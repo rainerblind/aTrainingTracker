@@ -96,6 +96,20 @@ object AttFusedAltitudePreferences {
 
     // --- Effective Active States ---
 
+    data class EffectiveState(
+        val isBarometerActive: Boolean,
+        val isDemActive: Boolean,
+        val isGpsActive: Boolean,
+        val isSpeedActive: Boolean
+    )
+
+    fun getEffectiveState(context: Context): EffectiveState = EffectiveState(
+        isBarometerActive = isEffectiveBarometerActive(context),
+        isDemActive = isEffectiveDemActive(context),
+        isGpsActive = isEffectiveGpsActive(context),
+        isSpeedActive = isEffectiveSpeedActive(context)
+    )
+
     fun isEffectiveBarometerActive(context: Context): Boolean =
         isBarometerEnabled(context) && isBarometerAvailable(context)
 

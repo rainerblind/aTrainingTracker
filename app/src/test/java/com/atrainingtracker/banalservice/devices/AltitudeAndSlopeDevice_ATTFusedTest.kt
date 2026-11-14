@@ -108,6 +108,14 @@ class AltitudeAndSlopeDevice_ATTFusedTest {
         every { AttFusedAltitudePreferences.isEffectiveDemActive(any()) } returns true
         every { AttFusedAltitudePreferences.isEffectiveGpsActive(any()) } returns false
         every { AttFusedAltitudePreferences.isEffectiveSpeedActive(any()) } returns true
+        every { AttFusedAltitudePreferences.getEffectiveState(any()) } answers {
+            AttFusedAltitudePreferences.EffectiveState(
+                isBarometerActive = AttFusedAltitudePreferences.isEffectiveBarometerActive(firstArg()),
+                isDemActive = AttFusedAltitudePreferences.isEffectiveDemActive(firstArg()),
+                isGpsActive = AttFusedAltitudePreferences.isEffectiveGpsActive(firstArg()),
+                isSpeedActive = AttFusedAltitudePreferences.isEffectiveSpeedActive(firstArg())
+            )
+        }
     }
 
     @After
@@ -193,5 +201,158 @@ class AltitudeAndSlopeDevice_ATTFusedTest {
 
         device.shutDown()
         assertFalse("EKF should be reset on shutdown", device.ekf.isInitialized)
+    }
+
+    /**
+     * Finding 1: Caches preference and pairing states in memory; refreshes via snapshot.
+     */
+    @Test
+    fun testFinding1_cachesPreferenceAndPairingStates_inMemory() {
+        val device = AltitudeAndSlopeDevice_ATTFused(mockContext, mockSensorManager, autoStartScheduler = false)
+
+        assertTrue(device.isEffectiveBarometer)
+        assertTrue(device.isEffectiveDem)
+        assertFalse(device.isEffectiveGps)
+        assertTrue(device.isEffectiveSpeed)
+
+        every { AttFusedAltitudePreferences.isEffectiveDemActive(any()) } returns false
+        every { AttFusedAltitudePreferences.isEffectiveGpsActive(any()) } returns true
+        device.refreshCachedPreferences()
+
+        assertFalse(device.isEffectiveDem)
+        assertTrue(device.isEffectiveGps)
+    }
+
+    /**
+     * Finding 2: Concurrency safety across calculateMetrics() and handlePressureMeasurement().
+     */
+    @Test
+    fun testFinding2_concurrencyBetweenMetricsAndPressureMeasurement() {
+        val device = AltitudeAndSlopeDevice_ATTFused(mockContext, mockSensorManager, autoStartScheduler = false)
+        val speedSensor = mockk<com.atrainingtracker.banalservice.sensor.MySensor<Number>>(relaxed = true)
+        every { speedSensor.value } returns 4.0
+        every { mockSensorManager.getSensor(SensorType.SPEED_mps) } returns speedSensor
+
+        device.handleReferenceAltitude(100.0, isDem = true)
+
+        val threads = mutableListOf<Thread>()
+        var errorOccurred = false
+
+        repeat(4) { t ->
+            val thread = Thread {
+                try {
+                    repeat(100) { i ->
+                        if (t % 2 == 0) {
+                            device.calculateMetrics(1000L + i * 200L)
+                        } else {
+                            val pressure = 1013.25f - (i * 0.1f)
+                            device.handlePressureMeasurement(pressure, 1000L + i * 200L)
+                        }
+                    }
+                } catch (e: Exception) {
+                    errorOccurred = true
+                }
+            }
+            threads.add(thread)
+            thread.start()
+        }
+
+        threads.forEach { it.join() }
+        assertFalse("Concurrent execution must not throw exceptions", errorOccurred)
+        assertTrue("Altitude must remain finite and positive", (device.mAltitudeSensor?.value as Number).toDouble() > 0.0)
+    }
+
+    /**
+     * Finding 3: DEM reference altitude is ingested ONLY when demSensor.lastUpdateTimestamp > mLastDemUpdateTimestampMs.
+     * Prevents static DEM over-ingestion from collapsing P00 covariance.
+     */
+    @Test
+    fun testFinding3_demTimestampGating_preventsCovarianceCollapse() {
+        val demSensor = mockk<com.atrainingtracker.banalservice.sensor.MySensor<Number>>(relaxed = true)
+        every { demSensor.value } returns 400.0
+        every { demSensor.lastUpdateTimestamp } returns 1000L
+        every {
+            mockSensorManager.getSensorForDeviceType(SensorType.ALTITUDE, DeviceType.ALTITUDE_FROM_POSITION)
+        } returns demSensor
+
+        val device = AltitudeAndSlopeDevice_ATTFused(mockContext, mockSensorManager, autoStartScheduler = false)
+        device.handlePressureMeasurement(1013.25f, 1000L)
+
+        // First calculateMetrics: ingests DEM at timestamp 1000L
+        device.calculateMetrics(1000L)
+        assertEquals(1000L, device.lastDemUpdateTimestampMs)
+        val p00AfterFirstIngest = device.ekf.p00
+
+        // 10 subsequent calculateMetrics with SAME timestamp 1000L (static DEM)
+        repeat(10) { i ->
+            device.calculateMetrics(2000L + i * 1000L)
+        }
+
+        // P00 should NOT have collapsed down to 1e-6 because static DEM was ignored!
+        assertTrue("P00 must not collapse on static DEM (was ${device.ekf.p00})", device.ekf.p00 >= p00AfterFirstIngest * 0.5)
+
+        // Now new DEM fix arrives at timestamp 25000L with 410m
+        every { demSensor.value } returns 410.0
+        every { demSensor.lastUpdateTimestamp } returns 25000L
+
+        device.calculateMetrics(25000L)
+        assertEquals(25000L, device.lastDemUpdateTimestampMs)
+    }
+
+    /**
+     * Finding 4: Ingests GPS elevation in 3-State mode when isEffectiveGpsActive is enabled.
+     */
+    @Test
+    fun testFinding4_gpsElevationIngestion_whenGpsActive() {
+        every { AttFusedAltitudePreferences.isEffectiveDemActive(any()) } returns false
+        every { AttFusedAltitudePreferences.isEffectiveGpsActive(any()) } returns true
+
+        val gpsSensor = mockk<com.atrainingtracker.banalservice.sensor.MySensor<Number>>(relaxed = true)
+        every { gpsSensor.value } returns 600.0
+        every { gpsSensor.lastUpdateTimestamp } returns 5000L
+        every {
+            mockSensorManager.getSensorForDeviceType(SensorType.ALTITUDE, DeviceType.SPEED_AND_LOCATION_GPS)
+        } returns gpsSensor
+
+        val speedSensor = mockk<com.atrainingtracker.banalservice.sensor.MySensor<Number>>(relaxed = true)
+        every { speedSensor.value } returns 5.0
+        every { mockSensorManager.getSensor(SensorType.SPEED_mps) } returns speedSensor
+
+        val device = AltitudeAndSlopeDevice_ATTFused(mockContext, mockSensorManager, autoStartScheduler = false)
+        device.refreshCachedPreferences()
+
+        assertTrue("EKF must be in 3-State mode when GPS is active", device.ekf.is3StateMode)
+
+        // Initialize at 590m (within 3-sigma of GPS 600m to avoid Huber gate rejection)
+        val pressure590m = SensorManager.PRESSURE_STANDARD_ATMOSPHERE *
+            Math.pow(1.0 - 590.0 / 44330.0, 5.255).toFloat()
+        device.handlePressureMeasurement(pressure590m, 4000L)
+        device.calculateMetrics(5000L)
+
+        assertEquals("GPS timestamp must be recorded", 5000L, device.lastGpsUpdateTimestampMs)
+        // With R_gps = 16.0 and P00 ~ 0.25, Kalman gain K0 ~ 0.0154, updating elevation by ~+0.15m towards 600m
+        assertTrue("Altitude should adjust towards GPS 600m (was ${device.ekf.altitude})", device.ekf.altitude > 590.1)
+    }
+
+    /**
+     * Finding 5: Workout pause updates mLastStepTimestampMs and clamps dtSec to MAX_DT_SEC (5.0s).
+     */
+    @Test
+    fun testFinding5_workoutPause_clampsDtSecAndPreventsSpike() {
+        val device = AltitudeAndSlopeDevice_ATTFused(mockContext, mockSensorManager, autoStartScheduler = false)
+        device.handleReferenceAltitude(250.0, isDem = true)
+
+        // Pause workout
+        every { TrainingApplication.isPaused() } returns true
+        device.calculateMetrics(1000L)
+
+        val p00BeforeResume = device.ekf.p00
+
+        // Resume after 30 minutes (1800s pause)
+        every { TrainingApplication.isPaused() } returns false
+        device.calculateMetrics(1801000L)
+
+        // dtSec must have been clamped to 5.0s, preventing massive covariance explosion
+        assertTrue("Covariance growth must be bounded by MAX_DT_SEC", device.ekf.p00 < p00BeforeResume + 1.0)
     }
 }

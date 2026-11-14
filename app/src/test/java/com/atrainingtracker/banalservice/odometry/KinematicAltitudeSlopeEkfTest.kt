@@ -146,4 +146,54 @@ class KinematicAltitudeSlopeEkfTest {
             ekf.altitude < baseline + 5.0
         )
     }
+
+    /**
+     * Finding 5: dtSec clamping to MAX_DT_SEC (5.0s).
+     * Even if a huge dtSec (e.g. 1800s after pause) is passed, predict() clamps propagation step.
+     */
+    @Test
+    fun testPredict_clampsLargeDtSec() {
+        val initialAlt = 200.0
+        ekf.updateBarometer(initialAlt, isStandstill = false)
+
+        // Predict with 1800s dtSec at 5 m/s
+        ekf.predict(1800.0, 5.0)
+
+        // Without clamp, dtSec=1800 at 5 m/s would give deltaDist=9000m and p00 > 800,000.
+        // With MAX_DT_SEC (5.0s), deltaDist is 25m, so p00 is bounded (< 10.0).
+        assertTrue("p00 growth must be bounded by MAX_DT_SEC (was ${ekf.p00})", ekf.p00 < 10.0)
+    }
+
+    /**
+     * Finding 2: Thread-safety across concurrent predict and update operations.
+     */
+    @Test
+    fun testConcurrency_predictAndUpdateWithoutCorruption() {
+        ekf.updateBarometer(100.0, isStandstill = false)
+        val threads = mutableListOf<Thread>()
+        var errorOccurred = false
+
+        repeat(4) { t ->
+            val thread = Thread {
+                try {
+                    repeat(200) { i ->
+                        if (t % 2 == 0) {
+                            ekf.predict(1.0, 5.0)
+                        } else {
+                            ekf.updateBarometer(100.0 + (i % 10), isStandstill = false)
+                        }
+                    }
+                } catch (e: Exception) {
+                    errorOccurred = true
+                }
+            }
+            threads.add(thread)
+            thread.start()
+        }
+
+        threads.forEach { it.join() }
+        assertFalse("Concurrent EKF predict and update must not throw exceptions", errorOccurred)
+        assertTrue("Altitude must be a valid finite number", !ekf.altitude.isNaN() && !ekf.altitude.isInfinite())
+        assertTrue("Covariance p00 must be positive", ekf.p00 > 0.0)
+    }
 }

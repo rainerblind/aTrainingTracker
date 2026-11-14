@@ -19,12 +19,14 @@
 package com.atrainingtracker.banalservice.devices
 
 import android.content.Context
+import android.content.SharedPreferences
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.util.Log
 import androidx.annotation.VisibleForTesting
+import androidx.preference.PreferenceManager
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
@@ -85,13 +87,57 @@ open class AltitudeAndSlopeDevice_ATTFused @JvmOverloads constructor(
     private var mScheduler: ScheduledExecutorService? = null
     private var mLastAltitude: Double = Double.NaN
     private var mLastStepTimestampMs: Long = 0L
+    private var mLastDemUpdateTimestampMs: Long = 0L
+    private var mLastGpsUpdateTimestampMs: Long = 0L
+
+    @Volatile
+    var isEffectiveBarometer: Boolean = true
+        private set
+
+    @Volatile
+    var isEffectiveDem: Boolean = false
+        private set
+
+    @Volatile
+    var isEffectiveGps: Boolean = false
+        private set
+
+    @Volatile
+    var isEffectiveSpeed: Boolean = true
+        private set
+
+    @VisibleForTesting
+    var lastDemUpdateTimestampMs: Long
+        get() = mLastDemUpdateTimestampMs
+        set(value) { mLastDemUpdateTimestampMs = value }
+
+    @VisibleForTesting
+    var lastGpsUpdateTimestampMs: Long
+        get() = mLastGpsUpdateTimestampMs
+        set(value) { mLastGpsUpdateTimestampMs = value }
+
+    private val mPrefChangeListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+        if (key == null || key.startsWith("pref_att_fused_alt_")) {
+            refreshCachedPreferences()
+        }
+    }
 
     init {
         val db = DevicesDatabaseManager.getInstance(mContext)
         mDeviceId = db.altitudeAndSlopeAttFusedDeviceId
         mHardwareSensorManager = mContext.getSystemService(Context.SENSOR_SERVICE) as? SensorManager
+
+        try {
+            val prefs = PreferenceManager.getDefaultSharedPreferences(mContext)
+            prefs?.registerOnSharedPreferenceChangeListener(mPrefChangeListener)
+        } catch (e: Exception) {
+            Log.d(TAG, "Could not register SharedPreferences listener: ${e.message}")
+        }
+
+        refreshCachedPreferences()
         registerSensors()
         registerPressureSensor()
+
         if (autoStartScheduler) {
             val scheduler = Executors.newSingleThreadScheduledExecutor()
             mScheduler = scheduler
@@ -122,24 +168,34 @@ open class AltitudeAndSlopeDevice_ATTFused @JvmOverloads constructor(
     override fun getName(): String =
         mContext.getString(R.string.devices_altitude_slope_ATT_fused)
 
+    @Synchronized
     override fun shutDown() {
         super.shutDown()
         mScheduler?.let {
             if (!it.isShutdown) it.shutdown()
         }
+        try {
+            val prefs = PreferenceManager.getDefaultSharedPreferences(mContext)
+            prefs?.unregisterOnSharedPreferenceChangeListener(mPrefChangeListener)
+        } catch (e: Exception) {
+            Log.d(TAG, "Could not unregister SharedPreferences listener: ${e.message}")
+        }
         mHardwareSensorManager?.unregisterListener(this)
+        mPressureSensor = null
         mPressureSensorRegistered = false
         baroFilter.reset()
         ekf.reset()
         mLastAltitude = Double.NaN
         mLastStepTimestampMs = 0L
+        mLastDemUpdateTimestampMs = 0L
+        mLastGpsUpdateTimestampMs = 0L
     }
 
     @Synchronized
     fun registerPressureSensor() {
         if (mPressureSensorRegistered) return
         val sm = mHardwareSensorManager ?: return
-        if (!AttFusedAltitudePreferences.isEffectiveBarometerActive(mContext)) return
+        if (!isEffectiveBarometer) return
         try {
             val pressure = sm.getDefaultSensor(Sensor.TYPE_PRESSURE)
             if (pressure != null) {
@@ -154,14 +210,45 @@ open class AltitudeAndSlopeDevice_ATTFused @JvmOverloads constructor(
         }
     }
 
+    @Synchronized
+    fun unregisterPressureSensor() {
+        if (!mPressureSensorRegistered) return
+        mHardwareSensorManager?.unregisterListener(this)
+        mPressureSensor = null
+        mPressureSensorRegistered = false
+        if (DEBUG) Log.i(TAG, "Hardware pressure listener unregistered")
+    }
+
+    /**
+     * Refreshes effective device availability and preferences into in-memory cached flags.
+     * Invoked upon creation, preference broadcasts, and on the 1-Hz background scheduler thread.
+     */
+    @Synchronized
+    fun refreshCachedPreferences() {
+        val state = AttFusedAltitudePreferences.getEffectiveState(mContext)
+        isEffectiveBarometer = state.isBarometerActive
+        isEffectiveDem = state.isDemActive
+        isEffectiveGps = state.isGpsActive
+        isEffectiveSpeed = state.isSpeedActive
+
+        ekf.setMode(state.isDemActive || state.isGpsActive)
+
+        if (isEffectiveBarometer && !mPressureSensorRegistered) {
+            registerPressureSensor()
+        } else if (!isEffectiveBarometer && mPressureSensorRegistered) {
+            unregisterPressureSensor()
+        }
+    }
+
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
 
     override fun onSensorChanged(event: SensorEvent?) {
         if (event == null || event.sensor.type != Sensor.TYPE_PRESSURE) return
-        if (!AttFusedAltitudePreferences.isEffectiveBarometerActive(mContext)) return
+        if (!isEffectiveBarometer) return
         handlePressureMeasurement(event.values[0], System.currentTimeMillis())
     }
 
+    @Synchronized
     @VisibleForTesting
     fun handlePressureMeasurement(pressureHpa: Float, timestampMs: Long = System.currentTimeMillis()) {
         val rawAlt = SensorManager.getAltitude(SensorManager.PRESSURE_STANDARD_ATMOSPHERE, pressureHpa).toDouble()
@@ -169,19 +256,15 @@ open class AltitudeAndSlopeDevice_ATTFused @JvmOverloads constructor(
         val speed = getCurrentSpeed()
         val isStandstill = speed < ekf.standstillSpeedThresholdMps
 
-        val useDem = AttFusedAltitudePreferences.isEffectiveDemActive(mContext)
-        val useGps = AttFusedAltitudePreferences.isEffectiveGpsActive(mContext)
-        ekf.setMode(useDem || useGps)
-
+        ekf.setMode(isEffectiveDem || isEffectiveGps)
         ekf.updateBarometer(slewAlt, isStandstill = isStandstill)
         publishAltitudeAndMetrics(speed)
     }
 
+    @Synchronized
     @VisibleForTesting
     fun handleReferenceAltitude(refAltM: Double, isDem: Boolean = true) {
-        val useDem = AttFusedAltitudePreferences.isEffectiveDemActive(mContext)
-        val useGps = AttFusedAltitudePreferences.isEffectiveGpsActive(mContext)
-        ekf.setMode(useDem || useGps)
+        ekf.setMode(isEffectiveDem || isEffectiveGps)
         ekf.updateReferenceAltitude(
             refAltM,
             if (isDem) KinematicAltitudeSlopeEkf.DEFAULT_VAR_DEM else KinematicAltitudeSlopeEkf.DEFAULT_VAR_GPS
@@ -189,13 +272,21 @@ open class AltitudeAndSlopeDevice_ATTFused @JvmOverloads constructor(
         publishAltitudeAndMetrics(getCurrentSpeed())
     }
 
+    @Synchronized
     @VisibleForTesting
     fun calculateMetrics(nowMs: Long = System.currentTimeMillis()) {
-        if (TrainingApplication.isPaused() || TrainingApplication.isAutoPaused()) return
+        if (TrainingApplication.isPaused() || TrainingApplication.isAutoPaused()) {
+            mLastStepTimestampMs = nowMs
+            return
+        }
 
         val now = nowMs
-        val dtSec = if (mLastStepTimestampMs > 0L) (now - mLastStepTimestampMs) / 1000.0 else 1.0
+        val dtRaw = if (mLastStepTimestampMs > 0L) (now - mLastStepTimestampMs) / 1000.0 else 1.0
         mLastStepTimestampMs = now
+        val dtSec = dtRaw.coerceIn(0.0, KinematicAltitudeSlopeEkf.MAX_DT_SEC)
+
+        // Background refresh of preferences and pairings from SQLite (1-Hz background thread, NOT UI thread)
+        refreshCachedPreferences()
 
         val speed = getCurrentSpeed()
         checkReferenceAltitudeFromSensors()
@@ -205,25 +296,50 @@ open class AltitudeAndSlopeDevice_ATTFused @JvmOverloads constructor(
     }
 
     private fun checkReferenceAltitudeFromSensors() {
-        if (AttFusedAltitudePreferences.isEffectiveDemActive(mContext)) {
+        if (isEffectiveDem) {
             val demSensor = mMySensorManager.getSensorForDeviceType(
                 SensorType.ALTITUDE,
                 DeviceType.ALTITUDE_FROM_POSITION
             )
-            val demVal = (demSensor?.value as? Number)?.toDouble()
-            if (demVal != null && !demVal.isNaN()) {
-                ekf.updateReferenceAltitude(demVal, KinematicAltitudeSlopeEkf.DEFAULT_VAR_DEM)
+            if (demSensor != null && demSensor.lastUpdateTimestamp > mLastDemUpdateTimestampMs) {
+                val demVal = (demSensor.value as? Number)?.toDouble()
+                if (demVal != null && !demVal.isNaN()) {
+                    mLastDemUpdateTimestampMs = demSensor.lastUpdateTimestamp
+                    ekf.updateReferenceAltitude(demVal, KinematicAltitudeSlopeEkf.DEFAULT_VAR_DEM)
+                }
+            }
+        }
+
+        if (isEffectiveGps) {
+            val gpsSensor = mMySensorManager.getSensorForDeviceType(
+                SensorType.ALTITUDE,
+                DeviceType.SPEED_AND_LOCATION_GPS
+            ) ?: mMySensorManager.getSensorForDeviceType(
+                SensorType.ALTITUDE,
+                DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED
+            ) ?: mMySensorManager.getSensorForDeviceType(
+                SensorType.ALTITUDE,
+                DeviceType.SPEED_AND_LOCATION_ATT_FUSED
+            )
+            if (gpsSensor != null && gpsSensor.lastUpdateTimestamp > mLastGpsUpdateTimestampMs) {
+                val gpsVal = (gpsSensor.value as? Number)?.toDouble()
+                if (gpsVal != null && !gpsVal.isNaN()) {
+                    mLastGpsUpdateTimestampMs = gpsSensor.lastUpdateTimestamp
+                    ekf.updateReferenceAltitude(gpsVal, KinematicAltitudeSlopeEkf.DEFAULT_VAR_GPS)
+                }
             }
         }
     }
 
+    @Synchronized
     fun getCurrentSpeed(): Double {
-        if (!AttFusedAltitudePreferences.isEffectiveSpeedActive(mContext)) return 0.0
+        if (!isEffectiveSpeed) return 0.0
         val speedSensor = mMySensorManager.getSensor(SensorType.SPEED_mps)
         val speedVal = (speedSensor?.value as? Number)?.toDouble() ?: 0.0
         return max(0.0, speedVal)
     }
 
+    @Synchronized
     private fun publishAltitudeAndMetrics(speedMps: Double) {
         if (!ekf.isInitialized) return
 

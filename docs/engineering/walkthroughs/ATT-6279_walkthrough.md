@@ -86,3 +86,37 @@ ATT-6279 introduces the **ATT Fused (Höhe und Steigung)** pairable virtual sens
 ### Governance
 - `python3 tools/verify_requirement_governance.py --sync-indexes`: PASS (Master index tables synchronized with 100% parity).
 - `python3 tools/verify_requirement_governance.py`: PASS (Zero violations, 100% bidirectional traceability).
+
+---
+
+## Bounce 1/3 Remediation Summary (Cold Carbon Stage 6 Audit Findings)
+
+Following Stage 6 Cold Carbon code and architecture review, 5 defects were identified and resolved on `fix/ATT-6279-bounce1`:
+
+### 1. Finding 1: In-Memory Preference & Pairing Cache (Main Thread UI Stutter Elimination)
+- In `AltitudeAndSlopeDevice_ATTFused.kt`: Added `@Volatile` cached flags (`isEffectiveBarometer`, `isEffectiveDem`, `isEffectiveGps`, `isEffectiveSpeed`).
+- Added `AttFusedAltitudePreferences.getEffectiveState(context)` snapshot helper.
+- Flags are populated in `init`, updated via `SharedPreferences.OnSharedPreferenceChangeListener`, and re-synced every 1s on the background `mScheduler` thread inside `calculateMetrics()`.
+- Eliminated all SQLite queries (`getSmartphoneDeviceId()` / `isPaired()`) from 5-Hz `onSensorChanged()` and `handlePressureMeasurement()`.
+
+### 2. Finding 2: Thread-Safe EKF & Metric Accumulation
+- In `KinematicAltitudeSlopeEkf.kt`: Marked all state variables and covariance elements (`p00`..`p22`) as `@Volatile`.
+- Annotated all mutating and calculation methods (`predict`, `updateBarometer`, `updateReferenceAltitude`, `setMode`, `reset`, `getVerticalSpeedMps`, `getVamMph`) with `@Synchronized`.
+- In `AltitudeAndSlopeDevice_ATTFused.kt`: Annotated `handlePressureMeasurement()`, `handleReferenceAltitude()`, `calculateMetrics()`, `publishAltitudeAndMetrics()`, and `refreshCachedPreferences()` with `@Synchronized`.
+- Eliminated data races between 1-Hz background `mScheduler` and 5-Hz `onSensorChanged` over EKF covariance and `mLastAltitude` / `mAscentSensor` / `mDescentSensor`.
+
+### 3. Finding 3: Timestamp Gating for DEM Reference Ingestion
+- In `AltitudeAndSlopeDevice_ATTFused.kt`: Introduced `mLastDemUpdateTimestampMs` gating in `checkReferenceAltitudeFromSensors()`.
+- DEM reference altitude is ingested into the EKF only when `demSensor.lastUpdateTimestamp > mLastDemUpdateTimestampMs`.
+- Static DEM values are no longer ingested 60 times/min, completely preventing $P_{00}$ covariance collapse.
+
+### 4. Finding 4: Wired GPS Elevation Ingestion in 3-State Mode
+- In `AltitudeAndSlopeDevice_ATTFused.kt:checkReferenceAltitudeFromSensors()`: When `isEffectiveGps` is active, queries `SPEED_AND_LOCATION_GPS`, `SPEED_AND_LOCATION_GOOGLE_FUSED`, and `SPEED_AND_LOCATION_ATT_FUSED`.
+- Fresh GPS altitude fixes (`lastUpdateTimestamp > mLastGpsUpdateTimestampMs`) are ingested via `ekf.updateReferenceAltitude(gpsVal, KinematicAltitudeSlopeEkf.DEFAULT_VAR_GPS)` ($R_{GPS} = 16.0$).
+- Ensures complete observability of the $[h, g, b_{baro}]^T$ state vector when GPS altitude drift correction is enabled in UI.
+
+### 5. Finding 5: dtSec Clamping & Step Timestamp Re-seeding on Workout Pause
+- In `AltitudeAndSlopeDevice_ATTFused.kt:calculateMetrics()`: When paused or auto-paused, updates `mLastStepTimestampMs = nowMs` and returns early.
+- Bounded `dtSec = dtRaw.coerceIn(0.0, KinematicAltitudeSlopeEkf.MAX_DT_SEC)` (5.0s) in `calculateMetrics()` and inside `KinematicAltitudeSlopeEkf.predict()`.
+- Resuming after extended workout pauses (10–30 min) no longer injects huge displacement or process noise spikes into the EKF.
+

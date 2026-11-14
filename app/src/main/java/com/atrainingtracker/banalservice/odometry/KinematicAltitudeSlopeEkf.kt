@@ -56,34 +56,40 @@ class KinematicAltitudeSlopeEkf(
         const val DEFAULT_VAR_GPS = 16.0 // (4.0 m)^2
         const val DEFAULT_HUBER_K = 3.0 // 3-sigma innovation clamp
         const val DEFAULT_STANDSTILL_THRESHOLD_MPS = 0.3
+        const val MAX_DT_SEC = 5.0 // Maximum allowable delta-time propagation step
     }
 
+    @Volatile
     var altitude: Double = 0.0
         private set
 
+    @Volatile
     var slope: Double = 0.0
         private set
 
     val slopePercent: Double
         get() = slope * 100.0
 
+    @Volatile
     var baroBias: Double = 0.0
         private set
 
+    @Volatile
     var isInitialized: Boolean = false
         private set
 
     // Covariance elements
-    var p00: Double = 1.0 // var(h)
-    var p01: Double = 0.0 // cov(h, g)
-    var p10: Double = 0.0 // cov(g, h)
-    var p11: Double = 0.01 // var(g)
-    var p02: Double = 0.0 // cov(h, b_baro)
-    var p20: Double = 0.0 // cov(b_baro, h)
-    var p12: Double = 0.0 // cov(g, b_baro)
-    var p21: Double = 0.0 // cov(b_baro, g)
-    var p22: Double = 100.0 // var(b_baro)
+    @Volatile var p00: Double = 1.0 // var(h)
+    @Volatile var p01: Double = 0.0 // cov(h, g)
+    @Volatile var p10: Double = 0.0 // cov(g, h)
+    @Volatile var p11: Double = 0.01 // var(g)
+    @Volatile var p02: Double = 0.0 // cov(h, b_baro)
+    @Volatile var p20: Double = 0.0 // cov(b_baro, h)
+    @Volatile var p12: Double = 0.0 // cov(g, b_baro)
+    @Volatile var p21: Double = 0.0 // cov(b_baro, g)
+    @Volatile var p22: Double = 100.0 // var(b_baro)
 
+    @Synchronized
     fun reset(initialAlt: Double = 0.0, initialSlope: Double = 0.0, initialBias: Double = 0.0) {
         altitude = initialAlt
         slope = initialSlope
@@ -100,6 +106,7 @@ class KinematicAltitudeSlopeEkf(
         isInitialized = false
     }
 
+    @Synchronized
     fun setMode(threeState: Boolean) {
         if (is3StateMode == threeState) return
         is3StateMode = threeState
@@ -116,18 +123,22 @@ class KinematicAltitudeSlopeEkf(
     /**
      * Propagates state and covariance forward across $\Delta t$ seconds at speed $v$.
      * Enforces standstill clamping when $v < v_{threshold}$ ($\Delta s = 0 \implies dh = 0, Q_g = 0$).
+     * Bounds `dtSec` to `MAX_DT_SEC` to prevent unbounded covariance growth after pause.
      */
+    @Synchronized
     fun predict(dtSec: Double, speedMps: Double, deltaDistM: Double = speedMps * dtSec) {
         if (!isInitialized || dtSec <= 0.0) return
 
+        val dtClamped = dtSec.coerceIn(0.0, MAX_DT_SEC)
         val speed = max(0.0, speedMps)
-        val isStandstill = speed < standstillSpeedThresholdMps || deltaDistM < 1e-5
-        val deltaDist = if (isStandstill) 0.0 else max(0.0, deltaDistM)
+        val deltaDistCalculated = if (deltaDistM == speedMps * dtSec) speed * dtClamped else deltaDistM
+        val isStandstill = speed < standstillSpeedThresholdMps || deltaDistCalculated < 1e-5
+        val deltaDist = if (isStandstill) 0.0 else max(0.0, deltaDistCalculated)
 
         if (isStandstill) {
             // Standstill clamping: dh = 0, Qg = 0, Qh = 0
             if (is3StateMode) {
-                p22 += qBias * dtSec
+                p22 += qBias * dtClamped
             }
             return
         }
@@ -137,7 +148,7 @@ class KinematicAltitudeSlopeEkf(
 
         // Covariance propagation: P^- = F * P * F^T + Q
         val qgVal = qg * deltaDist
-        val qhVal = qh * dtSec
+        val qhVal = qh * dtClamped
 
         val p00New = p00 + 2.0 * deltaDist * p01 + deltaDist * deltaDist * p11 + qhVal
         val p01New = p01 + deltaDist * p11
@@ -152,13 +163,14 @@ class KinematicAltitudeSlopeEkf(
             val p02New = p02 + deltaDist * p12
             p02 = p02New
             p20 = p02New
-            p22 += qBias * dtSec
+            p22 += qBias * dtClamped
         }
     }
 
     /**
      * Ingests a barometric altitude measurement (slew-clamped, without EMA).
      */
+    @Synchronized
     @Suppress("ReturnCount")
     fun updateBarometer(baroAltM: Double, varBaro: Double = rBaro, isStandstill: Boolean = false) {
         if (baroAltM.isNaN() || baroAltM.isInfinite()) return
@@ -236,6 +248,7 @@ class KinematicAltitudeSlopeEkf(
     /**
      * Ingests an absolute reference altitude (DEM or GPS elevation).
      */
+    @Synchronized
     fun updateReferenceAltitude(refAltM: Double, varRef: Double = rDem) {
         if (refAltM.isNaN() || refAltM.isInfinite()) return
 
@@ -294,10 +307,12 @@ class KinematicAltitudeSlopeEkf(
         }
     }
 
+    @Synchronized
     fun getVerticalSpeedMps(speedMps: Double): Double {
         return if (speedMps < standstillSpeedThresholdMps) 0.0 else slope * speedMps
     }
 
+    @Synchronized
     fun getVamMph(speedMps: Double): Double {
         return getVerticalSpeedMps(speedMps) * 3600.0
     }
