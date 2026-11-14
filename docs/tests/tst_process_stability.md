@@ -3025,3 +3025,21 @@
   3. *Branch Build Governance Step Contract*: Execute `ReleaseCiAndLintConfigContractTest.testBranchBuildWorkflow_runsGovernanceVerification` verifying that `android-branch-build.yml` executes `python3 tools/verify_requirement_governance.py`.
   4. *Governance Script Validation*: Run `python3 tools/verify_requirement_governance.py` asserting exit code 0 and zero governance violations across all shards.
 
+---
+
+### TST-PRO-091: **Independent ASPICE SUP.1 QA Auditing, Representative Sampling & Corrective Action Verification Suite** [Verified]
+- **Verifies**: `REQ-PRO-091`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Component**: `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `tools/hoechstmass/`, `tools/test_jira_accounts.py`, `tools/test_verify_requirement_governance.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`, `docs/engineering/qa_audits/`
+- **Jira**: `ATT-7558`
+- **Test Description**:
+  1. *QA Auditor Role Independence & Coordinator Rejection*: Test in `test_jira_accounts.py` that `qa_audit` executes under `qa` / `agent2` and rejects `role="coordinator"` or `role="agent1"`.
+  2. *Representative Sample Size Dynamic Scaling*: Test in `test_jira_accounts.py` that `qa_audit` samples $\ge 10\%$ when population exceeds 20 tickets (e.g. 25 tickets $\rightarrow \ge 3$ sampled).
+  3. *Corrective Action Link Validation in Verifier*: Test in `test_verify_requirement_governance.py` that `verify_qa_audits` rejects `NON-COMPLIANT` reports lacking Jira issue keys in Section 4 and accepts reports with linked corrective actions.
+  4. *Auditor Independence Verification in Verifier*: Test in `test_verify_requirement_governance.py` that `verify_qa_audits` rejects reports with `Auditor Role: coordinator`.
+  5. *Counterpart Mirror Parity*: Verify parity in Höchstmaß mirror tooling (`test_hoechstmass_tools.py`).
+  6. *Governance Script Validation*: Run `python3 tools/verify_requirement_governance.py` verifying exit code 0.
+
+

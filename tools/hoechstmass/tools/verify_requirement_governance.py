@@ -446,15 +446,99 @@ def verify_sprint_metrics(sprint_name=None, repo_root=None):
         ]
 
 
+def _validate_single_qa_audit(found_file, sprint_name=None):
+    try:
+        with open(found_file, "r", encoding="utf-8") as f:
+            content = f.read().strip()
+        if not content:
+            return False, [f"ERROR: Sprint QA audit report is empty: {found_file}"]
+        if not re.search(r"\b(?:COMPLIANT|NON-COMPLIANT)\b", content, re.IGNORECASE):
+            return False, [f"ERROR: Sprint QA audit report contains no recognized compliance verdicts: {found_file}"]
+
+        # Auditor Role validation (REQ-PRO-091.1, TST-PRO-091.4)
+        role_m = re.search(r"\bAuditor Role\b.*?:.*?(?:`|\b)(coordinator|agent1|qa|agent2)\b", content, re.IGNORECASE)
+        if role_m:
+            auditor_r = role_m.group(1).lower()
+            if auditor_r in ("coordinator", "agent1"):
+                return False, [
+                    f"ERROR: Auditor role in {found_file} is '{auditor_r}', which lacks ASPICE SUP.1 independence. Must be 'qa' or 'agent2' (REQ-PRO-091.1)."
+                ]
+        else:
+            hdr_m = re.search(r"\bAuditor Role\b\s*:\s*`?([a-zA-Z0-9_-]+)`?", content, re.IGNORECASE)
+            if hdr_m:
+                auditor_r = hdr_m.group(1).lower()
+                if auditor_r in ("coordinator", "agent1"):
+                    return False, [
+                        f"ERROR: Auditor role in {found_file} is '{auditor_r}', which lacks ASPICE SUP.1 independence. Must be 'qa' or 'agent2' (REQ-PRO-091.1)."
+                    ]
+                elif auditor_r not in ("qa", "agent2"):
+                    return False, [
+                        f"ERROR: Unrecognized or non-independent auditor role '{auditor_r}' in {found_file}. Must be 'qa' or 'agent2' (REQ-PRO-091.1)."
+                    ]
+
+        ticket_sections = re.findall(
+            r"(?:###\s*(?:Sampled\s+)?Ticket:?\s*([A-Z0-9_-]+)|\|\s*([A-Z0-9_-]+)\s*\|\s*(?:PASS|FAIL|COMPLIANT|NON-COMPLIANT))",
+            content,
+            re.IGNORECASE,
+        )
+        sampled_tickets = set(t[0] or t[1] for t in ticket_sections if (t[0] or t[1]) and not (t[0] or t[1]).startswith("ATT-232"))
+        if len(sampled_tickets) == 0:
+            all_keys = set(re.findall(r"\b(?:ATT|PROJ)-\d+\b", content))
+            sampled_tickets = {k for k in all_keys if not k.startswith("ATT-232")}
+
+        total_sampled = len(sampled_tickets)
+        if total_sampled < 2:
+            return False, [
+                f"ERROR: Sprint QA audit report in {found_file} sampled only {total_sampled} ticket(s) (minimum >= 2 required by REQ-PRO-061.1)."
+            ]
+
+        # Dynamic sample size check (REQ-PRO-091.2, TST-PRO-091.2)
+        sample_ratio_m = re.search(r"(?:Sample Size|sample_size).*?(\d+)\s*/\s*(\d+)", content, re.IGNORECASE)
+        if sample_ratio_m:
+            sampled_cnt = int(sample_ratio_m.group(1))
+            total_cnt = int(sample_ratio_m.group(2))
+            import math
+            min_required = max(2, math.ceil(total_cnt * 0.10))
+            if sampled_cnt < min_required:
+                return False, [
+                    f"ERROR: Sample size {sampled_cnt} / {total_cnt} in {found_file} is below required >= 10% dynamic threshold (minimum {min_required} required by REQ-PRO-091.2)."
+                ]
+
+        # Corrective Action Tracking check (REQ-PRO-091.3, TST-PRO-091.3)
+        is_non_compliant = bool(re.search(r"Overall Process Verdict.*?\bNON-COMPLIANT\b", content, re.IGNORECASE))
+        if not is_non_compliant:
+            is_non_compliant = bool(re.search(r"\|\s*NON-COMPLIANT\s*\|", content, re.IGNORECASE))
+        if is_non_compliant:
+            sec4_m = re.search(r"## 4\.\s*Non-Compliance Tracking & Remediation(.*?)(?:---|\Z)", content, re.DOTALL | re.IGNORECASE)
+            if not sec4_m:
+                return False, [
+                    f"ERROR: Non-compliant audit {found_file} is missing Section 4 ('## 4. Non-Compliance Tracking & Remediation') (REQ-PRO-091.3)."
+                ]
+            sec4_text = sec4_m.group(1).strip()
+            ca_links = re.findall(r"\[(ATT-\d+|PROJ-\d+)\]", sec4_text)
+            if not ca_links:
+                return False, [
+                    f"ERROR: Non-compliant audit in {found_file} lacks required Jira corrective action ticket links [ATT-XXXX] in Section 4 (REQ-PRO-091.3)."
+                ]
+
+        sprint_label = sprint_name if sprint_name else os.path.basename(found_file)
+        return True, [f"PASS: Sprint QA audit report verified for '{sprint_label}' ({total_sampled} sampled tickets): {found_file}"]
+    except Exception as e:
+        return False, [f"ERROR: Failed to read QA audit file {found_file}: {e}"]
+
+
 def verify_qa_audits(sprint_name=None, repo_root=None):
     """
-    REQ-PRO-061.4 / TST-PRO-061.2:
+    REQ-PRO-061.4 / TST-PRO-061.2 / REQ-PRO-091 / TST-PRO-091:
     Verifies that sprint QA process-compliance audit records exist in docs/engineering/qa_audits/
-    per REQ-PRO-061. Fails with exit code 1 if:
+    per REQ-PRO-061 and REQ-PRO-091. Fails with exit code 1 if:
     - qa_audits directory does not exist.
     - Expected sprint audit file is missing or empty.
     - Audit record does not contain recognized compliance verdicts ('COMPLIANT' or 'NON-COMPLIANT').
     - Audit record does not contain at least 2 sampled ticket evaluations (REQ-PRO-061.1).
+    - Auditor role is not independent ('coordinator' or 'agent1' rejected) (REQ-PRO-091.1).
+    - Sample size does not meet >= max(2, ceil(N * 0.10)) dynamic threshold (REQ-PRO-091.2).
+    - Non-compliant audit lacks Jira corrective action ticket links [ATT-XXXX] in Section 4 (REQ-PRO-091.3).
     """
     if repo_root is None:
         repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
@@ -488,49 +572,24 @@ def verify_qa_audits(sprint_name=None, repo_root=None):
                 f"Expected one of {[os.path.join('docs/engineering/qa_audits', c) for c in candidates]}."
             ]
 
-        try:
-            with open(found_file, "r", encoding="utf-8") as f:
-                content = f.read().strip()
-            if not content:
-                return False, [f"ERROR: Sprint QA audit report is empty: {found_file}"]
-            if not re.search(r"\b(?:COMPLIANT|NON-COMPLIANT)\b", content, re.IGNORECASE):
-                return False, [f"ERROR: Sprint QA audit report contains no recognized compliance verdicts: {found_file}"]
-
-            ticket_sections = re.findall(
-                r"(?:###\s*(?:Sampled\s+)?Ticket:?\s*([A-Z0-9_-]+)|\|\s*([A-Z0-9_-]+)\s*\|\s*(?:PASS|FAIL|COMPLIANT|NON-COMPLIANT))",
-                content,
-                re.IGNORECASE,
-            )
-            sampled_tickets = set(t[0] or t[1] for t in ticket_sections if (t[0] or t[1]) and not (t[0] or t[1]).startswith("ATT-232"))
-            if len(sampled_tickets) == 0:
-                all_keys = set(re.findall(r"\b(?:ATT|PROJ)-\d+\b", content))
-                sampled_tickets = {k for k in all_keys if not k.startswith("ATT-232")}
-
-            total_sampled = len(sampled_tickets)
-            if total_sampled < 2:
-                return False, [
-                    f"ERROR: Sprint QA audit report in {found_file} sampled only {total_sampled} ticket(s) (minimum >= 2 required by REQ-PRO-061.1)."
-                ]
-
-            return True, [f"PASS: Sprint QA audit report verified for '{sprint_name}' ({total_sampled} sampled tickets): {found_file}"]
-        except Exception as e:
-            return False, [f"ERROR: Failed to read QA audit file {found_file}: {e}"]
+        return _validate_single_qa_audit(found_file, sprint_name=sprint_name)
     else:
         md_files = [f for f in os.listdir(qa_dir) if f.endswith(".md") and not f.startswith(".")]
         if not md_files:
             return False, [f"ERROR: No sprint QA process-compliance audit files (*.md) found in {qa_dir}"]
 
+        all_errors = []
         valid_files = 0
         for fname in md_files:
             fpath = os.path.join(qa_dir, fname)
-            try:
-                with open(fpath, "r", encoding="utf-8") as f:
-                    content = f.read().strip()
-                if content and re.search(r"\b(?:COMPLIANT|NON-COMPLIANT)\b", content, re.IGNORECASE):
-                    valid_files += 1
-            except Exception:
-                pass
+            ok, diag = _validate_single_qa_audit(fpath)
+            if not ok:
+                all_errors.extend(diag)
+            else:
+                valid_files += 1
 
+        if all_errors:
+            return False, all_errors
         if valid_files == 0:
             return False, [f"ERROR: No valid, non-empty sprint QA audit records found in {qa_dir}"]
         return True, [f"PASS: Verified {valid_files} sprint QA process-compliance audit record(s) in {qa_dir}."]

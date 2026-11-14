@@ -4751,3 +4751,52 @@ The workflow SHALL mandate that:
   • *Then* all contract tests verifying gate presence, sequencing, and artifact uploads across both workflows pass with 100% success.
 - **Invariants**: Zero runtime code changes; existing release signing provider chain and secrets handling remain unmodified.
 
+---
+
+### REQ-PRO-091: Independent ASPICE SUP.1 QA Auditing, Representative Sampling & Corrective Action Tracking [Verified]
+- **Tests**: `TST-PRO-091`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `tools/hoechstmass/`, `.agents/skills/sprint-planner/SKILL.md`, `.agents/skills/jira-workflow/SKILL.md`, `.agents/rules/aspice_governance.md`, `docs/project_governance.md`, `docs/engineering/qa_audits/`
+- **Rationale**: ASPICE evaluation finding F1 identified three systemic gaps in process quality assurance under SUP.1 (Quality Assurance): lack of auditor role independence (audits were authored by `coordinator`), under-sampling (static 2-ticket sample regardless of sprint size), and open-loop non-compliances (prior non-compliant findings had no tracked Jira corrective action tickets and were never reviewed at sprint planning). Establishing strict auditor independence, representative statistical sampling ($\ge 10\%$), closed-loop corrective action tracking, and Ceremony 1 verification satisfies ASPICE SUP.1 BP1, BP4, and BP5 (ATT-7558, Parent Epic ATT-232, refining and extending `REQ-PRO-061`):
+- **Description**:
+  1. *Independent QA Auditor Role Enforcement (`REQ-PRO-091.1`)*:
+     • The QA process audit tool (`qa-audit`) and audit records in `docs/engineering/qa_audits/<sprint>.md` SHALL enforce an independent auditor role (`qa` / `agent2` / `quality-assurance`) that is strictly distinct from the sprint coordinator (`coordinator`) and ticket implementers (`agent1`).
+     • Invoking `qa-audit` with `role="coordinator"` or `role="agent1"` SHALL be forbidden and rejected with exit code 1.
+  2. *Representative Statistical Sampling Ratio (`REQ-PRO-091.2`)*:
+     • The QA audit tool SHALL dynamically compute the minimum required sample size as at least 10% of completed parent sprint tickets:
+       $$\text{sample\_size} \ge \max(2, \lceil 0.10 \times N \rceil)$$
+       where $N$ is the count of completed parent sprint tickets (or a documented risk-based sampling rationale).
+     • The audit report in `docs/engineering/qa_audits/<sprint>.md` SHALL explicitly document the total sprint population, sample size, and statistical/risk rationale in Section 1.
+  3. *Closed-Loop Jira Corrective-Action Tracking (`REQ-PRO-091.3`)*:
+     • For any audit evaluating a `NON-COMPLIANT` overall verdict or finding, Section 4 of `docs/engineering/qa_audits/<sprint>.md` SHALL link every non-compliant finding to a dedicated Jira corrective-action ticket (formatted as `[ATT-XXXX](https://.../browse/ATT-XXXX)` or `ATT-XXXX`).
+     • Generic placeholder text without authentic Jira ticket links is prohibited.
+  4. *Ceremony 1 Corrective Action Closure Verification (`REQ-PRO-091.4`)*:
+     • `.agents/skills/sprint-planner/SKILL.md` Ceremony 1 (Sprint Planning) SHALL mandate reviewing the previous sprint's QA process-compliance audit in `docs/engineering/qa_audits/` and verifying that all corrective-action tickets from non-compliant findings are either closed or scheduled for remediation in the active sprint.
+  5. *Automated Governance Verifier Enforcement (`REQ-PRO-091.5`)*:
+     • `tools/verify_requirement_governance.py --check-qa-audits` (and Höchstmaß mirror) SHALL validate that:
+       (a) Auditor role is independent (not `coordinator` or `agent1`),
+       (b) Sample size is $\ge \max(2, \lceil 0.10 \times N \rceil)$ or documented rationale, and
+       (c) Every `NON-COMPLIANT` audit record contains valid Jira ticket links for each non-compliant finding.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-091` (`REQ-PRO-091.1`–`REQ-PRO-091.5`), refining and extending `REQ-PRO-061` (*Sprint-Level QA Process-Compliance Audit*). Targets `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `tools/hoechstmass/`, `.agents/skills/sprint-planner/SKILL.md`, and `docs/engineering/qa_audits/`.
+  2. *Historical Origin & Commit Trace*: Introduced in Sprint 2026-46.3 via ATT-6154 (`REQ-PRO-061`). Finding F1 in ASPICE independent evaluation (2026-11-12) identified that `coordinator` authored audits, under-sampled, and left non-compliances open-loop.
+  3. *Root Reason for Existing Formulation*: Early tooling prioritized basic automated markdown generation over strict organizational independence and closed-loop corrective action tracking.
+  4. *Preservation of Core Invariants*: Existing CLI commands (`qa-audit`, `--check-qa-audits`) remain backward-compatible; pure Python standard library; zero production Android runtime code changes.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* an execution of `qa-audit`,
+  • *When* the auditor role is evaluated,
+  • *Then* it executes under an independent role (`qa` / `agent2`), and aborts if invoked under `coordinator` or `agent1`.
+  • *Given* a sprint with $N$ completed parent tickets,
+  • *When* `qa-audit` draws the sample,
+  • *Then* the sample size is $\ge \max(2, \lceil 0.10 \times N \rceil)$ with documented sampling rationale.
+  • *Given* an audit record with a `NON-COMPLIANT` finding,
+  • *When* validated by `verify_requirement_governance.py --check-qa-audits`,
+  • *Then* it passes only if every non-compliant finding links to an authentic Jira corrective-action ticket.
+  • *Given* Ceremony 1 in `sprint-planner/SKILL.md`,
+  • *When* executed at Sprint-Start,
+  • *Then* it includes verification of open corrective action tickets from the prior sprint's QA audit.
+- **Invariants**: Zero Android runtime code changes; pure Python 3 standard library; Rule 3 human-only gate preserved.
+
+
