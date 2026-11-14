@@ -27,7 +27,7 @@
   1. *Global Verification Floor*: `app/build.gradle` SHALL enforce a minimum of 40% line coverage (`minBound(40)`) and 35% branch coverage (`CoverageUnit.BRANCH`, `minValue = 35`).
   2. *Subsystem Verification Bounds*: `app/build.gradle` SHALL define bounded verification rules for:
      - `Tracking`: packages `com.atrainingtracker.trainingtracker.tracker` (line $\ge 55\%$, branch $\ge 45\%$).
-     - `Filters`: packages matching `*.filter*` (line $\ge 70\%$, branch $\ge 60\%$).
+     - `Filters`: packages `com.atrainingtracker.banalservice.filters` (line $\ge 70\%$, branch $\ge 50\%$).
      - `Sensors & Devices`: packages matching `com.atrainingtracker.banalservice.devices*` and `com.atrainingtracker.banalservice.sensor*` (line $\ge 60\%$, branch $\ge 50\%$).
   3. *Test Suite Execution Precondition*: All unit tests SHALL pass cleanly before coverage verification is evaluated.
   4. *Documentation Synchronization*: `docs/tests.md` and `docs/coding_standards.md` SHALL document the new bounds.

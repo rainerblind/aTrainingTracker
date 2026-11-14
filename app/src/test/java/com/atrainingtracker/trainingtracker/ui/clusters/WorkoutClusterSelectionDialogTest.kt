@@ -36,18 +36,9 @@ class WorkoutClusterSelectionDialogTest {
 
     private val supportedLocales = listOf("", "de", "es", "fr", "it", "ja", "nl", "pl", "pt")
 
-    private fun findResDirectory(): File {
-        val candidates = listOf(
-            File("src/main/res"),
-            File("app/src/main/res"),
-            File("../app/src/main/res")
-        )
-        return candidates.firstOrNull { it.exists() && it.isDirectory }
-            ?: error("res directory not found in candidate paths: $candidates")
-    }
-
-    private fun extractStringTagRawContent(stringsFile: File, stringKey: String): String? {
-        val content = stringsFile.readText()
+    private fun extractStringTagRawContent(locale: String, stringKey: String): String? {
+        val dirName = if (locale.isEmpty()) "values" else "values-$locale"
+        val content = com.atrainingtracker.testing.LocalizationTestCache.getRawContent(dirName, "strings.xml")
         val regex = Pattern.compile("<string\\s+name=[\"']$stringKey[\"']>(.*?)</string>", Pattern.DOTALL)
         val matcher = regex.matcher(content)
         return if (matcher.find()) matcher.group(1) else null
@@ -207,18 +198,14 @@ class WorkoutClusterSelectionDialogTest {
 
     @Test
     fun testLeaveUnclusteredStrings_existAcrossAll9Locales() {
-        val resDir = findResDirectory()
         val keys = listOf(
             "cluster_naming__leave_unclustered",
             "cluster_naming__create_new"
         )
         for (locale in supportedLocales) {
             val valuesDir = if (locale.isEmpty()) "values" else "values-$locale"
-            val stringsFile = File(resDir, "$valuesDir/strings.xml")
-            assertTrue("File $stringsFile must exist", stringsFile.exists())
-
             for (key in keys) {
-                val rawContent = extractStringTagRawContent(stringsFile, key)
+                val rawContent = extractStringTagRawContent(locale, key)
                 assertNotNull("Key '$key' must exist in $valuesDir/strings.xml", rawContent)
                 assertFalse("Key '$key' in $valuesDir must not be blank", rawContent!!.isBlank())
                 assertFalse(

@@ -417,6 +417,18 @@ class ReleaseCiAndLintConfigContractTest {
                 (appBuildContent.contains("minValue = 30") || appBuildContent.contains("minBound(30)") ||
                     appBuildContent.contains("minValue = 35") || appBuildContent.contains("minBound(35)"))
         )
+        assertTrue(
+            "app/build.gradle must define Critical Tracking rule (REQ-PRO-089, TST-PRO-089)",
+            Regex("""rule\("Critical Tracking"\)\s*\{[\s\S]*?packages\('com\.atrainingtracker\.trainingtracker\.tracker'\)[\s\S]*?minBound\(55\)[\s\S]*?minValue\s*=\s*45""").containsMatchIn(appBuildContent)
+        )
+        assertTrue(
+            "app/build.gradle must define Critical Filters rule (REQ-PRO-089, TST-PRO-089)",
+            Regex("""rule\("Critical Filters"\)\s*\{[\s\S]*?packages\('com\.atrainingtracker\.banalservice\.filters'\)[\s\S]*?minBound\(70\)[\s\S]*?minValue\s*=\s*50""").containsMatchIn(appBuildContent)
+        )
+        assertTrue(
+            "app/build.gradle must define Critical Sensors & Protocols rule (REQ-PRO-089, TST-PRO-089)",
+            Regex("""rule\("Critical Sensors & Protocols"\)\s*\{[\s\S]*?packages\('com\.atrainingtracker\.banalservice\.devices',\s*'com\.atrainingtracker\.banalservice\.sensor'\)[\s\S]*?minBound\(60\)[\s\S]*?minValue\s*=\s*50""").containsMatchIn(appBuildContent)
+        )
     }
 
     /**

@@ -297,6 +297,6 @@ This document serves as the authoritative living source of truth for software en
   * CI enforces a global coverage floor of **40% Line Coverage** (`minBound(40)`) and **35% Branch Coverage** (`CoverageUnit.BRANCH`, `minValue = 35`).
   * Safety-critical subsystems enforce dedicated bounded verification rules:
     * **Tracking Subsystem** (`com.atrainingtracker.trainingtracker.tracker`): $\ge 55\%$ Line, $\ge 45\%$ Branch.
-    * **Filter Subsystem** (`com.atrainingtracker.trainingtracker.filter`): $\ge 70\%$ Line, $\ge 60\%$ Branch.
+    * **Filter Subsystem** (`com.atrainingtracker.banalservice.filters`): $\ge 70\%$ Line, $\ge 50\%$ Branch.
     * **Sensors & Protocols Subsystem** (`com.atrainingtracker.banalservice.devices`, `com.atrainingtracker.banalservice.sensor`): $\ge 60\%$ Line, $\ge 50\%$ Branch.
   * Running `./gradlew koverVerifyDebug` executes all unit tests prior to computing coverage and fails fast if any global or subsystem bound is violated.

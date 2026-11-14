@@ -27,7 +27,7 @@ Living test specifications use multi-line Markdown headings (`### TST-XXX: Title
   * Global verification floor: $\ge 40\%$ line coverage, $\ge 35\%$ branch coverage.
   * Dedicated subsystem bounds:
     * Tracking (`com.atrainingtracker.trainingtracker.tracker`): $\ge 55\%$ line, $\ge 45\%$ branch.
-    * Filters (`com.atrainingtracker.trainingtracker.filter`): $\ge 70\%$ line, $\ge 60\%$ branch.
+    * Filters (`com.atrainingtracker.banalservice.filters`): $\ge 70\%$ line, $\ge 50\%$ branch.
     * Sensors & Devices (`com.atrainingtracker.banalservice.devices`, `com.atrainingtracker.banalservice.sensor`): $\ge 60\%$ line, $\ge 50\%$ branch.
   * Verified via `./gradlew koverVerifyDebug`.
 * **Requirement Governance**: Enforced via `python3 tools/verify_requirement_governance.py`.

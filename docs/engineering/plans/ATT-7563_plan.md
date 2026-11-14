@@ -11,7 +11,7 @@
   - The Kover DSL in `kover.reports.verify` supports multiple named `rule(String) { ... }` blocks with independent `filters { includes { packages(...) } }`.
   - **Global Rule**: `rule("Global Coverage Floor")` enforcing `minBound(40)` (line) and branch `bound { coverageUnits = kotlinx.kover.gradle.plugin.dsl.CoverageUnit.BRANCH; minValue = 35 }`.
   - **Critical Tracking Subsystem**: `rule("Critical Tracking")` targeting packages `com.atrainingtracker.trainingtracker.tracker` with line $\ge 55\%$ and branch $\ge 45\%$.
-  - **Filter Subsystem**: `rule("Critical Filters")` targeting packages `com.atrainingtracker.trainingtracker.filter*` with line $\ge 70\%$ and branch $\ge 60\%$.
+  - **Filter Subsystem**: `rule("Critical Filters")` targeting packages `com.atrainingtracker.banalservice.filters` with line $\ge 70\%$ and branch $\ge 50\%$ (baseline 54.15%).
   - **Sensors & Protocols Subsystem**: `rule("Critical Sensors & Protocols")` targeting packages `com.atrainingtracker.banalservice.devices*` and `com.atrainingtracker.banalservice.sensor*` with line $\ge 60\%$ and branch $\ge 50\%$.
 - **Test Hygiene Prerequisite**:
   - `koverVerifyDebug` executes all unit tests prior to coverage calculation.

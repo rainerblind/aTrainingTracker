@@ -35,7 +35,7 @@ class WorkoutSectionOrderPersistenceTest {
     @Test
     fun testDefaultWorkoutSectionsOrder() {
         val defaultOrder = WorkoutSectionType.DEFAULT_ORDER
-        assertEquals(WorkoutSectionType.DEFAULT_ORDER.size, defaultOrder.size)
+        assertEquals(14, defaultOrder.size)
         assertEquals(WorkoutSectionType.RPE_AND_FEEL, defaultOrder[0])
         assertEquals(WorkoutSectionType.DETAILS, defaultOrder[1])
         assertEquals(WorkoutSectionType.DESCRIPTION, defaultOrder[2])
@@ -106,7 +106,7 @@ class WorkoutSectionOrderPersistenceTest {
         val partial = "CHARTS,ZONES,MAP"
         val healed = WorkoutSectionType.fromSerializedString(partial)
 
-        assertEquals(WorkoutSectionType.DEFAULT_ORDER.size, healed.size)
+        assertEquals(14, healed.size)
         // RPE_AND_FEEL auto-migrated at index 0; missing DETAILS inserted next because PHOTOS was not at index 0
         assertEquals(WorkoutSectionType.RPE_AND_FEEL, healed[0])
         assertEquals(WorkoutSectionType.DETAILS, healed[1])
@@ -131,7 +131,7 @@ class WorkoutSectionOrderPersistenceTest {
         val duplicates = "MAP,MAP,CHARTS,MAP,ZONES"
         val result = WorkoutSectionType.fromSerializedString(duplicates)
 
-        assertEquals(WorkoutSectionType.DEFAULT_ORDER.size, result.size)
+        assertEquals(14, result.size)
         assertEquals(WorkoutSectionType.RPE_AND_FEEL, result[0])
         assertEquals(WorkoutSectionType.DETAILS, result[1])
         assertEquals(WorkoutSectionType.MAP, result[2])
@@ -145,7 +145,7 @@ class WorkoutSectionOrderPersistenceTest {
         val legacy = "PHOTOS,DESCRIPTION,EXTREMA,MAP,ELEVATION,CHARTS,ZONES,GRADE_DISTRIBUTION,LAPS,EXPORT_STATUS,STRAVA"
         val migrated = WorkoutSectionType.fromSerializedString(legacy)
 
-        assertEquals(WorkoutSectionType.DEFAULT_ORDER.size, migrated.size)
+        assertEquals(14, migrated.size)
         assertEquals(WorkoutSectionType.RPE_AND_FEEL, migrated[0])
         assertEquals(WorkoutSectionType.PHOTOS, migrated[1])
         assertEquals(WorkoutSectionType.DETAILS, migrated[2])
@@ -157,7 +157,7 @@ class WorkoutSectionOrderPersistenceTest {
         val legacy = "DESCRIPTION,EXTREMA,PHOTOS,MAP,ELEVATION,CHARTS,ZONES,GRADE_DISTRIBUTION,LAPS,EXPORT_STATUS,STRAVA"
         val migrated = WorkoutSectionType.fromSerializedString(legacy)
 
-        assertEquals(WorkoutSectionType.DEFAULT_ORDER.size, migrated.size)
+        assertEquals(14, migrated.size)
         assertEquals(WorkoutSectionType.RPE_AND_FEEL, migrated[0])
         assertEquals(WorkoutSectionType.DETAILS, migrated[1])
         assertEquals(WorkoutSectionType.DESCRIPTION, migrated[2])
