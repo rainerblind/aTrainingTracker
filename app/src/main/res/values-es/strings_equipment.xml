@@ -17,4 +17,13 @@
     <string name="equipment_guidance_2_sensors_title">2 sensores de rueda (delantera + trasera) + GPS</string>
     <string name="equipment_guidance_2_sensors_body">Permite el monitoreo indirecto de presión de neumáticos (iTPMS) sin GPS para detectar pinchazos lentos en 150–250 m midiendo variaciones relativas de circunferencia de rueda (identificando pérdida delantera vs. trasera), calibración de neumáticos independiente y fusión de odometría multisensor.</string>
     <string name="equipment_guidance_got_it">Entendido</string>
+    <string name="itpms_dual_puncture_rear_title">¡Pérdida de presión en rueda trasera!</string>
+    <string name="itpms_dual_puncture_rear_message">Rápida caída de presión detectada en la rueda trasera (%1$s). ¡Deténgase y revise el neumático!</string>
+    <string name="itpms_dual_puncture_front_title">¡Pérdida de presión en rueda delantera!</string>
+    <string name="itpms_dual_puncture_front_message">Rápida caída de presión detectada en la rueda delantera (%1$s). ¡Deténgase y revise el neumático!</string>
+    <string name="equipment_tpms_history_title">Historial de circunferencia y presión</string>
+    <string name="equipment_tpms_reset_baseline">Neumáticos recién inflados (Fijar base)</string>
+    <string name="equipment_tpms_no_history">Aún no hay datos grabados. Complete recorridos con sensores vinculados en ambas ruedas.</string>
+    <string name="equipment_tpms_front_legend">Rueda delantera</string>
+    <string name="equipment_tpms_rear_legend">Rueda trasera</string>
 </resources>

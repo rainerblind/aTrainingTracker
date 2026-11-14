@@ -17,4 +17,13 @@
     <string name="equipment_guidance_2_sensors_title">2 capteurs de roue (avant + arrière) + GPS</string>
     <string name="equipment_guidance_2_sensors_body">Permet la surveillance indirecte de la pression des pneus (iTPMS) sans GPS pour détecter les crevaisons lentes en 150–250 m en mesurant les variations relatives de circonférence (perte avant vs arrière), l\'étalonnage indépendant de circonférence et la fusion odométrique multicapteurs.</string>
     <string name="equipment_guidance_got_it">Compris</string>
+    <string name="itpms_dual_puncture_rear_title">Perte de pression à la roue arrière !</string>
+    <string name="itpms_dual_puncture_rear_message">Baisse rapide de pression détectée sur la roue arrière (%1$s). Arrêtez-vous et vérifiez le pneu !</string>
+    <string name="itpms_dual_puncture_front_title">Perte de pression à la roue avant !</string>
+    <string name="itpms_dual_puncture_front_message">Baisse rapide de pression détectée sur la roue avant (%1$s). Arrêtez-vous et vérifiez le pneu !</string>
+    <string name="equipment_tpms_history_title">Historique de circonférence et pression</string>
+    <string name="equipment_tpms_reset_baseline">Pneus récemment gonflés (Définir base)</string>
+    <string name="equipment_tpms_no_history">Aucune donnée enregistrée. Effectuez des sorties avec capteurs avant et arrière connectés.</string>
+    <string name="equipment_tpms_front_legend">Roue avant</string>
+    <string name="equipment_tpms_rear_legend">Roue arrière</string>
 </resources>

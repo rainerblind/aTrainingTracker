@@ -17,4 +17,13 @@
     <string name="equipment_guidance_2_sensors_title">ホイールセンサー2基（前輪 + 後輪） + GPS</string>
     <string name="equipment_guidance_2_sensors_body">GPS不要の間接式タイヤ空気圧監視（iTPMS）により、相対的な車輪回転周回数の変化を測定して150〜250m以内にスローパンクを検知（前輪または後輪の空気圧低下を特定）、独立したタイヤ外周長自動較正、およびマルチセンサーオドメトリフュージョンを可能にします。</string>
     <string name="equipment_guidance_got_it">了解</string>
+    <string name="itpms_dual_puncture_rear_title">後輪の空気圧低下！</string>
+    <string name="itpms_dual_puncture_rear_message">後輪で急激な空気圧低下を検出しました (%1$s)。停止してタイヤを確認してください！</string>
+    <string name="itpms_dual_puncture_front_title">前輪の空気圧低下！</string>
+    <string name="itpms_dual_puncture_front_message">前輪で急激な空気圧低下を検出しました (%1$s)。停止してタイヤを確認してください！</string>
+    <string name="equipment_tpms_history_title">タイヤ周長・空気圧の履歴</string>
+    <string name="equipment_tpms_reset_baseline">空気充填完了（基準値を設定）</string>
+    <string name="equipment_tpms_no_history">測定データがありません。前後輪センサーを接続して走行してください。</string>
+    <string name="equipment_tpms_front_legend">前輪</string>
+    <string name="equipment_tpms_rear_legend">後輪</string>
 </resources>

@@ -5576,3 +5576,51 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 • *Then* localized text across all 9 languages clearly explains the physical benefits of 1 vs. 2 wheel sensors alongside GPS.
 
 **Invariants**: Zero data loss during SQLite upgrade; non-wheel sensors retain 1-tap checkbox toggling; zero text clipping across German and English UI strings (`Rule 84`); 100% clean-room test pass rate.
+
+### REQ-SEN-030: Per-Bike Front/Rear Wheel Circumference Time-Series History & GPS-Free Dual-Wheel iTPMS Puncture Detection [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-SEN-030`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `DualWheelTpmsEstimator.kt`, `IndirectTpmsEstimator.kt`, `BANALServiceRepository.kt`, `EquipmentDbHelper.java`, `EquipmentRepository.kt`, `EquipmentViewModel.kt`, `WheelCircumferenceHistoryChart.kt`, `strings.xml`
+- **Rationale**: Provide automotive ABS-style GPS-free dual-wheel slow-puncture detection within 150–250 m by tracking the revolution ratio $\rho_k = \frac{\Delta N_{rear,k}}{\Delta N_{front,k}} = \frac{C_{front}}{C_{rear}}$ with yaw-rate gating ($|\omega_{ENU,z}| < 5^\circ/\text{s}$), identifying whether the front or rear tire is deflating without requiring GPS signal, and persist post-workout circumference estimates into `Equipment.db` table `WheelCircumferenceHistory` to render longitudinal Front vs. Rear tire pressure/wear time-series charts per bike with pumped baseline reset (ATT-7753, extending REQ-TRK-050 and REQ-SEN-029):
+- **Description**:
+  1. *GPS-Free Dual-Wheel Ratio CUSUM Detector (`REQ-SEN-030.1`)*:
+     - When a bike has active `FRONT` and `REAR` wheel speed sensors, `DualWheelTpmsEstimator` SHALL monitor $\rho_k = \frac{\Delta N_{rear,k}}{\Delta N_{front,k}}$.
+     - Updates SHALL be gated on low yaw-rate ($|\omega_{ENU,z}| < 0.087\text{ rad/s} \approx 5^\circ/\text{s}$ or straight bearing rate $< 5^\circ/\text{s}$) and minimum forward speed ($v \ge 3.0\text{ m/s}$).
+     - The detector SHALL lock the baseline ratio $\rho_{start}$ after $300\text{ m}$ of qualified straight riding.
+     - A sliding-window CUSUM detector over 150–250 m SHALL compute deviation $\delta = \frac{\rho_k - \rho_{start}}{\rho_{start}}$.
+     - When $\delta \ge +0.008$ ($+0.8\%$), the system SHALL trigger a `CRITICAL` alert: *"Druckverlust am Hinterrad!"* (*Rear Wheel Pressure Loss!*).
+     - When $\delta \le -0.008$ ($-0.8\%$), the system SHALL trigger a `CRITICAL` alert: *"Druckverlust am Vorderrad!"* (*Front Wheel Pressure Loss!*).
+     - Sharp turns and hairpins ($|\omega_{ENU,z}| \ge 5^\circ/\text{s}$) SHALL be discarded with zero false alarms.
+  2. *Concurrent Multi-Sensor Telemetry Routing (`REQ-SEN-030.2`)*:
+     - `BANALServiceRepository.kt` SHALL maintain an estimator instance per active wheel speed sensor (`Map<Long, IndirectTpmsEstimator>`).
+     - Each active wheel speed sensor SHALL be evaluated against GNSS to monitor multi-day pressure loss relative to pumped baseline (`baselineCircumferenceMeters`), alerting if both tires deflated equally in storage.
+  3. *Longitudinal Wheel Circumference History Persistence (`REQ-SEN-030.3`)*:
+     - `EquipmentDbHelper.java` (`DB_VERSION = 5`) SHALL declare table `WheelCircumferenceHistory` (`_id`, `workout_id`, `timestamp_ms`, `equipment_id`, `device_id`, `wheel_position`, `circumference_mm`, `std_error_mm`, `gated_distance_m`, `is_baseline`).
+     - Upon workout finalization, converged circumference estimates from active wheel sensors SHALL be persisted into `WheelCircumferenceHistory`.
+     - `EquipmentRepository` and `EquipmentViewModel` SHALL expose `getCircumferenceHistory(equipmentId)` and `setPumpedBaseline(equipmentId, deviceId)`.
+  4. *Bike Equipment UI Circumference History Chart (`REQ-SEN-030.4`)*:
+     - In Bike Equipment details, `WheelCircumferenceHistoryChart` SHALL render Front and Rear circumference curves over time side-by-side with localized legends.
+     - The UI SHALL offer a *"Reifen gerade aufgepumpt (Baseline setzen)"* button to reset the pumped baseline for the selected bike/wheel.
+     - Layout SHALL comply with `Rule 84` visual inspection with zero text clipping across all 9 languages.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-SEN-030`, extending `REQ-TRK-050` (*iTPMS Single-Sensor GNSS*, `ATT-4880`) and `REQ-SEN-029` (*Wheel Mounting Positions*, `ATT-7752`). Targets `DualWheelTpmsEstimator.kt`, `IndirectTpmsEstimator.kt`, `BANALServiceRepository.kt`, `EquipmentDbHelper.java`, `EquipmentRepository.kt`, `EquipmentViewModel.kt`, and `WheelCircumferenceHistoryChart.kt`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-44.2 (`ATT-4880`, commit `8d400192`, single-wheel iTPMS) and Sprint 2026-46.6 (`ATT-7752`, commit `4edcda86`, front/rear position tracking).
+3. *Root Reason for Existing Formulation*: Baseline only evaluated the first wheel sensor against GNSS due to absence of mounting position metadata in `Equipment.db`.
+4. *Preservation of Core Invariants*: Single-wheel bikes maintain exact baseline behavior of `REQ-TRK-050` with zero regression; non-wheel sensors remain unaffected; 100% clean-room test pass rate.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a bike with active `FRONT` and `REAR` wheel speed sensors during a GNSS-degraded ride,
+• *When* the rear tire effective circumference drops by $\ge 0.8\%$ over $250\text{ m}$,
+• *Then* the GPS-free dual-wheel ratio detector triggers a critical alert explicitly naming the *rear wheel* (*Hinterrad*), while hairpins ($|\omega_{ENU,z}| \ge 5^\circ/\text{s}$) produce zero false positives.
+• *Given* both tires simultaneously lost $0.8\%$ circumference over weeks in storage leaving $\frac{C_{front}}{C_{rear}}$ unchanged,
+• *When* riding on open road,
+• *Then* the per-sensor GNSS estimators trigger the low-pressure pump reminder for both wheels.
+• *Given* completed rides with wheel speed sensors linked to a bike,
+• *When* gated circumference estimation converges,
+• *Then* each wheel sensor's estimated circumference is persisted into `WheelCircumferenceHistory` and rendered as a historical time-series chart per bike.
+
+**Invariants**: Single-wheel bikes retain 100% baseline behavior; hairpins produce 0.0% false puncture alerts; SQLite migration v4 $\rightarrow$ v5 preserves existing tables; 100% test pass rate.

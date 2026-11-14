@@ -34,6 +34,7 @@ import com.atrainingtracker.trainingtracker.ui.components.stats.StatsData
 import com.atrainingtracker.trainingtracker.ui.components.stats.StatsPeriodHelper
 import com.atrainingtracker.trainingtracker.monetization.GarageLeagueDetector
 import com.atrainingtracker.trainingtracker.monetization.GarageNudgeEvent
+import com.atrainingtracker.trainingtracker.database.WheelCircumferenceRecord
 import com.atrainingtracker.trainingtracker.database.WheelPosition
 import com.atrainingtracker.trainingtracker.repositories.EquipmentRepository
 import kotlinx.coroutines.CoroutineDispatcher
@@ -296,6 +297,37 @@ class EquipmentViewModel @JvmOverloads constructor(
     ) {
         viewModelScope.launch(ioDispatcher) {
             effectiveEquipmentRepo.updateDeviceLinkWheelPosition(equipmentId, sensorId, wheelPosition)
+            loadEquipment()
+        }
+    }
+
+    /**
+     * REQ-SEN-030.3: Returns the chronological wheel circumference history for an equipment item.
+     */
+    fun getCircumferenceHistory(equipmentId: Long): List<WheelCircumferenceRecord> {
+        return effectiveEquipmentRepo.getCircumferenceHistory(equipmentId)
+    }
+
+    /**
+     * REQ-SEN-030.4: Resets or establishes a freshly pumped circumference baseline for FRONT and REAR wheels.
+     */
+    fun resetCircumferenceBaseline(equipmentId: Long, baselineFrontMm: Int = 2105, baselineRearMm: Int = 2105) {
+        viewModelScope.launch(ioDispatcher) {
+            val now = System.currentTimeMillis()
+            effectiveEquipmentRepo.addCircumferenceHistory(
+                equipmentId = equipmentId,
+                timestampMs = now,
+                wheelPosition = WheelPosition.FRONT,
+                circumferenceMm = baselineFrontMm,
+                source = WheelCircumferenceRecord.SOURCE_MANUAL_RESET
+            )
+            effectiveEquipmentRepo.addCircumferenceHistory(
+                equipmentId = equipmentId,
+                timestampMs = now,
+                wheelPosition = WheelPosition.REAR,
+                circumferenceMm = baselineRearMm,
+                source = WheelCircumferenceRecord.SOURCE_MANUAL_RESET
+            )
             loadEquipment()
         }
     }

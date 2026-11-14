@@ -2788,3 +2788,31 @@
      • Verify Section 3.3 in `docs/guide/en/03-equipment-sensor-matrix.md` and `docs/guide/de/03-equipment-sensor-matrix.md`.
   6. *Targeted Unit & Regression Suite Execution (`TST-SEN-029.6`)*:
      • `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.database.Equipment*" --tests "com.atrainingtracker.trainingtracker.ui.equipment.*"` asserting 100% pass rate.
+
+
+### TST-SEN-030: Front/Rear Wheel Circumference Time-Series History & Dual-Wheel iTPMS Verification Suite [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-SEN-030` (`REQ-SEN-030.1`..`REQ-SEN-030.4`)
+- **Component**: `DualWheelTpmsEstimator.kt`, `IndirectTpmsEstimator.kt`, `BANALServiceRepository.kt`, `EquipmentDbHelper.java`, `EquipmentRepository.kt`, `EquipmentViewModel.kt`, `WheelCircumferenceHistoryChart.kt`, `strings.xml`
+- **Test Type**: Unit & Contract
+- **Verification Method**: Unit
+- **Procedure**:
+  1. *Dual-Wheel Ratio Slow-Puncture Detection Test (`TST-SEN-030.1`, `DualWheelTpmsEstimatorTest.kt`)*:
+     • Feed baseline straight-line revolutions for front and rear wheels ($C_{front} = 2.100\text{ m}$, $C_{rear} = 2.100\text{ m}$); assert $\rho_{start} = 1.0$ is locked after $300\text{ m}$.
+     • Simulate rear tire slow puncture (deflate rear circumference by $1.0\%$ over $250\text{ m}$); assert `DualWheelTpmsAlert.RearPuncture` triggered within $\le 250\text{ m}$.
+     • Simulate front tire slow puncture (deflate front circumference by $1.0\%$ over $250\text{ m}$); assert `DualWheelTpmsAlert.FrontPuncture` triggered within $\le 250\text{ m}$.
+     • Hairpin cornering rejection: feed high yaw-rate ($|\omega_{ENU,z}| = 15^\circ/\text{s}$); assert turn samples are discarded and zero false alerts are triggered.
+  2. *Concurrent Multi-Sensor Telemetry Routing Test (`TST-SEN-030.2`, `BANALServiceRepositoryMultiWheelTpmsTest.kt`)*:
+     • Connect two active wheel speed sensors (`FRONT` and `REAR`).
+     • Verify both sensors instantiate independent `IndirectTpmsEstimator` instances and concurrently feed `DualWheelTpmsEstimator`.
+  3. *Wheel Circumference History SQLite Schema & Persistence Test (`TST-SEN-030.3`, `WheelCircumferenceHistoryDbTest.kt`)*:
+     • Execute `EquipmentDbHelper.onUpgrade(db, 4, 5)`; assert table `WheelCircumferenceHistory` created.
+     • Insert post-workout records for `FRONT` and `REAR`; assert query by `equipmentId` returns ordered historical series.
+  4. *Bike Equipment UI Circumference Chart & Baseline Reset Test (`TST-SEN-030.4`, `WheelCircumferenceHistoryChartTest.kt`)*:
+     • Render `WheelCircumferenceHistoryChart` with historical records for Front and Rear.
+     • Verify dual curves render without text clipping (`Rule 84`).
+     • Click "Reifen aufgepumpt" baseline reset; assert repository updates baseline.
+  5. *9-Language Localization & Format Parity Audit (`TST-SEN-030.5`, `TranslationParityTest.kt`)*:
+     • Assert all newly introduced string resources (`itpms_front_wheel_*`, `itpms_rear_wheel_*`, `itpms_circumference_history_*`) exist across all 9 locales.
+  6. *Targeted Unit & Regression Suite Execution (`TST-SEN-030.6`)*:
+     • `./gradlew testDebugUnitTest --tests "com.atrainingtracker.banalservice.tpms.*" --tests "com.atrainingtracker.trainingtracker.database.Equipment*"` asserting 100% pass rate.

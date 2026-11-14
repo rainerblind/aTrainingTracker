@@ -17,4 +17,13 @@
     <string name="equipment_guidance_2_sensors_title">2 sensores de roda (dianteira + traseira) + GPS</string>
     <string name="equipment_guidance_2_sensors_body">Permite monitoramento indireto da pressão dos pneus (iTPMS) sem GPS para detectar furos lentos dentro de 150–250 m medindo variações relativas na circunferência de rolamento (identificando perda dianteira vs. traseira), calibração independente da circunferência dos pneus e fusão odométrica multissensor.</string>
     <string name="equipment_guidance_got_it">Entendido</string>
+    <string name="itpms_dual_puncture_rear_title">Perda de pressão na roda traseira!</string>
+    <string name="itpms_dual_puncture_rear_message">Queda rápida de pressão detetada na roda traseira (%1$s). Pare e verifique o pneu!</string>
+    <string name="itpms_dual_puncture_front_title">Perda de pressão na roda dianteira!</string>
+    <string name="itpms_dual_puncture_front_message">Queda rápida de pressão detetada na roda dianteira (%1$s). Pare e verifique o pneu!</string>
+    <string name="equipment_tpms_history_title">Histórico de circunferência e pressão</string>
+    <string name="equipment_tpms_reset_baseline">Pneus acabados de encher (Definir base)</string>
+    <string name="equipment_tpms_no_history">Ainda sem dados registados. Conclua passeios com sensores dianteiro e traseiro emparelhados.</string>
+    <string name="equipment_tpms_front_legend">Roda dianteira</string>
+    <string name="equipment_tpms_rear_legend">Roda traseira</string>
 </resources>

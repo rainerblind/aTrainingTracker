@@ -17,4 +17,13 @@
     <string name="equipment_guidance_2_sensors_title">2 Wheel Sensors (Front + Rear) + GPS</string>
     <string name="equipment_guidance_2_sensors_body">Enables GPS-free indirect tire pressure monitoring (iTPMS) to detect slow punctures within 150–250 m by measuring relative wheel circumference changes (identifying front vs. rear pressure loss), independent tire circumference calibration, and multi-sensor odometry fusion.</string>
     <string name="equipment_guidance_got_it">Got it</string>
+    <string name="itpms_dual_puncture_rear_title">Rear Wheel Pressure Loss!</string>
+    <string name="itpms_dual_puncture_rear_message">Rapid pressure drop detected on rear wheel (%1$s). Please stop and check tire!</string>
+    <string name="itpms_dual_puncture_front_title">Front Wheel Pressure Loss!</string>
+    <string name="itpms_dual_puncture_front_message">Rapid pressure drop detected on front wheel (%1$s). Please stop and check tire!</string>
+    <string name="equipment_tpms_history_title">Wheel Circumference &amp; Pressure History</string>
+    <string name="equipment_tpms_reset_baseline">Tires Just Pumped (Set Baseline)</string>
+    <string name="equipment_tpms_no_history">No measurement data recorded yet. Complete rides with linked front and rear wheel sensors.</string>
+    <string name="equipment_tpms_front_legend">Front Wheel</string>
+    <string name="equipment_tpms_rear_legend">Rear Wheel</string>
 </resources>

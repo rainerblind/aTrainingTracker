@@ -25,6 +25,7 @@ import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 import com.atrainingtracker.trainingtracker.database.SportTypeEquipmentLinkManager
+import com.atrainingtracker.trainingtracker.database.WheelCircumferenceRecord
 import com.atrainingtracker.trainingtracker.database.WheelPosition
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -78,6 +79,23 @@ open class EquipmentRepository internal constructor(
 
     open fun getDeviceWheelPositionsForEquipment(equipmentId: Long): Map<Long, WheelPosition> =
         equipmentDbHelper.getDeviceWheelPositionsForEquipment(equipmentId)
+
+    open fun getWheelPositionForDevice(sensorId: Long): WheelPosition =
+        equipmentDbHelper.getWheelPositionForDevice(sensorId)
+
+    open fun addCircumferenceHistory(
+        equipmentId: Long,
+        timestampMs: Long,
+        wheelPosition: WheelPosition,
+        circumferenceMm: Int,
+        source: String? = null
+    ): Long = equipmentDbHelper.addCircumferenceHistory(equipmentId, timestampMs, wheelPosition, circumferenceMm, source)
+
+    open fun getCircumferenceHistory(equipmentId: Long): List<WheelCircumferenceRecord> =
+        equipmentDbHelper.getCircumferenceHistory(equipmentId)
+
+    open fun clearCircumferenceHistory(equipmentId: Long): Int =
+        equipmentDbHelper.clearCircumferenceHistory(equipmentId)
 
     /**
      * REQ-SEN-029.2: Establishes a link for a wheel speed sensor with conflict detection / swap guardrail.

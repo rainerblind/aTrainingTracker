@@ -305,11 +305,16 @@ fun EquipmentTabsScreen(
             shoeSensors
         }
         val availableSportTypes = if (item.frameType > 0) viewModel.bikeSportTypes else viewModel.runSportTypes
+        val historyRecords = if (item.frameType > 0) {
+            remember(item.id) { viewModel.getCircumferenceHistory(item.id) }
+        } else emptyList()
 
         EditEquipmentDialog(
             item = item,
             availableSensors = availableSensors,
             availableSportTypes = availableSportTypes,
+            historyRecords = historyRecords,
+            onResetBaseline = { viewModel.resetCircumferenceBaseline(item.id) },
             onDismiss = { itemToConfigure = null },
             onConfirm = { updated ->
                 viewModel.updateEquipment(updated)

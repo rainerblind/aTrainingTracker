@@ -17,4 +17,13 @@
     <string name="equipment_guidance_2_sensors_title">2 Laufradsensoren (Vorder- + Hinterrad) + GPS</string>
     <string name="equipment_guidance_2_sensors_body">Ermöglicht GPS-unabhängige indirekte Reifendrucküberwachung (iTPMS) zur Erkennung von schleichendem Druckverlust innerhalb von 150–250 m durch Messung relativer Abrollumfangsdifferenzen (differenziert nach Vorder- vs. Hinterrad), unabhängige Reifenumfangskalibrierung und Multisensor-Odometriefusion.</string>
     <string name="equipment_guidance_got_it">Verstanden</string>
+    <string name="itpms_dual_puncture_rear_title">Druckverlust am Hinterrad!</string>
+    <string name="itpms_dual_puncture_rear_message">Schneller Druckabfall am Hinterrad festgestellt (%1$s). Bitte anhalten und Reifen prüfen!</string>
+    <string name="itpms_dual_puncture_front_title">Druckverlust am Vorderrad!</string>
+    <string name="itpms_dual_puncture_front_message">Schneller Druckabfall am Vorderrad festgestellt (%1$s). Bitte anhalten und Reifen prüfen!</string>
+    <string name="equipment_tpms_history_title">Abrollumfang- &amp; Reifendruckverlauf</string>
+    <string name="equipment_tpms_reset_baseline">Reifen gerade aufgepumpt (Baseline setzen)</string>
+    <string name="equipment_tpms_no_history">Noch keine Messdaten aufgezeichnet. Absolviere Fahrten mit gekoppeltem Vorder- und Hinterradsensor.</string>
+    <string name="equipment_tpms_front_legend">Vorderrad</string>
+    <string name="equipment_tpms_rear_legend">Hinterrad</string>
 </resources>

@@ -17,4 +17,13 @@
     <string name="equipment_guidance_2_sensors_title">2 sensori ruota (anteriore + posteriore) + GPS</string>
     <string name="equipment_guidance_2_sensors_body">Consente il monitoraggio indiretto della pressione pneumatici (iTPMS) senza GPS per rilevare forature lente entro 150–250 m misurando variazioni relative della circonferenza di rotolamento (identificando perdita anteriore vs posteriore), calibrazione indipendente dei pneumatici e fusione odometrica multisensore.</string>
     <string name="equipment_guidance_got_it">Ho capito</string>
+    <string name="itpms_dual_puncture_rear_title">Perdita di pressione alla ruota posteriore!</string>
+    <string name="itpms_dual_puncture_rear_message">Rilevata rapida perdita di pressione sulla ruota posteriore (%1$s). Fermarsi e controllare il pneumatico!</string>
+    <string name="itpms_dual_puncture_front_title">Perdita di pressione alla ruota anteriore!</string>
+    <string name="itpms_dual_puncture_front_message">Rilevata rapida perdita di pressione sulla ruota anteriore (%1$s). Fermarsi e controllare il pneumatico!</string>
+    <string name="equipment_tpms_history_title">Cronologia circonferenza e pressione ruote</string>
+    <string name="equipment_tpms_reset_baseline">Pneumatici appena gonfiati (Imposta base)</string>
+    <string name="equipment_tpms_no_history">Nessun dato registrato. Completa uscite con sensori collegati a ruota anteriore e posteriore.</string>
+    <string name="equipment_tpms_front_legend">Ruota anteriore</string>
+    <string name="equipment_tpms_rear_legend">Ruota posteriore</string>
 </resources>

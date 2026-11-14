@@ -17,4 +17,13 @@
     <string name="equipment_guidance_2_sensors_title">2 wielsensoren (voor + achter) + GPS</string>
     <string name="equipment_guidance_2_sensors_body">Maakt GPS-loze indirecte bandenspanningscontrole (iTPMS) mogelijk om langzaam leeglopen binnen 150–250 m te detecteren via relatieve wielomtrekveranderingen (identificeert drukverlies voor vs. achter), onafhankelijke kalibratie van wielomtrek en multisensor-odometriefusie.</string>
     <string name="equipment_guidance_got_it">Begrepen</string>
+    <string name="itpms_dual_puncture_rear_title">Drukverlies achterwiel!</string>
+    <string name="itpms_dual_puncture_rear_message">Snelle drukval gedetecteerd op achterwiel (%1$s). Stop en controleer de band!</string>
+    <string name="itpms_dual_puncture_front_title">Drukverlies voorwiel!</string>
+    <string name="itpms_dual_puncture_front_message">Snelle drukval gedetecteerd op voorwiel (%1$s). Stop en controleer de band!</string>
+    <string name="equipment_tpms_history_title">Historiek wielomtrek &amp; bandenspanning</string>
+    <string name="equipment_tpms_reset_baseline">Banden net opgepompt (Basis instellen)</string>
+    <string name="equipment_tpms_no_history">Nog geen gegevens vastgelegd. Maak ritten met gekoppelde voor- en achterwielsensor.</string>
+    <string name="equipment_tpms_front_legend">Voorwiel</string>
+    <string name="equipment_tpms_rear_legend">Achterwiel</string>
 </resources>

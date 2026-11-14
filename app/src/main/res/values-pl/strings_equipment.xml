@@ -17,4 +17,13 @@
     <string name="equipment_guidance_2_sensors_title">2 czujniki koła (przód + tył) + GPS</string>
     <string name="equipment_guidance_2_sensors_body">Umożliwia pośrednie monitorowanie ciśnienia w oponach (iTPMS) bez GPS w celu wykrywania powolnego spadku ciśnienia w odległości 150–250 m poprzez pomiar względnych zmian obwodu tocznego (identyfikacja utraty ciśnienia z przodu lub z tyłu), niezależną kalibrację obwodu opony i fuzję odometrii wieloczujnikowej.</string>
     <string name="equipment_guidance_got_it">Rozumiem</string>
+    <string name="itpms_dual_puncture_rear_title">Spadek ciśnienia w tylnym kole!</string>
+    <string name="itpms_dual_puncture_rear_message">Wykryto szybki spadek ciśnienia w tylnym kole (%1$s). Zatrzymaj się i sprawdź oponę!</string>
+    <string name="itpms_dual_puncture_front_title">Spadek ciśnienia w przednim kole!</string>
+    <string name="itpms_dual_puncture_front_message">Wykryto szybki spadek ciśnienia w przednim kole (%1$s). Zatrzymaj się i sprawdź oponę!</string>
+    <string name="equipment_tpms_history_title">Historia obwodu koła i ciśnienia</string>
+    <string name="equipment_tpms_reset_baseline">Opony świeżo napompowane (Ustaw bazę)</string>
+    <string name="equipment_tpms_no_history">Brak zarejestrowanych danych. Wykonaj przejazdy z czujnikami przedniego i tylnego koła.</string>
+    <string name="equipment_tpms_front_legend">Przednie koło</string>
+    <string name="equipment_tpms_rear_legend">Tylne koło</string>
 </resources>
