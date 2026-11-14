@@ -17202,7 +17202,6 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 **Invariants**: Resource IDs, DataStore preference keys, enum constants, and SQLite tables remain unchanged; zero changes to mathematical DSP calculation or threshold invariant $T_1 \ge T_2 + 0.05f$.
 
 
-
 ### REQ-UI-527: Dedicated HRV Tab in Workout Details, Wire Migration & Telemetry-Gated Zone Comparison [Verified]
 - **Target Release**: `V5.0.0`
 - **Tickets**: `ATT-7756`
@@ -17262,3 +17261,47 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 4. *Preservation of Core Invariants*: Wire backward compatibility in `deserializeTabs` via auto-migration; map-at-index-0 invariant; empty tab auto-hiding; 100% 9-language localization parity.
 
 **Invariants**: Map remains pinned at index 0 in any tab where present; zero layout shifts on non-HRV workouts; existing user tab configurations migrate without data loss; 100% 9-language localization parity.
+
+
+### REQ-UI-528: Multi-Dimensional Sensor List Sorting (Alphabetical, First Seen, Last Usage, Battery Level) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tickets**: `ATT-7663`
+- **Tests**: `TST-UI-528`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `DeviceSortOrder.kt`, `DeviceListViewModel.kt`, `DevicesTabbedViewModel.kt`, `DevicesTabbedScreen.kt`, `strings_devices.xml` (all 9 locales)
+- **Rationale**: Athletes managing multiple wireless sensors (ANT+ and Bluetooth LE) need quick, intuitive ways to locate newly paired sensors, review recently active sensors, or check battery levels before workouts. Providing a top app bar Sort dropdown with checkmark indicators matching Routes and Known Locations patterns enhances navigation without disrupting existing scan discovery pinning or alphabetical stability (ATT-7663, Parent Epic ATT-5910, extending `REQ-UI-334`).
+- **Description**:
+  1. *DeviceSortOrder Domain Enumeration (`REQ-UI-528.1`)*:
+     - The system SHALL define `DeviceSortOrder` enum in `com.atrainingtracker.banalservice.ui.devices.devicelist` with values: `ALPHABETICAL` (Default), `FIRST_SEEN`, `LAST_USAGE`, and `BATTERY_LEVEL`, each mapped to a localized string resource ID (`labelResId`).
+  2. *Multi-Tier Deterministic Sorting Pipeline (`REQ-UI-528.2`)*:
+     - `DeviceListViewModel.getFilteredDevices` SHALL accept a `sortOrder: DeviceSortOrder` parameter (defaulting to `DeviceSortOrder.ALPHABETICAL`).
+     - *Primary Scan Recency Tier*: All newly discovered sensors (`isNewlyDiscovered == true`) SHALL remain pinned at the very top of the list in reverse discovery order (`newlyFoundDevicesIds.indexOf(it.id)` descending), strictly preserving `REQ-UI-334`.
+     - *Secondary User-Selected Tier*:
+       - `ALPHABETICAL`: Case-insensitive `deviceName` ascending (`A–Z`), tie-broken by `id` ascending.
+       - `FIRST_SEEN`: Database row ID (`id`) descending (newest added/discovered first).
+       - `LAST_USAGE`: Currently connected devices (`isConnected == true`) first, followed by disconnected devices ordered by parsed `lastSeen` timestamp descending (most recently active first, treating null or unparseable timestamps as 0L), tie-broken by `deviceName` (`A–Z`) and `id` ascending.
+       - `BATTERY_LEVEL`: Known battery percentage (`batteryPercentage >= 0`) ascending (lowest battery first), followed by unknown battery (`batteryPercentage < 0`), tie-broken by `deviceName` (`A–Z`) and `id` ascending.
+  3. *Top App Bar Sort Action Button & Dropdown Menu (`REQ-UI-528.3`)*:
+     - In `DevicesTabbedScreen.kt`, the top app bar SHALL display a Sort `IconButton` with `Icons.AutoMirrored.Filled.Sort` right next to `FilterActionButton` when the active tab is a sensor list tab (`pagerState.currentPage in 0..2`).
+     - Tapping the button SHALL open a `DropdownMenu` listing all 4 sort options, displaying a `Check` leading icon next to the currently active sort order.
+     - The Sort button SHALL be hidden on Equipment Matrix tabs (`pagerState.currentPage in 3..4`).
+  4. *ViewModel State & Process Death Persistence (`REQ-UI-528.4`)*:
+     - `DevicesTabbedViewModel` SHALL expose `sortOrder: StateFlow<DeviceSortOrder>` initialized from `SavedStateHandle[KEY_SORT_ORDER]`, surviving configuration changes and process restoration.
+  5. *100% 9-Language Localization Parity (`REQ-UI-528.5`)*:
+     - All 4 sort order labels (`devices_sort_alphabetical`, `devices_sort_first_seen`, `devices_sort_last_usage`, `devices_sort_battery_level`) and menu title/description SHALL be localized across all 9 supported application locales (EN, DE, ES, FR, IT, JA, NL, PL, PT) with zero missing entries and zero empty strings.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* the athlete opens "My Sensors" (`DevicesTabbedScreen`),
+• *When* viewing any sensor tab (Available, Paired, All Known),
+• *Then* a Sort icon button is displayed next to the Filter button, and clicking it opens a dropdown menu with a checkmark on the active sort order (defaulting to Alphabetical).
+• *Given* an active sort order selected (e.g. `BATTERY_LEVEL`, `FIRST_SEEN`, `LAST_USAGE`),
+• *When* the sensor list renders,
+• *Then* sensors are sorted deterministically according to the selected criteria, while any newly discovered sensors (`isNewlyDiscovered == true`) remain pinned at index 0..N at the top.
+• *Given* the athlete switches to Equipment tabs (Bikes or Shoes),
+• *When* viewing tab 3 or 4,
+• *Then* the Sort icon button is not displayed in the top bar.
+
+**Invariants**: Zero changes to `devices.db` SQLite schema; `isNewlyDiscovered` top-of-list recency pinning (`REQ-UI-334`) preserved; stable alphabetical default with zero connection jumping preserved; 100% 9-language localization parity.
+

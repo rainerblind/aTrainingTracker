@@ -25,7 +25,9 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
@@ -41,6 +43,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -93,6 +96,7 @@ fun DevicesTabbedScreen(
     val scanningProtocol by tabViewModel.scanningProtocol.collectAsState()
     val scanningDeviceType by tabViewModel.scanningDeviceType.collectAsState()
     val filterCriteria by tabViewModel.filterCriteria.collectAsState()
+    val sortOrder by tabViewModel.sortOrder.collectAsState()
     val zonePrompt by tabViewModel.zonePromptState.collectAsState()
     
     val protocol = tabViewModel.protocol
@@ -236,6 +240,7 @@ fun DevicesTabbedScreen(
                                 headerHeightPx = appBarMaxHeightPx.toFloat(),
                                 onCheckAntInstallation = { showAntStatusSheet = true },
                                 filterCriteria = filterCriteria,
+                                sortOrder = sortOrder,
                                 onScanForSensors = { showProtocolSheet = true }
                             )
                             1 -> DeviceListScreen(
@@ -249,6 +254,7 @@ fun DevicesTabbedScreen(
                                 headerHeightPx = appBarMaxHeightPx.toFloat(),
                                 onCheckAntInstallation = { showAntStatusSheet = true },
                                 filterCriteria = filterCriteria,
+                                sortOrder = sortOrder,
                                 onScanForSensors = { showProtocolSheet = true }
                             )
                             2 -> DeviceListScreen(
@@ -262,6 +268,7 @@ fun DevicesTabbedScreen(
                                 headerHeightPx = appBarMaxHeightPx.toFloat(),
                                 onCheckAntInstallation = { showAntStatusSheet = true },
                                 filterCriteria = filterCriteria,
+                                sortOrder = sortOrder,
                                 onScanForSensors = { showProtocolSheet = true }
                             )
                             3 -> EquipmentSportSensorMatrix(
@@ -371,6 +378,55 @@ fun DevicesTabbedScreen(
                                     }
 
                                     Row(verticalAlignment = Alignment.CenterVertically) {
+                                        // Sort Action Button & Dropdown Menu (Only shown on sensor tabs 0..2)
+                                        if (pagerState.currentPage < 3) {
+                                            var showSortMenu by remember { mutableStateOf(false) }
+
+                                            Box {
+                                                IconButton(
+                                                    onClick = { showSortMenu = true },
+                                                    modifier = Modifier.testTag("devices_sort_button")
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.AutoMirrored.Filled.Sort,
+                                                        contentDescription = stringResource(R.string.sort),
+                                                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                                    )
+                                                }
+
+                                                DropdownMenu(
+                                                    containerColor = MaterialTheme.colorScheme.surface,
+                                                    expanded = showSortMenu,
+                                                    onDismissRequest = { showSortMenu = false }
+                                                ) {
+                                                    DeviceSortOrder.entries.forEach { order ->
+                                                        DropdownMenuItem(
+                                                            text = {
+                                                                Text(
+                                                                    text = stringResource(order.labelResId),
+                                                                    color = MaterialTheme.colorScheme.onSurface
+                                                                )
+                                                            },
+                                                            onClick = {
+                                                                tabViewModel.setSortOrder(order)
+                                                                showSortMenu = false
+                                                            },
+                                                            leadingIcon = {
+                                                                if (sortOrder == order) {
+                                                                    Icon(
+                                                                        imageVector = Icons.Default.Check,
+                                                                        contentDescription = null,
+                                                                        tint = MaterialTheme.colorScheme.onSurface
+                                                                    )
+                                                                }
+                                                            },
+                                                            modifier = Modifier.testTag("devices_sort_${order.name.lowercase()}")
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }
+
                                         FilterActionButton(
                                             onClick = { showFilterSheet = true },
                                             isFilterActive = filterCriteria.isNotEmpty,

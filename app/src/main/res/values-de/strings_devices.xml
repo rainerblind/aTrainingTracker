@@ -123,4 +123,10 @@
     <!-- Indirect Tire Pressure Monitoring (ATT-4880, REQ-TRK-050) -->
     <string name="devices_reset_tire_pressure_baseline">Reifendruck-Basiswert zurücksetzen (Frisch aufgepumpt)</string>
 
+    <!-- Sensor List Sorting (ATT-7663, REQ-UI-528) -->
+    <string name="devices_sort_alphabetical">Alphabetisch</string>
+    <string name="devices_sort_first_seen">Zuerst gesehen</string>
+    <string name="devices_sort_last_usage">Zuletzt verwendet</string>
+    <string name="devices_sort_battery_level">Akkustand</string>
+
 </resources>

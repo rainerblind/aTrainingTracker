@@ -111,4 +111,10 @@
 
     <!-- Indirect Tire Pressure Monitoring (ATT-4880, REQ-TRK-050) -->
     <string name="devices_reset_tire_pressure_baseline">Ripristina pressione base pneumatici (appena gonfiati)</string>
+
+    <!-- Sensor List Sorting (ATT-7663, REQ-UI-528) -->
+    <string name="devices_sort_alphabetical">Alfabetico</string>
+    <string name="devices_sort_first_seen">Visto per la prima volta</string>
+    <string name="devices_sort_last_usage">Ultimo utilizzo</string>
+    <string name="devices_sort_battery_level">Livello della batteria</string>
 </resources>

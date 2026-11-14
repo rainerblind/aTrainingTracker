@@ -152,4 +152,10 @@
     <!-- Indirect Tire Pressure Monitoring (ATT-4880, REQ-TRK-050) -->
     <string name="devices_reset_tire_pressure_baseline">Reset Tire Pressure Baseline (Just Pumped Tires)</string>
 
+    <!-- Sensor List Sorting (ATT-7663, REQ-UI-528) -->
+    <string name="devices_sort_alphabetical">Alphabetical</string>
+    <string name="devices_sort_first_seen">First Seen</string>
+    <string name="devices_sort_last_usage">Last Usage</string>
+    <string name="devices_sort_battery_level">Battery Level</string>
+
 </resources>

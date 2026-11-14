@@ -216,4 +216,68 @@ class DeviceListViewModelPriorityTest {
         assertTrue(googleFusedItem.isConnected)
         assertEquals(2, updatedList.indexOf(googleFusedItem))
     }
+
+    @Test
+    fun testNewlyDiscoveredSensors_remainPinnedAtTopAcrossAllSortOrders() = runTest {
+        // Device A: Known paired device (id 100)
+        val devKnown1 = createDevice(id = 100L, name = "Alpha Sensor", isPaired = true).copy(batteryPercentage = 10)
+        // Device B: Known paired device (id 200)
+        val devKnown2 = createDevice(id = 200L, name = "Zulu Sensor", isPaired = true).copy(batteryPercentage = 90)
+        // Device C: Newly discovered sensor 1 (found first)
+        val devNew1 = createDevice(id = 300L, name = "Beta New 1", isPaired = false)
+        // Device D: Newly discovered sensor 2 (found second)
+        val devNew2 = createDevice(id = 400L, name = "Charlie New 2", isPaired = false)
+
+        allDevicesFlow.value = listOf(devKnown1, devKnown2, devNew1, devNew2)
+        newlyFoundFlow.value = listOf(300L, 400L) // 400L is newer
+
+        val viewModel = DeviceListViewModel(mockApplication)
+        val spec = DeviceFilterSpec(DeviceFilterType.ALL_KNOWN, Protocol.ALL, DeviceType.ALL)
+
+        // Across all 4 sort orders, newly discovered sensors must be pinned at indices 0 and 1 (400L then 300L)
+        for (sortOrder in DeviceSortOrder.entries) {
+            val result = viewModel.getFilteredDevices(spec, sortOrder = sortOrder).first()
+            assertEquals("Order $sortOrder must have 4 devices", 4, result.size)
+            assertEquals("Order $sortOrder must pin newest discovery at top", 400L, result[0].id)
+            assertTrue(result[0].isNewlyDiscovered)
+            assertEquals("Order $sortOrder must pin second discovery next", 300L, result[1].id)
+            assertTrue(result[1].isNewlyDiscovered)
+        }
+    }
+
+    @Test
+    fun testSortOrder_batteryLevelSortsLowestKnownFirst() = runTest {
+        val devHigh = createDevice(id = 1L, name = "Sensor High 95%", isPaired = true).copy(batteryPercentage = 95)
+        val devLow = createDevice(id = 2L, name = "Sensor Low 15%", isPaired = true).copy(batteryPercentage = 15)
+        val devUnknown = createDevice(id = 3L, name = "Sensor Unknown", isPaired = true).copy(batteryPercentage = -1)
+
+        allDevicesFlow.value = listOf(devHigh, devLow, devUnknown)
+        newlyFoundFlow.value = emptyList()
+
+        val viewModel = DeviceListViewModel(mockApplication)
+        val spec = DeviceFilterSpec(DeviceFilterType.ALL_KNOWN, Protocol.ALL, DeviceType.ALL)
+
+        val result = viewModel.getFilteredDevices(spec, sortOrder = DeviceSortOrder.BATTERY_LEVEL).first()
+
+        // Lowest (15% - id 2) -> High (95% - id 1) -> Unknown (-1 - id 3)
+        assertEquals(listOf(2L, 1L, 3L), result.map { it.id })
+    }
+
+    @Test
+    fun testSortOrder_firstSeenSortsByIdDescending() = runTest {
+        val devOld = createDevice(id = 5L, name = "Old Device", isPaired = true)
+        val devNew = createDevice(id = 85L, name = "New Device", isPaired = true)
+        val devMid = createDevice(id = 22L, name = "Mid Device", isPaired = true)
+
+        allDevicesFlow.value = listOf(devOld, devNew, devMid)
+        newlyFoundFlow.value = emptyList()
+
+        val viewModel = DeviceListViewModel(mockApplication)
+        val spec = DeviceFilterSpec(DeviceFilterType.ALL_KNOWN, Protocol.ALL, DeviceType.ALL)
+
+        val result = viewModel.getFilteredDevices(spec, sortOrder = DeviceSortOrder.FIRST_SEEN).first()
+
+        // Row ID descending: 85L -> 22L -> 5L
+        assertEquals(listOf(85L, 22L, 5L), result.map { it.id })
+    }
 }

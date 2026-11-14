@@ -64,9 +64,10 @@ fun DeviceListScreen(
     scanningDeviceType: DeviceType? = null,
     onCheckAntInstallation: (() -> Unit)? = null,
     filterCriteria: DeviceFilterCriteria = DeviceFilterCriteria(),
+    sortOrder: DeviceSortOrder = DeviceSortOrder.ALPHABETICAL,
     onScanForSensors: (() -> Unit)? = null
 ) {
-    val devices by viewModel.getFilteredDevices(filterSpec, filterCriteria).collectAsState(initial = emptyList())
+    val devices by viewModel.getFilteredDevices(filterSpec, filterCriteria, sortOrder).collectAsState(initial = emptyList())
     val density = LocalDensity.current
     val topPadding = with(density) { (headerHeightPx + appBarOffsetPx).toDp() }
     

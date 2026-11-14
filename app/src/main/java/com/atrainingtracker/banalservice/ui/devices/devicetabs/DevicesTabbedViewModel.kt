@@ -38,6 +38,7 @@ import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
 import com.atrainingtracker.banalservice.ui.devices.devicelist.BatteryFilter
 import com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceFilterCriteria
+import com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceSortOrder
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import kotlinx.coroutines.Dispatchers
@@ -184,6 +185,18 @@ class DevicesTabbedViewModel @JvmOverloads constructor(
         updateFilterCriteria(DeviceFilterCriteria(batteryFilter = BatteryFilter.CRITICAL_ONLY))
     }
 
+    private val _sortOrder = MutableStateFlow(
+        savedStateHandle.get<String>(KEY_SORT_ORDER)?.let {
+            safeEnumValueOfOrNull<DeviceSortOrder>(it)
+        } ?: DeviceSortOrder.ALPHABETICAL
+    )
+    val sortOrder: StateFlow<DeviceSortOrder> = _sortOrder.asStateFlow()
+
+    fun setSortOrder(order: DeviceSortOrder) {
+        _sortOrder.value = order
+        savedStateHandle[KEY_SORT_ORDER] = order.name
+    }
+
     private val _uiState = MutableLiveData<UiState>()
     val uiState: LiveData<UiState> = _uiState
 
@@ -292,5 +305,6 @@ class DevicesTabbedViewModel @JvmOverloads constructor(
     companion object {
         const val KEY_FILTER_CRITERIA_JSON = "KEY_FILTER_CRITERIA_JSON"
         const val EXTRA_FILTER_CRITICAL_BATTERY = "EXTRA_FILTER_CRITICAL_BATTERY"
+        const val KEY_SORT_ORDER = "KEY_SORT_ORDER"
     }
 }

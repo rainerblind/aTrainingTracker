@@ -8501,7 +8501,6 @@
      - Assert 100% pass rate.
 
 
-
 ### TST-UI-527: **Dedicated HRV Tab, Wire Migration & Telemetry-Gated Zone Comparison Verification Suite** [Verified]
 - **Target Release**: `V5.0.0`
 - **Requirement(s)**: `REQ-UI-527`
@@ -8532,3 +8531,28 @@
   7. *Targeted Unit Test Regression Suite (`TST-UI-527.7`)*:
      - Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.aftermath.*" --tests "com.atrainingtracker.trainingtracker.localization.*"`.
      - Assert 100% pass rate.
+
+
+### TST-UI-528: **Multi-Dimensional Sensor List Sorting (Alphabetical, First Seen, Last Usage, Battery Level) Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-UI-528` (`REQ-UI-528.1`..`REQ-UI-528.5`)
+- **Component**: `DeviceSortOrder.kt`, `DeviceListViewModel.kt`, `DevicesTabbedViewModel.kt`, `DevicesTabbedScreen.kt`, `strings_devices.xml` (all 9 locales)
+- **Jira**: `ATT-7663`
+- **Test Description**:
+  1. *DeviceSortOrder Model & Comparator Unit Tests (`TST-UI-528.1`, `DeviceSortOrderTest.kt`)*:
+     - Verify `ALPHABETICAL` sorts case-insensitively ascending by name with ID tie-breaker.
+     - Verify `FIRST_SEEN` sorts by `id` descending.
+     - Verify `LAST_USAGE` sorts connected devices first, then descending by parsed `lastSeen` timestamp, with unknown/null placed at bottom.
+     - Verify `BATTERY_LEVEL` sorts known percentages ascending (0%..100%), followed by unknown (-1).
+  2. *Scan Recency Pinning Across All Sort Orders (`TST-UI-528.2`, `DeviceListViewModelPriorityTest.kt`)*:
+     - Verify that across all 4 sort orders, `isNewlyDiscovered == true` sensors remain pinned at the very top of the list in reverse discovery order.
+  3. *DevicesTabbedViewModel Sort Order State & SavedStateHandle (`TST-UI-528.3`, `DevicesTabbedViewModelTest.kt`)*:
+     - Verify default sort order is `ALPHABETICAL`.
+     - Verify updating sort order updates state flow and saves to `SavedStateHandle`.
+  4. *Top App Bar Sort Button Visibility Contract Tests (`TST-UI-528.4`, `DevicesTabbedScreenContractTest.kt`)*:
+     - Verify Sort button is present on sensor tabs (0, 1, 2) and hidden on Equipment tabs (3, 4).
+  5. *9-Language Localization Parity Verification (`TST-UI-528.5`, `TranslationParityTest.kt`)*:
+     - Verify all 4 sort labels exist across all 9 locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`) with zero missing entries.
+  6. *Targeted Unit Test Regression Suite (`TST-UI-528.6`)*:
+     - Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.banalservice.ui.devices.*" --tests "com.atrainingtracker.trainingtracker.build.*"`.
+

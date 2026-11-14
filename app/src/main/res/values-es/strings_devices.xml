@@ -111,4 +111,10 @@
 
     <!-- Indirect Tire Pressure Monitoring (ATT-4880, REQ-TRK-050) -->
     <string name="devices_reset_tire_pressure_baseline">Restablecer presión base de neumáticos (recién inflados)</string>
+
+    <!-- Sensor List Sorting (ATT-7663, REQ-UI-528) -->
+    <string name="devices_sort_alphabetical">Alfabético</string>
+    <string name="devices_sort_first_seen">Visto por primera vez</string>
+    <string name="devices_sort_last_usage">Último uso</string>
+    <string name="devices_sort_battery_level">Nivel de batería</string>
 </resources>

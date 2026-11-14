@@ -35,6 +35,13 @@ class DeviceDiscoveryLocalizationTest {
         "devices_new_sensor_discovered"
     )
 
+    private val sortKeys = listOf(
+        "devices_sort_alphabetical",
+        "devices_sort_first_seen",
+        "devices_sort_last_usage",
+        "devices_sort_battery_level"
+    )
+
     @Test
     fun verifyLocalizationKeysExistInAllLocales() {
         for (locale in LocalizationTestCache.LOCALES) {
@@ -51,6 +58,19 @@ class DeviceDiscoveryLocalizationTest {
                         value.contains("%1\$s") || value.contains("%s")
                     )
                 }
+            }
+        }
+    }
+
+    @Test
+    fun verifyDeviceSortKeysExistInAllLocales() {
+        for (locale in LocalizationTestCache.LOCALES) {
+            val strings = LocalizationTestCache.getStrings(locale, "strings_devices.xml")
+
+            for (key in sortKeys) {
+                val value = strings[key]
+                assertNotNull("Key '$key' must exist in locale $locale/strings_devices.xml", value)
+                assertFalse("Key '$key' must not be empty in locale $locale/strings_devices.xml", value!!.trim().isEmpty())
             }
         }
     }

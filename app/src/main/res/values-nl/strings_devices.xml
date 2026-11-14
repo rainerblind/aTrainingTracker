@@ -111,4 +111,10 @@
 
     <!-- Indirect Tire Pressure Monitoring (ATT-4880, REQ-TRK-050) -->
     <string name="devices_reset_tire_pressure_baseline">Bandenspanning-basiswaarde resetten (net opgepompt)</string>
+
+    <!-- Sensor List Sorting (ATT-7663, REQ-UI-528) -->
+    <string name="devices_sort_alphabetical">Alfabetisch</string>
+    <string name="devices_sort_first_seen">Eerst gezien</string>
+    <string name="devices_sort_last_usage">Laatst gebruikt</string>
+    <string name="devices_sort_battery_level">Batterijniveau</string>
 </resources>
