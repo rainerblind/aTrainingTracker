@@ -194,6 +194,11 @@ public class TrackerService extends Service {
     private volatile boolean mIsStopping = false;
     private volatile boolean mBanalBound = false;
     @Nullable private volatile BanalFinalizationSnapshot mFinalizationSnapshot = null;
+    @Nullable private volatile Long mFinalizationWorkoutId = null;
+    @Nullable private volatile String mFinalizationBaseFileName = null;
+    @Nullable private volatile LiveWorkoutSession mFinalizationLiveSession = null;
+    private final AtomicInteger mSessionGeneration = new AtomicInteger(0);
+    private volatile boolean mReceiversRegistered = false;
     @Nullable private volatile MilestoneAutoNamingManager.MilestoneCelebrationData mFirstJubileeCelebrationData = null;
 
     @VisibleForTesting
@@ -428,6 +433,22 @@ public class TrackerService extends Service {
     @VisibleForTesting
     public boolean isStoppingForTesting() {
         return mIsStopping;
+    }
+
+    /**
+     * Returns the monotonic session generation counter ({@code REQ-TRK-076.3}).
+     */
+    @VisibleForTesting
+    public int getSessionGenerationForTesting() {
+        return mSessionGeneration.get();
+    }
+
+    /**
+     * Returns whether the background RR flush executor has been shut down ({@code REQ-TRK-076.1}).
+     */
+    @VisibleForTesting
+    public boolean isRrFlushExecutorShutdownForTesting() {
+        return mRrFlushExecutor.isShutdown();
     }
 
     /**
@@ -933,10 +954,7 @@ public class TrackerService extends Service {
         bindService(new Intent(this, BANALService.class), mBanalConnection, Context.BIND_AUTO_CREATE);
         mBanalBound = true;
 
-        ContextCompat.registerReceiver(this, mSearchingFinishedReceiver, mSearchingFinishedFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
-        ContextCompat.registerReceiver(this, mAltitudeCorrectionReceiver, mAltitudeCorrectionFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
-        ContextCompat.registerReceiver(this, mLapSummaryReceiver, mLapSummaryFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
-        ContextCompat.registerReceiver(this, mUserSelectedSportTypeChangedReceiver, new IntentFilter(BANALService.SPORT_TYPE_CHANGED_BY_USER_INTENT), ContextCompat.RECEIVER_NOT_EXPORTED);
+        registerTransientReceivers();
 
         try {
             mRadarAlertManager = new RadarAlertManager(this);
@@ -948,12 +966,46 @@ public class TrackerService extends Service {
         acquireWakeLock();
     }
 
-    private void acquireWakeLock() {
+    protected synchronized void registerTransientReceivers() {
+        if (!mReceiversRegistered) {
+            try {
+                ContextCompat.registerReceiver(this, mSearchingFinishedReceiver, mSearchingFinishedFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+                ContextCompat.registerReceiver(this, mAltitudeCorrectionReceiver, mAltitudeCorrectionFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+                ContextCompat.registerReceiver(this, mLapSummaryReceiver, mLapSummaryFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+                ContextCompat.registerReceiver(this, mUserSelectedSportTypeChangedReceiver, new IntentFilter(BANALService.SPORT_TYPE_CHANGED_BY_USER_INTENT), ContextCompat.RECEIVER_NOT_EXPORTED);
+                mReceiversRegistered = true;
+            } catch (Throwable t) {
+                Log.w(TAG, "Error registering transient receivers", t);
+            }
+        }
+    }
+
+    protected synchronized void unregisterTransientReceivers() {
+        if (mReceiversRegistered) {
+            try {
+                LifecycleUtils.safeUnregisterReceiver(this, mSearchingFinishedReceiver, TAG);
+                LifecycleUtils.safeUnregisterReceiver(this, mAltitudeCorrectionReceiver, TAG);
+                LifecycleUtils.safeUnregisterReceiver(this, mLapSummaryReceiver, TAG);
+                LifecycleUtils.safeUnregisterReceiver(this, mUserSelectedSportTypeChangedReceiver, TAG);
+                mReceiversRegistered = false;
+            } catch (Throwable t) {
+                Log.w(TAG, "Error unregistering transient receivers", t);
+            }
+        }
+    }
+
+    protected void acquireWakeLock() {
         if (wakeLock == null) {
-            android.os.PowerManager powerManager = (android.os.PowerManager) getSystemService(Context.POWER_SERVICE);
-            wakeLock = powerManager.newWakeLock(android.os.PowerManager.PARTIAL_WAKE_LOCK, "aTrainingTracker:TrackingLock");
-            wakeLock.acquire();
-            if (DEBUG) Log.d(TAG, "WakeLock acquired");
+            try {
+                android.os.PowerManager powerManager = (android.os.PowerManager) getSystemService(Context.POWER_SERVICE);
+                if (powerManager != null) {
+                    wakeLock = powerManager.newWakeLock(android.os.PowerManager.PARTIAL_WAKE_LOCK, "aTrainingTracker:TrackingLock");
+                    wakeLock.acquire();
+                    if (DEBUG) Log.d(TAG, "WakeLock acquired");
+                }
+            } catch (Throwable t) {
+                Log.w(TAG, "Error acquiring WakeLock", t);
+            }
         }
     }
 
@@ -1045,6 +1097,28 @@ public class TrackerService extends Service {
         }
         mStartType = startType;
         mWorkoutStartLocationRecorded = (startType != StartType.START_NORMAL);
+
+        // ATT-7746 (REQ-TRK-076.3, REQ-TRK-076.4): If a workout was in the middle of stopping,
+        // or a new session is starting, reset stopping/interrupted flags, increment session generation,
+        // re-register transient receivers, and ensure wake lock and BANAL binding are active.
+        if (mIsStopping) {
+            if (DEBUG) {
+                Log.d(TAG, "onStartCommand: new start received while service was stopping; resetting mIsStopping to false (startType=" + startType + ")");
+            }
+            mIsStopping = false;
+        }
+        mSessionGeneration.incrementAndGet();
+        mTrackingInterrupted = false;
+        registerTransientReceivers();
+        acquireWakeLock();
+        if (!mBanalBound) {
+            try {
+                bindService(new Intent(this, BANALService.class), mBanalConnection, Context.BIND_AUTO_CREATE);
+                mBanalBound = true;
+            } catch (Throwable t) {
+                Log.w(TAG, "Error rebinding BANALService in onStartCommand", t);
+            }
+        }
         if (startType == StartType.START_NORMAL || startType == StartType.RESUME_BY_USER || startType == StartType.RESUME_AUTOMATICALLY) {
             BSportType sportType = (mBanalService != null) ? mBanalService.getBSportType() : null;
             if (sportType == null) {
@@ -1229,14 +1303,17 @@ public class TrackerService extends Service {
 
     /**
      * Handles graceful asynchronous workout finalization under foreground service priority
-     * ({@code REQ-TRK-034.2}, {@code REQ-TRK-034.3}).
+     * ({@code REQ-TRK-034.2}, {@code REQ-TRK-034.3}, {@code REQ-TRK-076.1}).
      *
-     * <p>1. Shuts down {@code mScheduler} immediately to prevent any further 1 Hz ticks from being enqueued.
+     * <p>1. Cancels active 1 Hz tracker handle to stop periodic sampling ticks immediately.
+     * Complete executor shutdown is deferred strictly to {@code onDestroy()} so newly started
+     * sessions are never rejected ({@code REQ-TRK-076.1}).
      * <p>2. Retains active foreground service priority and notification so Android's Low Memory Killer
      * does not terminate the process during lengthy database finalization on {@code mDbExecutor}.
-     * <p>3. Enqueues {@code finalizationTask} onto the single-threaded FIFO {@code mDbExecutor}.
-     * <p>4. In the completion callback of {@code finalizationTask}, dispatches main-thread unbinding
-     * of {@code mBanalConnection}, {@code performStopForeground()}, and {@code performStopSelf()}.
+     * <p>3. Captures immutable local session snapshots and enqueues {@code finalizationTask} onto
+     * the single-threaded FIFO {@code mDbExecutor} ({@code REQ-TRK-076.2}).
+     * <p>4. In the completion callback of {@code finalizationTask}, checks {@code mSessionGeneration}
+     * and dispatches main-thread teardown only if no new workout session has started ({@code REQ-TRK-076.3}).
      */
     protected int handleActionStop() {
         if (mIsStopping) {
@@ -1256,41 +1333,54 @@ public class TrackerService extends Service {
         RadarTrafficSimulator.INSTANCE.stop();
 
         cancelTrackerHandle();
-        mScheduler.shutdownNow();
+        // ATT-7746 (REQ-TRK-076.1): Do NOT call mScheduler.shutdownNow() here.
+        // Complete executor shutdown is deferred strictly to onDestroy().
 
         mAutoPauseManager.release();
 
-        LifecycleUtils.safeUnregisterReceiver(this, mSearchingFinishedReceiver, TAG);
-        LifecycleUtils.safeUnregisterReceiver(this, mAltitudeCorrectionReceiver, TAG);
-        LifecycleUtils.safeUnregisterReceiver(this, mLapSummaryReceiver, TAG);
-        LifecycleUtils.safeUnregisterReceiver(this, mUserSelectedSportTypeChangedReceiver, TAG);
+        unregisterTransientReceivers();
 
         final BanalFinalizationSnapshot snapshot = BanalFinalizationSnapshot.capture(
                 mBanalService, this, getAverageSpeed(), averageSpeedCalculateable());
         final boolean interrupted = mTrackingInterrupted;
+        final long stoppingWorkoutId = mWorkoutID;
+        final String stoppingBaseFileName = mBaseFileName;
+        final LiveWorkoutSession stoppingLiveSession = mLiveSession;
+        final int stoppingGeneration = mSessionGeneration.get();
         final CompletableFuture<Void> finalizationFuture = new CompletableFuture<>();
         mFinalizationFuture = finalizationFuture;
 
         Runnable finalizationTask = () -> {
             try {
                 if (!interrupted) {
-                    endWorkout(snapshot);
+                    endWorkout(snapshot, stoppingWorkoutId, stoppingBaseFileName, stoppingLiveSession);
                 }
             } catch (Throwable t) {
                 Log.e(TAG, "Unexpected error during async workout finalization in handleActionStop", t);
             } finally {
-                mRrFlushExecutor.shutdown();
-                mBanalService = null;
-                releaseWakeLock();
-                runOnMainThread(() -> {
-                    try {
-                        safeUnbindBanalService();
-                        performStopForeground();
-                        performStopSelf();
-                    } finally {
-                        finalizationFuture.complete(null);
+                // ATT-7746 (REQ-TRK-076.3): Gate teardown on session generation and stopping state.
+                // If a new session started while this finalizationTask was queued/running on mDbExecutor,
+                // keep the service running in foreground and suppress performStopSelf/unbinding.
+                if (mSessionGeneration.get() == stoppingGeneration && mIsStopping) {
+                    mBanalService = null;
+                    releaseWakeLock();
+                    runOnMainThread(() -> {
+                        try {
+                            safeUnbindBanalService();
+                            performStopForeground();
+                            performStopSelf();
+                        } finally {
+                            finalizationFuture.complete(null);
+                        }
+                    });
+                } else {
+                    if (DEBUG) {
+                        Log.d(TAG, "handleActionStop: New session started (generation="
+                                + mSessionGeneration.get() + " vs stopping=" + stoppingGeneration
+                                + ", isStopping=" + mIsStopping + "); suppressing stopSelf and teardown.");
                     }
-                });
+                    finalizationFuture.complete(null);
+                }
             }
         };
 
@@ -1299,9 +1389,9 @@ public class TrackerService extends Service {
         } catch (java.util.concurrent.RejectedExecutionException e) {
             Log.w(TAG, "mDbExecutor already shut down; running finalizationTask inline", e);
             finalizationTask.run();
-        } finally {
-            mDbExecutor.shutdown();
         }
+        // ATT-7746 (REQ-TRK-076.1): Do NOT call mDbExecutor.shutdown() here.
+        // Complete executor shutdown is deferred strictly to onDestroy().
 
         return Service.START_NOT_STICKY;
     }
@@ -1458,10 +1548,7 @@ public class TrackerService extends Service {
 
         RadarLightController.onWorkoutStopped(this);
 
-        LifecycleUtils.safeUnregisterReceiver(this, mSearchingFinishedReceiver, TAG);
-        LifecycleUtils.safeUnregisterReceiver(this, mAltitudeCorrectionReceiver, TAG);
-        LifecycleUtils.safeUnregisterReceiver(this, mLapSummaryReceiver, TAG);
-        LifecycleUtils.safeUnregisterReceiver(this, mUserSelectedSportTypeChangedReceiver, TAG);
+        unregisterTransientReceivers();
 
         if (mIsStopping) {
             CompletableFuture<Void> future = mFinalizationFuture;
@@ -1472,6 +1559,7 @@ public class TrackerService extends Service {
                 }
             }
             mRrFlushExecutor.shutdown();
+            mDbExecutor.shutdown();
             safeUnbindBanalService();
             performStopForeground();
             return;
@@ -1481,13 +1569,16 @@ public class TrackerService extends Service {
                 mBanalService, this, getAverageSpeed(), averageSpeedCalculateable());
 
         final boolean interrupted = mTrackingInterrupted;
+        final long stoppingWorkoutId = mWorkoutID;
+        final String stoppingBaseFileName = mBaseFileName;
+        final LiveWorkoutSession stoppingLiveSession = mLiveSession;
         final CompletableFuture<Void> finalizationFuture = new CompletableFuture<>();
         mFinalizationFuture = finalizationFuture;
 
         Runnable finalizationTask = () -> {
             try {
                 if (!interrupted) {
-                    endWorkout(snapshot);
+                    endWorkout(snapshot, stoppingWorkoutId, stoppingBaseFileName, stoppingLiveSession);
                 }
             } catch (Throwable t) {
                 Log.e(TAG, "Unexpected error during async workout finalization in onDestroy", t);
@@ -1887,7 +1978,12 @@ public class TrackerService extends Service {
     }
 
     protected void createNewLap(@Nullable BanalFinalizationSnapshot snapshot) {
-        if (DEBUG) Log.i(TAG, "createNewLap");
+        long targetWorkoutId = (mFinalizationWorkoutId != null) ? mFinalizationWorkoutId : mWorkoutID;
+        createNewLap(snapshot, targetWorkoutId);
+    }
+
+    protected void createNewLap(@Nullable BanalFinalizationSnapshot snapshot, long workoutId) {
+        if (DEBUG) Log.i(TAG, "createNewLap for workout " + workoutId);
 
         int prevLapNr = 0;
         int lapTime_s = 0;
@@ -1936,10 +2032,15 @@ public class TrackerService extends Service {
     }
 
     protected void saveLap(long lapNr, int lapTime, double lapDistance, double averageSpeed) {
-        if (DEBUG)
-            Log.i(TAG, "saveLap: lapNr=" + lapNr + ", lapTime=" + lapTime + ", lapDistance=" + lapDistance + ", averageSpeed=" + averageSpeed);
+        long targetWorkoutId = (mFinalizationWorkoutId != null) ? mFinalizationWorkoutId : mWorkoutID;
+        saveLap(targetWorkoutId, lapNr, lapTime, lapDistance, averageSpeed);
+    }
 
-        getWorkoutRepository().saveLap(mWorkoutID, lapNr, lapTime, lapDistance, averageSpeed);
+    protected void saveLap(long workoutId, long lapNr, int lapTime, double lapDistance, double averageSpeed) {
+        if (DEBUG)
+            Log.i(TAG, "saveLap: workoutId=" + workoutId + ", lapNr=" + lapNr + ", lapTime=" + lapTime + ", lapDistance=" + lapDistance + ", averageSpeed=" + averageSpeed);
+
+        getWorkoutRepository().saveLap(workoutId, lapNr, lapTime, lapDistance, averageSpeed);
     }
 
     /**
@@ -2046,9 +2147,23 @@ public class TrackerService extends Service {
      *    via {@link LocalBroadcastManager} to notify internal data layers (e.g. {@code WorkoutRepository},
      *    {@code PeriodsRepository}, and {@code WorkoutClusterEngine}) for reactive period and cluster aggregation.
      */
-    public void endWorkout(@Nullable BanalFinalizationSnapshot snapshot) {
+    public void endWorkout(
+            @Nullable BanalFinalizationSnapshot snapshot,
+            long workoutId,
+            @Nullable String baseFileName,
+            @Nullable LiveWorkoutSession liveSession) {
         mFinalizationSnapshot = snapshot;
+        mFinalizationWorkoutId = workoutId;
+        mFinalizationBaseFileName = baseFileName;
+        mFinalizationLiveSession = liveSession;
         endWorkout();
+    }
+
+    public void endWorkout(@Nullable BanalFinalizationSnapshot snapshot) {
+        long targetWorkoutId = (mFinalizationWorkoutId != null) ? mFinalizationWorkoutId : mWorkoutID;
+        String targetBaseFileName = (mFinalizationBaseFileName != null) ? mFinalizationBaseFileName : mBaseFileName;
+        LiveWorkoutSession targetLiveSession = (mFinalizationLiveSession != null) ? mFinalizationLiveSession : mLiveSession;
+        endWorkout(snapshot, targetWorkoutId, targetBaseFileName, targetLiveSession);
     }
 
     public void endWorkout() {
@@ -2057,9 +2172,12 @@ public class TrackerService extends Service {
         }
 
         final BanalFinalizationSnapshot snapshot = mFinalizationSnapshot;
+        final long workoutId = (mFinalizationWorkoutId != null) ? mFinalizationWorkoutId : mWorkoutID;
+        final String baseFileName = (mFinalizationBaseFileName != null) ? mFinalizationBaseFileName : mBaseFileName;
+        final LiveWorkoutSession liveSession = (mFinalizationLiveSession != null) ? mFinalizationLiveSession : mLiveSession;
 
         try {
-            createNewLap(snapshot);
+            createNewLap(snapshot, workoutId);
         } catch (Throwable t) {
             Log.e(TAG, "Error in createNewLap during endWorkout", t);
         }
@@ -2069,14 +2187,17 @@ public class TrackerService extends Service {
         // store the ANT and BTLE Devices that were active during the workout
         if (DEBUG) Log.d(TAG, "storing active device list");
         try {
+            Set<Long> activeDevices = new HashSet<>();
             if (snapshot != null && !snapshot.activeRemoteDeviceIds.isEmpty()) {
-                mActiveSessionDeviceIds.addAll(snapshot.activeRemoteDeviceIds);
+                activeDevices.addAll(snapshot.activeRemoteDeviceIds);
+            } else if (banalService != null) {
+                activeDevices.addAll(banalService.getDatabaseIdsOfActiveRemoteDevices());
             } else {
-                updateActiveSessionDevices(banalService);
+                activeDevices.addAll(mActiveSessionDeviceIds);
             }
-            for (Long deviceDbId : mActiveSessionDeviceIds) {
+            for (Long deviceDbId : activeDevices) {
                 if (deviceDbId != null && deviceDbId >= 0) {
-                    getDeviceDataRepository().recordActiveDevice(mWorkoutID, deviceDbId);
+                    getDeviceDataRepository().recordActiveDevice(workoutId, deviceDbId);
                 }
             }
         } catch (Throwable t) {
@@ -2085,8 +2206,8 @@ public class TrackerService extends Service {
 
         // Persist remaining raw beat-to-beat RR intervals (REQ-PER-034.1, REQ-PER-034.2)
         try {
-            if (mWorkoutID > 0) {
-                flushLiveRrQueueSync(mWorkoutID);
+            if (workoutId > 0) {
+                flushLiveRrQueueSync(workoutId);
             }
         } catch (Throwable t) {
             Log.e(TAG, "Error persisting workout RR intervals during endWorkout", t);
@@ -2095,7 +2216,7 @@ public class TrackerService extends Service {
         try {
             // 1. Critical state transition: commit FINISHED = 1 first in its own dedicated, minimal transaction (REQ-TRK-030.1)
             try {
-                getWorkoutRepository().markWorkoutFinishedBlocking(mWorkoutID);
+                getWorkoutRepository().markWorkoutFinishedBlocking(workoutId);
             } catch (Throwable t) {
                 Log.e(TAG, "Error setting FINISHED=1 in summaries table during endWorkout", t);
             }
@@ -2106,7 +2227,7 @@ public class TrackerService extends Service {
                     : (banalService != null ? banalService.getAccumulatedSensorTypeSet() : null);
             if (accumulatedSensors != null) {
                 try {
-                    getWorkoutRepository().saveAccumulatedSensorTypes(mWorkoutID, accumulatedSensors);
+                    getWorkoutRepository().saveAccumulatedSensorTypes(workoutId, accumulatedSensors);
                 } catch (Throwable t) {
                     Log.e(TAG, "Error saving accumulated sensor types during endWorkout", t);
                 }
@@ -2125,7 +2246,7 @@ public class TrackerService extends Service {
                         ? snapshot.bSportType
                         : getSportTypesRepository().getBSportType(sportTypeId);
 
-                getWorkoutRepository().updateWorkoutAuxiliaryMetadata(mWorkoutID, gcData, sportTypeId, bSportType);
+                getWorkoutRepository().updateWorkoutAuxiliaryMetadata(workoutId, gcData, sportTypeId, bSportType);
             } catch (Throwable t) {
                 Log.e(TAG, "Error updating auxiliary summary metadata during endWorkout", t);
             }
@@ -2135,15 +2256,15 @@ public class TrackerService extends Service {
 
         try {
             // Finalize Live Session (Auto Name, Commute, Trainer)
-            if (mLiveSession != null) {
-                finalizeLiveSession(snapshot);
+            if (liveSession != null) {
+                finalizeLiveSession(snapshot, workoutId, baseFileName, liveSession);
             }
         } catch (Throwable t) {
             Log.e(TAG, "Error finalizing live session during endWorkout", t);
         }
 
         try {
-            final long finalWorkoutId = mWorkoutID;
+            final long finalWorkoutId = workoutId;
             final Context appContext = getApplicationContext();
             if (finalWorkoutId > 0) {
                 java.util.concurrent.ForkJoinPool.commonPool().execute(() -> {
@@ -2163,7 +2284,9 @@ public class TrackerService extends Service {
 
         try {
             ExportManager exportManager = new ExportManager(this);
-            exportManager.workoutFinished(mBaseFileName);
+            if (baseFileName != null && !baseFileName.trim().isEmpty()) {
+                exportManager.workoutFinished(baseFileName);
+            }
         } catch (Throwable t) {
             Log.e(TAG, "Error finishing workout export during endWorkout", t);
         } finally {
@@ -2171,7 +2294,7 @@ public class TrackerService extends Service {
                 // 1. Broadcast TRACKING_FINISHED_INTENT with WORKOUT_ID at system level
                 Intent finishedIntent = new Intent(TRACKING_FINISHED_INTENT)
                         .setPackage(getPackageName())
-                        .putExtra(WORKOUT_ID, mWorkoutID);
+                        .putExtra(WORKOUT_ID, workoutId);
                 if (mFirstJubileeCelebrationData != null) {
                     finishedIntent.putExtra(MilestoneAutoNamingManager.EXTRA_IS_FIRST_JUBILEE, true);
                     finishedIntent.putExtra(MilestoneAutoNamingManager.EXTRA_MILESTONE_COUNT, mFirstJubileeCelebrationData.getCount());
@@ -2183,7 +2306,7 @@ public class TrackerService extends Service {
                 // for internal components (WorkoutRepository, etc.) to trigger reactive period & cluster updates (REQ-TRK-010, ATT-505)
                 Intent localFinishedIntent = new Intent(TRACKING_FINISHED_INTENT)
                         .setPackage(getPackageName())
-                        .putExtra(WORKOUT_ID, mWorkoutID);
+                        .putExtra(WORKOUT_ID, workoutId);
                 if (mFirstJubileeCelebrationData != null) {
                     localFinishedIntent.putExtra(MilestoneAutoNamingManager.EXTRA_IS_FIRST_JUBILEE, true);
                     localFinishedIntent.putExtra(MilestoneAutoNamingManager.EXTRA_MILESTONE_COUNT, mFirstJubileeCelebrationData.getCount());
@@ -2194,6 +2317,9 @@ public class TrackerService extends Service {
                 Log.w(TAG, "Error broadcasting tracking finished intents during endWorkout", t);
             } finally {
                 mFinalizationSnapshot = null;
+                mFinalizationWorkoutId = null;
+                mFinalizationBaseFileName = null;
+                mFinalizationLiveSession = null;
                 mFirstJubileeCelebrationData = null;
             }
         }
@@ -2810,27 +2936,39 @@ public class TrackerService extends Service {
 
     @VisibleForTesting
     protected void finalizeLiveSession(@Nullable BanalFinalizationSnapshot snapshot) {
-        if (mLiveSession == null) return;
-        if (DEBUG) Log.i(TAG, "finalizeLiveSession");
+        long targetWorkoutId = (mFinalizationWorkoutId != null) ? mFinalizationWorkoutId : mWorkoutID;
+        String targetBaseFileName = (mFinalizationBaseFileName != null) ? mFinalizationBaseFileName : mBaseFileName;
+        LiveWorkoutSession targetLiveSession = (mFinalizationLiveSession != null) ? mFinalizationLiveSession : mLiveSession;
+        finalizeLiveSession(snapshot, targetWorkoutId, targetBaseFileName, targetLiveSession);
+    }
+
+    @VisibleForTesting
+    protected void finalizeLiveSession(
+            @Nullable BanalFinalizationSnapshot snapshot,
+            long workoutId,
+            @Nullable String baseFileName,
+            @Nullable LiveWorkoutSession liveSession) {
+        if (liveSession == null) return;
+        if (DEBUG) Log.i(TAG, "finalizeLiveSession for workout " + workoutId);
 
         final BANALServiceComm banalService = mBanalService;
         WorkoutRepository repository = getWorkoutRepository();
 
         // 1. Finalize Map and Streams first so route geometry and profile streams are never lost if downstream steps fail (REQ-TRK-030.4)
         try {
-            List<LatLng> pointsToSimplify = mLiveSession.getRawLatLngs();
+            List<LatLng> pointsToSimplify = liveSession.getRawLatLngs();
             if (pointsToSimplify == null || pointsToSimplify.isEmpty()) {
-                pointsToSimplify = mLiveSession.getSampledLatLngs();
+                pointsToSimplify = liveSession.getSampledLatLngs();
             }
             List<LatLng> simplifiedPoints = (pointsToSimplify != null && !pointsToSimplify.isEmpty())
                     ? PolyUtil.simplify(pointsToSimplify, 10.0)
                     : Collections.emptyList();
             String polyline = PolyUtil.encode(simplifiedPoints);
-            List<Double> sampledAltitudes = mLiveSession.getSampledAltitudes();
-            List<Double> sampledDistances = mLiveSession.getSampledDistances();
+            List<Double> sampledAltitudes = liveSession.getSampledAltitudes();
+            List<Double> sampledDistances = liveSession.getSampledDistances();
             String altStream = NumericalEncodingUtils.INSTANCE.encodeDoubles(sampledAltitudes != null ? sampledAltitudes : Collections.emptyList());
             String distStream = NumericalEncodingUtils.INSTANCE.encodeDoubles(sampledDistances != null ? sampledDistances : Collections.emptyList());
-            repository.updateMapAndStreams(mWorkoutID, polyline, altStream, distStream);
+            repository.updateMapAndStreams(workoutId, polyline, altStream, distStream);
         } catch (Throwable t) {
             Log.e(TAG, "finalizeLiveSession: Error persisting map polyline and elevation/distance streams", t);
             mDiagnosticCollector.record(DiagnosticStage.FINALIZE, t, "Error persisting map polyline and elevation/distance streams");
@@ -2838,31 +2976,31 @@ public class TrackerService extends Service {
 
         // 2. Save START and END locations, Sensor Extrema, and Max Line Distance (REQ-TRK-030.4)
         try {
-            LatLng startPos = mLiveSession.getStartLatLng();
-            LatLng endPos = mLiveSession.getLastLatLng();
+            LatLng startPos = liveSession.getStartLatLng();
+            LatLng endPos = liveSession.getLastLatLng();
 
             if (startPos != null) {
-                repository.updateExtremaValue(mWorkoutID, SensorType.LATITUDE, ExtremaType.START, startPos.latitude, startPos);
-                repository.updateExtremaValue(mWorkoutID, SensorType.LONGITUDE, ExtremaType.START, startPos.longitude, startPos);
+                repository.updateExtremaValue(workoutId, SensorType.LATITUDE, ExtremaType.START, startPos.latitude, startPos);
+                repository.updateExtremaValue(workoutId, SensorType.LONGITUDE, ExtremaType.START, startPos.longitude, startPos);
             }
 
             if (endPos != null) {
-                repository.updateExtremaValue(mWorkoutID, SensorType.LATITUDE, ExtremaType.END, endPos.latitude, endPos);
-                repository.updateExtremaValue(mWorkoutID, SensorType.LONGITUDE, ExtremaType.END, endPos.longitude, endPos);
+                repository.updateExtremaValue(workoutId, SensorType.LATITUDE, ExtremaType.END, endPos.latitude, endPos);
+                repository.updateExtremaValue(workoutId, SensorType.LONGITUDE, ExtremaType.END, endPos.longitude, endPos);
             }
 
-            for (Map.Entry<SensorType, LiveWorkoutSession.RunningStats> entry : mLiveSession.getSensorStats().entrySet()) {
+            for (Map.Entry<SensorType, LiveWorkoutSession.RunningStats> entry : liveSession.getSensorStats().entrySet()) {
                 SensorType sensor = entry.getKey();
                 LiveWorkoutSession.RunningStats stats = entry.getValue();
                 if (stats == null) continue;
 
                 // Min
                 if (Double.isFinite(stats.min) && stats.min != Double.MAX_VALUE) {
-                    repository.updateExtremaValue(mWorkoutID, sensor, ExtremaType.MIN, stats.min, stats.minPos);
+                    repository.updateExtremaValue(workoutId, sensor, ExtremaType.MIN, stats.min, stats.minPos);
                 }
                 // Max
                 if (Double.isFinite(stats.max) && stats.max != -Double.MAX_VALUE) {
-                    repository.updateExtremaValue(mWorkoutID, sensor, ExtremaType.MAX, stats.max, stats.maxPos);
+                    repository.updateExtremaValue(workoutId, sensor, ExtremaType.MAX, stats.max, stats.maxPos);
                 }
                 // Avg
                 if (IMPORTANT_SENSOR_TYPES.contains(sensor)) {
@@ -2873,20 +3011,20 @@ public class TrackerService extends Service {
                     }
                     if (Double.isFinite(avgValue)) {
                         Integer avgCount = stats.getCount() > 0 ? stats.getCount() : null;
-                        repository.updateExtremaValue(mWorkoutID, sensor, ExtremaType.AVG, avgValue, null, avgCount);
+                        repository.updateExtremaValue(workoutId, sensor, ExtremaType.AVG, avgValue, null, avgCount);
                     }
                 }
                 if (sensor == SensorType.W_PRIME_BAL && stats.count > 0 && Double.isFinite(stats.last)) {
-                    repository.updateExtremaValue(mWorkoutID, sensor, ExtremaType.END, stats.last, endPos);
+                    repository.updateExtremaValue(workoutId, sensor, ExtremaType.END, stats.last, endPos);
                 }
             }
 
             // REQ-MAP-020 (ATT-528), REQ-SET-097 (ATT-5899): Non-degenerate elliptical apex calculation from recorded track
-            if (startPos != null && mLiveSession.getSampledLatLngs() != null && !mLiveSession.getSampledLatLngs().isEmpty()) {
-                List<LatLng> sampledPoints = mLiveSession.getSampledLatLngs();
+            if (startPos != null && liveSession.getSampledLatLngs() != null && !liveSession.getSampledLatLngs().isEmpty()) {
+                List<LatLng> sampledPoints = liveSession.getSampledLatLngs();
                 LatLng calculatedApex = WorkoutClusterEngine.getInstance(this).findApexFromPoints(startPos, sampledPoints, endPos);
                 double calculatedMaxDisp = WorkoutClusterEngine.Companion.distanceBetween(startPos, calculatedApex);
-                repository.updateExtremaValue(mWorkoutID, SensorType.LINE_DISTANCE_m, ExtremaType.MAX, calculatedMaxDisp, calculatedApex);
+                repository.updateExtremaValue(workoutId, SensorType.LINE_DISTANCE_m, ExtremaType.MAX, calculatedMaxDisp, calculatedApex);
             }
         } catch (Throwable t) {
             Log.e(TAG, "finalizeLiveSession: Error persisting start/end locations and sensor extrema", t);
@@ -2895,8 +3033,8 @@ public class TrackerService extends Service {
 
         // 3. Calculate and persist Efficiency Factor (EF), Aerobic Decoupling, and Power Training Metrics from recorded samples (REQ-UI-400.2, REQ-MIG-039.4)
         try {
-            if (mBaseFileName != null && !mBaseFileName.isEmpty()) {
-                com.atrainingtracker.trainingtracker.ui.aftermath.PowerSpeedHrSamples samples = repository.getPowerSpeedHrSamples(mBaseFileName);
+            if (baseFileName != null && !baseFileName.isEmpty()) {
+                com.atrainingtracker.trainingtracker.ui.aftermath.PowerSpeedHrSamples samples = repository.getPowerSpeedHrSamples(baseFileName);
                 java.util.List<Double> powerSamples = samples.getPowerSamples();
                 java.util.List<Double> speedSamples = samples.getSpeedSamples();
                 java.util.List<Double> hrSamples = samples.getHrSamples();
@@ -2913,20 +3051,20 @@ public class TrackerService extends Service {
                     SensorType targetSensor = aerobicResult.isPowerBased() ? SensorType.POWER : SensorType.SPEED_mps;
                     if (aerobicResult.getEfficiencyFactor() != null) {
                         double ef = aerobicResult.getEfficiencyFactor();
-                        repository.updateExtremaValue(mWorkoutID, targetSensor, ExtremaType.EFFICIENCY_FACTOR, ef, null);
+                        repository.updateExtremaValue(workoutId, targetSensor, ExtremaType.EFFICIENCY_FACTOR, ef, null);
                     }
                     if (aerobicResult.getDecouplingPct() != null) {
                         double dec = aerobicResult.getDecouplingPct();
-                        repository.updateExtremaValue(mWorkoutID, targetSensor, ExtremaType.AEROBIC_DECOUPLING, dec, null);
+                        repository.updateExtremaValue(workoutId, targetSensor, ExtremaType.AEROBIC_DECOUPLING, dec, null);
                     }
 
                     // REQ-REV-009.2 (ATT-3904): 1st-order dynamical Power-HR identification
                     com.atrainingtracker.trainingtracker.database.CardioPowerDynamicsRecord dynamics =
                             com.atrainingtracker.trainingtracker.physiology.PowerHrDynamicsCalculator.calculate(
-                                    powerSamples, hrSamples, mWorkoutID, 1.0
+                                    powerSamples, hrSamples, workoutId, 1.0
                             );
                     if (dynamics != null) {
-                        repository.saveCardioPowerDynamics(mWorkoutID, dynamics);
+                        repository.saveCardioPowerDynamics(workoutId, dynamics);
                     }
 
                     // REQ-MIG-039.4 (ATT-3860 / ATT-3858): Calculate and persist session power training metrics (NP, IF, TSS, Work kJ, W/kg)
@@ -2944,33 +3082,33 @@ public class TrackerService extends Service {
                             );
                     if (powerMetrics.getNormalizedPowerWatts() != null) {
                         double np = powerMetrics.getNormalizedPowerWatts();
-                        repository.updateExtremaValue(mWorkoutID, SensorType.NORMALIZED_POWER, ExtremaType.AVG, np, null);
-                        repository.updateExtremaValue(mWorkoutID, SensorType.NORMALIZED_POWER, ExtremaType.END, np, null);
+                        repository.updateExtremaValue(workoutId, SensorType.NORMALIZED_POWER, ExtremaType.AVG, np, null);
+                        repository.updateExtremaValue(workoutId, SensorType.NORMALIZED_POWER, ExtremaType.END, np, null);
                     }
                     if (powerMetrics.getIntensityFactor() != null) {
                         double ifVal = powerMetrics.getIntensityFactor();
-                        repository.updateExtremaValue(mWorkoutID, SensorType.INTENSITY_FACTOR, ExtremaType.AVG, ifVal, null);
-                        repository.updateExtremaValue(mWorkoutID, SensorType.INTENSITY_FACTOR, ExtremaType.END, ifVal, null);
+                        repository.updateExtremaValue(workoutId, SensorType.INTENSITY_FACTOR, ExtremaType.AVG, ifVal, null);
+                        repository.updateExtremaValue(workoutId, SensorType.INTENSITY_FACTOR, ExtremaType.END, ifVal, null);
                     }
                     if (powerMetrics.getTss() != null) {
                         double tss = powerMetrics.getTss();
-                        repository.updateExtremaValue(mWorkoutID, SensorType.TSS, ExtremaType.AVG, tss, null);
-                        repository.updateExtremaValue(mWorkoutID, SensorType.TSS, ExtremaType.MAX, tss, null);
-                        repository.updateExtremaValue(mWorkoutID, SensorType.TSS, ExtremaType.END, tss, null);
+                        repository.updateExtremaValue(workoutId, SensorType.TSS, ExtremaType.AVG, tss, null);
+                        repository.updateExtremaValue(workoutId, SensorType.TSS, ExtremaType.MAX, tss, null);
+                        repository.updateExtremaValue(workoutId, SensorType.TSS, ExtremaType.END, tss, null);
                     }
                     if (powerMetrics.getWorkKj() != null) {
                         double workKj = powerMetrics.getWorkKj();
-                        repository.updateExtremaValue(mWorkoutID, SensorType.WORK_KJ, ExtremaType.AVG, workKj, null);
-                        repository.updateExtremaValue(mWorkoutID, SensorType.WORK_KJ, ExtremaType.MAX, workKj, null);
-                        repository.updateExtremaValue(mWorkoutID, SensorType.WORK_KJ, ExtremaType.END, workKj, null);
+                        repository.updateExtremaValue(workoutId, SensorType.WORK_KJ, ExtremaType.AVG, workKj, null);
+                        repository.updateExtremaValue(workoutId, SensorType.WORK_KJ, ExtremaType.MAX, workKj, null);
+                        repository.updateExtremaValue(workoutId, SensorType.WORK_KJ, ExtremaType.END, workKj, null);
                     }
                     if (powerMetrics.getAvgPowerToWeight() != null) {
                         double avgWPerKg = powerMetrics.getAvgPowerToWeight();
-                        repository.updateExtremaValue(mWorkoutID, SensorType.POWER_TO_WEIGHT, ExtremaType.AVG, avgWPerKg, null);
+                        repository.updateExtremaValue(workoutId, SensorType.POWER_TO_WEIGHT, ExtremaType.AVG, avgWPerKg, null);
                     }
                     if (powerMetrics.getMaxPowerToWeight() != null) {
                         double maxWPerKg = powerMetrics.getMaxPowerToWeight();
-                        repository.updateExtremaValue(mWorkoutID, SensorType.POWER_TO_WEIGHT, ExtremaType.MAX, maxWPerKg, null);
+                        repository.updateExtremaValue(workoutId, SensorType.POWER_TO_WEIGHT, ExtremaType.MAX, maxWPerKg, null);
                     }
                 }
             }
@@ -2981,7 +3119,7 @@ public class TrackerService extends Service {
 
         // 4. Guess Commute and Trainer (REQ-TRK-030.4)
         try {
-            guessCommuteAndTrainer();
+            guessCommuteAndTrainer(workoutId);
         } catch (Throwable t) {
             Log.e(TAG, "finalizeLiveSession: Error in guessCommuteAndTrainer", t);
             mDiagnosticCollector.record(DiagnosticStage.FINALIZE, t, "Error in guessCommuteAndTrainer");
@@ -3004,9 +3142,9 @@ public class TrackerService extends Service {
             // Initial arbitration using currently active devices in memory (more reliable than waiting for DB sync)
             EquipmentAndSportTypeDiscoveryManager.InferredIdentity identity = discoveryManager.resolveIdentity(activeRemoteDeviceIds, banalSportType, getAverageSpeed());
 
-            LatLng startPosRaw = mLiveSession.getStartLatLng();
-            LatLng endPosRaw = mLiveSession.getLastLatLng();
-            LatLng maxDispPos = repository.getExtremaPosition(mWorkoutID, SensorType.LINE_DISTANCE_m, ExtremaType.MAX);
+            LatLng startPosRaw = (liveSession != null) ? liveSession.getStartLatLng() : null;
+            LatLng endPosRaw = (liveSession != null) ? liveSession.getLastLatLng() : null;
+            LatLng maxDispPos = repository.getExtremaPosition(workoutId, SensorType.LINE_DISTANCE_m, ExtremaType.MAX);
 
             if (startPosRaw != null && endPosRaw != null && maxDispPos != null) {
                 WorkoutClusterEngine engine = WorkoutClusterEngine.Companion.getInstance(this);
@@ -3027,26 +3165,26 @@ public class TrackerService extends Service {
                     candidateSports = discoveryManager.getCandidateBSportTypes(banalSportType, getAverageSpeed());
                 }
 
-                LatLng minAltPos = repository.getExtremaPosition(mWorkoutID, SensorType.ALTITUDE, ExtremaType.MIN);
-                LatLng maxAltPos = repository.getExtremaPosition(mWorkoutID, SensorType.ALTITUDE, ExtremaType.MAX);
+                LatLng minAltPos = repository.getExtremaPosition(workoutId, SensorType.ALTITUDE, ExtremaType.MIN);
+                LatLng maxAltPos = repository.getExtremaPosition(workoutId, SensorType.ALTITUDE, ExtremaType.MAX);
                 WorkoutCluster suggestion = engine.suggestCluster(startPosRaw, endPosRaw, maxDispPos, mDistanceTotal_m, null, candidateSports, minAltPos, maxAltPos);
                 if (suggestion != null) {
                     // If hardware confidence is high, we only take the name from the cluster
                     if (identity.isHighConfidence()) {
                         int displayCount = suggestion.getHitCount() + 1;
                         String autoName = WorkoutClusterEngine.formatClusterWorkoutName(this, suggestion.getName(), displayCount, suggestion.getHasCounter());
-                        repository.updateWorkoutName(mWorkoutID, autoName);
-                        repository.updateWorkoutClusterId(mWorkoutID, suggestion.getId());
+                        repository.updateWorkoutName(workoutId, autoName);
+                        repository.updateWorkoutClusterId(workoutId, suggestion.getId());
 
                         // Apply hardware-based identity (Sport, Gear, Strava)
-                        repository.applyInferredIdentity(mWorkoutID, identity);
+                        repository.applyInferredIdentity(workoutId, identity);
                     } else {
                         // Low hardware confidence -> Workout Cluster wins everything and resolves ambiguous sport type
-                        engine.assignClusterToWorkout(this, mWorkoutID, suggestion.getId());
+                        engine.assignClusterToWorkout(this, workoutId, suggestion.getId());
                     }
                 } else {
                     // No cluster match -> use hardware identity
-                    repository.applyInferredIdentity(mWorkoutID, identity);
+                    repository.applyInferredIdentity(workoutId, identity);
 
                     // ATT-1398: Intelligent Workout Auto-Naming based on recognized start/destination Lieblingsorte
                     KnownLocationsRepository knownLocationsRepo = getKnownLocationsRepository();
@@ -3065,12 +3203,12 @@ public class TrackerService extends Service {
                         mDistanceTotal_m
                     );
                     if (autoName != null && !autoName.trim().isEmpty()) {
-                        repository.updateWorkoutName(mWorkoutID, autoName);
+                        repository.updateWorkoutName(workoutId, autoName);
                     }
                 }
             } else {
                 // No spatial data -> use hardware identity
-                repository.applyInferredIdentity(mWorkoutID, identity);
+                repository.applyInferredIdentity(workoutId, identity);
             }
 
             // 6. Milestone Workout Auto-Naming & First Jubilee Evaluation (ATT-2308 / REQ-REV-001, REQ-REV-002, REQ-REV-004)
@@ -3083,7 +3221,7 @@ public class TrackerService extends Service {
                         : ((snapshot != null && snapshot.bSportType != BSportType.UNKNOWN) ? snapshot.bSportType : banalSportType);
                 mFirstJubileeCelebrationData = MilestoneAutoNamingManager.evaluateAndApplyMilestone(
                         this,
-                        mWorkoutID,
+                        workoutId,
                         finalSportId,
                         finalSportType
                 );
@@ -3099,8 +3237,8 @@ public class TrackerService extends Service {
         // 7. Persist final diagnostic recording errors summary (REQ-TRK-053.2)
         try {
             String finalErrorJson = mDiagnosticCollector.toJson();
-            if (finalErrorJson != null && mWorkoutID > 0) {
-                repository.updateRecordingErrors(mWorkoutID, finalErrorJson);
+            if (finalErrorJson != null && workoutId > 0) {
+                repository.updateRecordingErrors(workoutId, finalErrorJson);
             }
         } catch (Throwable t) {
             Log.e(TAG, "finalizeLiveSession: Error persisting diagnostic errors payload", t);
@@ -3109,12 +3247,17 @@ public class TrackerService extends Service {
 
     @VisibleForTesting
     protected void guessCommuteAndTrainer() {
+        guessCommuteAndTrainer(mWorkoutID);
+    }
+
+    @VisibleForTesting
+    protected void guessCommuteAndTrainer(long workoutId) {
         if (DEBUG) Log.i(TAG, "guessCommuteAndTrainer");
         WorkoutRepository repository = getWorkoutRepository();
 
-        Double distance = repository.getWorkoutDistance(mWorkoutID);
-        Double maxLineDistance = repository.getExtremaValue(mWorkoutID, SensorType.LINE_DISTANCE_m, ExtremaType.MAX);
-        Double endLineDistance = repository.getExtremaValue(mWorkoutID, SensorType.LINE_DISTANCE_m, ExtremaType.END);
+        Double distance = repository.getWorkoutDistance(workoutId);
+        Double maxLineDistance = repository.getExtremaValue(workoutId, SensorType.LINE_DISTANCE_m, ExtremaType.MAX);
+        Double endLineDistance = repository.getExtremaValue(workoutId, SensorType.LINE_DISTANCE_m, ExtremaType.END);
 
         boolean commute = false, trainer = false;
         if (maxLineDistance != null) {
@@ -3129,7 +3272,7 @@ public class TrackerService extends Service {
         }
 
         if (commute ^ trainer) {
-            repository.setCommuteAndTrainer(mWorkoutID, commute, trainer);
+            repository.setCommuteAndTrainer(workoutId, commute, trainer);
         }
     }
 

@@ -2491,3 +2491,25 @@
      • Assert `workout_summaries` has `FINISHED = 1`, final lap record in `laps`, and all computed summary fields match expectations.
   6. *Targeted Package Integration Suite Execution (`TST-TRK-075.6`)*:
      • `python3 tools/parallel_sprint_lock.py -- ./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.integration.*"` asserting 100% pass rate.
+
+
+### TST-TRK-076: **Defensive Concurrency and Re-Entrant Stop-to-Start Lifecycle Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-TRK-076` (`REQ-TRK-076.1`..`REQ-TRK-076.4`)
+- **Component**: `TrackerService.java`, `TrackerServiceFinalizationTest.kt`
+- **Jira**: `ATT-7746`
+- **Test Description**:
+  1. *Immediate START_NORMAL During In-Flight Finalization Test (`TST-TRK-076.1`, `TrackerServiceFinalizationTest.kt`)*:
+     • Simulate active workout finalization running on `mDbExecutor` after `handleActionStop()`.
+     • Dispatch `onStartCommand(START_NORMAL)` before `finalizationTask` completes.
+     • Assert zero `RejectedExecutionException` thrown and task enqueued on `mDbExecutor` in FIFO order.
+  2. *Session Parameter Isolation Verification Test (`TST-TRK-076.2`, `TrackerServiceFinalizationTest.kt`)*:
+     • Update `mWorkoutID`, `mBaseFileName`, and `mLiveSession` in `onStartCommand(START_NORMAL)` while previous session is finalizing.
+     • Assert that the finishing session's `endWorkout` and `finalizeLiveSession` execute using the captured snapshot parameters without corruption.
+  3. *Suppression of Stale StopSelf and Teardown Test (`TST-TRK-076.3`, `TrackerServiceFinalizationTest.kt`)*:
+     • Complete `finalizationTask` on `mDbExecutor` after `onStartCommand(START_NORMAL)` has incremented `mSessionGeneration` and reset `mIsStopping = false`.
+     • Assert that `performStopSelf()`, `performStopForeground()`, and `safeUnbindBanalService()` are NOT executed by the completed previous session.
+  4. *Clean Normal Teardown on Terminal Exit Test (`TST-TRK-076.4`, `TrackerServiceFinalizationTest.kt`)*:
+     • Execute `handleActionStop()` without subsequent restart.
+     • Assert that upon `finalizationTask` completion, teardown is invoked, and `onDestroy()` shuts down `mDbExecutor`, `mScheduler`, and `mRrFlushExecutor`.
+  5. *Targeted Package Regression Execution (`TST-TRK-076.5`)*:
+     • `python3 tools/parallel_sprint_lock.py -- ./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.tracker.*"` asserting 100% pass rate.

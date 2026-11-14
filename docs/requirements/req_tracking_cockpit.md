@@ -4589,3 +4589,44 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 • *Then* the final lap is saved, `FINISHED = 1` is committed, and computed summary metrics (distance, active time, max/avg HR, ascent) are persisted to SQLite.
 
 **Invariants**: Zero modification to production code or database schemas; complete test isolation per run; 100% authentic SQLite persistence verification.
+
+
+### REQ-TRK-076: Defensive Concurrency and Re-Entrant Stop-to-Start Lifecycle in TrackerService [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-TRK-076`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `TrackerService.java`, `TrackerServiceFinalizationTest.kt`
+- **Rationale**: When an athlete stops a workout and starts a new session immediately while asynchronous finalization (`finalizationTask`) is still running on `mDbExecutor`, `TrackerService` SHALL NOT throw `RejectedExecutionException`, SHALL NOT corrupt the finishing session's state, and SHALL NOT allow the finishing session's teardown callback to prematurely terminate the new session (ATT-7746, amending `REQ-TRK-034.2` and `REQ-TRK-034.3`):
+- **Description**:
+  1. *Deferred Executor Teardown strictly to onDestroy (`REQ-TRK-076.1`)*:
+     - `TrackerService.handleActionStop()` SHALL cancel periodic sampling via `cancelTrackerHandle()`, but SHALL NOT invoke `mDbExecutor.shutdown()`, `mScheduler.shutdownNow()`, or `mRrFlushExecutor.shutdown()`. Complete executor shutdown SHALL be deferred strictly to `onDestroy()`.
+     - In `onDestroy()`, `mDbExecutor.shutdown()` and `mScheduler.shutdownNow()` SHALL be invoked across all exit paths, including when `mIsStopping == true`.
+  2. *Session-Isolated Snapshot Parameters (`REQ-TRK-076.2`)*:
+     - In `handleActionStop()`, `TrackerService` SHALL capture immutable local references to the active session parameters (`workoutId`, `baseFileName`, `liveSession`) before submitting `finalizationTask` to `mDbExecutor`.
+     - These parameters SHALL be passed explicitly to `endWorkout(...)` and `finalizeLiveSession(...)` so that subsequent mutations to `TrackerService` instance fields by `onStartCommand(START_NORMAL)` cannot cross-contaminate or corrupt the finalizing session.
+  3. *Monotonic Session Generation Gating for Teardown (`REQ-TRK-076.3`)*:
+     - `TrackerService` SHALL maintain a monotonic `mSessionGeneration` counter incremented upon each `START_NORMAL` dispatch.
+     - In `finalizationTask`'s `finally` block, `performStopSelf()`, `performStopForeground()`, `safeUnbindBanalService()`, and `releaseWakeLock()` SHALL execute ONLY if `mSessionGeneration == stoppingGeneration` and `mIsStopping == true`. If a new session has started, the previous session's teardown callbacks SHALL NOT terminate or unbind resources for the active session.
+  4. *Service State Re-initialization & Receiver Re-registration on Restart (`REQ-TRK-076.4`)*:
+     - When `onStartCommand` receives `START_NORMAL` while `mIsStopping == true`, `TrackerService` SHALL reset `mIsStopping = false`, reset `mTrackingInterrupted = false`, re-register transient broadcast receivers (`mSearchingFinishedReceiver`, `mAltitudeCorrectionReceiver`, `mLapSummaryReceiver`, `mUserSelectedSportTypeChangedReceiver`), and ensure foreground service state and wakelock are actively maintained.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: `REQ-TRK-034` (Clauses 2 & 3), targeting `TrackerService.java` and `TrackerServiceFinalizationTest.kt`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-42.9 (`ATT-4098`, commit `4795a2cf`). Introduced `ACTION_STOP` to retain Foreground Service priority during async finalization on `mDbExecutor`.
+3. *Root Reason for Existing Formulation*: Assumed a single linear session lifecycle where `ACTION_STOP` finalization runs to termination before a new session starts.
+4. *Preservation of Core Invariants*: Retains 1-Hz tick suppression (`cancelTrackerHandle()`), foreground LMK protection, dedicated `FINISHED = 1` minimal transaction, and `TRACKING_FINISHED_INTENT` broadcast, while establishing re-entrant stop-to-start lifecycle safety.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `TrackerService` has received `ACTION_STOP` and `finalizationTask` is actively running on `mDbExecutor`,
+• *When* `onStartCommand` with `START_NORMAL` is delivered to the same `TrackerService` instance before `finalizationTask` completes,
+• *Then* no `RejectedExecutionException` is thrown, the new session task queues behind the finalization task in strict FIFO order, the previous session finalizes with its isolated parameters, and the previous session's completion callback does not invoke `performStopSelf()`.
+• *Given* `TrackerService` receives `ACTION_STOP` and no subsequent `onStartCommand` arrives,
+• *When* `finalizationTask` finishes,
+• *Then* `performStopSelf()`, `performStopForeground()`, and `safeUnbindBanalService()` are invoked on the main thread, and all executors are cleanly shut down in `onDestroy()`.
+• *Given* `TrackerService.onDestroy()` is invoked while `mIsStopping == true`,
+• *When* `onDestroy()` executes,
+• *Then* `mDbExecutor.shutdown()` and `mScheduler.shutdownNow()` are executed to prevent worker thread leaks.
+
+**Invariants**: Zero `RejectedExecutionException`; strict single-thread FIFO execution on `mDbExecutor`; zero state cross-contamination between consecutive sessions; clean service and executor destruction on terminal exit.
