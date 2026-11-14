@@ -7328,6 +7328,7 @@
   4. *Radar Icon Asset & SensorType Mapping Contract Test (`TST-UI-451.4`, `SensorStatusTopBarSpacingTest.kt`)*:
   • Verify `R.drawable.ic_radar` exists in `res/drawable/` as a valid 24dp vector drawable.
   • Verify `SensorType.RADAR_THREAT_COUNT.getIconResId()` returns `R.drawable.ic_radar`.
+  • Verify `ic_radar.xml` reorients radar waves 90 degrees counter-clockwise (to the left) via `<group>` rotation (`android:rotation="270"` around `android:pivotX="480"` and `android:pivotY="480"`) (`ATT-7736`).
   5. *Radar Sensor Source Dialog Contract Test (`TST-UI-451.5`, `SensorSourceDialogContractTest.kt`)*:
   • Verify `SensorSourceDialog` displays localized "Bike Radar" title (`R.string.device_type_bike_radar`) for `RADAR_THREAT_COUNT`.
   • Verify scalar `valueWithUnit` is suppressed on device identity rows for `RADAR_THREAT_COUNT`.

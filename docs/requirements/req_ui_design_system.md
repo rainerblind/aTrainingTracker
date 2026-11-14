@@ -14674,7 +14674,7 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
      - In portrait mode (`!isCompactLandscape`), horizontal padding per sensor icon in the central container SHALL be adjusted to `4.dp` (`size(22.dp)` + `padding(horizontal = 4.dp)` = `30.dp` per icon slot), ensuring all 9 icons fit cleanly within the 272 dp central container (`9 * 30.dp = 270.dp <= 272.dp`) without clipping on compact 360 dp viewports.
      - The radar icon SHALL render at `1.0f` alpha when `RADAR_THREAT_COUNT` is present in `activeSensors` (indicating active BLE/ANT+ radar hardware connected or `RadarTrafficSimulator` active) and at `INACTIVE_SENSOR_ALPHA = 0.38f` when inactive.
      - `SensorType.getIconResId()` SHALL return dedicated 24dp vector drawable `R.drawable.ic_radar` for `SensorType.RADAR_THREAT_COUNT`, `RADAR_CLOSEST_DISTANCE_m`, `RADAR_APPROACH_SPEED_mps`, and `RADAR_VEHICLE_COUNT`.
-     - Dedicated vector asset `res/drawable/ic_radar.xml` SHALL be authored as a clean, standalone 24dp vector drawable featuring concentric radar waves and origin point.
+     - Dedicated vector asset `res/drawable/ic_radar.xml` SHALL be authored as a clean, standalone 24dp vector drawable featuring concentric radar waves and origin point, rotated 90 degrees counter-clockwise (to the left) so waves radiate horizontally to the left representing rearview vehicular radar detection horizon (`ATT-7736`).
   5. *Bike Radar Sensor Source Dialog & Scalar Metric Omission (`REQ-UI-451.5`)*:
      - When `SensorSourceDialog` is opened for `SensorType.RADAR_THREAT_COUNT`:
        - The dialog title SHALL display the localized "Bike Radar" string (`R.string.device_type_bike_radar`, capitalized) alongside `R.drawable.ic_radar`.
@@ -14685,10 +14685,10 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
      - All radar sensor status and source dialog text, dialog titles, and accessibility content descriptions SHALL maintain 100% localization parity across all 9 supported languages (`de`, `en`, `es`, `fr`, `it`, `ja`, `nl`, `pl`, `pt`).
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Extending `REQ-UI-445.3` (*Live Cockpit Status Emblem & Retirement of Quick Icon Picker Dialog*), targets `SensorStatus.kt`, `SensorSourceDialog.kt`, `SensorType.java`, `TrackingTabsScreen.kt`.
-2. *Historical Origin & Commit Trace*: Sprint 2026-45.4 (`ATT-5397`, commit `8baf42c8`), Sprint 2026-45.4 (`ATT-5422`, commit `fb6797a7`), and Sprint 2026-46.5 (`ATT-7544`).
-3. *Root Reason for Existing Formulation*: `REQ-UI-451` originally budgeted 272 dp for 8 legacy sensors (8 * 34 dp = 272 dp). Adding the 9th sensor for Cycling Rearview Radar (`DeviceType.BIKE_RADAR`) without padding adjustment would require 306 dp (> 272 dp) and cause clipping on 360 dp screens.
-4. *Preservation of Core Invariants*: The 8 legacy sensors maintain 100% functional and visual fidelity; 32 dp symmetrical action buttons and 16 dp total display edge offsets are strictly preserved; central alignment is maintained; compact landscape mode remains preserved.
+1. *Original Requirement ID & Target*: Extending `REQ-UI-445.3` (*Live Cockpit Status Emblem & Retirement of Quick Icon Picker Dialog*), targets `SensorStatus.kt`, `SensorSourceDialog.kt`, `SensorType.java`, `TrackingTabsScreen.kt`, `res/drawable/ic_radar.xml`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-45.4 (`ATT-5397`, commit `8baf42c8`), Sprint 2026-45.4 (`ATT-5422`, commit `fb6797a7`), Sprint 2026-46.5 (`ATT-7544`), and Sprint 2026-46.6 (`ATT-7736`).
+3. *Root Reason for Existing Formulation*: `REQ-UI-451` originally budgeted 272 dp for 8 legacy sensors (8 * 34 dp = 272 dp). Adding the 9th sensor for Cycling Rearview Radar (`DeviceType.BIKE_RADAR`) without padding adjustment would require 306 dp (> 272 dp) and cause clipping on 360 dp screens. ATT-7544 authored the standalone 24dp vector asset with concentric waves, but defaulted to upward-pointing waves. Sprint 2026-46.5 Review noted that cycling radar icons canonically radiate horizontally to the left (rearview radar perspective).
+4. *Preservation of Core Invariants*: The 8 legacy sensors maintain 100% functional and visual fidelity; 32 dp symmetrical action buttons and 16 dp total display edge offsets are strictly preserved; central alignment is maintained; compact landscape mode remains preserved; 24dp asset bounds, 960x960 viewport, and vector tinting are strictly preserved under 90° counter-clockwise rotation.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* an athlete viewing the tracking cockpit in portrait mode on a 360 dp display,
@@ -14700,6 +14700,9 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 • *Given* an athlete tapping the radar icon in `SensorStatus`,
 • *When* `SensorSourceDialog` opens,
 • *Then* the title displays the localized "Bike Radar" with `R.drawable.ic_radar`, enumerates `BIKE_RADAR` devices without scalar value text, and clicking a device opens `EditDeviceDialog`.
+• *Given* the Bike Radar status icon `R.drawable.ic_radar` rendered in `SensorStatus` or `SensorSourceDialog`,
+• *When* visually inspected,
+• *Then* the origin point is located at the center-right and the concentric radar wave arcs radiate horizontally to the left (90 degrees counter-clockwise from upward).
 
 **Invariants**: Option A 16 dp visual edge offset, exact mathematical centering of 9 sensor icons across all tiers, 270 dp <= 272 dp width on 360 dp displays, untouched compact landscape layout (`REQ-UI-434.1`), and 100% 9-language localization parity.
 

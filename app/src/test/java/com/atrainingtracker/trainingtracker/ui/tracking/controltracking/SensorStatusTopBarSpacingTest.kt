@@ -129,5 +129,7 @@ class SensorStatusTopBarSpacingTest {
         val content = target.readText()
         assertTrue("ic_radar.xml must be a vector drawable", content.contains("<vector"))
         assertTrue("ic_radar.xml must define 24dp dimensions", content.contains("android:width=\"24dp\"") && content.contains("android:height=\"24dp\""))
+        assertTrue("ic_radar.xml must define 90 degree counter-clockwise rotation", content.contains("android:rotation=\"270\"") || content.contains("android:rotation=\"-90\""))
+        assertTrue("ic_radar.xml must define center pivot", content.contains("android:pivotX=\"480\"") && content.contains("android:pivotY=\"480\""))
     }
 }
