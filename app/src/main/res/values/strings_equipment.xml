@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="equipment_wheel_position_title">Wheel Mounting Position</string>
+    <string name="equipment_wheel_position_front">Front Wheel</string>
+    <string name="equipment_wheel_position_rear">Rear Wheel</string>
+    <string name="equipment_wheel_position_unspecified">Unspecified Position</string>
+    <string name="equipment_wheel_position_unlink">Unlink Sensor</string>
+    <string name="equipment_wheel_position_front_badge">F</string>
+    <string name="equipment_wheel_position_rear_badge">R</string>
+    <string name="equipment_wheel_position_conflict_title">Wheel Position Conflict</string>
+    <string name="equipment_wheel_position_conflict_message">%1$s is already assigned to the %2$s on this bike. Swap sensor positions?</string>
+    <string name="equipment_wheel_position_swap">Swap Positions</string>
+    <string name="equipment_guidance_title">Why Wheel Sensors Alongside GPS?</string>
+    <string name="equipment_guidance_subtitle">Physical advantages of wheel speed sensors vs. smartphone GPS</string>
+    <string name="equipment_guidance_1_sensor_title">1 Wheel Sensor + GPS</string>
+    <string name="equipment_guidance_1_sensor_body">Provides instant zero-lag speed response, exact distance progression under dense forest canopy, in tunnels, and through alpine switchbacks where satellite visibility drops, as well as sharper live slope grade (Slope %).</string>
+    <string name="equipment_guidance_2_sensors_title">2 Wheel Sensors (Front + Rear) + GPS</string>
+    <string name="equipment_guidance_2_sensors_body">Enables GPS-free indirect tire pressure monitoring (iTPMS) to detect slow punctures within 150–250 m by measuring relative wheel circumference changes (identifying front vs. rear pressure loss), independent tire circumference calibration, and multi-sensor odometry fusion.</string>
+    <string name="equipment_guidance_got_it">Got it</string>
+</resources>

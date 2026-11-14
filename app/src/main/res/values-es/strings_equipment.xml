@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="equipment_wheel_position_title">Posición de montaje de rueda</string>
+    <string name="equipment_wheel_position_front">Rueda delantera</string>
+    <string name="equipment_wheel_position_rear">Rueda trasera</string>
+    <string name="equipment_wheel_position_unspecified">Posición no especificada</string>
+    <string name="equipment_wheel_position_unlink">Desvincular sensor</string>
+    <string name="equipment_wheel_position_front_badge">D</string>
+    <string name="equipment_wheel_position_rear_badge">T</string>
+    <string name="equipment_wheel_position_conflict_title">Conflicto de posición de rueda</string>
+    <string name="equipment_wheel_position_conflict_message">%1$s ya está asignado a la %2$s en esta bicicleta. ¿Intercambiar posiciones de los sensores?</string>
+    <string name="equipment_wheel_position_swap">Intercambiar posiciones</string>
+    <string name="equipment_guidance_title">¿Por qué sensores de rueda junto al GPS?</string>
+    <string name="equipment_guidance_subtitle">Ventajas físicas de los sensores de velocidad de rueda frente al GPS del teléfono</string>
+    <string name="equipment_guidance_1_sensor_title">1 sensor de rueda + GPS</string>
+    <string name="equipment_guidance_1_sensor_body">Proporciona una respuesta de velocidad instantánea sin retrasos, progresión de distancia exacta bajo copas de árboles densas, en túneles y curvas alpinas donde disminuye la señal de satélite, y una inclinación en tiempo real más precisa (Pendiente %).</string>
+    <string name="equipment_guidance_2_sensors_title">2 sensores de rueda (delantera + trasera) + GPS</string>
+    <string name="equipment_guidance_2_sensors_body">Permite el monitoreo indirecto de presión de neumáticos (iTPMS) sin GPS para detectar pinchazos lentos en 150–250 m midiendo variaciones relativas de circunferencia de rueda (identificando pérdida delantera vs. trasera), calibración de neumáticos independiente y fusión de odometría multisensor.</string>
+    <string name="equipment_guidance_got_it">Entendido</string>
+</resources>

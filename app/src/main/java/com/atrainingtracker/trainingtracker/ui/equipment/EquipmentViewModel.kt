@@ -34,6 +34,7 @@ import com.atrainingtracker.trainingtracker.ui.components.stats.StatsData
 import com.atrainingtracker.trainingtracker.ui.components.stats.StatsPeriodHelper
 import com.atrainingtracker.trainingtracker.monetization.GarageLeagueDetector
 import com.atrainingtracker.trainingtracker.monetization.GarageNudgeEvent
+import com.atrainingtracker.trainingtracker.database.WheelPosition
 import com.atrainingtracker.trainingtracker.repositories.EquipmentRepository
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -56,6 +57,7 @@ data class EquipmentItem(
     val firstUsed: String?,
     val lastUsed: String?,
     val statsData: StatsData,
+    val linkedDeviceWheelPositions: Map<Long, WheelPosition> = emptyMap(),
 )
 
 /**
@@ -192,6 +194,7 @@ class EquipmentViewModel @JvmOverloads constructor(
                     Log.i("EquipmentViewModel", "${data.id} ${data.name}: $sportTypeNames")
 
                     val stats = effectiveWorkoutRepo.getEquipmentStats(data.id)
+                    val wheelPositions = effectiveEquipmentRepo.getDeviceWheelPositionsForEquipment(data.id)
 
                     // You can now access data.stravaName, data.frameType, etc.
                     EquipmentItem(
@@ -212,7 +215,8 @@ class EquipmentViewModel @JvmOverloads constructor(
                             secondaryTitle = getApplication<Application>().getString(R.string.stats_total),
                             stats = stats,
                             equipmentId = data.id
-                        )
+                        ),
+                        linkedDeviceWheelPositions = wheelPositions
                     )
                 }
             }
@@ -244,9 +248,54 @@ class EquipmentViewModel @JvmOverloads constructor(
      * @param sensorId ID of the sensor device
      * @param isLinked True to establish link, false to unlink
      */
-    fun setSensorLink(equipmentId: Long, sensorId: Long, isLinked: Boolean) {
+    fun setSensorLink(
+        equipmentId: Long,
+        sensorId: Long,
+        isLinked: Boolean
+    ) {
         viewModelScope.launch(ioDispatcher) {
             effectiveEquipmentRepo.setDeviceLink(equipmentId, sensorId, isLinked)
+            loadEquipment()
+        }
+    }
+
+    fun setSensorLink(
+        equipmentId: Long,
+        sensorId: Long,
+        isLinked: Boolean,
+        wheelPosition: WheelPosition
+    ) {
+        viewModelScope.launch(ioDispatcher) {
+            effectiveEquipmentRepo.setDeviceLink(equipmentId, sensorId, isLinked, wheelPosition)
+            loadEquipment()
+        }
+    }
+
+    /**
+     * REQ-SEN-029.2: Updates a wheel speed sensor link with automatic conflict resolution/swap.
+     */
+    fun setWheelSensorLink(
+        equipmentId: Long,
+        sensorId: Long,
+        wheelPosition: WheelPosition,
+        swapConflict: Boolean = true
+    ) {
+        viewModelScope.launch(ioDispatcher) {
+            effectiveEquipmentRepo.setWheelSensorLink(equipmentId, sensorId, wheelPosition, swapConflict)
+            loadEquipment()
+        }
+    }
+
+    /**
+     * REQ-SEN-029.2: Updates the wheel position of an existing linked sensor.
+     */
+    fun updateDeviceLinkWheelPosition(
+        equipmentId: Long,
+        sensorId: Long,
+        wheelPosition: WheelPosition
+    ) {
+        viewModelScope.launch(ioDispatcher) {
+            effectiveEquipmentRepo.updateDeviceLinkWheelPosition(equipmentId, sensorId, wheelPosition)
             loadEquipment()
         }
     }

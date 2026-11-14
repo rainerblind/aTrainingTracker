@@ -25,6 +25,7 @@ import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 import com.atrainingtracker.trainingtracker.database.SportTypeEquipmentLinkManager
+import com.atrainingtracker.trainingtracker.database.WheelPosition
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -65,6 +66,51 @@ open class EquipmentRepository internal constructor(
 
     open fun setDeviceLink(equipmentId: Long, sensorId: Long, isLinked: Boolean) =
         equipmentDbHelper.setDeviceLink(equipmentId, sensorId, isLinked)
+
+    open fun setDeviceLink(equipmentId: Long, sensorId: Long, isLinked: Boolean, wheelPosition: WheelPosition) =
+        equipmentDbHelper.setDeviceLink(equipmentId, sensorId, isLinked, wheelPosition)
+
+    open fun updateDeviceLinkWheelPosition(equipmentId: Long, sensorId: Long, wheelPosition: WheelPosition) =
+        equipmentDbHelper.updateDeviceLinkWheelPosition(equipmentId, sensorId, wheelPosition)
+
+    open fun getWheelPosition(equipmentId: Long, sensorId: Long): WheelPosition? =
+        equipmentDbHelper.getWheelPosition(equipmentId, sensorId)
+
+    open fun getDeviceWheelPositionsForEquipment(equipmentId: Long): Map<Long, WheelPosition> =
+        equipmentDbHelper.getDeviceWheelPositionsForEquipment(equipmentId)
+
+    /**
+     * REQ-SEN-029.2: Establishes a link for a wheel speed sensor with conflict detection / swap guardrail.
+     * If another sensor on the bike is already assigned to the target position (FRONT or REAR),
+     * swaps positions or reassigns the existing sensor to prevent duplicate assignments per bike.
+     */
+    open fun setWheelSensorLink(
+        equipmentId: Long,
+        sensorId: Long,
+        wheelPosition: WheelPosition,
+        swapConflict: Boolean = true
+    ) {
+        if (wheelPosition == WheelPosition.FRONT || wheelPosition == WheelPosition.REAR) {
+            val existingPositions = getDeviceWheelPositionsForEquipment(equipmentId)
+            val conflictingEntry = existingPositions.entries.firstOrNull {
+                it.key != sensorId && it.value == wheelPosition
+            }
+            if (conflictingEntry != null && swapConflict) {
+                val oldPositionOfCurrent = existingPositions[sensorId] ?: WheelPosition.UNSPECIFIED
+                val targetForConflicting = if (oldPositionOfCurrent == WheelPosition.FRONT || oldPositionOfCurrent == WheelPosition.REAR) {
+                    oldPositionOfCurrent
+                } else {
+                    val opposite = if (wheelPosition == WheelPosition.FRONT) WheelPosition.REAR else WheelPosition.FRONT
+                    val oppositeTaken = existingPositions.entries.any {
+                        it.key != sensorId && it.key != conflictingEntry.key && it.value == opposite
+                    }
+                    if (oppositeTaken) WheelPosition.UNSPECIFIED else opposite
+                }
+                equipmentDbHelper.updateDeviceLinkWheelPosition(equipmentId, conflictingEntry.key, targetForConflicting)
+            }
+        }
+        equipmentDbHelper.setDeviceLink(equipmentId, sensorId, true, wheelPosition)
+    }
 
     open fun updateEquipment(id: Long, name: String, frameType: Int, linkedDeviceIds: List<Long>, isRetired: Boolean) =
         equipmentDbHelper.updateEquipment(id, name, frameType, linkedDeviceIds, isRetired)

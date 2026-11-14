@@ -5523,3 +5523,56 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 **Invariants**: Zero GPS distance creep during indoor trainer workouts; zero spiderweb polyline drift at rest stops; 100% backward compatibility for mock GPS replays and standalone GPS tracking; 100% test pass rate across `banalservice.devices.*`.
 
+
+### REQ-SEN-029: Front/Rear Wheel Speed Sensor Mounting Position Tracking, Selection Dialog & Dual-Sensor Guidance [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-SEN-029`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `EquipmentDbHelper.java`, `WheelPosition.java`, `EquipmentRepository.kt`, `EquipmentViewModel.kt`, `EquipmentSensorMatrixScreen.kt`, `EditDeviceDialog.kt`, `strings_equipment.xml`, `docs/guide/`
+- **Rationale**: Track FRONT vs. REAR wheel sensor mounting positions in SQLite and Compose UI to enable dual-wheel odometry fusion (ATT-131 / ATT-7751), per-wheel circumference history, and dual-wheel iTPMS slow-puncture detection (ATT-7753), while providing clear contextual guidance explaining the physical benefits of 1 vs. 2 wheel speed sensors alongside smartphone GPS (ATT-7752, extending REQ-UI-256 and REQ-DAT-031):
+- **Description**:
+  1. *SQLite Schema Extension & Migration (`REQ-SEN-029.1`)*:
+     - The system SHALL declare enum `WheelPosition` with values `FRONT`, `REAR`, `UNSPECIFIED`.
+     - In `EquipmentDbHelper.java`, `DB_VERSION` SHALL be incremented to `4`.
+     - On upgrade (`oldVersion < 4`), `onUpgrade` SHALL execute non-destructive migration: `ALTER TABLE Links ADD COLUMN wheel_position TEXT DEFAULT 'UNSPECIFIED'`.
+     - In fresh installations, `CREATE_LINKS_TABLE` SHALL include `wheel_position text default 'UNSPECIFIED'`.
+     - Existing links SHALL preserve 100% data integrity with `wheel_position = 'UNSPECIFIED'`.
+     - `EquipmentDbHelper` SHALL expose `getDeviceWheelPositionsForEquipment(equipmentId)`, `getWheelPosition(equipmentId, deviceId)`, and `setDeviceLink(equipmentId, deviceId, isLinked, wheelPosition)`.
+  2. *EquipmentRepository & ViewModel Synchronization with Bike Guardrail (`REQ-SEN-029.2`)*:
+     - `EquipmentItem` SHALL encapsulate `linkedDeviceWheelPositions: Map<Long, WheelPosition>`.
+     - `EquipmentRepository` and `EquipmentViewModel` SHALL support updating wheel mounting positions and dispatching reactive notifications via `equipmentLinksChanged`.
+     - *Guardrail per bike*: When a bike already links a speed sensor with position `FRONT` and the user assigns `FRONT` to a second sensor on that bike, the system SHALL offer a clean swap or reassign the existing sensor to `REAR`/`UNSPECIFIED` so two sensors on the same bike are never accidentally both marked `FRONT` (and similarly for `REAR`).
+  3. *Interactive Wheel Position Selection Dialog & Badge Rendering (`REQ-SEN-029.3`)*:
+     - In `EquipmentSensorMatrixScreen.kt`, tapping a wheel speed sensor (`BIKE_SPEED`, `BIKE_SPEED_AND_CADENCE`) cell SHALL display a compact Material 3 dialog prompting for mounting position: *Vorderrad (Front)*, *Hinterrad (Rear)*, *Ohne feste Position (Unspecified)*, or *Trennen (Unlink)* if already linked.
+     - Tapping a non-wheel sensor (HRM, Cadence, Power, Radar) SHALL retain standard 1-tap checkbox toggling.
+     - Linked wheel speed sensor cells SHALL display a localized short badge (e.g. `V` / `H` in German, `F` / `R` in English) alongside the checkmark within `SENSOR_COLUMN_WIDTH` (88 dp) without text clipping (`Rule 84`).
+  4. *In-App Guidance Card & Living User Documentation (`REQ-SEN-029.4`)*:
+     - `EquipmentSensorMatrixScreen.kt` and `EditDeviceDialog.kt` (for `BIKE_SPEED` and `SPEED_AND_LOCATION_ATT_FUSED`) SHALL provide a localized info card or dialog explaining the physical advantages of 1 vs. 2 wheel sensors:
+       a) *1 Wheel Sensor + GPS*: Instant speed responsiveness without GNSS filter lag, exact distance under canopy, mountain hairpins and tunnels, sharper live slope %, and tire pressure baseline tracking.
+       b) *2 Wheel Sensors (Front + Rear) + GPS*: Independent front/rear tire circumference history, GPS-free ABS-style dual-wheel slow-puncture detection within 150–250 m (identifying front vs. rear pressure loss), and triple-redundant multi-sensor fusion.
+     - `docs/guide/en/03-equipment-sensor-matrix.md` and `docs/guide/de/03-equipment-sensor-matrix.md` SHALL detail Section 3.3 ("Why 1 or 2 Wheel Sensors Alongside GPS?").
+     - All user-facing UI strings SHALL be translated with 100% parity across all 9 supported locales.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-SEN-029`, refining and extending `REQ-UI-256` (*Equipment Management Matrix*, `ATT-2126`) and `REQ-DAT-031` (*EquipmentDbHelper Schema*, `ATT-4011`). Targets `EquipmentDbHelper.java`, `WheelPosition.java`, `EquipmentRepository.kt`, `EquipmentViewModel.kt`, `EquipmentSensorMatrixScreen.kt`, `EditDeviceDialog.kt`, and `docs/guide/`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-40.15 (`ATT-2126`, `ATT-2307`, `REQ-UI-256` matrix) and Sprint 2026-46.6 (`ATT-7751`, `REQ-SEN-028` ATT Fused sensor).
+3. *Root Reason for Existing Formulation*: Original matrix only supported binary association without tracking per-wheel mounting geometry or dual-wheel puncture differentials.
+4. *Preservation of Core Invariants*: Default `UNSPECIFIED` value preserves 100% of existing equipment links; non-wheel sensors remain unaffected; backup/restore compatibility is maintained; 100% test pass rate across equipment and database suites.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an existing `Equipment.db` at version 3 with bike-sensor links,
+• *When* the database is opened under `EquipmentDbHelper` version 4,
+• *Then* `wheel_position` column is added non-destructively, existing links return `WheelPosition.UNSPECIFIED`, and new links with `FRONT`/`REAR` persist reliably.
+• *Given* `EquipmentSensorMatrixScreen.kt`,
+• *When* the user taps a `BIKE_SPEED` or `BIKE_SPEED_AND_CADENCE` cell for a bike,
+• *Then* an interactive dialog prompts for *Vorderrad*, *Hinterrad*, or *Unbestimmt*, and the cell renders a compact non-clipping badge (`V`/`H` or `F`/`R`) within 88 dp column width.
+• *Given* a bike with an existing `FRONT` wheel sensor,
+• *When* the user selects `FRONT` for a second wheel speed sensor on the same bike,
+• *Then* the system detects the conflict and offers to swap positions or reassign cleanly without leaving two `FRONT` sensors on the same bike.
+• *Given* the sensor matrix or `EditDeviceDialog.kt`,
+• *When* the user opens the sensor info guidance,
+• *Then* localized text across all 9 languages clearly explains the physical benefits of 1 vs. 2 wheel sensors alongside GPS.
+
+**Invariants**: Zero data loss during SQLite upgrade; non-wheel sensors retain 1-tap checkbox toggling; zero text clipping across German and English UI strings (`Rule 84`); 100% clean-room test pass rate.

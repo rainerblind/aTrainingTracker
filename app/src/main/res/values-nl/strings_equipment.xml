@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="equipment_wheel_position_title">Wielmontagepositie</string>
+    <string name="equipment_wheel_position_front">Voorwiel</string>
+    <string name="equipment_wheel_position_rear">Achterwiel</string>
+    <string name="equipment_wheel_position_unspecified">Niet-gespecificeerde positie</string>
+    <string name="equipment_wheel_position_unlink">Sensor ontkoppelen</string>
+    <string name="equipment_wheel_position_front_badge">V</string>
+    <string name="equipment_wheel_position_rear_badge">A</string>
+    <string name="equipment_wheel_position_conflict_title">Wielpositieconflict</string>
+    <string name="equipment_wheel_position_conflict_message">%1$s is op deze fiets al toegewezen aan het %2$s. Sensorposities omwisselen?</string>
+    <string name="equipment_wheel_position_swap">Posities omwisselen</string>
+    <string name="equipment_guidance_title">Waarom wielsensoren naast GPS?</string>
+    <string name="equipment_guidance_subtitle">Fysieke voordelen van wielsnelheidssensoren ten opzichte van smartphone-GPS</string>
+    <string name="equipment_guidance_1_sensor_title">1 wielsensor + GPS</string>
+    <string name="equipment_guidance_1_sensor_body">Biedt directe snelheidsrespons zonder vertraging, exacte afstandsberekening onder een dicht bladerdek, in tunnels en op bochtige bergpassen met verminderde satellietontvangst, evenals een scherpere actuele hellingsgraad (Helling %).</string>
+    <string name="equipment_guidance_2_sensors_title">2 wielsensoren (voor + achter) + GPS</string>
+    <string name="equipment_guidance_2_sensors_body">Maakt GPS-loze indirecte bandenspanningscontrole (iTPMS) mogelijk om langzaam leeglopen binnen 150–250 m te detecteren via relatieve wielomtrekveranderingen (identificeert drukverlies voor vs. achter), onafhankelijke kalibratie van wielomtrek en multisensor-odometriefusie.</string>
+    <string name="equipment_guidance_got_it">Begrepen</string>
+</resources>

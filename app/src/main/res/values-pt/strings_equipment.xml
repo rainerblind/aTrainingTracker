@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="equipment_wheel_position_title">Posição de montagem da roda</string>
+    <string name="equipment_wheel_position_front">Roda dianteira</string>
+    <string name="equipment_wheel_position_rear">Roda traseira</string>
+    <string name="equipment_wheel_position_unspecified">Posição não especificada</string>
+    <string name="equipment_wheel_position_unlink">Desvincular sensor</string>
+    <string name="equipment_wheel_position_front_badge">D</string>
+    <string name="equipment_wheel_position_rear_badge">T</string>
+    <string name="equipment_wheel_position_conflict_title">Conflito de posição da roda</string>
+    <string name="equipment_wheel_position_conflict_message">%1$s já está atribuído à %2$s nesta bicicleta. Trocar posições dos sensores?</string>
+    <string name="equipment_wheel_position_swap">Trocar posições</string>
+    <string name="equipment_guidance_title">Por que sensores de roda junto ao GPS?</string>
+    <string name="equipment_guidance_subtitle">Vantagens físicas dos sensores de velocidade da roda em relação ao GPS do smartphone</string>
+    <string name="equipment_guidance_1_sensor_title">1 sensor de roda + GPS</string>
+    <string name="equipment_guidance_1_sensor_body">Fornece resposta de velocidade instantânea sem atraso, progressão de distância exata sob cobertura florestal densa, em túneis e curvas alpinas onde a visibilidade do satélite diminui, além de inclinação em tempo real mais precisa (Inclinação %).</string>
+    <string name="equipment_guidance_2_sensors_title">2 sensores de roda (dianteira + traseira) + GPS</string>
+    <string name="equipment_guidance_2_sensors_body">Permite monitoramento indireto da pressão dos pneus (iTPMS) sem GPS para detectar furos lentos dentro de 150–250 m medindo variações relativas na circunferência de rolamento (identificando perda dianteira vs. traseira), calibração independente da circunferência dos pneus e fusão odométrica multissensor.</string>
+    <string name="equipment_guidance_got_it">Entendido</string>
+</resources>

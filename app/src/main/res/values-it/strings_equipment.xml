@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="equipment_wheel_position_title">Posizione di montaggio ruota</string>
+    <string name="equipment_wheel_position_front">Ruota anteriore</string>
+    <string name="equipment_wheel_position_rear">Ruota posteriore</string>
+    <string name="equipment_wheel_position_unspecified">Posizione non specificata</string>
+    <string name="equipment_wheel_position_unlink">Scollega sensore</string>
+    <string name="equipment_wheel_position_front_badge">A</string>
+    <string name="equipment_wheel_position_rear_badge">P</string>
+    <string name="equipment_wheel_position_conflict_title">Conflitto posizione ruota</string>
+    <string name="equipment_wheel_position_conflict_message">%1$s è già assegnato alla %2$s su questa bicicletta. Scambiare le posizioni dei sensori?</string>
+    <string name="equipment_wheel_position_swap">Scambia posizioni</string>
+    <string name="equipment_guidance_title">Perché i sensori ruota insieme al GPS?</string>
+    <string name="equipment_guidance_subtitle">Vantaggi fisici dei sensori di velocità ruota rispetto al GPS dello smartphone</string>
+    <string name="equipment_guidance_1_sensor_title">1 sensore ruota + GPS</string>
+    <string name="equipment_guidance_1_sensor_body">Fornisce risposta istantanea della velocità a latenza zero, calcolo esatto della distanza sotto fitta copertura boschiva, in gallerie e tornanti alpini dove la ricezione satellitare cala, nonché pendenza istantanea più precisa (Pendenza %).</string>
+    <string name="equipment_guidance_2_sensors_title">2 sensori ruota (anteriore + posteriore) + GPS</string>
+    <string name="equipment_guidance_2_sensors_body">Consente il monitoraggio indiretto della pressione pneumatici (iTPMS) senza GPS per rilevare forature lente entro 150–250 m misurando variazioni relative della circonferenza di rotolamento (identificando perdita anteriore vs posteriore), calibrazione indipendente dei pneumatici e fusione odometrica multisensore.</string>
+    <string name="equipment_guidance_got_it">Ho capito</string>
+</resources>

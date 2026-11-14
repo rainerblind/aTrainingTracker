@@ -278,6 +278,9 @@ fun DevicesTabbedScreen(
                                 onToggleLink = { eqId, sId, isLinked ->
                                     equipmentViewModel.setSensorLink(eqId, sId, isLinked)
                                 },
+                                onSetWheelPosition = { eqId, sId, position, isLinked ->
+                                    equipmentViewModel.setWheelSensorLink(eqId, sId, position, isLinked)
+                                },
                                 appBarOffsetPx = connection.appBarOffset,
                                 headerHeightPx = appBarMaxHeightPx.toFloat(),
                                 scrollState = bikesListState,

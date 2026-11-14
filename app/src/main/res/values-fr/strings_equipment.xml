@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="equipment_wheel_position_title">Position de montage de roue</string>
+    <string name="equipment_wheel_position_front">Roue avant</string>
+    <string name="equipment_wheel_position_rear">Roue arrière</string>
+    <string name="equipment_wheel_position_unspecified">Position non spécifiée</string>
+    <string name="equipment_wheel_position_unlink">Dissocier le capteur</string>
+    <string name="equipment_wheel_position_front_badge">Av</string>
+    <string name="equipment_wheel_position_rear_badge">Ar</string>
+    <string name="equipment_wheel_position_conflict_title">Conflit de position de roue</string>
+    <string name="equipment_wheel_position_conflict_message">%1$s est déjà assigné à la %2$s sur ce vélo. Échanger les positions des capteurs ?</string>
+    <string name="equipment_wheel_position_swap">Échanger les positions</string>
+    <string name="equipment_guidance_title">Pourquoi des capteurs de roue avec le GPS ?</string>
+    <string name="equipment_guidance_subtitle">Avantages physiques des capteurs de vitesse de roue par rapport au GPS du smartphone</string>
+    <string name="equipment_guidance_1_sensor_title">1 capteur de roue + GPS</string>
+    <string name="equipment_guidance_1_sensor_body">Fournit une vitesse instantanée sans latence, une distance exacte sous couvert forestier dense, dans les tunnels et les lacets alpins où le signal satellite faiblit, ainsi qu\'une pente en direct plus précise (Pente %).</string>
+    <string name="equipment_guidance_2_sensors_title">2 capteurs de roue (avant + arrière) + GPS</string>
+    <string name="equipment_guidance_2_sensors_body">Permet la surveillance indirecte de la pression des pneus (iTPMS) sans GPS pour détecter les crevaisons lentes en 150–250 m en mesurant les variations relatives de circonférence (perte avant vs arrière), l\'étalonnage indépendant de circonférence et la fusion odométrique multicapteurs.</string>
+    <string name="equipment_guidance_got_it">Compris</string>
+</resources>

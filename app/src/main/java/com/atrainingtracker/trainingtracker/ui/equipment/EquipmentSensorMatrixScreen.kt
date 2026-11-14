@@ -20,6 +20,7 @@ package com.atrainingtracker.trainingtracker.ui.equipment
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -28,12 +29,18 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -44,8 +51,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
 import com.atrainingtracker.banalservice.ui.devices.devicedata.SimpleSensorInfo
+import com.atrainingtracker.trainingtracker.database.WheelPosition
 import com.atrainingtracker.trainingtracker.ui.components.EmptyStatePlaceholder
 import com.atrainingtracker.trainingtracker.ui.components.FastScrollableBox
 
@@ -59,6 +68,12 @@ internal val ROW_HEIGHT = 56.dp
 internal val SECTION_HEADER_HEIGHT = 36.dp
 @VisibleForTesting
 internal val HEADER_ROW_HEIGHT = 60.dp
+
+private data class WheelDialogTarget(
+    val equipment: EquipmentItem,
+    val sensor: SimpleSensorInfo,
+    val isLinked: Boolean
+)
 
 /**
  * Screen providing a centralized, interactive equipment-to-sensor mapping matrix with checkboxes
@@ -80,11 +95,40 @@ fun EquipmentSensorMatrixScreen(
     shoeSensors: List<SimpleSensorInfo> = emptyList(),
     sensors: List<SimpleSensorInfo> = emptyList(),
     onToggleLink: (equipmentId: Long, sensorId: Long, isLinked: Boolean) -> Unit,
+    onSetWheelPosition: (equipmentId: Long, sensorId: Long, position: WheelPosition, isLinked: Boolean) -> Unit = { eqId, sId, _, isLinked -> onToggleLink(eqId, sId, isLinked) },
     appBarOffsetPx: Int,
     headerHeightPx: Float,
     modifier: Modifier = Modifier,
     scrollState: LazyListState = rememberLazyListState()
 ) {
+    var showGuidanceDialog by remember { mutableStateOf(false) }
+    var wheelDialogTarget by remember { mutableStateOf<WheelDialogTarget?>(null) }
+
+    if (showGuidanceDialog) {
+        WheelSensorGuidanceDialog(onDismiss = { showGuidanceDialog = false })
+    }
+
+    wheelDialogTarget?.let { target ->
+        val currentPosition = target.equipment.linkedDeviceWheelPositions[target.sensor.id] ?: WheelPosition.UNSPECIFIED
+        WheelPositionSelectionDialog(
+            equipmentName = target.equipment.name,
+            sensorName = target.sensor.name,
+            currentPosition = currentPosition,
+            isLinked = target.isLinked,
+            onSelectPosition = { position ->
+                onSetWheelPosition(target.equipment.id, target.sensor.id, position, true)
+                wheelDialogTarget = null
+            },
+            onUnlink = {
+                onToggleLink(target.equipment.id, target.sensor.id, false)
+                wheelDialogTarget = null
+            },
+            onDismiss = {
+                wheelDialogTarget = null
+            }
+        )
+    }
+
     val effectiveBikeSensors = if (bikeSensors.isNotEmpty()) {
         bikeSensors
     } else {
@@ -163,7 +207,8 @@ fun EquipmentSensorMatrixScreen(
                         title = stringResource(R.string.Equipment),
                         sensors = effectiveBikeSensors,
                         horizontalScrollState = bikeScrollState,
-                        emptySensorsMessage = stringResource(R.string.equipment_matrix_no_bike_sensors)
+                        emptySensorsMessage = stringResource(R.string.equipment_matrix_no_bike_sensors),
+                        onShowGuidance = { showGuidanceDialog = true }
                     )
                 }
 
@@ -173,7 +218,10 @@ fun EquipmentSensorMatrixScreen(
                         isBike = true,
                         sensors = effectiveBikeSensors,
                         horizontalScrollState = bikeScrollState,
-                        onToggleLink = onToggleLink
+                        onToggleLink = onToggleLink,
+                        onRequestWheelPositionDialog = { eq, sensor, linked ->
+                            wheelDialogTarget = WheelDialogTarget(eq, sensor, linked)
+                        }
                     )
                     HorizontalDivider(
                         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
@@ -224,7 +272,8 @@ private fun MatrixTableHeaderRow(
     title: String,
     sensors: List<SimpleSensorInfo>,
     horizontalScrollState: androidx.compose.foundation.ScrollState,
-    emptySensorsMessage: String? = null
+    emptySensorsMessage: String? = null,
+    onShowGuidance: (() -> Unit)? = null
 ) {
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainerHighest,
@@ -252,6 +301,22 @@ private fun MatrixTableHeaderRow(
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                if (onShowGuidance != null) {
+                    IconButton(
+                        onClick = onShowGuidance,
+                        modifier = Modifier
+                            .align(Alignment.CenterEnd)
+                            .size(32.dp)
+                            .testTag("matrix_guidance_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = stringResource(R.string.equipment_guidance_title),
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
             }
 
             // Vertical separator
@@ -382,7 +447,8 @@ private fun MatrixEquipmentRow(
     isBike: Boolean,
     sensors: List<SimpleSensorInfo>,
     horizontalScrollState: androidx.compose.foundation.ScrollState,
-    onToggleLink: (equipmentId: Long, sensorId: Long, isLinked: Boolean) -> Unit
+    onToggleLink: (equipmentId: Long, sensorId: Long, isLinked: Boolean) -> Unit,
+    onRequestWheelPositionDialog: ((EquipmentItem, SimpleSensorInfo, Boolean) -> Unit)? = null
 ) {
     Row(
         modifier = Modifier
@@ -454,22 +520,65 @@ private fun MatrixEquipmentRow(
         ) {
             sensors.forEach { sensor ->
                 val isLinked = item.linkedDeviceIds.contains(sensor.id)
+                val isWheelSensor = isBike && (sensor.deviceType == DeviceType.BIKE_SPEED || sensor.deviceType == DeviceType.BIKE_SPEED_AND_CADENCE)
+
                 Box(
                     modifier = Modifier
                         .width(SENSOR_COLUMN_WIDTH)
-                        .fillMaxHeight(),
+                        .fillMaxHeight()
+                        .then(
+                            if (isWheelSensor && onRequestWheelPositionDialog != null) {
+                                Modifier.clickable {
+                                    onRequestWheelPositionDialog(item, sensor, isLinked)
+                                }
+                            } else {
+                                Modifier
+                            }
+                        ),
                     contentAlignment = Alignment.Center
                 ) {
                     Checkbox(
                         checked = isLinked,
                         onCheckedChange = { checked ->
-                            onToggleLink(item.id, sensor.id, checked)
+                            if (isWheelSensor && onRequestWheelPositionDialog != null) {
+                                onRequestWheelPositionDialog(item, sensor, isLinked)
+                            } else {
+                                onToggleLink(item.id, sensor.id, checked)
+                            }
                         },
                         colors = CheckboxDefaults.colors(
                             checkedColor = MaterialTheme.colorScheme.primary,
                             checkmarkColor = MaterialTheme.colorScheme.onPrimary
                         )
                     )
+
+                    if (isLinked && isWheelSensor) {
+                        val wheelPos = item.linkedDeviceWheelPositions[sensor.id] ?: WheelPosition.UNSPECIFIED
+                        val badgeText = when (wheelPos) {
+                            WheelPosition.FRONT -> stringResource(R.string.equipment_wheel_position_front_badge)
+                            WheelPosition.REAR -> stringResource(R.string.equipment_wheel_position_rear_badge)
+                            WheelPosition.UNSPECIFIED -> null
+                        }
+                        if (badgeText != null) {
+                            Surface(
+                                shape = RoundedCornerShape(3.dp),
+                                color = MaterialTheme.colorScheme.primaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .padding(top = 4.dp, end = 6.dp)
+                                    .testTag("wheel_position_badge_${item.id}_${sensor.id}")
+                            ) {
+                                Text(
+                                    text = badgeText,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                )
+                            }
+                        }
+                    }
+
                     // Subtle vertical column guide on the right
                     Box(
                         modifier = Modifier
@@ -501,6 +610,7 @@ fun EquipmentSportSensorMatrix(
     sensors: List<SimpleSensorInfo>,
     isBike: Boolean,
     onToggleLink: (equipmentId: Long, sensorId: Long, isLinked: Boolean) -> Unit,
+    onSetWheelPosition: (equipmentId: Long, sensorId: Long, position: WheelPosition, isLinked: Boolean) -> Unit = { eqId, sId, _, isLinked -> onToggleLink(eqId, sId, isLinked) },
     appBarOffsetPx: Int,
     headerHeightPx: Float,
     modifier: Modifier = Modifier,
@@ -509,6 +619,34 @@ fun EquipmentSportSensorMatrix(
     emptyEquipmentMessage: String = stringResource(if (isBike) R.string.equipment_no_bikes else R.string.equipment_no_shoes),
     emptySensorsMessage: String = stringResource(if (isBike) R.string.equipment_matrix_no_bike_sensors else R.string.equipment_matrix_no_shoe_sensors)
 ) {
+    var showGuidanceDialog by remember { mutableStateOf(false) }
+    var wheelDialogTarget by remember { mutableStateOf<WheelDialogTarget?>(null) }
+
+    if (showGuidanceDialog) {
+        WheelSensorGuidanceDialog(onDismiss = { showGuidanceDialog = false })
+    }
+
+    wheelDialogTarget?.let { target ->
+        val currentPosition = target.equipment.linkedDeviceWheelPositions[target.sensor.id] ?: WheelPosition.UNSPECIFIED
+        WheelPositionSelectionDialog(
+            equipmentName = target.equipment.name,
+            sensorName = target.sensor.name,
+            currentPosition = currentPosition,
+            isLinked = target.isLinked,
+            onSelectPosition = { position ->
+                onSetWheelPosition(target.equipment.id, target.sensor.id, position, true)
+                wheelDialogTarget = null
+            },
+            onUnlink = {
+                onToggleLink(target.equipment.id, target.sensor.id, false)
+                wheelDialogTarget = null
+            },
+            onDismiss = {
+                wheelDialogTarget = null
+            }
+        )
+    }
+
     val density = LocalDensity.current
     val topPadding = with(density) { (headerHeightPx + appBarOffsetPx).toDp() }
     val bottomPadding = WindowInsets.systemBars.asPaddingValues().calculateBottomPadding()
@@ -552,7 +690,8 @@ fun EquipmentSportSensorMatrix(
                     title = stringResource(R.string.Equipment),
                     sensors = sensors,
                     horizontalScrollState = horizontalScrollState,
-                    emptySensorsMessage = emptySensorsMessage
+                    emptySensorsMessage = emptySensorsMessage,
+                    onShowGuidance = if (isBike) { { showGuidanceDialog = true } } else null
                 )
             }
 
@@ -562,7 +701,10 @@ fun EquipmentSportSensorMatrix(
                     isBike = isBike,
                     sensors = sensors,
                     horizontalScrollState = horizontalScrollState,
-                    onToggleLink = onToggleLink
+                    onToggleLink = onToggleLink,
+                    onRequestWheelPositionDialog = if (isBike) {
+                        { eq, sensor, linked -> wheelDialogTarget = WheelDialogTarget(eq, sensor, linked) }
+                    } else null
                 )
                 HorizontalDivider(
                     color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),

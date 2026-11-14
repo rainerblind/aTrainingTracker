@@ -2756,3 +2756,35 @@
      • Execute existing `SpeedAndLocationDeviceStationaryJitterTest` suite with external sensors and accelerometer absent; assert 100% pass rate with zero regression in 3-tick hysteresis, deadband gating, and start-line pinning.
   5. *Targeted Unit & Regression Suite Execution (`TST-TRK-077.5`)*:
      • `./gradlew testDebugUnitTest --tests "com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice*"` asserting 100% pass rate.
+
+
+### TST-SEN-029: Front/Rear Wheel Speed Sensor Mounting Position Tracking, Selection Dialog & Dual-Sensor Guidance Verification Suite [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-SEN-029` (`REQ-SEN-029.1`..`REQ-SEN-029.4`)
+- **Component**: `EquipmentDbHelper.java`, `WheelPosition.java`, `EquipmentRepository.kt`, `EquipmentViewModel.kt`, `EquipmentSensorMatrixScreen.kt`, `EditDeviceDialog.kt`, `strings_equipment.xml`, `docs/guide/`
+- **Test Type**: Unit & Contract
+- **Verification Method**: Unit
+- **Procedure**:
+  1. *SQLite v3 $\rightarrow$ v4 Schema Migration & Position Persistence Test (`TST-SEN-029.1`, `EquipmentDbHelperMigrationTest.kt`)*:
+     • Create in-memory/temp SQLite database with v3 schema (without `wheel_position`).
+     • Insert legacy equipment and link entries.
+     • Execute `EquipmentDbHelper.onUpgrade(db, 3, 4)`.
+     • Verify column `wheel_position` exists and existing links evaluate as `WheelPosition.UNSPECIFIED`.
+     • Insert new link with `WheelPosition.FRONT` and `WheelPosition.REAR`; verify persistence and retrieval.
+  2. *EquipmentRepository & Bike Duplicate Guardrail Swap Test (`TST-SEN-029.2`, `EquipmentRepositoryWheelPositionTest.kt`)*:
+     • Link sensor 1 to bike A as `FRONT`.
+     • Link sensor 2 to bike A as `FRONT` with swap enabled; assert sensor 2 is `FRONT` and sensor 1 is updated to `REAR` or `UNSPECIFIED`.
+     • Assert `EquipmentRepository.equipmentLinksChanged` emits affected device IDs.
+  3. *Compose Matrix Wheel Position Dialog & Badge Rendering Test (`TST-SEN-029.3`, `EquipmentSensorMatrixWheelPositionTest.kt`)*:
+     • Render `EquipmentSensorMatrixScreen` with bike and wheel speed sensors (`BIKE_SPEED`).
+     • Tap cell; assert mounting position selection dialog is displayed.
+     • Select *Vorderrad*; verify cell renders short badge (`V`/`F`) alongside checkmark without text clipping within `SENSOR_COLUMN_WIDTH` (88 dp, `Rule 84`).
+     • Tap non-wheel sensor (cadence pod); verify standard 1-tap checkbox toggles without dialog.
+  4. *9-Language Localization & Format Parity Audit (`TST-SEN-029.4`, `TranslationParityTest.kt`)*:
+     • Assert all newly introduced string resources (`equipment_wheel_position_*`, `equipment_guidance_*`) exist across all 9 locales: `values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`.
+     • Verify matching format specifiers and zero missing entries.
+  5. *In-App Guidance & User Guide Markdown Audit (`TST-SEN-029.5`)*:
+     • Verify presence of contextual explanation card in `EquipmentSensorMatrixScreen` and `EditDeviceDialog`.
+     • Verify Section 3.3 in `docs/guide/en/03-equipment-sensor-matrix.md` and `docs/guide/de/03-equipment-sensor-matrix.md`.
+  6. *Targeted Unit & Regression Suite Execution (`TST-SEN-029.6`)*:
+     • `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.database.Equipment*" --tests "com.atrainingtracker.trainingtracker.ui.equipment.*"` asserting 100% pass rate.

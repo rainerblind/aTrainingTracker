@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="equipment_wheel_position_title">ホイール取り付け位置</string>
+    <string name="equipment_wheel_position_front">前輪</string>
+    <string name="equipment_wheel_position_rear">後輪</string>
+    <string name="equipment_wheel_position_unspecified">未指定の位置</string>
+    <string name="equipment_wheel_position_unlink">センサーのリンクを解除</string>
+    <string name="equipment_wheel_position_front_badge">前</string>
+    <string name="equipment_wheel_position_rear_badge">後</string>
+    <string name="equipment_wheel_position_conflict_title">ホイール位置の競合</string>
+    <string name="equipment_wheel_position_conflict_message">%1$s はこの自転車の %2$s に既に割り当てられています。センサーの位置を入れ替えますか？</string>
+    <string name="equipment_wheel_position_swap">位置を入れ替える</string>
+    <string name="equipment_guidance_title">GPSに加えてホイールセンサーを使用する理由</string>
+    <string name="equipment_guidance_subtitle">スマートフォンGPSに対するホイールスピードセンサーの物理的利点</string>
+    <string name="equipment_guidance_1_sensor_title">ホイールセンサー1基 + GPS</string>
+    <string name="equipment_guidance_1_sensor_body">遅延のない即座の速度応答、鬱蒼とした森林の樹冠下やトンネル、衛星受信が低下する山岳ワインディングロードでの正確な距離測定、よりシャープなリアルタイム勾配表示（勾配 %）を実現します。</string>
+    <string name="equipment_guidance_2_sensors_title">ホイールセンサー2基（前輪 + 後輪） + GPS</string>
+    <string name="equipment_guidance_2_sensors_body">GPS不要の間接式タイヤ空気圧監視（iTPMS）により、相対的な車輪回転周回数の変化を測定して150〜250m以内にスローパンクを検知（前輪または後輪の空気圧低下を特定）、独立したタイヤ外周長自動較正、およびマルチセンサーオドメトリフュージョンを可能にします。</string>
+    <string name="equipment_guidance_got_it">了解</string>
+</resources>
