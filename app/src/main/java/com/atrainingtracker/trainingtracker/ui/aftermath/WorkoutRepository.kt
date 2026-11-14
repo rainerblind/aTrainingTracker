@@ -4338,7 +4338,8 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                             trainer = userEditedWorkout.trainer,
                             race = userEditedWorkout.race,
                             source = current.source,
-                            uploadToStrava = userEditedWorkout.uploadToStrava
+                            uploadToStrava = userEditedWorkout.uploadToStrava,
+                            syncToHealthConnect = userEditedWorkout.syncToHealthConnect
                         )
                     } else current
                 }

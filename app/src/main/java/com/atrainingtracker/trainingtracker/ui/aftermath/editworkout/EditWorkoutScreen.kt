@@ -116,9 +116,7 @@ fun EditWorkoutDialog(
     val isHealthConnectAvailable = remember {
         com.atrainingtracker.trainingtracker.cloud.healthconnect.HealthConnectManager.isAvailable(localContext)
     }
-    var syncToHealthConnect by remember {
-        mutableStateOf(TrainingApplication.syncToHealthConnect())
-    }
+    val syncToHealthConnect = workoutData?.syncToHealthConnect ?: TrainingApplication.syncToHealthConnect()
 
     AppModalBottomSheet(
         title = stringResource(R.string.edit_workout),
@@ -128,15 +126,6 @@ fun EditWorkoutDialog(
             AppDialogActions.SaveCancel(
                 onSave = {
                     viewModel.saveChanges()
-                    if (isHealthConnectAvailable && syncToHealthConnect) {
-                        workoutData?.let { data ->
-                            com.atrainingtracker.trainingtracker.cloud.healthconnect.HealthConnectManager.syncWorkoutAsync(
-                                localContext.applicationContext,
-                                data,
-                                force = true
-                            )
-                        }
-                    }
                     onDismiss()
                 },
                 onCancel = onDismiss
@@ -520,7 +509,7 @@ fun EditWorkoutDialog(
                                     .toggleable(
                                         value = syncToHealthConnect,
                                         role = Role.Checkbox,
-                                        onValueChange = { syncToHealthConnect = it }
+                                        onValueChange = { viewModel.updateSyncToHealthConnect(it) }
                                     )
                                     .padding(horizontal = 12.dp, vertical = 10.dp),
                                 verticalAlignment = Alignment.CenterVertically

@@ -89,6 +89,9 @@ object HealthConnectManager {
     @VisibleForTesting
     var sdkStatusOverride: Int? = null
 
+    @VisibleForTesting
+    var syncWorkoutAsyncDelegate: ((Context, WorkoutData, Boolean) -> Unit)? = null
+
     /**
      * Returns the Health Connect SDK availability status code.
      */
@@ -163,6 +166,10 @@ object HealthConnectManager {
     @JvmStatic
     @JvmOverloads
     fun syncWorkoutAsync(context: Context, workoutData: WorkoutData, force: Boolean = false) {
+        syncWorkoutAsyncDelegate?.let {
+            it.invoke(context, workoutData, force)
+            return
+        }
         kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
             syncWorkout(context, workoutData, force)
         }

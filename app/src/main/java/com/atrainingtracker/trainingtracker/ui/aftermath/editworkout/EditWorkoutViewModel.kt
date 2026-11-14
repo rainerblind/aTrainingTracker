@@ -35,6 +35,7 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.atrainingtracker.trainingtracker.repositories.EquipmentRepository
 import com.atrainingtracker.trainingtracker.repositories.SportTypesRepository
+import com.atrainingtracker.trainingtracker.TrainingApplication
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -143,7 +144,9 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
                             stravaSportName = data.stravaSportName
                         )
                     } else {
-                        data
+                        data.copy(
+                            syncToHealthConnect = data.syncToHealthConnect ?: TrainingApplication.syncToHealthConnect()
+                        )
                     }
                 }
                 
@@ -404,6 +407,13 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
 
     fun updateUploadToStrava(isChecked: Boolean) {
         _workoutData.update { it?.copy(uploadToStrava = if (isChecked) 1 else 0) }
+    }
+
+    /**
+     * Updates the per-workout Health Connect sync selection (REQ-REV-014.1 / ATT-7669).
+     */
+    fun updateSyncToHealthConnect(isChecked: Boolean) {
+        _workoutData.update { it?.copy(syncToHealthConnect = isChecked) }
     }
 
     fun updateIsRace(isChecked: Boolean) {

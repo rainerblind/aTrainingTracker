@@ -31,6 +31,7 @@ import com.atrainingtracker.trainingtracker.repositories.SimpleSportTypeInfo
 import com.atrainingtracker.trainingtracker.repositories.SportTypesRepository
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
+import com.atrainingtracker.trainingtracker.TrainingApplication
 import io.mockk.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -80,6 +81,9 @@ class EditWorkoutViewModelTest {
         every { Log.i(any<String>(), any<String>()) } returns 0
         every { Log.w(any<String>(), any<String>()) } returns 0
         every { Log.e(any<String>(), any<String>()) } returns 0
+
+        mockkStatic(TrainingApplication::class)
+        every { TrainingApplication.syncToHealthConnect() } returns false
 
         mockApplication = mockk(relaxed = true)
         every { mockApplication.getString(R.string.all_sports) } returns "+ all sports +"
@@ -403,5 +407,24 @@ class EditWorkoutViewModelTest {
         assertEquals("Morning Loop", updated.workoutName)
         assertFalse("Manual flag must be reset to false on creating new cluster", viewModel.userManuallyChangedWorkoutName)
         verify { mockWorkoutRepository.createNewClusterFromWorkout(any<WorkoutData>(), "Morning Loop", true, null) }
+    }
+
+    @Test
+    fun testEditWorkoutViewModel_initializesAndUpdatesSyncToHealthConnect() {
+        // TST-REV-015.1: Initialize ViewModel with sample workout data having syncToHealthConnect = null
+        every { TrainingApplication.syncToHealthConnect() } returns true
+        val initial = createTestWorkout().copy(syncToHealthConnect = null)
+        val viewModel = createViewModel(initial)
+
+        // Verify loaded workoutData.value?.syncToHealthConnect matches TrainingApplication.syncToHealthConnect()
+        assertEquals(true, viewModel.workoutData.value?.syncToHealthConnect)
+
+        // Invoke viewModel.updateSyncToHealthConnect(false), assert == false
+        viewModel.updateSyncToHealthConnect(false)
+        assertEquals(false, viewModel.workoutData.value?.syncToHealthConnect)
+
+        // Invoke viewModel.updateSyncToHealthConnect(true), assert == true
+        viewModel.updateSyncToHealthConnect(true)
+        assertEquals(true, viewModel.workoutData.value?.syncToHealthConnect)
     }
 }

@@ -150,7 +150,10 @@ data class WorkoutData(
     // --- 3. Heavy/Live Data ---
     val exportStatuses: List<ExportStatusGroupData> = emptyList(),
     val extremaRows: List<ExtremaDataRow> = emptyList(),
-    val laps: List<LapData> = emptyList()
+    val laps: List<LapData> = emptyList(),
+
+    // Per-workout transient Health Connect sync flag (REQ-REV-014.1 / ATT-7669)
+    val syncToHealthConnect: Boolean? = null
 ) {
 
     // --- 3. Computed Component Properties ---

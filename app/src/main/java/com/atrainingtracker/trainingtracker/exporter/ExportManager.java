@@ -205,9 +205,12 @@ public class ExportManager {
         }
         if (DEBUG) Log.d(TAG, "exportWorkout: " + workoutData.getFileBaseName());
 
-        // Android Health Connect automatic workout synchronization (ATT-3052 / REQ-SET-103)
-        if (TrainingApplication.syncToHealthConnect() && mContext != null) {
-            com.atrainingtracker.trainingtracker.cloud.healthconnect.HealthConnectManager.syncWorkoutAsync(mContext, workoutData);
+        // Android Health Connect automatic workout synchronization (ATT-3052 / REQ-SET-103, ATT-7669)
+        Boolean syncHc = workoutData.getSyncToHealthConnect();
+        boolean shouldSyncHc = (syncHc != null) ? syncHc : TrainingApplication.syncToHealthConnect();
+        if (shouldSyncHc && mContext != null) {
+            boolean forceSync = Boolean.TRUE.equals(syncHc);
+            com.atrainingtracker.trainingtracker.cloud.healthconnect.HealthConnectManager.syncWorkoutAsync(mContext, workoutData, forceSync);
         }
 
         for (FileFormat fileFormat : FileFormat.values()) {

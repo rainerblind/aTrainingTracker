@@ -391,4 +391,43 @@
   • *When* evaluating string key `indoor_short`,
   • *Then* it resolves in all 9 language directories without missing keys or unescaped characters.
 
+### REQ-REV-014: EditWorkout Per-Workout Health Connect Sync Honor & Deduplication [Verified]
+- **Tests**: `TST-REV-015`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Implementation**: `WorkoutData.kt`, `EditWorkoutViewModel.kt`, `EditWorkoutScreen.kt`, `WorkoutRepository.kt`, `ExportManager.java`
+- **Rationale**: In `EditWorkoutScreen.kt`, the user can toggle the "Zu Health Connect synchronisieren" checkbox. However, `ExportManager.exportWorkout()` historically evaluated only the global setting `TrainingApplication.syncToHealthConnect()` while `EditWorkoutScreen` simultaneously triggered an independent `HealthConnectManager.syncWorkoutAsync()` call on save. This caused duplicate concurrent sync requests on save and prevented users from opting out of Health Connect sync for individual workouts. Propagating the per-workout choice into `WorkoutData`, binding it in `EditWorkoutViewModel`, delegating single-trigger execution exclusively to `ExportManager`, and honoring user opt-out establishes a single source of truth and prevents race conditions.
+- **Description**:
+  1. *Per-Workout State in WorkoutData & ViewModel*:
+     a. `WorkoutData` SHALL include a property `val syncToHealthConnect: Boolean? = null`.
+     b. `EditWorkoutViewModel` SHALL expose `updateSyncToHealthConnect(isChecked: Boolean)` to update `workoutData.value.syncToHealthConnect`.
+     c. Upon initial load, `EditWorkoutViewModel` SHALL initialize `syncToHealthConnect` on `WorkoutData` with the user's global preference `TrainingApplication.syncToHealthConnect()`.
+  2. *EditWorkoutScreen UI & onSave Handler*:
+     a. `EditWorkoutScreen.kt` SHALL bind the Health Connect sync checkbox to `workoutData?.syncToHealthConnect ?: TrainingApplication.syncToHealthConnect()`.
+     b. Toggling the Health Connect row SHALL invoke `viewModel.updateSyncToHealthConnect(it)`.
+     c. `EditWorkoutDialog.onSave` SHALL NOT invoke `HealthConnectManager.syncWorkoutAsync()` directly, delegating all export and sync execution exclusively to `viewModel.saveChanges()`.
+  3. *ExportManager Pipeline Single Trigger & Opt-Out Honor*:
+     a. When `ExportManager.exportWorkout(WorkoutData workoutData)` executes, it SHALL evaluate `workoutData.getSyncToHealthConnect()`.
+     b. If `workoutData.getSyncToHealthConnect()` is `false`, Health Connect synchronization SHALL NOT be triggered, regardless of global `TrainingApplication.syncToHealthConnect()`.
+     c. If `workoutData.getSyncToHealthConnect()` is `true`, Health Connect synchronization SHALL be triggered exactly once via `HealthConnectManager.syncWorkoutAsync(mContext, workoutData, true)`.
+     d. If `workoutData.getSyncToHealthConnect()` is `null`, `ExportManager` SHALL preserve default legacy behavior by evaluating `TrainingApplication.syncToHealthConnect()`.
+  4. *Chesterton's Fence Archaeology*:
+     - `Original Requirement ID & Target`: Refines `REQ-REV-013.2` (*Grouped Cloud Sync Card in EditWorkoutScreen*) and `REQ-SET-103` (*Health Connect Settings UI, Manual Re-Sync & Write Idempotency*), targeting `EditWorkoutScreen.kt`, `EditWorkoutViewModel.kt`, `WorkoutRepository.kt`, and `ExportManager.java`.
+     - `Historical Origin & Commit Trace`: `REQ-REV-013` in `ATT-7517` (commit `6989ff14`); `REQ-SET-103` in `ATT-3052` (Sprint 2026-44.5).
+     - `Root Reason for Existing Formulation`: In `ATT-7517`, the UI checkbox was moved into the unified card container, but the underlying manual sync dispatch in `EditWorkoutScreen.onSave` was left intact alongside `ExportManager.exportWorkout()`, leading to duplicate concurrent triggers and ignored per-workout opt-outs.
+     - `Preservation of Core Invariants`: Background export for automated tracking, crop export, lap editing, Strava upload exclusion, and global preference defaults are 100% preserved.
+
+- **Acceptance Criteria**:
+  • *Given* global Health Connect sync is enabled (`TrainingApplication.syncToHealthConnect() == true`),
+  • *When* the user unchecks `Zu Health Connect synchronisieren` in `EditWorkoutDialog` and taps Save,
+  • *Then* `ExportManager.exportWorkout` does NOT trigger Health Connect synchronization.
+  • *Given* `Zu Health Connect synchronisieren` is checked in `EditWorkoutDialog`,
+  • *When* the user edits workout metadata and taps Save,
+  • *Then* `HealthConnectManager.syncWorkoutAsync` is invoked exactly once with the updated `WorkoutData`.
+  • *Given* a workout export triggered from background crop or lap editing where `workoutData.syncToHealthConnect` is `null`,
+  • *When* `ExportManager.exportWorkout` executes,
+  • *Then* it synchronizes to Health Connect if and only if `TrainingApplication.syncToHealthConnect()` is true.
+
+
 
