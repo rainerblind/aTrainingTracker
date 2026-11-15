@@ -3,7 +3,7 @@
 **Domain**: `settings_profiles`  
 **Prefixes**: `LOC`, `MON`, `PRI`, `SET`  
 **Scope**: Athlete settings, bike/sensor profiles, privacy zones, data stores, monetization, and 9-locale parity.  
-**Total Tests**: 93
+**Total Tests**: 94
 
 ---
 
@@ -1223,6 +1223,25 @@
   • Verify that a 30-second bounded timeout gracefully terminates the backfill attempt, resumes GATT, and releases downstream exports with partial live data if the strap is powered off or unreachable.
   6. *9-Language Localization Audit (`TST-SET-107.6`)*:
   • Verify 100% presence and parity for all Polar H10 sync notification strings across all 9 supported application locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
+
+### TST-SET-108: **Polar H10 Aftermath Retry Sync Banner Test Suite** [Verified]
+- **Requirement(s)**: `REQ-SET-106`
+- **Component**: `WorkoutSummariesDatabaseManager.java`, `PolarH10OfflineController.kt`, `WorkoutData.kt`, `WorkoutDataMapper.kt`, `TrackOnMapScreen.kt`, `PolarH10RetrySyncBanner.kt`, `WorkoutRepository.kt`, `ExportManager.java`
+- **Jira**: `ATT-7919`
+- **Status**: Verified (ATT-7919)
+- **Test Description**:
+  1. *Stop-Time Fallback & Pending Metadata Persistence (`TST-SET-108.1`)*:
+  • Verify that when `PolarH10OfflineController.stopAndBackfillWorkout()` times out or fails, `TrackerService` records `polarSyncPending = 1` and exercise metadata in `WorkoutSummaries.db` without crashing or blocking finalization.
+  2. *Database v31 Migration & Parity Test (`TST-SET-108.2`)*:
+  • Verify that upgrading `WorkoutSummaries.db` from v30 to v31 adds pending sync columns with `DEFAULT 0` for `polarSyncPending`, matching fresh `onCreate()` schema.
+  3. *M3 Aftermath Retry Banner Rendering & 9-Locale Parity (`TST-SET-108.3`)*:
+  • Verify that `PolarH10RetrySyncBanner` is displayed in `TrackOnMapScreen` when `polarSyncPending == 1`.
+  • Verify 100% presence and parity for all banner strings across all 9 supported application locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`) without emojis.
+  4. *Deferred Wake, Backfill & Re-Export Integration (`TST-SET-108.4`)*:
+  • Verify that tapping "Sync Now" wakes the strap, executes PFTP fetch for the matching exercise ID, patches `WorkoutSamples.db` and `WorkoutRr.db`, recomputes HRV summaries, clears `polarSyncPending = 0`, calls `removeExercise()` on the strap strictly after DB commit, and triggers `ExportManager.exportWorkout()`.
+  5. *Dismiss Banner Action Test (`TST-SET-108.5`)*:
+  • Verify that tapping "Dismiss" updates `WorkoutSummaries.db` setting `polarSyncPending = 0` and does NOT invoke `removeExercise()` on the strap.
+
 
 
 

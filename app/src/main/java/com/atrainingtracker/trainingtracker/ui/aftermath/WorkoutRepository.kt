@@ -4378,6 +4378,16 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
     }
 
     /**
+     * Dismisses the Polar H10 retry sync banner for a workout, setting polarSyncPending to 0 (REQ-SET-106.4, ATT-7919).
+     */
+    fun dismissPolarSyncPending(workoutId: Long) {
+        launch(Dispatchers.IO) {
+            summariesManager.clearPolarSyncPending(workoutId)
+            refreshWorkout(workoutId)
+        }
+    }
+
+    /**
      * Deletes a workout session from the database and memory.
      *
      * Implementation: Triggers surgical cleanup for dependent modules (Periods, Clusters)

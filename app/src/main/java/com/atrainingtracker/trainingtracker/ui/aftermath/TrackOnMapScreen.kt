@@ -497,21 +497,49 @@ fun TrackOnMapScreen(
             showCreateLapSheet = true
         },
         header = {
-            WorkoutHeader(
-                modifier = Modifier.fillMaxWidth(),
-                data = workoutData.headerData,
-                menuEnabled = false,
-                canDelete = false,
-                onClicked = onEditWorkout?.let { edit -> { edit(workoutData.id) } },
-                onExport = { },
-                onSaveAsRoute = { },
-                onDeleteRequest = { },
-                onClusterClick = onClusterClick,
-                onEditWorkout = onEditWorkout?.let { edit -> { edit(workoutData.id) } },
-                actions = {
-                    headerActions()
+            Column(modifier = Modifier.fillMaxWidth()) {
+                WorkoutHeader(
+                    modifier = Modifier.fillMaxWidth(),
+                    data = workoutData.headerData,
+                    menuEnabled = false,
+                    canDelete = false,
+                    onClicked = onEditWorkout?.let { edit -> { edit(workoutData.id) } },
+                    onExport = { },
+                    onSaveAsRoute = { },
+                    onDeleteRequest = { },
+                    onClusterClick = onClusterClick,
+                    onEditWorkout = onEditWorkout?.let { edit -> { edit(workoutData.id) } },
+                    actions = {
+                        headerActions()
+                    }
+                )
+                if (workoutData.polarSyncPending) {
+                    var isSyncingPolar by remember { mutableStateOf(false) }
+                    var polarSyncError by remember { mutableStateOf<String?>(null) }
+                    val failedMsg = stringResource(R.string.polar_h10_retry_sync_failed)
+
+                    PolarH10RetrySyncBanner(
+                        isSyncing = isSyncingPolar,
+                        errorMessage = polarSyncError,
+                        onSyncNow = {
+                            if (!isSyncingPolar) {
+                                isSyncingPolar = true
+                                polarSyncError = null
+                                coroutineScope.launch {
+                                    val success = com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineController.syncPendingWorkout(context, workoutData.id)
+                                    isSyncingPolar = false
+                                    if (!success) {
+                                        polarSyncError = failedMsg
+                                    }
+                                }
+                            }
+                        },
+                        onDismiss = {
+                            repository.dismissPolarSyncPending(workoutData.id)
+                        }
+                    )
                 }
-            )
+            }
         },
         mapContent = {
             tracks(filteredTracks)

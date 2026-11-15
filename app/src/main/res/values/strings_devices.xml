@@ -193,4 +193,12 @@
     <string name="notification_polar_h10_syncing_title">Syncing Polar H10 Data</string>
     <string name="notification_polar_h10_syncing_desc">Syncing HR and HRV intervals from sensor memory…</string>
 
+    <!-- Polar H10 Aftermath Retry Sync Banner (ATT-7919, REQ-SET-106) -->
+    <string name="polar_h10_retry_sync_title">Polar H10 Offline Data Available</string>
+    <string name="polar_h10_retry_sync_desc">The heart rate sensor was asleep when tracking stopped. Wear the strap or moisten and bridge both electrode snaps with your fingers to wake it, ensure it is not connected to other devices, and sync now.</string>
+    <string name="polar_h10_retry_sync_action">Sync Now</string>
+    <string name="polar_h10_retry_sync_dismiss">Dismiss</string>
+    <string name="polar_h10_retry_syncing">Syncing Polar H10…</string>
+    <string name="polar_h10_retry_sync_failed">Could not connect to Polar H10. Please wake the sensor and try again.</string>
+
 </resources>

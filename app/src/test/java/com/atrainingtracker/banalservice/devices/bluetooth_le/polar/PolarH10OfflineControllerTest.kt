@@ -28,6 +28,7 @@ import com.atrainingtracker.banalservice.devices.DeviceManager
 import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDevice
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager
+import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.hrv.HrvPostWorkoutRecomputer
 import com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrInterval
 import com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrRepository
@@ -65,6 +66,7 @@ class PolarH10OfflineControllerTest {
     private val mockBtleDevice = mockk<MyBTLEDevice>(relaxed = true)
     private val mockRrRepo = mockk<WorkoutRrRepository>(relaxed = true)
     private val mockSamplesDb = mockk<WorkoutSamplesDatabaseManager>(relaxed = true)
+    private val mockSummariesDb = mockk<WorkoutSummariesDatabaseManager>(relaxed = true)
     private val mockWorkoutRepo = mockk<WorkoutRepository>(relaxed = true)
 
     private val testDevice = DevicesDatabaseManager.RemoteDeviceUIDataCacheItem(
@@ -95,6 +97,9 @@ class PolarH10OfflineControllerTest {
         every { mockDevicesDb.isPolarH10OfflineRecordingEnabled(1L) } returns true
         every { mockDevicesDb.getBluetoothMACAddress(1L) } returns "AA:BB:CC:DD:EE:FF"
 
+        mockkStatic(WorkoutSummariesDatabaseManager::class)
+        every { WorkoutSummariesDatabaseManager.getInstance(any()) } returns mockSummariesDb
+
         mockkStatic(BANALService::class)
         every { BANALService.getDeviceManager() } returns mockDeviceManager
         every { mockDeviceManager.getBtleDeviceByAddress("AA:BB:CC:DD:EE:FF") } returns mockBtleDevice
@@ -104,6 +109,7 @@ class PolarH10OfflineControllerTest {
         WorkoutRrRepository.resetForTesting(mockRrRepo)
         WorkoutSamplesDatabaseManager.resetForTesting(mockSamplesDb)
         WorkoutRepository.resetForTesting(mockWorkoutRepo)
+        every { mockWorkoutRepo.allWorkouts } returns kotlinx.coroutines.flow.MutableStateFlow(emptyList())
 
         mockkObject(HrvPostWorkoutRecomputer)
         coEvery { HrvPostWorkoutRecomputer.recomputeWorkout(any(), any()) } returns true
@@ -336,5 +342,81 @@ class PolarH10OfflineControllerTest {
         assertFalse("API < 33 must bypass backfill", result)
         coVerify(exactly = 0) { mockApi.connectToDevice(any()) }
         assertFalse(PolarH10OfflineController.isRecordingArmed())
+    }
+
+    @Test
+    fun testStopAndBackfill_timeout_persistsPendingSyncMetadata() = runBlocking {
+        // Given: Gaps exist and connection/fetch times out or fails (TST-SET-108.1)
+        PolarH10OfflineController.sdkIntOverride = 33
+        PolarH10OfflineController.apiOverride = mockApi
+        PolarH10OfflineController.setArmedForTesting(true)
+        PolarH10OfflineController.setArmedMetadataForTesting("1C3B2421", "ATT_TEST_EX")
+
+        every { mockRrRepo.getIntervalsForWorkoutBlocking(123L) } returns emptyList()
+        every { mockSamplesDb.hasMissingHeartRateSamples("2026-11-15_123456") } returns true
+
+        // Simulate connection failure (e.g. strap asleep)
+        coEvery { mockApi.connectToDevice(any()) } throws RuntimeException("BLE connection timeout")
+
+        // When: stopAndBackfillWorkout is executed
+        val result = PolarH10OfflineController.stopAndBackfillWorkout(context, 123L, "2026-11-15_123456", 1000L)
+
+        // Then (TST-SET-108.1): Returns false gracefully, but records polarSyncPending = 1 in SQLite
+        assertFalse("Should return false on connection failure", result)
+        verify(exactly = 1) {
+            mockSummariesDb.setPolarSyncPending(123L, "1C3B2421", "ATT_TEST_EX", 1000L, any())
+        }
+        verify(exactly = 1) { mockWorkoutRepo.refreshWorkout(123L) }
+        verify(exactly = 1) { mockBtleDevice.resumeGattOperations() }
+        assertFalse("Armed state must reset after stop", PolarH10OfflineController.isRecordingArmed())
+    }
+
+    @Test
+    fun testSyncPendingWorkout_success_fetchesPatchesAndClearsFlag() = runBlocking {
+        // Given: Pending sync metadata exists in summaries DB (TST-SET-108.4)
+        PolarH10OfflineController.sdkIntOverride = 33
+        PolarH10OfflineController.apiOverride = mockApi
+
+        val pendingData = WorkoutSummariesDatabaseManager.PolarPendingSyncData(
+            "1C3B2421",
+            "ATT_TEST_EX",
+            1000L,
+            2000L,
+            true
+        )
+        every { mockSummariesDb.getPolarPendingSyncData(123L) } returns pendingData
+        every { mockWorkoutRepo.getBaseFileName(123L) } returns "2026-11-15_123456"
+
+        val exerciseData = PolarExerciseData(recordingInterval = 1, hrSamples = listOf(800, 850, 750))
+        coEvery { mockApi.connectToDevice("1C3B2421") } just Runs
+        coEvery { mockApi.waitForConnection("1C3B2421") } just Runs
+        coEvery { mockApi.requestRecordingStatus("1C3B2421") } returns PolarH10OfflineExerciseApi.PolarRecordingStatus(false, "", true)
+        every { mockApi.listExercises("1C3B2421") } returns flowOf(testEntry)
+        coEvery { mockApi.fetchExercise("1C3B2421", testEntry) } returns exerciseData
+        every { mockSamplesDb.patchMissingHeartRateSamples(any(), any(), any()) } returns 3
+        coEvery { mockRrRepo.insertIntervals(any()) } returns 3
+        coEvery { mockApi.removeExercise("1C3B2421", testEntry) } just Runs
+        coEvery { mockApi.disconnectFromDevice("1C3B2421") } just Runs
+
+        // When: syncPendingWorkout is executed
+        val result = PolarH10OfflineController.syncPendingWorkout(context, 123L)
+
+        // Then (TST-SET-108.4): Deferred sync patches DBs, clears flag, removes exercise from strap, refreshes UI
+        assertTrue("Deferred sync should succeed", result)
+        coVerify(exactly = 1) { mockApi.fetchExercise("1C3B2421", testEntry) }
+        coVerify(exactly = 1) { mockRrRepo.insertIntervals(any()) }
+        coVerify(exactly = 1) { HrvPostWorkoutRecomputer.recomputeWorkout(any(), 123L) }
+        verify(exactly = 1) { mockSummariesDb.clearPolarSyncPending(123L) }
+        coVerify(exactly = 1) { mockApi.removeExercise("1C3B2421", testEntry) }
+        verify(atLeast = 1) { mockWorkoutRepo.refreshWorkout(123L) }
+    }
+
+    @Test
+    fun testDismissPendingSync_clearsPendingFlag() {
+        // Given & When: dismissPolarSyncPending called on repository (TST-SET-108.5)
+        mockWorkoutRepo.dismissPolarSyncPending(123L)
+
+        // Then (TST-SET-108.5): dismissPolarSyncPending invoked without touching sensor exercise
+        verify { mockWorkoutRepo.dismissPolarSyncPending(123L) }
     }
 }

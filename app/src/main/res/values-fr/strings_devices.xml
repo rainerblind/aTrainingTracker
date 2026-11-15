@@ -152,4 +152,12 @@
     <string name="notification_polar_h10_syncing_title">Synchronisation des données Polar H10</string>
     <string name="notification_polar_h10_syncing_desc">Synchronisation de la fréquence cardiaque et des intervalles RR depuis la mémoire du capteur…</string>
 
+    <!-- Polar H10 Aftermath Retry Sync Banner (ATT-7919, REQ-SET-106) -->
+    <string name="polar_h10_retry_sync_title">Données hors ligne Polar H10 disponibles</string>
+    <string name="polar_h10_retry_sync_desc">Le capteur cardiaque était en veille à la fin de la séance. Mettez la ceinture ou humidifiez et reliez les deux boutons de pression avec les doigts pour le réveiller, assurez-vous qu\'il n\'est pas connecté à d\'autres appareils et synchronisez maintenant.</string>
+    <string name="polar_h10_retry_sync_action">Synchroniser maintenant</string>
+    <string name="polar_h10_retry_sync_dismiss">Ignorer</string>
+    <string name="polar_h10_retry_syncing">Synchronisation du Polar H10…</string>
+    <string name="polar_h10_retry_sync_failed">Impossible de se connecter au Polar H10. Réveillez le capteur et réessayez.</string>
+
 </resources>

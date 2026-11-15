@@ -152,4 +152,12 @@
     <string name="notification_polar_h10_syncing_title">Synchronizacja danych Polar H10</string>
     <string name="notification_polar_h10_syncing_desc">Synchronizacja tętna i interwałów RR z pamięci czujnika…</string>
 
+    <!-- Polar H10 Aftermath Retry Sync Banner (ATT-7919, REQ-SET-106) -->
+    <string name="polar_h10_retry_sync_title">Dostępne dane offline Polar H10</string>
+    <string name="polar_h10_retry_sync_desc">Czujnik tętna był w trybie uśpienia po zakończeniu treningu. Załóż pasek lub zwilż i zmostkuj oba zatrzaski elektrod palcami, aby go wybudzić, upewnij się, że nie jest połączony z innymi urządzeniami, i zsynchronizuj teraz.</string>
+    <string name="polar_h10_retry_sync_action">Synchronizuj teraz</string>
+    <string name="polar_h10_retry_sync_dismiss">Odrzuć</string>
+    <string name="polar_h10_retry_syncing">Synchronizowanie Polar H10…</string>
+    <string name="polar_h10_retry_sync_failed">Nie udało się połączyć z Polar H10. Wybudź czujnik i spróbuj ponownie.</string>
+
 </resources>

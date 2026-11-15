@@ -164,4 +164,12 @@
     <string name="notification_polar_h10_syncing_title">Polar H10-Daten synchronisieren</string>
     <string name="notification_polar_h10_syncing_desc">Herzfrequenz- und RR-Intervalle werden aus dem Sensorspeicher geladen…</string>
 
+    <!-- Polar H10 Aftermath Retry Sync Banner (ATT-7919, REQ-SET-106) -->
+    <string name="polar_h10_retry_sync_title">Polar H10-Offline-Daten verfügbar</string>
+    <string name="polar_h10_retry_sync_desc">Der Herzfrequenzsensor war beim Beenden im Ruhezustand. Gurt anlegen oder beide Elektroden-Druckknöpfe mit befeuchteten Fingern überbrücken, sicherstellen, dass er nicht mit anderen Geräten verbunden ist, und jetzt synchronisieren.</string>
+    <string name="polar_h10_retry_sync_action">Jetzt synchronisieren</string>
+    <string name="polar_h10_retry_sync_dismiss">Verwerfen</string>
+    <string name="polar_h10_retry_syncing">Polar H10 wird synchronisiert…</string>
+    <string name="polar_h10_retry_sync_failed">Verbindung zum Polar H10 fehlgeschlagen. Sensor aufwecken und erneut versuchen.</string>
+
 </resources>

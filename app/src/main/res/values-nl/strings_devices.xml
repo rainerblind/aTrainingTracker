@@ -152,4 +152,12 @@
     <string name="notification_polar_h10_syncing_title">Polar H10-gegevens synchroniseren</string>
     <string name="notification_polar_h10_syncing_desc">Hartslag- en RR-intervallen synchroniseren vanuit het sensorgeheugen…</string>
 
+    <!-- Polar H10 Aftermath Retry Sync Banner (ATT-7919, REQ-SET-106) -->
+    <string name="polar_h10_retry_sync_title">Polar H10 offline gegevens beschikbaar</string>
+    <string name="polar_h10_retry_sync_desc">De hartslagsensor stond in slaapstand toen de workout werd beëindigd. Doe de band om of bevochtig en overbrug beide drukknoppen met uw vingers om deze te wekken, zorg dat hij niet met andere apparaten is verbonden en synchroniseer nu.</string>
+    <string name="polar_h10_retry_sync_action">Nu synchroniseren</string>
+    <string name="polar_h10_retry_sync_dismiss">Negeren</string>
+    <string name="polar_h10_retry_syncing">Polar H10 synchroniseren…</string>
+    <string name="polar_h10_retry_sync_failed">Kan geen verbinding maken met Polar H10. Maak de sensor wakker en probeer het opnieuw.</string>
+
 </resources>

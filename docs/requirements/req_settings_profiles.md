@@ -3,7 +3,7 @@
 **Domain**: `settings_profiles`  
 **Prefixes**: `LOC`, `MON`, `PRI`, `SET`  
 **Scope**: Athlete settings, bike/sensor profiles, privacy zones, data stores, monetization, and 9-locale parity.  
-**Total Requirements**: 104
+**Total Requirements**: 105
 
 ---
 
@@ -2346,6 +2346,47 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 • *Then* `TrackerService` finalizes the workout using available live data without hanging or crashing.
 
 **Invariants**: Zero data loss or corruption of existing live GPS, power, cadence, or HR telemetry; zero export of premature/partial files prior to backfill completion when strap is available; bounded 30-second timeout guarantees foreground service termination even if strap is lost; full 9-language localization parity for any user-facing notifications.
+
+### REQ-SET-106: Polar H10 Aftermath Retry Sync Banner for Asleep Strap [Verified]
+- **Tests**: `TST-SET-108`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit, Integration, On-Device Manual
+- **Implementation**: `WorkoutSummariesDatabaseManager.java`, `PolarH10OfflineController.kt`, `WorkoutData.kt`, `WorkoutDataMapper.kt`, `TrackOnMapScreen.kt`, `PolarH10RetrySyncBanner.kt`, `WorkoutRepository.kt`, `ExportManager.java`
+- **Status**: Verified (ATT-7919)
+- **Rationale**: A Polar H10 powers down BLE 45s after losing skin contact (e.g. swimmer unclipping in shower before reaching locker). When stop-time backfill fails or times out, the workout must finalize without blocking, while preserving persistent metadata of the unretrieved session in `WorkoutSummaries.db`. An Aftermath retry banner prompts the athlete to wake the sensor, triggers deferred backfill, updates summaries and exports, and transactionally removes the exercise from strap memory upon successful SQLite commit.
+- **Description**:
+1. *Pending-Sync Metadata Persistence (`REQ-SET-106.1`)*:
+   - When `PolarH10OfflineController.stopAndBackfillWorkout()` fails or times out due to an unreachable/asleep strap, `TrackerService.endWorkout()` SHALL persist `polarDeviceId`, `polarExerciseId`, `polarExpectedStartMs`, `polarExpectedEndMs`, and `polarSyncPending = 1` into `WorkoutSummaries.db` (v31 schema) before completing workout finalization.
+2. *Material 3 Aftermath Retry Sync Banner (`REQ-SET-106.2`)*:
+   - When viewing a workout summary where `polarSyncPending == 1` in `TrackOnMapScreen`, an M3 Card banner SHALL be rendered at the top of the summary content.
+   - The banner SHALL display sensor wake instructions ("Wet electrodes and snap strap on, or place thumbs on sensors to wake"), a primary "Sync Now" button, and a "Dismiss" action.
+   - All banner strings SHALL maintain 100% 9-language localization parity across EN, DE, ES, FR, IT, JA, NL, PL, PT with zero decorative inline emojis.
+3. *Deferred Wake & Backfill Execution (`REQ-SET-106.3`)*:
+   - Tapping "Sync Now" SHALL trigger `PolarH10OfflineController.syncPendingWorkout()`, connecting to the awake strap via PFTP, validating the matching exercise ID or overlapping start time window, and fetching recorded RR data bounded by a 30-second timeout.
+   - Missing 1-Hz HR samples SHALL be patched into `WorkoutSamples.db`, and RR beats SHALL be inserted into `WorkoutRr.db` closing `ARTIFACT_GAP` ranges.
+   - Upon successful SQLite commit, `HrvPostWorkoutRecomputer` SHALL recompute summary metrics, `removeExercise()` on the strap SHALL be invoked, `polarSyncPending` SHALL be set to 0 in `WorkoutSummaries.db`, and `ExportManager.exportWorkout()` SHALL be triggered to regenerate updated export files.
+4. *Dismiss Banner Action (`REQ-SET-106.4`)*:
+   - Tapping "Dismiss" SHALL update `WorkoutSummaries.db` setting `polarSyncPending = 0`, permanently dismissing the banner for this workout without clearing or deleting the unretrieved exercise on the strap.
+5. *Database Migration Parity (`REQ-SET-106.5`)*:
+   - `WorkoutSummariesDatabaseManager` upgrade from version 30 to 31 SHALL add columns `polarDeviceId` (TEXT), `polarExerciseId` (TEXT), `polarExpectedStartMs` (INTEGER), `polarExpectedEndMs` (INTEGER), and `polarSyncPending` (INTEGER DEFAULT 0), maintaining exact schema parity between `onCreate()` and `onUpgrade()`.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an athlete unclips a Polar H10 in the shower and stops tracking 2 minutes later at the locker,
+• *When* stop-time backfill times out after 30s,
+• *Then* `TrackerService` finalizes the workout without hanging, saving `polarSyncPending = 1` in `WorkoutSummaries.db`.
+• *Given* a workout with `polarSyncPending == 1` opened in Aftermath (`TrackOnMapScreen`),
+• *When* the user views the screen,
+• *Then* the M3 retry sync banner is displayed with wake guidance, "Sync Now", and "Dismiss".
+• *Given* the athlete wets the electrodes, snaps the strap on, and taps "Sync Now",
+• *When* `syncPendingWorkout()` runs,
+• *Then* stored RR data is retrieved, missing 1-Hz HR and RR intervals are populated in SQLite, HRV metrics are recalculated, the exercise is deleted from the strap, the banner disappears, and exports are regenerated.
+• *Given* an athlete taps "Dismiss" on the retry banner,
+• *When* dismissal completes,
+• *Then* `polarSyncPending` is cleared to 0 in SQLite, the banner is hidden, and no strap exercises are deleted.
+
+**Invariants**: Workout finalization is never blocked by an asleep strap; existing live telemetry in `WorkoutSamples.db` is never overwritten; `removeExercise()` is executed strictly after SQLite commit; full 9-language localization parity without emojis.
+
 
 
 

@@ -151,4 +151,12 @@
     <!-- Polar H10 Backfill Sync Notification (ATT-7918, REQ-SET-105) -->
     <string name="notification_polar_h10_syncing_title">Sincronizando dados do Polar H10</string>
     <string name="notification_polar_h10_syncing_desc">Sincronizando frequência cardíaca e intervalos RR da memória do sensor…</string>
+
+    <!-- Polar H10 Aftermath Retry Sync Banner (ATT-7919, REQ-SET-106) -->
+    <string name="polar_h10_retry_sync_title">Dados offline do Polar H10 disponíveis</string>
+    <string name="polar_h10_retry_sync_desc">O sensor cardíaco estava em repouso ao encerrar o treino. Coloque a cinta ou umedeça e faça a ponte entre os dois botões de pressão com os dedos para ativá-lo, certifique-se de que não esteja conectado a outros dispositivos e sincronize agora.</string>
+    <string name="polar_h10_retry_sync_action">Sincronizar agora</string>
+    <string name="polar_h10_retry_sync_dismiss">Dispensar</string>
+    <string name="polar_h10_retry_syncing">Sincronizando Polar H10…</string>
+    <string name="polar_h10_retry_sync_failed">Não foi possível conectar ao Polar H10. Ative o sensor e tente novamente.</string>
 </resources>

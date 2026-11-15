@@ -39,6 +39,7 @@ import com.atrainingtracker.banalservice.devices.RrBeatEvent
 import com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDevice
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager
+import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.hrv.HrvPostWorkoutRecomputer
 import com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrInterval
 import com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrRepository
@@ -89,6 +90,8 @@ object PolarH10OfflineController {
     private val isArmed = AtomicBoolean(false)
     private var scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var sessionStartTimeMs: Long = 0L
+    private var armedDeviceId: String? = null
+    private var armedExerciseId: String? = null
 
     @VisibleForTesting
     var dispatcher: CoroutineDispatcher = Dispatchers.IO
@@ -117,12 +120,26 @@ object PolarH10OfflineController {
         isArmed.set(armed)
     }
 
+    @JvmStatic
+    fun getArmedDeviceId(): String? = armedDeviceId
+
+    @JvmStatic
+    fun getArmedExerciseId(): String? = armedExerciseId
+
+    @VisibleForTesting
+    fun setArmedMetadataForTesting(deviceId: String?, exerciseId: String?) {
+        armedDeviceId = deviceId
+        armedExerciseId = exerciseId
+    }
+
     @VisibleForTesting
     fun resetForTesting() {
         isArmed.set(false)
         apiOverride = null
         sdkIntOverride = null
         sessionStartTimeMs = 0L
+        armedDeviceId = null
+        armedExerciseId = null
     }
 
     /**
@@ -276,8 +293,8 @@ object PolarH10OfflineController {
             showSyncNotification(appContext)
         }
 
-        try {
-            return withTimeoutOrNull(BACKFILL_TIMEOUT_MS) {
+        return try {
+            val timeoutResult = withTimeoutOrNull(BACKFILL_TIMEOUT_MS) {
                 val api = apiOverride ?: PolarBleApiDefaultImpl.defaultImplementation(
                     appContext,
                     setOf(
@@ -400,18 +417,238 @@ object PolarH10OfflineController {
                         }
                     }
                 }
-            } ?: run {
-                Log.w(TAG, "Polar H10 backfill timed out after $BACKFILL_TIMEOUT_MS ms; falling back cleanly.")
-                false
             }
+            val success = timeoutResult ?: false
+            if (timeoutResult == null) {
+                Log.w(TAG, "Polar H10 backfill timed out after $BACKFILL_TIMEOUT_MS ms; falling back cleanly.")
+            }
+            if (!success && needsBackfill && workoutId > 0) {
+                recordPendingSync(appContext, workoutId, targetId, startTimeMs)
+            }
+            success
         } catch (t: Throwable) {
             Log.w(TAG, "Exception during Polar H10 stopAndBackfillWorkout: ${t.message}", t)
+            if (needsBackfill && workoutId > 0) {
+                recordPendingSync(appContext, workoutId, targetId, startTimeMs)
+            }
             return false
         } finally {
             isArmed.set(false)
             if (needsBackfill) {
                 dismissSyncNotification(appContext)
             }
+            btleDevice?.resumeGattOperations()
+        }
+    }
+
+    private fun recordPendingSync(context: Context, workoutId: Long, targetId: String?, startTimeMs: Long) {
+        val devId = targetId ?: armedDeviceId
+        val exId = armedExerciseId
+        val startMs = if (startTimeMs > 0) startTimeMs else sessionStartTimeMs
+        val endMs = System.currentTimeMillis()
+        if (!devId.isNullOrEmpty()) {
+            try {
+                Log.i(TAG, "Persisting pending Polar H10 sync for workout $workoutId (dev=$devId, exId=$exId)")
+                val summariesDb = WorkoutSummariesDatabaseManager.getInstance(context)
+                summariesDb.setPolarSyncPending(workoutId, devId, exId, startMs, endMs)
+                WorkoutRepository.getInstance(context).refreshWorkout(workoutId)
+            } catch (e: Exception) {
+                Log.e(TAG, "Could not persist pending polar sync for workout $workoutId: ${e.message}", e)
+            }
+        }
+    }
+
+    /**
+     * Synchronous blocking convenience entry point for deferred Polar H10 sync (REQ-SET-106.3, ATT-7919).
+     */
+    @JvmStatic
+    fun syncPendingWorkoutBlocking(context: Context, workoutId: Long): Boolean {
+        return runBlocking(dispatcher) {
+            syncPendingWorkout(context, workoutId)
+        }
+    }
+
+    /**
+     * Executes deferred Polar H10 offline sync for a workout with pending sync metadata (REQ-SET-106.3, ATT-7919).
+     */
+    suspend fun syncPendingWorkout(context: Context, workoutId: Long): Boolean {
+        if (getEffectiveSdkInt() < Build.VERSION_CODES.TIRAMISU) {
+            Log.d(TAG, "API level < 33; Polar H10 offline sync unavailable.")
+            return false
+        }
+
+        val appContext = context.applicationContext
+        val summariesDb = WorkoutSummariesDatabaseManager.getInstance(appContext)
+        val pendingData = summariesDb.getPolarPendingSyncData(workoutId)
+        if (pendingData == null || !pendingData.isPending) {
+            Log.w(TAG, "No pending Polar sync found for workout $workoutId")
+            return false
+        }
+
+        val targetId = pendingData.deviceId
+        if (targetId.isNullOrEmpty()) {
+            Log.w(TAG, "No target device ID for workout $workoutId")
+            return false
+        }
+
+        val devicesDb = DevicesDatabaseManager.getInstance(appContext)
+        val devices = devicesDb.allDevicesForCache
+        var targetMac: String? = null
+        for (dev in devices) {
+            if (dev.type == DeviceType.HRM && dev.protocol == Protocol.BLUETOOTH_LE) {
+                val mac = devicesDb.getBluetoothMACAddress(dev.id)
+                val name = dev.name ?: ""
+                if (mac == targetId || name.contains(targetId, ignoreCase = true)) {
+                    targetMac = mac
+                    break
+                }
+            }
+        }
+        val deviceManager = BANALService.getDeviceManager()
+        val btleDevice = targetMac?.let { deviceManager?.getBtleDeviceByAddress(it) }
+        btleDevice?.pauseGattOperations()
+
+        try {
+            return withTimeoutOrNull(BACKFILL_TIMEOUT_MS) {
+                val api = apiOverride ?: PolarBleApiDefaultImpl.defaultImplementation(
+                    appContext,
+                    setOf(
+                        PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_H10_EXERCISE_RECORDING,
+                        PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_DEVICE_TIME_SETUP
+                    )
+                )
+
+                try {
+                    api.connectToDevice(targetId)
+                    api.waitForConnection(targetId)
+
+                    try {
+                        val status = api.requestRecordingStatus(targetId)
+                        if (status.ongoing) {
+                            api.stopRecording(targetId)
+                        }
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Error checking/stopping recording for $targetId: ${e.message}")
+                    }
+
+                    val exercises = try {
+                        api.listExercises(targetId).toList()
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Error listing exercises for pending sync on $targetId: ${e.message}")
+                        emptyList()
+                    }
+
+                    if (exercises.isEmpty()) {
+                        Log.w(TAG, "No exercises found on Polar H10 for pending sync.")
+                        return@withTimeoutOrNull false
+                    }
+
+                    val matchingEntry = exercises.firstOrNull { entry ->
+                        if (!pendingData.exerciseId.isNullOrEmpty() && entry.path.contains(pendingData.exerciseId)) {
+                            true
+                        } else {
+                            val entryEpochMs = entry.date.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+                            (pendingData.expectedStartMs > 0 && Math.abs(entryEpochMs - pendingData.expectedStartMs) <= 600_000L) ||
+                                (pendingData.expectedEndMs > 0 && entryEpochMs in pendingData.expectedStartMs..pendingData.expectedEndMs)
+                        }
+                    } ?: exercises.firstOrNull()
+
+                    if (matchingEntry == null) {
+                        Log.w(TAG, "No matching exercise found for workout $workoutId")
+                        return@withTimeoutOrNull false
+                    }
+
+                    val data = api.fetchExercise(targetId, matchingEntry)
+                    val hrSamples = data.hrSamples
+                    if (hrSamples.isNotEmpty()) {
+                        val anchorMs = if (pendingData.expectedStartMs > 0) {
+                            pendingData.expectedStartMs
+                        } else {
+                            matchingEntry.date.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+                        }
+
+                        val intervals = mutableListOf<WorkoutRrInterval>()
+                        val hrPairs = mutableListOf<android.util.Pair<Long, Int>>()
+                        var cumulativeMs = 0L
+                        var beatIndex = 0
+
+                        for (rr in hrSamples) {
+                            cumulativeMs += rr
+                            val beatTs = anchorMs + cumulativeMs
+                            val bpm = (60_000.0 / rr).roundToInt().coerceIn(30, 250)
+                            hrPairs.add(android.util.Pair(beatTs, bpm))
+                            intervals.add(
+                                WorkoutRrInterval(
+                                    workoutId = workoutId,
+                                    beatIndex = beatIndex++,
+                                    beatTimestampMs = beatTs,
+                                    rrMs = rr.toFloat(),
+                                    artifactFlag = 0,
+                                    gapBeats = 0
+                                )
+                            )
+                        }
+
+                        val repo = WorkoutRepository.getInstance(appContext)
+                        val baseFileName = repo.getBaseFileName(workoutId) ?: summariesDb.getBaseFileName(workoutId)
+
+                        if (!baseFileName.isNullOrEmpty()) {
+                            val samplesManager = WorkoutSamplesDatabaseManager.getInstance(appContext)
+                            samplesManager.patchMissingHeartRateSamples(baseFileName, anchorMs, hrPairs)
+                        }
+
+                        val rrRepo = WorkoutRrRepository.getInstance(appContext)
+                        rrRepo.insertIntervals(intervals)
+
+                        HrvPostWorkoutRecomputer.recomputeWorkout(appContext, workoutId)
+
+                        summariesDb.clearPolarSyncPending(workoutId)
+
+                        api.removeExercise(targetId, matchingEntry)
+                        Log.i(TAG, "Successfully performed deferred sync and removed exercise ${matchingEntry.path}")
+
+                        repo.refreshWorkout(workoutId)
+                        val updatedWorkout = try {
+                            repo.allWorkouts.value.find { it.id == workoutId }
+                        } catch (t: Throwable) {
+                            Log.w(TAG, "Failed to resolve updated workout from repository: ${t.message}")
+                            null
+                        }
+                        if (updatedWorkout != null) {
+                            try {
+                                val exportManager = com.atrainingtracker.trainingtracker.exporter.ExportManager(appContext)
+                                if (baseFileName != null) {
+                                    exportManager.invalidateWorkoutExport(baseFileName)
+                                }
+                                exportManager.exportWorkout(updatedWorkout)
+                            } catch (e: Exception) {
+                                Log.w(TAG, "Non-fatal export exception after deferred sync: ${e.message}")
+                            }
+                        }
+                        true
+                    } else {
+                        api.removeExercise(targetId, matchingEntry)
+                        summariesDb.clearPolarSyncPending(workoutId)
+                        WorkoutRepository.getInstance(appContext).refreshWorkout(workoutId)
+                        true
+                    }
+                } finally {
+                    try {
+                        api.disconnectFromDevice(targetId)
+                    } catch (ignored: Exception) {}
+                    if (apiOverride == null) {
+                        try {
+                            api.cleanup()
+                        } catch (t: Throwable) {
+                            Log.w(TAG, "Error cleaning up PolarBleApi: ${t.message}")
+                        }
+                    }
+                }
+            } ?: false
+        } catch (t: Throwable) {
+            Log.e(TAG, "Exception during Polar H10 syncPendingWorkout: ${t.message}", t)
+            return false
+        } finally {
             btleDevice?.resumeGattOperations()
         }
     }
@@ -548,6 +785,8 @@ object PolarH10OfflineController {
                     )
                     Log.i(TAG, "Successfully armed Polar H10 offline RR recording on $polarId (id: $exerciseId)")
 
+                    armedDeviceId = polarId
+                    armedExerciseId = exerciseId
                     isArmed.set(true)
 
                     try {
