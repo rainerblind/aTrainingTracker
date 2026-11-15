@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.ui.map
 
+import android.content.SharedPreferences
 import android.content.res.Configuration
 import android.graphics.Paint
 import android.graphics.Typeface
@@ -36,7 +37,9 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -79,6 +82,7 @@ import com.atrainingtracker.trainingtracker.physiology.PowerHrDynamicsCalculator
 import com.atrainingtracker.trainingtracker.settings.ProfileXAxisDomain
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper
+import com.atrainingtracker.trainingtracker.settings.TelemetryGraphColorPreferences
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneThresholds
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.LinearHistogramBin
@@ -190,16 +194,38 @@ fun TelemetryMetricGraph(
     val distanceFormatter = remember(unit) { DistanceFormatter() }
 
     val colorScheme = MaterialTheme.colorScheme
-
-    val accentColor = remember(metricType, colorScheme) {
-        when (metricType) {
-            TelemetryMetricType.HEART_RATE -> TTColor.Zone4
-            TelemetryMetricType.SPEED, TelemetryMetricType.PACE -> colorScheme.primary
-            TelemetryMetricType.POWER -> TTColor.Zone5
-            TelemetryMetricType.W_PRIME_BAL -> TTColor.WPrimeBalGreen
-            TelemetryMetricType.HRV_DFA_A1 -> TTColor.Zone3
-            TelemetryMetricType.HRV_RMSSD -> TTColor.Zone1
+    val graphColorPrefs = remember(context) {
+        TelemetryGraphColorPreferences.resolveSharedPreferences(context)
+    }
+    var graphColorRevision by remember { mutableIntStateOf(0) }
+    val metricColorPrefKey = remember(metricType) {
+        TelemetryGraphColorPreferences.preferenceKey(metricType)
+    }
+    DisposableEffect(graphColorPrefs, metricColorPrefKey) {
+        if (graphColorPrefs == null) {
+            onDispose {}
+        } else {
+            val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, changedKey ->
+                if (changedKey == null ||
+                    changedKey == metricColorPrefKey ||
+                    changedKey.startsWith(TelemetryGraphColorPreferences.KEY_PREFIX)
+                ) {
+                    graphColorRevision++
+                }
+            }
+            graphColorPrefs.registerOnSharedPreferenceChangeListener(listener)
+            onDispose {
+                graphColorPrefs.unregisterOnSharedPreferenceChangeListener(listener)
+            }
         }
+    }
+
+    val accentColor = remember(metricType, colorScheme, graphColorPrefs, graphColorRevision) {
+        TelemetryGraphColorPreferences.resolveAccentColor(
+            prefs = graphColorPrefs,
+            metricType = metricType,
+            colorScheme = colorScheme
+        )
     }
 
     val isTrackless = remember(pathPoints) {

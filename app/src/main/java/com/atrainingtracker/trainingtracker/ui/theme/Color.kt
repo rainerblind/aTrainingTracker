@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
@@ -440,4 +441,84 @@ object TTColor {
     val VaultExplorerEmeraldContainer = Color(0x2610B981)
     val VaultPassportBgStart = Color(0xFF0F172A)
     val VaultPassportBgEnd = Color(0xFF1E293B)
+}
+
+/**
+ * Centralized Light/Dark-aware fixed telemetry color palette and theme-default option
+ * for Workout Detail charts and Cockpit sparklines (REQ-UI-530.1, ATT-7759).
+ *
+ * Every fixed palette token is calibrated to achieve WCAG 2.1 non-text contrast (>= 3.0:1)
+ * against Light (#FFFFFF), Dark (#16161A), and AMOLED (#000000) surfaces.
+ */
+@Suppress("MagicNumber")
+enum class TelemetryGraphColor(
+    val lightColor: Color,
+    val darkColor: Color
+) {
+    THEME_DEFAULT(
+        lightColor = LightPrimary,
+        darkColor = DarkPrimary
+    ),
+    CRIMSON(
+        lightColor = Color(0xFFD32F2F),
+        darkColor = Color(0xFFFF5252)
+    ),
+    VIOLET(
+        lightColor = Color(0xFF7C3AED),
+        darkColor = Color(0xFFC084FC)
+    ),
+    EMERALD(
+        lightColor = Color(0xFF059669),
+        darkColor = TTColor.WPrimeBalGreen
+    ),
+    AMBER(
+        lightColor = Color(0xFFD97706),
+        darkColor = Color(0xFFFBBF24)
+    ),
+    TEAL(
+        lightColor = Color(0xFF0D9488),
+        darkColor = Color(0xFF2DD4BF)
+    ),
+    MAGENTA(
+        lightColor = Color(0xFFDB2777),
+        darkColor = Color(0xFFF472B6)
+    ),
+    CYAN(
+        lightColor = Color(0xFF0891B2),
+        darkColor = Color(0xFF22D3EE)
+    ),
+    CORAL(
+        lightColor = Color(0xFFEA580C),
+        darkColor = Color(0xFFFB923C)
+    );
+
+    /**
+     * Resolves the theme-appropriate stroke/accent [Color] for [colorScheme].
+     *
+     * Defaults [isDarkTheme] from [colorScheme]'s surface luminance so forced-dark themes
+     * (such as Cockpit ALWAYS_DARK or AMOLED) resolve high-contrast dark tokens even when the
+     * host system theme is Light.
+     */
+    fun resolveColor(
+        colorScheme: ColorScheme,
+        isDarkTheme: Boolean = isDarkSurface(colorScheme)
+    ): Color = when (this) {
+        THEME_DEFAULT -> colorScheme.primary
+        else -> if (isDarkTheme) darkColor else lightColor
+    }
+
+    companion object {
+        private const val DARK_SURFACE_LUMINANCE_THRESHOLD = 0.5
+
+        /**
+         * All 8 fixed non-theme-default palette colors in canonical display order.
+         */
+        val PALETTE_COLORS: List<TelemetryGraphColor> = entries.filter { it != THEME_DEFAULT }
+
+        /**
+         * Returns true when [colorScheme] uses a dark surface based on relative luminance.
+         */
+        fun isDarkSurface(colorScheme: ColorScheme): Boolean =
+            TTColor.relativeLuminance(colorScheme.surface) < DARK_SURFACE_LUMINANCE_THRESHOLD
+    }
 }
