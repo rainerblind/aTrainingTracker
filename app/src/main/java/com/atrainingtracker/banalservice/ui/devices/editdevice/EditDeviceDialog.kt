@@ -55,6 +55,7 @@ import com.atrainingtracker.banalservice.devices.AttFusedPreferences
 import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.devices.radar.RadarLightController
 import com.atrainingtracker.banalservice.devices.radar.RadarLightMode
+import com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulator
 import com.atrainingtracker.banalservice.ui.devices.DeviceStatusRow
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
 import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
@@ -1106,16 +1107,18 @@ private fun AttFusedToggleRow(
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-@Suppress("LongMethod")
+@Suppress("LongMethod", "CyclomaticComplexMethod")
 private fun RadarLightControlSection(
     isConnected: Boolean,
     modifier: Modifier = Modifier
 ) {
     val isLightControlAvailable by RadarLightController.isLightControlAvailable.collectAsStateWithLifecycle()
-    if (!isConnected || !isLightControlAvailable) {
+    val isSimulating by RadarTrafficSimulator.isSimulatingFlow.collectAsStateWithLifecycle()
+    if (!isSimulating && (!isConnected || !isLightControlAvailable)) {
         return
     }
 
+    val isAutoMode by RadarLightController.isAutoMode.collectAsStateWithLifecycle()
     val currentMode by RadarLightController.currentMode.collectAsStateWithLifecycle()
     val isStvzo by RadarLightController.isStvzo.collectAsStateWithLifecycle()
     val availableModes = remember(isStvzo) { RadarLightMode.getAvailableModes(isStvzo) }
@@ -1150,12 +1153,29 @@ private fun RadarLightControlSection(
             SingleChoiceSegmentedButtonRow(
                 modifier = Modifier.fillMaxWidth()
             ) {
+                val totalCount = 1 + availableModes.size
+                SegmentedButton(
+                    selected = isAutoMode,
+                    onClick = { RadarLightController.setAutoMode() },
+                    shape = SegmentedButtonDefaults.itemShape(index = 0, count = totalCount),
+                    icon = {},
+                    modifier = Modifier.testTag("RadarLightMode_AUTO")
+                ) {
+                    Text(
+                        text = stringResource(R.string.radar_light_control_mode_smart),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = if (isAutoMode) FontWeight.Bold else FontWeight.Medium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+
                 availableModes.forEachIndexed { index, mode ->
-                    val isSelected = mode == currentMode
+                    val isSelected = !isAutoMode && mode == currentMode
                     SegmentedButton(
                         selected = isSelected,
                         onClick = { RadarLightController.setManualLightMode(mode) },
-                        shape = SegmentedButtonDefaults.itemShape(index = index, count = availableModes.size),
+                        shape = SegmentedButtonDefaults.itemShape(index = index + 1, count = totalCount),
                         icon = {},
                         modifier = Modifier.testTag("RadarLightMode_${mode.name}")
                     ) {
@@ -1169,9 +1189,67 @@ private fun RadarLightControlSection(
                     }
                 }
             }
+
+            if (isAutoMode) {
+                Text(
+                    text = stringResource(
+                        R.string.radar_light_active_mode_format,
+                        stringResource(currentMode.titleResId)
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 4.dp)
+                )
+            }
         } else {
+            // Automatik Option (REQ-CON-031.3, REQ-CON-031.5)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+                    .clickable { RadarLightController.setAutoMode() }
+                    .padding(horizontal = 12.dp, vertical = 8.dp)
+                    .testTag("RadarLightMode_AUTO"),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(10.dp)
+                        .clip(CircleShape)
+                        .background(TTColor.RadarClearGreen)
+                )
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.radar_light_control_mode_smart),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = if (isAutoMode) FontWeight.Bold else FontWeight.Normal,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    if (isAutoMode) {
+                        Text(
+                            text = stringResource(
+                                R.string.radar_light_active_mode_format,
+                                stringResource(currentMode.titleResId)
+                            ),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                RadioButton(
+                    selected = isAutoMode,
+                    onClick = { RadarLightController.setAutoMode() }
+                )
+            }
+
             availableModes.forEach { mode ->
-                val isSelected = mode == currentMode
+                val isSelected = !isAutoMode && mode == currentMode
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()

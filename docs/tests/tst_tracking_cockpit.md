@@ -2067,27 +2067,32 @@
   • Verify that when `BuildConfig.DEBUG` is false or override is disabled, normal V2 discovery and negotiation proceed.
 
 ### TST-CON-031: **BLE Radar Tail Light Mode Control Test Suite** [Verified]
-- **Requirement(s)**: `REQ-CON-031` (`REQ-CON-031.1`..`REQ-CON-031.7`)
+- **Requirement(s)**: `REQ-CON-031` (`REQ-CON-031.1`..`REQ-CON-031.8`)
 - **Component**: `BTLERadarDevice.java`, `RadarLightController.kt`, `RadarLightMode.kt`, `RadarEdgeOverlay.kt`, `RadarSettingsSection.kt`, `TuningPreferencesDataStore.kt`, `TrackerService.java`, `RadarLightQuickSwitchSheet.kt`, `EditDeviceDialog.kt`, `strings_radar.xml`
-- **Jira**: `ATT-5102`, `ATT-6707`, `ATT-7545`, `ATT-7540`, `ATT-7538`
+- **Jira**: `ATT-5102`, `ATT-6707`, `ATT-7545`, `ATT-7540`, `ATT-7538`, `ATT-7991`
 - **Test Description**:
   1. *Light Characteristic Discovery, Model Number Query & Queue Routing Tests (`TST-CON-031.1`, `BTLERadarDeviceTest.kt`)*:
   • Verify discovery of RearVue 820 Control Service `6a4e2f00` (write `6a4e2f11`, notify `6a4e2f14`) and CCCD subscription on `6a4e2f14`, transparent legacy fallback to `6a4e3202` on service `6a4e3200`, read of Device Information `0x2A24` (Model Number string), StVZO detection (`isStvzo = true` for `010-03180-10`, `RTL516`), initial read/registration of light control on connect, active light mode re-dispatch on mid-ride reconnect, and serialized write queueing.
   2. *Mode Command Encoding, Slot Notification Decoding, StVZO Pruning & Gated Mutation Tests (`TST-CON-031.2`, `BTLERadarDeviceTest.kt`, `RadarLightControllerTest.kt`)*:
   • Verify dispatch of 4-byte mode commands `06 09 01 TT` (`0x11` SOLID, `0x12` PELOTON, `0x13` DAY_FLASH, `0x14` NIGHT_FLASH, `0x1F` OFF) on `6a4e2f11` configured with `WRITE_TYPE_NO_RESPONSE`, `MyBTLEDevice` write queue write type enforcement, immediate `RadarLightController.updateHardwareLightMode(mode)` update, legacy 1-byte command dispatch on `6a4e3202`, decoding of 4-byte slot notifications `01 [slot] ff [type]` on `6a4e2f14` updating `RadarLightController` without reverting active mode, flashing mode pruning under StVZO, and verification that `_currentMode` and `RadarStateRepository` mutate strictly when `dispatched == true`.
-  3. *Cockpit Quick-Switch Sheet UI & State Tests (`TST-CON-031.3`, `RadarLightQuickSwitchSheetTest.kt`)*:
-  • Verify modal sheet rendering upon badge tap, active mode indication, selection callback invocation, non-interactive badge behavior on devices lacking light characteristic, styling using `MaterialTheme.colorScheme.outline`, and `@Preview` coverage.
+  3. *Cockpit Quick-Switch Sheet Automatik & Physical Mode Selection Tests (`TST-CON-031.3`, `RadarLightQuickSwitchSheetTest.kt`)*:
+  • Verify modal sheet rendering with `Automatik` as the first selectable option followed by available physical modes, live active state indication for both `isAutoMode` and `currentMode`, proper callback invocation clearing manual override on `Automatik` selection and persisting `radarLightDefaultMode` on explicit physical mode selection, non-interactive badge behavior on devices lacking light characteristic, styling using `MaterialTheme.colorScheme.outline`, and `@Preview` coverage.
   4. *Workout Lifecycle Auto-Switch Automation & Pause Safety Tests (`TST-CON-031.4`, `RadarLightControllerTest.kt`, `TrackerServiceTest.kt`)*:
-  • Verify automatic transmission of workout light command on tracker start/resume (`START_NORMAL`, `RESUME_BY_USER`, `RESUME_AUTOMATICALLY`), preservation of tail light illumination across workout pause, and synchronous dispatch of `OFF` on explicit stop (`handleActionStop`) before `BANALService` unbinds without MockK `context.filesDir` crashes.
-  5. *Settings Persistence, 3-Way Mode Control, EditDeviceDialog Live Controls & Config Parity Tests (`TST-CON-031.5`, `TuningPreferencesDataStoreTest.kt`, `RadarSettingsSectionTest.kt`, `RadarLightControllerTest.kt`)*:
-  • Verify preference persistence for `RadarLightControlMode` and migration logic in DataStore, 3-way segmented button selector in `RadarSettingsSection`, conditional visibility of default light mode dropdown (visible only for `FIXED_WORKOUT_MODE`), and exclusive non-racing runtime dispatch in `RadarLightController`.
-  • Verify `EditDeviceDialog` live tail light controls: conditional visibility gating (`BIKE_RADAR`, connected, `isLightControlAvailable`), immediate invocation of `RadarLightController.setManualLightMode()`, draft state decoupling, and StVZO option restriction.
+  • Verify automatic activation of persisted user lighting selection (`AUTO` starts `SmartRadarLightEngine`; explicit mode dispatches directly) on tracker start/resume (`START_NORMAL`, `RESUME_BY_USER`, `RESUME_AUTOMATICALLY`), preservation of tail light illumination across workout pause, and synchronous dispatch of `OFF` on explicit stop (`handleActionStop`) without erasing or overwriting persisted user preferences for future workouts.
+  5. *Unified Persistence Migration, Expert Settings Retirement & EditDeviceDialog Tests (`TST-CON-031.5`, `TuningPreferencesDataStoreRadarLightControlModeTest.kt`, `RadarSettingsSectionTest.kt`, `RadarLightControllerTest.kt`, `EditDeviceDialogTest.kt`)*:
+  • Verify DataStore migration from legacy `RadarLightControlMode` to unified `isAutoMode: Boolean` + `radarLightDefaultMode: RadarLightMode` with fallback defaults (`true` and `DAY_FLASH`).
+  • Verify retirement of redundant 3-way mode segmented button and default mode dropdown in `RadarSettingsSection.kt`, and preservation of `radarBrakeLightEnabled` toggle.
+  • Verify `EditDeviceDialog` live tail light controls: conditional visibility gating (`BIKE_RADAR`, connected, `isLightControlAvailable`), inclusion of `Automatik` as first option alongside physical modes, immediate dispatch via `RadarLightController`, draft state decoupling, and StVZO option restriction.
   6. *Traffic Simulator Light State Tests (`TST-CON-031.6`, `RadarTrafficSimulatorTest.kt`)*:
   • Verify light command handling and simulated state reflections in `RadarTrafficSimulator`.
   7. *9-Language Localization Parity Test (`TST-CON-031.7`, `TranslationParityTest.kt`)*:
-  • Verify 100% key and format parity for light mode and auto-switch string resources across all 9 supported locales.
+  • Verify 100% key and format parity for light mode, Automatik, and status string resources across all 9 supported locales.
   8. *Clean-Room Targeted Test Suite Execution (`TST-CON-031.8`)*:
   • Execute targeted package tests asserting 100% pass rate.
+  9. *Debounced Mode Stepping & Reactive State Separation Tests (`TST-CON-031.9`, `RadarLightControllerTest.kt`)*:
+  • Verify `cycleNextMode()` sequence: `AUTO` -> `DAY_FLASH` -> `SOLID` -> `PELOTON` -> `NIGHT_FLASH` -> `OFF` -> `AUTO` on non-StVZO hardware, and `AUTO` -> `SOLID` -> `OFF` -> `AUTO` on StVZO hardware.
+  • Verify immediate UI-observable target mode updates on rapid successive taps, with ~400 ms debounce window coalescing outbound commands into a single physical dispatch.
+  • Verify distinct reactive emission of `isAutoMode` and `currentMode` `StateFlow`s during auto-escalation and manual override.
 
 ### TST-CON-032: **ANT+ Cycling Rearview Radar Profile (Device Type 0x28) Driver & Target Demuxing Test Suite** [Verified]
 - **Requirement(s)**: `REQ-CON-032` (`REQ-CON-032.1`..`REQ-CON-032.6`)

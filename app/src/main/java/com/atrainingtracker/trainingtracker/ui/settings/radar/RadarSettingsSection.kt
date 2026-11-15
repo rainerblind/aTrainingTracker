@@ -46,7 +46,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
-import com.atrainingtracker.banalservice.devices.radar.RadarLightController
 import com.atrainingtracker.banalservice.devices.radar.RadarScenario
 import com.atrainingtracker.banalservice.devices.radar.RadarStateRepository
 import com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulator
@@ -57,7 +56,6 @@ import com.atrainingtracker.trainingtracker.settings.RadarAudioAlertMode
 import com.atrainingtracker.trainingtracker.settings.RadarAudioRoute
 import com.atrainingtracker.trainingtracker.settings.RadarClearMode
 import com.atrainingtracker.trainingtracker.settings.RadarEdgeSide
-import com.atrainingtracker.trainingtracker.settings.RadarLightControlMode
 import com.atrainingtracker.trainingtracker.settings.RadarTrafficOrientation
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.SubordinateTuningToggleItem
@@ -402,53 +400,6 @@ fun RadarSettingsSection(
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurface
         )
-
-        // 3-Way Tail Light Control Mode Selector (REQ-CON-031.5c / ATT-7538)
-        val controlModeHelperText = when (tuningConfig.radarLightControlMode) {
-            RadarLightControlMode.MANUAL -> stringResource(R.string.radar_light_control_mode_manual_desc)
-            RadarLightControlMode.FIXED_WORKOUT_MODE -> stringResource(R.string.radar_light_control_mode_fixed_desc)
-            RadarLightControlMode.SMART_AUTOMATION -> stringResource(R.string.radar_light_control_mode_smart_desc)
-        }
-        TuningSegmentedButtonRow(
-            title = stringResource(R.string.radar_light_control_mode_title),
-            options = listOf(
-                RadarLightControlMode.MANUAL,
-                RadarLightControlMode.FIXED_WORKOUT_MODE,
-                RadarLightControlMode.SMART_AUTOMATION
-            ),
-            selectedOption = tuningConfig.radarLightControlMode,
-            onOptionSelected = { mode ->
-                coroutineScope.launch {
-                    actualDataStore.updateRadarLightControlMode(mode)
-                }
-            },
-            labelProvider = { mode ->
-                when (mode) {
-                    RadarLightControlMode.MANUAL -> stringResource(R.string.radar_light_control_mode_manual)
-                    RadarLightControlMode.FIXED_WORKOUT_MODE -> stringResource(R.string.radar_light_control_mode_fixed)
-                    RadarLightControlMode.SMART_AUTOMATION -> stringResource(R.string.radar_light_control_mode_smart)
-                }
-            },
-            helperText = controlModeHelperText
-        )
-
-        // Default Light Mode Selection: Conditionally visible ONLY in FIXED_WORKOUT_MODE (REQ-CON-031.5d)
-        if (tuningConfig.radarLightControlMode == RadarLightControlMode.FIXED_WORKOUT_MODE) {
-            val availableModes = RadarLightController.getAvailableModes()
-            TuningDropdownRow(
-                title = stringResource(R.string.radar_light_mode_title),
-                options = availableModes,
-                selectedOption = tuningConfig.radarLightDefaultMode,
-                onOptionSelected = { mode ->
-                    coroutineScope.launch {
-                        actualDataStore.updateRadarLightDefaultMode(mode)
-                    }
-                },
-                labelProvider = { stringResource(it.titleResId) },
-                testTag = "RadarLightDefaultModeDropdown",
-                itemTestTagPrefix = "RadarLightModeItem"
-            )
-        }
 
         // Software Deceleration Brake-Light Trigger (REQ-CON-035.6 / ATT-5121)
         TuningToggleItem(

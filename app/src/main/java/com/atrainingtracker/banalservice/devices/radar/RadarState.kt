@@ -109,6 +109,7 @@ enum class RadarSource(val priority: Int) {
  * @property isLightControlSupported True if peripheral or simulator supports tail light mode commands.
  * @property audioSnoozeState Current audio snooze and alert suppression status.
  * @property source Hardware peripheral or simulation transport source (REQ-CON-041).
+ * @property isAutoMode True if tail light is operating under smart automation (REQ-CON-031.8).
  */
 data class RadarState @JvmOverloads constructor(
     val connectionState: RadarConnectionState = RadarConnectionState.DISCONNECTED,
@@ -118,5 +119,6 @@ data class RadarState @JvmOverloads constructor(
     val lightMode: RadarLightMode = RadarLightMode.OFF,
     val isLightControlSupported: Boolean = false,
     val audioSnoozeState: RadarAudioSnoozeState = RadarAudioSnoozeState.INACTIVE,
-    val source: RadarSource = RadarSource.NONE
+    val source: RadarSource = RadarSource.NONE,
+    val isAutoMode: Boolean = true
 )

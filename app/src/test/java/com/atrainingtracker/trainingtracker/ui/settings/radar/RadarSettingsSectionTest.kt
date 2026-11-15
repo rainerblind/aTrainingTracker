@@ -107,6 +107,27 @@ class RadarSettingsSectionTest {
         assertEquals(RadarLightControlMode.SMART_AUTOMATION, cfgSmartBrakeOff.radarLightControlMode)
     }
 
+    /**
+     * TST-CON-031.5b / REQ-CON-031.5: Brake light toggle must be independent and retained in settings
+     * when mode selection is unified.
+     */
+    @Test
+    fun testRadarSettingsSection_retiresModeControls_retainsBrakeLight() {
+        val autoConfig = TuningConfig(
+            radarLightAutoMode = true,
+            radarBrakeLightEnabled = true
+        )
+        assertTrue("Brake light toggle must remain configurable", autoConfig.radarBrakeLightEnabled)
+        assertTrue("Unified auto mode must be configurable", autoConfig.radarLightAutoMode)
+
+        val manualConfig = TuningConfig(
+            radarLightAutoMode = false,
+            radarBrakeLightEnabled = false
+        )
+        assertFalse(manualConfig.radarBrakeLightEnabled)
+        assertFalse(manualConfig.radarLightAutoMode)
+    }
+
     private fun getXmlString(file: File, stringName: String): String? {
         val target = if (file.exists()) file else File("app/" + file.path)
         val doc = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(target)

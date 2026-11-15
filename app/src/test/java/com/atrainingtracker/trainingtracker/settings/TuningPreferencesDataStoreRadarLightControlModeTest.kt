@@ -25,8 +25,10 @@ class TuningPreferencesDataStoreRadarLightControlModeTest {
     @Test
     fun defaultConstants_matchSpecification() {
         assertEquals(RadarLightControlMode.FIXED_WORKOUT_MODE, TuningPreferencesDefaults.RADAR_LIGHT_CONTROL_MODE)
+        assertTrue(TuningPreferencesDefaults.RADAR_LIGHT_AUTO_MODE)
         val config = TuningConfig()
-        assertEquals(RadarLightControlMode.FIXED_WORKOUT_MODE, config.radarLightControlMode)
+        assertEquals(RadarLightControlMode.SMART_AUTOMATION, config.radarLightControlMode)
+        assertTrue(config.radarLightAutoMode)
     }
 
     @Test
@@ -35,6 +37,53 @@ class TuningPreferencesDataStoreRadarLightControlModeTest {
             "KEY_RADAR_LIGHT_CONTROL_MODE must be registered in ALL_KEYS for backup and reset",
             TuningPreferencesDataStore.ALL_KEYS.contains(TuningPreferencesDataStore.KEY_RADAR_LIGHT_CONTROL_MODE)
         )
+        assertTrue(
+            "KEY_RADAR_LIGHT_AUTO_MODE must be registered in ALL_KEYS for backup and reset",
+            TuningPreferencesDataStore.ALL_KEYS.contains(TuningPreferencesDataStore.KEY_RADAR_LIGHT_AUTO_MODE)
+        )
+    }
+
+    @Test
+    fun resolveRadarLightAutoMode_migratesLegacyFlagsCorrectly() {
+        // Explicit unified key
+        val prefsAutoTrue = preferencesOf(TuningPreferencesDataStore.KEY_RADAR_LIGHT_AUTO_MODE to true)
+        assertTrue(TuningPreferencesDataStore.resolveRadarLightAutoMode(prefsAutoTrue))
+
+        val prefsAutoFalse = preferencesOf(TuningPreferencesDataStore.KEY_RADAR_LIGHT_AUTO_MODE to false)
+        assertFalse(TuningPreferencesDataStore.resolveRadarLightAutoMode(prefsAutoFalse))
+
+        // From 3-way control mode
+        val prefsSmart = preferencesOf(TuningPreferencesDataStore.KEY_RADAR_LIGHT_CONTROL_MODE to RadarLightControlMode.SMART_AUTOMATION.name)
+        assertTrue(TuningPreferencesDataStore.resolveRadarLightAutoMode(prefsSmart))
+
+        val prefsFixed = preferencesOf(TuningPreferencesDataStore.KEY_RADAR_LIGHT_CONTROL_MODE to RadarLightControlMode.FIXED_WORKOUT_MODE.name)
+        assertFalse(TuningPreferencesDataStore.resolveRadarLightAutoMode(prefsFixed))
+
+        val prefsManual = preferencesOf(TuningPreferencesDataStore.KEY_RADAR_LIGHT_CONTROL_MODE to RadarLightControlMode.MANUAL.name)
+        assertFalse(TuningPreferencesDataStore.resolveRadarLightAutoMode(prefsManual))
+
+        // From legacy booleans
+        val prefsLegacySmart = preferencesOf(TuningPreferencesDataStore.KEY_RADAR_SMART_LIGHT_AUTOMATION to true)
+        assertTrue(TuningPreferencesDataStore.resolveRadarLightAutoMode(prefsLegacySmart))
+
+        val prefsLegacyAuto = preferencesOf(TuningPreferencesDataStore.KEY_RADAR_AUTO_LIGHT_CONTROL to true)
+        assertFalse(TuningPreferencesDataStore.resolveRadarLightAutoMode(prefsLegacyAuto))
+
+        // Fresh install (empty prefs) defaults to AUTO (true)
+        val prefsEmpty = preferencesOf()
+        assertTrue(TuningPreferencesDataStore.resolveRadarLightAutoMode(prefsEmpty))
+    }
+
+    @Test
+    fun resolveRadarLightDefaultMode_migratesCorrectly() {
+        val prefsExplicit = preferencesOf(TuningPreferencesDataStore.KEY_RADAR_LIGHT_DEFAULT_MODE to com.atrainingtracker.banalservice.devices.radar.RadarLightMode.SOLID.name)
+        assertEquals(com.atrainingtracker.banalservice.devices.radar.RadarLightMode.SOLID, TuningPreferencesDataStore.resolveRadarLightDefaultMode(prefsExplicit))
+
+        val prefsManual = preferencesOf(TuningPreferencesDataStore.KEY_RADAR_LIGHT_CONTROL_MODE to RadarLightControlMode.MANUAL.name)
+        assertEquals(com.atrainingtracker.banalservice.devices.radar.RadarLightMode.OFF, TuningPreferencesDataStore.resolveRadarLightDefaultMode(prefsManual))
+
+        val prefsEmpty = preferencesOf()
+        assertEquals(com.atrainingtracker.banalservice.devices.radar.RadarLightMode.DAY_FLASH, TuningPreferencesDataStore.resolveRadarLightDefaultMode(prefsEmpty))
     }
 
     @Test

@@ -23,13 +23,17 @@ import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.util.Log
+import androidx.annotation.VisibleForTesting
 import com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDevice
 import com.atrainingtracker.trainingtracker.settings.RadarLightControlMode
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import java.util.Locale
 
 /**
@@ -40,17 +44,27 @@ import java.util.Locale
  * brake-light triggering with 2.0s post-brake hold, and automated workout lighting
  * lifecycle transitions without duplicate BLE pairing or database storage.
  */
+data class RadarLightSelection(
+    val isAuto: Boolean,
+    val mode: RadarLightMode
+)
+
 object RadarLightController {
 
     private const val TAG = "RadarLightController"
 
     const val POST_BRAKE_HOLD_DURATION_MS = 2000L
+    const val DEBOUNCE_DELAY_MS = 400L
 
     private var activeRadarDevice: RadarLightDeviceClient? = null
 
     private val _currentMode = MutableStateFlow(RadarLightMode.OFF)
     @get:JvmStatic
     val currentMode: StateFlow<RadarLightMode> = _currentMode.asStateFlow()
+
+    private val _isAutoMode = MutableStateFlow(true)
+    @get:JvmStatic
+    val isAutoMode: StateFlow<Boolean> = _isAutoMode.asStateFlow()
 
     private val _isLightControlAvailable = MutableStateFlow(false)
     @get:JvmStatic
@@ -78,12 +92,18 @@ object RadarLightController {
     private var preBrakeMode: RadarLightMode = RadarLightMode.OFF
     private var brakeHoldUntilRealtimeMs: Long = 0L
 
+    private var pendingTargetMode: RadarLightMode? = null
+
     private val handler by lazy { Handler(Looper.getMainLooper()) }
     private val brakeHoldRunnable = Runnable {
         synchronized(this@RadarLightController) {
             if (!isBrakeActive) return@Runnable
         }
         checkAndRestorePreBrakeMode(SystemClock.elapsedRealtime())
+    }
+
+    private val debouncedDispatchRunnable = Runnable {
+        flushDebouncedDispatch()
     }
 
     /**
@@ -115,7 +135,7 @@ object RadarLightController {
             SmartBrakeLightDetector.startListening(ctx)
         }
         val current = RadarStateRepository.getState()
-        RadarStateRepository.updateState(current.copy(isLightControlSupported = lightSupported))
+        RadarStateRepository.updateState(current.copy(isLightControlSupported = lightSupported, isAutoMode = _isAutoMode.value))
         Log.i(TAG, "Registered radar device (lightSupported=$lightSupported, isStvzo=$isStvzo, hasHardwareBrake=$hasHardwareBrakeSensor)")
     }
 
@@ -133,37 +153,61 @@ object RadarLightController {
                 SmartBrakeLightDetector.isAutoBypassed = false
                 _currentMode.value = RadarLightMode.OFF
                 isBrakeActive = false
+                pendingTargetMode = null
                 try {
                     handler.removeCallbacks(brakeHoldRunnable)
+                    handler.removeCallbacks(debouncedDispatchRunnable)
                 } catch (_: Exception) {}
             }
         }
         SmartBrakeLightDetector.stopListening()
         val current = RadarStateRepository.getState()
-        RadarStateRepository.updateState(current.copy(isLightControlSupported = false, lightMode = RadarLightMode.OFF))
+        RadarStateRepository.updateState(current.copy(isLightControlSupported = false, lightMode = RadarLightMode.OFF, isAutoMode = _isAutoMode.value))
         Log.i(TAG, "Unregistered radar device")
     }
 
+    private var cachedAutoMode: Boolean = TuningPreferencesDefaults.RADAR_LIGHT_AUTO_MODE
     private var cachedAutoLightControl: Boolean = TuningPreferencesDefaults.RADAR_AUTO_LIGHT_CONTROL
     private var cachedLightDefaultMode: RadarLightMode = TuningPreferencesDefaults.RADAR_LIGHT_DEFAULT_MODE
     private var cachedControlMode: RadarLightControlMode = TuningPreferencesDefaults.RADAR_LIGHT_CONTROL_MODE
 
     @JvmStatic
-    fun updateCachedPreferences(autoControl: Boolean, defaultMode: RadarLightMode) {
+    fun updateCachedPreferences(autoMode: Boolean, defaultMode: RadarLightMode) {
         synchronized(this) {
-            cachedAutoLightControl = autoControl
+            cachedAutoMode = autoMode
             cachedLightDefaultMode = defaultMode
-            cachedControlMode = if (autoControl) RadarLightControlMode.FIXED_WORKOUT_MODE else RadarLightControlMode.MANUAL
+            cachedAutoLightControl = !autoMode
+            cachedControlMode = if (autoMode) RadarLightControlMode.SMART_AUTOMATION else RadarLightControlMode.FIXED_WORKOUT_MODE
         }
+        _isAutoMode.value = autoMode
+        val current = RadarStateRepository.getState()
+        RadarStateRepository.updateState(current.copy(isAutoMode = autoMode))
     }
 
     @JvmStatic
+    @Deprecated("Use updateCachedPreferences(autoMode: Boolean, defaultMode: RadarLightMode)")
     fun updateCachedPreferences(controlMode: RadarLightControlMode, defaultMode: RadarLightMode) {
         synchronized(this) {
             cachedControlMode = controlMode
             cachedLightDefaultMode = defaultMode
+            when (controlMode) {
+                RadarLightControlMode.SMART_AUTOMATION -> {
+                    cachedAutoMode = true
+                }
+                RadarLightControlMode.FIXED_WORKOUT_MODE -> {
+                    cachedAutoMode = false
+                }
+                RadarLightControlMode.MANUAL -> {
+                    cachedAutoMode = false
+                    cachedLightDefaultMode = RadarLightMode.OFF
+                }
+            }
             cachedAutoLightControl = (controlMode == RadarLightControlMode.FIXED_WORKOUT_MODE)
         }
+        val isAuto = (controlMode == RadarLightControlMode.SMART_AUTOMATION)
+        _isAutoMode.value = isAuto
+        val current = RadarStateRepository.getState()
+        RadarStateRepository.updateState(current.copy(isAutoMode = isAuto))
     }
 
     /**
@@ -175,7 +219,7 @@ object RadarLightController {
             _currentMode.value = mode
         }
         val current = RadarStateRepository.getState()
-        RadarStateRepository.updateState(current.copy(lightMode = mode))
+        RadarStateRepository.updateState(current.copy(lightMode = mode, isAutoMode = _isAutoMode.value))
     }
 
     /**
@@ -210,10 +254,30 @@ object RadarLightController {
         if (dispatched) {
             _currentMode.value = targetMode
             val current = RadarStateRepository.getState()
-            RadarStateRepository.updateState(current.copy(lightMode = targetMode))
+            RadarStateRepository.updateState(current.copy(lightMode = targetMode, isAutoMode = _isAutoMode.value))
         }
 
         return dispatched
+    }
+
+    /**
+     * User-initiated selection of Smart Auto mode (REQ-CON-031.3, REQ-CON-034).
+     * Resumes smart automation via [SmartRadarLightEngine.resumeAutomation].
+     */
+    @JvmStatic
+    fun setAutoMode() {
+        synchronized(this) {
+            try {
+                handler.removeCallbacks(debouncedDispatchRunnable)
+            } catch (_: Exception) {}
+            pendingTargetMode = null
+            _isAutoMode.value = true
+        }
+        SmartRadarLightEngine.resumeAutomation()
+        val current = RadarStateRepository.getState()
+        RadarStateRepository.updateState(current.copy(isAutoMode = true))
+        persistSelectionAsync(isAuto = true, mode = null)
+        Log.i(TAG, "User selected Automatik mode")
     }
 
     /**
@@ -222,8 +286,118 @@ object RadarLightController {
      */
     @JvmStatic
     fun setManualLightMode(mode: RadarLightMode): Boolean {
+        synchronized(this) {
+            try {
+                handler.removeCallbacks(debouncedDispatchRunnable)
+            } catch (_: Exception) {}
+            pendingTargetMode = null
+            _isAutoMode.value = false
+        }
         SmartRadarLightEngine.onManualOverride(mode)
-        return setLightMode(mode)
+        val result = setLightMode(mode)
+        val current = RadarStateRepository.getState()
+        RadarStateRepository.updateState(current.copy(isAutoMode = false, lightMode = mode))
+        persistSelectionAsync(isAuto = false, mode = mode)
+        return result
+    }
+
+    /**
+     * Cycles through available radar tail light modes with ~400 ms hardware command debouncing (REQ-CON-031.8).
+     *
+     * Non-StVZO sequence: AUTO -> DAY_FLASH -> SOLID -> PELOTON -> NIGHT_FLASH -> OFF -> AUTO.
+     * StVZO sequence: AUTO -> SOLID -> OFF -> AUTO.
+     *
+     * Updates UI-observable target state immediately for zero-latency visual feedback, while coalescing
+     * outbound hardware dispatch over [DEBOUNCE_DELAY_MS] ms.
+     *
+     * @return The updated [RadarLightSelection].
+     */
+    @JvmStatic
+    fun cycleNextMode(): RadarLightSelection {
+        val isStvzoDevice = _isStvzo.value
+        val currentIsAuto = _isAutoMode.value
+        val currentExplicit = pendingTargetMode ?: _currentMode.value
+
+        if (currentIsAuto) {
+            val nextMode = if (isStvzoDevice) RadarLightMode.SOLID else RadarLightMode.DAY_FLASH
+            return applyDebouncedModeStep(nextMode)
+        } else {
+            val nextMode: RadarLightMode? = if (isStvzoDevice) {
+                when (currentExplicit) {
+                    RadarLightMode.SOLID -> RadarLightMode.OFF
+                    RadarLightMode.OFF -> null // back to AUTO
+                    else -> RadarLightMode.SOLID
+                }
+            } else {
+                when (currentExplicit) {
+                    RadarLightMode.DAY_FLASH -> RadarLightMode.SOLID
+                    RadarLightMode.SOLID -> RadarLightMode.PELOTON
+                    RadarLightMode.PELOTON -> RadarLightMode.NIGHT_FLASH
+                    RadarLightMode.NIGHT_FLASH -> RadarLightMode.OFF
+                    RadarLightMode.OFF -> null // back to AUTO
+                }
+            }
+
+            return if (nextMode == null) {
+                setAutoMode()
+                RadarLightSelection(isAuto = true, mode = _currentMode.value)
+            } else {
+                applyDebouncedModeStep(nextMode)
+            }
+        }
+    }
+
+    private fun applyDebouncedModeStep(targetMode: RadarLightMode): RadarLightSelection {
+        synchronized(this) {
+            _isAutoMode.value = false
+            pendingTargetMode = targetMode
+            _currentMode.value = targetMode
+            try {
+                handler.removeCallbacks(debouncedDispatchRunnable)
+                handler.postDelayed(debouncedDispatchRunnable, DEBOUNCE_DELAY_MS)
+            } catch (_: Exception) {}
+        }
+        SmartRadarLightEngine.onManualOverride(targetMode)
+        val current = RadarStateRepository.getState()
+        RadarStateRepository.updateState(current.copy(isAutoMode = false, lightMode = targetMode))
+        persistSelectionAsync(isAuto = false, mode = targetMode)
+        return RadarLightSelection(isAuto = false, mode = targetMode)
+    }
+
+    private fun flushDebouncedDispatch() {
+        val target = synchronized(this) {
+            val t = pendingTargetMode
+            pendingTargetMode = null
+            t
+        } ?: return
+        val targetMode = if (_isStvzo.value && !target.isStvzoCompliant) {
+            RadarLightMode.SOLID
+        } else {
+            target
+        }
+        val device = synchronized(this) { activeRadarDevice }
+        if (device != null && _isLightControlAvailable.value) {
+            device.setLightMode(targetMode)
+        }
+        if (RadarTrafficSimulator.isSimulating || (device == null && RadarStateRepository.getState().isLightControlSupported)) {
+            RadarTrafficSimulator.setSimulatedLightMode(targetMode)
+        }
+    }
+
+    @VisibleForTesting
+    fun flushDebounce() {
+        flushDebouncedDispatch()
+    }
+
+    private fun persistSelectionAsync(isAuto: Boolean, mode: RadarLightMode?) {
+        val ctx = appContext
+        if (ctx != null && TuningPreferencesDataStore.hasInitializedInstance()) {
+            try {
+                CoroutineScope(Dispatchers.IO).launch {
+                    TuningPreferencesDataStore.getInstance(ctx).updateRadarLightSelection(isAuto, mode)
+                }
+            } catch (_: Throwable) {}
+        }
     }
 
     /**
@@ -235,24 +409,25 @@ object RadarLightController {
     }
 
     private data class ActiveLightConfig(
-        val controlMode: RadarLightControlMode,
-        val defaultMode: RadarLightMode
+        val isAutoMode: Boolean,
+        val defaultMode: RadarLightMode,
+        val controlMode: RadarLightControlMode = if (isAutoMode) RadarLightControlMode.SMART_AUTOMATION else RadarLightControlMode.FIXED_WORKOUT_MODE
     )
 
     private fun resolveActiveConfig(context: Context?): ActiveLightConfig {
         if (context != null && TuningPreferencesDataStore.hasInitializedInstance()) {
             try {
                 val cfg = TuningPreferencesDataStore.getInstance(context).getTuningConfig()
-                updateCachedPreferences(cfg.radarLightControlMode, cfg.radarLightDefaultMode)
+                updateCachedPreferences(cfg.radarLightAutoMode, cfg.radarLightDefaultMode)
                 SmartBrakeLightDetector.isEnabled = cfg.radarBrakeLightEnabled
-                SmartRadarLightEngine.isAutomationEnabled = (cfg.radarLightControlMode == RadarLightControlMode.SMART_AUTOMATION)
-                return ActiveLightConfig(cfg.radarLightControlMode, cfg.radarLightDefaultMode)
+                SmartRadarLightEngine.isAutomationEnabled = cfg.radarLightAutoMode
+                return ActiveLightConfig(cfg.radarLightAutoMode, cfg.radarLightDefaultMode, cfg.radarLightControlMode)
             } catch (_: Throwable) {
                 // Ignore and use cached
             }
         }
         return synchronized(this) {
-            ActiveLightConfig(cachedControlMode, cachedLightDefaultMode)
+            ActiveLightConfig(cachedAutoMode, cachedLightDefaultMode, cachedControlMode)
         }
     }
 
@@ -276,23 +451,25 @@ object RadarLightController {
             }
         }
         val config = resolveActiveConfig(context)
-        when (config.controlMode) {
-            RadarLightControlMode.MANUAL -> {
-                Log.d(TAG, "Radar light control is MANUAL; skipping automatic mode dispatch")
-            }
-            RadarLightControlMode.FIXED_WORKOUT_MODE -> {
-                setLightMode(config.defaultMode)
-            }
-            RadarLightControlMode.SMART_AUTOMATION -> {
-                // In SMART_AUTOMATION, do not pre-dispatch defaultMode to prevent race overwrite
-            }
+        if (config.controlMode == RadarLightControlMode.MANUAL || (!config.isAutoMode && config.defaultMode == RadarLightMode.OFF)) {
+            Log.d(TAG, "Radar light control is MANUAL/OFF; skipping automatic mode dispatch")
+        } else if (config.isAutoMode) {
+            _isAutoMode.value = true
+            val current = RadarStateRepository.getState()
+            RadarStateRepository.updateState(current.copy(isAutoMode = true))
+        } else {
+            _isAutoMode.value = false
+            setLightMode(config.defaultMode)
+            SmartRadarLightEngine.onManualOverride(config.defaultMode)
+            val current = RadarStateRepository.getState()
+            RadarStateRepository.updateState(current.copy(isAutoMode = false, lightMode = config.defaultMode))
         }
         val ctx = context?.applicationContext ?: synchronized(this) { appContext }
         val isLightAvailable = synchronized(this) { _isLightControlAvailable.value || RadarTrafficSimulator.isSimulating }
         if (ctx != null && isLightAvailable && SmartBrakeLightDetector.isEnabled && !SmartBrakeLightDetector.isAutoBypassed) {
             SmartBrakeLightDetector.startListening(ctx)
         }
-        if (ctx != null && isCycling && config.controlMode == RadarLightControlMode.SMART_AUTOMATION) {
+        if (ctx != null && isCycling && config.isAutoMode) {
             SmartRadarLightEngine.start(ctx)
         }
     }
@@ -311,6 +488,7 @@ object RadarLightController {
             brakeHoldUntilRealtimeMs = 0L
             try {
                 handler.removeCallbacks(brakeHoldRunnable)
+                handler.removeCallbacks(debouncedDispatchRunnable)
             } catch (_: Exception) {}
             mode
         }
@@ -340,17 +518,9 @@ object RadarLightController {
             }
         }
         val config = resolveActiveConfig(context)
-        when (config.controlMode) {
-            RadarLightControlMode.MANUAL -> {
-                // Do not change light mode on resume in manual mode
-            }
-            RadarLightControlMode.FIXED_WORKOUT_MODE -> {
-                if (_currentMode.value == RadarLightMode.OFF) {
-                    setLightMode(config.defaultMode)
-                }
-            }
-            RadarLightControlMode.SMART_AUTOMATION -> {
-                // Smart engine handles mode dynamically
+        if (!config.isAutoMode) {
+            if (_currentMode.value == RadarLightMode.OFF && config.defaultMode != RadarLightMode.OFF) {
+                setLightMode(config.defaultMode)
             }
         }
         val ctx = context?.applicationContext ?: synchronized(this) { appContext }
@@ -358,7 +528,7 @@ object RadarLightController {
         if (ctx != null && isLightAvailable && SmartBrakeLightDetector.isEnabled && !SmartBrakeLightDetector.isAutoBypassed) {
             SmartBrakeLightDetector.startListening(ctx)
         }
-        if (ctx != null && cycling && config.controlMode == RadarLightControlMode.SMART_AUTOMATION) {
+        if (ctx != null && cycling && config.isAutoMode) {
             SmartRadarLightEngine.start(ctx)
         }
     }
@@ -379,6 +549,8 @@ object RadarLightController {
             preBrakeMode = RadarLightMode.OFF
             try {
                 handler.removeCallbacks(brakeHoldRunnable)
+                handler.removeCallbacks(debouncedDispatchRunnable)
+                pendingTargetMode = null
             } catch (_: Exception) {}
         }
         SmartBrakeLightDetector.stopListening()
@@ -503,20 +675,24 @@ object RadarLightController {
             _isStvzo.value = false
             _hasHardwareBrakeSensor.value = false
             _isAutoBypassed.value = false
+            _isAutoMode.value = true
             _currentMode.value = RadarLightMode.OFF
             isBrakeActive = false
             preBrakeMode = RadarLightMode.OFF
             brakeHoldUntilRealtimeMs = 0L
+            pendingTargetMode = null
+            cachedAutoMode = TuningPreferencesDefaults.RADAR_LIGHT_AUTO_MODE
             cachedAutoLightControl = TuningPreferencesDefaults.RADAR_AUTO_LIGHT_CONTROL
             cachedLightDefaultMode = TuningPreferencesDefaults.RADAR_LIGHT_DEFAULT_MODE
             try {
                 handler.removeCallbacks(brakeHoldRunnable)
+                handler.removeCallbacks(debouncedDispatchRunnable)
             } catch (_: Exception) {}
         }
         SmartBrakeLightDetector.stopListening()
         SmartBrakeLightDetector.reset()
         SmartRadarLightEngine.reset()
         val current = RadarStateRepository.getState()
-        RadarStateRepository.updateState(current.copy(isLightControlSupported = false, lightMode = RadarLightMode.OFF))
+        RadarStateRepository.updateState(current.copy(isLightControlSupported = false, lightMode = RadarLightMode.OFF, isAutoMode = true))
     }
 }

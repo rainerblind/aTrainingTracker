@@ -68,9 +68,11 @@ fun RadarLightQuickSwitchSheet(
     currentMode: RadarLightMode,
     availableModes: List<RadarLightMode>,
     isStvzo: Boolean,
+    isAutoMode: Boolean = true,
     isLightControlSupported: Boolean = true,
     snoozeState: RadarAudioSnoozeState = RadarAudioSnoozeState.INACTIVE,
     onModeSelected: (RadarLightMode) -> Unit,
+    onAutoSelected: () -> Unit = {},
     onSnoozeSelected: (RadarAudioSnoozeMode) -> Unit = {},
     onResumeAudio: () -> Unit = {},
     onDismiss: () -> Unit,
@@ -91,10 +93,11 @@ fun RadarLightQuickSwitchSheet(
             currentMode = currentMode,
             availableModes = availableModes,
             isStvzo = isStvzo,
+            isAutoMode = isAutoMode,
             isLightControlSupported = isLightControlSupported,
             snoozeState = snoozeState,
             onModeSelected = onModeSelected,
-            onSnoozeSelected = onSnoozeSelected,
+            onAutoSelected = onAutoSelected,
             onResumeAudio = onResumeAudio,
             onDismiss = onDismiss
         )
@@ -109,9 +112,11 @@ fun RadarLightQuickSwitchSheetContent(
     currentMode: RadarLightMode,
     availableModes: List<RadarLightMode>,
     isStvzo: Boolean,
+    isAutoMode: Boolean = true,
     isLightControlSupported: Boolean = true,
     snoozeState: RadarAudioSnoozeState = RadarAudioSnoozeState.INACTIVE,
     onModeSelected: (RadarLightMode) -> Unit,
+    onAutoSelected: () -> Unit = {},
     onSnoozeSelected: (RadarAudioSnoozeMode) -> Unit = {},
     onResumeAudio: () -> Unit = {},
     onDismiss: () -> Unit = {},
@@ -142,8 +147,52 @@ fun RadarLightQuickSwitchSheetContent(
                 Spacer(modifier = Modifier.height(4.dp))
             }
 
+            // Automatik Option (REQ-CON-031.3)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+                    .clickable { onAutoSelected() }
+                    .padding(horizontal = 12.dp, vertical = 10.dp)
+                    .testTag("RadarLightMode_AUTO"),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(10.dp)
+                        .clip(CircleShape)
+                        .background(TTColor.RadarClearGreen)
+                )
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.radar_light_control_mode_smart),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = if (isAutoMode) FontWeight.Bold else FontWeight.Normal
+                    )
+                    if (isAutoMode) {
+                        Text(
+                            text = stringResource(
+                                R.string.radar_light_active_mode_format,
+                                stringResource(currentMode.titleResId)
+                            ),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                RadioButton(
+                    selected = isAutoMode,
+                    onClick = { onAutoSelected() }
+                )
+            }
+
             availableModes.forEach { mode ->
-                val isSelected = mode == currentMode
+                val isSelected = !isAutoMode && mode == currentMode
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -264,8 +313,10 @@ private fun RadarLightQuickSwitchSheetPreviewLight() {
                 currentMode = RadarLightMode.DAY_FLASH,
                 availableModes = RadarLightMode.getAvailableModes(false),
                 isStvzo = false,
+                isAutoMode = true,
                 isLightControlSupported = true,
-                onModeSelected = {}
+                onModeSelected = {},
+                onAutoSelected = {}
             )
         }
     }
@@ -280,8 +331,10 @@ private fun RadarLightQuickSwitchSheetPreviewDark() {
                 currentMode = RadarLightMode.SOLID,
                 availableModes = RadarLightMode.getAvailableModes(false),
                 isStvzo = false,
+                isAutoMode = false,
                 isLightControlSupported = true,
-                onModeSelected = {}
+                onModeSelected = {},
+                onAutoSelected = {}
             )
         }
     }
@@ -296,8 +349,10 @@ private fun RadarLightQuickSwitchSheetPreviewStvzo() {
                 currentMode = RadarLightMode.SOLID,
                 availableModes = RadarLightMode.getAvailableModes(true),
                 isStvzo = true,
+                isAutoMode = true,
                 isLightControlSupported = true,
-                onModeSelected = {}
+                onModeSelected = {},
+                onAutoSelected = {}
             )
         }
     }
