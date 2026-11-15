@@ -2508,6 +2508,158 @@ def ensure_weekly_retro_ticket(role="coordinator"):
     return new_key
 
 
+def get_next_review_subsystem(matrix_path=None, repo_root=None):
+    """
+    REQ-PRO-095.2 / REQ-PRO-095.3:
+    Parses docs/engineering/code_reviews/coverage_matrix.md and returns
+    the next target subsystem to audit: (domain, target_path, status).
+    Selects the first UNREVIEWED subsystem, or if all are AUDITED,
+    the subsystem with the oldest Last Audited Date.
+    """
+    if repo_root is None:
+        repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    if matrix_path is None:
+        matrix_path = os.path.join(repo_root, "docs", "engineering", "code_reviews", "coverage_matrix.md")
+
+    if not os.path.isfile(matrix_path):
+        return ("tracker/", "app/src/main/java/com/atrainingtracker/trainingtracker/tracker/", "UNREVIEWED")
+
+    subsystems = []
+    with open(matrix_path, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line.startswith("|") or line.startswith("| :---"):
+                continue
+            cols = [c.strip() for c in line.split("|")[1:-1]]
+            if len(cols) < 7:
+                continue
+            domain, target_path, last_date, last_sha, gemini_model, claude_model, status = cols[:7]
+            if domain == "Subsystem Domain":
+                continue
+            subsystems.append({
+                "domain": domain.strip("`"),
+                "target_path": target_path.strip("`"),
+                "last_date": last_date.strip("`"),
+                "status": status.strip("`").upper()
+            })
+
+    if not subsystems:
+        return ("tracker/", "app/src/main/java/com/atrainingtracker/trainingtracker/tracker/", "UNREVIEWED")
+
+    # 1. First check for UNREVIEWED
+    for s in subsystems:
+        if s["status"] == "UNREVIEWED":
+            return (s["domain"], s["target_path"], "UNREVIEWED")
+
+    # 2. Otherwise find oldest audited date
+    def parse_date(d_str):
+        try:
+            return datetime.strptime(d_str, "%Y-%m-%d")
+        except Exception:
+            return datetime.min
+
+    oldest = min(subsystems, key=lambda s: parse_date(s["last_date"]))
+    return (oldest["domain"], oldest["target_path"], oldest["status"])
+
+
+def is_weekly_review_overdue(reviews_dir=None, days_threshold=7, repo_root=None):
+    """
+    REQ-PRO-095.3 / REQ-PRO-095.4:
+    Returns True if more than days_threshold days have elapsed since the latest
+    completed review in docs/engineering/code_reviews/ or if unreviewed subsystems remain.
+    """
+    if repo_root is None:
+        repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    if reviews_dir is None:
+        reviews_dir = os.path.join(repo_root, "docs", "engineering", "code_reviews")
+
+    next_domain, _, status = get_next_review_subsystem(repo_root=repo_root)
+    if status == "UNREVIEWED":
+        return True
+
+    if not os.path.isdir(reviews_dir):
+        return True
+
+    review_files = [
+        f for f in os.listdir(reviews_dir)
+        if f.endswith("_dual_vendor_code_review.md") and not f.startswith("template_")
+    ]
+    if not review_files:
+        return True
+
+    latest_date = None
+    for f in review_files:
+        m = re.match(r"^(\d{4}-\d{2}-\d{2})_", f)
+        if m:
+            try:
+                dt = datetime.strptime(m.group(1), "%Y-%m-%d")
+                if latest_date is None or dt > latest_date:
+                    latest_date = dt
+            except Exception:
+                pass
+
+    if latest_date is None:
+        return True
+
+    elapsed = (datetime.now() - latest_date).days
+    return elapsed >= days_threshold
+
+
+def ensure_weekly_review_ticket(role="coordinator", force=False):
+    """
+    REQ-PRO-095.3:
+    Ensures one open Weekly Dual-Vendor (Gemini + Claude) Code Review ticket exists
+    under Epic ATT-232, ranked at rank-top, pre-populated with the next target subsystem.
+    """
+    config = get_config()
+    jql = 'project = ATT AND parent = ATT-232 AND status != "Erledigt" AND (summary ~ "Weekly Dual-Vendor" OR summary ~ "Dual-Vendor Code Review") ORDER BY created DESC'
+    existing = paged_jql_search(jql, ["summary", "status", "labels"], role=role, config=config)
+    for issue in existing:
+        summary = issue.get("fields", {}).get("summary", "")
+        if "dual-vendor" in summary.lower() and "code review" in summary.lower():
+            status = issue.get("fields", {}).get("status", {}).get("name", "Unknown")
+            print(f"Weekly Dual-Vendor Code Review ticket already open: {issue['key']} — {summary} [{status}]")
+            return issue["key"]
+
+    if not force and not is_weekly_review_overdue():
+        print("Weekly Dual-Vendor Code Review is not overdue (< 7 days and all subsystems audited).")
+        return None
+
+    target_domain, target_path, _ = get_next_review_subsystem()
+    iso_year, iso_week, _ = datetime.now().isocalendar()
+    week_label = f"{iso_year}-KW{iso_week:02d}"
+    summary = f"Weekly Dual-Vendor Gemini and Claude Code Review - {target_domain} ({week_label})"
+    desc = (
+        f"h2. Mandatory Weekly Dual-Vendor Code & Architecture Review ({week_label})\n"
+        f"*Target Subsystem*: `{target_domain}` ({target_path})\n"
+        f"*Cadence*: Weekly dual-vendor holistic code & architecture review (REQ-PRO-095 / ATT-8213).\n"
+        f"*Dual AI Vendors*: Google Gemini (Gemini 2.5 Pro / Gemini 4 Carbon) + Anthropic Claude (Claude 3.7 Sonnet).\n\n"
+        "h3. Review Scope & Execution Protocol\n"
+        f"1. Audit full subsystem `{target_domain}` alongside recent commits on develop (not restricted to incremental diffs!).\n"
+        "2. Independent blind evaluations by Gemini and Claude covering:\n"
+        "   - Concurrency & thread safety (coroutine dispatchers, race conditions)\n"
+        "   - Resource leaks (SQLite cursors, broadcast receivers, memory)\n"
+        "   - Architectural boundaries, monolith complexity & repository encapsulation\n"
+        "   - Defensive error handling and test assertion validity\n"
+        f"3. Reconcile findings into docs/engineering/code_reviews/{datetime.now().strftime('%Y-%m-%d')}_dual_vendor_code_review.md.\n"
+        "4. File discovered defects/refactorings as Jira tickets under ATT-232 / ATT-8138.\n"
+        f"5. Update {target_domain} status to AUDITED in docs/engineering/code_reviews/coverage_matrix.md.\n"
+    )
+    new_key = create_issue(
+        summary=summary,
+        description=desc,
+        issuetype_id="Verbesserung",
+        parent_key="ATT-232",
+        role=role,
+        add_to_sprint=False,
+        labels=["process", "code-review", "dual-vendor", "weekly-review"],
+        rank_top=True,
+        points=2.0,
+    )
+    print(f"Created Weekly Dual-Vendor Code Review ticket {new_key} for {target_domain} ({week_label}) ranked at top of backlog.")
+    return new_key
+
+
 def collect_sprint_metrics_for_id(sprint_id, sprint_name, board_id, role="coordinator"):
     config = get_config()
     base = config['JIRA_URL'].rstrip('/')
@@ -3539,6 +3691,7 @@ USAGE_TEXT = (
     "  search JQL                                            Search issues using JQL\n"
     "  ensure-retro                                          Check/create 'Review & Retro' ticket in the active sprint\n"
     "  ensure-weekly-retro                                   Check/create rolling 'Wochen Review & Retro' ticket under ATT-232\n"
+    "  ensure-weekly-reviews [--force]                       Check/create mandatory Weekly Dual-Vendor Code Review ticket\n"
     "  add-label KEY LABEL[,LABEL2]                          Append label(s) to an issue idempotently\n"
     "  pack-sprint TARGET_SPRINT_ID [--lanes N]              Pull disjoint-Epic tickets from Vom PO Freigegeben (447) in rank order\n"
     "  return-unstarted [SPRINT_ARG]                         Return untouched Zu erledigen sprint tickets to Vom PO Freigegeben (447)\n"
@@ -3595,6 +3748,9 @@ if __name__ == "__main__":
         ensure_retro_ticket(role=active_role)
     elif cmd in ("ensure-weekly-retro", "ensure_weekly_retro"):
         ensure_weekly_retro_ticket(role=active_role)
+    elif cmd in ("ensure-weekly-reviews", "ensure_weekly_reviews", "ensure-weekly-review", "ensure_weekly_review"):
+        force = "--force" in remaining_argv
+        ensure_weekly_review_ticket(role=active_role, force=force)
     elif cmd in ("add-label", "add_label") and len(remaining_argv) == 3:
         add_label(remaining_argv[1], remaining_argv[2], role=active_role)
     elif cmd in ("pack-sprint", "pack_sprint") and len(remaining_argv) >= 2:

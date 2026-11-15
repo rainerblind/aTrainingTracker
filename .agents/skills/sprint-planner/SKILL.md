@@ -54,11 +54,13 @@ Ensure that every ticket committed to the active sprint has clear, unambiguous a
      ```bash
      python3 tools/jira_util.py search "project = ATT AND sprint = <SPRINT_ID> AND status = 'Zu erledigen' ORDER BY rank ASC"
      ```
-   * **Ensure Sprint `Review & Retro` Ticket Exists**: Jira has an automation intended to create a `Review & Retro` ticket for each sprint, but it frequently fails to fire. Therefore, during Ceremony 1 (Sprint Planning), the agent **MUST** check if a `Review & Retro` ticket exists in the active sprint and create it if missing:
+   * **Ensure Sprint `Review & Retro` and Weekly Cadence Tickets Exist**: Jira has an automation intended to create ceremony tickets, but it frequently fails to fire. Therefore, during Ceremony 1 (Sprint Planning), the agent **MUST** ensure both sprint and rolling weekly tickets exist:
      ```bash
      python3 tools/jira_util.py ensure-retro
+     python3 tools/jira_util.py ensure-weekly-retro
+     python3 tools/jira_util.py ensure-weekly-reviews
      ```
-     This command checks the active sprint for a `Review & Retro` ticket and, if none exists, creates `Review & Retro - Sprint <SPRINT_NAME>` (Type: `Verbesserung` / `10008`, Epic: `ATT-232`) and adds it to the active sprint.
+     `ensure-weekly-reviews` checks whether `> 7 days` have elapsed since the latest completed review in `docs/engineering/code_reviews/` (or unreviewed packages remain in `coverage_matrix.md`) and automatically creates a deduplicated Weekly Dual-Vendor Code Review ticket under Epic `ATT-232` pre-populated with the next target subsystem and ranks it at `rank-top`.
    * *Strict Invariant*: Aside from `ensure-retro` for the sprint's `Review & Retro` ceremony ticket, AI agents MUST NEVER move backlog feature/bug tickets into active sprints autonomously (`"Agents must not move tickets to sprints!"`). Only the human user assigns backlog tickets to sprints.
 2. **Establish Sprint Integration Branch**:
    Create and push the sprint integration branch from latest `develop`:
@@ -223,8 +225,8 @@ Jointly review all completed sprint tickets with the human user against expectat
      python3 tools/verify_requirement_governance.py --check-reviews
      ```
      This serializes traceable reviewer metadata (Human process owner or external AI vendor, date, reviewed targets, scope, and findings/verdict) to `docs/engineering/reviews/<sprint>.md`.
-   * **Dual-Ticket Weekly Retrospective Roll-Up (`ensure-weekly-retro`, `ATT-8030`)**:
-     Ensure the persistent rolling **`Wochen Review & Retro`** ticket (`python3 tools/jira_util.py --as coordinator ensure-weekly-retro`) exists under Epic `ATT-232` to aggregate weekly SPC trends, `risk_register.md` updates, skill hardening, and weekly external review summaries for the once-weekly human review session.
+   * **Dual-Ticket Weekly Retrospective Roll-Up & Weekly Review Backlog Placement (`ensure-weekly-retro`, `ensure-weekly-reviews`, `ATT-8030`, `ATT-8213`)**:
+     Ensure the persistent rolling **`Wochen Review & Retro`** ticket (`python3 tools/jira_util.py --as coordinator ensure-weekly-retro`) exists under Epic `ATT-232` to aggregate weekly SPC trends, `risk_register.md` updates, skill hardening, and weekly external review summaries. Run `python3 tools/jira_util.py ensure-weekly-reviews` to verify that the next subsystem Dual-Vendor Code Review ticket is created and ranked at `rank-top` if overdue.
    * **Closed-Loop Process Improvement Trigger (PA 4.2 $\rightarrow$ PA 5.2)**:
      Whenever the scorecard detects an out-of-control condition (`⚠️ PA 4.2 Special Cause Variation` where any metric falls outside $\mu \pm 2\sigma$), the Retrospective document (`docs/engineering/retros/Sprint_Review_and_Retro_<KEY>.md`) **MUST** contain an explicit Root-Cause Analysis (RCA) and concrete process/skill countermeasure prior to sprint merge.
    * **Mandatory Tier 2 Re-Verification When Any Ticket Is Dropped or Reverted During Review (`Rule 77` — `ATT-5762`)**: If any ticket commit is removed (`git reset --hard`) or reverted (`git revert`) from `sprint/<SPRINT_NAME>` during Ceremony 2 (e.g., `ATT-5665`), the pre-review Tier 2 test run is invalidated because the code state at Sprint-End has changed. You **MUST** re-execute the full Tier 2 Sprint Integration Gate (`./gradlew testDebugUnitTest --max-workers=2 && python3 tools/verify_requirement_governance.py`) and `./gradlew installDebug` on the post-drop sprint branch **before** merging into `develop`.

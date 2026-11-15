@@ -435,6 +435,7 @@ def verify_stage1_impact_analysis(analysis_file=None, repo_root=None):
 
 ALLOWED_ENGINEERING_ENTRIES = {
     "analysis",
+    "code_reviews",
     "gates",
     "metrics",
     "plans",

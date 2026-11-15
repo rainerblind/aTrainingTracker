@@ -13,6 +13,7 @@ import sys
 import io
 import base64
 import tempfile
+from datetime import datetime, timedelta
 from unittest.mock import patch, MagicMock
 
 # Ensure tools directory is on sys.path
@@ -1079,6 +1080,96 @@ class TestJiraCliTooling(unittest.TestCase):
         ]
         key2 = jira_util.ensure_weekly_retro_ticket(role="coordinator")
         self.assertEqual(key2, "ATT-9100")
+        mock_create.assert_not_called()
+
+    def test_get_next_review_subsystem_unreviewed_and_rotation(self):
+        """TST-PRO-095.2: Parsing coverage_matrix.md and rotating through UNREVIEWED and oldest AUDITED slices."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            matrix_file = os.path.join(tmpdir, "coverage_matrix.md")
+            # 1. When UNREVIEWED rows exist, pick first UNREVIEWED
+            content_unreviewed = (
+                "# Matrix\n\n"
+                "| Subsystem Domain | Target Path(s) | Last Audited Date | Audited Commit SHA | Gemini Model | Claude Model | Status | Active / Next Target |\n"
+                "| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |\n"
+                "| `tracker/` | `app/tracker/` | 2026-11-01 | abc | Pro | Sonnet | `AUDITED` | - |\n"
+                "| `banalservice/` | `app/banalservice/` | - | - | - | - | `UNREVIEWED` | `NEXT` |\n"
+                "| `database/` | `app/database/` | - | - | - | - | `UNREVIEWED` | - |\n"
+            )
+            with open(matrix_file, "w", encoding="utf-8") as f:
+                f.write(content_unreviewed)
+
+            domain, path, status = jira_util.get_next_review_subsystem(matrix_path=matrix_file)
+            self.assertEqual(domain, "banalservice/")
+            self.assertEqual(status, "UNREVIEWED")
+
+            # 2. When all are AUDITED, pick oldest date
+            content_all_audited = (
+                "# Matrix\n\n"
+                "| Subsystem Domain | Target Path(s) | Last Audited Date | Audited Commit SHA | Gemini Model | Claude Model | Status | Active / Next Target |\n"
+                "| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |\n"
+                "| `tracker/` | `app/tracker/` | 2026-11-10 | abc | Pro | Sonnet | `AUDITED` | - |\n"
+                "| `banalservice/` | `app/banalservice/` | 2026-11-01 | def | Pro | Sonnet | `AUDITED` | - |\n"
+                "| `database/` | `app/database/` | 2026-11-05 | ghi | Pro | Sonnet | `AUDITED` | - |\n"
+            )
+            with open(matrix_file, "w", encoding="utf-8") as f:
+                f.write(content_all_audited)
+
+            domain2, path2, status2 = jira_util.get_next_review_subsystem(matrix_path=matrix_file)
+            self.assertEqual(domain2, "banalservice/")
+            self.assertEqual(status2, "AUDITED")
+
+    def test_is_weekly_review_overdue(self):
+        """TST-PRO-095.3: Overdue determination based on elapsed days and review directory."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            matrix_file = os.path.join(tmpdir, "coverage_matrix.md")
+            reviews_dir = os.path.join(tmpdir, "code_reviews")
+            os.makedirs(reviews_dir, exist_ok=True)
+
+            two_days_ago = (datetime.now() - timedelta(days=2)).strftime("%Y-%m-%d")
+            content = (
+                "# Matrix\n\n"
+                "| Subsystem Domain | Target Path(s) | Last Audited Date | Audited Commit SHA | Gemini Model | Claude Model | Status | Active / Next Target |\n"
+                "| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |\n"
+                f"| `tracker/` | `app/tracker/` | {two_days_ago} | abc | Pro | Sonnet | `AUDITED` | - |\n"
+            )
+            with open(matrix_file, "w", encoding="utf-8") as f:
+                f.write(content)
+            with open(os.path.join(reviews_dir, f"{two_days_ago}_dual_vendor_code_review.md"), "w") as f:
+                f.write("# Review")
+
+            with patch("jira_util.get_next_review_subsystem", return_value=("tracker/", "app/tracker/", "AUDITED")):
+                overdue = jira_util.is_weekly_review_overdue(reviews_dir=reviews_dir, days_threshold=7)
+                self.assertFalse(overdue)
+
+            ten_days_ago = (datetime.now() - timedelta(days=10)).strftime("%Y-%m-%d")
+            os.remove(os.path.join(reviews_dir, f"{two_days_ago}_dual_vendor_code_review.md"))
+            with open(os.path.join(reviews_dir, f"{ten_days_ago}_dual_vendor_code_review.md"), "w") as f:
+                f.write("# Review")
+
+            with patch("jira_util.get_next_review_subsystem", return_value=("tracker/", "app/tracker/", "AUDITED")):
+                overdue_10 = jira_util.is_weekly_review_overdue(reviews_dir=reviews_dir, days_threshold=7)
+                self.assertTrue(overdue_10)
+
+    @patch("jira_util.create_issue", return_value="ATT-9200")
+    @patch("jira_util.paged_jql_search", return_value=[])
+    @patch("jira_util.get_config", return_value={"JIRA_URL": "https://example.atlassian.net"})
+    def test_ensure_weekly_review_creates_and_deduplicates(self, mock_config, mock_search, mock_create):
+        """TST-PRO-095.3: Automated weekly review ticket creates when overdue/missing and reuses when open."""
+        with patch("jira_util.is_weekly_review_overdue", return_value=True), \
+             patch("jira_util.get_next_review_subsystem", return_value=("tracker/", "app/tracker/", "UNREVIEWED")):
+            key1 = jira_util.ensure_weekly_review_ticket(role="coordinator")
+            self.assertEqual(key1, "ATT-9200")
+            mock_create.assert_called_once()
+            self.assertTrue(mock_create.call_args[1].get("rank_top"))
+            self.assertEqual(mock_create.call_args[1].get("parent_key"), "ATT-232")
+
+        # Deduplication test: when already open
+        mock_create.reset_mock()
+        mock_search.return_value = [
+            {"key": "ATT-9200", "fields": {"summary": "Weekly Dual-Vendor Gemini and Claude Code Review - tracker/ (2026-KW46)", "status": {"name": "Zu erledigen"}}}
+        ]
+        key2 = jira_util.ensure_weekly_review_ticket(role="coordinator")
+        self.assertEqual(key2, "ATT-9200")
         mock_create.assert_not_called()
 
 

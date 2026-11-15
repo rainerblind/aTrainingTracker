@@ -518,23 +518,34 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
             self.assertIn("across 1 domain shards.", updated_text)
 
     def test_scenario_13_canonical_engineering_directory_allows_gates(self):
-        """Scenario 13: ALLOWED_ENGINEERING_ENTRIES registers 'gates', 'qa_audits', and 'reviews' (TST-PRO-059.3, TST-PRO-061.4, TST-PRO-062.3)."""
+        """Scenario 13: ALLOWED_ENGINEERING_ENTRIES registers 'gates', 'qa_audits', 'reviews', and 'code_reviews' (TST-PRO-059.3, TST-PRO-061.4, TST-PRO-062.3, TST-PRO-095.1)."""
         self.assertIn("gates", ALLOWED_ENGINEERING_ENTRIES)
         self.assertIn("qa_audits", ALLOWED_ENGINEERING_ENTRIES)
         self.assertIn("reviews", ALLOWED_ENGINEERING_ENTRIES)
+        self.assertIn("code_reviews", ALLOWED_ENGINEERING_ENTRIES)
         with tempfile.TemporaryDirectory() as tmpdir:
             eng_dir = os.path.join(tmpdir, "docs", "engineering")
             os.makedirs(os.path.join(eng_dir, "gates"), exist_ok=True)
             os.makedirs(os.path.join(eng_dir, "analysis"), exist_ok=True)
             os.makedirs(os.path.join(eng_dir, "reviews"), exist_ok=True)
+            os.makedirs(os.path.join(eng_dir, "code_reviews"), exist_ok=True)
             ok, errors = verify_engineering_directory_structure(eng_dir=eng_dir)
-            self.assertTrue(ok, f"Expected gates and reviews to be allowed, got errors: {errors}")
+            self.assertTrue(ok, f"Expected gates, reviews, and code_reviews to be allowed, got errors: {errors}")
 
             # Non-canonical entry should fail
             os.makedirs(os.path.join(eng_dir, "invalid_dir"), exist_ok=True)
             ok_bad, errors_bad = verify_engineering_directory_structure(eng_dir=eng_dir)
             self.assertFalse(ok_bad)
             self.assertTrue(any("invalid_dir" in e for e in errors_bad))
+
+    def test_scenario_weekly_dual_vendor_code_reviews_registration(self):
+        """TST-PRO-095.1: Assert 'code_reviews' is canonical in ALLOWED_ENGINEERING_ENTRIES."""
+        self.assertIn("code_reviews", ALLOWED_ENGINEERING_ENTRIES)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            eng_dir = os.path.join(tmpdir, "docs", "engineering")
+            os.makedirs(os.path.join(eng_dir, "code_reviews"), exist_ok=True)
+            ok, errors = verify_engineering_directory_structure(eng_dir=eng_dir)
+            self.assertTrue(ok, f"Expected code_reviews to be allowed, got errors: {errors}")
 
     def test_scenario_14_verify_gate_records_validation(self):
         """Scenario 14: verify_gate_records validates export presence and failure modes (TST-PRO-059.2)."""

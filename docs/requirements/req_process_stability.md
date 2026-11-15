@@ -5032,3 +5032,36 @@ The workflow SHALL mandate that:
   • *When* the governance verifier runs,
   • *Then* it fails unconditionally with exit code 1.
 - **Invariants**: Zero changes to production runtime logic; existing master table parity intact; Human Decision Gate inviolable.
+
+
+---
+
+### REQ-PRO-095: Weekly Dual-Vendor Holistic Code and Architecture Review Governance and Backlog Orchestration [Verified]
+- **Tests**: `TST-PRO-095`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `docs/management/cm_plan.md`, `docs/coding_standards.md`, `.agents/rules/aspice_governance.md`, `.agents/skills/sprint-planner/SKILL.md`, `.agents/skills/release-manager/SKILL.md`, `docs/engineering/code_reviews/coverage_matrix.md`
+- **Rationale**: In-sprint Stage 6 reviews only inspect single-ticket diffs in isolation. To systematically uncover latent architectural debt, concurrency hazards, resource leaks, and test gaps across the ~200k+ LoC codebase, mandatory weekly dual-vendor reviews (Google Gemini + Anthropic Claude) inspecting entire subsystems alongside delta changes must be governed, tracked in a coverage matrix, and automatically scheduled at the top of the Product Backlog.
+- **Description**:
+  1. *Weekly Dual-Vendor Full-Subsystem Review Policy (`REQ-PRO-095.1`)*: `docs/coding_standards.md`, `.agents/rules/aspice_governance.md`, `sprint-planner/SKILL.md`, `release-manager/SKILL.md`, and `docs/management/cm_plan.md` SHALL mandate weekly dual-vendor holistic code & architecture reviews by both Google Gemini and Anthropic Claude covering full production and test subsystem slices across all 9 codebase packages (`tracker/`, `banalservice/`, `database/`, `exporter/`, `ui/tracking/`, `ui/aftermath/`, `ui/settings/`, `tools/`, `test/`) alongside recent delta commits.
+  2. *Subsystem Audit Coverage Matrix & Evidence Store (`REQ-PRO-095.2`)*: `docs/engineering/code_reviews/` SHALL be established as a canonical engineering deliverable directory (registered in `cm_plan.md` and `verify_requirement_governance.py`), containing `coverage_matrix.md` tracking all 9 subsystem packages, audit timestamps, commit SHAs, model versions, and status (`UNREVIEWED` $\to$ `AUDITED`), cycling continuously.
+  3. *Automated Top-of-Backlog Review Ticket Creation (`REQ-PRO-095.3`)*: `tools/jira_util.py` SHALL implement `ensure-weekly-reviews` CLI and automation (`ensure_weekly_review_ticket`), which checks if `> 7 days` have elapsed since the latest completed review record or if `UNREVIEWED` packages exist; if overdue and no open weekly review ticket exists, it SHALL automatically create a review ticket pre-populated with target subsystems from `coverage_matrix.md` under Epic `ATT-232` and place it at the very top of the Product Backlog (`rank-top`).
+  4. *Sprint Ceremony & Release Gate Enforcement (`REQ-PRO-095.4`)*: `sprint-planner/SKILL.md` (Ceremonies 1 & 2) SHALL invoke `ensure-weekly-reviews` to maintain review ticket presence, and `release-manager/SKILL.md` SHALL verify that no weekly review is overdue prior to completing release readiness.
+  5. *Review Tooling & Governance Contract Test Parity (`REQ-PRO-095.5`)*: `tools/test_jira_accounts.py` and `tools/test_verify_requirement_governance.py` SHALL verify `ensure-weekly-reviews` CLI parsing, target subsystem slice selection, deduplication logic, and `code_reviews` directory canonical registration.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-095`. Targets `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `docs/management/cm_plan.md`, `docs/coding_standards.md`, `.agents/rules/aspice_governance.md`, `.agents/skills/sprint-planner/SKILL.md`, `.agents/skills/release-manager/SKILL.md`, `docs/engineering/code_reviews/coverage_matrix.md`.
+  2. *Historical Origin & Commit Trace*: Sprint 2026-46.8 via ticket `ATT-8213` under Epic `ATT-8138` (ASPICE 4.0 Audit Remediation).
+  3. *Root Reason for Existing Formulation*: Prior review governance (`REQ-PRO-062`) was confined to per-sprint diff reviews without full-subsystem scope or automated backlog scheduling.
+  4. *Preservation of Core Invariants*: Human Decision Gate, commit hygiene, zero runtime changes in `app/src/main/`, and pure Python stdlib offline resilience preserved.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `docs/coding_standards.md`, `docs/management/cm_plan.md`, and `.agents/rules/aspice_governance.md`,
+  • *When* inspected,
+  • *Then* the weekly dual-vendor full-subsystem review policy and canonical `docs/engineering/code_reviews/` directory are formally specified and registered.
+  • *Given* `> 7 days` have elapsed since the last review or `UNREVIEWED` subsystems remain in `coverage_matrix.md`,
+  • *When* `ensure-weekly-reviews` runs,
+  • *Then* a deduplicated ticket targeting the next subsystem is created under `ATT-232` and ranked at `rank-top`.
+  • *Given* an overdue weekly review,
+  • *When* `release-manager` checks release preconditions,
+  • *Then* release readiness flags the overdue review.
+- **Invariants**: Zero changes to production runtime logic; existing master table parity intact; Human Decision Gate inviolable.

@@ -57,7 +57,7 @@ python3 tools/jira_util.py comment <RELEASE_TICKET_KEY> "h4. Release Progress: S
 2. `Gradle: Version: Remove -dev` (Set clean production `versionName`)
 3. `Build: Signed APK` (`app-release.apk`)
 4. `Build: Signed APP Bundle` (`app-release.aab`)
-* **[MANDATORY SYSTEM EVIDENCE GATE - ASPICE SYS.4 & SYS.5]**: Release candidate tag creation (Step 7) and Play Store distribution (Step 6) are **STRICTLY BLOCKED** unless verified system evidence artifacts exist under `docs/releases/<tag>/` and pass all criteria:
+* **[MANDATORY SYSTEM & GOVERNANCE EVIDENCE GATES - ASPICE SYS.4, SYS.5 & SWE.2/SWE.3/SUP.1]**: Release branch initiation and release candidate tag creation (Step 7) / Play Store distribution (Step 6) are **STRICTLY BLOCKED** if mandatory weekly dual-vendor code reviews are overdue (`is_weekly_review_overdue()`) or unless verified system evidence artifacts exist under `docs/releases/<tag>/` and pass all criteria:
   - SYS.4: `docs/releases/<tag>/system_integration_results.json` (from `tools/run_system_integration_tests.py`)
   - SYS.5: `docs/releases/<tag>/sys_verification_record.md` (per `docs/system/sys_verification_protocol.md`)
   - Verification Summary: `docs/releases/<tag>/verification_summary.md` (from `tools/generate_release_verification_summary.py`)
@@ -81,6 +81,13 @@ python3 tools/jira_util.py comment <RELEASE_TICKET_KEY> "h4. Release Progress: S
    git pull origin develop
    git status
    ```
+
+   * **Mandatory Weekly Dual-Vendor Code Review Currency Gate (`REQ-PRO-095` / `ATT-8213`)**:
+     Prior to cutting the release branch, verify that the weekly Dual-Vendor (Google Gemini + Anthropic Claude) Code Review is current ($\le 7$ days old) and recorded in `docs/engineering/code_reviews/`:
+     ```bash
+     python3 -c "import tools.jira_util as ju; exit(1 if ju.is_weekly_review_overdue() else 0)"
+     ```
+     If overdue, release preparation is **STRICTLY BLOCKED** until the pending review ticket is resolved or human exception is recorded.
 
 2. **Inspect Current Version in `app/build.gradle`**:
    Read `versionName` and `versionCode` from the `defaultConfig` block in `app/build.gradle`:

@@ -3148,3 +3148,20 @@
   2. *Strict Verifier Execution*: Run `verify_requirement_attributes(enforce_attributes=True)` and assert pass with message `PASS: 100% of living requirements define valid Priority, Type, and Verification Method attributes.`
   3. *Negative Mutation Verification*: In `tools/test_verify_requirement_governance.py`, assert that any requirement without attributes fails verification.
   4. *Governance Parity Verification*: Execute `python3 tools/verify_requirement_governance.py` and confirm 100% parity with zero warnings.
+
+
+---
+
+### TST-PRO-095: **Weekly Dual-Vendor Code Review Governance and Automation Verification** [Verified]
+- **Verifies**: `REQ-PRO-095`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Component**: `tools/jira_util.py`, `tools/test_jira_accounts.py`, `tools/verify_requirement_governance.py`, `tools/test_verify_requirement_governance.py`, `docs/engineering/code_reviews/`
+- **Jira**: `ATT-8213`
+- **Test Description**:
+  1. *Canonical Directory Registration Test (`tools/test_verify_requirement_governance.py`)*: Assert `code_reviews` is recognized in `ALLOWED_ENGINEERING_ENTRIES` and `verify_canonical_engineering_entries()` passes with `docs/engineering/code_reviews/` present.
+  2. *Subsystem Coverage Matrix Parsing & Slice Selection Test (`tools/test_jira_accounts.py`)*: Assert helper function `get_next_review_subsystem()` correctly parses `coverage_matrix.md` and selects unreviewed or oldest audited subsystem slices.
+  3. *Weekly Review Ticket Creation & Deduplication Test (`tools/test_jira_accounts.py`)*: Mock Jira API and verify `ensure_weekly_review_ticket()` creates a ticket with `rank_top=True` under `ATT-232` when overdue and skips creation when an active review ticket already exists.
+  4. *Governance Documentation & Policy Grounding Review*: Verify policy alignment across `docs/coding_standards.md`, `.agents/rules/aspice_governance.md`, `sprint-planner/SKILL.md`, and `release-manager/SKILL.md`.
+  5. *Living Documentation Master Parity*: Run `python3 tools/verify_requirement_governance.py` confirming 100% parity across `docs/requirements.md` and `docs/tests.md`.
