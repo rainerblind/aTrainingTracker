@@ -322,16 +322,17 @@ class RoutesRepository internal constructor(
      * without invoking [WorkoutClusterEngine.syncRouteNameChange] to prevent recursion (REQ-PER-040.2).
      */
     suspend fun syncClusterNameChange(clusterId: Long, newName: String) {
-        if (clusterId == -1L) return
+        val trimmedName = newName.trim()
+        if (clusterId == -1L || trimmedName.isEmpty()) return
         val linkedRoute = withContext(Dispatchers.IO) {
             routesDb.getRouteByClusterId(clusterId)
         }
-        if (linkedRoute != null && linkedRoute.summary.name != newName) {
-            routesDb.updateRouteSummary(linkedRoute.summary.copy(name = newName))
+        if (linkedRoute != null && linkedRoute.summary.name != trimmedName) {
+            routesDb.updateRouteSummary(linkedRoute.summary.copy(name = trimmedName))
             _allRoutes.update { currentRoutes ->
                 currentRoutes.map { route ->
                     if (route.summary.clusterId == clusterId) {
-                        route.copy(summary = route.summary.copy(name = newName))
+                        route.copy(summary = route.summary.copy(name = trimmedName))
                     } else {
                         route
                     }

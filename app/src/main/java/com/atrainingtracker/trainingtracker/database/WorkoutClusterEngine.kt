@@ -106,11 +106,30 @@ class WorkoutClusterEngine private constructor(context: Context) {
             hitCount: Int,
             hasCounter: Boolean = true
         ): String {
+            val cleanName = clusterName.trim()
             return if (!hasCounter || hitCount <= 1) {
-                clusterName
+                cleanName
             } else {
-                context.getString(R.string.cluster_autoname_format, clusterName, hitCount)
+                context.getString(R.string.cluster_autoname_format, cleanName, hitCount)
             }
+        }
+
+        /**
+         * Resolves a collision-free cluster name from trimmed [baseName] using [isTaken] (REQ-PER-041).
+         */
+        internal fun resolveUniqueClusterName(
+            baseName: String,
+            isTaken: (String) -> Boolean
+        ): String {
+            val cleanBase = baseName.trim()
+            if (cleanBase.isEmpty()) return ""
+            var candidate = cleanBase
+            var counter = 2
+            while (isTaken(candidate)) {
+                candidate = "$cleanBase var $counter"
+                counter++
+            }
+            return candidate
         }
 
         @JvmStatic
@@ -196,17 +215,21 @@ class WorkoutClusterEngine private constructor(context: Context) {
     ): Long {
         synchronized(clusterLock) {
             val workoutSportType = SportTypesRepository.getInstance(appContext).getBSportType(userSportId)
-            val normalizedInputName = stripHitCount(userSpecifiedName)
+            val normalizedInputName = stripHitCount(userSpecifiedName).trim()
             val existingMatch = if (clusterIdOverride != -1L) {
                 cachedClusters?.find { it.id == clusterIdOverride } ?: dbManager.getClusterById(clusterIdOverride)
             } else {
-                (suggestCluster(start, end, apex, distance, userSpecifiedName, workoutSportType, minAltPos, maxAltPos, cachedClusters)
-                    ?: (cachedClusters?.find { it.name == normalizedInputName } ?: dbManager.getClusterByName(normalizedInputName)))
+                (suggestCluster(
+                    start, end, apex, distance, userSpecifiedName,
+                    workoutSportType, minAltPos, maxAltPos, cachedClusters
+                )
+                    ?: cachedClusters?.find { it.name.trim() == normalizedInputName }
+                    ?: dbManager.getClusterByName(normalizedInputName))
             }
 
         return if (existingMatch != null) {
             val uniqueName = if (clusterIdOverride != -1L && !isDefaultName(existingMatch.name)) {
-                existingMatch.name
+                existingMatch.name.trim()
             } else {
                 if (existingMatch.name == normalizedInputName) normalizedInputName
                 else findUniqueClusterName(normalizedInputName, existingMatch.id, cachedClusters)
@@ -261,7 +284,9 @@ class WorkoutClusterEngine private constructor(context: Context) {
             ensureStartingLocationAnchor(start)
             updatedCluster.id
         } else {
-            val uniqueName = findUniqueClusterName(stripHitCount(userSpecifiedName), -1, cachedClusters)
+            val baseNewName = stripHitCount(userSpecifiedName).trim()
+                .ifEmpty { appContext.getString(R.string.cluster_default_name_format, "Workout") }
+            val uniqueName = findUniqueClusterName(baseNewName, -1, cachedClusters)
             val newCluster = WorkoutCluster(
                 name = uniqueName,
                 probableSportId = userSportId,
@@ -612,13 +637,19 @@ class WorkoutClusterEngine private constructor(context: Context) {
         }
     }
 
+    /**
+     * Updates a linked cluster's name from a route rename after trimming and uniqueness checks (REQ-PER-041.1).
+     */
     fun syncRouteNameChange(clusterId: Long, newName: String) {
+        val trimmedName = newName.trim()
+        if (clusterId == -1L || trimmedName.isEmpty()) return
         synchronized(clusterLock) {
-            if (clusterId == -1L) return
             val match = dbManager.getClusterById(clusterId)
             if (match != null) {
-                val uniqueName = findUniqueClusterName(newName, match.id)
-                dbManager.updateCluster(match.copy(name = uniqueName))
+                val uniqueName = findUniqueClusterName(trimmedName, match.id)
+                if (uniqueName.isNotEmpty()) {
+                    dbManager.updateCluster(match.copy(name = uniqueName))
+                }
             }
         }
     }
@@ -791,15 +822,17 @@ class WorkoutClusterEngine private constructor(context: Context) {
         }
     }
 
-    private fun findUniqueClusterName(baseName: String, excludeId: Long = -1, cachedClusters: List<WorkoutCluster>? = null): String {
-        var candidate = baseName; var counter = 2
+    internal fun findUniqueClusterName(
+        baseName: String,
+        excludeId: Long = -1,
+        cachedClusters: List<WorkoutCluster>? = null
+    ): String {
         val isTaken: (String) -> Boolean = if (cachedClusters != null) {
-            { name -> cachedClusters.any { it.name == name && it.id != excludeId } }
+            { name -> cachedClusters.any { it.name.trim() == name && it.id != excludeId } }
         } else {
             { name -> dbManager.isNameTaken(name, excludeId) }
         }
-        while (isTaken(candidate)) { candidate = "$baseName var $counter"; counter++ }
-        return candidate
+        return resolveUniqueClusterName(baseName, isTaken)
     }
 
     @JvmOverloads
@@ -920,10 +953,11 @@ class WorkoutClusterEngine private constructor(context: Context) {
             val apex = workoutRepo.getExtremaPosition(workout.id, SensorType.LINE_DISTANCE_m, ExtremaType.MAX) ?: workout.maxDisplacementLatLng ?: end
             val distance = workout.totalDistance
             val sportId = workout.sportId
-            val clusterName = if (!customName.isNullOrBlank()) {
-                customName
+            val trimmedCustomName = customName?.trim()
+            val clusterName = if (!trimmedCustomName.isNullOrEmpty()) {
+                trimmedCustomName
             } else if (workout.workoutName.isNotBlank()) {
-                workout.workoutName
+                workout.workoutName.trim()
             } else {
                 val seedName = try {
                     val startLoc = KnownLocationsRepository.getInstance(context).getMyLocation(start)
@@ -937,7 +971,7 @@ class WorkoutClusterEngine private constructor(context: Context) {
             val minAltPos = workoutRepo.getExtremaPosition(workout.id, SensorType.ALTITUDE, ExtremaType.MIN) ?: workout.minAltitudeLatLng
             val maxAltPos = workoutRepo.getExtremaPosition(workout.id, SensorType.ALTITUDE, ExtremaType.MAX) ?: workout.maxAltitudeLatLng
 
-            val uniqueName = findUniqueClusterName(stripHitCount(clusterName))
+            val uniqueName = findUniqueClusterName(stripHitCount(clusterName).trim())
             val newCluster = WorkoutCluster(
                 name = uniqueName,
                 probableSportId = sportId,
@@ -993,10 +1027,11 @@ class WorkoutClusterEngine private constructor(context: Context) {
             val wMaxLat = wBounds["BoundMaxLat"]
             val wMaxLng = wBounds["BoundMaxLng"]
             val workoutName = workoutRepo.getWorkoutName(workoutId)
-            val clusterName = if (!customName.isNullOrBlank()) {
-                customName
+            val trimmedCustomName = customName?.trim()
+            val clusterName = if (!trimmedCustomName.isNullOrEmpty()) {
+                trimmedCustomName
             } else if (!workoutName.isNullOrBlank()) {
-                workoutName
+                workoutName.trim()
             } else {
                 val seedName = try {
                     val startLoc = KnownLocationsRepository.getInstance(context).getMyLocation(start)
@@ -1010,7 +1045,7 @@ class WorkoutClusterEngine private constructor(context: Context) {
             val minAltPos = workoutRepo.getExtremaPosition(workoutId, SensorType.ALTITUDE, ExtremaType.MIN)
             val maxAltPos = workoutRepo.getExtremaPosition(workoutId, SensorType.ALTITUDE, ExtremaType.MAX)
 
-            val uniqueName = findUniqueClusterName(stripHitCount(clusterName))
+            val uniqueName = findUniqueClusterName(stripHitCount(clusterName).trim())
             val newCluster = WorkoutCluster(
                 name = uniqueName,
                 probableSportId = sportId,
@@ -1408,7 +1443,9 @@ class WorkoutClusterEngine private constructor(context: Context) {
             workoutRepo.runInTransaction {
                 for ((rawName, workouts) in variantsToSplit) {
                     if (workouts.isEmpty()) continue
-                    val uniqueName = findUniqueClusterName(stripHitCount(rawName))
+                    val cleanBase = stripHitCount(rawName).trim()
+                    if (cleanBase.isEmpty()) continue
+                    val uniqueName = findUniqueClusterName(cleanBase)
                     val mCount = workouts.size
 
                     val startLat = workouts.mapNotNull { it.startLatLng?.latitude }.average().takeIf { !it.isNaN() } ?: primaryCluster.startLat
@@ -1545,13 +1582,40 @@ class WorkoutClusterEngine private constructor(context: Context) {
         }
     }
 
-    fun manuallyCreateCluster(name: String, sportId: Long, start: LatLng, end: LatLng, apex: LatLng, distance: Double): Long {
-        synchronized(clusterLock) {
-            return dbManager.insertCluster(WorkoutCluster(
-                name = findUniqueClusterName(name), probableSportId = sportId, startLat = start.latitude, startLng = start.longitude,
-                endLat = end.latitude, endLng = end.longitude, maxDispLat = apex.latitude, maxDispLng = apex.longitude,
-                refDistance = distance, hitCount = 0, bSportType = SportTypesRepository.getInstance(appContext).getBSportType(sportId)
-            ))
+    /**
+     * Manually creates a cluster after trimming and validating non-blank [name] (REQ-PER-041.1).
+     */
+    fun manuallyCreateCluster(
+        name: String,
+        sportId: Long,
+        start: LatLng,
+        end: LatLng,
+        apex: LatLng,
+        distance: Double
+    ): Long {
+        val trimmedName = name.trim()
+        if (trimmedName.isEmpty()) return -1L
+        return synchronized(clusterLock) {
+            val uniqueName = findUniqueClusterName(trimmedName)
+            if (uniqueName.isEmpty()) {
+                -1L
+            } else {
+                dbManager.insertCluster(
+                    WorkoutCluster(
+                        name = uniqueName,
+                        probableSportId = sportId,
+                        startLat = start.latitude,
+                        startLng = start.longitude,
+                        endLat = end.latitude,
+                        endLng = end.longitude,
+                        maxDispLat = apex.latitude,
+                        maxDispLng = apex.longitude,
+                        refDistance = distance,
+                        hitCount = 0,
+                        bSportType = SportTypesRepository.getInstance(appContext).getBSportType(sportId)
+                    )
+                )
+            }
         }
     }
 

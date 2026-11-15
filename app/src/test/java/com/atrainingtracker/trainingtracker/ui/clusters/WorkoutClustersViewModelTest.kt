@@ -584,5 +584,64 @@ class WorkoutClustersViewModelTest {
         assertEquals(30L, viewModel.peekedWorkoutDataWithTrack.value?.workoutData?.clusterId)
         assertEquals("Variant B", viewModel.peekedWorkoutDataWithTrack.value?.workoutData?.clusterName)
     }
+
+    /**
+     * TST-PER-049.1: WorkoutClustersViewModel trims cluster names and rejects blank-only names
+     * on rename, manual cluster creation, and cluster split (REQ-PER-041.1).
+     */
+    @Test
+    fun testClusterMutations_trimWhitespaceAndRejectBlank_TST_PER_049_1() = runTest(testDispatcher) {
+        val cluster = createCluster(10L, "Main Trail")
+        val splitWorkout = createWorkout(102L, 10L)
+        allClustersFlow.value = listOf(cluster)
+        coEvery { mockClusterRepo.getWorkoutsForCluster(10L) } returns listOf(splitWorkout)
+
+        val viewModel = WorkoutClustersViewModel(mockApplication, testDispatcher)
+        activeViewModel = viewModel
+        advanceUntilIdle()
+
+        viewModel.selectCluster(cluster)
+        advanceUntilIdle()
+
+        // Blank rename is ignored; padded rename is trimmed
+        viewModel.updateClusterIdentity(cluster, "   ", 1L, true)
+        advanceUntilIdle()
+        coVerify(exactly = 0) { mockClusterRepo.updateCluster(any()) }
+
+        viewModel.updateClusterIdentity(cluster, "  Trimmed Trail  ", 1L, true)
+        advanceUntilIdle()
+        coVerify(exactly = 1) {
+            mockClusterRepo.updateCluster(match { it.id == 10L && it.name == "Trimmed Trail" })
+        }
+        assertEquals("Trimmed Trail", viewModel.selectedCluster.value?.name)
+
+        // Blank manual cluster is ignored; padded manual cluster is trimmed
+        val pos = LatLng(48.0, 11.0)
+        viewModel.addManualCluster(" \t ", 1L, pos, pos, pos, 5000.0)
+        advanceUntilIdle()
+        verify(exactly = 0) {
+            mockClusterEngine.manuallyCreateCluster(any(), any(), any(), any(), any(), any())
+        }
+
+        viewModel.addManualCluster("  Manual Trail  ", 1L, pos, pos, pos, 5000.0)
+        advanceUntilIdle()
+        verify(exactly = 1) {
+            mockClusterEngine.manuallyCreateCluster("Manual Trail", 1L, pos, pos, pos, 5000.0)
+        }
+
+        // Split filters out blank names and trims valid variant names
+        viewModel.executeClusterSplit(
+            listOf("   " to listOf(splitWorkout), "  Sub Trail  " to listOf(splitWorkout)),
+            renameWorkouts = true
+        )
+        advanceUntilIdle()
+        coVerify(exactly = 1) {
+            mockClusterRepo.splitCluster(
+                primaryClusterId = 10L,
+                variantsToSplit = listOf("Sub Trail" to listOf(splitWorkout)),
+                renameWorkouts = true
+            )
+        }
+    }
 }
 

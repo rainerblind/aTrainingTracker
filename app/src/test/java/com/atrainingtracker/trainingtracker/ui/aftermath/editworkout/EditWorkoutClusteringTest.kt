@@ -368,4 +368,38 @@ class EditWorkoutClusteringTest {
         assertTrue(capturedCandidates.size >= 2)
         assertEquals(setOf(BSportType.RUN), capturedCandidates.last())
     }
+
+    /**
+     * TST-PER-049.1: createNewCluster rejects blank-only names and trims leading/trailing
+     * whitespace before updating UI state and persisting (REQ-PER-041.1).
+     */
+    @Test
+    fun createNewCluster_trimsWhitespaceAndRejectsBlank_TST_PER_049_1() = runTest(testDispatcher) {
+        val workout = createBakeryCommuteWorkout(bSportType = BSportType.BIKE)
+        every { mockApplication.getString(R.string.cluster_autoname_format, *anyVararg()) } answers {
+            val formatArgs = args[1] as Array<*>
+            "${formatArgs[0]} #${formatArgs[1]}"
+        }
+
+        val viewModel = EditWorkoutViewModel(mockApplication, 42L)
+        initialWorkoutLoadedLiveEvent.value = workout
+        advanceUntilIdle()
+
+        viewModel.createNewCluster("   ", hasCounter = true)
+        verify(exactly = 0) {
+            mockWorkoutRepository.createNewClusterFromWorkout(any<WorkoutData>(), any(), any(), any())
+        }
+
+        viewModel.createNewCluster("  Kurze Runde  ", hasCounter = true)
+        assertEquals("Kurze Runde", viewModel.workoutData.value?.clusterName)
+        assertEquals("Kurze Runde", viewModel.workoutData.value?.workoutName)
+        verify(exactly = 1) {
+            mockWorkoutRepository.createNewClusterFromWorkout(
+                match<WorkoutData> { it.id == 42L },
+                "Kurze Runde",
+                true,
+                null
+            )
+        }
+    }
 }

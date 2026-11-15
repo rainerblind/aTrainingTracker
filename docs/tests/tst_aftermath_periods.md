@@ -865,6 +865,19 @@
      • Verify all unit tests pass under plain JVM without `PreferenceManager`/IO leaks (`coding_standards.md` §5.5).
 
 
+### TST-PER-049: **RouteCluster Whitespace Normalization & Startup/Refresh Self-Healing Test Suite** [Verified]
+- **Requirement(s)**: `REQ-PER-041` (`REQ-PER-041.1`, `REQ-PER-041.2`)
+- **Component**: `WorkoutClusterDatabaseManager.kt`, `WorkoutClusterEngine.kt`, `WorkoutClusterRepository.kt`, `WorkoutClustersViewModel.kt`, `EditWorkoutViewModel.kt`, `WorkoutClusterHeatmapScreen.kt`, `RoutesRepository.kt`
+- **Jira**: `ATT-7757`
+- **Test Description**:
+  1. *Write, Lookup & Auto-Naming Whitespace Normalization Test (`TST-PER-049.1`)*:
+     • Verify that `updateClusterIdentity`, `addManualCluster`, `executeClusterSplit`, `EditWorkoutViewModel.createNewCluster`, `manuallyCreateCluster`, `syncRouteNameChange`, `splitCluster`, `insertCluster`, `updateCluster`, `isNameTaken`, `findUniqueClusterName`, and `formatClusterWorkoutName` trim leading/trailing whitespace, reject blank-only names, and never emit `"  #N"` double spaces.
+  2. *Startup & Refresh Self-Healing & Collision Propagation Test (`TST-PER-049.2`)*:
+     • Verify that `WorkoutClusterRepository.loadAllClustersLightweight()` and `refreshClusters()` normalize untrimmed rows (e.g. `"  Kurze Runde  "`), resolve collisions cleanly (`"Kurze Runde var 2"` when `"Kurze Runde"` exists), persist healed names in SQLite, and propagate healed names to `WorkoutRepository.onClusterRenamed`, `RoutesRepository.syncClusterNameChange`, and `clusterMutationEvents`.
+  3. *Localization & Regression Isolation Check (`TST-PER-049.3`)*:
+     • Verify `TranslationParityTest` and targeted unit tests pass cleanly under plain JVM without unmocked Android/IO dependencies (`coding_standards.md` §5.5).
+
+
 ---
 
 ### TST-SPT-005: Retrospective Filtering, Cluster Math, Lifetime Evaluation & ViewModel Tests [Verified]

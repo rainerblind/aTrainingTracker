@@ -24,6 +24,10 @@ import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
+import com.atrainingtracker.trainingtracker.repositories.SportTypesRepository
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
+import com.google.android.gms.maps.model.LatLng
 import io.mockk.*
 import org.junit.After
 import org.junit.Assert.*
@@ -239,5 +243,121 @@ class WorkoutClusterAutoNamingTest {
         assertEquals("morning run", normalizedNumbered)
         assertEquals("morning run", normalizedOne)
         assertEquals("morning run", normalizedVar)
+    }
+
+    /**
+     * TST-PER-049.1: formatClusterWorkoutName strips leading/trailing whitespace so double spaces
+     * like "Kurze Runde  #2" cannot occur (REQ-PER-041.1).
+     */
+    @Test
+    fun testFormatClusterWorkoutName_trimsLeadingAndTrailingWhitespace_TST_PER_049_1() {
+        assertEquals(
+            "Kurze Runde",
+            WorkoutClusterEngine.formatClusterWorkoutName(mockContext, "  Kurze Runde  ", 1)
+        )
+        assertEquals(
+            "Kurze Runde #2",
+            WorkoutClusterEngine.formatClusterWorkoutName(mockContext, "Kurze Runde ", 2)
+        )
+    }
+
+    /**
+     * TST-PER-049.1: manuallyCreateCluster and syncRouteNameChange normalize
+     * leading/trailing spaces, resolve collisions, and reject blank-only names (REQ-PER-041.1).
+     */
+    @Test
+    fun testManuallyCreateAndSyncRoute_trimsAndRejectsBlank_TST_PER_049_1() {
+        val mockSportRepo = mockk<SportTypesRepository>(relaxed = true)
+        every { mockSportRepo.getBSportType(any()) } returns BSportType.BIKE
+        SportTypesRepository.resetForTesting(mockSportRepo)
+
+        try {
+            val pos = LatLng(48.1, 11.5)
+            assertEquals(-1L, clusterEngine.manuallyCreateCluster("   ", 1L, pos, pos, pos, 5000.0))
+            verify(exactly = 0) { mockClusterDb.insertCluster(any()) }
+
+            every { mockClusterDb.isNameTaken("Kurze Runde", -1L) } returns true
+            every { mockClusterDb.isNameTaken("Kurze Runde var 2", -1L) } returns false
+            every { mockClusterDb.insertCluster(any()) } returns 77L
+            val createdId = clusterEngine.manuallyCreateCluster(
+                "  Kurze Runde  ",
+                1L,
+                pos,
+                pos,
+                pos,
+                5000.0
+            )
+            assertEquals(77L, createdId)
+            verify { mockClusterDb.insertCluster(match { it.name == "Kurze Runde var 2" }) }
+
+            val cluster77 = WorkoutCluster(
+                id = 77L, name = "Kurze Runde var 2", probableSportId = 1L,
+                startLat = 48.1, startLng = 11.5, endLat = 48.1, endLng = 11.5,
+                maxDispLat = 48.1, maxDispLng = 11.5, refDistance = 5000.0,
+                hitCount = 1, bSportType = BSportType.BIKE
+            )
+            every { mockClusterDb.getClusterById(77L) } returns cluster77
+            every { mockClusterDb.isNameTaken("Isar Loop", 77L) } returns false
+
+            clusterEngine.syncRouteNameChange(77L, "  \t ")
+            verify(exactly = 0) { mockClusterDb.updateCluster(any()) }
+
+            clusterEngine.syncRouteNameChange(77L, "  Isar Loop  ")
+            verify(exactly = 1) { mockClusterDb.updateCluster(match { it.name == "Isar Loop" }) }
+        } finally {
+            SportTypesRepository.resetForTesting(null)
+        }
+    }
+
+    /**
+     * TST-PER-049.1: splitCluster skips blank-only variants and trims valid names (REQ-PER-041.1).
+     */
+    @Test
+    fun testSplitCluster_trimsVariantsAndSkipsBlank_TST_PER_049_1() {
+        val mockSportRepo = mockk<SportTypesRepository>(relaxed = true)
+        every { mockSportRepo.getBSportType(any()) } returns BSportType.BIKE
+        SportTypesRepository.resetForTesting(mockSportRepo)
+        val mockWorkoutRepo = mockk<WorkoutRepository>(relaxed = true)
+        WorkoutRepository.resetForTesting(mockWorkoutRepo)
+
+        try {
+            val pos = LatLng(48.1, 11.5)
+            val cluster77 = WorkoutCluster(
+                id = 77L, name = "Main Loop", probableSportId = 1L,
+                startLat = 48.1, startLng = 11.5, endLat = 48.1, endLng = 11.5,
+                maxDispLat = 48.1, maxDispLng = 11.5, refDistance = 5000.0,
+                hitCount = 1, bSportType = BSportType.BIKE
+            )
+            every { mockClusterDb.getClusterById(77L) } returns cluster77
+            val splitWorkout = mockk<WorkoutData>(relaxed = true) {
+                every { id } returns 501L
+                every { startLatLng } returns pos
+                every { endLatLng } returns pos
+                every { maxDisplacementLatLng } returns pos
+                every { totalDistance } returns 5000.0
+                every { sportId } returns 1L
+                every { startTimeS } returns 1000L
+            }
+            every { mockWorkoutRepo.runInTransaction(any<() -> Any?>()) } answers {
+                firstArg<() -> Any?>().invoke()
+            }
+            every { mockClusterDb.isNameTaken("Variant Nord", -1L) } returns false
+            every { mockClusterDb.insertCluster(match { it.name == "Variant Nord" }) } returns 88L
+
+            val splitIds = clusterEngine.splitCluster(
+                context = mockContext,
+                primaryClusterId = 77L,
+                variantsToSplit = listOf(
+                    "   " to listOf(splitWorkout),
+                    "  Variant Nord  " to listOf(splitWorkout)
+                ),
+                renameWorkouts = true
+            )
+            assertEquals(listOf(88L), splitIds)
+            verify { mockClusterDb.insertCluster(match { it.name == "Variant Nord" }) }
+        } finally {
+            WorkoutRepository.resetForTesting(null)
+            SportTypesRepository.resetForTesting(null)
+        }
     }
 }

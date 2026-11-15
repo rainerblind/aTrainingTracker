@@ -514,6 +514,7 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
 
     fun createNewCluster(customName: String, hasCounter: Boolean = true) {
         val trimmedName = customName.trim()
+        if (trimmedName.isEmpty()) return
         val current = _workoutData.value
         userManuallyChangedWorkoutName = false
         val resolvedWorkoutName = WorkoutClusterEngine.formatClusterWorkoutName(application, trimmedName, 1, hasCounter)

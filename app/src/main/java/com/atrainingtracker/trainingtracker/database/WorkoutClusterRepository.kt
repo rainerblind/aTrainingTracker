@@ -162,6 +162,7 @@ class WorkoutClusterRepository internal constructor(
         lightweightLoadMutex.withLock {
             val cached = clusterDb.getAllClusters()
             if (cached.isNotEmpty()) {
+                val normalized = healUntrimmedClusterNames(cached)
                 val stats = if (_clusterStats.value.isEmpty()) {
                     try {
                         summariesManager.getWorkoutClusterStatsForAllClusters().also {
@@ -176,7 +177,7 @@ class WorkoutClusterRepository internal constructor(
                 }
 
                 // Self-heal clusters with desynchronized hitCount (REQ-UI-493.1, ATT-5846)
-                val healed = cached.map { cluster ->
+                val healed = normalized.map { cluster ->
                     val statCount = stats[cluster.id]?.workoutCount ?: 0
                     if (cluster.hitCount == 0 && statCount > 0) {
                         val updated = cluster.copy(hitCount = statCount)
@@ -258,6 +259,9 @@ class WorkoutClusterRepository internal constructor(
             prefs.edit().putInt(SP_KEY_LAST_APEX_REPAIR, 2).apply()
             currentClusters = clusterDb.getAllClusters()
         }
+
+        // 0.2 Whitespace Self-Healing Pass (REQ-PER-041.2, ATT-7757)
+        currentClusters = healUntrimmedClusterNames(currentClusters)
 
         // --- ATT-441: Optimized Refresh Logic ---
         // If data is already persistent, load silently.
@@ -418,15 +422,67 @@ class WorkoutClusterRepository internal constructor(
     }
 
     /**
-     * Updates a [WorkoutCluster] in SQLite, syncs linked route name if needed, updates cached
-     * [WorkoutRepository] workouts, and emits [ClusterMutationEvent.Renamed] (REQ-PER-040.1, REQ-PER-040.2).
+     * Self-heals untrimmed or blank persisted cluster names in-place with collision resolution,
+     * propagating healed names to linked routes, [WorkoutRepository], and [clusterMutationEvents]
+     * (REQ-PER-041.2).
+     */
+    private suspend fun healUntrimmedClusterNames(
+        clusters: List<WorkoutCluster>
+    ): List<WorkoutCluster> {
+        if (clusters.none { it.name != it.name.trim() || it.name.isBlank() }) return clusters
+
+        val working = clusters.toMutableList()
+        val healedChanges = mutableListOf<Pair<Long, String>>()
+        for (index in working.indices) {
+            val cluster = working[index]
+            val trimmed = cluster.name.trim()
+            if (trimmed == cluster.name && trimmed.isNotEmpty()) continue
+
+            val baseName = trimmed.ifEmpty { "Cluster ${cluster.id}" }
+            val otherNames = working.asSequence()
+                .filter { it.id != cluster.id }
+                .map { it.name.trim() }
+                .filter { it.isNotEmpty() }
+                .toSet()
+            val uniqueName = WorkoutClusterEngine.resolveUniqueClusterName(baseName) { candidate ->
+                candidate in otherNames
+            }
+            val updated = cluster.copy(name = uniqueName)
+            runCatching { clusterDb.updateCluster(updated) }
+                .onFailure { t ->
+                    if (DEBUG) {
+                        val msg = "Failed to heal cluster name: ${t.message}"
+                        runCatching { android.util.Log.w("WorkoutClusterRepo", msg) }
+                    }
+                }
+            working[index] = updated
+            if (uniqueName != cluster.name) {
+                healedChanges.add(cluster.id to uniqueName)
+            }
+        }
+
+        for ((clusterId, healedName) in healedChanges) {
+            notifyRoutesRepository { it.syncClusterNameChange(clusterId, healedName) }
+            notifyWorkoutRepository { it.onClusterRenamed(clusterId, healedName) }
+            _clusterMutationEvents.emit(ClusterMutationEvent.Renamed(clusterId, healedName))
+        }
+        return working
+    }
+
+    /**
+     * Updates a [WorkoutCluster] in SQLite after trimming its name, syncs linked route name if needed,
+     * updates cached [WorkoutRepository] workouts, and emits [ClusterMutationEvent.Renamed]
+     * (REQ-PER-040.1, REQ-PER-040.2, REQ-PER-041.1).
      */
     suspend fun updateCluster(cluster: WorkoutCluster) = withContext(Dispatchers.IO) {
-        clusterDb.updateCluster(cluster)
+        val trimmedName = cluster.name.trim()
+        if (trimmedName.isEmpty()) return@withContext
+        val sanitized = cluster.copy(name = trimmedName)
+        clusterDb.updateCluster(sanitized)
         refreshClusters()
-        notifyRoutesRepository { it.syncClusterNameChange(cluster.id, cluster.name) }
-        notifyWorkoutRepository { it.onClusterRenamed(cluster.id, cluster.name) }
-        _clusterMutationEvents.emit(ClusterMutationEvent.Renamed(cluster.id, cluster.name))
+        notifyRoutesRepository { it.syncClusterNameChange(sanitized.id, sanitized.name) }
+        notifyWorkoutRepository { it.onClusterRenamed(sanitized.id, sanitized.name) }
+        _clusterMutationEvents.emit(ClusterMutationEvent.Renamed(sanitized.id, sanitized.name))
     }
 
     /**
@@ -676,7 +732,11 @@ class WorkoutClusterRepository internal constructor(
     fun getClusterByName(name: String): WorkoutCluster? = clusterDb.getClusterByName(name)
     fun getClusterNameById(id: Long): String? = clusterDb.getClusterNameById(id)
     fun insertCluster(cluster: WorkoutCluster): Long = clusterDb.insertCluster(cluster)
-    fun updateClusterSync(cluster: WorkoutCluster) = clusterDb.updateCluster(cluster)
+    fun updateClusterSync(cluster: WorkoutCluster) {
+        val trimmedName = cluster.name.trim()
+        if (trimmedName.isEmpty()) return
+        clusterDb.updateCluster(cluster.copy(name = trimmedName))
+    }
     fun deleteClusterSync(id: Long) = clusterDb.deleteCluster(id)
     fun deleteAllClustersSync() = clusterDb.deleteAllClusters()
     fun isNameTaken(name: String, excludeId: Long = -1): Boolean = clusterDb.isNameTaken(name, excludeId)

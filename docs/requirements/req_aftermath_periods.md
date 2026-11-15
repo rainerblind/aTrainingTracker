@@ -1349,6 +1349,31 @@
 
 ---
 
+### REQ-PER-041: WorkoutCluster Name Whitespace Normalization and Startup/Refresh Self-Healing [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-PER-049`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `WorkoutClusterDatabaseManager.kt`, `WorkoutClusterEngine.kt`, `WorkoutClusterRepository.kt`, `WorkoutClustersViewModel.kt`, `EditWorkoutViewModel.kt`, `WorkoutClusterHeatmapScreen.kt`, `RoutesRepository.kt`
+- **Rationale**: Soft-keyboard autocomplete often appends trailing spaces to `WorkoutCluster` names (e.g., `"Kurze Runde "`), causing double spaces in `formatClusterWorkoutName` (`"Kurze Runde  #2"`), false negatives in `isNameTaken` / `findUniqueClusterName` uniqueness checks, and asymmetric chip padding (`ATT-7757`). Existing untrimmed `RouteClusters` rows in SQLite also remain stale unless normalized in-place.
+- **Description**:
+  1. *Write, Lookup & Formatting Whitespace Normalization (`REQ-PER-041.1`)*:
+     - All `WorkoutCluster` write, lookup, and formatting paths (`updateClusterIdentity`, `EditWorkoutClusterIdentityDialog`, `addManualCluster`, `executeClusterSplit`, `EditWorkoutViewModel.createNewCluster`, `WorkoutClusterRepository.updateCluster` / `updateClusterSync`, `RoutesRepository.syncClusterNameChange`, `WorkoutClusterEngine.manuallyCreateCluster` / `syncRouteNameChange` / `splitCluster` / `createNewClusterFromWorkout` / `findUniqueClusterName` / `formatClusterWorkoutName`, and `WorkoutClusterDatabaseManager.insertCluster` / `updateCluster` / `isNameTaken` / `getClusterByName`) SHALL trim leading/trailing whitespace and reject blank-only cluster names.
+  2. *Startup & Refresh In-Place Self-Healing (`REQ-PER-041.2`)*:
+     - `WorkoutClusterRepository.loadAllClustersLightweight()` and `refreshClusters()` SHALL detect any existing `RouteClusters.name` entry with leading/trailing whitespace (`name != name.trim()`), compute a collision-free trimmed name using `findUniqueClusterName` logic (falling back to `"Cluster <id>"` if blank-only), update `RouteClusters.db` in-place, and propagate any healed name immediately to linked `Routes` and in-memory `WorkoutData.clusterName` via `WorkoutRepository.onClusterRenamed` and `ClusterMutationEvent.Renamed`.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* user input `"Kurze Runde "` with leading/trailing whitespace on create, rename, split, or route-sync,
+  • *When* persisted or checked via `isNameTaken`, `findUniqueClusterName`, or formatted via `formatClusterWorkoutName`,
+  • *Then* `"Kurze Runde"` is stored without leading/trailing whitespace, uniqueness collides with `"Kurze Runde"`, blank-only input is rejected, and `formatClusterWorkoutName(..., 2)` returns `"Kurze Runde #2"` without double spaces.
+  • *Given* persisted `RouteClusters` containing `"Kurze Runde "` (and optionally an existing `"Kurze Runde"`),
+  • *When* `WorkoutClusterRepository.loadAllClustersLightweight()` or `refreshClusters()` runs,
+  • *Then* SQLite, `_allClusters`, linked routes, and cached `WorkoutData.clusterName` reflect the healed unique trimmed name immediately.
+- **Invariants**: Internal whitespace inside multi-word names MUST be preserved; existing `REQ-PER-040` in-memory sync and non-recursive `Route <-> Cluster` propagation MUST NOT regress; no SQLite schema version bump.
+
+
+---
+
 ### REQ-SPT-002: Retrospective Filtering, Cluster Aggregation & Lifetime Engine [Verified]
 - **Tests**: `TST-SPT-005`
 - **Priority**: High

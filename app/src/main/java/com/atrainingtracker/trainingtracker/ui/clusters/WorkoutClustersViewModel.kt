@@ -557,9 +557,20 @@ class WorkoutClustersViewModel @JvmOverloads constructor(
         _peekedWorkoutDataWithTrack.value = null
     }
 
-    fun updateClusterIdentity(cluster: WorkoutCluster, newName: String, newSportId: Long, hasCounter: Boolean = cluster.hasCounter) {
+    fun updateClusterIdentity(
+        cluster: WorkoutCluster,
+        newName: String,
+        newSportId: Long,
+        hasCounter: Boolean = cluster.hasCounter
+    ) {
+        val trimmedName = newName.trim()
+        if (trimmedName.isEmpty()) return
         viewModelScope.launch {
-            val updated = cluster.copy(name = newName, probableSportId = newSportId, hasCounter = hasCounter)
+            val updated = cluster.copy(
+                name = trimmedName,
+                probableSportId = newSportId,
+                hasCounter = hasCounter
+            )
             repository.updateCluster(updated)
             // Update selected cluster if it's the one modified
             if (_selectedCluster.value?.id == cluster.id) {
@@ -688,9 +699,11 @@ class WorkoutClustersViewModel @JvmOverloads constructor(
         apex: com.google.android.gms.maps.model.LatLng,
         distance: Double
     ) {
-        viewModelScope.launch(Dispatchers.IO) {
+        val trimmedName = name.trim()
+        if (trimmedName.isEmpty()) return
+        viewModelScope.launch(ioDispatcher) {
             WorkoutClusterEngine.getInstance(getApplication())
-                .manuallyCreateCluster(name, sportId, start, end, apex, distance)
+                .manuallyCreateCluster(trimmedName, sportId, start, end, apex, distance)
             repository.refreshClusters()
         }
     }
@@ -813,11 +826,16 @@ class WorkoutClustersViewModel @JvmOverloads constructor(
         renameWorkouts: Boolean
     ) {
         val cluster = splitTargetCluster ?: _selectedCluster.value ?: return
+        val sanitizedVariants = variantsToSplit.mapNotNull { (rawName, workouts) ->
+            val trimmed = rawName.trim()
+            if (trimmed.isEmpty() || workouts.isEmpty()) null else trimmed to workouts
+        }
+        if (sanitizedVariants.isEmpty()) return
         val isListTriggered = (splitTargetCluster != null && _selectedCluster.value == null)
         viewModelScope.launch(ioDispatcher) {
             repository.splitCluster(
                 primaryClusterId = cluster.id,
-                variantsToSplit = variantsToSplit,
+                variantsToSplit = sanitizedVariants,
                 renameWorkouts = renameWorkouts
             )
             _isSplitPreviewActive.value = false
