@@ -23,11 +23,22 @@ package com.atrainingtracker.banalservice.devices.bluetooth_le.polar
 import android.content.Context
 import android.util.Log
 import com.atrainingtracker.banalservice.BANALService
+import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
 import com.atrainingtracker.banalservice.devices.DeviceManager
 import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDevice
+import com.atrainingtracker.banalservice.sensor.SensorType
+import com.atrainingtracker.trainingtracker.database.ExtremaType
+import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager
+import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
+import com.atrainingtracker.trainingtracker.database.hrv.HrvPostWorkoutRecomputer
+import com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrRepository
+import com.atrainingtracker.trainingtracker.exporter.ExportManager
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
+import com.atrainingtracker.trainingtracker.ui.aftermath.syncPendingPolarWorkout
 import com.polar.androidcommunications.api.ble.model.gatt.client.psftp.BlePsFtpUtils
 import com.polar.sdk.api.PolarBleApi
 import com.polar.sdk.api.PolarBleApiCallbackProvider
@@ -41,11 +52,14 @@ import io.mockk.coVerifyOrder
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
+import io.mockk.mockkConstructor
+import io.mockk.mockkObject
 import io.mockk.mockkStatic
 import io.mockk.slot
 import io.mockk.unmockkAll
 import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -60,8 +74,10 @@ import java.time.ZoneId
 
 /**
  * Unit tests for [PolarVeritySenseOfflineController], [PolarOfflineGattCoordinator], and
- * [PolarOfflineCapabilityStore] (`ATT-7923`, `REQ-SET-108`, `TST-SET-110`).
+ * [PolarOfflineCapabilityStore] (`ATT-7923`, `REQ-SET-108`, `TST-SET-110`,
+ * `ATT-7924`, `REQ-SET-109`, `TST-SET-111`).
  */
+@Suppress("LargeClass")
 class PolarVeritySenseOfflineControllerTest {
 
     private lateinit var context: Context
@@ -69,6 +85,10 @@ class PolarVeritySenseOfflineControllerTest {
     private lateinit var mockDb: DevicesDatabaseManager
     private lateinit var mockDeviceManager: DeviceManager
     private lateinit var mockBtleDevice: MyBTLEDevice
+    private lateinit var mockSamplesDb: WorkoutSamplesDatabaseManager
+    private lateinit var mockSummariesDb: WorkoutSummariesDatabaseManager
+    private lateinit var mockRrRepo: WorkoutRrRepository
+    private lateinit var mockWorkoutRepo: WorkoutRepository
 
     private val verityMac = "AA:BB:CC:11:22:33"
     private val verityPolarId = "A1B2C3D4"
@@ -100,6 +120,25 @@ class PolarVeritySenseOfflineControllerTest {
         every { mockBtleDevice.pauseGattOperations() } just Runs
         every { mockBtleDevice.resumeGattOperations() } just Runs
 
+        mockSamplesDb = mockk(relaxed = true)
+        mockSummariesDb = mockk(relaxed = true)
+        mockRrRepo = mockk(relaxed = true)
+        mockWorkoutRepo = mockk(relaxed = true)
+
+        WorkoutSamplesDatabaseManager.resetForTesting(mockSamplesDb)
+
+        mockkStatic(WorkoutSummariesDatabaseManager::class)
+        every { WorkoutSummariesDatabaseManager.getInstance(any()) } returns mockSummariesDb
+        every { mockSummariesDb.getString(any<Long>(), any()) } returns BSportType.UNKNOWN.name
+
+        WorkoutRrRepository.resetForTesting(mockRrRepo)
+
+        mockkObject(HrvPostWorkoutRecomputer)
+        coEvery { HrvPostWorkoutRecomputer.recomputeWorkout(any(), any()) } returns false
+
+        WorkoutRepository.resetForTesting(mockWorkoutRepo)
+        every { mockWorkoutRepo.refreshWorkout(any()) } just Runs
+
         PolarOfflineCapabilityStore.resetForTesting()
         PolarVeritySenseOfflineController.resetForTesting()
         PolarVeritySenseOfflineController.dispatcher = Dispatchers.Unconfined
@@ -109,6 +148,9 @@ class PolarVeritySenseOfflineControllerTest {
     fun tearDown() {
         PolarVeritySenseOfflineController.resetForTesting()
         PolarOfflineCapabilityStore.resetForTesting()
+        WorkoutRrRepository.resetForTesting(null)
+        WorkoutSamplesDatabaseManager.resetForTesting(null)
+        WorkoutRepository.resetForTesting(null)
         unmockkAll()
     }
 
@@ -369,13 +411,337 @@ class PolarVeritySenseOfflineControllerTest {
     }
 
     @Test
-    fun testWorkoutStopped_clearsArmedState() {
+    fun testWorkoutStopped_preservesArmedStateForEndWorkoutBackfill() {
         PolarVeritySenseOfflineController.sdkIntOverride = 33
-        PolarVeritySenseOfflineController.setArmedForTesting(true)
+        PolarVeritySenseOfflineController.setArmedForTesting(true, verityPolarId, verityMac)
 
         PolarVeritySenseOfflineController.onWorkoutStopped(context)
 
+        assertTrue(PolarVeritySenseOfflineController.isRecordingArmed())
+    }
+
+    @Test
+    fun testStopAndBackfill_zeroGapFastPath_skipsDownloadAndRemovesMatchedEntry() = runBlocking {
+        PolarVeritySenseOfflineController.sdkIntOverride = 33
+        PolarVeritySenseOfflineController.apiOverride = mockApi
+        PolarVeritySenseOfflineController.setArmedForTesting(true, verityPolarId, verityMac)
+
+        val now = LocalDateTime.now()
+        val nowMs = now.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        val matchingEntry = PolarOfflineRecordingEntry(
+            path = "/U/0/20261115/R/120000/HR.BPB",
+            size = 512L,
+            date = now,
+            type = PolarBleApi.PolarDeviceDataType.HR
+        )
+        val unrelatedEntry = PolarOfflineRecordingEntry(
+            path = "/U/0/20261114/R/080000/HR.BPB",
+            size = 900L,
+            date = now.minusDays(1),
+            type = PolarBleApi.PolarDeviceDataType.HR
+        )
+
+        every { mockSamplesDb.hasMissingHeartRateSamples("2026-11-15_120000") } returns false
+        mockReadyFeatures(verityPolarId)
+        coEvery { mockApi.connectToDevice(verityPolarId) } just Runs
+        coEvery { mockApi.waitForConnection(verityPolarId) } just Runs
+        coEvery { mockApi.getOfflineRecordingStatus(verityPolarId) } returns listOf(
+            PolarBleApi.PolarDeviceDataType.HR
+        )
+        coEvery {
+            mockApi.stopOfflineRecording(verityPolarId, PolarBleApi.PolarDeviceDataType.HR)
+        } just Runs
+        every { mockApi.listOfflineRecordings(verityPolarId) } returns flowOf(unrelatedEntry, matchingEntry)
+        coEvery { mockApi.removeOfflineRecord(verityPolarId, matchingEntry) } just Runs
+        coEvery { mockApi.disconnectFromDevice(verityPolarId) } just Runs
+
+        val result = PolarVeritySenseOfflineController.stopAndBackfillWorkout(
+            context = context,
+            workoutId = 77L,
+            baseFileName = "2026-11-15_120000",
+            startTimeMs = nowMs - 5_000L
+        )
+
+        assertTrue(result)
         assertFalse(PolarVeritySenseOfflineController.isRecordingArmed())
+        coVerify(exactly = 0) { mockApi.getOfflineRecord(any(), any(), any()) }
+        coVerify(exactly = 1) {
+            mockApi.stopOfflineRecording(verityPolarId, PolarBleApi.PolarDeviceDataType.HR)
+        }
+        coVerify(exactly = 1) { mockApi.removeOfflineRecord(verityPolarId, matchingEntry) }
+        coVerify(exactly = 0) { mockApi.removeOfflineRecord(verityPolarId, unrelatedEntry) }
+        coVerify(exactly = 0) { mockRrRepo.insertIntervals(any()) }
+        verify(atLeast = 1) { mockBtleDevice.resumeGattOperations() }
+    }
+
+    @Test
+    @Suppress("LongMethod")
+    fun testStopAndBackfill_gapsExist_aligns1HzHrUpdatesExtremaAndProtectsHrv() = runBlocking {
+        PolarVeritySenseOfflineController.sdkIntOverride = 33
+        PolarVeritySenseOfflineController.apiOverride = mockApi
+        PolarVeritySenseOfflineController.setArmedForTesting(true, verityPolarId, verityMac)
+
+        val now = LocalDateTime.now().minusMinutes(5)
+        val anchorMs = now.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        val matchingEntry = PolarOfflineRecordingEntry(
+            path = "/U/0/20261115/R/120500/HR.BPB",
+            size = 1024L,
+            date = now,
+            type = PolarBleApi.PolarDeviceDataType.HR
+        )
+        val unrelatedEntry = PolarOfflineRecordingEntry(
+            path = "/U/0/20261113/R/070000/HR.BPB",
+            size = 2048L,
+            date = now.minusDays(2),
+            type = PolarBleApi.PolarDeviceDataType.HR
+        )
+        val samples = listOf(
+            createHrSample(hr = 132),
+            createHrSample(hr = 0, correctedHr = 144),
+            createHrSample(hr = 156)
+        )
+        val hrRecording = PolarOfflineRecordingData.HrOfflineRecording(
+            data = PolarHrData(samples),
+            startTime = now
+        )
+        val pairsSlot = slot<List<android.util.Pair<Long, Int>>>()
+
+        every { mockSamplesDb.hasMissingHeartRateSamples("2026-11-15_120500") } returns true
+        every {
+            mockSamplesDb.patchMissingHeartRateSamples("2026-11-15_120500", anchorMs, capture(pairsSlot))
+        } returns 2
+        every { mockSamplesDb.calcHeartRateStats("2026-11-15_120500") } returns
+            WorkoutSamplesDatabaseManager.HrStats(132.0, 156.0, 144.0, 3)
+
+        mockReadyFeatures(verityPolarId)
+        coEvery { mockApi.connectToDevice(verityPolarId) } just Runs
+        coEvery { mockApi.waitForConnection(verityPolarId) } just Runs
+        coEvery { mockApi.getOfflineRecordingStatus(verityPolarId) } returns listOf(
+            PolarBleApi.PolarDeviceDataType.HR
+        )
+        coEvery {
+            mockApi.stopOfflineRecording(verityPolarId, PolarBleApi.PolarDeviceDataType.HR)
+        } just Runs
+        every { mockApi.listOfflineRecordings(verityPolarId) } returns flowOf(unrelatedEntry, matchingEntry)
+        coEvery { mockApi.getOfflineRecord(verityPolarId, matchingEntry, null) } returns hrRecording
+        coEvery { mockApi.removeOfflineRecord(verityPolarId, matchingEntry) } just Runs
+        coEvery { mockApi.disconnectFromDevice(verityPolarId) } just Runs
+
+        val result = PolarVeritySenseOfflineController.stopAndBackfillWorkout(
+            context = context,
+            workoutId = 88L,
+            baseFileName = "2026-11-15_120500",
+            startTimeMs = anchorMs - 2_000L
+        )
+
+        assertTrue(result)
+        assertFalse(PolarVeritySenseOfflineController.isRecordingArmed())
+        assertEquals(3, pairsSlot.captured.size)
+        val aligned = PolarVeritySenseOfflineController.alignHrSamples(hrRecording, anchorMs)
+        assertEquals(
+            listOf(
+                anchorMs to 132,
+                (anchorMs + 1_000L) to 144,
+                (anchorMs + 2_000L) to 156
+            ),
+            aligned
+        )
+
+        verify(exactly = 1) {
+            mockSummariesDb.updateExtremaValue(88L, SensorType.HR, ExtremaType.MIN, 132.0, null)
+            mockSummariesDb.updateExtremaValue(88L, SensorType.HR, ExtremaType.MAX, 156.0, null)
+            mockSummariesDb.updateExtremaValue(88L, SensorType.HR, ExtremaType.AVG, 144.0, null, 3)
+            mockWorkoutRepo.refreshWorkout(88L)
+        }
+        coVerify(exactly = 0) { mockRrRepo.insertIntervals(any()) }
+        coVerify(exactly = 0) { HrvPostWorkoutRecomputer.recomputeWorkout(any(), any()) }
+        coVerify(exactly = 1) { mockApi.removeOfflineRecord(verityPolarId, matchingEntry) }
+        coVerify(exactly = 0) { mockApi.removeOfflineRecord(verityPolarId, unrelatedEntry) }
+    }
+
+    @Test
+    fun testStopAndBackfill_sqliteFailure_doesNotDeleteFlashAndPersistsPendingSync() = runBlocking {
+        PolarVeritySenseOfflineController.sdkIntOverride = 33
+        PolarVeritySenseOfflineController.apiOverride = mockApi
+        PolarVeritySenseOfflineController.setArmedForTesting(true, verityPolarId, verityMac)
+
+        val now = LocalDateTime.now().minusMinutes(3)
+        val anchorMs = now.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        val matchingEntry = PolarOfflineRecordingEntry(
+            path = "/U/0/20261115/R/120800/HR.BPB",
+            size = 640L,
+            date = now,
+            type = PolarBleApi.PolarDeviceDataType.HR
+        )
+        val hrRecording = PolarOfflineRecordingData.HrOfflineRecording(
+            data = PolarHrData(listOf(createHrSample(hr = 140))),
+            startTime = now
+        )
+
+        every { mockSamplesDb.hasMissingHeartRateSamples("2026-11-15_120800") } returns true
+        every { mockSamplesDb.patchMissingHeartRateSamples(any(), any(), any()) } throws
+            RuntimeException("SQLite write error")
+
+        mockReadyFeatures(verityPolarId)
+        coEvery { mockApi.connectToDevice(verityPolarId) } just Runs
+        coEvery { mockApi.waitForConnection(verityPolarId) } just Runs
+        every { mockApi.listOfflineRecordings(verityPolarId) } returns flowOf(matchingEntry)
+        coEvery { mockApi.getOfflineRecord(verityPolarId, matchingEntry, null) } returns hrRecording
+
+        val result = PolarVeritySenseOfflineController.stopAndBackfillWorkout(
+            context = context,
+            workoutId = 89L,
+            baseFileName = "2026-11-15_120800",
+            startTimeMs = anchorMs
+        )
+
+        assertFalse(result)
+        coVerify(exactly = 0) { mockApi.removeOfflineRecord(any(), any()) }
+        verify(exactly = 1) {
+            mockSummariesDb.setPolarSyncPending(
+                89L,
+                verityPolarId,
+                match { PolarVeritySenseOfflineController.isVerityPendingSync(it) },
+                any(),
+                any()
+            )
+        }
+    }
+
+    @Test
+    fun testStopAndBackfill_sensorUnreachable_recordsVerityPendingSync() = runBlocking {
+        PolarVeritySenseOfflineController.sdkIntOverride = 33
+        PolarVeritySenseOfflineController.apiOverride = mockApi
+        PolarVeritySenseOfflineController.setArmedForTesting(true, verityPolarId, verityMac)
+
+        every { mockSamplesDb.hasMissingHeartRateSamples("2026-11-15_121000") } returns true
+        coEvery { mockApi.connectToDevice(verityPolarId) } throws RuntimeException("GATT unreachable")
+
+        val result = PolarVeritySenseOfflineController.stopAndBackfillWorkout(
+            context = context,
+            workoutId = 90L,
+            baseFileName = "2026-11-15_121000",
+            startTimeMs = 1_700_000_000_000L
+        )
+
+        assertFalse(result)
+        assertFalse(PolarVeritySenseOfflineController.isRecordingArmed())
+        verify(exactly = 1) {
+            mockSummariesDb.setPolarSyncPending(
+                90L,
+                verityPolarId,
+                PolarVeritySenseOfflineController.VERITY_EXERCISE_PREFIX,
+                1_700_000_000_000L,
+                any()
+            )
+        }
+        verify(atLeast = 1) { mockBtleDevice.resumeGattOperations() }
+    }
+
+    @Test
+    @Suppress("LongMethod")
+    fun testSyncPendingWorkout_backfillsClearsPendingDeletesOnlyMatchedEntryAndReexports() = runBlocking {
+        PolarVeritySenseOfflineController.sdkIntOverride = 33
+        PolarVeritySenseOfflineController.apiOverride = mockApi
+        mockkConstructor(ExportManager::class)
+        every { anyConstructed<ExportManager>().invalidateWorkoutExport(any()) } just Runs
+        every { anyConstructed<ExportManager>().exportWorkout(any()) } just Runs
+
+        val now = LocalDateTime.now().minusMinutes(10)
+        val anchorMs = now.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        val matchedPath = "/U/0/20261115/R/121500/HR.BPB"
+        val matchingEntry = PolarOfflineRecordingEntry(
+            path = matchedPath,
+            size = 1024L,
+            date = now,
+            type = PolarBleApi.PolarDeviceDataType.HR
+        )
+        val unrelatedEntry = PolarOfflineRecordingEntry(
+            path = "/U/0/20261114/R/090000/HR.BPB",
+            size = 500L,
+            date = now.minusDays(1),
+            type = PolarBleApi.PolarDeviceDataType.HR
+        )
+        val hrRecording = PolarOfflineRecordingData.HrOfflineRecording(
+            data = PolarHrData(listOf(createHrSample(hr = 150), createHrSample(hr = 160))),
+            startTime = now
+        )
+        val devItem = DevicesDatabaseManager.RemoteDeviceUIDataCacheItem(
+            7L, "Polar Sense $verityPolarId", DeviceType.HRM, Protocol.BLUETOOTH_LE
+        )
+        every { mockDb.allDevicesForCache } returns listOf(devItem)
+        every { mockDb.getBluetoothMACAddress(7L) } returns verityMac
+
+        every { mockSummariesDb.getPolarPendingSyncData(91L) } returns
+            WorkoutSummariesDatabaseManager.PolarPendingSyncData(
+                verityPolarId,
+                "${PolarVeritySenseOfflineController.VERITY_EXERCISE_PREFIX}$matchedPath",
+                anchorMs,
+                anchorMs + 60_000L,
+                true
+            )
+        every { mockWorkoutRepo.getBaseFileName(91L) } returns "2026-11-15_121500"
+        val mockWorkoutData = mockk<WorkoutData>(relaxed = true) {
+            every { id } returns 91L
+        }
+        every { mockWorkoutRepo.allWorkouts } returns MutableStateFlow(listOf(mockWorkoutData))
+        every { mockSamplesDb.calcHeartRateStats("2026-11-15_121500") } returns
+            WorkoutSamplesDatabaseManager.HrStats(150.0, 160.0, 155.0, 2)
+
+        mockReadyFeatures(verityPolarId)
+        coEvery { mockApi.connectToDevice(verityPolarId) } just Runs
+        coEvery { mockApi.waitForConnection(verityPolarId) } just Runs
+        coEvery { mockApi.getOfflineRecordingStatus(verityPolarId) } returns emptyList()
+        every { mockApi.listOfflineRecordings(verityPolarId) } returns flowOf(unrelatedEntry, matchingEntry)
+        coEvery { mockApi.getOfflineRecord(verityPolarId, matchingEntry, null) } returns hrRecording
+        coEvery { mockApi.removeOfflineRecord(verityPolarId, matchingEntry) } just Runs
+        coEvery { mockApi.disconnectFromDevice(verityPolarId) } just Runs
+
+        val result = PolarVeritySenseOfflineController.syncPendingWorkout(context, 91L)
+
+        assertTrue(result)
+        verify(exactly = 1) {
+            mockSamplesDb.patchMissingHeartRateSamples("2026-11-15_121500", anchorMs, any())
+            mockSummariesDb.clearPolarSyncPending(91L)
+            mockWorkoutRepo.refreshWorkout(91L)
+            anyConstructed<ExportManager>().invalidateWorkoutExport("2026-11-15_121500")
+            anyConstructed<ExportManager>().exportWorkout(mockWorkoutData)
+        }
+        coVerify(exactly = 0) { mockRrRepo.insertIntervals(any()) }
+        coVerify(exactly = 0) { HrvPostWorkoutRecomputer.recomputeWorkout(any(), any()) }
+        coVerify(exactly = 1) { mockApi.removeOfflineRecord(verityPolarId, matchingEntry) }
+        coVerify(exactly = 0) { mockApi.removeOfflineRecord(verityPolarId, unrelatedEntry) }
+    }
+
+    @Test
+    fun testSyncPendingPolarWorkout_routesVerityPrefixAndLegacyH10Separately() = runBlocking {
+        assertTrue(PolarVeritySenseOfflineController.isVerityPendingSync("verity:/U/0/HR.BPB"))
+        assertFalse(PolarVeritySenseOfflineController.isVerityPendingSync("/exercises/1"))
+
+        mockkObject(PolarVeritySenseOfflineController)
+        mockkObject(PolarH10OfflineController)
+        coEvery { PolarVeritySenseOfflineController.syncPendingWorkout(context, 10L) } returns true
+        coEvery { PolarH10OfflineController.syncPendingWorkout(context, 20L) } returns true
+
+        assertTrue(syncPendingPolarWorkout(context, 10L, "verity:/U/0/HR.BPB"))
+        assertTrue(syncPendingPolarWorkout(context, 20L, "/exercises/1"))
+
+        coVerify(exactly = 1) { PolarVeritySenseOfflineController.syncPendingWorkout(context, 10L) }
+        coVerify(exactly = 0) { PolarH10OfflineController.syncPendingWorkout(context, 10L) }
+        coVerify(exactly = 1) { PolarH10OfflineController.syncPendingWorkout(context, 20L) }
+    }
+
+    private fun createHrSample(hr: Int, correctedHr: Int = hr): PolarHrData.PolarHrSample {
+        return PolarHrData.PolarHrSample(
+            hr = hr,
+            correctedHr = correctedHr,
+            ppgQuality = 100,
+            rrs = emptyList(),
+            rrsMs = emptyList(),
+            rrAvailable = false,
+            contactStatus = true,
+            contactStatusSupported = true
+        )
     }
 
     private fun mockReadyFeatures(polarId: String) {

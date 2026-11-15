@@ -2453,3 +2453,35 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 
 **Invariants**: `Devices.db` stays `DB_VERSION = 13`; zero workout-start crashes or hangs on `SYSTEM_BUSY`; zero mid-workout PFTP interruptions; zero emojis in strings; full API < 33 isolation.
 
+---
+
+### REQ-SET-109: Polar Verity Sense Stop-Time HR Backfill & Aftermath Retry Sync (`ATT-7924`) [Verified]
+- **Tests**: `TST-SET-111`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit / Integration
+- **Implementation**: `PolarVeritySenseOfflineController.kt`, `PolarOfflineGattCoordinator.kt`, `TrackerService.java`, `WorkoutSamplesDatabaseManager.java`, `WorkoutSummariesDatabaseManager.java`, `PolarH10RetrySyncBanner.kt`, `TrackOnMapScreen.kt`, `WorkoutDetailTabbedContent.kt`, `res/values*/strings_devices.xml`
+- **Rationale**: Swimmers leaving phones in lockers rely on Polar Verity Sense internal 1-Hz optical HR memory (`ATT-7923`) to recover missed BLE heart rate samples on workout stop (or later in Aftermath when powered back on in Blue Sensor Mode) before automatic exports execute, while strictly protecting `WorkoutRr.db` HRV integrity against optical 1-Hz PPG pollution.
+- **Description**:
+1. *Stop-Time Backfill, Export Gate & Zero-Gap Fast Path (`REQ-SET-109.1`)*:
+   - On Android 13+ during `TrackerService.endWorkout()`, if `PolarVeritySenseOfflineController.isRecordingArmed()` is true, `TrackerService` SHALL invoke `PolarVeritySenseOfflineController.stopAndBackfillWorkoutBlocking(...)` BEFORE `ExportManager.workoutFinished()` executes, holding all automatic downstream exports (Strava, Health Connect, Dropbox, `.fit`, `.tcx`, `.gpx`, `.csv`) until backfill or pending-sync fallback completes.
+   - `PolarVeritySenseOfflineController.onWorkoutStopped(context)` SHALL preserve armed session metadata when armed so `endWorkout()` can execute backfill (resetting `isArmed` in `stopAndBackfillWorkout()`'s `finally` block).
+   - `PolarVeritySenseOfflineController.shouldBackfill(context, baseFileName)` SHALL inspect ONLY `WorkoutSamplesDatabaseManager.hasMissingHeartRateSamples(baseFileName)` (ignoring `WorkoutRr.db`). On zero missing HR seconds (`shouldBackfill == false`), the fast path SHALL stop active `HR` recording and call `removeOfflineRecord()` for ONLY the workout's matched `PolarOfflineRecordingEntry` without downloading `HrOfflineRecording`.
+   - When missing HR seconds exist, the controller SHALL pause standard GATT via `PolarOfflineGattCoordinator`, stop/list/fetch `HrOfflineRecording`, align `HrOfflineRecording.startTime` + 1-Hz `samples` (`sample.hr` / `correctedHr`) to workout timestamps, and call `WorkoutSamplesDatabaseManager.patchMissingHeartRateSamples()` to populate ONLY missing (`NULL` or `<= 0`) `SensorType.HR` rows while preserving all existing valid HR, GPS, speed, cadence, and power samples.
+2. *Strict HRV Integrity & Summary Recomputation (`REQ-SET-109.2`)*:
+   - `PolarVeritySenseOfflineController` MUST NEVER write synthetic RR intervals or optical PPI rows into `WorkoutRr.db` and MUST NEVER invoke `HrvPostWorkoutRecomputer`.
+   - After patching `WorkoutSamples.db`, the controller SHALL recompute `SensorType.HR` summary extrema (`MIN`, `MAX`, `AVG` with count) and optional EF/decoupling into `WorkoutSummaries.db` (`TABLE_EXTREMA_VALUES`) and call `WorkoutRepository.refreshWorkout(workoutId)` so Aftermath summaries and HR zone durations (`ZoneDistributionCalculator`) update cleanly.
+3. *Multi-Session Flash Safety & Aftermath Deferred Retry (`REQ-SET-109.3`)*:
+   - `removeOfflineRecord()` MUST execute strictly AFTER SQLite commits succeed and delete ONLY the `PolarOfflineRecordingEntry` matching the workout's expected time window (or persisted `polarExerciseId` path), preserving unrelated recordings on the 16 MB flash.
+   - When Verity Sense is unreachable/powered off or no data is retrieved when backfill is needed, the controller SHALL persist `WorkoutSummariesDatabaseManager.setPolarSyncPending(...)` tagging `polarExerciseId` with `"verity:"` prefix + matched path (zero DB schema bump).
+   - `PolarH10RetrySyncBanner` (in `TrackOnMapScreen.kt` and `WorkoutDetailTabbedContent.kt`) SHALL detect `"verity:"` pending state, render localized optical Blue Sensor Mode copy across all 9 locales without emojis (*"Turn on your Polar Verity Sense in Blue Sensor Mode and tap Sync Now."*), dispatch *Sync Now* to `PolarVeritySenseOfflineController.syncPendingWorkout()`, clear pending state and remove only the matched flash entry after SQLite commit, refresh `WorkoutRepository`, and trigger `ExportManager.invalidateWorkoutExport()` + `exportWorkout()`.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a workout with Verity Sense backup armed and missing `HR` seconds, *When* `TrackerService.endWorkout()` executes with sensor in range, *Then* missing 1-Hz `HR` samples and `HR` extrema/zones update before `ExportManager.workoutFinished()`, `WorkoutRr.db` has zero insertions, and only the matched flash entry is removed post-commit.
+• *Given* zero missing `HR` seconds in `WorkoutSamples.db`, *When* stop-time backfill executes, *Then* `getOfflineRecord` is skipped and only the matched entry is stopped and removed.
+• *Given* multiple recordings on Verity Sense 16 MB flash, *When* cleanup runs, *Then* unrelated recordings remain untouched.
+• *Given* Verity Sense was powered off at stop (`polarSyncPending=1`, `verity:` tag), *When* reopened in Blue Sensor Mode and user taps *Sync Now* in Aftermath, *Then* Verity copy renders in 9 locales, `syncPendingWorkout()` backfills HR, refreshes summaries, deletes only matched entry, and clears the banner.
+
+**Invariants**: Zero `WorkoutRr.db` / `HrvPostWorkoutRecomputer` writes; zero `WorkoutSummaries.db` schema bump; gap-only `HR` patching; post-commit single-entry deletion; zero emojis in strings.
+
+

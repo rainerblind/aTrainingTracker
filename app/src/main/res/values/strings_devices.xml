@@ -205,4 +205,12 @@
     <string name="device_polar_verity_backup_recording_title">Polar Verity Sense Backup Recording</string>
     <string name="device_polar_verity_backup_recording_desc">Records optical heart rate into internal sensor memory (e.g. for pool swimming or Bluetooth dropouts).</string>
 
+    <!-- Polar Verity Sense Stop Backfill & Aftermath Retry (ATT-7924, REQ-SET-109) -->
+    <string name="notification_polar_verity_syncing_title">Syncing Polar Verity Sense Data</string>
+    <string name="notification_polar_verity_syncing_desc">Syncing optical HR samples from sensor memory…</string>
+    <string name="polar_verity_retry_sync_title">Polar Verity Sense Offline Data Available</string>
+    <string name="polar_verity_retry_sync_desc">The optical heart rate sensor was unreachable when tracking stopped. Turn on your Polar Verity Sense in Blue Sensor Mode and tap Sync Now.</string>
+    <string name="polar_verity_retry_syncing">Syncing Polar Verity Sense…</string>
+    <string name="polar_verity_retry_sync_failed">Could not connect to Polar Verity Sense. Turn it on in Blue Sensor Mode and try again.</string>
+
 </resources>

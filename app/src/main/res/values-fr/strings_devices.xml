@@ -164,4 +164,12 @@
     <string name="device_polar_verity_backup_recording_title">Enregistrement de secours Polar Verity Sense</string>
     <string name="device_polar_verity_backup_recording_desc">Enregistre la fréquence cardiaque optique dans la mémoire interne du capteur (par ex. en natation ou lors de coupures Bluetooth).</string>
 
+    <!-- Polar Verity Sense Stop Backfill & Aftermath Retry (ATT-7924, REQ-SET-109) -->
+    <string name="notification_polar_verity_syncing_title">Synchronisation Polar Verity Sense</string>
+    <string name="notification_polar_verity_syncing_desc">Synchronisation des échantillons cardiaques optiques depuis la mémoire du capteur…</string>
+    <string name="polar_verity_retry_sync_title">Données hors ligne Polar Verity Sense disponibles</string>
+    <string name="polar_verity_retry_sync_desc">Le capteur optique était injoignable à l\'arrêt du suivi. Allumez votre Polar Verity Sense en mode capteur bleu et appuyez sur Synchroniser maintenant.</string>
+    <string name="polar_verity_retry_syncing">Synchronisation du Polar Verity Sense…</string>
+    <string name="polar_verity_retry_sync_failed">Impossible de se connecter au Polar Verity Sense. Allumez-le en mode capteur bleu et réessayez.</string>
+
 </resources>

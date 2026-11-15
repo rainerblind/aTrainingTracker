@@ -127,6 +127,25 @@ object PolarOfflineGattCoordinator {
             .firstOrNull()
     }
 
+    /**
+     * Resolves the paired Bluetooth MAC address for a stored Polar 8-hex [polarId] or MAC string (`ATT-7924`).
+     */
+    fun findMacAddressForPolarId(context: Context, polarId: String): String? {
+        if (polarId.isBlank()) return null
+        val db = DevicesDatabaseManager.getInstance(context)
+        return db.allDevicesForCache
+            ?.asSequence()
+            ?.filter { it.type == DeviceType.HRM && it.protocol == Protocol.BLUETOOTH_LE }
+            ?.mapNotNull { dev ->
+                val mac = db.getBluetoothMACAddress(dev.id)
+                val name = dev.name ?: ""
+                val matches = mac != null &&
+                    (mac.equals(polarId, ignoreCase = true) || name.contains(polarId, ignoreCase = true))
+                if (matches) mac else null
+            }
+            ?.firstOrNull()
+    }
+
     private fun buildTargetIfEnabled(
         db: DevicesDatabaseManager,
         deviceId: Long,

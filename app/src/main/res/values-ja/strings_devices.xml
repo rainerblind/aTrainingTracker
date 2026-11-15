@@ -164,4 +164,12 @@
     <string name="device_polar_verity_backup_recording_title">Polar Verity Sense バックアップ記録</string>
     <string name="device_polar_verity_backup_recording_desc">光学式心拍数をセンサー内部メモリに記録します（プールでの水泳や Bluetooth 切断時のバックアップ用）。</string>
 
+    <!-- Polar Verity Sense Stop Backfill & Aftermath Retry (ATT-7924, REQ-SET-109) -->
+    <string name="notification_polar_verity_syncing_title">Polar Verity Sense データを同期中</string>
+    <string name="notification_polar_verity_syncing_desc">センサーメモリから光学式心拍データを同期しています…</string>
+    <string name="polar_verity_retry_sync_title">Polar Verity Sense オフラインデータが利用可能</string>
+    <string name="polar_verity_retry_sync_desc">ワークアウト終了時に光学式心拍センサーに接続できませんでした。Polar Verity Sense をブルーセンサーモードでオンにして「今すぐ同期」をタップしてください。</string>
+    <string name="polar_verity_retry_syncing">Polar Verity Sense を同期中…</string>
+    <string name="polar_verity_retry_sync_failed">Polar Verity Sense に接続できませんでした。ブルーセンサーモードでオンにして再試行してください。</string>
+
 </resources>

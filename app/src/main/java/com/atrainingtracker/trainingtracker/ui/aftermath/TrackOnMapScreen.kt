@@ -514,26 +514,9 @@ fun TrackOnMapScreen(
                     }
                 )
                 if (workoutData.polarSyncPending) {
-                    var isSyncingPolar by remember { mutableStateOf(false) }
-                    var polarSyncError by remember { mutableStateOf<String?>(null) }
-                    val failedMsg = stringResource(R.string.polar_h10_retry_sync_failed)
-
-                    PolarH10RetrySyncBanner(
-                        isSyncing = isSyncingPolar,
-                        errorMessage = polarSyncError,
-                        onSyncNow = {
-                            if (!isSyncingPolar) {
-                                isSyncingPolar = true
-                                polarSyncError = null
-                                coroutineScope.launch {
-                                    val success = com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineController.syncPendingWorkout(context, workoutData.id)
-                                    isSyncingPolar = false
-                                    if (!success) {
-                                        polarSyncError = failedMsg
-                                    }
-                                }
-                            }
-                        },
+                    PolarPendingRetrySyncSection(
+                        workoutId = workoutData.id,
+                        polarExerciseId = workoutData.polarExerciseId,
                         onDismiss = {
                             repository.dismissPolarSyncPending(workoutData.id)
                         }

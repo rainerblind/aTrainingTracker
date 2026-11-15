@@ -176,4 +176,12 @@
     <string name="device_polar_verity_backup_recording_title">Polar Verity Sense-Backup-Aufzeichnung</string>
     <string name="device_polar_verity_backup_recording_desc">Zeichnet die optische Herzfrequenz im internen Sensorspeicher auf (z. B. beim Schwimmen oder bei Bluetooth-Aussetzern).</string>
 
+    <!-- Polar Verity Sense Stop Backfill & Aftermath Retry (ATT-7924, REQ-SET-109) -->
+    <string name="notification_polar_verity_syncing_title">Polar Verity Sense-Daten werden synchronisiert</string>
+    <string name="notification_polar_verity_syncing_desc">Optische Herzfrequenzdaten werden aus dem Sensorspeicher synchronisiert…</string>
+    <string name="polar_verity_retry_sync_title">Polar Verity Sense-Offline-Daten verfügbar</string>
+    <string name="polar_verity_retry_sync_desc">Der optische Herzfrequenzsensor war beim Beenden nicht erreichbar. Schalten Sie Ihren Polar Verity Sense im blauen Sensormodus ein und tippen Sie auf Jetzt synchronisieren.</string>
+    <string name="polar_verity_retry_syncing">Polar Verity Sense wird synchronisiert…</string>
+    <string name="polar_verity_retry_sync_failed">Verbindung zum Polar Verity Sense fehlgeschlagen. Im blauen Sensormodus einschalten und erneut versuchen.</string>
+
 </resources>

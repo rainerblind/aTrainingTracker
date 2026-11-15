@@ -164,4 +164,12 @@
     <string name="device_polar_verity_backup_recording_title">Nagrywanie zapasowe Polar Verity Sense</string>
     <string name="device_polar_verity_backup_recording_desc">Zapisuje optyczne tętno w pamięci wewnętrznej czujnika (np. podczas pływania w basenie lub zaniku Bluetooth).</string>
 
+    <!-- Polar Verity Sense Stop Backfill & Aftermath Retry (ATT-7924, REQ-SET-109) -->
+    <string name="notification_polar_verity_syncing_title">Synchronizowanie danych Polar Verity Sense</string>
+    <string name="notification_polar_verity_syncing_desc">Synchronizowanie optycznych próbek tętna z pamięci czujnika…</string>
+    <string name="polar_verity_retry_sync_title">Dostępne dane offline Polar Verity Sense</string>
+    <string name="polar_verity_retry_sync_desc">Czujnik optyczny był nieosiągalny po zakończeniu treningu. Włącz Polar Verity Sense w trybie niebieskiego czujnika i dotknij Synchronizuj teraz.</string>
+    <string name="polar_verity_retry_syncing">Synchronizowanie Polar Verity Sense…</string>
+    <string name="polar_verity_retry_sync_failed">Nie udało się połączyć z Polar Verity Sense. Włącz tryb niebieskiego czujnika i spróbuj ponownie.</string>
+
 </resources>

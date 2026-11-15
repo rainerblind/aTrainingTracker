@@ -2410,6 +2410,13 @@ public class TrackerService extends Service {
                         Log.e(TAG, "Error in Polar H10 stop and backfill for workout " + finalWorkoutId, t);
                     }
                 }
+                if (PolarVeritySenseOfflineController.isRecordingArmed()) {
+                    try {
+                        PolarVeritySenseOfflineController.stopAndBackfillWorkoutBlocking(appContext, finalWorkoutId, baseFileName);
+                    } catch (Throwable t) {
+                        Log.e(TAG, "Error in Polar Verity Sense stop and backfill for workout " + finalWorkoutId, t);
+                    }
+                }
 
                 // ATT-7918 (REQ-SET-105.4, REQ-SET-105.5): Execute post-workout HRV and ERTS recomputations
                 // synchronously on mDbExecutor BEFORE ExportManager.workoutFinished() so exported files

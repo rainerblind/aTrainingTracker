@@ -1090,6 +1090,54 @@ public class WorkoutSamplesDatabaseManager {
         return patchedCount;
     }
 
+    /**
+     * Valid positive heart-rate summary statistics computed directly from {@code WorkoutSamples.db}
+     * ({@code ATT-7924}, {@code REQ-SET-109.2}).
+     */
+    public static class HrStats {
+        public final double min;
+        public final double max;
+        public final double avg;
+        public final int count;
+
+        public HrStats(double min, double max, double avg, int count) {
+            this.min = min;
+            this.max = max;
+            this.avg = avg;
+            this.count = count;
+        }
+    }
+
+    /**
+     * Computes MIN, MAX, AVG, and sample count over valid positive {@code HR} rows in {@code WorkoutSamples.db}
+     * ({@code ATT-7924}, {@code REQ-SET-109.2}). Returns {@code null} if no positive HR samples exist.
+     */
+    @Nullable
+    public HrStats calcHeartRateStats(@Nullable String baseFileName) {
+        if (baseFileName == null || !existsTable(baseFileName)) {
+            return null;
+        }
+        SQLiteDatabase db = getDatabase();
+        String table = getTableName(baseFileName);
+        if (!existsColumnInTable(db, table, SensorType.HR.name())) {
+            return null;
+        }
+        String hrCol = SensorType.HR.name();
+        String sql = "SELECT MIN(" + hrCol + "), MAX(" + hrCol + "), AVG(" + hrCol + "), COUNT(" + hrCol + ") FROM " + table
+                + " WHERE " + hrCol + " IS NOT NULL AND " + hrCol + " > 0";
+        try (Cursor cursor = db.rawQuery(sql, null)) {
+            if (cursor != null && cursor.moveToFirst()) {
+                int count = cursor.getInt(3);
+                if (count > 0 && !cursor.isNull(0) && !cursor.isNull(1) && !cursor.isNull(2)) {
+                    return new HrStats(cursor.getDouble(0), cursor.getDouble(1), cursor.getDouble(2), count);
+                }
+            }
+        } catch (Exception e) {
+            if (DEBUG) Log.w(TAG, "Error calculating HR stats for " + baseFileName + ": " + e.getMessage(), e);
+        }
+        return null;
+    }
+
     private static long parseTimestampMs(@Nullable String timeStr) {
         if (timeStr == null || timeStr.trim().isEmpty()) return 0L;
         String[] formats = {

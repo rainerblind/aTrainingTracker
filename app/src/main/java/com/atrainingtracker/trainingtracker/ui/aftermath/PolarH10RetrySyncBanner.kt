@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.ui.aftermath
 
+import android.content.Context
 import android.content.res.Configuration
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -40,18 +41,87 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineController
+import com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarVeritySenseOfflineController
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
+import kotlinx.coroutines.launch
+
+/**
+ * Dispatches a pending Aftermath offline sync to [PolarVeritySenseOfflineController] when
+ * [polarExerciseId] carries the Verity Sense tag, or to [PolarH10OfflineController] otherwise (`ATT-7924`).
+ */
+suspend fun syncPendingPolarWorkout(
+    context: Context,
+    workoutId: Long,
+    polarExerciseId: String?
+): Boolean {
+    return if (PolarVeritySenseOfflineController.isVerityPendingSync(polarExerciseId)) {
+        PolarVeritySenseOfflineController.syncPendingWorkout(context, workoutId)
+    } else {
+        PolarH10OfflineController.syncPendingWorkout(context, workoutId)
+    }
+}
+
+/**
+ * Stateful Aftermath retry-sync wrapper that detects Polar H10 vs. Polar Verity Sense pending workouts,
+ * renders the matching wake-up instructions, and invokes [syncPendingPolarWorkout] (`REQ-SET-106.2`, `REQ-SET-109.3`).
+ */
+@Composable
+fun PolarPendingRetrySyncSection(
+    workoutId: Long,
+    polarExerciseId: String?,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    val isVeritySense = PolarVeritySenseOfflineController.isVerityPendingSync(polarExerciseId)
+    var isSyncingPolar by remember(workoutId, polarExerciseId) { mutableStateOf(false) }
+    var polarSyncError by remember(workoutId, polarExerciseId) { mutableStateOf<String?>(null) }
+    val failedMsg = stringResource(
+        if (isVeritySense) R.string.polar_verity_retry_sync_failed else R.string.polar_h10_retry_sync_failed
+    )
+
+    PolarH10RetrySyncBanner(
+        onSyncNow = {
+            if (!isSyncingPolar) {
+                isSyncingPolar = true
+                polarSyncError = null
+                coroutineScope.launch {
+                    val success = syncPendingPolarWorkout(context, workoutId, polarExerciseId)
+                    isSyncingPolar = false
+                    if (!success) {
+                        polarSyncError = failedMsg
+                    }
+                }
+            }
+        },
+        onDismiss = onDismiss,
+        modifier = modifier,
+        isSyncing = isSyncingPolar,
+        errorMessage = polarSyncError,
+        isVeritySense = isVeritySense
+    )
+}
 
 /**
  * Material 3 retry sync banner displayed in Aftermath (Workout Details)
- * when a workout has unretrieved offline data stored on a sleeping Polar H10 strap (REQ-SET-106.2, ATT-7919).
+ * when a workout has unretrieved offline data stored on a sleeping Polar H10 strap (`REQ-SET-106.2`, `ATT-7919`)
+ * or a powered-off Polar Verity Sense optical sensor (`REQ-SET-109.3`, `ATT-7924`).
  */
 @Composable
 fun PolarH10RetrySyncBanner(
@@ -59,8 +129,13 @@ fun PolarH10RetrySyncBanner(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
     isSyncing: Boolean = false,
-    errorMessage: String? = null
+    errorMessage: String? = null,
+    isVeritySense: Boolean = false
 ) {
+    val titleRes = if (isVeritySense) R.string.polar_verity_retry_sync_title else R.string.polar_h10_retry_sync_title
+    val descRes = if (isVeritySense) R.string.polar_verity_retry_sync_desc else R.string.polar_h10_retry_sync_desc
+    val syncingRes = if (isVeritySense) R.string.polar_verity_retry_syncing else R.string.polar_h10_retry_syncing
+
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -76,18 +151,18 @@ fun PolarH10RetrySyncBanner(
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
-            BannerHeader()
+            BannerHeader(titleRes = titleRes)
 
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = stringResource(R.string.polar_h10_retry_sync_desc),
+                text = stringResource(descRes),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSecondaryContainer
             )
 
             if (isSyncing) {
-                BannerSyncingStatus()
+                BannerSyncingStatus(syncingRes = syncingRes)
             }
 
             if (!errorMessage.isNullOrEmpty()) {
@@ -111,7 +186,7 @@ fun PolarH10RetrySyncBanner(
 }
 
 @Composable
-private fun BannerHeader() {
+private fun BannerHeader(titleRes: Int) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.fillMaxWidth()
@@ -124,7 +199,7 @@ private fun BannerHeader() {
         )
         Spacer(modifier = Modifier.width(8.dp))
         Text(
-            text = stringResource(R.string.polar_h10_retry_sync_title),
+            text = stringResource(titleRes),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSecondaryContainer
@@ -133,7 +208,7 @@ private fun BannerHeader() {
 }
 
 @Composable
-private fun BannerSyncingStatus() {
+private fun BannerSyncingStatus(syncingRes: Int) {
     Spacer(modifier = Modifier.height(12.dp))
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -146,7 +221,7 @@ private fun BannerSyncingStatus() {
         )
         Spacer(modifier = Modifier.width(8.dp))
         Text(
-            text = stringResource(R.string.polar_h10_retry_syncing),
+            text = stringResource(syncingRes),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSecondaryContainer
         )
@@ -168,14 +243,22 @@ private fun BannerActions(
             onClick = onDismiss,
             enabled = !isSyncing
         ) {
-            Text(text = stringResource(R.string.polar_h10_retry_sync_dismiss))
+            Text(
+                text = stringResource(R.string.polar_h10_retry_sync_dismiss),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
         Spacer(modifier = Modifier.width(8.dp))
         Button(
             onClick = onSyncNow,
             enabled = !isSyncing
         ) {
-            Text(text = stringResource(R.string.polar_h10_retry_sync_action))
+            Text(
+                text = stringResource(R.string.polar_h10_retry_sync_action),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }
@@ -188,6 +271,19 @@ private fun PolarH10RetrySyncBannerPreview() {
         PolarH10RetrySyncBanner(
             onSyncNow = {},
             onDismiss = {}
+        )
+    }
+}
+
+@Preview(name = "PolarVerityRetrySyncBanner - Light", showBackground = true)
+@Preview(name = "PolarVerityRetrySyncBanner - Dark", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+private fun PolarVerityRetrySyncBannerPreview() {
+    ATrainingTrackerTheme {
+        PolarH10RetrySyncBanner(
+            onSyncNow = {},
+            onDismiss = {},
+            isVeritySense = true
         )
     }
 }

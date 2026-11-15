@@ -20,10 +20,25 @@
 
 package com.atrainingtracker.banalservice.devices.bluetooth_le.polar
 
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
 import android.os.Build
 import android.util.Log
 import androidx.annotation.VisibleForTesting
+import androidx.core.app.ActivityCompat
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
+import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.banalservice.sensor.SensorType
+import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.database.ExtremaType
+import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager
+import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
+import com.atrainingtracker.trainingtracker.exporter.ExportManager
+import com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculator
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.polar.androidcommunications.api.ble.model.gatt.client.psftp.BlePsFtpUtils
 import com.polar.sdk.api.PolarBleApi
 import com.polar.sdk.api.model.PolarOfflineRecordingData
@@ -34,6 +49,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.util.concurrent.atomic.AtomicBoolean
@@ -41,19 +57,28 @@ import kotlin.math.abs
 
 /**
  * Controller for Polar Verity Sense (and compatible optical Polar sensors) offline HR recording
- * using `PolarOfflineRecordingApi` (`ATT-7923`, `REQ-SET-108`).
+ * using `PolarOfflineRecordingApi` (`ATT-7923`, `REQ-SET-108`) and post-workout HR backfill /
+ * Aftermath deferred retry (`ATT-7924`, `REQ-SET-109`).
  *
  * Enforces Android 13+ (API 33) isolation, GATT arbitration with [MyBTLEDevice], device clock
- * synchronization, pre-existing HR recording cleanup, non-blocking `SYSTEM_BUSY` resilience, and
- * single-shot session arming (mid-workout `0x180D` BLE flaps never interrupt PFTP recording).
+ * synchronization, non-blocking `SYSTEM_BUSY` resilience, single-shot session arming,
+ * 1-Hz gap-only `SensorType.HR` SQLite patching, strict HRV (`WorkoutRr.db`) exclusion, and
+ * post-commit single-entry flash cleanup.
  */
-@Suppress("TooGenericExceptionCaught")
+@Suppress("LargeClass", "TooGenericExceptionCaught")
 object PolarVeritySenseOfflineController {
 
     private const val TAG = "PolarVerityOfflineCtrl"
     const val ARMING_TIMEOUT_MS = 15_000L
     const val FETCH_TIMEOUT_MS = 30_000L
+    const val BACKFILL_TIMEOUT_MS = 45_000L
+    const val POLAR_VERITY_SYNC_NOTIFICATION_ID = 8046
+    const val VERITY_EXERCISE_PREFIX = "verity:"
     private const val ENTRY_MATCH_TOLERANCE_MS = 180_000L
+    private const val PENDING_MATCH_TOLERANCE_MS = 600_000L
+    private const val MIN_VALID_HR_BPM = 25
+    private const val MAX_VALID_HR_BPM = 250
+    private const val MILLIS_PER_SECOND = 1000L
     private const val SYSTEM_BUSY_ERROR_NAME = "SYSTEM_BUSY"
 
     private val REQUIRED_ARMING_FEATURES = setOf(
@@ -145,8 +170,14 @@ object PolarVeritySenseOfflineController {
     fun getLastArmingError(): String? = lastArmingError
 
     @VisibleForTesting
-    fun setArmedForTesting(armed: Boolean) {
+    fun setArmedForTesting(
+        armed: Boolean,
+        deviceId: String? = armedDeviceId,
+        macAddress: String? = armedMacAddress
+    ) {
         isArmed.set(armed)
+        armedDeviceId = deviceId
+        armedMacAddress = macAddress
     }
 
     @VisibleForTesting
@@ -201,21 +232,166 @@ object PolarVeritySenseOfflineController {
     }
 
     /**
-     * Workout-stop lifecycle hook resetting session arming state cleanly (`REQ-SET-108.2`).
+     * Workout-stop lifecycle hook (`REQ-SET-108.2`, `REQ-SET-109.1`).
+     * Retains armed session metadata while `isArmed` is true so `TrackerService.endWorkout()` can execute
+     * synchronous stop-time backfill before resetting state; shuts down any test API when not armed.
      */
     @Suppress("UnusedParameter")
     @JvmStatic
     fun onWorkoutStopped(context: Context) {
-        val wasArmed = isArmed.getAndSet(false)
-        armedDeviceId = null
-        armedMacAddress = null
-        if (!wasArmed) {
+        if (getEffectiveSdkInt() < Build.VERSION_CODES.TIRAMISU) {
+            resetArmedState()
+            return
+        }
+        if (!isArmed.get()) {
+            armedDeviceId = null
+            armedMacAddress = null
             apiOverride?.let { api ->
                 try {
                     api.shutDown()
                 } catch (t: Throwable) {
                     Log.w(TAG, "Error shutting down test PolarBleApi: ${t.message}", t)
                 }
+            }
+        }
+    }
+
+    /**
+     * Returns true when a persisted pending-sync record belongs to Polar Verity Sense (`REQ-SET-109.3`).
+     */
+    @JvmStatic
+    fun isVerityPendingSync(polarExerciseId: String?): Boolean {
+        return polarExerciseId?.startsWith(VERITY_EXERCISE_PREFIX) == true
+    }
+
+    /**
+     * Evaluates whether `WorkoutSamples.db` has missing or unpopulated `SensorType.HR` samples (`REQ-SET-109.1`).
+     * Strictly ignores `WorkoutRr.db` because Verity Sense optical recording covers 1-Hz HR only.
+     */
+    @JvmStatic
+    fun shouldBackfill(context: Context, baseFileName: String?): Boolean {
+        if (getEffectiveSdkInt() < Build.VERSION_CODES.TIRAMISU) {
+            return false
+        }
+        return WorkoutSamplesDatabaseManager.getInstance(context.applicationContext)
+            .hasMissingHeartRateSamples(baseFileName)
+    }
+
+    /**
+     * Synchronous blocking convenience entry point invoked by `TrackerService.endWorkout()` before exports
+     * (`REQ-SET-109.1`).
+     */
+    @JvmStatic
+    @JvmOverloads
+    fun stopAndBackfillWorkoutBlocking(
+        context: Context,
+        workoutId: Long,
+        baseFileName: String,
+        startTimeMs: Long = sessionStartTimeMs
+    ): Boolean {
+        return runBlocking(dispatcher) {
+            stopAndBackfillWorkout(context, workoutId, baseFileName, startTimeMs)
+        }
+    }
+
+    /**
+     * Stops active Verity Sense offline HR recording, evaluates gap continuity, fetches & aligns
+     * 1-Hz `HrOfflineRecording` if gaps exist, updates `WorkoutSamples.db` and `WorkoutSummaries.db`
+     * without touching `WorkoutRr.db`, and removes ONLY the matched flash entry strictly post-commit (`REQ-SET-109`).
+     */
+    suspend fun stopAndBackfillWorkout(
+        context: Context,
+        workoutId: Long,
+        baseFileName: String,
+        startTimeMs: Long = sessionStartTimeMs
+    ): Boolean {
+        val appContext = context.applicationContext
+        val (targetId, targetMac) = if (getEffectiveSdkInt() >= Build.VERSION_CODES.TIRAMISU) {
+            resolveTargetIdsForStop(appContext)
+        } else {
+            null to null
+        }
+        if (targetId == null) {
+            resetArmedState()
+            return false
+        }
+
+        val needsBackfill = shouldBackfill(appContext, baseFileName)
+        val windowStartMs = if (startTimeMs > 0L) startTimeMs else System.currentTimeMillis()
+        val windowEndMs = System.currentTimeMillis()
+        if (needsBackfill) {
+            showSyncNotification(appContext)
+        }
+
+        val backfillCtx = StopBackfillContext(
+            workoutId = workoutId,
+            baseFileName = baseFileName,
+            polarId = targetId,
+            macAddress = targetMac,
+            windowStartMs = windowStartMs,
+            windowEndMs = windowEndMs,
+            needsBackfill = needsBackfill
+        )
+        var matchedPath: String? = null
+        return try {
+            val sessionOutcome = executeStopBackfillSession(appContext, backfillCtx)
+            matchedPath = sessionOutcome.matchedPath
+            if (!sessionOutcome.success && needsBackfill && workoutId > 0L) {
+                recordPendingSync(appContext, workoutId, targetId, matchedPath, windowStartMs, windowEndMs)
+            }
+            sessionOutcome.success
+        } catch (t: Throwable) {
+            Log.w(TAG, "Exception during Polar Verity Sense stopAndBackfillWorkout: ${t.message}", t)
+            if (needsBackfill && workoutId > 0L) {
+                recordPendingSync(appContext, workoutId, targetId, matchedPath, windowStartMs, windowEndMs)
+            }
+            false
+        } finally {
+            resetArmedState()
+            if (needsBackfill) {
+                dismissSyncNotification(appContext)
+            }
+        }
+    }
+
+    /**
+     * Synchronous blocking convenience wrapper for UI callers (`REQ-SET-109.3`).
+     */
+    @JvmStatic
+    fun syncPendingWorkoutBlocking(context: Context, workoutId: Long): Boolean {
+        return runBlocking(dispatcher) {
+            syncPendingWorkout(context, workoutId)
+        }
+    }
+
+    /**
+     * Deferred manual retry invoked from the Aftermath retry banner when Polar Verity Sense was
+     * powered off at workout stop and has been restarted in Blue Sensor Mode (`REQ-SET-109.3`).
+     */
+    suspend fun syncPendingWorkout(context: Context, workoutId: Long): Boolean {
+        if (getEffectiveSdkInt() < Build.VERSION_CODES.TIRAMISU) return false
+
+        val appContext = context.applicationContext
+        val summariesDb = WorkoutSummariesDatabaseManager.getInstance(appContext)
+        val pendingData = summariesDb.getPolarPendingSyncData(workoutId)
+        val (targetId, targetMac) = resolveTargetIdsForRetry(appContext, pendingData?.deviceId)
+
+        return if (targetId == null) {
+            Log.w(TAG, "No target Polar Verity Sense device ID for pending workout $workoutId")
+            false
+        } else {
+            try {
+                executePendingSyncSession(
+                    appContext = appContext,
+                    workoutId = workoutId,
+                    summariesDb = summariesDb,
+                    pendingData = pendingData,
+                    polarId = targetId,
+                    macAddress = targetMac
+                )
+            } catch (t: Throwable) {
+                Log.e(TAG, "Exception during Polar Verity Sense syncPendingWorkout: ${t.message}", t)
+                false
             }
         }
     }
@@ -441,22 +617,429 @@ object PolarVeritySenseOfflineController {
         }
     }
 
+    private data class StopBackfillContext(
+        val workoutId: Long,
+        val baseFileName: String,
+        val polarId: String,
+        val macAddress: String?,
+        val windowStartMs: Long,
+        val windowEndMs: Long,
+        val needsBackfill: Boolean
+    )
+
+    private data class StopSessionOutcome(
+        val success: Boolean,
+        val matchedPath: String? = null
+    )
+
+    private suspend fun executeStopBackfillSession(
+        appContext: Context,
+        backfillCtx: StopBackfillContext
+    ): StopSessionOutcome {
+        var matchedPath: String? = null
+        val success = PolarOfflineGattCoordinator.withGattYieldAndPolarApi(
+            context = appContext,
+            macAddress = backfillCtx.macAddress,
+            polarId = backfillCtx.polarId,
+            features = REQUIRED_OFFLINE_FEATURES,
+            timeoutMs = BACKFILL_TIMEOUT_MS,
+            apiOverride = apiOverride
+        ) { api ->
+            val session = connectAndMatchHrEntry(
+                api = api,
+                polarId = backfillCtx.polarId,
+                windowStartMs = backfillCtx.windowStartMs,
+                windowEndMs = backfillCtx.windowEndMs,
+                preferredPath = null,
+                toleranceMs = ENTRY_MATCH_TOLERANCE_MS
+            )
+            matchedPath = session.match?.path
+            handleStopBackfillMatch(api, appContext, backfillCtx, session)
+        } ?: false
+
+        return StopSessionOutcome(success = success, matchedPath = matchedPath)
+    }
+
+    private suspend fun executePendingSyncSession(
+        appContext: Context,
+        workoutId: Long,
+        summariesDb: WorkoutSummariesDatabaseManager,
+        pendingData: WorkoutSummariesDatabaseManager.PolarPendingSyncData?,
+        polarId: String,
+        macAddress: String?
+    ): Boolean {
+        val preferredPath = stripVerityPrefix(pendingData?.exerciseId)
+        val windowStartMs = pendingData?.expectedStartMs ?: 0L
+        val windowEndMs = pendingData?.expectedEndMs ?: 0L
+        val repo = WorkoutRepository.getInstance(appContext)
+        val baseFileName = repo.getBaseFileName(workoutId) ?: summariesDb.getBaseFileName(workoutId)
+
+        val result = PolarOfflineGattCoordinator.withGattYieldAndPolarApi(
+            context = appContext,
+            macAddress = macAddress,
+            polarId = polarId,
+            features = REQUIRED_OFFLINE_FEATURES,
+            timeoutMs = BACKFILL_TIMEOUT_MS,
+            apiOverride = apiOverride
+        ) { api ->
+            val session = connectAndMatchHrEntry(
+                api = api,
+                polarId = polarId,
+                windowStartMs = windowStartMs,
+                windowEndMs = windowEndMs,
+                preferredPath = preferredPath,
+                toleranceMs = PENDING_MATCH_TOLERANCE_MS
+            )
+            val match = session.match
+            val hrData = if (session.ready && match != null) {
+                api.getOfflineRecord(polarId, match, secret = null)
+                    as? PolarOfflineRecordingData.HrOfflineRecording
+            } else {
+                null
+            }
+            val committed = if (hrData != null) {
+                applyBackfillAndCommit(
+                    appContext = appContext,
+                    workoutId = workoutId,
+                    baseFileName = baseFileName,
+                    hrData = hrData,
+                    fallbackAnchorMs = windowStartMs,
+                    clearPendingFlag = true
+                )
+            } else {
+                false
+            }
+            if (committed && match != null) {
+                api.removeOfflineRecord(polarId, match)
+                reexportUpdatedWorkout(appContext, repo, workoutId, baseFileName)
+            }
+            committed
+        }
+        return result == true
+    }
+
+    private data class MatchedOfflineSession(
+        val ready: Boolean,
+        val match: PolarOfflineRecordingEntry?
+    )
+
+    private suspend fun connectAndMatchHrEntry(
+        api: PolarBleApi,
+        polarId: String,
+        windowStartMs: Long,
+        windowEndMs: Long,
+        preferredPath: String?,
+        toleranceMs: Long
+    ): MatchedOfflineSession {
+        api.connectToDevice(polarId)
+        api.waitForConnection(polarId)
+        val ready = PolarOfflineGattCoordinator.awaitFeaturesReady(
+            api, polarId, REQUIRED_OFFLINE_FEATURES, featureTimeoutMs
+        )
+        if (!ready) {
+            return MatchedOfflineSession(ready = false, match = null)
+        }
+        stopActiveHrIfRunning(api, polarId)
+        val entries = api.listOfflineRecordings(polarId).toList()
+        val match = selectMatchingHrEntry(
+            entries = entries,
+            windowStartMs = windowStartMs,
+            windowEndMs = windowEndMs,
+            preferredPath = preferredPath,
+            toleranceMs = toleranceMs
+        )
+        return MatchedOfflineSession(ready = true, match = match)
+    }
+
+    private suspend fun handleStopBackfillMatch(
+        api: PolarBleApi,
+        appContext: Context,
+        backfillCtx: StopBackfillContext,
+        session: MatchedOfflineSession
+    ): Boolean {
+        val match = session.match
+        return when {
+            !session.ready -> false
+            !backfillCtx.needsBackfill -> {
+                // Zero-gap fast path: skip full PFTP download while stopping & cleaning matched flash entry
+                if (match != null) {
+                    api.removeOfflineRecord(backfillCtx.polarId, match)
+                }
+                true
+            }
+            match == null -> {
+                Log.w(TAG, "No matching Verity Sense HR entry found for workout ${backfillCtx.workoutId}")
+                false
+            }
+            else -> {
+                val hrData = api.getOfflineRecord(backfillCtx.polarId, match, secret = null)
+                    as? PolarOfflineRecordingData.HrOfflineRecording
+                val committed = if (hrData != null) {
+                    applyBackfillAndCommit(
+                        appContext = appContext,
+                        workoutId = backfillCtx.workoutId,
+                        baseFileName = backfillCtx.baseFileName,
+                        hrData = hrData,
+                        fallbackAnchorMs = backfillCtx.windowStartMs,
+                        clearPendingFlag = false
+                    )
+                } else {
+                    false
+                }
+                if (committed) {
+                    // Multi-session flash safety: delete ONLY the matched entry strictly AFTER SQLite commit
+                    api.removeOfflineRecord(backfillCtx.polarId, match)
+                }
+                committed
+            }
+        }
+    }
+
+    private fun applyBackfillAndCommit(
+        appContext: Context,
+        workoutId: Long,
+        baseFileName: String?,
+        hrData: PolarOfflineRecordingData.HrOfflineRecording,
+        fallbackAnchorMs: Long,
+        clearPendingFlag: Boolean
+    ): Boolean {
+        val anchorMs = resolveRecordingAnchorMs(hrData, fallbackAnchorMs)
+        val hrPairs = buildHrPairs(hrData, anchorMs)
+        if (!baseFileName.isNullOrEmpty() && hrPairs.isNotEmpty()) {
+            val samplesManager = WorkoutSamplesDatabaseManager.getInstance(appContext)
+            samplesManager.patchMissingHeartRateSamples(baseFileName, anchorMs, hrPairs)
+            recomputeHrSummaryMetrics(appContext, workoutId, baseFileName)
+        }
+        if (clearPendingFlag) {
+            WorkoutSummariesDatabaseManager.getInstance(appContext).clearPolarSyncPending(workoutId)
+        }
+        WorkoutRepository.getInstance(appContext).refreshWorkout(workoutId)
+        return true
+    }
+
+    private fun resolveRecordingAnchorMs(
+        hrData: PolarOfflineRecordingData.HrOfflineRecording,
+        fallbackAnchorMs: Long
+    ): Long {
+        val parsedMs = hrData.startTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        return if (parsedMs > 0L) parsedMs else fallbackAnchorMs
+    }
+
+    @VisibleForTesting
+    internal fun alignHrSamples(
+        hrData: PolarOfflineRecordingData.HrOfflineRecording,
+        anchorMs: Long
+    ): List<Pair<Long, Int>> {
+        val samples = hrData.data.samples
+        if (samples.isEmpty()) return emptyList()
+        val pairs = ArrayList<Pair<Long, Int>>(samples.size)
+        for ((index, sample) in samples.withIndex()) {
+            val rawBpm = if (sample.hr > 0) sample.hr else sample.correctedHr
+            if (rawBpm in MIN_VALID_HR_BPM..MAX_VALID_HR_BPM) {
+                pairs.add((anchorMs + index * MILLIS_PER_SECOND) to rawBpm)
+            }
+        }
+        return pairs
+    }
+
+    private fun buildHrPairs(
+        hrData: PolarOfflineRecordingData.HrOfflineRecording,
+        anchorMs: Long
+    ): List<android.util.Pair<Long, Int>> {
+        return alignHrSamples(hrData, anchorMs).map { (timestampMs, bpm) ->
+            android.util.Pair(timestampMs, bpm)
+        }
+    }
+
+    private fun recomputeHrSummaryMetrics(
+        appContext: Context,
+        workoutId: Long,
+        baseFileName: String
+    ) {
+        val samplesManager = WorkoutSamplesDatabaseManager.getInstance(appContext)
+        val stats = samplesManager.calcHeartRateStats(baseFileName) ?: return
+        val summariesDb = WorkoutSummariesDatabaseManager.getInstance(appContext)
+        summariesDb.updateExtremaValue(workoutId, SensorType.HR, ExtremaType.MIN, stats.min, null)
+        summariesDb.updateExtremaValue(workoutId, SensorType.HR, ExtremaType.MAX, stats.max, null)
+        summariesDb.updateExtremaValue(workoutId, SensorType.HR, ExtremaType.AVG, stats.avg, null, stats.count)
+
+        try {
+            val repo = WorkoutRepository.getInstance(appContext)
+            val telemetry = repo.getPowerSpeedHrSamples(baseFileName)
+            val hasHrAndKinematic = telemetry.hrSamples.isNotEmpty() &&
+                (telemetry.powerSamples.isNotEmpty() || telemetry.speedSamples.isNotEmpty())
+            if (hasHrAndKinematic) {
+                val sportName = summariesDb.getString(
+                    workoutId,
+                    WorkoutSummariesDatabaseManager.WorkoutSummaries.B_SPORT
+                )
+                val sportType = BSportType.entries.firstOrNull { it.name == sportName } ?: BSportType.UNKNOWN
+                val aerobicResult = PowerPhysiologyCalculator.computeAerobicEfficiencyAndDecoupling(
+                    telemetry.powerSamples,
+                    telemetry.speedSamples,
+                    telemetry.hrSamples,
+                    sportType
+                )
+                val targetSensor = if (aerobicResult.isPowerBased) SensorType.POWER else SensorType.SPEED_mps
+                aerobicResult.efficiencyFactor?.let { ef ->
+                    summariesDb.updateExtremaValue(workoutId, targetSensor, ExtremaType.EFFICIENCY_FACTOR, ef, null)
+                }
+                aerobicResult.decouplingPct?.let { dec ->
+                    summariesDb.updateExtremaValue(workoutId, targetSensor, ExtremaType.AEROBIC_DECOUPLING, dec, null)
+                }
+            }
+        } catch (t: Throwable) {
+            Log.w(TAG, "Non-fatal error recomputing HR aerobic efficiency for $workoutId: ${t.message}")
+        }
+    }
+
+    private fun reexportUpdatedWorkout(
+        appContext: Context,
+        repo: WorkoutRepository,
+        workoutId: Long,
+        baseFileName: String?
+    ) {
+        val updatedWorkout = try {
+            repo.allWorkouts.value.find { it.id == workoutId }
+        } catch (t: Throwable) {
+            Log.w(TAG, "Failed to resolve refreshed workout $workoutId for re-export: ${t.message}")
+            null
+        } ?: return
+
+        try {
+            val exportManager = ExportManager(appContext)
+            if (!baseFileName.isNullOrEmpty()) {
+                exportManager.invalidateWorkoutExport(baseFileName)
+            }
+            exportManager.exportWorkout(updatedWorkout)
+        } catch (t: Throwable) {
+            Log.w(TAG, "Non-fatal export exception after Verity Sense deferred sync: ${t.message}")
+        }
+    }
+
+    private fun resolveTargetIdsForStop(appContext: Context): Pair<String?, String?> {
+        var targetId = armedDeviceId
+        var targetMac = armedMacAddress
+        if (targetId == null) {
+            val target = PolarOfflineGattCoordinator.findEnabledPolarDevice(appContext) { name, mac ->
+                PolarOfflineGattCoordinator.isPolarVeritySenseDevice(appContext, name, macAddress = mac)
+            }
+            targetId = target?.polarId
+            targetMac = target?.macAddress
+        }
+        return targetId to targetMac
+    }
+
+    private fun resolveTargetIdsForRetry(
+        appContext: Context,
+        persistedDeviceId: String?
+    ): Pair<String?, String?> {
+        val resolvedId = persistedDeviceId?.takeIf { it.isNotBlank() }
+            ?: armedDeviceId
+            ?: PolarOfflineGattCoordinator.findEnabledPolarDevice(appContext) { name, mac ->
+                PolarOfflineGattCoordinator.isPolarVeritySenseDevice(appContext, name, macAddress = mac)
+            }?.polarId
+        val resolvedMac = resolvedId?.let { id ->
+            PolarOfflineGattCoordinator.findMacAddressForPolarId(appContext, id) ?: armedMacAddress
+        }
+        return resolvedId to resolvedMac
+    }
+
+    private fun recordPendingSync(
+        context: Context,
+        workoutId: Long,
+        targetId: String?,
+        matchedPath: String?,
+        windowStartMs: Long,
+        windowEndMs: Long
+    ) {
+        val devId = targetId ?: armedDeviceId
+        val taggedExerciseId = "$VERITY_EXERCISE_PREFIX${matchedPath.orEmpty()}"
+        WorkoutSummariesDatabaseManager.getInstance(context).setPolarSyncPending(
+            workoutId,
+            devId,
+            taggedExerciseId,
+            windowStartMs,
+            windowEndMs
+        )
+    }
+
+    private fun stripVerityPrefix(exerciseId: String?): String? {
+        if (exerciseId.isNullOrBlank()) return null
+        val raw = if (exerciseId.startsWith(VERITY_EXERCISE_PREFIX)) {
+            exerciseId.removePrefix(VERITY_EXERCISE_PREFIX)
+        } else {
+            exerciseId
+        }
+        return raw.takeIf { it.isNotBlank() }
+    }
+
+    private fun resetArmedState() {
+        isArmed.set(false)
+        armedDeviceId = null
+        armedMacAddress = null
+    }
+
+    private fun showSyncNotification(context: Context) {
+        try {
+            val builder = NotificationCompat.Builder(context, TrainingApplication.NOTIFICATION_CHANNEL__TRACKING_2)
+                .setSmallIcon(R.drawable.ic_stat_notify_logo)
+                .setContentTitle(context.getString(R.string.notification_polar_verity_syncing_title))
+                .setContentText(context.getString(R.string.notification_polar_verity_syncing_desc))
+                .setPriority(NotificationCompat.PRIORITY_LOW)
+                .setOngoing(true)
+                .setAutoCancel(false)
+            val notificationManager = NotificationManagerCompat.from(context)
+            val hasPostPermission = ActivityCompat.checkSelfPermission(
+                context,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+            if (hasPostPermission || Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+                notificationManager.notify(POLAR_VERITY_SYNC_NOTIFICATION_ID, builder.build())
+            }
+        } catch (t: Throwable) {
+            Log.w(TAG, "Could not show Verity sync notification: ${t.message}")
+        }
+    }
+
+    private fun dismissSyncNotification(context: Context) {
+        try {
+            NotificationManagerCompat.from(context).cancel(POLAR_VERITY_SYNC_NOTIFICATION_ID)
+        } catch (t: Throwable) {
+            Log.w(TAG, "Could not dismiss Verity sync notification: ${t.message}")
+        }
+    }
+
     private fun selectMatchingHrEntry(
         entries: List<PolarOfflineRecordingEntry>,
         windowStartMs: Long,
-        windowEndMs: Long
+        windowEndMs: Long,
+        preferredPath: String? = null,
+        toleranceMs: Long = ENTRY_MATCH_TOLERANCE_MS
     ): PolarOfflineRecordingEntry? {
         val hrEntries = entries.filter { it.type == PolarBleApi.PolarDeviceDataType.HR }
-        if (hrEntries.isEmpty()) return null
         val zone = ZoneId.systemDefault()
-        val windowMatches = hrEntries.filter { entry ->
-            val entryMs = entry.date.atZone(zone).toInstant().toEpochMilli()
-            entryMs in (windowStartMs - ENTRY_MATCH_TOLERANCE_MS)..(windowEndMs + ENTRY_MATCH_TOLERANCE_MS)
+        val pathMatch = if (!preferredPath.isNullOrBlank()) {
+            hrEntries.firstOrNull { it.path == preferredPath || it.path.contains(preferredPath) }
+        } else {
+            null
         }
-        val candidates = if (windowMatches.isNotEmpty()) windowMatches else hrEntries
-        return candidates.minByOrNull { entry ->
-            val entryMs = entry.date.atZone(zone).toInstant().toEpochMilli()
-            abs(entryMs - windowStartMs)
+        return when {
+            hrEntries.isEmpty() -> null
+            pathMatch != null -> pathMatch
+            windowStartMs <= 0L -> hrEntries.minByOrNull { entry ->
+                entry.date.atZone(zone).toInstant().toEpochMilli()
+            }
+            else -> {
+                val effectiveEndMs = if (windowEndMs >= windowStartMs) windowEndMs else windowStartMs
+                hrEntries.filter { entry ->
+                    val entryMs = entry.date.atZone(zone).toInstant().toEpochMilli()
+                    entryMs in (windowStartMs - toleranceMs)..(effectiveEndMs + toleranceMs)
+                }.minByOrNull { entry ->
+                    val entryMs = entry.date.atZone(zone).toInstant().toEpochMilli()
+                    abs(entryMs - windowStartMs)
+                }
+            }
         }
     }
 

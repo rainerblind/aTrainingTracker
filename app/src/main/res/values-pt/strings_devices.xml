@@ -163,4 +163,12 @@
     <!-- Polar Verity Sense Optical Offline HR Backup (ATT-7923, REQ-SET-108) -->
     <string name="device_polar_verity_backup_recording_title">Gravação de backup do Polar Verity Sense</string>
     <string name="device_polar_verity_backup_recording_desc">Registra a frequência cardíaca óptica na memória interna do sensor (por ex., ao nadar ou durante quedas de Bluetooth).</string>
+
+    <!-- Polar Verity Sense Stop Backfill & Aftermath Retry (ATT-7924, REQ-SET-109) -->
+    <string name="notification_polar_verity_syncing_title">Sincronizando dados do Polar Verity Sense</string>
+    <string name="notification_polar_verity_syncing_desc">Sincronizando amostras ópticas de frequência cardíaca do sensor…</string>
+    <string name="polar_verity_retry_sync_title">Dados offline do Polar Verity Sense disponíveis</string>
+    <string name="polar_verity_retry_sync_desc">O sensor óptico estava inacessível ao encerrar o treino. Ligue o seu Polar Verity Sense no modo sensor azul e toque em Sincronizar agora.</string>
+    <string name="polar_verity_retry_syncing">Sincronizando Polar Verity Sense…</string>
+    <string name="polar_verity_retry_sync_failed">Não foi possível conectar ao Polar Verity Sense. Ligue-o no modo sensor azul e tente novamente.</string>
 </resources>

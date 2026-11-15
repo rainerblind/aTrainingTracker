@@ -1290,3 +1290,24 @@
   5. *`EditDeviceDialog` UI, 9-Locale Parity & Screenshot (`TST-SET-110.5`)*:
   • Verify `EditDeviceDialog` Compose test confirms Verity Sense displays HR-only toggle (default ON on API 33+, disabled with hint on `< 33`), `TranslationParityTest` passes with zero emojis across all 9 locales, and screenshot on `emulator-5554` verifies layout.
 
+---
+
+### TST-SET-111: **Polar Verity Sense Stop-Time HR Backfill & Aftermath Retry Sync Test Suite** [Verified]
+- **Requirement(s)**: `REQ-SET-109`
+- **Component**: `PolarVeritySenseOfflineController.kt`, `PolarOfflineGattCoordinator.kt`, `TrackerService.java`, `PolarH10RetrySyncBanner.kt`, `WorkoutSamplesDatabaseManager.java`, `WorkoutSummariesDatabaseManager.java`, `res/values*/strings_devices.xml`
+- **Jira**: `ATT-7924`
+- **Status**: Verified (ATT-7924)
+- **Test Description**:
+  1. *Stop-Time Backfill, 1-Hz Alignment & Gap-Only Patching (`TST-SET-111.1`)*:
+  • Verify `stopAndBackfillWorkout()` preserves existing valid live `HR > 0`, GPS, cadence, and power samples while patching ONLY missing `HR` rows in `WorkoutSamples.db` using `HrOfflineRecording.startTime` + 1-Hz `samples` timestamps.
+  • Verify `onWorkoutStopped()` preserves armed state for `TrackerService.endWorkout()` and `stopAndBackfillWorkout()` clears `isRecordingArmed()` in `finally` before exports run.
+  2. *Zero-Gap Fast Path (`TST-SET-111.2`)*:
+  • Verify when `hasMissingHeartRateSamples()` is `false`, `shouldBackfill()` returns `false`, `getOfflineRecord()` is NOT invoked, active `HR` stops, and matched flash entry is removed.
+  3. *Strict HRV Integrity Invariant (`TST-SET-111.3`)*:
+  • Verify `WorkoutRr.db` (`WorkoutRrRepository`) receives zero inserts and `HrvPostWorkoutRecomputer` is NEVER triggered during stop-time or deferred Verity backfill.
+  4. *HR Summary Recomputation & Single-Entry Flash Safety (`TST-SET-111.4`)*:
+  • Verify `SensorType.HR` extrema (`MIN`, `MAX`, `AVG`) update in `WorkoutSummaries.db` (`TABLE_EXTREMA_VALUES`) and `removeOfflineRecord()` deletes ONLY the matched `PolarOfflineRecordingEntry` strictly AFTER SQLite commit (skipping deletion if commit throws and preserving unrelated flash entries).
+  5. *Aftermath Retry Pending, Copy, 9-Locale Parity & UI Screenshot (`TST-SET-111.5`)*:
+  • Verify unreachable Verity Sense persists `setPolarSyncPending` with `verity:` tag, `PolarH10RetrySyncBanner` renders optical Blue Sensor Mode copy across all 9 locales (zero emojis), *Sync Now* executes `PolarVeritySenseOfflineController.syncPendingWorkout()` cleanly, and visual screenshot on `emulator-5554` verifies UI.
+
+
