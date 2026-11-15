@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sport_type_swim">水泳</string>
+    <string name="tuning_cat_swimming">水泳とプール</string>
+    <string name="tuning_swim_activate_title">水泳スポーツ種別を有効にする</string>
+    <string name="tuning_swim_activate_summary">ロッカーやプールのワークアウト向けに水泳種別を作成します（初期一覧は簡潔なまま維持されます）。</string>
+    <string name="tuning_swim_activate_active_summary">スポーツ種別に水泳が有効化されています。</string>
+    <string name="tuning_swim_pool_length_title">既定のプール長</string>
+    <string name="tuning_swim_pool_preset_25m">25 m</string>
+    <string name="tuning_swim_pool_preset_50m">50 m</string>
+    <string name="tuning_swim_pool_preset_25yd">25 yd</string>
+    <string name="tuning_swim_pool_preset_custom">カスタム</string>
+    <string name="tuning_swim_pool_custom_meters_label">カスタム長: %1$d m</string>
+    <string name="tuning_swim_subtitle_active">有効、%1$sプール</string>
+    <string name="tuning_swim_subtitle_inactive">無効、%1$sプール</string>
+</resources>

@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MonitorHeart
 import androidx.compose.material.icons.filled.Navigation
+import androidx.compose.material.icons.filled.Pool
 import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Sensors
@@ -50,7 +51,9 @@ import com.atrainingtracker.trainingtracker.MyUnits
 import com.atrainingtracker.trainingtracker.MyPreferenceManager
 import com.atrainingtracker.trainingtracker.WorkoutCardSectionPreferences
 import com.atrainingtracker.trainingtracker.WorkoutDetailPreferences
+import com.atrainingtracker.trainingtracker.repositories.SportTypesRepository
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutSectionType
+import com.atrainingtracker.trainingtracker.settings.PoolLengthUnit
 import com.atrainingtracker.trainingtracker.settings.TuningConfig
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
@@ -63,10 +66,13 @@ import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.Cockpi
 import com.atrainingtracker.trainingtracker.climbs.ClimbScoringFormula
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.NavigationSection
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.PhysiologyModelsSection
+import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.PoolLengthPreset
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.SensorsGpsFilterSection
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.SensorSearchPreferences
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.SensorSearchTuningSection
+import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.SwimmingSection
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.WorkoutMasksAndCardsSection
+import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.resolvePoolLengthPreset
 import kotlinx.coroutines.launch
 
 /**
@@ -120,6 +126,11 @@ fun AdvancedTuningScreen(
     var enableContextTags by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_ENABLE_CONTEXT_TAGS) }
     var showMorningCheckOnStartScreen by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_SHOW_MORNING_CHECK_ON_START_SCREEN) }
     var morningCheckCutoffHour by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_MORNING_CHECK_CUTOFF_HOUR) }
+    val persistedSwimActivated = remember { runCatching { SportTypesRepository.getInstance(context).isSwimSportTypeActivated() }.getOrDefault(false) }
+    var isSwimActivated by remember { mutableStateOf(persistedSwimActivated) }
+    var defaultPoolLengthMeters by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_POOL_LENGTH_METERS) }
+    var defaultPoolLengthUnit by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_POOL_LENGTH_UNIT) }
+    var selectedPoolLengthPreset by remember { mutableStateOf(PoolLengthPreset.M_25) }
     var sensorSearchPrefs by remember { mutableStateOf(SensorSearchPreferences.load(context)) }
 
     var workoutCardPrefs by remember { mutableStateOf(WorkoutCardSectionPreferences()) }; var isAftermathPrefsInitialized by remember { mutableStateOf(false) }
@@ -168,6 +179,9 @@ fun AdvancedTuningScreen(
         enableContextTags = config.enableContextTags
         showMorningCheckOnStartScreen = config.showMorningCheckOnStartScreen
         morningCheckCutoffHour = config.morningCheckCutoffHour
+        defaultPoolLengthMeters = config.defaultPoolLengthMeters
+        defaultPoolLengthUnit = config.defaultPoolLengthUnit
+        selectedPoolLengthPreset = resolvePoolLengthPreset(config.defaultPoolLengthMeters, config.defaultPoolLengthUnit)
     }
     var isInitialized by remember { mutableStateOf(false) }
     LaunchedEffect(persistedConfig) {
@@ -223,10 +237,17 @@ fun AdvancedTuningScreen(
             enableMuscleSoreness = enableMuscleSoreness,
             enableContextTags = enableContextTags,
             showMorningCheckOnStartScreen = showMorningCheckOnStartScreen,
-            morningCheckCutoffHour = morningCheckCutoffHour
+            morningCheckCutoffHour = morningCheckCutoffHour,
+            defaultPoolLengthMeters = defaultPoolLengthMeters,
+            defaultPoolLengthUnit = defaultPoolLengthUnit
         )
         scope.launch {
             tuningDataStore.saveTuningConfig(newConfig)
+            if (isSwimActivated) {
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    SportTypesRepository.getInstance(context).ensureSwimSportTypeExists()
+                }
+            }
             preferenceManager.setWorkoutCardPreferences(workoutCardPrefs); preferenceManager.setWorkoutDetailPreferences(workoutDetailPrefs)
             preferenceManager.setWorkoutSectionsOrder(workoutSectionsOrder); SensorSearchPreferences.save(context, sensorSearchPrefs)
             onSettingsChanged?.invoke(); onNavigateBack()
@@ -318,6 +339,50 @@ fun AdvancedTuningScreen(
                     mediumDimFactor = mediumDimFactor, onMediumDimChange = { mediumDimFactor = it },
                     slopeFlat = slopeFlat, onSlopeFlatChange = { slopeFlat = it }, slopeSteep = slopeSteep, onSlopeSteepChange = { slopeSteep = it },
                     wakeupSec = wakeupSec, onWakeupSecChange = { wakeupSec = it }, downwardDelaySec = downwardDelaySec, onDownwardDelayChange = { downwardDelaySec = it }
+                )
+            }
+
+            // Section 3b: Schwimmen & Becken (ATT-7999 / REQ-SET-107.3)
+            TuningAccordionSection(
+                icon = Icons.Default.Pool, title = stringResource(R.string.tuning_cat_swimming),
+                subtitle = TuningSubtitleFormatter.formatSwimmingSubtitle(
+                    isSwimActivated = isSwimActivated,
+                    poolLengthMeters = defaultPoolLengthMeters,
+                    poolLengthUnit = defaultPoolLengthUnit,
+                    context = context
+                ),
+                isExpanded = isSectionExpanded(TuningSection.SWIMMING), onToggle = { toggleSection(TuningSection.SWIMMING) }
+            ) {
+                SwimmingSection(
+                    isSwimActivated = isSwimActivated,
+                    onSwimActivatedChange = { isSwimActivated = it },
+                    selectedPreset = selectedPoolLengthPreset,
+                    onPresetSelected = { preset ->
+                        selectedPoolLengthPreset = preset
+                        when (preset) {
+                            PoolLengthPreset.M_25 -> {
+                                defaultPoolLengthMeters = TuningPreferencesDefaults.POOL_LENGTH_25M
+                                defaultPoolLengthUnit = PoolLengthUnit.METERS
+                            }
+                            PoolLengthPreset.M_50 -> {
+                                defaultPoolLengthMeters = TuningPreferencesDefaults.POOL_LENGTH_50M
+                                defaultPoolLengthUnit = PoolLengthUnit.METERS
+                            }
+                            PoolLengthPreset.YD_25 -> {
+                                defaultPoolLengthMeters = TuningPreferencesDefaults.POOL_LENGTH_25YD_METERS
+                                defaultPoolLengthUnit = PoolLengthUnit.YARDS
+                            }
+                            PoolLengthPreset.CUSTOM -> {
+                                defaultPoolLengthUnit = PoolLengthUnit.METERS
+                            }
+                        }
+                    },
+                    defaultPoolLengthMeters = defaultPoolLengthMeters,
+                    onCustomPoolLengthMetersChange = { meters ->
+                        defaultPoolLengthMeters = meters
+                        defaultPoolLengthUnit = PoolLengthUnit.METERS
+                    },
+                    isActivationToggleEnabled = !persistedSwimActivated
                 )
             }
 

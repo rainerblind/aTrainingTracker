@@ -31,6 +31,8 @@ import com.atrainingtracker.trainingtracker.database.ExtremaType;
 import com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrInterval;
 import com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrRepository;
 import com.atrainingtracker.trainingtracker.repositories.SportTypesRepository;
+import com.atrainingtracker.trainingtracker.settings.PoolLengthUnit;
+import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper;
 import com.atrainingtracker.trainingtracker.ui.aftermath.LapData;
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutExportHeader;
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository;
@@ -41,6 +43,7 @@ import com.garmin.fit.ActivityMesg;
 import com.garmin.fit.DateTime;
 import com.garmin.fit.DeveloperDataIdMesg;
 import com.garmin.fit.DeveloperField;
+import com.garmin.fit.DisplayMeasure;
 import com.garmin.fit.Event;
 import com.garmin.fit.EventMesg;
 import com.garmin.fit.EventType;
@@ -176,12 +179,37 @@ public class FitFileWriter extends BaseFileWriter {
             Sport sport = Sport.GENERIC;
             SubSport subSport = SubSport.GENERIC;
 
-            BSportType bSport = SportTypesRepository.getInstance(mContext).getBSportType(sportTypeId);
-            String tcxName = SportTypesRepository.getInstance(mContext).getTcxName(sportTypeId);
+            SportTypesRepository sportTypesRepo = SportTypesRepository.getInstance(mContext);
+            BSportType bSport = sportTypesRepo.getBSportType(sportTypeId);
+            String tcxName = sportTypesRepo.getTcxName(sportTypeId);
+            String stravaName = sportTypesRepo.getStravaName(sportTypeId);
+            String gcName = sportTypesRepo.getGcName(sportTypeId);
             if (tcxName == null) tcxName = "";
+            if (stravaName == null) stravaName = "";
+            if (gcName == null) gcName = "";
             String tcxLower = tcxName.toLowerCase(Locale.US);
+            boolean isSwimmingSport = tcxLower.contains("swim")
+                    || "Swim".equalsIgnoreCase(stravaName.trim())
+                    || "swim".equalsIgnoreCase(gcName.trim());
 
-            if (bSport == BSportType.BIKE) {
+            Float sessionPoolLengthMeters = null;
+            DisplayMeasure sessionPoolLengthUnit = null;
+
+            if (isSwimmingSport) {
+                sport = Sport.SWIMMING;
+                boolean isIndoorSwim = indoorTrainerSession || sportTypesRepo.isIndoorSportType(sportTypeId);
+                float configuredPoolLengthMeters = SettingsDataStoreJavaHelper.getDefaultPoolLengthMeters(mContext);
+                if (isIndoorSwim || configuredPoolLengthMeters > 0.0f) {
+                    subSport = SubSport.LAP_SWIMMING;
+                    if (configuredPoolLengthMeters > 0.0f) {
+                        sessionPoolLengthMeters = configuredPoolLengthMeters;
+                        PoolLengthUnit unit = SettingsDataStoreJavaHelper.getDefaultPoolLengthUnit(mContext);
+                        sessionPoolLengthUnit = (unit == PoolLengthUnit.YARDS)
+                                ? DisplayMeasure.STATUTE
+                                : DisplayMeasure.METRIC;
+                    }
+                }
+            } else if (bSport == BSportType.BIKE) {
                 sport = Sport.CYCLING;
                 if (indoorTrainerSession) {
                     subSport = SubSport.INDOOR_CYCLING;
@@ -195,8 +223,6 @@ public class FitFileWriter extends BaseFileWriter {
                         subSport = SubSport.TREADMILL;
                     }
                 }
-            } else if (tcxLower.contains("swim")) {
-                sport = Sport.SWIMMING;
             } else if (indoorTrainerSession) {
                 sport = Sport.FITNESS_EQUIPMENT;
             }
@@ -652,6 +678,12 @@ public class FitFileWriter extends BaseFileWriter {
             sessionMesg.setTotalDistance((float) distTotal);
             sessionMesg.setSport(sport);
             sessionMesg.setSubSport(subSport);
+            if (sessionPoolLengthMeters != null && sessionPoolLengthMeters > 0.0f) {
+                sessionMesg.setPoolLength(sessionPoolLengthMeters);
+                if (sessionPoolLengthUnit != null) {
+                    sessionMesg.setPoolLengthUnit(sessionPoolLengthUnit);
+                }
+            }
             sessionMesg.setNumLaps(laps != null && !laps.isEmpty() ? laps.size() : 1);
 
             // Populate summary metrics from WorkoutExportHeader (REQ-DAT-042.3)

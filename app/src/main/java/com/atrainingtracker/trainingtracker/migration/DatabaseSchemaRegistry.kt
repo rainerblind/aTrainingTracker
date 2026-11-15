@@ -35,7 +35,7 @@ object DatabaseSchemaRegistry {
         "TrackingViews.db" to com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager.TrackingViewsDbHelper.DB_VERSION,
         "FlexibleGenericView.db" to com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager.TrackingViewsDbHelper.DB_VERSION,
         "Devices.db" to com.atrainingtracker.banalservice.database.DevicesDatabaseManager.DevicesDbHelper.DB_VERSION,
-        "SportType.db" to 3,
+        "SportType.db" to com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.SportTypeDbHelper.DB_VERSION,
         "Segments.db" to 9,
         "StravaUpload.db" to 6,
         "Equipment.db" to com.atrainingtracker.trainingtracker.database.EquipmentDbHelper.DB_VERSION,

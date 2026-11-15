@@ -572,6 +572,66 @@ public class SportTypeDatabaseManager {
         return id < 0 || id > 3;
     }
 
+    /**
+     * Resolves the ID of an active Swimming sport type row matching Strava ("Swim") or
+     * GoldenCheetah ("swim") case-insensitively, or {@link DatabaseConstants#INVALID_ID}.
+     */
+    private long findActiveSwimSportTypeId(SQLiteDatabase db) {
+        String selection = "(" + SportType.STRAVA_NAME + "=? COLLATE NOCASE OR "
+                + SportType.GOLDEN_CHEETAH_NAME + "=? COLLATE NOCASE) AND "
+                + SportType.IS_PLACEHOLDER + "=0";
+        try (Cursor cursor = db.query(SportType.TABLE,
+                new String[]{SportType.C_ID},
+                selection,
+                new String[]{TTSportType.SWIM.getStravaName(), TTSportType.SWIM.getGcName()},
+                null, null, SportType.C_ID + " ASC", "1")) {
+            if (cursor != null && cursor.moveToFirst()) {
+                int idCol = cursor.getColumnIndex(SportType.C_ID);
+                if (idCol >= 0) {
+                    return cursor.getLong(idCol);
+                }
+            }
+        }
+        return DatabaseConstants.INVALID_ID;
+    }
+
+    /**
+     * Returns true if an active Swimming sport type row already exists in SportType.db (REQ-SET-107.2).
+     */
+    public boolean isSwimSportTypeActivated() {
+        return findActiveSwimSportTypeId(getDatabase()) != DatabaseConstants.INVALID_ID;
+    }
+
+    /**
+     * Idempotently ensures the localized Swimming sport type exists in SportType.db without
+     * polluting fresh installs or matching speed-based auto-detection (REQ-SET-107.1, REQ-SET-107.2).
+     *
+     * @return The existing or newly inserted sport type row ID.
+     */
+    public synchronized long ensureSwimSportTypeExists() {
+        SQLiteDatabase db = getDatabase();
+        long existingId = findActiveSwimSportTypeId(db);
+        if (existingId != DatabaseConstants.INVALID_ID) {
+            return existingId;
+        }
+
+        ContentValues cv = new ContentValues();
+        String uiName = mContext != null
+                ? mContext.getString(TTSportType.SWIM.getUIId())
+                : TTSportType.SWIM.toString();
+        cv.put(SportType.UI_NAME, uiName);
+        cv.put(SportType.BASE_SPORT_TYPE, TTSportType.SWIM.getBSportType().name());
+        cv.put(SportType.GOLDEN_CHEETAH_NAME, TTSportType.SWIM.getGcName());
+        cv.put(SportType.TCX_NAME, TTSportType.SWIM.getTcxName());
+        cv.put(SportType.STRAVA_NAME, TTSportType.SWIM.getStravaName());
+        cv.put(SportType.RUNKEEPER_NAME, TTSportType.SWIM.getRunkeeperName());
+        cv.put(SportType.TRAINING_PEAKS_NAME, TTSportType.SWIM.getTrainingPeaksName());
+        cv.put(SportType.MIN_AVG_SPEED, 0.0);
+        cv.put(SportType.MAX_AVG_SPEED, 0.0);
+        cv.put(SportType.IS_PLACEHOLDER, 0);
+        return db.insert(SportType.TABLE, null, cv);
+    }
+
     public void delete(long id) {
         if (!canDelete(id)) {
             return;
@@ -616,6 +676,7 @@ public class SportTypeDatabaseManager {
         RUN(BSportType.RUN, R.string.sport_type_run, "run", "Run", "Running", "Running", "Run"),
         MTB(BSportType.BIKE, R.string.sport_type_MTB, "mtb", "MountainBikeRide", "Biking", "Mountain Biking", "MTB"),
         BIKE(BSportType.BIKE, R.string.sport_type_bike, "bike", "Ride", "Biking", "Cycling", "Bike"),
+        SWIM(BSportType.UNKNOWN, R.string.sport_type_swim, "swim", "Swim", "Other", "Swimming", "Swim"),
         OTHER(BSportType.UNKNOWN, R.string.sport_type_other, "", null, "Other", "Other", "Other");
 
         // TODO: Runkeeper: Running, Cycling, Mountain Biking, Walking, Hiking, Downhill Skiing, Cross-Country Skiing, Snowboarding, Skating, Swimming, Wheelchair, Rowing, Elliptical, Other
@@ -648,7 +709,10 @@ public class SportTypeDatabaseManager {
             return bSportType;
         }
 
-        // public int    getUIId()              { return UIId;              }
+        public int getUIId() {
+            return UIId;
+        }
+
         public String getGcName() {
             return gcName;
         }

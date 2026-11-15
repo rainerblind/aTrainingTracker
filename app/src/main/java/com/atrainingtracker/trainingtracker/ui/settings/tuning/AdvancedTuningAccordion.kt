@@ -73,7 +73,8 @@ enum class TuningSection {
     WORKOUT_MASKS_CARDS,
     PHYSIOLOGY_MODELS,
     ROUTE_CLUSTERING,
-    AFTERMATH_ANALYSIS
+    AFTERMATH_ANALYSIS,
+    SWIMMING
 }
 
 /**
@@ -254,6 +255,27 @@ object TuningSubtitleFormatter {
             scenario = RadarTrafficSimulator.activeScenario,
             context = context
         )
+
+    /**
+     * Formats Swimming & Pool activation and default pool length subtitle (REQ-SET-107.3).
+     */
+    fun formatSwimmingSubtitle(
+        isSwimActivated: Boolean,
+        poolLengthMeters: Float,
+        poolLengthUnit: com.atrainingtracker.trainingtracker.settings.PoolLengthUnit,
+        context: Context
+    ): String {
+        val poolStr = if (poolLengthUnit == com.atrainingtracker.trainingtracker.settings.PoolLengthUnit.YARDS) {
+            context.getString(R.string.tuning_swim_pool_preset_25yd)
+        } else {
+            "${poolLengthMeters.roundToInt()} m"
+        }
+        return if (isSwimActivated) {
+            context.getString(R.string.tuning_swim_subtitle_active, poolStr)
+        } else {
+            context.getString(R.string.tuning_swim_subtitle_inactive, poolStr)
+        }
+    }
 }
 
 /**

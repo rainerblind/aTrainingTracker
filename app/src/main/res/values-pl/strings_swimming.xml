@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sport_type_swim">Pływanie</string>
+    <string name="tuning_cat_swimming">Pływanie i basen</string>
+    <string name="tuning_swim_activate_title">Włącz dyscyplinę Pływanie</string>
+    <string name="tuning_swim_activate_summary">Tworzy dyscyplinę Pływanie dla treningów na basenie bez zaśmiecania list domyślnych.</string>
+    <string name="tuning_swim_activate_active_summary">Dyscyplina Pływanie jest aktywna w Typach sportu.</string>
+    <string name="tuning_swim_pool_length_title">Domyślna długość basenu</string>
+    <string name="tuning_swim_pool_preset_25m">25 m</string>
+    <string name="tuning_swim_pool_preset_50m">50 m</string>
+    <string name="tuning_swim_pool_preset_25yd">25 yd</string>
+    <string name="tuning_swim_pool_preset_custom">Własna</string>
+    <string name="tuning_swim_pool_custom_meters_label">Własna długość: %1$d m</string>
+    <string name="tuning_swim_subtitle_active">Aktywne, basen %1$s</string>
+    <string name="tuning_swim_subtitle_inactive">Nieaktywne, basen %1$s</string>
+</resources>

@@ -1248,3 +1248,24 @@
 
 
 
+
+### TST-SET-109: **Swimming SportType Template, Expert Activation, Pool Length & FIT Export Test Suite** [Verified]
+- **Requirement(s)**: `REQ-SET-107`
+- **Component**: `SportTypeDatabaseManager.java`, `SportTypesRepository.kt`, `DatabaseSchemaRegistry.kt`, `TuningPreferencesDataStore.kt`, `SettingsDataStoreJavaHelper.kt`, `AdvancedTuningAccordion.kt`, `AdvancedTuningScreen.kt`, `SwimmingSection.kt`, `FitFileWriter.java`, `res/values*/strings_swimming.xml`
+- **Jira**: `ATT-7999`
+- **Status**: Verified (ATT-7999)
+- **Test Description**:
+  1. *Fresh DB Cleanliness & Zero Walk Collision (`TST-SET-109.1`)*:
+  • Verify fresh `SportType.db` v3 `onCreate()` seeds strictly 5 defaults (no `Swimming`), and `DatabaseSchemaRegistry` references `SportTypeDbHelper.DB_VERSION`.
+  • Verify with active `SWIM` row (`minSpeed = 0.0, maxSpeed = 0.0`), `getSportTypesIdList(BSportType.UNKNOWN, 1.4)` and `0.0` never return the `SWIM` row ID.
+  2. *Idempotent `ensureSwimSportTypeExists()` & Locale Mapping (`TST-SET-109.2`)*:
+  • Verify calling `ensureSwimSportTypeExists()` creates one `SWIM` row (`stravaName = "Swim"`, `gcName = "swim"`, `tcxName = "Other"`, `minSpeed = 0.0`, `maxSpeed = 0.0`, `is_placeholder = 0`) and subsequent calls return the same ID without duplicates.
+  • Verify existing user rows with `stravaName = "Swim"` or `gcName = "swim"` are reused without duplication.
+  3. *Expert Settings DataStore, UI Contract & 9-Locale Parity (`TST-SET-109.3`)*:
+  • Verify `TuningConfig` defaults (`25.0f`, `PoolLengthUnit.METERS`), clamping (`10f..100f`), `ALL_KEYS` membership, and `resetToDefaults()`.
+  • Verify `TuningDesignGuidelinesContractTest`, `AdvancedTuningAccordionTest`, `AdvancedTuningScreenTest`, and `TranslationParityTest` pass across all 9 locales with zero emojis.
+  4. *FIT `Sport.SWIMMING`, `SubSport.LAP_SWIMMING` & Pool Length Export (`TST-SET-109.4`)*:
+  • Verify `FitFileWriter` round-trip decode encodes `Sport.SWIMMING`, `SubSport.LAP_SWIMMING`, `pool_length` (`25.0f` / `22.86f`), and `pool_length_unit` (`METRIC` / `STATUTE`) when `tcxName = "Other"` and `stravaName = "Swim"` or `gcName = "swim"`.
+  5. *On-Device / Emulator UI Render Check (`TST-SET-109.5`)*:
+  • Capture screenshot on `emulator-5554` verifying Expert Settings `Swimming` accordion displays Material 3 activation toggle, pool length segmented presets (`25 m`, `50 m`, `25 yd`, custom), and clean layout.
+

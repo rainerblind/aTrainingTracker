@@ -2392,3 +2392,34 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 
 
 
+### REQ-SET-107: Swimming SportType Template, Expert Activation, Pool Length & FIT Export [Verified]
+- **Tests**: `TST-SET-109`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration, On-Device Manual
+- **Implementation**: `SportTypeDatabaseManager.java`, `SportTypesRepository.kt`, `DatabaseSchemaRegistry.kt`, `TuningPreferencesDataStore.kt`, `SettingsDataStoreJavaHelper.kt`, `AdvancedTuningAccordion.kt`, `AdvancedTuningScreen.kt`, `SwimmingSection.kt`, `FitFileWriter.java`, `res/values*/strings_swimming.xml`
+- **Status**: Verified (ATT-7999)
+- **Rationale**: Eagerly seeding Swimming into `SportType.db` clutters UI lists for pure cyclists/runners, while assigning non-zero speed thresholds collides with walking (~1.0–1.8 m/s). Additionally, Garmin TCX forces `tcxName = "Other"` for swimming, causing `FitFileWriter` (which only checked `tcxName`) to emit `Sport.GENERIC`. Providing an unseeded template, idempotent activation, Expert pool-length settings, and `stravaName`/`gcName` FIT resolution ensures turnkey swimming support without side effects.
+- **Description**:
+1. *Prepared `TTSportType.SWIM` Template & Zero-Collision Bounds (`REQ-SET-107.1`)*:
+   - `SportTypeDatabaseManager` SHALL define `TTSportType.SWIM` (`BSportType.UNKNOWN`, `R.string.sport_type_swim`, `gcName = "swim"`, `stravaName = "Swim"`, `tcxName = "Other"`, `runkeeperName = "Swimming"`, `trainingPeaksName = "Swim"`), localized across all 9 UI languages (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`) without emojis.
+   - Fresh `onCreate()` SHALL continue seeding only the 5 default rows (`OTHER`, `RUN`, `BIKE`, `WALK`, `MTB`) at `DB_VERSION = 3` (referenced directly by `DatabaseSchemaRegistry`).
+   - `SWIM` SHALL use `minSpeed = 0.0` and `maxSpeed = 0.0` so speed-range matching `minSpeed <= avgSpd AND maxSpeed > avgSpd` never matches `Swimming`.
+2. *Idempotent `ensureSwimSportTypeExists()` (`REQ-SET-107.2`)*:
+   - `SportTypeDatabaseManager` and `SportTypesRepository` SHALL expose `ensureSwimSportTypeExists(): Long` and `isSwimSportTypeActivated(): Boolean`.
+   - When `ensureSwimSportTypeExists()` runs, if an active (`is_placeholder = 0`) row with case-insensitive `stravaName = "Swim"` or `gcName = "swim"` already exists, it SHALL return that row's ID without inserting a duplicate; otherwise it SHALL insert/activate the localized `SWIM` row (`minSpeed = 0.0`, `maxSpeed = 0.0`) and return its ID.
+3. *Expert Settings Swimming Activation & Default Pool Length (`REQ-SET-107.3`)*:
+   - `TuningPreferencesDataStore` SHALL persist `defaultPoolLengthMeters` (Float, default `25.0f`, presets `25 m`, `50 m`, `25 yd` = `22.86f`, or custom `10f..100f` meters) and `defaultPoolLengthUnit` (`PoolLengthUnit.METERS` / `YARDS`), included in `ALL_KEYS` and `resetToDefaults()`.
+   - `AdvancedTuningScreen` (`TuningSection.SWIMMING`, `SwimmingSection.kt`) SHALL follow `docs/design_guidelines.md` (no `FilterChip`, raw `Switch`, or nested `ElevatedCard`), offering Swimming sport-type activation (`ensureSwimSportTypeExists()` on Save) and default pool length selection across all 9 languages.
+4. *FIT Export `Sport.SWIMMING` & Lap Swimming Metadata (`REQ-SET-107.4`)*:
+   - `FitFileWriter` SHALL resolve `Sport.SWIMMING` when `tcxName` contains `"swim"`, `stravaName` equals `"Swim"` (ignore case), or `gcName` equals `"swim"` (ignore case).
+   - For swimming sessions where pool length (`> 0f`) or indoor pool context applies, `FitFileWriter` SHALL encode `SubSport.LAP_SWIMMING` and populate `SessionMesg` `pool_length` (meters) and `pool_length_unit` (`DisplayMeasure.STATUTE` for `YARDS`, `DisplayMeasure.METRIC` for `METERS`).
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a fresh installation where Swimming has not been activated, *When* inspecting `SportType.db`, *Then* only the 5 defaults exist (`Swimming` absent).
+• *Given* `ensureSwimSportTypeExists()` is invoked once (or on a DB already containing user `Swim`), *When* called again, *Then* exactly one active Swimming row exists and its ID is returned idempotently.
+• *Given* `Swimming` exists with `minSpeed = 0.0, maxSpeed = 0.0`, *When* speed-based lookup runs for `1.4 m/s` (`BSportType.UNKNOWN` or `RUN`) or `0.0 m/s`, *Then* `WALK`/`OTHER` resolves and `Swimming` is never selected.
+• *Given* a Swimming workout (`tcxName = "Other"`, `stravaName = "Swim"`) and default pool length `25 m` (`25 yd`), *When* exported via `FitFileWriter`, *Then* `SessionMesg` encodes `Sport.SWIMMING`, `SubSport.LAP_SWIMMING`, `pool_length = 25.0` (`22.86`), and `DisplayMeasure.METRIC` (`STATUTE`).
+
+**Invariants**: `SportType.db` `DB_VERSION = 3` unchanged; fresh DB row count stays 5; zero walk-speed collision; zero emojis in strings; full `TuningDesignGuidelinesContractTest` compliance.
+

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sport_type_swim">Natação</string>
+    <string name="tuning_cat_swimming">Natação e piscina</string>
+    <string name="tuning_swim_activate_title">Ativar desporto Natação</string>
+    <string name="tuning_swim_activate_summary">Cria o desporto Natação para treinos em piscina sem sobrecarregar as listas padrão.</string>
+    <string name="tuning_swim_activate_active_summary">O desporto Natação está ativo em Tipos de desporto.</string>
+    <string name="tuning_swim_pool_length_title">Comprimento padrão da piscina</string>
+    <string name="tuning_swim_pool_preset_25m">25 m</string>
+    <string name="tuning_swim_pool_preset_50m">50 m</string>
+    <string name="tuning_swim_pool_preset_25yd">25 yd</string>
+    <string name="tuning_swim_pool_preset_custom">Outra</string>
+    <string name="tuning_swim_pool_custom_meters_label">Comprimento personalizado: %1$d m</string>
+    <string name="tuning_swim_subtitle_active">Ativo, piscina de %1$s</string>
+    <string name="tuning_swim_subtitle_inactive">Inativo, piscina de %1$s</string>
+</resources>

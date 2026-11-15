@@ -215,4 +215,32 @@ class TuningConfigTest {
         )
         assertEquals(23, clampedCutoffHigh)
     }
+
+    @Test
+    fun testDefaultPoolLength_defaultsBoundsAndPresetResolution() {
+        val defaultConfig = TuningConfig()
+        assertEquals(25.0f, defaultConfig.defaultPoolLengthMeters, 0.001f)
+        assertEquals(PoolLengthUnit.METERS, defaultConfig.defaultPoolLengthUnit)
+
+        assertTrue(
+            "KEY_DEFAULT_POOL_LENGTH_METERS must be in ALL_KEYS",
+            TuningPreferencesDataStore.ALL_KEYS.contains(TuningPreferencesDataStore.KEY_DEFAULT_POOL_LENGTH_METERS)
+        )
+        assertTrue(
+            "KEY_DEFAULT_POOL_LENGTH_UNIT must be in ALL_KEYS",
+            TuningPreferencesDataStore.ALL_KEYS.contains(TuningPreferencesDataStore.KEY_DEFAULT_POOL_LENGTH_UNIT)
+        )
+
+        val clampedLow = 2.0f.coerceIn(
+            TuningPreferencesDefaults.MIN_POOL_LENGTH_METERS,
+            TuningPreferencesDefaults.MAX_POOL_LENGTH_METERS
+        )
+        assertEquals(10.0f, clampedLow, 0.001f)
+
+        val clampedHigh = 250.0f.coerceIn(
+            TuningPreferencesDefaults.MIN_POOL_LENGTH_METERS,
+            TuningPreferencesDefaults.MAX_POOL_LENGTH_METERS
+        )
+        assertEquals(100.0f, clampedHigh, 0.001f)
+    }
 }

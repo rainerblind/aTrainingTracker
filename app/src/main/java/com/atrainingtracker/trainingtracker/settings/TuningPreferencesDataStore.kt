@@ -103,6 +103,14 @@ enum class RadarLightControlMode {
 }
 
 /**
+ * Display unit for configured swimming pool length (REQ-SET-107.3).
+ */
+enum class PoolLengthUnit {
+    METERS,
+    YARDS
+}
+
+/**
  * Encapsulates battle-tested factory defaults and safety clamping bounds for advanced tuning.
  */
 object TuningPreferencesDefaults {
@@ -359,6 +367,14 @@ object TuningPreferencesDefaults {
     const val DEFAULT_MORNING_CHECK_CUTOFF_HOUR = 8
     const val MIN_MORNING_CHECK_CUTOFF_HOUR = 6
     const val MAX_MORNING_CHECK_CUTOFF_HOUR = 23
+
+    const val DEFAULT_POOL_LENGTH_METERS = 25.0f
+    const val MIN_POOL_LENGTH_METERS = 10.0f
+    const val MAX_POOL_LENGTH_METERS = 100.0f
+    const val POOL_LENGTH_25M = 25.0f
+    const val POOL_LENGTH_50M = 50.0f
+    const val POOL_LENGTH_25YD_METERS = 22.86f
+    val DEFAULT_POOL_LENGTH_UNIT = PoolLengthUnit.METERS
 }
 
 /**
@@ -466,7 +482,9 @@ data class TuningConfig(
     val radarSpeedPitchModulation: Boolean = TuningPreferencesDefaults.RADAR_SPEED_PITCH_MODULATION,
     val radarTrafficOrientation: RadarTrafficOrientation = TuningPreferencesDefaults.RADAR_TRAFFIC_ORIENTATION,
     val radarLaneChangeTickEnabled: Boolean = TuningPreferencesDefaults.RADAR_LANE_CHANGE_TICK_ENABLED,
-    val radarClosePassThresholdM: Float = TuningPreferencesDefaults.RADAR_CLOSE_PASS_THRESHOLD_M
+    val radarClosePassThresholdM: Float = TuningPreferencesDefaults.RADAR_CLOSE_PASS_THRESHOLD_M,
+    val defaultPoolLengthMeters: Float = TuningPreferencesDefaults.DEFAULT_POOL_LENGTH_METERS,
+    val defaultPoolLengthUnit: PoolLengthUnit = TuningPreferencesDefaults.DEFAULT_POOL_LENGTH_UNIT
 ) {
     val showAntMissingAdapterWarnings: Boolean
         get() = !suppressAntMissingAdapterDialog
@@ -643,6 +661,8 @@ class TuningPreferencesDataStore(private val context: Context) {
         val KEY_RADAR_TRAFFIC_ORIENTATION: Preferences.Key<String> = stringPreferencesKey("tuning_radar_traffic_orientation")
         val KEY_RADAR_LANE_CHANGE_TICK_ENABLED: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_radar_lane_change_tick_enabled")
         val KEY_RADAR_CLOSE_PASS_THRESHOLD: Preferences.Key<Float> = floatPreferencesKey("tuning_radar_close_pass_threshold_m")
+        val KEY_DEFAULT_POOL_LENGTH_METERS: Preferences.Key<Float> = floatPreferencesKey("tuning_default_pool_length_meters")
+        val KEY_DEFAULT_POOL_LENGTH_UNIT: Preferences.Key<String> = stringPreferencesKey("tuning_default_pool_length_unit")
 
         internal val ALL_KEYS = listOf(
             KEY_ELEVATION_X_AXIS_DOMAIN,
@@ -747,7 +767,9 @@ class TuningPreferencesDataStore(private val context: Context) {
             KEY_RADAR_SPEED_PITCH_MODULATION,
             KEY_RADAR_TRAFFIC_ORIENTATION,
             KEY_RADAR_LANE_CHANGE_TICK_ENABLED,
-            KEY_RADAR_CLOSE_PASS_THRESHOLD
+            KEY_RADAR_CLOSE_PASS_THRESHOLD,
+            KEY_DEFAULT_POOL_LENGTH_METERS,
+            KEY_DEFAULT_POOL_LENGTH_UNIT
         )
 
         /**
@@ -1014,6 +1036,11 @@ data class AutoPausePreferences(
         val radarTrafficOrientation = safeEnumValueOf(rawTrafficOrientationStr, TuningPreferencesDefaults.RADAR_TRAFFIC_ORIENTATION)
         val radarLaneChangeTickEnabled = prefs[KEY_RADAR_LANE_CHANGE_TICK_ENABLED] ?: TuningPreferencesDefaults.RADAR_LANE_CHANGE_TICK_ENABLED
         val radarClosePassThresholdM = prefs[KEY_RADAR_CLOSE_PASS_THRESHOLD] ?: TuningPreferencesDefaults.RADAR_CLOSE_PASS_THRESHOLD_M
+        val defaultPoolLengthMeters = (prefs[KEY_DEFAULT_POOL_LENGTH_METERS] ?: TuningPreferencesDefaults.DEFAULT_POOL_LENGTH_METERS).coerceIn(
+            TuningPreferencesDefaults.MIN_POOL_LENGTH_METERS,
+            TuningPreferencesDefaults.MAX_POOL_LENGTH_METERS
+        )
+        val defaultPoolLengthUnit = safeEnumValueOf(prefs[KEY_DEFAULT_POOL_LENGTH_UNIT], TuningPreferencesDefaults.DEFAULT_POOL_LENGTH_UNIT)
 
         val rawFontWeightStr = prefs[KEY_COCKPIT_FONT_WEIGHT]
         val cockpitFontWeight = safeEnumValueOf(rawFontWeightStr, TuningPreferencesDefaults.COCKPIT_FONT_WEIGHT)
@@ -1257,7 +1284,9 @@ data class AutoPausePreferences(
             radarSpeedPitchModulation = radarSpeedPitchModulation,
             radarTrafficOrientation = radarTrafficOrientation,
             radarLaneChangeTickEnabled = radarLaneChangeTickEnabled,
-            radarClosePassThresholdM = radarClosePassThresholdM
+            radarClosePassThresholdM = radarClosePassThresholdM,
+            defaultPoolLengthMeters = defaultPoolLengthMeters,
+            defaultPoolLengthUnit = defaultPoolLengthUnit
         )
     }
 
@@ -1665,6 +1694,11 @@ data class AutoPausePreferences(
             prefs[KEY_RADAR_TRAFFIC_ORIENTATION] = config.radarTrafficOrientation.name
             prefs[KEY_RADAR_LANE_CHANGE_TICK_ENABLED] = config.radarLaneChangeTickEnabled
             prefs[KEY_RADAR_CLOSE_PASS_THRESHOLD] = config.radarClosePassThresholdM
+            prefs[KEY_DEFAULT_POOL_LENGTH_METERS] = config.defaultPoolLengthMeters.coerceIn(
+                TuningPreferencesDefaults.MIN_POOL_LENGTH_METERS,
+                TuningPreferencesDefaults.MAX_POOL_LENGTH_METERS
+            )
+            prefs[KEY_DEFAULT_POOL_LENGTH_UNIT] = config.defaultPoolLengthUnit.name
         }
 
         TrainingApplication.setClusterTolEndpoints(clampedClusterTolEndpoints)
@@ -2071,6 +2105,28 @@ data class AutoPausePreferences(
     suspend fun updateRadarClosePassThreshold(thresholdM: Float) {
         context.dataStore.edit { prefs ->
             prefs[KEY_RADAR_CLOSE_PASS_THRESHOLD] = thresholdM
+        }
+    }
+
+    val defaultPoolLengthMetersFlow: Flow<Float> = context.dataStore.data.map { prefs ->
+        (prefs[KEY_DEFAULT_POOL_LENGTH_METERS] ?: TuningPreferencesDefaults.DEFAULT_POOL_LENGTH_METERS).coerceIn(
+            TuningPreferencesDefaults.MIN_POOL_LENGTH_METERS,
+            TuningPreferencesDefaults.MAX_POOL_LENGTH_METERS
+        )
+    }
+
+    val defaultPoolLengthUnitFlow: Flow<PoolLengthUnit> = context.dataStore.data.map { prefs ->
+        safeEnumValueOf(prefs[KEY_DEFAULT_POOL_LENGTH_UNIT], TuningPreferencesDefaults.DEFAULT_POOL_LENGTH_UNIT)
+    }
+
+    suspend fun updateDefaultPoolLength(lengthMeters: Float, unit: PoolLengthUnit) {
+        val clamped = lengthMeters.coerceIn(
+            TuningPreferencesDefaults.MIN_POOL_LENGTH_METERS,
+            TuningPreferencesDefaults.MAX_POOL_LENGTH_METERS
+        )
+        context.dataStore.edit { prefs ->
+            prefs[KEY_DEFAULT_POOL_LENGTH_METERS] = clamped
+            prefs[KEY_DEFAULT_POOL_LENGTH_UNIT] = unit.name
         }
     }
 

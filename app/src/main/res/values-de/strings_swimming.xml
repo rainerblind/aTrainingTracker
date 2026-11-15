@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sport_type_swim">Schwimmen</string>
+    <string name="tuning_cat_swimming">Schwimmen &amp; Becken</string>
+    <string name="tuning_swim_activate_title">Sportart Schwimmen aktivieren</string>
+    <string name="tuning_swim_activate_summary">Legt die Sportart Schwimmen für Spind- und Becken-Workouts an, ohne Standardlisten vorab zu füllen.</string>
+    <string name="tuning_swim_activate_active_summary">Sportart Schwimmen ist in den Sportarten aktiv.</string>
+    <string name="tuning_swim_pool_length_title">Standard-Bahnlänge</string>
+    <string name="tuning_swim_pool_preset_25m">25 m</string>
+    <string name="tuning_swim_pool_preset_50m">50 m</string>
+    <string name="tuning_swim_pool_preset_25yd">25 yd</string>
+    <string name="tuning_swim_pool_preset_custom">Eigene</string>
+    <string name="tuning_swim_pool_custom_meters_label">Eigene Länge: %1$d m</string>
+    <string name="tuning_swim_subtitle_active">Aktiv, %1$s-Becken</string>
+    <string name="tuning_swim_subtitle_inactive">Inaktiv, %1$s-Becken</string>
+</resources>

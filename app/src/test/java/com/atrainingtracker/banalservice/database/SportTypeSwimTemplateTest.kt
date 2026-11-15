@@ -1,0 +1,159 @@
+/*
+ * aTrainingTracker (ANT+ BTLE)
+ * Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
+ */
+
+package com.atrainingtracker.banalservice.database
+
+import android.content.ContentValues
+import android.content.Context
+import androidx.test.core.app.ApplicationProvider
+import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.SportType
+import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.SportTypeDbHelper
+import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.migration.DatabaseSchemaRegistry
+import com.atrainingtracker.trainingtracker.repositories.SportTypesRepository
+import io.mockk.every
+import io.mockk.mockkStatic
+import io.mockk.spyk
+import io.mockk.unmockkAll
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+
+/**
+ * Real SQLite contract tests for prepared Swimming SportType template, idempotent
+ * creation, zero walk-speed collision, and DatabaseSchemaRegistry parity (REQ-SET-107.1,
+ * REQ-SET-107.2, TST-SET-109.1, TST-SET-109.2).
+ */
+@RunWith(RobolectricTestRunner::class)
+class SportTypeSwimTemplateTest {
+
+    private lateinit var context: Context
+
+    @Before
+    fun setUp() {
+        val baseContext = ApplicationProvider.getApplicationContext<Context>()
+        context = spyk(baseContext)
+        every { context.applicationContext } returns context
+        every { context.getString(R.string.sport_type_other) } returns "Other"
+        every { context.getString(R.string.sport_type_run) } returns "Run"
+        every { context.getString(R.string.sport_type_bike) } returns "Bike"
+        every { context.getString(R.string.sport_type_walk) } returns "Walk"
+        every { context.getString(R.string.sport_type_MTB) } returns "MTB"
+        every { context.getString(R.string.sport_type_swim) } returns "Swimming"
+
+        mockkStatic(TrainingApplication::class)
+        every { TrainingApplication.getAppContext() } returns context
+        every { TrainingApplication.getMinWalkSpeed_mps() } returns 0.5
+        every { TrainingApplication.getMaxWalkSpeed_mps() } returns 2.0
+        every { TrainingApplication.getMaxRunSpeed_mps() } returns 6.0
+        every { TrainingApplication.getMaxMTBSpeed_mps() } returns 7.0
+        every { TrainingApplication.getMaxBikeSpeed_mps() } returns 15.0
+
+        SportTypesRepository.resetForTesting(null)
+        SportTypeDatabaseManager.resetForTesting(null)
+        context.deleteDatabase(SportTypeDbHelper.DB_NAME)
+    }
+
+    @After
+    fun tearDown() {
+        SportTypesRepository.resetForTesting(null)
+        SportTypeDatabaseManager.resetForTesting(null)
+        context.deleteDatabase(SportTypeDbHelper.DB_NAME)
+        unmockkAll()
+    }
+
+    @Test
+    fun testFreshDatabase_seedsOnlyFiveDefaultsWithoutSwimming() {
+        val dbManager = SportTypeDatabaseManager.getInstance(context)
+        val ids = dbManager.sportTypesIdList
+        assertEquals("Fresh SportType.db must seed strictly 5 default sport types", 5, ids.size)
+        assertFalse("Fresh install must not activate Swimming by default", dbManager.isSwimSportTypeActivated)
+        assertEquals(
+            "DatabaseSchemaRegistry must match SportTypeDbHelper.DB_VERSION",
+            SportTypeDbHelper.DB_VERSION,
+            DatabaseSchemaRegistry.getMaxSupportedVersion(SportTypeDbHelper.DB_NAME)
+        )
+    }
+
+    @Test
+    fun testEnsureSwimSportTypeExists_isIdempotentAndLocalized() {
+        val repo = SportTypesRepository.getInstance(context)
+        assertFalse(repo.isSwimSportTypeActivated())
+
+        val firstId = repo.ensureSwimSportTypeExists()
+        assertTrue("Inserted Swim ID must exceed 5", firstId > SportTypeDatabaseManager.SYSTEM_SPORT_ID_THRESHOLD)
+        assertTrue(repo.isSwimSportTypeActivated())
+
+        val secondId = repo.ensureSwimSportTypeExists()
+        assertEquals("Repeated ensureSwimSportTypeExists() must return existing ID", firstId, secondId)
+
+        val dbManager = SportTypeDatabaseManager.getInstance(context)
+        assertEquals(6, dbManager.sportTypesIdList.size)
+        assertEquals(context.getString(R.string.sport_type_swim), dbManager.getUIName(firstId))
+        assertEquals(BSportType.UNKNOWN, dbManager.getBSportType(firstId))
+        assertEquals("Swim", dbManager.getStravaName(firstId))
+        assertEquals("swim", dbManager.getGcName(firstId))
+        assertEquals("Other", dbManager.getTcxName(firstId))
+        assertEquals(0.0, dbManager.getMinSpeed(firstId), 0.0001)
+        assertEquals(0.0, dbManager.getMaxSpeed(firstId), 0.0001)
+    }
+
+    @Test
+    fun testEnsureSwimSportTypeExists_reusesPreExistingUserSwimRow() {
+        val dbManager = SportTypeDatabaseManager.getInstance(context)
+        val cv = ContentValues().apply {
+            put(SportType.UI_NAME, "Pool Swim")
+            put(SportType.BASE_SPORT_TYPE, BSportType.UNKNOWN.name)
+            put(SportType.GOLDEN_CHEETAH_NAME, "custom_swim")
+            put(SportType.TCX_NAME, "Other")
+            put(SportType.STRAVA_NAME, "Swim")
+            put(SportType.RUNKEEPER_NAME, "Swimming")
+            put(SportType.TRAINING_PEAKS_NAME, "Swim")
+            put(SportType.MIN_AVG_SPEED, 0.0)
+            put(SportType.MAX_AVG_SPEED, 0.0)
+            put(SportType.IS_PLACEHOLDER, 0)
+        }
+        val userSwimId = dbManager.database.insert(SportType.TABLE, null, cv)
+        assertTrue(userSwimId > 5L)
+
+        val resolvedId = SportTypesRepository.getInstance(context).ensureSwimSportTypeExists()
+        assertEquals("Existing user Swim row must be reused without duplicates", userSwimId, resolvedId)
+        assertEquals(6, dbManager.sportTypesIdList.size)
+    }
+
+    @Test
+    fun testZeroWalkSpeedCollision_whenSwimmingActivated() {
+        val dbManager = SportTypeDatabaseManager.getInstance(context)
+        val swimId = dbManager.ensureSwimSportTypeExists()
+
+        val walkResolvedIds = dbManager.getSportTypesIdList(BSportType.UNKNOWN, 1.4)
+        assertFalse("1.4 m/s land walk must never resolve to Swimming", walkResolvedIds.contains(swimId))
+        assertTrue("1.4 m/s land walk must resolve to WALK (ID 4)", walkResolvedIds.contains(4L))
+
+        val zeroSpeedResolvedIds = dbManager.getSportTypesIdList(BSportType.UNKNOWN, 0.0)
+        assertFalse("0.0 m/s workout must never match Swimming [0.0, 0.0)", zeroSpeedResolvedIds.contains(swimId))
+        assertTrue("0.0 m/s workout must resolve to OTHER (ID 1)", zeroSpeedResolvedIds.contains(1L))
+    }
+}

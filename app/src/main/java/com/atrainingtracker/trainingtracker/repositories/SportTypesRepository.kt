@@ -101,6 +101,28 @@ class SportTypesRepository private constructor(private val context: Context) :
         return isIndoorName(uiName) || isIndoorName(tcxName) || isIndoorName(stravaName)
     }
 
+    /**
+     * Resolves GoldenCheetah activity name for sport type id (REQ-SET-107.4).
+     */
+    fun getGcName(sportId: Long): String? {
+        return sportTypeDatabaseManager.getGcName(sportId)
+    }
+
+    /**
+     * Returns true if an active Swimming sport type is already present in SportType.db (REQ-SET-107.2).
+     */
+    fun isSwimSportTypeActivated(): Boolean {
+        return sportTypeDatabaseManager.isSwimSportTypeActivated()
+    }
+
+    /**
+     * Idempotently ensures the localized Swimming sport type exists in SportType.db,
+     * returning the existing or newly created sport type ID (REQ-SET-107.2).
+     */
+    fun ensureSwimSportTypeExists(): Long {
+        return sportTypeDatabaseManager.ensureSwimSportTypeExists()
+    }
+
     companion object {
         private val TAG = "SportTypesRepository"
         private val DEBUG = TrainingApplication.getDebug(true)
