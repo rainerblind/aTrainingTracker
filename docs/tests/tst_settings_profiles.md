@@ -1269,3 +1269,24 @@
   5. *On-Device / Emulator UI Render Check (`TST-SET-109.5`)*:
   • Capture screenshot on `emulator-5554` verifying Expert Settings `Swimming` accordion displays Material 3 activation toggle, pool length segmented presets (`25 m`, `50 m`, `25 yd`, custom), and clean layout.
 
+---
+
+### TST-SET-110: **Polar Verity Sense Offline HR Recording Controller & EditDeviceDialog Test Suite** [Verified]
+- **Requirement(s)**: `REQ-SET-108`
+- **Component**: `PolarOfflineGattCoordinator.kt`, `PolarH10OfflineController.kt`, `PolarVeritySenseOfflineController.kt`, `PolarOfflineCapabilityStore.kt`, `EditDeviceDialog.kt`, `TrackerService.java`, `res/values*/strings_devices.xml`
+- **Jira**: `ATT-7923`
+- **Status**: Verified (ATT-7923)
+- **Test Description**:
+  1. *Device Detection & API Level Guards (`TST-SET-110.1`)*:
+  • Verify `isPolarVeritySenseDevice()` matches `"Polar Sense ..."`, `"Verity Sense"`, `"Polar Verity Sense"`, `"Polar OH1"`, and cached PFTP offline capability without misclassifying Polar H10.
+  • Verify `PolarVeritySenseOfflineController` returns immediately without SDK calls when API < 33 or `polarH10OfflineRecording == false`.
+  2. *SDK Arming Sequence & Pre-Existing HR Cleanup (`TST-SET-110.2`)*:
+  • Verify `onWorkoutStarted()` pauses GATT, awaits `FEATURE_POLAR_OFFLINE_RECORDING` & `FEATURE_POLAR_DEVICE_TIME_SETUP`, calls `setLocalTime()`, inspects `getOfflineRecordingStatus()` (invoking `stopOfflineRecording(..., HR)` first if `HR` is active), calls `startOfflineRecording(id, HR, null, null)`, and always invokes `resumeGattOperations()`.
+  3. *Mid-Workout Fringe-Flap Invariant & `SYSTEM_BUSY` Resilience (`TST-SET-110.3`)*:
+  • Verify repeated `onWorkoutStarted()` while `isArmed == true` makes zero additional PFTP/SDK calls until `onWorkoutStopped()`.
+  • Verify `BlePsFtpUtils.PftpResponseError(PbPFtpError.SYSTEM_BUSY)` never throws, resets `isArmed = false`, records diagnostic error, and resumes standard GATT.
+  4. *Stop, Fetch & Remove Coroutine API (`TST-SET-110.4`)*:
+  • Verify `stopAndFetchOfflineHr()` stops `HR`, collects `listOfflineRecordings()`, resolves `PolarOfflineRecordingData.HrOfflineRecording`, and `removeOfflineRecord()` delegates `api.removeOfflineRecord()`.
+  5. *`EditDeviceDialog` UI, 9-Locale Parity & Screenshot (`TST-SET-110.5`)*:
+  • Verify `EditDeviceDialog` Compose test confirms Verity Sense displays HR-only toggle (default ON on API 33+, disabled with hint on `< 33`), `TranslationParityTest` passes with zero emojis across all 9 locales, and screenshot on `emulator-5554` verifies layout.
+

@@ -172,4 +172,8 @@
     <string name="polar_h10_retry_syncing">Polar H10 wird synchronisiert…</string>
     <string name="polar_h10_retry_sync_failed">Verbindung zum Polar H10 fehlgeschlagen. Sensor aufwecken und erneut versuchen.</string>
 
+    <!-- Polar Verity Sense Optical Offline HR Backup (ATT-7923, REQ-SET-108) -->
+    <string name="device_polar_verity_backup_recording_title">Polar Verity Sense-Backup-Aufzeichnung</string>
+    <string name="device_polar_verity_backup_recording_desc">Zeichnet die optische Herzfrequenz im internen Sensorspeicher auf (z. B. beim Schwimmen oder bei Bluetooth-Aussetzern).</string>
+
 </resources>

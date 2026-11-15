@@ -251,36 +251,16 @@ object PolarH10OfflineController {
         }
 
         val appContext = context.applicationContext
-        val db = DevicesDatabaseManager.getInstance(appContext)
-        val devices = db.allDevicesForCache
-        var targetMac: String? = null
-        var targetId: String? = null
-
-        for (dev in devices) {
-            if (dev.type == DeviceType.HRM && dev.protocol == Protocol.BLUETOOTH_LE) {
-                val name = dev.name ?: ""
-                val isH10 = name.contains("Polar H10", ignoreCase = true) ||
-                        (name.contains("Polar", ignoreCase = true) && name.contains("H10", ignoreCase = true))
-                if (isH10) {
-                    val enabled = db.isPolarH10OfflineRecordingEnabled(dev.id)
-                    if (enabled) {
-                        val mac = db.getBluetoothMACAddress(dev.id)
-                        if (!mac.isNullOrEmpty()) {
-                            targetMac = mac
-                            val match = Regex("""\b([0-9A-Fa-f]{8})\b""").find(name)
-                            targetId = match?.value ?: mac
-                            break
-                        }
-                    }
-                }
-            }
+        val targetDevice = PolarOfflineGattCoordinator.findEnabledPolarDevice(appContext) { name, _ ->
+            PolarOfflineGattCoordinator.isPolarH10Name(name)
         }
-
-        if (targetMac == null || targetId == null) {
+        if (targetDevice == null) {
             Log.d(TAG, "No enabled Polar H10 device found for backfill.")
             isArmed.set(false)
             return false
         }
+        val targetMac = targetDevice.macAddress
+        val targetId = targetDevice.polarId
 
         val needsBackfill = shouldBackfill(appContext, baseFileName, workoutId)
         Log.i(TAG, "Polar H10 stopAndBackfillWorkout: polarId=$targetId, needsBackfill=$needsBackfill")
@@ -692,128 +672,84 @@ object PolarH10OfflineController {
             return true
         }
 
-        val db = DevicesDatabaseManager.getInstance(context)
-        val devices = db.allDevicesForCache
-        var targetMac: String? = null
-        var targetId: String? = null
-
-        for (dev in devices) {
-            if (dev.type == DeviceType.HRM && dev.protocol == Protocol.BLUETOOTH_LE) {
-                val name = dev.name ?: ""
-                val isH10 = name.contains("Polar H10", ignoreCase = true) ||
-                        (name.contains("Polar", ignoreCase = true) && name.contains("H10", ignoreCase = true))
-                if (isH10) {
-                    val enabled = db.isPolarH10OfflineRecordingEnabled(dev.id)
-                    if (enabled) {
-                        val mac = db.getBluetoothMACAddress(dev.id)
-                        if (!mac.isNullOrEmpty()) {
-                            targetMac = mac
-                            val match = Regex("""\b([0-9A-Fa-f]{8})\b""").find(name)
-                            targetId = match?.value ?: mac
-                            break
-                        }
-                    }
-                }
-            }
+        val targetDevice = PolarOfflineGattCoordinator.findEnabledPolarDevice(context) { name, _ ->
+            PolarOfflineGattCoordinator.isPolarH10Name(name)
         }
-
-        if (targetMac == null || targetId == null) {
+        if (targetDevice == null) {
             Log.d(TAG, "No enabled Polar H10 device found in database.")
             return false
         }
 
-        return executeArming(context, targetMac, targetId)
+        return executeArming(context, targetDevice.macAddress, targetDevice.polarId)
     }
 
     suspend fun executeArming(context: Context, macAddress: String, polarId: String): Boolean {
-        val deviceManager = BANALService.getDeviceManager()
-        val btleDevice = deviceManager?.getBtleDeviceByAddress(macAddress)
+        return try {
+            PolarOfflineGattCoordinator.withGattYieldAndPolarApi(
+                context = context,
+                macAddress = macAddress,
+                polarId = polarId,
+                features = setOf(
+                    PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_H10_EXERCISE_RECORDING,
+                    PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_DEVICE_TIME_SETUP
+                ),
+                timeoutMs = ARMING_TIMEOUT_MS,
+                apiOverride = apiOverride
+            ) { api ->
+                api.connectToDevice(polarId)
+                api.waitForConnection(polarId)
 
-        // Step 1: Pause GATT operations on MyBTLEDevice to avoid reconnect collisions
-        btleDevice?.pauseGattOperations()
-        try {
-            return withTimeoutOrNull(ARMING_TIMEOUT_MS) {
-                val api = apiOverride ?: PolarBleApiDefaultImpl.defaultImplementation(
-                    context,
-                    setOf(
-                        PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_H10_EXERCISE_RECORDING,
-                        PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_DEVICE_TIME_SETUP
-                    )
-                )
-
+                // 1. Synchronize device clock
                 try {
-                    api.connectToDevice(polarId)
-                    api.waitForConnection(polarId)
-
-                    // 1. Synchronize device clock
-                    try {
-                        api.setLocalTime(polarId, LocalDateTime.now())
-                        Log.d(TAG, "Polar H10 device clock synchronized for $polarId")
-                    } catch (e: Exception) {
-                        Log.w(TAG, "Failed to synchronize device clock for $polarId: ${e.message}")
-                    }
-
-                    // 2. Check and stop ongoing exercise if any
-                    try {
-                        val status = api.requestRecordingStatus(polarId)
-                        if (status.ongoing) {
-                            Log.d(TAG, "Stopping ongoing recording on $polarId (entryId: ${status.entryId})")
-                            api.stopRecording(polarId)
-                        }
-                    } catch (e: Exception) {
-                        Log.w(TAG, "Could not query/stop recording status for $polarId: ${e.message}")
-                    }
-
-                    // 3. Remove stale exercises
-                    try {
-                        val staleExercises = api.listExercises(polarId).toList()
-                        for (entry in staleExercises) {
-                            Log.d(TAG, "Removing stale exercise ${entry.path} on $polarId")
-                            api.removeExercise(polarId, entry)
-                        }
-                    } catch (e: Exception) {
-                        Log.w(TAG, "Could not clear stale exercises on $polarId: ${e.message}")
-                    }
-
-                    // 4. Single-shot arm recording with SampleType.RR
-                    val exerciseId = "ATT_${System.currentTimeMillis()}"
-                    api.startRecording(
-                        polarId,
-                        exerciseId,
-                        PolarH10OfflineExerciseApi.RecordingInterval.INTERVAL_1S,
-                        PolarH10OfflineExerciseApi.SampleType.RR
-                    )
-                    Log.i(TAG, "Successfully armed Polar H10 offline RR recording on $polarId (id: $exerciseId)")
-
-                    armedDeviceId = polarId
-                    armedExerciseId = exerciseId
-                    isArmed.set(true)
-
-                    try {
-                        api.disconnectFromDevice(polarId)
-                    } catch (ignored: Exception) {
-                    }
-
-                    true
-                } finally {
-                    if (apiOverride == null) {
-                        try {
-                            api.cleanup()
-                        } catch (t: Throwable) {
-                            Log.w(TAG, "Error cleaning up PolarBleApi: ${t.message}")
-                        }
-                    }
+                    api.setLocalTime(polarId, LocalDateTime.now())
+                    Log.d(TAG, "Polar H10 device clock synchronized for $polarId")
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to synchronize device clock for $polarId: ${e.message}")
                 }
+
+                // 2. Check and stop ongoing exercise if any
+                try {
+                    val status = api.requestRecordingStatus(polarId)
+                    if (status.ongoing) {
+                        Log.d(TAG, "Stopping ongoing recording on $polarId (entryId: ${status.entryId})")
+                        api.stopRecording(polarId)
+                    }
+                } catch (e: Exception) {
+                    Log.w(TAG, "Could not query/stop recording status for $polarId: ${e.message}")
+                }
+
+                // 3. Remove stale exercises
+                try {
+                    val staleExercises = api.listExercises(polarId).toList()
+                    for (entry in staleExercises) {
+                        Log.d(TAG, "Removing stale exercise ${entry.path} on $polarId")
+                        api.removeExercise(polarId, entry)
+                    }
+                } catch (e: Exception) {
+                    Log.w(TAG, "Could not clear stale exercises on $polarId: ${e.message}")
+                }
+
+                // 4. Single-shot arm recording with SampleType.RR
+                val exerciseId = "ATT_${System.currentTimeMillis()}"
+                api.startRecording(
+                    polarId,
+                    exerciseId,
+                    PolarH10OfflineExerciseApi.RecordingInterval.INTERVAL_1S,
+                    PolarH10OfflineExerciseApi.SampleType.RR
+                )
+                Log.i(TAG, "Successfully armed Polar H10 offline RR recording on $polarId (id: $exerciseId)")
+
+                armedDeviceId = polarId
+                armedExerciseId = exerciseId
+                isArmed.set(true)
+                true
             } ?: run {
                 Log.w(TAG, "Arming Polar H10 offline recording timed out after $ARMING_TIMEOUT_MS ms")
                 false
             }
         } catch (t: Throwable) {
             Log.w(TAG, "Exception during Polar H10 arming: ${t.message}", t)
-            return false
-        } finally {
-            // Always resume GATT operations so live 0x180D streaming is never broken
-            btleDevice?.resumeGattOperations()
+            false
         }
     }
 }

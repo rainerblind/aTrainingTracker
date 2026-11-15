@@ -2423,3 +2423,33 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 
 **Invariants**: `SportType.db` `DB_VERSION = 3` unchanged; fresh DB row count stays 5; zero walk-speed collision; zero emojis in strings; full `TuningDesignGuidelinesContractTest` compliance.
 
+---
+
+### REQ-SET-108: Polar Verity Sense Offline HR Recording Controller & EditDeviceDialog Support (`ATT-7923`) [Verified]
+- **Tests**: `TST-SET-110`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit / Integration
+- **Implementation**: `PolarOfflineGattCoordinator.kt`, `PolarH10OfflineController.kt`, `PolarVeritySenseOfflineController.kt`, `TrackerService.java`, `EditDeviceDialog.kt`, `BTSearchForNewDevicesEngine.java`, `res/values*/strings_devices.xml`
+- **Rationale**: Optical Polar sensors such as Polar Verity Sense use `PolarOfflineRecordingApi` (`PolarDeviceDataType.HR`) rather than H10's `PolarExerciseApi` to maintain internal backup HR recording during pool swims or BLE dropouts without adding a duplicate SQLite migration or interrupting `0x180D` live streaming.
+- **Description**:
+1. *Optical Offline-Capable Device Detection & Settings Reuse (`REQ-SET-108.1`)*:
+   - The system SHALL recognize Polar Verity Sense / compatible `FEATURE_POLAR_OFFLINE_RECORDING` optical HR devices via device name/manufacturer matching (`"Polar Sense"`, `"Verity Sense"`, `"Polar Verity"`, `"Polar OH1"`) and persisted PFTP/offline capability cache (`PolarOfflineCapabilityStore`), reusing `Devices.db` v13 `polarH10OfflineRecording` (`DEFAULT 1`) without bumping `DB_VERSION`.
+   - `EditDeviceDialog` SHALL display the `@RequiresApi(33)` backup recording toggle for detected Polar Verity Sense / compatible optical Polar HRM devices (default ON on Android 13+, disabled with Android 13 hint below API 33), using accurate HR-only copy (`device_polar_verity_backup_recording_title` / `device_polar_verity_backup_recording_desc`) vs. H10 HR + HRV copy across all 9 locales (`values*/strings_devices.xml`) without emojis.
+2. *Shared GATT Arbitration & `PolarVeritySenseOfflineController` (`REQ-SET-108.2`)*:
+   - Shared GATT yield (`pauseGattOperations()` / `resumeGattOperations()`), Polar 8-hex ID extraction, DB device resolution, and SDK feature-readiness awaiting SHALL be factored into `PolarOfflineGattCoordinator` reused by `PolarH10OfflineController` and `PolarVeritySenseOfflineController`.
+   - On Android 13+ when backup recording is enabled, `PolarVeritySenseOfflineController.onWorkoutStarted(context)` SHALL coordinate GATT yield, await `FEATURE_POLAR_OFFLINE_RECORDING` and `FEATURE_POLAR_DEVICE_TIME_SETUP`, call `setLocalTime()`, inspect `getOfflineRecordingStatus()` (stopping pre-existing `PolarDeviceDataType.HR` if active), start `PolarDeviceDataType.HR` via `PolarOfflineRecordingApi.startOfflineRecording(..., settings = null, secret = null)`, and release GATT back to `BTLEHeartRateDevice` in a `finally` block.
+   - `TrackerService` SHALL invoke `PolarVeritySenseOfflineController.setSessionStartTimeMs(...)`, `onWorkoutStarted(this)`, and `onWorkoutStopped(this)` alongside `PolarH10OfflineController`.
+3. *Mid-Workout Fringe-Flap Invariant, `SYSTEM_BUSY` Resilience & Fetch/Cleanup API (`REQ-SET-108.3`)*:
+   - `PolarVeritySenseOfflineController` SHALL arm once per workout (`isArmed` CAS); mid-workout `0x180D` BLE disconnects or reconnects MUST NOT stop, restart, or re-query PFTP offline recording.
+   - `BlePsFtpUtils.PftpResponseError` (`PbPFtpError.SYSTEM_BUSY`) or SDK failures during arming MUST NOT crash or block workout start; the controller SHALL clear `isArmed`, restore standard GATT operations, and record a diagnosable last error state.
+   - `PolarVeritySenseOfflineController` SHALL expose `suspend fun stopAndFetchOfflineHr(...)` (stopping active HR recording, querying `listOfflineRecordings`, fetching `PolarOfflineRecordingData.HrOfflineRecording`) and `suspend fun removeOfflineRecord(...)` for downstream post-workout backfill (`ATT-7924`).
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an Android 13+ device with a Polar Verity Sense paired, *When* opening `EditDeviceDialog`, *Then* the backup toggle defaults ON with HR-only Verity Sense copy in all 9 locales (and shows disabled Android 13 hint below API 33).
+• *Given* workout start on Android 13+ with Verity Sense backup enabled, *When* `PolarVeritySenseOfflineController.onWorkoutStarted()` runs, *Then* standard GATT pauses, `setLocalTime()` and `getOfflineRecordingStatus()` execute (stopping active `HR` if present), `startOfflineRecording(..., HR, null, null)` succeeds, and `resumeGattOperations()` always executes.
+• *Given* an already-armed workout experiencing a mid-workout `0x180D` BLE flap, *When* `onWorkoutStarted()` / `onDeviceDisconnected()` occurs, *Then* PFTP offline recording is NOT stopped, restarted, or re-queried.
+• *Given* the Verity Sense returns `SYSTEM_BUSY` during arming, *When* `onWorkoutStarted()` executes, *Then* workout start completes non-blockingly, `isArmed` resets cleanly, and `resumeGattOperations()` restores live `0x180D` streaming.
+
+**Invariants**: `Devices.db` stays `DB_VERSION = 13`; zero workout-start crashes or hangs on `SYSTEM_BUSY`; zero mid-workout PFTP interruptions; zero emojis in strings; full API < 33 isolation.
+

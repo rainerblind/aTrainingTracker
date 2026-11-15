@@ -201,4 +201,8 @@
     <string name="polar_h10_retry_syncing">Syncing Polar H10…</string>
     <string name="polar_h10_retry_sync_failed">Could not connect to Polar H10. Please wake the sensor and try again.</string>
 
+    <!-- Polar Verity Sense Optical Offline HR Backup (ATT-7923, REQ-SET-108) -->
+    <string name="device_polar_verity_backup_recording_title">Polar Verity Sense Backup Recording</string>
+    <string name="device_polar_verity_backup_recording_desc">Records optical heart rate into internal sensor memory (e.g. for pool swimming or Bluetooth dropouts).</string>
+
 </resources>

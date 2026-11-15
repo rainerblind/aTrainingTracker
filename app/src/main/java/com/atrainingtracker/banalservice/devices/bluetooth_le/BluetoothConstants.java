@@ -71,6 +71,12 @@ public class BluetoothConstants {
     public static final String CHARACTERISTIC_RADAR_CONTROL_NOTIFY = "6a4e2f14-667b-11e3-949a-0800200c9a66";
     public static final UUID UUID_CHARACTERISTIC_RADAR_CONTROL_NOTIFY = UUID.fromString(CHARACTERISTIC_RADAR_CONTROL_NOTIFY);
 
+    // Polar PFTP & PMD Services for offline recording discovery (ATT-7923, REQ-SET-108)
+    public static final String SERVICE_POLAR_PFTP = "0000feee-0000-1000-8000-00805f9b34fb";
+    public static final UUID UUID_SERVICE_POLAR_PFTP = UUID.fromString(SERVICE_POLAR_PFTP);
+    public static final String SERVICE_POLAR_PMD = "fb005c80-02e7-f387-1cad-8acd2d8df0c8";
+    public static final UUID UUID_SERVICE_POLAR_PMD = UUID.fromString(SERVICE_POLAR_PMD);
+
     private static final HashMap<DeviceType, UUID> SERVICE_UUIDS = new HashMap<DeviceType, UUID>();
     private static final HashMap<DeviceType, UUID> CHARACTERISTIC_MEASUREMENT_UUIDS = new HashMap<DeviceType, UUID>();
 

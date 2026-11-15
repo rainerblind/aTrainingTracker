@@ -87,6 +87,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils;
 import com.atrainingtracker.banalservice.devices.radar.RadarLightController;
 import com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineController;
+import com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarVeritySenseOfflineController;
 import com.atrainingtracker.banalservice.devices.radar.RadarSnoozeController;
 import com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulator;
 import com.atrainingtracker.banalservice.devices.radar.SmartBrakeLightDetector;
@@ -1204,9 +1205,15 @@ public class TrackerService extends Service {
                     mAutoPauseManager.setState(AutoPauseState.AUTO_PAUSED);
                     mAutoPauseManager.resetDebounceCounter();
                 }
+                long startTimeMs = System.currentTimeMillis();
                 try {
-                    PolarH10OfflineController.setSessionStartTimeMs(System.currentTimeMillis());
+                    PolarH10OfflineController.setSessionStartTimeMs(startTimeMs);
                     PolarH10OfflineController.onWorkoutStarted(this);
+                } catch (Throwable ignored) {
+                }
+                try {
+                    PolarVeritySenseOfflineController.setSessionStartTimeMs(startTimeMs);
+                    PolarVeritySenseOfflineController.onWorkoutStarted(this);
                 } catch (Throwable ignored) {
                 }
                 // The workout name is just the date+time
@@ -1397,6 +1404,10 @@ public class TrackerService extends Service {
         RadarLightController.onWorkoutStopped(this);
         try {
             PolarH10OfflineController.onWorkoutStopped(this);
+        } catch (Throwable ignored) {
+        }
+        try {
+            PolarVeritySenseOfflineController.onWorkoutStopped(this);
         } catch (Throwable ignored) {
         }
         RadarSnoozeController.reset();
@@ -1618,6 +1629,10 @@ public class TrackerService extends Service {
         RadarLightController.onWorkoutStopped(this);
         try {
             PolarH10OfflineController.onWorkoutStopped(this);
+        } catch (Throwable ignored) {
+        }
+        try {
+            PolarVeritySenseOfflineController.onWorkoutStopped(this);
         } catch (Throwable ignored) {
         }
 

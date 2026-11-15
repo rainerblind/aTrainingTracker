@@ -50,9 +50,11 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.atrainingtracker.banalservice.Protocol
+import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
 import com.atrainingtracker.banalservice.devices.AttFusedAltitudePreferences
 import com.atrainingtracker.banalservice.devices.AttFusedPreferences
 import com.atrainingtracker.banalservice.devices.DeviceType
+import com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineGattCoordinator
 import com.atrainingtracker.banalservice.devices.radar.RadarLightController
 import com.atrainingtracker.banalservice.devices.radar.RadarLightMode
 import com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulator
@@ -205,9 +207,9 @@ fun EditDeviceDialog(
                     WheelSensorGuidanceCard(onShowGuidance = { showWheelGuidanceDialog = true })
                 }
 
-                // 10. Polar H10 Internal Backup Recording (ATT-7762, REQ-SET-104)
-                if (data.deviceType == DeviceType.HRM && isPolarH10Device(data)) {
-                    PolarH10Section(data, viewModel)
+                // 10. Polar H10 & Verity Sense Internal Backup Recording (ATT-7762, ATT-7923, REQ-SET-104, REQ-SET-108)
+                if (data.deviceType == DeviceType.HRM) {
+                    PolarOfflineDeviceSection(data = data, viewModel = viewModel)
                 }
 
                 // 11. Live Data Preview
@@ -1370,14 +1372,87 @@ fun shouldShowWheelSensorGuidance(deviceType: DeviceType): Boolean =
     deviceType == DeviceType.SPEED_AND_LOCATION_ATT_FUSED
 
 fun isPolarH10Device(data: DeviceUiData): Boolean {
-    val name = data.deviceName.lowercase(java.util.Locale.ROOT)
-    val manufacturer = data.manufacturer.lowercase(java.util.Locale.ROOT)
-    return name.contains("polar h10") || (name.contains("h10") && manufacturer.contains("polar")) || (data.deviceType == DeviceType.HRM && name.startsWith("polar h10", ignoreCase = true))
+    return PolarOfflineGattCoordinator.isPolarH10Name(data.deviceName, data.manufacturer) ||
+        (data.deviceType == DeviceType.HRM && data.deviceName.startsWith("polar h10", ignoreCase = true))
+}
+
+/**
+ * Returns true if [data] identifies a Polar Verity Sense / compatible optical Polar offline HR sensor (ATT-7923).
+ */
+fun isPolarVeritySenseDevice(
+    data: DeviceUiData,
+    context: android.content.Context? = null,
+    macAddress: String? = null
+): Boolean {
+    return PolarOfflineGattCoordinator.isPolarVeritySenseDevice(
+        context = context,
+        name = data.deviceName,
+        manufacturer = data.manufacturer,
+        macAddress = macAddress
+    )
 }
 
 @Composable
-private fun PolarH10Section(data: DeviceUiData, viewModel: EditDeviceViewModel) {
+private fun PolarOfflineDeviceSection(data: DeviceUiData, viewModel: EditDeviceViewModel) {
+    val dialogContext = LocalContext.current
+    val isH10 = isPolarH10Device(data)
+    val polarMac = if (!isH10 && data.protocol == Protocol.BLUETOOTH_LE) {
+        remember(data.id) {
+            try {
+                DevicesDatabaseManager.getInstance(dialogContext).getBluetoothMACAddress(data.id)
+            } catch (_: Throwable) {
+                null
+            }
+        }
+    } else {
+        null
+    }
+    val isVeritySense = !isH10 && isPolarVeritySenseDevice(data, dialogContext, polarMac)
+    if (isH10 || isVeritySense) {
+        PolarBackupRecordingSection(
+            data = data,
+            viewModel = viewModel,
+            isVeritySense = isVeritySense
+        )
+    }
+}
+
+@Composable
+private fun PolarBackupRecordingSection(
+    data: DeviceUiData,
+    viewModel: EditDeviceViewModel,
+    isVeritySense: Boolean
+) {
     val isAndroid13Plus = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU
+    PolarBackupRecordingCard(
+        checked = data.polarH10OfflineRecording,
+        isVeritySense = isVeritySense,
+        isAndroid13Plus = isAndroid13Plus,
+        onCheckedChange = { viewModel.onPolarH10OfflineRecordingChanged(it) }
+    )
+}
+
+/**
+ * Stateless Material 3 card exposing the Polar H10 (HR + HRV) or Verity Sense (optical HR-only)
+ * internal backup recording toggle (`REQ-SET-104`, `REQ-SET-108`).
+ */
+@Composable
+fun PolarBackupRecordingCard(
+    checked: Boolean,
+    isVeritySense: Boolean,
+    isAndroid13Plus: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    val titleRes = if (isVeritySense) {
+        R.string.device_polar_verity_backup_recording_title
+    } else {
+        R.string.device_polar_h10_backup_recording_title
+    }
+    val descRes = if (isVeritySense) {
+        R.string.device_polar_verity_backup_recording_desc
+    } else {
+        R.string.device_polar_h10_backup_recording_desc
+    }
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
@@ -1393,14 +1468,14 @@ private fun PolarH10Section(data: DeviceUiData, viewModel: EditDeviceViewModel) 
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             AttFusedToggleRow(
-                title = stringResource(R.string.device_polar_h10_backup_recording_title),
-                checked = data.polarH10OfflineRecording,
+                title = stringResource(titleRes),
+                checked = checked,
                 enabled = isAndroid13Plus,
                 disabledHint = stringResource(R.string.device_polar_h10_backup_recording_requires_android_13),
-                onCheckedChange = { viewModel.onPolarH10OfflineRecordingChanged(it) }
+                onCheckedChange = onCheckedChange
             )
             Text(
-                text = stringResource(R.string.device_polar_h10_backup_recording_desc),
+                text = stringResource(descRes),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium)
             )
