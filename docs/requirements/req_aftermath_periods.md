@@ -1317,6 +1317,38 @@
 
 ---
 
+### REQ-PER-040: Immediate In-Memory Propagation of RouteCluster Rename, Merge, Delete & Split and Bidirectional Route Sync [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-PER-048`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `WorkoutClusterRepository.kt`, `WorkoutRepository.kt`, `WorkoutClustersViewModel.kt`, `WorkoutClustersScreen.kt`, `PeriodsViewModel.kt`, `WorkoutSummariesViewModel.kt`, `RoutesRepository.kt`
+- **Rationale**: Renaming, merging, deleting, or splitting a `WorkoutCluster` updates `RouteClusters.db` and `WorkoutClusterRepository.allClusters`, but in-memory `WorkoutData.clusterName` and `clusterId` across `WorkoutRepository._allWorkouts`, `WorkoutClustersViewModel`, and `PeriodsViewModel` remain stale until an application restart. Furthermore, `ActiveFilterChipsRow` retains stale cluster names, and cluster renames do not sync to linked routes (`ATT-7758`). The system SHALL guarantee immediate in-memory propagation across all affected repositories and ViewModels while preserving `workoutName` immutability and preventing recursive sync loops.
+- **Description**:
+  1. *In-Memory Workout Propagation (`REQ-PER-040.1`)*:
+     - `WorkoutClusterRepository` operations (`updateCluster`, `deleteCluster`, `mergeClusters`, `splitCluster`, and route-synced renames) SHALL immediately propagate to `WorkoutRepository._allWorkouts` (`clusterName` updated on rename, `clusterId = -1L` and `clusterName = null` on delete, reassigned to `targetId` and `targetName` on merge, and reloaded/reconciled on split).
+  2. *ViewModel & Peek Sheet In-Memory Reconciliation (`REQ-PER-040.2`)*:
+     - `WorkoutClustersViewModel` (`_clusterWorkouts`, `_peekedWorkoutDataWithTrack`, `_selectedCluster`, `_unclusteredWorkouts`) SHALL immediately reflect cluster mutations.
+     - `WorkoutClustersScreen` (`inspectedWorkout`) SHALL resolve reactively by ID from `clusterWorkouts`.
+     - `PeriodsViewModel._peekedWorkoutDataWithTrack` SHALL observe `WorkoutRepository.allWorkouts` to reconcile the peeked workout header in-place.
+  3. *Active Filter Chip & Filter Criteria Live Synchronization (`REQ-PER-040.3`)*:
+     - `WorkoutSummariesViewModel.filterCriteria` SHALL update `clusterName` immediately on cluster rename, clear the cluster filter on delete, and transition to `targetId`/`targetName` on merge so `ActiveFilterChipsRow` stays synchronized.
+  4. *Non-Recursive Bidirectional Cluster-Route Name Sync (`REQ-PER-040.4`)*:
+     - `WorkoutClusterRepository.updateCluster()` SHALL sync the cluster name to any linked route in `RoutesRepository` without triggering recursion back into `WorkoutClusterRepository`.
+     - `RoutesRepository.updateRouteSummary()` SHALL refresh `WorkoutClusterRepository` and propagate in-memory workout updates when a cluster-linked route is renamed.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* workouts cached in `WorkoutRepository._allWorkouts`,
+  • *When* a cluster is renamed, deleted, merged, or split,
+  • *Then* in-memory `clusterName` / `clusterId` update immediately across all screens without overwriting `WorkoutData.workoutName`.
+  • *Given* an active cluster filter in `WorkoutSummariesViewModel`,
+  • *When* the cluster is renamed, merged, or deleted,
+  • *Then* `filterCriteria` and `ActiveFilterChipsRow` reflect the updated state immediately.
+- **Invariants**: `WorkoutData.workoutName` MUST NOT be overwritten on cluster rename; bidirectional `Route <-> Cluster` sync MUST NOT infinite-loop; plain JVM unit tests MUST NOT trigger unmocked `PreferenceManager`/IO leaks in `WorkoutRepository.init` (`coding_standards.md` §5.5).
+
+
+---
+
 ### REQ-SPT-002: Retrospective Filtering, Cluster Aggregation & Lifetime Engine [Verified]
 - **Tests**: `TST-SPT-005`
 - **Priority**: High

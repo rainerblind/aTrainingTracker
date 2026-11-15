@@ -25,7 +25,9 @@ import androidx.preference.PreferenceManager
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.database.ClusterMutationEvent
 import com.atrainingtracker.trainingtracker.database.WorkoutCluster
+import com.atrainingtracker.trainingtracker.database.collectIgnoringUnstubbedMock
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterStats
 import com.atrainingtracker.trainingtracker.database.ClusterCorridorVariant
@@ -296,6 +298,121 @@ class WorkoutClustersViewModel @JvmOverloads constructor(
 
     init {
         refresh()
+        observeClusterMutations()
+    }
+
+    private inline fun updatePeekedWorkout(transform: (WorkoutData) -> WorkoutData) {
+        _peekedWorkoutDataWithTrack.update { peeked ->
+            val currentWorkout = peeked?.workoutData ?: return@update peeked
+            val updatedWorkout = transform(currentWorkout)
+            if (updatedWorkout != currentWorkout) peeked.copy(workoutData = updatedWorkout) else peeked
+        }
+    }
+
+    private fun observeClusterMutations() {
+        viewModelScope.launch {
+            repository.clusterMutationEvents.collectIgnoringUnstubbedMock { event ->
+                when (event) {
+                    is ClusterMutationEvent.Renamed -> handleClusterRenamedEvent(event)
+                    is ClusterMutationEvent.Deleted -> handleClusterDeletedEvent(event)
+                    is ClusterMutationEvent.Merged -> handleClusterMergedEvent(event)
+                    is ClusterMutationEvent.Split -> handleClusterSplitEvent(event)
+                }
+            }
+        }
+    }
+
+    private fun handleClusterRenamedEvent(event: ClusterMutationEvent.Renamed) {
+        _clusterWorkouts.update { list ->
+            list.map { workout ->
+                if (workout.clusterId == event.clusterId) {
+                    workout.copy(clusterName = event.newName)
+                } else {
+                    workout
+                }
+            }
+        }
+        updatePeekedWorkout { workout ->
+            if (workout.clusterId == event.clusterId) {
+                workout.copy(clusterName = event.newName)
+            } else {
+                workout
+            }
+        }
+        _selectedCluster.update { selected ->
+            if (selected?.id == event.clusterId) selected.copy(name = event.newName) else selected
+        }
+    }
+
+    private suspend fun handleClusterDeletedEvent(event: ClusterMutationEvent.Deleted) {
+        val hadWorkoutsFromDeletedCluster =
+            _clusterWorkouts.value.any { it.clusterId == event.clusterId }
+        _clusterWorkouts.update { list ->
+            list.filterNot { it.clusterId == event.clusterId }
+        }
+        updatePeekedWorkout { workout ->
+            if (workout.clusterId == event.clusterId) {
+                workout.copy(clusterId = -1L, clusterName = null)
+            } else {
+                workout
+            }
+        }
+        if (_selectedCluster.value?.id == event.clusterId) {
+            _selectedCluster.value = null
+        }
+        if (hadWorkoutsFromDeletedCluster) {
+            _unclusteredWorkouts.value = repository.getUnclusteredWorkouts()
+        }
+    }
+
+    private suspend fun handleClusterMergedEvent(event: ClusterMutationEvent.Merged) {
+        _clusterWorkouts.update { list ->
+            list.map { workout ->
+                if (workout.clusterId == event.sourceId ||
+                    (workout.clusterId == event.targetId && workout.clusterName != event.targetName)
+                ) {
+                    workout.copy(clusterId = event.targetId, clusterName = event.targetName)
+                } else {
+                    workout
+                }
+            }
+        }
+        updatePeekedWorkout { workout ->
+            if (workout.clusterId == event.sourceId || workout.clusterId == event.targetId) {
+                workout.copy(clusterId = event.targetId, clusterName = event.targetName)
+            } else {
+                workout
+            }
+        }
+        if (_selectedCluster.value?.id == event.sourceId ||
+            _selectedCluster.value?.id == event.targetId
+        ) {
+            allClusters.value.find { it.id == event.targetId }?.let { refreshedTarget ->
+                _selectedCluster.value = refreshedTarget
+            }
+            _clusterWorkouts.value = repository.getWorkoutsForCluster(event.targetId)
+        }
+    }
+
+    private suspend fun handleClusterSplitEvent(event: ClusterMutationEvent.Split) {
+        val affectedSet = event.affectedWorkoutIds.toSet()
+        _clusterWorkouts.update { list ->
+            list.filterNot { it.id in affectedSet }
+        }
+        val peekedWorkout = _peekedWorkoutDataWithTrack.value?.workoutData
+        if (peekedWorkout != null && peekedWorkout.id in affectedSet) {
+            val updatedWorkout = runCatching {
+                WorkoutRepository.getInstance(getApplication())
+                    .allWorkouts.value
+                    .find { it.id == peekedWorkout.id }
+            }.getOrNull()
+            if (updatedWorkout != null) {
+                updatePeekedWorkout { updatedWorkout }
+            }
+        }
+        if (_selectedCluster.value?.id == event.primaryClusterId) {
+            _clusterWorkouts.value = repository.getWorkoutsForCluster(event.primaryClusterId)
+        }
     }
 
     fun refresh() {
@@ -698,13 +815,11 @@ class WorkoutClustersViewModel @JvmOverloads constructor(
         val cluster = splitTargetCluster ?: _selectedCluster.value ?: return
         val isListTriggered = (splitTargetCluster != null && _selectedCluster.value == null)
         viewModelScope.launch(ioDispatcher) {
-            WorkoutClusterEngine.getInstance(getApplication()).splitCluster(
-                context = getApplication(),
+            repository.splitCluster(
                 primaryClusterId = cluster.id,
                 variantsToSplit = variantsToSplit,
                 renameWorkouts = renameWorkouts
             )
-            repository.refreshClusters()
             _isSplitPreviewActive.value = false
             _detectedVariants.value = emptyList()
             splitTargetCluster = null

@@ -26,6 +26,7 @@ import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.database.EquipmentAndSportTypeDiscoveryManager
 import com.atrainingtracker.trainingtracker.MyPreferenceManager
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.database.ClusterMutationEvent
 import com.atrainingtracker.trainingtracker.database.WorkoutCluster
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository
@@ -43,6 +44,7 @@ import io.mockk.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
@@ -77,6 +79,7 @@ class WorkoutClustersViewModelTest {
     private val mockKnownLocationsRepo = mockk<KnownLocationsRepository>(relaxed = true)
 
     private val allClustersFlow = MutableStateFlow<List<WorkoutCluster>>(emptyList())
+    private val clusterMutationEventsFlow = MutableSharedFlow<ClusterMutationEvent>(extraBufferCapacity = 16)
     private val currentLocationFlow = MutableStateFlow<LatLng?>(null)
 
     private fun createWorkout(id: Long, clusterId: Long): WorkoutData {
@@ -191,6 +194,7 @@ class WorkoutClustersViewModelTest {
         every { anyConstructed<MyPreferenceManager>().clusterFilterCriteriaFlow } returns MutableStateFlow(ClusterFilterCriteria())
 
         every { mockClusterRepo.allClusters } returns allClustersFlow
+        every { mockClusterRepo.clusterMutationEvents } returns clusterMutationEventsFlow
         every { mockBanalRepo.currentLocation } returns currentLocationFlow
         every { mockClusterRepo.migrationStatus } returns MutableStateFlow(null)
         every { mockClusterRepo.clusterStats } returns MutableStateFlow(emptyMap())
@@ -485,6 +489,100 @@ class WorkoutClustersViewModelTest {
         verify { mockClusterEngine.createNewClusterFromWorkout(mockApplication, workout) }
         coVerify { mockClusterRepo.refreshClusters() }
         coVerify { mockWorkoutRepo.reloadWorkoutData(101L) }
+    }
+
+    /**
+     * TST-PER-048.3: ClusterMutationEvents reconcile clusterWorkouts, peekedWorkoutDataWithTrack,
+     * and selectedCluster immediately across rename, merge, and delete (REQ-PER-040.1).
+     */
+    @Test
+    fun testClusterMutationEvents_renamedMergedDeleted_reconcilesViewModelState_TST_PER_048_3() =
+        runTest(testDispatcher) {
+            val cluster10 = createCluster(10L, "Isar Trail")
+            val cluster20 = createCluster(20L, "Target Loop")
+            val workout = createWorkout(101L, 10L).copy(clusterName = "Isar Trail")
+            allClustersFlow.value = listOf(cluster10, cluster20)
+            coEvery { mockClusterRepo.getWorkoutsForCluster(10L) } returns listOf(workout)
+            coEvery { mockClusterRepo.getWorkoutsForCluster(20L) } returns listOf(
+                workout.copy(clusterId = 20L, clusterName = "Target Loop")
+            )
+            coEvery { mockClusterRepo.getUnclusteredWorkouts() } returns listOf(
+                workout.copy(clusterId = -1L, clusterName = null)
+            )
+
+        val viewModel = WorkoutClustersViewModel(mockApplication, testDispatcher)
+        activeViewModel = viewModel
+        advanceUntilIdle()
+
+        viewModel.selectCluster(cluster10)
+        advanceUntilIdle()
+        viewModel.selectWorkoutForPeek(101L)
+        advanceUntilIdle()
+
+        assertEquals("Isar Trail", viewModel.clusterWorkouts.value.first().clusterName)
+        assertEquals("Isar Trail", viewModel.peekedWorkoutDataWithTrack.value?.workoutData?.clusterName)
+
+        // 1. Rename event
+        clusterMutationEventsFlow.emit(ClusterMutationEvent.Renamed(10L, "Favorite Isar"))
+        advanceUntilIdle()
+        assertEquals("Favorite Isar", viewModel.clusterWorkouts.value.first().clusterName)
+        assertEquals("Favorite Isar", viewModel.peekedWorkoutDataWithTrack.value?.workoutData?.clusterName)
+        assertEquals("Favorite Isar", viewModel.selectedCluster.value?.name)
+
+        // 2. Merge event (10 -> 20)
+        clusterMutationEventsFlow.emit(ClusterMutationEvent.Merged(10L, 20L, "Target Loop"))
+        advanceUntilIdle()
+        assertEquals(20L, viewModel.selectedCluster.value?.id)
+        assertEquals(20L, viewModel.clusterWorkouts.value.first().clusterId)
+        assertEquals("Target Loop", viewModel.clusterWorkouts.value.first().clusterName)
+        assertEquals(20L, viewModel.peekedWorkoutDataWithTrack.value?.workoutData?.clusterId)
+        assertEquals("Target Loop", viewModel.peekedWorkoutDataWithTrack.value?.workoutData?.clusterName)
+
+        // 3. Delete event (20)
+        clusterMutationEventsFlow.emit(ClusterMutationEvent.Deleted(20L))
+        advanceUntilIdle()
+        assertNull(viewModel.selectedCluster.value)
+        assertTrue(viewModel.clusterWorkouts.value.isEmpty())
+        assertEquals(-1L, viewModel.peekedWorkoutDataWithTrack.value?.workoutData?.clusterId)
+        assertNull(viewModel.peekedWorkoutDataWithTrack.value?.workoutData?.clusterName)
+        assertEquals(1, viewModel.unclusteredWorkouts.value.size)
+    }
+
+    /**
+     * TST-PER-048.3: executeClusterSplit delegates through WorkoutClusterRepository.splitCluster and
+     * ClusterMutationEvent.Split removes split workouts from clusterWorkouts & reconciles peek (REQ-PER-040.1).
+     */
+    @Test
+    fun testExecuteClusterSplit_delegatesToRepositoryAndReconcilesSplitEvent_TST_PER_048_3() = runTest(testDispatcher) {
+        val cluster = createCluster(10L, "Main Trail")
+        val remainingWorkout = createWorkout(101L, 10L).copy(clusterName = "Main Trail")
+        val splitWorkout = createWorkout(102L, 10L).copy(clusterName = "Main Trail")
+        val reloadedSplitWorkout = splitWorkout.copy(clusterId = 30L, clusterName = "Variant B")
+        allClustersFlow.value = listOf(cluster)
+        coEvery { mockClusterRepo.getWorkoutsForCluster(10L) } returns
+            listOf(remainingWorkout, splitWorkout) andThen listOf(remainingWorkout)
+        every { mockWorkoutRepo.allWorkouts } returns MutableStateFlow(listOf(remainingWorkout, reloadedSplitWorkout))
+        coEvery { mockClusterRepo.splitCluster(10L, any(), true) } coAnswers {
+            clusterMutationEventsFlow.emit(ClusterMutationEvent.Split(10L, listOf(30L), listOf(102L)))
+            listOf(30L)
+        }
+
+        val viewModel = WorkoutClustersViewModel(mockApplication, testDispatcher)
+        activeViewModel = viewModel
+        advanceUntilIdle()
+
+        viewModel.selectCluster(cluster)
+        advanceUntilIdle()
+        viewModel.selectWorkoutForPeek(102L)
+        advanceUntilIdle()
+
+        viewModel.executeClusterSplit(listOf("Variant B" to listOf(splitWorkout)), renameWorkouts = true)
+        advanceUntilIdle()
+
+        coVerify(exactly = 1) { mockClusterRepo.splitCluster(10L, any(), true) }
+        assertEquals(listOf(101L), viewModel.clusterWorkouts.value.map { it.id })
+        assertEquals(30L, viewModel.peekedWorkoutDataWithTrack.value?.workoutData?.clusterId)
+        assertEquals("Variant B", viewModel.peekedWorkoutDataWithTrack.value?.workoutData?.clusterName)
     }
 }
 

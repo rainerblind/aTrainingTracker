@@ -847,6 +847,24 @@
      • `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.*"` asserting 100% pass rate.
 
 
+### TST-PER-048: **RouteCluster In-Memory Propagation, Filter Chip & Bidirectional Route Sync Test Suite** [Verified]
+- **Requirement(s)**: `REQ-PER-040` (`REQ-PER-040.1`..`REQ-PER-040.4`)
+- **Component**: `WorkoutClusterRepository.kt`, `WorkoutRepository.kt`, `WorkoutClustersViewModel.kt`, `WorkoutClustersScreen.kt`, `PeriodsViewModel.kt`, `WorkoutSummariesViewModel.kt`, `RoutesRepository.kt`
+- **Jira**: `ATT-7758`
+- **Test Description**:
+  1. *Cluster Rename, Delete, Merge & Split Propagation Test (`TST-PER-048.1`)*:
+     • Verify that `WorkoutClusterRepository.updateCluster()`, `deleteCluster()`, `mergeClusters()`, and `splitCluster()` propagate `clusterId`/`clusterName` immediately to `WorkoutRepository._allWorkouts` without mutating `WorkoutData.workoutName`.
+     • Verify that `WorkoutClustersViewModel._clusterWorkouts`, `_peekedWorkoutDataWithTrack`, and `_selectedCluster` reflect mutations immediately.
+  2. *Periods Peek Sheet Reactive Reconciliation Test (`TST-PER-048.2`)*:
+     • Verify that `PeriodsViewModel._peekedWorkoutDataWithTrack` reconciles immediately when `WorkoutRepository.allWorkouts` emits an updated `WorkoutData`.
+  3. *Active Filter Chip & Filter Criteria Live Synchronization Test (`TST-PER-048.3`)*:
+     • Verify that `WorkoutSummariesViewModel.filterCriteria` updates `clusterName` on rename, clears on delete, and transitions on merge.
+  4. *Bidirectional Non-Recursive Route-Cluster Name Sync Test (`TST-PER-048.4`)*:
+     • Verify that `WorkoutClusterRepository.updateCluster()` syncs linked routes in `RoutesRepository` without infinite recursion, and `RoutesRepository.updateRouteSummary()` refreshes `WorkoutClusterRepository` and propagates to `WorkoutRepository`.
+  5. *Plain JVM Isolation & Targeted Regression Test (`TST-PER-048.5`)*:
+     • Verify all unit tests pass under plain JVM without `PreferenceManager`/IO leaks (`coding_standards.md` §5.5).
+
+
 ---
 
 ### TST-SPT-005: Retrospective Filtering, Cluster Math, Lifetime Evaluation & ViewModel Tests [Verified]

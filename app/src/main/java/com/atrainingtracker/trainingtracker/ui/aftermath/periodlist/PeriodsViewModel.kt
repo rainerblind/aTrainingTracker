@@ -20,6 +20,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.database.collectIgnoringUnstubbedMock
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataWithTrack
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.atrainingtracker.trainingtracker.ui.util.MigrationStatus
@@ -68,6 +69,19 @@ class PeriodsViewModel @JvmOverloads constructor(
     private val workoutRepo = WorkoutRepository.getInstance(application)
     private val periodsRepo = PeriodsRepository.getInstance(application)
     private val prefManager = com.atrainingtracker.trainingtracker.MyPreferenceManager(application)
+
+    init {
+        viewModelScope.launch {
+            workoutRepo.allWorkouts.collectIgnoringUnstubbedMock { workouts ->
+                val peeked = _peekedWorkoutDataWithTrack.value ?: return@collectIgnoringUnstubbedMock
+                val workoutData = peeked.workoutData ?: return@collectIgnoringUnstubbedMock
+                val updated = workouts.find { it.id == workoutData.id } ?: return@collectIgnoringUnstubbedMock
+                if (updated != workoutData) {
+                    _peekedWorkoutDataWithTrack.value = peeked.copy(workoutData = updated)
+                }
+            }
+        }
+    }
 
     private val _selectedMetric = MutableStateFlow(PeriodBarMetric.DURATION)
     val selectedMetric: StateFlow<PeriodBarMetric> = _selectedMetric.asStateFlow()

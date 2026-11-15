@@ -32,6 +32,7 @@ import com.atrainingtracker.trainingtracker.database.RouteSummary
 import com.atrainingtracker.trainingtracker.database.RouteWithPath
 import com.atrainingtracker.trainingtracker.database.RoutesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine
+import com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository
 import com.atrainingtracker.trainingtracker.routes.RouteWaypoint
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaRoute
@@ -49,6 +50,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -298,14 +300,45 @@ class RoutesRepository internal constructor(
         // 1. Update the record in the database
         routesDb.updateRouteSummary(summary)
 
-        // 2. Sync name change with RouteCluster (SCRUM-207)
+        // 2. Sync name change with RouteCluster (SCRUM-207 / REQ-PER-040.2)
         if (summary.clusterId != -1L) {
             WorkoutClusterEngine.getInstance(context)
                 .syncRouteNameChange(summary.clusterId, summary.name)
+            @Suppress("TooGenericExceptionCaught")
+            try {
+                WorkoutClusterRepository.getInstance(context)
+                    .onRouteSyncedClusterRename(summary.clusterId)
+            } catch (t: Throwable) {
+                runCatching { Log.w(TAG, "Failed to propagate route-synced cluster rename", t) }
+            }
         }
 
         // 3. Trigger a refresh so all collectors (List View, Map View)
         refreshRoutes()
+    }
+
+    /**
+     * Synchronizes a cluster rename into its linked route in SQLite and refreshes [_allRoutes]
+     * without invoking [WorkoutClusterEngine.syncRouteNameChange] to prevent recursion (REQ-PER-040.2).
+     */
+    suspend fun syncClusterNameChange(clusterId: Long, newName: String) {
+        if (clusterId == -1L) return
+        val linkedRoute = withContext(Dispatchers.IO) {
+            routesDb.getRouteByClusterId(clusterId)
+        }
+        if (linkedRoute != null && linkedRoute.summary.name != newName) {
+            routesDb.updateRouteSummary(linkedRoute.summary.copy(name = newName))
+            _allRoutes.update { currentRoutes ->
+                currentRoutes.map { route ->
+                    if (route.summary.clusterId == clusterId) {
+                        route.copy(summary = route.summary.copy(name = newName))
+                    } else {
+                        route
+                    }
+                }
+            }
+            refreshRoutes()
+        }
     }
 
     /**

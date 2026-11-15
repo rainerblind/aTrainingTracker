@@ -4157,6 +4157,79 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
     }
 
     /**
+     * Updates [WorkoutData.clusterName] in memory for all cached workouts linked to [clusterId]
+     * while preserving user-defined [WorkoutData.workoutName] (REQ-PER-040.1).
+     */
+    fun onClusterRenamed(clusterId: Long, newName: String) {
+        if (clusterId == -1L) return
+        _allWorkouts.update { currentList ->
+            var changed = false
+            val updatedList = currentList.map { workout ->
+                if (workout.clusterId == clusterId && workout.clusterName != newName) {
+                    changed = true
+                    workout.copy(clusterName = newName)
+                } else {
+                    workout
+                }
+            }
+            if (changed) updatedList else currentList
+        }
+    }
+
+    /**
+     * Clears [WorkoutData.clusterId] and [WorkoutData.clusterName] in memory for all cached workouts
+     * previously linked to [clusterId] while preserving [WorkoutData.workoutName] (REQ-PER-040.1).
+     */
+    fun onClusterDeleted(clusterId: Long) {
+        if (clusterId == -1L) return
+        _allWorkouts.update { currentList ->
+            var changed = false
+            val updatedList = currentList.map { workout ->
+                if (workout.clusterId == clusterId) {
+                    changed = true
+                    workout.copy(clusterId = -1L, clusterName = null)
+                } else {
+                    workout
+                }
+            }
+            if (changed) updatedList else currentList
+        }
+    }
+
+    /**
+     * Reassigns [WorkoutData.clusterId] and [WorkoutData.clusterName] in memory from [sourceId]
+     * to [targetId] ([targetName]) while preserving [WorkoutData.workoutName] (REQ-PER-040.1).
+     */
+    fun onClusterMerged(sourceId: Long, targetId: Long, targetName: String) {
+        if (targetId == -1L) return
+        _allWorkouts.update { currentList ->
+            var changed = false
+            val updatedList = currentList.map { workout ->
+                if (workout.clusterId == sourceId ||
+                    (workout.clusterId == targetId && workout.clusterName != targetName)
+                ) {
+                    changed = true
+                    workout.copy(clusterId = targetId, clusterName = targetName)
+                } else {
+                    workout
+                }
+            }
+            if (changed) updatedList else currentList
+        }
+    }
+
+    /**
+     * Reloads in-memory [WorkoutData] entries from SQLite for every specified workout ID,
+     * keeping [_allWorkouts] aligned after bulk reassignments such as cluster splits (REQ-PER-040.1).
+     */
+    suspend fun reloadWorkouts(workoutIds: Collection<Long>) {
+        if (workoutIds.isEmpty()) return
+        workoutIds.distinct().forEach { workoutId ->
+            reloadWorkoutData(workoutId)
+        }
+    }
+
+    /**
      * Public accessor to force a reload of a single workout from the database.
      *
      * Implementation: Uses a conflated reload pipeline (REQ-STB-018.1). If a reload for [workoutId]

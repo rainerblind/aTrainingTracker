@@ -35,8 +35,10 @@ import com.atrainingtracker.trainingtracker.exporter.FileFormat
 import com.atrainingtracker.trainingtracker.ui.aftermath.DeletionProgress
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
+import com.atrainingtracker.trainingtracker.database.ClusterMutationEvent
 import com.atrainingtracker.trainingtracker.database.WorkoutCluster
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository
+import com.atrainingtracker.trainingtracker.database.collectIgnoringUnstubbedMock
 import com.atrainingtracker.trainingtracker.repositories.KnownLocationItem
 import com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepository
 import kotlinx.coroutines.flow.Flow
@@ -97,6 +99,42 @@ class WorkoutSummariesViewModel(application: Application) :
             tuningDataStore.enableCardioPowerDynamicsFlow.collect { enabled ->
                 if (enabled) {
                     workoutRepo.backfillHistoricalCardioPowerDynamics(limit = 20)
+                }
+            }
+        }
+        viewModelScope.launch {
+            clusterRepo.clusterMutationEvents.collectIgnoringUnstubbedMock { event ->
+                val current = _filterCriteria.value
+                val activeClusterId = current.clusterId ?: return@collectIgnoringUnstubbedMock
+                when (event) {
+                    is ClusterMutationEvent.Renamed -> {
+                        if (activeClusterId == event.clusterId && current.clusterName != event.newName) {
+                            setFilterCriteria(current.copy(clusterName = event.newName))
+                        }
+                    }
+                    is ClusterMutationEvent.Deleted -> {
+                        if (activeClusterId == event.clusterId) {
+                            setFilterCriteria(current.copy(clusterId = null, clusterName = null))
+                        }
+                    }
+                    is ClusterMutationEvent.Merged -> {
+                        if (activeClusterId == event.sourceId ||
+                            (activeClusterId == event.targetId && current.clusterName != event.targetName)
+                        ) {
+                            setFilterCriteria(current.copy(clusterId = event.targetId, clusterName = event.targetName))
+                        }
+                    }
+                    is ClusterMutationEvent.Split -> Unit
+                }
+            }
+        }
+        viewModelScope.launch {
+            clusterRepo.allClusters.collectIgnoringUnstubbedMock { clusters ->
+                val current = _filterCriteria.value
+                val activeClusterId = current.clusterId ?: return@collectIgnoringUnstubbedMock
+                val matched = clusters.find { it.id == activeClusterId } ?: return@collectIgnoringUnstubbedMock
+                if (matched.name != current.clusterName) {
+                    setFilterCriteria(current.copy(clusterName = matched.name))
                 }
             }
         }

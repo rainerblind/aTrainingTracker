@@ -87,6 +87,8 @@ fun WorkoutClustersScreen(
     }
 
     val selectedCluster by viewModel.selectedCluster.collectAsState()
+    val allClusters by viewModel.allClusters.collectAsStateWithLifecycle()
+    val currentClusterWorkouts by viewModel.clusterWorkouts.collectAsStateWithLifecycle()
     var viewingWorkoutsForCluster by remember { mutableStateOf<WorkoutCluster?>(null) }
     var inspectedWorkout by remember { mutableStateOf<WorkoutData?>(null) }
     var editedWorkoutId by rememberSaveable { mutableStateOf<Long?>(null) }
@@ -94,11 +96,22 @@ fun WorkoutClustersScreen(
 
     val allWorkouts by summariesViewModel.workouts.collectAsStateWithLifecycle()
 
-    LaunchedEffect(allWorkouts, inspectedWorkout?.id) {
+    LaunchedEffect(allWorkouts, currentClusterWorkouts, inspectedWorkout?.id) {
         val currentId = inspectedWorkout?.id ?: return@LaunchedEffect
-        val updated = allWorkouts.find { it.id == currentId }
+        val updated = currentClusterWorkouts.find { it.id == currentId }
+            ?: allWorkouts.find { it.id == currentId }
         if (updated != null && updated != inspectedWorkout) {
             inspectedWorkout = updated
+        }
+    }
+
+    LaunchedEffect(allClusters, viewingWorkoutsForCluster?.id) {
+        val activeId = viewingWorkoutsForCluster?.id ?: return@LaunchedEffect
+        val updated = allClusters.find { it.id == activeId }
+        if (updated == null) {
+            viewingWorkoutsForCluster = null
+        } else if (updated != viewingWorkoutsForCluster) {
+            viewingWorkoutsForCluster = updated
         }
     }
 

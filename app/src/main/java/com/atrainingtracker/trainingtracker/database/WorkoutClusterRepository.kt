@@ -21,6 +21,7 @@ package com.atrainingtracker.trainingtracker.database
 import android.content.Context
 import android.database.Cursor
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.atrainingtracker.trainingtracker.repositories.SportTypesRepository
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMapper
@@ -36,13 +37,49 @@ import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+
+/**
+ * Collects [kotlinx.coroutines.flow.Flow] emissions while rethrowing [kotlinx.coroutines.CancellationException]
+ * and ignoring MockK's `KotlinNothingValueException` when a relaxed mock leaves a flow unstubbed.
+ */
+@Suppress("TooGenericExceptionCaught")
+internal suspend fun <T> kotlinx.coroutines.flow.Flow<T>.collectIgnoringUnstubbedMock(
+    action: suspend (T) -> Unit
+) {
+    try {
+        collect { value -> action(value) }
+    } catch (ce: kotlinx.coroutines.CancellationException) {
+        throw ce
+    } catch (t: Throwable) {
+        if (t::class.simpleName != "KotlinNothingValueException") {
+            throw t
+        }
+    }
+}
+
+/**
+ * Domain events emitted after any persistent RouteCluster mutation completes (REQ-PER-040.1).
+ */
+sealed class ClusterMutationEvent {
+    data class Renamed(val clusterId: Long, val newName: String) : ClusterMutationEvent()
+    data class Deleted(val clusterId: Long) : ClusterMutationEvent()
+    data class Merged(val sourceId: Long, val targetId: Long, val targetName: String) : ClusterMutationEvent()
+    data class Split(
+        val primaryClusterId: Long,
+        val createdClusterIds: List<Long>,
+        val affectedWorkoutIds: List<Long>
+    ) : ClusterMutationEvent()
+}
 
 class WorkoutClusterRepository internal constructor(
     private val context: Context,
@@ -74,6 +111,33 @@ class WorkoutClusterRepository internal constructor(
 
     private val _clusterStats = MutableStateFlow<Map<Long, WorkoutClusterStats>>(emptyMap())
     val clusterStats: StateFlow<Map<Long, WorkoutClusterStats>> = _clusterStats.asStateFlow()
+
+    private val _clusterMutationEvents = MutableSharedFlow<ClusterMutationEvent>(extraBufferCapacity = 16)
+    val clusterMutationEvents: SharedFlow<ClusterMutationEvent> = _clusterMutationEvents.asSharedFlow()
+
+    private suspend fun notifyWorkoutRepository(action: suspend (WorkoutRepository) -> Unit) {
+        try {
+            action(WorkoutRepository.getInstance(context))
+        } catch (t: Throwable) {
+            if (DEBUG) {
+                runCatching {
+                    android.util.Log.w("WorkoutClusterRepo", "Failed to notify WorkoutRepository: ${t.message}")
+                }
+            }
+        }
+    }
+
+    private suspend fun notifyRoutesRepository(action: suspend (RoutesRepository) -> Unit) {
+        try {
+            action(RoutesRepository.getInstance(context))
+        } catch (t: Throwable) {
+            if (DEBUG) {
+                runCatching {
+                    android.util.Log.w("WorkoutClusterRepo", "Failed to notify RoutesRepository: ${t.message}")
+                }
+            }
+        }
+    }
 
     init {
         // Fast, non-blocking asynchronous hydration directly from RouteClusters table (ATT-5074 / REQ-UI-322.5).
@@ -353,9 +417,29 @@ class WorkoutClusterRepository internal constructor(
         _allClusters.value.find { it.id == clusterId } ?: clusterDb.getClusterById(clusterId)
     }
 
+    /**
+     * Updates a [WorkoutCluster] in SQLite, syncs linked route name if needed, updates cached
+     * [WorkoutRepository] workouts, and emits [ClusterMutationEvent.Renamed] (REQ-PER-040.1, REQ-PER-040.2).
+     */
     suspend fun updateCluster(cluster: WorkoutCluster) = withContext(Dispatchers.IO) {
         clusterDb.updateCluster(cluster)
         refreshClusters()
+        notifyRoutesRepository { it.syncClusterNameChange(cluster.id, cluster.name) }
+        notifyWorkoutRepository { it.onClusterRenamed(cluster.id, cluster.name) }
+        _clusterMutationEvents.emit(ClusterMutationEvent.Renamed(cluster.id, cluster.name))
+    }
+
+    /**
+     * Propagates a cluster rename that originated from a linked route rename in [RoutesRepository],
+     * refreshing [_allClusters], updating [WorkoutRepository], and emitting [ClusterMutationEvent.Renamed]
+     * without re-invoking [RoutesRepository] to prevent recursion (REQ-PER-040.2).
+     */
+    suspend fun onRouteSyncedClusterRename(clusterId: Long) = withContext(Dispatchers.IO) {
+        if (clusterId == -1L) return@withContext
+        val updatedCluster = clusterDb.getClusterById(clusterId) ?: return@withContext
+        refreshClusters()
+        notifyWorkoutRepository { it.onClusterRenamed(clusterId, updatedCluster.name) }
+        _clusterMutationEvents.emit(ClusterMutationEvent.Renamed(clusterId, updatedCluster.name))
     }
 
     private suspend fun repairClusterMetadata() = withContext(Dispatchers.Default) {
@@ -456,6 +540,10 @@ class WorkoutClusterRepository internal constructor(
         }
     }
 
+    /**
+     * Deletes a [WorkoutCluster], clears links in workouts and routes, refreshes caches, updates
+     * in-memory [WorkoutRepository] workouts, and emits [ClusterMutationEvent.Deleted] (REQ-PER-040.1).
+     */
     suspend fun deleteCluster(clusterId: Long) = withContext(Dispatchers.IO) {
         // 1. Clear links in workouts
         summariesManager.clearClusterLink(clusterId)
@@ -466,20 +554,59 @@ class WorkoutClusterRepository internal constructor(
         // 3. Delete the cluster itself
         clusterDb.deleteCluster(clusterId)
 
-        // 4. Refresh
+        // 4. Refresh & propagate in-memory
         refreshClusters()
+        notifyRoutesRepository { it.refreshRoutes() }
+        notifyWorkoutRepository { it.onClusterDeleted(clusterId) }
+        _clusterMutationEvents.emit(ClusterMutationEvent.Deleted(clusterId))
     }
 
     /**
-     * Merges a source cluster into a target cluster and refreshes cluster state flows (ATT-5666 / REQ-SET-089).
+     * Merges a source cluster into a target cluster, refreshes cluster and route flows,
+     * updates [WorkoutRepository], and emits [ClusterMutationEvent.Merged] (ATT-5666 / REQ-SET-089 / REQ-PER-040.1).
      */
     suspend fun mergeClusters(sourceId: Long, targetId: Long): Boolean = withContext(Dispatchers.IO) {
         val engine = WorkoutClusterEngine.getInstance(context)
+        val targetNameBeforeMerge = clusterDb.getClusterById(targetId)?.name
         val success = engine.mergeClusters(context, sourceId, targetId)
         if (success) {
             refreshClusters()
+            val resolvedTargetName = clusterDb.getClusterById(targetId)?.name ?: targetNameBeforeMerge ?: ""
+            notifyRoutesRepository { it.refreshRoutes() }
+            notifyWorkoutRepository { it.onClusterMerged(sourceId, targetId, resolvedTargetName) }
+            _clusterMutationEvents.emit(ClusterMutationEvent.Merged(sourceId, targetId, resolvedTargetName))
         }
         success
+    }
+
+    /**
+     * Splits selected route variants out of [primaryClusterId], refreshes cluster caches, reloads
+     * affected workouts in [WorkoutRepository], and emits [ClusterMutationEvent.Split] (REQ-PER-040.1).
+     */
+    suspend fun splitCluster(
+        primaryClusterId: Long,
+        variantsToSplit: List<Pair<String, List<WorkoutData>>>,
+        renameWorkouts: Boolean = true
+    ): List<Long> = withContext(Dispatchers.IO) {
+        val createdClusterIds = WorkoutClusterEngine.getInstance(context).splitCluster(
+            context = context,
+            primaryClusterId = primaryClusterId,
+            variantsToSplit = variantsToSplit,
+            renameWorkouts = renameWorkouts
+        )
+        refreshClusters()
+        val affectedWorkoutIds = variantsToSplit.flatMap { it.second }.map { it.id }.distinct()
+        if (createdClusterIds.isNotEmpty() && affectedWorkoutIds.isNotEmpty()) {
+            notifyWorkoutRepository { it.reloadWorkouts(affectedWorkoutIds) }
+            _clusterMutationEvents.emit(
+                ClusterMutationEvent.Split(
+                    primaryClusterId = primaryClusterId,
+                    createdClusterIds = createdClusterIds,
+                    affectedWorkoutIds = affectedWorkoutIds
+                )
+            )
+        }
+        createdClusterIds
     }
 
     suspend fun getWorkoutsForCluster(clusterId: Long): List<WorkoutData> = withContext(Dispatchers.IO) {
