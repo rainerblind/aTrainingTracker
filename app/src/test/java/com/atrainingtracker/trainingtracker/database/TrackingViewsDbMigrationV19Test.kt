@@ -130,7 +130,10 @@ class TrackingViewsDbMigrationV19Test {
 
         // Verify DatabaseSchemaRegistry parity (Rule 62)
         assertTrue(DatabaseSchemaRegistry.isVersionSupported("TrackingViews.db", 19))
-        assertEquals(20, DatabaseSchemaRegistry.getMaxSupportedVersion("TrackingViews.db"))
+        assertEquals(
+            TrackingViewsDatabaseManager.TrackingViewsDbHelper.DB_VERSION,
+            DatabaseSchemaRegistry.getMaxSupportedVersion("TrackingViews.db")
+        )
 
         // Verify idempotency
         helper.onUpgrade(database, 18, 19)
