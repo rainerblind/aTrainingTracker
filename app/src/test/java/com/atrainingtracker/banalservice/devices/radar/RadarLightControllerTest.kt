@@ -714,7 +714,6 @@ class RadarLightControllerTest {
         val mockContext = mockk<Context>(relaxed = true)
 
         RadarLightController.registerRadarDevice(mockDevice, lightSupported = true, isStvzo = false)
-        RadarLightController.updateCachedPreferences(autoMode = false, defaultMode = RadarLightMode.SOLID)
         RadarLightController.setManualLightMode(RadarLightMode.SOLID)
 
         assertFalse(RadarLightController.isAutoMode.value)
@@ -734,5 +733,40 @@ class RadarLightControllerTest {
         RadarLightController.onWorkoutStarted(mockContext, isCycling = true)
         assertEquals("Ride 2 should restore SOLID preference", RadarLightMode.SOLID, RadarLightController.currentMode.value)
         verify(atLeast = 2) { mockDevice.setLightMode(RadarLightMode.SOLID) }
+    }
+
+    /**
+     * Finding 2 & Finding 3: Selection outside active workout (e.g. EditDeviceDialog)
+     * updates in-memory cache and is NOT stomped on workout start.
+     */
+    @Test
+    fun testRadarLightController_outsideWorkoutSelection_persistsAcrossLifecycleAndWorkoutStart() {
+        val mockDevice = mockk<BTLERadarDevice>(relaxed = true)
+        every { mockDevice.setLightMode(any()) } returns true
+        val mockContext = mockk<Context>(relaxed = true)
+
+        RadarLightController.registerRadarDevice(mockDevice, lightSupported = true, isStvzo = false)
+
+        // User selects SOLID in EditDeviceDialog outside active workout
+        RadarLightController.setManualLightMode(RadarLightMode.SOLID)
+        assertFalse(RadarLightController.isAutoMode.value)
+        assertEquals(RadarLightMode.SOLID, RadarLightController.currentMode.value)
+
+        // Workout starts: must retain SOLID, not stomp with default AUTO
+        RadarLightController.onWorkoutStarted(mockContext, isCycling = true)
+        assertFalse(RadarLightController.isAutoMode.value)
+        assertEquals(RadarLightMode.SOLID, RadarLightController.currentMode.value)
+
+        // Workout stops
+        RadarLightController.onWorkoutStopped(mockContext)
+        assertEquals(RadarLightMode.OFF, RadarLightController.currentMode.value)
+
+        // Outside workout, user switches back to AUTO
+        RadarLightController.setAutoMode()
+        assertTrue(RadarLightController.isAutoMode.value)
+
+        // Workout starts: must retain AUTO
+        RadarLightController.onWorkoutStarted(mockContext, isCycling = true)
+        assertTrue(RadarLightController.isAutoMode.value)
     }
 }

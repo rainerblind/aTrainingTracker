@@ -13,8 +13,11 @@
 ATT-7991 unifies Garmin Varia radar tail light mode persistence and user interfaces across the app:
 1. **Unified Persistence & Automatic Migration (`TuningPreferencesDataStore.kt`)**: Persists `radarLightAutoMode: Boolean` (default `true`) and `radarLightDefaultMode: RadarLightMode` (`DAY_FLASH`). Migrates legacy `RadarLightControlMode`: `SMART_AUTOMATION -> true`, `FIXED_WORKOUT_MODE -> legacy default mode`, `MANUAL -> false + OFF`.
 2. **Controller Decoupling & Debounced Mode Cycling (`RadarLightController.kt`)**: Exposes dual `isAutoMode` and `currentMode` flows. Implements ~400 ms hardware command debounce for `cycleNextMode()`, updating UI immediately while coalescing radio writes. Preserves StVZO mode pruning (`AUTO -> SOLID -> OFF -> AUTO`).
-3. **Workout Lifecycle Preservation (`RadarLightController.kt`)**: Automatically activates persisted choice on cycling workout start; turns light `OFF` and disconnects on stop without wiping user configuration.
-4. **UI Consolidation & Parity (`RadarSettingsSection.kt`, `RadarLightQuickSwitchSheet.kt`, `EditDeviceDialog.kt`)**: Retired redundant 3-way mode controls and dropdown from Expert Settings while retaining deceleration brake light toggle (`Design Guidelines §3.2`). Added `Automatik` as first selectable choice with green status dot and active mode subtitle in both live sheets.
+3. **Workout Lifecycle & Bounce 1 Remediation**:
+   - Resolved Application context fallback via safe `runCatching { TrainingApplication.getAppContext() }` in `persistSelectionAsync` and `resolveActiveConfig`.
+   - Synchronous cache synchronization (`cachedAutoMode`, `cachedLightDefaultMode`, `hasLoadedInitialPreferences` guard) protects outside-workout user selections in `EditDeviceDialog` from being stomped upon subsequent workout start.
+   - Restores persisted selection on workout start; commands `OFF` on stop without preference erasure.
+4. **UI Consolidation & Parity (`RadarSettingsSection.kt`, `RadarLightQuickSwitchSheet.kt`, `EditDeviceDialog.kt`)**: Retired redundant 3-way mode controls and dropdown from Expert Settings while retaining deceleration brake light toggle (`Design Guidelines §3.2`). Added `Automatik` as first selectable choice with active mode subtitle in both live sheets.
 
 ---
 
@@ -28,7 +31,7 @@ ATT-7991 unifies Garmin Varia radar tail light mode persistence and user interfa
 | `REQ-CON-031.5` | `TST-CON-031.5b` | Compose UI Test (`RadarSettingsSectionTest`) | **PASSED** | `Verified` |
 | `REQ-CON-031.3` | `TST-CON-031.3a` | Visual Inspection & Compose Test (`RadarLightQuickSwitchSheet`) | **PASSED** | `Verified` |
 | `REQ-CON-031.7` | `TST-CON-031.7` | Localization Parity (`TranslationParityTest`, 9 locales) | **PASSED** | `Verified` |
-| `REQ-PRO-001` | `TST-CON-031.8` | Tier 1 Targeted Regression Suite (248 tests) | **PASSED** | `Verified` |
+| `REQ-PRO-001` | `TST-CON-031.8` | Targeted Unit Suite (`RadarLightControllerTest`, unmasked) | **PASSED** | `Verified` |
 
 ---
 
@@ -38,7 +41,7 @@ All UI screens verified on `emulator-5554` and certified via `read_file`:
 * **Settings**: ![Radar Settings](img/ATT-7991_radar_settings_section.png) (3-way selector retired, brake toggle preserved).
 * **Quick Switch**: ![Quick Switch Sheet](img/ATT-7991_quick_switch_sheet.png) (Automatik first option with active mode subtitle).
 * **Device Dialog**: ![Edit Device Dialog](img/ATT-7991_edit_device_dialog.png) (Parity with sheet, Automatik + physical modes).
-* **Crash Logcat**: `adb -s emulator-5554 logcat -b crash -d` verified clean (0 crashes).
+* **Crash Logcat**: `adb -s emulator-5554 logcat -b crash -d` clean (0 crashes).
 
 ---
 
@@ -46,11 +49,5 @@ All UI screens verified on `emulator-5554` and certified via `read_file`:
 
 1. **GATT Queue Safety**: ~400 ms command debouncing prevents BLE queue flooding during rapid tap sequences.
 2. **StVZO Compliance**: Non-StVZO flashing modes pruned automatically when `isStvzo == true`.
-3. **Clean-Room Test Pass Rate**: 248/248 unit tests passed; `:app:lintDebug` passed with 0 errors.
-4. **Living Documentation Synchronized**: `docs/requirements.md` and `docs/tests.md` updated to `Verified`.
-
-### Requirement Archaeology & Chesterton's Fence Audit
-* **Original Requirement ID & Target**: `REQ-CON-031.3` (Quick-Switch Sheet), `REQ-CON-031.4` (Workout Lifecycle), `REQ-CON-031.5` (Settings & Device Controls)
-* **Historical Origin & Commit Trace**: Introduced in `ATT-5102` (`c1d27049`), refined in `ATT-6707` (`fe09f672`), `ATT-7545` (`6bfac996`), `ATT-7540`, and `ATT-7538` (`b645651f`).
-* **Root Reason for Existing Formulation**: `ATT-7538` added a 3-way Expert Settings mode (`MANUAL`, `FIXED_WORKOUT_MODE`, `SMART_AUTOMATION`) to eliminate boolean race conditions, but isolated `Automatik` in settings, leaving live sheets as one-way manual traps with no return path and coupling workout stop to setting erasure.
-* **Preservation of Core Invariants**: StVZO regulatory compliance (`isStvzo` skips flashing modes); non-blocking GATT FIFO queueing with ~400 ms debounce; safety illumination during pause; independent deceleration brake light (`radarBrakeLightEnabled`); backward-compatible preference migration; 100% 9-language translation parity.
+3. **Clean-Room Test Pass Rate**: Unmasked `RadarLightControllerTest` passes 100%; `:app:lintDebug` passes with 0 errors; `:app:compileDebugAndroidTestKotlin` passes with 0 errors.
+4. **Living Documentation Synchronized**: `docs/requirements.md` and `docs/tests.md` confirmed `Verified`.
