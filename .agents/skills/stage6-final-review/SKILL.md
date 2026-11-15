@@ -23,8 +23,9 @@ A freshly spawned **Cold `Gemini 4 Carbon` (`Model: "pro"`)** reviewer — with 
      1. The original Jira ticket requirements (`python3 tools/jira_util.py show <TICKET_KEY>`),
      2. The full production & test diff (`git show <COMMIT_HASH> -- app/src/main/ app/src/test/ tools/`), and
      3. The **full surrounding production source files** (`read_file` on the modified classes and their callers/callees).
-3. **Full Production Code Diff Inspection is Mandatory**:
+3. **Full Production Code Diff Inspection is Mandatory (Strictly Read-Only — ZERO `./gradlew` / Lock Calls, `Rule 85`)**:
    - Running only `git show --stat` is a **severe governance violation**. You MUST read every line of production code in `git show <COMMIT_HASH>` plus the surrounding methods/classes in the working tree.
+   - **Zero-Build / Zero-Lock Invariant (`ATT-8030`)**: Stage 6 audits already-verified Stage 5 commits and MUST remain **100% read-only**. Do **NOT** invoke `./gradlew` or acquire `/tmp/att_build_merge.lock` during Stage 6 (`PASS` is certified from the Stage 5 verification evidence + diff/code forensics; fixes happen in the bounced implementation lane if needed).
 4. **Adversarial Bug-Hunter Mindset**:
    - Do **not** look for excuses to pass a ticket. Assume the implementing pair missed at least one subtle edge case, lifecycle race, sibling screen/protocol, or unit mismatch, and actively hunt for it. If you find *any* genuine defect, incomplete wiring, compiler warning, broken edge case, or governance discrepancy, you **MUST** execute `BOUNCE` (never excuse or rationalize it in `<thinking>`).
 5. **Mandatory `Pros` vs. `Cons / Defects Identified` & *"Would You Recommend Its Approval?"* Gate (`Rule 63` — `ATT-4670`)**:

@@ -119,7 +119,7 @@ android {
     testOptions {
         unitTests.includeAndroidResources = true
         unitTests.all {
-            maxParallelForks = Math.max(1, (int) (Runtime.runtime.availableProcessors() / 2))
+            maxParallelForks = 2
             forkEvery = 80
             minHeapSize = "256m"
             maxHeapSize = "768m"
