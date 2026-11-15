@@ -89,7 +89,7 @@ All system requirements across the 9 living domain shards are allocated directly
 | **Post-Workout Analytics & Periods** | `PER`, `PERF` | `WorkoutRepository`, `PowerPhysiologyCalculator`, `ZoneDistributionCalculator`, `PeriodsRepository`, `HrvReadinessRepository`, `HrvReadinessDatabaseManager`, `HrvReadinessCalculator`, `HealthConnectHrvImporter`, `MorningHrvCheckViewModel`, `HrvReadinessTrendMath`, `HrvReadinessTrendCard`, `HrvReadinessTrendChart`, `WorkoutRrRepository`, `WorkoutRrDatabaseManager`, `HrvPostWorkoutRecomputer`, `ErtsPostWorkoutRecomputer`, `PowerHrDynamicsCalculator`, `PowerHrDynamicsInfoDialog` | Physiological computation (NP, TSS), 5/7 power zone distributions, period statistics & trend filters, morning HRV readiness persistence & per-posture SWC baseline analytics, nocturnal Health Connect HRV ingestion, guided morning resting HRV protocol, longitudinal HRV readiness trend charts in Periods screen, lossless workout RR intervals persistence and centered post-workout HRV recomputation, non-causal bidirectional Extended RTS trajectory and altitude profile recomputation with strict canonical column invariant, 1st-order dynamical Power-HR system identification & explanation sheet. |
 | **Maps, Polylines & Navigation** | `GEO`, `MAP`, `NAV`, `ROU` | `ClimbDetector`, `PolylineProgressTracker`, `MapFragmentWithTrackViewModel`, `ATrainingTrackerMap` | Web Mercator tile rendering, polyline compression, climb categorization, live segment gate matching. |
 | **Persistence, Migration & Cloud Export** | `DAT`, `EXP`, `EXT`, `MIG` | `WorkoutSamplesDatabaseManager`, `WorkoutSummariesDatabaseManager`, `WorkoutRrDatabaseManager`, `HrvReadinessDatabaseManager`, `FitFileWriter`, `GPXFileWriter`, `TCXFileWriter`, `StravaUploader`, `GoogleDriveBackupManager` | Time-series SQLite storage, workout RR intervals storage, morning HRV readiness SQLite storage, schema migration, Strava OAuth/upload retry, FIT/TCX/GPX serialization with native Garmin FIT HrvMesg export/import. |
-| **Settings, Profiles & Localization** | `LOC`, `MON`, `PRI`, `SET` | `TuningPreferencesDataStore`, `EquipmentDbHelper`, `EquipmentRepository`, `ProFeatureManager`, `SupporterTier`, `GarageLeagueDetector`, `HealthConnectManager`, `HealthConnectRecordMapper`, `SensorQuotaReconciliationManager` | DataStore persistence, 9-locale string parity, sensor quotas, monetization, vehicle equipment, Health Connect sync & record mapping. |
+| **Settings, Profiles & Localization** | `LOC`, `MON`, `PRI`, `SET` | `TuningPreferencesDataStore`, `EquipmentDbHelper`, `EquipmentRepository`, `ProFeatureManager`, `SupporterTier`, `GarageLeagueDetector`, `HealthConnectManager`, `HealthConnectRecordMapper`, `SensorQuotaReconciliationManager`, `DevicesDatabaseManager`, `PolarH10OfflineController` | DataStore persistence, 9-locale string parity, sensor quotas, monetization, vehicle equipment, Health Connect sync & record mapping, Devices.db v13 offline recording toggle persistence, and Polar H10 offline RR interval recording control with GATT arbitration and Android 13+ isolation. |
 | **UI Components & Design System** | `UI`, `UNT` | Jetpack Compose theme (`ATrainingTrackerTheme`), `MetricItem`, `ElevationProfile`, `TelemetryMetricGraph`, `AppModalBottomSheet`, `WorkoutPhotoStrip`, `WorkoutTimePhotoPickerSheet`, `MorningHrvCheckScreen` | High-contrast AMOLED theming, responsive landscape layouts, chart scrubbing, reusable Compose components, chronological workout photo selection, guided morning resting HRV acquisition. |
 | **Engineering Process & Stability** | `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST` | ASPICE Dual-Agent Quality Gates, `jira_util.py`, `verify_requirement_governance.py`, ProGuard rules, [ADR-001](architecture/adr_001_java_core_services_migration.md), `JavaCoreMigrationStrategyContractTest` | CI/CD build hygiene, Chesterton's fence archaeology, crash resilience, process kill simulation, Java core services migration governance (`REQ-ARC-005`). |
 | **Jubilee Milestones & App Reviews** | `REV` | `MilestoneAutoNamingManager`, `FirstJubileeCelebrationDialog`, `FirstJubileeActionHelper` | Milestone counting, achievement celebration, Google Play in-app review prompting. |
@@ -165,6 +165,37 @@ sequenceDiagram
     EXP->>EXP: Build Binary .FIT and XML .TCX/.GPX Files
     EXP->>STR: Execute OAuth Refresh & Multipart Upload
     STR-->>EXP: 201 Created / Upload Polling ID
+```
+
+### 3.4 Polar H10 Offline RR Recording & GATT Arbitration Lifecycle (REQ-SET-104)
+When a paired Polar H10 heart rate strap has offline backup recording enabled on Android 13+ (`Build.VERSION.SDK_INT >= 33`), `TrackerService` triggers non-blocking single-shot arming at workout start. To prevent BLE collisions and reconnect loops during PFTP communication, GATT operations on `MyBTLEDevice` are temporarily paused and automatically resumed once the recording is armed.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant TS as TrackerService
+    participant PC as PolarH10OfflineController
+    participant MD as MyBTLEDevice
+    participant SDK as PolarBleApi (polar-ble-sdk)
+    participant H10 as Polar H10 Hardware
+
+    TS->>PC: onWorkoutStarted(context) [Async Dispatchers.IO]
+    PC->>PC: Check API 33+ & Single-Shot Invariant
+    PC->>MD: pauseGattOperations() [Prevent collision]
+    PC->>SDK: connectToDevice(polarId)
+    SDK->>H10: Establish BLE PFTP session
+    PC->>SDK: setLocalTime(polarId, now)
+    SDK->>H10: Synchronize Device Clock
+    PC->>SDK: requestRecordingStatus(polarId)
+    alt Ongoing recording detected
+        PC->>SDK: stopRecording(polarId)
+    end
+    PC->>SDK: listExercises(polarId) -> removeExercise() [Stale Cleanup]
+    PC->>SDK: startRecording(polarId, SampleType.RR)
+    SDK->>H10: Arm Internal Flash Recording
+    PC->>PC: Mark isRecordingArmed = true
+    PC->>SDK: disconnectFromDevice(polarId)
+    PC->>MD: resumeGattOperations() [Resume 0x180D Live Streaming]
 ```
 
 ---

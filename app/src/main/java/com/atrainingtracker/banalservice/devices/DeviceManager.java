@@ -1011,6 +1011,22 @@ public class DeviceManager {
         }
     }
 
+    @Nullable
+    public MyBTLEDevice getBtleDeviceByAddress(@Nullable String address) {
+        if (address == null) {
+            return null;
+        }
+        for (MyRemoteDevice dev : getRemoteDeviceList()) {
+            if (dev instanceof MyBTLEDevice) {
+                MyBTLEDevice btleDev = (MyBTLEDevice) dev;
+                if (address.equalsIgnoreCase(btleDev.getAddress())) {
+                    return btleDev;
+                }
+            }
+        }
+        return null;
+    }
+
     // TODO: not the best solution/approach
     protected List<MyDevice> getMyDeviceList() {
         if (DEBUG) Log.d(TAG, "getMyDeviceList");

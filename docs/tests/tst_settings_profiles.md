@@ -3,7 +3,7 @@
 **Domain**: `settings_profiles`  
 **Prefixes**: `LOC`, `MON`, `PRI`, `SET`  
 **Scope**: Athlete settings, bike/sensor profiles, privacy zones, data stores, monetization, and 9-locale parity.  
-**Total Tests**: 89
+**Total Tests**: 92
 
 ---
 
@@ -1182,6 +1182,28 @@
   • Verify that calling `onWorkoutNameChanged(...)` after cluster selection sets `userManuallyChangedWorkoutName = true`, and subsequent repository updates do NOT overwrite the manually entered name.
   5. *New Cluster Creation Name Synchronization (`TST-SET-105.5`)*:
   • Verify that calling `createNewCluster(...)` immediately sets `workoutName` to the formatted name and resets `userManuallyChangedWorkoutName` to `false`.
+
+### TST-SET-106: **Polar H10 Internal RR Recording & GATT Arbitration Test Suite** [Verified]
+- **Requirement(s)**: `REQ-SET-104`
+- **Component**: `PolarH10OfflineController.kt`, `DevicesDatabaseManager.java`, `EditDeviceDialog.kt`, `EditDeviceViewModel.kt`, `TrackerService.java`
+- **Jira**: `ATT-7762`
+- **Status**: Verified
+- **Test Description**:
+  1. *PolarH10OfflineController Arming & Clock Sync Lifecycle Test (`TST-SET-106.1`)*:
+  • Verify that starting internal recording invokes clock synchronization (`setLocalTime`), removes stale exercise slots, and triggers `startRecording(SampleType.RR)`.
+  • Verify that subsequent calls during an active workout session are ignored (fringe-flap invariant).
+  2. *GATT Arbitration & Connection Hand-off Test (`TST-SET-106.2`)*:
+  • Verify clean GATT arbitration between standard 0x180D BLE streaming in `BTLEHeartRateDevice` and Polar BLE SDK PFTP operations without GATT collision or resource deadlock.
+  3. *Android 8–12 Compatibility & Runtime API Guard Test (`TST-SET-106.3`)*:
+  • Verify that on devices with `Build.VERSION.SDK_INT < 33`, Polar BLE SDK classes are not invoked, and standard BLE heart rate acquisition functions without runtime crashes.
+  4. *DevicesDbHelper Version 13 Migration Parity Test (`TST-SET-106.4`)*:
+  • Verify that upgrading a database from `DB_VERSION = 12` to `13` adds column `polarH10OfflineRecording` with `DEFAULT 1`.
+  • Verify that a fresh database initialized via `onCreate()` contains the identical table schema, column types, and constraints as an upgraded database.
+  5. *EditDeviceDialog & ViewModel Toggle Integration Test (`TST-SET-106.5`)*:
+  • Verify that the "Polar H10 Backup Recording" switch is displayed strictly for devices of type `HRM` matching Polar H10 identifiers.
+  • Verify that toggling the switch updates `EditDeviceViewModel` state and persists changes to `DevicesDatabaseManager`.
+  6. *9-Language Localization Parity Audit (`TST-SET-106.6`)*:
+  • Verify 100% presence and parity for all Polar H10 backup recording strings across all 9 supported application locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
 
 
 

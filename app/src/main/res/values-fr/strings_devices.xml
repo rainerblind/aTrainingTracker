@@ -143,4 +143,9 @@
     <string name="devices_sort_last_usage">Dernière utilisation</string>
     <string name="devices_sort_battery_level">Niveau de batterie</string>
 
+    <!-- Polar H10 Internal Backup Recording (ATT-7762, REQ-SET-104) -->
+    <string name="device_polar_h10_backup_recording_title">Enregistrement de sauvegarde Polar H10</string>
+    <string name="device_polar_h10_backup_recording_desc">Enregistre la fréquence cardiaque et les intervalles RR dans la mémoire interne du capteur (par ex. pour la natation).</string>
+    <string name="device_polar_h10_backup_recording_requires_android_13">Nécessite Android 13 ou supérieur</string>
+
 </resources>

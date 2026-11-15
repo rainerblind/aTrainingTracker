@@ -143,4 +143,9 @@
     <string name="devices_sort_first_seen">初回検出順</string>
     <string name="devices_sort_last_usage">最近使用順</string>
     <string name="devices_sort_battery_level">バッテリー残量順</string>
+    <!-- Polar H10 Internal Backup Recording (ATT-7762, REQ-SET-104) -->
+    <string name="device_polar_h10_backup_recording_title">Polar H10 バックアップ記録</string>
+    <string name="device_polar_h10_backup_recording_desc">心拍数とRR間隔をセンサーの内蔵メモリに記録します（例：水泳時）。</string>
+    <string name="device_polar_h10_backup_recording_requires_android_13">Android 13 以降が必要です</string>
+
 </resources>

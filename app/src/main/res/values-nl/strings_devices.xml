@@ -143,4 +143,9 @@
     <string name="devices_sort_first_seen">Eerst gezien</string>
     <string name="devices_sort_last_usage">Laatst gebruikt</string>
     <string name="devices_sort_battery_level">Batterijniveau</string>
+    <!-- Polar H10 Internal Backup Recording (ATT-7762, REQ-SET-104) -->
+    <string name="device_polar_h10_backup_recording_title">Polar H10 reserve-opname</string>
+    <string name="device_polar_h10_backup_recording_desc">Neemt hartslag en RR-intervallen op in het interne sensorgeheugen (bijv. voor zwemmen).</string>
+    <string name="device_polar_h10_backup_recording_requires_android_13">Vereist Android 13 of nieuwer</string>
+
 </resources>

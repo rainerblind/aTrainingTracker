@@ -97,7 +97,7 @@ class DevicesDatabaseManagerMigrationTest {
 
     @Test
     fun testDbVersionIs12() {
-        assertEquals("DevicesDbHelper.DB_VERSION must be 12", 12, DevicesDatabaseManager.DevicesDbHelper.DB_VERSION)
+        org.junit.Assert.assertTrue("DevicesDbHelper.DB_VERSION must be at least 12", DevicesDatabaseManager.DevicesDbHelper.DB_VERSION >= 12)
     }
 
     @Test

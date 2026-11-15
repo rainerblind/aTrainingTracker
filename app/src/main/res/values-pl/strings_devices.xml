@@ -143,4 +143,9 @@
     <string name="devices_sort_first_seen">Najpierw wykryte</string>
     <string name="devices_sort_last_usage">Ostatnio używane</string>
     <string name="devices_sort_battery_level">Poziom baterii</string>
+    <!-- Polar H10 Internal Backup Recording (ATT-7762, REQ-SET-104) -->
+    <string name="device_polar_h10_backup_recording_title">Zapasowe nagrywanie Polar H10</string>
+    <string name="device_polar_h10_backup_recording_desc">Zapisuje tętno i interwały RR w pamięci wewnętrznej sensora (np. podczas pływania).</string>
+    <string name="device_polar_h10_backup_recording_requires_android_13">Wymaga systemu Android 13 lub nowszego</string>
+
 </resources>

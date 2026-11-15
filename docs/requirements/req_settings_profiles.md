@@ -3,7 +3,7 @@
 **Domain**: `settings_profiles`  
 **Prefixes**: `LOC`, `MON`, `PRI`, `SET`  
 **Scope**: Athlete settings, bike/sensor profiles, privacy zones, data stores, monetization, and 9-locale parity.  
-**Total Requirements**: 102
+**Total Requirements**: 103
 
 ---
 
@@ -2266,6 +2266,45 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 • *Then* `HRV_READ_PERMISSIONS` authorization is requested and an initial 60-day backfill is triggered upon confirmation.
 
 **Invariants**: Re-sync operations must never produce duplicate entries or orphan telemetry series in Health Connect. Zero unprompted background sync operations when disabled.
+
+### REQ-SET-104: Polar H10 Internal RR Recording & GATT Arbitration [Verified]
+- **Tests**: `TST-SET-106`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Implementation**: `app/build.gradle`, `AndroidManifest.xml`, `DevicesDatabaseManager.java`, `DeviceUiData.kt`, `EditDeviceDialog.kt`, `EditDeviceViewModel.kt`, `PolarH10OfflineController.kt`, `TrackerService.java`
+- **Rationale**: Athletes using Polar H10 chest straps lose heart rate and beat-to-beat RR interval telemetry during activities like swimming or when separated from their smartphone. While the Polar H10 features internal flash memory capable of recording an entire session via Polar PFTP GATT protocol, starting and managing internal recording requires proper clock synchronization, clearing existing exercises, and careful GATT arbitration with standard 0x180D BLE streaming without breaking backwards compatibility on Android 8–12 (`minSdkVersion 26`). The system SHALL provide configurable internal backup recording for Polar H10 devices:
+1. *Polar BLE SDK Integration & Manifest Override (`REQ-SET-104.1`)*:
+   - The project SHALL integrate `com.github.polarofficial:polar-ble-sdk:8.6.0` using `<uses-sdk tools:overrideLibrary="com.polar.sdk, com.polar.androidcommunications"/>` in `app/src/main/AndroidManifest.xml` to reconcile the SDK's higher `minSdkVersion` requirement with the app's global `minSdkVersion 26` baseline.
+   - All runtime invocations of Polar BLE SDK APIs SHALL be guarded behind `@RequiresApi(Build.VERSION_CODES.TIRAMISU)` / `Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU` (API 33) runtime checks, falling back safely on earlier Android releases.
+2. *Database Persistence & Migration Parity (`REQ-SET-104.2`)*:
+   - `DevicesDatabaseManager` SQLite database schema SHALL be upgraded from `DB_VERSION = 12` to `DB_VERSION = 13` by adding column `polarH10OfflineRecording int DEFAULT 1` to table `devices`.
+   - Both `onCreate()` and `onUpgrade()` migration paths SHALL maintain identical column definitions and default constraints.
+3. *Device Configuration UI & 9-Locale Parity (`REQ-SET-104.3`)*:
+   - In `EditDeviceDialog.kt` and `EditDeviceViewModel.kt`, the system SHALL display a dedicated "Polar H10 Backup Recording" switch item strictly when the inspected device is a Polar H10 heart rate strap (`deviceType == DeviceType.HRM` and name starts with `"Polar H10"` or manufacturer is Polar).
+   - Toggling the switch SHALL immediately persist the setting in `DevicesDatabaseManager`.
+   - All UI labels and descriptions SHALL be fully localized across all 9 supported application locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
+4. *GATT Arbitration & Arming Lifecycle (`REQ-SET-104.4`)*:
+   - When a workout begins (`TrackerService.onStartCommand`), if a paired Polar H10 device has backup recording enabled, `PolarH10OfflineController` SHALL asynchronously connect via Polar BLE SDK, synchronize device time (`setLocalTime`), query/remove any stale existing exercise session, and start internal recording of `SampleType.RR`.
+   - The controller SHALL arbitrate GATT access with `MyBTLEDevice`/`BTLEHeartRateDevice` to prevent concurrent GATT connection collisions on the same peripheral MAC address.
+   - *Fringe-Flap Invariant*: The internal recording session SHALL be armed strictly once at workout start and SHALL NOT re-arm, restart, or truncate ongoing recording if BLE connection is dropped and re-established mid-workout.
+5. *Polar SDK Attribution & License Notice (`REQ-SET-104.5`)*:
+   - In compliance with Polar BLE SDK License and GPLv3 Section 7, the application SHALL document the Polar BLE SDK third-party license notice and linking attribution in project legal/license documentation (`LICENSE`).
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an Android 8.0–12L device (`SDK_INT < 33`),
+• *When* the app launches and connects to a Polar H10 sensor,
+• *Then* the app functions normally without `ClassNotFoundException` or `NoClassDefFoundError`, streaming live HR/RR data via standard 0x180D BLE GATT.
+• *Given* an Android 13+ device (`SDK_INT >= 33`) with a paired Polar H10 where backup recording is enabled,
+• *When* tracking starts in `TrackerService`,
+• *Then* `PolarH10OfflineController` synchronizes device time, clears stale exercises, and starts internal RR recording asynchronously without blocking foreground service startup.
+• *Given* an active workout with internal recording armed,
+• *When* the user swims away from phone causing BLE disconnection and later reconnects,
+• *Then* standard 0x180D streaming resumes and the active internal recording session continues undisturbed without re-arming.
+• *Given* a fresh install or an upgrade from DB version 12,
+• *Then* `DevicesDatabaseManager` initializes or upgrades cleanly to version 13 with `polar_h10_offline_recording` defaulting to 0 (`false`).
+
+**Invariants**: Standard 0x180D GATT heart rate and RR streaming in `BTLEHeartRateDevice` is never regressed; workout start is non-blocking even if the sensor is unreachable; full database migration parity between `onCreate` and `onUpgrade`.
 
 
 

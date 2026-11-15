@@ -204,7 +204,12 @@ fun EditDeviceDialog(
                     WheelSensorGuidanceCard(onShowGuidance = { showWheelGuidanceDialog = true })
                 }
 
-                // 10. Live Data Preview
+                // 10. Polar H10 Internal Backup Recording (ATT-7762, REQ-SET-104)
+                if (data.deviceType == DeviceType.HRM && isPolarH10Device(data)) {
+                    PolarH10Section(data, viewModel)
+                }
+
+                // 11. Live Data Preview
                 liveData?.let { live ->
                     LivePreviewSection(live)
                 }
@@ -1285,4 +1290,44 @@ fun shouldShowWheelSensorGuidance(deviceType: DeviceType): Boolean =
     deviceType == DeviceType.BIKE_SPEED ||
     deviceType == DeviceType.BIKE_SPEED_AND_CADENCE ||
     deviceType == DeviceType.SPEED_AND_LOCATION_ATT_FUSED
+
+fun isPolarH10Device(data: DeviceUiData): Boolean {
+    val name = data.deviceName.lowercase(java.util.Locale.ROOT)
+    val manufacturer = data.manufacturer.lowercase(java.util.Locale.ROOT)
+    return name.contains("polar h10") || (name.contains("h10") && manufacturer.contains("polar")) || (data.deviceType == DeviceType.HRM && name.startsWith("polar h10", ignoreCase = true))
+}
+
+@Composable
+private fun PolarH10Section(data: DeviceUiData, viewModel: EditDeviceViewModel) {
+    val isAndroid13Plus = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        ),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            AttFusedToggleRow(
+                title = stringResource(R.string.device_polar_h10_backup_recording_title),
+                checked = data.polarH10OfflineRecording,
+                enabled = isAndroid13Plus,
+                disabledHint = stringResource(R.string.device_polar_h10_backup_recording_requires_android_13),
+                onCheckedChange = { viewModel.onPolarH10OfflineRecordingChanged(it) }
+            )
+            Text(
+                text = stringResource(R.string.device_polar_h10_backup_recording_desc),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium)
+            )
+        }
+    }
+}
+
 
