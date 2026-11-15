@@ -88,7 +88,7 @@ class JavaCoreMigrationStrategyContractTest {
             File("../../$relativePath")
         )
         return candidates.firstOrNull { it.exists() }
-            ?: throw IllegalStateException("Could not locate $relativePath from working directory: ${File(".").absolutePath}")
+            ?: error("Could not locate $relativePath from working directory: ${File(".").absolutePath}")
     }
 
     private fun findMainSourceDir(): File {
@@ -100,7 +100,7 @@ class JavaCoreMigrationStrategyContractTest {
             File("../../app", relSubPath)
         )
         return candidates.firstOrNull { it.exists() && it.isDirectory }
-            ?: throw IllegalStateException("Could not locate main Java source directory from: ${File(".").absolutePath}")
+            ?: error("Could not locate main Java source directory from: ${File(".").absolutePath}")
     }
 
     @Test
@@ -111,25 +111,53 @@ class JavaCoreMigrationStrategyContractTest {
         assertTrue("ADR-001 must not be empty", content.length > 5000)
 
         // Metadata & Governance
-        assertTrue("ADR-001 must have Status: Approved", content.contains("Status**: Approved") || content.contains("Status: Approved"))
+        val hasApprovedStatus = content.contains("Status**: Approved") || content.contains("Status: Approved")
+        assertTrue("ADR-001 must have Status: Approved", hasApprovedStatus)
         assertTrue("ADR-001 must reference REQ-ARC-005", content.contains("REQ-ARC-005"))
         assertTrue("ADR-001 must reference TST-ARC-005", content.contains("TST-ARC-005"))
         assertTrue("ADR-001 must reference parent epic ATT-431", content.contains("ATT-431"))
         assertTrue("ADR-001 must reference ticket ATT-7566", content.contains("ATT-7566"))
 
         // Mandatory Sections (REQ-ARC-005.1 .. REQ-ARC-005.5)
-        assertTrue("ADR must contain Section 1 (Context & Problem Statement)", content.contains("## 1. Context & Problem Statement"))
+        assertTrue(
+            "ADR must contain Section 1 (Context & Problem Statement)",
+            content.contains("## 1. Context & Problem Statement")
+        )
         assertTrue("ADR must describe ASPICE finding F9", content.contains("ASPICE evaluation finding F9"))
         assertTrue("ADR must describe platform types nullability hazards", content.contains("Platform Types (`T!`)"))
-        assertTrue("ADR must contain Section 2 (Decision Drivers & Evaluated Alternatives)", content.contains("## 2. Decision Drivers & Evaluated Alternatives"))
+        assertTrue(
+            "ADR must contain Section 2 (Decision Drivers & Evaluated Alternatives)",
+            content.contains("## 2. Decision Drivers & Evaluated Alternatives")
+        )
         assertTrue("ADR must evaluate Alternative 1 (Big-Bang)", content.contains("Alternative 1: Big-Bang"))
-        assertTrue("ADR must evaluate Alternative 2 (Status Quo)", content.contains("Alternative 2: Permanent Status Quo"))
-        assertTrue("ADR must evaluate Alternative 3 (Phased Bottom-Up)", content.contains("Alternative 3: Phased, Risk-Tiered Bottom-Up Migration"))
-        assertTrue("ADR must contain Section 3 (Decision Outcome & Strategy Matrix)", content.contains("## 3. Decision Outcome & Strategy Matrix"))
-        assertTrue("ADR must contain Section 4 (Quantitative Java Inventory)", content.contains("## 4. Quantitative Java Inventory"))
-        assertTrue("ADR must contain Section 5 (Phased Bottom-Up Migration Sequencing)", content.contains("## 5. Phased Bottom-Up Migration Sequencing"))
-        assertTrue("ADR must contain Section 6 (Mandatory Migration Quality Safeguards)", content.contains("## 6. Mandatory Migration Quality Safeguards"))
-        assertTrue("ADR must contain Section 7 (Atomic Backlog Child Tickets)", content.contains("## 7. Atomic Backlog Child Tickets"))
+        assertTrue(
+            "ADR must evaluate Alternative 2 (Status Quo)",
+            content.contains("Alternative 2: Permanent Status Quo")
+        )
+        assertTrue(
+            "ADR must evaluate Alternative 3 (Phased Bottom-Up)",
+            content.contains("Alternative 3: Phased, Risk-Tiered Bottom-Up Migration")
+        )
+        assertTrue(
+            "ADR must contain Section 3 (Decision Outcome & Strategy Matrix)",
+            content.contains("## 3. Decision Outcome & Strategy Matrix")
+        )
+        assertTrue(
+            "ADR must contain Section 4 (Quantitative Java Inventory)",
+            content.contains("## 4. Quantitative Java Inventory")
+        )
+        assertTrue(
+            "ADR must contain Section 5 (Phased Bottom-Up Migration Sequencing)",
+            content.contains("## 5. Phased Bottom-Up Migration Sequencing")
+        )
+        assertTrue(
+            "ADR must contain Section 6 (Mandatory Migration Quality Safeguards)",
+            content.contains("## 6. Mandatory Migration Quality Safeguards")
+        )
+        assertTrue(
+            "ADR must contain Section 7 (Atomic Backlog Child Tickets)",
+            content.contains("## 7. Atomic Backlog Child Tickets")
+        )
 
         // Quality Safeguards check (REQ-ARC-005.4)
         assertTrue("Must mandate Characterisation Tests First", content.contains("Characterisation Tests First"))

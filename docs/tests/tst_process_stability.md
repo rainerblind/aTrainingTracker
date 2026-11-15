@@ -1590,6 +1590,26 @@
   5. *Filter Subsystem Kover Coverage Verification (`TST-ARC-006.5`)*:
   • Execute `./gradlew koverVerifyDebug` confirming the filter subsystem achieves $\ge 70\%$ Line Coverage and $\ge 50\%$ Branch Coverage.
 
+### TST-ARC-007: **Java Core Migration: Leaf Sensor Formatters Kotlin Migration & Interoperability Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Requirement(s)**: `REQ-ARC-007`
+- **Component**: **Leaf Sensor Formatters Kotlin Migration Verification Suite**
+- **Jira**: `ATT-7903`
+- **Test Description**:
+  1. *Formatter Behavioral & String Equivalence Test Suite (`TST-ARC-007.1`)*:
+  • Execute targeted formatter unit tests in `com.atrainingtracker.banalservice.sensor.formater.*` covering all 14 concrete formatter classes across valid sensor readings, verifying 100% identical string representations and unit suffix outputs.
+  2. *Null, NaN, Infinity & Boundary Robustness Verification (`TST-ARC-007.2`)*:
+  • Verify that passing `null`, `Double.NaN`, `Double.POSITIVE_INFINITY`, `Double.NEGATIVE_INFINITY`, and boundary zero/negative values to each formatter returns the specified fallback string (`"--"`, `"--.--"`, `"0"`) and never throws `NullPointerException` or `NumberFormatException`.
+  3. *Java Caller Compatibility & Secondary Signatures Verification (`TST-ARC-007.3`)*:
+  • Verify that Java callers (`SensorType.java`, `BANALService.java`, UI presenters) compile and resolve `format(value)`, `format_with_units(value)`, and `format_3(value)` without source or binary incompatibilities.
+  4. *Java Core Migration Strategy Contract Test Verification (`TST-ARC-007.4`)*:
+  • Execute `./gradlew testDebugUnitTest --tests com.atrainingtracker.architecture.JavaCoreMigrationStrategyContractTest` verifying that Java file count decreases to 123 and satisfies `<= 149`.
+  5. *Formatter Subsystem Kover Coverage Verification (`TST-ARC-007.5`)*:
+  • Confirm that `com.atrainingtracker.banalservice.sensor.formater.*` achieves $\ge 70\%$ Line Coverage and $\ge 50\%$ Branch Coverage.
+
 ### TST-PRO-020: **Agile Agentic ASPICE (AAA) Governance, Constructive Resistance, Hypothesis Verification, Stage 5 Resource Gate & Ceremony 2 Completeness Sweep Verification** [Verified]
 - **Priority**: High
 - **Type**: Non-Functional

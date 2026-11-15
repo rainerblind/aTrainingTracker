@@ -16,14 +16,12 @@
  * along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
  */
 
-package com.atrainingtracker.banalservice.sensor.formater;
+package com.atrainingtracker.banalservice.sensor.formater
 
-import android.content.Context;
-
-import com.atrainingtracker.R;
-import com.atrainingtracker.trainingtracker.TrainingApplication;
-
-import java.util.Locale;
+import android.content.Context
+import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.TrainingApplication
+import java.util.Locale
 
 /**
  * Formats smartphone battery remaining duration into hours and minutes (e.g. "8:45 h").
@@ -31,32 +29,36 @@ import java.util.Locale;
  * - null or -2: initial stabilization or unknown drain ("--:--")
  * - -1: host device actively connected to charger ("Lädt" / "Charging")
  */
-public class BatteryRemainingTimeFormatter implements MyFormatter<Number> {
+class BatteryRemainingTimeFormatter : MyFormatter<Number> {
 
-    public static final int CHARGING_STATUS_CODE = -1;
-    public static final int STABILIZING_STATUS_CODE = -2;
-
-    @Override
-    public String format(Number value) {
+    @Suppress("ReturnCount")
+    override fun format(value: Number?): String {
         if (value == null) {
-            return "--:--";
+            return "--:--"
         }
-        int seconds = value.intValue();
+        val seconds = value.toInt()
         if (seconds == CHARGING_STATUS_CODE) {
             try {
-                Context context = TrainingApplication.getAppContext();
+                val context = TrainingApplication.getAppContext()
                 if (context != null) {
-                    return context.getString(R.string.battery_charging);
+                    return context.getString(R.string.battery_charging)
                 }
-            } catch (Exception ignored) {
+            } catch (ignored: Exception) {
             }
-            return "Charging";
+            return "Charging"
         }
         if (seconds <= STABILIZING_STATUS_CODE) {
-            return "--:--";
+            return "--:--"
         }
-        long hours = seconds / 3600;
-        long minutes = (seconds % 3600) / 60;
-        return String.format(Locale.getDefault(), "%d:%02d h", hours, minutes);
+        val hours = seconds / SECONDS_PER_HOUR
+        val minutes = (seconds % SECONDS_PER_HOUR) / SECONDS_PER_MINUTE
+        return String.format(Locale.getDefault(), "%d:%02d h", hours, minutes)
+    }
+
+    companion object {
+        const val CHARGING_STATUS_CODE: Int = -1
+        const val STABILIZING_STATUS_CODE: Int = -2
+        private const val SECONDS_PER_HOUR = 3600
+        private const val SECONDS_PER_MINUTE = 60
     }
 }

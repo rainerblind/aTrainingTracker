@@ -16,14 +16,15 @@
  * along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
  */
 
-package com.atrainingtracker.banalservice.sensor.formater;
+package com.atrainingtracker.banalservice.sensor.formater
 
-// import java.text.NumberFormat;
-
-public class DefaultStringFormatter implements MyFormatter<String> {
-    @Override
-    public String format(String value) {
-        return value != null ? value : "--";
+class IntegerFormatter : MyFormatter<Number> {
+    @Suppress("ReturnCount")
+    override fun format(value: Number?): String {
+        val d = value?.toDouble() ?: return "--"
+        if (d.isNaN() || d.isInfinite()) {
+            return "--"
+        }
+        return Math.round(d).toString()
     }
-
 }

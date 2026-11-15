@@ -16,13 +16,22 @@
  * along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
  */
 
-package com.atrainingtracker.banalservice.sensor.formater;
+package com.atrainingtracker.banalservice.sensor.formater
 
-public class CadenceFormatter implements MyFormatter<Number> {
-    private final IntegerFormatter mIntegerFormatter = new IntegerFormatter();
+import java.util.Locale
 
-    @Override
-    public String format(Number value) {
-        return mIntegerFormatter.format(value);
+class PowerToWeightFormatter : MyFormatter<Number> {
+    @Suppress("ReturnCount")
+    override fun format(value: Number?): String {
+        val d = value?.toDouble() ?: return "--"
+        if (d.isNaN() || d.isInfinite() || d < 0) {
+            return "--"
+        }
+        return String.format(Locale.getDefault(), "%.1f", d)
+    }
+
+    @Suppress("FunctionNaming")
+    fun format_with_units(value: Number?): String {
+        return "${format(value)} W/kg"
     }
 }

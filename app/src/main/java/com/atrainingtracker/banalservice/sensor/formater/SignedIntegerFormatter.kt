@@ -16,24 +16,16 @@
  * along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
  */
 
-package com.atrainingtracker.banalservice.sensor.formater;
+package com.atrainingtracker.banalservice.sensor.formater
 
-// import java.text.NumberFormat;
-
-import java.text.DecimalFormat;
-
-public class DefaultNumberFormatter implements MyFormatter<Number> {
-    @Override
-    public String format(Number value) {
-        if (value == null) {
-            return "--";
-        } else {
-            // return String.format("%.2f", value);
-            // return (NumberFormat.getInstance().).format(value);
-            DecimalFormat format = new DecimalFormat();
-            format.setMaximumFractionDigits(1);
-            return format.format(value);
+class SignedIntegerFormatter : MyFormatter<Number> {
+    @Suppress("ReturnCount")
+    override fun format(value: Number?): String {
+        val d = value?.toDouble() ?: return "--"
+        if (d.isNaN() || d.isInfinite()) {
+            return "--"
         }
+        val rounded = Math.round(d)
+        return if (rounded > 0) "+$rounded" else rounded.toString()
     }
-
 }

@@ -2419,6 +2419,43 @@ The workflow SHALL mandate that:
 
 **Invariants**: Zero modification to mathematical filter algorithms; thread synchronization semantics preserved; zero UI changes; 100% pass rate across filter unit tests and clean-room full suite regression.
 
+### REQ-ARC-007: Java Core Migration: Leaf Sensor Formatters Kotlin Migration & Interoperability Parity [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-ARC-007`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `app/src/main/java/com/atrainingtracker/banalservice/sensor/formater/`
+- **Rationale**: In accordance with ADR-001 (Tier 1 bottom-up migration, ATT-7566) and the PO architectural decision (ATT-7749), all 15 pure leaf formatter classes in `com.atrainingtracker.banalservice.sensor.formater` SHALL be migrated to idiomatic Kotlin (`.kt`) to eliminate platform type (`T!`) nullability hazards and memory allocations while maintaining 100% string output parity, null/NaN/Infinity safety, and Java caller interoperability (ATT-7903):
+1. *1:1 Idiomatic Kotlin Migration & SAM Interface Parity (`REQ-ARC-007.1`)*:
+• All 15 Java files in `com.atrainingtracker.banalservice.sensor.formater/` (`MyFormatter`, `DefaultStringFormatter`, `DefaultNumberFormatter`, `IntegerFormatter`, `SignedIntegerFormatter`, `CadenceFormatter`, `DfaA1Formatter`, `IntensityFactorFormatter`, `PowerToWeightFormatter`, `BatteryRemainingTimeFormatter`, `TimeFormatter`, `PaceFormatter`, `SpeedFormatter`, `AltitudeFormatter`, `DistanceFormatter`) SHALL be migrated to idiomatic Kotlin (`.kt`), and all legacy `.java` files SHALL be deleted.
+• `MyFormatter<T>` SHALL be defined as a functional interface (`fun interface MyFormatter<T> { fun format(value: T?): String }`) ensuring non-null String return guarantees and seamless SAM conversion in both Kotlin and Java callers.
+2. *Null, NaN, Infinity & Boundary Formatting Invariants (`REQ-ARC-007.2`)*:
+• All 14 concrete formatter implementations SHALL handle `null`, `Double.NaN`, `Double.POSITIVE_INFINITY`, `Double.NEGATIVE_INFINITY`, and out-of-range sensor values defensively, returning authoritative fallback representations (`"--"`, `"--.--"`, `"0"`) without throwing exceptions or emitting raw `"NaN"`/`"Infinity"` tokens.
+• Formatter outputs for valid numerical and string inputs SHALL remain bitwise identical to legacy Java outputs, preserving decimal precision, rounding rules, unit representations, and time/pace string conventions (`mm:ss`, `h:mm:ss`).
+3. *Java Caller Interoperability & Secondary Method Signatures (`REQ-ARC-007.3`)*:
+• Auxiliary formatting methods including `format_with_units(value: Number?): String` and `format_3(value: Number?): String` SHALL be preserved with exact binary and source compatibility for Java callers (including `SensorType.java` and UI presentation layers).
+• Classes exposing secondary overloaded methods or static utility helpers SHALL use `@JvmOverloads` and `@JvmStatic` annotations where necessary to ensure zero breaking changes for existing Java callers.
+4. *Bounded Subsystem Code Coverage & Contract Governance (`REQ-ARC-007.4`)*:
+• The formatter subsystem unit tests (`com.atrainingtracker.banalservice.sensor.formater.*`) SHALL maintain a test pass rate of 100% and satisfy subsystem coverage bounds of Line Coverage $\ge 70\%$ and Branch Coverage $\ge 50\%$.
+• `JavaCoreMigrationStrategyContractTest.kt` line 169 SHALL verify that total repository Java files decrease from 138 to 123, safely satisfying the `<= 149` contract bound.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* the 15 legacy Java formatter classes in `com.atrainingtracker.banalservice.sensor.formater`,
+• *When* converted to Kotlin,
+• *Then* zero `.java` files remain in `sensor/formater/` and all 15 `.kt` classes compile with non-null `String` return signatures.
+• *Given* null, NaN, infinite, or negative inputs passed to any formatter,
+• *When* `format(value)`, `format_with_units(value)`, or `format_3(value)` is evaluated,
+• *Then* deterministic fallback strings (`"--"`, `"--.--"`, etc.) are returned and zero runtime exceptions are thrown.
+• *Given* existing Java callers such as `SensorType.java` and UI ViewModels,
+• *When* invoking formatter methods,
+• *Then* compilation and execution succeed without casting errors or modified call sites.
+• *Given* `JavaCoreMigrationStrategyContractTest`,
+• *When* executed against the repository,
+• *Then* the `<= 149` Java file count check passes with zero failures.
+
+**Invariants**: Zero modification to numerical formatting results or fallback token strings; 100% backward compatibility with `SensorType.java`; zero UI regression; 100% unit test pass rate.
+
 ### REQ-PRO-027: Agile Agentic ASPICE (AAA) Governance, Constructive Resistance, Hypothesis Verification, Stage 5 Resource Gate & Ceremony 2 Completeness Sweep [Verified]
 - **Tests**: `TST-PRO-020`
 - **Priority**: High

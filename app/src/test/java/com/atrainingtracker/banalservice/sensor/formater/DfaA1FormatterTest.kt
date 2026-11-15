@@ -47,6 +47,18 @@ class DfaA1FormatterTest {
     }
 
     @Test
+    fun testFormat_nonUsLocale_formatsWithComma() {
+        val originalLocale = Locale.getDefault()
+        try {
+            Locale.setDefault(Locale.GERMANY)
+            assertEquals("0,75", formatter.format(0.75))
+            assertEquals("1,00", formatter.format(1.0))
+        } finally {
+            Locale.setDefault(originalLocale)
+        }
+    }
+
+    @Test
     fun testFormat_nullValue_returnsBlankDashes() {
         assertEquals("--.--", formatter.format(null))
     }

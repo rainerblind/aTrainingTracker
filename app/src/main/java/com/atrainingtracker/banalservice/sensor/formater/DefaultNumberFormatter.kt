@@ -16,32 +16,19 @@
  * along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
  */
 
-package com.atrainingtracker.banalservice.sensor.formater;
+package com.atrainingtracker.banalservice.sensor.formater
 
-import androidx.annotation.NonNull;
+import java.text.DecimalFormat
+import java.util.Locale
 
-import java.util.Locale;
-
-/**
- * Formats power-to-weight ratio (W/kg) to 1 decimal place (REQ-TRK-019, TST-TRK-011).
- * Returns "--" for null, NaN, infinite, or negative values.
- */
-public class PowerToWeightFormatter implements MyFormatter<Number> {
-
-    @NonNull
-    @Override
-    public String format(Number value) {
+class DefaultNumberFormatter : MyFormatter<Number> {
+    override fun format(value: Number?): String {
         if (value == null) {
-            return "--";
+            return "--"
         }
-        double val = value.doubleValue();
-        if (Double.isNaN(val) || Double.isInfinite(val) || val < 0.0) {
-            return "--";
+        val decimalFormat = (DecimalFormat.getInstance(Locale.getDefault()) as DecimalFormat).apply {
+            maximumFractionDigits = 1
         }
-        return String.format(Locale.getDefault(), "%.1f", val);
-    }
-
-    public String format_with_units(Number value) {
-        return format(value) + " W/kg";
+        return decimalFormat.format(value)
     }
 }

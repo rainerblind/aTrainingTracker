@@ -16,29 +16,31 @@
  * along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
  */
 
-package com.atrainingtracker.banalservice.sensor.formater;
+package com.atrainingtracker.banalservice.sensor.formater
 
-/**
- * Formatter for signed integer sensor values (e.g. Live HR Drift).
- * Formats positive numbers with a '+' prefix (e.g. "+5"), zero as "0",
- * and negative numbers with a standard minus sign (e.g. "-2").
- */
-public class SignedIntegerFormatter implements MyFormatter<Number> {
+import com.atrainingtracker.trainingtracker.MyHelper
+import com.atrainingtracker.trainingtracker.MyUnits
+import com.atrainingtracker.trainingtracker.TrainingApplication
+import java.util.Locale
 
-    @Override
-    public String format(Number value) {
+class SpeedFormatter : MyFormatter<Number> {
+    override fun format(value: Number?): String {
         if (value == null) {
-            return "--";
+            return "--"
         }
-        double d = value.doubleValue();
-        if (Double.isNaN(d) || Double.isInfinite(d)) {
-            return "--";
+
+        val speed = MyHelper.mps2userUnit(value.toDouble())
+        return String.format(Locale.getDefault(), "%.1f", speed)
+    }
+
+    @Suppress("FunctionNaming")
+    fun format_with_units(value: Number?): String {
+        val units = when (TrainingApplication.getUnit()) {
+            MyUnits.METRIC -> "km/h"
+            MyUnits.IMPERIAL -> "mile/h"
+            null -> ""
         }
-        long rounded = Math.round(d);
-        if (rounded > 0) {
-            return "+" + rounded;
-        } else {
-            return Long.toString(rounded);
-        }
+
+        return "${format(value)} $units"
     }
 }

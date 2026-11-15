@@ -16,12 +16,20 @@
  * along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
  */
 
-package com.atrainingtracker.banalservice.sensor.formater;
+package com.atrainingtracker.banalservice.sensor.formater
 
-import androidx.annotation.NonNull;
+import java.text.DecimalFormat
+import java.text.DecimalFormatSymbols
+import java.util.Locale
 
-public interface MyFormatter<T> {
-    // TODO: add units???
-    @NonNull
-    String format(T value);
+class DfaA1Formatter : MyFormatter<Number> {
+    @Suppress("ReturnCount")
+    override fun format(value: Number?): String {
+        val d = value?.toDouble() ?: return "--.--"
+        if (d.isNaN() || d.isInfinite() || d < 0) {
+            return "--.--"
+        }
+        val decimalFormat = DecimalFormat("0.00", DecimalFormatSymbols.getInstance(Locale.getDefault()))
+        return decimalFormat.format(d)
+    }
 }

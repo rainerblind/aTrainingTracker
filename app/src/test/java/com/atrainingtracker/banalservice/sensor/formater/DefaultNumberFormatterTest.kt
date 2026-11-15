@@ -16,19 +16,33 @@
  * along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
  */
 
-package com.atrainingtracker.banalservice.sensor.formater;
+package com.atrainingtracker.banalservice.sensor.formater
 
-public class IntegerFormatter implements MyFormatter<Number> {
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Test
 
-    @Override
-    public String format(Number value) {
-        if (value == null) {
-            return "--";
-        }
-        double d = value.doubleValue();
-        if (Double.isNaN(d) || Double.isInfinite(d)) {
-            return "--";
-        }
-        return Long.toString(Math.round(d));
+/**
+ * Unit tests for [DefaultNumberFormatter] (REQ-ARC-007, TST-ARC-007).
+ */
+class DefaultNumberFormatterTest {
+
+    private val formatter = DefaultNumberFormatter()
+
+    @Test
+    fun format_null_returnsDashes() {
+        assertEquals("--", formatter.format(null))
+    }
+
+    @Test
+    fun format_integer_formatsProperly() {
+        assertEquals("0", formatter.format(0))
+        assertEquals("123", formatter.format(123))
+    }
+
+    @Test
+    fun format_fractional_formatsAtMostOneFractionDigit() {
+        val result = formatter.format(12.34)
+        assertTrue(result == "12.3" || result == "12,3")
     }
 }
