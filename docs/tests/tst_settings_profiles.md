@@ -1310,4 +1310,24 @@
   5. *Aftermath Retry Pending, Copy, 9-Locale Parity & UI Screenshot (`TST-SET-111.5`)*:
   • Verify unreachable Verity Sense persists `setPolarSyncPending` with `verity:` tag, `PolarH10RetrySyncBanner` renders optical Blue Sensor Mode copy across all 9 locales (zero emojis), *Sync Now* executes `PolarVeritySenseOfflineController.syncPendingWorkout()` cleanly, and visual screenshot on `emulator-5554` verifies UI.
 
+---
+
+### TST-SET-112: **Polar Verity Sense Swim Mode Session Reader, Turn Extraction & SYSTEM_BUSY Test Suite** [Verified]
+- **Requirement(s)**: `REQ-SET-110`
+- **Component**: `PolarVeritySenseOfflineController.kt`, `PolarOfflineGattCoordinator.kt`, `PolarH10RetrySyncBanner.kt`, `res/values*/strings_devices.xml`
+- **Jira**: `ATT-8000`
+- **Status**: Verified (ATT-8000)
+- **Test Description**:
+  1. *Deterministic Swim Session Parsing & 1-Hz HR Extraction (`TST-SET-112.1`)*:
+  • Verify `PolarTrainingSession` with `PbSportIdentifier == 103` is parsed as pool swimming (`isPoolSwimSession = true`), yielding 1-Hz `heartRateSamples` and wall turn timestamps.
+  2. *FTU Initialization for Factory-Fresh Sensor (`TST-SET-112.2`)*:
+  • Verify when `isFtuDone()` returns `false`, `doFirstTimeUse()` is invoked before reading training sessions.
+  3. *SYSTEM_BUSY Mode-Switch Guidance & Tagged Pending State (`TST-SET-112.3`)*:
+  • Verify when `SYSTEM_BUSY` is thrown during stop or sync, pending state `verity:swim_busy:<targetId>` is saved, and `PolarH10RetrySyncBanner` renders localized button-exit instructions in 9 locales (zero emojis).
+  4. *Post-Commit Flash Session Removal & Unrelated Session Preservation (`TST-SET-112.4`)*:
+  • Verify `deleteTrainingSession()` is invoked strictly AFTER SQLite commit and only for the matched session reference, leaving unrelated sessions on flash untouched.
+  5. *9-Locale Localization Parity & Tier 1 Unit Regression (`TST-SET-112.5`)*:
+  • Verify `TranslationParityTest` passes with zero missing keys and zero emojis across all 9 locales, and targeted unit test suite passes cleanly.
+
+
 

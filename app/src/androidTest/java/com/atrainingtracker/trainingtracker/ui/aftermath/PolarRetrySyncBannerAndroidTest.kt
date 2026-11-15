@@ -105,6 +105,12 @@ class PolarRetrySyncBannerAndroidTest {
                                         onSyncNow = {},
                                         onDismiss = {},
                                         isVeritySense = true,
+                                        isSwimBusy = true
+                                    )
+                                    PolarH10RetrySyncBanner(
+                                        onSyncNow = {},
+                                        onDismiss = {},
+                                        isVeritySense = true,
                                         errorMessage = appContext.getString(R.string.polar_verity_retry_sync_failed)
                                     )
                                 }
@@ -127,10 +133,16 @@ class PolarRetrySyncBannerAndroidTest {
 
             val bitmap = instrumentation.uiAutomation.takeScreenshot()
             val outDir = appContext.getExternalFilesDir(null) ?: appContext.filesDir
-            val savedFile = File(outDir, "ATT-7924_verity_retry_banner.png")
+            val savedFile = File(outDir, "ATT-8000_swim_busy_banner.png")
             FileOutputStream(savedFile).use { fos ->
                 bitmap.compress(Bitmap.CompressFormat.PNG, 100, fos)
             }
+            try {
+                val sdcardFile = File("/sdcard/Pictures/ATT-8000_swim_busy_banner.png")
+                FileOutputStream(sdcardFile).use { fos ->
+                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, fos)
+                }
+            } catch (ignored: Exception) {}
             bitmap.recycle()
 
             assertTrue("Rendered ComposeView must be laid out", (composeContainer?.height ?: 0) > 0)

@@ -41,8 +41,13 @@ import com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculator
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.polar.androidcommunications.api.ble.model.gatt.client.psftp.BlePsFtpUtils
 import com.polar.sdk.api.PolarBleApi
+import com.polar.sdk.api.model.PolarFirstTimeUseConfig
 import com.polar.sdk.api.model.PolarOfflineRecordingData
 import com.polar.sdk.api.model.PolarOfflineRecordingEntry
+import com.polar.sdk.api.model.trainingsession.PolarExercise
+import com.polar.sdk.api.model.trainingsession.PolarTrainingSession
+import com.polar.sdk.api.model.trainingsession.PolarTrainingSessionReference
+import fi.polar.remote.representation.protobuf.Types
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -74,6 +79,8 @@ object PolarVeritySenseOfflineController {
     const val BACKFILL_TIMEOUT_MS = 45_000L
     const val POLAR_VERITY_SYNC_NOTIFICATION_ID = 8046
     const val VERITY_EXERCISE_PREFIX = "verity:"
+    const val VERITY_SWIM_BUSY_PREFIX = "verity:swim_busy:"
+    const val POLAR_SPORT_POOL_SWIMMING = 103L
     private const val ENTRY_MATCH_TOLERANCE_MS = 180_000L
     private const val PENDING_MATCH_TOLERANCE_MS = 600_000L
     private const val MIN_VALID_HR_BPM = 25
@@ -87,7 +94,8 @@ object PolarVeritySenseOfflineController {
     )
 
     private val REQUIRED_OFFLINE_FEATURES = setOf(
-        PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_OFFLINE_RECORDING
+        PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_OFFLINE_RECORDING,
+        PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_TRAINING_DATA
     )
 
     /**
@@ -265,6 +273,14 @@ object PolarVeritySenseOfflineController {
     }
 
     /**
+     * Returns true when a pending-sync record indicates the sensor is busy in swimming mode (`REQ-SET-110.4`).
+     */
+    @JvmStatic
+    fun isVeritySwimBusy(polarExerciseId: String?): Boolean {
+        return polarExerciseId?.startsWith(VERITY_SWIM_BUSY_PREFIX) == true
+    }
+
+    /**
      * Evaluates whether `WorkoutSamples.db` has missing or unpopulated `SensorType.HR` samples (`REQ-SET-109.1`).
      * Strictly ignores `WorkoutRr.db` because Verity Sense optical recording covers 1-Hz HR only.
      */
@@ -343,7 +359,12 @@ object PolarVeritySenseOfflineController {
         } catch (t: Throwable) {
             Log.w(TAG, "Exception during Polar Verity Sense stopAndBackfillWorkout: ${t.message}", t)
             if (needsBackfill && workoutId > 0L) {
-                recordPendingSync(appContext, workoutId, targetId, matchedPath, windowStartMs, windowEndMs)
+                val pathOrBusy = if (isSystemBusyError(t)) {
+                    "${VERITY_SWIM_BUSY_PREFIX.removePrefix(VERITY_EXERCISE_PREFIX)}$targetId"
+                } else {
+                    matchedPath
+                }
+                recordPendingSync(appContext, workoutId, targetId, pathOrBusy, windowStartMs, windowEndMs)
             }
             false
         } finally {
@@ -391,6 +412,16 @@ object PolarVeritySenseOfflineController {
                 )
             } catch (t: Throwable) {
                 Log.e(TAG, "Exception during Polar Verity Sense syncPendingWorkout: ${t.message}", t)
+                if (isSystemBusyError(t)) {
+                    recordPendingSync(
+                        context = appContext,
+                        workoutId = workoutId,
+                        targetId = targetId,
+                        matchedPath = "${VERITY_SWIM_BUSY_PREFIX.removePrefix(VERITY_EXERCISE_PREFIX)}$targetId",
+                        windowStartMs = pendingData?.expectedStartMs ?: 0L,
+                        windowEndMs = pendingData?.expectedEndMs ?: 0L
+                    )
+                }
                 false
             }
         }
@@ -582,6 +613,8 @@ object PolarVeritySenseOfflineController {
             return false
         }
 
+        checkAndPerformFtu(api, polarId)
+
         PolarOfflineCapabilityStore.markOfflineRecordingCapable(context, macAddress)
         api.setLocalTime(polarId, LocalDateTime.now())
         stopActiveHrIfRunning(api, polarId)
@@ -617,6 +650,39 @@ object PolarVeritySenseOfflineController {
         }
     }
 
+    internal suspend fun checkAndPerformFtu(api: PolarBleApi, polarId: String) {
+        try {
+            if (!api.isFtuDone(polarId)) {
+                Log.i(TAG, "Polar Verity Sense $polarId requires FTU; provisioning default config.")
+                val ftuConfig = PolarFirstTimeUseConfig(
+                    gender = PolarFirstTimeUseConfig.Gender.MALE,
+                    birthDate = java.time.LocalDate.of(1990, 1, 1),
+                    height = 175.0f,
+                    weight = 70.0f,
+                    maxHeartRate = 190,
+                    vo2Max = 45,
+                    restingHeartRate = 60,
+                    trainingBackground = 30,
+                    deviceTime = LocalDateTime.now().toString(),
+                    typicalDay = PolarFirstTimeUseConfig.TypicalDay.MOSTLY_MOVING,
+                    sleepGoalMinutes = 480
+                )
+                api.doFirstTimeUse(polarId, ftuConfig)
+            }
+        } catch (t: Throwable) {
+            if (isSystemBusyError(t)) throw t
+            Log.w(TAG, "Non-fatal error checking or performing FTU on $polarId: ${t.message}")
+        }
+    }
+
+    data class VeritySwimSession(
+        val reference: PolarTrainingSessionReference,
+        val startTimeMs: Long,
+        val durationMs: Long,
+        val hrSamples: List<Int>,
+        val turnTimestampsMs: List<Long>
+    )
+
     private data class StopBackfillContext(
         val workoutId: Long,
         val baseFileName: String,
@@ -645,7 +711,7 @@ object PolarVeritySenseOfflineController {
             timeoutMs = BACKFILL_TIMEOUT_MS,
             apiOverride = apiOverride
         ) { api ->
-            val session = connectAndMatchHrEntry(
+            val session = connectAndMatchSession(
                 api = api,
                 polarId = backfillCtx.polarId,
                 windowStartMs = backfillCtx.windowStartMs,
@@ -653,7 +719,7 @@ object PolarVeritySenseOfflineController {
                 preferredPath = null,
                 toleranceMs = ENTRY_MATCH_TOLERANCE_MS
             )
-            matchedPath = session.match?.path
+            matchedPath = session.path
             handleStopBackfillMatch(api, appContext, backfillCtx, session)
         } ?: false
 
@@ -682,7 +748,7 @@ object PolarVeritySenseOfflineController {
             timeoutMs = BACKFILL_TIMEOUT_MS,
             apiOverride = apiOverride
         ) { api ->
-            val session = connectAndMatchHrEntry(
+            val session = connectAndMatchSession(
                 api = api,
                 polarId = polarId,
                 windowStartMs = windowStartMs,
@@ -690,27 +756,42 @@ object PolarVeritySenseOfflineController {
                 preferredPath = preferredPath,
                 toleranceMs = PENDING_MATCH_TOLERANCE_MS
             )
-            val match = session.match
-            val hrData = if (session.ready && match != null) {
-                api.getOfflineRecord(polarId, match, secret = null)
-                    as? PolarOfflineRecordingData.HrOfflineRecording
-            } else {
-                null
+            val committed = when {
+                !session.ready -> false
+                session.offlineEntry != null -> {
+                    val hrData = api.getOfflineRecord(polarId, session.offlineEntry, secret = null)
+                        as? PolarOfflineRecordingData.HrOfflineRecording
+                    if (hrData != null) {
+                        applyBackfillAndCommit(
+                            appContext = appContext,
+                            workoutId = workoutId,
+                            baseFileName = baseFileName,
+                            hrData = hrData,
+                            fallbackAnchorMs = windowStartMs,
+                            clearPendingFlag = true
+                        )
+                    } else {
+                        false
+                    }
+                }
+                session.swimSession != null -> {
+                    applySwimBackfillAndCommit(
+                        appContext = appContext,
+                        workoutId = workoutId,
+                        baseFileName = baseFileName,
+                        swimSession = session.swimSession,
+                        fallbackAnchorMs = windowStartMs,
+                        clearPendingFlag = true
+                    )
+                }
+                else -> false
             }
-            val committed = if (hrData != null) {
-                applyBackfillAndCommit(
-                    appContext = appContext,
-                    workoutId = workoutId,
-                    baseFileName = baseFileName,
-                    hrData = hrData,
-                    fallbackAnchorMs = windowStartMs,
-                    clearPendingFlag = true
-                )
-            } else {
-                false
-            }
-            if (committed && match != null) {
-                api.removeOfflineRecord(polarId, match)
+            if (committed) {
+                if (session.offlineEntry != null) {
+                    api.removeOfflineRecord(polarId, session.offlineEntry)
+                } else if (session.swimRef != null) {
+                    api.deleteTrainingSession(polarId, session.swimRef)
+                }
                 reexportUpdatedWorkout(appContext, repo, workoutId, baseFileName)
             }
             committed
@@ -718,29 +799,39 @@ object PolarVeritySenseOfflineController {
         return result == true
     }
 
-    private data class MatchedOfflineSession(
+    private data class MatchedSession(
         val ready: Boolean,
-        val match: PolarOfflineRecordingEntry?
+        val offlineEntry: PolarOfflineRecordingEntry? = null,
+        val swimRef: PolarTrainingSessionReference? = null,
+        val swimSession: VeritySwimSession? = null,
+        val path: String? = offlineEntry?.path ?: swimRef?.path
     )
 
-    private suspend fun connectAndMatchHrEntry(
+    private suspend fun connectAndMatchSession(
         api: PolarBleApi,
         polarId: String,
         windowStartMs: Long,
         windowEndMs: Long,
         preferredPath: String?,
         toleranceMs: Long
-    ): MatchedOfflineSession {
+    ): MatchedSession {
         api.connectToDevice(polarId)
         api.waitForConnection(polarId)
         val ready = PolarOfflineGattCoordinator.awaitFeaturesReady(
             api, polarId, REQUIRED_OFFLINE_FEATURES, featureTimeoutMs
         )
         if (!ready) {
-            return MatchedOfflineSession(ready = false, match = null)
+            return MatchedSession(ready = false)
         }
         stopActiveHrIfRunning(api, polarId)
-        val entries = api.listOfflineRecordings(polarId).toList()
+
+        val entries = try {
+            api.listOfflineRecordings(polarId).toList()
+        } catch (t: Throwable) {
+            if (isSystemBusyError(t)) throw t
+            Log.w(TAG, "Error listing offline recordings on $polarId: ${t.message}")
+            emptyList()
+        }
         val match = selectMatchingHrEntry(
             entries = entries,
             windowStartMs = windowStartMs,
@@ -748,31 +839,72 @@ object PolarVeritySenseOfflineController {
             preferredPath = preferredPath,
             toleranceMs = toleranceMs
         )
-        return MatchedOfflineSession(ready = true, match = match)
+        if (match != null) {
+            return MatchedSession(ready = true, offlineEntry = match)
+        }
+
+        val trainingRefs = try {
+            api.getTrainingSessionReferences(polarId).toList()
+        } catch (t: Throwable) {
+            if (isSystemBusyError(t)) throw t
+            Log.w(TAG, "Error listing training session references on $polarId: ${t.message}")
+            emptyList()
+        }
+
+        for (ref in trainingRefs) {
+            if (preferredPath != null && ref.path != preferredPath && !ref.path.contains(preferredPath)) {
+                continue
+            }
+            val session = try {
+                api.getTrainingSession(polarId, ref)
+            } catch (t: Throwable) {
+                if (isSystemBusyError(t)) throw t
+                Log.w(TAG, "Error fetching training session ${ref.path} on $polarId: ${t.message}")
+                null
+            } ?: continue
+            val parsed = parseSwimTrainingSession(session)
+            if (parsed != null) {
+                val sessionStartMs = parsed.startTimeMs
+                val inWindow = if (windowStartMs <= 0L) true else {
+                    val effectiveEndMs = if (windowEndMs >= windowStartMs) windowEndMs else windowStartMs
+                    sessionStartMs in (windowStartMs - toleranceMs)..(effectiveEndMs + toleranceMs)
+                }
+                if (inWindow) {
+                    return MatchedSession(
+                        ready = true,
+                        swimRef = ref,
+                        swimSession = parsed
+                    )
+                }
+            }
+        }
+
+        return MatchedSession(ready = true)
     }
 
     private suspend fun handleStopBackfillMatch(
         api: PolarBleApi,
         appContext: Context,
         backfillCtx: StopBackfillContext,
-        session: MatchedOfflineSession
+        session: MatchedSession
     ): Boolean {
-        val match = session.match
         return when {
             !session.ready -> false
             !backfillCtx.needsBackfill -> {
                 // Zero-gap fast path: skip full PFTP download while stopping & cleaning matched flash entry
-                if (match != null) {
-                    api.removeOfflineRecord(backfillCtx.polarId, match)
+                if (session.offlineEntry != null) {
+                    api.removeOfflineRecord(backfillCtx.polarId, session.offlineEntry)
+                } else if (session.swimRef != null) {
+                    api.deleteTrainingSession(backfillCtx.polarId, session.swimRef)
                 }
                 true
             }
-            match == null -> {
-                Log.w(TAG, "No matching Verity Sense HR entry found for workout ${backfillCtx.workoutId}")
+            session.offlineEntry == null && session.swimSession == null -> {
+                Log.w(TAG, "No matching Verity Sense HR or swim entry found for workout ${backfillCtx.workoutId}")
                 false
             }
-            else -> {
-                val hrData = api.getOfflineRecord(backfillCtx.polarId, match, secret = null)
+            session.offlineEntry != null -> {
+                val hrData = api.getOfflineRecord(backfillCtx.polarId, session.offlineEntry, secret = null)
                     as? PolarOfflineRecordingData.HrOfflineRecording
                 val committed = if (hrData != null) {
                     applyBackfillAndCommit(
@@ -788,12 +920,152 @@ object PolarVeritySenseOfflineController {
                 }
                 if (committed) {
                     // Multi-session flash safety: delete ONLY the matched entry strictly AFTER SQLite commit
-                    api.removeOfflineRecord(backfillCtx.polarId, match)
+                    api.removeOfflineRecord(backfillCtx.polarId, session.offlineEntry)
                 }
                 committed
             }
+            session.swimSession != null && session.swimRef != null -> {
+                val committed = applySwimBackfillAndCommit(
+                    appContext = appContext,
+                    workoutId = backfillCtx.workoutId,
+                    baseFileName = backfillCtx.baseFileName,
+                    swimSession = session.swimSession,
+                    fallbackAnchorMs = backfillCtx.windowStartMs,
+                    clearPendingFlag = false
+                )
+                if (committed) {
+                    api.deleteTrainingSession(backfillCtx.polarId, session.swimRef)
+                }
+                committed
+            }
+            else -> false
         }
     }
+
+    private fun applySwimBackfillAndCommit(
+        appContext: Context,
+        workoutId: Long,
+        baseFileName: String?,
+        swimSession: VeritySwimSession,
+        fallbackAnchorMs: Long,
+        clearPendingFlag: Boolean
+    ): Boolean {
+        val anchorMs = if (swimSession.startTimeMs > 0L) swimSession.startTimeMs else fallbackAnchorMs
+        val hrPairs = buildHrPairsFromIntList(swimSession.hrSamples, anchorMs)
+        if (!baseFileName.isNullOrEmpty() && hrPairs.isNotEmpty()) {
+            val samplesManager = WorkoutSamplesDatabaseManager.getInstance(appContext)
+            samplesManager.patchMissingHeartRateSamples(baseFileName, anchorMs, hrPairs)
+            recomputeHrSummaryMetrics(appContext, workoutId, baseFileName)
+        }
+        if (clearPendingFlag) {
+            WorkoutSummariesDatabaseManager.getInstance(appContext).clearPolarSyncPending(workoutId)
+        }
+        WorkoutRepository.getInstance(appContext).refreshWorkout(workoutId)
+        return true
+    }
+
+    @VisibleForTesting
+    internal fun buildHrPairsFromIntList(
+        hrSamples: List<Int>,
+        anchorMs: Long
+    ): List<android.util.Pair<Long, Int>> {
+        if (hrSamples.isEmpty()) return emptyList()
+        val pairs = ArrayList<android.util.Pair<Long, Int>>(hrSamples.size)
+        for ((index, rawBpm) in hrSamples.withIndex()) {
+            if (rawBpm in MIN_VALID_HR_BPM..MAX_VALID_HR_BPM) {
+                pairs.add(android.util.Pair(anchorMs + index * MILLIS_PER_SECOND, rawBpm))
+            }
+        }
+        return pairs
+    }
+
+    @VisibleForTesting
+    internal fun extractTurnTimestamps(
+        distanceSamples: List<Float>,
+        startMs: Long,
+        sampleIntervalMs: Long = MILLIS_PER_SECOND
+    ): List<Long> {
+        if (distanceSamples.size < 2) return emptyList()
+        val turns = mutableListOf<Long>()
+        var prevDist = distanceSamples[0]
+        for (i in 1 until distanceSamples.size) {
+            val dist = distanceSamples[i]
+            if (dist > prevDist) {
+                turns.add(startMs + i * sampleIntervalMs)
+                prevDist = dist
+            }
+        }
+        return turns
+    }
+
+    @VisibleForTesting
+    internal fun parsePbLocalDateTime(pbDateTime: Types.PbLocalDateTime?): Long? {
+        if (pbDateTime == null || !pbDateTime.hasDate() || !pbDateTime.hasTime()) return null
+        val date = pbDateTime.date
+        val time = pbDateTime.time
+        val ldt = LocalDateTime.of(
+            date.year,
+            date.month,
+            date.day,
+            time.hour,
+            time.minute,
+            time.seconds,
+            time.millis * 1_000_000
+        )
+        return ldt.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+    }
+
+    @VisibleForTesting
+    internal fun parsePbDuration(pbDuration: Types.PbDuration?): Long {
+        if (pbDuration == null) return 0L
+        return (pbDuration.hours * 3600L + pbDuration.minutes * 60L + pbDuration.seconds) * 1000L + pbDuration.millis
+    }
+
+    @VisibleForTesting
+    internal fun parseSwimTrainingSession(session: PolarTrainingSession): VeritySwimSession? {
+        val summary = session.sessionSummary
+        val summarySport = if (summary != null && summary.hasSport()) summary.sport.value else -1L
+
+        val exercise = session.exercises.firstOrNull { ex ->
+            val exSummary = ex.exerciseSummary
+            val exSport = if (exSummary != null && exSummary.hasSport()) exSummary.sport.value else -1L
+            exSport == POLAR_SPORT_POOL_SWIMMING || summarySport == POLAR_SPORT_POOL_SWIMMING
+        } ?: session.exercises.firstOrNull().takeIf { summarySport == POLAR_SPORT_POOL_SWIMMING }
+
+        if (exercise == null && summarySport != POLAR_SPORT_POOL_SWIMMING) {
+            return null
+        }
+
+        val exSummary = exercise?.exerciseSummary
+        val startPb = when {
+            exSummary != null && exSummary.hasStart() -> exSummary.start
+            summary != null && summary.hasStart() -> summary.start
+            else -> null
+        }
+        val startMs = parsePbLocalDateTime(startPb)
+            ?: session.reference.date.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+
+        val durationPb = when {
+            exSummary != null && exSummary.hasDuration() -> exSummary.duration
+            summary != null && summary.hasDuration() -> summary.duration
+            else -> null
+        }
+        val durationMs = parsePbDuration(durationPb)
+
+        val samples = exercise?.samples
+        val hrList = samples?.heartRateSamplesList ?: emptyList()
+        val distanceList = samples?.distanceSamplesList ?: emptyList()
+        val turns = extractTurnTimestamps(distanceList, startMs)
+
+        return VeritySwimSession(
+            reference = session.reference,
+            startTimeMs = startMs,
+            durationMs = durationMs,
+            hrSamples = hrList,
+            turnTimestampsMs = turns
+        )
+    }
+
 
     private fun applyBackfillAndCommit(
         appContext: Context,
@@ -966,6 +1238,9 @@ object PolarVeritySenseOfflineController {
 
     private fun stripVerityPrefix(exerciseId: String?): String? {
         if (exerciseId.isNullOrBlank()) return null
+        if (exerciseId.startsWith(VERITY_SWIM_BUSY_PREFIX)) {
+            return null
+        }
         val raw = if (exerciseId.startsWith(VERITY_EXERCISE_PREFIX)) {
             exerciseId.removePrefix(VERITY_EXERCISE_PREFIX)
         } else {

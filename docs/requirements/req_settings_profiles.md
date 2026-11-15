@@ -2484,4 +2484,34 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 
 **Invariants**: Zero `WorkoutRr.db` / `HrvPostWorkoutRecomputer` writes; zero `WorkoutSummaries.db` schema bump; gap-only `HR` patching; post-commit single-entry deletion; zero emojis in strings.
 
+---
+
+### REQ-SET-110: Polar Verity Sense Swim Mode Session Reader, Turn Extraction & SYSTEM_BUSY Guidance (`ATT-8000`) [Verified]
+- **Tests**: `TST-SET-112`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit / Integration
+- **Implementation**: `PolarVeritySenseOfflineController.kt`, `PolarOfflineGattCoordinator.kt`, `PolarH10RetrySyncBanner.kt`, `res/values*/strings_devices.xml`
+- **Rationale**: When Polar Verity Sense is operated in White Swimming Mode, it records optical 1-Hz HR and gyroscope wall turns as structured Polar Training Sessions (`PolarTrainingSessionApi`) rather than raw offline recording streams, while returning `SYSTEM_BUSY` until the swimmer exits Swim Mode back to Blue Sensor Mode.
+- **Description**:
+1. *PolarTrainingSessionApi Session Fetch & FTU Lifecycle (`REQ-SET-110.1`)*:
+   - `PolarOfflineGattCoordinator` SHALL include `FEATURE_POLAR_TRAINING_DATA` alongside `FEATURE_POLAR_OFFLINE_RECORDING` and `FEATURE_POLAR_DEVICE_TIME_SETUP` in the offline session feature set.
+   - `PolarVeritySenseOfflineController` SHALL support factory-fresh devices by verifying `isFtuDone()` and calling `doFirstTimeUse()` if unprovisioned so standalone modes operate without requiring a Polar account.
+   - During `stopAndBackfillWorkout` and `syncPendingWorkout`, the controller SHALL query `PolarTrainingSessionApi.getTrainingSessionReferences()` to discover completed sessions on internal flash.
+2. *Deterministic Swim Session Parsing & Turn Extraction (`REQ-SET-110.2`)*:
+   - The controller SHALL inspect session metadata (`PbExerciseBase.sport.value == 103` / Pool Swimming) to deterministically identify White Swimming Mode sessions.
+   - For identified swim sessions, the controller SHALL extract the 1-Hz HR series from `PbExerciseSamples.heartRateSamples` and raw wall turn/length transition timestamps from `distanceSamples` (or length event samples), decoupling turn extraction from the sensor's internal pool-length setting.
+   - The controller SHALL patch missing `SensorType.HR` samples into `WorkoutSamples.db` and recompute HR extrema/zones in `WorkoutSummaries.db`.
+3. *SYSTEM_BUSY Guidance, Tagged Pending State & Flash Cleanup (`REQ-SET-110.3`)*:
+   - When workout stop or Aftermath *Sync Now* encounters `SYSTEM_BUSY` (swimmer still in White Swimming Mode), the controller SHALL persist pending sync state with tag `verity:swim_busy:<targetId>`.
+   - `PolarH10RetrySyncBanner` SHALL detect `verity:swim_busy` state and render localized instructions across all 9 UI locales without emojis: *"Please press the button on your Polar Verity Sense to exit Swim Mode (return to blue LED) and tap Sync Now."*
+   - Strictly post-commit upon successful database persistence, the controller SHALL call `PolarTrainingSessionApi.deleteTrainingSession()` for ONLY the matched training session reference, ensuring the 16 MB flash memory does not fill up.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a completed White Swimming Mode session on a Polar Verity Sense switched back to Blue Sensor Mode, *When* `stopAndBackfillWorkout` or `syncPendingWorkout` executes, *Then* the session is deterministically recognized (`PbSportIdentifier == 103`), 1-Hz HR and turn timestamps are extracted, missing HR samples are patched into `WorkoutSamples.db`, and `deleteTrainingSession` removes only the matched session post-commit.
+• *Given* Verity Sense is stopped while still in White Swimming Mode (`SYSTEM_BUSY`), *When* `stopAndBackfillWorkout` executes, *Then* pending sync is saved with `verity:swim_busy:`, and Aftermath renders localized guidance to exit Swim Mode and tap *Sync Now* across all 9 locales without emojis.
+
+**Invariants**: Zero `WorkoutRr.db` writes; zero `WorkoutSummaries.db` schema bumps; gap-only `HR` patching; post-commit single-session deletion; zero emojis in strings.
+
+
 

@@ -172,4 +172,9 @@
     <string name="polar_verity_retry_syncing">Polar Verity Sense を同期中…</string>
     <string name="polar_verity_retry_sync_failed">Polar Verity Sense に接続できませんでした。ブルーセンサーモードでオンにして再試行してください。</string>
 
+    <!-- Polar Verity Sense Swim Mode & SYSTEM_BUSY Guidance (ATT-8000, REQ-SET-110) -->
+    <string name="polar_verity_swim_busy_title">スイムモードのPolar Verity Sense</string>
+    <string name="polar_verity_swim_busy_desc">Polar Verity Senseのボタンを押してスイムモードを終了し（青色LEDに戻す）、今すぐ同期をタップしてください。</string>
+    <string name="polar_verity_swim_syncing">スイムモードデータを同期中…</string>
+
 </resources>

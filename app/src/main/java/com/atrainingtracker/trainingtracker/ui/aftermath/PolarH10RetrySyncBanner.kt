@@ -90,6 +90,7 @@ fun PolarPendingRetrySyncSection(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val isVeritySense = PolarVeritySenseOfflineController.isVerityPendingSync(polarExerciseId)
+    val isSwimBusy = PolarVeritySenseOfflineController.isVeritySwimBusy(polarExerciseId)
     var isSyncingPolar by remember(workoutId, polarExerciseId) { mutableStateOf(false) }
     var polarSyncError by remember(workoutId, polarExerciseId) { mutableStateOf<String?>(null) }
     val failedMsg = stringResource(
@@ -114,7 +115,8 @@ fun PolarPendingRetrySyncSection(
         modifier = modifier,
         isSyncing = isSyncingPolar,
         errorMessage = polarSyncError,
-        isVeritySense = isVeritySense
+        isVeritySense = isVeritySense,
+        isSwimBusy = isSwimBusy
     )
 }
 
@@ -130,11 +132,24 @@ fun PolarH10RetrySyncBanner(
     modifier: Modifier = Modifier,
     isSyncing: Boolean = false,
     errorMessage: String? = null,
-    isVeritySense: Boolean = false
+    isVeritySense: Boolean = false,
+    isSwimBusy: Boolean = false
 ) {
-    val titleRes = if (isVeritySense) R.string.polar_verity_retry_sync_title else R.string.polar_h10_retry_sync_title
-    val descRes = if (isVeritySense) R.string.polar_verity_retry_sync_desc else R.string.polar_h10_retry_sync_desc
-    val syncingRes = if (isVeritySense) R.string.polar_verity_retry_syncing else R.string.polar_h10_retry_syncing
+    val titleRes = when {
+        isSwimBusy -> R.string.polar_verity_swim_busy_title
+        isVeritySense -> R.string.polar_verity_retry_sync_title
+        else -> R.string.polar_h10_retry_sync_title
+    }
+    val descRes = when {
+        isSwimBusy -> R.string.polar_verity_swim_busy_desc
+        isVeritySense -> R.string.polar_verity_retry_sync_desc
+        else -> R.string.polar_h10_retry_sync_desc
+    }
+    val syncingRes = when {
+        isSwimBusy -> R.string.polar_verity_swim_syncing
+        isVeritySense -> R.string.polar_verity_retry_syncing
+        else -> R.string.polar_h10_retry_syncing
+    }
 
     Card(
         modifier = modifier
@@ -284,6 +299,20 @@ private fun PolarVerityRetrySyncBannerPreview() {
             onSyncNow = {},
             onDismiss = {},
             isVeritySense = true
+        )
+    }
+}
+
+@Preview(name = "PolarVeritySwimBusyBanner - Light", showBackground = true)
+@Preview(name = "PolarVeritySwimBusyBanner - Dark", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+private fun PolarVeritySwimBusyBannerPreview() {
+    ATrainingTrackerTheme {
+        PolarH10RetrySyncBanner(
+            onSyncNow = {},
+            onDismiss = {},
+            isVeritySense = true,
+            isSwimBusy = true
         )
     }
 }
