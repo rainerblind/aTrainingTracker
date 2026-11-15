@@ -409,12 +409,57 @@ def collect_sys5_summary(repo_root: str, tag: str) -> Dict[str, Any]:
     else:
         deviations.append("SYS.5 formal sign-off section missing or incomplete.")
 
+    # 4. Check for Synthetic Placeholder Serials (REQ-PRO-098 / Finding K1)
+    # Scan hardware log and matrix for synthetic placeholder serials
+    hw_match = re.search(r"##\s*1\.\s*Hardware.*?(?=##\s*2\.|\Z)", content, re.DOTALL | re.IGNORECASE)
+    matrix_match = re.search(r"##\s*2\.\s*Verification.*?(?=##\s*3\.|\Z)", content, re.DOTALL | re.IGNORECASE)
+    active_scope = ""
+    if hw_match:
+        active_scope += hw_match.group(0)
+    if matrix_match:
+        active_scope += matrix_match.group(0)
+    if not active_scope:
+        active_scope = content
+
+    placeholder_matches = re.findall(r"\b[A-Za-z0-9_-]*REF-[A-Za-z0-9_-]+\b", active_scope)
+    if placeholder_matches:
+        unique_placeholders = sorted(set(placeholder_matches))
+        deviations.append(
+            f"SYS.5 contains synthetic placeholder serial numbers ({', '.join(unique_placeholders)}): "
+            f"Real reference hardware evidence required (Finding K1 / REQ-PRO-098)."
+        )
+
+    # 5. Check Human PO Physical Field Attestation (REQ-PRO-098 / Finding K1)
+    has_po_attestation = False
+    po_lines = [
+        l for l in content.splitlines()
+        if re.search(r"(Product\s+Owner|PO\s+Attestation)", l, re.IGNORECASE)
+    ]
+    if po_lines:
+        has_po_pending = any(
+            re.search(r"(\[AWAITING|\[PENDING|______)", l, re.IGNORECASE)
+            for l in po_lines
+        ) or "[AWAITING PO SIGN-OFF]" in content
+        if has_po_pending:
+            deviations.append(
+                "SYS.5 human PO attestation pending: Field verification requires authentic Product Owner sign-off "
+                "and reference device serial (Finding K1 / REQ-PRO-098)."
+            )
+        else:
+            has_po_attestation = True
+    else:
+        deviations.append(
+            "SYS.5 human PO attestation section missing: Physical field verification requires authentic Product Owner sign-off "
+            "and reference device serial (Finding K1 / REQ-PRO-098)."
+        )
+
     return {
         "available": True,
         "path": sys5_rel_path,
         "overall_verdict": overall_verdict,
         "cases_found": cases_found,
         "has_signoff": has_signoff,
+        "has_po_attestation": has_po_attestation,
         "deviations": deviations,
     }
 
@@ -489,7 +534,7 @@ def render_markdown_summary(
         f"| **Unit & Regression Tests** | ASPICE SWE.6 BP3, BP4 | `{unit_summary.get('archive_path', 'build-evidence/junit-test-results-' + tag + '.zip')}` | {unit_summary.get('passed_tests', 0)}/{unit_summary.get('total_tests', 0)} passed ({unit_summary.get('failed_tests', 0)} failed) | [ {unit_gate} ] |",
         f"| **Traceability Coverage** | ASPICE SWE.1, SWE.6 | `tools/verify_requirement_governance.py` | REQ-TST: {req_tst_pct:.1f}%, TST-Code: {tst_code_pct:.1f}% | [ {cov_gate} ] |",
         f"| **System Integration (SYS.4)** | ASPICE SYS.4 BP5 | `{sys4_summary.get('path', 'docs/releases/' + tag + '/system_integration_results.json')}` | {sys4_summary.get('passed_cases', 0)}/{sys4_summary.get('total_cases', 0)} tests PASS | [ {sys4_gate} ] |",
-        f"| **System Protocol (SYS.5)** | ASPICE SYS.5 BP5, BP6 | `{sys5_summary.get('path', 'docs/releases/' + tag + '/sys_verification_record.md')}` | Verdict: {sys5_summary.get('overall_verdict', 'UNKNOWN')}, Sign-off: {'Signed' if sys5_summary.get('has_signoff') else 'Incomplete'} | [ {sys5_gate} ] |",
+        f"| **System Protocol (SYS.5)** | ASPICE SYS.5 BP5, BP6 | `{sys5_summary.get('path', 'docs/releases/' + tag + '/sys_verification_record.md')}` | Verdict: {sys5_summary.get('overall_verdict', 'UNKNOWN')}, Sign-off: {'Signed' if (sys5_summary.get('has_signoff') and sys5_summary.get('has_po_attestation')) else 'Incomplete'} | [ {sys5_gate} ] |",
         "",
         "---",
         "",
@@ -572,6 +617,7 @@ def render_markdown_summary(
             f"* **Artifact**: [`{sys5_summary['path']}`](../../../{sys5_summary['path']})",
             f"* **Recorded Verdict**: **{sys5_summary.get('overall_verdict')}**",
             f"* **Formal QA Sign-Off**: **{'Verified / Complete' if sys5_summary.get('has_signoff') else 'INCOMPLETE / MISSING'}**",
+            f"* **Human PO Attestation**: **{'Verified / Complete' if sys5_summary.get('has_po_attestation') else 'PENDING / MISSING'}**",
             "",
             "| Protocol Test ID | Target Domain / Interface | Protocol Verdict |",
             "| :--- | :--- | :--- |",

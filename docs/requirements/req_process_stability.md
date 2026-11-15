@@ -4760,16 +4760,16 @@ The workflow SHALL mandate that:
 
 ---
 
-### REQ-PRO-088: System Verification Records Execution & Release Pipeline Gating [Verified]
+### REQ-PRO-088: System Verification Records Execution & Release Pipeline Gating [Planned]
 - **Tests**: `TST-PRO-088`
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit / Review
 - **Implementation**: `docs/releases/V5.0.0/sys_verification_record.md`, `tools/run_system_integration_tests.py`, `.github/workflows/android-release.yml`, `.agents/skills/release-manager/SKILL.md`, `docs/releases/README.md`
 - **Rationale**: Under ASPICE SYS.5 (BP1-BP7) and SWE.6 BP5 (Finding F3), system-level verification across real reference hardware, physical BLE/ANT+ sensors, and operating environments must be executed and filed as formal evidence for production releases. The release management pipeline must enforce blocking gates that prevent tag creation, Play Store publishing, and GitHub release creation when verification records are missing or failing:
-  1. *Release System Verification Evidence Execution (`REQ-PRO-088.1`)*:
-     • For target production release `V5.0.0` (code `273`), a formal `sys_verification_record.md` SHALL be executed and filed under `docs/releases/V5.0.0/` adhering to `docs/system/sys_verification_protocol.md`.
-     • All 8 test cases (`SYS-VRF-001` through `SYS-VRF-008`) SHALL be executed against reference hardware (`SYS-HW-01`..`SYS-HW-07`) and recorded with an overall verdict of `PASS`.
+  1. *Release System Verification Evidence Execution (`REQ-PRO-088.1`)* [Planned]:
+     • For target production release `V5.0.0` (code `273`), a formal `sys_verification_record.md` SHALL be filed under `docs/releases/V5.0.0/` adhering to `docs/system/sys_verification_protocol.md`.
+     • All 8 verification cases (`SYS-VRF-001` through `SYS-VRF-008`) SHALL report authentic telemetry or open status, requiring explicit human PO attestation and prohibiting synthetic placeholder serials (`*-REF-*`) or unbacked automated passes.
   2. *Automated System Integration Protocol Alignment (`REQ-PRO-088.2`)*:
      • `tools/run_system_integration_tests.py` SHALL maintain protocol parity with authentic Garmin Varia radar telemetry frames (`[0x02, 0x00]` for `SYS-INT-003`).
      • Automated integration results SHALL be filed under `docs/releases/V5.0.0/system_integration_results.json` with 100% test pass rate (6/6 PASS).
@@ -4781,13 +4781,13 @@ The workflow SHALL mandate that:
      • `docs/releases/README.md` SHALL record an auditable backfill rationale documenting historical pre-ASPICE releases.
 - **Requirement Archaeology & Chesterton's Fence Audit**:
   1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-088` (`REQ-PRO-088.1`–`REQ-PRO-088.4`). Targets `docs/releases/`, `.github/workflows/android-release.yml`, `tools/run_system_integration_tests.py`, `.agents/skills/release-manager/SKILL.md`.
-  2. *Historical Origin & Commit Trace*: Sprint 2026-46.5 via ticket `ATT-7560` under Epic `ATT-232` (Process). Addresses ASPICE evaluation finding F3.
+  2. *Historical Origin & Commit Trace*: Sprint 2026-46.5 via ticket `ATT-7560` under Epic `ATT-232` (Process). Addresses ASPICE evaluation finding F3. Reset to [Planned] in Sprint 2026-46.8 via `ATT-8141` (Epic `ATT-8138`, Finding K1).
   3. *Root Reason for Existing Formulation*: Baseline assessment identified that while `sys_verification_protocol.md` defined SYS.5 procedures, zero release dossiers existed in `docs/releases/` and CI release workflows bypassed system evidence checks.
   4. *Preservation of Core Invariants*: Deterministic release gating; `ReleaseManagerSystemEvidenceContractTest.kt` passes 100%; zero Android production runtime code changes.
 - **Acceptance Criteria (Given-When-Then)**:
   • *Given* a release candidate tag `V5.0.0`,
   • *When* the release evidence dossier is checked,
-  • *Then* `docs/releases/V5.0.0/sys_verification_record.md` exists with 8/8 `SYS-VRF-xxx` test cases marked PASS and signed off by QA.
+  • *Then* `docs/releases/V5.0.0/sys_verification_record.md` exists with protocol completeness and authentic human PO attestation.
   • *Given* a missing or incomplete system verification record,
   • *When* `tools/generate_release_verification_summary.py --fail-on-deviations` or release CI runs,
   • *Then* the process fails and blocks release candidate tag creation.
@@ -5130,4 +5130,37 @@ The workflow SHALL mandate that:
   • *Given* `docs/management/release_plan.md`,
   • *When* inspected against ASPICE 4.0 `MAN.3` and `SUP.8`,
   • *Then* it specifies `V5.0.0` scope epics, schedule, cumulative Pixel 10 workout verification, and release exit criteria.
+- **Invariants**: Zero changes to production runtime logic (`app/src/main/`); existing master table parity intact; Human Decision Gate inviolable.
+
+
+---
+
+### REQ-PRO-098: Human-Attested Field Verification Evidence, Telemetry Extractor & Release Guarding [Verified]
+- **Tests**: `TST-PRO-098`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `tools/extract_pixel_field_evidence.py`, `tools/generate_release_verification_summary.py`, `docs/releases/TEMPLATE.md`, `docs/releases/V5.0.0/sys_verification_record.md`, `.agents/rules/aspice_governance.md`
+- **Rationale**: ASPICE 4.0 Finding K1 (SYS.4/5, SWE.6, SUP.1, SUP.8) identified that autonomous agents must never fabricate physical hardware execution or test results. System-level verification for releases must derive from authentic workout sessions recorded by the PO on the reference Google Pixel 10. Automated tooling must extract authentic telemetry, pre-populate protocol tables (`EXTRACTED_AWAITING_PO_ATTESTATION`), guide upcoming test rides via a coverage-gap report, and enforce human PO attestation prior to release clearance.
+- **Description**:
+  1. *Authentic Pixel 10 Telemetry Extraction & Verification Gap Coaching (`REQ-PRO-098.1`)*: `tools/extract_pixel_field_evidence.py` SHALL extract authentic workout telemetry (GPS, BLE HRM, ANT+ power, cadence, radar) from Pixel 10 databases/FIT exports, populate `SYS-VRF-*` rows with authentic metrics tagged `EXTRACTED_AWAITING_PO_ATTESTATION`, and output a prioritized coverage-gap report indicating uncovered scenarios and sensor combinations for upcoming rides.
+  2. *Automated Release Guarding Against Unsubstantiated Verification Evidence (`REQ-PRO-098.2`)*: `tools/generate_release_verification_summary.py` (`collect_sys5_summary()`) SHALL reject any verification record containing placeholder serials (`*-REF-*`), unbacked `PASS` verdicts without authentic telemetry traces, or missing human PO attestation signatures, reporting status `BLOCKED`.
+  3. *Release Template & V5.0.0 Verification Protocol Reset (`REQ-PRO-098.3`)*: `docs/releases/TEMPLATE.md` and `docs/releases/V5.0.0/sys_verification_record.md` SHALL be established with a formal Human PO Attestation block (device serial, build SHA, workout/FIT ID references) and reset to `OPEN / NOT PERFORMED`, removing all fabricated Pixel 8/6 data.
+  4. *Agent Governance & Human-Execution Lifecycle Tripwire (`REQ-PRO-098.4`)*: `.agents/rules/aspice_governance.md` (and Gate 4/5 checklists) SHALL strictly prohibit autonomous agents from authoring physical hardware test results; tickets requiring real hardware execution SHALL carry label `human-execution` and be restricted to protocol preparation and telemetry extraction by agents.
+  5. *Extractor & Release Summary Contract Test Parity (`REQ-PRO-098.5`)*: `tools/test_generate_release_verification_summary.py` and extractor unit tests SHALL verify placeholder rejection, human attestation enforcement, and gap reporting with 100% test pass rate.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-098`. Targets `tools/extract_pixel_field_evidence.py`, `tools/generate_release_verification_summary.py`, `docs/releases/TEMPLATE.md`, `docs/releases/V5.0.0/sys_verification_record.md`, `.agents/rules/aspice_governance.md`.
+  2. *Historical Origin & Commit Trace*: Sprint 2026-46.8 via ticket `ATT-8141` under Epic `ATT-8138` (ASPICE 4.0 Audit Remediation). Resolves critical Finding K1.
+  3. *Root Reason for Existing Formulation*: Evaluation finding K1 established that V5.0.0 release verification claimed hardware testing that did not occur; authentic continuous Pixel 10 workouts recorded by PO must drive release evidence through automated extraction and human attestation.
+  4. *Preservation of Core Invariants*: Release candidate gating remains strictly blocked until human PO attestation; zero Android runtime app bytecode changes; Human Decision Gate preserved.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `docs/releases/V5.0.0/sys_verification_record.md`,
+  • *When* inspected,
+  • *Then* all fabricated Pixel 8/6 entries are removed, and all rows report authentic Pixel 10 telemetry or `OPEN / NOT PERFORMED` awaiting human PO attestation.
+  • *Given* a verification record with placeholder serials (`*-REF-*`), unbacked PASS claims, or missing human PO attestation,
+  • *When* `tools/generate_release_verification_summary.py` runs,
+  • *Then* status is reported as `BLOCKED` with specific deviations.
+  • *Given* PO workout data on Pixel 10,
+  • *When* `tools/extract_pixel_field_evidence.py` executes,
+  • *Then* it extracts session telemetry, populates verification rows with `EXTRACTED_AWAITING_PO_ATTESTATION`, and generates an actionable coverage-gap report.
 - **Invariants**: Zero changes to production runtime logic (`app/src/main/`); existing master table parity intact; Human Decision Gate inviolable.

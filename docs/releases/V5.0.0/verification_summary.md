@@ -1,8 +1,8 @@
 # Release Verification Summary: Release V5.0.0 (ASPICE SWE.6 BP5, SUP.8)
 
 **Release Tag**: `V5.0.0`  
-**Baseline Commit**: `9a3b72d90754f9230620977939c8cdae60e7fe18`  
-**Generation Timestamp**: `2026-11-13 12:29:00 UTC`  
+**Baseline Commit**: `896e16264387dfc890c9a2ccf965adb8e327cba2`  
+**Generation Timestamp**: `2026-11-15 23:04:38 UTC`  
 **Overall Verification Status**: **BLOCKED / REQUIRES HUMAN APPROVAL**  
 
 ---
@@ -14,9 +14,9 @@ In accordance with **ASPICE SWE.6 BP5** (Work Product Verification), **SUP.8** (
 | Verification Dimension | Governed Standard | Evidence Artifact / Source | Status / Metric | Gating Verdict |
 | :--- | :--- | :--- | :--- | :--- |
 | **Unit & Regression Tests** | ASPICE SWE.6 BP3, BP4 | `build-evidence/junit-test-results-V5.0.0.zip` | 0/0 passed (0 failed) | [ FAIL ] |
-| **Traceability Coverage** | ASPICE SWE.1, SWE.6 | `tools/verify_requirement_governance.py` | REQ-TST: 100.0%, TST-Code: 63.9% | [ PASS ] |
+| **Traceability Coverage** | ASPICE SWE.1, SWE.6 | `tools/verify_requirement_governance.py` | REQ-TST: 100.0%, TST-Code: 65.0% | [ PASS ] |
 | **System Integration (SYS.4)** | ASPICE SYS.4 BP5 | `docs/releases/V5.0.0/system_integration_results.json` | 6/6 tests PASS | [ PASS ] |
-| **System Protocol (SYS.5)** | ASPICE SYS.5 BP5, BP6 | `docs/releases/V5.0.0/sys_verification_record.md` | Verdict: PASS, Sign-off: Signed | [ PASS ] |
+| **System Protocol (SYS.5)** | ASPICE SYS.5 BP5, BP6 | `docs/releases/V5.0.0/sys_verification_record.md` | Verdict: OPEN, Sign-off: Incomplete | [ FAIL ] |
 
 ---
 
@@ -31,10 +31,10 @@ In accordance with **ASPICE SWE.6 BP5** (Work Product Verification), **SUP.8** (
 
 | Category | Traceability Dimension | Covered / Total | Coverage % | Status |
 | :--- | :--- | :--- | :--- | :--- |
-| **Category 1** | REQs citing at least one TST in living docs | 1105 / 1105 | 100.00% | PASS |
-| **Category 2** | TSTs backed by executable test code | 706 / 1105 | 63.89% | PASS |
-| **Category 3** | Code test tags matching living doc specification | 706 / 711 | 99.30% | DEFICIT |
-| **Category 4** | Bidirectional citations (TST cited back by REQ) | 1074 / 1105 | 97.19% | PASS |
+| **Category 1** | REQs citing at least one TST in living docs | 1152 / 1152 | 100.00% | PASS |
+| **Category 2** | TSTs backed by executable test code | 750 / 1154 | 64.99% | PASS |
+| **Category 3** | Code test tags matching living doc specification | 750 / 755 | 99.34% | DEFICIT |
+| **Category 4** | Bidirectional citations (TST cited back by REQ) | 1123 / 1154 | 97.31% | PASS |
 
 * **Gate Diagnostics**: PASS: Coverage calculated successfully (no thresholds configured).
 
@@ -61,19 +61,20 @@ In accordance with **ASPICE SWE.6 BP5** (Work Product Verification), **SUP.8** (
 ## 5. System Verification Protocol Sign-Off Summary (SYS.5 / ATT-6167)
 
 * **Artifact**: [`docs/releases/V5.0.0/sys_verification_record.md`](../../../docs/releases/V5.0.0/sys_verification_record.md)
-* **Recorded Verdict**: **PASS**
+* **Recorded Verdict**: **OPEN**
 * **Formal QA Sign-Off**: **Verified / Complete**
+* **Human PO Attestation**: **PENDING / MISSING**
 
 | Protocol Test ID | Target Domain / Interface | Protocol Verdict |
 | :--- | :--- | :--- |
-| `SYS-VRF-001` | Formal On-Device Scenario | [ PASS ] |
-| `SYS-VRF-002` | Formal On-Device Scenario | [ PASS ] |
-| `SYS-VRF-003` | Formal On-Device Scenario | [ PASS ] |
-| `SYS-VRF-004` | Formal On-Device Scenario | [ PASS ] |
-| `SYS-VRF-005` | Formal On-Device Scenario | [ PASS ] |
-| `SYS-VRF-006` | Formal On-Device Scenario | [ PASS ] |
-| `SYS-VRF-007` | Formal On-Device Scenario | [ PASS ] |
-| `SYS-VRF-008` | Formal On-Device Scenario | [ PASS ] |
+| `SYS-VRF-001` | Formal On-Device Scenario | [ OPEN ] |
+| `SYS-VRF-002` | Formal On-Device Scenario | [ OPEN ] |
+| `SYS-VRF-003` | Formal On-Device Scenario | [ OPEN ] |
+| `SYS-VRF-004` | Formal On-Device Scenario | [ OPEN ] |
+| `SYS-VRF-005` | Formal On-Device Scenario | [ OPEN ] |
+| `SYS-VRF-006` | Formal On-Device Scenario | [ OPEN ] |
+| `SYS-VRF-007` | Formal On-Device Scenario | [ OPEN ] |
+| `SYS-VRF-008` | Formal On-Device Scenario | [ OPEN ] |
 
 ---
 
@@ -83,6 +84,16 @@ In accordance with **ASPICE SWE.6 BP5** (Work Product Verification), **SUP.8** (
 > **RELEASE GATING ALERT**: The following open deviations were detected. Under **REQ-PRO-074** and **REQ-PRO-072**, release candidate tag creation and Google Play Store distribution are **BLOCKED** until all deviations are remediated or formally approved by the human Quality Gatekeeper.
 
 - [ ] **DEVIATION**: Unit test evidence missing: No JUnit test reports found in app/build/test-results/testDebugUnitTest or build-evidence/junit-test-results-V5.0.0.zip.
+- [ ] **DEVIATION**: SYS.5 overall verdict not PASS: Found 'OPEN' in docs/releases/V5.0.0/sys_verification_record.md.
+- [ ] **DEVIATION**: SYS.5 test case non-pass: 'SYS-VRF-001' has result 'OPEN' (expected PASS).
+- [ ] **DEVIATION**: SYS.5 test case non-pass: 'SYS-VRF-002' has result 'OPEN' (expected PASS).
+- [ ] **DEVIATION**: SYS.5 test case non-pass: 'SYS-VRF-003' has result 'OPEN' (expected PASS).
+- [ ] **DEVIATION**: SYS.5 test case non-pass: 'SYS-VRF-004' has result 'OPEN' (expected PASS).
+- [ ] **DEVIATION**: SYS.5 test case non-pass: 'SYS-VRF-005' has result 'OPEN' (expected PASS).
+- [ ] **DEVIATION**: SYS.5 test case non-pass: 'SYS-VRF-006' has result 'OPEN' (expected PASS).
+- [ ] **DEVIATION**: SYS.5 test case non-pass: 'SYS-VRF-007' has result 'OPEN' (expected PASS).
+- [ ] **DEVIATION**: SYS.5 test case non-pass: 'SYS-VRF-008' has result 'OPEN' (expected PASS).
+- [ ] **DEVIATION**: SYS.5 human PO attestation pending: Field verification requires authentic Product Owner sign-off and reference device serial (Finding K1 / REQ-PRO-098).
 
 ---
 

@@ -3038,17 +3038,17 @@
 
 ---
 
-### TST-PRO-088: **System Verification Protocol Sign-Off & Release Gating Verification Suite** [Verified]
+### TST-PRO-088: **System Verification Protocol Sign-Off & Release Gating Verification Suite** [Planned]
 - **Verifies**: `REQ-PRO-088`
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit / Review
 - **Component**: `docs/releases/V5.0.0/sys_verification_record.md`, `tools/run_system_integration_tests.py`, `.github/workflows/android-release.yml`, `tools/test_generate_release_verification_summary.py`, `tools/test_system_integration_tests.py`
-- **Jira**: `ATT-7560`
+- **Jira**: `ATT-7560`, `ATT-8141`
 - **Test Description**:
-  1. *SYS.5 Verification Record & Release Gating Contract*: Verify that `docs/releases/V5.0.0/sys_verification_record.md` exists, defines all 8 `SYS-VRF-001`..`008` cases with `PASS`, includes hardware serials, and has formal sign-offs.
+  1. *SYS.5 Verification Record & Release Gating Contract*: Verify that `docs/releases/V5.0.0/sys_verification_record.md` exists, defines all 8 `SYS-VRF-001`..`008` cases, validates absence of synthetic placeholder serials (`*-REF-*`), and enforces human PO attestation prior to release qualification.
   2. *System Integration Runner & Wire Protocol Alignment*: Execute `tools/run_system_integration_tests.py` verifying all 6 cases (`SYS-INT-001`..`006`) pass cleanly including `SYS-INT-003`.
-  3. *Release Verification Summary Generation*: Run `tools/generate_release_verification_summary.py --tag V5.0.0 --fail-on-deviations` asserting exit code 0 and `PASS (READY FOR RELEASE)`.
+  3. *Release Verification Summary Gating*: Run `tools/generate_release_verification_summary.py --tag V5.0.0 --fail-on-deviations` asserting that unbacked or placeholder verification records correctly yield `BLOCKED` and missing human attestation prevents release candidate authorization.
   4. *Targeted Regression Test Execution*: Run unit tests in `tools/test_generate_release_verification_summary.py` and `tools/test_system_integration_tests.py` asserting 100% pass rate.
 
 
@@ -3199,3 +3199,21 @@
   3. *Release Plan Structure and Quality Gate Review*: Inspect `docs/management/release_plan.md` confirming full coverage of `V5.0.0` milestone epics, 12h continuous cadence, Google Pixel 10 daily-ride verification, and quality gate exit criteria.
   4. *Governance & Lifecycle Parity Review*: Verify consistency across `.agents/rules/aspice_governance.md` (Rule 8.3 & Rule 85), `sprint-planner/SKILL.md`, and `release-manager/SKILL.md`.
   5. *Living Documentation Parity*: Execute `python3 tools/verify_requirement_governance.py` confirming 100% parity across `docs/requirements.md` and `docs/tests.md`.
+
+
+---
+
+### TST-PRO-098: **Human-Attested Field Evidence Extractor, Release Guarding and Governance Verification Suite** [Verified]
+- **Verifies**: `REQ-PRO-098`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Component**: `tools/extract_pixel_field_evidence.py`, `tools/generate_release_verification_summary.py`, `tools/test_generate_release_verification_summary.py`, `docs/releases/TEMPLATE.md`, `docs/releases/V5.0.0/sys_verification_record.md`, `.agents/rules/aspice_governance.md`
+- **Jira**: `ATT-8141`
+- **Test Description**:
+  1. *Placeholder Serial & Synthetic Data Rejection Test*: In `tools/test_generate_release_verification_summary.py`, verify that `collect_sys5_summary()` detects placeholder serials (`P8-REF-2024-001`, `P6-REF-2022-044`, `*-REF-*`) and treats them as blocking deviations.
+  2. *Human PO Attestation Gating Test*: In `tools/test_generate_release_verification_summary.py`, assert that missing human PO attestation (missing signature, date, or build SHA) reports `BLOCKED` under `generate_release_verification_summary.py`.
+  3. *Pixel Telemetry Extractor & Gap Coach Test*: Verify that `tools/extract_pixel_field_evidence.py` parses workout session telemetry, populates `EXTRACTED_AWAITING_PO_ATTESTATION`, and outputs prioritized gap recommendations for unexercised sensor combinations.
+  4. *V5.0.0 Protocol & Template Schema Audit*: Verify `docs/releases/TEMPLATE.md` and `docs/releases/V5.0.0/sys_verification_record.md` contain the Human PO Attestation block and zero synthetic assertions.
+  5. *Agent Governance Rule Verification*: Assert that `.agents/rules/aspice_governance.md` mandates `human-execution` labeling and forbids autonomous agents from fabricating physical test evidence.
+  6. *Living Documentation Parity*: Execute `python3 tools/verify_requirement_governance.py` confirming 100% parity across `docs/requirements.md` and `docs/tests.md`.

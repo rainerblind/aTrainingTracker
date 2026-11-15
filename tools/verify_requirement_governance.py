@@ -3676,6 +3676,16 @@ def main():
             ).decode("utf-8").strip()
             ticket_m = re.search(r"([A-Z]+-\d+)", branch)
             ticket_key = ticket_m.group(1) if ticket_m else None
+            if not ticket_key:
+                try:
+                    for cmd in [["git", "branch", "--contains", "HEAD"], ["git", "log", "-1", "--pretty=%B"], ["git", "status"]]:
+                        out = subprocess.check_output(cmd, stderr=subprocess.DEVNULL).decode("utf-8")
+                        m = re.search(r"([A-Z]+-\d+)", out)
+                        if m:
+                            ticket_key = m.group(1)
+                            break
+                except Exception:
+                    pass
             if ticket_key:
                 candidates = [
                     f"docs/engineering/test_specs/{ticket_key}_test_spec.md",

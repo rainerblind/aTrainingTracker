@@ -281,6 +281,7 @@ class TestGenerateReleaseVerificationSummary(unittest.TestCase):
 | `SYS-VRF-008` | Cloud Sync | `SYSREQ-DEX-003` | Cloud | PASS | OK |
 
 ## 4. Formal Sign-Off
+* **Product Owner Physical Field Attestation**: PO Rainer Blind (Pixel 10 #66020DLCR002FL) Date: 2026-11-12
 * **System Verification Engineer**: John Doe Date: 2026-11-12
 * **Process Owner / Quality Gatekeeper**: Jane Smith Date: 2026-11-12
 """
@@ -291,7 +292,89 @@ class TestGenerateReleaseVerificationSummary(unittest.TestCase):
         self.assertTrue(res["available"])
         self.assertEqual(res["overall_verdict"], "PASS")
         self.assertTrue(res["has_signoff"])
+        self.assertTrue(res["has_po_attestation"])
         self.assertEqual(len(res["deviations"]), 0)
+
+    def test_collect_sys5_summary_synthetic_serials_blocked(self):
+        """TST-PRO-098.1: Detect and block synthetic placeholder serial numbers (Finding K1)."""
+        rel_dir = os.path.join(self.test_dir, "docs", "releases", self.tag)
+        os.makedirs(rel_dir, exist_ok=True)
+        sys5_file = os.path.join(rel_dir, "sys_verification_record.md")
+        content = """# System Verification Sign-Off Record: Release V5.0.0
+**Release Tag**: `V5.0.0`
+**Overall Verdict**: **PASS**
+
+## 1. Hardware Log
+* **Primary Phone**: Google Pixel 8 (Serial: `P8-REF-2024-001`)
+* **Secondary Phone**: Google Pixel 6 (Serial: `P6-REF-2022-044`)
+
+## 2. Verification Test Results Matrix
+| Test ID | Title | Traced Requirements | Environment | Result | Notes |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `SYS-VRF-001` | Multi-Sensor | `SYSREQ-TRK-001` | E2 | PASS | OK |
+| `SYS-VRF-002` | RF Dropout | `SYSREQ-TRK-002` | E1 | PASS | OK |
+| `SYS-VRF-003` | 1-Hz Sampling | `SYSREQ-TRK-003` | E4 | PASS | OK |
+| `SYS-VRF-004` | GNSS Fusion | `SYSREQ-TRK-004` | E1 | PASS | OK |
+| `SYS-VRF-005` | Battery | `SYSREQ-TRK-005` | E5 | PASS | OK |
+| `SYS-VRF-006` | Radar Alert | `SYSREQ-TRK-006` | E2 | PASS | OK |
+| `SYS-VRF-007` | FIT Export | `SYSREQ-DEX-001` | Storage | PASS | OK |
+| `SYS-VRF-008` | Cloud Sync | `SYSREQ-DEX-003` | Cloud | PASS | OK |
+
+## 4. Formal Sign-Off
+* **Product Owner Physical Field Attestation**: PO Attested Date: 2026-11-12
+* **System Verification Engineer**: John Doe Date: 2026-11-12
+* **Process Owner / Quality Gatekeeper**: Jane Smith Date: 2026-11-12
+"""
+        with open(sys5_file, "w") as f:
+            f.write(content)
+
+        res = collect_sys5_summary(self.test_dir, self.tag)
+        self.assertTrue(res["available"])
+        self.assertTrue(any("synthetic placeholder serial numbers" in d for d in res["deviations"]))
+
+    def test_collect_sys5_summary_missing_po_attestation_blocked(self):
+        """TST-PRO-098.2: Block release when human PO attestation is missing or pending."""
+        rel_dir = os.path.join(self.test_dir, "docs", "releases", self.tag)
+        os.makedirs(rel_dir, exist_ok=True)
+        sys5_file = os.path.join(rel_dir, "sys_verification_record.md")
+        # Missing PO attestation
+        content = """# System Verification Sign-Off Record: Release V5.0.0
+**Release Tag**: `V5.0.0`
+**Overall Verdict**: **PASS**
+
+## 2. Verification Test Results Matrix
+| `SYS-VRF-001` | Multi-Sensor | `SYSREQ-TRK-001` | E2 | PASS | OK |
+| `SYS-VRF-002` | RF Dropout | `SYSREQ-TRK-002` | E1 | PASS | OK |
+| `SYS-VRF-003` | 1-Hz Sampling | `SYSREQ-TRK-003` | E4 | PASS | OK |
+| `SYS-VRF-004` | GNSS Fusion | `SYSREQ-TRK-004` | E1 | PASS | OK |
+| `SYS-VRF-005` | Battery | `SYSREQ-TRK-005` | E5 | PASS | OK |
+| `SYS-VRF-006` | Radar Alert | `SYSREQ-TRK-006` | E2 | PASS | OK |
+| `SYS-VRF-007` | FIT Export | `SYSREQ-DEX-001` | Storage | PASS | OK |
+| `SYS-VRF-008` | Cloud Sync | `SYSREQ-DEX-003` | Cloud | PASS | OK |
+
+## 4. Formal Sign-Off
+* **System Verification Engineer**: John Doe Date: 2026-11-12
+* **Process Owner / Quality Gatekeeper**: Jane Smith Date: 2026-11-12
+"""
+        with open(sys5_file, "w") as f:
+            f.write(content)
+
+        res = collect_sys5_summary(self.test_dir, self.tag)
+        self.assertTrue(res["available"])
+        self.assertFalse(res["has_po_attestation"])
+        self.assertTrue(any("human PO attestation section missing" in d for d in res["deviations"]))
+
+        # Pending PO attestation placeholder
+        content_pending = content.replace(
+            "## 4. Formal Sign-Off",
+            "## 4. Formal Sign-Off\n* **Product Owner Physical Field Attestation**: [AWAITING PO SIGN-OFF]",
+        )
+        with open(sys5_file, "w") as f:
+            f.write(content_pending)
+
+        res_pending = collect_sys5_summary(self.test_dir, self.tag)
+        self.assertFalse(res_pending["has_po_attestation"])
+        self.assertTrue(any("human PO attestation pending" in d for d in res_pending["deviations"]))
 
     def test_collect_sys5_summary_placeholders(self):
         """TST-PRO-074.4: Detect unedited placeholder template in SYS.5 record."""
@@ -365,6 +448,7 @@ class TestGenerateReleaseVerificationSummary(unittest.TestCase):
 | `SYS-VRF-006` | T6 | R6 | Env | PASS | Notes |
 | `SYS-VRF-007` | T7 | R7 | Env | PASS | Notes |
 | `SYS-VRF-008` | T8 | R8 | Env | PASS | Notes |
+* **Product Owner Physical Field Attestation**: PO Lead Date: 2026-11-12
 * **System Verification Engineer**: QA Lead Date: 2026-11-12
 * **Process Owner / Quality Gatekeeper**: Lead Date: 2026-11-12
 """)
