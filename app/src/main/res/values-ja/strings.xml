@@ -602,6 +602,10 @@
     <string name="config_tracking__showLapButton">ラップボタン</string>
     <string name="config_tracking__showBikeBell">自転車ベルを表示</string>
     <string name="config_tracking__showBikeBell_subtitle">ベルボタンをタップ/長押し、またはコックピットをダブルタップして鳴らします</string>
+    <string name="config_tracking__show_radar_light">レーダーテールライト</string>
+    <string name="config_tracking__show_radar_light_subtitle">タップでモード切替、長押しでクイック切替メニュー</string>
+    <string name="radar_light_button_content_description">レーダーテールライト: %1$s</string>
+    <string name="radar_light_auto_badge">AUTO</string>
     <string name="config_tracking__show_navigation_hints">ターンバイターン案内</string>
     <string name="config_tracking__show_live_climbs">ライブクライム</string>
     <string name="config_tracking__wysiwyg_active">有効</string>

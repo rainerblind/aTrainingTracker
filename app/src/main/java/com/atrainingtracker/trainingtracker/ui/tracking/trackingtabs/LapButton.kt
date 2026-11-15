@@ -46,6 +46,7 @@ import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -59,6 +60,7 @@ import kotlin.text.uppercase
 fun LapButton(
     modifier: Modifier = Modifier,
     trackingMode: TrackingMode,
+    compact: Boolean = false,
     onClick: () -> Unit
 ) {
     val isTracking = trackingMode == TrackingMode.TRACKING
@@ -84,7 +86,7 @@ fun LapButton(
             defaultElevation = if (isTracking) 6.dp else 0.dp,
             disabledElevation = 0.dp
         ),
-        contentPadding = PaddingValues(horizontal = 32.dp, vertical = 0.dp)
+        contentPadding = PaddingValues(horizontal = if (compact) 14.dp else 32.dp, vertical = 0.dp)
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -93,18 +95,21 @@ fun LapButton(
             Icon(
                 painter = painterResource(id = R.drawable.ic_lap_add),
                 contentDescription = null,
-                modifier = Modifier.size(48.dp),
+                modifier = Modifier.size(if (compact) 32.dp else 48.dp),
                 tint = if (isTracking)
                     MaterialTheme.colorScheme.onPrimary
                 else
                     colorResource(R.color.lap_button_disabled_text)
             )
 
-            Spacer(Modifier.width(12.dp))
+            Spacer(Modifier.width(if (compact) 6.dp else 12.dp))
 
             Text(
                 text = stringResource(id = R.string.Lap),
-                style = MaterialTheme.typography.displayLarge
+                style = if (compact) MaterialTheme.typography.titleLarge else MaterialTheme.typography.displayLarge,
+                maxLines = 1,
+                softWrap = false,
+                overflow = TextOverflow.Ellipsis
             )
         }
     }

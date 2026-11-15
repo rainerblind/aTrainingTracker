@@ -2322,6 +2322,32 @@
   3. *Gated Simulator Preemption Call-Site Verification (`TST-CON-042.3`, `BTLERadarDeviceTest.kt`, `ANTBikeRadarDeviceTest.kt`)*:
   • Verify that when `RadarTrafficSimulator.isSimulating` is `false`, `onPhysicalHardwareConnected()` is bypassed upon incoming target frames.
 
+### TST-CON-043: **Cockpit Radar Tail Light Button & Action Row Test Suite** [Verified]
+- **Requirement(s)**: `REQ-CON-043` (`REQ-CON-043.1`..`REQ-CON-043.5`)
+- **Component**: `TrackingViewsDatabaseManager.java`, `TrackingViewsRepository.kt`, `TrackingViewModel.kt`, `TrackingTabsViewModel.kt`, `TrackingTabsScreen.kt`, `SensorGridScreen.kt`, `RadarLightButton.kt`, `strings_radar.xml`
+- **Jira**: `ATT-7972`
+- **Test Description**:
+  1. *TrackingViewsDbHelper Version 21 Migration & Contract Parity (`TST-CON-043.1`, `TrackingViewsDbHelperMigrationTest.kt`)*:
+  • Verify incremental upgrade from v20 to v21 adds `ShowRadarLight` column with idempotent execution.
+  • Verify `onCreate()` fresh schema matches upgraded schema 100%.
+  • Verify `DatabaseSchemaRegistry` reflects `DB_VERSION = 21`.
+  • Verify cursor extraction maps `ShowRadarLight` symmetrically across single and batch loaders.
+  2. *RadarLightButton Interaction, Live State & Auto Badge Tests (`TST-CON-043.2`, `RadarLightButtonTest.kt`)*:
+  • Verify short tap invokes `RadarLightController.cycleNextMode()`.
+  • Verify long press triggers `RadarLightQuickSwitchSheet` without cycling mode.
+  • Verify button renders `AUTO` micro-badge when `isAutoMode` is true and reflects real-time physical mode transitions.
+  • Verify button is hidden when `isLightControlAvailable` is false or tab setting is disabled.
+  3. *Action Row Layout, Canonical Ordering & Responsive Budget Tests (`TST-CON-043.3`, `TrackingTabsScreenTest.kt`)*:
+  • Verify canonical button ordering `[RadarLightButton, LapButton, BikeBellButton]`.
+  • Verify single-row fit on 360.dp portrait viewport at 130% font scaling without text clipping.
+  4. *SensorGridScreen Configuration Toggle & fabBottomClearance Tests (`TST-CON-043.4`, `SensorGridScreenTest.kt`)*:
+  • Verify `ShowRadarLight` toggle in configuration mode updates view settings.
+  • Verify `fabBottomClearance` expands when radar light button is visible.
+  5. *9-Language Localization Parity Test (`TST-CON-043.5`, `TranslationParityTest.kt`)*:
+  • Verify 100% parity of all radar light button strings across all 9 supported locales in `strings_radar.xml`.
+  6. *Clean-Room Targeted Test Suite Execution (`TST-CON-043.6`)*:
+  • Verify targeted regression tests pass at 100%.
+
 ### TST-TRK-064: **1-Tap Radar Audio Snooze, Peloton Sync & Urban Suppression Test Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-064` (`REQ-TRK-064.1`..`REQ-TRK-064.7`)
 - **Component**: `RadarSnoozeController.kt`, `RadarAlertManager.kt`, `RadarEdgeOverlay.kt`, `RadarLightQuickSwitchSheet.kt`, `RadarState.kt`, `RadarStateRepository.kt`, `BTLERadarDevice.java`, `TuningPreferencesDataStore.kt`, `RadarSettingsSection.kt`, `strings_radar.xml`

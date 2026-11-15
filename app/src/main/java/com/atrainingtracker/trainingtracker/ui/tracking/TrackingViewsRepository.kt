@@ -20,6 +20,7 @@ package com.atrainingtracker.trainingtracker.ui.tracking
 
 import android.content.Context
 import android.content.Intent
+import android.database.Cursor
 import android.util.Log
 import com.atrainingtracker.banalservice.ActivityType
 import com.atrainingtracker.banalservice.BSportType
@@ -61,7 +62,8 @@ data class TrackingViewInfo(
     val elevationProfileScope: ElevationProfileScope = ElevationProfileScope.FULL_ROUTE,
     val elevationProfileLookahead: Int = 2000,
     val showBikeBell: Boolean = false,
-    val showMmpCurve: Boolean = false
+    val showMmpCurve: Boolean = false,
+    val showRadarLight: Boolean = false
 )
 
 /**
@@ -148,52 +150,15 @@ class TrackingViewsRepository private constructor(private val context: Context) 
     private fun fetchTrackingViewInfo(tabViewId: Long): TrackingViewInfo? {
         val cursor = viewsDbManager.database.query(
             TrackingViewsDatabaseManager.TrackingViewsDbHelper.VIEWS_TABLE,
-            arrayOf(
-                TrackingViewsDatabaseManager.TrackingViewsDbHelper.C_ID,
-                TrackingViewsDatabaseManager.TrackingViewsDbHelper.NAME,
-                TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_MAP,
-                TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_LAP_BUTTON,
-                TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_LIVE_SEGMENTS,
-                TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_ELEVATION_PROFILE,
-                TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_LIVE_CLIMBS,
-                TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_NAVIGATION_HINTS,
-                TrackingViewsDatabaseManager.TrackingViewsDbHelper.ELEVATION_PROFILE_SCOPE,
-                TrackingViewsDatabaseManager.TrackingViewsDbHelper.ELEVATION_PROFILE_LOOKAHEAD,
-                TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_BIKE_BELL,
-                TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_MMP_CURVE
-            ),
+            VIEW_PROJECTION,
             "${TrackingViewsDatabaseManager.TrackingViewsDbHelper.C_ID}=?",
             arrayOf(tabViewId.toString()),
             null, null, null
         )
-
-        cursor.use {
-            if (it.moveToFirst()) {
-                val id = it.getLong(it.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.C_ID))
-                val name = it.getString(it.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.NAME))
-                val showMap = it.getInt(it.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_MAP)) == 1
-                val showLapButton = it.getInt(it.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_LAP_BUTTON)) == 1
-                val showLiveSegments = it.getInt(it.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_LIVE_SEGMENTS)) == 1
-                val showElevationProfile = it.getInt(it.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_ELEVATION_PROFILE)) == 1
-                val liveClimbsIndex = it.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_LIVE_CLIMBS)
-                val showLiveClimbs = if (liveClimbsIndex != -1) it.getInt(liveClimbsIndex) == 1 else true
-                val navHintsIndex = it.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_NAVIGATION_HINTS)
-                val showNavigationHints = if (navHintsIndex != -1) it.getInt(navHintsIndex) == 1 else true
-                val scopeIndex = it.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.ELEVATION_PROFILE_SCOPE)
-                val elevationProfileScope = if (scopeIndex != -1) ElevationProfileScope.fromDbValue(it.getInt(scopeIndex)) else ElevationProfileScope.FULL_ROUTE
-                val lookaheadIndex = it.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.ELEVATION_PROFILE_LOOKAHEAD)
-                val elevationProfileLookahead = if (lookaheadIndex != -1) it.getInt(lookaheadIndex).coerceAtLeast(500) else 2000
-                val bellIndex = it.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_BIKE_BELL)
-                val showBikeBell = if (bellIndex != -1) it.getInt(bellIndex) == 1 else false
-                val mmpIndex = it.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_MMP_CURVE)
-                val showMmpCurve = if (mmpIndex != -1) it.getInt(mmpIndex) == 1 else false
-                return TrackingViewInfo(id, name, showMap, showLapButton, showLiveSegments, showElevationProfile, showLiveClimbs, showNavigationHints, elevationProfileScope, elevationProfileLookahead, showBikeBell, showMmpCurve)
-            }
+        return cursor.use {
+            if (it.moveToFirst()) it.toTrackingViewInfo() else null
         }
-        return null
     }
-
-
 
     /**
      * A flow that emits the list of tracking views whenever the config changes.
@@ -210,54 +175,17 @@ class TrackingViewsRepository private constructor(private val context: Context) 
     private fun getTrackingViews(activityType: ActivityType): List<TrackingViewInfo> {
         val dbManager = TrackingViewsDatabaseManager.getInstance(context)
         val viewList = mutableListOf<TrackingViewInfo>()
-
         val cursor = dbManager.database.query(
             TrackingViewsDatabaseManager.TrackingViewsDbHelper.VIEWS_TABLE,
-            arrayOf(
-                TrackingViewsDatabaseManager.TrackingViewsDbHelper.C_ID,
-                TrackingViewsDatabaseManager.TrackingViewsDbHelper.NAME,
-                TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_MAP,
-                TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_LAP_BUTTON,
-                TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_LIVE_SEGMENTS,
-                TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_ELEVATION_PROFILE,
-                TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_LIVE_CLIMBS,
-                TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_NAVIGATION_HINTS,
-                TrackingViewsDatabaseManager.TrackingViewsDbHelper.ELEVATION_PROFILE_SCOPE,
-                TrackingViewsDatabaseManager.TrackingViewsDbHelper.ELEVATION_PROFILE_LOOKAHEAD,
-                TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_BIKE_BELL,
-                TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_MMP_CURVE
-            ),
+            VIEW_PROJECTION,
             "${TrackingViewsDatabaseManager.TrackingViewsDbHelper.ACTIVITY_TYPE}=?",
             arrayOf(activityType.name),
-            null,
-            null,
+            null, null,
             "${TrackingViewsDatabaseManager.TrackingViewsDbHelper.LAYOUT_NR} ASC"
         )
-
         cursor.use {
-            if (it.moveToFirst()) {
-                do {
-                    val id = it.getLong(it.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.C_ID))
-                    val name = it.getString(it.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.NAME))
-                    val showMap = it.getInt(it.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_MAP)) == 1
-                    val showLapButton = it.getInt(it.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_LAP_BUTTON)) == 1
-                    val showLiveSegments = it.getInt(it.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_LIVE_SEGMENTS)) == 1
-                    val showElevationProfile = it.getInt(it.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_ELEVATION_PROFILE)) == 1
-                    val liveClimbsIndex = it.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_LIVE_CLIMBS)
-                    val showLiveClimbs = if (liveClimbsIndex != -1) it.getInt(liveClimbsIndex) == 1 else true
-                    val navHintsIndex = it.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_NAVIGATION_HINTS)
-                    val showNavigationHints = if (navHintsIndex != -1) it.getInt(navHintsIndex) == 1 else true
-                    val scopeIndex = it.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.ELEVATION_PROFILE_SCOPE)
-                    val elevationProfileScope = if (scopeIndex != -1) ElevationProfileScope.fromDbValue(it.getInt(scopeIndex)) else ElevationProfileScope.FULL_ROUTE
-                    val lookaheadIndex = it.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.ELEVATION_PROFILE_LOOKAHEAD)
-                    val elevationProfileLookahead = if (lookaheadIndex != -1) it.getInt(lookaheadIndex).coerceAtLeast(500) else 2000
-                    val bellIndex = it.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_BIKE_BELL)
-                    val showBikeBell = if (bellIndex != -1) it.getInt(bellIndex) == 1 else false
-                    val mmpIndex = it.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_MMP_CURVE)
-                    val showMmpCurve = if (mmpIndex != -1) it.getInt(mmpIndex) == 1 else false
-
-                    viewList.add(TrackingViewInfo(id, name, showMap, showLapButton, showLiveSegments, showElevationProfile, showLiveClimbs, showNavigationHints, elevationProfileScope, elevationProfileLookahead, showBikeBell, showMmpCurve))
-                } while (it.moveToNext())
+            while (it.moveToNext()) {
+                viewList.add(it.toTrackingViewInfo())
             }
         }
         return viewList
@@ -681,6 +609,17 @@ class TrackingViewsRepository private constructor(private val context: Context) 
         }
     }
 
+    suspend fun updateShowRadarLight(tabViewId: Long, showRadarLight: Boolean) {
+        withContext(Dispatchers.IO) {
+            viewsDbManager.updateShowRadarLight(tabViewId, showRadarLight)
+        }
+
+        // trigger recreation of UI
+        withContext(Dispatchers.Main) {
+            configUpdateTrigger.value++
+        }
+    }
+
     suspend fun updateElevationProfileScope(tabViewId: Long, scope: ElevationProfileScope) {
         withContext(Dispatchers.IO) {
             viewsDbManager.updateElevationProfileScope(tabViewId, scope.dbValue)
@@ -805,6 +744,66 @@ class TrackingViewsRepository private constructor(private val context: Context) 
 
 
     companion object {
+        private const val TAG = "TrackingViewsRepo"
+
+        private val VIEW_PROJECTION = arrayOf(
+            TrackingViewsDatabaseManager.TrackingViewsDbHelper.C_ID,
+            TrackingViewsDatabaseManager.TrackingViewsDbHelper.NAME,
+            TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_MAP,
+            TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_LAP_BUTTON,
+            TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_LIVE_SEGMENTS,
+            TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_ELEVATION_PROFILE,
+            TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_LIVE_CLIMBS,
+            TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_NAVIGATION_HINTS,
+            TrackingViewsDatabaseManager.TrackingViewsDbHelper.ELEVATION_PROFILE_SCOPE,
+            TrackingViewsDatabaseManager.TrackingViewsDbHelper.ELEVATION_PROFILE_LOOKAHEAD,
+            TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_BIKE_BELL,
+            TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_MMP_CURVE,
+            TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_RADAR_LIGHT
+        )
+
+        private fun Cursor.toTrackingViewInfo(): TrackingViewInfo {
+            val id = getLong(getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.C_ID))
+            val name = getString(getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.NAME))
+            val showMap = getInt(getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_MAP)) == 1
+            val showLap = getInt(getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_LAP_BUTTON)) == 1
+            val showLiveSeg = getInt(getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_LIVE_SEGMENTS)) == 1
+            val showElev = getInt(getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_ELEVATION_PROFILE)) == 1
+            val liveClimbsIdx = getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_LIVE_CLIMBS)
+            val showLiveClimbs = if (liveClimbsIdx != -1) getInt(liveClimbsIdx) == 1 else true
+            val navHintsIdx = getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_NAVIGATION_HINTS)
+            val showNavHints = if (navHintsIdx != -1) getInt(navHintsIdx) == 1 else true
+            val scopeIdx = getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.ELEVATION_PROFILE_SCOPE)
+            val elevScope = if (scopeIdx != -1) {
+                ElevationProfileScope.fromDbValue(getInt(scopeIdx))
+            } else {
+                ElevationProfileScope.FULL_ROUTE
+            }
+            val lookaheadIdx = getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.ELEVATION_PROFILE_LOOKAHEAD)
+            val elevLookahead = if (lookaheadIdx != -1) getInt(lookaheadIdx).coerceAtLeast(500) else 2000
+            val bellIdx = getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_BIKE_BELL)
+            val showBell = if (bellIdx != -1) getInt(bellIdx) == 1 else false
+            val mmpIdx = getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_MMP_CURVE)
+            val showMmp = if (mmpIdx != -1) getInt(mmpIdx) == 1 else false
+            val radarLightIdx = getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_RADAR_LIGHT)
+            val showRadarLight = if (radarLightIdx != -1) getInt(radarLightIdx) == 1 else false
+            return TrackingViewInfo(
+                tabViewId = id,
+                name = name,
+                showMap = showMap,
+                showLapButton = showLap,
+                showLiveSegments = showLiveSeg,
+                showElevationProfile = showElev,
+                showLiveClimbs = showLiveClimbs,
+                showNavigationHints = showNavHints,
+                elevationProfileScope = elevScope,
+                elevationProfileLookahead = elevLookahead,
+                showBikeBell = showBell,
+                showMmpCurve = showMmp,
+                showRadarLight = showRadarLight
+            )
+        }
+
         @JvmStatic
         fun isBarSupported(sensorType: SensorType?, sportType: BSportType?): Boolean =
             TrackingViewsDatabaseManager.TrackingViewsDbHelper.isBarSupported(sensorType, sportType)

@@ -4613,6 +4613,53 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 **Invariants**: Predefined Network Slot 1 isolation; thread safety via repository synchronization lock; zero memory leaks; 100% test pass rate.
 
+### REQ-CON-043: Cockpit Radar Tail Light Button, Live Auto Status & Canonical Action Row [Verified]
+- **Tests**: `TST-CON-043`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `TrackingViewsDatabaseManager.java`, `TrackingViewsRepository.kt`, `TrackingViewModel.kt`, `TrackingTabsViewModel.kt`, `TrackingTabsScreen.kt`, `SensorGridScreen.kt`, `RadarLightButton.kt`, `strings_radar.xml`
+- **Rationale**: Cyclists operating in traffic require rapid handlebar control to cycle radar tail light modes directly from the Cockpit without taking a hand off the bars to reach the saddle or navigating multi-step settings menus. A dedicated Cockpit action button with live physical status, `AUTO` micro-badge, tap-to-cycle, long-press menu, and canonical integration into a responsive `[Licht, Lap, Klingel]` action row provides immediate situational lighting control while preserving Cockpit layout ergonomics (ATT-7972, Parent Epic ATT-1286, extending `REQ-CON-031` and `REQ-UI-421`):
+1. *TrackingViewsDbHelper Version 21 Migration & Schema Parity (`REQ-CON-043.1`)*:
+• `TrackingViewsDbHelper` SHALL increment `DB_VERSION` from 20 to 21, adding column `ShowRadarLight` (`INTEGER DEFAULT 0`, with default `1` for cycling sport views).
+• Database migration `onUpgrade` from version 20 to 21 SHALL be idempotent, checking column existence via `PRAGMA table_info(tracking_views)` prior to executing `ALTER TABLE`.
+• Fresh installation schema `onCreate()` and `DatabaseSchemaRegistry` SHALL include `ShowRadarLight` with 100% parity across fresh and upgraded databases.
+• `TrackingViewsDatabaseManager` and `TrackingViewsRepository` SHALL map `ShowRadarLight` symmetrically across single and batch cursor extraction methods.
+2. *Cockpit RadarLightButton Live State, Micro-Badge & Tap/Long-Press Demuxing (`REQ-CON-043.2`)*:
+• The system SHALL provide `RadarLightButton.kt` styled as a Material 3 `ElevatedButton` (`height = 72.dp`, `RoundedCornerShape(12.dp)`, `6.dp` elevation).
+• `RadarLightButton` SHALL display live semantic vector icons and container/content colors corresponding to the active physical `RadarLightMode` (`OFF`, `SOLID`, `DAY_FLASH`, `NIGHT_FLASH`, `PELOTON`).
+• When `isAutoMode == true`, the button SHALL continue rendering the live physical `RadarLightMode` icon and color while displaying a compact `AUTO` micro-badge at the bottom (`PlatformTextStyle(includeFontPadding = false)`, `lineHeight = fontSize`).
+• `RadarLightButton` SHALL track gestures via `MutableInteractionSource`: a short tap triggers `HapticFeedback` and `RadarLightController.cycleNextMode()`; a long press triggers `HapticFeedbackType.LongPress` and displays `RadarLightQuickSwitchSheet` without advancing the mode.
+• When `screenMode == ScreenMode.CONFIGURATION` or when no controllable light is connected (`isLightControlAvailable == false`), the button SHALL be completely hidden from the Cockpit.
+3. *Canonical Action Row Ordering & Responsive Width Budget (`REQ-CON-043.3`)*:
+• `TrackingTabsScreen.kt` SHALL layout bottom action buttons in strict left-to-right order: `[RadarLightButton, LapButton, BikeBellButton]`.
+• When all three buttons are enabled simultaneously on a 360.dp wide portrait viewport at up to 130% font scale, the layout SHALL adapt horizontal padding and enforce single-line text (`maxLines = 1`, `softWrap = false`, `overflow = TextOverflow.Ellipsis`) on `LapButton` (`"Runde"`) so zero clipping or horizontal wrapping occurs.
+4. *SensorGridScreen Configuration Toggle & Floating Clearance (`REQ-CON-043.4`)*:
+• In `SensorGridScreen.kt` (`ScreenMode.CONFIGURATION`), the bottom configuration panel SHALL expose a dedicated toggle for `ShowRadarLight` alongside Lap and Bike Bell toggles.
+• `ElevationProfile` and `LiveMmpCurveChart` SHALL dynamically adjust `fabBottomClearance` when `isRadarLightButtonVisible` is true, ensuring charts never overlap the floating button row.
+5. *9-Language Localization Parity (`REQ-CON-043.5`)*:
+• All button content descriptions, tab configuration toggle titles, and accessibility labels SHALL maintain 100% key and format parity across EN, DE, ES, FR, IT, JA, NL, PL, PT in `strings_radar.xml` (zero inline emojis).
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Criterion 1 (Conditional Visibility & Cycling Tab Default)*:
+  - *Given* a cycling tracking tab where `ShowRadarLight` defaults to `true`,
+  - *When* no controllable radar light is connected vs. when a light-capable radar connects in `READY`, `TRACKING`, or `PAUSED`,
+  - *Then* the button is hidden while disconnected and appears immediately once light control becomes available.
+• *Criterion 2 (Live Status + Bottom AUTO Indicator)*:
+  - *Given* `Automatik` mode is active and `SmartRadarLightEngine` switches the physical light from `OFF` to `DAY_FLASH` as a vehicle approaches,
+  - *When* viewing `RadarLightButton`,
+  - *Then* the button's main icon and color update live from `OFF` to `DAY_FLASH` while the `AUTO` text remains cleanly visible at the bottom of the button without clipping.
+• *Criterion 3 (Short-Tap Cycle vs. Long-Press Selection Sheet)*:
+  - *Given* `RadarLightButton` is visible on the Cockpit,
+  - *When* the cyclist performs a short tap vs. a long press,
+  - *Then* a short tap advances to the next mode with debounced radio dispatch, whereas a long press opens `RadarLightQuickSwitchSheet` without triggering a mode step.
+• *Criterion 4 ([Licht, Lap, Klingel] Ordering & 3-Button Portrait Fit)*:
+  - *Given* `ShowRadarLight`, `ShowLapButton`, and `ShowBikeBell` are all active on a 360.dp portrait screen in German at 130% font scale,
+  - *When* the Cockpit renders the bottom button row,
+  - *Then* the buttons appear in exact order `[Licht, Lap, Klingel]` on a single horizontal row without text wrapping, clipping, or overlapping `ElevationProfile` / `LiveMmpCurveChart`.
+
+**Invariants**: Non-blocking GATT mode cycling; zero ElevatedCard/pointerInput contention; idempotent SQLite upgrade; 100% 9-language translation parity.
+
 ### REQ-TRK-064: 1-Tap Radar Audio Snooze, Peloton-Mode Audio Sync & Smart Urban Alert Suppression [Verified]
 - **Tests**: `TST-TRK-064`
 - **Priority**: Medium

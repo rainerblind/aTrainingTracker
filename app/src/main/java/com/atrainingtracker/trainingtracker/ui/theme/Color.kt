@@ -330,6 +330,15 @@ object TTColor {
     val PauseAmber = Color(0xFFF59E0B)
     val BikeBellContainer = Color(0xFFFF9800) // Distinct Warm Orange (REQ-UI-421.2, ATT-5283)
     val BikeBellContent = Color(0xFF000000)   // High-Contrast Pure Black on Orange (WCAG AAA > 10:1) (REQ-UI-421.2, ATT-5283)
+
+    // Radar Tail Light Cockpit Button Tokens (REQ-CON-043.2, ATT-7972)
+    val RadarLightContainer = Color(0xFF263238)           // Slate Blue Grey container
+    val RadarLightContentOff = Color(0xFF90A4AE)          // Subtle Slate Grey for OFF
+    val RadarLightContentSolid = Color(0xFFE53935)        // High-visibility Red for SOLID
+    val RadarLightContentDayFlash = Color(0xFFFFB300)     // Amber / Gold for DAY FLASH
+    val RadarLightContentNightFlash = Color(0xFFFF8F00)   // Deep Amber for NIGHT FLASH
+    val RadarLightContentPeloton = Color(0xFFEF5350)      // Soft Red for PELOTON
+    val RadarLightBadgeAuto = Color(0xFF64B5F6)           // Clear Light Blue for AUTO micro-badge
     val SensorActiveBorder = Color(0xFF2196F3)
     val SensorBorderDark = Color(0xFF383838)
     val SensorBorderLight = Color(0xFFD6D6D6)

@@ -603,6 +603,10 @@
     <string name="config_tracking__showLapButton">Bouton tour</string>
     <string name="config_tracking__showBikeBell">Afficher la sonnette de vélo</string>
     <string name="config_tracking__showBikeBell_subtitle">Appuyez ou maintenez le bouton, ou appuyez deux fois sur le Cockpit</string>
+    <string name="config_tracking__show_radar_light">Feu arrière radar</string>
+    <string name="config_tracking__show_radar_light_subtitle">Appuyez pour changer de mode, maintenez pour le menu rapide</string>
+    <string name="radar_light_button_content_description">Feu arrière radar : %1$s</string>
+    <string name="radar_light_auto_badge">AUTO</string>
     <string name="config_tracking__show_navigation_hints">Indications de direction</string>
     <string name="config_tracking__show_live_climbs">Montées en direct</string>
     <string name="config_tracking__wysiwyg_active">Actif</string>

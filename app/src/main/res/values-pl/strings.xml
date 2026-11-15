@@ -341,6 +341,10 @@
     <string name="config_tracking__showLapButton">Przycisk okr.</string>
     <string name="config_tracking__showBikeBell">Pokaż dzwonek rowerowy</string>
     <string name="config_tracking__showBikeBell_subtitle">Dotknij lub przytrzymaj dzwonek albo dotknij dwukrotnie kokpitu</string>
+    <string name="config_tracking__show_radar_light">Tylne światło radaru</string>
+    <string name="config_tracking__show_radar_light_subtitle">Dotknij, aby zmienić tryb, przytrzymaj, aby otworzyć szybkie menu</string>
+    <string name="radar_light_button_content_description">Tylne światło radaru: %1$s</string>
+    <string name="radar_light_auto_badge">AUTO</string>
     <string name="config_tracking__show_navigation_hints">Wskazówki nawigacyjne</string>
     <string name="config_tracking__show_live_climbs">Podjazdy na żywo</string>
     <string name="config_tracking__wysiwyg_active">Aktywny</string>

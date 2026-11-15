@@ -100,6 +100,7 @@ data class TrackingScreenState(
     val showLapButton: Boolean = true,
     val showBikeBell: Boolean = false,
     val showMmpCurve: Boolean = false,
+    val showRadarLight: Boolean = false,
     val elevationProfileScope: ElevationProfileScope = ElevationProfileScope.FULL_ROUTE,
     val elevationProfileLookahead: Int = 2000,
     val fields: List<SensorFieldState> = emptyList(),
@@ -698,6 +699,7 @@ class TrackingViewModel @JvmOverloads constructor(
                     showLapButton = viewInfo?.showLapButton ?: true,
                     showBikeBell = viewInfo?.showBikeBell ?: false,
                     showMmpCurve = showMmp,
+                    showRadarLight = viewInfo?.showRadarLight ?: false,
                     elevationProfileScope = viewInfo?.elevationProfileScope ?: ElevationProfileScope.FULL_ROUTE,
                     elevationProfileLookahead = viewInfo?.elevationProfileLookahead ?: 2000,
                     pathPoints = currentPoints,
@@ -1131,6 +1133,12 @@ class TrackingViewModel @JvmOverloads constructor(
     fun onUpdateShowMmpCurve(show: Boolean) {
         viewModelScope.launch {
             trackingViewsRepository.updateShowMmpCurve(viewId, show)
+        }
+    }
+
+    fun onUpdateShowRadarLight(show: Boolean) {
+        viewModelScope.launch {
+            trackingViewsRepository.updateShowRadarLight(viewId, show)
         }
     }
 
