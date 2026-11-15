@@ -148,4 +148,8 @@
     <string name="device_polar_h10_backup_recording_desc">Zapisuje tętno i interwały RR w pamięci wewnętrznej sensora (np. podczas pływania).</string>
     <string name="device_polar_h10_backup_recording_requires_android_13">Wymaga systemu Android 13 lub nowszego</string>
 
+    <!-- Polar H10 Workout Stop Backfill & Export Gating (ATT-7918, REQ-SET-105) -->
+    <string name="notification_polar_h10_syncing_title">Synchronizacja danych Polar H10</string>
+    <string name="notification_polar_h10_syncing_desc">Synchronizacja tętna i interwałów RR z pamięci czujnika…</string>
+
 </resources>

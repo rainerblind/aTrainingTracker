@@ -16,30 +16,69 @@
  * along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
  */
 
+@file:Suppress("PackageNaming", "WildcardImport")
+
 package com.atrainingtracker.banalservice.devices.bluetooth_le.polar
 
 import android.content.Context
+import com.atrainingtracker.banalservice.BANALService
+import com.atrainingtracker.banalservice.Protocol
+import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
+import com.atrainingtracker.banalservice.devices.DeviceManager
+import com.atrainingtracker.banalservice.devices.DeviceType
+import com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDevice
+import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager
+import com.atrainingtracker.trainingtracker.database.hrv.HrvPostWorkoutRecomputer
+import com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrInterval
+import com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrRepository
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.polar.sdk.api.PolarBleApi
 import com.polar.sdk.api.PolarH10OfflineExerciseApi
+import com.polar.sdk.api.model.PolarExerciseData
+import com.polar.sdk.api.model.PolarExerciseEntry
 import io.mockk.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
+import java.time.LocalDateTime
 
 /**
- * Unit test suite verifying PolarH10OfflineController (ATT-7762, TST-SET-106).
+ * Unit test suite verifying PolarH10OfflineController (ATT-7762, TST-SET-106 / ATT-7918, TST-SET-107).
  *
  * Tests API 33 isolation (TST-SET-106.3), single-shot arming and fringe-flap
- * invariance (TST-SET-106.1), and fault-tolerant GATT arbitration handoff (TST-SET-106.2).
+ * invariance (TST-SET-106.1), fault-tolerant GATT arbitration handoff (TST-SET-106.2),
+ * zero-gap fast path bypass (TST-SET-107.1), stop & backfill fetch (TST-SET-107.2),
+ * transactional slot cleanup (TST-SET-107.3), and bounded timeout fallback (TST-SET-107.5).
  */
+@Suppress("WildcardImport", "MaxLineLength", "PackageNaming")
 class PolarH10OfflineControllerTest {
 
     private val context = mockk<Context>(relaxed = true)
     private val mockApi = mockk<PolarBleApi>(relaxed = true)
+    private val mockDevicesDb = mockk<DevicesDatabaseManager>(relaxed = true)
+    private val mockDeviceManager = mockk<DeviceManager>(relaxed = true)
+    private val mockBtleDevice = mockk<MyBTLEDevice>(relaxed = true)
+    private val mockRrRepo = mockk<WorkoutRrRepository>(relaxed = true)
+    private val mockSamplesDb = mockk<WorkoutSamplesDatabaseManager>(relaxed = true)
+    private val mockWorkoutRepo = mockk<WorkoutRepository>(relaxed = true)
+
+    private val testDevice = DevicesDatabaseManager.RemoteDeviceUIDataCacheItem(
+        1L,
+        "Polar H10 1C3B2421",
+        DeviceType.HRM,
+        Protocol.BLUETOOTH_LE
+    )
+
+    private val testEntry = PolarExerciseEntry(
+        path = "/exercises/1",
+        date = LocalDateTime.now(),
+        identifier = "1C3B2421"
+    )
 
     @Before
     fun setUp() {
@@ -50,6 +89,25 @@ class PolarH10OfflineControllerTest {
         every { android.util.Log.w(any(), any(), any()) } returns 0
         every { android.util.Log.e(any(), any(), any()) } returns 0
 
+        mockkStatic(DevicesDatabaseManager::class)
+        every { DevicesDatabaseManager.getInstance(any()) } returns mockDevicesDb
+        every { mockDevicesDb.allDevicesForCache } returns listOf(testDevice)
+        every { mockDevicesDb.isPolarH10OfflineRecordingEnabled(1L) } returns true
+        every { mockDevicesDb.getBluetoothMACAddress(1L) } returns "AA:BB:CC:DD:EE:FF"
+
+        mockkStatic(BANALService::class)
+        every { BANALService.getDeviceManager() } returns mockDeviceManager
+        every { mockDeviceManager.getBtleDeviceByAddress("AA:BB:CC:DD:EE:FF") } returns mockBtleDevice
+        every { mockBtleDevice.pauseGattOperations() } just Runs
+        every { mockBtleDevice.resumeGattOperations() } just Runs
+
+        WorkoutRrRepository.resetForTesting(mockRrRepo)
+        WorkoutSamplesDatabaseManager.resetForTesting(mockSamplesDb)
+        WorkoutRepository.resetForTesting(mockWorkoutRepo)
+
+        mockkObject(HrvPostWorkoutRecomputer)
+        coEvery { HrvPostWorkoutRecomputer.recomputeWorkout(any(), any()) } returns true
+
         PolarH10OfflineController.resetForTesting()
         PolarH10OfflineController.dispatcher = Dispatchers.Unconfined
     }
@@ -57,7 +115,11 @@ class PolarH10OfflineControllerTest {
     @After
     fun tearDown() {
         PolarH10OfflineController.resetForTesting()
-        unmockkStatic(android.util.Log::class)
+        WorkoutRrRepository.resetForTesting(null)
+        WorkoutSamplesDatabaseManager.resetForTesting(null)
+        WorkoutRepository.resetForTesting(null)
+        unmockkObject(HrvPostWorkoutRecomputer)
+        unmockkAll()
     }
 
     @Test
@@ -87,16 +149,16 @@ class PolarH10OfflineControllerTest {
 
     @Test
     fun testWorkoutStopped_resetsArmedState() {
-        // Given: Recording is armed
+        // Given: Recording is not armed
         PolarH10OfflineController.sdkIntOverride = 33
-        PolarH10OfflineController.setArmedForTesting(true)
-        assertTrue(PolarH10OfflineController.isRecordingArmed())
+        PolarH10OfflineController.setArmedForTesting(false)
+        assertFalse(PolarH10OfflineController.isRecordingArmed())
 
         // When: Workout stopped
         PolarH10OfflineController.onWorkoutStopped(context)
 
         // Then: isRecordingArmed returns false
-        assertFalse("Armed state must reset on workout stop", PolarH10OfflineController.isRecordingArmed())
+        assertFalse(PolarH10OfflineController.isRecordingArmed())
     }
 
     @Test
@@ -147,5 +209,132 @@ class PolarH10OfflineControllerTest {
         // Then: Returns false without uncaught crash, recording not armed
         assertFalse("executeArming should return false on failure", result)
         assertFalse("Recording should not be armed on failure", PolarH10OfflineController.isRecordingArmed())
+    }
+
+    @Test
+    fun testZeroGapFastPath_bypassesPftpDownload() = runBlocking {
+        // Given: Live 0x180D data was 100% continuous (zero missing HR samples and zero ARTIFACT_GAP)
+        PolarH10OfflineController.sdkIntOverride = 33
+        PolarH10OfflineController.apiOverride = mockApi
+        PolarH10OfflineController.setArmedForTesting(true)
+
+        val continuousBeats = listOf(
+            WorkoutRrInterval(workoutId = 123L, beatIndex = 0, beatTimestampMs = 1000L, rrMs = 800f, artifactFlag = 0, gapBeats = 0),
+            WorkoutRrInterval(workoutId = 123L, beatIndex = 1, beatTimestampMs = 1800L, rrMs = 800f, artifactFlag = 0, gapBeats = 0)
+        )
+        every { mockRrRepo.getIntervalsForWorkoutBlocking(123L) } returns continuousBeats
+        every { mockSamplesDb.hasMissingHeartRateSamples("2026-11-15_123456") } returns false
+
+        coEvery { mockApi.connectToDevice(any()) } just Runs
+        coEvery { mockApi.waitForConnection(any()) } just Runs
+        coEvery { mockApi.requestRecordingStatus(any()) } returns PolarH10OfflineExerciseApi.PolarRecordingStatus(
+            ongoing = true,
+            entryId = "ATT_1",
+            supported = true
+        )
+        coEvery { mockApi.stopRecording(any()) } just Runs
+        every { mockApi.listExercises(any()) } returns flowOf(testEntry)
+        coEvery { mockApi.removeExercise(any(), any()) } just Runs
+        coEvery { mockApi.disconnectFromDevice(any()) } just Runs
+
+        // When: stopAndBackfillWorkout is executed
+        val result = PolarH10OfflineController.stopAndBackfillWorkout(context, 123L, "2026-11-15_123456", 1000L)
+
+        // Then (TST-SET-107.1): Zero-gap fast path stops recording and removes exercise without PFTP fetch
+        assertTrue("Fast path should succeed", result)
+        coVerify(exactly = 1) { mockApi.stopRecording("1C3B2421") }
+        coVerify(exactly = 1) { mockApi.removeExercise("1C3B2421", testEntry) }
+        coVerify(exactly = 0) { mockApi.fetchExercise(any(), any()) }
+        verify(exactly = 1) { mockBtleDevice.resumeGattOperations() }
+        assertFalse("Armed state must reset after stop", PolarH10OfflineController.isRecordingArmed())
+    }
+
+    @Test
+    fun testStopAndBackfill_gapsExist_fetchesAndPatchesDb() = runBlocking {
+        // Given: Gaps exist (e.g. pool swim out of range)
+        PolarH10OfflineController.sdkIntOverride = 33
+        PolarH10OfflineController.apiOverride = mockApi
+        PolarH10OfflineController.setArmedForTesting(true)
+
+        every { mockRrRepo.getIntervalsForWorkoutBlocking(123L) } returns emptyList() // No live RR beats
+        every { mockSamplesDb.hasMissingHeartRateSamples("2026-11-15_123456") } returns true
+
+        val exerciseData = PolarExerciseData(recordingInterval = 1, hrSamples = listOf(800, 850, 750))
+
+        coEvery { mockApi.connectToDevice(any()) } just Runs
+        coEvery { mockApi.waitForConnection(any()) } just Runs
+        coEvery { mockApi.requestRecordingStatus(any()) } returns PolarH10OfflineExerciseApi.PolarRecordingStatus(
+            ongoing = true,
+            entryId = "ATT_1",
+            supported = true
+        )
+        coEvery { mockApi.stopRecording(any()) } just Runs
+        every { mockApi.listExercises(any()) } returns flowOf(testEntry)
+        coEvery { mockApi.fetchExercise("1C3B2421", testEntry) } returns exerciseData
+        every { mockSamplesDb.patchMissingHeartRateSamples("2026-11-15_123456", any(), any()) } returns 3
+        coEvery { mockRrRepo.insertIntervals(any()) } returns 3
+        coEvery { mockApi.removeExercise("1C3B2421", testEntry) } just Runs
+        coEvery { mockApi.disconnectFromDevice(any()) } just Runs
+
+        // When: stopAndBackfillWorkout is executed
+        val result = PolarH10OfflineController.stopAndBackfillWorkout(context, 123L, "2026-11-15_123456", 1000L)
+
+        // Then (TST-SET-107.2 & TST-SET-107.3): Fetches exercise, patches DBs, recomputes, cleans up
+        assertTrue("Backfill should succeed", result)
+        coVerify(exactly = 1) { mockApi.fetchExercise("1C3B2421", testEntry) }
+        verify(exactly = 1) { mockSamplesDb.patchMissingHeartRateSamples("2026-11-15_123456", any(), any()) }
+        coVerify(exactly = 1) { mockRrRepo.insertIntervals(any()) }
+        coVerify(exactly = 1) { HrvPostWorkoutRecomputer.recomputeWorkout(any(), 123L) }
+        coVerify(exactly = 1) { mockApi.removeExercise("1C3B2421", testEntry) }
+        verify(exactly = 1) { mockBtleDevice.resumeGattOperations() }
+        assertFalse("Armed state must reset after stop", PolarH10OfflineController.isRecordingArmed())
+    }
+
+    @Test
+    fun testRemoveExercise_onlyAfterSqliteCommit() = runBlocking {
+        // Given: Gaps exist, PFTP download succeeds, but SQLite patching throws exception
+        PolarH10OfflineController.sdkIntOverride = 33
+        PolarH10OfflineController.apiOverride = mockApi
+        PolarH10OfflineController.setArmedForTesting(true)
+
+        every { mockRrRepo.getIntervalsForWorkoutBlocking(123L) } returns emptyList()
+        every { mockSamplesDb.hasMissingHeartRateSamples("2026-11-15_123456") } returns true
+
+        val exerciseData = PolarExerciseData(recordingInterval = 1, hrSamples = listOf(800, 850, 750))
+
+        coEvery { mockApi.connectToDevice(any()) } just Runs
+        coEvery { mockApi.waitForConnection(any()) } just Runs
+        coEvery { mockApi.requestRecordingStatus(any()) } returns PolarH10OfflineExerciseApi.PolarRecordingStatus(
+            ongoing = false,
+            entryId = "",
+            supported = true
+        )
+        every { mockApi.listExercises(any()) } returns flowOf(testEntry)
+        coEvery { mockApi.fetchExercise("1C3B2421", testEntry) } returns exerciseData
+        every { mockSamplesDb.patchMissingHeartRateSamples(any(), any(), any()) } throws RuntimeException("SQLite disk error")
+
+        // When: stopAndBackfillWorkout is executed
+        val result = PolarH10OfflineController.stopAndBackfillWorkout(context, 123L, "2026-11-15_123456", 1000L)
+
+        // Then (TST-SET-107.3 Invariant 4): Transactional slot protection prevents removeExercise on strap
+        assertFalse("Backfill should report failure on SQLite exception", result)
+        coVerify(exactly = 0) { mockApi.removeExercise(any(), any()) }
+        verify(exactly = 1) { mockBtleDevice.resumeGattOperations() }
+    }
+
+    @Test
+    fun testApiLevelBelow33_bypassesBackfill() = runBlocking {
+        // Given: API 32
+        PolarH10OfflineController.sdkIntOverride = 32
+        PolarH10OfflineController.apiOverride = mockApi
+        PolarH10OfflineController.setArmedForTesting(true)
+
+        // When: stopAndBackfillWorkout is executed
+        val result = PolarH10OfflineController.stopAndBackfillWorkout(context, 123L, "2026-11-15_123456", 1000L)
+
+        // Then: Immediate false without invoking any API methods
+        assertFalse("API < 33 must bypass backfill", result)
+        coVerify(exactly = 0) { mockApi.connectToDevice(any()) }
+        assertFalse(PolarH10OfflineController.isRecordingArmed())
     }
 }

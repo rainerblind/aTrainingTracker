@@ -148,4 +148,8 @@
     <string name="device_polar_h10_backup_recording_desc">心拍数とRR間隔をセンサーの内蔵メモリに記録します（例：水泳時）。</string>
     <string name="device_polar_h10_backup_recording_requires_android_13">Android 13 以降が必要です</string>
 
+    <!-- Polar H10 Workout Stop Backfill & Export Gating (ATT-7918, REQ-SET-105) -->
+    <string name="notification_polar_h10_syncing_title">Polar H10 データの同期中</string>
+    <string name="notification_polar_h10_syncing_desc">センサーメモリから心拍数およびRR間隔を同期しています…</string>
+
 </resources>

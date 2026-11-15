@@ -1205,6 +1205,7 @@ public class TrackerService extends Service {
                     mAutoPauseManager.resetDebounceCounter();
                 }
                 try {
+                    PolarH10OfflineController.setSessionStartTimeMs(System.currentTimeMillis());
                     PolarH10OfflineController.onWorkoutStarted(this);
                 } catch (Throwable ignored) {
                 }
@@ -2340,23 +2341,34 @@ public class TrackerService extends Service {
             final long finalWorkoutId = workoutId;
             final Context appContext = getApplicationContext();
             if (finalWorkoutId > 0) {
-                java.util.concurrent.ForkJoinPool.commonPool().execute(() -> {
+                // ATT-7918 (REQ-SET-105.2, REQ-SET-105.5): If Polar H10 offline recording was armed,
+                // synchronously execute stop & backfill before summary recomputation and exports!
+                if (PolarH10OfflineController.isRecordingArmed()) {
                     try {
-                        boolean recomputed = HrvPostWorkoutRecomputer.recomputeWorkoutBlocking(appContext, finalWorkoutId);
-                        boolean ertsRecomputed = false;
-                        if (com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.isPostWorkoutErtsSmoothingEnabled(appContext)) {
-                            ertsRecomputed = com.atrainingtracker.trainingtracker.database.ErtsPostWorkoutRecomputer.recomputeWorkoutBlocking(appContext, finalWorkoutId);
-                        }
-                        if (recomputed || ertsRecomputed) {
-                            WorkoutRepository.getInstance(appContext).refreshWorkout(finalWorkoutId);
-                        }
+                        PolarH10OfflineController.stopAndBackfillWorkoutBlocking(appContext, finalWorkoutId, baseFileName);
                     } catch (Throwable t) {
-                        Log.e(TAG, "Error in post-workout recompute for workout " + finalWorkoutId, t);
+                        Log.e(TAG, "Error in Polar H10 stop and backfill for workout " + finalWorkoutId, t);
                     }
-                });
+                }
+
+                // ATT-7918 (REQ-SET-105.4, REQ-SET-105.5): Execute post-workout HRV and ERTS recomputations
+                // synchronously on mDbExecutor BEFORE ExportManager.workoutFinished() so exported files
+                // (FIT, TCX, Strava, Health Connect) contain complete, updated metrics.
+                try {
+                    boolean recomputed = HrvPostWorkoutRecomputer.recomputeWorkoutBlocking(appContext, finalWorkoutId);
+                    boolean ertsRecomputed = false;
+                    if (com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.isPostWorkoutErtsSmoothingEnabled(appContext)) {
+                        ertsRecomputed = com.atrainingtracker.trainingtracker.database.ErtsPostWorkoutRecomputer.recomputeWorkoutBlocking(appContext, finalWorkoutId);
+                    }
+                    if (recomputed || ertsRecomputed) {
+                        WorkoutRepository.getInstance(appContext).refreshWorkout(finalWorkoutId);
+                    }
+                } catch (Throwable t) {
+                    Log.e(TAG, "Error in post-workout recompute for workout " + finalWorkoutId, t);
+                }
             }
         } catch (Throwable t) {
-            Log.e(TAG, "Error scheduling post-workout HRV recompute", t);
+            Log.e(TAG, "Error in post-workout processing", t);
         }
 
         try {

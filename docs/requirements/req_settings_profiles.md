@@ -3,7 +3,7 @@
 **Domain**: `settings_profiles`  
 **Prefixes**: `LOC`, `MON`, `PRI`, `SET`  
 **Scope**: Athlete settings, bike/sensor profiles, privacy zones, data stores, monetization, and 9-locale parity.  
-**Total Requirements**: 103
+**Total Requirements**: 104
 
 ---
 
@@ -2305,6 +2305,47 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 • *Then* `DevicesDatabaseManager` initializes or upgrades cleanly to version 13 with `polar_h10_offline_recording` defaulting to 0 (`false`).
 
 **Invariants**: Standard 0x180D GATT heart rate and RR streaming in `BTLEHeartRateDevice` is never regressed; workout start is non-blocking even if the sensor is unreachable; full database migration parity between `onCreate` and `onUpgrade`.
+
+### REQ-SET-105: Polar H10 Offline HR/RR Workout Stop Backfill & Export Gating [Verified]
+- **Tests**: `TST-SET-107`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Implementation**: `PolarH10OfflineController.kt`, `TrackerService.java`, `WorkoutSamplesDatabaseManager.java`, `WorkoutRrDatabaseManager.kt`, `HrvPostWorkoutRecomputer.kt`, `ExportManager.java`
+- **Status**: Verified (ATT-7918)
+- **Rationale**: When endurance athletes record swimming sessions or experience mid-workout radio dropouts with an armed Polar H10, `TrackerService.endWorkout()` must retrieve the internal flash session via Polar PFTP protocol before triggering automated file serialization or cloud synchronization. Without gating, `ExportManager` publishes incomplete telemetry files lacking heart rate and HRV metrics. The system SHALL retrieve stored Polar H10 RR intervals on workout stop, patch missing samples idempotently in SQLite, recompute summary and HRV extrema, and gate downstream exports:
+1. *Zero-Gap Fast Path Evaluation (`REQ-SET-105.1`)*:
+   - Upon `TrackerService.endWorkout()`, if Polar H10 internal recording was armed (`isRecordingArmed == true`), the system SHALL first evaluate live telemetry continuity in `WorkoutSamples.db` and `WorkoutRr.db`.
+   - If live BLE 0x180D reception was 100% continuous (`count(HR) == totalActiveSeconds` and zero `ARTIFACT_GAP`), the system SHALL bypass the slow multi-second PFTP transfer, immediately issue `stopRecording()` and `removeExercise()`, and release downstream exports without delay.
+2. *Asynchronous Fetch, GATT Handoff & Foreground Progress Notification (`REQ-SET-105.2`)*:
+   - When gaps exist, `PolarH10OfflineController.stopAndBackfillWorkout()` SHALL pause `MyBTLEDevice` GATT operations, establish PFTP connection to the strap, and retrieve recorded RR intervals via `fetchExercise()`.
+   - A foreground notification ("Syncing HR/HRV from Polar H10..." / "Synchronisiere HF/HRV von Polar H10...") SHALL be displayed during download with 100% 9-language localization parity across all supported application locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
+   - The fetch pipeline SHALL be bounded by a 30-second timeout (`withTimeoutOrNull(30_000L)`). If the strap is out of range, dead, or times out, the system SHALL log a warning, resume GATT, and proceed gracefully with existing live data without service crash.
+3. *Timestamp Alignment & Idempotent Gap-Only SQLite Backfill (`REQ-SET-105.3`)*:
+   - Retrieved RR intervals SHALL be anchored to the exercise start timestamp established at workout start (`setLocalTime`).
+   - Missing 1-Hz HR samples (`round(60000.0 / rrMs)`) SHALL be inserted strictly into empty seconds in `WorkoutSamples.db` without overwriting or duplicating existing live samples.
+   - Beat-to-beat RR intervals SHALL be inserted into `WorkoutRr.db`, closing matching `ARTIFACT_GAP` intervals.
+4. *Post-Backfill Recomputation & Transactional Slot Cleanup (`REQ-SET-105.4`)*:
+   - Upon successful SQLite backfill commit, the system SHALL invoke `HrvPostWorkoutRecomputer.recomputeWorkoutBlocking(workoutId)` to recalculate centered rMSSD, SDNN, DFA a1, and Autonomic Durability, and update `WorkoutSummaries.db` HR/HRV averages, maxima, and HR zone distributions.
+   - The stored exercise on the Polar H10 strap SHALL be deleted via `removeExercise()` strictly after SQLite backfill and recomputation commit successfully.
+5. *Export Pipeline Gating (`REQ-SET-105.5`)*:
+   - Downstream export triggers (`ExportManager.workoutFinished()`, FIT/TCX/GPX/CSV file generation, and Strava / Health Connect / Dropbox sync) SHALL be held in `TrackerService.endWorkout()` until backfill and summary recomputation finish (or until timeout fallback expires), ensuring all exported files and cloud syncs contain complete HR and HRV metrics.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an athlete finishes a 30-minute pool swim with phone left in the locker and strap within BLE range upon return,
+• *When* the athlete taps Stop in `TrackerService`,
+• *Then* the stored RR exercise is fetched from the H10, missing 1-Hz HR rows in `WorkoutSamples.db` and beat rows in `WorkoutRr.db` are inserted, `HrvPostWorkoutRecomputer` updates `WorkoutSummaries.db` extrema, and `removeExercise()` cleans up the strap.
+• *Given* automated exports (FIT, TCX, Strava, Health Connect) are enabled on a workout with Polar H10 gaps,
+• *When* the workout ends,
+• *Then* `ExportManager.workoutFinished()` is gated until backfill commits, and all exported files contain continuous HR curves and complete HRV metrics.
+• *Given* an outdoor ride with a Polar H10 where 0x180D BLE streaming had zero dropouts,
+• *When* the workout ends,
+• *Then* the zero-gap fast path immediately stops and deletes the H10 exercise without executing a multi-second PFTP download.
+• *Given* a Polar H10 that was turned off or walked away before tapping Stop,
+• *When* the 30-second backfill timeout expires,
+• *Then* `TrackerService` finalizes the workout using available live data without hanging or crashing.
+
+**Invariants**: Zero data loss or corruption of existing live GPS, power, cadence, or HR telemetry; zero export of premature/partial files prior to backfill completion when strap is available; bounded 30-second timeout guarantees foreground service termination even if strap is lost; full 9-language localization parity for any user-facing notifications.
 
 
 

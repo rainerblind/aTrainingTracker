@@ -148,4 +148,8 @@
     <string name="device_polar_h10_backup_recording_desc">Neemt hartslag en RR-intervallen op in het interne sensorgeheugen (bijv. voor zwemmen).</string>
     <string name="device_polar_h10_backup_recording_requires_android_13">Vereist Android 13 of nieuwer</string>
 
+    <!-- Polar H10 Workout Stop Backfill & Export Gating (ATT-7918, REQ-SET-105) -->
+    <string name="notification_polar_h10_syncing_title">Polar H10-gegevens synchroniseren</string>
+    <string name="notification_polar_h10_syncing_desc">Hartslag- en RR-intervallen synchroniseren vanuit het sensorgeheugen…</string>
+
 </resources>

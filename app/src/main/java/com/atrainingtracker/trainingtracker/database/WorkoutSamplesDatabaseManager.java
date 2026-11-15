@@ -29,6 +29,7 @@ import android.location.Location;
 import android.provider.BaseColumns;
 import android.text.TextUtils;
 import android.util.Log;
+import android.util.Pair;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -806,6 +807,157 @@ public class WorkoutSamplesDatabaseManager {
         } finally {
             db.endTransaction();
         }
+    }
+
+    /**
+     * Checks whether the workout samples table has missing or unpopulated heart rate samples (ATT-7918, REQ-SET-105).
+     */
+    public boolean hasMissingHeartRateSamples(@Nullable String baseFileName) {
+        if (baseFileName == null || !existsTable(baseFileName)) {
+            return true;
+        }
+        SQLiteDatabase db = getDatabase();
+        String table = getTableName(baseFileName);
+        if (!existsColumnInTable(db, table, SensorType.HR.name())) {
+            return true;
+        }
+        try (Cursor cursor = db.rawQuery(
+                "SELECT COUNT(*), COUNT(CASE WHEN " + SensorType.HR.name() + " IS NOT NULL AND " + SensorType.HR.name() + " > 0 THEN 1 END) FROM " + table, null)) {
+            if (cursor != null && cursor.moveToFirst()) {
+                int totalCount = cursor.getInt(0);
+                int validHrCount = cursor.getInt(1);
+                return totalCount == 0 || validHrCount < totalCount;
+            }
+        } catch (Exception e) {
+            if (DEBUG) Log.w(TAG, "Error checking missing HR samples: " + e.getMessage(), e);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Patches missing heart rate samples in the workout samples table using offline reconstructed HR data (ATT-7918, REQ-SET-105.3).
+     * Preserves all existing valid HR samples, GPS, speed, cadence, and power data.
+     *
+     * @param baseFileName The workout file base name.
+     * @param startTimeMs The workout start epoch ms.
+     * @param hrSamples List of (timestampMs, hrBpm) pairs.
+     * @return Number of patched sample rows.
+     */
+    public int patchMissingHeartRateSamples(@NonNull String baseFileName, long startTimeMs, @NonNull List<Pair<Long, Integer>> hrSamples) {
+        if (baseFileName == null || !existsTable(baseFileName) || hrSamples.isEmpty()) {
+            return 0;
+        }
+        SQLiteDatabase db = getDatabase();
+        String table = getTableName(baseFileName);
+
+        // Ensure HR column exists
+        if (!existsColumnInTable(db, table, SensorType.HR.name())) {
+            try {
+                db.execSQL("ALTER TABLE " + table + " ADD COLUMN " + SensorType.HR.name() + " int");
+            } catch (Exception e) {
+                Log.w(TAG, "Failed adding HR column to " + table + ": " + e.getMessage());
+            }
+        }
+
+        java.util.TreeMap<Long, Integer> hrMap = new java.util.TreeMap<>();
+        for (Pair<Long, Integer> sample : hrSamples) {
+            if (sample != null && sample.first != null && sample.second != null && sample.second > 0) {
+                hrMap.put(sample.first, sample.second);
+            }
+        }
+        if (hrMap.isEmpty()) {
+            return 0;
+        }
+
+        int patchedCount = 0;
+        db.beginTransaction();
+        try {
+            List<Pair<Long, Long>> missingRows = new java.util.ArrayList<>();
+            try (Cursor cursor = db.rawQuery(
+                    "SELECT " + WorkoutSamplesDbHelper.C_ID + ", " + WorkoutSamplesDbHelper.TIME + ", CAST(strftime('%s', " + WorkoutSamplesDbHelper.TIME + ") AS INTEGER) FROM " + table + " WHERE " + SensorType.HR.name() + " IS NULL OR " + SensorType.HR.name() + " <= 0", null)) {
+                if (cursor != null) {
+                    while (cursor.moveToNext()) {
+                        long rowId = cursor.getLong(0);
+                        String timeStr = cursor.getString(1);
+                        long timeSec = cursor.getLong(2);
+                        long tsMs = 0L;
+                        if (timeSec > 0) {
+                            tsMs = timeSec * 1000L;
+                        } else if (timeStr != null) {
+                            tsMs = parseTimestampMs(timeStr);
+                        }
+                        missingRows.add(new Pair<>(rowId, tsMs));
+                    }
+                }
+            }
+
+            if (!missingRows.isEmpty()) {
+                SQLiteStatement stmt = db.compileStatement("UPDATE " + table + " SET " + SensorType.HR.name() + " = ? WHERE " + WorkoutSamplesDbHelper.C_ID + " = ?");
+                for (Pair<Long, Long> row : missingRows) {
+                    long rowId = row.first;
+                    long tsMs = row.second > 0 ? row.second : startTimeMs;
+                    java.util.Map.Entry<Long, Integer> floor = hrMap.floorEntry(tsMs);
+                    java.util.Map.Entry<Long, Integer> ceiling = hrMap.ceilingEntry(tsMs);
+                    Integer hr = null;
+                    if (floor != null && ceiling != null) {
+                        hr = Math.abs(tsMs - floor.getKey()) <= Math.abs(tsMs - ceiling.getKey()) ? floor.getValue() : ceiling.getValue();
+                    } else if (floor != null) {
+                        hr = floor.getValue();
+                    } else if (ceiling != null) {
+                        hr = ceiling.getValue();
+                    }
+                    if (hr != null && hr > 0) {
+                        stmt.bindLong(1, hr);
+                        stmt.bindLong(2, rowId);
+                        stmt.executeUpdateDelete();
+                        patchedCount++;
+                    }
+                }
+            } else {
+                int totalRows = 0;
+                try (Cursor countCursor = db.rawQuery("SELECT COUNT(*) FROM " + table, null)) {
+                    if (countCursor != null && countCursor.moveToFirst()) {
+                        totalRows = countCursor.getInt(0);
+                    }
+                }
+                if (totalRows == 0) {
+                    SQLiteStatement insertStmt = db.compileStatement("INSERT INTO " + table + " (" + WorkoutSamplesDbHelper.TIME + ", " + SensorType.HR.name() + ") VALUES (datetime(?, 'unixepoch'), ?)");
+                    for (java.util.Map.Entry<Long, Integer> entry : hrMap.entrySet()) {
+                        long sec = entry.getKey() / 1000L;
+                        insertStmt.bindLong(1, sec);
+                        insertStmt.bindLong(2, entry.getValue());
+                        insertStmt.executeInsert();
+                        patchedCount++;
+                    }
+                }
+            }
+
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
+        }
+        return patchedCount;
+    }
+
+    private static long parseTimestampMs(@Nullable String timeStr) {
+        if (timeStr == null || timeStr.trim().isEmpty()) return 0L;
+        String[] formats = {
+                "yyyy-MM-dd HH:mm:ss",
+                "yyyy-MM-dd'T'HH:mm:ss",
+                "yyyy-MM-dd'T'HH:mm:ss'Z'",
+                "yyyy-MM-dd_HHmmss"
+        };
+        for (String pattern : formats) {
+            try {
+                java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat(pattern, java.util.Locale.US);
+                sdf.setTimeZone(java.util.TimeZone.getTimeZone("UTC"));
+                java.util.Date date = sdf.parse(timeStr);
+                if (date != null) return date.getTime();
+            } catch (Exception ignored) {
+            }
+        }
+        return 0L;
     }
 
     // stolen from http://stackoverflow.com/questions/4719594/checking-if-a-column-exists-in-an-application-database-in-android

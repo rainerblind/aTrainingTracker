@@ -148,4 +148,8 @@
     <string name="device_polar_h10_backup_recording_desc">Registra la frecuencia cardíaca y los intervalos RR en la memoria interna del sensor (p. ej. al nadar).</string>
     <string name="device_polar_h10_backup_recording_requires_android_13">Requiere Android 13 o superior</string>
 
+    <!-- Polar H10 Workout Stop Backfill & Export Gating (ATT-7918, REQ-SET-105) -->
+    <string name="notification_polar_h10_syncing_title">Sincronizando datos de Polar H10</string>
+    <string name="notification_polar_h10_syncing_desc">Sincronizando frecuencia cardíaca e intervalos RR desde la memoria del sensor…</string>
+
 </resources>

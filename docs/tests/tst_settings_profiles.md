@@ -3,7 +3,7 @@
 **Domain**: `settings_profiles`  
 **Prefixes**: `LOC`, `MON`, `PRI`, `SET`  
 **Scope**: Athlete settings, bike/sensor profiles, privacy zones, data stores, monetization, and 9-locale parity.  
-**Total Tests**: 92
+**Total Tests**: 93
 
 ---
 
@@ -1204,6 +1204,25 @@
   • Verify that toggling the switch updates `EditDeviceViewModel` state and persists changes to `DevicesDatabaseManager`.
   6. *9-Language Localization Parity Audit (`TST-SET-106.6`)*:
   • Verify 100% presence and parity for all Polar H10 backup recording strings across all 9 supported application locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
+
+### TST-SET-107: **Polar H10 Offline HR/RR Workout Stop Backfill & Export Gating Test Suite** [Verified]
+- **Requirement(s)**: `REQ-SET-105`
+- **Component**: `PolarH10OfflineController.kt`, `TrackerService.java`, `WorkoutSamplesDatabaseManager.java`, `WorkoutRrDatabaseManager.kt`, `HrvPostWorkoutRecomputer.kt`, `ExportManager.java`
+- **Jira**: `ATT-7918`
+- **Status**: Verified (ATT-7918)
+- **Test Description**:
+  1. *Zero-Gap Fast Path Evaluation Test (`TST-SET-107.1`)*:
+  • Verify that when live BLE 0x180D telemetry has zero missing seconds and zero `ARTIFACT_GAP` entries, `PolarH10OfflineController.stopAndBackfillWorkout()` stops and removes the H10 exercise without executing a multi-second PFTP sample download.
+  2. *Stop & Fetch Backfill Integration Test (`TST-SET-107.2`)*:
+  • Verify that when gaps exist, `PolarH10OfflineController` pauses `MyBTLEDevice` GATT, fetches stored RR intervals via `fetchExercise()`, anchors them to start time, reconstructs 1-Hz HR samples (`round(60000.0 / rrMs)`), and patches missing seconds in `WorkoutSamples.db` and beats in `WorkoutRr.db` idempotently.
+  3. *Post-Backfill Recomputation & Slot Cleanup Test (`TST-SET-107.3`)*:
+  • Verify that `HrvPostWorkoutRecomputer.recomputeWorkoutBlocking()` updates `WorkoutSummaries.db` extrema upon successful backfill, and `removeExercise()` on the H10 is invoked strictly after SQLite commit.
+  4. *Export Pipeline Gating Test (`TST-SET-107.4`)*:
+  • Verify that `ExportManager.workoutFinished()` and automated file/cloud exports are deferred in `TrackerService.endWorkout()` until backfill completes, ensuring exported files contain complete HR/HRV data.
+  5. *Bounded Timeout Fallback Test (`TST-SET-107.5`)*:
+  • Verify that a 30-second bounded timeout gracefully terminates the backfill attempt, resumes GATT, and releases downstream exports with partial live data if the strap is powered off or unreachable.
+  6. *9-Language Localization Audit (`TST-SET-107.6`)*:
+  • Verify 100% presence and parity for all Polar H10 sync notification strings across all 9 supported application locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
 
 
 

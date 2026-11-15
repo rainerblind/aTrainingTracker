@@ -167,8 +167,10 @@ sequenceDiagram
     STR-->>EXP: 201 Created / Upload Polling ID
 ```
 
-### 3.4 Polar H10 Offline RR Recording & GATT Arbitration Lifecycle (REQ-SET-104)
+### 3.4 Polar H10 Offline RR Recording, Backfill & Export Gating Lifecycle (REQ-SET-104, REQ-SET-105)
 When a paired Polar H10 heart rate strap has offline backup recording enabled on Android 13+ (`Build.VERSION.SDK_INT >= 33`), `TrackerService` triggers non-blocking single-shot arming at workout start. To prevent BLE collisions and reconnect loops during PFTP communication, GATT operations on `MyBTLEDevice` are temporarily paused and automatically resumed once the recording is armed.
+
+Upon workout completion (`TrackerService.endWorkout()`), `PolarH10OfflineController.stopAndBackfillWorkoutBlocking()` gates downstream `ExportManager.workoutFinished()` exports. It evaluates live telemetry continuity: if 100% continuous (`count(HR) == totalActiveSeconds` and zero `ARTIFACT_GAP`), it issues `stopRecording()` and cleans up exercises via the fast path without slow PFTP download. If gaps exist (e.g. pool swim or RF dropout), it fetches recorded RR intervals bounded by a 30-second timeout, patches missing 1-Hz HR into `WorkoutSamples.db` and RR beats into `WorkoutRr.db`, triggers `HrvPostWorkoutRecomputer`, and transactionally invokes `removeExercise()` on the strap strictly after SQLite commit succeeds.
 
 ```mermaid
 sequenceDiagram
@@ -178,7 +180,10 @@ sequenceDiagram
     participant MD as MyBTLEDevice
     participant SDK as PolarBleApi (polar-ble-sdk)
     participant H10 as Polar H10 Hardware
+    participant DB as SQLite (Samples / RR / Summaries)
+    participant EXP as ExportManager
 
+    Note over TS,H10: Workout Start Arming (REQ-SET-104)
     TS->>PC: onWorkoutStarted(context) [Async Dispatchers.IO]
     PC->>PC: Check API 33+ & Single-Shot Invariant
     PC->>MD: pauseGattOperations() [Prevent collision]
@@ -196,6 +201,28 @@ sequenceDiagram
     PC->>PC: Mark isRecordingArmed = true
     PC->>SDK: disconnectFromDevice(polarId)
     PC->>MD: resumeGattOperations() [Resume 0x180D Live Streaming]
+
+    Note over TS,EXP: Workout Stop Backfill & Export Gating (REQ-SET-105)
+    TS->>PC: stopAndBackfillWorkoutBlocking(context, workoutId, baseFileName)
+    PC->>PC: evaluate shouldBackfill() (Zero-gap check)
+    PC->>MD: pauseGattOperations()
+    alt Zero-gap fast path (100% continuous live HR & zero ARTIFACT_GAP)
+        PC->>SDK: stopRecording() + listExercises() -> removeExercise()
+    else Gaps exist (pool swim or BLE dropout)
+        PC->>PC: showSyncNotification() (9-locale parity)
+        PC->>SDK: fetchExercise(polarId, entry) [30s timeout]
+        SDK->H10: PFTP RR data transfer
+        H10-->>PC: PolarExerciseData (hrSamples in ms)
+        PC->>DB: patchMissingHeartRateSamples() [Gap-only 1-Hz HR]
+        PC->>DB: insertIntervals() [Missing RR beats into WorkoutRr.db]
+        PC->>DB: HrvPostWorkoutRecomputer.recomputeWorkout() [Summaries.db]
+        Note over PC,H10: Transactional Slot Cleanup strictly AFTER SQLite commit
+        PC->>SDK: removeExercise(polarId, entry)
+        PC->>PC: dismissSyncNotification()
+    end
+    PC->>MD: resumeGattOperations()
+    PC-->>TS: Backfill & summary recomputation complete
+    TS->>EXP: workoutFinished(baseFileName) [Exports release with 100% complete metrics]
 ```
 
 ---
