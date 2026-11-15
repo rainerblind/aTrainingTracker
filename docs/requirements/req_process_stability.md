@@ -5098,3 +5098,36 @@ The workflow SHALL mandate that:
   • *When* `ensure-weekly-reviews` executes,
   • *Then* a deduplicated Weekly Dual-Vendor ASPICE Audit ticket is created under `ATT-232` at `rank-top`.
 - **Invariants**: Zero changes to production runtime logic; existing master table parity intact; Human Decision Gate inviolable.
+
+
+---
+
+### REQ-PRO-097: Capacity-Bound Multi-Lane Sprint Commitment, V5.0.0 Release Planning, and Jira FixVersion Governance [Verified]
+- **Tests**: `TST-PRO-097`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `docs/management/release_plan.md`, `tools/jira_util.py`, `tools/test_jira_accounts.py`, `sprint-planner/SKILL.md`, `release-manager/SKILL.md`, `.agents/rules/aspice_governance.md`
+- **Rationale**: ASPICE 4.0 `MAN.3` (Project Management, Finding `M10`), `SUP.8` (Configuration Management), and `SUP.10` (Change Request Management) mandate capacity-bound sprint commitments matching team velocity and clear release planning. Historically, sprints were overloaded up to 283 SP, completion fell to 35%, no `V5.0.0` release plan existed, and `show_issue()` in `jira_util.py` emitted false positive FixVersion warnings on active in-sprint tickets, conflicting with Rule 8.3 (FixVersion assigned only upon completion).
+- **Description**:
+  1. *Formal V5.0.0 Release Plan (`REQ-PRO-097.1`)*: `docs/management/release_plan.md` SHALL be established as a canonical configuration item in `cm_plan.md`, specifying target release `V5.0.0`, milestone epics, scheduled 12h sprint cycles, cumulative Google Pixel 10 physical daily-ride workout verification (`ATT-8141`), quality criteria, and gate exit criteria.
+  2. *Lane-Aware Greedy Bin-Packing with Capacity Ceiling (`REQ-PRO-097.2`)*: `select_greedy_bin_pack_tickets()` in `tools/jira_util.py` SHALL iterate candidate tickets from `Vom PO Freigegeben` (ID `447`) in strict `ORDER BY rank ASC`, filling up to `max_lanes` (default 3) disjoint Epic lanes up to a configurable per-lane capacity ceiling (`max_sp_per_lane`, default 10 SP, or max tickets per lane). When a lane reaches capacity on Epic A, excess tickets of Epic A SHALL be left in `Vom PO Freigegeben` without skipping higher-ranked eligible tickets, while subsequent disjoint Epics fill Lanes 2 and 3.
+  3. *Jira FixVersion Rule Alignment (`REQ-PRO-097.3`)*: In `tools/jira_util.py` (`show_issue()`), the warning `WARNING: Mandatory field missing!` for missing `FixVersion` SHALL be suppressed for active in-sprint and in-flight tickets (status != `Erledigt`), and SHALL be emitted strictly when an issue is in terminal status (`Erledigt`) without an assigned `fixVersions` array, aligning tooling with Core Rule 8.3.
+  4. *Lifecycle Skills & Governance Parity (`REQ-PRO-097.4`)*: `.agents/rules/aspice_governance.md`, `sprint-planner/SKILL.md`, and `release-manager/SKILL.md` SHALL reflect the capacity-bound multi-lane packing from `Vom PO Freigegeben`, the 12h cadence (`04:00` / `16:00`), and `V5.0.0` release plan compliance.
+  5. *Tooling Test Coverage Parity (`REQ-PRO-097.5`)*: `tools/test_jira_accounts.py` SHALL verify multi-ticket lane packing, capacity boundary constraints, rank order integrity, and FixVersion warning emission logic with 100% test pass rate.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-097`. Targets `docs/management/release_plan.md`, `tools/jira_util.py`, `tools/test_jira_accounts.py`, `sprint-planner/SKILL.md`, `release-manager/SKILL.md`, `.agents/rules/aspice_governance.md`.
+  2. *Historical Origin & Commit Trace*: Sprint 2026-46.8 via ticket `ATT-8162` under Epic `ATT-8138` (ASPICE 4.0 Audit Remediation).
+  3. *Root Reason for Existing Formulation*: Previous sprint planning lacked formal release plan grounding, allowed sprint over-commitment, and `show_issue()` warned indiscriminately on all tickets lacking FixVersion.
+  4. *Preservation of Core Invariants*: Rule 3 human gates, detached worktree isolation, POSIX flock merge lock, and pure Python stdlib offline resilience strictly preserved.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `Vom PO Freigegeben` (ID 447) with multiple tickets across disjoint Epics,
+  • *When* `select_greedy_bin_pack_tickets()` is invoked with `max_lanes=3` and `max_sp_per_lane`,
+  • *Then* it selects tickets in strict rank order across disjoint Epics without exceeding per-lane capacity and leaves excess same-Epic tickets in the queue.
+  • *Given* an active in-sprint ticket without `FixVersion`,
+  • *When* `python3 tools/jira_util.py show <KEY>` is run,
+  • *Then* no `WARNING: Mandatory field missing!` warning is emitted for `FixVersion`.
+  • *Given* `docs/management/release_plan.md`,
+  • *When* inspected against ASPICE 4.0 `MAN.3` and `SUP.8`,
+  • *Then* it specifies `V5.0.0` scope epics, schedule, cumulative Pixel 10 workout verification, and release exit criteria.
+- **Invariants**: Zero changes to production runtime logic (`app/src/main/`); existing master table parity intact; Human Decision Gate inviolable.

@@ -61,6 +61,7 @@ python3 tools/jira_util.py comment <RELEASE_TICKET_KEY> "h4. Release Progress: S
   - SYS.4: `docs/releases/<tag>/system_integration_results.json` (from `tools/run_system_integration_tests.py`)
   - SYS.5: `docs/releases/<tag>/sys_verification_record.md` (per `docs/system/sys_verification_protocol.md`)
   - Verification Summary: `docs/releases/<tag>/verification_summary.md` (from `tools/generate_release_verification_summary.py`)
+  - Release Plan & Governance: `docs/management/release_plan.md` exit criteria verified and `FixVersion` stamped on all completed parent issues per Core Rule 8.3 (`REQ-PRO-097`)
 5. `Jira: Finish Release & Create new one` (Release current version, create next FixVersion)
 6. `Play Store: Upload as Testing` (Upload `.aab` to Internal/Closed Testing track — blocked if system evidence missing/failing)
 7. `Gitflow: Finish Release` (Merge into `master` with tags, merge back into `develop` — tag creation blocked if system evidence missing/failing)

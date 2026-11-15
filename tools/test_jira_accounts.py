@@ -1225,6 +1225,89 @@ class TestJiraCliTooling(unittest.TestCase):
         mock_review.assert_called_once_with(role="coordinator", force=True)
         mock_audit.assert_called_once_with(role="coordinator", force=True)
 
+    def test_select_greedy_bin_pack_tickets_with_capacity_ceiling(self):
+        """TST-PRO-097.1: Multi-lane greedy bin-packing accumulates tickets up to max_sp_per_lane."""
+        ranked = [
+            {"key": "ATT-1", "fields": {"issuetype": {"name": "Bug"}, "summary": "A1", "status": {"name": "Zu erledigen"}, "parent": {"key": "EPIC-A"}, jira_util.STORY_POINTS_FIELD: 3.0}},
+            {"key": "ATT-2", "fields": {"issuetype": {"name": "Bug"}, "summary": "A2", "status": {"name": "Zu erledigen"}, "parent": {"key": "EPIC-A"}, jira_util.STORY_POINTS_FIELD: 5.0}},
+            {"key": "ATT-3", "fields": {"issuetype": {"name": "Bug"}, "summary": "A3", "status": {"name": "Zu erledigen"}, "parent": {"key": "EPIC-A"}, jira_util.STORY_POINTS_FIELD: 5.0}},
+            {"key": "ATT-4", "fields": {"issuetype": {"name": "Feature"}, "summary": "B1", "status": {"name": "Zu erledigen"}, "parent": {"key": "EPIC-B"}, jira_util.STORY_POINTS_FIELD: 8.0}},
+            {"key": "ATT-5", "fields": {"issuetype": {"name": "Feature"}, "summary": "C1", "status": {"name": "Zu erledigen"}, "parent": {"key": "EPIC-C"}, jira_util.STORY_POINTS_FIELD: 3.0}},
+            {"key": "ATT-6", "fields": {"issuetype": {"name": "Feature"}, "summary": "D1", "status": {"name": "Zu erledigen"}, "parent": {"key": "EPIC-D"}, jira_util.STORY_POINTS_FIELD: 2.0}},
+        ]
+        # With max_lanes=3 and max_sp_per_lane=10:
+        # Lane 1 (EPIC-A): ATT-1 (3 SP) + ATT-2 (5 SP) = 8 SP <= 10. ATT-3 (5 SP) -> 13 SP > 10, left in queue.
+        # Lane 2 (EPIC-B): ATT-4 (8 SP).
+        # Lane 3 (EPIC-C): ATT-5 (3 SP).
+        # ATT-6 (EPIC-D): 4th Epic, exceeds max_lanes=3.
+        packed = jira_util.select_greedy_bin_pack_tickets(ranked, max_lanes=3, max_sp_per_lane=10.0)
+        self.assertEqual([i["key"] for i in packed], ["ATT-1", "ATT-2", "ATT-4", "ATT-5"])
+
+    @patch("sys.stdout", new_callable=io.StringIO)
+    @patch("jira_util.jira_request")
+    @patch("jira_util.get_config", return_value={"JIRA_URL": "https://example.atlassian.net"})
+    def test_show_issue_fixversion_warning_alignment(self, mock_config, mock_request, mock_stdout):
+        """TST-PRO-097.2: FixVersion warning suppressed for active in-sprint issues and emitted for completed ones."""
+        # 1. Active in-sprint issue (In Bearbeitung) without FixVersion -> No warning
+        mock_request.return_value = {
+            "key": "ATT-100",
+            "fields": {
+                "summary": "Active Issue",
+                "issuetype": {"name": "Verbesserung", "subtask": False},
+                "status": {"name": "In Bearbeitung"},
+                "fixVersions": [],
+                "description": "Active in-sprint description",
+                "comment": {"comments": []},
+            }
+        }
+        jira_util.show_issue("ATT-100")
+        output1 = mock_stdout.getvalue()
+        self.assertIn("*Lösungsversion (Fix Version/s)*: None (In-Sprint / Set upon completion per Rule 8.3)", output1)
+        self.assertNotIn("WARNING: Mandatory field missing!", output1)
+
+        # 2. Completed issue (Erledigt) without FixVersion -> Warning
+        mock_stdout.truncate(0)
+        mock_stdout.seek(0)
+        mock_request.return_value = {
+            "key": "ATT-101",
+            "fields": {
+                "summary": "Completed Issue",
+                "issuetype": {"name": "Verbesserung", "subtask": False},
+                "status": {"name": "Erledigt"},
+                "fixVersions": [],
+                "description": "Completed description",
+                "comment": {"comments": []},
+            }
+        }
+        jira_util.show_issue("ATT-101")
+        output2 = mock_stdout.getvalue()
+        self.assertIn("*Lösungsversion (Fix Version/s)*: None (WARNING: Mandatory field missing on completed issue!)", output2)
+
+        # 3. Subtask without FixVersion -> Subtask message, no warning
+        mock_stdout.truncate(0)
+        mock_stdout.seek(0)
+        mock_subtask = {
+            "key": "ATT-102",
+            "fields": {
+                "summary": "Sub-task Issue",
+                "issuetype": {"name": "Sub-task", "subtask": True},
+                "status": {"name": "In Bearbeitung"},
+                "fixVersions": [],
+                "parent": {"key": "ATT-100", "fields": {"summary": "Parent", "issuetype": {"name": "Verbesserung"}}},
+                "description": "Subtask description",
+                "comment": {"comments": []},
+            }
+        }
+        # Parent lookup returns no fixVersions
+        mock_request.side_effect = [
+            mock_subtask,
+            {"fields": {"fixVersions": []}}
+        ]
+        jira_util.show_issue("ATT-102")
+        output3 = mock_stdout.getvalue()
+        self.assertIn("*Lösungsversion (Fix Version/s)*: None on subtask (per Core Rule 8.3)", output3)
+        self.assertNotIn("WARNING: Mandatory field missing!", output3)
+
 
 if __name__ == "__main__":
     unittest.main()

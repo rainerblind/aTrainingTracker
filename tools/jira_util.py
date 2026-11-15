@@ -545,28 +545,37 @@ def show_issue(issue_key, role="agent1"):
     if labels:
         print(f"\n*Labels*: {', '.join(labels)}")
 
-    # Fix Version / Lösungsversion
+    # Fix Version / Lösungsversion (REQ-PRO-097.3 / Rule 8.3)
     fix_versions = issue['fields'].get('fixVersions', [])
     if fix_versions:
         fv_names = ", ".join([v.get('name', '') for v in fix_versions])
         print(f"\n*Lösungsversion (Fix Version/s)*: {fv_names}")
     else:
-        # Check if parent has a fixVersion if this is a subtask
-        parent_fv = None
-        if issue['fields'].get('parent'):
-            parent_key = issue['fields']['parent']['key']
-            parent_url = f"{config['JIRA_URL']}/rest/api/2/issue/{parent_key}?fields=fixVersions"
-            try:
-                parent_res = jira_request(parent_url, role=role)
-                pfvs = parent_res.get('fields', {}).get('fixVersions', [])
-                if pfvs:
-                    parent_fv = ", ".join([v.get('name', '') for v in pfvs])
-            except Exception:
-                pass
-        if parent_fv:
-            print(f"\n*Lösungsversion (Fix Version/s)*: None on subtask (Inherited from Parent: {parent_fv})")
+        # Check if this is a subtask
+        is_subtask = itype.lower() in ("sub-task", "subtask") or issue['fields'].get('issuetype', {}).get('subtask', False)
+        if is_subtask:
+            parent_fv = None
+            if issue['fields'].get('parent'):
+                parent_key = issue['fields']['parent']['key']
+                parent_url = f"{config['JIRA_URL']}/rest/api/2/issue/{parent_key}?fields=fixVersions"
+                try:
+                    parent_res = jira_request(parent_url, role=role)
+                    pfvs = parent_res.get('fields', {}).get('fixVersions', [])
+                    if pfvs:
+                        parent_fv = ", ".join([v.get('name', '') for v in pfvs])
+                except Exception:
+                    pass
+            if parent_fv:
+                print(f"\n*Lösungsversion (Fix Version/s)*: None on subtask (Inherited from Parent: {parent_fv})")
+            else:
+                print(f"\n*Lösungsversion (Fix Version/s)*: None on subtask (per Core Rule 8.3)")
         else:
-            print(f"\n*Lösungsversion (Fix Version/s)*: None (WARNING: Mandatory field missing!)")
+            # For parent tickets, only completed issues without FixVersion trigger warning
+            is_terminal = status.lower() in ("erledigt", "done", "closed", "abgeschlossen")
+            if is_terminal:
+                print(f"\n*Lösungsversion (Fix Version/s)*: None (WARNING: Mandatory field missing on completed issue!)")
+            else:
+                print(f"\n*Lösungsversion (Fix Version/s)*: None (In-Sprint / Set upon completion per Rule 8.3)")
 
     # Epic/Parent context
     parent = issue['fields'].get('parent')
@@ -593,7 +602,8 @@ def show_issue(issue_key, role="agent1"):
         st_status = st.get('fields', {}).get('status', {}).get('name', 'Unknown')
         print(f"* {st_key}: {st_summary} [{st_status}]")
 
-    print(f"\n*Description*:\n{issue['fields']['description']}")
+    desc = issue['fields'].get('description') or 'No description'
+    print(f"\n*Description*:\n{desc}")
 
     print("\n*Attachments*:")
     attachments = issue['fields'].get('attachment', [])
@@ -603,7 +613,10 @@ def show_issue(issue_key, role="agent1"):
         print(f"* {a['filename']} ({a['size']} bytes) - ID: {a['id']} - URL: {a['content']}")
 
     print("\n*Comments*:")
-    for c in issue['fields']['comment']['comments']:
+    comments = issue['fields'].get('comment', {}).get('comments', [])
+    if not comments:
+        print("None")
+    for c in comments:
         print(f"--- {c['author']['displayName']} ({c['created']}) ---\n{c['body']}\n")
 
 def list_versions(role="agent1"):
@@ -2325,16 +2338,24 @@ def move_issues_to_sprint_guarded(target_sprint_id, issue_keys, role="coordinato
     return list(issue_keys)
 
 
-def select_greedy_bin_pack_tickets(ranked_issues, max_lanes=3):
+def select_greedy_bin_pack_tickets(ranked_issues, max_lanes=3, max_sp_per_lane=None):
     """
-    Multi-Lane Greedy Bin-Packing (ATT-8030):
-    Iterates ranked issues in strict ORDER BY rank ASC (never top[:X]) and picks up to `max_lanes`
-    non-subtask tickets from completely disjoint Parent Epics in `Zu erledigen`.
+    Multi-Lane Greedy Bin-Packing (ATT-8030, ATT-8162, REQ-PRO-097.2):
+    Iterates ranked issues in strict ORDER BY rank ASC (never top[:X]) and packs tickets
+    into up to `max_lanes` disjoint Parent Epic lanes in `Zu erledigen`.
+
+    If `max_sp_per_lane` is specified (e.g. 10 SP), each lane accumulates tickets belonging to its
+    designated Epic up to `max_sp_per_lane`. When a lane reaches capacity, excess tickets of that Epic
+    remain in the queue without blocking subsequent disjoint Epics from filling remaining lanes.
+    If `max_sp_per_lane` is None, exactly one ticket is chosen per disjoint Epic lane.
+
     Issues without an explicit Parent Epic use their own key as a synthetic lane group so unrelated
     standalone items never collide with named Epics.
     """
     selected = []
-    seen_epics = set()
+    lane_epics = []
+    lane_sp = {}
+
     for issue in ranked_issues:
         fields = issue.get("fields", {})
         itype = fields.get("issuetype", {}).get("name", "").lower()
@@ -2346,18 +2367,35 @@ def select_greedy_bin_pack_tickets(ranked_issues, max_lanes=3):
         status_name = fields.get("status", {}).get("name", "").strip().lower()
         if status_name != "zu erledigen":
             continue
+
         parent_obj = fields.get("parent") or {}
         epic_key = parent_obj.get("key") or f"__NO_EPIC__:{issue.get('key')}"
-        if epic_key in seen_epics:
-            continue
-        seen_epics.add(epic_key)
-        selected.append(issue)
-        if len(selected) >= max_lanes:
-            break
+
+        # Story Points extraction (default 3.0 SP per ATT-8162)
+        raw_sp = fields.get(STORY_POINTS_FIELD)
+        try:
+            issue_sp = float(raw_sp) if raw_sp is not None else 3.0
+        except (ValueError, TypeError):
+            issue_sp = 3.0
+
+        if epic_key in lane_sp:
+            # Epic is already assigned to an active lane
+            if max_sp_per_lane is not None:
+                if lane_sp[epic_key] + issue_sp <= max_sp_per_lane:
+                    lane_sp[epic_key] += issue_sp
+                    selected.append(issue)
+                # Excess tickets exceeding max_sp_per_lane remain in Vom PO Freigegeben
+        else:
+            # Epic not yet assigned; can we open a new lane?
+            if len(lane_epics) < max_lanes:
+                lane_epics.append(epic_key)
+                lane_sp[epic_key] = issue_sp
+                selected.append(issue)
+
     return selected
 
 
-def pack_sprint_from_po_queue(target_sprint_id, max_lanes=3, role="coordinator"):
+def pack_sprint_from_po_queue(target_sprint_id, max_lanes=3, max_sp_per_lane=None, role="coordinator"):
     """Pulls PO-approved tickets out of 'Vom PO Freigegeben' (ID 447) into target sprint via greedy bin-packing."""
     if role != "coordinator":
         print("Error: pack-sprint is restricted to '--as coordinator'.", file=sys.stderr)
@@ -2369,7 +2407,7 @@ def pack_sprint_from_po_queue(target_sprint_id, max_lanes=3, role="coordinator")
     base = config['JIRA_URL'].rstrip('/')
     jql = f"project = ATT AND sprint = {PO_RELEASED_QUEUE_SPRINT_ID} AND issuetype != Sub-task ORDER BY rank ASC"
     ranked = paged_jql_search(jql, ["summary", "status", "issuetype", "parent", STORY_POINTS_FIELD], role=role, config=config)
-    chosen = select_greedy_bin_pack_tickets(ranked, max_lanes=max_lanes)
+    chosen = select_greedy_bin_pack_tickets(ranked, max_lanes=max_lanes, max_sp_per_lane=max_sp_per_lane)
     keys = [c["key"] for c in chosen]
     if not keys:
         print(f"No eligible 'Zu erledigen' tickets found in '{PO_RELEASED_QUEUE_NAME}' (ID {PO_RELEASED_QUEUE_SPRINT_ID}).")
@@ -3793,7 +3831,8 @@ USAGE_TEXT = (
     "  ensure-weekly-retro                                   Check/create rolling 'Wochen Review & Retro' ticket under ATT-232\n"
     "  ensure-weekly-reviews [--force]                       Check/create mandatory Weekly Dual-Vendor Code Review ticket\n"
     "  add-label KEY LABEL[,LABEL2]                          Append label(s) to an issue idempotently\n"
-    "  pack-sprint TARGET_SPRINT_ID [--lanes N]              Pull disjoint-Epic tickets from Vom PO Freigegeben (447) in rank order\n"
+    "  pack-sprint TARGET_SPRINT_ID [--lanes N] [--max-sp-per-lane SP]\n"
+    "                                                        Pull disjoint-Epic tickets from Vom PO Freigegeben (447) in rank order\n"
     "  return-unstarted [SPRINT_ARG]                         Return untouched Zu erledigen sprint tickets to Vom PO Freigegeben (447)\n"
     "  swap-po-queue FUTURE_SPRINT_ID                        Keep Vom PO Freigegeben (447) positioned right above Product Backlog\n"
     "  check-gate KEY                                        Verify Impl-Plan subtask is Erledigt (Gate 3)\n"
@@ -3856,6 +3895,7 @@ if __name__ == "__main__":
     elif cmd in ("pack-sprint", "pack_sprint") and len(remaining_argv) >= 2:
         t_sprint = remaining_argv[1]
         max_lanes = 3
+        max_sp_per_lane = None
         idx = 2
         while idx < len(remaining_argv):
             a = remaining_argv[idx]
@@ -3864,8 +3904,13 @@ if __name__ == "__main__":
             elif a == "--lanes" and idx + 1 < len(remaining_argv):
                 max_lanes = int(remaining_argv[idx + 1])
                 idx += 1
+            elif a.startswith("--max-sp-per-lane="):
+                max_sp_per_lane = float(a.split("=", 1)[1])
+            elif a == "--max-sp-per-lane" and idx + 1 < len(remaining_argv):
+                max_sp_per_lane = float(remaining_argv[idx + 1])
+                idx += 1
             idx += 1
-        pack_sprint_from_po_queue(t_sprint, max_lanes=max_lanes, role=active_role)
+        pack_sprint_from_po_queue(t_sprint, max_lanes=max_lanes, max_sp_per_lane=max_sp_per_lane, role=active_role)
     elif cmd in ("return-unstarted", "return_unstarted"):
         s_arg = remaining_argv[1] if len(remaining_argv) >= 2 else None
         return_unstarted_to_po_queue(sprint_arg=s_arg, role=active_role)
