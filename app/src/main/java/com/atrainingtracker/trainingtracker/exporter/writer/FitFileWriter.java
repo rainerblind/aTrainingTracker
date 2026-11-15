@@ -54,6 +54,8 @@ import com.garmin.fit.Fit;
 import com.garmin.fit.HrvMesg;
 import com.garmin.fit.Intensity;
 import com.garmin.fit.LapMesg;
+import com.garmin.fit.LeftRightBalance;
+import com.garmin.fit.LeftRightBalance100;
 import com.garmin.fit.Manufacturer;
 import com.garmin.fit.RadarThreatLevelType;
 import com.garmin.fit.RecordMesg;
@@ -71,8 +73,10 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CancellationException;
 
@@ -405,6 +409,8 @@ public class FitFileWriter extends BaseFileWriter {
             final FieldDescriptionMesg finalPassingDistDesc = passingDistDesc;
             final FieldDescriptionMesg finalLargeVehCountDesc = largeVehCountDesc;
             final int[] prevVehCount = new int[]{0};
+            final PedalDynamicsAccumulator sessionPedalAcc = new PedalDynamicsAccumulator();
+            final Map<Integer, PedalDynamicsAccumulator> lapPedalAccMap = new HashMap<>();
 
             try {
                 WorkoutRepository.getInstance(mContext).streamSamples(exportInfo.getFileBaseName(), sample -> {
@@ -495,6 +501,55 @@ public class FitFileWriter extends BaseFileWriter {
                             record.setPower((int) Math.round(pwr));
                         }
                     }
+
+                    // Cycling Power Dynamics (REQ-EXP-043.2 / ATT-8196)
+                    if (sample.getPedalPowerBalance() != null) {
+                        double bal = sample.getPedalPowerBalance();
+                        if (!Double.isNaN(bal) && bal >= 0.0 && bal <= 100.0) {
+                            short encoded = (short) (((int) Math.round(bal) & LeftRightBalance.MASK) | LeftRightBalance.RIGHT);
+                            record.setLeftRightBalance(encoded);
+                        }
+                    }
+                    if (sample.getTorqueEffectivenessL() != null) {
+                        double teL = sample.getTorqueEffectivenessL();
+                        if (!Double.isNaN(teL) && teL >= 0.0 && teL <= 100.0) {
+                            record.setLeftTorqueEffectiveness((float) teL);
+                        }
+                    }
+                    if (sample.getTorqueEffectivenessR() != null) {
+                        double teR = sample.getTorqueEffectivenessR();
+                        if (!Double.isNaN(teR) && teR >= 0.0 && teR <= 100.0) {
+                            record.setRightTorqueEffectiveness((float) teR);
+                        }
+                    }
+                    if (sample.getPedalSmoothnessL() != null) {
+                        double psL = sample.getPedalSmoothnessL();
+                        if (!Double.isNaN(psL) && psL >= 0.0 && psL <= 100.0) {
+                            record.setLeftPedalSmoothness((float) psL);
+                        }
+                    }
+                    if (sample.getPedalSmoothnessR() != null) {
+                        double psR = sample.getPedalSmoothnessR();
+                        if (!Double.isNaN(psR) && psR >= 0.0 && psR <= 100.0) {
+                            record.setRightPedalSmoothness((float) psR);
+                        }
+                    }
+                    if (sample.getPedalSmoothnessCombined() != null) {
+                        double psComb = sample.getPedalSmoothnessCombined();
+                        if (!Double.isNaN(psComb) && psComb >= 0.0 && psComb <= 100.0) {
+                            record.setCombinedPedalSmoothness((float) psComb);
+                        }
+                    }
+
+                    // Accumulate online pedal dynamics (REQ-EXP-043.3)
+                    sessionPedalAcc.add(sample);
+                    int sampleLap = sample.getLapNr() > 0 ? sample.getLapNr() : 1;
+                    PedalDynamicsAccumulator lapAcc = lapPedalAccMap.get(sampleLap);
+                    if (lapAcc == null) {
+                        lapAcc = new PedalDynamicsAccumulator();
+                        lapPedalAccMap.put(sampleLap, lapAcc);
+                    }
+                    lapAcc.add(sample);
 
                     // Temperature
                     if (sample.getTemperature() != null) {
@@ -627,6 +682,7 @@ public class FitFileWriter extends BaseFileWriter {
             // Query laps from Laps.db (strictly read-only access)
             List<LapData> laps = WorkoutRepository.getInstance(mContext).getLaps(workoutID);
             if (laps != null && !laps.isEmpty()) {
+                int lapSeq = 1;
                 for (LapData lap : laps) {
                     LapMesg lapMesg = new LapMesg();
                     Date lapStart = startDate;
@@ -650,7 +706,13 @@ public class FitFileWriter extends BaseFileWriter {
                     lapMesg.setIntensity(Intensity.ACTIVE);
                     lapMesg.setSport(sport);
                     lapMesg.setSubSport(subSport);
+                    PedalDynamicsAccumulator lapAcc = lapPedalAccMap.get((int) lap.getLapNr());
+                    if (lapAcc == null) {
+                        lapAcc = lapPedalAccMap.get(lapSeq);
+                    }
+                    applyPedalDynamicsToLap(lapMesg, lapAcc != null ? lapAcc : sessionPedalAcc);
                     encoder.write(lapMesg);
+                    lapSeq++;
                 }
             } else {
                 // Transient representation for FIT protocol compliance; zero mutations to Laps.db (Laps.db is purely read-only)
@@ -666,11 +728,13 @@ public class FitFileWriter extends BaseFileWriter {
                 lapMesg.setIntensity(Intensity.ACTIVE);
                 lapMesg.setSport(sport);
                 lapMesg.setSubSport(subSport);
+                applyPedalDynamicsToLap(lapMesg, sessionPedalAcc);
                 encoder.write(lapMesg);
             }
 
             // 4. SessionMesg
             SessionMesg sessionMesg = new SessionMesg();
+            applyPedalDynamicsToSession(sessionMesg, sessionPedalAcc);
             sessionMesg.setStartTime(new DateTime(startDate));
             sessionMesg.setTimestamp(new DateTime(sessionEndDate));
             sessionMesg.setTotalElapsedTime((float) totalElapsedTimeSec);
@@ -871,5 +935,118 @@ public class FitFileWriter extends BaseFileWriter {
             hrvMesg.setTime(i, intervalsSec.get(i));
         }
         encoder.write(hrvMesg);
+    }
+
+    /**
+     * Bounded O(1) online accumulator for cycling pedal dynamics (REQ-EXP-043.3 / ATT-8196).
+     */
+    private static class PedalDynamicsAccumulator {
+        double balanceSum = 0.0;
+        int balanceCount = 0;
+        double teLSum = 0.0;
+        int teLCount = 0;
+        double teRSum = 0.0;
+        int teRCount = 0;
+        double psLSum = 0.0;
+        int psLCount = 0;
+        double psRSum = 0.0;
+        int psRCount = 0;
+        double psCombSum = 0.0;
+        int psCombCount = 0;
+
+        void add(@NonNull WorkoutSampleRecord sample) {
+            if (sample.getPedalPowerBalance() != null) {
+                double b = sample.getPedalPowerBalance();
+                if (!Double.isNaN(b) && b >= 0.0 && b <= 100.0) {
+                    balanceSum += b;
+                    balanceCount++;
+                }
+            }
+            if (sample.getTorqueEffectivenessL() != null) {
+                double te = sample.getTorqueEffectivenessL();
+                if (!Double.isNaN(te) && te >= 0.0 && te <= 100.0) {
+                    teLSum += te;
+                    teLCount++;
+                }
+            }
+            if (sample.getTorqueEffectivenessR() != null) {
+                double te = sample.getTorqueEffectivenessR();
+                if (!Double.isNaN(te) && te >= 0.0 && te <= 100.0) {
+                    teRSum += te;
+                    teRCount++;
+                }
+            }
+            if (sample.getPedalSmoothnessL() != null) {
+                double ps = sample.getPedalSmoothnessL();
+                if (!Double.isNaN(ps) && ps >= 0.0 && ps <= 100.0) {
+                    psLSum += ps;
+                    psLCount++;
+                }
+            }
+            if (sample.getPedalSmoothnessR() != null) {
+                double ps = sample.getPedalSmoothnessR();
+                if (!Double.isNaN(ps) && ps >= 0.0 && ps <= 100.0) {
+                    psRSum += ps;
+                    psRCount++;
+                }
+            }
+            if (sample.getPedalSmoothnessCombined() != null) {
+                double ps = sample.getPedalSmoothnessCombined();
+                if (!Double.isNaN(ps) && ps >= 0.0 && ps <= 100.0) {
+                    psCombSum += ps;
+                    psCombCount++;
+                }
+            }
+        }
+    }
+
+    private static void applyPedalDynamicsToLap(@NonNull LapMesg lapMesg, @Nullable PedalDynamicsAccumulator acc) {
+        if (acc != null) {
+            if (acc.balanceCount > 0) {
+                double avgRight = acc.balanceSum / acc.balanceCount;
+                int encoded100 = ((int) Math.round(avgRight * 100.0) & LeftRightBalance100.MASK) | LeftRightBalance100.RIGHT;
+                lapMesg.setLeftRightBalance(encoded100);
+            }
+            if (acc.teLCount > 0) {
+                lapMesg.setAvgLeftTorqueEffectiveness((float) (acc.teLSum / acc.teLCount));
+            }
+            if (acc.teRCount > 0) {
+                lapMesg.setAvgRightTorqueEffectiveness((float) (acc.teRSum / acc.teRCount));
+            }
+            if (acc.psLCount > 0) {
+                lapMesg.setAvgLeftPedalSmoothness((float) (acc.psLSum / acc.psLCount));
+            }
+            if (acc.psRCount > 0) {
+                lapMesg.setAvgRightPedalSmoothness((float) (acc.psRSum / acc.psRCount));
+            }
+            if (acc.psCombCount > 0) {
+                lapMesg.setAvgCombinedPedalSmoothness((float) (acc.psCombSum / acc.psCombCount));
+            }
+        }
+    }
+
+    private static void applyPedalDynamicsToSession(@NonNull SessionMesg sessionMesg, @Nullable PedalDynamicsAccumulator acc) {
+        if (acc != null) {
+            if (acc.balanceCount > 0) {
+                double avgRight = acc.balanceSum / acc.balanceCount;
+                int encoded100 = ((int) Math.round(avgRight * 100.0) & LeftRightBalance100.MASK) | LeftRightBalance100.RIGHT;
+                sessionMesg.setLeftRightBalance(encoded100);
+            }
+            if (acc.teLCount > 0) {
+                sessionMesg.setAvgLeftTorqueEffectiveness((float) (acc.teLSum / acc.teLCount));
+            }
+            if (acc.teRCount > 0) {
+                sessionMesg.setAvgRightTorqueEffectiveness((float) (acc.teRSum / acc.teRCount));
+            }
+            if (acc.psLCount > 0) {
+                sessionMesg.setAvgLeftPedalSmoothness((float) (acc.psLSum / acc.psLCount));
+            }
+            if (acc.psRCount > 0) {
+                sessionMesg.setAvgRightPedalSmoothness((float) (acc.psRSum / acc.psRCount));
+            }
+            if (acc.psCombCount > 0) {
+                sessionMesg.setAvgCombinedPedalSmoothness((float) (acc.psCombSum / acc.psCombCount));
+            }
+        }
     }
 }

@@ -3844,6 +3844,38 @@
 
 **Invariants**: Third-party FIT file backward compatibility preserved; zero data loss during FIT export/import cycle; Garmin FIT SDK V2.0 Developer Field profile compliance.
 
+### REQ-EXP-043: Standard Garmin FIT Pedal Power Balance, Torque Effectiveness & Pedal Smoothness Serialization and Lossless Round-Trip [Verified]
+- **Tests**: `TST-EXP-043`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `FitFileWriter.java`, `FitWorkoutParser.kt`, `WorkoutExportHeader.kt`, `WorkoutRepository.kt`
+- **Rationale**: Cyclists using dual-sided ANT+ or Bluetooth LE power meters expect recorded Left/Right pedal power balance, torque effectiveness (TE), and pedal smoothness (PS) metrics exported into standard Garmin `.fit` files for analysis on Intervals.icu, Strava, TrainingPeaks, GoldenCheetah, and WKO5, as well as preserved across `.fit` backup/restore cycles without data loss or bilateral inversion.
+- **Description**:
+  1. *Sample Streaming Extension (`WorkoutExportHeader.kt` & `WorkoutRepository.kt`)*: `WorkoutSampleRecord` SHALL include nullable fields `pedalPowerBalance: Double?`, `torqueEffectivenessL: Double?`, `torqueEffectivenessR: Double?`, `pedalSmoothnessL: Double?`, `pedalSmoothnessR: Double?`, and `pedalSmoothnessCombined: Double?`. `WorkoutRepository.streamSamples(...)` SHALL project `SensorType.PEDAL_POWER_BALANCE`, `TORQUE_EFFECTIVENESS_L`, `TORQUE_EFFECTIVENESS_R`, `PEDAL_SMOOTHNESS_L`, `PEDAL_SMOOTHNESS_R`, and `PEDAL_SMOOTHNESS` while preserving $O(1)$ memory streaming (`REQ-DAT-042.2`) and zero SQLite imports in `FitFileWriter.java` (`REQ-DAT-042.5`).
+  2. *Standard FIT Trackpoint Serialization (`FitFileWriter.java`)*: For trackpoint records containing pedal dynamics:
+     - `pedalPowerBalance` (normalized Right % `0..100` per `REQ-CON-022`) SHALL be encoded via `record.setLeftRightBalance((short) ((Math.round(clampedRightPct) & LeftRightBalance.MASK) | LeftRightBalance.RIGHT))` where `LeftRightBalance.RIGHT = 0x80` and `LeftRightBalance.MASK = 0x7F`.
+     - `torqueEffectivenessL` and `torqueEffectivenessR` (`0.0..100.0%`) SHALL be serialized via `record.setLeftTorqueEffectiveness(Float)` and `record.setRightTorqueEffectiveness(Float)`.
+     - `pedalSmoothnessL`, `pedalSmoothnessR`, and combined `pedalSmoothnessCombined` (`0.0..100.0%`) SHALL be serialized via `record.setLeftPedalSmoothness(Float)`, `record.setRightPedalSmoothness(Float)`, and `record.setCombinedPedalSmoothness(Float)`.
+  3. *Lap & Session Aggregate Serialization (`FitFileWriter.java`)*: During sample streaming, the exporter SHALL accumulate online sums and counts in $O(1)$ memory. When valid samples exist:
+     - `LapMesg` and `SessionMesg` SHALL encode average balance via `setLeftRightBalance(Integer)` using `LeftRightBalance100` (`(Math.round(avgRightPct * 100.0) & LeftRightBalance100.MASK) | LeftRightBalance100.RIGHT`, `LeftRightBalance100.RIGHT = 0x8000`, `LeftRightBalance100.MASK = 0x3FFF`, `0.01%` resolution).
+     - `LapMesg` and `SessionMesg` SHALL encode averages via `setAvgLeftTorqueEffectiveness`, `setAvgRightTorqueEffectiveness`, `setAvgLeftPedalSmoothness`, `setAvgRightPedalSmoothness`, and `setAvgCombinedPedalSmoothness`. Workouts lacking these sensors SHALL leave corresponding fields unset (`null`).
+  4. *Lossless FIT Ingestion (`FitWorkoutParser.kt`)*: The parser SHALL decode `RecordMesg.getLeftRightBalance()` (extracting Right % when `LeftRightBalance.RIGHT` is set and populating `SensorType.PEDAL_POWER_BALANCE`), `getLeftTorqueEffectiveness()`, `getRightTorqueEffectiveness()`, `getLeftPedalSmoothness()`, `getRightPedalSmoothness()`, and `getCombinedPedalSmoothness()` into `bufferedSamples` and register the corresponding `SensorType` entries in `foundSensors` (`REQ-MIG-053`).
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a recorded cycling workout containing `PEDAL_POWER_BALANCE = 52.0` (48% L / 52% R), `TORQUE_EFFECTIVENESS_L = 78.5`, `TORQUE_EFFECTIVENESS_R = 81.0`, `PEDAL_SMOOTHNESS_L = 24.0`, and `PEDAL_SMOOTHNESS_R = 25.5`,
+• *When* exported to `.fit` via `FitFileWriter` and decoded using Garmin FIT SDK `Decode`,
+• *Then* `RecordMesg.getLeftRightBalance()` equals `(52 | LeftRightBalance.RIGHT)`, `getLeftTorqueEffectiveness()` / `getRightTorqueEffectiveness()` equal `78.5f` / `81.0f`, and `getLeftPedalSmoothness()` / `getRightPedalSmoothness()` equal `24.0f` / `25.5f`.
+• *Given* a multi-lap workout with recorded L/R balance, TE, and PS samples,
+• *When* exported to `.fit`,
+• *Then* `LapMesg` and `SessionMesg` populate `left_right_balance` using `LeftRightBalance100` (`0.01%` resolution with `LeftRightBalance100.RIGHT = 0x8000`) and populate average TE and PS fields, while workouts without these sensors omit them cleanly (`null`).
+• *Given* a workout with L/R balance, TE, and PS exported to `.fit` by `FitFileWriter`,
+• *When* re-imported through `FitWorkoutParser`,
+• *Then* `SensorType.PEDAL_POWER_BALANCE`, `TORQUE_EFFECTIVENESS_L/R`, and `PEDAL_SMOOTHNESS_L/R` (or combined `PEDAL_SMOOTHNESS`) are restored into `WorkoutSamples` and `foundSensors` without L/R inversion.
+
+**Invariants**: $O(1)$ heap memory overhead during FIT export stream (`REQ-DAT-042.2`); zero SQLite imports or direct database calls in `FitFileWriter.java` (`REQ-DAT-042.5`); Right-pedal 0..100% normalization preserved (`REQ-CON-022.1`); clean omission for absent sensors without artificial 0% artifacts.
+
+
 
 
 

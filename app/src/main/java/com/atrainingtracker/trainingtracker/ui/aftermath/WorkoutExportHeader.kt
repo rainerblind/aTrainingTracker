@@ -73,7 +73,13 @@ data class WorkoutSampleRecord(
     val radarApproachSpeedMps: Double? = null,
     val radarVehicleCount: Int? = null,
     val radarPassingDistanceM: Double? = null,
-    val radarLargeVehicleCount: Int? = null
+    val radarLargeVehicleCount: Int? = null,
+    val pedalPowerBalance: Double? = null,
+    val torqueEffectivenessL: Double? = null,
+    val torqueEffectivenessR: Double? = null,
+    val pedalSmoothnessL: Double? = null,
+    val pedalSmoothnessR: Double? = null,
+    val pedalSmoothnessCombined: Double? = null
 )
 
 /**

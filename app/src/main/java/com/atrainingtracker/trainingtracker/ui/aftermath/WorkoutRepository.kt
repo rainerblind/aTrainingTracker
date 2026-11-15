@@ -640,6 +640,12 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                 val radarVehCountIdx = col(SensorType.RADAR_VEHICLE_COUNT.name)
                 val radarPassingDistIdx = col(SensorType.RADAR_PASSING_DISTANCE_m.name)
                 val radarLargeVehCountIdx = col(SensorType.RADAR_LARGE_VEHICLE_COUNT.name)
+                val balanceIdx = col(SensorType.PEDAL_POWER_BALANCE.name)
+                val teLIdx = col(SensorType.TORQUE_EFFECTIVENESS_L.name)
+                val teRIdx = col(SensorType.TORQUE_EFFECTIVENESS_R.name)
+                val psLIdx = col(SensorType.PEDAL_SMOOTHNESS_L.name)
+                val psRIdx = col(SensorType.PEDAL_SMOOTHNESS_R.name)
+                val psCombIdx = col(SensorType.PEDAL_SMOOTHNESS.name)
 
                 fun getDoubleOrNull(idx: Int): Double? =
                     if (idx >= 0 && !cursor.isNull(idx)) {
@@ -678,7 +684,13 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                         radarApproachSpeedMps = getDoubleOrNull(radarApproachSpdIdx),
                         radarVehicleCount = getIntOrNull(radarVehCountIdx),
                         radarPassingDistanceM = getDoubleOrNull(radarPassingDistIdx),
-                        radarLargeVehicleCount = getIntOrNull(radarLargeVehCountIdx)
+                        radarLargeVehicleCount = getIntOrNull(radarLargeVehCountIdx),
+                        pedalPowerBalance = getDoubleOrNull(balanceIdx),
+                        torqueEffectivenessL = getDoubleOrNull(teLIdx),
+                        torqueEffectivenessR = getDoubleOrNull(teRIdx),
+                        pedalSmoothnessL = getDoubleOrNull(psLIdx),
+                        pedalSmoothnessR = getDoubleOrNull(psRIdx),
+                        pedalSmoothnessCombined = getDoubleOrNull(psCombIdx)
                     )
                     consumer.accept(record)
                 }
