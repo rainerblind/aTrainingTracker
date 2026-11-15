@@ -2456,6 +2456,37 @@ The workflow SHALL mandate that:
 
 **Invariants**: Zero modification to numerical formatting results or fallback token strings; 100% backward compatibility with `SensorType.java`; zero UI regression; 100% unit test pass rate.
 
+### REQ-ARC-008: Java Core Migration: Golden Master Characterisation Test Scaffolding for TrackerService & BANALService [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-ARC-008`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `app/src/test/java/com/atrainingtracker/tracker/`
+- **Rationale**: In accordance with ADR-001 (Tier 0 Golden Master Scaffolding, ATT-7566) and the PO architectural directive (ATT-7749, ATT-7902), `TrackerService.java` (3,307 LOC) and `BANALService.java` (864 LOC) SHALL receive automated, end-to-end characterisation test fixtures capturing their public runtime contracts and state machines prior to future coroutine/StateFlow migration, while maintaining strict zero-production-edit invariance:
+1. *TrackerService State Machine & Lifecycle Characterisation (`REQ-ARC-008.1`)*:
+• Characterisation test fixtures SHALL exercise the full `TrackerService` state lifecycle (`IDLE` -> `READY` -> `TRACKING` -> `PAUSED` -> `STOPPED`), validating transitions across `TrackingMode` and `AutoPauseState` without altering production code.
+• Automated fixtures SHALL verify 1-Hz database tick dispatching, active workout sample persistence, crash/resume recovery, and post-stop export gating parity (`ATT-7918`).
+2. *BANALService Sensor Arbitration & Event Dispatching (`REQ-ARC-008.2`)*:
+• Characterisation test fixtures SHALL exercise `BANALService` ANT+/BLE sensor arbitration across multi-device sources, verifying priority resolution between ANT+ and BLE telemetry.
+• Fixtures SHALL verify `ProxySensor` listener registration and dispatching, filtered sensor integration (`FilterManager`), and timeout failover behavior.
+3. *Zero Production Code Invariant & Regression Protection (`REQ-ARC-008.3`)*:
+• All characterisation scaffolding SHALL be implemented strictly under `app/src/test/` with ZERO edits to production code in `app/src/main/`.
+• Existing unit and contract tests in `testDebugUnitTest` SHALL remain 100% green with zero regressions.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* the `TrackerService` characterisation test harness,
+• *When* the full session lifecycle (`IDLE` -> `READY` -> `TRACKING` -> `PAUSED` -> `STOPPED`) and 1-Hz sample dispatching execute,
+• *Then* state transitions and sample persistence match legacy Java behavior with zero errors.
+• *Given* the `BANALService` characterisation test harness,
+• *When* multi-sensor arbitration and `ProxySensor` event dispatching execute,
+• *Then* priority resolution and timeout failover assert bit-for-bit equivalence to the existing service.
+• *Given* the complete codebase,
+• *When* git status is inspected,
+• *Then* zero modifications exist in `app/src/main/`.
+
+**Invariants**: Zero changes to production code in `app/src/main/`; existing test suites remain 100% green; `ANT-Android-SDKs` submodule gitlink (`160000`) untouched.
+
 ### REQ-PRO-027: Agile Agentic ASPICE (AAA) Governance, Constructive Resistance, Hypothesis Verification, Stage 5 Resource Gate & Ceremony 2 Completeness Sweep [Verified]
 - **Tests**: `TST-PRO-020`
 - **Priority**: High

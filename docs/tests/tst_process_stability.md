@@ -1610,6 +1610,24 @@
   5. *Formatter Subsystem Kover Coverage Verification (`TST-ARC-007.5`)*:
   • Confirm that `com.atrainingtracker.banalservice.sensor.formater.*` achieves $\ge 70\%$ Line Coverage and $\ge 50\%$ Branch Coverage.
 
+### TST-ARC-008: **Java Core Migration: TrackerService & BANALService Characterisation Test Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Requirement(s)**: `REQ-ARC-008`
+- **Component**: **Core Services Characterisation Test Suite**
+- **Jira**: `ATT-7902`
+- **Test Description**:
+  1. *TrackerService State Machine & 1-Hz Tick Dispatching Test Suite (`TST-ARC-008.1`)*:
+  • Execute automated characterisation tests verifying `TrackerService` state transitions across `TrackingMode` (`IDLE`, `READY`, `TRACKING`, `PAUSED`, `STOPPED`) and `AutoPauseState`, 1-Hz database tick sample dispatching, and post-stop export gating parity (`ATT-7918`).
+  2. *TrackerService Crash/Resume Recovery Verification (`TST-ARC-008.2`)*:
+  • Verify that simulated process kill and crash recovery reconstructs the active session state, workout ID, and sample continuity without data loss.
+  3. *BANALService Multi-Sensor Arbitration & Dispatching Test Suite (`TST-ARC-008.3`)*:
+  • Execute automated characterisation tests verifying `BANALService` ANT+/BLE arbitration, `ProxySensor` listener notifications, filter query integration, and timeout failover.
+  4. *Zero Production Code Change Governance Audit (`TST-ARC-008.4`)*:
+  • Verify via `git status` that `app/src/main/` contains zero modifications.
+
 ### TST-PRO-020: **Agile Agentic ASPICE (AAA) Governance, Constructive Resistance, Hypothesis Verification, Stage 5 Resource Gate & Ceremony 2 Completeness Sweep Verification** [Verified]
 - **Priority**: High
 - **Type**: Non-Functional
