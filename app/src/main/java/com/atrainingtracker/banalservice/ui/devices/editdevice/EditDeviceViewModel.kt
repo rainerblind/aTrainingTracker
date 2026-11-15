@@ -343,4 +343,8 @@ class EditDeviceViewModel(private val application: Application) : AndroidViewMod
         }
     }
 
+    /** Returns the persisted Bluetooth MAC address for [deviceId] via the repository layer. */
+    fun getBluetoothMacAddress(deviceId: Long): String? =
+        devicesRepository.getBluetoothMACAddress(deviceId)
+
 }

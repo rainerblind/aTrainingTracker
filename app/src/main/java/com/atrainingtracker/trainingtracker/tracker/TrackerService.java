@@ -63,7 +63,6 @@ import com.atrainingtracker.trainingtracker.database.WorkoutSource;
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.BANALService.BANALServiceComm;
-import com.atrainingtracker.banalservice.database.DevicesDatabaseManager;
 import com.atrainingtracker.banalservice.devices.AltitudeFromPressureDevice;
 import com.atrainingtracker.banalservice.sensor.MySensorManager;
 import com.atrainingtracker.banalservice.sensor.SensorData;
@@ -856,7 +855,7 @@ public class TrackerService extends Service {
         }
         try {
             long bestAltDeviceId = banal.getSourceDeviceId(SensorType.ALTITUDE);
-            long baroDeviceId = DevicesDatabaseManager.getInstance(this).getAltitudeFromPressureDeviceId();
+            long baroDeviceId = getDeviceDataRepository().getAltitudeFromPressureDeviceId();
             if (bestAltDeviceId > 0 && baroDeviceId > 0 && bestAltDeviceId != baroDeviceId) {
                 return false;
             }

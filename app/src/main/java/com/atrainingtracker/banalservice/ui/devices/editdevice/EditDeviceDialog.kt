@@ -50,7 +50,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.atrainingtracker.banalservice.Protocol
-import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
 import com.atrainingtracker.banalservice.devices.AttFusedAltitudePreferences
 import com.atrainingtracker.banalservice.devices.AttFusedPreferences
 import com.atrainingtracker.banalservice.devices.DeviceType
@@ -1399,7 +1398,7 @@ private fun PolarOfflineDeviceSection(data: DeviceUiData, viewModel: EditDeviceV
     val polarMac = if (!isH10 && data.protocol == Protocol.BLUETOOTH_LE) {
         remember(data.id) {
             try {
-                DevicesDatabaseManager.getInstance(dialogContext).getBluetoothMACAddress(data.id)
+                viewModel.getBluetoothMacAddress(data.id)
             } catch (_: Throwable) {
                 null
             }

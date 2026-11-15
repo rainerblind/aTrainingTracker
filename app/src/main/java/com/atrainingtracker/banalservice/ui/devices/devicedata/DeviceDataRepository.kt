@@ -592,6 +592,10 @@ class DeviceDataRepository @androidx.annotation.VisibleForTesting internal const
     fun getAltitudeAndSlopeAttFusedDeviceId(): Long =
         devicesDatabaseManager.altitudeAndSlopeAttFusedDeviceId
 
+    /** Returns the device row ID for the smartphone barometric altitude device, or -1 if absent. */
+    fun getAltitudeFromPressureDeviceId(): Long =
+        devicesDatabaseManager.altitudeFromPressureDeviceId
+
     fun hasPairedWheelSpeedSensor(): Boolean =
         devicesDatabaseManager.hasPairedWheelSpeedSensor()
 
