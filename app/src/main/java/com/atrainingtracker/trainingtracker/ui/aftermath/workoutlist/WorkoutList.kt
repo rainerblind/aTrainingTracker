@@ -75,7 +75,7 @@ fun WorkoutList(
     workoutSectionsOrder: List<WorkoutSectionType> = WorkoutSectionType.DEFAULT_ORDER
 ) {
     val context = LocalContext.current
-    val tuningDataStore = remember(context) { TuningPreferencesDataStore(context.applicationContext) }
+    val tuningDataStore = remember(context) { TuningPreferencesDataStore.getInstance(context) }
     val tuningConfig by tuningDataStore.tuningConfigFlow.collectAsState(initial = TuningConfig())
     val density = LocalDensity.current
     val topPadding = with(density) { (headerHeightPx + appBarOffsetPx).toDp() }

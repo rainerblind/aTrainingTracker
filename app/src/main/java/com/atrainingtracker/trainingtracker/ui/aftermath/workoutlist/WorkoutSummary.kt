@@ -128,7 +128,7 @@ fun WorkoutSummary(
     val effectiveGradeZoneDisplayMode = gradeZoneDisplayMode ?: preferences.zoneCardDisplayMode
     val context = LocalContext.current
     val repository = remember(context) { WorkoutRepository.getInstance(context.applicationContext as Application) }
-    val tuningDataStore = remember(context) { TuningPreferencesDataStore(context.applicationContext) }
+    val tuningDataStore = remember(context) { TuningPreferencesDataStore.getInstance(context) }
     val observedTuningConfig by tuningDataStore.tuningConfigFlow.collectAsState(initial = TuningConfig())
     val effectiveTuningConfig = tuningConfig ?: observedTuningConfig
     val coroutineScope = rememberCoroutineScope()

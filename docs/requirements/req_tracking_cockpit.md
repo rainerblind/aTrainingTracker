@@ -5757,3 +5757,44 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 **Invariants**: Monotonic non-decreasing accumulator progression across service recreation boundaries; `START_NORMAL` fresh workout start behavior and resets remain strictly unchanged; 100% clean-room test pass rate.
 
+### REQ-TRK-079: Application-Scoped DataStore Lifecycle and Offscreen Cockpit Map Disposal [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-TRK-079`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
+- **Implementation**: `TuningPreferencesDataStore.kt`, `TrackingTabsScreen.kt`, `TrackingViewModel.kt`, `SensorGridScreen.kt`
+- **Rationale**: Prevent fatal 512 MB OutOfMemoryError heap exhaustion, native JNI map crashes, GC stalls, and background CPU usage process kills during active workouts by enforcing application-scoped singleton DataStore lifecycle, bounding HorizontalPager offscreen composition, and gating live UI map telemetry on `Lifecycle.State.STARTED` (ATT-7874, extending `REQ-SET-073` and `REQ-MAP-051`).
+- **Description**:
+  1. *Application-Scoped TuningPreferencesDataStore Singleton Lifecycle (`REQ-TRK-079.1`)*:
+     - `TuningPreferencesDataStore` primary constructor SHALL be scoped to internal / `@VisibleForTesting`, and production callers SHALL exclusively obtain instances via `TuningPreferencesDataStore.getInstance(context)`.
+     - `getInstance(context)` SHALL normalize any supplied `Context` to `context.applicationContext`, preventing retention of `Activity`, `View`, or Compose hierarchies.
+     - `TuningPreferencesDataStore` internal startup maintenance (such as legacy map camera preference purging) SHALL run within `appScope` rather than spawning independent unmanaged `CoroutineScope(Dispatchers.IO)` workers.
+     - All 19 existing production call sites SHALL be migrated to `TuningPreferencesDataStore.getInstance(context.applicationContext)`.
+  2. *Bounded Viewport Composition & Inactive Tab Map Disposal (`REQ-TRK-079.2`)*:
+     - `TrackingTabsScreen` `HorizontalPager` SHALL NOT set `beyondViewportPageCount = trackingViews.size + 1`. It SHALL set `beyondViewportPageCount = 0` (or default bounded window), ensuring offscreen Cockpit tabs are not actively composed.
+     - When a Cockpit tab containing `TrackingMapContainer` is not the active visible page (`!isTabActive`), the underlying `GoogleMap` composable and view hierarchy SHALL be disposed, freeing native map renderer resources and bitmap textures.
+  3. *Lifecycle-Gated Cockpit Telemetry Collection (`REQ-TRK-079.3`)*:
+     - In `TrackingViewModel`, live 1-Hz map telemetry and polyline state pipelines (`observeMapState`) and Compose collectors (`collectAsStateWithLifecycle`) SHALL gate emission on `Lifecycle.State.STARTED`.
+     - When the athlete turns off the screen or moves the app to the background (`STOPPED`), UI map and polyline emissions SHALL pause completely, while `TrackerService` 1-Hz GPS tracking and SQLite database recording continue without interruption.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-TRK-079`, extending `REQ-SET-073` (*Advanced Tuning Preferences*) and `REQ-MAP-051` (*Map Segment Layer Isolation*). Targets `TuningPreferencesDataStore.kt`, `TrackingTabsScreen.kt`, `TrackingViewModel.kt`, `SensorGridScreen.kt`, and `ATrainingTrackerMap.kt`.
+2. *Historical Origin & Commit Trace*: `ATT-2945` (`commit f3ff8577`) introduced `beyondViewportPageCount = trackingViews.size + 1` in `TrackingTabsScreen` to eliminate tab switching latency when athletes swipe between Cockpit tabs during tracking.
+3. *Root Reason for Existing Formulation*: At the time, Cockpit tabs only hosted lightweight View/Compose text metric tiles; multi-tab Google Map composition and 1-Hz `observeMapState` coroutine pipelines were not present.
+4. *Preservation of Core Invariants*: Tab swiping responsiveness for sensor metric grids is preserved while heavy native `GoogleMap` composition is deferred on inactive tabs; `TrackerService` 1-Hz background GPS tracking and SQLite database recording remain 100% independent and unaffected.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* repeated navigation across Cockpit tabs, Aftermath screens, Elevation Profiles, and Settings,
+• *When* `TuningPreferencesDataStore` is queried,
+• *Then* exactly one application-scoped instance exists and zero `Activity` contexts or orphaned coroutine scopes are retained.
+• *Given* an active workout with multiple Cockpit tabs including map views,
+• *When* the athlete is viewing a non-map tab or the device screen is turned off (`STOPPED`),
+• *Then* offscreen `GoogleMap` composables are disposed and `TrackingViewModel.observeMapState()` pauses live polyline/marker emissions.
+• *Given* an active workout with screen turned off,
+• *When* `TrackerService` runs in the foreground service,
+• *Then* 1-Hz workout sample recording to `WorkoutSamples.db` continues uninterrupted with zero data loss.
+
+**Invariants**: `TrackerService` 1-Hz background recording 100% unaffected; immediate persistence of tuning preferences preserved; zero leak of `Activity` references; 100% clean-room test pass rate.
+
+

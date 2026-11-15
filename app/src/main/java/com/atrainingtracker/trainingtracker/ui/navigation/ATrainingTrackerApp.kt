@@ -828,7 +828,7 @@ fun ATrainingTrackerApp(
     when (val dialogState = activity.antDialogState) {
         is AntDialogState.MissingAdapter -> {
             val scope = rememberCoroutineScope()
-            val tuningDataStore = remember { TuningPreferencesDataStore(activity.applicationContext) }
+            val tuningDataStore = remember { TuningPreferencesDataStore.getInstance(activity) }
             AntMissingAdapterDialog(
                 onViewStatus = {
                     activity.antDialogState = null

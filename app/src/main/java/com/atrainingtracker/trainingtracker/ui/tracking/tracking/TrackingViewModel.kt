@@ -148,6 +148,14 @@ class TrackingViewModel @JvmOverloads constructor(
     private val _mapState = MutableStateFlow(TrackingMapState())
     val mapState: StateFlow<TrackingMapState> = _mapState.asStateFlow()
 
+    // Gates high-frequency map telemetry emissions when UI is in background/screen-off or tab is inactive (REQ-TRK-079.3)
+    private val _isUiActive = MutableStateFlow(true)
+    val isUiActive: StateFlow<Boolean> = _isUiActive.asStateFlow()
+
+    fun setUiActive(isActive: Boolean) {
+        _isUiActive.value = isActive
+    }
+
     private val _activityType = MutableStateFlow<ActivityType>(ActivityType.getDefaultActivityType())
     val activityType: StateFlow<ActivityType> = _activityType.asStateFlow()
 
@@ -224,7 +232,7 @@ class TrackingViewModel @JvmOverloads constructor(
 
     private val sharedPreferences: SharedPreferences = PreferenceManager.getDefaultSharedPreferences(application)
     private val settingsDataStore = SettingsDataStore(application)
-    private val tuningPreferencesDataStore by lazy { TuningPreferencesDataStore(application) }
+    private val tuningPreferencesDataStore by lazy { TuningPreferencesDataStore.getInstance(application) }
     private val _tuningConfig = MutableStateFlow(TuningConfig())
     val tuningConfig: StateFlow<TuningConfig> = _tuningConfig.asStateFlow()
     private val zoneDisplayOptionsMap = mutableMapOf<SettingsDataStore.ZoneType, ZoneDisplayOptions>()
@@ -503,50 +511,57 @@ class TrackingViewModel @JvmOverloads constructor(
             combine(
                 trackingViewsRepository.getTrackingViewInfoFlow(viewId),
                 staticMapLayerFlow,
-                liveTelemetryFlow
-            ) { viewInfo, staticLayers, liveTelemetry ->
-                val currentTrack = liveTelemetry.currentTrack
-                val markerList = if (currentTrack.isNotEmpty()) {
-                    listOf(
-                        LocationMarker(
-                            position = currentTrack.first(),
-                            iconResId = R.drawable.start_logo_map,
-                            title = application.getString(R.string.Start)
-                        )
-                    )
+                liveTelemetryFlow,
+                _isUiActive
+            ) { viewInfo, staticLayers, liveTelemetry, isUiActive ->
+                if (!isUiActive) {
+                    null
                 } else {
-                    emptyList()
-                }
+                    val currentTrack = liveTelemetry.currentTrack
+                    val markerList = if (currentTrack.isNotEmpty()) {
+                        listOf(
+                            LocationMarker(
+                                position = currentTrack.first(),
+                                iconResId = R.drawable.start_logo_map,
+                                title = application.getString(R.string.Start)
+                            )
+                        )
+                    } else {
+                        emptyList()
+                    }
 
-                TrackingMapState(
-                    showMap = viewInfo?.showMap ?: false,
-                    zoomFocus = MapZoomFocus.FOLLOW_ME,
-                    userSpeed = liveTelemetry.userSpeed,
-                    userBearing = liveTelemetry.userBearing,
-                    bSportType = liveTelemetry.bSportType,
-                    currentTrack = currentTrack,
-                    mapSegments = staticLayers.mapSegments,
-                    mapRoutes = staticLayers.mapRoutes,
-                    activeLiveSegmentIds = staticLayers.activeLiveSegmentIds,
-                    mapMarkers = markerList
-                )
-            }.collect { newMapState ->
-                _mapState.value = newMapState
-                _uiState.update { current ->
-                    current.copy(
-                        showMap = newMapState.showMap,
-                        mapState = newMapState,
-                        zoomFocus = newMapState.zoomFocus,
-                        userBearing = newMapState.userBearing,
-                        userSpeed = newMapState.userSpeed,
-                        bSportType = newMapState.bSportType,
-                        currentTrack = newMapState.currentTrack,
-                        mapTracks = newMapState.mapTracks,
-                        mapSegments = newMapState.mapSegments,
-                        activeLiveSegmentIds = newMapState.activeLiveSegmentIds,
-                        mapRoutes = newMapState.mapRoutes,
-                        mapMarkers = newMapState.mapMarkers
+                    TrackingMapState(
+                        showMap = viewInfo?.showMap ?: false,
+                        zoomFocus = MapZoomFocus.FOLLOW_ME,
+                        userSpeed = liveTelemetry.userSpeed,
+                        userBearing = liveTelemetry.userBearing,
+                        bSportType = liveTelemetry.bSportType,
+                        currentTrack = currentTrack,
+                        mapSegments = staticLayers.mapSegments,
+                        mapRoutes = staticLayers.mapRoutes,
+                        activeLiveSegmentIds = staticLayers.activeLiveSegmentIds,
+                        mapMarkers = markerList
                     )
+                }
+            }.collect { newMapState ->
+                if (newMapState != null) {
+                    _mapState.value = newMapState
+                    _uiState.update { current ->
+                        current.copy(
+                            showMap = newMapState.showMap,
+                            mapState = newMapState,
+                            zoomFocus = newMapState.zoomFocus,
+                            userBearing = newMapState.userBearing,
+                            userSpeed = newMapState.userSpeed,
+                            bSportType = newMapState.bSportType,
+                            currentTrack = newMapState.currentTrack,
+                            mapTracks = newMapState.mapTracks,
+                            mapSegments = newMapState.mapSegments,
+                            activeLiveSegmentIds = newMapState.activeLiveSegmentIds,
+                            mapRoutes = newMapState.mapRoutes,
+                            mapMarkers = newMapState.mapMarkers
+                        )
+                    }
                 }
             }
         }

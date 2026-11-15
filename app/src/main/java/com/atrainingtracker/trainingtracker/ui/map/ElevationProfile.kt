@@ -350,7 +350,7 @@ fun ElevationProfile(
     val context = LocalContext.current
     val colorScheme = MaterialTheme.colorScheme
     val unit = TrainingApplication.getUnit()
-    val tuningDataStore = remember(context) { TuningPreferencesDataStore(context) }
+    val tuningDataStore = remember(context) { TuningPreferencesDataStore.getInstance(context) }
     val tuningConfig by tuningDataStore.tuningConfigFlow.collectAsState(initial = TuningConfig())
     val effectiveSigma = smoothingSigma ?: tuningConfig.elevationSmoothingSigmaMeters.toDouble()
     var showLegend by remember { mutableStateOf(false) }

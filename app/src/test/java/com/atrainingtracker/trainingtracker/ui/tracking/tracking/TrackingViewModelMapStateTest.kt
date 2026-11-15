@@ -273,6 +273,41 @@ class TrackingViewModelMapStateTest {
     }
 
     @Test
+    fun testObserveMapState_suspendsEmissionsWhenUiIsInactive() = runTest {
+        val viewModel = createViewModel()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Initially UI is active, speed updates are emitted
+        currentSpeedFlow.value = 10.0
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertEquals(10.0f, viewModel.mapState.value.userSpeed, 0.001f)
+
+        // Deactivate UI (screen off / tab inactive per REQ-TRK-079.3)
+        viewModel.setUiActive(false)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Emitting new speed, bearing, and track points while UI is inactive
+        currentSpeedFlow.value = 25.0
+        currentBearingFlow.value = 180.0
+        currentTrackFlow.value = listOf(LatLng(48.1, 11.5), LatLng(48.2, 11.6))
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Map state MUST retain previous state and NOT update while inactive
+        assertEquals(10.0f, viewModel.mapState.value.userSpeed, 0.001f)
+        assertEquals(0.0f, viewModel.mapState.value.userBearing, 0.001f)
+        assertTrue(viewModel.mapState.value.currentTrack.isEmpty())
+
+        // Reactivate UI (screen turned on / tab visible)
+        viewModel.setUiActive(true)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Map state immediately syncs to latest telemetry
+        assertEquals(25.0f, viewModel.mapState.value.userSpeed, 0.001f)
+        assertEquals(180.0f, viewModel.mapState.value.userBearing, 0.001f)
+        assertEquals(2, viewModel.mapState.value.currentTrack.size)
+    }
+
+    @Test
     fun testStepFollowMeSmoothing_convergesToTargetZoomAndBearingUnderSteadyInputs() {
         // Case A: Low steady speed (2.5 m/s = 9.0 km/h, target zoom = 19.10f) and 350 -> 10 deg wrap-around bearing
         var filteredSpeed = 0.0f

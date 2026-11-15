@@ -2892,3 +2892,24 @@
   6. *Targeted Tier-1 Unit & Contract Verification (`TST-TRK-078.6`)*:
      • Run targeted Gradle suite (`TrackerServiceResumeTest`, `TrackerServiceCrashRecoveryCharacterisationTest`, `TrackerServiceLapTest`, `MyAccumulatorSensorTest`) asserting 100% pass rate.
 
+### TST-TRK-079: **DataStore Singleton Lifecycle, Offscreen Map Disposal & Lifecycle Gating Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-TRK-079` (`REQ-TRK-079.1`..`REQ-TRK-079.3`)
+- **Component**: `TuningPreferencesDataStoreLifecycleTest.kt`, `TrackingViewModelMapStateTest.kt`, `TrackingTabsScreenLayoutTest.kt`
+- **Test Type**: Unit & Lifecycle
+- **Verification Method**: Unit
+- **Procedure**:
+  1. *DataStore Singleton & Application Context Normalization Test (`TST-TRK-079.1`, `TuningPreferencesDataStoreLifecycleTest.kt`)*:
+     • Verify calling `TuningPreferencesDataStore.getInstance(activityContext)` returns identical singleton reference across multiple invocations and stores `applicationContext`.
+     • Verify all 19 production call sites route through `getInstance(context)`.
+  2. *Bounded Viewport Page Count & Inactive Tab Map Guard Test (`TST-TRK-079.2`, `TrackingTabsScreenLayoutTest.kt`)*:
+     • Verify `HorizontalPager.beyondViewportPageCount` is bounded (`0` or `1`) rather than `trackingViews.size + 1`.
+     • Verify `TrackingMapContainer` renders a lightweight placeholder or skips `GoogleMap` composition when `isTabActive == false`.
+  3. *Lifecycle-Gated Map State Emission Test (`TST-TRK-079.3`, `TrackingViewModelMapStateTest.kt`)*:
+     • Simulate `Lifecycle.State.STOPPED` / background transition; verify live `TrackingMapState` emissions pause and resume when returning to `Lifecycle.State.STARTED`.
+  4. *TrackerService Background Persistence Neutrality Test (`TST-TRK-079.4`, `TrackerServiceResumeTest.kt` / `TrackerServiceIntegrationTest.kt`)*:
+     • Verify `TrackerService` 1-Hz database sample insertion continues independently when UI is in `STOPPED` state.
+  5. *Tier 1 Targeted Unit & Contract Verification (`TST-TRK-079.5`)*:
+     • Run targeted Gradle suite (`TuningPreferences*`, `TrackingViewModel*`, `TrackingTabs*`) asserting 100% pass rate.
+
+

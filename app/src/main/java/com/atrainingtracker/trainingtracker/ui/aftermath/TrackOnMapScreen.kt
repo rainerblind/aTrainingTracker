@@ -117,7 +117,7 @@ fun TrackOnMapScreen(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val preferenceManager = remember { MyPreferenceManager(context.applicationContext) }
-    val tuningDataStore = remember { TuningPreferencesDataStore(context.applicationContext) }
+    val tuningDataStore = remember { TuningPreferencesDataStore.getInstance(context) }
     val tuningConfig by tuningDataStore.tuningConfigFlow.collectAsState(initial = TuningConfig())
     val persistedDetailPrefs by preferenceManager.workoutDetailPreferencesFlow.collectAsState(initial = WorkoutDetailPreferences())
     val persistedCardPrefs by preferenceManager.workoutCardPreferencesFlow.collectAsState(initial = WorkoutCardSectionPreferences())

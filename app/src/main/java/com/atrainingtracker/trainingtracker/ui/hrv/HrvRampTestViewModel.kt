@@ -63,7 +63,7 @@ class HrvRampTestViewModel @JvmOverloads constructor(
     private val banalServiceRepository: BANALServiceRepository = BANALServiceRepository.getInstance(application),
     private val dispatcher: CoroutineDispatcher = Dispatchers.Main,
     private val workoutRepository: WorkoutRepository = WorkoutRepository.getInstance(application),
-    private val tuningPreferencesDataStore: TuningPreferencesDataStore = TuningPreferencesDataStore(application)
+    private val tuningPreferencesDataStore: TuningPreferencesDataStore = TuningPreferencesDataStore.getInstance(application)
 ) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow(HrvRampTestUiState())

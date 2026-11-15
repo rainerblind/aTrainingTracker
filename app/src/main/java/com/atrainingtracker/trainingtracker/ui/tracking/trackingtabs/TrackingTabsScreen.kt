@@ -307,7 +307,7 @@ fun TrackingTabsScreen(
     }
 
     // Battery Saver Telemetry & Event Subscriptions
-    val tuningDataStore = remember { com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore(context) }
+    val tuningDataStore = remember { com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore.getInstance(context) }
     val tuningConfig by tuningDataStore.tuningConfigFlow.collectAsState(
         initial = com.atrainingtracker.trainingtracker.settings.TuningConfig()
     )
@@ -917,7 +917,7 @@ fun TrackingTabsScreen(
                             .fillMaxSize()
                             .navigationBarsPadding(), // do not draw under the navigation bar
                         userScrollEnabled = true,
-                        beyondViewportPageCount = if (screenMode == ScreenMode.TRACKING) trackingViews.size + 1 else trackingViews.size  // keep them all
+                        beyondViewportPageCount = 0 // REQ-TRK-079.2: Bound viewport pre-composition to eliminate offscreen map memory explosion
                     ) { page ->
                         if (screenMode == ScreenMode.TRACKING && page == 0) {
 

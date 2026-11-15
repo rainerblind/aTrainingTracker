@@ -179,7 +179,7 @@ class EditSensorFieldViewModel(
     private val rowNr: Int,
     private val colNr: Int,          // -1 for new row
     tuningConfigFlow: Flow<TuningConfig> = if (application is TrainingApplication) {
-        TuningPreferencesDataStore(application).tuningConfigFlow
+        TuningPreferencesDataStore.getInstance(application).tuningConfigFlow
     } else {
         flowOf(TuningConfig())
     }

@@ -530,7 +530,11 @@ data class TuningConfig(
  * DataStore repository managing expert tuning preferences with strict parameter validation and atomic factory reset.
  * Conforms to REQ-SET-073.
  */
-class TuningPreferencesDataStore(private val context: Context) {
+class TuningPreferencesDataStore private constructor(
+    context: Context,
+    private val appScope: CoroutineScope
+) {
+    private val context: Context = context.applicationContext ?: context
 
     companion object {
         val KEY_ELEVATION_X_AXIS_DOMAIN: Preferences.Key<String> = stringPreferencesKey("tuning_elevation_x_axis_domain")
@@ -918,8 +922,19 @@ class TuningPreferencesDataStore(private val context: Context) {
         @JvmStatic
         fun getInstance(context: Context): TuningPreferencesDataStore {
             return INSTANCE ?: synchronized(this) {
-                INSTANCE ?: TuningPreferencesDataStore(context.applicationContext ?: context).also { INSTANCE = it }
+                INSTANCE ?: TuningPreferencesDataStore(
+                    context.applicationContext ?: context,
+                    CoroutineScope(SupervisorJob() + Dispatchers.Default)
+                ).also { INSTANCE = it }
             }
+        }
+
+        @VisibleForTesting
+        fun createForTesting(
+            context: Context,
+            testScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+        ): TuningPreferencesDataStore {
+            return TuningPreferencesDataStore(context.applicationContext ?: context, testScope)
         }
 
         @VisibleForTesting
@@ -931,8 +946,6 @@ class TuningPreferencesDataStore(private val context: Context) {
 
         internal fun hasInitializedInstance(): Boolean = INSTANCE != null
     }
-
-    private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     val tuningConfigStateFlow: StateFlow<TuningConfig> by lazy {
         tuningConfigFlow.stateIn(
@@ -1291,7 +1304,7 @@ data class AutoPausePreferences(
     }
 
     init {
-        CoroutineScope(Dispatchers.IO).launch {
+        appScope.launch(Dispatchers.IO) {
             try {
                 purgeLegacyMapCameraPreferences()
             } catch (_: Exception) {
