@@ -71,6 +71,7 @@ import java.util.concurrent.TimeUnit
  * - REQ-TRK-033: Asynchronous Initialization & Abort Handling
  */
 @RunWith(RobolectricTestRunner::class)
+@org.robolectric.annotation.Config(sdk = [34])
 class TrackerServiceCrashRecoveryCharacterisationTest {
 
     private class TestableTrackerService : TrackerService() {

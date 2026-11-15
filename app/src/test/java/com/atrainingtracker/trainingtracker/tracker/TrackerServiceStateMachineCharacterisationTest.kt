@@ -80,6 +80,7 @@ import java.util.concurrent.TimeUnit
  * - ATT-7918: Export Gating Parity
  */
 @RunWith(RobolectricTestRunner::class)
+@org.robolectric.annotation.Config(sdk = [34])
 class TrackerServiceStateMachineCharacterisationTest {
 
     private class TestableTrackerService : TrackerService() {
