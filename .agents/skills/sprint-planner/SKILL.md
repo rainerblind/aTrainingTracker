@@ -60,7 +60,7 @@ Ensure that every ticket committed to the active sprint has clear, unambiguous a
      python3 tools/jira_util.py ensure-weekly-retro
      python3 tools/jira_util.py ensure-weekly-reviews
      ```
-     `ensure-weekly-reviews` checks whether `> 7 days` have elapsed since the latest completed review in `docs/engineering/code_reviews/` (or unreviewed packages remain in `coverage_matrix.md`) and automatically creates a deduplicated Weekly Dual-Vendor Code Review ticket under Epic `ATT-232` pre-populated with the next target subsystem and ranks it at `rank-top`.
+     `ensure-weekly-reviews` checks whether `> 7 days` have elapsed since the latest completed reviews in `docs/engineering/code_reviews/` and `docs/engineering/aspice_audits/` and automatically creates deduplicated Weekly Dual-Vendor Code Review and ASPICE 4.0 Audit tickets under Epic `ATT-232` ranked at `rank-top`.
    * *Strict Invariant*: Aside from `ensure-retro` for the sprint's `Review & Retro` ceremony ticket, AI agents MUST NEVER move backlog feature/bug tickets into active sprints autonomously (`"Agents must not move tickets to sprints!"`). Only the human user assigns backlog tickets to sprints.
 2. **Establish Sprint Integration Branch**:
    Create and push the sprint integration branch from latest `develop`:

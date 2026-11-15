@@ -82,12 +82,12 @@ python3 tools/jira_util.py comment <RELEASE_TICKET_KEY> "h4. Release Progress: S
    git status
    ```
 
-   * **Mandatory Weekly Dual-Vendor Code Review Currency Gate (`REQ-PRO-095` / `ATT-8213`)**:
-     Prior to cutting the release branch, verify that the weekly Dual-Vendor (Google Gemini + Anthropic Claude) Code Review is current ($\le 7$ days old) and recorded in `docs/engineering/code_reviews/`:
+   * **Mandatory Weekly Dual-Vendor Governance Currency Gate (`REQ-PRO-095`, `REQ-PRO-096` / `ATT-8212`, `ATT-8213`)**:
+     Prior to cutting the release branch, verify that both the weekly Dual-Vendor (Google Gemini + Anthropic Claude) Code Review and ASPICE 4.0 Cross-Audit are current ($\le 7$ days old) and recorded in `docs/engineering/code_reviews/` and `docs/engineering/aspice_audits/`:
      ```bash
-     python3 -c "import tools.jira_util as ju; exit(1 if ju.is_weekly_review_overdue() else 0)"
+     python3 -c "import tools.jira_util as ju; exit(1 if (ju.is_weekly_review_overdue() or ju.is_weekly_aspice_audit_overdue()) else 0)"
      ```
-     If overdue, release preparation is **STRICTLY BLOCKED** until the pending review ticket is resolved or human exception is recorded.
+     If either review is overdue, release preparation is **STRICTLY BLOCKED** until the pending review ticket is resolved or human exception is recorded.
 
 2. **Inspect Current Version in `app/build.gradle`**:
    Read `versionName` and `versionCode` from the `defaultConfig` block in `app/build.gradle`:

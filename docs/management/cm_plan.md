@@ -31,8 +31,9 @@ All work products subject to formal configuration control are classified as Conf
 | **System Architecture** | `docs/architecture.md`, `docs/architecture/*.md`, `docs/coding_standards.md`, `docs/design_guidelines.md` | Git (SWE.2 System Architecture models) |
 | **Management & CM Plans** | `docs/management/*.md` | Git (ASPICE SUP.8 CM Plan & Policies) |
 | **Living Requirements & Tests** | `docs/requirements/`, `docs/tests/`, `docs/requirements.md`, `docs/tests.md` | Git (9 domain shards, synchronized master indexes) |
-| **Engineering Deliverables** | `docs/engineering/analysis/`, `plans/`, `test_specs/`, `walkthroughs/`, `retros/`, `code_reviews/` | Git (Canonical directories per Rule 8.4) |
+| **Engineering Deliverables** | `docs/engineering/analysis/`, `plans/`, `test_specs/`, `walkthroughs/`, `retros/`, `code_reviews/`, `aspice_audits/` | Git (Canonical directories per Rule 8.4) |
 | **Code Review Coverage Matrix** | `docs/engineering/code_reviews/coverage_matrix.md`, review reports | Git (Weekly Dual-Vendor review evidence per REQ-PRO-095) |
+| **ASPICE Audit Records** | `docs/engineering/aspice_audits/` (`YYYY-MM-DD_dual_vendor_aspice_audit.md`) | Git (Weekly Dual-Vendor ASPICE audits per REQ-PRO-096) |
 | **Store & Visual Assets** | `docs/store_presence/`, `docs/guide/` | Git (Markdown, verified PNGs/SVGs) |
 | **Code Quality & Linting** | `config/detekt/` | Git (Static analysis & Detekt configuration) |
 | **Tooling & Automation** | `tools/` | Git (Python verification, build & merge locks) |

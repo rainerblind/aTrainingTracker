@@ -5065,3 +5065,36 @@ The workflow SHALL mandate that:
   • *When* `release-manager` checks release preconditions,
   • *Then* release readiness flags the overdue review.
 - **Invariants**: Zero changes to production runtime logic; existing master table parity intact; Human Decision Gate inviolable.
+
+
+---
+
+### REQ-PRO-096: ASPICE 4.0 SUP.1 Quality Assurance Strategy, Evidence Storage, and Dual-Vendor Cross-Audit Automation [Verified]
+- **Tests**: `TST-PRO-096`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `docs/management/qa_plan.md`, `docs/management/cm_plan.md`, `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `docs/engineering/aspice_audits/`
+- **Rationale**: ASPICE 4.0 `SUP.1.BP1-BP6` and `GP 2.1.6` mandate a formal project QA plan ensuring independence of quality assurance from development. To avoid single-model blind spots, regular weekly independent blind ASPICE 4.0 cross-audits across two distinct AI vendors (Google Gemini + Anthropic Claude) must be institutionalized, verified in canonical storage (`docs/engineering/aspice_audits/`), and automatically scheduled at the top of the Product Backlog.
+- **Description**:
+  1. *Formal Project QA Strategy & Plan (`REQ-PRO-096.1`)*: `docs/management/qa_plan.md` SHALL establish the comprehensive ASPICE 4.0 `SUP.1` quality assurance strategy satisfying `BP1` (QA strategy), `BP2` (quality criteria), `BP3` (assurance of work product compliance), `BP4` (assurance of process compliance), `BP5` (problem escalation & resolution), and `BP6` (quality records), anchoring technical role independence (`GP 2.1.6`) across 5 verification layers.
+  2. *Canonical ASPICE Audit Evidence Store (`REQ-PRO-096.2`)*: `docs/engineering/aspice_audits/` SHALL be established as a canonical directory in `cm_plan.md` and `verify_requirement_governance.py` (`ALLOWED_ENGINEERING_ENTRIES`), housing `README.md` and versioned dual-vendor audit evidence records (`YYYY-MM-DD_dual_vendor_aspice_audit.md`), starting with the `2026-11-15` baseline audit for Epic `ATT-8138`.
+  3. *Automated Top-of-Backlog Audit Ticket Creation (`REQ-PRO-096.3`)*: `tools/jira_util.py` SHALL implement `ensure_weekly_aspice_audit_ticket()` (`ensure-weekly-reviews` CLI), which verifies whether `> 7 days` have elapsed since the latest completed ASPICE audit in `docs/engineering/aspice_audits/`; if overdue and no open weekly ASPICE audit ticket exists, it SHALL automatically create a review ticket under Epic `ATT-232` and place it at `rank-top`.
+  4. *Sprint & Release Lifecycle Currency Enforcement (`REQ-PRO-096.4`)*: `sprint-planner/SKILL.md` (Ceremonies 1 & 2) and `release-manager/SKILL.md` SHALL verify that both weekly ASPICE audits and code reviews are current ($\le 7$ days) prior to closing sprint reviews or initiating production release branches.
+  5. *QA Tooling & Contract Test Parity (`REQ-PRO-096.5`)*: `tools/test_jira_accounts.py` and `tools/test_verify_requirement_governance.py` SHALL maintain 100% test pass rate for `aspice_audits` canonical directory registration, audit currency calculation, and deduplicated ticket creation.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-096`. Targets `docs/management/qa_plan.md`, `docs/management/cm_plan.md`, `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `docs/engineering/aspice_audits/`.
+  2. *Historical Origin & Commit Trace*: Sprint 2026-46.8 via ticket `ATT-8212` under Epic `ATT-8138` (ASPICE 4.0 Audit Remediation).
+  3. *Root Reason for Existing Formulation*: Prior QA provisions (`REQ-PRO-061`, `REQ-PRO-091`) governed in-sprint ticket sampling (`qa-audit`) but lacked full SUP.1 plan governance and automated cross-vendor ASPICE audit scheduling.
+  4. *Preservation of Core Invariants*: Human Decision Gate, commit hygiene, zero runtime code changes in `app/src/main/`, and pure Python stdlib offline resilience preserved.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `docs/management/qa_plan.md`,
+  • *When* inspected against ASPICE 4.0 `SUP.1` and `GP 2.1.6`,
+  • *Then* it specifies all 5 QA layers, independence guarantees, escalation paths, and the regular weekly dual-vendor ASPICE cross-audit procedure.
+  • *Given* `docs/engineering/aspice_audits/` and `docs/management/cm_plan.md`,
+  • *When* inspected,
+  • *Then* `aspice_audits` is registered in `cm_plan.md` and contains the `2026-11-15` dual-audit baseline record referencing `ATT-8138`.
+  • *Given* `> 7 days` have elapsed since the last ASPICE audit,
+  • *When* `ensure-weekly-reviews` executes,
+  • *Then* a deduplicated Weekly Dual-Vendor ASPICE Audit ticket is created under `ATT-232` at `rank-top`.
+- **Invariants**: Zero changes to production runtime logic; existing master table parity intact; Human Decision Gate inviolable.

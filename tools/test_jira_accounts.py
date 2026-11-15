@@ -1172,6 +1172,59 @@ class TestJiraCliTooling(unittest.TestCase):
         self.assertEqual(key2, "ATT-9200")
         mock_create.assert_not_called()
 
+    def test_is_weekly_aspice_audit_overdue(self):
+        """TST-PRO-096.3: Overdue determination for ASPICE audit based on elapsed days."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            audits_dir = os.path.join(tmpdir, "aspice_audits")
+            os.makedirs(audits_dir, exist_ok=True)
+
+            # 1. No audit files -> overdue
+            self.assertTrue(jira_util.is_weekly_aspice_audit_overdue(audits_dir=audits_dir, days_threshold=7))
+
+            # 2. Recent audit (2 days ago) -> not overdue
+            two_days_ago = (datetime.now() - timedelta(days=2)).strftime("%Y-%m-%d")
+            recent_file = os.path.join(audits_dir, f"{two_days_ago}_dual_vendor_aspice_audit.md")
+            with open(recent_file, "w", encoding="utf-8") as f:
+                f.write("# Audit")
+            self.assertFalse(jira_util.is_weekly_aspice_audit_overdue(audits_dir=audits_dir, days_threshold=7))
+
+            # 3. Old audit (10 days ago) -> overdue
+            os.remove(recent_file)
+            ten_days_ago = (datetime.now() - timedelta(days=10)).strftime("%Y-%m-%d")
+            with open(os.path.join(audits_dir, f"{ten_days_ago}_dual_vendor_aspice_audit.md"), "w", encoding="utf-8") as f:
+                f.write("# Audit")
+            self.assertTrue(jira_util.is_weekly_aspice_audit_overdue(audits_dir=audits_dir, days_threshold=7))
+
+    @patch("jira_util.create_issue", return_value="ATT-9201")
+    @patch("jira_util.paged_jql_search", return_value=[])
+    @patch("jira_util.get_config", return_value={"JIRA_URL": "https://example.atlassian.net"})
+    def test_ensure_weekly_aspice_audit_creates_and_deduplicates(self, mock_config, mock_search, mock_create):
+        """TST-PRO-096.3: Automated weekly ASPICE audit ticket creates when overdue and reuses when open."""
+        with patch("jira_util.is_weekly_aspice_audit_overdue", return_value=True):
+            key1 = jira_util.ensure_weekly_aspice_audit_ticket(role="coordinator")
+            self.assertEqual(key1, "ATT-9201")
+            mock_create.assert_called_once()
+            self.assertTrue(mock_create.call_args[1].get("rank_top"))
+            self.assertEqual(mock_create.call_args[1].get("parent_key"), "ATT-232")
+
+        # Deduplication test: when already open
+        mock_create.reset_mock()
+        mock_search.return_value = [
+            {"key": "ATT-9201", "fields": {"summary": "Weekly Dual-Vendor Gemini and Claude ASPICE 4.0 Cross-Audit (2026-KW46)", "status": {"name": "Zu erledigen"}}}
+        ]
+        key2 = jira_util.ensure_weekly_aspice_audit_ticket(role="coordinator")
+        self.assertEqual(key2, "ATT-9201")
+        mock_create.assert_not_called()
+
+    @patch("jira_util.ensure_weekly_aspice_audit_ticket", return_value="ATT-9201")
+    @patch("jira_util.ensure_weekly_review_ticket", return_value="ATT-9200")
+    def test_ensure_weekly_reviews_coordinates_both_pillars(self, mock_review, mock_audit):
+        """TST-PRO-096.3: ensure_weekly_reviews dispatches both code review and ASPICE audit tickets."""
+        res = jira_util.ensure_weekly_reviews(role="coordinator", force=True)
+        self.assertEqual(res, {"code_review": "ATT-9200", "aspice_audit": "ATT-9201"})
+        mock_review.assert_called_once_with(role="coordinator", force=True)
+        mock_audit.assert_called_once_with(role="coordinator", force=True)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -3165,3 +3165,20 @@
   3. *Weekly Review Ticket Creation & Deduplication Test (`tools/test_jira_accounts.py`)*: Mock Jira API and verify `ensure_weekly_review_ticket()` creates a ticket with `rank_top=True` under `ATT-232` when overdue and skips creation when an active review ticket already exists.
   4. *Governance Documentation & Policy Grounding Review*: Verify policy alignment across `docs/coding_standards.md`, `.agents/rules/aspice_governance.md`, `sprint-planner/SKILL.md`, and `release-manager/SKILL.md`.
   5. *Living Documentation Master Parity*: Run `python3 tools/verify_requirement_governance.py` confirming 100% parity across `docs/requirements.md` and `docs/tests.md`.
+
+
+---
+
+### TST-PRO-096: **ASPICE 4.0 SUP.1 QA Governance, Audit Evidence Store, and Automation Verification** [Verified]
+- **Verifies**: `REQ-PRO-096`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Component**: `docs/management/qa_plan.md`, `tools/jira_util.py`, `tools/test_jira_accounts.py`, `tools/verify_requirement_governance.py`, `tools/test_verify_requirement_governance.py`, `docs/engineering/aspice_audits/`
+- **Jira**: `ATT-8212`
+- **Test Description**:
+  1. *Canonical Directory Registration Test (`tools/test_verify_requirement_governance.py`)*: Assert `aspice_audits` is recognized in `ALLOWED_ENGINEERING_ENTRIES` and `verify_canonical_engineering_entries()` passes with `docs/engineering/aspice_audits/` present.
+  2. *ASPICE Audit Currency & Overdue Check Test (`tools/test_jira_accounts.py`)*: Assert `is_weekly_aspice_audit_overdue()` correctly evaluates elapsed days against records in `docs/engineering/aspice_audits/`.
+  3. *Weekly ASPICE Audit Ticket Creation & Deduplication Test (`tools/test_jira_accounts.py`)*: Mock Jira API and verify `ensure_weekly_aspice_audit_ticket()` creates a ticket with `rank_top=True` under `ATT-232` when overdue and skips creation when an active ticket already exists.
+  4. *SUP.1 QA Plan Governance & Release Gate Review*: Verify alignment across `docs/management/qa_plan.md`, `cm_plan.md`, `sprint-planner/SKILL.md`, and `release-manager/SKILL.md`.
+  5. *Living Documentation Parity*: Run `python3 tools/verify_requirement_governance.py` confirming 100% parity across `docs/requirements.md` and `docs/tests.md`.

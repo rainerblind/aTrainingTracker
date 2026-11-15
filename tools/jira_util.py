@@ -2660,6 +2660,106 @@ def ensure_weekly_review_ticket(role="coordinator", force=False):
     return new_key
 
 
+def is_weekly_aspice_audit_overdue(audits_dir=None, days_threshold=7, repo_root=None):
+    """
+    REQ-PRO-096.3 / REQ-PRO-096.4:
+    Returns True if more than days_threshold days have elapsed since the latest
+    completed audit in docs/engineering/aspice_audits/ or if no completed audit exists.
+    """
+    if repo_root is None:
+        repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    if audits_dir is None:
+        audits_dir = os.path.join(repo_root, "docs", "engineering", "aspice_audits")
+
+    if not os.path.isdir(audits_dir):
+        return True
+
+    audit_files = [
+        f for f in os.listdir(audits_dir)
+        if f.endswith("_dual_vendor_aspice_audit.md") and not f.startswith("template_")
+    ]
+    if not audit_files:
+        return True
+
+    latest_date = None
+    for f in audit_files:
+        m = re.match(r"^(\d{4}-\d{2}-\d{2})_", f)
+        if m:
+            try:
+                dt = datetime.strptime(m.group(1), "%Y-%m-%d")
+                if latest_date is None or dt > latest_date:
+                    latest_date = dt
+            except Exception:
+                pass
+
+    if latest_date is None:
+        return True
+
+    elapsed = (datetime.now() - latest_date).days
+    return elapsed >= days_threshold
+
+
+def ensure_weekly_aspice_audit_ticket(role="coordinator", force=False):
+    """
+    REQ-PRO-096.3:
+    Ensures one open Weekly Dual-Vendor (Gemini + Claude) ASPICE 4.0 Audit ticket exists
+    under Epic ATT-232, ranked at rank-top.
+    """
+    config = get_config()
+    jql = 'project = ATT AND parent = ATT-232 AND status != "Erledigt" AND (summary ~ "Weekly Dual-Vendor" OR summary ~ "ASPICE 4.0 Audit") ORDER BY created DESC'
+    existing = paged_jql_search(jql, ["summary", "status", "labels"], role=role, config=config)
+    for issue in existing:
+        summary = issue.get("fields", {}).get("summary", "")
+        if "dual-vendor" in summary.lower() and "aspice" in summary.lower():
+            status = issue.get("fields", {}).get("status", {}).get("name", "Unknown")
+            print(f"Weekly Dual-Vendor ASPICE Audit ticket already open: {issue['key']} — {summary} [{status}]")
+            return issue["key"]
+
+    if not force and not is_weekly_aspice_audit_overdue():
+        print("Weekly Dual-Vendor ASPICE Audit is not overdue (< 7 days).")
+        return None
+
+    iso_year, iso_week, _ = datetime.now().isocalendar()
+    week_label = f"{iso_year}-KW{iso_week:02d}"
+    summary = f"Weekly Dual-Vendor Gemini and Claude ASPICE 4.0 Cross-Audit ({week_label})"
+    desc = (
+        f"h2. Mandatory Weekly Dual-Vendor ASPICE 4.0 Cross-Audit ({week_label})\n"
+        f"*Cadence*: Weekly dual-vendor ASPICE 4.0 process and evidence cross-audit (REQ-PRO-096 / ATT-8212).\n"
+        f"*Dual AI Vendors*: Google Gemini (Gemini 2.5 Pro / Gemini 4 Carbon) + Anthropic Claude (Claude 3.7 Sonnet).\n\n"
+        "h3. Audit Scope & Protocol (SUP.1 / GP 2.1.6)\n"
+        "1. Independent cross-vendor compliance evaluation across ASPICE VDA processes (SWE.1–SWE.6, SUP.1, SUP.8, SUP.9, SUP.10, MAN.3).\n"
+        "2. Verification of quality gate records (Gates 1–5), First-Time Pass Rate (FTPR) integrity, and role separation.\n"
+        "3. Traceability verification between System and Software requirements (SYS.2 <-> SYS.3).\n"
+        f"4. Reconcile findings into docs/engineering/aspice_audits/{datetime.now().strftime('%Y-%m-%d')}_dual_vendor_aspice_audit.md.\n"
+        "5. File discovered defects or process non-conformances as Jira tickets under Epic ATT-232 / ATT-8138.\n"
+    )
+    new_key = create_issue(
+        summary=summary,
+        description=desc,
+        issuetype_id="Verbesserung",
+        parent_key="ATT-232",
+        role=role,
+        add_to_sprint=False,
+        labels=["process", "aspice-audit", "dual-vendor", "weekly-review"],
+        rank_top=True,
+        points=2.0,
+    )
+    print(f"Created Weekly Dual-Vendor ASPICE Audit ticket {new_key} ({week_label}) ranked at top of backlog.")
+    return new_key
+
+
+def ensure_weekly_reviews(role="coordinator", force=False):
+    """
+    REQ-PRO-095.3 / REQ-PRO-096.3:
+    Coordinates both weekly dual-vendor pillars:
+    1. Weekly Dual-Vendor Code Review ticket (ATT-8213)
+    2. Weekly Dual-Vendor ASPICE 4.0 Audit ticket (ATT-8212)
+    """
+    code_review_key = ensure_weekly_review_ticket(role=role, force=force)
+    aspice_audit_key = ensure_weekly_aspice_audit_ticket(role=role, force=force)
+    return {"code_review": code_review_key, "aspice_audit": aspice_audit_key}
+
+
 def collect_sprint_metrics_for_id(sprint_id, sprint_name, board_id, role="coordinator"):
     config = get_config()
     base = config['JIRA_URL'].rstrip('/')
@@ -3750,7 +3850,7 @@ if __name__ == "__main__":
         ensure_weekly_retro_ticket(role=active_role)
     elif cmd in ("ensure-weekly-reviews", "ensure_weekly_reviews", "ensure-weekly-review", "ensure_weekly_review"):
         force = "--force" in remaining_argv
-        ensure_weekly_review_ticket(role=active_role, force=force)
+        ensure_weekly_reviews(role=active_role, force=force)
     elif cmd in ("add-label", "add_label") and len(remaining_argv) == 3:
         add_label(remaining_argv[1], remaining_argv[2], role=active_role)
     elif cmd in ("pack-sprint", "pack_sprint") and len(remaining_argv) >= 2:
