@@ -57,10 +57,12 @@ import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomShe
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 
 /**
- * Modal quick-switch sheet for Garmin Varia BLE radar tail light mode selection and audio snooze (REQ-CON-031.3, REQ-TRK-064.1).
+ * Modal quick-switch sheet for Garmin Varia BLE radar tail light mode selection
+ * and audio snooze (REQ-CON-031.3, REQ-TRK-064.1).
  *
- * Triggered by tapping the top status badge on [RadarEdgeOverlay]. Dynamically prunes flashing
- * modes when StVZO-compliant hardware is connected, and provides 1-tap audio snooze actions across all radar devices.
+ * Triggered by tapping the top status badge on [RadarEdgeOverlay]. Dynamically prunes
+ * flashing modes when StVZO-compliant hardware is connected, and provides 1-tap audio snooze
+ * actions across all radar devices.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -98,6 +100,7 @@ fun RadarLightQuickSwitchSheet(
             snoozeState = snoozeState,
             onModeSelected = onModeSelected,
             onAutoSelected = onAutoSelected,
+            onSnoozeSelected = onSnoozeSelected,
             onResumeAudio = onResumeAudio,
             onDismiss = onDismiss
         )
@@ -107,6 +110,7 @@ fun RadarLightQuickSwitchSheet(
 /**
  * Visual content for [RadarLightQuickSwitchSheet] (REQ-CON-031.3).
  */
+@Suppress("LongMethod")
 @Composable
 fun RadarLightQuickSwitchSheetContent(
     currentMode: RadarLightMode,
@@ -322,7 +326,11 @@ private fun RadarLightQuickSwitchSheetPreviewLight() {
     }
 }
 
-@Preview(name = "RadarLightQuickSwitchSheet - Dark", uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES, showBackground = true)
+@Preview(
+    name = "RadarLightQuickSwitchSheet - Dark",
+    uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES,
+    showBackground = true
+)
 @Composable
 private fun RadarLightQuickSwitchSheetPreviewDark() {
     MaterialTheme {
