@@ -21,16 +21,30 @@
 package com.atrainingtracker.trainingtracker.tracker
 
 import android.app.Notification
+import android.app.Service
 import android.content.Context
+import android.content.ContextWrapper
 import android.content.Intent
+import android.content.ServiceConnection
 import android.util.Log
+import androidx.preference.PreferenceManager
 import androidx.test.core.app.ApplicationProvider
 import com.atrainingtracker.banalservice.BANALService
+import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineController
+import com.atrainingtracker.banalservice.devices.radar.RadarLightController
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.TrackingMode
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrRepository
+import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
+import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
+import com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepository
+import com.atrainingtracker.trainingtracker.repositories.SportTypesRepository
 import com.atrainingtracker.trainingtracker.tracker.TrackerService.ResumedWorkoutState
 import com.atrainingtracker.trainingtracker.tracker.TrackerService.StartType
+import com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseManager
+import com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseState
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import io.mockk.*
 import org.junit.After
@@ -43,6 +57,7 @@ import java.lang.reflect.Field
 import java.lang.reflect.Method
 import java.util.concurrent.AbstractExecutorService
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 
 /**
@@ -67,6 +82,10 @@ class TrackerServiceCrashRecoveryCharacterisationTest {
         override fun hasBackgroundLocationPermission(): Boolean = true
         override fun hasLocationPermission(): Boolean = true
         override fun createNewWorkout(): Long = 999L
+        override fun bindService(service: Intent, conn: ServiceConnection, flags: Int): Boolean = true
+        override fun registerTransientReceivers() {}
+        override fun unregisterTransientReceivers() {}
+        override fun acquireWakeLock() {}
 
         override fun showTrackingInterruptedNotification() {
             interruptedNotificationShown = true
@@ -90,6 +109,10 @@ class TrackerServiceCrashRecoveryCharacterisationTest {
                 sentBroadcasts.add(intent)
             }
         }
+
+        fun callHandleTrackingAborted() {
+            super.handleTrackingAborted()
+        }
     }
 
     private class DirectExecutorService : AbstractExecutorService() {
@@ -105,6 +128,11 @@ class TrackerServiceCrashRecoveryCharacterisationTest {
     private lateinit var context: Context
     private lateinit var service: TestableTrackerService
     private lateinit var mockWorkoutRepo: WorkoutRepository
+    private lateinit var mockSportTypesRepo: SportTypesRepository
+    private lateinit var mockDeviceDataRepo: DeviceDataRepository
+    private lateinit var mockKnownLocationsRepo: KnownLocationsRepository
+    private lateinit var mockWorkoutRrRepo: WorkoutRrRepository
+    private lateinit var mockTrainingApplication: TrainingApplication
     private lateinit var directExecutor: DirectExecutorService
 
     companion object {
@@ -112,9 +140,65 @@ class TrackerServiceCrashRecoveryCharacterisationTest {
         private const val VALID_BASE_FILE_NAME = "2026-11-15_100000"
     }
 
+    private fun createPreparedService(): TestableTrackerService {
+        val instance = TestableTrackerService()
+        val attachMethod: Method = ContextWrapper::class.java.getDeclaredMethod("attachBaseContext", Context::class.java)
+        attachMethod.isAccessible = true
+        attachMethod.invoke(instance, context)
+
+        val dbExecutorField: Field = TrackerService::class.java.getDeclaredField("mDbExecutor")
+        dbExecutorField.isAccessible = true
+        dbExecutorField.set(instance, directExecutor)
+
+        val rrExecutorField: Field = TrackerService::class.java.getDeclaredField("mRrFlushExecutor")
+        rrExecutorField.isAccessible = true
+        rrExecutorField.set(instance, directExecutor)
+
+        val schedulerField: Field = TrackerService::class.java.getDeclaredField("mScheduler")
+        schedulerField.isAccessible = true
+        schedulerField.set(instance, mockk<ScheduledExecutorService>(relaxed = true))
+
+        val appRefField: Field = TrackerService::class.java.getDeclaredField("mTrainingApplication")
+        appRefField.isAccessible = true
+        appRefField.set(instance, mockTrainingApplication)
+
+        val sportRepoField: Field = TrackerService::class.java.getDeclaredField("mSportTypesRepository")
+        sportRepoField.isAccessible = true
+        sportRepoField.set(instance, mockSportTypesRepo)
+
+        val deviceRepoField: Field = TrackerService::class.java.getDeclaredField("mDeviceDataRepository")
+        deviceRepoField.isAccessible = true
+        deviceRepoField.set(instance, mockDeviceDataRepo)
+
+        val knownLocRepoField: Field = TrackerService::class.java.getDeclaredField("mKnownLocationsRepository")
+        knownLocRepoField.isAccessible = true
+        knownLocRepoField.set(instance, mockKnownLocationsRepo)
+
+        val rrRepoField: Field = TrackerService::class.java.getDeclaredField("mWorkoutRrRepository")
+        rrRepoField.isAccessible = true
+        rrRepoField.set(instance, mockWorkoutRrRepo)
+
+        val tableInitFutureField: Field = TrackerService::class.java.getDeclaredField("mTableInitializationFuture")
+        tableInitFutureField.isAccessible = true
+        tableInitFutureField.set(instance, CompletableFuture<Void>())
+
+        return instance
+    }
+
     @Before
     fun setUp() {
         context = ApplicationProvider.getApplicationContext()
+
+        val appContextField = TrainingApplication::class.java.getDeclaredField("cAppContext")
+        appContextField.isAccessible = true
+        appContextField.set(null, context)
+
+        val prefField = TrainingApplication::class.java.getDeclaredField("cSharedPreferences")
+        prefField.isAccessible = true
+        prefField.set(null, PreferenceManager.getDefaultSharedPreferences(context))
+
+        TrainingApplication.setAutoPaused(false, context)
+        TrainingApplication.setManualPauseLock(false, context)
 
         mockkStatic(Log::class)
         every { Log.d(any<String>(), any<String>()) } returns 0
@@ -129,33 +213,55 @@ class TrackerServiceCrashRecoveryCharacterisationTest {
         every { BANALService.setInitialSensorValue(any<SensorType>(), any<Double>()) } returns Unit
         every { BANALService.checkOrInitializeLocationDevices() } returns Unit
         every { BANALService.isSearching() } returns false
+        every { BANALService.setStaticIndoorMode(any()) } returns Unit
+
+        RadarLightController.reset()
+
+        mockkStatic(PolarH10OfflineController::class)
+        every { PolarH10OfflineController.setSessionStartTimeMs(any()) } returns Unit
+        every { PolarH10OfflineController.onWorkoutStarted(any()) } returns Unit
 
         mockWorkoutRepo = mockk(relaxed = true)
         WorkoutRepository.resetForTesting(mockWorkoutRepo)
+        BANALServiceRepository.resetForTesting(mockk(relaxed = true))
 
-        service = TestableTrackerService()
+        mockSportTypesRepo = mockk(relaxed = true)
+        every { mockSportTypesRepo.getBSportType(any()) } returns BSportType.BIKE
+        every { mockSportTypesRepo.isIndoorSportType(any()) } returns false
+        mockDeviceDataRepo = mockk(relaxed = true)
+        mockKnownLocationsRepo = mockk(relaxed = true)
+        mockWorkoutRrRepo = mockk(relaxed = true)
+        mockTrainingApplication = mockk(relaxed = true)
 
         directExecutor = DirectExecutorService()
-        val dbExecutorField: Field = TrackerService::class.java.getDeclaredField("mDbExecutor")
-        dbExecutorField.isAccessible = true
-        dbExecutorField.set(service, directExecutor)
-
-        val tableInitFutureField: Field = TrackerService::class.java.getDeclaredField("mTableInitializationFuture")
-        tableInitFutureField.isAccessible = true
-        tableInitFutureField.set(service, CompletableFuture<Void>())
+        service = createPreparedService()
     }
 
     @After
     fun tearDown() {
+        RadarLightController.reset()
+        BANALServiceRepository.resetForTesting(null)
         WorkoutRepository.resetForTesting(null)
-        unmockkAll()
+        TrainingApplication.setAutoPaused(false, context)
+        TrainingApplication.setManualPauseLock(false, context)
         TrainingApplication.setTrackingModeForTesting(TrackingMode.READY)
+
+        val appContextField = TrainingApplication::class.java.getDeclaredField("cAppContext")
+        appContextField.isAccessible = true
+        appContextField.set(null, null)
+
+        val prefField = TrainingApplication::class.java.getDeclaredField("cSharedPreferences")
+        prefField.isAccessible = true
+        prefField.set(null, null)
+
+        unmockkAll()
     }
 
     /**
-     * Characterisation Test 1: StartType Invariants Across Startup Recovery Tiers
-     * Asserts that START_NORMAL leaves mWorkoutStartLocationRecorded=false while
-     * RESUME_BY_USER and RESUME_SERVICE_RECREATION set it to true.
+     * Characterisation Test 1: StartType & 3-Tier Recovery Invariants via Genuine onStartCommand()
+     * Invokes TrackerService.onStartCommand() across RESUME_BY_USER, START_NORMAL, and
+     * OS service recreation (intent == null) and asserts that production onStartCommand() resolves
+     * mStartType, mWorkoutStartLocationRecorded, and the 3-tier AutoPauseState recovery hierarchy.
      */
     @Test
     fun testStartTypeInvariants_acrossStartupTiers() {
@@ -165,20 +271,54 @@ class TrackerServiceCrashRecoveryCharacterisationTest {
         val recordedField: Field = TrackerService::class.java.getDeclaredField("mWorkoutStartLocationRecorded")
         recordedField.isAccessible = true
 
-        // Tier 1: START_NORMAL
-        startTypeField.set(service, StartType.START_NORMAL)
-        recordedField.set(service, false)
+        val autoPauseManagerField: Field = TrackerService::class.java.getDeclaredField("mAutoPauseManager")
+        autoPauseManagerField.isAccessible = true
+
+        // Tier 2: RESUME_BY_USER -> mWorkoutStartLocationRecorded flips from default false to true
+        val resumeIntent = Intent(context, TrackerService::class.java).apply {
+            putExtra(TrackerService.START_TYPE, StartType.RESUME_BY_USER.name)
+        }
+        assertEquals(Service.START_STICKY, service.onStartCommand(resumeIntent, 0, 1))
+        assertEquals(StartType.RESUME_BY_USER, startTypeField.get(service))
+        assertTrue(recordedField.get(service) as Boolean)
+
+        // Tier 1: START_NORMAL on the same instance -> mWorkoutStartLocationRecorded resets to false
+        val normalIntent = Intent(context, TrackerService::class.java).apply {
+            putExtra(TrackerService.START_TYPE, StartType.START_NORMAL.name)
+        }
+        assertEquals(Service.START_STICKY, service.onStartCommand(normalIntent, 0, 2))
+        assertEquals(StartType.START_NORMAL, startTypeField.get(service))
         assertFalse(recordedField.get(service) as Boolean)
+        assertEquals(999L, service.notifiedWorkoutId)
+        verify(exactly = 1) { mockWorkoutRepo.createSamplesTable(any(), any()) }
 
-        // Tier 2: RESUME_BY_USER
-        startTypeField.set(service, StartType.RESUME_BY_USER)
-        recordedField.set(service, true)
-        assertTrue(recordedField.get(service) as Boolean)
+        // Tier 3 (intent == null): OS Service Recreation -> RESUME_SERVICE_RECREATION & recorded=true
+        // Sub-tier 3a: MANUAL_PAUSED takes highest precedence
+        TrainingApplication.setManualPauseLock(true, context)
+        TrainingApplication.setAutoPaused(true, context)
+        val tier1Service = createPreparedService()
+        assertEquals(Service.START_STICKY, tier1Service.onStartCommand(null, 0, 3))
+        assertEquals(StartType.RESUME_SERVICE_RECREATION, startTypeField.get(tier1Service))
+        assertTrue(recordedField.get(tier1Service) as Boolean)
+        assertEquals(AutoPauseState.MANUAL_PAUSED, (autoPauseManagerField.get(tier1Service) as AutoPauseManager).currentState)
 
-        // Tier 3: RESUME_SERVICE_RECREATION
-        startTypeField.set(service, StartType.RESUME_SERVICE_RECREATION)
-        recordedField.set(service, true)
-        assertTrue(recordedField.get(service) as Boolean)
+        // Sub-tier 3b: AUTO_PAUSED when manualPauseLocked == false
+        TrainingApplication.setManualPauseLock(false, context)
+        TrainingApplication.setAutoPaused(true, context)
+        val tier2Service = createPreparedService()
+        assertEquals(Service.START_STICKY, tier2Service.onStartCommand(null, 0, 4))
+        assertEquals(StartType.RESUME_SERVICE_RECREATION, startTypeField.get(tier2Service))
+        assertTrue(recordedField.get(tier2Service) as Boolean)
+        assertEquals(AutoPauseState.AUTO_PAUSED, (autoPauseManagerField.get(tier2Service) as AutoPauseManager).currentState)
+
+        // Sub-tier 3c: TRACKING when neither manualPauseLocked nor autoPaused
+        TrainingApplication.setManualPauseLock(false, context)
+        TrainingApplication.setAutoPaused(false, context)
+        val tier3Service = createPreparedService()
+        assertEquals(Service.START_STICKY, tier3Service.onStartCommand(null, 0, 5))
+        assertEquals(StartType.RESUME_SERVICE_RECREATION, startTypeField.get(tier3Service))
+        assertTrue(recordedField.get(tier3Service) as Boolean)
+        assertEquals(AutoPauseState.TRACKING, (autoPauseManagerField.get(tier3Service) as AutoPauseManager).currentState)
     }
 
     /**
@@ -278,20 +418,27 @@ class TrackerServiceCrashRecoveryCharacterisationTest {
 
     /**
      * Characterisation Test 5: Tracking Abort State Invariants
-     * Asserts that resetTrackingStateOnAbort() and onTrackingAborted() cleanly reset
-     * TrackingMode to READY, active workout ID to -1, and clear pause/autopause flags.
+     * Invokes genuine TrackerService.handleTrackingAborted() and asserts that TrackingMode resets
+     * to READY, pause/autopause flags clear, TrainingApplication.onTrackingAborted() runs, and
+     * TRACKING_ABORTED_INTENT is broadcast.
      */
     @Test
     fun testTrackingAbort_resetsApplicationStateInvariants() {
         TrainingApplication.setTrackingModeForTesting(TrackingMode.TRACKING)
+        TrainingApplication.setAutoPaused(true, context)
         assertEquals(TrackingMode.TRACKING, TrainingApplication.getTrackingMode())
 
-        TrainingApplication.resetTrackingStateOnAbort()
+        service.callHandleTrackingAborted()
 
         assertEquals(TrackingMode.READY, TrainingApplication.getTrackingMode())
         assertTrue(TrainingApplication.isPaused()) // Invariant: READY is not TRACKING, so isPaused() == true
         assertFalse(TrainingApplication.isTracking())
         assertFalse(TrainingApplication.isAutoPaused())
         assertFalse(TrainingApplication.isManualPauseLocked())
+        verify(exactly = 1) { mockTrainingApplication.onTrackingAborted() }
+        assertTrue(
+            "handleTrackingAborted() must broadcast TRACKING_ABORTED_INTENT",
+            service.sentBroadcasts.any { it.action == TrackerService.TRACKING_ABORTED_INTENT }
+        )
     }
 }
