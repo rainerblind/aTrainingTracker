@@ -53,6 +53,8 @@ ROLE_ACCOUNT_IDS = {
 }
 
 STORY_POINTS_FIELD = "customfield_10016"
+PO_RELEASED_QUEUE_SPRINT_ID = 447
+PO_RELEASED_QUEUE_NAME = "Vom PO Freigegeben"
 
 DEFAULT_CONFIG_LOCATIONS = [
     os.path.join(os.path.dirname(__file__), "hoechstmass", "hoechstmass_config.json"),
@@ -438,7 +440,11 @@ def resolve_active_sprint(board_id, role="agent1"):
     sprints = jira_request(f"{config['JIRA_URL']}/rest/agile/1.0/board/{board_id}/sprint?state=active", role=role)["values"]
     if not sprints:
         return None
-    dev_sprints = [s for s in sprints if s.get("name", "").strip().lower() != "human review"]
+    dev_sprints = [
+        s for s in sprints
+        if s.get("name", "").strip().lower() not in ("human review", PO_RELEASED_QUEUE_NAME.lower())
+        and s.get("id") != PO_RELEASED_QUEUE_SPRINT_ID
+    ]
     if dev_sprints:
         dev_sprints.sort(key=lambda s: s.get("id", 0), reverse=True)
         return dev_sprints[0]
@@ -2120,6 +2126,9 @@ def add_to_active_sprint(issue_key, role="agent1"):
         print("No active sprint found.")
         return
     sprint_id = active_sprint["id"]
+    if int(sprint_id) == PO_RELEASED_QUEUE_SPRINT_ID:
+        print(f"Error: Refusing to add {issue_key} to protected queue '{PO_RELEASED_QUEUE_NAME}' (ID {PO_RELEASED_QUEUE_SPRINT_ID}).", file=sys.stderr)
+        sys.exit(1)
     url = f"{config['JIRA_URL']}/rest/agile/1.0/sprint/{sprint_id}/issue"
     payload = {"issues": [issue_key]}
     jira_request(url, method="POST", payload=payload, role=role)
@@ -2235,6 +2244,267 @@ def ensure_retro_ticket(role="agent1"):
     )
     update_issue_description(new_key, final_desc, role=role)
     print(f"Created Review & Retro ticket {new_key} for {display_sprint} (id {sprint_id}).")
+    return new_key
+
+
+def add_label(issue_key, labels_to_add, role="coordinator"):
+    """Appends one or more labels to an issue idempotently without removing existing labels."""
+    if isinstance(labels_to_add, str):
+        parsed = [x.strip() for x in labels_to_add.split(",") if x.strip()]
+    else:
+        parsed = [str(x).strip() for x in labels_to_add if str(x).strip()]
+    if not parsed:
+        print("Error: At least one non-empty label is required.", file=sys.stderr)
+        sys.exit(1)
+    config = get_config()
+    base = config['JIRA_URL'].rstrip('/')
+    issue = jira_request(f"{base}/rest/api/2/issue/{issue_key}?fields=labels", role=role)
+    existing = list(issue.get("fields", {}).get("labels") or [])
+    merged = list(existing)
+    added = []
+    for lbl in parsed:
+        if lbl not in merged:
+            merged.append(lbl)
+            added.append(lbl)
+    if not added:
+        print(f"{issue_key} already has label(s): {', '.join(parsed)}.")
+        return existing
+    jira_request(
+        f"{base}/rest/api/2/issue/{issue_key}",
+        method="PUT",
+        payload={"fields": {"labels": merged}},
+        role=role,
+    )
+    print(f"Added label(s) {', '.join(added)} to {issue_key}.")
+    return merged
+
+
+def _is_po_queue_sprint(sprint_id=None, sprint_name=None):
+    if sprint_id is not None:
+        try:
+            if int(sprint_id) == PO_RELEASED_QUEUE_SPRINT_ID:
+                return True
+        except (ValueError, TypeError):
+            pass
+    if sprint_name and str(sprint_name).strip().lower() == PO_RELEASED_QUEUE_NAME.lower():
+        return True
+    return False
+
+
+def move_issues_to_sprint_guarded(target_sprint_id, issue_keys, role="coordinator", cutoff_return=False, source_sprint_id=None):
+    """
+    Moves issues between sprints under ATT-8030 / SUP.10.BP4 tamper protection:
+    - 'agent1' and 'agent2' cannot modify sprint memberships manually.
+    - Agents/Coordinator MUST NEVER promote backlog issues into 'Vom PO Freigegeben' (ID 447).
+    - Coordinator may ONLY move into ID 447 during the 03:25/15:25 start-cutoff (`cutoff_return=True`)
+      when returning untouched 'Zu erledigen' issues that belonged to `source_sprint_id != 447`.
+    """
+    if role in ("agent1", "agent2"):
+        print("Error: agent1/agent2 cannot assign or move tickets across sprints; only coordinator/human operations are permitted.", file=sys.stderr)
+        sys.exit(1)
+    if not issue_keys:
+        return []
+    target_id_int = int(target_sprint_id)
+    if target_id_int == PO_RELEASED_QUEUE_SPRINT_ID:
+        if not cutoff_return or role != "coordinator" or not source_sprint_id or int(source_sprint_id) == PO_RELEASED_QUEUE_SPRINT_ID:
+            print(
+                f"Error: Adding Backlog tickets into '{PO_RELEASED_QUEUE_NAME}' (ID {PO_RELEASED_QUEUE_SPRINT_ID}) "
+                "is strictly forbidden for AI agents (ATT-8030 Three-Tier Board Guard).",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+    config = get_config()
+    base = config['JIRA_URL'].rstrip('/')
+    jira_request(
+        f"{base}/rest/agile/1.0/sprint/{target_id_int}/issue",
+        method="POST",
+        payload={"issues": list(issue_keys)},
+        role=role,
+    )
+    print(f"Moved {len(issue_keys)} issue(s) to sprint {target_id_int}: {', '.join(issue_keys)}")
+    return list(issue_keys)
+
+
+def select_greedy_bin_pack_tickets(ranked_issues, max_lanes=3):
+    """
+    Multi-Lane Greedy Bin-Packing (ATT-8030):
+    Iterates ranked issues in strict ORDER BY rank ASC (never top[:X]) and picks up to `max_lanes`
+    non-subtask tickets from completely disjoint Parent Epics in `Zu erledigen`.
+    Issues without an explicit Parent Epic use their own key as a synthetic lane group so unrelated
+    standalone items never collide with named Epics.
+    """
+    selected = []
+    seen_epics = set()
+    for issue in ranked_issues:
+        fields = issue.get("fields", {})
+        itype = fields.get("issuetype", {}).get("name", "").lower()
+        if itype in ("sub-task", "subtask"):
+            continue
+        summary = fields.get("summary", "")
+        if "review & retro" in summary.lower():
+            continue
+        status_name = fields.get("status", {}).get("name", "").strip().lower()
+        if status_name != "zu erledigen":
+            continue
+        parent_obj = fields.get("parent") or {}
+        epic_key = parent_obj.get("key") or f"__NO_EPIC__:{issue.get('key')}"
+        if epic_key in seen_epics:
+            continue
+        seen_epics.add(epic_key)
+        selected.append(issue)
+        if len(selected) >= max_lanes:
+            break
+    return selected
+
+
+def pack_sprint_from_po_queue(target_sprint_id, max_lanes=3, role="coordinator"):
+    """Pulls PO-approved tickets out of 'Vom PO Freigegeben' (ID 447) into target sprint via greedy bin-packing."""
+    if role != "coordinator":
+        print("Error: pack-sprint is restricted to '--as coordinator'.", file=sys.stderr)
+        sys.exit(1)
+    if int(target_sprint_id) == PO_RELEASED_QUEUE_SPRINT_ID:
+        print(f"Error: Target sprint cannot be '{PO_RELEASED_QUEUE_NAME}' (ID {PO_RELEASED_QUEUE_SPRINT_ID}).", file=sys.stderr)
+        sys.exit(1)
+    config = get_config()
+    base = config['JIRA_URL'].rstrip('/')
+    jql = f"project = ATT AND sprint = {PO_RELEASED_QUEUE_SPRINT_ID} AND issuetype != Sub-task ORDER BY rank ASC"
+    ranked = paged_jql_search(jql, ["summary", "status", "issuetype", "parent", STORY_POINTS_FIELD], role=role, config=config)
+    chosen = select_greedy_bin_pack_tickets(ranked, max_lanes=max_lanes)
+    keys = [c["key"] for c in chosen]
+    if not keys:
+        print(f"No eligible 'Zu erledigen' tickets found in '{PO_RELEASED_QUEUE_NAME}' (ID {PO_RELEASED_QUEUE_SPRINT_ID}).")
+        return []
+    move_issues_to_sprint_guarded(int(target_sprint_id), keys, role=role)
+    return keys
+
+
+def return_unstarted_to_po_queue(sprint_arg=None, role="coordinator"):
+    """
+    03:25 / 15:25 Start-Cutoff handler (ATT-8030):
+    Moves untouched 'Zu erledigen' regular tickets from the closing sprint cleanly back to the top of
+    'Vom PO Freigegeben' (ID 447) ahead of lower queued items.
+    """
+    if role != "coordinator":
+        print("Error: return-unstarted is restricted to '--as coordinator'.", file=sys.stderr)
+        sys.exit(1)
+    config = get_config()
+    base = config['JIRA_URL'].rstrip('/')
+    boards = jira_request(f"{base}/rest/agile/1.0/board", role=role).get("values", [])
+    if not boards:
+        print("Error: No Agile board found.", file=sys.stderr)
+        sys.exit(1)
+    board_id = boards[0]["id"]
+    target_sprint = resolve_sprint_object(base, board_id, sprint_arg=sprint_arg, role=role)
+    if not target_sprint:
+        print("Error: Source sprint not found.", file=sys.stderr)
+        sys.exit(1)
+    s_id = int(target_sprint["id"])
+    if s_id == PO_RELEASED_QUEUE_SPRINT_ID:
+        print(f"Error: Source sprint cannot be '{PO_RELEASED_QUEUE_NAME}' (ID {PO_RELEASED_QUEUE_SPRINT_ID}).", file=sys.stderr)
+        sys.exit(1)
+    issues = fetch_all_sprint_issues(base, s_id, "summary,status,issuetype", role=role)
+    untouched = []
+    for issue in issues:
+        fields = issue.get("fields", {})
+        if fields.get("issuetype", {}).get("subtask", False):
+            continue
+        summary = fields.get("summary", "")
+        if "review & retro" in summary.lower():
+            continue
+        status_name = fields.get("status", {}).get("name", "").strip().lower()
+        if status_name == "zu erledigen":
+            untouched.append(issue["key"])
+    if not untouched:
+        print(f"No untouched 'Zu erledigen' regular tickets to return from sprint '{target_sprint.get('name')}' (ID {s_id}).")
+        return []
+    # Find current top-ranked item in 447 so returned items stay ahead of queued items
+    existing_po = paged_jql_search(
+        f"project = ATT AND sprint = {PO_RELEASED_QUEUE_SPRINT_ID} AND issuetype != Sub-task ORDER BY rank ASC",
+        ["summary"],
+        role=role,
+        config=config,
+    )
+    top_po_key = next((item["key"] for item in existing_po if item.get("key") not in untouched), None)
+    move_issues_to_sprint_guarded(
+        PO_RELEASED_QUEUE_SPRINT_ID,
+        untouched,
+        role=role,
+        cutoff_return=True,
+        source_sprint_id=s_id,
+    )
+    if top_po_key:
+        try:
+            jira_request(
+                f"{base}/rest/agile/1.0/issue/rank",
+                method="PUT",
+                payload={"issues": untouched, "rankBeforeIssue": top_po_key},
+                role=role,
+            )
+            print(f"Ranked returned tickets before {top_po_key} at top of '{PO_RELEASED_QUEUE_NAME}'.")
+        except Exception as e:
+            print(f"Warning: Could not rank returned tickets before {top_po_key}: {e}", file=sys.stderr)
+    return untouched
+
+
+def swap_future_sprint_keep_po_queue_last(new_future_sprint_id, role="coordinator"):
+    """
+    Keeps permanent pseudo-sprint 'Vom PO Freigegeben' (ID 447) positioned right above Product Backlog
+    by calling /rest/agile/1.0/sprint/{sprintId}/swap with sprintToSwapWith=447 (SUP.10.BP4 / ATT-8030).
+    """
+    if role != "coordinator":
+        print("Error: swap-po-queue is restricted to '--as coordinator'.", file=sys.stderr)
+        sys.exit(1)
+    new_id_int = int(new_future_sprint_id)
+    if new_id_int == PO_RELEASED_QUEUE_SPRINT_ID:
+        print(f"Error: Cannot swap '{PO_RELEASED_QUEUE_NAME}' (ID {PO_RELEASED_QUEUE_SPRINT_ID}) with itself.", file=sys.stderr)
+        sys.exit(1)
+    config = get_config()
+    base = config['JIRA_URL'].rstrip('/')
+    jira_request(
+        f"{base}/rest/agile/1.0/sprint/{new_id_int}/swap",
+        method="POST",
+        payload={"sprintToSwapWith": PO_RELEASED_QUEUE_SPRINT_ID},
+        role=role,
+    )
+    print(f"Swapped future sprint {new_id_int} above '{PO_RELEASED_QUEUE_NAME}' (ID {PO_RELEASED_QUEUE_SPRINT_ID}).")
+    return True
+
+
+def ensure_weekly_retro_ticket(role="coordinator"):
+    """
+    Dual-Ticket Retrospective Model (ATT-8030):
+    Ensures one open rolling 'Wochen Review & Retro' ticket exists under Epic ATT-232
+    to aggregate weekly trends, risk register updates, and skill updates without blocking 12h sprints.
+    """
+    config = get_config()
+    jql = 'project = ATT AND parent = ATT-232 AND status != "Erledigt" AND summary ~ "Wochen Review" ORDER BY created DESC'
+    existing = paged_jql_search(jql, ["summary", "status", "labels"], role=role, config=config)
+    for issue in existing:
+        summary = issue.get("fields", {}).get("summary", "")
+        if re.search(r"^\s*wochen\s+review\s*(?:&|and)\s*retro", summary, re.IGNORECASE):
+            status = issue.get("fields", {}).get("status", {}).get("name", "Unknown")
+            print(f"Rolling Wochen Review & Retro ticket already open: {issue['key']} — {summary} [{status}]")
+            return issue["key"]
+    iso_year, iso_week, _ = datetime.now().isocalendar()
+    week_label = f"{iso_year}-KW{iso_week:02d}"
+    summary = f"Wochen Review & Retro - {week_label}"
+    desc = (
+        f"h2. Rolling Weekly Retrospective ({week_label})\n"
+        "*Cadence*: Weekly human review roll-up across 12h autonomous sprints (ATT-8030 Dual-Ticket Retro).\n"
+        "*Scope*: Weekly SPC control trends (PA 4.2), Risk Register updates, ASPICE skill hardening, and cross-vendor review synthesis.\n"
+    )
+    new_key = create_issue(
+        summary=summary,
+        description=desc,
+        issuetype_id="Verbesserung",
+        parent_key="ATT-232",
+        role=role,
+        add_to_sprint=False,
+        labels=["process", "retro", "weekly-retro"],
+        rank_top=False,
+        points=1.0,
+    )
+    print(f"Created rolling Wochen Review & Retro ticket {new_key} ({week_label}).")
     return new_key
 
 
@@ -3268,6 +3538,11 @@ USAGE_TEXT = (
     "  status KEY                                            Show issue status\n"
     "  search JQL                                            Search issues using JQL\n"
     "  ensure-retro                                          Check/create 'Review & Retro' ticket in the active sprint\n"
+    "  ensure-weekly-retro                                   Check/create rolling 'Wochen Review & Retro' ticket under ATT-232\n"
+    "  add-label KEY LABEL[,LABEL2]                          Append label(s) to an issue idempotently\n"
+    "  pack-sprint TARGET_SPRINT_ID [--lanes N]              Pull disjoint-Epic tickets from Vom PO Freigegeben (447) in rank order\n"
+    "  return-unstarted [SPRINT_ARG]                         Return untouched Zu erledigen sprint tickets to Vom PO Freigegeben (447)\n"
+    "  swap-po-queue FUTURE_SPRINT_ID                        Keep Vom PO Freigegeben (447) positioned right above Product Backlog\n"
     "  check-gate KEY                                        Verify Impl-Plan subtask is Erledigt (Gate 3)\n"
     "  submit-stage PARENT_KEY STAGE TEXT_OR_@FILE [--summary \"...\"]\n"
     "                                                        Create/update stage subtask (1..5) and move to In Überprüfung\n"
@@ -3294,7 +3569,7 @@ USAGE_TEXT = (
     "                                                        Export sprint gate records to docs/engineering/gates/<sprint>.md\n"
     "  qa-audit [--sprint <ID|NAME>] [--sample N] [--out <FILE>]\n"
     "                                                        Sample >= 2 sprint tickets and audit ASPICE process compliance\n"
-    "  record-review [--sprint <ID|NAME>] [--ticket KEY] [--reviewer NAME] [--vendor VENDOR] [--model MODEL] [--version VER] [--scope SCOPE] [--verdict PASS|FAIL] [--findings FINDINGS] [--out FILE]\n"
+    "  record-review [--sprint <ID|NAME>] [--ticket KEY] [--reviewer NAME] [--vendor VENDOR] [--model MODEL] [--version VER] [--scope SCOPE] [--verdict PASS|FAIL|NOT PERFORMED] [--findings FINDINGS] [--out FILE]\n"
     "                                                        Record Human Sprint Review or Cross-Vendor AI Review in docs/engineering/reviews/\n"
     "  create-issue SUMMARY DESC [TYPE_ID|Bug|Feature|Verbesserung] [PARENT_KEY] [--type=...] [--parent=...] [--bottom] [--points=N] [--severity=critical|major|minor|cosmetic]"
 )
@@ -3318,6 +3593,28 @@ if __name__ == "__main__":
         close_epic(remaining_argv[1], role=active_role)
     elif cmd in ("ensure-retro", "ensure_retro"):
         ensure_retro_ticket(role=active_role)
+    elif cmd in ("ensure-weekly-retro", "ensure_weekly_retro"):
+        ensure_weekly_retro_ticket(role=active_role)
+    elif cmd in ("add-label", "add_label") and len(remaining_argv) == 3:
+        add_label(remaining_argv[1], remaining_argv[2], role=active_role)
+    elif cmd in ("pack-sprint", "pack_sprint") and len(remaining_argv) >= 2:
+        t_sprint = remaining_argv[1]
+        max_lanes = 3
+        idx = 2
+        while idx < len(remaining_argv):
+            a = remaining_argv[idx]
+            if a.startswith("--lanes="):
+                max_lanes = int(a.split("=", 1)[1])
+            elif a == "--lanes" and idx + 1 < len(remaining_argv):
+                max_lanes = int(remaining_argv[idx + 1])
+                idx += 1
+            idx += 1
+        pack_sprint_from_po_queue(t_sprint, max_lanes=max_lanes, role=active_role)
+    elif cmd in ("return-unstarted", "return_unstarted"):
+        s_arg = remaining_argv[1] if len(remaining_argv) >= 2 else None
+        return_unstarted_to_po_queue(sprint_arg=s_arg, role=active_role)
+    elif cmd in ("swap-po-queue", "swap_po_queue") and len(remaining_argv) == 2:
+        swap_future_sprint_keep_po_queue_last(remaining_argv[1], role=active_role)
     elif cmd == "show" and len(remaining_argv) == 2:
         show_issue(remaining_argv[1], role=active_role)
     elif cmd in ("set-points", "set_points") and len(remaining_argv) == 3:

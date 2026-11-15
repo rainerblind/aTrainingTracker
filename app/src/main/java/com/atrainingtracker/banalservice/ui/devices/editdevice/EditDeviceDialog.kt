@@ -53,8 +53,10 @@ import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.devices.AttFusedAltitudePreferences
 import com.atrainingtracker.banalservice.devices.AttFusedPreferences
 import com.atrainingtracker.banalservice.devices.DeviceType
+import com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineGattCoordinator
 import com.atrainingtracker.banalservice.devices.radar.RadarLightController
 import com.atrainingtracker.banalservice.devices.radar.RadarLightMode
+import com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulator
 import com.atrainingtracker.banalservice.ui.devices.DeviceStatusRow
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
 import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
@@ -204,7 +206,12 @@ fun EditDeviceDialog(
                     WheelSensorGuidanceCard(onShowGuidance = { showWheelGuidanceDialog = true })
                 }
 
-                // 10. Live Data Preview
+                // 10. Polar H10 & Verity Sense Internal Backup Recording (ATT-7762, ATT-7923, REQ-SET-104, REQ-SET-108)
+                if (data.deviceType == DeviceType.HRM) {
+                    PolarOfflineDeviceSection(data = data, viewModel = viewModel)
+                }
+
+                // 11. Live Data Preview
                 liveData?.let { live ->
                     LivePreviewSection(live)
                 }
@@ -1101,16 +1108,18 @@ private fun AttFusedToggleRow(
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-@Suppress("LongMethod")
+@Suppress("LongMethod", "CyclomaticComplexMethod")
 private fun RadarLightControlSection(
     isConnected: Boolean,
     modifier: Modifier = Modifier
 ) {
     val isLightControlAvailable by RadarLightController.isLightControlAvailable.collectAsStateWithLifecycle()
-    if (!isConnected || !isLightControlAvailable) {
+    val isSimulating by RadarTrafficSimulator.isSimulatingFlow.collectAsStateWithLifecycle()
+    if (!isSimulating && (!isConnected || !isLightControlAvailable)) {
         return
     }
 
+    val isAutoMode by RadarLightController.isAutoMode.collectAsStateWithLifecycle()
     val currentMode by RadarLightController.currentMode.collectAsStateWithLifecycle()
     val isStvzo by RadarLightController.isStvzo.collectAsStateWithLifecycle()
     val availableModes = remember(isStvzo) { RadarLightMode.getAvailableModes(isStvzo) }
@@ -1145,12 +1154,29 @@ private fun RadarLightControlSection(
             SingleChoiceSegmentedButtonRow(
                 modifier = Modifier.fillMaxWidth()
             ) {
+                val totalCount = 1 + availableModes.size
+                SegmentedButton(
+                    selected = isAutoMode,
+                    onClick = { RadarLightController.setAutoMode() },
+                    shape = SegmentedButtonDefaults.itemShape(index = 0, count = totalCount),
+                    icon = {},
+                    modifier = Modifier.testTag("RadarLightMode_AUTO")
+                ) {
+                    Text(
+                        text = stringResource(R.string.radar_light_control_mode_smart),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = if (isAutoMode) FontWeight.Bold else FontWeight.Medium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+
                 availableModes.forEachIndexed { index, mode ->
-                    val isSelected = mode == currentMode
+                    val isSelected = !isAutoMode && mode == currentMode
                     SegmentedButton(
                         selected = isSelected,
                         onClick = { RadarLightController.setManualLightMode(mode) },
-                        shape = SegmentedButtonDefaults.itemShape(index = index, count = availableModes.size),
+                        shape = SegmentedButtonDefaults.itemShape(index = index + 1, count = totalCount),
                         icon = {},
                         modifier = Modifier.testTag("RadarLightMode_${mode.name}")
                     ) {
@@ -1164,9 +1190,67 @@ private fun RadarLightControlSection(
                     }
                 }
             }
+
+            if (isAutoMode) {
+                Text(
+                    text = stringResource(
+                        R.string.radar_light_active_mode_format,
+                        stringResource(currentMode.titleResId)
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 4.dp)
+                )
+            }
         } else {
+            // Automatik Option (REQ-CON-031.3, REQ-CON-031.5)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+                    .clickable { RadarLightController.setAutoMode() }
+                    .padding(horizontal = 12.dp, vertical = 8.dp)
+                    .testTag("RadarLightMode_AUTO"),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(10.dp)
+                        .clip(CircleShape)
+                        .background(TTColor.RadarClearGreen)
+                )
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.radar_light_control_mode_smart),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = if (isAutoMode) FontWeight.Bold else FontWeight.Normal,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    if (isAutoMode) {
+                        Text(
+                            text = stringResource(
+                                R.string.radar_light_active_mode_format,
+                                stringResource(currentMode.titleResId)
+                            ),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                RadioButton(
+                    selected = isAutoMode,
+                    onClick = { RadarLightController.setAutoMode() }
+                )
+            }
+
             availableModes.forEach { mode ->
-                val isSelected = mode == currentMode
+                val isSelected = !isAutoMode && mode == currentMode
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -1285,4 +1369,117 @@ fun shouldShowWheelSensorGuidance(deviceType: DeviceType): Boolean =
     deviceType == DeviceType.BIKE_SPEED ||
     deviceType == DeviceType.BIKE_SPEED_AND_CADENCE ||
     deviceType == DeviceType.SPEED_AND_LOCATION_ATT_FUSED
+
+fun isPolarH10Device(data: DeviceUiData): Boolean {
+    return PolarOfflineGattCoordinator.isPolarH10Name(data.deviceName, data.manufacturer) ||
+        (data.deviceType == DeviceType.HRM && data.deviceName.startsWith("polar h10", ignoreCase = true))
+}
+
+/**
+ * Returns true if [data] identifies a Polar Verity Sense / compatible optical Polar offline HR sensor (ATT-7923).
+ */
+fun isPolarVeritySenseDevice(
+    data: DeviceUiData,
+    context: android.content.Context? = null,
+    macAddress: String? = null
+): Boolean {
+    return PolarOfflineGattCoordinator.isPolarVeritySenseDevice(
+        context = context,
+        name = data.deviceName,
+        manufacturer = data.manufacturer,
+        macAddress = macAddress
+    )
+}
+
+@Composable
+private fun PolarOfflineDeviceSection(data: DeviceUiData, viewModel: EditDeviceViewModel) {
+    val dialogContext = LocalContext.current
+    val isH10 = isPolarH10Device(data)
+    val polarMac = if (!isH10 && data.protocol == Protocol.BLUETOOTH_LE) {
+        remember(data.id) {
+            try {
+                viewModel.getBluetoothMacAddress(data.id)
+            } catch (_: Throwable) {
+                null
+            }
+        }
+    } else {
+        null
+    }
+    val isVeritySense = !isH10 && isPolarVeritySenseDevice(data, dialogContext, polarMac)
+    if (isH10 || isVeritySense) {
+        PolarBackupRecordingSection(
+            data = data,
+            viewModel = viewModel,
+            isVeritySense = isVeritySense
+        )
+    }
+}
+
+@Composable
+private fun PolarBackupRecordingSection(
+    data: DeviceUiData,
+    viewModel: EditDeviceViewModel,
+    isVeritySense: Boolean
+) {
+    val isAndroid13Plus = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU
+    PolarBackupRecordingCard(
+        checked = data.polarH10OfflineRecording,
+        isVeritySense = isVeritySense,
+        isAndroid13Plus = isAndroid13Plus,
+        onCheckedChange = { viewModel.onPolarH10OfflineRecordingChanged(it) }
+    )
+}
+
+/**
+ * Stateless Material 3 card exposing the Polar H10 (HR + HRV) or Verity Sense (optical HR-only)
+ * internal backup recording toggle (`REQ-SET-104`, `REQ-SET-108`).
+ */
+@Composable
+fun PolarBackupRecordingCard(
+    checked: Boolean,
+    isVeritySense: Boolean,
+    isAndroid13Plus: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    val titleRes = if (isVeritySense) {
+        R.string.device_polar_verity_backup_recording_title
+    } else {
+        R.string.device_polar_h10_backup_recording_title
+    }
+    val descRes = if (isVeritySense) {
+        R.string.device_polar_verity_backup_recording_desc
+    } else {
+        R.string.device_polar_h10_backup_recording_desc
+    }
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        ),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            AttFusedToggleRow(
+                title = stringResource(titleRes),
+                checked = checked,
+                enabled = isAndroid13Plus,
+                disabledHint = stringResource(R.string.device_polar_h10_backup_recording_requires_android_13),
+                onCheckedChange = onCheckedChange
+            )
+            Text(
+                text = stringResource(descRes),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium)
+            )
+        }
+    }
+}
+
 

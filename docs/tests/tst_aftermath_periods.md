@@ -847,6 +847,37 @@
      • `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.*"` asserting 100% pass rate.
 
 
+### TST-PER-048: **RouteCluster In-Memory Propagation, Filter Chip & Bidirectional Route Sync Test Suite** [Verified]
+- **Requirement(s)**: `REQ-PER-040` (`REQ-PER-040.1`..`REQ-PER-040.4`)
+- **Component**: `WorkoutClusterRepository.kt`, `WorkoutRepository.kt`, `WorkoutClustersViewModel.kt`, `WorkoutClustersScreen.kt`, `PeriodsViewModel.kt`, `WorkoutSummariesViewModel.kt`, `RoutesRepository.kt`
+- **Jira**: `ATT-7758`
+- **Test Description**:
+  1. *Cluster Rename, Delete, Merge & Split Propagation Test (`TST-PER-048.1`)*:
+     • Verify that `WorkoutClusterRepository.updateCluster()`, `deleteCluster()`, `mergeClusters()`, and `splitCluster()` propagate `clusterId`/`clusterName` immediately to `WorkoutRepository._allWorkouts` without mutating `WorkoutData.workoutName`.
+     • Verify that `WorkoutClustersViewModel._clusterWorkouts`, `_peekedWorkoutDataWithTrack`, and `_selectedCluster` reflect mutations immediately.
+  2. *Periods Peek Sheet Reactive Reconciliation Test (`TST-PER-048.2`)*:
+     • Verify that `PeriodsViewModel._peekedWorkoutDataWithTrack` reconciles immediately when `WorkoutRepository.allWorkouts` emits an updated `WorkoutData`.
+  3. *Active Filter Chip & Filter Criteria Live Synchronization Test (`TST-PER-048.3`)*:
+     • Verify that `WorkoutSummariesViewModel.filterCriteria` updates `clusterName` on rename, clears on delete, and transitions on merge.
+  4. *Bidirectional Non-Recursive Route-Cluster Name Sync Test (`TST-PER-048.4`)*:
+     • Verify that `WorkoutClusterRepository.updateCluster()` syncs linked routes in `RoutesRepository` without infinite recursion, and `RoutesRepository.updateRouteSummary()` refreshes `WorkoutClusterRepository` and propagates to `WorkoutRepository`.
+  5. *Plain JVM Isolation & Targeted Regression Test (`TST-PER-048.5`)*:
+     • Verify all unit tests pass under plain JVM without `PreferenceManager`/IO leaks (`coding_standards.md` §5.5).
+
+
+### TST-PER-049: **RouteCluster Whitespace Normalization & Startup/Refresh Self-Healing Test Suite** [Verified]
+- **Requirement(s)**: `REQ-PER-041` (`REQ-PER-041.1`, `REQ-PER-041.2`)
+- **Component**: `WorkoutClusterDatabaseManager.kt`, `WorkoutClusterEngine.kt`, `WorkoutClusterRepository.kt`, `WorkoutClustersViewModel.kt`, `EditWorkoutViewModel.kt`, `WorkoutClusterHeatmapScreen.kt`, `RoutesRepository.kt`
+- **Jira**: `ATT-7757`
+- **Test Description**:
+  1. *Write, Lookup & Auto-Naming Whitespace Normalization Test (`TST-PER-049.1`)*:
+     • Verify that `updateClusterIdentity`, `addManualCluster`, `executeClusterSplit`, `EditWorkoutViewModel.createNewCluster`, `manuallyCreateCluster`, `syncRouteNameChange`, `splitCluster`, `insertCluster`, `updateCluster`, `isNameTaken`, `findUniqueClusterName`, and `formatClusterWorkoutName` trim leading/trailing whitespace, reject blank-only names, and never emit `"  #N"` double spaces.
+  2. *Startup & Refresh Self-Healing & Collision Propagation Test (`TST-PER-049.2`)*:
+     • Verify that `WorkoutClusterRepository.loadAllClustersLightweight()` and `refreshClusters()` normalize untrimmed rows (e.g. `"  Kurze Runde  "`), resolve collisions cleanly (`"Kurze Runde var 2"` when `"Kurze Runde"` exists), persist healed names in SQLite, and propagate healed names to `WorkoutRepository.onClusterRenamed`, `RoutesRepository.syncClusterNameChange`, and `clusterMutationEvents`.
+  3. *Localization & Regression Isolation Check (`TST-PER-049.3`)*:
+     • Verify `TranslationParityTest` and targeted unit tests pass cleanly under plain JVM without unmocked Android/IO dependencies (`coding_standards.md` §5.5).
+
+
 ---
 
 ### TST-SPT-005: Retrospective Filtering, Cluster Math, Lifetime Evaluation & ViewModel Tests [Verified]

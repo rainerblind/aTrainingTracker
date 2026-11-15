@@ -73,6 +73,7 @@ import androidx.compose.material.icons.filled.Terrain
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.TrendingUp
+import androidx.compose.material.icons.filled.FlashlightOn
 import com.atrainingtracker.trainingtracker.ui.tracking.LiveMmpCurveChart
 import androidx.compose.material.icons.filled.HorizontalSplit
 import androidx.compose.material.icons.filled.Title
@@ -201,6 +202,7 @@ interface TabToggleActions {
     fun onToggleLapButton(enabled: Boolean) {}
     fun onToggleBikeBell(enabled: Boolean) {}
     fun onToggleMmpCurve(enabled: Boolean) {}
+    fun onToggleRadarLight(enabled: Boolean) {}
     fun onRingBikeBell() {}
 
     companion object {
@@ -875,6 +877,14 @@ fun SensorGridScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
                     SpatialCockpitToggleCard(
+                        title = stringResource(R.string.config_tracking__show_radar_light),
+                        subtitle = stringResource(R.string.config_tracking__show_radar_light_subtitle),
+                        isActive = state.showRadarLight,
+                        onToggle = { tabToggleActions.onToggleRadarLight(it) },
+                        icon = Icons.Default.FlashlightOn,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    SpatialCockpitToggleCard(
                         title = stringResource(R.string.config_tracking__showLapButton),
                         isActive = state.showLapButton,
                         onToggle = { tabToggleActions.onToggleLapButton(it) },
@@ -958,8 +968,16 @@ fun SensorGridScreen(
                     // here! Material 3 BottomSheetScaffold passes static sheetPeekHeight (~174dp) in paddingValues even when
                     // the user swipes the Live Segment / Climb sheet down to SheetValue.Hidden (skipHiddenState = false),
                     // which creates a permanent 174dp blank whitespace below the ElevationProfile.
+                    val hasBottomButton = state.showRadarLight || state.showBikeBell || state.showLapButton
+                    val fabBottomClearance = if (
+                        !isLandscape && hasBottomButton && screenMode != ScreenMode.CONFIGURATION
+                    ) {
+                        68.dp
+                    } else {
+                        0.dp
+                    }
+
                     if (state.showElevationProfile) {
-                        val fabBottomClearance = if (!isLandscape && (state.showBikeBell || state.showLapButton) && screenMode != ScreenMode.CONFIGURATION) 68.dp else 0.dp
                         Surface(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -976,7 +994,6 @@ fun SensorGridScreen(
                     }
 
                     if (state.showMmpCurve) {
-                        val fabBottomClearance = if (!isLandscape && (state.showBikeBell || state.showLapButton) && screenMode != ScreenMode.CONFIGURATION) 68.dp else 0.dp
                         Surface(
                             modifier = Modifier
                                 .fillMaxWidth()

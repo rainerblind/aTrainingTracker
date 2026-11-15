@@ -86,6 +86,8 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils;
 import com.atrainingtracker.banalservice.devices.radar.RadarLightController;
+import com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineController;
+import com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarVeritySenseOfflineController;
 import com.atrainingtracker.banalservice.devices.radar.RadarSnoozeController;
 import com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulator;
 import com.atrainingtracker.banalservice.devices.radar.SmartBrakeLightDetector;
@@ -775,6 +777,7 @@ public class TrackerService extends Service {
     // private String mGCDataString;
     // private String[] mSensorNames;
     private volatile String mSamplesTableName;
+    private volatile long mSessionEpochStartTimeMs = -1L;
     private final BroadcastReceiver mAltitudeCorrectionReceiver = new BroadcastReceiver() {
 
         @Override
@@ -790,13 +793,19 @@ public class TrackerService extends Service {
 
             long prevCalTimeMs = intent.getLongExtra(AltitudeFromPressureDevice.PREV_CALIBRATION_TIME_MS_EXTRA, -1L);
             long currentCalTimeMs = intent.getLongExtra(AltitudeFromPressureDevice.CALIBRATION_TIME_MS_EXTRA, System.currentTimeMillis());
+            final long sessionEpochStartTimeMs = mSessionEpochStartTimeMs;
+
+            // REQ-FIL-018.2: Only update canonical LiveWorkoutSession & WorkoutSummaries when pressure is the active canonical ALTITUDE source
+            boolean isBaroCanonical = isBarometricCanonicalAltitude();
 
             if (DEBUG)
-                Log.i(TAG, "Triggering atomic altitude correction by " + altitudeCorrection + " m (prevCal=" + prevCalTimeMs + ", currentCal=" + currentCalTimeMs + ")");
+                Log.i(TAG, "Triggering atomic altitude correction by " + altitudeCorrection
+                        + " m (prevCal=" + prevCalTimeMs + ", currentCal=" + currentCalTimeMs
+                        + ", epochStart=" + sessionEpochStartTimeMs + ", baroCanonical=" + isBaroCanonical + ")");
 
             // 1. Live Session Update
-            LiveWorkoutSession session = mLiveSession;
-            if (session != null) {
+            final LiveWorkoutSession session = mLiveSession;
+            if (isBaroCanonical && session != null) {
                 session.applyRetroactiveAltitudeCorrection(altitudeCorrection, prevCalTimeMs, currentCalTimeMs);
             }
 
@@ -811,11 +820,24 @@ public class TrackerService extends Service {
                     return;
                 }
 
-                // 2a. Raw Samples drift/shift correction in explicit atomic SQLite transaction (REQ-CON-017, REQ-TRK-047.2)
-                getWorkoutRepository().applyAltitudeDriftCorrection(samplesTable, altitudeCorrection, prevCalTimeMs, currentCalTimeMs);
+                // 2a. Raw Samples drift/shift correction strictly scoped to barometric columns + baro-sourced canonical rows (REQ-FIL-018.1, REQ-FIL-018.2)
+                int canonicalShifted = getWorkoutRepository().applyAltitudeDriftCorrection(
+                        samplesTable, altitudeCorrection, prevCalTimeMs, currentCalTimeMs, sessionEpochStartTimeMs);
 
-                // 2b. Summary Extrema and Elevation Stream shift / interpolation (ATT-38, REQ-TRK-047.2)
-                getWorkoutRepository().shiftAltitudeData(workoutId, altitudeCorrection, prevCalTimeMs, currentCalTimeMs);
+                // 2b. Summary Extrema and Elevation Stream sync only if barometric pressure is canonical (REQ-FIL-018.2, REQ-FIL-018.3)
+                if (isBaroCanonical && (canonicalShifted > 0 || sessionEpochStartTimeMs <= 0)) {
+                    if (session != null) {
+                        LiveWorkoutSession.RunningStats altStats = session.getSensorStats().get(SensorType.ALTITUDE);
+                        getWorkoutRepository().syncAltitudeSummaryFromSession(
+                                workoutId,
+                                session.getSampledAltitudes(),
+                                session.getSampledAscent(),
+                                session.getSampledDescent(),
+                                altStats);
+                    } else {
+                        getWorkoutRepository().shiftAltitudeData(workoutId, altitudeCorrection, prevCalTimeMs, currentCalTimeMs);
+                    }
+                }
 
                 // 3. Notify UI/Repository to refresh from DB
                 LocalBroadcastManager.getInstance(TrackerService.this).sendBroadcast(new Intent(WORKOUT_UPDATED_INTENT).putExtra(WORKOUT_ID, workoutId));
@@ -825,6 +847,22 @@ public class TrackerService extends Service {
             });
         }
     };
+
+    private boolean isBarometricCanonicalAltitude() {
+        BANALServiceComm banal = mBanalService;
+        if (banal == null) {
+            return true;
+        }
+        try {
+            long bestAltDeviceId = banal.getSourceDeviceId(SensorType.ALTITUDE);
+            long baroDeviceId = getDeviceDataRepository().getAltitudeFromPressureDeviceId();
+            if (bestAltDeviceId > 0 && baroDeviceId > 0 && bestAltDeviceId != baroDeviceId) {
+                return false;
+            }
+        } catch (Throwable ignored) {
+        }
+        return true;
+    }
     // private long   mLapNr           = BANALService.INIT_LAP_NR-1;
     volatile int mTimeTotal_s = 0;
     private volatile int mTimeActive_s = 0;
@@ -1203,10 +1241,23 @@ public class TrackerService extends Service {
                     mAutoPauseManager.setState(AutoPauseState.AUTO_PAUSED);
                     mAutoPauseManager.resetDebounceCounter();
                 }
+                long startTimeMs = System.currentTimeMillis();
+                mSessionEpochStartTimeMs = startTimeMs;
+                try {
+                    PolarH10OfflineController.setSessionStartTimeMs(startTimeMs);
+                    PolarH10OfflineController.onWorkoutStarted(this);
+                } catch (Throwable ignored) {
+                }
+                try {
+                    PolarVeritySenseOfflineController.setSessionStartTimeMs(startTimeMs);
+                    PolarVeritySenseOfflineController.onWorkoutStarted(this);
+                } catch (Throwable ignored) {
+                }
                 // The workout name is just the date+time
                 mBaseFileName = (new SimpleDateFormat("yyyy-MM-dd_HHmmss", Locale.US)).format(new Date());
                 mSamplesTableName = WorkoutRepository.getSamplesTableName(mBaseFileName);
                 mLiveSession = new LiveWorkoutSession(0, IMPORTANT_SENSOR_TYPES);
+                mLiveSession.setSessionEpochStartTimeMs(startTimeMs);
 
                 final CompletableFuture<Void> initFuture = new CompletableFuture<>();
                 mTableInitializationFuture = initFuture;
@@ -1261,6 +1312,7 @@ public class TrackerService extends Service {
 
             case RESUME_SERVICE_RECREATION:
                 Log.d(TAG, "resuming after killed service");
+                mSessionEpochStartTimeMs = System.currentTimeMillis();
                 if (mTableInitializationFuture == null || mTableInitializationFuture.isDone()) {
                     mTableInitializationFuture = new CompletableFuture<>();
                 }
@@ -1389,6 +1441,14 @@ public class TrackerService extends Service {
         if (DEBUG) Log.d(TAG, "handleActionStop: initiating foreground-protected async finalization");
 
         RadarLightController.onWorkoutStopped(this);
+        try {
+            PolarH10OfflineController.onWorkoutStopped(this);
+        } catch (Throwable ignored) {
+        }
+        try {
+            PolarVeritySenseOfflineController.onWorkoutStopped(this);
+        } catch (Throwable ignored) {
+        }
         RadarSnoozeController.reset();
         RadarTrafficSimulator.INSTANCE.stop();
 
@@ -1606,6 +1666,14 @@ public class TrackerService extends Service {
         }
 
         RadarLightController.onWorkoutStopped(this);
+        try {
+            PolarH10OfflineController.onWorkoutStopped(this);
+        } catch (Throwable ignored) {
+        }
+        try {
+            PolarVeritySenseOfflineController.onWorkoutStopped(this);
+        } catch (Throwable ignored) {
+        }
 
         unregisterTransientReceivers();
 
@@ -1794,6 +1862,10 @@ public class TrackerService extends Service {
             return;
         }
 
+        if (mSessionEpochStartTimeMs <= 0L) {
+            mSessionEpochStartTimeMs = System.currentTimeMillis();
+        }
+        final long epochStartMs = mSessionEpochStartTimeMs;
         // ATT-4095 (REQ-TRK-036.2): Construct, rehydrate, and publish candidate session on mDbExecutor
         if (mTableInitializationFuture == null || mTableInitializationFuture.isDone()) {
             mTableInitializationFuture = new CompletableFuture<>();
@@ -1803,6 +1875,7 @@ public class TrackerService extends Service {
             try {
                 LiveWorkoutSession newSession = new LiveWorkoutSession(resumedWorkoutId, IMPORTANT_SENSOR_TYPES);
                 rehydrateLiveSession(newSession, resumedWorkoutId, resumedActiveTimeS);
+                newSession.setSessionEpochStartTimeMs(epochStartMs);
                 mLiveSession = newSession;
             } finally {
                 mIsRehydrating = false;
@@ -2327,23 +2400,41 @@ public class TrackerService extends Service {
             final long finalWorkoutId = workoutId;
             final Context appContext = getApplicationContext();
             if (finalWorkoutId > 0) {
-                java.util.concurrent.ForkJoinPool.commonPool().execute(() -> {
+                // ATT-7918 (REQ-SET-105.2, REQ-SET-105.5): If Polar H10 offline recording was armed,
+                // synchronously execute stop & backfill before summary recomputation and exports!
+                if (PolarH10OfflineController.isRecordingArmed()) {
                     try {
-                        boolean recomputed = HrvPostWorkoutRecomputer.recomputeWorkoutBlocking(appContext, finalWorkoutId);
-                        boolean ertsRecomputed = false;
-                        if (com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.isPostWorkoutErtsSmoothingEnabled(appContext)) {
-                            ertsRecomputed = com.atrainingtracker.trainingtracker.database.ErtsPostWorkoutRecomputer.recomputeWorkoutBlocking(appContext, finalWorkoutId);
-                        }
-                        if (recomputed || ertsRecomputed) {
-                            WorkoutRepository.getInstance(appContext).refreshWorkout(finalWorkoutId);
-                        }
+                        PolarH10OfflineController.stopAndBackfillWorkoutBlocking(appContext, finalWorkoutId, baseFileName);
                     } catch (Throwable t) {
-                        Log.e(TAG, "Error in post-workout recompute for workout " + finalWorkoutId, t);
+                        Log.e(TAG, "Error in Polar H10 stop and backfill for workout " + finalWorkoutId, t);
                     }
-                });
+                }
+                if (PolarVeritySenseOfflineController.isRecordingArmed()) {
+                    try {
+                        PolarVeritySenseOfflineController.stopAndBackfillWorkoutBlocking(appContext, finalWorkoutId, baseFileName);
+                    } catch (Throwable t) {
+                        Log.e(TAG, "Error in Polar Verity Sense stop and backfill for workout " + finalWorkoutId, t);
+                    }
+                }
+
+                // ATT-7918 (REQ-SET-105.4, REQ-SET-105.5): Execute post-workout HRV and ERTS recomputations
+                // synchronously on mDbExecutor BEFORE ExportManager.workoutFinished() so exported files
+                // (FIT, TCX, Strava, Health Connect) contain complete, updated metrics.
+                try {
+                    boolean recomputed = HrvPostWorkoutRecomputer.recomputeWorkoutBlocking(appContext, finalWorkoutId);
+                    boolean ertsRecomputed = false;
+                    if (com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.isPostWorkoutErtsSmoothingEnabled(appContext)) {
+                        ertsRecomputed = com.atrainingtracker.trainingtracker.database.ErtsPostWorkoutRecomputer.recomputeWorkoutBlocking(appContext, finalWorkoutId);
+                    }
+                    if (recomputed || ertsRecomputed) {
+                        WorkoutRepository.getInstance(appContext).refreshWorkout(finalWorkoutId);
+                    }
+                } catch (Throwable t) {
+                    Log.e(TAG, "Error in post-workout recompute for workout " + finalWorkoutId, t);
+                }
             }
         } catch (Throwable t) {
-            Log.e(TAG, "Error scheduling post-workout HRV recompute", t);
+            Log.e(TAG, "Error in post-workout processing", t);
         }
 
         try {

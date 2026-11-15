@@ -18,8 +18,8 @@
 
 package com.atrainingtracker.banalservice.devices
 
+import android.app.Application
 import android.content.Context
-import android.content.Intent
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.hardware.SensorManager
@@ -30,6 +30,7 @@ import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
 import com.atrainingtracker.banalservice.helpers.HavePressureSensor
 import com.atrainingtracker.banalservice.sensor.MySensorManager
+import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.monetization.ProFeatureManager
 import com.atrainingtracker.trainingtracker.monetization.SensorQuotaReconciliationManager
@@ -42,14 +43,18 @@ import io.mockk.unmockkAll
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
 /**
  * Unit tests verifying defense-in-depth Free-tier hardware connection clamping
  * in [DeviceManager.startSearchForPairedDevices] (REQ-SET-084.7, TST-SET-084.12).
  */
+@RunWith(RobolectricTestRunner::class)
+@Config(application = Application::class)
 class DeviceManagerQuotaClampingTest {
 
     private lateinit var mockBanalService: BANALService
@@ -62,6 +67,8 @@ class DeviceManagerQuotaClampingTest {
 
     @Before
     fun setUp() {
+        DeviceDataRepository.resetForTesting()
+
         mockkStatic(Log::class)
         every { Log.d(any(), any()) } returns 0
         every { Log.i(any(), any()) } returns 0
@@ -70,9 +77,6 @@ class DeviceManagerQuotaClampingTest {
 
         mockkStatic(ContextCompat::class)
         every { ContextCompat.registerReceiver(any(), any(), any(), any()) } returns null
-
-        mockkConstructor(Intent::class)
-        every { anyConstructed<Intent>().setPackage(any()) } answers { self as Intent }
 
         mockkStatic(TrainingApplication::class)
         every { TrainingApplication.startSearchWhenAppStarts() } returns false
@@ -119,6 +123,7 @@ class DeviceManagerQuotaClampingTest {
     fun tearDown() {
         resetStaticSearchingDevice()
         unmockkAll()
+        DeviceDataRepository.resetForTesting()
         SensorQuotaReconciliationManager.setInstanceForTesting(null)
         ProFeatureManager.setInstanceForTesting(null)
     }

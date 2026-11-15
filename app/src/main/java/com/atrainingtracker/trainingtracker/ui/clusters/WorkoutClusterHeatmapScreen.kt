@@ -1192,9 +1192,13 @@ fun EditWorkoutClusterIdentityDialog(
         icon = Icons.Default.Place,
         actions = {
             AppDialogActions.SaveCancel(
-                onSave = { 
-                    val sportId = sportTypesList.find { it.name == selectedSportName }?.id ?: cluster.probableSportId
-                    onConfirm(name, sportId, hasCounter) 
+                onSave = {
+                    val trimmedName = name.trim()
+                    if (trimmedName.isNotEmpty()) {
+                        val sportId = sportTypesList
+                            .find { it.name == selectedSportName }?.id ?: cluster.probableSportId
+                        onConfirm(trimmedName, sportId, hasCounter)
+                    }
                 },
                 onCancel = onDismiss,
                 saveText = stringResource(R.string.save),

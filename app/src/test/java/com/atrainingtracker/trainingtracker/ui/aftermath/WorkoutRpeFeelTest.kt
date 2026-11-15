@@ -42,6 +42,7 @@ import java.io.File
  * Unit tests verifying REQ-WKO-035 through REQ-WKO-039 (TST-WKO-035 through TST-WKO-039)
  * and REQ-UI-529 (TST-UI-529).
  */
+@Suppress("UnusedPrivateProperty", "MaxLineLength")
 class WorkoutRpeFeelTest {
 
     private val projectRoot: File by lazy {
@@ -55,7 +56,7 @@ class WorkoutRpeFeelTest {
     // --- TST-WKO-035: Database schema & constants ---
     @Test
     fun testDbVersionAndColumnConstants() {
-        assertEquals("DB_VERSION must be 30", 30, WorkoutSummariesDbHelper.DB_VERSION)
+        assertEquals("DB_VERSION must be 31", 31, WorkoutSummariesDbHelper.DB_VERSION)
         assertEquals("Column constant RPE must be 'rpe'", "rpe", WorkoutSummaries.RPE)
         assertEquals("Column constant FEEL must be 'feel'", "feel", WorkoutSummaries.FEEL)
     }

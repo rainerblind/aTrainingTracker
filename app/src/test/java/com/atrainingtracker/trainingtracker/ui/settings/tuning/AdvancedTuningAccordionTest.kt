@@ -618,8 +618,64 @@ class AdvancedTuningAccordionTest {
             TuningSection.WORKOUT_MASKS_CARDS,
             TuningSection.PHYSIOLOGY_MODELS,
             TuningSection.ROUTE_CLUSTERING,
-            TuningSection.AFTERMATH_ANALYSIS
+            TuningSection.AFTERMATH_ANALYSIS,
+            TuningSection.SWIMMING
         )
         assertEquals(expected, TuningSection.values().toList())
+    }
+
+    @Test
+    fun testSwimmingSubtitleFormatter_andPoolPresetResolution() {
+        val mockContext = mockk<Context>()
+        every { mockContext.getString(R.string.tuning_swim_pool_preset_25yd) } returns "25 yd"
+        every { mockContext.getString(R.string.tuning_swim_subtitle_active, any()) } answers {
+            val arg = secondArg<Array<Any>>()[0]
+            "Active, $arg pool"
+        }
+        every { mockContext.getString(R.string.tuning_swim_subtitle_inactive, any()) } answers {
+            val arg = secondArg<Array<Any>>()[0]
+            "Inactive, $arg pool"
+        }
+
+        assertEquals(
+            "Inactive, 25 m pool",
+            TuningSubtitleFormatter.formatSwimmingSubtitle(
+                isSwimActivated = false,
+                poolLengthMeters = 25.0f,
+                poolLengthUnit = com.atrainingtracker.trainingtracker.settings.PoolLengthUnit.METERS,
+                context = mockContext
+            )
+        )
+        assertEquals(
+            "Active, 25 yd pool",
+            TuningSubtitleFormatter.formatSwimmingSubtitle(
+                isSwimActivated = true,
+                poolLengthMeters = 22.86f,
+                poolLengthUnit = com.atrainingtracker.trainingtracker.settings.PoolLengthUnit.YARDS,
+                context = mockContext
+            )
+        )
+
+        assertEquals(
+            com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.PoolLengthPreset.M_25,
+            com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.resolvePoolLengthPreset(
+                25.0f,
+                com.atrainingtracker.trainingtracker.settings.PoolLengthUnit.METERS
+            )
+        )
+        assertEquals(
+            com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.PoolLengthPreset.YD_25,
+            com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.resolvePoolLengthPreset(
+                22.86f,
+                com.atrainingtracker.trainingtracker.settings.PoolLengthUnit.YARDS
+            )
+        )
+        assertEquals(
+            com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.PoolLengthPreset.CUSTOM,
+            com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.resolvePoolLengthPreset(
+                33.0f,
+                com.atrainingtracker.trainingtracker.settings.PoolLengthUnit.METERS
+            )
+        )
     }
 }

@@ -103,6 +103,14 @@ enum class RadarLightControlMode {
 }
 
 /**
+ * Display unit for configured swimming pool length (REQ-SET-107.3).
+ */
+enum class PoolLengthUnit {
+    METERS,
+    YARDS
+}
+
+/**
  * Encapsulates battle-tested factory defaults and safety clamping bounds for advanced tuning.
  */
 object TuningPreferencesDefaults {
@@ -120,6 +128,7 @@ object TuningPreferencesDefaults {
     val RADAR_AUDIO_ROUTE = RadarAudioRoute.SYSTEM_DEFAULT
     const val RADAR_HAPTIC_ALERT = true
     val RADAR_LIGHT_DEFAULT_MODE = RadarLightMode.DAY_FLASH
+    const val RADAR_LIGHT_AUTO_MODE = true
     val RADAR_LIGHT_CONTROL_MODE = RadarLightControlMode.FIXED_WORKOUT_MODE
     const val RADAR_AUTO_LIGHT_CONTROL = true
     const val RADAR_SMART_LIGHT_AUTOMATION = false
@@ -358,6 +367,14 @@ object TuningPreferencesDefaults {
     const val DEFAULT_MORNING_CHECK_CUTOFF_HOUR = 8
     const val MIN_MORNING_CHECK_CUTOFF_HOUR = 6
     const val MAX_MORNING_CHECK_CUTOFF_HOUR = 23
+
+    const val DEFAULT_POOL_LENGTH_METERS = 25.0f
+    const val MIN_POOL_LENGTH_METERS = 10.0f
+    const val MAX_POOL_LENGTH_METERS = 100.0f
+    const val POOL_LENGTH_25M = 25.0f
+    const val POOL_LENGTH_50M = 50.0f
+    const val POOL_LENGTH_25YD_METERS = 22.86f
+    val DEFAULT_POOL_LENGTH_UNIT = PoolLengthUnit.METERS
 }
 
 /**
@@ -454,7 +471,8 @@ data class TuningConfig(
     val radarAudioRoute: RadarAudioRoute = TuningPreferencesDefaults.RADAR_AUDIO_ROUTE,
     val radarHapticAlert: Boolean = TuningPreferencesDefaults.RADAR_HAPTIC_ALERT,
     val radarLightDefaultMode: RadarLightMode = TuningPreferencesDefaults.RADAR_LIGHT_DEFAULT_MODE,
-    val radarLightControlMode: RadarLightControlMode = TuningPreferencesDefaults.RADAR_LIGHT_CONTROL_MODE,
+    val radarLightAutoMode: Boolean = TuningPreferencesDefaults.RADAR_LIGHT_AUTO_MODE,
+    val radarLightControlMode: RadarLightControlMode = if (radarLightAutoMode) RadarLightControlMode.SMART_AUTOMATION else RadarLightControlMode.FIXED_WORKOUT_MODE,
     val radarAutoLightControl: Boolean = TuningPreferencesDefaults.RADAR_AUTO_LIGHT_CONTROL,
     val radarSmartLightAutomation: Boolean = TuningPreferencesDefaults.RADAR_SMART_LIGHT_AUTOMATION,
     val radarBrakeLightEnabled: Boolean = TuningPreferencesDefaults.RADAR_BRAKE_LIGHT_ENABLED,
@@ -464,7 +482,9 @@ data class TuningConfig(
     val radarSpeedPitchModulation: Boolean = TuningPreferencesDefaults.RADAR_SPEED_PITCH_MODULATION,
     val radarTrafficOrientation: RadarTrafficOrientation = TuningPreferencesDefaults.RADAR_TRAFFIC_ORIENTATION,
     val radarLaneChangeTickEnabled: Boolean = TuningPreferencesDefaults.RADAR_LANE_CHANGE_TICK_ENABLED,
-    val radarClosePassThresholdM: Float = TuningPreferencesDefaults.RADAR_CLOSE_PASS_THRESHOLD_M
+    val radarClosePassThresholdM: Float = TuningPreferencesDefaults.RADAR_CLOSE_PASS_THRESHOLD_M,
+    val defaultPoolLengthMeters: Float = TuningPreferencesDefaults.DEFAULT_POOL_LENGTH_METERS,
+    val defaultPoolLengthUnit: PoolLengthUnit = TuningPreferencesDefaults.DEFAULT_POOL_LENGTH_UNIT
 ) {
     val showAntMissingAdapterWarnings: Boolean
         get() = !suppressAntMissingAdapterDialog
@@ -629,6 +649,7 @@ class TuningPreferencesDataStore(private val context: Context) {
         val KEY_RADAR_AUDIO_ROUTE: Preferences.Key<String> = stringPreferencesKey("tuning_radar_audio_route")
         val KEY_RADAR_HAPTIC_ALERT: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_radar_haptic_alert")
         val KEY_RADAR_LIGHT_DEFAULT_MODE: Preferences.Key<String> = stringPreferencesKey("tuning_radar_light_default_mode")
+        val KEY_RADAR_LIGHT_AUTO_MODE: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_radar_light_auto_mode")
         val KEY_RADAR_LIGHT_CONTROL_MODE: Preferences.Key<String> = stringPreferencesKey("tuning_radar_light_control_mode")
         val KEY_RADAR_AUTO_LIGHT_CONTROL: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_radar_auto_light_control")
         val KEY_RADAR_SMART_LIGHT_AUTOMATION: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_radar_smart_light_automation")
@@ -640,6 +661,8 @@ class TuningPreferencesDataStore(private val context: Context) {
         val KEY_RADAR_TRAFFIC_ORIENTATION: Preferences.Key<String> = stringPreferencesKey("tuning_radar_traffic_orientation")
         val KEY_RADAR_LANE_CHANGE_TICK_ENABLED: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_radar_lane_change_tick_enabled")
         val KEY_RADAR_CLOSE_PASS_THRESHOLD: Preferences.Key<Float> = floatPreferencesKey("tuning_radar_close_pass_threshold_m")
+        val KEY_DEFAULT_POOL_LENGTH_METERS: Preferences.Key<Float> = floatPreferencesKey("tuning_default_pool_length_meters")
+        val KEY_DEFAULT_POOL_LENGTH_UNIT: Preferences.Key<String> = stringPreferencesKey("tuning_default_pool_length_unit")
 
         internal val ALL_KEYS = listOf(
             KEY_ELEVATION_X_AXIS_DOMAIN,
@@ -733,6 +756,7 @@ class TuningPreferencesDataStore(private val context: Context) {
             KEY_RADAR_AUDIO_ROUTE,
             KEY_RADAR_HAPTIC_ALERT,
             KEY_RADAR_LIGHT_DEFAULT_MODE,
+            KEY_RADAR_LIGHT_AUTO_MODE,
             KEY_RADAR_LIGHT_CONTROL_MODE,
             KEY_RADAR_AUTO_LIGHT_CONTROL,
             KEY_RADAR_SMART_LIGHT_AUTOMATION,
@@ -743,8 +767,51 @@ class TuningPreferencesDataStore(private val context: Context) {
             KEY_RADAR_SPEED_PITCH_MODULATION,
             KEY_RADAR_TRAFFIC_ORIENTATION,
             KEY_RADAR_LANE_CHANGE_TICK_ENABLED,
-            KEY_RADAR_CLOSE_PASS_THRESHOLD
+            KEY_RADAR_CLOSE_PASS_THRESHOLD,
+            KEY_DEFAULT_POOL_LENGTH_METERS,
+            KEY_DEFAULT_POOL_LENGTH_UNIT
         )
+
+        /**
+         * Resolves and migrates unified radar tail light auto mode with legacy fallback (REQ-CON-031.5).
+         */
+        @VisibleForTesting
+        fun resolveRadarLightAutoMode(prefs: Preferences): Boolean {
+            val autoMode = prefs[KEY_RADAR_LIGHT_AUTO_MODE]
+            if (autoMode != null) {
+                return autoMode
+            }
+            val rawControlModeStr = prefs[KEY_RADAR_LIGHT_CONTROL_MODE]
+            if (rawControlModeStr != null) {
+                val controlMode = safeEnumValueOf(rawControlModeStr, TuningPreferencesDefaults.RADAR_LIGHT_CONTROL_MODE)
+                return controlMode == RadarLightControlMode.SMART_AUTOMATION
+            }
+            val legacySmart = prefs[KEY_RADAR_SMART_LIGHT_AUTOMATION]
+            if (legacySmart == true) {
+                return true
+            }
+            val legacyAuto = prefs[KEY_RADAR_AUTO_LIGHT_CONTROL]
+            if (legacyAuto != null) {
+                return false
+            }
+            return TuningPreferencesDefaults.RADAR_LIGHT_AUTO_MODE
+        }
+
+        /**
+         * Resolves and migrates radar tail light default physical mode with legacy fallback (REQ-CON-031.5).
+         */
+        @VisibleForTesting
+        fun resolveRadarLightDefaultMode(prefs: Preferences): RadarLightMode {
+            val raw = prefs[KEY_RADAR_LIGHT_DEFAULT_MODE]
+            if (raw != null) {
+                return safeEnumValueOf(raw, TuningPreferencesDefaults.RADAR_LIGHT_DEFAULT_MODE)
+            }
+            val rawControl = prefs[KEY_RADAR_LIGHT_CONTROL_MODE]
+            if (rawControl == RadarLightControlMode.MANUAL.name) {
+                return RadarLightMode.OFF
+            }
+            return TuningPreferencesDefaults.RADAR_LIGHT_DEFAULT_MODE
+        }
 
         /**
          * Resolves and migrates 3-way radar tail light control mode with legacy fallback (REQ-CON-031.5b).
@@ -754,6 +821,10 @@ class TuningPreferencesDataStore(private val context: Context) {
             val rawControlModeStr = prefs[KEY_RADAR_LIGHT_CONTROL_MODE]
             if (rawControlModeStr != null) {
                 return safeEnumValueOf(rawControlModeStr, TuningPreferencesDefaults.RADAR_LIGHT_CONTROL_MODE)
+            }
+            val autoMode = prefs[KEY_RADAR_LIGHT_AUTO_MODE]
+            if (autoMode != null) {
+                return if (autoMode) RadarLightControlMode.SMART_AUTOMATION else RadarLightControlMode.FIXED_WORKOUT_MODE
             }
             val legacySmart = prefs[KEY_RADAR_SMART_LIGHT_AUTOMATION]
             val legacyAuto = prefs[KEY_RADAR_AUTO_LIGHT_CONTROL]
@@ -942,8 +1013,8 @@ data class AutoPausePreferences(
         val radarAudioRoute = safeEnumValueOf(rawAudioRouteStr, TuningPreferencesDefaults.RADAR_AUDIO_ROUTE)
 
         val radarHapticAlert = prefs[KEY_RADAR_HAPTIC_ALERT] ?: TuningPreferencesDefaults.RADAR_HAPTIC_ALERT
-        val rawLightDefaultModeStr = prefs[KEY_RADAR_LIGHT_DEFAULT_MODE]
-        val radarLightDefaultMode = safeEnumValueOf(rawLightDefaultModeStr, TuningPreferencesDefaults.RADAR_LIGHT_DEFAULT_MODE)
+        val radarLightAutoMode = resolveRadarLightAutoMode(prefs)
+        val radarLightDefaultMode = resolveRadarLightDefaultMode(prefs)
         val rawControlModeStr = prefs[KEY_RADAR_LIGHT_CONTROL_MODE]
         val radarLightControlMode = resolveRadarLightControlMode(prefs)
         val radarAutoLightControl = if (rawControlModeStr != null) {
@@ -965,6 +1036,11 @@ data class AutoPausePreferences(
         val radarTrafficOrientation = safeEnumValueOf(rawTrafficOrientationStr, TuningPreferencesDefaults.RADAR_TRAFFIC_ORIENTATION)
         val radarLaneChangeTickEnabled = prefs[KEY_RADAR_LANE_CHANGE_TICK_ENABLED] ?: TuningPreferencesDefaults.RADAR_LANE_CHANGE_TICK_ENABLED
         val radarClosePassThresholdM = prefs[KEY_RADAR_CLOSE_PASS_THRESHOLD] ?: TuningPreferencesDefaults.RADAR_CLOSE_PASS_THRESHOLD_M
+        val defaultPoolLengthMeters = (prefs[KEY_DEFAULT_POOL_LENGTH_METERS] ?: TuningPreferencesDefaults.DEFAULT_POOL_LENGTH_METERS).coerceIn(
+            TuningPreferencesDefaults.MIN_POOL_LENGTH_METERS,
+            TuningPreferencesDefaults.MAX_POOL_LENGTH_METERS
+        )
+        val defaultPoolLengthUnit = safeEnumValueOf(prefs[KEY_DEFAULT_POOL_LENGTH_UNIT], TuningPreferencesDefaults.DEFAULT_POOL_LENGTH_UNIT)
 
         val rawFontWeightStr = prefs[KEY_COCKPIT_FONT_WEIGHT]
         val cockpitFontWeight = safeEnumValueOf(rawFontWeightStr, TuningPreferencesDefaults.COCKPIT_FONT_WEIGHT)
@@ -1197,6 +1273,7 @@ data class AutoPausePreferences(
             radarAudioRoute = radarAudioRoute,
             radarHapticAlert = radarHapticAlert,
             radarLightDefaultMode = radarLightDefaultMode,
+            radarLightAutoMode = radarLightAutoMode,
             radarLightControlMode = radarLightControlMode,
             radarAutoLightControl = radarAutoLightControl,
             radarSmartLightAutomation = radarSmartLightAutomation,
@@ -1207,7 +1284,9 @@ data class AutoPausePreferences(
             radarSpeedPitchModulation = radarSpeedPitchModulation,
             radarTrafficOrientation = radarTrafficOrientation,
             radarLaneChangeTickEnabled = radarLaneChangeTickEnabled,
-            radarClosePassThresholdM = radarClosePassThresholdM
+            radarClosePassThresholdM = radarClosePassThresholdM,
+            defaultPoolLengthMeters = defaultPoolLengthMeters,
+            defaultPoolLengthUnit = defaultPoolLengthUnit
         )
     }
 
@@ -1603,6 +1682,7 @@ data class AutoPausePreferences(
             prefs[KEY_RADAR_AUDIO_ROUTE] = config.radarAudioRoute.name
             prefs[KEY_RADAR_HAPTIC_ALERT] = config.radarHapticAlert
             prefs[KEY_RADAR_LIGHT_DEFAULT_MODE] = config.radarLightDefaultMode.name
+            prefs[KEY_RADAR_LIGHT_AUTO_MODE] = config.radarLightAutoMode
             prefs[KEY_RADAR_LIGHT_CONTROL_MODE] = config.radarLightControlMode.name
             prefs[KEY_RADAR_AUTO_LIGHT_CONTROL] = (config.radarLightControlMode == RadarLightControlMode.FIXED_WORKOUT_MODE)
             prefs[KEY_RADAR_SMART_LIGHT_AUTOMATION] = (config.radarLightControlMode == RadarLightControlMode.SMART_AUTOMATION)
@@ -1614,6 +1694,11 @@ data class AutoPausePreferences(
             prefs[KEY_RADAR_TRAFFIC_ORIENTATION] = config.radarTrafficOrientation.name
             prefs[KEY_RADAR_LANE_CHANGE_TICK_ENABLED] = config.radarLaneChangeTickEnabled
             prefs[KEY_RADAR_CLOSE_PASS_THRESHOLD] = config.radarClosePassThresholdM
+            prefs[KEY_DEFAULT_POOL_LENGTH_METERS] = config.defaultPoolLengthMeters.coerceIn(
+                TuningPreferencesDefaults.MIN_POOL_LENGTH_METERS,
+                TuningPreferencesDefaults.MAX_POOL_LENGTH_METERS
+            )
+            prefs[KEY_DEFAULT_POOL_LENGTH_UNIT] = config.defaultPoolLengthUnit.name
         }
 
         TrainingApplication.setClusterTolEndpoints(clampedClusterTolEndpoints)
@@ -1842,7 +1927,11 @@ data class AutoPausePreferences(
     }
 
     val radarLightDefaultModeFlow: Flow<RadarLightMode> = context.dataStore.data.map { prefs ->
-        safeEnumValueOf(prefs[KEY_RADAR_LIGHT_DEFAULT_MODE], TuningPreferencesDefaults.RADAR_LIGHT_DEFAULT_MODE)
+        resolveRadarLightDefaultMode(prefs)
+    }
+
+    val radarLightAutoModeFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        resolveRadarLightAutoMode(prefs)
     }
 
     val radarLightControlModeFlow: Flow<RadarLightControlMode> = context.dataStore.data.map { prefs ->
@@ -1864,11 +1953,42 @@ data class AutoPausePreferences(
         }
     }
 
+    suspend fun updateRadarLightAutoMode(autoMode: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_RADAR_LIGHT_AUTO_MODE] = autoMode
+            prefs[KEY_RADAR_LIGHT_CONTROL_MODE] = if (autoMode) {
+                RadarLightControlMode.SMART_AUTOMATION.name
+            } else {
+                RadarLightControlMode.FIXED_WORKOUT_MODE.name
+            }
+            prefs[KEY_RADAR_AUTO_LIGHT_CONTROL] = !autoMode
+            prefs[KEY_RADAR_SMART_LIGHT_AUTOMATION] = autoMode
+        }
+    }
+
+    suspend fun updateRadarLightSelection(isAuto: Boolean, mode: RadarLightMode? = null) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_RADAR_LIGHT_AUTO_MODE] = isAuto
+            if (mode != null) {
+                prefs[KEY_RADAR_LIGHT_DEFAULT_MODE] = mode.name
+            }
+            prefs[KEY_RADAR_LIGHT_CONTROL_MODE] = if (isAuto) {
+                RadarLightControlMode.SMART_AUTOMATION.name
+            } else {
+                RadarLightControlMode.FIXED_WORKOUT_MODE.name
+            }
+            prefs[KEY_RADAR_AUTO_LIGHT_CONTROL] = !isAuto
+            prefs[KEY_RADAR_SMART_LIGHT_AUTOMATION] = isAuto
+        }
+    }
+
     suspend fun updateRadarLightControlMode(mode: RadarLightControlMode) {
         context.dataStore.edit { prefs ->
             prefs[KEY_RADAR_LIGHT_CONTROL_MODE] = mode.name
+            val isAuto = (mode == RadarLightControlMode.SMART_AUTOMATION)
+            prefs[KEY_RADAR_LIGHT_AUTO_MODE] = isAuto
             prefs[KEY_RADAR_AUTO_LIGHT_CONTROL] = (mode == RadarLightControlMode.FIXED_WORKOUT_MODE)
-            prefs[KEY_RADAR_SMART_LIGHT_AUTOMATION] = (mode == RadarLightControlMode.SMART_AUTOMATION)
+            prefs[KEY_RADAR_SMART_LIGHT_AUTOMATION] = isAuto
         }
     }
 
@@ -1985,6 +2105,28 @@ data class AutoPausePreferences(
     suspend fun updateRadarClosePassThreshold(thresholdM: Float) {
         context.dataStore.edit { prefs ->
             prefs[KEY_RADAR_CLOSE_PASS_THRESHOLD] = thresholdM
+        }
+    }
+
+    val defaultPoolLengthMetersFlow: Flow<Float> = context.dataStore.data.map { prefs ->
+        (prefs[KEY_DEFAULT_POOL_LENGTH_METERS] ?: TuningPreferencesDefaults.DEFAULT_POOL_LENGTH_METERS).coerceIn(
+            TuningPreferencesDefaults.MIN_POOL_LENGTH_METERS,
+            TuningPreferencesDefaults.MAX_POOL_LENGTH_METERS
+        )
+    }
+
+    val defaultPoolLengthUnitFlow: Flow<PoolLengthUnit> = context.dataStore.data.map { prefs ->
+        safeEnumValueOf(prefs[KEY_DEFAULT_POOL_LENGTH_UNIT], TuningPreferencesDefaults.DEFAULT_POOL_LENGTH_UNIT)
+    }
+
+    suspend fun updateDefaultPoolLength(lengthMeters: Float, unit: PoolLengthUnit) {
+        val clamped = lengthMeters.coerceIn(
+            TuningPreferencesDefaults.MIN_POOL_LENGTH_METERS,
+            TuningPreferencesDefaults.MAX_POOL_LENGTH_METERS
+        )
+        context.dataStore.edit { prefs ->
+            prefs[KEY_DEFAULT_POOL_LENGTH_METERS] = clamped
+            prefs[KEY_DEFAULT_POOL_LENGTH_UNIT] = unit.name
         }
     }
 

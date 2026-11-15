@@ -184,4 +184,33 @@
     <string name="devices_sort_last_usage">Last Usage</string>
     <string name="devices_sort_battery_level">Battery Level</string>
 
+    <!-- Polar H10 Internal Backup Recording (ATT-7762, REQ-SET-104) -->
+    <string name="device_polar_h10_backup_recording_title">Polar H10 Backup Recording</string>
+    <string name="device_polar_h10_backup_recording_desc">Records heart rate and RR intervals into internal sensor memory (e.g. for pool swimming).</string>
+    <string name="device_polar_h10_backup_recording_requires_android_13">Requires Android 13 or newer</string>
+
+    <!-- Polar H10 Workout Stop Backfill & Export Gating (ATT-7918, REQ-SET-105) -->
+    <string name="notification_polar_h10_syncing_title">Syncing Polar H10 Data</string>
+    <string name="notification_polar_h10_syncing_desc">Syncing HR and HRV intervals from sensor memory…</string>
+
+    <!-- Polar H10 Aftermath Retry Sync Banner (ATT-7919, REQ-SET-106) -->
+    <string name="polar_h10_retry_sync_title">Polar H10 Offline Data Available</string>
+    <string name="polar_h10_retry_sync_desc">The heart rate sensor was asleep when tracking stopped. Wear the strap or moisten and bridge both electrode snaps with your fingers to wake it, ensure it is not connected to other devices, and sync now.</string>
+    <string name="polar_h10_retry_sync_action">Sync Now</string>
+    <string name="polar_h10_retry_sync_dismiss">Dismiss</string>
+    <string name="polar_h10_retry_syncing">Syncing Polar H10…</string>
+    <string name="polar_h10_retry_sync_failed">Could not connect to Polar H10. Please wake the sensor and try again.</string>
+
+    <!-- Polar Verity Sense Optical Offline HR Backup (ATT-7923, REQ-SET-108) -->
+    <string name="device_polar_verity_backup_recording_title">Polar Verity Sense Backup Recording</string>
+    <string name="device_polar_verity_backup_recording_desc">Records optical heart rate into internal sensor memory (e.g. for pool swimming or Bluetooth dropouts).</string>
+
+    <!-- Polar Verity Sense Stop Backfill & Aftermath Retry (ATT-7924, REQ-SET-109) -->
+    <string name="notification_polar_verity_syncing_title">Syncing Polar Verity Sense Data</string>
+    <string name="notification_polar_verity_syncing_desc">Syncing optical HR samples from sensor memory…</string>
+    <string name="polar_verity_retry_sync_title">Polar Verity Sense Offline Data Available</string>
+    <string name="polar_verity_retry_sync_desc">The optical heart rate sensor was unreachable when tracking stopped. Turn on your Polar Verity Sense in Blue Sensor Mode and tap Sync Now.</string>
+    <string name="polar_verity_retry_syncing">Syncing Polar Verity Sense…</string>
+    <string name="polar_verity_retry_sync_failed">Could not connect to Polar Verity Sense. Turn it on in Blue Sensor Mode and try again.</string>
+
 </resources>

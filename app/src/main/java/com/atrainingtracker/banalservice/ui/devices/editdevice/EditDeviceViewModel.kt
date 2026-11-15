@@ -299,6 +299,10 @@ class EditDeviceViewModel(private val application: Application) : AndroidViewMod
         updateState { it.copy(wheelCircumference = wheelCircumference) }
     }
 
+    fun onPolarH10OfflineRecordingChanged(enabled: Boolean) {
+        updateState { it.copy(polarH10OfflineRecording = enabled) }
+    }
+
     /**
      * Resets the persistent tire pressure baseline (iTPMS) to the currently selected wheel circumference.
      */
@@ -338,5 +342,9 @@ class EditDeviceViewModel(private val application: Application) : AndroidViewMod
             devicesRepository.updateDevice(finalState)
         }
     }
+
+    /** Returns the persisted Bluetooth MAC address for [deviceId] via the repository layer. */
+    fun getBluetoothMacAddress(deviceId: Long): String? =
+        devicesRepository.getBluetoothMACAddress(deviceId)
 
 }

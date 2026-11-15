@@ -50,6 +50,7 @@ android {
         versionName = "5.0.0-dev"
         versionCode = 273
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        manifestPlaceholders = [MAPS_API_KEY: "AIzaSyPlaceholderMapsApiKeyForBuildTestingOnly00"]
     }
 
     signingConfigs {
@@ -116,8 +117,9 @@ android {
     }
 
     testOptions {
+        unitTests.includeAndroidResources = true
         unitTests.all {
-            maxParallelForks = Math.max(1, (int) (Runtime.runtime.availableProcessors() / 2))
+            maxParallelForks = 2
             forkEvery = 80
             minHeapSize = "256m"
             maxHeapSize = "768m"
@@ -239,6 +241,7 @@ dependencies {
     implementation 'com.getpebble:pebblekit:4.0.1'
     implementation files('../ANT-Android-SDKs/ANT+_Android_SDK/API/antpluginlib_3-9-0.aar')
     implementation files('../ANT-Android-SDKs/ANT_Android_SDK/API/android_antlib_4-16-0.aar')
+    implementation 'com.github.polarofficial:polar-ble-sdk:8.6.0'
 
     // --- AndroidX Core & Lifecycle ---
     // ATT-1037: Pinned to 1.15.0 to prevent NoSuchMethodError on Android 14 (API 34).
@@ -267,6 +270,7 @@ dependencies {
     implementation 'androidx.compose.material:material-icons-extended'
     implementation 'androidx.navigation:navigation-compose:2.8.8'
     debugImplementation 'androidx.compose.ui:ui-tooling'
+    debugImplementation 'androidx.compose.ui:ui-test-manifest'
 
     // --- Google Maps, Location, Auth & Firebase ---
     implementation 'com.google.android.gms:play-services-maps:20.0.0'
@@ -304,6 +308,7 @@ dependencies {
     testImplementation 'org.robolectric:robolectric:4.14.1'
     testImplementation 'androidx.test:core:1.6.1'
     testImplementation 'androidx.test.ext:junit:1.2.1'
+    testImplementation 'androidx.compose.ui:ui-test-junit4'
 
     // --- Instrumented Testing (androidTest) ---
     androidTestImplementation 'androidx.test.ext:junit:1.2.1'

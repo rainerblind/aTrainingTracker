@@ -35,6 +35,7 @@ import android.bluetooth.le.ScanResult;
 import android.bluetooth.le.ScanSettings;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineCapabilityStore;
 import android.os.Build;
 import android.os.Handler;
 import android.os.ParcelUuid;
@@ -499,6 +500,10 @@ public class BTSearchForNewDevicesEngine
                 }
             }
         } else {
+            if (mDeviceType == DeviceType.HRM && gatt != null
+                    && gatt.getService(BluetoothConstants.UUID_SERVICE_POLAR_PFTP) != null) {
+                PolarOfflineCapabilityStore.markOfflineRecordingCapable(mContext, address);
+            }
             newDeviceFound(address);
         }
     }

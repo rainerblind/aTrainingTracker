@@ -682,5 +682,91 @@ class FitFileWriterTest {
         assertEquals(300f, lapMesgs[0].totalTimerTime)
         assertEquals(900f, lapMesgs[0].totalElapsedTime)
     }
+
+    @Test
+    fun testFitFileWriter_swimStravaNameAndMetricPoolLength_exportsSwimmingLapSession() {
+        val summaryCursor = createMockSummaryCursor(timeStart = "2026-10-03 10:00:00", totalTime = "1800", distanceTotal = "1500.0")
+        every {
+            mockSqlDb.query(WorkoutSummaries.TABLE, any(), any(), any(), any(), any(), any())
+        } returns summaryCursor
+
+        val samplesCursor = createMockSamplesCursor(listOf(
+            mapOf(WorkoutSamplesDbHelper.TIME to "2026-10-03 10:00:00"),
+            mapOf(WorkoutSamplesDbHelper.TIME to "2026-10-03 10:30:00")
+        ))
+        every {
+            mockSqlDb.query(match { it.startsWith("samples_") }, any(), any(), any(), any(), any(), any())
+        } returns samplesCursor
+
+        every { mockSportTypeDb.getBSportType(1L) } returns BSportType.UNKNOWN
+        every { mockSportTypeDb.getTcxName(1L) } returns "Other"
+        every { mockSportTypeDb.getStravaName(1L) } returns "Swim"
+        every { mockSportTypeDb.getGcName(1L) } returns "swim"
+        every { mockLapsDb.getLaps(101L) } returns emptyList()
+
+        val exportInfo = ExportInfo("workout_swim_metric", FileFormat.FIT, ExportType.FILE)
+        val result = FitFileWriter(mockContext).doExport(exportInfo)
+        assertTrue("Swim FIT export must succeed", result.success())
+
+        val sessions = mutableListOf<SessionMesg>()
+        val decode = Decode()
+        val broadcaster = MesgBroadcaster(decode)
+        broadcaster.addListener(SessionMesgListener { sessions.add(it) })
+        FileInputStream(File(tempDir, exportInfo.shortPath)).use { decode.read(it, broadcaster) }
+
+        assertEquals(1, sessions.size)
+        assertEquals(Sport.SWIMMING, sessions[0].sport)
+        assertEquals(com.garmin.fit.SubSport.LAP_SWIMMING, sessions[0].subSport)
+        assertEquals(25.0f, sessions[0].poolLength!!, 0.01f)
+        assertEquals(com.garmin.fit.DisplayMeasure.METRIC, sessions[0].poolLengthUnit)
+    }
+
+    @Test
+    fun testFitFileWriter_swimGcNameAndYardsPoolLength_exportsStatutePoolSession() {
+        val mockTuningStore = mockk<com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore>(relaxed = true)
+        every { mockTuningStore.getTuningConfig() } returns com.atrainingtracker.trainingtracker.settings.TuningConfig(
+            defaultPoolLengthMeters = 22.86f,
+            defaultPoolLengthUnit = com.atrainingtracker.trainingtracker.settings.PoolLengthUnit.YARDS
+        )
+        com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore.setInstanceForTesting(mockTuningStore)
+        try {
+            val summaryCursor = createMockSummaryCursor(timeStart = "2026-10-03 10:00:00", totalTime = "1200", distanceTotal = "914.4")
+            every {
+                mockSqlDb.query(WorkoutSummaries.TABLE, any(), any(), any(), any(), any(), any())
+            } returns summaryCursor
+
+            val samplesCursor = createMockSamplesCursor(listOf(
+                mapOf(WorkoutSamplesDbHelper.TIME to "2026-10-03 10:00:00"),
+                mapOf(WorkoutSamplesDbHelper.TIME to "2026-10-03 10:20:00")
+            ))
+            every {
+                mockSqlDb.query(match { it.startsWith("samples_") }, any(), any(), any(), any(), any(), any())
+            } returns samplesCursor
+
+            every { mockSportTypeDb.getBSportType(1L) } returns BSportType.UNKNOWN
+            every { mockSportTypeDb.getTcxName(1L) } returns "Other"
+            every { mockSportTypeDb.getStravaName(1L) } returns ""
+            every { mockSportTypeDb.getGcName(1L) } returns "swim"
+            every { mockLapsDb.getLaps(101L) } returns emptyList()
+
+            val exportInfo = ExportInfo("workout_swim_yards", FileFormat.FIT, ExportType.FILE)
+            val result = FitFileWriter(mockContext).doExport(exportInfo)
+            assertTrue("Swim yards FIT export must succeed", result.success())
+
+            val sessions = mutableListOf<SessionMesg>()
+            val decode = Decode()
+            val broadcaster = MesgBroadcaster(decode)
+            broadcaster.addListener(SessionMesgListener { sessions.add(it) })
+            FileInputStream(File(tempDir, exportInfo.shortPath)).use { decode.read(it, broadcaster) }
+
+            assertEquals(1, sessions.size)
+            assertEquals(Sport.SWIMMING, sessions[0].sport)
+            assertEquals(com.garmin.fit.SubSport.LAP_SWIMMING, sessions[0].subSport)
+            assertEquals(22.86f, sessions[0].poolLength!!, 0.01f)
+            assertEquals(com.garmin.fit.DisplayMeasure.STATUTE, sessions[0].poolLengthUnit)
+        } finally {
+            com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore.setInstanceForTesting(null)
+        }
+    }
 }
 

@@ -3,7 +3,7 @@
 **Domain**: `settings_profiles`  
 **Prefixes**: `LOC`, `MON`, `PRI`, `SET`  
 **Scope**: Athlete settings, bike/sensor profiles, privacy zones, data stores, monetization, and 9-locale parity.  
-**Total Tests**: 89
+**Total Tests**: 94
 
 ---
 
@@ -1183,8 +1183,131 @@
   5. *New Cluster Creation Name Synchronization (`TST-SET-105.5`)*:
   • Verify that calling `createNewCluster(...)` immediately sets `workoutName` to the formatted name and resets `userManuallyChangedWorkoutName` to `false`.
 
+### TST-SET-106: **Polar H10 Internal RR Recording & GATT Arbitration Test Suite** [Verified]
+- **Requirement(s)**: `REQ-SET-104`
+- **Component**: `PolarH10OfflineController.kt`, `DevicesDatabaseManager.java`, `EditDeviceDialog.kt`, `EditDeviceViewModel.kt`, `TrackerService.java`
+- **Jira**: `ATT-7762`
+- **Status**: Verified
+- **Test Description**:
+  1. *PolarH10OfflineController Arming & Clock Sync Lifecycle Test (`TST-SET-106.1`)*:
+  • Verify that starting internal recording invokes clock synchronization (`setLocalTime`), removes stale exercise slots, and triggers `startRecording(SampleType.RR)`.
+  • Verify that subsequent calls during an active workout session are ignored (fringe-flap invariant).
+  2. *GATT Arbitration & Connection Hand-off Test (`TST-SET-106.2`)*:
+  • Verify clean GATT arbitration between standard 0x180D BLE streaming in `BTLEHeartRateDevice` and Polar BLE SDK PFTP operations without GATT collision or resource deadlock.
+  3. *Android 8–12 Compatibility & Runtime API Guard Test (`TST-SET-106.3`)*:
+  • Verify that on devices with `Build.VERSION.SDK_INT < 33`, Polar BLE SDK classes are not invoked, and standard BLE heart rate acquisition functions without runtime crashes.
+  4. *DevicesDbHelper Version 13 Migration Parity Test (`TST-SET-106.4`)*:
+  • Verify that upgrading a database from `DB_VERSION = 12` to `13` adds column `polarH10OfflineRecording` with `DEFAULT 1`.
+  • Verify that a fresh database initialized via `onCreate()` contains the identical table schema, column types, and constraints as an upgraded database.
+  5. *EditDeviceDialog & ViewModel Toggle Integration Test (`TST-SET-106.5`)*:
+  • Verify that the "Polar H10 Backup Recording" switch is displayed strictly for devices of type `HRM` matching Polar H10 identifiers.
+  • Verify that toggling the switch updates `EditDeviceViewModel` state and persists changes to `DevicesDatabaseManager`.
+  6. *9-Language Localization Parity Audit (`TST-SET-106.6`)*:
+  • Verify 100% presence and parity for all Polar H10 backup recording strings across all 9 supported application locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
+
+### TST-SET-107: **Polar H10 Offline HR/RR Workout Stop Backfill & Export Gating Test Suite** [Verified]
+- **Requirement(s)**: `REQ-SET-105`
+- **Component**: `PolarH10OfflineController.kt`, `TrackerService.java`, `WorkoutSamplesDatabaseManager.java`, `WorkoutRrDatabaseManager.kt`, `HrvPostWorkoutRecomputer.kt`, `ExportManager.java`
+- **Jira**: `ATT-7918`
+- **Status**: Verified (ATT-7918)
+- **Test Description**:
+  1. *Zero-Gap Fast Path Evaluation Test (`TST-SET-107.1`)*:
+  • Verify that when live BLE 0x180D telemetry has zero missing seconds and zero `ARTIFACT_GAP` entries, `PolarH10OfflineController.stopAndBackfillWorkout()` stops and removes the H10 exercise without executing a multi-second PFTP sample download.
+  2. *Stop & Fetch Backfill Integration Test (`TST-SET-107.2`)*:
+  • Verify that when gaps exist, `PolarH10OfflineController` pauses `MyBTLEDevice` GATT, fetches stored RR intervals via `fetchExercise()`, anchors them to start time, reconstructs 1-Hz HR samples (`round(60000.0 / rrMs)`), and patches missing seconds in `WorkoutSamples.db` and beats in `WorkoutRr.db` idempotently.
+  3. *Post-Backfill Recomputation & Slot Cleanup Test (`TST-SET-107.3`)*:
+  • Verify that `HrvPostWorkoutRecomputer.recomputeWorkoutBlocking()` updates `WorkoutSummaries.db` extrema upon successful backfill, and `removeExercise()` on the H10 is invoked strictly after SQLite commit.
+  4. *Export Pipeline Gating Test (`TST-SET-107.4`)*:
+  • Verify that `ExportManager.workoutFinished()` and automated file/cloud exports are deferred in `TrackerService.endWorkout()` until backfill completes, ensuring exported files contain complete HR/HRV data.
+  5. *Bounded Timeout Fallback Test (`TST-SET-107.5`)*:
+  • Verify that a 30-second bounded timeout gracefully terminates the backfill attempt, resumes GATT, and releases downstream exports with partial live data if the strap is powered off or unreachable.
+  6. *9-Language Localization Audit (`TST-SET-107.6`)*:
+  • Verify 100% presence and parity for all Polar H10 sync notification strings across all 9 supported application locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
+
+### TST-SET-108: **Polar H10 Aftermath Retry Sync Banner Test Suite** [Verified]
+- **Requirement(s)**: `REQ-SET-106`
+- **Component**: `WorkoutSummariesDatabaseManager.java`, `PolarH10OfflineController.kt`, `WorkoutData.kt`, `WorkoutDataMapper.kt`, `TrackOnMapScreen.kt`, `PolarH10RetrySyncBanner.kt`, `WorkoutRepository.kt`, `ExportManager.java`
+- **Jira**: `ATT-7919`
+- **Status**: Verified (ATT-7919)
+- **Test Description**:
+  1. *Stop-Time Fallback & Pending Metadata Persistence (`TST-SET-108.1`)*:
+  • Verify that when `PolarH10OfflineController.stopAndBackfillWorkout()` times out or fails, `TrackerService` records `polarSyncPending = 1` and exercise metadata in `WorkoutSummaries.db` without crashing or blocking finalization.
+  2. *Database v31 Migration & Parity Test (`TST-SET-108.2`)*:
+  • Verify that upgrading `WorkoutSummaries.db` from v30 to v31 adds pending sync columns with `DEFAULT 0` for `polarSyncPending`, matching fresh `onCreate()` schema.
+  3. *M3 Aftermath Retry Banner Rendering & 9-Locale Parity (`TST-SET-108.3`)*:
+  • Verify that `PolarH10RetrySyncBanner` is displayed in `TrackOnMapScreen` when `polarSyncPending == 1`.
+  • Verify 100% presence and parity for all banner strings across all 9 supported application locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`) without emojis.
+  4. *Deferred Wake, Backfill & Re-Export Integration (`TST-SET-108.4`)*:
+  • Verify that tapping "Sync Now" wakes the strap, executes PFTP fetch for the matching exercise ID, patches `WorkoutSamples.db` and `WorkoutRr.db`, recomputes HRV summaries, clears `polarSyncPending = 0`, calls `removeExercise()` on the strap strictly after DB commit, and triggers `ExportManager.exportWorkout()`.
+  5. *Dismiss Banner Action Test (`TST-SET-108.5`)*:
+  • Verify that tapping "Dismiss" updates `WorkoutSummaries.db` setting `polarSyncPending = 0` and does NOT invoke `removeExercise()` on the strap.
 
 
 
+
+
+
+
+
+### TST-SET-109: **Swimming SportType Template, Expert Activation, Pool Length & FIT Export Test Suite** [Verified]
+- **Requirement(s)**: `REQ-SET-107`
+- **Component**: `SportTypeDatabaseManager.java`, `SportTypesRepository.kt`, `DatabaseSchemaRegistry.kt`, `TuningPreferencesDataStore.kt`, `SettingsDataStoreJavaHelper.kt`, `AdvancedTuningAccordion.kt`, `AdvancedTuningScreen.kt`, `SwimmingSection.kt`, `FitFileWriter.java`, `res/values*/strings_swimming.xml`
+- **Jira**: `ATT-7999`
+- **Status**: Verified (ATT-7999)
+- **Test Description**:
+  1. *Fresh DB Cleanliness & Zero Walk Collision (`TST-SET-109.1`)*:
+  • Verify fresh `SportType.db` v3 `onCreate()` seeds strictly 5 defaults (no `Swimming`), and `DatabaseSchemaRegistry` references `SportTypeDbHelper.DB_VERSION`.
+  • Verify with active `SWIM` row (`minSpeed = 0.0, maxSpeed = 0.0`), `getSportTypesIdList(BSportType.UNKNOWN, 1.4)` and `0.0` never return the `SWIM` row ID.
+  2. *Idempotent `ensureSwimSportTypeExists()` & Locale Mapping (`TST-SET-109.2`)*:
+  • Verify calling `ensureSwimSportTypeExists()` creates one `SWIM` row (`stravaName = "Swim"`, `gcName = "swim"`, `tcxName = "Other"`, `minSpeed = 0.0`, `maxSpeed = 0.0`, `is_placeholder = 0`) and subsequent calls return the same ID without duplicates.
+  • Verify existing user rows with `stravaName = "Swim"` or `gcName = "swim"` are reused without duplication.
+  3. *Expert Settings DataStore, UI Contract & 9-Locale Parity (`TST-SET-109.3`)*:
+  • Verify `TuningConfig` defaults (`25.0f`, `PoolLengthUnit.METERS`), clamping (`10f..100f`), `ALL_KEYS` membership, and `resetToDefaults()`.
+  • Verify `TuningDesignGuidelinesContractTest`, `AdvancedTuningAccordionTest`, `AdvancedTuningScreenTest`, and `TranslationParityTest` pass across all 9 locales with zero emojis.
+  4. *FIT `Sport.SWIMMING`, `SubSport.LAP_SWIMMING` & Pool Length Export (`TST-SET-109.4`)*:
+  • Verify `FitFileWriter` round-trip decode encodes `Sport.SWIMMING`, `SubSport.LAP_SWIMMING`, `pool_length` (`25.0f` / `22.86f`), and `pool_length_unit` (`METRIC` / `STATUTE`) when `tcxName = "Other"` and `stravaName = "Swim"` or `gcName = "swim"`.
+  5. *On-Device / Emulator UI Render Check (`TST-SET-109.5`)*:
+  • Capture screenshot on `emulator-5554` verifying Expert Settings `Swimming` accordion displays Material 3 activation toggle, pool length segmented presets (`25 m`, `50 m`, `25 yd`, custom), and clean layout.
+
+---
+
+### TST-SET-110: **Polar Verity Sense Offline HR Recording Controller & EditDeviceDialog Test Suite** [Verified]
+- **Requirement(s)**: `REQ-SET-108`
+- **Component**: `PolarOfflineGattCoordinator.kt`, `PolarH10OfflineController.kt`, `PolarVeritySenseOfflineController.kt`, `PolarOfflineCapabilityStore.kt`, `EditDeviceDialog.kt`, `TrackerService.java`, `res/values*/strings_devices.xml`
+- **Jira**: `ATT-7923`
+- **Status**: Verified (ATT-7923)
+- **Test Description**:
+  1. *Device Detection & API Level Guards (`TST-SET-110.1`)*:
+  • Verify `isPolarVeritySenseDevice()` matches `"Polar Sense ..."`, `"Verity Sense"`, `"Polar Verity Sense"`, `"Polar OH1"`, and cached PFTP offline capability without misclassifying Polar H10.
+  • Verify `PolarVeritySenseOfflineController` returns immediately without SDK calls when API < 33 or `polarH10OfflineRecording == false`.
+  2. *SDK Arming Sequence & Pre-Existing HR Cleanup (`TST-SET-110.2`)*:
+  • Verify `onWorkoutStarted()` pauses GATT, awaits `FEATURE_POLAR_OFFLINE_RECORDING` & `FEATURE_POLAR_DEVICE_TIME_SETUP`, calls `setLocalTime()`, inspects `getOfflineRecordingStatus()` (invoking `stopOfflineRecording(..., HR)` first if `HR` is active), calls `startOfflineRecording(id, HR, null, null)`, and always invokes `resumeGattOperations()`.
+  3. *Mid-Workout Fringe-Flap Invariant & `SYSTEM_BUSY` Resilience (`TST-SET-110.3`)*:
+  • Verify repeated `onWorkoutStarted()` while `isArmed == true` makes zero additional PFTP/SDK calls until `onWorkoutStopped()`.
+  • Verify `BlePsFtpUtils.PftpResponseError(PbPFtpError.SYSTEM_BUSY)` never throws, resets `isArmed = false`, records diagnostic error, and resumes standard GATT.
+  4. *Stop, Fetch & Remove Coroutine API (`TST-SET-110.4`)*:
+  • Verify `stopAndFetchOfflineHr()` stops `HR`, collects `listOfflineRecordings()`, resolves `PolarOfflineRecordingData.HrOfflineRecording`, and `removeOfflineRecord()` delegates `api.removeOfflineRecord()`.
+  5. *`EditDeviceDialog` UI, 9-Locale Parity & Screenshot (`TST-SET-110.5`)*:
+  • Verify `EditDeviceDialog` Compose test confirms Verity Sense displays HR-only toggle (default ON on API 33+, disabled with hint on `< 33`), `TranslationParityTest` passes with zero emojis across all 9 locales, and screenshot on `emulator-5554` verifies layout.
+
+---
+
+### TST-SET-111: **Polar Verity Sense Stop-Time HR Backfill & Aftermath Retry Sync Test Suite** [Verified]
+- **Requirement(s)**: `REQ-SET-109`
+- **Component**: `PolarVeritySenseOfflineController.kt`, `PolarOfflineGattCoordinator.kt`, `TrackerService.java`, `PolarH10RetrySyncBanner.kt`, `WorkoutSamplesDatabaseManager.java`, `WorkoutSummariesDatabaseManager.java`, `res/values*/strings_devices.xml`
+- **Jira**: `ATT-7924`
+- **Status**: Verified (ATT-7924)
+- **Test Description**:
+  1. *Stop-Time Backfill, 1-Hz Alignment & Gap-Only Patching (`TST-SET-111.1`)*:
+  • Verify `stopAndBackfillWorkout()` preserves existing valid live `HR > 0`, GPS, cadence, and power samples while patching ONLY missing `HR` rows in `WorkoutSamples.db` using `HrOfflineRecording.startTime` + 1-Hz `samples` timestamps.
+  • Verify `onWorkoutStopped()` preserves armed state for `TrackerService.endWorkout()` and `stopAndBackfillWorkout()` clears `isRecordingArmed()` in `finally` before exports run.
+  2. *Zero-Gap Fast Path (`TST-SET-111.2`)*:
+  • Verify when `hasMissingHeartRateSamples()` is `false`, `shouldBackfill()` returns `false`, `getOfflineRecord()` is NOT invoked, active `HR` stops, and matched flash entry is removed.
+  3. *Strict HRV Integrity Invariant (`TST-SET-111.3`)*:
+  • Verify `WorkoutRr.db` (`WorkoutRrRepository`) receives zero inserts and `HrvPostWorkoutRecomputer` is NEVER triggered during stop-time or deferred Verity backfill.
+  4. *HR Summary Recomputation & Single-Entry Flash Safety (`TST-SET-111.4`)*:
+  • Verify `SensorType.HR` extrema (`MIN`, `MAX`, `AVG`) update in `WorkoutSummaries.db` (`TABLE_EXTREMA_VALUES`) and `removeOfflineRecord()` deletes ONLY the matched `PolarOfflineRecordingEntry` strictly AFTER SQLite commit (skipping deletion if commit throws and preserving unrelated flash entries).
+  5. *Aftermath Retry Pending, Copy, 9-Locale Parity & UI Screenshot (`TST-SET-111.5`)*:
+  • Verify unreachable Verity Sense persists `setPolarSyncPending` with `verity:` tag, `PolarH10RetrySyncBanner` renders optical Blue Sensor Mode copy across all 9 locales (zero emojis), *Sync Now* executes `PolarVeritySenseOfflineController.syncPendingWorkout()` cleanly, and visual screenshot on `emulator-5554` verifies UI.
 
 

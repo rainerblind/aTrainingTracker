@@ -231,6 +231,78 @@ public class WorkoutSummariesDatabaseManager {
     }
 
     /**
+     * Persists Polar H10 retry sync pending metadata when stop-time backfill times out (REQ-SET-106.1, ATT-7919).
+     */
+    public void setPolarSyncPending(long workoutId, @Nullable String polarDeviceId, @Nullable String polarExerciseId, long expectedStartMs, long expectedEndMs) {
+        ContentValues values = new ContentValues();
+        values.put(WorkoutSummaries.POLAR_DEVICE_ID, polarDeviceId);
+        values.put(WorkoutSummaries.POLAR_EXERCISE_ID, polarExerciseId);
+        values.put(WorkoutSummaries.POLAR_EXPECTED_START_MS, expectedStartMs);
+        values.put(WorkoutSummaries.POLAR_EXPECTED_END_MS, expectedEndMs);
+        values.put(WorkoutSummaries.POLAR_SYNC_PENDING, 1);
+        getDatabase().update(WorkoutSummaries.TABLE, values, WorkoutSummaries.C_ID + "=?", new String[]{String.valueOf(workoutId)});
+    }
+
+    /**
+     * Clears Polar H10 retry sync pending flag for a workout (REQ-SET-106.3, REQ-SET-106.4, ATT-7919).
+     */
+    public void clearPolarSyncPending(long workoutId) {
+        ContentValues values = new ContentValues();
+        values.put(WorkoutSummaries.POLAR_SYNC_PENDING, 0);
+        getDatabase().update(WorkoutSummaries.TABLE, values, WorkoutSummaries.C_ID + "=?", new String[]{String.valueOf(workoutId)});
+    }
+
+    /**
+     * In-memory record representing pending Polar H10 sync metadata (REQ-SET-106.1, ATT-7919).
+     */
+    public static class PolarPendingSyncData {
+        @Nullable public final String deviceId;
+        @Nullable public final String exerciseId;
+        public final long expectedStartMs;
+        public final long expectedEndMs;
+        public final boolean isPending;
+
+        public PolarPendingSyncData(@Nullable String deviceId, @Nullable String exerciseId, long expectedStartMs, long expectedEndMs, boolean isPending) {
+            this.deviceId = deviceId;
+            this.exerciseId = exerciseId;
+            this.expectedStartMs = expectedStartMs;
+            this.expectedEndMs = expectedEndMs;
+            this.isPending = isPending;
+        }
+    }
+
+    /**
+     * Retrieves pending Polar H10 sync metadata for a workout (REQ-SET-106.3, ATT-7919).
+     */
+    @Nullable
+    public PolarPendingSyncData getPolarPendingSyncData(long workoutId) {
+        try (Cursor cursor = getDatabase().query(
+                WorkoutSummaries.TABLE,
+                new String[]{
+                        WorkoutSummaries.POLAR_DEVICE_ID,
+                        WorkoutSummaries.POLAR_EXERCISE_ID,
+                        WorkoutSummaries.POLAR_EXPECTED_START_MS,
+                        WorkoutSummaries.POLAR_EXPECTED_END_MS,
+                        WorkoutSummaries.POLAR_SYNC_PENDING
+                },
+                WorkoutSummaries.C_ID + "=?",
+                new String[]{String.valueOf(workoutId)},
+                null, null, null)) {
+            if (cursor != null && cursor.moveToFirst()) {
+                String devId = cursor.getString(0);
+                String exId = cursor.getString(1);
+                long startMs = cursor.getLong(2);
+                long endMs = cursor.getLong(3);
+                boolean pending = cursor.getInt(4) == 1;
+                return new PolarPendingSyncData(devId, exId, startMs, endMs, pending);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error getting polar pending sync data for workout " + workoutId, e);
+        }
+        return null;
+    }
+
+    /**
      * Applies an inferred identity (Equipment, Strava) to a workout based on its SportType.
      * Use this during learning or cluster assignment (SCRUM-200).
      */
@@ -1476,6 +1548,53 @@ public class WorkoutSummariesDatabaseManager {
     }
 
     /**
+     * REQ-FIL-018.2 / REQ-FIL-018.3: Synchronizes WorkoutSummaries altitude stream, ascent/descent,
+     * and MIN/MAX/AVG extrema directly from LiveWorkoutSession's epoch-guarded state so
+     * pre-crash stream points and 1-Hz average denominators remain intact.
+     */
+    public void syncAltitudeSummaryFromSession(
+            long workoutId,
+            @Nullable List<Double> sampledAltitudes,
+            double ascent,
+            double descent,
+            @Nullable com.atrainingtracker.trainingtracker.tracker.LiveWorkoutSession.RunningStats altStats) {
+        if (workoutId <= 0) {
+            return;
+        }
+        SQLiteDatabase db = getDatabase();
+        db.beginTransaction();
+        try {
+            if (sampledAltitudes != null && !sampledAltitudes.isEmpty()) {
+                ContentValues streamValues = new ContentValues();
+                streamValues.put(WorkoutSummaries.ALTITUDE_STREAM, NumericalEncodingUtils.INSTANCE.encodeDoubles(sampledAltitudes));
+                streamValues.put(WorkoutSummaries.ASCENDING, ascent);
+                streamValues.put(WorkoutSummaries.DESCENDING, descent);
+                db.update(WorkoutSummaries.TABLE, streamValues, WorkoutSummaries.C_ID + "=?", new String[]{String.valueOf(workoutId)});
+            }
+
+            if (altStats != null) {
+                double min = altStats.min;
+                double max = altStats.max;
+                int count = altStats.getCount();
+                double avg = altStats.getAverage();
+                if (Double.isFinite(min) && min != Double.MAX_VALUE) {
+                    updateExtremaValue(db, workoutId, SensorType.ALTITUDE, ExtremaType.MIN, min, null);
+                }
+                if (Double.isFinite(max) && max != -Double.MAX_VALUE) {
+                    updateExtremaValue(db, workoutId, SensorType.ALTITUDE, ExtremaType.MAX, max, null);
+                }
+                if (count > 0 && Double.isFinite(avg)) {
+                    updateExtremaValue(db, workoutId, SensorType.ALTITUDE, ExtremaType.AVG, avg, null, count);
+                }
+            }
+
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
+        }
+    }
+
+    /**
      * Sanitizes historical workouts contaminated with runaway altitude shifts (REQ-CON-017).
      *
      * @deprecated Automated background mutation of historical workout altitude data is prohibited (REQ-CON-017, ATT-3990).
@@ -2247,6 +2366,11 @@ public class WorkoutSummariesDatabaseManager {
         public static final String RECORDING_ERRORS = "recordingErrors"; // added in Version 28 (08.11.2026, ATT-5886)
         public static final String RPE = "rpe"; // added in Version 30 (11.11.2026, ATT-6879)
         public static final String FEEL = "feel"; // added in Version 30 (11.11.2026, ATT-6879)
+        public static final String POLAR_DEVICE_ID = "polarDeviceId"; // added in Version 31 (ATT-7919)
+        public static final String POLAR_EXERCISE_ID = "polarExerciseId"; // added in Version 31 (ATT-7919)
+        public static final String POLAR_EXPECTED_START_MS = "polarExpectedStartMs"; // added in Version 31 (ATT-7919)
+        public static final String POLAR_EXPECTED_END_MS = "polarExpectedEndMs"; // added in Version 31 (ATT-7919)
+        public static final String POLAR_SYNC_PENDING = "polarSyncPending"; // added in Version 31 (ATT-7919)
         // new entries in version 5 of the DB
         @Deprecated
         public static final String EXTREMA_VALUES_CALCULATED = "extremumValuesCalculated";
@@ -2333,7 +2457,8 @@ public class WorkoutSummariesDatabaseManager {
         // public static final int DB_VERSION = 27; // 04.11.2026 Added workout_photos table (ATT-43)
         // public static final int DB_VERSION = 28; // 08.11.2026 Added recordingErrors column (ATT-5886)
         // public static final int DB_VERSION = 29; // 10.11.2026 Added cardio_power_dynamics table (ATT-3904)
-        public static final int DB_VERSION = 30; // 11.11.2026 Added rpe and feel columns (ATT-6879)
+        // public static final int DB_VERSION = 30; // 11.11.2026 Added rpe and feel columns (ATT-6879)
+        public static final int DB_VERSION = 31; // 15.11.2026 Added Polar H10 retry sync pending columns (ATT-7919)
         
 
 
@@ -2378,7 +2503,12 @@ public class WorkoutSummariesDatabaseManager {
                 + WorkoutSummaries.SOURCE + " text DEFAULT 'TRACKED', "  // added in Version 24
                 + WorkoutSummaries.RECORDING_ERRORS + " text, "  // added in Version 28
                 + WorkoutSummaries.RPE + " int, "  // added in Version 30 (ATT-6879)
-                + WorkoutSummaries.FEEL + " int)";  // added in Version 30 (ATT-6879)
+                + WorkoutSummaries.FEEL + " int, "  // added in Version 30 (ATT-6879)
+                + WorkoutSummaries.POLAR_DEVICE_ID + " text, "  // added in Version 31 (ATT-7919)
+                + WorkoutSummaries.POLAR_EXERCISE_ID + " text, "  // added in Version 31 (ATT-7919)
+                + WorkoutSummaries.POLAR_EXPECTED_START_MS + " int DEFAULT 0, "  // added in Version 31 (ATT-7919)
+                + WorkoutSummaries.POLAR_EXPECTED_END_MS + " int DEFAULT 0, "  // added in Version 31 (ATT-7919)
+                + WorkoutSummaries.POLAR_SYNC_PENDING + " int DEFAULT 0)";  // added in Version 31 (ATT-7919)
 
         protected static final String CREATE_TABLE_EXTREMA_VALUES = "create table " + WorkoutSummaries.TABLE_EXTREMA_VALUES + " ("
                 + WorkoutSummaries.C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
@@ -2766,6 +2896,15 @@ public class WorkoutSummariesDatabaseManager {
                 Log.i(TAG, "upgrading to DB version 30 (Adding rpe and feel columns to WorkoutSummaries)");
                 addColumnIfNotExists(db, WorkoutSummaries.TABLE, WorkoutSummaries.RPE, "int", null);
                 addColumnIfNotExists(db, WorkoutSummaries.TABLE, WorkoutSummaries.FEEL, "int", null);
+            }
+
+            if (oldVersion < 31) {
+                Log.i(TAG, "upgrading to DB version 31 (Adding polar offline sync retry columns)");
+                addColumnIfNotExists(db, WorkoutSummaries.TABLE, WorkoutSummaries.POLAR_DEVICE_ID, "text", null);
+                addColumnIfNotExists(db, WorkoutSummaries.TABLE, WorkoutSummaries.POLAR_EXERCISE_ID, "text", null);
+                addColumnIfNotExists(db, WorkoutSummaries.TABLE, WorkoutSummaries.POLAR_EXPECTED_START_MS, "int", "0");
+                addColumnIfNotExists(db, WorkoutSummaries.TABLE, WorkoutSummaries.POLAR_EXPECTED_END_MS, "int", "0");
+                addColumnIfNotExists(db, WorkoutSummaries.TABLE, WorkoutSummaries.POLAR_SYNC_PENDING, "int", "0");
             }
         }
 

@@ -148,6 +148,22 @@ object SettingsDataStoreJavaHelper {
     }
 
     /**
+     * Synchronous bridge to fetch the configured default pool length in meters for swimming FIT export (REQ-SET-107.3).
+     */
+    @JvmStatic
+    fun getDefaultPoolLengthMeters(context: Context): Float {
+        return getTuningConfig(context).defaultPoolLengthMeters
+    }
+
+    /**
+     * Synchronous bridge to fetch the configured default pool length display unit for swimming FIT export (REQ-SET-107.3).
+     */
+    @JvmStatic
+    fun getDefaultPoolLengthUnit(context: Context): PoolLengthUnit {
+        return getTuningConfig(context).defaultPoolLengthUnit
+    }
+
+    /**
      * Synchronous bridge to fetch athlete Functional Threshold Power (FTP) in Watts.
      * Returns null if unconfigured or <= 0. Non-blocking in-memory read.
      */

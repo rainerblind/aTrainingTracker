@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sport_type_swim">Zwemmen</string>
+    <string name="tuning_cat_swimming">Zwemmen &amp; Bad</string>
+    <string name="tuning_swim_activate_title">Sporttype Zwemmen inschakelen</string>
+    <string name="tuning_swim_activate_summary">Maakt het sporttype Zwemmen aan voor zwembadsessies zonder standaardlijsten vooraf te vullen.</string>
+    <string name="tuning_swim_activate_active_summary">Sporttype Zwemmen is actief bij Sporttypes.</string>
+    <string name="tuning_swim_pool_length_title">Standaard badlengte</string>
+    <string name="tuning_swim_pool_preset_25m">25 m</string>
+    <string name="tuning_swim_pool_preset_50m">50 m</string>
+    <string name="tuning_swim_pool_preset_25yd">25 yd</string>
+    <string name="tuning_swim_pool_preset_custom">Eigen</string>
+    <string name="tuning_swim_pool_custom_meters_label">Aangepaste lengte: %1$d m</string>
+    <string name="tuning_swim_subtitle_active">Actief, %1$s-bad</string>
+    <string name="tuning_swim_subtitle_inactive">Inactief, %1$s-bad</string>
+</resources>

@@ -2373,6 +2373,120 @@ The workflow SHALL mandate that:
 
 **Invariants**: Zero modification to production runtime code in `app/src/main/`, strict characterisation test prerequisite for all future child tickets, 100% test pass rate.
 
+### REQ-ARC-006: Java Core Migration: Pure Signal Filters Kotlin Migration & ADR-001 Contract Alignment [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-ARC-006`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `app/src/main/java/com/atrainingtracker/banalservice/filters/`, `docs/architecture/adr_001_java_core_services_migration.md`, `JavaCoreMigrationStrategyContractTest.kt`
+- **Rationale**: In accordance with ADR-001 (Tier 1 bottom-up migration, ATT-7566) and the PO decision recorded in the ATT-7749 retrospective, the 11 pure signal filter classes in `com.atrainingtracker.banalservice.filters` SHALL be migrated to idiomatic Kotlin to eliminate platform type (`T!`) nullability hazards in high-frequency sensor telemetry processing while strictly preserving numerical equivalence, thread synchronization, and Rule 50 post-trim emptiness invariants (ATT-7905):
+1. *1:1 Idiomatic Kotlin Migration & Interoperability Parity (`REQ-ARC-006.1`)*:
+• All 11 Java classes in `com.atrainingtracker.banalservice.filters/` (`MyFilter`, `AverageFilter`, `ExponentialSmoothingFilter`, `MovingAverageFilter`, `NumberedMovingAverageFilter`, `TimedMovingAverageFilter`, `MaxValueFilter`, `InstantaneousFilter`, `FilterData`, `FilteredSensorData`, `FilterManager`) SHALL be migrated to idiomatic Kotlin (`.kt`).
+• Generic signatures (`MyFilter<T>`, `InstantaneousFilter<T>`, `FilteredSensorData<T>`) and Java callers (`BANALService`, `TrackerService`) SHALL remain 100% interoperable without changes to calling signatures.
+• Thread-safe monitor locking SHALL be preserved via Kotlin `@Synchronized` annotations or explicit synchronized blocks across all mutable filter calculation, reset, and lifecycle methods.
+2. *Numerical Parity & Rule 50 Post-Trim Emptiness Guard (`REQ-ARC-006.2`)*:
+• Mathematical output for moving average, timed moving average, numbered moving average, maximum value, and exponential smoothing algorithms SHALL be bitwise/epsilon numerically identical to the legacy Java implementation.
+• `TimedMovingAverageFilter` SHALL preserve the Rule 50 invariant: `trimValues()` MUST execute first, followed immediately by an emptiness check returning `null` (never `Double.NaN`) when all samples in the time window have expired.
+3. *PO Scope Boundary & Strategy Contract Test Alignment (`REQ-ARC-006.3`)*:
+• ADR-001 (`docs/architecture/adr_001_java_core_services_migration.md`) SHALL document the PO decision from the ATT-7749 retrospective that migration under Epic ATT-431 is bounded to leaf formatters (`ATT-7903`), pure signal filters (`ATT-7905`), and streaming exporters (`ATT-7906`), while retaining remaining Java subsystems under `Keep`.
+• `JavaCoreMigrationStrategyContractTest.kt` line 169 SHALL relax the exact equality check (`assertEquals(149, javaFiles.size)`) to `<= 149` (`assertTrue("Java files count must decrease from baseline 149", javaFiles.size <= 149)`), preventing build failures as Java classes are converted to Kotlin while continuing to prohibit unauthorized additions.
+4. *Bounded Subsystem Code Coverage Verification (`REQ-ARC-006.4`)*:
+• In compliance with `docs/coding_standards.md` §5.11 (REQ-PRO-089 / ATT-7563), the filter subsystem (`com.atrainingtracker.banalservice.filters`) SHALL satisfy the bounded verification thresholds: Line Coverage $\ge 70\%$ and Branch Coverage $\ge 50\%$ under Kover (`./gradlew koverVerifyDebug`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-ARC-006` extending `REQ-ARC-005` under Epic `ATT-431` (*Clean Code*). Targets `banalservice/filters/`, `docs/architecture/adr_001_java_core_services_migration.md`, and `JavaCoreMigrationStrategyContractTest.kt`.
+2. *Historical Origin & Commit Trace*: Initiated in Sprint `2026-46.7` under ticket `ATT-7905` to execute Tier 1 migration authorized by ADR-001 (`ATT-7566`) and bounded by PO decision in Sprint `2026-46.6` retro (`ATT-7749`).
+3. *Root Reason for Existing Formulation*: `REQ-ARC-005.1` originally asserted exact 149 Java classes to prevent untracked additions. Now that Tier 1 migrations are underway, exact equality would reject legal conversions; loosening to `<= 149` maintains the upper bound while permitting progress.
+4. *Preservation of Core Invariants*: Algorithmic filter logic, numerical results, `@Synchronized` thread locks, and Rule 50 post-trim emptiness guards are 100% preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* the 11 legacy Java filter classes in `com.atrainingtracker.banalservice.filters`,
+• *When* converted to Kotlin,
+• *Then* zero `.java` files remain in `banalservice/filters/` and all public methods, constructors, and properties maintain binary and source compatibility for existing callers.
+• *Given* concurrent sensor sample emissions,
+• *When* `FilterManager` or individual filter instances process telemetry,
+• *Then* `@Synchronized` monitor locks prevent race conditions, corrupted buffers, or concurrent modification exceptions.
+• *Given* `TimedMovingAverageFilter` with expired timestamps,
+• *When* `getFilteredValue()` is queried after all entries are trimmed,
+• *Then* it returns `null` rather than `Double.NaN` (Rule 50).
+• *Given* `JavaCoreMigrationStrategyContractTest`,
+• *When* executed against the repository containing 138 or fewer Java files,
+• *Then* the `<= 149` assertion succeeds and ADR-001 verification passes with zero failures.
+• *Given* the filter subsystem unit test suite,
+• *When* Kover verification executes,
+• *Then* Line Coverage is $\ge 70\%$ and Branch Coverage is $\ge 50\%$.
+
+**Invariants**: Zero modification to mathematical filter algorithms; thread synchronization semantics preserved; zero UI changes; 100% pass rate across filter unit tests and clean-room full suite regression.
+
+### REQ-ARC-007: Java Core Migration: Leaf Sensor Formatters Kotlin Migration & Interoperability Parity [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-ARC-007`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `app/src/main/java/com/atrainingtracker/banalservice/sensor/formater/`
+- **Rationale**: In accordance with ADR-001 (Tier 1 bottom-up migration, ATT-7566) and the PO architectural decision (ATT-7749), all 15 pure leaf formatter classes in `com.atrainingtracker.banalservice.sensor.formater` SHALL be migrated to idiomatic Kotlin (`.kt`) to eliminate platform type (`T!`) nullability hazards and memory allocations while maintaining 100% string output parity, null/NaN/Infinity safety, and Java caller interoperability (ATT-7903):
+1. *1:1 Idiomatic Kotlin Migration & SAM Interface Parity (`REQ-ARC-007.1`)*:
+• All 15 Java files in `com.atrainingtracker.banalservice.sensor.formater/` (`MyFormatter`, `DefaultStringFormatter`, `DefaultNumberFormatter`, `IntegerFormatter`, `SignedIntegerFormatter`, `CadenceFormatter`, `DfaA1Formatter`, `IntensityFactorFormatter`, `PowerToWeightFormatter`, `BatteryRemainingTimeFormatter`, `TimeFormatter`, `PaceFormatter`, `SpeedFormatter`, `AltitudeFormatter`, `DistanceFormatter`) SHALL be migrated to idiomatic Kotlin (`.kt`), and all legacy `.java` files SHALL be deleted.
+• `MyFormatter<T>` SHALL be defined as a functional interface (`fun interface MyFormatter<T> { fun format(value: T?): String }`) ensuring non-null String return guarantees and seamless SAM conversion in both Kotlin and Java callers.
+2. *Null, NaN, Infinity & Boundary Formatting Invariants (`REQ-ARC-007.2`)*:
+• All 14 concrete formatter implementations SHALL handle `null`, `Double.NaN`, `Double.POSITIVE_INFINITY`, `Double.NEGATIVE_INFINITY`, and out-of-range sensor values defensively, returning authoritative fallback representations (`"--"`, `"--.--"`, `"0"`) without throwing exceptions or emitting raw `"NaN"`/`"Infinity"` tokens.
+• Formatter outputs for valid numerical and string inputs SHALL remain bitwise identical to legacy Java outputs, preserving decimal precision, rounding rules, unit representations, and time/pace string conventions (`mm:ss`, `h:mm:ss`).
+3. *Java Caller Interoperability & Secondary Method Signatures (`REQ-ARC-007.3`)*:
+• Auxiliary formatting methods including `format_with_units(value: Number?): String` and `format_3(value: Number?): String` SHALL be preserved with exact binary and source compatibility for Java callers (including `SensorType.java` and UI presentation layers).
+• Classes exposing secondary overloaded methods or static utility helpers SHALL use `@JvmOverloads` and `@JvmStatic` annotations where necessary to ensure zero breaking changes for existing Java callers.
+4. *Bounded Subsystem Code Coverage & Contract Governance (`REQ-ARC-007.4`)*:
+• The formatter subsystem unit tests (`com.atrainingtracker.banalservice.sensor.formater.*`) SHALL maintain a test pass rate of 100% and satisfy subsystem coverage bounds of Line Coverage $\ge 70\%$ and Branch Coverage $\ge 50\%$.
+• `JavaCoreMigrationStrategyContractTest.kt` line 169 SHALL verify that total repository Java files decrease from 138 to 123, safely satisfying the `<= 149` contract bound.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* the 15 legacy Java formatter classes in `com.atrainingtracker.banalservice.sensor.formater`,
+• *When* converted to Kotlin,
+• *Then* zero `.java` files remain in `sensor/formater/` and all 15 `.kt` classes compile with non-null `String` return signatures.
+• *Given* null, NaN, infinite, or negative inputs passed to any formatter,
+• *When* `format(value)`, `format_with_units(value)`, or `format_3(value)` is evaluated,
+• *Then* deterministic fallback strings (`"--"`, `"--.--"`, etc.) are returned and zero runtime exceptions are thrown.
+• *Given* existing Java callers such as `SensorType.java` and UI ViewModels,
+• *When* invoking formatter methods,
+• *Then* compilation and execution succeed without casting errors or modified call sites.
+• *Given* `JavaCoreMigrationStrategyContractTest`,
+• *When* executed against the repository,
+• *Then* the `<= 149` Java file count check passes with zero failures.
+
+**Invariants**: Zero modification to numerical formatting results or fallback token strings; 100% backward compatibility with `SensorType.java`; zero UI regression; 100% unit test pass rate.
+
+### REQ-ARC-008: Java Core Migration: Golden Master Characterisation Test Scaffolding for TrackerService & BANALService [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-ARC-008`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `app/src/test/java/com/atrainingtracker/tracker/`
+- **Rationale**: In accordance with ADR-001 (Tier 0 Golden Master Scaffolding, ATT-7566) and the PO architectural directive (ATT-7749, ATT-7902), `TrackerService.java` (3,307 LOC) and `BANALService.java` (864 LOC) SHALL receive automated, end-to-end characterisation test fixtures capturing their public runtime contracts and state machines prior to future coroutine/StateFlow migration, while maintaining strict zero-production-edit invariance:
+1. *TrackerService State Machine & Lifecycle Characterisation (`REQ-ARC-008.1`)*:
+• Characterisation test fixtures SHALL exercise the full `TrackerService` state lifecycle (`IDLE` -> `READY` -> `TRACKING` -> `PAUSED` -> `STOPPED`), validating transitions across `TrackingMode` and `AutoPauseState` without altering production code.
+• Automated fixtures SHALL verify 1-Hz database tick dispatching, active workout sample persistence, crash/resume recovery, and post-stop export gating parity (`ATT-7918`).
+2. *BANALService Sensor Arbitration & Event Dispatching (`REQ-ARC-008.2`)*:
+• Characterisation test fixtures SHALL exercise `BANALService` ANT+/BLE sensor arbitration across multi-device sources, verifying priority resolution between ANT+ and BLE telemetry.
+• Fixtures SHALL verify `ProxySensor` listener registration and dispatching, filtered sensor integration (`FilterManager`), and timeout failover behavior.
+3. *Zero Production Code Invariant & Regression Protection (`REQ-ARC-008.3`)*:
+• All characterisation scaffolding SHALL be implemented strictly under `app/src/test/` with ZERO edits to production code in `app/src/main/`.
+• Existing unit and contract tests in `testDebugUnitTest` SHALL remain 100% green with zero regressions.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* the `TrackerService` characterisation test harness,
+• *When* the full session lifecycle (`IDLE` -> `READY` -> `TRACKING` -> `PAUSED` -> `STOPPED`) and 1-Hz sample dispatching execute,
+• *Then* state transitions and sample persistence match legacy Java behavior with zero errors.
+• *Given* the `BANALService` characterisation test harness,
+• *When* multi-sensor arbitration and `ProxySensor` event dispatching execute,
+• *Then* priority resolution and timeout failover assert bit-for-bit equivalence to the existing service.
+• *Given* the complete codebase,
+• *When* git status is inspected,
+• *Then* zero modifications exist in `app/src/main/`.
+
+**Invariants**: Zero changes to production code in `app/src/main/`; existing test suites remain 100% green; `ANT-Android-SDKs` submodule gitlink (`160000`) untouched.
+
 ### REQ-PRO-027: Agile Agentic ASPICE (AAA) Governance, Constructive Resistance, Hypothesis Verification, Stage 5 Resource Gate & Ceremony 2 Completeness Sweep [Verified]
 - **Tests**: `TST-PRO-020`
 - **Priority**: High

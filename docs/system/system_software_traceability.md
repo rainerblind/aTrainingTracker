@@ -27,7 +27,7 @@ This specification establishes normative, bidirectional traceability between bla
 | System Requirement | System Title | Refining Software Requirements (`REQ-*`) | Grounded Classes & Verification Test |
 | :--- | :--- | :--- | :--- |
 | `SYSREQ-TRK-001` | Multi-Sensor Profile Interoperability | `REQ-CON-001`, `REQ-CON-002`, `REQ-CON-003`, `REQ-CON-004`, `REQ-CON-005`, `REQ-CON-007`, `REQ-CON-028` | `BANALService.java`, `BluetoothConstants.java`, `BTLERadarDevice.java`, `SystemLiveTrackingRequirementsContractTest.kt` |
-| `SYSREQ-TRK-002` | Reconnection Resilience & Watchdog | `REQ-CON-005`, `REQ-CON-028`, `REQ-TRK-013` | `MyBTLEDevice.java`, `BTLERadarDevice.java`, `FilterManager.java`, `SystemLiveTrackingRequirementsContractTest.kt` |
+| `SYSREQ-TRK-002` | Reconnection Resilience & Watchdog | `REQ-CON-005`, `REQ-CON-028`, `REQ-TRK-013` | `MyBTLEDevice.java`, `BTLERadarDevice.java`, `FilterManager.kt`, `SystemLiveTrackingRequirementsContractTest.kt` |
 | `SYSREQ-TRK-003` | Deterministic 1-Hz Sampling Loop | `REQ-TRK-001`, `REQ-TRK-002`, `REQ-TRK-007`, `REQ-FIL-001`, `REQ-FIL-005` | `TrackerService.java`, `WorkoutSamplesDatabaseManager.java`, `SystemLiveTrackingRequirementsContractTest.kt` |
 | `SYSREQ-TRK-004` | Multi-Source GNSS Positioning | `REQ-TRK-003`, `REQ-TRK-013`, `REQ-TRK-014`, `REQ-TRK-017` | `SpeedAndLocationDevice_GPS.java`, `SpeedAndLocationDevice_GoogleFused.java`, `SystemLiveTrackingRequirementsContractTest.kt` |
 | `SYSREQ-TRK-005` | Foreground Service & Power Management | `REQ-TRK-003`, `REQ-TRK-005`, `REQ-TRK-015`, `REQ-TRK-016` | `TrackerService.java`, `TrainingApplication.java`, `SystemLiveTrackingRequirementsContractTest.kt` |

@@ -497,21 +497,32 @@ fun TrackOnMapScreen(
             showCreateLapSheet = true
         },
         header = {
-            WorkoutHeader(
-                modifier = Modifier.fillMaxWidth(),
-                data = workoutData.headerData,
-                menuEnabled = false,
-                canDelete = false,
-                onClicked = onEditWorkout?.let { edit -> { edit(workoutData.id) } },
-                onExport = { },
-                onSaveAsRoute = { },
-                onDeleteRequest = { },
-                onClusterClick = onClusterClick,
-                onEditWorkout = onEditWorkout?.let { edit -> { edit(workoutData.id) } },
-                actions = {
-                    headerActions()
+            Column(modifier = Modifier.fillMaxWidth()) {
+                WorkoutHeader(
+                    modifier = Modifier.fillMaxWidth(),
+                    data = workoutData.headerData,
+                    menuEnabled = false,
+                    canDelete = false,
+                    onClicked = onEditWorkout?.let { edit -> { edit(workoutData.id) } },
+                    onExport = { },
+                    onSaveAsRoute = { },
+                    onDeleteRequest = { },
+                    onClusterClick = onClusterClick,
+                    onEditWorkout = onEditWorkout?.let { edit -> { edit(workoutData.id) } },
+                    actions = {
+                        headerActions()
+                    }
+                )
+                if (workoutData.polarSyncPending) {
+                    PolarPendingRetrySyncSection(
+                        workoutId = workoutData.id,
+                        polarExerciseId = workoutData.polarExerciseId,
+                        onDismiss = {
+                            repository.dismissPolarSyncPending(workoutData.id)
+                        }
+                    )
                 }
-            )
+            }
         },
         mapContent = {
             tracks(filteredTracks)

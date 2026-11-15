@@ -89,7 +89,7 @@ All system requirements across the 9 living domain shards are allocated directly
 | **Post-Workout Analytics & Periods** | `PER`, `PERF` | `WorkoutRepository`, `PowerPhysiologyCalculator`, `ZoneDistributionCalculator`, `PeriodsRepository`, `HrvReadinessRepository`, `HrvReadinessDatabaseManager`, `HrvReadinessCalculator`, `HealthConnectHrvImporter`, `MorningHrvCheckViewModel`, `HrvReadinessTrendMath`, `HrvReadinessTrendCard`, `HrvReadinessTrendChart`, `WorkoutRrRepository`, `WorkoutRrDatabaseManager`, `HrvPostWorkoutRecomputer`, `ErtsPostWorkoutRecomputer`, `PowerHrDynamicsCalculator`, `PowerHrDynamicsInfoDialog` | Physiological computation (NP, TSS), 5/7 power zone distributions, period statistics & trend filters, morning HRV readiness persistence & per-posture SWC baseline analytics, nocturnal Health Connect HRV ingestion, guided morning resting HRV protocol, longitudinal HRV readiness trend charts in Periods screen, lossless workout RR intervals persistence and centered post-workout HRV recomputation, non-causal bidirectional Extended RTS trajectory and altitude profile recomputation with strict canonical column invariant, 1st-order dynamical Power-HR system identification & explanation sheet. |
 | **Maps, Polylines & Navigation** | `GEO`, `MAP`, `NAV`, `ROU` | `ClimbDetector`, `PolylineProgressTracker`, `MapFragmentWithTrackViewModel`, `ATrainingTrackerMap` | Web Mercator tile rendering, polyline compression, climb categorization, live segment gate matching. |
 | **Persistence, Migration & Cloud Export** | `DAT`, `EXP`, `EXT`, `MIG` | `WorkoutSamplesDatabaseManager`, `WorkoutSummariesDatabaseManager`, `WorkoutRrDatabaseManager`, `HrvReadinessDatabaseManager`, `FitFileWriter`, `GPXFileWriter`, `TCXFileWriter`, `StravaUploader`, `GoogleDriveBackupManager` | Time-series SQLite storage, workout RR intervals storage, morning HRV readiness SQLite storage, schema migration, Strava OAuth/upload retry, FIT/TCX/GPX serialization with native Garmin FIT HrvMesg export/import. |
-| **Settings, Profiles & Localization** | `LOC`, `MON`, `PRI`, `SET` | `TuningPreferencesDataStore`, `EquipmentDbHelper`, `EquipmentRepository`, `ProFeatureManager`, `SupporterTier`, `GarageLeagueDetector`, `HealthConnectManager`, `HealthConnectRecordMapper`, `SensorQuotaReconciliationManager` | DataStore persistence, 9-locale string parity, sensor quotas, monetization, vehicle equipment, Health Connect sync & record mapping. |
+| **Settings, Profiles & Localization** | `LOC`, `MON`, `PRI`, `SET` | `TuningPreferencesDataStore`, `EquipmentDbHelper`, `EquipmentRepository`, `ProFeatureManager`, `SupporterTier`, `GarageLeagueDetector`, `HealthConnectManager`, `HealthConnectRecordMapper`, `SensorQuotaReconciliationManager`, `DevicesDatabaseManager`, `PolarOfflineGattCoordinator`, `PolarOfflineCapabilityStore`, `PolarH10OfflineController`, `PolarVeritySenseOfflineController` | DataStore persistence, 9-locale string parity, sensor quotas, monetization, vehicle equipment, Health Connect sync & record mapping, Devices.db v13 offline recording toggle persistence, and Polar H10 (RR) / Verity Sense (optical HR) offline recording control with shared GATT arbitration and Android 13+ isolation. |
 | **UI Components & Design System** | `UI`, `UNT` | Jetpack Compose theme (`ATrainingTrackerTheme`), `MetricItem`, `ElevationProfile`, `TelemetryMetricGraph`, `AppModalBottomSheet`, `WorkoutPhotoStrip`, `WorkoutTimePhotoPickerSheet`, `MorningHrvCheckScreen` | High-contrast AMOLED theming, responsive landscape layouts, chart scrubbing, reusable Compose components, chronological workout photo selection, guided morning resting HRV acquisition. |
 | **Engineering Process & Stability** | `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST` | ASPICE Dual-Agent Quality Gates, `jira_util.py`, `verify_requirement_governance.py`, ProGuard rules, [ADR-001](architecture/adr_001_java_core_services_migration.md), `JavaCoreMigrationStrategyContractTest` | CI/CD build hygiene, Chesterton's fence archaeology, crash resilience, process kill simulation, Java core services migration governance (`REQ-ARC-005`). |
 | **Jubilee Milestones & App Reviews** | `REV` | `MilestoneAutoNamingManager`, `FirstJubileeCelebrationDialog`, `FirstJubileeActionHelper` | Milestone counting, achievement celebration, Google Play in-app review prompting. |
@@ -165,6 +165,64 @@ sequenceDiagram
     EXP->>EXP: Build Binary .FIT and XML .TCX/.GPX Files
     EXP->>STR: Execute OAuth Refresh & Multipart Upload
     STR-->>EXP: 201 Created / Upload Polling ID
+```
+
+### 3.4 Polar H10 & Verity Sense Offline Recording, Backfill & Export Gating Lifecycle (REQ-SET-104, REQ-SET-105, REQ-SET-108, REQ-SET-109)
+When a paired Polar H10 or Polar Verity Sense / optical `FEATURE_POLAR_OFFLINE_RECORDING` heart rate sensor has offline backup recording enabled on Android 13+ (`Build.VERSION.SDK_INT >= 33`), `TrackerService` triggers non-blocking single-shot arming (`PolarH10OfflineController` or `PolarVeritySenseOfflineController`) at workout start. Both controllers coordinate GATT yield via `PolarOfflineGattCoordinator` (`MyBTLEDevice.pauseGattOperations()` / `resumeGattOperations()`), enforce `isArmed` mid-workout fringe-flap invariance, handle `SYSTEM_BUSY` gracefully, and for optical sensors persist PFTP capability in `PolarOfflineCapabilityStore` while arming `PolarDeviceDataType.HR` via `PolarOfflineRecordingApi`.
+
+Upon workout completion (`TrackerService.endWorkout()`), `PolarH10OfflineController.stopAndBackfillWorkoutBlocking()` and `PolarVeritySenseOfflineController.stopAndBackfillWorkoutBlocking()` gate downstream `ExportManager.workoutFinished()` exports. H10 evaluates live continuity across `WorkoutSamples.db` and `WorkoutRr.db`, patching HR + RR intervals and invoking `HrvPostWorkoutRecomputer`. Conversely, `PolarVeritySenseOfflineController` (`REQ-SET-109`) evaluates `WorkoutSamplesDatabaseManager.hasMissingHeartRateSamples()` only (zero-gap fast path skips `getOfflineRecord` download while stopping HR and deleting only the matched entry), aligns `HrOfflineRecording.startTime` + 1-Hz samples into missing `SensorType.HR` rows, recomputes `SensorType.HR` extrema (`MIN`, `MAX`, `AVG`) into `WorkoutSummaries.db` + refreshes `WorkoutRepository` (strictly NEVER writing `WorkoutRr.db` or invoking `HrvPostWorkoutRecomputer`), and deletes ONLY the matched `PolarOfflineRecordingEntry` post-commit. When Verity Sense is unreachable at stop, `setPolarSyncPending()` tags `polarExerciseId` with `"verity:"` and `PolarH10RetrySyncBanner` renders localized Blue Sensor Mode wake instructions across 9 locales dispatching to `PolarVeritySenseOfflineController.syncPendingWorkout()`.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant TS as TrackerService
+    participant PC as PolarH10OfflineController
+    participant MD as MyBTLEDevice
+    participant SDK as PolarBleApi (polar-ble-sdk)
+    participant H10 as Polar H10 Hardware
+    participant DB as SQLite (Samples / RR / Summaries)
+    participant EXP as ExportManager
+
+    Note over TS,H10: Workout Start Arming (REQ-SET-104)
+    TS->>PC: onWorkoutStarted(context) [Async Dispatchers.IO]
+    PC->>PC: Check API 33+ & Single-Shot Invariant
+    PC->>MD: pauseGattOperations() [Prevent collision]
+    PC->>SDK: connectToDevice(polarId)
+    SDK->>H10: Establish BLE PFTP session
+    PC->>SDK: setLocalTime(polarId, now)
+    SDK->>H10: Synchronize Device Clock
+    PC->>SDK: requestRecordingStatus(polarId)
+    alt Ongoing recording detected
+        PC->>SDK: stopRecording(polarId)
+    end
+    PC->>SDK: listExercises(polarId) -> removeExercise() [Stale Cleanup]
+    PC->>SDK: startRecording(polarId, SampleType.RR)
+    SDK->>H10: Arm Internal Flash Recording
+    PC->>PC: Mark isRecordingArmed = true
+    PC->>SDK: disconnectFromDevice(polarId)
+    PC->>MD: resumeGattOperations() [Resume 0x180D Live Streaming]
+
+    Note over TS,EXP: Workout Stop Backfill & Export Gating (REQ-SET-105)
+    TS->>PC: stopAndBackfillWorkoutBlocking(context, workoutId, baseFileName)
+    PC->>PC: evaluate shouldBackfill() (Zero-gap check)
+    PC->>MD: pauseGattOperations()
+    alt Zero-gap fast path (100% continuous live HR & zero ARTIFACT_GAP)
+        PC->>SDK: stopRecording() + listExercises() -> removeExercise()
+    else Gaps exist (pool swim or BLE dropout)
+        PC->>PC: showSyncNotification() (9-locale parity)
+        PC->>SDK: fetchExercise(polarId, entry) [30s timeout]
+        SDK->H10: PFTP RR data transfer
+        H10-->>PC: PolarExerciseData (hrSamples in ms)
+        PC->>DB: patchMissingHeartRateSamples() [Gap-only 1-Hz HR]
+        PC->>DB: insertIntervals() [Missing RR beats into WorkoutRr.db]
+        PC->>DB: HrvPostWorkoutRecomputer.recomputeWorkout() [Summaries.db]
+        Note over PC,H10: Transactional Slot Cleanup strictly AFTER SQLite commit
+        PC->>SDK: removeExercise(polarId, entry)
+        PC->>PC: dismissSyncNotification()
+    end
+    PC->>MD: resumeGattOperations()
+    PC-->>TS: Backfill & summary recomputation complete
+    TS->>EXP: workoutFinished(baseFileName) [Exports release with 100% complete metrics]
 ```
 
 ---

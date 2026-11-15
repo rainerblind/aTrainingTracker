@@ -8587,3 +8587,29 @@
   6. *Targeted Unit Test Regression Suite (`TST-UI-529.6`)*:
      - Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRpeFeelTest" --tests "com.atrainingtracker.trainingtracker.build.ThemeColorCentralizationAuditTest"`.
      - Assert 100% pass rate.
+
+
+### TST-UI-530: **Centralized Telemetry Color Palette, Metric Defaults & Preference Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-UI-530` (`REQ-UI-530.1`..`REQ-UI-530.4`)
+- **Component**: `Color.kt`, `TelemetryGraphColorPreferences.kt`, `TelemetryMetricGraph.kt`, `TelemetryGraphColorContrastTest.kt`, `TelemetryGraphColorPreferencesTest.kt`
+- **Jira**: `ATT-7759`
+- **Test Description**:
+  1. *TelemetryGraphColor WCAG Contrast & Palette Unit Tests (`TST-UI-530.1`, `TelemetryGraphColorContrastTest.kt`)*:
+     - Verify all 8 colors (`CRIMSON`, `VIOLET`, `EMERALD`, `AMBER`, `TEAL`, `MAGENTA`, `CYAN`, `CORAL`) achieve $\ge 3.0:1$ non-text contrast against Light (`#FFFFFF`), Dark (`#16161A`), and AMOLED (`#000000`) surfaces.
+     - Verify `EMERALD` Light variant (`#059669`) achieves $\ge 3.0:1$ contrast against `#FFFFFF`, fixing the `2.53:1` contrast deficiency of raw `WPrimeBalGreen`.
+     - Verify `resolveColor` returns `colorScheme.primary` when `THEME_DEFAULT` is selected.
+  2. *Canonical Metric & Sensor Default Mappings Unit Tests (`TST-UI-530.2`, `TelemetryGraphColorPreferencesTest.kt`)*:
+     - Verify default color mappings for all `TelemetryMetricType` values: HR=CRIMSON, POWER=VIOLET, W_PRIME_BAL=EMERALD, HRV_DFA_A1=AMBER, HRV_RMSSD=TEAL, SPEED/PACE=THEME_DEFAULT.
+     - Verify default mappings for `SensorType` families (Heart Rate, Power, Speed, Cadence, Altitude, Grade, etc.).
+  3. *Preference Persistence & Safe Deserialization Unit Tests (`TST-UI-530.3`, `TelemetryGraphColorPreferencesTest.kt`)*:
+     - Verify `setGraphColor` persists the selected color and `getGraphColor` returns it.
+     - Verify `resetGraphColor` restores the metric's default color.
+     - Verify `resetAllGraphColors` resets all metric overrides to defaults.
+     - Verify corrupt, unknown, or lowercase enum strings in `SharedPreferences` safely fall back to canonical defaults without throwing exceptions (`REQ-ARC-001`).
+  4. *TelemetryMetricGraph Accent Color Resolution & Contrast Verification (`TST-UI-530.4`, `TelemetryMetricGraphColorTest.kt`)*:
+     - Verify accent color resolution in `TelemetryMetricGraph` across Light, Dark, and AMOLED theme modes.
+     - Verify reactive resolution when preferences are modified.
+  5. *Architecture, Centralization & Governance Regression Suite (`TST-UI-530.5`)*:
+     - Execute `ThemeColorCentralizationAuditTest`, `AspiceSweAuditContractTest`, `SourceTextReadingAuditContractTest`, `SafeEnumDeserializationAuditTest`, and `verify_requirement_governance.py`.
+     - Assert 100% pass rate with zero `Color(0x...)` literals outside `Color.kt`.

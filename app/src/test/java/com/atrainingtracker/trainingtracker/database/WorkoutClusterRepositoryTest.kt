@@ -24,7 +24,13 @@ import androidx.preference.PreferenceManager
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import io.mockk.*
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.*
@@ -272,5 +278,215 @@ class WorkoutClusterRepositoryTest {
         // Second call when stats are already populated should not re-query summariesManager
         repo.loadAllClustersLightweight()
         verify(exactly = 1) { mockSummariesManager.getWorkoutClusterStatsForAllClusters() }
+    }
+
+    /**
+     * TST-PER-048.2: Cluster rename, merge, delete, split, and route-synced renames propagate to
+     * WorkoutRepository, RoutesRepository, and emit corresponding ClusterMutationEvents (REQ-PER-040.1, REQ-PER-040.2).
+     */
+    @Test
+    fun testClusterMutations_propagateToWorkoutRepositoryRoutesAndEmitEvents_TST_PER_048_2() = runBlocking {
+        val mockWorkoutRepo = mockk<WorkoutRepository>(relaxed = true)
+        val mockRoutesRepo = mockk<RoutesRepository>(relaxed = true)
+        val mockEngine = mockk<WorkoutClusterEngine>(relaxed = true)
+        WorkoutRepository.resetForTesting(mockWorkoutRepo)
+        RoutesRepository.resetForTesting(mockRoutesRepo)
+        WorkoutClusterEngine.resetForTesting(mockEngine)
+
+        try {
+            val cluster10 = WorkoutCluster(
+                id = 10L,
+                name = "Old Name",
+                probableSportId = 1L,
+                startLat = 48.0,
+                startLng = 9.0,
+                endLat = 48.1,
+                endLng = 9.1,
+                maxDispLat = 48.2,
+                maxDispLng = 9.2,
+                refDistance = 5000.0,
+                hitCount = 3,
+                bSportType = BSportType.RUN
+            )
+            val cluster20 = cluster10.copy(id = 20L, name = "Target Route")
+            every { mockClusterDb.getAllClusters() } returns listOf(cluster10, cluster20)
+            every { mockClusterDb.getClusterById(20L) } returns cluster20
+            every { mockClusterDb.getClusterById(10L) } returns cluster10.copy(name = "Route Synced")
+            every { mockEngine.mergeClusters(any(), 10L, 20L) } returns true
+            every { mockEngine.splitCluster(any(), 10L, any(), true) } returns listOf(30L)
+
+            val repo = WorkoutClusterRepository.getInstance(mockContext)
+
+            // 1. Rename via updateCluster
+            val renameEvent = async(start = CoroutineStart.UNDISPATCHED) { repo.clusterMutationEvents.first() }
+            repo.updateCluster(cluster10.copy(name = "New Cluster"))
+            assertEquals(ClusterMutationEvent.Renamed(10L, "New Cluster"), renameEvent.await())
+            coVerify(exactly = 1) { mockRoutesRepo.syncClusterNameChange(10L, "New Cluster") }
+            verify(exactly = 1) { mockWorkoutRepo.onClusterRenamed(10L, "New Cluster") }
+
+            // 2. Merge
+            val mergeEvent = async(start = CoroutineStart.UNDISPATCHED) { repo.clusterMutationEvents.first() }
+            assertTrue(repo.mergeClusters(10L, 20L))
+            assertEquals(ClusterMutationEvent.Merged(10L, 20L, "Target Route"), mergeEvent.await())
+            coVerify(atLeast = 1) { mockRoutesRepo.refreshRoutes() }
+            verify(exactly = 1) { mockWorkoutRepo.onClusterMerged(10L, 20L, "Target Route") }
+
+            // 3. Delete
+            val deleteEvent = async(start = CoroutineStart.UNDISPATCHED) { repo.clusterMutationEvents.first() }
+            repo.deleteCluster(20L)
+            assertEquals(ClusterMutationEvent.Deleted(20L), deleteEvent.await())
+            verify(exactly = 1) { mockWorkoutRepo.onClusterDeleted(20L) }
+
+            // 4. Split
+            val splitWorkout = mockk<WorkoutData>(relaxed = true) { every { id } returns 501L }
+            val splitEvent = async(start = CoroutineStart.UNDISPATCHED) { repo.clusterMutationEvents.first() }
+            val createdIds = repo.splitCluster(10L, listOf("Variant A" to listOf(splitWorkout)), renameWorkouts = true)
+            assertEquals(listOf(30L), createdIds)
+            assertEquals(ClusterMutationEvent.Split(10L, listOf(30L), listOf(501L)), splitEvent.await())
+            coVerify(exactly = 1) { mockWorkoutRepo.reloadWorkouts(listOf(501L)) }
+        } finally {
+            WorkoutClusterEngine.resetForTesting(null)
+            RoutesRepository.resetForTesting(null)
+            WorkoutRepository.resetForTesting(null)
+        }
+    }
+
+    /**
+     * TST-PER-048.2: Route-originated rename propagates to WorkoutRepository and emits Renamed event
+     * without re-invoking RoutesRepository.syncClusterNameChange (REQ-PER-040.2).
+     */
+    @Test
+    fun testOnRouteSyncedClusterRename_propagatesWithoutCallingRoutesRepository_TST_PER_048_2() = runBlocking {
+        val mockWorkoutRepo = mockk<WorkoutRepository>(relaxed = true)
+        val mockRoutesRepo = mockk<RoutesRepository>(relaxed = true)
+        WorkoutRepository.resetForTesting(mockWorkoutRepo)
+        RoutesRepository.resetForTesting(mockRoutesRepo)
+
+        try {
+            val cluster10 = WorkoutCluster(
+                id = 10L,
+                name = "Route Synced",
+                probableSportId = 1L,
+                startLat = 48.0,
+                startLng = 9.0,
+                endLat = 48.1,
+                endLng = 9.1,
+                maxDispLat = 48.2,
+                maxDispLng = 9.2,
+                refDistance = 5000.0,
+                hitCount = 3,
+                bSportType = BSportType.RUN
+            )
+            every { mockClusterDb.getClusterById(10L) } returns cluster10
+            every { mockClusterDb.getAllClusters() } returns listOf(cluster10)
+
+            val repo = WorkoutClusterRepository.getInstance(mockContext)
+            val routeRenameEvent = async(start = CoroutineStart.UNDISPATCHED) { repo.clusterMutationEvents.first() }
+            repo.onRouteSyncedClusterRename(10L)
+            assertEquals(ClusterMutationEvent.Renamed(10L, "Route Synced"), routeRenameEvent.await())
+            verify(exactly = 1) { mockWorkoutRepo.onClusterRenamed(10L, "Route Synced") }
+            coVerify(exactly = 0) { mockRoutesRepo.syncClusterNameChange(any(), any()) }
+        } finally {
+            RoutesRepository.resetForTesting(null)
+            WorkoutRepository.resetForTesting(null)
+        }
+    }
+
+    /**
+     * TST-PER-049.2: loadAllClustersLightweight self-heals untrimmed and blank persisted names
+     * with collision resolution and propagates changes cleanly.
+     */
+    @Test
+    fun testLoadAllClusters_selfHealsUntrimmedNamesWithCollision_TST_PER_049_2() = runBlocking {
+        val mockWorkoutRepo = mockk<WorkoutRepository>(relaxed = true)
+        val mockRoutesRepo = mockk<RoutesRepository>(relaxed = true)
+        WorkoutRepository.resetForTesting(mockWorkoutRepo)
+        RoutesRepository.resetForTesting(mockRoutesRepo)
+
+        try {
+            val repo = WorkoutClusterRepository.getInstance(mockContext)
+            verify(timeout = 1000, atLeast = 1) { mockClusterDb.getAllClusters() }
+            repo.loadAllClustersLightweight()
+            clearMocks(mockClusterDb, mockWorkoutRepo, mockRoutesRepo, answers = false)
+
+            val base = WorkoutCluster(
+                id = 1L, name = "Kurze Runde", probableSportId = 1L,
+                startLat = 48.0, startLng = 9.0, endLat = 48.1, endLng = 9.1,
+                maxDispLat = 48.2, maxDispLng = 9.2, refDistance = 5000.0,
+                hitCount = 5, bSportType = BSportType.RUN
+            )
+            every { mockClusterDb.getAllClusters() } returns listOf(
+                base,
+                base.copy(id = 2L, name = "  Alte Runde  ", hitCount = 3),
+                base.copy(id = 3L, name = "Kurze Runde ", hitCount = 2),
+                base.copy(id = 4L, name = "   ", hitCount = 1)
+            )
+            every { mockSummariesManager.getWorkoutClusterStatsForAllClusters() } returns emptyMap()
+
+            val events = mutableListOf<ClusterMutationEvent>()
+            val collector = async(start = CoroutineStart.UNDISPATCHED) {
+                repo.clusterMutationEvents.collect { events.add(it) }
+            }
+            val loaded = repo.loadAllClustersLightweight()
+            collector.cancel()
+
+            assertEquals("Kurze Runde", loaded.first { it.id == 1L }.name)
+            assertEquals("Alte Runde", loaded.first { it.id == 2L }.name)
+            assertEquals("Kurze Runde var 2", loaded.first { it.id == 3L }.name)
+            assertEquals("Cluster 4", loaded.first { it.id == 4L }.name)
+            verify(exactly = 1) { mockClusterDb.updateCluster(match { it.id == 2L && it.name == "Alte Runde" }) }
+            verify(exactly = 1) {
+                mockClusterDb.updateCluster(match { it.id == 3L && it.name == "Kurze Runde var 2" })
+            }
+            coVerify(exactly = 1) { mockRoutesRepo.syncClusterNameChange(2L, "Alte Runde") }
+            verify(exactly = 1) { mockWorkoutRepo.onClusterRenamed(3L, "Kurze Runde var 2") }
+            assertTrue(events.contains(ClusterMutationEvent.Renamed(2L, "Alte Runde")))
+            assertTrue(events.contains(ClusterMutationEvent.Renamed(3L, "Kurze Runde var 2")))
+        } finally {
+            RoutesRepository.resetForTesting(null)
+            WorkoutRepository.resetForTesting(null)
+        }
+    }
+
+    /**
+     * TST-PER-049.1 / TST-PER-049.2: refreshClusters fast-path self-heals untrimmed rows and
+     * updateCluster / updateClusterSync trim names and reject blank-only updates.
+     */
+    @Test
+    fun testRefreshAndUpdate_healsTrimsAndRejectsBlank_TST_PER_049_1() = runBlocking {
+        val mockWorkoutRepo = mockk<WorkoutRepository>(relaxed = true)
+        val mockRoutesRepo = mockk<RoutesRepository>(relaxed = true)
+        WorkoutRepository.resetForTesting(mockWorkoutRepo)
+        RoutesRepository.resetForTesting(mockRoutesRepo)
+
+        try {
+            val repo = WorkoutClusterRepository.getInstance(mockContext)
+            verify(timeout = 1000, atLeast = 1) { mockClusterDb.getAllClusters() }
+            repo.loadAllClustersLightweight()
+            clearMocks(mockClusterDb, mockWorkoutRepo, mockRoutesRepo, answers = false)
+
+            val base = WorkoutCluster(
+                id = 5L, name = " Ostpark ", probableSportId = 1L,
+                startLat = 48.0, startLng = 9.0, endLat = 48.1, endLng = 9.1,
+                maxDispLat = 48.2, maxDispLng = 9.2, refDistance = 5000.0,
+                hitCount = 4, bSportType = BSportType.RUN, previewPaths = listOf("poly")
+            )
+            every { mockClusterDb.getAllClusters() } returns listOf(base)
+            repo.refreshClusters()
+
+            assertEquals("Ostpark", repo.allClusters.value.first().name)
+            verify(exactly = 1) { mockClusterDb.updateCluster(match { it.id == 5L && it.name == "Ostpark" }) }
+            verify(exactly = 1) { mockWorkoutRepo.onClusterRenamed(5L, "Ostpark") }
+
+            repo.updateCluster(base.copy(id = 1L, name = "   "))
+            verify(exactly = 0) { mockClusterDb.updateCluster(match { it.id == 1L }) }
+            repo.updateCluster(base.copy(id = 1L, name = "  Neu Benannt  "))
+            verify(exactly = 1) { mockClusterDb.updateCluster(match { it.id == 1L && it.name == "Neu Benannt" }) }
+            repo.updateClusterSync(base.copy(id = 1L, name = "  Sync Trim  "))
+            verify(exactly = 1) { mockClusterDb.updateCluster(match { it.id == 1L && it.name == "Sync Trim" }) }
+        } finally {
+            RoutesRepository.resetForTesting(null)
+            WorkoutRepository.resetForTesting(null)
+        }
     }
 }

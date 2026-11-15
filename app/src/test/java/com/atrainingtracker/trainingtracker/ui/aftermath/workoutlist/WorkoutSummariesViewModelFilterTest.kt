@@ -23,6 +23,8 @@ import androidx.arch.core.executor.ArchTaskExecutor
 import androidx.arch.core.executor.TaskExecutor
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.MyPreferenceManager
+import com.atrainingtracker.trainingtracker.database.ClusterMutationEvent
+import com.atrainingtracker.trainingtracker.database.WorkoutCluster
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository
 import com.atrainingtracker.trainingtracker.database.WorkoutSource
 import com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepository
@@ -38,6 +40,7 @@ import io.mockk.mockkConstructor
 import io.mockk.unmockkAll
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
@@ -51,6 +54,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -70,6 +74,8 @@ class WorkoutSummariesViewModelFilterTest {
     private val mockClusterRepo = mockk<WorkoutClusterRepository>(relaxed = true)
 
     private val allWorkoutsFlow = MutableStateFlow<List<WorkoutData>>(emptyList())
+    private val allClustersFlow = MutableStateFlow<List<WorkoutCluster>>(emptyList())
+    private val clusterMutationEventsFlow = MutableSharedFlow<ClusterMutationEvent>(extraBufferCapacity = 16)
 
     private fun createWorkout(
         id: Long,
@@ -138,7 +144,8 @@ class WorkoutSummariesViewModelFilterTest {
 
         every { mockWorkoutRepo.allWorkouts } returns allWorkoutsFlow
         every { mockKnownLocationsRepo.locationsFlow } returns MutableStateFlow(emptyList())
-        every { mockClusterRepo.allClusters } returns MutableStateFlow(emptyList())
+        every { mockClusterRepo.allClusters } returns allClustersFlow
+        every { mockClusterRepo.clusterMutationEvents } returns clusterMutationEventsFlow
         val mockTuningDataStore = mockk<TuningPreferencesDataStore>(relaxed = true)
         every { mockTuningDataStore.enableCardioPowerDynamicsFlow } returns flowOf(false)
         TuningPreferencesDataStore.setInstanceForTesting(mockTuningDataStore)
@@ -320,5 +327,36 @@ class WorkoutSummariesViewModelFilterTest {
         advanceUntilIdle()
         assertEquals(1, viewModel.workouts.value.size)
         assertEquals("TCX Bike", viewModel.workouts.value[0].workoutName)
+    }
+
+    /**
+     * TST-PER-048.5: Active cluster filter chip metadata updates on cluster rename, reassigns on merge,
+     * and clears cleanly when the filtered cluster is deleted (REQ-PER-040.3).
+     */
+    @Test
+    fun testClusterFilterCriteria_reconcilesOnRenameMergeAndDelete_TST_PER_048_5() = runTest(testDispatcher) {
+        val viewModel = WorkoutSummariesViewModel(mockApplication)
+        advanceUntilIdle()
+
+        viewModel.setFilterCriteria(WorkoutFilterCriteria(clusterId = 10L, clusterName = "Old Route"))
+        advanceUntilIdle()
+
+        // 1. Rename updates clusterName while preserving clusterId
+        clusterMutationEventsFlow.emit(ClusterMutationEvent.Renamed(10L, "New Route"))
+        advanceUntilIdle()
+        assertEquals(10L, viewModel.filterCriteria.value.clusterId)
+        assertEquals("New Route", viewModel.filterCriteria.value.clusterName)
+
+        // 2. Merge updates clusterId & clusterName to target cluster
+        clusterMutationEventsFlow.emit(ClusterMutationEvent.Merged(10L, 20L, "Unified Route"))
+        advanceUntilIdle()
+        assertEquals(20L, viewModel.filterCriteria.value.clusterId)
+        assertEquals("Unified Route", viewModel.filterCriteria.value.clusterName)
+
+        // 3. Delete clears active cluster filter
+        clusterMutationEventsFlow.emit(ClusterMutationEvent.Deleted(20L))
+        advanceUntilIdle()
+        assertNull(viewModel.filterCriteria.value.clusterId)
+        assertNull(viewModel.filterCriteria.value.clusterName)
     }
 }

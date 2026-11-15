@@ -604,6 +604,10 @@
     <string name="config_tracking__showLapButton">Ronde-knop</string>
     <string name="config_tracking__showBikeBell">Fietsbel weergeven</string>
     <string name="config_tracking__showBikeBell_subtitle">Tik op of houd de belknop ingedrukt, of dubbeltik op de cockpit</string>
+    <string name="config_tracking__show_radar_light">Radar-achterlicht</string>
+    <string name="config_tracking__show_radar_light_subtitle">Tik om van modus te wisselen, houd ingedrukt voor snelmenu</string>
+    <string name="radar_light_button_content_description">Radar-achterlicht: %1$s</string>
+    <string name="radar_light_auto_badge">AUTO</string>
     <string name="config_tracking__show_navigation_hints">Aanwijzingen</string>
     <string name="config_tracking__show_live_climbs">Live beklimmingen</string>
     <string name="config_tracking__wysiwyg_active">Actief</string>

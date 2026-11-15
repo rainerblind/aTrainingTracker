@@ -1010,6 +1010,77 @@ class TestJiraCliTooling(unittest.TestCase):
         jira_util.gate_verdict("ATT-4302", "PASS", "Gate 2 PASS audit report", role="agent2")
         mock_transition.assert_called_with("ATT-4302", "freigabe", role="agent2", inject_context=True)
 
+    @patch("jira_util.get_config", return_value={"JIRA_URL": "https://example.atlassian.net"})
+    @patch("jira_util.jira_request")
+    def test_po_queue_447_tamper_protection_and_bin_packing(self, mock_request, mock_config):
+        """ATT-8030: Enforce Vom PO Freigegeben (ID 447) tamper guard, cutoff return, greedy bin-packing & swap."""
+        # 1. Pushing Backlog tickets into ID 447 must exit(1) even for coordinator
+        with self.assertRaises(SystemExit) as cm:
+            jira_util.move_issues_to_sprint_guarded(447, ["ATT-9001"], role="coordinator", cutoff_return=False)
+        self.assertEqual(cm.exception.code, 1)
+        mock_request.assert_not_called()
+
+        # 2. agent1/agent2 cannot move sprint memberships at all
+        with self.assertRaises(SystemExit):
+            jira_util.move_issues_to_sprint_guarded(448, ["ATT-9001"], role="agent1")
+
+        # 3. Greedy bin-packing selects strictly in rank order across disjoint Epics up to max_lanes
+        ranked = [
+            {"key": "ATT-1", "fields": {"issuetype": {"name": "Bug"}, "summary": "A1", "status": {"name": "Zu erledigen"}, "parent": {"key": "EPIC-A"}}},
+            {"key": "ATT-2", "fields": {"issuetype": {"name": "Bug"}, "summary": "A2", "status": {"name": "Zu erledigen"}, "parent": {"key": "EPIC-A"}}},
+            {"key": "ATT-3", "fields": {"issuetype": {"name": "Feature"}, "summary": "B1", "status": {"name": "Implementation"}, "parent": {"key": "EPIC-B"}}},
+            {"key": "ATT-4", "fields": {"issuetype": {"name": "Feature"}, "summary": "C1", "status": {"name": "Zu erledigen"}, "parent": {"key": "EPIC-C"}}},
+            {"key": "ATT-5", "fields": {"issuetype": {"name": "Feature"}, "summary": "D1", "status": {"name": "Zu erledigen"}, "parent": {"key": "EPIC-D"}}},
+        ]
+        packed = jira_util.select_greedy_bin_pack_tickets(ranked, max_lanes=3)
+        self.assertEqual([i["key"] for i in packed], ["ATT-1", "ATT-4", "ATT-5"])
+
+        # 4. Cutoff return-unstarted moves ONLY untouched Zu erledigen (excluding Review & Retro) to 447 and ranks top
+        mock_request.side_effect = [
+            {"values": [{"id": 1}]},
+            {
+                "issues": [
+                    {"key": "ATT-10", "fields": {"issuetype": {"subtask": False}, "summary": "Untouched Bug", "status": {"name": "Zu erledigen"}}},
+                    {"key": "ATT-11", "fields": {"issuetype": {"subtask": False}, "summary": "Done Item", "status": {"name": "Final Review (Human)"}}},
+                    {"key": "ATT-8030", "fields": {"issuetype": {"subtask": False}, "summary": "Review & Retro - Sprint 2026-46.7", "status": {"name": "Zu erledigen"}}},
+                ],
+                "total": 3,
+            },
+            {"issues": [{"key": "ATT-200"}]},  # existing top item in 447
+            {},  # POST /sprint/447/issue
+            {},  # PUT /issue/rank
+        ]
+        with patch("jira_util.resolve_sprint_object", return_value={"id": 444, "name": "2026-46.7"}):
+            returned = jira_util.return_unstarted_to_po_queue("444", role="coordinator")
+        self.assertEqual(returned, ["ATT-10"])
+        self.assertEqual(mock_request.call_args_list[-2][1]["payload"], {"issues": ["ATT-10"]})
+        self.assertEqual(mock_request.call_args_list[-1][1]["payload"], {"issues": ["ATT-10"], "rankBeforeIssue": "ATT-200"})
+
+        # 5. Swap future sprint keeps ID 447 adjacent to Backlog
+        mock_request.reset_mock()
+        mock_request.side_effect = None
+        mock_request.return_value = {}
+        self.assertTrue(jira_util.swap_future_sprint_keep_po_queue_last(450, role="coordinator"))
+        self.assertIn("/rest/agile/1.0/sprint/450/swap", mock_request.call_args[0][0])
+        self.assertEqual(mock_request.call_args[1]["payload"], {"sprintToSwapWith": 447})
+
+    @patch("jira_util.create_issue", return_value="ATT-9100")
+    @patch("jira_util.paged_jql_search", return_value=[])
+    @patch("jira_util.get_config", return_value={"JIRA_URL": "https://example.atlassian.net"})
+    def test_ensure_weekly_retro_creates_and_reuses_ticket(self, mock_config, mock_search, mock_create):
+        """ATT-8030: Dual-ticket rolling Wochen Review & Retro creates when missing and reuses when open."""
+        key1 = jira_util.ensure_weekly_retro_ticket(role="coordinator")
+        self.assertEqual(key1, "ATT-9100")
+        mock_create.assert_called_once()
+
+        mock_create.reset_mock()
+        mock_search.return_value = [
+            {"key": "ATT-9100", "fields": {"summary": "Wochen Review & Retro - 2026-KW46", "status": {"name": "Zu erledigen"}}}
+        ]
+        key2 = jira_util.ensure_weekly_retro_ticket(role="coordinator")
+        self.assertEqual(key2, "ATT-9100")
+        mock_create.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()

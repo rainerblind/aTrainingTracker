@@ -1570,6 +1570,64 @@
   4. *Targeted & Full Suite Clean-Room Regression Execution (`TST-ARC-005.4`)*:
   • Execute `./gradlew testDebugUnitTest --tests com.atrainingtracker.architecture.JavaCoreMigrationStrategyContractTest` verifying 100% pass rate.
 
+### TST-ARC-006: **Java Core Migration: Pure Signal Filters Kotlin Migration & ADR-001 Contract Alignment Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Requirement(s)**: `REQ-ARC-006`
+- **Component**: **Pure Signal Filters Kotlin Migration Verification Suite**
+- **Jira**: `ATT-7905`
+- **Test Description**:
+  1. *Filter Behavioral & Numerical Equivalence Test Suite (`TST-ARC-006.1`)*:
+  • Execute targeted filter unit tests in `com.atrainingtracker.banalservice.filters.*` (`FilterInitializationAndBoundsTest`, `FilterManagerAccumulatorResetTest`, `FilterManagerRebindTest`, `FilterNullSafetyTest`, `FilterResetAndPreStartTest`, `SensorFilterDefaultsTest`) verifying 100% pass rate and identical floating-point output.
+  2. *Thread Synchronization & Concurrency Safety Verification (`TST-ARC-006.2`)*:
+  • Verify that all converted filter classes annotate mutating methods (`newValue`, `reset`, `getFilteredValue`, `createFilter`, `resetAllFilters`) with `@Synchronized` to preserve monitor safety across high-frequency ingestion threads.
+  3. *Rule 50 Post-Trim Emptiness & NaN Elimination Verification (`TST-ARC-006.3`)*:
+  • Verify that `TimedMovingAverageFilterTest` confirms `getFilteredValue()` returns `null` (not `NaN`) when all timestamped values are trimmed.
+  4. *Java Core Migration Strategy Contract Test Verification (`TST-ARC-006.4`)*:
+  • Execute `./gradlew testDebugUnitTest --tests com.atrainingtracker.architecture.JavaCoreMigrationStrategyContractTest` verifying that ADR-001 reflects the bounded migration scope and the `<= 149` Java file count tolerance passes.
+  5. *Filter Subsystem Kover Coverage Verification (`TST-ARC-006.5`)*:
+  • Execute `./gradlew koverVerifyDebug` confirming the filter subsystem achieves $\ge 70\%$ Line Coverage and $\ge 50\%$ Branch Coverage.
+
+### TST-ARC-007: **Java Core Migration: Leaf Sensor Formatters Kotlin Migration & Interoperability Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Requirement(s)**: `REQ-ARC-007`
+- **Component**: **Leaf Sensor Formatters Kotlin Migration Verification Suite**
+- **Jira**: `ATT-7903`
+- **Test Description**:
+  1. *Formatter Behavioral & String Equivalence Test Suite (`TST-ARC-007.1`)*:
+  • Execute targeted formatter unit tests in `com.atrainingtracker.banalservice.sensor.formater.*` covering all 14 concrete formatter classes across valid sensor readings, verifying 100% identical string representations and unit suffix outputs.
+  2. *Null, NaN, Infinity & Boundary Robustness Verification (`TST-ARC-007.2`)*:
+  • Verify that passing `null`, `Double.NaN`, `Double.POSITIVE_INFINITY`, `Double.NEGATIVE_INFINITY`, and boundary zero/negative values to each formatter returns the specified fallback string (`"--"`, `"--.--"`, `"0"`) and never throws `NullPointerException` or `NumberFormatException`.
+  3. *Java Caller Compatibility & Secondary Signatures Verification (`TST-ARC-007.3`)*:
+  • Verify that Java callers (`SensorType.java`, `BANALService.java`, UI presenters) compile and resolve `format(value)`, `format_with_units(value)`, and `format_3(value)` without source or binary incompatibilities.
+  4. *Java Core Migration Strategy Contract Test Verification (`TST-ARC-007.4`)*:
+  • Execute `./gradlew testDebugUnitTest --tests com.atrainingtracker.architecture.JavaCoreMigrationStrategyContractTest` verifying that Java file count decreases to 123 and satisfies `<= 149`.
+  5. *Formatter Subsystem Kover Coverage Verification (`TST-ARC-007.5`)*:
+  • Confirm that `com.atrainingtracker.banalservice.sensor.formater.*` achieves $\ge 70\%$ Line Coverage and $\ge 50\%$ Branch Coverage.
+
+### TST-ARC-008: **Java Core Migration: TrackerService & BANALService Characterisation Test Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Requirement(s)**: `REQ-ARC-008`
+- **Component**: **Core Services Characterisation Test Suite**
+- **Jira**: `ATT-7902`
+- **Test Description**:
+  1. *TrackerService State Machine & 1-Hz Tick Dispatching Test Suite (`TST-ARC-008.1`)*:
+  • Execute automated characterisation tests verifying `TrackerService` state transitions across `TrackingMode` (`IDLE`, `READY`, `TRACKING`, `PAUSED`, `STOPPED`) and `AutoPauseState`, 1-Hz database tick sample dispatching, and post-stop export gating parity (`ATT-7918`).
+  2. *TrackerService Crash/Resume Recovery Verification (`TST-ARC-008.2`)*:
+  • Verify that simulated process kill and crash recovery reconstructs the active session state, workout ID, and sample continuity without data loss.
+  3. *BANALService Multi-Sensor Arbitration & Dispatching Test Suite (`TST-ARC-008.3`)*:
+  • Execute automated characterisation tests verifying `BANALService` ANT+/BLE arbitration, `ProxySensor` listener notifications, filter query integration, and timeout failover.
+  4. *Zero Production Code Change Governance Audit (`TST-ARC-008.4`)*:
+  • Verify via `git status` that `app/src/main/` contains zero modifications.
+
 ### TST-PRO-020: **Agile Agentic ASPICE (AAA) Governance, Constructive Resistance, Hypothesis Verification, Stage 5 Resource Gate & Ceremony 2 Completeness Sweep Verification** [Verified]
 - **Priority**: High
 - **Type**: Non-Functional

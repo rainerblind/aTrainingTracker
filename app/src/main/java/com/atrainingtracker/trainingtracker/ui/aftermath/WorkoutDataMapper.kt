@@ -256,6 +256,21 @@ class WorkoutDataMapper(
             feel = cursor.getColumnIndex(WorkoutSummaries.FEEL).takeIf { it >= 0 }?.let {
                 if (cursor.isNull(it)) null else cursor.getInt(it)
             },
+            polarSyncPending = cursor.getColumnIndex(WorkoutSummaries.POLAR_SYNC_PENDING).takeIf { it >= 0 }?.let {
+                !cursor.isNull(it) && cursor.getInt(it) == 1
+            } ?: false,
+            polarDeviceId = cursor.getColumnIndex(WorkoutSummaries.POLAR_DEVICE_ID).takeIf { it >= 0 }?.let {
+                if (cursor.isNull(it)) null else cursor.getString(it)
+            },
+            polarExerciseId = cursor.getColumnIndex(WorkoutSummaries.POLAR_EXERCISE_ID).takeIf { it >= 0 }?.let {
+                if (cursor.isNull(it)) null else cursor.getString(it)
+            },
+            polarExpectedStartMs = cursor.getColumnIndex(WorkoutSummaries.POLAR_EXPECTED_START_MS).takeIf { it >= 0 }?.let {
+                if (cursor.isNull(it)) 0L else cursor.getLong(it)
+            } ?: 0L,
+            polarExpectedEndMs = cursor.getColumnIndex(WorkoutSummaries.POLAR_EXPECTED_END_MS).takeIf { it >= 0 }?.let {
+                if (cursor.isNull(it)) 0L else cursor.getLong(it)
+            } ?: 0L,
 
             extremaRows = sensorsToCheck.flatMap { sensorType ->
                 val rows = mutableListOf<ExtremaDataRow>()
@@ -643,7 +658,12 @@ class WorkoutDataMapper(
         val calories: Int? = null,
         val recordingErrors: String? = null,
         val rpe: Int? = null,
-        val feel: Int? = null
+        val feel: Int? = null,
+        val polarSyncPending: Boolean = false,
+        val polarDeviceId: String? = null,
+        val polarExerciseId: String? = null,
+        val polarExpectedStartMs: Long = 0L,
+        val polarExpectedEndMs: Long = 0L
     )
 
     /**
@@ -694,6 +714,21 @@ class WorkoutDataMapper(
         val feel = cursor.getColumnIndex(WorkoutSummaries.FEEL).takeIf { it >= 0 }?.let {
             if (cursor.isNull(it)) null else cursor.getInt(it)
         }
+        val polarSyncPending = cursor.getColumnIndex(WorkoutSummaries.POLAR_SYNC_PENDING).takeIf { it >= 0 }?.let {
+            !cursor.isNull(it) && cursor.getInt(it) == 1
+        } ?: false
+        val polarDeviceId = cursor.getColumnIndex(WorkoutSummaries.POLAR_DEVICE_ID).takeIf { it >= 0 }?.let {
+            if (cursor.isNull(it)) null else cursor.getString(it)
+        }
+        val polarExerciseId = cursor.getColumnIndex(WorkoutSummaries.POLAR_EXERCISE_ID).takeIf { it >= 0 }?.let {
+            if (cursor.isNull(it)) null else cursor.getString(it)
+        }
+        val polarExpectedStartMs = cursor.getColumnIndex(WorkoutSummaries.POLAR_EXPECTED_START_MS).takeIf { it >= 0 }?.let {
+            if (cursor.isNull(it)) 0L else cursor.getLong(it)
+        } ?: 0L
+        val polarExpectedEndMs = cursor.getColumnIndex(WorkoutSummaries.POLAR_EXPECTED_END_MS).takeIf { it >= 0 }?.let {
+            if (cursor.isNull(it)) 0L else cursor.getLong(it)
+        } ?: 0L
 
         return RawCursorSnapshot(
             workoutId = workoutId,
@@ -731,7 +766,12 @@ class WorkoutDataMapper(
             calories = calories,
             recordingErrors = recordingErrors,
             rpe = rpe,
-            feel = feel
+            feel = feel,
+            polarSyncPending = polarSyncPending,
+            polarDeviceId = polarDeviceId,
+            polarExerciseId = polarExerciseId,
+            polarExpectedStartMs = polarExpectedStartMs,
+            polarExpectedEndMs = polarExpectedEndMs
         )
     }
 
@@ -930,6 +970,11 @@ class WorkoutDataMapper(
             recordingErrors = snapshot.recordingErrors,
             rpe = snapshot.rpe,
             feel = snapshot.feel,
+            polarSyncPending = snapshot.polarSyncPending,
+            polarDeviceId = snapshot.polarDeviceId,
+            polarExerciseId = snapshot.polarExerciseId,
+            polarExpectedStartMs = snapshot.polarExpectedStartMs,
+            polarExpectedEndMs = snapshot.polarExpectedEndMs,
 
             extremaRows = sensorsToCheck.flatMap { sensorType ->
                 val rows = mutableListOf<ExtremaDataRow>()

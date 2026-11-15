@@ -143,4 +143,33 @@
     <string name="devices_sort_first_seen">Eerst gezien</string>
     <string name="devices_sort_last_usage">Laatst gebruikt</string>
     <string name="devices_sort_battery_level">Batterijniveau</string>
+    <!-- Polar H10 Internal Backup Recording (ATT-7762, REQ-SET-104) -->
+    <string name="device_polar_h10_backup_recording_title">Polar H10 reserve-opname</string>
+    <string name="device_polar_h10_backup_recording_desc">Neemt hartslag en RR-intervallen op in het interne sensorgeheugen (bijv. voor zwemmen).</string>
+    <string name="device_polar_h10_backup_recording_requires_android_13">Vereist Android 13 of nieuwer</string>
+
+    <!-- Polar H10 Workout Stop Backfill & Export Gating (ATT-7918, REQ-SET-105) -->
+    <string name="notification_polar_h10_syncing_title">Polar H10-gegevens synchroniseren</string>
+    <string name="notification_polar_h10_syncing_desc">Hartslag- en RR-intervallen synchroniseren vanuit het sensorgeheugen…</string>
+
+    <!-- Polar H10 Aftermath Retry Sync Banner (ATT-7919, REQ-SET-106) -->
+    <string name="polar_h10_retry_sync_title">Polar H10 offline gegevens beschikbaar</string>
+    <string name="polar_h10_retry_sync_desc">De hartslagsensor stond in slaapstand toen de workout werd beëindigd. Doe de band om of bevochtig en overbrug beide drukknoppen met uw vingers om deze te wekken, zorg dat hij niet met andere apparaten is verbonden en synchroniseer nu.</string>
+    <string name="polar_h10_retry_sync_action">Nu synchroniseren</string>
+    <string name="polar_h10_retry_sync_dismiss">Negeren</string>
+    <string name="polar_h10_retry_syncing">Polar H10 synchroniseren…</string>
+    <string name="polar_h10_retry_sync_failed">Kan geen verbinding maken met Polar H10. Maak de sensor wakker en probeer het opnieuw.</string>
+
+    <!-- Polar Verity Sense Optical Offline HR Backup (ATT-7923, REQ-SET-108) -->
+    <string name="device_polar_verity_backup_recording_title">Polar Verity Sense back-upopname</string>
+    <string name="device_polar_verity_backup_recording_desc">Slaat optische hartslag op in het interne geheugen van de sensor (bijv. bij zwemmen of Bluetooth-onderbrekingen).</string>
+
+    <!-- Polar Verity Sense Stop Backfill & Aftermath Retry (ATT-7924, REQ-SET-109) -->
+    <string name="notification_polar_verity_syncing_title">Polar Verity Sense-gegevens synchroniseren</string>
+    <string name="notification_polar_verity_syncing_desc">Optische hartslaggegevens uit sensorgeheugen synchroniseren…</string>
+    <string name="polar_verity_retry_sync_title">Polar Verity Sense offline gegevens beschikbaar</string>
+    <string name="polar_verity_retry_sync_desc">De optische hartslagsensor was onbereikbaar bij het stoppen. Schakel uw Polar Verity Sense in via de blauwe sensormodus en tik op Nu synchroniseren.</string>
+    <string name="polar_verity_retry_syncing">Polar Verity Sense synchroniseren…</string>
+    <string name="polar_verity_retry_sync_failed">Kan geen verbinding maken met Polar Verity Sense. Schakel deze in via de blauwe sensormodus en probeer het opnieuw.</string>
+
 </resources>

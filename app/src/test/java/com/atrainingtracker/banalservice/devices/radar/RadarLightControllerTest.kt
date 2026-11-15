@@ -177,7 +177,7 @@ class RadarLightControllerTest {
         every { mockDevice.setLightMode(any()) } returns true
         RadarLightController.registerRadarDevice(mockDevice, lightSupported = true, isStvzo = false)
 
-        RadarLightController.updateCachedPreferences(autoControl = true, defaultMode = RadarLightMode.DAY_FLASH)
+        RadarLightController.updateCachedPreferences(autoMode = false, defaultMode = RadarLightMode.DAY_FLASH)
 
         val mockContext = mockk<Context>(relaxed = true)
         RadarLightController.onWorkoutStarted(mockContext)
@@ -432,7 +432,7 @@ class RadarLightControllerTest {
         val mockDevice = mockk<BTLERadarDevice>(relaxed = true)
         every { mockDevice.setLightMode(any()) } returns true
         RadarLightController.registerRadarDevice(mockDevice, lightSupported = true)
-        RadarLightController.updateCachedPreferences(autoControl = true, defaultMode = RadarLightMode.DAY_FLASH)
+        RadarLightController.updateCachedPreferences(autoMode = false, defaultMode = RadarLightMode.DAY_FLASH)
 
         val mockContext = mockk<Context>(relaxed = true)
         RadarLightController.onWorkoutStarted(mockContext, isCycling = true)
@@ -643,5 +643,130 @@ class RadarLightControllerTest {
         assertFalse("IMU detector must stop listening on pause", SmartBrakeLightDetector.isListening)
         assertEquals("Pre-brake mode OFF must be restored on pause", RadarLightMode.OFF, RadarLightController.currentMode.value)
         verify { mockDevice.setLightMode(RadarLightMode.OFF) }
+    }
+
+    /**
+     * TST-CON-031.9a / REQ-CON-031.8: Debounced mode cycling and StVZO capability filtering.
+     * Non-StVZO: AUTO -> DAY_FLASH -> SOLID -> PELOTON -> NIGHT_FLASH -> OFF -> AUTO.
+     * StVZO: AUTO -> SOLID -> OFF -> AUTO.
+     */
+    @Test
+    fun testRadarLightController_debouncedCycleNextMode_andStvzo() {
+        val mockDevice = mockk<BTLERadarDevice>(relaxed = true)
+        every { mockDevice.setLightMode(any()) } returns true
+        RadarLightController.registerRadarDevice(mockDevice, lightSupported = true, isStvzo = false)
+
+        assertTrue("Initial state must be AUTO", RadarLightController.isAutoMode.value)
+
+        // Non-StVZO Cycle
+        var selection = RadarLightController.cycleNextMode()
+        assertFalse(selection.isAuto)
+        assertEquals(RadarLightMode.DAY_FLASH, selection.mode)
+        assertEquals(RadarLightMode.DAY_FLASH, RadarLightController.currentMode.value)
+        assertFalse(RadarLightController.isAutoMode.value)
+
+        selection = RadarLightController.cycleNextMode()
+        assertFalse(selection.isAuto)
+        assertEquals(RadarLightMode.SOLID, selection.mode)
+
+        selection = RadarLightController.cycleNextMode()
+        assertFalse(selection.isAuto)
+        assertEquals(RadarLightMode.PELOTON, selection.mode)
+
+        selection = RadarLightController.cycleNextMode()
+        assertFalse(selection.isAuto)
+        assertEquals(RadarLightMode.NIGHT_FLASH, selection.mode)
+
+        selection = RadarLightController.cycleNextMode()
+        assertFalse(selection.isAuto)
+        assertEquals(RadarLightMode.OFF, selection.mode)
+
+        selection = RadarLightController.cycleNextMode()
+        assertTrue(selection.isAuto)
+        assertTrue(RadarLightController.isAutoMode.value)
+
+        // StVZO Cycle
+        RadarLightController.registerRadarDevice(mockDevice, lightSupported = true, isStvzo = true)
+        RadarLightController.setAutoMode()
+        assertTrue(RadarLightController.isAutoMode.value)
+
+        selection = RadarLightController.cycleNextMode()
+        assertFalse(selection.isAuto)
+        assertEquals(RadarLightMode.SOLID, selection.mode)
+
+        selection = RadarLightController.cycleNextMode()
+        assertFalse(selection.isAuto)
+        assertEquals(RadarLightMode.OFF, selection.mode)
+
+        selection = RadarLightController.cycleNextMode()
+        assertTrue(selection.isAuto)
+        assertTrue(RadarLightController.isAutoMode.value)
+    }
+
+    /**
+     * TST-CON-031.4a / REQ-CON-031.4: Workout lifecycle maintains user mode across rides.
+     * Stop commands physical OFF without wiping persisted selection; next start restores selection.
+     */
+    @Test
+    fun testRadarLightController_workoutStartStop_persistsAcrossRides() {
+        val mockDevice = mockk<BTLERadarDevice>(relaxed = true)
+        every { mockDevice.setLightMode(any()) } returns true
+        val mockContext = mockk<Context>(relaxed = true)
+
+        RadarLightController.registerRadarDevice(mockDevice, lightSupported = true, isStvzo = false)
+        RadarLightController.setManualLightMode(RadarLightMode.SOLID)
+
+        assertFalse(RadarLightController.isAutoMode.value)
+        assertEquals(RadarLightMode.SOLID, RadarLightController.currentMode.value)
+
+        // Ride 1 starts
+        RadarLightController.onWorkoutStarted(mockContext, isCycling = true)
+        assertEquals(RadarLightMode.SOLID, RadarLightController.currentMode.value)
+        verify { mockDevice.setLightMode(RadarLightMode.SOLID) }
+
+        // Ride 1 stops: hardware dispatched OFF, but internal selection preserved
+        RadarLightController.onWorkoutStopped(mockContext)
+        assertEquals("Physical mode should reflect OFF on stop", RadarLightMode.OFF, RadarLightController.currentMode.value)
+        verify { mockDevice.setLightMode(RadarLightMode.OFF) }
+
+        // Ride 2 starts: resumes persisted selection
+        RadarLightController.onWorkoutStarted(mockContext, isCycling = true)
+        assertEquals("Ride 2 should restore SOLID preference", RadarLightMode.SOLID, RadarLightController.currentMode.value)
+        verify(atLeast = 2) { mockDevice.setLightMode(RadarLightMode.SOLID) }
+    }
+
+    /**
+     * Finding 2 & Finding 3: Selection outside active workout (e.g. EditDeviceDialog)
+     * updates in-memory cache and is NOT stomped on workout start.
+     */
+    @Test
+    fun testRadarLightController_outsideWorkoutSelection_persistsAcrossLifecycleAndWorkoutStart() {
+        val mockDevice = mockk<BTLERadarDevice>(relaxed = true)
+        every { mockDevice.setLightMode(any()) } returns true
+        val mockContext = mockk<Context>(relaxed = true)
+
+        RadarLightController.registerRadarDevice(mockDevice, lightSupported = true, isStvzo = false)
+
+        // User selects SOLID in EditDeviceDialog outside active workout
+        RadarLightController.setManualLightMode(RadarLightMode.SOLID)
+        assertFalse(RadarLightController.isAutoMode.value)
+        assertEquals(RadarLightMode.SOLID, RadarLightController.currentMode.value)
+
+        // Workout starts: must retain SOLID, not stomp with default AUTO
+        RadarLightController.onWorkoutStarted(mockContext, isCycling = true)
+        assertFalse(RadarLightController.isAutoMode.value)
+        assertEquals(RadarLightMode.SOLID, RadarLightController.currentMode.value)
+
+        // Workout stops
+        RadarLightController.onWorkoutStopped(mockContext)
+        assertEquals(RadarLightMode.OFF, RadarLightController.currentMode.value)
+
+        // Outside workout, user switches back to AUTO
+        RadarLightController.setAutoMode()
+        assertTrue(RadarLightController.isAutoMode.value)
+
+        // Workout starts: must retain AUTO
+        RadarLightController.onWorkoutStarted(mockContext, isCycling = true)
+        assertTrue(RadarLightController.isAutoMode.value)
     }
 }

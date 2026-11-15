@@ -35,6 +35,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 import java.lang.reflect.Field
@@ -257,5 +258,65 @@ class WorkoutRepositorySaveClusteringTest {
         val saved = repository.allWorkouts.value.find { it.id == 42L }
         assertEquals("Hausrunde #5 (Fast)", saved?.workoutName)
         assertEquals(10L, saved?.clusterId)
+    }
+
+    /**
+     * TST-PER-048.1: Propagates cluster rename, merge, and delete immediately to in-memory
+     * WorkoutData.clusterId / clusterName / headerData while keeping custom workoutName immutable (REQ-PER-040.1).
+     */
+    @Test
+    fun testClusterMutations_onRenamedMergedDeleted_updatesInMemoryWorkoutsPreservingWorkoutName_TST_PER_048_1() {
+        val w1 = createTestWorkout(1L, "My Custom Morning Run", clusterId = 10L, clusterName = "Old Route")
+        val w2 = createTestWorkout(2L, "Old Route #2", clusterId = 10L, clusterName = "Old Route")
+        val w3 = createTestWorkout(3L, "Commute Ride", clusterId = 20L, clusterName = "Other Route")
+        seedWorkouts(listOf(w1, w2, w3))
+
+        // 1. Rename cluster 10 -> "Favorite Loop"
+        repository.onClusterRenamed(10L, "Favorite Loop")
+        val afterRename = repository.allWorkouts.value.associateBy { it.id }
+        assertEquals("Favorite Loop", afterRename[1L]?.clusterName)
+        assertEquals("Favorite Loop", afterRename[1L]?.headerData?.clusterName)
+        assertEquals("My Custom Morning Run", afterRename[1L]?.workoutName)
+        assertEquals("Favorite Loop", afterRename[2L]?.clusterName)
+        assertEquals("Old Route #2", afterRename[2L]?.workoutName)
+        assertEquals("Other Route", afterRename[3L]?.clusterName)
+
+        // 2. Merge cluster 10 -> 20 ("Unified Track")
+        repository.onClusterMerged(10L, 20L, "Unified Track")
+        val afterMerge = repository.allWorkouts.value.associateBy { it.id }
+        assertEquals(20L, afterMerge[1L]?.clusterId)
+        assertEquals("Unified Track", afterMerge[1L]?.clusterName)
+        assertEquals("My Custom Morning Run", afterMerge[1L]?.workoutName)
+        assertEquals(20L, afterMerge[2L]?.clusterId)
+        assertEquals("Unified Track", afterMerge[2L]?.clusterName)
+        assertEquals(20L, afterMerge[3L]?.clusterId)
+        assertEquals("Unified Track", afterMerge[3L]?.clusterName)
+
+        // 3. Delete cluster 20
+        repository.onClusterDeleted(20L)
+        val afterDelete = repository.allWorkouts.value.associateBy { it.id }
+        assertEquals(-1L, afterDelete[1L]?.clusterId)
+        assertNull(afterDelete[1L]?.clusterName)
+        assertNull(afterDelete[1L]?.headerData?.clusterName)
+        assertEquals("My Custom Morning Run", afterDelete[1L]?.workoutName)
+        assertEquals(-1L, afterDelete[2L]?.clusterId)
+        assertNull(afterDelete[2L]?.clusterName)
+        assertEquals(-1L, afterDelete[3L]?.clusterId)
+        assertNull(afterDelete[3L]?.clusterName)
+    }
+
+    /**
+     * TST-PER-048.1: reloadWorkouts deduplicates IDs and reloads each affected workout
+     * from persistence (REQ-PER-040.1).
+     */
+    @Test
+    fun testReloadWorkouts_reloadsDistinctWorkoutIds_TST_PER_048_1() = runBlocking {
+        val spiedRepo = spyk(repository)
+        coEvery { spiedRepo.reloadWorkoutData(any()) } just Runs
+
+        spiedRepo.reloadWorkouts(listOf(101L, 102L, 101L))
+
+        coVerify(exactly = 1) { spiedRepo.reloadWorkoutData(101L) }
+        coVerify(exactly = 1) { spiedRepo.reloadWorkoutData(102L) }
     }
 }

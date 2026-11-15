@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sport_type_swim">Swimming</string>
+    <string name="tuning_cat_swimming">Swimming &amp; Pool</string>
+    <string name="tuning_swim_activate_title">Enable Swimming sport type</string>
+    <string name="tuning_swim_activate_summary">Creates the Swimming sport type for locker and pool workouts without cluttering default lists beforehand.</string>
+    <string name="tuning_swim_activate_active_summary">Swimming sport type is active in Sport Types.</string>
+    <string name="tuning_swim_pool_length_title">Default pool length</string>
+    <string name="tuning_swim_pool_preset_25m">25 m</string>
+    <string name="tuning_swim_pool_preset_50m">50 m</string>
+    <string name="tuning_swim_pool_preset_25yd">25 yd</string>
+    <string name="tuning_swim_pool_preset_custom">Custom</string>
+    <string name="tuning_swim_pool_custom_meters_label">Custom length: %1$d m</string>
+    <string name="tuning_swim_subtitle_active">Active, %1$s pool</string>
+    <string name="tuning_swim_subtitle_inactive">Inactive, %1$s pool</string>
+</resources>

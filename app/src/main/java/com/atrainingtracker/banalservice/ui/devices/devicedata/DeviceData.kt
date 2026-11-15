@@ -46,7 +46,8 @@ data class DeviceRawData(
     val availableEquipment: List<String>,
     val powerFeaturesFlags: Int?,
     val linkedSportTypes: List<String> = emptyList(),
-    val baselineCircumference: Double? = null
+    val baselineCircumference: Double? = null,
+    val polarH10OfflineRecording: Boolean = true
 )
 
 /**
@@ -77,6 +78,7 @@ data class DeviceUiData(
     val calibrationFactor: Double?,
     val powerFeatures: BikePowerFeatures?,
     val baselineCircumference: Double? = null,
+    val polarH10OfflineRecording: Boolean = true,
 
     // stuff that we don't get from the database but from the devices itself.
     val isConnected: Boolean,
@@ -141,6 +143,7 @@ fun raw2UiDeviceData(rawData: DeviceRawData, context: Context): DeviceUiData {
         calibrationFactor = calibrationFactor,
         powerFeatures = powerFeatures,
         baselineCircumference = rawData.baselineCircumference,
+        polarH10OfflineRecording = rawData.polarH10OfflineRecording,
 
         // set by observing the devices
         isConnected = false,

@@ -247,7 +247,7 @@ class SensorAndDeviceConcurrencyStressTest {
                         )
                         filterManager.createFilter(filterData)
                         filterManager.getFilteredSensorData(filterData)
-                        for (filtered in filterManager.allFilteredSensorData) {
+                        for (filtered in filterManager.getAllFilteredSensorData()) {
                             assertNotNull(filtered)
                         }
 

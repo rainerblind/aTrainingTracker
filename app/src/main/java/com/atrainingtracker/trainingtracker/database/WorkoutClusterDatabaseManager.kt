@@ -470,13 +470,23 @@ class WorkoutClusterDatabaseManager private constructor(context: Context) {
         }
     }
 
+    /**
+     * Inserts a [WorkoutCluster] after trimming its name, rejecting blank-only names (REQ-PER-041.1).
+     */
     fun insertCluster(cluster: WorkoutCluster): Long {
-        val values = createContentValues(cluster)
+        val trimmed = cluster.name.trim()
+        if (trimmed.isEmpty()) return -1L
+        val values = createContentValues(cluster.copy(name = trimmed))
         return getDatabase().insert(WorkoutClusterContract.TABLE_NAME, null, values)
     }
 
+    /**
+     * Updates a [WorkoutCluster] after trimming its name, ignoring blank-only names (REQ-PER-041.1).
+     */
     fun updateCluster(cluster: WorkoutCluster) {
-        val values = createContentValues(cluster)
+        val trimmed = cluster.name.trim()
+        if (trimmed.isEmpty()) return
+        val values = createContentValues(cluster.copy(name = trimmed))
         getDatabase().update(
             WorkoutClusterContract.TABLE_NAME, values,
             "${BaseColumns._ID} = ?", arrayOf(cluster.id.toString())
@@ -566,13 +576,18 @@ class WorkoutClusterDatabaseManager private constructor(context: Context) {
         return results
     }
 
+    /**
+     * Checks whether a normalized cluster name already exists (REQ-PER-041.1).
+     */
     fun isNameTaken(name: String, excludeId: Long = -1): Boolean {
+        val trimmed = name.trim()
+        if (trimmed.isEmpty()) return false
         var selection = "${WorkoutClusterContract.COLUMN_NAME} = ?"
-        var args = arrayOf(name)
-        
+        var args = arrayOf(trimmed)
+
         if (excludeId != -1L) {
             selection += " AND ${BaseColumns._ID} != ?"
-            args = arrayOf(name, excludeId.toString())
+            args = arrayOf(trimmed, excludeId.toString())
         }
 
         getDatabase().query(

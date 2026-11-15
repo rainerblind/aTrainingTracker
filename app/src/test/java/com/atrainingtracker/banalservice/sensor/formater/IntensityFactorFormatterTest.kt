@@ -70,4 +70,16 @@ class IntensityFactorFormatterTest {
         assertEquals("0.70", formatter.format(0.7))
         assertEquals("0.00", formatter.format(0.0))
     }
+
+    @Test
+    fun testFormat_nonUsLocale_formatsWithComma() {
+        val original = Locale.getDefault()
+        try {
+            Locale.setDefault(Locale.GERMANY)
+            assertEquals("0,85", formatter.format(0.854))
+            assertEquals("1,03", formatter.format(1.028))
+        } finally {
+            Locale.setDefault(original)
+        }
+    }
 }

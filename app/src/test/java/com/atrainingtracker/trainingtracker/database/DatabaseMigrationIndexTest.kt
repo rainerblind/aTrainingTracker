@@ -95,7 +95,7 @@ class DatabaseMigrationIndexTest {
     @Test
     fun testSchemaVersionConstants() {
         assertEquals("RoutesDbHelper.DB_VERSION must be 11", 11, RoutesDbHelper.DB_VERSION)
-        assertEquals("WorkoutSummariesDbHelper.DB_VERSION must be 30", 30, WorkoutSummariesDbHelper.DB_VERSION)
+        assertEquals("WorkoutSummariesDbHelper.DB_VERSION must be 31", 31, WorkoutSummariesDbHelper.DB_VERSION)
         assertEquals("LapsDbHelper.DB_VERSION must be 3", 3, LapsDbHelper.DB_VERSION)
     }
 

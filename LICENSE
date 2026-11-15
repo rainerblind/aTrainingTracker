@@ -672,3 +672,13 @@ may consider it more useful to permit linking proprietary applications with
 the library.  If this is what you want to do, use the GNU Lesser General
 Public License instead of this License.  But first, please read
 <https://www.gnu.org/licenses/why-not-lgpl.html>.
+
+========================================================================
+GPLv3 Section 7 Linking Exception & Third-Party Library Attribution
+========================================================================
+As an additional permission under GNU GPLv3 Section 7, the copyright holder
+of aTrainingTracker gives permission to link this program with the Polar BLE
+SDK (com.github.polarofficial:polar-ble-sdk, Copyright (c) Polar Electro Oy)
+under the terms of the Polar BLE SDK License, and to distribute the resulting
+executable work.
+

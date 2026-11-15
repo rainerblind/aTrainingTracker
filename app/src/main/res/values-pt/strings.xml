@@ -604,6 +604,10 @@
     <string name="config_tracking__showLapButton">Botão Volta</string>
     <string name="config_tracking__showBikeBell">Mostrar buzina de bicicleta</string>
     <string name="config_tracking__showBikeBell_subtitle">Toque ou segure o botão da buzina ou toque duas vezes no Cockpit</string>
+    <string name="config_tracking__show_radar_light">Luz traseira do radar</string>
+    <string name="config_tracking__show_radar_light_subtitle">Toque para alternar modos, segure para menu rápido</string>
+    <string name="radar_light_button_content_description">Luz traseira do radar: %1$s</string>
+    <string name="radar_light_auto_badge">AUTO</string>
     <string name="config_tracking__show_navigation_hints">Instruções de navegação</string>
     <string name="config_tracking__show_live_climbs">Subidas ao vivo</string>
     <string name="config_tracking__wysiwyg_active">Ativo</string>

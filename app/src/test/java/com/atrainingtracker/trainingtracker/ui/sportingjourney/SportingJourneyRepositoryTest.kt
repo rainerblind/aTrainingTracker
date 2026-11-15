@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.ui.sportingjourney
 
+import android.app.Application
 import android.content.ContentValues
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
@@ -35,11 +36,13 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
 /**
  * Unit verification suite for [SportingJourneyRepository] across All-Time and Annual Wrapped horizons (REQ-SPT-002, TST-SPT-005).
  */
 @RunWith(RobolectricTestRunner::class)
+@Config(application = Application::class)
 class SportingJourneyRepositoryTest {
 
     private lateinit var context: Context

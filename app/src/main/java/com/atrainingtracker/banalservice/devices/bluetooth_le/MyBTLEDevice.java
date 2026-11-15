@@ -79,6 +79,7 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
     Handler mHandler;
     protected volatile BluetoothGattCharacteristic mBatteryCharacteristic;
     protected volatile boolean mIsShutDown = false;
+    private volatile boolean mIsGattPaused = false;
     private volatile long mCurrentReconnectDelayMs = INITIAL_RECONNECT_DELAY_MS;
     private volatile boolean mIsScanning = false;
     private ScanCallback mScanCallback;
@@ -506,7 +507,7 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
         @Override
         public void run() {
             synchronized (mGattLock) {
-                if (mIsShutDown) {
+                if (mIsShutDown || mIsGattPaused) {
                     return;
                 }
                 if (mState != State.CONNECTED_TO_GATT && mState != State.CONNECTED_WITH_SERVICE) {
@@ -725,11 +726,39 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
     }
 
 
+    public void pauseGattOperations() {
+        synchronized (mGattLock) {
+            mIsGattPaused = true;
+            stopScanAssistance();
+            if (mHandler != null) {
+                mHandler.removeCallbacks(mSearchTimeoutRunnable);
+                mHandler.removeCallbacks(mReconnectRunnable);
+            }
+        }
+    }
+
+    public void resumeGattOperations() {
+        synchronized (mGattLock) {
+            mIsGattPaused = false;
+            if (mState == State.DISCONNECTED && !mIsShutDown) {
+                startSearching();
+            }
+        }
+    }
+
+    public boolean isGattPaused() {
+        return mIsGattPaused;
+    }
+
+    public String getAddress() {
+        return mAddress;
+    }
+
     @Override
     public void startSearching() {
         synchronized (mGattLock) {
-            if (mIsShutDown) {
-                Log.w(TAG, "Ignoring startSearching() because device is shut down");
+            if (mIsShutDown || mIsGattPaused) {
+                Log.w(TAG, "Ignoring startSearching() because device is shut down or GATT is paused");
                 return;
             }
             if (DEBUG) Log.i(TAG, "startSearching()");

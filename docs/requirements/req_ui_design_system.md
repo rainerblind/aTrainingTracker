@@ -17361,3 +17361,49 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 • *Then* "6 — Schwer bis sehr schwer" renders on a single line without wrapping and remains visible above the slider during dragging.
 
 **Invariants**: `rpe` (1..10) nullable database persistence (`DB_VERSION = 30`) preserved; Foster sRPE calculation preserved; Feel (1..5) M3 cards and sentiment icons preserved; 100% 9-language localization parity preserved.
+
+
+### REQ-UI-530: Centralized Light/Dark Telemetry Color Palette, Metric Defaults & Global Graph Color Persistence [Verified]
+- **Tests**: `TST-UI-530`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit, Review
+- **Implementation**: `Color.kt`, `TelemetryGraphColorPreferences.kt`, `TelemetryMetricGraph.kt`
+- **Rationale**: Currently, `TelemetryMetricGraph.kt` hardcodes raw `TTColor.Zone1..5` and `TTColor.WPrimeBalGreen` tokens that lack Light/Dark/AMOLED adaptation (e.g., `Zone1` fails contrast on light surfaces, `Zone5` is dim on dark/AMOLED backgrounds, and `WPrimeBalGreen` has only 2.53:1 contrast on white). Furthermore, users have no global preference mechanism to configure metric graph colors consistently across Workout Detail and Cockpit sparklines. Establishing a centralized 8-color Light/Dark palette with WCAG 2.1 compliance ($\ge 3.0:1$), canonical metric defaults, a downgrade-safe SharedPreferences store, and reactive graph integration ensures accessibility, aesthetic uniformity, and user personalization (ATT-7759, Parent Epic ATT-5908, refining `REQ-UI-206`).
+- **Description**:
+  1. *Centralized Fixed Telemetry Graph Color Palette (`REQ-UI-530.1`)*:
+     - `ui/theme/Color.kt` SHALL define `TelemetryGraphColor` featuring 8 Light/Dark-aware color tokens (`CRIMSON`, `VIOLET`, `EMERALD`, `AMBER`, `TEAL`, `MAGENTA`, `CYAN`, `CORAL`) plus `THEME_DEFAULT` (`MaterialTheme.colorScheme.primary`).
+     - Every palette token SHALL satisfy WCAG 2.1 non-text contrast ($\ge 3.0:1$) against Light (`#FFFFFF`), Dark (`#16161A`), and AMOLED (`#000000`) surfaces.
+     - `TelemetryGraphColor.resolveColor(colorScheme: ColorScheme, isDarkTheme: Boolean): Color` SHALL resolve `colorScheme.primary` for `THEME_DEFAULT`, and the respective high-contrast light or dark hex variant for the 8 palette tokens.
+  2. *Canonical Metric Default Color Assignments (`REQ-UI-530.2`)*:
+     - Default telemetry graph colors SHALL be assigned canonically:
+       - Heart Rate $\rightarrow$ `TelemetryGraphColor.CRIMSON`
+       - Power $\rightarrow$ `TelemetryGraphColor.VIOLET`
+       - W'bal $\rightarrow$ `TelemetryGraphColor.EMERALD` (Light `#059669`, Dark `#10B981`)
+       - HRV DFA $\alpha_1$ $\rightarrow$ `TelemetryGraphColor.AMBER`
+       - HRV rMSSD $\rightarrow$ `TelemetryGraphColor.TEAL`
+       - Speed, Pace, and cockpit-only sensor types (Cadence, Altitude, Grade, Temperature) $\rightarrow$ `TelemetryGraphColor.THEME_DEFAULT`
+  3. *Global Preference Store & Safe Deserialization (`REQ-UI-530.3`)*:
+     - A global preference store (`TelemetryGraphColorPreferences`) in `com.atrainingtracker.trainingtracker.settings` SHALL persist user-selected graph colors per metric family using `SharedPreferences`.
+     - The preference store SHALL provide `getGraphColor(metricType: TelemetryMetricType): TelemetryGraphColor`, `setGraphColor(metricType: TelemetryMetricType, color: TelemetryGraphColor)`, `resetGraphColor(metricType: TelemetryMetricType)`, and `resetAllGraphColors()`.
+     - Sensor-based overloads SHALL support mapping `SensorType` families to their corresponding preference keys.
+     - Deserialization of persisted enum names SHALL use safe deserialization (`safeEnumValueOf` or safe lookup) falling back gracefully to canonical metric defaults upon invalid or unknown tokens (`REQ-ARC-001`).
+  4. *TelemetryMetricGraph Integration & Reactive Theme Luminance Adaptation (`REQ-UI-530.4`)*:
+     - `TelemetryMetricGraph.kt` SHALL resolve `accentColor` via `TelemetryGraphColorPreferences` using the active surface luminance (`TTColor.relativeLuminance(colorScheme.surface) < 0.5f`) to ensure proper high-contrast rendering under `CockpitThemeMode.ALWAYS_DARK` and AMOLED surfaces.
+     - Graph geometry (paddings `50.dp`/`25.dp`/`24.dp`), zone background bands, scrubbing markers, and histogram calculations SHALL remain preserved and unregressed.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a fresh installation with no custom graph color overrides,
+• *When* the athlete views Workout Detail charts (`TelemetryMetricGraph`),
+• *Then* Heart Rate, Power, W'bal, HRV DFA α1, and HRV rMSSD render in Crimson, Violet, Emerald, Amber, and Teal respectively, while Speed and Pace render in `MaterialTheme.colorScheme.primary`.
+• *Given* any color in the fixed 8-color telemetry palette,
+• *When* rendered in Light, Dark, or AMOLED mode,
+• *Then* the resolved color achieves $\ge 3.0:1$ non-text contrast against the underlying surface and satisfies `ThemeColorCentralizationAuditTest`.
+• *Given* the global graph color preference for Heart Rate is updated to Cyan,
+• *When* the athlete opens a workout in Workout Detail,
+• *Then* the Heart Rate `TelemetryMetricGraph` renders using the Cyan palette token.
+• *Given* an invalid or corrupt color string persisted in SharedPreferences,
+• *When* `TelemetryGraphColorPreferences` reads the preference,
+• *Then* it safely recovers and returns the canonical metric default without crashing.
+
+**Invariants**: `TTColor.Zone1..7` and `TTColor.WPrimeBalGreen` tokens unaltered; zero `Color(0x...)` outside `Color.kt`; graph layout dimensions (`50.dp`/`25.dp`/`24.dp`) preserved; 100% 9-language localization parity.

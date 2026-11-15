@@ -1143,10 +1143,15 @@ fun TrackingTabsScreen(
                             currentMode = radarState.lightMode,
                             availableModes = RadarLightController.getAvailableModes(),
                             isStvzo = RadarLightController.isStvzo.collectAsState().value,
+                            isAutoMode = radarState.isAutoMode,
                             isLightControlSupported = radarState.isLightControlSupported,
                             snoozeState = radarState.audioSnoozeState,
                             onModeSelected = { mode ->
                                 RadarLightController.setManualLightMode(mode)
+                                showRadarLightQuickSwitch = false
+                            },
+                            onAutoSelected = {
+                                RadarLightController.setAutoMode()
                                 showRadarLightQuickSwitch = false
                             },
                             onSnoozeSelected = { mode ->
@@ -1161,12 +1166,22 @@ fun TrackingTabsScreen(
                 }
             }
 
-            // --- Conditionally show the Lap Button and Bike Bell Button (suppressed in CONFIGURATION mode per REQ-UI-295)
+            // --- Conditionally show Radar Tail Light, Lap Button, and Bike Bell Button (REQ-CON-043, REQ-UI-295)
+            val shouldShowRadarLight = currentViewInfo?.showRadarLight == true &&
+                    screenMode != ScreenMode.CONFIGURATION &&
+                    radarState.isLightControlSupported
             val shouldShowLapButton = currentViewInfo?.showLapButton == true && screenMode != ScreenMode.CONFIGURATION
             val shouldShowBikeBell = currentViewInfo?.showBikeBell == true && screenMode != ScreenMode.CONFIGURATION
-            if (shouldShowLapButton || shouldShowBikeBell) {
+            val visibleButtonCount = (if (shouldShowRadarLight) 1 else 0) +
+                    (if (shouldShowLapButton) 1 else 0) +
+                    (if (shouldShowBikeBell) 1 else 0)
+
+            if (visibleButtonCount > 0) {
                 val isLandscapeWithMap = isLandscape && currentViewInfo?.showMap == true
                 val buttonAlignment = if (isLandscapeWithMap) Alignment.BottomStart else Alignment.BottomCenter
+                val rowSpacing = if (visibleButtonCount >= 3) 8.dp else 16.dp
+                val rowHorizontalPadding = if (visibleButtonCount >= 3) 8.dp else 16.dp
+
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -1177,19 +1192,33 @@ fun TrackingTabsScreen(
                         ), // Space from bottom of screen
                     contentAlignment = buttonAlignment
                 ) {
-                    if (shouldShowLapButton && shouldShowBikeBell) {
-                        Row(
-                            modifier = Modifier
-                                .wrapContentSize()
-                                .padding(horizontal = 16.dp),
-                            horizontalArrangement = Arrangement.spacedBy(16.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
+                    Row(
+                        modifier = Modifier
+                            .wrapContentSize()
+                            .padding(horizontal = rowHorizontalPadding),
+                        horizontalArrangement = Arrangement.spacedBy(rowSpacing),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (shouldShowRadarLight) {
+                            RadarLightButton(
+                                modifier = Modifier.wrapContentSize(),
+                                trackingMode = trackingMode,
+                                lightMode = radarState.lightMode,
+                                isAutoMode = radarState.isAutoMode,
+                                isLightControlAvailable = radarState.isLightControlSupported,
+                                onShortTap = { RadarLightController.cycleNextMode() },
+                                onLongPress = { showRadarLightQuickSwitch = true }
+                            )
+                        }
+                        if (shouldShowLapButton) {
                             LapButton(
                                 modifier = Modifier.wrapContentSize(),
                                 trackingMode = trackingMode,
+                                compact = visibleButtonCount >= 3,
                                 onClick = { trackingTabsViewModel.onLapButtonClick() }
                             )
+                        }
+                        if (shouldShowBikeBell) {
                             BikeBellButton(
                                 modifier = Modifier.wrapContentSize(),
                                 trackingMode = trackingMode,
@@ -1198,24 +1227,6 @@ fun TrackingTabsScreen(
                                 onContinuousRingStop = { trackingTabsViewModel.stopBellRoll() }
                             )
                         }
-                    } else if (shouldShowLapButton) {
-                        LapButton(
-                            modifier = Modifier
-                                .wrapContentSize()
-                                .padding(horizontal = 16.dp),
-                            trackingMode = trackingMode,
-                            onClick = { trackingTabsViewModel.onLapButtonClick() }
-                        )
-                    } else {
-                        BikeBellButton(
-                            modifier = Modifier
-                                .wrapContentSize()
-                                .padding(horizontal = 16.dp),
-                            trackingMode = trackingMode,
-                            onSingleRing = { trackingTabsViewModel.triggerBellRing(isLongPress = false) },
-                            onContinuousRingStart = { trackingTabsViewModel.triggerBellRoll() },
-                            onContinuousRingStop = { trackingTabsViewModel.stopBellRoll() }
-                        )
                     }
                 }
             }

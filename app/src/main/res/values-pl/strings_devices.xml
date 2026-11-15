@@ -143,4 +143,33 @@
     <string name="devices_sort_first_seen">Najpierw wykryte</string>
     <string name="devices_sort_last_usage">Ostatnio używane</string>
     <string name="devices_sort_battery_level">Poziom baterii</string>
+    <!-- Polar H10 Internal Backup Recording (ATT-7762, REQ-SET-104) -->
+    <string name="device_polar_h10_backup_recording_title">Zapasowe nagrywanie Polar H10</string>
+    <string name="device_polar_h10_backup_recording_desc">Zapisuje tętno i interwały RR w pamięci wewnętrznej sensora (np. podczas pływania).</string>
+    <string name="device_polar_h10_backup_recording_requires_android_13">Wymaga systemu Android 13 lub nowszego</string>
+
+    <!-- Polar H10 Workout Stop Backfill & Export Gating (ATT-7918, REQ-SET-105) -->
+    <string name="notification_polar_h10_syncing_title">Synchronizacja danych Polar H10</string>
+    <string name="notification_polar_h10_syncing_desc">Synchronizacja tętna i interwałów RR z pamięci czujnika…</string>
+
+    <!-- Polar H10 Aftermath Retry Sync Banner (ATT-7919, REQ-SET-106) -->
+    <string name="polar_h10_retry_sync_title">Dostępne dane offline Polar H10</string>
+    <string name="polar_h10_retry_sync_desc">Czujnik tętna był w trybie uśpienia po zakończeniu treningu. Załóż pasek lub zwilż i zmostkuj oba zatrzaski elektrod palcami, aby go wybudzić, upewnij się, że nie jest połączony z innymi urządzeniami, i zsynchronizuj teraz.</string>
+    <string name="polar_h10_retry_sync_action">Synchronizuj teraz</string>
+    <string name="polar_h10_retry_sync_dismiss">Odrzuć</string>
+    <string name="polar_h10_retry_syncing">Synchronizowanie Polar H10…</string>
+    <string name="polar_h10_retry_sync_failed">Nie udało się połączyć z Polar H10. Wybudź czujnik i spróbuj ponownie.</string>
+
+    <!-- Polar Verity Sense Optical Offline HR Backup (ATT-7923, REQ-SET-108) -->
+    <string name="device_polar_verity_backup_recording_title">Nagrywanie zapasowe Polar Verity Sense</string>
+    <string name="device_polar_verity_backup_recording_desc">Zapisuje optyczne tętno w pamięci wewnętrznej czujnika (np. podczas pływania w basenie lub zaniku Bluetooth).</string>
+
+    <!-- Polar Verity Sense Stop Backfill & Aftermath Retry (ATT-7924, REQ-SET-109) -->
+    <string name="notification_polar_verity_syncing_title">Synchronizowanie danych Polar Verity Sense</string>
+    <string name="notification_polar_verity_syncing_desc">Synchronizowanie optycznych próbek tętna z pamięci czujnika…</string>
+    <string name="polar_verity_retry_sync_title">Dostępne dane offline Polar Verity Sense</string>
+    <string name="polar_verity_retry_sync_desc">Czujnik optyczny był nieosiągalny po zakończeniu treningu. Włącz Polar Verity Sense w trybie niebieskiego czujnika i dotknij Synchronizuj teraz.</string>
+    <string name="polar_verity_retry_syncing">Synchronizowanie Polar Verity Sense…</string>
+    <string name="polar_verity_retry_sync_failed">Nie udało się połączyć z Polar Verity Sense. Włącz tryb niebieskiego czujnika i spróbuj ponownie.</string>
+
 </resources>

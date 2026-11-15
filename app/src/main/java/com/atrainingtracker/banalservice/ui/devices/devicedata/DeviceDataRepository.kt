@@ -468,6 +468,10 @@ class DeviceDataRepository @androidx.annotation.VisibleForTesting internal const
                 put(DevicesDatabaseManager.DevicesDbHelper.BASELINE_CIRCUMFERENCE, final.baselineCircumference ?: 0.0)
             }
 
+            if (original.polarH10OfflineRecording != final.polarH10OfflineRecording) {
+                put(DevicesDatabaseManager.DevicesDbHelper.POLAR_H10_OFFLINE_RECORDING, if (final.polarH10OfflineRecording) 1 else 0)
+            }
+
         }
     }
 
@@ -587,6 +591,10 @@ class DeviceDataRepository @androidx.annotation.VisibleForTesting internal const
 
     fun getAltitudeAndSlopeAttFusedDeviceId(): Long =
         devicesDatabaseManager.altitudeAndSlopeAttFusedDeviceId
+
+    /** Returns the device row ID for the smartphone barometric altitude device, or -1 if absent. */
+    fun getAltitudeFromPressureDeviceId(): Long =
+        devicesDatabaseManager.altitudeFromPressureDeviceId
 
     fun hasPairedWheelSpeedSensor(): Boolean =
         devicesDatabaseManager.hasPairedWheelSpeedSensor()

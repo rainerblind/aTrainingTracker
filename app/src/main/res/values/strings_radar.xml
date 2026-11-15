@@ -119,6 +119,7 @@
     <string name="radar_smart_light_automation_desc">Adapt light to daylight, tunnels, dusk, and traffic threats</string>
     <string name="radar_light_sheet_title">Radar Tail Light</string>
     <string name="radar_light_stvzo_notice">StVZO Mode (Flashing disabled)</string>
+    <string name="radar_light_active_mode_format">Active: %1$s</string>
 
     <!-- Radar Audio Snooze, Peloton Sync & Urban Suppression (ATT-5119 / REQ-TRK-064) -->
     <string name="radar_snooze_title">Audio Snooze</string>

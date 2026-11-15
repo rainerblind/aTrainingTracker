@@ -721,6 +721,18 @@ fun WorkoutDetailTabbedContent(
                     }
                 }
 
+                // 1c. Polar H10 Retry Sync Banner (REQ-SET-106.2, ATT-7919)
+                if (workoutData.polarSyncPending) {
+                    val repo = remember(context) { WorkoutRepository.getInstance(context.applicationContext as Application) }
+                    PolarPendingRetrySyncSection(
+                        workoutId = workoutData.id,
+                        polarExerciseId = workoutData.polarExerciseId,
+                        onDismiss = {
+                            repo.dismissPolarSyncPending(workoutData.id)
+                        }
+                    )
+                }
+
                 // 2. Material 3 Tab Bar (shown when > 1 visible tab)
                 if (visibleTabs.size > 1) {
                     PrimaryScrollableTabRow(

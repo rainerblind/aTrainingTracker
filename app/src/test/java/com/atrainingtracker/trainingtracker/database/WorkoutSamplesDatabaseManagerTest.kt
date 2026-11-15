@@ -28,6 +28,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
 /**
  * Unit tests verifying retroactive altitude drift correction and sourced-column
@@ -35,6 +36,7 @@ import org.robolectric.RobolectricTestRunner
  * (REQ-TRK-057.3, TST-TRK-057.4).
  */
 @RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34])
 class WorkoutSamplesDatabaseManagerTest {
 
     private lateinit var context: Context
@@ -149,8 +151,8 @@ class WorkoutSamplesDatabaseManagerTest {
     fun testApplyAltitudeDriftCorrection_negativeOffset_shiftsDownwardsSymmetrically() {
         db.execSQL("INSERT INTO $testTable (time, ALTITUDE, \"ALTITUDE (Höhe aus Luftdruck)\") VALUES ('2026-11-10 10:00:00', 500.0, 500.0)")
 
-        // Act: Apply -15.0m shift
-        dbManager.applyAltitudeDriftCorrection(testTable, -15.0, -1L, 1000L)
+        // Act: Apply -15.0m shift with t1Ms >= row timestamp
+        dbManager.applyAltitudeDriftCorrection(testTable, -15.0, -1L, 1794304820000L)
 
         db.rawQuery("SELECT ALTITUDE, \"ALTITUDE (Höhe aus Luftdruck)\" FROM $testTable", null).use { cursor ->
             assertTrue(cursor.moveToFirst())
@@ -166,12 +168,142 @@ class WorkoutSamplesDatabaseManagerTest {
     fun testApplyAltitudeDriftCorrection_nearZeroOffset_skipsExecution() {
         db.execSQL("INSERT INTO $testTable (time, ALTITUDE, \"ALTITUDE (Höhe aus Luftdruck)\") VALUES ('2026-11-10 10:00:00', 500.0, 500.0)")
 
-        dbManager.applyAltitudeDriftCorrection(testTable, 0.0001, -1L, 1000L)
+        dbManager.applyAltitudeDriftCorrection(testTable, 0.0001, -1L, 1794304820000L)
 
         db.rawQuery("SELECT ALTITUDE, \"ALTITUDE (Höhe aus Luftdruck)\" FROM $testTable", null).use { cursor ->
             assertTrue(cursor.moveToFirst())
             assertEquals(500.0, cursor.getDouble(0), 0.001)
             assertEquals(500.0, cursor.getDouble(1), 0.001)
+        }
+    }
+
+    /**
+     * TST-FIL-018.1 (Criterion 1): Non-barometric columns (DEM, GPS, Google Fused, ATT Fused) remain
+     * completely immutable under barometric calibration, and canonical ALTITUDE only shifts on rows
+     * where barometric pressure was the active canonical source.
+     */
+    @Test
+    fun testApplyAltitudeDriftCorrection_isolatesNonBarometricColumnsAndChecksCanonicalSource() {
+        val multiSourceTable = "\"test_multisource_2026_11_15\""
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS $multiSourceTable (" +
+                    "_id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                    "time DATETIME DEFAULT CURRENT_TIMESTAMP, " +
+                    "ALTITUDE REAL, " +
+                    "\"ALTITUDE (Höhe aus Luftdruck)\" REAL, " +
+                    "\"ALTITUDE (Topografische Höhe (DEM))\" REAL, " +
+                    "\"ALTITUDE (GPS)\" REAL, " +
+                    "\"ALTITUDE (Google Fused)\" REAL, " +
+                    "\"ALTITUDE (ATT Fused (Höhe und Steigung))\" REAL)"
+        )
+
+        val tSec = 1794304800L // 2026-11-10 10:00:00 UTC
+        // Row 0: Canonical ALTITUDE sourced from DEM (448.0), while uncalibrated Baro reads 385.63
+        db.execSQL(
+            "INSERT INTO $multiSourceTable (time, ALTITUDE, \"ALTITUDE (Höhe aus Luftdruck)\", " +
+                    "\"ALTITUDE (Topografische Höhe (DEM))\", \"ALTITUDE (GPS)\", \"ALTITUDE (Google Fused)\", " +
+                    "\"ALTITUDE (ATT Fused (Höhe und Steigung))\") " +
+                    "VALUES (datetime($tSec, 'unixepoch'), 448.0, 385.63, 448.0, 452.0, 450.0, 448.5)"
+        )
+        // Row 1: Canonical ALTITUDE sourced from Barometer (386.0) when DEM/ATT Fused are NULL
+        db.execSQL(
+            "INSERT INTO $multiSourceTable (time, ALTITUDE, \"ALTITUDE (Höhe aus Luftdruck)\", " +
+                    "\"ALTITUDE (Topografische Höhe (DEM))\", \"ALTITUDE (GPS)\", \"ALTITUDE (Google Fused)\", " +
+                    "\"ALTITUDE (ATT Fused (Höhe und Steigung))\") " +
+                    "VALUES (datetime(${tSec + 5}, 'unixepoch'), 386.0, 386.0, NULL, 451.0, 449.0, NULL)"
+        )
+
+        val canonicalShifted = dbManager.applyAltitudeDriftCorrection(
+            multiSourceTable, 62.37, -1L, (tSec + 10) * 1000L, -1L
+        )
+        assertEquals("Exactly 1 barometric canonical row should shift", 1, canonicalShifted)
+
+        db.rawQuery(
+            "SELECT ALTITUDE, \"ALTITUDE (Höhe aus Luftdruck)\", \"ALTITUDE (Topografische Höhe (DEM))\", " +
+                    "\"ALTITUDE (GPS)\", \"ALTITUDE (Google Fused)\", \"ALTITUDE (ATT Fused (Höhe und Steigung))\" " +
+                    "FROM $multiSourceTable ORDER BY _id ASC", null
+        ).use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals("Row 0 DEM-sourced canonical ALTITUDE untouched", 448.0, cursor.getDouble(0), 0.001)
+            assertEquals("Row 0 Baro column shifted", 448.0, cursor.getDouble(1), 0.001)
+            assertEquals("Row 0 DEM column untouched", 448.0, cursor.getDouble(2), 0.001)
+            assertEquals("Row 0 GPS column untouched", 452.0, cursor.getDouble(3), 0.001)
+            assertEquals("Row 0 Google Fused column untouched", 450.0, cursor.getDouble(4), 0.001)
+            assertEquals("Row 0 ATT Fused column untouched", 448.5, cursor.getDouble(5), 0.001)
+
+            assertTrue(cursor.moveToNext())
+            assertEquals("Row 1 Baro-sourced canonical ALTITUDE shifted", 448.37, cursor.getDouble(0), 0.001)
+            assertEquals("Row 1 Baro column shifted", 448.37, cursor.getDouble(1), 0.001)
+            assertTrue("Row 1 DEM remains NULL", cursor.isNull(2))
+            assertEquals("Row 1 GPS column untouched", 451.0, cursor.getDouble(3), 0.001)
+            assertEquals("Row 1 Google Fused column untouched", 449.0, cursor.getDouble(4), 0.001)
+            assertTrue("Row 1 ATT Fused remains NULL", cursor.isNull(5))
+        }
+    }
+
+    /**
+     * TST-FIL-018.2 (Criterion 2): On RESUME_SERVICE_RECREATION (prevCalTimeMs == -1L), Case A
+     * shifts ONLY uncalibrated barometric rows within [sessionEpochStartTimeMs, t1Ms], leaving
+     * already-calibrated pre-crash rows and post-calibration rows untouched.
+     */
+    @Test
+    fun testApplyAltitudeDriftCorrection_caseA_epochAndUpperBoundsProtectPreCrashAndPostCalRows() {
+        val epochSec = 1794305400L // crash/restart epoch start
+        val t1Sec = epochSec + 10L   // calibration timestamp
+
+        // Pre-crash calibrated rows (< epochSec)
+        val insertPreSql = "INSERT INTO $testTable (time, ALTITUDE, \"ALTITUDE (Höhe aus Luftdruck)\") VALUES "
+        db.execSQL("$insertPreSql(datetime(${epochSec - 60}, 'unixepoch'), 440.0, 440.0)")
+        db.execSQL("$insertPreSql(datetime(${epochSec - 10}, 'unixepoch'), 445.0, 445.0)")
+        // Post-restart uncalibrated rows in [epochSec, t1Sec]
+        db.execSQL("$insertPreSql(datetime($epochSec, 'unixepoch'), 380.0, 380.0)")
+        db.execSQL("$insertPreSql(datetime($t1Sec, 'unixepoch'), 385.0, 385.0)")
+        // Post-calibration row (> t1Sec), already calibrated at 448.0
+        db.execSQL("$insertPreSql(datetime(${t1Sec + 10}, 'unixepoch'), 448.0, 448.0)")
+
+        // Pass epochStartMs with +900ms sub-second offset to verify floor-second inclusivity for epochSec row
+        val shifted = dbManager.applyAltitudeDriftCorrection(
+            testTable, 62.37, -1L, t1Sec * 1000L + 500L, epochSec * 1000L + 900L
+        )
+        assertEquals("Only the 2 uncalibrated post-restart rows should shift", 2, shifted)
+
+        val expected = listOf(440.0, 445.0, 442.37, 447.37, 448.0)
+        db.rawQuery("SELECT ALTITUDE, \"ALTITUDE (Höhe aus Luftdruck)\" FROM $testTable ORDER BY _id ASC", null).use { cursor ->
+            var idx = 0
+            while (cursor.moveToNext()) {
+                assertEquals("Row $idx canonical ALTITUDE", expected[idx], cursor.getDouble(0), 0.001)
+                assertEquals("Row $idx Baro ALTITUDE", expected[idx], cursor.getDouble(1), 0.001)
+                idx++
+            }
+            assertEquals(5, idx)
+        }
+    }
+
+    /**
+     * Edge case: Without a barometric source column present, DEM/GPS/canonical ALTITUDE are never mutated.
+     */
+    @Test
+    fun testApplyAltitudeDriftCorrection_withoutBarometricColumn_leavesDemAndCanonicalUntouched() {
+        val demOnlyTable = "\"test_dem_only_2026_11_15\""
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS $demOnlyTable (" +
+                    "_id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                    "time DATETIME DEFAULT CURRENT_TIMESTAMP, " +
+                    "ALTITUDE REAL, " +
+                    "\"ALTITUDE (Topografische Höhe (DEM))\" REAL)"
+        )
+        db.execSQL(
+            "INSERT INTO $demOnlyTable (time, ALTITUDE, \"ALTITUDE (Topografische Höhe (DEM))\") " +
+                "VALUES ('2026-11-10 10:00:00', 448.0, 448.0)"
+        )
+
+        val shifted = dbManager.applyAltitudeDriftCorrection(demOnlyTable, 50.0, -1L, 1794304820000L, -1L)
+        assertEquals(0, shifted)
+
+        db.rawQuery("SELECT ALTITUDE, \"ALTITUDE (Topografische Höhe (DEM))\" FROM $demOnlyTable", null).use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals(448.0, cursor.getDouble(0), 0.001)
+            assertEquals(448.0, cursor.getDouble(1), 0.001)
         }
     }
 }

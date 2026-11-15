@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sport_type_swim">Nuoto</string>
+    <string name="tuning_cat_swimming">Nuoto e vasca</string>
+    <string name="tuning_swim_activate_title">Attiva sport Nuoto</string>
+    <string name="tuning_swim_activate_summary">Crea lo sport Nuoto per sessioni in piscina senza affollare gli elenchi predefiniti.</string>
+    <string name="tuning_swim_activate_active_summary">Lo sport Nuoto è attivo in Tipi di sport.</string>
+    <string name="tuning_swim_pool_length_title">Lunghezza vasca predefinita</string>
+    <string name="tuning_swim_pool_preset_25m">25 m</string>
+    <string name="tuning_swim_pool_preset_50m">50 m</string>
+    <string name="tuning_swim_pool_preset_25yd">25 yd</string>
+    <string name="tuning_swim_pool_preset_custom">Altra</string>
+    <string name="tuning_swim_pool_custom_meters_label">Lunghezza personalizzata: %1$d m</string>
+    <string name="tuning_swim_subtitle_active">Attivo, vasca %1$s</string>
+    <string name="tuning_swim_subtitle_inactive">Inattivo, vasca %1$s</string>
+</resources>

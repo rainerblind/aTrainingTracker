@@ -21,6 +21,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     package="com.atrainingtracker">
 
+    <uses-sdk tools:overrideLibrary="com.polar.sdk, com.polar.androidcommunications" />
+
     <uses-permission android:name="com.google.android.gms.permission.AD_ID" tools:node="remove"/>
 
     <uses-permission android:name="android.permission.INTERNET" />

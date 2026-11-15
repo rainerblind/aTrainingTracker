@@ -633,4 +633,57 @@ class PeriodsViewModelTest {
             methodNames.any { it.contains("HrvTrendSeries") }
         )
     }
+
+    /**
+     * TST-PER-048.4: Reconciles PeriodsViewModel.peekedWorkoutDataWithTrack immediately when
+     * WorkoutRepository.allWorkouts emits updated WorkoutData after rename, merge, or delete (REQ-PER-040.1).
+     */
+    @Test
+    fun testPeekedWorkout_reconcilesImmediatelyWhenAllWorkoutsEmitsClusterChange_TST_PER_048_4() =
+        runTest(testDispatcher) {
+        val initialWorkout = mockk<WorkoutData>(relaxed = true) {
+            every { id } returns 301L
+            every { workoutName } returns "Morning Run"
+            every { clusterId } returns 10L
+            every { clusterName } returns "Old Cluster"
+        }
+        val renamedWorkout = mockk<WorkoutData>(relaxed = true) {
+            every { id } returns 301L
+            every { workoutName } returns "Morning Run"
+            every { clusterId } returns 10L
+            every { clusterName } returns "Renamed Cluster"
+        }
+        val deletedClusterWorkout = mockk<WorkoutData>(relaxed = true) {
+            every { id } returns 301L
+            every { workoutName } returns "Morning Run"
+            every { clusterId } returns -1L
+            every { clusterName } returns null
+        }
+
+        val allWorkoutsFlow = MutableStateFlow(listOf(initialWorkout))
+        every { mockWorkoutRepo.allWorkouts } returns allWorkoutsFlow
+        coEvery { mockWorkoutRepo.getWorkoutTrackPoints(301L, any()) } returns emptyList()
+
+        val viewModel = createViewModel()
+        viewModel.selectWorkoutForPeek(301L)
+        testScheduler.advanceUntilIdle()
+
+        assertEquals("Old Cluster", viewModel.peekedWorkoutDataWithTrack.value?.workoutData?.clusterName)
+        assertEquals("Morning Run", viewModel.peekedWorkoutDataWithTrack.value?.workoutData?.workoutName)
+
+        // Emit cluster rename through WorkoutRepository.allWorkouts
+        allWorkoutsFlow.value = listOf(renamedWorkout)
+        testScheduler.advanceUntilIdle()
+
+        assertEquals("Renamed Cluster", viewModel.peekedWorkoutDataWithTrack.value?.workoutData?.clusterName)
+        assertEquals("Morning Run", viewModel.peekedWorkoutDataWithTrack.value?.workoutData?.workoutName)
+
+        // Emit cluster delete through WorkoutRepository.allWorkouts
+        allWorkoutsFlow.value = listOf(deletedClusterWorkout)
+        testScheduler.advanceUntilIdle()
+
+        assertEquals(-1L, viewModel.peekedWorkoutDataWithTrack.value?.workoutData?.clusterId)
+        assertNull(viewModel.peekedWorkoutDataWithTrack.value?.workoutData?.clusterName)
+        assertEquals("Morning Run", viewModel.peekedWorkoutDataWithTrack.value?.workoutData?.workoutName)
+    }
 }

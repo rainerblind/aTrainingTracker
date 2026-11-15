@@ -652,6 +652,24 @@ public class DevicesDatabaseManager {
         setBaselineCircumference(deviceID, calib);
     }
 
+    public boolean isPolarH10OfflineRecordingEnabled(long deviceID) {
+        boolean enabled = true;
+        SQLiteDatabase db = getDatabase();
+        try (Cursor cursor = getCursor(db, deviceID, DevicesDbHelper.POLAR_H10_OFFLINE_RECORDING)) {
+            if (cursor != null && cursor.moveToFirst() && !cursor.isNull(0)) {
+                enabled = cursor.getInt(0) == 1;
+            }
+        }
+        return enabled;
+    }
+
+    public void setPolarH10OfflineRecordingEnabled(long deviceID, boolean enabled) {
+        SQLiteDatabase db = getDatabase();
+        ContentValues values = new ContentValues();
+        values.put(DevicesDbHelper.POLAR_H10_OFFLINE_RECORDING, enabled ? 1 : 0);
+        db.update(DevicesDbHelper.DEVICES, values, DevicesDbHelper.C_ID + "=?", new String[]{String.valueOf(deviceID)});
+    }
+
     public boolean isPaired(long deviceID) {
         boolean result = false;
 
@@ -1100,6 +1118,7 @@ public class DevicesDatabaseManager {
         public static final String DEVICE_ID = "deviceId";
         public static final String BIKE_POWER_SENSOR_FLAGS = "bikePowerSensorFlags";
         public static final String BASELINE_CIRCUMFERENCE = "baselineCircumference";
+        public static final String POLAR_H10_OFFLINE_RECORDING = "polarH10OfflineRecording";
         public static final String DB_NAME = "Devices.db";
         // static final int DB_VERSION = 4;
         // static final int DB_VERSION = 5;    // upgraded at 30.12.2016 to support storing of BT features
@@ -1109,7 +1128,8 @@ public class DevicesDatabaseManager {
         // static final int DB_VERSION = 9;    // upgraded at 03.11.2026: renamed legacy ALTITUDE_FROM_PRESSURE default names (ATT-5073)
         // static final int DB_VERSION = 10;   // upgraded at 06.11.2026: excised obsolete SPEED_AND_LOCATION_NETWORK (ATT-5492)
         // static final int DB_VERSION = 11;   // upgraded at 14.11.2026: added SPEED_AND_LOCATION_ATT_FUSED (ATT-7751)
-        public static final int DB_VERSION = 12;   // upgraded at 14.11.2026: added ALTITUDE_AND_SLOPE_ATT_FUSED (ATT-6279)
+        // static final int DB_VERSION = 12;   // upgraded at 14.11.2026: added ALTITUDE_AND_SLOPE_ATT_FUSED (ATT-6279)
+        public static final int DB_VERSION = 13;   // upgraded at 15.11.2026: added polarH10OfflineRecording (ATT-7762)
         private static final String TAG = "DeviceDbHelper";
         private static final boolean DEBUG = BANALService.getDebug(false);
         private static final String DEVICES_V3 = "Devices";               // in version 3, the table was simply called Devices
@@ -1141,6 +1161,20 @@ public class DevicesDatabaseManager {
                 + LAST_ACTIVE + " text,"
                 + LAST_BATTERY_PERCENTAGE + " int,"
                 + BASELINE_CIRCUMFERENCE + " real DEFAULT 0.0)";
+        private static final String CREATE_DEVICE_DB_13 = "create table " + DEVICES + " ("
+                + C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
+                + PROTOCOL + " text, "
+                + ANT_DEVICE_NUMBER + " int, "
+                + BT_ADDRESS + " text, "
+                + DEVICE_TYPE + " text, "
+                + PAIRED + " int, "
+                + NAME + " text, "
+                + MANUFACTURER_NAME + " text, "
+                + CALIBRATION_FACTOR + " real,"
+                + LAST_ACTIVE + " text,"
+                + LAST_BATTERY_PERCENTAGE + " int,"
+                + BASELINE_CIRCUMFERENCE + " real DEFAULT 0.0,"
+                + POLAR_H10_OFFLINE_RECORDING + " int DEFAULT 1)";
         @Deprecated
         private static final String CREATE_BT_SPECIFIC_5 = "create table " + TABLE_BT_SPECIFIC + " ("
                 + C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
@@ -1219,8 +1253,9 @@ public class DevicesDatabaseManager {
                 case 10:
                 case 11:
                 case 12:
-                    db.execSQL(CREATE_DEVICE_DB_8);
-                    if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_DEVICE_DB_8);
+                case 13:
+                    db.execSQL(CREATE_DEVICE_DB_13);
+                    if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_DEVICE_DB_13);
                     db.execSQL(CREATE_BIKE_POWER_SENSORS_TABLE_6);
                     if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_BIKE_POWER_SENSORS_TABLE_6);
 
@@ -1369,6 +1404,23 @@ public class DevicesDatabaseManager {
             if (oldVersion <= 11) {
                 if (DEBUG) Log.i(TAG, "onUpgrade: upgrading from Version <= 11 to 12 (adding ALTITUDE_AND_SLOPE_ATT_FUSED)");
                 migrateAddAltitudeAndSlopeAttFused(db);
+            }
+
+            if (oldVersion <= 12 && newVersion >= 13) {
+                if (DEBUG) Log.i(TAG, "onUpgrade: upgrading from Version <= 12 to 13 (adding polarH10OfflineRecording)");
+                boolean columnExists = false;
+                try (Cursor cursor = db.rawQuery("PRAGMA table_info(" + DEVICES + ")", null)) {
+                    int nameColIdx = cursor.getColumnIndex("name");
+                    while (cursor.moveToNext()) {
+                        if (POLAR_H10_OFFLINE_RECORDING.equalsIgnoreCase(cursor.getString(nameColIdx))) {
+                            columnExists = true;
+                            break;
+                        }
+                    }
+                }
+                if (!columnExists) {
+                    db.execSQL("ALTER TABLE " + DEVICES + " ADD COLUMN " + POLAR_H10_OFFLINE_RECORDING + " int DEFAULT 1");
+                }
             }
         }
 

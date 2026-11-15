@@ -3,7 +3,7 @@
 **Domain**: `settings_profiles`  
 **Prefixes**: `LOC`, `MON`, `PRI`, `SET`  
 **Scope**: Athlete settings, bike/sensor profiles, privacy zones, data stores, monetization, and 9-locale parity.  
-**Total Requirements**: 102
+**Total Requirements**: 105
 
 ---
 
@@ -2267,7 +2267,221 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 
 **Invariants**: Re-sync operations must never produce duplicate entries or orphan telemetry series in Health Connect. Zero unprompted background sync operations when disabled.
 
+### REQ-SET-104: Polar H10 Internal RR Recording & GATT Arbitration [Verified]
+- **Tests**: `TST-SET-106`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Implementation**: `app/build.gradle`, `AndroidManifest.xml`, `DevicesDatabaseManager.java`, `DeviceUiData.kt`, `EditDeviceDialog.kt`, `EditDeviceViewModel.kt`, `PolarH10OfflineController.kt`, `TrackerService.java`
+- **Rationale**: Athletes using Polar H10 chest straps lose heart rate and beat-to-beat RR interval telemetry during activities like swimming or when separated from their smartphone. While the Polar H10 features internal flash memory capable of recording an entire session via Polar PFTP GATT protocol, starting and managing internal recording requires proper clock synchronization, clearing existing exercises, and careful GATT arbitration with standard 0x180D BLE streaming without breaking backwards compatibility on Android 8–12 (`minSdkVersion 26`). The system SHALL provide configurable internal backup recording for Polar H10 devices:
+1. *Polar BLE SDK Integration & Manifest Override (`REQ-SET-104.1`)*:
+   - The project SHALL integrate `com.github.polarofficial:polar-ble-sdk:8.6.0` using `<uses-sdk tools:overrideLibrary="com.polar.sdk, com.polar.androidcommunications"/>` in `app/src/main/AndroidManifest.xml` to reconcile the SDK's higher `minSdkVersion` requirement with the app's global `minSdkVersion 26` baseline.
+   - All runtime invocations of Polar BLE SDK APIs SHALL be guarded behind `@RequiresApi(Build.VERSION_CODES.TIRAMISU)` / `Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU` (API 33) runtime checks, falling back safely on earlier Android releases.
+2. *Database Persistence & Migration Parity (`REQ-SET-104.2`)*:
+   - `DevicesDatabaseManager` SQLite database schema SHALL be upgraded from `DB_VERSION = 12` to `DB_VERSION = 13` by adding column `polarH10OfflineRecording int DEFAULT 1` to table `devices`.
+   - Both `onCreate()` and `onUpgrade()` migration paths SHALL maintain identical column definitions and default constraints.
+3. *Device Configuration UI & 9-Locale Parity (`REQ-SET-104.3`)*:
+   - In `EditDeviceDialog.kt` and `EditDeviceViewModel.kt`, the system SHALL display a dedicated "Polar H10 Backup Recording" switch item strictly when the inspected device is a Polar H10 heart rate strap (`deviceType == DeviceType.HRM` and name starts with `"Polar H10"` or manufacturer is Polar).
+   - Toggling the switch SHALL immediately persist the setting in `DevicesDatabaseManager`.
+   - All UI labels and descriptions SHALL be fully localized across all 9 supported application locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
+4. *GATT Arbitration & Arming Lifecycle (`REQ-SET-104.4`)*:
+   - When a workout begins (`TrackerService.onStartCommand`), if a paired Polar H10 device has backup recording enabled, `PolarH10OfflineController` SHALL asynchronously connect via Polar BLE SDK, synchronize device time (`setLocalTime`), query/remove any stale existing exercise session, and start internal recording of `SampleType.RR`.
+   - The controller SHALL arbitrate GATT access with `MyBTLEDevice`/`BTLEHeartRateDevice` to prevent concurrent GATT connection collisions on the same peripheral MAC address.
+   - *Fringe-Flap Invariant*: The internal recording session SHALL be armed strictly once at workout start and SHALL NOT re-arm, restart, or truncate ongoing recording if BLE connection is dropped and re-established mid-workout.
+5. *Polar SDK Attribution & License Notice (`REQ-SET-104.5`)*:
+   - In compliance with Polar BLE SDK License and GPLv3 Section 7, the application SHALL document the Polar BLE SDK third-party license notice and linking attribution in project legal/license documentation (`LICENSE`).
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an Android 8.0–12L device (`SDK_INT < 33`),
+• *When* the app launches and connects to a Polar H10 sensor,
+• *Then* the app functions normally without `ClassNotFoundException` or `NoClassDefFoundError`, streaming live HR/RR data via standard 0x180D BLE GATT.
+• *Given* an Android 13+ device (`SDK_INT >= 33`) with a paired Polar H10 where backup recording is enabled,
+• *When* tracking starts in `TrackerService`,
+• *Then* `PolarH10OfflineController` synchronizes device time, clears stale exercises, and starts internal RR recording asynchronously without blocking foreground service startup.
+• *Given* an active workout with internal recording armed,
+• *When* the user swims away from phone causing BLE disconnection and later reconnects,
+• *Then* standard 0x180D streaming resumes and the active internal recording session continues undisturbed without re-arming.
+• *Given* a fresh install or an upgrade from DB version 12,
+• *Then* `DevicesDatabaseManager` initializes or upgrades cleanly to version 13 with `polar_h10_offline_recording` defaulting to 0 (`false`).
+
+**Invariants**: Standard 0x180D GATT heart rate and RR streaming in `BTLEHeartRateDevice` is never regressed; workout start is non-blocking even if the sensor is unreachable; full database migration parity between `onCreate` and `onUpgrade`.
+
+### REQ-SET-105: Polar H10 Offline HR/RR Workout Stop Backfill & Export Gating [Verified]
+- **Tests**: `TST-SET-107`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Implementation**: `PolarH10OfflineController.kt`, `TrackerService.java`, `WorkoutSamplesDatabaseManager.java`, `WorkoutRrDatabaseManager.kt`, `HrvPostWorkoutRecomputer.kt`, `ExportManager.java`
+- **Status**: Verified (ATT-7918)
+- **Rationale**: When endurance athletes record swimming sessions or experience mid-workout radio dropouts with an armed Polar H10, `TrackerService.endWorkout()` must retrieve the internal flash session via Polar PFTP protocol before triggering automated file serialization or cloud synchronization. Without gating, `ExportManager` publishes incomplete telemetry files lacking heart rate and HRV metrics. The system SHALL retrieve stored Polar H10 RR intervals on workout stop, patch missing samples idempotently in SQLite, recompute summary and HRV extrema, and gate downstream exports:
+1. *Zero-Gap Fast Path Evaluation (`REQ-SET-105.1`)*:
+   - Upon `TrackerService.endWorkout()`, if Polar H10 internal recording was armed (`isRecordingArmed == true`), the system SHALL first evaluate live telemetry continuity in `WorkoutSamples.db` and `WorkoutRr.db`.
+   - If live BLE 0x180D reception was 100% continuous (`count(HR) == totalActiveSeconds` and zero `ARTIFACT_GAP`), the system SHALL bypass the slow multi-second PFTP transfer, immediately issue `stopRecording()` and `removeExercise()`, and release downstream exports without delay.
+2. *Asynchronous Fetch, GATT Handoff & Foreground Progress Notification (`REQ-SET-105.2`)*:
+   - When gaps exist, `PolarH10OfflineController.stopAndBackfillWorkout()` SHALL pause `MyBTLEDevice` GATT operations, establish PFTP connection to the strap, and retrieve recorded RR intervals via `fetchExercise()`.
+   - A foreground notification ("Syncing HR/HRV from Polar H10..." / "Synchronisiere HF/HRV von Polar H10...") SHALL be displayed during download with 100% 9-language localization parity across all supported application locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
+   - The fetch pipeline SHALL be bounded by a 30-second timeout (`withTimeoutOrNull(30_000L)`). If the strap is out of range, dead, or times out, the system SHALL log a warning, resume GATT, and proceed gracefully with existing live data without service crash.
+3. *Timestamp Alignment & Idempotent Gap-Only SQLite Backfill (`REQ-SET-105.3`)*:
+   - Retrieved RR intervals SHALL be anchored to the exercise start timestamp established at workout start (`setLocalTime`).
+   - Missing 1-Hz HR samples (`round(60000.0 / rrMs)`) SHALL be inserted strictly into empty seconds in `WorkoutSamples.db` without overwriting or duplicating existing live samples.
+   - Beat-to-beat RR intervals SHALL be inserted into `WorkoutRr.db`, closing matching `ARTIFACT_GAP` intervals.
+4. *Post-Backfill Recomputation & Transactional Slot Cleanup (`REQ-SET-105.4`)*:
+   - Upon successful SQLite backfill commit, the system SHALL invoke `HrvPostWorkoutRecomputer.recomputeWorkoutBlocking(workoutId)` to recalculate centered rMSSD, SDNN, DFA a1, and Autonomic Durability, and update `WorkoutSummaries.db` HR/HRV averages, maxima, and HR zone distributions.
+   - The stored exercise on the Polar H10 strap SHALL be deleted via `removeExercise()` strictly after SQLite backfill and recomputation commit successfully.
+5. *Export Pipeline Gating (`REQ-SET-105.5`)*:
+   - Downstream export triggers (`ExportManager.workoutFinished()`, FIT/TCX/GPX/CSV file generation, and Strava / Health Connect / Dropbox sync) SHALL be held in `TrackerService.endWorkout()` until backfill and summary recomputation finish (or until timeout fallback expires), ensuring all exported files and cloud syncs contain complete HR and HRV metrics.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an athlete finishes a 30-minute pool swim with phone left in the locker and strap within BLE range upon return,
+• *When* the athlete taps Stop in `TrackerService`,
+• *Then* the stored RR exercise is fetched from the H10, missing 1-Hz HR rows in `WorkoutSamples.db` and beat rows in `WorkoutRr.db` are inserted, `HrvPostWorkoutRecomputer` updates `WorkoutSummaries.db` extrema, and `removeExercise()` cleans up the strap.
+• *Given* automated exports (FIT, TCX, Strava, Health Connect) are enabled on a workout with Polar H10 gaps,
+• *When* the workout ends,
+• *Then* `ExportManager.workoutFinished()` is gated until backfill commits, and all exported files contain continuous HR curves and complete HRV metrics.
+• *Given* an outdoor ride with a Polar H10 where 0x180D BLE streaming had zero dropouts,
+• *When* the workout ends,
+• *Then* the zero-gap fast path immediately stops and deletes the H10 exercise without executing a multi-second PFTP download.
+• *Given* a Polar H10 that was turned off or walked away before tapping Stop,
+• *When* the 30-second backfill timeout expires,
+• *Then* `TrackerService` finalizes the workout using available live data without hanging or crashing.
+
+**Invariants**: Zero data loss or corruption of existing live GPS, power, cadence, or HR telemetry; zero export of premature/partial files prior to backfill completion when strap is available; bounded 30-second timeout guarantees foreground service termination even if strap is lost; full 9-language localization parity for any user-facing notifications.
+
+### REQ-SET-106: Polar H10 Aftermath Retry Sync Banner for Asleep Strap [Verified]
+- **Tests**: `TST-SET-108`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit, Integration, On-Device Manual
+- **Implementation**: `WorkoutSummariesDatabaseManager.java`, `PolarH10OfflineController.kt`, `WorkoutData.kt`, `WorkoutDataMapper.kt`, `TrackOnMapScreen.kt`, `PolarH10RetrySyncBanner.kt`, `WorkoutRepository.kt`, `ExportManager.java`
+- **Status**: Verified (ATT-7919)
+- **Rationale**: A Polar H10 powers down BLE 45s after losing skin contact (e.g. swimmer unclipping in shower before reaching locker). When stop-time backfill fails or times out, the workout must finalize without blocking, while preserving persistent metadata of the unretrieved session in `WorkoutSummaries.db`. An Aftermath retry banner prompts the athlete to wake the sensor, triggers deferred backfill, updates summaries and exports, and transactionally removes the exercise from strap memory upon successful SQLite commit.
+- **Description**:
+1. *Pending-Sync Metadata Persistence (`REQ-SET-106.1`)*:
+   - When `PolarH10OfflineController.stopAndBackfillWorkout()` fails or times out due to an unreachable/asleep strap, `TrackerService.endWorkout()` SHALL persist `polarDeviceId`, `polarExerciseId`, `polarExpectedStartMs`, `polarExpectedEndMs`, and `polarSyncPending = 1` into `WorkoutSummaries.db` (v31 schema) before completing workout finalization.
+2. *Material 3 Aftermath Retry Sync Banner (`REQ-SET-106.2`)*:
+   - When viewing a workout summary where `polarSyncPending == 1` in `TrackOnMapScreen`, an M3 Card banner SHALL be rendered at the top of the summary content.
+   - The banner SHALL display sensor wake instructions ("Wet electrodes and snap strap on, or place thumbs on sensors to wake"), a primary "Sync Now" button, and a "Dismiss" action.
+   - All banner strings SHALL maintain 100% 9-language localization parity across EN, DE, ES, FR, IT, JA, NL, PL, PT with zero decorative inline emojis.
+3. *Deferred Wake & Backfill Execution (`REQ-SET-106.3`)*:
+   - Tapping "Sync Now" SHALL trigger `PolarH10OfflineController.syncPendingWorkout()`, connecting to the awake strap via PFTP, validating the matching exercise ID or overlapping start time window, and fetching recorded RR data bounded by a 30-second timeout.
+   - Missing 1-Hz HR samples SHALL be patched into `WorkoutSamples.db`, and RR beats SHALL be inserted into `WorkoutRr.db` closing `ARTIFACT_GAP` ranges.
+   - Upon successful SQLite commit, `HrvPostWorkoutRecomputer` SHALL recompute summary metrics, `removeExercise()` on the strap SHALL be invoked, `polarSyncPending` SHALL be set to 0 in `WorkoutSummaries.db`, and `ExportManager.exportWorkout()` SHALL be triggered to regenerate updated export files.
+4. *Dismiss Banner Action (`REQ-SET-106.4`)*:
+   - Tapping "Dismiss" SHALL update `WorkoutSummaries.db` setting `polarSyncPending = 0`, permanently dismissing the banner for this workout without clearing or deleting the unretrieved exercise on the strap.
+5. *Database Migration Parity (`REQ-SET-106.5`)*:
+   - `WorkoutSummariesDatabaseManager` upgrade from version 30 to 31 SHALL add columns `polarDeviceId` (TEXT), `polarExerciseId` (TEXT), `polarExpectedStartMs` (INTEGER), `polarExpectedEndMs` (INTEGER), and `polarSyncPending` (INTEGER DEFAULT 0), maintaining exact schema parity between `onCreate()` and `onUpgrade()`.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an athlete unclips a Polar H10 in the shower and stops tracking 2 minutes later at the locker,
+• *When* stop-time backfill times out after 30s,
+• *Then* `TrackerService` finalizes the workout without hanging, saving `polarSyncPending = 1` in `WorkoutSummaries.db`.
+• *Given* a workout with `polarSyncPending == 1` opened in Aftermath (`TrackOnMapScreen`),
+• *When* the user views the screen,
+• *Then* the M3 retry sync banner is displayed with wake guidance, "Sync Now", and "Dismiss".
+• *Given* the athlete wets the electrodes, snaps the strap on, and taps "Sync Now",
+• *When* `syncPendingWorkout()` runs,
+• *Then* stored RR data is retrieved, missing 1-Hz HR and RR intervals are populated in SQLite, HRV metrics are recalculated, the exercise is deleted from the strap, the banner disappears, and exports are regenerated.
+• *Given* an athlete taps "Dismiss" on the retry banner,
+• *When* dismissal completes,
+• *Then* `polarSyncPending` is cleared to 0 in SQLite, the banner is hidden, and no strap exercises are deleted.
+
+**Invariants**: Workout finalization is never blocked by an asleep strap; existing live telemetry in `WorkoutSamples.db` is never overwritten; `removeExercise()` is executed strictly after SQLite commit; full 9-language localization parity without emojis.
 
 
+
+
+
+
+### REQ-SET-107: Swimming SportType Template, Expert Activation, Pool Length & FIT Export [Verified]
+- **Tests**: `TST-SET-109`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration, On-Device Manual
+- **Implementation**: `SportTypeDatabaseManager.java`, `SportTypesRepository.kt`, `DatabaseSchemaRegistry.kt`, `TuningPreferencesDataStore.kt`, `SettingsDataStoreJavaHelper.kt`, `AdvancedTuningAccordion.kt`, `AdvancedTuningScreen.kt`, `SwimmingSection.kt`, `FitFileWriter.java`, `res/values*/strings_swimming.xml`
+- **Status**: Verified (ATT-7999)
+- **Rationale**: Eagerly seeding Swimming into `SportType.db` clutters UI lists for pure cyclists/runners, while assigning non-zero speed thresholds collides with walking (~1.0–1.8 m/s). Additionally, Garmin TCX forces `tcxName = "Other"` for swimming, causing `FitFileWriter` (which only checked `tcxName`) to emit `Sport.GENERIC`. Providing an unseeded template, idempotent activation, Expert pool-length settings, and `stravaName`/`gcName` FIT resolution ensures turnkey swimming support without side effects.
+- **Description**:
+1. *Prepared `TTSportType.SWIM` Template & Zero-Collision Bounds (`REQ-SET-107.1`)*:
+   - `SportTypeDatabaseManager` SHALL define `TTSportType.SWIM` (`BSportType.UNKNOWN`, `R.string.sport_type_swim`, `gcName = "swim"`, `stravaName = "Swim"`, `tcxName = "Other"`, `runkeeperName = "Swimming"`, `trainingPeaksName = "Swim"`), localized across all 9 UI languages (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`) without emojis.
+   - Fresh `onCreate()` SHALL continue seeding only the 5 default rows (`OTHER`, `RUN`, `BIKE`, `WALK`, `MTB`) at `DB_VERSION = 3` (referenced directly by `DatabaseSchemaRegistry`).
+   - `SWIM` SHALL use `minSpeed = 0.0` and `maxSpeed = 0.0` so speed-range matching `minSpeed <= avgSpd AND maxSpeed > avgSpd` never matches `Swimming`.
+2. *Idempotent `ensureSwimSportTypeExists()` (`REQ-SET-107.2`)*:
+   - `SportTypeDatabaseManager` and `SportTypesRepository` SHALL expose `ensureSwimSportTypeExists(): Long` and `isSwimSportTypeActivated(): Boolean`.
+   - When `ensureSwimSportTypeExists()` runs, if an active (`is_placeholder = 0`) row with case-insensitive `stravaName = "Swim"` or `gcName = "swim"` already exists, it SHALL return that row's ID without inserting a duplicate; otherwise it SHALL insert/activate the localized `SWIM` row (`minSpeed = 0.0`, `maxSpeed = 0.0`) and return its ID.
+3. *Expert Settings Swimming Activation & Default Pool Length (`REQ-SET-107.3`)*:
+   - `TuningPreferencesDataStore` SHALL persist `defaultPoolLengthMeters` (Float, default `25.0f`, presets `25 m`, `50 m`, `25 yd` = `22.86f`, or custom `10f..100f` meters) and `defaultPoolLengthUnit` (`PoolLengthUnit.METERS` / `YARDS`), included in `ALL_KEYS` and `resetToDefaults()`.
+   - `AdvancedTuningScreen` (`TuningSection.SWIMMING`, `SwimmingSection.kt`) SHALL follow `docs/design_guidelines.md` (no `FilterChip`, raw `Switch`, or nested `ElevatedCard`), offering Swimming sport-type activation (`ensureSwimSportTypeExists()` on Save) and default pool length selection across all 9 languages.
+4. *FIT Export `Sport.SWIMMING` & Lap Swimming Metadata (`REQ-SET-107.4`)*:
+   - `FitFileWriter` SHALL resolve `Sport.SWIMMING` when `tcxName` contains `"swim"`, `stravaName` equals `"Swim"` (ignore case), or `gcName` equals `"swim"` (ignore case).
+   - For swimming sessions where pool length (`> 0f`) or indoor pool context applies, `FitFileWriter` SHALL encode `SubSport.LAP_SWIMMING` and populate `SessionMesg` `pool_length` (meters) and `pool_length_unit` (`DisplayMeasure.STATUTE` for `YARDS`, `DisplayMeasure.METRIC` for `METERS`).
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a fresh installation where Swimming has not been activated, *When* inspecting `SportType.db`, *Then* only the 5 defaults exist (`Swimming` absent).
+• *Given* `ensureSwimSportTypeExists()` is invoked once (or on a DB already containing user `Swim`), *When* called again, *Then* exactly one active Swimming row exists and its ID is returned idempotently.
+• *Given* `Swimming` exists with `minSpeed = 0.0, maxSpeed = 0.0`, *When* speed-based lookup runs for `1.4 m/s` (`BSportType.UNKNOWN` or `RUN`) or `0.0 m/s`, *Then* `WALK`/`OTHER` resolves and `Swimming` is never selected.
+• *Given* a Swimming workout (`tcxName = "Other"`, `stravaName = "Swim"`) and default pool length `25 m` (`25 yd`), *When* exported via `FitFileWriter`, *Then* `SessionMesg` encodes `Sport.SWIMMING`, `SubSport.LAP_SWIMMING`, `pool_length = 25.0` (`22.86`), and `DisplayMeasure.METRIC` (`STATUTE`).
+
+**Invariants**: `SportType.db` `DB_VERSION = 3` unchanged; fresh DB row count stays 5; zero walk-speed collision; zero emojis in strings; full `TuningDesignGuidelinesContractTest` compliance.
+
+---
+
+### REQ-SET-108: Polar Verity Sense Offline HR Recording Controller & EditDeviceDialog Support (`ATT-7923`) [Verified]
+- **Tests**: `TST-SET-110`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit / Integration
+- **Implementation**: `PolarOfflineGattCoordinator.kt`, `PolarH10OfflineController.kt`, `PolarVeritySenseOfflineController.kt`, `TrackerService.java`, `EditDeviceDialog.kt`, `BTSearchForNewDevicesEngine.java`, `res/values*/strings_devices.xml`
+- **Rationale**: Optical Polar sensors such as Polar Verity Sense use `PolarOfflineRecordingApi` (`PolarDeviceDataType.HR`) rather than H10's `PolarExerciseApi` to maintain internal backup HR recording during pool swims or BLE dropouts without adding a duplicate SQLite migration or interrupting `0x180D` live streaming.
+- **Description**:
+1. *Optical Offline-Capable Device Detection & Settings Reuse (`REQ-SET-108.1`)*:
+   - The system SHALL recognize Polar Verity Sense / compatible `FEATURE_POLAR_OFFLINE_RECORDING` optical HR devices via device name/manufacturer matching (`"Polar Sense"`, `"Verity Sense"`, `"Polar Verity"`, `"Polar OH1"`) and persisted PFTP/offline capability cache (`PolarOfflineCapabilityStore`), reusing `Devices.db` v13 `polarH10OfflineRecording` (`DEFAULT 1`) without bumping `DB_VERSION`.
+   - `EditDeviceDialog` SHALL display the `@RequiresApi(33)` backup recording toggle for detected Polar Verity Sense / compatible optical Polar HRM devices (default ON on Android 13+, disabled with Android 13 hint below API 33), using accurate HR-only copy (`device_polar_verity_backup_recording_title` / `device_polar_verity_backup_recording_desc`) vs. H10 HR + HRV copy across all 9 locales (`values*/strings_devices.xml`) without emojis.
+2. *Shared GATT Arbitration & `PolarVeritySenseOfflineController` (`REQ-SET-108.2`)*:
+   - Shared GATT yield (`pauseGattOperations()` / `resumeGattOperations()`), Polar 8-hex ID extraction, DB device resolution, and SDK feature-readiness awaiting SHALL be factored into `PolarOfflineGattCoordinator` reused by `PolarH10OfflineController` and `PolarVeritySenseOfflineController`.
+   - On Android 13+ when backup recording is enabled, `PolarVeritySenseOfflineController.onWorkoutStarted(context)` SHALL coordinate GATT yield, await `FEATURE_POLAR_OFFLINE_RECORDING` and `FEATURE_POLAR_DEVICE_TIME_SETUP`, call `setLocalTime()`, inspect `getOfflineRecordingStatus()` (stopping pre-existing `PolarDeviceDataType.HR` if active), start `PolarDeviceDataType.HR` via `PolarOfflineRecordingApi.startOfflineRecording(..., settings = null, secret = null)`, and release GATT back to `BTLEHeartRateDevice` in a `finally` block.
+   - `TrackerService` SHALL invoke `PolarVeritySenseOfflineController.setSessionStartTimeMs(...)`, `onWorkoutStarted(this)`, and `onWorkoutStopped(this)` alongside `PolarH10OfflineController`.
+3. *Mid-Workout Fringe-Flap Invariant, `SYSTEM_BUSY` Resilience & Fetch/Cleanup API (`REQ-SET-108.3`)*:
+   - `PolarVeritySenseOfflineController` SHALL arm once per workout (`isArmed` CAS); mid-workout `0x180D` BLE disconnects or reconnects MUST NOT stop, restart, or re-query PFTP offline recording.
+   - `BlePsFtpUtils.PftpResponseError` (`PbPFtpError.SYSTEM_BUSY`) or SDK failures during arming MUST NOT crash or block workout start; the controller SHALL clear `isArmed`, restore standard GATT operations, and record a diagnosable last error state.
+   - `PolarVeritySenseOfflineController` SHALL expose `suspend fun stopAndFetchOfflineHr(...)` (stopping active HR recording, querying `listOfflineRecordings`, fetching `PolarOfflineRecordingData.HrOfflineRecording`) and `suspend fun removeOfflineRecord(...)` for downstream post-workout backfill (`ATT-7924`).
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an Android 13+ device with a Polar Verity Sense paired, *When* opening `EditDeviceDialog`, *Then* the backup toggle defaults ON with HR-only Verity Sense copy in all 9 locales (and shows disabled Android 13 hint below API 33).
+• *Given* workout start on Android 13+ with Verity Sense backup enabled, *When* `PolarVeritySenseOfflineController.onWorkoutStarted()` runs, *Then* standard GATT pauses, `setLocalTime()` and `getOfflineRecordingStatus()` execute (stopping active `HR` if present), `startOfflineRecording(..., HR, null, null)` succeeds, and `resumeGattOperations()` always executes.
+• *Given* an already-armed workout experiencing a mid-workout `0x180D` BLE flap, *When* `onWorkoutStarted()` / `onDeviceDisconnected()` occurs, *Then* PFTP offline recording is NOT stopped, restarted, or re-queried.
+• *Given* the Verity Sense returns `SYSTEM_BUSY` during arming, *When* `onWorkoutStarted()` executes, *Then* workout start completes non-blockingly, `isArmed` resets cleanly, and `resumeGattOperations()` restores live `0x180D` streaming.
+
+**Invariants**: `Devices.db` stays `DB_VERSION = 13`; zero workout-start crashes or hangs on `SYSTEM_BUSY`; zero mid-workout PFTP interruptions; zero emojis in strings; full API < 33 isolation.
+
+---
+
+### REQ-SET-109: Polar Verity Sense Stop-Time HR Backfill & Aftermath Retry Sync (`ATT-7924`) [Verified]
+- **Tests**: `TST-SET-111`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit / Integration
+- **Implementation**: `PolarVeritySenseOfflineController.kt`, `PolarOfflineGattCoordinator.kt`, `TrackerService.java`, `WorkoutSamplesDatabaseManager.java`, `WorkoutSummariesDatabaseManager.java`, `PolarH10RetrySyncBanner.kt`, `TrackOnMapScreen.kt`, `WorkoutDetailTabbedContent.kt`, `res/values*/strings_devices.xml`
+- **Rationale**: Swimmers leaving phones in lockers rely on Polar Verity Sense internal 1-Hz optical HR memory (`ATT-7923`) to recover missed BLE heart rate samples on workout stop (or later in Aftermath when powered back on in Blue Sensor Mode) before automatic exports execute, while strictly protecting `WorkoutRr.db` HRV integrity against optical 1-Hz PPG pollution.
+- **Description**:
+1. *Stop-Time Backfill, Export Gate & Zero-Gap Fast Path (`REQ-SET-109.1`)*:
+   - On Android 13+ during `TrackerService.endWorkout()`, if `PolarVeritySenseOfflineController.isRecordingArmed()` is true, `TrackerService` SHALL invoke `PolarVeritySenseOfflineController.stopAndBackfillWorkoutBlocking(...)` BEFORE `ExportManager.workoutFinished()` executes, holding all automatic downstream exports (Strava, Health Connect, Dropbox, `.fit`, `.tcx`, `.gpx`, `.csv`) until backfill or pending-sync fallback completes.
+   - `PolarVeritySenseOfflineController.onWorkoutStopped(context)` SHALL preserve armed session metadata when armed so `endWorkout()` can execute backfill (resetting `isArmed` in `stopAndBackfillWorkout()`'s `finally` block).
+   - `PolarVeritySenseOfflineController.shouldBackfill(context, baseFileName)` SHALL inspect ONLY `WorkoutSamplesDatabaseManager.hasMissingHeartRateSamples(baseFileName)` (ignoring `WorkoutRr.db`). On zero missing HR seconds (`shouldBackfill == false`), the fast path SHALL stop active `HR` recording and call `removeOfflineRecord()` for ONLY the workout's matched `PolarOfflineRecordingEntry` without downloading `HrOfflineRecording`.
+   - When missing HR seconds exist, the controller SHALL pause standard GATT via `PolarOfflineGattCoordinator`, stop/list/fetch `HrOfflineRecording`, align `HrOfflineRecording.startTime` + 1-Hz `samples` (`sample.hr` / `correctedHr`) to workout timestamps, and call `WorkoutSamplesDatabaseManager.patchMissingHeartRateSamples()` to populate ONLY missing (`NULL` or `<= 0`) `SensorType.HR` rows while preserving all existing valid HR, GPS, speed, cadence, and power samples.
+2. *Strict HRV Integrity & Summary Recomputation (`REQ-SET-109.2`)*:
+   - `PolarVeritySenseOfflineController` MUST NEVER write synthetic RR intervals or optical PPI rows into `WorkoutRr.db` and MUST NEVER invoke `HrvPostWorkoutRecomputer`.
+   - After patching `WorkoutSamples.db`, the controller SHALL recompute `SensorType.HR` summary extrema (`MIN`, `MAX`, `AVG` with count) and optional EF/decoupling into `WorkoutSummaries.db` (`TABLE_EXTREMA_VALUES`) and call `WorkoutRepository.refreshWorkout(workoutId)` so Aftermath summaries and HR zone durations (`ZoneDistributionCalculator`) update cleanly.
+3. *Multi-Session Flash Safety & Aftermath Deferred Retry (`REQ-SET-109.3`)*:
+   - `removeOfflineRecord()` MUST execute strictly AFTER SQLite commits succeed and delete ONLY the `PolarOfflineRecordingEntry` matching the workout's expected time window (or persisted `polarExerciseId` path), preserving unrelated recordings on the 16 MB flash.
+   - When Verity Sense is unreachable/powered off or no data is retrieved when backfill is needed, the controller SHALL persist `WorkoutSummariesDatabaseManager.setPolarSyncPending(...)` tagging `polarExerciseId` with `"verity:"` prefix + matched path (zero DB schema bump).
+   - `PolarH10RetrySyncBanner` (in `TrackOnMapScreen.kt` and `WorkoutDetailTabbedContent.kt`) SHALL detect `"verity:"` pending state, render localized optical Blue Sensor Mode copy across all 9 locales without emojis (*"Turn on your Polar Verity Sense in Blue Sensor Mode and tap Sync Now."*), dispatch *Sync Now* to `PolarVeritySenseOfflineController.syncPendingWorkout()`, clear pending state and remove only the matched flash entry after SQLite commit, refresh `WorkoutRepository`, and trigger `ExportManager.invalidateWorkoutExport()` + `exportWorkout()`.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a workout with Verity Sense backup armed and missing `HR` seconds, *When* `TrackerService.endWorkout()` executes with sensor in range, *Then* missing 1-Hz `HR` samples and `HR` extrema/zones update before `ExportManager.workoutFinished()`, `WorkoutRr.db` has zero insertions, and only the matched flash entry is removed post-commit.
+• *Given* zero missing `HR` seconds in `WorkoutSamples.db`, *When* stop-time backfill executes, *Then* `getOfflineRecord` is skipped and only the matched entry is stopped and removed.
+• *Given* multiple recordings on Verity Sense 16 MB flash, *When* cleanup runs, *Then* unrelated recordings remain untouched.
+• *Given* Verity Sense was powered off at stop (`polarSyncPending=1`, `verity:` tag), *When* reopened in Blue Sensor Mode and user taps *Sync Now* in Aftermath, *Then* Verity copy renders in 9 locales, `syncPendingWorkout()` backfills HR, refreshes summaries, deletes only matched entry, and clears the banner.
+
+**Invariants**: Zero `WorkoutRr.db` / `HrvPostWorkoutRecomputer` writes; zero `WorkoutSummaries.db` schema bump; gap-only `HR` patching; post-commit single-entry deletion; zero emojis in strings.
 
 

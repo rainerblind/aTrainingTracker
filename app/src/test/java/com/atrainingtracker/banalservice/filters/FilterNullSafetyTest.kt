@@ -49,11 +49,11 @@ class FilterNullSafetyTest {
         
         // Valid value should work
         filter.newValue(100)
-        assertEquals(100.0, filter.filteredValue.toDouble(), 0.01)
+        assertEquals(100.0, filter.filteredValue?.toDouble() ?: 0.0, 0.01)
         
         // Subsequent null should not crash and not affect average
         filter.newValue(null)
-        assertEquals(100.0, filter.filteredValue.toDouble(), 0.01)
+        assertEquals(100.0, filter.filteredValue?.toDouble() ?: 0.0, 0.01)
     }
 
     @Test
@@ -81,13 +81,13 @@ class FilterNullSafetyTest {
         assertNull(filter.filteredValue)
         
         filter.newValue(100)
-        assertEquals(100.0, filter.filteredValue.toDouble(), 0.01)
+        assertEquals(100.0, filter.filteredValue?.toDouble() ?: 0.0, 0.01)
         
         filter.newValue(null)
-        assertEquals(100.0, filter.filteredValue.toDouble(), 0.01)
+        assertEquals(100.0, filter.filteredValue?.toDouble() ?: 0.0, 0.01)
         
         filter.newValue(200)
-        assertEquals(150.0, filter.filteredValue.toDouble(), 0.01)
+        assertEquals(150.0, filter.filteredValue?.toDouble() ?: 0.0, 0.01)
     }
 
     @Test
@@ -99,10 +99,10 @@ class FilterNullSafetyTest {
         assertNull(filter.filteredValue)
         
         filter.newValue(100)
-        assertEquals(100.0, filter.filteredValue.toDouble(), 0.01)
+        assertEquals(100.0, filter.filteredValue?.toDouble() ?: 0.0, 0.01)
         
         filter.newValue(null)
-        assertEquals(100.0, filter.filteredValue.toDouble(), 0.01)
+        assertEquals(100.0, filter.filteredValue?.toDouble() ?: 0.0, 0.01)
     }
 
     /**
@@ -135,7 +135,7 @@ class FilterNullSafetyTest {
         filter.newValue(200)
 
         assertNotNull(filter.filteredValue)
-        assertEquals(150.0, filter.filteredValue.toDouble(), 0.01)
+        assertEquals(150.0, filter.filteredValue?.toDouble() ?: 0.0, 0.01)
     }
 
     private class TestableTimedMovingAverageFilter(

@@ -143,4 +143,33 @@
     <string name="devices_sort_first_seen">Visto per la prima volta</string>
     <string name="devices_sort_last_usage">Ultimo utilizzo</string>
     <string name="devices_sort_battery_level">Livello della batteria</string>
+    <!-- Polar H10 Internal Backup Recording (ATT-7762, REQ-SET-104) -->
+    <string name="device_polar_h10_backup_recording_title">Registrazione di backup Polar H10</string>
+    <string name="device_polar_h10_backup_recording_desc">Registra la frequenza cardiaca e gli intervalli RR nella memoria interna del sensore (es. per il nuoto).</string>
+    <string name="device_polar_h10_backup_recording_requires_android_13">Richiede Android 13 o successivo</string>
+
+    <!-- Polar H10 Workout Stop Backfill & Export Gating (ATT-7918, REQ-SET-105) -->
+    <string name="notification_polar_h10_syncing_title">Sincronizzazione dati Polar H10</string>
+    <string name="notification_polar_h10_syncing_desc">Sincronizzazione della frequenza cardiaca e degli intervalli RR dalla memoria del sensore…</string>
+
+    <!-- Polar H10 Aftermath Retry Sync Banner (ATT-7919, REQ-SET-106) -->
+    <string name="polar_h10_retry_sync_title">Dati offline Polar H10 disponibili</string>
+    <string name="polar_h10_retry_sync_desc">Il sensore di frequenza cardiaca era in standby al termine dell\'allenamento. Indossa la fascia o inumidisci e collega entrambi i bottoni a pressione con le dita per riattivarlo, assicurati che non sia connesso ad altri dispositivi e sincronizza ora.</string>
+    <string name="polar_h10_retry_sync_action">Sincronizza ora</string>
+    <string name="polar_h10_retry_sync_dismiss">Ignora</string>
+    <string name="polar_h10_retry_syncing">Sincronizzazione di Polar H10…</string>
+    <string name="polar_h10_retry_sync_failed">Impossibile connettersi a Polar H10. Riattiva il sensore e riprova.</string>
+
+    <!-- Polar Verity Sense Optical Offline HR Backup (ATT-7923, REQ-SET-108) -->
+    <string name="device_polar_verity_backup_recording_title">Registrazione di backup Polar Verity Sense</string>
+    <string name="device_polar_verity_backup_recording_desc">Registra la frequenza cardiaca ottica nella memoria interna del sensore (ad es. per il nuoto in piscina o in caso di perdita Bluetooth).</string>
+
+    <!-- Polar Verity Sense Stop Backfill & Aftermath Retry (ATT-7924, REQ-SET-109) -->
+    <string name="notification_polar_verity_syncing_title">Sincronizzazione dati Polar Verity Sense</string>
+    <string name="notification_polar_verity_syncing_desc">Sincronizzazione dei campioni ottici di frequenza cardiaca dalla memoria del sensore…</string>
+    <string name="polar_verity_retry_sync_title">Dati offline Polar Verity Sense disponibili</string>
+    <string name="polar_verity_retry_sync_desc">Il sensore ottico non era raggiungibile al termine dell\'allenamento. Accendi il tuo Polar Verity Sense in modalità sensore blu e tocca Sincronizza ora.</string>
+    <string name="polar_verity_retry_syncing">Sincronizzazione di Polar Verity Sense…</string>
+    <string name="polar_verity_retry_sync_failed">Impossibile connettersi a Polar Verity Sense. Accendilo in modalità sensore blu e riprova.</string>
+
 </resources>

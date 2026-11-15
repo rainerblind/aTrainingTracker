@@ -40,6 +40,9 @@ class WorkoutRrRepository private constructor(
     fun getIntervalsForWorkoutBlocking(workoutId: Long): List<WorkoutRrInterval> =
         databaseManager.getIntervalsForWorkout(workoutId)
 
+    fun hasIntervalsForWorkoutBlocking(workoutId: Long): Boolean =
+        databaseManager.hasIntervalsForWorkout(workoutId)
+
     fun deleteWorkoutBlocking(workoutId: Long): Int =
         databaseManager.deleteWorkout(workoutId)
 

@@ -32,12 +32,13 @@ Reuse the ticket's two persistent `TypeName: "self"` subagents via `send_message
    - For string additions: ensure entries exist across all 9 supported language directories (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`) with consistent format specifiers. String additions may be partitioned into domain-scoped `strings_<domain>.xml` files (`REQ-PRO-041.3`) to prevent git merge conflicts during parallel sprint execution.
    - **Universal `read_file` Image Inspection & Mandatory `pro` 4-Point Visual Self-Inspection (`Rules 71 & 84`, `ATT-5431`, `ATT-7525`)**: Visually inspect every created, modified, or referenced image asset (`.png`, `.jpg`, `.svg` across `docs/guide/img/*`, `docs/store_presence/*`, drawables) via `read_file`. For every Graphical/UI/Compose/Slider/Icon ticket, `subagent_pro` MUST render/capture a PNG preview or screenshot during Stage 4, inspect it with `read_file`, and verify: (1) *Orientation & Geometry*, (2) *Color Mapping & M3 Track/Stop-Dot Artifacts*, (3) *Typography & Multi-Line Wrapping / Ellipsizing*, and (4) *Touch Ergonomics & Finger Occlusion*.
    - **Documentation Code-Grounding (`ATT-5431`)**: Every statement in guides or docs must be verified against actual code (`AndroidManifest.xml`, Compose screens, Strings, Repositories).
-4. **Targeted Unit Testing**:
-   - Run exclusively targeted unit tests for modified packages/classes (5–15s runtime) to verify logic rapidly during development. When running under parallel sprint execution (Core Rule 9 / `REQ-PRO-041.2`), wrap Gradle test executions with `python3 tools/parallel_sprint_lock.py`:
+4. **Targeted Unit Testing (`Rule 7.5` / `Rule 85` — `ATT-8030`)**:
+   - Execute **only** `./gradlew :app:testDebugUnitTest --tests <NewOrModifiedTestClasses>` covering modified/newly added logic (`~14s` warm daemon). Wrap with `python3 tools/parallel_sprint_lock.py` (or rely on `./gradlew` POSIX `flock`) during parallel lanes:
      ```bash
-     python3 tools/parallel_sprint_lock.py ./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.knownlocations.*"
+     python3 tools/parallel_sprint_lock.py ./gradlew :app:testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.knownlocations.*"
      ```
-   - Defer full test suite execution (`./gradlew testDebugUnitTest`) to Stage 5.
+   - Run `TranslationParityTest` **only** if `app/src/main/res/values*/strings*.xml` was modified; run `:app:compileDebugAndroidTestKotlin` **only** if `app/src/androidTest/` was modified.
+   - Defer `:app:lintDebug`, `:app:detekt`, and full-suite / contract scans (`ThemeColorCentralizationAuditTest`, `AspiceSweAuditContractTest`, full `testDebugUnitTest`) strictly to the Tier-2 Sprint-End Integration Gate (unless High-Risk core infrastructure explicitly touches `TrainingApplication`, `TrackerService`, `BANALService`, or SQLite migrations).
 5. **Single-Turn Stage Submission (`submit-stage`)**:
    - Submit Stage 4 summary and targeted test results in a single composite CLI call (creates/updates `[Implementation]` sub-task and moves it to `In Überprüfung`). **Never** create markdown files or folders inside `docs/engineering/` (such as `summaries/` or `implementation/`) for Stage 4 (Rule 67 — `ATT-4936`):
      ```bash
