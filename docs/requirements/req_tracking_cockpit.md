@@ -5676,3 +5676,43 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 • *Then* each wheel sensor's estimated circumference is persisted into `WheelCircumferenceHistory` and rendered as a historical time-series chart per bike.
 
 **Invariants**: Single-wheel bikes retain 100% baseline behavior; hairpins produce 0.0% false puncture alerts; SQLite migration v4 $\rightarrow$ v5 preserves existing tables; 100% test pass rate.
+
+### REQ-FIL-018: Epoch-Bounded Barometric Calibration & Non-Barometric Column Isolation [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-FIL-018`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `WorkoutSamplesDatabaseManager.java`, `WorkoutSummariesDatabaseManager.java`, `WorkoutRepository.kt`, `LiveWorkoutSession.java`, `TrackerService.java`
+- **Rationale**: Prevent post-crash (`RESUME_SERVICE_RECREATION`) barometric calibration shifts from double-shifting already-calibrated pre-crash samples/streams, corrupting non-barometric elevation columns (DEM, GPS, Google Fused, ATT Fused), or causing a ~20x average altitude drop in `LiveWorkoutSession` Case B (`ATT-7876`, extending `REQ-CON-017`, `REQ-TRK-047.2`, and `REQ-TRK-057.3`).
+- **Description**:
+  1. *Strict Barometric Column Scope (`REQ-FIL-018.1`)*:
+     - `WorkoutSamplesDatabaseManager.applyAltitudeDriftCorrection()` MUST mutate exclusively barometric pressure altitude column(s) (`DeviceType.ALTITUDE_FROM_PRESSURE` names resolved from `DevicesDatabaseManager`, current `R.string.devices_altitude_from_pressure`, known 9-locale defaults, and legacy `ATT-5073` names) and canonical `ALTITUDE`.
+     - It SHALL NEVER mutate `ALTITUDE (GPS)`, `ALTITUDE (Google Fused)`, `ALTITUDE (Topografische Höhe (DEM))`, `ALTITUDE (ATT Fused ...)`, or any other non-barometric `ALTITUDE (*)` / `ALTITUDE_*` column.
+     - Canonical `ALTITUDE` SHALL ONLY be shifted on rows where barometric pressure was the active canonical source (`baroCol IS NOT NULL AND ABS(ALTITUDE - baroCol) < 0.01`), evaluated atomically prior to shifting `baroCol`.
+  2. *Process-Epoch Lower Bound & Upper-Bound Case A Guard (`REQ-FIL-018.2`)*:
+     - `TrackerService` SHALL record `mSessionEpochStartTimeMs` on `START_NORMAL`, `RESUME_SERVICE_RECREATION`, and process-recreation resumes (`mLiveSession == null`) and propagate it through `WorkoutRepository`, `WorkoutSamplesDatabaseManager`, and `LiveWorkoutSession`.
+     - When Case A executes (`t0Ms <= 0 || t1Ms <= t0Ms`), `WorkoutSamplesDatabaseManager` SHALL restrict updates to `TIME >= floor(sessionEpochStartTimeMs / 1000)` (when `sessionEpochStartTimeMs > 0`) and `TIME <= t1Ms / 1000.0` (when `t1Ms > 0`), leaving pre-crash calibrated rows and post-calibration rows untouched.
+     - `LiveWorkoutSession.rehydrateStreams()` SHALL align `sampledAltitudeTimestamps` (`0L` sentinels for pre-resume entries) and preserve pre-epoch `RunningStats` and `sampledAltitudes` across Case A post-crash calibration.
+     - `TrackerService.mAltitudeCorrectionReceiver` SHALL only update `LiveWorkoutSession` and `WorkoutSummariesDatabaseManager` canonical altitude summary/streams when `DeviceType.ALTITUDE_FROM_PRESSURE` is the active canonical `ALTITUDE` source.
+  3. *Dimensionally Consistent Case B Average Altitude (`REQ-FIL-018.3`)*:
+     - In `LiveWorkoutSession.applyRetroactiveAltitudeCorrection()` Case B (`t0Ms > 0 && t1Ms > t0Ms`), `altStats.sum` MUST remain dimensionally consistent with 1-Hz `altStats.count` by adding `meanAppliedCorrection * altStats.count` rather than overwriting `altStats.sum` with the sum over 20-second `sampledAltitudes`.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new `REQ-FIL-018` extending `REQ-CON-017` (*Barometric Calibration Sanity Guard*), `REQ-TRK-047.2` (*Retroactive Drift Correction*), and `REQ-TRK-057.3` (*Sourced Column Sync*).
+2. *Historical Origin & Commit Trace*: `ATT-4845` (`REQ-TRK-047`) and `ATT-6265` (`e079f7a9`, `REQ-TRK-057.3`) introduced `"ALTITUDE (*)"` wildcard discovery when barometer was the sole named altitude source.
+3. *Root Reason for Existing Formulation*: Multi-source DEM (`ATT-4859`) and ATT Fused (`ATT-6279`) columns were added later; unbounded Case A across process restarts and 1-Hz vs 20-s stat cadences were unmodeled.
+4. *Preservation of Core Invariants*: Preserves $|\Delta h| \le 500\text{ m}$ (`REQ-CON-017`), Case B piecewise-linear interpolation over `[t0, t1]` (`REQ-TRK-047.2`), barometric column sync (`REQ-TRK-057.3`), passive `onOpen()`, and `mDbExecutor` single-thread safety.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `WorkoutSamples` containing `ALTITUDE (GPS)`, `ALTITUDE (Google Fused)`, `ALTITUDE (Topografische Höhe (DEM))`, and `ALTITUDE (Höhe aus Luftdruck)`,
+• *When* `ALTITUDE_CORRECTION_INTENT` fires with `deltaOffset != 0`,
+• *Then* GPS, Google Fused, and DEM columns remain unchanged, and canonical `ALTITUDE` shifts only on barometric-sourced rows.
+• *Given* a workout with calibrated pre-crash samples resumed via `RESUME_SERVICE_RECREATION`,
+• *When* the first post-restart barometric calibration fires (`prevCalTimeMs == -1L`),
+• *Then* only uncalibrated post-restart barometric samples in `[restartTime, calibrationTime]` are shifted.
+• *Given* `LiveWorkoutSession` with 1-Hz `ALTITUDE` samples around `445 m` and 20-second `sampledAltitudes`,
+• *When* `applyRetroactiveAltitudeCorrection(offset, t0Ms, t1Ms)` executes Case B (`t0Ms > 0`),
+• *Then* `altStats.getAverage()` remains around `445 m + meanCorrection` (never divided by ~20).
+
+**Invariants**: Non-barometric columns 100% immutable; pre-crash calibrated rows untouched on `RESUME_SERVICE_RECREATION`; 1-Hz `altStats.count` and `sum` dimensionally consistent; passive DB `onOpen()`; 100% clean-room test pass rate.

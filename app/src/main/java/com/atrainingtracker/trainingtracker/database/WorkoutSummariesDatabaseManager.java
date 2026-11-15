@@ -1548,6 +1548,53 @@ public class WorkoutSummariesDatabaseManager {
     }
 
     /**
+     * REQ-FIL-018.2 / REQ-FIL-018.3: Synchronizes WorkoutSummaries altitude stream, ascent/descent,
+     * and MIN/MAX/AVG extrema directly from LiveWorkoutSession's epoch-guarded state so
+     * pre-crash stream points and 1-Hz average denominators remain intact.
+     */
+    public void syncAltitudeSummaryFromSession(
+            long workoutId,
+            @Nullable List<Double> sampledAltitudes,
+            double ascent,
+            double descent,
+            @Nullable com.atrainingtracker.trainingtracker.tracker.LiveWorkoutSession.RunningStats altStats) {
+        if (workoutId <= 0) {
+            return;
+        }
+        SQLiteDatabase db = getDatabase();
+        db.beginTransaction();
+        try {
+            if (sampledAltitudes != null && !sampledAltitudes.isEmpty()) {
+                ContentValues streamValues = new ContentValues();
+                streamValues.put(WorkoutSummaries.ALTITUDE_STREAM, NumericalEncodingUtils.INSTANCE.encodeDoubles(sampledAltitudes));
+                streamValues.put(WorkoutSummaries.ASCENDING, ascent);
+                streamValues.put(WorkoutSummaries.DESCENDING, descent);
+                db.update(WorkoutSummaries.TABLE, streamValues, WorkoutSummaries.C_ID + "=?", new String[]{String.valueOf(workoutId)});
+            }
+
+            if (altStats != null) {
+                double min = altStats.min;
+                double max = altStats.max;
+                int count = altStats.getCount();
+                double avg = altStats.getAverage();
+                if (Double.isFinite(min) && min != Double.MAX_VALUE) {
+                    updateExtremaValue(db, workoutId, SensorType.ALTITUDE, ExtremaType.MIN, min, null);
+                }
+                if (Double.isFinite(max) && max != -Double.MAX_VALUE) {
+                    updateExtremaValue(db, workoutId, SensorType.ALTITUDE, ExtremaType.MAX, max, null);
+                }
+                if (count > 0 && Double.isFinite(avg)) {
+                    updateExtremaValue(db, workoutId, SensorType.ALTITUDE, ExtremaType.AVG, avg, null, count);
+                }
+            }
+
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
+        }
+    }
+
+    /**
      * Sanitizes historical workouts contaminated with runaway altitude shifts (REQ-CON-017).
      *
      * @deprecated Automated background mutation of historical workout altitude data is prohibited (REQ-CON-017, ATT-3990).

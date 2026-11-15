@@ -63,6 +63,7 @@ import com.atrainingtracker.trainingtracker.database.WorkoutSource;
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.BANALService.BANALServiceComm;
+import com.atrainingtracker.banalservice.database.DevicesDatabaseManager;
 import com.atrainingtracker.banalservice.devices.AltitudeFromPressureDevice;
 import com.atrainingtracker.banalservice.sensor.MySensorManager;
 import com.atrainingtracker.banalservice.sensor.SensorData;
@@ -777,6 +778,7 @@ public class TrackerService extends Service {
     // private String mGCDataString;
     // private String[] mSensorNames;
     private volatile String mSamplesTableName;
+    private volatile long mSessionEpochStartTimeMs = -1L;
     private final BroadcastReceiver mAltitudeCorrectionReceiver = new BroadcastReceiver() {
 
         @Override
@@ -792,13 +794,19 @@ public class TrackerService extends Service {
 
             long prevCalTimeMs = intent.getLongExtra(AltitudeFromPressureDevice.PREV_CALIBRATION_TIME_MS_EXTRA, -1L);
             long currentCalTimeMs = intent.getLongExtra(AltitudeFromPressureDevice.CALIBRATION_TIME_MS_EXTRA, System.currentTimeMillis());
+            final long sessionEpochStartTimeMs = mSessionEpochStartTimeMs;
+
+            // REQ-FIL-018.2: Only update canonical LiveWorkoutSession & WorkoutSummaries when pressure is the active canonical ALTITUDE source
+            boolean isBaroCanonical = isBarometricCanonicalAltitude();
 
             if (DEBUG)
-                Log.i(TAG, "Triggering atomic altitude correction by " + altitudeCorrection + " m (prevCal=" + prevCalTimeMs + ", currentCal=" + currentCalTimeMs + ")");
+                Log.i(TAG, "Triggering atomic altitude correction by " + altitudeCorrection
+                        + " m (prevCal=" + prevCalTimeMs + ", currentCal=" + currentCalTimeMs
+                        + ", epochStart=" + sessionEpochStartTimeMs + ", baroCanonical=" + isBaroCanonical + ")");
 
             // 1. Live Session Update
-            LiveWorkoutSession session = mLiveSession;
-            if (session != null) {
+            final LiveWorkoutSession session = mLiveSession;
+            if (isBaroCanonical && session != null) {
                 session.applyRetroactiveAltitudeCorrection(altitudeCorrection, prevCalTimeMs, currentCalTimeMs);
             }
 
@@ -813,11 +821,24 @@ public class TrackerService extends Service {
                     return;
                 }
 
-                // 2a. Raw Samples drift/shift correction in explicit atomic SQLite transaction (REQ-CON-017, REQ-TRK-047.2)
-                getWorkoutRepository().applyAltitudeDriftCorrection(samplesTable, altitudeCorrection, prevCalTimeMs, currentCalTimeMs);
+                // 2a. Raw Samples drift/shift correction strictly scoped to barometric columns + baro-sourced canonical rows (REQ-FIL-018.1, REQ-FIL-018.2)
+                int canonicalShifted = getWorkoutRepository().applyAltitudeDriftCorrection(
+                        samplesTable, altitudeCorrection, prevCalTimeMs, currentCalTimeMs, sessionEpochStartTimeMs);
 
-                // 2b. Summary Extrema and Elevation Stream shift / interpolation (ATT-38, REQ-TRK-047.2)
-                getWorkoutRepository().shiftAltitudeData(workoutId, altitudeCorrection, prevCalTimeMs, currentCalTimeMs);
+                // 2b. Summary Extrema and Elevation Stream sync only if barometric pressure is canonical (REQ-FIL-018.2, REQ-FIL-018.3)
+                if (isBaroCanonical && (canonicalShifted > 0 || sessionEpochStartTimeMs <= 0)) {
+                    if (session != null) {
+                        LiveWorkoutSession.RunningStats altStats = session.getSensorStats().get(SensorType.ALTITUDE);
+                        getWorkoutRepository().syncAltitudeSummaryFromSession(
+                                workoutId,
+                                session.getSampledAltitudes(),
+                                session.getSampledAscent(),
+                                session.getSampledDescent(),
+                                altStats);
+                    } else {
+                        getWorkoutRepository().shiftAltitudeData(workoutId, altitudeCorrection, prevCalTimeMs, currentCalTimeMs);
+                    }
+                }
 
                 // 3. Notify UI/Repository to refresh from DB
                 LocalBroadcastManager.getInstance(TrackerService.this).sendBroadcast(new Intent(WORKOUT_UPDATED_INTENT).putExtra(WORKOUT_ID, workoutId));
@@ -827,6 +848,22 @@ public class TrackerService extends Service {
             });
         }
     };
+
+    private boolean isBarometricCanonicalAltitude() {
+        BANALServiceComm banal = mBanalService;
+        if (banal == null) {
+            return true;
+        }
+        try {
+            long bestAltDeviceId = banal.getSourceDeviceId(SensorType.ALTITUDE);
+            long baroDeviceId = DevicesDatabaseManager.getInstance(this).getAltitudeFromPressureDeviceId();
+            if (bestAltDeviceId > 0 && baroDeviceId > 0 && bestAltDeviceId != baroDeviceId) {
+                return false;
+            }
+        } catch (Throwable ignored) {
+        }
+        return true;
+    }
     // private long   mLapNr           = BANALService.INIT_LAP_NR-1;
     volatile int mTimeTotal_s = 0;
     private volatile int mTimeActive_s = 0;
@@ -1206,6 +1243,7 @@ public class TrackerService extends Service {
                     mAutoPauseManager.resetDebounceCounter();
                 }
                 long startTimeMs = System.currentTimeMillis();
+                mSessionEpochStartTimeMs = startTimeMs;
                 try {
                     PolarH10OfflineController.setSessionStartTimeMs(startTimeMs);
                     PolarH10OfflineController.onWorkoutStarted(this);
@@ -1220,6 +1258,7 @@ public class TrackerService extends Service {
                 mBaseFileName = (new SimpleDateFormat("yyyy-MM-dd_HHmmss", Locale.US)).format(new Date());
                 mSamplesTableName = WorkoutRepository.getSamplesTableName(mBaseFileName);
                 mLiveSession = new LiveWorkoutSession(0, IMPORTANT_SENSOR_TYPES);
+                mLiveSession.setSessionEpochStartTimeMs(startTimeMs);
 
                 final CompletableFuture<Void> initFuture = new CompletableFuture<>();
                 mTableInitializationFuture = initFuture;
@@ -1274,6 +1313,7 @@ public class TrackerService extends Service {
 
             case RESUME_SERVICE_RECREATION:
                 Log.d(TAG, "resuming after killed service");
+                mSessionEpochStartTimeMs = System.currentTimeMillis();
                 if (mTableInitializationFuture == null || mTableInitializationFuture.isDone()) {
                     mTableInitializationFuture = new CompletableFuture<>();
                 }
@@ -1823,6 +1863,10 @@ public class TrackerService extends Service {
             return;
         }
 
+        if (mSessionEpochStartTimeMs <= 0L) {
+            mSessionEpochStartTimeMs = System.currentTimeMillis();
+        }
+        final long epochStartMs = mSessionEpochStartTimeMs;
         // ATT-4095 (REQ-TRK-036.2): Construct, rehydrate, and publish candidate session on mDbExecutor
         if (mTableInitializationFuture == null || mTableInitializationFuture.isDone()) {
             mTableInitializationFuture = new CompletableFuture<>();
@@ -1832,6 +1876,7 @@ public class TrackerService extends Service {
             try {
                 LiveWorkoutSession newSession = new LiveWorkoutSession(resumedWorkoutId, IMPORTANT_SENSOR_TYPES);
                 rehydrateLiveSession(newSession, resumedWorkoutId, resumedActiveTimeS);
+                newSession.setSessionEpochStartTimeMs(epochStartMs);
                 mLiveSession = newSession;
             } finally {
                 mIsRehydrating = false;

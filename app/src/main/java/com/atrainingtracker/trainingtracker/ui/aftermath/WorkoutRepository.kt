@@ -333,12 +333,40 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
 
     fun existsSamplesTable(baseFileName: String): Boolean = samplesManager.existsTable(baseFileName)
 
-    fun applyAltitudeDriftCorrection(samplesTable: String, altitudeCorrection: Double, prevCalTimeMs: Long, currentCalTimeMs: Long) {
-        samplesManager.applyAltitudeDriftCorrection(samplesTable, altitudeCorrection, prevCalTimeMs, currentCalTimeMs)
-    }
+    @JvmOverloads
+    fun applyAltitudeDriftCorrection(
+        samplesTable: String,
+        altitudeCorrection: Double,
+        prevCalTimeMs: Long,
+        currentCalTimeMs: Long,
+        sessionEpochStartTimeMs: Long = -1L
+    ): Int =
+        samplesManager.applyAltitudeDriftCorrection(
+            samplesTable,
+            altitudeCorrection,
+            prevCalTimeMs,
+            currentCalTimeMs,
+            sessionEpochStartTimeMs
+        )
 
     fun shiftAltitudeData(workoutId: Long, altitudeCorrection: Double, prevCalTimeMs: Long, currentCalTimeMs: Long) {
         summariesManager.shiftAltitudeData(workoutId, altitudeCorrection, prevCalTimeMs, currentCalTimeMs)
+    }
+
+    fun syncAltitudeSummaryFromSession(
+        workoutId: Long,
+        sampledAltitudes: List<Double>?,
+        ascent: Double,
+        descent: Double,
+        altStats: com.atrainingtracker.trainingtracker.tracker.LiveWorkoutSession.RunningStats?
+    ) {
+        summariesManager.syncAltitudeSummaryFromSession(
+            workoutId,
+            sampledAltitudes,
+            ascent,
+            descent,
+            altStats
+        )
     }
 
     fun getEncodedStreams(workoutId: Long): WorkoutSummariesDatabaseManager.EncodedStreams? =

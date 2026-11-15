@@ -56,10 +56,30 @@ public class LiveWorkoutSession {
 
     private LatLng startLatLng = null;
     private LatLng lastLatLng = null;
+    private long sessionEpochStartTimeMs = -1L;
+    private int epochStartAltCount = 0;
+    private double epochStartAltMin = Double.MAX_VALUE;
+    private double epochStartAltMax = -Double.MAX_VALUE;
+    private double postEpochRawAltMin = Double.MAX_VALUE;
+    private double postEpochRawAltMax = -Double.MAX_VALUE;
 
     public LiveWorkoutSession(long workoutId, Set<SensorType> sensorsForAverage) {
         this.workoutId = workoutId;
         this.sensorsForAverage = sensorsForAverage;
+    }
+
+    /**
+     * Anchors the current process/session epoch boundary for retroactive Case A calibration
+     * protection ({@code REQ-FIL-018.2}).
+     */
+    public synchronized void setSessionEpochStartTimeMs(long sessionEpochStartTimeMs) {
+        this.sessionEpochStartTimeMs = sessionEpochStartTimeMs;
+        RunningStats altStats = sensorStats.get(SensorType.ALTITUDE);
+        this.epochStartAltCount = (altStats != null) ? altStats.getCount() : 0;
+        this.epochStartAltMin = (altStats != null) ? altStats.min : Double.MAX_VALUE;
+        this.epochStartAltMax = (altStats != null) ? altStats.max : -Double.MAX_VALUE;
+        this.postEpochRawAltMin = Double.MAX_VALUE;
+        this.postEpochRawAltMax = -Double.MAX_VALUE;
     }
 
     public synchronized void setWorkoutId(long workoutId) {
@@ -71,6 +91,10 @@ public class LiveWorkoutSession {
             // REQ-CON-017: Suppress non-physical altitude readings from running extrema
             if (value < -500.0 || value > 9000.0) {
                 return 0;
+            }
+            if (sessionEpochStartTimeMs > 0) {
+                if (value < postEpochRawAltMin) postEpochRawAltMin = value;
+                if (value > postEpochRawAltMax) postEpochRawAltMax = value;
             }
         }
 
@@ -153,6 +177,7 @@ public class LiveWorkoutSession {
             for (Double alt : preResumeAltitudes) {
                 if (alt != null && Double.isFinite(alt)) {
                     sampledAltitudes.add(alt);
+                    sampledAltitudeTimestamps.add(0L);
                 }
             }
             if (!sampledAltitudes.isEmpty()) {
@@ -217,6 +242,13 @@ public class LiveWorkoutSession {
             sensorStats.put(sensorType, stats);
         }
         stats.rehydrate(minValue, minPosition, maxValue, maxPosition, avgValue, sampleCount);
+        if (sensorType == SensorType.ALTITUDE && sessionEpochStartTimeMs > 0) {
+            this.epochStartAltCount = stats.getCount();
+            this.epochStartAltMin = stats.min;
+            this.epochStartAltMax = stats.max;
+            this.postEpochRawAltMin = Double.MAX_VALUE;
+            this.postEpochRawAltMax = -Double.MAX_VALUE;
+        }
     }
 
     /**
@@ -343,24 +375,68 @@ public class LiveWorkoutSession {
         }
 
         if (t0Ms <= 0 || t1Ms <= t0Ms) {
-            // Case A: Uncalibrated workout start -> uniform shift across all recorded samples
+            // Case A: Uncalibrated epoch -> shift only samples inside [sessionEpochStartTimeMs, t1Ms]
+            boolean epochBounded = sessionEpochStartTimeMs > 0;
+            boolean hasAlignedTimestamps = sampledAltitudeTimestamps.size() == sampledAltitudes.size();
+
+            for (int i = 0; i < sampledAltitudes.size(); i++) {
+                if (hasAlignedTimestamps) {
+                    long ts = sampledAltitudeTimestamps.get(i);
+                    if (epochBounded && ts < sessionEpochStartTimeMs) {
+                        continue;
+                    }
+                    if (t1Ms > 0 && ts > t1Ms) {
+                        continue;
+                    }
+                } else if (epochBounded) {
+                    continue;
+                }
+                sampledAltitudes.set(i, sampledAltitudes.get(i) + offset);
+            }
+
             RunningStats altStats = sensorStats.get(SensorType.ALTITUDE);
             if (altStats != null) {
                 synchronized (altStats) {
-                    if (altStats.min != Double.MAX_VALUE) altStats.min += offset;
-                    if (altStats.max != -Double.MAX_VALUE) altStats.max += offset;
-                    altStats.sum += (offset * altStats.count);
+                    if (!epochBounded || epochStartAltCount == 0) {
+                        if (altStats.min != Double.MAX_VALUE) altStats.min += offset;
+                        if (altStats.max != -Double.MAX_VALUE) altStats.max += offset;
+                        altStats.sum += (offset * altStats.count);
+                    } else {
+                        int postEpochCount = Math.max(0, altStats.count - epochStartAltCount);
+                        if (postEpochCount > 0) {
+                            altStats.sum += (offset * postEpochCount);
+                            double baseMin = epochStartAltMin;
+                            double baseMax = epochStartAltMax;
+                            if (postEpochRawAltMin != Double.MAX_VALUE) {
+                                baseMin = Math.min(baseMin, postEpochRawAltMin + offset);
+                            }
+                            if (postEpochRawAltMax != -Double.MAX_VALUE) {
+                                baseMax = Math.max(baseMax, postEpochRawAltMax + offset);
+                            }
+                            altStats.min = baseMin;
+                            altStats.max = baseMax;
+                            altStats.last += offset;
+                        }
+                        epochStartAltCount = altStats.count;
+                        epochStartAltMin = altStats.min;
+                        epochStartAltMax = altStats.max;
+                        postEpochRawAltMin = Double.MAX_VALUE;
+                        postEpochRawAltMax = -Double.MAX_VALUE;
+                    }
                 }
             }
 
-            for (int i = 0; i < sampledAltitudes.size(); i++) {
-                sampledAltitudes.set(i, sampledAltitudes.get(i) + offset);
+            if (!sampledAltitudes.isEmpty()) {
+                lastAltE2 = Math.round(sampledAltitudes.get(sampledAltitudes.size() - 1) * 100);
+            } else {
+                lastAltE2 += Math.round(offset * 100);
             }
-            lastAltE2 += Math.round(offset * 100);
         } else {
             // Case B: Piecewise-linear drift interpolation between t0 and t1
             double duration = (double) (t1Ms - t0Ms);
             int n = sampledAltitudes.size();
+            double deltaSum = 0.0;
+            int deltaCount = 0;
             for (int i = 0; i < n; i++) {
                 double correction;
                 if (!sampledAltitudeTimestamps.isEmpty() && i < sampledAltitudeTimestamps.size()) {
@@ -377,25 +453,28 @@ public class LiveWorkoutSession {
                     correction = offset * fraction;
                 }
                 sampledAltitudes.set(i, sampledAltitudes.get(i) + correction);
+                deltaSum += correction;
+                deltaCount++;
             }
 
-            // Recompute RunningStats cleanly from updated sampledAltitudes
+            // Recompute min/max/last from updated sampledAltitudes while preserving 1-Hz count dimensional consistency
             RunningStats altStats = sensorStats.get(SensorType.ALTITUDE);
             if (altStats != null && !sampledAltitudes.isEmpty()) {
                 synchronized (altStats) {
                     double min = Double.MAX_VALUE;
                     double max = -Double.MAX_VALUE;
-                    double sum = 0.0;
                     for (Double val : sampledAltitudes) {
                         if (val != null) {
                             if (val < min) min = val;
                             if (val > max) max = val;
-                            sum += val;
                         }
                     }
+                    double meanCorrection = deltaCount > 0 ? (deltaSum / deltaCount) : 0.0;
                     altStats.min = min;
                     altStats.max = max;
-                    altStats.sum = sum;
+                    if (altStats.count > 0) {
+                        altStats.sum += (meanCorrection * altStats.count);
+                    }
                     altStats.last = sampledAltitudes.get(sampledAltitudes.size() - 1);
                 }
             }

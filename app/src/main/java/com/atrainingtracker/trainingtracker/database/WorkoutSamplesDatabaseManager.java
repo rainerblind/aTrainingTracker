@@ -36,6 +36,9 @@ import androidx.annotation.Nullable;
 import androidx.annotation.VisibleForTesting;
 
 import com.atrainingtracker.R;
+import com.atrainingtracker.banalservice.database.DevicesDatabaseManager;
+import com.atrainingtracker.banalservice.database.DevicesDatabaseManager.DevicesDbHelper;
+import com.atrainingtracker.banalservice.devices.DeviceType;
 import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries;
@@ -43,7 +46,10 @@ import com.atrainingtracker.trainingtracker.domain.crop.CropWorkoutMath;
 import com.google.android.gms.maps.model.LatLng;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 
 public class WorkoutSamplesDatabaseManager {
@@ -51,9 +57,11 @@ public class WorkoutSamplesDatabaseManager {
     private static final boolean DEBUG = TrainingApplication.getDebug(true);
     private static volatile WorkoutSamplesDatabaseManager cInstance;
     private final WorkoutSamplesDbHelper cDbHelper;
+    private final Context mContext;
     private SQLiteDatabase mDatabase = null;
 
     private WorkoutSamplesDatabaseManager(@NonNull Context context) {
+        this.mContext = context.getApplicationContext() != null ? context.getApplicationContext() : context;
         this.cDbHelper = new WorkoutSamplesDbHelper(context);
     }
 
@@ -734,32 +742,56 @@ public class WorkoutSamplesDatabaseManager {
     }
 
     /**
-     * REQ-TRK-047.2 & REQ-TRK-057.3: Applies retroactive altitude correction to the workout samples table.
-     * When t0Ms <= 0, applies a uniform shift across all existing rows (Case A).
-     * When t0Ms > 0 and t1Ms > t0Ms, applies piecewise-linear drift interpolation (Case B).
-     * Symmetrically updates canonical ALTITUDE and all source-attributed ALTITUDE (*) columns.
+     * REQ-TRK-047.2, REQ-TRK-057.3 & REQ-FIL-018: Applies retroactive barometric altitude correction
+     * to the workout samples table without epoch lower bound.
      *
-     * @param samplesTable Table name of the active workout samples.
-     * @param deltaOffset  Altitude shift delta in meters.
-     * @param t0Ms         Previous calibration timestamp in milliseconds (-1 if uncalibrated start).
-     * @param t1Ms         Current calibration timestamp in milliseconds.
+     * @see #applyAltitudeDriftCorrection(String, double, long, long, long)
      */
-    public void applyAltitudeDriftCorrection(@NonNull String samplesTable, double deltaOffset, long t0Ms, long t1Ms) {
+    public int applyAltitudeDriftCorrection(@NonNull String samplesTable, double deltaOffset, long t0Ms, long t1Ms) {
+        return applyAltitudeDriftCorrection(samplesTable, deltaOffset, t0Ms, t1Ms, -1L);
+    }
+
+    /**
+     * REQ-FIL-018: Applies retroactive barometric altitude correction strictly to barometric pressure
+     * columns and canonical ALTITUDE rows sourced from barometric pressure.
+     * Case A (t0Ms &lt;= 0) is bounded to [floor(sessionEpochStartTimeMs/1000), t1Ms/1000.0] so
+     * already-calibrated pre-crash samples and post-calibration samples are never shifted twice.
+     *
+     * @param samplesTable            Table name of the active workout samples.
+     * @param deltaOffset             Altitude shift delta in meters.
+     * @param t0Ms                    Previous calibration timestamp in milliseconds (-1 if uncalibrated in epoch).
+     * @param t1Ms                    Current calibration timestamp in milliseconds.
+     * @param sessionEpochStartTimeMs Current process/session epoch start timestamp in milliseconds (&lt;= 0 if unbounded).
+     * @return Number of canonical ALTITUDE rows shifted (0 if canonical ALTITUDE was not barometric).
+     */
+    public int applyAltitudeDriftCorrection(
+            @NonNull String samplesTable,
+            double deltaOffset,
+            long t0Ms,
+            long t1Ms,
+            long sessionEpochStartTimeMs) {
         if (Math.abs(deltaOffset) < 0.001 || samplesTable.trim().isEmpty()) {
-            return;
+            return 0;
         }
         SQLiteDatabase db = getDatabase();
 
-        // REQ-TRK-057.3: Discover canonical ALTITUDE and any source-attributed ALTITUDE (*) columns
-        List<String> altitudeColumns = new ArrayList<>();
+        Set<String> allowedBaroDeviceNames = resolveBarometricDeviceNames();
+        String altPrefix = SensorType.ALTITUDE.name() + " (";
+        boolean hasCanonicalAltitude = false;
+        List<String> baroColumns = new ArrayList<>();
+
         try (Cursor cursor = db.rawQuery("SELECT * FROM " + samplesTable + " LIMIT 0", null)) {
             if (cursor != null) {
                 String[] columnNames = cursor.getColumnNames();
                 if (columnNames != null) {
                     for (String col : columnNames) {
-                        if (SensorType.ALTITUDE.name().equals(col)
-                                || (col.startsWith(SensorType.ALTITUDE.name() + " (") && col.endsWith(")"))) {
-                            altitudeColumns.add(col);
+                        if (SensorType.ALTITUDE.name().equals(col)) {
+                            hasCanonicalAltitude = true;
+                        } else if (col.startsWith(altPrefix) && col.endsWith(")")) {
+                            String deviceName = col.substring(altPrefix.length(), col.length() - 1).trim();
+                            if (allowedBaroDeviceNames.contains(deviceName)) {
+                                baroColumns.add(col);
+                            }
                         }
                     }
                 }
@@ -767,46 +799,164 @@ public class WorkoutSamplesDatabaseManager {
         } catch (Exception e) {
             Log.w(TAG, "Error inspecting columns in " + samplesTable + ": " + e.getMessage());
         }
-        if (altitudeColumns.isEmpty()) {
-            altitudeColumns.add(SensorType.ALTITUDE.name());
+
+        // REQ-FIL-018.1: Without a barometric column, never mutate DEM/GPS/Fused or canonical ALTITUDE
+        if (baroColumns.isEmpty()) {
+            return 0;
         }
+
+        String canonicalMatchPredicate = buildCanonicalBarometricMatchPredicate(baroColumns);
+        String timeExpr = "CAST(strftime('%s', " + WorkoutSamplesDbHelper.TIME + ") AS REAL)";
+        int canonicalShifted = 0;
 
         db.beginTransaction();
         try {
-            for (String col : altitudeColumns) {
-                String quotedCol = "\"" + col.replace("\"", "\"\"") + "\"";
-                if (t0Ms <= 0 || t1Ms <= t0Ms) {
-                    // Case A: Uncalibrated workout start -> uniform shift across all recorded samples
-                    String operator = deltaOffset >= 0 ? " + " : " - ";
-                    db.execSQL("UPDATE " + samplesTable + " SET " + quotedCol
-                            + " = " + quotedCol + operator + Math.abs(deltaOffset)
-                            + " WHERE " + quotedCol + " IS NOT NULL");
-                } else {
-                    // Case B: Piecewise-linear drift interpolation between t0 and t1
-                    double t0Sec = t0Ms / 1000.0;
-                    double t1Sec = t1Ms / 1000.0;
-                    double duration = t1Sec - t0Sec;
-
-                    // 1. Linearly interpolate samples in [t0, t1]
-                    db.execSQL("UPDATE " + samplesTable
-                            + " SET " + quotedCol + " = " + quotedCol
-                            + " + (" + deltaOffset + " * (CAST(strftime('%s', " + WorkoutSamplesDbHelper.TIME + ") AS REAL) - " + t0Sec + ") / " + duration + ")"
-                            + " WHERE " + quotedCol + " IS NOT NULL"
-                            + " AND CAST(strftime('%s', " + WorkoutSamplesDbHelper.TIME + ") AS REAL) >= " + t0Sec
-                            + " AND CAST(strftime('%s', " + WorkoutSamplesDbHelper.TIME + ") AS REAL) <= " + t1Sec);
-
-                    // 2. Uniformly shift any samples recorded after t1 (if any)
-                    String operator = deltaOffset >= 0 ? " + " : " - ";
-                    db.execSQL("UPDATE " + samplesTable
-                            + " SET " + quotedCol + " = " + quotedCol + operator + Math.abs(deltaOffset)
-                            + " WHERE " + quotedCol + " IS NOT NULL"
-                            + " AND CAST(strftime('%s', " + WorkoutSamplesDbHelper.TIME + ") AS REAL) > " + t1Sec);
-                }
+            // Evaluate canonical ALTITUDE BEFORE mutating baroColumns so equality reflects pre-shift values
+            if (hasCanonicalAltitude) {
+                canonicalShifted = shiftAltitudeColumn(
+                        db,
+                        samplesTable,
+                        SensorType.ALTITUDE.name(),
+                        deltaOffset,
+                        t0Ms,
+                        t1Ms,
+                        sessionEpochStartTimeMs,
+                        timeExpr,
+                        canonicalMatchPredicate);
+            }
+            for (String baroCol : baroColumns) {
+                shiftAltitudeColumn(
+                        db,
+                        samplesTable,
+                        baroCol,
+                        deltaOffset,
+                        t0Ms,
+                        t1Ms,
+                        sessionEpochStartTimeMs,
+                        timeExpr,
+                        null);
             }
             db.setTransactionSuccessful();
         } finally {
             db.endTransaction();
         }
+        return canonicalShifted;
+    }
+
+    private int shiftAltitudeColumn(
+            SQLiteDatabase db,
+            String samplesTable,
+            String columnName,
+            double deltaOffset,
+            long t0Ms,
+            long t1Ms,
+            long sessionEpochStartTimeMs,
+            String timeExpr,
+            @Nullable String extraPredicate) {
+        String quotedCol = "\"" + columnName.replace("\"", "\"\"") + "\"";
+        String extraWhere = extraPredicate != null ? " AND " + extraPredicate : "";
+        String operator = deltaOffset >= 0 ? " + " : " - ";
+        double absDelta = Math.abs(deltaOffset);
+
+        if (t0Ms <= 0 || t1Ms <= t0Ms) {
+            // Case A: Uncalibrated epoch -> uniform shift bounded to [sessionEpochStartTimeMs, t1Ms]
+            StringBuilder timeBound = new StringBuilder();
+            if (sessionEpochStartTimeMs > 0) {
+                long epochStartSec = sessionEpochStartTimeMs / 1000L;
+                timeBound.append(" AND ").append(timeExpr).append(" >= ").append(epochStartSec);
+            }
+            if (t1Ms > 0) {
+                double t1Sec = t1Ms / 1000.0;
+                timeBound.append(" AND ").append(timeExpr).append(" <= ").append(t1Sec);
+            }
+            return executeUpdateSql(db, "UPDATE " + samplesTable
+                    + " SET " + quotedCol + " = " + quotedCol + operator + absDelta
+                    + " WHERE " + quotedCol + " IS NOT NULL" + extraWhere + timeBound);
+        } else {
+            // Case B: Piecewise-linear drift interpolation between t0 and t1
+            double t0Sec = t0Ms / 1000.0;
+            double t1Sec = t1Ms / 1000.0;
+            double duration = t1Sec - t0Sec;
+            String epochBound = sessionEpochStartTimeMs > 0
+                    ? " AND " + timeExpr + " >= " + (sessionEpochStartTimeMs / 1000L)
+                    : "";
+
+            int updated = executeUpdateSql(db, "UPDATE " + samplesTable
+                    + " SET " + quotedCol + " = " + quotedCol
+                    + " + (" + deltaOffset + " * (" + timeExpr + " - " + t0Sec + ") / " + duration + ")"
+                    + " WHERE " + quotedCol + " IS NOT NULL"
+                    + extraWhere
+                    + epochBound
+                    + " AND " + timeExpr + " >= " + t0Sec
+                    + " AND " + timeExpr + " <= " + t1Sec);
+
+            updated += executeUpdateSql(db, "UPDATE " + samplesTable
+                    + " SET " + quotedCol + " = " + quotedCol + operator + absDelta
+                    + " WHERE " + quotedCol + " IS NOT NULL"
+                    + extraWhere
+                    + epochBound
+                    + " AND " + timeExpr + " > " + t1Sec);
+            return updated;
+        }
+    }
+
+    private int executeUpdateSql(SQLiteDatabase db, String sql) {
+        try (SQLiteStatement stmt = db.compileStatement(sql)) {
+            return stmt.executeUpdateDelete();
+        }
+    }
+
+    private String buildCanonicalBarometricMatchPredicate(List<String> baroColumns) {
+        String canonicalCol = "\"" + SensorType.ALTITUDE.name() + "\"";
+        StringBuilder sb = new StringBuilder("(");
+        for (int i = 0; i < baroColumns.size(); i++) {
+            if (i > 0) sb.append(" OR ");
+            String quotedBaro = "\"" + baroColumns.get(i).replace("\"", "\"\"") + "\"";
+            sb.append("(").append(quotedBaro).append(" IS NOT NULL AND ABS(")
+                    .append(canonicalCol).append(" - ").append(quotedBaro).append(") < 0.01)");
+        }
+        sb.append(")");
+        return sb.toString();
+    }
+
+    private Set<String> resolveBarometricDeviceNames() {
+        Set<String> names = new HashSet<>(Arrays.asList(
+                // 9-locale defaults for R.string.devices_altitude_from_pressure + ATT-5073 legacy names
+                "Altitude from Pressure", "Höhe aus Luftdruck", "Altitud por presión",
+                "Altitude par pression", "Altitudine da pressione", "気圧からの高度",
+                "Hoogte uit luchtdruk", "Wysokość z ciśnienia", "Altitude por pressão",
+                "Barometer",
+                "Air Pressure", "Luftdruck", "Presión Aire", "Pression Air",
+                "Pressione Aria", "気圧", "Luchtdruk", "Ciśnienie pow.", "Pressão do Ar"
+        ));
+        try {
+            String localized = mContext.getString(R.string.devices_altitude_from_pressure);
+            if (!localized.trim().isEmpty()) {
+                names.add(localized.trim());
+            }
+        } catch (Throwable ignored) {
+        }
+        try {
+            SQLiteDatabase devicesDb = DevicesDatabaseManager.getInstance(mContext).getDatabase();
+            try (Cursor cursor = devicesDb.query(
+                    DevicesDbHelper.DEVICES,
+                    new String[]{DevicesDbHelper.NAME},
+                    DevicesDbHelper.DEVICE_TYPE + "=?",
+                    new String[]{DeviceType.ALTITUDE_FROM_PRESSURE.name()},
+                    null, null, null)) {
+                if (cursor != null) {
+                    int nameIdx = cursor.getColumnIndex(DevicesDbHelper.NAME);
+                    while (nameIdx >= 0 && cursor.moveToNext()) {
+                        String dbName = cursor.getString(nameIdx);
+                        if (dbName != null && !dbName.trim().isEmpty()) {
+                            names.add(dbName.trim());
+                        }
+                    }
+                }
+            }
+        } catch (Throwable ignored) {
+        }
+        return names;
     }
 
     /**

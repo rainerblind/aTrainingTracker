@@ -2847,3 +2847,27 @@
      • Assert all newly introduced string resources (`itpms_front_wheel_*`, `itpms_rear_wheel_*`, `itpms_circumference_history_*`) exist across all 9 locales.
   6. *Targeted Unit & Regression Suite Execution (`TST-SEN-030.6`)*:
      • `./gradlew testDebugUnitTest --tests "com.atrainingtracker.banalservice.tpms.*" --tests "com.atrainingtracker.trainingtracker.database.Equipment*"` asserting 100% pass rate.
+
+
+### TST-FIL-018: Epoch-Bounded Barometric Calibration & Case B Average Consistency Suite [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-FIL-018` (`REQ-FIL-018.1`..`REQ-FIL-018.3`)
+- **Component**: `WorkoutSamplesDatabaseManagerTest.kt`, `LiveWorkoutSessionAltitudeDriftTest.kt`, `TrackerServiceCrashRecoveryCharacterisationTest.kt`
+- **Test Type**: Unit & Contract
+- **Verification Method**: Unit
+- **Procedure**:
+  1. *Non-Barometric Column Isolation & Canonical Source Match Test (`TST-FIL-018.1`, `WorkoutSamplesDatabaseManagerTest.kt`)*:
+     • Create `WorkoutSamples` table containing `ALTITUDE`, `"ALTITUDE (Höhe aus Luftdruck)"`, `"ALTITUDE (Topografische Höhe (DEM))"`, `"ALTITUDE (GPS)"`, `"ALTITUDE (Google Fused)"`, and `"ALTITUDE (ATT Fused (Höhe und Steigung))"`.
+     • Populate rows where canonical `ALTITUDE` equals DEM vs rows where canonical `ALTITUDE` equals barometric pressure, invoke `applyAltitudeDriftCorrection(...)`, and assert DEM/GPS/Google Fused/ATT Fused columns are unchanged while canonical `ALTITUDE` shifts exclusively on barometric-sourced rows.
+  2. *Post-Crash Process-Epoch Lower & Upper Bound Test (`TST-FIL-018.2`, `WorkoutSamplesDatabaseManagerTest.kt` & `LiveWorkoutSessionAltitudeDriftTest.kt`)*:
+     • Insert pre-crash calibrated rows (`TIME < sessionEpochStartTimeMs`), uncalibrated post-restart rows in `[sessionEpochStartTimeMs, t1Ms]`, and post-calibration rows (`TIME > t1Ms`).
+     • Invoke Case A (`t0Ms = -1L`) with `sessionEpochStartTimeMs`; assert ONLY rows in `[sessionEpochStartTimeMs, t1Ms]` shift while pre-crash and post-calibration rows remain untouched.
+     • Verify `LiveWorkoutSession.rehydrateStreams()` + `setSessionEpochStartTimeMs()` protects pre-crash `sampledAltitudes` and pre-epoch `RunningStats` during Case A.
+  3. *1-Hz vs 20-s Case B Average Altitude Dimensional Consistency Test (`TST-FIL-018.3`, `LiveWorkoutSessionAltitudeDriftTest.kt`)*:
+     • Feed 100 1-Hz `ALTITUDE` samples around `445.0 m` and 5 corresponding 20-second `sampledAltitudes` across `[500 ms..4500 ms]`.
+     • Execute `applyRetroactiveAltitudeCorrection(offset = +40.0, t0Ms = 1500L, t1Ms = 3500L)`.
+     • Assert `altStats.count == 100` and `altStats.getAverage()` equals `445.0 + meanCorrection` (within `0.5 m`, never ~`22 m`).
+  4. *9-Locale Pressure Device Name Parity Verification (`TST-FIL-018.4`)*:
+     • Verify zero new strings added and existing `R.string.devices_altitude_from_pressure` across all 9 locales (EN, DE, ES, FR, IT, JA, NL, PL, PT) plus legacy `ATT-5073` names are recognized as barometric columns.
+  5. *Targeted Tier-1 Unit & Contract Verification (`TST-FIL-018.5`)*:
+     • Run targeted Gradle suite (`WorkoutSamplesDatabaseManager*`, `LiveWorkoutSession*`, `AltitudeFromPressure*`, `TrackerServiceCrashRecoveryCharacterisationTest`, `SourceTextReadingAuditContractTest`, `AspiceSweAuditContractTest`) + `:app:lintDebug` + scoped `:app:detekt`.
