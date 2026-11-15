@@ -847,7 +847,15 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
             self.assertTrue(ok, f"Expected pass, got: {msgs}")
             self.assertTrue(any("PASS" in m for m in msgs))
 
-            # 6. Wildcard verification without sprint name
+            # 6. Valid SKIPPED, NOT PERFORMED, and PARTIAL verdicts
+            for alt_verdict in ("SKIPPED", "NOT PERFORMED", "PARTIAL"):
+                alt_content = valid_content.replace("**Verdict**: **PASS**", f"**Verdict**: **{alt_verdict}**")
+                with open(target_file, "w", encoding="utf-8") as f:
+                    f.write(alt_content)
+                ok_alt, msgs_alt = verify_independent_reviews(sprint_name="sprint/2026-46.3", repo_root=tmpdir)
+                self.assertTrue(ok_alt, f"Expected pass for verdict {alt_verdict}, got: {msgs_alt}")
+
+            # 7. Wildcard verification without sprint name
             ok_any, msgs_any = verify_independent_reviews(sprint_name=None, repo_root=tmpdir)
             self.assertTrue(ok_any, f"Expected pass, got: {msgs_any}")
             self.assertTrue(any("Verified 1 independent review record(s)" in m for m in msgs_any))

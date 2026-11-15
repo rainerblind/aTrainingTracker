@@ -689,7 +689,20 @@ class TestEpicCommands(unittest.TestCase):
             self.assertTrue(ok, f"Expected pass, got: {msgs}")
             self.assertTrue(any("PASS" in m for m in msgs))
 
-            # 4. Wildcard
+            # 4. Valid SKIPPED, NOT PERFORMED, and PARTIAL verdicts
+            for alt_v in ("SKIPPED", "NOT PERFORMED", "PARTIAL"):
+                with open(target, "w", encoding="utf-8") as f:
+                    f.write(
+                        f"# Independent QA Review Record: Sprint 2026-46.3\n\n"
+                        f"* **Reviewer**: Human\n"
+                        f"* **Date**: 2026-11-12 04:00:00\n"
+                        f"* **Scope**: Ceremony 2 Sprint Review\n"
+                        f"* **Verdict**: **{alt_v}**\n"
+                    )
+                ok_alt, msgs_alt = verify_independent_reviews(sprint_name="2026-46.3", repo_root=tmpdir)
+                self.assertTrue(ok_alt, f"Expected pass for verdict {alt_v}, got: {msgs_alt}")
+
+            # 5. Wildcard
             ok_any, msgs_any = verify_independent_reviews(sprint_name=None, repo_root=tmpdir)
             self.assertTrue(ok_any)
             self.assertTrue(any("Verified 1 independent review record" in m for m in msgs_any))

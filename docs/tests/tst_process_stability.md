@@ -2349,15 +2349,20 @@
 - **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-PRO-062`
 - **Component**: `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `tools/hoechstmass/tools/jira_util.py`, `tools/hoechstmass/tools/verify_requirement_governance.py`, `tools/test_jira_accounts.py`, `tools/test_verify_requirement_governance.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`
-- **Jira**: `ATT-6155`
+- **Jira**: `ATT-6155`, `ATT-8142`
 - **Test Description**:
   1. *`record-review` CLI Command & Report Generation (`TST-PRO-062.1`, tools/test_jira_accounts.py & tools/hoechstmass/tools/test_hoechstmass_tools.py)*:
   • Execute `record-review` for Human Ceremony 2 review and Cross-Vendor AI review; verify structured markdown output and metadata serialization.
+  • Test that `record-review` with `--verdict PASS` or `FAIL` without `--findings` fails with usage error.
+  • Test that `record-review` with `--verdict SKIPPED` or `NOT PERFORMED` generates truthful record without default success text and includes Rule 1.3 deviation header.
+  • Test invalid verdict string is rejected.
   2. *Independent Review Governance Verification (`TST-PRO-062.2`, tools/test_verify_requirement_governance.py)*:
-  • Run `verify_independent_reviews` against valid vs missing and malformed review records; assert pass/fail status and schema diagnostics.
-  3. *Counterpart Parity & Tooling Integration (`TST-PRO-062.3`, tools/hoechstmass/tools/test_hoechstmass_tools.py)*:
+  • Run `verify_independent_reviews` against valid vs missing and malformed review records, including `PASS`, `FAIL`, `SKIPPED`, `NOT PERFORMED`, and `PARTIAL`; assert pass/fail status and schema diagnostics.
+  3. *Review File Correction & Evidence Integrity (`TST-PRO-062.3`, docs/engineering/reviews/sprint_2026-46.6.md)*:
+  • Verify `docs/engineering/reviews/sprint_2026-46.6.md` contains verdict `SKIPPED` and correction note referencing Finding K2.
+  4. *Counterpart Parity & Tooling Integration (`TST-PRO-062.4`, tools/hoechstmass/tools/test_hoechstmass_tools.py)*:
   • Assert `record-review` and `verify_independent_reviews` in Höchstmaß mirror match root tooling behavior.
-  4. *Canonical Directory Registration (`TST-PRO-062.4`, tools/test_verify_requirement_governance.py)*:
+  5. *Canonical Directory Registration (`TST-PRO-062.5`, tools/test_verify_requirement_governance.py)*:
   • Assert `"reviews"` exists in `ALLOWED_ENGINEERING_ENTRIES` and `hoechstmass_config.json`.
 
 ### TST-PRO-063: **Problem Severity Classification & Defect Trend Metrics Suite** [Verified]

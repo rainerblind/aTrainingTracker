@@ -656,7 +656,7 @@ def verify_independent_reviews(sprint_name=None, repo_root=None):
                 (r"(?:\*\*Reviewer\*\*|Reviewer:?)\s*([^\n\r]+)", "Reviewer"),
                 (r"(?:\*\*Date\*\*|Date:?)\s*([^\n\r]+)", "Date"),
                 (r"(?:\*\*Scope\*\*|Scope:?)\s*([^\n\r]+)", "Scope"),
-                (r"(?:\*\*Verdict\*\*|Verdict|Process Verdict)[\s:\*]+(PASS|FAIL|ACCEPTED|COMPLIANT)", "Verdict"),
+                (r"(?:\*\*Verdict\*\*|Verdict|Process Verdict)[\s:\*]+(PASS|FAIL|ACCEPTED|COMPLIANT|NOT PERFORMED|SKIPPED|PARTIAL)", "Verdict"),
             ]
             for pat, field_name in required_patterns:
                 if not re.search(pat, content, re.IGNORECASE):

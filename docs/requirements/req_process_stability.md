@@ -3844,34 +3844,39 @@ The workflow SHALL mandate that:
 - **Type**: Non-Functional
 - **Verification Method**: Unit / Review
 - **Implementation**: Automated `record-review` CLI command in `tools/jira_util.py` and `tools/hoechstmass/tools/jira_util.py`, structured markdown reporting in `docs/engineering/reviews/<review_file>.md`, canonical directory registration, and `--check-reviews` validation in `tools/verify_requirement_governance.py`.
-- **Rationale**: Under ASPICE SUP.1 (Quality Assurance), QA evidence must demonstrate independence from the work product author (Pre-Assessment Finding B-10). While in-sprint agents operate on the same vendor framework, independent reviews conducted by the Human (during Ceremony 2 Sprint Review before `Erledigt`) and cross-vendor AI models (Layer 5) previously lacked persistent repository records. This requirement establishes a structured review evidence format and CLI tooling:
+- **Rationale**: Under ASPICE SUP.1 (Quality Assurance), QA evidence must demonstrate independence from the work product author (Pre-Assessment Finding B-10, Remediation Finding K2). While in-sprint agents operate on the same vendor framework, independent reviews conducted by the Human (during Ceremony 2 Sprint Review before `Erledigt`) and cross-vendor AI models (Layer 5) previously lacked persistent repository records or permitted deceptive default positive findings. This requirement establishes a structured review evidence format and CLI tooling:
   1. *Review Record Schema (`REQ-PRO-062.1`, docs/engineering/reviews/<sprint_or_review>.md)*:
-     • Review deliverables SHALL record traceable metadata: Reviewer (`Human` or external AI vendor), Model/Version (if AI), Date/Timestamp, Reviewed Ticket(s) or Commit(s), Scope, and Findings / Verdict (`PASS` / `FAIL`).
+     • Review deliverables SHALL record traceable metadata: Reviewer (`Human` or external AI vendor), Model/Version (if AI), Date/Timestamp, Reviewed Ticket(s) or Commit(s), Scope, and Findings / Verdict (`PASS`, `FAIL`, `SKIPPED`, `NOT PERFORMED`, `PARTIAL`).
+     • Review records for skipped or unexecuted ceremonies SHALL explicitly record verdict `SKIPPED` or `NOT PERFORMED` with mandatory justification and process deviation citation (Rule 1.3), prohibiting false success claims. Historical inaccurate records (specifically `docs/engineering/reviews/sprint_2026-46.6.md`) SHALL be corrected to `SKIPPED` with an auditable correction note.
   2. *Independent Review CLI Helper (`REQ-PRO-062.2`, tools/jira_util.py & tools/hoechstmass/tools/jira_util.py)*:
      • Tooling SHALL implement `record-review` command supporting both Human Sprint Reviews (Ceremony 2) and Cross-Vendor AI Reviews (Layer 5) with parameters `--sprint`, `--ticket`, `--reviewer`, `--vendor`, `--model`, `--version`, `--scope`, `--verdict`, and `--findings`.
+     • `record-review` SHALL NOT default verdict or findings to positive success claims. Invoking `record-review` with `--verdict PASS` or `FAIL` without `--findings` SHALL fail with a usage error. Setting `--verdict SKIPPED` or `NOT PERFORMED` SHALL require `--findings` containing the rationale and document a process deviation. Allowed verdicts SHALL be strictly validated (`PASS`, `FAIL`, `SKIPPED`, `NOT PERFORMED`, `PARTIAL`).
   3. *Directory Governance (`REQ-PRO-062.3`, ALLOWED_ENGINEERING_ENTRIES & hoechstmass_config.json)*:
      • `ALLOWED_ENGINEERING_ENTRIES` in `tools/verify_requirement_governance.py` and `hoechstmass_config.json` SHALL register `"reviews"`.
   4. *Governance Enforcement CLI (`REQ-PRO-062.4`, tools/verify_requirement_governance.py & tools/hoechstmass/tools/verify_requirement_governance.py)*:
-     • `tools/verify_requirement_governance.py` and Höchstmaß mirror SHALL implement `--check-reviews [SPRINT]`, validating existence and schema compliance of review records.
+     • `tools/verify_requirement_governance.py` and Höchstmaß mirror SHALL implement `--check-reviews [SPRINT]`, validating existence and schema compliance of review records, recognizing `PASS`, `FAIL`, `SKIPPED`, `NOT PERFORMED`, and `PARTIAL`.
   5. *Autonomous Execution Decoupling (`REQ-PRO-062.5`)*:
      • Autonomous Phase 2 lifecycle execution (`Stage 5 -> Final Review`) SHALL NOT be blocked by missing human review records, preserving automated in-sprint throughput.
   6. *Ceremony 2 Review Mandate (`REQ-PRO-062.6`, .agents/skills/sprint-planner/SKILL.md)*:
      • `sprint-planner/SKILL.md` Ceremony 2 SHALL document recording human review acceptance into `docs/engineering/reviews/` prior to sprint closure.
 - **Requirement Archaeology & Chesterton's Fence Audit**:
-  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-062` (`REQ-PRO-062.1`–`REQ-PRO-062.6`). Targets `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `docs/engineering/reviews/`, and `tools/hoechstmass/`.
-  2. *Historical Origin & Commit Trace*: Introduced in Sprint 2026-46.3 via ATT-6155 under Epic ATT-6141 to satisfy ASPICE pre-assessment finding B-10.
-  3. *Root Reason for Existing Formulation*: Lack of repository evidence for independent human / cross-vendor reviews under ASPICE SUP.1.
-  4. *Preservation of Core Invariants*: Zero changes to Android runtime code; pure Python 3 standard library; autonomous Phase 2 execution strictly preserved.
+  1. *Original Requirement ID & Target*: Modified requirement `REQ-PRO-062` (`REQ-PRO-062.1`, `REQ-PRO-062.2`, `REQ-PRO-062.4`). Targets `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `docs/engineering/reviews/`, and `tools/hoechstmass/`.
+  2. *Historical Origin & Commit Trace*: Introduced in Sprint 2026-46.3 via ATT-6155 under Epic ATT-6141; amended in Sprint 2026-46.8 via ATT-8142 (Finding K2) under Epic ATT-8138.
+  3. *Root Reason for Existing Formulation*: Originally lacked explicit non-defaulting validation, allowing missing findings/verdict to default to PASS with a generic "Zero deviations" text string.
+  4. *Preservation of Core Invariants*: Truth-in-evidence enforced: review records must honestly represent actual human/AI execution without artificial success defaults; zero Android runtime code changes; Rule 3 Human Gate intact.
 - **Acceptance Criteria (Given-When-Then)**:
-  • *Given* a completed Ceremony 2 or cross-vendor AI review,
-  • *When* `record-review` is executed,
-  • *Then* it generates a markdown file in `docs/engineering/reviews/` with traceable reviewer metadata, scope, and verdict.
-  • *Given* a review file in `docs/engineering/reviews/`,
+  • *Given* a skipped Ceremony 2 sprint review,
+  • *When* `record-review` is executed with `--verdict SKIPPED` and `--findings "<rationale>"`,
+  • *Then* it generates a review record showing `SKIPPED`, containing no success claims, and noting a Rule 1.3 process deviation.
+  • *Given* `record-review` invoked with `--verdict PASS` or `FAIL` without `--findings`,
+  • *When* the command runs,
+  • *Then* it fails with an exit code 1 error requiring findings.
+  • *Given* `docs/engineering/reviews/sprint_2026-46.6.md`,
+  • *When* inspected,
+  • *Then* its verdict is `SKIPPED` with an auditable correction note addressing Finding K2.
+  • *Given* a review file in `docs/engineering/reviews/` with verdict `SKIPPED`, `NOT PERFORMED`, or `PARTIAL`,
   • *When* `verify_requirement_governance.py --check-reviews` runs,
-  • *Then* it verifies that all required metadata fields are present and valid.
-  • *Given* a ticket progressing through Stages 1..5 in Phase 2,
-  • *When* transitioning to `Final Review (Agent)`,
-  • *Then* the transition is unblocked regardless of whether a human review record exists.
+  • *Then* it verifies successfully.
 - **Invariants**: Zero modifications to Android production runtime code in `app/src/main/`; pure Python standard library retained; Rule 3 (`Erledigt` human-only gate) preserved.
 
 ### REQ-PRO-063: Problem Severity Classification & Defect Trend Metrics [Verified]

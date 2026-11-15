@@ -917,6 +917,71 @@ class TestJiraCliTooling(unittest.TestCase):
             self.assertIn("ATT-6155", content_ai)
             self.assertIn("ASPICE compliance and role integrity verified.", content_ai)
 
+    @patch("jira_util.jira_request")
+    def test_record_review_validation_and_skipped_handling(self, mock_request):
+        """TST-PRO-062.1: Verify record-review validates verdicts, mandates findings, and handles SKIPPED/NOT PERFORMED."""
+        mock_request.return_value = {}
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # 1. Missing verdict raises ValueError
+            with self.assertRaises(ValueError):
+                jira_util.record_review(repo_root=tmpdir, verdict=None, findings="notes")
+
+            # 2. Invalid verdict raises ValueError
+            with self.assertRaises(ValueError):
+                jira_util.record_review(repo_root=tmpdir, verdict="INVALID_VERDICT", findings="notes")
+
+            # 3. Missing findings for PASS raises ValueError
+            with self.assertRaises(ValueError):
+                jira_util.record_review(repo_root=tmpdir, verdict="PASS", findings=None)
+            with self.assertRaises(ValueError):
+                jira_util.record_review(repo_root=tmpdir, verdict="PASS", findings="")
+
+            # 4. Missing findings for FAIL raises ValueError
+            with self.assertRaises(ValueError):
+                jira_util.record_review(repo_root=tmpdir, verdict="FAIL", findings="")
+
+            # 5. Missing findings for SKIPPED raises ValueError
+            with self.assertRaises(ValueError):
+                jira_util.record_review(repo_root=tmpdir, verdict="SKIPPED", findings="")
+
+            # 6. Valid SKIPPED review generates Rule 1.3 deviation header and omits default success text
+            out_skip = os.path.join(tmpdir, "docs", "engineering", "reviews", "sprint_2026-46.6.md")
+            path_s, meta_s = jira_util.record_review(
+                sprint_arg="2026-46.6",
+                ticket_key="ATT-7755",
+                reviewer="Human",
+                scope="Ceremony 2 Sprint Review (Skipped per PO instruction)",
+                verdict="SKIPPED",
+                findings="Individual ticket review skipped per PO instruction to proceed directly to Retro.",
+                out_path=out_skip,
+                repo_root=tmpdir,
+            )
+            self.assertEqual(path_s, out_skip)
+            with open(out_skip, "r", encoding="utf-8") as f:
+                content_s = f.read()
+
+            self.assertIn("**Verdict**: **SKIPPED**", content_s)
+            self.assertIn("[PROCESS DEVIATION — Rule 1.3]", content_s)
+            self.assertIn("Individual ticket review skipped per PO instruction", content_s)
+            self.assertNotIn("Independent review conducted successfully", content_s)
+            self.assertNotIn("Zero critical process or technical deviations", content_s)
+
+            # 7. Valid PARTIAL review
+            out_part = os.path.join(tmpdir, "docs", "engineering", "reviews", "partial.md")
+            path_p, _ = jira_util.record_review(
+                sprint_arg="2026-46.8",
+                ticket_key="ATT-8142",
+                reviewer="Human",
+                verdict="PARTIAL",
+                findings="Partial review conducted for high-risk items only.",
+                out_path=out_part,
+                repo_root=tmpdir,
+            )
+            with open(out_part, "r", encoding="utf-8") as f:
+                content_p = f.read()
+            self.assertIn("**Verdict**: **PARTIAL**", content_p)
+            self.assertIn("Partial review conducted for high-risk items only.", content_p)
+
     @patch("jira_util.rank_at_top_of_backlog")
     @patch("jira_util.jira_request")
     def test_create_issue_requires_severity_for_bugs(self, mock_request, mock_rank):

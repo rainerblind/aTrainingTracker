@@ -1873,6 +1873,15 @@ def format_review_markdown(
     s_id = sprint_info.get("id", "N/A")
     t_str = ", ".join(tickets) if isinstance(tickets, (list, set, tuple)) else str(tickets)
 
+    findings_clean = findings.strip() if findings else ""
+    if verdict in ("SKIPPED", "NOT PERFORMED"):
+        if not findings_clean.startswith("### [PROCESS DEVIATION") and not findings_clean.startswith("[PROCESS DEVIATION"):
+            findings_text = f"### [PROCESS DEVIATION — Rule 1.3]\n{findings_clean}"
+        else:
+            findings_text = findings_clean
+    else:
+        findings_text = findings_clean
+
     lines = [
         f"# Independent QA Review Record: Sprint {s_name}",
         "",
@@ -1898,7 +1907,7 @@ def format_review_markdown(
         "---",
         "",
         "## 2. Findings & Assessment Notes",
-        findings if findings else "Independent review conducted successfully. Zero critical process or technical deviations identified.",
+        findings_text,
         "",
         "---",
         "",
@@ -1910,6 +1919,9 @@ def format_review_markdown(
     return "\n".join(lines)
 
 
+ALLOWED_REVIEW_VERDICTS = {"PASS", "FAIL", "SKIPPED", "NOT PERFORMED", "PARTIAL"}
+
+
 def record_review(
     sprint_arg=None,
     ticket_key=None,
@@ -1918,7 +1930,7 @@ def record_review(
     model=None,
     version=None,
     scope=None,
-    verdict="PASS",
+    verdict=None,
     findings=None,
     out_path=None,
     as_role="coordinator",
@@ -1936,6 +1948,35 @@ def record_review(
         as_role = role
     if repo_root is None:
         repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+
+    if not verdict:
+        raise ValueError(
+            "Review verdict is required. Allowed verdicts: "
+            + ", ".join(sorted(ALLOWED_REVIEW_VERDICTS))
+        )
+    verdict_clean = verdict.upper().strip()
+    if verdict_clean not in ALLOWED_REVIEW_VERDICTS:
+        raise ValueError(
+            f"Invalid verdict '{verdict}'. Allowed verdicts: "
+            + ", ".join(sorted(ALLOWED_REVIEW_VERDICTS))
+        )
+
+    if not findings or not str(findings).strip():
+        if verdict_clean in ("PASS", "FAIL"):
+            raise ValueError(
+                f"Review findings are mandatory for verdict '{verdict_clean}'. "
+                "Provide --findings with assessment details."
+            )
+        elif verdict_clean in ("SKIPPED", "NOT PERFORMED"):
+            raise ValueError(
+                f"A skip rationale is mandatory for verdict '{verdict_clean}'. "
+                "Provide --findings with justification."
+            )
+        else:
+            raise ValueError(
+                f"Findings are mandatory for verdict '{verdict_clean}'. "
+                "Provide --findings with assessment details."
+            )
 
     if config is None:
         config = load_env_config()
@@ -2205,7 +2246,7 @@ def main():
         model_arg = None
         version_arg = None
         scope_arg = None
-        verdict_arg = "PASS"
+        verdict_arg = None
         findings_arg = None
         out_arg = None
         idx = 1
@@ -2262,19 +2303,23 @@ def main():
                 out_arg = args[idx + 1]
                 idx += 1
             idx += 1
-        record_review(
-            sprint_arg=sprint_arg,
-            ticket_key=ticket_arg,
-            reviewer=reviewer_arg,
-            vendor=vendor_arg,
-            model=model_arg,
-            version=version_arg,
-            scope=scope_arg,
-            verdict=verdict_arg,
-            findings=findings_arg,
-            out_path=out_arg,
-            as_role=as_role,
-        )
+        try:
+            record_review(
+                sprint_arg=sprint_arg,
+                ticket_key=ticket_arg,
+                reviewer=reviewer_arg,
+                vendor=vendor_arg,
+                model=model_arg,
+                version=version_arg,
+                scope=scope_arg,
+                verdict=verdict_arg,
+                findings=findings_arg,
+                out_path=out_arg,
+                as_role=as_role,
+            )
+        except ValueError as err:
+            print(f"Error: {err}", file=sys.stderr)
+            sys.exit(1)
     elif cmd == "create-issue" and len(args) >= 3:
         summary = args[1]
         desc = args[2]

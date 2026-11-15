@@ -3656,6 +3656,15 @@ def format_review_markdown(
     s_id = sprint_info.get("id", "N/A")
     t_str = ", ".join(tickets) if isinstance(tickets, (list, set, tuple)) else str(tickets)
 
+    findings_clean = findings.strip() if findings else ""
+    if verdict in ("SKIPPED", "NOT PERFORMED"):
+        if not findings_clean.startswith("### [PROCESS DEVIATION") and not findings_clean.startswith("[PROCESS DEVIATION"):
+            findings_text = f"### [PROCESS DEVIATION — Rule 1.3]\n{findings_clean}"
+        else:
+            findings_text = findings_clean
+    else:
+        findings_text = findings_clean
+
     lines = [
         f"# Independent QA Review Record: Sprint {s_name}",
         "",
@@ -3681,7 +3690,7 @@ def format_review_markdown(
         "---",
         "",
         "## 2. Findings & Assessment Notes",
-        findings if findings else "Independent review conducted successfully. Zero critical process or technical deviations identified.",
+        findings_text,
         "",
         "---",
         "",
@@ -3693,6 +3702,9 @@ def format_review_markdown(
     return "\n".join(lines)
 
 
+ALLOWED_REVIEW_VERDICTS = {"PASS", "FAIL", "SKIPPED", "NOT PERFORMED", "PARTIAL"}
+
+
 def record_review(
     sprint_arg=None,
     ticket_key=None,
@@ -3701,7 +3713,7 @@ def record_review(
     model=None,
     version=None,
     scope=None,
-    verdict="PASS",
+    verdict=None,
     findings=None,
     out_path=None,
     role="coordinator",
@@ -3717,6 +3729,35 @@ def record_review(
         role = as_role
     if repo_root is None:
         repo_root = os.getcwd()
+
+    if not verdict:
+        raise ValueError(
+            "Review verdict is required. Allowed verdicts: "
+            + ", ".join(sorted(ALLOWED_REVIEW_VERDICTS))
+        )
+    verdict_clean = verdict.upper().strip()
+    if verdict_clean not in ALLOWED_REVIEW_VERDICTS:
+        raise ValueError(
+            f"Invalid verdict '{verdict}'. Allowed verdicts: "
+            + ", ".join(sorted(ALLOWED_REVIEW_VERDICTS))
+        )
+
+    if not findings or not str(findings).strip():
+        if verdict_clean in ("PASS", "FAIL"):
+            raise ValueError(
+                f"Review findings are mandatory for verdict '{verdict_clean}'. "
+                "Provide --findings with assessment details."
+            )
+        elif verdict_clean in ("SKIPPED", "NOT PERFORMED"):
+            raise ValueError(
+                f"A skip rationale is mandatory for verdict '{verdict_clean}'. "
+                "Provide --findings with justification."
+            )
+        else:
+            raise ValueError(
+                f"Findings are mandatory for verdict '{verdict_clean}'. "
+                "Provide --findings with assessment details."
+            )
 
     config = get_config()
     base = config['JIRA_URL'].rstrip('/')
@@ -3861,7 +3902,7 @@ USAGE_TEXT = (
     "                                                        Export sprint gate records to docs/engineering/gates/<sprint>.md\n"
     "  qa-audit [--sprint <ID|NAME>] [--sample N] [--out <FILE>]\n"
     "                                                        Sample >= 2 sprint tickets and audit ASPICE process compliance\n"
-    "  record-review [--sprint <ID|NAME>] [--ticket KEY] [--reviewer NAME] [--vendor VENDOR] [--model MODEL] [--version VER] [--scope SCOPE] [--verdict PASS|FAIL|NOT PERFORMED] [--findings FINDINGS] [--out FILE]\n"
+    "  record-review [--sprint <ID|NAME>] [--ticket KEY] [--reviewer NAME] [--vendor VENDOR] [--model MODEL] [--version VER] [--scope SCOPE] [--verdict PASS|FAIL|NOT PERFORMED|SKIPPED|PARTIAL] [--findings FINDINGS] [--out FILE]\n"
     "                                                        Record Human Sprint Review or Cross-Vendor AI Review in docs/engineering/reviews/\n"
     "  create-issue SUMMARY DESC [TYPE_ID|Bug|Feature|Verbesserung] [PARENT_KEY] [--type=...] [--parent=...] [--bottom] [--points=N] [--severity=critical|major|minor|cosmetic]"
 )
@@ -4176,7 +4217,7 @@ if __name__ == "__main__":
         model_arg = None
         version_arg = None
         scope_arg = None
-        verdict_arg = "PASS"
+        verdict_arg = None
         findings_arg = None
         out_arg = None
         idx = 1
@@ -4233,19 +4274,23 @@ if __name__ == "__main__":
                 out_arg = remaining_argv[idx + 1]
                 idx += 1
             idx += 1
-        record_review(
-            sprint_arg=sprint_arg,
-            ticket_key=ticket_arg,
-            reviewer=reviewer_arg,
-            vendor=vendor_arg,
-            model=model_arg,
-            version=version_arg,
-            scope=scope_arg,
-            verdict=verdict_arg,
-            findings=findings_arg,
-            out_path=out_arg,
-            role=active_role,
-        )
+        try:
+            record_review(
+                sprint_arg=sprint_arg,
+                ticket_key=ticket_arg,
+                reviewer=reviewer_arg,
+                vendor=vendor_arg,
+                model=model_arg,
+                version=version_arg,
+                scope=scope_arg,
+                verdict=verdict_arg,
+                findings=findings_arg,
+                out_path=out_arg,
+                role=active_role,
+            )
+        except ValueError as err:
+            print(f"Error: {err}", file=sys.stderr)
+            sys.exit(1)
     elif cmd == "add-to-sprint" and len(remaining_argv) == 2:
         if active_role in ("agent1", "agent2", "coordinator"):
             print("Error: Agents must not move tickets to sprints! Only the human user assigns tickets to sprints during Sprint-Start Screening.", file=sys.stderr)
