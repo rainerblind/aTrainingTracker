@@ -2373,6 +2373,52 @@ The workflow SHALL mandate that:
 
 **Invariants**: Zero modification to production runtime code in `app/src/main/`, strict characterisation test prerequisite for all future child tickets, 100% test pass rate.
 
+### REQ-ARC-006: Java Core Migration: Pure Signal Filters Kotlin Migration & ADR-001 Contract Alignment [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-ARC-006`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `app/src/main/java/com/atrainingtracker/banalservice/filters/`, `docs/architecture/adr_001_java_core_services_migration.md`, `JavaCoreMigrationStrategyContractTest.kt`
+- **Rationale**: In accordance with ADR-001 (Tier 1 bottom-up migration, ATT-7566) and the PO decision recorded in the ATT-7749 retrospective, the 11 pure signal filter classes in `com.atrainingtracker.banalservice.filters` SHALL be migrated to idiomatic Kotlin to eliminate platform type (`T!`) nullability hazards in high-frequency sensor telemetry processing while strictly preserving numerical equivalence, thread synchronization, and Rule 50 post-trim emptiness invariants (ATT-7905):
+1. *1:1 Idiomatic Kotlin Migration & Interoperability Parity (`REQ-ARC-006.1`)*:
+• All 11 Java classes in `com.atrainingtracker.banalservice.filters/` (`MyFilter`, `AverageFilter`, `ExponentialSmoothingFilter`, `MovingAverageFilter`, `NumberedMovingAverageFilter`, `TimedMovingAverageFilter`, `MaxValueFilter`, `InstantaneousFilter`, `FilterData`, `FilteredSensorData`, `FilterManager`) SHALL be migrated to idiomatic Kotlin (`.kt`).
+• Generic signatures (`MyFilter<T>`, `InstantaneousFilter<T>`, `FilteredSensorData<T>`) and Java callers (`BANALService`, `TrackerService`) SHALL remain 100% interoperable without changes to calling signatures.
+• Thread-safe monitor locking SHALL be preserved via Kotlin `@Synchronized` annotations or explicit synchronized blocks across all mutable filter calculation, reset, and lifecycle methods.
+2. *Numerical Parity & Rule 50 Post-Trim Emptiness Guard (`REQ-ARC-006.2`)*:
+• Mathematical output for moving average, timed moving average, numbered moving average, maximum value, and exponential smoothing algorithms SHALL be bitwise/epsilon numerically identical to the legacy Java implementation.
+• `TimedMovingAverageFilter` SHALL preserve the Rule 50 invariant: `trimValues()` MUST execute first, followed immediately by an emptiness check returning `null` (never `Double.NaN`) when all samples in the time window have expired.
+3. *PO Scope Boundary & Strategy Contract Test Alignment (`REQ-ARC-006.3`)*:
+• ADR-001 (`docs/architecture/adr_001_java_core_services_migration.md`) SHALL document the PO decision from the ATT-7749 retrospective that migration under Epic ATT-431 is bounded to leaf formatters (`ATT-7903`), pure signal filters (`ATT-7905`), and streaming exporters (`ATT-7906`), while retaining remaining Java subsystems under `Keep`.
+• `JavaCoreMigrationStrategyContractTest.kt` line 169 SHALL relax the exact equality check (`assertEquals(149, javaFiles.size)`) to `<= 149` (`assertTrue("Java files count must decrease from baseline 149", javaFiles.size <= 149)`), preventing build failures as Java classes are converted to Kotlin while continuing to prohibit unauthorized additions.
+4. *Bounded Subsystem Code Coverage Verification (`REQ-ARC-006.4`)*:
+• In compliance with `docs/coding_standards.md` §5.11 (REQ-PRO-089 / ATT-7563), the filter subsystem (`com.atrainingtracker.banalservice.filters`) SHALL satisfy the bounded verification thresholds: Line Coverage $\ge 70\%$ and Branch Coverage $\ge 50\%$ under Kover (`./gradlew koverVerifyDebug`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-ARC-006` extending `REQ-ARC-005` under Epic `ATT-431` (*Clean Code*). Targets `banalservice/filters/`, `docs/architecture/adr_001_java_core_services_migration.md`, and `JavaCoreMigrationStrategyContractTest.kt`.
+2. *Historical Origin & Commit Trace*: Initiated in Sprint `2026-46.7` under ticket `ATT-7905` to execute Tier 1 migration authorized by ADR-001 (`ATT-7566`) and bounded by PO decision in Sprint `2026-46.6` retro (`ATT-7749`).
+3. *Root Reason for Existing Formulation*: `REQ-ARC-005.1` originally asserted exact 149 Java classes to prevent untracked additions. Now that Tier 1 migrations are underway, exact equality would reject legal conversions; loosening to `<= 149` maintains the upper bound while permitting progress.
+4. *Preservation of Core Invariants*: Algorithmic filter logic, numerical results, `@Synchronized` thread locks, and Rule 50 post-trim emptiness guards are 100% preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* the 11 legacy Java filter classes in `com.atrainingtracker.banalservice.filters`,
+• *When* converted to Kotlin,
+• *Then* zero `.java` files remain in `banalservice/filters/` and all public methods, constructors, and properties maintain binary and source compatibility for existing callers.
+• *Given* concurrent sensor sample emissions,
+• *When* `FilterManager` or individual filter instances process telemetry,
+• *Then* `@Synchronized` monitor locks prevent race conditions, corrupted buffers, or concurrent modification exceptions.
+• *Given* `TimedMovingAverageFilter` with expired timestamps,
+• *When* `getFilteredValue()` is queried after all entries are trimmed,
+• *Then* it returns `null` rather than `Double.NaN` (Rule 50).
+• *Given* `JavaCoreMigrationStrategyContractTest`,
+• *When* executed against the repository containing 138 or fewer Java files,
+• *Then* the `<= 149` assertion succeeds and ADR-001 verification passes with zero failures.
+• *Given* the filter subsystem unit test suite,
+• *When* Kover verification executes,
+• *Then* Line Coverage is $\ge 70\%$ and Branch Coverage is $\ge 50\%$.
+
+**Invariants**: Zero modification to mathematical filter algorithms; thread synchronization semantics preserved; zero UI changes; 100% pass rate across filter unit tests and clean-room full suite regression.
+
 ### REQ-PRO-027: Agile Agentic ASPICE (AAA) Governance, Constructive Resistance, Hypothesis Verification, Stage 5 Resource Gate & Ceremony 2 Completeness Sweep [Verified]
 - **Tests**: `TST-PRO-020`
 - **Priority**: High

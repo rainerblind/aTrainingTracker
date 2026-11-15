@@ -16,40 +16,34 @@
  * along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
  */
 
-package com.atrainingtracker.banalservice.filters;
+package com.atrainingtracker.banalservice.filters
 
-import com.atrainingtracker.banalservice.sensor.MySensor;
-import com.atrainingtracker.banalservice.sensor.SensorType;
+import com.atrainingtracker.banalservice.sensor.MySensor
+import com.atrainingtracker.banalservice.sensor.SensorType
 
-public abstract class MyFilter<T>
-        implements MySensor.SensorListener<T> {
-    private static final String TAG = MyFilter.class.getCanonicalName();
-    protected String mDeviceName;
-    protected SensorType mSensorType;
+abstract class MyFilter<T>(
+    @JvmField protected var mDeviceName: String?,
+    @JvmField protected var mSensorType: SensorType
+) : MySensor.SensorListener<T> {
 
-    public MyFilter(String deviceName, SensorType sensorType) {
-        mDeviceName = deviceName;
-        mSensorType = sensorType;
-    }
+    abstract val filteredValue: T?
 
-    abstract T getFilteredValue();
+    abstract val filterType: FilterType
 
-    abstract FilterType getFilterType();
+    abstract val filterConstant: Double
 
-    abstract double getFilterConstant();
-
-    public FilteredSensorData getFilteredSensorData() {
-        // Log.i(TAG, "getFilteredSensorData(): " + getFilterType() + " " + mDeviceName + " " + mSensorType + ": " + getFilteredValue());
-
-        T filteredValue = getFilteredValue();
-        return new FilteredSensorData(mSensorType, filteredValue, mSensorType.getMyFormatter().format(filteredValue), mDeviceName, getFilterType(), getFilterConstant());
-    }
+    open val filteredSensorData: FilteredSensorData<T>
+        get() {
+            val fv = filteredValue
+            val stringValue = mSensorType.myFormatter.format(fv)
+            return FilteredSensorData(mSensorType, fv, stringValue, mDeviceName, filterType, filterConstant)
+        }
 
     /**
      * Resets filter internal state, sample buffers, and accumulators (REQ-FIL-013).
      * Default implementation is a no-op for stateless filters.
      */
-    public void reset() {
+    open fun reset() {
         // Default no-op for stateless filters (e.g. InstantaneousFilter)
     }
 
@@ -59,7 +53,7 @@ public abstract class MyFilter<T>
      *
      * @param delta the offset to add to existing samples.
      */
-    public void shiftValues(double delta) {
+    open fun shiftValues(delta: Double) {
         // Default no-op
     }
 
@@ -69,10 +63,11 @@ public abstract class MyFilter<T>
      *
      * @param value the new baseline sample.
      */
-    public void reseed(Number value) {
-        reset();
+    @Suppress("UNCHECKED_CAST")
+    open fun reseed(value: Number?) {
+        reset()
         if (value != null) {
-            newValue((T) value);
+            newValue(value as T)
         }
     }
 }

@@ -16,39 +16,34 @@
  * along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
  */
 
-package com.atrainingtracker.banalservice.filters;
+package com.atrainingtracker.banalservice.filters
 
-import com.atrainingtracker.banalservice.sensor.SensorType;
+import com.atrainingtracker.banalservice.sensor.SensorType
 
-public class InstantaneousFilter<T> extends MyFilter<T> {
-    protected T mValue = null;
+open class InstantaneousFilter<T>(
+    deviceName: String?,
+    sensorType: SensorType
+) : MyFilter<T>(deviceName, sensorType) {
 
-    public InstantaneousFilter(String deviceName, SensorType sensorType) {
-        super(deviceName, sensorType);
+    @JvmField
+    protected var mValue: T? = null
+
+    override val filterConstant: Double
+        get() = 1.0
+
+    override val filterType: FilterType
+        get() = FilterType.INSTANTANEOUS
+
+    @Synchronized
+    override fun newValue(value: T?) {
+        mValue = value
     }
 
-    @Override
-    public double getFilterConstant() {
-        return 1;
-    }
+    override val filteredValue: T?
+        @Synchronized get() = mValue
 
-    @Override
-    public FilterType getFilterType() {
-        return FilterType.INSTANTANEOUS;
-    }
-
-    @Override
-    public synchronized void newValue(T value) {
-        mValue = value;
-    }
-
-    @Override
-    public synchronized T getFilteredValue() {
-        return mValue;
-    }
-
-    @Override
-    public synchronized void reset() {
-        mValue = null;
+    @Synchronized
+    override fun reset() {
+        mValue = null
     }
 }

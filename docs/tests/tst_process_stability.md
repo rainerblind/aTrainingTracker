@@ -1570,6 +1570,26 @@
   4. *Targeted & Full Suite Clean-Room Regression Execution (`TST-ARC-005.4`)*:
   • Execute `./gradlew testDebugUnitTest --tests com.atrainingtracker.architecture.JavaCoreMigrationStrategyContractTest` verifying 100% pass rate.
 
+### TST-ARC-006: **Java Core Migration: Pure Signal Filters Kotlin Migration & ADR-001 Contract Alignment Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Requirement(s)**: `REQ-ARC-006`
+- **Component**: **Pure Signal Filters Kotlin Migration Verification Suite**
+- **Jira**: `ATT-7905`
+- **Test Description**:
+  1. *Filter Behavioral & Numerical Equivalence Test Suite (`TST-ARC-006.1`)*:
+  • Execute targeted filter unit tests in `com.atrainingtracker.banalservice.filters.*` (`FilterInitializationAndBoundsTest`, `FilterManagerAccumulatorResetTest`, `FilterManagerRebindTest`, `FilterNullSafetyTest`, `FilterResetAndPreStartTest`, `SensorFilterDefaultsTest`) verifying 100% pass rate and identical floating-point output.
+  2. *Thread Synchronization & Concurrency Safety Verification (`TST-ARC-006.2`)*:
+  • Verify that all converted filter classes annotate mutating methods (`newValue`, `reset`, `getFilteredValue`, `createFilter`, `resetAllFilters`) with `@Synchronized` to preserve monitor safety across high-frequency ingestion threads.
+  3. *Rule 50 Post-Trim Emptiness & NaN Elimination Verification (`TST-ARC-006.3`)*:
+  • Verify that `TimedMovingAverageFilterTest` confirms `getFilteredValue()` returns `null` (not `NaN`) when all timestamped values are trimmed.
+  4. *Java Core Migration Strategy Contract Test Verification (`TST-ARC-006.4`)*:
+  • Execute `./gradlew testDebugUnitTest --tests com.atrainingtracker.architecture.JavaCoreMigrationStrategyContractTest` verifying that ADR-001 reflects the bounded migration scope and the `<= 149` Java file count tolerance passes.
+  5. *Filter Subsystem Kover Coverage Verification (`TST-ARC-006.5`)*:
+  • Execute `./gradlew koverVerifyDebug` confirming the filter subsystem achieves $\ge 70\%$ Line Coverage and $\ge 50\%$ Branch Coverage.
+
 ### TST-PRO-020: **Agile Agentic ASPICE (AAA) Governance, Constructive Resistance, Hypothesis Verification, Stage 5 Resource Gate & Ceremony 2 Completeness Sweep Verification** [Verified]
 - **Priority**: High
 - **Type**: Non-Functional

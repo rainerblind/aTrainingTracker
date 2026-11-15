@@ -47,7 +47,7 @@ These requirements satisfy ASPICE 4.0 **SYS.2 (System Requirements Analysis)** B
 * **Rationale**: Wireless RF dropouts (due to athlete distance, terrain obstruction, or body attenuation) are routine during outdoor workouts; recovery must be autonomous and energy-efficient.
 * **Priority**: High
 * **Verification Method**: Test & Analysis (`SystemLiveTrackingRequirementsContractTest.kt`, `MyBTLEDevice.java`, `BTLERadarDevice.java`)
-* **Traced Software Components**: `MyBTLEDevice.java`, `BTLERadarDevice.java`, `FilterManager.java`, `BANALService.java`
+* **Traced Software Components**: `MyBTLEDevice.java`, `BTLERadarDevice.java`, `FilterManager.kt`, `BANALService.java`
 
 ### SYSREQ-TRK-003: Deterministic 1-Hz Technical Sampling Loop & Time-Series Recording
 * **Title**: Deterministic 1-Hz Technical Sampling Loop & Time-Series Recording
@@ -58,7 +58,7 @@ These requirements satisfy ASPICE 4.0 **SYS.2 (System Requirements Analysis)** B
 * **Rationale**: Accurate sport analytics (power duration curves, normalized power, segment pacing) require a strictly deterministic 1-Hz discrete time-base.
 * **Priority**: High
 * **Verification Method**: Test & Inspection (`SystemLiveTrackingRequirementsContractTest.kt`, `TrackerService.java`, `WorkoutSamplesDatabaseManager.java`)
-* **Traced Software Components**: `TrackerService.java`, `FilterManager.java`, `WorkoutSamplesDatabaseManager.java`
+* **Traced Software Components**: `TrackerService.java`, `FilterManager.kt`, `WorkoutSamplesDatabaseManager.java`
 
 ### SYSREQ-TRK-004: Multi-Source GNSS Acquisition & Position Telemetry
 * **Title**: Multi-Source GNSS Acquisition & Position Telemetry
@@ -117,7 +117,7 @@ The following matrix establishes bidirectional traceability between system track
 | System Requirement | System Title | Refining Software Requirements (`REQ-*`) | Grounded Classes & Verification Test |
 | :--- | :--- | :--- | :--- |
 | `SYSREQ-TRK-001` | Multi-Sensor Profile Interoperability | `REQ-CON-001`, `REQ-CON-002`, `REQ-CON-003`, `REQ-CON-004`, `REQ-CON-005`, `REQ-CON-007`, `REQ-CON-028` | `BANALService.java`, `BluetoothConstants.java`, `BTLERadarDevice.java`, `SystemLiveTrackingRequirementsContractTest.kt` |
-| `SYSREQ-TRK-002` | Reconnection Resilience & Watchdog | `REQ-CON-005`, `REQ-CON-028`, `REQ-TRK-013` | `MyBTLEDevice.java`, `BTLERadarDevice.java`, `FilterManager.java`, `SystemLiveTrackingRequirementsContractTest.kt` |
+| `SYSREQ-TRK-002` | Reconnection Resilience & Watchdog | `REQ-CON-005`, `REQ-CON-028`, `REQ-TRK-013` | `MyBTLEDevice.java`, `BTLERadarDevice.java`, `FilterManager.kt`, `SystemLiveTrackingRequirementsContractTest.kt` |
 | `SYSREQ-TRK-003` | Deterministic 1-Hz Sampling Loop | `REQ-TRK-001`, `REQ-TRK-002`, `REQ-TRK-007`, `REQ-FIL-001`, `REQ-FIL-005` | `TrackerService.java`, `WorkoutSamplesDatabaseManager.java`, `SystemLiveTrackingRequirementsContractTest.kt` |
 | `SYSREQ-TRK-004` | Multi-Source GNSS Positioning | `REQ-TRK-003`, `REQ-TRK-013`, `REQ-TRK-014`, `REQ-TRK-017` | `SpeedAndLocationDevice_GPS.java`, `SpeedAndLocationDevice_GoogleFused.java`, `SystemLiveTrackingRequirementsContractTest.kt` |
 | `SYSREQ-TRK-005` | Foreground Service & Power Management | `REQ-TRK-003`, `REQ-TRK-005`, `REQ-TRK-015`, `REQ-TRK-016` | `TrackerService.java`, `TrainingApplication.java`, `SystemLiveTrackingRequirementsContractTest.kt` |

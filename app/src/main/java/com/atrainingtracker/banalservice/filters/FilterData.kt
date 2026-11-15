@@ -16,25 +16,16 @@
  * along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
  */
 
-package com.atrainingtracker.banalservice.filters;
+package com.atrainingtracker.banalservice.filters
 
-import com.atrainingtracker.banalservice.sensor.SensorType;
+import com.atrainingtracker.banalservice.sensor.SensorType
 
-public class FilterData {
-
-    public String deviceName;
-    public SensorType sensorType;
-    public FilterType filterType;
-    public double filterConstant;
-
-    public FilterData(String deviceName, SensorType sensorType, FilterType filterType, double filterConstant) {
-        this.deviceName = deviceName;
-        this.sensorType = sensorType;
-        this.filterType = filterType;
-        this.filterConstant = filterConstant;
-    }
-
-    public String getHashKey() {
-        return deviceName + "-" + sensorType.name() + "-" + filterType.name() + "-" + filterConstant;
-    }
+data class FilterData(
+    @JvmField var deviceName: String?,
+    @JvmField var sensorType: SensorType,
+    @JvmField var filterType: FilterType,
+    @JvmField var filterConstant: Double
+) {
+    val hashKey: String
+        get() = "$deviceName-${sensorType.name}-${filterType.name}-$filterConstant"
 }

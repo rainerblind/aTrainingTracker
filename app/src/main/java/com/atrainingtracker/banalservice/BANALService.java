@@ -252,12 +252,13 @@ public class BANALService
         }
     }
 
-    public static FilteredSensorData getFilteredSensorData(FilterData filterData) {
+    @SuppressWarnings("unchecked")
+    public static <T> FilteredSensorData<T> getFilteredSensorData(FilterData filterData) {
         FilterManager filterManager = cFilterManager;
-        return filterManager != null ? filterManager.getFilteredSensorData(filterData) : null;
+        return filterManager != null ? (FilteredSensorData<T>) filterManager.getFilteredSensorData(filterData) : null;
     }
 
-    protected static List<FilteredSensorData> getAllFilteredSensorData() {
+    protected static List<FilteredSensorData<?>> getAllFilteredSensorData() {
         FilterManager filterManager = cFilterManager;
         return filterManager != null ? filterManager.getAllFilteredSensorData() : new LinkedList<>();
     }
@@ -790,11 +791,12 @@ public class BANALService
             BANALService.createFilter(filterData);
         }
 
-        public FilteredSensorData getFilteredSensorData(FilterData filterData) {
-            return BANALService.getFilteredSensorData(filterData);
+        @SuppressWarnings("unchecked")
+        public <T> FilteredSensorData<T> getFilteredSensorData(FilterData filterData) {
+            return (FilteredSensorData<T>) BANALService.getFilteredSensorData(filterData);
         }
 
-        public List<FilteredSensorData> getAllFilteredSensorData() {
+        public List<FilteredSensorData<?>> getAllFilteredSensorData() {
             return BANALService.getAllFilteredSensorData();
         }
 

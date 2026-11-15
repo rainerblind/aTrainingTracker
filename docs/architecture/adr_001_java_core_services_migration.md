@@ -323,6 +323,15 @@ In compliance with `REQ-ARC-005.5` and ASPICE SWE.1 / SWE.2 decomposition, the J
 | **[ATT-7909](https://issue-tracker/ATT-7909)** | Java Core Migration: Modernize SQLite database managers via repository interfaces | 3 SP | Tier 4 | SQLite Database Persistence |
 | **[ATT-7910](https://issue-tracker/ATT-7910)** | Java Core Migration: Formal deprecation and retirement of legacy Pebble smartwatch integration | 1 SP | Tier 6 | Obsolete Smartwatch Subsystems |
 
+### 7.1 Product Owner Scope Boundary & Execution Decision (Sprint 2026-46.6 Retro / ATT-7749)
+Per the authoritative Product Owner decision recorded in the Sprint 2026-46.6 retrospective (`ATT-7749`), active migration execution under Epic [ATT-431](https://issue-tracker/ATT-431) is strictly bounded to the highest-value leaf components:
+- **`ATT-7902`**: Characterisation test scaffolding only (zero Java-to-Kotlin production code changes; establishes automated safety harnesses).
+- **`ATT-7903`**: Leaf sensor formatters migration to Kotlin (`banalservice/sensor/formater/`).
+- **`ATT-7905`**: Pure mathematical signal filters migration to Kotlin (`banalservice/filters/`).
+- **`ATT-7906`**: Streaming file writers migration to Kotlin (`trainingtracker/exporter/writer/`).
+
+All subsequent child tickets (`ATT-7907`, `ATT-7908`, `ATT-7909`, `ATT-7910`) and remaining Java core subsystems (BLE/ANT+ drivers, SQLite database managers, core tracking services, legacy smartwatch) remain classified as **Keep** (retained in production Java or encapsulated behind clean Kotlin repositories) to safeguard runtime endurance stability and eliminate regression risks in high-frequency sensor ingestion.
+
 ---
 
 ## 8. Architectural Consequences & Trade-offs

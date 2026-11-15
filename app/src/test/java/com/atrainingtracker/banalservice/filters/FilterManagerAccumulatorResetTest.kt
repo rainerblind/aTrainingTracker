@@ -74,7 +74,7 @@ class FilterManagerAccumulatorResetTest {
 
         // Seed with non-zero value during active tracking
         accumulatorFilter.newValue(3600.0)
-        assertEquals(3600.0, accumulatorFilter.filteredValue, 0.001)
+        assertEquals(3600.0, accumulatorFilter.filteredValue ?: -1.0, 0.001)
 
         // Reset accumulator sensor to baseline zero
         activeTimeSensor.reset()

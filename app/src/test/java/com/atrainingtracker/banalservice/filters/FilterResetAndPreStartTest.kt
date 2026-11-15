@@ -68,14 +68,14 @@ class FilterResetAndPreStartTest {
 
         // In pre-start / paused mode: should compute moving average
         filter.newValue(200)
-        assertEquals(200.0, filter.filteredValue.toDouble(), 0.01)
+        assertEquals(200.0, filter.filteredValue?.toDouble() ?: 0.0, 0.01)
 
         filter.newValue(300)
-        assertEquals(250.0, filter.filteredValue.toDouble(), 0.01)
+        assertEquals(250.0, filter.filteredValue?.toDouble() ?: 0.0, 0.01)
 
         // Null should not corrupt average
         filter.newValue(null)
-        assertEquals(250.0, filter.filteredValue.toDouble(), 0.01)
+        assertEquals(250.0, filter.filteredValue?.toDouble() ?: 0.0, 0.01)
 
         // Reset should clear buffer
         filter.reset()
@@ -88,21 +88,21 @@ class FilterResetAndPreStartTest {
 
         // In pre-start / paused mode: should compute moving average over window
         filter.newValue(10.0)
-        assertEquals(10.0, filter.filteredValue.toDouble(), 0.01)
+        assertEquals(10.0, filter.filteredValue?.toDouble() ?: 0.0, 0.01)
 
         filter.newValue(20.0)
-        assertEquals(15.0, filter.filteredValue.toDouble(), 0.01)
+        assertEquals(15.0, filter.filteredValue?.toDouble() ?: 0.0, 0.01)
 
         filter.newValue(30.0)
-        assertEquals(20.0, filter.filteredValue.toDouble(), 0.01)
+        assertEquals(20.0, filter.filteredValue?.toDouble() ?: 0.0, 0.01)
 
         // 4th sample: ring buffer replaces oldest (10.0) with 40.0 -> [40, 20, 30] -> avg = 30.0
         filter.newValue(40.0)
-        assertEquals(30.0, filter.filteredValue.toDouble(), 0.01)
+        assertEquals(30.0, filter.filteredValue?.toDouble() ?: 0.0, 0.01)
 
         // Null should not mutate
         filter.newValue(null)
-        assertEquals(30.0, filter.filteredValue.toDouble(), 0.01)
+        assertEquals(30.0, filter.filteredValue?.toDouble() ?: 0.0, 0.01)
 
         // Reset should clear values
         filter.reset()
@@ -119,19 +119,19 @@ class FilterResetAndPreStartTest {
         filter.newValue(100.0)
         filter.newValue(102.0)
         filter.newValue(104.0)
-        assertEquals(102.0, filter.filteredValue.toDouble(), 0.01)
+        assertEquals(102.0, filter.filteredValue?.toDouble() ?: 0.0, 0.01)
 
         // Uniform upward shift on barometric calibration (+20.0m)
         filter.shiftValues(20.0)
-        assertEquals(122.0, filter.filteredValue.toDouble(), 0.01)
+        assertEquals(122.0, filter.filteredValue?.toDouble() ?: 0.0, 0.01)
 
         // Uniform downward shift (-30.0m)
         filter.shiftValues(-30.0)
-        assertEquals(92.0, filter.filteredValue.toDouble(), 0.01)
+        assertEquals(92.0, filter.filteredValue?.toDouble() ?: 0.0, 0.01)
 
         // Micro delta (< 1e-4) should be no-op
         filter.shiftValues(0.00001)
-        assertEquals(92.0, filter.filteredValue.toDouble(), 0.01)
+        assertEquals(92.0, filter.filteredValue?.toDouble() ?: 0.0, 0.01)
     }
 
     /**
@@ -145,15 +145,15 @@ class FilterResetAndPreStartTest {
         filter.newValue(492.0)
         filter.newValue(492.0)
         filter.newValue(492.0)
-        assertEquals(492.0, filter.filteredValue.toDouble(), 0.01)
+        assertEquals(492.0, filter.filteredValue?.toDouble() ?: 0.0, 0.01)
 
         // Active source transitions to DEM elevation (438.0m)
         filter.reseed(438.0)
-        assertEquals(438.0, filter.filteredValue.toDouble(), 0.01)
+        assertEquals(438.0, filter.filteredValue?.toDouble() ?: 0.0, 0.01)
 
         // Subsequent sample averages cleanly with new baseline only (not stale 492m)
         filter.newValue(439.0)
-        assertEquals(438.5, filter.filteredValue.toDouble(), 0.01)
+        assertEquals(438.5, filter.filteredValue?.toDouble() ?: 0.0, 0.01)
     }
 
     @Test
@@ -168,15 +168,15 @@ class FilterResetAndPreStartTest {
         // Active workout tracking starts
         every { TrainingApplication.isPaused() } returns false
         filter.newValue(80)
-        assertEquals(80.0, filter.filteredValue.toDouble(), 0.01)
+        assertEquals(80.0, filter.filteredValue?.toDouble() ?: 0.0, 0.01)
 
         filter.newValue(100)
-        assertEquals(90.0, filter.filteredValue.toDouble(), 0.01)
+        assertEquals(90.0, filter.filteredValue?.toDouble() ?: 0.0, 0.01)
 
         // Pause occurs: subsequent samples ignored
         every { TrainingApplication.isPaused() } returns true
         filter.newValue(200)
-        assertEquals(90.0, filter.filteredValue.toDouble(), 0.01)
+        assertEquals(90.0, filter.filteredValue?.toDouble() ?: 0.0, 0.01)
 
         // Reset flushes accumulated session stats
         filter.reset()

@@ -166,7 +166,11 @@ class JavaCoreMigrationStrategyContractTest {
         // Scan main source directory and verify every .java file is cataloged in ADR-001
         val mainDir = findMainSourceDir()
         val javaFiles = mainDir.walkTopDown().filter { it.isFile && it.name.endsWith(".java") }.toList()
-        assertEquals("Expected exactly 149 Java classes in main production sources (REQ-ARC-005.1)", 149, javaFiles.size)
+        assertTrue(
+            "Expected <= 149 Java classes in main production sources (REQ-ARC-005.1, REQ-ARC-006.3), " +
+                "found: ${javaFiles.size}",
+            javaFiles.size <= 149
+        )
 
         val missingFromAdr = mutableListOf<String>()
         javaFiles.forEach { file ->
