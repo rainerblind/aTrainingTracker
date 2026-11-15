@@ -5716,3 +5716,44 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 • *Then* `altStats.getAverage()` remains around `445 m + meanCorrection` (never divided by ~20).
 
 **Invariants**: Non-barometric columns 100% immutable; pre-crash calibrated rows untouched on `RESUME_SERVICE_RECREATION`; 1-Hz `altStats.count` and `sum` dimensionally consistent; passive DB `onOpen()`; 100% clean-room test pass rate.
+
+### REQ-TRK-078: Mid-Workout Crash Recovery Accumulator Preservation and Baseline Seeding [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-TRK-078`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `TrackerService.java`, `WorkoutRepository.kt`, `BANALService.java`, `MyAccumulatorSensor.java`, `TrackerServiceResumeTest.kt`
+- **Rationale**: Prevent mid-workout process recreation (`StartType.RESUME_SERVICE_RECREATION` and `StartType.RESUME_BY_USER`) from resetting session accumulators (`TIME_TOTAL`, `TIME_ACTIVE`, `DISTANCE_m`, `CALORIES`, `LAP_NR`, `ASCENT`, `DESCENT`, `TIME_LAP`, `DISTANCE_m_LAP`), which causes data loss in summaries, exports (`.fit`, `.tcx`, `.gpx`), and fold-back elevation/telemetry artifacts in Aftermath (`ATT-7875`, refining `REQ-TRK-026` and `REQ-TRK-031`).
+- **Description**:
+  1. *Omission of Reset Accumulators Intent on Resume (`REQ-TRK-078.1`)*:
+     - `TrackerService.mBanalConnection.onServiceConnected()` SHALL NOT broadcast `BANALService.RESET_ACCUMULATORS_INTENT` when resuming tracking (`mResumeTrackingWhenConnectedToBanalService` or `mResumeFromPausedWhenConnectedToBanalService`).
+     - `BANALService.RESET_ACCUMULATORS_INTENT` SHALL strictly be reserved for fresh workout starts (`StartType.START_NORMAL` in `TrainingApplication.startTracking()`).
+  2. *Extended Resumed Workout State Rehydration (`REQ-TRK-078.2`)*:
+     - `ResumedWorkoutState` SHALL encapsulate `ascent: Double`, `descent: Double`, `timeLap_s: Int`, and `distanceLap_m: Double` alongside `baseFileName`, `workoutId`, `timeTotal_s`, `timeActive_s`, `calories`, `lapNr`, and `distanceTotal_m`.
+     - `WorkoutRepository.getResumedWorkoutState(workoutId)` SHALL query `ASCENDING` and `DESCENDING` from `WorkoutSummaries.db`.
+     - For active lap metrics: when `lapNr > 1`, `timeLap_s = timeActive_s - sum(completedLapTime)` and `distanceLap_m = distanceTotal_m - sum(completedLapDistance)` derived from `LapsDatabaseManager.getLaps(workoutId)`; when `lapNr == 1`, `timeLap_s = timeActive_s` and `distanceLap_m = distanceTotal_m`.
+  3. *Full Sensor Baseline Seeding on Resume (`REQ-TRK-078.3`)*:
+     - In `TrackerService.applyResumedState(@NonNull ResumedWorkoutState state)`, `TrackerService` SHALL invoke `BANALService.setInitialSensorValue` for `SensorType.ASCENT`, `SensorType.DESCENT`, `SensorType.TIME_LAP`, and `SensorType.DISTANCE_m_LAP` in addition to `TIME_TOTAL`, `TIME_ACTIVE`, `CALORIES`, `LAP_NR`, and `DISTANCE_m`.
+  4. *Late-Binding Sensor Initial Value Inheritance (`REQ-TRK-078.4`)*:
+     - `MyAccumulatorSensor` constructor SHALL query `mMySensorManager.getInitialValue(sensorType)` and seed `mInitialValue` when an initial value has been registered in `MySensorManager`, ensuring sensors connecting after service restart inherit the pre-crash baseline rather than defaulting to zero.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Refines `REQ-TRK-026` (`TST-TRK-018`) and complements `REQ-TRK-031` (`ATT-3987`, *Resumed LiveWorkoutSession Rehydration*). Targets `TrackerService.java`, `WorkoutRepository.kt`, `BANALService.java`, `MyAccumulatorSensor.java`, and `TrackerServiceResumeTest.kt`.
+2. *Historical Origin & Commit Trace*: `845818c2cfe0` (Aug 2019) introduced `RESET_ACCUMULATORS_INTENT` unconditionally in `onServiceConnected()`. `ATT-3980` (`f4650d74e8b4`) ordered table name initialization in `recreateValuesWhenResuming()` but retained the unconditional reset broadcast.
+3. *Root Reason for Existing Formulation*: In legacy code, `TrackerService` lacked distinct state tracking between fresh workout initialization and sticky process recreation; the reset intent was broadcast to ensure sensors did not carry over stale state from previously stopped workouts in the same process.
+4. *Preservation of Core Invariants*: Fresh workout start resets via `TrainingApplication.startTracking()` remain 100% untouched. Backward compatibility of `ResumedWorkoutState` constructors is preserved. The `mTableInitializationFuture` barrier (`REQ-TRK-026.3`) and single-thread DB execution contracts remain strictly intact.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an active workout with persisted `timeTotal_s = 643`, `timeActive_s = 643`, `distanceTotal_m = 1098.8`, `ascent = 21.0`, `descent = 1.7`, `lapNr = 1`,
+• *When* `TrackerService` restarts via `StartType.RESUME_SERVICE_RECREATION` and binds to `BANALService`,
+• *Then* `RESET_ACCUMULATORS_INTENT` is not broadcast, all 9 accumulators are restored with pre-crash initial values, and subsequent samples proceed monotonically without resetting to 0.
+• *Given* an active workout on `lapNr = 2` with lap 1 having `time = 300 s` and `distance = 500 m`,
+• *When* `TrackerService` recovers from crash,
+• *Then* `TIME_LAP` is initialized to `timeActive_s - 300` and `DISTANCE_m_LAP` is initialized to `distanceTotal_m - 500`.
+• *Given* a new accumulator sensor instantiated after resume has executed,
+• *When* constructed with a sensor type registered in `MySensorManager`,
+• *Then* its initial value reflects the restored baseline rather than zero.
+
+**Invariants**: Monotonic non-decreasing accumulator progression across service recreation boundaries; `START_NORMAL` fresh workout start behavior and resets remain strictly unchanged; 100% clean-room test pass rate.
+

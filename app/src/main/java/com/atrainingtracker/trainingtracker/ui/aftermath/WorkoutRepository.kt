@@ -423,7 +423,9 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
             WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_ACTIVE_s,
             WorkoutSummariesDatabaseManager.WorkoutSummaries.CALORIES,
             WorkoutSummariesDatabaseManager.WorkoutSummaries.LAPS,
-            WorkoutSummariesDatabaseManager.WorkoutSummaries.DISTANCE_TOTAL_m
+            WorkoutSummariesDatabaseManager.WorkoutSummaries.DISTANCE_TOTAL_m,
+            WorkoutSummariesDatabaseManager.WorkoutSummaries.ASCENDING,
+            WorkoutSummariesDatabaseManager.WorkoutSummaries.DESCENDING
         )
         summariesManager.database.query(
             WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE,
@@ -440,15 +442,44 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                 val caloriesCol = cursor.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.CALORIES)
                 val lapsCol = cursor.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.LAPS)
                 val distanceCol = cursor.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.DISTANCE_TOTAL_m)
+                val ascentCol = cursor.getColumnIndex(WorkoutSummariesDatabaseManager.WorkoutSummaries.ASCENDING)
+                val descentCol = cursor.getColumnIndex(WorkoutSummariesDatabaseManager.WorkoutSummaries.DESCENDING)
+
+                val workoutId = cursor.getLong(idCol)
+                val timeActive = cursor.getInt(timeActiveCol)
+                val distanceTotal = cursor.getDouble(distanceCol)
+                val laps = cursor.getInt(lapsCol)
+                val ascent = if (ascentCol >= 0 && !cursor.isNull(ascentCol)) cursor.getDouble(ascentCol) else 0.0
+                val descent = if (descentCol >= 0 && !cursor.isNull(descentCol)) cursor.getDouble(descentCol) else 0.0
+
+                var timeLap = timeActive
+                var distanceLap = distanceTotal
+                if (laps > 1) {
+                    try {
+                        val completedLaps = getLaps(workoutId)
+                        if (!completedLaps.isNullOrEmpty()) {
+                            val completedTime = completedLaps.sumOf { it.timeTotalS }
+                            val completedDist = completedLaps.sumOf { it.distanceTotalM }
+                            timeLap = maxOf(0, timeActive - completedTime)
+                            distanceLap = maxOf(0.0, distanceTotal - completedDist)
+                        }
+                    } catch (t: Throwable) {
+                        Log.w("WorkoutRepository", "Failed to compute active lap metrics from laps table for workout $workoutId", t)
+                    }
+                }
 
                 return TrackerService.ResumedWorkoutState(
                     cursor.getString(baseFileNameCol) ?: "",
-                    cursor.getLong(idCol),
+                    workoutId,
                     cursor.getInt(timeTotalCol),
-                    cursor.getInt(timeActiveCol),
+                    timeActive,
                     cursor.getInt(caloriesCol),
-                    cursor.getInt(lapsCol),
-                    cursor.getDouble(distanceCol)
+                    laps,
+                    distanceTotal,
+                    ascent,
+                    descent,
+                    timeLap,
+                    distanceLap
                 )
             }
         }

@@ -106,8 +106,13 @@ class TrackerServiceResumeTest {
             stoppedSelf = true
         }
 
+        val sentBroadcasts = mutableListOf<Intent>()
         override fun performStartForeground(id: Int, notification: Notification?, foregroundServiceType: Int) {}
-        override fun sendBroadcast(intent: Intent?) {}
+        override fun sendBroadcast(intent: Intent?) {
+            if (intent != null) {
+                sentBroadcasts.add(intent)
+            }
+        }
         override fun getPackageName(): String = "com.atrainingtracker"
         override fun performSuperOnDestroy() {}
         override fun unregisterReceiver(receiver: BroadcastReceiver?) {}
@@ -197,7 +202,9 @@ class TrackerServiceResumeTest {
         timeActive: Int = 3450,
         calories: Int = 550,
         laps: Int = 3,
-        distance: Double = 12500.5
+        distance: Double = 12500.5,
+        ascent: Double = 45.0,
+        descent: Double = 12.0
     ) {
         every {
             mockDb.query(
@@ -221,11 +228,14 @@ class TrackerServiceResumeTest {
             WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_ACTIVE_s,
             WorkoutSummariesDatabaseManager.WorkoutSummaries.CALORIES,
             WorkoutSummariesDatabaseManager.WorkoutSummaries.LAPS,
-            WorkoutSummariesDatabaseManager.WorkoutSummaries.DISTANCE_TOTAL_m
+            WorkoutSummariesDatabaseManager.WorkoutSummaries.DISTANCE_TOTAL_m,
+            WorkoutSummariesDatabaseManager.WorkoutSummaries.ASCENDING,
+            WorkoutSummariesDatabaseManager.WorkoutSummaries.DESCENDING
         )
 
         expectedColumns.forEachIndexed { index, colName ->
             every { mockCursor.getColumnIndexOrThrow(colName) } returns index
+            every { mockCursor.getColumnIndex(colName) } returns index
         }
 
         every { mockCursor.getString(0) } returns baseFileName
@@ -235,6 +245,9 @@ class TrackerServiceResumeTest {
         every { mockCursor.getInt(4) } returns calories
         every { mockCursor.getInt(5) } returns laps
         every { mockCursor.getDouble(6) } returns distance
+        every { mockCursor.getDouble(7) } returns ascent
+        every { mockCursor.getDouble(8) } returns descent
+        every { mockCursor.isNull(any()) } returns false
     }
 
     @Test
@@ -266,7 +279,9 @@ class TrackerServiceResumeTest {
             WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_ACTIVE_s,
             WorkoutSummariesDatabaseManager.WorkoutSummaries.CALORIES,
             WorkoutSummariesDatabaseManager.WorkoutSummaries.LAPS,
-            WorkoutSummariesDatabaseManager.WorkoutSummaries.DISTANCE_TOTAL_m
+            WorkoutSummariesDatabaseManager.WorkoutSummaries.DISTANCE_TOTAL_m,
+            WorkoutSummariesDatabaseManager.WorkoutSummaries.ASCENDING,
+            WorkoutSummariesDatabaseManager.WorkoutSummaries.DESCENDING
         )
 
         // 1. Verify query arguments
@@ -282,12 +297,16 @@ class TrackerServiceResumeTest {
         assertEquals(3450, service.timeActive_s)
         assertEquals(12500.5, service.distanceTotal_m, 0.001)
 
-        // 3. Verify BANALService accumulators initialized
+        // 3. Verify BANALService accumulators initialized for all 9 types (REQ-TRK-078.3)
         verify(exactly = 1) { BANALService.setInitialSensorValue(SensorType.TIME_TOTAL, 3600) }
         verify(exactly = 1) { BANALService.setInitialSensorValue(SensorType.TIME_ACTIVE, 3450) }
         verify(exactly = 1) { BANALService.setInitialSensorValue(SensorType.CALORIES, 550) }
         verify(exactly = 1) { BANALService.setInitialSensorValue(SensorType.LAP_NR, 3) }
         verify(exactly = 1) { BANALService.setInitialSensorValue(SensorType.DISTANCE_m, 12500.5) }
+        verify(exactly = 1) { BANALService.setInitialSensorValue(SensorType.ASCENT, 45.0) }
+        verify(exactly = 1) { BANALService.setInitialSensorValue(SensorType.DESCENT, 12.0) }
+        verify(exactly = 1) { BANALService.setInitialSensorValue(SensorType.TIME_LAP, 3450) }
+        verify(exactly = 1) { BANALService.setInitialSensorValue(SensorType.DISTANCE_m_LAP, 12500.5) }
 
         // 4. Verify deterministic try-with-resources cursor closure
         verify(exactly = 1) { mockCursor.close() }
@@ -455,6 +474,44 @@ class TrackerServiceResumeTest {
         assertEquals("\"2026-06-15_120000\"", insertedTableSlot.captured)
         verify(exactly = 1) { mockSamplesDb.setTransactionSuccessful() }
         verify(exactly = 1) { mockDb.setTransactionSuccessful() }
+
+        // REQ-TRK-078.1 / TST-TRK-078.1: Must not broadcast RESET_ACCUMULATORS_INTENT on crash recovery resume
+        assertFalse(
+            "Must NOT broadcast RESET_ACCUMULATORS_INTENT on crash recovery resume",
+            service.sentBroadcasts.any { it.action == BANALService.RESET_ACCUMULATORS_INTENT }
+        )
+    }
+
+    /**
+     * TST-TRK-078.3: Verifies applyResumedState seeds all 9 accumulator sensor baselines into BANALService.
+     */
+    @Test
+    fun testApplyResumedState_seedsAllNineSensorAccumulators() {
+        val state = TrackerService.ResumedWorkoutState(
+            "2026-11-15_100000",
+            77L,
+            643,
+            643,
+            120,
+            2,
+            1098.8,
+            21.0,
+            1.7,
+            343,
+            598.8
+        )
+
+        service.applyResumedState(state)
+
+        verify(exactly = 1) { BANALService.setInitialSensorValue(SensorType.TIME_TOTAL, 643) }
+        verify(exactly = 1) { BANALService.setInitialSensorValue(SensorType.TIME_ACTIVE, 643) }
+        verify(exactly = 1) { BANALService.setInitialSensorValue(SensorType.CALORIES, 120) }
+        verify(exactly = 1) { BANALService.setInitialSensorValue(SensorType.LAP_NR, 2) }
+        verify(exactly = 1) { BANALService.setInitialSensorValue(SensorType.DISTANCE_m, 1098.8) }
+        verify(exactly = 1) { BANALService.setInitialSensorValue(SensorType.ASCENT, 21.0) }
+        verify(exactly = 1) { BANALService.setInitialSensorValue(SensorType.DESCENT, 1.7) }
+        verify(exactly = 1) { BANALService.setInitialSensorValue(SensorType.TIME_LAP, 343) }
+        verify(exactly = 1) { BANALService.setInitialSensorValue(SensorType.DISTANCE_m_LAP, 598.8) }
     }
 
     /**

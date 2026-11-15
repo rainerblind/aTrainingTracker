@@ -97,16 +97,43 @@ public abstract class MyAccumulatorSensor<N extends Number> extends MySensor<N> 
      * @param respectPause parameter to specify whether or not the value should be incremented when the app is paused.
      *    Unfortunately, this seems to be difficult for the ANT+ and Bluetooth LE devices.  These devices simply count the wheel revolutions or steps.  Thus, it is difficult to not increment the distance when paused.
      */
+    @SuppressWarnings("unchecked")
     public MyAccumulatorSensor(MyDevice myDevice, SensorType sensorType, Boolean respectPause, N zeroValue) {
         super(myDevice, sensorType);
         mRespectPause = respectPause;
         mZeroValue = zeroValue;
-        mInitialValue = zeroValue;
+        N initialVal = zeroValue;
+        if (myDevice != null && myDevice.getMySensorManager() != null) {
+            Object registeredInitial = myDevice.getMySensorManager().getInitialValue(sensorType);
+            if (registeredInitial instanceof Number) {
+                if (zeroValue instanceof Double) {
+                    initialVal = (N) Double.valueOf(((Number) registeredInitial).doubleValue());
+                } else if (zeroValue instanceof Integer) {
+                    initialVal = (N) Integer.valueOf(((Number) registeredInitial).intValue());
+                } else if (zeroValue instanceof Long) {
+                    initialVal = (N) Long.valueOf(((Number) registeredInitial).longValue());
+                } else if (zeroValue instanceof Float) {
+                    initialVal = (N) Float.valueOf(((Number) registeredInitial).floatValue());
+                }
+            }
+        }
+        mInitialValue = initialVal;
         newValue(zeroValue);
     }
 
-    public final synchronized void setInitialValue(N value) {
-        mInitialValue = value;
+    public final void setInitialValue(N value) {
+        N currentTotal;
+        boolean active;
+        synchronized (this) {
+            mInitialValue = value;
+            currentTotal = add(mInitialValue, mValue);
+            active = mActivated;
+        }
+        if (active) {
+            for (SensorListener sensorListener : mSensorListeners) {
+                sensorListener.newValue(currentTotal);
+            }
+        }
     }
 
     /**
@@ -121,7 +148,7 @@ public abstract class MyAccumulatorSensor<N extends Number> extends MySensor<N> 
     public final void reset() {
         boolean active;
         synchronized (this) {
-            setInitialValue(sub(mZeroValue, mValue));
+            mInitialValue = sub(mZeroValue, mValue);
             mLastAbsoluteValue = null;
             active = mActivated;
         }

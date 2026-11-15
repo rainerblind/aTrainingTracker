@@ -356,12 +356,16 @@ class TrackerServiceCrashRecoveryCharacterisationTest {
         samplesTableField.isAccessible = true
         assertNotNull(samplesTableField.get(service))
 
-        // Initial sensor values seeded into BANALService
+        // Initial sensor values seeded into BANALService (REQ-TRK-078.3)
         verify { BANALService.setInitialSensorValue(SensorType.TIME_TOTAL, 1500) }
         verify { BANALService.setInitialSensorValue(SensorType.TIME_ACTIVE, 1200) }
         verify { BANALService.setInitialSensorValue(SensorType.CALORIES, 450) }
         verify { BANALService.setInitialSensorValue(SensorType.LAP_NR, 3) }
         verify { BANALService.setInitialSensorValue(SensorType.DISTANCE_m, 12500.0) }
+        verify { BANALService.setInitialSensorValue(SensorType.ASCENT, 0.0) }
+        verify { BANALService.setInitialSensorValue(SensorType.DESCENT, 0.0) }
+        verify { BANALService.setInitialSensorValue(SensorType.TIME_LAP, 1200) }
+        verify { BANALService.setInitialSensorValue(SensorType.DISTANCE_m_LAP, 12500.0) }
 
         assertEquals(RESUMED_WORKOUT_ID, service.notifiedWorkoutId)
     }
@@ -440,6 +444,49 @@ class TrackerServiceCrashRecoveryCharacterisationTest {
         assertTrue(
             "handleTrackingAborted() must broadcast TRACKING_ABORTED_INTENT",
             service.sentBroadcasts.any { it.action == TrackerService.TRACKING_ABORTED_INTENT }
+        )
+    }
+
+    /**
+     * Characterisation Test 6: End-to-End Monotonic Continuity Across Crash Recovery (TST-TRK-078.5)
+     * Simulates workout _id = 2176 recovery with non-zero time, distance, elevation, and lap metrics.
+     * Asserts that all 9 accumulators are restored, and RESET_ACCUMULATORS_INTENT is NOT broadcast.
+     */
+    @Test
+    fun testEndToEndMonotonicContinuityAcrossCrashRecovery() {
+        val state = ResumedWorkoutState(
+            "2026-11-14_084021",
+            2176L,
+            643,   // timeTotal_s
+            643,   // timeActive_s
+            150,   // calories
+            1,     // lapNr
+            1098.8,// distanceTotal_m
+            21.0,  // ascent
+            1.7,   // descent
+            643,   // timeLap_s
+            1098.8 // distanceLap_m
+        )
+
+        val method: Method = TrackerService::class.java.getDeclaredMethod("applyResumedState", ResumedWorkoutState::class.java)
+        method.isAccessible = true
+        method.invoke(service, state)
+
+        // All 9 accumulator baselines seeded monotonically into BANALService
+        verify(exactly = 1) { BANALService.setInitialSensorValue(SensorType.TIME_TOTAL, 643) }
+        verify(exactly = 1) { BANALService.setInitialSensorValue(SensorType.TIME_ACTIVE, 643) }
+        verify(exactly = 1) { BANALService.setInitialSensorValue(SensorType.CALORIES, 150) }
+        verify(exactly = 1) { BANALService.setInitialSensorValue(SensorType.LAP_NR, 1) }
+        verify(exactly = 1) { BANALService.setInitialSensorValue(SensorType.DISTANCE_m, 1098.8) }
+        verify(exactly = 1) { BANALService.setInitialSensorValue(SensorType.ASCENT, 21.0) }
+        verify(exactly = 1) { BANALService.setInitialSensorValue(SensorType.DESCENT, 1.7) }
+        verify(exactly = 1) { BANALService.setInitialSensorValue(SensorType.TIME_LAP, 643) }
+        verify(exactly = 1) { BANALService.setInitialSensorValue(SensorType.DISTANCE_m_LAP, 1098.8) }
+
+        // RESET_ACCUMULATORS_INTENT must never be broadcast
+        assertFalse(
+            "RESET_ACCUMULATORS_INTENT must NOT be broadcast during crash recovery",
+            service.sentBroadcasts.any { it.action == BANALService.RESET_ACCUMULATORS_INTENT }
         )
     }
 }

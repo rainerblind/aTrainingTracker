@@ -2871,3 +2871,24 @@
      • Verify zero new strings added and existing `R.string.devices_altitude_from_pressure` across all 9 locales (EN, DE, ES, FR, IT, JA, NL, PL, PT) plus legacy `ATT-5073` names are recognized as barometric columns.
   5. *Targeted Tier-1 Unit & Contract Verification (`TST-FIL-018.5`)*:
      • Run targeted Gradle suite (`WorkoutSamplesDatabaseManager*`, `LiveWorkoutSession*`, `AltitudeFromPressure*`, `TrackerServiceCrashRecoveryCharacterisationTest`, `SourceTextReadingAuditContractTest`, `AspiceSweAuditContractTest`) + `:app:lintDebug` + scoped `:app:detekt`.
+
+### TST-TRK-078: **Mid-Workout Crash Recovery Accumulator Preservation and Continuity Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-TRK-078` (`REQ-TRK-078.1`..`REQ-TRK-078.4`)
+- **Component**: `TrackerServiceResumeTest.kt`, `TrackerServiceCrashRecoveryCharacterisationTest.kt`, `MyAccumulatorSensorTest.kt`
+- **Test Type**: Unit & Regression
+- **Verification Method**: Unit
+- **Procedure**:
+  1. *Omission of Reset Intent on Resume Test (`TST-TRK-078.1`, `TrackerServiceResumeTest.kt`)*:
+     • Simulate `onStartCommand()` with `StartType.RESUME_SERVICE_RECREATION` and `mBanalService == null`, followed by `onServiceConnected()`. Verify `sentBroadcasts` does NOT contain `BANALService.RESET_ACCUMULATORS_INTENT`.
+  2. *Resumed Workout State Elevation & Active Lap Rehydration Test (`TST-TRK-078.2`, `TrackerServiceResumeTest.kt`)*:
+     • Verify `getResumedWorkoutState()` extracts `ASCENDING`, `DESCENDING`, and computes active lap duration and distance when multiple laps exist or single lap exists.
+  3. *Full Sensor Baseline Seeding Verification Test (`TST-TRK-078.3`, `TrackerServiceResumeTest.kt`)*:
+     • Verify `applyResumedState()` calls `BANALService.setInitialSensorValue` for `ASCENT`, `DESCENT`, `TIME_LAP`, and `DISTANCE_m_LAP` with exact state values.
+  4. *Late-Binding Sensor Initial Value Inheritance Test (`TST-TRK-078.4`, `MyAccumulatorSensorTest.kt`)*:
+     • Verify newly instantiated `MyAccumulatorSensor` initializes `mInitialValue` from `MySensorManager.getInitialValue(sensorType)`.
+  5. *Monotonic Continuity Across Recovery Boundary Characterisation Test (`TST-TRK-078.5`, `TrackerServiceCrashRecoveryCharacterisationTest.kt`)*:
+     • Verify end-to-end simulation where pre-crash workout state produces subsequent sample values monotonically non-decreasing (`v >= v_pre`) for time, distance, and elevation.
+  6. *Targeted Tier-1 Unit & Contract Verification (`TST-TRK-078.6`)*:
+     • Run targeted Gradle suite (`TrackerServiceResumeTest`, `TrackerServiceCrashRecoveryCharacterisationTest`, `TrackerServiceLapTest`, `MyAccumulatorSensorTest`) asserting 100% pass rate.
+

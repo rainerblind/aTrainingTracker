@@ -961,8 +961,6 @@ public class TrackerService extends Service {
                 recreateValuesWhenResuming();
                 mResumeTrackingWhenConnectedToBanalService = false;
                 // mBanalService.resumeTracking();
-                sendBroadcast(new Intent(BANALService.RESET_ACCUMULATORS_INTENT)
-                        .setPackage(getPackageName()));
             }
 
             if (mCreateNewLapWhenConnectedToBanalService) {
@@ -1743,8 +1741,23 @@ public class TrackerService extends Service {
         public final int calories;
         public final int lapNr;
         public final double distanceTotal_m;
+        public final double ascent;
+        public final double descent;
+        public final int timeLap_s;
+        public final double distanceLap_m;
 
-        public ResumedWorkoutState(@NonNull String baseFileName, long workoutId, int timeTotal_s, int timeActive_s, int calories, int lapNr, double distanceTotal_m) {
+        public ResumedWorkoutState(
+                @NonNull String baseFileName,
+                long workoutId,
+                int timeTotal_s,
+                int timeActive_s,
+                int calories,
+                int lapNr,
+                double distanceTotal_m,
+                double ascent,
+                double descent,
+                int timeLap_s,
+                double distanceLap_m) {
             this.baseFileName = baseFileName;
             this.workoutId = workoutId;
             this.timeTotal_s = timeTotal_s;
@@ -1752,6 +1765,21 @@ public class TrackerService extends Service {
             this.calories = calories;
             this.lapNr = lapNr;
             this.distanceTotal_m = distanceTotal_m;
+            this.ascent = ascent;
+            this.descent = descent;
+            this.timeLap_s = timeLap_s;
+            this.distanceLap_m = distanceLap_m;
+        }
+
+        public ResumedWorkoutState(
+                @NonNull String baseFileName,
+                long workoutId,
+                int timeTotal_s,
+                int timeActive_s,
+                int calories,
+                int lapNr,
+                double distanceTotal_m) {
+            this(baseFileName, workoutId, timeTotal_s, timeActive_s, calories, lapNr, distanceTotal_m, 0.0, 0.0, timeActive_s, distanceTotal_m);
         }
     }
 
@@ -1839,13 +1867,21 @@ public class TrackerService extends Service {
                 + ", time_active_s=" + mTimeActive_s
                 + ", calories=" + state.calories
                 + ", lapNr=" + state.lapNr
-                + ", distance_m=" + mDistanceTotal_m);
+                + ", distance_m=" + mDistanceTotal_m
+                + ", ascent=" + state.ascent
+                + ", descent=" + state.descent
+                + ", timeLap_s=" + state.timeLap_s
+                + ", distanceLap_m=" + state.distanceLap_m);
 
         BANALService.setInitialSensorValue(SensorType.TIME_TOTAL, mTimeTotal_s);
         BANALService.setInitialSensorValue(SensorType.TIME_ACTIVE, mTimeActive_s);
         BANALService.setInitialSensorValue(SensorType.CALORIES, state.calories);
         BANALService.setInitialSensorValue(SensorType.LAP_NR, state.lapNr);
         BANALService.setInitialSensorValue(SensorType.DISTANCE_m, mDistanceTotal_m);
+        BANALService.setInitialSensorValue(SensorType.ASCENT, state.ascent);
+        BANALService.setInitialSensorValue(SensorType.DESCENT, state.descent);
+        BANALService.setInitialSensorValue(SensorType.TIME_LAP, state.timeLap_s);
+        BANALService.setInitialSensorValue(SensorType.DISTANCE_m_LAP, state.distanceLap_m);
 
         final long resumedWorkoutId = mWorkoutID;
         final int resumedActiveTimeS = mTimeActive_s;
