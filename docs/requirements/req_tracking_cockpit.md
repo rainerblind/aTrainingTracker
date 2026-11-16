@@ -5798,3 +5798,48 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 **Invariants**: `TrackerService` 1-Hz background recording 100% unaffected; immediate persistence of tuning preferences preserved; zero leak of `Activity` references; 100% clean-room test pass rate.
 
 
+
+### REQ-TRK-080: Mid-Workout Process Restart Cockpit Telemetry, Live Map Track & Sparkline Rehydration [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-TRK-080`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `BANALServiceRepository.kt`, `LiveSparklineBuffer.kt`, `WorkoutSamplesDatabaseManager.java`, `WorkoutRepository.kt`
+- **Rationale**: When `aTrainingTracker` recovers from background process termination (`StartType.RESUME_SERVICE_RECREATION`) or when UI reconnects mid-workout, accumulator recovery (REQ-TRK-078) restores service scalar state, but `BANALServiceRepository` initializes empty `_currentTrack`, `_currentPathPoints`, and `sparklineBuffers`. Rehydrating telemetry asynchronously from `WorkoutSamples.db` ensures athletes immediately see their full pre-crash GPS route, elevation profile, and sparkline trends without UI stutter or data resets (ATT-7877, extending REQ-TRK-059 and REQ-TRK-042).
+- **Description**:
+  1. *Asynchronous Rehydration Dispatch & State Gating (`REQ-TRK-080.1`)*:
+     - When `BANALServiceRepository` observes `TrackingMode.TRACKING` or `TrackingMode.PAUSED` for an active workout session with a valid `baseFileName` / `workoutId` (via `WorkoutRepository.getResumedWorkoutState()` or `TrainingApplication.getActiveWorkoutID()`) while `_currentTrack.value.isEmpty()`:
+     - `BANALServiceRepository` SHALL dispatch an asynchronous rehydration task on `Dispatchers.IO` to load persisted coordinates and numeric sensor histories from `WorkoutSamples.db`.
+     - Rehydration SHALL NOT execute during fresh workout starts (`StartType.START_NORMAL`), preserving clean initial states.
+     - Telemetry emission to the UI layer SHALL preserve `Lifecycle.State.STARTED` gating per `REQ-TRK-079.3`.
+  2. *Live Map Track & PathPoint Rehydration (`REQ-TRK-080.2`)*:
+     - Persisted GPS samples (`LATITUDE`, `LONGITUDE`, `DISTANCE_m`, and `ALTITUDE`) ordered chronologically by `TIME` SHALL be retrieved from `WorkoutSamples.db` and converted into `List<LatLng>` and `List<PathPoint>`.
+     - `_currentTrack` and `_currentPathPoints` SHALL be atomically populated using `SnapshotChunkedList.from()`, preserving chunked memory bounds and immutability.
+     - Any live GPS location updates received concurrently while the asynchronous query is executing SHALL be merged monotonically at the tail, preventing dropped coordinates or out-of-order vertices.
+  3. *LiveSparklineBuffer Horizon Historical Backfill (`REQ-TRK-080.3`)*:
+     - For registered `sparklineBuffers`, `LiveSparklineBuffer` SHALL support `backfillHistoricalSamples(samples: List<Float>)` protected by thread-safe synchronization (`synchronized(lock)`).
+     - Query results for the corresponding numeric sensor column (`HR`, `SPEED_mps`, `POWER_W`, `CADENCE`, `ALTITUDE`) across the past `horizonSeconds` window SHALL populate the buffer up to its configured `maxCapacity`.
+     - Live samples appended via `updateSparklineBuffers()` concurrently with the asynchronous fetch SHALL be preserved monotonically without buffer overrun or corruption.
+  4. *Localization Neutrality & System Invariants (`REQ-TRK-080.4`)*:
+     - Rehydration operates exclusively within the data and repository layer; zero new UI string resources or layout changes are required across all 9 supported locales.
+     - Query execution MUST NOT block the Android main thread. Total in-memory allocations MUST remain bounded via `SnapshotChunkedList` and `LiveSparklineBuffer` capacity limits.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-TRK-080`, extending `REQ-TRK-059` (*Live Sparklines*), `REQ-TRK-042` (*Snapshot Chunked Track*), and `REQ-TRK-078` (*Crash Recovery Accumulators*). Targets `BANALServiceRepository.kt`, `LiveSparklineBuffer.kt`, and `WorkoutSamplesDatabaseManager.java`.
+2. *Historical Origin & Commit Trace*: `ATT-6710` introduced in-memory `LiveSparklineBuffer` for 1-Hz streaming; `REQ-TRK-042` introduced `SnapshotChunkedList` for live breadcrumbs. Both assumed a continuous lifecycle from workout start to stop.
+3. *Root Reason for Existing Formulation*: Buffers were created empty at component construction because tracking was originally assumed to run within an uninterrupted process lifecycle.
+4. *Preservation of Core Invariants*: Streaming 1-Hz updates, `SnapshotChunkedList` memory bounding, `ATT-7874` offscreen map disposal, and `ATT-7875` accumulator preservation remain 100% intact.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an active workout with 15 minutes of persisted 1-Hz telemetry in `WorkoutSamples.db` and configured Cockpit sparkline fields,
+• *When* the app recovers from background process termination (`RESUME_SERVICE_RECREATION`) or UI reconnection,
+• *Then* `_currentTrack`, `_currentPathPoints`, and registered `sparklineBuffers` backfill from `WorkoutSamples.db` on `Dispatchers.IO`, restoring the map route and 15-minute telemetry trend immediately.
+• *Given* an ongoing rehydration task on `Dispatchers.IO`,
+• *When* new 1-Hz GPS or sensor ticks arrive from `BANALService`,
+• *Then* incoming samples are merged monotonically after the historical baseline with zero dropped ticks and zero race conditions.
+• *Given* a new workout initialized via `StartType.START_NORMAL`,
+• *When* `BANALServiceRepository` starts,
+• *Then* rehydration is skipped and track collections remain empty.
+
+**Invariants**: Zero main-thread blocking (`Dispatchers.IO`); strictly bounded memory footprint via `SnapshotChunkedList` and `LiveSparklineBuffer`; monotonic timestamp ordering; clean-room test pass rate.

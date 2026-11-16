@@ -61,6 +61,45 @@ class LiveSparklineBuffer(val horizonSeconds: Int = 300) {
     }
 
     /**
+     * Backfills historical telemetry samples from persistent storage (e.g. after process restart)
+     * ahead of any concurrently ingested live samples (REQ-TRK-080.3, ATT-7877).
+     *
+     * @param samples Historical telemetry samples in chronological order.
+     */
+    fun backfillHistoricalSamples(samples: List<Float>) {
+        if (samples.isEmpty()) return
+        synchronized(lock) {
+            if (horizonSeconds > 0) {
+                val existing = fixedBuffer.toList()
+                val totalCount = samples.size + existing.size
+                val combined = if (totalCount > horizonSeconds) {
+                    val excess = totalCount - horizonSeconds
+                    if (excess < samples.size) {
+                        samples.subList(excess, samples.size) + existing
+                    } else {
+                        val existingExcess = excess - samples.size
+                        existing.subList(existingExcess, existing.size)
+                    }
+                } else {
+                    samples + existing
+                }
+                fixedBuffer.clear()
+                fixedBuffer.addAll(combined)
+                totalElapsedSeconds = maxOf(totalElapsedSeconds, totalCount)
+            } else {
+                val existing = ArrayList(fullWorkoutBuffer)
+                fullWorkoutBuffer.clear()
+                fullWorkoutBuffer.addAll(samples)
+                fullWorkoutBuffer.addAll(existing)
+                totalElapsedSeconds = maxOf(totalElapsedSeconds, samples.size + existing.size)
+                while (fullWorkoutBuffer.size > MAX_FULL_WORKOUT_SAMPLES) {
+                    decimateFullWorkout()
+                }
+            }
+        }
+    }
+
+    /**
      * Pairwise averages adjacent samples to halve buffer size without losing the temporal trend profile.
      */
     private fun decimateFullWorkout() {

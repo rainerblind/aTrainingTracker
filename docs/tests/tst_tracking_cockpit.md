@@ -2913,3 +2913,26 @@
      • Run targeted Gradle suite (`TuningPreferences*`, `TrackingViewModel*`, `TrackingTabs*`) asserting 100% pass rate.
 
 
+
+### TST-TRK-080: **Mid-Workout Telemetry, Live Map Track & Sparkline Rehydration Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Tickets**: `ATT-7877`
+- **Requirement(s)**: `REQ-TRK-080` (`REQ-TRK-080.1`..`REQ-TRK-080.4`)
+- **Component**: `BANALServiceRepositoryTest.kt`, `LiveSparklineBufferTest.kt`, `TrackerServiceResumeTest.kt`
+- **Test Type**: Unit, Concurrency & Regression
+- **Verification Method**: Unit
+- **Procedure**:
+  1. *Asynchronous Rehydration Gating & StartType Neutrality Test (`TST-TRK-080.1`, `BANALServiceRepositoryTest.kt`)*:
+     • Verify observing `TrackingMode.TRACKING` / `PAUSED` with active workout ID triggers async rehydration on `Dispatchers.IO`.
+     • Verify observing `TrackingMode.STOPPED` or fresh workout start (`START_NORMAL`) does NOT invoke database rehydration.
+  2. *Live Map Track & PathPoint Rehydration Parity Test (`TST-TRK-080.2`, `BANALServiceRepositoryTest.kt`)*:
+     • Mock `WorkoutSamplesDatabaseManager` returning historical GPS rows (`LATITUDE`, `LONGITUDE`, `DISTANCE_m`, `ALTITUDE`).
+     • Verify `_currentTrack` and `_currentPathPoints` are populated via `SnapshotChunkedList.from()` matching persisted coordinates and elevations exactly.
+  3. *LiveSparklineBuffer Backfill & Capacity Clamping Test (`TST-TRK-080.3`, `LiveSparklineBufferTest.kt`)*:
+     • Instantiate `LiveSparklineBuffer(maxCapacity = 300)`. Call `backfillHistoricalSamples` with 400 floats.
+     • Assert buffer contains only the most recent 300 samples, preserving chronological order and `currentSpanSeconds == 300`.
+  4. *Concurrent Live Tick Merge & Race Condition Guard Test (`TST-TRK-080.4`, `LiveSparklineBufferTest.kt` & `BANALServiceRepositoryTest.kt`)*:
+     • Simulate live `addSample()` / location update occurring simultaneously with historical backfill across concurrent threads.
+     • Assert thread safety (`synchronized(lock)`), monotonic timestamp ordering, and absence of data loss or buffer corruption.
+  5. *Tier 1 Targeted Unit & Concurrency Verification Suite (`TST-TRK-080.5`)*:
+     • Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.repositories.BANALServiceRepositoryTest" --tests "com.atrainingtracker.trainingtracker.ui.sparkline.LiveSparklineBufferTest"`.
