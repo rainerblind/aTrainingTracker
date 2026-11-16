@@ -1218,7 +1218,7 @@ public class WorkoutSamplesDatabaseManager {
             @NonNull java.util.List<SwimInterval> intervals,
             double poolLengthM
     ) {
-        if (intervals.isEmpty()) return;
+        if (baseFileName == null || !existsTable(baseFileName) || intervals.isEmpty()) return;
         SQLiteDatabase db = getDatabase();
         String table = getTableName(baseFileName);
 

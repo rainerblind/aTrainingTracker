@@ -895,8 +895,10 @@ private fun RenderWorkoutDetailCardSections(
                     workoutData.stravaSportName?.contains("swim", ignoreCase = true) == true
                 if (isSwim) {
                     val currentContext = LocalContext.current
-                    val repo = remember(currentContext) { WorkoutRepository.getInstance(currentContext.applicationContext as Application) }
-                    val laps = remember(workoutData.id) { repo.getLaps(workoutData.id) }
+                    val repo = remember(currentContext) { WorkoutRepository.getInstance(currentContext) }
+                    val laps = remember(workoutData.id, workoutData.totalDistance) {
+                        if (workoutData.laps.isNotEmpty()) workoutData.laps else repo.getLaps(workoutData.id)
+                    }
                     val lapCount = if (laps.isNotEmpty()) laps.size else Math.max(1, (workoutData.totalDistance / 25.0).toInt())
                     val currentPoolLengthM = if (lapCount > 0 && workoutData.totalDistance > 0) {
                         workoutData.totalDistance / lapCount

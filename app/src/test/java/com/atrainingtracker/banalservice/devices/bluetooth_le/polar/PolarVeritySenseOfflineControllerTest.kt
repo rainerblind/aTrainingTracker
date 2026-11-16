@@ -1076,4 +1076,71 @@ class PolarVeritySenseOfflineControllerTest {
             )
         }
     }
+
+    @Test
+    fun testApplySwimBackfill_turnsLessThanOrEqualToAnchor_filtersUnanchoredTurnsAndPreventsPhantomLaps() {
+        val workoutId = 98L
+        val baseFileName = "2026-11-15_120000"
+        val anchorMs = 1_700_000_000_000L
+
+        val ref = PolarTrainingSessionReference(
+            date = java.time.LocalDate.of(2026, 11, 15),
+            path = "/U/0/20261115/E/120000",
+            trainingDataTypes = emptyList(),
+            exercises = emptyList(),
+            fileSize = 1024L
+        )
+
+        // 4 turns: 2 are <= anchorMs, 2 are > anchorMs (at +25s and +50s)
+        val swimSession = PolarVeritySenseOfflineController.VeritySwimSession(
+            reference = ref,
+            startTimeMs = anchorMs,
+            durationMs = 75_000L,
+            hrSamples = listOf(130, 135, 140),
+            turnTimestampsMs = listOf(
+                anchorMs - 5_000L,  // < anchorMs -> MUST be filtered out
+                anchorMs,           // == anchorMs -> MUST be filtered out
+                anchorMs + 25_000L, // > anchorMs -> valid turn 1
+                anchorMs + 50_000L   // > anchorMs -> valid turn 2
+            )
+        )
+
+        every { mockSamplesDb.hasMissingHeartRateSamples(baseFileName) } returns false
+        every { mockSportTypesRepo.ensureSwimSportTypeExists() } returns 101L
+
+        val committed = PolarVeritySenseOfflineController.applySwimBackfillAndCommit(
+            appContext = context,
+            workoutId = workoutId,
+            baseFileName = baseFileName,
+            swimSession = swimSession,
+            fallbackAnchorMs = anchorMs,
+            clearPendingFlag = false
+        )
+
+        assertTrue(committed)
+
+        // 2 valid turns -> lengthCount = 2 + 1 = 3 (NOT 4 + 1 = 5)
+        // totalDistance = 3 * 25.0 = 75.0m
+        verify(exactly = 1) {
+            mockSummariesDb.updateSwimMetrics(
+                workoutId,
+                101L,
+                any(),
+                75.0,
+                3,
+                any()
+            )
+        }
+
+        // Discrete laps saved in Laps.db must be exactly 3 laps with 0 phantom 1s laps
+        verify(exactly = 3) {
+            mockLapsDb.saveLap(
+                workoutId,
+                any(),
+                any(),
+                25.0,
+                any()
+            )
+        }
+    }
 }

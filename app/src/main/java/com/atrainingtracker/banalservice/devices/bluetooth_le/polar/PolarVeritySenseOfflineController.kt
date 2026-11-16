@@ -949,7 +949,8 @@ object PolarVeritySenseOfflineController {
         }
     }
 
-    private fun applySwimBackfillAndCommit(
+    @VisibleForTesting
+    internal fun applySwimBackfillAndCommit(
         appContext: Context,
         workoutId: Long,
         baseFileName: String?,
@@ -975,8 +976,8 @@ object PolarVeritySenseOfflineController {
         } catch (_: Throwable) {
             25.0
         }
-        val turnTimestampsMs = swimSession.turnTimestampsMs
-        val lengthCount = turnTimestampsMs.size + 1
+        val validTurns = swimSession.turnTimestampsMs.filter { it > anchorMs }.sorted()
+        val lengthCount = validTurns.size + 1
         val totalDistanceM = lengthCount * poolLengthM
         val durationMs = if (swimSession.durationMs > 0L) {
             swimSession.durationMs
@@ -988,19 +989,18 @@ object PolarVeritySenseOfflineController {
 
         if (!baseFileName.isNullOrEmpty()) {
             val samplesManager = WorkoutSamplesDatabaseManager.getInstance(appContext)
-            samplesManager.patchSwimKinematics(baseFileName, anchorMs, durationMs, turnTimestampsMs, poolLengthM)
+            samplesManager.patchSwimKinematics(baseFileName, anchorMs, durationMs, validTurns, poolLengthM)
         }
 
         // Persist discrete laps in Laps.db honoring ATT-896
         val lapsManager = LapsDatabaseManager.getInstance(appContext)
         lapsManager.deleteWorkout(workoutId)
 
-        val sortedTurns = turnTimestampsMs.filter { it > anchorMs }.sorted()
         var prevTimeMs = anchorMs
         for (i in 0 until lengthCount) {
             val lapNr = (i + 1).toLong()
-            val lapEndMs = if (i < sortedTurns.size) {
-                sortedTurns[i]
+            val lapEndMs = if (i < validTurns.size) {
+                validTurns[i]
             } else {
                 anchorMs + durationMs
             }

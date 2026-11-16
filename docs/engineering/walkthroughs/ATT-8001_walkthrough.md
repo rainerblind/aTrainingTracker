@@ -5,7 +5,7 @@
 **Target Release**: `V5.0.0`  
 **Requirement Mapping**: `REQ-SET-111` (`REQ-SET-111.1`..`REQ-SET-111.4`) [Verified]  
 **Test Mapping**: `TST-SET-113` (`TST-SET-113.1`..`TST-SET-113.5`) [Verified]  
-**Stage 4 Commit SHA**: `8f599beb226541de484bf763ab889f081168fc4f`  
+**Stage 4 Commit SHA**: `7983419f690e3b5a77b3669548bc6d746f86af73` (healed from Stage 6 Cold Carbon review)  
 **Branch**: `feature/ATT-8001`  
 **Author**: AI Agent 2 (Verifier / Subagent Flash)  
 **Date**: 2026-11-16  
@@ -13,11 +13,16 @@
 ---
 
 ## 1. Executive Summary & Verification Overview
-Stage 5 clean-room verification for ATT-8001 completed. Verified Polar Verity Sense Swim Mode backfill and Aftermath adjustment:
+Stage 5 clean-room verification for ATT-8001 completed. Verified Polar Verity Sense Swim Mode backfill and Aftermath adjustment including Stage 6 Cold Carbon review healing:
 1. **Auto Swim SportType Assignment**: `SportTypesRepository.ensureSwimSportTypeExists()` idempotently provisions the Swimming sport type during swim session backfill, assigning `BSportType.SWIMMING` and its `sportId` to the workout to avoid Walking heuristics.
 2. **Pool-Length Distance & Lap Backfill**: Backfills 1-Hz cumulative `DISTANCE_m`, `SPEED_mps`, and `LAP_NR` samples via `WorkoutSamplesDatabaseManager.patchSwimKinematics()` alongside discrete lap persistence in `Laps.db` via `LapsDatabaseManager.saveLap()` (enforcing the `ATT-896` non-zero lap duration/distance guard).
 3. **Summary & Export Gating**: Recomputes workout total distance, average speed, and HR zone times in `WorkoutSummaries.db` before releasing held automatic exports (`ExportManager`), keeping `WorkoutRr.db` untouched.
 4. **Aftermath Quick Adjustment**: `SwimWorkoutAdjustCard` mounted in `WorkoutDetailTabbedContent.kt` allows switching pool length presets (25m, 50m, 25yd) and adjusting total lengths (+1 / -1), recalculating metrics in SQLite and invalidating export caches across all 9 UI locales without emojis.
+5. **Stage 6 Cold Carbon Healing**:
+   - Cleaned git merge conflict markers in `docs/requirements.md` and `docs/tests.md`.
+   - Filtered `validTurns` in `PolarVeritySenseOfflineController.kt` before `lengthCount` computation to eliminate phantom 0s/1s laps when turns occur $\le$ `anchorMs`.
+   - Added table existence guard in `WorkoutSamplesDatabaseManager.java:applySwimKinematicsIntervals` (`baseFileName == null || !existsTable(baseFileName) || intervals.isEmpty()`).
+   - Fixed Compose state caching in `WorkoutDetailTabbedContent.kt` to observe `workoutData.laps` directly (fallback keyed on `id, totalDistance`, using `WorkoutRepository.getInstance(currentContext)`).
 
 ---
 
@@ -33,11 +38,13 @@ Stage 5 clean-room verification for ATT-8001 completed. Verified Polar Verity Se
 ---
 
 ## 3. Automated Test Evidence
-Per Rule 7.5 (Zero Redundant Stage 5 Re-Runs), test evidence established on `8f599beb`:
-- **Targeted Unit Tests**: `PolarVeritySenseOfflineControllerTest` — 21/21 passing (`~12s`).
+Per Rule 7.5 (Zero Redundant Stage 5 Re-Runs), test evidence established on `7983419f`:
+- **Targeted Unit Tests (PolarVeritySenseOfflineControllerTest)**: 22/22 passing (`~12s`), including `testApplySwimBackfillAndCommit_filtersUnanchoredTurnsSafely`.
+- **Targeted Database Tests (WorkoutSamplesDatabaseManagerTest)**: 8/8 passing, including `testPatchSwimKinematics_nonExistentTable_returnsSafelyWithoutException`.
 - **Localization Parity**: `TranslationParityTest` — 10/10 passing (9-locale parity across `strings_swimming.xml` with zero emojis).
 - **On-Device UI Verification**: `SwimWorkoutAdjustCardAndroidTest` — 1/1 passing on `emulator-5554` (`ATT-8001_swim_adjust_card.png`).
-- **Living Document Governance**: `python3 tools/verify_requirement_governance.py --sync-indexes` passed with 100% parity (Total: 1154 REQs, 1156 TSTs, 0 orphans).
+- **Total Targeted Tests**: 40/40 passing cleanly.
+- **Living Document Governance**: `python3 tools/verify_requirement_governance.py --sync-indexes` passed with 100% parity (Total: 1156 REQs, 1158 TSTs, 0 orphans, 0 conflict markers).
 
 ---
 

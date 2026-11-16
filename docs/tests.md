@@ -17,11 +17,7 @@ Living test specifications use multi-line Markdown headings (`### TST-XXX: Title
 | [Jubilee Milestones & App Reviews](tests/tst_aftermath_reviews.md) | Milestone workout auto-naming, jubilee achievements, Google Play in-app reviews, athlete feedback, and supporter tier promotions. | `REV` | 15 | 15 | 0 | 0 |
 | [Store Presence](tests/tst_store_presence.md) | Store presence, Google Play listings, screenshots, store metadata contract testing, and release governance. | `STP` | 10 | 10 | 0 | 0 |
 
-<<<<<<< HEAD
 **Total Living Tests**: 1158 across 9 domain shards.
-=======
-**Total Living Tests**: 1158 across 9 domain shards.
->>>>>>> feature/ATT-8001
 
 ---
 
