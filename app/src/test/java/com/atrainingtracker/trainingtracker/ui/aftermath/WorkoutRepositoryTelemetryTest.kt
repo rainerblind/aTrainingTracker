@@ -28,6 +28,7 @@ import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.testutil.MockCursorFactory
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
+import com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricType
 import com.atrainingtracker.trainingtracker.ui.map.TrackType
 import com.google.android.gms.maps.model.LatLng
 import io.mockk.*
@@ -404,5 +405,163 @@ class WorkoutRepositoryTelemetryTest {
         // Row 1 MUST have null altitude (not 0.0) so ElevationSmoothingMath can interpolate cleanly (REQ-SEN-025.8, ATT-5312)
         assertNull(bestTrack[0].altitude)
         assertEquals(435.0, bestTrack[1].altitude!!, 1e-4)
+    }
+
+    /**
+     * TST-PER-050.1: Strict named-source column discovery ignores canonical ProxySensor + 1 named column,
+     * discovers >= 2 distinct named sources (including dotted device names), and preserves pre-decimation meanValue.
+     */
+    @Test
+    fun testDiscoverMultiSourceOverlayColumns_enforcesStrictTwoNamedSourcesAndDottedNames() {
+        // TST-PER-050.1
+        val singleNamedCols = listOf(
+            SensorType.HR.name,
+            "${SensorType.HR.name} (Polar H10)",
+            SensorType.POWER.name,
+            "${SensorType.POWER.name} (KICKR v5.0)",
+            "${SensorType.POWER.name} (Assioma Duo)",
+            "${SensorType.CADENCE.name} (Assioma)",
+            "${SensorType.CADENCE.name} (KICKR)"
+        )
+
+        assertEquals(
+            listOf("Polar H10" to "${SensorType.HR.name} (Polar H10)"),
+            WorkoutRepository.discoverNamedSourceColumns(singleNamedCols, SensorType.HR)
+        )
+
+        val discovered = WorkoutRepository.discoverMultiSourceOverlayColumns(singleNamedCols)
+        assertFalse(
+            "1 named + canonical ProxySensor HR must not produce multi-sensor overlay",
+            discovered.containsKey(TelemetryMetricType.HEART_RATE)
+        )
+        assertEquals(
+            listOf(
+                "Assioma Duo" to "${SensorType.POWER.name} (Assioma Duo)",
+                "KICKR v5.0" to "${SensorType.POWER.name} (KICKR v5.0)"
+            ),
+            discovered[TelemetryMetricType.POWER]
+        )
+        assertEquals(
+            listOf(
+                "Assioma" to "${SensorType.CADENCE.name} (Assioma)",
+                "KICKR" to "${SensorType.CADENCE.name} (KICKR)"
+            ),
+            discovered[TelemetryMetricType.CADENCE]
+        )
+    }
+
+    @Test
+    fun testLoadTracklessWorkoutTelemetry_extractsCadencePreDecimationMeansAndDottedColumns() = runBlocking {
+        // TST-PER-050.1
+        val baseFileName = "2026-11-16-07-30-00"
+        val tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
+        every { mockSummariesDb.getBaseFileName(901L) } returns baseFileName
+        every { mockSamplesDb.existsTable(baseFileName) } returns true
+
+        val rowCount = 1000
+        val rows = (0 until rowCount).map { idx ->
+            val hrPolar = if (idx < 50) 100 else 200
+            val hrWatch = 150
+            val kickrPower = if (idx < 500) 200 else 300
+            val assiomaPower = 240
+            val cadA = 85 + (idx % 5)
+            val cadB = 87 + (idx % 5)
+            listOf<Any?>(
+                idx * 10.0,
+                idx.toLong(),
+                hrPolar,
+                hrPolar,
+                hrWatch,
+                kickrPower,
+                kickrPower,
+                assiomaPower,
+                cadA,
+                cadA,
+                cadB
+            )
+        }
+        val dataCursor = MockCursorFactory.create(
+            listOf(
+                SensorType.DISTANCE_m.name,
+                SensorType.TIME_ACTIVE.name,
+                SensorType.HR.name,
+                "${SensorType.HR.name} (Polar H10)",
+                "${SensorType.HR.name} (Optical Watch)",
+                SensorType.POWER.name,
+                "${SensorType.POWER.name} (KICKR v5.0)",
+                "${SensorType.POWER.name} (Assioma Duo)",
+                SensorType.CADENCE.name,
+                "${SensorType.CADENCE.name} (Assioma)",
+                "${SensorType.CADENCE.name} (KICKR)"
+            ),
+            rows
+        )
+        every { mockSqliteDb.query(tableName, any(), null, null, null, null, null) } returns dataCursor
+
+        val (points, overlays) = repository.loadTracklessWorkoutTelemetry(901L)
+        assertTrue("Expected decimated points <= 800, was ${points.size}", points.size in 500..800)
+        assertTrue(points.all { (it.cadence ?: 0) >= 85 })
+
+        val hrOverlays = overlays[TelemetryMetricType.HEART_RATE].orEmpty()
+        assertEquals(2, hrOverlays.size)
+        val polarSeries = hrOverlays.first { it.sourceName == "Polar H10" }
+        assertTrue(polarSeries.points.size <= 800)
+        // Pre-decimation mean of 50*100 + 950*200 over 1000 rows = 195.0 exactly
+        assertEquals(195.0, polarSeries.meanValue, 1e-6)
+
+        val powerOverlays = overlays[TelemetryMetricType.POWER].orEmpty()
+        assertEquals(listOf("Assioma Duo", "KICKR v5.0"), powerOverlays.map { it.sourceName })
+        assertEquals(250.0, powerOverlays.first { it.sourceName == "KICKR v5.0" }.meanValue, 1e-6)
+
+        val cadenceOverlays = overlays[TelemetryMetricType.CADENCE].orEmpty()
+        assertEquals(listOf("Assioma", "KICKR"), cadenceOverlays.map { it.sourceName })
+    }
+
+    @Test
+    fun testLoadWorkoutDetailTelemetry_gpsExtractsCadenceAndMultiSensorOverlays() = runBlocking {
+        // TST-PER-050.1
+        val baseFileName = "2026-11-16-08-00-00"
+        val tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
+        every { mockSummariesDb.getBaseFileName(902L) } returns baseFileName
+        every { mockSamplesDb.existsTable(baseFileName) } returns true
+
+        val cols = listOf(
+            TrackType.BEST.latitudeColumn,
+            TrackType.BEST.longitudeColumn,
+            SensorType.DISTANCE_m.name,
+            SensorType.TIME_ACTIVE.name,
+            SensorType.HR.name,
+            "${SensorType.HR.name} (Chest Strap)",
+            "${SensorType.HR.name} (Optical)",
+            SensorType.POWER.name,
+            "${SensorType.POWER.name} (Single Power)",
+            SensorType.CADENCE.name,
+            "${SensorType.CADENCE.name} (Pedal)",
+            "${SensorType.CADENCE.name} (Hub)"
+        )
+        val pragmaCursor = MockCursorFactory.create(listOf("name"), cols.map { listOf(it) })
+        every { mockSqliteDb.rawQuery(match { it.contains("PRAGMA table_info") }, null) } returns pragmaCursor
+
+        val dataCursor = MockCursorFactory.create(
+            cols,
+            listOf(
+                listOf(48.10, 11.50, 0.0, 0L, 140, 140, 134, 210, 210, 88, 88, 86),
+                listOf(48.11, 11.51, 50.0, 10L, 150, 150, 146, 230, 230, 92, 92, 90)
+            )
+        )
+        every { mockSqliteDb.query(tableName, any(), null, null, null, null, null) } returns dataCursor
+
+        val telemetry = repository.loadWorkoutDetailTelemetry(902L, com.atrainingtracker.banalservice.BSportType.BIKE)
+        val bestTrack = telemetry.tracks[TrackType.BEST].orEmpty()
+        assertEquals(2, bestTrack.size)
+        assertEquals(88, bestTrack[0].cadence)
+        assertEquals(92, bestTrack[1].cadence)
+
+        assertEquals(2, telemetry.multiSensorOverlays[TelemetryMetricType.HEART_RATE]?.size)
+        assertEquals(2, telemetry.multiSensorOverlays[TelemetryMetricType.CADENCE]?.size)
+        assertFalse(
+            "Single named POWER column must not emit an overlay",
+            telemetry.multiSensorOverlays.containsKey(TelemetryMetricType.POWER)
+        )
     }
 }

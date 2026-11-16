@@ -3,7 +3,7 @@
 **Domain**: `aftermath_periods`  
 **Prefixes**: `PER`, `PERF`, `RAD`, `SPT`  
 **Scope**: Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers.  
-**Total Requirements**: 57
+**Total Requirements**: 58
 
 ---
 
@@ -1660,3 +1660,40 @@
   • *Given* Health Connect sleep permission granted,
   • *When* opening morning check screen,
   • *Then* sleep duration is pre-filled from the most recent sleep session.
+
+---
+
+### REQ-PER-042: Multi-Sensor Telemetry Chart Overlays & Session Mean Comparison for HR, Power, and Cadence (`ATT-8096`) [Verified]
+- **System Requirement(s)**: Derived (SW-only) — Post-workout multi-sensor telemetry overlay visualization and session mean comparison
+- **Tests**: `TST-PER-050`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Implementation**: `MapModels.kt`, `WorkoutRepository.kt`, `TrackOnMapAftermathViewModel.kt`, `TelemetryMetricGraph.kt`, `TelemetryMetricUtils.kt`, `TelemetryGraphColorPreferences.kt`, `MapDetailLayout.kt`, `WorkoutDetailTabbedContent.kt`, `res/values*/strings.xml`
+- **Rationale**: `TrackerService.java` already records source-qualified columns (`"HR (<deviceName>)"`, `"POWER (<deviceName>)"`, `"CADENCE (<deviceName>)"`) in `WorkoutSamples.db`, yet Workout Details charts only display canonical single-column streams (`HR`, `POWER`) and omit `CADENCE`, preventing athletes from visually comparing dual HR straps or pedal vs. smart-trainer power on-device (`ATT-8096`, Epic `ATT-68`).
+- **Description**:
+  1. *Strict Multi-Source Column Discovery & Dotted-Name Lookup (`REQ-PER-042.1`)*:
+     - `WorkoutRepository.kt` (`loadWorkoutDetailTelemetry` for GPS workouts and `getWorkoutTelemetryPoints` for trackless indoor workouts) SHALL discover source-qualified columns in `WorkoutSamples.db` strictly matching `"^${type.name} \\((.+)\\)$"` for `HR`, `POWER`, and `CADENCE` across `cursor.columnNames` (using `columnNames.indexOf(...)` so device names containing dots such as `"KICKR v5.0"` never fail `Cursor.getColumnIndex()`).
+     - Single-sensor workouts recording both canonical `ProxySensor` (`"HR"`) and `1` named column (`"HR (<device>)"`) MUST resolve to `1` named source and MUST NOT trigger multi-source overlay UI. Multi-source overlay UI SHALL activate strictly when `>= 2` distinct named source columns exist for that metric.
+  2. *`PathPoint.cadence` & `TelemetryMetricType.CADENCE` Support (`REQ-PER-042.2`)*:
+     - `PathPoint` (`MapModels.kt`) SHALL add nullable `cadence: Int? = null`, and `TelemetryMetricType` (`TelemetryMetricGraph.kt`) SHALL add `CADENCE` (wired across `TelemetryMetricUtils.kt`, `MapDetailLayout.kt`, and `WorkoutDetailTabbedContent.kt`).
+     - `TelemetryGraphColorPreferences` SHALL resolve `TelemetryMetricType.CADENCE` to the existing `telemetry_graph_color_SENSOR_CADENCE` preference key (`THEME_DEFAULT` default) without altering existing preference keys or defaults (`REQ-UI-530`).
+  3. *Progressive-Disclosure `Layers` Overlay, `Ø` Mean Comparison & Synchronized Scrubbing (`REQ-PER-042.3`)*:
+     - When `<= 1` named source exists for `HR`, `POWER`, or `CADENCE`, `TelemetryMetricGraph` SHALL display zero additional `Layers` toggles, selectors, or comparison legend rows.
+     - When `>= 2` named sources exist, `TelemetryMetricGraph` SHALL expose a compact `Layers` overlay toggle, render enabled secondary device curve(s) with distinct color/stroke styling, show a compact one-line session-mean comparison in the legend (e.g., `Ø %1$d bpm`, `Ø %1$d W`, `Ø %1$d rpm`), and update header/scrubbing readouts synchronously across both `DISTANCE` and `TIME` X-axis domains (GPS and trackless workouts) while strictly preserving `Rule 64` plot paddings (`50.dp`/`25.dp`/`24.dp`) and `Rule 48` axis labels.
+  4. *9-Locale Parity & Rule 8.5 Visual Compose Verification (`REQ-PER-042.4`)*:
+     - All new chart heading and multi-source overlay/mean strings (`graph_heading_cadence`, overlay toggle & mean labels) SHALL maintain 100% parity across all 9 locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`) with zero emojis (`ATT-5400`).
+     - Stage 4 SHALL render a Robolectric Compose PNG screenshot (`docs/engineering/walkthroughs/img/ATT-8096_multisensor_charts.png`, Light & Dark themes) verifying multi-source overlay curves, `Layers` toggle, `Ø` mean legend, and zero clutter on single-sensor cards (`Rule 8.5`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new `REQ-PER-042` extending `REQ-UI-206` (`TelemetryMetricGraph`), `REQ-UI-260` (trackless workouts), `REQ-DAT-033` (multi-sensor sample persistence), `REQ-UI-530` (`TelemetryGraphColorPreferences`), and `REQ-TRK-029` (multi-sensor columns).
+2. *Historical Origin & Commit Trace*: `TrackerService` multi-sensor SQLite persistence (`REQ-TRK-029`) + `TelemetryMetricGraph` (`ATT-1740`) + `TelemetryGraphColorPreferences` (`ATT-7759`).
+3. *Root Reason for Existing Formulation*: `TelemetryMetricGraph` queried only single canonical columns to keep mobile chart layouts clean and decoupled before multi-sensor source overlays were requested.
+4. *Preservation of Core Invariants*: Zero UI clutter on single-sensor (`<= 1` named source) workouts; `Rule 64` plot alignment (`50.dp`/`25.dp`/`24.dp` portrait, `0.72f` landscape) and `Rule 48` axis labels intact; `telemetry_graph_color_SENSOR_CADENCE` preference key preserved; `TrackerService.java` and `CSVFileWriter.java` untouched; zero `WorkoutSamples.db` schema bumps; backward-compatible `TelemetryMetricGraph` defaults for `WorkoutSummary.kt` and `HrvRampTestScreen.kt`.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a `WorkoutSamples.db` recording with `<= 1` named source column per metric (e.g., canonical `"HR"` + `"HR (Polar H10)"`), *When* opening Workout Details (`CHARTS`), *Then* no `Layers` overlay toggle or mean comparison legend renders on `HR`, `POWER`, or `CADENCE`.
+• *Given* a GPS or trackless workout containing `>= 2` named columns for `HR`, `POWER`, or `CADENCE` (including dotted device names such as `"POWER (KICKR v5.0)"`), *When* enabling the `Layers` overlay toggle, *Then* secondary device curve(s) render in distinct stroke/color together with a compact `Ø` mean comparison in the legend.
+• *Given* an active multi-sensor overlay on `HR`, `POWER`, or `CADENCE`, *When* scrubbing horizontally across `DISTANCE` or `TIME`, *Then* the vertical marker and header/readout display synchronized values for active overlaid sources in sync with all Workout Details charts.
+
+**Invariants**: `<= 1` named source shows zero overlay UI; `Rule 64` & `Rule 48` preserved; `telemetry_graph_color_SENSOR_CADENCE` reused; zero `WorkoutSamples.db` schema changes; zero emojis across 9 locales (`ATT-5400`).

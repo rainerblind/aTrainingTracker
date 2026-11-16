@@ -1645,6 +1645,11 @@
     <string name="graph_heading_speed">Prędkość</string>
     <string name="graph_heading_pace">Tempo</string>
     <string name="graph_heading_power">Moc</string>
+    <string name="graph_heading_cadence">Kadencja</string>
+    <string name="chart_overlay_layers_cd">Porównaj źródła czujników</string>
+    <string name="chart_overlay_mean_bpm">Ø %1$d bpm</string>
+    <string name="chart_overlay_mean_watt">Ø %1$d W</string>
+    <string name="chart_overlay_mean_rpm">Ø %1$d rpm</string>
 
     <!-- Persistent Sticky Global Zoom Toolbar (ATT-1876 / REQ-UI-225) -->
     <string name="zoom_in">Przybliż</string>

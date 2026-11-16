@@ -1642,6 +1642,11 @@
     <string name="graph_heading_speed">Velocidade</string>
     <string name="graph_heading_pace">Ritmo</string>
     <string name="graph_heading_power">Potência</string>
+    <string name="graph_heading_cadence">Cadência</string>
+    <string name="chart_overlay_layers_cd">Comparar fontes de sensores</string>
+    <string name="chart_overlay_mean_bpm">Ø %1$d bpm</string>
+    <string name="chart_overlay_mean_watt">Ø %1$d W</string>
+    <string name="chart_overlay_mean_rpm">Ø %1$d rpm</string>
 
     <!-- Persistent Sticky Global Zoom Toolbar (ATT-1876 / REQ-UI-225) -->
     <string name="zoom_in">Aproximar</string>

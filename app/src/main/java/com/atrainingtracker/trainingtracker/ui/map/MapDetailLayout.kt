@@ -156,7 +156,8 @@ fun MapDetailLayout(
     onCreateLapClick: ((Double) -> Unit)? = null,
     onInteractiveCanvasTouch: ((Boolean) -> Unit)? = null,
     externalSnapshotTrigger: Boolean = false,
-    onSnapshotComplete: (() -> Unit)? = null
+    onSnapshotComplete: (() -> Unit)? = null,
+    multiSensorOverlays: Map<TelemetryMetricType, List<TelemetrySourceSeries>> = emptyMap()
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -553,39 +554,16 @@ fun MapDetailLayout(
                                         )
                                     }
 
-                                    // HR Graph
+                                    // HR Graph (with optional >= 2 multi-sensor overlays, REQ-PER-042)
                                     if (TelemetryMetricUtils.hasHeartRateData(path)) {
-                                        Spacer(modifier = Modifier.height(8.dp))
-                                        val activeHrPoint = if (selectedDistance != null) {
-                                            TelemetryMetricUtils.findNearestPoint(
-                                                points = path,
-                                                targetValue = selectedDistance!!,
-                                                isTimeDomain = isTrackless
-                                            )
-                                        } else null
-                                        val activeHr = activeHrPoint?.hr
-                                        val hrHeaderText = if (activeHr != null) {
-                                            val zoneTag = if (hrThresholds != null) {
-                                                val zoneIdx = TelemetryZoneMath.determineHeartRateZone(activeHr.toDouble(), hrThresholds)
-                                                " • Z$zoneIdx"
-                                            } else ""
-                                            "${stringResource(R.string.graph_heading_heart_rate)}: $activeHr bpm$zoneTag"
-                                        } else {
-                                            stringResource(R.string.graph_heading_heart_rate)
-                                        }
-                                        Text(
-                                            text = hrHeaderText,
-                                            style = MaterialTheme.typography.titleSmall,
-                                            fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
-                                            color = MaterialTheme.colorScheme.onSurface,
-                                            modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 4.dp)
-                                        )
-                                        TelemetryMetricGraph(
-                                            pathPoints = path,
+                                        OverlayTelemetryChartSection(
+                                            path = path,
                                             metricType = TelemetryMetricType.HEART_RATE,
-                                            currentDistance = selectedDistance,
+                                            headingRes = R.string.graph_heading_heart_rate,
+                                            selectedDistance = selectedDistance,
                                             onDistanceSelected = { selectedDistance = it },
-                                            xAxisDomain = activeTelemetryDomain,
+                                            activeTelemetryDomain = activeTelemetryDomain,
+                                            isTrackless = isTrackless,
                                             bSportType = bSportType,
                                             zoomScale = profileZoomScale,
                                             startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, telemetryTotalSpan, profileZoomScale),
@@ -599,7 +577,10 @@ fun MapDetailLayout(
                                             zoneDisplayMode = hrZoneDisplayMode,
                                             cardioPowerDynamics = workoutData?.cardioPowerDynamics,
                                             enableCardioPowerDynamics = tuningConfig.enableCardioPowerDynamics,
-                                            modifier = Modifier
+                                            overlaySeries = multiSensorOverlays[
+                                                TelemetryMetricType.HEART_RATE
+                                            ].orEmpty(),
+                                            chartModifier = Modifier
                                                 .fillMaxWidth()
                                                 .chartInteractiveTouchDetector(
                                                     density = density,
@@ -610,39 +591,16 @@ fun MapDetailLayout(
                                         )
                                     }
 
-                                    // Power Graph
+                                    // Power Graph (with optional >= 2 multi-sensor overlays, REQ-PER-042)
                                     if (TelemetryMetricUtils.hasPowerData(path)) {
-                                        Spacer(modifier = Modifier.height(8.dp))
-                                        val activePowerPoint = if (selectedDistance != null) {
-                                            TelemetryMetricUtils.findNearestPoint(
-                                                points = path,
-                                                targetValue = selectedDistance!!,
-                                                isTimeDomain = isTrackless
-                                            )
-                                        } else null
-                                        val activePower = activePowerPoint?.power
-                                        val powerHeaderText = if (activePower != null) {
-                                            val zoneTag = if (powerThresholds != null) {
-                                                val zoneIdx = TelemetryZoneMath.determinePowerZone(activePower.toDouble(), powerThresholds)
-                                                " • Z$zoneIdx"
-                                            } else ""
-                                            "${stringResource(R.string.graph_heading_power)}: $activePower W$zoneTag"
-                                        } else {
-                                            stringResource(R.string.graph_heading_power)
-                                        }
-                                        Text(
-                                            text = powerHeaderText,
-                                            style = MaterialTheme.typography.titleSmall,
-                                            fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
-                                            color = MaterialTheme.colorScheme.onSurface,
-                                            modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 4.dp)
-                                        )
-                                        TelemetryMetricGraph(
-                                            pathPoints = path,
+                                        OverlayTelemetryChartSection(
+                                            path = path,
                                             metricType = TelemetryMetricType.POWER,
-                                            currentDistance = selectedDistance,
+                                            headingRes = R.string.graph_heading_power,
+                                            selectedDistance = selectedDistance,
                                             onDistanceSelected = { selectedDistance = it },
-                                            xAxisDomain = activeTelemetryDomain,
+                                            activeTelemetryDomain = activeTelemetryDomain,
+                                            isTrackless = isTrackless,
                                             bSportType = bSportType,
                                             zoomScale = profileZoomScale,
                                             startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, telemetryTotalSpan, profileZoomScale),
@@ -654,7 +612,38 @@ fun MapDetailLayout(
                                             powerZoneThresholds = powerThresholds,
                                             zoneDistribution = powerZoneDistribution,
                                             zoneDisplayMode = powerZoneDisplayMode,
-                                            modifier = Modifier
+                                            overlaySeries = multiSensorOverlays[TelemetryMetricType.POWER].orEmpty(),
+                                            chartModifier = Modifier
+                                                .fillMaxWidth()
+                                                .chartInteractiveTouchDetector(
+                                                    density = density,
+                                                    isLandscape = isLandscape,
+                                                    alignWithHistogram = true,
+                                                    onInteractiveCanvasTouch = onInteractiveCanvasTouch
+                                                )
+                                        )
+                                    }
+
+                                    // Cadence Graph (REQ-PER-042.2 / .3)
+                                    if (TelemetryMetricUtils.hasCadenceData(path)) {
+                                        OverlayTelemetryChartSection(
+                                            path = path,
+                                            metricType = TelemetryMetricType.CADENCE,
+                                            headingRes = R.string.graph_heading_cadence,
+                                            selectedDistance = selectedDistance,
+                                            onDistanceSelected = { selectedDistance = it },
+                                            activeTelemetryDomain = activeTelemetryDomain,
+                                            isTrackless = isTrackless,
+                                            bSportType = bSportType,
+                                            zoomScale = profileZoomScale,
+                                            startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, telemetryTotalSpan, profileZoomScale),
+                                            isPanMode = isPanMode,
+                                            onZoomChanged = { z, s ->
+                                                profileZoomScale = z
+                                                viewportStartFraction = MapDetailViewportMath.domainToFraction(s, telemetryTotalSpan, z)
+                                            },
+                                            overlaySeries = multiSensorOverlays[TelemetryMetricType.CADENCE].orEmpty(),
+                                            chartModifier = Modifier
                                                 .fillMaxWidth()
                                                 .chartInteractiveTouchDetector(
                                                     density = density,
@@ -1274,4 +1263,163 @@ internal suspend fun executeSnapshotCaptureAndShare(
     } finally {
         onFinally()
     }
+}
+
+/**
+ * Resolves the active scrubbing domain coordinate for multi-source overlays across GPS
+ * (`DISTANCE`/`TIME`) and trackless (`TIME`) workouts (REQ-PER-042.3).
+ */
+internal fun resolveOverlayScrubTarget(
+    pathPoints: List<PathPoint>,
+    selectedDistance: Double?,
+    isTimeDomain: Boolean,
+    isTrackless: Boolean
+): Double? = when {
+    selectedDistance == null -> null
+    !isTimeDomain || isTrackless -> selectedDistance
+    else -> TelemetryMetricUtils.findNearestPoint(
+        points = pathPoints,
+        targetValue = selectedDistance,
+        isTimeDomain = false
+    )?.timeSec?.toDouble()
+}
+
+internal fun formatTelemetryHeaderWithOverlays(
+    baseHeading: String,
+    activePrimaryText: String?,
+    metricType: TelemetryMetricType,
+    activeOverlays: List<TelemetrySourceSeries>,
+    overlayScrubTarget: Double?,
+    isTimeDomain: Boolean
+): String {
+    if (activePrimaryText == null && (overlayScrubTarget == null || activeOverlays.isEmpty())) {
+        return baseHeading
+    }
+    val unitSuffix = when (metricType) {
+        TelemetryMetricType.HEART_RATE -> "bpm"
+        TelemetryMetricType.POWER -> "W"
+        TelemetryMetricType.CADENCE -> "rpm"
+        else -> ""
+    }
+    val parts = mutableListOf<String>()
+    if (activePrimaryText != null) {
+        parts.add("$baseHeading: $activePrimaryText")
+    } else {
+        parts.add(baseHeading)
+    }
+    if (overlayScrubTarget != null && activeOverlays.isNotEmpty()) {
+        for (series in activeOverlays) {
+            val v = TelemetryMetricUtils.findNearestSourceValue(
+                points = series.points,
+                targetValue = overlayScrubTarget,
+                isTimeDomain = isTimeDomain
+            )
+            if (v != null) {
+                parts.add("${series.sourceName}: ${v.toInt()} $unitSuffix")
+            }
+        }
+    }
+    return parts.joinToString(" • ")
+}
+
+private fun formatPrimaryActiveValueText(
+    activePoint: PathPoint?,
+    metricType: TelemetryMetricType,
+    hrZoneThresholds: HeartRateZoneThresholds?,
+    powerZoneThresholds: PowerZoneThresholds?
+): String? = when (metricType) {
+    TelemetryMetricType.HEART_RATE -> activePoint?.hr?.let { hr ->
+        val zone = hrZoneThresholds?.let {
+            " • Z${TelemetryZoneMath.determineHeartRateZone(hr.toDouble(), it)}"
+        }.orEmpty()
+        "$hr bpm$zone"
+    }
+    TelemetryMetricType.POWER -> activePoint?.power?.let { pwr ->
+        val zone = powerZoneThresholds?.let {
+            " • Z${TelemetryZoneMath.determinePowerZone(pwr.toDouble(), it)}"
+        }.orEmpty()
+        "$pwr W$zone"
+    }
+    TelemetryMetricType.CADENCE -> activePoint?.cadence?.let { "$it rpm" }
+    else -> null
+}
+
+@Composable
+private fun OverlayTelemetryChartSection(
+    path: List<PathPoint>,
+    metricType: TelemetryMetricType,
+    headingRes: Int,
+    selectedDistance: Double?,
+    onDistanceSelected: (Double?) -> Unit,
+    activeTelemetryDomain: ProfileXAxisDomain,
+    isTrackless: Boolean,
+    bSportType: BSportType,
+    zoomScale: Float,
+    startDist: Double,
+    isPanMode: Boolean,
+    onZoomChanged: (Float, Double) -> Unit,
+    overlaySeries: List<TelemetrySourceSeries>,
+    chartModifier: Modifier,
+    hrZoneThresholds: HeartRateZoneThresholds? = null,
+    powerZoneThresholds: PowerZoneThresholds? = null,
+    zoneDistribution: ZoneDistributionData? = null,
+    zoneDisplayMode: ZoneCardDisplayMode = ZoneCardDisplayMode.FIVE_ZONES,
+    cardioPowerDynamics: com.atrainingtracker.trainingtracker.database.CardioPowerDynamicsRecord? = null,
+    enableCardioPowerDynamics: Boolean = true
+) {
+    Spacer(modifier = Modifier.height(8.dp))
+    var enabledOverlayIds by rememberSaveable(metricType.name, overlaySeries.map { it.columnName }) {
+        mutableStateOf(emptySet<String>())
+    }
+    val isTimeDomain = isTrackless || activeTelemetryDomain == ProfileXAxisDomain.TIME
+    val activePoint = selectedDistance?.let {
+        TelemetryMetricUtils.findNearestPoint(path, it, isTimeDomain = isTrackless)
+    }
+    val activePrimaryText = formatPrimaryActiveValueText(
+        activePoint, metricType, hrZoneThresholds, powerZoneThresholds
+    )
+    val activeOverlays = if (overlaySeries.size >= 2) {
+        overlaySeries.filter { it.columnName in enabledOverlayIds }
+    } else {
+        emptyList()
+    }
+    val headerText = formatTelemetryHeaderWithOverlays(
+        baseHeading = stringResource(headingRes),
+        activePrimaryText = activePrimaryText,
+        metricType = metricType,
+        activeOverlays = activeOverlays,
+        overlayScrubTarget = resolveOverlayScrubTarget(path, selectedDistance, isTimeDomain, isTrackless),
+        isTimeDomain = isTimeDomain
+    )
+    Text(
+        text = headerText,
+        style = MaterialTheme.typography.titleSmall,
+        fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+        color = MaterialTheme.colorScheme.onSurface,
+        modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 4.dp)
+    )
+    TelemetryMetricGraph(
+        pathPoints = path,
+        metricType = metricType,
+        currentDistance = selectedDistance,
+        onDistanceSelected = onDistanceSelected,
+        xAxisDomain = activeTelemetryDomain,
+        bSportType = bSportType,
+        zoomScale = zoomScale,
+        startDist = startDist,
+        isPanMode = isPanMode,
+        onZoomChanged = onZoomChanged,
+        hrZoneThresholds = hrZoneThresholds,
+        powerZoneThresholds = powerZoneThresholds,
+        zoneDistribution = zoneDistribution,
+        zoneDisplayMode = zoneDisplayMode,
+        cardioPowerDynamics = cardioPowerDynamics,
+        enableCardioPowerDynamics = enableCardioPowerDynamics,
+        overlaySeries = overlaySeries,
+        enabledOverlayIds = enabledOverlayIds,
+        onToggleOverlay = { col ->
+            enabledOverlayIds = if (col in enabledOverlayIds) enabledOverlayIds - col else enabledOverlayIds + col
+        },
+        modifier = chartModifier
+    )
 }

@@ -120,6 +120,7 @@ class TrackOnMapViewModelTelemetryTest {
             )
         )
         coEvery { mockWorkoutRepo.getWorkoutTelemetryPoints(42L) } returns expectedPoints
+        coEvery { mockWorkoutRepo.loadTracklessWorkoutTelemetry(42L) } returns (expectedPoints to emptyMap())
 
         val viewModel = TrackOnMapAftermathViewModel(mockApplication, ioDispatcher = testDispatcher)
         viewModel.loadAftermathData(workoutData)

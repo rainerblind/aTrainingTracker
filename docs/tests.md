@@ -8,7 +8,7 @@ Living test specifications use multi-line Markdown headings (`### TST-XXX: Title
 | Domain Shard | Scope & Functional Areas | Prefixes | Total | Verified | Implemented | Planned / Open |
 | :--- | :--- | :--- | :---: | :---: | :---: | :---: |
 | [Tracking & Live Sensor Cockpit](tests/tst_tracking_cockpit.md) | Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle. | `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA` | 128 | 125 | 3 | 0 |
-| [Post-Workout Analytics & Periods](tests/tst_aftermath_periods.md) | Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers. | `PER`, `PERF`, `SPT` | 63 | 44 | 19 | 0 |
+| [Post-Workout Analytics & Periods](tests/tst_aftermath_periods.md) | Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers. | `PER`, `PERF`, `SPT` | 64 | 45 | 19 | 0 |
 | [Maps, Polylines & Navigation](tests/tst_maps_navigation.md) | Map rendering, polylines, navigation overlays, GPX track follow-me, and routing. | `GEO`, `MAP`, `NAV`, `ROU` | 70 | 62 | 8 | 0 |
 | [Persistence, Migration & Cloud Export](tests/tst_data_migration_export.md) | Database schema, backup/restore, migration pipelines, Strava/cloud upload, FIT/GPX export. | `DAT`, `EXP`, `EXT`, `MIG` | 121 | 96 | 25 | 0 |
 | [Settings, Profiles & Localization](tests/tst_settings_profiles.md) | Athlete settings, bike/sensor profiles, privacy zones, data stores, monetization, and 9-locale parity. | `LOC`, `MON`, `PRI`, `SET` | 104 | 61 | 43 | 0 |
@@ -18,12 +18,12 @@ Living test specifications use multi-line Markdown headings (`### TST-XXX: Title
 | [Store Presence](tests/tst_store_presence.md) | Store presence, Google Play listings, screenshots, store metadata contract testing, and release governance. | `STP` | 10 | 10 | 0 | 0 |
 
 <<<<<<< HEAD
-**Total Living Tests**: 1186 across 9 domain shards.
+**Total Living Tests**: 1187 across 9 domain shards.
 =======
 <<<<<<< HEAD
-**Total Living Tests**: 1186 across 9 domain shards.
+**Total Living Tests**: 1187 across 9 domain shards.
 =======
-**Total Living Tests**: 1186 across 9 domain shards.
+**Total Living Tests**: 1187 across 9 domain shards.
 >>>>>>> f0dc36ce (ATT-8144: Persist versioned test and coverage evidence per sprint and release in git instead of a build symlink)
 >>>>>>> f64f3ed0 (feat(cockpit): per-tile sparkline color persistence and minimalist color editor UI (ATT-7760))
 

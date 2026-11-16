@@ -112,7 +112,8 @@ fun TrackOnMapScreen(
     isSmoothedStream: Boolean = false,
     useTabbedLayout: Boolean = true,
     initialAutoShareSnapshot: Boolean = false,
-    onSnapshotComplete: (() -> Unit)? = null
+    onSnapshotComplete: (() -> Unit)? = null,
+    multiSensorOverlays: Map<TelemetryMetricType, List<TelemetrySourceSeries>> = emptyMap()
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -223,6 +224,7 @@ fun TrackOnMapScreen(
             TelemetryMetricUtils.hasSpeedData(activeScrubPath) ||
                 TelemetryMetricUtils.hasHeartRateData(activeScrubPath) ||
                 TelemetryMetricUtils.hasPowerData(activeScrubPath) ||
+                TelemetryMetricUtils.hasCadenceData(activeScrubPath) ||
                 (enableCpModel && TelemetryMetricUtils.hasWPrimeBalData(activeScrubPath))
             )
     }
@@ -369,6 +371,7 @@ fun TrackOnMapScreen(
             powerZoneThresholds = powerZoneThresholds,
             recentSessions = recentSessions,
             isSmoothedStream = isSmoothedStream,
+            multiSensorOverlays = multiSensorOverlays,
             onUpdateFtp = effectiveOnUpdateFtp,
             onUpdateHrZones = effectiveOnUpdateHrZones,
             useStatusBarsPadding = useStatusBarsPadding,
@@ -492,6 +495,7 @@ fun TrackOnMapScreen(
         hrZoneThresholds = hrZoneThresholds,
         powerZoneThresholds = powerZoneThresholds,
         workoutData = workoutData,
+        multiSensorOverlays = multiSensorOverlays,
         onCreateLapClick = { scrubDist ->
             candidateSplitIndex = activeScrubPath?.indexOfFirst { it.distance >= scrubDist }?.takeIf { it >= 0 }
             showCreateLapSheet = true
@@ -756,6 +760,26 @@ fun TrackOnMapScreen(
                                         zoneDistribution = powerZoneDistribution,
                                         zoneDisplayMode = effectivePowerZoneDisplayMode,
                                         powerZoneThresholds = powerZoneThresholds,
+                                        overlaySeries = multiSensorOverlays[TelemetryMetricType.POWER].orEmpty(),
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
+                                if (TelemetryMetricUtils.hasCadenceData(activeScrubPath)) {
+                                    Text(
+                                        text = stringResource(R.string.graph_heading_cadence),
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 4.dp)
+                                    )
+                                    TelemetryMetricGraph(
+                                        pathPoints = activeScrubPath,
+                                        metricType = TelemetryMetricType.CADENCE,
+                                        currentDistance = null,
+                                        onDistanceSelected = {},
+                                        bSportType = workoutData.bSportType,
+                                        enableGestures = false,
+                                        overlaySeries = multiSensorOverlays[TelemetryMetricType.CADENCE].orEmpty(),
                                         modifier = Modifier.fillMaxWidth()
                                     )
                                 }

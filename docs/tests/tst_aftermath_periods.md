@@ -3,7 +3,7 @@
 **Domain**: `aftermath_periods`  
 **Prefixes**: `PER`, `PERF`, `RAD`, `SPT`  
 **Scope**: Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers.  
-**Total Tests**: 63
+**Total Tests**: 64
 
 ---
 
@@ -1050,3 +1050,23 @@
 - **Test Description**:
   1. *Health Connect Prefill & Localization Test (`TST-HRV-042`)*:
   • Verify graceful fallback when Health Connect permission is absent and 100% string parity across all 9 locales.
+
+---
+
+### TST-PER-050: **Multi-Sensor Telemetry Chart Overlays & Session Mean Comparison Verification Suite** (`ATT-8096`) [Verified]
+- **Requirement(s)**: `REQ-PER-042` (`REQ-PER-042.1`..`REQ-PER-042.4`)
+- **Component**: `MapModels.kt`, `WorkoutRepository.kt`, `TelemetryMetricGraph.kt`, `TelemetryMetricUtils.kt`, `TelemetryGraphColorPreferences.kt`, `MapDetailLayout.kt`, `WorkoutRepositoryTelemetryTest.kt`, `TelemetryMetricUtilsTest.kt`, `TelemetryGraphColorPreferencesTest.kt`, `TelemetryMetricGraphOverlayTest.kt`, `TelemetryMetricGraphMultiSourceUiTest.kt`, `MapDetailLayoutScrubSynchronizationTest.kt`, `MultiSensorChartsScreenshotTest.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-8096`
+- **Status**: Verified
+- **Test Description**:
+  1. *Strict Source-Column Discovery & Dotted Device Name Lookup (`TST-PER-050.1`, `WorkoutRepositoryTelemetryTest.kt`)*:
+  • Verify `"^${type.name} \\((.+)\\)$"` discovery against `cursor.columnNames` ignores canonical `ProxySensor` (`"HR"`) so `1` named column (`"HR (H10)"`) produces `<= 1` source, while `>= 2` named columns (including dotted `"POWER (KICKR v5.0)"`) resolve all named streams and session means across both `loadWorkoutDetailTelemetry` (GPS) and `getWorkoutTelemetryPoints` (trackless indoor).
+  2. *`TelemetryMetricType.CADENCE` & Color Preference Key Invariance (`TST-PER-050.2`, `TelemetryMetricUtilsTest.kt`, `TelemetryGraphColorPreferencesTest.kt`)*:
+  • Verify `PathPoint.cadence` extraction, `TelemetryMetricType.CADENCE` metric resolution/formatting (`rpm`), and `TelemetryGraphColorPreferences` persistence mapping to existing `telemetry_graph_color_SENSOR_CADENCE` (`THEME_DEFAULT` default).
+  3. *Progressive-Disclosure `Layers` UI, Mean Legend & Zero-Clutter Gating (`TST-PER-050.3`, `TelemetryMetricGraphOverlayTest.kt`)*:
+  • Verify `<= 1` named source hides the `Layers` toggle and comparison legend, whereas `>= 2` named sources show the toggle, secondary curve(s), and compact `Ø` mean comparison readout (`Ø %1$d bpm`, `Ø %1$d W`, `Ø %1$d rpm`).
+  4. *Synchronized X-Axis Scrubbing Across Distance & Time (`TST-PER-050.4`, `MapDetailLayoutScrubSynchronizationTest.kt`)*:
+  • Verify horizontal scrubbing in `DISTANCE` and `TIME` domains (both GPS and trackless workouts) updates overlaid source readout values synchronously while preserving `Rule 64` plot alignment.
+  5. *9-Locale Parity & Rule 8.5 Compose PNG (`TST-PER-050.5`, `TranslationParityTest.kt`, `MultiSensorChartsScreenshotTest.kt`)*:
+  • Verify 100% 9-locale parity (`EN/DE/ES/FR/IT/JA/NL/PL/PT`) with zero emojis (`ATT-5400`) and inspect rendered `docs/engineering/walkthroughs/img/ATT-8096_multisensor_charts.png` (Light + Dark) via `read_file` (`Rule 8.5`).
+

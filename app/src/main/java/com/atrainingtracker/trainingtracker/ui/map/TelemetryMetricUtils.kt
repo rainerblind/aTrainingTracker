@@ -89,6 +89,49 @@ object TelemetryMetricUtils {
     }
 
     /**
+     * Searches for the nearest [TelemetrySourcePoint] sample to [targetValue] in O(log N) time (REQ-PER-042.3).
+     */
+    fun findNearestSourceValue(
+        points: List<TelemetrySourcePoint>,
+        targetValue: Double,
+        isTimeDomain: Boolean = false
+    ): Double? {
+        if (points.isEmpty()) return null
+        val coordAt: (Int) -> Double = { idx ->
+            if (isTimeDomain) points[idx].timeSec.toDouble() else points[idx].distance
+        }
+        return points[nearestIndexByCoord(points.size, targetValue, coordAt)].value
+    }
+
+    private fun nearestIndexByCoord(
+        size: Int,
+        targetValue: Double,
+        coordAt: (Int) -> Double
+    ): Int {
+        var result: Int? = when {
+            size <= 1 || targetValue <= coordAt(0) -> 0
+            targetValue >= coordAt(size - 1) -> size - 1
+            else -> null
+        }
+        var low = 0
+        var high = size - 1
+        while (result == null && low <= high) {
+            val mid = (low + high) ushr 1
+            val midVal = coordAt(mid)
+            when {
+                midVal < targetValue -> low = mid + 1
+                midVal > targetValue -> high = mid - 1
+                else -> result = mid
+            }
+        }
+        return result ?: run {
+            val leftDiff = abs(coordAt(high) - targetValue)
+            val rightDiff = abs(coordAt(low) - targetValue)
+            if (rightDiff < leftDiff) low else high
+        }
+    }
+
+    /**
      * Checks whether valid heart rate samples exist in [path].
      */
     fun hasHeartRateData(path: List<PathPoint>?): Boolean {
@@ -110,6 +153,14 @@ object TelemetryMetricUtils {
     fun hasPowerData(path: List<PathPoint>?): Boolean {
         if (path.isNullOrEmpty()) return false
         return path.any { it.power != null && it.power > 0 }
+    }
+
+    /**
+     * Checks whether valid cadence samples exist in [path] (REQ-PER-042.2).
+     */
+    fun hasCadenceData(path: List<PathPoint>?): Boolean {
+        if (path.isNullOrEmpty()) return false
+        return path.any { it.cadence != null && it.cadence > 0 }
     }
 
     /**
@@ -183,6 +234,9 @@ object TelemetryMetricUtils {
             TelemetryMetricType.POWER -> {
                 point.power?.takeIf { it >= 0 }?.toDouble()
             }
+            TelemetryMetricType.CADENCE -> {
+                point.cadence?.takeIf { it > 0 }?.toDouble()
+            }
             TelemetryMetricType.W_PRIME_BAL -> {
                 point.wPrimeBalKj?.takeIf { it >= 0.0 }
             }
@@ -250,6 +304,9 @@ object TelemetryMetricUtils {
                 } else {
                     base
                 }
+            }
+            TelemetryMetricType.CADENCE -> {
+                "${value.toInt()} rpm"
             }
             TelemetryMetricType.W_PRIME_BAL -> {
                 String.format(Locale.US, "%.1f kJ", value)

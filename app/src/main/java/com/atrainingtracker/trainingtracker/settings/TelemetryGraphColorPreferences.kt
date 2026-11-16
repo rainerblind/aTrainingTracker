@@ -56,6 +56,7 @@ object TelemetryGraphColorPreferences {
         TelemetryMetricType.SPEED -> "${KEY_PREFIX}SPEED"
         TelemetryMetricType.PACE -> "${KEY_PREFIX}PACE"
         TelemetryMetricType.POWER -> "${KEY_PREFIX}POWER"
+        TelemetryMetricType.CADENCE -> "${KEY_PREFIX}SENSOR_${SensorType.CADENCE.name}"
         TelemetryMetricType.W_PRIME_BAL -> "${KEY_PREFIX}W_PRIME_BAL"
         TelemetryMetricType.HRV_DFA_A1 -> "${KEY_PREFIX}HRV_DFA_A1"
         TelemetryMetricType.HRV_RMSSD -> "${KEY_PREFIX}HRV_RMSSD"
@@ -95,6 +96,7 @@ object TelemetryGraphColorPreferences {
         TelemetryMetricType.W_PRIME_BAL -> TelemetryGraphColor.EMERALD
         TelemetryMetricType.HRV_DFA_A1 -> TelemetryGraphColor.AMBER
         TelemetryMetricType.HRV_RMSSD -> TelemetryGraphColor.TEAL
+        TelemetryMetricType.CADENCE,
         TelemetryMetricType.SPEED,
         TelemetryMetricType.PACE -> TelemetryGraphColor.THEME_DEFAULT
     }
