@@ -46,6 +46,7 @@ import java.time.LocalDateTime
  * (REQ-UI-427.1, TST-UI-392.1, ATT-4018).
  */
 @OptIn(ExperimentalCoroutinesApi::class)
+// Linked test specs: TST-RAD-006
 class TrackOnMapAftermathViewModelTest {
 
     private val testDispatcher = StandardTestDispatcher()

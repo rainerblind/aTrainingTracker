@@ -29,6 +29,7 @@ import org.junit.Test
  * en (default), de, es, fr, it, ja, nl, pl, pt.
  * Refactored to LocalizationTestCache per docs/coding_standards.md §5.4 and REQ-PRO-049.
  */
+// Linked test specs: TST-UI-355
 class PowerZoneLocalizationTest {
 
     private val locales = listOf("", "-de", "-es", "-fr", "-it", "-ja", "-nl", "-pl", "-pt")

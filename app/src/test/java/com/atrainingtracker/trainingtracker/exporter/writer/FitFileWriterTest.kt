@@ -70,6 +70,7 @@ import java.nio.file.Files
 /**
  * Unit and round-trip verification tests for FitFileWriter (REQ-DAT-018, TST-DAT-013).
  */
+// Linked test specs: TST-DAT-023
 class FitFileWriterTest {
 
     private lateinit var mockContext: Context

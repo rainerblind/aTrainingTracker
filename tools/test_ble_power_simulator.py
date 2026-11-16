@@ -25,6 +25,7 @@ from tools.ble_power_simulator import (
 )
 
 
+# Linked test specs: TST-TOOL-005
 class MockService:
     def __init__(self, path="/test/service"):
         self.path = path

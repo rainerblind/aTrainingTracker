@@ -29,6 +29,7 @@ import java.lang.reflect.Modifier
  * Architectural and contract tests for Tracking Tab WYSIWYG configuration mode (REQ-UI-275, TST-UI-235).
  * Refactored to reflection and state validation per docs/coding_standards.md §5.4 and REQ-PRO-049.
  */
+// Linked test specs: TST-UI-255, TST-UI-281
 class TrackingTabWysiwygContractTest {
 
     @Test

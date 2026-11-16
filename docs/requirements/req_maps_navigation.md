@@ -25,7 +25,7 @@
 - **Rationale**: Visualize training density professionally.
 - **Description**: Training heatmaps (Cyan -> Indigo gradient).
 
-### REQ-MAP-003: Low-pass filtered map camera bearing [Verified]
+### REQ-MAP-003: Low-pass filtered map camera bearing [Implemented]
 - **Tests**: `TST-REG-001`
 - **Priority**: Medium
 - **Type**: Functional
@@ -43,7 +43,7 @@
 - **Rationale**: Wider context at speed, detail when slow.
 - **Description**: Zoom depending on speed.
 
-### REQ-MAP-005: Strava Segments and Routes as map overlays [Verified]
+### REQ-MAP-005: Strava Segments and Routes as map overlays [Implemented]
 - **Tests**: `TST-REG-002`
 - **Priority**: Medium
 - **Type**: Functional
@@ -52,7 +52,7 @@
 - **Rationale**: Integrate community data directly on map.
 - **Description**: Strava Segments and Routes as map overlays.
 
-### REQ-MAP-006: Declarative Map DSL with modular layers [Verified]
+### REQ-MAP-006: Declarative Map DSL with modular layers [Implemented]
 - **Tests**: `TST-STR-005`
 - **Priority**: High
 - **Type**: Functional
@@ -61,7 +61,7 @@
 - **Rationale**: Standardize map rendering and behavior across screens.
 - **Description**: Declarative Map DSL with modular layers.
 
-### REQ-MAP-007: Lazy coordinate projection for path rendering [Verified]
+### REQ-MAP-007: Lazy coordinate projection for path rendering [Implemented]
 - **Tests**: `TST-UNT-010`
 - **Priority**: Medium
 - **Type**: Functional
@@ -70,7 +70,7 @@
 - **Rationale**: Optimize performance for long tracks and multiple layers.
 - **Description**: Lazy coordinate projection for path rendering.
 
-### REQ-MAP-008: Global Path Context [Verified]
+### REQ-MAP-008: Global Path Context [Implemented]
 - **Tests**: `TST-REG-005`
 - **Priority**: Medium
 - **Type**: Functional
@@ -79,7 +79,7 @@
 - **Rationale**: In any detail map view, show all loaded Segments and Routes in the background. Use tiered alpha levels: same sport type = muted (0.3), different sport type = highly muted (0.1).
 - **Description**: Global Path Context.
 
-### REQ-MAP-009: Reactive Map Layer Redraw [Verified]
+### REQ-MAP-009: Reactive Map Layer Redraw [Implemented]
 - **Tests**: `TST-UI-045`
 - **Priority**: Medium
 - **Type**: Functional
@@ -88,7 +88,7 @@
 - **Rationale**: The map SHALL immediately redraw and re-style polylines (Route, Segment, Track) when their underlying selection or visibility state changes in the UI.
 - **Description**: Reactive Map Layer Redraw.
 
-### REQ-MAP-010: Toggleable Grade Legend [Verified]
+### REQ-MAP-010: Toggleable Grade Legend [Implemented]
 - **Tests**: `TST-UI-051`
 - **Priority**: Low
 - **Type**: Functional
@@ -149,7 +149,7 @@
 
 **Invariants**: Zero database schema changes, strict preservation of `REQ-MAP-027` climb scoring thresholds, coordinate validation in route importer, and 100% clean-room unit test suite pass rate.
 
-### REQ-MAP-015: High-Fidelity Period Tracks [Verified]
+### REQ-MAP-015: High-Fidelity Period Tracks [Implemented]
 - **Tests**: `TST-UI-058`
 - **Priority**: Low
 - **Type**: Functional
@@ -158,7 +158,7 @@
 - **Rationale**: The `PeriodMapScreen` SHALL display originally sampled (fine-granular) location tracks instead of thinned overviews to provide professional analytical depth.
 - **Description**: High-Fidelity Period Tracks.
 
-### REQ-MAP-017: Adaptive Heatmap Performance [Verified]
+### REQ-MAP-017: Adaptive Heatmap Performance [Implemented]
 - **Tests**: `TST-PERF-001`
 - **Priority**: Medium
 - **Type**: Non-Functional
@@ -166,7 +166,7 @@
 - **Implementation**: `MapUtils.kt`, `PeriodMapUtils.kt`
 - **Rationale**: The system SHALL adapt heatmap point density based on the temporal scale (Period Type) to prevent memory exhaustion (OOM). Coarser resolutions (e.g., 50m+) SHALL be used for large periods (Month/Year) where sub-meter precision is not visible on a summary map.
 
-### REQ-MAP-011: Multi-Track Selection (Workout Details) [Verified]
+### REQ-MAP-011: Multi-Track Selection (Workout Details) [Implemented]
 - **Tests**: `TST-UI-055`
 - **Priority**: Medium
 - **Type**: Functional
@@ -175,7 +175,7 @@
 - **Rationale**: The Workout Details map SHALL support displaying multiple location tracks (GPS, Fused, Network) alongside the primary "Tracked" path to allow for technical data quality comparison. This feature SHALL NOT be available in workout summaries or periods to maintain visual simplicity.
 - **Description**: Multi-Track Selection (Workout Details).
 
-### REQ-MAP-012: Track Selection Menu [Verified]
+### REQ-MAP-012: Track Selection Menu [Implemented]
 - **Tests**: `TST-UI-055`
 - **Priority**: Medium
 - **Type**: Functional
@@ -184,7 +184,7 @@
 - **Rationale**: The Workout Details map SHALL provide a floating action button that opens a selection menu to individually toggle the visibility of Tracked, GPS, Fused, and Network tracks. The selection menu SHALL include a color legend for each track provider.
 - **Description**: Track Selection Menu.
 
-### REQ-MAP-013: Persistent Map Selection [Verified]
+### REQ-MAP-013: Persistent Map Selection [Implemented]
 - **Tests**: `TST-UI-056`
 - **Priority**: Medium
 - **Type**: Functional
@@ -193,7 +193,7 @@
 - **Rationale**: The Workout Details map SHALL persist the user's technical track visibility preferences across sessions to streamline repetitive data quality audits.
 - **Description**: Persistent Map Selection.
 
-### REQ-MAP-014: Period FAB Hierarchy [Verified]
+### REQ-MAP-014: Period FAB Hierarchy [Implemented]
 - **Tests**: `TST-UI-057`
 - **Priority**: Low
 - **Type**: Functional
@@ -202,7 +202,7 @@
 - **Rationale**: The `PeriodMapScreen` SHALL position the Sharing FAB at the top of the overlay stack to prioritize community engagement features.
 - **Description**: Period FAB Hierarchy.
 
-### REQ-MAP-016: Heatmap DSL Support [Verified]
+### REQ-MAP-016: Heatmap DSL Support [Implemented]
 - **Tests**: `TST-MAP-010`
 - **Priority**: Medium
 - **Type**: Functional
@@ -210,7 +210,7 @@
 - **Implementation**: `MapContentScope.kt`, `MapUtils.kt`
 - **Rationale**: The Map DSL SHALL support the declarative definition of Heatmap layers using standardized sequential gradients (Cyan -> Blue -> Indigo). The styling SHALL be zoom-adaptive. As the user zooms in, individual workout traces SHALL become fully opaque (Alpha 1.0) while the heatmap background weight recedes to a subtle density shadow. Member marker pins SHALL be culled at city-scale to prevent visual clutter and OOM crashes.
 
-### REQ-MAP-018: Detailed Map View Heatmap Visibility [Verified]
+### REQ-MAP-018: Detailed Map View Heatmap Visibility [Implemented]
 - **Tests**: `TST-MAP-020`
 - **Priority**: Medium
 - **Type**: Functional
@@ -660,7 +660,7 @@
 
 **Invariants**: SQLite schemas for `Routes.db` and `StartLocation2Altitude.db` must not be altered, calculations must be 100% offline, and 100% full-suite test pass rate MUST NOT be broken.
 
-### REQ-MAP-030: [SUPERSEDED / REMOVED by ATT-2463 / REQ-MAP-035] Corridor-Based Route Grouping & Differentiating Thumbnail Zoom [Verified]
+### REQ-MAP-030: [SUPERSEDED / REMOVED by ATT-2463 / REQ-MAP-035] Corridor-Based Route Grouping & Differentiating Thumbnail Zoom [Implemented]
 - **Tests**: `TST-MAP-032`
 - **Priority**: Low
 - **Type**: Functional

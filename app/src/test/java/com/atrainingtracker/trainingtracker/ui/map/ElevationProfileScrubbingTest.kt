@@ -25,6 +25,7 @@ import org.junit.Test
 /**
  * Unit test for ElevationProfile point resolution during scrubbing and graceful sensor fallback (REQ-UI-201, TST-UI-155.4).
  */
+// Linked test specs: TST-UI-173
 class ElevationProfileScrubbingTest {
 
     private val trackPoints = listOf(

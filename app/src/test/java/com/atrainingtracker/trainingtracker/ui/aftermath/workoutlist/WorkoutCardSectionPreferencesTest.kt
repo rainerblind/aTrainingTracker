@@ -29,6 +29,7 @@ import org.junit.Test
  * Unit tests verifying [WorkoutCardSectionPreferences] data contract, default states,
  * and immutability invariants under REQ-UI-210 and TST-UI-164.
  */
+// Linked test specs: TST-UI-351
 class WorkoutCardSectionPreferencesTest {
 
     @Test

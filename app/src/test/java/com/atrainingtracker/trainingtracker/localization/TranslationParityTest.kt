@@ -34,6 +34,7 @@ import javax.xml.parsers.DocumentBuilderFactory
  * string array depth consistency, and resource hierarchy hygiene across all 9 supported locales
  * pursuant to REQ-LOC-001 and REQ-UI-122.
  */
+// Linked test specs: TST-LOC-001, TST-STR-013, TST-STR-014, TST-STR-016
 class TranslationParityTest {
 
     private val locales = listOf("de", "es", "fr", "it", "ja", "nl", "pl", "pt")

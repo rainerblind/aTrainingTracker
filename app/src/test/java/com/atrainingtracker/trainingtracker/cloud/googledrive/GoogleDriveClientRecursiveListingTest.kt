@@ -29,6 +29,7 @@ import java.io.File
  * Unit tests verifying recursive folder traversal, pagination, extension filtering,
  * and direct file ID downloading in [GoogleDriveClient] (REQ-MIG-034, TST-MIG-031).
  */
+// Linked test specs: TST-DAT-025
 class GoogleDriveClientRecursiveListingTest {
 
     @get:Rule

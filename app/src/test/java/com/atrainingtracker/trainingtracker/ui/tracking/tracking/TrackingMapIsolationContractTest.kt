@@ -29,6 +29,7 @@ import java.lang.reflect.Modifier
  * Architectural contract tests for TrackingMapState isolation and memoized Map container rendering.
  * Refactored to reflection and state validation per docs/coding_standards.md §5.4 and REQ-PRO-049.
  */
+// Linked test specs: TST-UI-286
 class TrackingMapIsolationContractTest {
 
     @Test

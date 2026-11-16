@@ -26,6 +26,7 @@ import org.junit.Test
  * Verifies that the modular category and screen composables are decoupled into individual classes.
  * Refactored to pure JVM reflection per docs/coding_standards.md §5.4 and REQ-PRO-049.
  */
+// Linked test specs: TST-UI-236
 class AdvancedTuningModularityTest {
 
     @Test

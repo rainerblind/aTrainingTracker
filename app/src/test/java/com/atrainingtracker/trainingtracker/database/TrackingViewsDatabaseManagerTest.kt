@@ -37,6 +37,7 @@ import java.lang.reflect.Field
  * Unit tests verifying TrackingViewsDatabaseManager's tile swapping, moving,
  * and grid normalization capabilities (REQ-UI-200, TST-UI-154.1, TST-UI-154.2).
  */
+// Linked test specs: TST-UI-304, TST-UI-374, TST-UI-376, TST-UI-439, TST-UI-440
 class TrackingViewsDatabaseManagerTest {
 
     private lateinit var mockContext: Context

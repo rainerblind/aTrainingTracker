@@ -27,6 +27,7 @@ import java.io.File
  * Structural contract and localization parity verification for EquipmentSensorMatrixScreen
  * and EquipmentTabsScreen integration (REQ-UI-256, TST-UI-215, ATT-2126).
  */
+// Linked test specs: TST-UI-248
 class EquipmentSensorMatrixContractTest {
 
     private fun findFile(relativePath: String): File {

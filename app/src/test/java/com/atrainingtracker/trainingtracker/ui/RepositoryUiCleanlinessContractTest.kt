@@ -31,6 +31,7 @@ import java.io.File
  * ControlTrackingViewModel, EquipmentViewModel) route all database access through domain repositories
  * and eliminate direct SQLite database manager calls.
  */
+// Linked test specs: TST-UI-510
 class RepositoryUiCleanlinessContractTest {
 
     private fun resolveFile(relativePath: String): File {

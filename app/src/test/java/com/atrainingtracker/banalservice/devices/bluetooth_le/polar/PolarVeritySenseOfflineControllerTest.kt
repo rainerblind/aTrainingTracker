@@ -90,6 +90,7 @@ import java.time.ZoneId
  * `ATT-7924`, `REQ-SET-109`, `TST-SET-111`).
  */
 @Suppress("LargeClass")
+// Linked test specs: TST-SET-112
 class PolarVeritySenseOfflineControllerTest {
 
     private lateinit var context: Context

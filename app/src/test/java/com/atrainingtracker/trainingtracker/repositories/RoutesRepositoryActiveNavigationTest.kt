@@ -34,6 +34,7 @@ import org.junit.Test
 /**
  * Unit tests verifying active navigation state tracking in RoutesRepository (REQ-MAP-023 / TST-MAP-025 / ATT-1841).
  */
+// Linked test specs: TST-MAP-033
 class RoutesRepositoryActiveNavigationTest {
 
     private lateinit var mockContext: Context

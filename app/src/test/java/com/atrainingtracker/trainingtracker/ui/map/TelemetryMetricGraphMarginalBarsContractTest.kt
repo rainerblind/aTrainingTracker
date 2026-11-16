@@ -33,6 +33,7 @@ import kotlin.math.abs
  * Contract and architectural tests verifying REQ-UI-251 / ATT-2147:
  * Integrated minimalist marginal zone bars & histogram right of telemetry graph in portrait mode.
  */
+// Linked test specs: TST-UI-210
 class TelemetryMetricGraphMarginalBarsContractTest {
 
     @Test

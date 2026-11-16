@@ -17,22 +17,22 @@
 - **Component**: `TimeFormatter`
 - **Test Description**: Verify Removal of leading zeros and correct localized string generation for s, m:s, and h:m:s formats.
 
-### TST-UNT-003: EquipmentDiscovery [Verified]
+### TST-UNT-003: EquipmentDiscovery [Implemented]
 - **Requirement(s)**: `REQ-TRK-004`, `REQ-SET-003`
 - **Component**: `EquipmentDiscovery`
 - **Test Description**: Verify sport-type resolution logic based on varied active sensor ID sets and speed.
 
-### TST-UNT-004: MovingAverageFilter [Verified]
+### TST-UNT-004: MovingAverageFilter [Implemented]
 - **Requirement(s)**: `REQ-FIL-001`
 - **Component**: `MovingAverageFilter`
 - **Test Description**: Verify correct averaging of a sequence of numbers (Numbered and Timed variants).
 
-### TST-UNT-005: ExponentialSmoothing [Verified]
+### TST-UNT-005: ExponentialSmoothing [Implemented]
 - **Requirement(s)**: `REQ-FIL-002`
 - **Component**: `ExponentialSmoothing`
 - **Test Description**: Verify the recursive smoothing formula: `y[k+1] = α m[k] + (1-α) y[k]`.
 
-### TST-UNT-006: SportTypeMapping [Verified]
+### TST-UNT-006: SportTypeMapping [Implemented]
 - **Requirement(s)**: `REQ-EXP-006`
 - **Component**: `SportTypeMapping`
 - **Test Description**: Verify that `SportTypeDatabaseManager` correctly handles a `null` Strava mapping as a persistent state.
@@ -47,34 +47,34 @@
 - **Component**: `Accumulator`
 - **Test Description**: Verify that hardware deltas received during a pause are discarded, while deltas received while active are accumulated correctly.
 
-### TST-UNT-009: WorkoutDataMapper [Verified]
+### TST-UNT-009: WorkoutDataMapper [Implemented]
 - **Requirement(s)**: `REQ-UI-011`
 - **Component**: `WorkoutDataMapper`
 - **Test Description**: Verify that the extrema rows only include the "Big 6" performance metrics: HR, Speed/Pace, Cadence, Power, Altitude, and Temperature.
 
-### TST-UNT-010: MappablePath [Verified]
+### TST-UNT-010: MappablePath [Implemented]
 - **Requirement(s)**: `REQ-MAP-007`
 - **Component**: `MappablePath`
 - **Test Description**: Verify that coordinate projection (latLngs) is lazy and only occurs once.
 
-### TST-UNT-011: TrackingViewsDb [Verified]
+### TST-UNT-011: TrackingViewsDb [Implemented]
 - **Requirement(s)**: `REQ-PRO-005`
 - **Component**: `TrackingViewsDb`
 - **Test Description**: 1. Simulated fresh install (Wipe data): Verify schema contains ShowElevationProfile. 2. Simulated upgrade (v9->v10): Verify ShowElevationProfile is added.
 
-### TST-UNT-012: WorkoutSummariesViewModel [Verified]
+### TST-UNT-012: WorkoutSummariesViewModel [Implemented]
 - **Requirement(s)**: `REQ-PER-008`
 - **Component**: `WorkoutSummariesViewModel`
 - **Jira**: ``ATT-457``
 - **Test Description**: Verify `getFilteredWorkouts` correctly filters by `sportId` (Sub-Sport) when provided.
 
-### TST-UNT-013: WorkoutSummariesViewModel [Verified]
+### TST-UNT-013: WorkoutSummariesViewModel [Implemented]
 - **Requirement(s)**: `REQ-PER-008`
 - **Component**: `WorkoutSummariesViewModel`
 - **Jira**: ``ATT-458``
 - **Test Description**: Verify `getFilteredWorkouts` correctly filters by `bSportType` (Base Sport) when `sportId` is null.
 
-### TST-UNT-014: WorkoutSummariesDbHelper [Verified]
+### TST-UNT-014: WorkoutSummariesDbHelper [Implemented]
 - **Requirement(s)**: `REQ-DAT-008`
 - **Component**: `WorkoutSummariesDbHelper`
 - **Jira**: ``ATT-476``
@@ -86,128 +86,128 @@
 - **Jira**: ``ATT-502``
 - **Test Description**: Verify that 6-term altitude-aware cluster similarity calculation correctly applies displacement weights when altitude positions are present, differentiates routes with distinct peaks/valleys, and cleanly falls back to 4-term matching when altitude coordinates are null or disabled.
 
-### TST-UI-075: **Settings Terminology Audit** [Verified]
+### TST-UI-075: **Settings Terminology Audit** [Implemented]
 - **Requirement(s)**: `REQ-UI-115`
 - **Component**: **Settings Terminology Audit**
 - **Jira**: ``ATT-272``
 - **Test Description**: 1. Open Navigation Drawer -> Settings. 2. Verify items "Display" and "Search". 3. Switch to German. 4. Verify items "Display" and "Suche".
 
-### TST-UI-001: **UI Design** [Verified]
+### TST-UI-001: **UI Design** [Implemented]
 - **Requirement(s)**: `REQ-UI-011`
 - **Component**: **UI Design**
 - **Test Description**: Inspect the workout summary extrema table on various device themes.
 
-### TST-UI-011: **Formatting** [Verified]
+### TST-UI-011: **Formatting** [Implemented]
 - **Requirement(s)**: `REQ-UI-011`
 - **Component**: **Formatting**
 - **Test Description**: Verify that units in data rows are surrounded by square brackets (e.g., `[km/h]`).
 
-### TST-UI-012: **Hierarchy** [Verified]
+### TST-UI-012: **Hierarchy** [Implemented]
 - **Requirement(s)**: `REQ-UI-011`
 - **Component**: **Hierarchy**
 - **Test Description**: Verify that the Sensor Name and the Numeric Values share the same visual weight, while the unit is micro-scaled.
 
-### TST-UI-013: **Alignment** [Verified]
+### TST-UI-013: **Alignment** [Implemented]
 - **Requirement(s)**: `REQ-UI-011`
 - **Component**: **Alignment**
 - **Test Description**: Verify that in all data rows, the icon, sensor label, and numeric values are vertically aligned to their bottom edge.
 
-### TST-UI-014: **Typography** [Verified]
+### TST-UI-014: **Typography** [Implemented]
 - **Requirement(s)**: `REQ-UI-011`
 - **Component**: **Typography**
 - **Test Description**: Verify that units use a micro font size (e.g., 8-9.sp) and a lighter color (reduced alpha) than the sensor name.
 
-### TST-UI-015: **Notation** [Verified]
+### TST-UI-015: **Notation** [Implemented]
 - **Requirement(s)**: `REQ-UI-011`
 - **Component**: **Notation**
 - **Test Description**: Verify that the "Average" header column displays the mathematical symbol (Ø) instead of the word "average".
 
-### TST-UI-016: **Proportion** [Verified]
+### TST-UI-016: **Proportion** [Implemented]
 - **Requirement(s)**: `REQ-UI-011`
 - **Component**: **Proportion**
 - **Test Description**: Verify that the icon height visually matches the height of the sensor name (bodyLarge line height).
 
-### TST-UI-017: **Alignment** [Verified]
+### TST-UI-017: **Alignment** [Implemented]
 - **Requirement(s)**: `REQ-UI-011`
 - **Component**: **Alignment**
 - **Test Description**: Verify that the icon, sensor label, and bracketed unit are perfectly aligned to the same bottom baseline in the Compose Preview.
 
-### TST-UI-018: **Baseline Precision** [Verified]
+### TST-UI-018: **Baseline Precision** [Implemented]
 - **Requirement(s)**: `REQ-UI-011`
 - **Component**: **Baseline Precision**
 - **Test Description**: Verify that the bottom edge of the icon and the bottom of the text characters are visually perfectly aligned.
 
-### TST-UI-019: **Hierarchy** [Verified]
+### TST-UI-019: **Hierarchy** [Implemented]
 - **Requirement(s)**: `REQ-UI-011`
 - **Component**: **Hierarchy**
 - **Test Description**: Verify context-aware bolding: HR/Power (Avg+Max), Speed/Pace/Cadence (Avg), Alt/Temp (Min+Max).
 
-### TST-UI-020: **Contrast** [Verified]
+### TST-UI-020: **Contrast** [Implemented]
 - **Requirement(s)**: `REQ-UI-011`
 - **Component**: **Contrast**
 - **Test Description**: Verify that the "-" placeholder is visually lighter (alpha 0.3) than numeric values.
 
-### TST-UI-021: **Redundancy** [Verified]
+### TST-UI-021: **Redundancy** [Implemented]
 - **Requirement(s)**: `REQ-UI-012`
 - **Component**: **Redundancy**
 - **Test Description**: Verify that Min/Max altitude no longer appear in the Workout Details row, only Ascent and Descent.
 
-### TST-UI-026: **Consistency** [Verified]
+### TST-UI-026: **Consistency** [Implemented]
 - **Requirement(s)**: `REQ-UI-013`
 - **Component**: **Consistency**
 - **Test Description**: In the Workout Summary card, verify that the altitude labels at the start/end of the chart axes match the Min/Max values shown in the Extrema table.
 
-### TST-UI-027: **Harmonization** [Verified]
+### TST-UI-027: **Harmonization** [Implemented]
 - **Requirement(s)**: `REQ-UI-014`
 - **Component**: **Harmonization**
 - **Test Description**: Start tracking; verify the Speed Average in the extrema table exactly matches the value derived from Total Distance / Active Time (e.g., if distance is 100m and active time is 100s, avg speed must be 1.0 m/s).
 
-### TST-UI-028: **Localization** [Verified]
+### TST-UI-028: **Localization** [Implemented]
 - **Requirement(s)**: `REQ-UI-018`
 - **Component**: **Localization**
 - **Test Description**: Inspect Workout Summary in various languages. Verify Ascent/Descent uses relative terminology (e.g., "Höhenmeter", "Elevation") and Min/Max uses absolute terminology (e.g., "Höhe", "Altitude").
 
-### TST-UI-029: **Session Isolation** [Verified]
+### TST-UI-029: **Session Isolation** [Implemented]
 - **Requirement(s)**: `REQ-UI-009`
 - **Component**: **Session Isolation**
 - **Test Description**: 1. Start a workout, move, stop workout. 2. Immediately start a new workout.
 
-### TST-UI-030: **Metric Consistency** [Verified]
+### TST-UI-030: **Metric Consistency** [Implemented]
 - **Requirement(s)**: `REQ-UI-020`
 - **Component**: **Metric Consistency**
 - **Test Description**: Audit Workout and Segment items. Verify \"Gain\" uses `ic_ascent` in both. Verify \"Elevation\" label in Workout is bottom-aligned with values. Verify all icons/text share a consistent baseline.
 
-### TST-UI-031: **Layout Hierarchy** [Verified]
+### TST-UI-031: **Layout Hierarchy** [Implemented]
 - **Requirement(s)**: `REQ-UI-021`
 - **Component**: **Layout Hierarchy**
 - **Test Description**: Open Workout Summary. Inspect the Elevation section header (left column).
 
-### TST-UI-034: **Identity Branding UI** [Verified]
+### TST-UI-034: **Identity Branding UI** [Implemented]
 - **Requirement(s)**: `REQ-UI-024`
 - **Component**: **Identity Branding UI**
 - **Test Description**: 1. Open Route List. 2. Inspect Strava route: verify logo is below name and no \"Source: Strava\" text exists. 3. Inspect Local route: verify \"Source: Local\" text is below name. 4. Verify no branding logo in metrics row.
 
-### TST-UI-035: **Compact Metric Row** [Verified]
+### TST-UI-035: **Compact Metric Row** [Implemented]
 - **Requirement(s)**: `REQ-UI-025`
 - **Component**: **Compact Metric Row**
 - **Test Description**: 1. Open Route List. 2. Inspect gap between identity row and metrics row.
 
-### TST-UI-036: **Branding Audit** [Verified]
+### TST-UI-036: **Branding Audit** [Implemented]
 - **Requirement(s)**: `REQ-UI-026`
 - **Component**: **Branding Audit**
 - **Test Description**: 1. Open Segment List. 2. Verify top logo height (e.g., 24dp). 3. Inspect individual Segment Items (if enabled).
 
-### TST-UI-038: **Detailed Metric Scale** [Verified]
+### TST-UI-038: **Detailed Metric Scale** [Implemented]
 - **Requirement(s)**: `REQ-UI-028`
 - **Component**: **Detailed Metric Scale**
 - **Test Description**: 1. Open Periods screen. 2. Inspect sub-sport rows and \"Longest Workout\" highlight.
 
-### TST-UI-039: **Pause Movement Isolation** [Verified]
+### TST-UI-039: **Pause Movement Isolation** [Implemented]
 - **Requirement(s)**: `REQ-PRO-004`
 - **Component**: **Pause Movement Isolation**
 - **Test Description**: 1. Start workout. 2. Move to create track. 3. **Pause**. 4. Move 50m.
 
-### TST-UI-041: **Period Peak Markers Audit** [Verified]
+### TST-UI-041: **Period Peak Markers Audit** [Implemented]
 - **Requirement(s)**: `REQ-UI-033`, `REQ-UI-035`, `REQ-UI-036`
 - **Component**: **Interactive Period Map Peak Markers**
 - **Jira**: `SCRUM-130`
@@ -217,12 +217,12 @@
   3. Tap a peak marker: verify the bottom peek sheet opens displaying the corresponding workout details.
   4. Ensure successful compilation and zero visual regressions.
 
-### TST-UI-043: **Device Management Modernization** [Verified]
+### TST-UI-043: **Device Management Modernization** [Implemented]
 - **Requirement(s)**: `REQ-UI-041`, `REQ-UI-043`
 - **Component**: **Device Management Modernization**
 - **Test Description**: 1. Navigate to Pairing screen. 2. Verify Tabbed layout. 3. Interact with Pair switches. 4. Click device to open Edit Dialog. 5. Modify a setting (e.g. name).
 
-### TST-UI-044: **Mappable Device Items Layout Verification** [Verified]
+### TST-UI-044: **Mappable Device Items Layout Verification** [Implemented]
 - **Requirement(s)**: `REQ-UI-042`
 - **Component**: **High-Density Device Item Layout**
 - **Jira**: `SCRUM-37`
@@ -232,66 +232,66 @@
   3. Verify green/red availability LED icon is positioned to the left of the device metadata.
   4. Confirm pairing switch is positioned at the bottom-right corner with 0.8f scale.
 
-### TST-UI-045: **Reactive Map Updates** [Verified]
+### TST-UI-045: **Reactive Map Updates** [Implemented]
 - **Requirement(s)**: `REQ-MAP-009`
 - **Component**: **Reactive Map Updates**
 - **Test Description**: Open Route Detail Map. Toggle the \"Active\" switch in the header.
 
-### TST-UI-046: **Stats Summary Block Visual Alignment** [Verified]
+### TST-UI-046: **Stats Summary Block Visual Alignment** [Implemented]
 - **Requirement(s)**: `REQ-UI-046`
 - **Component**: **Stats Summary Block Visual Alignment**
 - **Test Description**: Inspect the `StatsSummaryBlock` in the Equipment or SportType details screen.
 
-### TST-UI-047: **Live Segment Sheet Swipe Limit** [Verified]
+### TST-UI-047: **Live Segment Sheet Swipe Limit** [Implemented]
 - **Requirement(s)**: `REQ-UI-047`
 - **Component**: **Live Segment Sheet Swipe Limit**
 - **Test Description**: 1. Start tracking. 2. When a segment is active, swipe up on the bottom sheet.
 
-### TST-UI-048: **Sensor Status Header Visual Audit** [Verified]
+### TST-UI-048: **Sensor Status Header Visual Audit** [Implemented]
 - **Requirement(s)**: `REQ-UI-048`
 - **Component**: **Sensor Status Header Visual Audit**
 - **Test Description**: Inspect the `SensorStatus` row at the top of the tracking screen.
 
-### TST-UI-049: **Sensor Source Dialog Verification** [Verified]
+### TST-UI-049: **Sensor Source Dialog Verification** [Implemented]
 - **Requirement(s)**: `REQ-UI-049`
 - **Component**: **Sensor Source Dialog Verification**
 - **Test Description**: 1. Start a session. 2. Tap any sensor icon (active or inactive) in the header.
 
-### TST-UI-051: **Grade Legend Visibility** [Verified]
+### TST-UI-051: **Grade Legend Visibility** [Implemented]
 - **Requirement(s)**: `REQ-MAP-010`
 - **Component**: **Grade Legend Visibility**
 - **Test Description**: 1. Open any Elevation Profile (e.g., in Aftermath). 2. Tap the info icon.
 
-### TST-UI-050: **Sensor Identity Logic** [Verified]
+### TST-UI-050: **Sensor Identity Logic** [Implemented]
 - **Requirement(s)**: `REQ-UI-050`
 - **Component**: **Sensor Identity Logic**
 - **Test Description**: Open `SensorSourceDialog`, `EditDeviceDialog`, and `DeviceItem`.
 
-### TST-UI-071: **Branding** [Verified]
+### TST-UI-071: **Branding** [Implemented]
 - **Requirement(s)**: `REQ-UI-062`
 - **Component**: **Branding**
 - **Jira**: ``ATT-237``
 - **Test Description**: 1. Open the app to the main tracking screen. 2. Inspect the header area.
 
-### TST-UI-074: **Weekly Period Date Range** [Verified]
+### TST-UI-074: **Weekly Period Date Range** [Implemented]
 - **Requirement(s)**: `REQ-UI-116`
 - **Component**: **Weekly Period Date Range**
 - **Jira**: ``ATT-386``
 - **Test Description**: 1. Open the 'Periods' screen. 2. Navigate to the 'Weeks' tab. 3. Inspect the period items.
 
-### TST-UI-072: **Progress Notification Neutrality** [Verified]
+### TST-UI-072: **Progress Notification Neutrality** [Implemented]
 - **Requirement(s)**: `REQ-UI-101`
 - **Component**: **Progress Notification Neutrality**
 - **Jira**: ``ATT-369``
 - **Test Description**: 1. Trigger a Periods sync or Cluster initial load. 2. Inspect the background color of the progress card.
 
-### TST-UI-073: **Bar Graph Synchronization** [Verified]
+### TST-UI-073: **Bar Graph Synchronization** [Implemented]
 - **Requirement(s)**: `REQ-UI-104`
 - **Component**: **Bar Graph Synchronization**
 - **Jira**: ``ATT-376``
 - **Test Description**: 1. Clear application data to trigger a Periods migration. 2. Navigate to the 'Periods' screen. 3. Observe the bar graph as the newest months are aggregated first. 4. Scroll the period list.
 
-### TST-UI-077: **Consistent Spacing Audit** [Verified]
+### TST-UI-077: **Consistent Spacing Audit** [Implemented]
 - **Requirement(s)**: `REQ-UI-121`
 - **Component**: **Consistent Spacing Audit**
 - **Jira**: ``ATT-474``
@@ -336,72 +336,72 @@
   • *When* route colors are queried,
   • *Then* `RouteSelected` and `RouteUnselected` SHALL remain strictly Royal Blue without regression.
 
-### TST-UI-053: **Longest Workout Navigation** [Verified]
+### TST-UI-053: **Longest Workout Navigation** [Implemented]
 - **Requirement(s)**: `REQ-UI-052`
 - **Component**: **Longest Workout Navigation**
 - **Test Description**: 1. Open a Period Summary with multiple workouts. 2. Tap the "Longest Workout" section.
 
-### TST-UI-054: **Location Audit Metric** [Verified]
+### TST-UI-054: **Location Audit Metric** [Implemented]
 - **Requirement(s)**: `REQ-UI-053`
 - **Component**: **Location Audit Metric**
 - **Test Description**: 1. Start a tracking session with a location provider active. 2. Tap the location icon in the `SensorStatus` header.
 
-### TST-UI-055: **Multi-Track Visibility Audit** [Verified]
+### TST-UI-055: **Multi-Track Visibility Audit** [Implemented]
 - **Requirement(s)**: `REQ-MAP-011`, `REQ-MAP-012`
 - **Component**: **Multi-Track Visibility Audit**
 - **Test Description**: 1. Open the Workout Details screen for a recorded activity. 2. Tap the "Layers" FAB. 3. Toggle different track types (GPS, Fused, Network).
 
-### TST-UI-056: **Map Preference Persistence** [Verified]
+### TST-UI-056: **Map Preference Persistence** [Implemented]
 - **Requirement(s)**: `REQ-MAP-013`
 - **Component**: **Map Preference Persistence**
 - **Test Description**: 1. Toggle technical tracks in Workout Details. 2. Close and reopen the workout.
 
-### TST-UI-057: **Period FAB Order** [Verified]
+### TST-UI-057: **Period FAB Order** [Implemented]
 - **Requirement(s)**: `REQ-MAP-014`
 - **Component**: **Period FAB Order**
 - **Test Description**: 1. Open the Period Map. 2. Verify the vertical order of FABs.
 
-### TST-UI-058: **High-Fidelity Period Tracks** [Verified]
+### TST-UI-058: **High-Fidelity Period Tracks** [Implemented]
 - **Requirement(s)**: `REQ-MAP-015`
 - **Component**: **High-Fidelity Period Tracks**
 - **Test Description**: 1. Compare a track in a Period Map overview with the same track in Workout Details.
 
-### TST-UI-059: **Alpha Consistency Audit** [Verified]
+### TST-UI-059: **Alpha Consistency Audit** [Implemented]
 - **Requirement(s)**: `REQ-UI-054`
 - **Component**: **Alpha Consistency Audit**
 - **Test Description**: Static analysis of `WorkoutExtrema.kt` and `MetricItem.kt`.
 
-### TST-UI-060: **Primary Metric Hierarchy** [Verified]
+### TST-UI-060: **Primary Metric Hierarchy** [Implemented]
 - **Requirement(s)**: `REQ-UI-055`
 - **Component**: **Primary Metric Hierarchy**
 - **Test Description**: Open Workout Details or Segment Details.
 
-### TST-UI-061: **Theme Audit** [Verified]
+### TST-UI-061: **Theme Audit** [Implemented]
 - **Requirement(s)**: `REQ-UI-056`
 - **Component**: **Theme Audit**
 - **Test Description**: Project-wide grep for `Color(0xFF...)` and `copy(alpha = ...)`.
 
-### TST-UI-062: **Protocol-Aware Menu** [Verified]
+### TST-UI-062: **Protocol-Aware Menu** [Implemented]
 - **Requirement(s)**: `REQ-UI-044`
 - **Component**: **Protocol-Aware Menu**
 - **Test Description**: 1. Open the Bluetooth sensor list. 2. Check the options menu. 3. Open the ANT+ sensor list. 4. Check the options menu.
 
-### TST-UI-063: **Global Icon Clipping** [Verified]
+### TST-UI-063: **Global Icon Clipping** [Implemented]
 - **Requirement(s)**: `REQ-UI-057`
 - **Component**: **Global Icon Clipping**
 - **Test Description**: 1. Open the app in Dark Mode. 2. Inspect sensor and protocol icons.
 
-### TST-UI-066: **Elevation Profile Visibility** [Verified]
+### TST-UI-066: **Elevation Profile Visibility** [Implemented]
 - **Requirement(s)**: `REQ-UI-058`
 - **Component**: **Elevation Profile Visibility**
 - **Test Description**: 1. Open the Recurring Path Heatmap. 2. Inspect the bottom of the screen.
 
-### TST-UI-067: **Robust Sharing Snapshot** [Verified]
+### TST-UI-067: **Robust Sharing Snapshot** [Implemented]
 - **Requirement(s)**: `REQ-UI-059`
 - **Component**: **Robust Sharing Snapshot**
 - **Test Description**: 1. Open a Workout Cluster Heatmap (where elevation is hidden). 2. Tap the Share button. 3. Verify that a loading indicator appears on the button. 4. Select a sharing target in the system dialog.
 
-### TST-UI-069: **Safe Map Snapshot** [Verified]
+### TST-UI-069: **Safe Map Snapshot** [Implemented]
 - **Requirement(s)**: `REQ-UI-060`
 - **Component**: **Safe Map Snapshot**
 - **Test Description**: 1. Trigger a snapshot multiple times rapidly. 2. Attempt a snapshot on a device with low memory.
@@ -426,7 +426,7 @@
   2. Run `TranslationParityTest` and `ClusterNamingDialogLabelsVisualContractTest` to confirm 100% string presence, copy correctness, and parity across `values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, and `values-pt/`.
   3. Verify `verify_requirement_governance.py` passes cleanly.
 
-### TST-UI-076: **Period UI Layout Integrity** [Verified]
+### TST-UI-076: **Period UI Layout Integrity** [Implemented]
 - **Requirement(s)**: `REQ-UI-104`
 - **Component**: **Period UI Layout Integrity**
 - **Jira**: ``ATT-444``
@@ -442,7 +442,7 @@
   3. Test with valid mountainous route; verify that full dynamic elevation range is preserved.
   4. Run unit tests in `ElevationProfileBoundsTest.kt`.
 
-### TST-UI-080: **Delete Old Workouts Compose Dialog & Action Trigger Verification** [Verified]
+### TST-UI-080: **Delete Old Workouts Compose Dialog & Action Trigger Verification** [Implemented]
 - **Requirement(s)**: `REQ-UI-127`
 - **Component**: **Delete Old Workouts Compose Dialog & Action Trigger Verification**
 - **Jira**: ``ATT-296``
@@ -961,7 +961,7 @@
   4. *Clean-Room Regression Verification*:
   • Execute full clean-room unit test suite (`./gradlew testDebugUnitTest --no-daemon`) ensuring zero regressions.
 
-### TST-UI-108: **Legacy Fragment Retirement, Unused Layout Purge & Resource Cleanup Verification** [Verified]
+### TST-UI-108: **Legacy Fragment Retirement, Unused Layout Purge & Resource Cleanup Verification** [Implemented]
 - **Requirement(s)**: `REQ-UI-155`
 - **Component**: **Legacy Fragment Retirement, Unused Layout Purge & Resource Cleanup Verification**
 - **Jira**: ``ATT-1018`, `ATT-1068``

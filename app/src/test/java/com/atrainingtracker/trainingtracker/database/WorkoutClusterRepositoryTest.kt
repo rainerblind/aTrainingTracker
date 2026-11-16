@@ -43,6 +43,7 @@ import org.junit.Test
  * - Unlinked zero-workout orphan clusters are automatically purged (REQ-SET-062).
  * - Route-linked clusters are preserved even when zero workouts remain (REQ-SET-062).
  */
+// Linked test specs: TST-SET-048
 class WorkoutClusterRepositoryTest {
 
     private lateinit var mockContext: Context

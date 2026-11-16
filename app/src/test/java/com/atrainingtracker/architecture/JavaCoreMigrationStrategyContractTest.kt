@@ -33,6 +33,7 @@ import java.io.File
  * 3. Atomic child ticket sizing (1..3 SP) and Epic ATT-431 traceability (TST-ARC-005.3, REQ-ARC-005.5).
  * 4. System architecture document integration in docs/architecture.md (TST-ARC-005.4, REQ-ARC-005.6).
  */
+// Linked test specs: TST-ARC-006
 class JavaCoreMigrationStrategyContractTest {
 
     companion object {

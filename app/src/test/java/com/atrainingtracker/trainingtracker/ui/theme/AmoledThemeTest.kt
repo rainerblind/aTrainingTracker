@@ -23,6 +23,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Test
 
+// Linked test specs: TST-UI-121
 class AmoledThemeTest {
 
     @Test

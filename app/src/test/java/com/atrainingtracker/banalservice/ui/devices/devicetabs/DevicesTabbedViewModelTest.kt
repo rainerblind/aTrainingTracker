@@ -50,6 +50,7 @@ import org.junit.rules.TemporaryFolder
  * parameters with robust defaults (Protocol.ALL, DeviceType.ALL) and crash immunity (REQ-STB-011, TST-STB-011, ATT-1308).
  */
 @OptIn(ExperimentalCoroutinesApi::class)
+// Linked test specs: TST-TST-003
 class DevicesTabbedViewModelTest {
 
     @get:Rule

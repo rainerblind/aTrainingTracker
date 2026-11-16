@@ -42,6 +42,7 @@ import javax.xml.parsers.DocumentBuilderFactory
  * - `EditSensorFieldDialog.kt` source contract and `AppModalBottomSheet` scroll safety (zero nested `verticalScroll` or `LazyColumn`)
  * - 9-locale localization parity for all category, sub-category, and capability badge string keys
  */
+// Linked test specs: TST-UI-358
 class SensorCategoryAndSelectorContractTest {
 
     private fun resolveProjectRoot(): File {

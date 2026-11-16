@@ -42,6 +42,7 @@ import org.junit.Test
  * Unit tests verifying forensic process exit classification, battery optimization state detection,
  * and escalation counter handling in [ProcessExitReasonHelper] (REQ-STB-012, TST-STB-012, ATT-2079).
  */
+// Linked test specs: TST-STB-015
 class ProcessExitReasonHelperTest {
 
     private lateinit var context: Context

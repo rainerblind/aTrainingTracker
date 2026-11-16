@@ -31,6 +31,7 @@ import java.util.regex.Pattern
  *
  * Covers [TST-UI-336.7].
  */
+// Linked test specs: TST-UI-341
 class ZoneCalculatorLocalizationTest {
 
     private val locales = listOf(

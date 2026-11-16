@@ -28,6 +28,7 @@ import org.junit.Test
 /**
  * Unit tests for [LiveWorkoutSession] running statistics and spatial coordinate binding (REQ-MAP-019, ATT-499).
  */
+// Linked test specs: TST-MAP-021
 class LiveWorkoutSessionTest {
 
     @Test

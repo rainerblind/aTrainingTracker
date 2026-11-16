@@ -37,6 +37,7 @@ import java.util.regex.Pattern
  *
  * Also validates V5.0 core capability messaging, screenshot uniqueness, and HTML tag hygiene.
  */
+// Linked test specs: TST-PRO-084
 class PlayStoreListingContractTest {
 
     private fun findRepoRootFile(relativePath: String): File {

@@ -30,6 +30,7 @@ import org.junit.Test
  * high-contrast badge marker generation, and 22 dp marker size scaling for waypoints
  * (REQ-MAP-033, TST-MAP-035, ATT-2461; REQ-MAP-037, TST-MAP-039 / ATT-2628).
  */
+// Linked test specs: TST-PRO-081
 class WaypointBadgeMarkerTest {
 
     @Test

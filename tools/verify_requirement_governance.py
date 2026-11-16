@@ -17,6 +17,7 @@ Invariants:
   - Deterministic exit codes: 0 = valid / compliant, 1 = schema failure.
 """
 
+import csv
 import json
 import os
 import re
@@ -50,67 +51,8 @@ LEGACY_DANGLING_TST_REFS = frozenset()
 
 LEGACY_DANGLING_REQ_REFS = frozenset()
 
-# Known legacy TSTs claiming [Verified] without test code or machine test evidence pending backfill (SWE.4/6 BP4/5, SWE.1 BP5, REQ-PRO-099)
-LEGACY_UNBACKED_VERIFIED_TSTS = frozenset({
-    "TST-ARC-006", "TST-BUG-001", "TST-BUG-002", "TST-BUG-006", "TST-BUG-007", "TST-BUG-008", "TST-BUG-009",
-    "TST-BUG-010", "TST-BUG-011", "TST-CON-002", "TST-CON-007", "TST-DAT-001", "TST-DAT-015", "TST-DAT-016",
-    "TST-DAT-017", "TST-DAT-019", "TST-DAT-021", "TST-DAT-023", "TST-DAT-025", "TST-DAT-032", "TST-DAT-034",
-    "TST-DAT-040", "TST-EXP-004", "TST-EXP-020", "TST-EXT-001", "TST-EXT-002", "TST-FIL-002", "TST-FIL-003",
-    "TST-INT-002", "TST-INT-003", "TST-INT-004", "TST-INT-005", "TST-INT-006", "TST-INT-007", "TST-INT-008",
-    "TST-LOC-001", "TST-LOG-001", "TST-LOG-002", "TST-MAN-001", "TST-MAP-010", "TST-MAP-020", "TST-MAP-021",
-    "TST-MAP-030", "TST-MAP-032", "TST-MAP-033", "TST-MAP-046", "TST-MAP-047", "TST-MAP-050", "TST-MAP-052",
-    "TST-MAP-057", "TST-MAP-062", "TST-MAP-065", "TST-MAP-069", "TST-MIG-001", "TST-MIG-002", "TST-MIG-003",
-    "TST-MIG-004", "TST-MIG-005", "TST-MIG-006", "TST-MIG-007", "TST-MIG-008", "TST-MIG-010", "TST-MIG-011",
-    "TST-MIG-012", "TST-MIG-013", "TST-MIG-014", "TST-MIG-015", "TST-MIG-016", "TST-MIG-017", "TST-MIG-018",
-    "TST-MIG-019", "TST-MIG-025", "TST-MIG-047", "TST-NAV-001", "TST-NAV-002", "TST-NAV-003", "TST-NAV-005",
-    "TST-NAV-006", "TST-NAV-045", "TST-NAV-056", "TST-PER-009", "TST-PER-010", "TST-PER-012", "TST-PER-014",
-    "TST-PER-017", "TST-PERF-001", "TST-PERF-002", "TST-PERF-003", "TST-PERF-004", "TST-PERF-005", "TST-PERF-006",
-    "TST-PERF-007", "TST-PERF-008", "TST-PERF-009", "TST-PERF-010", "TST-PRO-001", "TST-PRO-002", "TST-PRO-003",
-    "TST-PRO-004", "TST-PRO-005", "TST-PRO-006", "TST-PRO-007", "TST-PRO-008", "TST-PRO-009", "TST-PRO-010",
-    "TST-PRO-011", "TST-PRO-012", "TST-PRO-013", "TST-PRO-014", "TST-PRO-015", "TST-PRO-017", "TST-PRO-019",
-    "TST-PRO-020", "TST-PRO-021", "TST-PRO-022", "TST-PRO-038", "TST-PRO-039", "TST-PRO-040", "TST-PRO-058",
-    "TST-PRO-059", "TST-PRO-060", "TST-PRO-061", "TST-PRO-062", "TST-PRO-063", "TST-PRO-064", "TST-PRO-065",
-    "TST-PRO-066", "TST-PRO-070", "TST-PRO-071", "TST-PRO-073", "TST-PRO-074", "TST-PRO-075", "TST-PRO-076",
-    "TST-PRO-077", "TST-PRO-078", "TST-PRO-079", "TST-PRO-080", "TST-PRO-081", "TST-PRO-082", "TST-PRO-083",
-    "TST-PRO-084", "TST-PRO-085", "TST-PRO-086", "TST-PRO-087", "TST-PRO-088", "TST-PRO-091", "TST-PRO-092",
-    "TST-PRO-093", "TST-PRO-094", "TST-PRO-095", "TST-PRO-096", "TST-PRO-097", "TST-PRO-098", "TST-RAD-006",
-    "TST-REG-001", "TST-REG-002", "TST-REG-003", "TST-REG-004", "TST-REG-005", "TST-REG-007", "TST-REG-008",
-    "TST-SET-001", "TST-SET-002", "TST-SET-003", "TST-SET-004", "TST-SET-005", "TST-SET-006", "TST-SET-007",
-    "TST-SET-008", "TST-SET-009", "TST-SET-010", "TST-SET-011", "TST-SET-012", "TST-SET-013", "TST-SET-014",
-    "TST-SET-015", "TST-SET-016", "TST-SET-017", "TST-SET-018", "TST-SET-019", "TST-SET-020", "TST-SET-021",
-    "TST-SET-022", "TST-SET-023", "TST-SET-024", "TST-SET-025", "TST-SET-026", "TST-SET-027", "TST-SET-028",
-    "TST-SET-029", "TST-SET-030", "TST-SET-031", "TST-SET-032", "TST-SET-033", "TST-SET-034", "TST-SET-035",
-    "TST-SET-040", "TST-SET-041", "TST-SET-042", "TST-SET-043", "TST-SET-044", "TST-SET-045", "TST-SET-046",
-    "TST-SET-047", "TST-SET-048", "TST-SET-057", "TST-SET-058", "TST-SET-061", "TST-SET-063", "TST-SET-076",
-    "TST-SET-085", "TST-SET-112", "TST-STB-015", "TST-STR-001", "TST-STR-002", "TST-STR-003", "TST-STR-004",
-    "TST-STR-005", "TST-STR-006", "TST-STR-007", "TST-STR-008", "TST-STR-011", "TST-STR-012", "TST-STR-013",
-    "TST-STR-014", "TST-STR-015", "TST-STR-016", "TST-STR-017", "TST-TOOL-001", "TST-TOOL-002", "TST-TOOL-003",
-    "TST-TOOL-004", "TST-TOOL-005", "TST-TOOL-006", "TST-TOOL-007", "TST-TRK-006", "TST-TRK-017", "TST-TRK-068",
-    "TST-TST-003", "TST-TST-004", "TST-UI-001", "TST-UI-011", "TST-UI-012", "TST-UI-013", "TST-UI-014",
-    "TST-UI-015", "TST-UI-016", "TST-UI-017", "TST-UI-018", "TST-UI-019", "TST-UI-020", "TST-UI-021",
-    "TST-UI-026", "TST-UI-027", "TST-UI-028", "TST-UI-029", "TST-UI-030", "TST-UI-031", "TST-UI-034",
-    "TST-UI-035", "TST-UI-036", "TST-UI-038", "TST-UI-039", "TST-UI-041", "TST-UI-043", "TST-UI-044",
-    "TST-UI-045", "TST-UI-046", "TST-UI-047", "TST-UI-048", "TST-UI-049", "TST-UI-050", "TST-UI-051",
-    "TST-UI-053", "TST-UI-054", "TST-UI-055", "TST-UI-056", "TST-UI-057", "TST-UI-058", "TST-UI-059",
-    "TST-UI-060", "TST-UI-061", "TST-UI-062", "TST-UI-063", "TST-UI-066", "TST-UI-067", "TST-UI-069",
-    "TST-UI-071", "TST-UI-072", "TST-UI-073", "TST-UI-074", "TST-UI-075", "TST-UI-076", "TST-UI-077",
-    "TST-UI-080", "TST-UI-093", "TST-UI-096", "TST-UI-104", "TST-UI-106", "TST-UI-107", "TST-UI-108",
-    "TST-UI-109", "TST-UI-110", "TST-UI-121", "TST-UI-148", "TST-UI-161", "TST-UI-168", "TST-UI-169",
-    "TST-UI-171", "TST-UI-173", "TST-UI-186", "TST-UI-187", "TST-UI-188", "TST-UI-189", "TST-UI-193",
-    "TST-UI-203", "TST-UI-205", "TST-UI-209", "TST-UI-210", "TST-UI-224", "TST-UI-225", "TST-UI-226",
-    "TST-UI-231", "TST-UI-236", "TST-UI-248", "TST-UI-249", "TST-UI-251", "TST-UI-255", "TST-UI-269",
-    "TST-UI-270", "TST-UI-271", "TST-UI-273", "TST-UI-274", "TST-UI-275", "TST-UI-277", "TST-UI-280",
-    "TST-UI-281", "TST-UI-284", "TST-UI-285", "TST-UI-286", "TST-UI-287", "TST-UI-291", "TST-UI-292",
-    "TST-UI-295", "TST-UI-297", "TST-UI-299", "TST-UI-300", "TST-UI-303", "TST-UI-304", "TST-UI-306",
-    "TST-UI-308", "TST-UI-319", "TST-UI-332", "TST-UI-341", "TST-UI-343", "TST-UI-345", "TST-UI-346",
-    "TST-UI-349", "TST-UI-350", "TST-UI-351", "TST-UI-355", "TST-UI-358", "TST-UI-359", "TST-UI-361",
-    "TST-UI-363", "TST-UI-365", "TST-UI-368", "TST-UI-374", "TST-UI-376", "TST-UI-382", "TST-UI-383",
-    "TST-UI-386", "TST-UI-391", "TST-UI-399", "TST-UI-439", "TST-UI-440", "TST-UI-443", "TST-UI-448",
-    "TST-UI-458", "TST-UI-459", "TST-UI-460", "TST-UI-463", "TST-UI-465", "TST-UI-474", "TST-UI-491",
-    "TST-UI-500", "TST-UI-504", "TST-UI-510", "TST-UI-511", "TST-UI-516", "TST-UI-525", "TST-UNT-001",
-    "TST-UNT-002", "TST-UNT-003", "TST-UNT-004", "TST-UNT-005", "TST-UNT-006", "TST-UNT-007", "TST-UNT-008",
-    "TST-UNT-009", "TST-UNT-010", "TST-UNT-011", "TST-UNT-012", "TST-UNT-013", "TST-UNT-014"
-})
+# Legacy unbacked [Verified] TST ratchet reconciled to 0 in ATT-8145 (SWE.4/6 BP4/5, SWE.1 BP5, REQ-PRO-099, REQ-PRO-101)
+LEGACY_UNBACKED_VERIFIED_TSTS = frozenset()
 
 # Known legacy requirements claiming [Verified] without TST citations pending backfill in ATT-6127..ATT-6135 (SWE.1 BP3, SWE.6 BP3, REQ-PRO-073)
 LEGACY_UNGROUNDED_VERIFIED_REQS = frozenset({
@@ -2360,15 +2302,25 @@ def extract_test_code_tags(test_sources=None, repo_root=None):
     tag_pattern = re.compile(r"(?<![A-Za-z0-9_-])(TST-[A-Z]+-[0-9]+(?:[\._-][A-Za-z0-9_-]+)*)")
     base_pattern = re.compile(r"^(TST-[A-Z]+-[0-9]+)")
 
+    synthetic_gov_tests = {
+        "test_verify_requirement_governance.py",
+        "test_generate_test_evidence.py",
+        "test_jira_accounts.py",
+        "test_shard_living_docs.py",
+    }
+
     code_tags = {}
     for rel_fp, lines in files_to_scan:
         is_tool_script = rel_fp.startswith("tools") or rel_fp.endswith(".py")
+        is_synthetic_gov = os.path.basename(rel_fp) in synthetic_gov_tests
         for lno, line in enumerate(lines, 1):
             for m in tag_pattern.finditer(line):
                 raw = m.group(1).rstrip(".")
                 m_base = base_pattern.match(raw)
                 base_id = m_base.group(1) if m_base else raw
-                if is_tool_script and not base_id.startswith("TST-PRO-"):
+                if is_tool_script and is_synthetic_gov and not base_id.startswith("TST-PRO-"):
+                    continue
+                if is_tool_script and not is_synthetic_gov and not base_id.startswith(("TST-PRO-", "TST-TOOL-", "TST-STB-", "TST-TST-", "TST-SIM-", "TST-TRK-017")):
                     continue
                 code_tags.setdefault(base_id, []).append({
                     "file": rel_fp,
@@ -2971,6 +2923,275 @@ def has_verified_test_evidence(
         return True, "Tolerated in ratchet baseline (legacy unbacked TST)"
 
     return False, "No test code or passing test results found"
+
+
+def _collect_test_file_index(repo_root, test_sources=None):
+    """Indexes test source files under app/src/test, app/src/androidTest, and tools/."""
+    test_files = {}
+    if isinstance(test_sources, dict):
+        for rel_p, content in test_sources.items():
+            test_files[rel_p] = content if isinstance(content, str) else "".join(content)
+    else:
+        for base in ("app/src/test", "app/src/androidTest", "tools"):
+            abs_base = os.path.join(repo_root, base)
+            if not os.path.isdir(abs_base):
+                continue
+            for root, _, files in os.walk(abs_base):
+                if "hoechstmass" in root:
+                    continue
+                for fn in sorted(files):
+                    if base == "tools":
+                        if not (fn.startswith("test_") and fn.endswith(".py")):
+                            continue
+                    elif not (fn.endswith(".kt") or fn.endswith(".java")):
+                        continue
+                    abs_p = os.path.join(root, fn)
+                    rel_p = os.path.relpath(abs_p, repo_root)
+                    with open(abs_p, "r", encoding="utf-8", errors="ignore") as fh:
+                        test_files[rel_p] = fh.read()
+    by_basename = {}
+    req_in_tests = {}
+    doc_tools_tests = {
+        "test_verify_requirement_governance.py",
+        "test_generate_test_evidence.py",
+        "test_jira_accounts.py",
+        "test_shard_living_docs.py",
+        "test_extract_pixel_field_evidence.py",
+        "test_generate_release_verification_summary.py",
+    }
+    for rel_p, txt in test_files.items():
+        bn = os.path.basename(rel_p)
+        by_basename.setdefault(bn, []).append(rel_p)
+        for m in re.finditer(r"REQ-[A-Z]+-[0-9]+", txt):
+            req_id = m.group(0)
+            if bn in doc_tools_tests and not req_id.startswith("REQ-PRO-"):
+                continue
+            req_in_tests.setdefault(req_id, set()).add(rel_p)
+    return by_basename, req_in_tests
+
+
+def triage_unbacked_verified_tsts(
+    repo_root=None,
+    out_csv=None,
+    tst_shards=None,
+    req_shards=None,
+    test_sources=None,
+    code_tags=None,
+    baseline_allowlist=None,
+):
+    """
+    Classifies all unbacked [Verified] TST specifications across living-doc shards into deterministic
+    triage categories ('unit-test-backed', 'UI/manual-only', 'obsolete/duplicate', 'missing test code'),
+    flags stale already-backed entries in LEGACY_UNBACKED_VERIFIED_TSTS, and optionally writes a CSV ledger.
+    Returns (report: dict, diagnostics: list[str]).
+    """
+    if repo_root is None:
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    if baseline_allowlist is None:
+        baseline_allowlist = LEGACY_UNBACKED_VERIFIED_TSTS
+    if code_tags is None:
+        code_tags = extract_test_code_tags(test_sources=test_sources, repo_root=repo_root)
+
+    by_basename, req_in_tests = _collect_test_file_index(repo_root, test_sources=test_sources)
+    loaded_reqs = _load_shard_sources(req_shards, "docs/requirements", repo_root)
+    loaded_tsts = _load_shard_sources(tst_shards, "docs/tests", repo_root)
+
+    req_meta = {}
+    for rel_path, lines in loaded_reqs:
+        cur = None
+        for line in lines:
+            m = re.match(r"^###\s+(REQ-[A-Z0-9_-]+):?\s*(.*)$", line.strip())
+            if m:
+                cur = m.group(1)
+                req_meta[cur] = {"vm": "", "tests": "", "verified": "[Verified]" in m.group(2)}
+            elif cur:
+                if "**Verification Method**:" in line:
+                    req_meta[cur]["vm"] = line.split(":", 1)[1].strip()
+                elif "**Tests**:" in line:
+                    req_meta[cur]["tests"] = line.split(":", 1)[1].strip()
+
+    heading_pat = re.compile(r"^###\s+(TST-[A-Z]+-[0-9]+(?:\.[0-9]+)?)[^:\n]*:\s*([^\n]+)")
+    generic_contracts = {
+        "TranslationParityTest.kt",
+        "AspiceSweAuditContractTest.kt",
+        "SystemArchitectureDesignContractTest.kt",
+        "SystemIntegrationTestContractTest.kt",
+        "SystemLiveTrackingRequirementsContractTest.kt",
+        "SystemVerificationProtocolContractTest.kt",
+        "ReleaseCiAndLintConfigContractTest.kt",
+        "HoechstmassCoreFrameworkContractTest.kt",
+    }
+    generic_kw_pat = re.compile(
+        r"translat|format\s+string|locali|parity|aspice|governance|hoechstmass|shard|backfill|sprint\s+metrics",
+        re.IGNORECASE,
+    )
+    manual_ui_pat = re.compile(
+        r"(?:\b(?:Tap|Navigate\s+to|Open\s+the|Swipe|Visually|Clear\s+application\s+data|Inspect\s+the|Install|Restart\s+app|Click\s+a|On-Device|Physical\s+device|Screenshot)\b)",
+        re.IGNORECASE,
+    )
+
+    entries = []
+    seen_tst_ids = set()
+    duplicate_tst_ids = set()
+    parsed_tsts = []
+
+    for rel_path, lines in loaded_tsts:
+        cur = None
+        block = []
+        for lno, line in enumerate(lines, 1):
+            m = heading_pat.match(line.strip())
+            if m:
+                if cur is not None:
+                    cur["block"] = "".join(block)
+                    parsed_tsts.append(cur)
+                tid = m.group(1)
+                base_tid = tid.split(".")[0]
+                if base_tid in seen_tst_ids:
+                    duplicate_tst_ids.add(base_tid)
+                seen_tst_ids.add(base_tid)
+                rest = m.group(2)
+                cur = (
+                    {
+                        "base_id": base_tid,
+                        "raw_id": tid,
+                        "file": rel_path,
+                        "line": lno,
+                        "title": rest.strip(),
+                    }
+                    if ("[Verified]" in rest or "Verified" in rest)
+                    else None
+                )
+                block = []
+            elif cur is not None:
+                block.append(line)
+        if cur is not None:
+            cur["block"] = "".join(block)
+            parsed_tsts.append(cur)
+
+    for item in parsed_tsts:
+        base_tid = item["base_id"]
+        if base_tid in code_tags:
+            continue
+        block = item["block"]
+        title = item["title"]
+        reqs = sorted(set(re.findall(r"REQ-[A-Z]+-[0-9]+", block)))
+        vms = sorted({req_meta[r]["vm"] for r in reqs if r in req_meta and req_meta[r]["vm"]})
+        vm_str = "; ".join(vms) if vms else "Unspecified"
+        comp_m = re.search(r"\*\*Component\*\*:\s*([^\n]+)", block)
+        comp = comp_m.group(1) if comp_m else ""
+        is_generic_topic = bool(generic_kw_pat.search(title + " " + block))
+
+        explicit_files = [
+            p
+            for fn in re.findall(r"([A-Za-z0-9_]+Test\.(?:kt|java)|test_[a-z0-9_]+\.py)", block)
+            for p in by_basename.get(fn, [])
+            if os.path.basename(p) not in generic_contracts or is_generic_topic
+        ]
+        comp_files = [
+            p
+            for tok in re.findall(r"\b([A-Za-z0-9_]+)\b", comp)
+            for cand in (f"{tok}Test.kt", f"{tok}Test.java", f"test_{tok}.py")
+            for p in by_basename.get(cand, [])
+        ]
+        req_files = [
+            p
+            for r in reqs
+            for p in req_in_tests.get(r, ())
+            if os.path.basename(p) not in generic_contracts or is_generic_topic
+        ]
+        req_tfield_files = [
+            p
+            for r in reqs
+            if r in req_meta
+            for fn in re.findall(r"([A-Za-z0-9_]+Test\.(?:kt|java)|test_[a-z0-9_]+\.py)", req_meta[r]["tests"])
+            for p in by_basename.get(fn, [])
+            if os.path.basename(p) not in generic_contracts or is_generic_topic
+        ]
+        matched_files = sorted(set(explicit_files or comp_files or req_files or req_tfield_files))
+
+        is_obsolete = (
+            base_tid in duplicate_tst_ids
+            or bool(re.search(r"\b(?:superseded|obsolete|deprecated|removed\s+by)\b", title, re.IGNORECASE))
+            or bool(re.search(r"\*\*Test Description\*\*:\s*(?:\*\*)?(?:SUPERSEDED|OBSOLETE|DEPRECATED)", block, re.IGNORECASE))
+        )
+        is_manual_vm = ("On-Device Manual" in vm_str and "Unit" not in vm_str) or vm_str == "Review"
+
+        if is_obsolete:
+            category = "obsolete/duplicate"
+            rec_status = "[Implemented]"
+            rec_action = "Downgrade superseded/duplicate spec to [Implemented]"
+        elif matched_files and not is_manual_vm:
+            category = "unit-test-backed"
+            rec_status = "[Verified]"
+            rec_action = "Tag existing test file(s) with TST-* ID"
+        elif is_manual_vm or (manual_ui_pat.search(block) and not matched_files):
+            category = "UI/manual-only"
+            rec_status = "[Implemented]"
+            rec_action = "Downgrade to [Implemented] pending attested manual protocol"
+        else:
+            category = "missing test code"
+            rec_status = "[Implemented]"
+            rec_action = "Downgrade to [Implemented] and file domain test follow-up ticket"
+
+        entries.append({
+            "tst_id": base_tid,
+            "shard": item["file"],
+            "line": item["line"],
+            "category": category,
+            "recommended_status": rec_status,
+            "recommended_action": rec_action,
+            "matched_test_files": ";".join(matched_files),
+            "linked_reqs": ";".join(reqs),
+            "verification_method": vm_str,
+            "title": title,
+        })
+
+    unbacked_ids = {e["tst_id"] for e in entries}
+    stale_baseline = sorted(set(baseline_allowlist) - unbacked_ids)
+    by_category = {}
+    by_shard = {}
+    for e in entries:
+        by_category[e["category"]] = by_category.get(e["category"], 0) + 1
+        shard_name = os.path.basename(e["shard"])
+        by_shard[shard_name] = by_shard.get(shard_name, 0) + 1
+
+    if out_csv:
+        abs_csv = out_csv if os.path.isabs(out_csv) else os.path.join(repo_root, out_csv)
+        os.makedirs(os.path.dirname(abs_csv), exist_ok=True)
+        fieldnames = [
+            "tst_id",
+            "shard",
+            "line",
+            "category",
+            "recommended_status",
+            "recommended_action",
+            "matched_test_files",
+            "linked_reqs",
+            "verification_method",
+            "title",
+        ]
+        with open(abs_csv, "w", encoding="utf-8", newline="") as fh:
+            writer = csv.DictWriter(fh, fieldnames=fieldnames)
+            writer.writeheader()
+            for e in sorted(entries, key=lambda x: (x["shard"], x["line"], x["tst_id"])):
+                writer.writerow(e)
+
+    report = {
+        "total_unbacked_verified_tsts": len(entries),
+        "stale_baseline_count": len(stale_baseline),
+        "stale_baseline_ids": stale_baseline,
+        "by_category": by_category,
+        "by_shard": by_shard,
+        "entries": entries,
+    }
+    diagnostics = [
+        f"Unbacked [Verified] TSTs: {len(entries)} | Stale baseline entries: {len(stale_baseline)}",
+        "Categories: " + ", ".join(f"{k}={v}" for k, v in sorted(by_category.items())),
+        "Shards: " + ", ".join(f"{k}={v}" for k, v in sorted(by_shard.items())),
+    ]
+    if out_csv:
+        diagnostics.append(f"Exported triage CSV ledger to {out_csv}")
+    return report, diagnostics
 
 
 
@@ -3913,6 +4134,17 @@ def main():
         help="Verify that all [Verified] TST specifications are backed by passing test evidence and reject failing or unbacked items (REQ-PRO-099).",
     )
     parser.add_argument(
+        "--triage-unbacked",
+        action="store_true",
+        help="Classify all unbacked [Verified] TSTs across living-doc shards and report stale ratchet baseline entries (REQ-PRO-101.1).",
+    )
+    parser.add_argument(
+        "--triage-csv",
+        type=str,
+        default=None,
+        help="Optional CSV output path for --triage-unbacked (e.g. docs/engineering/test_evidence/ATT-8145_unbacked_triage.csv).",
+    )
+    parser.add_argument(
         "--check-test-evidence",
         nargs="?",
         const="",
@@ -4030,6 +4262,12 @@ def main():
         for msg in diag:
             print(msg, file=sys.stderr if not ok and msg.startswith("ERROR") else sys.stdout)
         sys.exit(0 if ok else 1)
+
+    if args.triage_unbacked:
+        _, diag = triage_unbacked_verified_tsts(out_csv=args.triage_csv)
+        for msg in diag:
+            print(msg)
+        sys.exit(0)
 
     if args.check_test_evidence is not None:
         target_sprint = args.check_test_evidence if args.check_test_evidence != "" else None

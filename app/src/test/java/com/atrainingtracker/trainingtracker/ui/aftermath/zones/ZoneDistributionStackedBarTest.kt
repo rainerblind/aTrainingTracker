@@ -30,6 +30,7 @@ import org.junit.Test
  * zero-duration filtering, 5-zone HR / 7-zone Power parity, and contrast contracts (REQ-UI-372 / TST-UI-335).
  * Refactored to JVM reflection and behavioral tests per docs/coding_standards.md §5.4 and REQ-PRO-049.
  */
+// Linked test specs: TST-UI-350
 class ZoneDistributionStackedBarTest {
 
     @Test

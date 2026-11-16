@@ -31,6 +31,7 @@ import javax.xml.parsers.DocumentBuilderFactory
  * Unit and contract tests verifying [LiveClimbSheet] composable structure, contracts,
  * visual tokens, and alignment with the Live Segment design system (REQ-MAP-027, REQ-UI-328, TST-UI-288).
  */
+// Linked test specs: TST-UI-346
 class LiveClimbSheetLayoutTest {
 
     private val projectRoot: File by lazy {

@@ -28,6 +28,7 @@ import java.lang.reflect.Modifier
  * Contract tests verifying structural integrity, token consumption, and component boundaries
  * of [RouteSelectorSheetKt] (REQ-MAP-024, REQ-UI-280 / TST-UI-240 / ATT-2459).
  */
+// Linked test specs: TST-UI-271, TST-UI-280, TST-UI-285
 class RouteSelectorSheetTest {
 
     private val sheetClass: Class<*> by lazy {

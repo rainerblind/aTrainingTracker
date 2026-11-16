@@ -30,6 +30,7 @@ import java.lang.reflect.Modifier
  * in full alignment with REQ-UI-240 and ATT-2030.
  * Refactored to pure JVM reflection per docs/coding_standards.md §5.4 and REQ-PRO-049.
  */
+// Linked test specs: TST-UI-292
 class TrackOnMapScreenDetailPreferencesContractTest {
 
     @Test

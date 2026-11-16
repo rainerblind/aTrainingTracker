@@ -27,6 +27,7 @@ import java.lang.reflect.Modifier
  * and navigation overlay hierarchy.
  * Refactored to reflection per docs/coding_standards.md §5.4 and REQ-PRO-049.
  */
+// Linked test specs: TST-UI-284, TST-UI-295, TST-UI-308
 class SensorGridScreenRouteIntegrationTest {
 
     private fun getSensorGridScreenClass(): Class<*> {

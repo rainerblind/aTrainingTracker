@@ -27,6 +27,7 @@ import java.util.regex.Pattern
  * verifying preserved line breaks and absence of XML numeric entities in the
  * 3D topological fingerprint description (ATT-2195 / REQ-UI-269 / TST-UI-228).
  */
+// Linked test specs: TST-SET-076
 class ClusterInfoDialogContractTest {
 
     private val supportedLocales = listOf("", "de", "es", "fr", "it", "ja", "nl", "pl", "pt")

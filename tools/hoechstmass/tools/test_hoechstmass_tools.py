@@ -55,6 +55,7 @@ from tools.hoechstmass.tools.verify_requirement_governance import (
     verify_independent_reviews,
     validate_impact_analysis_section,
     verify_stage1_impact_analysis,
+    triage_unbacked_verified_tsts,
 )
 from tools.hoechstmass.tools.parallel_sprint_lock import (
     sprint_lock,
@@ -783,6 +784,34 @@ class TestEpicCommands(unittest.TestCase):
 
             ok, msgs = verify_sprint_metrics(sprint_name="Sprint 101", repo_root=tmpdir)
             self.assertTrue(ok, f"Expected valid metrics with problem_trends to pass, got: {msgs}")
+
+    def test_hoechstmass_triage_unbacked_verified_tsts(self):
+        """TST-PRO-101.5: Verify parameterized triage_unbacked_verified_tsts in hoechstmass."""
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            csv_out = os.path.join(tmpdir, "triage.csv")
+            report, _ = triage_unbacked_verified_tsts(
+                repo_root=tmpdir,
+                out_csv=csv_out,
+                tst_shards={
+                    "docs/tests/tst_core.md": (
+                        "### TST-CORE-001: Backed [Verified]\n- **Requirement(s)**: `REQ-CORE-001`\n- **Component**: `CoreTest.kt`\n"
+                        "### TST-CORE-002: Missing [Verified]\n- **Requirement(s)**: `REQ-CORE-002`\n"
+                    )
+                },
+                req_shards={
+                    "docs/requirements/req_core.md": (
+                        "### REQ-CORE-001: R1 [Verified]\n- **Verification Method**: Unit\n"
+                        "### REQ-CORE-002: R2 [Verified]\n- **Verification Method**: Unit\n"
+                    )
+                },
+                test_sources={"app/src/test/CoreTest.kt": "class CoreTest {}"},
+            )
+            self.assertEqual(report["total_unbacked_verified_tsts"], 2)
+            self.assertEqual(report["by_category"]["unit-test-backed"], 1)
+            self.assertEqual(report["by_category"]["missing test code"], 1)
+            self.assertTrue(os.path.isfile(csv_out))
 
 
 

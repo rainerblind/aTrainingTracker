@@ -31,6 +31,7 @@ import org.junit.Test
  * Verifies Tier 1 (interactive user override) vs. Tier 2 (global preference default).
  * Refactored to JVM reflection and behavioral tests per docs/coding_standards.md §5.4 and REQ-PRO-049.
  */
+// Linked test specs: TST-UI-349
 class WorkoutSummaryZoneDisplayModeTest {
 
     @Test

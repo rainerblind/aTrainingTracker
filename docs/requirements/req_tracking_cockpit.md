@@ -16,7 +16,7 @@
 - **Rationale**: Provide comprehensive data for diverse athletic activities.
 - **Description**: Support multiple ANT+ sensor profiles (HR, Speed, Cadence, Power, Env).
 
-### REQ-CON-002: Support Bluetooth LE (BLE) sensor profiles (HR, Speed, Cadence, Power) [Verified]
+### REQ-CON-002: Support Bluetooth LE (BLE) sensor profiles (HR, Speed, Cadence, Power) [Implemented]
 - **Tests**: `TST-CON-003`, `TST-CON-005`
 - **Priority**: High
 - **Type**: Functional
@@ -25,7 +25,7 @@
 - **Rationale**: Ensure compatibility with modern fitness hardware.
 - **Description**: Support Bluetooth LE (BLE) sensor profiles (HR, Speed, Cadence, Power).
 
-### REQ-CON-003: Implement "Best Sensor" selection logic using priority lists [Verified]
+### REQ-CON-003: Implement "Best Sensor" selection logic using priority lists [Implemented]
 - **Tests**: `TST-TRK-016`
 - **Priority**: High
 - **Type**: Functional
@@ -188,7 +188,7 @@
 - **Rationale**: Extensible architecture for complex multi-sensor data.
 - **Description**: Implement "Proxy Sensors" and "Accumulator Sensors".
 
-### REQ-FIL-006: Geographical rolling averages for start altitude [Verified]
+### REQ-FIL-006: Geographical rolling averages for start altitude [Implemented]
 - **Tests**: `TST-FIL-002`
 - **Priority**: Medium
 - **Type**: Functional
@@ -346,7 +346,7 @@
 - **Rationale**: The `TrackerService` SHALL continue to update the `TIME_TOTAL_s` field in the `WorkoutSummaries` database table even when the recording is in a PAUSED state.
 - **Description**: Total Time Persistence.
 
-### REQ-TRK-010: Live Tracking Finalization Event Dispatch [Verified]
+### REQ-TRK-010: Live Tracking Finalization Event Dispatch [Implemented]
 - **Tests**: `TST-TRK-008`, `TST-TRK-022`
 - **Priority**: Medium
 - **Type**: Functional

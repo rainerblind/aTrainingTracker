@@ -55,6 +55,8 @@ from tools.verify_requirement_governance import (
     CoverageCategoryResult,
     TraceabilityCoverageReport,
     LEGACY_UNGROUNDED_VERIFIED_REQS,
+    LEGACY_UNBACKED_VERIFIED_TSTS,
+    triage_unbacked_verified_tsts,
     extract_living_test_ids,
     find_ungrounded_verified_requirements,
     verify_requirement_evidence_status,
@@ -79,6 +81,7 @@ from tools.verify_requirement_governance import (
 )
 
 
+# Linked test specs: TST-PRO-085, TST-PRO-086
 class TestRequirementGovernance(unittest.TestCase):
 
     def setUp(self):
@@ -218,7 +221,7 @@ index 1234567..89abcdef 100644
                     imported_modules.add(node.module.split(".")[0])
 
         # Allowed standard library modules
-        std_lib_modules = {"os", "sys", "re", "subprocess", "argparse", "unittest", "json", "math", "xml", "zipfile"}
+        std_lib_modules = {"csv", "os", "sys", "re", "subprocess", "argparse", "unittest", "json", "math", "xml", "zipfile"}
         for mod in imported_modules:
             self.assertIn(
                 mod,
@@ -263,8 +266,13 @@ diff --git a/docs/requirements/req_tracking_cockpit.md b/docs/requirements/req_t
         with tempfile.TemporaryDirectory() as tmpdir:
             req_dir = os.path.join(tmpdir, "docs", "requirements")
             tst_dir = os.path.join(tmpdir, "docs", "tests")
+            tools_dir = os.path.join(tmpdir, "tools")
             os.makedirs(req_dir, exist_ok=True)
             os.makedirs(tst_dir, exist_ok=True)
+            os.makedirs(tools_dir, exist_ok=True)
+
+            with open(os.path.join(tools_dir, "test_sharding.py"), "w", encoding="utf-8") as f:
+                f.write("# TST-PRO-021\n")
 
             shard_file = os.path.join(req_dir, "req_process_stability.md")
             with open(shard_file, "w", encoding="utf-8") as f:
@@ -2385,7 +2393,7 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
 
     def test_scenario_60_tst_pro_099_3_unbacked_tst_ratchet_baseline(self):
         """TST-PRO-099.3: Verify novel unbacked TST fails while legacy ratchet baseline items pass (Criterion 2 & 3)."""
-        # 1. Legacy unbacked item in baseline (e.g. TST-BUG-001) passes with warning
+        # 1. Legacy unbacked item in synthetic baseline passes with warning
         legacy_shard = {
             "docs/tests/tst_legacy.md": (
                 "### TST-BUG-001: Legacy Bug Test [Verified]\n"
@@ -2396,6 +2404,7 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
         ok_leg, diag_leg = verify_verified_test_evidence(
             test_results=empty_results,
             code_tags={},
+            baseline_allowlist=frozenset({"TST-BUG-001"}),
             tst_shards=legacy_shard,
         )
         self.assertTrue(ok_leg, "Legacy unbacked item in baseline must pass")
@@ -2411,6 +2420,7 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
         ok_nov, diag_nov = verify_verified_test_evidence(
             test_results=empty_results,
             code_tags={},
+            baseline_allowlist=frozenset({"TST-BUG-001"}),
             tst_shards=novel_shard,
         )
         self.assertFalse(ok_nov, "Novel unbacked item outside baseline must fail (Criterion 2)")
@@ -2420,8 +2430,8 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
         """TST-PRO-099: Verify clean worktree safety when test-results directory does not exist (REQ-PRO-099.5)."""
         clean_shard = {
             "docs/tests/tst_clean.md": (
-                "### TST-BUG-001: Legacy Bug [Verified]\n"
-                "- **Requirement(s)**: `REQ-BUG-001`\n"
+                "### TST-PRO-099: Clean Worktree Spec [Verified]\n"
+                "- **Requirement(s)**: `REQ-PRO-099`\n"
             )
         }
         ok, diag = verify_verified_test_evidence(
@@ -2480,6 +2490,69 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
             ok_fail, diag_fail = verify_test_evidence(repo_root=tmpdir)
             self.assertFalse(ok_fail)
             self.assertTrue(any("reports 2 failure(s)" in m for m in diag_fail))
+
+    def test_scenario_63_tst_pro_101_1_triage_unbacked_classification_and_csv(self):
+        """TST-PRO-101.1: Verify deterministic triage classification and CSV export compatibility."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tst_shards = {
+                "docs/tests/tst_sample.md": (
+                    "### TST-DOM-001: Sample Unit [Verified]\n"
+                    "- **Requirement(s)**: `REQ-DOM-001`\n"
+                    "- **Component**: `SampleWidgetTest.kt`\n"
+                    "### TST-DOM-002: Manual Tap [Verified]\n"
+                    "- **Requirement(s)**: `REQ-DOM-002`\n"
+                    "- **Test Description**: 1. Tap button on device.\n"
+                    "### TST-DOM-003: [SUPERSEDED by TST-DOM-001] Old [Verified]\n"
+                    "- **Requirement(s)**: `REQ-DOM-003`\n"
+                    "### TST-DOM-004: Missing Unit [Verified]\n"
+                    "- **Requirement(s)**: `REQ-DOM-004`\n"
+                    "- **Test Description**: Assert calculation invariant.\n"
+                )
+            }
+            req_shards = {
+                "docs/requirements/req_sample.md": (
+                    "### REQ-DOM-001: Unit Req [Verified]\n"
+                    "- **Verification Method**: Unit\n"
+                    "### REQ-DOM-002: Manual Req [Verified]\n"
+                    "- **Verification Method**: On-Device Manual\n"
+                    "### REQ-DOM-004: Missing Req [Verified]\n"
+                    "- **Verification Method**: Unit\n"
+                )
+            }
+            test_sources = {
+                "app/src/test/SampleWidgetTest.kt": "class SampleWidgetTest {}",
+            }
+            csv_path = os.path.join(tmpdir, "docs", "engineering", "test_evidence", "triage.csv")
+            report, diag = triage_unbacked_verified_tsts(
+                repo_root=tmpdir,
+                out_csv=csv_path,
+                tst_shards=tst_shards,
+                req_shards=req_shards,
+                test_sources=test_sources,
+                code_tags={},
+                baseline_allowlist=frozenset({"TST-DOM-001", "TST-DOM-999"}),
+            )
+            self.assertEqual(report["total_unbacked_verified_tsts"], 4)
+            self.assertEqual(report["by_category"]["unit-test-backed"], 1)
+            self.assertEqual(report["by_category"]["UI/manual-only"], 1)
+            self.assertEqual(report["by_category"]["obsolete/duplicate"], 1)
+            self.assertEqual(report["by_category"]["missing test code"], 1)
+            self.assertEqual(report["stale_baseline_ids"], ["TST-DOM-999"])
+            self.assertTrue(os.path.isfile(csv_path))
+
+    def test_scenario_64_tst_pro_101_2_3_4_live_repo_ratchet_zero(self):
+        """TST-PRO-101.2, TST-PRO-101.3, TST-PRO-101.4: Verify live repo has 0 unbacked [Verified] TSTs and ratchet=0."""
+        self.assertEqual(len(LEGACY_UNBACKED_VERIFIED_TSTS), 0, "Ratchet baseline must be reconciled to 0")
+        ok, diag = verify_verified_test_evidence(results_dir="/nonexistent/clean_worktree")
+        self.assertTrue(ok, f"Live repository --check-verified-evidence must pass cleanly: {diag}")
+        report, _ = triage_unbacked_verified_tsts()
+        self.assertEqual(report["total_unbacked_verified_tsts"], 0)
+        self.assertEqual(report["stale_baseline_count"], 0)
+
+    def test_scenario_65_tst_pro_101_5_hoechstmass_mirror_parity(self):
+        """TST-PRO-101.5: Verify Hoechstmass mirror exposes parameterized triage_unbacked_verified_tsts."""
+        from tools.hoechstmass.tools.verify_requirement_governance import triage_unbacked_verified_tsts as hm_triage
+        self.assertTrue(callable(hm_triage))
 
 
 

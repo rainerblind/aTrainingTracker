@@ -29,6 +29,7 @@ import java.lang.reflect.Modifier
  * allocations, touch slop jump elimination, and gesture loop continuity as mandated by
  * REQ-UI-232, REQ-UI-234, and TST-UI-190 (ATT-1987).
  */
+// Linked test specs: TST-UI-193
 class ElevationProfileGestureContractTest {
 
     private fun getElevationProfileClass(): Class<*> =

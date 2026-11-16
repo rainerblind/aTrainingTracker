@@ -7,7 +7,7 @@
 
 ---
 
-### TST-FIL-002: WorkoutSamplesDb [Verified]
+### TST-FIL-002: WorkoutSamplesDb [Implemented]
 - **Requirement(s)**: `REQ-FIL-006`, `REQ-FIL-011`
 - **Component**: `WorkoutSamplesDb`
 - **Test Description**: Verify that `calcExtremaValue` returns `null` (not 0.0) when querying a sensor that has only NULL values or does not exist in the table.
@@ -37,7 +37,7 @@
 - **Test Description**:
   1. *Auto-Calibration Convergence Test*: Feed raw wheel revolutions alongside ground-truth high-accuracy GPS fixes on straight road segments; verify the filter dynamically converges wheel circumference within < 0.3% error.
 
-### TST-FIL-003: **Atomic Altitude Correction** [Verified]
+### TST-FIL-003: **Atomic Altitude Correction** [Implemented]
 - **Requirement(s)**: `REQ-FIL-004`
 - **Component**: **Atomic Altitude Correction**
 - **Jira**: ``ATT-425``
@@ -289,7 +289,7 @@
   7. *Clean-Room Regression Suite*:
   • Run `./gradlew testDebugUnitTest` to guarantee 100% pass rate.
 
-### TST-CON-007: **Battery Remaining Duration Monotonic Countdown and Step-Transition Recalibration Verification** [Verified]
+### TST-CON-007: **Battery Remaining Duration Monotonic Countdown and Step-Transition Recalibration Verification** [Implemented]
 - **Requirement(s)**: `REQ-CON-016`
 - **Component**: **Battery Remaining Duration Monotonic Countdown and Step-Transition Recalibration Verification**
 - **Jira**: ``ATT-1631``

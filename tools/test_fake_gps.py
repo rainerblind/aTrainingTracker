@@ -27,6 +27,7 @@ from tools.fake_gps import (
 )
 
 
+# Linked test specs: TST-TOOL-001
 class TestGeodesicMath(unittest.TestCase):
 
     def test_haversine_known_distance(self):

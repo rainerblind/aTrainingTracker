@@ -43,6 +43,7 @@ import kotlin.math.*
  * in [LiveClimbsRepository] (REQ-MAP-027, TST-MAP-029 Group 3).
  */
 @OptIn(ExperimentalCoroutinesApi::class)
+// Linked test specs: TST-MAP-069, TST-NAV-056
 class LiveClimbsRepositoryTest {
 
     private lateinit var mockContext: Context

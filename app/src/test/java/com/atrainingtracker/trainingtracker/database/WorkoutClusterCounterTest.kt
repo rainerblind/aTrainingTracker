@@ -39,6 +39,7 @@ import org.junit.Test
  * 2. WorkoutCluster data model hasCounter defaults and mutations.
  * 3. assignClusterToWorkout name formatting behavior when hasCounter is toggled.
  */
+// Linked test specs: TST-PRO-082
 class WorkoutClusterCounterTest {
 
     private lateinit var mockContext: Context

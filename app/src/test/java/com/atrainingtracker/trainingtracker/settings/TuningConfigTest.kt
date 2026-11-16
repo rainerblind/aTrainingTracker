@@ -20,6 +20,7 @@ import org.junit.Test
  * Unit tests for [TuningConfig] and [TuningPreferencesDefaults] (TST-SET-062).
  * Verifies default parameter values, clamping boundaries, and safety invariants.
  */
+// Linked test specs: TST-SET-063
 class TuningConfigTest {
 
     @Test

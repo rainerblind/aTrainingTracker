@@ -27,6 +27,7 @@ import org.junit.Test
  * verifying the persistent floating [ScrubbingTelemetryBadge] overlay pinned above scrollable graphs
  * (TST-UI-200.1 / REQ-UI-241 / ATT-2016).
  */
+// Linked test specs: TST-UI-205
 class MapDetailLayoutScrubbingBadgeContractTest {
 
     @Test

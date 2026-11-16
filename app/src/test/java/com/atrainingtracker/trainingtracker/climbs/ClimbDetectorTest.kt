@@ -32,6 +32,7 @@ import org.junit.Test
  * Unit tests verifying automated climb detection, micro-dip tolerance, and category scoring
  * (REQ-MAP-027, TST-MAP-029 Group 1).
  */
+// Linked test specs: TST-UI-345
 class ClimbDetectorTest {
 
     @Before

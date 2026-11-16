@@ -27,6 +27,7 @@ import org.junit.Test
  * resilient map preview visibility, overflow detection, and scrollable container architecture
  * as mandated by REQ-UI-213 and TST-UI-167 (ATT-1812).
  */
+// Linked test specs: TST-UI-168, TST-UI-226, TST-UI-500
 class MapDetailLayoutTest {
 
     @Test

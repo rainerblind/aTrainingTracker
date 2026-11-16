@@ -18,6 +18,7 @@ import kotlin.math.exp
  * - Skiba 1-Hz $W'_{\text{bal}}$ depletion ($P > CP$), zero floor, and exponential reconstitution ($P \le CP$)
  * - Series evaluation and empty-tank warning ($< 10\%$).
  */
+// Linked test specs: TST-UI-363, TST-UI-459
 class PowerPhysiologyCalculatorTest {
 
     @Test

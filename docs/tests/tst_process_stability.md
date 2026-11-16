@@ -7,7 +7,7 @@
 
 ---
 
-### TST-REG-001: **Tracking** [Verified]
+### TST-REG-001: **Tracking** [Implemented]
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Integration
@@ -15,7 +15,7 @@
 - **Component**: **Tracking**
 - **Test Description**: Start workout, background app for 10 min, check bearing jitter.
 
-### TST-REG-002: **Branding** [Verified]
+### TST-REG-002: **Branding** [Implemented]
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Integration
@@ -23,7 +23,7 @@
 - **Component**: **Branding**
 - **Test Description**: Navigate to Strava Segments list and Detail map.
 
-### TST-REG-003: **Cloud** [Verified]
+### TST-REG-003: **Cloud** [Implemented]
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Integration
@@ -31,7 +31,7 @@
 - **Component**: **Cloud**
 - **Test Description**: Complete workout with Strava enabled.
 
-### TST-REG-004: **Pause Logic** [Verified]
+### TST-REG-004: **Pause Logic** [Implemented]
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Integration
@@ -39,7 +39,7 @@
 - **Component**: **Pause Logic**
 - **Test Description**: Connect hardware distance sensor. Start workout. Record distance. **Pause**. Continue movement (e.g., spin wheel). **Resume**. Record more distance. Repeat for all relevant protocols (ANT+/BTLE).
 
-### TST-INT-002: **UI/Logic** [Verified]
+### TST-INT-002: **UI/Logic** [Implemented]
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Integration
@@ -47,7 +47,7 @@
 - **Component**: **UI/Logic**
 - **Test Description**: In Sport Type Editor, select "- No upload -". Then create/edit workout with this type.
 
-### TST-INT-003: **Mapping** [Verified]
+### TST-INT-003: **Mapping** [Implemented]
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Integration
@@ -55,7 +55,7 @@
 - **Component**: **Mapping**
 - **Test Description**: In Sport Type Editor, select a new Strava type (e.g., Gravel Ride). Save and reopen.
 
-### TST-INT-004: **UI/Logic** [Verified]
+### TST-INT-004: **UI/Logic** [Implemented]
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Integration
@@ -63,7 +63,7 @@
 - **Component**: **UI/Logic**
 - **Test Description**: In Tracking Tab Configuration, toggle "Show Elevation Profile".
 
-### TST-INT-005: **UI Layout** [Verified]
+### TST-INT-005: **UI Layout** [Implemented]
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Integration
@@ -71,7 +71,7 @@
 - **Component**: **UI Layout**
 - **Test Description**: Open the Tab Configuration on a narrow device or split-screen.
 
-### TST-INT-006: **UI Layout** [Verified]
+### TST-INT-006: **UI Layout** [Implemented]
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Integration
@@ -79,7 +79,7 @@
 - **Component**: **UI Layout**
 - **Test Description**: Audit the checkbox sequence in the tab configuration header.
 
-### TST-REG-005: **Map Context** [Verified]
+### TST-REG-005: **Map Context** [Implemented]
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Integration
@@ -87,7 +87,7 @@
 - **Component**: **Map Context**
 - **Test Description**: Open detail map. Verify active item is primary. Verify background items of same sport are muted (0.3). Verify background items of different sport are highly muted (0.1).
 
-### TST-INT-007: **Original Sport Icons Visual Identity Verification** [Verified]
+### TST-INT-007: **Original Sport Icons Visual Identity Verification** [Implemented]
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Manual / Review
@@ -98,7 +98,7 @@
   2. Verify that sport type icons render in their authentic original colors and are not subject to theme-based tinting in active states.
   3. Verify muted/disabled state icons render with appropriate transparency.
 
-### TST-INT-008: **Settings Cleanup Verification** [Verified]
+### TST-INT-008: **Settings Cleanup Verification** [Implemented]
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Integration
@@ -125,7 +125,7 @@
 - **Jira**: ``ATT-274``
 - **Test Description**: 1. Run `jira_util.py list`. 2. Run `jira_util.py show KEY`.
 
-### TST-PRO-003: **Plan Sub-Task Verification** [Verified]
+### TST-PRO-003: **Plan Sub-Task Verification** [Implemented]
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit / Review
@@ -134,7 +134,7 @@
 - **Jira**: ``ATT-327``
 - **Test Description**: 1. Identify a task requires a plan. 2. Verify that the agent creates a Jira sub-task with summary `[Plan] SCRUM-XXX: Summary` and description matching the plan.
 
-### TST-REG-007: **Pause Time Sync** [Verified]
+### TST-REG-007: **Pause Time Sync** [Implemented]
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Integration
@@ -142,7 +142,7 @@
 - **Component**: **Pause Time Sync**
 - **Test Description**: 1. Start workout. 2. Pause after 10s. 3. Wait 20s while paused.
 
-### TST-REG-008: **Dropbox Auth** [Verified]
+### TST-REG-008: **Dropbox Auth** [Implemented]
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Integration
@@ -151,7 +151,7 @@
 - **Jira**: ``ATT-257``
 - **Test Description**: 1. Navigate to 'Dropbox' in Ecosystem. 2. Tap 'Connect to Dropbox'. 3. Complete OAuth flow in browser. 4. Return to app.
 
-### TST-LOG-001: **Logic** [Verified]
+### TST-LOG-001: **Logic** [Implemented]
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -159,7 +159,7 @@
 - **Component**: **Logic**
 - **Test Description**: Verify that all rows, including "Pace", follow strict mathematical ordering (numerical minimum in Min column, numerical maximum in Max column).
 
-### TST-LOG-002: **Logic** [Verified]
+### TST-LOG-002: **Logic** [Implemented]
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -167,7 +167,7 @@
 - **Component**: **Logic**
 - **Test Description**: Verify that for a running activity, both Speed and Pace rows are generated from the single Speed data source.
 
-### TST-MAN-001: **General** [Verified]
+### TST-MAN-001: **General** [Implemented]
 - **Priority**: Low
 - **Type**: Functional
 - **Verification Method**: On-Device Manual
@@ -175,7 +175,7 @@
 - **Component**: **General**
 - **Test Description**: Ad-hoc functional testing on a physical device.
 
-### TST-PRO-004: **Decoupled Interaction Queue** [Verified]
+### TST-PRO-004: **Decoupled Interaction Queue** [Implemented]
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit / Review
@@ -184,7 +184,7 @@
 - **Jira**: ``ATT-333``
 - **Test Description**: 1. Start a bulk TCX import that triggers multiple cluster naming candidates. 2. Verify that while the ClusterNamingDialog is shown, the background progress indicator remains visible. 3. Complete the first naming task.
 
-### TST-BUG-006: **Adaptive Header Framing** [Verified]
+### TST-BUG-006: **Adaptive Header Framing** [Implemented]
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -193,7 +193,7 @@
 - **Jira**: ``ATT-397``
 - **Test Description**: 1. Open the app on a device with a large status bar (e.g. Pixel 10). 2. Navigate to Workouts, Periods, and My Locations.
 
-### TST-BUG-007: **Internal Altitude Source Visibility** [Verified]
+### TST-BUG-007: **Internal Altitude Source Visibility** [Implemented]
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -202,7 +202,7 @@
 - **Jira**: ``ATT-410``
 - **Test Description**: 1. Open tracking screen on device with pressure sensor. 2. Tap Altitude icon.
 
-### TST-BUG-008: **Self-Healing Pressure Sensor Registration** [Verified]
+### TST-BUG-008: **Self-Healing Pressure Sensor Registration** [Implemented]
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -211,7 +211,7 @@
 - **Jira**: ``ATT-414``
 - **Test Description**: 1. Use Database Inspector to delete the 'Altitude from Pressure' entry from the `Devices` table. 2. Restart the app on a device with a pressure sensor. 3. Navigate to 'My Sensors'.
 
-### TST-BUG-009: **Internal Sensor Pairing Control** [Verified]
+### TST-BUG-009: **Internal Sensor Pairing Control** [Implemented]
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -220,7 +220,7 @@
 - **Jira**: ``ATT-416``
 - **Test Description**: 1. Navigate to 'My Sensors'. 2. Deactivate the 'Altitude from Pressure' sensor using the toggle switch. 3. Verify that the sensor status LED turns grey and real-time altitude updates from this source stop. 4. Reactivate and verify resumption.
 
-### TST-BUG-011: **Eager Pressure Sensor Visibility** [Verified]
+### TST-BUG-011: **Eager Pressure Sensor Visibility** [Implemented]
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -229,7 +229,7 @@
 - **Jira**: ``ATT-420``
 - **Test Description**: 1. Use Database Inspector to delete the 'Altitude from Pressure' entry from the `Devices` table. 2. Restart the app on a device with a pressure sensor. 3. Navigate to 'My Sensors'.
 
-### TST-BUG-010: **Internal Sensor Iconography** [Verified]
+### TST-BUG-010: **Internal Sensor Iconography** [Implemented]
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -237,7 +237,7 @@
 - **Component**: **Internal Sensor Iconography**
 - **Test Description**: 1. Open 'My Sensors'. 2. Inspect the 'Altitude from Pressure' entry.
 
-### TST-STR-001: **Stability** [Verified]
+### TST-STR-001: **Stability** [Implemented]
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
@@ -245,7 +245,7 @@
 - **Component**: **Stability**
 - **Test Description**: Static analysis and architectural audit.
 
-### TST-STR-002: **Thread Safety** [Verified]
+### TST-STR-002: **Thread Safety** [Implemented]
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
@@ -253,7 +253,7 @@
 - **Component**: **Thread Safety**
 - **Test Description**: Static analysis of `synchronized` blocks to ensure no nested locks or I/O within locks.
 
-### TST-STR-003: **Data Integrity** [Verified]
+### TST-STR-003: **Data Integrity** [Implemented]
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
@@ -263,7 +263,7 @@
   1. Static analysis of `onUpgrade` (v9->v10).
   2. Static analysis of `onCreate` and `addDefaultTab`.
 
-### TST-STR-004: **Consistency** [Verified]
+### TST-STR-004: **Consistency** [Implemented]
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
@@ -271,7 +271,7 @@
 - **Component**: **Consistency**
 - **Test Description**: Static analysis of `TrackerService.java`.
 
-### TST-STR-005: **Map DSL** [Verified]
+### TST-STR-005: **Map DSL** [Implemented]
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
@@ -279,7 +279,7 @@
 - **Component**: **Map DSL**
 - **Test Description**: Static audit of `ATrainingTrackerMap` callers.
 
-### TST-STR-006: **Metric Consistency** [Verified]
+### TST-STR-006: **Metric Consistency** [Implemented]
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
@@ -287,7 +287,7 @@
 - **Component**: **Metric Consistency**
 - **Test Description**: Visual audit of Workout, Route, and Segment screens.
 
-### TST-STR-007: **Formatter Sync** [Verified]
+### TST-STR-007: **Formatter Sync** [Implemented]
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
@@ -295,7 +295,7 @@
 - **Component**: **Formatter Sync**
 - **Test Description**: Static audit of `LocalMetricFormatter` usages.
 
-### TST-STR-008: **List Foundation** [Verified]
+### TST-STR-008: **List Foundation** [Implemented]
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
@@ -303,7 +303,7 @@
 - **Component**: **List Foundation**
 - **Test Description**: Audit of `MappableListItem` usages.
 
-### TST-STR-011: **Thread-Safe Sensor Management** [Verified]
+### TST-STR-011: **Thread-Safe Sensor Management** [Implemented]
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
@@ -311,7 +311,7 @@
 - **Component**: **Thread-Safe Sensor Management**
 - **Test Description**: Static audit of `MySensorManager` and `MyDevice`.
 
-### TST-STR-012: **Sub-Task Automation Verification** [Verified]
+### TST-STR-012: **Sub-Task Automation Verification** [Implemented]
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
@@ -328,7 +328,7 @@
 - **Jira**: ``ATT-251``
 - **Test Description**: 1. Audit all `values-*/strings.xml` files. 2. Compare the set of keys in each file with the keys in `values/strings.xml`. 3. Identify keys present in translations but missing in default. 4. Verify that after implementation, no such discrepancies exist.
 
-### TST-STR-015: **Documentation Audit** [Verified]
+### TST-STR-015: **Documentation Audit** [Implemented]
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
@@ -355,7 +355,7 @@
 - **Jira**: ``ATT-523``
 - **Test Description**: 1. Execute a comprehensive search across all `strings.xml` files in all locales (DE, ES, FR, IT, JA, NL, PL, PT) for positional format specifiers that are incomplete (e.g., `%1` without `$s`, `$d`, or `$f`). 2. Correct any identified issues. 3. Verify that the final resource set contains only syntactically valid `java.util.Formatter` specifiers.
 
-### TST-BUG-001: **Cluster Selection Race Condition** [Verified]
+### TST-BUG-001: **Cluster Selection Race Condition** [Implemented]
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -364,7 +364,7 @@
 - **Jira**: ``ATT-364``
 - **Test Description**: 1. Open Workout Cluster list. 2. Tap Cluster A. 3. Immediately go back and tap Cluster B. 4. Wait for loading to complete.
 
-### TST-BUG-002: **Aggregation Gap Stability** [Verified]
+### TST-BUG-002: **Aggregation Gap Stability** [Implemented]
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -373,7 +373,7 @@
 - **Jira**: ``ATT-372``
 - **Test Description**: 1. Import training history with temporal gaps (e.g. skip a week/month). 2. Trigger a full hierarchical sync.
 
-### TST-STR-017: **Protocol Integrity Audit** [Verified]
+### TST-STR-017: **Protocol Integrity Audit** [Implemented]
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
@@ -391,7 +391,7 @@
 - **Jira**: ``ATT-523``
 - **Test Description**: Verify that 'project_protocol.md' mandates System Invariants, pre-implementation `find_usages` requirement cross-checks, and adversarial self-reviews.
 
-### TST-PRO-006: **Dual-Gate Review Protocol Verification** [Verified]
+### TST-PRO-006: **Dual-Gate Review Protocol Verification** [Implemented]
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit / Review
@@ -400,7 +400,7 @@
 - **Jira**: ``ATT-523``
 - **Test Description**: Verify that 'project_protocol.md' mandates the unified 5-stage sub-task lifecycle using the automated dual-agent review workflow, with autonomous transitions upon passing gate audits and human approval reserved exclusively for parent tickets.
 
-### TST-PRO-007: **Agent Git Branch, Commit & Merge Protocol Verification** [Verified]
+### TST-PRO-007: **Agent Git Branch, Commit & Merge Protocol Verification** [Implemented]
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit / Review
@@ -413,7 +413,7 @@
   3. Verify protocol mandates merging the ticket branch into `develop` using non-fast-forward merge (`git merge --no-ff <branch> -m "Merge branch '<branch>' into develop"`) upon completion and human release approval.
   4. Validate repository state demonstrates successful branch creation (`feature/ATT-422`), commit adherence, and merge flow.
 
-### TST-PRO-008: **Automated 5-Stage ASPICE Workflow & Independent Agent 2 Audit Verification** [Verified]
+### TST-PRO-008: **Automated 5-Stage ASPICE Workflow & Independent Agent 2 Audit Verification** [Implemented]
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit / Review
@@ -431,7 +431,7 @@
   8. Verify `tools/jira_util.py` displays `Lösungsversion` on `show` and `list`, supports `versions` and `set-fixversion`, and warns if missing.
   9. Verify protocol and `.cursorrules` mandate `Lösungsversion` (*Fix Version/s*) and its audit in Gate 5 prior to closure.
 
-### TST-PRO-009: **Inviolable ASPICE Human Decision Gate & Anti-Premature Trigger Protocol Verification** [Verified]
+### TST-PRO-009: **Inviolable ASPICE Human Decision Gate & Anti-Premature Trigger Protocol Verification** [Implemented]
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit / Review
@@ -445,7 +445,7 @@
   4. Verify `tools/jira_util.py` includes the `check-gate` command that returns exit code 0 when status is `Erledigt` and exit code 1 otherwise.
   5. Verify `.agents/rules/aspice_governance.md` exists and enforces these rules in Antigravity.
 
-### TST-PRO-010: **Sub-Task Self-Sufficiency, Transition Sequencing, Discovery-First, and Git Finalization Verification** [Verified]
+### TST-PRO-010: **Sub-Task Self-Sufficiency, Transition Sequencing, Discovery-First, and Git Finalization Verification** [Implemented]
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit / Review
@@ -459,7 +459,7 @@
   4. Verify protocol mandates post-completion git finalization (`git checkout develop && git merge --no-ff`) and integration commenting on the parent ticket.
   5. Validate that ATT-945 deliverables adhere to the hardened protocol with full documentation in `docs/engineering/Sprint_Review_and_Retro_ATT-945.md`.
 
-### TST-PRO-011: **Autonomous Multi-Model Independent Review Agent & Automated Gate Audits Verification** [Verified]
+### TST-PRO-011: **Autonomous Multi-Model Independent Review Agent & Automated Gate Audits Verification** [Implemented]
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit / Review
@@ -562,7 +562,7 @@
   4. *Living Protocol & Sandbox Documentation Inspection*:
   • Verify `docs/project_protocol.md` and `.cursorrules` explicitly document filesystem boundaries for Gradle Daemon caches (`~/.gradle`, `~/.android`) and when to execute with elevated permissions (`BypassSandbox: true`).
 
-### TST-PRO-017: **Modular Skill-Based Agile Architecture & Directory Parity Verification** [Verified]
+### TST-PRO-017: **Modular Skill-Based Agile Architecture & Directory Parity Verification** [Implemented]
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit / Review
@@ -601,7 +601,7 @@
 - **Jira**: ``ATT-2770``
 - **Test Description**: 1. *Parallel Worker Forking & Multi-Core Utilization Verification (`TST-PRO-018.1`)*: Trigger `./gradlew testDebugUnitTest`. Inspect OS processes via `ps aux
 
-### TST-PRO-019: **Document Triad Architecture, Governance Streamlining, and Invariant Verification** [Verified]
+### TST-PRO-019: **Document Triad Architecture, Governance Streamlining, and Invariant Verification** [Implemented]
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit / Review
@@ -1671,7 +1671,7 @@
   • Execute `ExceptionHandlingHygieneTest` verifying `FitFileWriter.kt` contains zero unlogged empty catch blocks and zero `catch (Throwable)`.
   • Execute `JavaCoreMigrationStrategyContractTest` verifying Java class count decreases while remaining `<= 149`.
 
-### TST-PRO-020: **Agile Agentic ASPICE (AAA) Governance, Constructive Resistance, Hypothesis Verification, Stage 5 Resource Gate & Ceremony 2 Completeness Sweep Verification** [Verified]
+### TST-PRO-020: **Agile Agentic ASPICE (AAA) Governance, Constructive Resistance, Hypothesis Verification, Stage 5 Resource Gate & Ceremony 2 Completeness Sweep Verification** [Implemented]
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit / Review
@@ -3307,3 +3307,24 @@
   • Assert `docs/management/cm_plan.md` registers `docs/engineering/test_evidence/` under controlled Configuration Items.
   4. *Living Documentation Parity*:
   • Execute `python3 tools/verify_requirement_governance.py` confirming 100% parity across `docs/requirements.md` and `docs/tests.md`.
+
+---
+
+### TST-PRO-101: **Unbacked Status Triage, Test-Tag Reconciliation & Ratchet Reduction Suite (ATT-8145)** [Verified]
+- **Requirement(s)**: `REQ-PRO-101`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Component**: `tools/verify_requirement_governance.py`, `tools/hoechstmass/tools/verify_requirement_governance.py`, `tools/test_verify_requirement_governance.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/AspiceSweAuditContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/HoechstmassToolingContractTest.kt`, `docs/engineering/test_evidence/ATT-8145_unbacked_triage.csv`
+- **Jira**: `ATT-8145`
+- **Test Description**:
+  1. *Deterministic Unbacked Triage & CSV Ledger Test (`TST-PRO-101.1`, tools/test_verify_requirement_governance.py)*:
+  • Verify `--triage-unbacked` classifies unbacked `[Verified]` TSTs across all shards into `unit-test-backed`, `UI/manual-only`, `obsolete/duplicate`, and `missing test code`, flags stale already-backed `LEGACY_UNBACKED_VERIFIED_TSTS` entries, and writes `docs/engineering/test_evidence/ATT-8145_unbacked_triage.csv` cleanly under `ALLOWED_ENGINEERING_ENTRIES`.
+  2. *Test-Tag Reconciliation & Evidence Verification Test (`TST-PRO-101.2`, tools/test_verify_requirement_governance.py & targeted Gradle unit tests)*:
+  • Verify `extract_test_code_tags()` detects newly added `TST-*` tags across `*Test.kt`, `*Test.java`, and `tools/test_*.py` suites for `unit-test-backed` specs, and targeted Gradle / Python unit tests pass.
+  3. *Truthful Downgrade, Orphan & Heading Suffix Compliance Test (`TST-PRO-101.3`, AspiceSweAuditContractTest.kt & verify_requirement_governance.py)*:
+  • Verify downgraded `UI/manual-only` (incl. `TST-MIG-006`), `obsolete/duplicate`, `missing test code`, `14` `[Verified]` orphans, and unbacked REQs use standard `[Verified|Implemented|Planned|Open]` suffixes (`testLivingDocShards_allHeadingsStandardized`), and `--sync-indexes` maintains 100% master table parity (`testMasterTableParity_matchesDomainShards`).
+  4. *Ratchet Reduction & Scenario 60/61 Fixture Test (`TST-PRO-101.4`, tools/test_verify_requirement_governance.py)*:
+  • Verify `LEGACY_UNBACKED_VERIFIED_TSTS` ratchet reduction passes `--check-verified-evidence` with exit code `0`, and `test_scenario_60` / `test_scenario_61` validate ratchet enforcement and clean-worktree safety using parameterized `baseline_allowlist` / reconciled fixtures.
+  5. *Höchstmaß Mirror Parity Contract Test (`TST-PRO-101.5`, HoechstmassToolingContractTest.kt & tools/hoechstmass/tools/test_hoechstmass_tools.py)*:
+  • Verify `HoechstmassToolingContractTest` and `python3 -m unittest discover` in `tools/hoechstmass/tools/` pass with zero hardcoded `ATT` project/user IDs.

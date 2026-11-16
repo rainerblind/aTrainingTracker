@@ -36,6 +36,7 @@ import org.junit.Test
  * Unit tests verifying multi-stage proximity ranking and tie-breaking for RouteProximityRanker
  * (REQ-MAP-024 / TST-MAP-026 / ATT-1835).
  */
+// Linked test specs: TST-UI-270
 class RouteProximityRankerTest {
 
     @Before

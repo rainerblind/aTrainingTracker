@@ -28,6 +28,7 @@ import java.lang.reflect.Modifier
  * bottom sheets on inactive cockpit tabs (REQ-TRK-039 / TST-TRK-039 / ATT-4375).
  * Refactored to reflection and state validation per docs/coding_standards.md §5.4 and REQ-PRO-049.
  */
+// Linked test specs: TST-UI-287, TST-UI-303
 class SensorGridScreenClimbSuppressionTest {
 
     private fun getSensorGridScreenClass(): Class<*> {

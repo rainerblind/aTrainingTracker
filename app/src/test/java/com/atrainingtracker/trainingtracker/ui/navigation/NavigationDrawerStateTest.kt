@@ -29,6 +29,7 @@ import org.junit.Test
  *
  * Fulfills verification requirement TST-NAV-007 (ATT-526 / ATT-243).
  */
+// Linked test specs: TST-UI-274
 class NavigationDrawerStateTest {
 
     @Test

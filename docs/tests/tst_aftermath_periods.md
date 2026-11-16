@@ -7,79 +7,79 @@
 
 ---
 
-### TST-PERF-001: **Heatmap Memory Scalability** [Verified]
+### TST-PERF-001: **Heatmap Memory Scalability** [Implemented]
 - **Requirement(s)**: `REQ-MAP-017`
 - **Component**: **Heatmap Memory Scalability**
 - **Jira**: ``ATT-319``
 - **Test Description**: 1. Import a large volume of workouts (e.g. 500+). 2. Navigate to the 'Periods' view and scroll through Yearly/Monthly summaries.
 
-### TST-PERF-002: **Cluster Detail Loading Speed** [Verified]
+### TST-PERF-002: **Cluster Detail Loading Speed** [Implemented]
 - **Requirement(s)**: `REQ-PER-001`
 - **Component**: **Cluster Detail Loading Speed**
 - **Jira**: ``ATT-362``
 - **Test Description**: 1. Identify a cluster with > 30 recordings. 2. Tap on the cluster to open its details. 3. Measure time from tap to full heatmap/list display.
 
-### TST-PERF-003: **Initial Cluster Loading Progress** [Verified]
+### TST-PERF-003: **Initial Cluster Loading Progress** [Implemented]
 - **Requirement(s)**: `REQ-PER-003`
 - **Component**: **Initial Cluster Loading Progress**
 - **Jira**: ``ATT-366``
 - **Test Description**: 1. Clear application cache or significantly modify history. 2. Navigate to 'My Locations'.
 
-### TST-PERF-004: **Incremental Period Visibility** [Verified]
+### TST-PERF-004: **Incremental Period Visibility** [Implemented]
 - **Requirement(s)**: `REQ-PER-001`
 - **Component**: **Incremental Period Visibility**
 - **Jira**: ``ATT-374``
 - **Test Description**: 1. Trigger a full hierarchical Periods sync. 2. Observe the list as the "Syncing [Month]..." progress updates.
 
-### TST-PERF-005: **Dual-Phase Sync Efficiency** [1. The status SHALL transition from 'Reading...' to 'Syncing...' without jumping back. 2. The period list SHALL grow visibly after each 'Syncing [Month]' update. 3. Scrolling SHALL remain smooth throughout the sync.] [Verified]
+### TST-PERF-005: **Dual-Phase Sync Efficiency** [1. The status SHALL transition from 'Reading...' to 'Syncing...' without jumping back. 2. The period list SHALL grow visibly after each 'Syncing [Month]' update. 3. Scrolling SHALL remain smooth throughout the sync.] [Implemented]
 - **Requirement(s)**: `REQ-PER-004`
 - **Component**: **Dual-Phase Sync Efficiency**
 - **Jira**: ``ATT-380``
 - **Test Description**: 1. Trigger a full hierarchical Periods sync. 2. Observe the status transitions and UI responsiveness.
 
-### TST-PERF-006: **Multi-Phase Progress Feedback** [Verified]
+### TST-PERF-006: **Multi-Phase Progress Feedback** [Implemented]
 - **Requirement(s)**: `REQ-PER-005`
 - **Component**: **Multi-Phase Progress Feedback**
 - **Jira**: ``ATT-383``
 - **Test Description**: 1. Trigger a Periods sync. 2. Inspect the progress card UI.
 
-### TST-PERF-007: **Workout Cluster Migration Progress** [Verified]
+### TST-PERF-007: **Workout Cluster Migration Progress** [Implemented]
 - **Requirement(s)**: `REQ-PER-006`
 - **Component**: **Workout Cluster Migration Progress**
 - **Jira**: ``ATT-393``
 - **Test Description**: 1. Trigger a Workout Cluster recalculation. 2. Observe the progress card.
 
-### TST-PERF-008: **Reactive Period Detail Verification** [Verified]
+### TST-PERF-008: **Reactive Period Detail Verification** [Implemented]
 - **Requirement(s)**: `REQ-PER-007`
 - **Component**: **Reactive Period Detail Verification**
 - **Jira**: ``ATT-442``
 - **Test Description**: 1. Open the 'Periods' screen. 2. Tap the map icon for a period *immediately* before the background loading completes. 3. Observe the heatmap as it grows.
 
-### TST-PERF-009: **Silent Cluster Refresh** [Verified]
+### TST-PERF-009: **Silent Cluster Refresh** [Implemented]
 - **Requirement(s)**: `REQ-PER-006`
 - **Component**: **Silent Cluster Refresh**
 - **Jira**: ``ATT-441``
 - **Test Description**: 1. Navigate to My Locations. 2. Navigate away and back. 3. Verify no progress notification on 2nd visit. 4. Trigger recalculation and verify progress DOES appear.
 
-### TST-PERF-010: **Persistent Previews Audit** [Verified]
+### TST-PERF-010: **Persistent Previews Audit** [Implemented]
 - **Requirement(s)**: `REQ-PER-006`
 - **Component**: **Persistent Previews Audit**
 - **Jira**: ``ATT-441``
 - **Test Description**: 1. Navigate to My Locations. 2. Wait for enrichment. 3. Kill and restart app. 4. Navigate back to My Locations.
 
-### TST-PER-009: **Precise Sport Filtering** [Verified]
+### TST-PER-009: **Precise Sport Filtering** [Implemented]
 - **Requirement(s)**: `REQ-PER-008`
 - **Component**: **Precise Sport Filtering**
 - **Jira**: ``ATT-459``
 - **Test Description**: 1. Open a Period Summary. 2. Click a Sub-Sport row (e.g. MTB). 3. Verify the resulting list only contains MTB workouts for that period.
 
-### TST-PER-010: **Heatmap Toggle Removal** [Verified]
+### TST-PER-010: **Heatmap Toggle Removal** [Implemented]
 - **Requirement(s)**: `REQ-UI-120`
 - **Component**: **Heatmap Toggle Removal**
 - **Jira**: ``ATT-460``
 - **Test Description**: 1. Open Periods screen and Period Map. 2. Verify `Whatshot` toggle is gone. 3. Verify heatmap still reacts to global settings.
 
-### TST-PER-012: **Period Map Sport Filtering** [Verified]
+### TST-PER-012: **Period Map Sport Filtering** [Implemented]
 - **Requirement(s)**: `REQ-PER-009`
 - **Component**: **Period Map Sport Filtering**
 - **Jira**: ``ATT-466``
@@ -109,7 +109,7 @@
 - **Jira**: ``ATT-579``
 - **Test Description**: 1. Execute `PeriodsAggregationTest`. 2. Verify that in multi-workout periods (such as January 2015), the workout with the true maximum duration and distance (day 31) is selected as longest workout regardless of stale database IDs.
 
-### TST-PER-017: **Period Empty State Placeholder Verification** [Verified]
+### TST-PER-017: **Period Empty State Placeholder Verification** [Implemented]
 - **Requirement(s)**: `REQ-UI-125`
 - **Component**: **Period Empty State Placeholder Verification**
 - **Jira**: ``ATT-488``

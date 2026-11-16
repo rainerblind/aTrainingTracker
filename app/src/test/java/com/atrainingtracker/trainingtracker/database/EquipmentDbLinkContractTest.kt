@@ -37,6 +37,7 @@ import java.util.IdentityHashMap
  * Unit verification suite for EquipmentDbHelper atomic link operations and
  * DevicesDatabaseManager remote sensor discovery (REQ-UI-256, TST-UI-215, ATT-2126).
  */
+// Linked test specs: TST-UI-511
 class EquipmentDbLinkContractTest {
 
     private lateinit var mockContext: Context

@@ -7,7 +7,7 @@
 
 ---
 
-### REQ-LIV-001: Detect segments using "Gates" and cross-products [Verified]
+### REQ-LIV-001: Detect segments using "Gates" and cross-products [Implemented]
 - **Tests**: `TST-MAN-001`
 - **Priority**: Medium
 - **Type**: Functional
@@ -16,7 +16,7 @@
 - **Rationale**: Reliable entry/exit detection regardless of jitter.
 - **Description**: Detect segments using "Gates" and cross-products.
 
-### REQ-LIV-002: Real-time progress on starred Strava segments [Verified]
+### REQ-LIV-002: Real-time progress on starred Strava segments [Implemented]
 - **Tests**: `TST-MAN-001`
 - **Priority**: Medium
 - **Type**: Functional
@@ -25,7 +25,7 @@
 - **Rationale**: Motivate users during live efforts.
 - **Description**: Real-time progress on starred Strava segments.
 
-### REQ-LIV-003: Remaining distance/time vs PR [Verified]
+### REQ-LIV-003: Remaining distance/time vs PR [Implemented]
 - **Tests**: `TST-MAN-001`
 - **Priority**: Medium
 - **Type**: Functional
@@ -34,7 +34,7 @@
 - **Rationale**: Immediate feedback on performance.
 - **Description**: Remaining distance/time vs PR.
 
-### REQ-LIV-004: Filter segments by bearing alignment (45°) [Verified]
+### REQ-LIV-004: Filter segments by bearing alignment (45°) [Implemented]
 - **Tests**: `TST-MAN-001`
 - **Priority**: Medium
 - **Type**: Functional
@@ -92,7 +92,7 @@
 
 **Invariants**: Gate crossing geometry, polyline projection, PR comparison, and 100% clean-room test pass rate MUST NOT be broken.
 
-### REQ-PRO-001: Integrate Agile Workflow with Jira Cloud [Verified]
+### REQ-PRO-001: Integrate Agile Workflow with Jira Cloud [Implemented]
 - **Tests**: `TST-MAN-001`
 - **Priority**: High
 - **Type**: Non-Functional
@@ -101,7 +101,7 @@
 - **Rationale**: Ensure bidirectional traceability between tasks and code.
 - **Description**: Integrate Agile Workflow with Jira Cloud.
 
-### REQ-PRO-002: App Responsiveness [Verified]
+### REQ-PRO-002: App Responsiveness [Implemented]
 - **Tests**: `TST-STR-002`
 - **Priority**: High
 - **Type**: Non-Functional
@@ -109,7 +109,7 @@
 - **Implementation**: `TrackerService.java`, `ExportManager.java`
 - **Rationale**: The system SHALL minimize lock contention to ensure the app remains responsive during heavy I/O or sensor load.
 
-### REQ-PRO-006: Thread-Safe Sensor Management [Verified]
+### REQ-PRO-006: Thread-Safe Sensor Management [Implemented]
 - **Tests**: `TST-STR-011`
 - **Priority**: High
 - **Type**: Non-Functional
@@ -117,7 +117,7 @@
 - **Implementation**: `MySensorManager.java`, `MyDevice.java`
 - **Rationale**: The sensor management system SHALL be thread-safe to prevent race conditions during registration and unregistration of hardware sensors across multiple threads.
 
-### REQ-PRO-007: Traceable Test Execution [Verified]
+### REQ-PRO-007: Traceable Test Execution [Implemented]
 - **Tests**: `TST-STR-012`
 - **Priority**: High
 - **Type**: Non-Functional
@@ -125,7 +125,7 @@
 - **Implementation**: `jira_util.py`, `project_protocol.md`
 - **Rationale**: The system SHALL integrate test verification into the Jira workflow by automatically creating sub-tasks for each test case defined in `docs/tests.md` that is relevant to the current ticket.
 
-### REQ-PRO-010: Traceable Implementation Planning [Verified]
+### REQ-PRO-010: Traceable Implementation Planning [Implemented]
 - **Tests**: `TST-PRO-003`
 - **Priority**: High
 - **Type**: Non-Functional
@@ -149,7 +149,7 @@
 - **Implementation**: `jira_util.py`
 - **Rationale**: The development workflow SHALL provide visibility into Jira issue types (Bug, Task, Story) during listing and inspection to ensure appropriate processing logic.
 
-### REQ-PRO-011: Mandatory Code Documentation [Verified]
+### REQ-PRO-011: Mandatory Code Documentation [Implemented]
 - **Tests**: `TST-STR-015`
 - **Priority**: High
 - **Type**: Non-Functional
@@ -165,7 +165,7 @@
 - **Implementation**: `MyAccumulatorSensor.java`, `ANTBikeSpeedDevice.java`, `BTLEBikeDevice.java`
 - **Rationale**: The system SHALL prevent distance accumulation while paused to ensure workout statistics only reflect active movement.
 
-### REQ-PRO-004: Pause Track Isolation [Verified]
+### REQ-PRO-004: Pause Track Isolation [Implemented]
 - **Tests**: `TST-UI-039`
 - **Priority**: High
 - **Type**: Non-Functional
@@ -173,7 +173,7 @@
 - **Implementation**: `BANALServiceRepository.kt`
 - **Rationale**: The system SHALL prevent track and profile accumulation while paused, ensuring they strictly reflect active periods.
 
-### REQ-PRO-005: Database Schema Integrity [Verified]
+### REQ-PRO-005: Database Schema Integrity [Implemented]
 - **Tests**: `TST-UNT-011`
 - **Priority**: High
 - **Type**: Non-Functional
@@ -464,7 +464,7 @@
 3. *Root Reason for Existing Formulation*: Placeholders preserved IDs while full SWE.1 BP1/BP4 quantification was prioritized for dedicated sprint ticket ATT-6139.
 4. *Preservation of Core Invariants*: All 12 Section 4.9 budget targets, threading attributions (`TrackerService` `mScheduler` / `mDbExecutor`), WakeLock bounding, and 100% unit test pass rate remain strictly preserved without Android production runtime code changes.
 
-### REQ-PRO-012: Project Protocol Hardening [Verified]
+### REQ-PRO-012: Project Protocol Hardening [Implemented]
 - **Tests**: `TST-STR-017`
 - **Priority**: High
 - **Type**: Non-Functional
@@ -480,7 +480,7 @@
 - **Implementation**: `project_protocol.md`
 - **Rationale**: The development workflow SHALL enforce explicit System Invariants ("What MUST NOT Change") for all requirements, MANDATE a pre-implementation `find_usages` cross-check of all requirements mapped to files slated for modification, and REQUIRE a pre-commit adversarial self-review to prevent regressions.
 
-### REQ-PRO-014: Unified 5-Stage ASPICE Dual-Agent Quality Gates & Automated Jira Workflow [Verified]
+### REQ-PRO-014: Unified 5-Stage ASPICE Dual-Agent Quality Gates & Automated Jira Workflow [Implemented]
 - **Tests**: `TST-PRO-006`, `TST-PRO-008`
 - **Priority**: High
 - **Type**: Non-Functional
@@ -512,7 +512,7 @@ The workflow SHALL mandate that:
 • *Then* the parent ticket's `Lösungsversion` SHALL be populated with the active release version, verified by Agent 2 in Gate 5.
 **Invariants**: Moving parent tickets to `Erledigt` remains an inviolable human-only gate; sub-tasks transition directly to `Erledigt` upon automated Gate audit PASS; direct merges to `develop` without 100% sub-task completion remain strictly forbidden.
 
-### REQ-PRO-015: Agent-Driven Git Branching, Conventional Commits, and Develop Merging Protocol [Verified]
+### REQ-PRO-015: Agent-Driven Git Branching, Conventional Commits, and Develop Merging Protocol [Implemented]
 - **Tests**: `TST-PRO-007`
 - **Priority**: High
 - **Type**: Non-Functional
@@ -534,7 +534,7 @@ The workflow SHALL mandate that:
 • *Then* the agent SHALL checkout `develop` and execute `git merge --no-ff <branch_name> -m "Merge branch '<branch_name>' into develop"`.
 **Invariants**: Direct commits to `master` remain strictly forbidden; unreviewed code MUST NOT be merged into `develop`; sub-tasks complete autonomously via automated audit PASS while parent ticket release approval remains strictly reserved for the human user.
 
-### REQ-PRO-016: Inviolable ASPICE Human Decision Gates & Prevention of Premature Implementation Triggers [Verified]
+### REQ-PRO-016: Inviolable ASPICE Human Decision Gates & Prevention of Premature Implementation Triggers [Implemented]
 - **Tests**: `TST-PRO-009`
 - **Priority**: High
 - **Type**: Non-Functional
@@ -557,7 +557,7 @@ The workflow SHALL mandate that:
 • *Then* the agent SHALL run `python3 tools/jira_util.py check-gate <Subtask>` and confirm exit code 0 before editing any file.
 **Invariants**: The 5-stage ASPICE lifecycle, automated Jira sub-task generation, and dual-agent reviews MUST remain fully intact; moving parent tickets to `Erledigt` remains an inviolable human-only gate while sub-tasks complete autonomously via automated Gate audit PASS.
 
-### REQ-PRO-017: Process Hardening: Sub-Task Self-Sufficiency, Transition Sequencing, Discovery-First, and Git Finalization [Verified]
+### REQ-PRO-017: Process Hardening: Sub-Task Self-Sufficiency, Transition Sequencing, Discovery-First, and Git Finalization [Implemented]
 - **Tests**: `TST-PRO-010`
 - **Priority**: High
 - **Type**: Non-Functional
@@ -583,7 +583,7 @@ The workflow SHALL mandate that:
 • *Then* the agent SHALL checkout `develop`, merge with `--no-ff`, verify `git status`, and post the merge commit hash to the parent ticket.
 **Invariants**: Moving parent tickets to `Erledigt` remains an inviolable human-only gate; zero unmerged feature branches upon ticket completion.
 
-### REQ-PRO-018: Autonomous Multi-Model Independent Review Agent & Automated Gate Audits [Verified]
+### REQ-PRO-018: Autonomous Multi-Model Independent Review Agent & Automated Gate Audits [Implemented]
 - **Tests**: `TST-PRO-011`
 - **Priority**: High
 - **Type**: Non-Functional
@@ -748,7 +748,7 @@ The workflow SHALL mandate that:
 
 **Invariants**: Zero APK runtime bytecode or asset modifications (100% test-only code and developer tooling); existing test suites continue to pass with zero regressions; pure Python 3 standard library for all tooling scripts.
 
-### REQ-PRO-024: Modular Skill-Based Agile Architecture & Role-Specialized On-Demand Workflows [Verified]
+### REQ-PRO-024: Modular Skill-Based Agile Architecture & Role-Specialized On-Demand Workflows [Implemented]
 - **Tests**: `TST-PRO-017`
 - **Priority**: High
 - **Type**: Non-Functional
@@ -834,7 +834,7 @@ The workflow SHALL mandate that:
 
 **Invariants**: Test isolation preserved; zero flaky tests; memory consumption bounded to safe host limits.
 
-### REQ-PRO-026: Document Triad Architecture: Separation of ASPICE Governance, UI Design Guidelines, and Technical Coding Standards [Verified]
+### REQ-PRO-026: Document Triad Architecture: Separation of ASPICE Governance, UI Design Guidelines, and Technical Coding Standards [Implemented]
 - **Tests**: `TST-PRO-019`
 - **Priority**: High
 - **Type**: Non-Functional
@@ -2578,7 +2578,7 @@ The workflow SHALL mandate that:
 
 **Invariants**: 100% binary FIT Protocol V2.0 and Garmin TCX v2 schema parity; $O(1)$ memory consumption; zero SQLite imports in `FitFileWriter` / `TCXFileWriter`; Java subclasses and callers remain fully supported.
 
-### REQ-PRO-027: Agile Agentic ASPICE (AAA) Governance, Constructive Resistance, Hypothesis Verification, Stage 5 Resource Gate & Ceremony 2 Completeness Sweep [Verified]
+### REQ-PRO-027: Agile Agentic ASPICE (AAA) Governance, Constructive Resistance, Hypothesis Verification, Stage 5 Resource Gate & Ceremony 2 Completeness Sweep [Implemented]
 - **Tests**: `TST-PRO-020`
 - **Priority**: High
 - **Type**: Non-Functional
@@ -5334,3 +5334,35 @@ The workflow SHALL mandate that:
   • *When* `tools/verify_requirement_governance.py --check-test-evidence` executes,
   • *Then* it validates evidence integrity and reports PASS if complete or fails with exit code 1 if missing or failing.
 - **Invariants**: Zero Android runtime bytecode changes; Gradle Kover verification thresholds in `app/build.gradle` remain unchanged; POSIX flock mutual exclusion and Rule 3 human gates preserved.
+
+---
+
+### REQ-PRO-101: Unbacked Status Triage, Test-Tag Reconciliation & Ratchet Reduction (ATT-8145) [Verified]
+- **Tests**: `TST-PRO-101`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `tools/verify_requirement_governance.py`, `tools/hoechstmass/tools/verify_requirement_governance.py`, `tools/test_verify_requirement_governance.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`, `docs/engineering/test_evidence/ATT-8145_unbacked_triage.csv`, `docs/requirements/*.md`, `docs/tests/*.md`
+- **Rationale**: ASPICE 4.0 Major Finding M1 (`ATT-8145`) identified `369` active unbacked `[Verified]` TST specifications (out of the `405`-item `LEGACY_UNBACKED_VERIFIED_TSTS` ratchet baseline from `ATT-8143`), `332` `[Verified]` REQ headings citing only unbacked TSTs, and `14` `[Verified]` baselined orphans in `tools/traceability_baseline.json`. Extending `REQ-PRO-099`, legacy `[Verified]` claims must be triaged and reconciled so `[Verified]` strictly reflects executable test tags or attested verification evidence, backed by a machine-readable triage ledger and monotonic ratchet reduction.
+- **Description**:
+  1. *Deterministic Unbacked Verification Triage & Machine-Readable Ledger (`REQ-PRO-101.1`)*: `tools/verify_requirement_governance.py` SHALL implement `--triage-unbacked` (with deterministic CSV/report export under canonical `docs/engineering/test_evidence/`, e.g., `docs/engineering/test_evidence/ATT-8145_unbacked_triage.csv`, preserving `ALLOWED_ENGINEERING_ENTRIES`) to classify all unbacked `[Verified]` TSTs across living-doc shards into `unit-test-backed`, `UI/manual-only`, `obsolete/duplicate`, and `missing test code`, and identify stale already-backed entries in `LEGACY_UNBACKED_VERIFIED_TSTS`.
+  2. *Existing Test-Suite Tag Reconciliation (`REQ-PRO-101.2`)*: All `unit-test-backed` TST specifications (`157` items) whose verification logic already exists in `*Test.kt`, `*Test.java`, or `tools/test_*.py` suites SHALL retain `[Verified]` strictly after explicit `TST-*` tags are added to the corresponding test files so `extract_test_code_tags()` binds them deterministically.
+  3. *Truthful Status Downgrade & Domain Follow-Up Allocation (`REQ-PRO-101.3`)*: Remaining unbacked `[Verified]` TSTs (`UI/manual-only` including `TST-MIG-006`, `obsolete/duplicate`, `missing test code`), the `14` `[Verified]` baselined orphans in `tools/traceability_baseline.json`, and `[Verified]` REQs whose cited TSTs are unbacked SHALL be downgraded to `[Implemented]` or `[Planned]` using strictly `AspiceSweAuditContractTest`-valid heading suffixes (`[Verified]`, `[Implemented]`, `[Planned]`, `[Open]`). Per-domain follow-up Jira backlog tickets (`1-3 SP` each) SHALL be logged for genuinely missing automated or human-attested verification.
+  4. *Monotonic Ratchet Reduction & Master Index Parity (`REQ-PRO-101.4`)*: `LEGACY_UNBACKED_VERIFIED_TSTS` in `tools/verify_requirement_governance.py` SHALL be reconciled downward to `0` (or a strictly documented, ticket-referenced residual cap), `docs/requirements.md` and `docs/tests.md` summary tables SHALL be synchronized via `--sync-indexes`, and `python3 tools/verify_requirement_governance.py` + `--check-verified-evidence` SHALL exit `0`.
+  5. *Höchstmaß Mirror Parity & Governance Test Maintenance (`REQ-PRO-101.5`)*: `tools/hoechstmass/tools/verify_requirement_governance.py` and `tools/hoechstmass/tools/test_hoechstmass_tools.py` SHALL maintain parameterized mirror parity (`HoechstmassToolingContractTest` passing without hardcoded `ATT` project/user IDs), and `tools/test_verify_requirement_governance.py` (`test_scenario_60`, `test_scenario_61`) SHALL be updated cleanly using parameterized `baseline_allowlist` / reconciled fixtures.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Extends `REQ-PRO-099.3` / `TST-PRO-099.3` (`LEGACY_UNBACKED_VERIFIED_TSTS`, `405` items) via net-new `REQ-PRO-101` / `TST-PRO-101`. Targets `tools/verify_requirement_governance.py`, `tools/hoechstmass/tools/verify_requirement_governance.py`, `tools/test_verify_requirement_governance.py`, `docs/requirements/*.md`, `docs/tests/*.md`, and `docs/engineering/test_evidence/ATT-8145_unbacked_triage.csv`.
+  2. *Historical Origin & Commit Trace*: `ATT-8143` (`f9d9b9e5`, Sprint `2026-46.8`) introduced `LEGACY_UNBACKED_VERIFIED_TSTS` (`405` IDs) as a ratchet baseline; `ATT-8145` (Sprint `2026-47.1`) executes M1 triage remediation.
+  3. *Root Reason for Existing Formulation*: Prevented legacy unbacked `[Verified]` claims left by unconditional Stage 5 auto-verification from breaking CI while blocking novel unbacked `[Verified]` items.
+  4. *Preservation of Core Invariants*: Preserves monotonic non-increasing ratchet (`|B_{t+1}| <= |B_t|`), standard heading suffixes `[Verified|Implemented|Planned|Open]`, master index parity (`--sync-indexes`), clean-worktree safety (`REQ-PRO-099.5`), zero `app/src/main/` changes, and Human Decision Gate.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* the living-doc shards and test suites,
+  • *When* `python3 tools/verify_requirement_governance.py --triage-unbacked` runs,
+  • *Then* every unbacked `[Verified]` TST is deterministically classified and exported to `docs/engineering/test_evidence/ATT-8145_unbacked_triage.csv` without violating `ALLOWED_ENGINEERING_ENTRIES`.
+  • *Given* reconciled `TST-*` tags on `unit-test-backed` suites and downgraded `UI/manual-only`, `obsolete/duplicate`, `missing test code`, and `14` orphan items,
+  • *When* `python3 tools/verify_requirement_governance.py --sync-indexes` and `--check-verified-evidence` execute,
+  • *Then* `LEGACY_UNBACKED_VERIFIED_TSTS` is reduced monotonically (zero unbacked `[Verified]` items outside any documented residual cap), all headings end with valid status tokens, and governance checks exit `0`.
+  • *Given* `tools/test_verify_requirement_governance.py` (`test_scenario_60`, `test_scenario_61`), `tools/hoechstmass/tools/test_hoechstmass_tools.py`, `HoechstmassToolingContractTest`, and `AspiceSweAuditContractTest`,
+  • *When* executed,
+  • *Then* all unit and contract tests pass with exit code `0`.
+- **Invariants**: Zero `app/src/main/` runtime code changes; `ANT-Android-SDKs` untouched at `160000`; `ALLOWED_ENGINEERING_ENTRIES` canonical integrity preserved; standard heading suffixes `[Verified|Implemented|Planned|Open]` strictly enforced.

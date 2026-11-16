@@ -7,7 +7,7 @@
 
 ---
 
-### REQ-DAT-001: Store per-second sensor samples and extrema [Verified]
+### REQ-DAT-001: Store per-second sensor samples and extrema [Implemented]
 - **Tests**: `TST-STR-001`
 - **Priority**: Medium
 - **Type**: Functional
@@ -16,7 +16,7 @@
 - **Rationale**: Granular data and peak performance insights.
 - **Description**: Store per-second sensor samples and extrema.
 
-### REQ-DAT-002: Support automatic deletion of old workouts [Verified]
+### REQ-DAT-002: Support automatic deletion of old workouts [Implemented]
 - **Tests**: `TST-MAN-001`
 - **Priority**: Medium
 - **Type**: Functional
@@ -25,7 +25,7 @@
 - **Rationale**: Manage device storage automatically.
 - **Description**: Support automatic deletion of old workouts.
 
-### REQ-DAT-003: Provide period-based statistics (W/M/Y) [Verified]
+### REQ-DAT-003: Provide period-based statistics (W/M/Y) [Implemented]
 - **Tests**: `TST-MAN-001`, `TST-PERF-004`, `TST-BUG-002`
 - **Priority**: Medium
 - **Type**: Functional
@@ -43,7 +43,7 @@
 - **Rationale**: Optimize database size and UI performance.
 - **Description**: Encoded polylines and streams for storage/map.
 
-### REQ-DAT-005: Dynamic database schema evolution [Verified]
+### REQ-DAT-005: Dynamic database schema evolution [Implemented]
 - **Tests**: `TST-STR-001`
 - **Priority**: High
 - **Type**: Non-Functional
@@ -52,7 +52,7 @@
 - **Rationale**: Support future hardware without migrations.
 - **Description**: Dynamic database schema evolution.
 
-### REQ-EXP-001: Export Interoperability [Verified]
+### REQ-EXP-001: Export Interoperability [Implemented]
 - **Tests**: `TST-REG-003`, `TST-EXP-004`
 - **Priority**: Medium
 - **Type**: Functional
@@ -60,7 +60,7 @@
 - **Implementation**: `writer/`, `TCXFileWriter.java`
 - **Rationale**: The system SHALL support workout export to GPX, TCX, CSV, and GC JSON formats. The TCX export MUST strictly adhere to the Version 2.0 schema, ensuring that specific fields like `<Cadence>`, `<Watts>`, and `<RunCadence>` are formatted as integers to guarantee compatibility with professional analytical tools.
 
-### REQ-EXP-002: Cloud Synchronization [Verified]
+### REQ-EXP-002: Cloud Synchronization [Implemented]
 - **Tests**: `TST-REG-003`, `TST-REG-008`
 - **Priority**: Medium
 - **Type**: Functional
@@ -68,7 +68,7 @@
 - **Implementation**: `ExportManager.java`, `CloudUploadFragment.kt`
 - **Rationale**: The system SHALL support automated workout uploads to Strava and Dropbox. The system SHALL correctly persist and reflect the connection state (Authorized/Disconnected) across application restarts and fragment navigation.
 
-### REQ-EXP-003: Selective Upload (exclude specific data) [Verified]
+### REQ-EXP-003: Selective Upload (exclude specific data) [Implemented]
 - **Tests**: `TST-MAN-001`
 - **Priority**: Medium
 - **Type**: Functional
@@ -86,7 +86,7 @@
 - **Rationale**: Allow users to opt-out of Strava sync for specific custom sport types via a dedicated "- No upload -" mapping option.
 - **Description**: Explicit "No upload" option for Strava mapping.
 
-### REQ-EXP-007: Support latest Strava sport types [Verified]
+### REQ-EXP-007: Support latest Strava sport types [Implemented]
 - **Tests**: `TST-INT-003`
 - **Priority**: Medium
 - **Type**: Functional
@@ -615,7 +615,7 @@
 
 **Invariants**: Explicit file exports continue to appear in Downloads/; custom extension schemas preserved; 100% test pass rate MUST NOT be broken.
 
-### REQ-EXP-005: Exponential backoff for Strava uploads [Verified]
+### REQ-EXP-005: Exponential backoff for Strava uploads [Implemented]
 - **Tests**: `TST-STR-001`
 - **Priority**: Medium
 - **Type**: Functional
@@ -624,7 +624,7 @@
 - **Rationale**: Robust sync even with API issues.
 - **Description**: Exponential backoff for Strava uploads.
 
-### REQ-EXT-001: "Powered by Strava" branding on all Strava data [Verified]
+### REQ-EXT-001: "Powered by Strava" branding on all Strava data [Implemented]
 - **Tests**: `TST-REG-002`
 - **Priority**: Medium
 - **Type**: Functional
@@ -633,7 +633,7 @@
 - **Rationale**: Comply with mandatory API guidelines.
 - **Description**: "Powered by Strava" branding on all Strava data.
 
-### REQ-EXT-002: Official Strava Assets [Verified]
+### REQ-EXT-002: Official Strava Assets [Implemented]
 - **Tests**: `TST-REG-002`
 - **Priority**: Medium
 - **Type**: Functional
@@ -641,7 +641,7 @@
 - **Implementation**: `StravaUploadFragment.kt`
 - **Rationale**: The system SHALL use official Strava \"Connect\" authentication assets to comply with partner brand requirements.
 
-### REQ-EXT-003: Display logo contextually within lists/headers [Verified]
+### REQ-EXT-003: Display logo contextually within lists/headers [Implemented]
 - **Tests**: `TST-REG-002`
 - **Priority**: Medium
 - **Type**: Functional
@@ -650,7 +650,7 @@
 - **Rationale**: Maintain compliance without UI clutter.
 - **Description**: Display logo contextually within lists/headers.
 
-### REQ-EXT-004: Integrated Strava Authorization [Verified]
+### REQ-EXT-004: Integrated Strava Authorization [Implemented]
 - **Tests**: `TST-EXT-001`
 - **Priority**: High
 - **Type**: Functional
@@ -659,7 +659,7 @@
 - **Rationale**: The system SHALL use Chrome Custom Tabs for Strava authorization to provide a seamless user experience within the application context.
 - **Description**: Integrated Strava Authorization.
 
-### REQ-EXT-005: Reactive OAuth Feedback [Verified]
+### REQ-EXT-005: Reactive OAuth Feedback [Implemented]
 - **Tests**: `TST-EXT-002`
 - **Priority**: High
 - **Type**: Functional
@@ -833,7 +833,7 @@
 
 **Invariants**: Custom Tabs launch, callback authority `rainerblind.github.io`, permission scopes, single-variant authentication backwards compatibility, and 100% clean-room test pass rate.
 
-### REQ-DAT-006: Eager Internal Sensor Registration [Verified]
+### REQ-DAT-006: Eager Internal Sensor Registration [Implemented]
 - **Tests**: `TST-BUG-011`
 - **Priority**: Medium
 - **Type**: Functional
@@ -841,7 +841,7 @@
 - **Implementation**: `DeviceManager.java`, `DevicesDatabaseManager.java`
 - **Rationale**: The `DeviceManager` SHALL ensure that all detectable internal sensors (e.g., Pressure Sensor) are registered in the database *prior* to any pairing checks or device instantiations within its constructor. This guarantees that internal hardware always has a valid database identity and can be correctly auditable in the UI.
 
-### REQ-MIG-051: Sparse Data Import [Verified]
+### REQ-MIG-051: Sparse Data Import [Implemented]
 - **Tests**: `TST-MIG-014`
 - **Priority**: Medium
 - **Type**: Functional
@@ -877,7 +877,7 @@
 
 **Invariants**: Spatial geofence matching radius ($200\text{m}$), schema version (V5), locked location altitude immutability (`REQ-DAT-014`), null-safe correction dispatch (`REQ-CON-013`), and cold-start baseline protection (`REQ-CON-011`) MUST NOT be altered.
 
-### REQ-DAT-008: Atomic Database Upgrades [Verified]
+### REQ-DAT-008: Atomic Database Upgrades [Implemented]
 - **Tests**: `TST-UNT-014`
 - **Priority**: High
 - **Type**: Functional
@@ -1501,7 +1501,7 @@
 
 **Invariants**: Zero database schema alterations; strict cursor lifecycle ownership; 100% unit test pass rate.
 
-### REQ-MIG-001: State Bundling [Verified]
+### REQ-MIG-001: State Bundling [Implemented]
 - **Tests**: `TST-MIG-001`
 - **Priority**: Medium
 - **Type**: Functional
@@ -1509,7 +1509,7 @@
 - **Implementation**: `BackupManager`
 - **Rationale**: The system SHALL be able to bundle all internal SQLite databases (including high-fidelity samples) and shared preferences into a single portable archive (`.attbackup`).
 
-### REQ-MIG-002: Multi-Destination Backup [Verified]
+### REQ-MIG-002: Multi-Destination Backup [Implemented]
 - **Tests**: `TST-MIG-001`
 - **Priority**: High
 - **Type**: Functional
@@ -1517,7 +1517,7 @@
 - **Implementation**: `BackupManager`, `DropboxIntegration`
 - **Rationale**: The system SHALL support both manual backup (via Android SAF) and direct upload to a linked Dropbox account.
 
-### REQ-MIG-003: Regular Cloud Backups [Verified]
+### REQ-MIG-003: Regular Cloud Backups [Implemented]
 - **Tests**: `TST-MIG-003`
 - **Priority**: High
 - **Type**: Functional
@@ -1533,7 +1533,7 @@
 - **Implementation**: `MigrationEngine`
 - **Rationale**: The system SHALL support a "Full Restore" mode that replaces the entire local state with a backup, followed by a forced app restart to ensure consistency.
 
-### REQ-MIG-005: Incremental Import [Verified]
+### REQ-MIG-005: Incremental Import [Implemented]
 - **Tests**: `TST-MIG-002`
 - **Priority**: Medium
 - **Type**: Functional
@@ -1541,7 +1541,7 @@
 - **Implementation**: `ImportEngine.kt`, `LegacyImportEngine.kt`
 - **Rationale**: The system SHALL support merging backups into an existing database. It MUST perform deduplication using the `FILE_BASE_NAME` as the unique identifier. Legacy recovery SHALL also skip files that already exist in the database.
 
-### REQ-MIG-013: Idempotent Recovery [Verified]
+### REQ-MIG-013: Idempotent Recovery [Implemented]
 - **Tests**: `TST-MIG-010`
 - **Priority**: High
 - **Type**: Functional
@@ -1549,7 +1549,7 @@
 - **Implementation**: `LegacyImportEngine.kt`
 - **Rationale**: The legacy recovery process SHALL NOT trigger clustering prompts for workouts that are already present in the database or already have a cluster assigned.
 
-### REQ-MIG-014: Queued User Interaction [Verified]
+### REQ-MIG-014: Queued User Interaction [Implemented]
 - **Tests**: `TST-MIG-017`
 - **Priority**: Medium
 - **Type**: Functional
@@ -1557,7 +1557,7 @@
 - **Implementation**: `LegacyImportEngine.kt`, `BackupRestoreViewModel.kt`, `ImportBackupTabsScreen.kt`
 - **Rationale**: The system SHALL decouple user interaction requests (e.g., cluster naming) from background file importing. While an interaction is pending user resolution, the TCX import engine SHALL continue downloading and processing subsequent files concurrently in the background, queuing up to 3 pending user interactions without blocking progress. **Invariants**: Progress indicators and status updates MUST remain visible during background importing.
 
-### REQ-MIG-006: State Lockdown [Verified]
+### REQ-MIG-006: State Lockdown [Implemented]
 - **Tests**: `TST-MIG-001`
 - **Priority**: Medium
 - **Type**: Functional
@@ -1565,7 +1565,7 @@
 - **Implementation**: `MigrationUI`
 - **Rationale**: Backup and Restore operations SHALL ONLY be allowed when the system is in a non-tracking state to prevent data corruption.
 
-### REQ-MIG-007: Full Restore Confirmation [Verified]
+### REQ-MIG-007: Full Restore Confirmation [Implemented]
 - **Tests**: `TST-MIG-004`
 - **Priority**: High
 - **Type**: Functional
@@ -1573,7 +1573,7 @@
 - **Implementation**: `BackupRestoreScreen.kt`
 - **Rationale**: The system SHALL require explicit user confirmation before initiating a "Full Restore" from Dropbox.
 
-### REQ-MIG-008: Informative Dashboard Labels [Verified]
+### REQ-MIG-008: Informative Dashboard Labels [Implemented]
 - **Tests**: `TST-MIG-005`
 - **Priority**: Low
 - **Type**: Functional
@@ -1581,7 +1581,7 @@
 - **Implementation**: `BackupRestoreScreen.kt`
 - **Rationale**: The Backup \u0026 Restore dashboard SHALL provide clear descriptive text for all operations. The Dropbox backup button SHALL be labeled \"Create \u0026 Upload Backup to Dropbox\". Destructive and merging sections SHALL feature high-level descriptions explaining their impact on local data.
 
-### REQ-MIG-011: Tabbed Import \u0026 Backup UI [Verified]
+### REQ-MIG-011: Tabbed Import \u0026 Backup UI [Implemented]
 - **Tests**: `TST-MIG-008`
 - **Priority**: High
 - **Type**: Functional
@@ -1608,7 +1608,7 @@
 
 **Invariants**: User-selected tolerances MUST be persisted to shared preferences upon confirmation. The underlying mathematical clustering engine, Room database entities, and file import workflows MUST remain unaltered.
 
-### REQ-MIG-009: Default Backup Interval [Verified]
+### REQ-MIG-009: Default Backup Interval [Implemented]
 - **Tests**: `TST-MIG-006`
 - **Priority**: High
 - **Type**: Functional
@@ -1616,7 +1616,7 @@
 - **Implementation**: `prefs_dropbox.xml`, `BackupWorker.kt`
 - **Rationale**: The system SHALL default the automated backup interval to 1 day (Daily) to maximize data safety for new users.
 
-### REQ-MIG-010: Enable Backups by Default [Verified]
+### REQ-MIG-010: Enable Backups by Default [Implemented]
 - **Tests**: `TST-MIG-007`
 - **Priority**: High
 - **Type**: Functional
@@ -1624,7 +1624,7 @@
 - **Implementation**: `prefs_dropbox.xml`, `BackupWorker.kt`
 - **Rationale**: The system SHALL enable the automated backup feature by default for new installations.
 
-### REQ-MIG-015: Efficient Legacy Recovery [Verified]
+### REQ-MIG-015: Efficient Legacy Recovery [Implemented]
 - **Tests**: `TST-MIG-011`
 - **Priority**: High
 - **Type**: Functional
@@ -1632,7 +1632,7 @@
 - **Implementation**: `LegacyImportEngine.kt`
 - **Rationale**: The legacy recovery process SHALL skip already imported workouts BEFORE downloading them from remote storage to ensure optimal performance and bandwidth usage.
 
-### REQ-MIG-016: Paginated & Recursive Cloud Recovery [Verified]
+### REQ-MIG-016: Paginated & Recursive Cloud Recovery [Implemented]
 - **Tests**: `TST-MIG-012`, `TST-MIG-018`
 - **Priority**: High
 - **Type**: Functional
@@ -1640,7 +1640,7 @@
 - **Implementation**: `LegacyImportEngine.kt`, `BackupRestoreViewModel.kt`
 - **Rationale**: The system SHALL robustly scan and paginate cloud storage paths (e.g., `/TCX`, `/apps/Workouts/TCX` and their subdirectories) using `.withRecursive(true)` and `listFolderContinue()` with error recovery to discover all TCX workout files regardless of folder size. **Invariants**: Deduplication (`isWorkoutExisting`) MUST continue using `FILE_BASE_NAME` as the unique identifier.
 
-### REQ-MIG-021: Informative Import Summary [Verified]
+### REQ-MIG-021: Informative Import Summary [Implemented]
 - **Tests**: `TST-MIG-018`
 - **Priority**: Medium
 - **Type**: Functional
@@ -1648,7 +1648,7 @@
 - **Implementation**: `BackupRestoreViewModel.kt`, `LegacyImportEngine.kt`, `strings.xml`
 - **Rationale**: Upon completing a bulk import, the system SHALL display a detailed summary stating the number of newly imported workouts, the number of skipped/already existing workouts, and the total number of files scanned. **Invariants**: Success and error messages MUST be accurately formatted.
 
-### REQ-MIG-022: Preserve Original Filename During Import [Verified]
+### REQ-MIG-022: Preserve Original Filename During Import [Implemented]
 - **Tests**: `TST-MIG-019`
 - **Priority**: Medium
 - **Type**: Functional
@@ -1664,7 +1664,7 @@
 - **Implementation**: `ImportBackupTabsScreen.kt`, `TrainingApplication.java`, `BackupRestoreViewModel.kt`, `DropboxUploader.java`
 - **Rationale**: When the user is not authenticated or connected to Dropbox, all cloud-dependent features (including scanning/importing legacy TCX files, cloud backups, and cloud restores) SHALL be visually deactivated in the UI (rendered in a muted/grey state). Clicking a deactivated cloud action SHALL present an informational dialog explaining that Dropbox is disconnected. **Invariants**: Credential reading and background jobs MUST NOT throw null pointer exceptions when unlinked.
 
-### REQ-MIG-017: Limited Interaction Queue & Backpressure [Verified]
+### REQ-MIG-017: Limited Interaction Queue & Backpressure [Implemented]
 - **Tests**: `TST-MIG-013`, `TST-MIG-017`
 - **Priority**: Medium
 - **Type**: Functional
@@ -1672,7 +1672,7 @@
 - **Implementation**: `LegacyImportEngine.kt`, `BackupRestoreViewModel.kt`
 - **Rationale**: The system SHALL limit the number of concurrent pending UI interactions to a maximum of 3 using a semaphore (`interactionSemaphore(3)`). The background import engine MUST ONLY suspend file downloading and parsing when 3 candidate interactions are active in `_interactionQueue`, automatically resuming as the user resolves queued items. **Invariants**: Queue size MUST NOT exceed 3 items.
 
-### REQ-MIG-018: Sparse Data Import [Verified]
+### REQ-MIG-018: Sparse Data Import [Implemented]
 - **Tests**: `TST-MIG-014`
 - **Priority**: Medium
 - **Type**: Functional
@@ -1680,7 +1680,7 @@
 - **Implementation**: `LegacyImportEngine.kt`, `WorkoutSamplesDatabaseManager.java`
 - **Rationale**: The TCX import engine SHALL dynamically detect available sensors and only create database columns and summary metrics for telemetry actually present in the source file, preventing the population of zero-filled streams for missing data.
 
-### REQ-MIG-019: Dropbox Wait Feedback [Verified]
+### REQ-MIG-019: Dropbox Wait Feedback [Implemented]
 - **Tests**: `TST-MIG-015`
 - **Priority**: Medium
 - **Type**: Functional
@@ -1688,7 +1688,7 @@
 - **Implementation**: `LegacyImportEngine.kt`, `BackupRestoreViewModel.kt`
 - **Rationale**: The TCX import process SHALL provide explicit visual feedback (e.g., status message) when the system is waiting for a response from the Dropbox API (e.g., during folder scanning or file downloading) to ensure the user is aware of the external dependency.
 
-### REQ-MIG-020: Positive Import Branding [Verified]
+### REQ-MIG-020: Positive Import Branding [Implemented]
 - **Tests**: `TST-MIG-016`
 - **Priority**: Medium
 - **Type**: Functional
@@ -1792,7 +1792,7 @@
 
 **Invariants**: User decision sovereignty (`REQ-MIG-025`, \"Leave Unclustered\" remains `clusterId = -1`) MUST be preserved; existing spatial tolerances (endpoints, apex, distance, altitude) MUST NOT be altered.
 
-### REQ-MIG-028: Optional Strava Upload on TCX Import [Verified]
+### REQ-MIG-028: Optional Strava Upload on TCX Import [Implemented]
 - **Tests**: `TST-MIG-025`
 - **Priority**: High
 - **Type**: Functional
@@ -2343,7 +2343,7 @@
 
 **Invariants**: Zero cursor leaks, zero `CursorIndexOutOfBoundsException`, deterministic sentinel return mapping, 100% clean-room test pass rate.
 
-### REQ-DAT-026: Targeted Single-Row Query and Bounds-Checked Resume Reconstruction in TrackerService [Verified]
+### REQ-DAT-026: Targeted Single-Row Query and Bounds-Checked Resume Reconstruction in TrackerService [Implemented]
 - **Tests**: `TST-DAT-021`
 - **Priority**: Medium
 - **Type**: Non-Functional
@@ -3301,7 +3301,7 @@
 
 **Invariants**: Zero SQLite schema migrations, 100% clean-room test pass rate, and strict rejection of internal symbolic links.
 
-### REQ-DAT-036: SQLite Schema Evolution, `onCreate`/`onUpgrade` Parity & Automated Migration Verification [Verified]
+### REQ-DAT-036: SQLite Schema Evolution, `onCreate`/`onUpgrade` Parity & Automated Migration Verification [Implemented]
 - **Tests**: `TST-DAT-032`
 - **Priority**: High
 - **Type**: Non-Functional

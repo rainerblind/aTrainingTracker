@@ -504,7 +504,11 @@ class TestJiraCliTooling(unittest.TestCase):
         import tempfile
         with tempfile.TemporaryDirectory() as tmpdir:
             docs_dir = os.path.join(tmpdir, "docs")
+            test_dir = os.path.join(tmpdir, "app", "src", "test")
             os.makedirs(docs_dir, exist_ok=True)
+            os.makedirs(test_dir, exist_ok=True)
+            with open(os.path.join(test_dir, "UiWidgetTest.kt"), "w", encoding="utf-8") as f:
+                f.write("// TST-UI-001\n")
             req_path = os.path.join(docs_dir, "requirements.md")
             tst_path = os.path.join(docs_dir, "tests.md")
             with open(req_path, "w", encoding="utf-8") as f:
@@ -527,7 +531,7 @@ class TestJiraCliTooling(unittest.TestCase):
             # Unbacked requirements remain/flip to Implemented under REQ-PRO-099.4
             self.assertIn("Implemented", req_content)
             self.assertNotIn("Planned", tst_content)
-            # TST-UI-001 is tolerated in ratchet baseline, so it promotes to Verified
+            # TST-UI-001 has test code backing in tmpdir, so it promotes to Verified
             self.assertIn("| Verified |", tst_content)
 
     def test_stage5_evidence_gating_unbacked_and_backed(self):

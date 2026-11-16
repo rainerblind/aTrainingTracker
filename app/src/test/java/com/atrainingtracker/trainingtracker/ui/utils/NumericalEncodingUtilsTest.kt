@@ -21,6 +21,7 @@ package com.atrainingtracker.trainingtracker.ui.utils
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
+// Linked test specs: TST-UNT-001
 class NumericalEncodingUtilsTest {
 
     @Test

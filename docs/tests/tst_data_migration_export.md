@@ -7,7 +7,7 @@
 
 ---
 
-### TST-EXP-004: **TCX Schema Compliance Audit** [Verified]
+### TST-EXP-004: **TCX Schema Compliance Audit** [Implemented]
 - **Requirement(s)**: `REQ-EXP-001`
 - **Component**: **TCX Schema Compliance Audit**
 - **Jira**: ``ATT-517``
@@ -295,49 +295,49 @@
   5. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules asserting 100% test pass rate with zero regressions.
 
-### TST-MIG-001: **Full Migration Cycle** [Verified]
+### TST-MIG-001: **Full Migration Cycle** [Implemented]
 - **Requirement(s)**: `REQ-MIG-001`, `REQ-MIG-002`, `REQ-MIG-004`, `REQ-MIG-006`
 - **Component**: **Full Migration Cycle**
 - **Jira**: ``ATT-117``
 - **Test Description**: 1. Generate local backup. 2. Wipe app data. 3. Restore from backup.
 
-### TST-MIG-002: **Deduplication Verification** [Verified]
+### TST-MIG-002: **Deduplication Verification** [Implemented]
 - **Requirement(s)**: `REQ-MIG-005`
 - **Component**: **Deduplication Verification**
 - **Jira**: ``ATT-117``
 - **Test Description**: 1. Import a backup containing already existing workouts.
 
-### TST-MIG-003: **Automated Dropbox Backup** [Verified]
+### TST-MIG-003: **Automated Dropbox Backup** [Implemented]
 - **Requirement(s)**: `REQ-MIG-003`
 - **Component**: **Automated Dropbox Backup**
 - **Jira**: ``ATT-93``
 - **Test Description**: 1. Enable regular backups. 2. Verify archive exists in Dropbox after background task runs.
 
-### TST-MIG-004: **Full Restore Confirmation (Dropbox)** [Verified]
+### TST-MIG-004: **Full Restore Confirmation (Dropbox)** [Implemented]
 - **Requirement(s)**: `REQ-MIG-007`
 - **Component**: **Full Restore Confirmation (Dropbox)**
 - **Jira**: ``ATT-290``
 - **Test Description**: 1. Navigate to 'Backup \u0026 Restore'. 2. Tap \"Dropbox: Restore Backup\".
 
-### TST-MIG-005: **Informative Labels Audit** [Verified]
+### TST-MIG-005: **Informative Labels Audit** [Implemented]
 - **Requirement(s)**: `REQ-MIG-008`
 - **Component**: **Informative Labels Audit**
 - **Jira**: ``ATT-295``
 - **Test Description**: 1. Open Backup \u0026 Restore dashboard. 2. Verify Dropbox button label. 3. Verify presence of descriptions in Restore and Import sections.
 
-### TST-MIG-006: **Default Backup Interval Verification** [Verified]
+### TST-MIG-006: **Default Backup Interval Verification** [Implemented]
 - **Requirement(s)**: `REQ-MIG-009`
 - **Component**: **Default Backup Interval Verification**
 - **Jira**: ``ATT-321``
 - **Test Description**: 1. Clear application data. 2. Navigate to 'Dropbox' settings. 3. Inspect 'Backup Interval'.
 
-### TST-MIG-007: **Enable Backups by Default Verification** [Verified]
+### TST-MIG-007: **Enable Backups by Default Verification** [Implemented]
 - **Requirement(s)**: `REQ-MIG-010`
 - **Component**: **Enable Backups by Default Verification**
 - **Jira**: ``ATT-322``
 - **Test Description**: 1. Clear application data. 2. Navigate to 'Dropbox' settings. 3. Inspect 'Automated Backups' switch.
 
-### TST-MIG-008: **Tabbed UI Navigation** [Verified]
+### TST-MIG-008: **Tabbed UI Navigation** [Implemented]
 - **Requirement(s)**: `REQ-MIG-011`
 - **Component**: **Tabbed UI Navigation**
 - **Jira**: ``ATT-323``
@@ -356,61 +356,61 @@
   6. Adjust parameters, tap OK, and verify tolerances persist to `SharedPreferences` and import commences.
   7. Re-open sheet, tap Cancel or dismiss sheet via drag, and verify no import commences and unconfirmed edits are discarded.
 
-### TST-MIG-010: **Idempotent TCX Import** [Verified]
+### TST-MIG-010: **Idempotent TCX Import** [Implemented]
 - **Requirement(s)**: `REQ-MIG-013`
 - **Component**: **Idempotent TCX Import**
 - **Jira**: ``ATT-331``
 - **Test Description**: 1. Import a TCX file. 2. Re-run 'Scan TCX' for the same file.
 
-### TST-MIG-011: **Legacy Recovery Performance Audit** [Verified]
+### TST-MIG-011: **Legacy Recovery Performance Audit** [Implemented]
 - **Requirement(s)**: `REQ-MIG-015`
 - **Component**: **Legacy Recovery Performance Audit**
 - **Jira**: ``ATT-337``
 - **Test Description**: 1. Ensure several legacy workouts exist in the local database. 2. Run 'Scan TCX' with those same files present in Dropbox.
 
-### TST-MIG-012: **Paginated Cloud Scan Verification** [Verified]
+### TST-MIG-012: **Paginated Cloud Scan Verification** [Implemented]
 - **Requirement(s)**: `REQ-MIG-016`
 - **Component**: **Paginated Cloud Scan Verification**
 - **Jira**: ``ATT-339``
 - **Test Description**: 1. Use a Dropbox account with > 1000 TCX files in the target folder. 2. Trigger 'Scan TCX'.
 
-### TST-MIG-013: **Interaction Queue Size Limiting** [Verified]
+### TST-MIG-013: **Interaction Queue Size Limiting** [Implemented]
 - **Requirement(s)**: `REQ-MIG-017`
 - **Component**: **Interaction Queue Size Limiting**
 - **Jira**: ``ATT-401``
 - **Test Description**: 1. Start bulk import of > 10 unclustered workouts. 2. Verify engine pauses at 10 queued items. 3. Monitor network/parsing logs.
 
-### TST-MIG-014: **Sparse Data Import** [Verified]
+### TST-MIG-014: **Sparse Data Import** [Implemented]
 - **Requirement(s)**: `REQ-MIG-018`
 - **Component**: **Sparse Data Import**
 - **Jira**: ``ATT-403``
 - **Test Description**: 1. Import a TCX file missing HR/Power. 2. Inspect summary and DB schema.
 
-### TST-MIG-015: **Dropbox Wait Feedback** [Explicit messages like "Waiting for Dropbox..." or "Downloading [File]..." SHALL be visible during network operations.] [Verified]
+### TST-MIG-015: **Dropbox Wait Feedback** [Explicit messages like "Waiting for Dropbox..." or "Downloading [File]..." SHALL be visible during network operations.] [Implemented]
 - **Requirement(s)**: `REQ-MIG-019`
 - **Component**: **Dropbox Wait Feedback**
 - **Jira**: ``ATT-405``
 - **Test Description**: 1. Trigger 'Scan TCX' from Dropbox. 2. Observe the progress status messages.
 
-### TST-MIG-016: **Positive Import UI Alignment** [Verified]
+### TST-MIG-016: **Positive Import UI Alignment** [Implemented]
 - **Requirement(s)**: `REQ-MIG-020`
 - **Component**: **Positive Import UI Alignment**
 - **Jira**: ``ATT-435``
 - **Test Description**: 1. Navigate to 'Import & Backup'. 2. Inspect the 'Import' tab content.
 
-### TST-MIG-017: **Concurrent TCX Import Background Queuing & Throttling** [Verified]
+### TST-MIG-017: **Concurrent TCX Import Background Queuing & Throttling** [Implemented]
 - **Requirement(s)**: `REQ-MIG-014`, `REQ-MIG-017`
 - **Component**: **Concurrent TCX Import Background Queuing & Throttling**
 - **Jira**: ``ATT-549``
 - **Test Description**: 1. Start bulk import of multiple TCX files requiring route cluster naming. 2. Leave the first cluster naming dialog open without confirming immediately. 3. Monitor background progress indicators.
 
-### TST-MIG-018: **Recursive Cloud Folder Scanning & Informative Import Summary** [Verified]
+### TST-MIG-018: **Recursive Cloud Folder Scanning & Informative Import Summary** [Implemented]
 - **Requirement(s)**: `REQ-MIG-016`, `REQ-MIG-021`
 - **Component**: **Recursive Cloud Folder Scanning & Informative Import Summary**
 - **Jira**: ``ATT-560``
 - **Test Description**: 1. Set up a Dropbox folder structure containing TCX files in multiple paths and subdirectories (e.g., `/TCX/2025/` and `/apps/Workouts/TCX/`). 2. Trigger bulk recovery. 3. Inspect final success message.
 
-### TST-MIG-019: **Workout Name Filename Integrity** [Verified]
+### TST-MIG-019: **Workout Name Filename Integrity** [Implemented]
 - **Requirement(s)**: `REQ-MIG-022`
 - **Component**: **Workout Name Filename Integrity**
 - **Jira**: ``ATT-571``
@@ -460,7 +460,7 @@
   6. Verify `WorkoutSummaries.B_SPORT` is populated with the inferred `BSportType` name.
   7. Verify `WorkoutClusterRepository.refreshClusters()` is invoked and in-memory caches (`allClusters`, `clusterStats`, `unclusteredWorkouts`) immediately update with the newly imported session.
 
-### TST-MIG-025: **TCX Import Optional Strava Upload & UI Switch Verification** [Verified]
+### TST-MIG-025: **TCX Import Optional Strava Upload & UI Switch Verification** [Implemented]
 - **Requirement(s)**: `REQ-MIG-028`
 - **Component**: **TCX Import Optional Strava Upload & UI Switch Verification**
 - **Jira**: ``ATT-911``
@@ -653,7 +653,7 @@
   5. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% test pass rate with zero regressions.
 
-### TST-DAT-001: **Automated Altitude Discovery** [Verified]
+### TST-DAT-001: **Automated Altitude Discovery** [Implemented]
 - **Requirement(s)**: `REQ-DAT-007`
 - **Component**: **Automated Altitude Discovery**
 - **Jira**: ``ATT-423``
@@ -665,12 +665,12 @@
 - **Jira**: ``ATT-482``
 - **Test Description**: 1. Start workout at Location A (200m). 2. Descend to 100m. 3. Stop workout. 4. Inspect 'Known Locations' DB.
 
-### TST-EXT-001: **Strava Custom Tabs** [Verified]
+### TST-EXT-001: **Strava Custom Tabs** [Implemented]
 - **Requirement(s)**: `REQ-EXT-004`
 - **Component**: **Strava Custom Tabs**
 - **Test Description**: 1. Click "Connect to Strava". 2. Verify that a Custom Tab opens.
 
-### TST-EXT-002: **Strava OAuth Flow** [Verified]
+### TST-EXT-002: **Strava OAuth Flow** [Implemented]
 - **Requirement(s)**: `REQ-EXT-005`
 - **Component**: **Strava OAuth Flow**
 - **Test Description**: 1. Complete Strava authorization. 2. Observe the loading state.
@@ -1320,7 +1320,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions across all 2932+ tests.
 
-### TST-DAT-021: **Targeted Crash-Resume Single-Row Query & Bounds Safety Verification Suite** [Verified]
+### TST-DAT-021: **Targeted Crash-Resume Single-Row Query & Bounds Safety Verification Suite** [Implemented]
 - **Requirement(s)**: `REQ-DAT-026`
 - **Component**: **Targeted Crash-Resume Single-Row Query & Bounds Safety Verification Suite**
 - **Jira**: ``ATT-3549``
@@ -1924,7 +1924,7 @@
   4. *Clean-Room Regression Suite Execution (`TST-MIG-045.4`)*:
   • Execute targeted migration unit tests and `TranslationParityTest` asserting 100% pass rate.
 
-### TST-DAT-032: **SQLite Schema Evolution, onCreate/onUpgrade Parity & Automated Migration Verification Standard Audit** [Verified]
+### TST-DAT-032: **SQLite Schema Evolution, onCreate/onUpgrade Parity & Automated Migration Verification Standard Audit** [Implemented]
 - **Requirement(s)**: `REQ-DAT-036`
 - **Component**: **SQLite Schema Evolution, `onCreate`/`onUpgrade` Parity & Automated Migration Verification Standard Audit**
 - **Jira**: ``ATT-3534``

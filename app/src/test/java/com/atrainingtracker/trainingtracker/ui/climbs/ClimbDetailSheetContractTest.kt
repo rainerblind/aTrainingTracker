@@ -31,6 +31,7 @@ import java.lang.reflect.Modifier
  * Architectural and contract tests for [ClimbDetailSheet], [ClimbDetailElevationProfile],
  * and [calculateClimbBounds] (REQ-UI-300, TST-UI-260).
  */
+// Linked test specs: TST-UI-275
 class ClimbDetailSheetContractTest {
 
     private val projectRoot: File by lazy {

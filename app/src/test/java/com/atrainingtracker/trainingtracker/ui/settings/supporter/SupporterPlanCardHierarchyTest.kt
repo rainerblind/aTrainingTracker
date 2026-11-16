@@ -33,6 +33,7 @@ import java.util.regex.Pattern
  * Architectural and contract verification suite for Supporter tier visual hierarchy,
  * lower tier de-emphasis, and recommendation badge gating (REQ-UI-501, TST-UI-501 / ATT-6286).
  */
+// Linked test specs: TST-UI-504
 class SupporterPlanCardHierarchyTest {
 
     private val supportedLocales = listOf("", "de", "es", "fr", "it", "ja", "nl", "pl", "pt")

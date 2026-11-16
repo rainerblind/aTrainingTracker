@@ -38,6 +38,7 @@ import java.io.File
  * Unit and contract tests for BANALServiceRepository verifying breadcrumb clearing,
  * force unbind behavior, and tracking mode state handling (REQ-TRK-049 / TST-TRK-049).
  */
+// Linked test specs: TST-MAP-047
 class BANALServiceRepositoryTest {
 
     private fun resolveSourceFile(relativePath: String): File {

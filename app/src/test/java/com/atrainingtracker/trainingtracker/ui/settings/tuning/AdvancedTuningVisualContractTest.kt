@@ -30,6 +30,7 @@ import java.lang.reflect.Modifier
  * and decoupled subsection composables in accordance with REQ-UI-222 and TST-UI-176.2.
  * Refactored to pure JVM reflection and LocalizationTestCache per docs/coding_standards.md §5.4 and REQ-PRO-049.
  */
+// Linked test specs: TST-UI-187
 class AdvancedTuningVisualContractTest {
 
     @Test

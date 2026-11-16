@@ -27,6 +27,7 @@ import com.google.android.gms.maps.model.LatLng
 import org.junit.Assert.*
 import org.junit.Test
 
+// Linked test specs: TST-NAV-045
 class RouteDivergenceDetectorTest {
 
     private fun pt(lat: Double, lng: Double, dist: Double = 0.0) =

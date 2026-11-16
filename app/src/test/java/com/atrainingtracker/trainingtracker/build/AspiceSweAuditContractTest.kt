@@ -34,6 +34,7 @@ import java.io.File
  * 6. Skill & rule governance contracts (universal read_file image audit, doc code-grounding, SWE.2 maintenance).
  * 7. Software integration verification strategy (SWE.5.BP1) for INT-SWE-01 through INT-SWE-08 (REQ-PRO-045).
  */
+// Linked test specs: TST-PRO-078, TST-PRO-093
 class AspiceSweAuditContractTest {
 
     private fun findRepoRootFile(relativePath: String): File {

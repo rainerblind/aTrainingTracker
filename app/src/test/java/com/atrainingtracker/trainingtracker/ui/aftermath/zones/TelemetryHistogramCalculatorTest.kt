@@ -22,6 +22,7 @@ import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import org.junit.Assert.*
 import org.junit.Test
 
+// Linked test specs: TST-UI-382, TST-UI-383, TST-UI-443
 class TelemetryHistogramCalculatorTest {
 
     private val hrThresholds = HeartRateZoneThresholds(

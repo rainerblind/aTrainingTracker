@@ -26,6 +26,7 @@ import org.junit.Test
  * Unit tests for TelemetryHistogram and zone distribution cards.
  * Refactored to JVM reflection and behavioral tests per docs/coding_standards.md §5.4 and REQ-PRO-049.
  */
+// Linked test specs: TST-UI-189
 class TelemetryHistogramCardTest {
 
     @Test

@@ -53,6 +53,7 @@ import org.junit.Test
  * are symmetrically extracted into [WorkoutDataMapper.RawCursorSnapshot] and forwarded
  * into [WorkoutData] via [WorkoutDataMapper.fromSnapshot] and [WorkoutDataMapper.fromCursor] batch.
  */
+// Linked test specs: TST-DAT-016, TST-UI-365
 class WorkoutDataMappingSymmetryTest {
 
     private val context = mockk<Context>(relaxed = true)

@@ -28,6 +28,7 @@ import org.junit.Test
  * Architectural and contract test verifying contextual ANT+ status guidance
  * components and UI integration (REQ-UI-296, TST-UI-256, ATT-2513).
  */
+// Linked test specs: TST-UI-269
 class AntServicesStatusContractTest {
 
     @Test

@@ -21,6 +21,7 @@ package com.atrainingtracker.banalservice.sensor.formater;
 import static org.junit.Assert.assertEquals;
 import org.junit.Test;
 
+// Linked test specs: TST-UNT-002
 public class TimeFormatterTest {
 
     @Test

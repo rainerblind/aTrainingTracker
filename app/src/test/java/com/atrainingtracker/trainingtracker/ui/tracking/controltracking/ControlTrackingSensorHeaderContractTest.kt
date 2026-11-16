@@ -28,6 +28,7 @@ import java.lang.reflect.Modifier
  * Structural contract test for ControlTrackingScreen sensor header and device discovery area.
  * Refactored to reflection and LocalizationTestCache per docs/coding_standards.md §5.4 and REQ-PRO-049.
  */
+// Linked test specs: TST-UI-273
 class ControlTrackingSensorHeaderContractTest {
 
     private fun getScreenClass(): Class<*> {

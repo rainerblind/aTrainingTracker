@@ -30,6 +30,7 @@ import java.util.regex.Pattern
  * (REQ-SET-086, REQ-REV-003, REQ-UI-502, TST-SET-086, TST-REV-003, TST-REV-005, TST-UI-502 / ATT-5659, ATT-6290).
  * Refactored to LocalizationTestCache per docs/coding_standards.md §5.4 and REQ-PRO-049.
  */
+// Linked test specs: TST-UI-516
 class SupporterCopyContractTest {
 
     private val supportedLocales = listOf("", "de", "es", "fr", "it", "ja", "nl", "pl", "pt")

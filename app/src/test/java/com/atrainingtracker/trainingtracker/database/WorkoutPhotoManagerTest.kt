@@ -38,6 +38,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import java.io.File
 
+// Linked test specs: TST-UI-448
 @RunWith(RobolectricTestRunner::class)
 class WorkoutPhotoManagerTest {
 

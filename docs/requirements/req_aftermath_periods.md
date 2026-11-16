@@ -7,7 +7,7 @@
 
 ---
 
-### REQ-PER-007: Reactive Period-Workout Association [Verified]
+### REQ-PER-007: Reactive Period-Workout Association [Implemented]
 - **Tests**: `TST-PERF-008`
 - **Priority**: Medium
 - **Type**: Functional
@@ -15,7 +15,7 @@
 - **Implementation**: `PeriodsViewModel.kt`, `PeriodsRepository.kt`
 - **Rationale**: The system SHALL ensure that all workouts belonging to a specific period are correctly and reactively associated when viewing period details (Map or List). The visualization SHALL automatically update as workout data is loaded or modified in the background, ensuring no sessions are omitted due to partial loading states.
 
-### REQ-PER-008: Precise Period Filtering [Verified]
+### REQ-PER-008: Precise Period Filtering [Implemented]
 - **Tests**: `TST-PER-009`
 - **Priority**: Medium
 - **Type**: Functional
@@ -23,7 +23,7 @@
 - **Implementation**: `PeriodsFragment.kt`, `WorkoutSummariesViewModel.kt`
 - **Rationale**: The system SHALL correctly filter the workout list when navigating from a period summary highlight (Base Sport or Sub-Sport). This filtering MUST respect both the temporal bounds of the period and the specific sport identity selected to ensure professional analytical depth.
 
-### REQ-PER-009: Detail Map Sport Filtering [Verified]
+### REQ-PER-009: Detail Map Sport Filtering [Implemented]
 - **Tests**: `TST-PER-012`
 - **Priority**: Medium
 - **Type**: Functional
@@ -90,7 +90,7 @@
 
 **Invariants**: SQLite schema for `PeriodSummaries.db` MUST NOT be altered; single-region periods MUST maintain 100% camera and visual parity; vector track limit ($\le 30$) and heatmap rendering per `REQ-PER-012` MUST NOT be regressed; all user-facing chip strings MUST maintain 9-language localization parity.
 
-### REQ-PER-001: The system SHALL load and display the detailed visualization (Heatmap and List) [Verified]
+### REQ-PER-001: The system SHALL load and display the detailed visualization (Heatmap and List) [Implemented]
 - **Tests**: `TST-PERF-002`, `TST-PERF-004`
 - **Priority**: High
 - **Type**: Functional
@@ -99,7 +99,7 @@
 - **Rationale**: Ensure a responsive and professional user experience when analyzing recurring routes.
 - **Description**: The system SHALL load and display the detailed visualization (Heatmap and List) of a Workout Cluster within 1 second for route families containing up to 50 sessions.
 
-### REQ-PER-002: The system SHALL ensure that only the map state (Heatmap, Tracks, and Markers) o [Verified]
+### REQ-PER-002: The system SHALL ensure that only the map state (Heatmap, Tracks, and Markers) o [Implemented]
 - **Tests**: `TST-BUG-001`
 - **Priority**: High
 - **Type**: Functional
@@ -108,7 +108,7 @@
 - **Rationale**: Guarantee data consistency and prevent visual artifacts during navigation.
 - **Description**: The system SHALL ensure that only the map state (Heatmap, Tracks, and Markers) of the most recently selected Workout Cluster is displayed, preventing race conditions during rapid navigation.
 
-### REQ-PER-003: The system SHALL display a detailed progress notification (Migration Status card [Verified]
+### REQ-PER-003: The system SHALL display a detailed progress notification (Migration Status card [Implemented]
 - **Tests**: `TST-PERF-003`
 - **Priority**: Medium
 - **Type**: Functional
@@ -117,7 +117,7 @@
 - **Rationale**: Provide immediate feedback and maintain visual consistency with other progressive loading screens (e.g. Periods).
 - **Description**: The system SHALL display a detailed progress notification (Migration Status card) during the initial loading and "self-healing" phase of Workout Clusters to inform the user about the background processing state.
 
-### REQ-PER-004: The hierarchical periods aggregation SHALL utilize a 'Dual-Phase' strategy: Phas [Verified]
+### REQ-PER-004: The hierarchical periods aggregation SHALL utilize a 'Dual-Phase' strategy: Phas [Implemented]
 - **Tests**: `TST-PERF-005`
 - **Priority**: High
 - **Type**: Functional
@@ -126,7 +126,7 @@
 - **Rationale**: Eliminate database lock contention and O(N^2) re-grouping overhead to ensure sub-second startup and true real-time visibility.
 - **Description**: The hierarchical periods aggregation SHALL utilize a 'Dual-Phase' strategy: Phase 1 (O(N)) for high-speed database reading and global grouping, and Phase 2 for bucketized commits and incremental UI pumping.
 
-### REQ-PER-005: The 'Migration Status' notification SHALL provide a descriptive high-level title [Verified]
+### REQ-PER-005: The 'Migration Status' notification SHALL provide a descriptive high-level title [Implemented]
 - **Tests**: `TST-PERF-006`
 - **Priority**: Low
 - **Type**: Functional
@@ -135,7 +135,7 @@
 - **Rationale**: Enhance user transparency and professional feedback during complex background operations.
 - **Description**: The 'Migration Status' notification SHALL provide a descriptive high-level title (Introducing relational database) and explicitly label Phase 1 (Reading) and Phase 2 (Syncing) to provide clear technical context.
 
-### REQ-PER-006: The system SHALL display a detailed, multi-phase progress notification during th [Verified]
+### REQ-PER-006: The system SHALL display a detailed, multi-phase progress notification during th [Implemented]
 - **Tests**: `TST-PERF-007`, `TST-PERF-009`, `TST-PERF-010`
 - **Priority**: Medium
 - **Type**: Functional

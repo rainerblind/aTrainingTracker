@@ -41,6 +41,7 @@ import java.lang.reflect.Field
 /**
  * Unit tests verifying GoogleDriveUploader export lifecycle, credential checks, and folder resolution.
  */
+// Linked test specs: TST-DAT-019
 class GoogleDriveUploaderTest {
 
     @get:Rule

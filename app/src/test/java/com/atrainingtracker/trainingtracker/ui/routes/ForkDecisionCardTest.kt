@@ -34,6 +34,7 @@ import java.lang.reflect.Modifier
 /**
  * Contract, layout, and state verification for ForkDecisionCard (REQ-MAP-031, REQ-UI-330 / TST-UI-290).
  */
+// Linked test specs: TST-UI-297
 class ForkDecisionCardTest {
 
     private val cardClass: Class<*> by lazy {

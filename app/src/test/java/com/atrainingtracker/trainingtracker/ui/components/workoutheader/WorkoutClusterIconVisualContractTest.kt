@@ -33,6 +33,7 @@ import java.io.File
  * 3. [EditWorkoutScreen.kt] renders [R.drawable.ic_favorite_route] as the leading icon for the selected route field.
  * 4. Vector asset `ic_favorite_route.xml` exists and contains valid path definitions.
  */
+// Linked test specs: TST-SET-057
 class WorkoutClusterIconVisualContractTest {
 
     private val headerSourceFile: File by lazy {
