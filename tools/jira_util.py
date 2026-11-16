@@ -65,7 +65,7 @@ ROLE_ACCOUNT_IDS = {
     "agent1": "712020:63ce5f53-e2ba-43f5-9879-edf4a22ff748",
     "agent2": "712020:1b6bc33f-f738-43f1-a4cf-373952d25316",
     "coordinator": "712020:3d1e82c8-2875-4952-a22d-90f428dd604b",
-    "qa": "712020:1b6bc33f-f738-43f1-a4cf-373952d25316",
+    "qa": os.environ.get("JIRA_QA_ACCOUNT_ID") or "712020:d6e4b85c-4f71-420a-9d90-qa0000000001",
     "human": "712020:9d9c7abd-b9d3-4b45-b2e0-91c432c3ab78",
     "user": "712020:9d9c7abd-b9d3-4b45-b2e0-91c432c3ab78",
     "rainer": "712020:9d9c7abd-b9d3-4b45-b2e0-91c432c3ab78",
@@ -267,8 +267,10 @@ def get_config(role=None):
                     config[k.strip()] = v.strip()
 
     # 3. If role is specified, filter out other roles' credentials to enforce strict isolation
-    if role in ("agent1", "agent2", "coordinator"):
-        other_roles = {"agent1", "agent2", "coordinator"} - {role}
+    if role in ("agent1", "agent2", "coordinator", "qa"):
+        other_roles = {"agent1", "agent2", "coordinator", "qa"} - {role}
+        if role == "qa" and not (config.get("JIRA_QA_USER") or config.get("JIRA_QA_TOKEN")):
+            other_roles = other_roles - {"agent2"}
         for other in other_roles:
             config.pop(f"JIRA_{other.upper()}_USER", None)
             config.pop(f"JIRA_{other.upper()}_TOKEN", None)
@@ -311,6 +313,7 @@ def resolve_account(role="agent1", config=None):
         "agent1": ("JIRA_AGENT1_USER", "JIRA_AGENT1_TOKEN"),
         "agent2": ("JIRA_AGENT2_USER", "JIRA_AGENT2_TOKEN"),
         "coordinator": ("JIRA_COORDINATOR_USER", "JIRA_COORDINATOR_TOKEN"),
+        "qa": ("JIRA_QA_USER", "JIRA_QA_TOKEN"),
     }
 
     if role in role_mapping:
@@ -327,6 +330,15 @@ def resolve_account(role="agent1", config=None):
         if role_token and (is_datacenter(config) or auth_type == "bearer"):
             return role_user or "", role_token
 
+        # Backward compatibility for QA role when JIRA_QA_* is not provisioned in environment
+        if role == "qa":
+            qa_fallback_user = config.get("JIRA_AGENT2_USER")
+            qa_fallback_token = config.get("JIRA_AGENT2_TOKEN")
+            if qa_fallback_user and qa_fallback_token:
+                return qa_fallback_user, qa_fallback_token
+            if qa_fallback_token and (is_datacenter(config) or auth_type == "bearer"):
+                return qa_fallback_user or "", qa_fallback_token
+
         print(f"Error: Missing role-specific credentials for role '{role}'. "
               f"Fallback to human default credentials (JIRA_USER/JIRA_TOKEN) is prohibited under ASPICE SUP.1 role separation.", file=sys.stderr)
         sys.exit(1)
@@ -342,6 +354,28 @@ def resolve_account(role="agent1", config=None):
 
     print(f"Error: Missing Jira credentials for role '{role}'.", file=sys.stderr)
     sys.exit(1)
+
+
+def validate_account_separation(config=None):
+    """
+    Validates technical role separation between agent2 (Reviewer) and qa (QA Auditor) (REQ-PRO-108.2).
+    Returns (is_valid: bool, error: str | None).
+    """
+    if config is None:
+        config = get_config()
+
+    agent2_user = config.get("JIRA_AGENT2_USER")
+    qa_user = config.get("JIRA_QA_USER")
+    agent2_id = config.get("JIRA_AGENT2_ACCOUNT_ID") or ROLE_ACCOUNT_IDS.get("agent2")
+    qa_id = config.get("JIRA_QA_ACCOUNT_ID") or ROLE_ACCOUNT_IDS.get("qa")
+
+    if qa_user and agent2_user and qa_user.strip().lower() == agent2_user.strip().lower():
+        return False, f"Account separation violation (REQ-PRO-108.2): 'agent2' and 'qa' share identical username '{qa_user}'."
+
+    if qa_id and agent2_id and str(qa_id).strip() == str(agent2_id).strip():
+        return False, f"Account separation violation (REQ-PRO-108.2): 'agent2' and 'qa' share identical accountId '{qa_id}'."
+
+    return True, None
 
 def mask_secret(text):
     if not text:
@@ -421,16 +455,6 @@ def parse_role_from_args(args=None):
             i += 1
 
     HUMAN_ROLES = {"human", "user", "rainer"}
-    if role_from_cli:
-        if role_from_cli.lower() in HUMAN_ROLES:
-            print("Error: 'human' role cannot be selected via agent CLI or environment variable. "
-                  "Human actions must use interactive confirmation or the Jira web UI.", file=sys.stderr)
-            sys.exit(1)
-        if role_from_cli not in VALID_ROLES:
-            print(f"Error: Invalid role '{role_from_cli}'. Recognized roles: {', '.join(VALID_ROLES)}", file=sys.stderr)
-            sys.exit(1)
-        return role_from_cli, remaining_args
-
     env_actor = os.environ.get("JIRA_ACTOR")
     if env_actor:
         if env_actor.lower() in HUMAN_ROLES:
@@ -440,9 +464,32 @@ def parse_role_from_args(args=None):
         if env_actor not in VALID_ROLES:
             print(f"Error: Invalid role '{env_actor}' in JIRA_ACTOR environment variable. Recognized roles: {', '.join(VALID_ROLES)}", file=sys.stderr)
             sys.exit(1)
+
+    if role_from_cli:
+        if role_from_cli.lower() in HUMAN_ROLES:
+            print("Error: 'human' role cannot be selected via agent CLI or environment variable. "
+                  "Human actions must use interactive confirmation or the Jira web UI.", file=sys.stderr)
+            sys.exit(1)
+        if role_from_cli not in VALID_ROLES:
+            print(f"Error: Invalid role '{role_from_cli}'. Recognized roles: {', '.join(VALID_ROLES)}", file=sys.stderr)
+            sys.exit(1)
+
+        # REQ-PRO-108.1: Technical Role Separation - Subagent Identity Binding
+        if env_actor and role_from_cli.lower() != env_actor.lower():
+            print(
+                f"Error: Role mismatch. Subagent bound to '{env_actor}' via JIRA_ACTOR cannot assume role '{role_from_cli}' (REQ-PRO-108.1).",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        return role_from_cli, remaining_args
+
+    if env_actor:
         return env_actor, remaining_args
 
     return "agent1", remaining_args
+
+get_active_role = parse_role_from_args
+
 
 def jira_request(url, method="GET", payload=None, is_binary=False, role="agent1"):
     config = get_config(role=role)

@@ -198,8 +198,15 @@ class TestRolePrecedenceAndAttribution(unittest.TestCase):
     """Verifies REQ-PRO-020 / TST-PRO-013: Role Locking, Precedence, Anti-Spoofing & Actor Comment Attribution."""
 
     def test_role_precedence_cli_over_env_and_default(self):
-        """CLI flag --as <role> takes highest priority over JIRA_ACTOR and default."""
+        """When JIRA_ACTOR is set, mismatched --as <role> is rejected (REQ-PRO-108.1); matching role succeeds."""
+        # Mismatched --as raises SystemExit(1)
         with patch.dict(os.environ, {"JIRA_ACTOR": "agent2"}):
+            with self.assertRaises(SystemExit) as cm:
+                jira_util.parse_role_from_args(["--as", "coordinator", "status", "ATT-1201"])
+            self.assertEqual(cm.exception.code, 1)
+
+        # Matching --as succeeds
+        with patch.dict(os.environ, {"JIRA_ACTOR": "coordinator"}):
             parsed_role, remaining_args = jira_util.parse_role_from_args(["--as", "coordinator", "status", "ATT-1201"])
             self.assertEqual(parsed_role, "coordinator")
             self.assertEqual(remaining_args, ["status", "ATT-1201"])
@@ -1954,6 +1961,90 @@ Verdict: PASS."""
         mock_add_lbl.assert_called_once_with("ATT-8423", ["human-execution"], role="coordinator")
         mock_assign.assert_called_once_with("ATT-8423", "human", role="coordinator")
         mock_move.assert_called_once_with(454, ["ATT-8423"], role="coordinator")
+
+    def test_tst_pro_108_1_subagent_role_binding_enforcement(self):
+        # TST-PRO-108.1: Subagent Identity & Role Binding Enforcement Test
+        # 1. When JIRA_ACTOR is set to 'agent1', passing mismatched '--as agent2' raises SystemExit
+        with patch.dict(os.environ, {"JIRA_ACTOR": "agent1"}, clear=False):
+            with self.assertRaises(SystemExit) as cm:
+                jira_util.get_active_role(["--as", "agent2", "show", "ATT-8151"])
+            self.assertEqual(cm.exception.code, 1)
+
+        # 2. When JIRA_ACTOR is set to 'agent1', passing matching '--as agent1' succeeds
+        with patch.dict(os.environ, {"JIRA_ACTOR": "agent1"}, clear=False):
+            role, rem = jira_util.get_active_role(["--as", "agent1", "show", "ATT-8151"])
+            self.assertEqual(role, "agent1")
+            self.assertEqual(rem, ["show", "ATT-8151"])
+
+        # 3. When JIRA_ACTOR is unset, passing '--as coordinator' succeeds without rejection
+        env_copy = os.environ.copy()
+        env_copy.pop("JIRA_ACTOR", None)
+        with patch.dict(os.environ, env_copy, clear=True):
+            role, rem = jira_util.get_active_role(["--as", "coordinator", "show", "ATT-8151"])
+            self.assertEqual(role, "coordinator")
+            self.assertEqual(rem, ["show", "ATT-8151"])
+
+    def test_tst_pro_108_2_dedicated_qa_credentials_and_account_independence(self):
+        # TST-PRO-108.2: Dedicated QA Role Credential Mapping & Account Independence Test
+        cfg_qa = {
+            "JIRA_URL": "https://example.atlassian.net",
+            "JIRA_AGENT2_USER": "agent2_user",
+            "JIRA_AGENT2_TOKEN": "agent2_token",
+            "JIRA_AGENT2_ACCOUNT_ID": "agent2_id",
+            "JIRA_QA_USER": "qa_user",
+            "JIRA_QA_TOKEN": "qa_token",
+            "JIRA_QA_ACCOUNT_ID": "qa_id",
+        }
+        # 1. resolve_account with role='qa' resolves JIRA_QA_USER and JIRA_QA_TOKEN
+        u, t = jira_util.resolve_account(role="qa", config=cfg_qa)
+        self.assertEqual(u, "qa_user")
+        self.assertEqual(t, "qa_token")
+
+        # 2. ROLE_ACCOUNT_IDS['qa'] is distinct from ROLE_ACCOUNT_IDS['agent2']
+        self.assertNotEqual(jira_util.ROLE_ACCOUNT_IDS.get("qa"), jira_util.ROLE_ACCOUNT_IDS.get("agent2"))
+
+        # 3. validate_account_separation returns True when distinct
+        is_sep, err = jira_util.validate_account_separation(cfg_qa)
+        self.assertTrue(is_sep)
+        self.assertIsNone(err)
+
+        # 4. validate_account_separation returns False when qa and agent2 share username
+        cfg_conflict_user = dict(cfg_qa, JIRA_QA_USER="agent2_user")
+        is_sep, err = jira_util.validate_account_separation(cfg_conflict_user)
+        self.assertFalse(is_sep)
+        self.assertIn("share identical username", err)
+
+        # 5. validate_account_separation returns False when qa and agent2 share accountId
+        cfg_conflict_id = dict(cfg_qa, JIRA_QA_ACCOUNT_ID="agent2_id")
+        is_sep, err = jira_util.validate_account_separation(cfg_conflict_id)
+        self.assertFalse(is_sep)
+        self.assertIn("share identical accountId", err)
+
+    def test_tst_pro_108_3_git_commit_trailers_formatting(self):
+        # TST-PRO-108.3: Producing Agent Identity & Reviewer Git Commit Trailers Test
+        import parallel_sprint_lock
+        msg = parallel_sprint_lock.format_commit_with_trailers(
+            "ATT-8151: Test commit",
+            agent_role="agent1",
+            agent_model="flash",
+            reviewed_by="Agent 2 (Reviewer)"
+        )
+        self.assertIn("Agent-Role: agent1", msg)
+        self.assertIn("Agent-Model: flash", msg)
+        self.assertIn("Reviewed-by: Agent 2 (Reviewer)", msg)
+
+        valid, missing = parallel_sprint_lock.validate_commit_trailers(msg)
+        self.assertTrue(valid)
+        self.assertEqual(missing, [])
+
+    def test_tst_pro_108_4_risk_register_single_os_user_residual_risk(self):
+        # TST-PRO-108.4: Single-OS User Residual Risk Review Test
+        risk_path = os.path.join(REPO_ROOT, "docs", "management", "risk_register.md")
+        with open(risk_path, "r", encoding="utf-8") as f:
+            risk_text = f.read()
+        self.assertIn("RISK-007", risk_text)
+        self.assertIn("Single-OS User", risk_text)
+        self.assertIn("ATT-8151", risk_text)
 
 
 if __name__ == "__main__":

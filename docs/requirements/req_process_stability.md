@@ -3,7 +3,7 @@
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Requirements**: 172
+**Total Requirements**: 173
 
 ---
 
@@ -5556,3 +5556,37 @@ The workflow SHALL mandate that:
   • *When* `sprint-metrics` runs,
   • *Then* a prominent Rubber-Stamping Alert is emitted and posted to the sprint Retro ticket.
 - **Invariants**: Zero Android runtime impact (`app/src/main/`); `ANT-Android-SDKs` untouched at `160000`; Rule 3 human decision gate preserved.
+
+---
+
+### REQ-PRO-108: Technical Role Separation for Agent Credentials & Git Commit Identity (ATT-8151) [Verified]
+- **Tests**: `TST-PRO-108`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `tools/jira_util.py`, `tools/parallel_sprint_lock.py`, `tools/locked_build_merge.py`, `tools/test_jira_accounts.py`, `docs/management/risk_register.md`
+- **Rationale**: ASPICE 4.0 Finding M4 (SUP.1 Quality Assurance, GP 2.1.4, SUP.8 Configuration Management, BP4) identified that role separation between implementer and reviewer existed only at the prompt level. Any agent could assume any role via `--as`, `qa` had no credential mapping, and all commits were authored under a single human identity without agent or model provenance. Binding role selection to subagent identity, mapping dedicated QA credentials, appending verifiable commit trailers, and documenting residual single-OS user risks establishes technical and auditable role independence.
+- **Description**:
+  1. *Subagent Identity & Role Binding (`REQ-PRO-108.1`)*: When the `JIRA_ACTOR` environment variable is defined in the subagent environment, `tools/jira_util.py` SHALL strictly reject any mismatched CLI `--as <role>` override with a role mismatch error. When `JIRA_ACTOR` is unset (manual developer CLI or coordinator invocation), `--as coordinator` and manual `--as <role>` calls SHALL continue to operate without rejection.
+  2. *Dedicated QA Role Credential Mapping & Account Independence (`REQ-PRO-108.2`)*: `tools/jira_util.py` SHALL map role `qa` to dedicated credentials (`JIRA_QA_USER`, `JIRA_QA_TOKEN`), support `.env.jira.qa`, include `qa` in `get_config` role credential filtering, and enforce that `agent2` and `qa` operate under distinct Jira user accounts (different account IDs or usernames).
+  3. *Producing Agent Identity & Reviewer Git Commit Trailers (`REQ-PRO-108.3`)*: `tools/parallel_sprint_lock.py` (`_merge_ticket_impl` / `--merge-ticket`) SHALL append standard git trailers (`Agent-Role:`, `Agent-Model:`, `Reviewed-by:`) to atomic squash merge commits, auto-detecting values from environment variables (`AGENT_ROLE`, `AGENT_MODEL`, `REVIEWED_BY`, `JIRA_ACTOR`) or CLI arguments, verifiable by automated unit checks.
+  4. *Single-OS User Residual Risk Documentation (`REQ-PRO-108.4`)*: `docs/management/risk_register.md` SHALL formally register the residual risk of local subagent process co-location under a single operating system user account and document the layered mitigations (token isolation, role binding, commit trailers, CI gating).
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Extends `REQ-PRO-060` (Composite CLI role operations) and `REQ-PRO-041` (Parallel sprint lock & atomic commit merging) via net-new `REQ-PRO-108`. Targets `tools/jira_util.py`, `tools/parallel_sprint_lock.py`, and `docs/management/risk_register.md`.
+  2. *Historical Origin & Commit Trace*: `ATT-4290` (`REQ-PRO-060`), `ATT-7025` (`REQ-PRO-041`), `ATT-8150` (`REQ-PRO-107`), `ATT-8151`.
+  3. *Root Reason for Existing Formulation*: Permissive `--as` and uniform commit authorship were established for single-developer convenience prior to multi-agent role separation.
+  4. *Preservation of Core Invariants*: Standalone manual CLI usage when `JIRA_ACTOR` is unset remains fully functional; POSIX flock locking and `ANT-Android-SDKs` submodule integrity (`160000 commit 0e8cea714a231fb9565170d4ed01eafa868f9798`) are preserved.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* a subagent process launched with `JIRA_ACTOR=agent1`,
+  • *When* it calls `tools/jira_util.py --as agent2 gate-verdict ...`,
+  • *Then* the invocation is rejected with a role mismatch error.
+  • *Given* an execution environment without `JIRA_ACTOR`,
+  • *When* `tools/jira_util.py --as coordinator show ATT-8151` is executed,
+  • *Then* the command succeeds without role mismatch rejection.
+  • *Given* configured `agent2` and `qa` credentials,
+  • *When* `tools/jira_util.py` resolves accounts,
+  • *Then* `qa` resolves to dedicated credentials and accounts are verified distinct.
+  • *Given* a completed ticket being merged onto the sprint branch via `--merge-ticket`,
+  • *When* the atomic squash commit is created,
+  • *Then* the commit message contains valid `Agent-Role:`, `Agent-Model:`, and `Reviewed-by:` git trailers.
+- **Invariants**: Zero Android production code impact (`app/src/main/`); `ANT-Android-SDKs` untouched at `160000`; existing test fixtures and POSIX flock semantics preserved.
