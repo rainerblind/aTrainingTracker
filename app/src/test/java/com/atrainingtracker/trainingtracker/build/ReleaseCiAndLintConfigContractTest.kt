@@ -760,10 +760,12 @@ class ReleaseCiAndLintConfigContractTest {
     }
 
     /**
-     * Asserts that docs/management/risk_register.md exists, defines mandatory ASPICE MAN.3.BP5 sections,
-     * links all High-exposure risks to Jira remediation tickets, and is integrated into Ceremony 1
-     * in .agents/skills/sprint-planner/SKILL.md (REQ-STP-010, TST-STP-010, ATT-6151).
+     * Asserts that docs/management/risk_register.md exists, conforms to ASPICE 4.0 MAN.5 (and legacy MAN.3.BP5),
+     * registers risks RISK-001 through RISK-011, links High-exposure risks to Jira remediation tickets,
+     * and is governed by Ceremony 1 and Ceremony 2 in .agents/skills/sprint-planner/SKILL.md
+     * (REQ-STP-010, TST-STP-010, ATT-6151, ATT-8167).
      */
+    // Traces to: REQ-STP-010, TST-STP-010
     @Test
     fun testProjectRiskRegister_existsAndHighExposureMitigated() {
         val riskRegisterFile = findRepoRootFile("docs/management/risk_register.md", "../docs/management/risk_register.md")
@@ -774,11 +776,12 @@ class ReleaseCiAndLintConfigContractTest {
         val riskContent = riskRegisterFile.readText()
 
         val requiredSections = listOf(
+            "MAN.5",
             "MAN.3.BP5",
             "Risk Assessment & Scoring Rubric",
             "Risk Exposure Matrix",
             "Sprint Review Log",
-            "Registered Project & Technical Risks"
+            "Registered Project, Technical & Process Risks"
         )
         for (section in requiredSections) {
             assertTrue(
@@ -787,10 +790,13 @@ class ReleaseCiAndLintConfigContractTest {
             )
         }
 
-        val requiredRisks = listOf("RISK-001", "RISK-002", "RISK-003", "RISK-004", "RISK-005", "RISK-006")
+        val requiredRisks = listOf(
+            "RISK-001", "RISK-002", "RISK-003", "RISK-004", "RISK-005",
+            "RISK-006", "RISK-007", "RISK-008", "RISK-009", "RISK-010", "RISK-011"
+        )
         for (riskId in requiredRisks) {
             assertTrue(
-                "Risk register must register initial risk '$riskId' (REQ-STP-010.1, TST-STP-010.1)",
+                "Risk register must register risk '$riskId' (REQ-STP-010.1, TST-STP-010.1)",
                 riskContent.contains(riskId)
             )
         }
@@ -805,13 +811,17 @@ class ReleaseCiAndLintConfigContractTest {
             riskContent.contains("ATT-6150")
         )
 
-        // Verify Sprint Review Log records active sprint baseline
+        // Verify Sprint Review Log records active sprint baseline and historical close gap remediation
         assertTrue(
             "Sprint Review Log must record active sprint 2026-46.1 review baseline (REQ-STP-010.1)",
             riskContent.contains("2026-46.1") && riskContent.contains("2026-11-10")
         )
+        assertTrue(
+            "Sprint Review Log must record historical 2026-46.6 close audit remediation (REQ-STP-010.1, ATT-8167)",
+            riskContent.contains("2026-46.6") && riskContent.contains("SKIPPED")
+        )
 
-        // Verify Ceremony 1 integration in .agents/skills/sprint-planner/SKILL.md
+        // Verify Ceremony 1 & Ceremony 2 integration in .agents/skills/sprint-planner/SKILL.md
         val sprintPlannerFile = findRepoRootFile(".agents/skills/sprint-planner/SKILL.md", "../.agents/skills/sprint-planner/SKILL.md")
         assertTrue(
             ".agents/skills/sprint-planner/SKILL.md must exist (REQ-STP-010.2, TST-STP-010.2)",
@@ -822,6 +832,11 @@ class ReleaseCiAndLintConfigContractTest {
             "sprint-planner skill Ceremony 1 must include risk register review (REQ-STP-010.2, TST-STP-010.2)",
             sprintPlannerContent.contains("docs/management/risk_register.md") &&
                 sprintPlannerContent.contains("REQ-STP-010")
+        )
+        assertTrue(
+            "sprint-planner skill Ceremony 2 must mandate per-sprint risk review (REQ-STP-010.2, TST-STP-010.3, ATT-8167)",
+            sprintPlannerContent.contains("Mandatory Per-Sprint Risk Review") &&
+                sprintPlannerContent.contains("No Change / Risks Monitored & Stable")
         )
     }
 

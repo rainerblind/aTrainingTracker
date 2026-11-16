@@ -164,23 +164,26 @@
   4. *Build Contract Suite Execution (`TST-STP-009.4`)*:
      • Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.*"` asserting 100% pass rate in CI.
 
-### TST-STP-010: Project Risk Register & Sprint-Start Governance Contract Test [Verified]
+### TST-STP-010: Project Risk Register, ASPICE MAN.5 & Dual-Ceremony Governance Contract Test [Verified]
 - **Requirement(s)**: `REQ-STP-010`
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit / Review
 - **Component**: `docs/management/risk_register.md`, `.agents/skills/sprint-planner/SKILL.md`, `ReleaseCiAndLintConfigContractTest.kt`
-- **Jira**: `ATT-6151`
+- **Jira**: `ATT-6151`, `ATT-8167`
 - **Test Description**:
-  1. *Risk Register Documentation & Structure Audit (`TST-STP-010.1`)*:
+  1. *Risk Register Documentation & ASPICE 4.0 MAN.5 Structure Audit (`TST-STP-010.1`)*:
      • Verify existence of `docs/management/risk_register.md`.
-     • Assert presence of mandatory sections: Scoring Matrix ($P \times I$), Exposure Thresholds (Low/Medium/High), and Registered Risks Table.
-     • Assert presence of initial risks: `PR-01` (Single Human Bottleneck), `PR-02` (AI Model Drift), `PR-03` (Google Play Policy), and `PR-04` (Sensor Fragmentation).
-     • Assert all High-exposure risks link to a concrete mitigation ticket.
-  2. *Ceremony 1 Sprint-Start Review Checkpoint Audit (`TST-STP-010.2`)*:
+     • Assert presence of mandatory sections: ASPICE 4.0 `MAN.5` (BP1–BP6), legacy `MAN.3.BP5` reference, Scoring Rubric ($P \times I$), Exposure Thresholds (Low/Medium/High), and Registered Risks Table.
+     • Assert presence of all registered risks: `RISK-001` through `RISK-011` (covering technical, platform, data, security, and process risks).
+     • Assert all High-exposure risks ($E \ge 15$, including `RISK-001` and `RISK-002`) link to active/completed mitigation tickets (`ATT-6148`, `ATT-6150`).
+     • Assert `RISK-003` references concrete backlog maintenance without unlinked placeholders, and `ATT-7902` is properly framed as tests-only scaffolding.
+     • Assert Sprint Review Log contains continuous historical baseline entries including `2026-46.6 (Close)` SKIPPED review documentation.
+  2. *Dual-Ceremony Sprint Governance Integration Audit (`TST-STP-010.2`)*:
      • Inspect `.agents/skills/sprint-planner/SKILL.md`.
-     • Verify Ceremony 1 includes an explicit risk register review and last-reviewed date check.
+     • Verify Ceremony 1 includes an explicit Sprint-Start risk register review checkpoint.
+     • Verify Ceremony 2 includes an explicit Sprint-Close risk register review checkpoint mandating either a delta update or an explicit 'No Change / Risks Monitored & Stable' entry.
   3. *Rule 67 Canonical Engineering Boundary Guard (`TST-STP-010.3`)*:
      • Execute `python3 tools/verify_requirement_governance.py` and verify exit code 0, confirming zero non-canonical entries in `docs/engineering/`.
   4. *Build Contract Suite Execution (`TST-STP-010.4`)*:
-     • Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.*"` asserting 100% pass rate in CI.
+     • Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.ReleaseCiAndLintConfigContractTest.testProjectRiskRegister_existsAndHighExposureMitigated"` asserting 100% pass rate in CI.
