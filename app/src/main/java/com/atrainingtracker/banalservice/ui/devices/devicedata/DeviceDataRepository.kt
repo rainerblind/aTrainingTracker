@@ -477,6 +477,10 @@ class DeviceDataRepository @androidx.annotation.VisibleForTesting internal const
                 put(DevicesDatabaseManager.DevicesDbHelper.POLAR_H10_OFFLINE_RECORDING, if (final.polarH10OfflineRecording) 1 else 0)
             }
 
+            if (original.polarLiveImuEnabled != final.polarLiveImuEnabled) {
+                put(DevicesDatabaseManager.DevicesDbHelper.POLAR_LIVE_IMU_ENABLED, if (final.polarLiveImuEnabled) 1 else 0)
+            }
+
         }
     }
 
@@ -612,6 +616,21 @@ class DeviceDataRepository @androidx.annotation.VisibleForTesting internal const
 
     fun getBluetoothMACAddress(deviceId: Long): String? =
         devicesDatabaseManager.getBluetoothMACAddress(deviceId)
+
+    /**
+     * Returns true when [deviceId] is a Polar H10 or Verity Sense opted in for live IMU streaming (`REQ-SET-112.1`).
+     */
+    fun isPolarLiveImuBridgeEligible(deviceId: Long, btAddress: String?): Boolean {
+        if (!devicesDatabaseManager.isPolarLiveImuEnabled(deviceId)) {
+            return false
+        }
+        val name = devicesDatabaseManager.getDeviceName(deviceId) ?: ""
+        val manufacturer = devicesDatabaseManager.getManufacturerName(deviceId) ?: ""
+        return com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineGattCoordinator
+            .isPolarH10Name(name, manufacturer) ||
+            com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineGattCoordinator
+                .isPolarVeritySenseDevice(application, name, manufacturer, btAddress)
+    }
 
     fun getPairedRemoteDevices(protocol: Protocol): List<PairedRemoteDeviceDto> {
         val db = devicesDatabaseManager.database ?: return emptyList()

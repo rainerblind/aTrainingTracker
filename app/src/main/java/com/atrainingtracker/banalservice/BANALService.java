@@ -305,8 +305,22 @@ public class BANALService
         return DeviceManager.isSearchingForARemoteDevice();
     }
 
+    @Nullable
     public static DeviceManager getDeviceManager() {
         return cDeviceManager;
+    }
+
+    /**
+     * Returns the currently active [BSportType] from the live [BANALService] instance or its [DeviceManager].
+     */
+    @NonNull
+    public static BSportType getActiveBSportType() {
+        Context ctx = cServiceContext;
+        if (ctx instanceof BANALService) {
+            return ((BANALService) ctx).getBSportType();
+        }
+        DeviceManager dm = cDeviceManager;
+        return dm != null ? dm.getSportType() : BSportType.UNKNOWN;
     }
 
     /**

@@ -189,4 +189,10 @@
     <string name="polar_verity_swim_busy_desc">Bitte drücken Sie die Taste am Polar Verity Sense, um den Schwimm-Modus zu beenden (Rückkehr zur blauen LED), und tippen Sie auf Jetzt synchronisieren.</string>
     <string name="polar_verity_swim_syncing">Schwimm-Modus-Daten werden synchronisiert…</string>
 
+    <!-- Polar Live IMU Streaming Bridge (ATT-8016, REQ-SET-112) -->
+    <string name="device_polar_live_imu_title">Live-IMU-Streaming (ACC/GYRO)</string>
+    <string name="device_polar_h10_live_imu_desc">Überträgt Live-HF/RR- und Beschleunigungsdaten über eine einzelne Polar-Verbindung für Laufkadenz ohne aktiven Laufsensor.</string>
+    <string name="device_polar_verity_live_imu_desc">Überträgt Live-HF- sowie ACC/GYRO-Daten im blauen Sensormodus über eine einzelne Polar-Verbindung für Laufkadenz ohne aktiven Laufsensor.</string>
+    <string name="device_polar_live_imu_requires_android_13">Erfordert Android 13 oder neuer.</string>
+
 </resources>

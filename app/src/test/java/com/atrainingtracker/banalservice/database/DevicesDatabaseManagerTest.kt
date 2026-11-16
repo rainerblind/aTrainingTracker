@@ -449,11 +449,10 @@ class DevicesDatabaseManagerTest {
     }
 
     @Test
-    fun testDevicesDbHelper_dbVersionIsThirteen() {
-        assertEquals(
-            "DevicesDbHelper.DB_VERSION must be 13 for ATT-7762",
-            13,
-            DevicesDatabaseManager.DevicesDbHelper.DB_VERSION
+    fun testDevicesDbHelper_dbVersionIsAtLeastThirteen() {
+        assertTrue(
+            "DevicesDbHelper.DB_VERSION must be >= 13 (currently ${DevicesDatabaseManager.DevicesDbHelper.DB_VERSION})",
+            DevicesDatabaseManager.DevicesDbHelper.DB_VERSION >= 13
         )
     }
 

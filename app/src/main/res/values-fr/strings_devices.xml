@@ -177,4 +177,10 @@
     <string name="polar_verity_swim_busy_desc">Veuillez appuyer sur le bouton de votre Polar Verity Sense pour quitter le mode natation (retour à la LED bleue) et appuyez sur Synchroniser maintenant.</string>
     <string name="polar_verity_swim_syncing">Synchronisation des données du mode natation…</string>
 
+    <!-- Polar Live IMU Streaming Bridge (ATT-8016, REQ-SET-112) -->
+    <string name="device_polar_live_imu_title">Diffusion IMU en direct (ACC/GYRO)</string>
+    <string name="device_polar_h10_live_imu_desc">Diffuse la FC/RR et les données accéléromètre en direct sur une seule connexion Polar pour la cadence de course sans podomètre actif.</string>
+    <string name="device_polar_verity_live_imu_desc">Diffuse la FC et les données ACC/GYRO en mode capteur bleu sur une seule connexion Polar pour la cadence de course sans podomètre actif.</string>
+    <string name="device_polar_live_imu_requires_android_13">Nécessite Android 13 ou version ultérieure.</string>
+
 </resources>

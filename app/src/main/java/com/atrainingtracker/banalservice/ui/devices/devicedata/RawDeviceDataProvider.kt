@@ -61,6 +61,11 @@ class RawDeviceDataProvider(
             cursor.getInt(offlineRecIdx) == 1
         } else true
 
+        val liveImuIdx = cursor.getColumnIndex(DevicesDatabaseManager.DevicesDbHelper.POLAR_LIVE_IMU_ENABLED)
+        val polarLiveImuEnabled = if (liveImuIdx != -1 && !cursor.isNull(liveImuIdx)) {
+            cursor.getInt(liveImuIdx) == 1
+        } else false
+
         val powerFeaturesFlags = devicesDatabaseManager.getBikePowerSensorFlags(id)
         val linkedEquipment = equipmentDbHelper.getLinkedEquipmentFromDeviceId(id)
         val availableEquipment = try {
@@ -87,7 +92,8 @@ class RawDeviceDataProvider(
             powerFeaturesFlags = powerFeaturesFlags,
             linkedSportTypes = linkedSportTypes,
             baselineCircumference = baselineCircumference,
-            polarH10OfflineRecording = polarH10OfflineRecording
+            polarH10OfflineRecording = polarH10OfflineRecording,
+            polarLiveImuEnabled = polarLiveImuEnabled
         )
     }
 

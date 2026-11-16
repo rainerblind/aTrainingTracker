@@ -2546,6 +2546,36 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 
 **Invariants**: Zero `WorkoutRr.db` / `HrvPostWorkoutRecomputer` writes; zero `WorkoutSummaries.db` schema bumps; automatic exports held until backfill commits; idempotent `ensureSwimSportTypeExists()`; zero emojis in strings.
 
+---
+
+### REQ-SET-112: Polar Live IMU Streaming Bridge, Session Arbitration & Cadence Priority (`ATT-8016`) [Verified]
+- **Tests**: `TST-SET-114`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit / Integration / On-Device Manual
+- **Implementation**: `PolarOnlineStreamingBridge.kt`, `PolarOfflineGattCoordinator.kt`, `PolarH10OfflineController.kt`, `PolarVeritySenseOfflineController.kt`, `DeviceManager.java`, `MySensorManager.java`, `DevicesDatabaseManager.java`, `DatabaseSchemaRegistry.kt`, `RawDeviceDataProvider.kt`, `DeviceData.kt`, `DeviceDataRepository.kt`, `EditDeviceViewModel.kt`, `EditDeviceDialog.kt`, `res/values*/strings_devices.xml`
+- **Rationale**: Running cadence and biomechanics from Polar H10 (`ACC`) and Verity Sense (`ACC` + `GYRO`) require a single persistent `PolarBleApi` session on Android 13+ delivering live `HR`/`RR` and inertial frames simultaneously without dual-GATT contention, offline PFTP conflicts, or overwriting dedicated footpod/cycling cadence sensors.
+- **Description**:
+1. *Devices.db v14 Opt-In & `@RequiresApi(33)` UI Toggle (`REQ-SET-112.1`)*:
+   - `DevicesDatabaseManager.DevicesDbHelper` SHALL increment `DB_VERSION` to `14`, adding an opt-in live IMU column (`DEFAULT 0`) across both `onCreate` and `onUpgrade` (`13 -> 14`), tracked automatically by `DatabaseSchemaRegistry`.
+   - `RawDeviceDataProvider`, `DeviceRawData`, `DeviceUiData`, `DeviceDataRepository`, `EditDeviceViewModel`, and `EditDeviceDialog` SHALL expose the `@RequiresApi(33)` live IMU streaming toggle exclusively for Polar H10 and Verity Sense BLE HRM devices (disabled with Android 13+ hint below API 33) with 9-locale parity in `strings_devices.xml` (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`) and zero emojis.
+2. *Persistent Single-GATT Session & Live HR/RR + ACC/GYRO Streaming (`REQ-SET-112.2`)*:
+   - When live IMU is enabled on Android 13+, `DeviceManager.createNewBluetoothLEDevice()` SHALL instantiate `PolarOnlineStreamingBridge` instead of `BTLEHeartRateDevice` (`0x180D`) on the same MAC address, maintaining one persistent `PolarBleApi` session with `setAutomaticReconnection(true)`; when disabled or `< API 33`, `BTLEHeartRateDevice` SHALL remain unchanged.
+   - `PolarOnlineStreamingBridge` SHALL stream `PolarOnlineStreamingApi.startHrStreaming()` (`hr`, `rrsMs`, `rrAvailable`) into `SensorType.HR`, `SensorType.RR_INTERVAL`, and `RrBeatSource` -> `HRVMetricsDevice` with cumulative beat timestamping parity to `BTLEHeartRateDevice`.
+   - `PolarOnlineStreamingBridge` SHALL acquire `startAccStreaming()` (H10: 50/100/200 Hz; Verity Sense: 52 Hz) and `startGyroStreaming()` (Verity Sense Blue Sensor Mode: 52 Hz) without dual-GATT disconnects.
+3. *Offline Session Coexistence & Per-Channel `ACC` Mutual Exclusion (`REQ-SET-112.3`)*:
+   - `PolarOfflineGattCoordinator` SHALL support active `PolarBleApi` session reuse/handoff so `PolarH10OfflineController` and `PolarVeritySenseOfflineController` share the persistent `PolarBleApi` connection for PFTP start/stop/backfill without opening a competing GATT client.
+   - `PolarOnlineStreamingBridge` and `PolarVeritySenseOfflineController` MUST enforce per-channel `ACC` mutual exclusion on Verity Sense, never starting `PolarOfflineRecordingApi` and `PolarOnlineStreamingApi` concurrently on `ACC`.
+4. *`BSportType.RUN` Gating & Dedicated Cadence Priority Arbitration (`REQ-SET-112.4`)*:
+   - `PolarOnlineStreamingBridge` SHALL register/publish IMU-derived `SensorType.CADENCE` / `SensorType.STRIDES` ONLY when the active sport maps to `BSportType.RUN` (including `TTSportType.WALK`), and MUST NOT emit cadence during `BSportType.BIKE` or other non-running sports.
+   - `MySensorManager.CADENCE_PRIORITY` SHALL rank dedicated `RUN_SPEED`, `BIKE_CADENCE`, `BIKE_SPEED_AND_CADENCE`, and `BIKE_POWER` sensors strictly above Polar IMU cadence so dedicated ANT+/BLE footpods (`ANTRunSpeedDevice`, `BTLERunSpeedDevice`) and cycling crank sensors always retain exclusive `SensorType.CADENCE` ownership.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a paired Polar H10 or Verity Sense on Android 13+ with live IMU enabled (`DEFAULT 0` opt-in), *When* a Running or Walking (`BSportType.RUN`) workout runs, *Then* `PolarOnlineStreamingBridge` maintains a single persistent `PolarBleApi` session delivering 1-Hz HR (+ RR beats on H10) and `ACC` (+ `GYRO` on Verity Sense) without dual-GATT disconnects or `ACC` PFTP conflicts.
+• *Given* an active dedicated ANT+/BLE footpod (`RUN_SPEED`) or a `BSportType.BIKE` workout with/without a crank cadence sensor, *When* Polar live IMU is streaming, *Then* dedicated footpod/bike sensors retain exclusive `SensorType.CADENCE` ownership and `BSportType.BIKE` receives zero Polar IMU cadence.
+
+**Invariants**: Standard `BTLEHeartRateDevice` unchanged when opt-in is `0` or API < 33; `Devices.db` v14 `DEFAULT 0` preserves existing user configs; Verity Sense `ACC` single-owner lock; `WorkoutRr.db` never receives optical Verity PPG rows; `HIGH-RISK` Stage 4 (`subagent_pro` Doing / `subagent_flash` Gate 4 per `Rule 7.1`); Stage 4 UI screenshot verified (`Rule 8.5`).
+
 
 
 

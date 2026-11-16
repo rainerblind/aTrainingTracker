@@ -1348,6 +1348,25 @@
   5. *9-Locale Localization Parity & Visual UI Inspection (`TST-SET-113.5`)*:
   • Verify `TranslationParityTest` passes with zero missing keys and zero emojis across all 9 locales for `SwimWorkoutAdjustCard`, and UI screenshot verifies layout on `emulator-5554`.
 
+---
+
+### TST-SET-114: **Polar Live IMU Streaming Bridge, Session Arbitration & Cadence Priority Test Suite** [Verified]
+- **Requirement(s)**: `REQ-SET-112`
+- **Component**: `PolarOnlineStreamingBridge.kt`, `PolarOfflineGattCoordinator.kt`, `DeviceManager.java`, `MySensorManager.java`, `DevicesDatabaseManager.java`, `DatabaseSchemaRegistry.kt`, `DeviceDataRepository.kt`, `EditDeviceDialog.kt`, `res/values*/strings_devices.xml`
+- **Jira**: `ATT-8016`
+- **Status**: Verified
+- **Test Description**:
+  1. *`Devices.db` v13->v14 Migration & Schema Registry Parity (`TST-SET-114.1`)*:
+  • Verify `DevicesDbHelper.DB_VERSION == 14`, `onUpgrade(13, 14)` adds the live IMU column with `DEFAULT 0` without altering existing rows, `onCreate` matches `onUpgrade`, and `DatabaseSchemaRegistry.getMaxSupportedVersion("Devices.db") == 14`.
+  2. *EditDeviceDialog `@RequiresApi(33)` Toggle & 9-Locale Parity (`TST-SET-114.2`)*:
+  • Verify `EditDeviceDialog` shows the live IMU toggle only for Polar H10 / Verity Sense (API 33+ enabled, `< API 33` disabled with hint), persists opt-in via `DeviceDataRepository`, passes `TranslationParityTest` across all 9 locales, and passes Stage 4 PNG screenshot inspection (`Rule 8.5`).
+  3. *Persistent Single-GATT Session, HR/RR & ACC/GYRO Streaming (`TST-SET-114.3`)*:
+  • Verify `DeviceManager` routes enabled Polar H10 / Verity Sense to `PolarOnlineStreamingBridge` (and falls back to `BTLEHeartRateDevice` when disabled/`< API 33`), `PolarHrData` (`hr`, `rrsMs`, `rrAvailable`) dispatches `HR`, `RR_INTERVAL`, and `RrBeatSource` beats, and `startAccStreaming`/`startGyroStreaming` + `setAutomaticReconnection(true)` operate cleanly.
+  4. *Offline Session Reuse & Verity Sense `ACC` Mutual Exclusion (`TST-SET-114.4`)*:
+  • Verify `PolarOfflineGattCoordinator` reuses the active `PolarOnlineStreamingBridge` `PolarBleApi` session during offline PFTP start/stop/backfill without opening a second GATT client, and rejects concurrent `PolarOfflineRecordingApi` + `PolarOnlineStreamingApi` `ACC` activation on Verity Sense.
+  5. *`BSportType.RUN` Gating & Cadence Priority Arbitration (`TST-SET-114.5`)*:
+  • Verify `PolarOnlineStreamingBridge` publishes `CADENCE`/`STRIDES` only for `BSportType.RUN` (including `TTSportType.WALK`), emits zero cadence for `BSportType.BIKE`, and yields `SensorType.CADENCE` in `MySensorManager` whenever `RUN_SPEED`, `BIKE_CADENCE`, `BIKE_SPEED_AND_CADENCE`, or `BIKE_POWER` is active.
+
 
 
 

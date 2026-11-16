@@ -24,6 +24,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.location.LocationManager;
+import android.os.Build;
 import android.util.Log;
 
 import com.atrainingtracker.R;
@@ -51,6 +52,7 @@ import com.atrainingtracker.banalservice.devices.hrv.HRVMetricsDevice;
 import com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEHeartRateDevice;
 import com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERunSpeedDevice;
 import com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDevice;
+import com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOnlineStreamingBridge;
 import com.atrainingtracker.banalservice.devices.bluetooth_le.search_new.BTSearchForNewDevicesEngine;
 import com.atrainingtracker.banalservice.devices.bluetooth_le.search_new.BTSearchForNewDevicesEngine.IBTSearchForNewDevicesEngineInterface;
 import com.atrainingtracker.banalservice.Protocol;
@@ -1225,11 +1227,17 @@ public class DeviceManager {
         }
 
         MyBTLEDevice myBTLEDevice = null;
+        MyRemoteDevice polarBridgeDevice = null;
 
         switch (deviceType) {
             case HRM:
                 if (DEBUG) Log.d(TAG, "create new HR device");
-                myBTLEDevice = new BTLEHeartRateDevice(mContext, mSensorManager, deviceID, address);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+                        && mDeviceDataRepository.isPolarLiveImuBridgeEligible(deviceID, address)) {
+                    polarBridgeDevice = new PolarOnlineStreamingBridge(mContext, mSensorManager, deviceID, address);
+                } else {
+                    myBTLEDevice = new BTLEHeartRateDevice(mContext, mSensorManager, deviceID, address);
+                }
                 break;
 
             case RUN_SPEED:
@@ -1266,24 +1274,25 @@ public class DeviceManager {
                 Log.i(TAG, "Bluetooth device not yet supported");
         }
 
-        if (myBTLEDevice != null) {
-            if (myBTLEDevice instanceof RrBeatSource) {
+        MyRemoteDevice deviceToRegister = polarBridgeDevice != null ? polarBridgeDevice : myBTLEDevice;
+        if (deviceToRegister != null) {
+            if (deviceToRegister instanceof RrBeatSource) {
                 if (mHrvMetricsDevice != null) {
-                    ((RrBeatSource) myBTLEDevice).addRrBeatListener(mHrvMetricsDevice);
+                    ((RrBeatSource) deviceToRegister).addRrBeatListener(mHrvMetricsDevice);
                 }
                 for (RrBeatListener listener : mRrBeatListeners) {
-                    ((RrBeatSource) myBTLEDevice).addRrBeatListener(listener);
+                    ((RrBeatSource) deviceToRegister).addRrBeatListener(listener);
                 }
             }
-            MyRemoteDevice existing = mMyRemoteDevices.putIfAbsent(deviceID, myBTLEDevice);
+            MyRemoteDevice existing = mMyRemoteDevices.putIfAbsent(deviceID, deviceToRegister);
             if (existing != null) {
-                myBTLEDevice.shutDown();
+                deviceToRegister.shutDown();
                 return null;
             }
-            mSearchQueue.addFirst(myBTLEDevice);
+            mSearchQueue.addFirst(deviceToRegister);
         }
 
-        return myBTLEDevice;
+        return deviceToRegister;
     }
 
     // TODO: code is very similar to createPairedRemoteDevices, so the code might be merged?

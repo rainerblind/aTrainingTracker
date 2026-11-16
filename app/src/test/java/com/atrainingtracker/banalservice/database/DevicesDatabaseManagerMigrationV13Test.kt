@@ -55,15 +55,22 @@ class DevicesDatabaseManagerMigrationV13Test {
     }
 
     @Test
-    fun testDbVersionIs13() {
-        assertEquals("DevicesDbHelper.DB_VERSION must be 13", 13, DevicesDatabaseManager.DevicesDbHelper.DB_VERSION)
+    fun testDbVersionIsAtLeast13() {
+        assertTrue(
+            "DevicesDbHelper.DB_VERSION must be >= 13",
+            DevicesDatabaseManager.DevicesDbHelper.DB_VERSION >= 13
+        )
     }
 
     @Test
-    fun testDatabaseSchemaRegistryReflectsVersion13() {
+    fun testDatabaseSchemaRegistryMatchesDbVersion() {
         val maxVersion = DatabaseSchemaRegistry.getMaxSupportedVersion("Devices.db")
         assertNotNull("Devices.db must be registered in DatabaseSchemaRegistry", maxVersion)
-        assertEquals("DatabaseSchemaRegistry max supported version must match DB_VERSION", 13, maxVersion)
+        assertEquals(
+            "DatabaseSchemaRegistry max supported version must match DB_VERSION",
+            DevicesDatabaseManager.DevicesDbHelper.DB_VERSION,
+            maxVersion
+        )
     }
 
     @Test

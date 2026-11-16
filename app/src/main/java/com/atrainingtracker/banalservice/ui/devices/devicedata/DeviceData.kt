@@ -47,7 +47,8 @@ data class DeviceRawData(
     val powerFeaturesFlags: Int?,
     val linkedSportTypes: List<String> = emptyList(),
     val baselineCircumference: Double? = null,
-    val polarH10OfflineRecording: Boolean = true
+    val polarH10OfflineRecording: Boolean = true,
+    val polarLiveImuEnabled: Boolean = false
 )
 
 /**
@@ -84,7 +85,8 @@ data class DeviceUiData(
     val isConnected: Boolean,
     val mainValue: String?,
     val allValues: List<String>?,
-    val isNewlyDiscovered: Boolean = false
+    val isNewlyDiscovered: Boolean = false,
+    val polarLiveImuEnabled: Boolean = false
 )
 
 // --- THE NEW, SIMPLIFIED FACTORY ---
@@ -149,7 +151,8 @@ fun raw2UiDeviceData(rawData: DeviceRawData, context: Context): DeviceUiData {
         isConnected = false,
         mainValue = null,
         allValues = null,
-        linkedSportTypes = rawData.linkedSportTypes
+        linkedSportTypes = rawData.linkedSportTypes,
+        polarLiveImuEnabled = rawData.polarLiveImuEnabled
         )
 }
 

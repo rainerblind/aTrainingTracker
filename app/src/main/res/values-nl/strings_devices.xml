@@ -177,4 +177,10 @@
     <string name="polar_verity_swim_busy_desc">Druk op de knop op uw Polar Verity Sense om de zwemmodus te verlaten (terug naar blauwe led) en tik op Nu synchroniseren.</string>
     <string name="polar_verity_swim_syncing">Zwemmodusgegevens synchroniseren…</string>
 
+    <!-- Polar Live IMU Streaming Bridge (ATT-8016, REQ-SET-112) -->
+    <string name="device_polar_live_imu_title">Live IMU-streaming (ACC/GYRO)</string>
+    <string name="device_polar_h10_live_imu_desc">Streamt live hartslag/RR en versnellingsgegevens via één Polar-verbinding voor hardloopcadans zonder actieve footpod.</string>
+    <string name="device_polar_verity_live_imu_desc">Streamt live hartslag en ACC/GYRO-gegevens in de blauwe sensormodus via één Polar-verbinding voor hardloopcadans zonder actieve footpod.</string>
+    <string name="device_polar_live_imu_requires_android_13">Vereist Android 13 of nieuwer.</string>
+
 </resources>

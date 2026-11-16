@@ -22,6 +22,7 @@ package com.atrainingtracker.banalservice.devices.bluetooth_le.polar
 
 import android.content.Context
 import android.util.Log
+import androidx.annotation.VisibleForTesting
 import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
@@ -29,22 +30,29 @@ import com.atrainingtracker.banalservice.devices.DeviceType
 import com.polar.androidcommunications.api.ble.model.DisInfo
 import com.polar.sdk.api.PolarBleApi
 import com.polar.sdk.api.PolarBleApiCallback
+import com.polar.sdk.api.PolarBleApiCallbackProvider
 import com.polar.sdk.api.PolarBleApiDefaultImpl
+import com.polar.sdk.api.model.PolarDeviceInfo
 import com.polar.sdk.api.model.PolarHealthThermometerData
+import com.polar.sdk.api.model.PolarHrData
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.Locale
+import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Shared GATT arbitration, Polar ID resolution, device discovery helpers, and SDK feature
- * synchronization reused across [PolarH10OfflineController] and [PolarVeritySenseOfflineController] (ATT-7923).
+ * synchronization reused across [PolarH10OfflineController], [PolarVeritySenseOfflineController],
+ * and [PolarOnlineStreamingBridge] (`ATT-7923`, `ATT-8016`).
  */
 @Suppress("TooGenericExceptionCaught")
 object PolarOfflineGattCoordinator {
 
     private const val TAG = "PolarOfflineGattCoord"
     const val FEATURE_READY_TIMEOUT_MS = 10_000L
+    const val ACC_OWNER_ONLINE = "ONLINE"
+    const val ACC_OWNER_OFFLINE = "OFFLINE"
     private val POLAR_ID_REGEX = Regex("""\b([0-9A-Fa-f]{8})\b""")
     private val VERITY_MODEL_TOKENS = listOf(
         "polar sense",
@@ -52,6 +60,86 @@ object PolarOfflineGattCoordinator {
         "polar verity",
         "polar oh1"
     )
+
+    private val activeSessions = ConcurrentHashMap<String, PolarBleApi>()
+    private val activeSessionCallbacks = ConcurrentHashMap<String, PolarBleApiCallbackProvider>()
+    private val activeAccOwners = ConcurrentHashMap<String, String>()
+
+    private fun normalizeId(polarId: String): String = polarId.uppercase(Locale.ROOT)
+
+    /**
+     * Registers a persistent [PolarBleApi] session (e.g. from [PolarOnlineStreamingBridge]) so
+     * offline PFTP operations reuse the single GATT connection instead of opening a competing client.
+     */
+    @JvmStatic
+    fun registerActiveSession(
+        polarId: String,
+        api: PolarBleApi,
+        callback: PolarBleApiCallbackProvider? = null
+    ) {
+        val key = normalizeId(polarId)
+        activeSessions[key] = api
+        if (callback != null) {
+            activeSessionCallbacks[key] = callback
+        }
+    }
+
+    /**
+     * Unregisters an active [PolarBleApi] session on shutdown (`ATT-8016`).
+     */
+    @JvmStatic
+    fun unregisterActiveSession(polarId: String, api: PolarBleApi? = null) {
+        val key = normalizeId(polarId)
+        if (api == null) {
+            activeSessions.remove(key)
+            activeSessionCallbacks.remove(key)
+        } else {
+            if (activeSessions.remove(key, api)) {
+                activeSessionCallbacks.remove(key)
+            }
+        }
+    }
+
+    /**
+     * Returns the persistent [PolarBleApi] session for [polarId], or `null` if none is active.
+     */
+    @JvmStatic
+    fun getActiveSession(polarId: String): PolarBleApi? {
+        if (polarId.isBlank()) return null
+        return activeSessions[normalizeId(polarId)]
+    }
+
+    /**
+     * Acquires exclusive ownership of the Verity Sense/Polar `ACC` channel for [owner]
+     * (`ACC_OWNER_ONLINE` or `ACC_OWNER_OFFLINE`), enforcing per-channel mutual exclusion (`REQ-SET-112.3`).
+     */
+    @JvmStatic
+    fun tryAcquireAccChannel(polarId: String, owner: String): Boolean {
+        val key = normalizeId(polarId)
+        val existing = activeAccOwners.putIfAbsent(key, owner)
+        return existing == null || existing == owner
+    }
+
+    /**
+     * Releases `ACC` channel ownership if currently held by [owner].
+     */
+    @JvmStatic
+    fun releaseAccChannel(polarId: String, owner: String) {
+        activeAccOwners.remove(normalizeId(polarId), owner)
+    }
+
+    /**
+     * Returns the current owner of the `ACC` channel for [polarId], or `null` if free.
+     */
+    @JvmStatic
+    fun getAccChannelOwner(polarId: String): String? = activeAccOwners[normalizeId(polarId)]
+
+    @VisibleForTesting
+    fun resetForTesting() {
+        activeSessions.clear()
+        activeSessionCallbacks.clear()
+        activeAccOwners.clear()
+    }
 
     /**
      * Resolved target Polar HRM device entry from [DevicesDatabaseManager].
@@ -192,18 +280,44 @@ object PolarOfflineGattCoordinator {
         val readyFeatures = ConcurrentHashMap.newKeySet<PolarBleApi.PolarBleSdkFeature>()
         requiredFeatures.filterTo(readyFeatures) { api.isFeatureReady(polarId, it) }
 
+        val existingCallback = activeSessionCallbacks[normalizeId(polarId)]
         val deferred = CompletableDeferred<Boolean>()
         val callback = object : NoOpPolarCallback() {
+            override fun deviceConnected(polarDeviceInfo: PolarDeviceInfo) {
+                existingCallback?.deviceConnected(polarDeviceInfo)
+            }
+
+            override fun deviceConnecting(polarDeviceInfo: PolarDeviceInfo) {
+                existingCallback?.deviceConnecting(polarDeviceInfo)
+            }
+
+            override fun deviceDisconnected(polarDeviceInfo: PolarDeviceInfo) {
+                existingCallback?.deviceDisconnected(polarDeviceInfo)
+            }
+
             override fun bleSdkFeatureReady(
                 identifier: String,
                 feature: PolarBleApi.PolarBleSdkFeature
             ) {
+                existingCallback?.bleSdkFeatureReady(identifier, feature)
                 if (identifier.equals(polarId, ignoreCase = true) || identifier == polarId) {
                     readyFeatures.add(feature)
                     if (readyFeatures.containsAll(requiredFeatures)) {
                         deferred.complete(true)
                     }
                 }
+            }
+
+            override fun batteryLevelReceived(identifier: String, level: Int) {
+                existingCallback?.batteryLevelReceived(identifier, level)
+            }
+
+            override fun hrNotificationReceived(identifier: String, data: PolarHrData.PolarHrSample) {
+                existingCallback?.hrNotificationReceived(identifier, data)
+            }
+
+            override fun disInformationReceived(identifier: String, uuid: UUID, value: String) {
+                existingCallback?.disInformationReceived(identifier, uuid, value)
             }
         }
 
@@ -217,7 +331,7 @@ object PolarOfflineGattCoordinator {
             }
         } finally {
             try {
-                api.setApiCallback(NoOpPolarCallback())
+                api.setApiCallback(existingCallback ?: NoOpPolarCallback())
             } catch (_: Throwable) {
                 // Ignore SDK callback reset failure during teardown.
             }
@@ -235,8 +349,9 @@ object PolarOfflineGattCoordinator {
     }
 
     /**
-     * Yields standard `MyBTLEDevice` GATT operations for [macAddress], opens or uses [apiOverride],
-     * executes [block] bounded by [timeoutMs], disconnects/cleans up safely, and ALWAYS resumes GATT.
+     * Yields standard `MyBTLEDevice` GATT operations for [macAddress], reuses an active persistent
+     * [PolarBleApi] session when present (or opens a transient client / uses [apiOverride]),
+     * executes [block] bounded by [timeoutMs], cleans up only transient sessions, and ALWAYS resumes GATT.
      */
     suspend fun <T> withGattYieldAndPolarApi(
         context: Context,
@@ -255,21 +370,23 @@ object PolarOfflineGattCoordinator {
             null
         }
 
+        val sharedApi = if (apiOverride == null) getActiveSession(polarId) else null
+        val isSharedPersistentSession = sharedApi != null
         btleDevice?.pauseGattOperations()
         return try {
             withTimeoutOrNull(timeoutMs) {
-                val api = apiOverride ?: PolarBleApiDefaultImpl.defaultImplementation(context, features)
+                val api = apiOverride ?: sharedApi ?: PolarBleApiDefaultImpl.defaultImplementation(context, features)
                 try {
                     block(api)
                 } finally {
-                    if (disconnectOnExit) {
+                    if (!isSharedPersistentSession && disconnectOnExit) {
                         try {
                             api.disconnectFromDevice(polarId)
                         } catch (_: Exception) {
                             // Best-effort disconnect after PFTP exchange.
                         }
                     }
-                    if (apiOverride == null) {
+                    if (apiOverride == null && !isSharedPersistentSession) {
                         try {
                             api.cleanup()
                         } catch (t: Throwable) {
