@@ -3,7 +3,7 @@
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Requirements**: 170
+**Total Requirements**: 171
 
 ---
 
@@ -5494,3 +5494,34 @@ The workflow SHALL mandate that:
   • *When* audited under SUP.10,
   • *Then* formal disposition documentation confirms tests-only authorization by the Product Owner.
 - **Invariants**: Zero `app/src/main/` production changes; `ANT-Android-SDKs` untouched at `160000`; coordinator ceremony flows (`pack-sprint`, `return-unstarted`, `ensure-retro`) preserved.
+
+---
+
+### REQ-PRO-106: Atomic REQ and TST ID Reservation Across Parallel Sprint Lanes (ATT-8149) [Verified]
+- **Tests**: `TST-PRO-106`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `tools/jira_util.py`, `tools/test_jira_accounts.py`
+- **Rationale**: ASPICE 4.0 Audit Finding Minor (Jira sample ATT-7758, SWE.1 BP1, SUP.8 BP4) revealed that parallel sprint execution across decoupled git worktrees (`REQ-PRO-041`) introduces specification-time ID collision hazards. Local filesystem scans cannot observe unmerged ID allocations in parallel sibling lanes. To prevent collisions, silent renumbering drift, and audit trail inconsistencies, a POSIX `flock`-protected reservation registry anchored at `git rev-parse --git-common-dir` must coordinate ID allocation atomically across all worktrees, and Gate 2 must verify reservation provenance before approving specifications.
+- **Description**:
+  1. *Common-Dir Cross-Worktree ID Reservation Registry (`REQ-PRO-106.1`)*: `tools/jira_util.py` SHALL implement atomic ID reservation (`reserve-id <DOMAIN> <REQ|TST|BOTH> <TICKET_KEY> [--count N]`) backed by POSIX `flock` on `/tmp/att_id_reservation.lock`. Reservations SHALL be persisted to a shared JSON ledger located in the common git directory (`$(git rev-parse --git-common-dir)/att_id_reservations.json`), guaranteeing instantaneous cross-worktree visibility across all concurrent `Workspace: "share"` branches.
+  2. *Next-ID Calculation with Active Reservation Awareness (`REQ-PRO-106.2`)*: When allocating next available IDs, the tooling SHALL evaluate both committed living documentation headings across `docs/requirements/*.md` and `docs/tests/*.md` as well as active reservations in the common-dir ledger, assigning strictly greater monotonic IDs (`max(committed, reserved) + 1`).
+  3. *Gate 2 Reservation Provenance Verification (`REQ-PRO-106.3`)*: In `gate-verdict` on `[Req & Test Spec]` subtasks, `tools/jira_util.py` SHALL parse all newly introduced `REQ-*` and `TST-*` IDs in the deliverable and verify that each ID is registered to the target parent ticket in the shared reservation ledger, rejecting unreserved IDs to prevent collisions and uncoordinated drift.
+  4. *Reservation Hygiene & Expiration Management (`REQ-PRO-106.4`)*: The tooling SHALL support explicit release (`release-id <TICKET_KEY>`) upon ticket completion or cancellation, clean reconciliation upon merge into sprint branches, and stale reservation expiration safeguards, while ensuring reservation files never trigger false-positive code orphan detections under `verify_requirement_governance.py --check-code-orphans`.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Extends `REQ-PRO-041` (Parallel sprint execution / `parallel_sprint_lock.py`) and `REQ-PRO-075` (Syntax governance) via net-new `REQ-PRO-106`. Targets `tools/jira_util.py` and `tools/test_jira_accounts.py`.
+  2. *Historical Origin & Commit Trace*: `ATT-6163` (`REQ-PRO-041`), `ATT-6129` (`REQ-PRO-075`), `ATT-7758` / `ATT-8075` (`608c4e31`), `ATT-8149`.
+  3. *Root Reason for Existing Formulation*: Prior tooling relied exclusively on local static regex scanning of worktree files, leaving concurrent sprint lanes blind to sibling allocations until Stage 5 merge.
+  4. *Preservation of Core Invariants*: Build/merge locks on `/tmp/att_build_merge.lock` remain untouched; existing baselined and legacy requirement numbers remain immutable; `ANT-Android-SDKs` remains untouched at `160000 commit 0e8cea714a231fb9565170d4ed01eafa868f9798`.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* concurrent sprint lanes running in disjoint worktrees,
+  • *When* `jira_util.py reserve-id` is called simultaneously for the same domain prefix,
+  • *Then* POSIX `flock` serializes access, each lane receives unique non-overlapping monotonic IDs, and the shared common-dir ledger is updated atomically.
+  • *Given* a Stage 2 deliverable containing newly introduced `REQ-*` and `TST-*` IDs,
+  • *When* `gate-verdict` executes for `[Req & Test Spec]`,
+  • *Then* the audit verifies that all new IDs are properly reserved for the parent ticket, passing if registered and rejecting with an informative error if unreserved.
+  • *Given* a reservation ledger file,
+  • *When* `verify_requirement_governance.py --check-code-orphans` executes,
+  • *Then* zero false-positive code orphan violations are reported.
+- **Invariants**: Zero Android production code impact (`app/src/main/`); `ANT-Android-SDKs` untouched at `160000`; existing synthetic test fixtures and `parallel_sprint_lock.py` functionality preserved.

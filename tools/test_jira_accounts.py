@@ -1572,6 +1572,185 @@ class TestPoApprovalAndChangelogProvenance(unittest.TestCase):
         self.assertIn("approved sprint placement", reason)
 
 
+def _concurrent_reservation_worker(ledger_dir, repo_root, domain, id_type, ticket, count, results_queue):
+    import os
+    import sys
+    import importlib.util
+
+    root_tools_dir = os.path.dirname(os.path.abspath(__file__))
+    sys.path = [p for p in sys.path if "hoechstmass" not in p]
+    if root_tools_dir not in sys.path:
+        sys.path.insert(0, root_tools_dir)
+    else:
+        sys.path.remove(root_tools_dir)
+        sys.path.insert(0, root_tools_dir)
+
+    spec = importlib.util.spec_from_file_location("root_jira_util", os.path.join(root_tools_dir, "jira_util.py"))
+    jira_util_mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(jira_util_mod)
+
+    try:
+        allocated = jira_util_mod.reserve_id(
+            domain,
+            id_type,
+            ticket,
+            count=count,
+            ledger_dir=ledger_dir,
+            repo_root=repo_root,
+        )
+        results_queue.put((ticket, allocated, None))
+    except Exception as e:
+        results_queue.put((ticket, [], str(e)))
+
+
+class TestIdReservationGovernance(unittest.TestCase):
+    """
+    TST-PRO-106: Atomic REQ and TST ID Reservation Across Parallel Sprint Lanes Suite (ATT-8149).
+    Verifies REQ-PRO-106.1..REQ-PRO-106.4.
+    """
+
+    def setUp(self):
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.ledger_dir = self.temp_dir.name
+        self.repo_dir = tempfile.TemporaryDirectory()
+        os.makedirs(os.path.join(self.repo_dir.name, "docs", "requirements"), exist_ok=True)
+        os.makedirs(os.path.join(self.repo_dir.name, "docs", "tests"), exist_ok=True)
+        os.makedirs(os.path.join(self.repo_dir.name, "docs", "engineering", "test_specs"), exist_ok=True)
+
+    def tearDown(self):
+        self.temp_dir.cleanup()
+        self.repo_dir.cleanup()
+
+    def test_tst_pro_106_1_atomic_cross_worktree_id_reservation(self):
+        # TST-PRO-106.1: Atomic Cross-Worktree ID Reservation Test
+        import multiprocessing
+        q = multiprocessing.Queue()
+        processes = []
+        concurrency = 5
+        count_per_proc = 2
+
+        for i in range(concurrency):
+            ticket = f"ATT-900{i}"
+            p = multiprocessing.Process(
+                target=_concurrent_reservation_worker,
+                args=(self.ledger_dir, self.repo_dir.name, "SIM", "REQ", ticket, count_per_proc, q)
+            )
+            processes.append(p)
+
+        for p in processes:
+            p.start()
+        for p in processes:
+            p.join(timeout=10)
+
+        results = []
+        while not q.empty():
+            results.append(q.get())
+
+        self.assertEqual(len(results), concurrency)
+        all_allocated = []
+        for ticket, allocated, err in results:
+            self.assertIsNone(err, f"Worker failed: {err}")
+            self.assertEqual(len(allocated), count_per_proc)
+            all_allocated.extend(allocated)
+
+        self.assertEqual(len(all_allocated), concurrency * count_per_proc)
+        # Verify 100% uniqueness - zero ID collisions under concurrent processes
+        self.assertEqual(len(set(all_allocated)), len(all_allocated))
+
+    def test_tst_pro_106_2_monotonic_next_id_calculation(self):
+        # TST-PRO-106.2: Monotonic Next-ID Calculation with Active Reservation Awareness Test
+        req_file = os.path.join(self.repo_dir.name, "docs", "requirements", "req_sim.md")
+        with open(req_file, "w", encoding="utf-8") as f:
+            f.write("### REQ-SIM-010: Prior requirement [Implemented]\n")
+
+        # First reservation should allocate REQ-SIM-011
+        r1 = jira_util.reserve_id("SIM", "REQ", "ATT-1001", count=1, ledger_dir=self.ledger_dir, repo_root=self.repo_dir.name)
+        self.assertEqual(r1, ["REQ-SIM-011"])
+
+        # Second reservation without committing to doc should observe active reservation and allocate REQ-SIM-012
+        r2 = jira_util.reserve_id("SIM", "REQ", "ATT-1002", count=2, ledger_dir=self.ledger_dir, repo_root=self.repo_dir.name)
+        self.assertEqual(r2, ["REQ-SIM-012", "REQ-SIM-013"])
+
+        # BOTH allocation aligns REQ and TST numbers
+        r3 = jira_util.reserve_id("SIM", "BOTH", "ATT-1003", count=1, ledger_dir=self.ledger_dir, repo_root=self.repo_dir.name)
+        self.assertEqual(r3, ["REQ-SIM-014", "TST-SIM-014"])
+
+        # Specific ID reservation with conflict check
+        with self.assertRaises(ValueError):
+            jira_util.reserve_id("SIM", "REQ", "ATT-1004", specific_id=11, ledger_dir=self.ledger_dir, repo_root=self.repo_dir.name)
+
+        # Renewing specific ID by owner succeeds
+        r_renew = jira_util.reserve_id("SIM", "REQ", "ATT-1001", specific_id=11, ledger_dir=self.ledger_dir, repo_root=self.repo_dir.name)
+        self.assertEqual(r_renew, ["REQ-SIM-011"])
+
+    def test_tst_pro_106_3_gate_2_reservation_provenance_verification(self):
+        # TST-PRO-106.3: Gate 2 Reservation Provenance Verification Test
+        test_spec_path = os.path.join(self.repo_dir.name, "docs", "engineering", "test_specs", "ATT-2000_test_spec.md")
+        with open(test_spec_path, "w", encoding="utf-8") as f:
+            f.write("""# Stage 2: Test Spec
+## 1. Requirement Specification (REQ-SIM-050)
+* **REQ-SIM-050.1**: Something
+## 4. Test Specification (TST-SIM-050)
+* **TST-SIM-050.1**: Test procedure
+""")
+
+        # 1. Unreserved net-new ID -> fails Gate 2 check
+        is_valid, errors = jira_util.verify_stage2_id_reservations(
+            "ATT-2001", "", parent_key="ATT-2000", ledger_dir=self.ledger_dir, repo_root=self.repo_dir.name
+        )
+        self.assertFalse(is_valid)
+        self.assertTrue(any("has not been reserved" in e for e in errors))
+
+        # 2. Reserved for a DIFFERENT ticket -> fails Gate 2 check
+        jira_util.reserve_id("SIM", "BOTH", "ATT-9999", specific_id=50, ledger_dir=self.ledger_dir, repo_root=self.repo_dir.name)
+        is_valid, errors = jira_util.verify_stage2_id_reservations(
+            "ATT-2001", "", parent_key="ATT-2000", ledger_dir=self.ledger_dir, repo_root=self.repo_dir.name
+        )
+        self.assertFalse(is_valid)
+        self.assertTrue(any("reserved for ticket 'ATT-9999', not 'ATT-2000'" in e for e in errors))
+
+        # 3. Reserved for the matching ticket -> passes Gate 2 check
+        jira_util.release_id("ATT-9999", ledger_dir=self.ledger_dir)
+        jira_util.reserve_id("SIM", "BOTH", "ATT-2000", specific_id=50, ledger_dir=self.ledger_dir, repo_root=self.repo_dir.name)
+        is_valid, errors = jira_util.verify_stage2_id_reservations(
+            "ATT-2001", "", parent_key="ATT-2000", ledger_dir=self.ledger_dir, repo_root=self.repo_dir.name
+        )
+        self.assertTrue(is_valid)
+        self.assertEqual(len(errors), 0)
+
+    def test_tst_pro_106_4_reservation_hygiene_expiration_and_orphan_parity(self):
+        # TST-PRO-106.4: Reservation Hygiene, Expiration & Code Orphan Parity Test
+        # 1. Reserve and list
+        allocated = jira_util.reserve_id("SIM", "REQ", "ATT-3000", count=2, ledger_dir=self.ledger_dir, repo_root=self.repo_dir.name)
+        res_list = jira_util.list_reservations(ticket="ATT-3000", ledger_dir=self.ledger_dir)
+        self.assertEqual(len(res_list), 2)
+
+        # 2. Release by ticket
+        rel = jira_util.release_id("ATT-3000", ledger_dir=self.ledger_dir)
+        self.assertEqual(len(rel), 2)
+        res_list_after = jira_util.list_reservations(ticket="ATT-3000", ledger_dir=self.ledger_dir)
+        self.assertEqual(len(res_list_after), 0)
+
+        # 3. Active expiration cleanup
+        ledger_path = jira_util.resolve_shared_ledger_path(self.ledger_dir)
+        expired_entry = {
+            "version": 1,
+            "reservations": [
+                {
+                    "id": "REQ-SIM-099",
+                    "type": "REQ",
+                    "domain": "SIM",
+                    "ticket": "ATT-OLD",
+                    "reserved_at": "2020-01-01T00:00:00Z",
+                    "expires_at": "2020-01-08T00:00:00Z",
+                }
+            ]
+        }
+        jira_util.save_reservation_ledger(ledger_path, expired_entry)
+        active_res = jira_util.list_reservations(ledger_dir=self.ledger_dir)
+        self.assertEqual(len(active_res), 0)
+
+
 if __name__ == "__main__":
     unittest.main()
 

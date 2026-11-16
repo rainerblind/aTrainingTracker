@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
 import urllib.request
 import base64
+import contextlib
+import fcntl
 import json
 import os
 import re
 import ssl
 import subprocess
 import sys
-from datetime import datetime
+import time
+from datetime import datetime, timedelta, timezone
 from urllib.parse import urlencode
 
 _tools_dir = os.path.dirname(os.path.abspath(__file__))
@@ -1464,15 +1467,436 @@ def get_subtask_summary_and_desc(subtask_key, role="agent2"):
         return "", "", None
 
 
+ID_RESERVATION_LOCK_FILE = "/tmp/att_id_reservation.lock"
+
+
+@contextlib.contextmanager
+def id_reservation_lock(lock_path=ID_RESERVATION_LOCK_FILE, timeout_sec=30.0, poll_interval=0.05):
+    """Acquires exclusive POSIX flock on lock_path for atomic ID reservations (REQ-PRO-106.1)."""
+    lock_dir = os.path.dirname(os.path.abspath(lock_path))
+    if lock_dir and not os.path.exists(lock_dir):
+        os.makedirs(lock_dir, exist_ok=True)
+
+    fd = os.open(lock_path, os.O_CREAT | os.O_RDWR, 0o666)
+    start_time = time.time()
+    acquired = False
+    try:
+        while True:
+            try:
+                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                acquired = True
+                break
+            except (BlockingIOError, IOError, OSError):
+                elapsed = time.time() - start_time
+                if elapsed >= timeout_sec:
+                    raise TimeoutError(f"Timeout ({timeout_sec:.1f}s) exceeded waiting for reservation lock on {lock_path}")
+                time.sleep(poll_interval)
+        yield fd
+    finally:
+        if acquired:
+            try:
+                fcntl.flock(fd, fcntl.LOCK_UN)
+            except OSError:
+                pass
+        try:
+            os.close(fd)
+        except OSError:
+            pass
+
+
+def resolve_shared_ledger_path(ledger_dir=None):
+    """
+    Resolves the shared ID reservation ledger path (REQ-PRO-106.1).
+    Prioritizes explicit ledger_dir (for test isolation), then git common dir, then .git fallback.
+    """
+    if ledger_dir:
+        return os.path.join(os.path.abspath(ledger_dir), "att_id_reservations.json")
+    try:
+        res = subprocess.run(
+            ["git", "rev-parse", "--path-format=absolute", "--git-common-dir"],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        cdir = res.stdout.strip()
+        if cdir and os.path.isdir(cdir):
+            return os.path.join(cdir, "att_id_reservations.json")
+    except Exception:
+        pass
+    try:
+        res = subprocess.run(
+            ["git", "rev-parse", "--git-common-dir"],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        cdir = res.stdout.strip()
+        if cdir:
+            return os.path.abspath(os.path.join(cdir, "att_id_reservations.json"))
+    except Exception:
+        pass
+    return os.path.abspath(os.path.join(".git", "att_id_reservations.json"))
+
+
+def load_reservation_ledger(ledger_path):
+    """Loads reservation ledger data, returning {'version': 1, 'reservations': []} if absent/corrupt."""
+    if not os.path.exists(ledger_path):
+        return {"version": 1, "reservations": []}
+    try:
+        with open(ledger_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            if isinstance(data, dict) and "reservations" in data:
+                return data
+            elif isinstance(data, list):
+                return {"version": 1, "reservations": data}
+    except Exception:
+        pass
+    return {"version": 1, "reservations": []}
+
+
+def save_reservation_ledger(ledger_path, data):
+    """Atomically saves reservation ledger data via temp file and os.replace."""
+    d = os.path.dirname(ledger_path)
+    if d and not os.path.exists(d):
+        os.makedirs(d, exist_ok=True)
+    temp_path = f"{ledger_path}.tmp.{os.getpid()}"
+    with open(temp_path, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, sort_keys=True)
+    os.replace(temp_path, ledger_path)
+
+
+def purge_expired_reservations(ledger_data):
+    """Purges expired reservations based on ISO expires_at timestamp (REQ-PRO-106.4)."""
+    now_iso = datetime.now(timezone.utc).isoformat()
+    active = []
+    purged = []
+    for item in ledger_data.get("reservations", []):
+        exp = item.get("expires_at")
+        if exp and exp < now_iso:
+            purged.append(item)
+        else:
+            active.append(item)
+    ledger_data["reservations"] = active
+    return purged
+
+
+def get_max_allocated_id(domain, id_type, repo_root=None, ledger_data=None):
+    """
+    Computes maximum allocated ID for a given domain and type by scanning:
+    1. Local living doc shards (docs/requirements/*.md or docs/tests/*.md)
+    2. Local sprint/* branches in git
+    3. Active reservations in ledger_data
+    (REQ-PRO-106.2)
+    """
+    domain = domain.strip().upper()
+    id_type = id_type.strip().upper()
+    max_id = 0
+    pat = re.compile(rf"\b{re.escape(id_type)}-{re.escape(domain)}-(\d+)\b")
+
+    if repo_root is None:
+        repo_root = os.path.abspath(os.path.join(_tools_dir, ".."))
+
+    # 1. Local filesystem scan
+    target_dirs = []
+    if id_type == "REQ":
+        target_dirs.append(os.path.join(repo_root, "docs", "requirements"))
+        target_dirs.append(os.path.join(repo_root, "docs"))
+    else:
+        target_dirs.append(os.path.join(repo_root, "docs", "tests"))
+        target_dirs.append(os.path.join(repo_root, "docs"))
+
+    for tdir in target_dirs:
+        if os.path.isdir(tdir):
+            for fname in os.listdir(tdir):
+                if fname.endswith(".md"):
+                    fpath = os.path.join(tdir, fname)
+                    try:
+                        with open(fpath, "r", encoding="utf-8", errors="ignore") as f:
+                            content = f.read()
+                            for m in pat.finditer(content):
+                                num = int(m.group(1))
+                                if num > max_id:
+                                    max_id = num
+                    except Exception:
+                        pass
+
+    # 2. Scan sprint/* branches in git if available
+    try:
+        res = subprocess.run(
+            ["git", "for-each-ref", "--format=%(refname:short)", "refs/heads/sprint/"],
+            capture_output=True,
+            text=True,
+            cwd=repo_root
+        )
+        branches = [b.strip() for b in res.stdout.splitlines() if b.strip()]
+        for br in branches:
+            file_pattern = "docs/requirements/*.md" if id_type == "REQ" else "docs/tests/*.md"
+            res2 = subprocess.run(
+                ["git", "grep", "-h", "-o", "-E", f"{id_type}-{domain}-[0-9]+", br, "--", file_pattern],
+                capture_output=True,
+                text=True,
+                cwd=repo_root
+            )
+            for line in res2.stdout.splitlines():
+                m = pat.search(line.strip())
+                if m:
+                    num = int(m.group(1))
+                    if num > max_id:
+                        max_id = num
+    except Exception:
+        pass
+
+    # 3. Active reservations in ledger
+    if ledger_data:
+        for item in ledger_data.get("reservations", []):
+            if item.get("domain", "").upper() == domain and item.get("type", "").upper() == id_type:
+                m = pat.search(item.get("id", ""))
+                if m:
+                    num = int(m.group(1))
+                    if num > max_id:
+                        max_id = num
+
+    return max_id
+
+
+def reserve_id(domain, id_type, ticket, count=1, specific_id=None, ttl_days=7, ledger_dir=None, repo_root=None):
+    """
+    Atomically reserves count IDs under POSIX flock (REQ-PRO-106.1, REQ-PRO-106.2).
+    Returns list of reserved ID strings (e.g. ['REQ-PRO-106', 'TST-PRO-106']).
+    """
+    domain = domain.strip().upper()
+    id_type = id_type.strip().upper()
+    ticket = ticket.strip().upper()
+    ledger_path = resolve_shared_ledger_path(ledger_dir)
+
+    types_to_reserve = []
+    if id_type in ("BOTH", "ALL"):
+        types_to_reserve = ["REQ", "TST"]
+    elif id_type in ("REQ", "TST"):
+        types_to_reserve = [id_type]
+    else:
+        raise ValueError(f"Invalid id_type '{id_type}'. Expected REQ, TST, or BOTH.")
+
+    reserved_ids = []
+    with id_reservation_lock():
+        ledger_data = load_reservation_ledger(ledger_path)
+        purge_expired_reservations(ledger_data)
+
+        now = datetime.now(timezone.utc)
+        now_iso = now.isoformat()
+        expires_at = (now + timedelta(days=ttl_days)).isoformat()
+
+        if specific_id is not None:
+            for t in types_to_reserve:
+                if isinstance(specific_id, int):
+                    num = specific_id
+                elif str(specific_id).isdigit():
+                    num = int(specific_id)
+                else:
+                    m = re.search(r"(\d+)$", str(specific_id))
+                    num = int(m.group(1)) if m else None
+                if num is None:
+                    raise ValueError(f"Could not parse numeric ID from specific_id='{specific_id}'")
+                id_str = f"{t}-{domain}-{num:03d}" if num < 1000 else f"{t}-{domain}-{num}"
+
+                for item in ledger_data.get("reservations", []):
+                    if item.get("id", "").upper() == id_str.upper():
+                        if item.get("ticket", "").upper() != ticket:
+                            raise ValueError(f"ID '{id_str}' is already reserved by ticket '{item.get('ticket')}'")
+
+                ledger_data["reservations"] = [
+                    r for r in ledger_data.get("reservations", [])
+                    if not (r.get("id", "").upper() == id_str.upper() and r.get("ticket", "").upper() == ticket)
+                ]
+                ledger_data["reservations"].append({
+                    "id": id_str,
+                    "type": t,
+                    "domain": domain,
+                    "ticket": ticket,
+                    "reserved_at": now_iso,
+                    "expires_at": expires_at,
+                })
+                reserved_ids.append(id_str)
+        else:
+            if id_type in ("BOTH", "ALL"):
+                req_max = get_max_allocated_id(domain, "REQ", repo_root=repo_root, ledger_data=ledger_data)
+                tst_max = get_max_allocated_id(domain, "TST", repo_root=repo_root, ledger_data=ledger_data)
+                start_num = max(req_max, tst_max) + 1
+                for offset in range(count):
+                    curr_num = start_num + offset
+                    for t in ["REQ", "TST"]:
+                        id_str = f"{t}-{domain}-{curr_num:03d}" if curr_num < 1000 else f"{t}-{domain}-{curr_num}"
+                        ledger_data["reservations"].append({
+                            "id": id_str,
+                            "type": t,
+                            "domain": domain,
+                            "ticket": ticket,
+                            "reserved_at": now_iso,
+                            "expires_at": expires_at,
+                        })
+                        reserved_ids.append(id_str)
+            else:
+                curr_max = get_max_allocated_id(domain, id_type, repo_root=repo_root, ledger_data=ledger_data)
+                start_num = curr_max + 1
+                for offset in range(count):
+                    curr_num = start_num + offset
+                    id_str = f"{id_type}-{domain}-{curr_num:03d}" if curr_num < 1000 else f"{id_type}-{domain}-{curr_num}"
+                    ledger_data["reservations"].append({
+                        "id": id_str,
+                        "type": id_type,
+                        "domain": domain,
+                        "ticket": ticket,
+                        "reserved_at": now_iso,
+                        "expires_at": expires_at,
+                    })
+                    reserved_ids.append(id_str)
+
+        save_reservation_ledger(ledger_path, ledger_data)
+
+    return reserved_ids
+
+
+def release_id(ticket, id_str=None, ledger_dir=None):
+    """Releases active reservations for ticket (and optionally id_str) (REQ-PRO-106.4)."""
+    ticket = ticket.strip().upper()
+    ledger_path = resolve_shared_ledger_path(ledger_dir)
+    with id_reservation_lock():
+        ledger_data = load_reservation_ledger(ledger_path)
+        purge_expired_reservations(ledger_data)
+        remaining = []
+        released = []
+        for item in ledger_data.get("reservations", []):
+            match_ticket = item.get("ticket", "").upper() == ticket
+            match_id = (id_str is None) or (item.get("id", "").upper() == id_str.strip().upper())
+            if match_ticket and match_id:
+                released.append(item)
+            else:
+                remaining.append(item)
+        ledger_data["reservations"] = remaining
+        save_reservation_ledger(ledger_path, ledger_data)
+    return released
+
+
+def list_reservations(domain=None, ticket=None, ledger_dir=None):
+    """Lists active, non-expired reservations (REQ-PRO-106.4)."""
+    ledger_path = resolve_shared_ledger_path(ledger_dir)
+    with id_reservation_lock():
+        ledger_data = load_reservation_ledger(ledger_path)
+        purge_expired_reservations(ledger_data)
+        save_reservation_ledger(ledger_path, ledger_data)
+        res = ledger_data.get("reservations", [])
+        if domain:
+            res = [r for r in res if r.get("domain", "").upper() == domain.strip().upper()]
+        if ticket:
+            res = [r for r in res if r.get("ticket", "").upper() == ticket.strip().upper()]
+        return res
+
+
+def verify_stage2_id_reservations(subtask_key, text_or_file, parent_key=None, ledger_dir=None, repo_root=None):
+    """
+    Verifies that all newly introduced REQ-* and TST-* IDs in Stage 2 deliverable
+    are reserved for parent_key in the shared reservation ledger (REQ-PRO-106.3).
+    Returns (success: bool, errors: list[str]).
+    """
+    if repo_root is None:
+        repo_root = os.path.abspath(os.path.join(_tools_dir, ".."))
+
+    content = ""
+    if parent_key:
+        cand = os.path.join(repo_root, "docs", "engineering", "test_specs", f"{parent_key}_test_spec.md")
+        if os.path.exists(cand):
+            try:
+                with open(cand, "r", encoding="utf-8") as f:
+                    content = f.read()
+            except Exception:
+                pass
+    if not content and text_or_file:
+        if text_or_file.startswith("@") and os.path.exists(text_or_file[1:]):
+            try:
+                with open(text_or_file[1:], "r", encoding="utf-8") as f:
+                    content = f.read()
+            except Exception:
+                pass
+        else:
+            content = text_or_file
+
+    if not content:
+        return True, []
+
+    id_pat = re.compile(r"\b(REQ-[A-Z]+-\d+|TST-[A-Z]+-\d+)\b")
+    candidate_ids = set()
+
+    lines = content.splitlines()
+    in_target_section = False
+    for line in lines:
+        if re.search(r"##\s+(?:1\.\s+Requirement\s+Specification|4\.\s+Test\s+Specification|5\.\s+Traceability\s+Matrix)", line, re.IGNORECASE):
+            in_target_section = True
+        elif re.search(r"##\s+(?:2\.\s+Requirement\s+Archaeology|3\.\s+Acceptance\s+Criteria)", line, re.IGNORECASE):
+            in_target_section = False
+
+        if in_target_section or re.search(r"(?:###|Requirement\s+Mapping:|Test\s+Spec\s+ID:)\s*(?:REQ|TST)-[A-Z]+-\d+", line):
+            for m in id_pat.finditer(line):
+                candidate_ids.add(m.group(1))
+
+    if not candidate_ids:
+        for m in id_pat.finditer(content):
+            candidate_ids.add(m.group(1))
+
+    # Filter out IDs that already exist in git base (HEAD~1, master, or base sprint)
+    net_new_ids = set()
+    for cid in candidate_ids:
+        exists_in_base = False
+        try:
+            res = subprocess.run(
+                ["git", "grep", "-q", "-E", rf"\b{re.escape(cid)}\b", "HEAD~1", "--", "docs/requirements/*.md", "docs/tests/*.md"],
+                capture_output=True,
+                cwd=repo_root
+            )
+            if res.returncode == 0:
+                exists_in_base = True
+        except Exception:
+            pass
+
+        if not exists_in_base:
+            net_new_ids.add(cid)
+
+    if not net_new_ids:
+        return True, []
+
+    ledger_path = resolve_shared_ledger_path(ledger_dir)
+    ledger_data = load_reservation_ledger(ledger_path)
+    purge_expired_reservations(ledger_data)
+
+    errors = []
+    res_map = {}
+    for r in ledger_data.get("reservations", []):
+        res_map[r.get("id", "").upper()] = r.get("ticket", "").upper()
+
+    parent_norm = (parent_key or "").strip().upper()
+    for nid in sorted(net_new_ids):
+        owner = res_map.get(nid.upper())
+        if not owner:
+            errors.append(
+                f"ID '{nid}' has not been reserved for ticket '{parent_key}' in the shared reservation ledger. Run 'jira_util.py reserve-id' first."
+            )
+        elif parent_norm and owner != parent_norm:
+            errors.append(
+                f"ID '{nid}' is reserved for ticket '{owner}', not '{parent_key}'."
+            )
+
+    return (len(errors) == 0), errors
+
+
 def gate_verdict(subtask_key, verdict_arg, text_or_file, role="agent2"):
     """
     Composite Gate-Verdict Command for agent2 (ATT-4290 Process Improvement #2).
     Hardwired to role='agent2' (Anti-Spoofing lock).
     1. For [Analysis] subtasks on PASS: validates Change-Request Impact Analysis deliverable (REQ-PRO-064.3).
-    2. Assigns subtask_key to agent2.
-    3. Posts text_or_file as a role-attributed agent2 audit comment on subtask_key.
-    4. If PASS: transitions subtask_key via 'freigabe' (closes sub-task to Erledigt, advances parent, and injects next stage SKILL.md).
-    5. If REVISION: transitions subtask_key back to 'in_progress' and assigns to agent1.
+    2. For [Req & Test Spec] subtasks on PASS: validates REQ/TST ID reservation provenance (REQ-PRO-106.3).
+    3. Assigns subtask_key to agent2.
+    4. Posts text_or_file as a role-attributed agent2 audit comment on subtask_key.
+    5. If PASS: transitions subtask_key via 'freigabe' (closes sub-task to Erledigt, advances parent, and injects next stage SKILL.md).
+    6. If REVISION: transitions subtask_key back to 'in_progress' and assigns to agent1.
     """
     auditor_role = "agent2"
     verdict_norm = (verdict_arg or "").strip().upper()
@@ -1509,6 +1933,29 @@ def gate_verdict(subtask_key, verdict_arg, text_or_file, role="agent2"):
                     for err in errors:
                         print(f"  - {err}", file=sys.stderr)
                     sys.exit(1)
+
+        # ATT-8149 / REQ-PRO-106.3: Validate REQ/TST ID reservation on [Req & Test Spec] subtasks before approval
+        if summary and re.search(r"^\[(req\s*&\s*test\s*spec|req/test\s*spec|test-spec|test\s*spec|specification|spec)\]", summary, re.IGNORECASE):
+            eval_text = desc or ""
+            if parent_key:
+                cand = os.path.join("docs", "engineering", "test_specs", f"{parent_key}_test_spec.md")
+                if os.path.exists(cand):
+                    try:
+                        with open(cand, "r", encoding="utf-8") as f:
+                            local_text = f.read()
+                        if local_text:
+                            eval_text = local_text
+                    except Exception:
+                        pass
+            is_valid, errors = verify_stage2_id_reservations(subtask_key, eval_text, parent_key=parent_key)
+            if not is_valid:
+                print(
+                    f"Error: Gate 2 approval rejected for {subtask_key}. Stage 2 deliverable failed ID reservation provenance check:",
+                    file=sys.stderr,
+                )
+                for err in errors:
+                    print(f"  - {err}", file=sys.stderr)
+                sys.exit(1)
 
         assign_issue(subtask_key, auditor_role, role=auditor_role)
         add_comment(subtask_key, text_or_file, role=auditor_role)
@@ -4187,6 +4634,12 @@ USAGE_TEXT = (
     "                                                        Export versioned test and coverage evidence to docs/engineering/test_evidence/\n"
     "  qa-audit [--sprint <ID|NAME>] [--sample N] [--out <FILE>]\n"
     "                                                        Sample >= 2 sprint tickets and audit ASPICE process compliance\n"
+    "  reserve-id DOMAIN TYPE TICKET [--count N] [--id SPECIFIC_ID] [--ttl-days D] [--ledger-dir DIR]\n"
+    "                                                        Atomically reserve REQ/TST ID(s) across parallel sprint lanes\n"
+    "  release-id TICKET [ID] [--ledger-dir DIR]\n"
+    "                                                        Release active ID reservation(s) for a ticket\n"
+    "  list-reservations [--domain DOMAIN] [--ticket TICKET] [--ledger-dir DIR] [--json]\n"
+    "                                                        List active ID reservations from the shared ledger\n"
     "  record-review [--sprint <ID|NAME>] [--ticket KEY] [--reviewer NAME] [--vendor VENDOR] [--model MODEL] [--version VER] [--scope SCOPE] [--verdict PASS|FAIL|NOT PERFORMED|SKIPPED|PARTIAL] [--findings FINDINGS] [--out FILE]\n"
     "                                                        Record Human Sprint Review or Cross-Vendor AI Review in docs/engineering/reviews/\n"
     "  create-issue SUMMARY DESC [TYPE_ID|Bug|Feature|Verbesserung] [PARENT_KEY] [--type=...] [--parent=...] [--bottom] [--points=N] [--severity=critical|major|minor|cosmetic]"
@@ -4607,6 +5060,112 @@ if __name__ == "__main__":
             print("Error: Agents must not move tickets to sprints! Only the human user assigns tickets to sprints during Sprint-Start Screening.", file=sys.stderr)
             sys.exit(1)
         add_to_active_sprint(remaining_argv[1], role=active_role)
+    elif cmd in ("reserve-id", "reserve_id") and len(remaining_argv) >= 4:
+        domain_arg = remaining_argv[1]
+        type_arg = remaining_argv[2]
+        ticket_arg = remaining_argv[3]
+        count_arg = 1
+        id_arg = None
+        ttl_arg = 7
+        ldir_arg = None
+        idx = 4
+        while idx < len(remaining_argv):
+            a = remaining_argv[idx]
+            if a.startswith("--count="):
+                count_arg = int(a.split("=", 1)[1])
+            elif a == "--count" and idx + 1 < len(remaining_argv):
+                count_arg = int(remaining_argv[idx + 1])
+                idx += 1
+            elif a.startswith("--id="):
+                id_arg = a.split("=", 1)[1]
+            elif a == "--id" and idx + 1 < len(remaining_argv):
+                id_arg = remaining_argv[idx + 1]
+                idx += 1
+            elif a.startswith("--ttl-days="):
+                ttl_arg = int(a.split("=", 1)[1])
+            elif a == "--ttl-days" and idx + 1 < len(remaining_argv):
+                ttl_arg = int(remaining_argv[idx + 1])
+                idx += 1
+            elif a.startswith("--ledger-dir="):
+                ldir_arg = a.split("=", 1)[1]
+            elif a == "--ledger-dir" and idx + 1 < len(remaining_argv):
+                ldir_arg = remaining_argv[idx + 1]
+                idx += 1
+            idx += 1
+        try:
+            allocated = reserve_id(
+                domain_arg,
+                type_arg,
+                ticket_arg,
+                count=count_arg,
+                specific_id=id_arg,
+                ttl_days=ttl_arg,
+                ledger_dir=ldir_arg,
+            )
+            print(f"RESERVED: {', '.join(allocated)}")
+        except Exception as e:
+            print(f"Error: {e}", file=sys.stderr)
+            sys.exit(1)
+    elif cmd in ("release-id", "release_id") and len(remaining_argv) >= 2:
+        ticket_arg = remaining_argv[1]
+        id_arg = None
+        ldir_arg = None
+        idx = 2
+        while idx < len(remaining_argv):
+            a = remaining_argv[idx]
+            if a.startswith("--ledger-dir="):
+                ldir_arg = a.split("=", 1)[1]
+            elif a == "--ledger-dir" and idx + 1 < len(remaining_argv):
+                ldir_arg = remaining_argv[idx + 1]
+                idx += 1
+            elif not a.startswith("--") and id_arg is None:
+                id_arg = a
+            idx += 1
+        try:
+            rel = release_id(ticket_arg, id_str=id_arg, ledger_dir=ldir_arg)
+            print(f"RELEASED: {len(rel)} reservation(s) for {ticket_arg}")
+        except Exception as e:
+            print(f"Error: {e}", file=sys.stderr)
+            sys.exit(1)
+    elif cmd in ("list-reservations", "list_reservations"):
+        dom_arg = None
+        tkt_arg = None
+        ldir_arg = None
+        as_json = "--json" in remaining_argv
+        idx = 1
+        while idx < len(remaining_argv):
+            a = remaining_argv[idx]
+            if a.startswith("--domain="):
+                dom_arg = a.split("=", 1)[1]
+            elif a == "--domain" and idx + 1 < len(remaining_argv):
+                dom_arg = remaining_argv[idx + 1]
+                idx += 1
+            elif a.startswith("--ticket="):
+                tkt_arg = a.split("=", 1)[1]
+            elif a == "--ticket" and idx + 1 < len(remaining_argv):
+                tkt_arg = remaining_argv[idx + 1]
+                idx += 1
+            elif a.startswith("--ledger-dir="):
+                ldir_arg = a.split("=", 1)[1]
+            elif a == "--ledger-dir" and idx + 1 < len(remaining_argv):
+                ldir_arg = remaining_argv[idx + 1]
+                idx += 1
+            idx += 1
+        try:
+            res_list = list_reservations(domain=dom_arg, ticket=tkt_arg, ledger_dir=ldir_arg)
+            if as_json:
+                print(json.dumps(res_list, indent=2))
+            else:
+                if not res_list:
+                    print("No active reservations found.")
+                else:
+                    print(f"{'ID':<15} {'Type':<6} {'Domain':<8} {'Ticket':<12} {'Expires At'}")
+                    print("-" * 65)
+                    for r in res_list:
+                        print(f"{r.get('id',''):<15} {r.get('type',''):<6} {r.get('domain',''):<8} {r.get('ticket',''):<12} {r.get('expires_at','')}")
+        except Exception as e:
+            print(f"Error: {e}", file=sys.stderr)
+            sys.exit(1)
     else:
         print(f"Invalid command or arguments: {' '.join(remaining_argv)}\n\n{USAGE_TEXT}", file=sys.stderr)
         sys.exit(1)
