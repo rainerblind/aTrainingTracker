@@ -5366,3 +5366,33 @@ The workflow SHALL mandate that:
   • *When* executed,
   • *Then* all unit and contract tests pass with exit code `0`.
 - **Invariants**: Zero `app/src/main/` runtime code changes; `ANT-Android-SDKs` untouched at `160000`; `ALLOWED_ENGINEERING_ENTRIES` canonical integrity preserved; standard heading suffixes `[Verified|Implemented|Planned|Open]` strictly enforced.
+
+---
+
+### REQ-PRO-102: Boundary-Safe SYSREQ Traceability & Bidirectional System-Refinement Coverage Reporting (ATT-8146) [Verified]
+- **Tests**: `TST-PRO-102`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `tools/verify_requirement_governance.py`, `tools/test_verify_requirement_governance.py`
+- **Rationale**: ASPICE 4.0 Major Finding M2 (`ATT-8146`) identified that `verify_system_software_traceability()` in `tools/verify_requirement_governance.py` matched `"REQ-" in line` and `re.findall(r"REQ-[A-Z0-9_-]+", line)` inside `SYSREQ-DEX-*` / `SYSREQ-TRK-*`, emitting bogus `REQ-DEX-001..006` IDs, misclassified `REQ-PRO-*` process specs as system refinements, and omitted reverse (`SWE -> SYSREQ`) coverage (`49/355` = `13.8%`). Extending `REQ-PRO-076`, boundary-safe matching and bidirectional reporting are required for truthful SWE.1 BP5 / SYS.2 BP5 traceability metrics.
+- **Description**:
+  1. *Word/Prefix Boundary Enforcement (`REQ-PRO-102.1`)*: `verify_system_software_traceability()` (`L3710-3716`) and secondary `REQ-*` scanners (`_collect_test_file_index`, `triage_unbacked_verified_tsts`) in `tools/verify_requirement_governance.py` SHALL enforce word/prefix boundary regex `(?<![A-Za-z0-9_-])REQ-[A-Z0-9_-]+(?![A-Za-z0-9_-])` (replacing `"REQ-" in line` substring checks) so `SYSREQ-DEX-001` or `SYSREQ-TRK-001` never false-match as `REQ-DEX-001` or `REQ-TRK-001`.
+  2. *Strict `SYSTEM_REFINED_PREFIXES` Filtering (`REQ-PRO-102.2`)*: `verify_system_software_traceability()` SHALL filter `sys_to_swe` refinement sets strictly to requirements whose prefix belongs to `SYSTEM_REFINED_PREFIXES`, excluding `REQ-PRO-*` and all other `SWE_DERIVED_PREFIXES`.
+  3. *Bidirectional Forward & Reverse Coverage Reporting (`REQ-PRO-102.3`)*: `verify_system_software_traceability()` and `--report-sys-coverage` SHALL populate `report` (`swe_refinement_total_count`, `swe_refinement_covered_count`, `swe_refinement_coverage_pct`, `swe_to_sys_map`) and print BOTH forward (`SYSREQ -> SWE`, `12/12` = `100.0%`) and authentic reverse `System-Refinement` (`SWE -> SYSREQ`, `49/355` = `13.8%`) coverage without breaking `--verify-sys-trace` CI pass when forward coverage is 100% and zero dangling `SYSREQ`s exist.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Extends `REQ-PRO-076.4` / `TST-PRO-076` (`tools/verify_requirement_governance.py`). Targets `verify_system_software_traceability()`, `_collect_test_file_index()`, `triage_unbacked_verified_tsts()`, and `--report-sys-coverage`.
+  2. *Historical Origin & Commit Trace*: `REQ-PRO-076` introduced in `ATT-6163` (Sprint `2026-46.4`); amended in `ATT-8146` (Sprint `2026-47.1`, Epic `ATT-8138`) to remediate Finding M2.
+  3. *Root Reason for Existing Formulation*: Enforced `12/12` forward `SYSREQ` coverage and zero dangling `SYSREQ`s across `docs/system/` and `docs/requirements/`.
+  4. *Preservation of Core Invariants*: Preserves `--verify-sys-trace` CI gate (`12/12` forward `SYSREQ`s covered, zero dangling `SYSREQ`s), preserves `report` keys (`sysreq_count`, `covered_count`, `coverage_pct`, `sys_to_swe_map`) for `test_scenario_40..43`, keeps pure Python stdlib, and makes zero `app/src/main/` or `docs/system/*.md` changes.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* a document containing only `SYSREQ-DEX-001` (with no standalone `REQ-DEX-001`),
+  • *When* `verify_system_software_traceability()` parses it,
+  • *Then* `REQ-DEX-001` is never extracted or added to `sys_to_swe`.
+  • *Given* requirements in `SWE_DERIVED_PREFIXES` (e.g., `REQ-PRO-054`, `REQ-PRO-076`) mentioning `SYSREQ-*`,
+  • *When* `verify_system_software_traceability()` computes system refinements,
+  • *Then* `REQ-PRO-*` IDs are excluded from `sys_to_swe` and `swe_refinement_total_count`.
+  • *Given* the live repository,
+  • *When* `--report-sys-coverage` executes,
+  • *Then* it reports both `12/12` (`100.0%`) forward `SYSREQ -> SWE` coverage and the authentic `49/355` (`13.8%`) reverse `System-Refinement` `SWE -> SYSREQ` coverage, while `--verify-sys-trace` exits `0`.
+- **Invariants**: Zero `app/src/main/` or `docs/system/*.md` edits; `ANT-Android-SDKs` untouched at `160000`; `test_scenario_40..43` compatibility preserved.

@@ -3328,3 +3328,20 @@
   • Verify `LEGACY_UNBACKED_VERIFIED_TSTS` ratchet reduction passes `--check-verified-evidence` with exit code `0`, and `test_scenario_60` / `test_scenario_61` validate ratchet enforcement and clean-worktree safety using parameterized `baseline_allowlist` / reconciled fixtures.
   5. *Höchstmaß Mirror Parity Contract Test (`TST-PRO-101.5`, HoechstmassToolingContractTest.kt & tools/hoechstmass/tools/test_hoechstmass_tools.py)*:
   • Verify `HoechstmassToolingContractTest` and `python3 -m unittest discover` in `tools/hoechstmass/tools/` pass with zero hardcoded `ATT` project/user IDs.
+
+---
+
+### TST-PRO-102: **Boundary-Safe SYSREQ Traceability & Bidirectional Coverage Verification Suite (ATT-8146)** [Verified]
+- **Requirement(s)**: `REQ-PRO-102`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Component**: `tools/verify_requirement_governance.py`, `tools/test_verify_requirement_governance.py`
+- **Jira**: `ATT-8146`
+- **Test Description**:
+  1. *SYSREQ Boundary False-Positive Rejection Test (`TST-PRO-102.1`, tools/test_verify_requirement_governance.py)*:
+  • Verify a document containing only `SYSREQ-DEX-001` or `SYSREQ-TRK-001` does NOT extract `REQ-DEX-001` / `REQ-TRK-001` into `sys_to_swe` or `_collect_test_file_index()`, while valid standalone `REQ-*` references still match cleanly.
+  2. *Derived Prefix Exclusion Test (`TST-PRO-102.2`, tools/test_verify_requirement_governance.py)*:
+  • Verify `REQ-PRO-*` (and other `SWE_DERIVED_PREFIXES`) mentioning `SYSREQ-*` are excluded from `sys_to_swe` and `swe_refinement_total_count`.
+  3. *Bidirectional Coverage & Live CLI Verification Test (`TST-PRO-102.3`, tools/test_verify_requirement_governance.py)*:
+  • Verify `report` exposes accurate `swe_refinement_total_count`, `swe_refinement_covered_count`, `swe_refinement_coverage_pct`, and `swe_to_sys_map`; verify live `--verify-sys-trace --report-sys-coverage` prints `12/12` (`100.0%`) forward and `49/355` (`13.8%`) reverse `System-Refinement` coverage with exit code `0`, and `test_scenario_40..43` remain green.

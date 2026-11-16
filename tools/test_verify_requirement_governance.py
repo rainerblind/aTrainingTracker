@@ -1591,22 +1591,22 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
             with open(os.path.join(sys_dir, "sysreq_test.md"), "w", encoding="utf-8") as f:
                 f.write(
                     "# System Requirements Test\n\n"
-                    "### SYSREQ-TST-001: Telemetry Acquisition\n"
+                    "### SYSREQ-TRK-001: Telemetry Acquisition\n"
                     "- Statement: The system SHALL acquire telemetry.\n\n"
                     "## 4. Traceability Matrix\n"
-                    "| `SYSREQ-TST-001` | Telemetry | `REQ-TST-001` | Test |\n"
+                    "| `SYSREQ-TRK-001` | Telemetry | `REQ-TRK-001` | Test |\n"
                 )
 
             # REQ citing dangling SYSREQ
             with open(os.path.join(req_dir, "req_test.md"), "w", encoding="utf-8") as f:
                 f.write(
                     "# Living Requirements Test\n\n"
-                    "### REQ-TST-001: Sensor Driver [Verified]\n"
-                    "- **System Requirement**: `SYSREQ-TST-001`\n"
-                    "- **Tests**: `TST-TST-001`\n\n"
-                    "### REQ-TST-002: Invalid Reference [Verified]\n"
+                    "### REQ-TRK-001: Sensor Driver [Verified]\n"
+                    "- **System Requirement**: `SYSREQ-TRK-001`\n"
+                    "- **Tests**: `TST-TRK-001`\n\n"
+                    "### REQ-TRK-002: Invalid Reference [Verified]\n"
                     "- **System Requirement**: `SYSREQ-NONEXISTENT-999`\n"
-                    "- **Tests**: `TST-TST-001`\n"
+                    "- **Tests**: `TST-TRK-001`\n"
                 )
 
             ok_fail, diag_fail, report_fail = verify_system_software_traceability(
@@ -1620,12 +1620,12 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
             with open(os.path.join(req_dir, "req_test.md"), "w", encoding="utf-8") as f:
                 f.write(
                     "# Living Requirements Test\n\n"
-                    "### REQ-TST-001: Sensor Driver [Verified]\n"
-                    "- **System Requirement**: `SYSREQ-TST-001`\n"
-                    "- **Tests**: `TST-TST-001`\n\n"
-                    "### REQ-TST-002: Clean Second Req [Verified]\n"
-                    "- **System Requirement**: `SYSREQ-TST-001`\n"
-                    "- **Tests**: `TST-TST-001`\n"
+                    "### REQ-TRK-001: Sensor Driver [Verified]\n"
+                    "- **System Requirement**: `SYSREQ-TRK-001`\n"
+                    "- **Tests**: `TST-TRK-001`\n\n"
+                    "### REQ-TRK-002: Clean Second Req [Verified]\n"
+                    "- **System Requirement**: `SYSREQ-TRK-001`\n"
+                    "- **Tests**: `TST-TRK-001`\n"
                 )
 
             ok_pass, diag_pass, report_pass = verify_system_software_traceability(
@@ -1647,21 +1647,21 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
             with open(os.path.join(sys_dir, "sysreq_test.md"), "w", encoding="utf-8") as f:
                 f.write(
                     "# System Requirements Test\n\n"
-                    "### SYSREQ-TST-001: Telemetry Acquisition\n"
+                    "### SYSREQ-TRK-001: Telemetry Acquisition\n"
                     "- Statement: Telemetry acquisition.\n\n"
-                    "### SYSREQ-TST-002: Data Export\n"
+                    "### SYSREQ-TRK-002: Data Export\n"
                     "- Statement: Data export.\n\n"
                     "## 4. Traceability Matrix\n"
-                    "| `SYSREQ-TST-001` | Telemetry | `REQ-TST-001` | Test |\n"
+                    "| `SYSREQ-TRK-001` | Telemetry | `REQ-TRK-001` | Test |\n"
                 )
 
-            # Only SYSREQ-TST-001 is covered; SYSREQ-TST-002 is uncovered
+            # Only SYSREQ-TRK-001 is covered; SYSREQ-TRK-002 is uncovered
             with open(os.path.join(req_dir, "req_test.md"), "w", encoding="utf-8") as f:
                 f.write(
                     "# Living Requirements Test\n\n"
-                    "### REQ-TST-001: Sensor Driver [Verified]\n"
-                    "- **System Requirement**: `SYSREQ-TST-001`\n"
-                    "- **Tests**: `TST-TST-001`\n"
+                    "### REQ-TRK-001: Sensor Driver [Verified]\n"
+                    "- **System Requirement**: `SYSREQ-TRK-001`\n"
+                    "- **Tests**: `TST-TRK-001`\n"
                 )
 
             ok_gap, diag_gap, report_gap = verify_system_software_traceability(
@@ -1669,15 +1669,15 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
                 fail_on_missing_coverage=True,
             )
             self.assertFalse(ok_gap)
-            self.assertIn("SYSREQ-TST-002", report_gap["uncovered_sysreqs"])
+            self.assertIn("SYSREQ-TRK-002", report_gap["uncovered_sysreqs"])
             self.assertEqual(report_gap["coverage_pct"], 50.0)
 
-            # Now add coverage for SYSREQ-TST-002
+            # Now add coverage for SYSREQ-TRK-002
             with open(os.path.join(req_dir, "req_test.md"), "a", encoding="utf-8") as f:
                 f.write(
-                    "\n### REQ-TST-002: Export Engine [Verified]\n"
-                    "- **System Requirement**: `SYSREQ-TST-002`\n"
-                    "- **Tests**: `TST-TST-001`\n"
+                    "\n### REQ-TRK-002: Export Engine [Verified]\n"
+                    "- **System Requirement**: `SYSREQ-TRK-002`\n"
+                    "- **Tests**: `TST-TRK-001`\n"
                 )
 
             ok_full, diag_full, report_full = verify_system_software_traceability(
@@ -2553,6 +2553,82 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
         """TST-PRO-101.5: Verify Hoechstmass mirror exposes parameterized triage_unbacked_verified_tsts."""
         from tools.hoechstmass.tools.verify_requirement_governance import triage_unbacked_verified_tsts as hm_triage
         self.assertTrue(callable(hm_triage))
+
+    def test_scenario_66_tst_pro_102_1_sysreq_boundary_no_false_positive(self):
+        """TST-PRO-102.1: SYSREQ-DEX-001 must NOT false-match as REQ-DEX-001 in traceability or test index."""
+        from verify_requirement_governance import _collect_test_file_index
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            sys_dir = os.path.join(tmpdir, "docs", "system")
+            req_dir = os.path.join(tmpdir, "docs", "requirements")
+            os.makedirs(sys_dir)
+            os.makedirs(req_dir)
+
+            with open(os.path.join(sys_dir, "sysreq_data.md"), "w", encoding="utf-8") as f:
+                f.write(
+                    "### SYSREQ-DEX-001: Export\n"
+                    "| `SYSREQ-DEX-001` | Export | No standalone SWE REQ here |\n"
+                )
+            with open(os.path.join(req_dir, "req_data.md"), "w", encoding="utf-8") as f:
+                f.write("### REQ-DAT-001: Data Storage [Verified]\n- **Tests**: `TST-DAT-001`\n")
+
+            ok, _, report = verify_system_software_traceability(
+                repo_root=tmpdir,
+                fail_on_missing_coverage=False,
+            )
+            self.assertTrue(ok)
+            self.assertEqual(report["sys_to_swe_map"]["SYSREQ-DEX-001"], [])
+            self.assertEqual(report["covered_count"], 0)
+            self.assertEqual(report["swe_refinement_covered_count"], 0)
+
+            _, req_in_tests = _collect_test_file_index(
+                tmpdir,
+                test_sources={"app/src/test/SysOnlyTest.kt": "// Verifies SYSREQ-DEX-001 and REQ-DAT-001"},
+            )
+            self.assertNotIn("REQ-DEX-001", req_in_tests)
+            self.assertIn("REQ-DAT-001", req_in_tests)
+
+    def test_scenario_67_tst_pro_102_2_derived_prefix_exclusion(self):
+        """TST-PRO-102.2: Process/derived REQs (REQ-PRO-*) must be excluded from sys_to_swe refinements."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            sys_dir = os.path.join(tmpdir, "docs", "system")
+            req_dir = os.path.join(tmpdir, "docs", "requirements")
+            os.makedirs(sys_dir)
+            os.makedirs(req_dir)
+
+            with open(os.path.join(sys_dir, "sysreq_trk.md"), "w", encoding="utf-8") as f:
+                f.write(
+                    "### SYSREQ-TRK-001: Tracking\n"
+                    "| `SYSREQ-TRK-001` | Tracking | `REQ-PRO-054`, `REQ-TRK-001` |\n"
+                )
+            with open(os.path.join(req_dir, "req_pro.md"), "w", encoding="utf-8") as f:
+                f.write("### REQ-PRO-054: Governance [Verified]\n- References `SYSREQ-TRK-001`\n")
+            with open(os.path.join(req_dir, "req_trk.md"), "w", encoding="utf-8") as f:
+                f.write(
+                    "### REQ-TRK-001: Live Tracking [Verified]\n- References `SYSREQ-TRK-001`\n"
+                    "### REQ-TRK-002: Unlinked Tracking [Verified]\n"
+                )
+
+            ok, _, report = verify_system_software_traceability(repo_root=tmpdir)
+            self.assertTrue(ok)
+            self.assertEqual(report["sys_to_swe_map"]["SYSREQ-TRK-001"], ["REQ-TRK-001"])
+            self.assertNotIn("REQ-PRO-054", report["swe_to_sys_map"])
+            self.assertEqual(report["swe_refinement_total_count"], 2)
+            self.assertEqual(report["swe_refinement_covered_count"], 1)
+            self.assertEqual(report["swe_refinement_coverage_pct"], 50.0)
+
+    def test_scenario_68_tst_pro_102_3_bidirectional_sys_coverage_live_repo(self):
+        """TST-PRO-102.3: Live repository reports authentic bidirectional SYS/SWE coverage without bogus IDs."""
+        ok, diag, report = verify_system_software_traceability()
+        self.assertTrue(ok, f"Expected live --verify-sys-trace pass, got: {diag}")
+        self.assertEqual(report["covered_count"], 12)
+        self.assertEqual(report["sysreq_count"], 12)
+        all_mapped_reqs = {r for reqs in report["sys_to_swe_map"].values() for r in reqs}
+        self.assertFalse(any(r.startswith("REQ-DEX-") for r in all_mapped_reqs))
+        self.assertFalse(any(r.startswith("REQ-PRO-") for r in all_mapped_reqs))
+        self.assertEqual(report["swe_refinement_total_count"], 355)
+        self.assertEqual(report["swe_refinement_covered_count"], 49)
+        self.assertAlmostEqual(report["swe_refinement_coverage_pct"], 13.8, places=2)
 
 
 
