@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.ui.settings.supporter
 
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.monetization.GarageLeague
 import com.atrainingtracker.trainingtracker.monetization.SupporterBasePlan
 import com.atrainingtracker.trainingtracker.monetization.SupporterTier
 import org.junit.Assert.assertEquals
@@ -33,6 +34,7 @@ import java.util.regex.Pattern
  * Architectural and contract verification suite for Supporter tier visual hierarchy,
  * lower tier de-emphasis, and recommendation badge gating (REQ-UI-501, TST-UI-501 / ATT-6286).
  */
+// Linked test specs: TST-UI-504, TST-SET-117
 class SupporterPlanCardHierarchyTest {
 
     private val supportedLocales = listOf("", "de", "es", "fr", "it", "ja", "nl", "pl", "pt")
@@ -164,5 +166,53 @@ class SupporterPlanCardHierarchyTest {
         assertNotNull("SupporterComponentsKt must exist", compClass)
         val planCardMethod = compClass.declaredMethods.find { it.name.startsWith("SupporterPlanCard") }
         assertNotNull("SupporterPlanCard composable must exist", planCardMethod)
+    }
+
+    @Test
+    fun testSupporterBasePlanSkusAndPersonaSubtitlesPreserved() {
+        // TST-SET-117.4
+        val plans = SupporterBasePlan.PLANS
+        assertEquals(5, plans.size)
+        assertEquals(
+            listOf("bronze-monthly", "bronze-yearly", "silver-yearly", "gold-yearly", "diamond-yearly"),
+            plans.map { it.basePlanId }
+        )
+        assertEquals(
+            listOf("1 €", "10 €", "25 €", "50 €", "100 €"),
+            plans.map { it.priceFormatted }
+        )
+        assertEquals(R.string.supporter_plan_subtitle_bronze_monthly, plans[0].subtitleRes())
+        assertEquals(R.string.supporter_plan_subtitle_bronze_yearly, plans[1].subtitleRes())
+        assertEquals(R.string.supporter_plan_subtitle_silver_yearly, plans[2].subtitleRes())
+        assertEquals(R.string.supporter_plan_subtitle_gold_yearly, plans[3].subtitleRes())
+        assertEquals(R.string.supporter_plan_subtitle_diamond_yearly, plans[4].subtitleRes())
+    }
+
+    @Test
+    fun testGarageMatchBadgeEligibilityAcrossTiersAndLeagues() {
+        // TST-SET-117.4
+        val goldYearly = SupporterBasePlan.PLANS.first { it.basePlanId == "gold-yearly" }
+        val diamondYearly = SupporterBasePlan.PLANS.first { it.basePlanId == "diamond-yearly" }
+        val silverYearly = SupporterBasePlan.PLANS.first { it.basePlanId == "silver-yearly" }
+
+        // Gold qualification highlights Gold only when effectiveTier < GOLD
+        assertTrue(isGarageMatchForPlan(goldYearly, GarageLeague.GOLD, SupporterTier.FREE))
+        assertTrue(isGarageMatchForPlan(goldYearly, GarageLeague.GOLD, SupporterTier.BRONZE))
+        assertTrue(isGarageMatchForPlan(goldYearly, GarageLeague.GOLD, SupporterTier.SILVER))
+        assertFalse(isGarageMatchForPlan(goldYearly, GarageLeague.GOLD, SupporterTier.GOLD))
+        assertFalse(isGarageMatchForPlan(goldYearly, GarageLeague.GOLD, SupporterTier.DIAMOND))
+        assertFalse(isGarageMatchForPlan(silverYearly, GarageLeague.GOLD, SupporterTier.FREE))
+        assertFalse(isGarageMatchForPlan(diamondYearly, GarageLeague.GOLD, SupporterTier.FREE))
+
+        // Diamond qualification highlights Diamond only when effectiveTier < DIAMOND
+        assertTrue(isGarageMatchForPlan(diamondYearly, GarageLeague.DIAMOND, SupporterTier.FREE))
+        assertTrue(isGarageMatchForPlan(diamondYearly, GarageLeague.DIAMOND, SupporterTier.GOLD))
+        assertFalse(isGarageMatchForPlan(diamondYearly, GarageLeague.DIAMOND, SupporterTier.DIAMOND))
+        assertFalse(isGarageMatchForPlan(goldYearly, GarageLeague.DIAMOND, SupporterTier.FREE))
+
+        // NONE qualification never highlights any plan
+        SupporterBasePlan.PLANS.forEach { plan ->
+            assertFalse(isGarageMatchForPlan(plan, GarageLeague.NONE, SupporterTier.FREE))
+        }
     }
 }

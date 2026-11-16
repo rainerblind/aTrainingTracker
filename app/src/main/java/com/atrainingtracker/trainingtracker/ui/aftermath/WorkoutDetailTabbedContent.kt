@@ -144,6 +144,7 @@ fun WorkoutDetailTabbedContent(
     onLapClick: ((LapData) -> Unit)? = null,
     initialAutoShareSnapshot: Boolean = false,
     onSnapshotComplete: (() -> Unit)? = null,
+    multiSensorOverlays: Map<TelemetryMetricType, List<TelemetrySourceSeries>> = emptyMap(),
     modifier: Modifier = Modifier
 ) {
     val visibleTabs = remember(tabs, availability, detailPreferences) {
@@ -383,6 +384,7 @@ fun WorkoutDetailTabbedContent(
                             header = snapshotHeader,
                             externalSnapshotTrigger = (pageIndex == mapTabIndex) && triggerMapSnapshot,
                             onSnapshotComplete = { handleSnapshotComplete() },
+                            multiSensorOverlays = multiSensorOverlays,
                             mapContent = mapContent,
                             overlay = mapOverlay,
                             topEndActions = mapTopEndActions,
@@ -478,6 +480,7 @@ fun WorkoutDetailTabbedContent(
                                 header = snapshotHeader,
                                 externalSnapshotTrigger = (pageIndex == mapTabIndex) && triggerMapSnapshot,
                                 onSnapshotComplete = { handleSnapshotComplete() },
+                                multiSensorOverlays = multiSensorOverlays,
                                 metadataContent = null,
                                 analyticsContent = if (nonMapNonGraphSections.isNotEmpty()) {
                                     {

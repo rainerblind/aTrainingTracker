@@ -3,11 +3,11 @@
 **Domain**: `aftermath_periods`  
 **Prefixes**: `PER`, `PERF`, `RAD`, `SPT`  
 **Scope**: Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers.  
-**Total Requirements**: 41
+**Total Requirements**: 58
 
 ---
 
-### REQ-PER-007: Reactive Period-Workout Association [Verified]
+### REQ-PER-007: Reactive Period-Workout Association [Implemented]
 - **Tests**: `TST-PERF-008`
 - **Priority**: Medium
 - **Type**: Functional
@@ -15,7 +15,7 @@
 - **Implementation**: `PeriodsViewModel.kt`, `PeriodsRepository.kt`
 - **Rationale**: The system SHALL ensure that all workouts belonging to a specific period are correctly and reactively associated when viewing period details (Map or List). The visualization SHALL automatically update as workout data is loaded or modified in the background, ensuring no sessions are omitted due to partial loading states.
 
-### REQ-PER-008: Precise Period Filtering [Verified]
+### REQ-PER-008: Precise Period Filtering [Implemented]
 - **Tests**: `TST-PER-009`
 - **Priority**: Medium
 - **Type**: Functional
@@ -23,7 +23,7 @@
 - **Implementation**: `PeriodsFragment.kt`, `WorkoutSummariesViewModel.kt`
 - **Rationale**: The system SHALL correctly filter the workout list when navigating from a period summary highlight (Base Sport or Sub-Sport). This filtering MUST respect both the temporal bounds of the period and the specific sport identity selected to ensure professional analytical depth.
 
-### REQ-PER-009: Detail Map Sport Filtering [Verified]
+### REQ-PER-009: Detail Map Sport Filtering [Implemented]
 - **Tests**: `TST-PER-012`
 - **Priority**: Medium
 - **Type**: Functional
@@ -90,7 +90,7 @@
 
 **Invariants**: SQLite schema for `PeriodSummaries.db` MUST NOT be altered; single-region periods MUST maintain 100% camera and visual parity; vector track limit ($\le 30$) and heatmap rendering per `REQ-PER-012` MUST NOT be regressed; all user-facing chip strings MUST maintain 9-language localization parity.
 
-### REQ-PER-001: The system SHALL load and display the detailed visualization (Heatmap and List) [Verified]
+### REQ-PER-001: The system SHALL load and display the detailed visualization (Heatmap and List) [Implemented]
 - **Tests**: `TST-PERF-002`, `TST-PERF-004`
 - **Priority**: High
 - **Type**: Functional
@@ -99,7 +99,7 @@
 - **Rationale**: Ensure a responsive and professional user experience when analyzing recurring routes.
 - **Description**: The system SHALL load and display the detailed visualization (Heatmap and List) of a Workout Cluster within 1 second for route families containing up to 50 sessions.
 
-### REQ-PER-002: The system SHALL ensure that only the map state (Heatmap, Tracks, and Markers) o [Verified]
+### REQ-PER-002: The system SHALL ensure that only the map state (Heatmap, Tracks, and Markers) o [Implemented]
 - **Tests**: `TST-BUG-001`
 - **Priority**: High
 - **Type**: Functional
@@ -108,7 +108,7 @@
 - **Rationale**: Guarantee data consistency and prevent visual artifacts during navigation.
 - **Description**: The system SHALL ensure that only the map state (Heatmap, Tracks, and Markers) of the most recently selected Workout Cluster is displayed, preventing race conditions during rapid navigation.
 
-### REQ-PER-003: The system SHALL display a detailed progress notification (Migration Status card [Verified]
+### REQ-PER-003: The system SHALL display a detailed progress notification (Migration Status card [Implemented]
 - **Tests**: `TST-PERF-003`
 - **Priority**: Medium
 - **Type**: Functional
@@ -117,7 +117,7 @@
 - **Rationale**: Provide immediate feedback and maintain visual consistency with other progressive loading screens (e.g. Periods).
 - **Description**: The system SHALL display a detailed progress notification (Migration Status card) during the initial loading and "self-healing" phase of Workout Clusters to inform the user about the background processing state.
 
-### REQ-PER-004: The hierarchical periods aggregation SHALL utilize a 'Dual-Phase' strategy: Phas [Verified]
+### REQ-PER-004: The hierarchical periods aggregation SHALL utilize a 'Dual-Phase' strategy: Phas [Implemented]
 - **Tests**: `TST-PERF-005`
 - **Priority**: High
 - **Type**: Functional
@@ -126,7 +126,7 @@
 - **Rationale**: Eliminate database lock contention and O(N^2) re-grouping overhead to ensure sub-second startup and true real-time visibility.
 - **Description**: The hierarchical periods aggregation SHALL utilize a 'Dual-Phase' strategy: Phase 1 (O(N)) for high-speed database reading and global grouping, and Phase 2 for bucketized commits and incremental UI pumping.
 
-### REQ-PER-005: The 'Migration Status' notification SHALL provide a descriptive high-level title [Verified]
+### REQ-PER-005: The 'Migration Status' notification SHALL provide a descriptive high-level title [Implemented]
 - **Tests**: `TST-PERF-006`
 - **Priority**: Low
 - **Type**: Functional
@@ -135,7 +135,7 @@
 - **Rationale**: Enhance user transparency and professional feedback during complex background operations.
 - **Description**: The 'Migration Status' notification SHALL provide a descriptive high-level title (Introducing relational database) and explicitly label Phase 1 (Reading) and Phase 2 (Syncing) to provide clear technical context.
 
-### REQ-PER-006: The system SHALL display a detailed, multi-phase progress notification during th [Verified]
+### REQ-PER-006: The system SHALL display a detailed, multi-phase progress notification during th [Implemented]
 - **Tests**: `TST-PERF-007`, `TST-PERF-009`, `TST-PERF-010`
 - **Priority**: Medium
 - **Type**: Functional
@@ -1131,6 +1131,7 @@
 
 ### REQ-RAD-005: Workout Traffic Persistence, Session Totals & Aftermath Summary Card [Verified]
 - **Tests**: `TST-RAD-005`
+- **System Requirement(s)**: `SYSREQ-TRK-006`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit, Integration
@@ -1374,6 +1375,21 @@
 
 ---
 
+### REQ-SPT-001: The Trophy Vault & Sporting Journey Entry & Architecture [Implemented]
+- **Tests**: `TST-SPT-005`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit / Integration
+- **Implementation**: `SportingJourneySheet.kt`, `SportingJourneyViewModel.kt`, `TrackingTabsScreen.kt`, `SupporterScreen.kt`
+- **Rationale**: Provide entry points and modal bottom sheet hosting for "The Trophy Vault — My Sporting Journey" across tracking tabs, supporter screen, and aftermath navigation (ATT-7022, ATT-7321).
+- **Description**: The system SHALL provide a modal bottom sheet entry point for "The Trophy Vault — My Sporting Journey" accessible from `TrackingTabsScreen` and `SupporterScreen`, managing immutable state aggregation and filter transitions.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* the athlete opens tracking tabs or supporter screen,
+  • *When* tapping the Sporting Journey entry card or action,
+  • *Then* the full-height modal bottom sheet opens with current aggregate state.
+
+---
+
 ### REQ-SPT-002: Retrospective Filtering, Cluster Aggregation & Lifetime Engine [Verified]
 - **Tests**: `TST-SPT-005`
 - **Priority**: High
@@ -1411,6 +1427,37 @@
 • *Then* `availableYears` renders all historical years, and `Pioneer Athlete` remains unlocked based on the global 2012 inception date.
 
 **Invariants**: Zero SQLite schema migration; exact distance, elevation, and time math preserved; 100% 9-language localization parity.
+
+
+---
+
+### REQ-SPT-003: Hidden Gems, Signature Milestones & Achievement Room Telemetry [Implemented]
+- **Tests**: `TST-SPT-005`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `SportingJourneyModels.kt`, `SportingJourneyComponents.kt`, `SportingJourneyCalculator.kt`
+- **Rationale**: Retrospective discovery in "The Trophy Vault" must surface biological and mechanical Hidden Gems, signature single-workout milestones, and achievement room trophies from offline telemetry (ATT-7022, ATT-7321).
+- **Description**: The system SHALL evaluate biological and mechanical Hidden Gems (Pillar 2), signature workout milestones (Pillar 3), and unlocked achievement room trophies (Pillar 4) from SQLite telemetry data, formatting metrics cleanly across All-Time and Annual Wrapped horizons.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* historical telemetry in SQLite,
+  • *When* the Trophy Vault is rendered,
+  • *Then* Hidden Gems, Signature Milestones, and Achievement Room trophies are computed and displayed without cloud dependencies.
+
+---
+
+### REQ-SPT-004: Athlete Passport Card & Native Social Sharing [Implemented]
+- **Tests**: `TST-SPT-006`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `SportingJourneyShareHelper.kt`, `SportingJourneyComponents.kt`
+- **Rationale**: Athletes need shareable social summary cards of their sporting retrospective without third-party cloud analytics dependencies (ATT-7022, ATT-7323).
+- **Description**: `SportingJourneyShareHelper` SHALL format and dispatch the shareable Athlete Passport card via Android `Intent.ACTION_SEND`, incorporating annual summary stats, route highlights, and trophy counts.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* generated sporting journey summary metrics,
+  • *When* the user taps share on Athlete Passport,
+  • *Then* `Intent.ACTION_SEND` is dispatched with formatted text and statistics.
 
 
 ---
@@ -1453,3 +1500,200 @@
 • *Then* numbers display comma decimal separators, distance is converted to miles (`mi`), and elevation is converted to feet (`ft`).
 
 **Invariants**: Zero SQLite schema migration; exact distance, elevation, and time math preserved; 100% 9-language localization parity.
+
+---
+
+### REQ-WKO-035: Workout RPE & Feel Database Schema, Persistence & Default Configuration [Implemented]
+- **Tests**: `TST-WKO-035`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Target**: `WorkoutSummariesDatabaseManager.java`, `WorkoutSummariesDbHelper.kt`, `WorkoutDataMapper.kt`
+- **Implementation**: `WorkoutSummariesDatabaseManager.java`, `WorkoutSummariesDbHelper.kt`, `WorkoutDataMapper.kt`
+- **Rationale**: Enable subjective exertion (RPE 1..10) and feel (1..5) tracking in workout summaries database with symmetric migration and mapping parity (ATT-6879).
+- **Description**: `WorkoutSummariesDbHelper` SHALL support `DB_VERSION = 31` with nullable `rpe` (`INTEGER`, `1..10`) and `feel` (`INTEGER`, `1..5`) columns, ensuring `onCreate` and `onUpgrade` parity and symmetric mapping in `WorkoutData` and `WorkoutDataMapper`.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* database creation or migration,
+  • *When* upgrading to or creating DB version 31,
+  • *Then* `rpe` and `feel` nullable columns exist with symmetric cursor mapping.
+
+---
+
+### REQ-WKO-036: RPE Borg CR10 Scale & Subjective Feel Anchors, Vector Icons & Emojis [Implemented]
+- **Tests**: `TST-WKO-036`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Target**: `EditWorkoutScreen.kt`, `WorkoutRpeFeelSection.kt`, `strings_rpe_feel.xml`
+- **Implementation**: `EditWorkoutScreen.kt`, `WorkoutRpeFeelSection.kt`, `strings_rpe_feel.xml`
+- **Rationale**: Provide intuitive Borg CR10 verbal anchors and Material 3 vector sentiment icons with emoji fallbacks across all 9 supported locales (ATT-6879, ATT-7320).
+- **Description**: The system SHALL provide localized Borg CR10 scale anchors (1..10) and subjective feel ratings (1..5) mapped to Material 3 sentiment vector icons and emojis, exposing interactive controls in `EditWorkoutScreen` and section preferences defaulting to disabled.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* the RPE & Feel UI editor,
+  • *When* the user views anchors and icons across scales,
+  • *Then* Borg 1..10 anchors and Feel 1..5 sentiment icons are rendered accurately.
+
+---
+
+### REQ-WKO-037: Reorderable Section Hierarchy, Section Slotting & Overview Tab Slotting [Implemented]
+- **Tests**: `TST-WKO-037`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Target**: `WorkoutRpeFeelSection.kt`, `WorkoutSectionType.kt`, `WorkoutDetailTabConfig.kt`
+- **Implementation**: `WorkoutRpeFeelSection.kt`, `WorkoutSectionType.kt`, `WorkoutDetailTabConfig.kt`
+- **Rationale**: Support customizable aftermath layout slotting with RPE & Feel positioned above Description or at index 0 of Overview tab (ATT-6879, ATT-7320).
+- **Description**: `WorkoutSectionType` and `WorkoutDetailSectionType` SHALL declare `RPE_AND_FEEL` at `index 0` in `DEFAULT_ORDER` and `WorkoutDetailTabConfig.DEFAULT_TABS` Overview preset, rendering above the workout description.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* default workout detail tab configurations,
+  • *When* opening the Overview tab,
+  • *Then* `RPE_AND_FEEL` occupies slot 0.
+
+---
+
+### REQ-WKO-038: Foster Session-RPE Training Load Score Calculation [Implemented]
+- **Tests**: `TST-WKO-038`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Target**: `PowerPhysiologyCalculator.kt`, `WorkoutRpeFeelSection.kt`
+- **Implementation**: `PowerPhysiologyCalculator.kt`, `WorkoutRpeFeelSection.kt`
+- **Rationale**: Compute validated Foster Session-RPE training load ($sRPE = \text{RPE} \times \text{duration\_minutes}$) for subjective exertion quantification (ATT-6879).
+- **Description**: `PowerPhysiologyCalculator.calculateSessionRpe()` SHALL compute Foster Session-RPE training load score as $sRPE = \text{RPE} \times (\text{activeTimeSeconds} / 60.0)$ for valid RPE scores (`1..10`) and positive duration, returning `0.0` for out-of-range or non-positive values.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* valid RPE and active time duration,
+  • *When* `calculateSessionRpe()` is called,
+  • *Then* it returns the exact mathematical product $RPE \times (duration\_sec / 60.0)$.
+
+---
+
+### REQ-WKO-039: Performance Management Chart (PMC) Tier 4 Training Load Fallback via Session-RPE [Implemented]
+- **Tests**: `TST-WKO-039`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Target**: `PowerPhysiologyCalculator.kt`, `FitFileWriter.kt`
+- **Implementation**: `PowerPhysiologyCalculator.kt`, `FitFileWriter.kt`
+- **Rationale**: Provide Tier 4 training load resolution in PMC when power TSS and hrTSS telemetry are unavailable, plus FIT protocol field round-trip (ATT-6879, ATT-8196).
+- **Description**: `PowerPhysiologyCalculator.resolveWorkoutTrainingLoad()` SHALL fall back to Session-RPE load (Tier 4) when neither power nor heart rate metrics are present, and `FitFileWriter` SHALL serialize subjective feel and RPE metadata.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* a workout sample with RPE but lacking power and HR metrics,
+  • *When* resolving workout training load,
+  • *Then* Tier 4 Session-RPE score is resolved.
+
+---
+
+### REQ-HRV-038: Morning Sleep & Wellness Settings Progressive Disclosure [Implemented]
+- **Tests**: `TST-HRV-038`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Target**: `TuningPreferencesDataStore.kt`, `PhysiologyModelsSection.kt`, `MorningCheckSection.kt`
+- **Implementation**: `TuningPreferencesDataStore.kt`, `PhysiologyModelsSection.kt`, `MorningCheckSection.kt`
+- **Rationale**: Configurable progressive disclosure in Advanced Settings for subjective sleep and morning wellness tracking (ATT-7034).
+- **Description**: `SettingsDataStore.kt` and `PhysiologyModelsSection.kt` SHALL provide master toggle `enableMorningSleepAndWellness: Boolean` (default `false`) with subordinate controls for sleep duration, quality, energy, soreness, and context tags.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* default app installation,
+  • *When* inspecting Advanced Settings,
+  • *Then* `enableMorningSleepAndWellness` is disabled by default.
+
+---
+
+### REQ-HRV-039: Morning Readiness SQLite Schema Evolution & Parity [Implemented]
+- **Tests**: `TST-HRV-039`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Target**: `HrvReadinessDbHelper.kt`, `HrvReadinessDatabaseManager.kt`, `HrvReadinessEntry.kt`
+- **Implementation**: `HrvReadinessDbHelper.kt`, `HrvReadinessDatabaseManager.kt`, `HrvReadinessEntry.kt`
+- **Rationale**: Support standalone subjective wellness entries alongside autonomic HRV measurements with database migration parity (ATT-7034).
+- **Description**: `HrvReadinessDbHelper` SHALL support `DB_VERSION = 2` allowing HRV metrics to be nullable for standalone wellness entries and adding nullable columns `sleep_duration_min`, `sleep_quality_1_5`, `morning_energy_1_5`, `muscle_soreness_1_5`, and `context_tags` with `onCreate`/`onUpgrade` parity.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* database creation or upgrade from V1,
+  • *When* migrating to `DB_VERSION = 2`,
+  • *Then* schema contains all 5 nullable wellness columns with 100% parity.
+
+---
+
+### REQ-HRV-040: Standalone No-Strap Morning Wellness Logging [Implemented]
+- **Tests**: `TST-HRV-040`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Target**: `MorningHrvCheckScreen.kt`, `MorningHrvCheckViewModel.kt`
+- **Implementation**: `MorningHrvCheckScreen.kt`, `MorningHrvCheckViewModel.kt`
+- **Rationale**: Allow athletes to log morning sleep and wellness markers on non-strap days or without an HR chest strap (ATT-7034).
+- **Description**: When enabled, `MorningHrvCheckScreen.kt` SHALL permit entering Sleep Duration/Quality and Morning Energy and saving directly without connecting an HR sensor, storing standalone entries with null HRV metrics without corrupting baseline SWC corridors.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* morning check screen with no HR sensor connected,
+  • *When* saving morning wellness,
+  • *Then* record is saved with null HRV metrics.
+
+---
+
+### REQ-HRV-041: In-Measurement Combined Morning HRV & Wellness Logging [Implemented]
+- **Tests**: `TST-HRV-041`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Target**: `MorningHrvCheckScreen.kt`, `MorningHrvCheckViewModel.kt`
+- **Implementation**: `MorningHrvCheckScreen.kt`, `MorningHrvCheckViewModel.kt`
+- **Rationale**: Allow interactive wellness input during the 60s/120s countdown timer and combine with objective HRV metrics upon save (ATT-7034).
+- **Description**: When enabled, subjective wellness inputs SHALL remain interactive before, during, and after the countdown timer, persisting both objective HRV metrics and subjective wellness values into the same daily record upon measurement completion.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* an active HRV countdown measurement,
+  • *When* user inputs wellness ratings and measurement completes,
+  • *Then* saving persists both objective HRV metrics and subjective wellness into a single record.
+
+---
+
+### REQ-HRV-042: Health Connect Sleep Auto-Prefill & 9-Language Localization [Implemented]
+- **Tests**: `TST-HRV-042`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Target**: `HealthConnectManager.kt`, `strings_hrv.xml`
+- **Implementation**: `HealthConnectManager.kt`, `strings_hrv.xml`
+- **Rationale**: Seamlessly prefill sleep duration from Health Connect when permission is granted, with 100% 9-language localization parity (ATT-7034).
+- **Description**: `HealthConnectManager.kt` SHALL optionally prefill sleep duration from `SleepSessionRecord` within the last 24 hours if permission is granted, with all UI strings maintaining 100% parity across all 9 supported locales.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* Health Connect sleep permission granted,
+  • *When* opening morning check screen,
+  • *Then* sleep duration is pre-filled from the most recent sleep session.
+
+---
+
+### REQ-PER-042: Multi-Sensor Telemetry Chart Overlays & Session Mean Comparison for HR, Power, and Cadence (`ATT-8096`) [Verified]
+- **System Requirement(s)**: Derived (SW-only) — Post-workout multi-sensor telemetry overlay visualization and session mean comparison
+- **Tests**: `TST-PER-050`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Implementation**: `MapModels.kt`, `WorkoutRepository.kt`, `TrackOnMapAftermathViewModel.kt`, `TelemetryMetricGraph.kt`, `TelemetryMetricUtils.kt`, `TelemetryGraphColorPreferences.kt`, `MapDetailLayout.kt`, `WorkoutDetailTabbedContent.kt`, `res/values*/strings.xml`
+- **Rationale**: `TrackerService.java` already records source-qualified columns (`"HR (<deviceName>)"`, `"POWER (<deviceName>)"`, `"CADENCE (<deviceName>)"`) in `WorkoutSamples.db`, yet Workout Details charts only display canonical single-column streams (`HR`, `POWER`) and omit `CADENCE`, preventing athletes from visually comparing dual HR straps or pedal vs. smart-trainer power on-device (`ATT-8096`, Epic `ATT-68`).
+- **Description**:
+  1. *Strict Multi-Source Column Discovery & Dotted-Name Lookup (`REQ-PER-042.1`)*:
+     - `WorkoutRepository.kt` (`loadWorkoutDetailTelemetry` for GPS workouts and `getWorkoutTelemetryPoints` for trackless indoor workouts) SHALL discover source-qualified columns in `WorkoutSamples.db` strictly matching `"^${type.name} \\((.+)\\)$"` for `HR`, `POWER`, and `CADENCE` across `cursor.columnNames` (using `columnNames.indexOf(...)` so device names containing dots such as `"KICKR v5.0"` never fail `Cursor.getColumnIndex()`).
+     - Single-sensor workouts recording both canonical `ProxySensor` (`"HR"`) and `1` named column (`"HR (<device>)"`) MUST resolve to `1` named source and MUST NOT trigger multi-source overlay UI. Multi-source overlay UI SHALL activate strictly when `>= 2` distinct named source columns exist for that metric.
+  2. *`PathPoint.cadence` & `TelemetryMetricType.CADENCE` Support (`REQ-PER-042.2`)*:
+     - `PathPoint` (`MapModels.kt`) SHALL add nullable `cadence: Int? = null`, and `TelemetryMetricType` (`TelemetryMetricGraph.kt`) SHALL add `CADENCE` (wired across `TelemetryMetricUtils.kt`, `MapDetailLayout.kt`, and `WorkoutDetailTabbedContent.kt`).
+     - `TelemetryGraphColorPreferences` SHALL resolve `TelemetryMetricType.CADENCE` to the existing `telemetry_graph_color_SENSOR_CADENCE` preference key (`THEME_DEFAULT` default) without altering existing preference keys or defaults (`REQ-UI-530`).
+  3. *Progressive-Disclosure `Layers` Overlay, `Ø` Mean Comparison & Synchronized Scrubbing (`REQ-PER-042.3`)*:
+     - When `<= 1` named source exists for `HR`, `POWER`, or `CADENCE`, `TelemetryMetricGraph` SHALL display zero additional `Layers` toggles, selectors, or comparison legend rows.
+     - When `>= 2` named sources exist, `TelemetryMetricGraph` SHALL expose a compact `Layers` overlay toggle, render enabled secondary device curve(s) with distinct color/stroke styling, show a compact one-line session-mean comparison in the legend (e.g., `Ø %1$d bpm`, `Ø %1$d W`, `Ø %1$d rpm`), and update header/scrubbing readouts synchronously across both `DISTANCE` and `TIME` X-axis domains (GPS and trackless workouts) while strictly preserving `Rule 64` plot paddings (`50.dp`/`25.dp`/`24.dp`) and `Rule 48` axis labels.
+  4. *9-Locale Parity & Rule 8.5 Visual Compose Verification (`REQ-PER-042.4`)*:
+     - All new chart heading and multi-source overlay/mean strings (`graph_heading_cadence`, overlay toggle & mean labels) SHALL maintain 100% parity across all 9 locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`) with zero emojis (`ATT-5400`).
+     - Stage 4 SHALL render a Robolectric Compose PNG screenshot (`docs/engineering/walkthroughs/img/ATT-8096_multisensor_charts.png`, Light & Dark themes) verifying multi-source overlay curves, `Layers` toggle, `Ø` mean legend, and zero clutter on single-sensor cards (`Rule 8.5`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new `REQ-PER-042` extending `REQ-UI-206` (`TelemetryMetricGraph`), `REQ-UI-260` (trackless workouts), `REQ-DAT-033` (multi-sensor sample persistence), `REQ-UI-530` (`TelemetryGraphColorPreferences`), and `REQ-TRK-029` (multi-sensor columns).
+2. *Historical Origin & Commit Trace*: `TrackerService` multi-sensor SQLite persistence (`REQ-TRK-029`) + `TelemetryMetricGraph` (`ATT-1740`) + `TelemetryGraphColorPreferences` (`ATT-7759`).
+3. *Root Reason for Existing Formulation*: `TelemetryMetricGraph` queried only single canonical columns to keep mobile chart layouts clean and decoupled before multi-sensor source overlays were requested.
+4. *Preservation of Core Invariants*: Zero UI clutter on single-sensor (`<= 1` named source) workouts; `Rule 64` plot alignment (`50.dp`/`25.dp`/`24.dp` portrait, `0.72f` landscape) and `Rule 48` axis labels intact; `telemetry_graph_color_SENSOR_CADENCE` preference key preserved; `TrackerService.java` and `CSVFileWriter.java` untouched; zero `WorkoutSamples.db` schema bumps; backward-compatible `TelemetryMetricGraph` defaults for `WorkoutSummary.kt` and `HrvRampTestScreen.kt`.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a `WorkoutSamples.db` recording with `<= 1` named source column per metric (e.g., canonical `"HR"` + `"HR (Polar H10)"`), *When* opening Workout Details (`CHARTS`), *Then* no `Layers` overlay toggle or mean comparison legend renders on `HR`, `POWER`, or `CADENCE`.
+• *Given* a GPS or trackless workout containing `>= 2` named columns for `HR`, `POWER`, or `CADENCE` (including dotted device names such as `"POWER (KICKR v5.0)"`), *When* enabling the `Layers` overlay toggle, *Then* secondary device curve(s) render in distinct stroke/color together with a compact `Ø` mean comparison in the legend.
+• *Given* an active multi-sensor overlay on `HR`, `POWER`, or `CADENCE`, *When* scrubbing horizontally across `DISTANCE` or `TIME`, *Then* the vertical marker and header/readout display synchronized values for active overlaid sources in sync with all Workout Details charts.
+
+**Invariants**: `<= 1` named source shows zero overlay UI; `Rule 64` & `Rule 48` preserved; `telemetry_graph_color_SENSOR_CADENCE` reused; zero `WorkoutSamples.db` schema changes; zero emojis across 9 locales (`ATT-5400`).

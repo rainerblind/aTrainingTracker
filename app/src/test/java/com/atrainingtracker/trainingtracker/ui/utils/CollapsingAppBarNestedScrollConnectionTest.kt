@@ -29,6 +29,7 @@ import org.junit.Test
  * non-blocking nested scroll dispatch, sub-pixel float precision accumulation,
  * and deferred downward expansion (REQ-UI-254 / TST-UI-213 / ATT-2178).
  */
+// Linked test specs: TST-UI-225
 class CollapsingAppBarNestedScrollConnectionTest {
 
     private lateinit var connection: CollapsingAppBarNestedScrollConnection

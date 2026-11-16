@@ -7,19 +7,19 @@
 
 ---
 
-### TST-NAV-001: **Navigation** [Verified]
+### TST-NAV-001: **Navigation** [Implemented]
 - **Requirement(s)**: `REQ-SET-050`
 - **Component**: **Navigation**
 - **Jira**: ``ATT-239``
 - **Test Description**: 1. Open the navigation drawer and verify the new sections (Training, Spatial, My Equipment, Ecosystem, System). 2. Verify 'Sport Types' and 'Training Zones' are in 'My Equipment'. 3. Verify individual items for 'Strava' and 'Dropbox' are in 'Ecosystem'. 4. Open 'Preferences' and verify moved items are no longer present.
 
-### TST-NAV-002: **Navigation** [Verified]
+### TST-NAV-002: **Navigation** [Implemented]
 - **Requirement(s)**: `REQ-UI-112`
 - **Component**: **Navigation**
 - **Jira**: ``ATT-249``
 - **Test Description**: 1. Open the navigation drawer. 2. Verify section "Equipment" (EN) / "Ausrüstung" (DE). 3. Verify section "Synchronization" (EN) / "Synchronisation" (DE). 4. Verify item "Dateiexport" (DE).
 
-### TST-NAV-003: **Direct Config Navigation** [Verified]
+### TST-NAV-003: **Direct Config Navigation** [Implemented]
 - **Requirement(s)**: `REQ-SET-051`
 - **Component**: **Direct Config Navigation**
 - **Jira**: ``ATT-258``
@@ -40,13 +40,13 @@
   5. Toggle "force portrait" to OFF and dismiss dialog. Verify `MainActivityWithNavigation` dynamically clears orientation lock (`SCREEN_ORIENTATION_UNSPECIFIED`) and clears `FLAG_SHOW_WHEN_LOCKED`.
   6. Run automated regression suite `./gradlew testDebugUnitTest` including `DisplaySettingsTest`.
 
-### TST-NAV-005: **Direct Units Settings Dialog** [Verified]
+### TST-NAV-005: **Direct Units Settings Dialog** [Implemented]
 - **Requirement(s)**: `REQ-SET-053`
 - **Component**: **Direct Units Settings Dialog**
 - **Jira**: ``ATT-262``
 - **Test Description**: 1. Open Navigation Drawer -> Settings. 2. Tap 'Units'.
 
-### TST-NAV-006: **Direct Export Settings Dialog** [Verified]
+### TST-NAV-006: **Direct Export Settings Dialog** [Implemented]
 - **Requirement(s)**: `REQ-SET-054`
 - **Component**: **Direct Export Settings Dialog**
 - **Jira**: ``ATT-264``
@@ -95,13 +95,13 @@
   • Rotate device during active sensor telemetry and verify zero disconnect/rebind storms.
   • Test interrupted workout recovery notification intent launch.
 
-### TST-MAP-010: **Zoom-Adaptive Heatmap Styling** [Verified]
+### TST-MAP-010: **Zoom-Adaptive Heatmap Styling** [Implemented]
 - **Requirement(s)**: `REQ-MAP-016`
 - **Component**: **Zoom-Adaptive Heatmap Styling**
 - **Jira**: ``ATT-437``
 - **Test Description**: 1. Open a Workout Cluster heatmap. 2. Zoom out to level 11/12. 3. Observe line width and marker pins. 4. Zoom in to level 17+.
 
-### TST-MAP-020: **Detailed Map View Heatmap Visibility** [Verified]
+### TST-MAP-020: **Detailed Map View Heatmap Visibility** [Implemented]
 - **Requirement(s)**: `REQ-MAP-018`
 - **Component**: **Detailed Map View Heatmap Visibility**
 - **Jira**: ``ATT-538``
@@ -318,7 +318,7 @@
   6. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% pass rate with zero regressions.
 
-### TST-MAP-032: **[SUPERSEDED / REMOVED by ATT-2463 / TST-MAP-037] Corridor-Based Route Grouping & Differentiating Thumbnail Zoom Verification** [Verified]
+### TST-MAP-032: **[SUPERSEDED / REMOVED by ATT-2463 / TST-MAP-037] Corridor-Based Route Grouping & Differentiating Thumbnail Zoom Verification** [Implemented]
 - **Requirement(s)**: `REQ-MAP-030`
 - **Component**: **[SUPERSEDED / REMOVED by ATT-2463 / TST-MAP-037] Corridor-Based Route Grouping & Differentiating Thumbnail Zoom Verification**
 - **Jira**: ``ATT-1954``

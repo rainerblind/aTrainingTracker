@@ -21,6 +21,7 @@ import org.junit.Test
  * Unit tests verifying viewport mathematics, coordinate conversions, centroid anchoring,
  * and boundary clamping for [ElevationProfileZoomMath] (TST-UI-146).
  */
+// Linked test specs: TST-UI-186
 class ElevationProfileZoomMathTest {
 
     private val totalDist = 20_000.0 // 20km

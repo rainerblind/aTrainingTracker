@@ -38,6 +38,7 @@ import org.junit.Test
 /**
  * Unit tests verifying RouteAutoDetector behavior (REQ-MAP-024 / TST-MAP-026 / ATT-1835).
  */
+// Linked test specs: TST-MAP-057, TST-UI-249
 class RouteAutoDetectorTest {
 
     private lateinit var detector: RouteAutoDetector

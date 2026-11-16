@@ -36,6 +36,7 @@ import org.junit.Test
  * Unit and contract tests for cursor-to-entity mapping in [WorkoutClusterDatabaseManager]
  * and [WorkoutClusterRepository] enforcing Rule 20, Rule 36, REQ-DAT-025, and TST-DAT-020.
  */
+// Linked test specs: TST-DAT-040
 class WorkoutClusterMapperTest {
 
     private lateinit var mockContext: Context

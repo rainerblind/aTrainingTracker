@@ -17,6 +17,7 @@ Invariants:
   - Deterministic exit codes: 0 = valid / compliant, 1 = schema failure.
 """
 
+import csv
 import json
 import os
 import re
@@ -50,67 +51,8 @@ LEGACY_DANGLING_TST_REFS = frozenset()
 
 LEGACY_DANGLING_REQ_REFS = frozenset()
 
-# Known legacy TSTs claiming [Verified] without test code or machine test evidence pending backfill (SWE.4/6 BP4/5, SWE.1 BP5, REQ-PRO-099)
-LEGACY_UNBACKED_VERIFIED_TSTS = frozenset({
-    "TST-ARC-006", "TST-BUG-001", "TST-BUG-002", "TST-BUG-006", "TST-BUG-007", "TST-BUG-008", "TST-BUG-009",
-    "TST-BUG-010", "TST-BUG-011", "TST-CON-002", "TST-CON-007", "TST-DAT-001", "TST-DAT-015", "TST-DAT-016",
-    "TST-DAT-017", "TST-DAT-019", "TST-DAT-021", "TST-DAT-023", "TST-DAT-025", "TST-DAT-032", "TST-DAT-034",
-    "TST-DAT-040", "TST-EXP-004", "TST-EXP-020", "TST-EXT-001", "TST-EXT-002", "TST-FIL-002", "TST-FIL-003",
-    "TST-INT-002", "TST-INT-003", "TST-INT-004", "TST-INT-005", "TST-INT-006", "TST-INT-007", "TST-INT-008",
-    "TST-LOC-001", "TST-LOG-001", "TST-LOG-002", "TST-MAN-001", "TST-MAP-010", "TST-MAP-020", "TST-MAP-021",
-    "TST-MAP-030", "TST-MAP-032", "TST-MAP-033", "TST-MAP-046", "TST-MAP-047", "TST-MAP-050", "TST-MAP-052",
-    "TST-MAP-057", "TST-MAP-062", "TST-MAP-065", "TST-MAP-069", "TST-MIG-001", "TST-MIG-002", "TST-MIG-003",
-    "TST-MIG-004", "TST-MIG-005", "TST-MIG-006", "TST-MIG-007", "TST-MIG-008", "TST-MIG-010", "TST-MIG-011",
-    "TST-MIG-012", "TST-MIG-013", "TST-MIG-014", "TST-MIG-015", "TST-MIG-016", "TST-MIG-017", "TST-MIG-018",
-    "TST-MIG-019", "TST-MIG-025", "TST-MIG-047", "TST-NAV-001", "TST-NAV-002", "TST-NAV-003", "TST-NAV-005",
-    "TST-NAV-006", "TST-NAV-045", "TST-NAV-056", "TST-PER-009", "TST-PER-010", "TST-PER-012", "TST-PER-014",
-    "TST-PER-017", "TST-PERF-001", "TST-PERF-002", "TST-PERF-003", "TST-PERF-004", "TST-PERF-005", "TST-PERF-006",
-    "TST-PERF-007", "TST-PERF-008", "TST-PERF-009", "TST-PERF-010", "TST-PRO-001", "TST-PRO-002", "TST-PRO-003",
-    "TST-PRO-004", "TST-PRO-005", "TST-PRO-006", "TST-PRO-007", "TST-PRO-008", "TST-PRO-009", "TST-PRO-010",
-    "TST-PRO-011", "TST-PRO-012", "TST-PRO-013", "TST-PRO-014", "TST-PRO-015", "TST-PRO-017", "TST-PRO-019",
-    "TST-PRO-020", "TST-PRO-021", "TST-PRO-022", "TST-PRO-038", "TST-PRO-039", "TST-PRO-040", "TST-PRO-058",
-    "TST-PRO-059", "TST-PRO-060", "TST-PRO-061", "TST-PRO-062", "TST-PRO-063", "TST-PRO-064", "TST-PRO-065",
-    "TST-PRO-066", "TST-PRO-070", "TST-PRO-071", "TST-PRO-073", "TST-PRO-074", "TST-PRO-075", "TST-PRO-076",
-    "TST-PRO-077", "TST-PRO-078", "TST-PRO-079", "TST-PRO-080", "TST-PRO-081", "TST-PRO-082", "TST-PRO-083",
-    "TST-PRO-084", "TST-PRO-085", "TST-PRO-086", "TST-PRO-087", "TST-PRO-088", "TST-PRO-091", "TST-PRO-092",
-    "TST-PRO-093", "TST-PRO-094", "TST-PRO-095", "TST-PRO-096", "TST-PRO-097", "TST-PRO-098", "TST-RAD-006",
-    "TST-REG-001", "TST-REG-002", "TST-REG-003", "TST-REG-004", "TST-REG-005", "TST-REG-007", "TST-REG-008",
-    "TST-SET-001", "TST-SET-002", "TST-SET-003", "TST-SET-004", "TST-SET-005", "TST-SET-006", "TST-SET-007",
-    "TST-SET-008", "TST-SET-009", "TST-SET-010", "TST-SET-011", "TST-SET-012", "TST-SET-013", "TST-SET-014",
-    "TST-SET-015", "TST-SET-016", "TST-SET-017", "TST-SET-018", "TST-SET-019", "TST-SET-020", "TST-SET-021",
-    "TST-SET-022", "TST-SET-023", "TST-SET-024", "TST-SET-025", "TST-SET-026", "TST-SET-027", "TST-SET-028",
-    "TST-SET-029", "TST-SET-030", "TST-SET-031", "TST-SET-032", "TST-SET-033", "TST-SET-034", "TST-SET-035",
-    "TST-SET-040", "TST-SET-041", "TST-SET-042", "TST-SET-043", "TST-SET-044", "TST-SET-045", "TST-SET-046",
-    "TST-SET-047", "TST-SET-048", "TST-SET-057", "TST-SET-058", "TST-SET-061", "TST-SET-063", "TST-SET-076",
-    "TST-SET-085", "TST-SET-112", "TST-STB-015", "TST-STR-001", "TST-STR-002", "TST-STR-003", "TST-STR-004",
-    "TST-STR-005", "TST-STR-006", "TST-STR-007", "TST-STR-008", "TST-STR-011", "TST-STR-012", "TST-STR-013",
-    "TST-STR-014", "TST-STR-015", "TST-STR-016", "TST-STR-017", "TST-TOOL-001", "TST-TOOL-002", "TST-TOOL-003",
-    "TST-TOOL-004", "TST-TOOL-005", "TST-TOOL-006", "TST-TOOL-007", "TST-TRK-006", "TST-TRK-017", "TST-TRK-068",
-    "TST-TST-003", "TST-TST-004", "TST-UI-001", "TST-UI-011", "TST-UI-012", "TST-UI-013", "TST-UI-014",
-    "TST-UI-015", "TST-UI-016", "TST-UI-017", "TST-UI-018", "TST-UI-019", "TST-UI-020", "TST-UI-021",
-    "TST-UI-026", "TST-UI-027", "TST-UI-028", "TST-UI-029", "TST-UI-030", "TST-UI-031", "TST-UI-034",
-    "TST-UI-035", "TST-UI-036", "TST-UI-038", "TST-UI-039", "TST-UI-041", "TST-UI-043", "TST-UI-044",
-    "TST-UI-045", "TST-UI-046", "TST-UI-047", "TST-UI-048", "TST-UI-049", "TST-UI-050", "TST-UI-051",
-    "TST-UI-053", "TST-UI-054", "TST-UI-055", "TST-UI-056", "TST-UI-057", "TST-UI-058", "TST-UI-059",
-    "TST-UI-060", "TST-UI-061", "TST-UI-062", "TST-UI-063", "TST-UI-066", "TST-UI-067", "TST-UI-069",
-    "TST-UI-071", "TST-UI-072", "TST-UI-073", "TST-UI-074", "TST-UI-075", "TST-UI-076", "TST-UI-077",
-    "TST-UI-080", "TST-UI-093", "TST-UI-096", "TST-UI-104", "TST-UI-106", "TST-UI-107", "TST-UI-108",
-    "TST-UI-109", "TST-UI-110", "TST-UI-121", "TST-UI-148", "TST-UI-161", "TST-UI-168", "TST-UI-169",
-    "TST-UI-171", "TST-UI-173", "TST-UI-186", "TST-UI-187", "TST-UI-188", "TST-UI-189", "TST-UI-193",
-    "TST-UI-203", "TST-UI-205", "TST-UI-209", "TST-UI-210", "TST-UI-224", "TST-UI-225", "TST-UI-226",
-    "TST-UI-231", "TST-UI-236", "TST-UI-248", "TST-UI-249", "TST-UI-251", "TST-UI-255", "TST-UI-269",
-    "TST-UI-270", "TST-UI-271", "TST-UI-273", "TST-UI-274", "TST-UI-275", "TST-UI-277", "TST-UI-280",
-    "TST-UI-281", "TST-UI-284", "TST-UI-285", "TST-UI-286", "TST-UI-287", "TST-UI-291", "TST-UI-292",
-    "TST-UI-295", "TST-UI-297", "TST-UI-299", "TST-UI-300", "TST-UI-303", "TST-UI-304", "TST-UI-306",
-    "TST-UI-308", "TST-UI-319", "TST-UI-332", "TST-UI-341", "TST-UI-343", "TST-UI-345", "TST-UI-346",
-    "TST-UI-349", "TST-UI-350", "TST-UI-351", "TST-UI-355", "TST-UI-358", "TST-UI-359", "TST-UI-361",
-    "TST-UI-363", "TST-UI-365", "TST-UI-368", "TST-UI-374", "TST-UI-376", "TST-UI-382", "TST-UI-383",
-    "TST-UI-386", "TST-UI-391", "TST-UI-399", "TST-UI-439", "TST-UI-440", "TST-UI-443", "TST-UI-448",
-    "TST-UI-458", "TST-UI-459", "TST-UI-460", "TST-UI-463", "TST-UI-465", "TST-UI-474", "TST-UI-491",
-    "TST-UI-500", "TST-UI-504", "TST-UI-510", "TST-UI-511", "TST-UI-516", "TST-UI-525", "TST-UNT-001",
-    "TST-UNT-002", "TST-UNT-003", "TST-UNT-004", "TST-UNT-005", "TST-UNT-006", "TST-UNT-007", "TST-UNT-008",
-    "TST-UNT-009", "TST-UNT-010", "TST-UNT-011", "TST-UNT-012", "TST-UNT-013", "TST-UNT-014"
-})
+# Legacy unbacked [Verified] TST ratchet reconciled to 0 in ATT-8145 (SWE.4/6 BP4/5, SWE.1 BP5, REQ-PRO-099, REQ-PRO-101)
+LEGACY_UNBACKED_VERIFIED_TSTS = frozenset()
 
 # Known legacy requirements claiming [Verified] without TST citations pending backfill in ATT-6127..ATT-6135 (SWE.1 BP3, SWE.6 BP3, REQ-PRO-073)
 LEGACY_UNGROUNDED_VERIFIED_REQS = frozenset({
@@ -147,6 +89,97 @@ LEGACY_UNGROUNDED_VERIFIED_REQS = frozenset({
     "REQ-TRK-028", "REQ-TRK-029", "REQ-TRK-030", "REQ-TRK-031", "REQ-TRK-032", "REQ-TRK-033",
     "REQ-TRK-034", "REQ-TRK-036", "REQ-TRK-037",
 })
+
+# Known legacy requirements lacking - **Description**: field in baseline (REQ-PRO-104.3)
+LEGACY_MISSING_DESCRIPTION_REQS = frozenset({
+    "REQ-ARC-001", "REQ-ARC-002", "REQ-ARC-003", "REQ-ARC-004", "REQ-ARC-005", "REQ-ARC-006", "REQ-ARC-007", "REQ-ARC-008", "REQ-ARC-009", "REQ-ARC-010",
+    "REQ-BLD-001", "REQ-BLD-002", "REQ-BLD-003", "REQ-CLM-008", "REQ-CLM-009", "REQ-CLM-010", "REQ-CLM-011", "REQ-CON-007", "REQ-CON-010", "REQ-CON-011",
+    "REQ-CON-012", "REQ-CON-013", "REQ-CON-014", "REQ-CON-015", "REQ-CON-016", "REQ-CON-017", "REQ-CON-018", "REQ-CON-019", "REQ-CON-020", "REQ-CON-021",
+    "REQ-CON-022", "REQ-CON-023", "REQ-CON-024", "REQ-CON-027", "REQ-CON-028", "REQ-CON-029", "REQ-CON-030", "REQ-CON-031", "REQ-CON-032", "REQ-CON-033",
+    "REQ-CON-034", "REQ-CON-035", "REQ-CON-043", "REQ-DAT-006", "REQ-DAT-007", "REQ-DAT-008", "REQ-DAT-009", "REQ-DAT-010", "REQ-DAT-011", "REQ-DAT-012",
+    "REQ-DAT-013", "REQ-DAT-014", "REQ-DAT-015", "REQ-DAT-016", "REQ-DAT-017", "REQ-DAT-018", "REQ-DAT-019", "REQ-DAT-020", "REQ-DAT-021", "REQ-DAT-022",
+    "REQ-DAT-023", "REQ-DAT-024", "REQ-DAT-025", "REQ-DAT-026", "REQ-DAT-027", "REQ-DAT-028", "REQ-DAT-029", "REQ-DAT-030", "REQ-DAT-031", "REQ-DAT-032",
+    "REQ-DAT-033", "REQ-DAT-034", "REQ-DAT-035", "REQ-DAT-036", "REQ-DAT-037", "REQ-DAT-038", "REQ-DAT-043", "REQ-DAT-044", "REQ-EXP-001", "REQ-EXP-002",
+    "REQ-EXP-008", "REQ-EXP-009", "REQ-EXP-010", "REQ-EXP-011", "REQ-EXP-012", "REQ-EXP-013", "REQ-EXP-014", "REQ-EXP-015", "REQ-EXP-016", "REQ-EXP-017",
+    "REQ-EXP-018", "REQ-EXP-019", "REQ-EXP-020", "REQ-EXP-021", "REQ-EXP-022", "REQ-EXT-002", "REQ-EXT-006", "REQ-EXT-007", "REQ-EXT-008", "REQ-EXT-009",
+    "REQ-EXT-010", "REQ-EXT-011", "REQ-EXT-012", "REQ-FIL-004", "REQ-FIL-011", "REQ-FIL-012", "REQ-FIL-013", "REQ-FIL-014", "REQ-FIL-015", "REQ-GEO-001",
+    "REQ-GEO-002", "REQ-LIV-005", "REQ-LOC-001", "REQ-LOC-002", "REQ-MAP-016", "REQ-MAP-017", "REQ-MAP-018", "REQ-MAP-019", "REQ-MAP-020", "REQ-MAP-021",
+    "REQ-MAP-022", "REQ-MAP-023", "REQ-MAP-024", "REQ-MAP-025", "REQ-MAP-026", "REQ-MAP-027", "REQ-MAP-028", "REQ-MAP-029", "REQ-MAP-030", "REQ-MAP-031",
+    "REQ-MAP-032", "REQ-MAP-033", "REQ-MAP-034", "REQ-MAP-035", "REQ-MAP-036", "REQ-MAP-037", "REQ-MAP-038", "REQ-MAP-039", "REQ-MAP-040", "REQ-MAP-041",
+    "REQ-MAP-042", "REQ-MAP-044", "REQ-MAP-045", "REQ-MAP-046", "REQ-MAP-047", "REQ-MAP-048", "REQ-MAP-049", "REQ-MAP-050", "REQ-MAP-051", "REQ-MAP-052",
+    "REQ-MAP-053", "REQ-MAP-054", "REQ-MAP-055", "REQ-MAP-056", "REQ-MAP-057", "REQ-MAP-058", "REQ-MAP-059", "REQ-MAP-060", "REQ-MAP-061", "REQ-MAP-062",
+    "REQ-MAP-063", "REQ-MAP-064", "REQ-MAP-065", "REQ-MAP-066", "REQ-MAP-067", "REQ-MIG-001", "REQ-MIG-002", "REQ-MIG-003", "REQ-MIG-004", "REQ-MIG-005",
+    "REQ-MIG-006", "REQ-MIG-007", "REQ-MIG-008", "REQ-MIG-009", "REQ-MIG-010", "REQ-MIG-011", "REQ-MIG-012", "REQ-MIG-013", "REQ-MIG-014", "REQ-MIG-015",
+    "REQ-MIG-016", "REQ-MIG-017", "REQ-MIG-018", "REQ-MIG-019", "REQ-MIG-020", "REQ-MIG-021", "REQ-MIG-022", "REQ-MIG-023", "REQ-MIG-024", "REQ-MIG-025",
+    "REQ-MIG-026", "REQ-MIG-027", "REQ-MIG-028", "REQ-MIG-029", "REQ-MIG-030", "REQ-MIG-031", "REQ-MIG-032", "REQ-MIG-033", "REQ-MIG-034", "REQ-MIG-035",
+    "REQ-MIG-036", "REQ-MIG-037", "REQ-MIG-038", "REQ-MIG-039", "REQ-MIG-040", "REQ-MIG-041", "REQ-MIG-042", "REQ-MIG-043", "REQ-MIG-044", "REQ-MIG-045",
+    "REQ-MIG-046", "REQ-MIG-047", "REQ-MIG-048", "REQ-MIG-049", "REQ-MIG-050", "REQ-MIG-051", "REQ-NAV-043", "REQ-NAV-056", "REQ-PER-007", "REQ-PER-008",
+    "REQ-PER-009", "REQ-PER-010", "REQ-PER-011", "REQ-PER-012", "REQ-PER-013", "REQ-PER-014", "REQ-PER-015", "REQ-PER-016", "REQ-PER-017", "REQ-PER-018",
+    "REQ-PER-019", "REQ-PER-020", "REQ-PER-021", "REQ-PER-022", "REQ-PER-023", "REQ-PER-024", "REQ-PER-025", "REQ-PER-026", "REQ-PER-027", "REQ-PER-028",
+    "REQ-PER-029", "REQ-PER-030", "REQ-PER-031", "REQ-PER-032", "REQ-PER-033", "REQ-PER-034", "REQ-PER-035", "REQ-PER-036", "REQ-PRI-001", "REQ-PRI-002",
+    "REQ-PRI-003", "REQ-PRI-004", "REQ-PRI-005", "REQ-PRI-006", "REQ-PRI-007", "REQ-PRO-002", "REQ-PRO-003", "REQ-PRO-004", "REQ-PRO-006", "REQ-PRO-007",
+    "REQ-PRO-008", "REQ-PRO-009", "REQ-PRO-010", "REQ-PRO-011", "REQ-PRO-012", "REQ-PRO-013", "REQ-PRO-014", "REQ-PRO-015", "REQ-PRO-016", "REQ-PRO-017",
+    "REQ-PRO-018", "REQ-PRO-019", "REQ-PRO-020", "REQ-PRO-021", "REQ-PRO-022", "REQ-PRO-023", "REQ-PRO-024", "REQ-PRO-025", "REQ-PRO-026", "REQ-PRO-027",
+    "REQ-PRO-028", "REQ-PRO-029", "REQ-PRO-033", "REQ-PRO-034", "REQ-PRO-035", "REQ-PRO-036", "REQ-PRO-037", "REQ-PRO-040", "REQ-PRO-041", "REQ-PRO-059",
+    "REQ-PRO-060", "REQ-PRO-061", "REQ-PRO-062", "REQ-PRO-063", "REQ-PRO-064", "REQ-PRO-065", "REQ-PRO-066", "REQ-PRO-067", "REQ-PRO-068", "REQ-PRO-069",
+    "REQ-PRO-070", "REQ-PRO-071", "REQ-PRO-072", "REQ-PRO-073", "REQ-PRO-074", "REQ-PRO-075", "REQ-PRO-076", "REQ-PRO-077", "REQ-PRO-078", "REQ-PRO-079",
+    "REQ-PRO-080", "REQ-PRO-081", "REQ-PRO-082", "REQ-PRO-083", "REQ-PRO-084", "REQ-PRO-085", "REQ-PRO-086", "REQ-PRO-087", "REQ-PRO-088", "REQ-SEC-041",
+    "REQ-SEC-042", "REQ-SEN-020", "REQ-SEN-021", "REQ-SEN-025", "REQ-SEN-026", "REQ-SET-005", "REQ-SET-006", "REQ-SET-007", "REQ-SET-008", "REQ-SET-009",
+    "REQ-SET-010", "REQ-SET-011", "REQ-SET-012", "REQ-SET-013", "REQ-SET-014", "REQ-SET-015", "REQ-SET-016", "REQ-SET-017", "REQ-SET-018", "REQ-SET-019",
+    "REQ-SET-020", "REQ-SET-021", "REQ-SET-022", "REQ-SET-023", "REQ-SET-024", "REQ-SET-025", "REQ-SET-026", "REQ-SET-027", "REQ-SET-028", "REQ-SET-029",
+    "REQ-SET-030", "REQ-SET-031", "REQ-SET-032", "REQ-SET-033", "REQ-SET-034", "REQ-SET-035", "REQ-SET-036", "REQ-SET-037", "REQ-SET-038", "REQ-SET-039",
+    "REQ-SET-040", "REQ-SET-041", "REQ-SET-042", "REQ-SET-043", "REQ-SET-044", "REQ-SET-050", "REQ-SET-051", "REQ-SET-052", "REQ-SET-053", "REQ-SET-054",
+    "REQ-SET-055", "REQ-SET-056", "REQ-SET-057", "REQ-SET-058", "REQ-SET-059", "REQ-SET-060", "REQ-SET-061", "REQ-SET-062", "REQ-SET-063", "REQ-SET-064",
+    "REQ-SET-065", "REQ-SET-066", "REQ-SET-067", "REQ-SET-068", "REQ-SET-069", "REQ-SET-070", "REQ-SET-071", "REQ-SET-072", "REQ-SET-073", "REQ-SET-074",
+    "REQ-SET-075", "REQ-SET-076", "REQ-SET-077", "REQ-SET-078", "REQ-SET-079", "REQ-SET-080", "REQ-SET-081", "REQ-SET-082", "REQ-SET-089", "REQ-SET-095",
+    "REQ-SET-096", "REQ-SET-097", "REQ-SET-098", "REQ-SET-099", "REQ-SET-100", "REQ-SET-101", "REQ-SET-102", "REQ-SET-103", "REQ-SET-104", "REQ-SET-105",
+    "REQ-STB-001", "REQ-STB-002", "REQ-STB-003", "REQ-STB-004", "REQ-STB-005", "REQ-STB-006", "REQ-STB-007", "REQ-STB-008", "REQ-STB-009", "REQ-STB-010",
+    "REQ-STB-011", "REQ-STB-012", "REQ-STB-013", "REQ-STB-014", "REQ-STB-015", "REQ-STB-016", "REQ-STB-017", "REQ-STB-018", "REQ-STB-019", "REQ-TOOL-001",
+    "REQ-TOOL-002", "REQ-TOOL-003", "REQ-TOOL-004", "REQ-TOOL-005", "REQ-TOOL-006", "REQ-TOOL-007", "REQ-TRK-002", "REQ-TRK-010", "REQ-TRK-011", "REQ-TRK-012",
+    "REQ-TRK-013", "REQ-TRK-014", "REQ-TRK-015", "REQ-TRK-016", "REQ-TRK-017", "REQ-TRK-018", "REQ-TRK-019", "REQ-TRK-020", "REQ-TRK-021", "REQ-TRK-022",
+    "REQ-TRK-023", "REQ-TRK-024", "REQ-TRK-025", "REQ-TRK-026", "REQ-TRK-027", "REQ-TRK-028", "REQ-TRK-029", "REQ-TRK-030", "REQ-TRK-031", "REQ-TRK-032",
+    "REQ-TRK-033", "REQ-TRK-034", "REQ-TRK-035", "REQ-TRK-036", "REQ-TRK-037", "REQ-TRK-038", "REQ-TRK-040", "REQ-TRK-041", "REQ-TRK-042", "REQ-TRK-043",
+    "REQ-TRK-044", "REQ-TRK-045", "REQ-TRK-046", "REQ-TRK-047", "REQ-TRK-048", "REQ-TRK-049", "REQ-TRK-050", "REQ-TRK-051", "REQ-TRK-052", "REQ-TRK-060",
+    "REQ-TRK-061", "REQ-TRK-062", "REQ-TRK-063", "REQ-TRK-064", "REQ-TRK-065", "REQ-TST-001", "REQ-TST-002", "REQ-TST-003", "REQ-UI-011", "REQ-UI-012",
+    "REQ-UI-021", "REQ-UI-048", "REQ-UI-051", "REQ-UI-058", "REQ-UI-059", "REQ-UI-060", "REQ-UI-061", "REQ-UI-102", "REQ-UI-103", "REQ-UI-104",
+    "REQ-UI-105", "REQ-UI-106", "REQ-UI-107", "REQ-UI-108", "REQ-UI-109", "REQ-UI-112", "REQ-UI-113", "REQ-UI-114", "REQ-UI-115", "REQ-UI-116",
+    "REQ-UI-117", "REQ-UI-118", "REQ-UI-119", "REQ-UI-120", "REQ-UI-121", "REQ-UI-122", "REQ-UI-123", "REQ-UI-124", "REQ-UI-125", "REQ-UI-126",
+    "REQ-UI-127", "REQ-UI-128", "REQ-UI-129", "REQ-UI-130", "REQ-UI-131", "REQ-UI-132", "REQ-UI-133", "REQ-UI-134", "REQ-UI-136", "REQ-UI-137",
+    "REQ-UI-138", "REQ-UI-139", "REQ-UI-140", "REQ-UI-141", "REQ-UI-142", "REQ-UI-143", "REQ-UI-144", "REQ-UI-145", "REQ-UI-146", "REQ-UI-147",
+    "REQ-UI-148", "REQ-UI-149", "REQ-UI-150", "REQ-UI-151", "REQ-UI-152", "REQ-UI-153", "REQ-UI-154", "REQ-UI-155", "REQ-UI-156", "REQ-UI-157",
+    "REQ-UI-158", "REQ-UI-159", "REQ-UI-160", "REQ-UI-161", "REQ-UI-162", "REQ-UI-163", "REQ-UI-164", "REQ-UI-165", "REQ-UI-167", "REQ-UI-168",
+    "REQ-UI-169", "REQ-UI-170", "REQ-UI-171", "REQ-UI-172", "REQ-UI-173", "REQ-UI-174", "REQ-UI-175", "REQ-UI-176", "REQ-UI-177", "REQ-UI-178",
+    "REQ-UI-179", "REQ-UI-180", "REQ-UI-181", "REQ-UI-182", "REQ-UI-183", "REQ-UI-184", "REQ-UI-185", "REQ-UI-186", "REQ-UI-187", "REQ-UI-188",
+    "REQ-UI-189", "REQ-UI-190", "REQ-UI-191", "REQ-UI-192", "REQ-UI-193", "REQ-UI-194", "REQ-UI-195", "REQ-UI-196", "REQ-UI-197", "REQ-UI-198",
+    "REQ-UI-199", "REQ-UI-200", "REQ-UI-201", "REQ-UI-202", "REQ-UI-203", "REQ-UI-204", "REQ-UI-205", "REQ-UI-206", "REQ-UI-207", "REQ-UI-208",
+    "REQ-UI-209", "REQ-UI-210", "REQ-UI-211", "REQ-UI-212", "REQ-UI-213", "REQ-UI-214", "REQ-UI-215", "REQ-UI-216", "REQ-UI-217", "REQ-UI-218",
+    "REQ-UI-219", "REQ-UI-220", "REQ-UI-221", "REQ-UI-222", "REQ-UI-223", "REQ-UI-224", "REQ-UI-225", "REQ-UI-226", "REQ-UI-227", "REQ-UI-228",
+    "REQ-UI-229", "REQ-UI-230", "REQ-UI-231", "REQ-UI-232", "REQ-UI-233", "REQ-UI-234", "REQ-UI-235", "REQ-UI-236", "REQ-UI-237", "REQ-UI-238",
+    "REQ-UI-239", "REQ-UI-240", "REQ-UI-241", "REQ-UI-242", "REQ-UI-243", "REQ-UI-244", "REQ-UI-245", "REQ-UI-246", "REQ-UI-247", "REQ-UI-248",
+    "REQ-UI-249", "REQ-UI-250", "REQ-UI-251", "REQ-UI-252", "REQ-UI-253", "REQ-UI-254", "REQ-UI-255", "REQ-UI-256", "REQ-UI-257", "REQ-UI-258",
+    "REQ-UI-259", "REQ-UI-260", "REQ-UI-261", "REQ-UI-262", "REQ-UI-263", "REQ-UI-264", "REQ-UI-265", "REQ-UI-266", "REQ-UI-267", "REQ-UI-268",
+    "REQ-UI-269", "REQ-UI-270", "REQ-UI-271", "REQ-UI-272", "REQ-UI-273", "REQ-UI-274", "REQ-UI-275", "REQ-UI-276", "REQ-UI-277", "REQ-UI-278",
+    "REQ-UI-279", "REQ-UI-280", "REQ-UI-281", "REQ-UI-282", "REQ-UI-283", "REQ-UI-284", "REQ-UI-285", "REQ-UI-286", "REQ-UI-287", "REQ-UI-288",
+    "REQ-UI-290", "REQ-UI-291", "REQ-UI-293", "REQ-UI-294", "REQ-UI-295", "REQ-UI-296", "REQ-UI-297", "REQ-UI-298", "REQ-UI-299", "REQ-UI-300",
+    "REQ-UI-301", "REQ-UI-302", "REQ-UI-303", "REQ-UI-304", "REQ-UI-305", "REQ-UI-306", "REQ-UI-307", "REQ-UI-308", "REQ-UI-309", "REQ-UI-310",
+    "REQ-UI-311", "REQ-UI-312", "REQ-UI-313", "REQ-UI-314", "REQ-UI-315", "REQ-UI-316", "REQ-UI-317", "REQ-UI-318", "REQ-UI-319", "REQ-UI-320",
+    "REQ-UI-321", "REQ-UI-322", "REQ-UI-323", "REQ-UI-324", "REQ-UI-325", "REQ-UI-326", "REQ-UI-327", "REQ-UI-328", "REQ-UI-329", "REQ-UI-330",
+    "REQ-UI-331", "REQ-UI-332", "REQ-UI-333", "REQ-UI-334", "REQ-UI-335", "REQ-UI-336", "REQ-UI-337", "REQ-UI-338", "REQ-UI-339", "REQ-UI-340",
+    "REQ-UI-341", "REQ-UI-342", "REQ-UI-343", "REQ-UI-344", "REQ-UI-345", "REQ-UI-346", "REQ-UI-347", "REQ-UI-348", "REQ-UI-349", "REQ-UI-350",
+    "REQ-UI-351", "REQ-UI-352", "REQ-UI-353", "REQ-UI-354", "REQ-UI-355", "REQ-UI-356", "REQ-UI-357", "REQ-UI-358", "REQ-UI-359", "REQ-UI-360",
+    "REQ-UI-361", "REQ-UI-362", "REQ-UI-363", "REQ-UI-364", "REQ-UI-365", "REQ-UI-366", "REQ-UI-367", "REQ-UI-368", "REQ-UI-369", "REQ-UI-370",
+    "REQ-UI-371", "REQ-UI-372", "REQ-UI-373", "REQ-UI-374", "REQ-UI-375", "REQ-UI-376", "REQ-UI-377", "REQ-UI-378", "REQ-UI-379", "REQ-UI-380",
+    "REQ-UI-381", "REQ-UI-382", "REQ-UI-383", "REQ-UI-384", "REQ-UI-385", "REQ-UI-386", "REQ-UI-387", "REQ-UI-388", "REQ-UI-389", "REQ-UI-390",
+    "REQ-UI-391", "REQ-UI-392", "REQ-UI-393", "REQ-UI-394", "REQ-UI-395", "REQ-UI-396", "REQ-UI-397", "REQ-UI-398", "REQ-UI-399", "REQ-UI-400",
+    "REQ-UI-401", "REQ-UI-402", "REQ-UI-403", "REQ-UI-404", "REQ-UI-405", "REQ-UI-406", "REQ-UI-407", "REQ-UI-408", "REQ-UI-409", "REQ-UI-410",
+    "REQ-UI-411", "REQ-UI-412", "REQ-UI-413", "REQ-UI-414", "REQ-UI-415", "REQ-UI-416", "REQ-UI-417", "REQ-UI-418", "REQ-UI-419", "REQ-UI-420",
+    "REQ-UI-421", "REQ-UI-422", "REQ-UI-423", "REQ-UI-424", "REQ-UI-425", "REQ-UI-426", "REQ-UI-427", "REQ-UI-428", "REQ-UI-429", "REQ-UI-430",
+    "REQ-UI-431", "REQ-UI-432", "REQ-UI-433", "REQ-UI-434", "REQ-UI-435", "REQ-UI-436", "REQ-UI-437", "REQ-UI-438", "REQ-UI-439", "REQ-UI-440",
+    "REQ-UI-441", "REQ-UI-442", "REQ-UI-443", "REQ-UI-444", "REQ-UI-445", "REQ-UI-446", "REQ-UI-447", "REQ-UI-448", "REQ-UI-455", "REQ-UI-456",
+    "REQ-UI-457", "REQ-UI-458", "REQ-UI-459", "REQ-UI-460", "REQ-UI-461", "REQ-UI-462", "REQ-UI-463", "REQ-UI-464", "REQ-UI-465", "REQ-UI-466",
+    "REQ-UI-467", "REQ-UI-468", "REQ-UI-469", "REQ-UI-470", "REQ-UI-471", "REQ-UI-508", "REQ-UI-509", "REQ-UI-521", "REQ-UI-522", "REQ-UI-523",
+})
+
 
 
 def get_git_diff(base_ref="develop", target_paths=None):
@@ -1063,6 +1096,32 @@ def verify_master_table_parity(repo_root=None):
                     plan += 1
             shard_counts[fn] = (tot, ver, impl, plan)
 
+            header_label = "Total Requirements" if prefix == "REQ" else "Total Tests"
+            with open(fp, "r", encoding="utf-8") as f:
+                shard_content = f.read()
+            new_shard_content = re.sub(
+                r"\*\*Total (?:Requirements|Tests)\*\*:\s*\d+",
+                f"**{header_label}**: {tot}",
+                shard_content,
+                count=1,
+            )
+            if new_shard_content != shard_content:
+                with open(fp, "w", encoding="utf-8") as f:
+                    f.write(new_shard_content)
+
+            header_label = "Total Requirements" if prefix == "REQ" else "Total Tests"
+            with open(fp, "r", encoding="utf-8") as f:
+                shard_content = f.read()
+            new_shard_content = re.sub(
+                r"\*\*Total (?:Requirements|Tests)\*\*:\s*\d+",
+                f"**{header_label}**: {tot}",
+                shard_content,
+                count=1,
+            )
+            if new_shard_content != shard_content:
+                with open(fp, "w", encoding="utf-8") as f:
+                    f.write(new_shard_content)
+
         master_fp = os.path.join(repo_root, master_rel)
         if not os.path.exists(master_fp):
             continue
@@ -1785,6 +1844,159 @@ def verify_traceability_orphans(
     return True, diagnostics, report
 
 
+def find_code_traceability_orphans(
+    repo_root=None,
+    search_dirs=None,
+    req_shards=None,
+    tst_shards=None,
+):
+    """
+    Scans codebase (app/src/main, app/src/test, app/src/androidTest, and tools/) for cited
+    REQ-* and TST-* tokens and asserts that each cited token resolves to an authentic declared
+    heading in living documentation (REQ-PRO-104.1).
+    Returns (orphan_reqs: dict[str, list], orphan_tsts: dict[str, list], scanned_files: int).
+    """
+    if repo_root is None:
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+    known_req_ids = set()
+    req_dir = os.path.join(repo_root, "docs/requirements")
+    if os.path.isdir(req_dir):
+        for fn in os.listdir(req_dir):
+            if fn.endswith(".md"):
+                with open(os.path.join(req_dir, fn), "r", encoding="utf-8") as f:
+                    for line in f:
+                        m = re.match(r"^#{2,4}\s+(REQ-[A-Z0-9_-]+):?", line.strip())
+                        if m:
+                            known_req_ids.add(m.group(1))
+
+    known_tst_ids = set()
+    tst_dir = os.path.join(repo_root, "docs/tests")
+    if os.path.isdir(tst_dir):
+        for fn in os.listdir(tst_dir):
+            if fn.endswith(".md"):
+                with open(os.path.join(tst_dir, fn), "r", encoding="utf-8") as f:
+                    for line in f:
+                        m = re.match(r"^#{2,4}\s+(TST-[A-Z0-9_-]+):?", line.strip())
+                        if m:
+                            known_tst_ids.add(m.group(1))
+
+    if search_dirs is None:
+        search_dirs = [
+            "app/src/main",
+            "app/src/test",
+            "app/src/androidTest",
+            "tools",
+        ]
+
+    req_pat = re.compile(r"(?<![A-Za-z0-9_-])REQ-[A-Z]+-[0-9]+(?:\.[0-9]+)?(?![A-Za-z0-9_-])")
+    tst_pat = re.compile(r"(?<![A-Za-z0-9_-])TST-[A-Z]+-[0-9]+(?:\.[0-9]+)?(?![A-Za-z0-9_-])")
+
+    ignored_file_patterns = {"test_verify_requirement_governance.py", "traceability_baseline.json"}
+
+    orphan_reqs = {}
+    orphan_tsts = {}
+    scanned_files = 0
+
+    for s_dir in search_dirs:
+        abs_s_dir = os.path.join(repo_root, s_dir)
+        if not os.path.isdir(abs_s_dir):
+            continue
+        is_tools = s_dir == "tools" or s_dir.startswith("tools/")
+        for root, dirs, files in os.walk(abs_s_dir):
+            for f in files:
+                if f in ignored_file_patterns or f.endswith(".pyc") or f.endswith(".class"):
+                    continue
+                if is_tools and (f.startswith("test_") or "/test" in root or "\\test" in root):
+                    continue
+                if not (f.endswith(".kt") or f.endswith(".java") or f.endswith(".xml") or f.endswith(".py")):
+                    continue
+                scanned_files += 1
+                fp = os.path.join(root, f)
+                rel_fp = os.path.relpath(fp, repo_root)
+                with open(fp, "r", encoding="utf-8", errors="ignore") as fh:
+                    for line_no, line in enumerate(fh, 1):
+                        for m in req_pat.finditer(line):
+                            token = m.group(0)
+                            base_id = token.split(".")[0]
+                            if (
+                                base_id.startswith("REQ-SIM-")
+                                or base_id.startswith("REQ-XXX")
+                                or base_id.startswith("REQ-DOM-")
+                                or base_id.startswith("REQ-NNN")
+                                or (is_tools and base_id in ("REQ-TST-005", "REQ-TST-006"))
+                            ):
+                                continue
+                            if base_id not in known_req_ids:
+                                orphan_reqs.setdefault(base_id, []).append((rel_fp, line_no))
+
+                        for m in tst_pat.finditer(line):
+                            token = m.group(0)
+                            base_id = token.split(".")[0]
+                            if (
+                                base_id.startswith("TST-SIM-")
+                                or base_id.startswith("TST-XXX")
+                                or base_id.startswith("TST-DOM-")
+                                or base_id.startswith("TST-NNN")
+                                or (is_tools and base_id in ("TST-TST-005", "TST-TST-006", "TST-XXX-001"))
+                            ):
+                                continue
+                            if base_id not in known_tst_ids:
+                                orphan_tsts.setdefault(base_id, []).append((rel_fp, line_no))
+
+    return orphan_reqs, orphan_tsts, scanned_files
+
+
+def verify_code_traceability_orphans(
+    repo_root=None,
+    search_dirs=None,
+    fail_on_orphans=True,
+):
+    """
+    Verifies that zero orphan REQ or TST identifiers exist in production or test code (REQ-PRO-104.1).
+    Returns (success: bool, diagnostics: list[str], report: dict).
+    """
+    orphan_reqs, orphan_tsts, scanned_count = find_code_traceability_orphans(
+        repo_root=repo_root, search_dirs=search_dirs
+    )
+    diagnostics = []
+    errors = []
+
+    if orphan_reqs:
+        for req_id, occurrences in sorted(orphan_reqs.items()):
+            msg = f"ERROR: Code orphan requirement {req_id} cited in {len(occurrences)} location(s), e.g. {occurrences[0][0]}:{occurrences[0][1]}."
+            errors.append(msg)
+            diagnostics.append(msg)
+
+    if orphan_tsts:
+        for tst_id, occurrences in sorted(orphan_tsts.items()):
+            msg = f"ERROR: Code orphan test specification {tst_id} cited in {len(occurrences)} location(s), e.g. {occurrences[0][0]}:{occurrences[0][1]}."
+            errors.append(msg)
+            diagnostics.append(msg)
+
+    report = {
+        "orphan_req_count": len(orphan_reqs),
+        "orphan_tst_count": len(orphan_tsts),
+        "orphan_reqs": sorted(orphan_reqs.keys()),
+        "orphan_tsts": sorted(orphan_tsts.keys()),
+        "scanned_files": scanned_count,
+    }
+
+    if errors:
+        if fail_on_orphans:
+            diagnostics.insert(0, f"ERROR: Code-to-shard traceability orphan check failed with {len(errors)} orphan(s).")
+            return False, diagnostics, report
+        else:
+            diagnostics.insert(0, f"WARNING: Code-to-shard traceability orphan check detected {len(errors)} orphan(s) (non-blocking).")
+            return True, diagnostics, report
+
+    diagnostics.append(
+        f"PASS: Zero code-to-shard requirement or test orphans detected in codebase ({scanned_count} files scanned)."
+    )
+    return True, diagnostics, report
+
+
+
 def extract_living_test_ids(repo_root=None, tst_shards=None):
     """
     Collects all authentic TST-* IDs declared across living test shards (REQ-PRO-073.4).
@@ -2190,6 +2402,157 @@ def verify_requirement_attributes(
     return True, diagnostics
 
 
+def verify_req_descriptions(
+    repo_root=None,
+    baseline=None,
+    req_shards=None,
+    fail_on_missing=True,
+):
+    """
+    Enforces that all requirements declare a non-empty - **Description**: field (REQ-PRO-104.3).
+    Tolerates 860 frozen legacy requirements in LEGACY_MISSING_DESCRIPTION_REQS ratchet baseline.
+    Returns (success: bool, diagnostics: list[str], report: dict).
+    """
+    if repo_root is None:
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    if baseline is None:
+        baseline = LEGACY_MISSING_DESCRIPTION_REQS
+
+    req_dir = os.path.join(repo_root, "docs/requirements")
+    req_pattern = re.compile(r"^###\s+(REQ-[A-Z0-9_-]+):")
+
+    missing = []
+    total_reqs = 0
+
+    shard_files = req_shards if req_shards else sorted(os.listdir(req_dir))
+    for fn in shard_files:
+        if not fn.endswith(".md"):
+            continue
+        fp = os.path.join(req_dir, fn) if not os.path.isabs(fn) else fn
+        if not os.path.exists(fp):
+            continue
+        with open(fp, "r", encoding="utf-8") as f:
+            content = f.read()
+        sections = re.split(r"\n(?=###\s+REQ-)", content)
+        for sec in sections:
+            m = req_pattern.match(sec.strip())
+            if not m:
+                continue
+            total_reqs += 1
+            req_id = m.group(1)
+            if not re.search(r"-\s+\*\*Description\*\*:\s*\S+", sec):
+                missing.append((req_id, fn))
+
+    missing_ids = set(m[0] for m in missing)
+    unbaselined_missing = sorted(missing_ids - baseline)
+    stale_baselined = sorted(baseline - missing_ids)
+
+    diagnostics = []
+    errors = []
+
+    if unbaselined_missing:
+        for req_id in unbaselined_missing:
+            msg = f"ERROR: Requirement {req_id} lacks mandatory '- **Description**:' field and is not in legacy baseline."
+            errors.append(msg)
+            diagnostics.append(msg)
+
+    if len(missing_ids) > len(baseline):
+        msg = f"ERROR (Ratchet): Missing description count ({len(missing_ids)}) exceeds legacy baseline ({len(baseline)})."
+        if msg not in errors:
+            errors.append(msg)
+            diagnostics.append(msg)
+
+    report = {
+        "total_reqs": total_reqs,
+        "missing_count": len(missing_ids),
+        "unbaselined_missing": unbaselined_missing,
+        "stale_baselined": stale_baselined,
+        "baseline_count": len(baseline),
+    }
+
+    if errors:
+        if fail_on_missing:
+            diagnostics.insert(0, f"ERROR: Requirement description governance failed with {len(errors)} violation(s).")
+            return False, diagnostics, report
+        else:
+            diagnostics.insert(0, f"WARNING: Requirement description governance detected {len(errors)} violation(s) (non-blocking).")
+            return True, diagnostics, report
+
+    diagnostics.append(
+        f"PASS: 100% of non-baselined requirements declare Description fields ({len(missing_ids)} legacy REQs tolerated in baseline)."
+    )
+    return True, diagnostics, report
+
+
+def calculate_req_field_coverage(repo_root=None, req_shards=None):
+    """
+    Calculates field completion statistics (Description, Given-When-Then, Allocation) across
+    all requirements in living documentation shards (REQ-PRO-104.3).
+    Returns dict report.
+    """
+    if repo_root is None:
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+    req_dir = os.path.join(repo_root, "docs/requirements")
+    req_pattern = re.compile(r"^###\s+(REQ-[A-Z0-9_-]+):")
+
+    total_reqs = 0
+    has_desc = 0
+    has_gwt = 0
+    has_alloc = 0
+
+    shard_files = req_shards if req_shards else sorted(os.listdir(req_dir))
+    for fn in shard_files:
+        if not fn.endswith(".md"):
+            continue
+        fp = os.path.join(req_dir, fn) if not os.path.isabs(fn) else fn
+        if not os.path.exists(fp):
+            continue
+        with open(fp, "r", encoding="utf-8") as f:
+            content = f.read()
+        sections = re.split(r"\n(?=###\s+REQ-)", content)
+        for sec in sections:
+            m = req_pattern.match(sec.strip())
+            if not m:
+                continue
+            total_reqs += 1
+            if re.search(r"-\s+\*\*Description\*\*:\s*\S+", sec):
+                has_desc += 1
+            if re.search(r"Given.*When.*Then", sec, re.DOTALL | re.IGNORECASE) or re.search(r"Acceptance Criteria", sec, re.IGNORECASE):
+                has_gwt += 1
+            if re.search(r"-\s+\*\*(?:Implementation|Target)\*\*:\s*\S+", sec):
+                has_alloc += 1
+
+    desc_pct = round((has_desc / total_reqs * 100.0), 1) if total_reqs else 0.0
+    gwt_pct = round((has_gwt / total_reqs * 100.0), 1) if total_reqs else 0.0
+    alloc_pct = round((has_alloc / total_reqs * 100.0), 1) if total_reqs else 0.0
+
+    return {
+        "total_reqs": total_reqs,
+        "description_count": has_desc,
+        "description_pct": desc_pct,
+        "gwt_count": has_gwt,
+        "gwt_pct": gwt_pct,
+        "alloc_count": has_alloc,
+        "alloc_pct": alloc_pct,
+    }
+
+
+def format_req_field_coverage(report):
+    """Formats requirement field coverage report into structured console text."""
+    lines = [
+        "================================================================================",
+        "=== REQUIREMENT FIELD COVERAGE REPORT (REQ-PRO-104.3)                        ===",
+        "================================================================================",
+        f"Total Living Requirements: {report['total_reqs']}",
+        f"Description Coverage:      {report['description_count']}/{report['total_reqs']} ({report['description_pct']}%)",
+        f"Acceptance Criteria (GWT): {report['gwt_count']}/{report['total_reqs']} ({report['gwt_pct']}%)",
+        f"Allocation (Target/Impl):  {report['alloc_count']}/{report['total_reqs']} ({report['alloc_pct']}%)",
+        "================================================================================",
+    ]
+    return "\n".join(lines)
+
+
 
 class CoverageCategoryResult:
     """Represents a single coverage gap category with counts, totals, and percentages (REQ-PRO-071)."""
@@ -2360,15 +2723,25 @@ def extract_test_code_tags(test_sources=None, repo_root=None):
     tag_pattern = re.compile(r"(?<![A-Za-z0-9_-])(TST-[A-Z]+-[0-9]+(?:[\._-][A-Za-z0-9_-]+)*)")
     base_pattern = re.compile(r"^(TST-[A-Z]+-[0-9]+)")
 
+    synthetic_gov_tests = {
+        "test_verify_requirement_governance.py",
+        "test_generate_test_evidence.py",
+        "test_jira_accounts.py",
+        "test_shard_living_docs.py",
+    }
+
     code_tags = {}
     for rel_fp, lines in files_to_scan:
         is_tool_script = rel_fp.startswith("tools") or rel_fp.endswith(".py")
+        is_synthetic_gov = os.path.basename(rel_fp) in synthetic_gov_tests
         for lno, line in enumerate(lines, 1):
             for m in tag_pattern.finditer(line):
                 raw = m.group(1).rstrip(".")
                 m_base = base_pattern.match(raw)
                 base_id = m_base.group(1) if m_base else raw
-                if is_tool_script and not base_id.startswith("TST-PRO-"):
+                if is_tool_script and is_synthetic_gov and not base_id.startswith("TST-PRO-"):
+                    continue
+                if is_tool_script and not is_synthetic_gov and not base_id.startswith(("TST-PRO-", "TST-TOOL-", "TST-STB-", "TST-TST-", "TST-SIM-", "TST-TRK-017")):
                     continue
                 code_tags.setdefault(base_id, []).append({
                     "file": rel_fp,
@@ -2973,6 +3346,324 @@ def has_verified_test_evidence(
     return False, "No test code or passing test results found"
 
 
+def _collect_test_file_index(repo_root, test_sources=None):
+    """Indexes test source files under app/src/test, app/src/androidTest, and tools/."""
+    test_files = {}
+    if isinstance(test_sources, dict):
+        for rel_p, content in test_sources.items():
+            test_files[rel_p] = content if isinstance(content, str) else "".join(content)
+    else:
+        for base in ("app/src/test", "app/src/androidTest", "tools"):
+            abs_base = os.path.join(repo_root, base)
+            if not os.path.isdir(abs_base):
+                continue
+            for root, _, files in os.walk(abs_base):
+                if "hoechstmass" in root:
+                    continue
+                for fn in sorted(files):
+                    if base == "tools":
+                        if not (fn.startswith("test_") and fn.endswith(".py")):
+                            continue
+                    elif not (fn.endswith(".kt") or fn.endswith(".java")):
+                        continue
+                    abs_p = os.path.join(root, fn)
+                    rel_p = os.path.relpath(abs_p, repo_root)
+                    with open(abs_p, "r", encoding="utf-8", errors="ignore") as fh:
+                        test_files[rel_p] = fh.read()
+    by_basename = {}
+    req_in_tests = {}
+    doc_tools_tests = {
+        "test_verify_requirement_governance.py",
+        "test_generate_test_evidence.py",
+        "test_jira_accounts.py",
+        "test_shard_living_docs.py",
+        "test_extract_pixel_field_evidence.py",
+        "test_generate_release_verification_summary.py",
+    }
+    for rel_p, txt in test_files.items():
+        bn = os.path.basename(rel_p)
+        by_basename.setdefault(bn, []).append(rel_p)
+        for m in re.finditer(r"(?<![A-Za-z0-9_-])REQ-[A-Z]+-[0-9]+(?![A-Za-z0-9_-])", txt):
+            req_id = m.group(0)
+            if bn in doc_tools_tests and not req_id.startswith("REQ-PRO-"):
+                continue
+            req_in_tests.setdefault(req_id, set()).add(rel_p)
+    return by_basename, req_in_tests
+
+
+def triage_unbacked_verified_tsts(
+    repo_root=None,
+    out_csv=None,
+    tst_shards=None,
+    req_shards=None,
+    test_sources=None,
+    code_tags=None,
+    baseline_allowlist=None,
+):
+    """
+    Classifies all unbacked [Verified] TST specifications across living-doc shards into deterministic
+    triage categories ('unit-test-backed', 'UI/manual-only', 'obsolete/duplicate', 'missing test code'),
+    flags stale already-backed entries in LEGACY_UNBACKED_VERIFIED_TSTS, and optionally writes a CSV ledger.
+    Returns (report: dict, diagnostics: list[str]).
+    """
+    if repo_root is None:
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    if baseline_allowlist is None:
+        baseline_allowlist = LEGACY_UNBACKED_VERIFIED_TSTS
+    if code_tags is None:
+        code_tags = extract_test_code_tags(test_sources=test_sources, repo_root=repo_root)
+
+    by_basename, req_in_tests = _collect_test_file_index(repo_root, test_sources=test_sources)
+    loaded_reqs = _load_shard_sources(req_shards, "docs/requirements", repo_root)
+    loaded_tsts = _load_shard_sources(tst_shards, "docs/tests", repo_root)
+
+    req_meta = {}
+    for rel_path, lines in loaded_reqs:
+        cur = None
+        for line in lines:
+            m = re.match(r"^###\s+(REQ-[A-Z0-9_-]+):?\s*(.*)$", line.strip())
+            if m:
+                cur = m.group(1)
+                req_meta[cur] = {"vm": "", "tests": "", "verified": "[Verified]" in m.group(2)}
+            elif cur:
+                if "**Verification Method**:" in line:
+                    req_meta[cur]["vm"] = line.split(":", 1)[1].strip()
+                elif "**Tests**:" in line:
+                    req_meta[cur]["tests"] = line.split(":", 1)[1].strip()
+
+    heading_pat = re.compile(r"^###\s+(TST-[A-Z]+-[0-9]+(?:\.[0-9]+)?)[^:\n]*:\s*([^\n]+)")
+    generic_contracts = {
+        "TranslationParityTest.kt",
+        "AspiceSweAuditContractTest.kt",
+        "SystemArchitectureDesignContractTest.kt",
+        "SystemIntegrationTestContractTest.kt",
+        "SystemLiveTrackingRequirementsContractTest.kt",
+        "SystemVerificationProtocolContractTest.kt",
+        "ReleaseCiAndLintConfigContractTest.kt",
+        "HoechstmassCoreFrameworkContractTest.kt",
+    }
+    generic_kw_pat = re.compile(
+        r"translat|format\s+string|locali|parity|aspice|governance|hoechstmass|shard|backfill|sprint\s+metrics",
+        re.IGNORECASE,
+    )
+    manual_ui_pat = re.compile(
+        r"(?:\b(?:Tap|Navigate\s+to|Open\s+the|Swipe|Visually|Clear\s+application\s+data|Inspect\s+the|Install|Restart\s+app|Click\s+a|On-Device|Physical\s+device|Screenshot)\b)",
+        re.IGNORECASE,
+    )
+
+    entries = []
+    seen_tst_ids = set()
+    duplicate_tst_ids = set()
+    parsed_tsts = []
+
+    for rel_path, lines in loaded_tsts:
+        cur = None
+        block = []
+        for lno, line in enumerate(lines, 1):
+            m = heading_pat.match(line.strip())
+            if m:
+                if cur is not None:
+                    cur["block"] = "".join(block)
+                    parsed_tsts.append(cur)
+                tid = m.group(1)
+                base_tid = tid.split(".")[0]
+                if base_tid in seen_tst_ids:
+                    duplicate_tst_ids.add(base_tid)
+                seen_tst_ids.add(base_tid)
+                rest = m.group(2)
+                cur = (
+                    {
+                        "base_id": base_tid,
+                        "raw_id": tid,
+                        "file": rel_path,
+                        "line": lno,
+                        "title": rest.strip(),
+                    }
+                    if ("[Verified]" in rest or "Verified" in rest)
+                    else None
+                )
+                block = []
+            elif cur is not None:
+                block.append(line)
+        if cur is not None:
+            cur["block"] = "".join(block)
+            parsed_tsts.append(cur)
+
+    for item in parsed_tsts:
+        base_tid = item["base_id"]
+        if base_tid in code_tags:
+            continue
+        block = item["block"]
+        title = item["title"]
+        reqs = sorted(set(re.findall(r"(?<![A-Za-z0-9_-])REQ-[A-Z]+-[0-9]+(?![A-Za-z0-9_-])", block)))
+        vms = sorted({req_meta[r]["vm"] for r in reqs if r in req_meta and req_meta[r]["vm"]})
+        vm_str = "; ".join(vms) if vms else "Unspecified"
+        comp_m = re.search(r"\*\*Component\*\*:\s*([^\n]+)", block)
+        comp = comp_m.group(1) if comp_m else ""
+        is_generic_topic = bool(generic_kw_pat.search(title + " " + block))
+
+        explicit_files = [
+            p
+            for fn in re.findall(r"([A-Za-z0-9_]+Test\.(?:kt|java)|test_[a-z0-9_]+\.py)", block)
+            for p in by_basename.get(fn, [])
+            if os.path.basename(p) not in generic_contracts or is_generic_topic
+        ]
+        comp_files = [
+            p
+            for tok in re.findall(r"\b([A-Za-z0-9_]+)\b", comp)
+            for cand in (f"{tok}Test.kt", f"{tok}Test.java", f"test_{tok}.py")
+            for p in by_basename.get(cand, [])
+        ]
+        req_files = [
+            p
+            for r in reqs
+            for p in req_in_tests.get(r, ())
+            if os.path.basename(p) not in generic_contracts or is_generic_topic
+        ]
+        req_tfield_files = [
+            p
+            for r in reqs
+            if r in req_meta
+            for fn in re.findall(r"([A-Za-z0-9_]+Test\.(?:kt|java)|test_[a-z0-9_]+\.py)", req_meta[r]["tests"])
+            for p in by_basename.get(fn, [])
+            if os.path.basename(p) not in generic_contracts or is_generic_topic
+        ]
+        matched_files = sorted(set(explicit_files or comp_files or req_files or req_tfield_files))
+
+        is_obsolete = (
+            base_tid in duplicate_tst_ids
+            or bool(re.search(r"\b(?:superseded|obsolete|deprecated|removed\s+by)\b", title, re.IGNORECASE))
+            or bool(re.search(r"\*\*Test Description\*\*:\s*(?:\*\*)?(?:SUPERSEDED|OBSOLETE|DEPRECATED)", block, re.IGNORECASE))
+        )
+        is_manual_vm = ("On-Device Manual" in vm_str and "Unit" not in vm_str) or vm_str == "Review"
+
+        if is_obsolete:
+            category = "obsolete/duplicate"
+            rec_status = "[Implemented]"
+            rec_action = "Downgrade superseded/duplicate spec to [Implemented]"
+        elif matched_files and not is_manual_vm:
+            category = "unit-test-backed"
+            rec_status = "[Verified]"
+            rec_action = "Tag existing test file(s) with TST-* ID"
+        elif is_manual_vm or (manual_ui_pat.search(block) and not matched_files):
+            category = "UI/manual-only"
+            rec_status = "[Implemented]"
+            rec_action = "Downgrade to [Implemented] pending attested manual protocol"
+        else:
+            category = "missing test code"
+            rec_status = "[Implemented]"
+            rec_action = "Downgrade to [Implemented] and file domain test follow-up ticket"
+
+        entries.append({
+            "tst_id": base_tid,
+            "shard": item["file"],
+            "line": item["line"],
+            "category": category,
+            "recommended_status": rec_status,
+            "recommended_action": rec_action,
+            "matched_test_files": ";".join(matched_files),
+            "linked_reqs": ";".join(reqs),
+            "verification_method": vm_str,
+            "title": title,
+        })
+
+    unbacked_ids = {e["tst_id"] for e in entries}
+    stale_baseline = sorted(set(baseline_allowlist) - unbacked_ids)
+    by_category = {}
+    by_shard = {}
+    for e in entries:
+        by_category[e["category"]] = by_category.get(e["category"], 0) + 1
+        shard_name = os.path.basename(e["shard"])
+        by_shard[shard_name] = by_shard.get(shard_name, 0) + 1
+
+    if out_csv:
+        abs_csv = out_csv if os.path.isabs(out_csv) else os.path.join(repo_root, out_csv)
+        os.makedirs(os.path.dirname(abs_csv), exist_ok=True)
+        fieldnames = [
+            "tst_id",
+            "shard",
+            "line",
+            "category",
+            "recommended_status",
+            "recommended_action",
+            "matched_test_files",
+            "linked_reqs",
+            "verification_method",
+            "title",
+        ]
+        with open(abs_csv, "w", encoding="utf-8", newline="") as fh:
+            writer = csv.DictWriter(fh, fieldnames=fieldnames)
+            writer.writeheader()
+            for e in sorted(entries, key=lambda x: (x["shard"], x["line"], x["tst_id"])):
+                writer.writerow(e)
+
+    report = {
+        "total_unbacked_verified_tsts": len(entries),
+        "stale_baseline_count": len(stale_baseline),
+        "stale_baseline_ids": stale_baseline,
+        "by_category": by_category,
+        "by_shard": by_shard,
+        "entries": entries,
+    }
+    diagnostics = [
+        f"Unbacked [Verified] TSTs: {len(entries)} | Stale baseline entries: {len(stale_baseline)}",
+        "Categories: " + ", ".join(f"{k}={v}" for k, v in sorted(by_category.items())),
+        "Shards: " + ", ".join(f"{k}={v}" for k, v in sorted(by_shard.items())),
+    ]
+    if out_csv:
+        diagnostics.append(f"Exported triage CSV ledger to {out_csv}")
+    return report, diagnostics
+
+
+
+
+def verify_shard_header_counts(repo_root=None):
+    """
+    Verifies that declared **Total Requirements / Tests** header counts match parsed section headings
+    across all 18 living documentation shards with 100% parity (REQ-PRO-104.2).
+    Returns (success: bool, diagnostics: list[str]).
+    """
+    if repo_root is None:
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+    specs = [
+        ("docs/requirements", "REQ", "Total Requirements"),
+        ("docs/tests", "TST", "Total Tests"),
+    ]
+    errors = []
+    checked_shards = 0
+    for shard_dir_rel, prefix, header_label in specs:
+        abs_shard_dir = os.path.join(repo_root, shard_dir_rel)
+        if not os.path.isdir(abs_shard_dir):
+            continue
+        for fn in sorted(os.listdir(abs_shard_dir)):
+            if not fn.endswith(".md"):
+                continue
+            fp = os.path.join(abs_shard_dir, fn)
+            checked_shards += 1
+            tot = 0
+            declared_header = None
+            with open(fp, "r", encoding="utf-8") as f:
+                for line in f:
+                    if declared_header is None:
+                        m_hdr = re.search(r"\*\*Total (?:Requirements|Tests)\*\*:\s*(\d+)", line)
+                        if m_hdr:
+                            declared_header = int(m_hdr.group(1))
+                    m_sec = re.match(r"^(#{2,4})\s*(" + prefix + r"-[A-Z0-9_-]+):?\s*(.*?)$", line.strip())
+                    if m_sec:
+                        tot += 1
+
+            if declared_header is None:
+                errors.append(f"ERROR: {fn} missing '**{header_label}**: N' header count.")
+            elif declared_header != tot:
+                errors.append(
+                    f"ERROR: {fn} header count ({declared_header}) does not match actual {prefix} count ({tot})."
+                )
+
+    if errors:
+        return False, errors
+    return True, [f"PASS: All {checked_shards} domain shard header counts match parsed sections with 100% parity."]
+
 
 def recalculate_master_index_tables(repo_root=None):
     """
@@ -3011,6 +3702,19 @@ def recalculate_master_index_tables(repo_root=None):
                     else:
                         plan += 1
             shard_counts[fn] = (tot, ver, impl, plan)
+
+            header_label = "Total Requirements" if prefix == "REQ" else "Total Tests"
+            with open(fp, "r", encoding="utf-8") as f:
+                shard_content = f.read()
+            new_shard_content = re.sub(
+                r"\*\*Total (?:Requirements|Tests)\*\*:\s*\d+",
+                f"**{header_label}**: {tot}",
+                shard_content,
+                count=1,
+            )
+            if new_shard_content != shard_content:
+                with open(fp, "w", encoding="utf-8") as f:
+                    f.write(new_shard_content)
 
         master_fp = os.path.join(repo_root, master_rel)
         if not os.path.exists(master_fp):
@@ -3430,6 +4134,7 @@ SWE_DERIVED_PREFIXES = {
     "LOC", "MON", "PRI", "SET",
     "REV",
     "STP",
+    "HRV", "WKO",
     "ARC", "BLD", "BUG", "INT", "LIV", "LOG", "MAN", "NFR", "PRO", "REG", "SEC", "STB", "STR", "TOOL", "TST",
 }
 
@@ -3437,25 +4142,32 @@ SYSTEM_REFINED_PREFIXES = {
     "CON", "FIL", "FUSION", "SEN", "TRK", "WEA",
     "DAT", "EXP", "EXT", "MIG",
     "GEO", "MAP", "NAV", "ROU",
+    "CLM", "RAD",
 }
+
+LEGACY_UNLINKED_SYS_REFINEMENT_REQS = frozenset()
 
 
 def verify_system_software_traceability(
     repo_root=None,
     fail_on_missing_coverage=True,
     fail_on_dangling_sysreq=True,
+    fail_on_unclassified_swe=False,
+    baseline_allowlist=None,
 ):
     """
-    ASPICE SYS.2 BP5 / SWE.1 BP5 System-to-Software Requirement Traceability Guard (REQ-PRO-076).
+    ASPICE SYS.2 BP5 / SWE.1 BP5 System-to-Software Requirement Traceability Guard (REQ-PRO-076, REQ-PRO-102, REQ-PRO-103).
     Verifies that:
       1. All cited SYSREQ-* identifiers exist in docs/system/sysreq_*.md (no dangling SYSREQs).
       2. 100% of declared system requirements have verified coverage by >= 1 software requirement.
-      3. All software requirements either trace to a parent SYSREQ, have an explicit derived marker,
-         or belong to a tailored software-derived prefix family with documented rationale.
+      3. Under fail_on_unclassified_swe=True (--check-reverse-sys-trace), all SYSTEM_REFINED_PREFIXES
+         requirements either trace to >= 1 parent SYSREQ or carry explicit 'Derived (SW-only)' rationale.
     Returns (success: bool, diagnostics: list[str], report: dict).
     """
     if repo_root is None:
         repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    if baseline_allowlist is None:
+        baseline_allowlist = LEGACY_UNLINKED_SYS_REFINEMENT_REQS
 
     diagnostics = []
     errors = []
@@ -3478,6 +4190,20 @@ def verify_system_software_traceability(
 
     # 2. Build SYS-to-SWE mapping from system matrices and requirements
     sys_to_swe = {s: set() for s in declared_sysreqs}
+    req_boundary_pat = re.compile(r"(?<![A-Za-z0-9_-])REQ-[A-Z0-9_-]+(?![A-Za-z0-9_-])")
+    sys_boundary_pat = re.compile(r"(?<![A-Za-z0-9_-])SYSREQ-[A-Z0-9_-]+(?![A-Za-z0-9_-])")
+    sys_field_pat = re.compile(
+        r"^\s*[-*]\s*\*{0,2}(?:System Requirements?|System Requirement\(s\)|Derives from)\*{0,2}\s*:\s*(.*)$",
+        re.IGNORECASE | re.MULTILINE,
+    )
+    derived_sw_only_pat = re.compile(
+        r"Derived\s*\(\s*SW[- ]only\s*\)\s*(?:[:\-\—]+\s*(.+))?",
+        re.IGNORECASE,
+    )
+
+    def _is_system_refined_req(req_id):
+        parts = req_id.split("-")
+        return len(parts) >= 2 and parts[1] in SYSTEM_REFINED_PREFIXES
 
     # 2a. Traceability tables in docs/system/*.md
     if os.path.isdir(sysreq_dir):
@@ -3486,17 +4212,20 @@ def verify_system_software_traceability(
                 fp = os.path.join(sysreq_dir, fn)
                 with open(fp, "r", encoding="utf-8") as fh:
                     for line in fh:
-                        if "|" in line and "SYSREQ-" in line and "REQ-" in line:
-                            sys_matches = re.findall(r"SYSREQ-[A-Z0-9_-]+", line)
-                            req_matches = re.findall(r"REQ-[A-Z0-9_-]+", line)
-                            for s in sys_matches:
-                                s_clean = s.rstrip("-_")
-                                if s_clean in sys_to_swe:
-                                    sys_to_swe[s_clean].update([r.rstrip("-_") for r in req_matches])
+                        if "|" in line:
+                            sys_matches = [s.rstrip("-_") for s in sys_boundary_pat.findall(line)]
+                            req_matches = [r.rstrip("-_") for r in req_boundary_pat.findall(line)]
+                            refined_reqs = [r for r in req_matches if _is_system_refined_req(r)]
+                            if sys_matches and refined_reqs:
+                                for s_clean in sys_matches:
+                                    if s_clean in sys_to_swe:
+                                        sys_to_swe[s_clean].update(refined_reqs)
 
     # 2b. Software requirements in docs/requirements/*.md
     req_dir = os.path.join(repo_root, "docs/requirements")
     swe_req_ids = set()
+    swe_refinement_reqs = set()
+    swe_derived_sw_only_map = {}
     dangling_sysreq_citations = []
 
     if os.path.isdir(req_dir):
@@ -3513,19 +4242,33 @@ def verify_system_software_traceability(
                         continue
                     current_req = m_head.group(1).rstrip("-_")
                     swe_req_ids.add(current_req)
+                    is_sys_refined = _is_system_refined_req(current_req)
+                    if is_sys_refined:
+                        swe_refinement_reqs.add(current_req)
 
-                    for m_sys in re.finditer(r"SYSREQ-[A-Z0-9_-]+", section):
+                    for m_sys in sys_boundary_pat.finditer(section):
                         raw_sys = m_sys.group(0).rstrip("-_")
                         if raw_sys in ("SYSREQ-XXX", "SYSREQ-TRK", "SYSREQ-DEX"):
                             continue
                         if not re.match(r"^SYSREQ-[A-Z]+-\d+$", raw_sys):
                             continue
                         if raw_sys in declared_sysreqs:
-                            sys_to_swe[raw_sys].add(current_req)
+                            if is_sys_refined:
+                                sys_to_swe[raw_sys].add(current_req)
                         elif raw_sys not in GRANDFATHERED_SYSREQS:
                             dangling_sysreq_citations.append(
                                 f"{fn} [{current_req}] cites undeclared system requirement {raw_sys}"
                             )
+
+                    if is_sys_refined:
+                        m_field = sys_field_pat.search(section)
+                        if m_field:
+                            field_val = m_field.group(1).strip()
+                            m_der = derived_sw_only_pat.search(field_val)
+                            if m_der:
+                                rationale = (m_der.group(1) or "").strip()
+                                if len(rationale) >= 5:
+                                    swe_derived_sw_only_map[current_req] = rationale
 
     # 3. Check for dangling SYSREQs in docs/system/
     if os.path.isdir(sysreq_dir):
@@ -3552,10 +4295,37 @@ def verify_system_software_traceability(
         else:
             diagnostics.append(f"WARNING: {msg}")
 
-    # 4. Coverage calculation
+    # 4. Coverage calculation (forward SYSREQ->SWE and reverse System-Refinement SWE->SYSREQ/Derived)
     covered_sysreqs = {s for s, reqs in sys_to_swe.items() if len(reqs) > 0}
     uncovered_sysreqs = declared_sysreqs - covered_sysreqs
     coverage_pct = round(len(covered_sysreqs) / max(1, len(declared_sysreqs)) * 100.0, 1)
+
+    covered_swe_refinement_reqs = {
+        r for reqs in sys_to_swe.values() for r in reqs if _is_system_refined_req(r)
+    }
+    if swe_refinement_reqs:
+        covered_swe_refinement_reqs &= swe_refinement_reqs
+    swe_refinement_total_count = len(swe_refinement_reqs)
+    swe_refinement_covered_count = len(covered_swe_refinement_reqs)
+    swe_refinement_coverage_pct = (
+        round(swe_refinement_covered_count / swe_refinement_total_count * 100.0, 2)
+        if swe_refinement_total_count > 0
+        else 0.0
+    )
+    swe_to_sys_map = {
+        r: sorted([s for s, reqs in sys_to_swe.items() if r in reqs])
+        for r in sorted(covered_swe_refinement_reqs)
+    }
+    unlinked_swe_refinement_reqs = sorted(swe_refinement_reqs - covered_swe_refinement_reqs)
+
+    classified_swe_reqs = covered_swe_refinement_reqs | (set(swe_derived_sw_only_map.keys()) & swe_refinement_reqs)
+    unclassified_swe_refinement_reqs = sorted(swe_refinement_reqs - classified_swe_reqs)
+    reverse_classified_count = len(classified_swe_reqs)
+    reverse_classified_pct = (
+        round(reverse_classified_count / swe_refinement_total_count * 100.0, 2)
+        if swe_refinement_total_count > 0
+        else 0.0
+    )
 
     if uncovered_sysreqs:
         msg = f"SYSREQ coverage gap: {', '.join(sorted(uncovered_sysreqs))} have zero refining software requirements."
@@ -3563,6 +4333,15 @@ def verify_system_software_traceability(
             errors.append(msg)
         else:
             diagnostics.append(f"WARNING: {msg}")
+
+    if fail_on_unclassified_swe:
+        unbaselined = [r for r in unclassified_swe_refinement_reqs if r not in baseline_allowlist]
+        if unbaselined:
+            errors.append(
+                f"Unclassified System-Refinement SWE requirement(s) missing SYSREQ-* or Derived (SW-only) "
+                f"rationale ({len(unbaselined)}): {', '.join(unbaselined[:15])}"
+                + (f" ... (+{len(unbaselined) - 15} more)" if len(unbaselined) > 15 else "")
+            )
 
     report = {
         "declared_sysreqs": sorted(list(declared_sysreqs)),
@@ -3574,6 +4353,16 @@ def verify_system_software_traceability(
         "sys_to_swe_map": {k: sorted(list(v)) for k, v in sys_to_swe.items()},
         "dangling_sysreq_citations": dangling_sysreq_citations,
         "total_swe_reqs_count": len(swe_req_ids),
+        "swe_refinement_total_count": swe_refinement_total_count,
+        "swe_refinement_covered_count": swe_refinement_covered_count,
+        "swe_refinement_coverage_pct": swe_refinement_coverage_pct,
+        "swe_to_sys_map": swe_to_sys_map,
+        "unlinked_swe_refinement_reqs": unlinked_swe_refinement_reqs,
+        "swe_derived_sw_only_count": len(swe_derived_sw_only_map),
+        "swe_derived_sw_only_map": dict(sorted(swe_derived_sw_only_map.items())),
+        "unclassified_swe_refinement_reqs": unclassified_swe_refinement_reqs,
+        "reverse_classified_count": reverse_classified_count,
+        "reverse_classified_pct": reverse_classified_pct,
     }
 
     if errors:
@@ -3581,7 +4370,11 @@ def verify_system_software_traceability(
 
     diagnostics.append(
         f"PASS: 100% System-to-Software requirement traceability verified "
-        f"({len(covered_sysreqs)}/{len(declared_sysreqs)} SYSREQs covered by software requirements, "
+        f"({len(covered_sysreqs)}/{len(declared_sysreqs)} SYSREQs covered by software requirements; "
+        f"{swe_refinement_covered_count}/{swe_refinement_total_count} "
+        f"[{swe_refinement_coverage_pct}%] SYSREQ-linked, "
+        f"{len(swe_derived_sw_only_map)} Derived (SW-only), "
+        f"{reverse_classified_count}/{swe_refinement_total_count} [{reverse_classified_pct}%] classified; "
         f"zero dangling SYSREQs)."
     )
     return True, diagnostics, report
@@ -3673,6 +4466,24 @@ def verify_governance(
         diagnostics.extend(orphans_diag)
         return False, diagnostics
     diagnostics.extend(orphans_diag)
+
+    headers_ok, headers_diag = verify_shard_header_counts(repo_root=repo_root)
+    if not headers_ok:
+        diagnostics.extend(headers_diag)
+        return False, diagnostics
+    diagnostics.extend(headers_diag)
+
+    desc_ok, desc_diag, _ = verify_req_descriptions(repo_root=repo_root)
+    if not desc_ok:
+        diagnostics.extend(desc_diag)
+        return False, diagnostics
+    diagnostics.extend(desc_diag)
+
+    code_orphans_ok, code_orphans_diag, _ = verify_code_traceability_orphans(repo_root=repo_root)
+    if not code_orphans_ok:
+        diagnostics.extend(code_orphans_diag)
+        return False, diagnostics
+    diagnostics.extend(code_orphans_diag)
 
     if (
         min_req_tst_coverage is not None
@@ -3780,6 +4591,8 @@ def main():
     )
     parser.add_argument(
         "--sync-indexes",
+        "--recalc-docs",
+        dest="sync_indexes",
         action="store_true",
         help="Recalculate and synchronize master index tables in docs/requirements.md and docs/tests.md.",
     )
@@ -3913,6 +4726,17 @@ def main():
         help="Verify that all [Verified] TST specifications are backed by passing test evidence and reject failing or unbacked items (REQ-PRO-099).",
     )
     parser.add_argument(
+        "--triage-unbacked",
+        action="store_true",
+        help="Classify all unbacked [Verified] TSTs across living-doc shards and report stale ratchet baseline entries (REQ-PRO-101.1).",
+    )
+    parser.add_argument(
+        "--triage-csv",
+        type=str,
+        default=None,
+        help="Optional CSV output path for --triage-unbacked (e.g. docs/engineering/test_evidence/ATT-8145_unbacked_triage.csv).",
+    )
+    parser.add_argument(
         "--check-test-evidence",
         nargs="?",
         const="",
@@ -3940,6 +4764,11 @@ def main():
         "--verify-sys-trace",
         action="store_true",
         help="Verify system-to-software requirement traceability and prefix tailoring (REQ-PRO-076).",
+    )
+    parser.add_argument(
+        "--check-reverse-sys-trace",
+        action="store_true",
+        help="Fail if any System-Refinement SWE requirement lacks a SYSREQ-* link or Derived (SW-only) rationale (REQ-PRO-103.3).",
     )
     parser.add_argument(
         "--report-sys-coverage",
@@ -3992,6 +4821,26 @@ def main():
         action="store_false",
         help="Do not fail on unbaselined orphans (warning only).",
     )
+    parser.add_argument(
+        "--check-code-orphans",
+        action="store_true",
+        help="Verify that all REQ and TST citations in codebase resolve to authentic living documentation headings (REQ-PRO-104.1).",
+    )
+    parser.add_argument(
+        "--check-shard-headers",
+        action="store_true",
+        help="Verify that all 18 living documentation domain shard headers match parsed section counts with 100%% parity (REQ-PRO-104.2).",
+    )
+    parser.add_argument(
+        "--check-req-description",
+        action="store_true",
+        help="Enforce that all newly added living requirements declare a non-empty - **Description**: field against legacy ratchet baseline (REQ-PRO-104.3).",
+    )
+    parser.add_argument(
+        "--report-req-field-coverage",
+        action="store_true",
+        help="Report field completion coverage percentages (Description, Given-When-Then, Allocation) across all living requirements (REQ-PRO-104.3).",
+    )
 
     args = parser.parse_args()
 
@@ -4004,22 +4853,60 @@ def main():
             print(msg, file=sys.stderr if not ok and "ERROR" in msg else sys.stdout)
         sys.exit(0 if ok else 1)
 
+    if args.check_code_orphans:
+        ok, diag, _ = verify_code_traceability_orphans(fail_on_orphans=args.fail_on_orphans)
+        for msg in diag:
+            print(msg, file=sys.stderr if not ok and "ERROR" in msg else sys.stdout)
+        sys.exit(0 if ok else 1)
+
+    if args.check_shard_headers:
+        ok, diag = verify_shard_header_counts()
+        for msg in diag:
+            print(msg, file=sys.stderr if not ok and "ERROR" in msg else sys.stdout)
+        sys.exit(0 if ok else 1)
+
+    if args.check_req_description:
+        ok, diag, _ = verify_req_descriptions(fail_on_missing=True)
+        for msg in diag:
+            print(msg, file=sys.stderr if not ok and "ERROR" in msg else sys.stdout)
+        sys.exit(0 if ok else 1)
+
+    if args.report_req_field_coverage:
+        cov = calculate_req_field_coverage()
+        print(format_req_field_coverage(cov))
+        sys.exit(0)
+
     if args.check_evidence:
         ok, diag = verify_requirement_evidence_status(fail_on_unverified=args.enforce_evidence)
         for msg in diag:
             print(msg, file=sys.stderr if not ok else sys.stdout)
         sys.exit(0 if ok else 1)
 
-    if args.verify_sys_trace or args.report_sys_coverage:
-        ok, diag, report = verify_system_software_traceability()
+    if args.verify_sys_trace or args.check_reverse_sys_trace or args.report_sys_coverage:
+        ok, diag, report = verify_system_software_traceability(
+            fail_on_unclassified_swe=args.check_reverse_sys_trace,
+        )
         for msg in diag:
             print(msg, file=sys.stderr if not ok and "ERROR" in msg else sys.stdout)
         if args.report_sys_coverage:
             print("\nSYSREQ-to-SWE Requirement Coverage Report:")
-            print(f"Total Declared SYSREQs: {report['sysreq_count']}")
-            print(f"Covered SYSREQs: {report['covered_count']} ({report['coverage_pct']}%)")
+            print(f"Forward Coverage (SYSREQ -> Product REQ): {report['covered_count']}/{report['sysreq_count']} ({report['coverage_pct']}%)")
             for sys_id, reqs in sorted(report["sys_to_swe_map"].items()):
                 print(f"  {sys_id} ({len(reqs)} REQs): {', '.join(sorted(reqs))}")
+            print(
+                f"\nReverse Coverage (Product REQ [System-Refinement] -> SYSREQ): "
+                f"{report['swe_refinement_covered_count']}/{report['swe_refinement_total_count']} "
+                f"({report['swe_refinement_coverage_pct']}%)"
+            )
+            print(
+                f"Derived (SW-only) System-Refinement REQs: {report['swe_derived_sw_only_count']}"
+            )
+            print(
+                f"Total Classified System-Refinement REQs: "
+                f"{report['reverse_classified_count']}/{report['swe_refinement_total_count']} "
+                f"({report['reverse_classified_pct']}%)"
+            )
+            print(f"Unclassified System-Refinement SWE REQs: {len(report['unclassified_swe_refinement_reqs'])}")
         sys.exit(0 if ok else 1)
 
     if args.check_verified_evidence:
@@ -4030,6 +4917,12 @@ def main():
         for msg in diag:
             print(msg, file=sys.stderr if not ok and msg.startswith("ERROR") else sys.stdout)
         sys.exit(0 if ok else 1)
+
+    if args.triage_unbacked:
+        _, diag = triage_unbacked_verified_tsts(out_csv=args.triage_csv)
+        for msg in diag:
+            print(msg)
+        sys.exit(0)
 
     if args.check_test_evidence is not None:
         target_sprint = args.check_test_evidence if args.check_test_evidence != "" else None

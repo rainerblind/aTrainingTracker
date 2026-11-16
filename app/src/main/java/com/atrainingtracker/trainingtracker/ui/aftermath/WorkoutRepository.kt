@@ -86,6 +86,9 @@ import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusRep
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusGroupData
 import com.atrainingtracker.trainingtracker.ui.map.LocationMarker
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
+import com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricType
+import com.atrainingtracker.trainingtracker.ui.map.TelemetrySourcePoint
+import com.atrainingtracker.trainingtracker.ui.map.TelemetrySourceSeries
 import com.atrainingtracker.trainingtracker.ui.map.TrackType
 import com.atrainingtracker.trainingtracker.ui.map.createSensorMarker
 import com.atrainingtracker.trainingtracker.ui.map.TelemetryZoneMath
@@ -197,6 +200,57 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
         @androidx.annotation.VisibleForTesting
         fun resetForTesting(newInstance: WorkoutRepository? = null) {
             INSTANCE = newInstance
+        }
+
+        private const val MAX_OVERLAY_POINTS = 800
+
+        /**
+         * Discovers source-qualified columns strictly matching `"^${type.name} \\((.+)\\)$"`
+         * so canonical ProxySensor columns are never double-counted (REQ-PER-042.1).
+         */
+        fun discoverNamedSourceColumns(
+            existingColumns: Collection<String>,
+            sensorType: SensorType
+        ): List<Pair<String, String>> {
+            val pattern = Regex("^${Regex.escape(sensorType.name)} \\((.+)\\)$")
+            return existingColumns.mapNotNull { colName ->
+                val match = pattern.matchEntire(colName) ?: return@mapNotNull null
+                val sourceName = match.groupValues[1].trim()
+                if (sourceName.isEmpty()) null else sourceName to colName
+            }.sortedBy { it.first.lowercase(Locale.US) }
+        }
+
+        /**
+         * Maps overlay-eligible metrics (`HR`, `POWER`, `CADENCE`) that have at least 2 distinct
+         * named device columns (REQ-PER-042.1).
+         */
+        fun discoverMultiSourceOverlayColumns(
+            existingColumns: Collection<String>
+        ): Map<TelemetryMetricType, List<Pair<String, String>>> {
+            val mappings = listOf(
+                SensorType.HR to TelemetryMetricType.HEART_RATE,
+                SensorType.POWER to TelemetryMetricType.POWER,
+                SensorType.CADENCE to TelemetryMetricType.CADENCE
+            )
+            val result = linkedMapOf<TelemetryMetricType, List<Pair<String, String>>>()
+            for ((sensorType, metricType) in mappings) {
+                val sources = discoverNamedSourceColumns(existingColumns, sensorType)
+                if (sources.size >= 2) {
+                    result[metricType] = sources
+                }
+            }
+            return result
+        }
+
+        private fun decimateSourcePoints(
+            points: List<TelemetrySourcePoint>,
+            maxPoints: Int = MAX_OVERLAY_POINTS
+        ): List<TelemetrySourcePoint> {
+            if (points.size <= maxPoints) return points
+            val step = kotlin.math.ceil(points.size.toDouble() / maxPoints).toInt()
+            return points.filterIndexed { index, _ ->
+                index == 0 || index == points.lastIndex || index % step == 0
+            }
         }
 
         /**
@@ -677,6 +731,8 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                 val psLIdx = col(SensorType.PEDAL_SMOOTHNESS_L.name)
                 val psRIdx = col(SensorType.PEDAL_SMOOTHNESS_R.name)
                 val psCombIdx = col(SensorType.PEDAL_SMOOTHNESS.name)
+                val voIdx = col(SensorType.VERTICAL_OSCILLATION.name)
+                val gctIdx = col(SensorType.GROUND_CONTACT_TIME.name)
 
                 fun getDoubleOrNull(idx: Int): Double? =
                     if (idx >= 0 && !cursor.isNull(idx)) {
@@ -721,7 +777,9 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                         torqueEffectivenessR = getDoubleOrNull(teRIdx),
                         pedalSmoothnessL = getDoubleOrNull(psLIdx),
                         pedalSmoothnessR = getDoubleOrNull(psRIdx),
-                        pedalSmoothnessCombined = getDoubleOrNull(psCombIdx)
+                        pedalSmoothnessCombined = getDoubleOrNull(psCombIdx),
+                        verticalOscillationCm = getDoubleOrNull(voIdx),
+                        groundContactTimeMs = getDoubleOrNull(gctIdx)
                     )
                     consumer.accept(record)
                 }
@@ -1391,7 +1449,8 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
     ) {
         val sensorsToCalculate = mutableListOf(
             SensorType.HR, SensorType.CADENCE, SensorType.POWER, SensorType.SPEED_mps,
-            SensorType.ALTITUDE, SensorType.TEMPERATURE
+            SensorType.ALTITUDE, SensorType.TEMPERATURE,
+            SensorType.VERTICAL_OSCILLATION, SensorType.GROUND_CONTACT_TIME
         )
         if (hasRadarData(workoutId, baseFileName)) {
             sensorsToCalculate.addAll(
@@ -1975,7 +2034,8 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
      * @return A list of [PathPoint] objects containing distance, location, and altitude.
      */
     /**
-     * DTO containing consolidated telemetry tracks and zone distributions (ATT-4003 / REQ-DAT-033 / ATT-5487).
+     * DTO containing consolidated telemetry tracks, zone distributions, and multi-sensor overlays
+     * (ATT-4003 / REQ-DAT-033 / ATT-5487 / REQ-PER-042).
      */
     data class WorkoutDetailTelemetry @JvmOverloads constructor(
         val tracks: Map<TrackType, List<PathPoint>>,
@@ -1983,8 +2043,72 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
         val powerZoneDistribution: ZoneDistributionData?,
         val hrThresholds: HeartRateZoneThresholds? = null,
         val powerThresholds: PowerZoneThresholds? = null,
-        val gradeZoneDistribution: ZoneDistributionData? = null
+        val gradeZoneDistribution: ZoneDistributionData? = null,
+        val multiSensorOverlays: Map<TelemetryMetricType, List<TelemetrySourceSeries>> = emptyMap()
     )
+
+    private class OverlaySeriesAccumulator(
+        val metricType: TelemetryMetricType,
+        val sourceName: String,
+        val columnName: String,
+        val columnIndex: Int
+    ) {
+        private val points = mutableListOf<TelemetrySourcePoint>()
+        private var sum = 0.0
+        private var count = 0
+
+        fun record(cursor: Cursor, distance: Double, timeSec: Long) {
+            if (columnIndex < 0 || cursor.isNull(columnIndex)) return
+            val raw = cursor.getDouble(columnIndex)
+            val valid = if (metricType == TelemetryMetricType.POWER) raw >= 0.0 else raw > 0.0
+            if (valid) {
+                sum += raw
+                count++
+                points.add(TelemetrySourcePoint(distance = distance, timeSec = timeSec, value = raw))
+            }
+        }
+
+        fun build(): TelemetrySourceSeries? {
+            if (count == 0) return null
+            return TelemetrySourceSeries(
+                metricType = metricType,
+                sourceName = sourceName,
+                columnName = columnName,
+                points = decimateSourcePoints(points),
+                meanValue = sum / count
+            )
+        }
+    }
+
+    private fun buildColumnIndexMap(cursor: Cursor): Map<String, Int> {
+        val map = HashMap<String, Int>()
+        val names = cursor.columnNames ?: return map
+        names.forEachIndexed { idx, name -> map[name] = idx }
+        return map
+    }
+
+    private fun createOverlayAccumulators(
+        overlayColumnsByMetric: Map<TelemetryMetricType, List<Pair<String, String>>>,
+        columnIndexMap: Map<String, Int>
+    ): List<OverlaySeriesAccumulator> {
+        val list = mutableListOf<OverlaySeriesAccumulator>()
+        for ((metricType, sources) in overlayColumnsByMetric) {
+            for ((sourceName, colName) in sources) {
+                val idx = columnIndexMap[colName] ?: -1
+                if (idx >= 0) {
+                    list.add(OverlaySeriesAccumulator(metricType, sourceName, colName, idx))
+                }
+            }
+        }
+        return list
+    }
+
+    private fun finalizeOverlaySeries(
+        accumulators: List<OverlaySeriesAccumulator>
+    ): Map<TelemetryMetricType, List<TelemetrySourceSeries>> {
+        val grouped = accumulators.mapNotNull { it.build() }.groupBy { it.metricType }
+        return grouped.filterValues { it.size >= 2 }
+    }
 
     private fun getExistingColumns(db: android.database.sqlite.SQLiteDatabase, tableName: String): Set<String> {
         val cols = mutableSetOf<String>()
@@ -2038,6 +2162,7 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
             WorkoutSamplesDatabaseManager.WorkoutSamplesDbHelper.TIME,
             SensorType.HR.name,
             SensorType.POWER.name,
+            SensorType.CADENCE.name,
             SensorType.SPEED_mps.name,
             SensorType.SLOPE.name,
             SensorType.W_PRIME_BAL.name,
@@ -2060,6 +2185,7 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
             val timeIdx = cursor.getColumnIndex(WorkoutSamplesDatabaseManager.WorkoutSamplesDbHelper.TIME)
             val hrIdx = cursor.getColumnIndex(SensorType.HR.name)
             val powerIdx = cursor.getColumnIndex(SensorType.POWER.name)
+            val cadenceIdx = cursor.getColumnIndex(SensorType.CADENCE.name)
             val speedIdx = cursor.getColumnIndex(SensorType.SPEED_mps.name)
             val slopeIdx = cursor.getColumnIndex(SensorType.SLOPE.name)
             val wPrimeIdx = cursor.getColumnIndex(SensorType.W_PRIME_BAL.name)
@@ -2088,12 +2214,13 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                     val alt = if (altIdx != -1 && !cursor.isNull(altIdx)) cursor.getDouble(altIdx) else null
                     val hr = if (hrIdx != -1 && !cursor.isNull(hrIdx)) cursor.getInt(hrIdx) else null
                     val power = if (powerIdx != -1 && !cursor.isNull(powerIdx)) cursor.getInt(powerIdx) else null
-                    val speed = if (speedIdx != -1 && !cursor.isNull(speedIdx)) cursor.getDouble(speedIdx) else null
-                    val slope = if (slopeIdx != -1 && !cursor.isNull(slopeIdx)) cursor.getDouble(slopeIdx) else null
-                    val wPrimeBal = if (wPrimeIdx != -1 && !cursor.isNull(wPrimeIdx)) cursor.getDouble(wPrimeIdx) else null
-                    val hrvDfaA1 = if (hrvDfaIdx != -1 && !cursor.isNull(hrvDfaIdx)) cursor.getDouble(hrvDfaIdx) else null
-                    val hrvRmssd = if (hrvRmssdIdx != -1 && !cursor.isNull(hrvRmssdIdx)) cursor.getDouble(hrvRmssdIdx) else null
-                    val hrvArtifactRate = if (hrvArtifactIdx != -1 && !cursor.isNull(hrvArtifactIdx)) cursor.getDouble(hrvArtifactIdx) else null
+                    val cadence = cursor.optIntOrNull(cadenceIdx)
+                    val speed = cursor.optDoubleOrNull(speedIdx)
+                    val slope = cursor.optDoubleOrNull(slopeIdx)
+                    val wPrimeBal = cursor.optDoubleOrNull(wPrimeIdx)
+                    val hrvDfaA1 = cursor.optDoubleOrNull(hrvDfaIdx)
+                    val hrvRmssd = cursor.optDoubleOrNull(hrvRmssdIdx)
+                    val hrvArtifactRate = cursor.optDoubleOrNull(hrvArtifactIdx)
 
                     points.add(
                         PathPoint(
@@ -2108,7 +2235,8 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                             wPrimeBalKj = wPrimeBal,
                             hrvDfaA1 = hrvDfaA1,
                             hrvRmssd = hrvRmssd,
-                            hrvArtifactRate = hrvArtifactRate
+                            hrvArtifactRate = hrvArtifactRate,
+                            cadence = cadence
                         )
                     )
                 }
@@ -2119,96 +2247,123 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
     }
 
     /**
-     * Extracts continuous sensor telemetry points (HR, Power, Speed) across the Time domain
-     * for trackless workouts where GPS coordinate fixes are absent (REQ-UI-235 / ATT-2006).
-     *
-     * @param workoutId The database ID of the workout summary.
-     * @return Decimated list of [PathPoint] containing continuous time-domain telemetry.
+     * Extracts continuous sensor telemetry points (HR, Power, Cadence, Speed) across the Time domain
+     * for trackless workouts where GPS coordinate fixes are absent (REQ-UI-235 / ATT-2006 / REQ-PER-042).
      */
     suspend fun getWorkoutTelemetryPoints(
         workoutId: Long
-    ): List<PathPoint> = withContext(Dispatchers.IO) {
+    ): List<PathPoint> = loadTracklessWorkoutTelemetry(workoutId).first
+
+    /**
+     * Extracts continuous time-domain [PathPoint]s and multi-sensor overlay streams (`>= 2` named sources)
+     * for trackless indoor workouts (REQ-UI-235, REQ-PER-042.1).
+     */
+    suspend fun loadTracklessWorkoutTelemetry(
+        workoutId: Long
+    ): Pair<List<PathPoint>, Map<TelemetryMetricType, List<TelemetrySourceSeries>>> = withContext(Dispatchers.IO) {
         val points = mutableListOf<PathPoint>()
 
         val baseFileName = summariesManager.getBaseFileName(workoutId)
-            ?: return@withContext emptyList()
+            ?: return@withContext emptyList<PathPoint>() to emptyMap()
 
         val db = samplesManager.database
         val tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
 
         if (!samplesManager.existsTable(baseFileName)) {
-            return@withContext emptyList()
+            return@withContext emptyList<PathPoint>() to emptyMap()
         }
 
+        var overlayAccumulators: List<OverlaySeriesAccumulator> = emptyList()
+
         db.query(tableName, null, null, null, null, null, null).use { cursor ->
-            val distIdx = cursor.getColumnIndex(SensorType.DISTANCE_m.name)
-            val timeActiveIdx = cursor.getColumnIndex(SensorType.TIME_ACTIVE.name)
-            val timeTotalIdx = cursor.getColumnIndex(SensorType.TIME_TOTAL.name)
-            val timeIdx = cursor.getColumnIndex(WorkoutSamplesDatabaseManager.WorkoutSamplesDbHelper.TIME)
-            val hrIdx = cursor.getColumnIndex(SensorType.HR.name)
-            val powerIdx = cursor.getColumnIndex(SensorType.POWER.name)
-            val speedIdx = cursor.getColumnIndex(SensorType.SPEED_mps.name)
-            val altIdx = cursor.getColumnIndex(SensorType.ALTITUDE.name)
-            val wPrimeIdx = cursor.getColumnIndex(SensorType.W_PRIME_BAL.name)
-            val hrvDfaIdx = cursor.getColumnIndex(SensorType.HRV_DFA_A1.name)
-            val hrvRmssdIdx = cursor.getColumnIndex(SensorType.HRV_RMSSD.name)
-            val hrvArtifactIdx = cursor.getColumnIndex(SensorType.HRV_ARTIFACT_RATE.name)
-
-            var initialEpochSec: Long? = null
-            var sampleIndex = 0L
-
-            while (cursor.moveToNext()) {
-                val timeSec = when {
-                    timeActiveIdx != -1 && !cursor.isNull(timeActiveIdx) -> cursor.getLong(timeActiveIdx)
-                    timeTotalIdx != -1 && !cursor.isNull(timeTotalIdx) -> cursor.getLong(timeTotalIdx)
-                    timeIdx != -1 && !cursor.isNull(timeIdx) -> {
-                        val (offset, anchor) = parseTimestampOffset(cursor.getString(timeIdx), initialEpochSec)
-                        initialEpochSec = anchor
-                        offset ?: sampleIndex
-                    }
-                    else -> sampleIndex
-                }
-
-                val hr = if (hrIdx != -1 && !cursor.isNull(hrIdx)) cursor.getInt(hrIdx) else null
-                val power = if (powerIdx != -1 && !cursor.isNull(powerIdx)) cursor.getInt(powerIdx) else null
-                val speed = if (speedIdx != -1 && !cursor.isNull(speedIdx)) cursor.getDouble(speedIdx) else null
-                val alt = if (altIdx != -1 && !cursor.isNull(altIdx)) cursor.getDouble(altIdx) else null
-                val dist = if (distIdx != -1 && !cursor.isNull(distIdx)) cursor.getDouble(distIdx) else 0.0
-                val wPrimeBal = if (wPrimeIdx != -1 && !cursor.isNull(wPrimeIdx)) cursor.getDouble(wPrimeIdx) else null
-                val hrvDfaA1 = if (hrvDfaIdx != -1 && !cursor.isNull(hrvDfaIdx)) cursor.getDouble(hrvDfaIdx) else null
-                val hrvRmssd = if (hrvRmssdIdx != -1 && !cursor.isNull(hrvRmssdIdx)) cursor.getDouble(hrvRmssdIdx) else null
-                val hrvArtifactRate = if (hrvArtifactIdx != -1 && !cursor.isNull(hrvArtifactIdx)) cursor.getDouble(hrvArtifactIdx) else null
-
-                if (hr != null || power != null || speed != null || alt != null || hrvDfaA1 != null || hrvRmssd != null) {
-                    points.add(
-                        PathPoint(
-                            distance = dist,
-                            latLng = LatLng(0.0, 0.0),
-                            altitude = alt,
-                            timeSec = timeSec,
-                            hr = hr,
-                            power = power,
-                            speedMps = speed,
-                            slope = null,
-                            wPrimeBalKj = wPrimeBal,
-                            hrvDfaA1 = hrvDfaA1,
-                            hrvRmssd = hrvRmssd,
-                            hrvArtifactRate = hrvArtifactRate
-                        )
-                    )
-                }
-                sampleIndex++
-            }
+            val columnIndexMap = buildColumnIndexMap(cursor)
+            val overlayColumnsByMetric = discoverMultiSourceOverlayColumns(columnIndexMap.keys)
+            overlayAccumulators = createOverlayAccumulators(overlayColumnsByMetric, columnIndexMap)
+            readTracklessTelemetryRows(cursor, overlayAccumulators, points)
         }
 
         val enrichedPoints = enrichPointsWithWPrimeBal(points)
-        if (enrichedPoints.size > 800) {
+        val finalPoints = if (enrichedPoints.size > 800) {
             val step = kotlin.math.ceil(enrichedPoints.size / 800.0).toInt()
             enrichedPoints.filterIndexed { index, _ ->
                 index == 0 || index == enrichedPoints.lastIndex || index % step == 0
             }
         } else {
             enrichedPoints
+        }
+        return@withContext finalPoints to finalizeOverlaySeries(overlayAccumulators)
+    }
+
+    private fun android.database.Cursor.optIntOrNull(idx: Int): Int? =
+        if (idx != -1 && !isNull(idx)) getInt(idx) else null
+
+    private fun android.database.Cursor.optDoubleOrNull(idx: Int): Double? =
+        if (idx != -1 && !isNull(idx)) getDouble(idx) else null
+
+    private fun readTracklessTelemetryRows(
+        cursor: android.database.Cursor,
+        overlayAccumulators: List<OverlaySeriesAccumulator>,
+        points: MutableList<PathPoint>
+    ) {
+        val distIdx = cursor.getColumnIndex(SensorType.DISTANCE_m.name)
+        val timeActiveIdx = cursor.getColumnIndex(SensorType.TIME_ACTIVE.name)
+        val timeTotalIdx = cursor.getColumnIndex(SensorType.TIME_TOTAL.name)
+        val timeIdx = cursor.getColumnIndex(WorkoutSamplesDatabaseManager.WorkoutSamplesDbHelper.TIME)
+        val hrIdx = cursor.getColumnIndex(SensorType.HR.name)
+        val powerIdx = cursor.getColumnIndex(SensorType.POWER.name)
+        val cadenceIdx = cursor.getColumnIndex(SensorType.CADENCE.name)
+        val speedIdx = cursor.getColumnIndex(SensorType.SPEED_mps.name)
+        val altIdx = cursor.getColumnIndex(SensorType.ALTITUDE.name)
+        val wPrimeIdx = cursor.getColumnIndex(SensorType.W_PRIME_BAL.name)
+        val hrvDfaIdx = cursor.getColumnIndex(SensorType.HRV_DFA_A1.name)
+        val hrvRmssdIdx = cursor.getColumnIndex(SensorType.HRV_RMSSD.name)
+        val hrvArtifactIdx = cursor.getColumnIndex(SensorType.HRV_ARTIFACT_RATE.name)
+
+        var initialEpochSec: Long? = null
+        var sampleIndex = 0L
+
+        while (cursor.moveToNext()) {
+            val timeSec = when {
+                timeActiveIdx != -1 && !cursor.isNull(timeActiveIdx) -> cursor.getLong(timeActiveIdx)
+                timeTotalIdx != -1 && !cursor.isNull(timeTotalIdx) -> cursor.getLong(timeTotalIdx)
+                timeIdx != -1 && !cursor.isNull(timeIdx) -> {
+                    val (offset, anchor) = parseTimestampOffset(cursor.getString(timeIdx), initialEpochSec)
+                    initialEpochSec = anchor
+                    offset ?: sampleIndex
+                }
+                else -> sampleIndex
+            }
+            val dist = cursor.optDoubleOrNull(distIdx) ?: 0.0
+            val hr = cursor.optIntOrNull(hrIdx)
+            val power = cursor.optIntOrNull(powerIdx)
+            val cadence = cursor.optIntOrNull(cadenceIdx)
+            val speed = cursor.optDoubleOrNull(speedIdx)
+            val alt = cursor.optDoubleOrNull(altIdx)
+            val hrvDfaA1 = cursor.optDoubleOrNull(hrvDfaIdx)
+            val hrvRmssd = cursor.optDoubleOrNull(hrvRmssdIdx)
+            overlayAccumulators.forEach { it.record(cursor, dist, timeSec) }
+
+            val hasSample = listOf(hr, power, cadence, speed, alt, hrvDfaA1, hrvRmssd).any { it != null }
+            if (hasSample) {
+                points.add(
+                    PathPoint(
+                        distance = dist,
+                        latLng = LatLng(0.0, 0.0),
+                        altitude = alt,
+                        timeSec = timeSec,
+                        hr = hr,
+                        power = power,
+                        speedMps = speed,
+                        slope = null,
+                        wPrimeBalKj = cursor.optDoubleOrNull(wPrimeIdx),
+                        hrvDfaA1 = hrvDfaA1,
+                        hrvRmssd = hrvRmssd,
+                        hrvArtifactRate = cursor.optDoubleOrNull(hrvArtifactIdx),
+                        cadence = cadence
+                    )
+                )
+            }
+            sampleIndex++
         }
     }
 
@@ -2441,8 +2596,11 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
 
         val hasHr = SensorType.HR.name in existingColumns
         val hasPower = SensorType.POWER.name in existingColumns
+        val hasCadence = SensorType.CADENCE.name in existingColumns
+        val hasScalarSensor = hasHr || hasPower || hasCadence
+        val overlayColumnsByMetric = discoverMultiSourceOverlayColumns(existingColumns)
 
-        if (availableTrackTypes.isEmpty() && !hasHr && !hasPower) {
+        if (availableTrackTypes.isEmpty() && !hasScalarSensor && overlayColumnsByMetric.isEmpty()) {
             return@withContext WorkoutDetailTelemetry(emptyMap(), null, null)
         }
 
@@ -2483,6 +2641,7 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
             WorkoutSamplesDatabaseManager.WorkoutSamplesDbHelper.TIME,
             SensorType.HR.name,
             SensorType.POWER.name,
+            SensorType.CADENCE.name,
             SensorType.SPEED_mps.name,
             SensorType.SLOPE.name,
             SensorType.W_PRIME_BAL.name,
@@ -2493,13 +2652,21 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
         for (col in commonCols) {
             if (col in existingColumns) projectionSet.add(col)
         }
+        for (sources in overlayColumnsByMetric.values) {
+            for ((_, colName) in sources) {
+                projectionSet.add(colName)
+            }
+        }
 
         val projection = projectionSet.map { quoteSqlIdentifier(it) }.toTypedArray()
         val trackPointsMap = availableTrackTypes.associateWith { ArrayList<PathPoint>() }
         val hrSamples = if (hasHr) mutableListOf<ZoneSample>() else null
         val powerSamples = if (hasPower) mutableListOf<ZoneSample>() else null
+        var overlayAccumulators: List<OverlaySeriesAccumulator> = emptyList()
 
         db.query(tableName, projection, null, null, null, null, null).use { cursor ->
+            val columnIndexMap = buildColumnIndexMap(cursor)
+            overlayAccumulators = createOverlayAccumulators(overlayColumnsByMetric, columnIndexMap)
             val colIndices = availableTrackTypes.associateWith { type ->
                 Pair(cursor.getColumnIndex(type.latitudeColumn), cursor.getColumnIndex(type.longitudeColumn))
             }
@@ -2510,6 +2677,7 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
             val timeIdx = cursor.getColumnIndex(WorkoutSamplesDatabaseManager.WorkoutSamplesDbHelper.TIME)
             val hrIdx = cursor.getColumnIndex(SensorType.HR.name)
             val powerIdx = cursor.getColumnIndex(SensorType.POWER.name)
+            val cadenceIdx = cursor.getColumnIndex(SensorType.CADENCE.name)
             val speedIdx = cursor.getColumnIndex(SensorType.SPEED_mps.name)
             val slopeIdx = cursor.getColumnIndex(SensorType.SLOPE.name)
             val wPrimeIdx = cursor.getColumnIndex(SensorType.W_PRIME_BAL.name)
@@ -2536,12 +2704,17 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                 val alt = if (altIdx != -1 && !cursor.isNull(altIdx)) cursor.getDouble(altIdx) else null
                 val hr = if (hrIdx != -1 && !cursor.isNull(hrIdx)) cursor.getInt(hrIdx) else null
                 val power = if (powerIdx != -1 && !cursor.isNull(powerIdx)) cursor.getInt(powerIdx) else null
+                val cadence = if (cadenceIdx != -1 && !cursor.isNull(cadenceIdx)) cursor.getInt(cadenceIdx) else null
                 val speed = if (speedIdx != -1 && !cursor.isNull(speedIdx)) cursor.getDouble(speedIdx) else null
                 val slope = if (slopeIdx != -1 && !cursor.isNull(slopeIdx)) cursor.getDouble(slopeIdx) else null
                 val wPrimeBal = if (wPrimeIdx != -1 && !cursor.isNull(wPrimeIdx)) cursor.getDouble(wPrimeIdx) else null
                 val hrvDfaA1 = if (hrvDfaIdx != -1 && !cursor.isNull(hrvDfaIdx)) cursor.getDouble(hrvDfaIdx) else null
                 val hrvRmssd = if (hrvRmssdIdx != -1 && !cursor.isNull(hrvRmssdIdx)) cursor.getDouble(hrvRmssdIdx) else null
                 val hrvArtifactRate = if (hrvArtifactIdx != -1 && !cursor.isNull(hrvArtifactIdx)) cursor.getDouble(hrvArtifactIdx) else null
+
+                for (acc in overlayAccumulators) {
+                    acc.record(cursor, dist, timeSec)
+                }
 
                 for (type in availableTrackTypes) {
                     val (latIdx, lonIdx) = colIndices[type] ?: continue
@@ -2559,7 +2732,8 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                                 wPrimeBalKj = wPrimeBal,
                                 hrvDfaA1 = hrvDfaA1,
                                 hrvRmssd = hrvRmssd,
-                                hrvArtifactRate = hrvArtifactRate
+                                hrvArtifactRate = hrvArtifactRate,
+                                cadence = cadence
                             )
                         )
                     }
@@ -2596,7 +2770,8 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
             powerZoneDistribution = powerDistribution,
             hrThresholds = hrThresholds,
             powerThresholds = powerThresholds,
-            gradeZoneDistribution = gradeDistribution
+            gradeZoneDistribution = gradeDistribution,
+            multiSensorOverlays = finalizeOverlaySeries(overlayAccumulators)
         )
     }
 

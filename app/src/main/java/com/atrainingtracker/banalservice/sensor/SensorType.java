@@ -130,7 +130,9 @@ public enum SensorType
     RADAR_PASSING_DISTANCE_m(SensorCategory.SYSTEM_ENVIRONMENT_AND_DIAGNOSTICS, SensorSubCategory.RADAR_SAFETY, R.string.radar_passing_distance, R.string.radar_passing_distance_short, R.string.units_distance_basic, SensorValueType.DOUBLE, new DistanceFormatter(), false),
     RADAR_LARGE_VEHICLE_COUNT(SensorCategory.SYSTEM_ENVIRONMENT_AND_DIAGNOSTICS, SensorSubCategory.RADAR_SAFETY, R.string.radar_large_vehicle_count, R.string.radar_large_vehicle_count_short, R.string.units_none, SensorValueType.INTEGER, new IntegerFormatter(), false),
     LIVE_HR_DRIFT(SensorCategory.HEART_RATE_AND_ENERGY, SensorSubCategory.HRV_AND_DRIFT, R.string.live_hr_drift, R.string.live_hr_drift_short, R.string.units_heart_rate, SensorValueType.INTEGER, new SignedIntegerFormatter(), true),
-    WORLD_YAW_RATE_radps(SensorCategory.SYSTEM_ENVIRONMENT_AND_DIAGNOSTICS, null, R.string.world_yaw_rate, R.string.world_yaw_rate_short, R.string.units_rad_per_sec, SensorValueType.DOUBLE, new DefaultNumberFormatter(), false);
+    WORLD_YAW_RATE_radps(SensorCategory.SYSTEM_ENVIRONMENT_AND_DIAGNOSTICS, null, R.string.world_yaw_rate, R.string.world_yaw_rate_short, R.string.units_rad_per_sec, SensorValueType.DOUBLE, new DefaultNumberFormatter(), false),
+    VERTICAL_OSCILLATION(SensorCategory.SPEED_PACE_AND_DISTANCE, R.string.vertical_oscillation, R.string.vertical_oscillation_short, R.string.units_cm, SensorValueType.DOUBLE, new DefaultNumberFormatter(), true),
+    GROUND_CONTACT_TIME(SensorCategory.SPEED_PACE_AND_DISTANCE, R.string.ground_contact_time, R.string.ground_contact_time_short, R.string.units_time_ms, SensorValueType.DOUBLE, new IntegerFormatter(), true);
 
     // max bit = 118
 
@@ -198,7 +200,7 @@ public enum SensorType
             case ALTITUDE -> R.drawable.ic_altitude;
             case DISTANCE_m -> R.drawable.ic_distance;
             case SPEED_mps -> R.drawable.ic_speed;
-            case CADENCE -> R.drawable.ic_cadence;
+            case CADENCE, VERTICAL_OSCILLATION, GROUND_CONTACT_TIME -> R.drawable.ic_cadence;
             case HR, RR_INTERVAL, HRV_RMSSD, HRV_DFA_A1, HRV_ARTIFACT_RATE, HRV_SDNN, LIVE_HR_DRIFT -> R.drawable.ic_heart_rate;
             case POWER, POWER_TO_WEIGHT, NORMALIZED_POWER, INTENSITY_FACTOR, WORK_KJ, TSS, W_PRIME_BAL,
                  POWER_5S, POWER_1M, POWER_5M, POWER_20M,

@@ -805,9 +805,7 @@
     <ID>LongMethod:StravaUploaderNamingTest.kt$StravaUploaderNamingTest$@Test fun testIsDefaultStravaNameEvaluation()</ID>
     <ID>LongMethod:StravaUploaderTest.kt$StravaUploaderTest$@Test fun testPollingRecoversFromTransientNullGlitch()</ID>
     <ID>LongMethod:SupporterBadgeContractTest.kt$SupporterBadgeContractTest$@Test fun testSafeZoneContainmentAcrossAllTiers()</ID>
-    <ID>LongMethod:SupporterComponents.kt$@Composable internal fun SupporterPlanCard( plan: SupporterBasePlan, isCurrentTier: Boolean = false, effectiveTier: SupporterTier = if (isCurrentTier) plan.tier else SupporterTier.FREE, isPreSelected: Boolean = false, onSelectPlan: () -&gt; Unit )</ID>
     <ID>LongMethod:SupporterDebugSection.kt$@OptIn(ExperimentalLayoutApi::class) @Composable fun SupporterDebugSection()</ID>
-    <ID>LongMethod:SupporterScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun SupporterScreen( onNavigateBack: () -&gt; Unit, preSelectedPlanId: String? = null )</ID>
     <ID>LongMethod:SwapOrUpgradeDialog.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun SwapOrUpgradeDialog( candidateDevice: DeviceUiData, currentlyPairedDevices: List&lt;DeviceUiData&gt;, recommendedUnpairDeviceId: Long, onSwapConfirmed: (unpairDeviceId: Long, pairDeviceId: Long) -&gt; Unit, onNavigateToSupporter: () -&gt; Unit, onDismiss: () -&gt; Unit )</ID>
     <ID>LongMethod:SystemContextContractTest.kt$SystemContextContractTest$@Test fun testSystemContext_codeGroundingParity()</ID>
     <ID>LongMethod:TCXFileWriterLapTest.kt$TCXFileWriterLapTest$@Test fun testTcxExportSerializesLapNotesExtensionsAndActivityNotes()</ID>

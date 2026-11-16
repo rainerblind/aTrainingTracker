@@ -51,6 +51,7 @@ import java.time.LocalDateTime
  * and suggested sport dropdown expansion in [EditWorkoutViewModel] according to REQ-SET-064 and TST-SET-056 (ATT-820).
  */
 @OptIn(ExperimentalCoroutinesApi::class)
+// Linked test specs: TST-SET-021
 class EditWorkoutClusteringTest {
 
     private val testDispatcher = StandardTestDispatcher()

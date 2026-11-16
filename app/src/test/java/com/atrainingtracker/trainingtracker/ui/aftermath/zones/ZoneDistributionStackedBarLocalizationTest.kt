@@ -29,6 +29,7 @@ import org.junit.Test
  * across all 9 supported locales under REQ-UI-372.
  * Refactored to LocalizationTestCache per docs/coding_standards.md §5.4 and REQ-PRO-049.
  */
+// Linked test specs: TST-UI-361
 class ZoneDistributionStackedBarLocalizationTest {
 
     private val locales = listOf(

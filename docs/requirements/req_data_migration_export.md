@@ -3,12 +3,13 @@
 **Domain**: `data_migration_export`  
 **Prefixes**: `DAT`, `EXP`, `EXT`, `MIG`  
 **Scope**: Database schema, backup/restore, migration pipelines, Strava/cloud upload, FIT/GPX export.  
-**Total Requirements**: 131
+**Total Requirements**: 134
 
 ---
 
-### REQ-DAT-001: Store per-second sensor samples and extrema [Verified]
+### REQ-DAT-001: Store per-second sensor samples and extrema [Implemented]
 - **Tests**: `TST-STR-001`
+- **System Requirement(s)**: `SYSREQ-DEX-002`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -16,8 +17,9 @@
 - **Rationale**: Granular data and peak performance insights.
 - **Description**: Store per-second sensor samples and extrema.
 
-### REQ-DAT-002: Support automatic deletion of old workouts [Verified]
+### REQ-DAT-002: Support automatic deletion of old workouts [Implemented]
 - **Tests**: `TST-MAN-001`
+- **System Requirement(s)**: Derived (SW-only) — Internal software persistence, indexing, or aftermath aggregation optimization
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -25,8 +27,9 @@
 - **Rationale**: Manage device storage automatically.
 - **Description**: Support automatic deletion of old workouts.
 
-### REQ-DAT-003: Provide period-based statistics (W/M/Y) [Verified]
+### REQ-DAT-003: Provide period-based statistics (W/M/Y) [Implemented]
 - **Tests**: `TST-MAN-001`, `TST-PERF-004`, `TST-BUG-002`
+- **System Requirement(s)**: Derived (SW-only) — Internal software persistence, indexing, or aftermath aggregation optimization
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -36,6 +39,7 @@
 
 ### REQ-DAT-004: Encoded polylines and streams for storage/map [Verified]
 - **Tests**: `TST-UNT-001`
+- **System Requirement(s)**: `SYSREQ-DEX-005`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -43,8 +47,9 @@
 - **Rationale**: Optimize database size and UI performance.
 - **Description**: Encoded polylines and streams for storage/map.
 
-### REQ-DAT-005: Dynamic database schema evolution [Verified]
+### REQ-DAT-005: Dynamic database schema evolution [Implemented]
 - **Tests**: `TST-STR-001`
+- **System Requirement(s)**: `SYSREQ-DEX-005`
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
@@ -52,24 +57,27 @@
 - **Rationale**: Support future hardware without migrations.
 - **Description**: Dynamic database schema evolution.
 
-### REQ-EXP-001: Export Interoperability [Verified]
+### REQ-EXP-001: Export Interoperability [Implemented]
 - **Tests**: `TST-REG-003`, `TST-EXP-004`
+- **System Requirement(s)**: `SYSREQ-DEX-001`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
 - **Implementation**: `writer/`, `TCXFileWriter.java`
 - **Rationale**: The system SHALL support workout export to GPX, TCX, CSV, and GC JSON formats. The TCX export MUST strictly adhere to the Version 2.0 schema, ensuring that specific fields like `<Cadence>`, `<Watts>`, and `<RunCadence>` are formatted as integers to guarantee compatibility with professional analytical tools.
 
-### REQ-EXP-002: Cloud Synchronization [Verified]
+### REQ-EXP-002: Cloud Synchronization [Implemented]
 - **Tests**: `TST-REG-003`, `TST-REG-008`
+- **System Requirement(s)**: `SYSREQ-DEX-003`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
 - **Implementation**: `ExportManager.java`, `CloudUploadFragment.kt`
 - **Rationale**: The system SHALL support automated workout uploads to Strava and Dropbox. The system SHALL correctly persist and reflect the connection state (Authorized/Disconnected) across application restarts and fragment navigation.
 
-### REQ-EXP-003: Selective Upload (exclude specific data) [Verified]
+### REQ-EXP-003: Selective Upload (exclude specific data) [Implemented]
 - **Tests**: `TST-MAN-001`
+- **System Requirement(s)**: `SYSREQ-DEX-003`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -79,6 +87,7 @@
 
 ### REQ-EXP-006: Explicit "No upload" option for Strava mapping [Verified]
 - **Tests**: `TST-UNT-006`, `TST-UNT-007`, `TST-INT-002`
+- **System Requirement(s)**: `SYSREQ-DEX-003`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -86,8 +95,9 @@
 - **Rationale**: Allow users to opt-out of Strava sync for specific custom sport types via a dedicated "- No upload -" mapping option.
 - **Description**: Explicit "No upload" option for Strava mapping.
 
-### REQ-EXP-007: Support latest Strava sport types [Verified]
+### REQ-EXP-007: Support latest Strava sport types [Implemented]
 - **Tests**: `TST-INT-003`
+- **System Requirement(s)**: `SYSREQ-DEX-003`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -97,6 +107,7 @@
 
 ### REQ-EXP-008: Smart Asymmetric Workout Naming Strategy & Pre-Upload Duplicate Discovery for Strava [Verified]
 - **Tests**: `TST-EXP-005`
+- **System Requirement(s)**: `SYSREQ-DEX-003`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -136,6 +147,7 @@
 
 ### REQ-EXP-009: Strava Duplicate Reconciliation Equipment, Retired Gear & Detailed Sport Type Enrichment [Verified]
 - **Tests**: `TST-EXP-006`
+- **System Requirement(s)**: `SYSREQ-DEX-003`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -165,6 +177,7 @@
 
 ### REQ-EXP-010: Strava Segment Personal Best Update & Achievement Presentation [Verified]
 - **Tests**: `TST-EXP-007`
+- **System Requirement(s)**: `SYSREQ-DEX-003`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -184,6 +197,7 @@
 
 ### REQ-EXP-011: Strava Segments Mandatory Daily Automated Synchronization [Verified]
 - **Tests**: `TST-EXP-008`
+- **System Requirement(s)**: `SYSREQ-DEX-003`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -208,6 +222,7 @@
 
 ### REQ-EXP-012: Strava Routes Mandatory Daily Automated Synchronization [Verified]
 - **Tests**: `TST-EXP-009`
+- **System Requirement(s)**: `SYSREQ-DEX-003`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -232,6 +247,7 @@
 
 ### REQ-EXP-013: Strava Activity Feedback Data Minimization to Athlete Achievements [Verified]
 - **Tests**: `TST-EXP-010`
+- **System Requirement(s)**: `SYSREQ-DEX-003`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -262,6 +278,7 @@
 
 ### REQ-EXP-014: Reactive Strava Segment Synchronization Progress Indicator & Transient State Decoupling [Verified]
 - **Tests**: `TST-EXP-011`
+- **System Requirement(s)**: `SYSREQ-DEX-003`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -293,6 +310,7 @@
 
 ### REQ-EXP-015: Reactive Strava Route Synchronization Progress Indicator & Transient State Decoupling [Verified]
 - **Tests**: `TST-EXP-012`
+- **System Requirement(s)**: `SYSREQ-DEX-003`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -324,6 +342,7 @@
 
 ### REQ-EXP-016: Reactive Strava Equipment Synchronization Progress Indicator & Transient State Decoupling [Verified]
 - **Tests**: `TST-EXP-013`
+- **System Requirement(s)**: `SYSREQ-DEX-003`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -358,6 +377,7 @@
 
 ### REQ-EXP-017: Non-Blocking Strava Equipment Background Synchronization & Modal Dialog Elimination [Verified]
 - **Tests**: `TST-EXP-014`
+- **System Requirement(s)**: `SYSREQ-DEX-003`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -387,6 +407,7 @@
 
 ### REQ-EXP-019: Automated Background Synchronization for Strava Segments, Routes, and Equipment [Verified]
 - **Tests**: `TST-EXP-016`
+- **System Requirement(s)**: `SYSREQ-DEX-003`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -443,6 +464,7 @@
 
 ### REQ-EXP-020: Decommission Obsolete Runkeeper and TrainingPeaks Legacy Exporters, Activities, and Retain Google Maps Legacy Platform Library [Verified]
 - **Tests**: `TST-EXP-017`
+- **System Requirement(s)**: `SYSREQ-DEX-006`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -500,6 +522,7 @@
 
 ### REQ-EXP-021: Strava Upload Transient Error Resilient Retry, Polling Fault Tolerance & Pre-Upload Duplicate False-Start Protection [Verified]
 - **Tests**: `TST-EXP-018`
+- **System Requirement(s)**: `SYSREQ-DEX-003`
 - **Priority**: Medium
 - **Type**: Non-Functional
 - **Verification Method**: Unit
@@ -561,6 +584,7 @@
 
 ### REQ-EXP-022: GPX/TCX Export XML Well-Formedness, Garmin Schema Compliance, Downloads MIME Type & Privacy Protection [Verified]
 - **Tests**: `TST-EXP-019`
+- **System Requirement(s)**: `SYSREQ-DEX-001`
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
@@ -615,8 +639,9 @@
 
 **Invariants**: Explicit file exports continue to appear in Downloads/; custom extension schemas preserved; 100% test pass rate MUST NOT be broken.
 
-### REQ-EXP-005: Exponential backoff for Strava uploads [Verified]
+### REQ-EXP-005: Exponential backoff for Strava uploads [Implemented]
 - **Tests**: `TST-STR-001`
+- **System Requirement(s)**: `SYSREQ-DEX-003`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -624,8 +649,9 @@
 - **Rationale**: Robust sync even with API issues.
 - **Description**: Exponential backoff for Strava uploads.
 
-### REQ-EXT-001: "Powered by Strava" branding on all Strava data [Verified]
+### REQ-EXT-001: "Powered by Strava" branding on all Strava data [Implemented]
 - **Tests**: `TST-REG-002`
+- **System Requirement(s)**: `SYSREQ-DEX-003`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -633,16 +659,18 @@
 - **Rationale**: Comply with mandatory API guidelines.
 - **Description**: "Powered by Strava" branding on all Strava data.
 
-### REQ-EXT-002: Official Strava Assets [Verified]
+### REQ-EXT-002: Official Strava Assets [Implemented]
 - **Tests**: `TST-REG-002`
+- **System Requirement(s)**: `SYSREQ-DEX-003`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
 - **Implementation**: `StravaUploadFragment.kt`
 - **Rationale**: The system SHALL use official Strava \"Connect\" authentication assets to comply with partner brand requirements.
 
-### REQ-EXT-003: Display logo contextually within lists/headers [Verified]
+### REQ-EXT-003: Display logo contextually within lists/headers [Implemented]
 - **Tests**: `TST-REG-002`
+- **System Requirement(s)**: `SYSREQ-DEX-003`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -650,8 +678,9 @@
 - **Rationale**: Maintain compliance without UI clutter.
 - **Description**: Display logo contextually within lists/headers.
 
-### REQ-EXT-004: Integrated Strava Authorization [Verified]
+### REQ-EXT-004: Integrated Strava Authorization [Implemented]
 - **Tests**: `TST-EXT-001`
+- **System Requirement(s)**: `SYSREQ-DEX-003`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -659,8 +688,9 @@
 - **Rationale**: The system SHALL use Chrome Custom Tabs for Strava authorization to provide a seamless user experience within the application context.
 - **Description**: Integrated Strava Authorization.
 
-### REQ-EXT-005: Reactive OAuth Feedback [Verified]
+### REQ-EXT-005: Reactive OAuth Feedback [Implemented]
 - **Tests**: `TST-EXT-002`
+- **System Requirement(s)**: `SYSREQ-DEX-003`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -670,6 +700,7 @@
 
 ### REQ-EXT-006: Strava Profile Scope & Equipment Synchronization Integrity [Verified]
 - **Tests**: `TST-EXT-003`
+- **System Requirement(s)**: `SYSREQ-DEX-003`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -678,6 +709,7 @@
 
 ### REQ-EXT-007: Automated & On-Demand Strava Route Synchronization [Verified]
 - **Tests**: `TST-EXT-004`
+- **System Requirement(s)**: `SYSREQ-DEX-003`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -686,6 +718,7 @@
 
 ### REQ-EXT-008: Automated Community Upload for Imported Workouts [Verified]
 - **Tests**: `TST-EXT-005`
+- **System Requirement(s)**: `SYSREQ-DEX-003`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -694,6 +727,7 @@
 
 ### REQ-EXT-009: Strava Data Deletion on Token Invalidation, Deauthorization & Reauthorization Integrity [Verified]
 - **Tests**: `TST-EXT-006`
+- **System Requirement(s)**: `SYSREQ-DEX-006`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -715,6 +749,7 @@
 
 ### REQ-EXT-010: Strava Route & Segment 7-Day TTL Cache Retention, Orphan Pruning & Route Preservation [Verified]
 - **Tests**: `TST-EXT-007`
+- **System Requirement(s)**: `SYSREQ-DEX-003`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -728,6 +763,7 @@
 
 ### REQ-EXT-011: Resilient Strava Token Refresh Concurrency, Expiry Margin, Precise Revocation Discrimination & Safe Header Construction [Verified]
 - **Tests**: `TST-EXT-008`
+- **System Requirement(s)**: `SYSREQ-DEX-006`
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
@@ -775,6 +811,7 @@
 
 ### REQ-EXT-012: Strava OAuth 2.0 State Parameter CSRF Protection, Structured Repository Scope Exchange, Application ID Scheme Callback Scoping, and Legacy Callback Deletion [Verified]
 - **Tests**: `TST-EXT-009`, `TST-EXT-012`
+- **System Requirement(s)**: `SYSREQ-DEX-006`
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
@@ -833,16 +870,18 @@
 
 **Invariants**: Custom Tabs launch, callback authority `rainerblind.github.io`, permission scopes, single-variant authentication backwards compatibility, and 100% clean-room test pass rate.
 
-### REQ-DAT-006: Eager Internal Sensor Registration [Verified]
+### REQ-DAT-006: Eager Internal Sensor Registration [Implemented]
 - **Tests**: `TST-BUG-011`
+- **System Requirement(s)**: `SYSREQ-DEX-005`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
 - **Implementation**: `DeviceManager.java`, `DevicesDatabaseManager.java`
 - **Rationale**: The `DeviceManager` SHALL ensure that all detectable internal sensors (e.g., Pressure Sensor) are registered in the database *prior* to any pairing checks or device instantiations within its constructor. This guarantees that internal hardware always has a valid database identity and can be correctly auditable in the UI.
 
-### REQ-MIG-051: Sparse Data Import [Verified]
+### REQ-MIG-051: Sparse Data Import [Implemented]
 - **Tests**: `TST-MIG-014`
+- **System Requirement(s)**: `SYSREQ-DEX-002`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -851,6 +890,7 @@
 
 ### REQ-DAT-007: Automated Altitude Reference Discovery & Stable Reference Elevation Preservation [Verified]
 - **Tests**: `TST-DAT-001`, `TST-DAT-002`, `TST-DAT-009`
+- **System Requirement(s)**: `SYSREQ-DEX-005`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -877,8 +917,9 @@
 
 **Invariants**: Spatial geofence matching radius ($200\text{m}$), schema version (V5), locked location altitude immutability (`REQ-DAT-014`), null-safe correction dispatch (`REQ-CON-013`), and cold-start baseline protection (`REQ-CON-011`) MUST NOT be altered.
 
-### REQ-DAT-008: Atomic Database Upgrades [Verified]
+### REQ-DAT-008: Atomic Database Upgrades [Implemented]
 - **Tests**: `TST-UNT-014`
+- **System Requirement(s)**: `SYSREQ-DEX-005`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -887,6 +928,7 @@
 
 ### REQ-DAT-009: Authoritative Altitude Extrema Reconciliation & Self-Healing [Verified]
 - **Tests**: `TST-DAT-003`, `TST-DAT-028`
+- **System Requirement(s)**: `SYSREQ-DEX-005`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -900,6 +942,7 @@
 
 ### REQ-DAT-010: Bulk Workout Deletion & Relational Storage Purge [Verified]
 - **Tests**: `TST-DAT-004`
+- **System Requirement(s)**: Derived (SW-only) — Internal software persistence, indexing, or aftermath aggregation optimization
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -908,6 +951,7 @@
 
 ### REQ-DAT-011: Period Database Cache Invalidation & Resynchronization upon Bulk Deletion [Verified]
 - **Tests**: `TST-DAT-005`
+- **System Requirement(s)**: `SYSREQ-DEX-005`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -924,6 +968,7 @@
 
 ### REQ-DAT-012: TCX Lap Information (Name and Description) Bidirectional Export & Import [Verified]
 - **Tests**: `TST-DAT-006`
+- **System Requirement(s)**: `SYSREQ-DEX-001`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -961,6 +1006,7 @@
 
 ### REQ-DAT-013: TCX Workout Name & Description Bidirectional Export & Import [Verified]
 - **Tests**: `TST-DAT-007`
+- **System Requirement(s)**: `SYSREQ-DEX-001`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -978,6 +1024,7 @@
 
 ### REQ-DAT-014: Internet Digital Elevation Model (DEM) Reference Altitude Retrieval, Spatial Caching & Legacy Location Healing [Verified]
 - **Tests**: `TST-DAT-008`
+- **System Requirement(s)**: `SYSREQ-DEX-002`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1012,6 +1059,7 @@
 
 ### REQ-DAT-015: Decoupled Barometric Altimeter Calibration and Authoritative Workout Start Counting [Verified]
 - **Tests**: `TST-DAT-010`
+- **System Requirement(s)**: `SYSREQ-DEX-005`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1055,6 +1103,7 @@
 
 ### REQ-DAT-016: Authoritative Workout Start Count Self-Healing Reconciliation & Reactive Presentation [Verified]
 - **Tests**: `TST-DAT-011`
+- **System Requirement(s)**: `SYSREQ-DEX-005`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1098,6 +1147,7 @@
 
 ### REQ-DAT-017: Workout Origin Source Provenance Attribute [Verified]
 - **Tests**: `TST-DAT-012`
+- **System Requirement(s)**: `SYSREQ-DEX-001`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1131,6 +1181,7 @@
 
 ### REQ-DAT-018: Full-Telemetry FIT Workout Exporter via Garmin FIT SDK (`FitFileWriter`) [Verified]
 - **Tests**: `TST-DAT-013`
+- **System Requirement(s)**: `SYSREQ-DEX-001`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1172,6 +1223,7 @@
 
 ### REQ-DAT-019: External FIT Workout Importer with Duplicate Detection & Sport Mapping [Verified]
 - **Tests**: `TST-DAT-014`
+- **System Requirement(s)**: `SYSREQ-DEX-002`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1218,6 +1270,7 @@
 
 ### REQ-DAT-020: Google Drive Integration for Automated Workout Export and Database Backup [Verified]
 - **Tests**: `TST-DAT-015`
+- **System Requirement(s)**: `SYSREQ-DEX-004`, `SYSREQ-DEX-005`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1288,6 +1341,7 @@
 
 ### REQ-DAT-021: Workout Origin Source Batch Mapping Symmetry and Cursor Snapshot Propagation [Verified]
 - **Tests**: `TST-DAT-016`
+- **System Requirement(s)**: `SYSREQ-DEX-002`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1329,6 +1383,7 @@
 
 ### REQ-DAT-022: Google Drive Background Token Refresh, 401 Re-Authentication, Folder Hierarchy Resolution Resilience & Concurrency Synchronization [Verified]
 - **Tests**: `TST-DAT-017`
+- **System Requirement(s)**: `SYSREQ-DEX-004`
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
@@ -1383,6 +1438,7 @@
 
 ### REQ-DAT-023: Workout Route Preview Map Simplification via Douglas-Peucker & Compact Scalar Streams [Verified]
 - **Tests**: `TST-DAT-018`
+- **System Requirement(s)**: `SYSREQ-DEX-001`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit / Review
@@ -1418,6 +1474,7 @@
 
 ### REQ-DAT-024: Google Drive Format-Specific Directory Organization for Workout Exports and Imports (FIT, TCX, GPX, CSV, GC) [Verified]
 - **Tests**: `TST-DAT-019`
+- **System Requirement(s)**: `SYSREQ-DEX-004`, `SYSREQ-DEX-006`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1449,6 +1506,7 @@
 
 ### REQ-DAT-025: Authoritative Database Cursor Row and Batch Mappers for Route and Cluster Repositories [Verified]
 - **Tests**: `TST-DAT-020`
+- **System Requirement(s)**: `SYSREQ-DEX-002`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1501,24 +1559,27 @@
 
 **Invariants**: Zero database schema alterations; strict cursor lifecycle ownership; 100% unit test pass rate.
 
-### REQ-MIG-001: State Bundling [Verified]
+### REQ-MIG-001: State Bundling [Implemented]
 - **Tests**: `TST-MIG-001`
+- **System Requirement(s)**: `SYSREQ-DEX-005`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
 - **Implementation**: `BackupManager`
 - **Rationale**: The system SHALL be able to bundle all internal SQLite databases (including high-fidelity samples) and shared preferences into a single portable archive (`.attbackup`).
 
-### REQ-MIG-002: Multi-Destination Backup [Verified]
+### REQ-MIG-002: Multi-Destination Backup [Implemented]
 - **Tests**: `TST-MIG-001`
+- **System Requirement(s)**: `SYSREQ-DEX-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
 - **Implementation**: `BackupManager`, `DropboxIntegration`
 - **Rationale**: The system SHALL support both manual backup (via Android SAF) and direct upload to a linked Dropbox account.
 
-### REQ-MIG-003: Regular Cloud Backups [Verified]
+### REQ-MIG-003: Regular Cloud Backups [Implemented]
 - **Tests**: `TST-MIG-003`
+- **System Requirement(s)**: `SYSREQ-DEX-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1527,62 +1588,70 @@
 
 ### REQ-MIG-004: Full Migration Mode [Verified]
 - **Tests**: `TST-MIG-001`, `TST-MIG-037`
+- **System Requirement(s)**: `SYSREQ-DEX-005`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
 - **Implementation**: `MigrationEngine`
 - **Rationale**: The system SHALL support a "Full Restore" mode that replaces the entire local state with a backup, followed by a forced app restart to ensure consistency.
 
-### REQ-MIG-005: Incremental Import [Verified]
+### REQ-MIG-005: Incremental Import [Implemented]
 - **Tests**: `TST-MIG-002`
+- **System Requirement(s)**: `SYSREQ-DEX-005`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
 - **Implementation**: `ImportEngine.kt`, `LegacyImportEngine.kt`
 - **Rationale**: The system SHALL support merging backups into an existing database. It MUST perform deduplication using the `FILE_BASE_NAME` as the unique identifier. Legacy recovery SHALL also skip files that already exist in the database.
 
-### REQ-MIG-013: Idempotent Recovery [Verified]
+### REQ-MIG-013: Idempotent Recovery [Implemented]
 - **Tests**: `TST-MIG-010`
+- **System Requirement(s)**: `SYSREQ-DEX-005`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
 - **Implementation**: `LegacyImportEngine.kt`
 - **Rationale**: The legacy recovery process SHALL NOT trigger clustering prompts for workouts that are already present in the database or already have a cluster assigned.
 
-### REQ-MIG-014: Queued User Interaction [Verified]
+### REQ-MIG-014: Queued User Interaction [Implemented]
 - **Tests**: `TST-MIG-017`
+- **System Requirement(s)**: `SYSREQ-DEX-005`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
 - **Implementation**: `LegacyImportEngine.kt`, `BackupRestoreViewModel.kt`, `ImportBackupTabsScreen.kt`
 - **Rationale**: The system SHALL decouple user interaction requests (e.g., cluster naming) from background file importing. While an interaction is pending user resolution, the TCX import engine SHALL continue downloading and processing subsequent files concurrently in the background, queuing up to 3 pending user interactions without blocking progress. **Invariants**: Progress indicators and status updates MUST remain visible during background importing.
 
-### REQ-MIG-006: State Lockdown [Verified]
+### REQ-MIG-006: State Lockdown [Implemented]
 - **Tests**: `TST-MIG-001`
+- **System Requirement(s)**: `SYSREQ-DEX-005`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
 - **Implementation**: `MigrationUI`
 - **Rationale**: Backup and Restore operations SHALL ONLY be allowed when the system is in a non-tracking state to prevent data corruption.
 
-### REQ-MIG-007: Full Restore Confirmation [Verified]
+### REQ-MIG-007: Full Restore Confirmation [Implemented]
 - **Tests**: `TST-MIG-004`
+- **System Requirement(s)**: `SYSREQ-DEX-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
 - **Implementation**: `BackupRestoreScreen.kt`
 - **Rationale**: The system SHALL require explicit user confirmation before initiating a "Full Restore" from Dropbox.
 
-### REQ-MIG-008: Informative Dashboard Labels [Verified]
+### REQ-MIG-008: Informative Dashboard Labels [Implemented]
 - **Tests**: `TST-MIG-005`
+- **System Requirement(s)**: `SYSREQ-DEX-004`
 - **Priority**: Low
 - **Type**: Functional
 - **Verification Method**: Unit
 - **Implementation**: `BackupRestoreScreen.kt`
 - **Rationale**: The Backup \u0026 Restore dashboard SHALL provide clear descriptive text for all operations. The Dropbox backup button SHALL be labeled \"Create \u0026 Upload Backup to Dropbox\". Destructive and merging sections SHALL feature high-level descriptions explaining their impact on local data.
 
-### REQ-MIG-011: Tabbed Import \u0026 Backup UI [Verified]
+### REQ-MIG-011: Tabbed Import \u0026 Backup UI [Implemented]
 - **Tests**: `TST-MIG-008`
+- **System Requirement(s)**: `SYSREQ-DEX-005`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1591,6 +1660,7 @@
 
 ### REQ-MIG-012: Responsive Pre-Import Workout Cluster Tuning Bottom Sheet [Verified]
 - **Tests**: `TST-MIG-009`
+- **System Requirement(s)**: `SYSREQ-DEX-005`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1608,48 +1678,54 @@
 
 **Invariants**: User-selected tolerances MUST be persisted to shared preferences upon confirmation. The underlying mathematical clustering engine, Room database entities, and file import workflows MUST remain unaltered.
 
-### REQ-MIG-009: Default Backup Interval [Verified]
+### REQ-MIG-009: Default Backup Interval [Implemented]
 - **Tests**: `TST-MIG-006`
+- **System Requirement(s)**: `SYSREQ-DEX-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
 - **Implementation**: `prefs_dropbox.xml`, `BackupWorker.kt`
 - **Rationale**: The system SHALL default the automated backup interval to 1 day (Daily) to maximize data safety for new users.
 
-### REQ-MIG-010: Enable Backups by Default [Verified]
+### REQ-MIG-010: Enable Backups by Default [Implemented]
 - **Tests**: `TST-MIG-007`
+- **System Requirement(s)**: `SYSREQ-DEX-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
 - **Implementation**: `prefs_dropbox.xml`, `BackupWorker.kt`
 - **Rationale**: The system SHALL enable the automated backup feature by default for new installations.
 
-### REQ-MIG-015: Efficient Legacy Recovery [Verified]
+### REQ-MIG-015: Efficient Legacy Recovery [Implemented]
 - **Tests**: `TST-MIG-011`
+- **System Requirement(s)**: `SYSREQ-DEX-005`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
 - **Implementation**: `LegacyImportEngine.kt`
 - **Rationale**: The legacy recovery process SHALL skip already imported workouts BEFORE downloading them from remote storage to ensure optimal performance and bandwidth usage.
 
-### REQ-MIG-016: Paginated & Recursive Cloud Recovery [Verified]
+### REQ-MIG-016: Paginated & Recursive Cloud Recovery [Implemented]
 - **Tests**: `TST-MIG-012`, `TST-MIG-018`
+- **System Requirement(s)**: `SYSREQ-DEX-005`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
 - **Implementation**: `LegacyImportEngine.kt`, `BackupRestoreViewModel.kt`
 - **Rationale**: The system SHALL robustly scan and paginate cloud storage paths (e.g., `/TCX`, `/apps/Workouts/TCX` and their subdirectories) using `.withRecursive(true)` and `listFolderContinue()` with error recovery to discover all TCX workout files regardless of folder size. **Invariants**: Deduplication (`isWorkoutExisting`) MUST continue using `FILE_BASE_NAME` as the unique identifier.
 
-### REQ-MIG-021: Informative Import Summary [Verified]
+### REQ-MIG-021: Informative Import Summary [Implemented]
 - **Tests**: `TST-MIG-018`
+- **System Requirement(s)**: `SYSREQ-DEX-005`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
 - **Implementation**: `BackupRestoreViewModel.kt`, `LegacyImportEngine.kt`, `strings.xml`
 - **Rationale**: Upon completing a bulk import, the system SHALL display a detailed summary stating the number of newly imported workouts, the number of skipped/already existing workouts, and the total number of files scanned. **Invariants**: Success and error messages MUST be accurately formatted.
 
-### REQ-MIG-022: Preserve Original Filename During Import [Verified]
+### REQ-MIG-022: Preserve Original Filename During Import [Implemented]
 - **Tests**: `TST-MIG-019`
+- **System Requirement(s)**: `SYSREQ-DEX-002`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1658,38 +1734,43 @@
 
 ### REQ-MIG-023: Unlinked Cloud Feature Deactivation [Verified]
 - **Tests**: `TST-MIG-020`
+- **System Requirement(s)**: `SYSREQ-DEX-005`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
 - **Implementation**: `ImportBackupTabsScreen.kt`, `TrainingApplication.java`, `BackupRestoreViewModel.kt`, `DropboxUploader.java`
 - **Rationale**: When the user is not authenticated or connected to Dropbox, all cloud-dependent features (including scanning/importing legacy TCX files, cloud backups, and cloud restores) SHALL be visually deactivated in the UI (rendered in a muted/grey state). Clicking a deactivated cloud action SHALL present an informational dialog explaining that Dropbox is disconnected. **Invariants**: Credential reading and background jobs MUST NOT throw null pointer exceptions when unlinked.
 
-### REQ-MIG-017: Limited Interaction Queue & Backpressure [Verified]
+### REQ-MIG-017: Limited Interaction Queue & Backpressure [Implemented]
 - **Tests**: `TST-MIG-013`, `TST-MIG-017`
+- **System Requirement(s)**: `SYSREQ-DEX-005`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
 - **Implementation**: `LegacyImportEngine.kt`, `BackupRestoreViewModel.kt`
 - **Rationale**: The system SHALL limit the number of concurrent pending UI interactions to a maximum of 3 using a semaphore (`interactionSemaphore(3)`). The background import engine MUST ONLY suspend file downloading and parsing when 3 candidate interactions are active in `_interactionQueue`, automatically resuming as the user resolves queued items. **Invariants**: Queue size MUST NOT exceed 3 items.
 
-### REQ-MIG-018: Sparse Data Import [Verified]
+### REQ-MIG-018: Sparse Data Import [Implemented]
 - **Tests**: `TST-MIG-014`
+- **System Requirement(s)**: `SYSREQ-DEX-002`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
 - **Implementation**: `LegacyImportEngine.kt`, `WorkoutSamplesDatabaseManager.java`
 - **Rationale**: The TCX import engine SHALL dynamically detect available sensors and only create database columns and summary metrics for telemetry actually present in the source file, preventing the population of zero-filled streams for missing data.
 
-### REQ-MIG-019: Dropbox Wait Feedback [Verified]
+### REQ-MIG-019: Dropbox Wait Feedback [Implemented]
 - **Tests**: `TST-MIG-015`
+- **System Requirement(s)**: `SYSREQ-DEX-004`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
 - **Implementation**: `LegacyImportEngine.kt`, `BackupRestoreViewModel.kt`
 - **Rationale**: The TCX import process SHALL provide explicit visual feedback (e.g., status message) when the system is waiting for a response from the Dropbox API (e.g., during folder scanning or file downloading) to ensure the user is aware of the external dependency.
 
-### REQ-MIG-020: Positive Import Branding [Verified]
+### REQ-MIG-020: Positive Import Branding [Implemented]
 - **Tests**: `TST-MIG-016`
+- **System Requirement(s)**: `SYSREQ-DEX-005`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1698,6 +1779,7 @@
 
 ### REQ-MIG-024: High-Fidelity TCX Telemetry & Multi-Lap Structure Import [Verified]
 - **Tests**: `TST-MIG-021`
+- **System Requirement(s)**: `SYSREQ-DEX-002`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1715,6 +1797,7 @@
 
 ### REQ-MIG-025: TCX Import Cluster Decision Integrity & Unclustered Workout Preservation [Verified]
 - **Tests**: `TST-MIG-022`
+- **System Requirement(s)**: `SYSREQ-DEX-005`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1748,6 +1831,7 @@
 
 ### REQ-MIG-026: TCX Import Reactive Period Aggregation, Direct Pipeline Notification & Self-Healing Period Sync [Verified]
 - **Tests**: `TST-MIG-023`
+- **System Requirement(s)**: `SYSREQ-DEX-005`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1769,6 +1853,7 @@
 
 ### REQ-MIG-027: TCX Import Cluster Assignment, Multi-Sport Heuristics & In-Memory Cache Refresh [Verified]
 - **Tests**: `TST-MIG-024`
+- **System Requirement(s)**: `SYSREQ-DEX-005`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1792,8 +1877,9 @@
 
 **Invariants**: User decision sovereignty (`REQ-MIG-025`, \"Leave Unclustered\" remains `clusterId = -1`) MUST be preserved; existing spatial tolerances (endpoints, apex, distance, altitude) MUST NOT be altered.
 
-### REQ-MIG-028: Optional Strava Upload on TCX Import [Verified]
+### REQ-MIG-028: Optional Strava Upload on TCX Import [Implemented]
 - **Tests**: `TST-MIG-025`
+- **System Requirement(s)**: `SYSREQ-DEX-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1820,6 +1906,7 @@
 
 ### REQ-MIG-029: TCX Import & Spatial Route Cluster Auto-Matching Parity & Lossless Candidate Discovery [Verified]
 - **Tests**: `TST-MIG-026`
+- **System Requirement(s)**: `SYSREQ-DEX-005`
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
@@ -1841,6 +1928,7 @@
 
 ### REQ-MIG-030: High-Fidelity GPX Workout Import & Full Telemetry Ingestion Parity [Verified]
 - **Tests**: `TST-MIG-027`
+- **System Requirement(s)**: `SYSREQ-DEX-004`
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
@@ -1856,6 +1944,7 @@
 
 ### REQ-MIG-031: Multi-Dimensional Workout Deduplication & Concurrent Worker Race Condition Guard in TCX/GPX Import with Extended 3-Minute Same-Sport Tolerance Window (Option 2) [Verified]
 - **Tests**: `TST-MIG-028`
+- **System Requirement(s)**: `SYSREQ-DEX-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1896,6 +1985,7 @@
 
 ### REQ-MIG-032: Interactive Post-Import Workout Navigation & Decoupled List Auto-Focus [Verified]
 - **Tests**: `TST-MIG-029`
+- **System Requirement(s)**: `SYSREQ-DEX-005`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1938,6 +2028,7 @@
 
 ### REQ-MIG-033: Enhanced Altitude & Speed Telemetry Ingestion Parity in FIT Workout Import [Verified]
 - **Tests**: `TST-MIG-030`
+- **System Requirement(s)**: `SYSREQ-DEX-002`
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
@@ -1978,6 +2069,7 @@
 
 ### REQ-MIG-034: Google Drive Historical Workout File Discovery, Top-Level Candidates & Bulk Recovery (.fit, .tcx, .gpx) [Verified]
 - **Tests**: `TST-MIG-031`
+- **System Requirement(s)**: `SYSREQ-DEX-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -2033,6 +2125,7 @@
 
 ### REQ-MIG-035: Dropbox Historical Workout File Discovery & Bulk Recovery for FIT (.fit) [Verified]
 - **Tests**: `TST-MIG-032`
+- **System Requirement(s)**: `SYSREQ-DEX-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -2077,6 +2170,7 @@
 
 ### REQ-MIG-036: Automated Background Backup WorkManager Scheduling, Monotonic Timer Preservation, Conditional Network Constraints, Status Diagnostics, Unified Manual Cloud Backup, and Dynamic Automated Subtitles [Verified]
 - **Tests**: `TST-MIG-033`, `TST-MIG-036`, `TST-DAT-031`, `TST-MIG-045`, `TST-MIG-037`
+- **System Requirement(s)**: `SYSREQ-DEX-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -2184,6 +2278,7 @@
 
 ### REQ-EXP-018: FIT Format Support in Detailed Export Report, Safe Database Upsert & Workout Header Export Menu Integration [Verified]
 - **Tests**: `TST-EXP-015`
+- **System Requirement(s)**: `SYSREQ-DEX-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -2213,6 +2308,7 @@
 
 ### REQ-MIG-037: Unified Streaming TCX and GPX XML Trackpoint Parsing Engine (Rule 36) [Verified]
 - **Tests**: `TST-MIG-034`
+- **System Requirement(s)**: `SYSREQ-DEX-002`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -2256,6 +2352,7 @@
 
 ### REQ-MIG-038: Modular Workout Format Parsers for TCX, GPX, and FIT Ingestion & LegacyImportEngine Architectural Facade [Verified]
 - **Tests**: `TST-MIG-035`
+- **System Requirement(s)**: `SYSREQ-DEX-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -2302,6 +2399,7 @@
 
 ### REQ-DAT-043: Deterministic Resource Management via Try-With-Resources and Bounds Checking on SQLite Cursors Across Legacy Database Managers [Verified]
 - **Tests**: `TST-DAT-039`
+- **System Requirement(s)**: `SYSREQ-DEX-001`
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
@@ -2343,8 +2441,9 @@
 
 **Invariants**: Zero cursor leaks, zero `CursorIndexOutOfBoundsException`, deterministic sentinel return mapping, 100% clean-room test pass rate.
 
-### REQ-DAT-026: Targeted Single-Row Query and Bounds-Checked Resume Reconstruction in TrackerService [Verified]
+### REQ-DAT-026: Targeted Single-Row Query and Bounds-Checked Resume Reconstruction in TrackerService [Implemented]
 - **Tests**: `TST-DAT-021`
+- **System Requirement(s)**: `SYSREQ-DEX-005`
 - **Priority**: Medium
 - **Type**: Non-Functional
 - **Verification Method**: Unit
@@ -2382,6 +2481,7 @@
 
 ### REQ-DAT-044: Authoritative Cursor Mappers for Workout Cluster Engine and Equipment Data Provider Architecture [Verified]
 - **Tests**: `TST-DAT-040`
+- **System Requirement(s)**: `SYSREQ-DEX-005`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -2432,6 +2532,7 @@
 
 ### REQ-DAT-027: GoldenCheetah JSON File Export Format and Data Integrity Verification [Verified]
 - **Tests**: `TST-DAT-022`
+- **System Requirement(s)**: `SYSREQ-DEX-001`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -2478,6 +2579,7 @@
 
 ### REQ-MIG-039: Offline Power Training Metrics Calculation, Historical Athlete Threshold Resolution, and Import/Finalization Extrema Persistence [Verified]
 - **Tests**: `TST-MIG-049`
+- **System Requirement(s)**: `SYSREQ-DEX-002`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -2511,6 +2613,7 @@
 
 ### REQ-MIG-040: Zip-Slip Path Traversal Protection, Symlink Rejection, Top-Level Whitelist & Bounded Stream Extraction in Backup Operations [Verified]
 - **Tests**: `TST-MIG-037`, `TST-MIG-038`, `TST-MIG-044`
+- **System Requirement(s)**: `SYSREQ-DEX-004`
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
@@ -2556,6 +2659,7 @@
 
 ### REQ-MIG-041: Pre-Restore Backup Validation, Schema Version Bounds, Connection Teardown, and Atomic Rollback Snapshot [Verified]
 - **Tests**: `TST-MIG-038`
+- **System Requirement(s)**: `SYSREQ-DEX-005`
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
@@ -2601,6 +2705,7 @@
 
 ### REQ-MIG-042: Samples Table Name Escaping, Case-Insensitive Deduplication, Deterministic Disambiguation & Structural DDL Construction [Verified]
 - **Tests**: `TST-MIG-039`
+- **System Requirement(s)**: `SYSREQ-DEX-005`
 - **Priority**: Medium
 - **Type**: Non-Functional
 - **Verification Method**: Unit
@@ -2643,6 +2748,7 @@
 
 ### REQ-MIG-043: Atomic Cross-Database Import via SQLite ATTACH, Dedicated Scoped Connection, Shared ReentrantLock, Non-Destructive Orphan Repair, insertOrThrow Enforcement & Cooperative Coroutine Responsiveness [Verified]
 - **Tests**: `TST-MIG-040`
+- **System Requirement(s)**: `SYSREQ-DEX-005`
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
@@ -2701,6 +2807,7 @@
 
 ### REQ-MIG-044: Non-Destructive SportType Schema Upgrade, Custom Sport Preservation, Post-v2 Data Healing Reconciliation, Placeholder Flagging & Strict Downgrade Guard [Verified]
 - **Tests**: `TST-MIG-041`
+- **System Requirement(s)**: `SYSREQ-DEX-005`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -2752,6 +2859,7 @@
 
 ### REQ-DAT-028: UTC-Anchored Binary FIT Export, Transient Lap Synthesis, Fail-Fast Stream Error Propagation, and Application Context Lifetime [Verified]
 - **Tests**: `TST-DAT-023`
+- **System Requirement(s)**: `SYSREQ-DEX-001`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -2800,6 +2908,7 @@
 
 ### REQ-DAT-029: Resilient Background Export & Upload Pipeline, Attempt Capping, Cooperative Cancellation, Transactional Upload Remediation, and Stuck State Recovery [Verified]
 - **Tests**: `TST-DAT-024`
+- **System Requirement(s)**: `SYSREQ-DEX-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -2866,6 +2975,7 @@
 
 ### REQ-MIG-045: Real SQLite In-Memory & Fixture Migration Testing Framework via Robolectric [Verified]
 - **Tests**: `TST-MIG-042`
+- **System Requirement(s)**: `SYSREQ-DEX-005`
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
@@ -2917,6 +3027,7 @@
 
 ### REQ-MIG-046: Legacy SQLite Upgrade DDL Hardening, Synchronous onUpgrade Excision, and Idempotent Cross-Database Backfill Architecture [Verified]
 - **Tests**: `TST-MIG-043`
+- **System Requirement(s)**: `SYSREQ-DEX-002`
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
@@ -2964,6 +3075,7 @@
 
 ### REQ-DAT-030: Google Drive Query Escaping, Encapsulated Account Cache, Atomic Download Staging & Transparent Scan Results [Verified]
 - **Tests**: `TST-DAT-025`
+- **System Requirement(s)**: `SYSREQ-DEX-001`
 - **Priority**: Medium
 - **Type**: Non-Functional
 - **Verification Method**: Unit
@@ -3022,6 +3134,7 @@
 
 ### REQ-DAT-031: Atomic Concurrent-Safe Database Backup Snapshots, Storage Verification, and Singleton Helper Lifecycle [Verified]
 - **Tests**: `TST-DAT-026`
+- **System Requirement(s)**: `SYSREQ-DEX-001`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -3077,6 +3190,7 @@
 
 ### REQ-DAT-032: OAuth Credential Isolation, Android Auto Backup & Device Transfer Rules, and .attbackup Credential Exclusion Policy [Verified]
 - **Tests**: `TST-DAT-027`, `TST-DAT-031`
+- **System Requirement(s)**: `SYSREQ-DEX-001`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -3164,6 +3278,7 @@
 
 ### REQ-DAT-033: High-Performance Batch Workout Mapping, Non-Blocking Cluster Equipment Resolution & Consolidated Samples DB Telemetry Loading [Verified]
 - **Tests**: `TST-DAT-028`
+- **System Requirement(s)**: `SYSREQ-DEX-005`
 - **Priority**: Medium
 - **Type**: Non-Functional
 - **Verification Method**: Unit
@@ -3213,6 +3328,7 @@
 
 ### REQ-DAT-034: Database Performance Optimization, Missing Index Migrations, Routes N+1 Query Elimination & Synchronized Transactional Clustering Engine [Verified]
 - **Tests**: `TST-DAT-029`
+- **System Requirement(s)**: `SYSREQ-DEX-002`
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
@@ -3249,6 +3365,7 @@
 
 ### REQ-DAT-035: Nullable Altitude Telemetry, Sea-Level Fidelity (0.0 m), Crop Stream Gap Resilience & Extrema Reconciliation Integrity [Verified]
 - **Tests**: `TST-DAT-030`
+- **System Requirement(s)**: `SYSREQ-DEX-005`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -3260,6 +3377,7 @@
 
 ### REQ-MIG-047: Canonical Destination Resolution, Symlinked Parent Directory Boundary Tolerance & Symlink Rejection Invariant in SecureZipExtractor [Verified]
 - **Tests**: `TST-MIG-044`
+- **System Requirement(s)**: `SYSREQ-DEX-005`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -3301,8 +3419,9 @@
 
 **Invariants**: Zero SQLite schema migrations, 100% clean-room test pass rate, and strict rejection of internal symbolic links.
 
-### REQ-DAT-036: SQLite Schema Evolution, `onCreate`/`onUpgrade` Parity & Automated Migration Verification [Verified]
+### REQ-DAT-036: SQLite Schema Evolution, `onCreate`/`onUpgrade` Parity & Automated Migration Verification [Implemented]
 - **Tests**: `TST-DAT-032`
+- **System Requirement(s)**: `SYSREQ-DEX-005`
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
@@ -3331,6 +3450,7 @@
 
 ### REQ-DAT-037: Resilient Google Drive Background Upload Retry, Post-Restore Re-Auth Parity & Stuck Export Recovery [Verified]
 - **Tests**: `TST-DAT-033`
+- **System Requirement(s)**: `SYSREQ-DEX-001`
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
@@ -3381,6 +3501,7 @@
 
 ### REQ-MIG-048: Strava Bulk Export Archive Ingestion Pipeline, Bilingual CSV Metadata Enrichment, Transparent GZIP Decompression, Tolerant XML Deserialization, Equipment Sync, and Duplicate Re-Upload Prevention [Verified]
 - **Tests**: `TST-MIG-046`
+- **System Requirement(s)**: `SYSREQ-DEX-005`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -3430,6 +3551,7 @@
 
 ### REQ-DAT-038: Workout Photo Storage, Symmetrical SQLite Schema v27, and EXIF/Trackpoint Interpolation [Verified]
 - **Tests**: `TST-DAT-034`
+- **System Requirement(s)**: `SYSREQ-DEX-001`
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
@@ -3467,6 +3589,7 @@
 
 ### REQ-MIG-049: Unified Chronological Ascending Ingestion Order for Bulk Imports & Cloud Recovery [Verified]
 - **Tests**: `TST-MIG-047`
+- **System Requirement(s)**: `SYSREQ-DEX-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -3506,6 +3629,7 @@
 
 ### REQ-MIG-050: In-Memory Existing Workout Deduplication Snapshot & Zero-I/O Fast-Forward for Bulk Importers [Verified]
 - **Tests**: `TST-MIG-048`
+- **System Requirement(s)**: `SYSREQ-DEX-004`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -3550,6 +3674,7 @@
 ### REQ-DAT-039: Point-to-Point (A->B) Route Apex Migration, Import Unification & Mapper Parity [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-DAT-035`
+- **System Requirement(s)**: `SYSREQ-DEX-001`
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
@@ -3586,6 +3711,7 @@
 ### REQ-DAT-040: TCX Structured DTO Serialization, Parsing Decoupling & Round-Trip Fidelity [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-DAT-036`
+- **System Requirement(s)**: `SYSREQ-DEX-001`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -3626,6 +3752,7 @@
 ### REQ-DAT-041: Repository-Only Engine, Exporter & Migration Layer Database Access (Phase B) [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-DAT-037`
+- **System Requirement(s)**: `SYSREQ-DEX-001`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -3661,6 +3788,7 @@
 ### REQ-DAT-042: True Repository Encapsulation & SQLite Backdoor Elimination (Phase B Hardening) [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-DAT-038`
+- **System Requirement(s)**: `SYSREQ-DEX-001`
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
@@ -3700,6 +3828,7 @@
 
 ### REQ-EXP-042: Garmin FIT Radar Threat Alert Events & MyBikeTraffic Developer Fields [Verified]
 - **Tests**: `TST-EXP-042`
+- **System Requirement(s)**: `SYSREQ-DEX-001`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -3731,6 +3860,7 @@
 
 ### REQ-RAD-007: Radar Traffic & Close-Pass Summary in Strava Description & Share Intent [Verified]
 - **Tests**: `TST-RAD-007`
+- **System Requirement(s)**: `SYSREQ-DEX-003`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -3762,6 +3892,7 @@
 
 ### REQ-EXP-023: Health Connect Export Status Tracking & Community Display [Verified]
 - **Tests**: `TST-EXP-020`
+- **System Requirement(s)**: `SYSREQ-DEX-003`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -3790,6 +3921,7 @@
 
 ### REQ-MIG-052: Multi-Device Incremental Cloud Auto-Import & Local Health Connect / Strava Relay [Verified]
 - **Tests**: `TST-MIG-050`
+- **System Requirement(s)**: `SYSREQ-DEX-004`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -3819,6 +3951,7 @@
 
 ### REQ-MIG-053: Lossless FIT Round-Trip for Workout Metadata, HRV Protocol Tags & Bike Radar Developer Fields [Verified]
 - **Tests**: `TST-MIG-051`
+- **System Requirement(s)**: `SYSREQ-DEX-002`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -3846,6 +3979,7 @@
 
 ### REQ-EXP-043: Standard Garmin FIT Pedal Power Balance, Torque Effectiveness & Pedal Smoothness Serialization and Lossless Round-Trip [Verified]
 - **Tests**: `TST-EXP-043`
+- **System Requirement(s)**: `SYSREQ-DEX-003`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit

@@ -55,6 +55,8 @@ from tools.verify_requirement_governance import (
     CoverageCategoryResult,
     TraceabilityCoverageReport,
     LEGACY_UNGROUNDED_VERIFIED_REQS,
+    LEGACY_UNBACKED_VERIFIED_TSTS,
+    triage_unbacked_verified_tsts,
     extract_living_test_ids,
     find_ungrounded_verified_requirements,
     verify_requirement_evidence_status,
@@ -76,9 +78,17 @@ from tools.verify_requirement_governance import (
     has_verified_test_evidence,
     verify_test_evidence,
     LEGACY_UNBACKED_VERIFIED_TSTS,
+    find_code_traceability_orphans,
+    verify_code_traceability_orphans,
+    verify_shard_header_counts,
+    LEGACY_MISSING_DESCRIPTION_REQS,
+    verify_req_descriptions,
+    calculate_req_field_coverage,
+    format_req_field_coverage,
 )
 
 
+# Linked test specs: TST-PRO-085, TST-PRO-086
 class TestRequirementGovernance(unittest.TestCase):
 
     def setUp(self):
@@ -218,7 +228,7 @@ index 1234567..89abcdef 100644
                     imported_modules.add(node.module.split(".")[0])
 
         # Allowed standard library modules
-        std_lib_modules = {"os", "sys", "re", "subprocess", "argparse", "unittest", "json", "math", "xml", "zipfile"}
+        std_lib_modules = {"csv", "os", "sys", "re", "subprocess", "argparse", "unittest", "json", "math", "xml", "zipfile"}
         for mod in imported_modules:
             self.assertIn(
                 mod,
@@ -263,8 +273,13 @@ diff --git a/docs/requirements/req_tracking_cockpit.md b/docs/requirements/req_t
         with tempfile.TemporaryDirectory() as tmpdir:
             req_dir = os.path.join(tmpdir, "docs", "requirements")
             tst_dir = os.path.join(tmpdir, "docs", "tests")
+            tools_dir = os.path.join(tmpdir, "tools")
             os.makedirs(req_dir, exist_ok=True)
             os.makedirs(tst_dir, exist_ok=True)
+            os.makedirs(tools_dir, exist_ok=True)
+
+            with open(os.path.join(tools_dir, "test_sharding.py"), "w", encoding="utf-8") as f:
+                f.write("# TST-PRO-021\n")
 
             shard_file = os.path.join(req_dir, "req_process_stability.md")
             with open(shard_file, "w", encoding="utf-8") as f:
@@ -1583,22 +1598,22 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
             with open(os.path.join(sys_dir, "sysreq_test.md"), "w", encoding="utf-8") as f:
                 f.write(
                     "# System Requirements Test\n\n"
-                    "### SYSREQ-TST-001: Telemetry Acquisition\n"
+                    "### SYSREQ-TRK-001: Telemetry Acquisition\n"
                     "- Statement: The system SHALL acquire telemetry.\n\n"
                     "## 4. Traceability Matrix\n"
-                    "| `SYSREQ-TST-001` | Telemetry | `REQ-TST-001` | Test |\n"
+                    "| `SYSREQ-TRK-001` | Telemetry | `REQ-TRK-001` | Test |\n"
                 )
 
             # REQ citing dangling SYSREQ
             with open(os.path.join(req_dir, "req_test.md"), "w", encoding="utf-8") as f:
                 f.write(
                     "# Living Requirements Test\n\n"
-                    "### REQ-TST-001: Sensor Driver [Verified]\n"
-                    "- **System Requirement**: `SYSREQ-TST-001`\n"
-                    "- **Tests**: `TST-TST-001`\n\n"
-                    "### REQ-TST-002: Invalid Reference [Verified]\n"
+                    "### REQ-TRK-001: Sensor Driver [Verified]\n"
+                    "- **System Requirement**: `SYSREQ-TRK-001`\n"
+                    "- **Tests**: `TST-TRK-001`\n\n"
+                    "### REQ-TRK-002: Invalid Reference [Verified]\n"
                     "- **System Requirement**: `SYSREQ-NONEXISTENT-999`\n"
-                    "- **Tests**: `TST-TST-001`\n"
+                    "- **Tests**: `TST-TRK-001`\n"
                 )
 
             ok_fail, diag_fail, report_fail = verify_system_software_traceability(
@@ -1612,12 +1627,12 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
             with open(os.path.join(req_dir, "req_test.md"), "w", encoding="utf-8") as f:
                 f.write(
                     "# Living Requirements Test\n\n"
-                    "### REQ-TST-001: Sensor Driver [Verified]\n"
-                    "- **System Requirement**: `SYSREQ-TST-001`\n"
-                    "- **Tests**: `TST-TST-001`\n\n"
-                    "### REQ-TST-002: Clean Second Req [Verified]\n"
-                    "- **System Requirement**: `SYSREQ-TST-001`\n"
-                    "- **Tests**: `TST-TST-001`\n"
+                    "### REQ-TRK-001: Sensor Driver [Verified]\n"
+                    "- **System Requirement**: `SYSREQ-TRK-001`\n"
+                    "- **Tests**: `TST-TRK-001`\n\n"
+                    "### REQ-TRK-002: Clean Second Req [Verified]\n"
+                    "- **System Requirement**: `SYSREQ-TRK-001`\n"
+                    "- **Tests**: `TST-TRK-001`\n"
                 )
 
             ok_pass, diag_pass, report_pass = verify_system_software_traceability(
@@ -1639,21 +1654,21 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
             with open(os.path.join(sys_dir, "sysreq_test.md"), "w", encoding="utf-8") as f:
                 f.write(
                     "# System Requirements Test\n\n"
-                    "### SYSREQ-TST-001: Telemetry Acquisition\n"
+                    "### SYSREQ-TRK-001: Telemetry Acquisition\n"
                     "- Statement: Telemetry acquisition.\n\n"
-                    "### SYSREQ-TST-002: Data Export\n"
+                    "### SYSREQ-TRK-002: Data Export\n"
                     "- Statement: Data export.\n\n"
                     "## 4. Traceability Matrix\n"
-                    "| `SYSREQ-TST-001` | Telemetry | `REQ-TST-001` | Test |\n"
+                    "| `SYSREQ-TRK-001` | Telemetry | `REQ-TRK-001` | Test |\n"
                 )
 
-            # Only SYSREQ-TST-001 is covered; SYSREQ-TST-002 is uncovered
+            # Only SYSREQ-TRK-001 is covered; SYSREQ-TRK-002 is uncovered
             with open(os.path.join(req_dir, "req_test.md"), "w", encoding="utf-8") as f:
                 f.write(
                     "# Living Requirements Test\n\n"
-                    "### REQ-TST-001: Sensor Driver [Verified]\n"
-                    "- **System Requirement**: `SYSREQ-TST-001`\n"
-                    "- **Tests**: `TST-TST-001`\n"
+                    "### REQ-TRK-001: Sensor Driver [Verified]\n"
+                    "- **System Requirement**: `SYSREQ-TRK-001`\n"
+                    "- **Tests**: `TST-TRK-001`\n"
                 )
 
             ok_gap, diag_gap, report_gap = verify_system_software_traceability(
@@ -1661,15 +1676,15 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
                 fail_on_missing_coverage=True,
             )
             self.assertFalse(ok_gap)
-            self.assertIn("SYSREQ-TST-002", report_gap["uncovered_sysreqs"])
+            self.assertIn("SYSREQ-TRK-002", report_gap["uncovered_sysreqs"])
             self.assertEqual(report_gap["coverage_pct"], 50.0)
 
-            # Now add coverage for SYSREQ-TST-002
+            # Now add coverage for SYSREQ-TRK-002
             with open(os.path.join(req_dir, "req_test.md"), "a", encoding="utf-8") as f:
                 f.write(
-                    "\n### REQ-TST-002: Export Engine [Verified]\n"
-                    "- **System Requirement**: `SYSREQ-TST-002`\n"
-                    "- **Tests**: `TST-TST-001`\n"
+                    "\n### REQ-TRK-002: Export Engine [Verified]\n"
+                    "- **System Requirement**: `SYSREQ-TRK-002`\n"
+                    "- **Tests**: `TST-TRK-001`\n"
                 )
 
             ok_full, diag_full, report_full = verify_system_software_traceability(
@@ -2385,7 +2400,7 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
 
     def test_scenario_60_tst_pro_099_3_unbacked_tst_ratchet_baseline(self):
         """TST-PRO-099.3: Verify novel unbacked TST fails while legacy ratchet baseline items pass (Criterion 2 & 3)."""
-        # 1. Legacy unbacked item in baseline (e.g. TST-BUG-001) passes with warning
+        # 1. Legacy unbacked item in synthetic baseline passes with warning
         legacy_shard = {
             "docs/tests/tst_legacy.md": (
                 "### TST-BUG-001: Legacy Bug Test [Verified]\n"
@@ -2396,6 +2411,7 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
         ok_leg, diag_leg = verify_verified_test_evidence(
             test_results=empty_results,
             code_tags={},
+            baseline_allowlist=frozenset({"TST-BUG-001"}),
             tst_shards=legacy_shard,
         )
         self.assertTrue(ok_leg, "Legacy unbacked item in baseline must pass")
@@ -2411,6 +2427,7 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
         ok_nov, diag_nov = verify_verified_test_evidence(
             test_results=empty_results,
             code_tags={},
+            baseline_allowlist=frozenset({"TST-BUG-001"}),
             tst_shards=novel_shard,
         )
         self.assertFalse(ok_nov, "Novel unbacked item outside baseline must fail (Criterion 2)")
@@ -2420,8 +2437,8 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
         """TST-PRO-099: Verify clean worktree safety when test-results directory does not exist (REQ-PRO-099.5)."""
         clean_shard = {
             "docs/tests/tst_clean.md": (
-                "### TST-BUG-001: Legacy Bug [Verified]\n"
-                "- **Requirement(s)**: `REQ-BUG-001`\n"
+                "### TST-PRO-099: Clean Worktree Spec [Verified]\n"
+                "- **Requirement(s)**: `REQ-PRO-099`\n"
             )
         }
         ok, diag = verify_verified_test_evidence(
@@ -2480,6 +2497,326 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
             ok_fail, diag_fail = verify_test_evidence(repo_root=tmpdir)
             self.assertFalse(ok_fail)
             self.assertTrue(any("reports 2 failure(s)" in m for m in diag_fail))
+
+    def test_scenario_63_tst_pro_101_1_triage_unbacked_classification_and_csv(self):
+        """TST-PRO-101.1: Verify deterministic triage classification and CSV export compatibility."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tst_shards = {
+                "docs/tests/tst_sample.md": (
+                    "### TST-DOM-001: Sample Unit [Verified]\n"
+                    "- **Requirement(s)**: `REQ-DOM-001`\n"
+                    "- **Component**: `SampleWidgetTest.kt`\n"
+                    "### TST-DOM-002: Manual Tap [Verified]\n"
+                    "- **Requirement(s)**: `REQ-DOM-002`\n"
+                    "- **Test Description**: 1. Tap button on device.\n"
+                    "### TST-DOM-003: [SUPERSEDED by TST-DOM-001] Old [Verified]\n"
+                    "- **Requirement(s)**: `REQ-DOM-003`\n"
+                    "### TST-DOM-004: Missing Unit [Verified]\n"
+                    "- **Requirement(s)**: `REQ-DOM-004`\n"
+                    "- **Test Description**: Assert calculation invariant.\n"
+                )
+            }
+            req_shards = {
+                "docs/requirements/req_sample.md": (
+                    "### REQ-DOM-001: Unit Req [Verified]\n"
+                    "- **Verification Method**: Unit\n"
+                    "### REQ-DOM-002: Manual Req [Verified]\n"
+                    "- **Verification Method**: On-Device Manual\n"
+                    "### REQ-DOM-004: Missing Req [Verified]\n"
+                    "- **Verification Method**: Unit\n"
+                )
+            }
+            test_sources = {
+                "app/src/test/SampleWidgetTest.kt": "class SampleWidgetTest {}",
+            }
+            csv_path = os.path.join(tmpdir, "docs", "engineering", "test_evidence", "triage.csv")
+            report, diag = triage_unbacked_verified_tsts(
+                repo_root=tmpdir,
+                out_csv=csv_path,
+                tst_shards=tst_shards,
+                req_shards=req_shards,
+                test_sources=test_sources,
+                code_tags={},
+                baseline_allowlist=frozenset({"TST-DOM-001", "TST-DOM-999"}),
+            )
+            self.assertEqual(report["total_unbacked_verified_tsts"], 4)
+            self.assertEqual(report["by_category"]["unit-test-backed"], 1)
+            self.assertEqual(report["by_category"]["UI/manual-only"], 1)
+            self.assertEqual(report["by_category"]["obsolete/duplicate"], 1)
+            self.assertEqual(report["by_category"]["missing test code"], 1)
+            self.assertEqual(report["stale_baseline_ids"], ["TST-DOM-999"])
+            self.assertTrue(os.path.isfile(csv_path))
+
+    def test_scenario_64_tst_pro_101_2_3_4_live_repo_ratchet_zero(self):
+        """TST-PRO-101.2, TST-PRO-101.3, TST-PRO-101.4: Verify live repo has 0 unbacked [Verified] TSTs and ratchet=0."""
+        self.assertEqual(len(LEGACY_UNBACKED_VERIFIED_TSTS), 0, "Ratchet baseline must be reconciled to 0")
+        ok, diag = verify_verified_test_evidence(results_dir="/nonexistent/clean_worktree")
+        self.assertTrue(ok, f"Live repository --check-verified-evidence must pass cleanly: {diag}")
+        report, _ = triage_unbacked_verified_tsts()
+        self.assertEqual(report["total_unbacked_verified_tsts"], 0)
+        self.assertEqual(report["stale_baseline_count"], 0)
+
+    def test_scenario_65_tst_pro_101_5_hoechstmass_mirror_parity(self):
+        """TST-PRO-101.5: Verify Hoechstmass mirror exposes parameterized triage_unbacked_verified_tsts."""
+        from tools.hoechstmass.tools.verify_requirement_governance import triage_unbacked_verified_tsts as hm_triage
+        self.assertTrue(callable(hm_triage))
+
+    def test_scenario_66_tst_pro_102_1_sysreq_boundary_no_false_positive(self):
+        """TST-PRO-102.1: SYSREQ-DEX-001 must NOT false-match as REQ-DEX-001 in traceability or test index."""
+        from tools.verify_requirement_governance import _collect_test_file_index
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            sys_dir = os.path.join(tmpdir, "docs", "system")
+            req_dir = os.path.join(tmpdir, "docs", "requirements")
+            os.makedirs(sys_dir)
+            os.makedirs(req_dir)
+
+            with open(os.path.join(sys_dir, "sysreq_data.md"), "w", encoding="utf-8") as f:
+                f.write(
+                    "### SYSREQ-DEX-001: Export\n"
+                    "| `SYSREQ-DEX-001` | Export | No standalone SWE REQ here |\n"
+                )
+            with open(os.path.join(req_dir, "req_data.md"), "w", encoding="utf-8") as f:
+                f.write("### REQ-DAT-001: Data Storage [Verified]\n- **Tests**: `TST-DAT-001`\n")
+
+            ok, _, report = verify_system_software_traceability(
+                repo_root=tmpdir,
+                fail_on_missing_coverage=False,
+            )
+            self.assertTrue(ok)
+            self.assertEqual(report["sys_to_swe_map"]["SYSREQ-DEX-001"], [])
+            self.assertEqual(report["covered_count"], 0)
+            self.assertEqual(report["swe_refinement_covered_count"], 0)
+
+            _, req_in_tests = _collect_test_file_index(
+                tmpdir,
+                test_sources={"app/src/test/SysOnlyTest.kt": "// Verifies SYSREQ-DEX-001 and REQ-DAT-001"},
+            )
+            self.assertNotIn("REQ-DEX-001", req_in_tests)
+            self.assertIn("REQ-DAT-001", req_in_tests)
+
+    def test_scenario_67_tst_pro_102_2_derived_prefix_exclusion(self):
+        """TST-PRO-102.2: Process/derived REQs (REQ-PRO-*) must be excluded from sys_to_swe refinements."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            sys_dir = os.path.join(tmpdir, "docs", "system")
+            req_dir = os.path.join(tmpdir, "docs", "requirements")
+            os.makedirs(sys_dir)
+            os.makedirs(req_dir)
+
+            with open(os.path.join(sys_dir, "sysreq_trk.md"), "w", encoding="utf-8") as f:
+                f.write(
+                    "### SYSREQ-TRK-001: Tracking\n"
+                    "| `SYSREQ-TRK-001` | Tracking | `REQ-PRO-054`, `REQ-TRK-001` |\n"
+                )
+            with open(os.path.join(req_dir, "req_pro.md"), "w", encoding="utf-8") as f:
+                f.write("### REQ-PRO-054: Governance [Verified]\n- References `SYSREQ-TRK-001`\n")
+            with open(os.path.join(req_dir, "req_trk.md"), "w", encoding="utf-8") as f:
+                f.write(
+                    "### REQ-TRK-001: Live Tracking [Verified]\n- References `SYSREQ-TRK-001`\n"
+                    "### REQ-TRK-002: Unlinked Tracking [Verified]\n"
+                )
+
+            ok, _, report = verify_system_software_traceability(repo_root=tmpdir)
+            self.assertTrue(ok)
+            self.assertEqual(report["sys_to_swe_map"]["SYSREQ-TRK-001"], ["REQ-TRK-001"])
+            self.assertNotIn("REQ-PRO-054", report["swe_to_sys_map"])
+            self.assertEqual(report["swe_refinement_total_count"], 2)
+            self.assertEqual(report["swe_refinement_covered_count"], 1)
+            self.assertEqual(report["swe_refinement_coverage_pct"], 50.0)
+
+    def test_scenario_68_tst_pro_102_3_bidirectional_sys_coverage_live_repo(self):
+        """TST-PRO-102.3: Live repository reports authentic bidirectional SYS/SWE coverage without bogus IDs."""
+        ok, diag, report = verify_system_software_traceability()
+        self.assertTrue(ok, f"Expected live --verify-sys-trace pass, got: {diag}")
+        self.assertEqual(report["covered_count"], 12)
+        self.assertEqual(report["sysreq_count"], 12)
+        all_mapped_reqs = {r for reqs in report["sys_to_swe_map"].values() for r in reqs}
+        self.assertFalse(any(r.startswith("REQ-DEX-") for r in all_mapped_reqs))
+        self.assertFalse(any(r.startswith("REQ-PRO-") for r in all_mapped_reqs))
+        self.assertEqual(report["swe_refinement_total_count"], 362)
+        self.assertEqual(report["swe_refinement_covered_count"], 346)
+        self.assertAlmostEqual(report["swe_refinement_coverage_pct"], 95.58, places=2)
+
+    def test_scenario_69_tst_pro_103_1_system_requirement_attribute_and_derived_parser(self):
+        """TST-PRO-103.1: Parse System Requirement(s) (SYSREQ-* & Derived (SW-only)) and enforce unclassified rejection."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            sys_dir = os.path.join(tmpdir, "docs", "system")
+            req_dir = os.path.join(tmpdir, "docs", "requirements")
+            os.makedirs(sys_dir)
+            os.makedirs(req_dir)
+
+            with open(os.path.join(sys_dir, "sysreq_trk.md"), "w", encoding="utf-8") as f:
+                f.write("### SYSREQ-TRK-001: Sensors\n")
+            with open(os.path.join(req_dir, "req_trk.md"), "w", encoding="utf-8") as f:
+                f.write(
+                    "### REQ-TRK-001: Linked [Verified]\n"
+                    "- **System Requirement(s)**: `SYSREQ-TRK-001`\n\n"
+                    "### REQ-WEA-001: Pebble Derived [Implemented]\n"
+                    "- **System Requirement(s)**: Derived (SW-only) — Companion watch software\n\n"
+                    "### REQ-TRK-002: Missing Classification [Verified]\n"
+                )
+
+            ok_fail, diag_fail, rep_fail = verify_system_software_traceability(
+                repo_root=tmpdir,
+                fail_on_unclassified_swe=True,
+            )
+            self.assertFalse(ok_fail)
+            self.assertEqual(rep_fail["unclassified_swe_refinement_reqs"], ["REQ-TRK-002"])
+            self.assertIn("REQ-WEA-001", rep_fail["swe_derived_sw_only_map"])
+            self.assertTrue(any("REQ-TRK-002" in d for d in diag_fail))
+
+            with open(os.path.join(req_dir, "req_trk.md"), "a", encoding="utf-8") as f:
+                f.write("- **System Requirement(s)**: `SYSREQ-TRK-001`\n")
+
+            ok_pass, _, rep_pass = verify_system_software_traceability(
+                repo_root=tmpdir,
+                fail_on_unclassified_swe=True,
+            )
+            self.assertTrue(ok_pass)
+            self.assertEqual(rep_pass["reverse_classified_count"], 3)
+            self.assertEqual(rep_pass["reverse_classified_pct"], 100.0)
+            self.assertEqual(rep_pass["unclassified_swe_refinement_reqs"], [])
+
+    def test_scenario_70_tst_pro_103_2_live_reverse_sys_trace_100pct(self):
+        """TST-PRO-103.2: Live repository achieves 100% System-Refinement classification with 0 unclassified REQs."""
+        ok, diag, report = verify_system_software_traceability(fail_on_unclassified_swe=True)
+        self.assertTrue(ok, f"Expected live --check-reverse-sys-trace pass, got: {diag}")
+        self.assertEqual(report["unclassified_swe_refinement_reqs"], [])
+        self.assertEqual(report["reverse_classified_count"], 362)
+        self.assertEqual(report["reverse_classified_pct"], 100.0)
+
+    def test_scenario_71_tst_pro_103_3_rad_clm_prefix_classification(self):
+        """TST-PRO-103.3: Assert RAD and CLM belong to SYSTEM_REFINED_PREFIXES and REQ-PRO-* stays excluded."""
+        self.assertIn("RAD", SYSTEM_REFINED_PREFIXES)
+        self.assertIn("CLM", SYSTEM_REFINED_PREFIXES)
+        self.assertIn("PRO", SWE_DERIVED_PREFIXES)
+        self.assertNotIn("PRO", SYSTEM_REFINED_PREFIXES)
+
+    def test_scenario_72_tst_pro_104_1_code_to_shard_orphan_detection(self):
+        # TST-PRO-104.1: Code-to-Shard Orphan Detection & Exclusion Test
+        with tempfile.TemporaryDirectory() as tmpdir:
+            req_dir = os.path.join(tmpdir, "docs", "requirements")
+            tst_dir = os.path.join(tmpdir, "docs", "tests")
+            src_dir = os.path.join(tmpdir, "app", "src", "main", "java")
+            os.makedirs(req_dir)
+            os.makedirs(tst_dir)
+            os.makedirs(src_dir)
+
+            with open(os.path.join(req_dir, "req_core.md"), "w", encoding="utf-8") as f:
+                f.write("### REQ-COR-001: Authentic Core [Implemented]\n- **Tests**: `TST-COR-001`\n- **Description**: Core.\n")
+            with open(os.path.join(tst_dir, "tst_core.md"), "w", encoding="utf-8") as f:
+                f.write("### TST-COR-001: Authentic Core Test [Implemented]\n- **Requirement(s)**: `REQ-COR-001`\n")
+
+            with open(os.path.join(src_dir, "Component.kt"), "w", encoding="utf-8") as f:
+                f.write("// Traceability: REQ-COR-001.1, TST-COR-001.2, REQ-SIM-001\nclass Component\n")
+
+            orph_reqs, orph_tsts, count = find_code_traceability_orphans(repo_root=tmpdir, search_dirs=["app/src/main"])
+            self.assertEqual(len(orph_reqs), 0)
+            self.assertEqual(len(orph_tsts), 0)
+            self.assertEqual(count, 1)
+
+            ok, diag, rep = verify_code_traceability_orphans(repo_root=tmpdir, search_dirs=["app/src/main"])
+            self.assertTrue(ok)
+            self.assertEqual(rep["orphan_req_count"], 0)
+
+            with open(os.path.join(src_dir, "Orphan.kt"), "w", encoding="utf-8") as f:
+                f.write("// REQ-ORP-999 and TST-ORP-999\nclass Orphan\n")
+
+            ok_fail, diag_fail, rep_fail = verify_code_traceability_orphans(repo_root=tmpdir, search_dirs=["app/src/main"])
+            self.assertFalse(ok_fail)
+            self.assertIn("REQ-ORP-999", rep_fail["orphan_reqs"])
+            self.assertIn("TST-ORP-999", rep_fail["orphan_tsts"])
+
+    def test_scenario_73_tst_pro_104_2_shard_header_count_sync_and_validation(self):
+        # TST-PRO-104.2: Living Doc Shard Header Synchronization & Audit Test
+        with tempfile.TemporaryDirectory() as tmpdir:
+            req_dir = os.path.join(tmpdir, "docs", "requirements")
+            tst_dir = os.path.join(tmpdir, "docs", "tests")
+            os.makedirs(req_dir)
+            os.makedirs(tst_dir)
+
+            with open(os.path.join(req_dir, "req_sample.md"), "w", encoding="utf-8") as f:
+                f.write("# Living Requirements\n**Total Requirements**: 1\n\n### REQ-SMP-001: S1\n### REQ-SMP-002: S2\n")
+            with open(os.path.join(tst_dir, "tst_sample.md"), "w", encoding="utf-8") as f:
+                f.write("# Living Tests\n**Total Tests**: 5\n\n### TST-SMP-001: T1\n")
+
+            with open(os.path.join(tmpdir, "docs", "requirements.md"), "w", encoding="utf-8") as f:
+                f.write("# Index\n| [Sample](requirements/req_sample.md) | D | `SMP` | 1 | 0 | 0 | 1 |\n**Total Living Requirements**: 1 across 1 domain shards.\n")
+            with open(os.path.join(tmpdir, "docs", "tests.md"), "w", encoding="utf-8") as f:
+                f.write("# Index\n| [Sample](tests/tst_sample.md) | D | `SMP` | 5 | 0 | 0 | 5 |\n**Total Living Tests**: 5 across 1 domain shards.\n")
+
+            ok_fail, diag_fail = verify_shard_header_counts(repo_root=tmpdir)
+            self.assertFalse(ok_fail)
+            self.assertTrue(any("header count" in d for d in diag_fail))
+
+            recalculate_master_index_tables(repo_root=tmpdir)
+
+            ok_pass, diag_pass = verify_shard_header_counts(repo_root=tmpdir)
+            self.assertTrue(ok_pass, f"Expected header pass after recalc, got: {diag_pass}")
+
+            with open(os.path.join(req_dir, "req_sample.md"), "r", encoding="utf-8") as f:
+                self.assertIn("**Total Requirements**: 2", f.read())
+            with open(os.path.join(tst_dir, "tst_sample.md"), "r", encoding="utf-8") as f:
+                self.assertIn("**Total Tests**: 1", f.read())
+
+    def test_scenario_74_tst_pro_104_3_req_description_ratchet_and_coverage(self):
+        # TST-PRO-104.3: Description Field Ratchet & Field Coverage Reporting Test
+        with tempfile.TemporaryDirectory() as tmpdir:
+            req_dir = os.path.join(tmpdir, "docs", "requirements")
+            os.makedirs(req_dir)
+
+            with open(os.path.join(req_dir, "req_dom.md"), "w", encoding="utf-8") as f:
+                f.write(
+                    "### REQ-LEG-001: Legacy REQ [Verified]\n"
+                    "- **Rationale**: Legacy.\n\n"
+                    "### REQ-NEW-001: New REQ without Description [Planned]\n"
+                    "- **Rationale**: New.\n\n"
+                    "### REQ-NEW-002: New REQ with Description [Planned]\n"
+                    "- **Rationale**: New.\n"
+                    "- **Description**: Non-empty contract description.\n"
+                    "- **Implementation**: `Target.kt`\n"
+                    "- **Acceptance Criteria**: Given X When Y Then Z.\n"
+                )
+
+            baseline = frozenset({"REQ-LEG-001"})
+
+            ok_fail, diag_fail, rep_fail = verify_req_descriptions(
+                repo_root=tmpdir,
+                baseline=baseline,
+                fail_on_missing=True,
+            )
+            self.assertFalse(ok_fail)
+            self.assertEqual(rep_fail["unbaselined_missing"], ["REQ-NEW-001"])
+
+            with open(os.path.join(req_dir, "req_dom.md"), "r", encoding="utf-8") as f:
+                fixed_content = f.read().replace("### REQ-NEW-001: New REQ without Description [Planned]\n- **Rationale**: New.", "### REQ-NEW-001: New REQ with Description [Planned]\n- **Description**: Fixed desc.\n- **Rationale**: New.")
+            with open(os.path.join(req_dir, "req_dom.md"), "w", encoding="utf-8") as f:
+                f.write(fixed_content)
+
+            ok_pass, _, rep_pass = verify_req_descriptions(
+                repo_root=tmpdir,
+                baseline=baseline,
+                fail_on_missing=True,
+            )
+            self.assertTrue(ok_pass)
+            self.assertEqual(rep_pass["unbaselined_missing"], [])
+
+            cov = calculate_req_field_coverage(repo_root=tmpdir)
+            self.assertEqual(cov["total_reqs"], 3)
+            self.assertEqual(cov["description_count"], 2)
+            formatted = format_req_field_coverage(cov)
+            self.assertIn("Description Coverage:", formatted)
+
+    def test_scenario_75_tst_pro_104_4_live_repo_governance_parity(self):
+        # TST-PRO-104.4: Restored Requirement Governance & Evidence Cross-Check Test
+        h_ok, h_diag = verify_shard_header_counts()
+        self.assertTrue(h_ok, f"Shard headers failed on live repo: {h_diag}")
+
+        d_ok, d_diag, _ = verify_req_descriptions(fail_on_missing=True)
+        self.assertTrue(d_ok, f"Req descriptions failed on live repo: {d_diag}")
+
+        c_ok, c_diag, _ = verify_code_traceability_orphans(fail_on_orphans=True)
+        self.assertTrue(c_ok, f"Code orphans failed on live repo: {c_diag}")
 
 
 

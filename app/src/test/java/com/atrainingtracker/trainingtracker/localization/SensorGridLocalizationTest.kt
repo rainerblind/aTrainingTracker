@@ -29,6 +29,7 @@ import javax.xml.parsers.DocumentBuilderFactory
  * Localization verification test for Pick & Place sensor tile reordering strings (REQ-UI-200, TST-UI-154.5).
  * Validates 9-locale parity for move_tile_banner_instruction and move_tile_cancel.
  */
+// Linked test specs: TST-UI-386
 class SensorGridLocalizationTest {
 
     private val locales = listOf("", "-de", "-es", "-fr", "-it", "-ja", "-nl", "-pl", "-pt")

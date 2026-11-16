@@ -25,6 +25,8 @@ import android.util.Log
 import androidx.core.content.ContextCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.banalservice.sensor.SensorType
+import com.atrainingtracker.trainingtracker.database.ExtremaType
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
@@ -258,5 +260,54 @@ class WorkoutRepositoryProjectionTest {
         val pwrDist = repository.getPowerZoneDistribution(testWorkoutId)
         assertNotNull(pwrDist)
         assertEquals(6L, pwrDist!!.totalActiveTimeSec)
+    }
+
+    @Test
+    fun testStreamSamples_projectsVerticalOscillationAndGroundContactTime() {
+        // TST-SET-118.4
+        val rdFile = "2026-10-16_060000"
+        val tableName = WorkoutSamplesDatabaseManager.getTableName(rdFile)
+        every { mockSamplesDb.existsTable(rdFile) } returns true
+        realDb.execSQL(
+            """
+            CREATE TABLE $tableName (
+                _id INTEGER PRIMARY KEY AUTOINCREMENT,
+                time TEXT,
+                LAP_NR INTEGER,
+                CADENCE REAL,
+                VERTICAL_OSCILLATION REAL,
+                GROUND_CONTACT_TIME REAL
+            );
+            """.trimIndent()
+        )
+        realDb.execSQL(
+            """
+            INSERT INTO $tableName (time, LAP_NR, CADENCE, VERTICAL_OSCILLATION, GROUND_CONTACT_TIME)
+            VALUES ('2026-10-16 06:00:00', 1, 86.0, 8.4, 245.0),
+                   ('2026-10-16 06:00:01', 1, 88.0, 8.8, 235.0);
+            """.trimIndent()
+        )
+
+        val streamed = mutableListOf<WorkoutSampleRecord>()
+        repository.streamSamples(rdFile) { streamed.add(it) }
+
+        assertEquals(2, streamed.size)
+        assertEquals(8.4, streamed[0].verticalOscillationCm!!, 0.001)
+        assertEquals(245.0, streamed[0].groundContactTimeMs!!, 0.001)
+        assertEquals(8.8, streamed[1].verticalOscillationCm!!, 0.001)
+        assertEquals(235.0, streamed[1].groundContactTimeMs!!, 0.001)
+
+        every {
+            mockSamplesDb.calcExtremaValue(mockSummariesDb, rdFile, ExtremaType.AVG, SensorType.VERTICAL_OSCILLATION)
+        } returns 8.6
+        every {
+            mockSamplesDb.calcExtremaValue(mockSummariesDb, rdFile, ExtremaType.AVG, SensorType.GROUND_CONTACT_TIME)
+        } returns 240.0
+        repository.calculateAndSaveExtrema(testWorkoutId, rdFile)
+
+        verify {
+            mockSummariesDb.updateExtremaValue(testWorkoutId, SensorType.VERTICAL_OSCILLATION, ExtremaType.AVG, 8.6, null)
+            mockSummariesDb.updateExtremaValue(testWorkoutId, SensorType.GROUND_CONTACT_TIME, ExtremaType.AVG, 240.0, null)
+        }
     }
 }

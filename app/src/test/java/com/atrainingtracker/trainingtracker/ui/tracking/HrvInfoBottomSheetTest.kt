@@ -29,6 +29,7 @@ import java.lang.reflect.Modifier
  * Rule 72 (zero nested verticalScroll), and 9-language translation parity in strings_hrv.xml (TST-TRK-061.5).
  * Refactored to reflection and LocalizationTestCache per docs/coding_standards.md §5.4 and REQ-PRO-049.
  */
+// Linked test specs: TST-TRK-068
 class HrvInfoBottomSheetTest {
 
     @Test

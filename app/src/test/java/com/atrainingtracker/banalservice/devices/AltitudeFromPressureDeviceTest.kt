@@ -52,6 +52,7 @@ import org.junit.Test
  * Unit tests verifying null-safe barometric altitude sensor initialization,
  * raw altitude fallback, and correction dispatch (REQ-CON-013, TST-CON-004, ATT-1353).
  */
+// Linked test specs: TST-CON-002
 class AltitudeFromPressureDeviceTest {
 
     private lateinit var mockContext: Context

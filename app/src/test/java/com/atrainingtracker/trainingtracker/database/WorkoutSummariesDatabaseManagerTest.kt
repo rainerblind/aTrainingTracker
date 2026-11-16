@@ -40,6 +40,7 @@ import org.junit.Test
  * Unit tests verifying [WorkoutSummariesDatabaseManager] unfinalized workout query and update predicates
  * for NULL and 0 finished states (REQ-UI-345, TST-UI-305, ATT-3165).
  */
+// Linked test specs: TST-SET-085
 class WorkoutSummariesDatabaseManagerTest {
 
     private lateinit var mockContext: Context

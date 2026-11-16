@@ -504,7 +504,11 @@ class TestJiraCliTooling(unittest.TestCase):
         import tempfile
         with tempfile.TemporaryDirectory() as tmpdir:
             docs_dir = os.path.join(tmpdir, "docs")
+            test_dir = os.path.join(tmpdir, "app", "src", "test")
             os.makedirs(docs_dir, exist_ok=True)
+            os.makedirs(test_dir, exist_ok=True)
+            with open(os.path.join(test_dir, "UiWidgetTest.kt"), "w", encoding="utf-8") as f:
+                f.write("// TST-UI-001\n")
             req_path = os.path.join(docs_dir, "requirements.md")
             tst_path = os.path.join(docs_dir, "tests.md")
             with open(req_path, "w", encoding="utf-8") as f:
@@ -527,7 +531,7 @@ class TestJiraCliTooling(unittest.TestCase):
             # Unbacked requirements remain/flip to Implemented under REQ-PRO-099.4
             self.assertIn("Implemented", req_content)
             self.assertNotIn("Planned", tst_content)
-            # TST-UI-001 is tolerated in ratchet baseline, so it promotes to Verified
+            # TST-UI-001 has test code backing in tmpdir, so it promotes to Verified
             self.assertIn("| Verified |", tst_content)
 
     def test_stage5_evidence_gating_unbacked_and_backed(self):
@@ -1449,6 +1453,123 @@ class TestJiraCliTooling(unittest.TestCase):
         output3 = mock_stdout.getvalue()
         self.assertIn("*Lösungsversion (Fix Version/s)*: None on subtask (per Core Rule 8.3)", output3)
         self.assertNotIn("WARNING: Mandatory field missing!", output3)
+
+
+class TestPoApprovalAndChangelogProvenance(unittest.TestCase):
+    """
+    Verifies REQ-PRO-105 / TST-PRO-105:
+    Explicit PO approval & changelog provenance for agent-originated change requests (ATT-8166).
+    """
+
+    @patch("jira_util.jira_request")
+    def test_tst_pro_105_1_create_issue_blocks_add_to_sprint_for_agents(self, mock_request):
+        # TST-PRO-105.1: Agent Backlog Placement & Direct Sprint Block Test
+        mock_request.return_value = {"key": "ATT-9999"}
+        with patch("sys.stderr", new_callable=io.StringIO) as mock_stderr:
+            for role in ("agent1", "agent2", "coordinator"):
+                with self.assertRaises(SystemExit) as cm:
+                    jira_util.create_issue("Agent Task", "Desc", role=role, add_to_sprint=True)
+                self.assertEqual(cm.exception.code, 1)
+                self.assertIn("Agents must not move tickets to sprints", mock_stderr.getvalue())
+
+    @patch("jira_util.jira_request")
+    def test_tst_pro_105_2_backlog_to_po_queue_two_way_guard(self, mock_request):
+        # TST-PRO-105.2: Backlog-to-PO-Queue Two-Way Guard Test
+        mock_request.return_value = {}
+
+        # Moving to 447 without cutoff_return=True is rejected
+        with patch("sys.stderr", new_callable=io.StringIO) as mock_stderr:
+            with self.assertRaises(SystemExit) as cm:
+                jira_util.move_issues_to_sprint_guarded(447, ["ATT-100"], role="coordinator", cutoff_return=False)
+            self.assertEqual(cm.exception.code, 1)
+            self.assertIn("Adding Backlog tickets into 'Vom PO Freigegeben' (ID 447) is strictly forbidden", mock_stderr.getvalue())
+
+        # Moving raw Backlog directly to active sprint (450) without source_sprint_id=447 is rejected
+        with patch("sys.stderr", new_callable=io.StringIO) as mock_stderr:
+            with self.assertRaises(SystemExit) as cm:
+                jira_util.move_issues_to_sprint_guarded(450, ["ATT-100"], role="coordinator", source_sprint_id=None)
+            self.assertEqual(cm.exception.code, 1)
+            self.assertIn("strictly forbidden for AI agents (REQ-PRO-105.2)", mock_stderr.getvalue())
+
+        # Pack-sprint from 447 to active sprint succeeds
+        res = jira_util.move_issues_to_sprint_guarded(450, ["ATT-100"], role="coordinator", source_sprint_id=447)
+        self.assertEqual(res, ["ATT-100"])
+
+        # Return unstarted from active sprint to 447 with cutoff_return=True succeeds
+        res_return = jira_util.move_issues_to_sprint_guarded(447, ["ATT-100"], role="coordinator", cutoff_return=True, source_sprint_id=450)
+        self.assertEqual(res_return, ["ATT-100"])
+
+    def test_tst_pro_105_3_verify_po_approval_changelog(self):
+        # TST-PRO-105.3: PO Changelog Provenance & QA Audit Dimension 6 Test
+        human_id = jira_util.ROLE_ACCOUNT_IDS["human"]
+
+        # 1. Ceremony ticket is exempt
+        ceremony_issue = {"key": "ATT-9100", "fields": {"summary": "Review & Retro - Sprint 2026-47.1"}}
+        appr, reason = jira_util.verify_po_approval_changelog(ceremony_issue)
+        self.assertTrue(appr)
+        self.assertIn("Ceremony ticket exempt", reason)
+
+        # 2. Directly created by human PO
+        po_created = {"key": "ATT-9101", "fields": {"summary": "Feature", "reporter": {"accountId": human_id}}}
+        appr, reason = jira_util.verify_po_approval_changelog(po_created)
+        self.assertTrue(appr)
+        self.assertIn("created directly by Product Owner", reason)
+
+        # 3. Approved in changelog into Vom PO Freigegeben (ID 447) by PO
+        po_changelog = {
+            "key": "ATT-9102",
+            "fields": {"summary": "Feature", "reporter": {"accountId": "agent1"}},
+            "changelog": {
+                "histories": [
+                    {
+                        "author": {"accountId": human_id, "displayName": "Rainer Blind"},
+                        "created": "2026-11-15T19:05:18.523+0100",
+                        "items": [{"field": "Sprint", "fromString": "", "toString": "Vom PO Freigegeben", "from": "", "to": "447"}],
+                    }
+                ]
+            },
+        }
+        appr, reason = jira_util.verify_po_approval_changelog(po_changelog)
+        self.assertTrue(appr)
+        self.assertIn("approved sprint placement into 'Vom PO Freigegeben'", reason)
+
+        # 4. Agent moved issue to sprint without PO approval -> REJECTED
+        agent_changelog = {
+            "key": "ATT-9103",
+            "fields": {"summary": "Feature", "reporter": {"accountId": "agent1"}},
+            "changelog": {
+                "histories": [
+                    {
+                        "author": {"accountId": "agent_id", "displayName": "AI Agent"},
+                        "created": "2026-11-15T19:05:18.523+0100",
+                        "items": [{"field": "Sprint", "fromString": "", "toString": "2026-47.1", "from": "", "to": "450"}],
+                    }
+                ]
+            },
+        }
+        appr, reason = jira_util.verify_po_approval_changelog(agent_changelog)
+        self.assertFalse(appr)
+        self.assertIn("lacks Product Owner approval", reason)
+
+    def test_tst_pro_105_4_att_7902_disposition_record_and_governance(self):
+        # TST-PRO-105.4: Historical Exception Disposition & Living Doc Parity Test
+        human_id = jira_util.ROLE_ACCOUNT_IDS["human"]
+        att_7902_data = {
+            "key": "ATT-7902",
+            "fields": {"summary": "Characterisation test scaffolding", "reporter": {"accountId": "agent_id"}},
+            "changelog": {
+                "histories": [
+                    {
+                        "author": {"accountId": human_id, "displayName": "Rainer Blind"},
+                        "created": "2026-11-14T20:28:50.000+0100",
+                        "items": [{"field": "Sprint", "fromString": "", "toString": "Vom PO Freigegeben", "from": "", "to": "447"}],
+                    }
+                ]
+            },
+        }
+        appr, reason = jira_util.verify_po_approval_changelog(att_7902_data)
+        self.assertTrue(appr)
+        self.assertIn("approved sprint placement", reason)
 
 
 if __name__ == "__main__":

@@ -26,6 +26,7 @@ import java.lang.reflect.Modifier
  * Architectural contract test for TrackingTabsScreen landscape layout and auto-hide overlay.
  * Refactored to reflection per docs/coding_standards.md §5.4 and REQ-PRO-049.
  */
+// Linked test specs: TST-UI-399
 class TrackingTabsLandscapeLayoutTest {
 
     @Test

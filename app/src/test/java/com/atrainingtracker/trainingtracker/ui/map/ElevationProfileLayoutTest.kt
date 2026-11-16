@@ -20,6 +20,7 @@ import org.junit.Test
  * explicit enablement in [MapDetailLayout], and the non-overlapping vertical layout
  * architecture for [ElevationProfile] (TST-UI-151 / REQ-UI-197).
  */
+// Linked test specs: TST-UI-169, TST-UI-299, TST-UI-306
 class ElevationProfileLayoutTest {
 
     @Test

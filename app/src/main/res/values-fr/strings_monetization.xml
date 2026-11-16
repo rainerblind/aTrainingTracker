@@ -19,4 +19,10 @@
 
 <resources>
     <string name="supporter_plan_button_switch">Changer</string>
+    <string name="supporter_plan_subtitle_bronze_monthly">Essai mensuel flexible</string>
+    <string name="supporter_plan_subtitle_bronze_yearly">Petit budget, étudiants et pratique occasionnelle</string>
+    <string name="supporter_plan_subtitle_silver_yearly">La formule juste pour un entraînement régulier</string>
+    <string name="supporter_plan_subtitle_gold_yearly">Entraînement ambitieux avec capteur de puissance et multi-capteurs</string>
+    <string name="supporter_plan_subtitle_diamond_yearly">Grand garage et soutien maximal au développement</string>
+    <string name="supporter_garage_match_badge">Adapté à votre garage</string>
 </resources>

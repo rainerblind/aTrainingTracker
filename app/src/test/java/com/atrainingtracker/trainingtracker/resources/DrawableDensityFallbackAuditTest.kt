@@ -14,6 +14,7 @@ import java.io.File
  * This ensures Android's resource resolver never fails with Resources$NotFoundException on density-split APKs
  * or custom DPI devices.
  */
+// Linked test specs: TST-UI-343
 class DrawableDensityFallbackAuditTest {
 
     @Test

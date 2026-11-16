@@ -54,6 +54,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -63,6 +64,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.monetization.GarageLeague
+import com.atrainingtracker.trainingtracker.monetization.GarageLeagueDetector
 import com.atrainingtracker.trainingtracker.monetization.ProFeatureManager
 import com.atrainingtracker.trainingtracker.monetization.SupporterBasePlan
 import com.atrainingtracker.trainingtracker.monetization.SupporterTier
@@ -88,173 +91,207 @@ fun SupporterScreen(
     val effectiveTier by proFeatureManager.effectiveTier.collectAsState()
     val isPioneer by settingsDataStore.isPioneerEarlyAdopter.collectAsState(initial = false)
     val pioneerSinceYear by proFeatureManager.pioneerSinceYear.collectAsState()
+    val qualifiedLeague by produceState(initialValue = GarageLeague.NONE, context) {
+        value = GarageLeagueDetector(context).evaluateQualifiedLeague()
+    }
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = stringResource(R.string.supporter_screen_title),
-                        fontWeight = FontWeight.Bold
-                    )
-                },
-                navigationIcon = {
-                    if (onOpenDrawer != null) {
-                        IconButton(onClick = onOpenDrawer) {
-                            Icon(
-                                imageVector = Icons.Default.Menu,
-                                contentDescription = stringResource(R.string.navigation_drawer_open)
-                            )
-                        }
-                    } else {
-                        IconButton(onClick = onNavigateBack) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = stringResource(R.string.back)
-                            )
-                        }
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                )
+            SupporterTopBar(
+                onNavigateBack = onNavigateBack,
+                onOpenDrawer = onOpenDrawer
             )
         }
     ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 12.dp)
-        ) {
-            // Subtitle / mission
-            Text(
-                text = stringResource(R.string.supporter_screen_subtitle),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Pioneer recognition banner
-            if (isPioneer || effectiveTier == SupporterTier.PIONEER) {
-                PioneerStatusBanner(sinceYear = pioneerSinceYear)
-                Spacer(modifier = Modifier.height(16.dp))
-            } else if (effectiveTier.isPro) {
-                ActiveTierBanner(tier = effectiveTier)
-                Spacer(modifier = Modifier.height(16.dp))
+        SupporterScreenBody(
+            modifier = Modifier.padding(innerPadding),
+            effectiveTier = effectiveTier,
+            isPioneer = isPioneer,
+            pioneerSinceYear = pioneerSinceYear,
+            qualifiedLeague = qualifiedLeague,
+            preSelectedPlanId = preSelectedPlanId,
+            onSelectPlan = { plan ->
+                handlePlanSelection(context, plan, settingsDataStore)
             }
+        )
+    }
+}
 
-            var showSportingJourneySheet by remember { mutableStateOf(false) }
-
-            // Sporting Journey Entry Card (REQ-SPT-001)
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { showSportingJourneySheet = true },
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = TTColor.VaultCardBackground),
-                border = BorderStroke(1.dp, TTColor.VaultCardBorder)
-            ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(
-                        modifier = Modifier.weight(1f),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "🏆",
-                            style = MaterialTheme.typography.titleLarge,
-                            modifier = Modifier.padding(end = 12.dp)
-                        )
-                        Column {
-                            Text(
-                                text = stringResource(R.string.sporting_journey_entry_supporter_screen),
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = stringResource(R.string.sporting_journey_entry_supporter_desc),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SupporterTopBar(
+    onNavigateBack: () -> Unit,
+    onOpenDrawer: (() -> Unit)?
+) {
+    TopAppBar(
+        title = {
+            Text(
+                text = stringResource(R.string.supporter_screen_title),
+                fontWeight = FontWeight.Bold
+            )
+        },
+        navigationIcon = {
+            if (onOpenDrawer != null) {
+                IconButton(onClick = onOpenDrawer) {
                     Icon(
-                        imageVector = Icons.Default.ChevronRight,
-                        contentDescription = null,
-                        tint = TTColor.VaultAmber
+                        imageVector = Icons.Default.Menu,
+                        contentDescription = stringResource(R.string.navigation_drawer_open)
+                    )
+                }
+            } else {
+                IconButton(onClick = onNavigateBack) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = stringResource(R.string.back)
                     )
                 }
             }
+        },
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
+    )
+}
+
+@Composable
+private fun SupporterScreenBody(
+    modifier: Modifier,
+    effectiveTier: SupporterTier,
+    isPioneer: Boolean,
+    pioneerSinceYear: Int?,
+    qualifiedLeague: GarageLeague,
+    preSelectedPlanId: String?,
+    onSelectPlan: (SupporterBasePlan) -> Unit
+) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+    ) {
+        Text(
+            text = stringResource(R.string.supporter_screen_subtitle),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+
+        if (isPioneer || effectiveTier == SupporterTier.PIONEER) {
+            PioneerStatusBanner(sinceYear = pioneerSinceYear)
             Spacer(modifier = Modifier.height(16.dp))
+        } else if (effectiveTier.isPro) {
+            ActiveTierBanner(tier = effectiveTier)
+            Spacer(modifier = Modifier.height(16.dp))
+        }
 
-            if (showSportingJourneySheet) {
-                SportingJourneySheet(onDismissRequest = { showSportingJourneySheet = false })
-            }
+        var showSportingJourneySheet by remember { mutableStateOf(false) }
+        SupporterSportingJourneyCard(onClick = { showSportingJourneySheet = true })
+        Spacer(modifier = Modifier.height(16.dp))
+        if (showSportingJourneySheet) {
+            SportingJourneySheet(onDismissRequest = { showSportingJourneySheet = false })
+        }
 
-            // Subscription plans section header
-            Text(
-                text = stringResource(R.string.supporter_screen_title),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
+        Text(
+            text = stringResource(R.string.supporter_screen_title),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+
+        SupporterBasePlan.PLANS.forEach { plan ->
+            SupporterPlanCard(
+                plan = plan,
+                isCurrentTier = effectiveTier == plan.tier,
+                effectiveTier = effectiveTier,
+                isPreSelected = plan.basePlanId == preSelectedPlanId,
+                isGarageMatch = isGarageMatchForPlan(plan, qualifiedLeague, effectiveTier),
+                onSelectPlan = { onSelectPlan(plan) }
             )
+            Spacer(modifier = Modifier.height(10.dp))
+        }
 
-            Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(16.dp))
+        SupporterTransparencyFooter()
+        Spacer(modifier = Modifier.height(24.dp))
+    }
+}
 
-            // 5 Base plans
-            SupporterBasePlan.PLANS.forEach { plan ->
-                SupporterPlanCard(
-                    plan = plan,
-                    isCurrentTier = effectiveTier == plan.tier,
-                    effectiveTier = effectiveTier,
-                    isPreSelected = plan.basePlanId == preSelectedPlanId,
-                    onSelectPlan = {
-                        handlePlanSelection(context, plan, settingsDataStore)
-                    }
-                )
-                Spacer(modifier = Modifier.height(10.dp))
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Transparency footer
-            Surface(
-                shape = RoundedCornerShape(8.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                modifier = Modifier.fillMaxWidth()
+@Composable
+private fun SupporterSportingJourneyCard(onClick: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = TTColor.VaultCardBackground),
+        border = BorderStroke(1.dp, TTColor.VaultCardBorder)
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                modifier = Modifier.weight(1f),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(modifier = Modifier.padding(14.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.Favorite,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = stringResource(R.string.supporter_core_invariant_title),
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = "🏆",
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.padding(end = 12.dp)
+                )
+                Column {
                     Text(
-                        text = stringResource(R.string.supporter_core_invariant_body),
+                        text = stringResource(R.string.sporting_journey_entry_supporter_screen),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = stringResource(R.string.sporting_journey_entry_supporter_desc),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
+            Icon(
+                imageVector = Icons.Default.ChevronRight,
+                contentDescription = null,
+                tint = TTColor.VaultAmber
+            )
+        }
+    }
+}
 
-            Spacer(modifier = Modifier.height(24.dp))
+@Composable
+private fun SupporterTransparencyFooter() {
+    Surface(
+        shape = RoundedCornerShape(8.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(14.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.Favorite,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = stringResource(R.string.supporter_core_invariant_title),
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = stringResource(R.string.supporter_core_invariant_body),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }

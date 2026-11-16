@@ -304,6 +304,13 @@ class EditDeviceViewModel(private val application: Application) : AndroidViewMod
     }
 
     /**
+     * Updates the draft opt-in state for Polar live IMU streaming (`REQ-SET-112.1`, `ATT-8016`).
+     */
+    fun onPolarLiveImuEnabledChanged(enabled: Boolean) {
+        updateState { it.copy(polarLiveImuEnabled = enabled) }
+    }
+
+    /**
      * Resets the persistent tire pressure baseline (iTPMS) to the currently selected wheel circumference.
      */
     fun resetTirePressureBaseline() {

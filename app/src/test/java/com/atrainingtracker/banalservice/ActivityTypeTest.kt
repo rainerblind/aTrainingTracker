@@ -146,4 +146,12 @@ class ActivityTypeTest {
             assertFalse("$activity must NOT contain LIVE_HR_DRIFT", sensors.contains(SensorType.LIVE_HR_DRIFT))
         }
     }
+
+    @Test
+    fun testGetSensorTypeArray_runSpeedAndCadenceContainsRunningDynamics() {
+        // TST-SET-118.3
+        val runSensors = ActivityType.getSensorTypeArray(ActivityType.RUN_SPEED_AND_CADENCE, null).toList()
+        assertTrue("RUN_SPEED_AND_CADENCE must contain VERTICAL_OSCILLATION", runSensors.contains(SensorType.VERTICAL_OSCILLATION))
+        assertTrue("RUN_SPEED_AND_CADENCE must contain GROUND_CONTACT_TIME", runSensors.contains(SensorType.GROUND_CONTACT_TIME))
+    }
 }

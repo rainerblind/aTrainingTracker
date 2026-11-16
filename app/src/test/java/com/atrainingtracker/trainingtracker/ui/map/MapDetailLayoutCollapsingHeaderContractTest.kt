@@ -30,6 +30,7 @@ import org.junit.Test
  * collapsible upper metadata architecture via [CollapsingAppBarNestedScrollConnection]
  * and map squashing prevention (REQ-UI-250 / ATT-2150).
  */
+// Linked test specs: TST-UI-209, TST-UI-491
 class MapDetailLayoutCollapsingHeaderContractTest {
 
     @Test

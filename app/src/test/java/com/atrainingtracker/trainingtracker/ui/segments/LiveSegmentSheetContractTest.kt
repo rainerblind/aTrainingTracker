@@ -25,6 +25,7 @@ import java.io.File
  * verifying clamped bottom sheet height to elevation profile content height without expanding
  * to the top of the viewport (ATT-2231 / REQ-UI-270 / TST-UI-229).
  */
+// Linked test specs: TST-UI-291, TST-UI-300
 class LiveSegmentSheetContractTest {
 
     private fun findSourceFile(relativePath: String): File {

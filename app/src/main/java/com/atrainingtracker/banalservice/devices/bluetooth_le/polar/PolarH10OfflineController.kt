@@ -274,8 +274,10 @@ object PolarH10OfflineController {
         }
 
         return try {
+            val sharedApi = if (apiOverride == null) PolarOfflineGattCoordinator.getActiveSession(targetId) else null
+            val ownsApiLifecycle = apiOverride == null && sharedApi == null
             val timeoutResult = withTimeoutOrNull(BACKFILL_TIMEOUT_MS) {
-                val api = apiOverride ?: PolarBleApiDefaultImpl.defaultImplementation(
+                val api = apiOverride ?: sharedApi ?: PolarBleApiDefaultImpl.defaultImplementation(
                     appContext,
                     setOf(
                         PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_H10_EXERCISE_RECORDING,
@@ -382,14 +384,16 @@ object PolarH10OfflineController {
                         }
                     }
 
-                    try {
-                        api.disconnectFromDevice(targetId)
-                    } catch (ignored: Exception) {
+                    if (ownsApiLifecycle) {
+                        try {
+                            api.disconnectFromDevice(targetId)
+                        } catch (ignored: Exception) {
+                        }
                     }
 
                     allPatchedSuccessfully
                 } finally {
-                    if (apiOverride == null) {
+                    if (ownsApiLifecycle) {
                         try {
                             api.cleanup()
                         } catch (t: Throwable) {
@@ -488,9 +492,11 @@ object PolarH10OfflineController {
         val btleDevice = targetMac?.let { deviceManager?.getBtleDeviceByAddress(it) }
         btleDevice?.pauseGattOperations()
 
+        val sharedApi = if (apiOverride == null) PolarOfflineGattCoordinator.getActiveSession(targetId) else null
+        val ownsApiLifecycle = apiOverride == null && sharedApi == null
         try {
             return withTimeoutOrNull(BACKFILL_TIMEOUT_MS) {
-                val api = apiOverride ?: PolarBleApiDefaultImpl.defaultImplementation(
+                val api = apiOverride ?: sharedApi ?: PolarBleApiDefaultImpl.defaultImplementation(
                     appContext,
                     setOf(
                         PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_H10_EXERCISE_RECORDING,
@@ -613,10 +619,10 @@ object PolarH10OfflineController {
                         true
                     }
                 } finally {
-                    try {
-                        api.disconnectFromDevice(targetId)
-                    } catch (ignored: Exception) {}
-                    if (apiOverride == null) {
+                    if (ownsApiLifecycle) {
+                        try {
+                            api.disconnectFromDevice(targetId)
+                        } catch (ignored: Exception) {}
                         try {
                             api.cleanup()
                         } catch (t: Throwable) {

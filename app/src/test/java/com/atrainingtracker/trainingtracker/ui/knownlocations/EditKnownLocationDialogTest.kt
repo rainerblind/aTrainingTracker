@@ -41,6 +41,7 @@ import kotlin.math.roundToInt
  * - TST-UI-131.4: formatRadius metric and imperial presentation.
  * - TST-UI-131.5: Radius slider adjustment, snapping (25m step), clamping [50, 1000], and onConfirm propagation.
  */
+// Linked test specs: TST-MAP-065
 class EditKnownLocationDialogTest {
 
     private val sampleLocation = KnownLocationItem(

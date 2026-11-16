@@ -27,6 +27,7 @@ import java.io.File
  * Unit tests verifying pure function [calculateZoneIndex] and its backward-compatible overload
  * (REQ-SET-079 / TST-SET-079.2).
  */
+// Linked test specs: TST-UI-391
 class BatterySaverModelPureTest {
 
     @get:Rule

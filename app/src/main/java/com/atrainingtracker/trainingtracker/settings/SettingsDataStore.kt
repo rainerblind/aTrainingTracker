@@ -30,6 +30,8 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.preferencesDataStore
+import com.atrainingtracker.trainingtracker.monetization.GarageLeague
+import com.atrainingtracker.trainingtracker.monetization.GarageNudgeCooldownState
 import com.atrainingtracker.trainingtracker.monetization.SupporterTier
 import com.atrainingtracker.trainingtracker.monetization.SupporterTierOverride
 import com.atrainingtracker.trainingtracker.zones.ValidationResult
@@ -232,6 +234,12 @@ class SettingsDataStore(
         val KEY_HAS_SHOWN_FIRST_JUBILEE_PROMPT = booleanPreferencesKey("has_shown_first_jubilee_prompt")
         val KEY_HAS_SHOWN_GOLD_GARAGE_NUDGE = booleanPreferencesKey("has_shown_gold_garage_nudge")
         val KEY_HAS_SHOWN_DIAMOND_GARAGE_NUDGE = booleanPreferencesKey("has_shown_diamond_garage_nudge")
+        val KEY_GOLD_GARAGE_NUDGE_COUNT = intPreferencesKey("gold_garage_nudge_count")
+        val KEY_LAST_GOLD_GARAGE_NUDGE_TIMESTAMP_MS = longPreferencesKey("last_gold_garage_nudge_timestamp_ms")
+        val KEY_LAST_GOLD_GARAGE_NUDGE_WORKOUT_COUNT = intPreferencesKey("last_gold_garage_nudge_workout_count")
+        val KEY_DIAMOND_GARAGE_NUDGE_COUNT = intPreferencesKey("diamond_garage_nudge_count")
+        val KEY_LAST_DIAMOND_GARAGE_NUDGE_TIMESTAMP_MS = longPreferencesKey("last_diamond_garage_nudge_timestamp_ms")
+        val KEY_LAST_DIAMOND_GARAGE_NUDGE_WORKOUT_COUNT = intPreferencesKey("last_diamond_garage_nudge_workout_count")
 
         // Developer Overrides (ATT-7659, REQ-CON-030.8)
         val KEY_RADAR_V1_ONLY_OVERRIDE = booleanPreferencesKey("radar_v1_only_override")
@@ -650,6 +658,47 @@ class SettingsDataStore(
         }
     }
 
+    private data class GarageNudgeKeys(
+        val legacyKey: Preferences.Key<Boolean>,
+        val countKey: Preferences.Key<Int>,
+        val timestampKey: Preferences.Key<Long>,
+        val workoutCountKey: Preferences.Key<Int>
+    )
+
+    private fun nudgeKeysFor(league: GarageLeague): GarageNudgeKeys? = when (league) {
+        GarageLeague.GOLD -> GarageNudgeKeys(
+            legacyKey = KEY_HAS_SHOWN_GOLD_GARAGE_NUDGE,
+            countKey = KEY_GOLD_GARAGE_NUDGE_COUNT,
+            timestampKey = KEY_LAST_GOLD_GARAGE_NUDGE_TIMESTAMP_MS,
+            workoutCountKey = KEY_LAST_GOLD_GARAGE_NUDGE_WORKOUT_COUNT
+        )
+        GarageLeague.DIAMOND -> GarageNudgeKeys(
+            legacyKey = KEY_HAS_SHOWN_DIAMOND_GARAGE_NUDGE,
+            countKey = KEY_DIAMOND_GARAGE_NUDGE_COUNT,
+            timestampKey = KEY_LAST_DIAMOND_GARAGE_NUDGE_TIMESTAMP_MS,
+            workoutCountKey = KEY_LAST_DIAMOND_GARAGE_NUDGE_WORKOUT_COUNT
+        )
+        GarageLeague.NONE -> null
+    }
+
+    private fun readGarageNudgeState(prefs: Preferences, league: GarageLeague): GarageNudgeCooldownState {
+        val keys = nudgeKeysFor(league) ?: return GarageNudgeCooldownState()
+        return GarageNudgeCooldownState(
+            nudgeCount = prefs[keys.countKey] ?: 0,
+            lastNudgeTimestampMs = prefs[keys.timestampKey] ?: 0L,
+            lastNudgeWorkoutCount = prefs[keys.workoutCountKey] ?: 0,
+            legacyHasShown = prefs[keys.legacyKey] ?: false
+        )
+    }
+
+    val goldGarageNudgeState: Flow<GarageNudgeCooldownState> = dataStore.data.map { prefs ->
+        readGarageNudgeState(prefs, GarageLeague.GOLD)
+    }
+
+    val diamondGarageNudgeState: Flow<GarageNudgeCooldownState> = dataStore.data.map { prefs ->
+        readGarageNudgeState(prefs, GarageLeague.DIAMOND)
+    }
+
     val hasShownGoldGarageNudge: Flow<Boolean> = dataStore.data.map { prefs ->
         prefs[KEY_HAS_SHOWN_GOLD_GARAGE_NUDGE] ?: false
     }
@@ -670,10 +719,48 @@ class SettingsDataStore(
         }
     }
 
+    /**
+     * Records a presented N+1 garage nudge and updates cooldown baselines (REQ-SET-115.1).
+     */
+    suspend fun recordGarageNudgeShown(league: GarageLeague, timestampMs: Long, workoutCount: Int) {
+        val keys = nudgeKeysFor(league) ?: return
+        dataStore.edit { prefs ->
+            val currentCount = prefs[keys.countKey] ?: 0
+            val legacyCount = if (currentCount == 0 && (prefs[keys.legacyKey] == true)) 1 else currentCount
+            prefs[keys.legacyKey] = true
+            prefs[keys.countKey] = legacyCount + 1
+            prefs[keys.timestampKey] = timestampMs
+            prefs[keys.workoutCountKey] = workoutCount
+        }
+    }
+
+    /**
+     * Migrates a legacy single-shot `hasShown*` flag into cooldown state without immediately
+     * re-nudging (REQ-SET-115.1).
+     */
+    suspend fun seedLegacyGarageNudgeBaseline(league: GarageLeague, timestampMs: Long, workoutCount: Int) {
+        val keys = nudgeKeysFor(league) ?: return
+        dataStore.edit { prefs ->
+            if ((prefs[keys.countKey] ?: 0) == 0 && (prefs[keys.legacyKey] == true)) {
+                prefs[keys.countKey] = 1
+                prefs[keys.timestampKey] = timestampMs
+                prefs[keys.workoutCountKey] = workoutCount
+            }
+        }
+    }
+
+    /**
+     * Resets both legacy garage nudge flags and bounded seasonal cooldown counters/timestamps (REQ-SET-115.1).
+     */
     suspend fun resetGarageNudgeFlags() {
         dataStore.edit { prefs ->
-            prefs[KEY_HAS_SHOWN_GOLD_GARAGE_NUDGE] = false
-            prefs[KEY_HAS_SHOWN_DIAMOND_GARAGE_NUDGE] = false
+            for (league in listOf(GarageLeague.GOLD, GarageLeague.DIAMOND)) {
+                val keys = nudgeKeysFor(league) ?: continue
+                prefs[keys.legacyKey] = false
+                prefs[keys.countKey] = 0
+                prefs[keys.timestampKey] = 0L
+                prefs[keys.workoutCountKey] = 0
+            }
         }
     }
 

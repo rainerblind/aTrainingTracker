@@ -30,6 +30,7 @@ import java.io.File
 /**
  * Contract & 9-Language Localization Parity tests for `ATT-3704` (`REQ-UI-391.1`, `REQ-UI-391.5`, `TST-UI-354.3`).
  */
+// Linked test specs: TST-UI-359, TST-UI-368
 class AthleteProfileContractAndLocalizationTest {
 
     private fun resolveModuleRoot(): File {

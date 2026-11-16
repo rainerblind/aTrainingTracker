@@ -35,6 +35,7 @@ import org.junit.Test
  * Unit tests for [RouteSegmentMatcher] geodesic spatial corridor and directional traversal engine
  * (REQ-UI-302, TST-UI-262, ATT-2583).
  */
+// Linked test specs: TST-UI-277
 class RouteSegmentMatcherTest {
 
     // 1 degree longitude at 48.0 degrees lat is approx 74470 meters

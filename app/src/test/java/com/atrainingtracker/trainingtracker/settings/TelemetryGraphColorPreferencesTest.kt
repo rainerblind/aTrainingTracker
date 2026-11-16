@@ -180,4 +180,23 @@ class TelemetryGraphColorPreferencesTest {
             TelemetryGraphColorPreferences.resolveAccentColor(null, TelemetryMetricType.HEART_RATE, DarkColorScheme)
         )
     }
+
+    @Test
+    fun cadenceMetricType_mapsToExistingSensorCadenceColorKeyAndDefault() {
+        // TST-PER-050.2
+        assertEquals(
+            TelemetryGraphColorPreferences.preferenceKey(SensorType.CADENCE),
+            TelemetryGraphColorPreferences.preferenceKey(TelemetryMetricType.CADENCE)
+        )
+        assertEquals(
+            TelemetryGraphColor.THEME_DEFAULT,
+            TelemetryGraphColorPreferences.getGraphColor(context, TelemetryMetricType.CADENCE)
+        )
+
+        TelemetryGraphColorPreferences.setGraphColor(context, SensorType.CADENCE, TelemetryGraphColor.TEAL)
+        assertEquals(
+            TelemetryGraphColor.TEAL,
+            TelemetryGraphColorPreferences.getGraphColor(context, TelemetryMetricType.CADENCE)
+        )
+    }
 }

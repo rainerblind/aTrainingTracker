@@ -44,6 +44,7 @@ import java.util.concurrent.atomic.AtomicInteger
  * pre-dispatch cloud scanning deduplication, and atomic mutex synchronization across concurrent
  * workers (REQ-MIG-031, TST-MIG-028, ATT-2023).
  */
+// Linked test specs: TST-MIG-047
 class LegacyImportEngineDeduplicationTest {
 
     private lateinit var mockSummariesDb: WorkoutSummariesDatabaseManager

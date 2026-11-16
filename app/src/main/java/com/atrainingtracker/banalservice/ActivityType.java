@@ -103,6 +103,8 @@ public enum ActivityType {
                         SensorType.DISTANCE_m,
                         SensorType.CADENCE,
                         SensorType.STRIDES,
+                        SensorType.VERTICAL_OSCILLATION,
+                        SensorType.GROUND_CONTACT_TIME,
                         SensorType.ALTITUDE,
                         SensorType.ASCENT,
                         SensorType.DESCENT,

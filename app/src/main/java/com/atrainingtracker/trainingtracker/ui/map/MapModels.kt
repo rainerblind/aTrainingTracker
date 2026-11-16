@@ -184,7 +184,28 @@ data class PathPoint @JvmOverloads constructor(
     val wPrimeBalKj: Double? = null,
     val hrvDfaA1: Double? = null,
     val hrvRmssd: Double? = null,
-    val hrvArtifactRate: Double? = null
+    val hrvArtifactRate: Double? = null,
+    val cadence: Int? = null
+)
+
+/**
+ * Single telemetry sample for a named per-device source stream (REQ-PER-042.1).
+ */
+data class TelemetrySourcePoint(
+    val distance: Double,
+    val timeSec: Long,
+    val value: Double
+)
+
+/**
+ * Named per-device telemetry overlay stream with pre-decimation session mean (REQ-PER-042.1).
+ */
+data class TelemetrySourceSeries(
+    val metricType: TelemetryMetricType,
+    val sourceName: String,
+    val columnName: String,
+    val points: List<TelemetrySourcePoint>,
+    val meanValue: Double
 )
 
 /**

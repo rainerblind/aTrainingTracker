@@ -55,6 +55,7 @@ import java.time.LocalDateTime
  * Unit test suite verifying Health Connect asynchronous sync, idempotent record insertions,
  * and preference state integration (REQ-SET-103, TST-SET-103).
  */
+// Linked test specs: TST-EXP-020
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class HealthConnectSyncTest {

@@ -19,28 +19,43 @@
 package com.atrainingtracker.trainingtracker.monetization
 
 import android.content.Context
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
 import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
+import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
 
 /**
  * Unit test suite verifying N+1 garage league detection, threshold hierarchy,
- * tier monotonicity, and non-spam gating (TST-SET-088.1, TST-SET-088.2).
+ * tier monotonicity, warm-engagement gating, bounded seasonal cooldowns, and
+ * post-workout priority arbitration (TST-SET-088.1, TST-SET-088.2, TST-SET-117.1..3).
  */
+// Linked test specs: TST-SET-117
 class GarageLeagueDetectorTest {
+
+    @get:Rule
+    val tempFolder = TemporaryFolder()
 
     @Test
     fun evaluateLeague_diamondPrecedence() {
@@ -176,13 +191,17 @@ class GarageLeagueDetectorTest {
     @Test
     fun shouldTriggerNudge_goldMonotonicity() {
         val goldStats = GarageStats(bikeCount = 3, shoeCount = 1, sensorCount = 2, powerMeterCount = 0)
+        val freshState = GarageNudgeCooldownState()
+        val nowMs = 1_700_000_000_000L
 
-        // Free, Pioneer, Bronze, Silver -> eligible for Gold nudge
+        // Free, Pioneer, Bronze, Silver -> eligible for Gold nudge once engagement gate satisfied
         val freeNudge = GarageNudgeEvaluator.shouldTriggerNudge(
             stats = goldStats,
             currentTier = SupporterTier.FREE,
-            hasShownGold = false,
-            hasShownDiamond = false
+            finishedWorkoutCount = 8,
+            nowMs = nowMs,
+            goldState = freshState,
+            diamondState = freshState
         )
         assertNotNull(freeNudge)
         assertEquals(GarageLeague.GOLD, freeNudge?.league)
@@ -191,8 +210,10 @@ class GarageLeagueDetectorTest {
         val silverNudge = GarageNudgeEvaluator.shouldTriggerNudge(
             stats = goldStats,
             currentTier = SupporterTier.SILVER,
-            hasShownGold = false,
-            hasShownDiamond = false
+            finishedWorkoutCount = 10,
+            nowMs = nowMs,
+            goldState = freshState,
+            diamondState = freshState
         )
         assertNotNull(silverNudge)
 
@@ -201,16 +222,20 @@ class GarageLeagueDetectorTest {
             GarageNudgeEvaluator.shouldTriggerNudge(
                 stats = goldStats,
                 currentTier = SupporterTier.GOLD,
-                hasShownGold = false,
-                hasShownDiamond = false
+                finishedWorkoutCount = 10,
+                nowMs = nowMs,
+                goldState = freshState,
+                diamondState = freshState
             )
         )
         assertNull(
             GarageNudgeEvaluator.shouldTriggerNudge(
                 stats = goldStats,
                 currentTier = SupporterTier.DIAMOND,
-                hasShownGold = false,
-                hasShownDiamond = false
+                finishedWorkoutCount = 10,
+                nowMs = nowMs,
+                goldState = freshState,
+                diamondState = freshState
             )
         )
     }
@@ -218,13 +243,22 @@ class GarageLeagueDetectorTest {
     @Test
     fun shouldTriggerNudge_diamondMonotonicity() {
         val diamondStats = GarageStats(bikeCount = 4, shoeCount = 1, sensorCount = 3, powerMeterCount = 0)
+        val shownGold = GarageNudgeCooldownState(
+            nudgeCount = 1,
+            lastNudgeTimestampMs = 1_000L,
+            lastNudgeWorkoutCount = 8
+        )
+        val freshDiamond = GarageNudgeCooldownState()
+        val nowMs = 1_700_000_000_000L
 
         // Below Diamond -> eligible for Diamond nudge
         val goldUserNudge = GarageNudgeEvaluator.shouldTriggerNudge(
             stats = diamondStats,
             currentTier = SupporterTier.GOLD,
-            hasShownGold = true,
-            hasShownDiamond = false
+            finishedWorkoutCount = 10,
+            nowMs = nowMs,
+            goldState = shownGold,
+            diamondState = freshDiamond
         )
         assertNotNull(goldUserNudge)
         assertEquals(GarageLeague.DIAMOND, goldUserNudge?.league)
@@ -235,8 +269,10 @@ class GarageLeagueDetectorTest {
             GarageNudgeEvaluator.shouldTriggerNudge(
                 stats = diamondStats,
                 currentTier = SupporterTier.DIAMOND,
-                hasShownGold = true,
-                hasShownDiamond = false
+                finishedWorkoutCount = 10,
+                nowMs = nowMs,
+                goldState = shownGold,
+                diamondState = freshDiamond
             )
         )
     }
@@ -245,26 +281,308 @@ class GarageLeagueDetectorTest {
     fun shouldTriggerNudge_nonSpamPersistence() {
         val goldStats = GarageStats(bikeCount = 3, shoeCount = 1, sensorCount = 2, powerMeterCount = 0)
         val diamondStats = GarageStats(bikeCount = 4, shoeCount = 1, sensorCount = 3, powerMeterCount = 0)
+        val t0 = 1_700_000_000_000L
+        val recentCooldown = GarageNudgeCooldownState(
+            nudgeCount = 1,
+            lastNudgeTimestampMs = t0,
+            lastNudgeWorkoutCount = 10,
+            legacyHasShown = true
+        )
 
-        // Once Gold flag is set, Gold nudge is suppressed
+        // Immediately after Gold nudge, subsequent nudge is suppressed during cooldown
         assertNull(
             GarageNudgeEvaluator.shouldTriggerNudge(
                 stats = goldStats,
                 currentTier = SupporterTier.FREE,
-                hasShownGold = true,
-                hasShownDiamond = false
+                finishedWorkoutCount = 11,
+                nowMs = t0 + 1_000L,
+                goldState = recentCooldown,
+                diamondState = GarageNudgeCooldownState()
             )
         )
 
-        // Once Diamond flag is set, Diamond nudge is suppressed
+        // Immediately after Diamond nudge, subsequent nudge is suppressed during cooldown
         assertNull(
             GarageNudgeEvaluator.shouldTriggerNudge(
                 stats = diamondStats,
                 currentTier = SupporterTier.GOLD,
-                hasShownGold = true,
-                hasShownDiamond = true
+                finishedWorkoutCount = 11,
+                nowMs = t0 + 1_000L,
+                goldState = recentCooldown,
+                diamondState = recentCooldown
             )
         )
+    }
+
+    @Test
+    fun shouldTriggerNudge_requiresMinimumEightWorkouts_andNeverConsumesQuota() = runTest {
+        // TST-SET-117.1
+        val goldStats = GarageStats(bikeCount = 3, shoeCount = 1, sensorCount = 2, powerMeterCount = 1)
+        val diamondStats = GarageStats(
+            bikeCount = 4,
+            shoeCount = 2,
+            sensorCount = 8,
+            powerMeterCount = 2,
+            isStravaSubscriber = true
+        )
+        val freshState = GarageNudgeCooldownState()
+        val nowMs = 1_700_000_000_000L
+
+        for (count in listOf(0, 1, 7)) {
+            assertNull(
+                "Workouts=$count must suppress Gold nudge",
+                GarageNudgeEvaluator.shouldTriggerNudge(
+                    stats = goldStats,
+                    currentTier = SupporterTier.FREE,
+                    finishedWorkoutCount = count,
+                    nowMs = nowMs,
+                    goldState = freshState,
+                    diamondState = freshState
+                )
+            )
+            assertNull(
+                "Workouts=$count must suppress Diamond nudge",
+                GarageNudgeEvaluator.shouldTriggerNudge(
+                    stats = diamondStats,
+                    currentTier = SupporterTier.BRONZE,
+                    finishedWorkoutCount = count,
+                    nowMs = nowMs,
+                    goldState = freshState,
+                    diamondState = freshState
+                )
+            )
+        }
+
+        val mockContext = mockk<Context>(relaxed = true)
+        val mockEquipmentDb = mockk<EquipmentDbHelper>(relaxed = true)
+        val mockDevicesDb = mockk<DevicesDatabaseManager>(relaxed = true)
+        val mockSettingsDataStore = mockk<SettingsDataStore>(relaxed = true)
+        val mockProFeatureManager = mockk<ProFeatureManager>(relaxed = true)
+        val mockWorkoutDb = mockk<WorkoutSummariesDatabaseManager>()
+        every { mockWorkoutDb.finishedWorkoutCount } returns 7
+
+        val detector = GarageLeagueDetector(
+            context = mockContext,
+            equipmentDbHelper = mockEquipmentDb,
+            devicesDbHelper = mockDevicesDb,
+            settingsDataStore = mockSettingsDataStore,
+            proFeatureManager = mockProFeatureManager,
+            workoutSummariesDbManager = mockWorkoutDb,
+            timeProvider = { nowMs }
+        )
+
+        assertNull(detector.evaluateNudge())
+        coVerify(exactly = 0) { mockSettingsDataStore.recordGarageNudgeShown(any(), any(), any()) }
+        coVerify(exactly = 0) { mockSettingsDataStore.seedLegacyGarageNudgeBaseline(any(), any(), any()) }
+    }
+
+    @Test
+    fun shouldTriggerNudge_boundedSeasonalCooldown_requiresTimeAndWorkoutDelta() {
+        // TST-SET-117.2
+        val goldStats = GarageStats(bikeCount = 3, shoeCount = 0, sensorCount = 2, powerMeterCount = 1)
+        val t0 = 1_700_000_000_000L
+        val cooldownMs = GarageNudgeEvaluator.RE_NUDGE_COOLDOWN_MS
+        val afterFirstNudge = GarageNudgeCooldownState(
+            nudgeCount = 1,
+            lastNudgeTimestampMs = t0,
+            lastNudgeWorkoutCount = 10,
+            legacyHasShown = true
+        )
+
+        // Only >= 180 days without >= 25 workouts -> null
+        assertNull(
+            GarageNudgeEvaluator.shouldTriggerNudge(
+                stats = goldStats,
+                currentTier = SupporterTier.BRONZE,
+                finishedWorkoutCount = 34,
+                nowMs = t0 + cooldownMs,
+                goldState = afterFirstNudge,
+                diamondState = GarageNudgeCooldownState()
+            )
+        )
+
+        // Only >= 25 workouts without >= 180 days -> null
+        assertNull(
+            GarageNudgeEvaluator.shouldTriggerNudge(
+                stats = goldStats,
+                currentTier = SupporterTier.BRONZE,
+                finishedWorkoutCount = 40,
+                nowMs = t0 + cooldownMs - 1_000L,
+                goldState = afterFirstNudge,
+                diamondState = GarageNudgeCooldownState()
+            )
+        )
+
+        // Both >= 180 days AND >= 25 workouts -> reminder #1 allowed
+        val reminder1 = GarageNudgeEvaluator.shouldTriggerNudge(
+            stats = goldStats,
+            currentTier = SupporterTier.BRONZE,
+            finishedWorkoutCount = 35,
+            nowMs = t0 + cooldownMs,
+            goldState = afterFirstNudge,
+            diamondState = GarageNudgeCooldownState()
+        )
+        assertNotNull(reminder1)
+        assertEquals(GarageLeague.GOLD, reminder1?.league)
+    }
+
+    @Test
+    fun shouldTriggerNudge_boundedSeasonalCooldown_capsAtMaxNudges() {
+        // TST-SET-117.2
+        val goldStats = GarageStats(bikeCount = 3, shoeCount = 0, sensorCount = 2, powerMeterCount = 1)
+        val t0 = 1_700_000_000_000L
+        val cooldownMs = GarageNudgeEvaluator.RE_NUDGE_COOLDOWN_MS
+
+        // Reminder #2 allowed when nudgeCount == 2 and both thresholds satisfied again
+        val afterSecondNudge = GarageNudgeCooldownState(
+            nudgeCount = 2,
+            lastNudgeTimestampMs = t0 + cooldownMs,
+            lastNudgeWorkoutCount = 35,
+            legacyHasShown = true
+        )
+        assertNotNull(
+            GarageNudgeEvaluator.shouldTriggerNudge(
+                stats = goldStats,
+                currentTier = SupporterTier.BRONZE,
+                finishedWorkoutCount = 60,
+                nowMs = t0 + (2 * cooldownMs),
+                goldState = afterSecondNudge,
+                diamondState = GarageNudgeCooldownState()
+            )
+        )
+
+        // Hard cap reached at MAX_NUDGES_PER_LEAGUE = 3 -> permanently suppressed
+        val cappedState = GarageNudgeCooldownState(
+            nudgeCount = 3,
+            lastNudgeTimestampMs = t0,
+            lastNudgeWorkoutCount = 10,
+            legacyHasShown = true
+        )
+        assertNull(
+            GarageNudgeEvaluator.shouldTriggerNudge(
+                stats = goldStats,
+                currentTier = SupporterTier.BRONZE,
+                finishedWorkoutCount = 500,
+                nowMs = t0 + (10 * cooldownMs),
+                goldState = cappedState,
+                diamondState = GarageNudgeCooldownState()
+            )
+        )
+    }
+
+    @Test
+    fun evaluateNudge_migratesLegacyHasShownFlagSafely() = runTest {
+        // TST-SET-117.2
+        val mockContext = mockk<Context>(relaxed = true)
+        val mockEquipmentDb = mockk<EquipmentDbHelper>()
+        val mockDevicesDb = mockk<DevicesDatabaseManager>()
+        val mockSettingsDataStore = mockk<SettingsDataStore>(relaxed = true)
+        val mockProFeatureManager = mockk<ProFeatureManager>()
+        val mockWorkoutDb = mockk<WorkoutSummariesDatabaseManager>()
+        val nowMs = 1_700_000_000_000L
+
+        every { mockWorkoutDb.finishedWorkoutCount } returns 12
+        every { mockEquipmentDb.getEquipmentItems(BSportType.BIKE, false) } returns listOf(
+            mockk(), mockk(), mockk()
+        )
+        every { mockEquipmentDb.getEquipmentItems(BSportType.RUN, false) } returns emptyList()
+        every { mockDevicesDb.allRemoteSensors } returns emptyList()
+        every { mockProFeatureManager.effectiveTier } returns MutableStateFlow(SupporterTier.BRONZE)
+        every { mockSettingsDataStore.goldGarageNudgeState } returns flowOf(
+            GarageNudgeCooldownState(nudgeCount = 0, legacyHasShown = true)
+        )
+        every { mockSettingsDataStore.diamondGarageNudgeState } returns flowOf(GarageNudgeCooldownState())
+
+        val detector = GarageLeagueDetector(
+            context = mockContext,
+            equipmentDbHelper = mockEquipmentDb,
+            devicesDbHelper = mockDevicesDb,
+            settingsDataStore = mockSettingsDataStore,
+            proFeatureManager = mockProFeatureManager,
+            workoutSummariesDbManager = mockWorkoutDb,
+            timeProvider = { nowMs }
+        )
+
+        assertNull(detector.evaluateNudge())
+        coVerify(exactly = 1) {
+            mockSettingsDataStore.seedLegacyGarageNudgeBaseline(GarageLeague.GOLD, nowMs, 12)
+        }
+    }
+
+    @Test
+    fun evaluatePostWorkoutGarageNudgeIfUnpreempted_yieldsToJubileeAndQuota() = runTest {
+        // TST-SET-117.3
+        val event = GarageNudgeEvent(
+            league = GarageLeague.GOLD,
+            stats = GarageStats(bikeCount = 3, shoeCount = 0, sensorCount = 2, powerMeterCount = 1),
+            recommendedPlanId = GarageNudgeEvaluator.PLAN_GOLD,
+            currentTier = SupporterTier.BRONZE
+        )
+        val mockDetector = mockk<GarageLeagueDetector>(relaxed = true)
+        coEvery { mockDetector.evaluateNudge() } returns event
+
+        // Suppressed when Jubilee is active
+        assertNull(
+            evaluatePostWorkoutGarageNudgeIfUnpreempted(
+                detector = mockDetector,
+                isJubileeActive = { true },
+                isQuotaSheetActive = { false }
+            )
+        )
+        // Suppressed when Quota reconciliation sheet is active
+        assertNull(
+            evaluatePostWorkoutGarageNudgeIfUnpreempted(
+                detector = mockDetector,
+                isJubileeActive = { false },
+                isQuotaSheetActive = { true }
+            )
+        )
+        coVerify(exactly = 0) { mockDetector.markNudgeShown(any()) }
+
+        // Emits and marks shown when neither dialog is active
+        val result = evaluatePostWorkoutGarageNudgeIfUnpreempted(
+            detector = mockDetector,
+            isJubileeActive = { false },
+            isQuotaSheetActive = { false }
+        )
+        assertEquals(event, result)
+        coVerify(exactly = 1) { mockDetector.markNudgeShown(GarageLeague.GOLD) }
+    }
+
+    @Test
+    fun settingsDataStore_recordSeedAndResetGarageNudgeFlags_roundTrip() = runTest {
+        // TST-SET-117.2
+        val testFile = tempFolder.newFile("garage_nudge_${System.nanoTime()}.preferences_pb")
+        val rawDataStore = PreferenceDataStoreFactory.create(
+            scope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
+            produceFile = { testFile }
+        )
+        val store = SettingsDataStore(mockk(relaxed = true), rawDataStore)
+
+        // Legacy flag migration
+        store.setHasShownGoldGarageNudge(true)
+        store.seedLegacyGarageNudgeBaseline(GarageLeague.GOLD, timestampMs = 5_000L, workoutCount = 14)
+        val migrated = store.goldGarageNudgeState.first()
+        assertEquals(1, migrated.nudgeCount)
+        assertEquals(5_000L, migrated.lastNudgeTimestampMs)
+        assertEquals(14, migrated.lastNudgeWorkoutCount)
+        assertTrue(migrated.legacyHasShown)
+
+        // Recording another nudge increments count and updates timestamp + workout baseline
+        store.recordGarageNudgeShown(GarageLeague.GOLD, timestampMs = 99_000L, workoutCount = 42)
+        val recorded = store.goldGarageNudgeState.first()
+        assertEquals(2, recorded.nudgeCount)
+        assertEquals(99_000L, recorded.lastNudgeTimestampMs)
+        assertEquals(42, recorded.lastNudgeWorkoutCount)
+
+        // Debug reset clears both legacy and cooldown keys
+        store.resetGarageNudgeFlags()
+        val resetGold = store.goldGarageNudgeState.first()
+        assertEquals(0, resetGold.nudgeCount)
+        assertEquals(0L, resetGold.lastNudgeTimestampMs)
+        assertEquals(0, resetGold.lastNudgeWorkoutCount)
+        assertFalse(resetGold.legacyHasShown)
+        assertFalse(store.hasShownGoldGarageNudge.first())
     }
 
     @Test
@@ -320,26 +638,30 @@ class GarageLeagueDetectorTest {
         val mockDevicesDb = mockk<DevicesDatabaseManager>()
         val mockSettingsDataStore = mockk<SettingsDataStore>()
         val mockProFeatureManager = mockk<ProFeatureManager>()
+        val mockWorkoutDb = mockk<WorkoutSummariesDatabaseManager>()
 
         val mockBikes = listOf(
             mockk<EquipmentDbHelper.EquipmentData>(),
             mockk<EquipmentDbHelper.EquipmentData>(),
             mockk<EquipmentDbHelper.EquipmentData>()
         )
+        every { mockWorkoutDb.finishedWorkoutCount } returns 10
         every { mockEquipmentDb.getEquipmentItems(BSportType.BIKE, false) } returns mockBikes
         every { mockEquipmentDb.getEquipmentItems(BSportType.RUN, false) } returns emptyList()
         every { mockDevicesDb.allRemoteSensors } returns emptyList()
 
         every { mockProFeatureManager.effectiveTier } returns MutableStateFlow(SupporterTier.FREE)
-        every { mockSettingsDataStore.hasShownGoldGarageNudge } returns flowOf(false)
-        every { mockSettingsDataStore.hasShownDiamondGarageNudge } returns flowOf(false)
+        every { mockSettingsDataStore.goldGarageNudgeState } returns flowOf(GarageNudgeCooldownState())
+        every { mockSettingsDataStore.diamondGarageNudgeState } returns flowOf(GarageNudgeCooldownState())
 
         val detector = GarageLeagueDetector(
             context = mockContext,
             equipmentDbHelper = mockEquipmentDb,
             devicesDbHelper = mockDevicesDb,
             settingsDataStore = mockSettingsDataStore,
-            proFeatureManager = mockProFeatureManager
+            proFeatureManager = mockProFeatureManager,
+            workoutSummariesDbManager = mockWorkoutDb,
+            timeProvider = { 1_700_000_000_000L }
         )
 
         val nudge = detector.evaluateNudge()
@@ -355,22 +677,25 @@ class GarageLeagueDetectorTest {
         val mockDevicesDb = mockk<DevicesDatabaseManager>(relaxed = true)
         val mockSettingsDataStore = mockk<SettingsDataStore>(relaxed = true)
         val mockProFeatureManager = mockk<ProFeatureManager>(relaxed = true)
+        val mockWorkoutDb = mockk<WorkoutSummariesDatabaseManager>()
 
-        coEvery { mockSettingsDataStore.setHasShownGoldGarageNudge(true) } returns Unit
-        coEvery { mockSettingsDataStore.setHasShownDiamondGarageNudge(true) } returns Unit
+        every { mockWorkoutDb.finishedWorkoutCount } returns 12
+        coEvery { mockSettingsDataStore.recordGarageNudgeShown(any(), any(), any()) } returns Unit
 
         val detector = GarageLeagueDetector(
             context = mockContext,
             equipmentDbHelper = mockEquipmentDb,
             devicesDbHelper = mockDevicesDb,
             settingsDataStore = mockSettingsDataStore,
-            proFeatureManager = mockProFeatureManager
+            proFeatureManager = mockProFeatureManager,
+            workoutSummariesDbManager = mockWorkoutDb,
+            timeProvider = { 1_700_000_000_000L }
         )
 
         detector.markNudgeShown(GarageLeague.GOLD)
-        coVerify { mockSettingsDataStore.setHasShownGoldGarageNudge(true) }
+        coVerify { mockSettingsDataStore.recordGarageNudgeShown(GarageLeague.GOLD, 1_700_000_000_000L, 12) }
 
         detector.markNudgeShown(GarageLeague.DIAMOND)
-        coVerify { mockSettingsDataStore.setHasShownDiamondGarageNudge(true) }
+        coVerify { mockSettingsDataStore.recordGarageNudgeShown(GarageLeague.DIAMOND, 1_700_000_000_000L, 12) }
     }
 }

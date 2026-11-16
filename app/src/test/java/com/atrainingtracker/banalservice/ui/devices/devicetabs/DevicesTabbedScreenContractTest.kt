@@ -32,6 +32,7 @@ import org.junit.Test
  * 2. DevicesTabbedScreen composable exists.
  * 3. EquipmentSportSensorMatrix exists and integrates with EquipmentViewModel.
  */
+// Linked test specs: TST-UI-251
 class DevicesTabbedScreenContractTest {
 
     @Test

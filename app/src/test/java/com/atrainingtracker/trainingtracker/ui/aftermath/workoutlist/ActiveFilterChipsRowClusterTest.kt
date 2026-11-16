@@ -28,6 +28,7 @@ import org.junit.Test
  * Unit test suite verifying [ActiveFilterChipsRow] display criteria, chip formatting,
  * and filter removal semantics for route clusters (REQ-UI-187, TST-UI-141.4).
  */
+// Linked test specs: TST-UI-148
 class ActiveFilterChipsRowClusterTest {
 
     @Test

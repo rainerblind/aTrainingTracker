@@ -29,6 +29,7 @@ import javax.xml.parsers.DocumentBuilderFactory
  * Localization parity tests verifying all 15 obsolete map camera tuning string resources
  * are completely removed across all 9 supported locales (REQ-MAP-050 / ATT-3581).
  */
+// Linked test specs: TST-MAP-046
 class MapCameraLocalizationTest {
 
     private val locales = listOf("", "de", "es", "fr", "it", "ja", "nl", "pl", "pt")

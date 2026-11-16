@@ -31,6 +31,7 @@ import java.time.LocalDateTime
  * Unit tests verifying multi-dimensional predicate matching, active filter count derivation,
  * and JSON serialization/deserialization for [WorkoutFilterCriteria] (REQ-UI-132, TST-UI-085).
  */
+// Linked test specs: TST-UI-110, TST-UI-224
 class WorkoutFilterCriteriaTest {
 
     private fun createWorkout(

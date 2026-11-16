@@ -165,6 +165,8 @@ public class TrackerService extends Service {
     static final HashSet<SensorType> IMPORTANT_SENSOR_TYPES = new HashSet<>(SensorType.CORE_METRICS);
     static {
         IMPORTANT_SENSOR_TYPES.add(SensorType.W_PRIME_BAL);
+        IMPORTANT_SENSOR_TYPES.add(SensorType.VERTICAL_OSCILLATION);
+        IMPORTANT_SENSOR_TYPES.add(SensorType.GROUND_CONTACT_TIME);
     }
 
     // Sensors to track for Min/Max and used for average if in IMPORTANT_SENSOR_TYPES

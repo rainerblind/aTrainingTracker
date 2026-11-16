@@ -3,83 +3,83 @@
 **Domain**: `aftermath_periods`  
 **Prefixes**: `PER`, `PERF`, `RAD`, `SPT`  
 **Scope**: Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers.  
-**Total Tests**: 50
+**Total Tests**: 64
 
 ---
 
-### TST-PERF-001: **Heatmap Memory Scalability** [Verified]
+### TST-PERF-001: **Heatmap Memory Scalability** [Implemented]
 - **Requirement(s)**: `REQ-MAP-017`
 - **Component**: **Heatmap Memory Scalability**
 - **Jira**: ``ATT-319``
 - **Test Description**: 1. Import a large volume of workouts (e.g. 500+). 2. Navigate to the 'Periods' view and scroll through Yearly/Monthly summaries.
 
-### TST-PERF-002: **Cluster Detail Loading Speed** [Verified]
+### TST-PERF-002: **Cluster Detail Loading Speed** [Implemented]
 - **Requirement(s)**: `REQ-PER-001`
 - **Component**: **Cluster Detail Loading Speed**
 - **Jira**: ``ATT-362``
 - **Test Description**: 1. Identify a cluster with > 30 recordings. 2. Tap on the cluster to open its details. 3. Measure time from tap to full heatmap/list display.
 
-### TST-PERF-003: **Initial Cluster Loading Progress** [Verified]
+### TST-PERF-003: **Initial Cluster Loading Progress** [Implemented]
 - **Requirement(s)**: `REQ-PER-003`
 - **Component**: **Initial Cluster Loading Progress**
 - **Jira**: ``ATT-366``
 - **Test Description**: 1. Clear application cache or significantly modify history. 2. Navigate to 'My Locations'.
 
-### TST-PERF-004: **Incremental Period Visibility** [Verified]
+### TST-PERF-004: **Incremental Period Visibility** [Implemented]
 - **Requirement(s)**: `REQ-PER-001`
 - **Component**: **Incremental Period Visibility**
 - **Jira**: ``ATT-374``
 - **Test Description**: 1. Trigger a full hierarchical Periods sync. 2. Observe the list as the "Syncing [Month]..." progress updates.
 
-### TST-PERF-005: **Dual-Phase Sync Efficiency** [1. The status SHALL transition from 'Reading...' to 'Syncing...' without jumping back. 2. The period list SHALL grow visibly after each 'Syncing [Month]' update. 3. Scrolling SHALL remain smooth throughout the sync.] [Verified]
+### TST-PERF-005: **Dual-Phase Sync Efficiency** [1. The status SHALL transition from 'Reading...' to 'Syncing...' without jumping back. 2. The period list SHALL grow visibly after each 'Syncing [Month]' update. 3. Scrolling SHALL remain smooth throughout the sync.] [Implemented]
 - **Requirement(s)**: `REQ-PER-004`
 - **Component**: **Dual-Phase Sync Efficiency**
 - **Jira**: ``ATT-380``
 - **Test Description**: 1. Trigger a full hierarchical Periods sync. 2. Observe the status transitions and UI responsiveness.
 
-### TST-PERF-006: **Multi-Phase Progress Feedback** [Verified]
+### TST-PERF-006: **Multi-Phase Progress Feedback** [Implemented]
 - **Requirement(s)**: `REQ-PER-005`
 - **Component**: **Multi-Phase Progress Feedback**
 - **Jira**: ``ATT-383``
 - **Test Description**: 1. Trigger a Periods sync. 2. Inspect the progress card UI.
 
-### TST-PERF-007: **Workout Cluster Migration Progress** [Verified]
+### TST-PERF-007: **Workout Cluster Migration Progress** [Implemented]
 - **Requirement(s)**: `REQ-PER-006`
 - **Component**: **Workout Cluster Migration Progress**
 - **Jira**: ``ATT-393``
 - **Test Description**: 1. Trigger a Workout Cluster recalculation. 2. Observe the progress card.
 
-### TST-PERF-008: **Reactive Period Detail Verification** [Verified]
+### TST-PERF-008: **Reactive Period Detail Verification** [Implemented]
 - **Requirement(s)**: `REQ-PER-007`
 - **Component**: **Reactive Period Detail Verification**
 - **Jira**: ``ATT-442``
 - **Test Description**: 1. Open the 'Periods' screen. 2. Tap the map icon for a period *immediately* before the background loading completes. 3. Observe the heatmap as it grows.
 
-### TST-PERF-009: **Silent Cluster Refresh** [Verified]
+### TST-PERF-009: **Silent Cluster Refresh** [Implemented]
 - **Requirement(s)**: `REQ-PER-006`
 - **Component**: **Silent Cluster Refresh**
 - **Jira**: ``ATT-441``
 - **Test Description**: 1. Navigate to My Locations. 2. Navigate away and back. 3. Verify no progress notification on 2nd visit. 4. Trigger recalculation and verify progress DOES appear.
 
-### TST-PERF-010: **Persistent Previews Audit** [Verified]
+### TST-PERF-010: **Persistent Previews Audit** [Implemented]
 - **Requirement(s)**: `REQ-PER-006`
 - **Component**: **Persistent Previews Audit**
 - **Jira**: ``ATT-441``
 - **Test Description**: 1. Navigate to My Locations. 2. Wait for enrichment. 3. Kill and restart app. 4. Navigate back to My Locations.
 
-### TST-PER-009: **Precise Sport Filtering** [Verified]
+### TST-PER-009: **Precise Sport Filtering** [Implemented]
 - **Requirement(s)**: `REQ-PER-008`
 - **Component**: **Precise Sport Filtering**
 - **Jira**: ``ATT-459``
 - **Test Description**: 1. Open a Period Summary. 2. Click a Sub-Sport row (e.g. MTB). 3. Verify the resulting list only contains MTB workouts for that period.
 
-### TST-PER-010: **Heatmap Toggle Removal** [Verified]
+### TST-PER-010: **Heatmap Toggle Removal** [Implemented]
 - **Requirement(s)**: `REQ-UI-120`
 - **Component**: **Heatmap Toggle Removal**
 - **Jira**: ``ATT-460``
 - **Test Description**: 1. Open Periods screen and Period Map. 2. Verify `Whatshot` toggle is gone. 3. Verify heatmap still reacts to global settings.
 
-### TST-PER-012: **Period Map Sport Filtering** [Verified]
+### TST-PER-012: **Period Map Sport Filtering** [Implemented]
 - **Requirement(s)**: `REQ-PER-009`
 - **Component**: **Period Map Sport Filtering**
 - **Jira**: ``ATT-466``
@@ -109,7 +109,7 @@
 - **Jira**: ``ATT-579``
 - **Test Description**: 1. Execute `PeriodsAggregationTest`. 2. Verify that in multi-workout periods (such as January 2015), the workout with the true maximum duration and distance (day 31) is selected as longest workout regardless of stale database IDs.
 
-### TST-PER-017: **Period Empty State Placeholder Verification** [Verified]
+### TST-PER-017: **Period Empty State Placeholder Verification** [Implemented]
 - **Requirement(s)**: `REQ-UI-125`
 - **Component**: **Period Empty State Placeholder Verification**
 - **Jira**: ``ATT-488``
@@ -881,7 +881,7 @@
 ---
 
 ### TST-SPT-005: Retrospective Filtering, Cluster Math, Lifetime Evaluation & ViewModel Tests [Verified]
-- **Target Requirement**: `REQ-SPT-002` (Retrospective Filtering, Cluster Aggregation & Lifetime Engine)
+- **Target Requirement**: `REQ-SPT-001`, `REQ-SPT-002`, `REQ-SPT-003`
 - **Target Verification Component**: `SportingJourneyRepositoryTest.kt`, `SportingJourneyViewModelTest.kt`
 - **Verification Type**: Automated Unit & State Machine Verification
 - **Test Description**:
@@ -905,7 +905,7 @@
 ---
 
 ### TST-SPT-006: SportingJourney UI & UX Redesign, M3 Hierarchy, Grid Layout & Locale Formatting Tests [Verified]
-- **Target Requirement**: `REQ-SPT-005` (SportingJourney UI & UX Redesign, M3 Hierarchy, Grid Layout & Locale Formatting)
+- **Target Requirement**: `REQ-SPT-004`, `REQ-SPT-005`
 - **Target Verification Component**: `SportingJourneyLocalizationContractTest.kt`, `SportingJourneyComponentsTest.kt`, `SportingJourneyShareHelperTest.kt`
 - **Verification Type**: Automated Unit & Contract Verification
 - **Test Description**:
@@ -920,3 +920,153 @@
   • Verify that when `TrainingApplication.getUnit() == MyUnits.IMPERIAL`, total distance is formatted in miles (`mi`) and total elevation in feet (`ft`) using `BANALService` conversion factors.
   • Verify that `SportingJourneyShareHelper.buildShareText` formats localized string templates.
   (ATT-7323: [Verbesserung] SportingJourneySheet & SportingJourneyComponents: Material 3 redesign, row weight wrapping fixes, grid layout, and locale/unit formatting)
+
+---
+
+### TST-WKO-035: Workout Summaries Database Migration & Column Constants Verification [Verified]
+- **Target Requirement**: `REQ-WKO-035`
+- **Target Verification Component**: `WorkoutRpeFeelTest.kt`, `WorkoutSummariesDatabaseTest.kt`
+- **Verification Type**: Unit
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Test Description**:
+  1. *Database Schema & Column Constants Test (`TST-WKO-035`)*:
+  • Verify `DB_VERSION = 31`, `WorkoutSummaries.RPE = "rpe"`, and `WorkoutSummaries.FEEL = "feel"` constants and table creation/upgrade parity.
+
+---
+
+### TST-WKO-036: RPE & Feel Anchors, Emojis and Settings Toggle Verification [Verified]
+- **Target Requirement**: `REQ-WKO-036`
+- **Target Verification Component**: `WorkoutRpeFeelTest.kt`
+- **Verification Type**: Unit
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Test Description**:
+  1. *Borg CR10 and Feel Sentiment Anchors Test (`TST-WKO-036`)*:
+  • Verify Borg CR10 string resource anchors (1..10), feel emojis (1..5), sentiment vector icons, and UI test tags constants.
+
+---
+
+### TST-WKO-037: Reorderable Section Defaults & Overview Tab Configuration Verification [Verified]
+- **Target Requirement**: `REQ-WKO-037`
+- **Target Verification Component**: `WorkoutRpeFeelTest.kt`, `TrackOnMapScreenSectionSlottingContractTest.kt`
+- **Verification Type**: Unit
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Test Description**:
+  1. *Section Ordering and Tab Slotting Test (`TST-WKO-037`)*:
+  • Verify `WorkoutSectionType.DEFAULT_ORDER[0] == RPE_AND_FEEL` and `Overview` tab contains `RPE_AND_FEEL` at slot 0.
+
+---
+
+### TST-WKO-038: Foster Session-RPE Score Calculation Verification [Verified]
+- **Target Requirement**: `REQ-WKO-038`
+- **Target Verification Component**: `WorkoutRpeFeelTest.kt`
+- **Verification Type**: Unit
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Test Description**:
+  1. *Session-RPE Math Test (`TST-WKO-038`)*:
+  • Verify `PowerPhysiologyCalculator.calculateSessionRpe()` returns exact scores for 60 min at RPE 7 (420.0), 45 min at RPE 4 (180.0), and 0.0 for out-of-range inputs.
+
+---
+
+### TST-WKO-039: Tier 4 Session-RPE Fallback in PMC Training Load Verification [Verified]
+- **Target Requirement**: `REQ-WKO-039`
+- **Target Verification Component**: `WorkoutRpeFeelTest.kt`, `PowerPhysiologyCalculatorTest.kt`
+- **Verification Type**: Unit
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Test Description**:
+  1. *Tier 4 Fallback Resolution Test (`TST-WKO-039`)*:
+  • Verify `resolveWorkoutTrainingLoad()` resolves Session-RPE when power and HR are absent, while preserving power TSS precedence when present.
+
+---
+
+### TST-HRV-038: Morning Sleep & Wellness Settings Progressive Disclosure Verification [Implemented]
+- **Target Requirement**: `REQ-HRV-038`
+- **Target Verification Component**: `SettingsDataStoreTest.kt`, `PhysiologyModelsSectionTest.kt`
+- **Verification Type**: Unit
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Test Description**:
+  1. *Settings Progressive Disclosure Test (`TST-HRV-038`)*:
+  • Verify default `OFF`, subordinate toggle visibility gating, and preference persistence round-trip.
+
+---
+
+### TST-HRV-039: Morning Readiness Database Migration V1->V2 & Symmetric Mapping Verification [Implemented]
+- **Target Requirement**: `REQ-HRV-039`
+- **Target Verification Component**: `HrvReadinessDatabaseManagerTest.kt`, `HrvReadinessEntryTest.kt`
+- **Verification Type**: Unit
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Test Description**:
+  1. *Schema V2 Evolution & Symmetric Mapping Test (`TST-HRV-039`)*:
+  • Verify `onUpgrade` from V1 preserves legacy records and adds 5 nullable columns; verify `onCreate` equals `onUpgrade` schema and DTO mapping symmetry.
+
+---
+
+### TST-HRV-040: Standalone No-Strap Wellness Logging Verification [Implemented]
+- **Target Requirement**: `REQ-HRV-040`
+- **Target Verification Component**: `MorningHrvCheckViewModelTest.kt`
+- **Verification Type**: Unit
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Test Description**:
+  1. *Standalone Wellness Logging Test (`TST-HRV-040`)*:
+  • Verify saving with no HR connection inserts entry with null `rmssdMs`; SWC baseline query excludes standalone entries.
+
+---
+
+### TST-HRV-041: Combined In-Measurement Logging Verification [Implemented]
+- **Target Requirement**: `REQ-HRV-041`
+- **Target Verification Component**: `MorningHrvCheckViewModelTest.kt`
+- **Verification Type**: Unit
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Test Description**:
+  1. *Combined In-Measurement Logging Test (`TST-HRV-041`)*:
+  • Verify entries saved after countdown contain both calculated HRV metrics and input wellness fields.
+
+---
+
+### TST-HRV-042: Health Connect Sleep Prefill & Localization Parity Verification [Implemented]
+- **Target Requirement**: `REQ-HRV-042`
+- **Target Verification Component**: `HealthConnectManagerTest.kt`, `TranslationParityTest.kt`
+- **Verification Type**: Unit
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Test Description**:
+  1. *Health Connect Prefill & Localization Test (`TST-HRV-042`)*:
+  • Verify graceful fallback when Health Connect permission is absent and 100% string parity across all 9 locales.
+
+---
+
+### TST-PER-050: **Multi-Sensor Telemetry Chart Overlays & Session Mean Comparison Verification Suite** (`ATT-8096`) [Verified]
+- **Requirement(s)**: `REQ-PER-042` (`REQ-PER-042.1`..`REQ-PER-042.4`)
+- **Component**: `MapModels.kt`, `WorkoutRepository.kt`, `TelemetryMetricGraph.kt`, `TelemetryMetricUtils.kt`, `TelemetryGraphColorPreferences.kt`, `MapDetailLayout.kt`, `WorkoutRepositoryTelemetryTest.kt`, `TelemetryMetricUtilsTest.kt`, `TelemetryGraphColorPreferencesTest.kt`, `TelemetryMetricGraphOverlayTest.kt`, `TelemetryMetricGraphMultiSourceUiTest.kt`, `MapDetailLayoutScrubSynchronizationTest.kt`, `MultiSensorChartsScreenshotTest.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-8096`
+- **Status**: Verified
+- **Test Description**:
+  1. *Strict Source-Column Discovery & Dotted Device Name Lookup (`TST-PER-050.1`, `WorkoutRepositoryTelemetryTest.kt`)*:
+  • Verify `"^${type.name} \\((.+)\\)$"` discovery against `cursor.columnNames` ignores canonical `ProxySensor` (`"HR"`) so `1` named column (`"HR (H10)"`) produces `<= 1` source, while `>= 2` named columns (including dotted `"POWER (KICKR v5.0)"`) resolve all named streams and session means across both `loadWorkoutDetailTelemetry` (GPS) and `getWorkoutTelemetryPoints` (trackless indoor).
+  2. *`TelemetryMetricType.CADENCE` & Color Preference Key Invariance (`TST-PER-050.2`, `TelemetryMetricUtilsTest.kt`, `TelemetryGraphColorPreferencesTest.kt`)*:
+  • Verify `PathPoint.cadence` extraction, `TelemetryMetricType.CADENCE` metric resolution/formatting (`rpm`), and `TelemetryGraphColorPreferences` persistence mapping to existing `telemetry_graph_color_SENSOR_CADENCE` (`THEME_DEFAULT` default).
+  3. *Progressive-Disclosure `Layers` UI, Mean Legend & Zero-Clutter Gating (`TST-PER-050.3`, `TelemetryMetricGraphOverlayTest.kt`)*:
+  • Verify `<= 1` named source hides the `Layers` toggle and comparison legend, whereas `>= 2` named sources show the toggle, secondary curve(s), and compact `Ø` mean comparison readout (`Ø %1$d bpm`, `Ø %1$d W`, `Ø %1$d rpm`).
+  4. *Synchronized X-Axis Scrubbing Across Distance & Time (`TST-PER-050.4`, `MapDetailLayoutScrubSynchronizationTest.kt`)*:
+  • Verify horizontal scrubbing in `DISTANCE` and `TIME` domains (both GPS and trackless workouts) updates overlaid source readout values synchronously while preserving `Rule 64` plot alignment.
+  5. *9-Locale Parity & Rule 8.5 Compose PNG (`TST-PER-050.5`, `TranslationParityTest.kt`, `MultiSensorChartsScreenshotTest.kt`)*:
+  • Verify 100% 9-locale parity (`EN/DE/ES/FR/IT/JA/NL/PL/PT`) with zero emojis (`ATT-5400`) and inspect rendered `docs/engineering/walkthroughs/img/ATT-8096_multisensor_charts.png` (Light + Dark) via `read_file` (`Rule 8.5`).
+

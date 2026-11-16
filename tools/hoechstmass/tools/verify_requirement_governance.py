@@ -7,6 +7,7 @@ master table counter parity across domain shards dynamically using hoechstmass_c
 Pure Python 3 standard library.
 """
 
+import csv
 import json
 import os
 import re
@@ -860,6 +861,154 @@ def recalculate_master_index_tables(repo_root=None, config=None):
     return recalculated
 
 
+def triage_unbacked_verified_tsts(
+    repo_root=None,
+    out_csv=None,
+    config=None,
+    tst_shards=None,
+    req_shards=None,
+    test_sources=None,
+):
+    """
+    Generic, config-driven triage classifier for unbacked [Verified] TST specifications.
+    Classifies unbacked specs into 'unit-test-backed', 'UI/manual-only', 'obsolete/duplicate',
+    or 'missing test code' and optionally exports a CSV ledger.
+    """
+    if repo_root is None:
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+    if config is None:
+        config = load_config()
+
+    paths_cfg = config.get("paths", {})
+    tst_dir = os.path.join(repo_root, paths_cfg.get("tests_shard_dir", "docs/tests"))
+    req_dir = os.path.join(repo_root, paths_cfg.get("requirements_shard_dir", "docs/requirements"))
+
+    test_files = {}
+    if isinstance(test_sources, dict):
+        for rel_p, content in test_sources.items():
+            test_files[rel_p] = content if isinstance(content, str) else "".join(content)
+    else:
+        for base in ("app/src/test", "tests", "tools"):
+            abs_base = os.path.join(repo_root, base)
+            if not os.path.isdir(abs_base):
+                continue
+            for root, _, files in os.walk(abs_base):
+                for fn in sorted(files):
+                    if fn.endswith((".kt", ".java", ".py")):
+                        abs_p = os.path.join(root, fn)
+                        with open(abs_p, "r", encoding="utf-8", errors="ignore") as fh:
+                            test_files[os.path.relpath(abs_p, repo_root)] = fh.read()
+
+    tagged_ids = set()
+    by_basename = {}
+    for rel_p, content in test_files.items():
+        by_basename.setdefault(os.path.basename(rel_p), []).append(rel_p)
+        for m in re.finditer(r"TST-[A-Z]+-[0-9]+", content):
+            tagged_ids.add(m.group(0))
+
+    loaded_tsts = []
+    if isinstance(tst_shards, dict):
+        for rel_p, txt in sorted(tst_shards.items()):
+            loaded_tsts.append((rel_p, txt.splitlines(keepends=True)))
+    elif os.path.isdir(tst_dir):
+        for fn in sorted(os.listdir(tst_dir)):
+            if fn.endswith(".md"):
+                fp = os.path.join(tst_dir, fn)
+                with open(fp, "r", encoding="utf-8") as fh:
+                    loaded_tsts.append((os.path.relpath(fp, repo_root), fh.readlines()))
+
+    req_vm = {}
+    loaded_reqs = []
+    if isinstance(req_shards, dict):
+        for rel_p, txt in sorted(req_shards.items()):
+            loaded_reqs.append((rel_p, txt.splitlines(keepends=True)))
+    elif os.path.isdir(req_dir):
+        for fn in sorted(os.listdir(req_dir)):
+            if fn.endswith(".md"):
+                fp = os.path.join(req_dir, fn)
+                with open(fp, "r", encoding="utf-8") as fh:
+                    loaded_reqs.append((os.path.relpath(fp, repo_root), fh.readlines()))
+    for _, lines in loaded_reqs:
+        cur_r = None
+        for line in lines:
+            mr = re.match(r"^###\s+(REQ-[A-Z0-9_-]+):?", line.strip())
+            if mr:
+                cur_r = mr.group(1)
+            elif cur_r and "**Verification Method**:" in line:
+                req_vm[cur_r] = line.split(":", 1)[1].strip()
+
+    heading_pat = re.compile(r"^###\s+(TST-[A-Z]+-[0-9]+(?:\.[0-9]+)?)[^:\n]*:\s*([^\n]+)")
+    entries = []
+    for rel_p, lines in loaded_tsts:
+        cur = None
+        block = []
+        parsed = []
+        for lno, line in enumerate(lines, 1):
+            m = heading_pat.match(line.strip())
+            if m:
+                if cur is not None:
+                    cur["block"] = "".join(block)
+                    parsed.append(cur)
+                base_tid = m.group(1).split(".")[0]
+                rest = m.group(2).strip()
+                cur = {"tst_id": base_tid, "shard": rel_p, "line": lno, "title": rest} if "[Verified]" in rest else None
+                block = []
+            elif cur is not None:
+                block.append(line)
+        if cur is not None:
+            cur["block"] = "".join(block)
+            parsed.append(cur)
+
+        for item in parsed:
+            if item["tst_id"] in tagged_ids:
+                continue
+            b = item["block"]
+            reqs = sorted(set(re.findall(r"REQ-[A-Z]+-[0-9]+", b)))
+            vms = sorted({req_vm[r] for r in reqs if r in req_vm})
+            vm_str = "; ".join(vms) if vms else "Unspecified"
+            matched = sorted({
+                p
+                for fn in re.findall(r"([A-Za-z0-9_]+Test\.(?:kt|java)|test_[a-z0-9_]+\.py)", b)
+                for p in by_basename.get(fn, [])
+            })
+            if re.search(r"\b(?:superseded|obsolete|deprecated)\b", item["title"] + " " + b, re.IGNORECASE):
+                cat = "obsolete/duplicate"
+            elif matched and "On-Device Manual" not in vm_str:
+                cat = "unit-test-backed"
+            elif "On-Device Manual" in vm_str or re.search(r"\b(?:Tap|Navigate|Swipe|On-Device)\b", b, re.IGNORECASE):
+                cat = "UI/manual-only"
+            else:
+                cat = "missing test code"
+            entries.append({
+                "tst_id": item["tst_id"],
+                "shard": item["shard"],
+                "line": item["line"],
+                "category": cat,
+                "matched_test_files": ";".join(matched),
+                "linked_reqs": ";".join(reqs),
+                "verification_method": vm_str,
+                "title": item["title"],
+            })
+
+    if out_csv:
+        abs_csv = out_csv if os.path.isabs(out_csv) else os.path.join(repo_root, out_csv)
+        os.makedirs(os.path.dirname(abs_csv), exist_ok=True)
+        with open(abs_csv, "w", encoding="utf-8", newline="") as fh:
+            writer = csv.DictWriter(
+                fh,
+                fieldnames=["tst_id", "shard", "line", "category", "matched_test_files", "linked_reqs", "verification_method", "title"],
+            )
+            writer.writeheader()
+            writer.writerows(entries)
+
+    by_category = {}
+    for e in entries:
+        by_category[e["category"]] = by_category.get(e["category"], 0) + 1
+    return {"total_unbacked_verified_tsts": len(entries), "by_category": by_category, "entries": entries}, [
+        f"Unbacked [Verified] TSTs: {len(entries)}"
+    ]
+
+
 def main():
     import argparse
     parser = argparse.ArgumentParser(
@@ -905,7 +1054,24 @@ def main():
         default=None,
         help="Verify Change-Request Impact Analysis in Stage 1 deliverable (optionally specify analysis file path).",
     )
+    parser.add_argument(
+        "--triage-unbacked",
+        action="store_true",
+        help="Classify unbacked [Verified] TSTs across living-doc shards.",
+    )
+    parser.add_argument(
+        "--triage-csv",
+        type=str,
+        default=None,
+        help="Optional CSV output path for --triage-unbacked.",
+    )
     args = parser.parse_args()
+
+    if args.triage_unbacked:
+        _, diag = triage_unbacked_verified_tsts(out_csv=args.triage_csv)
+        for msg in diag:
+            print(msg)
+        sys.exit(0)
 
     if args.check_impact is not None:
         target_file = args.check_impact.strip() if args.check_impact.strip() else None

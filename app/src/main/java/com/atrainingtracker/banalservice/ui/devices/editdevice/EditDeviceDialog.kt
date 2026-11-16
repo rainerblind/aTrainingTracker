@@ -1078,6 +1078,7 @@ private fun AttFusedToggleRow(
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.weight(1f).padding(end = 8.dp),
                 color = if (enabled) {
                     MaterialTheme.colorScheme.onSurface
                 } else {
@@ -1408,11 +1409,18 @@ private fun PolarOfflineDeviceSection(data: DeviceUiData, viewModel: EditDeviceV
     }
     val isVeritySense = !isH10 && isPolarVeritySenseDevice(data, dialogContext, polarMac)
     if (isH10 || isVeritySense) {
-        PolarBackupRecordingSection(
-            data = data,
-            viewModel = viewModel,
-            isVeritySense = isVeritySense
-        )
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            PolarBackupRecordingSection(
+                data = data,
+                viewModel = viewModel,
+                isVeritySense = isVeritySense
+            )
+            PolarLiveImuSection(
+                data = data,
+                viewModel = viewModel,
+                isVeritySense = isVeritySense
+            )
+        }
     }
 }
 
@@ -1428,6 +1436,21 @@ private fun PolarBackupRecordingSection(
         isVeritySense = isVeritySense,
         isAndroid13Plus = isAndroid13Plus,
         onCheckedChange = { viewModel.onPolarH10OfflineRecordingChanged(it) }
+    )
+}
+
+@Composable
+private fun PolarLiveImuSection(
+    data: DeviceUiData,
+    viewModel: EditDeviceViewModel,
+    isVeritySense: Boolean
+) {
+    val isAndroid13Plus = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU
+    PolarLiveImuCard(
+        checked = data.polarLiveImuEnabled,
+        isVeritySense = isVeritySense,
+        isAndroid13Plus = isAndroid13Plus,
+        onCheckedChange = { viewModel.onPolarLiveImuEnabledChanged(it) }
     )
 }
 
@@ -1452,6 +1475,51 @@ fun PolarBackupRecordingCard(
     } else {
         R.string.device_polar_h10_backup_recording_desc
     }
+    PolarFeatureToggleCard(
+        titleRes = titleRes,
+        descRes = descRes,
+        disabledHintRes = R.string.device_polar_h10_backup_recording_requires_android_13,
+        checked = checked,
+        enabled = isAndroid13Plus,
+        onCheckedChange = onCheckedChange
+    )
+}
+
+/**
+ * Stateless Material 3 card exposing the Polar H10 (`ACC`) or Verity Sense (`ACC` + `GYRO`)
+ * live PMD IMU streaming opt-in toggle (`REQ-SET-112.1`, `ATT-8016`).
+ */
+@Composable
+fun PolarLiveImuCard(
+    checked: Boolean,
+    isVeritySense: Boolean,
+    isAndroid13Plus: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    val descRes = if (isVeritySense) {
+        R.string.device_polar_verity_live_imu_desc
+    } else {
+        R.string.device_polar_h10_live_imu_desc
+    }
+    PolarFeatureToggleCard(
+        titleRes = R.string.device_polar_live_imu_title,
+        descRes = descRes,
+        disabledHintRes = R.string.device_polar_live_imu_requires_android_13,
+        checked = checked,
+        enabled = isAndroid13Plus,
+        onCheckedChange = onCheckedChange
+    )
+}
+
+@Composable
+private fun PolarFeatureToggleCard(
+    titleRes: Int,
+    descRes: Int,
+    disabledHintRes: Int,
+    checked: Boolean,
+    enabled: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
@@ -1469,8 +1537,8 @@ fun PolarBackupRecordingCard(
             AttFusedToggleRow(
                 title = stringResource(titleRes),
                 checked = checked,
-                enabled = isAndroid13Plus,
-                disabledHint = stringResource(R.string.device_polar_h10_backup_recording_requires_android_13),
+                enabled = enabled,
+                disabledHint = stringResource(disabledHintRes),
                 onCheckedChange = onCheckedChange
             )
             Text(

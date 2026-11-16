@@ -40,6 +40,7 @@ except ImportError:
     HAS_PYQT6 = False
 
 
+# Linked test specs: TST-TOOL-003, TST-TOOL-004
 class TestGeodesicsAndHelpers(unittest.TestCase):
     def test_haversine_distance(self):
         # Distance between Munich Marienplatz and Odeonsplatz (~850m)

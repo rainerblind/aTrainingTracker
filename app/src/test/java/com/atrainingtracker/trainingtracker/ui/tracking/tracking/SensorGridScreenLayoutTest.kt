@@ -28,6 +28,7 @@ import java.lang.reflect.Modifier
  * and elevation profile zero dead space enforcement (REQ-UI-437, TST-UI-437, ATT-5072).
  * Refactored to reflection per docs/coding_standards.md §5.4 and REQ-PRO-049.
  */
+// Linked test specs: TST-UI-319, TST-UI-332
 class SensorGridScreenLayoutTest {
 
     private fun getSensorGridScreenClass(): Class<*> {

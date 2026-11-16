@@ -3,111 +3,111 @@
 **Domain**: `settings_profiles`  
 **Prefixes**: `LOC`, `MON`, `PRI`, `SET`  
 **Scope**: Athlete settings, bike/sensor profiles, privacy zones, data stores, monetization, and 9-locale parity.  
-**Total Tests**: 94
+**Total Tests**: 104
 
 ---
 
-### TST-SET-031: **Unified Spatial Markers** [Verified]
+### TST-SET-031: **Unified Spatial Markers** [Implemented]
 - **Requirement(s)**: `REQ-SET-041`
 - **Component**: **Unified Spatial Markers**
 - **Test Description**: 1. Open Workout Details, Period Map, and Route Heatmap. 2. Inspect Start/End markers.
 
-### TST-SET-001: **Workout Learning Engine** [Verified]
+### TST-SET-001: **Workout Learning Engine** [Implemented]
 - **Requirement(s)**: `REQ-SET-006`, `REQ-SET-007`, `REQ-SET-008`
 - **Component**: **Workout Learning Engine**
 - **Test Description**: 1. Track a route. 2. Name it \"Park Loop\" and set sport to \"Running\". 3. Track the same route again.
 
-### TST-SET-002: **Favorite Tracks Heatmap** [Verified]
+### TST-SET-002: **Favorite Tracks Heatmap** [Implemented]
 - **Requirement(s)**: `REQ-SET-009`
 - **Component**: **Favorite Tracks Heatmap**
 - **Test Description**: 1. Navigate to \"Workout Clusters\" drawer. 2. Select a recurring path.
 
-### TST-SET-003: **Cluster Tuning** [Verified]
+### TST-SET-003: **Cluster Tuning** [Implemented]
 - **Requirement(s)**: `REQ-SET-010`, `REQ-SET-011`
 - **Component**: **Cluster Tuning**
 - **Test Description**: 1. Navigate to \"Workout Clusters\". 2. Open Tuning menu. 3. Adjust the master slider. 4. Optionally toggle detailed controls. 5. Tap \"Recalculate\".
 
-### TST-SET-004: **Workout Cluster Item Map** [Verified]
+### TST-SET-004: **Workout Cluster Item Map** [Implemented]
 - **Requirement(s)**: `REQ-SET-012`
 - **Component**: **Workout Cluster Item Map**
 - **Test Description**: 1. Navigate to \"Workout Clusters\". 2. Inspect list items.
 
-### TST-SET-005: **Name-Aware Clustering** [Verified]
+### TST-SET-005: **Name-Aware Clustering** [Implemented]
 - **Requirement(s)**: `REQ-SET-013`
 - **Component**: **Name-Aware Clustering**
 - **Test Description**: 1. Identify two workouts with same name but high spatial drift. 2. Trigger recalculation.
 
-### TST-SET-006: **Auto-Dismiss Tuning** [Verified]
+### TST-SET-006: **Auto-Dismiss Tuning** [Implemented]
 - **Requirement(s)**: `REQ-SET-014`
 - **Component**: **Auto-Dismiss Tuning**
 - **Test Description**: 1. Open Tuning screen. 2. Tap \"Recalculate All Clusters\". 3. Wait for completion.
 
-### TST-SET-007: **Unique Cluster Naming** [Verified]
+### TST-SET-007: **Unique Cluster Naming** [Implemented]
 - **Requirement(s)**: `REQ-SET-015`
 - **Component**: **Unique Cluster Naming**
 - **Test Description**: 1. Create a cluster named \"Home\". 2. Create a spatially distinct route and also name it \"Home\".
 
-### TST-SET-008: **Edit Cluster Identity** [Verified]
+### TST-SET-008: **Edit Cluster Identity** [Implemented]
 - **Requirement(s)**: `REQ-SET-016`
 - **Component**: **Edit Cluster Identity**
 - **Test Description**: 1. Select a workout cluster. 2. Tap Edit Icon in TopAppBar. 3. Enter new name and select a different sport. 4. Save.
 
-### TST-SET-009: **Manual Workout Reassignment** [Verified]
+### TST-SET-009: **Manual Workout Reassignment** [Implemented]
 - **Requirement(s)**: `REQ-SET-017`
 - **Component**: **Manual Workout Reassignment**
 - **Test Description**: 1. Open a Workout Heatmap. 2. Tap a specific workout polyline. 3. Select a different cluster from the candidate list. 4. Save.
 
-### TST-SET-010: **Edit Workout Suggestions** [Verified]
+### TST-SET-010: **Edit Workout Suggestions** [Implemented]
 - **Requirement(s)**: `REQ-SET-018`
 - **Component**: **Edit Workout Suggestions**
 - **Test Description**: 1. Edit a workout. 2. Tap the \"My Locations\" icon in the Name field. 3. Select a suggested cluster.
 
-### TST-SET-011: **Manual Cluster Creation** [Verified]
+### TST-SET-011: **Manual Cluster Creation** [Implemented]
 - **Requirement(s)**: `REQ-SET-019`
 - **Component**: **Manual Cluster Creation**
 - **Test Description**: 1. Navigate to \"Workout Clusters\". 2. Tap \"+\" FAB. 3. Fill in name and distance. 4. Tap map to set 3 points. 5. Save.
 
-### TST-SET-012: **Workout Peek & Move** [Verified]
+### TST-SET-012: **Workout Peek & Move** [Implemented]
 - **Requirement(s)**: `REQ-SET-020`
 - **Component**: **Workout Peek & Move**
 - **Test Description**: 1. Open a Workout Heatmap. 2. Tap a specific workout track. 3. Observe the Bottom Sheet peek. 4. Tap the \"Move\" FAB in the peek.
 
-### TST-SET-013: **Manual Fingerprint Edit** [Verified]
+### TST-SET-013: **Manual Fingerprint Edit** [Implemented]
 - **Requirement(s)**: `REQ-SET-021`
 - **Component**: **Manual Fingerprint Edit**
 - **Test Description**: 1. Open a Workout Heatmap. 2. Tap a signature marker (Start/End/Apex). 3. Select \"Edit Position\". 4. Tap map to set new position. 5. Save.
 
-### TST-SET-014: **Workout Markers in Cluster** [Verified]
+### TST-SET-014: **Workout Markers in Cluster** [Implemented]
 - **Requirement(s)**: `REQ-SET-022`
 - **Component**: **Workout Markers in Cluster**
 - **Test Description**: 1. Open a Workout Heatmap. 2. Observe the distribution of markers for all members. 3. Tap a specific workout track OR any marker. 4. Inspect markers in the peek.
 
-### TST-SET-015: **Imperial Units in Clusters** [Verified]
+### TST-SET-015: **Imperial Units in Clusters** [Implemented]
 - **Requirement(s)**: `REQ-SET-023`
 - **Component**: **Imperial Units in Clusters**
 - **Test Description**: 1. Switch to Imperial. 2. Add manual cluster (miles). 3. View tuning details (mile).
 
-### TST-SET-016: **Cluster Equipment Determination** [Verified]
+### TST-SET-016: **Cluster Equipment Determination** [Implemented]
 - **Requirement(s)**: `REQ-SET-024`
 - **Component**: **Cluster Equipment Determination**
 - **Test Description**: 1. Open a Workout Cluster. 2. Verify the associated equipment list (→).
 
-### TST-SET-017: **Workout Cluster Collapsing Header** [Verified]
+### TST-SET-017: **Workout Cluster Collapsing Header** [Implemented]
 - **Requirement(s)**: `REQ-SET-025`
 - **Component**: **Workout Cluster Collapsing Header**
 - **Test Description**: 1. Navigate to \"Workout Clusters\". 2. Scroll the list downwards. 3. Observe the TopAppBar behavior.
 
-### TST-SET-018: **Workout Cluster Tabbed Layout** [Verified]
+### TST-SET-018: **Workout Cluster Tabbed Layout** [Implemented]
 - **Requirement(s)**: `REQ-SET-026`
 - **Component**: **Workout Cluster Tabbed Layout**
 - **Test Description**: 1. Navigate to \"Workout Clusters\". 2. Observe the tabs at the top. 3. Swipe between tabs (All, Bike, Run, Other).
 
-### TST-SET-019: **Workout Cluster Scroll Persistence** [Verified]
+### TST-SET-019: **Workout Cluster Scroll Persistence** [Implemented]
 - **Requirement(s)**: `REQ-SET-027`
 - **Component**: **Workout Cluster Scroll Persistence**
 - **Test Description**: 1. Scroll down the \"All\" tab. 2. Select a cluster to open its heatmap. 3. Navigate back.
 
-### TST-SET-020: **Unified FAB Layout** [Verified]
+### TST-SET-020: **Unified FAB Layout** [Implemented]
 - **Requirement(s)**: `REQ-SET-028`
 - **Component**: **Unified FAB Layout**
 - **Test Description**: 1. Navigate to \"Workout Clusters\". 2. Observe FAB position and styling. 3. Compare with \"Sport Types\" and \"Equipment\" FABs.
@@ -117,87 +117,87 @@
 - **Component**: **Identity Arbitration**
 - **Test Description**: 1. Link a specific sensor to a bike. 2. Record a session with that sensor on a route matched to a cluster with a different majority sport.
 
-### TST-SET-022: **Route-to-Cluster Matching** [Verified]
+### TST-SET-022: **Route-to-Cluster Matching** [Implemented]
 - **Requirement(s)**: `REQ-SET-031`
 - **Component**: **Route-to-Cluster Matching**
 - **Test Description**: 1. Import a GPX Route. 2. Navigate to \"Workout Clusters\".
 
-### TST-SET-023: **Reference Route in Heatmap** [Verified]
+### TST-SET-023: **Reference Route in Heatmap** [Implemented]
 - **Requirement(s)**: `REQ-SET-032`
 - **Component**: **Reference Route in Heatmap**
 - **Test Description**: 1. Open a Workout Cluster that is linked to an explicit Route. 2. Observe the heatmap visualization.
 
-### TST-SET-024: **Workout Cluster Deletion** [Verified]
+### TST-SET-024: **Workout Cluster Deletion** [Implemented]
 - **Requirement(s)**: `REQ-SET-033`
 - **Component**: **Workout Cluster Deletion**
 - **Test Description**: 1. Open a Workout Cluster detail view. 2. Long-click the header. 3. Select \"Delete\". 4. Confirm deletion.
 
-### TST-SET-025: **Stable Cluster Naming** [Verified]
+### TST-SET-025: **Stable Cluster Naming** [Implemented]
 - **Requirement(s)**: `REQ-SET-034`
 - **Component**: **Stable Cluster Naming**
 - **Test Description**: 1. Identify a cluster named \"Park Loop\". 2. Track a workout matching this cluster.
 
-### TST-SET-026: **Preview Heatmap** [Verified]
+### TST-SET-026: **Preview Heatmap** [Implemented]
 - **Requirement(s)**: `REQ-SET-035`
 - **Component**: **Preview Heatmap**
 - **Test Description**: 1. Open the Favorite Tracks list. 2. Observe the mini-map in a list item.
 
-### TST-SET-027: **Persistent DB Connection** [Verified]
+### TST-SET-027: **Persistent DB Connection** [Implemented]
 - **Requirement(s)**: `REQ-SET-036`
 - **Component**: **Persistent DB Connection**
 - **Test Description**: 1. Start the app. 2. Open Android Studio Database Inspector.
 
-### TST-SET-028: **Hit Count Synchronization** [Verified]
+### TST-SET-028: **Hit Count Synchronization** [Implemented]
 - **Requirement(s)**: `REQ-SET-037`
 - **Component**: **Hit Count Synchronization**
 - **Test Description**: 1. Identify a cluster with hit count > 0. 2. Use Database Inspector to manually clear `clusterId` for its workouts. 3. Open Favorite Tracks list.
 
-### TST-SET-029: **Unclustered Tab Verification** [Verified]
+### TST-SET-029: **Unclustered Tab Verification** [Implemented]
 - **Requirement(s)**: `REQ-SET-040`
 - **Component**: **Unclustered Tab Verification**
 - **Test Description**: 1. Navigate to Favorite Tracks. 2. Open 'Offen' tab. 3. Tap a workout.
 
-### TST-SET-030: **Locale-Aware Distance Input** [Verified]
+### TST-SET-030: **Locale-Aware Distance Input** [Implemented]
 - **Requirement(s)**: `REQ-SET-039`
 - **Component**: **Locale-Aware Distance Input**
 - **Test Description**: 1. Set device locale to German. 2. Open 'Add Workout Cluster' flow. 3. Enter '5,5' in the distance field.
 
-### TST-SET-032: **Markers & Framing in Previews** [Verified]
+### TST-SET-032: **Markers & Framing in Previews** [Implemented]
 - **Requirement(s)**: `REQ-SET-042`
 - **Component**: **Markers & Framing in Previews**
 - **Jira**: ``ATT-390``
 - **Test Description**: 1. Open Workout History, Routes, and My Locations lists. 2. Observe the mini-maps.
 
-### TST-SET-033: **Fingerprint Parity** [Verified]
+### TST-SET-033: **Fingerprint Parity** [Implemented]
 - **Requirement(s)**: `REQ-SET-043`
 - **Component**: **Fingerprint Parity**
 - **Test Description**: 1. Import a Route. 2. Record a workout on that exact route. 3. Navigate to Favorite Tracks.
 
-### TST-SET-034: **Sport-Aware Clustering** [Verified]
+### TST-SET-034: **Sport-Aware Clustering** [Implemented]
 - **Requirement(s)**: `REQ-SET-010`, `REQ-SET-043`
 - **Component**: **Sport-Aware Clustering**
 - **Jira**: ``ATT-399``
 - **Test Description**: 1. Navigate to My Locations -> Tuning. 2. Toggle 'Take Sport Type into account' to ON. 3. Recalculate clusters. 4. Verify that Runs and Rides on the same path remain in separate clusters. 5. Toggle to OFF and recalculate. 6. Verify they merge into one cluster.
 
-### TST-SET-035: **Sport Mismatch with UNKNOWN** [Verified]
+### TST-SET-035: **Sport Mismatch with UNKNOWN** [Implemented]
 - **Requirement(s)**: `REQ-SET-043`
 - **Component**: **Sport Mismatch with UNKNOWN**
 - **Jira**: ``ATT-427``
 - **Test Description**: 1. Ensure Tuning toggle is ON. 2. Record a 'Running' workout on a path that currently has an 'UNKNOWN' cluster.
 
-### TST-SET-040: **Unclustered Workout Navigation** [Verified]
+### TST-SET-040: **Unclustered Workout Navigation** [Implemented]
 - **Requirement(s)**: `REQ-SET-056`
 - **Component**: **Unclustered Workout Navigation**
 - **Jira**: ``ATT-278``
 - **Test Description**: 1. Open 'Unclustered' tab in My Locations. 2. Verify layout parity with clusters (mini-map exists). 3. Tap a workout. 4. Verify navigation to map. 5. Tap 'Move to Cluster' icon.
 
-### TST-SET-041: **Cluster Member Listing** [Verified]
+### TST-SET-041: **Cluster Member Listing** [Implemented]
 - **Requirement(s)**: `REQ-SET-057`
 - **Component**: **Cluster Member Listing**
 - **Jira**: ``ATT-280``
 - **Test Description**: 1. Open 'Clusters' tab. 2. Click on the \"X recordings\" text for a cluster. 3. Verify navigation to a list containing only those recordings.
 
-### TST-SET-042: **Workout Session Naming Isolation** [Verified]
+### TST-SET-042: **Workout Session Naming Isolation** [Implemented]
 - **Requirement(s)**: `REQ-SET-034`, `REQ-SET-044`
 - **Component**: **Workout Session Naming Isolation**
 - **Jira**: ``ATT-317``
@@ -209,25 +209,25 @@
 - **Jira**: ``ATT-395``
 - **Test Description**: 1. Open the Workout History list. 2. Verify each item displays its Cluster Name with the leading route icon at the very left below the workout name. 3. Edit a workout and manually re-assign it to a different cluster. 4. Save and verify the update in the list.
 
-### TST-SET-044: **Selection Dialog Hit Count Accuracy** [Verified]
+### TST-SET-044: **Selection Dialog Hit Count Accuracy** [Implemented]
 - **Requirement(s)**: `REQ-SET-038`
 - **Component**: **Selection Dialog Hit Count Accuracy**
 - **Jira**: ``ATT-429``
 - **Test Description**: 1. Identify a cluster with 5 associated workouts. 2. Open a workout for manual re-clustering or trigger a TCX import interaction. 3. Open the "Select Existing Route" dialog.
 
-### TST-SET-045: **Selectable Cluster Markers** [Verified]
+### TST-SET-045: **Selectable Cluster Markers** [Implemented]
 - **Requirement(s)**: `REQ-SET-060`
 - **Component**: **Selectable Cluster Markers**
 - **Jira**: ``ATT-463``
 - **Test Description**: 1. Open a Workout Cluster heatmap. 2. Tap the Marker Options button. 3. Uncheck "Start Point". 4. Verify that all green pins (signature and member distribution) disappear. 5. Re-check and Verify reappearance. 6. Re-check persistence after app restart.
 
-### TST-SET-046: **Reactive Editor Suggestions** [Verified]
+### TST-SET-046: **Reactive Editor Suggestions** [Implemented]
 - **Requirement(s)**: `REQ-SET-018`
 - **Component**: **Reactive Editor Suggestions**
 - **Jira**: ``ATT-447``
 - **Test Description**: 1. Edit a 'Running' workout on a 'Cycling' path. 2. Observe high similarity score (> 5.0) for 'Cycling' cluster in suggestions. 3. Change workout sport to 'Cycling'. 4. Verify score drops below 1.0 (penalty removed).
 
-### TST-SET-047: **Idempotent Route Cluster Creation** [Verified]
+### TST-SET-047: **Idempotent Route Cluster Creation** [Implemented]
 - **Requirement(s)**: `REQ-SET-061`
 - **Component**: **Idempotent Route Cluster Creation**
 - **Jira**: ``ATT-543``
@@ -390,7 +390,7 @@
   • Tap top app bar back arrow or system Back button: verify navigation returns directly to Workout History.
   • Open a workout in `TrackOnMapScreen`: tap the cluster button: verify direct navigation to the cluster heatmap.
 
-### TST-SET-058: **Workout, Route & Segment Bottom Scaffold Status Bar Boundary & Peek Verification** [Verified]
+### TST-SET-058: **Workout, Route & Segment Bottom Scaffold Status Bar Boundary & Peek Verification** [Implemented]
 2. Background maps render edge-to-edge under the status bar.
 3. Workout popup displays both header and track map.
 4. Initial popups display compact drag handles and unclipped header information.
@@ -470,7 +470,7 @@
   3. *Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` to ensure zero regressions across all modules.
 
-### TST-SET-061: **Edit Workout New Cluster Creation & Name Synchronization Verification** [Verified]
+### TST-SET-061: **Edit Workout New Cluster Creation & Name Synchronization Verification** [Implemented]
 2. Creating a new cluster updates database and UI with the new cluster identity (`forceIdentity = true`).
 3. Non-customized workout names automatically adopt the new cluster name; manually typed custom workout names are safely preserved.]
 - **Requirement(s)**: `REQ-SET-072`
@@ -1348,6 +1348,103 @@
   5. *9-Locale Localization Parity & Visual UI Inspection (`TST-SET-113.5`)*:
   • Verify `TranslationParityTest` passes with zero missing keys and zero emojis across all 9 locales for `SwimWorkoutAdjustCard`, and UI screenshot verifies layout on `emulator-5554`.
 
+---
+
+### TST-SET-114: **Polar Live IMU Streaming Bridge, Session Arbitration & Cadence Priority Test Suite** [Verified]
+- **Requirement(s)**: `REQ-SET-112`
+- **Component**: `PolarOnlineStreamingBridge.kt`, `PolarOfflineGattCoordinator.kt`, `DeviceManager.java`, `MySensorManager.java`, `DevicesDatabaseManager.java`, `DatabaseSchemaRegistry.kt`, `DeviceDataRepository.kt`, `EditDeviceDialog.kt`, `res/values*/strings_devices.xml`
+- **Jira**: `ATT-8016`
+- **Status**: Verified
+- **Test Description**:
+  1. *`Devices.db` v13->v14 Migration & Schema Registry Parity (`TST-SET-114.1`)*:
+  • Verify `DevicesDbHelper.DB_VERSION == 14`, `onUpgrade(13, 14)` adds the live IMU column with `DEFAULT 0` without altering existing rows, `onCreate` matches `onUpgrade`, and `DatabaseSchemaRegistry.getMaxSupportedVersion("Devices.db") == 14`.
+  2. *EditDeviceDialog `@RequiresApi(33)` Toggle & 9-Locale Parity (`TST-SET-114.2`)*:
+  • Verify `EditDeviceDialog` shows the live IMU toggle only for Polar H10 / Verity Sense (API 33+ enabled, `< API 33` disabled with hint), persists opt-in via `DeviceDataRepository`, passes `TranslationParityTest` across all 9 locales, and passes Stage 4 PNG screenshot inspection (`Rule 8.5`).
+  3. *Persistent Single-GATT Session, HR/RR & ACC/GYRO Streaming (`TST-SET-114.3`)*:
+  • Verify `DeviceManager` routes enabled Polar H10 / Verity Sense to `PolarOnlineStreamingBridge` (and falls back to `BTLEHeartRateDevice` when disabled/`< API 33`), `PolarHrData` (`hr`, `rrsMs`, `rrAvailable`) dispatches `HR`, `RR_INTERVAL`, and `RrBeatSource` beats, and `startAccStreaming`/`startGyroStreaming` + `setAutomaticReconnection(true)` operate cleanly.
+  4. *Offline Session Reuse & Verity Sense `ACC` Mutual Exclusion (`TST-SET-114.4`)*:
+  • Verify `PolarOfflineGattCoordinator` reuses the active `PolarOnlineStreamingBridge` `PolarBleApi` session during offline PFTP start/stop/backfill without opening a second GATT client, and rejects concurrent `PolarOfflineRecordingApi` + `PolarOnlineStreamingApi` `ACC` activation on Verity Sense.
+  5. *`BSportType.RUN` Gating & Cadence Priority Arbitration (`TST-SET-114.5`)*:
+  • Verify `PolarOnlineStreamingBridge` publishes `CADENCE`/`STRIDES` only for `BSportType.RUN` (including `TTSportType.WALK`), emits zero cadence for `BSportType.BIKE`, and yields `SensorType.CADENCE` in `MySensorManager` whenever `RUN_SPEED`, `BIKE_CADENCE`, `BIKE_SPEED_AND_CADENCE`, or `BIKE_POWER` is active.
+
+---
+
+### TST-SET-115: **Expert Settings HRV Artifact Gate Relocation & Morning Checks Section Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-SET-113` (`REQ-SET-113.1`..`REQ-SET-113.4`)
+- **Component**: `AdvancedTuningAccordionTest.kt`, `AdvancedTuningModularityTest.kt`, `AdvancedTuningScreenTest.kt`, `AdvancedTuningVisualContractTest.kt`, `PhysiologyModelsVisibilityContractTest.kt`, `TuningDesignGuidelinesContractTest.kt`, `TranslationParityTest.kt`, `AdvancedTuningSectionsScreenshotTest.kt`
+- **Jira**: `ATT-8117`
+- **Status**: Verified
+- **Test Description**:
+  1. *HRV Artifact Gate Relocation & DataStore Key Invariance (`TST-SET-115.1`, `PhysiologyModelsVisibilityContractTest.kt`)*:
+  • Verify `PhysiologyModelsSection.kt` omits `tuning_hrv_artifact_gate_title` and all 7 Morning Check controls while retaining `tuning_physiology_hrv_zones_link` and `showRpeAndFeel`.
+  • Verify `SensorsGpsFilterSection.kt` hosts `tuning_hrv_artifact_gate_title` (`3.0%..5.0%`) and both `AdvancedTuningScreen.kt` and `AdvancedTuningDialog.kt` wire `hrvArtifactGateThresholdPercent` without altering `TuningPreferencesDataStore` keys.
+  2. *`TuningSection.MORNING_CHECK` & `MorningCheckSection` Wiring (`TST-SET-115.2`, `AdvancedTuningAccordionTest.kt`, `AdvancedTuningModularityTest.kt`, `AdvancedTuningScreenTest.kt`, `AdvancedTuningVisualContractTest.kt`)*:
+  • Verify `TuningSection.values()` contains all 12 canonical entries including `MORNING_CHECK`.
+  • Verify `TuningSubtitleFormatter.formatMorningCheckSubtitle(...)` produces deterministic live summaries and `MorningCheckSection` exists as a public composable mounted in both `AdvancedTuningScreen` and `AdvancedTuningDialog` with all 7 Morning Check controls.
+  3. *Design Guidelines Contract Verification (`TST-SET-115.3`, `TuningDesignGuidelinesContractTest.kt`)*:
+  • Verify `SensorsGpsFilterSection.kt`, `PhysiologyModelsSection.kt`, and `MorningCheckSection.kt` strictly use `TuningToggleItem`, `SubordinateTuningToggleItem`, `TuningSliderItem`, and `HorizontalDivider` with zero `FilterChip`, raw `Switch(`, or nested `ElevatedCard(`.
+  4. *9-Language Localization Parity (`TST-SET-115.4`, `TranslationParityTest.kt`)*:
+  • Verify 100% translation parity, matching format specifiers, and zero emojis across all 9 locales (`EN, DE, ES, FR, IT, JA, NL, PL, PT`) for all new `MorningCheckSection` and subtitle string resources.
+  5. *Visual Compose Screenshot Verification (`TST-SET-115.5`, `AdvancedTuningSectionsScreenshotTest.kt`, Rule 8.5)*:
+  • Render `SensorsGpsFilterSection`, `MorningCheckSection`, and `PhysiologyModelsSection` in Robolectric Compose, capture `docs/engineering/walkthroughs/img/ATT-8117_tuning_sections.png`, and inspect via `read_file` against the 4-point visual checklist.
+
+---
+
+### TST-SET-117: **Supporter Tier Self-Selection Anchoring & Post-Onboarding Garage Nudge Verification Suite** (`ATT-8108`) [Verified]
+- **Requirement(s)**: `REQ-SET-115` (`REQ-SET-115.1`..`REQ-SET-115.4`)
+- **Component**: `GarageLeagueDetector.kt`, `SettingsDataStore.kt`, `MainActivityWithNavigation.kt`, `ATrainingTrackerApp.kt`, `SupporterScreen.kt`, `SupporterComponents.kt`, `SupporterDebugSection.kt`, `GarageLeagueDetectorTest.kt`, `SupporterPlanCardHierarchyTest.kt`, `SupporterCopyContractTest.kt`, `GarageUpgradeNudgeDialogContractTest.kt`, `TranslationParityTest.kt`, `SupporterCardsScreenshotTest.kt`
+- **Jira**: `ATT-8108`
+- **Status**: Verified
+- **Test Description**:
+  1. *Warm-Engagement Workout Gate & Unconsumed Quota (`TST-SET-117.1`, `GarageLeagueDetectorTest.kt`)*:
+  • Verify `GarageNudgeEvaluator.shouldTriggerNudge(...)` and `GarageLeagueDetector.evaluateNudge()` return `null` whenever `finishedWorkoutCount < 8` (e.g., `0` or `7`), even with Gold/Diamond hardware or Strava Pro, without incrementing nudge counts or setting cooldown timestamps, while `SensorQuotaReconciliationManager` continues enforcing the 2-sensor free-tier quota truthfully.
+  2. *Bounded Seasonal Cooldown & Legacy Flag Migration (`TST-SET-117.2`, `GarageLeagueDetectorTest.kt`)*:
+  • Verify initial nudge triggers once `finishedWorkoutCount >= 8`; after dismissal, verify re-nudge stays suppressed when only `>= 180 days` OR only `>= 25` workouts have elapsed, triggers only when **both** `>= 180 days` AND `>= 25` additional finished workouts have passed, stops permanently once `nudgeCount >= 3`, migrates legacy `hasShownGoldGarageNudge`/`hasShownDiamondGarageNudge` safely, and resets cleanly via `SettingsDataStore.resetGarageNudgeFlags()`.
+  3. *Post-Workout Evaluation & Jubilee / Quota Priority Suppression (`TST-SET-117.3`)*:
+  • Verify post-workout `TRACKING_FINISHED_INTENT` nudge evaluation triggers for Day-0-paired hardware upon crossing `finishedWorkoutCount >= 8`, and strictly yields (remains `null`/suppressed) when `FirstJubileeCelebrationDialog` (`firstJubileeCelebrationState != null`) or `SensorQuotaReconciliationManager` (`keepTwoSensorsEvent != null`) is active.
+  4. *Supporter Tier Persona Subtitles, Garage-Match Badge & Detekt Modularity (`TST-SET-117.4`, `SupporterPlanCardHierarchyTest.kt`, `SupporterCopyContractTest.kt`)*:
+  • Verify all 5 `SupporterBasePlan.PLANS` IDs/prices remain unchanged (`REQ-SET-086.1`), `SupporterScreen` resolves matching `GarageLeague` badge eligibility (`GOLD`/`DIAMOND` strictly above `effectiveTier`), `Rule 38` (`maxLines = 1, softWrap = false`) and `Rule 73` stacked dialog contracts hold, and `SupporterPlanCard` helper extraction resolves `LongMethod`.
+  5. *9-Locale Localization Parity, Zero-Emoji Hygiene & Rule 8.5 Compose PNG (`TST-SET-117.5`, `TranslationParityTest.kt`, `SupporterCardsScreenshotTest.kt`)*:
+  • Execute `TranslationParityTest` and `SupporterCopyContractTest` asserting all 6 new `strings_monetization.xml` keys exist across all 9 locales with zero decorative emojis (`ATT-5400`) and zero defensive buzzwords (`ATT-5659`).
+  • Render `SupporterPlanCard` variants (persona subtitles, `Silver` Recommended anchor, `Gold`/`Diamond` Garage-Match badge) via Robolectric Compose to `docs/engineering/walkthroughs/img/ATT-8108_supporter_cards.png` and inspect with `read_file` against the 4-point visual checklist (`Rule 8.5`).
 
 
 
+
+
+---
+
+### TST-SET-116: **Polar Live Running Cadence & Stride Counter Test Suite (`ATT-8017`)** [Verified]
+- **Requirement(s)**: `REQ-SET-114`
+- **Component**: `PolarLiveRunningCadenceEstimator.kt`, `PolarOnlineStreamingBridge.kt`, `FitFileWriter.kt`
+- **Jira**: `ATT-8017`
+- **Status**: Verified
+- **Test Description**:
+  1. *Polar H10 Sternum `ACC` Accuracy & Autocorrelation (`TST-SET-116.1`)*:
+  • Verify `PolarLiveRunningCadenceEstimator` processes synthetic H10 `ACC` streams (50/100 Hz) across `60–100` strides/min (`120–200` steps/min) using `1.2–4.0 Hz` band-pass + adaptive peak + `5s` autocorrelation within `±2` strides/min without harmonic doubling/halving.
+  2. *Polar Verity Sense `GYRO+ACC` Fusion & Rotation Invariance (`TST-SET-116.2`)*:
+  • Verify `PolarLiveRunningCadenceEstimator` processes synthetic 52 Hz Verity Sense `ACC+GYRO` arm-swing streams (`0.6–2.0 Hz`) within `±2` strides/min across `60–100` strides/min and arbitrary 3D sensor rotations.
+  3. *Standstill Zeroing & 1-Hz Emission (`TST-SET-116.3`)*:
+  • Verify `SensorType.CADENCE` emits steady `1 Hz` updates during motion and drops cleanly to `0.0` within `>= 3s` of standstill via motion-energy gating.
+  4. *First-Stride Baseline Seeding (`TST-SET-116.4`)*:
+  • Verify `PolarOnlineStreamingBridge.syncCadenceSensorRegistration()` calls `mStridesSensor.accumulate(0)` on `BSportType.RUN` registration so stride `1` is counted immediately without baseline swallowing in `MyIntegerAccumulatorSensor`.
+  5. *Canonical Strides/Min FIT Export Parity (`TST-SET-116.5`)*:
+  • Verify `PolarOnlineStreamingBridge` emits half-step strides/min matching `ANTRunSpeedDevice`/`BTLERunSpeedDevice` and `FitFileWriter` (`RecordMesg.cadence`/`SessionMesg.avgCadence` `UINT8` serialization without scaling).
+---
+
+### TST-SET-118: **Polar H10 200 Hz Running Dynamics & FIT Export Test Suite (`ATT-8018`)** [Verified]
+- **Requirement(s)**: `REQ-SET-116`
+- **Component**: `PolarH10RunningDynamicsEstimator.kt`, `PolarOnlineStreamingBridge.kt`, `FitFileWriter.kt`, `SensorType.java`
+- **Jira**: `ATT-8018`
+- **Status**: Verified
+- **Test Description**:
+  1. *200 Hz Tilted-Axis Alignment, VO Double-Integration & GCT Accuracy (`TST-SET-118.1`)*:
+  • Verify `PolarH10RunningDynamicsEstimator` aligns tilted trunk gravity (`~0.25 Hz` LPF), computes drift-free detrended rolling VO (`5.0..13.0 cm` over 5–8 steps), and detects `5 ms`-resolution GCT (`140..400 ms` across `150–195 spm`) within physiological plausibility bounds.
+  2. *Walking GCT Suppression, Standstill Reset & 200 Hz PMD Activation (`TST-SET-118.2`)*:
+  • Verify `< 130 spm` (`< 65 strides/min`) walking cleanly suppresses GCT emission, standstill/disconnect resets state, and `PolarOnlineStreamingBridge` negotiates `200 Hz` `ACC` exclusively for H10 in `BSportType.RUN` while leaving Verity Sense (`52 Hz`) and non-running sports unchanged.
+  3. *SensorType, ActivityType Partition & 9-Language Localization Parity (`TST-SET-118.3`)*:
+  • Verify `SensorType.VERTICAL_OSCILLATION` (`cm`), `SensorType.GROUND_CONTACT_TIME` (`ms`), `ActivityType.RUN_SPEED_AND_CADENCE`, `SensorCategoryAndSelectorContractTest`, and 9-locale `TranslationParityTest` (`EN, DE, ES, FR, IT, JA, NL, PL, PT`).
+  4. *End-to-End Sample Persistence & Summary Extrema (`TST-SET-118.4`)*:
+  • Verify `TrackerService`, `WorkoutDataMapper`, and `WorkoutRepository` (`streamSamples()` & `calculateAndSaveExtrema()`) persist 1-Hz `cm`/`ms` series and Aftermath `AVG`/`MIN`/`MAX` summaries with zero SQLite schema bumps.
+  5. *FIT SDK `mm` (`cm * 10f`) & `ms` Record/Lap/Session Encoding (`TST-SET-118.5`)*:
+  • Verify `FitFileWriterTest` decodes emitted FIT binaries and asserts exact `cm * 10f` (`mm`) `verticalOscillation`/`avgVerticalOscillation` and `ms` `stanceTime`/`avgStanceTime` across `RecordMesg`, `LapMesg`, and `SessionMesg`.

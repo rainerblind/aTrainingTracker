@@ -25,6 +25,7 @@ import org.junit.Test
  * - TST-MIG-045.2: RestoreTabContent layout, CloudDownload icon, and unconditional Google Drive visibility contract
  * - TST-MIG-045.3: ImportBackupTabsScreen disconnected Google Drive dialog dispatch contract
  */
+// Linked test specs: TST-UI-474
 class RestoreCardContractTest {
 
     private val restoreButtonKeys = listOf(

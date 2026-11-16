@@ -70,7 +70,8 @@ public class MySensorManager extends MyDevice {
             DeviceType.RUN_SPEED, // Does this device always contain a cadence sensor???
             DeviceType.BIKE_CADENCE,
             DeviceType.BIKE_SPEED_AND_CADENCE,
-            DeviceType.BIKE_POWER
+            DeviceType.BIKE_POWER,
+            DeviceType.HRM
     };
     /**
      * Priority hierarchy for altitude sensors ({@link SensorType#ALTITUDE}).

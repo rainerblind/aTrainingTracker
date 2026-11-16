@@ -27,6 +27,7 @@ import java.lang.reflect.Modifier
  * Unit tests verifying modernized modal bottom sheet dialogs, selection flows,
  * and centered dialog invariants according to REQ-UI-149 and TST-UI-102 (ATT-900).
  */
+// Linked test specs: TST-UI-104, TST-UI-106, TST-UI-107, TST-UI-109
 class ModalBottomSheetDialogsIntegrityTest {
 
     @Test

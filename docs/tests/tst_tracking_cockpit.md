@@ -3,11 +3,11 @@
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Tests**: 57
+**Total Tests**: 128
 
 ---
 
-### TST-FIL-002: WorkoutSamplesDb [Verified]
+### TST-FIL-002: WorkoutSamplesDb [Implemented]
 - **Requirement(s)**: `REQ-FIL-006`, `REQ-FIL-011`
 - **Component**: `WorkoutSamplesDb`
 - **Test Description**: Verify that `calcExtremaValue` returns `null` (not 0.0) when querying a sensor that has only NULL values or does not exist in the table.
@@ -37,7 +37,7 @@
 - **Test Description**:
   1. *Auto-Calibration Convergence Test*: Feed raw wheel revolutions alongside ground-truth high-accuracy GPS fixes on straight road segments; verify the filter dynamically converges wheel circumference within < 0.3% error.
 
-### TST-FIL-003: **Atomic Altitude Correction** [Verified]
+### TST-FIL-003: **Atomic Altitude Correction** [Implemented]
 - **Requirement(s)**: `REQ-FIL-004`
 - **Component**: **Atomic Altitude Correction**
 - **Jira**: ``ATT-425``
@@ -289,7 +289,7 @@
   7. *Clean-Room Regression Suite*:
   • Run `./gradlew testDebugUnitTest` to guarantee 100% pass rate.
 
-### TST-CON-007: **Battery Remaining Duration Monotonic Countdown and Step-Transition Recalibration Verification** [Verified]
+### TST-CON-007: **Battery Remaining Duration Monotonic Countdown and Step-Transition Recalibration Verification** [Implemented]
 - **Requirement(s)**: `REQ-CON-016`
 - **Component**: **Battery Remaining Duration Monotonic Countdown and Step-Transition Recalibration Verification**
 - **Jira**: ``ATT-1631``
@@ -2968,4 +2968,29 @@
      • Verify 100% translation parity, matching format specifiers, and zero missing keys across all 9 locales for all new string tokens.
   6. *Visual Compose Screenshot Verification Test (`TST-TRK-081.6`, `EditSensorFieldDialogScreenshotTest.kt`)*:
      • Render `EditSensorFieldDialog` in Light and Dark themes and capture `docs/engineering/walkthroughs/img/ATT-7760_color_picker.png` verifying Rule 8.5 4-point visual checklist.
+
+
+### TST-TRK-082: **Decoupled Multi-Color Dynamic Zone Sparkline Rendering Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Tickets**: `ATT-7761`
+- **Requirement(s)**: `REQ-TRK-082` (`REQ-TRK-082.1`..`REQ-TRK-082.4`)
+- **Component**: `SensorSparklineViewTest.kt`, `TrackingViewModelDynamicZoneSparklineTest.kt`, `SensorFieldViewDynamicZoneScreenshotTest.kt`
+- **Test Type**: Unit, ViewModel & Compose Screenshot
+- **Verification Method**: Unit
+- **Procedure**:
+  1. *Decoupled Sparkline Color Resolution Test (`TST-TRK-082.1`, `SensorSparklineViewTest.kt`)*:
+     • Verify `resolveSparklineLineColor` returns `colorScheme.primary` (not `zoneColor`) when `graphColor = "GLOBAL_DEFAULT"` and `sensorType = null` regardless of text zone coloring (`showTextColor` removed from sparkline color resolution).
+     • Verify fixed palette tokens, `"THEME_DEFAULT"`, `"GLOBAL_DEFAULT"`, and `"DYNAMIC_ZONE"` resolve deterministically independent of `zoneDisplayOptions.showTextColor`.
+  2. *Threshold Gradient Stop Mapping, Terminal Dot & Fallback Test (`TST-TRK-082.2`, `SensorSparklineViewTest.kt`)*:
+     • **HR (4 cutoffs -> Z1..Z5)** and **Power (6 cutoffs -> Z1..Z7)**: verify normalized stops in `[0f, 1f]` are monotonically non-decreasing, aligned to `minVal..maxVal` within canvas vertical padding, and terminal dot color matches `samples.last()` zone.
+     • **HRV DFA α1 (inverted polarity)**: verify `alpha1 > t1` maps to `TTColor.Zone2` (green, top / `stop = 0f`), `t2 <= alpha1 <= t1` maps to `TTColor.Zone3` (orange, middle), and `alpha1 < t2` maps to `TTColor.Zone4` (red, bottom / `stop = 1f`).
+     • **Dark/AMOLED Zone 7 Contrast**: verify `TTColor.Zone7` (`#000000`) substitutes a high-contrast dark-surface color when `isDarkSurface(colorScheme) == true`.
+     • **Edge-Case Fallbacks**: verify graceful fallback to solid `lineColor` (null gradient stops / zero crash) for `samples.size == 1`, `range == 0f` (`minVal == maxVal`), `isPlaceholder == true`, and null/empty thresholds.
+  3. *TrackingViewModel Zone Cutoff Projection & Guard Test (`TST-TRK-082.3`, `TrackingViewModelDynamicZoneSparklineTest.kt`)*:
+     • Verify `TrackingViewModel` projects `HR_RUN`/`HR_BIKE` (4 cutoffs), `PWR_BIKE` (6 cutoffs), and `HRV_DFA_A1` (`t1`, `t2`) sparkline zone specs onto `SensorFieldState` only when `showGraph` and `graphColor == "DYNAMIC_ZONE"` (or resolved global dynamic mode).
+     • Verify `SensorType.POWER_TO_WEIGHT` is strictly guarded against receiving raw Watt (`PWR_BIKE`) cutoffs.
+     • Verify `HRV_DFA_A1` zone gradient stops are suppressed when `hrvSignalQualityStatus` is `SMOOTHED_STREAM` or `QUANTIZED_SYNTHETIC`.
+  4. *Visual Compose Screenshot Verification Test (`TST-TRK-082.4`, `SensorFieldViewDynamicZoneScreenshotTest.kt`)*:
+     • Render `SensorFieldView` / `SensorSparklineView` tiles in Light and Dark/AMOLED themes covering HR (5-zone), Power (7-zone incl. Zone 7 dark contrast), HRV DFA α1 (inverted polarity), decoupled fixed-color + `showTextColor = true`, and placeholder/flat-line fallbacks; capture `docs/engineering/walkthroughs/img/ATT-7761_dynamic_zone_sparkline.png` and certify against Rule 8.5 4-point visual checklist.
+
 

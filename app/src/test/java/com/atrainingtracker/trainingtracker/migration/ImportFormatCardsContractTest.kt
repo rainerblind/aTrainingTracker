@@ -20,6 +20,7 @@ import org.junit.Test
  * Structural contract test verifying that [ImportBackupTabsScreen.kt] adheres to the
  * format-partitioned card architecture without Google Drive scan buttons (REQ-UI-293, REQ-UI-362, TST-UI-253, TST-UI-325, ATT-2623, ATT-3489).
  */
+// Linked test specs: TST-UI-458, TST-UI-460
 class ImportFormatCardsContractTest {
 
     @Test

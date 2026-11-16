@@ -24,6 +24,7 @@ import java.util.TimeZone
  * Unit tests verifying longest workout resolution integrity across multi-workout periods.
  * Fulfills REQ-PER-011 / TST-PER-016 for ATT-579.
  */
+// Linked test specs: TST-PER-014
 class PeriodsAggregationTest {
 
     private lateinit var originalTimeZone: TimeZone

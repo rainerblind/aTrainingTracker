@@ -20,6 +20,7 @@ import org.junit.Test
  * Unit tests for [TuningConfig] and [TuningPreferencesDefaults] (TST-SET-062).
  * Verifies default parameter values, clamping boundaries, and safety invariants.
  */
+// Linked test specs: TST-SET-063
 class TuningConfigTest {
 
     @Test
@@ -96,6 +97,7 @@ class TuningConfigTest {
         assertEquals(true, TuningPreferencesDefaults.RADAR_LANE_CHANGE_TICK_ENABLED)
         assertEquals(ClimbScoringFormula.FIETS, config.climbScoringFormula)
         assertEquals(ClimbScoringFormula.FIETS, TuningPreferencesDefaults.DEFAULT_CLIMB_SCORING_FORMULA)
+        // TST-UI-525.1
         assertEquals(true, config.showMorningCheckOnStartScreen)
         assertEquals(true, TuningPreferencesDefaults.DEFAULT_SHOW_MORNING_CHECK_ON_START_SCREEN)
         assertEquals(8, config.morningCheckCutoffHour)
@@ -134,8 +136,9 @@ class TuningConfigTest {
         assertEquals(60, TuningPreferencesDefaults.MAX_ALTITUDE_WINDOW_SEC)
         assertEquals(0.2f, TuningPreferencesDefaults.MIN_SLOPE_SPEED_MPS, 0.001f)
         assertEquals(2.0f, TuningPreferencesDefaults.MAX_SLOPE_SPEED_MPS, 0.001f)
+        // TST-UI-525.1
         assertEquals(6, TuningPreferencesDefaults.MIN_MORNING_CHECK_CUTOFF_HOUR)
-        assertEquals(23, TuningPreferencesDefaults.MAX_MORNING_CHECK_CUTOFF_HOUR)
+        assertEquals(11, TuningPreferencesDefaults.MAX_MORNING_CHECK_CUTOFF_HOUR)
     }
 
     @Test
@@ -208,12 +211,14 @@ class TuningConfigTest {
         )
         assertEquals(6, clampedCutoffLow)
 
-        val rawCutoffHigh = 25
-        val clampedCutoffHigh = rawCutoffHigh.coerceIn(
-            TuningPreferencesDefaults.MIN_MORNING_CHECK_CUTOFF_HOUR,
-            TuningPreferencesDefaults.MAX_MORNING_CHECK_CUTOFF_HOUR
-        )
-        assertEquals(23, clampedCutoffHigh)
+        // TST-UI-525.1: clamp persisted legacy >11 and out-of-range values into 6..11
+        for (rawCutoffHigh in listOf(12, 23, 25)) {
+            val clampedCutoffHigh = rawCutoffHigh.coerceIn(
+                TuningPreferencesDefaults.MIN_MORNING_CHECK_CUTOFF_HOUR,
+                TuningPreferencesDefaults.MAX_MORNING_CHECK_CUTOFF_HOUR
+            )
+            assertEquals(11, clampedCutoffHigh)
+        }
     }
 
     @Test

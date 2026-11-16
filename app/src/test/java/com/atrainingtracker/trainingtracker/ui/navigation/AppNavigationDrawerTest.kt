@@ -32,6 +32,7 @@ import org.junit.Test
  * Traceability:
  * - TST-UI-117.1: Drawer item routes to NavRoutes.START_LOCATIONS and closes drawer.
  */
+// Linked test specs: TST-UI-463
 class AppNavigationDrawerTest {
 
     @Test

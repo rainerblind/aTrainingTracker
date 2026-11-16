@@ -24,6 +24,24 @@ import com.atrainingtracker.trainingtracker.settings.TuningConfig
 import com.atrainingtracker.trainingtracker.settings.ZoneDisplayOptions
 
 /**
+ * Immutable zone threshold specification for multi-color Dynamic Zone sparkline rendering
+ * (REQ-TRK-082.2, ATT-7761).
+ *
+ * @property cutoffs Ascending boundary thresholds (4 HR cutoffs for Zones 1–5, 6 Power cutoffs
+ *   for Zones 1–7, or `[t2, t1]` for HRV DFA alpha 1).
+ * @property zoneColors Zone colors aligned with intervals around [cutoffs] in ascending metric
+ *   value order (`zoneColors.size == cutoffs.size + 1`).
+ * @property invertedPolarity True for inverted-strain metrics such as HRV DFA alpha 1 where
+ *   higher values (`> t1`) correspond to lower strain ([TTColor.Zone2] green) and lower values
+ *   (`< t2`) correspond to higher strain ([TTColor.Zone4] red).
+ */
+data class SparklineZoneThresholds(
+    val cutoffs: List<Float>,
+    val zoneColors: List<Color>,
+    val invertedPolarity: Boolean = false
+)
+
+/**
  * A simple, plain data class that represents the complete state of a single sensor field on the UI.
  * This is the "model" that the Composables will be fed. It contains no business logic.
  */
@@ -76,6 +94,7 @@ data class SensorFieldState(
     val sparklineSamples: List<Float> = emptyList(),
     val sparklineSpanSeconds: Int = 0,
     val graphColor: String = "GLOBAL_DEFAULT",
+    val sparklineZoneThresholds: SparklineZoneThresholds? = null,
 
     // Proportional horizontal width weight (REQ-UI-437, ATT-4861)
     val colWeight: Float = 1.0f,

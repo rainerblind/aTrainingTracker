@@ -625,12 +625,7 @@ object PolarVeritySenseOfflineController {
         PolarOfflineCapabilityStore.markOfflineRecordingCapable(context, macAddress)
         api.setLocalTime(polarId, LocalDateTime.now())
         stopActiveHrIfRunning(api, polarId)
-        api.startOfflineRecording(
-            identifier = polarId,
-            feature = PolarBleApi.PolarDeviceDataType.HR,
-            settings = null,
-            secret = null
-        )
+        startOfflineRecordingGuarded(api, polarId, PolarBleApi.PolarDeviceDataType.HR)
 
         armedDeviceId = polarId
         armedMacAddress = macAddress
@@ -638,6 +633,30 @@ object PolarVeritySenseOfflineController {
         lastArmingOutcome = ArmingOutcome.ARMED
         lastArmingError = null
         Log.i(TAG, "Armed Polar Verity Sense offline HR recording on $polarId")
+        return true
+    }
+
+    /**
+     * Starts an offline recording channel while enforcing Verity Sense per-channel `ACC` mutual
+     * exclusion against active [PolarOnlineStreamingBridge] online `ACC` streams (`REQ-SET-112.3`).
+     */
+    internal suspend fun startOfflineRecordingGuarded(
+        api: PolarBleApi,
+        polarId: String,
+        feature: PolarBleApi.PolarDeviceDataType
+    ): Boolean {
+        if (feature == PolarBleApi.PolarDeviceDataType.ACC &&
+            !PolarOfflineGattCoordinator.tryAcquireAccChannel(polarId, PolarOfflineGattCoordinator.ACC_OWNER_OFFLINE)
+        ) {
+            Log.w(TAG, "Refusing offline ACC recording on $polarId: ACC channel owned by online IMU stream.")
+            return false
+        }
+        api.startOfflineRecording(
+            identifier = polarId,
+            feature = feature,
+            settings = null,
+            secret = null
+        )
         return true
     }
 

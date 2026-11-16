@@ -25,6 +25,7 @@ import org.junit.Test
 /**
  * Unit tests verifying speed-dependent camera zoom curve calculation and tilt angle bounds (REQ-MAP-042 / TST-MAP-044.1 / TST-MAP-044.3).
  */
+// Linked test specs: TST-MAP-052
 class FollowMeCameraZoomTest {
 
     @Test

@@ -46,18 +46,16 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
-import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
 import com.atrainingtracker.trainingtracker.ui.dialogs.PowerHrDynamicsInfoDialog
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.SubordinateTuningToggleItem
-import com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningSliderItem
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningToggleItem
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
-import java.util.Locale
 
 /**
- * Physiology & Training Models accordion category in Advanced Settings (REQ-UI-403 / REQ-UI-424 / REQ-REV-009).
+ * Physiology & Training Models accordion category in Advanced Settings (REQ-UI-403 / REQ-UI-424 / REQ-REV-009 / REQ-SET-113.1).
  *
- * Provides progressive disclosure toggles for 5 training science models:
+ * Provides progressive disclosure toggles for 5 training science models, the HRV zones link card,
+ * and Workout Card RPE & Feel visibility:
  * 1. Coggan Power Metrics (NP, IF, TSS, VI) — Default: ON
  *    - Show in Workout Summary subordinate toggle — Default: ON (Rule 59)
  * 2. Performance Management (PMC: ATL, CTL, TSB, ACWR, Ramp Rate) — Default: OFF
@@ -89,26 +87,6 @@ fun PhysiologyModelsSection(
     showCardioPowerInWorkoutSummary: Boolean = true,
     onShowCardioPowerInWorkoutSummaryChange: (Boolean) -> Unit = {},
     onCardioPowerInfoClick: (() -> Unit)? = null,
-    dfaA1ThresholdT1: Float = TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T1,
-    onDfaA1ThresholdT1Change: (Float) -> Unit = {},
-    dfaA1ThresholdT2: Float = TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T2,
-    onDfaA1ThresholdT2Change: (Float) -> Unit = {},
-    hrvArtifactGateThresholdPercent: Float = TuningPreferencesDefaults.DEFAULT_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT,
-    onHrvArtifactGateThresholdPercentChange: (Float) -> Unit = {},
-    enableMorningSleepAndWellness: Boolean = false,
-    onEnableMorningSleepAndWellnessChange: (Boolean) -> Unit = {},
-    enableSleepDurationAndQuality: Boolean = true,
-    onEnableSleepDurationAndQualityChange: (Boolean) -> Unit = {},
-    enableMorningEnergy: Boolean = true,
-    onEnableMorningEnergyChange: (Boolean) -> Unit = {},
-    enableMuscleSoreness: Boolean = false,
-    onEnableMuscleSorenessChange: (Boolean) -> Unit = {},
-    enableContextTags: Boolean = false,
-    onEnableContextTagsChange: (Boolean) -> Unit = {},
-    showMorningCheckOnStartScreen: Boolean = TuningPreferencesDefaults.DEFAULT_SHOW_MORNING_CHECK_ON_START_SCREEN,
-    onShowMorningCheckOnStartScreenChange: (Boolean) -> Unit = {},
-    morningCheckCutoffHour: Int = TuningPreferencesDefaults.DEFAULT_MORNING_CHECK_CUTOFF_HOUR,
-    onMorningCheckCutoffHourChange: (Int) -> Unit = {},
     showRpeAndFeel: Boolean = false,
     onShowRpeAndFeelChange: (Boolean) -> Unit = {}
 ) {
@@ -123,16 +101,6 @@ fun PhysiologyModelsSection(
     val showCpCallback = remember(onShowCriticalPowerInWorkoutSummaryChange) { onShowCriticalPowerInWorkoutSummaryChange }
     val cardioPowerCallback = remember(onEnableCardioPowerDynamicsChange) { onEnableCardioPowerDynamicsChange }
     val showCardioPowerCallback = remember(onShowCardioPowerInWorkoutSummaryChange) { onShowCardioPowerInWorkoutSummaryChange }
-    val dfaT1Callback = remember(onDfaA1ThresholdT1Change) { onDfaA1ThresholdT1Change }
-    val dfaT2Callback = remember(onDfaA1ThresholdT2Change) { onDfaA1ThresholdT2Change }
-    val hrvArtifactGateCallback = remember(onHrvArtifactGateThresholdPercentChange) { onHrvArtifactGateThresholdPercentChange }
-    val morningSleepAndWellnessCallback = remember(onEnableMorningSleepAndWellnessChange) { onEnableMorningSleepAndWellnessChange }
-    val sleepDurationAndQualityCallback = remember(onEnableSleepDurationAndQualityChange) { onEnableSleepDurationAndQualityChange }
-    val morningEnergyCallback = remember(onEnableMorningEnergyChange) { onEnableMorningEnergyChange }
-    val muscleSorenessCallback = remember(onEnableMuscleSorenessChange) { onEnableMuscleSorenessChange }
-    val contextTagsCallback = remember(onEnableContextTagsChange) { onEnableContextTagsChange }
-    val showMorningCheckOnStartScreenCallback = remember(onShowMorningCheckOnStartScreenChange) { onShowMorningCheckOnStartScreenChange }
-    val morningCheckCutoffHourCallback = remember(onMorningCheckCutoffHourChange) { onMorningCheckCutoffHourChange }
     val rpeAndFeelCallback = remember(onShowRpeAndFeelChange) { onShowRpeAndFeelChange }
 
     Column(
@@ -274,91 +242,9 @@ fun PhysiologyModelsSection(
             }
         }
 
-        TuningSliderItem(
-            title = stringResource(R.string.tuning_hrv_artifact_gate_title),
-            valueText = String.format(Locale.US, "%.1f%%", hrvArtifactGateThresholdPercent),
-            helperText = stringResource(R.string.tuning_hrv_artifact_gate_desc),
-            defaultText = stringResource(
-                R.string.tuning_hrv_artifact_gate_default,
-                TuningPreferencesDefaults.DEFAULT_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT
-            ),
-            value = hrvArtifactGateThresholdPercent,
-            onValueChange = { newValue ->
-                val rounded = Math.round(newValue * 10f) / 10f
-                val clamped = rounded.coerceIn(
-                    TuningPreferencesDefaults.MIN_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT,
-                    TuningPreferencesDefaults.MAX_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT
-                )
-                hrvArtifactGateCallback(clamped)
-            },
-            valueRange = 3.0f..5.0f,
-            steps = 3
-        )
-
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
 
-        // Model 7: Morning Sleep & Wellness Tracking (REQ-HRV-038)
-        TuningToggleItem(
-            title = stringResource(R.string.tuning_morning_sleep_wellness_title),
-            isChecked = enableMorningSleepAndWellness,
-            onCheckedChange = morningSleepAndWellnessCallback,
-            summary = stringResource(R.string.tuning_morning_sleep_wellness_desc)
-        )
-        if (enableMorningSleepAndWellness) {
-            SubordinateTuningToggleItem(
-                title = stringResource(R.string.tuning_morning_sleep_duration_quality_title),
-                isChecked = enableSleepDurationAndQuality,
-                onCheckedChange = sleepDurationAndQualityCallback
-            )
-            SubordinateTuningToggleItem(
-                title = stringResource(R.string.tuning_morning_energy_title),
-                isChecked = enableMorningEnergy,
-                onCheckedChange = morningEnergyCallback
-            )
-            SubordinateTuningToggleItem(
-                title = stringResource(R.string.tuning_morning_muscle_soreness_title),
-                isChecked = enableMuscleSoreness,
-                onCheckedChange = muscleSorenessCallback
-            )
-            SubordinateTuningToggleItem(
-                title = stringResource(R.string.tuning_morning_context_tags_title),
-                isChecked = enableContextTags,
-                onCheckedChange = contextTagsCallback
-            )
-        }
-
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-
-        // Morning HRV Check on Start Screen (REQ-UI-525.1)
-        TuningToggleItem(
-            title = stringResource(R.string.tuning_show_morning_check_on_start_screen_title),
-            isChecked = showMorningCheckOnStartScreen,
-            onCheckedChange = showMorningCheckOnStartScreenCallback,
-            summary = stringResource(R.string.tuning_show_morning_check_on_start_screen_desc)
-        )
-        if (showMorningCheckOnStartScreen) {
-            TuningSliderItem(
-                title = stringResource(R.string.tuning_morning_check_cutoff_hour_title),
-                valueText = String.format(Locale.US, "%02d:00", morningCheckCutoffHour),
-                helperText = stringResource(R.string.tuning_morning_check_cutoff_hour_desc, morningCheckCutoffHour),
-                defaultText = String.format(Locale.US, "%02d:00", TuningPreferencesDefaults.DEFAULT_MORNING_CHECK_CUTOFF_HOUR),
-                value = morningCheckCutoffHour.toFloat(),
-                onValueChange = { hourFloat ->
-                    morningCheckCutoffHourCallback(
-                        kotlin.math.round(hourFloat).toInt().coerceIn(
-                            TuningPreferencesDefaults.MIN_MORNING_CHECK_CUTOFF_HOUR,
-                            TuningPreferencesDefaults.MAX_MORNING_CHECK_CUTOFF_HOUR
-                        )
-                    )
-                },
-                valueRange = TuningPreferencesDefaults.MIN_MORNING_CHECK_CUTOFF_HOUR.toFloat()..TuningPreferencesDefaults.MAX_MORNING_CHECK_CUTOFF_HOUR.toFloat(),
-                steps = TuningPreferencesDefaults.MAX_MORNING_CHECK_CUTOFF_HOUR - TuningPreferencesDefaults.MIN_MORNING_CHECK_CUTOFF_HOUR - 1
-            )
-        }
-
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-
-        // Model 8: Perceived Exertion (RPE) & Feel (REQ-WKO-036)
+        // Model 6: Perceived Exertion (RPE) & Feel (REQ-WKO-036)
         TuningToggleItem(
             title = stringResource(R.string.settings_workout_card_rpe_feel),
             isChecked = showRpeAndFeel,
@@ -401,7 +287,6 @@ private fun PhysiologyModelsSectionAllEnabledPreview() {
                 enableAerobicEfficiencyModel = true, onEnableAerobicEfficiencyModelChange = {},
                 enableCriticalPowerModel = true, onEnableCriticalPowerModelChange = {},
                 enableCardioPowerDynamics = true, onEnableCardioPowerDynamicsChange = {},
-                enableMorningSleepAndWellness = true, onEnableMorningSleepAndWellnessChange = {},
                 showRpeAndFeel = true, onShowRpeAndFeelChange = {}
             )
         }

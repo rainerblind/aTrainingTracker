@@ -26,6 +26,7 @@ import org.junit.Test
  * Verifies that the modular category and screen composables are decoupled into individual classes.
  * Refactored to pure JVM reflection per docs/coding_standards.md §5.4 and REQ-PRO-049.
  */
+// Linked test specs: TST-UI-236
 class AdvancedTuningModularityTest {
 
     @Test
@@ -45,7 +46,8 @@ class AdvancedTuningModularityTest {
             "com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.NavigationSectionKt",
             "com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.SensorSearchTuningSectionKt",
             "com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.ClusterTuningSectionKt",
-            "com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.PhysiologyModelsSectionKt"
+            "com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.PhysiologyModelsSectionKt",
+            "com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.MorningCheckSectionKt"
         )
 
         for (className in expectedClasses) {
@@ -56,6 +58,7 @@ class AdvancedTuningModularityTest {
 
     @Test
     fun testCategoryComposables_areDecoupledAndExposed() {
+        // TST-SET-115
         val categoryClasses = listOf(
             "com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.CockpitTypographySectionKt",
             "com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.AmoledBatterySaverSectionKt",
@@ -65,7 +68,8 @@ class AdvancedTuningModularityTest {
             "com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.NavigationSectionKt",
             "com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.SensorSearchTuningSectionKt",
             "com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.ClusterTuningSectionKt",
-            "com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.PhysiologyModelsSectionKt"
+            "com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.PhysiologyModelsSectionKt",
+            "com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.MorningCheckSectionKt"
         )
 
         for (className in categoryClasses) {

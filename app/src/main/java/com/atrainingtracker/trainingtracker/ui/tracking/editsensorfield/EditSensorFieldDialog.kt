@@ -71,6 +71,7 @@ import com.atrainingtracker.trainingtracker.ui.theme.safePainterResource
 import com.atrainingtracker.trainingtracker.ui.tracking.DEFAULT_PREVIEW_SPARKLINE_SAMPLES
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorSparklineView
 import com.atrainingtracker.trainingtracker.ui.tracking.getDisplayName
+import com.atrainingtracker.trainingtracker.ui.tracking.resolvePreviewSparklineZoneThresholds
 import com.atrainingtracker.trainingtracker.ui.tracking.resolveSparklineLineColor
 import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
@@ -438,15 +439,19 @@ fun EditSensorFieldDialog(
                         val previewLineColor = resolveSparklineLineColor(
                             graphColor = uiState.graphColor,
                             zoneColor = Color.Transparent,
-                            showTextColor = false,
                             sensorType = uiState.selectedSensorType,
                             colorScheme = MaterialTheme.colorScheme,
                             context = context
+                        )
+                        val previewZoneThresholds = resolvePreviewSparklineZoneThresholds(
+                            sensorType = uiState.selectedSensorType,
+                            graphColor = uiState.graphColor
                         )
                         SensorSparklineView(
                             samples = DEFAULT_PREVIEW_SPARKLINE_SAMPLES,
                             spanSeconds = if (uiState.graphHorizonSeconds > 0) uiState.graphHorizonSeconds else 300,
                             lineColor = previewLineColor,
+                            zoneThresholds = previewZoneThresholds,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(44.dp)

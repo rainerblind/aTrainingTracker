@@ -317,4 +317,7 @@
     <string name="tuning_show_morning_check_on_start_screen_desc">心拍センサーがペアリングされている場合、ワークアウト前にスタート画面に朝のHRVチェックを開始するボタンを表示します。</string>
     <string name="tuning_morning_check_cutoff_hour_title">モーニングチェック終了時刻</string>
     <string name="tuning_morning_check_cutoff_hour_desc">スタート画面に %d:00 まで表示されます。</string>
+    <string name="tuning_cat_morning_check">朝のチェックとウェルネス</string>
+    <string name="tuning_morning_check_start_short">スタート画面 (%02d:00まで)</string>
+    <string name="tuning_morning_check_none_enabled">無効</string>
 </resources>

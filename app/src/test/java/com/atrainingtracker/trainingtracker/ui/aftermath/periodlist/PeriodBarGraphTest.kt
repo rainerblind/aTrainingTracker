@@ -36,6 +36,7 @@ import java.util.Locale
  * sport stacking, metric modes, and imperial/metric unit parity
  * (REQ-PER-018, REQ-PER-023, TST-PER-024, TST-PER-029, TST-PER-036).
  */
+// Linked test specs: TST-PRO-080
 class PeriodBarGraphTest {
 
     private val utcZone = ZoneOffset.UTC

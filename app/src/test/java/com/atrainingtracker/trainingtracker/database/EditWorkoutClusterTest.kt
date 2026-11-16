@@ -38,6 +38,7 @@ import java.time.LocalDateTime
  * Unit tests verifying explicit workout cluster management (unassign, create new, assign)
  * in accordance with REQ-SET-059 and TST-SET-050 (ATT-318, ATT-666).
  */
+// Linked test specs: TST-SET-043
 class EditWorkoutClusterTest {
 
     private lateinit var mockContext: Context

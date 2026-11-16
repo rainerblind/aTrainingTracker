@@ -66,6 +66,7 @@ data class AftermathMapUIState(
     val powerZoneDistribution: ZoneDistributionData? = null,
     val gradeZoneDistribution: ZoneDistributionData? = null,
     val telemetryPath: List<PathPoint> = emptyList(),
+    val multiSensorOverlays: Map<TelemetryMetricType, List<TelemetrySourceSeries>> = emptyMap(),
     val hrThresholds: HeartRateZoneThresholds? = null,
     val powerThresholds: PowerZoneThresholds? = null,
     val recentSessions: List<HrvSessionThreshold> = emptyList(),
@@ -244,14 +245,20 @@ class TrackOnMapAftermathViewModel @JvmOverloads constructor(
                     }
                     _uiState.value = _uiState.value.copy(
                         tracks = tracksToSet,
-                        availableTrackTypes = fullTracks.map { it.type }.toSet()
+                        availableTrackTypes = fullTracks.map { it.type }.toSet(),
+                        multiSensorOverlays = telemetry?.multiSensorOverlays ?: emptyMap()
                     )
                 }
             } else {
-                val telemetryPoints = workoutRepository.getWorkoutTelemetryPoints(workoutId)
+                val (telemetryPoints, tracklessOverlays) = try {
+                    workoutRepository.loadTracklessWorkoutTelemetry(workoutId)
+                } catch (_: Throwable) {
+                    workoutRepository.getWorkoutTelemetryPoints(workoutId) to emptyMap()
+                }
                 withContext(Dispatchers.Main) {
                     _uiState.value = _uiState.value.copy(
-                        telemetryPath = telemetryPoints
+                        telemetryPath = telemetryPoints,
+                        multiSensorOverlays = tracklessOverlays
                     )
                 }
             }

@@ -366,7 +366,7 @@ object TuningPreferencesDefaults {
     const val DEFAULT_SHOW_MORNING_CHECK_ON_START_SCREEN = true
     const val DEFAULT_MORNING_CHECK_CUTOFF_HOUR = 8
     const val MIN_MORNING_CHECK_CUTOFF_HOUR = 6
-    const val MAX_MORNING_CHECK_CUTOFF_HOUR = 23
+    const val MAX_MORNING_CHECK_CUTOFF_HOUR = 11
 
     const val DEFAULT_POOL_LENGTH_METERS = 25.0f
     const val MIN_POOL_LENGTH_METERS = 10.0f

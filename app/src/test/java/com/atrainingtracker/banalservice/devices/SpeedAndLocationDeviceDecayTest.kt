@@ -50,6 +50,7 @@ import org.junit.Test
  * pace nullification, zero-division protection, and distance accumulation immunity
  * (REQ-TRK-013, TST-TRK-005, ATT-2616).
  */
+// Linked test specs: TST-TRK-006
 class SpeedAndLocationDeviceDecayTest {
 
     private lateinit var mockContext: Context

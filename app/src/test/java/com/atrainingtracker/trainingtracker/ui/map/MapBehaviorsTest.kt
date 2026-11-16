@@ -27,6 +27,7 @@ import org.junit.Test
  * Unit and structural contract tests for MapBehaviors camera lifecycle,
  * deferred live fix alignment, and zoom calculation (REQ-MAP-059.2 / TST-MAP-061.3).
  */
+// Linked test specs: TST-MAP-062
 class MapBehaviorsTest {
 
     @Test

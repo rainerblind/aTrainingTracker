@@ -67,6 +67,7 @@ class TrackOnMapAftermathViewModelFallbackTest {
         coEvery { mockWorkoutRepo.getHeartRateZoneDistribution(any(), any()) } returns null
         coEvery { mockWorkoutRepo.getPowerZoneDistribution(any()) } returns null
         coEvery { mockWorkoutRepo.getWorkoutTelemetryPoints(any()) } returns emptyList()
+        coEvery { mockWorkoutRepo.loadTracklessWorkoutTelemetry(any()) } returns (emptyList<PathPoint>() to emptyMap())
 
         mockkObject(SegmentsRepository.Companion)
         val mockSegmentsRepo = mockk<SegmentsRepository>(relaxed = true)

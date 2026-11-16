@@ -317,4 +317,7 @@
     <string name="tuning_show_morning_check_on_start_screen_desc">Affiche un bouton sur l\'écran de démarrage avant l\'entraînement pour lancer le contrôle VRC matinal si un capteur de fréquence cardiaque est appairé.</string>
     <string name="tuning_morning_check_cutoff_hour_title">Heure limite du contrôle matinal</string>
     <string name="tuning_morning_check_cutoff_hour_desc">Affiché sur l\'écran d\'accueil jusqu\'à %d:00.</string>
+    <string name="tuning_cat_morning_check">Contrôles matinaux &amp; bien-être</string>
+    <string name="tuning_morning_check_start_short">Bouton accueil (jusqu\'à %02d:00)</string>
+    <string name="tuning_morning_check_none_enabled">Désactivé</string>
 </resources>

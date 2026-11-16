@@ -29,6 +29,7 @@ import org.junit.Test
  * Unit tests verifying LapDisplayMode enum, WorkoutCardSectionPreferences default value,
  * and deserialization safety with defensive fallback (REQ-UI-229, TST-UI-183, TST-UI-191, ATT-1870, ATT-1988).
  */
+// Linked test specs: TST-UI-188
 class LapDisplayModePreferencesTest {
 
     @Test

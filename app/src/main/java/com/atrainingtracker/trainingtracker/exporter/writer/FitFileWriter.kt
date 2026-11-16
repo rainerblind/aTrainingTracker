@@ -107,7 +107,7 @@ inline fun <R> FileEncoder.use(block: (FileEncoder) -> R): R {
  * - REQ-DAT-042.5: Zero-SQLite Exporter Invariant & O(1) Memory Streaming via WorkoutRepository.
  * - REQ-EXP-043: Cycling Pedal Dynamics Serialization & Online Accumulator.
  * - REQ-EXP-042: Bike Radar Event & Developer Fields Serialization.
- * - REQ-EXP-041 / REQ-MIG-053: Lossless FIT Metadata Developer Fields Serialization.
+ * - REQ-MIG-053: Lossless FIT Metadata Developer Fields Serialization.
  */
 class FitFileWriter(context: Context) : BaseFileWriter(context.applicationContext ?: context) {
 
@@ -116,6 +116,7 @@ class FitFileWriter(context: Context) : BaseFileWriter(context.applicationContex
         private const val DEBUG: Boolean = false
 
         private const val SEMICIRCLES_FACTOR: Double = 2147483648.0 / 180.0
+        private const val CM_TO_MM: Double = 10.0
         private val DATE_TIME_FORMATTER: DateTimeFormatter =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss", Locale.US)
 
@@ -189,6 +190,42 @@ class FitFileWriter(context: Context) : BaseFileWriter(context.applicationContex
                 if (acc.psCombCount > 0) {
                     sessionMesg.setAvgCombinedPedalSmoothness((acc.psCombSum / acc.psCombCount).toFloat())
                 }
+            }
+        }
+
+        private fun applyRunningDynamicsToLap(lapMesg: LapMesg, acc: RunningDynamicsAccumulator?) {
+            if (acc == null) return
+            if (acc.voCount > 0) {
+                val avgVoMm = ((acc.voSumCm / acc.voCount) * CM_TO_MM).toFloat()
+                lapMesg.setAvgVerticalOscillation(avgVoMm)
+            }
+            if (acc.gctCount > 0) {
+                val avgGctMs = (acc.gctSumMs / acc.gctCount).toFloat()
+                lapMesg.setAvgStanceTime(avgGctMs)
+            }
+        }
+
+        private fun applyRunningDynamicsToSession(
+            sessionMesg: SessionMesg,
+            acc: RunningDynamicsAccumulator?,
+            avgVoFallbackCm: Double?,
+            avgGctFallbackMs: Double?
+        ) {
+            val voCm = if (acc != null && acc.voCount > 0) {
+                acc.voSumCm / acc.voCount
+            } else {
+                avgVoFallbackCm
+            }
+            if (voCm != null && !voCm.isNaN() && voCm > 0.0) {
+                sessionMesg.setAvgVerticalOscillation((voCm * CM_TO_MM).toFloat())
+            }
+            val gctMs = if (acc != null && acc.gctCount > 0) {
+                acc.gctSumMs / acc.gctCount
+            } else {
+                avgGctFallbackMs
+            }
+            if (gctMs != null && !gctMs.isNaN() && gctMs > 0.0) {
+                sessionMesg.setAvgStanceTime(gctMs.toFloat())
             }
         }
     }
@@ -505,6 +542,8 @@ class FitFileWriter(context: Context) : BaseFileWriter(context.applicationContex
             val prevVehCount = intArrayOf(0)
             val sessionPedalAcc = PedalDynamicsAccumulator()
             val lapPedalAccMap = HashMap<Int, PedalDynamicsAccumulator>()
+            val sessionRdAcc = RunningDynamicsAccumulator()
+            val lapRdAccMap = HashMap<Int, RunningDynamicsAccumulator>()
 
             try {
                 WorkoutRepository.getInstance(mContext).streamSamples(exportInfo.fileBaseName) { sample ->
@@ -629,8 +668,19 @@ class FitFileWriter(context: Context) : BaseFileWriter(context.applicationContex
                         }
                     }
 
-                    // Accumulate online pedal dynamics (REQ-EXP-043.3)
+                    // Running Dynamics (REQ-SET-116.4 / ATT-8018: FIT SDK expects mm and ms)
+                    val voCm = sample.verticalOscillationCm
+                    if (voCm != null && !voCm.isNaN() && voCm in 1.0..25.0) {
+                        record.setVerticalOscillation((voCm * CM_TO_MM).toFloat())
+                    }
+                    val gctMs = sample.groundContactTimeMs
+                    if (gctMs != null && !gctMs.isNaN() && gctMs in 50.0..1000.0) {
+                        record.setStanceTime(gctMs.toFloat())
+                    }
+
+                    // Accumulate online pedal and running dynamics (REQ-EXP-043.3, REQ-SET-116.4)
                     sessionPedalAcc.add(sample)
+                    sessionRdAcc.add(sample)
                     val sampleLap = if (sample.lapNr > 0) sample.lapNr else 1
                     var lapAcc = lapPedalAccMap[sampleLap]
                     if (lapAcc == null) {
@@ -638,6 +688,8 @@ class FitFileWriter(context: Context) : BaseFileWriter(context.applicationContex
                         lapPedalAccMap[sampleLap] = lapAcc
                     }
                     lapAcc.add(sample)
+                    val lapRdAcc = lapRdAccMap.getOrPut(sampleLap) { RunningDynamicsAccumulator() }
+                    lapRdAcc.add(sample)
 
                     // Temperature
                     if (sample.temperature != null) {
@@ -797,6 +849,8 @@ class FitFileWriter(context: Context) : BaseFileWriter(context.applicationContex
                         lapAcc = lapPedalAccMap[lapSeq]
                     }
                     applyPedalDynamicsToLap(lapMesg, lapAcc ?: sessionPedalAcc)
+                    val lapRdAcc = lapRdAccMap[lap.lapNr.toInt()] ?: lapRdAccMap[lapSeq]
+                    applyRunningDynamicsToLap(lapMesg, lapRdAcc ?: sessionRdAcc)
                     encoder.write(lapMesg)
                     lapSeq++
                 }
@@ -816,6 +870,7 @@ class FitFileWriter(context: Context) : BaseFileWriter(context.applicationContex
                     setSubSport(subSport)
                 }
                 applyPedalDynamicsToLap(lapMesg, sessionPedalAcc)
+                applyRunningDynamicsToLap(lapMesg, sessionRdAcc)
                 encoder.write(lapMesg)
             }
 
@@ -870,6 +925,10 @@ class FitFileWriter(context: Context) : BaseFileWriter(context.applicationContex
             if (maxSpeed != null) sessionMesg.setMaxSpeed(maxSpeed.toFloat())
             val avgSpeed = repo.getExtremaValue(resolvedWorkoutId, SensorType.SPEED_mps, ExtremaType.AVG)
             if (avgSpeed != null) sessionMesg.setAvgSpeed(avgSpeed.toFloat())
+
+            val avgVoFallback = repo.getExtremaValue(resolvedWorkoutId, SensorType.VERTICAL_OSCILLATION, ExtremaType.AVG)
+            val avgGctFallback = repo.getExtremaValue(resolvedWorkoutId, SensorType.GROUND_CONTACT_TIME, ExtremaType.AVG)
+            applyRunningDynamicsToSession(sessionMesg, sessionRdAcc, avgVoFallback, avgGctFallback)
 
             // Populate standard FIT session power/stress metrics (REQ-MIG-053.2 / ATT-7747)
             var np = if (header?.normalizedPower != null) {
@@ -1065,6 +1124,29 @@ class FitFileWriter(context: Context) : BaseFileWriter(context.applicationContex
             if (psComb != null && !psComb.isNaN() && psComb in 0.0..100.0) {
                 psCombSum += psComb
                 psCombCount++
+            }
+        }
+    }
+
+    /**
+     * Bounded O(1) online accumulator for Polar H10 Running Dynamics averages (`REQ-SET-116.4`).
+     */
+    private class RunningDynamicsAccumulator {
+        var voSumCm: Double = 0.0
+        var voCount: Int = 0
+        var gctSumMs: Double = 0.0
+        var gctCount: Int = 0
+
+        fun add(sample: WorkoutSampleRecord) {
+            val vo = sample.verticalOscillationCm
+            if (vo != null && !vo.isNaN() && vo in 1.0..25.0) {
+                voSumCm += vo
+                voCount++
+            }
+            val gct = sample.groundContactTimeMs
+            if (gct != null && !gct.isNaN() && gct in 50.0..1000.0) {
+                gctSumMs += gct
+                gctCount++
             }
         }
     }

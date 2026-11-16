@@ -1,74 +1,41 @@
-# Stage 5: Walkthrough & Verification - ATT-7740: Morning HRV Cutoff Hour Default to 08:00 and Upper Bound Extension
+# Stage 5 Walkthrough: ATT-7740 - Morning HRV Cutoff Hour Default 08:00 & Max Bound 11:00
 
-**Ticket**: [ATT-7740](https://rainerblind.atlassian.net/browse/ATT-7740)  
-**Parent Epic**: [ATT-3539](https://rainerblind.atlassian.net/browse/ATT-3539) (*Heart Rate Variability (HRV)*)  
-**Target Release**: `V5.0.0`  
-**Active Sprint**: `Sprint 2026-46.6`  
-**Requirement Mapping**: `REQ-UI-525` / `REQ-UI-525.1`  
-**Test Mapping**: `TST-UI-525` / `TST-UI-525.1`  
-**Branch**: `feat/ATT-7740`  
-**Author**: AI Agent 1 (Implementer)  
-**Date**: 2026-11-14  
+**Ticket**: [ATT-7740](https://rainerblind.atlassian.net/browse/ATT-7740) | **Sub-task**: `[Test]` (Pending `submit-stage`)
+**Parent Epic**: [ATT-3539](https://rainerblind.atlassian.net/browse/ATT-3539) (*Heart Rate Variability (HRV)*)
+**Target Release**: `V5.0.0` | **Active Sprint**: `2026-47.1` | **Branch**: `feature/ATT-7740`
+**Requirement Mapping**: `REQ-UI-525` (`REQ-UI-525.1`)
+**Test Spec Mapping**: `TST-UI-525` (`TST-UI-525.1`, `TST-UI-525.4`, `TST-UI-525.6`, `TST-UI-525.7`)
+**Author**: AI Agent 1 (Implementer, `subagent_pro`) | **Date**: 2026-11-16
 
 ---
 
-## 1. Executive Summary & Verification Overview
-
-This deliverable refines the morning HRV check-in cutoff configuration per Sprint 2026-46.5 feedback:
-1. **Default Cutoff Adjusted to 08:00 AM**: Updated `TuningPreferencesDefaults.DEFAULT_MORNING_CHECK_CUTOFF_HOUR = 8` (was 11), ensuring the morning check CTA button on the Start screen does not linger into midday.
-2. **Extended Cutoff Ceiling to 23:00 (11:00 PM)**: Updated `TuningPreferencesDefaults.MAX_MORNING_CHECK_CUTOFF_HOUR = 23` (was 15), providing full afternoon and evening readiness check-in flexibility for shift workers and evening athletes while keeping `MIN_MORNING_CHECK_CUTOFF_HOUR = 6`.
-3. **Zero-Padded Hour Formatting**: Updated `PhysiologyModelsSection.kt` to format `valueText` and `defaultText` with `%02d:00` (e.g. `08:00` instead of `8:00`), dynamic steps `16` ($23 - 6 - 1$), and continuous slider bounds `6.0f..23.0f`.
-4. **Automated & On-Device Verification**: Verified with 21 targeted unit and theme tests passing (100%), and validated on `emulator-5554` with visual self-inspection per Rules 71 & 84.
-
----
+## 1. Executive Summary & Verification Walkthrough
+1. **Default `08:00` & Upper Bound `11:00` (`REQ-UI-525.1`)**: Updated `TuningPreferencesDefaults.MAX_MORNING_CHECK_CUTOFF_HOUR` from `23` to `11` (`11:00 AM`) in `TuningPreferencesDataStore.kt` per PO review feedback while preserving `DEFAULT_MORNING_CHECK_CUTOFF_HOUR = 8` (`08:00 AM`) and `MIN_MORNING_CHECK_CUTOFF_HOUR = 6` (`06:00 AM`).
+2. **Legacy Clamping & `MorningCheckSection.kt` Slider**: Existing `.coerceIn(MIN, MAX)` guards in `TuningPreferencesDataStore.kt` automatically clamp persisted legacy values `> 11` cleanly to `11` with zero DB/DataStore migration. `MorningCheckSection.kt` dynamically binds `valueRange = 6f..11f` (`steps = 4`, 6 hourly stops `06:00..11:00`) with `%02d:00` zero-padded formatting.
+3. **Test & Living Doc Alignment**: Updated `TuningConfigTest.kt` (`MAX_MORNING_CHECK_CUTOFF_HOUR == 11`, clamping `12/23/25 -> 11`), added `// TST-UI-525.*` tags across `TuningConfigTest.kt`, `ControlTrackingViewModelTest.kt`, `AdvancedTuningAccordionTest.kt`, and `MorningCheckCutoffScreenshotTest.kt`, and updated `REQ-UI-525.1` / `TST-UI-525.1`.
 
 ## 2. Requirement & Test Verification Matrix
-
-| Requirement | Test Spec | Verification Method | Result | Status in Living Docs |
+| Requirement | Test Spec | Verification Method | Result (Stage 4 Tier 1) | Status in Living Docs |
 | :--- | :--- | :--- | :--- | :--- |
-| `REQ-UI-525.1` | `TST-UI-525.1a` | Automated Unit Test (`TuningConfigTest.kt`) | **PASSED** (4 tests) | `Verified` |
-| `REQ-UI-525.1` | `TST-UI-525.1b` | Automated Unit Test (`ControlTrackingViewModelTest.kt`) | **PASSED** (12 tests) | `Verified` |
-| `REQ-UI-525.1` | `TST-UI-525.1c` | Tier 1 Targeted Suite (`TuningConfigTest`, `ControlTrackingViewModelTest`, `ThemeColorCentralizationAuditTest`) | **PASSED** (21/21 tests) | `Verified` |
-| `REQ-UI-525.1` | `TST-UI-525.1d` | On-Device Emulator Verification (`emulator-5554`) & Visual Self-Inspection (Rules 71 & 84) | **PASSED** | `Verified` |
+| `REQ-UI-525.1` | `TST-UI-525.1` | Unit: `TuningConfigTest`, `AdvancedTuningAccordionTest` | **PASSED** (21/21) | `Verified` |
+| `REQ-UI-525.4` | `TST-UI-525.4` | Unit: `ControlTrackingViewModelTest` | **PASSED** (12/12) | `Verified` |
+| `REQ-UI-525` | `TST-UI-525` | Design Contract: `TuningDesignGuidelinesContractTest` | **PASSED** (5/5) | `Verified` |
+| `REQ-UI-525.1` | `TST-UI-525.6` | Screenshot: `MorningCheckCutoffScreenshotTest` | **PASSED** (1/1, Rule 8.5) | `Verified` |
 
----
+## 3. Automated Test Evidence (Stage 4 Reused per Rule 7.5)
+* **Tier 1 Targeted Suite** (39 / 39 tests PASSED on commit `f3fcb1859c1ce90a496335e59113a05fea8742cf`; zero production code edits in Stage 5 so Gradle not re-run per `Rule 7.5`):
+  - `TuningConfigTest`: 5/5 PASSED (`// TST-UI-525.1`)
+  - `ControlTrackingViewModelTest`: 12/12 PASSED (`// TST-UI-525.4`)
+  - `AdvancedTuningAccordionTest`: 16/16 PASSED (`// TST-UI-525.1`)
+  - `TuningDesignGuidelinesContractTest`: 5/5 PASSED
+  - `MorningCheckCutoffScreenshotTest`: 1/1 PASSED (`// TST-UI-525.6`)
+* **Governance Checks**: `verify_requirement_governance.py`, `--check-verified-evidence`, and `--check-test-evidence` PASSED.
 
-## 3. Automated Test Evidence
+## 4. Visual Inspection Evidence (`Rule 8.5` / `Rule 7.8`)
+* **Screenshot**: ![Morning Check Cutoff Slider](img/ATT-7740_morning_cutoff.png)
+* `docs/engineering/walkthroughs/img/ATT-7740_morning_cutoff.png` inspected directly via `read_file` across Light & Dark themes:
+  1. **Geometry & Stop-Dots**: Slider displays exactly 6 discrete stops (`06:00..11:00`, `steps = 4`) with the active thumb at `08:00` (3rd stop).
+  2. **Typography & Formatting**: Header subtitle (`Sleep & Wellness, Start button (until 08:00)`) and readout (`08:00`) render cleanly with zero clipping or wrapping.
 
-### Tier 1 Targeted Regression Scope
-```text
-> Task :app:testDebugUnitTest
-
-com.atrainingtracker.trainingtracker.settings.TuningConfigTest > 4 tests passed
-com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingViewModelTest > 12 tests passed
-com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest > 5 tests passed
-
-BUILD SUCCESSFUL in 47s
-33 actionable tasks: 2 executed, 31 up-to-date
-```
-
----
-
-## 4. Hardware / Emulated Verification (`emulator-5554`, Pixel 8 Android 15)
-
-### Visual Consistency (Rule 23 & Rule 71)
-
-| Default Cutoff (08:00 AM) | Extended Cutoff Slider (Adjusted to 18:00) |
-| :---: | :---: |
-| ![Default Cutoff](img/ATT-7740_morning_cutoff.png) | ![Adjusted Cutoff](img/ATT-7740_morning_cutoff_adjusted.png) |
-
-* **Checked against `docs/design_guidelines.md` §5**:
-  - **Shapes**: Standard Material 3 `TuningSliderItem` track and thumb geometry.
-  - **Spacing**: Consistent padding within the Physiology Models section.
-  - **Colors/Themes**: Material 3 primary theme colors for slider thumb and value indicator.
-  - **Typography**: 2-digit zero-padded hour string (`08:00`, `18:00`).
-  - **Placement**: Nested inside Physiology Models accordion section with toggle dependency.
-* **Deviations & Justification**: None. Fully standard Material 3 Compose tuning slider.
-
----
-
-## 5. Invariant & Governance Verification
-
-1. **System Invariant**: Reactive visibility gating `timeProvider().hour < tuning.morningCheckCutoffHour` strictly preserved.
-2. **Zero Regressions**: 21/21 targeted tests passed with 0 failures, 0 errors.
-3. **Living Documentation Synchronized**: `verify_requirement_governance.py --sync-indexes` passed with 100% parity.
+## 5. System Invariants & Governance Verification
+* Zero DataStore schema/key changes; `hour < morningCheckCutoffHour` gating intact; `REQ-UI-525` & `TST-UI-525` promoted to `[Verified]`.

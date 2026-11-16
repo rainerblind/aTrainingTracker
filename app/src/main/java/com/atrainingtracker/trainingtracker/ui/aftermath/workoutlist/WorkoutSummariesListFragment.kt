@@ -207,6 +207,7 @@ class WorkoutSummariesListFragment : Fragment() {
                                     onUpdateFtp = { trackOnMapViewModel.updateFtp(it) },
                                     onUpdateHrZones = { t1, t2 -> trackOnMapViewModel.updateHrZones(t1, t2) },
                                     telemetryPath = aftermathUIState.telemetryPath,
+                                    multiSensorOverlays = aftermathUIState.multiSensorOverlays,
                                     initialAutoShareSnapshot = autoShareSnapshotOnOpen,
                                     onSnapshotComplete = {
                                         if (autoShareSnapshotOnOpen) {

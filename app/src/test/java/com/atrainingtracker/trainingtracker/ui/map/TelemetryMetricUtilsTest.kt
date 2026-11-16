@@ -18,6 +18,9 @@
 
 package com.atrainingtracker.trainingtracker.ui.map
 
+import com.atrainingtracker.banalservice.sensor.formater.PaceFormatter
+import com.atrainingtracker.banalservice.sensor.formater.SpeedFormatter
+import com.atrainingtracker.trainingtracker.MyUnits
 import com.google.android.gms.maps.model.LatLng
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -218,5 +221,55 @@ class TelemetryMetricUtilsTest {
         assertEquals("4:30", TelemetryMetricUtils.formatPaceMinutes(4.5))
         assertEquals("5:00", TelemetryMetricUtils.formatPaceMinutes(5.0))
         assertEquals("3:45", TelemetryMetricUtils.formatPaceMinutes(3.75))
+    }
+
+    @Test
+    fun testCadenceDataDetectionExtractionAndFormatting() {
+        // TST-PER-050.2
+        assertFalse(TelemetryMetricUtils.hasCadenceData(null))
+        assertFalse(TelemetryMetricUtils.hasCadenceData(listOf(createPoint(10.0, 10L))))
+        assertFalse(
+            TelemetryMetricUtils.hasCadenceData(
+                listOf(PathPoint(10.0, LatLng(48.0, 11.0), timeSec = 10L, cadence = 0))
+            )
+        )
+
+        val cadencePoint = PathPoint(
+            distance = 100.0,
+            latLng = LatLng(48.0, 11.0),
+            timeSec = 25L,
+            cadence = 92
+        )
+        assertTrue(TelemetryMetricUtils.hasCadenceData(listOf(cadencePoint)))
+        assertEquals(
+            92.0,
+            TelemetryMetricUtils.extractMetricValue(cadencePoint, TelemetryMetricType.CADENCE, MyUnits.METRIC)!!,
+            1e-6
+        )
+        assertEquals(
+            "92 rpm",
+            TelemetryMetricUtils.formatValue(
+                value = 92.4,
+                metricType = TelemetryMetricType.CADENCE,
+                unit = MyUnits.METRIC,
+                speedFormatter = SpeedFormatter(),
+                paceFormatter = PaceFormatter()
+            )
+        )
+    }
+
+    @Test
+    fun testFindNearestSourceValue_distanceAndTimeDomains() {
+        // TST-PER-050.2
+        assertNull(TelemetryMetricUtils.findNearestSourceValue(emptyList(), 50.0, isTimeDomain = false))
+
+        val points = listOf(
+            TelemetrySourcePoint(distance = 0.0, timeSec = 0L, value = 132.0),
+            TelemetrySourcePoint(distance = 100.0, timeSec = 20L, value = 148.0),
+            TelemetrySourcePoint(distance = 250.0, timeSec = 50L, value = 162.0)
+        )
+
+        assertEquals(148.0, TelemetryMetricUtils.findNearestSourceValue(points, 115.0, isTimeDomain = false)!!, 1e-6)
+        assertEquals(162.0, TelemetryMetricUtils.findNearestSourceValue(points, 45.0, isTimeDomain = true)!!, 1e-6)
     }
 }

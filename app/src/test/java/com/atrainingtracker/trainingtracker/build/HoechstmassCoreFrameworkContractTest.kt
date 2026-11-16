@@ -28,6 +28,7 @@ import java.io.File
  * branded README, project protocol, Swiss Cheese defect reduction model, generalized Document Triad,
  * 10 skills, and deliverable starter templates (REQ-PRO-035, TST-PRO-035, ATT-3922).
  */
+// Linked test specs: TST-PRO-038
 class HoechstmassCoreFrameworkContractTest {
 
     private fun findRepoRootFile(relativePath: String): File {

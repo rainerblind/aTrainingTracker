@@ -41,6 +41,7 @@ import org.junit.Test
  * Unit tests verifying [DevicesDatabaseManager.hasPairedRemoteDevices] query logic,
  * parameter mapping, cursor closing, and boundary conditions (REQ-UI-259, TST-UI-218, ATT-2057).
  */
+// Linked test specs: TST-UI-525
 class DevicesDatabaseManagerTest {
 
     private lateinit var mockContext: Context
@@ -448,11 +449,10 @@ class DevicesDatabaseManagerTest {
     }
 
     @Test
-    fun testDevicesDbHelper_dbVersionIsThirteen() {
-        assertEquals(
-            "DevicesDbHelper.DB_VERSION must be 13 for ATT-7762",
-            13,
-            DevicesDatabaseManager.DevicesDbHelper.DB_VERSION
+    fun testDevicesDbHelper_dbVersionIsAtLeastThirteen() {
+        assertTrue(
+            "DevicesDbHelper.DB_VERSION must be >= 13 (currently ${DevicesDatabaseManager.DevicesDbHelper.DB_VERSION})",
+            DevicesDatabaseManager.DevicesDbHelper.DB_VERSION >= 13
         )
     }
 

@@ -70,6 +70,7 @@ import java.nio.file.Files
 /**
  * Unit and round-trip verification tests for FitFileWriter (REQ-DAT-018, TST-DAT-013).
  */
+// Linked test specs: TST-DAT-023
 class FitFileWriterTest {
 
     private lateinit var mockContext: Context
@@ -205,7 +206,10 @@ class FitFileWriterTest {
             SensorType.TORQUE_EFFECTIVENESS_R.name,
             SensorType.PEDAL_SMOOTHNESS_L.name,
             SensorType.PEDAL_SMOOTHNESS_R.name,
-            SensorType.PEDAL_SMOOTHNESS.name
+            SensorType.PEDAL_SMOOTHNESS.name,
+            SensorType.LAP_NR.name,
+            SensorType.VERTICAL_OSCILLATION.name,
+            SensorType.GROUND_CONTACT_TIME.name
         )
 
         every { cursor.count } returns samples.size
@@ -940,6 +944,118 @@ class FitFileWriterTest {
         assertNull("Lap avgLeftPedalSmoothness must be null", laps[0].avgLeftPedalSmoothness)
         assertNull("Lap avgRightPedalSmoothness must be null", laps[0].avgRightPedalSmoothness)
         assertNull("Lap avgCombinedPedalSmoothness must be null", laps[0].avgCombinedPedalSmoothness)
+    }
+
+    @Test
+    fun testFitFileWriter_runningDynamics_encodesMillimetersAndMillisecondsAcrossRecordLapSession() {
+        // TST-SET-118.5
+        val summaryCursor = createMockSummaryCursor(timeStart = "2026-10-03 10:00:00", totalTime = "120", distanceTotal = "1000.0")
+        every {
+            mockSqlDb.query(WorkoutSummaries.TABLE, any(), any(), any(), any(), any(), any())
+        } returns summaryCursor
+
+        val sampleList = listOf(
+            mapOf(
+                WorkoutSamplesDbHelper.TIME to "2026-10-03 10:00:00",
+                SensorType.LAP_NR.name to 1,
+                SensorType.CADENCE.name to 86.0,
+                SensorType.VERTICAL_OSCILLATION.name to 8.4,
+                SensorType.GROUND_CONTACT_TIME.name to 245.0
+            ),
+            mapOf(
+                WorkoutSamplesDbHelper.TIME to "2026-10-03 10:00:01",
+                SensorType.LAP_NR.name to 1,
+                SensorType.CADENCE.name to 88.0,
+                SensorType.VERTICAL_OSCILLATION.name to 9.2,
+                SensorType.GROUND_CONTACT_TIME.name to 235.0
+            )
+        )
+        val samplesCursor = createMockSamplesCursor(sampleList)
+        every {
+            mockSqlDb.query(match { it.startsWith("samples_") }, any(), any(), any(), any(), any(), any())
+        } returns samplesCursor
+
+        every { mockSportTypeDb.getBSportType(1L) } returns BSportType.RUN
+        every { mockSportTypeDb.getTcxName(1L) } returns "Running"
+        every { mockLapsDb.getLaps(101L) } returns emptyList()
+
+        val exportInfo = ExportInfo("workout_running_dynamics", FileFormat.FIT, ExportType.FILE)
+        val result = FitFileWriter(mockContext).doExport(exportInfo)
+        assertTrue("FIT export with Running Dynamics must succeed", result.success())
+
+        val records = mutableListOf<RecordMesg>()
+        val laps = mutableListOf<LapMesg>()
+        val sessions = mutableListOf<SessionMesg>()
+
+        val decode = Decode()
+        val broadcaster = MesgBroadcaster(decode)
+        broadcaster.addListener(RecordMesgListener { records.add(it) })
+        broadcaster.addListener(LapMesgListener { laps.add(it) })
+        broadcaster.addListener(SessionMesgListener { sessions.add(it) })
+        FileInputStream(File(tempDir, exportInfo.shortPath)).use { decode.read(it, broadcaster) }
+
+        assertEquals(2, records.size)
+        // Record 0: 8.4 cm * 10 = 84.0 mm, 245.0 ms
+        assertEquals(84.0f, records[0].verticalOscillation!!, 0.2f)
+        assertEquals(245.0f, records[0].stanceTime!!, 1.0f)
+        // Record 1: 9.2 cm * 10 = 92.0 mm, 235.0 ms
+        assertEquals(92.0f, records[1].verticalOscillation!!, 0.2f)
+        assertEquals(235.0f, records[1].stanceTime!!, 1.0f)
+
+        // Lap & Session averages: avg(8.4, 9.2) cm = 8.8 cm = 88.0 mm; avg(245, 235) ms = 240.0 ms
+        assertEquals(1, laps.size)
+        assertEquals(88.0f, laps[0].avgVerticalOscillation!!, 0.3f)
+        assertEquals(240.0f, laps[0].avgStanceTime!!, 1.0f)
+
+        assertEquals(1, sessions.size)
+        assertEquals(88.0f, sessions[0].avgVerticalOscillation!!, 0.3f)
+        assertEquals(240.0f, sessions[0].avgStanceTime!!, 1.0f)
+    }
+
+    @Test
+    fun testFitFileWriter_withoutRunningDynamics_omitsDynamicsFieldsCleanly() {
+        // TST-SET-118.5
+        val summaryCursor = createMockSummaryCursor(timeStart = "2026-10-03 10:00:00", totalTime = "120", distanceTotal = "1000.0")
+        every {
+            mockSqlDb.query(WorkoutSummaries.TABLE, any(), any(), any(), any(), any(), any())
+        } returns summaryCursor
+
+        val sampleList = listOf(
+            mapOf(
+                WorkoutSamplesDbHelper.TIME to "2026-10-03 10:00:00",
+                SensorType.CADENCE.name to 86.0
+            )
+        )
+        val samplesCursor = createMockSamplesCursor(sampleList)
+        every {
+            mockSqlDb.query(match { it.startsWith("samples_") }, any(), any(), any(), any(), any(), any())
+        } returns samplesCursor
+
+        every { mockSportTypeDb.getBSportType(1L) } returns BSportType.RUN
+        every { mockSportTypeDb.getTcxName(1L) } returns "Running"
+        every { mockLapsDb.getLaps(101L) } returns emptyList()
+
+        val exportInfo = ExportInfo("workout_no_running_dynamics", FileFormat.FIT, ExportType.FILE)
+        val result = FitFileWriter(mockContext).doExport(exportInfo)
+        assertTrue(result.success())
+
+        val records = mutableListOf<RecordMesg>()
+        val laps = mutableListOf<LapMesg>()
+        val sessions = mutableListOf<SessionMesg>()
+
+        val decode = Decode()
+        val broadcaster = MesgBroadcaster(decode)
+        broadcaster.addListener(RecordMesgListener { records.add(it) })
+        broadcaster.addListener(LapMesgListener { laps.add(it) })
+        broadcaster.addListener(SessionMesgListener { sessions.add(it) })
+        FileInputStream(File(tempDir, exportInfo.shortPath)).use { decode.read(it, broadcaster) }
+
+        assertNull(records[0].verticalOscillation)
+        assertNull(records[0].stanceTime)
+        assertNull(laps[0].avgVerticalOscillation)
+        assertNull(laps[0].avgStanceTime)
+        assertNull(sessions[0].avgVerticalOscillation)
+        assertNull(sessions[0].avgStanceTime)
     }
 }
 

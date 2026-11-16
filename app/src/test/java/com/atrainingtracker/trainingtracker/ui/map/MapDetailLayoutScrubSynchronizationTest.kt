@@ -18,7 +18,10 @@
 
 package com.atrainingtracker.trainingtracker.ui.map
 
+import com.google.android.gms.maps.model.LatLng
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -67,5 +70,94 @@ class MapDetailLayoutScrubSynchronizationTest {
         assertNotNull("MapDetailLayoutKt should exist", clazz)
         val methods = clazz.declaredMethods.filter { it.name.startsWith("MapDetailLayout") }
         assertTrue("MapDetailLayout composable methods must exist", methods.isNotEmpty())
+    }
+
+    @Test
+    fun overlayScrubTarget_resolvesBothDistanceAndTimeDomains_gpsAndTrackless() {
+        // TST-PER-050.4
+        val origin = LatLng(48.0, 11.0)
+        val pathPoints = listOf(
+            PathPoint(distance = 0.0, latLng = origin, timeSec = 0L, hr = 120),
+            PathPoint(distance = 100.0, latLng = origin, timeSec = 20L, hr = 140),
+            PathPoint(distance = 250.0, latLng = origin, timeSec = 45L, hr = 160)
+        )
+
+        assertNull(resolveOverlayScrubTarget(pathPoints, null, isTimeDomain = false, isTrackless = false))
+        assertEquals(
+            100.0,
+            resolveOverlayScrubTarget(pathPoints, 100.0, isTimeDomain = false, isTrackless = false)!!,
+            1e-6
+        )
+        assertEquals(
+            20.0,
+            resolveOverlayScrubTarget(pathPoints, 100.0, isTimeDomain = true, isTrackless = false)!!,
+            1e-6
+        )
+        assertEquals(
+            45.0,
+            resolveOverlayScrubTarget(pathPoints, 45.0, isTimeDomain = true, isTrackless = true)!!,
+            1e-6
+        )
+    }
+
+    @Test
+    fun telemetryHeaderFormatting_appendsActiveOverlayValuesOnlyWhenOverlaysActive() {
+        // TST-PER-050.4
+        val series = listOf(
+            TelemetrySourceSeries(
+                metricType = TelemetryMetricType.HEART_RATE,
+                sourceName = "Polar H10",
+                columnName = "HR (Polar H10)",
+                points = listOf(
+                    TelemetrySourcePoint(distance = 0.0, timeSec = 0L, value = 132.0),
+                    TelemetrySourcePoint(distance = 100.0, timeSec = 20L, value = 148.0)
+                ),
+                meanValue = 140.0
+            ),
+            TelemetrySourceSeries(
+                metricType = TelemetryMetricType.HEART_RATE,
+                sourceName = "Watch",
+                columnName = "HR (Watch)",
+                points = listOf(
+                    TelemetrySourcePoint(distance = 0.0, timeSec = 0L, value = 128.0),
+                    TelemetrySourcePoint(distance = 100.0, timeSec = 20L, value = 141.0)
+                ),
+                meanValue = 134.5
+            )
+        )
+
+        assertEquals(
+            "Heart Rate: 148 bpm",
+            formatTelemetryHeaderWithOverlays(
+                baseHeading = "Heart Rate",
+                activePrimaryText = "148 bpm",
+                metricType = TelemetryMetricType.HEART_RATE,
+                activeOverlays = emptyList(),
+                overlayScrubTarget = 100.0,
+                isTimeDomain = false
+            )
+        )
+
+        val scrubbingText = formatTelemetryHeaderWithOverlays(
+            baseHeading = "Heart Rate",
+            activePrimaryText = "148 bpm",
+            metricType = TelemetryMetricType.HEART_RATE,
+            activeOverlays = series,
+            overlayScrubTarget = 20.0,
+            isTimeDomain = true
+        )
+        assertTrue(scrubbingText.contains("148 bpm"))
+        assertTrue(scrubbingText.contains("Polar H10: 148 bpm"))
+        assertTrue(scrubbingText.contains("Watch: 141 bpm"))
+
+        val staticText = formatTelemetryHeaderWithOverlays(
+            baseHeading = "Heart Rate",
+            activePrimaryText = null,
+            metricType = TelemetryMetricType.HEART_RATE,
+            activeOverlays = series,
+            overlayScrubTarget = null,
+            isTimeDomain = false
+        )
+        assertEquals("Heart Rate", staticText)
     }
 }

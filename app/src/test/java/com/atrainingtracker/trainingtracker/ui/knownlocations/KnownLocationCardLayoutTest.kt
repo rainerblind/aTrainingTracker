@@ -27,6 +27,7 @@ import java.io.File
  * Structural contract test verifying that [KnownLocationCard] isolates the altitude metric
  * and places Starts and Strecken badges on their own dedicated row with compact sizing (REQ-UI-195, TST-UI-149.1).
  */
+// Linked test specs: TST-UI-161, TST-UI-171, TST-UI-203, TST-UI-465
 class KnownLocationCardLayoutTest {
 
     private fun loadScreenSource(): String {

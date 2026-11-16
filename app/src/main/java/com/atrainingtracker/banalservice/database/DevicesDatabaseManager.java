@@ -670,6 +670,30 @@ public class DevicesDatabaseManager {
         db.update(DevicesDbHelper.DEVICES, values, DevicesDbHelper.C_ID + "=?", new String[]{String.valueOf(deviceID)});
     }
 
+    /**
+     * Returns whether live Polar IMU streaming (ACC/GYRO) is opted in for [deviceID] (REQ-SET-112.1, ATT-8016).
+     */
+    public boolean isPolarLiveImuEnabled(long deviceID) {
+        boolean enabled = false;
+        SQLiteDatabase db = getDatabase();
+        try (Cursor cursor = getCursor(db, deviceID, DevicesDbHelper.POLAR_LIVE_IMU_ENABLED)) {
+            if (cursor != null && cursor.moveToFirst() && !cursor.isNull(0)) {
+                enabled = cursor.getInt(0) == 1;
+            }
+        }
+        return enabled;
+    }
+
+    /**
+     * Persists live Polar IMU streaming opt-in state for [deviceID] (REQ-SET-112.1, ATT-8016).
+     */
+    public void setPolarLiveImuEnabled(long deviceID, boolean enabled) {
+        SQLiteDatabase db = getDatabase();
+        ContentValues values = new ContentValues();
+        values.put(DevicesDbHelper.POLAR_LIVE_IMU_ENABLED, enabled ? 1 : 0);
+        db.update(DevicesDbHelper.DEVICES, values, DevicesDbHelper.C_ID + "=?", new String[]{String.valueOf(deviceID)});
+    }
+
     public boolean isPaired(long deviceID) {
         boolean result = false;
 
@@ -1119,6 +1143,7 @@ public class DevicesDatabaseManager {
         public static final String BIKE_POWER_SENSOR_FLAGS = "bikePowerSensorFlags";
         public static final String BASELINE_CIRCUMFERENCE = "baselineCircumference";
         public static final String POLAR_H10_OFFLINE_RECORDING = "polarH10OfflineRecording";
+        public static final String POLAR_LIVE_IMU_ENABLED = "polarLiveImuEnabled";
         public static final String DB_NAME = "Devices.db";
         // static final int DB_VERSION = 4;
         // static final int DB_VERSION = 5;    // upgraded at 30.12.2016 to support storing of BT features
@@ -1129,7 +1154,8 @@ public class DevicesDatabaseManager {
         // static final int DB_VERSION = 10;   // upgraded at 06.11.2026: excised obsolete SPEED_AND_LOCATION_NETWORK (ATT-5492)
         // static final int DB_VERSION = 11;   // upgraded at 14.11.2026: added SPEED_AND_LOCATION_ATT_FUSED (ATT-7751)
         // static final int DB_VERSION = 12;   // upgraded at 14.11.2026: added ALTITUDE_AND_SLOPE_ATT_FUSED (ATT-6279)
-        public static final int DB_VERSION = 13;   // upgraded at 15.11.2026: added polarH10OfflineRecording (ATT-7762)
+        // static final int DB_VERSION = 13;   // upgraded at 15.11.2026: added polarH10OfflineRecording (ATT-7762)
+        public static final int DB_VERSION = 14;   // upgraded at 16.11.2026: added polarLiveImuEnabled (ATT-8016)
         private static final String TAG = "DeviceDbHelper";
         private static final boolean DEBUG = BANALService.getDebug(false);
         private static final String DEVICES_V3 = "Devices";               // in version 3, the table was simply called Devices
@@ -1161,7 +1187,7 @@ public class DevicesDatabaseManager {
                 + LAST_ACTIVE + " text,"
                 + LAST_BATTERY_PERCENTAGE + " int,"
                 + BASELINE_CIRCUMFERENCE + " real DEFAULT 0.0)";
-        private static final String CREATE_DEVICE_DB_13 = "create table " + DEVICES + " ("
+        private static final String CREATE_DEVICE_DB_14 = "create table " + DEVICES + " ("
                 + C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
                 + PROTOCOL + " text, "
                 + ANT_DEVICE_NUMBER + " int, "
@@ -1174,7 +1200,8 @@ public class DevicesDatabaseManager {
                 + LAST_ACTIVE + " text,"
                 + LAST_BATTERY_PERCENTAGE + " int,"
                 + BASELINE_CIRCUMFERENCE + " real DEFAULT 0.0,"
-                + POLAR_H10_OFFLINE_RECORDING + " int DEFAULT 1)";
+                + POLAR_H10_OFFLINE_RECORDING + " int DEFAULT 1,"
+                + POLAR_LIVE_IMU_ENABLED + " int DEFAULT 0)";
         @Deprecated
         private static final String CREATE_BT_SPECIFIC_5 = "create table " + TABLE_BT_SPECIFIC + " ("
                 + C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
@@ -1254,8 +1281,9 @@ public class DevicesDatabaseManager {
                 case 11:
                 case 12:
                 case 13:
-                    db.execSQL(CREATE_DEVICE_DB_13);
-                    if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_DEVICE_DB_13);
+                case 14:
+                    db.execSQL(CREATE_DEVICE_DB_14);
+                    if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_DEVICE_DB_14);
                     db.execSQL(CREATE_BIKE_POWER_SENSORS_TABLE_6);
                     if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_BIKE_POWER_SENSORS_TABLE_6);
 
@@ -1408,19 +1436,28 @@ public class DevicesDatabaseManager {
 
             if (oldVersion <= 12 && newVersion >= 13) {
                 if (DEBUG) Log.i(TAG, "onUpgrade: upgrading from Version <= 12 to 13 (adding polarH10OfflineRecording)");
-                boolean columnExists = false;
-                try (Cursor cursor = db.rawQuery("PRAGMA table_info(" + DEVICES + ")", null)) {
-                    int nameColIdx = cursor.getColumnIndex("name");
-                    while (cursor.moveToNext()) {
-                        if (POLAR_H10_OFFLINE_RECORDING.equalsIgnoreCase(cursor.getString(nameColIdx))) {
-                            columnExists = true;
-                            break;
-                        }
+                addColumnIfMissing(db, POLAR_H10_OFFLINE_RECORDING, "int DEFAULT 1");
+            }
+
+            if (oldVersion <= 13 && newVersion >= 14) {
+                if (DEBUG) Log.i(TAG, "onUpgrade: upgrading from Version <= 13 to 14 (adding polarLiveImuEnabled)");
+                addColumnIfMissing(db, POLAR_LIVE_IMU_ENABLED, "int DEFAULT 0");
+            }
+        }
+
+        private static void addColumnIfMissing(SQLiteDatabase db, String columnName, String columnDef) {
+            boolean columnExists = false;
+            try (Cursor cursor = db.rawQuery("PRAGMA table_info(" + DEVICES + ")", null)) {
+                int nameColIdx = cursor.getColumnIndex("name");
+                while (cursor.moveToNext()) {
+                    if (columnName.equalsIgnoreCase(cursor.getString(nameColIdx))) {
+                        columnExists = true;
+                        break;
                     }
                 }
-                if (!columnExists) {
-                    db.execSQL("ALTER TABLE " + DEVICES + " ADD COLUMN " + POLAR_H10_OFFLINE_RECORDING + " int DEFAULT 1");
-                }
+            }
+            if (!columnExists) {
+                db.execSQL("ALTER TABLE " + DEVICES + " ADD COLUMN " + columnName + " " + columnDef);
             }
         }
 

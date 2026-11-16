@@ -177,4 +177,16 @@
     <string name="polar_verity_swim_busy_desc">Polar Verity Senseのボタンを押してスイムモードを終了し（青色LEDに戻す）、今すぐ同期をタップしてください。</string>
     <string name="polar_verity_swim_syncing">スイムモードデータを同期中…</string>
 
+    <!-- Polar Live IMU Streaming Bridge (ATT-8016, REQ-SET-112) -->
+    <string name="device_polar_live_imu_title">ライブ IMU ストリーミング (ACC/GYRO)</string>
+    <string name="device_polar_h10_live_imu_desc">単一の Polar 接続でライブ心拍/RR と加速度データを配信し、フットポッド未使用時にランニングケイデンスを提供します。</string>
+    <string name="device_polar_verity_live_imu_desc">青色センサーモードで単一の Polar 接続によりライブ心拍と ACC/GYRO を配信し、フットポッド未使用時にランニングケイデンスを提供します。</string>
+    <string name="device_polar_live_imu_requires_android_13">Android 13 以降が必要です。</string>
+
+    <!-- Polar H10 Running Dynamics (ATT-8018, REQ-SET-116) -->
+    <string name="vertical_oscillation">上下動</string>
+    <string name="vertical_oscillation_short">上下動</string>
+    <string name="ground_contact_time">接地時間</string>
+    <string name="ground_contact_time_short">接地時間</string>
+
 </resources>

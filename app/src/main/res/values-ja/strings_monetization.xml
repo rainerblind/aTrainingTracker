@@ -19,4 +19,10 @@
 
 <resources>
     <string name="supporter_plan_button_switch">変更</string>
+    <string name="supporter_plan_subtitle_bronze_monthly">気軽に試せる月額プラン</string>
+    <string name="supporter_plan_subtitle_bronze_yearly">学生やカジュアルなトレーニング向け</string>
+    <string name="supporter_plan_subtitle_silver_yearly">定期的なトレーニング向けの標準プラン</string>
+    <string name="supporter_plan_subtitle_gold_yearly">パワーメーターと複数センサーでの本格トレーニング向け</string>
+    <string name="supporter_plan_subtitle_diamond_yearly">充実した機材環境と開発への最大限の支援</string>
+    <string name="supporter_garage_match_badge">現在の機材構成に最適</string>
 </resources>

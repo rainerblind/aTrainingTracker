@@ -3,11 +3,11 @@
 **Domain**: `settings_profiles`  
 **Prefixes**: `LOC`, `MON`, `PRI`, `SET`  
 **Scope**: Athlete settings, bike/sensor profiles, privacy zones, data stores, monetization, and 9-locale parity.  
-**Total Requirements**: 105
+**Total Requirements**: 115
 
 ---
 
-### REQ-SET-001: HR and Power training zones (5-zone model) [Verified]
+### REQ-SET-001: HR and Power training zones (5-zone model) [Implemented]
 - **Tests**: `TST-SET-082`
 - **Priority**: Medium
 - **Type**: Functional
@@ -16,7 +16,7 @@
 - **Rationale**: Allow athletes to train within specific intensities.
 - **Description**: HR and Power training zones (5-zone model).
 
-### REQ-SET-002: Equipment management (Bikes/Shoes) with odometer [Verified]
+### REQ-SET-002: Equipment management (Bikes/Shoes) with odometer [Implemented]
 - **Tests**: `TST-SET-098`
 - **Priority**: Medium
 - **Type**: Functional
@@ -25,7 +25,7 @@
 - **Rationale**: Help users monitor gear wear and tear.
 - **Description**: Equipment management (Bikes/Shoes) with odometer.
 
-### REQ-SET-003: Configurable speed thresholds for classification [Verified]
+### REQ-SET-003: Configurable speed thresholds for classification [Implemented]
 - **Tests**: `TST-UNT-003`
 - **Priority**: Medium
 - **Type**: Functional
@@ -34,7 +34,7 @@
 - **Rationale**: Tailor automation to user's specific pace profile.
 - **Description**: Configurable speed thresholds for classification.
 
-### REQ-SET-004: "Fancy Name" schemes using location and detours [Verified]
+### REQ-SET-004: "Fancy Name" schemes using location and detours [Implemented]
 - **Tests**: `TST-SET-053`
 - **Priority**: Medium
 - **Type**: Functional
@@ -43,7 +43,7 @@
 - **Rationale**: Provide descriptive workout names automatically.
 - **Description**: "Fancy Name" schemes using location and detours.
 
-### REQ-SET-050: Navigation Drawer Structure [Verified]
+### REQ-SET-050: Navigation Drawer Structure [Implemented]
 - **Tests**: `TST-NAV-001`
 - **Priority**: Medium
 - **Type**: Functional
@@ -51,7 +51,7 @@
 - **Implementation**: `main_navigation_drawer.xml`, `MainActivityWithNavigation.java`, `ui/settings/`
 - **Rationale**: The navigation drawer SHALL be organized into logical hubs: Training, Spatial, Equipment, Ecosystem, and System. Key management features (Sport Types, Training Zones, Strava, Dropbox, Export) SHALL be individual first-class items in the drawer. Technical application settings (Units, Search, Display, Tracking Tabs) SHALL also be accessible as individual drawer items.
 
-### REQ-SET-055: Modular Settings Architecture [Verified]
+### REQ-SET-055: Modular Settings Architecture [Implemented]
 - **Tests**: `TST-INT-008`
 - **Priority**: High
 - **Type**: Non-Functional
@@ -59,7 +59,7 @@
 - **Implementation**: `ui/settings/`, `MainActivityWithNavigation.java`
 - **Rationale**: The system's settings configuration SHALL follow a modular architectural pattern. All settings-related UI components SHALL reside within dedicated functional sub-packages under `ui.settings` (e.g., `display`, `units`, `export`). The system SHALL NOT contain redundant preference fragments or legacy XML configurations that are no longer active in the primary navigation flow.
 
-### REQ-SET-051: Direct Tracking Tab Selection [Verified]
+### REQ-SET-051: Direct Tracking Tab Selection [Implemented]
 - **Tests**: `TST-NAV-003`
 - **Priority**: Medium
 - **Type**: Functional
@@ -91,7 +91,7 @@
 • *Then* the activity orientation lock SHALL be released (`SCREEN_ORIENTATION_UNSPECIFIED`) dynamically without requiring an activity restart.
 **Invariants**: The SharedPreferences key `pref_display_options`, option string literals (`forcePortrait`, `keepScreenOn`, `noUnlocking`), and backward-compatible reading of existing user preferences MUST NOT change.
 
-### REQ-SET-053: Modal Units Selection [Verified]
+### REQ-SET-053: Modal Units Selection [Implemented]
 - **Tests**: `TST-NAV-005`
 - **Priority**: Medium
 - **Type**: Functional
@@ -99,7 +99,7 @@
 - **Implementation**: `MainActivityWithNavigation.java`, `UnitsSettingsDialogFragment.kt`
 - **Rationale**: The system SHALL provide direct access to global unit system settings (Metric/Imperial) via a modal dialog triggered from the navigation drawer.
 
-### REQ-SET-054: Modal Export Configuration [Verified]
+### REQ-SET-054: Modal Export Configuration [Implemented]
 - **Tests**: `TST-NAV-006`
 - **Priority**: Medium
 - **Type**: Functional
@@ -107,7 +107,7 @@
 - **Implementation**: `MainActivityWithNavigation.java`, `ExportSettingsDialogFragment.kt`
 - **Rationale**: The system SHALL provide direct access to file export preferences (TCX, GPX, etc.) via a modal dialog triggered from the navigation drawer.
 
-### REQ-SET-005: Global Unit Support (Metric/Imperial) [Verified]
+### REQ-SET-005: Global Unit Support (Metric/Imperial) [Implemented]
 - **Tests**: `TST-NAV-005`
 - **Priority**: Medium
 - **Type**: Functional
@@ -115,7 +115,7 @@
 - **Implementation**: `MyUnits.java`, `MyHelper.java`
 - **Rationale**: The system SHALL support both Metric and Imperial unit systems globally across all modules (Tracking, Aftermath, Periods, WorkoutClusters, and Settings). All user-facing values, entry fields, and visualizations SHALL adapt dynamically to the user's unit preference.
 
-### REQ-SET-006: Agnostic Workout Clustering [Verified]
+### REQ-SET-006: Agnostic Workout Clustering [Implemented]
 - **Tests**: `TST-SET-001`
 - **Priority**: High
 - **Type**: Functional
@@ -123,7 +123,7 @@
 - **Implementation**: `WorkoutClusterEngine.kt`
 - **Rationale**: The system SHALL automatically group similar tracks into \"Workout Clusters\" based on spatial fingerprints (Start, End, Apex, Distance) regardless of the initial sport type.
 
-### REQ-SET-007: Majority-Based Sport Inference [Verified]
+### REQ-SET-007: Majority-Based Sport Inference [Implemented]
 - **Tests**: `TST-SET-001`
 - **Priority**: High
 - **Type**: Functional
@@ -131,7 +131,7 @@
 - **Implementation**: `WorkoutClusterEngine.kt`, `WorkoutSummariesDatabaseManager.java`
 - **Rationale**: The system SHALL determine the most likely Name and Sport for a Workout Cluster based on the majority of associated workouts. Manual confirms/overrides SHALL take precedence in the learning knowledge base.
 
-### REQ-SET-008: Learning Feedback Loop [Verified]
+### REQ-SET-008: Learning Feedback Loop [Implemented]
 - **Tests**: `TST-SET-001`
 - **Priority**: High
 - **Type**: Functional
@@ -139,7 +139,7 @@
 - **Implementation**: `WorkoutRepository.kt`
 - **Rationale**: The system SHALL refine the cluster centroids and update probable sport associations whenever a user overrides or confirms a suggestion. The cluster's name SHALL ONLY be updated if it currently has a generic/default name (e.g., 'Cluster at...').
 
-### REQ-SET-009: Favorite Tracks Heatmap [Verified]
+### REQ-SET-009: Favorite Tracks Heatmap [Implemented]
 - **Tests**: `TST-SET-002`
 - **Priority**: High
 - **Type**: Functional
@@ -147,7 +147,7 @@
 - **Implementation**: `WorkoutClusterHeatmapScreen.kt`, `MapContentScope.kt`
 - **Rationale**: The system SHALL provide a visualization for Workout Clusters that overlays all associated workout tracks as a heatmap, along with the spatial fingerprint markers.
 
-### REQ-SET-010: Tuning Parameters UI [Verified]
+### REQ-SET-010: Tuning Parameters UI [Implemented]
 - **Tests**: `TST-SET-003`, `TST-SET-034`
 - **Priority**: High
 - **Type**: Functional
@@ -155,7 +155,7 @@
 - **Implementation**: `ClusterTuningScreen.kt`, `WorkoutClustersViewModel.kt`
 - **Rationale**: The system SHALL provide a UI to edit the tuning parameters for the Workout Cluster Engine, featuring a primary \"Strict-to-Relaxed\" master slider, optional detailed controls for individual tolerances (Endpoint, Apex, Distance), and a toggle to optionally include Sport Type in similarity calculations.
 
-### REQ-SET-011: Clustering Recalculation [Verified]
+### REQ-SET-011: Clustering Recalculation [Implemented]
 - **Tests**: `TST-SET-003`
 - **Priority**: High
 - **Type**: Functional
@@ -163,7 +163,7 @@
 - **Implementation**: `WorkoutClusterEngine.kt`
 - **Rationale**: Upon modification of tuning parameters, the system SHALL allow the user to trigger a full recalculation of Workout Clusters across the entire workout history.
 
-### REQ-SET-012: Workout Cluster List Visualization [Verified]
+### REQ-SET-012: Workout Cluster List Visualization [Implemented]
 - **Tests**: `TST-SET-004`
 - **Priority**: High
 - **Type**: Functional
@@ -171,7 +171,7 @@
 - **Implementation**: `WorkoutClustersTabsScreen.kt`, `WorkoutClusterHeatmapScreen.kt`
 - **Rationale**: The system SHALL display a Workout Cluster list using a layout harmonized with the Workout and Route lists. Each item SHALL feature a full-width header (BSportType icon and Name) positioned at the top. Secondary metadata and metrics SHALL be displayed below the header, alongside a right-aligned map preview of the spatial signature. The Cluster Detail Heatmap SHALL also utilize a similar header layout to maximize visual consistency across the analytical suite.
 
-### REQ-SET-013: Name-Aware Clustering [Verified]
+### REQ-SET-013: Name-Aware Clustering [Implemented]
 - **Tests**: `TST-SET-005`
 - **Priority**: High
 - **Type**: Functional
@@ -179,7 +179,7 @@
 - **Implementation**: `WorkoutClusterEngine.kt`
 - **Rationale**: The system SHALL prioritize existing identical workout names when matching routes to clusters to improve grouping accuracy for user-named paths.
 
-### REQ-SET-014: Auto-Dismiss Tuning UI [Verified]
+### REQ-SET-014: Auto-Dismiss Tuning UI [Implemented]
 - **Tests**: `TST-SET-006`
 - **Priority**: Medium
 - **Type**: Functional
@@ -187,7 +187,7 @@
 - **Implementation**: `WorkoutClustersFragment.kt`, `WorkoutClustersViewModel.kt`
 - **Rationale**: The system SHALL automatically return to the cluster list view once a recalculation process is successfully completed. *(Superseded by REQ-SET-075 / ATT-3452: Cluster tuning removed from Favorite Routes header; recalculation centralized in Advanced Settings without auto-dismissal)*.
 
-### REQ-SET-015: Unique Cluster Naming [Verified]
+### REQ-SET-015: Unique Cluster Naming [Implemented]
 - **Tests**: `TST-SET-007`
 - **Priority**: High
 - **Type**: Functional
@@ -195,7 +195,7 @@
 - **Implementation**: `WorkoutClusterEngine.kt`, `WorkoutClusterDatabaseManager.kt`
 - **Rationale**: The system SHALL ensure that every workout cluster has a unique name by appending a variant counter (e.g., var 2) if a name collision occurs for spatially distinct routes.
 
-### REQ-SET-016: Edit Cluster Identity [Verified]
+### REQ-SET-016: Edit Cluster Identity [Implemented]
 - **Tests**: `TST-SET-008`
 - **Priority**: High
 - **Type**: Functional
@@ -203,7 +203,7 @@
 - **Implementation**: `WorkoutClusterHeatmapScreen.kt`, `WorkoutClusterRepository.kt`
 - **Rationale**: The system SHALL allow the user to manually rename a workout cluster and change its primary sport type via a dedicated edit dialog in the cluster's detail view.
 
-### REQ-SET-017: Manual Workout Cluster Reassignment [Verified]
+### REQ-SET-017: Manual Workout Cluster Reassignment [Implemented]
 - **Tests**: `TST-SET-009`
 - **Priority**: High
 - **Type**: Functional
@@ -211,7 +211,7 @@
 - **Implementation**: `WorkoutClusterHeatmapScreen.kt`, `WorkoutClusterEngine.kt`
 - **Rationale**: The system SHALL allow the user to manually reassign a workout to a different workout cluster via the heatmap view. Tapping a workout track SHALL show a list of candidate clusters sorted by similarity score.
 
-### REQ-SET-018: Cluster Suggestions in Edit Workout [Verified]
+### REQ-SET-018: Cluster Suggestions in Edit Workout [Implemented]
 - **Tests**: `TST-SET-010`, `TST-SET-046`
 - **Priority**: High
 - **Type**: Functional
@@ -219,7 +219,7 @@
 - **Implementation**: `EditWorkoutScreen.kt`, `EditWorkoutViewModel.kt`
 - **Rationale**: The system SHALL provide a list of spatially similar cluster candidates when editing a workout's name. Selecting a candidate SHALL automatically update the workout's Name, Sport, and Cluster association.
 
-### REQ-SET-019: Manual Cluster Creation [Verified]
+### REQ-SET-019: Manual Cluster Creation [Implemented]
 - **Tests**: `TST-SET-011`
 - **Priority**: High
 - **Type**: Functional
@@ -227,7 +227,7 @@
 - **Implementation**: `ManualClusterScreen.kt`, `WorkoutClusterEngine.kt`
 - **Rationale**: The system SHALL allow the user to manually create a new workout cluster by specifying its spatial fingerprint (Start, End, Apex) and distance metrics via a dedicated UI.
 
-### REQ-SET-020: Workout Peek in Heatmap [Verified]
+### REQ-SET-020: Workout Peek in Heatmap [Implemented]
 - **Tests**: `TST-SET-012`
 - **Priority**: High
 - **Type**: Functional
@@ -235,7 +235,7 @@
 - **Implementation**: `WorkoutClusterHeatmapScreen.kt`
 - **Rationale**: The system SHALL display a detailed peek (Bottom Sheet) when a workout track is tapped in the cluster heatmap, similar to the Periods view. This peek SHALL include an option to reassign the workout to a different cluster.
 
-### REQ-SET-021: Manual Fingerprint Editing [Verified]
+### REQ-SET-021: Manual Fingerprint Editing [Implemented]
 - **Tests**: `TST-SET-013`
 - **Priority**: High
 - **Type**: Functional
@@ -243,7 +243,7 @@
 - **Implementation**: `WorkoutClusterHeatmapScreen.kt`, `WorkoutClusterRepository.kt`
 - **Rationale**: The system SHALL allow the user to manually adjust the signature points (Start, End, Apex) of an existing workout cluster via the heatmap detail view.
 
-### REQ-SET-022: Workout Markers in Cluster Detail [Verified]
+### REQ-SET-022: Workout Markers in Cluster Detail [Implemented]
 - **Tests**: `TST-SET-014`
 - **Priority**: High
 - **Type**: Functional
@@ -251,7 +251,7 @@
 - **Implementation**: `WorkoutClusterHeatmapScreen.kt`, `WorkoutRepository.kt`
 - **Rationale**: When viewing a workout cluster heatmap, the system SHALL display the spatial signature markers (Start, Stop, Apex) for EVERY member workout of the cluster to visualize spatial distribution. Additionally, it SHALL display all individual markers (Start, Stop, Extrema) for a specific workout when peeked. Clicking on any marker SHALL trigger the workout peek functionality.
 
-### REQ-SET-023: Global Workout Unit Support [Verified]
+### REQ-SET-023: Global Workout Unit Support [Implemented]
 - **Tests**: `TST-SET-015`
 - **Priority**: High
 - **Type**: Functional
@@ -259,7 +259,7 @@
 - **Implementation**: `ManualClusterScreen.kt`, `ClusterTuningScreen.kt`
 - **Rationale**: The system SHALL support both Metric and Imperial units in the WorkoutCluster management UI. Distance entry and tuning visualization MUST use high-level units (km/mile) with appropriate precision to ensure professional-grade spatial definition.
 
-### REQ-SET-024: Cluster Equipment Determination [Verified]
+### REQ-SET-024: Cluster Equipment Determination [Implemented]
 - **Tests**: `TST-SET-016`
 - **Priority**: High
 - **Type**: Functional
@@ -267,7 +267,7 @@
 - **Implementation**: `WorkoutClustersListScreen.kt`, `WorkoutClusterHeatmapScreen.kt`
 - **Rationale**: The system SHALL dynamically determine and display the equipment associated with a Workout Cluster's majority sport. This SHALL use the technical mapping notation (→) consistent with the sensor management UI.
 
-### REQ-SET-031: Route-to-Cluster Synchronization [Verified]
+### REQ-SET-031: Route-to-Cluster Synchronization [Implemented]
 - **Tests**: `TST-SET-022`
 - **Priority**: High
 - **Type**: Functional
@@ -275,7 +275,7 @@
 - **Implementation**: `WorkoutClusterEngine.kt`, `RoutesRepository.kt`
 - **Rationale**: Every explicit Route in the system (imported or created) SHALL have a corresponding Workout Cluster. Renaming a route SHALL automatically update the corresponding Workout Cluster name to ensure naming consistency across the spatial knowledge base.
 
-### REQ-SET-033: Workout Cluster Deletion [Verified]
+### REQ-SET-033: Workout Cluster Deletion [Implemented]
 - **Tests**: `TST-SET-024`
 - **Priority**: High
 - **Type**: Functional
@@ -283,7 +283,7 @@
 - **Implementation**: `WorkoutClusterHeatmapScreen.kt`, `WorkoutClusterRepository.kt`
 - **Rationale**: The system SHALL allow the user to delete a Workout Cluster via a long-click context menu on its detail header. Deleting a cluster SHALL nullify all associations with workouts and routes to maintain data integrity, while preserving the actual workout recordings.
 
-### REQ-SET-032: Reference Route Visualization [Verified]
+### REQ-SET-032: Reference Route Visualization [Implemented]
 - **Tests**: `TST-SET-023`
 - **Priority**: High
 - **Type**: Functional
@@ -291,7 +291,7 @@
 - **Implementation**: `WorkoutClusterHeatmapScreen.kt`, `WorkoutClustersViewModel.kt`
 - **Rationale**: When a Workout Cluster is linked to an explicit Route, the system SHALL display that route's path as a prominent reference layer on the detailed heatmap view to provide an authoritative spatial baseline.
 
-### REQ-SET-061: Idempotent Route Cluster Creation [Verified]
+### REQ-SET-061: Idempotent Route Cluster Creation [Implemented]
 - **Tests**: `TST-SET-047`
 - **Priority**: High
 - **Type**: Functional
@@ -307,7 +307,7 @@
 - **Implementation**: `WorkoutClusterRepository.kt`, `WorkoutClusterDatabaseManager.kt`
 - **Rationale**: The system SHALL automatically delete orphan route clusters that have zero actual workouts assigned in the database during repository refresh and post-import self-healing. **Invariants**: Clusters linked to an explicit Route (imported or created) MUST NOT be deleted even when they contain zero workouts. Clusters with 1 or more assigned workouts MUST NOT be deleted.
 
-### REQ-SET-025: Workout Cluster Collapsing Header [Verified]
+### REQ-SET-025: Workout Cluster Collapsing Header [Implemented]
 - **Tests**: `TST-SET-017`
 - **Priority**: Medium
 - **Type**: Functional
@@ -315,7 +315,7 @@
 - **Implementation**: `WorkoutClustersTabsScreen.kt`
 - **Rationale**: The Workout Cluster list SHALL feature a collapsing top app bar that integrates with the list's scroll behavior, providing a modern and consistent navigation experience similar to the Workouts and Routes screens.
 
-### REQ-SET-027: Persistent Scroll State [Verified]
+### REQ-SET-027: Persistent Scroll State [Implemented]
 - **Tests**: `TST-SET-019`
 - **Priority**: Medium
 - **Type**: Non-Functional
@@ -323,7 +323,7 @@
 - **Implementation**: `WorkoutClustersFragment.kt`, `WorkoutClustersTabsScreen.kt`
 - **Rationale**: The system SHALL preserve the scroll position and active tab of the Workout Cluster list when navigating back from a detail heatmap view.
 
-### REQ-SET-026: Workout Cluster Tabbed Layout [Verified]
+### REQ-SET-026: Workout Cluster Tabbed Layout [Implemented]
 - **Tests**: `TST-SET-018`
 - **Priority**: Medium
 - **Type**: Functional
@@ -331,7 +331,7 @@
 - **Implementation**: `WorkoutClustersTabsScreen.kt`, `WorkoutClustersFragment.kt`
 - **Rationale**: The Workout Cluster list SHALL feature a tabbed layout based on `BSportType` (All, Bike, Run, Other), matching the design pattern of Workouts, Segments, and Routes.
 
-### REQ-SET-028: Unified Action Button Layout [Verified]
+### REQ-SET-028: Unified Action Button Layout [Implemented]
 - **Tests**: `TST-SET-020`
 - **Priority**: Medium
 - **Type**: Functional
@@ -355,7 +355,7 @@
 - **Implementation**: `EquipmentAndSportTypeDiscoveryManager.kt`, `WorkoutClusterEngine.kt`
 - **Rationale**: The system SHALL implement a confidence-based arbitration model to resolve conflicts between active hardware and route history. High-confidence sensor signals (e.g., uniquely linked hardware) SHALL veto route-based sport/gear overrides, while low-confidence sessions (GPS-only) SHALL be corrected by the Workout Cluster majority.
 
-### REQ-SET-034: Stable Cluster Naming [Verified]
+### REQ-SET-034: Stable Cluster Naming [Implemented]
 - **Tests**: `TST-SET-025`, `TST-SET-042`
 - **Priority**: High
 - **Type**: Functional
@@ -363,7 +363,7 @@
 - **Implementation**: `WorkoutClusterEngine.kt`
 - **Rationale**: The system SHALL maintain the base name of a Workout Cluster when assigning it to a workout. The auto-generated workout name (including a hit counter) MUST NOT be propagated back to the cluster's permanent name. Manual session renames in the Edit Workout screen SHALL NOT rename the linked cluster.
 
-### REQ-SET-037: Atomic Cluster Linking [Verified]
+### REQ-SET-037: Atomic Cluster Linking [Implemented]
 - **Tests**: `TST-SET-028`
 - **Priority**: High
 - **Type**: Functional
@@ -371,7 +371,7 @@
 - **Implementation**: `WorkoutClusterEngine.kt`, `WorkoutRepository.kt`
 - **Rationale**: When a workout is assigned to a Workout Cluster, the system SHALL atomically update the workout's cluster association and increment the cluster's hit count. If reassigned from another cluster, the source cluster's count SHALL be decremented but the cluster MUST NOT be deleted automatically.
 
-### REQ-SET-038: Self-Healing Hit Counts [Verified]
+### REQ-SET-038: Self-Healing Hit Counts [Implemented]
 - **Tests**: `TST-SET-044`
 - **Priority**: High
 - **Type**: Functional
@@ -379,7 +379,7 @@
 - **Implementation**: `WorkoutClusterRepository.kt`, `WorkoutClusterSelectionDialog`
 - **Rationale**: The system SHALL ensure that Workout Cluster hit counts are always accurate by either calculating them on-the-fly from the workout summary database or by performing a periodic integrity check that synchronizes the redundant `hit_count` column with the actual number of associated sessions. The UI selection dialog MUST display these accurate counts.
 
-### REQ-SET-035: Preview Heatmap [Verified]
+### REQ-SET-035: Preview Heatmap [Implemented]
 - **Tests**: `TST-SET-026`
 - **Priority**: High
 - **Type**: Functional
@@ -387,7 +387,7 @@
 - **Implementation**: `WorkoutClusterComponents.kt`, `WorkoutClusterRepository.kt`
 - **Rationale**: The Workout Cluster list item SHALL display a representative spatial preview on its mini-map, consisting of the linked Route path (if available) or the 5 most recent workout tracks rendered as a low-opacity heatmap.
 
-### REQ-SET-036: Persistent DB Connection [Verified]
+### REQ-SET-036: Persistent DB Connection [Implemented]
 - **Tests**: `TST-SET-027`
 - **Priority**: High
 - **Type**: Non-Functional
@@ -395,7 +395,7 @@
 - **Implementation**: `WorkoutClusterDatabaseManager.kt`
 - **Rationale**: The Workout Cluster database SHALL remain open during the application lifecycle to facilitate real-time debugging and inspection via external tools.
 
-### REQ-SET-039: Locale-Aware Distance Input [Verified]
+### REQ-SET-039: Locale-Aware Distance Input [Implemented]
 - **Tests**: `TST-SET-030`
 - **Priority**: Medium
 - **Type**: Functional
@@ -403,7 +403,7 @@
 - **Implementation**: `ManualClusterScreen.kt`
 - **Rationale**: The manual cluster creation interface SHALL support locale-specific decimal separators (e.g., comma in DE, dot in EN) when entering workout distances.
 
-### REQ-SET-040: Unclustered Workout Access [Verified]
+### REQ-SET-040: Unclustered Workout Access [Implemented]
 - **Tests**: `TST-SET-029`
 - **Priority**: Medium
 - **Type**: Functional
@@ -411,7 +411,7 @@
 - **Implementation**: `WorkoutClustersTabsScreen.kt`, `WorkoutClusterRepository.kt`
 - **Rationale**: The system SHALL provide a dedicated view for workouts that are not associated with any Workout Cluster to facilitate manual organization and re-clustering.
 
-### REQ-SET-056: Unclustered Workout Visualization [Verified]
+### REQ-SET-056: Unclustered Workout Visualization [Implemented]
 - **Tests**: `TST-SET-040`
 - **Priority**: Medium
 - **Type**: Functional
@@ -419,7 +419,7 @@
 - **Implementation**: `WorkoutClusterComponents.kt`, `WorkoutClustersFragment.kt`, `TrackOnMapScreen.kt`
 - **Rationale**: Unclustered workouts SHALL be displayed in the cluster management UI using a layout harmonized with `ClusterItem`, including a spatial mini-map preview. Clicking an unclustered workout SHALL navigate the user to a detailed map view of that workout, featuring a direct option to manually assign it to a cluster.
 
-### REQ-SET-057: Cluster Member Listing [Verified]
+### REQ-SET-057: Cluster Member Listing [Implemented]
 - **Tests**: `TST-SET-041`
 - **Priority**: Medium
 - **Type**: Functional
@@ -508,7 +508,7 @@ When the user navigates to a cluster detail view via this workout button, pressi
 • *Then* subsequent repository emissions SHALL preserve the user's custom workout name.
 **Invariants**: Existing sport type and equipment selections MUST NOT be mutated without user confirmation; non-target workout metrics MUST be preserved; existing hit count recalculation logic MUST NOT be corrupted.
 
-### REQ-SET-060: Selectable Cluster Markers [Verified]
+### REQ-SET-060: Selectable Cluster Markers [Implemented]
 - **Tests**: `TST-SET-045`
 - **Priority**: Medium
 - **Type**: Functional
@@ -516,7 +516,7 @@ When the user navigates to a cluster detail view via this workout button, pressi
 - **Implementation**: `WorkoutClusterHeatmapScreen.kt`, `WorkoutClustersViewModel.kt`, `MyPreferenceManager.kt`
 - **Rationale**: The system SHALL allow the user to toggle the visibility of individual marker types (Start, End, Max Distance) within the Workout Cluster heatmap. These markers SHALL be independently selectable for both the cluster signature and the session distribution distribution. The selection state MUST be persisted independently from the Periods module preferences.
 
-### REQ-SET-042: Markers in Previews [Verified]
+### REQ-SET-042: Markers in Previews [Implemented]
 - **Tests**: `TST-SET-032`
 - **Priority**: Medium
 - **Type**: Functional
@@ -524,7 +524,7 @@ When the user navigates to a cluster detail view via this workout button, pressi
 - **Implementation**: `PathPreviewMap.kt`, `WorkoutSummary.kt`, `RouteItem.kt`, `WorkoutClusterComponents.kt`, `PeriodSummaryCard.kt`, `WorkoutClusterEngine.kt`
 - **Rationale**: The system SHALL display Start, End, and Apex markers in the mini-map previews for Workouts. For Routes, ONLY Start and End markers SHALL be displayed. ALL map previews (Clusters, Workouts, Periods) SHALL correctly frame the entire route(s) based on persisted spatial bounds.
 
-### REQ-SET-043: Fingerprint Parity [Verified]
+### REQ-SET-043: Fingerprint Parity [Implemented]
 - **Tests**: `TST-SET-033`, `TST-SET-034`, `TST-SET-035`
 - **Priority**: Medium
 - **Type**: Functional
@@ -532,7 +532,7 @@ When the user navigates to a cluster detail view via this workout button, pressi
 - **Implementation**: `WorkoutClusterEngine.kt`
 - **Rationale**: To ensure 100% matching accuracy, the system SHALL calculate Route spatial fingerprints using 'Max Displacement from Start', matching the live tracking engine's logic. The similarity calculation SHALL strictly include a significant penalty (+2.0) if the workout's `BSportType` is NOT IDENTICAL to the cluster's `BSportType` (when enabled), preventing cross-activity cluster contamination even between known sports and 'UNKNOWN' placeholders.
 
-### REQ-SET-044: Manual Name Isolation [Verified]
+### REQ-SET-044: Manual Name Isolation [Implemented]
 - **Tests**: `TST-SET-042`
 - **Priority**: Medium
 - **Type**: Functional
@@ -725,7 +725,7 @@ Normalization (`WorkoutClusterEngine.normalizeName`) and hit count stripping (`W
 
 **Invariants**: Cluster fingerprinting, apex anchoring, database schema, and existing cluster filtering/sorting MUST NOT be modified.
 
-### REQ-SET-069: Workout, Route & Segment Detail Bottom Sheet Scaffold Status Bar Boundary Constraint [Verified]
+### REQ-SET-069: Workout, Route & Segment Detail Bottom Sheet Scaffold Status Bar Boundary Constraint [Implemented]
 - **Tests**: `TST-SET-058`
 - **Priority**: Medium
 - **Type**: Functional
@@ -821,7 +821,7 @@ Normalization (`WorkoutClusterEngine.normalizeName`) and hit count stripping (`W
 
 **Invariants**: Backstack navigation returning from `TrackOnMapScreen` or `EditWorkoutScreen` MUST preserve list scroll position; cluster calculation and export processing MUST NOT be modified.
 
-### REQ-SET-072: Edit Workout New Cluster Creation & Name Synchronization [Verified]
+### REQ-SET-072: Edit Workout New Cluster Creation & Name Synchronization [Implemented]
 - **Tests**: `TST-SET-061`
 - **Priority**: Medium
 - **Type**: Functional
@@ -1034,7 +1034,7 @@ Normalization (`WorkoutClusterEngine.normalizeName`) and hit count stripping (`W
 
 **Invariants**: Mandatory confirmation AlertDialog, repository async recalculation, migration status locking, and 9-language translation parity MUST NOT be broken.
 
-### REQ-SET-041: Unified Spatial Markers [Verified]
+### REQ-SET-041: Unified Spatial Markers [Implemented]
 - **Tests**: `TST-SET-031`
 - **Priority**: Medium
 - **Type**: Functional
@@ -1042,7 +1042,7 @@ Normalization (`WorkoutClusterEngine.normalizeName`) and hit count stripping (`W
 - **Implementation**: `WorkoutClusterHeatmapScreen.kt`, `InteractivePeriodMap.kt`, `TrackOnMapScreen.kt`, `RouteItem.kt`
 - **Rationale**: All geographical views (Workout Clusters, Periods, Workout Details, and Routes) SHALL use standardized technical markers: Green start icons, Red stop icons, and Blue apex/distance icons. Icons SHALL use the unified `createSensorMarker` visual style.
 
-### REQ-PRI-001: Permission Transparency [Verified]
+### REQ-PRI-001: Permission Transparency [Implemented]
 - **Tests**: `TST-PRI-002`
 - **Priority**: Critical
 - **Type**: Non-Functional
@@ -2546,6 +2546,164 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 
 **Invariants**: Zero `WorkoutRr.db` / `HrvPostWorkoutRecomputer` writes; zero `WorkoutSummaries.db` schema bumps; automatic exports held until backfill commits; idempotent `ensureSwimSportTypeExists()`; zero emojis in strings.
 
+---
+
+### REQ-SET-112: Polar Live IMU Streaming Bridge, Session Arbitration & Cadence Priority (`ATT-8016`) [Verified]
+- **Tests**: `TST-SET-114`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit / Integration / On-Device Manual
+- **Implementation**: `PolarOnlineStreamingBridge.kt`, `PolarOfflineGattCoordinator.kt`, `PolarH10OfflineController.kt`, `PolarVeritySenseOfflineController.kt`, `DeviceManager.java`, `MySensorManager.java`, `DevicesDatabaseManager.java`, `DatabaseSchemaRegistry.kt`, `RawDeviceDataProvider.kt`, `DeviceData.kt`, `DeviceDataRepository.kt`, `EditDeviceViewModel.kt`, `EditDeviceDialog.kt`, `res/values*/strings_devices.xml`
+- **Rationale**: Running cadence and biomechanics from Polar H10 (`ACC`) and Verity Sense (`ACC` + `GYRO`) require a single persistent `PolarBleApi` session on Android 13+ delivering live `HR`/`RR` and inertial frames simultaneously without dual-GATT contention, offline PFTP conflicts, or overwriting dedicated footpod/cycling cadence sensors.
+- **Description**:
+1. *Devices.db v14 Opt-In & `@RequiresApi(33)` UI Toggle (`REQ-SET-112.1`)*:
+   - `DevicesDatabaseManager.DevicesDbHelper` SHALL increment `DB_VERSION` to `14`, adding an opt-in live IMU column (`DEFAULT 0`) across both `onCreate` and `onUpgrade` (`13 -> 14`), tracked automatically by `DatabaseSchemaRegistry`.
+   - `RawDeviceDataProvider`, `DeviceRawData`, `DeviceUiData`, `DeviceDataRepository`, `EditDeviceViewModel`, and `EditDeviceDialog` SHALL expose the `@RequiresApi(33)` live IMU streaming toggle exclusively for Polar H10 and Verity Sense BLE HRM devices (disabled with Android 13+ hint below API 33) with 9-locale parity in `strings_devices.xml` (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`) and zero emojis.
+2. *Persistent Single-GATT Session & Live HR/RR + ACC/GYRO Streaming (`REQ-SET-112.2`)*:
+   - When live IMU is enabled on Android 13+, `DeviceManager.createNewBluetoothLEDevice()` SHALL instantiate `PolarOnlineStreamingBridge` instead of `BTLEHeartRateDevice` (`0x180D`) on the same MAC address, maintaining one persistent `PolarBleApi` session with `setAutomaticReconnection(true)`; when disabled or `< API 33`, `BTLEHeartRateDevice` SHALL remain unchanged.
+   - `PolarOnlineStreamingBridge` SHALL stream `PolarOnlineStreamingApi.startHrStreaming()` (`hr`, `rrsMs`, `rrAvailable`) into `SensorType.HR`, `SensorType.RR_INTERVAL`, and `RrBeatSource` -> `HRVMetricsDevice` with cumulative beat timestamping parity to `BTLEHeartRateDevice`.
+   - `PolarOnlineStreamingBridge` SHALL acquire `startAccStreaming()` (H10: 50/100/200 Hz; Verity Sense: 52 Hz) and `startGyroStreaming()` (Verity Sense Blue Sensor Mode: 52 Hz) without dual-GATT disconnects.
+3. *Offline Session Coexistence & Per-Channel `ACC` Mutual Exclusion (`REQ-SET-112.3`)*:
+   - `PolarOfflineGattCoordinator` SHALL support active `PolarBleApi` session reuse/handoff so `PolarH10OfflineController` and `PolarVeritySenseOfflineController` share the persistent `PolarBleApi` connection for PFTP start/stop/backfill without opening a competing GATT client.
+   - `PolarOnlineStreamingBridge` and `PolarVeritySenseOfflineController` MUST enforce per-channel `ACC` mutual exclusion on Verity Sense, never starting `PolarOfflineRecordingApi` and `PolarOnlineStreamingApi` concurrently on `ACC`.
+4. *`BSportType.RUN` Gating & Dedicated Cadence Priority Arbitration (`REQ-SET-112.4`)*:
+   - `PolarOnlineStreamingBridge` SHALL register/publish IMU-derived `SensorType.CADENCE` / `SensorType.STRIDES` ONLY when the active sport maps to `BSportType.RUN` (including `TTSportType.WALK`), and MUST NOT emit cadence during `BSportType.BIKE` or other non-running sports.
+   - `MySensorManager.CADENCE_PRIORITY` SHALL rank dedicated `RUN_SPEED`, `BIKE_CADENCE`, `BIKE_SPEED_AND_CADENCE`, and `BIKE_POWER` sensors strictly above Polar IMU cadence so dedicated ANT+/BLE footpods (`ANTRunSpeedDevice`, `BTLERunSpeedDevice`) and cycling crank sensors always retain exclusive `SensorType.CADENCE` ownership.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a paired Polar H10 or Verity Sense on Android 13+ with live IMU enabled (`DEFAULT 0` opt-in), *When* a Running or Walking (`BSportType.RUN`) workout runs, *Then* `PolarOnlineStreamingBridge` maintains a single persistent `PolarBleApi` session delivering 1-Hz HR (+ RR beats on H10) and `ACC` (+ `GYRO` on Verity Sense) without dual-GATT disconnects or `ACC` PFTP conflicts.
+• *Given* an active dedicated ANT+/BLE footpod (`RUN_SPEED`) or a `BSportType.BIKE` workout with/without a crank cadence sensor, *When* Polar live IMU is streaming, *Then* dedicated footpod/bike sensors retain exclusive `SensorType.CADENCE` ownership and `BSportType.BIKE` receives zero Polar IMU cadence.
+
+**Invariants**: Standard `BTLEHeartRateDevice` unchanged when opt-in is `0` or API < 33; `Devices.db` v14 `DEFAULT 0` preserves existing user configs; Verity Sense `ACC` single-owner lock; `WorkoutRr.db` never receives optical Verity PPG rows; `HIGH-RISK` Stage 4 (`subagent_pro` Doing / `subagent_flash` Gate 4 per `Rule 7.1`); Stage 4 UI screenshot verified (`Rule 8.5`).
+
+
+### REQ-SET-113: Expert Settings HRV Artifact Gate Relocation & Dedicated Morning Checks Section (`ATT-8117`) [Verified]
+- **Tests**: `TST-SET-115`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `AdvancedTuningAccordion.kt`, `AdvancedTuningScreen.kt`, `AdvancedTuningDialog.kt`, `SensorsGpsFilterSection.kt`, `PhysiologyModelsSection.kt`, `MorningCheckSection.kt`, `res/values*/strings_hrv.xml`
+- **Rationale**: `PhysiologyModelsSection.kt` mixes physiological training models, HRV RR-interval signal filtering (`hrvArtifactGateThresholdPercent`), and 7 morning wellness check settings. Relocating the HRV Artifact Gate slider to `SensorsGpsFilterSection` and extracting the 7 Morning Check controls into a dedicated `TuningSection.MORNING_CHECK` (`MorningCheckSection`) improves thematic cohesion across both `AdvancedTuningScreen` and `@Deprecated AdvancedTuningDialog` while preserving all persisted DataStore keys (`ATT-8117`, Epic `ATT-355`, refining `REQ-UI-403`, `REQ-UI-463.2`, `REQ-UI-525.1`).
+- **Description**:
+  1. *HRV Artifact Gate Relocation (`REQ-SET-113.1`)*:
+     - `hrvArtifactGateThresholdPercent` (`tuning_hrv_artifact_gate_title` slider, range `3.0%..5.0%`, default `5.0%`) SHALL be moved from `PhysiologyModelsSection.kt` to `SensorsGpsFilterSection.kt` (`TuningSection.SENSORS_GPS`) and wired identically from both `AdvancedTuningScreen.kt` and `@Deprecated AdvancedTuningDialog.kt` without altering persisted `TuningPreferencesDataStore` keys, defaults, or clamping bounds.
+     - `tuning_physiology_hrv_zones_link` and `showRpeAndFeel` SHALL remain in `PhysiologyModelsSection.kt`.
+  2. *Dedicated Morning Checks Section (`REQ-SET-113.2`)*:
+     - `TuningSection` in `AdvancedTuningAccordion.kt` SHALL add `TuningSection.MORNING_CHECK` (expanding the canonical lifecycle enum to 12 entries), paired with `TuningSubtitleFormatter.formatMorningCheckSubtitle(...)` and a dedicated `MorningCheckSection` composable under `ui/settings/tuning/categories/`.
+     - `MorningCheckSection` SHALL house all 7 Morning Check settings (`enableMorningSleepAndWellness`, `enableSleepDurationAndQuality`, `enableMorningEnergy`, `enableMuscleSoreness`, `enableContextTags`, `showMorningCheckOnStartScreen`, `morningCheckCutoffHour`) and SHALL be mounted symmetrically in both `AdvancedTuningScreen.kt` and `@Deprecated AdvancedTuningDialog.kt`.
+  3. *Design Guidelines Compliance, Contract Synchronization & 9-Language Parity (`REQ-SET-113.3`)*:
+     - `SensorsGpsFilterSection`, `PhysiologyModelsSection`, and `MorningCheckSection` MUST comply strictly with `TuningDesignGuidelinesContractTest` (`TuningToggleItem`, `SubordinateTuningToggleItem`, `TuningSliderItem`, and `HorizontalDivider` only; zero `FilterChip`, raw `Switch(`, or nested `ElevatedCard(`).
+     - `PhysiologyModelsVisibilityContractTest`, `AdvancedTuningAccordionTest` (12-entry `TuningSection` enum & subtitle formatter), `AdvancedTuningModularityTest`, `AdvancedTuningScreenTest`, and `AdvancedTuningVisualContractTest` SHALL be updated consistently with the new section architecture.
+     - All new user-facing strings (`tuning_cat_morning_check`, morning check subtitle strings) SHALL maintain 100% 9-language localization parity across `values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, and `values-pt/` with zero emojis, verified by `TranslationParityTest`.
+  4. *Visual Compose Screenshot Verification (`REQ-SET-113.4`, Rule 8.5)*:
+     - A Robolectric Compose screenshot test SHALL capture `docs/engineering/walkthroughs/img/ATT-8117_tuning_sections.png` verifying `SensorsGpsFilterSection` (with HRV Artifact Gate), `MorningCheckSection` (all 7 controls), and `PhysiologyModelsSection` (trimmed of Morning Check and HRV Artifact Gate) against the 4-point visual checklist.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Refines `REQ-UI-403` (*Physiology & Training Models*), `REQ-UI-463.2` (*Expert Settings Thematic Grouping*), and `REQ-UI-525.1` (*Morning HRV Check Cutoff & Start Screen Toggle*) in `docs/requirements/req_ui_design_system.md`. Targets `AdvancedTuningAccordion.kt`, `AdvancedTuningScreen.kt`, `AdvancedTuningDialog.kt`, `SensorsGpsFilterSection.kt`, `PhysiologyModelsSection.kt`, and new `MorningCheckSection.kt`.
+2. *Historical Origin & Commit Trace*: `ATT-7532` (`647ef674`) and `ATT-7740` (`6267d2c0`) appended Morning Check toggles/cutoff controls to `PhysiologyModelsSection.kt` alongside the HRV Artifact Gate slider (`ATT-6715`).
+3. *Root Reason for Existing Formulation*: Incremental HRV feature delivery reused the existing `PhysiologyModelsSection` container to avoid introducing a new `TuningSection` enum entry and 9-locale section header strings.
+4. *Preservation of Core Invariants*: All `TuningPreferencesDataStore` keys, defaults (`08:00`, `6..23`, `3.0%..5.0%`), `ControlTrackingViewModel` start-screen gating, `TrackingViewModelHrvTest`, `showRpeAndFeel`, `tuning_physiology_hrv_zones_link`, and `SecondaryTabbedHeadersContractTest` navigation chrome remain 100% preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* the user opens Expert Settings (`AdvancedTuningScreen` or `AdvancedTuningDialog`) and expands *Sensors, GPS & Filtering*, *When* inspecting its controls, *Then* the HRV Artifact Gate threshold slider (`tuning_hrv_artifact_gate_title`, `3.0%..5.0%`) is rendered there and persists to the unchanged DataStore key.
+• *Given* the user expands the new *Morning Checks* (`TuningSection.MORNING_CHECK`) accordion section, *When* toggling wellness/start-screen options or adjusting cutoff hour, *Then* all 7 Morning Check settings are grouped there with a live subtitle summary while *Physiology & Training Models* retains training models, `tuning_physiology_hrv_zones_link`, and `showRpeAndFeel`.
+• *Given* all category composables under `ui/settings/tuning/categories/` and 9-locale `strings*.xml` files, *When* running contract and localization tests, *Then* `TuningDesignGuidelinesContractTest`, `PhysiologyModelsVisibilityContractTest`, `AdvancedTuningAccordionTest` (12 entries), `AdvancedTuningModularityTest`, `AdvancedTuningScreenTest`, `TranslationParityTest`, and Rule 8.5 Compose PNG inspection pass cleanly.
+
+**Invariants**: Zero `TuningPreferencesDataStore` key/default/bound changes; zero `FilterChip`, raw `Switch(`, or nested `ElevatedCard(` in tuning categories; 100% 9-language parity with zero emojis; dual-host symmetry across `AdvancedTuningScreen` and `AdvancedTuningDialog`.
+
+---
+
+### REQ-SET-115: Supporter Tier Self-Selection Anchoring, Garage-Match Badge & Post-Onboarding Engagement-Gated Garage Nudges (`ATT-8108`) [Verified]
+- **Tests**: `TST-SET-117`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Implementation**: `GarageLeagueDetector.kt`, `SettingsDataStore.kt`, `MainActivityWithNavigation.kt`, `ATrainingTrackerApp.kt`, `SupporterScreen.kt`, `SupporterComponents.kt`, `SupporterDebugSection.kt`, `res/values*/strings_monetization.xml`
+- **Rationale**: Premature Day-0 N+1 garage nudges burn permanent single-shot suppression flags before the athlete completes a workout, while unframed top-down Supporter cards anchor athletes on `10 €` Bronze instead of self-selecting by fairness, budget, and garage scale (`ATT-8108`, Epic `ATT-355`, amending `REQ-SET-088.3`, `REQ-SET-088.4` and extending `REQ-SET-086`, `REQ-UI-501`).
+- **Description**:
+  1. *Warm-Engagement Workout Gate & Bounded Seasonal Cooldown (`REQ-SET-115.1`)*:
+     - `GarageNudgeEvaluator.shouldTriggerNudge(...)` and `GarageLeagueDetector.evaluateNudge()` SHALL require `finishedWorkoutCount >= MIN_FINISHED_WORKOUTS_FOR_NUDGE` (`8` finished workouts via `WorkoutSummariesDatabaseManager.getFinishedWorkoutCount()`) before triggering any Gold or Diamond `GarageUpgradeNudgeDialog`. Pairing sensors (`DeviceListViewModel`) or adding equipment (`EquipmentViewModel`) with `< 8` finished workouts MUST NOT consume nudge quota or mutate cooldown persistence.
+     - Permanent single-shot boolean suppression (`hasShownGoldGarageNudge`, `hasShownDiamondGarageNudge`) SHALL be replaced with bounded seasonal cooldown state in `SettingsDataStore` (`lastGoldNudgeTimestampMs`, `goldNudgeCount`, `lastGoldNudgeWorkoutCount`, plus analogous Diamond keys; `MAX_NUDGES_PER_LEAGUE = 3`, allowing 1 initial nudge + up to 2 follow-up reminders). Follow-up reminders for an un-upgraded league SHALL trigger only when **both** `(nowMs - lastNudgeTimestampMs) >= 180 days` **and** `(finishedWorkoutCount - lastNudgeWorkoutCount) >= 25` additional finished workouts have elapsed.
+     - Legacy users with `hasShownGoldGarageNudge == true` or `hasShownDiamondGarageNudge == true` and zero new count keys SHALL migrate safely with `nudgeCount >= 1` and cooldown anchored so no immediate re-nudge fires before `180 days` AND `25` additional workouts.
+     - `SensorQuotaReconciliationManager` (`MAX_FREE_PAIRED_DEVICES = 2`) free-tier sensor quota enforcement and swap/downgrade dialogs SHALL remain untouched and truthful regardless of finished workout count.
+     - `SupporterDebugSection` (`BuildConfig.DEBUG`) reset action (`SettingsDataStore.resetGarageNudgeFlags()`) SHALL clear both legacy flags and all new cooldown timestamps, nudge counts, and workout-count baselines.
+  2. *Post-Workout Nudge Evaluation & Jubilee Priority Arbitration (`REQ-SET-115.2`)*:
+     - Upon `TrackerService.TRACKING_FINISHED_INTENT` completion in `MainActivityWithNavigation.mTrackingStoppedReceiver` / `ATrainingTrackerApp`, the system SHALL asynchronously evaluate `GarageLeagueDetector.evaluateNudge()` so Day-0-paired athletes are nudged cleanly upon crossing `finishedWorkoutCount >= 8`.
+     - Post-workout garage nudge presentation MUST strictly yield to and remain suppressed whenever `FirstJubileeCelebrationDialog` (`firstJubileeCelebrationState != null`, `REQ-REV-003`) or `SensorQuotaReconciliationManager` (`keepTwoSensorsEvent != null`, `REQ-SET-084.5`) is scheduled or active in that session.
+  3. *Supporter Tier Self-Selection Subtitles, Garage-Match Badge & Detekt Modularity (`REQ-SET-115.3`)*:
+     - `SupporterPlanCard` (`SupporterComponents.kt`, `SupporterScreen.kt`) SHALL display a concise 1–2 line localized fairness/persona subtitle for each of the 5 unchanged `SupporterBasePlan.PLANS` (`bronze-monthly`, `bronze-yearly`, `silver-yearly` retaining `isRecommended = true` Empfehlung/Recommended anchor above title when `effectiveTier.rank < SILVER.rank`, `gold-yearly`, `diamond-yearly`) without modifying Google Play SKUs or prices (`REQ-SET-086.1`).
+     - When `GarageNudgeEvaluator.evaluateLeague()` qualifies `GOLD` or `DIAMOND` above the athlete's `effectiveTier`, `SupporterScreen` SHALL highlight the matching `gold-yearly` or `diamond-yearly` card with a subtle `"Matches your garage"` / `"Passend zu deinem Fuhrpark"` badge (`supporter_garage_match_badge`).
+     - `SupporterPlanCard` SHALL extract cohesive helper subcomposables to resolve the `Detekt` `LongMethod` suppression (`app/detekt-baseline.xml`) while strictly enforcing `Rule 38` (`maxLines = 1, softWrap = false` on plan action buttons) and `Rule 73` (stacked full-width buttons in `GarageUpgradeNudgeDialog`).
+  4. *9-Locale Localization Parity, Zero-Emoji Hygiene & Rule 8.5 Visual Compose Verification (`REQ-SET-115.4`)*:
+     - All 5 persona subtitle strings and `supporter_garage_match_badge` SHALL be partitioned into `res/values*/strings_monetization.xml` across all 9 locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`) with zero decorative inline Unicode emojis (`ATT-5400`), zero defensive buzzwords (`ATT-5659`), and matching format specifiers.
+     - Stage 4 SHALL render a Robolectric Compose PNG screenshot (`docs/engineering/walkthroughs/img/ATT-8108_supporter_cards.png`) of `SupporterPlanCard` states (persona subtitles, Silver anchor, Gold/Diamond Garage-Match badge) and verify it via `read_file` against the 4-point visual checklist (`Rule 8.5`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Amends `REQ-SET-088` (`REQ-SET-088.3`, `REQ-SET-088.4`) and extends `REQ-SET-086` (`REQ-SET-086.4/.5`) and `REQ-UI-501` (`SupporterPlanCard`). Targets `GarageLeagueDetector.kt`, `SettingsDataStore.kt`, `MainActivityWithNavigation.kt`, `ATrainingTrackerApp.kt`, `SupporterScreen.kt`, `SupporterComponents.kt`, `SupporterDebugSection.kt`, and `res/values*/strings_monetization.xml`.
+2. *Historical Origin & Commit Trace*: `de0e1d55` (`ATT-51`), `3b4e0a20` (`ATT-5299`), `30ab5df4` (`ATT-5468`), `be746cdd` (`ATT-5570`), `7d72425c` (`ATT-6286`).
+3. *Root Reason for Existing Formulation*: Boolean `hasShown*` flags prevented repeated dialog spam during consecutive device/equipment edits, and minimal plan cards avoided paywall complexity.
+4. *Preservation of Core Invariants*: All 5 `SupporterBasePlan.PLANS` SKUs/prices (`REQ-SET-086.1`), `evaluateLeague()` thresholds & Strava Pro boost (`REQ-SET-088.1`), tier monotonicity (`REQ-SET-088.2`), `SensorQuotaReconciliationManager` (`REQ-SET-084.5`), `Rule 38` single-line buttons, `Rule 73` stacked dialog buttons, `ATT-5400` zero emojis, `ATT-5659` plain appreciative wording, and `REQ-REV-003` Jubilee precedence remain 100% preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a new athlete on `FREE` or `BRONZE` with `< 8` finished workouts, *When* they pair a power meter or add 3 bikes, *Then* `GarageUpgradeNudgeDialog` is NOT triggered and no nudge quota or cooldown state is consumed.
+• *Given* a `BRONZE` athlete with a Gold-qualified garage reaching `>= 8` finished workouts on a session without `FirstJubileeCelebrationDialog` or quota reconciliation, *When* the workout finishes, *Then* `GarageUpgradeNudgeDialog` is presented; if dismissed, it stays silent until `>= 180 days` AND `>= 25` additional finished workouts have elapsed (up to `MAX_NUDGES_PER_LEAGUE = 3`).
+• *Given* an athlete opening `SupporterScreen` across any of the 9 supported locales, *When* all 5 `SupporterPlanCard` items render, *Then* each card displays its localized zero-emoji persona subtitle without button wrapping (`Rule 38`), `silver-yearly` retains its Recommended anchor below Silver, and a Gold/Diamond-qualified athlete below that tier sees `"Matches your garage"` on the matching card.
+
+**Invariants**: 5 Play base plan IDs and prices untouched; `SensorQuotaReconciliationManager` quota truthful; `Rule 38` & `Rule 73` enforced; zero emojis across 9 locales (`ATT-5400`); `FirstJubileeCelebrationDialog` never collides with garage nudge; `SupporterPlanCard` Detekt `LongMethod` eliminated.
 
 
 
+
+
+
+---
+
+### REQ-SET-114: Polar Live Running Cadence & Stride Estimation from H10 (`ACC`) and Verity Sense (`ACC`/`GYRO`) (`ATT-8017`) [Verified]
+- **Tests**: `TST-SET-116`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit / Integration
+- **Implementation**: `PolarLiveRunningCadenceEstimator.kt`, `PolarOnlineStreamingBridge.kt`, `docs/architecture.md`
+- **Rationale**: Runners wearing a Polar H10 chest strap or Polar Verity Sense armband without a separate footpod (including treadmill running with a stationary smartphone) require accurate 1-Hz running cadence and cumulative stride estimation derived from live PMD `ACC`/`GYRO` frames in canonical FIT/ANT+/BLE strides/min units.
+- **Description**:
+1. *Canonical Strides/Min & Stride-Cycle Unit Parity (`REQ-SET-114.1`)*:
+   - `PolarLiveRunningCadenceEstimator` and `PolarOnlineStreamingBridge` SHALL publish `SensorType.CADENCE` strictly in **strides/min** (full 2-step cycles/min, e.g., `60–100` strides/min corresponding to `120–200` steps/min), matching `ANTRunSpeedDevice`, `BTLERunSpeedDevice` (`0x2A53`), and `FitFileWriter` (`RecordMesg.cadence` / `SessionMesg.avgCadence` `UINT8` scaling where `85–90` strides/min displays as `170–180` spm on Strava).
+   - `PolarOnlineStreamingBridge.syncCadenceSensorRegistration()` SHALL seed `mStridesSensor.accumulate(0)` upon `BSportType.RUN` sensor registration (`MyAccumulatorSensor` baseline parity) so the very first 2-step stride cycle increments `SensorType.STRIDES` to `1` without being swallowed as the baseline.
+2. *Polar H10 Sternum `ACC` Cadence Estimator (`REQ-SET-114.2`)*:
+   - For Polar H10 `ACC` streams (50–100/200 Hz), `PolarLiveRunningCadenceEstimator` SHALL apply a `1.2–4.0 Hz` band-pass filter (`72–240` steps/min) on acceleration magnitude combined with adaptive foot-strike peak detection and a sliding `5s` autocorrelation estimator to track fundamental stride frequency without harmonic doubling/halving.
+3. *Polar Verity Sense Armband `GYRO+ACC` Fusion Estimator (`REQ-SET-114.3`)*:
+   - For Polar Verity Sense `ACC` + `GYRO` streams (52 Hz), `PolarLiveRunningCadenceEstimator` SHALL fuse orientation-invariant angular-rate (`GYRO` deg/s) and `ACC` arm-swing envelope signals across a `0.6–2.0 Hz` band-pass (`36–120` strides/min = `72–240` steps/min), remaining immune to armband rotation around the bicep/forearm.
+4. *1-Hz Cadence Emission, `>= 3s` Standstill Zeroing & Arbitration (`REQ-SET-114.4`)*:
+   - `PolarLiveRunningCadenceEstimator` and `PolarOnlineStreamingBridge` SHALL emit steady `1 Hz` `SensorType.CADENCE` updates within `±2` strides/min across `60–100` strides/min steady running/walking (`BSportType.RUN`, including `TTSportType.WALK`), and SHALL drop `SensorType.CADENCE` cleanly to `0.0` via motion-energy gating within `>= 3s` of standstill.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* steady running or walking between `60–100` strides/min (`120–200` steps/min) on Polar H10 (`ACC`) or Polar Verity Sense (`ACC+GYRO`, any armband orientation), *When* processed by `PolarLiveRunningCadenceEstimator` and `PolarOnlineStreamingBridge`, *Then* `SensorType.CADENCE` updates at `1 Hz` within `±2` strides/min, `SensorType.STRIDES` increments from stride `1` (`accumulate(0)` seeded), and `FitFileWriter` exports matching strides/min (`~85–90`).
+• *Given* the runner stops moving during an active run, *When* standstill persists for `>= 3s`, *Then* motion-energy gating drops `SensorType.CADENCE` cleanly to `0.0`.
+
+**Invariants**: Canonical strides/min (`CADENCE` `36–120` active or `0.0` standstill); `BSportType.RUN`-only gating & `MySensorManager.CADENCE_PRIORITY` (`RUN_SPEED`/`BIKE_*` > `HRM`) preserved; zero UI/DB/exporter/`ANT-Android-SDKs` edits; `HIGH-RISK` Stage 4 (`subagent_pro` Doing / `subagent_flash` Gate 4 per `Rule 7.1`, non-UI DSP engine).
+---
+
+### REQ-SET-116: Polar H10 200 Hz Live Running Dynamics (Vertical Oscillation & Ground Contact Time) & FIT Export (`ATT-8018`) [Verified]
+- **Tests**: `TST-SET-118`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit / Integration
+- **Implementation**: `PolarH10RunningDynamicsEstimator.kt`, `PolarOnlineStreamingBridge.kt`, `SensorType.java`, `ActivityType.java`, `TrackerService.java`, `WorkoutRepository.kt`, `FitFileWriter.kt`, `docs/architecture.md`
+- **Rationale**: Wearing a Polar H10 chest strap at 200 Hz (5 ms resolution) near the runner's center of mass provides sternum vertical acceleration transients capable of computing live Vertical Oscillation (`cm`) and Ground Contact Time (`ms`) for Cockpit telemetry, 1-Hz `WorkoutSamples.db`/`WorkoutSummaries.db` persistence, and native Garmin FIT Running Dynamics export without proprietary hardware.
+- **Description**:
+1. *H10-Only 200 Hz `BSportType.RUN` Activation & Safe Shutdown (`REQ-SET-116.1`)*:
+   - `PolarOnlineStreamingBridge` SHALL activate `highRateRunningDynamicsActive = true` and negotiate `H10_HIGH_RATE_ACC_HZ` (`200 Hz`, graceful fallback to `100/50 Hz`) exclusively for Polar H10 (`!isVeritySense`) during `BSportType.RUN`, MUST keep Verity Sense (`52 Hz`) and non-running sports unchanged, and MUST reset estimator state cleanly on disconnect, sport switch, or `shutDown()`.
+2. *200 Hz Sternum Biomechanics DSP, Physiological Bounds & Walking Guard (`REQ-SET-116.2`)*:
+   - `PolarH10RunningDynamicsEstimator` SHALL continuously align the trunk vertical axis using a `~0.25 Hz` low-pass gravity estimator and project `200 Hz` `ACC` onto that vertical axis.
+   - Over each running step interval `T_step`, it SHALL apply zero-mean detrended double-integration to compute peak-to-trough **Vertical Oscillation** (`cm`, bounded within physiological `5.0..13.0 cm` plausibility and smoothed across a `5–8` step rolling window without cumulative integration drift).
+   - It SHALL detect foot-strike impact peak/jerk onset to toe-off upward-acceleration inflection at `5 ms` resolution for **Ground Contact Time** (`ms`, bounded within `140..400 ms`), and SHALL suppress GCT output during walking (`cadence < 130 steps/min`, i.e., `< 65 strides/min`) and zero/clear state cleanly on standstill (`>= 2–3 s`) or lower sample rates.
+3. *Sensor Channels, Persistence, Aftermath Extrema & 9-Language Parity (`REQ-SET-116.3`)*:
+   - Register `SensorType.VERTICAL_OSCILLATION` (`cm`, `units_cm`, `DOUBLE`) and `SensorType.GROUND_CONTACT_TIME` (`ms`, `units_time_ms`, `DOUBLE`) under `SensorCategory.SPEED_PACE_AND_DISTANCE`, wire them into `ActivityType.RUN_SPEED_AND_CADENCE`, `DeviceType.HRM`, `TrackerService`, `WorkoutDataMapper`, and `WorkoutRepository` (`streamSamples()`/`calculateAndSaveExtrema()`) with zero SQLite schema bumps, pass `SensorCategoryAndSelectorContractTest`, and provide full 9-language localization parity (`EN, DE, ES, FR, IT, JA, NL, PL, PT`) for display names and `cm`/`ms` units.
+4. *Native Garmin FIT SDK Unit Scaling (`REQ-SET-116.4`)*:
+   - `FitFileWriter.kt` SHALL convert Vertical Oscillation from `cm` to FIT SDK **millimeters (`mm`)** (`cm * 10f`) on `RecordMesg.setVerticalOscillation`, `LapMesg.setAvgVerticalOscillation`, and `SessionMesg.setAvgVerticalOscillation`, and write Ground Contact Time in **milliseconds (`ms`)** via `RecordMesg.setStanceTime`, `LapMesg.setAvgStanceTime`, and `SessionMesg.setAvgStanceTime`.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `200 Hz` Polar H10 `ACC` streams across tilted chest orientations (`150–195 spm`) and walking (`< 130 spm`), *When* processed by `PolarH10RunningDynamicsEstimator`, *Then* running yields drift-free rolling Vertical Oscillation (`5.0..13.0 cm`) and GCT (`140..400 ms`), while walking (`< 130 spm`) cleanly suppresses GCT without invalid output.
+• *Given* a recorded run with Polar H10 Running Dynamics, *When* persisted to `WorkoutSamples.db`/`WorkoutSummaries.db` and exported via `FitFileWriter`, *Then* Cockpit/Aftermath reflect `cm` and `ms` metrics, all 9 `values*/strings*.xml` files pass `TranslationParityTest`, and `FitFileWriter` encodes `mm` (`cm * 10f`) and `ms` on `RecordMesg`, `LapMesg`, and `SessionMesg`.
+
+**Invariants**: Cross-lane ID collision guard skips `REQ-SET-115` (`ATT-8108`) -> uses `REQ-SET-116` (`TST-SET-118`); zero DB schema bumps; `FitFileWriter` strictly scales `cm * 10f -> mm`; walking (`< 130 spm`) emits no GCT; `ATT-8017` cadence (`strides/min`) & `CADENCE_PRIORITY` preserved; `HIGH-RISK` Role Rotation (`agent1` Flash: S1, G2+S3, G4+S5; `agent2` Pro: G1+S2, G3+S4, G5+merge).

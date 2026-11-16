@@ -34,6 +34,7 @@ import org.junit.Test
 /**
  * Automated unit tests verifying that WorkoutDeletionHelper delegates to WorkoutRepository (REQ-DAT-042.5, REQ-DAT-010, TST-DAT-004 / ATT-296).
  */
+// Linked test specs: TST-DAT-034, TST-PRO-083
 class WorkoutDeletionHelperTest {
 
     private val mockContext = mockk<Context>(relaxed = true)

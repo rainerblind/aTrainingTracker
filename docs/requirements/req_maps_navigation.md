@@ -9,6 +9,7 @@
 
 ### REQ-MAP-001: Interactive workout tracks with "Roughness" [Implemented]
 - **Tests**: `TST-REG-001`
+- **System Requirement(s)**: Derived (SW-only) — Post-workout map visualization, heatmap rendering, and UI styling
 - **Priority**: Low
 - **Type**: Functional
 - **Verification Method**: On-Device Manual
@@ -18,6 +19,7 @@
 
 ### REQ-MAP-002: Training heatmaps (Cyan -> Indigo gradient) [Implemented]
 - **Tests**: `TST-MAN-001`
+- **System Requirement(s)**: Derived (SW-only) — Post-workout map visualization, heatmap rendering, and UI styling
 - **Priority**: Low
 - **Type**: Functional
 - **Verification Method**: On-Device Manual
@@ -25,8 +27,9 @@
 - **Rationale**: Visualize training density professionally.
 - **Description**: Training heatmaps (Cyan -> Indigo gradient).
 
-### REQ-MAP-003: Low-pass filtered map camera bearing [Verified]
+### REQ-MAP-003: Low-pass filtered map camera bearing [Implemented]
 - **Tests**: `TST-REG-001`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -36,6 +39,7 @@
 
 ### REQ-MAP-004: Zoom depending on speed [Verified]
 - **Tests**: `TST-MAP-044`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -43,8 +47,9 @@
 - **Rationale**: Wider context at speed, detail when slow.
 - **Description**: Zoom depending on speed.
 
-### REQ-MAP-005: Strava Segments and Routes as map overlays [Verified]
+### REQ-MAP-005: Strava Segments and Routes as map overlays [Implemented]
 - **Tests**: `TST-REG-002`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Review
@@ -52,8 +57,9 @@
 - **Rationale**: Integrate community data directly on map.
 - **Description**: Strava Segments and Routes as map overlays.
 
-### REQ-MAP-006: Declarative Map DSL with modular layers [Verified]
+### REQ-MAP-006: Declarative Map DSL with modular layers [Implemented]
 - **Tests**: `TST-STR-005`
+- **System Requirement(s)**: Derived (SW-only) — Post-workout map visualization, heatmap rendering, and UI styling
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -61,8 +67,9 @@
 - **Rationale**: Standardize map rendering and behavior across screens.
 - **Description**: Declarative Map DSL with modular layers.
 
-### REQ-MAP-007: Lazy coordinate projection for path rendering [Verified]
+### REQ-MAP-007: Lazy coordinate projection for path rendering [Implemented]
 - **Tests**: `TST-UNT-010`
+- **System Requirement(s)**: Derived (SW-only) — Post-workout map visualization, heatmap rendering, and UI styling
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -70,8 +77,9 @@
 - **Rationale**: Optimize performance for long tracks and multiple layers.
 - **Description**: Lazy coordinate projection for path rendering.
 
-### REQ-MAP-008: Global Path Context [Verified]
+### REQ-MAP-008: Global Path Context [Implemented]
 - **Tests**: `TST-REG-005`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Review
@@ -79,8 +87,9 @@
 - **Rationale**: In any detail map view, show all loaded Segments and Routes in the background. Use tiered alpha levels: same sport type = muted (0.3), different sport type = highly muted (0.1).
 - **Description**: Global Path Context.
 
-### REQ-MAP-009: Reactive Map Layer Redraw [Verified]
+### REQ-MAP-009: Reactive Map Layer Redraw [Implemented]
 - **Tests**: `TST-UI-045`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Review
@@ -88,8 +97,9 @@
 - **Rationale**: The map SHALL immediately redraw and re-style polylines (Route, Segment, Track) when their underlying selection or visibility state changes in the UI.
 - **Description**: Reactive Map Layer Redraw.
 
-### REQ-MAP-010: Toggleable Grade Legend [Verified]
+### REQ-MAP-010: Toggleable Grade Legend [Implemented]
 - **Tests**: `TST-UI-051`
+- **System Requirement(s)**: Derived (SW-only) — Post-workout map visualization, heatmap rendering, and UI styling
 - **Priority**: Low
 - **Type**: Functional
 - **Verification Method**: Review
@@ -99,6 +109,7 @@
 
 ### REQ-MAP-055: Climb Detection Performance, Route/TCX Import Fidelity & Power Calibration [Verified]
 - **Tests**: `TST-MAP-070`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -149,8 +160,9 @@
 
 **Invariants**: Zero database schema changes, strict preservation of `REQ-MAP-027` climb scoring thresholds, coordinate validation in route importer, and 100% clean-room unit test suite pass rate.
 
-### REQ-MAP-015: High-Fidelity Period Tracks [Verified]
+### REQ-MAP-015: High-Fidelity Period Tracks [Implemented]
 - **Tests**: `TST-UI-058`
+- **System Requirement(s)**: Derived (SW-only) — Post-workout map visualization, heatmap rendering, and UI styling
 - **Priority**: Low
 - **Type**: Functional
 - **Verification Method**: Review
@@ -158,16 +170,18 @@
 - **Rationale**: The `PeriodMapScreen` SHALL display originally sampled (fine-granular) location tracks instead of thinned overviews to provide professional analytical depth.
 - **Description**: High-Fidelity Period Tracks.
 
-### REQ-MAP-017: Adaptive Heatmap Performance [Verified]
+### REQ-MAP-017: Adaptive Heatmap Performance [Implemented]
 - **Tests**: `TST-PERF-001`
+- **System Requirement(s)**: Derived (SW-only) — Post-workout map visualization, heatmap rendering, and UI styling
 - **Priority**: Medium
 - **Type**: Non-Functional
 - **Verification Method**: Unit
 - **Implementation**: `MapUtils.kt`, `PeriodMapUtils.kt`
 - **Rationale**: The system SHALL adapt heatmap point density based on the temporal scale (Period Type) to prevent memory exhaustion (OOM). Coarser resolutions (e.g., 50m+) SHALL be used for large periods (Month/Year) where sub-meter precision is not visible on a summary map.
 
-### REQ-MAP-011: Multi-Track Selection (Workout Details) [Verified]
+### REQ-MAP-011: Multi-Track Selection (Workout Details) [Implemented]
 - **Tests**: `TST-UI-055`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Review
@@ -175,8 +189,9 @@
 - **Rationale**: The Workout Details map SHALL support displaying multiple location tracks (GPS, Fused, Network) alongside the primary "Tracked" path to allow for technical data quality comparison. This feature SHALL NOT be available in workout summaries or periods to maintain visual simplicity.
 - **Description**: Multi-Track Selection (Workout Details).
 
-### REQ-MAP-012: Track Selection Menu [Verified]
+### REQ-MAP-012: Track Selection Menu [Implemented]
 - **Tests**: `TST-UI-055`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Review
@@ -184,8 +199,9 @@
 - **Rationale**: The Workout Details map SHALL provide a floating action button that opens a selection menu to individually toggle the visibility of Tracked, GPS, Fused, and Network tracks. The selection menu SHALL include a color legend for each track provider.
 - **Description**: Track Selection Menu.
 
-### REQ-MAP-013: Persistent Map Selection [Verified]
+### REQ-MAP-013: Persistent Map Selection [Implemented]
 - **Tests**: `TST-UI-056`
+- **System Requirement(s)**: Derived (SW-only) — Post-workout map visualization, heatmap rendering, and UI styling
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -193,8 +209,9 @@
 - **Rationale**: The Workout Details map SHALL persist the user's technical track visibility preferences across sessions to streamline repetitive data quality audits.
 - **Description**: Persistent Map Selection.
 
-### REQ-MAP-014: Period FAB Hierarchy [Verified]
+### REQ-MAP-014: Period FAB Hierarchy [Implemented]
 - **Tests**: `TST-UI-057`
+- **System Requirement(s)**: Derived (SW-only) — Post-workout map visualization, heatmap rendering, and UI styling
 - **Priority**: Low
 - **Type**: Functional
 - **Verification Method**: Review
@@ -202,16 +219,18 @@
 - **Rationale**: The `PeriodMapScreen` SHALL position the Sharing FAB at the top of the overlay stack to prioritize community engagement features.
 - **Description**: Period FAB Hierarchy.
 
-### REQ-MAP-016: Heatmap DSL Support [Verified]
+### REQ-MAP-016: Heatmap DSL Support [Implemented]
 - **Tests**: `TST-MAP-010`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
 - **Implementation**: `MapContentScope.kt`, `MapUtils.kt`
 - **Rationale**: The Map DSL SHALL support the declarative definition of Heatmap layers using standardized sequential gradients (Cyan -> Blue -> Indigo). The styling SHALL be zoom-adaptive. As the user zooms in, individual workout traces SHALL become fully opaque (Alpha 1.0) while the heatmap background weight recedes to a subtle density shadow. Member marker pins SHALL be culled at city-scale to prevent visual clutter and OOM crashes.
 
-### REQ-MAP-018: Detailed Map View Heatmap Visibility [Verified]
+### REQ-MAP-018: Detailed Map View Heatmap Visibility [Implemented]
 - **Tests**: `TST-MAP-020`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Review
@@ -220,6 +239,7 @@
 
 ### REQ-MAP-019: Authoritative Sensor Extrema Spatial Positioning [Verified]
 - **Tests**: `TST-MAP-021`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -228,6 +248,7 @@
 
 ### REQ-MAP-020: Authoritative Workout Max Line Distance (Apex) Calculation & Self-Anchored Displacement Integrity [Verified]
 - **Tests**: `TST-MAP-022`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -236,6 +257,7 @@
 
 ### REQ-MAP-021: Dark Mode Map Styling for Live Route Tracking, Navigation, Cockpit, and Secondary Map Views [Verified]
 - **Tests**: `TST-MAP-023`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -281,6 +303,7 @@
 
 ### REQ-MAP-022: Google Maps CameraUpdateFactory Initialization Resilience and Lifecycle Guarding in Import Route Preview [Verified]
 - **Tests**: `TST-MAP-024`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -326,6 +349,7 @@
 
 ### REQ-MAP-023: Prominent High-Contrast Rendering for Actively Navigated Routes Preserving Multi-Layer X-Ray Segment Synergy [Verified]
 - **Tests**: `TST-MAP-025`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -374,6 +398,7 @@
 
 ### REQ-MAP-024: Quick Route Selector from Cockpit with GPS Proximity Sorting and Automated Route Detection [Verified]
 - **Tests**: `TST-MAP-026`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -427,6 +452,7 @@
 
 ### REQ-MAP-025: Automatic DEM Elevation Enrichment for Imported GPX Routes Lacking Altitude Data [Verified]
 - **Tests**: `TST-MAP-027`, `TST-MAP-070`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -470,6 +496,7 @@
 
 ### REQ-MAP-026: Support Waypoints, POIs (Benches, Water, Summits) and TCX Course Points [Verified]
 - **Tests**: `TST-MAP-028`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -517,6 +544,7 @@
 
 ### REQ-MAP-027: Persistent Climbs Database & Live ClimbPro Cockpit Sheet (Route & Free-Riding Support) [Verified]
 - **Tests**: `TST-MAP-029`, `TST-MAP-070`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -559,6 +587,7 @@
 
 ### REQ-MAP-028: Visual & Auditory Turn-by-Turn Navigation Prompts, Battery Saver Wake-Up & Off-Route Alerts [Verified]
 - **Tests**: `TST-MAP-030`, `TST-MAP-045`, `TST-MAP-057`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -606,6 +635,7 @@
 
 ### REQ-MAP-029: "Take Me Home" Return Navigation, Remaining Distance & Elevation-Aware ETA HUD [Verified]
 - **Tests**: `TST-MAP-031`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -660,8 +690,9 @@
 
 **Invariants**: SQLite schemas for `Routes.db` and `StartLocation2Altitude.db` must not be altered, calculations must be 100% offline, and 100% full-suite test pass rate MUST NOT be broken.
 
-### REQ-MAP-030: [SUPERSEDED / REMOVED by ATT-2463 / REQ-MAP-035] Corridor-Based Route Grouping & Differentiating Thumbnail Zoom [Verified]
+### REQ-MAP-030: [SUPERSEDED / REMOVED by ATT-2463 / REQ-MAP-035] Corridor-Based Route Grouping & Differentiating Thumbnail Zoom [Implemented]
 - **Tests**: `TST-MAP-032`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: Low
 - **Type**: Functional
 - **Verification Method**: Review
@@ -676,6 +707,7 @@
 
 ### REQ-MAP-035: Standalone Geodesic Calculation Utilities & Flat Route List Presentation [Verified]
 - **Tests**: `TST-MAP-037`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -718,6 +750,7 @@
 
 ### REQ-MAP-031: In-Ride Fork-in-the-Road Route Selection & Decision Alerts [Verified]
 - **Tests**: `TST-MAP-033`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -778,6 +811,7 @@
 
 ### REQ-MAP-032: Domain-Agnostic Scrubber Marker Synchronization & Telemetry Graph Auto-Centering [Verified]
 - **Tests**: `TST-MAP-034`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -820,6 +854,7 @@
 
 ### REQ-MAP-033: High-Contrast Maki POI Waypoint Badges, Shelter Classification & Substring Disambiguation [Verified]
 - **Tests**: `TST-MAP-035`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -870,6 +905,7 @@
 
 ### REQ-MAP-034: Designated Home-Base Selection for Return Navigation & Substring Disambiguation [Verified]
 - **Tests**: `TST-MAP-036`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -927,6 +963,7 @@
 
 ### REQ-MAP-036: Known Locations: Heim-Basis Redundant Badge Excision & Start-Count Home Resolution Alignment [Verified]
 - **Tests**: `TST-MAP-036`, `TST-MAP-038`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -991,6 +1028,7 @@
 
 ### REQ-MAP-037: Route Waypoint Marker Badge Diameter Optimization & Glanceability Proportional Scaling [Verified]
 - **Tests**: `TST-MAP-039`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1034,6 +1072,7 @@
 
 ### REQ-MAP-038: In-Ride Fork Route Detection Performance Optimization: Spatial Bounding-Box Rejection, Sport-Type Pre-Filtering, and Location Evaluation Throttling [Verified]
 - **Tests**: `TST-MAP-040`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
@@ -1080,6 +1119,7 @@
 
 ### REQ-MAP-039: Strict "Take Me Home" Return Navigation Activation Decoupling, Tab Navigation Hints Gating, and Non-Displacing Cockpit Overlay Integration [Verified]
 - **Tests**: `TST-MAP-041`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1133,6 +1173,7 @@
 
 ### REQ-MAP-040: High-Glanceability Route Polyline Scaling and Solid Line Rendering for Actively Navigated Route [Verified]
 - **Tests**: `TST-MAP-042`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1186,6 +1227,7 @@
 
 ### REQ-MAP-041: Restricting In-Ride Fork Route Candidate Matching to Active Selected Routes & Quiescent Short-Circuit [Verified]
 - **Tests**: `TST-MAP-043`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1225,6 +1267,7 @@
 
 ### REQ-MAP-042: Calibratable Speed-Dependent Map Zoom Curve, Follow-Me Forward Lookahead Camera Padding & Pitch Tuning [Verified]
 - **Tests**: `TST-MAP-044`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1278,6 +1321,7 @@
 
 ### REQ-NAV-043: In-Ride Fork Decision Alert Direction-Diversity Gating & False-Positive Suppression [Verified]
 - **Tests**: `TST-NAV-045`
+- **System Requirement(s)**: `SYSREQ-TRK-004`, `SYSREQ-TRK-006`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1309,6 +1353,7 @@
 
 ### REQ-MAP-044: Forward Lookahead Camera Top Content Padding Inversion & Settings Zoom Directional Guidance [Verified]
 - **Tests**: `TST-MAP-046`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1354,6 +1399,7 @@
 
 ### REQ-MAP-045: Automatic Active Workout Sport Type Synchronization on Route Selection (Bike / Run) [Verified]
 - **Tests**: `TST-MAP-047`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1400,6 +1446,7 @@
 
 ### REQ-MAP-046: Unified Viewport Anchor Authority for Follow-Me Map Tracking & Analytical Forward Lookahead Calculation [Verified]
 - **Tests**: `TST-MAP-048`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1444,6 +1491,7 @@
 
 ### REQ-MAP-047: Continuous Linear Polyline Projection & Progress Metric Interpolation for Live Climbs [Verified]
 - **Tests**: `TST-MAP-049`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1498,6 +1546,7 @@
 
 ### REQ-MAP-048: Follow-Me Camera Target Forward Lookahead Projection Scaling, Tilt Foreshortening Compensation & Settings Scale Direction Transparency [Verified]
 - **Tests**: `TST-MAP-050`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1544,6 +1593,7 @@
 
 ### REQ-GEO-001: Unified Polyline Progress Tracking Engine with Directional Virtual Gates and Orthogonal Segment Projection [Verified]
 - **Tests**: `TST-GEO-001`
+- **System Requirement(s)**: `SYSREQ-TRK-004`, `SYSREQ-TRK-006`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1606,6 +1656,7 @@
 
 ### REQ-MAP-049: Follow-Me Camera Speed Zoom Smoothing, Zoom Hysteresis Deadband, and Configurable Speed/Bearing Filter Calibration [Verified]
 - **Tests**: `TST-MAP-051`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1660,6 +1711,7 @@
 
 ### REQ-MAP-050: Calibrated Piecewise Linear-to-Logarithmic Follow-Me High-Speed Zoom and Autonomous Camera Control [Verified]
 - **Tests**: `TST-MAP-052`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1704,6 +1756,7 @@
 
 ### REQ-MAP-051: Referentially Stable Map Polyline Allocation, Static Layer Flow Decoupling, Keyed Layer Composition & Preview Downsampling [Verified]
 - **Tests**: `TST-MAP-053`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
@@ -1742,6 +1795,7 @@
 
 ### REQ-MAP-052: Reactive Speed/Bearing Flow Subscription in TrackingViewModel & Continuous Follow-Me Smoothing Convergence [Verified]
 - **Tests**: `TST-MAP-054`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1756,6 +1810,7 @@
 
 ### REQ-MAP-053: Multi-File Route Selection, Batch Import, Sport Type Selection Prompt & External Multi-Share Processing [Verified]
 - **Tests**: `TST-MAP-055`, `TST-MAP-056`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1821,6 +1876,7 @@
 
 ### REQ-MAP-054: TurnCueDetector Dead Code Cleanup, Unused Circular Smoothing Removal & Continuous Chord Window Boundary Interpolation Architecture [Verified]
 - **Tests**: `TST-MAP-057`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: Medium
 - **Type**: Non-Functional
 - **Verification Method**: Unit
@@ -1868,6 +1924,7 @@
 
 ### REQ-GEO-002: Equirectangular Scaled Polyline Projection, Orthogonal Virtual Gates & Windowed Out-and-Back Route Progress Tracking [Verified]
 - **Tests**: `TST-GEO-002`, `TST-NAV-056`
+- **System Requirement(s)**: `SYSREQ-TRK-004`, `SYSREQ-TRK-006`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1916,6 +1973,7 @@
 
 ### REQ-NAV-056: Stateful Polyline Progress Tracking Continuity, lastSegmentIndex Propagation & Reset Lifecycle Invariants across Production Callers [Verified]
 - **Tests**: `TST-NAV-056`
+- **System Requirement(s)**: `SYSREQ-TRK-004`, `SYSREQ-TRK-006`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1974,6 +2032,7 @@
 
 ### REQ-MAP-056: Line-Density Polyline Heatmap Tile Provider & 256-Entry Sequential Blue Color LUT [Verified]
 - **Tests**: `TST-MAP-058`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -2069,6 +2128,7 @@
 
 ### REQ-MAP-057: Zoom-Adaptive Line-Density Heatmap Stroke Scaling, Warm Sequential Palette & Muted Base Map Styling [Verified]
 - **Tests**: `TST-MAP-059`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -2122,6 +2182,7 @@
 
 ### REQ-MAP-058: Decouple Workout Clusters Heatmap from Periods Styling & Restore Pre-ATT-4833 Visual Appearance [Verified]
 - **Tests**: `TST-MAP-060`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -2169,6 +2230,7 @@
 
 ### REQ-MAP-059: Initial Map Camera Centering, Fallback Cascade & Navigation Bar Insets [Verified]
 - **Tests**: `TST-MAP-061`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -2217,6 +2279,7 @@
 
 ### REQ-MAP-060: Local Bounds Proximity Guard & Initial Location Fallback [Verified]
 - **Tests**: `TST-MAP-062`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -2253,6 +2316,7 @@
 
 ### REQ-MAP-061: Strava Segment Synchronization Exception Containment & Coroutine Safety [Verified]
 - **Tests**: `TST-MAP-063`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -2295,6 +2359,7 @@
 
 ### REQ-MAP-062: KnownLocationCard Sport Starts Breakdown Drill-Down Filter [Verified]
 - **Tests**: `TST-MAP-064`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -2339,6 +2404,7 @@
 
 ### REQ-MAP-063: Cross-Surface Centered Material Heart Marker Parity for Known Locations [Verified]
 - **Tests**: `TST-MAP-065`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -2376,6 +2442,7 @@
 
 ### REQ-MAP-064: Workout Climb Ingestion, Spatial Deduplication & Toggleable Map Climbs Layer [Verified]
 - **Tests**: `TST-MAP-066`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -2420,6 +2487,7 @@
 ### REQ-MAP-065: LiveSegmentsRepository Concurrency Safety & Immutability [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-MAP-067`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -2461,6 +2529,7 @@
 ### REQ-MAP-066: Historical Workout Climb Backfill & Backup Self-Healing Parity [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-MAP-068`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Integration
@@ -2497,6 +2566,7 @@
 ### REQ-MAP-067: Reactive Stored Climbs Flow & ViewModel Repository Decoupling [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-MAP-069`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -2528,6 +2598,7 @@
 
 ### REQ-RAD-006: Aftermath Map Traffic Hotspot Markers [Verified]
 - **Tests**: `TST-RAD-006`
+- **System Requirement(s)**: Derived (SW-only) — Post-workout aftermath map traffic hotspot visualization
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -2552,6 +2623,7 @@
 ### REQ-CLM-008: Live Climb Detection Movement-Bearing Gating & Cache Reconciliation [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-CLM-008`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -2590,6 +2662,7 @@
 ### REQ-CLM-009: Climb Detection Spike Guards, DEM Ground-Truth Cross-Validation & Corrupted Climbs Self-Healing [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-CLM-009`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Integration
@@ -2630,6 +2703,7 @@
 ### REQ-CLM-010: Configurable FIETS Index & Strava/Garmin Climb Categorization [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-CLM-010`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -2667,6 +2741,7 @@
 ### REQ-CLM-011: Deduplicate Overlapping Climbs in Climbs.db & Map Layer [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-CLM-011`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit

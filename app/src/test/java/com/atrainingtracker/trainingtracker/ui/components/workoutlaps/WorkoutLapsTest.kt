@@ -27,6 +27,7 @@ import org.junit.Test
  * Unit tests verifying WorkoutLaps logic: rabbit/hedgehog badges, lap naming,
  * descriptions, and expandable list threshold (REQ-UI-141, TST-UI-094, ATT-510).
  */
+// Linked test specs: TST-UI-096
 class WorkoutLapsTest {
 
     @Test

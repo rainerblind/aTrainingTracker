@@ -27,6 +27,7 @@ import org.junit.Test
  * Unit tests verifying analytical follow-me camera target calculation and
  * forward lookahead projection math (REQ-MAP-046 / TST-MAP-048.1).
  */
+// Linked test specs: TST-MAP-050
 class FollowMeCameraTargetTest {
 
     private val munichLocation = LatLng(48.137154, 11.576124)

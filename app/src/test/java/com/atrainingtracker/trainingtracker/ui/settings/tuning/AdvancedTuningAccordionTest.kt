@@ -608,6 +608,7 @@ class AdvancedTuningAccordionTest {
 
     @Test
     fun testTuningSectionEnum_canonicalLifecycleSequence() {
+        // TST-SET-115
         val expected = listOf(
             TuningSection.NAVIGATION,
             TuningSection.COCKPIT_TYPOGRAPHY,
@@ -617,11 +618,41 @@ class AdvancedTuningAccordionTest {
             TuningSection.CYCLING_RADAR,
             TuningSection.WORKOUT_MASKS_CARDS,
             TuningSection.PHYSIOLOGY_MODELS,
+            TuningSection.MORNING_CHECK,
             TuningSection.ROUTE_CLUSTERING,
             TuningSection.AFTERMATH_ANALYSIS,
             TuningSection.SWIMMING
         )
+        assertEquals(12, expected.size)
         assertEquals(expected, TuningSection.values().toList())
+    }
+
+    @Test
+    fun testMorningCheckSubtitleFormatter() {
+        // TST-SET-115, TST-UI-525.1
+        val mockContext = mockk<Context>()
+        every { mockContext.getString(R.string.tuning_morning_sleep_wellness_short) } returns "Sleep & Wellness"
+        every { mockContext.getString(R.string.tuning_morning_check_start_short, 8) } returns "Start button (until 08:00)"
+        every { mockContext.getString(R.string.tuning_morning_check_none_enabled) } returns "Disabled"
+
+        assertEquals(
+            "Disabled",
+            TuningSubtitleFormatter.formatMorningCheckSubtitle(
+                enableMorningSleepAndWellness = false,
+                showMorningCheckOnStartScreen = false,
+                morningCheckCutoffHour = 8,
+                context = mockContext
+            )
+        )
+        assertEquals(
+            "Sleep & Wellness, Start button (until 08:00)",
+            TuningSubtitleFormatter.formatMorningCheckSubtitle(
+                enableMorningSleepAndWellness = true,
+                showMorningCheckOnStartScreen = true,
+                morningCheckCutoffHour = 8,
+                context = mockContext
+            )
+        )
     }
 
     @Test

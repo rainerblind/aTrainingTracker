@@ -24,6 +24,7 @@ import org.junit.Test
 /**
  * Unit tests verifying [FastScrollbar] scroll calculations and index targeting (ATT-861, REQ-UI-139, TST-UI-092).
  */
+// Linked test specs: TST-UI-093
 class FastScrollbarTest {
 
     @Test

@@ -30,6 +30,7 @@ import java.lang.reflect.Modifier
  * and decoupled subsection composables in accordance with REQ-UI-222 and TST-UI-176.2.
  * Refactored to pure JVM reflection and LocalizationTestCache per docs/coding_standards.md §5.4 and REQ-PRO-049.
  */
+// Linked test specs: TST-UI-187
 class AdvancedTuningVisualContractTest {
 
     @Test
@@ -48,6 +49,7 @@ class AdvancedTuningVisualContractTest {
         assertTrue(constants.contains("SENSORS_GPS"))
         assertTrue(constants.contains("AFTERMATH_ANALYSIS"))
         assertTrue(constants.contains("WORKOUT_MASKS_CARDS"))
+        assertTrue(constants.contains("MORNING_CHECK"))
     }
 
     @Test
@@ -59,12 +61,14 @@ class AdvancedTuningVisualContractTest {
 
     @Test
     fun testDecoupledSubsections_existAsIndividualComposables() {
+        // TST-SET-115
         val sections = listOf(
             "com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.CockpitTypographySectionKt" to "CockpitTypographySection",
             "com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.AmoledBatterySaverSectionKt" to "AmoledBatterySaverSection",
             "com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.SensorsGpsFilterSectionKt" to "SensorsGpsFilterSection",
             "com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.AftermathAnalysisSectionKt" to "AftermathAnalysisSection",
-            "com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.WorkoutMasksAndCardsSectionKt" to "WorkoutMasksAndCardsSection"
+            "com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.WorkoutMasksAndCardsSectionKt" to "WorkoutMasksAndCardsSection",
+            "com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.MorningCheckSectionKt" to "MorningCheckSection"
         )
 
         for ((className, methodName) in sections) {
