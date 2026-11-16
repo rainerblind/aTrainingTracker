@@ -34,10 +34,13 @@ import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.ExtremaType
+import com.atrainingtracker.trainingtracker.database.LapsDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.exporter.ExportManager
 import com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculator
+import com.atrainingtracker.trainingtracker.repositories.SportTypesRepository
+import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.polar.androidcommunications.api.ble.model.gatt.client.psftp.BlePsFtpUtils
 import com.polar.sdk.api.PolarBleApi
@@ -150,6 +153,9 @@ object PolarVeritySenseOfflineController {
     var sdkIntOverride: Int? = null
 
     @VisibleForTesting
+    var poolLengthOverrideMeters: Double? = null
+
+    @VisibleForTesting
     var featureTimeoutMs: Long = PolarOfflineGattCoordinator.FEATURE_READY_TIMEOUT_MS
 
     internal fun getEffectiveSdkInt(): Int = sdkIntOverride ?: Build.VERSION.SDK_INT
@@ -194,6 +200,7 @@ object PolarVeritySenseOfflineController {
         isArmingInFlight.set(false)
         apiOverride = null
         sdkIntOverride = null
+        poolLengthOverrideMeters = null
         dispatcher = Dispatchers.IO
         featureTimeoutMs = PolarOfflineGattCoordinator.FEATURE_READY_TIMEOUT_MS
         sessionStartTimeMs = 0L
@@ -957,10 +964,73 @@ object PolarVeritySenseOfflineController {
             samplesManager.patchMissingHeartRateSamples(baseFileName, anchorMs, hrPairs)
             recomputeHrSummaryMetrics(appContext, workoutId, baseFileName)
         }
-        if (clearPendingFlag) {
-            WorkoutSummariesDatabaseManager.getInstance(appContext).clearPolarSyncPending(workoutId)
+
+        // REQ-SET-111.1: Auto-assign Swim sport type
+        val sportTypesRepo = SportTypesRepository.getInstance(appContext)
+        val swimSportId = sportTypesRepo.ensureSwimSportTypeExists()
+
+        // REQ-SET-111.2: Pool-length distance & turn extraction
+        val poolLengthM = poolLengthOverrideMeters ?: try {
+            SettingsDataStoreJavaHelper.getDefaultPoolLengthMeters(appContext).toDouble()
+        } catch (_: Throwable) {
+            25.0
         }
-        WorkoutRepository.getInstance(appContext).refreshWorkout(workoutId)
+        val turnTimestampsMs = swimSession.turnTimestampsMs
+        val lengthCount = turnTimestampsMs.size + 1
+        val totalDistanceM = lengthCount * poolLengthM
+        val durationMs = if (swimSession.durationMs > 0L) {
+            swimSession.durationMs
+        } else if (swimSession.hrSamples.isNotEmpty()) {
+            swimSession.hrSamples.size * MILLIS_PER_SECOND
+        } else {
+            lengthCount * 30_000L
+        }
+
+        if (!baseFileName.isNullOrEmpty()) {
+            val samplesManager = WorkoutSamplesDatabaseManager.getInstance(appContext)
+            samplesManager.patchSwimKinematics(baseFileName, anchorMs, durationMs, turnTimestampsMs, poolLengthM)
+        }
+
+        // Persist discrete laps in Laps.db honoring ATT-896
+        val lapsManager = LapsDatabaseManager.getInstance(appContext)
+        lapsManager.deleteWorkout(workoutId)
+
+        val sortedTurns = turnTimestampsMs.filter { it > anchorMs }.sorted()
+        var prevTimeMs = anchorMs
+        for (i in 0 until lengthCount) {
+            val lapNr = (i + 1).toLong()
+            val lapEndMs = if (i < sortedTurns.size) {
+                sortedTurns[i]
+            } else {
+                anchorMs + durationMs
+            }
+            val lapDurSec = Math.max(1, ((lapEndMs - prevTimeMs) / 1000L).toInt())
+            val lapSpeedMps = if (lapDurSec > 0) poolLengthM / lapDurSec else 0.0
+            lapsManager.saveLap(workoutId, lapNr, lapDurSec, poolLengthM, lapSpeedMps)
+            prevTimeMs = lapEndMs
+        }
+
+        val avgSpeedMps = if (durationMs > 0) totalDistanceM / (durationMs / 1000.0) else 0.0
+
+        // Update WorkoutSummaries.db
+        val summariesManager = WorkoutSummariesDatabaseManager.getInstance(appContext)
+        summariesManager.updateSwimMetrics(
+            workoutId,
+            swimSportId,
+            BSportType.UNKNOWN.name,
+            totalDistanceM,
+            lengthCount,
+            avgSpeedMps
+        )
+
+        // Update WorkoutRepository sport
+        val workoutRepo = WorkoutRepository.getInstance(appContext)
+        workoutRepo.updateWorkoutSport(workoutId, swimSportId, BSportType.UNKNOWN)
+
+        if (clearPendingFlag) {
+            summariesManager.clearPolarSyncPending(workoutId)
+        }
+        workoutRepo.refreshWorkout(workoutId)
         return true
     }
 

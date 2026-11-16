@@ -31,11 +31,14 @@ import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDevice
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.database.ExtremaType
+import com.atrainingtracker.trainingtracker.database.LapsDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.hrv.HrvPostWorkoutRecomputer
 import com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrRepository
 import com.atrainingtracker.trainingtracker.exporter.ExportManager
+import com.atrainingtracker.trainingtracker.repositories.SportTypesRepository
+import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.atrainingtracker.trainingtracker.ui.aftermath.syncPendingPolarWorkout
@@ -98,6 +101,8 @@ class PolarVeritySenseOfflineControllerTest {
     private lateinit var mockSummariesDb: WorkoutSummariesDatabaseManager
     private lateinit var mockRrRepo: WorkoutRrRepository
     private lateinit var mockWorkoutRepo: WorkoutRepository
+    private lateinit var mockLapsDb: LapsDatabaseManager
+    private lateinit var mockSportTypesRepo: SportTypesRepository
 
     private val verityMac = "AA:BB:CC:11:22:33"
     private val verityPolarId = "A1B2C3D4"
@@ -133,6 +138,8 @@ class PolarVeritySenseOfflineControllerTest {
         mockSummariesDb = mockk(relaxed = true)
         mockRrRepo = mockk(relaxed = true)
         mockWorkoutRepo = mockk(relaxed = true)
+        mockLapsDb = mockk(relaxed = true)
+        mockSportTypesRepo = mockk(relaxed = true)
 
         WorkoutSamplesDatabaseManager.resetForTesting(mockSamplesDb)
 
@@ -147,6 +154,14 @@ class PolarVeritySenseOfflineControllerTest {
 
         WorkoutRepository.resetForTesting(mockWorkoutRepo)
         every { mockWorkoutRepo.refreshWorkout(any()) } just Runs
+
+        mockkStatic(LapsDatabaseManager::class)
+        every { LapsDatabaseManager.getInstance(any<Context>()) } returns mockLapsDb
+
+        SportTypesRepository.resetForTesting(mockSportTypesRepo)
+        every { mockSportTypesRepo.ensureSwimSportTypeExists() } returns 101L
+
+        PolarVeritySenseOfflineController.poolLengthOverrideMeters = 25.0
 
         coEvery { mockApi.isFtuDone(any()) } returns true
         every { mockApi.getTrainingSessionReferences(any()) } returns flowOf()
@@ -967,6 +982,11 @@ class PolarVeritySenseOfflineControllerTest {
 
         assertTrue(success)
         assertEquals(3, pairsSlot.captured.size)
+        verify(exactly = 1) { mockSportTypesRepo.ensureSwimSportTypeExists() }
+        verify(exactly = 1) { mockSamplesDb.patchSwimKinematics(baseFileName, anchorMs, any(), any(), 25.0) }
+        verify(atLeast = 1) { mockLapsDb.saveLap(workoutId, any(), any(), 25.0, any()) }
+        verify(exactly = 1) { mockSummariesDb.updateSwimMetrics(workoutId, 101L, any(), any(), any(), any()) }
+        verify(exactly = 1) { mockWorkoutRepo.updateWorkoutSport(workoutId, 101L, any()) }
         coVerify(exactly = 1) { mockApi.deleteTrainingSession(verityPolarId, ref) }
         coVerify(exactly = 0) { mockRrRepo.insertIntervals(any()) }
     }

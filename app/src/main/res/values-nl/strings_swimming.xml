@@ -13,4 +13,8 @@
     <string name="tuning_swim_pool_custom_meters_label">Aangepaste lengte: %1$d m</string>
     <string name="tuning_swim_subtitle_active">Actief, %1$s-bad</string>
     <string name="tuning_swim_subtitle_inactive">Inactief, %1$s-bad</string>
+    <string name="swim_adjust_card_title">Zweminstellingen</string>
+    <string name="swim_adjust_pool_length_label">Badlengte</string>
+    <string name="swim_adjust_lengths_label">Banen</string>
+    <string name="swim_adjust_recalculating">Zwemstatistieken herberekenen…</string>
 </resources>

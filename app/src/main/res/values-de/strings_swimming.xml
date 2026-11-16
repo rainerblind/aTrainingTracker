@@ -13,4 +13,8 @@
     <string name="tuning_swim_pool_custom_meters_label">Eigene Länge: %1$d m</string>
     <string name="tuning_swim_subtitle_active">Aktiv, %1$s-Becken</string>
     <string name="tuning_swim_subtitle_inactive">Inaktiv, %1$s-Becken</string>
+    <string name="swim_adjust_card_title">Schwimm-Einstellungen</string>
+    <string name="swim_adjust_pool_length_label">Bahnlänge</string>
+    <string name="swim_adjust_lengths_label">Bahnen</string>
+    <string name="swim_adjust_recalculating">Schwimmdaten werden neu berechnet…</string>
 </resources>

@@ -1329,5 +1329,25 @@
   5. *9-Locale Localization Parity & Tier 1 Unit Regression (`TST-SET-112.5`)*:
   • Verify `TranslationParityTest` passes with zero missing keys and zero emojis across all 9 locales, and targeted unit test suite passes cleanly.
 
+---
+
+### TST-SET-113: **Polar Verity Sense Swim Mode Backfill, Auto SportType & Aftermath Adjustment Test Suite** [Verified]
+- **Requirement(s)**: `REQ-SET-111`
+- **Component**: `PolarVeritySenseOfflineController.kt`, `SportTypesRepository.kt`, `LapsDatabaseManager.java`, `WorkoutSamplesDatabaseManager.java`, `WorkoutSummariesDatabaseManager.java`, `WorkoutDetailTabbedContent.kt`, `res/values*/strings_swimming.xml`
+- **Jira**: `ATT-8001`
+- **Status**: Verified (ATT-8001)
+- **Test Description**:
+  1. *Automatic Swim SportType Provisioning & Assignment (`TST-SET-113.1`)*:
+  • Verify `ensureSwimSportTypeExists()` creates/resolves the Swimming sport type and assigns `BSportType.SWIMMING` and its `sportId` to the workout summary during swim session backfill.
+  2. *Pool-Length Distance, Speed & Lap SQLite Backfill (`TST-SET-113.2`)*:
+  • Verify backfill calculates cumulative distance from `poolLengthMeters * turnCount`, writes `DISTANCE_m`, `SPEED_mps`, and `LAP_NR` samples into `WorkoutSamples.db`, and persists valid non-zero laps in `LapsDatabaseManager` (honoring ATT-896).
+  3. *Export Hold & Summary Extrema Recalculation (`TST-SET-113.3`)*:
+  • Verify `WorkoutSummariesDatabaseManager` updates total distance, average/max speed, and HR zone times before `ExportManager.workoutFinished()` is released, while `WorkoutRr.db` receives zero entries.
+  4. *Aftermath Pool-Length & Turn Correction Recalculation (`TST-SET-113.4`)*:
+  • Verify switching pool length (e.g. 25m to 50m) or adjusting length count (`+1`/`-1`) in `SwimWorkoutAdjustCard` recalculates workout total distance, pace, and lap splits in SQLite, refreshes `WorkoutRepository`, and triggers export invalidation.
+  5. *9-Locale Localization Parity & Visual UI Inspection (`TST-SET-113.5`)*:
+  • Verify `TranslationParityTest` passes with zero missing keys and zero emojis across all 9 locales for `SwimWorkoutAdjustCard`, and UI screenshot verifies layout on `emulator-5554`.
+
+
 
 

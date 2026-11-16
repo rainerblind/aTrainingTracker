@@ -1138,6 +1138,230 @@ public class WorkoutSamplesDatabaseManager {
         return null;
     }
 
+    /**
+     * Backfills swim kinematics (cumulative DISTANCE_m, interval SPEED_mps, LAP_NR)
+     * using detected turn timestamps (REQ-SET-111.2, ATT-8001).
+     */
+    public void patchSwimKinematics(
+            @NonNull String baseFileName,
+            long startTimeMs,
+            long durationMs,
+            @NonNull java.util.List<Long> turnTimestampsMs,
+            double poolLengthM
+    ) {
+        java.util.List<SwimInterval> intervals = new java.util.ArrayList<>();
+        java.util.List<Long> sortedTurns = new java.util.ArrayList<>();
+        for (Long t : turnTimestampsMs) {
+            if (t != null && t > startTimeMs) {
+                sortedTurns.add(t);
+            }
+        }
+        java.util.Collections.sort(sortedTurns);
+
+        if (sortedTurns.isEmpty()) {
+            long endMs = startTimeMs + Math.max(1000L, durationMs);
+            intervals.add(new SwimInterval(startTimeMs, endMs, poolLengthM));
+        } else {
+            intervals.add(new SwimInterval(startTimeMs, sortedTurns.get(0), poolLengthM));
+            for (int i = 0; i < sortedTurns.size() - 1; i++) {
+                intervals.add(new SwimInterval(sortedTurns.get(i), sortedTurns.get(i + 1), poolLengthM));
+            }
+            long lastTurn = sortedTurns.get(sortedTurns.size() - 1);
+            long endMs = Math.max(lastTurn + 1000L, startTimeMs + durationMs);
+            intervals.add(new SwimInterval(lastTurn, endMs, poolLengthM));
+        }
+
+        applySwimKinematicsIntervals(baseFileName, startTimeMs, durationMs, intervals, poolLengthM);
+    }
+
+    /**
+     * Backfills uniform swim kinematics across a specified number of lengths (REQ-SET-111.3, ATT-8001).
+     */
+    public void patchSwimKinematicsUniform(
+            @NonNull String baseFileName,
+            long startTimeMs,
+            long durationMs,
+            int lengthCount,
+            double poolLengthM
+    ) {
+        int count = Math.max(1, lengthCount);
+        long totalDur = Math.max(1000L, durationMs);
+        long intervalDur = Math.max(500L, totalDur / count);
+
+        java.util.List<SwimInterval> intervals = new java.util.ArrayList<>();
+        for (int i = 0; i < count; i++) {
+            long s = startTimeMs + i * intervalDur;
+            long e = (i == count - 1) ? (startTimeMs + totalDur) : (startTimeMs + (i + 1) * intervalDur);
+            intervals.add(new SwimInterval(s, Math.max(s + 500L, e), poolLengthM));
+        }
+
+        applySwimKinematicsIntervals(baseFileName, startTimeMs, durationMs, intervals, poolLengthM);
+    }
+
+    private static class SwimInterval {
+        final long startMs;
+        final long endMs;
+        final double speedMps;
+
+        SwimInterval(long startMs, long endMs, double poolLengthM) {
+            this.startMs = startMs;
+            this.endMs = Math.max(startMs + 500L, endMs);
+            double durSec = Math.max(0.5, (this.endMs - this.startMs) / 1000.0);
+            this.speedMps = poolLengthM / durSec;
+        }
+    }
+
+    private void applySwimKinematicsIntervals(
+            @NonNull String baseFileName,
+            long startTimeMs,
+            long durationMs,
+            @NonNull java.util.List<SwimInterval> intervals,
+            double poolLengthM
+    ) {
+        if (intervals.isEmpty()) return;
+        SQLiteDatabase db = getDatabase();
+        String table = getTableName(baseFileName);
+
+        if (!existsColumnInTable(db, table, SensorType.DISTANCE_m.name())) {
+            try {
+                db.execSQL("ALTER TABLE " + table + " ADD COLUMN " + SensorType.DISTANCE_m.name() + " REAL DEFAULT 0.0");
+            } catch (Exception ignored) {}
+        }
+        if (!existsColumnInTable(db, table, SensorType.SPEED_mps.name())) {
+            try {
+                db.execSQL("ALTER TABLE " + table + " ADD COLUMN " + SensorType.SPEED_mps.name() + " REAL DEFAULT 0.0");
+            } catch (Exception ignored) {}
+        }
+        if (!existsColumnInTable(db, table, SensorType.LAP_NR.name())) {
+            try {
+                db.execSQL("ALTER TABLE " + table + " ADD COLUMN " + SensorType.LAP_NR.name() + " INTEGER DEFAULT 1");
+            } catch (Exception ignored) {}
+        }
+
+        db.beginTransaction();
+        try {
+            java.util.List<Pair<Long, Long>> rows = new java.util.ArrayList<>();
+            try (Cursor cursor = db.rawQuery(
+                    "SELECT " + WorkoutSamplesDbHelper.C_ID + ", " + WorkoutSamplesDbHelper.TIME +
+                    ", CAST(strftime('%s', " + WorkoutSamplesDbHelper.TIME + ") AS INTEGER) FROM " + table +
+                    " ORDER BY " + WorkoutSamplesDbHelper.C_ID + " ASC", null)) {
+                if (cursor != null) {
+                    while (cursor.moveToNext()) {
+                        long rowId = cursor.getLong(0);
+                        String timeStr = cursor.getString(1);
+                        long timeSec = cursor.getLong(2);
+                        long tsMs = (timeSec > 0) ? timeSec * 1000L : parseTimestampMs(timeStr);
+                        rows.add(new Pair<>(rowId, tsMs));
+                    }
+                }
+            }
+
+            int numIntervals = intervals.size();
+            if (!rows.isEmpty()) {
+                SQLiteStatement stmt = db.compileStatement(
+                        "UPDATE " + table + " SET " +
+                        SensorType.DISTANCE_m.name() + " = ?, " +
+                        SensorType.SPEED_mps.name() + " = ?, " +
+                        SensorType.LAP_NR.name() + " = ? WHERE " +
+                        WorkoutSamplesDbHelper.C_ID + " = ?");
+
+                for (Pair<Long, Long> row : rows) {
+                    long rowId = row.first;
+                    long tsMs = row.second > 0 ? row.second : startTimeMs;
+
+                    int activeLap = 1;
+                    double cumDist = 0.0;
+                    double speed = intervals.get(0).speedMps;
+
+                    if (tsMs <= intervals.get(0).startMs) {
+                        activeLap = 1;
+                        cumDist = 0.0;
+                        speed = intervals.get(0).speedMps;
+                    } else if (tsMs >= intervals.get(numIntervals - 1).endMs) {
+                        activeLap = numIntervals;
+                        cumDist = numIntervals * poolLengthM;
+                        speed = 0.0;
+                    } else {
+                        for (int i = 0; i < numIntervals; i++) {
+                            SwimInterval inv = intervals.get(i);
+                            if (tsMs >= inv.startMs && tsMs <= inv.endMs) {
+                                activeLap = i + 1;
+                                double fraction = (inv.endMs > inv.startMs)
+                                        ? Math.max(0.0, Math.min(1.0, (double) (tsMs - inv.startMs) / (double) (inv.endMs - inv.startMs)))
+                                        : 1.0;
+                                cumDist = (i * poolLengthM) + (fraction * poolLengthM);
+                                speed = inv.speedMps;
+                                break;
+                            } else if (i < numIntervals - 1 && tsMs > inv.endMs && tsMs < intervals.get(i + 1).startMs) {
+                                activeLap = i + 1;
+                                cumDist = (i + 1) * poolLengthM;
+                                speed = inv.speedMps;
+                                break;
+                            }
+                        }
+                    }
+
+                    stmt.bindDouble(1, cumDist);
+                    stmt.bindDouble(2, speed);
+                    stmt.bindLong(3, activeLap);
+                    stmt.bindLong(4, rowId);
+                    stmt.executeUpdateDelete();
+                }
+            } else if (durationMs > 0) {
+                long secCount = Math.max(1L, durationMs / 1000L);
+                SQLiteStatement insertStmt = db.compileStatement(
+                        "INSERT INTO " + table + " (" + WorkoutSamplesDbHelper.TIME + ", " +
+                        SensorType.DISTANCE_m.name() + ", " + SensorType.SPEED_mps.name() + ", " + SensorType.LAP_NR.name() +
+                        ") VALUES (datetime(?, 'unixepoch'), ?, ?, ?)");
+                for (int s = 0; s < secCount; s++) {
+                    long currentSec = (startTimeMs / 1000L) + s;
+                    long tsMs = currentSec * 1000L;
+
+                    int activeLap = 1;
+                    double cumDist = 0.0;
+                    double speed = intervals.get(0).speedMps;
+
+                    if (tsMs <= intervals.get(0).startMs) {
+                        activeLap = 1;
+                        cumDist = 0.0;
+                        speed = intervals.get(0).speedMps;
+                    } else if (tsMs >= intervals.get(numIntervals - 1).endMs) {
+                        activeLap = numIntervals;
+                        cumDist = numIntervals * poolLengthM;
+                        speed = 0.0;
+                    } else {
+                        for (int i = 0; i < numIntervals; i++) {
+                            SwimInterval inv = intervals.get(i);
+                            if (tsMs >= inv.startMs && tsMs <= inv.endMs) {
+                                activeLap = i + 1;
+                                double fraction = (inv.endMs > inv.startMs)
+                                        ? Math.max(0.0, Math.min(1.0, (double) (tsMs - inv.startMs) / (double) (inv.endMs - inv.startMs)))
+                                        : 1.0;
+                                cumDist = (i * poolLengthM) + (fraction * poolLengthM);
+                                speed = inv.speedMps;
+                                break;
+                            } else if (i < numIntervals - 1 && tsMs > inv.endMs && tsMs < intervals.get(i + 1).startMs) {
+                                activeLap = i + 1;
+                                cumDist = (i + 1) * poolLengthM;
+                                speed = inv.speedMps;
+                                break;
+                            }
+                        }
+                    }
+
+                    insertStmt.bindLong(1, currentSec);
+                    insertStmt.bindDouble(2, cumDist);
+                    insertStmt.bindDouble(3, speed);
+                    insertStmt.bindLong(4, activeLap);
+                    insertStmt.executeInsert();
+                }
+            }
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
+        }
+    }
+
     private static long parseTimestampMs(@Nullable String timeStr) {
         if (timeStr == null || timeStr.trim().isEmpty()) return 0L;
         String[] formats = {

@@ -2513,5 +2513,39 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 
 **Invariants**: Zero `WorkoutRr.db` writes; zero `WorkoutSummaries.db` schema bumps; gap-only `HR` patching; post-commit single-session deletion; zero emojis in strings.
 
+---
+
+### REQ-SET-111: Polar Verity Sense Swim Mode Pool-Length Distance/Laps Backfill, Auto SportType & Aftermath Adjustment (`ATT-8001`) [Verified]
+- **Tests**: `TST-SET-113`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit / Integration
+- **Implementation**: `PolarVeritySenseOfflineController.kt`, `SportTypesRepository.kt`, `LapsDatabaseManager.java`, `WorkoutSamplesDatabaseManager.java`, `WorkoutSummariesDatabaseManager.java`, `WorkoutRepository.kt`, `SwimWorkoutAdjustCard.kt`, `WorkoutDetailTabbedContent.kt`, `res/values*/strings_swimming.xml`
+- **Rationale**: While ATT-8000 extracts 1-Hz HR and gyroscope wall turns, full swim integration requires automatically creating/assigning the Swimming sport type, backfilling pool-length distance, speed, and lap number into SQLite databases, holding automatic exports until commit, and allowing post-workout pool length and turn adjustments in Aftermath.
+- **Description**:
+1. *Automatic Swim SportType Provisioning & Assignment (`REQ-SET-111.1`)*:
+   - When a White Swimming Mode session is backfilled (at workout stop or via Aftermath retry sync), the controller SHALL call `SportTypesRepository.getInstance(context).ensureSwimSportTypeExists()` to idempotently create the Swimming sport type if not already active.
+   - The controller SHALL assign the Swimming sport ID and `BSportType.SWIMMING` to the workout via `WorkoutSummariesDatabaseManager` and `WorkoutRepository.updateWorkoutSport()`, overriding speed-based heuristic fallbacks (`WALK`/`OTHER`).
+2. *Pool-Length Distance, Speed & Lap Backfill (`REQ-SET-111.2`)*:
+   - The controller SHALL read the configured default pool length via `SettingsDataStoreJavaHelper.getDefaultPoolLengthMeters(context)`.
+   - For each detected length interval (defined by consecutive `turnTimestampsMs`), the controller SHALL compute cumulative `SensorType.DISTANCE_m`, segment `SensorType.SPEED_mps`, and `SensorType.LAP_NR`, backfilling them into `WorkoutSamples.db` alongside 1-Hz `SensorType.HR`.
+   - The controller SHALL persist discrete lap entries into `Laps.db` via `LapsDatabaseManager.saveLap()`, enforcing the `ATT-896` non-zero lap duration/distance guard (`lapDistance > 0 && lapTime > 0`).
+   - The controller SHALL recompute workout total distance, average/max speed, and HR zones in `WorkoutSummaries.db` before releasing held automatic exports (`ExportManager`).
+   - `WorkoutRr.db` MUST NOT receive any optical PPG rows (strict HRV integrity).
+3. *Aftermath Pool-Length & Length-Count Adjustment (`REQ-SET-111.3`)*:
+   - For Verity Sense swim workouts, Workout Details (Aftermath) SHALL render a `SwimWorkoutAdjustCard` in `WorkoutDetailTabbedContent.kt`.
+   - Swimmers SHALL be able to select standard pool lengths (`25 m`, `50 m`, `25 yd`, custom) or adjust total length count (`+1` / `-1` for missed/phantom gyroscope turns).
+   - Upon adjustment, the system SHALL recalculate workout total distance, average pace, lap splits, and sample streams in SQLite, refresh `WorkoutRepository`, and invalidate/trigger re-export via `ExportManager`.
+4. *9-Locale Localization Parity & Invariants (`REQ-SET-111.4`)*:
+   - All user-facing strings for `SwimWorkoutAdjustCard` SHALL be localized across all 9 supported application locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`) with zero inline emojis.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* Swimming has not yet been activated in `SportType.db`, *When* a Verity Sense White Swimming Mode session is backfilled, *Then* `ensureSwimSportTypeExists()` creates the Swimming sport type and assigns it to the workout, preventing Walking misclassification.
+• *Given* configured pool length is 50 m and the sensor recorded 20 turn intervals, *When* stop backfill completes, *Then* `WorkoutSamples.db`, `Laps.db`, and `WorkoutSummaries.db` record 1000 m total distance, 20 distinct laps, and 1-Hz HR before automatic exports run, with zero writes to `WorkoutRr.db`.
+• *Given* a synced swim workout in Workout Details (Aftermath), *When* the user switches pool length from 25 m to 50 m or taps `+1` length, *Then* total distance, pace, and laps recalculate immediately in SQLite and refresh in the UI across all 9 locales.
+
+**Invariants**: Zero `WorkoutRr.db` / `HrvPostWorkoutRecomputer` writes; zero `WorkoutSummaries.db` schema bumps; automatic exports held until backfill commits; idempotent `ensureSwimSportTypeExists()`; zero emojis in strings.
+
+
 
 

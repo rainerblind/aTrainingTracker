@@ -64,6 +64,7 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.splits.LapSplitVisualiz
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutdetail.HrvAlpha1ScatterCard
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutdetail.HrvDurabilityCard
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutdetail.HrvThresholdSummaryCard
+import com.atrainingtracker.trainingtracker.ui.aftermath.workoutdetail.SwimWorkoutAdjustCard
 import com.atrainingtracker.trainingtracker.zones.HrvSessionThreshold
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.GradeZoneDistributionCard
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneDistributionCard
@@ -883,6 +884,37 @@ private fun RenderWorkoutDetailCardSections(
                     showCardioPowerInWorkoutSummary = false,
                     modifier = Modifier.fillMaxWidth()
                 )
+                val isSwim = workoutData.sportName.contains("swim", ignoreCase = true) ||
+                    workoutData.sportName.contains("schwimm", ignoreCase = true) ||
+                    workoutData.sportName.contains("natat", ignoreCase = true) ||
+                    workoutData.sportName.contains("nuot", ignoreCase = true) ||
+                    workoutData.sportName.contains("zwem", ignoreCase = true) ||
+                    workoutData.sportName.contains("pływ", ignoreCase = true) ||
+                    workoutData.sportName.contains("nataç", ignoreCase = true) ||
+                    workoutData.sportName.contains("水泳", ignoreCase = true) ||
+                    workoutData.stravaSportName?.contains("swim", ignoreCase = true) == true
+                if (isSwim) {
+                    val currentContext = LocalContext.current
+                    val repo = remember(currentContext) { WorkoutRepository.getInstance(currentContext.applicationContext as Application) }
+                    val laps = remember(workoutData.id) { repo.getLaps(workoutData.id) }
+                    val lapCount = if (laps.isNotEmpty()) laps.size else Math.max(1, (workoutData.totalDistance / 25.0).toInt())
+                    val currentPoolLengthM = if (lapCount > 0 && workoutData.totalDistance > 0) {
+                        workoutData.totalDistance / lapCount
+                    } else {
+                        tuningConfig.defaultPoolLengthMeters.toDouble()
+                    }
+                    SwimWorkoutAdjustCard(
+                        workoutId = workoutData.id,
+                        currentPoolLengthM = currentPoolLengthM,
+                        currentLengthCount = lapCount,
+                        onAdjust = { newPoolLength, newCount ->
+                            repo.recalculateSwimWorkout(workoutData.id, newPoolLength, newCount)
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 4.dp)
+                    )
+                }
                 if (tuningConfig.enableCardioPowerDynamics && workoutData.cardioPowerDynamics != null) {
                     CardioPowerDynamicsCard(
                         record = workoutData.cardioPowerDynamics,

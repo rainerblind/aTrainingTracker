@@ -13,4 +13,8 @@
     <string name="tuning_swim_pool_custom_meters_label">カスタム長: %1$d m</string>
     <string name="tuning_swim_subtitle_active">有効、%1$sプール</string>
     <string name="tuning_swim_subtitle_inactive">無効、%1$sプール</string>
+    <string name="swim_adjust_card_title">スイム設定</string>
+    <string name="swim_adjust_pool_length_label">プール長</string>
+    <string name="swim_adjust_lengths_label">ラップ（本数）</string>
+    <string name="swim_adjust_recalculating">スイム指標を再計算中…</string>
 </resources>

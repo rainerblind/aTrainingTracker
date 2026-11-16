@@ -1513,6 +1513,84 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
         updateWorkoutSummary(workoutId, updateVals)
     }
 
+    /**
+     * Recalculates swim workout metrics, patches sample streams, and updates laps
+     * following user adjustment in Aftermath (REQ-SET-111.3, ATT-8001).
+     */
+    suspend fun recalculateSwimWorkout(
+        workoutId: Long,
+        poolLengthMeters: Double,
+        lengthCount: Int
+    ): Boolean = withContext(Dispatchers.IO) {
+        val baseFileName = summariesManager.getString(workoutId, WorkoutSummariesDatabaseManager.WorkoutSummaries.FILE_BASE_NAME)
+            ?: return@withContext false
+        val activeTimeSec = summariesManager.getLong(workoutId, WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_ACTIVE_s) ?: 0L
+        val startTimeStr = summariesManager.getString(workoutId, WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_START)
+        val sportId = summariesManager.getLong(workoutId, WorkoutSummariesDatabaseManager.WorkoutSummaries.SPORT_ID) ?: 0L
+        val bSportName = summariesManager.getString(workoutId, WorkoutSummariesDatabaseManager.WorkoutSummaries.B_SPORT) ?: BSportType.UNKNOWN.name
+
+        val startTimeMs = if (!startTimeStr.isNullOrEmpty()) {
+            try {
+                java.time.LocalDateTime.parse(startTimeStr.replace(" ", "T"))
+                    .atZone(java.time.ZoneId.systemDefault())
+                    .toInstant()
+                    .toEpochMilli()
+            } catch (e: Exception) {
+                System.currentTimeMillis() - (activeTimeSec * 1000L)
+            }
+        } else {
+            System.currentTimeMillis() - (activeTimeSec * 1000L)
+        }
+
+        val totalDurationMs = Math.max(1000L, activeTimeSec * 1000L)
+        val safeLengthCount = Math.max(1, lengthCount)
+        val totalDistanceM = safeLengthCount * poolLengthMeters
+        val avgSpeedMps = if (totalDurationMs > 0) totalDistanceM / (totalDurationMs / 1000.0) else 0.0
+
+        // 1. Patch samples with uniform swim kinematics
+        samplesManager.patchSwimKinematicsUniform(
+            baseFileName,
+            startTimeMs,
+            totalDurationMs,
+            safeLengthCount,
+            poolLengthMeters
+        )
+
+        // 2. Re-create discrete laps in Laps.db
+        lapsDatabaseManager.deleteWorkout(workoutId)
+        val intervalDurMs = Math.max(500L, totalDurationMs / safeLengthCount)
+        var prevLapMs = startTimeMs
+        for (i in 0 until safeLengthCount) {
+            val lapNr = (i + 1).toLong()
+            val lapEndMs = if (i == safeLengthCount - 1) (startTimeMs + totalDurationMs) else (startTimeMs + (i + 1) * intervalDurMs)
+            val lapDurSec = Math.max(1, ((lapEndMs - prevLapMs) / 1000L).toInt())
+            val lapSpeedMps = if (lapDurSec > 0) poolLengthMeters / lapDurSec else 0.0
+            lapsDatabaseManager.saveLap(workoutId, lapNr, lapDurSec, poolLengthMeters, lapSpeedMps)
+            prevLapMs = lapEndMs
+        }
+
+        // 3. Update summaries in WorkoutSummaries.db
+        summariesManager.updateSwimMetrics(
+            workoutId,
+            sportId,
+            bSportName,
+            totalDistanceM,
+            safeLengthCount,
+            avgSpeedMps
+        )
+
+        // 4. Invalidate export cache
+        try {
+            exportManager.invalidateWorkoutExport(baseFileName)
+        } catch (e: Exception) {
+            Log.w(TAG, "Non-fatal export cache invalidation exception after swim recalculate: ${e.message}")
+        }
+
+        // 5. Reload workout in memory
+        reloadWorkoutData(workoutId)
+        true
+    }
+
     fun updateWorkoutName(workoutId: Long, name: String) {
         val updateVals = ContentValues().apply {
             put(WorkoutSummariesDatabaseManager.WorkoutSummaries.WORKOUT_NAME, name)
