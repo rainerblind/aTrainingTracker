@@ -3,7 +3,7 @@
 **Domain**: `ui_design_system`  
 **Prefixes**: `UI`, `UNT`  
 **Scope**: Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts.  
-**Total Requirements**: 460
+**Total Requirements**: 461
 
 ---
 
@@ -17428,3 +17428,41 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 • *Then* it safely recovers and returns the canonical metric default without crashing.
 
 **Invariants**: `TTColor.Zone1..7` and `TTColor.WPrimeBalGreen` tokens unaltered; zero `Color(0x...)` outside `Color.kt`; graph layout dimensions (`50.dp`/`25.dp`/`24.dp`) preserved; 100% 9-language localization parity.
+
+### REQ-UI-2781: Conditional Section Dividers in SensorSourceDialog [Verified]
+- **Tests**: `TST-UI-2781`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `SensorSourceDialog.kt`
+- **Rationale**: In `SensorSourceDialog`, horizontal dividers (`HorizontalDivider`) separate distinct operational tiers (Altitude Calibration, Source Device, Active Backups, and Not Connected). Dividers SHALL only be rendered between two rendered content sections. When a section is not preceded by any rendered section (such as when `sourceDevice == null` and `activeBackups.isEmpty()`), no leading divider SHALL be rendered at the top of the dialog body. When a section has no subsequent section rendered, no trailing divider SHALL be emitted.
+- **Description**: Conditional Section Dividers in `SensorSourceDialog`.
+
+1. *Sequential Section Guarding (`REQ-UI-2781.1`)*:
+• In `SensorSourceDialog.kt`, section rendering SHALL maintain a sequential preceding-section guard (`hasPrecedingSection`).
+• The Altitude Calibration section (`sensorType == SensorType.ALTITUDE && onCalibrateAltitude != null`) SHALL NOT emit a trailing `HorizontalDivider` unconditionally.
+• The Source Device section (`sourceDevice != null`), Active Backups section (`activeBackups.isNotEmpty()`), and Not Connected section (`notConnected.isNotEmpty()`) SHALL emit a `HorizontalDivider` preceding their header if and only if a prior section has rendered content.
+• If no preceding section was rendered (e.g. for disconnected sensors where `sourceDevice == null` and `activeBackups.isEmpty()`), the Not Connected section SHALL NOT render a leading `HorizontalDivider`.
+
+2. *Duplicate Divider Elimination (`REQ-UI-2781.2`)*:
+• Under no permutation of sensor availability or calibration settings SHALL two `HorizontalDivider` elements be rendered adjacent to each other.
+• If only the Altitude Calibration card is rendered without any subsequent device blocks, no trailing `HorizontalDivider` SHALL be displayed above the dialog confirmation actions.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-UI-2781`, extending `REQ-UI-049` (*Sensor Source Dialog*) and `REQ-UI-268` (*Canonical Priority Sorting in SensorSourceDialog*), targeting `SensorSourceDialog.kt`.
+2. *Historical Origin & Commit Trace*: Introduced in Sprint `2026-40.1` (`aa0184f0`), augmented in `ATT-4845`/`ATT-5072` (altitude calibration) and `ATT-7544` (bike radar).
+3. *Root Reason for Existing Formulation*: Dividers were added incrementally inside section blocks on the assumption that preceding sections were present. When a category had only disconnected devices, the divider became an orphaned top-level line.
+4. *Preservation of Core Invariants*: Preserves all sensor category sections, semantic header colors (`REQ-UI-051`), canonical sorting order (`REQ-UI-268.5`), and device click navigation without regression.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an athlete opening `SensorSourceDialog` for a sensor with only disconnected devices (`sourceDevice == null` and `activeBackups.isEmpty()`),
+• *When* the dialog content renders,
+• *Then* zero `HorizontalDivider` composables SHALL precede the "Nicht verbunden" (`R.string.source_not_connected`) section header.
+• *Given* an athlete opening `SensorSourceDialog` for `SensorType.ALTITUDE` with calibration active and no connected source devices,
+• *When* both the calibration card and disconnected devices render,
+• *Then* exactly one `HorizontalDivider` SHALL separate the calibration card from the "Nicht verbunden" section, with zero stacked dividers.
+• *Given* an athlete opening `SensorSourceDialog` with an active `sourceDevice` and active backups,
+• *When* the dialog content renders,
+• *Then* exactly one `HorizontalDivider` SHALL separate `sourceDevice` from `activeBackups`.
+
+**Invariants**: Layout spacing, semantic color tokens (`TTColor.SensorSourceActive`, `TTColor.SensorBackupActive`), device click actions, and canonical priority sorting (`REQ-UI-268.5`) MUST NOT be altered.

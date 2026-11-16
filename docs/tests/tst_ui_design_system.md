@@ -3,7 +3,7 @@
 **Domain**: `ui_design_system`  
 **Prefixes**: `UI`, `UNT`  
 **Scope**: Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts.  
-**Total Tests**: 474
+**Total Tests**: 475
 
 ---
 
@@ -8630,3 +8630,21 @@
   5. *Architecture, Centralization & Governance Regression Suite (`TST-UI-530.5`)*:
      - Execute `ThemeColorCentralizationAuditTest`, `AspiceSweAuditContractTest`, `SourceTextReadingAuditContractTest`, `SafeEnumDeserializationAuditTest`, and `verify_requirement_governance.py`.
      - Assert 100% pass rate with zero `Color(0x...)` literals outside `Color.kt`.
+
+### TST-UI-2781: Conditional Section Dividers Verification in SensorSourceDialog [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-UI-2781` (`REQ-UI-2781.1`, `REQ-UI-2781.2`)
+- **Component**: `SensorSourceDialog.kt`, `SensorSourceDialogContractTest.kt`
+- **Jira**: `ATT-8107`
+- **Test Description**:
+  1. *Disconnected Sensor Top-Divider Absence Contract & Unit Test (`TST-UI-2781.1`, `SensorSourceDialogContractTest.kt`)*:
+     - Verify that when `sourceDevice == null` and `activeBackups` is empty, no `HorizontalDivider` is emitted preceding the `notConnected` section.
+     - Verify that the first visual element rendered below the dialog title is the `notConnected` section header.
+  2. *Altitude Calibration & Section Permutation Divider Separation Contract Test (`TST-UI-2781.2`, `SensorSourceDialogContractTest.kt`)*:
+     - Verify that when Altitude Calibration is present alongside `notConnected` devices (with no active source), exactly one divider separates the calibration card from `notConnected`, eliminating stacked/duplicate dividers.
+     - Verify that when `sourceDevice != null` and `activeBackups.isNotEmpty()`, a divider separates `sourceDevice` from `activeBackups`.
+     - Verify that when no content follows Altitude Calibration, no trailing divider is emitted.
+  3. *Targeted Regression Suite & Requirement Governance (`TST-UI-2781.3`)*:
+     - Execute `./gradlew testDebugUnitTest --tests "*SensorSourceDialog*" --tests "*SensorStatus*" --max-workers=2`.
+     - Execute `python3 tools/verify_requirement_governance.py --check-code-orphans --check-req-description`.
+     - Assert 100% pass rate.
