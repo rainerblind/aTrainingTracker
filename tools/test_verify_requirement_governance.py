@@ -78,6 +78,13 @@ from tools.verify_requirement_governance import (
     has_verified_test_evidence,
     verify_test_evidence,
     LEGACY_UNBACKED_VERIFIED_TSTS,
+    find_code_traceability_orphans,
+    verify_code_traceability_orphans,
+    verify_shard_header_counts,
+    LEGACY_MISSING_DESCRIPTION_REQS,
+    verify_req_descriptions,
+    calculate_req_field_coverage,
+    format_req_field_coverage,
 )
 
 
@@ -2556,7 +2563,7 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
 
     def test_scenario_66_tst_pro_102_1_sysreq_boundary_no_false_positive(self):
         """TST-PRO-102.1: SYSREQ-DEX-001 must NOT false-match as REQ-DEX-001 in traceability or test index."""
-        from verify_requirement_governance import _collect_test_file_index
+        from tools.verify_requirement_governance import _collect_test_file_index
 
         with tempfile.TemporaryDirectory() as tmpdir:
             sys_dir = os.path.join(tmpdir, "docs", "system")
@@ -2684,6 +2691,132 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
         self.assertIn("CLM", SYSTEM_REFINED_PREFIXES)
         self.assertIn("PRO", SWE_DERIVED_PREFIXES)
         self.assertNotIn("PRO", SYSTEM_REFINED_PREFIXES)
+
+    def test_scenario_72_tst_pro_104_1_code_to_shard_orphan_detection(self):
+        # TST-PRO-104.1: Code-to-Shard Orphan Detection & Exclusion Test
+        with tempfile.TemporaryDirectory() as tmpdir:
+            req_dir = os.path.join(tmpdir, "docs", "requirements")
+            tst_dir = os.path.join(tmpdir, "docs", "tests")
+            src_dir = os.path.join(tmpdir, "app", "src", "main", "java")
+            os.makedirs(req_dir)
+            os.makedirs(tst_dir)
+            os.makedirs(src_dir)
+
+            with open(os.path.join(req_dir, "req_core.md"), "w", encoding="utf-8") as f:
+                f.write("### REQ-COR-001: Authentic Core [Implemented]\n- **Tests**: `TST-COR-001`\n- **Description**: Core.\n")
+            with open(os.path.join(tst_dir, "tst_core.md"), "w", encoding="utf-8") as f:
+                f.write("### TST-COR-001: Authentic Core Test [Implemented]\n- **Requirement(s)**: `REQ-COR-001`\n")
+
+            with open(os.path.join(src_dir, "Component.kt"), "w", encoding="utf-8") as f:
+                f.write("// Traceability: REQ-COR-001.1, TST-COR-001.2, REQ-SIM-001\nclass Component\n")
+
+            orph_reqs, orph_tsts, count = find_code_traceability_orphans(repo_root=tmpdir, search_dirs=["app/src/main"])
+            self.assertEqual(len(orph_reqs), 0)
+            self.assertEqual(len(orph_tsts), 0)
+            self.assertEqual(count, 1)
+
+            ok, diag, rep = verify_code_traceability_orphans(repo_root=tmpdir, search_dirs=["app/src/main"])
+            self.assertTrue(ok)
+            self.assertEqual(rep["orphan_req_count"], 0)
+
+            with open(os.path.join(src_dir, "Orphan.kt"), "w", encoding="utf-8") as f:
+                f.write("// REQ-ORP-999 and TST-ORP-999\nclass Orphan\n")
+
+            ok_fail, diag_fail, rep_fail = verify_code_traceability_orphans(repo_root=tmpdir, search_dirs=["app/src/main"])
+            self.assertFalse(ok_fail)
+            self.assertIn("REQ-ORP-999", rep_fail["orphan_reqs"])
+            self.assertIn("TST-ORP-999", rep_fail["orphan_tsts"])
+
+    def test_scenario_73_tst_pro_104_2_shard_header_count_sync_and_validation(self):
+        # TST-PRO-104.2: Living Doc Shard Header Synchronization & Audit Test
+        with tempfile.TemporaryDirectory() as tmpdir:
+            req_dir = os.path.join(tmpdir, "docs", "requirements")
+            tst_dir = os.path.join(tmpdir, "docs", "tests")
+            os.makedirs(req_dir)
+            os.makedirs(tst_dir)
+
+            with open(os.path.join(req_dir, "req_sample.md"), "w", encoding="utf-8") as f:
+                f.write("# Living Requirements\n**Total Requirements**: 1\n\n### REQ-SMP-001: S1\n### REQ-SMP-002: S2\n")
+            with open(os.path.join(tst_dir, "tst_sample.md"), "w", encoding="utf-8") as f:
+                f.write("# Living Tests\n**Total Tests**: 5\n\n### TST-SMP-001: T1\n")
+
+            with open(os.path.join(tmpdir, "docs", "requirements.md"), "w", encoding="utf-8") as f:
+                f.write("# Index\n| [Sample](requirements/req_sample.md) | D | `SMP` | 1 | 0 | 0 | 1 |\n**Total Living Requirements**: 1 across 1 domain shards.\n")
+            with open(os.path.join(tmpdir, "docs", "tests.md"), "w", encoding="utf-8") as f:
+                f.write("# Index\n| [Sample](tests/tst_sample.md) | D | `SMP` | 5 | 0 | 0 | 5 |\n**Total Living Tests**: 5 across 1 domain shards.\n")
+
+            ok_fail, diag_fail = verify_shard_header_counts(repo_root=tmpdir)
+            self.assertFalse(ok_fail)
+            self.assertTrue(any("header count" in d for d in diag_fail))
+
+            recalculate_master_index_tables(repo_root=tmpdir)
+
+            ok_pass, diag_pass = verify_shard_header_counts(repo_root=tmpdir)
+            self.assertTrue(ok_pass, f"Expected header pass after recalc, got: {diag_pass}")
+
+            with open(os.path.join(req_dir, "req_sample.md"), "r", encoding="utf-8") as f:
+                self.assertIn("**Total Requirements**: 2", f.read())
+            with open(os.path.join(tst_dir, "tst_sample.md"), "r", encoding="utf-8") as f:
+                self.assertIn("**Total Tests**: 1", f.read())
+
+    def test_scenario_74_tst_pro_104_3_req_description_ratchet_and_coverage(self):
+        # TST-PRO-104.3: Description Field Ratchet & Field Coverage Reporting Test
+        with tempfile.TemporaryDirectory() as tmpdir:
+            req_dir = os.path.join(tmpdir, "docs", "requirements")
+            os.makedirs(req_dir)
+
+            with open(os.path.join(req_dir, "req_dom.md"), "w", encoding="utf-8") as f:
+                f.write(
+                    "### REQ-LEG-001: Legacy REQ [Verified]\n"
+                    "- **Rationale**: Legacy.\n\n"
+                    "### REQ-NEW-001: New REQ without Description [Planned]\n"
+                    "- **Rationale**: New.\n\n"
+                    "### REQ-NEW-002: New REQ with Description [Planned]\n"
+                    "- **Rationale**: New.\n"
+                    "- **Description**: Non-empty contract description.\n"
+                    "- **Implementation**: `Target.kt`\n"
+                    "- **Acceptance Criteria**: Given X When Y Then Z.\n"
+                )
+
+            baseline = frozenset({"REQ-LEG-001"})
+
+            ok_fail, diag_fail, rep_fail = verify_req_descriptions(
+                repo_root=tmpdir,
+                baseline=baseline,
+                fail_on_missing=True,
+            )
+            self.assertFalse(ok_fail)
+            self.assertEqual(rep_fail["unbaselined_missing"], ["REQ-NEW-001"])
+
+            with open(os.path.join(req_dir, "req_dom.md"), "r", encoding="utf-8") as f:
+                fixed_content = f.read().replace("### REQ-NEW-001: New REQ without Description [Planned]\n- **Rationale**: New.", "### REQ-NEW-001: New REQ with Description [Planned]\n- **Description**: Fixed desc.\n- **Rationale**: New.")
+            with open(os.path.join(req_dir, "req_dom.md"), "w", encoding="utf-8") as f:
+                f.write(fixed_content)
+
+            ok_pass, _, rep_pass = verify_req_descriptions(
+                repo_root=tmpdir,
+                baseline=baseline,
+                fail_on_missing=True,
+            )
+            self.assertTrue(ok_pass)
+            self.assertEqual(rep_pass["unbaselined_missing"], [])
+
+            cov = calculate_req_field_coverage(repo_root=tmpdir)
+            self.assertEqual(cov["total_reqs"], 3)
+            self.assertEqual(cov["description_count"], 2)
+            formatted = format_req_field_coverage(cov)
+            self.assertIn("Description Coverage:", formatted)
+
+    def test_scenario_75_tst_pro_104_4_live_repo_governance_parity(self):
+        # TST-PRO-104.4: Restored Requirement Governance & Evidence Cross-Check Test
+        h_ok, h_diag = verify_shard_header_counts()
+        self.assertTrue(h_ok, f"Shard headers failed on live repo: {h_diag}")
+
+        d_ok, d_diag, _ = verify_req_descriptions(fail_on_missing=True)
+        self.assertTrue(d_ok, f"Req descriptions failed on live repo: {d_diag}")
+
+        c_ok, c_diag, _ = verify_code_traceability_orphans(fail_on_orphans=True)
+        self.assertTrue(c_ok, f"Code orphans failed on live repo: {c_diag}")
 
 
 

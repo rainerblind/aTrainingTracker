@@ -3,7 +3,7 @@
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Tests**: 133
+**Total Tests**: 200
 
 ---
 
@@ -3362,3 +3362,22 @@
   • Verify `--check-reverse-sys-trace` and `--verify-sys-trace --report-sys-coverage` pass on the live repository with `12/12` (`100.0%`) forward coverage, `0` unclassified `SYSTEM_REFINED_PREFIXES` REQs (`100.0%` classified via `SYSREQ-*` or `Derived (SW-only)`), and `REQ-PRO-*` cleanly excluded.
   3. *System Contract & Fixture Compatibility Test (`TST-PRO-103.3`, System*ContractTest.kt & tools/test_verify_requirement_governance.py)*:
   • Verify `SystemLiveTrackingRequirementsContractTest`, `SystemDataExchangeRequirementsContractTest`, `SystemRequirementsSpecificationContractTest`, `SystemVerificationProtocolContractTest`, `AspiceSweAuditContractTest`, and synthetic fixtures (`test_scenario_40..43`, `test_scenario_66..68`) all pass with exit code `0`.
+
+---
+
+### TST-PRO-104: **Code-to-Doc Orphan Guard, Shard Header Count Sync & REQ Description Governance Suite (ATT-8148)** [Verified]
+- **Requirement(s)**: `REQ-PRO-104`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Component**: `tools/verify_requirement_governance.py`, `tools/test_verify_requirement_governance.py`
+- **Jira**: `ATT-8148`
+- **Test Description**:
+  1. *Code-to-Shard Orphan Detection & Typo Resolution Test (`TST-PRO-104.1`, tools/test_verify_requirement_governance.py)*:
+  • Verify `verify_code_traceability_orphans()` scans `app/src/main`, `app/src/test`, `app/src/androidTest`, and `tools/`, flags undeclared `REQ-*` and `TST-*` tokens, passes cleanly with 0 orphans on the live repo after restoring missing specs and fixing `REQ-UI-314` and `REQ-MIG-053` typos, and validates synthetic orphan injection failure.
+  2. *Living Doc Shard Header Synchronization & Audit Test (`TST-PRO-104.2`, tools/test_verify_requirement_governance.py)*:
+  • Verify `recalculate_master_index_tables()` parses and writes exact header counts across all 18 shards in `docs/requirements/` and `docs/tests/`, and verify governance check rejects any shard with divergent `**Total Requirements**` or `**Total Tests**` headers.
+  3. *Description Field Ratchet & Field Coverage Reporting Test (`TST-PRO-104.3`, tools/test_verify_requirement_governance.py)*:
+  • Verify `--check-req-description` enforces `- **Description**:` on non-baselined requirements (including `REQ-PRO-104`), rejects new REQs lacking description, and verify `--report-req-field-coverage` outputs accurate percentages for Description, Acceptance Criteria, and Allocation fields.
+  4. *Restored Requirement Governance & Evidence Cross-Check Test (`TST-PRO-104.4`, tools/test_verify_requirement_governance.py)*:
+  • Verify all restored requirements in `SYSTEM_REFINED_PREFIXES` define valid `- **System Requirement(s)**:`, no restored test is marked `[Verified]` without test code evidence, and `--check-verified-evidence` and `--check-reverse-sys-trace` exit `0`.

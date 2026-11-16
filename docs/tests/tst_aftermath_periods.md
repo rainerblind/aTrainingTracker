@@ -3,7 +3,7 @@
 **Domain**: `aftermath_periods`  
 **Prefixes**: `PER`, `PERF`, `RAD`, `SPT`  
 **Scope**: Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers.  
-**Total Tests**: 50
+**Total Tests**: 63
 
 ---
 
@@ -881,7 +881,7 @@
 ---
 
 ### TST-SPT-005: Retrospective Filtering, Cluster Math, Lifetime Evaluation & ViewModel Tests [Verified]
-- **Target Requirement**: `REQ-SPT-002` (Retrospective Filtering, Cluster Aggregation & Lifetime Engine)
+- **Target Requirement**: `REQ-SPT-001`, `REQ-SPT-002`, `REQ-SPT-003`
 - **Target Verification Component**: `SportingJourneyRepositoryTest.kt`, `SportingJourneyViewModelTest.kt`
 - **Verification Type**: Automated Unit & State Machine Verification
 - **Test Description**:
@@ -905,7 +905,7 @@
 ---
 
 ### TST-SPT-006: SportingJourney UI & UX Redesign, M3 Hierarchy, Grid Layout & Locale Formatting Tests [Verified]
-- **Target Requirement**: `REQ-SPT-005` (SportingJourney UI & UX Redesign, M3 Hierarchy, Grid Layout & Locale Formatting)
+- **Target Requirement**: `REQ-SPT-004`, `REQ-SPT-005`
 - **Target Verification Component**: `SportingJourneyLocalizationContractTest.kt`, `SportingJourneyComponentsTest.kt`, `SportingJourneyShareHelperTest.kt`
 - **Verification Type**: Automated Unit & Contract Verification
 - **Test Description**:
@@ -920,3 +920,133 @@
   • Verify that when `TrainingApplication.getUnit() == MyUnits.IMPERIAL`, total distance is formatted in miles (`mi`) and total elevation in feet (`ft`) using `BANALService` conversion factors.
   • Verify that `SportingJourneyShareHelper.buildShareText` formats localized string templates.
   (ATT-7323: [Verbesserung] SportingJourneySheet & SportingJourneyComponents: Material 3 redesign, row weight wrapping fixes, grid layout, and locale/unit formatting)
+
+---
+
+### TST-WKO-035: Workout Summaries Database Migration & Column Constants Verification [Verified]
+- **Target Requirement**: `REQ-WKO-035`
+- **Target Verification Component**: `WorkoutRpeFeelTest.kt`, `WorkoutSummariesDatabaseTest.kt`
+- **Verification Type**: Unit
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Test Description**:
+  1. *Database Schema & Column Constants Test (`TST-WKO-035`)*:
+  • Verify `DB_VERSION = 31`, `WorkoutSummaries.RPE = "rpe"`, and `WorkoutSummaries.FEEL = "feel"` constants and table creation/upgrade parity.
+
+---
+
+### TST-WKO-036: RPE & Feel Anchors, Emojis and Settings Toggle Verification [Verified]
+- **Target Requirement**: `REQ-WKO-036`
+- **Target Verification Component**: `WorkoutRpeFeelTest.kt`
+- **Verification Type**: Unit
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Test Description**:
+  1. *Borg CR10 and Feel Sentiment Anchors Test (`TST-WKO-036`)*:
+  • Verify Borg CR10 string resource anchors (1..10), feel emojis (1..5), sentiment vector icons, and UI test tags constants.
+
+---
+
+### TST-WKO-037: Reorderable Section Defaults & Overview Tab Configuration Verification [Verified]
+- **Target Requirement**: `REQ-WKO-037`
+- **Target Verification Component**: `WorkoutRpeFeelTest.kt`, `TrackOnMapScreenSectionSlottingContractTest.kt`
+- **Verification Type**: Unit
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Test Description**:
+  1. *Section Ordering and Tab Slotting Test (`TST-WKO-037`)*:
+  • Verify `WorkoutSectionType.DEFAULT_ORDER[0] == RPE_AND_FEEL` and `Overview` tab contains `RPE_AND_FEEL` at slot 0.
+
+---
+
+### TST-WKO-038: Foster Session-RPE Score Calculation Verification [Verified]
+- **Target Requirement**: `REQ-WKO-038`
+- **Target Verification Component**: `WorkoutRpeFeelTest.kt`
+- **Verification Type**: Unit
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Test Description**:
+  1. *Session-RPE Math Test (`TST-WKO-038`)*:
+  • Verify `PowerPhysiologyCalculator.calculateSessionRpe()` returns exact scores for 60 min at RPE 7 (420.0), 45 min at RPE 4 (180.0), and 0.0 for out-of-range inputs.
+
+---
+
+### TST-WKO-039: Tier 4 Session-RPE Fallback in PMC Training Load Verification [Verified]
+- **Target Requirement**: `REQ-WKO-039`
+- **Target Verification Component**: `WorkoutRpeFeelTest.kt`, `PowerPhysiologyCalculatorTest.kt`
+- **Verification Type**: Unit
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Test Description**:
+  1. *Tier 4 Fallback Resolution Test (`TST-WKO-039`)*:
+  • Verify `resolveWorkoutTrainingLoad()` resolves Session-RPE when power and HR are absent, while preserving power TSS precedence when present.
+
+---
+
+### TST-HRV-038: Morning Sleep & Wellness Settings Progressive Disclosure Verification [Implemented]
+- **Target Requirement**: `REQ-HRV-038`
+- **Target Verification Component**: `SettingsDataStoreTest.kt`, `PhysiologyModelsSectionTest.kt`
+- **Verification Type**: Unit
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Test Description**:
+  1. *Settings Progressive Disclosure Test (`TST-HRV-038`)*:
+  • Verify default `OFF`, subordinate toggle visibility gating, and preference persistence round-trip.
+
+---
+
+### TST-HRV-039: Morning Readiness Database Migration V1->V2 & Symmetric Mapping Verification [Implemented]
+- **Target Requirement**: `REQ-HRV-039`
+- **Target Verification Component**: `HrvReadinessDatabaseManagerTest.kt`, `HrvReadinessEntryTest.kt`
+- **Verification Type**: Unit
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Test Description**:
+  1. *Schema V2 Evolution & Symmetric Mapping Test (`TST-HRV-039`)*:
+  • Verify `onUpgrade` from V1 preserves legacy records and adds 5 nullable columns; verify `onCreate` equals `onUpgrade` schema and DTO mapping symmetry.
+
+---
+
+### TST-HRV-040: Standalone No-Strap Wellness Logging Verification [Implemented]
+- **Target Requirement**: `REQ-HRV-040`
+- **Target Verification Component**: `MorningHrvCheckViewModelTest.kt`
+- **Verification Type**: Unit
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Test Description**:
+  1. *Standalone Wellness Logging Test (`TST-HRV-040`)*:
+  • Verify saving with no HR connection inserts entry with null `rmssdMs`; SWC baseline query excludes standalone entries.
+
+---
+
+### TST-HRV-041: Combined In-Measurement Logging Verification [Implemented]
+- **Target Requirement**: `REQ-HRV-041`
+- **Target Verification Component**: `MorningHrvCheckViewModelTest.kt`
+- **Verification Type**: Unit
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Test Description**:
+  1. *Combined In-Measurement Logging Test (`TST-HRV-041`)*:
+  • Verify entries saved after countdown contain both calculated HRV metrics and input wellness fields.
+
+---
+
+### TST-HRV-042: Health Connect Sleep Prefill & Localization Parity Verification [Implemented]
+- **Target Requirement**: `REQ-HRV-042`
+- **Target Verification Component**: `HealthConnectManagerTest.kt`, `TranslationParityTest.kt`
+- **Verification Type**: Unit
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Test Description**:
+  1. *Health Connect Prefill & Localization Test (`TST-HRV-042`)*:
+  • Verify graceful fallback when Health Connect permission is absent and 100% string parity across all 9 locales.

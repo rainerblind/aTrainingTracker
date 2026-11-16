@@ -3,7 +3,7 @@
 **Domain**: `ui_design_system`  
 **Prefixes**: `UI`, `UNT`  
 **Scope**: Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts.  
-**Total Requirements**: 452
+**Total Requirements**: 460
 
 ---
 
@@ -7615,6 +7615,27 @@ The methods SHALL encapsulate `SettingsDataStoreJavaHelper.getZoneMax` queries (
 • *Then* `stopSearching()` SHALL reset `scanningProtocol` and `scanningDeviceType` to null and stop background scanning.
 
 **Invariants**: Targeted background scanning, device discovery broadcast processing, and 100% full-suite unit test pass rate MUST NOT be broken.
+
+---
+
+### REQ-UI-292: Sensor Field Style Dynamic Grid Spacing Resolution [Implemented]
+- **Tests**: `TST-UI-252`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Target**: `SensorFieldStyle.kt`
+- **Implementation**: `SensorFieldStyle.kt`
+- **Rationale**: Resolves dynamic inter-tile grid spacing based on corner radius, border thickness, and baseline to prevent card collisions (ATT-2624).
+- **Description**: In `SensorFieldStyle.kt`, `resolveTileGridSpacing()` SHALL compute dynamic inter-tile grid spacing: guaranteeing `0.dp` for `CLASSIC_SEAMLESS` baseline (0 radius, <= 1.0.dp border), and proportionally expanding whitespace when borders are thick or corners are rounded to eliminate tile collisions.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* the `CLASSIC_SEAMLESS` preset with 0 radius and <= 1.0.dp border,
+  • *When* `resolveTileGridSpacing()` is evaluated,
+  • *Then* it returns `0.dp` spacing.
+  • *Given* rounded corners or thick borders,
+  • *When* `resolveTileGridSpacing()` is evaluated,
+  • *Then* whitespace is proportionally expanded to eliminate visual clipping.
+
+---
 
 ### REQ-UI-293: Format-Specific Import Tab Architecture with Uniform Multi-Document Source Triad (FIT, TCX, GPX) [Verified]
 - **Tests**: `TST-UI-253`, `TST-UI-458`

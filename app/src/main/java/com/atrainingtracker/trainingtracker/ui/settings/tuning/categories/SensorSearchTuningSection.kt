@@ -90,7 +90,7 @@ data class SensorSearchPreferences(
 }
 
 /**
- * Sensor Search & Behavior tuning category composable (REQ-UI-2780, REQ-UI-353, ATT-3454).
+ * Sensor Search & Behavior tuning category composable (REQ-UI-314, REQ-UI-353, ATT-3454).
  * Encapsulates search round attempts, auto-search triggers, sensor discovery behaviors,
  * and missing ANT+ adapter warning toggle.
  */

@@ -107,7 +107,7 @@ inline fun <R> FileEncoder.use(block: (FileEncoder) -> R): R {
  * - REQ-DAT-042.5: Zero-SQLite Exporter Invariant & O(1) Memory Streaming via WorkoutRepository.
  * - REQ-EXP-043: Cycling Pedal Dynamics Serialization & Online Accumulator.
  * - REQ-EXP-042: Bike Radar Event & Developer Fields Serialization.
- * - REQ-EXP-041 / REQ-MIG-053: Lossless FIT Metadata Developer Fields Serialization.
+ * - REQ-MIG-053: Lossless FIT Metadata Developer Fields Serialization.
  */
 class FitFileWriter(context: Context) : BaseFileWriter(context.applicationContext ?: context) {
 

@@ -3,7 +3,7 @@
 **Domain**: `aftermath_periods`  
 **Prefixes**: `PER`, `PERF`, `RAD`, `SPT`  
 **Scope**: Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers.  
-**Total Requirements**: 41
+**Total Requirements**: 57
 
 ---
 
@@ -1375,6 +1375,21 @@
 
 ---
 
+### REQ-SPT-001: The Trophy Vault & Sporting Journey Entry & Architecture [Implemented]
+- **Tests**: `TST-SPT-005`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit / Integration
+- **Implementation**: `SportingJourneySheet.kt`, `SportingJourneyViewModel.kt`, `TrackingTabsScreen.kt`, `SupporterScreen.kt`
+- **Rationale**: Provide entry points and modal bottom sheet hosting for "The Trophy Vault — My Sporting Journey" across tracking tabs, supporter screen, and aftermath navigation (ATT-7022, ATT-7321).
+- **Description**: The system SHALL provide a modal bottom sheet entry point for "The Trophy Vault — My Sporting Journey" accessible from `TrackingTabsScreen` and `SupporterScreen`, managing immutable state aggregation and filter transitions.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* the athlete opens tracking tabs or supporter screen,
+  • *When* tapping the Sporting Journey entry card or action,
+  • *Then* the full-height modal bottom sheet opens with current aggregate state.
+
+---
+
 ### REQ-SPT-002: Retrospective Filtering, Cluster Aggregation & Lifetime Engine [Verified]
 - **Tests**: `TST-SPT-005`
 - **Priority**: High
@@ -1412,6 +1427,37 @@
 • *Then* `availableYears` renders all historical years, and `Pioneer Athlete` remains unlocked based on the global 2012 inception date.
 
 **Invariants**: Zero SQLite schema migration; exact distance, elevation, and time math preserved; 100% 9-language localization parity.
+
+
+---
+
+### REQ-SPT-003: Hidden Gems, Signature Milestones & Achievement Room Telemetry [Implemented]
+- **Tests**: `TST-SPT-005`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `SportingJourneyModels.kt`, `SportingJourneyComponents.kt`, `SportingJourneyCalculator.kt`
+- **Rationale**: Retrospective discovery in "The Trophy Vault" must surface biological and mechanical Hidden Gems, signature single-workout milestones, and achievement room trophies from offline telemetry (ATT-7022, ATT-7321).
+- **Description**: The system SHALL evaluate biological and mechanical Hidden Gems (Pillar 2), signature workout milestones (Pillar 3), and unlocked achievement room trophies (Pillar 4) from SQLite telemetry data, formatting metrics cleanly across All-Time and Annual Wrapped horizons.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* historical telemetry in SQLite,
+  • *When* the Trophy Vault is rendered,
+  • *Then* Hidden Gems, Signature Milestones, and Achievement Room trophies are computed and displayed without cloud dependencies.
+
+---
+
+### REQ-SPT-004: Athlete Passport Card & Native Social Sharing [Implemented]
+- **Tests**: `TST-SPT-006`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `SportingJourneyShareHelper.kt`, `SportingJourneyComponents.kt`
+- **Rationale**: Athletes need shareable social summary cards of their sporting retrospective without third-party cloud analytics dependencies (ATT-7022, ATT-7323).
+- **Description**: `SportingJourneyShareHelper` SHALL format and dispatch the shareable Athlete Passport card via Android `Intent.ACTION_SEND`, incorporating annual summary stats, route highlights, and trophy counts.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* generated sporting journey summary metrics,
+  • *When* the user taps share on Athlete Passport,
+  • *Then* `Intent.ACTION_SEND` is dispatched with formatted text and statistics.
 
 
 ---
@@ -1454,3 +1500,163 @@
 • *Then* numbers display comma decimal separators, distance is converted to miles (`mi`), and elevation is converted to feet (`ft`).
 
 **Invariants**: Zero SQLite schema migration; exact distance, elevation, and time math preserved; 100% 9-language localization parity.
+
+---
+
+### REQ-WKO-035: Workout RPE & Feel Database Schema, Persistence & Default Configuration [Implemented]
+- **Tests**: `TST-WKO-035`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Target**: `WorkoutSummariesDatabaseManager.java`, `WorkoutSummariesDbHelper.kt`, `WorkoutDataMapper.kt`
+- **Implementation**: `WorkoutSummariesDatabaseManager.java`, `WorkoutSummariesDbHelper.kt`, `WorkoutDataMapper.kt`
+- **Rationale**: Enable subjective exertion (RPE 1..10) and feel (1..5) tracking in workout summaries database with symmetric migration and mapping parity (ATT-6879).
+- **Description**: `WorkoutSummariesDbHelper` SHALL support `DB_VERSION = 31` with nullable `rpe` (`INTEGER`, `1..10`) and `feel` (`INTEGER`, `1..5`) columns, ensuring `onCreate` and `onUpgrade` parity and symmetric mapping in `WorkoutData` and `WorkoutDataMapper`.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* database creation or migration,
+  • *When* upgrading to or creating DB version 31,
+  • *Then* `rpe` and `feel` nullable columns exist with symmetric cursor mapping.
+
+---
+
+### REQ-WKO-036: RPE Borg CR10 Scale & Subjective Feel Anchors, Vector Icons & Emojis [Implemented]
+- **Tests**: `TST-WKO-036`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Target**: `EditWorkoutScreen.kt`, `WorkoutRpeFeelSection.kt`, `strings_rpe_feel.xml`
+- **Implementation**: `EditWorkoutScreen.kt`, `WorkoutRpeFeelSection.kt`, `strings_rpe_feel.xml`
+- **Rationale**: Provide intuitive Borg CR10 verbal anchors and Material 3 vector sentiment icons with emoji fallbacks across all 9 supported locales (ATT-6879, ATT-7320).
+- **Description**: The system SHALL provide localized Borg CR10 scale anchors (1..10) and subjective feel ratings (1..5) mapped to Material 3 sentiment vector icons and emojis, exposing interactive controls in `EditWorkoutScreen` and section preferences defaulting to disabled.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* the RPE & Feel UI editor,
+  • *When* the user views anchors and icons across scales,
+  • *Then* Borg 1..10 anchors and Feel 1..5 sentiment icons are rendered accurately.
+
+---
+
+### REQ-WKO-037: Reorderable Section Hierarchy, Section Slotting & Overview Tab Slotting [Implemented]
+- **Tests**: `TST-WKO-037`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Target**: `WorkoutRpeFeelSection.kt`, `WorkoutSectionType.kt`, `WorkoutDetailTabConfig.kt`
+- **Implementation**: `WorkoutRpeFeelSection.kt`, `WorkoutSectionType.kt`, `WorkoutDetailTabConfig.kt`
+- **Rationale**: Support customizable aftermath layout slotting with RPE & Feel positioned above Description or at index 0 of Overview tab (ATT-6879, ATT-7320).
+- **Description**: `WorkoutSectionType` and `WorkoutDetailSectionType` SHALL declare `RPE_AND_FEEL` at `index 0` in `DEFAULT_ORDER` and `WorkoutDetailTabConfig.DEFAULT_TABS` Overview preset, rendering above the workout description.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* default workout detail tab configurations,
+  • *When* opening the Overview tab,
+  • *Then* `RPE_AND_FEEL` occupies slot 0.
+
+---
+
+### REQ-WKO-038: Foster Session-RPE Training Load Score Calculation [Implemented]
+- **Tests**: `TST-WKO-038`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Target**: `PowerPhysiologyCalculator.kt`, `WorkoutRpeFeelSection.kt`
+- **Implementation**: `PowerPhysiologyCalculator.kt`, `WorkoutRpeFeelSection.kt`
+- **Rationale**: Compute validated Foster Session-RPE training load ($sRPE = \text{RPE} \times \text{duration\_minutes}$) for subjective exertion quantification (ATT-6879).
+- **Description**: `PowerPhysiologyCalculator.calculateSessionRpe()` SHALL compute Foster Session-RPE training load score as $sRPE = \text{RPE} \times (\text{activeTimeSeconds} / 60.0)$ for valid RPE scores (`1..10`) and positive duration, returning `0.0` for out-of-range or non-positive values.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* valid RPE and active time duration,
+  • *When* `calculateSessionRpe()` is called,
+  • *Then* it returns the exact mathematical product $RPE \times (duration\_sec / 60.0)$.
+
+---
+
+### REQ-WKO-039: Performance Management Chart (PMC) Tier 4 Training Load Fallback via Session-RPE [Implemented]
+- **Tests**: `TST-WKO-039`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Target**: `PowerPhysiologyCalculator.kt`, `FitFileWriter.kt`
+- **Implementation**: `PowerPhysiologyCalculator.kt`, `FitFileWriter.kt`
+- **Rationale**: Provide Tier 4 training load resolution in PMC when power TSS and hrTSS telemetry are unavailable, plus FIT protocol field round-trip (ATT-6879, ATT-8196).
+- **Description**: `PowerPhysiologyCalculator.resolveWorkoutTrainingLoad()` SHALL fall back to Session-RPE load (Tier 4) when neither power nor heart rate metrics are present, and `FitFileWriter` SHALL serialize subjective feel and RPE metadata.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* a workout sample with RPE but lacking power and HR metrics,
+  • *When* resolving workout training load,
+  • *Then* Tier 4 Session-RPE score is resolved.
+
+---
+
+### REQ-HRV-038: Morning Sleep & Wellness Settings Progressive Disclosure [Implemented]
+- **Tests**: `TST-HRV-038`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Target**: `TuningPreferencesDataStore.kt`, `PhysiologyModelsSection.kt`, `MorningCheckSection.kt`
+- **Implementation**: `TuningPreferencesDataStore.kt`, `PhysiologyModelsSection.kt`, `MorningCheckSection.kt`
+- **Rationale**: Configurable progressive disclosure in Advanced Settings for subjective sleep and morning wellness tracking (ATT-7034).
+- **Description**: `SettingsDataStore.kt` and `PhysiologyModelsSection.kt` SHALL provide master toggle `enableMorningSleepAndWellness: Boolean` (default `false`) with subordinate controls for sleep duration, quality, energy, soreness, and context tags.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* default app installation,
+  • *When* inspecting Advanced Settings,
+  • *Then* `enableMorningSleepAndWellness` is disabled by default.
+
+---
+
+### REQ-HRV-039: Morning Readiness SQLite Schema Evolution & Parity [Implemented]
+- **Tests**: `TST-HRV-039`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Target**: `HrvReadinessDbHelper.kt`, `HrvReadinessDatabaseManager.kt`, `HrvReadinessEntry.kt`
+- **Implementation**: `HrvReadinessDbHelper.kt`, `HrvReadinessDatabaseManager.kt`, `HrvReadinessEntry.kt`
+- **Rationale**: Support standalone subjective wellness entries alongside autonomic HRV measurements with database migration parity (ATT-7034).
+- **Description**: `HrvReadinessDbHelper` SHALL support `DB_VERSION = 2` allowing HRV metrics to be nullable for standalone wellness entries and adding nullable columns `sleep_duration_min`, `sleep_quality_1_5`, `morning_energy_1_5`, `muscle_soreness_1_5`, and `context_tags` with `onCreate`/`onUpgrade` parity.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* database creation or upgrade from V1,
+  • *When* migrating to `DB_VERSION = 2`,
+  • *Then* schema contains all 5 nullable wellness columns with 100% parity.
+
+---
+
+### REQ-HRV-040: Standalone No-Strap Morning Wellness Logging [Implemented]
+- **Tests**: `TST-HRV-040`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Target**: `MorningHrvCheckScreen.kt`, `MorningHrvCheckViewModel.kt`
+- **Implementation**: `MorningHrvCheckScreen.kt`, `MorningHrvCheckViewModel.kt`
+- **Rationale**: Allow athletes to log morning sleep and wellness markers on non-strap days or without an HR chest strap (ATT-7034).
+- **Description**: When enabled, `MorningHrvCheckScreen.kt` SHALL permit entering Sleep Duration/Quality and Morning Energy and saving directly without connecting an HR sensor, storing standalone entries with null HRV metrics without corrupting baseline SWC corridors.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* morning check screen with no HR sensor connected,
+  • *When* saving morning wellness,
+  • *Then* record is saved with null HRV metrics.
+
+---
+
+### REQ-HRV-041: In-Measurement Combined Morning HRV & Wellness Logging [Implemented]
+- **Tests**: `TST-HRV-041`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Target**: `MorningHrvCheckScreen.kt`, `MorningHrvCheckViewModel.kt`
+- **Implementation**: `MorningHrvCheckScreen.kt`, `MorningHrvCheckViewModel.kt`
+- **Rationale**: Allow interactive wellness input during the 60s/120s countdown timer and combine with objective HRV metrics upon save (ATT-7034).
+- **Description**: When enabled, subjective wellness inputs SHALL remain interactive before, during, and after the countdown timer, persisting both objective HRV metrics and subjective wellness values into the same daily record upon measurement completion.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* an active HRV countdown measurement,
+  • *When* user inputs wellness ratings and measurement completes,
+  • *Then* saving persists both objective HRV metrics and subjective wellness into a single record.
+
+---
+
+### REQ-HRV-042: Health Connect Sleep Auto-Prefill & 9-Language Localization [Implemented]
+- **Tests**: `TST-HRV-042`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Target**: `HealthConnectManager.kt`, `strings_hrv.xml`
+- **Implementation**: `HealthConnectManager.kt`, `strings_hrv.xml`
+- **Rationale**: Seamlessly prefill sleep duration from Health Connect when permission is granted, with 100% 9-language localization parity (ATT-7034).
+- **Description**: `HealthConnectManager.kt` SHALL optionally prefill sleep duration from `SleepSessionRecord` within the last 24 hours if permission is granted, with all UI strings maintaining 100% parity across all 9 supported locales.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* Health Connect sleep permission granted,
+  • *When* opening morning check screen,
+  • *Then* sleep duration is pre-filled from the most recent sleep session.

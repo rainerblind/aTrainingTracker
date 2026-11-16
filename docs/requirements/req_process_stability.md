@@ -3,7 +3,7 @@
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Requirements**: 90
+**Total Requirements**: 169
 
 ---
 
@@ -5426,3 +5426,37 @@ The workflow SHALL mandate that:
   • *When* `tools/test_verify_requirement_governance.py` runs,
   • *Then* all existing and new `TST-PRO-103.*` tests pass with exit code `0`.
 - **Invariants**: Zero `app/src/main/` production changes; `ANT-Android-SDKs` untouched at `160000`; `12` declared `SYSREQ-*` IDs unchanged; `REQ-PRO-*` remains `SWE-Derived`.
+
+---
+
+### REQ-PRO-104: Code-to-Doc Orphan Guard, Shard Header Count Sync & REQ Description Governance (ATT-8148) [Verified]
+- **Tests**: `TST-PRO-104`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `tools/verify_requirement_governance.py`, `tools/test_verify_requirement_governance.py`, `docs/requirements/req_process_stability.md`, `docs/tests/tst_process_stability.md`
+- **Rationale**: ASPICE 4.0 Minor Finding (SWE.1 BP1/BP5, GP 2.2.4) identified three documentation drift vectors: code citations lacking requirement/test shard entries, stale per-shard header counts, and missing description fields in legacy requirements. Eliminating code-level orphans and automating shard header parity guarantees full bidirectional traceability between codebase implementation and living documentation.
+- **Description**:
+  1. *Code-to-Shard Orphan Detection & Exclusion (`REQ-PRO-104.1`)*: `tools/verify_requirement_governance.py` SHALL implement code-to-shard orphan verification (`verify_code_traceability_orphans()`) scanning `app/src/main/`, `app/src/test/`, `app/src/androidTest/`, and `tools/` for `REQ-*` and `TST-*` citations, failing verification if any cited ID is absent from all 18 living documentation shards (`docs/requirements/` and `docs/tests/`), resolving verified typos (`REQ-UI-2780` -> `REQ-UI-314`, `REQ-EXP-041` -> `REQ-MIG-053`), and restoring authentic missing specifications (`REQ-WKO-035..039`, `REQ-HRV-038..042`, `REQ-SPT-001/003/004`, `REQ-UI-292` and matching `TST-*` IDs).
+  2. *Living Doc Shard Header Synchronization (`REQ-PRO-104.2`)*: `recalculate_master_index_tables()` (invoked via `--sync-indexes` and `recalc-docs`) SHALL automatically synchronize the `**Total Requirements**: N` and `**Total Tests**: N` header counts across all 18 domain shards in `docs/requirements/` and `docs/tests/` with exact parsed heading counts, and `verify_requirement_governance.py` SHALL fail CI if any shard header count diverges from its actual section count.
+  3. *Description Field Ratchet & Field Coverage Reporting (`REQ-PRO-104.3`)*: `tools/verify_requirement_governance.py` SHALL enforce mandatory `- **Description**:` fields on all newly added requirements via `--check-req-description` backed by a frozen legacy baseline ratchet (`LEGACY_MISSING_DESCRIPTION_REQS`), and expose `--report-req-field-coverage` to report field completion metrics (Description, Given-When-Then, Allocation).
+  4. *Cross-Check Integrity Safeguards (`REQ-PRO-104.4`)*: Any requirement restored in `SYSTEM_REFINED_PREFIXES` (e.g. `req_aftermath_periods.md`) MUST declare `- **System Requirement(s)**:`, and NO restored test specification may be marked `[Verified]` unless backed by passing test code evidence matching `--check-verified-evidence` and leaving `--check-reverse-sys-trace` with zero unclassified requirements.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Extends `REQ-PRO-075` (syntax governance), `REQ-PRO-087` (traceability orphans), and `REQ-PRO-041.4` (index synchronization) via net-new `REQ-PRO-104`. Targets `tools/verify_requirement_governance.py`, living documentation shards, and code comments.
+  2. *Historical Origin & Commit Trace*: `ATT-6163` (`REQ-PRO-075`), `ATT-6129` (`REQ-PRO-087`), `ATT-5431` (`REQ-PRO-041.4`), `06990c88` (shard split).
+  3. *Root Reason for Existing Formulation*: Shard-to-shard checks verified internal document consistency but left code citations and per-shard header counts unverified against drift.
+  4. *Preservation of Core Invariants*: Zero production runtime logic changes; `ANT-Android-SDKs` untouched at `160000 commit 0e8cea714a231fb9565170d4ed01eafa868f9798`; preserve existing test suite and synthetic test compatibility.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* source files under `app/src/` and `tools/`,
+  • *When* `verify_requirement_governance.py` runs code orphan verification,
+  • *Then* zero undeclared `REQ-*` or `TST-*` citations exist across the codebase and exit code is `0`.
+  • *Given* all 18 living documentation shards in `docs/requirements/` and `docs/tests/`,
+  • *When* `recalculate_master_index_tables()` executes,
+  • *Then* all 18 shard header counts match the actual parsed heading counts exactly.
+  • *Given* requirement definitions across living documentation shards,
+  • *When* `--check-req-description` and `--report-req-field-coverage` execute,
+  • *Then* `REQ-PRO-104` and all post-baseline requirements declare `- **Description**:`, and coverage metrics are reported cleanly.
+  • *Given* restored specifications in `SYSTEM_REFINED_PREFIXES` and `[Verified]` test specifications,
+  • *When* `--check-reverse-sys-trace` and `--check-verified-evidence` execute,
+  • *Then* zero unclassified SWE requirements exist and zero unbacked `[Verified]` tests are detected.
+- **Invariants**: Zero runtime behavior changes in `app/src/main/`; `ANT-Android-SDKs` untouched at `160000`; existing synthetic governance test fixtures continue to pass.

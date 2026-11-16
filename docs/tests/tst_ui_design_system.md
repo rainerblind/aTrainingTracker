@@ -3,7 +3,7 @@
 **Domain**: `ui_design_system`  
 **Prefixes**: `UI`, `UNT`  
 **Scope**: Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts.  
-**Total Tests**: 466
+**Total Tests**: 474
 
 ---
 
@@ -3916,6 +3916,21 @@
   • Verify `devices_searchingForDevice` format string has matching 2 format specifiers (`%1$s`, `%2$s`) across all 9 supported locales (EN, DE, ES, FR, IT, JA, NL, PL, PT).
   4. *Full Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
+
+---
+
+### TST-UI-252: **Sensor Field Style Dynamic Grid Spacing Resolution Verification** [Implemented]
+- **Requirement(s)**: `REQ-UI-292`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Component**: `SensorFieldStyle.kt`
+- **Jira**: `ATT-2624`
+- **Test Description**:
+  1. *Dynamic Inter-Tile Grid Spacing Resolution Test (`TST-UI-252.1`)*:
+  • Verify that `SensorFieldStyle` computes `0.dp` spacing for `CLASSIC_SEAMLESS` preset and expands spacing dynamically for rounded corners or thick borders to prevent visual card clipping.
+
+---
 
 ### TST-UI-253: **Format-Specific Import Tab Architecture and Multi-Document Recovery Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-293`
