@@ -3555,6 +3555,7 @@ def ensure_weekly_review_ticket(role="coordinator", force=False):
         "   - Resource leaks (SQLite cursors, broadcast receivers, memory)\n"
         "   - Architectural boundaries, monolith complexity & repository encapsulation\n"
         "   - Defensive error handling and test assertion validity\n"
+        f"   - Scenario-gap diagnostic: run `./gradlew :app:koverXmlReportDebug --max-workers=2` and inspect `{target_domain}` coverage to spot untested real-world edge cases (never write artificial coverage-padding tests)\n"
         f"3. Reconcile findings into docs/engineering/code_reviews/{datetime.now().strftime('%Y-%m-%d')}_dual_vendor_code_review.md.\n"
         "4. File discovered defects/refactorings as Jira tickets under ATT-232 / ATT-8138.\n"
         f"5. Update {target_domain} status to AUDITED in docs/engineering/code_reviews/coverage_matrix.md.\n"
@@ -3644,8 +3645,9 @@ def ensure_weekly_aspice_audit_ticket(role="coordinator", force=False):
         "1. Independent cross-vendor compliance evaluation across ASPICE VDA processes (SWE.1–SWE.6, SUP.1, SUP.8, SUP.9, SUP.10, MAN.3).\n"
         "2. Verification of quality gate records (Gates 1–5), First-Time Pass Rate (FTPR) integrity, and role separation.\n"
         "3. Traceability verification between System and Software requirements (SYS.2 <-> SYS.3).\n"
-        f"4. Reconcile findings into docs/engineering/aspice_audits/{datetime.now().strftime('%Y-%m-%d')}_dual_vendor_aspice_audit.md.\n"
-        "5. File discovered defects or process non-conformances as Jira tickets under Epic ATT-232 / ATT-8138.\n"
+        "4. Weekly Kover coverage snapshot (`./gradlew :app:koverXmlReportDebug --max-workers=2` + `python3 tools/generate_test_evidence.py --target weekly_<KW>`), verifying meaningful scenario coverage and critical subsystem floors without coverage-padding.\n"
+        f"5. Reconcile findings into docs/engineering/aspice_audits/{datetime.now().strftime('%Y-%m-%d')}_dual_vendor_aspice_audit.md.\n"
+        "6. File discovered defects or process non-conformances as Jira tickets under Epic ATT-232 / ATT-8138.\n"
     )
     new_key = create_issue(
         summary=summary,
