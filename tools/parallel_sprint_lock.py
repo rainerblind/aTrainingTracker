@@ -187,7 +187,51 @@ def guard_submodules_staged(cwd):
                 break
 
 
-def _merge_ticket_impl(ticket_key, sprint=None, summary=None, cwd=None):
+def format_commit_with_trailers(summary, agent_role=None, agent_model=None, reviewed_by=None):
+    """
+    Appends standard git commit trailers to the atomic commit message (REQ-PRO-108.3).
+    Auto-detects from environment if not explicitly provided.
+    """
+    msg = (summary or "").strip()
+
+    role = agent_role or os.environ.get("AGENT_ROLE") or os.environ.get("JIRA_ACTOR") or "agent1"
+    model = agent_model or os.environ.get("AGENT_MODEL") or "flash"
+    reviewer = reviewed_by or os.environ.get("REVIEWED_BY") or "Agent 2 (Reviewer)"
+
+    trailers = []
+    if role:
+        trailers.append(f"Agent-Role: {role}")
+    if model:
+        trailers.append(f"Agent-Model: {model}")
+    if reviewer:
+        trailers.append(f"Reviewed-by: {reviewer}")
+
+    if trailers:
+        if "Agent-Role:" not in msg and "Agent-Model:" not in msg:
+            msg = f"{msg}\n\n" + "\n".join(trailers)
+
+    return msg
+
+
+def validate_commit_trailers(commit_message):
+    """
+    Validates presence of mandatory ASPICE commit trailers (REQ-PRO-108.3).
+    Returns (is_valid: bool, missing: list[str]).
+    """
+    required = ["Agent-Role:", "Agent-Model:", "Reviewed-by:"]
+    missing = [t for t in required if t not in (commit_message or "")]
+    return (len(missing) == 0), missing
+
+
+def _merge_ticket_impl(
+    ticket_key,
+    sprint=None,
+    summary=None,
+    cwd=None,
+    agent_role=None,
+    agent_model=None,
+    reviewed_by=None,
+):
     """
     Internal execution logic for --merge-ticket.
     Must be invoked under sprint_lock.
@@ -281,7 +325,10 @@ def _merge_ticket_impl(ticket_key, sprint=None, summary=None, cwd=None):
     diff_final = git_cmd(["diff", "--cached", "--quiet"], cwd=current_wt, check=False)
     sprint_sha = git_cmd(["rev-parse", f"refs/heads/{sprint_ref}"], cwd=current_wt).stdout.strip()
     if diff_final.returncode != 0:
-        git_cmd(["commit", "-m", summary], cwd=current_wt)
+        full_commit_msg = format_commit_with_trailers(
+            summary, agent_role=agent_role, agent_model=agent_model, reviewed_by=reviewed_by
+        )
+        git_cmd(["commit", "-m", full_commit_msg], cwd=current_wt)
         new_sha = git_cmd(["rev-parse", "HEAD"], cwd=current_wt).stdout.strip()
     else:
         new_sha = git_cmd(["rev-parse", "HEAD"], cwd=current_wt).stdout.strip()
@@ -349,12 +396,23 @@ def run_merge_ticket(
     cwd=None,
     lock_path=DEFAULT_LOCK_FILE,
     timeout_sec=DEFAULT_TIMEOUT_SEC,
+    agent_role=None,
+    agent_model=None,
+    reviewed_by=None,
 ):
     """
     Deterministically squash-merges ticket_key onto sprint branch under exclusive POSIX flock.
     """
     with sprint_lock(lock_path=lock_path, timeout_sec=timeout_sec):
-        return _merge_ticket_impl(ticket_key, sprint=sprint, summary=summary, cwd=cwd)
+        return _merge_ticket_impl(
+            ticket_key,
+            sprint=sprint,
+            summary=summary,
+            cwd=cwd,
+            agent_role=agent_role,
+            agent_model=agent_model,
+            reviewed_by=reviewed_by,
+        )
 
 
 def main():
@@ -392,6 +450,21 @@ def main():
         help="Atomic commit summary for the merged ticket.",
     )
     parser.add_argument(
+        "--agent-role",
+        default=None,
+        help="Producing agent role for commit trailer (REQ-PRO-108.3).",
+    )
+    parser.add_argument(
+        "--agent-model",
+        default=None,
+        help="Producing agent model tier for commit trailer (REQ-PRO-108.3).",
+    )
+    parser.add_argument(
+        "--reviewed-by",
+        default=None,
+        help="Reviewer identity for commit trailer (REQ-PRO-108.3).",
+    )
+    parser.add_argument(
         "cmd",
         nargs=argparse.REMAINDER,
         help="Command to run under lock.",
@@ -416,6 +489,9 @@ def main():
                 summary=args.summary,
                 lock_path=args.lock_file,
                 timeout_sec=args.timeout,
+                agent_role=args.agent_role,
+                agent_model=args.agent_model,
+                reviewed_by=args.reviewed_by,
             )
             sys.exit(ret)
         except TimeoutError as te:

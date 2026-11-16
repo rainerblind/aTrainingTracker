@@ -42,6 +42,18 @@ object PolarRawTelemetryPruner {
     private const val MS_PER_DAY = 24L * 60L * 60L * 1000L
 
     /**
+     * Checks whether a raw telemetry sidecar file exists and is non-empty for [fileBaseName].
+     */
+    @JvmStatic
+    fun hasSidecar(context: Context?, fileBaseName: String?): Boolean {
+        if (context == null || fileBaseName.isNullOrBlank()) return false
+        val dir = PolarRawTelemetryRecorder.getRawSensorDir(context)
+        val sidecarName = "$fileBaseName${PolarRawTelemetryRecorder.SIDECAR_EXTENSION}"
+        val sidecar = File(dir, sidecarName)
+        return sidecar.exists() && sidecar.length() > 0L
+    }
+
+    /**
      * Deletes raw telemetry sidecar files matching [fileBaseName] during workout deletion cascade (REQ-DAT-042).
      */
     @JvmStatic

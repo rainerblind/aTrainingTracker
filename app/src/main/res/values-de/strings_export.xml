@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="file_format_raw_sensor">Rohsensordaten</string>
+    <string name="report_raw_sensor_data">Rohsensordaten melden</string>
+    <string name="diagnostic_share_sheet_title">Sensor-Diagnosepaket</string>
+    <string name="diagnostic_share_sheet_description">Rohsensor-Aufzeichnungen und Sitzungsdaten zur Fehlerbehebung bündeln.</string>
+    <string name="diagnostic_include_gps_location">GPS-Standort einbeziehen</string>
+    <string name="diagnostic_include_gps_description">Geografische Koordinaten in das Diagnosepaket einbeziehen.</string>
+    <string name="diagnostic_symptom_notes">Symptombeschreibung</string>
+    <string name="diagnostic_symptom_notes_placeholder">Beschreiben Sie aufgetretene Sensorausfälle, Spitzen oder Probleme…</string>
+    <string name="diagnostic_share_button">Diagnosepaket teilen</string>
+    <string name="diagnostic_bundle_packaging">Diagnosepaket wird geschnürt…</string>
+    <string name="diagnostic_no_sidecar_warning">Keine Rohsensor-Aufzeichnung für dieses Training vorhanden.</string>
+</resources>

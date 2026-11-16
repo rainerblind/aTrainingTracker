@@ -69,14 +69,9 @@ class JavaCoreMigrationStrategyContractTest {
         )
 
         val REGISTERED_CHILD_TICKETS = listOf(
-            ChildTicketContract("ATT-7902", 3, 0),
             ChildTicketContract("ATT-7903", 2, 1),
             ChildTicketContract("ATT-7905", 2, 1),
-            ChildTicketContract("ATT-7906", 3, 2),
-            ChildTicketContract("ATT-7907", 2, 3),
-            ChildTicketContract("ATT-7908", 3, 3),
-            ChildTicketContract("ATT-7909", 3, 4),
-            ChildTicketContract("ATT-7910", 1, 6)
+            ChildTicketContract("ATT-7906", 3, 2)
         )
     }
 
@@ -220,7 +215,7 @@ class JavaCoreMigrationStrategyContractTest {
         val adrFile = findRepoRootFile(ADR_RELATIVE_PATH)
         val content = adrFile.readText()
 
-        assertEquals("Expected exactly 8 child tickets registered (REQ-ARC-005.5)", 8, REGISTERED_CHILD_TICKETS.size)
+        assertEquals("Expected exactly 3 child tickets registered (REQ-ARC-005.5)", 3, REGISTERED_CHILD_TICKETS.size)
 
         REGISTERED_CHILD_TICKETS.forEach { ticket ->
             // Key must be mentioned

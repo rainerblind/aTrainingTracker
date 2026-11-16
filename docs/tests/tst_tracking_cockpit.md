@@ -3,7 +3,7 @@
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Tests**: 130
+**Total Tests**: 131
 
 ---
 
@@ -2352,6 +2352,28 @@
   6. *Clean-Room Targeted Test Suite Execution (`TST-CON-043.6`)*:
   • Verify targeted regression tests pass at 100%.
 
+### TST-CON-044: **Instance-Isolated Radar Connection State & Multi-Device Gating Test Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-CON-044` (`REQ-CON-044.1`..`REQ-CON-044.3`)
+- **Component**: `BTLERadarDevice.java`, `ANTBikeRadarDevice.kt`, `BTLERadarDeviceTest.kt`, `ANTBikeRadarDeviceTest.kt`
+- **Jira**: `ATT-8109`
+- **Test Type**: Unit & Regression
+- **Verification Method**: Unit
+- **Procedure**:
+  1. *Multi-Instance BLE Radar Isolation Test (`TST-CON-044.1`, `BTLERadarDeviceTest.kt`)*:
+     • Instantiate two `BTLERadarDevice` instances (`device1` and `device2`).
+     • Connect `device1` (`State.CONNECTED_WITH_SERVICE`) while leaving `device2` disconnected (`State.DISCONNECTED`).
+     • Update `RadarStateRepository` to `CONNECTED` under `RadarSource.BLE`.
+     • Assert `device1.isReceivingData` is `true` and `device2.isReceivingData` is `false`.
+  2. *Fail-Safe Watchdog Starvation Retention Test (`TST-CON-044.2`, `BTLERadarDeviceTest.kt`)*:
+     • With `device1` in `State.CONNECTED_WITH_SERVICE`, trigger watchdog timeout (`watchdogRunnable.run()`).
+     • Assert `device1.isReceivingData` transitions to `false`.
+  3. *Multi-Instance ANT+ Radar Isolation Test (`TST-CON-044.3`, `ANTBikeRadarDeviceTest.kt`)*:
+     • Instantiate two `ANTBikeRadarDevice` instances with different ANT device numbers.
+     • Feed broadcast pages to instance 1 only; assert instance 1 returns `true` and instance 2 returns `false`.
+  4. *Clean-Room Targeted Test Suite Execution (`TST-CON-044.4`)*:
+     • Verify all radar unit test suites pass with 100% success rate.
+
 ### TST-TRK-064: **1-Tap Radar Audio Snooze, Peloton Sync & Urban Suppression Test Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-064` (`REQ-TRK-064.1`..`REQ-TRK-064.7`)
 - **Component**: `RadarSnoozeController.kt`, `RadarAlertManager.kt`, `RadarEdgeOverlay.kt`, `RadarLightQuickSwitchSheet.kt`, `RadarState.kt`, `RadarStateRepository.kt`, `BTLERadarDevice.java`, `TuningPreferencesDataStore.kt`, `RadarSettingsSection.kt`, `strings_radar.xml`
@@ -3018,7 +3040,7 @@
 
 ### TST-TRK-082: **Decoupled Multi-Color Dynamic Zone Sparkline Rendering Verification Suite** [Verified]
 - **Target Release**: `V5.0.0`
-- **Tickets**: `ATT-7761`
+- **Tickets**: `ATT-7761`, `ATT-8436`
 - **Requirement(s)**: `REQ-TRK-082` (`REQ-TRK-082.1`..`REQ-TRK-082.4`)
 - **Component**: `SensorSparklineViewTest.kt`, `TrackingViewModelDynamicZoneSparklineTest.kt`, `SensorFieldViewDynamicZoneScreenshotTest.kt`
 - **Test Type**: Unit, ViewModel & Compose Screenshot
@@ -3029,7 +3051,7 @@
      • Verify fixed palette tokens, `"THEME_DEFAULT"`, `"GLOBAL_DEFAULT"`, and `"DYNAMIC_ZONE"` resolve deterministically independent of `zoneDisplayOptions.showTextColor`.
   2. *Threshold Gradient Stop Mapping, Terminal Dot & Fallback Test (`TST-TRK-082.2`, `SensorSparklineViewTest.kt`)*:
      • **HR (4 cutoffs -> Z1..Z5)** and **Power (6 cutoffs -> Z1..Z7)**: verify normalized stops in `[0f, 1f]` are monotonically non-decreasing, aligned to `minVal..maxVal` within canvas vertical padding, and terminal dot color matches `samples.last()` zone.
-     • **HRV DFA α1 (inverted polarity)**: verify `alpha1 > t1` maps to `TTColor.Zone2` (green, top / `stop = 0f`), `t2 <= alpha1 <= t1` maps to `TTColor.Zone3` (orange, middle), and `alpha1 < t2` maps to `TTColor.Zone4` (red, bottom / `stop = 1f`).
+     • **HRV DFA α1 (inverted polarity & inverted Y-axis, ATT-8436)**: verify `alpha1 < t2` maps to `TTColor.Zone4` (red, top / `stop = 0f`), `t2 <= alpha1 <= t1` maps to `TTColor.Zone3` (orange, middle), and `alpha1 > t1` maps to `TTColor.Zone2` (green, bottom / `stop = 1f`). Verify spatial Y-coordinate inversion renders lower values at `verticalPaddingPx` (top) and higher values at `height - verticalPaddingPx` (bottom) across dynamic and fixed color modes.
      • **Dark/AMOLED Zone 7 Contrast**: verify `TTColor.Zone7` (`#000000`) substitutes a high-contrast dark-surface color when `isDarkSurface(colorScheme) == true`.
      • **Edge-Case Fallbacks**: verify graceful fallback to solid `lineColor` (null gradient stops / zero crash) for `samples.size == 1`, `range == 0f` (`minVal == maxVal`), `isPlaceholder == true`, and null/empty thresholds.
   3. *TrackingViewModel Zone Cutoff Projection & Guard Test (`TST-TRK-082.3`, `TrackingViewModelDynamicZoneSparklineTest.kt`)*:
@@ -3037,6 +3059,6 @@
      • Verify `SensorType.POWER_TO_WEIGHT` is strictly guarded against receiving raw Watt (`PWR_BIKE`) cutoffs.
      • Verify `HRV_DFA_A1` zone gradient stops are suppressed when `hrvSignalQualityStatus` is `SMOOTHED_STREAM` or `QUANTIZED_SYNTHETIC`.
   4. *Visual Compose Screenshot Verification Test (`TST-TRK-082.4`, `SensorFieldViewDynamicZoneScreenshotTest.kt`)*:
-     • Render `SensorFieldView` / `SensorSparklineView` tiles in Light and Dark/AMOLED themes covering HR (5-zone), Power (7-zone incl. Zone 7 dark contrast), HRV DFA α1 (inverted polarity), decoupled fixed-color + `showTextColor = true`, and placeholder/flat-line fallbacks; capture `docs/engineering/walkthroughs/img/ATT-7761_dynamic_zone_sparkline.png` and certify against Rule 8.5 4-point visual checklist.
+     • Render `SensorFieldView` / `SensorSparklineView` tiles in Light and Dark/AMOLED themes covering HR (5-zone), Power (7-zone incl. Zone 7 dark contrast), HRV DFA α1 (inverted polarity with aerobic green at bottom and anaerobic red at top), decoupled fixed-color + `showTextColor = true`, and placeholder/flat-line fallbacks; capture `docs/engineering/walkthroughs/img/ATT-7761_dynamic_zone_sparkline.png` and certify against Rule 8.5 4-point visual checklist.
 
 

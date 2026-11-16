@@ -229,5 +229,51 @@ class TestGenerateTestEvidence(unittest.TestCase):
             self.assertEqual(payload_rel["type"], "release")
 
 
+    def test_kover_skipped_for_all_regular_schichten_but_measured_for_weekly_and_release(self):
+        """All regular Schicht sprints skip Kover; weekly audit targets and releases measure it."""
+        with tempfile.TemporaryDirectory() as tmp_root:
+            out_dir = os.path.join(tmp_root, "docs", "engineering", "test_evidence")
+            results_dir = os.path.join(tmp_root, "app", "build", "test-results")
+            kover_dir = os.path.join(tmp_root, "app", "build", "reports", "kover")
+            os.makedirs(results_dir, exist_ok=True)
+            os.makedirs(kover_dir, exist_ok=True)
+            with open(os.path.join(results_dir, "TEST-SampleTest.xml"), "w", encoding="utf-8") as f:
+                f.write('<testsuite name="T" tests="1" failures="0" errors="0" skipped="0" time="0.1"><testcase name="t" classname="T" time="0.1"/></testsuite>')
+            with open(os.path.join(kover_dir, "reportDebug.xml"), "w", encoding="utf-8") as f:
+                f.write(self.sample_kover_xml)
+
+            for sprint_id in ("sprint_2026-11-17_01_Früh", "sprint_2026-11-22_02_Spät", "sprint_2026-11-16_03_Nacht"):
+                _, _, payload = generate_test_evidence(
+                    target_id=sprint_id,
+                    target_type="sprint",
+                    repo_root=tmp_root,
+                    results_dir=results_dir,
+                    out_dir=out_dir,
+                    commit_sha="deadbeef",
+                )
+                self.assertFalse(payload["coverage"]["measured"], f"Expected Kover skipped for {sprint_id}")
+
+            _, _, payload_weekly = generate_test_evidence(
+                target_id="weekly_2026-KW47",
+                target_type="generic",
+                repo_root=tmp_root,
+                results_dir=results_dir,
+                out_dir=out_dir,
+                commit_sha="deadbeef",
+            )
+            self.assertTrue(payload_weekly["coverage"]["measured"])
+
+            _, _, payload_forced = generate_test_evidence(
+                target_id="weekly_2026-KW47",
+                target_type="generic",
+                repo_root=tmp_root,
+                results_dir=results_dir,
+                out_dir=out_dir,
+                commit_sha="deadbeef",
+                skip_kover=True,
+            )
+            self.assertFalse(payload_forced["coverage"]["measured"])
+
+
 if __name__ == "__main__":
     unittest.main()

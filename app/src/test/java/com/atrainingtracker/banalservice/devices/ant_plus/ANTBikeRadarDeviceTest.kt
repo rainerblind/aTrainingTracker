@@ -737,6 +737,37 @@ class ANTBikeRadarDeviceTest {
     }
 
     /**
+     * TST-CON-044.3: ANTBikeRadarDevice Multi-Instance Isolation Test (ATT-8109).
+     * Verifies that when multiple ANT+ radars are configured, only the instance actively
+     * receiving broadcast packets within the watchdog window reports isReceivingData() == true;
+     * a silent peer instance reports false even though RadarSource.ANT_PLUS is CONNECTED.
+     */
+    @Test
+    fun testMultiInstanceAntRadar_silentDeviceReturnsFalse() {
+        val antRadar2 = ANTBikeRadarDevice(
+            context = mockContext,
+            mySensorManager = mockSensorManager,
+            deviceId = 2L,
+            antDeviceNumber = 54321
+        )
+
+        val validPayload = byteArrayOf(
+            0x30.toByte(), 0x01.toByte(), 0x00.toByte(),
+            0x10.toByte(), 0x00.toByte(), 0x00.toByte(),
+            0x05.toByte(), 0x00.toByte()
+        )
+        radarDevice.decodeBroadcastData(validPayload)
+
+        assertEquals(
+            RadarConnectionState.CONNECTED,
+            RadarStateRepository.getState(RadarSource.ANT_PLUS).connectionState
+        )
+
+        assertTrue("Active ANT+ radar must return isReceivingData == true", radarDevice.isReceivingData())
+        assertFalse("Silent peer ANT+ radar must return isReceivingData == false", antRadar2.isReceivingData())
+    }
+
+    /**
      * TST-CON-042.2 & TST-CON-042.4: ANT+ Packet Ingestion Preserves Snooze & Light Mode.
      * Verifies parseTargetsPage() and publishTargets() retain active audioSnoozeState and lightMode,
      * and bypass simulator preemption when isSimulating is false.

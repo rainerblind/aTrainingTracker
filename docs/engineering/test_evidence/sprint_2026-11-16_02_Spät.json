@@ -1,0 +1,31 @@
+{
+  "target": "sprint_2026-11-16_02_Sp\u00e4t",
+  "type": "sprint",
+  "commit": "62af65356c4148d8a6539acd0092181c9ec23744",
+  "timestamp": "2026-11-16T22:04:37.703762+00:00",
+  "unit_tests": {
+    "total": 12,
+    "passed": 12,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "time": 27.389
+  },
+  "coverage": {
+    "measured": false,
+    "reason": "Kover skipped for regular Schicht (executed in weekly Code Review / ASPICE Audit and releases)",
+    "global": {
+      "line_percent": null,
+      "branch_percent": null
+    },
+    "critical_packages": {}
+  },
+  "tst_results": {
+    "TST-TRK-039": {
+      "status": "PASS",
+      "passing_cases_count": 12,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    }
+  }
+}

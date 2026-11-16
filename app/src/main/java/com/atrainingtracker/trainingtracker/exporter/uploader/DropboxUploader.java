@@ -27,6 +27,7 @@ import com.atrainingtracker.BuildConfig;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.exporter.BaseExporter;
 import com.atrainingtracker.trainingtracker.exporter.ExportInfo;
+import com.atrainingtracker.trainingtracker.exporter.FileFormat;
 import com.dropbox.core.DbxException;
 import com.dropbox.core.DbxRequestConfig;
 import com.dropbox.core.oauth.DbxCredential;
@@ -52,6 +53,10 @@ public class DropboxUploader extends BaseExporter {
         String filename = exportInfo.getShortPath();
         File file = new File(getBaseDirFile(mContext), filename);
         if (!file.exists()) {
+            if (exportInfo.getFileFormat() == FileFormat.RAW_SENSOR) {
+                Log.i(TAG, "Raw sensor sidecar does not exist for " + exportInfo.getFileBaseName() + " (graceful skip)");
+                return new ExportResult(true, false, "Raw sensor sidecar does not exist (graceful skip)");
+            }
             return new ExportResult(false, false,"Dropbox file does not exist: " + file);
         }
 

@@ -3,7 +3,7 @@
 **Domain**: `data_migration_export`  
 **Prefixes**: `DAT`, `EXP`, `EXT`, `MIG`  
 **Scope**: Database schema, backup/restore, migration pipelines, Strava/cloud upload, FIT/GPX export.  
-**Total Tests**: 121
+**Total Tests**: 122
 
 ---
 
@@ -2237,6 +2237,29 @@
      - Verify `FitWorkoutParser` decodes balance, TE, and PS from `RecordMesg` into `bufferedSamples` and registers `SensorType` entries in `foundSensors`, maintaining exact bilateral values without inversion.
   4. *Clean-Room Regression Suite Execution*:
      - Verify `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.exporter.*" --tests "com.atrainingtracker.trainingtracker.migration.*"`.
+
+---
+
+### TST-EXP-044: **Polar Raw Sensor Sidecar Export & Aftermath Diagnostic Bundle Share Test Suite (`ATT-8020`)** [Verified]
+- **Requirement(s)**: `REQ-EXP-044` (`REQ-EXP-044.1`..`REQ-EXP-044.4`)
+- **Component**: `FileFormat.java`, `ExportType.java`, `ExportManager.java`, `RawSensorFileExporter.kt`, `DropboxUploader.java`, `GoogleDriveUploader.kt`, `SensorDiagnosticBundlePackager.kt`, `SensorDiagnosticShareSheet.kt`, `ExportSettingsDialog.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-8020`
+- **Test Description**:
+  1. *Raw Sensor Sidecar File Export & Absent File Graceful Skip (`TST-EXP-044.1`)*:
+     - Verify `RawSensorFileExporter` copies existing `.polar_raw.csv.gz` sidecars to public downloads via `copyFileToDownloads()`.
+     - Verify when the sidecar does not exist on disk, `RawSensorFileExporter`, `DropboxUploader`, and `GoogleDriveUploader` return a clean success/skip result without failing standard exports.
+  2. *Cloud Uploader Integration (Dropbox & Google Drive) (`TST-EXP-044.2`)*:
+     - Verify `DropboxUploader` and `GoogleDriveUploader` upload `raw_sensor/<fileBaseName>.polar_raw.csv.gz` to their respective cloud workout folders when present.
+  3. *Diagnostic ZIP Bundle Assembly & Structure Integrity (`TST-EXP-044.3`)*:
+     - Verify `SensorDiagnosticBundlePackager` creates a valid, uncorrupted `.zip` file containing `raw_telemetry.polar_raw.csv.gz`, `workout_summary.json`, `laps.json`, `samples_1hz.csv`, and `diagnostic_metadata.json` with user notes.
+  4. *Privacy-Preserving GPS Stripping Verification (`TST-EXP-044.4`)*:
+     - Verify when `includeGps = false`, `SensorDiagnosticBundlePackager` strictly omits latitude and longitude from `samples_1hz.csv` and `summary.json`.
+     - Verify when `includeGps = true`, coordinates are preserved.
+  5. *FileProvider Authority, 9-Locale Strings Parity & Rule 8.5 UI Verification (`TST-EXP-044.5`)*:
+     - Verify `file_paths.xml` allows sharing from `cache/diagnostics/` via `FileProvider`.
+     - Run `TranslationParityTest` verifying all 9 locales (`EN`, `DE`, `ES`, `FR`, `IT`, `JA`, `NL`, `PL`, `PT`) define all diagnostic bundle and raw sensor export labels without emojis (`Rule 38`).
+     - Verify Stage 4 generates and inspects `docs/engineering/walkthroughs/img/ATT-8020_diagnostic_share_sheet.png` (`Rule 8.5`).
+
 
 
 

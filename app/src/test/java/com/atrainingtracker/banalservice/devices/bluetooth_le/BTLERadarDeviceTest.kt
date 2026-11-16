@@ -227,7 +227,40 @@ class BTLERadarDeviceTest {
     }
 
     /**
-     * TST-CON-041.6: BTLERadarDevice isReceivingData Source Isolation & Watchdog Test.
+     * TST-CON-044.1: BTLERadarDevice Multi-Instance Isolation Test (ATT-8109).
+     * Verifies that when multiple BLE radars are paired, only the peripheral actively
+     * connected to GATT returns isReceivingData() == true; disconnected peer instances return false.
+     */
+    @Test
+    fun testMultiInstanceBleRadar_disconnectedDeviceReturnsFalse() {
+        val mockGatt = mockk<BluetoothGatt>(relaxed = true)
+        val mockRadarService = mockk<BluetoothGattService>(relaxed = true)
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_RADAR) } returns mockRadarService
+
+        radarDevice.configureServices(mockGatt)
+        radarDevice.setStateForTesting(MyBTLEDevice.State.CONNECTED_WITH_SERVICE)
+
+        val device2 = BTLERadarDevice(
+            mockContext,
+            mockSensorManager,
+            2L,
+            "D0:C6:37:33:67:AA"
+        )
+        device2.setStateForTesting(MyBTLEDevice.State.DISCONNECTED)
+
+        RadarStateRepository.updateState(
+            com.atrainingtracker.banalservice.devices.radar.RadarState(
+                connectionState = RadarConnectionState.CONNECTED,
+                source = com.atrainingtracker.banalservice.devices.radar.RadarSource.BLE
+            )
+        )
+
+        assertTrue("Connected BLE radar must report isReceivingData == true", radarDevice.isReceivingData)
+        assertFalse("Disconnected peer BLE radar must report isReceivingData == false", device2.isReceivingData)
+    }
+
+    /**
+     * TST-CON-041.6, TST-CON-044.2: BTLERadarDevice isReceivingData Source Isolation & Watchdog Test.
      * Verifies isReceivingData() queries only RadarSource.BLE state and returns false on watchdog timeout
      * even if underlying GATT state is CONNECTED_WITH_SERVICE.
      */

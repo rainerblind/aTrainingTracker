@@ -3,7 +3,7 @@
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Requirements**: 172
+**Total Requirements**: 173
 
 ---
 
@@ -2325,13 +2325,14 @@ The workflow SHALL mandate that:
 - **Type**: Non-Functional
 - **Verification Method**: Unit / Review
 - **Implementation**: `docs/architecture/adr_001_java_core_services_migration.md`, `JavaCoreMigrationStrategyContractTest.kt`, `docs/architecture.md`
-- **Rationale**: To address ASPICE evaluation finding F9, eliminate Java platform types (`T!`) across core boundaries, ensure SWE.3 compile-time null safety, unify static analysis under Detekt/KtLint, and modernize concurrency models, an authoritative Architecture Decision Record (ADR-001) SHALL document the class-by-class inventory, migrate/keep/retire determinations, dependency-ordered migration tiers (Tiers 0–6), quality safeguards, and atomic child tickets (1–3 SP) under Epic ATT-431 (ATT-7566):
+- **Rationale**: To address ASPICE evaluation finding F9, eliminate Java platform types (`T!`) across core boundaries, ensure SWE.3 compile-time null safety, unify static analysis under Detekt/KtLint, and modernize concurrency models, an authoritative Architecture Decision Record (ADR-001) SHALL document the class-by-class inventory, migrate/keep/retire determinations, dependency-ordered migration tiers (Tiers 0–6), quality safeguards, and atomic child tickets (1–3 SP) under Epic ATT-431 (ATT-7566, ATT-8115):
 1. *Comprehensive Quantitative Inventory & Classification (`REQ-ARC-005.1`)*:
 • An authoritative ADR (`docs/architecture/adr_001_java_core_services_migration.md`) SHALL catalog all 149 Java classes (45,167 LOC) across 12 architectural subsystems, documenting size, commit churn, unit test coverage, and defect risk per class.
 2. *Class-by-Class Migrate vs. Keep vs. Retire Decision Matrix (`REQ-ARC-005.2`)*:
 • The ADR SHALL record an explicit decision for every core subsystem:
-  - Migrate: Core tracking (`TrackerService`), peripheral device ingestion (`BANALService`, `DeviceManager`, `CyclingPowerMetricsDevice`, `BTLERadarDevice`), sensor formatting/filters, and file exporters (`FitFileWriter`, `TCXFileWriter`).
+  - Migrate: Leaf sensor formatters (`ATT-7903`), pure signal filters (`ATT-7905`), and file exporters (`ATT-7906`, `FitFileWriter`, `TCXFileWriter`).
   - Keep / Modernize via Repository: SQLite database managers (`WorkoutSummariesDatabaseManager`, `WorkoutSamplesDatabaseManager`).
+  - Keep: Core tracking (`TrackerService`), peripheral device ingestion (`BANALService`, `DeviceManager`, `CyclingPowerMetricsDevice`, `BTLERadarDevice`, `ANTHeartRateDevice`) per Product Owner architecture decision (2026-11-14, ATT-8115) to safeguard endurance telemetry stability.
   - Keep / Sunset: Legacy Pebble smartwatch integration (7 files, 1,739 LOC) frozen for formal deprecation.
   - Keep / Replace with standard library: 3rd-party embedded `au.com.bytecode.opencsv` (3 files, 493 LOC).
 3. *Phased, Bottom-Up Migration Sequencing & Integration Seams (`REQ-ARC-005.3`)*:
@@ -2350,15 +2351,16 @@ The workflow SHALL mandate that:
   - Platform type nullability shielding: Adjacent Java boundaries must be fortified with `@NonNull` / `@Nullable` annotations.
   - 100% clean-room test pass rate under `./gradlew testDebugUnitTest`.
 5. *Atomic Backlog Ticket Decomposition (`REQ-ARC-005.5`)*:
-• All resulting migration work SHALL be partitioned into atomic backlog tickets sized between 1 and 3 Story Points under Epic `ATT-431` (*Clean Code*), precluding monolithic multi-thousand LOC migration tickets.
+• Active migration work under Epic `ATT-431` (*Clean Code*) SHALL be partitioned into atomic backlog tickets sized between 1 and 3 Story Points strictly bounded to the 3 authorized leaf components: `ATT-7903` (2 SP, Tier 1), `ATT-7905` (2 SP, Tier 1), and `ATT-7906` (3 SP, Tier 2). Remaining subsystems (`ATT-7902`, `ATT-7907`..`ATT-7910`) are retained as Keep or characterisation scaffolding (ATT-8115).
 6. *Automated Strategy Contract Test Verification (`REQ-ARC-005.6`)*:
-• `JavaCoreMigrationStrategyContractTest.kt` SHALL programmatically assert the existence of ADR-001, verify that all core Java classes cited in the inventory are accounted for with valid decision classifications, and check that required quality safeguards and child tickets are documented.
+• `JavaCoreMigrationStrategyContractTest.kt` SHALL programmatically assert the existence of ADR-001, verify that all core Java classes cited in the inventory are accounted for with valid decision classifications, check that <= 149 Java classes exist in main production sources, and assert that exactly 3 authorized child tickets (`ATT-7903`, `ATT-7905`, `ATT-7906`) are registered.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
 1. *Original Requirement ID & Target*: Net-new requirement `REQ-ARC-005` under Epic `ATT-431` (*Clean Code*), extending `REQ-ARC-001` through `REQ-ARC-004`. Targets `docs/architecture/adr_001_java_core_services_migration.md`, `JavaCoreMigrationStrategyContractTest.kt`, and `docs/architecture.md`.
 2. *Historical Origin & Commit Trace*: Initiated in Sprint `2026-46.6` under ticket `ATT-7566` to resolve ASPICE evaluation finding F9.
 3. *Root Reason for Existing Formulation*: Java core was retained during Kotlin adoption to prevent regressions in high-frequency sensor/GPS ingestion. A documented, phased migration strategy with pre-existing characterisation tests eliminates migration risk while restoring null safety and architectural homogeneity.
 4. *Preservation of Core Invariants*: Zero production code modification in this ticket; all existing telemetry processing, database schemas, and background services remain unaltered.
+5. *PO Scope Refinement & Child Ticket Reduction (`ATT-8115`)*: Refined in Sprint `2026-11-16_02_Spät` under ticket `ATT-8115` to codify the Product Owner decision (2026-11-14): restrict active migration to leaf formatters (`ATT-7903`), filters (`ATT-7905`), and exporters (`ATT-7906`), while retaining core tracking and BLE/ANT+ drivers in Java (`Keep`). `JavaCoreMigrationStrategyContractTest.kt` reduces `REGISTERED_CHILD_TICKETS` to 3 tickets.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* the Java codebase inventory in `aTrainingTracker`,
@@ -4974,11 +4976,12 @@ The workflow SHALL mandate that:
   1. *Independent QA Auditor Role Enforcement (`REQ-PRO-091.1`)*:
      • The QA process audit tool (`qa-audit`) and audit records in `docs/engineering/qa_audits/<sprint>.md` SHALL enforce an independent auditor role (`qa` / `agent2` / `quality-assurance`) that is strictly distinct from the sprint coordinator (`coordinator`) and ticket implementers (`agent1`).
      • Invoking `qa-audit` with `role="coordinator"` or `role="agent1"` SHALL be forbidden and rejected with exit code 1.
-  2. *Representative Statistical Sampling Ratio (`REQ-PRO-091.2`)*:
+  2. *Representative Statistical Sampling Ratio & Seeded Randomization (`REQ-PRO-091.2`)*:
      • The QA audit tool SHALL dynamically compute the minimum required sample size as at least 10% of completed parent sprint tickets:
        $$\text{sample\_size} \ge \max(2, \lceil 0.10 \times N \rceil)$$
-       where $N$ is the count of completed parent sprint tickets (or a documented risk-based sampling rationale).
-     • The audit report in `docs/engineering/qa_audits/<sprint>.md` SHALL explicitly document the total sprint population, sample size, and statistical/risk rationale in Section 1.
+       where $N$ is the count of completed parent sprint tickets.
+     • Sample selection SHALL use seeded pseudo-random sampling (`random.Random(seed).sample`), accepting an optional seed parameter (`--seed`) or generating a random integer seed.
+     • The audit report in `docs/engineering/qa_audits/<sprint>.md` SHALL explicitly document the total sprint population, sample size, random seed, and sampled ticket keys in Section 1.
   3. *Closed-Loop Jira Corrective-Action Tracking (`REQ-PRO-091.3`)*:
      • For any audit evaluating a `NON-COMPLIANT` overall verdict or finding, Section 4 of `docs/engineering/qa_audits/<sprint>.md` SHALL link every non-compliant finding to a dedicated Jira corrective-action ticket (formatted as `[ATT-XXXX](https://.../browse/ATT-XXXX)` or `ATT-XXXX`).
      • Generic placeholder text without authentic Jira ticket links is prohibited.
@@ -4989,10 +4992,14 @@ The workflow SHALL mandate that:
        (a) Auditor role is independent (not `coordinator` or `agent1`),
        (b) Sample size is $\ge \max(2, \lceil 0.10 \times N \rceil)$ or documented rationale, and
        (c) Every `NON-COMPLIANT` audit record contains valid Jira ticket links for each non-compliant finding.
+  6. *Objective Process-Compliance Verification Criteria (`REQ-PRO-091.6`)*:
+     • Living Documentation Parity: `qa-audit` SHALL load and evaluate referenced requirement IDs against all living requirement domain shards in `docs/requirements/req_*.md` (~1,194 active requirements) and `docs/tests/tst_*.md`, rather than summary-only master tables.
+     • Issue Description Ingestion: `fetch_all_sprint_issues` SHALL include the `description` field in Jira Cloud queries to evaluate requirement references in ticket bodies.
+     • AccountId-Based 4-Augen Role Separation: `qa-audit` SHALL verify author and reviewer separation by evaluating Atlassian `accountId`s against `ROLE_ACCOUNT_IDS` rather than matching display-name strings.
 - **Requirement Archaeology & Chesterton's Fence Audit**:
-  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-091` (`REQ-PRO-091.1`–`REQ-PRO-091.5`), refining and extending `REQ-PRO-061` (*Sprint-Level QA Process-Compliance Audit*). Targets `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `tools/hoechstmass/`, `.agents/skills/sprint-planner/SKILL.md`, and `docs/engineering/qa_audits/`.
-  2. *Historical Origin & Commit Trace*: Introduced in Sprint 2026-46.3 via ATT-6154 (`REQ-PRO-061`). Finding F1 in ASPICE independent evaluation (2026-11-12) identified that `coordinator` authored audits, under-sampled, and left non-compliances open-loop.
-  3. *Root Reason for Existing Formulation*: Early tooling prioritized basic automated markdown generation over strict organizational independence and closed-loop corrective action tracking.
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-091` (`REQ-PRO-091.1`–`REQ-PRO-091.6`), refining and extending `REQ-PRO-061` (*Sprint-Level QA Process-Compliance Audit*). Targets `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `tools/hoechstmass/`, `.agents/skills/sprint-planner/SKILL.md`, and `docs/engineering/qa_audits/`.
+  2. *Historical Origin & Commit Trace*: Introduced in Sprint 2026-46.3 via ATT-6154 (`REQ-PRO-061`); extended in Sprint 2026-46.6 via ATT-7558; bugfixed in Sprint 2026-11-16_02_Spät via ATT-8152 (Finding M5).
+  3. *Root Reason for Existing Formulation*: Early tooling prioritized basic automated markdown generation and checked only `docs/requirements.md` before domain shards were introduced; description was omitted from query; role separation relied on display-name heuristics.
   4. *Preservation of Core Invariants*: Existing CLI commands (`qa-audit`, `--check-qa-audits`) remain backward-compatible; pure Python standard library; zero production Android runtime code changes.
 - **Acceptance Criteria (Given-When-Then)**:
   • *Given* an execution of `qa-audit`,
@@ -5000,13 +5007,19 @@ The workflow SHALL mandate that:
   • *Then* it executes under an independent role (`qa` / `agent2`), and aborts if invoked under `coordinator` or `agent1`.
   • *Given* a sprint with $N$ completed parent tickets,
   • *When* `qa-audit` draws the sample,
-  • *Then* the sample size is $\ge \max(2, \lceil 0.10 \times N \rceil)$ with documented sampling rationale.
+  • *Then* the sample size is $\ge \max(2, \lceil 0.10 \times N \rceil)$ with seeded random selection, documenting seed and sampled keys.
   • *Given* an audit record with a `NON-COMPLIANT` finding,
   • *When* validated by `verify_requirement_governance.py --check-qa-audits`,
   • *Then* it passes only if every non-compliant finding links to an authentic Jira corrective-action ticket.
   • *Given* Ceremony 1 in `sprint-planner/SKILL.md`,
   • *When* executed at Sprint-Start,
   • *Then* it includes verification of open corrective action tickets from the prior sprint's QA audit.
+  • *Given* a compliant ticket whose requirement resides in a domain shard,
+  • *When* `qa-audit` evaluates Living Documentation Parity,
+  • *Then* the requirement ID is resolved against `docs/requirements/req_*.md` shards and passes.
+  • *Given* subtasks reviewed by `agent2`,
+  • *When* `qa-audit` evaluates 4-Augen Role Separation,
+  • *Then* `accountId`s are matched against `ROLE_ACCOUNT_IDS` and passes.
 - **Invariants**: Zero Android runtime code changes; pure Python 3 standard library; Rule 3 human-only gate preserved.
 
 
@@ -5556,3 +5569,37 @@ The workflow SHALL mandate that:
   • *When* `sprint-metrics` runs,
   • *Then* a prominent Rubber-Stamping Alert is emitted and posted to the sprint Retro ticket.
 - **Invariants**: Zero Android runtime impact (`app/src/main/`); `ANT-Android-SDKs` untouched at `160000`; Rule 3 human decision gate preserved.
+
+---
+
+### REQ-PRO-108: Technical Role Separation for Agent Credentials & Git Commit Identity (ATT-8151) [Verified]
+- **Tests**: `TST-PRO-108`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `tools/jira_util.py`, `tools/parallel_sprint_lock.py`, `tools/locked_build_merge.py`, `tools/test_jira_accounts.py`, `docs/management/risk_register.md`
+- **Rationale**: ASPICE 4.0 Finding M4 (SUP.1 Quality Assurance, GP 2.1.4, SUP.8 Configuration Management, BP4) identified that role separation between implementer and reviewer existed only at the prompt level. Any agent could assume any role via `--as`, `qa` had no credential mapping, and all commits were authored under a single human identity without agent or model provenance. Binding role selection to subagent identity, mapping dedicated QA credentials, appending verifiable commit trailers, and documenting residual single-OS user risks establishes technical and auditable role independence.
+- **Description**:
+  1. *Subagent Identity & Role Binding (`REQ-PRO-108.1`)*: When the `JIRA_ACTOR` environment variable is defined in the subagent environment, `tools/jira_util.py` SHALL strictly reject any mismatched CLI `--as <role>` override with a role mismatch error. When `JIRA_ACTOR` is unset (manual developer CLI or coordinator invocation), `--as coordinator` and manual `--as <role>` calls SHALL continue to operate without rejection.
+  2. *Dedicated QA Role Credential Mapping & Account Independence (`REQ-PRO-108.2`)*: `tools/jira_util.py` SHALL map role `qa` to dedicated credentials (`JIRA_QA_USER`, `JIRA_QA_TOKEN`), support `.env.jira.qa`, include `qa` in `get_config` role credential filtering, and enforce that `agent2` and `qa` operate under distinct Jira user accounts (different account IDs or usernames).
+  3. *Producing Agent Identity & Reviewer Git Commit Trailers (`REQ-PRO-108.3`)*: `tools/parallel_sprint_lock.py` (`_merge_ticket_impl` / `--merge-ticket`) SHALL append standard git trailers (`Agent-Role:`, `Agent-Model:`, `Reviewed-by:`) to atomic squash merge commits, auto-detecting values from environment variables (`AGENT_ROLE`, `AGENT_MODEL`, `REVIEWED_BY`, `JIRA_ACTOR`) or CLI arguments, verifiable by automated unit checks.
+  4. *Single-OS User Residual Risk Documentation (`REQ-PRO-108.4`)*: `docs/management/risk_register.md` SHALL formally register the residual risk of local subagent process co-location under a single operating system user account and document the layered mitigations (token isolation, role binding, commit trailers, CI gating).
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Extends `REQ-PRO-060` (Composite CLI role operations) and `REQ-PRO-041` (Parallel sprint lock & atomic commit merging) via net-new `REQ-PRO-108`. Targets `tools/jira_util.py`, `tools/parallel_sprint_lock.py`, and `docs/management/risk_register.md`.
+  2. *Historical Origin & Commit Trace*: `ATT-4290` (`REQ-PRO-060`), `ATT-7025` (`REQ-PRO-041`), `ATT-8150` (`REQ-PRO-107`), `ATT-8151`.
+  3. *Root Reason for Existing Formulation*: Permissive `--as` and uniform commit authorship were established for single-developer convenience prior to multi-agent role separation.
+  4. *Preservation of Core Invariants*: Standalone manual CLI usage when `JIRA_ACTOR` is unset remains fully functional; POSIX flock locking and `ANT-Android-SDKs` submodule integrity (`160000 commit 0e8cea714a231fb9565170d4ed01eafa868f9798`) are preserved.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* a subagent process launched with `JIRA_ACTOR=agent1`,
+  • *When* it calls `tools/jira_util.py --as agent2 gate-verdict ...`,
+  • *Then* the invocation is rejected with a role mismatch error.
+  • *Given* an execution environment without `JIRA_ACTOR`,
+  • *When* `tools/jira_util.py --as coordinator show ATT-8151` is executed,
+  • *Then* the command succeeds without role mismatch rejection.
+  • *Given* configured `agent2` and `qa` credentials,
+  • *When* `tools/jira_util.py` resolves accounts,
+  • *Then* `qa` resolves to dedicated credentials and accounts are verified distinct.
+  • *Given* a completed ticket being merged onto the sprint branch via `--merge-ticket`,
+  • *When* the atomic squash commit is created,
+  • *Then* the commit message contains valid `Agent-Role:`, `Agent-Model:`, and `Reviewed-by:` git trailers.
+- **Invariants**: Zero Android production code impact (`app/src/main/`); `ANT-Android-SDKs` untouched at `160000`; existing test fixtures and POSIX flock semantics preserved.

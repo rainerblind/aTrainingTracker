@@ -60,5 +60,6 @@ data class WorkoutHeaderData(
     val finished: Boolean,
     val startLocationName: String? = null,
     val endLocationName: String? = null,
-    val recordingErrors: String? = null
+    val recordingErrors: String? = null,
+    val fileBaseName: String? = null
 )

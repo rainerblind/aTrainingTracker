@@ -25,6 +25,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -40,6 +41,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
@@ -52,9 +54,11 @@ import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarRawTelemetryPruner
 import com.atrainingtracker.trainingtracker.database.WorkoutSource
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.exporter.FileFormat
+import com.atrainingtracker.trainingtracker.ui.dialogs.SensorDiagnosticShareSheet
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 
@@ -99,6 +103,8 @@ fun WorkoutHeader(
     var showMenu by remember { mutableStateOf(false) }
     var showContextMenu by remember { mutableStateOf(false) }
     var showDiagnosticSheet by remember { mutableStateOf(false) }
+    var showSensorDiagnosticSheet by remember { mutableStateOf(false) }
+    val context = LocalContext.current
 
     val hasLongClick = canDelete || (!data.finished && onMarkFinished != null)
 
@@ -259,6 +265,31 @@ fun WorkoutHeader(
                                     onClick = {
                                         showMenu = false
                                         onSyncHealthConnect()
+                                    }
+                                )
+                            }
+
+                            val hasSidecar = remember(data.fileBaseName) {
+                                PolarRawTelemetryPruner.hasSidecar(context, data.fileBaseName)
+                            }
+                            if (hasSidecar) {
+                                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                                DropdownMenuItem(
+                                    text = {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(
+                                                imageVector = Icons.Default.BugReport,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(18.dp),
+                                                tint = MaterialTheme.colorScheme.primary
+                                            )
+                                            Spacer(Modifier.width(8.dp))
+                                            Text(stringResource(R.string.report_raw_sensor_data))
+                                        }
+                                    },
+                                    onClick = {
+                                        showMenu = false
+                                        showSensorDiagnosticSheet = true
                                     }
                                 )
                             }
@@ -648,6 +679,13 @@ fun WorkoutHeader(
                 showDiagnosticSheet = false
             },
             onDismiss = { showDiagnosticSheet = false }
+        )
+    }
+
+    if (showSensorDiagnosticSheet && !data.fileBaseName.isNullOrBlank()) {
+        SensorDiagnosticShareSheet(
+            fileBaseName = data.fileBaseName!!,
+            onDismiss = { showSensorDiagnosticSheet = false }
         )
     }
 }

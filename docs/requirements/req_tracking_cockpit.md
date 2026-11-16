@@ -3,7 +3,7 @@
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Requirements**: 154
+**Total Requirements**: 155
 
 ---
 
@@ -4793,6 +4793,47 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 **Invariants**: Non-blocking GATT mode cycling; zero ElevatedCard/pointerInput contention; idempotent SQLite upgrade; 100% 9-language translation parity.
 
+### REQ-CON-044: Instance-Isolated Connection State & Multi-Device Gating for BLE & ANT+ Radar [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-CON-044`
+- **System Requirement(s)**: `SYSREQ-TRK-001`, `SYSREQ-TRK-002`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `BTLERadarDevice.java`, `ANTBikeRadarDevice.kt`, `MyBTLEDevice.java`
+- **Rationale**: When multiple radar peripherals are paired in `DeviceManager` across multiple bikes (e.g. `RearVue8` on bike A and `ATT-Rdr` on bike B), connecting to one radar must not falsely mark all paired radar peripherals as connected on the Start screen or in Cockpit device status headers. Each device instance must evaluate its own physical connection and packet reception status while preserving fail-safe packet-starvation watchdog detection (ATT-8109, Parent Epic ATT-1286, extending `REQ-CON-028` and `REQ-CON-041.4`):
+- **Description**:
+  1. *Per-Instance BLE GATT Connection Qualification (`REQ-CON-044.1`)*:
+     - `BTLERadarDevice.isReceivingData()` SHALL verify that *this specific device instance* has an active GATT connection and discovered services via `super.isReceivingData()` (`mState == State.CONNECTED_WITH_SERVICE`), in conjunction with `RadarStateRepository.getState(RadarSource.BLE).getConnectionState() == RadarConnectionState.CONNECTED`.
+     - When multiple `BTLERadarDevice` instances are paired, an active connection on one peripheral SHALL NOT cause disconnected or powered-off peer instances to return `true`.
+  2. *Fail-Safe Watchdog Starvation Preservation (`REQ-CON-044.2`)*:
+     - If the underlying GATT connection of a `BTLERadarDevice` remains open but incoming packet flow ceases (triggering the 3.5s packet-starvation watchdog and setting `RadarConnectionState.DISCONNECTED_ERROR`), `isReceivingData()` SHALL evaluate to `false` via the conjunction with `RadarStateRepository`.
+  3. *Per-Instance ANT+ Radar Packet Reception Gating (`REQ-CON-044.3`)*:
+     - `ANTBikeRadarDevice.isReceivingData()` SHALL verify that *this specific device instance* has received valid radar broadcast packets within the active watchdog timeout window (`WATCHDOG_TIMEOUT_MS = 3500L`), in conjunction with `RadarStateRepository.getState(RadarSource.ANT_PLUS).connectionState == RadarConnectionState.CONNECTED`.
+     - When multiple ANT+ radars are configured, a live broadcast stream on one device SHALL NOT cause a silent peer ANT+ radar to report `isReceivingData() == true`.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new `REQ-CON-044` extending `REQ-CON-041.4` (*Isolated Transport Inspection* in `ATT-7575`). Targets `BTLERadarDevice.java` and `ANTBikeRadarDevice.kt`.
+2. *Historical Origin & Commit Trace*: Commit `663c69ea` (ATT-7575) introduced `BTLERadarDevice.isReceivingData()` inspecting `RadarStateRepository.getState(RadarSource.BLE)` to prevent ANT+ streams from falsely activating BLE radar tiles.
+3. *Root Reason for Existing Formulation*: The formulation in ATT-7575 focused on cross-protocol arbitration (BLE vs. ANT+), inadvertently omitting the per-instance GATT connection check from `MyBTLEDevice`.
+4. *Preservation of Core Invariants*: Preserves cross-protocol isolation (`RadarSource.BLE` vs. `RadarSource.ANT_PLUS`), watchdog fail-safe timeout upon packet starvation, and single-radar operation.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Criterion 1 (Multi-Instance BLE Radar Gating)*:
+  - *Given* two paired BLE radar devices (`device1` and `device2`) in `DeviceManager`,
+  - *When* `device1` is connected (`CONNECTED_WITH_SERVICE`) and streaming, while `device2` is powered off (`DISCONNECTED`),
+  - *Then* `device1.isReceivingData()` returns `true`, and `device2.isReceivingData()` returns `false`.
+• *Criterion 2 (BLE Watchdog Packet Starvation)*:
+  - *Given* a connected `BTLERadarDevice` (`CONNECTED_WITH_SERVICE`),
+  - *When* radar packet delivery stops and the 3.5s watchdog timer fires (setting `RadarConnectionState.DISCONNECTED_ERROR`),
+  - *Then* `device.isReceivingData()` returns `false` despite GATT connection remaining open.
+• *Criterion 3 (Multi-Instance ANT+ Radar Gating)*:
+  - *Given* two configured ANT+ radar devices,
+  - *When* only one device receives broadcast data pages,
+  - *Then* only that active instance returns `isReceivingData() == true`.
+
+**Invariants**: Zero false-positive device status on Start/Cockpit screens; 100% fail-safe watchdog retention; 100% clean-room test pass rate.
+
 ### REQ-TRK-064: 1-Tap Radar Audio Snooze, Peloton-Mode Audio Sync & Smart Urban Alert Suppression [Verified]
 - **Tests**: `TST-TRK-064`
 - **System Requirement(s)**: `SYSREQ-TRK-005`
@@ -6154,30 +6195,31 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 - **Type**: Functional
 - **Verification Method**: Unit
 - **Implementation**: `SensorSparklineView.kt`, `SensorFieldView.kt`, `SensorFieldState.kt`, `TrackingViewModel.kt`, `EditSensorFieldDialog.kt`
-- **Rationale**: In `ATT-7760` (`REQ-TRK-081.2`), `resolveSparklineLineColor` retained a legacy `showTextColor` fallback when `sensorType == null`, callers (`SensorFieldView.kt`, `EditSensorFieldDialog.kt`) still passed `showTextColor`, and `"DYNAMIC_ZONE"` painted the entire sparkline with a single instantaneous `fieldState.zoneColor`. Fully decoupling sparkline color resolution from `zoneDisplayOptions.showTextColor` and mapping athlete zone thresholds onto `Brush.verticalGradient` stops lets athletes keep crisp high-contrast numbers while inspecting historical multi-zone transitions across HR, Power, and HRV DFA α1 sparklines with zero extra `List<Float>` ring-buffer allocations (ATT-7761, Parent Epic ATT-5908, refining `REQ-TRK-081` and `REQ-TRK-059`).
+- **Rationale**: In `ATT-7760` (`REQ-TRK-081.2`), `resolveSparklineLineColor` retained a legacy `showTextColor` fallback when `sensorType == null`, callers (`SensorFieldView.kt`, `EditSensorFieldDialog.kt`) still passed `showTextColor`, and `"DYNAMIC_ZONE"` painted the entire sparkline with a single instantaneous `fieldState.zoneColor`. Fully decoupling sparkline color resolution from `zoneDisplayOptions.showTextColor` and mapping athlete zone thresholds onto `Brush.verticalGradient` stops lets athletes keep crisp high-contrast numbers while inspecting historical multi-zone transitions across HR, Power, and HRV DFA α1 sparklines with zero extra `List<Float>` ring-buffer allocations (ATT-7761, ATT-8436, Parent Epic ATT-5908, refining `REQ-TRK-081` and `REQ-TRK-059`).
 - **Description**:
   1. *Complete Decoupling from `showTextColor` (`REQ-TRK-082.1`)*:
      - `resolveSparklineLineColor` in `SensorSparklineView.kt` SHALL NOT read, accept, or depend on `zoneDisplayOptions.showTextColor` across any color resolution branch (including `"GLOBAL_DEFAULT"` when `sensorType == null`, `"THEME_DEFAULT"`, `"DYNAMIC_ZONE"`, and explicit palette tokens); callers in `SensorFieldView.kt` and `EditSensorFieldDialog.kt` SHALL NOT pass `showTextColor` to sparkline color resolution.
      - Numeric tile text coloring in `SensorFieldView.kt` SHALL remain governed exclusively by `fieldState.zoneDisplayOptions.showTextColor`, independent of `fieldState.graphColor`.
   2. *Multi-Color Historical `Brush.verticalGradient` Zone Curve & Terminal Dot (`REQ-TRK-082.2`)*:
      - `SensorFieldState` SHALL carry an optional sparkline zone threshold specification derived from `TrackingViewModel.zoneCutoffsMap` / HRV parameters without modifying `List<Float>` sample ring buffers or allocating per-sample colors during 1 Hz updates.
-     - When `graphColor == "DYNAMIC_ZONE"` and valid zone threshold stops are available, `SensorSparklineView.kt` SHALL render both the stroke path and subtle gradient fill via `Brush.verticalGradient` using monotonically non-decreasing normalized color stops in `[0f, 1f]` mapped onto `[minVal, maxVal]` within `[verticalPaddingPx, height - verticalPaddingPx]` (`maxVal -> 0f` top, `minVal -> 1f` bottom), and SHALL render the terminal dot in the zone color corresponding to the latest sample (`samples.last()`).
+     - When `graphColor == "DYNAMIC_ZONE"` and valid zone threshold stops are available, `SensorSparklineView.kt` SHALL render both the stroke path and subtle gradient fill via `Brush.verticalGradient` using monotonically non-decreasing normalized color stops in `[0f, 1f]` mapped onto `[minVal, maxVal]` within `[verticalPaddingPx, height - verticalPaddingPx]` (`maxVal -> 0f` top, `minVal -> 1f` bottom for standard metrics), and SHALL render the terminal dot in the zone color corresponding to the latest sample (`samples.last()`).
      - `EditSensorFieldDialog.kt` SHALL provide representative/configured zone stops to its `SensorSparklineView` preview whenever `uiState.graphColor == "DYNAMIC_ZONE"` for a supported metric.
      - Zone threshold mappings MUST cover:
        • **Heart Rate (`SensorType.HR`)**: 4 cutoffs (`HR_RUN` / `HR_BIKE`) mapping ascending values across `TTColor.Zone1`..`TTColor.Zone5`.
        • **Power (`SensorType.POWER` family, excluding `POWER_TO_WEIGHT`)**: 6 cutoffs (`PWR_BIKE`) mapping ascending values across `TTColor.Zone1`..`TTColor.Zone7`. `SensorType.POWER_TO_WEIGHT` (W/kg) MUST be guarded against raw Watt cutoffs and MUST NOT receive `PWR_BIKE` gradient stops.
-       • **HRV DFA α1 (`SensorType.HRV_DFA_A1`)**: inverted polarity using `dfaA1ThresholdT1` and `dfaA1ThresholdT2` where `alpha1 > t1` maps to `TTColor.Zone2` (green, top), `t2 <= alpha1 <= t1` maps to `TTColor.Zone3` (orange, middle), and `alpha1 < t2` maps to `TTColor.Zone4` (red, bottom); zone coloring MUST be suppressed (falling back to solid `lineColor`) when `hrvSignalQualityStatus` is `SMOOTHED_STREAM` or `QUANTIZED_SYNTHETIC` (consistent with `HrvZoneIndicator`).
+       • **HRV DFA α1 (`SensorType.HRV_DFA_A1`)**: inverted polarity and inverted Y-axis where higher aerobic values (`alpha1 > t1`) map to `TTColor.Zone2` (green, bottom / `stop = 1f`) and lower anaerobic values (`alpha1 < t2`) map to `TTColor.Zone4` (red, top / `stop = 0f`), with `t2 <= alpha1 <= t1` mapping to `TTColor.Zone3` (orange, middle); `SensorSparklineView.kt` SHALL invert the canvas Y-axis coordinate mapping (`currentY = verticalPaddingPx + ((value - minVal) / range) * usableHeight`) whenever `sensorType == SensorType.HRV_DFA_A1` or `thresholds.invertedPolarity == true` across both dynamic-zone and fixed-color modes, ensuring that the sparkline curve and fill rise upward into red under strain and fall downward into green during recovery (`ATT-8436`); zone coloring MUST be suppressed (falling back to solid `lineColor`) when `hrvSignalQualityStatus` is `SMOOTHED_STREAM` or `QUANTIZED_SYNTHETIC` (consistent with `HrvZoneIndicator`).
   3. *Dark/AMOLED Zone 7 Contrast & Graceful Edge-Case Fallbacks (`REQ-TRK-082.3`)*:
      - When `TTColor.Zone7` (`#000000`) appears on a dark or AMOLED surface (`TelemetryGraphColor.isDarkSurface(colorScheme) == true`), `SensorSparklineView.kt` MUST substitute a high-contrast dark-surface zone color (e.g., `colorScheme.onSurface`) so Zone 7 segments and terminal dots remain legible.
      - `SensorSparklineView.kt` MUST fall back gracefully to solid `lineColor` (zero divide-by-zero or invalid gradient stop errors) whenever `samples.size == 1`, `range == 0f` (`minVal == maxVal`), `isPlaceholder == true`, or zone threshold stops are null/empty.
   4. *Visual Compose Screenshot Verification (`REQ-TRK-082.4`, Rule 8.5)*:
-     - A Robolectric Compose screenshot test SHALL capture `docs/engineering/walkthroughs/img/ATT-7761_dynamic_zone_sparkline.png` verifying Light and Dark/AMOLED rendering across HR (5-zone), Power (7-zone including Zone 7 dark contrast), HRV DFA α1 (inverted polarity), decoupled fixed-color + `showTextColor = true`, and placeholder/flat-line fallbacks against the 4-point visual checklist.
+     - A Robolectric Compose screenshot test SHALL capture `docs/engineering/walkthroughs/img/ATT-7761_dynamic_zone_sparkline.png` verifying Light and Dark/AMOLED rendering across HR (5-zone), Power (7-zone including Zone 7 dark contrast), HRV DFA α1 (inverted polarity with aerobic green at bottom and anaerobic red at top), decoupled fixed-color + `showTextColor = true`, and placeholder/flat-line fallbacks against the 4-point visual checklist.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
 1. *Original Requirement ID & Target*: Refines `REQ-TRK-081` (`REQ-TRK-081.2`) and `REQ-TRK-059` in `docs/requirements/req_tracking_cockpit.md` (`5854-5908`). Targets `SensorSparklineView.kt`, `SensorFieldView.kt`, `SensorFieldState.kt`, `TrackingViewModel.kt`, and `EditSensorFieldDialog.kt`.
 2. *Historical Origin & Commit Trace*: `ATT-7760` (`65d2c2d5`, Sprint 2026-46.8) introduced `SensorFieldState.graphColor` and `resolveSparklineLineColor`, retaining a `showTextColor` fallback (`SensorSparklineView.kt:332`) when `sensorType == null` and resolving `"DYNAMIC_ZONE"` to a single `fieldState.zoneColor`.
 3. *Root Reason for Existing Formulation*: `ATT-7760` scoped SQLite v22 schema persistence, global/per-tile preferences, and the color picker UI, intentionally deferring multi-stop threshold-mapped gradient rendering and complete `showTextColor` decoupling to `ATT-7761`.
 4. *Preservation of Core Invariants*: Fixed palette tokens, `THEME_DEFAULT`, `GLOBAL_DEFAULT`, SQLite v22 schema, `List<Float>` sample ring buffers, and `showTextColor` numeric text coloring remain intact; `"DYNAMIC_ZONE"` upgrades cleanly to threshold-aligned vertical gradients with solid fallback when thresholds or sample variance are absent.
+5. *DFA Alpha 1 Y-Axis Inversion Refinement (`ATT-8436`)*: Ceremony 2 Sprint Review follow-up in Sprint `2026-11-16_02_Spät`. Inverts the spatial Y-axis and gradient stop orientation for DFA alpha 1 so that aerobic/green values sit at the bottom and anaerobic/red values sit at the top, ensuring intuitive visual strain alignment with HR and Power sparklines.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* an HR tile with `showTextColor = true` and `graphColor` set to a fixed palette color (e.g., `CRIMSON` or `VIOLET`) or `GLOBAL_DEFAULT` (even when `sensorType == null`),

@@ -318,6 +318,23 @@ class TestFlockSerialization(unittest.TestCase):
         self.assertNotEqual(ref1.returncode, 0)
         self.assertNotEqual(ref2.returncode, 0)
 
+    def test_merge_ticket_with_agent_trailers(self):
+        """Verifies that format_commit_with_trailers properly appends mandatory commit trailers (REQ-PRO-108.3)."""
+        from parallel_sprint_lock import format_commit_with_trailers, validate_commit_trailers
+        msg = format_commit_with_trailers(
+            "ATT-8151: Fix role separation",
+            agent_role="agent1",
+            agent_model="pro",
+            reviewed_by="Agent 2 (Reviewer) <agent2@atrainingtracker.local>",
+        )
+        self.assertIn("ATT-8151: Fix role separation", msg)
+        self.assertIn("Agent-Role: agent1", msg)
+        self.assertIn("Agent-Model: pro", msg)
+        self.assertIn("Reviewed-by: Agent 2 (Reviewer) <agent2@atrainingtracker.local>", msg)
+        is_valid, missing = validate_commit_trailers(msg)
+        self.assertTrue(is_valid)
+        self.assertEqual(missing, [])
+
 
 if __name__ == "__main__":
     unittest.main()

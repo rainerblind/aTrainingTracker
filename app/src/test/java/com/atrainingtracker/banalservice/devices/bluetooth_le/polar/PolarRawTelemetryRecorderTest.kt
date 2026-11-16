@@ -24,9 +24,15 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.atrainingtracker.banalservice.devices.ProtocolType
 import com.atrainingtracker.banalservice.devices.RrBeatEvent
+import com.atrainingtracker.banalservice.sensor.MySensorManager
+import com.polar.sdk.api.model.PolarAccelerometerData
+import com.polar.sdk.api.model.PolarDeviceInfo
+import com.polar.sdk.api.model.PolarHrData
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -101,19 +107,19 @@ class PolarRawTelemetryRecorderTest {
         )
         recorder.start()
 
-        // Write ACC frames
-        recorder.recordAcc(1_000_000_000L, 12, -45, 980)
-        recorder.recordAcc(1_005_000_000L, 14, -40, 985)
+        // Write ACC frames with hardware monotonic timestamps
+        recorder.recordAcc(100_000_000_000L, 12, -45, 980)
+        recorder.recordAcc(100_005_000_000L, 14, -40, 985)
 
-        // Write GYRO frame
-        recorder.recordGyro(1_010_000_000L, 1.25f, -0.45f, 0.05f)
+        // Write GYRO frame with hardware monotonic timestamp
+        recorder.recordGyro(100_010_000_000L, 1.25f, -0.45f, 0.05f)
 
-        // Write HR sample
-        recorder.recordHr(1_015_000_000L, 145)
+        // Write HR sample with host epoch timestamp (+1000ms from start)
+        recorder.recordHr((startTime + 1000L) * 1_000_000L, 145)
 
-        // Write RR beat event
+        // Write RR beat event with host epoch timestamp (+1200ms from start)
         val rrEvent = RrBeatEvent(
-            beatTimestampMs = startTime + 1000L,
+            beatTimestampMs = startTime + 1200L,
             rrMs = 750.5,
             rawCounter = 1,
             protocol = ProtocolType.BLE
@@ -133,19 +139,97 @@ class PolarRawTelemetryRecorderTest {
         assertEquals(metadata.accRateHz, session.metadata.accRateHz)
         assertEquals(5, session.rows.size)
 
+        // ACC verification
         assertEquals(RawTelemetryChannel.ACC, session.rows[0].channel)
         assertEquals(12, session.rows[0].axMg)
         assertEquals(-45, session.rows[0].ayMg)
         assertEquals(980, session.rows[0].azMg)
+        assertTrue("ACC elapsedMs must be non-negative", session.rows[0].elapsedMs >= 0L)
+        assertEquals(
+            "ACC delta elapsedMs must match hardware timestamp delta",
+            session.rows[0].elapsedMs + 5L,
+            session.rows[1].elapsedMs
+        )
 
+        // GYRO verification
         assertEquals(RawTelemetryChannel.GYRO, session.rows[2].channel)
         assertEquals(1.25f, session.rows[2].gxMdps)
+        assertTrue("GYRO elapsedMs must be non-negative", session.rows[2].elapsedMs >= 0L)
 
+        // HR verification: host epoch elapsedMs must match session offset exactly
         assertEquals(RawTelemetryChannel.HR, session.rows[3].channel)
         assertEquals(145, session.rows[3].hrBpm)
+        assertEquals(1000L, session.rows[3].elapsedMs)
 
+        // RR verification: host epoch elapsedMs must match session offset exactly
         assertEquals(RawTelemetryChannel.RR, session.rows[4].channel)
         assertEquals(750.5, session.rows[4].rrMs!!, 0.1)
+        assertEquals(1200L, session.rows[4].elapsedMs)
+
+        // Finding 2 verification: zero clock-domain mixing or multi-year drift
+        assertTrue(
+            "All channel elapsedMs values must be within realistic session bounds (< 60s)",
+            session.rows.all { it.elapsedMs in 0L..60_000L }
+        )
+    }
+
+    // TST-SET-119.1
+    @Test
+    fun preConnectedBridge_capturesFramesWhenWorkoutStartsLater() {
+        val sensorManager = MySensorManager(context)
+        val bridge = PolarOnlineStreamingBridge(
+            context = context,
+            mySensorManager = sensorManager,
+            deviceId = 1L,
+            macAddress = "00:22:D0:AA:BB:CC"
+        )
+        // 1. Simulate device connected BEFORE workout starts (e.g. on Dashboard)
+        bridge.getSdkCallbackForTesting().deviceConnected(
+            PolarDeviceInfo("H10_PRE_CONNECTED", "00:22:D0:AA:BB:CC", -60, "Polar H10", true)
+        )
+        // Verify recorder is null at connect time
+        assertNull(PolarRawTelemetryRecorder.getActiveRecorder())
+
+        // 2. Later, athlete starts workout session
+        val startTime = System.currentTimeMillis()
+        val recorder = PolarRawTelemetryRecorder.startActiveSession(
+            context = context,
+            fileBaseName = testBaseFileName,
+            startTimeMs = startTime,
+            sportId = 1
+        )
+        assertNotNull(recorder)
+
+        // 3. Bridge processes frames during workout
+        bridge.processAccData(
+            PolarAccelerometerData(
+                samples = listOf(
+                    PolarAccelerometerData.PolarAccelerometerDataSample(50_000_000_000L, 10, 20, 980),
+                    PolarAccelerometerData.PolarAccelerometerDataSample(50_005_000_000L, 12, 22, 985)
+                )
+            )
+        )
+        bridge.processHrData(
+            PolarHrData(
+                samples = listOf(
+                    PolarHrData.PolarHrSample(140, 140, 0, listOf(800), listOf(800), true, true, true)
+                )
+            ),
+            packetArrivalMs = startTime + 500L
+        )
+
+        // 4. Workout ends
+        PolarRawTelemetryRecorder.stopActiveSession()
+        bridge.shutDown()
+
+        // 5. Verify sidecar was created and contains all frames
+        val sidecar = PolarRawTelemetryRecorder.getSidecarFile(context, testBaseFileName)
+        assertTrue("Sidecar must exist for pre-connected bridge session", sidecar.exists())
+
+        val session = PolarRawTelemetryReader.readFile(sidecar)
+        assertTrue("Must record ACC and HR/RR frames", session.rows.isNotEmpty())
+        assertTrue("Must contain ACC frames", session.rows.any { it.channel == RawTelemetryChannel.ACC })
+        assertTrue("Must contain HR or RR frames", session.rows.any { it.channel == RawTelemetryChannel.HR || it.channel == RawTelemetryChannel.RR })
     }
 
     // TST-SET-119.1

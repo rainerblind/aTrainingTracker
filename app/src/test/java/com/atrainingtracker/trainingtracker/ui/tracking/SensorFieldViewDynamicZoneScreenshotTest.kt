@@ -212,7 +212,7 @@ class SensorFieldViewDynamicZoneScreenshotTest {
                 modifier = Modifier.height(132.dp)
             )
 
-            // 3. HRV DFA alpha 1 (inverted polarity: >0.75 Green top .. <0.50 Red bottom)
+            // 3. HRV DFA alpha 1 (inverted polarity: >0.75 Green bottom .. <0.50 Red top, ATT-8436)
             SensorFieldView(
                 fieldState = SensorFieldState(
                     configHash = 3,

@@ -56,6 +56,10 @@ open class GoogleDriveUploader(context: Context) : BaseExporter(context) {
         val filename = exportInfo.shortPath
         val file = getBaseFile(filename)
         if (!file.exists()) {
+            if (exportInfo.fileFormat == FileFormat.RAW_SENSOR) {
+                Log.i(TAG, "Raw sensor sidecar does not exist for ${exportInfo.fileBaseName} (graceful skip)")
+                return ExportResult(true, false, "Raw sensor sidecar does not exist (graceful skip)")
+            }
             return ExportResult(false, false, "Google Drive file does not exist: $file")
         }
 

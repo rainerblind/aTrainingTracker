@@ -3,7 +3,7 @@
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Tests**: 203
+**Total Tests**: 204
 
 ---
 
@@ -1559,14 +1559,14 @@
 - **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-ARC-005`
 - **Component**: **Java Core Services Architecture Decision Record & Migration Strategy Verification Suite**
-- **Jira**: `ATT-7566`
+- **Jira**: `ATT-7566`, `ATT-8115`
 - **Test Description**:
   1. *ADR Existence & Structural Integrity Contract Test (`TST-ARC-005.1`, `JavaCoreMigrationStrategyContractTest.kt`)*:
   • Verify that `docs/architecture/adr_001_java_core_services_migration.md` exists and contains required sections: Context, Java Inventory, Decision Matrix, Phased Roadmap (Tiers 0–6), Quality Safeguards, and Child Tickets.
   2. *Class Inventory & Decision Coverage Test (`TST-ARC-005.2`, `JavaCoreMigrationStrategyContractTest.kt`)*:
-  • Verify that ADR-001 accounts for all top Java anchors (`TrackerService`, `BANALService`, `WorkoutSummariesDatabaseManager`, `TrainingApplication`, `DevicesDatabaseManager`, `DeviceManager`, `BTLERadarDevice`, `FitFileWriter`) with unambiguous Migrate/Keep/Retire determinations.
+  • Verify that ADR-001 accounts for all top Java anchors (`TrackerService`, `BANALService`, `WorkoutSummariesDatabaseManager`, `TrainingApplication`, `DevicesDatabaseManager`, `DeviceManager`, `BTLERadarDevice`, `FitFileWriter`) with unambiguous Migrate/Keep/Retire determinations, and verify `<= 149` Java classes in main production sources.
   3. *Child Ticket Sizing & Traceability Audit (`TST-ARC-005.3`, `JavaCoreMigrationStrategyContractTest.kt`)*:
-  • Verify that all child tickets identified in ADR-001 have defined Story Points between 1 and 3 SP and map to Epic `ATT-431`.
+  • Verify that `REGISTERED_CHILD_TICKETS` contains exactly the 3 authorized migration child tickets (`ATT-7903`, `ATT-7905`, `ATT-7906`) sized between 1 and 3 SP and mapped to Epic `ATT-431`.
   4. *Targeted & Full Suite Clean-Room Regression Execution (`TST-ARC-005.4`)*:
   • Execute `./gradlew testDebugUnitTest --tests com.atrainingtracker.architecture.JavaCoreMigrationStrategyContractTest` verifying 100% pass rate.
 
@@ -3139,7 +3139,8 @@
 - **Type**: Non-Functional
 - **Verification Method**: Unit / Review
 - **Component**: `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `tools/hoechstmass/`, `tools/test_jira_accounts.py`, `tools/test_verify_requirement_governance.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`, `docs/engineering/qa_audits/`
-- **Jira**: `ATT-7558`
+- **Jira**: `ATT-7558`, `ATT-8152`
+- **Evidence**: Verified by `test_tst_pro_091_7_living_doc_shard_resolution`, `test_tst_pro_091_8_issue_description_ingestion`, `test_tst_pro_091_9_account_id_role_separation`, and `test_tst_pro_091_10_seeded_random_sampling` in `tools/test_jira_accounts.py` (77/77 tests passed), plus re-audit of Sprint 2026-46.6 in `docs/engineering/qa_audits/sprint_2026-46.6.md` demonstrating 100% Living Documentation Parity resolution across 5 sampled tickets.
 - **Test Description**:
   1. *QA Auditor Role Independence & Coordinator Rejection*: Test in `test_jira_accounts.py` that `qa_audit` executes under `qa` / `agent2` and rejects `role="coordinator"` or `role="agent1"`.
   2. *Representative Sample Size Dynamic Scaling*: Test in `test_jira_accounts.py` that `qa_audit` samples $\ge 10\%$ when population exceeds 20 tickets (e.g. 25 tickets $\rightarrow \ge 3$ sampled).
@@ -3147,6 +3148,10 @@
   4. *Auditor Independence Verification in Verifier*: Test in `test_verify_requirement_governance.py` that `verify_qa_audits` rejects reports with `Auditor Role: coordinator`.
   5. *Counterpart Mirror Parity*: Verify parity in Höchstmaß mirror tooling (`test_hoechstmass_tools.py`).
   6. *Governance Script Validation*: Run `python3 tools/verify_requirement_governance.py` verifying exit code 0.
+  7. *Living Document Shard Resolution (`TST-PRO-091.7`, tools/test_jira_accounts.py)*: Verify `qa_audit` resolves requirement references across all living requirement shards (`docs/requirements/req_*.md`) and passes compliant tickets.
+  8. *Issue Description Ingestion (`TST-PRO-091.8`, tools/test_jira_accounts.py)*: Verify `fetch_all_sprint_issues` requests and parses the `description` field for requirement references.
+  9. *AccountId Role Separation (`TST-PRO-091.9`, tools/test_jira_accounts.py)*: Verify `qa_audit` checks comment author `accountId` against `ROLE_ACCOUNT_IDS`, correctly evaluating independent reviews.
+  10. *Seeded Random Sampling (`TST-PRO-091.10`, tools/test_jira_accounts.py)*: Verify `qa_audit` uses seeded pseudo-random sampling and records the random seed and sampled keys in the markdown header.
 
 
 
@@ -3438,3 +3443,22 @@
   • Verify `sprint_metrics` inspects historical sprint metrics, triggers a Rubber-Stamping Warning when consecutive sprints exhibit 100.0% FTPR, and verifies integration into retro comments.
   4. *Rule & Living Documentation Parity Test (`TST-PRO-107.4`, tools/test_jira_accounts.py)*:
   • Verify updated rules in `aspice_governance.md` and `jira-workflow/SKILL.md` conform to separated pair reviews and all living doc shards pass governance checks with zero code orphans.
+
+---
+
+### TST-PRO-108: **Technical Role Separation for Agent Credentials & Git Commit Identity Suite (ATT-8151)** [Verified]
+- **Requirement(s)**: `REQ-PRO-108`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Component**: `tools/jira_util.py`, `tools/parallel_sprint_lock.py`, `tools/test_jira_accounts.py`
+- **Jira**: `ATT-8151`
+- **Test Description**:
+  1. *Subagent Identity & Role Binding Enforcement Test (`TST-PRO-108.1`, tools/test_jira_accounts.py)*:
+  • Verify that when `JIRA_ACTOR` is set in the environment (e.g. `agent1`), passing a mismatched `--as` flag (e.g. `--as agent2`) raises a SystemExit role mismatch error. Verify that matching `--as agent1` succeeds, and verify that when `JIRA_ACTOR` is unset, `--as coordinator` and manual role invocations continue to succeed without rejection.
+  2. *Dedicated QA Role Credential Mapping & Account Independence Test (`TST-PRO-108.2`, tools/test_jira_accounts.py)*:
+  • Verify that `resolve_account("qa")` resolves `JIRA_QA_USER` and `JIRA_QA_TOKEN`, verify that `get_config(role="qa")` isolates QA credentials, and verify validation rejects configurations where `agent2` and `qa` share identical account IDs.
+  3. *Producing Agent Identity & Reviewer Git Commit Trailers Test (`TST-PRO-108.3`, tools/test_jira_accounts.py)*:
+  • Verify that `_merge_ticket_impl` formats squash commit messages with standard git trailers (`Agent-Role:`, `Agent-Model:`, `Reviewed-by:`), correctly reading from environment or arguments and passing automated trailer validation.
+  4. *Single-OS User Residual Risk Review Test (`TST-PRO-108.4`, docs/management/risk_register.md)*:
+  • Verify that `docs/management/risk_register.md` contains an approved entry documenting the residual risk and defense-in-depth controls for co-located subagent execution under a single OS account.

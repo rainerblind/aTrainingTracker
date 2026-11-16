@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="file_format_raw_sensor">Surowe dane z czujników</string>
+    <string name="report_raw_sensor_data">Zgłoś dane czujnika</string>
+    <string name="diagnostic_share_sheet_title">Pakiet diagnostyczny czujnika</string>
+    <string name="diagnostic_share_sheet_description">Pakiet surowych danych czujnika i metryk sesji do rozwiązywania problemów.</string>
+    <string name="diagnostic_include_gps_location">Dołącz lokalizację GPS</string>
+    <string name="diagnostic_include_gps_description">Dołącz współrzędne geograficzne w pakiecie diagnostycznym.</string>
+    <string name="diagnostic_symptom_notes">Notatki o objawach</string>
+    <string name="diagnostic_symptom_notes_placeholder">Opisz zaniki sygnału czujnika, skoki lub zaobserwowane problemy…</string>
+    <string name="diagnostic_share_button">Udostępnij pakiet diagnostyczny</string>
+    <string name="diagnostic_bundle_packaging">Pakowanie pakietu diagnostycznego…</string>
+    <string name="diagnostic_no_sidecar_warning">Brak surowego nagrania z czujnika dla tego treningu.</string>
+</resources>

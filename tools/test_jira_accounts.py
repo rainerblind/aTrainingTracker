@@ -198,8 +198,15 @@ class TestRolePrecedenceAndAttribution(unittest.TestCase):
     """Verifies REQ-PRO-020 / TST-PRO-013: Role Locking, Precedence, Anti-Spoofing & Actor Comment Attribution."""
 
     def test_role_precedence_cli_over_env_and_default(self):
-        """CLI flag --as <role> takes highest priority over JIRA_ACTOR and default."""
+        """When JIRA_ACTOR is set, mismatched --as <role> is rejected (REQ-PRO-108.1); matching role succeeds."""
+        # Mismatched --as raises SystemExit(1)
         with patch.dict(os.environ, {"JIRA_ACTOR": "agent2"}):
+            with self.assertRaises(SystemExit) as cm:
+                jira_util.parse_role_from_args(["--as", "coordinator", "status", "ATT-1201"])
+            self.assertEqual(cm.exception.code, 1)
+
+        # Matching --as succeeds
+        with patch.dict(os.environ, {"JIRA_ACTOR": "coordinator"}):
             parsed_role, remaining_args = jira_util.parse_role_from_args(["--as", "coordinator", "status", "ATT-1201"])
             self.assertEqual(parsed_role, "coordinator")
             self.assertEqual(remaining_args, ["status", "ATT-1201"])
@@ -1766,6 +1773,7 @@ class TestSeparatedAuthorshipAndGateEvidence(unittest.TestCase):
         self, mock_transition, mock_create, mock_request, mock_config
     ):
         # TST-PRO-107.1: Separated Authorship Enforcement Test
+        # In Jira Cloud REST v2, subtasks embedded in parent issues omit 'assignee'
         parent_info = {
             "fields": {
                 "summary": "Parent Issue",
@@ -1776,13 +1784,24 @@ class TestSeparatedAuthorshipAndGateEvidence(unittest.TestCase):
                         "fields": {
                             "summary": "[Analysis] Parent Issue",
                             "status": {"name": "Erledigt"},
-                            "assignee": {"displayName": "Agent 2", "name": "agent2", "accountId": "agent2_id"},
                         },
                     }
                 ],
             }
         }
-        mock_request.return_value = parent_info
+        subtask_info = {
+            "key": "ATT-9001",
+            "fields": {
+                "assignee": {"displayName": "Agent 2", "name": "agent2", "accountId": "agent2_id"},
+            },
+        }
+
+        def mock_request_impl(url, **kwargs):
+            if "ATT-9001" in url and "fields=assignee" in url:
+                return subtask_info
+            return parent_info
+
+        mock_request.side_effect = mock_request_impl
 
         # 1. Author matches preceding Gate 1 reviewer (both agent2) -> SystemExit(1)
         with self.assertRaises(SystemExit) as cm:
@@ -1814,8 +1833,9 @@ class TestSeparatedAuthorshipAndGateEvidence(unittest.TestCase):
     @patch("jira_util.add_comment")
     @patch("jira_util.transition_issue")
     @patch("jira_util.get_subtask_summary_and_desc")
+    @patch("jira_util.get_subtask_start_time", return_value=None)
     def test_tst_pro_107_2_evidence_backed_gate_checklist_validation(
-        self, mock_get_subtask, mock_transition, mock_comment, mock_assign, mock_config
+        self, mock_get_start_time, mock_get_subtask, mock_transition, mock_comment, mock_assign, mock_config
     ):
         # TST-PRO-107.2: Evidence-Backed Gate 1-5 Checklist Validation Test
         mock_get_subtask.return_value = ("[Impl-Plan] ATT-9000: Plan", "Plan details", "ATT-9000")
@@ -1843,6 +1863,38 @@ class TestSeparatedAuthorshipAndGateEvidence(unittest.TestCase):
 Verdict: PASS."""
         jira_util.gate_verdict("ATT-9003", "PASS", valid_report, role="agent2")
         mock_transition.assert_called_with("ATT-9003", "freigabe", role="agent2", inject_context=True)
+
+    @patch("jira_util.get_config", return_value={"JIRA_URL": "https://example.atlassian.net"})
+    @patch("jira_util.assign_issue")
+    @patch("jira_util.add_comment")
+    @patch("jira_util.transition_issue")
+    @patch("jira_util.get_subtask_summary_and_desc")
+    @patch("jira_util.get_subtask_start_time")
+    def test_tst_pro_107_2_rapid_review_warning(
+        self, mock_get_start_time, mock_get_subtask, mock_transition, mock_comment, mock_assign, mock_config
+    ):
+        # REQ-PRO-107.2 / TST-PRO-107.2: Rapid Gate Review Warning (< 5s elapsed)
+        from datetime import timezone
+        mock_get_subtask.return_value = ("[Impl-Plan] ATT-9000: Plan", "Plan details", "ATT-9000")
+        valid_report = """### Gate 3 Independent Review: PASS
+* [x] Traceability: REQ-PRO-107 verified in tools/jira_util.py:1450
+* [x] Commit SHA: 3a31b9ad verified clean
+* [x] Test output: BUILD SUCCESSFUL
+Verdict: PASS."""
+
+        # 1. Rapid review (< 5s, e.g. 2s ago) -> emits [AUDIT WARNING] Rapid Gate Review (< 5s) to stderr
+        mock_get_start_time.return_value = datetime.now(timezone.utc) - timedelta(seconds=2)
+        with patch("sys.stderr", new_callable=io.StringIO) as mock_stderr:
+            jira_util.gate_verdict("ATT-9003", "PASS", valid_report, role="agent2")
+            stderr_output = mock_stderr.getvalue()
+            self.assertIn("[AUDIT WARNING] Rapid Gate Review (< 5s)", stderr_output)
+
+        # 2. Normal review (>= 5s, e.g. 15s ago) -> no rapid review warning
+        mock_get_start_time.return_value = datetime.now(timezone.utc) - timedelta(seconds=15)
+        with patch("sys.stderr", new_callable=io.StringIO) as mock_stderr:
+            jira_util.gate_verdict("ATT-9003", "PASS", valid_report, role="agent2")
+            stderr_output = mock_stderr.getvalue()
+            self.assertNotIn("[AUDIT WARNING] Rapid Gate Review (< 5s)", stderr_output)
 
     def test_tst_pro_107_3_multi_sprint_100_percent_ftpr_rubber_stamping_alert(self):
         # TST-PRO-107.3: Multi-Sprint 100% FTPR Rubber-Stamping Alert Test
@@ -1909,6 +1961,322 @@ Verdict: PASS."""
         mock_add_lbl.assert_called_once_with("ATT-8423", ["human-execution"], role="coordinator")
         mock_assign.assert_called_once_with("ATT-8423", "human", role="coordinator")
         mock_move.assert_called_once_with(454, ["ATT-8423"], role="coordinator")
+
+    def test_tst_pro_108_1_subagent_role_binding_enforcement(self):
+        # TST-PRO-108.1: Subagent Identity & Role Binding Enforcement Test
+        # 1. When JIRA_ACTOR is set to 'agent1', passing mismatched '--as agent2' raises SystemExit
+        with patch.dict(os.environ, {"JIRA_ACTOR": "agent1"}, clear=False):
+            with self.assertRaises(SystemExit) as cm:
+                jira_util.get_active_role(["--as", "agent2", "show", "ATT-8151"])
+            self.assertEqual(cm.exception.code, 1)
+
+        # 2. When JIRA_ACTOR is set to 'agent1', passing matching '--as agent1' succeeds
+        with patch.dict(os.environ, {"JIRA_ACTOR": "agent1"}, clear=False):
+            role, rem = jira_util.get_active_role(["--as", "agent1", "show", "ATT-8151"])
+            self.assertEqual(role, "agent1")
+            self.assertEqual(rem, ["show", "ATT-8151"])
+
+        # 3. When JIRA_ACTOR is unset, passing '--as coordinator' succeeds without rejection
+        env_copy = os.environ.copy()
+        env_copy.pop("JIRA_ACTOR", None)
+        with patch.dict(os.environ, env_copy, clear=True):
+            role, rem = jira_util.get_active_role(["--as", "coordinator", "show", "ATT-8151"])
+            self.assertEqual(role, "coordinator")
+            self.assertEqual(rem, ["show", "ATT-8151"])
+
+    def test_tst_pro_108_2_dedicated_qa_credentials_and_account_independence(self):
+        # TST-PRO-108.2: Dedicated QA Role Credential Mapping & Account Independence Test
+        cfg_qa = {
+            "JIRA_URL": "https://example.atlassian.net",
+            "JIRA_AGENT2_USER": "agent2_user",
+            "JIRA_AGENT2_TOKEN": "agent2_token",
+            "JIRA_AGENT2_ACCOUNT_ID": "agent2_id",
+            "JIRA_QA_USER": "qa_user",
+            "JIRA_QA_TOKEN": "qa_token",
+            "JIRA_QA_ACCOUNT_ID": "qa_id",
+        }
+        # 1. resolve_account with role='qa' resolves JIRA_QA_USER and JIRA_QA_TOKEN
+        u, t = jira_util.resolve_account(role="qa", config=cfg_qa)
+        self.assertEqual(u, "qa_user")
+        self.assertEqual(t, "qa_token")
+
+        # 2. ROLE_ACCOUNT_IDS['qa'] is distinct from ROLE_ACCOUNT_IDS['agent2']
+        self.assertNotEqual(jira_util.ROLE_ACCOUNT_IDS.get("qa"), jira_util.ROLE_ACCOUNT_IDS.get("agent2"))
+
+        # 3. validate_account_separation returns True when distinct
+        is_sep, err = jira_util.validate_account_separation(cfg_qa)
+        self.assertTrue(is_sep)
+        self.assertIsNone(err)
+
+        # 4. validate_account_separation returns False when qa and agent2 share username
+        cfg_conflict_user = dict(cfg_qa, JIRA_QA_USER="agent2_user")
+        is_sep, err = jira_util.validate_account_separation(cfg_conflict_user)
+        self.assertFalse(is_sep)
+        self.assertIn("share identical username", err)
+
+        # 5. validate_account_separation returns False when qa and agent2 share accountId
+        cfg_conflict_id = dict(cfg_qa, JIRA_QA_ACCOUNT_ID="agent2_id")
+        is_sep, err = jira_util.validate_account_separation(cfg_conflict_id)
+        self.assertFalse(is_sep)
+        self.assertIn("share identical accountId", err)
+
+    def test_tst_pro_108_3_git_commit_trailers_formatting(self):
+        # TST-PRO-108.3: Producing Agent Identity & Reviewer Git Commit Trailers Test
+        import parallel_sprint_lock
+        msg = parallel_sprint_lock.format_commit_with_trailers(
+            "ATT-8151: Test commit",
+            agent_role="agent1",
+            agent_model="flash",
+            reviewed_by="Agent 2 (Reviewer)"
+        )
+        self.assertIn("Agent-Role: agent1", msg)
+        self.assertIn("Agent-Model: flash", msg)
+        self.assertIn("Reviewed-by: Agent 2 (Reviewer)", msg)
+
+        valid, missing = parallel_sprint_lock.validate_commit_trailers(msg)
+        self.assertTrue(valid)
+        self.assertEqual(missing, [])
+
+    def test_tst_pro_108_4_risk_register_single_os_user_residual_risk(self):
+        # TST-PRO-108.4: Single-OS User Residual Risk Review Test
+        risk_path = os.path.join(REPO_ROOT, "docs", "management", "risk_register.md")
+        with open(risk_path, "r", encoding="utf-8") as f:
+            risk_text = f.read()
+        self.assertIn("RISK-007", risk_text)
+        self.assertIn("Single-OS User", risk_text)
+        self.assertIn("ATT-8151", risk_text)
+
+    @patch("jira_util.jira_request")
+    def test_tst_pro_091_7_living_doc_shard_resolution(self, mock_request):
+        # TST-PRO-091.7: Living Document Shard Resolution Test
+        import subprocess
+        def mock_jira(url, method="GET", payload=None, role="coordinator"):
+            if "/rest/agile/1.0/board" in url and "/sprint" not in url:
+                return {"values": [{"id": 1, "name": "ATT Board"}]}
+            elif "/rest/agile/1.0/board/1/sprint?state=active" in url:
+                return {"values": [{"id": 440, "name": "2026-46.3", "state": "active"}]}
+            elif "/rest/agile/1.0/sprint/440/issue" in url:
+                return {
+                    "issues": [
+                        {
+                            "key": "ATT-9101",
+                            "fields": {
+                                "summary": "Ticket referencing REQ-SHARD-001",
+                                "description": "Details about REQ-SHARD-001",
+                                "status": {"name": "Erledigt"},
+                                "issuetype": {"subtask": False},
+                                "subtasks": [
+                                    {
+                                        "key": "ATT-9102",
+                                        "fields": {"summary": "[Analysis] Task", "status": {"name": "Erledigt"}},
+                                        "comments": [{"author": {"accountId": jira_util.ROLE_ACCOUNT_IDS["agent2"]}, "body": "GATE_VERDICT: PASS"}]
+                                    },
+                                    {
+                                        "key": "ATT-9103",
+                                        "fields": {"summary": "[Spec] Task", "status": {"name": "Erledigt"}},
+                                        "comments": [{"author": {"accountId": jira_util.ROLE_ACCOUNT_IDS["agent2"]}, "body": "GATE_VERDICT: PASS"}]
+                                    },
+                                    {
+                                        "key": "ATT-9104",
+                                        "fields": {"summary": "[Plan] Task", "status": {"name": "Erledigt"}},
+                                        "comments": [{"author": {"accountId": jira_util.ROLE_ACCOUNT_IDS["agent2"]}, "body": "GATE_VERDICT: PASS"}]
+                                    },
+                                    {
+                                        "key": "ATT-9105",
+                                        "fields": {"summary": "[Impl] Task", "status": {"name": "Erledigt"}},
+                                        "comments": [{"author": {"accountId": jira_util.ROLE_ACCOUNT_IDS["agent2"]}, "body": "GATE_VERDICT: PASS"}]
+                                    },
+                                    {
+                                        "key": "ATT-9106",
+                                        "fields": {"summary": "[Verif] Task", "status": {"name": "Erledigt"}},
+                                        "comments": [{"author": {"accountId": jira_util.ROLE_ACCOUNT_IDS["agent2"]}, "body": "GATE_VERDICT: PASS"}]
+                                    },
+                                ],
+                            },
+                        },
+                    ]
+                }
+            elif "/changelog" in url:
+                return {
+                    "values": [
+                        {
+                            "author": {"accountId": jira_util.ROLE_ACCOUNT_IDS["human"], "displayName": "Rainer Blind"},
+                            "items": [{"field": "status", "toString": "Approved"}],
+                        }
+                    ]
+                }
+            return {}
+
+        mock_request.side_effect = mock_jira
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            subprocess.run(["git", "init"], cwd=tmpdir, check=True, stdout=subprocess.DEVNULL)
+            subprocess.run(["git", "config", "user.name", "Tester"], cwd=tmpdir, check=True)
+            subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=tmpdir, check=True)
+            subprocess.run(["git", "commit", "--allow-empty", "-m", "ATT-9101: Test commit"], cwd=tmpdir, check=True, stdout=subprocess.DEVNULL)
+
+            for subfolder, suffix in [
+                ("analysis", "_analysis.md"),
+                ("test_specs", "_test_spec.md"),
+                ("plans", "_plan.md"),
+                ("walkthroughs", "_walkthrough.md"),
+            ]:
+                d = os.path.join(tmpdir, "docs", "engineering", subfolder)
+                os.makedirs(d, exist_ok=True)
+                with open(os.path.join(d, f"ATT-9101{suffix}"), "w", encoding="utf-8") as f:
+                    f.write("# Deliverable citing REQ-SHARD-001")
+
+            shards_dir = os.path.join(tmpdir, "docs", "requirements")
+            os.makedirs(shards_dir, exist_ok=True)
+            with open(os.path.join(shards_dir, "req_test_domain.md"), "w", encoding="utf-8") as f:
+                f.write("| Requirement ID | Summary |\n| :--- | :--- |\n| REQ-SHARD-001 | Shard req | ATT-9101 |\n")
+
+            out_file = os.path.join(tmpdir, "audit.md")
+            _, results = jira_util.qa_audit(sample_size=1, out_path=out_file, role="qa", repo_root=tmpdir)
+            self.assertEqual(len(results), 1)
+            self.assertTrue(results[0]["living_doc_pass"])
+
+    def test_tst_pro_091_8_issue_description_ingestion(self):
+        # TST-PRO-091.8: Issue Description Ingestion Test
+        self.assertEqual(jira_util.extract_text_from_description(None), "")
+        self.assertEqual(jira_util.extract_text_from_description("Direct string REQ-PRO-059"), "Direct string REQ-PRO-059")
+
+        adf = {
+            "version": 1,
+            "type": "doc",
+            "content": [
+                {
+                    "type": "paragraph",
+                    "content": [
+                        {"type": "text", "text": "ADF paragraph mentioning "},
+                        {"type": "text", "text": "REQ-PRO-060"},
+                    ],
+                }
+            ],
+        }
+        extracted = jira_util.extract_text_from_description(adf)
+        self.assertIn("REQ-PRO-060", extracted)
+
+    @patch("jira_util.jira_request")
+    def test_tst_pro_091_9_account_id_role_separation(self, mock_request):
+        # TST-PRO-091.9: AccountId Role Separation Test
+        def make_mock(reviewer_account_id):
+            return {
+                "issues": [
+                    {
+                        "key": "ATT-9201",
+                        "fields": {
+                            "summary": "Ticket testing accountId separation",
+                            "status": {"name": "Erledigt"},
+                            "issuetype": {"subtask": False},
+                            "subtasks": [
+                                {
+                                    "key": "ATT-9202",
+                                    "fields": {"summary": "[Analysis] Task", "status": {"name": "Erledigt"}},
+                                    "comments": [{"author": {"accountId": reviewer_account_id, "displayName": "Reviewer"}, "body": "GATE_VERDICT: PASS"}],
+                                },
+                                {
+                                    "key": "ATT-9203",
+                                    "fields": {"summary": "[Spec] Task", "status": {"name": "Erledigt"}},
+                                    "comments": [{"author": {"accountId": reviewer_account_id, "displayName": "Reviewer"}, "body": "GATE_VERDICT: PASS"}],
+                                },
+                                {
+                                    "key": "ATT-9204",
+                                    "fields": {"summary": "[Plan] Task", "status": {"name": "Erledigt"}},
+                                    "comments": [{"author": {"accountId": reviewer_account_id, "displayName": "Reviewer"}, "body": "GATE_VERDICT: PASS"}],
+                                },
+                                {
+                                    "key": "ATT-9205",
+                                    "fields": {"summary": "[Impl] Task", "status": {"name": "Erledigt"}},
+                                    "comments": [{"author": {"accountId": reviewer_account_id, "displayName": "Reviewer"}, "body": "GATE_VERDICT: PASS"}],
+                                },
+                                {
+                                    "key": "ATT-9206",
+                                    "fields": {"summary": "[Verif] Task", "status": {"name": "Erledigt"}},
+                                    "comments": [{"author": {"accountId": reviewer_account_id, "displayName": "Reviewer"}, "body": "GATE_VERDICT: PASS"}],
+                                },
+                            ],
+                        },
+                    }
+                ]
+            }
+
+        agent1_id = jira_util.ROLE_ACCOUNT_IDS["agent1"]
+        agent2_id = jira_util.ROLE_ACCOUNT_IDS["agent2"]
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # 1. Review by Agent 2 (valid separation)
+            mock_request.side_effect = lambda url, **kwargs: (
+                {"values": [{"id": 1, "name": "B"}]} if "/board" in url and "/sprint" not in url
+                else {"values": [{"id": 440, "name": "S", "state": "active"}]} if "/sprint?state=active" in url
+                else make_mock(agent2_id) if "/sprint/440/issue" in url
+                else {"values": [{"author": {"accountId": jira_util.ROLE_ACCOUNT_IDS["human"]}, "items": [{"field": "status", "toString": "Approved"}]}]}
+            )
+            _, res_valid = jira_util.qa_audit(sample_size=1, out_path=os.path.join(tmpdir, "a1.md"), role="qa", repo_root=tmpdir)
+            self.assertTrue(res_valid[0]["role_sep_pass"])
+
+            # 2. Review by Agent 1 (violation)
+            mock_request.side_effect = lambda url, **kwargs: (
+                {"values": [{"id": 1, "name": "B"}]} if "/board" in url and "/sprint" not in url
+                else {"values": [{"id": 440, "name": "S", "state": "active"}]} if "/sprint?state=active" in url
+                else make_mock(agent1_id) if "/sprint/440/issue" in url
+                else {"values": [{"author": {"accountId": jira_util.ROLE_ACCOUNT_IDS["human"]}, "items": [{"field": "status", "toString": "Approved"}]}]}
+            )
+            _, res_invalid = jira_util.qa_audit(sample_size=1, out_path=os.path.join(tmpdir, "a2.md"), role="qa", repo_root=tmpdir)
+            self.assertFalse(res_invalid[0]["role_sep_pass"])
+
+    @patch("jira_util.jira_request")
+    def test_tst_pro_091_10_seeded_random_sampling(self, mock_request):
+        # TST-PRO-091.10: Seeded Random Sampling Test
+        ten_issues = [
+            {
+                "key": f"ATT-93{i:02d}",
+                "fields": {
+                    "summary": f"Issue {i}",
+                    "status": {"name": "Erledigt"},
+                    "issuetype": {"subtask": False},
+                    "subtasks": [],
+                },
+            }
+            for i in range(10)
+        ]
+
+        def mock_jira(url, **kwargs):
+            if "/board" in url and "/sprint" not in url:
+                return {"values": [{"id": 1, "name": "B"}]}
+            elif "/sprint?state=active" in url:
+                return {"values": [{"id": 440, "name": "S", "state": "active"}]}
+            elif "/sprint/440/issue" in url:
+                return {"issues": ten_issues}
+            return {}
+
+        mock_request.side_effect = mock_jira
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            out_file1 = os.path.join(tmpdir, "audit1.md")
+            out_file2 = os.path.join(tmpdir, "audit2.md")
+            out_file3 = os.path.join(tmpdir, "audit3.md")
+
+            # Seed 42 runs
+            _, res1 = jira_util.qa_audit(sample_size=3, seed=42, out_path=out_file1, role="qa", repo_root=tmpdir)
+            _, res2 = jira_util.qa_audit(sample_size=3, seed=42, out_path=out_file2, role="qa", repo_root=tmpdir)
+            # Seed 99 runs
+            _, res3 = jira_util.qa_audit(sample_size=3, seed=99, out_path=out_file3, role="qa", repo_root=tmpdir)
+
+            keys1 = [r["key"] for r in res1]
+            keys2 = [r["key"] for r in res2]
+            keys3 = [r["key"] for r in res3]
+
+            self.assertEqual(keys1, keys2)
+            self.assertEqual(len(keys1), 3)
+
+            with open(out_file1, "r", encoding="utf-8") as f:
+                report_content = f.read()
+
+            self.assertIn("Random Seed", report_content)
+            self.assertIn("`42`", report_content)
+            for k in keys1:
+                self.assertIn(k, report_content)
 
 
 if __name__ == "__main__":

@@ -25,8 +25,8 @@ import com.atrainingtracker.trainingtracker.TrainingApplication;
 
 public enum ExportType {
     FILE(R.string.SD_card, FileFormat.values()),
-    DROPBOX(R.string.Dropbox, new FileFormat[]{FileFormat.CSV, FileFormat.GC, FileFormat.GPX, FileFormat.TCX, FileFormat.FIT}),
-    GOOGLE_DRIVE(R.string.google_drive, new FileFormat[]{FileFormat.CSV, FileFormat.GC, FileFormat.GPX, FileFormat.TCX, FileFormat.FIT}),
+    DROPBOX(R.string.Dropbox, new FileFormat[]{FileFormat.CSV, FileFormat.GC, FileFormat.GPX, FileFormat.TCX, FileFormat.FIT, FileFormat.RAW_SENSOR}),
+    GOOGLE_DRIVE(R.string.google_drive, new FileFormat[]{FileFormat.CSV, FileFormat.GC, FileFormat.GPX, FileFormat.TCX, FileFormat.FIT, FileFormat.RAW_SENSOR}),
     COMMUNITY(R.string.Community, new FileFormat[]{FileFormat.STRAVA, FileFormat.HEALTH_CONNECT});
 
     private final int uiId;

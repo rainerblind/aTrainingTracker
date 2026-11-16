@@ -452,6 +452,7 @@ fun EditSensorFieldDialog(
                             spanSeconds = if (uiState.graphHorizonSeconds > 0) uiState.graphHorizonSeconds else 300,
                             lineColor = previewLineColor,
                             zoneThresholds = previewZoneThresholds,
+                            invertYAxis = uiState.selectedSensorType == SensorType.HRV_DFA_A1 || (previewZoneThresholds?.invertedPolarity == true),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(44.dp)

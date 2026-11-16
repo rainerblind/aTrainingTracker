@@ -27,12 +27,13 @@ public enum FileFormat {
     TCX("TCX", ".tcx", R.string.TCX),//                 new TCXFileExporter(),           null),
     GPX("GPX", ".gpx", R.string.GPX),//                 new GPXFileExporter(),           null),
     FIT("FIT", ".fit", R.string.FIT),
+    RAW_SENSOR("raw_sensor", ".polar_raw.csv.gz", R.string.file_format_raw_sensor),
 
     // not the best solution but should work.
     STRAVA("Strava", ".tcx", R.string.Strava),
     HEALTH_CONNECT("HealthConnect", "", R.string.health_connect_title);
 
-    public static final FileFormat[] STANDARD_FILE_FORMATS = new FileFormat[]{CSV, GC, TCX, GPX, FIT};
+    public static final FileFormat[] STANDARD_FILE_FORMATS = new FileFormat[]{CSV, GC, TCX, GPX, FIT, RAW_SENSOR};
     public static final FileFormat[] ONLINE_COMMUNITIES = new FileFormat[]{STRAVA, HEALTH_CONNECT};
 
     private final String mDirName;
@@ -81,6 +82,8 @@ public enum FileFormat {
                 return "text/csv";
             case GC:
                 return "application/json";
+            case RAW_SENSOR:
+                return "application/gzip";
             default:
                 return "application/octet-stream";
         }

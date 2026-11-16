@@ -270,8 +270,8 @@ class SensorSparklineViewTest {
     }
 
     /**
-     * TST-TRK-082.2: HRV DFA alpha 1 inverted polarity maps alpha1 > t1 to Zone2 (green) at top
-     * and alpha1 < t2 to Zone4 (red) at bottom.
+     * TST-TRK-082.2: HRV DFA alpha 1 inverted polarity maps alpha1 < t2 to Zone4 (red) at top
+     * and alpha1 > t1 to Zone2 (green) at bottom (ATT-8436).
      */
     @Test
     fun testBuildDynamicZoneVerticalGradientStops_dfaAlpha1InvertedPolarity() {
@@ -285,15 +285,40 @@ class SensorSparklineViewTest {
 
         val stops = buildDynamicZoneVerticalGradientStops(0.35f, 1.05f, dfaThresholds, lightScheme)
         assertNotNull(stops)
-        // Top (maxVal = 1.05 > t1) -> Green (Zone2); Bottom (minVal = 0.35 < t2) -> Red (Zone4)
-        assertEquals(TTColor.Zone2, stops!!.first().second)
-        assertEquals(TTColor.Zone4, stops.last().second)
+        // Top (stop = 0f, minVal = 0.35 < t2) -> Red (Zone4); Bottom (stop = 1f, maxVal = 1.05 > t1) -> Green (Zone2)
+        assertEquals(TTColor.Zone4, stops!!.first().second)
+        assertEquals(TTColor.Zone2, stops.last().second)
 
         // Boundary polarity: exactly t1 (0.75f) -> Zone3; exactly t2 (0.50f) -> Zone3; < t2 -> Zone4
         assertEquals(TTColor.Zone2, resolveSparklineZoneColorForValue(0.76f, dfaThresholds, lightScheme))
         assertEquals(TTColor.Zone3, resolveSparklineZoneColorForValue(0.75f, dfaThresholds, lightScheme))
         assertEquals(TTColor.Zone3, resolveSparklineZoneColorForValue(0.50f, dfaThresholds, lightScheme))
         assertEquals(TTColor.Zone4, resolveSparklineZoneColorForValue(0.49f, dfaThresholds, lightScheme))
+    }
+
+    /**
+     * TST-TRK-082.2: Canvas coordinate Y mapping inverts correctly when invertYAxis is true (ATT-8436).
+     */
+    @Test
+    fun testComputeSparklineY_inversionMapping() {
+        // TST-TRK-082
+        val height = 100f
+        val padding = 10f
+        val minVal = 0.40f
+        val maxVal = 1.00f
+
+        // Standard Cartesian (invertYAxis = false): maxVal at top (padding = 10f), minVal at bottom (height - padding = 90f)
+        assertEquals(10f, computeSparklineY(maxVal, minVal, maxVal, height, padding, invertYAxis = false), 0.001f)
+        assertEquals(90f, computeSparklineY(minVal, minVal, maxVal, height, padding, invertYAxis = false), 0.001f)
+        assertEquals(50f, computeSparklineY(0.70f, minVal, maxVal, height, padding, invertYAxis = false), 0.001f)
+
+        // Inverted (invertYAxis = true): minVal at top (padding = 10f), maxVal at bottom (height - padding = 90f)
+        assertEquals(10f, computeSparklineY(minVal, minVal, maxVal, height, padding, invertYAxis = true), 0.001f)
+        assertEquals(90f, computeSparklineY(maxVal, minVal, maxVal, height, padding, invertYAxis = true), 0.001f)
+        assertEquals(50f, computeSparklineY(0.70f, minVal, maxVal, height, padding, invertYAxis = true), 0.001f)
+
+        // Flat-line fallback
+        assertEquals(50f, computeSparklineY(0.50f, 0.50f, 0.50f, height, padding, invertYAxis = true), 0.001f)
     }
 
     /**

@@ -35,6 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Sensors
 import androidx.compose.ui.res.stringResource
@@ -133,9 +134,13 @@ fun SensorSourceDialog(
         }
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag("sensor_source_dialog_content"),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            var hasPrecedingSection = false
+
             // 0. Manual Altitude Calibration Section (ATT-4845, ATT-5072 / REQ-TRK-047)
             if (sensorType == SensorType.ALTITUDE && onCalibrateAltitude != null) {
                 var altitudeInput by remember(currentAltitude, matchedLocation) {
@@ -251,11 +256,19 @@ fun SensorSourceDialog(
                         }
                     }
                 }
-                HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
+                hasPrecedingSection = true
             }
 
             // 1. Source Device
             if (sourceDevice != null) {
+                if (hasPrecedingSection) {
+                    HorizontalDivider(
+                        modifier = Modifier.testTag("sensor_source_dialog_divider"),
+                        thickness = 0.5.dp,
+                        color = MaterialTheme.colorScheme.outlineVariant
+                    )
+                }
+                hasPrecedingSection = true
                 val telemetry = allActiveTelemetries.find { it.deviceId == sourceDevice.id }
                 val value = telemetry?.allValues?.find { it.sensor == sensorType }?.value ?: "--"
                 val displayValue = if (sensorType == SensorType.RADAR_THREAT_COUNT) null
@@ -281,7 +294,14 @@ fun SensorSourceDialog(
 
             // 2. Active Backups
             if (activeBackups.isNotEmpty()) {
-                HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
+                if (hasPrecedingSection) {
+                    HorizontalDivider(
+                        modifier = Modifier.testTag("sensor_source_dialog_divider"),
+                        thickness = 0.5.dp,
+                        color = MaterialTheme.colorScheme.outlineVariant
+                    )
+                }
+                hasPrecedingSection = true
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
                         text = stringResource(id = R.string.source_active_backups),
@@ -312,7 +332,14 @@ fun SensorSourceDialog(
 
             // 3. Not connected devices
             if (notConnected.isNotEmpty()) {
-                HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
+                if (hasPrecedingSection) {
+                    HorizontalDivider(
+                        modifier = Modifier.testTag("sensor_source_dialog_divider"),
+                        thickness = 0.5.dp,
+                        color = MaterialTheme.colorScheme.outlineVariant
+                    )
+                }
+                hasPrecedingSection = true
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
                         text = stringResource(id = R.string.source_not_connected),
@@ -334,6 +361,13 @@ fun SensorSourceDialog(
 
             // Internal Fallback if applicable and no external active source
             if (sourceDevice == null && activeBackups.isEmpty() && notConnected.isEmpty()) {
+                if (hasPrecedingSection) {
+                    HorizontalDivider(
+                        modifier = Modifier.testTag("sensor_source_dialog_divider"),
+                        thickness = 0.5.dp,
+                        color = MaterialTheme.colorScheme.outlineVariant
+                    )
+                }
                 val isInternalPossible = remember(sensorType) {
                     potentialTypes.isNotEmpty() && potentialTypes.all { 
                         it == DeviceType.CLOCK || 

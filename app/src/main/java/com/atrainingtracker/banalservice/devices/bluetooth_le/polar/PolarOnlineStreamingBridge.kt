@@ -105,6 +105,27 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
         private const val H10_FALLBACK_ACC_HZ = 50
         private const val H10_HIGH_RATE_ACC_HZ = 200
         private const val VERITY_IMU_HZ = 52
+
+        private val activeBridges = CopyOnWriteArrayList<PolarOnlineStreamingBridge>()
+
+        @JvmStatic
+        fun attachActiveRecorder(recorder: PolarRawTelemetryRecorder) {
+            for (bridge in activeBridges) {
+                bridge.addImuFrameListener(recorder)
+                bridge.addRrBeatListener(recorder)
+            }
+        }
+
+        @JvmStatic
+        fun detachActiveRecorder(recorder: PolarRawTelemetryRecorder) {
+            for (bridge in activeBridges) {
+                bridge.removeImuFrameListener(recorder)
+                bridge.removeRrBeatListener(recorder)
+            }
+        }
+
+        @VisibleForTesting
+        fun getActiveBridgesForTesting(): List<PolarOnlineStreamingBridge> = activeBridges
     }
 
     private lateinit var mHeartRateSensor: MySensor<Int>
@@ -193,6 +214,7 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
             setLastActive()
             registerSensors()
             syncCadenceSensorRegistration()
+            activeBridges.addIfAbsent(this@PolarOnlineStreamingBridge)
             PolarRawTelemetryRecorder.getActiveRecorder()?.let { recorder ->
                 addImuFrameListener(recorder)
                 addRrBeatListener(recorder)
@@ -202,6 +224,7 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
 
         override fun deviceDisconnected(polarDeviceInfo: PolarDeviceInfo) {
             isConnectedFlag.set(false)
+            activeBridges.remove(this@PolarOnlineStreamingBridge)
             isAccStreamingActive.set(false)
             isGyroStreamingActive.set(false)
             PolarOfflineGattCoordinator.releaseAccChannel(polarId, PolarOfflineGattCoordinator.ACC_OWNER_ONLINE)
@@ -705,6 +728,7 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
             PolarOfflineGattCoordinator.releaseAccChannel(polarId, PolarOfflineGattCoordinator.ACC_OWNER_ONLINE)
         }
 
+        activeBridges.remove(this)
         unregisterSensors()
         rrBeatListeners.clear()
         imuFrameListeners.clear()

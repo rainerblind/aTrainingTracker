@@ -35,6 +35,7 @@ fun ExportSettingsDialog(
     var exportGcJson by remember { mutableStateOf(TrainingApplication.exportToGCJson()) }
     var exportCsv by remember { mutableStateOf(TrainingApplication.exportToCSV()) }
     var exportFit by remember { mutableStateOf(TrainingApplication.exportToFIT()) }
+    var exportRawSensor by remember { mutableStateOf(TrainingApplication.exportToRawSensor()) }
 
     AppBottomSheetContent(
         title = stringResource(R.string.prefs_Export),
@@ -48,6 +49,7 @@ fun ExportSettingsDialog(
                     TrainingApplication.setExportToGCJson(exportGcJson)
                     TrainingApplication.setExportToCSV(exportCsv)
                     TrainingApplication.setExportToFIT(exportFit)
+                    TrainingApplication.setExportToRawSensor(exportRawSensor)
                     onDismiss()
                 },
                 onCancel = onDismiss,
@@ -83,6 +85,11 @@ fun ExportSettingsDialog(
                 label = "FIT",
                 isChecked = exportFit,
                 onCheckedChange = { exportFit = it }
+            )
+            ExportOptionToggle(
+                label = stringResource(R.string.file_format_raw_sensor),
+                isChecked = exportRawSensor,
+                onCheckedChange = { exportRawSensor = it }
             )
         }
     }
