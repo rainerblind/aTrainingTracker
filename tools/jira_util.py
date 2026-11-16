@@ -74,6 +74,21 @@ ROLE_ACCOUNT_IDS = {
 STORY_POINTS_FIELD = "customfield_10016"
 PO_RELEASED_QUEUE_SPRINT_ID = 447
 PO_RELEASED_QUEUE_NAME = "Vom PO Freigegeben"
+PO_REVIEW_QUEUE_SPRINT_ID = 453
+PO_REVIEW_QUEUE_NAME = "Bereit für PO Abnahme"
+PO_SYSTEMTEST_QUEUE_SPRINT_ID = 454
+PO_SYSTEMTEST_QUEUE_NAME = "Bereit für PO Systemtest"
+PROTECTED_PSEUDO_SPRINT_IDS = frozenset({
+    PO_RELEASED_QUEUE_SPRINT_ID,
+    PO_REVIEW_QUEUE_SPRINT_ID,
+    PO_SYSTEMTEST_QUEUE_SPRINT_ID,
+})
+PROTECTED_PSEUDO_SPRINT_NAMES = frozenset({
+    "human review",
+    PO_RELEASED_QUEUE_NAME.lower(),
+    PO_REVIEW_QUEUE_NAME.lower(),
+    PO_SYSTEMTEST_QUEUE_NAME.lower(),
+})
 
 DEFAULT_CONFIG_LOCATIONS = [
     os.path.join(os.path.dirname(__file__), "hoechstmass", "hoechstmass_config.json"),
@@ -461,8 +476,8 @@ def resolve_active_sprint(board_id, role="agent1"):
         return None
     dev_sprints = [
         s for s in sprints
-        if s.get("name", "").strip().lower() not in ("human review", PO_RELEASED_QUEUE_NAME.lower())
-        and s.get("id") != PO_RELEASED_QUEUE_SPRINT_ID
+        if s.get("name", "").strip().lower() not in PROTECTED_PSEUDO_SPRINT_NAMES
+        and s.get("id") not in PROTECTED_PSEUDO_SPRINT_IDS
     ]
     if dev_sprints:
         dev_sprints.sort(key=lambda s: s.get("id", 0), reverse=True)
@@ -2771,8 +2786,8 @@ def add_to_active_sprint(issue_key, role="agent1"):
         print("No active sprint found.")
         return
     sprint_id = active_sprint["id"]
-    if int(sprint_id) == PO_RELEASED_QUEUE_SPRINT_ID:
-        print(f"Error: Refusing to add {issue_key} to protected queue '{PO_RELEASED_QUEUE_NAME}' (ID {PO_RELEASED_QUEUE_SPRINT_ID}).", file=sys.stderr)
+    if int(sprint_id) in PROTECTED_PSEUDO_SPRINT_IDS:
+        print(f"Error: Refusing to add {issue_key} to protected pseudo-sprint '{active_sprint.get('name')}' (ID {sprint_id}).", file=sys.stderr)
         sys.exit(1)
     url = f"{config['JIRA_URL']}/rest/agile/1.0/sprint/{sprint_id}/issue"
     payload = {"issues": [issue_key]}
@@ -2958,6 +2973,10 @@ def move_issues_to_sprint_guarded(target_sprint_id, issue_keys, role="coordinato
                 file=sys.stderr,
             )
             sys.exit(1)
+    elif target_id_int in (PO_REVIEW_QUEUE_SPRINT_ID, PO_SYSTEMTEST_QUEUE_SPRINT_ID):
+        if role != "coordinator":
+            print(f"Error: Only coordinator/human may move issues into pseudo-sprint ID {target_id_int}.", file=sys.stderr)
+            sys.exit(1)
     elif role != "human":
         # Target is an active sprint: only permitted via pack-sprint from PO queue (source_sprint_id == 447)
         if not source_sprint_id or int(source_sprint_id) != PO_RELEASED_QUEUE_SPRINT_ID:
@@ -3008,6 +3027,9 @@ def select_greedy_bin_pack_tickets(ranked_issues, max_lanes=3, max_sp_per_lane=N
         status_name = fields.get("status", {}).get("name", "").strip().lower()
         if status_name != "zu erledigen":
             continue
+        labels = [str(l).strip().lower() for l in (fields.get("labels") or [])]
+        if "human-execution" in labels:
+            continue
 
         parent_obj = fields.get("parent") or {}
         epic_key = parent_obj.get("key") or f"__NO_EPIC__:{issue.get('key')}"
@@ -3041,13 +3063,13 @@ def pack_sprint_from_po_queue(target_sprint_id, max_lanes=3, max_sp_per_lane=Non
     if role != "coordinator":
         print("Error: pack-sprint is restricted to '--as coordinator'.", file=sys.stderr)
         sys.exit(1)
-    if int(target_sprint_id) == PO_RELEASED_QUEUE_SPRINT_ID:
-        print(f"Error: Target sprint cannot be '{PO_RELEASED_QUEUE_NAME}' (ID {PO_RELEASED_QUEUE_SPRINT_ID}).", file=sys.stderr)
+    if int(target_sprint_id) in PROTECTED_PSEUDO_SPRINT_IDS:
+        print(f"Error: Target sprint cannot be a protected pseudo-sprint (ID {target_sprint_id}).", file=sys.stderr)
         sys.exit(1)
     config = get_config()
     base = config['JIRA_URL'].rstrip('/')
     jql = f"project = ATT AND sprint = {PO_RELEASED_QUEUE_SPRINT_ID} AND issuetype != Sub-task ORDER BY rank ASC"
-    ranked = paged_jql_search(jql, ["summary", "status", "issuetype", "parent", STORY_POINTS_FIELD], role=role, config=config)
+    ranked = paged_jql_search(jql, ["summary", "status", "issuetype", "parent", "labels", STORY_POINTS_FIELD], role=role, config=config)
     chosen = select_greedy_bin_pack_tickets(ranked, max_lanes=max_lanes, max_sp_per_lane=max_sp_per_lane)
     keys = [c["key"] for c in chosen]
     if not keys:
@@ -3055,6 +3077,21 @@ def pack_sprint_from_po_queue(target_sprint_id, max_lanes=3, max_sp_per_lane=Non
         return []
     move_issues_to_sprint_guarded(int(target_sprint_id), keys, role=role, source_sprint_id=PO_RELEASED_QUEUE_SPRINT_ID)
     return keys
+
+
+def defer_to_systemtest_queue(issue_key, role="coordinator"):
+    """
+    Moves a human-execution / Deferred Field Test ticket into 'Bereit für PO Systemtest' (ID 454),
+    applies the 'human-execution' label, and assigns it to 'human' (Rule 7.6).
+    """
+    if role != "coordinator":
+        print("Error: defer-systemtest is restricted to '--as coordinator'.", file=sys.stderr)
+        sys.exit(1)
+    add_label(issue_key, ["human-execution"], role=role)
+    assign_issue(issue_key, "human", role=role)
+    move_issues_to_sprint_guarded(PO_SYSTEMTEST_QUEUE_SPRINT_ID, [issue_key], role=role)
+    print(f"Moved {issue_key} to '{PO_SYSTEMTEST_QUEUE_NAME}' (ID {PO_SYSTEMTEST_QUEUE_SPRINT_ID}) with label 'human-execution'.")
+    return True
 
 
 def return_unstarted_to_po_queue(sprint_arg=None, role="coordinator"):
@@ -3078,8 +3115,8 @@ def return_unstarted_to_po_queue(sprint_arg=None, role="coordinator"):
         print("Error: Source sprint not found.", file=sys.stderr)
         sys.exit(1)
     s_id = int(target_sprint["id"])
-    if s_id == PO_RELEASED_QUEUE_SPRINT_ID:
-        print(f"Error: Source sprint cannot be '{PO_RELEASED_QUEUE_NAME}' (ID {PO_RELEASED_QUEUE_SPRINT_ID}).", file=sys.stderr)
+    if s_id in PROTECTED_PSEUDO_SPRINT_IDS:
+        print(f"Error: Source sprint cannot be protected pseudo-sprint '{target_sprint.get('name')}' (ID {s_id}).", file=sys.stderr)
         sys.exit(1)
     issues = fetch_all_sprint_issues(base, s_id, "summary,status,issuetype", role=role)
     untouched = []
@@ -4700,6 +4737,7 @@ USAGE_TEXT = (
     "                                                        Pull disjoint-Epic tickets from Vom PO Freigegeben (447) in rank order\n"
     "  return-unstarted [SPRINT_ARG]                         Return untouched Zu erledigen sprint tickets to Vom PO Freigegeben (447)\n"
     "  swap-po-queue FUTURE_SPRINT_ID                        Keep Vom PO Freigegeben (447) positioned right above Product Backlog\n"
+    "  defer-systemtest KEY                                  Label human-execution, assign human, and move to Bereit für PO Systemtest (454)\n"
     "  check-gate KEY                                        Verify Impl-Plan subtask is Erledigt (Gate 3)\n"
     "  submit-stage PARENT_KEY STAGE TEXT_OR_@FILE [--summary \"...\"]\n"
     "                                                        Create/update stage subtask (1..5) and move to In Überprüfung\n"
@@ -4789,6 +4827,8 @@ if __name__ == "__main__":
         return_unstarted_to_po_queue(sprint_arg=s_arg, role=active_role)
     elif cmd in ("swap-po-queue", "swap_po_queue") and len(remaining_argv) == 2:
         swap_future_sprint_keep_po_queue_last(remaining_argv[1], role=active_role)
+    elif cmd in ("defer-systemtest", "defer_systemtest") and len(remaining_argv) == 2:
+        defer_to_systemtest_queue(remaining_argv[1], role=active_role)
     elif cmd == "show" and len(remaining_argv) == 2:
         show_issue(remaining_argv[1], role=active_role)
     elif cmd in ("set-points", "set_points") and len(remaining_argv) == 3:

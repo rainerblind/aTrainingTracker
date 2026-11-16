@@ -1881,6 +1881,35 @@ Verdict: PASS."""
             skill_text = f.read()
         self.assertIn("REQ-PRO-107", skill_text)
 
+    @patch("jira_util.get_config", return_value={"JIRA_URL": "https://example.atlassian.net"})
+    @patch("jira_util.jira_request")
+    def test_systemtest_pseudo_sprint_454_and_human_execution_guard(self, mock_request, mock_config):
+        """Protect Bereit fuer PO Systemtest (ID 454) and skip human-execution in greedy bin-packing."""
+        # 1. Greedy bin-packing must skip tickets labeled 'human-execution'
+        ranked = [
+            {"key": "ATT-8423", "fields": {"issuetype": {"name": "Feature"}, "summary": "SysVer", "status": {"name": "Zu erledigen"}, "labels": ["human-execution"], "parent": {"key": "ATT-6142"}}},
+            {"key": "ATT-8424", "fields": {"issuetype": {"name": "Bug"}, "summary": "Normal", "status": {"name": "Zu erledigen"}, "labels": [], "parent": {"key": "ATT-166"}}},
+        ]
+        packed = jira_util.select_greedy_bin_pack_tickets(ranked, max_lanes=3)
+        self.assertEqual([i["key"] for i in packed], ["ATT-8424"])
+
+        # 2. pack_sprint and return_unstarted reject protected pseudo-sprint ID 454
+        with self.assertRaises(SystemExit):
+            jira_util.pack_sprint_from_po_queue(454, role="coordinator")
+        with patch("jira_util.resolve_sprint_object", return_value={"id": 454, "name": "Bereit für PO Systemtest"}):
+            mock_request.return_value = {"values": [{"id": 1}]}
+            with self.assertRaises(SystemExit):
+                jira_util.return_unstarted_to_po_queue("454", role="coordinator")
+
+        # 3. defer_to_systemtest_queue adds human-execution label, assigns human, and moves to ID 454
+        with patch("jira_util.add_label") as mock_add_lbl, \
+             patch("jira_util.assign_issue") as mock_assign, \
+             patch("jira_util.move_issues_to_sprint_guarded") as mock_move:
+            self.assertTrue(jira_util.defer_to_systemtest_queue("ATT-8423", role="coordinator"))
+        mock_add_lbl.assert_called_once_with("ATT-8423", ["human-execution"], role="coordinator")
+        mock_assign.assert_called_once_with("ATT-8423", "human", role="coordinator")
+        mock_move.assert_called_once_with(454, ["ATT-8423"], role="coordinator")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -33,7 +33,10 @@ To eliminate merge conflicts across shared living documents (`docs/requirements.
 * **Three-Tier Jira Board (`SUP.10.BP4`)**:
   1. **Tier 1 (`active` Sprint)**: Current 12-hour execution container.
   2. **Tier 2 (`Vom PO Freigegeben`, permanent `future` pseudo-sprint ID `447`)**: Strictly PO-curated approved queue positioned right above the Product Backlog. Agents are strictly forbidden from pushing Backlog tickets into ID `447` or reordering it (`jira_util.py` tamper lock); `--as coordinator` may pull ranked tickets out of `447` into a starting sprint, return unstarted `Zu erledigen` tickets at the `03:25`/`15:25` cutoff, and keep `447` adjacent to Backlog via `POST /rest/agile/1.0/sprint/{id}/swap`.
-  3. **Tier 3 (`Product Backlog`)**: Unapproved backlog / follow-up proposals.
+  3. **Protected Human Queues (`future` pseudo-sprints)**:
+     * **`Bereit für PO Abnahme`** (ID `453`): Collects `Final Review (Human)` tickets awaiting Ceremony 2 PO inspection & acceptance.
+     * **`Bereit für PO Systemtest`** (ID `454`): Collects `human-execution` physical system verification tickets (`SYS.5`) and *Deferred Field Test* items requiring real outdoor rides / hardware testing (`Rule 7.6`). Never pulled into active AI sprints (`pack-sprint` skips `human-execution` and `454`).
+  4. **Tier 3 (`Product Backlog`)**: Unapproved backlog / follow-up proposals.
 * **Dual-Ticket Retrospective Model (`Review & Retro` + Rolling `Wochen Review & Retro`)**:
   * Retain a lean per-sprint `Review & Retro - Sprint YYYY-WW.N` ticket (logs automated metrics, gates, QA audit, `installDebug` log & anomalies) alongside a persistent rolling **`Wochen Review & Retro`** ticket (Epic `ATT-232`) pushed forward week-to-week for the 1x/week consolidated human retrospective (weekly SPC trends, `docs/management/risk_register.md`, skill updates, and weekly external review tickets).
 * **Sprint Branch**: Created at Sprint-Start from `develop`: `sprint/<SPRINT_NAME>` (e.g. `sprint/2026-46.7`).
@@ -173,7 +176,7 @@ Jointly review all completed sprint tickets with the human user against expectat
          ```
        * Set Fix Version on the current sprint ticket (`python3 tools/jira_util.py set-fixversion <KEY> <VERSION>`), have the human user transition the current sprint ticket to `Erledigt`, and proceed strictly to the next ticket.
      * **Deferred Review State for Field-Tested Features**:
-       * When a sprint ticket modifies in-ride GPS dynamics, algorithmic filtering, sensor connectivity, or real-time cycling cockpit prompts requiring outdoor rides or real-world physical activities to evaluate, the ticket may remain in `Final Review (Human)` across sprint close while `sprint/<SPRINT_NAME>` is merged to `develop`.
+       * When a sprint ticket modifies in-ride GPS dynamics, algorithmic filtering, sensor connectivity, or real-time cycling cockpit prompts requiring outdoor rides or real-world physical activities to evaluate, move it into the dedicated human field-verification queue **`Bereit für PO Systemtest`** (ID `454`) with label `human-execution` via `python3 tools/jira_util.py --as coordinator defer-systemtest <KEY>` (keeping status `Final Review (Human)` / assigned to `human` across sprint close while `sprint/<SPRINT_NAME>` is merged to `develop`).
      * **Nicht in Ordnung (n.i.O. / Rejection of Core Scope)**:
        * Move ticket back to `Analysis` with explicit human feedback:
          ```bash
