@@ -1438,7 +1438,19 @@ def submit_stage(parent_key, stage_arg, text_or_file, summary_override=None, rol
             for st in parent_fields.get("subtasks", []):
                 st_summary = st.get("fields", {}).get("summary", "").strip()
                 if re.search(preceding_spec["pattern"], st_summary, re.IGNORECASE):
-                    st_assignee = st.get("fields", {}).get("assignee") or {}
+                    st_fields = st.get("fields") or {}
+                    st_assignee = st_fields.get("assignee")
+                    if not st_assignee:
+                        # Jira Cloud REST v2 omits assignee from subtasks in parent query; fetch directly (REQ-PRO-107.1)
+                        st_key = st.get("key")
+                        if st_key:
+                            try:
+                                subtask_data = jira_request(f"{config['JIRA_URL']}/rest/api/2/issue/{st_key}?fields=assignee", role=role)
+                                st_assignee = (subtask_data.get("fields") or {}).get("assignee")
+                            except Exception:
+                                pass
+                    if not st_assignee:
+                        st_assignee = {}
                     preceding_reviewer = (
                         st_assignee.get("displayName")
                         or st_assignee.get("name")
@@ -1517,6 +1529,27 @@ def get_subtask_summary_and_desc(subtask_key, role="agent2"):
         return fields.get("summary", ""), fields.get("description", ""), (fields.get("parent") or {}).get("key")
     except Exception:
         return "", "", None
+
+
+def get_subtask_start_time(subtask_key, role="agent2"):
+    """
+    Fetches the subtask creation or start timestamp (REQ-PRO-107.2).
+    Returns timezone-aware datetime in UTC or None.
+    """
+    try:
+        config = get_config()
+        url = f"{config['JIRA_URL']}/rest/api/2/issue/{subtask_key}?fields=created"
+        data = jira_request(url, role=role)
+        created_str = (data.get("fields") or {}).get("created")
+        if created_str:
+            cleaned = created_str.replace("Z", "+00:00")
+            dt = datetime.fromisoformat(cleaned)
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            return dt
+    except BaseException:
+        pass
+    return None
 
 
 ID_RESERVATION_LOCK_FILE = "/tmp/att_id_reservation.lock"
@@ -1990,7 +2023,7 @@ def gate_verdict(subtask_key, verdict_arg, text_or_file, role="agent2"):
     6. If PASS: transitions subtask_key via 'freigabe' (closes sub-task to Erledigt, advances parent, and injects next stage SKILL.md).
     7. If REVISION: transitions subtask_key back to 'in_progress' and assigns to agent1.
     """
-    auditor_role = "agent2"
+    auditor_role = role or "agent2"
     verdict_norm = (verdict_arg or "").strip().upper()
     if verdict_norm in ("PASS", "RECOMMEND PASS", "FREIGABE", "APPROVED"):
         is_pass = True
@@ -1999,6 +2032,20 @@ def gate_verdict(subtask_key, verdict_arg, text_or_file, role="agent2"):
     else:
         print(f"Error: Invalid verdict '{verdict_arg}'. Expected PASS or REVISION.", file=sys.stderr)
         sys.exit(1)
+
+    # REQ-PRO-107.2: Suspiciously rapid reviews (< 5 seconds elapsed between subtask start and verdict)
+    try:
+        start_time = get_subtask_start_time(subtask_key, role=auditor_role)
+        if start_time:
+            now = datetime.now(timezone.utc)
+            elapsed_sec = (now - start_time).total_seconds()
+            if elapsed_sec < 5.0:
+                print(
+                    f"[AUDIT WARNING] Rapid Gate Review (< 5s): Subtask {subtask_key} reviewed after {elapsed_sec:.1f}s. ASPICE SUP.1 requires rigorous verification.",
+                    file=sys.stderr,
+                )
+    except BaseException:
+        pass
 
     if is_pass:
         # REQ-PRO-107.2: Evidence-Backed Gate 1-5 Checklist Validation

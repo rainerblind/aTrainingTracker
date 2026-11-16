@@ -1766,6 +1766,7 @@ class TestSeparatedAuthorshipAndGateEvidence(unittest.TestCase):
         self, mock_transition, mock_create, mock_request, mock_config
     ):
         # TST-PRO-107.1: Separated Authorship Enforcement Test
+        # In Jira Cloud REST v2, subtasks embedded in parent issues omit 'assignee'
         parent_info = {
             "fields": {
                 "summary": "Parent Issue",
@@ -1776,13 +1777,24 @@ class TestSeparatedAuthorshipAndGateEvidence(unittest.TestCase):
                         "fields": {
                             "summary": "[Analysis] Parent Issue",
                             "status": {"name": "Erledigt"},
-                            "assignee": {"displayName": "Agent 2", "name": "agent2", "accountId": "agent2_id"},
                         },
                     }
                 ],
             }
         }
-        mock_request.return_value = parent_info
+        subtask_info = {
+            "key": "ATT-9001",
+            "fields": {
+                "assignee": {"displayName": "Agent 2", "name": "agent2", "accountId": "agent2_id"},
+            },
+        }
+
+        def mock_request_impl(url, **kwargs):
+            if "ATT-9001" in url and "fields=assignee" in url:
+                return subtask_info
+            return parent_info
+
+        mock_request.side_effect = mock_request_impl
 
         # 1. Author matches preceding Gate 1 reviewer (both agent2) -> SystemExit(1)
         with self.assertRaises(SystemExit) as cm:
@@ -1814,8 +1826,9 @@ class TestSeparatedAuthorshipAndGateEvidence(unittest.TestCase):
     @patch("jira_util.add_comment")
     @patch("jira_util.transition_issue")
     @patch("jira_util.get_subtask_summary_and_desc")
+    @patch("jira_util.get_subtask_start_time", return_value=None)
     def test_tst_pro_107_2_evidence_backed_gate_checklist_validation(
-        self, mock_get_subtask, mock_transition, mock_comment, mock_assign, mock_config
+        self, mock_get_start_time, mock_get_subtask, mock_transition, mock_comment, mock_assign, mock_config
     ):
         # TST-PRO-107.2: Evidence-Backed Gate 1-5 Checklist Validation Test
         mock_get_subtask.return_value = ("[Impl-Plan] ATT-9000: Plan", "Plan details", "ATT-9000")
@@ -1843,6 +1856,38 @@ class TestSeparatedAuthorshipAndGateEvidence(unittest.TestCase):
 Verdict: PASS."""
         jira_util.gate_verdict("ATT-9003", "PASS", valid_report, role="agent2")
         mock_transition.assert_called_with("ATT-9003", "freigabe", role="agent2", inject_context=True)
+
+    @patch("jira_util.get_config", return_value={"JIRA_URL": "https://example.atlassian.net"})
+    @patch("jira_util.assign_issue")
+    @patch("jira_util.add_comment")
+    @patch("jira_util.transition_issue")
+    @patch("jira_util.get_subtask_summary_and_desc")
+    @patch("jira_util.get_subtask_start_time")
+    def test_tst_pro_107_2_rapid_review_warning(
+        self, mock_get_start_time, mock_get_subtask, mock_transition, mock_comment, mock_assign, mock_config
+    ):
+        # REQ-PRO-107.2 / TST-PRO-107.2: Rapid Gate Review Warning (< 5s elapsed)
+        from datetime import timezone
+        mock_get_subtask.return_value = ("[Impl-Plan] ATT-9000: Plan", "Plan details", "ATT-9000")
+        valid_report = """### Gate 3 Independent Review: PASS
+* [x] Traceability: REQ-PRO-107 verified in tools/jira_util.py:1450
+* [x] Commit SHA: 3a31b9ad verified clean
+* [x] Test output: BUILD SUCCESSFUL
+Verdict: PASS."""
+
+        # 1. Rapid review (< 5s, e.g. 2s ago) -> emits [AUDIT WARNING] Rapid Gate Review (< 5s) to stderr
+        mock_get_start_time.return_value = datetime.now(timezone.utc) - timedelta(seconds=2)
+        with patch("sys.stderr", new_callable=io.StringIO) as mock_stderr:
+            jira_util.gate_verdict("ATT-9003", "PASS", valid_report, role="agent2")
+            stderr_output = mock_stderr.getvalue()
+            self.assertIn("[AUDIT WARNING] Rapid Gate Review (< 5s)", stderr_output)
+
+        # 2. Normal review (>= 5s, e.g. 15s ago) -> no rapid review warning
+        mock_get_start_time.return_value = datetime.now(timezone.utc) - timedelta(seconds=15)
+        with patch("sys.stderr", new_callable=io.StringIO) as mock_stderr:
+            jira_util.gate_verdict("ATT-9003", "PASS", valid_report, role="agent2")
+            stderr_output = mock_stderr.getvalue()
+            self.assertNotIn("[AUDIT WARNING] Rapid Gate Review (< 5s)", stderr_output)
 
     def test_tst_pro_107_3_multi_sprint_100_percent_ftpr_rubber_stamping_alert(self):
         # TST-PRO-107.3: Multi-Sprint 100% FTPR Rubber-Stamping Alert Test
