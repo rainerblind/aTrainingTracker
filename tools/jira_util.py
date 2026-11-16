@@ -3300,7 +3300,7 @@ def swap_future_sprint_keep_po_queue_last(new_future_sprint_id, role="coordinato
 
 def carryover_wip_to_sprint(from_sprint_arg, to_sprint_arg, role="coordinator"):
     """
-    Continuous 8h Schicht Rollover (Rule 2.2):
+    Continuous Schicht Rollover (Rule 2.2):
     Moves in-flight WIP tickets (status not in {'Zu erledigen', 'Final Review (Human)', 'Erledigt'}
     and excluding 'Review & Retro') from the closing Schicht directly into the target Schicht sprint
     without interrupting active worktrees.
@@ -4147,7 +4147,7 @@ def export_gates(sprint_arg=None, out_path=None, role="coordinator", as_role=Non
 
 def export_test_evidence(sprint_arg=None, release_arg=None, target_arg=None, out_dir=None,
                          test_results_dir=None, archive_path=None, kover_xml_path=None,
-                         role="coordinator", as_role=None):
+                         skip_kover=False, role="coordinator", as_role=None):
     """
     REQ-PRO-100.4 / TST-PRO-100.1:
     Exports persistent, version-controlled test and coverage evidence to
@@ -4221,6 +4221,7 @@ def export_test_evidence(sprint_arg=None, release_arg=None, target_arg=None, out
         archive_path=archive_path,
         kover_xml_path=kover_xml_path,
         out_dir=out_dir,
+        skip_kover=skip_kover,
     )
     return md_path, json_path, payload
 
@@ -5001,7 +5002,7 @@ USAGE_TEXT = (
     "                                                        Pull disjoint-Epic tickets from Vom PO Freigegeben (447) in rank order\n"
     "  return-unstarted [SPRINT_ARG]                         Return untouched Zu erledigen sprint tickets to Vom PO Freigegeben (447)\n"
     "  swap-po-queue FUTURE_SPRINT_ID                        Keep Vom PO Freigegeben (447) positioned right above Product Backlog\n"
-    "  carryover-wip FROM_SPRINT TO_SPRINT                   Move in-flight WIP directly across 8h Schicht boundaries\n"
+    "  carryover-wip FROM_SPRINT TO_SPRINT                   Move in-flight WIP directly across Schicht boundaries\n"
     "  archive-po-acceptance [SPRINT_ARG]                    Move completed Final Review (Human) tickets into Bereit für PO Abnahme (453)\n"
     "  defer-systemtest KEY                                  Label human-execution, assign human, and move to Bereit für PO Systemtest (454)\n"
     "  check-gate KEY                                        Verify Impl-Plan subtask is Erledigt (Gate 3)\n"
@@ -5028,7 +5029,7 @@ USAGE_TEXT = (
     "                                                        Calculate PA 4.1 sprint metrics and PA 4.2 SPC control limits\n"
     "  export-gates [--sprint <ID|NAME>] [--out <FILE>]\n"
     "                                                        Export sprint gate records to docs/engineering/gates/<sprint>.md\n"
-    "  export-test-evidence [--sprint <ID|NAME>] [--release <TAG>] [--out-dir <DIR>]\n"
+    "  export-test-evidence [--sprint <ID|NAME>] [--release <TAG>] [--out-dir <DIR>] [--no-kover]\n"
     "                                                        Export versioned test and coverage evidence to docs/engineering/test_evidence/\n"
     "  qa-audit [--sprint <ID|NAME>] [--sample N] [--out <FILE>]\n"
     "                                                        Sample >= 2 sprint tickets and audit ASPICE process compliance\n"
@@ -5335,6 +5336,7 @@ if __name__ == "__main__":
         sprint_arg = None
         release_arg = None
         out_arg = None
+        no_kover_arg = False
         idx = 1
         while idx < len(remaining_argv):
             a = remaining_argv[idx]
@@ -5353,10 +5355,12 @@ if __name__ == "__main__":
             elif a == "--out-dir" and idx + 1 < len(remaining_argv):
                 out_arg = remaining_argv[idx + 1]
                 idx += 1
+            elif a == "--no-kover":
+                no_kover_arg = True
             elif not a.startswith("--") and not sprint_arg and not release_arg:
                 sprint_arg = a
             idx += 1
-        export_test_evidence(sprint_arg=sprint_arg, release_arg=release_arg, out_dir=out_arg, role=active_role)
+        export_test_evidence(sprint_arg=sprint_arg, release_arg=release_arg, out_dir=out_arg, skip_kover=no_kover_arg, role=active_role)
     elif cmd in ("qa-audit", "qa_audit"):
         sprint_arg = None
         sample_arg = None
