@@ -3658,25 +3658,32 @@ SYSTEM_REFINED_PREFIXES = {
     "CON", "FIL", "FUSION", "SEN", "TRK", "WEA",
     "DAT", "EXP", "EXT", "MIG",
     "GEO", "MAP", "NAV", "ROU",
+    "CLM", "RAD",
 }
+
+LEGACY_UNLINKED_SYS_REFINEMENT_REQS = frozenset()
 
 
 def verify_system_software_traceability(
     repo_root=None,
     fail_on_missing_coverage=True,
     fail_on_dangling_sysreq=True,
+    fail_on_unclassified_swe=False,
+    baseline_allowlist=None,
 ):
     """
-    ASPICE SYS.2 BP5 / SWE.1 BP5 System-to-Software Requirement Traceability Guard (REQ-PRO-076).
+    ASPICE SYS.2 BP5 / SWE.1 BP5 System-to-Software Requirement Traceability Guard (REQ-PRO-076, REQ-PRO-102, REQ-PRO-103).
     Verifies that:
       1. All cited SYSREQ-* identifiers exist in docs/system/sysreq_*.md (no dangling SYSREQs).
       2. 100% of declared system requirements have verified coverage by >= 1 software requirement.
-      3. All software requirements either trace to a parent SYSREQ, have an explicit derived marker,
-         or belong to a tailored software-derived prefix family with documented rationale.
+      3. Under fail_on_unclassified_swe=True (--check-reverse-sys-trace), all SYSTEM_REFINED_PREFIXES
+         requirements either trace to >= 1 parent SYSREQ or carry explicit 'Derived (SW-only)' rationale.
     Returns (success: bool, diagnostics: list[str], report: dict).
     """
     if repo_root is None:
         repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    if baseline_allowlist is None:
+        baseline_allowlist = LEGACY_UNLINKED_SYS_REFINEMENT_REQS
 
     diagnostics = []
     errors = []
@@ -3701,6 +3708,14 @@ def verify_system_software_traceability(
     sys_to_swe = {s: set() for s in declared_sysreqs}
     req_boundary_pat = re.compile(r"(?<![A-Za-z0-9_-])REQ-[A-Z0-9_-]+(?![A-Za-z0-9_-])")
     sys_boundary_pat = re.compile(r"(?<![A-Za-z0-9_-])SYSREQ-[A-Z0-9_-]+(?![A-Za-z0-9_-])")
+    sys_field_pat = re.compile(
+        r"^\s*[-*]\s*\*{0,2}(?:System Requirements?|System Requirement\(s\)|Derives from)\*{0,2}\s*:\s*(.*)$",
+        re.IGNORECASE | re.MULTILINE,
+    )
+    derived_sw_only_pat = re.compile(
+        r"Derived\s*\(\s*SW[- ]only\s*\)\s*(?:[:\-\—]+\s*(.+))?",
+        re.IGNORECASE,
+    )
 
     def _is_system_refined_req(req_id):
         parts = req_id.split("-")
@@ -3726,6 +3741,7 @@ def verify_system_software_traceability(
     req_dir = os.path.join(repo_root, "docs/requirements")
     swe_req_ids = set()
     swe_refinement_reqs = set()
+    swe_derived_sw_only_map = {}
     dangling_sysreq_citations = []
 
     if os.path.isdir(req_dir):
@@ -3760,6 +3776,16 @@ def verify_system_software_traceability(
                                 f"{fn} [{current_req}] cites undeclared system requirement {raw_sys}"
                             )
 
+                    if is_sys_refined:
+                        m_field = sys_field_pat.search(section)
+                        if m_field:
+                            field_val = m_field.group(1).strip()
+                            m_der = derived_sw_only_pat.search(field_val)
+                            if m_der:
+                                rationale = (m_der.group(1) or "").strip()
+                                if len(rationale) >= 5:
+                                    swe_derived_sw_only_map[current_req] = rationale
+
     # 3. Check for dangling SYSREQs in docs/system/
     if os.path.isdir(sysreq_dir):
         for fn in os.listdir(sysreq_dir):
@@ -3785,7 +3811,7 @@ def verify_system_software_traceability(
         else:
             diagnostics.append(f"WARNING: {msg}")
 
-    # 4. Coverage calculation (forward SYSREQ->SWE and reverse System-Refinement SWE->SYSREQ)
+    # 4. Coverage calculation (forward SYSREQ->SWE and reverse System-Refinement SWE->SYSREQ/Derived)
     covered_sysreqs = {s for s, reqs in sys_to_swe.items() if len(reqs) > 0}
     uncovered_sysreqs = declared_sysreqs - covered_sysreqs
     coverage_pct = round(len(covered_sysreqs) / max(1, len(declared_sysreqs)) * 100.0, 1)
@@ -3808,12 +3834,30 @@ def verify_system_software_traceability(
     }
     unlinked_swe_refinement_reqs = sorted(swe_refinement_reqs - covered_swe_refinement_reqs)
 
+    classified_swe_reqs = covered_swe_refinement_reqs | (set(swe_derived_sw_only_map.keys()) & swe_refinement_reqs)
+    unclassified_swe_refinement_reqs = sorted(swe_refinement_reqs - classified_swe_reqs)
+    reverse_classified_count = len(classified_swe_reqs)
+    reverse_classified_pct = (
+        round(reverse_classified_count / swe_refinement_total_count * 100.0, 2)
+        if swe_refinement_total_count > 0
+        else 0.0
+    )
+
     if uncovered_sysreqs:
         msg = f"SYSREQ coverage gap: {', '.join(sorted(uncovered_sysreqs))} have zero refining software requirements."
         if fail_on_missing_coverage:
             errors.append(msg)
         else:
             diagnostics.append(f"WARNING: {msg}")
+
+    if fail_on_unclassified_swe:
+        unbaselined = [r for r in unclassified_swe_refinement_reqs if r not in baseline_allowlist]
+        if unbaselined:
+            errors.append(
+                f"Unclassified System-Refinement SWE requirement(s) missing SYSREQ-* or Derived (SW-only) "
+                f"rationale ({len(unbaselined)}): {', '.join(unbaselined[:15])}"
+                + (f" ... (+{len(unbaselined) - 15} more)" if len(unbaselined) > 15 else "")
+            )
 
     report = {
         "declared_sysreqs": sorted(list(declared_sysreqs)),
@@ -3830,6 +3874,11 @@ def verify_system_software_traceability(
         "swe_refinement_coverage_pct": swe_refinement_coverage_pct,
         "swe_to_sys_map": swe_to_sys_map,
         "unlinked_swe_refinement_reqs": unlinked_swe_refinement_reqs,
+        "swe_derived_sw_only_count": len(swe_derived_sw_only_map),
+        "swe_derived_sw_only_map": dict(sorted(swe_derived_sw_only_map.items())),
+        "unclassified_swe_refinement_reqs": unclassified_swe_refinement_reqs,
+        "reverse_classified_count": reverse_classified_count,
+        "reverse_classified_pct": reverse_classified_pct,
     }
 
     if errors:
@@ -3839,7 +3888,9 @@ def verify_system_software_traceability(
         f"PASS: 100% System-to-Software requirement traceability verified "
         f"({len(covered_sysreqs)}/{len(declared_sysreqs)} SYSREQs covered by software requirements; "
         f"{swe_refinement_covered_count}/{swe_refinement_total_count} "
-        f"[{swe_refinement_coverage_pct}%] System-Refinement SWE REQs traced to SYSREQs; "
+        f"[{swe_refinement_coverage_pct}%] SYSREQ-linked, "
+        f"{len(swe_derived_sw_only_map)} Derived (SW-only), "
+        f"{reverse_classified_count}/{swe_refinement_total_count} [{reverse_classified_pct}%] classified; "
         f"zero dangling SYSREQs)."
     )
     return True, diagnostics, report
@@ -4211,6 +4262,11 @@ def main():
         help="Verify system-to-software requirement traceability and prefix tailoring (REQ-PRO-076).",
     )
     parser.add_argument(
+        "--check-reverse-sys-trace",
+        action="store_true",
+        help="Fail if any System-Refinement SWE requirement lacks a SYSREQ-* link or Derived (SW-only) rationale (REQ-PRO-103.3).",
+    )
+    parser.add_argument(
         "--report-sys-coverage",
         action="store_true",
         help="Report detailed SYSREQ-to-SWE coverage matrix (REQ-PRO-076).",
@@ -4279,8 +4335,10 @@ def main():
             print(msg, file=sys.stderr if not ok else sys.stdout)
         sys.exit(0 if ok else 1)
 
-    if args.verify_sys_trace or args.report_sys_coverage:
-        ok, diag, report = verify_system_software_traceability()
+    if args.verify_sys_trace or args.check_reverse_sys_trace or args.report_sys_coverage:
+        ok, diag, report = verify_system_software_traceability(
+            fail_on_unclassified_swe=args.check_reverse_sys_trace,
+        )
         for msg in diag:
             print(msg, file=sys.stderr if not ok and "ERROR" in msg else sys.stdout)
         if args.report_sys_coverage:
@@ -4293,7 +4351,15 @@ def main():
                 f"{report['swe_refinement_covered_count']}/{report['swe_refinement_total_count']} "
                 f"({report['swe_refinement_coverage_pct']}%)"
             )
-            print(f"Unlinked System-Refinement SWE REQs: {len(report['unlinked_swe_refinement_reqs'])}")
+            print(
+                f"Derived (SW-only) System-Refinement REQs: {report['swe_derived_sw_only_count']}"
+            )
+            print(
+                f"Total Classified System-Refinement REQs: "
+                f"{report['reverse_classified_count']}/{report['swe_refinement_total_count']} "
+                f"({report['reverse_classified_pct']}%)"
+            )
+            print(f"Unclassified System-Refinement SWE REQs: {len(report['unclassified_swe_refinement_reqs'])}")
         sys.exit(0 if ok else 1)
 
     if args.check_verified_evidence:

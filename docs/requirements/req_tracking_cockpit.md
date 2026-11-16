@@ -9,6 +9,7 @@
 
 ### REQ-CON-001: Support multiple ANT+ sensor profiles (HR, Speed, Cadence, Power, Env) [Verified]
 - **Tests**: `TST-CON-025`
+- **System Requirement(s)**: `SYSREQ-TRK-001`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -18,6 +19,7 @@
 
 ### REQ-CON-002: Support Bluetooth LE (BLE) sensor profiles (HR, Speed, Cadence, Power) [Implemented]
 - **Tests**: `TST-CON-003`, `TST-CON-005`
+- **System Requirement(s)**: `SYSREQ-TRK-001`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -27,6 +29,7 @@
 
 ### REQ-CON-003: Implement "Best Sensor" selection logic using priority lists [Implemented]
 - **Tests**: `TST-TRK-016`
+- **System Requirement(s)**: `SYSREQ-TRK-001`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -36,6 +39,7 @@
 
 ### REQ-CON-004: Provide asynchronous background searching for devices [Verified]
 - **Tests**: `TST-CON-009`, `TST-CON-011`
+- **System Requirement(s)**: `SYSREQ-TRK-001`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -45,6 +49,7 @@
 
 ### REQ-CON-005: All BLE characteristic reads must be null-safe [Verified]
 - **Tests**: `TST-CON-003`, `TST-CON-005`
+- **System Requirement(s)**: `SYSREQ-TRK-001`, `SYSREQ-TRK-002`
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
@@ -54,6 +59,7 @@
 
 ### REQ-CON-006: Support barometric pressure sensors for altitude [Verified]
 - **Tests**: `TST-CON-004`, `TST-CON-008`
+- **System Requirement(s)**: `SYSREQ-TRK-001`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -63,6 +69,7 @@
 
 ### REQ-CON-007: Continuous Sensor Battery State Persistence, Live Battery Display in Sensors List & Post-Workout Alerting [Verified]
 - **Tests**: `TST-CON-010`
+- **System Requirement(s)**: `SYSREQ-TRK-001`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -128,6 +135,7 @@
 
 ### REQ-CON-008: Detect missing ANT+ services and link to Play Store [Implemented]
 - **Tests**: `TST-MAN-001`
+- **System Requirement(s)**: Derived (SW-only) — Android Play Store ANT+ service installation UX prompt
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: On-Device Manual
@@ -137,6 +145,7 @@
 
 ### REQ-CON-009: Support per-device calibration (wheel circumference) [Implemented]
 - **Tests**: `TST-MAN-001`
+- **System Requirement(s)**: `SYSREQ-TRK-001`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: On-Device Manual
@@ -146,6 +155,7 @@
 
 ### REQ-FIL-001: Flexible filtering (Moving Avg, Exponential Smoothing) [Verified]
 - **Tests**: `TST-FIL-004`, `TST-FIL-005`, `TST-FIL-014`
+- **System Requirement(s)**: `SYSREQ-TRK-003`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -155,6 +165,7 @@
 
 ### REQ-FIL-002: Configurable smoothing factors (α) for Power [Verified]
 - **Tests**: `TST-FIL-005`, `TST-FIL-015`
+- **System Requirement(s)**: `SYSREQ-TRK-003`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -164,6 +175,7 @@
 
 ### REQ-FIL-003: Calculate derived metrics (VAM, slope, pace) [Verified]
 - **Tests**: `TST-FIL-004`
+- **System Requirement(s)**: `SYSREQ-TRK-003`, `SYSREQ-TRK-004`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -173,6 +185,7 @@
 
 ### REQ-FIL-004: Atomic Altitude Correction [Implemented]
 - **Tests**: `TST-FIL-003`
+- **System Requirement(s)**: `SYSREQ-TRK-003`, `SYSREQ-TRK-004`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -181,6 +194,7 @@
 
 ### REQ-FIL-005: Implement "Proxy Sensors" and "Accumulator Sensors" [Verified]
 - **Tests**: `TST-TRK-028`
+- **System Requirement(s)**: `SYSREQ-TRK-003`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -190,6 +204,7 @@
 
 ### REQ-FIL-006: Geographical rolling averages for start altitude [Implemented]
 - **Tests**: `TST-FIL-002`
+- **System Requirement(s)**: `SYSREQ-TRK-003`, `SYSREQ-TRK-004`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -199,6 +214,7 @@
 
 ### REQ-FIL-012: Stabilized VAM (Vertical Speed) Metric, Location Accuracy Gating & Indoor Drift Suppression Architecture [Verified]
 - **Tests**: `TST-FIL-004`, `TST-FIL-015`
+- **System Requirement(s)**: `SYSREQ-TRK-003`, `SYSREQ-TRK-004`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -249,6 +265,7 @@
 
 ### REQ-TRK-001: Support Start, Stop, Pause with Service persistence [Verified]
 - **Tests**: `TST-TRK-075`
+- **System Requirement(s)**: `SYSREQ-TRK-003`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Integration
@@ -258,6 +275,7 @@
 
 ### REQ-TRK-002: Workout Lap Recording Lifecycle, Manual Splitting & Pause/Resume Neutrality [Verified]
 - **Tests**: `TST-TRK-002`
+- **System Requirement(s)**: `SYSREQ-TRK-003`
 - **Priority**: Medium
 - **Type**: Non-Functional
 - **Verification Method**: Unit
@@ -285,6 +303,7 @@
 
 ### REQ-TRK-003: Use WakeLocks during active tracking [Verified]
 - **Tests**: `TST-TRK-025`, `TST-TRK-026`
+- **System Requirement(s)**: `SYSREQ-TRK-004`, `SYSREQ-TRK-005`
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
@@ -294,6 +313,7 @@
 
 ### REQ-TRK-004: Automatically guess Sport Type and Equipment [Implemented]
 - **Tests**: `TST-MAN-001`
+- **System Requirement(s)**: `SYSREQ-TRK-003`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: On-Device Manual
@@ -303,6 +323,7 @@
 
 ### REQ-TRK-005: Implement session recovery ("Resume from Crash") [Verified]
 - **Tests**: `TST-TRK-018`, `TST-TRK-023`
+- **System Requirement(s)**: `SYSREQ-TRK-005`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Integration
@@ -312,6 +333,7 @@
 
 ### REQ-TRK-006: Support sport-specific search triggers [Implemented]
 - **Tests**: `TST-MAN-001`
+- **System Requirement(s)**: Derived (SW-only) — Internal software tracking cockpit state and UI coordination
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: On-Device Manual
@@ -321,6 +343,7 @@
 
 ### REQ-TRK-007: Deterministic 1Hz sampling rate during recording [Verified]
 - **Tests**: `TST-TRK-019`
+- **System Requirement(s)**: `SYSREQ-TRK-003`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -330,6 +353,7 @@
 
 ### REQ-TRK-008: Align session averages with core summary metrics [Verified]
 - **Tests**: `TST-TRK-022`
+- **System Requirement(s)**: `SYSREQ-TRK-005`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -339,6 +363,7 @@
 
 ### REQ-TRK-009: Total Time Persistence [Verified]
 - **Tests**: `TST-TRK-002`
+- **System Requirement(s)**: `SYSREQ-TRK-003`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -348,6 +373,7 @@
 
 ### REQ-TRK-010: Live Tracking Finalization Event Dispatch [Implemented]
 - **Tests**: `TST-TRK-008`, `TST-TRK-022`
+- **System Requirement(s)**: `SYSREQ-TRK-003`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -361,6 +387,7 @@
 
 ### REQ-TRK-011: Intelligent Workout Auto-Naming based on Recognized Start and Destination Lieblingsorte [Verified]
 - **Tests**: `TST-TRK-003`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -405,6 +432,7 @@
 
 ### REQ-TRK-012: Distance-Enriched Auto-Generated Workout Names for Start-Location Sessions [Verified]
 - **Tests**: `TST-TRK-004`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -460,6 +488,7 @@
 
 ### REQ-TRK-013: GPS Speed Inactivity Watchdog, Gradual Speed Decay & Pace Nullification Architecture [Verified]
 - **Tests**: `TST-TRK-005`
+- **System Requirement(s)**: `SYSREQ-TRK-002`, `SYSREQ-TRK-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -507,6 +536,7 @@
 
 ### REQ-TRK-014: Successive Geodesic Location Delta Fallback for Missing GPS Bearing and Speed in SpeedAndLocationDevice [Implemented]
 - **Tests**: `TST-TRK-006`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -555,6 +585,7 @@
 
 ### REQ-TRK-015: Permission-Gated Foreground Service Types in TrackerService [Verified]
 - **Tests**: `TST-TRK-007`, `TST-TRK-025`, `TST-TRK-026`
+- **System Requirement(s)**: `SYSREQ-TRK-005`
 - **Priority**: Medium
 - **Type**: Non-Functional
 - **Verification Method**: Unit
@@ -581,6 +612,7 @@
 
 ### REQ-TRK-016: Guaranteed Workout Finalization and Unconditional Completion Broadcast on Stop [Verified]
 - **Tests**: `TST-TRK-008`
+- **System Requirement(s)**: `SYSREQ-TRK-005`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -608,6 +640,7 @@
 
 ### REQ-CON-010: Internal Sensor Pairing [Verified]
 - **Tests**: `TST-CON-010`
+- **System Requirement(s)**: `SYSREQ-TRK-001`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -616,6 +649,7 @@
 
 ### REQ-CON-011: Barometric Cold-Start Baseline Protection [Implemented]
 - **Tests**: `TST-CON-002`
+- **System Requirement(s)**: `SYSREQ-TRK-001`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -624,6 +658,7 @@
 
 ### REQ-CON-012: Asynchronous BLE GATT Lifecycle, Thread-Safe Concurrency & Read Queue Null-Safety [Verified]
 - **Tests**: `TST-CON-003`
+- **System Requirement(s)**: `SYSREQ-TRK-002`
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
@@ -649,6 +684,7 @@
 
 ### REQ-CON-013: Barometric Altitude Sensor Initialization & Null-Safe Correction Dispatch [Verified]
 - **Tests**: `TST-CON-004`
+- **System Requirement(s)**: `SYSREQ-TRK-006`
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
@@ -674,6 +710,7 @@
 
 ### REQ-CON-014: BLE GATT Measurement Packet Parsing Resilience & Null-Safe Telemetry Extraction [Verified]
 - **Tests**: `TST-CON-005`
+- **System Requirement(s)**: `SYSREQ-TRK-006`
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
@@ -706,6 +743,7 @@
 
 ### REQ-CON-015: Smartphone Battery Level and Estimated Remaining Duration Telemetry Sensors (`PHONE_BATTERY` & `BATTERY_REMAINING_TIME`) [Verified]
 - **Tests**: `TST-CON-006`
+- **System Requirement(s)**: `SYSREQ-TRK-006`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -746,6 +784,7 @@
 
 ### REQ-CON-016: Smartphone Battery Remaining Duration Continuous Countdown & Discrete Transition Drain Rate Architecture [Implemented]
 - **Tests**: `TST-CON-007`
+- **System Requirement(s)**: `SYSREQ-TRK-006`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -792,6 +831,7 @@
 
 ### REQ-CON-017: Barometric Altimeter Idempotent Calibration, Delta Shift Dispatch, Physical Sanity Limiting & Historical Workout Data Sanitization [Verified]
 - **Tests**: `TST-CON-008`
+- **System Requirement(s)**: `SYSREQ-TRK-001`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -804,6 +844,7 @@
 
 ### REQ-CON-018: Robust Bluetooth LE Sensor Discovery: GATT Queue Deadlock Prevention and State Reset in BTSearchForNewDevicesEngine [Verified]
 - **Tests**: `TST-CON-009`
+- **System Requirement(s)**: `SYSREQ-TRK-002`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -840,6 +881,7 @@
 
 ### REQ-CON-019: Robust Bluetooth LE Sensor Discovery & Direct LE Transport Connection Architecture [Verified]
 - **Tests**: `TST-CON-011`, `TST-CON-021`
+- **System Requirement(s)**: `SYSREQ-TRK-002`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -896,6 +938,7 @@
 
 ### REQ-WEA-001: Support Pebble smartwatches for live metrics [Implemented]
 - **Tests**: `TST-MAN-001`
+- **System Requirement(s)**: Derived (SW-only) — Companion smartwatch software integration outside core BLE/ANT+ SYSREQs
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: On-Device Manual
@@ -905,6 +948,7 @@
 
 ### REQ-FIL-007: Coupled Unicycle Odometry Extended Kalman Filter Engine [Verified]
 - **Tests**: `TST-FUSION-001`
+- **System Requirement(s)**: `SYSREQ-TRK-003`, `SYSREQ-TRK-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -914,6 +958,7 @@
 
 ### REQ-FIL-008: Magnetometer-Free Quaternion Body-to-World Gyro Yaw-Rate Projection [Verified]
 - **Tests**: `TST-FUSION-001`
+- **System Requirement(s)**: `SYSREQ-TRK-003`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -923,6 +968,7 @@
 
 ### REQ-FIL-009: Continuous Odometry Dead Reckoning in GPS-Denied Environments [Verified]
 - **Tests**: `TST-FUSION-002`
+- **System Requirement(s)**: `SYSREQ-TRK-003`, `SYSREQ-TRK-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -932,6 +978,7 @@
 
 ### REQ-FIL-010: Gated Online Wheel Circumference Auto-Calibration [Verified]
 - **Tests**: `TST-FUSION-003`
+- **System Requirement(s)**: `SYSREQ-TRK-003`, `SYSREQ-TRK-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -941,6 +988,7 @@
 
 ### REQ-FIL-011: Null-Safe Sensor Filtering [Verified]
 - **Tests**: `TST-FIL-001`, `TST-FIL-002`, `TST-FIL-014`, `TST-FIL-015`
+- **System Requirement(s)**: `SYSREQ-TRK-003`
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
@@ -949,6 +997,7 @@
 
 ### REQ-TRK-017: Guaranteed Defensive Location Device Initialization on Tracking Startup and BANAL Connection [Verified]
 - **Tests**: `TST-TRK-009`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -989,6 +1038,7 @@
 
 ### REQ-FIL-013: Continuous Pre-Start Rolling Telemetry Filtering, Session Reset Isolation & Live Cockpit Metric Readiness [Verified]
 - **Tests**: `TST-FIL-005`, `TST-FIL-015`
+- **System Requirement(s)**: `SYSREQ-TRK-003`, `SYSREQ-TRK-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1038,6 +1088,7 @@
 
 ### REQ-TRK-018: Sport-Specific Auto-Pause Engine with Anti-Chatter Hysteresis, Mutex Precedence, Sensor Dropout Guard, Synchronous Ingestion Gating, and Sport-Decoupled Thresholds [Verified]
 - **Tests**: `TST-TRK-010`, `TST-TRK-020`
+- **System Requirement(s)**: `SYSREQ-TRK-006`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1120,6 +1171,7 @@
 
 ### REQ-TRK-019: Real-Time Power-to-Weight (W/kg) Cockpit Telemetry & Athlete Weight Baseline Architecture [Verified]
 - **Tests**: `TST-TRK-011`
+- **System Requirement(s)**: `SYSREQ-TRK-006`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1173,6 +1225,7 @@
 
 ### REQ-TRK-020: Live Normalized Power (NP) and Intensity Factor (IF) Calculations & Cockpit Integration [Verified]
 - **Tests**: `TST-TRK-012`
+- **System Requirement(s)**: `SYSREQ-TRK-006`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Integration
@@ -1237,6 +1290,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-021: Real-Time Mechanical Work (kJ) and Training Stress Score (TSS) Telemetry [Verified]
 - **Tests**: `TST-TRK-013`
+- **System Requirement(s)**: `SYSREQ-TRK-006`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1294,6 +1348,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 **Invariants**: Zero SecurityExceptions on service start; uninterrupted workout tracking; 100% clean-room test pass rate.]
 - **Tests**: `TST-TRK-014`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1337,6 +1392,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-023: Growing 1..29s Warm-Up Rolling Window for Live Normalized Power, Intensity Factor, and TSS [Verified]
 - **Tests**: `TST-TRK-015`
+- **System Requirement(s)**: `SYSREQ-TRK-005`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1369,6 +1425,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-024: Google Fused & Topographic DEM Priority Ordering in `MySensorManager`, Enum Declaration Alignment & `LINE_DISTANCE_m` Priority [Verified]
 - **Tests**: `TST-TRK-016`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1427,6 +1484,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-025: Deterministic `AdbGpsInjector` Mock Provider Lifecycle Bound to `PLAYING` State in `tools/replay_workout.py` [Implemented]
 - **Tests**: `TST-TRK-017`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
@@ -1455,6 +1513,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-026: Resumed Workout Sample Table Resolution, Asynchronous BANAL Binding Barrier, and Sample Write Error Surfacing in `TrackerService` [Verified]
 - **Tests**: `TST-TRK-018`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Integration
@@ -1491,6 +1550,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-027: Fault-Tolerant 1 Hz Sampling Loop, Clock Timer Exception Guard, and Volatile `BANALServiceComm` Snapshot Concurrency Safety [Verified]
 - **Tests**: `TST-TRK-019`
+- **System Requirement(s)**: `SYSREQ-TRK-006`
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
@@ -1522,6 +1582,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-028: `ProxySensor` Timestamp Delegation, Registered-Source Standstill Evaluation, Manual Resume State Synchronization & `ToneGenerator` Lifecycle Management [Verified]
 - **Tests**: `TST-TRK-020`
+- **System Requirement(s)**: `SYSREQ-TRK-005`
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
@@ -1536,6 +1597,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-029: Safe SQLite Column Identifier Escaping for Custom Device Names & Rate-Limited Sample Insert Failure Telemetry in `TrackerService` [Verified]
 - **Tests**: `TST-TRK-021`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1569,6 +1631,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-030: Fault-Isolated Workout Finalization, Dedicated `FINISHED=1` Commit, Defensive `AccumulatedSensorTypeSet` Copy, and Zero-Duration Average Speed Guard [Verified]
 - **Tests**: `TST-TRK-022`, `TST-TRK-025`, `TST-TRK-026`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1608,6 +1671,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-031: LiveWorkoutSession Instantiation & State Rehydration on Workout Resume (`RESUME_BY_USER` & `RESUME_SERVICE_RECREATION`) [Verified]
 - **Tests**: `TST-TRK-023`, `TST-TRK-029`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Integration
@@ -1639,6 +1703,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-032: Thread-Safe Sensor, Device, Filter, Service & Live Session Concurrency Architecture [Verified]
 - **Tests**: `TST-TRK-024`, `TST-TRK-028`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
@@ -1678,6 +1743,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-033: Non-Blocking `TrackerService.onDestroy()` Finalization on `mDbExecutor`, Deterministic `mScheduler` Thread Teardown, and `TrainingApplication` State Recovery on Async Init Failure [Verified]
 - **Tests**: `TST-TRK-025`, `TST-TRK-026`
+- **System Requirement(s)**: `SYSREQ-TRK-005`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1714,6 +1780,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-SEN-020: Streamlined Sensor Onboarding, Empty-State Action & Discovery Auto-Pairing [Verified]
 - **Tests**: `TST-SEN-020`
+- **System Requirement(s)**: `SYSREQ-TRK-001`, `SYSREQ-TRK-003`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1778,6 +1845,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-034: Foreground-Protected Asynchronous Workout Finalization and Stop Lifecycle Isolation [Verified]
 - **Tests**: `TST-TRK-026`, `TST-TRK-027`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: Medium
 - **Type**: Non-Functional
 - **Verification Method**: Unit
@@ -1824,6 +1892,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 **Invariants**: Rule 29 (`FINISHED = 1` committed first), `WakeLock` held until finalization completes, zero main-thread database blocking, and 100% clean-room test pass rate MUST NOT be broken.
 ### REQ-TRK-035: Deterministic BANAL State Snapshotting and Bound Lifecycle Preservation During Asynchronous Workout Finalization [Verified]
 - **Tests**: `TST-TRK-027`
+- **System Requirement(s)**: `SYSREQ-TRK-006`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1863,6 +1932,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-SEN-021: Lock-Free Initial newValue Dispatch & Decoupled ProxySensor Monitor Lifecycle [Verified]
 - **Tests**: `TST-TRK-028`
+- **System Requirement(s)**: `SYSREQ-TRK-001`, `SYSREQ-TRK-003`
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
@@ -1899,6 +1969,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-036: In-Memory `LiveWorkoutSession` Reuse on User Resume and Safe Publication after Rehydration [Verified]
 - **Tests**: `TST-TRK-029`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: Medium
 - **Type**: Non-Functional
 - **Verification Method**: Unit
@@ -1932,6 +2003,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-CON-020: Resilient Bluetooth LE & ANT+ Reconnection, Immutable Telemetry Dispatch, and Queue Integrity Architecture [Verified]
 - **Tests**: `TST-CON-012`
+- **System Requirement(s)**: `SYSREQ-TRK-002`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1985,6 +2057,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-037: Speed Sensor Standstill vs. In-Motion Signal Loss (Tunnel / Dropout) Discrimination in AutoPauseManager and Static Coupling Decoupling [Verified]
 - **Tests**: `TST-TRK-030`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -2031,6 +2104,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-038: Constructor State Seeding Parity (Rule 51), Telemetry-Gated W'bal Emission (Rule 52), Stationary/Paused W/kg Alignment, and Aftermath Presentation Defense [Verified]
 - **Tests**: `TST-TRK-031`
+- **System Requirement(s)**: `SYSREQ-TRK-006`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -2058,6 +2132,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-FIL-014: Backend Filter Key Normalization, Runtime 'Best Sensor' Field Registration & Post-Trim Rolling Filter NaN Guard [Verified]
 - **Tests**: `TST-FIL-014`
+- **System Requirement(s)**: `SYSREQ-TRK-003`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -2111,6 +2186,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-CON-021: BLUETOOTH_ADMIN Manifest Declaration for Android 8–11 Compatibility and Defensive BLE Scan Exception Handling [Verified]
 - **Tests**: `TST-CON-021`
+- **System Requirement(s)**: `SYSREQ-TRK-006`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -2159,6 +2235,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-CON-022: Automated BLE/ANT+ Pedal Power Balance Reference Normalization & Obsolete UI Checkbox Deprecation [Verified]
 - **Tests**: `TST-CON-022`
+- **System Requirement(s)**: `SYSREQ-TRK-006`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -2216,6 +2293,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-039: Tracking Subsystem Robustness, Resource Lifecycle & Rate-Limited Error Telemetry Hygiene [Verified]
 - **Tests**: `TST-TRK-039`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: Medium
 - **Type**: Non-Functional
 - **Verification Method**: Integration
@@ -2270,6 +2348,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-040: Landscape Cockpit Dual-Pane Layout, Widescreen Sensor Grid & Sub-Pane Overlay Docking [Verified]
 - **Tests**: `TST-TRK-040`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -2319,6 +2398,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-041: Geodesic Displacement Plausibility Gating for Distance Accumulation & Canonical Multi-Sensor Summary Filtering [Verified]
 - **Tests**: `TST-TRK-041`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -2357,6 +2437,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-042: 1-Hz Live-Tracking Allocation Hotspot Elimination, Recomposition Decoupling & Bounded Polyline Serialization [Verified]
 - **Tests**: `TST-TRK-042`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: Medium
 - **Type**: Non-Functional
 - **Verification Method**: Unit
@@ -2404,6 +2485,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-043: Sport-Specific Auto-Pause Resume Debounce & Symmetric Single-Threshold Evaluation [Verified]
 - **Tests**: `TST-TRK-043`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -2447,6 +2529,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-044: Optional Automatic Stationary Auto-Pause at Workout Start [Verified]
 - **Tests**: `TST-TRK-044`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -2492,6 +2575,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-045: Clear Non-Recording Status Indication: Unified HUD Banner and Grid Dimming [Verified]
 - **Tests**: `TST-TRK-045`
+- **System Requirement(s)**: `SYSREQ-TRK-005`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -2537,6 +2621,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-046: Per-Sensor-Field Display Elements Configuration: Value and Bar Gating [Verified]
 - **Tests**: `TST-TRK-046`
+- **System Requirement(s)**: `SYSREQ-TRK-005`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -2589,6 +2674,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-047: Cockpit Manual Altitude Calibration with Permanent Known Location Persistence and Retroactive Piecewise-Linear Drift Correction [Verified]
 - **Tests**: `TST-TRK-047`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -2646,6 +2732,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-SEN-025: Pairable Position-Based Elevation Sensor & Dedicated Spatial DEM Cache [Verified]
 - **Tests**: `TST-SEN-025`
+- **System Requirement(s)**: `SYSREQ-TRK-001`, `SYSREQ-TRK-003`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -2711,6 +2798,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-048: Stationary GPS Jitter Suppression, Doppler Zero Preservation & Anchor Pinning [Verified]
 - **Tests**: `TST-TRK-048`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -2750,6 +2838,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-049: Post-Workout State Cleansing, Breadcrumb Purge & Idle Service Dormancy [Verified]
 - **Tests**: `TST-TRK-049`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -2797,6 +2886,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-050: Indirect Tire Pressure Monitoring (iTPMS) via GPS vs. Wheel Circumference Drift [Verified]
 - **Tests**: `TST-TRK-050`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -2841,6 +2931,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-SEN-026: Specialized Altitude Devices: Barometric Altimeter Naming Parity, Idempotent SQLite Migration & Educational Operation Details [Verified]
 - **Tests**: `TST-SEN-026`
+- **System Requirement(s)**: `SYSREQ-TRK-001`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -2881,6 +2972,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-051: Dynamic SQLite Schema Discovery via PRAGMA table_info & Decoupled Summary Telemetry [Verified]
 - **Tests**: `TST-TRK-051`
+- **System Requirement(s)**: `SYSREQ-TRK-005`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -2919,6 +3011,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-CON-023: Paired BLE Random Static Address Resolution, Scan-Assisted Connection & Configurable Search Timeout [Verified]
 - **Tests**: `TST-CON-023`
+- **System Requirement(s)**: `SYSREQ-TRK-002`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -2960,6 +3053,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-CON-024: BLE Crank Revolution 16-Bit Rollover, Precision & Disconnect State Reset [Verified]
 - **Tests**: `TST-CON-024`
+- **System Requirement(s)**: `SYSREQ-TRK-002`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -2998,6 +3092,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-CON-025: ANT+ Device Driver Resource Cleanup & Telemetry Routing Safety [Verified]
 - **Tests**: `TST-CON-025`
+- **System Requirement(s)**: `SYSREQ-TRK-002`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -3034,6 +3129,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-CON-026: BLE Run Speed Device Lifecycle & Telemetry Hygiene [Verified]
 - **Tests**: `TST-CON-026`
+- **System Requirement(s)**: `SYSREQ-TRK-002`
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
@@ -3072,6 +3168,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-052: Zero-Allocation 1-Hz ClockTimeTask Time-of-Day Formatting [Verified]
 - **Tests**: `TST-TRK-052`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: Medium
 - **Type**: Non-Functional
 - **Verification Method**: Unit
@@ -3104,6 +3201,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-SEN-027: Complete Removal of Obsolete Network Location Provider & Devices.db Version 10 Migration [Verified]
 - **Tests**: `TST-SEN-027`
+- **System Requirement(s)**: `SYSREQ-TRK-001`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -3141,6 +3239,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-053: Persisted Deduplicated Workout Diagnostic Errors & Actionable Report Dialog [Verified]
 - **Tests**: `TST-TRK-053`
+- **System Requirement(s)**: `SYSREQ-TRK-005`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -3206,6 +3305,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-054: Hardware Volume Keys Cockpit Tab Cycling with Cyclic Wrap-Around [Verified]
 - **Tests**: `TST-TRK-054`
+- **System Requirement(s)**: `SYSREQ-TRK-006`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -3258,6 +3358,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-055: Persistent Sensor Proxy Binding & Automatic Filter Re-Connection [Verified]
 - **Tests**: `TST-TRK-055`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -3299,6 +3400,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-056: Google Fused Doppler Velocity Plausibility & Movement Pinning Prevention [Verified]
 - **Tests**: `TST-TRK-056`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -3335,6 +3437,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-057: Barometer Altitude Pocket-Compression Spike Rejection & Sourced DB Sync [Verified]
 - **Tests**: `TST-TRK-057`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -3373,6 +3476,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-058: Live Mean Maximal Power (MMP) Accumulators, Benchmark Durations (5s, 1m, 5m, 20m) & Cockpit MMP Curve Chart [Verified]
 - **Tests**: `TST-TRK-058`
+- **System Requirement(s)**: `SYSREQ-TRK-005`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -3439,6 +3543,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-059: Configurable Live Sparkline Graph Cockpit Tiles with Selectable Time Horizon Across Numeric SensorTypes [Verified]
 - **Tests**: `TST-TRK-059`
+- **System Requirement(s)**: `SYSREQ-TRK-005`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -3554,6 +3659,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-FIL-015: Filter Initialization State Tracking, Alpha Range Validation & Zero-Bias Elimination [Verified]
 - **Tests**: `TST-FIL-015`
+- **System Requirement(s)**: `SYSREQ-TRK-003`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -3609,6 +3715,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 - **Target Release**: `V5.0.0`
 - **Tickets**: `ATT-3540`, `ATT-7530`
 - **Tests**: `TST-CON-027`
+- **System Requirement(s)**: `SYSREQ-TRK-002`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -3665,6 +3772,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-060: Lipponen & Tarvainen RR Artifact Correction, Real-Time HRV Engine & NeuroKit2 Golden Parity [Verified]
 - **Tests**: `TST-TRK-060`
+- **System Requirement(s)**: `SYSREQ-TRK-006`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -3733,6 +3841,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-061: Live HRV Metrics and Aerobic Threshold Zone Indicators in Tracking Cockpit [Verified]
 - **Tests**: `TST-TRK-061`
+- **System Requirement(s)**: `SYSREQ-TRK-006`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -3816,6 +3925,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-CON-028: BLE Cycling Radar Protocol Driver, Serialized GATT Queue, Scalar Telemetry & Bike Equipment Integration [Verified]
 - **Tests**: `TST-CON-028`
+- **System Requirement(s)**: `SYSREQ-TRK-001`, `SYSREQ-TRK-002`, `SYSREQ-TRK-006`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -3901,6 +4011,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-CON-029: Built-in Cycling Radar Traffic Simulator & Scenario Engine [Verified]
 - **Tests**: `TST-CON-029`
+- **System Requirement(s)**: `SYSREQ-TRK-002`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -3939,6 +4050,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-062: Live Rearview Radar Vertical Edge Overlay Across Tracking Tabs [Verified]
 - **Tests**: `TST-TRK-062`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -3992,6 +4104,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-063: Radar Audio Chime and Haptic Alert Engine [Verified]
 - **Tests**: `TST-TRK-063`
+- **System Requirement(s)**: `SYSREQ-TRK-005`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -4039,6 +4152,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-CON-030: Garmin Varia BLE V2 High-Resolution Radar Stream & Vehicle Classification [Verified]
 - **Tests**: `TST-CON-030`
+- **System Requirement(s)**: `SYSREQ-TRK-002`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -4093,6 +4207,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-CON-031: BLE Radar Tail Light Mode Control, Smart Auto Persistence & Quick-Switch Unification [Verified]
 - **Tests**: `TST-CON-031`
+- **System Requirement(s)**: `SYSREQ-TRK-002`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -4172,6 +4287,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-CON-032: ANT+ Cycling Rearview Radar Profile (Device Type 0x28) Acquisition & Target Demuxing [Verified]
 - **Tests**: `TST-CON-032`
+- **System Requirement(s)**: `SYSREQ-TRK-002`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -4208,6 +4324,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-CON-033: ANT+ Bike Lights Profile (Device Type 0x23) Companion Channel, Connect Handshake & Tail Light Mode Control [Verified]
 - **Tests**: `TST-CON-033`
+- **System Requirement(s)**: `SYSREQ-TRK-002`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit / Integration
@@ -4248,6 +4365,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-CON-034: Environmental & Traffic-Adaptive Smart Tail Light Mode Automation [Verified]
 - **Tests**: `TST-CON-034`
+- **System Requirement(s)**: `SYSREQ-TRK-006`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -4293,6 +4411,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-CON-035: Smartphone IMU/GPS Deceleration Brake-Light Trigger for BLE & ANT+ (0x23) Radar Tail Lights [Verified]
 - **Tests**: `TST-CON-035`
+- **System Requirement(s)**: `SYSREQ-TRK-002`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -4343,6 +4462,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-CON-036: Resilient Mid-Workout BLE Peripheral Reconnection, Scan-Quota Throttling & Hardware Auto-Connect Architecture [Verified]
 - **Tests**: `TST-CON-036`
+- **System Requirement(s)**: `SYSREQ-TRK-002`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -4375,6 +4495,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-CON-037: ANT+ Bike Radar Cold-Start Channel Acquisition and UsbAntService Race Resilience [Verified]
 - **Tests**: `TST-CON-037`
+- **System Requirement(s)**: `SYSREQ-TRK-002`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -4420,6 +4541,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-CON-038: ANT+ Bike Radar Continuous Discovery, Channel Event Re-Opening & ExtendedData SDK Parsing [Verified]
 - **Tests**: `TST-CON-038`
+- **System Requirement(s)**: `SYSREQ-TRK-002`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -4464,6 +4586,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-CON-039: ANT+ Bike Radar Shutdown Cleanup, MainLooper Thread Serialization & Channel-Close Reconnect [Verified]
 - **Tests**: `TST-CON-039`
+- **System Requirement(s)**: `SYSREQ-TRK-002`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -4507,6 +4630,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-CON-040: ANT+ Radar Track Identity Continuity, 0-Bin Target Ingestion & Rolling Window Latch Preservation [Verified]
 - **Tests**: `TST-CON-040`
+- **System Requirement(s)**: `SYSREQ-TRK-002`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -4550,6 +4674,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-CON-041: Concurrent Radar Source Arbitration & Multi-Transport State Decoupling [Verified]
 - **Tests**: `TST-CON-041`
+- **System Requirement(s)**: `SYSREQ-TRK-002`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -4593,6 +4718,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-CON-042: Radar Application State Preservation During Preemption & Hardware Packet Ingestion [Verified]
 - **Tests**: `TST-CON-042`
+- **System Requirement(s)**: `SYSREQ-TRK-002`
 - **Priority**: Critical
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -4621,6 +4747,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-CON-043: Cockpit Radar Tail Light Button, Live Auto Status & Canonical Action Row [Verified]
 - **Tests**: `TST-CON-043`
+- **System Requirement(s)**: `SYSREQ-TRK-002`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -4668,6 +4795,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-064: 1-Tap Radar Audio Snooze, Peloton-Mode Audio Sync & Smart Urban Alert Suppression [Verified]
 - **Tests**: `TST-TRK-064`
+- **System Requirement(s)**: `SYSREQ-TRK-005`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -4714,6 +4842,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-065: 3D Stereo Lateral-Offset Panning & Approach-Speed Pitch Modulation for Radar Audio [Verified]
 - **Tests**: `TST-TRK-065`
+- **System Requirement(s)**: `SYSREQ-TRK-006`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -4764,6 +4893,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 ### REQ-TRK-066: Repository-Only Live Recording Service Database Access Layer (Phase C) [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-TRK-066`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -4801,6 +4931,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 ### REQ-TRK-067: Firmware-Smoothed & Quantized Synthetic RR Stream Detection (HrvSignalQualityAnalyzer) [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-TRK-067`
+- **System Requirement(s)**: `SYSREQ-TRK-006`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -4862,6 +4993,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 ### REQ-TRK-068: Smoothed RR Stream Warnings & Sensor Compatibility Guidance across Presentation Surfaces [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-TRK-068`
+- **System Requirement(s)**: `SYSREQ-TRK-006`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit / Review
@@ -4925,6 +5057,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 ### REQ-TRK-069: ANT+ UTC Epoch Timestamping, Reconnection Sensor Registration & BLE Bundled Drift Guard [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-TRK-069`
+- **System Requirement(s)**: `SYSREQ-TRK-003`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -4967,6 +5100,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 ### REQ-TRK-070: 2-Level Sensor Hierarchy (SensorSubCategory), Unified HRV/Radar Groups & Complete ActivityType Sensor Mapping [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-TRK-070`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -5043,6 +5177,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-071: Google Fused Location Registration Idempotency & Teardown Lifecycle [Verified]
 - **Tests**: `TST-TRK-071`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: Medium
 - **Type**: Non-Functional
 - **Verification Method**: Unit
@@ -5083,6 +5218,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 ### REQ-TRK-072: Guided DFA a1 Step & Ramp Test Protocol Screen [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-TRK-072`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -5186,6 +5322,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 ### REQ-TRK-073: Live 2D Lane-Offset & Vehicle Sizing Radar Edge Overlay [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-TRK-073`
+- **System Requirement(s)**: `SYSREQ-TRK-006`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -5223,6 +5360,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 ### REQ-TRK-074: Duplicate Location Callback Filtering, Asymmetric Deadband Separation & Stationary Pinning Entry Hysteresis in `SpeedAndLocationDevice` [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-TRK-074`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -5279,6 +5417,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 ### REQ-TRK-075: Core Tracking Pipeline Integration Verification (TrackerService, Sensor Layer & SQLite Database) [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-TRK-075`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Integration
@@ -5319,6 +5458,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 ### REQ-TRK-076: Defensive Concurrency and Re-Entrant Stop-to-Start Lifecycle in TrackerService [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-TRK-076`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -5359,6 +5499,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 ### REQ-SEN-028: Pairable Virtual Sensor ATT Fused (Position und Geschwindigkeit) with Priority Routing and Input Source Guards [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-SEN-028`
+- **System Requirement(s)**: `SYSREQ-TRK-001`, `SYSREQ-TRK-003`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -5412,6 +5553,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 ### REQ-FIL-016: Kinematic Terrain-Slope Altitude Fusion Engine & Pairable ATT Fused (Höhe und Steigung) Virtual Device [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-FIL-016`
+- **System Requirement(s)**: `SYSREQ-TRK-003`, `SYSREQ-TRK-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -5471,6 +5613,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 ### REQ-FIL-017: Post-Workout Extended Rauch-Tung-Striebel (ERTS/RTS) Zero-Phase Smoothing Engine [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-FIL-017`
+- **System Requirement(s)**: `SYSREQ-TRK-003`, `SYSREQ-TRK-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -5526,6 +5669,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 ### REQ-TRK-077: Indoor GPS Suppression, External Speed Sensor Coupling & IMU Rest-Variance Stationary Pinning [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-TRK-077`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -5585,6 +5729,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 ### REQ-SEN-029: Front/Rear Wheel Speed Sensor Mounting Position Tracking, Selection Dialog & Dual-Sensor Guidance [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-SEN-029`
+- **System Requirement(s)**: `SYSREQ-TRK-001`, `SYSREQ-TRK-003`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -5638,6 +5783,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 ### REQ-SEN-030: Per-Bike Front/Rear Wheel Circumference Time-Series History & GPS-Free Dual-Wheel iTPMS Puncture Detection [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-SEN-030`
+- **System Requirement(s)**: `SYSREQ-TRK-001`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -5686,6 +5832,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 ### REQ-FIL-018: Epoch-Bounded Barometric Calibration & Non-Barometric Column Isolation [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-FIL-018`
+- **System Requirement(s)**: `SYSREQ-TRK-003`, `SYSREQ-TRK-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -5726,6 +5873,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 ### REQ-TRK-078: Mid-Workout Crash Recovery Accumulator Preservation and Baseline Seeding [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-TRK-078`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -5766,6 +5914,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 ### REQ-TRK-079: Application-Scoped DataStore Lifecycle and Offscreen Cockpit Map Disposal [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-TRK-079`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
@@ -5808,6 +5957,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 ### REQ-TRK-080: Mid-Workout Process Restart Cockpit Telemetry, Live Map Track & Sparkline Rehydration [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-TRK-080`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -5854,6 +6004,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 ### REQ-TRK-081: Per-Tile Cockpit Sparkline Graph Color Persistence and Minimalist Color Editor UI [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-TRK-081`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -5911,6 +6062,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 ### REQ-TRK-082: Decoupled Multi-Color Dynamic Zone Sparkline Rendering for HR, Power, and HRV DFA α1 [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-TRK-082`
+- **System Requirement(s)**: `SYSREQ-TRK-006`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit

@@ -1131,6 +1131,7 @@
 
 ### REQ-RAD-005: Workout Traffic Persistence, Session Totals & Aftermath Summary Card [Verified]
 - **Tests**: `TST-RAD-005`
+- **System Requirement(s)**: `SYSREQ-TRK-006`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit, Integration

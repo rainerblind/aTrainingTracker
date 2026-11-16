@@ -2626,9 +2626,64 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
         all_mapped_reqs = {r for reqs in report["sys_to_swe_map"].values() for r in reqs}
         self.assertFalse(any(r.startswith("REQ-DEX-") for r in all_mapped_reqs))
         self.assertFalse(any(r.startswith("REQ-PRO-") for r in all_mapped_reqs))
-        self.assertEqual(report["swe_refinement_total_count"], 355)
-        self.assertEqual(report["swe_refinement_covered_count"], 49)
-        self.assertAlmostEqual(report["swe_refinement_coverage_pct"], 13.8, places=2)
+        self.assertEqual(report["swe_refinement_total_count"], 362)
+        self.assertEqual(report["swe_refinement_covered_count"], 346)
+        self.assertAlmostEqual(report["swe_refinement_coverage_pct"], 95.58, places=2)
+
+    def test_scenario_69_tst_pro_103_1_system_requirement_attribute_and_derived_parser(self):
+        """TST-PRO-103.1: Parse System Requirement(s) (SYSREQ-* & Derived (SW-only)) and enforce unclassified rejection."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            sys_dir = os.path.join(tmpdir, "docs", "system")
+            req_dir = os.path.join(tmpdir, "docs", "requirements")
+            os.makedirs(sys_dir)
+            os.makedirs(req_dir)
+
+            with open(os.path.join(sys_dir, "sysreq_trk.md"), "w", encoding="utf-8") as f:
+                f.write("### SYSREQ-TRK-001: Sensors\n")
+            with open(os.path.join(req_dir, "req_trk.md"), "w", encoding="utf-8") as f:
+                f.write(
+                    "### REQ-TRK-001: Linked [Verified]\n"
+                    "- **System Requirement(s)**: `SYSREQ-TRK-001`\n\n"
+                    "### REQ-WEA-001: Pebble Derived [Implemented]\n"
+                    "- **System Requirement(s)**: Derived (SW-only) — Companion watch software\n\n"
+                    "### REQ-TRK-002: Missing Classification [Verified]\n"
+                )
+
+            ok_fail, diag_fail, rep_fail = verify_system_software_traceability(
+                repo_root=tmpdir,
+                fail_on_unclassified_swe=True,
+            )
+            self.assertFalse(ok_fail)
+            self.assertEqual(rep_fail["unclassified_swe_refinement_reqs"], ["REQ-TRK-002"])
+            self.assertIn("REQ-WEA-001", rep_fail["swe_derived_sw_only_map"])
+            self.assertTrue(any("REQ-TRK-002" in d for d in diag_fail))
+
+            with open(os.path.join(req_dir, "req_trk.md"), "a", encoding="utf-8") as f:
+                f.write("- **System Requirement(s)**: `SYSREQ-TRK-001`\n")
+
+            ok_pass, _, rep_pass = verify_system_software_traceability(
+                repo_root=tmpdir,
+                fail_on_unclassified_swe=True,
+            )
+            self.assertTrue(ok_pass)
+            self.assertEqual(rep_pass["reverse_classified_count"], 3)
+            self.assertEqual(rep_pass["reverse_classified_pct"], 100.0)
+            self.assertEqual(rep_pass["unclassified_swe_refinement_reqs"], [])
+
+    def test_scenario_70_tst_pro_103_2_live_reverse_sys_trace_100pct(self):
+        """TST-PRO-103.2: Live repository achieves 100% System-Refinement classification with 0 unclassified REQs."""
+        ok, diag, report = verify_system_software_traceability(fail_on_unclassified_swe=True)
+        self.assertTrue(ok, f"Expected live --check-reverse-sys-trace pass, got: {diag}")
+        self.assertEqual(report["unclassified_swe_refinement_reqs"], [])
+        self.assertEqual(report["reverse_classified_count"], 362)
+        self.assertEqual(report["reverse_classified_pct"], 100.0)
+
+    def test_scenario_71_tst_pro_103_3_rad_clm_prefix_classification(self):
+        """TST-PRO-103.3: Assert RAD and CLM belong to SYSTEM_REFINED_PREFIXES and REQ-PRO-* stays excluded."""
+        self.assertIn("RAD", SYSTEM_REFINED_PREFIXES)
+        self.assertIn("CLM", SYSTEM_REFINED_PREFIXES)
+        self.assertIn("PRO", SWE_DERIVED_PREFIXES)
+        self.assertNotIn("PRO", SYSTEM_REFINED_PREFIXES)
 
 
 
