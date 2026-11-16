@@ -31,6 +31,8 @@ import com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEHeartRateDevic
 import com.atrainingtracker.banalservice.sensor.MySensorManager
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
+import com.atrainingtracker.trainingtracker.TrackingMode
+import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.polar.sdk.api.PolarBleApi
 import com.polar.sdk.api.model.PolarAccelerometerData
 import com.polar.sdk.api.model.PolarDeviceInfo
@@ -44,6 +46,9 @@ import io.mockk.spyk
 import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.flowOf
+import kotlin.math.PI
+import kotlin.math.roundToInt
+import kotlin.math.sin
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -77,6 +82,7 @@ class PolarOnlineStreamingBridgeTest {
 
     @After
     fun tearDown() {
+        TrainingApplication.setTrackingModeForTesting(TrackingMode.READY)
         PolarOfflineGattCoordinator.resetForTesting()
         sensorManager.shutDown()
         DeviceDataRepository.resetForTesting()
@@ -241,6 +247,123 @@ class PolarOnlineStreamingBridgeTest {
         assertEquals(9_500L, events[0].beatTimestampMs)
         assertEquals(10_000L, events[1].beatTimestampMs)
         assertEquals(10_490L, events[2].beatTimestampMs)
+
+        bridge.shutDown()
+    }
+
+    @Test
+    fun testH10Bridge_seedsStridesBaselineAndPublishesCanonicalStridesPerMinWithStandstillZeroing() {
+        // TST-SET-116.1
+        // TST-SET-116.3
+        // TST-SET-116.4
+        // TST-SET-116.5
+        TrainingApplication.setTrackingModeForTesting(TrackingMode.TRACKING)
+        val db = DevicesDatabaseManager.getInstance(context)
+        val h10Id = db.insertNewBluetoothDeviceIntoDB(
+            DeviceType.HRM,
+            "AA:BB:CC:DD:EE:77",
+            "Polar H10 77889900",
+            "Polar Electro",
+            95,
+            true
+        )
+
+        val bridge = PolarOnlineStreamingBridge(
+            context = context,
+            mySensorManager = sensorManager,
+            deviceId = h10Id,
+            macAddress = "AA:BB:CC:DD:EE:77",
+            dispatcher = Dispatchers.Unconfined,
+            sdkIntProvider = { 34 },
+            sportTypeProvider = { BSportType.RUN }
+        )
+
+        // Feed 10s of 100 Hz H10 chest running frames at 170 steps/min (85.0 strides/min) in 200ms chunks
+        // and verify stride 1 increments immediately from 0 -> 1 without baseline swallowing.
+        var firstNonZeroStride: Int? = null
+        val accSamples = (0..1000).map { idx ->
+            val tMs = idx * 10L
+            val zMg = (1000.0 + 650.0 * sin(2.0 * PI * (170.0 / 60.0) * (tMs / 1000.0))).roundToInt()
+            PolarAccelerometerData.PolarAccelerometerDataSample(tMs * 1_000_000L, 0, 0, zMg)
+        }
+        for (chunk in accSamples.chunked(20)) {
+            bridge.processAccData(PolarAccelerometerData(chunk))
+            val currentStrides = bridge.getSensor(SensorType.STRIDES).value as Int
+            if (firstNonZeroStride == null && currentStrides > 0) {
+                firstNonZeroStride = currentStrides
+            }
+        }
+
+        val cadenceSpm = bridge.getSensor(SensorType.CADENCE).value as Double
+        val strides = bridge.getSensor(SensorType.STRIDES).value as Int
+        assertEquals("First detected stride must publish 1 immediately (seeded 0 baseline)", 1, firstNonZeroStride)
+        assertEquals("H10 live bridge must publish 85.0 strides/min (half-step equivalence)", 85.0, cadenceSpm, 1.0)
+        assertTrue("Seeded MyIntegerAccumulatorSensor must reflect >= 12 strides, got $strides", strides >= 12)
+
+        // Feed 4s of flat standstill -> CADENCE must zero to 0.0 with zero phantom strides.
+        val standstillSamples = (1001..1400).map { idx ->
+            val tMs = idx * 10L
+            PolarAccelerometerData.PolarAccelerometerDataSample(tMs * 1_000_000L, 0, 0, 1000)
+        }
+        bridge.processAccData(PolarAccelerometerData(standstillSamples))
+
+        assertEquals(0.0, bridge.getSensor(SensorType.CADENCE).value as Double, 0.0)
+        assertEquals(strides, bridge.getSensor(SensorType.STRIDES).value as Int)
+
+        bridge.shutDown()
+    }
+
+    @Test
+    fun testVerityBridge_processesGyroAndAccIntoStridesPerMin() {
+        // TST-SET-116.2
+        TrainingApplication.setTrackingModeForTesting(TrackingMode.TRACKING)
+        val db = DevicesDatabaseManager.getInstance(context)
+        val verityId = db.insertNewBluetoothDeviceIntoDB(
+            DeviceType.HRM,
+            "AA:BB:CC:DD:EE:88",
+            "Polar Verity Sense 8899AABB",
+            "Polar Electro",
+            95,
+            true
+        )
+
+        val bridge = PolarOnlineStreamingBridge(
+            context = context,
+            mySensorManager = sensorManager,
+            deviceId = verityId,
+            macAddress = "AA:BB:CC:DD:EE:88",
+            dispatcher = Dispatchers.Unconfined,
+            sdkIntProvider = { 34 },
+            sportTypeProvider = { BSportType.RUN }
+        )
+
+        val strideFreqHz = 84.0 / 60.0 // 84.0 strides/min
+        val packetStepMs = 1000.0 / 52.0
+        for (pktStart in 0 until 520 step 10) {
+            val accList = mutableListOf<PolarAccelerometerData.PolarAccelerometerDataSample>()
+            val gyroList = mutableListOf<PolarGyroData.PolarGyroDataSample>()
+            for (k in pktStart until minOf(pktStart + 10, 520)) {
+                val tMs = (k * packetStepMs).roundToInt().toLong()
+                val tNs = tMs * 1_000_000L
+                val wave = sin(2.0 * PI * strideFreqHz * (tMs / 1000.0))
+                accList.add(PolarAccelerometerData.PolarAccelerometerDataSample(tNs, 0, 0, 1000))
+                gyroList.add(
+                    PolarGyroData.PolarGyroDataSample(
+                        tNs,
+                        (120.0 * wave).toFloat(),
+                        (-110.0 * wave).toFloat(),
+                        (80.0 * wave).toFloat()
+                    )
+                )
+            }
+            bridge.processAccData(PolarAccelerometerData(accList))
+            bridge.processGyroData(PolarGyroData(gyroList))
+        }
+
+        val cadenceSpm = bridge.getSensor(SensorType.CADENCE).value as Double
+        val strides = bridge.getSensor(SensorType.STRIDES).value as Int
+        assertEquals("Verity Sense arm-swing bridge must publish 84.0 strides/min", 84.0, cadenceSpm, 1.5)
+        assertTrue("Verity Sense bridge must increment SensorType.STRIDES, got $strides", strides >= 10)
 
         bridge.shutDown()
     }

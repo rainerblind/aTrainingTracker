@@ -65,8 +65,6 @@ import kotlinx.coroutines.launch
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.abs
-import kotlin.math.roundToInt
-import kotlin.math.sqrt
 
 /**
  * Persistent single-GATT bridge for Polar H10 (`ACC`) and Verity Sense (`ACC` + `GYRO`) live
@@ -100,18 +98,11 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
     companion object {
         private const val TAG = "PolarOnlineImuBridge"
         private const val DRIFT_THRESHOLD_MS = 2000.0
-        private const val MILLIS_PER_MINUTE = 60_000.0
-        private const val GRAVITY_BASELINE_MG = 1000.0
-        private const val STEP_PEAK_THRESHOLD_MG = 180.0
-        private const val MIN_STEP_INTERVAL_MS = 260L
-        private const val MAX_STEP_INTERVAL_MS = 2000L
         private const val NS_PER_MS = 1_000_000L
         private const val H10_DEFAULT_ACC_HZ = 100
         private const val H10_FALLBACK_ACC_HZ = 50
         private const val H10_HIGH_RATE_ACC_HZ = 200
         private const val VERITY_IMU_HZ = 52
-        private const val MIN_VALID_CADENCE_SPM = 30.0
-        private const val MAX_VALID_CADENCE_SPM = 240.0
     }
 
     private lateinit var mHeartRateSensor: MySensor<Int>
@@ -146,13 +137,18 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
     private var lastBeatTimestampMs = 0.0
     private var packetCounter = 0
 
-    // Lightweight step-peak cadence state (mG domain, timestamped in ms)
-    private var lastStepTimestampMs = 0L
-    private var cumulativeStepCount = 0
-    private var prevDynamicMagMg = 0.0
-    private var prevPrevDynamicMagMg = 0.0
-    private var lastSampleTimestampMs = 0L
-    private var syntheticSampleCounter = 0L
+    private val cadenceEstimatorLock = Any()
+    private val cadenceEstimator: PolarLiveRunningCadenceEstimator by lazy {
+        PolarLiveRunningCadenceEstimator(
+            mode = if (isVeritySense) {
+                PolarLiveRunningCadenceEstimator.Mode.VERITY_SENSE_ARM
+            } else {
+                PolarLiveRunningCadenceEstimator.Mode.H10_CHEST
+            },
+            onCadence = { cadenceSpm -> mCadenceSensor?.newValue(cadenceSpm) },
+            onStride = { cumulativeStrides -> mStridesSensor?.accumulate(cumulativeStrides) }
+        )
+    }
 
     private val deviceNameStr: String by lazy { getName() ?: macAddress }
     private val manufacturerStr: String by lazy { getManufacturerName() ?: "" }
@@ -484,20 +480,18 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
         syncCadenceSensorRegistration(isRunSport)
         if (!isRunSport) return
 
-        for (sample in data.samples) {
-            val timestampMs = resolveSampleTimestampMs(sample.timeStamp)
-            val magMg = sqrt(
-                sample.x.toDouble() * sample.x +
-                    sample.y.toDouble() * sample.y +
-                    sample.z.toDouble() * sample.z
-            )
-            val dynamicMag = abs(magMg - GRAVITY_BASELINE_MG)
-            detectStepPeak(dynamicMag, timestampMs)
+        synchronized(cadenceEstimatorLock) {
+            for (sample in data.samples) {
+                val timestampMs = if (sample.timeStamp > 0L) sample.timeStamp / NS_PER_MS else 0L
+                cadenceEstimator.onAccSample(sample.x, sample.y, sample.z, timestampMs)
+            }
         }
     }
 
     /**
-     * Processes live [PolarGyroData] frames and forwards them to registered IMU listeners.
+     * Processes live [PolarGyroData] frames, notifies raw IMU listeners, and feeds Verity Sense
+     * arm-swing gyroscope telemetry into [PolarLiveRunningCadenceEstimator] when [BSportType.RUN]
+     * is active (`REQ-SET-114.3`).
      */
     fun processGyroData(data: PolarGyroData) {
         if (isShutDown.get()) return
@@ -508,46 +502,16 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
                 Log.w(TAG, "Error in ImuFrameListener.onGyroFrame: ${e.message}")
             }
         }
-    }
+        val isRunSport = isRunSportActive()
+        syncCadenceSensorRegistration(isRunSport)
+        if (!isRunSport || !isVeritySense) return
 
-    private fun resolveSampleTimestampMs(rawTimestampNs: Long): Long {
-        if (rawTimestampNs > 0L) {
-            val ms = rawTimestampNs / NS_PER_MS
-            lastSampleTimestampMs = ms
-            return ms
-        }
-        syntheticSampleCounter += 10L
-        lastSampleTimestampMs += 10L
-        return lastSampleTimestampMs
-    }
-
-    private fun detectStepPeak(currentDynamicMg: Double, timestampMs: Long) {
-        val isPeak = prevDynamicMagMg > STEP_PEAK_THRESHOLD_MG &&
-            prevDynamicMagMg >= prevPrevDynamicMagMg &&
-            prevDynamicMagMg > currentDynamicMg
-
-        if (isPeak) {
-            val stepTs = timestampMs
-            if (lastStepTimestampMs > 0L) {
-                val deltaMs = stepTs - lastStepTimestampMs
-                if (deltaMs in MIN_STEP_INTERVAL_MS..MAX_STEP_INTERVAL_MS) {
-                    val cadenceSpm = (MILLIS_PER_MINUTE / deltaMs.toDouble())
-                        .coerceIn(MIN_VALID_CADENCE_SPM, MAX_VALID_CADENCE_SPM)
-                    mCadenceSensor?.newValue((cadenceSpm * 10.0).roundToInt() / 10.0)
-                    cumulativeStepCount++
-                    if (cumulativeStepCount % 2 == 0) {
-                        mStridesSensor?.accumulate(cumulativeStepCount / 2)
-                    }
-                    lastStepTimestampMs = stepTs
-                } else if (deltaMs > MAX_STEP_INTERVAL_MS) {
-                    lastStepTimestampMs = stepTs
-                }
-            } else {
-                lastStepTimestampMs = stepTs
+        synchronized(cadenceEstimatorLock) {
+            for (sample in data.samples) {
+                val timestampMs = if (sample.timeStamp > 0L) sample.timeStamp / NS_PER_MS else 0L
+                cadenceEstimator.onGyroSample(sample.x, sample.y, sample.z, timestampMs)
             }
         }
-        prevPrevDynamicMagMg = prevDynamicMagMg
-        prevDynamicMagMg = currentDynamicMg
     }
 
     /**
@@ -566,6 +530,8 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
                 val strideSensor = MyIntegerAccumulatorSensor(this, SensorType.STRIDES, true)
                 mStridesSensor = strideSensor
                 addAndRegisterSensor(strideSensor)
+                // Seed baseline 0 so the first detected stride increments SensorType.STRIDES to 1.
+                strideSensor.accumulate(0)
             }
         } else {
             unregisterImuCadenceSensors()
@@ -582,6 +548,9 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
             mMySensorManager?.unregisterSensor(sensor)
             removeSensor(SensorType.STRIDES)
             mStridesSensor = null
+        }
+        synchronized(cadenceEstimatorLock) {
+            cadenceEstimator.reset()
         }
     }
 

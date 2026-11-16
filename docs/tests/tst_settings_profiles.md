@@ -1391,3 +1391,21 @@
 
 
 
+---
+
+### TST-SET-116: **Polar Live Running Cadence & Stride Counter Test Suite (`ATT-8017`)** [Verified]
+- **Requirement(s)**: `REQ-SET-114`
+- **Component**: `PolarLiveRunningCadenceEstimator.kt`, `PolarOnlineStreamingBridge.kt`, `FitFileWriter.kt`
+- **Jira**: `ATT-8017`
+- **Status**: Verified
+- **Test Description**:
+  1. *Polar H10 Sternum `ACC` Accuracy & Autocorrelation (`TST-SET-116.1`)*:
+  • Verify `PolarLiveRunningCadenceEstimator` processes synthetic H10 `ACC` streams (50/100 Hz) across `60–100` strides/min (`120–200` steps/min) using `1.2–4.0 Hz` band-pass + adaptive peak + `5s` autocorrelation within `±2` strides/min without harmonic doubling/halving.
+  2. *Polar Verity Sense `GYRO+ACC` Fusion & Rotation Invariance (`TST-SET-116.2`)*:
+  • Verify `PolarLiveRunningCadenceEstimator` processes synthetic 52 Hz Verity Sense `ACC+GYRO` arm-swing streams (`0.6–2.0 Hz`) within `±2` strides/min across `60–100` strides/min and arbitrary 3D sensor rotations.
+  3. *Standstill Zeroing & 1-Hz Emission (`TST-SET-116.3`)*:
+  • Verify `SensorType.CADENCE` emits steady `1 Hz` updates during motion and drops cleanly to `0.0` within `>= 3s` of standstill via motion-energy gating.
+  4. *First-Stride Baseline Seeding (`TST-SET-116.4`)*:
+  • Verify `PolarOnlineStreamingBridge.syncCadenceSensorRegistration()` calls `mStridesSensor.accumulate(0)` on `BSportType.RUN` registration so stride `1` is counted immediately without baseline swallowing in `MyIntegerAccumulatorSensor`.
+  5. *Canonical Strides/Min FIT Export Parity (`TST-SET-116.5`)*:
+  • Verify `PolarOnlineStreamingBridge` emits half-step strides/min matching `ANTRunSpeedDevice`/`BTLERunSpeedDevice` and `FitFileWriter` (`RecordMesg.cadence`/`SessionMesg.avgCadence` `UINT8` serialization without scaling).

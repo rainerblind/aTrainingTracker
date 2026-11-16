@@ -2615,3 +2615,28 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 
 
 
+---
+
+### REQ-SET-114: Polar Live Running Cadence & Stride Estimation from H10 (`ACC`) and Verity Sense (`ACC`/`GYRO`) (`ATT-8017`) [Verified]
+- **Tests**: `TST-SET-116`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit / Integration
+- **Implementation**: `PolarLiveRunningCadenceEstimator.kt`, `PolarOnlineStreamingBridge.kt`, `docs/architecture.md`
+- **Rationale**: Runners wearing a Polar H10 chest strap or Polar Verity Sense armband without a separate footpod (including treadmill running with a stationary smartphone) require accurate 1-Hz running cadence and cumulative stride estimation derived from live PMD `ACC`/`GYRO` frames in canonical FIT/ANT+/BLE strides/min units.
+- **Description**:
+1. *Canonical Strides/Min & Stride-Cycle Unit Parity (`REQ-SET-114.1`)*:
+   - `PolarLiveRunningCadenceEstimator` and `PolarOnlineStreamingBridge` SHALL publish `SensorType.CADENCE` strictly in **strides/min** (full 2-step cycles/min, e.g., `60–100` strides/min corresponding to `120–200` steps/min), matching `ANTRunSpeedDevice`, `BTLERunSpeedDevice` (`0x2A53`), and `FitFileWriter` (`RecordMesg.cadence` / `SessionMesg.avgCadence` `UINT8` scaling where `85–90` strides/min displays as `170–180` spm on Strava).
+   - `PolarOnlineStreamingBridge.syncCadenceSensorRegistration()` SHALL seed `mStridesSensor.accumulate(0)` upon `BSportType.RUN` sensor registration (`MyAccumulatorSensor` baseline parity) so the very first 2-step stride cycle increments `SensorType.STRIDES` to `1` without being swallowed as the baseline.
+2. *Polar H10 Sternum `ACC` Cadence Estimator (`REQ-SET-114.2`)*:
+   - For Polar H10 `ACC` streams (50–100/200 Hz), `PolarLiveRunningCadenceEstimator` SHALL apply a `1.2–4.0 Hz` band-pass filter (`72–240` steps/min) on acceleration magnitude combined with adaptive foot-strike peak detection and a sliding `5s` autocorrelation estimator to track fundamental stride frequency without harmonic doubling/halving.
+3. *Polar Verity Sense Armband `GYRO+ACC` Fusion Estimator (`REQ-SET-114.3`)*:
+   - For Polar Verity Sense `ACC` + `GYRO` streams (52 Hz), `PolarLiveRunningCadenceEstimator` SHALL fuse orientation-invariant angular-rate (`GYRO` deg/s) and `ACC` arm-swing envelope signals across a `0.6–2.0 Hz` band-pass (`36–120` strides/min = `72–240` steps/min), remaining immune to armband rotation around the bicep/forearm.
+4. *1-Hz Cadence Emission, `>= 3s` Standstill Zeroing & Arbitration (`REQ-SET-114.4`)*:
+   - `PolarLiveRunningCadenceEstimator` and `PolarOnlineStreamingBridge` SHALL emit steady `1 Hz` `SensorType.CADENCE` updates within `±2` strides/min across `60–100` strides/min steady running/walking (`BSportType.RUN`, including `TTSportType.WALK`), and SHALL drop `SensorType.CADENCE` cleanly to `0.0` via motion-energy gating within `>= 3s` of standstill.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* steady running or walking between `60–100` strides/min (`120–200` steps/min) on Polar H10 (`ACC`) or Polar Verity Sense (`ACC+GYRO`, any armband orientation), *When* processed by `PolarLiveRunningCadenceEstimator` and `PolarOnlineStreamingBridge`, *Then* `SensorType.CADENCE` updates at `1 Hz` within `±2` strides/min, `SensorType.STRIDES` increments from stride `1` (`accumulate(0)` seeded), and `FitFileWriter` exports matching strides/min (`~85–90`).
+• *Given* the runner stops moving during an active run, *When* standstill persists for `>= 3s`, *Then* motion-energy gating drops `SensorType.CADENCE` cleanly to `0.0`.
+
+**Invariants**: Canonical strides/min (`CADENCE` `36–120` active or `0.0` standstill); `BSportType.RUN`-only gating & `MySensorManager.CADENCE_PRIORITY` (`RUN_SPEED`/`BIKE_*` > `HRM`) preserved; zero UI/DB/exporter/`ANT-Android-SDKs` edits; `HIGH-RISK` Stage 4 (`subagent_pro` Doing / `subagent_flash` Gate 4 per `Rule 7.1`, non-UI DSP engine).
