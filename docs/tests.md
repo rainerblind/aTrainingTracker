@@ -13,11 +13,11 @@ Living test specifications use multi-line Markdown headings (`### TST-XXX: Title
 | [Persistence, Migration & Cloud Export](tests/tst_data_migration_export.md) | Database schema, backup/restore, migration pipelines, Strava/cloud upload, FIT/GPX export. | `DAT`, `EXP`, `EXT`, `MIG` | 121 | 121 | 0 | 0 |
 | [Settings, Profiles & Localization](tests/tst_settings_profiles.md) | Athlete settings, bike/sensor profiles, privacy zones, data stores, monetization, and 9-locale parity. | `LOC`, `MON`, `PRI`, `SET` | 99 | 99 | 0 | 0 |
 | [UI Components & Design System](tests/tst_ui_design_system.md) | Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts. | `UI`, `UNT` | 473 | 473 | 0 | 0 |
-| [Engineering Process, Stability & Architecture](tests/tst_process_stability.md) | ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools. | `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST` | 192 | 190 | 1 | 1 |
+| [Engineering Process, Stability & Architecture](tests/tst_process_stability.md) | ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools. | `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST` | 193 | 191 | 1 | 1 |
 | [Jubilee Milestones & App Reviews](tests/tst_aftermath_reviews.md) | Milestone workout auto-naming, jubilee achievements, Google Play in-app reviews, athlete feedback, and supporter tier promotions. | `REV` | 15 | 15 | 0 | 0 |
 | [Store Presence](tests/tst_store_presence.md) | Store presence, Google Play listings, screenshots, store metadata contract testing, and release governance. | `STP` | 10 | 10 | 0 | 0 |
 
-**Total Living Tests**: 1158 across 9 domain shards.
+**Total Living Tests**: 1159 across 9 domain shards.
 
 ---
 
@@ -31,4 +31,4 @@ Living test specifications use multi-line Markdown headings (`### TST-XXX: Title
     * Sensors & Devices (`com.atrainingtracker.banalservice.devices`, `com.atrainingtracker.banalservice.sensor`): $\ge 60\%$ line, $\ge 50\%$ branch.
   * Verified via `./gradlew koverVerifyDebug`.
 * **Requirement Governance**: Enforced via `python3 tools/verify_requirement_governance.py`.
-* **Auto-Verification**: Flipped from `Planned` to `Verified` automatically on Stage 5 submission (`auto_verify_living_docs_on_stage5`).
+* **Auto-Verification**: Status promotion to `Verified` on Stage 5 submission (`auto_verify_living_docs_on_stage5`) is conditioned on machine-readable test results and backing test evidence (REQ-PRO-099); unbacked or failing items remain `[Implemented]`.

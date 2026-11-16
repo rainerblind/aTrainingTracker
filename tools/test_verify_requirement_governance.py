@@ -70,6 +70,11 @@ from tools.verify_requirement_governance import (
     load_traceability_baseline,
     verify_traceability_orphans,
     TraceabilityOrphansResult,
+    parse_junit_xml_results,
+    correlate_test_results_to_tsts,
+    verify_verified_test_evidence,
+    has_verified_test_evidence,
+    LEGACY_UNBACKED_VERIFIED_TSTS,
 )
 
 
@@ -212,7 +217,7 @@ index 1234567..89abcdef 100644
                     imported_modules.add(node.module.split(".")[0])
 
         # Allowed standard library modules
-        std_lib_modules = {"os", "sys", "re", "subprocess", "argparse", "unittest", "json", "math"}
+        std_lib_modules = {"os", "sys", "re", "subprocess", "argparse", "unittest", "json", "math", "xml", "zipfile"}
         for mod in imported_modules:
             self.assertIn(
                 mod,
@@ -2328,6 +2333,107 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
         )
         self.assertTrue(ok_comp)
         self.assertTrue(any("PASS: 100% of living requirements define valid Priority, Type, and Verification Method attributes" in msg for msg in diag_comp))
+
+    def test_scenario_58_tst_pro_099_1_junit_xml_parsing_and_mapping(self):
+        """TST-PRO-099.1: Verify parsing JUnit XML results and mapping testcases to TST-XXX IDs."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            xml_path = os.path.join(tmpdir, "TEST-com.atrainingtracker.ExampleTest.xml")
+            with open(xml_path, "w", encoding="utf-8") as f:
+                f.write(
+                    '<?xml version="1.0" encoding="UTF-8"?>\n'
+                    '<testsuite name="com.atrainingtracker.ExampleTest" tests="3" failures="0" errors="0" skipped="1" time="0.35">\n'
+                    '  <testcase classname="com.atrainingtracker.ExampleTest" name="testFoo_TST_PRO_099" time="0.10"/>\n'
+                    '  <testcase classname="com.atrainingtracker.ExampleTest" name="testBar_TST_PRO_005" time="0.15"/>\n'
+                    '  <testcase classname="com.atrainingtracker.ExampleTest" name="testSkipped" time="0.10">\n'
+                    '    <skipped message="temporarily skipped"/>\n'
+                    '  </testcase>\n'
+                    '</testsuite>\n'
+                )
+
+            res = parse_junit_xml_results(results_dir=tmpdir)
+            self.assertEqual(res["summary"]["total"], 3)
+            self.assertEqual(res["summary"]["passed"], 2)
+            self.assertEqual(res["summary"]["skipped"], 1)
+            self.assertEqual(res["summary"]["failures"], 0)
+            self.assertEqual(res["summary"]["errors"], 0)
+            self.assertIn("TST-PRO-099", res["by_tst"])
+            self.assertEqual(res["by_tst"]["TST-PRO-099"]["status"], "PASS")
+            self.assertEqual(len(res["by_tst"]["TST-PRO-099"]["passing_cases"]), 1)
+            self.assertIn("TST-PRO-005", res["by_tst"])
+
+    def test_scenario_59_tst_pro_099_2_failing_evidence_rejection(self):
+        """TST-PRO-099.2: Verify verify_verified_test_evidence rejects [Verified] when testcase fails (Criterion 1)."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            xml_path = os.path.join(tmpdir, "TEST-com.atrainingtracker.FailureTest.xml")
+            with open(xml_path, "w", encoding="utf-8") as f:
+                f.write(
+                    '<?xml version="1.0" encoding="UTF-8"?>\n'
+                    '<testsuite name="com.atrainingtracker.FailureTest" tests="1" failures="1" errors="0" time="0.05">\n'
+                    '  <testcase classname="com.atrainingtracker.FailureTest" name="testBroken_TST_PRO_099" time="0.05">\n'
+                    '    <failure message="AssertionError: expected true but got false">Stack trace details</failure>\n'
+                    '  </testcase>\n'
+                    '</testsuite>\n'
+                )
+
+            synthetic_tsts = {
+                "docs/tests/tst_test.md": (
+                    "### TST-PRO-099: Test Result-Driven Verification [Verified]\n"
+                    "- **Requirement(s)**: `REQ-PRO-099`\n"
+                )
+            }
+            ok, diag = verify_verified_test_evidence(
+                results_dir=tmpdir,
+                tst_shards=synthetic_tsts,
+            )
+            self.assertFalse(ok, "Failing test result must cause verification to fail (Criterion 1)")
+            self.assertTrue(any("ERROR" in msg and "TST-PRO-099" in msg and "AssertionError" in msg for msg in diag))
+
+    def test_scenario_60_tst_pro_099_3_unbacked_tst_ratchet_baseline(self):
+        """TST-PRO-099.3: Verify novel unbacked TST fails while legacy ratchet baseline items pass (Criterion 2 & 3)."""
+        # 1. Legacy unbacked item in baseline (e.g. TST-BUG-001) passes with warning
+        legacy_shard = {
+            "docs/tests/tst_legacy.md": (
+                "### TST-BUG-001: Legacy Bug Test [Verified]\n"
+                "- **Requirement(s)**: `REQ-BUG-001`\n"
+            )
+        }
+        empty_results = {"testcases": [], "summary": {}, "by_tst": {}}
+        ok_leg, diag_leg = verify_verified_test_evidence(
+            test_results=empty_results,
+            code_tags={},
+            tst_shards=legacy_shard,
+        )
+        self.assertTrue(ok_leg, "Legacy unbacked item in baseline must pass")
+        self.assertTrue(any("WARNING (Legacy unbacked TST)" in msg and "TST-BUG-001" in msg for msg in diag_leg))
+
+        # 2. Novel unbacked item outside baseline fails with ERROR
+        novel_shard = {
+            "docs/tests/tst_novel.md": (
+                "### TST-NOVEL-999: Novel Test Without Code [Verified]\n"
+                "- **Requirement(s)**: `REQ-NOVEL-999`\n"
+            )
+        }
+        ok_nov, diag_nov = verify_verified_test_evidence(
+            test_results=empty_results,
+            code_tags={},
+            tst_shards=novel_shard,
+        )
+        self.assertFalse(ok_nov, "Novel unbacked item outside baseline must fail (Criterion 2)")
+        self.assertTrue(any("ERROR" in msg and "TST-NOVEL-999" in msg and "outside ratchet baseline" in msg for msg in diag_nov))
+
+    def test_scenario_61_tst_pro_099_clean_worktree_safety(self):
+        """TST-PRO-099: Verify clean worktree safety when test-results directory does not exist (REQ-PRO-099.5)."""
+        clean_shard = {
+            "docs/tests/tst_clean.md": (
+                "### TST-BUG-001: Legacy Bug [Verified]\n"
+                "- **Requirement(s)**: `REQ-BUG-001`\n"
+            )
+        }
+        ok, diag = verify_verified_test_evidence(
+            results_dir="/path/that/does/not/exist/in/clean/worktree",
+            tst_shards=clean_shard,
+        )
+        self.assertTrue(ok, "Clean worktree without build outputs must not crash or fail unexpectedly")
 
 
 

@@ -28,9 +28,25 @@ from sprint_metrics import (
 )
 
 try:
-    from verify_requirement_governance import validate_impact_analysis_section
+    from verify_requirement_governance import (
+        validate_impact_analysis_section,
+        has_verified_test_evidence,
+        parse_junit_xml_results,
+        extract_test_code_tags,
+    )
 except ImportError:
-    validate_impact_analysis_section = None
+    try:
+        from tools.verify_requirement_governance import (
+            validate_impact_analysis_section,
+            has_verified_test_evidence,
+            parse_junit_xml_results,
+            extract_test_code_tags,
+        )
+    except ImportError:
+        validate_impact_analysis_section = None
+        has_verified_test_evidence = None
+        parse_junit_xml_results = None
+        extract_test_code_tags = None
 
 # Transitions for ATT project
 TRANSITIONS = {
@@ -1098,16 +1114,17 @@ def transition_issue(issue_key, status_name, role="agent1", inject_context=True,
 
 def auto_verify_living_docs_on_stage5(parent_key, repo_root=None):
     """
-    Automatically flips 'Planned' / 'Status: Planned (<KEY>)' status cells and multi-line headings
+    Automatically flips 'Planned' / 'Implemented' status cells and multi-line headings
     to 'Verified' across docs/requirements.md, docs/tests.md, docs/requirements/*.md, and docs/tests/*.md
-    when submitting Stage 5 (Rule 60).
+    when submitting Stage 5 (Rule 60), conditioned on machine-readable test evidence (REQ-PRO-099.4).
+    Unbacked or failing items remain or are updated to [Implemented].
     """
     if not parent_key:
         return 0
     if repo_root is None:
         repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
-    status_words = r"(?:Planned|Specified|In\s+Progress|Draft)"
+    status_words = r"(?:Planned|Specified|In\s+Progress|Draft|Implemented)"
     trailing_planned_re = re.compile(
         r"\|\s*(?:Status:\s*)?" + status_words + r"(?:\s*\([^)]*\))?\s*\|(\s*)$",
         re.IGNORECASE,
@@ -1129,6 +1146,18 @@ def auto_verify_living_docs_on_stage5(parent_key, repo_root=None):
         re.IGNORECASE,
     )
 
+    # Pre-cache test evidence
+    cached_results = None
+    cached_tags = None
+    if has_verified_test_evidence is not None:
+        try:
+            if parse_junit_xml_results is not None:
+                cached_results = parse_junit_xml_results(repo_root=repo_root)
+            if extract_test_code_tags is not None:
+                cached_tags = extract_test_code_tags(repo_root=repo_root)
+        except Exception as e:
+            print(f"Notice: Test result pre-caching encountered: {e}", file=sys.stderr)
+
     # Collect target files
     target_files = ["docs/requirements.md", "docs/tests.md"]
     for shard_dir in ("docs/requirements", "docs/tests"):
@@ -1137,6 +1166,61 @@ def auto_verify_living_docs_on_stage5(parent_key, repo_root=None):
             for fname in sorted(os.listdir(abs_shard_dir)):
                 if fname.endswith(".md"):
                     target_files.append(os.path.join(shard_dir, fname))
+
+    # Pre-parse REQ to TST mapping from requirements shards
+    req_to_tsts = {}
+    for shard_file in target_files:
+        if "docs/requirements/" in shard_file:
+            abs_p = os.path.join(repo_root, shard_file)
+            if os.path.exists(abs_p):
+                try:
+                    with open(abs_p, "r", encoding="utf-8") as f:
+                        cur_req = None
+                        for l in f:
+                            m_h = re.match(r"^#{2,4}\s*(REQ-[A-Z0-9_.-]+)", l)
+                            if m_h:
+                                cur_req = m_h.group(1)
+                            elif cur_req and "- **Tests**:" in l:
+                                refs = re.findall(r"TST-[A-Z]+-[0-9]+", l)
+                                req_to_tsts[cur_req] = refs
+                except Exception:
+                    pass
+
+    def check_spec_verified(spec_id, block_text=""):
+        if not spec_id or has_verified_test_evidence is None:
+            return True, "verifier not available"
+        if spec_id.startswith("TST-"):
+            return has_verified_test_evidence(
+                spec_id,
+                repo_root=repo_root,
+                test_results=cached_results,
+                code_tags=cached_tags,
+            )
+        elif spec_id.startswith("REQ-"):
+            m_tests = re.search(r"-\s*\*\*Tests\*\*:\s*([^\n]+)", block_text)
+            tst_refs = re.findall(r"TST-[A-Z]+-[0-9]+", m_tests.group(1)) if m_tests else req_to_tsts.get(spec_id, [])
+            if not tst_refs:
+                return False, "No valid test specifications cited"
+            for t in tst_refs:
+                ok, reason = has_verified_test_evidence(
+                    t,
+                    repo_root=repo_root,
+                    test_results=cached_results,
+                    code_tags=cached_tags,
+                )
+                if not ok:
+                    return False, f"Cited test {t} lacks verified evidence: {reason}"
+            return True, "All cited tests have verified evidence"
+        return True, "non-REQ/TST specification"
+
+    heading_planned_any_re = re.compile(
+        r"^(#{2,4}\s*(?:REQ|TST)-[A-Z0-9_.-]+:.*?\[)(?:Status:\s*)?" + status_words + r"(?:\s*\([^)]*\))?(\])",
+        re.IGNORECASE,
+    )
+    bullet_planned_any_re = re.compile(
+        r"(\*\*(?:Status|Verification Status)\*\*:\s*)(?:Status:\s*)?" + status_words + r"(?:\s*\([^)]*\))?",
+        re.IGNORECASE,
+    )
 
     total_updated = 0
     for rel_path in target_files:
@@ -1152,23 +1236,17 @@ def auto_verify_living_docs_on_stage5(parent_key, repo_root=None):
                 new_line = line
                 if line.lstrip().startswith("|") and trailing_planned_re.search(line):
                     if parent_key in line or "Planned (" not in line:
-                        new_line = trailing_planned_re.sub(r"| Verified |\1", line)
-                elif parent_key in line and inline_planned_key_re.search(line):
-                    new_line = inline_planned_key_re.sub("Verified", line)
-                elif heading_planned_key_re.search(line):
-                    new_line = heading_planned_key_re.sub(r"\1Verified\2", line)
-                elif parent_key in line and heading_planned_gen_re.search(line):
-                    new_line = heading_planned_gen_re.sub(r"\1Verified\2", line)
-                elif bullet_planned_key_re.search(line):
-                    new_line = bullet_planned_key_re.sub(r"\1Verified", line)
+                        m_row_id = re.search(r"\b((?:REQ|TST)-[A-Z0-9_.-]+)\b", line)
+                        row_spec_id = m_row_id.group(1) if m_row_id else ""
+                        is_ver, _ = check_spec_verified(row_spec_id, line)
+                        target_status = "Verified" if is_ver else "Implemented"
+                        new_line = trailing_planned_re.sub(rf"| {target_status} |\1", line)
 
                 if new_line != line:
                     updated_count += 1
                 new_lines.append(new_line)
 
-            # Multi-line heading block support: if parent_key is present in the section body
-            # (e.g. - **Tickets**: <parent_key> or - **Jira**: <parent_key>) but not on the heading line,
-            # flip the section heading from Planned to Verified (ATT-5431)
+            # Multi-line heading block support: process each specification section
             sec_indices = [
                 idx for idx, l in enumerate(new_lines)
                 if re.match(r"^#{2,4}\s*(?:REQ|TST)-", l)
@@ -1180,15 +1258,28 @@ def auto_verify_living_docs_on_stage5(parent_key, repo_root=None):
                 block_text = "".join(new_lines[s_idx:e_idx])
                 if parent_key in block_text:
                     orig_hdr = new_lines[s_idx]
-                    mod_hdr = heading_planned_gen_re.sub(r"\1Verified\2", orig_hdr)
+                    m_id = re.match(r"^#{2,4}\s*((?:REQ|TST)-[A-Z0-9_.-]+)", orig_hdr)
+                    spec_id = m_id.group(1) if m_id else ""
+                    is_ver, reason = check_spec_verified(spec_id, block_text)
+                    target_status = "Verified" if is_ver else "Implemented"
+                    if not is_ver:
+                        print(f"Notice: {spec_id} lacks verified passing test evidence ({reason}); remaining [{target_status}] (REQ-PRO-099.4).")
+                    mod_hdr = heading_planned_any_re.sub(rf"\g<1>{target_status}\2", orig_hdr)
                     if mod_hdr != orig_hdr:
                         new_lines[s_idx] = mod_hdr
                         updated_count += 1
+                    for b_idx in range(s_idx + 1, e_idx):
+                        b_line = new_lines[b_idx]
+                        if bullet_planned_any_re.search(b_line):
+                            new_b_line = bullet_planned_any_re.sub(rf"\g<1>{target_status}", b_line)
+                            if new_b_line != b_line:
+                                new_lines[b_idx] = new_b_line
+                                updated_count += 1
 
             if updated_count > 0:
                 with open(abs_path, "w", encoding="utf-8") as f:
                     f.writelines(new_lines)
-                print(f"Auto-updated {updated_count} row(s) from Planned to Verified in {rel_path} for {parent_key}.")
+                print(f"Auto-updated {updated_count} row(s) in {rel_path} for {parent_key}.")
                 total_updated += updated_count
         except Exception as e:
             print(f"Warning: Could not auto-update {rel_path} for {parent_key}: {e}", file=sys.stderr)

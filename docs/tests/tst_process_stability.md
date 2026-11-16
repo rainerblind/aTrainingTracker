@@ -3222,3 +3222,21 @@
   4. *V5.0.0 Protocol & Template Schema Audit*: Verify `docs/releases/TEMPLATE.md` and `docs/releases/V5.0.0/sys_verification_record.md` contain the Human PO Attestation block and zero synthetic assertions.
   5. *Agent Governance Rule Verification*: Assert that `.agents/rules/aspice_governance.md` mandates `human-execution` labeling and forbids autonomous agents from fabricating physical test evidence.
   6. *Living Documentation Parity*: Execute `python3 tools/verify_requirement_governance.py` confirming 100% parity across `docs/requirements.md` and `docs/tests.md`.
+
+
+---
+
+### TST-PRO-099: **Test Result-Driven Verification Status & Evidence Gating Suite** [Verified]
+- **Requirement(s)**: `REQ-PRO-099`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Component**: `tools/verify_requirement_governance.py`, `tools/jira_util.py`, `tools/hoechstmass/tools/jira_util.py`, `tools/test_verify_requirement_governance.py`, `tools/test_jira_accounts.py`, `.agents/skills/stage5-verification/SKILL.md`
+- **Jira**: `ATT-8143`
+- **Test Description**:
+  1. *JUnit XML Result Ingestion & TST Mapping Test (`tools/test_verify_requirement_governance.py`)*: Assert parser extracts testcases from JUnit XML files (`TEST-*.xml`), maps method names and code tags to `TST-XXX` IDs, and aggregates pass/fail/error counts.
+  2. *Failing Test Result Evidence Gate Test (`tools/test_verify_requirement_governance.py`)*: Assert `verify_verified_test_evidence()` rejects `[Verified]` status with exit code 1 when a mapped test has `<failure>` or `<error>` in JUnit XML.
+  3. *Unbacked TST Rejection & Ratchet Baseline Test (`tools/test_verify_requirement_governance.py`)*: Assert net-new `[Verified]` TST without passing test evidence fails, while legacy baseline items within `LEGACY_UNBACKED_VERIFIED_TSTS` pass with warning.
+  4. *Stage 5 Evidence-Gated Promotion Test (`tools/test_jira_accounts.py`)*: Assert `auto_verify_living_docs_on_stage5()` checks test results before flipping status, promoting only items with passing evidence and keeping unbacked/failing items as `[Implemented]`.
+  5. *Clean Worktree Default Verification Safety Test*: Assert default `verify_requirement_governance.py` passes cleanly in fresh worktree without requiring pre-existing build artifacts.
+  6. *Living Documentation Parity*: Execute `python3 tools/verify_requirement_governance.py` confirming 100% parity across `docs/requirements.md` and `docs/tests.md`.

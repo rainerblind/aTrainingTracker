@@ -5169,3 +5169,36 @@ The workflow SHALL mandate that:
   • *When* `tools/extract_pixel_field_evidence.py` executes,
   • *Then* it extracts session telemetry, populates verification rows with `EXTRACTED_AWAITING_PO_ATTESTATION`, and generates an actionable coverage-gap report.
 - **Invariants**: Zero changes to production runtime logic (`app/src/main/`); existing master table parity intact; Human Decision Gate inviolable.
+
+
+---
+
+### REQ-PRO-099: Test Result-Driven Verification Status & Evidence Gating [Verified]
+- **Tests**: `TST-PRO-099`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `tools/verify_requirement_governance.py`, `tools/jira_util.py`, `tools/hoechstmass/tools/jira_util.py`, `.agents/skills/stage5-verification/SKILL.md`
+- **Rationale**: Under ASPICE 4.0 Major Finding M1 (SWE.4 BP4/BP5, SWE.6 BP4/BP5, SWE.1 BP5), `[Verified]` status must not be set unconditionally by Stage 5 workflow transitions (`auto_verify_living_docs_on_stage5()`). Living test (`TST-XXX`) and requirement (`REQ-XXX`) verification statuses must be derived strictly from passing, machine-readable test execution evidence (JUnit XML / test runner results) or authentic human-attested protocols. Unbacked or failing tests must block `[Verified]` promotion, while a ratchet baseline protects existing repository builds.
+- **Description**:
+  1. *Machine-Readable Test Result Ingestion (`REQ-PRO-099.1`)*: `tools/verify_requirement_governance.py` SHALL parse machine-readable test results (JUnit XML files under `app/build/test-results/**/TEST-*.xml` or test result archives) and correlate testcases to `TST-XXX` IDs via test method names, class names, and code comments.
+  2. *Verification Evidence Check CLI (`REQ-PRO-099.2`)*: `tools/verify_requirement_governance.py` SHALL implement `--check-verified-evidence` mode. Any `[Verified]` test specification (`TST-XXX`) whose associated testcase reports `failure` or `error` SHALL cause the check to fail with exit code 1 naming the failing TST ID.
+  3. *Unbacked TST Gating & Ratchet Baseline (`REQ-PRO-099.3`)*: Any new or modified `TST-XXX` specification lacking passing machine-readable test evidence or an attested manual verification protocol SHALL NOT be marked `[Verified]`. Legacy unbacked TST specifications (405 baseline items) SHALL be maintained in an explicit ratchet baseline (`LEGACY_UNBACKED_VERIFIED_TSTS`), allowing legacy tolerance while failing on any new unbacked `[Verified]` specification.
+  4. *Stage 5 Evidence-Conditioned Status Promotion (`REQ-PRO-099.4`)*: `auto_verify_living_docs_on_stage5()` in `tools/jira_util.py` (and Höchstmaß mirror) SHALL NOT flip `TST-XXX` or `REQ-XXX` headings or rows to `[Verified]` unless verified test execution evidence exists. When test results are absent, incomplete, or failing, items SHALL remain `[Implemented]`.
+  5. *Default Check Decoupling & Clean Worktree Safety (`REQ-PRO-099.5`)*: Default governance invocations (`verify_requirement_governance.py` without `--check-verified-evidence`, `--check-gates`, `--check-reviews`, and git hooks) SHALL remain functional in clean worktrees before Gradle build outputs exist, reserving strict XML result verification to `--check-verified-evidence` and Stage 5 verification gating.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-099`. Targets `tools/verify_requirement_governance.py`, `tools/jira_util.py`, `tools/hoechstmass/tools/jira_util.py`, and `.agents/skills/stage5-verification/SKILL.md`.
+  2. *Historical Origin & Commit Trace*: Sprint 2026-46.8 via ticket `ATT-8143` under Epic `ATT-8138` (ASPICE 4.0 Audit Remediation). Resolves finding M1.
+  3. *Root Reason for Existing Formulation*: Prior workflow automatically flipped living doc status to `[Verified]` upon `submit-stage 5` regardless of whether tests passed or even existed.
+  4. *Preservation of Core Invariants*: Retains living doc synchronization but grounds `[Verified]` in authentic test execution results; ratchet baseline preserves CI across legacy backlog without breaking builds; zero changes to Android runtime code; Rule 3 Human Gate intact.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* a test specification `TST-XXX` marked `[Verified]` whose tagged test fails in JUnit XML,
+  • *When* `verify_requirement_governance.py --check-verified-evidence` runs,
+  • *Then* the check fails with exit code 1 and identifies the failing TST ID.
+  • *Given* a net-new `TST-XXX` lacking tagged passing test execution evidence,
+  • *When* Stage 5 is submitted via `submit-stage <KEY> 5`,
+  • *Then* the specification remains `[Implemented]` and missing evidence is reported.
+  • *Given* the 405 legacy unbacked TST specifications,
+  • *When* `verify_requirement_governance.py --check-verified-evidence` runs,
+  • *Then* legacy unbacked items within the ratchet baseline do not trigger failure.
+- **Invariants**: Zero changes to production runtime logic (`app/src/main/`); existing master table parity intact; pure Python standard library retained.

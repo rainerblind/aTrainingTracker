@@ -500,6 +500,7 @@ class TestJiraCliTooling(unittest.TestCase):
         mock_transition.assert_called_once_with("ATT-4301", "freigabe", role="agent2", inject_context=True)
 
     def test_auto_verify_living_docs_on_stage5(self):
+        """TST-PRO-099.4: auto_verify_living_docs_on_stage5 promotes backed items and keeps unbacked items Implemented."""
         import tempfile
         with tempfile.TemporaryDirectory() as tmpdir:
             docs_dir = os.path.join(tmpdir, "docs")
@@ -523,9 +524,53 @@ class TestJiraCliTooling(unittest.TestCase):
             with open(tst_path, "r", encoding="utf-8") as f:
                 tst_content = f.read()
             self.assertNotIn("Planned", req_content)
-            self.assertEqual(req_content.count("| Verified |"), 3)
+            # Unbacked requirements remain/flip to Implemented under REQ-PRO-099.4
+            self.assertIn("Implemented", req_content)
             self.assertNotIn("Planned", tst_content)
+            # TST-UI-001 is tolerated in ratchet baseline, so it promotes to Verified
             self.assertIn("| Verified |", tst_content)
+
+    def test_stage5_evidence_gating_unbacked_and_backed(self):
+        """TST-PRO-099.4: Verify auto_verify_living_docs_on_stage5 conditions Verified on passing test evidence."""
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmpdir:
+            shards_req = os.path.join(tmpdir, "docs", "requirements")
+            shards_tst = os.path.join(tmpdir, "docs", "tests")
+            os.makedirs(shards_req, exist_ok=True)
+            os.makedirs(shards_tst, exist_ok=True)
+
+            tst_shard_file = os.path.join(shards_tst, "tst_test.md")
+            with open(tst_shard_file, "w", encoding="utf-8") as f:
+                f.write(
+                    "### TST-NOVEL-999: Novel Test Without Evidence [Planned]\n"
+                    "- **Tickets**: `ATT-8888`\n"
+                    "- **Requirements**: `REQ-NOVEL-999`\n"
+                )
+
+            tst_backed_file = os.path.join(shards_tst, "tst_backed.md")
+            with open(tst_backed_file, "w", encoding="utf-8") as f:
+                f.write(
+                    "### TST-PRO-099: Backed Test [Planned]\n"
+                    "- **Tickets**: `ATT-8888`\n"
+                    "- **Requirements**: `REQ-PRO-099`\n"
+                )
+
+            with patch("jira_util.has_verified_test_evidence") as mock_evidence:
+                def side_effect(tst_id, **kwargs):
+                    if tst_id == "TST-PRO-099":
+                        return True, "Passing evidence"
+                    return False, "Unbacked"
+                mock_evidence.side_effect = side_effect
+
+                jira_util.auto_verify_living_docs_on_stage5("ATT-8888", repo_root=tmpdir)
+
+            with open(tst_shard_file, "r", encoding="utf-8") as f:
+                novel_text = f.read()
+            with open(tst_backed_file, "r", encoding="utf-8") as f:
+                backed_text = f.read()
+
+            self.assertIn("### TST-NOVEL-999: Novel Test Without Evidence [Implemented]", novel_text)
+            self.assertIn("### TST-PRO-099: Backed Test [Verified]", backed_text)
 
     @patch("jira_util.jira_request")
     def test_export_gates_command_generates_markdown(self, mock_request):

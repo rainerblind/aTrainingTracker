@@ -22,6 +22,8 @@ import os
 import re
 import subprocess
 import sys
+import xml.etree.ElementTree as ET
+import zipfile
 
 MANDATORY_FIELDS = [
     r"Original Requirement ID & Target",
@@ -47,6 +49,68 @@ LEGACY_DUPLICATE_IDS = frozenset()
 LEGACY_DANGLING_TST_REFS = frozenset()
 
 LEGACY_DANGLING_REQ_REFS = frozenset()
+
+# Known legacy TSTs claiming [Verified] without test code or machine test evidence pending backfill (SWE.4/6 BP4/5, SWE.1 BP5, REQ-PRO-099)
+LEGACY_UNBACKED_VERIFIED_TSTS = frozenset({
+    "TST-ARC-006", "TST-BUG-001", "TST-BUG-002", "TST-BUG-006", "TST-BUG-007", "TST-BUG-008", "TST-BUG-009",
+    "TST-BUG-010", "TST-BUG-011", "TST-CON-002", "TST-CON-007", "TST-DAT-001", "TST-DAT-015", "TST-DAT-016",
+    "TST-DAT-017", "TST-DAT-019", "TST-DAT-021", "TST-DAT-023", "TST-DAT-025", "TST-DAT-032", "TST-DAT-034",
+    "TST-DAT-040", "TST-EXP-004", "TST-EXP-020", "TST-EXT-001", "TST-EXT-002", "TST-FIL-002", "TST-FIL-003",
+    "TST-INT-002", "TST-INT-003", "TST-INT-004", "TST-INT-005", "TST-INT-006", "TST-INT-007", "TST-INT-008",
+    "TST-LOC-001", "TST-LOG-001", "TST-LOG-002", "TST-MAN-001", "TST-MAP-010", "TST-MAP-020", "TST-MAP-021",
+    "TST-MAP-030", "TST-MAP-032", "TST-MAP-033", "TST-MAP-046", "TST-MAP-047", "TST-MAP-050", "TST-MAP-052",
+    "TST-MAP-057", "TST-MAP-062", "TST-MAP-065", "TST-MAP-069", "TST-MIG-001", "TST-MIG-002", "TST-MIG-003",
+    "TST-MIG-004", "TST-MIG-005", "TST-MIG-006", "TST-MIG-007", "TST-MIG-008", "TST-MIG-010", "TST-MIG-011",
+    "TST-MIG-012", "TST-MIG-013", "TST-MIG-014", "TST-MIG-015", "TST-MIG-016", "TST-MIG-017", "TST-MIG-018",
+    "TST-MIG-019", "TST-MIG-025", "TST-MIG-047", "TST-NAV-001", "TST-NAV-002", "TST-NAV-003", "TST-NAV-005",
+    "TST-NAV-006", "TST-NAV-045", "TST-NAV-056", "TST-PER-009", "TST-PER-010", "TST-PER-012", "TST-PER-014",
+    "TST-PER-017", "TST-PERF-001", "TST-PERF-002", "TST-PERF-003", "TST-PERF-004", "TST-PERF-005", "TST-PERF-006",
+    "TST-PERF-007", "TST-PERF-008", "TST-PERF-009", "TST-PERF-010", "TST-PRO-001", "TST-PRO-002", "TST-PRO-003",
+    "TST-PRO-004", "TST-PRO-005", "TST-PRO-006", "TST-PRO-007", "TST-PRO-008", "TST-PRO-009", "TST-PRO-010",
+    "TST-PRO-011", "TST-PRO-012", "TST-PRO-013", "TST-PRO-014", "TST-PRO-015", "TST-PRO-017", "TST-PRO-019",
+    "TST-PRO-020", "TST-PRO-021", "TST-PRO-022", "TST-PRO-038", "TST-PRO-039", "TST-PRO-040", "TST-PRO-058",
+    "TST-PRO-059", "TST-PRO-060", "TST-PRO-061", "TST-PRO-062", "TST-PRO-063", "TST-PRO-064", "TST-PRO-065",
+    "TST-PRO-066", "TST-PRO-070", "TST-PRO-071", "TST-PRO-073", "TST-PRO-074", "TST-PRO-075", "TST-PRO-076",
+    "TST-PRO-077", "TST-PRO-078", "TST-PRO-079", "TST-PRO-080", "TST-PRO-081", "TST-PRO-082", "TST-PRO-083",
+    "TST-PRO-084", "TST-PRO-085", "TST-PRO-086", "TST-PRO-087", "TST-PRO-088", "TST-PRO-091", "TST-PRO-092",
+    "TST-PRO-093", "TST-PRO-094", "TST-PRO-095", "TST-PRO-096", "TST-PRO-097", "TST-PRO-098", "TST-RAD-006",
+    "TST-REG-001", "TST-REG-002", "TST-REG-003", "TST-REG-004", "TST-REG-005", "TST-REG-007", "TST-REG-008",
+    "TST-SET-001", "TST-SET-002", "TST-SET-003", "TST-SET-004", "TST-SET-005", "TST-SET-006", "TST-SET-007",
+    "TST-SET-008", "TST-SET-009", "TST-SET-010", "TST-SET-011", "TST-SET-012", "TST-SET-013", "TST-SET-014",
+    "TST-SET-015", "TST-SET-016", "TST-SET-017", "TST-SET-018", "TST-SET-019", "TST-SET-020", "TST-SET-021",
+    "TST-SET-022", "TST-SET-023", "TST-SET-024", "TST-SET-025", "TST-SET-026", "TST-SET-027", "TST-SET-028",
+    "TST-SET-029", "TST-SET-030", "TST-SET-031", "TST-SET-032", "TST-SET-033", "TST-SET-034", "TST-SET-035",
+    "TST-SET-040", "TST-SET-041", "TST-SET-042", "TST-SET-043", "TST-SET-044", "TST-SET-045", "TST-SET-046",
+    "TST-SET-047", "TST-SET-048", "TST-SET-057", "TST-SET-058", "TST-SET-061", "TST-SET-063", "TST-SET-076",
+    "TST-SET-085", "TST-SET-112", "TST-STB-015", "TST-STR-001", "TST-STR-002", "TST-STR-003", "TST-STR-004",
+    "TST-STR-005", "TST-STR-006", "TST-STR-007", "TST-STR-008", "TST-STR-011", "TST-STR-012", "TST-STR-013",
+    "TST-STR-014", "TST-STR-015", "TST-STR-016", "TST-STR-017", "TST-TOOL-001", "TST-TOOL-002", "TST-TOOL-003",
+    "TST-TOOL-004", "TST-TOOL-005", "TST-TOOL-006", "TST-TOOL-007", "TST-TRK-006", "TST-TRK-017", "TST-TRK-068",
+    "TST-TST-003", "TST-TST-004", "TST-UI-001", "TST-UI-011", "TST-UI-012", "TST-UI-013", "TST-UI-014",
+    "TST-UI-015", "TST-UI-016", "TST-UI-017", "TST-UI-018", "TST-UI-019", "TST-UI-020", "TST-UI-021",
+    "TST-UI-026", "TST-UI-027", "TST-UI-028", "TST-UI-029", "TST-UI-030", "TST-UI-031", "TST-UI-034",
+    "TST-UI-035", "TST-UI-036", "TST-UI-038", "TST-UI-039", "TST-UI-041", "TST-UI-043", "TST-UI-044",
+    "TST-UI-045", "TST-UI-046", "TST-UI-047", "TST-UI-048", "TST-UI-049", "TST-UI-050", "TST-UI-051",
+    "TST-UI-053", "TST-UI-054", "TST-UI-055", "TST-UI-056", "TST-UI-057", "TST-UI-058", "TST-UI-059",
+    "TST-UI-060", "TST-UI-061", "TST-UI-062", "TST-UI-063", "TST-UI-066", "TST-UI-067", "TST-UI-069",
+    "TST-UI-071", "TST-UI-072", "TST-UI-073", "TST-UI-074", "TST-UI-075", "TST-UI-076", "TST-UI-077",
+    "TST-UI-080", "TST-UI-093", "TST-UI-096", "TST-UI-104", "TST-UI-106", "TST-UI-107", "TST-UI-108",
+    "TST-UI-109", "TST-UI-110", "TST-UI-121", "TST-UI-148", "TST-UI-161", "TST-UI-168", "TST-UI-169",
+    "TST-UI-171", "TST-UI-173", "TST-UI-186", "TST-UI-187", "TST-UI-188", "TST-UI-189", "TST-UI-193",
+    "TST-UI-203", "TST-UI-205", "TST-UI-209", "TST-UI-210", "TST-UI-224", "TST-UI-225", "TST-UI-226",
+    "TST-UI-231", "TST-UI-236", "TST-UI-248", "TST-UI-249", "TST-UI-251", "TST-UI-255", "TST-UI-269",
+    "TST-UI-270", "TST-UI-271", "TST-UI-273", "TST-UI-274", "TST-UI-275", "TST-UI-277", "TST-UI-280",
+    "TST-UI-281", "TST-UI-284", "TST-UI-285", "TST-UI-286", "TST-UI-287", "TST-UI-291", "TST-UI-292",
+    "TST-UI-295", "TST-UI-297", "TST-UI-299", "TST-UI-300", "TST-UI-303", "TST-UI-304", "TST-UI-306",
+    "TST-UI-308", "TST-UI-319", "TST-UI-332", "TST-UI-341", "TST-UI-343", "TST-UI-345", "TST-UI-346",
+    "TST-UI-349", "TST-UI-350", "TST-UI-351", "TST-UI-355", "TST-UI-358", "TST-UI-359", "TST-UI-361",
+    "TST-UI-363", "TST-UI-365", "TST-UI-368", "TST-UI-374", "TST-UI-376", "TST-UI-382", "TST-UI-383",
+    "TST-UI-386", "TST-UI-391", "TST-UI-399", "TST-UI-439", "TST-UI-440", "TST-UI-443", "TST-UI-448",
+    "TST-UI-458", "TST-UI-459", "TST-UI-460", "TST-UI-463", "TST-UI-465", "TST-UI-474", "TST-UI-491",
+    "TST-UI-500", "TST-UI-504", "TST-UI-510", "TST-UI-511", "TST-UI-516", "TST-UI-525", "TST-UNT-001",
+    "TST-UNT-002", "TST-UNT-003", "TST-UNT-004", "TST-UNT-005", "TST-UNT-006", "TST-UNT-007", "TST-UNT-008",
+    "TST-UNT-009", "TST-UNT-010", "TST-UNT-011", "TST-UNT-012", "TST-UNT-013", "TST-UNT-014"
+})
 
 # Known legacy requirements claiming [Verified] without TST citations pending backfill in ATT-6127..ATT-6135 (SWE.1 BP3, SWE.6 BP3, REQ-PRO-073)
 LEGACY_UNGROUNDED_VERIFIED_REQS = frozenset({
@@ -2181,10 +2245,27 @@ def extract_test_code_tags(test_sources=None, repo_root=None):
                         rel_fp = os.path.relpath(abs_fp, repo_root)
                         with open(abs_fp, "r", encoding="utf-8", errors="ignore") as fh:
                             files_to_scan.append((rel_fp, fh.readlines()))
+        android_test_dir = os.path.join(repo_root, "app/src/androidTest")
+        if os.path.isdir(android_test_dir):
+            for root, dirs, files in os.walk(android_test_dir):
+                for f in sorted(files):
+                    if f.endswith(".kt") or f.endswith(".java"):
+                        abs_fp = os.path.join(root, f)
+                        rel_fp = os.path.relpath(abs_fp, repo_root)
+                        with open(abs_fp, "r", encoding="utf-8", errors="ignore") as fh:
+                            files_to_scan.append((rel_fp, fh.readlines()))
+        tools_dir = os.path.join(repo_root, "tools")
+        if os.path.isdir(tools_dir):
+            for f in sorted(os.listdir(tools_dir)):
+                if f.startswith("test_") and f.endswith(".py"):
+                    abs_fp = os.path.join(tools_dir, f)
+                    rel_fp = os.path.relpath(abs_fp, repo_root)
+                    with open(abs_fp, "r", encoding="utf-8", errors="ignore") as fh:
+                        files_to_scan.append((rel_fp, fh.readlines()))
     elif isinstance(test_sources, str) and os.path.isdir(test_sources):
         for root, dirs, files in os.walk(test_sources):
             for f in sorted(files):
-                if f.endswith(".kt") or f.endswith(".java"):
+                if f.endswith(".kt") or f.endswith(".java") or (f.startswith("test_") and f.endswith(".py")):
                     abs_fp = os.path.join(root, f)
                     rel_fp = os.path.relpath(abs_fp, repo_root) if repo_root else abs_fp
                     with open(abs_fp, "r", encoding="utf-8", errors="ignore") as fh:
@@ -2208,11 +2289,14 @@ def extract_test_code_tags(test_sources=None, repo_root=None):
 
     code_tags = {}
     for rel_fp, lines in files_to_scan:
+        is_tool_script = rel_fp.startswith("tools") or rel_fp.endswith(".py")
         for lno, line in enumerate(lines, 1):
             for m in tag_pattern.finditer(line):
                 raw = m.group(1).rstrip(".")
                 m_base = base_pattern.match(raw)
                 base_id = m_base.group(1) if m_base else raw
+                if is_tool_script and not base_id.startswith("TST-PRO-"):
+                    continue
                 code_tags.setdefault(base_id, []).append({
                     "file": rel_fp,
                     "line": lno,
@@ -2480,6 +2564,340 @@ def verify_coverage_thresholds(
     if not diagnostics:
         diagnostics.append("PASS: Coverage calculated successfully (no thresholds configured).")
     return True, diagnostics
+
+
+def parse_junit_xml_results(
+    results_dir=None,
+    archive_path=None,
+    repo_root=None,
+):
+    """
+    Parses JUnit XML test results from directory or zip archive (REQ-PRO-099.1).
+    Returns dict:
+      {
+         "testcases": [...],
+         "summary": {"total": int, "passed": int, "failures": int, "errors": int, "skipped": int, "time": float},
+         "by_tst": { "TST-XXX": { "status": "PASS"|"FAIL"|"ERROR", "failing_cases": [...], "passing_cases": [...] } }
+      }
+    """
+    if repo_root is None:
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+    testcases = []
+    summary = {
+        "total": 0,
+        "passed": 0,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "time": 0.0,
+    }
+    by_tst = {}
+
+    xml_contents = []
+
+    # 1. Directory search
+    search_dirs = []
+    if results_dir:
+        search_dirs.append(results_dir)
+    else:
+        cand1 = os.path.join(repo_root, "app/build/test-results")
+        if os.path.isdir(cand1):
+            search_dirs.append(cand1)
+        cand2 = os.path.join(repo_root, "build-evidence")
+        if os.path.isdir(cand2):
+            search_dirs.append(cand2)
+
+    for s_dir in search_dirs:
+        if os.path.isdir(s_dir):
+            for root, dirs, files in os.walk(s_dir):
+                for f in sorted(files):
+                    if f.endswith(".xml") and (f.startswith("TEST-") or "test" in f.lower()):
+                        abs_p = os.path.join(root, f)
+                        try:
+                            with open(abs_p, "rb") as fh:
+                                xml_contents.append((abs_p, fh.read()))
+                        except Exception as e:
+                            print(f"Warning: Failed reading {abs_p}: {e}", file=sys.stderr)
+
+    # 2. Archive search if no directory files found or if archive_path explicitly provided
+    if not xml_contents or archive_path:
+        archives = []
+        if archive_path and os.path.isfile(archive_path):
+            archives.append(archive_path)
+        elif not xml_contents:
+            cand_arc_dir = os.path.join(repo_root, "build-evidence")
+            if os.path.isdir(cand_arc_dir):
+                for f in sorted(os.listdir(cand_arc_dir)):
+                    if f.endswith(".zip") and "junit" in f.lower():
+                        archives.append(os.path.join(cand_arc_dir, f))
+
+        for arc in archives:
+            try:
+                with zipfile.ZipFile(arc, "r") as z:
+                    for name in z.namelist():
+                        if name.endswith(".xml") and (name.startswith("TEST-") or "/TEST-" in name or "test" in name.lower()):
+                            xml_contents.append((f"{arc}::{name}", z.read(name)))
+            except Exception as e:
+                print(f"Warning: Failed reading archive {arc}: {e}", file=sys.stderr)
+
+    tag_pattern = re.compile(r"(?<![A-Za-z0-9])(TST-[A-Z]+-[0-9]+(?:[\._-][A-Za-z0-9_-]+)*)")
+    base_pattern = re.compile(r"^(TST-[A-Z]+-[0-9]+)")
+
+    for src_name, raw_bytes in xml_contents:
+        try:
+            root = ET.fromstring(raw_bytes)
+            suites = [root] if root.tag == "testsuite" else root.findall("testsuite")
+            for suite in suites:
+                for tc in suite.findall("testcase"):
+                    cname = tc.attrib.get("classname", "")
+                    name = tc.attrib.get("name", "")
+                    try:
+                        t_val = float(tc.attrib.get("time", 0.0) or 0.0)
+                    except ValueError:
+                        t_val = 0.0
+                    summary["time"] += t_val
+                    summary["total"] += 1
+
+                    fail_el = tc.find("failure")
+                    err_el = tc.find("error")
+                    skip_el = tc.find("skipped")
+
+                    if fail_el is not None:
+                        status = "FAIL"
+                        msg = fail_el.attrib.get("message", "") or (fail_el.text or "").strip()
+                        summary["failures"] += 1
+                    elif err_el is not None:
+                        status = "ERROR"
+                        msg = err_el.attrib.get("message", "") or (err_el.text or "").strip()
+                        summary["errors"] += 1
+                    elif skip_el is not None:
+                        status = "SKIPPED"
+                        msg = skip_el.attrib.get("message", "") or (skip_el.text or "").strip()
+                        summary["skipped"] += 1
+                    else:
+                        status = "PASS"
+                        msg = ""
+                        summary["passed"] += 1
+
+                    tst_ids = set()
+                    normalized_text = re.sub(r"TST[_-]([A-Z]+)[_-]([0-9]+)", r"TST-\1-\2", f"{name} {cname}")
+                    for m in tag_pattern.finditer(normalized_text):
+                        raw = m.group(1).rstrip(".")
+                        mb = base_pattern.match(raw)
+                        if mb:
+                            tst_ids.add(mb.group(1))
+
+                    tc_record = {
+                        "source": src_name,
+                        "classname": cname,
+                        "name": name,
+                        "time": t_val,
+                        "status": status,
+                        "message": msg,
+                        "tst_ids": sorted(list(tst_ids)),
+                    }
+                    testcases.append(tc_record)
+
+                    for tid in tst_ids:
+                        rec = by_tst.setdefault(tid, {"status": "PASS", "failing_cases": [], "passing_cases": []})
+                        if status in ("FAIL", "ERROR"):
+                            rec["status"] = status
+                            rec["failing_cases"].append(tc_record)
+                        elif status == "PASS":
+                            rec["passing_cases"].append(tc_record)
+        except Exception as e:
+            print(f"Warning: Failed to parse XML in {src_name}: {e}", file=sys.stderr)
+
+    return {
+        "testcases": testcases,
+        "summary": summary,
+        "by_tst": by_tst,
+    }
+
+
+def correlate_test_results_to_tsts(test_results, code_tags=None):
+    """
+    Correlates test cases to TST IDs via classname matching when TST ID is not in testcase name.
+    """
+    if not test_results:
+        return test_results
+    testcases = test_results.get("testcases", [])
+    by_tst = test_results.get("by_tst", {})
+
+    if code_tags:
+        file_to_tsts = {}
+        for tid, locs in code_tags.items():
+            for loc in locs:
+                f = loc["file"]
+                stem = os.path.splitext(os.path.basename(f))[0]
+                file_to_tsts.setdefault(stem, set()).add(tid)
+
+        for tc in testcases:
+            cname = tc.get("classname", "")
+            leaf = cname.split(".")[-1]
+            matched_tsts = file_to_tsts.get(leaf, set())
+            for tid in matched_tsts:
+                if tid not in tc["tst_ids"]:
+                    tc["tst_ids"].append(tid)
+                rec = by_tst.setdefault(tid, {"status": "PASS", "failing_cases": [], "passing_cases": []})
+                if tc["status"] in ("FAIL", "ERROR"):
+                    rec["status"] = tc["status"]
+                    rec["failing_cases"].append(tc)
+                elif tc["status"] == "PASS":
+                    rec["passing_cases"].append(tc)
+
+    return test_results
+
+
+def verify_verified_test_evidence(
+    repo_root=None,
+    results_dir=None,
+    archive_path=None,
+    test_results=None,
+    code_tags=None,
+    baseline_allowlist=None,
+    tst_shards=None,
+):
+    """
+    Enforces that all [Verified] TST specifications are backed by passing test evidence (REQ-PRO-099).
+    - Rejects any [Verified] TST whose associated testcase reports failure or error (Criterion 1).
+    - Tolerates 405 legacy unbacked TSTs in LEGACY_UNBACKED_VERIFIED_TSTS (Criterion 3).
+    - Rejects any novel unbacked [Verified] TST outside the baseline (Criterion 2).
+    Returns (success: bool, diagnostics: list[str]).
+    """
+    if repo_root is None:
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    if baseline_allowlist is None:
+        baseline_allowlist = LEGACY_UNBACKED_VERIFIED_TSTS
+
+    if code_tags is None:
+        code_tags = extract_test_code_tags(repo_root=repo_root)
+
+    if test_results is None:
+        test_results = parse_junit_xml_results(
+            results_dir=results_dir,
+            archive_path=archive_path,
+            repo_root=repo_root,
+        )
+
+    correlate_test_results_to_tsts(test_results, code_tags=code_tags)
+    by_tst = test_results.get("by_tst", {})
+
+    loaded_tsts = _load_shard_sources(tst_shards, "docs/tests", repo_root)
+    heading_pattern = re.compile(r"^###\s+(TST-[A-Z]+-[0-9]+(?:\.[0-9]+)?)[^:\n]*:\s*([^\n]+)")
+
+    verified_tsts = {}
+    for rel_path, lines in loaded_tsts:
+        for lno, line in enumerate(lines, 1):
+            m = heading_pattern.match(line.strip())
+            if m:
+                tid = m.group(1)
+                base_tid = tid.split(".")[0]
+                rest = m.group(2)
+                if "[Verified]" in rest or "Verified" in rest:
+                    verified_tsts[base_tid] = {
+                        "raw_id": tid,
+                        "file": rel_path,
+                        "line": lno,
+                    }
+
+    errors = []
+    warnings = []
+    passed_count = 0
+
+    for base_tid in sorted(verified_tsts.keys()):
+        info = verified_tsts[base_tid]
+        raw_id = info["raw_id"]
+        rel_p = info["file"]
+        lno = info["line"]
+
+        # Check for failing test results
+        if base_tid in by_tst:
+            tst_data = by_tst[base_tid]
+            if tst_data["status"] in ("FAIL", "ERROR"):
+                failing_names = [f"{c['classname']}.{c['name']}: {c['message']}" for c in tst_data["failing_cases"][:3]]
+                errors.append(
+                    f"{rel_p}:{lno} [{raw_id}] claims [Verified] but associated testcase failed: {', '.join(failing_names)}"
+                )
+                continue
+
+        # Check for backing evidence (test code tag or passing test result)
+        has_code = base_tid in code_tags
+        has_passing_result = base_tid in by_tst and len(by_tst[base_tid]["passing_cases"]) > 0
+
+        if has_code or has_passing_result:
+            passed_count += 1
+        else:
+            # Unbacked TST
+            if base_tid in baseline_allowlist:
+                warnings.append(
+                    f"WARNING (Legacy unbacked TST): {rel_p}:{lno} [{raw_id}] claims [Verified] without test code "
+                    f"or machine test evidence (tolerated in ratchet baseline)."
+                )
+            else:
+                errors.append(
+                    f"{rel_p}:{lno} [{raw_id}] claims [Verified] without test code or passing test evidence "
+                    f"(outside ratchet baseline, REQ-PRO-099.3)."
+                )
+
+    diagnostics = []
+    if errors:
+        for err in errors:
+            diagnostics.append(f"ERROR: {err}")
+        return False, diagnostics
+
+    for warn in warnings:
+        diagnostics.append(warn)
+
+    diagnostics.append(
+        f"PASS: 100% of [Verified] TST specifications verified against test evidence "
+        f"({len(warnings)} legacy unbacked TSTs tolerated in ratchet baseline, {passed_count} backed)."
+    )
+    return True, diagnostics
+
+
+def has_verified_test_evidence(
+    tst_id,
+    repo_root=None,
+    test_results=None,
+    code_tags=None,
+    baseline_allowlist=None,
+):
+    """
+    Checks if a given TST ID has passing test evidence or backing test code (REQ-PRO-099.4).
+    Returns (ok: bool, reason: str).
+    """
+    if repo_root is None:
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    if baseline_allowlist is None:
+        baseline_allowlist = LEGACY_UNBACKED_VERIFIED_TSTS
+
+    base_tid = tst_id.split(".")[0] if "." in tst_id else tst_id
+
+    if test_results is None:
+        test_results = parse_junit_xml_results(repo_root=repo_root)
+    if code_tags is None:
+        code_tags = extract_test_code_tags(repo_root=repo_root)
+
+    correlate_test_results_to_tsts(test_results, code_tags=code_tags)
+    by_tst = test_results.get("by_tst", {})
+
+    if base_tid in by_tst:
+        tst_data = by_tst[base_tid]
+        if tst_data["status"] in ("FAIL", "ERROR"):
+            return False, f"Associated testcase failed in test results ({len(tst_data['failing_cases'])} failure(s))"
+        if len(tst_data["passing_cases"]) > 0:
+            return True, f"Verified by {len(tst_data['passing_cases'])} passing testcase(s)"
+
+    if base_tid in code_tags:
+        loc_count = len(code_tags[base_tid])
+        return True, f"Backed by test code tag ({loc_count} location(s))"
+
+    if base_tid in baseline_allowlist:
+        return True, "Tolerated in ratchet baseline (legacy unbacked TST)"
+
+    return False, "No test code or passing test results found"
 
 
 
@@ -3417,6 +3835,23 @@ def main():
         help="Check living documentation shards for evidence-based requirement status compliance (REQ-PRO-073.4).",
     )
     parser.add_argument(
+        "--check-verified-evidence",
+        action="store_true",
+        help="Verify that all [Verified] TST specifications are backed by passing test evidence and reject failing or unbacked items (REQ-PRO-099).",
+    )
+    parser.add_argument(
+        "--test-results-dir",
+        type=str,
+        default=None,
+        help="Path to JUnit XML test results directory (default: app/build/test-results/**).",
+    )
+    parser.add_argument(
+        "--test-archive-path",
+        type=str,
+        default=None,
+        help="Path to JUnit XML test results zip archive.",
+    )
+    parser.add_argument(
         "--enforce-evidence",
         action="store_true",
         help="Fail if ANY requirement claiming [Verified] lacks an existing TST ID, including legacy items.",
@@ -3505,6 +3940,15 @@ def main():
             print(f"Covered SYSREQs: {report['covered_count']} ({report['coverage_pct']}%)")
             for sys_id, reqs in sorted(report["sys_to_swe_map"].items()):
                 print(f"  {sys_id} ({len(reqs)} REQs): {', '.join(sorted(reqs))}")
+        sys.exit(0 if ok else 1)
+
+    if args.check_verified_evidence:
+        ok, diag = verify_verified_test_evidence(
+            results_dir=args.test_results_dir,
+            archive_path=args.test_archive_path,
+        )
+        for msg in diag:
+            print(msg, file=sys.stderr if not ok and msg.startswith("ERROR") else sys.stdout)
         sys.exit(0 if ok else 1)
 
     if args.check_tests_format:
