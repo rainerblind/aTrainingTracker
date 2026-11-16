@@ -3,7 +3,7 @@
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Requirements**: 154
+**Total Requirements**: 155
 
 ---
 
@@ -4792,6 +4792,47 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
   - *Then* the buttons appear in exact order `[Licht, Lap, Klingel]` on a single horizontal row without text wrapping, clipping, or overlapping `ElevationProfile` / `LiveMmpCurveChart`.
 
 **Invariants**: Non-blocking GATT mode cycling; zero ElevatedCard/pointerInput contention; idempotent SQLite upgrade; 100% 9-language translation parity.
+
+### REQ-CON-044: Instance-Isolated Connection State & Multi-Device Gating for BLE & ANT+ Radar [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-CON-044`
+- **System Requirement(s)**: `SYSREQ-TRK-001`, `SYSREQ-TRK-002`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `BTLERadarDevice.java`, `ANTBikeRadarDevice.kt`, `MyBTLEDevice.java`
+- **Rationale**: When multiple radar peripherals are paired in `DeviceManager` across multiple bikes (e.g. `RearVue8` on bike A and `ATT-Rdr` on bike B), connecting to one radar must not falsely mark all paired radar peripherals as connected on the Start screen or in Cockpit device status headers. Each device instance must evaluate its own physical connection and packet reception status while preserving fail-safe packet-starvation watchdog detection (ATT-8109, Parent Epic ATT-1286, extending `REQ-CON-028` and `REQ-CON-041.4`):
+- **Description**:
+  1. *Per-Instance BLE GATT Connection Qualification (`REQ-CON-044.1`)*:
+     - `BTLERadarDevice.isReceivingData()` SHALL verify that *this specific device instance* has an active GATT connection and discovered services via `super.isReceivingData()` (`mState == State.CONNECTED_WITH_SERVICE`), in conjunction with `RadarStateRepository.getState(RadarSource.BLE).getConnectionState() == RadarConnectionState.CONNECTED`.
+     - When multiple `BTLERadarDevice` instances are paired, an active connection on one peripheral SHALL NOT cause disconnected or powered-off peer instances to return `true`.
+  2. *Fail-Safe Watchdog Starvation Preservation (`REQ-CON-044.2`)*:
+     - If the underlying GATT connection of a `BTLERadarDevice` remains open but incoming packet flow ceases (triggering the 3.5s packet-starvation watchdog and setting `RadarConnectionState.DISCONNECTED_ERROR`), `isReceivingData()` SHALL evaluate to `false` via the conjunction with `RadarStateRepository`.
+  3. *Per-Instance ANT+ Radar Packet Reception Gating (`REQ-CON-044.3`)*:
+     - `ANTBikeRadarDevice.isReceivingData()` SHALL verify that *this specific device instance* has received valid radar broadcast packets within the active watchdog timeout window (`WATCHDOG_TIMEOUT_MS = 3500L`), in conjunction with `RadarStateRepository.getState(RadarSource.ANT_PLUS).connectionState == RadarConnectionState.CONNECTED`.
+     - When multiple ANT+ radars are configured, a live broadcast stream on one device SHALL NOT cause a silent peer ANT+ radar to report `isReceivingData() == true`.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new `REQ-CON-044` extending `REQ-CON-041.4` (*Isolated Transport Inspection* in `ATT-7575`). Targets `BTLERadarDevice.java` and `ANTBikeRadarDevice.kt`.
+2. *Historical Origin & Commit Trace*: Commit `663c69ea` (ATT-7575) introduced `BTLERadarDevice.isReceivingData()` inspecting `RadarStateRepository.getState(RadarSource.BLE)` to prevent ANT+ streams from falsely activating BLE radar tiles.
+3. *Root Reason for Existing Formulation*: The formulation in ATT-7575 focused on cross-protocol arbitration (BLE vs. ANT+), inadvertently omitting the per-instance GATT connection check from `MyBTLEDevice`.
+4. *Preservation of Core Invariants*: Preserves cross-protocol isolation (`RadarSource.BLE` vs. `RadarSource.ANT_PLUS`), watchdog fail-safe timeout upon packet starvation, and single-radar operation.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Criterion 1 (Multi-Instance BLE Radar Gating)*:
+  - *Given* two paired BLE radar devices (`device1` and `device2`) in `DeviceManager`,
+  - *When* `device1` is connected (`CONNECTED_WITH_SERVICE`) and streaming, while `device2` is powered off (`DISCONNECTED`),
+  - *Then* `device1.isReceivingData()` returns `true`, and `device2.isReceivingData()` returns `false`.
+• *Criterion 2 (BLE Watchdog Packet Starvation)*:
+  - *Given* a connected `BTLERadarDevice` (`CONNECTED_WITH_SERVICE`),
+  - *When* radar packet delivery stops and the 3.5s watchdog timer fires (setting `RadarConnectionState.DISCONNECTED_ERROR`),
+  - *Then* `device.isReceivingData()` returns `false` despite GATT connection remaining open.
+• *Criterion 3 (Multi-Instance ANT+ Radar Gating)*:
+  - *Given* two configured ANT+ radar devices,
+  - *When* only one device receives broadcast data pages,
+  - *Then* only that active instance returns `isReceivingData() == true`.
+
+**Invariants**: Zero false-positive device status on Start/Cockpit screens; 100% fail-safe watchdog retention; 100% clean-room test pass rate.
 
 ### REQ-TRK-064: 1-Tap Radar Audio Snooze, Peloton-Mode Audio Sync & Smart Urban Alert Suppression [Verified]
 - **Tests**: `TST-TRK-064`

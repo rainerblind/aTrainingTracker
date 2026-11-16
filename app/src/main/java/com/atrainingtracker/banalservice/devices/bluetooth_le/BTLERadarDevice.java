@@ -172,7 +172,7 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
 
     @Override
     public boolean isReceivingData() {
-        return RadarStateRepository.getState(RadarSource.BLE).getConnectionState() == RadarConnectionState.CONNECTED;
+        return super.isReceivingData() && RadarStateRepository.getState(RadarSource.BLE).getConnectionState() == RadarConnectionState.CONNECTED;
     }
 
     @Override

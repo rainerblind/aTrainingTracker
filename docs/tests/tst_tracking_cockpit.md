@@ -3,7 +3,7 @@
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Tests**: 130
+**Total Tests**: 131
 
 ---
 
@@ -2351,6 +2351,28 @@
   • Verify 100% parity of all radar light button strings across all 9 supported locales in `strings_radar.xml`.
   6. *Clean-Room Targeted Test Suite Execution (`TST-CON-043.6`)*:
   • Verify targeted regression tests pass at 100%.
+
+### TST-CON-044: **Instance-Isolated Radar Connection State & Multi-Device Gating Test Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-CON-044` (`REQ-CON-044.1`..`REQ-CON-044.3`)
+- **Component**: `BTLERadarDevice.java`, `ANTBikeRadarDevice.kt`, `BTLERadarDeviceTest.kt`, `ANTBikeRadarDeviceTest.kt`
+- **Jira**: `ATT-8109`
+- **Test Type**: Unit & Regression
+- **Verification Method**: Unit
+- **Procedure**:
+  1. *Multi-Instance BLE Radar Isolation Test (`TST-CON-044.1`, `BTLERadarDeviceTest.kt`)*:
+     • Instantiate two `BTLERadarDevice` instances (`device1` and `device2`).
+     • Connect `device1` (`State.CONNECTED_WITH_SERVICE`) while leaving `device2` disconnected (`State.DISCONNECTED`).
+     • Update `RadarStateRepository` to `CONNECTED` under `RadarSource.BLE`.
+     • Assert `device1.isReceivingData` is `true` and `device2.isReceivingData` is `false`.
+  2. *Fail-Safe Watchdog Starvation Retention Test (`TST-CON-044.2`, `BTLERadarDeviceTest.kt`)*:
+     • With `device1` in `State.CONNECTED_WITH_SERVICE`, trigger watchdog timeout (`watchdogRunnable.run()`).
+     • Assert `device1.isReceivingData` transitions to `false`.
+  3. *Multi-Instance ANT+ Radar Isolation Test (`TST-CON-044.3`, `ANTBikeRadarDeviceTest.kt`)*:
+     • Instantiate two `ANTBikeRadarDevice` instances with different ANT device numbers.
+     • Feed broadcast pages to instance 1 only; assert instance 1 returns `true` and instance 2 returns `false`.
+  4. *Clean-Room Targeted Test Suite Execution (`TST-CON-044.4`)*:
+     • Verify all radar unit test suites pass with 100% success rate.
 
 ### TST-TRK-064: **1-Tap Radar Audio Snooze, Peloton Sync & Urban Suppression Test Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-064` (`REQ-TRK-064.1`..`REQ-TRK-064.7`)

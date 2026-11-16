@@ -118,6 +118,9 @@ class ANTBikeRadarDevice(
     internal var isShutDown = false
     internal var detectedManufacturerId: Int? = null
 
+    @Volatile
+    private var lastPacketReceivedRealtimeMs = 0L
+
     private val handler = Handler(Looper.getMainLooper())
     private val watchdogRunnable = Runnable {
         onWatchdogTimeout()
@@ -224,7 +227,9 @@ class ANTBikeRadarDevice(
     override fun getProtocol(): Protocol = Protocol.ANT_PLUS
 
     override fun isReceivingData(): Boolean =
-        RadarStateRepository.getState(RadarSource.ANT_PLUS).connectionState == RadarConnectionState.CONNECTED
+        (lastPacketReceivedRealtimeMs > 0L &&
+            SystemClock.elapsedRealtime() - lastPacketReceivedRealtimeMs <= WATCHDOG_TIMEOUT_MS) &&
+            RadarStateRepository.getState(RadarSource.ANT_PLUS).connectionState == RadarConnectionState.CONNECTED
 
     override fun addSensors() {
         threatCountSensor = MySensor(this, SensorType.RADAR_THREAT_COUNT)
@@ -294,6 +299,7 @@ class ANTBikeRadarDevice(
 
     fun decodeBroadcastData(payload: ByteArray?) {
         if (payload == null || payload.size < 8) return
+        lastPacketReceivedRealtimeMs = SystemClock.elapsedRealtime()
 
         val pageNumber = payload[0].toInt() and 0xFF
         when (pageNumber) {
@@ -503,6 +509,7 @@ class ANTBikeRadarDevice(
     }
 
     fun onWatchdogTimeout() {
+        lastPacketReceivedRealtimeMs = 0L
         channelAcquisitionHandle?.cancel()
         channelAcquisitionHandle = null
         activeTargets.clear()
@@ -595,6 +602,7 @@ class ANTBikeRadarDevice(
 
     override fun shutDown() {
         isShutDown = true
+        lastPacketReceivedRealtimeMs = 0L
         handler.removeCallbacksAndMessages(null)
         channelAcquisitionHandle?.cancel()
         channelAcquisitionHandle = null
@@ -644,5 +652,10 @@ class ANTBikeRadarDevice(
         } catch (_: Exception) {
             // Unit test / headless environment guard where Intent or package manager is not mocked
         }
+    }
+
+    @androidx.annotation.VisibleForTesting
+    fun setLastPacketReceivedRealtimeMsForTesting(timeMs: Long) {
+        lastPacketReceivedRealtimeMs = timeMs
     }
 }
