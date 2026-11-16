@@ -3351,8 +3351,8 @@
   • Verify a document containing only `SYSREQ-DEX-001` or `SYSREQ-TRK-001` does NOT extract `REQ-DEX-001` / `REQ-TRK-001` into `sys_to_swe` or `_collect_test_file_index()`, while valid standalone `REQ-*` references still match cleanly.
   2. *Derived Prefix Exclusion Test (`TST-PRO-102.2`, tools/test_verify_requirement_governance.py)*:
   • Verify `REQ-PRO-*` (and other `SWE_DERIVED_PREFIXES`) mentioning `SYSREQ-*` are excluded from `sys_to_swe` and `swe_refinement_total_count`.
-  3. *Bidirectional Coverage & Live CLI Verification Test (`TST-PRO-102.3`, tools/test_verify_requirement_governance.py)*:
-  • Verify `report` exposes accurate `swe_refinement_total_count`, `swe_refinement_covered_count`, `swe_refinement_coverage_pct`, and `swe_to_sys_map`; verify live `--verify-sys-trace --report-sys-coverage` prints `12/12` (`100.0%`) forward and `49/355` (`13.8%`) reverse `System-Refinement` coverage with exit code `0`, and `test_scenario_40..43` remain green.
+  3. *Bidirectional Coverage & Live CLI Invariant Verification Test (`TST-PRO-102.3`, [Verified] ATT-8437, tools/test_verify_requirement_governance.py)*:
+  • Verify `report` exposes accurate `swe_refinement_total_count`, `swe_refinement_covered_count`, `swe_refinement_coverage_pct`, and `swe_to_sys_map`; verify live `--verify-sys-trace --report-sys-coverage` prints `12/12` (`100.0%`) forward and reverse `System-Refinement` coverage with exit code `0`, and `test_scenario_68` asserts structural invariants: exact forward parity `covered_count == sysreq_count == 12`, lower-bound floors `swe_refinement_total_count >= 362`, `swe_refinement_covered_count >= 346`, `swe_refinement_coverage_pct >= 95.0`, and zero `REQ-DEX-*` / `REQ-PRO-*` pollution.
 
 ---
 
@@ -3366,8 +3366,8 @@
 - **Test Description**:
   1. *System Requirement(s) Attribute & Derived (SW-only) Parser Test (`TST-PRO-103.1`, tools/test_verify_requirement_governance.py)*:
   • Verify `verify_system_software_traceability()` parses `- **System Requirement(s)**:` for both `SYSREQ-*` links and `Derived (SW-only)` rationales, classifies `RAD`/`CLM` prefixes cleanly, and rejects unclassified `SYSTEM_REFINED_PREFIXES` REQs under `--check-reverse-sys-trace` / `fail_on_unclassified_swe=True`.
-  2. *Live Repository 100% Bidirectional Classification & Matrix Parity Test (`TST-PRO-103.2`, tools/test_verify_requirement_governance.py)*:
-  • Verify `--check-reverse-sys-trace` and `--verify-sys-trace --report-sys-coverage` pass on the live repository with `12/12` (`100.0%`) forward coverage, `0` unclassified `SYSTEM_REFINED_PREFIXES` REQs (`100.0%` classified via `SYSREQ-*` or `Derived (SW-only)`), and `REQ-PRO-*` cleanly excluded.
+  2. *Live Repository 100% Bidirectional Classification & Invariant Test (`TST-PRO-103.2`, [Verified] ATT-8437, tools/test_verify_requirement_governance.py)*:
+  • Verify `--check-reverse-sys-trace` and `--verify-sys-trace --report-sys-coverage` pass on the live repository with `12/12` (`100.0%`) forward coverage, and `test_scenario_70` asserts structural invariants: `reverse_classified_count == swe_refinement_total_count`, `swe_refinement_covered_count + swe_derived_sw_only_count == swe_refinement_total_count`, `unclassified_swe_refinement_reqs == []`, `swe_refinement_total_count >= 362`, and `reverse_classified_pct == 100.0`.
   3. *System Contract & Fixture Compatibility Test (`TST-PRO-103.3`, System*ContractTest.kt & tools/test_verify_requirement_governance.py)*:
   • Verify `SystemLiveTrackingRequirementsContractTest`, `SystemDataExchangeRequirementsContractTest`, `SystemRequirementsSpecificationContractTest`, `SystemVerificationProtocolContractTest`, `AspiceSweAuditContractTest`, and synthetic fixtures (`test_scenario_40..43`, `test_scenario_66..68`) all pass with exit code `0`.
 

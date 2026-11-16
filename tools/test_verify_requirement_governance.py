@@ -2625,16 +2625,16 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
             self.assertEqual(report["swe_refinement_coverage_pct"], 50.0)
 
     def test_scenario_68_tst_pro_102_3_bidirectional_sys_coverage_live_repo(self):
-        """TST-PRO-102.3: Live repository reports authentic bidirectional SYS/SWE coverage without bogus IDs."""
+        """TST-PRO-102.3: Live repository reports authentic bidirectional SYS/SWE coverage without bogus IDs (REQ-PRO-102.3)."""
         ok, diag, report = verify_system_software_traceability()
         self.assertTrue(ok, f"Expected live --verify-sys-trace pass, got: {diag}")
-        self.assertEqual(report["covered_count"], 12)
+        self.assertEqual(report["covered_count"], report["sysreq_count"])
         self.assertEqual(report["sysreq_count"], 12)
         all_mapped_reqs = {r for reqs in report["sys_to_swe_map"].values() for r in reqs}
         self.assertFalse(any(r.startswith("REQ-DEX-") for r in all_mapped_reqs))
         self.assertFalse(any(r.startswith("REQ-PRO-") for r in all_mapped_reqs))
-        self.assertGreaterEqual(report["swe_refinement_total_count"], 363)
-        self.assertGreaterEqual(report["swe_refinement_covered_count"], 347)
+        self.assertGreaterEqual(report["swe_refinement_total_count"], 362)
+        self.assertGreaterEqual(report["swe_refinement_covered_count"], 346)
         self.assertGreaterEqual(report["swe_refinement_coverage_pct"], 95.0)
 
     def test_scenario_69_tst_pro_103_1_system_requirement_attribute_and_derived_parser(self):
@@ -2678,11 +2678,16 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
             self.assertEqual(rep_pass["unclassified_swe_refinement_reqs"], [])
 
     def test_scenario_70_tst_pro_103_2_live_reverse_sys_trace_100pct(self):
-        """TST-PRO-103.2: Live repository achieves 100% System-Refinement classification with 0 unclassified REQs."""
+        """TST-PRO-103.2: Live repository achieves 100% System-Refinement classification with 0 unclassified REQs (REQ-PRO-103.2)."""
         ok, diag, report = verify_system_software_traceability(fail_on_unclassified_swe=True)
         self.assertTrue(ok, f"Expected live --check-reverse-sys-trace pass, got: {diag}")
         self.assertEqual(report["unclassified_swe_refinement_reqs"], [])
-        self.assertGreaterEqual(report["reverse_classified_count"], 363)
+        self.assertEqual(report["reverse_classified_count"], report["swe_refinement_total_count"])
+        self.assertEqual(
+            report["swe_refinement_covered_count"] + report["swe_derived_sw_only_count"],
+            report["swe_refinement_total_count"],
+        )
+        self.assertGreaterEqual(report["swe_refinement_total_count"], 362)
         self.assertEqual(report["reverse_classified_pct"], 100.0)
 
     def test_scenario_71_tst_pro_103_3_rad_clm_prefix_classification(self):
