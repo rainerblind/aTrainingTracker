@@ -3040,7 +3040,7 @@
 
 ### TST-TRK-082: **Decoupled Multi-Color Dynamic Zone Sparkline Rendering Verification Suite** [Verified]
 - **Target Release**: `V5.0.0`
-- **Tickets**: `ATT-7761`
+- **Tickets**: `ATT-7761`, `ATT-8436`
 - **Requirement(s)**: `REQ-TRK-082` (`REQ-TRK-082.1`..`REQ-TRK-082.4`)
 - **Component**: `SensorSparklineViewTest.kt`, `TrackingViewModelDynamicZoneSparklineTest.kt`, `SensorFieldViewDynamicZoneScreenshotTest.kt`
 - **Test Type**: Unit, ViewModel & Compose Screenshot
@@ -3051,7 +3051,7 @@
      • Verify fixed palette tokens, `"THEME_DEFAULT"`, `"GLOBAL_DEFAULT"`, and `"DYNAMIC_ZONE"` resolve deterministically independent of `zoneDisplayOptions.showTextColor`.
   2. *Threshold Gradient Stop Mapping, Terminal Dot & Fallback Test (`TST-TRK-082.2`, `SensorSparklineViewTest.kt`)*:
      • **HR (4 cutoffs -> Z1..Z5)** and **Power (6 cutoffs -> Z1..Z7)**: verify normalized stops in `[0f, 1f]` are monotonically non-decreasing, aligned to `minVal..maxVal` within canvas vertical padding, and terminal dot color matches `samples.last()` zone.
-     • **HRV DFA α1 (inverted polarity)**: verify `alpha1 > t1` maps to `TTColor.Zone2` (green, top / `stop = 0f`), `t2 <= alpha1 <= t1` maps to `TTColor.Zone3` (orange, middle), and `alpha1 < t2` maps to `TTColor.Zone4` (red, bottom / `stop = 1f`).
+     • **HRV DFA α1 (inverted polarity & inverted Y-axis, ATT-8436)**: verify `alpha1 < t2` maps to `TTColor.Zone4` (red, top / `stop = 0f`), `t2 <= alpha1 <= t1` maps to `TTColor.Zone3` (orange, middle), and `alpha1 > t1` maps to `TTColor.Zone2` (green, bottom / `stop = 1f`). Verify spatial Y-coordinate inversion renders lower values at `verticalPaddingPx` (top) and higher values at `height - verticalPaddingPx` (bottom) across dynamic and fixed color modes.
      • **Dark/AMOLED Zone 7 Contrast**: verify `TTColor.Zone7` (`#000000`) substitutes a high-contrast dark-surface color when `isDarkSurface(colorScheme) == true`.
      • **Edge-Case Fallbacks**: verify graceful fallback to solid `lineColor` (null gradient stops / zero crash) for `samples.size == 1`, `range == 0f` (`minVal == maxVal`), `isPlaceholder == true`, and null/empty thresholds.
   3. *TrackingViewModel Zone Cutoff Projection & Guard Test (`TST-TRK-082.3`, `TrackingViewModelDynamicZoneSparklineTest.kt`)*:
@@ -3059,6 +3059,6 @@
      • Verify `SensorType.POWER_TO_WEIGHT` is strictly guarded against receiving raw Watt (`PWR_BIKE`) cutoffs.
      • Verify `HRV_DFA_A1` zone gradient stops are suppressed when `hrvSignalQualityStatus` is `SMOOTHED_STREAM` or `QUANTIZED_SYNTHETIC`.
   4. *Visual Compose Screenshot Verification Test (`TST-TRK-082.4`, `SensorFieldViewDynamicZoneScreenshotTest.kt`)*:
-     • Render `SensorFieldView` / `SensorSparklineView` tiles in Light and Dark/AMOLED themes covering HR (5-zone), Power (7-zone incl. Zone 7 dark contrast), HRV DFA α1 (inverted polarity), decoupled fixed-color + `showTextColor = true`, and placeholder/flat-line fallbacks; capture `docs/engineering/walkthroughs/img/ATT-7761_dynamic_zone_sparkline.png` and certify against Rule 8.5 4-point visual checklist.
+     • Render `SensorFieldView` / `SensorSparklineView` tiles in Light and Dark/AMOLED themes covering HR (5-zone), Power (7-zone incl. Zone 7 dark contrast), HRV DFA α1 (inverted polarity with aerobic green at bottom and anaerobic red at top), decoupled fixed-color + `showTextColor = true`, and placeholder/flat-line fallbacks; capture `docs/engineering/walkthroughs/img/ATT-7761_dynamic_zone_sparkline.png` and certify against Rule 8.5 4-point visual checklist.
 
 

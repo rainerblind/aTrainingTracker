@@ -126,6 +126,37 @@ fun resolveSparklineEffectiveSpanSeconds(liveSamples: List<Float>, liveSpanSecon
     if (liveSamples.isNotEmpty()) liveSpanSeconds else (if (graphHorizonSeconds > 0) graphHorizonSeconds else 300)
 
 /**
+ * Calculates the canvas Y coordinate for [value] spanning `[minVal, maxVal]` within
+ * `[verticalPaddingPx, height - verticalPaddingPx]` (REQ-TRK-082.2, ATT-8436).
+ *
+ * - When [invertYAxis] is `false` (standard Cartesian metrics like HR and Power):
+ *   `maxVal` maps to `verticalPaddingPx` (top) and `minVal` maps to `height - verticalPaddingPx` (bottom).
+ * - When [invertYAxis] is `true` (inverted strain metrics like HRV DFA alpha 1):
+ *   `minVal` (anaerobic, high strain) maps to `verticalPaddingPx` (top) and `maxVal` (aerobic, low strain)
+ *   maps to `height - verticalPaddingPx` (bottom).
+ */
+fun computeSparklineY(
+    value: Float,
+    minVal: Float,
+    maxVal: Float,
+    height: Float,
+    verticalPaddingPx: Float,
+    invertYAxis: Boolean = false
+): Float {
+    val usableHeight = (height - 2f * verticalPaddingPx).coerceAtLeast(1f)
+    val range = maxVal - minVal
+    if (range <= 0f || !range.isFinite()) {
+        return height / 2f
+    }
+    val fraction = ((value - minVal) / range).coerceIn(0f, 1f)
+    return if (invertYAxis) {
+        verticalPaddingPx + fraction * usableHeight
+    } else {
+        height - verticalPaddingPx - fraction * usableHeight
+    }
+}
+
+/**
  * Lightweight, hardware-accelerated Canvas sparkline composable rendering temporal telemetry trends
  * and glanceable X-axis labels with zero recomposition churn or snapshot state mutations (REQ-TRK-059.5, REQ-TRK-059.9, REQ-TRK-059.11, Rule 66).
  *
@@ -136,6 +167,7 @@ fun resolveSparklineEffectiveSpanSeconds(liveSamples: List<Float>, liveSpanSecon
  * @param fillGradient Whether to render a subtle vertical gradient fill below the polyline.
  * @param isPlaceholder Whether to render the sparkline in subtle standby/placeholder mode with dashed curve, dimmed opacity, and suppressed terminal dot.
  * @param zoneThresholds Optional zone threshold specification for multi-color Dynamic Zone gradient rendering (REQ-TRK-082.2).
+ * @param invertYAxis Whether to invert the vertical Y-axis so lower values render near the top and higher values near the bottom (REQ-TRK-082.2, ATT-8436).
  */
 @Composable
 fun SensorSparklineView(
@@ -145,12 +177,14 @@ fun SensorSparklineView(
     lineColor: Color = MaterialTheme.colorScheme.primary,
     fillGradient: Boolean = true,
     isPlaceholder: Boolean = false,
-    zoneThresholds: SparklineZoneThresholds? = null
+    zoneThresholds: SparklineZoneThresholds? = null,
+    invertYAxis: Boolean = false
 ) {
     if (samples.isEmpty()) {
         return
     }
 
+    val effectiveInvertY = invertYAxis || (zoneThresholds?.invertedPolarity == true)
     val colorScheme = MaterialTheme.colorScheme
     val fallbackLineColor = resolveSparklineZoneContrastColor(lineColor, colorScheme)
     val resolvedStyling = remember(samples, isPlaceholder, zoneThresholds, colorScheme, fallbackLineColor) {
@@ -202,11 +236,14 @@ fun SensorSparklineView(
             val strokePath = Path()
             val fillPath = if (fillGradient && !isPlaceholder) Path() else null
 
-            val firstY = if (range > 0f) {
-                size.height - verticalPaddingPx - ((samples[0] - minVal) / range) * usableHeight
-            } else {
-                size.height / 2f
-            }
+            val firstY = computeSparklineY(
+                value = samples[0],
+                minVal = minVal,
+                maxVal = maxVal,
+                height = size.height,
+                verticalPaddingPx = verticalPaddingPx,
+                invertYAxis = effectiveInvertY
+            )
 
             strokePath.moveTo(0f, firstY)
             fillPath?.moveTo(0f, size.height)
@@ -217,11 +254,14 @@ fun SensorSparklineView(
 
             for (i in 1 until samples.size) {
                 val currentX = i * stepX
-                val currentY = if (range > 0f) {
-                    size.height - verticalPaddingPx - ((samples[i] - minVal) / range) * usableHeight
-                } else {
-                    size.height / 2f
-                }
+                val currentY = computeSparklineY(
+                    value = samples[i],
+                    minVal = minVal,
+                    maxVal = maxVal,
+                    height = size.height,
+                    verticalPaddingPx = verticalPaddingPx,
+                    invertYAxis = effectiveInvertY
+                )
                 strokePath.lineTo(currentX, currentY)
                 fillPath?.lineTo(currentX, currentY)
                 lastX = currentX
@@ -471,29 +511,51 @@ fun buildDynamicZoneVerticalGradientStops(
     }
 
     val range = maxVal - minVal
-    val topColor = resolveSparklineZoneColorForValue(maxVal, thresholds, colorScheme) ?: return null
-    val bottomColor = resolveSparklineZoneColorForValue(minVal, thresholds, colorScheme) ?: return null
-
     val stops = mutableListOf<Pair<Float, Color>>()
-    stops.add(0f to topColor)
-    var lastStop = 0f
 
-    // Traverse cutoffs strictly inside (minVal, maxVal) from highest (near top = 0f) to lowest (near bottom = 1f)
-    for (i in thresholds.cutoffs.indices.reversed()) {
-        val cutoff = thresholds.cutoffs[i]
-        if (cutoff > minVal && cutoff < maxVal) {
-            val fraction = ((maxVal - cutoff) / range).coerceIn(0f, 1f)
-            val upperColor = resolveSparklineZoneContrastColor(thresholds.zoneColors[i + 1], colorScheme)
-            val lowerColor = resolveSparklineZoneContrastColor(thresholds.zoneColors[i], colorScheme)
-            val upperStop = (fraction - GRADIENT_STOP_TRANSITION_EPSILON).coerceIn(lastStop, 1f)
-            val lowerStop = (fraction + GRADIENT_STOP_TRANSITION_EPSILON).coerceIn(upperStop, 1f)
-            stops.add(upperStop to upperColor)
-            stops.add(lowerStop to lowerColor)
-            lastStop = lowerStop
+    if (thresholds.invertedPolarity) {
+        val topColor = resolveSparklineZoneColorForValue(minVal, thresholds, colorScheme) ?: return null
+        val bottomColor = resolveSparklineZoneColorForValue(maxVal, thresholds, colorScheme) ?: return null
+        stops.add(0f to topColor)
+        var lastStop = 0f
+
+        // Traverse cutoffs from lowest value (near top = 0f, higher strain) to highest (near bottom = 1f, lower strain) (REQ-TRK-082.2, ATT-8436)
+        for (i in thresholds.cutoffs.indices) {
+            val cutoff = thresholds.cutoffs[i]
+            if (cutoff > minVal && cutoff < maxVal) {
+                val fraction = ((cutoff - minVal) / range).coerceIn(0f, 1f)
+                val upperColor = resolveSparklineZoneContrastColor(thresholds.zoneColors[i], colorScheme)
+                val lowerColor = resolveSparklineZoneContrastColor(thresholds.zoneColors[i + 1], colorScheme)
+                val upperStop = (fraction - GRADIENT_STOP_TRANSITION_EPSILON).coerceIn(lastStop, 1f)
+                val lowerStop = (fraction + GRADIENT_STOP_TRANSITION_EPSILON).coerceIn(upperStop, 1f)
+                stops.add(upperStop to upperColor)
+                stops.add(lowerStop to lowerColor)
+                lastStop = lowerStop
+            }
         }
-    }
+        stops.add(1f to bottomColor)
+    } else {
+        val topColor = resolveSparklineZoneColorForValue(maxVal, thresholds, colorScheme) ?: return null
+        val bottomColor = resolveSparklineZoneColorForValue(minVal, thresholds, colorScheme) ?: return null
+        stops.add(0f to topColor)
+        var lastStop = 0f
 
-    stops.add(1f to bottomColor)
+        // Traverse cutoffs strictly inside (minVal, maxVal) from highest (near top = 0f) to lowest (near bottom = 1f)
+        for (i in thresholds.cutoffs.indices.reversed()) {
+            val cutoff = thresholds.cutoffs[i]
+            if (cutoff > minVal && cutoff < maxVal) {
+                val fraction = ((maxVal - cutoff) / range).coerceIn(0f, 1f)
+                val upperColor = resolveSparklineZoneContrastColor(thresholds.zoneColors[i + 1], colorScheme)
+                val lowerColor = resolveSparklineZoneContrastColor(thresholds.zoneColors[i], colorScheme)
+                val upperStop = (fraction - GRADIENT_STOP_TRANSITION_EPSILON).coerceIn(lastStop, 1f)
+                val lowerStop = (fraction + GRADIENT_STOP_TRANSITION_EPSILON).coerceIn(upperStop, 1f)
+                stops.add(upperStop to upperColor)
+                stops.add(lowerStop to lowerColor)
+                lastStop = lowerStop
+            }
+        }
+        stops.add(1f to bottomColor)
+    }
     return stops
 }
 

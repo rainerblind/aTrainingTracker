@@ -491,6 +491,7 @@ fun SensorFieldView(
                             lineColor = sparklineLineColor,
                             isPlaceholder = isPlaceholder,
                             zoneThresholds = sparklineZoneThresholds,
+                            invertYAxis = fieldState.sensorType == SensorType.HRV_DFA_A1 || (sparklineZoneThresholds?.invertedPolarity == true),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .then(
