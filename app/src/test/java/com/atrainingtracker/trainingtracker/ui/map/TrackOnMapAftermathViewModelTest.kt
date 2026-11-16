@@ -67,6 +67,8 @@ class TrackOnMapAftermathViewModelTest {
         every { WorkoutRepository.getInstance(any()) } returns mockWorkoutRepo
         coEvery { mockWorkoutRepo.getWorkoutTrackPoints(any(), any()) } returns emptyList()
         coEvery { mockWorkoutRepo.getWorkoutTelemetryPoints(any()) } returns emptyList()
+        coEvery { mockWorkoutRepo.loadTracklessWorkoutTelemetry(any()) } returns (emptyList<PathPoint>() to emptyMap())
+        coEvery { mockWorkoutRepo.loadWorkoutDetailTelemetry(any(), any()) } returns WorkoutRepository.WorkoutDetailTelemetry(emptyMap(), null, null)
         coEvery { mockWorkoutRepo.getWorkoutMarkers(any()) } returns emptyList()
         coEvery { mockWorkoutRepo.getHeartRateZoneDistribution(any(), any()) } returns null
         coEvery { mockWorkoutRepo.getPowerZoneDistribution(any()) } returns null

@@ -250,7 +250,11 @@ class TrackOnMapAftermathViewModel @JvmOverloads constructor(
                     )
                 }
             } else {
-                val (telemetryPoints, tracklessOverlays) = workoutRepository.loadTracklessWorkoutTelemetry(workoutId)
+                val (telemetryPoints, tracklessOverlays) = try {
+                    workoutRepository.loadTracklessWorkoutTelemetry(workoutId)
+                } catch (_: Throwable) {
+                    workoutRepository.getWorkoutTelemetryPoints(workoutId) to emptyMap()
+                }
                 withContext(Dispatchers.Main) {
                     _uiState.value = _uiState.value.copy(
                         telemetryPath = telemetryPoints,
