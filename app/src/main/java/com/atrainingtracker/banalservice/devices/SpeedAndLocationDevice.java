@@ -29,6 +29,8 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 
+import androidx.core.location.LocationCompat;
+
 import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.sensor.MyDoubleAccumulatorSensor;
 import com.atrainingtracker.banalservice.sensor.MySensor;
@@ -774,7 +776,10 @@ public abstract class SpeedAndLocationDevice extends MyDevice implements SensorE
                 mLongitudeSensor.newValue(lonToPublish);
                 mLatitudeSensor.newValue(latToPublish);
                 mAccuracySensor.newValue(location.getAccuracy() + 0.0);
-                mAltitudeSensor.newValue(location.getAltitude());
+                double altToPublish = LocationCompat.hasMslAltitude(location)
+                        ? LocationCompat.getMslAltitudeMeters(location)
+                        : location.getAltitude();
+                mAltitudeSensor.newValue(altToPublish);
 
                 if (mIsStationaryPinned && mStationaryAnchor != null) {
                     mLineDistanceSensor.newValue(mStationaryAnchor.distanceTo(mStartLocation) + 0.0);

@@ -3,7 +3,7 @@
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Requirements**: 153
+**Total Requirements**: 154
 
 ---
 
@@ -5914,6 +5914,48 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 • *Then* the SQLite update is aborted, original live data is preserved, and an error is logged.
 
 **Invariants**: Zero Null Island $(0.0, 0.0)$ coordinates persisted to `WorkoutSamples.db` or encoded into `mapPolyline`; device-attributed columns 100% untouched; raw live data preserved if smoothing diverges; 100% test pass rate.
+
+### REQ-FIL-020: MSL Normalization, Reference Precedence, and Elevation Hysteresis for ATT Fused Altitude [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-FIL-020`
+- **System Requirement(s)**: `SYSREQ-TRK-003`, `SYSREQ-TRK-004`
+- **Priority**: Critical
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `AltitudeAndSlopeDevice_ATTFused.kt`, `SpeedAndLocationDevice.java`
+- **Rationale**: Prevent WGS84 ellipsoid vs. MSL geoid datum tug-of-war (~47.5 m offset in Central Europe) between GPS and DEM reference sources from shifting fused altitude +11 m and inducing Kalman slope/VAM oscillations (-28% .. +13%), eliminate 5-Hz zero-hysteresis noise rectification inflating ascent/descent by ~4.5x, and decouple database column persistence from localized display names (`ATT-8081`, extending `REQ-FIL-016`).
+- **Description**:
+  1. *Reference Altitude Precedence & Geoid MSL Normalization (`REQ-FIL-020.1`)*:
+     - In `AltitudeAndSlopeDevice_ATTFused`, when fresh orthometric MSL elevation from `AltitudeFromPositionDevice` (DEM) is available, it SHALL take strict precedence over GPS elevation as the absolute reference anchor for the Kalman filter.
+     - When GPS elevation is utilized as reference anchor (e.g. DEM unavailable or stale), `AltitudeAndSlopeDevice_ATTFused` SHALL normalize ellipsoidal WGS84 altitude to orthometric Mean Sea Level (MSL) altitude via `LocationCompat.getMslAltitudeMeters(location)` when `LocationCompat.hasMslAltitude(location)` is true, preventing datum step-shifts.
+  2. *Anchor-Based Elevation Hysteresis Deadband (`REQ-FIL-020.2`)*:
+     - `publishAltitudeAndMetrics()` SHALL NOT accumulate raw single-step delta differences at 5 Hz directly into ascent/descent accumulators.
+     - It SHALL implement an anchor-based elevation hysteresis deadband ($1.5\text{ m} \le \text{threshold} \le 2.0\text{ m}$, default $2.0\text{ m}$): ascent SHALL only accumulate when smoothed altitude rises $\ge \text{threshold}$ above the lowest anchor, and descent SHALL only accumulate when smoothed altitude drops $\ge \text{threshold}$ below the highest anchor, rejecting barometric micro-ripples and sensor noise.
+  3. *Locale-Invariant Technical DB Identifier (`REQ-FIL-020.3`)*:
+     - `AltitudeAndSlopeDevice_ATTFused.getName()` SHALL return the canonical, locale-invariant technical identifier `att_fused_altitude_slope` for SQLite column and device table persistence.
+     - User-facing UI screens, dialogs, and settings SHALL continue to display the localized name via `DevicesDatabaseManager` and resource string `R.string.devices_altitude_slope_ATT_fused` across all 9 supported locales.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new `REQ-FIL-020` extending `REQ-FIL-016` (*Coupled Kinematic Elevation & Slope Filter Virtual Device*). Targets `AltitudeAndSlopeDevice_ATTFused.kt` and `SpeedAndLocationDevice.java`.
+2. *Historical Origin & Commit Trace*: `ATT-6279` (Sprint 2026-46.6) introduced `AltitudeAndSlopeDevice_ATTFused` verifying DEM and GPS reference modes in isolation with synthetic zero-geoid coordinates.
+3. *Root Reason for Existing Formulation*: Testing separate reference sources in artificial planar environments did not expose real-world $N \approx +47.5\text{ m}$ datum tug-of-war when both sensors are active, nor the rectification of 5-Hz barometric sensor noise into phantom ascent.
+4. *Preservation of Core Invariants*: Standstill clamping ($v < 0.3\text{ m/s}$), 2-State / 3-State EKF observability switching, column whitelist invariants, and localized UI display in `DevicesDatabaseManager` remain 100% preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `AltitudeAndSlopeDevice_ATTFused` active with both DEM (MSL, 500.0 m) and GPS (WGS84, 547.5 m, $N = 47.5\text{ m}$) enabled,
+• *When* reference altitude updates are processed,
+• *Then* DEM takes precedence, no alternating ±48 m innovation kicks occur, and fused elevation converges to 500.0 m MSL without slope oscillations.
+• *Given* stationary or flat riding with ±0.3 m barometric pressure noise at 5 Hz,
+• *When* `publishAltitudeAndMetrics()` accumulates ascent and descent,
+• *Then* 0.0 m phantom ascent and 0.0 m phantom descent are accumulated over 60 seconds.
+• *Given* real terrain climbing with elevation rising from 500.0 m to 525.0 m,
+• *When* climbing progression exceeds the 2.0 m hysteresis threshold,
+• *Then* cumulative ascent accurately records 25.0 m climbing.
+• *Given* a workout recorded in German, French, or Japanese locale,
+• *When* `WorkoutSamples.db` records device columns for ATT Fused altitude and slope,
+• *Then* the column names use the canonical technical identifier `att_fused_altitude_slope` consistently regardless of system locale.
+
+**Invariants**: Standstill clamping produces 0.0 m drift during pauses; localized display names in `DevicesDatabaseManager` preserved across all 9 UI languages; zero regression in 2-State / 3-State EKF switching; 100% test pass rate.
 
 ### REQ-TRK-078: Mid-Workout Crash Recovery Accumulator Preservation and Baseline Seeding [Verified]
 - **Target Release**: `V5.0.0`
