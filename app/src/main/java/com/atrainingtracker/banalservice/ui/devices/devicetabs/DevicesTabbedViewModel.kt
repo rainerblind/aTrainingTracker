@@ -33,7 +33,6 @@ import com.atrainingtracker.util.safeUnregisterReceiver
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.Protocol
-import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
 import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
 import com.atrainingtracker.banalservice.ui.devices.devicelist.BatteryFilter
@@ -41,6 +40,7 @@ import com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceFilterCrite
 import com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceSortOrder
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -79,7 +79,8 @@ class DevicesTabbedViewModel @JvmOverloads constructor(
     private val savedStateHandle: SavedStateHandle,
     private val settingsDataStore: SettingsDataStore = SettingsDataStore.getInstance(application),
     private val deviceDBRepository: DeviceDataRepository = DeviceDataRepository.getInstance(application),
-    private val banalServiceRepository: BANALServiceRepository = BANALServiceRepository.getInstance(application)
+    private val banalServiceRepository: BANALServiceRepository = BANALServiceRepository.getInstance(application),
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : AndroidViewModel(application) {
 
     private val _newDeviceDiscoveredEvent = MutableSharedFlow<String>(extraBufferCapacity = 1)
@@ -109,9 +110,9 @@ class DevicesTabbedViewModel @JvmOverloads constructor(
 
                     val resolvedName = snapshot?.deviceName
                         ?: if (deviceId != -1L) {
-                            withContext(Dispatchers.IO) {
+                            withContext(ioDispatcher) {
                                 runCatching {
-                                    DevicesDatabaseManager.getInstance(getApplication()).getDeviceName(deviceId)
+                                    deviceDBRepository.getDeviceName(deviceId)
                                 }.getOrNull()
                             } ?: "Sensor"
                         } else "Sensor"
@@ -119,9 +120,9 @@ class DevicesTabbedViewModel @JvmOverloads constructor(
 
                     val resolvedType = snapshot?.deviceType
                         ?: if (deviceId != -1L) {
-                            withContext(Dispatchers.IO) {
+                            withContext(ioDispatcher) {
                                 runCatching {
-                                    DevicesDatabaseManager.getInstance(getApplication()).getDeviceType(deviceId)
+                                    deviceDBRepository.getDeviceType(deviceId)
                                 }.getOrNull()
                             }
                         } else null

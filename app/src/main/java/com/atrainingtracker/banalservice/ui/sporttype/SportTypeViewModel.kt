@@ -23,7 +23,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 import com.atrainingtracker.util.safeEnumValueOf
-import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.atrainingtracker.trainingtracker.ui.components.stats.StatsData
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -55,9 +55,11 @@ data class SportTypeItem(
     val isPlaceholder: Boolean = false
 )
 
-class SportTypeViewModel(application: Application) : AndroidViewModel(application) {
+class SportTypeViewModel @JvmOverloads constructor(
+    application: Application,
+    private val workoutRepository: WorkoutRepository = WorkoutRepository.getInstance(application)
+) : AndroidViewModel(application) {
     private val dbSportTypeManager = SportTypeDatabaseManager.getInstance(application)
-    private val dbSummariesManager = WorkoutSummariesDatabaseManager.getInstance(application)
     private val dbLinksHelper = SportTypeEquipmentLinkManager.getInstance(application)
     private val dbEquipmentHelper = EquipmentDbHelper.getInstance(application)
 
@@ -92,7 +94,7 @@ class SportTypeViewModel(application: Application) : AndroidViewModel(applicatio
                         dbEquipmentHelper.getEquipmentNameFromId(equipId)
                     }.joinToString(", ")
 
-                    val stats = dbSummariesManager.getSportTypeStats(id)
+                    val stats = workoutRepository.getSportTypeStats(id)
                     val sportTypeName = it.getString(it.getColumnIndexOrThrow(SportTypeDatabaseManager.SportType.UI_NAME))
                     val placeholderCol = it.getColumnIndex(SportTypeDatabaseManager.SportType.IS_PLACEHOLDER)
                     val isPlaceholder = placeholderCol != -1 && it.getInt(placeholderCol) == 1
@@ -134,7 +136,7 @@ class SportTypeViewModel(application: Application) : AndroidViewModel(applicatio
             context = getApplication(),
             firstUsageDate = firstUsageDate,
             fetchPeriod = { title, startS, endS ->
-                val raw = dbSummariesManager.getSportTypeStatsForPeriod(sportTypeId, startS, endS)
+                val raw = workoutRepository.getSportTypeStatsForPeriod(sportTypeId, startS, endS)
                 StatsData.fromDatabase(
                     primaryTitle = sportTypeName,
                     secondaryTitle = title,

@@ -497,6 +497,38 @@ class DevicesTabbedViewModelTest {
 
         assertEquals(DeviceSortOrder.FIRST_SEEN, viewModel.sortOrder.value)
     }
+
+    @Test
+    fun testDeviceDiscoveryReceiver_whenSnapshotNull_routesThroughDeviceDataRepository() = kotlinx.coroutines.test.runTest {
+        val receiverSlot = slot<android.content.BroadcastReceiver>()
+        every { mockApplication.registerReceiver(capture(receiverSlot), any(), any()) } returns null
+        every { mockApplication.registerReceiver(capture(receiverSlot), any()) } returns null
+
+        every { mockDeviceDataRepository.getDeviceSnapshotById(200L) } returns null
+        every { mockDeviceDataRepository.getDeviceName(200L) } returns "Fallback Polar"
+        every { mockDeviceDataRepository.getDeviceType(200L) } returns DeviceType.HRM
+        every { mockSettingsDataStore.isHrZonesConfigured } returns MutableStateFlow(false)
+
+        val viewModel = DevicesTabbedViewModel(
+            mockApplication,
+            SavedStateHandle(),
+            settingsDataStore = mockSettingsDataStore,
+            deviceDBRepository = mockDeviceDataRepository,
+            ioDispatcher = testDispatcher
+        )
+        val receiver = receiverSlot.captured
+
+        val mockIntent = mockk<android.content.Intent>()
+        every { mockIntent.action } returns BANALService.NEW_DEVICE_FOUND_INTENT
+        every { mockIntent.getLongExtra(BANALService.DEVICE_ID, -1L) } returns 200L
+
+        receiver.onReceive(mockApplication, mockIntent)
+        testScheduler.advanceUntilIdle()
+
+        verify { mockDeviceDataRepository.getDeviceName(200L) }
+        verify { mockDeviceDataRepository.getDeviceType(200L) }
+        assertEquals("Fallback Polar", viewModel.zonePromptState.value?.deviceName)
+    }
 }
 
 

@@ -2487,6 +2487,47 @@ The workflow SHALL mandate that:
 
 **Invariants**: Zero changes to production code in `app/src/main/`; existing test suites remain 100% green; `ANT-Android-SDKs` submodule gitlink (`160000`) untouched.
 
+### REQ-ARC-009: Java Core Migration: Modernize SQLite Database Managers via Repository Interfaces [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-ARC-009`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Integration
+- **Implementation**: `com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedViewModel`, `com.atrainingtracker.banalservice.ui.sporttype.SportTypeViewModel`, `com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepository`, `com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository`, `com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepository`, `com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository`
+- **Rationale**: In accordance with ADR-001 (Tier 4 Persistence Architecture, ATT-7566), REQ-ARC-004, and Rule 81 / coding_standards.md §2.5, legacy SQLite database managers (`WorkoutSummariesDatabaseManager`, `WorkoutSamplesDatabaseManager`, `DevicesDatabaseManager` — 6,006 LOC) SHALL remain in Java to eliminate regression risk in 1-Hz sensor/GPS ingestion (ATT-7749), but SHALL be encapsulated behind clean Kotlin repository abstractions with Dispatchers.IO confinement, safe null-hardened cursor lifecycles, and zero direct presentation/ViewModel backdoor instantiations:
+1. *ViewModel & Presentation Repository Encapsulation (`REQ-ARC-009.1`)*:
+• Presentation ViewModels and UI layers SHALL NOT directly instantiate or query SQLite database managers.
+• `DevicesTabbedViewModel` SHALL query device name and type exclusively via `DeviceDataRepository`, eliminating all direct `DevicesDatabaseManager.getInstance` calls.
+• `SportTypeViewModel` SHALL query sport type statistics via `WorkoutRepository`, eliminating direct `WorkoutSummariesDatabaseManager.getInstance` calls.
+• `TrackingViewsRepository` SHALL NOT leak `DevicesDatabaseManager` in public method parameters (`getAllFilterData()`) or return raw database manager internal structures in public APIs.
+2. *Thread Confinement & Dispatchers.IO Concurrency (`REQ-ARC-009.2`)*:
+• All asynchronous repository query operations and database extractions SHALL execute strictly off the main thread confined to `Dispatchers.IO`.
+3. *Null-Hardened Cursor Lifecycle & Resource Safety (`REQ-ARC-009.3`)*:
+• Raw `Cursor` consumption in `WorkoutRepository` and `PeriodsRepository` SHALL utilize null-safe scoping (`?.use { ... }`) to guard against null cursors on empty, closed, or corrupted database states without throwing `NullPointerException`.
+4. *Preservation of Invariants & Merged Repository Helpers (`REQ-ARC-009.4`)*:
+• Modernization SHALL preserve existing SQLite schemas, table structures, PRAGMAs, and database version constants with ZERO schema bumps.
+• All merged repository helpers—including Polar offline backfill pending methods (`setPolarSyncPending()`, `clearPolarSyncPending()`, `dismissPolarSyncPending()` from ATT-8000/ATT-7919/ATT-7924) and crash-recovery accumulator preservation logic (ATT-7875)—SHALL remain intact and fully functional.
+• Contract tests in `RepositoryCleanlinessContractTest` SHALL verify zero disallowed database manager instances in modernized ViewModels.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `DevicesTabbedViewModel`,
+• *When* a new device is discovered,
+• *Then* device name and device type are resolved via `DeviceDataRepository` on `Dispatchers.IO` with zero direct calls to `DevicesDatabaseManager.getInstance()`.
+• *Given* `SportTypeViewModel`,
+• *When* loading sport types or requesting detailed statistics for a period,
+• *Then* sport type statistics are fetched via `WorkoutRepository` on `Dispatchers.IO` with zero direct calls to `WorkoutSummariesDatabaseManager.getInstance()`.
+• *Given* `TrackingViewsRepository`,
+• *When* public APIs `getAllFilterData()` and `getDeviceLists()` are invoked,
+• *Then* no database manager parameter is exposed in public signatures and no database manager internal structs leak.
+• *Given* `WorkoutRepository` and `PeriodsRepository`,
+• *When* queries return null or empty cursors during bulk load or migration,
+• *Then* execution completes safely using `?.use {}` without throwing `NullPointerException`.
+• *Given* `RepositoryCleanlinessContractTest` and `TryWithResourcesCursorAuditTest`,
+• *When* test suites execute,
+• *Then* 100% pass rate is maintained and allowed UI DB caller baselines are updated or ratcheted downward.
+
+**Invariants**: Zero changes to SQLite table schemas, columns, or DB_VERSION; 100% test pass rate across all existing unit, repository, and ViewModel tests; merged ATT-8000 Polar sync pending and ATT-7875 accumulator restoration methods remain 100% operational.
+
 ### REQ-PRO-027: Agile Agentic ASPICE (AAA) Governance, Constructive Resistance, Hypothesis Verification, Stage 5 Resource Gate & Ceremony 2 Completeness Sweep [Verified]
 - **Tests**: `TST-PRO-020`
 - **Priority**: High

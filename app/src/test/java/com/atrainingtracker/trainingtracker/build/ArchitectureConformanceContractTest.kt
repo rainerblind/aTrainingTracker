@@ -63,7 +63,6 @@ class ArchitectureConformanceContractTest {
         val BASELINE_ALLOWED_UI_DB_CALLERS: Set<String> = setOf(
             "com/atrainingtracker/banalservice/ui/devices/devicedata/DeviceDataRepository.kt",
             "com/atrainingtracker/banalservice/ui/devices/devicedata/RawDeviceDataProvider.kt",
-            "com/atrainingtracker/banalservice/ui/devices/devicetabs/DevicesTabbedViewModel.kt",
             "com/atrainingtracker/banalservice/ui/sporttype/EditSportTypeDialog.kt",
             "com/atrainingtracker/banalservice/ui/sporttype/SportTypeViewModel.kt",
             "com/atrainingtracker/trainingtracker/ui/aftermath/EquipmentDataProvider.kt",
@@ -230,8 +229,8 @@ class ArchitectureConformanceContractTest {
     @Test
     fun testBaseline_containsExpectedCount() {
         assertEquals(
-            "Expected exactly 23 recorded legacy UI database callers in ratcheting baseline (REQ-PRO-050.3)",
-            23,
+            "Expected exactly 22 recorded legacy UI database callers in ratcheting baseline (REQ-PRO-050.3)",
+            22,
             BASELINE_ALLOWED_UI_DB_CALLERS.size
         )
     }

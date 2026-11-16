@@ -1628,6 +1628,27 @@
   4. *Zero Production Code Change Governance Audit (`TST-ARC-008.4`)*:
   • Verify via `git status` that `app/src/main/` contains zero modifications.
 
+### TST-ARC-009: **Java Core Migration: Modernize SQLite Database Managers via Repository Interfaces Test Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Integration
+- **Requirement(s)**: `REQ-ARC-009`
+- **Component**: **Repository & Database Manager Modernization Verification Suite**
+- **Jira**: `ATT-7909`
+- **Test Description**:
+  1. *ViewModel Repository Encapsulation Contract Verification (`TST-ARC-009.1`)*:
+  • Execute `RepositoryCleanlinessContractTest` to verify that `DevicesTabbedViewModel` and `SportTypeViewModel` contain zero direct `DatabaseManager.getInstance` invocations and that `TrackingViewsRepository` exposes no database manager types in public signatures.
+  2. *DeviceDataRepository & DevicesTabbedViewModel Modernization Suite (`TST-ARC-009.2`)*:
+  • Execute `DevicesTabbedViewModelTest` to verify that device name and type resolution route through `DeviceDataRepository` off the main thread.
+  3. *WorkoutRepository & SportTypeViewModel Statistics Suite (`TST-ARC-009.3`)*:
+  • Execute `SportTypeViewModelRetiredTest` / `SportTypeViewModelTest` to verify that sport type stats queries route through `WorkoutRepository.getSportTypeStats()` and `WorkoutRepository.getSportTypeStatsForPeriod()` on `Dispatchers.IO`.
+  4. *Null-Hardened Cursor & Resource Safety Verification (`TST-ARC-009.4`)*:
+  • Execute unit tests verifying that null or empty cursors in `WorkoutRepository.loadAllWorkouts()` and `PeriodsRepository.startMigration()` return safely via `?.use {}` without `NullPointerException`.
+  • Run `TryWithResourcesCursorAuditTest` to verify all cursor acquisition paths adhere to resource cleanup rules.
+  5. *Merged Features Regression Verification (`TST-ARC-009.5`)*:
+  • Verify that `dismissPolarSyncPending()`, `setPolarSyncPending()`, `clearPolarSyncPending()`, and crash-recovery accumulator preservation methods compile and function without regression.
+
 ### TST-PRO-020: **Agile Agentic ASPICE (AAA) Governance, Constructive Resistance, Hypothesis Verification, Stage 5 Resource Gate & Ceremony 2 Completeness Sweep Verification** [Verified]
 - **Priority**: High
 - **Type**: Non-Functional

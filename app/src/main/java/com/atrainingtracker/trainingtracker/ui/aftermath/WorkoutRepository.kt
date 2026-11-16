@@ -1860,6 +1860,36 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
         )
     }
 
+    /**
+     * Gets aggregate lifetime sport type statistics (REQ-ARC-009.1).
+     */
+    fun getSportTypeStats(sportTypeId: Long): WorkoutStatsSummary {
+        val s = summariesManager.getSportTypeStats(sportTypeId)
+        return WorkoutStatsSummary(
+            totalDistanceM = s.totalDistanceM,
+            totalActiveTimeS = s.totalActiveTimeS,
+            totalAscentM = s.totalAscentM,
+            firstUsage = s.firstUsage,
+            lastUsage = s.lastUsage,
+            count = s.count
+        )
+    }
+
+    /**
+     * Gets aggregate sport type statistics for a specific time period (REQ-ARC-009.1).
+     */
+    fun getSportTypeStatsForPeriod(sportTypeId: Long, startS: Long, endS: Long): WorkoutStatsSummary {
+        val s = summariesManager.getSportTypeStatsForPeriod(sportTypeId, startS, endS)
+        return WorkoutStatsSummary(
+            totalDistanceM = s.totalDistanceM,
+            totalActiveTimeS = s.totalActiveTimeS,
+            totalAscentM = s.totalAscentM,
+            firstUsage = s.firstUsage,
+            lastUsage = s.lastUsage,
+            count = s.count
+        )
+    }
+
 
     /**
      * Listens for workout state changes (Updates, Completion) broadcast by the [TrackerService].
@@ -3682,7 +3712,7 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                 val cursor = summariesManager.getCursorForAllWorkouts()
                 val allLoadedWorkouts = mutableListOf<WorkoutData>()
                 
-                cursor.use { c ->
+                cursor?.use { c ->
                     if (!c.moveToFirst()) return@withContext
 
                     val batchSize = 50

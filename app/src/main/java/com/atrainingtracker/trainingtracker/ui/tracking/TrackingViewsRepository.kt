@@ -98,6 +98,14 @@ data class SensorFieldConfig(
     val colWeight: Float = 1.0f
 )
 
+/**
+ * Domain DTO encapsulating paired device identifier and name lists (REQ-ARC-009.1).
+ */
+data class DeviceIdAndNameLists(
+    val deviceIds: List<Long>?,
+    val names: List<String>?
+)
+
 enum class ScreenMode {
     /** The screen is used for actively tracking a workout. Long-clicks are handled. */
     TRACKING,
@@ -361,9 +369,10 @@ class TrackingViewsRepository private constructor(private val context: Context) 
         }
     }
 
-    suspend fun getDeviceLists(sensorType: SensorType): DevicesDatabaseManager.DeviceIdAndNameLists? {
+    suspend fun getDeviceLists(sensorType: SensorType): DeviceIdAndNameLists? {
         return withContext(Dispatchers.IO) {
-            devicesDbManager.getDeviceIdAndNameLists(sensorType)
+            val raw = devicesDbManager.getDeviceIdAndNameLists(sensorType) ?: return@withContext null
+            DeviceIdAndNameLists(raw.deviceIds, raw.names)
         }
     }
 
@@ -734,9 +743,9 @@ class TrackingViewsRepository private constructor(private val context: Context) 
     }
 
     /**
-     * Retrieves all filter configurations for views (REQ-UI-507.5).
+     * Retrieves all filter configurations for views (REQ-UI-507.5, REQ-ARC-009.1).
      */
-    fun getAllFilterData(devicesDbManager: DevicesDatabaseManager = this.devicesDbManager): List<FilterData> {
+    fun getAllFilterData(): List<FilterData> {
         return viewsDbManager.getAllFilterData(devicesDbManager)
     }
 
