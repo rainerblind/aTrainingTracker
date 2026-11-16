@@ -189,4 +189,12 @@
     <string name="ground_contact_time">Tempo contatto suolo</string>
     <string name="ground_contact_time_short">TCS</string>
 
+    <!-- Polar Raw Telemetry Sidecar & Retention (ATT-8019, REQ-SET-117) -->
+    <string name="raw_telemetry_retention_title">Conservazione telemetria grezza</string>
+    <string name="raw_telemetry_retention_desc">Comprime la telemetria Polar PMD ad alta frequenza live e offline in file collaterali esterni senza appesantire il database.</string>
+    <string name="raw_telemetry_retention_30_days">30 giorni</string>
+    <string name="raw_telemetry_retention_keep_all">Conserva tutto</string>
+    <string name="raw_telemetry_retention_7_days">7 giorni</string>
+    <string name="raw_telemetry_retention_off">Disattivato</string>
+
 </resources>

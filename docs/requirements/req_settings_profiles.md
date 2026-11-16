@@ -3,7 +3,7 @@
 **Domain**: `settings_profiles`  
 **Prefixes**: `LOC`, `MON`, `PRI`, `SET`  
 **Scope**: Athlete settings, bike/sensor profiles, privacy zones, data stores, monetization, and 9-locale parity.  
-**Total Requirements**: 115
+**Total Requirements**: 116
 
 ---
 
@@ -2707,3 +2707,40 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 • *Given* a recorded run with Polar H10 Running Dynamics, *When* persisted to `WorkoutSamples.db`/`WorkoutSummaries.db` and exported via `FitFileWriter`, *Then* Cockpit/Aftermath reflect `cm` and `ms` metrics, all 9 `values*/strings*.xml` files pass `TranslationParityTest`, and `FitFileWriter` encodes `mm` (`cm * 10f`) and `ms` on `RecordMesg`, `LapMesg`, and `SessionMesg`.
 
 **Invariants**: Cross-lane ID collision guard skips `REQ-SET-115` (`ATT-8108`) -> uses `REQ-SET-116` (`TST-SET-118`); zero DB schema bumps; `FitFileWriter` strictly scales `cm * 10f -> mm`; walking (`< 130 spm`) emits no GCT; `ATT-8017` cadence (`strides/min`) & `CADENCE_PRIORITY` preserved; `HIGH-RISK` Role Rotation (`agent1` Flash: S1, G2+S3, G4+S5; `agent2` Pro: G1+S2, G3+S4, G5+merge).
+
+---
+
+### REQ-SET-117: Polar Raw Telemetry GZIP Sidecar Persistence & Storage Retention (`ATT-8019`) [Verified]
+- **Tests**: `TST-SET-119`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit / Integration
+- **Implementation**: `PolarRawTelemetryRecorder.kt`, `PolarRawTelemetryReader.kt`, `PolarRawTelemetryPruner.kt`, `RawSensorRetentionPolicy.kt`, `PolarOnlineStreamingBridge.kt`, `PolarH10OfflineController.kt`, `TrackerService.java`, `WorkoutSummariesDatabaseManager.java`, `WorkoutRepository.kt`, `TuningPreferencesDataStore.kt`, `SensorsGpsFilterSection.kt`, `docs/architecture.md`
+- **Rationale**: High-frequency Polar PMD streaming (50–200 Hz ACC / 26–52 Hz GYRO + HR/RR) and offline exercise sync generate ~720k frames/hour, which would bloat the 1-Hz WorkoutSamples.db by tens of MBs; persisting compressed streaming GZIP CSV sidecars outside SQLite with rolling retention preserves database performance while capturing lossless telemetry for diagnostics and R&D.
+- **Description**:
+1. *Buffered Streaming GZIP Sidecar Writer (`REQ-SET-117.1`)*:
+   - `PolarRawTelemetryRecorder` SHALL persist raw live PMD (`ATT-8016`) and offline sync (`ATT-7918`) sensor frames directly into a compressed file `files/raw_sensor/<fileBaseName>.polar_raw.csv.gz` external to `WorkoutSamples.db`.
+   - Recording SHALL stream through a non-blocking bounded coroutine buffer `Channel<RawTelemetryFrame>(capacity = 8192)` running on `Dispatchers.IO`, ensuring BLE GATT and PMD listener callbacks never stall or drop frames due to disk I/O latency.
+   - If a workout session ends with zero frames recorded or is discarded, `PolarRawTelemetryRecorder` SHALL delete the empty sidecar file and leave zero orphan files on disk.
+2. *Self-Describing Header & Monotonic Multi-Channel Schema (`REQ-SET-117.2`)*:
+   - The sidecar file SHALL begin with a metadata comment header `# metadata: {"schemaVersion":1,"appVersion":"...","sensorModel":"...","firmwareVersion":"...","streamMode":"LIVE|OFFLINE","accRateHz":...,"gyroRateHz":...,"sportId":...,"poolLength_m":...}` followed by the CSV column header:
+     `sensorTimestampNs,elapsedMs,channel,ax_mg,ay_mg,az_mg,gx_mdps,gy_mdps,gz_mdps,hr_bpm,rr_ms`.
+   - Monotonic hardware `sensorTimestampNs` and session-relative `elapsedMs` SHALL be preserved alongside discrete telemetry channels (`ACC`, `GYRO`, `HR`, `RR`).
+   - A deterministic parser `PolarRawTelemetryReader` SHALL validate metadata integrity, parse frame channels, and handle corrupt or truncated GZIP archives gracefully.
+3. *Workout Cascade Deletion & Off-Thread Rolling Retention (`REQ-SET-117.3`)*:
+   - Workout deletion in `WorkoutSummariesDatabaseManager.deleteWorkout` and `WorkoutRepository.deleteWorkoutCascade` SHALL hook into sidecar storage and delete the corresponding `<fileBaseName>.polar_raw.csv.gz` file alongside database rows, preserving `REQ-DAT-042`.
+   - `PolarRawTelemetryPruner` SHALL enforce a user-configurable rolling retention policy (`RawSensorRetentionPolicy`: `DAYS_30` [default], `KEEP_ALL`, `DAYS_7`, `OFF`) off the main thread, pruning unpinned expired sidecar files without deleting associated workout database records.
+4. *M3 Settings Selector & 9-Language Localization Parity (`REQ-SET-117.4`)*:
+   - `SensorsGpsFilterSection` in Compose Settings SHALL provide a Material 3 segmented button row or selector for `RawSensorRetentionPolicy` (`30 days` [default], `Keep all`, `7 days`, `Off`).
+   - All string resources across all 9 supported locales (`EN`, `DE`, `ES`, `FR`, `IT`, `JA`, `NL`, `PL`, `PT`) SHALL be defined in `strings_devices.xml` with zero missing entries, matching format specifiers, and zero emojis (`Rule 38`, `ATT-5400`).
+   - Stage 4 SHALL generate and inspect the verification screenshot `docs/engineering/walkthroughs/img/ATT-8019_raw_telemetry_settings.png` (`Rule 8.5`).
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an active Polar PMD streaming or offline sync session during a tracked workout, *When* `PolarRawTelemetryRecorder` receives high-frequency ACC/GYRO/HR/RR frames, *Then* frames are buffered via `Channel(capacity = 8192)` and written to `files/raw_sensor/<fileBaseName>.polar_raw.csv.gz` without blocking GATT callbacks, while `WorkoutSamples.db` remains strictly at 1-Hz sampling.
+• *Given* an existing `.polar_raw.csv.gz` sidecar file, *When* read via `PolarRawTelemetryReader`, *Then* metadata JSON header and all frame channels parse deterministically with exact timestamp fidelity.
+• *Given* an athlete deletes a workout from History or repository, *When* `WorkoutSummariesDatabaseManager.deleteWorkout` executes, *Then* the sidecar `.polar_raw.csv.gz` file is deleted concurrently.
+• *Given* sidecars exceeding the retention threshold (`30 days`, `7 days`, or `Off`), *When* `PolarRawTelemetryPruner` executes, *Then* unpinned expired sidecars are deleted off the main thread while workout database summaries are preserved.
+• *Given* the athlete opens Sensors & GPS Settings across any of the 9 locales, *When* `SensorsGpsFilterSection` renders, *Then* the retention selector displays localized labels (`30 days`, `Keep all`, `7 days`, `Off`) without UI clipping (`ATT-8019_raw_telemetry_settings.png`).
+
+**Invariants**: `WorkoutSamples.db` strictly retains 1-Hz sampling with zero schema modifications; BLE GATT loops never block on file I/O; empty sessions leave zero orphan files; `ANT-Android-SDKs` submodule remains untouched at `160000 commit 0e8cea714a231fb9565170d4ed01eafa868f9798`; Role Rotation (`agent2` Pro: S2, S4, Gate 5).
+

@@ -3,7 +3,7 @@
 **Domain**: `settings_profiles`  
 **Prefixes**: `LOC`, `MON`, `PRI`, `SET`  
 **Scope**: Athlete settings, bike/sensor profiles, privacy zones, data stores, monetization, and 9-locale parity.  
-**Total Tests**: 104
+**Total Tests**: 105
 
 ---
 
@@ -1448,3 +1448,27 @@
   • Verify `TrackerService`, `WorkoutDataMapper`, and `WorkoutRepository` (`streamSamples()` & `calculateAndSaveExtrema()`) persist 1-Hz `cm`/`ms` series and Aftermath `AVG`/`MIN`/`MAX` summaries with zero SQLite schema bumps.
   5. *FIT SDK `mm` (`cm * 10f`) & `ms` Record/Lap/Session Encoding (`TST-SET-118.5`)*:
   • Verify `FitFileWriterTest` decodes emitted FIT binaries and asserts exact `cm * 10f` (`mm`) `verticalOscillation`/`avgVerticalOscillation` and `ms` `stanceTime`/`avgStanceTime` across `RecordMesg`, `LapMesg`, and `SessionMesg`.
+---
+
+### TST-SET-119: **Polar Raw Telemetry GZIP Sidecar Persistence & Rolling Retention Test Suite (`ATT-8019`)** [Verified]
+- **Requirement(s)**: `REQ-SET-117` (`REQ-SET-117.1`..`REQ-SET-117.4`)
+- **Component**: `PolarRawTelemetryRecorder.kt`, `PolarRawTelemetryReader.kt`, `PolarRawTelemetryPruner.kt`, `RawSensorRetentionPolicy.kt`, `PolarOnlineStreamingBridge.kt`, `PolarH10OfflineController.kt`, `TrackerService.java`, `WorkoutSummariesDatabaseManager.java`, `WorkoutRepository.kt`, `TuningPreferencesDataStore.kt`, `SensorsGpsFilterSection.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-8019`
+- **Status**: Verified
+- **Test Description**:
+  1. *Buffered GZIP Sidecar I/O, Bounded Channel & Empty Session Cleanup (`TST-SET-119.1`)*:
+  • Verify `PolarRawTelemetryRecorder` writes valid GZIP-compressed CSV data to `files/raw_sensor/<fileBaseName>.polar_raw.csv.gz` via non-blocking bounded `Channel(capacity = 8192)` on `Dispatchers.IO` under simulated 200 Hz burst loads without callback stalling.
+  • Verify empty or discarded workout sessions delete the partial sidecar and leave zero orphan files on disk.
+  2. *Self-Describing Metadata Header & Round-Trip Replay Parsing (`TST-SET-119.2`)*:
+  • Verify `PolarRawTelemetryRecorder` emits `# metadata: {...}` JSON header containing `schemaVersion`, `appVersion`, `sensorModel`, `streamMode`, and sampling rates, followed by column headers.
+  • Verify `PolarRawTelemetryReader` parses metadata and reconstructs `ACC`, `GYRO`, `HR`, and `RR` frames with monotonic timestamps (`sensorTimestampNs`, `elapsedMs`), gracefully handling truncated or corrupted GZIP files.
+  3. *Workout Cascade Deletion & Background Retention Pruning (`TST-SET-119.3`)*:
+  • Verify `WorkoutSummariesDatabaseManager.deleteWorkout()` and `WorkoutRepository.deleteWorkoutCascade()` delete associated `.polar_raw.csv.gz` sidecars upon workout removal (`REQ-DAT-042`).
+  • Verify `PolarRawTelemetryPruner` prunes sidecars according to `RawSensorRetentionPolicy` (`DAYS_30`, `DAYS_7`, `KEEP_ALL`, `OFF`) without touching workout summary database records.
+  4. *TuningPreferencesDataStore Persistence & 9-Locale Translation Parity (`TST-SET-119.4`)*:
+  • Verify `TuningPreferencesDataStore` persists and emits `RawSensorRetentionPolicy` choices with default `DAYS_30`.
+  • Run `TranslationParityTest` verifying all 9 locales (`EN`, `DE`, `ES`, `FR`, `IT`, `JA`, `NL`, `PL`, `PT`) define all raw telemetry retention labels and summaries in `strings_devices.xml`.
+  5. *Compose UI Ergonomics & Rule 8.5 Visual Screenshot (`TST-SET-119.5`)*:
+  • Verify `SensorsGpsFilterSection` displays the retention selector using M3 components fitting 360dp widths across all 9 locales.
+  • Verify Stage 4 generates `docs/engineering/walkthroughs/img/ATT-8019_raw_telemetry_settings.png` and passes 4-point visual inspection (`Rule 8.5`).
+

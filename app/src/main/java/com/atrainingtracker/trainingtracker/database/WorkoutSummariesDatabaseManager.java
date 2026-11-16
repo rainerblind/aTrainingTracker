@@ -1832,6 +1832,8 @@ public class WorkoutSummariesDatabaseManager {
     public boolean deleteWorkout(long workoutId) {
         if (DEBUG) Log.i(TAG, "deleteWorkout: workoutId=" + workoutId);
 
+        String baseFileName = getBaseFileName(workoutId);
+
         SQLiteDatabase dbSummaries = getDatabase();
         dbSummaries.delete(WorkoutSummaries.TABLE, WorkoutSummaries.C_ID + "=?", new String[]{workoutId + ""});
         dbSummaries.delete(WorkoutSummaries.TABLE_ACCUMULATED_SENSORS, WorkoutSummaries.WORKOUT_ID + "=?", new String[]{workoutId + ""});
@@ -1839,6 +1841,14 @@ public class WorkoutSummariesDatabaseManager {
         dbSummaries.delete(WorkoutSummaries.TABLE_WORKOUT_PHOTOS, WorkoutSummaries.WORKOUT_ID + "=?", new String[]{String.valueOf(workoutId)});
         dbSummaries.delete(WorkoutSummaries.TABLE_CARDIO_POWER_DYNAMICS, WorkoutSummaries.CPD_WORKOUT_ID + "=?", new String[]{String.valueOf(workoutId)});
         deleteWorkoutPhotoFiles(workoutId);
+
+        if (baseFileName != null && !baseFileName.trim().isEmpty()) {
+            try {
+                com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarRawTelemetryPruner.deleteSidecar(mContext, baseFileName);
+            } catch (Throwable t) {
+                Log.w(TAG, "Error deleting polar raw sidecar for " + baseFileName + ": " + t.getMessage());
+            }
+        }
 
         return true;
     }

@@ -352,6 +352,18 @@ object SettingsDataStoreJavaHelper {
     }
 
     /**
+     * Synchronous bridge to retrieve the raw sensor telemetry retention policy (REQ-SET-117.3, ATT-8019).
+     */
+    @JvmStatic
+    fun getRawSensorRetentionPolicy(context: Context): RawSensorRetentionPolicy {
+        return try {
+            TuningPreferencesDataStore.getInstance(context).rawSensorRetentionPolicy.value
+        } catch (_: Throwable) {
+            TuningPreferencesDefaults.RAW_SENSOR_RETENTION_POLICY
+        }
+    }
+
+    /**
      * Synchronous bridge for BTLERadarDevice to check whether developer forced legacy V1 BLE protocol.
      * Strictly returns false in release builds (BuildConfig.DEBUG == false). (ATT-7659 / REQ-CON-030.8)
      */

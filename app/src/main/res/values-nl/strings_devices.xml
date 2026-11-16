@@ -189,4 +189,12 @@
     <string name="ground_contact_time">Grondcontacttijd</string>
     <string name="ground_contact_time_short">GCT</string>
 
+    <!-- Polar Raw Telemetry Sidecar & Retention (ATT-8019, REQ-SET-117) -->
+    <string name="raw_telemetry_retention_title">Bewaring ruwe telemetrie</string>
+    <string name="raw_telemetry_retention_desc">Comprimeert hoogfrequente Polar PMD live- en offline-telemetrie in externe bestanden zonder de trainingsdatabase te belasten.</string>
+    <string name="raw_telemetry_retention_30_days">30 dagen</string>
+    <string name="raw_telemetry_retention_keep_all">Alles bewaren</string>
+    <string name="raw_telemetry_retention_7_days">7 dagen</string>
+    <string name="raw_telemetry_retention_off">Uit</string>
+
 </resources>

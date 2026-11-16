@@ -1159,6 +1159,11 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
             samplesManager.deleteWorkout(fileBaseName)
             ExportStatusRepository.getInstance(application).deleteExportWorkout(fileBaseName)
             try {
+                com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarRawTelemetryPruner.deleteSidecar(application, fileBaseName)
+            } catch (t: Throwable) {
+                Log.w(TAG, "Could not delete polar raw sidecar for $fileBaseName: ${t.message}")
+            }
+            try {
                 stravaUploadDbHelper.deleteWorkout(fileBaseName)
             } catch (t: Throwable) {
                 Log.w(TAG, "Could not delete strava record for $fileBaseName: ${t.message}")

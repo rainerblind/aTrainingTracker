@@ -231,4 +231,12 @@
     <string name="ground_contact_time">Ground Contact Time</string>
     <string name="ground_contact_time_short">GCT</string>
 
+    <!-- Polar Raw Telemetry Sidecar & Retention (ATT-8019, REQ-SET-117) -->
+    <string name="raw_telemetry_retention_title">Raw Sensor Telemetry Retention</string>
+    <string name="raw_telemetry_retention_desc">Compresses high-frequency Polar PMD live and offline telemetry into external sidecars without bloating the workout database.</string>
+    <string name="raw_telemetry_retention_30_days">30 days</string>
+    <string name="raw_telemetry_retention_keep_all">Keep all</string>
+    <string name="raw_telemetry_retention_7_days">7 days</string>
+    <string name="raw_telemetry_retention_off">Off</string>
+
 </resources>
