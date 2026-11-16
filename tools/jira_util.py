@@ -3555,6 +3555,7 @@ def ensure_weekly_review_ticket(role="coordinator", force=False):
         "   - Resource leaks (SQLite cursors, broadcast receivers, memory)\n"
         "   - Architectural boundaries, monolith complexity & repository encapsulation\n"
         "   - Defensive error handling and test assertion validity\n"
+        "   - Static analysis & Android hygiene: run `./gradlew :app:lintDebug :app:detekt --max-workers=2`, review new findings deliberately, and derive concrete remediation tickets where warranted\n"
         f"   - Scenario-gap diagnostic: run `./gradlew :app:koverXmlReportDebug --max-workers=2` and inspect `{target_domain}` coverage to spot untested real-world edge cases (never write artificial coverage-padding tests)\n"
         f"3. Reconcile findings into docs/engineering/code_reviews/{datetime.now().strftime('%Y-%m-%d')}_dual_vendor_code_review.md.\n"
         "4. File discovered defects/refactorings as Jira tickets under ATT-232 / ATT-8138.\n"
