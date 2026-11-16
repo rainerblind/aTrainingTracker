@@ -200,4 +200,128 @@ class ExtendedRtsOdometrySmootherTest {
         println("Performance benchmark: 14,400 samples processed in $elapsedMs ms")
         assertTrue("Execution time was $elapsedMs ms, expected < 1000 ms", elapsedMs < 1000)
     }
+
+    // TST-FIL-019.1: Nullable coordinate support & first valid fix reference origin test
+    @Test
+    fun testLeadingNullGnssFixes_anchorsToFirstValidFixWithoutNullIslandShock() {
+        val samples = mutableListOf<RawOdometrySample>()
+        var tMs = 4000000L
+        val schoenaichLat = 48.6567
+        val schoenaichLon = 9.0545
+        val speed = 10.0
+
+        // 1. First 5 samples have NO GNSS fix (null or 0.0, 0.0)
+        for (i in 0 until 5) {
+            samples.add(
+                RawOdometrySample(
+                    timestampMs = tMs,
+                    latitude = null,
+                    longitude = null,
+                    speedMps = 0.0,
+                    bearingDeg = null,
+                    accuracyMeters = null,
+                    worldYawRateRadPerSec = 0.0,
+                    wheelSpeedMps = null
+                )
+            )
+            tMs += 1000L
+        }
+
+        // 2. Next 20 samples have genuine GNSS fixes at Schönaich moving East at 10 m/s
+        var east = 0.0
+        for (i in 0 until 20) {
+            val (lat, lon) = ExtendedRtsOdometrySmoother.enuToLatLng(east, 0.0, schoenaichLat, schoenaichLon)
+            samples.add(
+                RawOdometrySample(
+                    timestampMs = tMs,
+                    latitude = lat,
+                    longitude = lon,
+                    speedMps = speed,
+                    bearingDeg = 90.0,
+                    accuracyMeters = 3.0,
+                    worldYawRateRadPerSec = 0.0,
+                    wheelSpeedMps = speed
+                )
+            )
+            tMs += 1000L
+            east += speed
+        }
+
+        val smoothed = ExtendedRtsOdometrySmoother.smoothSamples(samples, initialHeadingRad = 0.0)
+        assertEquals(25, smoothed.size)
+
+        // All smoothed coordinates must remain anchored near Schönaich (never at Null Island 0.0, 0.0)
+        for (i in smoothed.indices) {
+            val pt = smoothed[i]
+            assertTrue(
+                "Point $i latitude must be near Schönaich (was ${pt.latitude})",
+                abs(pt.latitude - schoenaichLat) < 0.02
+            )
+            assertTrue(
+                "Point $i longitude must be near Schönaich (was ${pt.longitude})",
+                abs(pt.longitude - schoenaichLon) < 0.02
+            )
+            assertTrue("Speed at index $i must be plausible (< 15 m/s, was ${pt.speedMps})", pt.speedMps < 15.0)
+        }
+
+        // Verify all-null samples return empty list safely without crashing
+        val allNullSamples = (0 until 10).map { i ->
+            RawOdometrySample(timestampMs = 5000000L + i * 1000L, latitude = null, longitude = null)
+        }
+        val emptySmoothed = ExtendedRtsOdometrySmoother.smoothSamples(allNullSamples)
+        assertTrue("All-null samples sequence must return empty list", emptySmoothed.isEmpty())
+    }
+
+    // TST-FIL-019.2: Mid-workout GNSS gap predict-only ingestion test
+    @Test
+    fun testMidWorkoutGnssGap_bridgesSmoothlyWithoutNullIslandPull() {
+        val samples = mutableListOf<RawOdometrySample>()
+        var tMs = 6000000L
+        val speed = 10.0
+        var east = 0.0
+
+        // 30 seconds total: 10s valid -> 10s gap (latitude=null, longitude=null) -> 10s valid
+        for (i in 0 until 30) {
+            val isGap = i in 10 until 20
+            val (lat, lon) = if (!isGap) {
+                ExtendedRtsOdometrySmoother.enuToLatLng(east, 0.0, originLat, originLon)
+            } else {
+                Pair(null, null)
+            }
+
+            samples.add(
+                RawOdometrySample(
+                    timestampMs = tMs,
+                    latitude = lat,
+                    longitude = lon,
+                    speedMps = if (isGap) null else speed,
+                    bearingDeg = if (isGap) null else 90.0,
+                    accuracyMeters = if (isGap) null else 3.0,
+                    worldYawRateRadPerSec = 0.0,
+                    wheelSpeedMps = speed
+                )
+            )
+            tMs += 1000L
+            east += speed
+        }
+
+        val smoothed = ExtendedRtsOdometrySmoother.smoothSamples(samples, initialHeadingRad = 0.0)
+        assertEquals(30, smoothed.size)
+
+        // Across the entire 30s trajectory, all points must be continuous and near Munich origin
+        for (i in 1 until smoothed.size) {
+            val dE = smoothed[i].eastMeters - smoothed[i - 1].eastMeters
+            val dN = smoothed[i].northMeters - smoothed[i - 1].northMeters
+            val stepDist = hypot(dE, dN)
+            assertTrue("Step jump at index $i must remain continuous (< 20m, was $stepDist m)", stepDist < 20.0)
+            assertTrue(
+                "Latitude at index $i must be near Munich (was ${smoothed[i].latitude})",
+                abs(smoothed[i].latitude - originLat) < 0.01
+            )
+            assertTrue(
+                "Longitude at index $i must be near Munich (was ${smoothed[i].longitude})",
+                abs(smoothed[i].longitude - originLon) < 0.01
+            )
+        }
+    }
 }

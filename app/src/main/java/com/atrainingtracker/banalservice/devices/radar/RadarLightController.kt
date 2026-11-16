@@ -205,6 +205,7 @@ object RadarLightController {
                 }
             }
             cachedAutoLightControl = (controlMode == RadarLightControlMode.FIXED_WORKOUT_MODE)
+            hasLoadedInitialPreferences = true
         }
         val isAuto = (controlMode == RadarLightControlMode.SMART_AUTOMATION)
         _isAutoMode.value = isAuto

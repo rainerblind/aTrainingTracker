@@ -30,7 +30,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.sensor.formater.SpeedFormatter
+import com.atrainingtracker.trainingtracker.settings.RawSensorRetentionPolicy
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
+import com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningSegmentedButtonRow
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningSliderItem
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningToggleItem
 import java.util.Locale
@@ -53,7 +55,9 @@ fun SensorsGpsFilterSection(
     postWorkoutErtsSmoothingEnabled: Boolean = false,
     onPostWorkoutErtsSmoothingChange: (Boolean) -> Unit = {},
     hrvArtifactGateThresholdPercent: Float = TuningPreferencesDefaults.DEFAULT_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT,
-    onHrvArtifactGateThresholdPercentChange: (Float) -> Unit = {}
+    onHrvArtifactGateThresholdPercentChange: (Float) -> Unit = {},
+    rawSensorRetentionPolicy: RawSensorRetentionPolicy = TuningPreferencesDefaults.RAW_SENSOR_RETENTION_POLICY,
+    onRawSensorRetentionPolicyChange: (RawSensorRetentionPolicy) -> Unit = {}
 ) {
     val currentLocale = LocalConfiguration.current.locales[0]
     Column(
@@ -128,5 +132,34 @@ fun SensorsGpsFilterSection(
             valueRange = TuningPreferencesDefaults.MIN_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT..TuningPreferencesDefaults.MAX_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT,
             steps = 3
         )
+
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+
+        // Raw Polar IMU / RR streaming telemetry retention (REQ-SET-117.4, ATT-8019)
+        RawTelemetryRetentionControl(
+            policy = rawSensorRetentionPolicy,
+            onPolicyChange = onRawSensorRetentionPolicyChange
+        )
     }
+}
+
+@Composable
+private fun RawTelemetryRetentionControl(
+    policy: RawSensorRetentionPolicy,
+    onPolicyChange: (RawSensorRetentionPolicy) -> Unit
+) {
+    TuningSegmentedButtonRow(
+        title = stringResource(R.string.raw_telemetry_retention_title),
+        options = RawSensorRetentionPolicy.entries,
+        selectedOption = policy,
+        onOptionSelected = onPolicyChange,
+        labelProvider = { opt ->
+            when (opt) {
+                RawSensorRetentionPolicy.DAYS_30 -> stringResource(R.string.raw_telemetry_retention_30_days)
+                RawSensorRetentionPolicy.KEEP_ALL -> stringResource(R.string.raw_telemetry_retention_keep_all)
+                RawSensorRetentionPolicy.DAYS_7 -> stringResource(R.string.raw_telemetry_retention_7_days)
+                RawSensorRetentionPolicy.OFF -> stringResource(R.string.raw_telemetry_retention_off)
+            }
+        }
+    )
 }

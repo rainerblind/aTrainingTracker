@@ -494,9 +494,10 @@ class TestJiraCliTooling(unittest.TestCase):
     def test_gate_verdict_pass_advances_parent_stage(
         self, mock_comment, mock_assign, mock_transition
     ):
-        jira_util.gate_verdict("ATT-4301", "PASS", "Gate 1 PASS verdict", role="agent2")
+        report_text = "PASS: Verified in tools/jira_util.py:100 [x] commit 3a31b9ad"
+        jira_util.gate_verdict("ATT-4301", "PASS", report_text, role="agent2")
         mock_assign.assert_called_once_with("ATT-4301", "agent2", role="agent2")
-        mock_comment.assert_called_once_with("ATT-4301", "Gate 1 PASS verdict", role="agent2")
+        mock_comment.assert_called_once_with("ATT-4301", report_text, role="agent2")
         mock_transition.assert_called_once_with("ATT-4301", "freigabe", role="agent2", inject_context=True)
 
     def test_auto_verify_living_docs_on_stage5(self):
@@ -1135,7 +1136,7 @@ class TestJiraCliTooling(unittest.TestCase):
         # 1. [Analysis] subtask with missing Impact Analysis -> SystemExit(1)
         mock_get_subtask.return_value = ("[Analysis] ATT-4300: Problem Domain Analysis", "No impact analysis here.", "ATT-4300")
         with self.assertRaises(SystemExit) as cm:
-            jira_util.gate_verdict("ATT-4301", "PASS", "Gate 1 PASS audit report", role="agent2")
+            jira_util.gate_verdict("ATT-4301", "PASS", "Gate 1 PASS: [x] tools/jira_util.py:100", role="agent2")
         self.assertEqual(cm.exception.code, 1)
 
         # 2. [Analysis] subtask with valid Impact Analysis -> succeeds and transitions
@@ -1148,13 +1149,13 @@ class TestJiraCliTooling(unittest.TestCase):
 * **Risk Assessment & Invariants**: Low risk
 """
         mock_get_subtask.return_value = ("[Analysis] ATT-4300: Problem Domain Analysis", valid_desc, "ATT-4300")
-        jira_util.gate_verdict("ATT-4301", "PASS", "Gate 1 PASS audit report", role="agent2")
+        jira_util.gate_verdict("ATT-4301", "PASS", "Gate 1 PASS: [x] tools/jira_util.py:100", role="agent2")
         mock_transition.assert_called_with("ATT-4301", "freigabe", role="agent2", inject_context=True)
 
         # 3. Non-analysis subtask (e.g. [Req & Test Spec]) without impact analysis -> succeeds normally
         mock_transition.reset_mock()
         mock_get_subtask.return_value = ("[Req & Test Spec] ATT-4300: Test Spec", "Test spec details without impact section", "ATT-4300")
-        jira_util.gate_verdict("ATT-4302", "PASS", "Gate 2 PASS audit report", role="agent2")
+        jira_util.gate_verdict("ATT-4302", "PASS", "Gate 2 PASS: [x] tools/jira_util.py:100", role="agent2")
         mock_transition.assert_called_with("ATT-4302", "freigabe", role="agent2", inject_context=True)
 
     @patch("jira_util.get_config", return_value={"JIRA_URL": "https://example.atlassian.net"})
@@ -1570,6 +1571,344 @@ class TestPoApprovalAndChangelogProvenance(unittest.TestCase):
         appr, reason = jira_util.verify_po_approval_changelog(att_7902_data)
         self.assertTrue(appr)
         self.assertIn("approved sprint placement", reason)
+
+
+def _concurrent_reservation_worker(ledger_dir, repo_root, domain, id_type, ticket, count, results_queue):
+    import os
+    import sys
+    import importlib.util
+
+    root_tools_dir = os.path.dirname(os.path.abspath(__file__))
+    sys.path = [p for p in sys.path if "hoechstmass" not in p]
+    if root_tools_dir not in sys.path:
+        sys.path.insert(0, root_tools_dir)
+    else:
+        sys.path.remove(root_tools_dir)
+        sys.path.insert(0, root_tools_dir)
+
+    spec = importlib.util.spec_from_file_location("root_jira_util", os.path.join(root_tools_dir, "jira_util.py"))
+    jira_util_mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(jira_util_mod)
+
+    try:
+        allocated = jira_util_mod.reserve_id(
+            domain,
+            id_type,
+            ticket,
+            count=count,
+            ledger_dir=ledger_dir,
+            repo_root=repo_root,
+        )
+        results_queue.put((ticket, allocated, None))
+    except Exception as e:
+        results_queue.put((ticket, [], str(e)))
+
+
+class TestIdReservationGovernance(unittest.TestCase):
+    """
+    TST-PRO-106: Atomic REQ and TST ID Reservation Across Parallel Sprint Lanes Suite (ATT-8149).
+    Verifies REQ-PRO-106.1..REQ-PRO-106.4.
+    """
+
+    def setUp(self):
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.ledger_dir = self.temp_dir.name
+        self.repo_dir = tempfile.TemporaryDirectory()
+        os.makedirs(os.path.join(self.repo_dir.name, "docs", "requirements"), exist_ok=True)
+        os.makedirs(os.path.join(self.repo_dir.name, "docs", "tests"), exist_ok=True)
+        os.makedirs(os.path.join(self.repo_dir.name, "docs", "engineering", "test_specs"), exist_ok=True)
+
+    def tearDown(self):
+        self.temp_dir.cleanup()
+        self.repo_dir.cleanup()
+
+    def test_tst_pro_106_1_atomic_cross_worktree_id_reservation(self):
+        # TST-PRO-106.1: Atomic Cross-Worktree ID Reservation Test
+        import multiprocessing
+        q = multiprocessing.Queue()
+        processes = []
+        concurrency = 5
+        count_per_proc = 2
+
+        for i in range(concurrency):
+            ticket = f"ATT-900{i}"
+            p = multiprocessing.Process(
+                target=_concurrent_reservation_worker,
+                args=(self.ledger_dir, self.repo_dir.name, "SIM", "REQ", ticket, count_per_proc, q)
+            )
+            processes.append(p)
+
+        for p in processes:
+            p.start()
+        for p in processes:
+            p.join(timeout=10)
+
+        results = []
+        while not q.empty():
+            results.append(q.get())
+
+        self.assertEqual(len(results), concurrency)
+        all_allocated = []
+        for ticket, allocated, err in results:
+            self.assertIsNone(err, f"Worker failed: {err}")
+            self.assertEqual(len(allocated), count_per_proc)
+            all_allocated.extend(allocated)
+
+        self.assertEqual(len(all_allocated), concurrency * count_per_proc)
+        # Verify 100% uniqueness - zero ID collisions under concurrent processes
+        self.assertEqual(len(set(all_allocated)), len(all_allocated))
+
+    def test_tst_pro_106_2_monotonic_next_id_calculation(self):
+        # TST-PRO-106.2: Monotonic Next-ID Calculation with Active Reservation Awareness Test
+        req_file = os.path.join(self.repo_dir.name, "docs", "requirements", "req_sim.md")
+        with open(req_file, "w", encoding="utf-8") as f:
+            f.write("### REQ-SIM-010: Prior requirement [Implemented]\n")
+
+        # First reservation should allocate REQ-SIM-011
+        r1 = jira_util.reserve_id("SIM", "REQ", "ATT-1001", count=1, ledger_dir=self.ledger_dir, repo_root=self.repo_dir.name)
+        self.assertEqual(r1, ["REQ-SIM-011"])
+
+        # Second reservation without committing to doc should observe active reservation and allocate REQ-SIM-012
+        r2 = jira_util.reserve_id("SIM", "REQ", "ATT-1002", count=2, ledger_dir=self.ledger_dir, repo_root=self.repo_dir.name)
+        self.assertEqual(r2, ["REQ-SIM-012", "REQ-SIM-013"])
+
+        # BOTH allocation aligns REQ and TST numbers
+        r3 = jira_util.reserve_id("SIM", "BOTH", "ATT-1003", count=1, ledger_dir=self.ledger_dir, repo_root=self.repo_dir.name)
+        self.assertEqual(r3, ["REQ-SIM-014", "TST-SIM-014"])
+
+        # Specific ID reservation with conflict check
+        with self.assertRaises(ValueError):
+            jira_util.reserve_id("SIM", "REQ", "ATT-1004", specific_id=11, ledger_dir=self.ledger_dir, repo_root=self.repo_dir.name)
+
+        # Renewing specific ID by owner succeeds
+        r_renew = jira_util.reserve_id("SIM", "REQ", "ATT-1001", specific_id=11, ledger_dir=self.ledger_dir, repo_root=self.repo_dir.name)
+        self.assertEqual(r_renew, ["REQ-SIM-011"])
+
+    def test_tst_pro_106_3_gate_2_reservation_provenance_verification(self):
+        # TST-PRO-106.3: Gate 2 Reservation Provenance Verification Test
+        test_spec_path = os.path.join(self.repo_dir.name, "docs", "engineering", "test_specs", "ATT-2000_test_spec.md")
+        with open(test_spec_path, "w", encoding="utf-8") as f:
+            f.write("""# Stage 2: Test Spec
+## 1. Requirement Specification (REQ-SIM-050)
+* **REQ-SIM-050.1**: Something
+## 4. Test Specification (TST-SIM-050)
+* **TST-SIM-050.1**: Test procedure
+""")
+
+        # 1. Unreserved net-new ID -> fails Gate 2 check
+        is_valid, errors = jira_util.verify_stage2_id_reservations(
+            "ATT-2001", "", parent_key="ATT-2000", ledger_dir=self.ledger_dir, repo_root=self.repo_dir.name
+        )
+        self.assertFalse(is_valid)
+        self.assertTrue(any("has not been reserved" in e for e in errors))
+
+        # 2. Reserved for a DIFFERENT ticket -> fails Gate 2 check
+        jira_util.reserve_id("SIM", "BOTH", "ATT-9999", specific_id=50, ledger_dir=self.ledger_dir, repo_root=self.repo_dir.name)
+        is_valid, errors = jira_util.verify_stage2_id_reservations(
+            "ATT-2001", "", parent_key="ATT-2000", ledger_dir=self.ledger_dir, repo_root=self.repo_dir.name
+        )
+        self.assertFalse(is_valid)
+        self.assertTrue(any("reserved for ticket 'ATT-9999', not 'ATT-2000'" in e for e in errors))
+
+        # 3. Reserved for the matching ticket -> passes Gate 2 check
+        jira_util.release_id("ATT-9999", ledger_dir=self.ledger_dir)
+        jira_util.reserve_id("SIM", "BOTH", "ATT-2000", specific_id=50, ledger_dir=self.ledger_dir, repo_root=self.repo_dir.name)
+        is_valid, errors = jira_util.verify_stage2_id_reservations(
+            "ATT-2001", "", parent_key="ATT-2000", ledger_dir=self.ledger_dir, repo_root=self.repo_dir.name
+        )
+        self.assertTrue(is_valid)
+        self.assertEqual(len(errors), 0)
+
+    def test_tst_pro_106_4_reservation_hygiene_expiration_and_orphan_parity(self):
+        # TST-PRO-106.4: Reservation Hygiene, Expiration & Code Orphan Parity Test
+        # 1. Reserve and list
+        allocated = jira_util.reserve_id("SIM", "REQ", "ATT-3000", count=2, ledger_dir=self.ledger_dir, repo_root=self.repo_dir.name)
+        res_list = jira_util.list_reservations(ticket="ATT-3000", ledger_dir=self.ledger_dir)
+        self.assertEqual(len(res_list), 2)
+
+        # 2. Release by ticket
+        rel = jira_util.release_id("ATT-3000", ledger_dir=self.ledger_dir)
+        self.assertEqual(len(rel), 2)
+        res_list_after = jira_util.list_reservations(ticket="ATT-3000", ledger_dir=self.ledger_dir)
+        self.assertEqual(len(res_list_after), 0)
+
+        # 3. Active expiration cleanup
+        ledger_path = jira_util.resolve_shared_ledger_path(self.ledger_dir)
+        expired_entry = {
+            "version": 1,
+            "reservations": [
+                {
+                    "id": "REQ-SIM-099",
+                    "type": "REQ",
+                    "domain": "SIM",
+                    "ticket": "ATT-OLD",
+                    "reserved_at": "2020-01-01T00:00:00Z",
+                    "expires_at": "2020-01-08T00:00:00Z",
+                }
+            ]
+        }
+        jira_util.save_reservation_ledger(ledger_path, expired_entry)
+        active_res = jira_util.list_reservations(ledger_dir=self.ledger_dir)
+        self.assertEqual(len(active_res), 0)
+
+
+class TestSeparatedAuthorshipAndGateEvidence(unittest.TestCase):
+    """
+    TST-PRO-107: Separated Gate Review Authorship, Evidence Checklists & Zero-Revision Alerts Suite (ATT-8150).
+    Verifies REQ-PRO-107.1..REQ-PRO-107.4.
+    """
+
+    @patch("jira_util.get_config", return_value={"JIRA_URL": "https://example.atlassian.net"})
+    @patch("jira_util.jira_request")
+    @patch("jira_util.create_subtask", return_value="ATT-9999")
+    @patch("jira_util.transition_issue")
+    def test_tst_pro_107_1_separated_authorship_enforcement(
+        self, mock_transition, mock_create, mock_request, mock_config
+    ):
+        # TST-PRO-107.1: Separated Authorship Enforcement Test
+        parent_info = {
+            "fields": {
+                "summary": "Parent Issue",
+                "status": {"name": "Test Spec"},
+                "subtasks": [
+                    {
+                        "key": "ATT-9001",
+                        "fields": {
+                            "summary": "[Analysis] Parent Issue",
+                            "status": {"name": "Erledigt"},
+                            "assignee": {"displayName": "Agent 2", "name": "agent2", "accountId": "agent2_id"},
+                        },
+                    }
+                ],
+            }
+        }
+        mock_request.return_value = parent_info
+
+        # 1. Author matches preceding Gate 1 reviewer (both agent2) -> SystemExit(1)
+        with self.assertRaises(SystemExit) as cm:
+            jira_util.submit_stage("ATT-9000", "2", "Stage 2 spec", role="agent2")
+        self.assertEqual(cm.exception.code, 1)
+
+        # 2. Distinct author (agent1 vs preceding reviewer agent2) -> succeeds
+        mock_transition.reset_mock()
+        st_key = jira_util.submit_stage("ATT-9000", "2", "Stage 2 spec", role="agent1")
+        self.assertEqual(st_key, "ATT-9999")
+
+        # 3. Explicit author parameter override (author="agent1" under role="agent2") -> succeeds
+        mock_transition.reset_mock()
+        st_key = jira_util.submit_stage("ATT-9000", "2", "Stage 2 spec", role="agent2", author="agent1")
+        self.assertEqual(st_key, "ATT-9999")
+
+        # 4. Bypass flag (--bypass-authorship) -> succeeds even if author matches
+        mock_transition.reset_mock()
+        st_key = jira_util.submit_stage("ATT-9000", "2", "Stage 2 spec", role="agent2", bypass_authorship=True)
+        self.assertEqual(st_key, "ATT-9999")
+
+        # 5. Stage 1 submission (no preceding stage) -> succeeds
+        mock_transition.reset_mock()
+        st_key = jira_util.submit_stage("ATT-9000", "1", "Stage 1 analysis", role="agent2")
+        self.assertEqual(st_key, "ATT-9999")
+
+    @patch("jira_util.get_config", return_value={"JIRA_URL": "https://example.atlassian.net"})
+    @patch("jira_util.assign_issue")
+    @patch("jira_util.add_comment")
+    @patch("jira_util.transition_issue")
+    @patch("jira_util.get_subtask_summary_and_desc")
+    def test_tst_pro_107_2_evidence_backed_gate_checklist_validation(
+        self, mock_get_subtask, mock_transition, mock_comment, mock_assign, mock_config
+    ):
+        # TST-PRO-107.2: Evidence-Backed Gate 1-5 Checklist Validation Test
+        mock_get_subtask.return_value = ("[Impl-Plan] ATT-9000: Plan", "Plan details", "ATT-9000")
+
+        # 1. Plain text without checklist or evidence -> SystemExit(1)
+        with self.assertRaises(SystemExit) as cm:
+            jira_util.gate_verdict("ATT-9003", "PASS", "Looks good, approved.", role="agent2")
+        self.assertEqual(cm.exception.code, 1)
+
+        # 2. Has checklist item but lacks evidence anchor -> SystemExit(1)
+        with self.assertRaises(SystemExit) as cm:
+            jira_util.gate_verdict("ATT-9003", "PASS", "PASS: All requirements checked [x]", role="agent2")
+        self.assertEqual(cm.exception.code, 1)
+
+        # 3. Has evidence anchor but lacks checklist pattern -> SystemExit(1)
+        with self.assertRaises(SystemExit) as cm:
+            jira_util.gate_verdict("ATT-9003", "PASS", "Reviewed commit 3a31b9ad and tools/jira_util.py:100", role="agent2")
+        self.assertEqual(cm.exception.code, 1)
+
+        # 4. Valid checklist + concrete evidence anchor -> succeeds
+        valid_report = """### Gate 3 Independent Review: PASS
+* [x] Traceability: REQ-PRO-107 verified in tools/jira_util.py:1450
+* [x] Commit SHA: 3a31b9ad verified clean
+* [x] Test output: BUILD SUCCESSFUL
+Verdict: PASS."""
+        jira_util.gate_verdict("ATT-9003", "PASS", valid_report, role="agent2")
+        mock_transition.assert_called_with("ATT-9003", "freigabe", role="agent2", inject_context=True)
+
+    def test_tst_pro_107_3_multi_sprint_100_percent_ftpr_rubber_stamping_alert(self):
+        # TST-PRO-107.3: Multi-Sprint 100% FTPR Rubber-Stamping Alert Test
+        import sprint_metrics
+
+        # 1. Single sprint with 100% FTPR -> no multi-sprint alert
+        hist_1 = [
+            {"sprint_name": "Sprint 1", "quality_gates": {"overall_ftpr_percent": 90.0, "total_subtasks_evaluated": 10}}
+        ]
+        curr_1 = {"sprint_name": "Sprint 2", "quality_gates": {"overall_ftpr_percent": 100.0, "total_subtasks_evaluated": 10}}
+        spc_1 = sprint_metrics.calculate_spc_limits(hist_1, current_metrics=curr_1)
+        self.assertFalse(any("Finding M3 Rubber-Stamping Alert" in w for w in spc_1.get("warnings", [])))
+
+        # 2. Two consecutive sprints with 100% FTPR -> triggers Rubber-Stamping Alert!
+        hist_2 = [
+            {"sprint_name": "Sprint 1", "quality_gates": {"overall_ftpr_percent": 100.0, "total_subtasks_evaluated": 10}}
+        ]
+        curr_2 = {"sprint_name": "Sprint 2", "quality_gates": {"overall_ftpr_percent": 100.0, "total_subtasks_evaluated": 10}}
+        spc_2 = sprint_metrics.calculate_spc_limits(hist_2, current_metrics=curr_2)
+        self.assertTrue(any("Finding M3 Rubber-Stamping Alert" in w for w in spc_2.get("warnings", [])))
+
+        # 3. Check markdown report formatting includes the alert
+        report_md = sprint_metrics.format_metrics_markdown(curr_2, spc_2)
+        self.assertIn("Finding M3 Rubber-Stamping Alert", report_md)
+
+    def test_tst_pro_107_4_governance_rules_and_skill_parity(self):
+        # TST-PRO-107.4: Rule & Living Documentation Parity Test
+        gov_path = os.path.join(REPO_ROOT, ".agents", "rules", "aspice_governance.md")
+        with open(gov_path, "r", encoding="utf-8") as f:
+            gov_text = f.read()
+        self.assertIn("REQ-PRO-107", gov_text)
+        self.assertIn("Separated Review Authorship", gov_text)
+
+        skill_path = os.path.join(REPO_ROOT, ".agents", "skills", "jira-workflow", "SKILL.md")
+        with open(skill_path, "r", encoding="utf-8") as f:
+            skill_text = f.read()
+        self.assertIn("REQ-PRO-107", skill_text)
+
+    @patch("jira_util.get_config", return_value={"JIRA_URL": "https://example.atlassian.net"})
+    @patch("jira_util.jira_request")
+    def test_systemtest_pseudo_sprint_454_and_human_execution_guard(self, mock_request, mock_config):
+        """Protect Bereit fuer PO Systemtest (ID 454) and skip human-execution in greedy bin-packing."""
+        # 1. Greedy bin-packing must skip tickets labeled 'human-execution'
+        ranked = [
+            {"key": "ATT-8423", "fields": {"issuetype": {"name": "Feature"}, "summary": "SysVer", "status": {"name": "Zu erledigen"}, "labels": ["human-execution"], "parent": {"key": "ATT-6142"}}},
+            {"key": "ATT-8424", "fields": {"issuetype": {"name": "Bug"}, "summary": "Normal", "status": {"name": "Zu erledigen"}, "labels": [], "parent": {"key": "ATT-166"}}},
+        ]
+        packed = jira_util.select_greedy_bin_pack_tickets(ranked, max_lanes=3)
+        self.assertEqual([i["key"] for i in packed], ["ATT-8424"])
+
+        # 2. pack_sprint and return_unstarted reject protected pseudo-sprint ID 454
+        with self.assertRaises(SystemExit):
+            jira_util.pack_sprint_from_po_queue(454, role="coordinator")
+        with patch("jira_util.resolve_sprint_object", return_value={"id": 454, "name": "Bereit für PO Systemtest"}):
+            mock_request.return_value = {"values": [{"id": 1}]}
+            with self.assertRaises(SystemExit):
+                jira_util.return_unstarted_to_po_queue("454", role="coordinator")
+
+        # 3. defer_to_systemtest_queue adds human-execution label, assigns human, and moves to ID 454
+        with patch("jira_util.add_label") as mock_add_lbl, \
+             patch("jira_util.assign_issue") as mock_assign, \
+             patch("jira_util.move_issues_to_sprint_guarded") as mock_move:
+            self.assertTrue(jira_util.defer_to_systemtest_queue("ATT-8423", role="coordinator"))
+        mock_add_lbl.assert_called_once_with("ATT-8423", ["human-execution"], role="coordinator")
+        mock_assign.assert_called_once_with("ATT-8423", "human", role="coordinator")
+        mock_move.assert_called_once_with(454, ["ATT-8423"], role="coordinator")
 
 
 if __name__ == "__main__":

@@ -290,6 +290,11 @@ public class WorkoutSamplesDatabaseManager {
                                     testLocation.setLatitude(samplesCursor.getDouble(latIndex));
                                     testLocation.setLongitude(samplesCursor.getDouble(lonIndex));
 
+                                    // REQ-FIL-019.2: Exclude Null Island (0.0, 0.0) from location queries
+                                    if (Math.abs(testLocation.getLatitude()) < 1e-6 && Math.abs(testLocation.getLongitude()) < 1e-6) {
+                                        continue;
+                                    }
+
                                     if (centerLocation.distanceTo(testLocation) <= radius) {
                                         valueSum += samplesCursor.getDouble(sensorIndex);
                                         counter++;

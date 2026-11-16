@@ -1255,6 +1255,16 @@ public class TrackerService extends Service {
                 }
                 // The workout name is just the date+time
                 mBaseFileName = (new SimpleDateFormat("yyyy-MM-dd_HHmmss", Locale.US)).format(new Date());
+                try {
+                    com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarRawTelemetryRecorder.startActiveSession(
+                            getApplicationContext(),
+                            mBaseFileName,
+                            startTimeMs,
+                            (int) getSportTypeId()
+                    );
+                } catch (Throwable t) {
+                    Log.w(TAG, "Error starting PolarRawTelemetryRecorder active session: " + t.getMessage());
+                }
                 mSamplesTableName = WorkoutRepository.getSamplesTableName(mBaseFileName);
                 mLiveSession = new LiveWorkoutSession(0, IMPORTANT_SENSOR_TYPES);
                 mLiveSession.setSessionEpochStartTimeMs(startTimeMs);
@@ -2473,6 +2483,17 @@ public class TrackerService extends Service {
             }
         } catch (Throwable t) {
             Log.e(TAG, "Error in post-workout processing", t);
+        }
+
+        try {
+            com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarRawTelemetryRecorder.stopActiveSession();
+        } catch (Throwable t) {
+            Log.w(TAG, "Error stopping PolarRawTelemetryRecorder active session: " + t.getMessage());
+        }
+        try {
+            com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarRawTelemetryPruner.pruneExpiredSidecarsAsync(getApplicationContext());
+        } catch (Throwable t) {
+            Log.w(TAG, "Error triggering background raw telemetry pruner: " + t.getMessage());
         }
 
         try {

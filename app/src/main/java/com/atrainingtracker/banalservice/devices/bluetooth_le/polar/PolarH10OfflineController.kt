@@ -368,6 +368,19 @@ object PolarH10OfflineController {
                                 val rrRepo = WorkoutRrRepository.getInstance(appContext)
                                 rrRepo.insertIntervals(intervals)
 
+                                // Persist raw telemetry sidecar (REQ-SET-117.1, ATT-8019)
+                                try {
+                                    PolarRawTelemetryRecorder.recordOfflineExercise(
+                                        appContext,
+                                        baseFileName,
+                                        targetId,
+                                        anchorMs,
+                                        hrSamples
+                                    )
+                                } catch (e: Exception) {
+                                    Log.w(TAG, "Error recording raw telemetry sidecar for offline exercise on $targetId: ${e.message}")
+                                }
+
                                 // Recompute HRV summaries
                                 HrvPostWorkoutRecomputer.recomputeWorkout(appContext, workoutId)
                                 WorkoutRepository.getInstance(appContext).refreshWorkout(workoutId)

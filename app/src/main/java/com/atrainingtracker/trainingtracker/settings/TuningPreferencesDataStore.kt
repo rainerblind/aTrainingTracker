@@ -150,6 +150,7 @@ object TuningPreferencesDefaults {
     const val ALTITUDE_FILTER_WINDOW_SEC = 21
     const val SLOPE_MIN_SPEED_MPS = 0.5f
     const val DEFAULT_POST_WORKOUT_ERTS_SMOOTHING_ENABLED = false
+    val RAW_SENSOR_RETENTION_POLICY = RawSensorRetentionPolicy.DAYS_30
 
     const val MIN_FULL_DIM_FACTOR = 0.05f
     const val MAX_FULL_DIM_FACTOR = 0.50f
@@ -396,6 +397,7 @@ data class TuningConfig(
     val altitudeFilterWindowSec: Int = TuningPreferencesDefaults.ALTITUDE_FILTER_WINDOW_SEC,
     val slopeMinSpeedMps: Float = TuningPreferencesDefaults.SLOPE_MIN_SPEED_MPS,
     val postWorkoutErtsSmoothingEnabled: Boolean = TuningPreferencesDefaults.DEFAULT_POST_WORKOUT_ERTS_SMOOTHING_ENABLED,
+    val rawSensorRetentionPolicy: RawSensorRetentionPolicy = TuningPreferencesDefaults.RAW_SENSOR_RETENTION_POLICY,
     val paceCeilingMinKm: Float = TuningPreferencesDefaults.DEFAULT_PACE_CEILING_MIN_KM,
     val showLiveClimbs: Boolean = TuningPreferencesDefaults.SHOW_LIVE_CLIMBS,
     val climbMinLengthMeters: Float = TuningPreferencesDefaults.CLIMB_MIN_LENGTH_METERS,
@@ -554,6 +556,7 @@ class TuningPreferencesDataStore private constructor(
         val KEY_ALTITUDE_FILTER_WINDOW: Preferences.Key<Int> = intPreferencesKey("tuning_altitude_filter_window")
         val KEY_SLOPE_MIN_SPEED: Preferences.Key<Float> = floatPreferencesKey("tuning_slope_min_speed")
         val KEY_POST_WORKOUT_ERTS_SMOOTHING: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_post_workout_erts_smoothing")
+        val KEY_RAW_SENSOR_RETENTION_POLICY: Preferences.Key<String> = stringPreferencesKey("tuning_raw_sensor_retention_policy")
         val KEY_PACE_CEILING_MIN_KM: Preferences.Key<Float> = floatPreferencesKey("tuning_pace_ceiling_min_km")
         val KEY_SHOW_LIVE_CLIMBS: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_show_live_climbs")
         val KEY_CLIMB_MIN_LENGTH_METERS: Preferences.Key<Float> = floatPreferencesKey("tuning_climb_min_length_meters")
@@ -685,6 +688,7 @@ class TuningPreferencesDataStore private constructor(
             KEY_ALTITUDE_FILTER_WINDOW,
             KEY_SLOPE_MIN_SPEED,
             KEY_POST_WORKOUT_ERTS_SMOOTHING,
+            KEY_RAW_SENSOR_RETENTION_POLICY,
             KEY_PACE_CEILING_MIN_KM,
             KEY_SHOW_LIVE_CLIMBS,
             KEY_CLIMB_MIN_LENGTH_METERS,
@@ -1179,6 +1183,7 @@ data class AutoPausePreferences(
             altitudeFilterWindowSec = clampedAltWindow,
             slopeMinSpeedMps = clampedSlopeSpeed,
             postWorkoutErtsSmoothingEnabled = prefs[KEY_POST_WORKOUT_ERTS_SMOOTHING] ?: TuningPreferencesDefaults.DEFAULT_POST_WORKOUT_ERTS_SMOOTHING_ENABLED,
+            rawSensorRetentionPolicy = safeEnumValueOf(prefs[KEY_RAW_SENSOR_RETENTION_POLICY], TuningPreferencesDefaults.RAW_SENSOR_RETENTION_POLICY),
             paceCeilingMinKm = clampedPaceCeiling,
             showLiveClimbs = showLiveClimbs,
             climbMinLengthMeters = climbMinLength,
@@ -1608,6 +1613,7 @@ data class AutoPausePreferences(
             prefs[KEY_ALTITUDE_FILTER_WINDOW] = clampedAltWindow
             prefs[KEY_SLOPE_MIN_SPEED] = clampedSlopeSpeed
             prefs[KEY_POST_WORKOUT_ERTS_SMOOTHING] = config.postWorkoutErtsSmoothingEnabled
+            prefs[KEY_RAW_SENSOR_RETENTION_POLICY] = config.rawSensorRetentionPolicy.name
             prefs[KEY_PACE_CEILING_MIN_KM] = clampedPaceCeiling
             prefs[KEY_SHOW_LIVE_CLIMBS] = config.showLiveClimbs
             prefs[KEY_CLIMB_MIN_LENGTH_METERS] = config.climbMinLengthMeters
@@ -1839,6 +1845,24 @@ data class AutoPausePreferences(
 
     val postWorkoutErtsSmoothingFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
         prefs[KEY_POST_WORKOUT_ERTS_SMOOTHING] ?: TuningPreferencesDefaults.DEFAULT_POST_WORKOUT_ERTS_SMOOTHING_ENABLED
+    }
+
+    val rawSensorRetentionPolicyFlow: Flow<RawSensorRetentionPolicy> = context.dataStore.data.map { prefs ->
+        safeEnumValueOf(prefs[KEY_RAW_SENSOR_RETENTION_POLICY], TuningPreferencesDefaults.RAW_SENSOR_RETENTION_POLICY)
+    }
+
+    val rawSensorRetentionPolicy: StateFlow<RawSensorRetentionPolicy> by lazy {
+        rawSensorRetentionPolicyFlow.stateIn(
+            scope = appScope,
+            started = SharingStarted.Eagerly,
+            initialValue = TuningPreferencesDefaults.RAW_SENSOR_RETENTION_POLICY
+        )
+    }
+
+    suspend fun updateRawSensorRetentionPolicy(policy: RawSensorRetentionPolicy) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_RAW_SENSOR_RETENTION_POLICY] = policy.name
+        }
     }
 
     suspend fun updatePostWorkoutErtsSmoothingEnabled(enabled: Boolean) {

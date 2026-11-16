@@ -3,7 +3,7 @@
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Tests**: 128
+**Total Tests**: 130
 
 ---
 
@@ -2875,6 +2875,52 @@
      • Verify zero new strings added and existing `R.string.devices_altitude_from_pressure` across all 9 locales (EN, DE, ES, FR, IT, JA, NL, PL, PT) plus legacy `ATT-5073` names are recognized as barometric columns.
   5. *Targeted Tier-1 Unit & Contract Verification (`TST-FIL-018.5`)*:
      • Run targeted Gradle suite (`WorkoutSamplesDatabaseManager*`, `LiveWorkoutSession*`, `AltitudeFromPressure*`, `TrackerServiceCrashRecoveryCharacterisationTest`, `SourceTextReadingAuditContractTest`, `AspiceSweAuditContractTest`) + `:app:lintDebug` + scoped `:app:detekt`.
+
+### TST-FIL-019: Post-Workout ERTS Fix Gating, Origin Anchoring & Sanity Guard Verification Suite [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-FIL-019` (`REQ-FIL-019.1`..`REQ-FIL-019.4`)
+- **Component**: `ExtendedRtsOdometrySmootherTest.kt`, `ErtsPostWorkoutRecomputerTest.kt`, `WorkoutSamplesDatabaseManagerTest.kt`
+- **Test Type**: Unit & Regression
+- **Verification Method**: Unit
+- **Procedure**:
+  1. *Nullable Coordinate Support & First Valid Fix Origin Test (`TST-FIL-019.1`, `ExtendedRtsOdometrySmootherTest.kt`)*:
+     • Construct sample sequence with leading `null` / `(0.0, 0.0)` coordinates followed by valid GNSS coordinates at Schönaich (`48.6567°, 9.0545°`).
+     • Invoke `ExtendedRtsOdometrySmoother.smoothSamples()`. Assert `refLat`/`refLon` anchors to the first valid fix, no velocity shock or spiral oscillation occurs, and smoothed coordinates remain localized near Schönaich.
+     • Pass sequence with 100% `null` GNSS coordinates; verify smoother returns safely without exception.
+  2. *Mid-Workout GNSS Gap Predict-Only Ingestion Test (`TST-FIL-019.2`, `ExtendedRtsOdometrySmootherTest.kt`)*:
+     • Construct 60-second trajectory with a 15-second GNSS gap (`latitude = null, longitude = null`) with continuous wheel speed (10 m/s).
+     • Assert forward EKF executes prediction + wheel speed update during the gap without `updateGnssPosition(0.0, 0.0)` and backward RTS produces a continuous, smooth trajectory across the gap.
+  3. *Leading/Trailing NULL Preservation & Map Polyline Exclusion Test (`TST-FIL-019.3`, `ErtsPostWorkoutRecomputerTest.kt`)*:
+     • Recompute workout with leading `NULL` coordinates in `WorkoutSamples.db`.
+     • Assert leading rows retain `LATITUDE = NULL` and `LONGITUDE = NULL` in `WorkoutSamples.db` (never `0.0`), `mapPolyline` contains zero `(0.0, 0.0)` points, and `WorkoutSummaries.db` `START` extrema reflects the first genuine GNSS fix.
+  4. *Output Sanity Guard Anomaly Abort Test (`TST-FIL-019.4`, `ErtsPostWorkoutRecomputerTest.kt`)*:
+     • Simulate corrupted smoother output (e.g. distance $> 1,000\text{ km}$ or speed $> 100\text{ m/s}$).
+     • Assert `recomputeWorkout()` rejects the commit, original live `WorkoutSamples.db` and `WorkoutSummaries.db` values remain completely intact, and an error is logged.
+  5. *Targeted Tier-1 Unit & Contract Verification (`TST-FIL-019.5`)*:
+     • Run targeted Gradle suite (`ExtendedRtsOdometrySmootherTest`, `ErtsPostWorkoutRecomputerTest`, `WorkoutSamplesDatabaseManager*`, `SystemLiveTrackingRequirementsContractTest`) + living documentation governance verification (`python3 tools/verify_requirement_governance.py`).
+
+### TST-FIL-020: MSL Normalization, Reference Precedence, and Elevation Hysteresis Verification Suite [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-FIL-020` (`REQ-FIL-020.1`..`REQ-FIL-020.3`)
+- **Component**: `AltitudeAndSlopeDevice_ATTFusedTest.kt`, `AltitudeAndSlopeDeviceHysteresisTest.kt`
+- **Test Type**: Unit & Regression
+- **Verification Method**: Unit
+- **Procedure**:
+  1. *DEM Reference Precedence & WGS84 MSL Normalization Test (`TST-FIL-020.1`, `AltitudeAndSlopeDevice_ATTFusedTest.kt`)*:
+     • Configure `AltitudeAndSlopeDevice_ATTFused` with simultaneous DEM (500.0 m) and GPS (547.5 m) feeds.
+     • Assert DEM takes precedence and reference altitude fed to EKF remains 500.0 m without opposing kicks.
+     • Feed GPS with `LocationCompat.hasMslAltitude == true`; verify MSL altitude is extracted and applied when DEM is inactive.
+  2. *5-Hz Barometric Micro-Ripple Hysteresis Rejection Test (`TST-FIL-020.2`, `AltitudeAndSlopeDevice_ATTFusedTest.kt`)*:
+     • Feed 300 samples (60s at 5 Hz) of flat elevation (500.0 m) with Gaussian/sinusoidal noise $\le \pm 0.4\text{ m}$.
+     • Assert cumulative ascent and descent both remain exactly 0.0 m.
+  3. *True Terrain Climbing Ascent Accumulation Test (`TST-FIL-020.3`, `AltitudeAndSlopeDevice_ATTFusedTest.kt`)*:
+     • Feed continuous 25 m climb from 500.0 m to 525.0 m with superposed ±0.2 m noise.
+     • Assert cumulative ascent records exactly 25.0 m (within 0.5 m tolerance).
+  4. *Locale-Invariant Column Identifier & UI Name Compatibility Test (`TST-FIL-020.4`, `AltitudeAndSlopeDevice_ATTFusedTest.kt`)*:
+     • Verify `device.getName()` returns `att_fused_altitude_slope` independently of default locale.
+     • Verify `DevicesDatabaseManager` continues to resolve localized names across all 9 locales (EN, DE, ES, FR, IT, JA, NL, PL, PT).
+  5. *Targeted Tier-1 Unit & Contract Verification (`TST-FIL-020.5`)*:
+     • Run targeted Gradle suite (`AltitudeAndSlopeDevice_ATTFusedTest`, `AltitudeSlopeTest`, `SystemLiveTrackingRequirementsContractTest`) + living documentation governance verification (`python3 tools/verify_requirement_governance.py`).
 
 ### TST-TRK-078: **Mid-Workout Crash Recovery Accumulator Preservation and Continuity Verification Suite** [Verified]
 - **Target Release**: `V5.0.0`

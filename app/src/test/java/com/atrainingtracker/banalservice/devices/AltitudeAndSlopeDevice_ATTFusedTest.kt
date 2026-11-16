@@ -355,4 +355,125 @@ class AltitudeAndSlopeDevice_ATTFusedTest {
         // dtSec must have been clamped to 5.0s, preventing massive covariance explosion
         assertTrue("Covariance growth must be bounded by MAX_DT_SEC", device.ekf.p00 < p00BeforeResume + 1.0)
     }
+
+    // TST-FIL-020.1: DEM reference precedence over unnormalized WGS84 GPS altitude
+    @Test
+    fun testDemReferencePrecedence_overridesGpsAltitude_tstFil020_1() {
+        every { AttFusedAltitudePreferences.isEffectiveDemActive(any()) } returns true
+        every { AttFusedAltitudePreferences.isEffectiveGpsActive(any()) } returns true
+
+        val demSensor = mockk<com.atrainingtracker.banalservice.sensor.MySensor<Number>>(relaxed = true)
+        every { demSensor.value } returns 500.0
+        every { demSensor.lastUpdateTimestamp } returns 5000L
+        every {
+            mockSensorManager.getSensorForDeviceType(SensorType.ALTITUDE, DeviceType.ALTITUDE_FROM_POSITION)
+        } returns demSensor
+
+        val gpsSensor = mockk<com.atrainingtracker.banalservice.sensor.MySensor<Number>>(relaxed = true)
+        every { gpsSensor.value } returns 547.5 // WGS84 ellipsoid offset by +47.5m!
+        every { gpsSensor.lastUpdateTimestamp } returns 5000L
+        every {
+            mockSensorManager.getSensorForDeviceType(SensorType.ALTITUDE, DeviceType.SPEED_AND_LOCATION_GPS)
+        } returns gpsSensor
+
+        val speedSensor = mockk<com.atrainingtracker.banalservice.sensor.MySensor<Number>>(relaxed = true)
+        every { speedSensor.value } returns 5.0
+        every { mockSensorManager.getSensor(SensorType.SPEED_mps) } returns speedSensor
+
+        val device = AltitudeAndSlopeDevice_ATTFused(mockContext, mockSensorManager, autoStartScheduler = false)
+        device.refreshCachedPreferences()
+
+        val pressure500m = SensorManager.PRESSURE_STANDARD_ATMOSPHERE *
+            Math.pow(1.0 - 500.0 / 44330.0, 5.255).toFloat()
+        device.handlePressureMeasurement(pressure500m, 4000L)
+        device.calculateMetrics(5000L)
+
+        // Assert DEM was ingested and GPS was bypassed
+        assertEquals("DEM timestamp must be recorded", 5000L, device.lastDemUpdateTimestampMs)
+        assertEquals("GPS update must be bypassed due to DEM precedence", 0L, device.lastGpsUpdateTimestampMs)
+    }
+
+    // TST-FIL-020.2: 5-Hz barometric micro-ripple hysteresis deadband rejection
+    @Test
+    fun testBarometricMicroRippleHysteresisRejection_tstFil020_2() {
+        every { AttFusedAltitudePreferences.isEffectiveDemActive(any()) } returns false
+        every { AttFusedAltitudePreferences.isEffectiveGpsActive(any()) } returns false
+
+        val speedSensor = mockk<com.atrainingtracker.banalservice.sensor.MySensor<Number>>(relaxed = true)
+        every { speedSensor.value } returns 5.0
+        every { mockSensorManager.getSensor(SensorType.SPEED_mps) } returns speedSensor
+
+        val device = AltitudeAndSlopeDevice_ATTFused(mockContext, mockSensorManager, autoStartScheduler = false)
+        device.refreshCachedPreferences()
+
+        val basePressure = SensorManager.PRESSURE_STANDARD_ATMOSPHERE *
+            Math.pow(1.0 - 500.0 / 44330.0, 5.255).toFloat()
+        device.handlePressureMeasurement(basePressure, 1000L)
+        device.calculateMetrics(1000L)
+
+        // Feed 300 5-Hz samples (60 seconds) with micro-ripples <= ±0.4m
+        var tMs = 1200L
+        for (i in 0 until 300) {
+            val rippleAlt = 500.0 + 0.35 * kotlin.math.sin(i * 0.5)
+            val p = SensorManager.PRESSURE_STANDARD_ATMOSPHERE *
+                Math.pow(1.0 - rippleAlt / 44330.0, 5.255).toFloat()
+            device.handlePressureMeasurement(p, tMs)
+            if (i % 5 == 0) {
+                device.calculateMetrics(tMs)
+            }
+            tMs += 200L
+        }
+
+        // Hysteresis deadband (2.0m) must reject 100% of micro-ripples
+        val ascent = (device.mAscentSensor?.value as? Number)?.toDouble() ?: 0.0
+        val descent = (device.mDescentSensor?.value as? Number)?.toDouble() ?: 0.0
+        assertEquals("Ascent must remain exactly 0.0m on micro-ripples", 0.0, ascent, 1e-6)
+        assertEquals("Descent must remain exactly 0.0m on micro-ripples", 0.0, descent, 1e-6)
+    }
+
+    // TST-FIL-020.3: True terrain climbing ascent accumulation with hysteresis
+    @Test
+    fun testTerrainClimbAccumulation_withHysteresis_tstFil020_3() {
+        every { AttFusedAltitudePreferences.isEffectiveDemActive(any()) } returns false
+        every { AttFusedAltitudePreferences.isEffectiveGpsActive(any()) } returns false
+
+        val speedSensor = mockk<com.atrainingtracker.banalservice.sensor.MySensor<Number>>(relaxed = true)
+        every { speedSensor.value } returns 5.0
+        every { mockSensorManager.getSensor(SensorType.SPEED_mps) } returns speedSensor
+
+        val device = AltitudeAndSlopeDevice_ATTFused(mockContext, mockSensorManager, autoStartScheduler = false)
+        device.refreshCachedPreferences()
+
+        val basePressure = SensorManager.PRESSURE_STANDARD_ATMOSPHERE *
+            Math.pow(1.0 - 500.0 / 44330.0, 5.255).toFloat()
+        device.handlePressureMeasurement(basePressure, 1000L)
+        device.calculateMetrics(1000L)
+
+        // Climb ~25m from 500m over 30 seconds (+0.84m/s, within physical slew limit)
+        var currentAlt = 500.0
+        var tMs = 2000L
+        for (i in 0 until 30) {
+            currentAlt += 0.84
+            val p = SensorManager.PRESSURE_STANDARD_ATMOSPHERE *
+                Math.pow(1.0 - currentAlt / 44330.0, 5.255).toFloat()
+            device.handlePressureMeasurement(p, tMs)
+            device.calculateMetrics(tMs)
+            tMs += 1000L
+        }
+
+        val ascent = (device.mAscentSensor?.value as? Number)?.toDouble() ?: 0.0
+        assertTrue("Cumulative ascent must reflect the climb (was $ascent)", ascent in 22.0..26.0)
+    }
+
+    // TST-FIL-020.4: Locale-invariant technical device identifier
+    @Test
+    fun testTechnicalDeviceName_localeInvariant_tstFil020_4() {
+        val device = AltitudeAndSlopeDevice_ATTFused(mockContext, mockSensorManager, autoStartScheduler = false)
+        assertEquals(
+            "Device name must be canonical technical identifier",
+            AltitudeAndSlopeDevice_ATTFused.TECHNICAL_DEVICE_NAME,
+            device.name
+        )
+        assertEquals("att_fused_altitude_slope", device.name)
+    }
 }

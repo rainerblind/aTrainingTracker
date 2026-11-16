@@ -64,6 +64,9 @@ open class AltitudeAndSlopeDevice_ATTFused @JvmOverloads constructor(
         private const val TAG = "AltitudeSlopeDev_ATT"
         private val DEBUG = BANALService.getDebug(false)
         private const val DEFAULT_MIN_SPEED_MPS = 0.5
+        const val TECHNICAL_DEVICE_NAME = "att_fused_altitude_slope"
+        const val ASCENT_DESCENT_HYSTERESIS_METERS = 2.0
+        const val DEM_STALENESS_THRESHOLD_MS = 15_000L
     }
 
     val ekf = KinematicAltitudeSlopeEkf()
@@ -86,6 +89,7 @@ open class AltitudeAndSlopeDevice_ATTFused @JvmOverloads constructor(
 
     private var mScheduler: ScheduledExecutorService? = null
     private var mLastAltitude: Double = Double.NaN
+    private var mAscentDescentAnchorAltitude: Double = Double.NaN
     private var mLastStepTimestampMs: Long = 0L
     private var mLastDemUpdateTimestampMs: Long = 0L
     private var mLastGpsUpdateTimestampMs: Long = 0L
@@ -165,8 +169,7 @@ open class AltitudeAndSlopeDevice_ATTFused @JvmOverloads constructor(
         addSensor(descent)
     }
 
-    override fun getName(): String =
-        mContext.getString(R.string.devices_altitude_slope_ATT_fused)
+    override fun getName(): String = TECHNICAL_DEVICE_NAME
 
     @Synchronized
     override fun shutDown() {
@@ -186,6 +189,7 @@ open class AltitudeAndSlopeDevice_ATTFused @JvmOverloads constructor(
         baroFilter.reset()
         ekf.reset()
         mLastAltitude = Double.NaN
+        mAscentDescentAnchorAltitude = Double.NaN
         mLastStepTimestampMs = 0L
         mLastDemUpdateTimestampMs = 0L
         mLastGpsUpdateTimestampMs = 0L
@@ -289,13 +293,14 @@ open class AltitudeAndSlopeDevice_ATTFused @JvmOverloads constructor(
         refreshCachedPreferences()
 
         val speed = getCurrentSpeed()
-        checkReferenceAltitudeFromSensors()
+        checkReferenceAltitudeFromSensors(nowMs)
 
         ekf.predict(dtSec, speed)
         publishAltitudeAndMetrics(speed)
     }
 
-    private fun checkReferenceAltitudeFromSensors() {
+    private fun checkReferenceAltitudeFromSensors(nowMs: Long) {
+        var demConsumed = false
         if (isEffectiveDem) {
             val demSensor = mMySensorManager.getSensorForDeviceType(
                 SensorType.ALTITUDE,
@@ -306,11 +311,15 @@ open class AltitudeAndSlopeDevice_ATTFused @JvmOverloads constructor(
                 if (demVal != null && !demVal.isNaN()) {
                     mLastDemUpdateTimestampMs = demSensor.lastUpdateTimestamp
                     ekf.updateReferenceAltitude(demVal, KinematicAltitudeSlopeEkf.DEFAULT_VAR_DEM)
+                    demConsumed = true
                 }
+            } else if (demSensor != null && (nowMs - demSensor.lastUpdateTimestamp) <= DEM_STALENESS_THRESHOLD_MS) {
+                demConsumed = true
             }
         }
 
-        if (isEffectiveGps) {
+        // REQ-FIL-020.1: DEM reference precedence over unnormalized WGS84 GPS altitude
+        if (isEffectiveGps && !demConsumed) {
             val gpsSensor = mMySensorManager.getSensorForDeviceType(
                 SensorType.ALTITUDE,
                 DeviceType.SPEED_AND_LOCATION_GPS
@@ -346,12 +355,17 @@ open class AltitudeAndSlopeDevice_ATTFused @JvmOverloads constructor(
         val currentAlt = ekf.altitude
         mAltitudeSensor?.newValue(currentAlt)
 
-        if (!mLastAltitude.isNaN()) {
-            val deltaAlt = currentAlt - mLastAltitude
-            if (deltaAlt > 0.0) {
-                mAscentSensor?.increment(deltaAlt)
-            } else if (deltaAlt < 0.0) {
-                mDescentSensor?.increment(-deltaAlt)
+        // REQ-FIL-020.2: 2.0 m anchor-based elevation hysteresis deadband for cumulative ascent/descent
+        if (mAscentDescentAnchorAltitude.isNaN()) {
+            mAscentDescentAnchorAltitude = currentAlt
+        } else {
+            val deltaFromAnchor = currentAlt - mAscentDescentAnchorAltitude
+            if (deltaFromAnchor >= ASCENT_DESCENT_HYSTERESIS_METERS) {
+                mAscentSensor?.increment(deltaFromAnchor)
+                mAscentDescentAnchorAltitude = currentAlt
+            } else if (deltaFromAnchor <= -ASCENT_DESCENT_HYSTERESIS_METERS) {
+                mDescentSensor?.increment(-deltaFromAnchor)
+                mAscentDescentAnchorAltitude = currentAlt
             }
         }
         mLastAltitude = currentAlt

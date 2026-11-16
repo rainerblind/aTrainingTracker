@@ -201,4 +201,12 @@
     <string name="ground_contact_time">Bodenkontaktzeit</string>
     <string name="ground_contact_time_short">BKZ</string>
 
+    <!-- Polar Raw Telemetry Sidecar & Retention (ATT-8019, REQ-SET-117) -->
+    <string name="raw_telemetry_retention_title">Rohdaten-Aufbewahrung</string>
+    <string name="raw_telemetry_retention_desc">Komprimiert hochfrequente Polar-PMD-Live- und Offline-Telemetriedaten in externe Sidecar-Dateien, ohne die Trainingsdatenbank zu belasten.</string>
+    <string name="raw_telemetry_retention_30_days">30 Tage</string>
+    <string name="raw_telemetry_retention_keep_all">Alle</string>
+    <string name="raw_telemetry_retention_7_days">7 Tage</string>
+    <string name="raw_telemetry_retention_off">Aus</string>
+
 </resources>

@@ -3,7 +3,7 @@
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Tests**: 201
+**Total Tests**: 203
 
 ---
 
@@ -3400,3 +3400,41 @@
   • Verify `verify_po_approval_changelog()` parses Jira changelog history, passes issues moved to ID 447 or created by human PO `accountId`, rejects unapproved agent-originated issues, and asserts `qa_audit()` integrates Dimension 6 (`po_approval_pass`) while exempting ceremony tickets.
   4. *Historical Exception Disposition & Living Doc Parity Test (`TST-PRO-105.4`, Jira / tools/test_jira_accounts.py)*:
   • Verify `ATT-7902` disposition record confirms tests-only PO authorization, and verify all living doc shards pass governance checks with Description field ratchet compliance.
+
+---
+
+### TST-PRO-106: **Atomic REQ and TST ID Reservation Across Parallel Sprint Lanes Suite (ATT-8149)** [Verified]
+- **Requirement(s)**: `REQ-PRO-106`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Component**: `tools/jira_util.py`, `tools/test_jira_accounts.py`
+- **Jira**: `ATT-8149`
+- **Test Description**:
+  1. *Atomic Cross-Worktree ID Reservation Test (`TST-PRO-106.1`, tools/test_jira_accounts.py)*:
+  • Verify `reserve_id()` locks `/tmp/att_id_reservation.lock`, persists reservations to `$(git rev-parse --git-common-dir)/att_id_reservations.json`, guarantees cross-worktree visibility across simulated parallel worktrees, and prevents duplicate allocations under concurrent threads/processes.
+  2. *Monotonic Next-ID Calculation with Active Reservation Awareness Test (`TST-PRO-106.2`, tools/test_jira_accounts.py)*:
+  • Verify next ID selection considers both living documentation files and active ledger reservations, correctly producing `max(committed, reserved) + 1` for single and multi-count allocations.
+  3. *Gate 2 Reservation Provenance Verification Test (`TST-PRO-106.3`, tools/test_jira_accounts.py)*:
+  • Verify `gate-verdict` on Stage 2 subtasks passes when all new REQ/TST IDs match the parent ticket reservation and rejects with a governance error when an unreserved ID is detected.
+  4. *Reservation Hygiene, Expiration & Code Orphan Parity Test (`TST-PRO-106.4`, tools/test_jira_accounts.py)*:
+  • Verify reservation release on ticket lifecycle completion, ledger cleanup, and verify `verify_requirement_governance.py --check-code-orphans` reports zero false positives.
+
+---
+
+### TST-PRO-107: **Separated Gate Review Authorship, Evidence Checklists & Zero-Revision Alerts Suite (ATT-8150)** [Verified]
+- **Requirement(s)**: `REQ-PRO-107`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Component**: `tools/jira_util.py`, `tools/sprint_metrics.py`, `tools/test_jira_accounts.py`
+- **Jira**: `ATT-8150`
+- **Test Description**:
+  1. *Separated Authorship Enforcement Test (`TST-PRO-107.1`, tools/test_jira_accounts.py)*:
+  • Verify `submit_stage` detects if the caller actor matches the Gate N reviewer on the same parent ticket, rejects self-review handoffs with an error, and permits valid alternating author submissions.
+  2. *Evidence-Backed Gate 1–5 Checklist Validation Test (`TST-PRO-107.2`, tools/test_jira_accounts.py)*:
+  • Verify `gate_verdict` accepts verdicts with structured checklists and verifiable evidence anchors (`file:line`, commit SHA, test execution hashes), rejects unstructured or anchorless text, and flags rapid reviews.
+  3. *Multi-Sprint 100% FTPR Rubber-Stamping Alert Test (`TST-PRO-107.3`, tools/test_jira_accounts.py)*:
+  • Verify `sprint_metrics` inspects historical sprint metrics, triggers a Rubber-Stamping Warning when consecutive sprints exhibit 100.0% FTPR, and verifies integration into retro comments.
+  4. *Rule & Living Documentation Parity Test (`TST-PRO-107.4`, tools/test_jira_accounts.py)*:
+  • Verify updated rules in `aspice_governance.md` and `jira-workflow/SKILL.md` conform to separated pair reviews and all living doc shards pass governance checks with zero code orphans.

@@ -189,4 +189,12 @@
     <string name="ground_contact_time">接地時間</string>
     <string name="ground_contact_time_short">接地時間</string>
 
+    <!-- Polar Raw Telemetry Sidecar & Retention (ATT-8019, REQ-SET-117) -->
+    <string name="raw_telemetry_retention_title">生センサーテレメトリ保持</string>
+    <string name="raw_telemetry_retention_desc">高周波Polar PMDのライブおよびオフラインテレメトリを外部ファイルに圧縮保存し、ワークアウトDBの肥大化を防ぎます。</string>
+    <string name="raw_telemetry_retention_30_days">30日</string>
+    <string name="raw_telemetry_retention_keep_all">すべて保持</string>
+    <string name="raw_telemetry_retention_7_days">7日</string>
+    <string name="raw_telemetry_retention_off">オフ</string>
+
 </resources>

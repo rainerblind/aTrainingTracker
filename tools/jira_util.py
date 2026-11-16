@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
 import urllib.request
 import base64
+import contextlib
+import fcntl
 import json
 import os
 import re
 import ssl
 import subprocess
 import sys
-from datetime import datetime
+import time
+from datetime import datetime, timedelta, timezone
 from urllib.parse import urlencode
 
 _tools_dir = os.path.dirname(os.path.abspath(__file__))
@@ -71,6 +74,21 @@ ROLE_ACCOUNT_IDS = {
 STORY_POINTS_FIELD = "customfield_10016"
 PO_RELEASED_QUEUE_SPRINT_ID = 447
 PO_RELEASED_QUEUE_NAME = "Vom PO Freigegeben"
+PO_REVIEW_QUEUE_SPRINT_ID = 453
+PO_REVIEW_QUEUE_NAME = "Bereit für PO Abnahme"
+PO_SYSTEMTEST_QUEUE_SPRINT_ID = 454
+PO_SYSTEMTEST_QUEUE_NAME = "Bereit für PO Systemtest"
+PROTECTED_PSEUDO_SPRINT_IDS = frozenset({
+    PO_RELEASED_QUEUE_SPRINT_ID,
+    PO_REVIEW_QUEUE_SPRINT_ID,
+    PO_SYSTEMTEST_QUEUE_SPRINT_ID,
+})
+PROTECTED_PSEUDO_SPRINT_NAMES = frozenset({
+    "human review",
+    PO_RELEASED_QUEUE_NAME.lower(),
+    PO_REVIEW_QUEUE_NAME.lower(),
+    PO_SYSTEMTEST_QUEUE_NAME.lower(),
+})
 
 DEFAULT_CONFIG_LOCATIONS = [
     os.path.join(os.path.dirname(__file__), "hoechstmass", "hoechstmass_config.json"),
@@ -458,8 +476,8 @@ def resolve_active_sprint(board_id, role="agent1"):
         return None
     dev_sprints = [
         s for s in sprints
-        if s.get("name", "").strip().lower() not in ("human review", PO_RELEASED_QUEUE_NAME.lower())
-        and s.get("id") != PO_RELEASED_QUEUE_SPRINT_ID
+        if s.get("name", "").strip().lower() not in PROTECTED_PSEUDO_SPRINT_NAMES
+        and s.get("id") not in PROTECTED_PSEUDO_SPRINT_IDS
     ]
     if dev_sprints:
         dev_sprints.sort(key=lambda s: s.get("id", 0), reverse=True)
@@ -1378,14 +1396,15 @@ def recalculate_master_index_tables(repo_root=None):
                 f.writelines(new_lines)
             print(f"Recalculated master index table in {master_rel}: Total={grand_total}, Verified={grand_verified}, Implemented={grand_implemented}, Planned={grand_planned}.")
 
-def submit_stage(parent_key, stage_arg, text_or_file, summary_override=None, role="agent1"):
+def submit_stage(parent_key, stage_arg, text_or_file, summary_override=None, role="agent1", author=None, bypass_authorship=False):
     """
     Composite Stage-Submission Command for agent1 (ATT-4290 Process Improvement #2).
     1. Resolves stage (1..5) and ensures parent ticket is in the matching stage status.
     2. If stage == 5, automatically flips Planned -> Verified in docs/requirements.md and docs/tests.md.
-    3. Finds existing stage sub-task under parent_key or creates it with canonical prefix and --add-to-sprint.
-    4. Updates the sub-task description with text_or_file.
-    5. Transitions the sub-task to 'In Überprüfung' (in_review) and outputs SUBTASK_KEY.
+    3. Enforces separated authorship (Stage N+1 author != Gate N reviewer) (REQ-PRO-107.1).
+    4. Finds existing stage sub-task under parent_key or creates it with canonical prefix and --add-to-sprint.
+    5. Updates the sub-task description with text_or_file.
+    6. Transitions the sub-task to 'In Überprüfung' (in_review) and outputs SUBTASK_KEY.
     """
     stage_id = STAGE_ALIASES.get((stage_arg or "").strip().lower())
     if not stage_id or stage_id not in STAGE_SPECS:
@@ -1409,6 +1428,42 @@ def submit_stage(parent_key, stage_arg, text_or_file, summary_override=None, rol
     parent_summary = parent_fields.get("summary", "")
     current_parent_status = parent_fields.get("status", {}).get("name", "").strip().lower()
     desired_parent_stage = spec["parent_stage"]
+
+    # REQ-PRO-107.1: Separated Gate N -> Stage N+1 Authorship Guard
+    if int(stage_id) > 1 and not bypass_authorship:
+        preceding_stage_id = str(int(stage_id) - 1)
+        preceding_spec = STAGE_SPECS.get(preceding_stage_id)
+        if preceding_spec:
+            preceding_reviewer = None
+            for st in parent_fields.get("subtasks", []):
+                st_summary = st.get("fields", {}).get("summary", "").strip()
+                if re.search(preceding_spec["pattern"], st_summary, re.IGNORECASE):
+                    st_assignee = st.get("fields", {}).get("assignee") or {}
+                    preceding_reviewer = (
+                        st_assignee.get("displayName")
+                        or st_assignee.get("name")
+                        or st_assignee.get("accountId")
+                        or "agent2"
+                    )
+                    break
+            caller_author = author or os.environ.get("JIRA_ACTOR") or role
+            if preceding_reviewer and caller_author:
+                def norm_id(s):
+                    clean = re.sub(r'[\s_-]+', '', str(s or '').lower())
+                    if 'agent2' in clean or 'reviewer' in clean or 'auditor' in clean:
+                        return 'agent2'
+                    if 'agent1' in clean or 'implementer' in clean or 'author' in clean:
+                        return 'agent1'
+                    return clean
+
+                norm_author = norm_id(caller_author)
+                norm_reviewer = norm_id(preceding_reviewer)
+                if norm_author and norm_reviewer and norm_author == norm_reviewer:
+                    print(
+                        f"Error: Separated authorship violation (REQ-PRO-107.1). Stage {stage_id} author '{caller_author}' matches Gate {preceding_stage_id} reviewer '{preceding_reviewer}' on parent {parent_key}. In accordance with ASPICE 4.0 SUP.1, stage authorship and gate review must be separated across distinct actors.",
+                        file=sys.stderr,
+                    )
+                    sys.exit(1)
 
     # Ensure parent is in the matching stage status
     if current_parent_status in PARENT_STAGE_ORDER and desired_parent_stage in PARENT_STAGE_ORDER:
@@ -1464,15 +1519,476 @@ def get_subtask_summary_and_desc(subtask_key, role="agent2"):
         return "", "", None
 
 
+ID_RESERVATION_LOCK_FILE = "/tmp/att_id_reservation.lock"
+
+
+@contextlib.contextmanager
+def id_reservation_lock(lock_path=ID_RESERVATION_LOCK_FILE, timeout_sec=30.0, poll_interval=0.05):
+    """Acquires exclusive POSIX flock on lock_path for atomic ID reservations (REQ-PRO-106.1)."""
+    lock_dir = os.path.dirname(os.path.abspath(lock_path))
+    if lock_dir and not os.path.exists(lock_dir):
+        os.makedirs(lock_dir, exist_ok=True)
+
+    fd = os.open(lock_path, os.O_CREAT | os.O_RDWR, 0o666)
+    start_time = time.time()
+    acquired = False
+    try:
+        while True:
+            try:
+                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                acquired = True
+                break
+            except (BlockingIOError, IOError, OSError):
+                elapsed = time.time() - start_time
+                if elapsed >= timeout_sec:
+                    raise TimeoutError(f"Timeout ({timeout_sec:.1f}s) exceeded waiting for reservation lock on {lock_path}")
+                time.sleep(poll_interval)
+        yield fd
+    finally:
+        if acquired:
+            try:
+                fcntl.flock(fd, fcntl.LOCK_UN)
+            except OSError:
+                pass
+        try:
+            os.close(fd)
+        except OSError:
+            pass
+
+
+def resolve_shared_ledger_path(ledger_dir=None):
+    """
+    Resolves the shared ID reservation ledger path (REQ-PRO-106.1).
+    Prioritizes explicit ledger_dir (for test isolation), then git common dir, then .git fallback.
+    """
+    if ledger_dir:
+        return os.path.join(os.path.abspath(ledger_dir), "att_id_reservations.json")
+    try:
+        res = subprocess.run(
+            ["git", "rev-parse", "--path-format=absolute", "--git-common-dir"],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        cdir = res.stdout.strip()
+        if cdir and os.path.isdir(cdir):
+            return os.path.join(cdir, "att_id_reservations.json")
+    except Exception:
+        pass
+    try:
+        res = subprocess.run(
+            ["git", "rev-parse", "--git-common-dir"],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        cdir = res.stdout.strip()
+        if cdir:
+            return os.path.abspath(os.path.join(cdir, "att_id_reservations.json"))
+    except Exception:
+        pass
+    return os.path.abspath(os.path.join(".git", "att_id_reservations.json"))
+
+
+def load_reservation_ledger(ledger_path):
+    """Loads reservation ledger data, returning {'version': 1, 'reservations': []} if absent/corrupt."""
+    if not os.path.exists(ledger_path):
+        return {"version": 1, "reservations": []}
+    try:
+        with open(ledger_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            if isinstance(data, dict) and "reservations" in data:
+                return data
+            elif isinstance(data, list):
+                return {"version": 1, "reservations": data}
+    except Exception:
+        pass
+    return {"version": 1, "reservations": []}
+
+
+def save_reservation_ledger(ledger_path, data):
+    """Atomically saves reservation ledger data via temp file and os.replace."""
+    d = os.path.dirname(ledger_path)
+    if d and not os.path.exists(d):
+        os.makedirs(d, exist_ok=True)
+    temp_path = f"{ledger_path}.tmp.{os.getpid()}"
+    with open(temp_path, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, sort_keys=True)
+    os.replace(temp_path, ledger_path)
+
+
+def purge_expired_reservations(ledger_data):
+    """Purges expired reservations based on ISO expires_at timestamp (REQ-PRO-106.4)."""
+    now_iso = datetime.now(timezone.utc).isoformat()
+    active = []
+    purged = []
+    for item in ledger_data.get("reservations", []):
+        exp = item.get("expires_at")
+        if exp and exp < now_iso:
+            purged.append(item)
+        else:
+            active.append(item)
+    ledger_data["reservations"] = active
+    return purged
+
+
+def get_max_allocated_id(domain, id_type, repo_root=None, ledger_data=None):
+    """
+    Computes maximum allocated ID for a given domain and type by scanning:
+    1. Local living doc shards (docs/requirements/*.md or docs/tests/*.md)
+    2. Local sprint/* branches in git
+    3. Active reservations in ledger_data
+    (REQ-PRO-106.2)
+    """
+    domain = domain.strip().upper()
+    id_type = id_type.strip().upper()
+    max_id = 0
+    pat = re.compile(rf"\b{re.escape(id_type)}-{re.escape(domain)}-(\d+)\b")
+
+    if repo_root is None:
+        repo_root = os.path.abspath(os.path.join(_tools_dir, ".."))
+
+    # 1. Local filesystem scan
+    target_dirs = []
+    if id_type == "REQ":
+        target_dirs.append(os.path.join(repo_root, "docs", "requirements"))
+        target_dirs.append(os.path.join(repo_root, "docs"))
+    else:
+        target_dirs.append(os.path.join(repo_root, "docs", "tests"))
+        target_dirs.append(os.path.join(repo_root, "docs"))
+
+    for tdir in target_dirs:
+        if os.path.isdir(tdir):
+            for fname in os.listdir(tdir):
+                if fname.endswith(".md"):
+                    fpath = os.path.join(tdir, fname)
+                    try:
+                        with open(fpath, "r", encoding="utf-8", errors="ignore") as f:
+                            content = f.read()
+                            for m in pat.finditer(content):
+                                num = int(m.group(1))
+                                if num > max_id:
+                                    max_id = num
+                    except Exception:
+                        pass
+
+    # 2. Scan sprint/* branches in git if available
+    try:
+        res = subprocess.run(
+            ["git", "for-each-ref", "--format=%(refname:short)", "refs/heads/sprint/"],
+            capture_output=True,
+            text=True,
+            cwd=repo_root
+        )
+        branches = [b.strip() for b in res.stdout.splitlines() if b.strip()]
+        for br in branches:
+            file_pattern = "docs/requirements/*.md" if id_type == "REQ" else "docs/tests/*.md"
+            res2 = subprocess.run(
+                ["git", "grep", "-h", "-o", "-E", f"{id_type}-{domain}-[0-9]+", br, "--", file_pattern],
+                capture_output=True,
+                text=True,
+                cwd=repo_root
+            )
+            for line in res2.stdout.splitlines():
+                m = pat.search(line.strip())
+                if m:
+                    num = int(m.group(1))
+                    if num > max_id:
+                        max_id = num
+    except Exception:
+        pass
+
+    # 3. Active reservations in ledger
+    if ledger_data:
+        for item in ledger_data.get("reservations", []):
+            if item.get("domain", "").upper() == domain and item.get("type", "").upper() == id_type:
+                m = pat.search(item.get("id", ""))
+                if m:
+                    num = int(m.group(1))
+                    if num > max_id:
+                        max_id = num
+
+    return max_id
+
+
+def reserve_id(domain, id_type, ticket, count=1, specific_id=None, ttl_days=7, ledger_dir=None, repo_root=None):
+    """
+    Atomically reserves count IDs under POSIX flock (REQ-PRO-106.1, REQ-PRO-106.2).
+    Returns list of reserved ID strings (e.g. ['REQ-PRO-106', 'TST-PRO-106']).
+    """
+    domain = domain.strip().upper()
+    id_type = id_type.strip().upper()
+    ticket = ticket.strip().upper()
+    ledger_path = resolve_shared_ledger_path(ledger_dir)
+
+    types_to_reserve = []
+    if id_type in ("BOTH", "ALL"):
+        types_to_reserve = ["REQ", "TST"]
+    elif id_type in ("REQ", "TST"):
+        types_to_reserve = [id_type]
+    else:
+        raise ValueError(f"Invalid id_type '{id_type}'. Expected REQ, TST, or BOTH.")
+
+    reserved_ids = []
+    with id_reservation_lock():
+        ledger_data = load_reservation_ledger(ledger_path)
+        purge_expired_reservations(ledger_data)
+
+        now = datetime.now(timezone.utc)
+        now_iso = now.isoformat()
+        expires_at = (now + timedelta(days=ttl_days)).isoformat()
+
+        if specific_id is not None:
+            for t in types_to_reserve:
+                if isinstance(specific_id, int):
+                    num = specific_id
+                elif str(specific_id).isdigit():
+                    num = int(specific_id)
+                else:
+                    m = re.search(r"(\d+)$", str(specific_id))
+                    num = int(m.group(1)) if m else None
+                if num is None:
+                    raise ValueError(f"Could not parse numeric ID from specific_id='{specific_id}'")
+                id_str = f"{t}-{domain}-{num:03d}" if num < 1000 else f"{t}-{domain}-{num}"
+
+                for item in ledger_data.get("reservations", []):
+                    if item.get("id", "").upper() == id_str.upper():
+                        if item.get("ticket", "").upper() != ticket:
+                            raise ValueError(f"ID '{id_str}' is already reserved by ticket '{item.get('ticket')}'")
+
+                ledger_data["reservations"] = [
+                    r for r in ledger_data.get("reservations", [])
+                    if not (r.get("id", "").upper() == id_str.upper() and r.get("ticket", "").upper() == ticket)
+                ]
+                ledger_data["reservations"].append({
+                    "id": id_str,
+                    "type": t,
+                    "domain": domain,
+                    "ticket": ticket,
+                    "reserved_at": now_iso,
+                    "expires_at": expires_at,
+                })
+                reserved_ids.append(id_str)
+        else:
+            if id_type in ("BOTH", "ALL"):
+                req_max = get_max_allocated_id(domain, "REQ", repo_root=repo_root, ledger_data=ledger_data)
+                tst_max = get_max_allocated_id(domain, "TST", repo_root=repo_root, ledger_data=ledger_data)
+                start_num = max(req_max, tst_max) + 1
+                for offset in range(count):
+                    curr_num = start_num + offset
+                    for t in ["REQ", "TST"]:
+                        id_str = f"{t}-{domain}-{curr_num:03d}" if curr_num < 1000 else f"{t}-{domain}-{curr_num}"
+                        ledger_data["reservations"].append({
+                            "id": id_str,
+                            "type": t,
+                            "domain": domain,
+                            "ticket": ticket,
+                            "reserved_at": now_iso,
+                            "expires_at": expires_at,
+                        })
+                        reserved_ids.append(id_str)
+            else:
+                curr_max = get_max_allocated_id(domain, id_type, repo_root=repo_root, ledger_data=ledger_data)
+                start_num = curr_max + 1
+                for offset in range(count):
+                    curr_num = start_num + offset
+                    id_str = f"{id_type}-{domain}-{curr_num:03d}" if curr_num < 1000 else f"{id_type}-{domain}-{curr_num}"
+                    ledger_data["reservations"].append({
+                        "id": id_str,
+                        "type": id_type,
+                        "domain": domain,
+                        "ticket": ticket,
+                        "reserved_at": now_iso,
+                        "expires_at": expires_at,
+                    })
+                    reserved_ids.append(id_str)
+
+        save_reservation_ledger(ledger_path, ledger_data)
+
+    return reserved_ids
+
+
+def release_id(ticket, id_str=None, ledger_dir=None):
+    """Releases active reservations for ticket (and optionally id_str) (REQ-PRO-106.4)."""
+    ticket = ticket.strip().upper()
+    ledger_path = resolve_shared_ledger_path(ledger_dir)
+    with id_reservation_lock():
+        ledger_data = load_reservation_ledger(ledger_path)
+        purge_expired_reservations(ledger_data)
+        remaining = []
+        released = []
+        for item in ledger_data.get("reservations", []):
+            match_ticket = item.get("ticket", "").upper() == ticket
+            match_id = (id_str is None) or (item.get("id", "").upper() == id_str.strip().upper())
+            if match_ticket and match_id:
+                released.append(item)
+            else:
+                remaining.append(item)
+        ledger_data["reservations"] = remaining
+        save_reservation_ledger(ledger_path, ledger_data)
+    return released
+
+
+def list_reservations(domain=None, ticket=None, ledger_dir=None):
+    """Lists active, non-expired reservations (REQ-PRO-106.4)."""
+    ledger_path = resolve_shared_ledger_path(ledger_dir)
+    with id_reservation_lock():
+        ledger_data = load_reservation_ledger(ledger_path)
+        purge_expired_reservations(ledger_data)
+        save_reservation_ledger(ledger_path, ledger_data)
+        res = ledger_data.get("reservations", [])
+        if domain:
+            res = [r for r in res if r.get("domain", "").upper() == domain.strip().upper()]
+        if ticket:
+            res = [r for r in res if r.get("ticket", "").upper() == ticket.strip().upper()]
+        return res
+
+
+def verify_stage2_id_reservations(subtask_key, text_or_file, parent_key=None, ledger_dir=None, repo_root=None):
+    """
+    Verifies that all newly introduced REQ-* and TST-* IDs in Stage 2 deliverable
+    are reserved for parent_key in the shared reservation ledger (REQ-PRO-106.3).
+    Returns (success: bool, errors: list[str]).
+    """
+    if repo_root is None:
+        repo_root = os.path.abspath(os.path.join(_tools_dir, ".."))
+
+    content = ""
+    if parent_key:
+        cand = os.path.join(repo_root, "docs", "engineering", "test_specs", f"{parent_key}_test_spec.md")
+        if os.path.exists(cand):
+            try:
+                with open(cand, "r", encoding="utf-8") as f:
+                    content = f.read()
+            except Exception:
+                pass
+    if not content and text_or_file:
+        if text_or_file.startswith("@") and os.path.exists(text_or_file[1:]):
+            try:
+                with open(text_or_file[1:], "r", encoding="utf-8") as f:
+                    content = f.read()
+            except Exception:
+                pass
+        else:
+            content = text_or_file
+
+    if not content:
+        return True, []
+
+    id_pat = re.compile(r"\b(REQ-[A-Z]+-\d+|TST-[A-Z]+-\d+)\b")
+    candidate_ids = set()
+
+    lines = content.splitlines()
+    in_target_section = False
+    for line in lines:
+        if re.search(r"##\s+(?:1\.\s+Requirement\s+Specification|4\.\s+Test\s+Specification|5\.\s+Traceability\s+Matrix)", line, re.IGNORECASE):
+            in_target_section = True
+        elif re.search(r"##\s+(?:2\.\s+Requirement\s+Archaeology|3\.\s+Acceptance\s+Criteria)", line, re.IGNORECASE):
+            in_target_section = False
+
+        if in_target_section or re.search(r"(?:###|Requirement\s+Mapping:|Test\s+Spec\s+ID:)\s*(?:REQ|TST)-[A-Z]+-\d+", line):
+            for m in id_pat.finditer(line):
+                candidate_ids.add(m.group(1))
+
+    if not candidate_ids:
+        for m in id_pat.finditer(content):
+            candidate_ids.add(m.group(1))
+
+    # Filter out IDs that already exist in git base (HEAD~1, master, or base sprint)
+    net_new_ids = set()
+    for cid in candidate_ids:
+        exists_in_base = False
+        try:
+            res = subprocess.run(
+                ["git", "grep", "-q", "-E", rf"\b{re.escape(cid)}\b", "HEAD~1", "--", "docs/requirements/*.md", "docs/tests/*.md"],
+                capture_output=True,
+                cwd=repo_root
+            )
+            if res.returncode == 0:
+                exists_in_base = True
+        except Exception:
+            pass
+
+        if not exists_in_base:
+            net_new_ids.add(cid)
+
+    if not net_new_ids:
+        return True, []
+
+    ledger_path = resolve_shared_ledger_path(ledger_dir)
+    ledger_data = load_reservation_ledger(ledger_path)
+    purge_expired_reservations(ledger_data)
+
+    errors = []
+    res_map = {}
+    for r in ledger_data.get("reservations", []):
+        res_map[r.get("id", "").upper()] = r.get("ticket", "").upper()
+
+    parent_norm = (parent_key or "").strip().upper()
+    for nid in sorted(net_new_ids):
+        owner = res_map.get(nid.upper())
+        if not owner:
+            errors.append(
+                f"ID '{nid}' has not been reserved for ticket '{parent_key}' in the shared reservation ledger. Run 'jira_util.py reserve-id' first."
+            )
+        elif parent_norm and owner != parent_norm:
+            errors.append(
+                f"ID '{nid}' is reserved for ticket '{owner}', not '{parent_key}'."
+            )
+
+    return (len(errors) == 0), errors
+
+
+def validate_gate_verdict_content(text):
+    """
+    Validates that a Gate 1-5 review verdict contains structured checklist items
+    and at least one concrete verified evidence reference (REQ-PRO-107.2).
+    Returns (is_valid: bool, errors: list[str]).
+    """
+    if not text or not str(text).strip():
+        return False, ["Gate verdict comment is empty."]
+
+    content = str(text)
+
+    # 1. Structured checklist patterns
+    checklist_pats = [
+        r'\[[xX✓]\]',
+        r'\bPASS:\b',
+        r'\bPASSED\b',
+        r'^[*-]\s+\*\*[^*]+\*\*:\s*(?:PASS|Verified|OK|Checked|I\.O\.|Freigabe)',
+        r'[✓✔]',
+    ]
+    has_checklist = any(re.search(pat, content, re.MULTILINE | re.IGNORECASE) for pat in checklist_pats)
+
+    # 2. Concrete evidence references
+    evidence_pats = [
+        r'[a-zA-Z0-9_\-./]+\.[a-zA-Z0-9]+:\d+',  # file:line (e.g. tools/jira_util.py:1450)
+        r'\b[0-9a-f]{7,40}\b',                   # commit SHA
+        r'\b(?:BUILD SUCCESSFUL|testDebugUnitTest|Ran \d+ tests?|tests?, 0 failures|exit code 0)\b', # test outputs
+        r'\b(?:REQ-[A-Z]+-\d+|TST-[A-Z]+-\d+)\b', # REQ/TST tokens
+    ]
+    has_evidence = any(re.search(pat, content, re.IGNORECASE) for pat in evidence_pats)
+
+    errors = []
+    if not has_checklist:
+        errors.append("Missing structured checklist items (e.g. '[x]', 'PASS:', '✓', or '* **Check**: PASS').")
+    if not has_evidence:
+        errors.append("Missing concrete verified evidence reference (e.g. 'file:line', commit SHA [0-9a-f]{7,40}, test execution hash, or test output).")
+
+    return (len(errors) == 0), errors
+
+
 def gate_verdict(subtask_key, verdict_arg, text_or_file, role="agent2"):
     """
     Composite Gate-Verdict Command for agent2 (ATT-4290 Process Improvement #2).
     Hardwired to role='agent2' (Anti-Spoofing lock).
     1. For [Analysis] subtasks on PASS: validates Change-Request Impact Analysis deliverable (REQ-PRO-064.3).
-    2. Assigns subtask_key to agent2.
-    3. Posts text_or_file as a role-attributed agent2 audit comment on subtask_key.
-    4. If PASS: transitions subtask_key via 'freigabe' (closes sub-task to Erledigt, advances parent, and injects next stage SKILL.md).
-    5. If REVISION: transitions subtask_key back to 'in_progress' and assigns to agent1.
+    2. For [Req & Test Spec] subtasks on PASS: validates REQ/TST ID reservation provenance (REQ-PRO-106.3).
+    3. Validates structured checklist and concrete evidence reference on all Gate 1-5 passes (REQ-PRO-107.2).
+    4. Assigns subtask_key to agent2.
+    5. Posts text_or_file as a role-attributed agent2 audit comment on subtask_key.
+    6. If PASS: transitions subtask_key via 'freigabe' (closes sub-task to Erledigt, advances parent, and injects next stage SKILL.md).
+    7. If REVISION: transitions subtask_key back to 'in_progress' and assigns to agent1.
     """
     auditor_role = "agent2"
     verdict_norm = (verdict_arg or "").strip().upper()
@@ -1485,6 +2001,23 @@ def gate_verdict(subtask_key, verdict_arg, text_or_file, role="agent2"):
         sys.exit(1)
 
     if is_pass:
+        # REQ-PRO-107.2: Evidence-Backed Gate 1-5 Checklist Validation
+        comment_content = text_or_file
+        if comment_content.startswith("@") and os.path.exists(comment_content[1:]):
+            try:
+                with open(comment_content[1:], "r", encoding="utf-8") as f:
+                    comment_content = f.read()
+            except Exception:
+                pass
+        is_valid_evidence, evidence_errors = validate_gate_verdict_content(comment_content)
+        if not is_valid_evidence:
+            print(
+                f"Error: Gate approval rejected for {subtask_key}. Gate verdict must contain a structured checklist and at least one concrete verified evidence reference (REQ-PRO-107.2):",
+                file=sys.stderr,
+            )
+            for err in evidence_errors:
+                print(f"  - {err}", file=sys.stderr)
+            sys.exit(1)
         # ATT-6157 / REQ-PRO-064.3: Validate Impact Analysis on [Analysis] subtasks before approval
         summary, desc, parent_key = get_subtask_summary_and_desc(subtask_key, role=auditor_role)
         if summary and re.search(r"\[analysis\]", summary, re.IGNORECASE):
@@ -1509,6 +2042,29 @@ def gate_verdict(subtask_key, verdict_arg, text_or_file, role="agent2"):
                     for err in errors:
                         print(f"  - {err}", file=sys.stderr)
                     sys.exit(1)
+
+        # ATT-8149 / REQ-PRO-106.3: Validate REQ/TST ID reservation on [Req & Test Spec] subtasks before approval
+        if summary and re.search(r"^\[(req\s*&\s*test\s*spec|req/test\s*spec|test-spec|test\s*spec|specification|spec)\]", summary, re.IGNORECASE):
+            eval_text = desc or ""
+            if parent_key:
+                cand = os.path.join("docs", "engineering", "test_specs", f"{parent_key}_test_spec.md")
+                if os.path.exists(cand):
+                    try:
+                        with open(cand, "r", encoding="utf-8") as f:
+                            local_text = f.read()
+                        if local_text:
+                            eval_text = local_text
+                    except Exception:
+                        pass
+            is_valid, errors = verify_stage2_id_reservations(subtask_key, eval_text, parent_key=parent_key)
+            if not is_valid:
+                print(
+                    f"Error: Gate 2 approval rejected for {subtask_key}. Stage 2 deliverable failed ID reservation provenance check:",
+                    file=sys.stderr,
+                )
+                for err in errors:
+                    print(f"  - {err}", file=sys.stderr)
+                sys.exit(1)
 
         assign_issue(subtask_key, auditor_role, role=auditor_role)
         add_comment(subtask_key, text_or_file, role=auditor_role)
@@ -2230,8 +2786,8 @@ def add_to_active_sprint(issue_key, role="agent1"):
         print("No active sprint found.")
         return
     sprint_id = active_sprint["id"]
-    if int(sprint_id) == PO_RELEASED_QUEUE_SPRINT_ID:
-        print(f"Error: Refusing to add {issue_key} to protected queue '{PO_RELEASED_QUEUE_NAME}' (ID {PO_RELEASED_QUEUE_SPRINT_ID}).", file=sys.stderr)
+    if int(sprint_id) in PROTECTED_PSEUDO_SPRINT_IDS:
+        print(f"Error: Refusing to add {issue_key} to protected pseudo-sprint '{active_sprint.get('name')}' (ID {sprint_id}).", file=sys.stderr)
         sys.exit(1)
     url = f"{config['JIRA_URL']}/rest/agile/1.0/sprint/{sprint_id}/issue"
     payload = {"issues": [issue_key]}
@@ -2395,13 +2951,16 @@ def _is_po_queue_sprint(sprint_id=None, sprint_name=None):
     return False
 
 
-def move_issues_to_sprint_guarded(target_sprint_id, issue_keys, role="coordinator", cutoff_return=False, source_sprint_id=None):
+def move_issues_to_sprint_guarded(target_sprint_id, issue_keys, role="coordinator", cutoff_return=False, source_sprint_id=None, wip_carryover=False):
     """
     Moves issues between sprints under ATT-8030 / SUP.10.BP4 tamper protection:
     - 'agent1' and 'agent2' cannot modify sprint memberships manually.
     - Agents/Coordinator MUST NEVER promote backlog issues into 'Vom PO Freigegeben' (ID 447).
-    - Coordinator may ONLY move into ID 447 during the 03:25/15:25 start-cutoff (`cutoff_return=True`)
-      when returning untouched 'Zu erledigen' issues that belonged to `source_sprint_id != 447`.
+    - Coordinator may return untouched 'Zu erledigen' issues into ID 447 (`cutoff_return=True`).
+    - Coordinator may roll in-flight WIP across Schichten (`wip_carryover=True`) from an execution sprint
+      into the target Schicht without pausing worktrees (`Rule 2.2`).
+    - Coordinator may archive completed `Final Review (Human)` items into 'Bereit für PO Abnahme' (ID 453)
+      or `human-execution` items into 'Bereit für PO Systemtest' (ID 454).
     """
     if role in ("agent1", "agent2"):
         print("Error: agent1/agent2 cannot assign or move tickets across sprints; only coordinator/human operations are permitted.", file=sys.stderr)
@@ -2417,9 +2976,25 @@ def move_issues_to_sprint_guarded(target_sprint_id, issue_keys, role="coordinato
                 file=sys.stderr,
             )
             sys.exit(1)
+    elif target_id_int in (PO_REVIEW_QUEUE_SPRINT_ID, PO_SYSTEMTEST_QUEUE_SPRINT_ID):
+        if role != "coordinator":
+            print(f"Error: Only coordinator/human may move issues into pseudo-sprint ID {target_id_int}.", file=sys.stderr)
+            sys.exit(1)
     elif role != "human":
-        # Target is an active sprint: only permitted via pack-sprint from PO queue (source_sprint_id == 447)
-        if not source_sprint_id or int(source_sprint_id) != PO_RELEASED_QUEUE_SPRINT_ID:
+        if wip_carryover:
+            if (
+                role != "coordinator"
+                or not source_sprint_id
+                or int(source_sprint_id) in PROTECTED_PSEUDO_SPRINT_IDS
+                or int(source_sprint_id) == target_id_int
+            ):
+                print(
+                    "Error: WIP carryover is restricted to '--as coordinator' from a non-protected execution sprint to a distinct Schicht sprint.",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+        elif not source_sprint_id or int(source_sprint_id) != PO_RELEASED_QUEUE_SPRINT_ID:
+            # Target is an active sprint: only permitted via pack-sprint from PO queue (source_sprint_id == 447)
             print(
                 "Error: Moving raw Backlog tickets directly into active sprints is strictly forbidden for AI agents (REQ-PRO-105.2). "
                 f"Tickets must be placed into '{PO_RELEASED_QUEUE_NAME}' (ID {PO_RELEASED_QUEUE_SPRINT_ID}) by the Product Owner first.",
@@ -2428,14 +3003,17 @@ def move_issues_to_sprint_guarded(target_sprint_id, issue_keys, role="coordinato
             sys.exit(1)
     config = get_config()
     base = config['JIRA_URL'].rstrip('/')
-    jira_request(
-        f"{base}/rest/agile/1.0/sprint/{target_id_int}/issue",
-        method="POST",
-        payload={"issues": list(issue_keys)},
-        role=role,
-    )
-    print(f"Moved {len(issue_keys)} issue(s) to sprint {target_id_int}: {', '.join(issue_keys)}")
-    return list(issue_keys)
+    keys_list = list(issue_keys)
+    for idx in range(0, len(keys_list), 50):
+        batch = keys_list[idx:idx + 50]
+        jira_request(
+            f"{base}/rest/agile/1.0/sprint/{target_id_int}/issue",
+            method="POST",
+            payload={"issues": batch},
+            role=role,
+        )
+    print(f"Moved {len(keys_list)} issue(s) to sprint {target_id_int}: {', '.join(keys_list)}")
+    return keys_list
 
 
 def select_greedy_bin_pack_tickets(ranked_issues, max_lanes=3, max_sp_per_lane=None):
@@ -2466,6 +3044,9 @@ def select_greedy_bin_pack_tickets(ranked_issues, max_lanes=3, max_sp_per_lane=N
             continue
         status_name = fields.get("status", {}).get("name", "").strip().lower()
         if status_name != "zu erledigen":
+            continue
+        labels = [str(l).strip().lower() for l in (fields.get("labels") or [])]
+        if "human-execution" in labels:
             continue
 
         parent_obj = fields.get("parent") or {}
@@ -2500,13 +3081,13 @@ def pack_sprint_from_po_queue(target_sprint_id, max_lanes=3, max_sp_per_lane=Non
     if role != "coordinator":
         print("Error: pack-sprint is restricted to '--as coordinator'.", file=sys.stderr)
         sys.exit(1)
-    if int(target_sprint_id) == PO_RELEASED_QUEUE_SPRINT_ID:
-        print(f"Error: Target sprint cannot be '{PO_RELEASED_QUEUE_NAME}' (ID {PO_RELEASED_QUEUE_SPRINT_ID}).", file=sys.stderr)
+    if int(target_sprint_id) in PROTECTED_PSEUDO_SPRINT_IDS:
+        print(f"Error: Target sprint cannot be a protected pseudo-sprint (ID {target_sprint_id}).", file=sys.stderr)
         sys.exit(1)
     config = get_config()
     base = config['JIRA_URL'].rstrip('/')
     jql = f"project = ATT AND sprint = {PO_RELEASED_QUEUE_SPRINT_ID} AND issuetype != Sub-task ORDER BY rank ASC"
-    ranked = paged_jql_search(jql, ["summary", "status", "issuetype", "parent", STORY_POINTS_FIELD], role=role, config=config)
+    ranked = paged_jql_search(jql, ["summary", "status", "issuetype", "parent", "labels", STORY_POINTS_FIELD], role=role, config=config)
     chosen = select_greedy_bin_pack_tickets(ranked, max_lanes=max_lanes, max_sp_per_lane=max_sp_per_lane)
     keys = [c["key"] for c in chosen]
     if not keys:
@@ -2514,6 +3095,21 @@ def pack_sprint_from_po_queue(target_sprint_id, max_lanes=3, max_sp_per_lane=Non
         return []
     move_issues_to_sprint_guarded(int(target_sprint_id), keys, role=role, source_sprint_id=PO_RELEASED_QUEUE_SPRINT_ID)
     return keys
+
+
+def defer_to_systemtest_queue(issue_key, role="coordinator"):
+    """
+    Moves a human-execution / Deferred Field Test ticket into 'Bereit für PO Systemtest' (ID 454),
+    applies the 'human-execution' label, and assigns it to 'human' (Rule 7.6).
+    """
+    if role != "coordinator":
+        print("Error: defer-systemtest is restricted to '--as coordinator'.", file=sys.stderr)
+        sys.exit(1)
+    add_label(issue_key, ["human-execution"], role=role)
+    assign_issue(issue_key, "human", role=role)
+    move_issues_to_sprint_guarded(PO_SYSTEMTEST_QUEUE_SPRINT_ID, [issue_key], role=role)
+    print(f"Moved {issue_key} to '{PO_SYSTEMTEST_QUEUE_NAME}' (ID {PO_SYSTEMTEST_QUEUE_SPRINT_ID}) with label 'human-execution'.")
+    return True
 
 
 def return_unstarted_to_po_queue(sprint_arg=None, role="coordinator"):
@@ -2537,8 +3133,8 @@ def return_unstarted_to_po_queue(sprint_arg=None, role="coordinator"):
         print("Error: Source sprint not found.", file=sys.stderr)
         sys.exit(1)
     s_id = int(target_sprint["id"])
-    if s_id == PO_RELEASED_QUEUE_SPRINT_ID:
-        print(f"Error: Source sprint cannot be '{PO_RELEASED_QUEUE_NAME}' (ID {PO_RELEASED_QUEUE_SPRINT_ID}).", file=sys.stderr)
+    if s_id in PROTECTED_PSEUDO_SPRINT_IDS:
+        print(f"Error: Source sprint cannot be protected pseudo-sprint '{target_sprint.get('name')}' (ID {s_id}).", file=sys.stderr)
         sys.exit(1)
     issues = fetch_all_sprint_issues(base, s_id, "summary,status,issuetype", role=role)
     untouched = []
@@ -2593,8 +3189,8 @@ def swap_future_sprint_keep_po_queue_last(new_future_sprint_id, role="coordinato
         print("Error: swap-po-queue is restricted to '--as coordinator'.", file=sys.stderr)
         sys.exit(1)
     new_id_int = int(new_future_sprint_id)
-    if new_id_int == PO_RELEASED_QUEUE_SPRINT_ID:
-        print(f"Error: Cannot swap '{PO_RELEASED_QUEUE_NAME}' (ID {PO_RELEASED_QUEUE_SPRINT_ID}) with itself.", file=sys.stderr)
+    if new_id_int in PROTECTED_PSEUDO_SPRINT_IDS:
+        print(f"Error: Cannot swap protected pseudo-sprint (ID {new_id_int}).", file=sys.stderr)
         sys.exit(1)
     config = get_config()
     base = config['JIRA_URL'].rstrip('/')
@@ -2606,6 +3202,92 @@ def swap_future_sprint_keep_po_queue_last(new_future_sprint_id, role="coordinato
     )
     print(f"Swapped future sprint {new_id_int} above '{PO_RELEASED_QUEUE_NAME}' (ID {PO_RELEASED_QUEUE_SPRINT_ID}).")
     return True
+
+
+def carryover_wip_to_sprint(from_sprint_arg, to_sprint_arg, role="coordinator"):
+    """
+    Continuous 8h Schicht Rollover (Rule 2.2):
+    Moves in-flight WIP tickets (status not in {'Zu erledigen', 'Final Review (Human)', 'Erledigt'}
+    and excluding 'Review & Retro') from the closing Schicht directly into the target Schicht sprint
+    without interrupting active worktrees.
+    """
+    if role != "coordinator":
+        print("Error: carryover-wip is restricted to '--as coordinator'.", file=sys.stderr)
+        sys.exit(1)
+    config = get_config()
+    base = config['JIRA_URL'].rstrip('/')
+    boards = jira_request(f"{base}/rest/agile/1.0/board", role=role).get("values", [])
+    if not boards:
+        print("Error: No Agile board found.", file=sys.stderr)
+        sys.exit(1)
+    board_id = boards[0]["id"]
+    src_sprint = resolve_sprint_object(base, board_id, sprint_arg=from_sprint_arg, role=role)
+    dst_sprint = resolve_sprint_object(base, board_id, sprint_arg=to_sprint_arg, role=role)
+    if not src_sprint or not dst_sprint:
+        print("Error: Source or target sprint not found.", file=sys.stderr)
+        sys.exit(1)
+    src_id = int(src_sprint["id"])
+    dst_id = int(dst_sprint["id"])
+    if src_id in PROTECTED_PSEUDO_SPRINT_IDS or dst_id in PROTECTED_PSEUDO_SPRINT_IDS:
+        print("Error: carryover-wip cannot use protected pseudo-sprints.", file=sys.stderr)
+        sys.exit(1)
+    issues = fetch_all_sprint_issues(base, src_id, "summary,status,issuetype", role=role)
+    wip_keys = []
+    terminal_or_todo = {"zu erledigen", "final review (human)", "erledigt"}
+    for issue in issues:
+        fields = issue.get("fields", {})
+        if fields.get("issuetype", {}).get("subtask", False):
+            continue
+        summary = fields.get("summary", "")
+        if "review & retro" in summary.lower():
+            continue
+        status_name = fields.get("status", {}).get("name", "").strip().lower()
+        if status_name not in terminal_or_todo:
+            wip_keys.append(issue["key"])
+    if not wip_keys:
+        print(f"No in-flight WIP tickets to carry over from sprint '{src_sprint.get('name')}' (ID {src_id}).")
+        return []
+    return move_issues_to_sprint_guarded(dst_id, wip_keys, role=role, source_sprint_id=src_id, wip_carryover=True)
+
+
+def archive_po_acceptance(sprint_arg=None, role="coordinator"):
+    """
+    Post-close PO Acceptance Staging (Rule 9.1):
+    Moves completed 'Final Review (Human)' tickets (excluding 'human-execution') from a sprint into
+    protected pseudo-sprint 'Bereit für PO Abnahme' (ID 453) so Backlog and 'Vom PO Freigegeben' remain uncluttered.
+    """
+    if role != "coordinator":
+        print("Error: archive-po-acceptance is restricted to '--as coordinator'.", file=sys.stderr)
+        sys.exit(1)
+    config = get_config()
+    base = config['JIRA_URL'].rstrip('/')
+    boards = jira_request(f"{base}/rest/agile/1.0/board", role=role).get("values", [])
+    if not boards:
+        print("Error: No Agile board found.", file=sys.stderr)
+        sys.exit(1)
+    board_id = boards[0]["id"]
+    src_sprint = resolve_sprint_object(base, board_id, sprint_arg=sprint_arg, role=role)
+    if not src_sprint:
+        print("Error: Source sprint not found.", file=sys.stderr)
+        sys.exit(1)
+    src_id = int(src_sprint["id"])
+    if src_id in PROTECTED_PSEUDO_SPRINT_IDS:
+        print(f"Error: Source sprint cannot be protected pseudo-sprint ID {src_id}.", file=sys.stderr)
+        sys.exit(1)
+    issues = fetch_all_sprint_issues(base, src_id, "summary,status,issuetype,labels", role=role)
+    ready_keys = []
+    for issue in issues:
+        fields = issue.get("fields", {})
+        if fields.get("issuetype", {}).get("subtask", False):
+            continue
+        status_name = fields.get("status", {}).get("name", "").strip().lower()
+        labels = [str(l).strip().lower() for l in (fields.get("labels") or [])]
+        if status_name == "final review (human)" and "human-execution" not in labels:
+            ready_keys.append(issue["key"])
+    if not ready_keys:
+        print(f"No 'Final Review (Human)' tickets to move into '{PO_REVIEW_QUEUE_NAME}' (ID {PO_REVIEW_QUEUE_SPRINT_ID}).")
+        return []
+    return move_issues_to_sprint_guarded(PO_REVIEW_QUEUE_SPRINT_ID, ready_keys, role=role, source_sprint_id=src_id)
 
 
 def ensure_weekly_retro_ticket(role="coordinator"):
@@ -4159,6 +4841,9 @@ USAGE_TEXT = (
     "                                                        Pull disjoint-Epic tickets from Vom PO Freigegeben (447) in rank order\n"
     "  return-unstarted [SPRINT_ARG]                         Return untouched Zu erledigen sprint tickets to Vom PO Freigegeben (447)\n"
     "  swap-po-queue FUTURE_SPRINT_ID                        Keep Vom PO Freigegeben (447) positioned right above Product Backlog\n"
+    "  carryover-wip FROM_SPRINT TO_SPRINT                   Move in-flight WIP directly across 8h Schicht boundaries\n"
+    "  archive-po-acceptance [SPRINT_ARG]                    Move completed Final Review (Human) tickets into Bereit für PO Abnahme (453)\n"
+    "  defer-systemtest KEY                                  Label human-execution, assign human, and move to Bereit für PO Systemtest (454)\n"
     "  check-gate KEY                                        Verify Impl-Plan subtask is Erledigt (Gate 3)\n"
     "  submit-stage PARENT_KEY STAGE TEXT_OR_@FILE [--summary \"...\"]\n"
     "                                                        Create/update stage subtask (1..5) and move to In Überprüfung\n"
@@ -4187,6 +4872,12 @@ USAGE_TEXT = (
     "                                                        Export versioned test and coverage evidence to docs/engineering/test_evidence/\n"
     "  qa-audit [--sprint <ID|NAME>] [--sample N] [--out <FILE>]\n"
     "                                                        Sample >= 2 sprint tickets and audit ASPICE process compliance\n"
+    "  reserve-id DOMAIN TYPE TICKET [--count N] [--id SPECIFIC_ID] [--ttl-days D] [--ledger-dir DIR]\n"
+    "                                                        Atomically reserve REQ/TST ID(s) across parallel sprint lanes\n"
+    "  release-id TICKET [ID] [--ledger-dir DIR]\n"
+    "                                                        Release active ID reservation(s) for a ticket\n"
+    "  list-reservations [--domain DOMAIN] [--ticket TICKET] [--ledger-dir DIR] [--json]\n"
+    "                                                        List active ID reservations from the shared ledger\n"
     "  record-review [--sprint <ID|NAME>] [--ticket KEY] [--reviewer NAME] [--vendor VENDOR] [--model MODEL] [--version VER] [--scope SCOPE] [--verdict PASS|FAIL|NOT PERFORMED|SKIPPED|PARTIAL] [--findings FINDINGS] [--out FILE]\n"
     "                                                        Record Human Sprint Review or Cross-Vendor AI Review in docs/engineering/reviews/\n"
     "  create-issue SUMMARY DESC [TYPE_ID|Bug|Feature|Verbesserung] [PARENT_KEY] [--type=...] [--parent=...] [--bottom] [--points=N] [--severity=critical|major|minor|cosmetic]"
@@ -4242,6 +4933,13 @@ if __name__ == "__main__":
         return_unstarted_to_po_queue(sprint_arg=s_arg, role=active_role)
     elif cmd in ("swap-po-queue", "swap_po_queue") and len(remaining_argv) == 2:
         swap_future_sprint_keep_po_queue_last(remaining_argv[1], role=active_role)
+    elif cmd in ("carryover-wip", "carryover_wip") and len(remaining_argv) == 3:
+        carryover_wip_to_sprint(remaining_argv[1], remaining_argv[2], role=active_role)
+    elif cmd in ("archive-po-acceptance", "archive_po_acceptance"):
+        s_arg = remaining_argv[1] if len(remaining_argv) >= 2 else None
+        archive_po_acceptance(sprint_arg=s_arg, role=active_role)
+    elif cmd in ("defer-systemtest", "defer_systemtest") and len(remaining_argv) == 2:
+        defer_to_systemtest_queue(remaining_argv[1], role=active_role)
     elif cmd == "show" and len(remaining_argv) == 2:
         show_issue(remaining_argv[1], role=active_role)
     elif cmd in ("set-points", "set_points") and len(remaining_argv) == 3:
@@ -4255,6 +4953,8 @@ if __name__ == "__main__":
         stage_arg = remaining_argv[2]
         text_arg = remaining_argv[3]
         summ_override = None
+        author_override = None
+        bypass_auth = False
         idx = 4
         while idx < len(remaining_argv):
             arg = remaining_argv[idx]
@@ -4263,8 +4963,15 @@ if __name__ == "__main__":
             elif arg == "--summary" and idx + 1 < len(remaining_argv):
                 summ_override = remaining_argv[idx + 1]
                 idx += 1
+            elif arg.startswith("--author="):
+                author_override = arg.split("=", 1)[1]
+            elif arg == "--author" and idx + 1 < len(remaining_argv):
+                author_override = remaining_argv[idx + 1]
+                idx += 1
+            elif arg in ("--bypass-authorship", "--force"):
+                bypass_auth = True
             idx += 1
-        submit_stage(parent_k, stage_arg, text_arg, summary_override=summ_override, role=active_role)
+        submit_stage(parent_k, stage_arg, text_arg, summary_override=summ_override, role=active_role, author=author_override, bypass_authorship=bypass_auth)
     elif cmd in ("gate-verdict", "gate_verdict") and len(remaining_argv) == 4:
         gate_verdict(remaining_argv[1], remaining_argv[2], remaining_argv[3], role="agent2")
     elif cmd in ("final-review-verdict", "final_review_verdict") and len(remaining_argv) >= 4:
@@ -4607,6 +5314,112 @@ if __name__ == "__main__":
             print("Error: Agents must not move tickets to sprints! Only the human user assigns tickets to sprints during Sprint-Start Screening.", file=sys.stderr)
             sys.exit(1)
         add_to_active_sprint(remaining_argv[1], role=active_role)
+    elif cmd in ("reserve-id", "reserve_id") and len(remaining_argv) >= 4:
+        domain_arg = remaining_argv[1]
+        type_arg = remaining_argv[2]
+        ticket_arg = remaining_argv[3]
+        count_arg = 1
+        id_arg = None
+        ttl_arg = 7
+        ldir_arg = None
+        idx = 4
+        while idx < len(remaining_argv):
+            a = remaining_argv[idx]
+            if a.startswith("--count="):
+                count_arg = int(a.split("=", 1)[1])
+            elif a == "--count" and idx + 1 < len(remaining_argv):
+                count_arg = int(remaining_argv[idx + 1])
+                idx += 1
+            elif a.startswith("--id="):
+                id_arg = a.split("=", 1)[1]
+            elif a == "--id" and idx + 1 < len(remaining_argv):
+                id_arg = remaining_argv[idx + 1]
+                idx += 1
+            elif a.startswith("--ttl-days="):
+                ttl_arg = int(a.split("=", 1)[1])
+            elif a == "--ttl-days" and idx + 1 < len(remaining_argv):
+                ttl_arg = int(remaining_argv[idx + 1])
+                idx += 1
+            elif a.startswith("--ledger-dir="):
+                ldir_arg = a.split("=", 1)[1]
+            elif a == "--ledger-dir" and idx + 1 < len(remaining_argv):
+                ldir_arg = remaining_argv[idx + 1]
+                idx += 1
+            idx += 1
+        try:
+            allocated = reserve_id(
+                domain_arg,
+                type_arg,
+                ticket_arg,
+                count=count_arg,
+                specific_id=id_arg,
+                ttl_days=ttl_arg,
+                ledger_dir=ldir_arg,
+            )
+            print(f"RESERVED: {', '.join(allocated)}")
+        except Exception as e:
+            print(f"Error: {e}", file=sys.stderr)
+            sys.exit(1)
+    elif cmd in ("release-id", "release_id") and len(remaining_argv) >= 2:
+        ticket_arg = remaining_argv[1]
+        id_arg = None
+        ldir_arg = None
+        idx = 2
+        while idx < len(remaining_argv):
+            a = remaining_argv[idx]
+            if a.startswith("--ledger-dir="):
+                ldir_arg = a.split("=", 1)[1]
+            elif a == "--ledger-dir" and idx + 1 < len(remaining_argv):
+                ldir_arg = remaining_argv[idx + 1]
+                idx += 1
+            elif not a.startswith("--") and id_arg is None:
+                id_arg = a
+            idx += 1
+        try:
+            rel = release_id(ticket_arg, id_str=id_arg, ledger_dir=ldir_arg)
+            print(f"RELEASED: {len(rel)} reservation(s) for {ticket_arg}")
+        except Exception as e:
+            print(f"Error: {e}", file=sys.stderr)
+            sys.exit(1)
+    elif cmd in ("list-reservations", "list_reservations"):
+        dom_arg = None
+        tkt_arg = None
+        ldir_arg = None
+        as_json = "--json" in remaining_argv
+        idx = 1
+        while idx < len(remaining_argv):
+            a = remaining_argv[idx]
+            if a.startswith("--domain="):
+                dom_arg = a.split("=", 1)[1]
+            elif a == "--domain" and idx + 1 < len(remaining_argv):
+                dom_arg = remaining_argv[idx + 1]
+                idx += 1
+            elif a.startswith("--ticket="):
+                tkt_arg = a.split("=", 1)[1]
+            elif a == "--ticket" and idx + 1 < len(remaining_argv):
+                tkt_arg = remaining_argv[idx + 1]
+                idx += 1
+            elif a.startswith("--ledger-dir="):
+                ldir_arg = a.split("=", 1)[1]
+            elif a == "--ledger-dir" and idx + 1 < len(remaining_argv):
+                ldir_arg = remaining_argv[idx + 1]
+                idx += 1
+            idx += 1
+        try:
+            res_list = list_reservations(domain=dom_arg, ticket=tkt_arg, ledger_dir=ldir_arg)
+            if as_json:
+                print(json.dumps(res_list, indent=2))
+            else:
+                if not res_list:
+                    print("No active reservations found.")
+                else:
+                    print(f"{'ID':<15} {'Type':<6} {'Domain':<8} {'Ticket':<12} {'Expires At'}")
+                    print("-" * 65)
+                    for r in res_list:
+                        print(f"{r.get('id',''):<15} {r.get('type',''):<6} {r.get('domain',''):<8} {r.get('ticket',''):<12} {r.get('expires_at','')}")
+        except Exception as e:
+            print(f"Error: {e}", file=sys.stderr)
+            sys.exit(1)
     else:
         print(f"Invalid command or arguments: {' '.join(remaining_argv)}\n\n{USAGE_TEXT}", file=sys.stderr)
         sys.exit(1)

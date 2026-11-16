@@ -467,6 +467,24 @@ def calculate_spc_limits(history, current_metrics=None):
                             f"(mu: {round(mu, 1)}, sigma: {round(sigma, 1)})."
                         )
 
+    # ASPICE 4.0 Finding M3 / REQ-PRO-107.3: Multi-Sprint 100% FTPR Rubber-Stamping Alert
+    if current_metrics and history:
+        curr_ftpr = current_metrics.get("quality_gates", {}).get("overall_ftpr_percent", 0.0)
+        curr_subtasks = current_metrics.get("quality_gates", {}).get("total_subtasks_evaluated", 0)
+        if curr_ftpr >= 100.0 and curr_subtasks > 0:
+            consecutive_100_count = 1
+            for hist in reversed(history):
+                h_ftpr = hist.get("quality_gates", {}).get("overall_ftpr_percent", 0.0)
+                h_subtasks = hist.get("quality_gates", {}).get("total_subtasks_evaluated", 0)
+                if h_ftpr >= 100.0 and h_subtasks > 0:
+                    consecutive_100_count += 1
+                else:
+                    break
+            if consecutive_100_count >= 2:
+                warnings.append(
+                    f"⚠️ ASPICE Finding M3 Rubber-Stamping Alert: Consecutive sprints ({consecutive_100_count} >= 2) exhibit 100.0% Gate 1-5 First-Time Pass Rate with zero revisions. Gate discrimination failure detected (GP 2.1.4, GP 2.2.4). Mandatory review calibration required."
+                )
+
     return {
         "has_history": True,
         "sample_size": len(history),

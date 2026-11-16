@@ -94,6 +94,7 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
     interface ImuFrameListener {
         fun onAccFrame(polarId: String, data: PolarAccelerometerData)
         fun onGyroFrame(polarId: String, data: PolarGyroData) {}
+        fun onHrSample(polarId: String, hrBpm: Int, timestampNs: Long) {}
     }
 
     companion object {
@@ -192,6 +193,10 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
             setLastActive()
             registerSensors()
             syncCadenceSensorRegistration()
+            PolarRawTelemetryRecorder.getActiveRecorder()?.let { recorder ->
+                addImuFrameListener(recorder)
+                addRrBeatListener(recorder)
+            }
             notifyStopSearching(true)
         }
 
@@ -201,6 +206,10 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
             isGyroStreamingActive.set(false)
             PolarOfflineGattCoordinator.releaseAccChannel(polarId, PolarOfflineGattCoordinator.ACC_OWNER_ONLINE)
             unregisterSensors()
+            PolarRawTelemetryRecorder.getActiveRecorder()?.let { recorder ->
+                removeImuFrameListener(recorder)
+                removeRrBeatListener(recorder)
+            }
         }
 
         override fun bleSdkFeatureReady(
@@ -398,6 +407,13 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
         for (sample in data.samples) {
             if (sample.hr > 0) {
                 mHeartRateSensor.newValue(sample.hr)
+                for (listener in imuFrameListeners) {
+                    try {
+                        listener.onHrSample(polarId, sample.hr, packetArrivalMs * NS_PER_MS)
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Error in ImuFrameListener.onHrSample: ${e.message}")
+                    }
+                }
             }
             if (sample.rrAvailable && sample.rrsMs.isNotEmpty()) {
                 dispatchRrSamples(sample.rrsMs, packetArrivalMs)
