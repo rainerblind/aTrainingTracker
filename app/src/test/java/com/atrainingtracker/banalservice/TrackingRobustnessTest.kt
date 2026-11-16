@@ -39,6 +39,7 @@ import com.atrainingtracker.banalservice.sensor.MySensor
 import com.atrainingtracker.banalservice.sensor.MySensorManager
 import com.atrainingtracker.banalservice.sensor.SensorData
 import com.atrainingtracker.banalservice.sensor.SensorType
+import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
 import com.atrainingtracker.trainingtracker.TrackingMode
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.batterysaver.BatterySaverController
@@ -97,6 +98,7 @@ class TrackingRobustnessTest {
 
     @Before
     fun setUp() {
+        DeviceDataRepository.resetForTesting()
         intentExtras.clear()
 
         mockkStatic(Log::class)
@@ -179,6 +181,7 @@ class TrackingRobustnessTest {
 
     @After
     fun tearDown() {
+        DeviceDataRepository.resetForTesting()
         setBanalStaticField("cSensorManager", null)
         setBanalStaticField("cDeviceManager", null)
         unmockkAll()
