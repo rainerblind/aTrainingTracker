@@ -30,7 +30,7 @@ import java.util.regex.Pattern
  * (REQ-SET-086, REQ-REV-003, REQ-UI-502, TST-SET-086, TST-REV-003, TST-REV-005, TST-UI-502 / ATT-5659, ATT-6290).
  * Refactored to LocalizationTestCache per docs/coding_standards.md §5.4 and REQ-PRO-049.
  */
-// Linked test specs: TST-UI-516
+// Linked test specs: TST-UI-516, TST-SET-117
 class SupporterCopyContractTest {
 
     private val supportedLocales = listOf("", "de", "es", "fr", "it", "ja", "nl", "pl", "pt")
@@ -209,5 +209,52 @@ class SupporterCopyContractTest {
                 "Nevertheless, we would still be very happy about voluntary financial support for ongoing development.",
             unescapeXml(extractStringTagRawContent("", "pioneer_thank_you_body")!!)
         )
+    }
+
+    @Test
+    fun testPersonaSubtitlesAndGarageMatchBadgeNineLocaleParityAndHygiene() {
+        // TST-SET-117.5
+        val keys = listOf(
+            "supporter_plan_subtitle_bronze_monthly",
+            "supporter_plan_subtitle_bronze_yearly",
+            "supporter_plan_subtitle_silver_yearly",
+            "supporter_plan_subtitle_gold_yearly",
+            "supporter_plan_subtitle_diamond_yearly",
+            "supporter_garage_match_badge"
+        )
+        val formatArgPattern = Pattern.compile("%(?:\\d+\\$)?[sdfoxXeEgGaA]")
+        val emojiPattern = Pattern.compile("[\\x{1F300}-\\x{1F64F}\\x{1F680}-\\x{1F6FF}\\x{2600}-\\x{26FF}\\x{2700}-\\x{27BF}]")
+        val forbiddenBuzzwords = listOf(
+            "15+ Jahre", "15+ years", "indie", "seit 2011", "since 2011",
+            "datenschutz", "privacy", "unabhängig", "independent"
+        )
+
+        for (locale in supportedLocales) {
+            val dirName = if (locale.isEmpty()) "values" else "values-$locale"
+            val strings = com.atrainingtracker.testing.LocalizationTestCache.getStrings(
+                dirName,
+                "strings_monetization.xml"
+            )
+            for (key in keys) {
+                val rawValue = strings[key]
+                assertNotNull("Key '$key' must exist in $dirName/strings_monetization.xml", rawValue)
+                assertFalse("Key '$key' must not be blank in $dirName", rawValue!!.trim().isEmpty())
+                assertFalse(
+                    "Key '$key' in $dirName must not contain format specifiers",
+                    formatArgPattern.matcher(rawValue).find()
+                )
+                assertFalse(
+                    "Key '$key' in $dirName must not contain emojis (ATT-5400)",
+                    emojiPattern.matcher(rawValue).find()
+                )
+                val lower = rawValue.lowercase()
+                for (buzzword in forbiddenBuzzwords) {
+                    assertFalse(
+                        "Key '$key' in $dirName must not contain buzzword '$buzzword'",
+                        lower.contains(buzzword.lowercase())
+                    )
+                }
+            }
+        }
     }
 }

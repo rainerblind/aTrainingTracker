@@ -36,6 +36,7 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.runtime.collectAsState
 import androidx.core.content.ContextCompat
 import com.atrainingtracker.trainingtracker.ui.onboarding.permission.PermissionOnboardingSheet
+import com.atrainingtracker.trainingtracker.ui.settings.supporter.GarageUpgradeNudgeDialog
 import com.atrainingtracker.trainingtracker.ui.settings.supporter.SupporterScreen
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
@@ -947,6 +948,22 @@ fun ATrainingTrackerApp(
                 reconciliationManager.dismissKeepTwoSensors()
             }
         )
+    }
+
+    // Post-Workout Engagement-Gated N+1 Garage Upgrade Nudge (REQ-SET-115.2)
+    if (activity.firstJubileeCelebrationState == null && keepTwoSensorsEvent == null) {
+        activity.garageNudgeState?.let { nudgeEvent ->
+            GarageUpgradeNudgeDialog(
+                event = nudgeEvent,
+                onUpgrade = { planId ->
+                    activity.garageNudgeState = null
+                    navController.navigate(NavRoutes.supporter(planId, pushed = true))
+                },
+                onDismiss = {
+                    activity.garageNudgeState = null
+                }
+            )
+        }
     }
 
     // First-install Permission Onboarding Flow (REQ-PRI-007 / ATT-4455 / Rule 47)

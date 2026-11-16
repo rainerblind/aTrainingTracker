@@ -68,6 +68,19 @@ data class SupporterBasePlan(
     val period: String,
     val isRecommended: Boolean = false
 ) {
+    /**
+     * Returns the localized 1-2 line fairness/persona subtitle resource for this base plan (REQ-SET-115.3).
+     */
+    @StringRes
+    fun subtitleRes(): Int = when (basePlanId) {
+        "bronze-monthly" -> R.string.supporter_plan_subtitle_bronze_monthly
+        "bronze-yearly" -> R.string.supporter_plan_subtitle_bronze_yearly
+        "silver-yearly" -> R.string.supporter_plan_subtitle_silver_yearly
+        "gold-yearly" -> R.string.supporter_plan_subtitle_gold_yearly
+        "diamond-yearly" -> R.string.supporter_plan_subtitle_diamond_yearly
+        else -> R.string.supporter_plan_subtitle_silver_yearly
+    }
+
     companion object {
         const val PRODUCT_ID = "att_supporter_sub"
 

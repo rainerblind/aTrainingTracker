@@ -19,4 +19,10 @@
 
 <resources>
     <string name="supporter_plan_button_switch">Zmień</string>
+    <string name="supporter_plan_subtitle_bronze_monthly">Elastyczny plan miesięczny na próbę</string>
+    <string name="supporter_plan_subtitle_bronze_yearly">Skromny budżet, studenci i treningi rekreacyjne</string>
+    <string name="supporter_plan_subtitle_silver_yearly">Uczciwy standard do regularnego treningu</string>
+    <string name="supporter_plan_subtitle_gold_yearly">Ambitny trening z miernikiem mocy i zestawem czujników</string>
+    <string name="supporter_plan_subtitle_diamond_yearly">Rozbudowany sprzęt i maksymalne wsparcie rozwoju</string>
+    <string name="supporter_garage_match_badge">Pasuje do Twojego sprzętu</string>
 </resources>

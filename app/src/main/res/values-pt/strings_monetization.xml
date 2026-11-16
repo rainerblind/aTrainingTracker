@@ -19,4 +19,10 @@
 
 <resources>
     <string name="supporter_plan_button_switch">Mudar</string>
+    <string name="supporter_plan_subtitle_bronze_monthly">Experiência mensal flexível</string>
+    <string name="supporter_plan_subtitle_bronze_yearly">Orçamento reduzido, estudantes e uso ocasional</string>
+    <string name="supporter_plan_subtitle_silver_yearly">O padrão justo para treinos regulares</string>
+    <string name="supporter_plan_subtitle_gold_yearly">Treino ambicioso com medidor de potência e vários sensores</string>
+    <string name="supporter_plan_subtitle_diamond_yearly">Garagem completa e apoio máximo ao desenvolvimento</string>
+    <string name="supporter_garage_match_badge">Ideal para a tua garagem</string>
 </resources>

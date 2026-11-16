@@ -2611,6 +2611,47 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 
 **Invariants**: Zero `TuningPreferencesDataStore` key/default/bound changes; zero `FilterChip`, raw `Switch(`, or nested `ElevatedCard(` in tuning categories; 100% 9-language parity with zero emojis; dual-host symmetry across `AdvancedTuningScreen` and `AdvancedTuningDialog`.
 
+---
+
+### REQ-SET-115: Supporter Tier Self-Selection Anchoring, Garage-Match Badge & Post-Onboarding Engagement-Gated Garage Nudges (`ATT-8108`) [Verified]
+- **Tests**: `TST-SET-117`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Implementation**: `GarageLeagueDetector.kt`, `SettingsDataStore.kt`, `MainActivityWithNavigation.kt`, `ATrainingTrackerApp.kt`, `SupporterScreen.kt`, `SupporterComponents.kt`, `SupporterDebugSection.kt`, `res/values*/strings_monetization.xml`
+- **Rationale**: Premature Day-0 N+1 garage nudges burn permanent single-shot suppression flags before the athlete completes a workout, while unframed top-down Supporter cards anchor athletes on `10 €` Bronze instead of self-selecting by fairness, budget, and garage scale (`ATT-8108`, Epic `ATT-355`, amending `REQ-SET-088.3`, `REQ-SET-088.4` and extending `REQ-SET-086`, `REQ-UI-501`).
+- **Description**:
+  1. *Warm-Engagement Workout Gate & Bounded Seasonal Cooldown (`REQ-SET-115.1`)*:
+     - `GarageNudgeEvaluator.shouldTriggerNudge(...)` and `GarageLeagueDetector.evaluateNudge()` SHALL require `finishedWorkoutCount >= MIN_FINISHED_WORKOUTS_FOR_NUDGE` (`8` finished workouts via `WorkoutSummariesDatabaseManager.getFinishedWorkoutCount()`) before triggering any Gold or Diamond `GarageUpgradeNudgeDialog`. Pairing sensors (`DeviceListViewModel`) or adding equipment (`EquipmentViewModel`) with `< 8` finished workouts MUST NOT consume nudge quota or mutate cooldown persistence.
+     - Permanent single-shot boolean suppression (`hasShownGoldGarageNudge`, `hasShownDiamondGarageNudge`) SHALL be replaced with bounded seasonal cooldown state in `SettingsDataStore` (`lastGoldNudgeTimestampMs`, `goldNudgeCount`, `lastGoldNudgeWorkoutCount`, plus analogous Diamond keys; `MAX_NUDGES_PER_LEAGUE = 3`, allowing 1 initial nudge + up to 2 follow-up reminders). Follow-up reminders for an un-upgraded league SHALL trigger only when **both** `(nowMs - lastNudgeTimestampMs) >= 180 days` **and** `(finishedWorkoutCount - lastNudgeWorkoutCount) >= 25` additional finished workouts have elapsed.
+     - Legacy users with `hasShownGoldGarageNudge == true` or `hasShownDiamondGarageNudge == true` and zero new count keys SHALL migrate safely with `nudgeCount >= 1` and cooldown anchored so no immediate re-nudge fires before `180 days` AND `25` additional workouts.
+     - `SensorQuotaReconciliationManager` (`MAX_FREE_PAIRED_DEVICES = 2`) free-tier sensor quota enforcement and swap/downgrade dialogs SHALL remain untouched and truthful regardless of finished workout count.
+     - `SupporterDebugSection` (`BuildConfig.DEBUG`) reset action (`SettingsDataStore.resetGarageNudgeFlags()`) SHALL clear both legacy flags and all new cooldown timestamps, nudge counts, and workout-count baselines.
+  2. *Post-Workout Nudge Evaluation & Jubilee Priority Arbitration (`REQ-SET-115.2`)*:
+     - Upon `TrackerService.TRACKING_FINISHED_INTENT` completion in `MainActivityWithNavigation.mTrackingStoppedReceiver` / `ATrainingTrackerApp`, the system SHALL asynchronously evaluate `GarageLeagueDetector.evaluateNudge()` so Day-0-paired athletes are nudged cleanly upon crossing `finishedWorkoutCount >= 8`.
+     - Post-workout garage nudge presentation MUST strictly yield to and remain suppressed whenever `FirstJubileeCelebrationDialog` (`firstJubileeCelebrationState != null`, `REQ-REV-003`) or `SensorQuotaReconciliationManager` (`keepTwoSensorsEvent != null`, `REQ-SET-084.5`) is scheduled or active in that session.
+  3. *Supporter Tier Self-Selection Subtitles, Garage-Match Badge & Detekt Modularity (`REQ-SET-115.3`)*:
+     - `SupporterPlanCard` (`SupporterComponents.kt`, `SupporterScreen.kt`) SHALL display a concise 1–2 line localized fairness/persona subtitle for each of the 5 unchanged `SupporterBasePlan.PLANS` (`bronze-monthly`, `bronze-yearly`, `silver-yearly` retaining `isRecommended = true` Empfehlung/Recommended anchor above title when `effectiveTier.rank < SILVER.rank`, `gold-yearly`, `diamond-yearly`) without modifying Google Play SKUs or prices (`REQ-SET-086.1`).
+     - When `GarageNudgeEvaluator.evaluateLeague()` qualifies `GOLD` or `DIAMOND` above the athlete's `effectiveTier`, `SupporterScreen` SHALL highlight the matching `gold-yearly` or `diamond-yearly` card with a subtle `"Matches your garage"` / `"Passend zu deinem Fuhrpark"` badge (`supporter_garage_match_badge`).
+     - `SupporterPlanCard` SHALL extract cohesive helper subcomposables to resolve the `Detekt` `LongMethod` suppression (`app/detekt-baseline.xml`) while strictly enforcing `Rule 38` (`maxLines = 1, softWrap = false` on plan action buttons) and `Rule 73` (stacked full-width buttons in `GarageUpgradeNudgeDialog`).
+  4. *9-Locale Localization Parity, Zero-Emoji Hygiene & Rule 8.5 Visual Compose Verification (`REQ-SET-115.4`)*:
+     - All 5 persona subtitle strings and `supporter_garage_match_badge` SHALL be partitioned into `res/values*/strings_monetization.xml` across all 9 locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`) with zero decorative inline Unicode emojis (`ATT-5400`), zero defensive buzzwords (`ATT-5659`), and matching format specifiers.
+     - Stage 4 SHALL render a Robolectric Compose PNG screenshot (`docs/engineering/walkthroughs/img/ATT-8108_supporter_cards.png`) of `SupporterPlanCard` states (persona subtitles, Silver anchor, Gold/Diamond Garage-Match badge) and verify it via `read_file` against the 4-point visual checklist (`Rule 8.5`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Amends `REQ-SET-088` (`REQ-SET-088.3`, `REQ-SET-088.4`) and extends `REQ-SET-086` (`REQ-SET-086.4/.5`) and `REQ-UI-501` (`SupporterPlanCard`). Targets `GarageLeagueDetector.kt`, `SettingsDataStore.kt`, `MainActivityWithNavigation.kt`, `ATrainingTrackerApp.kt`, `SupporterScreen.kt`, `SupporterComponents.kt`, `SupporterDebugSection.kt`, and `res/values*/strings_monetization.xml`.
+2. *Historical Origin & Commit Trace*: `de0e1d55` (`ATT-51`), `3b4e0a20` (`ATT-5299`), `30ab5df4` (`ATT-5468`), `be746cdd` (`ATT-5570`), `7d72425c` (`ATT-6286`).
+3. *Root Reason for Existing Formulation*: Boolean `hasShown*` flags prevented repeated dialog spam during consecutive device/equipment edits, and minimal plan cards avoided paywall complexity.
+4. *Preservation of Core Invariants*: All 5 `SupporterBasePlan.PLANS` SKUs/prices (`REQ-SET-086.1`), `evaluateLeague()` thresholds & Strava Pro boost (`REQ-SET-088.1`), tier monotonicity (`REQ-SET-088.2`), `SensorQuotaReconciliationManager` (`REQ-SET-084.5`), `Rule 38` single-line buttons, `Rule 73` stacked dialog buttons, `ATT-5400` zero emojis, `ATT-5659` plain appreciative wording, and `REQ-REV-003` Jubilee precedence remain 100% preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a new athlete on `FREE` or `BRONZE` with `< 8` finished workouts, *When* they pair a power meter or add 3 bikes, *Then* `GarageUpgradeNudgeDialog` is NOT triggered and no nudge quota or cooldown state is consumed.
+• *Given* a `BRONZE` athlete with a Gold-qualified garage reaching `>= 8` finished workouts on a session without `FirstJubileeCelebrationDialog` or quota reconciliation, *When* the workout finishes, *Then* `GarageUpgradeNudgeDialog` is presented; if dismissed, it stays silent until `>= 180 days` AND `>= 25` additional finished workouts have elapsed (up to `MAX_NUDGES_PER_LEAGUE = 3`).
+• *Given* an athlete opening `SupporterScreen` across any of the 9 supported locales, *When* all 5 `SupporterPlanCard` items render, *Then* each card displays its localized zero-emoji persona subtitle without button wrapping (`Rule 38`), `silver-yearly` retains its Recommended anchor below Silver, and a Gold/Diamond-qualified athlete below that tier sees `"Matches your garage"` on the matching card.
+
+**Invariants**: 5 Play base plan IDs and prices untouched; `SensorQuotaReconciliationManager` quota truthful; `Rule 38` & `Rule 73` enforced; zero emojis across 9 locales (`ATT-5400`); `FirstJubileeCelebrationDialog` never collides with garage nudge; `SupporterPlanCard` Detekt `LongMethod` eliminated.
+
+
 
 
 

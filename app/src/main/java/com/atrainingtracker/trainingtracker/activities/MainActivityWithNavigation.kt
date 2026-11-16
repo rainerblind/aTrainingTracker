@@ -100,6 +100,10 @@ import com.atrainingtracker.trainingtracker.interfaces.StartOrResumeInterface
 import com.atrainingtracker.trainingtracker.migration.BackupRestoreFragment
 import com.atrainingtracker.trainingtracker.cloud.googledrive.GoogleDriveAuthManager
 import com.atrainingtracker.trainingtracker.exporter.ExportManager
+import com.atrainingtracker.trainingtracker.monetization.GarageLeagueDetector
+import com.atrainingtracker.trainingtracker.monetization.GarageNudgeEvent
+import com.atrainingtracker.trainingtracker.monetization.SensorQuotaReconciliationManager
+import com.atrainingtracker.trainingtracker.monetization.evaluatePostWorkoutGarageNudgeIfUnpreempted
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepository
 import com.atrainingtracker.trainingtracker.notifications.SensorBatteryNotificationManager
@@ -291,6 +295,21 @@ class MainActivityWithNavigation :
                     firstJubileeCelebrationState = MilestoneAutoNamingManager.MilestoneCelebrationData(workoutId, count, sportName)
                 }
             }
+
+            // Evaluate post-workout N+1 garage nudge only when Jubilee & quota dialogs are inactive (REQ-SET-115.2)
+            lifecycleScope.launch {
+                val event = evaluatePostWorkoutGarageNudgeIfUnpreempted(
+                    detector = GarageLeagueDetector(applicationContext),
+                    isJubileeActive = { firstJubileeCelebrationState != null },
+                    isQuotaSheetActive = {
+                        SensorQuotaReconciliationManager.getInstance(applicationContext)
+                            .keepTwoSensorsDialogEvent.value != null
+                    }
+                )
+                if (event != null) {
+                    garageNudgeState = event
+                }
+            }
         }
     }
 
@@ -315,6 +334,7 @@ class MainActivityWithNavigation :
     var antDialogState: AntDialogState? by mutableStateOf(null)
     var showAntStatusSheet: Boolean by mutableStateOf(false)
     var firstJubileeCelebrationState: MilestoneAutoNamingManager.MilestoneCelebrationData? by mutableStateOf(null)
+    var garageNudgeState: GarageNudgeEvent? by mutableStateOf(null)
 
     fun showSpecificInstallANTDialog() {
         if (antDialogState != null || showAntStatusSheet) {

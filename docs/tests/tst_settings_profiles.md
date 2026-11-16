@@ -1388,6 +1388,27 @@
   5. *Visual Compose Screenshot Verification (`TST-SET-115.5`, `AdvancedTuningSectionsScreenshotTest.kt`, Rule 8.5)*:
   • Render `SensorsGpsFilterSection`, `MorningCheckSection`, and `PhysiologyModelsSection` in Robolectric Compose, capture `docs/engineering/walkthroughs/img/ATT-8117_tuning_sections.png`, and inspect via `read_file` against the 4-point visual checklist.
 
+---
+
+### TST-SET-117: **Supporter Tier Self-Selection Anchoring & Post-Onboarding Garage Nudge Verification Suite** (`ATT-8108`) [Verified]
+- **Requirement(s)**: `REQ-SET-115` (`REQ-SET-115.1`..`REQ-SET-115.4`)
+- **Component**: `GarageLeagueDetector.kt`, `SettingsDataStore.kt`, `MainActivityWithNavigation.kt`, `ATrainingTrackerApp.kt`, `SupporterScreen.kt`, `SupporterComponents.kt`, `SupporterDebugSection.kt`, `GarageLeagueDetectorTest.kt`, `SupporterPlanCardHierarchyTest.kt`, `SupporterCopyContractTest.kt`, `GarageUpgradeNudgeDialogContractTest.kt`, `TranslationParityTest.kt`, `SupporterCardsScreenshotTest.kt`
+- **Jira**: `ATT-8108`
+- **Status**: Verified
+- **Test Description**:
+  1. *Warm-Engagement Workout Gate & Unconsumed Quota (`TST-SET-117.1`, `GarageLeagueDetectorTest.kt`)*:
+  • Verify `GarageNudgeEvaluator.shouldTriggerNudge(...)` and `GarageLeagueDetector.evaluateNudge()` return `null` whenever `finishedWorkoutCount < 8` (e.g., `0` or `7`), even with Gold/Diamond hardware or Strava Pro, without incrementing nudge counts or setting cooldown timestamps, while `SensorQuotaReconciliationManager` continues enforcing the 2-sensor free-tier quota truthfully.
+  2. *Bounded Seasonal Cooldown & Legacy Flag Migration (`TST-SET-117.2`, `GarageLeagueDetectorTest.kt`)*:
+  • Verify initial nudge triggers once `finishedWorkoutCount >= 8`; after dismissal, verify re-nudge stays suppressed when only `>= 180 days` OR only `>= 25` workouts have elapsed, triggers only when **both** `>= 180 days` AND `>= 25` additional finished workouts have passed, stops permanently once `nudgeCount >= 3`, migrates legacy `hasShownGoldGarageNudge`/`hasShownDiamondGarageNudge` safely, and resets cleanly via `SettingsDataStore.resetGarageNudgeFlags()`.
+  3. *Post-Workout Evaluation & Jubilee / Quota Priority Suppression (`TST-SET-117.3`)*:
+  • Verify post-workout `TRACKING_FINISHED_INTENT` nudge evaluation triggers for Day-0-paired hardware upon crossing `finishedWorkoutCount >= 8`, and strictly yields (remains `null`/suppressed) when `FirstJubileeCelebrationDialog` (`firstJubileeCelebrationState != null`) or `SensorQuotaReconciliationManager` (`keepTwoSensorsEvent != null`) is active.
+  4. *Supporter Tier Persona Subtitles, Garage-Match Badge & Detekt Modularity (`TST-SET-117.4`, `SupporterPlanCardHierarchyTest.kt`, `SupporterCopyContractTest.kt`)*:
+  • Verify all 5 `SupporterBasePlan.PLANS` IDs/prices remain unchanged (`REQ-SET-086.1`), `SupporterScreen` resolves matching `GarageLeague` badge eligibility (`GOLD`/`DIAMOND` strictly above `effectiveTier`), `Rule 38` (`maxLines = 1, softWrap = false`) and `Rule 73` stacked dialog contracts hold, and `SupporterPlanCard` helper extraction resolves `LongMethod`.
+  5. *9-Locale Localization Parity, Zero-Emoji Hygiene & Rule 8.5 Compose PNG (`TST-SET-117.5`, `TranslationParityTest.kt`, `SupporterCardsScreenshotTest.kt`)*:
+  • Execute `TranslationParityTest` and `SupporterCopyContractTest` asserting all 6 new `strings_monetization.xml` keys exist across all 9 locales with zero decorative emojis (`ATT-5400`) and zero defensive buzzwords (`ATT-5659`).
+  • Render `SupporterPlanCard` variants (persona subtitles, `Silver` Recommended anchor, `Gold`/`Diamond` Garage-Match badge) via Robolectric Compose to `docs/engineering/walkthroughs/img/ATT-8108_supporter_cards.png` and inspect with `read_file` against the 4-point visual checklist (`Rule 8.5`).
+
+
 
 
 

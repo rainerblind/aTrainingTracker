@@ -58,6 +58,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.atrainingtracker.BuildConfig
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.monetization.GarageLeague
 import com.atrainingtracker.trainingtracker.monetization.SupporterBasePlan
 import com.atrainingtracker.trainingtracker.monetization.SupporterTier
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
@@ -178,16 +179,28 @@ internal fun getPlanCardHierarchyState(
     }
 }
 
+internal fun isGarageMatchForPlan(
+    plan: SupporterBasePlan,
+    qualifiedLeague: GarageLeague,
+    effectiveTier: SupporterTier
+): Boolean = when (qualifiedLeague) {
+    GarageLeague.GOLD -> plan.tier == SupporterTier.GOLD && effectiveTier.rank < SupporterTier.GOLD.rank
+    GarageLeague.DIAMOND -> plan.tier == SupporterTier.DIAMOND && effectiveTier.rank < SupporterTier.DIAMOND.rank
+    GarageLeague.NONE -> false
+}
+
 @Composable
 internal fun SupporterPlanCard(
     plan: SupporterBasePlan,
     isCurrentTier: Boolean = false,
     effectiveTier: SupporterTier = if (isCurrentTier) plan.tier else SupporterTier.FREE,
     isPreSelected: Boolean = false,
+    isGarageMatch: Boolean = false,
     onSelectPlan: () -> Unit
 ) {
     val state = getPlanCardHierarchyState(plan, effectiveTier)
     val showRecommendation = plan.isRecommended && effectiveTier.rank < SupporterTier.SILVER.rank
+    val showGarageMatch = isGarageMatch && state == PlanCardHierarchyState.UPGRADE_TIER
 
     Card(
         colors = CardDefaults.cardColors(
@@ -195,6 +208,7 @@ internal fun SupporterPlanCard(
                 isPreSelected -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
                 state == PlanCardHierarchyState.CURRENT_TIER -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f)
                 state == PlanCardHierarchyState.UPGRADE_TIER && showRecommendation -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
+                showGarageMatch -> MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.35f)
                 else -> MaterialTheme.colorScheme.surface
             }
         ),
@@ -203,111 +217,162 @@ internal fun SupporterPlanCard(
             isPreSelected -> BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
             state == PlanCardHierarchyState.CURRENT_TIER -> BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary)
             state == PlanCardHierarchyState.UPGRADE_TIER && showRecommendation -> BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary)
+            showGarageMatch -> BorderStroke(1.dp, MaterialTheme.colorScheme.secondary)
             else -> BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant)
         },
         modifier = Modifier.fillMaxWidth()
     ) {
-        Column(modifier = Modifier.padding(14.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            val emblemRes = LauncherIconVariant.fromTier(plan.tier).emblemRes
+            if (emblemRes != null) {
+                Icon(
+                    painter = painterResource(id = emblemRes),
+                    contentDescription = null,
+                    tint = Color.Unspecified,
+                    modifier = Modifier.size(44.dp)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+            }
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .alpha(if (state == PlanCardHierarchyState.LOWER_TIER) 0.85f else 1f)
             ) {
-                val emblemRes = LauncherIconVariant.fromTier(plan.tier).emblemRes
-                if (emblemRes != null) {
-                    Icon(
-                        painter = painterResource(id = emblemRes),
-                        contentDescription = null,
-                        tint = Color.Unspecified,
-                        modifier = Modifier.size(44.dp)
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
-                }
-                Column(
-                    modifier = Modifier
-                        .weight(1f, fill = false)
-                        .alpha(if (state == PlanCardHierarchyState.LOWER_TIER) 0.85f else 1f)
-                ) {
-                    if (showRecommendation) {
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = MaterialTheme.colorScheme.primary
-                        ) {
-                            Text(
-                                text = stringResource(R.string.supporter_recommended_badge),
-                                color = MaterialTheme.colorScheme.onPrimary,
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(4.dp))
-                    }
-                    Text(
-                        text = stringResource(plan.tier.titleRes),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    val periodString = if (plan.period == "month") {
-                        stringResource(R.string.supporter_period_month)
-                    } else {
-                        stringResource(R.string.supporter_period_year)
-                    }
-                    Text(
-                        text = stringResource(R.string.supporter_price_per_period, plan.priceFormatted, periodString),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                SupporterPlanHeaderBadges(
+                    showRecommendation = showRecommendation,
+                    showGarageMatch = showGarageMatch
+                )
+                SupporterPlanTitleBlock(plan = plan)
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            SupporterPlanActionButton(state = state, onSelectPlan = onSelectPlan)
+        }
+    }
+}
 
-                Spacer(modifier = Modifier.width(8.dp))
+@Composable
+private fun SupporterPlanHeaderBadges(
+    showRecommendation: Boolean,
+    showGarageMatch: Boolean
+) {
+    if (!showRecommendation && !showGarageMatch) return
+    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        if (showRecommendation) {
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.primary
+            ) {
+                Text(
+                    text = stringResource(R.string.supporter_recommended_badge),
+                    color = MaterialTheme.colorScheme.onPrimary,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                )
+            }
+        }
+        if (showGarageMatch) {
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.secondaryContainer
+            ) {
+                Text(
+                    text = stringResource(R.string.supporter_garage_match_badge),
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                )
+            }
+        }
+    }
+    Spacer(modifier = Modifier.height(4.dp))
+}
 
-                val buttonContentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+@Composable
+private fun SupporterPlanTitleBlock(plan: SupporterBasePlan) {
+    Text(
+        text = stringResource(plan.tier.titleRes),
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.Bold,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis
+    )
+    val periodString = if (plan.period == "month") {
+        stringResource(R.string.supporter_period_month)
+    } else {
+        stringResource(R.string.supporter_period_year)
+    }
+    Text(
+        text = stringResource(R.string.supporter_price_per_period, plan.priceFormatted, periodString),
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
+    Spacer(modifier = Modifier.height(2.dp))
+    Text(
+        text = stringResource(plan.subtitleRes()),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        maxLines = 2,
+        overflow = TextOverflow.Ellipsis
+    )
+}
 
-                when (state) {
-                    PlanCardHierarchyState.CURRENT_TIER -> {
-                        OutlinedButton(
-                            onClick = {},
-                            enabled = false,
-                            shape = RoundedCornerShape(8.dp),
-                            contentPadding = buttonContentPadding
-                        ) {
-                            Text(
-                                text = stringResource(R.string.supporter_plan_button_active),
-                                maxLines = 1,
-                                softWrap = false
-                            )
-                        }
-                    }
-                    PlanCardHierarchyState.LOWER_TIER -> {
-                        OutlinedButton(
-                            onClick = onSelectPlan,
-                            shape = RoundedCornerShape(8.dp),
-                            contentPadding = buttonContentPadding
-                        ) {
-                            Text(
-                                text = stringResource(R.string.supporter_plan_button_switch),
-                                maxLines = 1,
-                                softWrap = false
-                            )
-                        }
-                    }
-                    PlanCardHierarchyState.UPGRADE_TIER -> {
-                        Button(
-                            onClick = onSelectPlan,
-                            shape = RoundedCornerShape(8.dp),
-                            contentPadding = buttonContentPadding
-                        ) {
-                            Text(
-                                text = stringResource(R.string.supporter_plan_button_support),
-                                maxLines = 1,
-                                softWrap = false
-                            )
-                        }
-                    }
-                }
+@Composable
+private fun SupporterPlanActionButton(
+    state: PlanCardHierarchyState,
+    onSelectPlan: () -> Unit
+) {
+    val buttonContentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+    when (state) {
+        PlanCardHierarchyState.CURRENT_TIER -> {
+            OutlinedButton(
+                onClick = {},
+                enabled = false,
+                shape = RoundedCornerShape(8.dp),
+                contentPadding = buttonContentPadding
+            ) {
+                Text(
+                    text = stringResource(R.string.supporter_plan_button_active),
+                    maxLines = 1,
+                    softWrap = false
+                )
+            }
+        }
+        PlanCardHierarchyState.LOWER_TIER -> {
+            OutlinedButton(
+                onClick = onSelectPlan,
+                shape = RoundedCornerShape(8.dp),
+                contentPadding = buttonContentPadding
+            ) {
+                Text(
+                    text = stringResource(R.string.supporter_plan_button_switch),
+                    maxLines = 1,
+                    softWrap = false
+                )
+            }
+        }
+        PlanCardHierarchyState.UPGRADE_TIER -> {
+            Button(
+                onClick = onSelectPlan,
+                shape = RoundedCornerShape(8.dp),
+                contentPadding = buttonContentPadding
+            ) {
+                Text(
+                    text = stringResource(R.string.supporter_plan_button_support),
+                    maxLines = 1,
+                    softWrap = false
+                )
             }
         }
     }
