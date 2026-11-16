@@ -48,6 +48,7 @@ import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.theme.TelemetryGraphColor
 import com.atrainingtracker.trainingtracker.ui.tracking.DEFAULT_PREVIEW_SPARKLINE_SAMPLES
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorSparklineView
+import com.atrainingtracker.trainingtracker.ui.tracking.resolvePreviewSparklineZoneThresholds
 import com.atrainingtracker.trainingtracker.ui.tracking.resolveSparklineLineColor
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -210,7 +211,6 @@ class EditSensorFieldDialogScreenshotTest {
                                 val previewLineColor = resolveSparklineLineColor(
                                     graphColor = selectedColor,
                                     zoneColor = Color.Transparent,
-                                    showTextColor = false,
                                     sensorType = SensorType.HR,
                                     colorScheme = MaterialTheme.colorScheme,
                                     context = LocalContext.current
@@ -219,6 +219,7 @@ class EditSensorFieldDialogScreenshotTest {
                                     samples = DEFAULT_PREVIEW_SPARKLINE_SAMPLES,
                                     spanSeconds = 300,
                                     lineColor = previewLineColor,
+                                    zoneThresholds = resolvePreviewSparklineZoneThresholds(SensorType.HR, selectedColor),
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .height(44.dp)

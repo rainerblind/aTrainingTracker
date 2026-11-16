@@ -28,6 +28,7 @@ import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -45,6 +46,7 @@ import androidx.compose.ui.unit.sp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.settings.TelemetryGraphColorPreferences
+import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import com.atrainingtracker.trainingtracker.ui.theme.TelemetryGraphColor
 
 /**
@@ -130,9 +132,10 @@ fun resolveSparklineEffectiveSpanSeconds(liveSamples: List<Float>, liveSpanSecon
  * @param samples Time-series numeric telemetry values ordered chronologically.
  * @param modifier Composable layout modifier.
  * @param spanSeconds Cumulative elapsed time span represented by the sparkline buffer in seconds.
- * @param lineColor Stroke color for the sparkline trend polyline and terminal point.
+ * @param lineColor Stroke color for the sparkline trend polyline and terminal point when solid rendering is used.
  * @param fillGradient Whether to render a subtle vertical gradient fill below the polyline.
  * @param isPlaceholder Whether to render the sparkline in subtle standby/placeholder mode with dashed curve, dimmed opacity, and suppressed terminal dot.
+ * @param zoneThresholds Optional zone threshold specification for multi-color Dynamic Zone gradient rendering (REQ-TRK-082.2).
  */
 @Composable
 fun SensorSparklineView(
@@ -141,10 +144,23 @@ fun SensorSparklineView(
     spanSeconds: Int = 0,
     lineColor: Color = MaterialTheme.colorScheme.primary,
     fillGradient: Boolean = true,
-    isPlaceholder: Boolean = false
+    isPlaceholder: Boolean = false,
+    zoneThresholds: SparklineZoneThresholds? = null
 ) {
     if (samples.isEmpty()) {
         return
+    }
+
+    val colorScheme = MaterialTheme.colorScheme
+    val fallbackLineColor = resolveSparklineZoneContrastColor(lineColor, colorScheme)
+    val resolvedStyling = remember(samples, isPlaceholder, zoneThresholds, colorScheme, fallbackLineColor) {
+        resolveSparklineDynamicStyling(
+            samples = samples,
+            isPlaceholder = isPlaceholder,
+            zoneThresholds = zoneThresholds,
+            colorScheme = colorScheme,
+            fallbackLineColor = fallbackLineColor
+        )
     }
 
     Column(modifier = modifier) {
@@ -165,7 +181,7 @@ fun SensorSparklineView(
                 // Single point: render a centered dot (suppressed for placeholder curves)
                 if (!isPlaceholder) {
                     drawCircle(
-                        color = lineColor,
+                        color = resolvedStyling.terminalDotColor,
                         radius = 2.5.dp.toPx(),
                         center = Offset(size.width / 2f, size.height / 2f)
                     )
@@ -212,24 +228,37 @@ fun SensorSparklineView(
                 lastY = currentY
             }
 
+            val gradientStops = resolvedStyling.gradientStops
+            val gradientEndY = (size.height - verticalPaddingPx).coerceAtLeast(verticalPaddingPx + 1f)
+
             // Draw gradient fill below polyline
             if (fillPath != null) {
                 fillPath.lineTo(size.width, size.height)
                 fillPath.close()
-                drawPath(
-                    path = fillPath,
-                    brush = Brush.verticalGradient(
+                val fillBrush = if (gradientStops != null) {
+                    val fillStops = Array(gradientStops.size) { idx ->
+                        val (stop, color) = gradientStops[idx]
+                        val alpha = (0.28f - 0.18f * stop).coerceIn(0.08f, 0.28f)
+                        stop to color.copy(alpha = alpha)
+                    }
+                    Brush.verticalGradient(
+                        colorStops = fillStops,
+                        startY = verticalPaddingPx,
+                        endY = gradientEndY
+                    )
+                } else {
+                    Brush.verticalGradient(
                         colors = listOf(
-                            lineColor.copy(alpha = 0.28f),
-                            lineColor.copy(alpha = 0.02f)
+                            resolvedStyling.solidColor.copy(alpha = 0.28f),
+                            resolvedStyling.solidColor.copy(alpha = 0.02f)
                         ),
                         startY = 0f,
                         endY = size.height
                     )
-                )
+                }
+                drawPath(path = fillPath, brush = fillBrush)
             }
 
-            val effectiveLineColor = if (isPlaceholder) lineColor.copy(alpha = 0.35f) else lineColor
             val strokeStyle = if (isPlaceholder) {
                 Stroke(
                     width = strokeWidthPx,
@@ -246,16 +275,33 @@ fun SensorSparklineView(
             }
 
             // Draw trend stroke polyline
-            drawPath(
-                path = strokePath,
-                color = effectiveLineColor,
-                style = strokeStyle
-            )
+            if (!isPlaceholder && gradientStops != null) {
+                drawPath(
+                    path = strokePath,
+                    brush = Brush.verticalGradient(
+                        colorStops = gradientStops.toTypedArray(),
+                        startY = verticalPaddingPx,
+                        endY = gradientEndY
+                    ),
+                    style = strokeStyle
+                )
+            } else {
+                val strokeColor = if (isPlaceholder) {
+                    resolvedStyling.solidColor.copy(alpha = 0.35f)
+                } else {
+                    resolvedStyling.solidColor
+                }
+                drawPath(
+                    path = strokePath,
+                    color = strokeColor,
+                    style = strokeStyle
+                )
+            }
 
             // Draw terminal dot at current (latest) reading (suppressed for placeholder curves)
             if (!isPlaceholder) {
                 drawCircle(
-                    color = lineColor,
+                    color = resolvedStyling.terminalDotColor,
                     radius = 2.75.dp.toPx(),
                     center = Offset(lastX, lastY)
                 )
@@ -297,18 +343,17 @@ fun SensorSparklineView(
 }
 
 /**
- * Resolves the sparkline stroke color for a cockpit sensor field (REQ-TRK-081.2, ATT-7760).
+ * Resolves the sparkline stroke color for a cockpit sensor field (REQ-TRK-081.2, REQ-TRK-082.1, ATT-7760, ATT-7761).
  *
- * Supports:
- * - "DYNAMIC_ZONE": active physiological zone color, falling back to primary.
- * - "THEME_DEFAULT": MaterialTheme.colorScheme.primary.
- * - "GLOBAL_DEFAULT": global preference store for the sensor type, falling back to primary or zone color.
+ * Completely decoupled from text zone coloring (`showTextColor`):
+ * - "DYNAMIC_ZONE": active physiological zone color (with dark-surface [TTColor.Zone7] contrast substitution), falling back to primary.
+ * - "THEME_DEFAULT": [ColorScheme.primary].
+ * - "GLOBAL_DEFAULT": global preference store for the sensor type, falling back to [ColorScheme.primary] when `sensorType == null`.
  * - Explicit 8-color palette token: [TelemetryGraphColor.valueOf(token).resolveColor(colorScheme, isDark)].
  */
 fun resolveSparklineLineColor(
     graphColor: String?,
     zoneColor: Color,
-    showTextColor: Boolean,
     sensorType: SensorType?,
     colorScheme: ColorScheme,
     context: Context? = null
@@ -316,7 +361,11 @@ fun resolveSparklineLineColor(
     val token = graphColor ?: "GLOBAL_DEFAULT"
     return when (token) {
         "DYNAMIC_ZONE" -> {
-            if (zoneColor != Color.Transparent) zoneColor else colorScheme.primary
+            if (zoneColor != Color.Transparent) {
+                resolveSparklineZoneContrastColor(zoneColor, colorScheme)
+            } else {
+                colorScheme.primary
+            }
         }
         "THEME_DEFAULT" -> colorScheme.primary
         "GLOBAL_DEFAULT" -> {
@@ -329,8 +378,6 @@ fun resolveSparklineLineColor(
                     val defaultColor = TelemetryGraphColorPreferences.getDefaultColor(sensorType)
                     defaultColor.resolveColor(colorScheme, isDark)
                 }
-            } else if (zoneColor != Color.Transparent && showTextColor) {
-                zoneColor
             } else {
                 colorScheme.primary
             }
@@ -343,6 +390,207 @@ fun resolveSparklineLineColor(
                 colorScheme.primary
             }
         }
+    }
+}
+
+private const val GRADIENT_STOP_TRANSITION_EPSILON = 0.002f
+
+internal data class SparklineDynamicStyling(
+    val gradientStops: List<Pair<Float, Color>>?,
+    val solidColor: Color,
+    val terminalDotColor: Color
+)
+
+/**
+ * Substitutes a high-contrast dark-surface color when [TTColor.Zone7] (`#000000`) is rendered
+ * on dark or AMOLED tiles (REQ-TRK-082.3, ATT-7761).
+ */
+fun resolveSparklineZoneContrastColor(color: Color, colorScheme: ColorScheme): Color =
+    if (color == TTColor.Zone7 && TelemetryGraphColor.isDarkSurface(colorScheme)) {
+        colorScheme.onSurface
+    } else {
+        color
+    }
+
+/**
+ * Resolves the zone [Color] for a single telemetry [value] given [thresholds] and [colorScheme]
+ * (REQ-TRK-082.2, REQ-TRK-082.3, ATT-7761).
+ */
+fun resolveSparklineZoneColorForValue(
+    value: Float,
+    thresholds: SparklineZoneThresholds,
+    colorScheme: ColorScheme
+): Color? {
+    if (!value.isFinite() || thresholds.zoneColors.isEmpty() || thresholds.zoneColors.size != thresholds.cutoffs.size + 1) {
+        return null
+    }
+    val index = if (thresholds.invertedPolarity && thresholds.cutoffs.size == 2) {
+        val t2 = thresholds.cutoffs[0]
+        val t1 = thresholds.cutoffs[1]
+        when {
+            value < t2 -> 0
+            value <= t1 -> 1
+            else -> 2
+        }
+    } else {
+        var idx = thresholds.cutoffs.size
+        for (i in thresholds.cutoffs.indices) {
+            if (value <= thresholds.cutoffs[i]) {
+                idx = i
+                break
+            }
+        }
+        idx
+    }
+    return resolveSparklineZoneContrastColor(thresholds.zoneColors[index], colorScheme)
+}
+
+/**
+ * Maps [thresholds] onto monotonically non-decreasing `[0f, 1f]` `Brush.verticalGradient` color
+ * stops spanning `[minVal, maxVal]` where `0f` aligns to `maxVal` (top) and `1f` aligns to
+ * `minVal` (bottom) (REQ-TRK-082.2, REQ-TRK-082.3, ATT-7761).
+ *
+ * Returns `null` when `[minVal, maxVal]` has zero/invalid span or [thresholds] is malformed.
+ */
+fun buildDynamicZoneVerticalGradientStops(
+    minVal: Float,
+    maxVal: Float,
+    thresholds: SparklineZoneThresholds,
+    colorScheme: ColorScheme
+): List<Pair<Float, Color>>? {
+    if (!minVal.isFinite() || !maxVal.isFinite() || maxVal <= minVal) {
+        return null
+    }
+    if (thresholds.zoneColors.isEmpty() || thresholds.zoneColors.size != thresholds.cutoffs.size + 1) {
+        return null
+    }
+    for (i in 1 until thresholds.cutoffs.size) {
+        if (thresholds.cutoffs[i] < thresholds.cutoffs[i - 1]) {
+            return null
+        }
+    }
+
+    val range = maxVal - minVal
+    val topColor = resolveSparklineZoneColorForValue(maxVal, thresholds, colorScheme) ?: return null
+    val bottomColor = resolveSparklineZoneColorForValue(minVal, thresholds, colorScheme) ?: return null
+
+    val stops = mutableListOf<Pair<Float, Color>>()
+    stops.add(0f to topColor)
+    var lastStop = 0f
+
+    // Traverse cutoffs strictly inside (minVal, maxVal) from highest (near top = 0f) to lowest (near bottom = 1f)
+    for (i in thresholds.cutoffs.indices.reversed()) {
+        val cutoff = thresholds.cutoffs[i]
+        if (cutoff > minVal && cutoff < maxVal) {
+            val fraction = ((maxVal - cutoff) / range).coerceIn(0f, 1f)
+            val upperColor = resolveSparklineZoneContrastColor(thresholds.zoneColors[i + 1], colorScheme)
+            val lowerColor = resolveSparklineZoneContrastColor(thresholds.zoneColors[i], colorScheme)
+            val upperStop = (fraction - GRADIENT_STOP_TRANSITION_EPSILON).coerceIn(lastStop, 1f)
+            val lowerStop = (fraction + GRADIENT_STOP_TRANSITION_EPSILON).coerceIn(upperStop, 1f)
+            stops.add(upperStop to upperColor)
+            stops.add(lowerStop to lowerColor)
+            lastStop = lowerStop
+        }
+    }
+
+    stops.add(1f to bottomColor)
+    return stops
+}
+
+internal fun resolveSparklineDynamicStyling(
+    samples: List<Float>,
+    isPlaceholder: Boolean,
+    zoneThresholds: SparklineZoneThresholds?,
+    colorScheme: ColorScheme,
+    fallbackLineColor: Color
+): SparklineDynamicStyling {
+    if (isPlaceholder || zoneThresholds == null || samples.isEmpty()) {
+        return SparklineDynamicStyling(
+            gradientStops = null,
+            solidColor = fallbackLineColor,
+            terminalDotColor = fallbackLineColor
+        )
+    }
+
+    if (samples.size == 1) {
+        val singleColor = resolveSparklineZoneColorForValue(samples[0], zoneThresholds, colorScheme)
+            ?: fallbackLineColor
+        return SparklineDynamicStyling(
+            gradientStops = null,
+            solidColor = singleColor,
+            terminalDotColor = singleColor
+        )
+    }
+
+    var minVal = Float.MAX_VALUE
+    var maxVal = -Float.MAX_VALUE
+    for (v in samples) {
+        if (v < minVal) minVal = v
+        if (v > maxVal) maxVal = v
+    }
+
+    val terminalColor = resolveSparklineZoneColorForValue(samples.last(), zoneThresholds, colorScheme)
+        ?: fallbackLineColor
+
+    if (!minVal.isFinite() || !maxVal.isFinite() || maxVal <= minVal) {
+        return SparklineDynamicStyling(
+            gradientStops = null,
+            solidColor = terminalColor,
+            terminalDotColor = terminalColor
+        )
+    }
+
+    val stops = buildDynamicZoneVerticalGradientStops(minVal, maxVal, zoneThresholds, colorScheme)
+    return SparklineDynamicStyling(
+        gradientStops = stops,
+        solidColor = terminalColor,
+        terminalDotColor = terminalColor
+    )
+}
+
+/**
+ * Provides representative preview [SparklineZoneThresholds] scaled to [DEFAULT_PREVIEW_SPARKLINE_SAMPLES]
+ * (`130..171`) when `"DYNAMIC_ZONE"` is selected in [EditSensorFieldDialog] (REQ-TRK-082.2, ATT-7761).
+ */
+fun resolvePreviewSparklineZoneThresholds(
+    sensorType: SensorType?,
+    graphColor: String?
+): SparklineZoneThresholds? {
+    if (graphColor != "DYNAMIC_ZONE" || sensorType == null) {
+        return null
+    }
+    return when (sensorType) {
+        SensorType.HR -> SparklineZoneThresholds(
+            cutoffs = listOf(132f, 145f, 158f, 171f),
+            zoneColors = listOf(TTColor.Zone1, TTColor.Zone2, TTColor.Zone3, TTColor.Zone4, TTColor.Zone5)
+        )
+        SensorType.POWER,
+        SensorType.NORMALIZED_POWER,
+        SensorType.POWER_5S,
+        SensorType.POWER_1M,
+        SensorType.POWER_5M,
+        SensorType.POWER_20M,
+        SensorType.POWER_PEAK_5S,
+        SensorType.POWER_PEAK_1M,
+        SensorType.POWER_PEAK_5M,
+        SensorType.POWER_PEAK_20M -> SparklineZoneThresholds(
+            cutoffs = listOf(135f, 142f, 148f, 154f, 160f, 166f),
+            zoneColors = listOf(
+                TTColor.Zone1,
+                TTColor.Zone2,
+                TTColor.Zone3,
+                TTColor.Zone4,
+                TTColor.Zone5,
+                TTColor.Zone6,
+                TTColor.Zone7
+            )
+        )
+        SensorType.HRV_DFA_A1 -> SparklineZoneThresholds(
+            cutoffs = listOf(143f, 158f),
+            zoneColors = listOf(TTColor.Zone4, TTColor.Zone3, TTColor.Zone2),
+            invertedPolarity = true
+        )
+        else -> null
     }
 }
 

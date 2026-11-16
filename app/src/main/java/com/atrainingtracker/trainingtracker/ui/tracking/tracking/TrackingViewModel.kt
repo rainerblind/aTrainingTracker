@@ -31,6 +31,7 @@ import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.ActivityType
 import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.banalservice.devices.hrv.HrvSignalQualityStatus
 import com.atrainingtracker.banalservice.filters.FilteredSensorData
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.MyHelper
@@ -43,6 +44,7 @@ import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import com.atrainingtracker.trainingtracker.settings.TuningConfig
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import com.atrainingtracker.trainingtracker.settings.ZoneDisplayOptions
+import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import com.atrainingtracker.trainingtracker.ui.map.LocationMarker
 import com.atrainingtracker.trainingtracker.ui.map.MapSegment
 import com.atrainingtracker.trainingtracker.ui.map.MapRoute
@@ -55,6 +57,7 @@ import com.atrainingtracker.trainingtracker.ui.tracking.ElevationProfileScope
 import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldConfig
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldState
+import com.atrainingtracker.trainingtracker.ui.tracking.SparklineZoneThresholds
 import com.atrainingtracker.trainingtracker.ui.tracking.PedalBalanceState
 import com.atrainingtracker.trainingtracker.ui.tracking.PedalPowerBalanceMath
 import com.atrainingtracker.trainingtracker.ui.tracking.ZoneGaugeMath
@@ -655,6 +658,15 @@ class TrackingViewModel @JvmOverloads constructor(
                         val initialSignalQuality = if (config.sensorType == SensorType.HRV_DFA_A1) {
                             com.atrainingtracker.banalservice.BANALService.getDeviceManager()?.hrvMetricsDevice?.signalQualityResult?.status
                         } else null
+                        val initialSparklineZoneThresholds = if (config.showGraph) {
+                            resolveSparklineZoneThresholds(
+                                sensorType = config.sensorType,
+                                sportType = currentActivity.sportType,
+                                graphColor = config.graphColor,
+                                tuningConfig = currentTuning,
+                                signalQuality = initialSignalQuality
+                            )
+                        } else null
                         SensorFieldState(
                             configHash = uniqueHash,
                             sensorFieldId = config.sensorFieldId,
@@ -678,6 +690,7 @@ class TrackingViewModel @JvmOverloads constructor(
                             sparklineSamples = sparklineSamples,
                             sparklineSpanSeconds = sparklineSpanSeconds,
                             graphColor = config.graphColor,
+                            sparklineZoneThresholds = initialSparklineZoneThresholds,
                             colWeight = config.colWeight,
                             dfaA1ThresholdT1 = currentTuning.dfaA1ThresholdT1,
                             dfaA1ThresholdT2 = currentTuning.dfaA1ThresholdT2,
@@ -858,6 +871,15 @@ class TrackingViewModel @JvmOverloads constructor(
                     val fieldWPrimeBatteryState = if (fieldToUpdate.showBar && isBike && isWPrimeBal) newWPrimeBatteryState else null
                     val newIsArtifactGated = if (isDfaA1) isArtifactGated else fieldToUpdate.isArtifactGated
                     val newSignalQuality = if (isDfaA1) currentSignalQuality else fieldToUpdate.hrvSignalQualityStatus
+                    val newSparklineThresholds = if (fieldToUpdate.showGraph) {
+                        resolveSparklineZoneThresholds(
+                            sensorType = sensorData.sensorType,
+                            sportType = activityType.sportType,
+                            graphColor = fieldToUpdate.graphColor,
+                            tuningConfig = tuning,
+                            signalQuality = newSignalQuality
+                        )
+                    } else null
 
                     // Check if this specific instance needs an update to avoid unnecessary changes.
                     if (fieldToUpdate.value != newFormattedValue ||
@@ -869,6 +891,7 @@ class TrackingViewModel @JvmOverloads constructor(
                         fieldToUpdate.dfaA1ThresholdT1 != tuning.dfaA1ThresholdT1 ||
                         fieldToUpdate.dfaA1ThresholdT2 != tuning.dfaA1ThresholdT2 ||
                         fieldToUpdate.hrvSignalQualityStatus != newSignalQuality ||
+                        fieldToUpdate.sparklineZoneThresholds != newSparklineThresholds ||
                         (isWPrimeBal && fieldToUpdate.wPrimeBatteryState != fieldWPrimeBatteryState)) {
                         val index = updatedFields.indexOf(fieldToUpdate)
                         if (index != -1) {
@@ -882,6 +905,7 @@ class TrackingViewModel @JvmOverloads constructor(
                                 dfaA1ThresholdT1 = tuning.dfaA1ThresholdT1,
                                 dfaA1ThresholdT2 = tuning.dfaA1ThresholdT2,
                                 hrvSignalQualityStatus = newSignalQuality,
+                                sparklineZoneThresholds = newSparklineThresholds,
                                 wPrimeBatteryState = if (isWPrimeBal) fieldWPrimeBatteryState else fieldToUpdate.wPrimeBatteryState
                             )
                             hasChanged = true
@@ -891,17 +915,29 @@ class TrackingViewModel @JvmOverloads constructor(
             }
         }
 
-        // REQ-TRK-059.7, ATT-6710, REQ-TRK-059.9, ATT-6695: Unconditionally populate latest sparkline samples
-        // and span seconds from repository for all fields with showGraph == true, ensuring non-emitting ticks never fall back to emptyList()
+        // REQ-TRK-059.7, ATT-6710, REQ-TRK-059.9, ATT-6695, REQ-TRK-082.2: Unconditionally populate latest sparkline samples,
+        // span seconds, and Dynamic Zone thresholds for all fields with showGraph == true.
+        val activeTuning = _tuningConfig.value
         for (i in updatedFields.indices) {
             val field = updatedFields[i]
             if (field.showGraph) {
                 val currentSamples = banalServiceRepository.getSparklineSamples(field.sensorFieldId)
                 val currentSpan = banalServiceRepository.getSparklineSpanSeconds(field.sensorFieldId)
-                if (field.sparklineSamples != currentSamples || field.sparklineSpanSeconds != currentSpan) {
+                val currentThresholds = resolveSparklineZoneThresholds(
+                    sensorType = field.sensorType,
+                    sportType = activityType.sportType,
+                    graphColor = field.graphColor,
+                    tuningConfig = activeTuning,
+                    signalQuality = field.hrvSignalQualityStatus
+                )
+                if (field.sparklineSamples != currentSamples ||
+                    field.sparklineSpanSeconds != currentSpan ||
+                    field.sparklineZoneThresholds != currentThresholds
+                ) {
                     updatedFields[i] = field.copy(
                         sparklineSamples = currentSamples,
-                        sparklineSpanSeconds = currentSpan
+                        sparklineSpanSeconds = currentSpan,
+                        sparklineZoneThresholds = currentThresholds
                     )
                     hasChanged = true
                 }
@@ -972,11 +1008,7 @@ class TrackingViewModel @JvmOverloads constructor(
         val zoneType = getZoneType(sensorData.sensorType, activityType.sportType)
 
         if (zoneType != null && currentValue is Number) {
-            val cutoffs = zoneCutoffsMap[zoneType] ?: when (zoneType) {
-                SettingsDataStore.ZoneType.PWR_BIKE -> listOf(149, 203, 243, 284, 324, 405)
-                SettingsDataStore.ZoneType.HR_RUN -> listOf(132, 145, 158, 171)
-                SettingsDataStore.ZoneType.HR_BIKE -> listOf(127, 140, 153, 166)
-            }
+            val cutoffs = resolveZoneCutoffs(zoneType)
             val numericValue = currentValue.toDouble()
 
             for (i in cutoffs.indices) {
@@ -989,17 +1021,108 @@ class TrackingViewModel @JvmOverloads constructor(
         return defaultZoneColor
     }
 
+    private fun resolveZoneCutoffs(zoneType: SettingsDataStore.ZoneType): List<Int> =
+        zoneCutoffsMap[zoneType] ?: when (zoneType) {
+            SettingsDataStore.ZoneType.PWR_BIKE -> listOf(149, 203, 243, 284, 324, 405)
+            SettingsDataStore.ZoneType.HR_RUN -> listOf(132, 145, 158, 171)
+            SettingsDataStore.ZoneType.HR_BIKE -> listOf(127, 140, 153, 166)
+        }
+
+    /**
+     * Resolves immutable [SparklineZoneThresholds] for Dynamic Zone multi-color sparklines
+     * (REQ-TRK-082.2, ATT-7761).
+     *
+     * - Returns `null` unless [graphColor] is `"DYNAMIC_ZONE"`.
+     * - Explicitly excludes [SensorType.POWER_TO_WEIGHT] from raw Watt [SettingsDataStore.ZoneType.PWR_BIKE] cutoffs.
+     * - Suppresses [SensorType.HRV_DFA_A1] zones when [signalQuality] is [HrvSignalQualityStatus.SMOOTHED_STREAM]
+     *   or [HrvSignalQualityStatus.QUANTIZED_SYNTHETIC].
+     */
+    internal fun resolveSparklineZoneThresholds(
+        sensorType: SensorType?,
+        sportType: BSportType,
+        graphColor: String?,
+        tuningConfig: TuningConfig = _tuningConfig.value,
+        signalQuality: HrvSignalQualityStatus? = null
+    ): SparklineZoneThresholds? {
+        if (graphColor != "DYNAMIC_ZONE" || sensorType == null) {
+            return null
+        }
+
+        return when (sensorType) {
+            SensorType.HR -> {
+                val zoneType = getZoneType(SensorType.HR, sportType) ?: return null
+                val cutoffs = resolveZoneCutoffs(zoneType)
+                if (cutoffs.size != 4) return null
+                SparklineZoneThresholds(
+                    cutoffs = cutoffs.map { it.toFloat() },
+                    zoneColors = listOf(
+                        TTColor.Zone1,
+                        TTColor.Zone2,
+                        TTColor.Zone3,
+                        TTColor.Zone4,
+                        TTColor.Zone5
+                    )
+                )
+            }
+            SensorType.POWER,
+            SensorType.NORMALIZED_POWER,
+            SensorType.POWER_5S,
+            SensorType.POWER_1M,
+            SensorType.POWER_5M,
+            SensorType.POWER_20M,
+            SensorType.POWER_PEAK_5S,
+            SensorType.POWER_PEAK_1M,
+            SensorType.POWER_PEAK_5M,
+            SensorType.POWER_PEAK_20M -> {
+                if (sportType != BSportType.BIKE) return null
+                val cutoffs = resolveZoneCutoffs(SettingsDataStore.ZoneType.PWR_BIKE)
+                if (cutoffs.size != 6) return null
+                SparklineZoneThresholds(
+                    cutoffs = cutoffs.map { it.toFloat() },
+                    zoneColors = listOf(
+                        TTColor.Zone1,
+                        TTColor.Zone2,
+                        TTColor.Zone3,
+                        TTColor.Zone4,
+                        TTColor.Zone5,
+                        TTColor.Zone6,
+                        TTColor.Zone7
+                    )
+                )
+            }
+            SensorType.POWER_TO_WEIGHT -> null
+            SensorType.HRV_DFA_A1 -> {
+                if (signalQuality == HrvSignalQualityStatus.SMOOTHED_STREAM ||
+                    signalQuality == HrvSignalQualityStatus.QUANTIZED_SYNTHETIC
+                ) {
+                    return null
+                }
+                val t1 = tuningConfig.dfaA1ThresholdT1
+                val t2 = tuningConfig.dfaA1ThresholdT2
+                if (!t1.isFinite() || !t2.isFinite() || t2 >= t1) {
+                    return null
+                }
+                SparklineZoneThresholds(
+                    cutoffs = listOf(t2, t1),
+                    zoneColors = listOf(
+                        TTColor.Zone4,
+                        TTColor.Zone3,
+                        TTColor.Zone2
+                    ),
+                    invertedPolarity = true
+                )
+            }
+            else -> null
+        }
+    }
+
     private fun calculateZoneGaugeState(
         zoneType: SettingsDataStore.ZoneType?,
         numericValue: Double?
     ): ZoneGaugeState? {
         if (zoneType == null) return null
 
-        val cutoffs = zoneCutoffsMap[zoneType] ?: when (zoneType) {
-            SettingsDataStore.ZoneType.PWR_BIKE -> listOf(149, 203, 243, 284, 324, 405)
-            SettingsDataStore.ZoneType.HR_RUN -> listOf(132, 145, 158, 171)
-            SettingsDataStore.ZoneType.HR_BIKE -> listOf(127, 140, 153, 166)
-        }
+        val cutoffs = resolveZoneCutoffs(zoneType)
 
         return ZoneGaugeMath.calculateZoneGaugeState(
             value = numericValue,

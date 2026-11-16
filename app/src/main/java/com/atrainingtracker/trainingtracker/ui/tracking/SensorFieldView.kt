@@ -460,14 +460,13 @@ fun SensorFieldView(
                         )
                     }
 
-                    // Optional Live Sparkline Graph (REQ-TRK-059, ATT-1294, ATT-7314, ATT-7522, ATT-7760)
+                    // Optional Live Sparkline Graph (REQ-TRK-059, REQ-TRK-082, ATT-1294, ATT-7314, ATT-7522, ATT-7760, ATT-7761)
                     if (fieldState.showGraph) {
                         Spacer(modifier = Modifier.height(4.dp))
                         val context = LocalContext.current
                         val sparklineLineColor = resolveSparklineLineColor(
                             graphColor = fieldState.graphColor,
                             zoneColor = fieldState.zoneColor,
-                            showTextColor = fieldState.zoneDisplayOptions.showTextColor,
                             sensorType = fieldState.sensorType,
                             colorScheme = MaterialTheme.colorScheme,
                             context = context
@@ -480,12 +479,18 @@ fun SensorFieldView(
                             fieldState.graphHorizonSeconds
                         )
                         val isPlaceholder = resolveSparklineIsPlaceholder(hasLiveSamples, screenMode)
+                        val sparklineZoneThresholds = if (fieldState.graphColor == "DYNAMIC_ZONE") {
+                            fieldState.sparklineZoneThresholds
+                        } else {
+                            null
+                        }
 
                         SensorSparklineView(
                             samples = effectiveSamples,
                             spanSeconds = effectiveSpanSeconds,
                             lineColor = sparklineLineColor,
                             isPlaceholder = isPlaceholder,
+                            zoneThresholds = sparklineZoneThresholds,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .then(

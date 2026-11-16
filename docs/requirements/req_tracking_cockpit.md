@@ -5907,3 +5907,50 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 **Invariants**: SQLite schema backward compatibility guaranteed; legacy backup JSON imports default cleanly; zero Compose snapshot state writes during composition; 100% 9-language localization parity; clean-room test pass rate.
 
+
+### REQ-TRK-082: Decoupled Multi-Color Dynamic Zone Sparkline Rendering for HR, Power, and HRV DFA α1 [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-TRK-082`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `SensorSparklineView.kt`, `SensorFieldView.kt`, `SensorFieldState.kt`, `TrackingViewModel.kt`, `EditSensorFieldDialog.kt`
+- **Rationale**: In `ATT-7760` (`REQ-TRK-081.2`), `resolveSparklineLineColor` retained a legacy `showTextColor` fallback when `sensorType == null`, callers (`SensorFieldView.kt`, `EditSensorFieldDialog.kt`) still passed `showTextColor`, and `"DYNAMIC_ZONE"` painted the entire sparkline with a single instantaneous `fieldState.zoneColor`. Fully decoupling sparkline color resolution from `zoneDisplayOptions.showTextColor` and mapping athlete zone thresholds onto `Brush.verticalGradient` stops lets athletes keep crisp high-contrast numbers while inspecting historical multi-zone transitions across HR, Power, and HRV DFA α1 sparklines with zero extra `List<Float>` ring-buffer allocations (ATT-7761, Parent Epic ATT-5908, refining `REQ-TRK-081` and `REQ-TRK-059`).
+- **Description**:
+  1. *Complete Decoupling from `showTextColor` (`REQ-TRK-082.1`)*:
+     - `resolveSparklineLineColor` in `SensorSparklineView.kt` SHALL NOT read, accept, or depend on `zoneDisplayOptions.showTextColor` across any color resolution branch (including `"GLOBAL_DEFAULT"` when `sensorType == null`, `"THEME_DEFAULT"`, `"DYNAMIC_ZONE"`, and explicit palette tokens); callers in `SensorFieldView.kt` and `EditSensorFieldDialog.kt` SHALL NOT pass `showTextColor` to sparkline color resolution.
+     - Numeric tile text coloring in `SensorFieldView.kt` SHALL remain governed exclusively by `fieldState.zoneDisplayOptions.showTextColor`, independent of `fieldState.graphColor`.
+  2. *Multi-Color Historical `Brush.verticalGradient` Zone Curve & Terminal Dot (`REQ-TRK-082.2`)*:
+     - `SensorFieldState` SHALL carry an optional sparkline zone threshold specification derived from `TrackingViewModel.zoneCutoffsMap` / HRV parameters without modifying `List<Float>` sample ring buffers or allocating per-sample colors during 1 Hz updates.
+     - When `graphColor == "DYNAMIC_ZONE"` and valid zone threshold stops are available, `SensorSparklineView.kt` SHALL render both the stroke path and subtle gradient fill via `Brush.verticalGradient` using monotonically non-decreasing normalized color stops in `[0f, 1f]` mapped onto `[minVal, maxVal]` within `[verticalPaddingPx, height - verticalPaddingPx]` (`maxVal -> 0f` top, `minVal -> 1f` bottom), and SHALL render the terminal dot in the zone color corresponding to the latest sample (`samples.last()`).
+     - `EditSensorFieldDialog.kt` SHALL provide representative/configured zone stops to its `SensorSparklineView` preview whenever `uiState.graphColor == "DYNAMIC_ZONE"` for a supported metric.
+     - Zone threshold mappings MUST cover:
+       • **Heart Rate (`SensorType.HR`)**: 4 cutoffs (`HR_RUN` / `HR_BIKE`) mapping ascending values across `TTColor.Zone1`..`TTColor.Zone5`.
+       • **Power (`SensorType.POWER` family, excluding `POWER_TO_WEIGHT`)**: 6 cutoffs (`PWR_BIKE`) mapping ascending values across `TTColor.Zone1`..`TTColor.Zone7`. `SensorType.POWER_TO_WEIGHT` (W/kg) MUST be guarded against raw Watt cutoffs and MUST NOT receive `PWR_BIKE` gradient stops.
+       • **HRV DFA α1 (`SensorType.HRV_DFA_A1`)**: inverted polarity using `dfaA1ThresholdT1` and `dfaA1ThresholdT2` where `alpha1 > t1` maps to `TTColor.Zone2` (green, top), `t2 <= alpha1 <= t1` maps to `TTColor.Zone3` (orange, middle), and `alpha1 < t2` maps to `TTColor.Zone4` (red, bottom); zone coloring MUST be suppressed (falling back to solid `lineColor`) when `hrvSignalQualityStatus` is `SMOOTHED_STREAM` or `QUANTIZED_SYNTHETIC` (consistent with `HrvZoneIndicator`).
+  3. *Dark/AMOLED Zone 7 Contrast & Graceful Edge-Case Fallbacks (`REQ-TRK-082.3`)*:
+     - When `TTColor.Zone7` (`#000000`) appears on a dark or AMOLED surface (`TelemetryGraphColor.isDarkSurface(colorScheme) == true`), `SensorSparklineView.kt` MUST substitute a high-contrast dark-surface zone color (e.g., `colorScheme.onSurface`) so Zone 7 segments and terminal dots remain legible.
+     - `SensorSparklineView.kt` MUST fall back gracefully to solid `lineColor` (zero divide-by-zero or invalid gradient stop errors) whenever `samples.size == 1`, `range == 0f` (`minVal == maxVal`), `isPlaceholder == true`, or zone threshold stops are null/empty.
+  4. *Visual Compose Screenshot Verification (`REQ-TRK-082.4`, Rule 8.5)*:
+     - A Robolectric Compose screenshot test SHALL capture `docs/engineering/walkthroughs/img/ATT-7761_dynamic_zone_sparkline.png` verifying Light and Dark/AMOLED rendering across HR (5-zone), Power (7-zone including Zone 7 dark contrast), HRV DFA α1 (inverted polarity), decoupled fixed-color + `showTextColor = true`, and placeholder/flat-line fallbacks against the 4-point visual checklist.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Refines `REQ-TRK-081` (`REQ-TRK-081.2`) and `REQ-TRK-059` in `docs/requirements/req_tracking_cockpit.md` (`5854-5908`). Targets `SensorSparklineView.kt`, `SensorFieldView.kt`, `SensorFieldState.kt`, `TrackingViewModel.kt`, and `EditSensorFieldDialog.kt`.
+2. *Historical Origin & Commit Trace*: `ATT-7760` (`65d2c2d5`, Sprint 2026-46.8) introduced `SensorFieldState.graphColor` and `resolveSparklineLineColor`, retaining a `showTextColor` fallback (`SensorSparklineView.kt:332`) when `sensorType == null` and resolving `"DYNAMIC_ZONE"` to a single `fieldState.zoneColor`.
+3. *Root Reason for Existing Formulation*: `ATT-7760` scoped SQLite v22 schema persistence, global/per-tile preferences, and the color picker UI, intentionally deferring multi-stop threshold-mapped gradient rendering and complete `showTextColor` decoupling to `ATT-7761`.
+4. *Preservation of Core Invariants*: Fixed palette tokens, `THEME_DEFAULT`, `GLOBAL_DEFAULT`, SQLite v22 schema, `List<Float>` sample ring buffers, and `showTextColor` numeric text coloring remain intact; `"DYNAMIC_ZONE"` upgrades cleanly to threshold-aligned vertical gradients with solid fallback when thresholds or sample variance are absent.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an HR tile with `showTextColor = true` and `graphColor` set to a fixed palette color (e.g., `CRIMSON` or `VIOLET`) or `GLOBAL_DEFAULT` (even when `sensorType == null`),
+• *When* the athlete enters Zone 4,
+• *Then* the numeric value tints to Zone 4 color while the sparkline stroke, fill, and terminal dot remain in the configured sparkline color without reading `showTextColor`.
+• *Given* an HR (4 cutoffs -> Z1..5), Power (6 cutoffs -> Z1..7, excluding `POWER_TO_WEIGHT`), or HRV DFA α1 (`t1`, `t2` inverted polarity; not `SMOOTHED_STREAM`/`QUANTIZED_SYNTHETIC`) tile with `graphColor = "DYNAMIC_ZONE"` and `showTextColor = false`,
+• *When* sparkline samples span multiple zones,
+• *Then* the stroke and fill render historical multi-colored `Brush.verticalGradient` segments aligned with the athlete's thresholds, the terminal dot matches the latest sample's zone (with dark/AMOLED contrast fallback for `Zone7`), and the numeric value remains standard `onSurface`.
+• *Given* a `DYNAMIC_ZONE` sparkline with `isPlaceholder = true`, `samples.size == 1`, `minVal == maxVal`, `POWER_TO_WEIGHT`, or `hrvSignalQualityStatus` in `{SMOOTHED_STREAM, QUANTIZED_SYNTHETIC}`,
+• *When* rendered in `SensorSparklineView`,
+• *Then* it renders cleanly without divide-by-zero or invalid gradient stops, falling back to placeholder dashed styling or solid `lineColor`.
+
+**Invariants**: Zero extra per-sample color allocations in `List<Float>` ring buffers; zero SQLite v22 schema changes; monotonically non-decreasing `Brush.verticalGradient` stops in `[0f, 1f]`; zero Compose snapshot state writes during composition; clean-room test pass rate and Rule 8.5 PNG inspection.
+
+
