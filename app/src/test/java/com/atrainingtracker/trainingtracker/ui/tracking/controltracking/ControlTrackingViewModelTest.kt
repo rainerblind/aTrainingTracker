@@ -464,6 +464,7 @@ class ControlTrackingViewModelTest {
 
     @Test
     fun isMorningHrvCheckVisible_whenPastCutoffHour_emitsFalse() = runTest {
+        // TST-UI-525.4
         val trackingModeLiveData = MutableLiveData(TrackingMode.READY)
         every { mockBanalRepo.trackingMode } returns trackingModeLiveData
 
@@ -504,6 +505,7 @@ class ControlTrackingViewModelTest {
 
     @Test
     fun isMorningHrvCheckVisible_defaultCutoffHour8() = runTest {
+        // TST-UI-525.4
         val trackingModeLiveData = MutableLiveData(TrackingMode.READY)
         every { mockBanalRepo.trackingMode } returns trackingModeLiveData
 

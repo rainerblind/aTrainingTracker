@@ -46,7 +46,7 @@ import kotlin.math.round
  * Bundles the 7 morning readiness check settings:
  * 1. Morning Sleep & Wellness tracking toggle + 4 subordinate dimension toggles
  *    (sleep duration & quality, morning energy, muscle soreness, context tags)
- * 2. Morning HRV Check shortcut toggle on the Start Tracking screen + cutoff hour slider (06:00..23:00)
+ * 2. Morning HRV Check shortcut toggle on the Start Tracking screen + cutoff hour slider (06:00..11:00)
  */
 @Composable
 fun MorningCheckSection(

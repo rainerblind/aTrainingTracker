@@ -629,7 +629,7 @@ class AdvancedTuningAccordionTest {
 
     @Test
     fun testMorningCheckSubtitleFormatter() {
-        // TST-SET-115
+        // TST-SET-115, TST-UI-525.1
         val mockContext = mockk<Context>()
         every { mockContext.getString(R.string.tuning_morning_sleep_wellness_short) } returns "Sleep & Wellness"
         every { mockContext.getString(R.string.tuning_morning_check_start_short, 8) } returns "Start button (until 08:00)"
