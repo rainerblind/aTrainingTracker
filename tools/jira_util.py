@@ -1381,14 +1381,15 @@ def recalculate_master_index_tables(repo_root=None):
                 f.writelines(new_lines)
             print(f"Recalculated master index table in {master_rel}: Total={grand_total}, Verified={grand_verified}, Implemented={grand_implemented}, Planned={grand_planned}.")
 
-def submit_stage(parent_key, stage_arg, text_or_file, summary_override=None, role="agent1"):
+def submit_stage(parent_key, stage_arg, text_or_file, summary_override=None, role="agent1", author=None, bypass_authorship=False):
     """
     Composite Stage-Submission Command for agent1 (ATT-4290 Process Improvement #2).
     1. Resolves stage (1..5) and ensures parent ticket is in the matching stage status.
     2. If stage == 5, automatically flips Planned -> Verified in docs/requirements.md and docs/tests.md.
-    3. Finds existing stage sub-task under parent_key or creates it with canonical prefix and --add-to-sprint.
-    4. Updates the sub-task description with text_or_file.
-    5. Transitions the sub-task to 'In Überprüfung' (in_review) and outputs SUBTASK_KEY.
+    3. Enforces separated authorship (Stage N+1 author != Gate N reviewer) (REQ-PRO-107.1).
+    4. Finds existing stage sub-task under parent_key or creates it with canonical prefix and --add-to-sprint.
+    5. Updates the sub-task description with text_or_file.
+    6. Transitions the sub-task to 'In Überprüfung' (in_review) and outputs SUBTASK_KEY.
     """
     stage_id = STAGE_ALIASES.get((stage_arg or "").strip().lower())
     if not stage_id or stage_id not in STAGE_SPECS:
@@ -1412,6 +1413,42 @@ def submit_stage(parent_key, stage_arg, text_or_file, summary_override=None, rol
     parent_summary = parent_fields.get("summary", "")
     current_parent_status = parent_fields.get("status", {}).get("name", "").strip().lower()
     desired_parent_stage = spec["parent_stage"]
+
+    # REQ-PRO-107.1: Separated Gate N -> Stage N+1 Authorship Guard
+    if int(stage_id) > 1 and not bypass_authorship:
+        preceding_stage_id = str(int(stage_id) - 1)
+        preceding_spec = STAGE_SPECS.get(preceding_stage_id)
+        if preceding_spec:
+            preceding_reviewer = None
+            for st in parent_fields.get("subtasks", []):
+                st_summary = st.get("fields", {}).get("summary", "").strip()
+                if re.search(preceding_spec["pattern"], st_summary, re.IGNORECASE):
+                    st_assignee = st.get("fields", {}).get("assignee") or {}
+                    preceding_reviewer = (
+                        st_assignee.get("displayName")
+                        or st_assignee.get("name")
+                        or st_assignee.get("accountId")
+                        or "agent2"
+                    )
+                    break
+            caller_author = author or os.environ.get("JIRA_ACTOR") or role
+            if preceding_reviewer and caller_author:
+                def norm_id(s):
+                    clean = re.sub(r'[\s_-]+', '', str(s or '').lower())
+                    if 'agent2' in clean or 'reviewer' in clean or 'auditor' in clean:
+                        return 'agent2'
+                    if 'agent1' in clean or 'implementer' in clean or 'author' in clean:
+                        return 'agent1'
+                    return clean
+
+                norm_author = norm_id(caller_author)
+                norm_reviewer = norm_id(preceding_reviewer)
+                if norm_author and norm_reviewer and norm_author == norm_reviewer:
+                    print(
+                        f"Error: Separated authorship violation (REQ-PRO-107.1). Stage {stage_id} author '{caller_author}' matches Gate {preceding_stage_id} reviewer '{preceding_reviewer}' on parent {parent_key}. In accordance with ASPICE 4.0 SUP.1, stage authorship and gate review must be separated across distinct actors.",
+                        file=sys.stderr,
+                    )
+                    sys.exit(1)
 
     # Ensure parent is in the matching stage status
     if current_parent_status in PARENT_STAGE_ORDER and desired_parent_stage in PARENT_STAGE_ORDER:
@@ -1887,16 +1924,56 @@ def verify_stage2_id_reservations(subtask_key, text_or_file, parent_key=None, le
     return (len(errors) == 0), errors
 
 
+def validate_gate_verdict_content(text):
+    """
+    Validates that a Gate 1-5 review verdict contains structured checklist items
+    and at least one concrete verified evidence reference (REQ-PRO-107.2).
+    Returns (is_valid: bool, errors: list[str]).
+    """
+    if not text or not str(text).strip():
+        return False, ["Gate verdict comment is empty."]
+
+    content = str(text)
+
+    # 1. Structured checklist patterns
+    checklist_pats = [
+        r'\[[xX✓]\]',
+        r'\bPASS:\b',
+        r'\bPASSED\b',
+        r'^[*-]\s+\*\*[^*]+\*\*:\s*(?:PASS|Verified|OK|Checked|I\.O\.|Freigabe)',
+        r'[✓✔]',
+    ]
+    has_checklist = any(re.search(pat, content, re.MULTILINE | re.IGNORECASE) for pat in checklist_pats)
+
+    # 2. Concrete evidence references
+    evidence_pats = [
+        r'[a-zA-Z0-9_\-./]+\.[a-zA-Z0-9]+:\d+',  # file:line (e.g. tools/jira_util.py:1450)
+        r'\b[0-9a-f]{7,40}\b',                   # commit SHA
+        r'\b(?:BUILD SUCCESSFUL|testDebugUnitTest|Ran \d+ tests?|tests?, 0 failures|exit code 0)\b', # test outputs
+        r'\b(?:REQ-[A-Z]+-\d+|TST-[A-Z]+-\d+)\b', # REQ/TST tokens
+    ]
+    has_evidence = any(re.search(pat, content, re.IGNORECASE) for pat in evidence_pats)
+
+    errors = []
+    if not has_checklist:
+        errors.append("Missing structured checklist items (e.g. '[x]', 'PASS:', '✓', or '* **Check**: PASS').")
+    if not has_evidence:
+        errors.append("Missing concrete verified evidence reference (e.g. 'file:line', commit SHA [0-9a-f]{7,40}, test execution hash, or test output).")
+
+    return (len(errors) == 0), errors
+
+
 def gate_verdict(subtask_key, verdict_arg, text_or_file, role="agent2"):
     """
     Composite Gate-Verdict Command for agent2 (ATT-4290 Process Improvement #2).
     Hardwired to role='agent2' (Anti-Spoofing lock).
     1. For [Analysis] subtasks on PASS: validates Change-Request Impact Analysis deliverable (REQ-PRO-064.3).
     2. For [Req & Test Spec] subtasks on PASS: validates REQ/TST ID reservation provenance (REQ-PRO-106.3).
-    3. Assigns subtask_key to agent2.
-    4. Posts text_or_file as a role-attributed agent2 audit comment on subtask_key.
-    5. If PASS: transitions subtask_key via 'freigabe' (closes sub-task to Erledigt, advances parent, and injects next stage SKILL.md).
-    6. If REVISION: transitions subtask_key back to 'in_progress' and assigns to agent1.
+    3. Validates structured checklist and concrete evidence reference on all Gate 1-5 passes (REQ-PRO-107.2).
+    4. Assigns subtask_key to agent2.
+    5. Posts text_or_file as a role-attributed agent2 audit comment on subtask_key.
+    6. If PASS: transitions subtask_key via 'freigabe' (closes sub-task to Erledigt, advances parent, and injects next stage SKILL.md).
+    7. If REVISION: transitions subtask_key back to 'in_progress' and assigns to agent1.
     """
     auditor_role = "agent2"
     verdict_norm = (verdict_arg or "").strip().upper()
@@ -1909,6 +1986,23 @@ def gate_verdict(subtask_key, verdict_arg, text_or_file, role="agent2"):
         sys.exit(1)
 
     if is_pass:
+        # REQ-PRO-107.2: Evidence-Backed Gate 1-5 Checklist Validation
+        comment_content = text_or_file
+        if comment_content.startswith("@") and os.path.exists(comment_content[1:]):
+            try:
+                with open(comment_content[1:], "r", encoding="utf-8") as f:
+                    comment_content = f.read()
+            except Exception:
+                pass
+        is_valid_evidence, evidence_errors = validate_gate_verdict_content(comment_content)
+        if not is_valid_evidence:
+            print(
+                f"Error: Gate approval rejected for {subtask_key}. Gate verdict must contain a structured checklist and at least one concrete verified evidence reference (REQ-PRO-107.2):",
+                file=sys.stderr,
+            )
+            for err in evidence_errors:
+                print(f"  - {err}", file=sys.stderr)
+            sys.exit(1)
         # ATT-6157 / REQ-PRO-064.3: Validate Impact Analysis on [Analysis] subtasks before approval
         summary, desc, parent_key = get_subtask_summary_and_desc(subtask_key, role=auditor_role)
         if summary and re.search(r"\[analysis\]", summary, re.IGNORECASE):
@@ -4708,6 +4802,8 @@ if __name__ == "__main__":
         stage_arg = remaining_argv[2]
         text_arg = remaining_argv[3]
         summ_override = None
+        author_override = None
+        bypass_auth = False
         idx = 4
         while idx < len(remaining_argv):
             arg = remaining_argv[idx]
@@ -4716,8 +4812,15 @@ if __name__ == "__main__":
             elif arg == "--summary" and idx + 1 < len(remaining_argv):
                 summ_override = remaining_argv[idx + 1]
                 idx += 1
+            elif arg.startswith("--author="):
+                author_override = arg.split("=", 1)[1]
+            elif arg == "--author" and idx + 1 < len(remaining_argv):
+                author_override = remaining_argv[idx + 1]
+                idx += 1
+            elif arg in ("--bypass-authorship", "--force"):
+                bypass_auth = True
             idx += 1
-        submit_stage(parent_k, stage_arg, text_arg, summary_override=summ_override, role=active_role)
+        submit_stage(parent_k, stage_arg, text_arg, summary_override=summ_override, role=active_role, author=author_override, bypass_authorship=bypass_auth)
     elif cmd in ("gate-verdict", "gate_verdict") and len(remaining_argv) == 4:
         gate_verdict(remaining_argv[1], remaining_argv[2], remaining_argv[3], role="agent2")
     elif cmd in ("final-review-verdict", "final_review_verdict") and len(remaining_argv) >= 4:

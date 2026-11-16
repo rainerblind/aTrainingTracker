@@ -494,9 +494,10 @@ class TestJiraCliTooling(unittest.TestCase):
     def test_gate_verdict_pass_advances_parent_stage(
         self, mock_comment, mock_assign, mock_transition
     ):
-        jira_util.gate_verdict("ATT-4301", "PASS", "Gate 1 PASS verdict", role="agent2")
+        report_text = "PASS: Verified in tools/jira_util.py:100 [x] commit 3a31b9ad"
+        jira_util.gate_verdict("ATT-4301", "PASS", report_text, role="agent2")
         mock_assign.assert_called_once_with("ATT-4301", "agent2", role="agent2")
-        mock_comment.assert_called_once_with("ATT-4301", "Gate 1 PASS verdict", role="agent2")
+        mock_comment.assert_called_once_with("ATT-4301", report_text, role="agent2")
         mock_transition.assert_called_once_with("ATT-4301", "freigabe", role="agent2", inject_context=True)
 
     def test_auto_verify_living_docs_on_stage5(self):
@@ -1135,7 +1136,7 @@ class TestJiraCliTooling(unittest.TestCase):
         # 1. [Analysis] subtask with missing Impact Analysis -> SystemExit(1)
         mock_get_subtask.return_value = ("[Analysis] ATT-4300: Problem Domain Analysis", "No impact analysis here.", "ATT-4300")
         with self.assertRaises(SystemExit) as cm:
-            jira_util.gate_verdict("ATT-4301", "PASS", "Gate 1 PASS audit report", role="agent2")
+            jira_util.gate_verdict("ATT-4301", "PASS", "Gate 1 PASS: [x] tools/jira_util.py:100", role="agent2")
         self.assertEqual(cm.exception.code, 1)
 
         # 2. [Analysis] subtask with valid Impact Analysis -> succeeds and transitions
@@ -1148,13 +1149,13 @@ class TestJiraCliTooling(unittest.TestCase):
 * **Risk Assessment & Invariants**: Low risk
 """
         mock_get_subtask.return_value = ("[Analysis] ATT-4300: Problem Domain Analysis", valid_desc, "ATT-4300")
-        jira_util.gate_verdict("ATT-4301", "PASS", "Gate 1 PASS audit report", role="agent2")
+        jira_util.gate_verdict("ATT-4301", "PASS", "Gate 1 PASS: [x] tools/jira_util.py:100", role="agent2")
         mock_transition.assert_called_with("ATT-4301", "freigabe", role="agent2", inject_context=True)
 
         # 3. Non-analysis subtask (e.g. [Req & Test Spec]) without impact analysis -> succeeds normally
         mock_transition.reset_mock()
         mock_get_subtask.return_value = ("[Req & Test Spec] ATT-4300: Test Spec", "Test spec details without impact section", "ATT-4300")
-        jira_util.gate_verdict("ATT-4302", "PASS", "Gate 2 PASS audit report", role="agent2")
+        jira_util.gate_verdict("ATT-4302", "PASS", "Gate 2 PASS: [x] tools/jira_util.py:100", role="agent2")
         mock_transition.assert_called_with("ATT-4302", "freigabe", role="agent2", inject_context=True)
 
     @patch("jira_util.get_config", return_value={"JIRA_URL": "https://example.atlassian.net"})
@@ -1749,6 +1750,136 @@ class TestIdReservationGovernance(unittest.TestCase):
         jira_util.save_reservation_ledger(ledger_path, expired_entry)
         active_res = jira_util.list_reservations(ledger_dir=self.ledger_dir)
         self.assertEqual(len(active_res), 0)
+
+
+class TestSeparatedAuthorshipAndGateEvidence(unittest.TestCase):
+    """
+    TST-PRO-107: Separated Gate Review Authorship, Evidence Checklists & Zero-Revision Alerts Suite (ATT-8150).
+    Verifies REQ-PRO-107.1..REQ-PRO-107.4.
+    """
+
+    @patch("jira_util.get_config", return_value={"JIRA_URL": "https://example.atlassian.net"})
+    @patch("jira_util.jira_request")
+    @patch("jira_util.create_subtask", return_value="ATT-9999")
+    @patch("jira_util.transition_issue")
+    def test_tst_pro_107_1_separated_authorship_enforcement(
+        self, mock_transition, mock_create, mock_request, mock_config
+    ):
+        # TST-PRO-107.1: Separated Authorship Enforcement Test
+        parent_info = {
+            "fields": {
+                "summary": "Parent Issue",
+                "status": {"name": "Test Spec"},
+                "subtasks": [
+                    {
+                        "key": "ATT-9001",
+                        "fields": {
+                            "summary": "[Analysis] Parent Issue",
+                            "status": {"name": "Erledigt"},
+                            "assignee": {"displayName": "Agent 2", "name": "agent2", "accountId": "agent2_id"},
+                        },
+                    }
+                ],
+            }
+        }
+        mock_request.return_value = parent_info
+
+        # 1. Author matches preceding Gate 1 reviewer (both agent2) -> SystemExit(1)
+        with self.assertRaises(SystemExit) as cm:
+            jira_util.submit_stage("ATT-9000", "2", "Stage 2 spec", role="agent2")
+        self.assertEqual(cm.exception.code, 1)
+
+        # 2. Distinct author (agent1 vs preceding reviewer agent2) -> succeeds
+        mock_transition.reset_mock()
+        st_key = jira_util.submit_stage("ATT-9000", "2", "Stage 2 spec", role="agent1")
+        self.assertEqual(st_key, "ATT-9999")
+
+        # 3. Explicit author parameter override (author="agent1" under role="agent2") -> succeeds
+        mock_transition.reset_mock()
+        st_key = jira_util.submit_stage("ATT-9000", "2", "Stage 2 spec", role="agent2", author="agent1")
+        self.assertEqual(st_key, "ATT-9999")
+
+        # 4. Bypass flag (--bypass-authorship) -> succeeds even if author matches
+        mock_transition.reset_mock()
+        st_key = jira_util.submit_stage("ATT-9000", "2", "Stage 2 spec", role="agent2", bypass_authorship=True)
+        self.assertEqual(st_key, "ATT-9999")
+
+        # 5. Stage 1 submission (no preceding stage) -> succeeds
+        mock_transition.reset_mock()
+        st_key = jira_util.submit_stage("ATT-9000", "1", "Stage 1 analysis", role="agent2")
+        self.assertEqual(st_key, "ATT-9999")
+
+    @patch("jira_util.get_config", return_value={"JIRA_URL": "https://example.atlassian.net"})
+    @patch("jira_util.assign_issue")
+    @patch("jira_util.add_comment")
+    @patch("jira_util.transition_issue")
+    @patch("jira_util.get_subtask_summary_and_desc")
+    def test_tst_pro_107_2_evidence_backed_gate_checklist_validation(
+        self, mock_get_subtask, mock_transition, mock_comment, mock_assign, mock_config
+    ):
+        # TST-PRO-107.2: Evidence-Backed Gate 1-5 Checklist Validation Test
+        mock_get_subtask.return_value = ("[Impl-Plan] ATT-9000: Plan", "Plan details", "ATT-9000")
+
+        # 1. Plain text without checklist or evidence -> SystemExit(1)
+        with self.assertRaises(SystemExit) as cm:
+            jira_util.gate_verdict("ATT-9003", "PASS", "Looks good, approved.", role="agent2")
+        self.assertEqual(cm.exception.code, 1)
+
+        # 2. Has checklist item but lacks evidence anchor -> SystemExit(1)
+        with self.assertRaises(SystemExit) as cm:
+            jira_util.gate_verdict("ATT-9003", "PASS", "PASS: All requirements checked [x]", role="agent2")
+        self.assertEqual(cm.exception.code, 1)
+
+        # 3. Has evidence anchor but lacks checklist pattern -> SystemExit(1)
+        with self.assertRaises(SystemExit) as cm:
+            jira_util.gate_verdict("ATT-9003", "PASS", "Reviewed commit 3a31b9ad and tools/jira_util.py:100", role="agent2")
+        self.assertEqual(cm.exception.code, 1)
+
+        # 4. Valid checklist + concrete evidence anchor -> succeeds
+        valid_report = """### Gate 3 Independent Review: PASS
+* [x] Traceability: REQ-PRO-107 verified in tools/jira_util.py:1450
+* [x] Commit SHA: 3a31b9ad verified clean
+* [x] Test output: BUILD SUCCESSFUL
+Verdict: PASS."""
+        jira_util.gate_verdict("ATT-9003", "PASS", valid_report, role="agent2")
+        mock_transition.assert_called_with("ATT-9003", "freigabe", role="agent2", inject_context=True)
+
+    def test_tst_pro_107_3_multi_sprint_100_percent_ftpr_rubber_stamping_alert(self):
+        # TST-PRO-107.3: Multi-Sprint 100% FTPR Rubber-Stamping Alert Test
+        import sprint_metrics
+
+        # 1. Single sprint with 100% FTPR -> no multi-sprint alert
+        hist_1 = [
+            {"sprint_name": "Sprint 1", "quality_gates": {"overall_ftpr_percent": 90.0, "total_subtasks_evaluated": 10}}
+        ]
+        curr_1 = {"sprint_name": "Sprint 2", "quality_gates": {"overall_ftpr_percent": 100.0, "total_subtasks_evaluated": 10}}
+        spc_1 = sprint_metrics.calculate_spc_limits(hist_1, current_metrics=curr_1)
+        self.assertFalse(any("Finding M3 Rubber-Stamping Alert" in w for w in spc_1.get("warnings", [])))
+
+        # 2. Two consecutive sprints with 100% FTPR -> triggers Rubber-Stamping Alert!
+        hist_2 = [
+            {"sprint_name": "Sprint 1", "quality_gates": {"overall_ftpr_percent": 100.0, "total_subtasks_evaluated": 10}}
+        ]
+        curr_2 = {"sprint_name": "Sprint 2", "quality_gates": {"overall_ftpr_percent": 100.0, "total_subtasks_evaluated": 10}}
+        spc_2 = sprint_metrics.calculate_spc_limits(hist_2, current_metrics=curr_2)
+        self.assertTrue(any("Finding M3 Rubber-Stamping Alert" in w for w in spc_2.get("warnings", [])))
+
+        # 3. Check markdown report formatting includes the alert
+        report_md = sprint_metrics.format_metrics_markdown(curr_2, spc_2)
+        self.assertIn("Finding M3 Rubber-Stamping Alert", report_md)
+
+    def test_tst_pro_107_4_governance_rules_and_skill_parity(self):
+        # TST-PRO-107.4: Rule & Living Documentation Parity Test
+        gov_path = os.path.join(REPO_ROOT, ".agents", "rules", "aspice_governance.md")
+        with open(gov_path, "r", encoding="utf-8") as f:
+            gov_text = f.read()
+        self.assertIn("REQ-PRO-107", gov_text)
+        self.assertIn("Separated Review Authorship", gov_text)
+
+        skill_path = os.path.join(REPO_ROOT, ".agents", "skills", "jira-workflow", "SKILL.md")
+        with open(skill_path, "r", encoding="utf-8") as f:
+            skill_text = f.read()
+        self.assertIn("REQ-PRO-107", skill_text)
 
 
 if __name__ == "__main__":
