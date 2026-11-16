@@ -1,7 +1,7 @@
 # Stage 5 Walkthrough - ATT-8019: Raw Polar IMU/RR Streaming GZIP Sidecars with Rolling Retention
 
 **Ticket**: [ATT-8019](https://rainerblind.atlassian.net/browse/ATT-8019) (`3 SP`) | **Epic**: [ATT-5910](https://rainerblind.atlassian.net/browse/ATT-5910) | **Sprint**: `2026-47.2`  
-**Target Release**: `V5.0.0` | **Branch**: `feature/ATT-8019` | **Stage 4 Commit**: `7b1496ea`  
+**Target Release**: `V5.0.0` | **Branch**: `feature/ATT-8019-heal` | **Healed Commit**: `d01d2668`  
 **Requirements**: `REQ-SET-117` (`REQ-SET-117.1`..`REQ-SET-117.4`) | **Test Spec**: `TST-SET-119` (`TST-SET-119.1`..`TST-SET-119.5`)  
 **Author**: AI Agent 1 (`Lane 3 Flash`, Role Rotation `Rule 7.1`) | **UI Changes**: M3 Settings Segmented Selector
 
@@ -25,29 +25,19 @@
 
 ---
 
-## 2. Verification Evidence (`Rule 7.5` — Tier 1 Targeted Suite)
-- **Automated Tests (`25/25 PASS`, `0 failures`, `0 errors`, `0 skipped`)**:
-  - `PolarRawTelemetryRecorderTest`: GZIP streaming, bounded channel, empty session cleanup (`// TST-SET-119.1`).
-  - `PolarRawTelemetryReaderTest`: JSON metadata parsing, channel reconstruction, corrupted stream recovery (`// TST-SET-119.2`).
-  - `PolarRawTelemetryPrunerTest`: Cascade deletion and rolling retention thresholds (30d/7d/all/off) (`// TST-SET-119.3`).
-  - `TuningPreferencesDataStoreRawSensorRetentionTest`: DataStore persistence and defaults (`// TST-SET-119.4`).
-  - `SensorsGpsFilterScreenshotTest`: Compose M3 rendering and PNG generation (`// TST-SET-119.5`).
-  - `TranslationParityTest`: Complete 9-language resource parity without missing keys (`// TST-SET-119.4`).
-- **Governance**: `verify_requirement_governance.py --check-code-orphans --check-req-description` passed with 0 code orphans (2357 files scanned).
+## 2. Stage 6 Bounce 1/3 Remediation (`d01d2668`)
+- **Lifecycle Registration Race Condition (`PolarOnlineStreamingBridge.kt`)**: Added `activeBridges` registry (`attachActiveRecorder`/`detachActiveRecorder`). Guarantees bridges connected before workout start (e.g. on Dashboard/Cockpit) attach to the recorder upon session start without dropping initial frames.
+- **Clock-Domain Mixing & Drift Remediation (`PolarRawTelemetryRecorder.kt`)**: Separated hardware uptime clocks (`firstAccNs`, `firstGyroNs`, `resolveHwElapsedMs`) from host wall-clock epoch timestamps (`firstHrNs`, `firstRrNs`, `resolveHostElapsedMs`), eliminating multi-year timestamp distortion.
+- **Targeted Healed Verification**: `PolarRawTelemetryRecorderTest` (5/5 PASS), `PolarOnlineStreamingBridgeTest` (6/6 PASS), `PolarRawTelemetryPrunerTest` (4/4 PASS), `PolarRawTelemetryReaderTest` (3/3 PASS), and `TuningPreferencesDataStoreRawSensorRetentionTest` (3/3 PASS) — total 21/21 tests passed cleanly.
 
 ---
 
-## 3. Visual Verification (`Rule 8.5`)
-![Settings UI](img/ATT-8019_raw_telemetry_settings.png)
-- Verified via `read_file`: Light and Dark themes display aligned 4-option segmented buttons ("30 days", "Keep all", "7 days", "Off") without clipping, ellipses, or thumb drag path occlusion on 360dp widths.
-
----
-
-## 4. Traceability Matrix
+## 3. Verification Evidence & Traceability Matrix (`Rule 7.5` — Tier 1 Targeted Suite)
+- **Governance**: `verify_requirement_governance.py` passed with 0 code orphans (2357 files scanned) and 100% living doc parity.
 
 | Spec ID | Scope | Evidence (`app/src/test/`) | Status |
 | :--- | :--- | :--- | :--- |
-| `TST-SET-119.1` | Buffered GZIP sidecar writer & bounded channel | `PolarRawTelemetryRecorderTest` | Verified |
+| `TST-SET-119.1` | Buffered GZIP sidecar writer, pre-connected bridges & clock isolation | `PolarRawTelemetryRecorderTest` | Verified |
 | `TST-SET-119.2` | Self-describing header & replay parser | `PolarRawTelemetryReaderTest` | Verified |
 | `TST-SET-119.3` | Cascade deletion & rolling retention pruner | `PolarRawTelemetryPrunerTest` | Verified |
 | `TST-SET-119.4` | DataStore persistence & 9-locale strings | `TuningPreferencesDataStoreRawSensorRetentionTest`, `TranslationParityTest` | Verified |

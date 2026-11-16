@@ -65,7 +65,18 @@ class PolarRawTelemetryRecorder(
     private val isRunning = AtomicBoolean(false)
     private val isClosed = AtomicBoolean(false)
     private val rowCount = AtomicLong(0)
-    private val firstSensorTimestampNs = AtomicLong(-1L)
+
+    private val firstAccNs = AtomicLong(-1L)
+    private val accBaseElapsedMs = AtomicLong(0L)
+
+    private val firstGyroNs = AtomicLong(-1L)
+    private val gyroBaseElapsedMs = AtomicLong(0L)
+
+    private val firstHrNs = AtomicLong(-1L)
+    private val hrBaseElapsedMs = AtomicLong(0L)
+
+    private val firstRrNs = AtomicLong(-1L)
+    private val rrBaseElapsedMs = AtomicLong(0L)
 
     private val channel = Channel<RawTelemetryRow>(capacity = CHANNEL_CAPACITY)
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -157,7 +168,7 @@ class PolarRawTelemetryRecorder(
     }
 
     fun recordAcc(sensorTimestampNs: Long, axMg: Int, ayMg: Int, azMg: Int) {
-        val elapsed = resolveElapsedMs(sensorTimestampNs)
+        val elapsed = resolveHwElapsedMs(sensorTimestampNs, firstAccNs, accBaseElapsedMs)
         recordRow(
             RawTelemetryRow(
                 sensorTimestampNs = sensorTimestampNs,
@@ -171,7 +182,7 @@ class PolarRawTelemetryRecorder(
     }
 
     fun recordGyro(sensorTimestampNs: Long, gxMdps: Float, gyMdps: Float, gzMdps: Float) {
-        val elapsed = resolveElapsedMs(sensorTimestampNs)
+        val elapsed = resolveHwElapsedMs(sensorTimestampNs, firstGyroNs, gyroBaseElapsedMs)
         recordRow(
             RawTelemetryRow(
                 sensorTimestampNs = sensorTimestampNs,
@@ -185,7 +196,7 @@ class PolarRawTelemetryRecorder(
     }
 
     fun recordHr(sensorTimestampNs: Long, hrBpm: Int) {
-        val elapsed = resolveElapsedMs(sensorTimestampNs)
+        val elapsed = resolveWallClockOrMonotonicElapsedMs(sensorTimestampNs, firstHrNs, hrBaseElapsedMs)
         recordRow(
             RawTelemetryRow(
                 sensorTimestampNs = sensorTimestampNs,
@@ -197,7 +208,7 @@ class PolarRawTelemetryRecorder(
     }
 
     fun recordRr(sensorTimestampNs: Long, rrMs: Double) {
-        val elapsed = resolveElapsedMs(sensorTimestampNs)
+        val elapsed = resolveWallClockOrMonotonicElapsedMs(sensorTimestampNs, firstRrNs, rrBaseElapsedMs)
         recordRow(
             RawTelemetryRow(
                 sensorTimestampNs = sensorTimestampNs,
@@ -208,11 +219,36 @@ class PolarRawTelemetryRecorder(
         )
     }
 
-    private fun resolveElapsedMs(sensorTimestampNs: Long): Long {
-        firstSensorTimestampNs.compareAndSet(-1L, sensorTimestampNs)
-        val firstNs = firstSensorTimestampNs.get()
-        return if (firstNs > 0L && sensorTimestampNs >= firstNs) {
-            (sensorTimestampNs - firstNs) / NS_PER_MS
+    private fun resolveWallClockOrMonotonicElapsedMs(
+        timestampNs: Long,
+        firstNsRef: AtomicLong,
+        baseElapsedRef: AtomicLong
+    ): Long {
+        return if (timestampNs >= EPOCH_THRESHOLD_NS) {
+            val eventMs = timestampNs / NS_PER_MS
+            maxOf(0L, eventMs - sessionStartTimeMs)
+        } else {
+            resolveHwElapsedMs(timestampNs, firstNsRef, baseElapsedRef)
+        }
+    }
+
+    private fun resolveHwElapsedMs(
+        hwTimestampNs: Long,
+        firstNsRef: AtomicLong,
+        baseElapsedRef: AtomicLong
+    ): Long {
+        if (hwTimestampNs <= 0L) {
+            return maxOf(0L, System.currentTimeMillis() - sessionStartTimeMs)
+        }
+        if (firstNsRef.compareAndSet(-1L, hwTimestampNs)) {
+            val initialElapsed = maxOf(0L, System.currentTimeMillis() - sessionStartTimeMs)
+            baseElapsedRef.set(initialElapsed)
+            return initialElapsed
+        }
+        val firstNs = firstNsRef.get()
+        val baseElapsed = baseElapsedRef.get()
+        return if (firstNs > 0L && hwTimestampNs >= firstNs) {
+            baseElapsed + ((hwTimestampNs - firstNs) / NS_PER_MS)
         } else {
             maxOf(0L, System.currentTimeMillis() - sessionStartTimeMs)
         }
@@ -265,6 +301,7 @@ class PolarRawTelemetryRecorder(
         private const val TAG = "PolarRawTelemetryRec"
         const val CHANNEL_CAPACITY = 8192
         const val NS_PER_MS = 1_000_000L
+        const val EPOCH_THRESHOLD_NS = 1_000_000_000_000_000_000L
         const val DEFAULT_TIMEOUT_MS = 5000L
         const val MIN_HEART_RATE_BPM = 30
         const val MAX_HEART_RATE_BPM = 250
@@ -318,6 +355,7 @@ class PolarRawTelemetryRecorder(
             val recorder = PolarRawTelemetryRecorder(context, fileBaseName, startTimeMs, metadata)
             recorder.start()
             activeRecorder = recorder
+            PolarOnlineStreamingBridge.attachActiveRecorder(recorder)
             Log.i(TAG, "Started active PolarRawTelemetryRecorder session for $fileBaseName")
             return recorder
         }
@@ -327,6 +365,7 @@ class PolarRawTelemetryRecorder(
         fun stopActiveSession() {
             val recorder = activeRecorder ?: return
             activeRecorder = null
+            PolarOnlineStreamingBridge.detachActiveRecorder(recorder)
             try {
                 recorder.stop()
                 Log.i(TAG, "Stopped active PolarRawTelemetryRecorder session for ${recorder.fileBaseName}")
