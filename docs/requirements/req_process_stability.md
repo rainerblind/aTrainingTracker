@@ -2528,6 +2528,56 @@ The workflow SHALL mandate that:
 
 **Invariants**: Zero changes to SQLite table schemas, columns, or DB_VERSION; 100% test pass rate across all existing unit, repository, and ViewModel tests; merged ATT-8000 Polar sync pending and ATT-7875 accumulator restoration methods remain 100% operational.
 
+### REQ-ARC-010: Java Core Migration: Streaming File Writers (BaseFileWriter, TCXFileWriter, FitFileWriter) Kotlin Migration & Interoperability Parity [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-ARC-010`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Integration
+- **Implementation**: `app/src/main/java/com/atrainingtracker/trainingtracker/exporter/writer/BaseFileWriter.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/exporter/writer/TCXFileWriter.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/exporter/writer/FitFileWriter.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/ui/RepositoryEngineCleanlinessContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ExceptionHandlingHygieneTest.kt`, `app/src/test/java/com/atrainingtracker/architecture/JavaCoreMigrationStrategyContractTest.kt`
+- **Rationale**: In accordance with ADR-001 (Tier 2 File Exporters & Serializers, ATT-7566), the PO decision in the ATT-7749 retrospective, and AAA Core Rule 8, `BaseFileWriter`, `TCXFileWriter`, and `FitFileWriter` in `com.atrainingtracker.trainingtracker.exporter.writer` (1,636 LOC) SHALL be migrated from Java to idiomatic Kotlin to eliminate platform type (`T!`) nullability hazards, enforce structured resource management (`.use {}`), and prevent file descriptor leaks, while preserving 100% binary FIT Protocol V2.0 and XML schema parity, Java interoperability for legacy writers, and core invariants across active sprint merges:
+1. *1:1 Idiomatic Kotlin Migration & Structured Resource Management (`REQ-ARC-010.1`)*:
+• `BaseFileWriter.java`, `TCXFileWriter.java`, and `FitFileWriter.java` SHALL be migrated to idiomatic Kotlin (`.kt`), and their legacy `.java` source files SHALL be removed.
+• All file encoders, buffered writers, and byte streams SHALL utilize Kotlin `.use {}` scoped blocks for deterministic file closure on normal completion, cancellation, or failure.
+2. *Strict Java Interoperability Parity (`REQ-ARC-010.2`)*:
+• `BaseFileWriter` SHALL be declared as `open class BaseFileWriter` with `protected` open fields and methods accessible to unmigrated Java subclasses (`GPXFileWriter.java`, `GCFileWriter.java`, `CSVFileWriter.java`), preserving existing constructor and method signatures without breaking Java callers or `ExportManager.java`.
+3. *Preservation of Core Invariants & Feature Integrations (`REQ-ARC-010.3`)*:
+• Zero SQLite queries or direct DatabaseManager imports in `FitFileWriter` and `TCXFileWriter` (`REQ-DAT-042.5`), streaming telemetry strictly through `WorkoutRepository.streamSamples` in $O(1)$ memory.
+• Preservation of `ATT-8196` (`REQ-EXP-043`): Pedal dynamics trackpoint serialization (`record.setLeftRightBalance`, `setLeftTorqueEffectiveness`, `setRightTorqueEffectiveness`, `setLeftPedalSmoothness`, `setRightPedalSmoothness`, `setCombinedPedalSmoothness`) and session/lap online accumulator aggregates (`PedalDynamicsAccumulator`).
+• Preservation of `ATT-7999`: Swimming sport mapping and pool length configuration (`SessionMesg.setPoolLength`, `PoolLengthUnit`).
+• Preservation of `ATT-7747` / `REQ-EXP-041`: Application metadata Developer Data ID (`APP_METADATA_DEVELOPER_DATA_ID`) and lossless FIT session developer fields (`workout_name`, `notes`, `equipment_name`, `method`, `goal`, `is_commute`, `is_trainer`, `is_race`).
+• Preservation of `ATT-5096` / `REQ-EXP-042`: Native FIT radar threat alert events (`EventMesg` `RADAR_THREAT_ALERT`) and MyBikeTraffic developer fields on `RecordMesg`.
+• Preservation of `ATT-6879`: RPE / Feel session serialization.
+• Preservation of `REQ-EXP-022`: Garmin TCX v2 sequence ordering, automated XML character escaping, and `TcxSerializer` structured DTO generation.
+4. *Contract Governance & Exception Handling Hygiene (`REQ-ARC-010.4`)*:
+• `RepositoryEngineCleanlinessContractTest.kt` SHALL be updated to resolve migrated `.kt` paths (or dual `.kt`/`.java`) while continuing to assert zero SQLite imports.
+• `ExceptionHandlingHygieneTest.kt` SHALL reference `FitFileWriter.kt` with zero unlogged empty catch blocks and zero `catch (Throwable)`.
+• `JavaCoreMigrationStrategyContractTest.kt` SHALL assert repository Java class count decreases while remaining `<= 149`.
+5. *Test Suite & Verification Bounds (`REQ-ARC-010.5`)*:
+• 100% pass rate across `FitFileWriterTest`, `FitFileWriterRadarTest`, `FitFileWriterHrvTest`, `FitLosslessRoundTripTest`, `TCXFileWriterLapTest`, `TCXFileWriterWorkoutNameTest`, `TCXRoundTripTest`, and legacy writer tests (`GPXFileWriterTest`, `GCFileWriterTest`, `CSVFileWriterTest`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-ARC-010` extending `REQ-ARC-005` (ADR-001 Tier 2) under Epic `ATT-431` (*Clean Code*). Targets `com.atrainingtracker.trainingtracker.exporter.writer.*` and architectural contract tests.
+2. *Historical Origin & Commit Trace*: Initiated in Sprint `2026-46.8` under ticket `ATT-7906` to execute Tier 2 migration authorized by ADR-001 (`ATT-7566`) and PO decision in Sprint `2026-46.6` retro (`ATT-7749`), incorporating features from `fdb444c0` (`ATT-8196`), `1b0be3ee` (`ATT-7999`), `807dcd1f` (`ATT-7747`), `ATT-5096`, and `ATT-6879`.
+3. *Root Reason for Existing Formulation*: Exporters were retained in Java during initial Kotlin adoption due to binary serialization complexity. Migrating `BaseFileWriter`, `TCXFileWriter`, and `FitFileWriter` eliminates platform type NPEs and resource leaks while `open class BaseFileWriter` maintains compatibility with cursor-based writers bounded to 3 SP.
+4. *Preservation of Core Invariants*: Binary FIT V2.0 protocol format, XML schema ordering, $O(1)$ memory streaming (`REQ-DAT-042.5`), and zero regression on existing characterisation tests are 100% preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `BaseFileWriter`, `TCXFileWriter`, and `FitFileWriter`,
+• *When* migrated to Kotlin,
+• *Then* legacy `.java` files are removed, all classes compile under idiomatic Kotlin with `.use {}` resource management, and Java subclasses continue to compile seamlessly.
+• *Given* sample streaming during FIT and TCX export,
+• *When* executed via `WorkoutRepository.streamSamples`,
+• *Then* zero SQLite imports or database managers are utilized (`REQ-DAT-042.5`) and heap memory overhead remains $O(1)$.
+• *Given* workouts with pedal dynamics, swimming pool length, radar alerts, or session metadata,
+• *When* exported to `.fit` and re-imported via `FitWorkoutParser`,
+• *Then* all developer fields, aggregates, and protocol messages are preserved with 100% lossless fidelity.
+• *Given* `RepositoryEngineCleanlinessContractTest`, `ExceptionHandlingHygieneTest`, and `JavaCoreMigrationStrategyContractTest`,
+• *When* executed,
+• *Then* all contract tests pass with zero violations.
+
+**Invariants**: 100% binary FIT Protocol V2.0 and Garmin TCX v2 schema parity; $O(1)$ memory consumption; zero SQLite imports in `FitFileWriter` / `TCXFileWriter`; Java subclasses and callers remain fully supported.
+
 ### REQ-PRO-027: Agile Agentic ASPICE (AAA) Governance, Constructive Resistance, Hypothesis Verification, Stage 5 Resource Gate & Ceremony 2 Completeness Sweep [Verified]
 - **Tests**: `TST-PRO-020`
 - **Priority**: High

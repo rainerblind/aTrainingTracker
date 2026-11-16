@@ -256,6 +256,7 @@ class FitFileWriterTest {
 
     @Test
     fun testFitFileWriter_generatesValidBinaryFitFile_andDecodesCleanly() {
+        // TST-ARC-010: Binary FIT Protocol Serialization & Golden Master Parity (REQ-ARC-010.1, REQ-ARC-010.3)
         val summaryCursor = createMockSummaryCursor()
         every {
             mockSqlDb.query(WorkoutSummaries.TABLE, any(), any(), any(), any(), any(), any())

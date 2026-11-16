@@ -1649,6 +1649,28 @@
   5. *Merged Features Regression Verification (`TST-ARC-009.5`)*:
   • Verify that `dismissPolarSyncPending()`, `setPolarSyncPending()`, `clearPolarSyncPending()`, and crash-recovery accumulator preservation methods compile and function without regression.
 
+### TST-ARC-010: **Java Core Migration: Streaming File Writers (BaseFileWriter, TCXFileWriter, FitFileWriter) Kotlin Migration Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Integration
+- **Requirement(s)**: `REQ-ARC-010`
+- **Component**: **Streaming File Writers Kotlin Migration Verification Suite**
+- **Jira**: `ATT-7906`
+- **Test Description**:
+  1. *Binary FIT Protocol Serialization & Golden Master Parity (`TST-ARC-010.1`)*:
+  • Execute `FitFileWriterTest`, `FitFileWriterRadarTest`, and `FitFileWriterHrvTest` verifying binary FIT Protocol V2.0 message encoding, `FileEncoder.use {}` scoping, developer data ID headers, and $O(1)$ memory sample streaming without SQLite imports.
+  2. *FIT Lossless Round-Trip & Developer Field Fidelity (`TST-ARC-010.2`)*:
+  • Execute `FitLosslessRoundTripTest` verifying lossless round-trip through `FitWorkoutParser` for pedal dynamics (`ATT-8196`), swimming pool length (`ATT-7999`), session metadata developer fields (`ATT-7747`), radar threat alerts (`ATT-5096`), and RPE/Feel (`ATT-6879`).
+  3. *TCX XML Schema & Structured DTO Serialization (`TST-ARC-010.3`)*:
+  • Execute `TCXFileWriterLapTest`, `TCXFileWriterWorkoutNameTest`, and `TCXRoundTripTest` verifying Garmin TCX v2 sequence ordering, XML character escaping, and `TcxSerializer` structured DTO generation.
+  4. *Java Subclass Interoperability Verification (`TST-ARC-010.4`)*:
+  • Execute `GPXFileWriterTest`, `GCFileWriterTest`, and `CSVFileWriterTest` verifying that legacy Java writers inheriting from `open class BaseFileWriter` compile and function without behavioral regressions.
+  5. *Architectural Contract & Exception Handling Governance (`TST-ARC-010.5`)*:
+  • Execute `RepositoryEngineCleanlinessContractTest` verifying zero SQLite imports in `BaseFileWriter`, `TCXFileWriter`, and `FitFileWriter`.
+  • Execute `ExceptionHandlingHygieneTest` verifying `FitFileWriter.kt` contains zero unlogged empty catch blocks and zero `catch (Throwable)`.
+  • Execute `JavaCoreMigrationStrategyContractTest` verifying Java class count decreases while remaining `<= 149`.
+
 ### TST-PRO-020: **Agile Agentic ASPICE (AAA) Governance, Constructive Resistance, Hypothesis Verification, Stage 5 Resource Gate & Ceremony 2 Completeness Sweep Verification** [Verified]
 - **Priority**: High
 - **Type**: Non-Functional

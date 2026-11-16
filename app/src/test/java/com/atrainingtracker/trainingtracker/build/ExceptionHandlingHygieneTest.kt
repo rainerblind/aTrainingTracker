@@ -42,7 +42,7 @@ class ExceptionHandlingHygieneTest {
     private lateinit var mockContext: Context
 
     private val auditedRelativePaths = listOf(
-        "app/src/main/java/com/atrainingtracker/trainingtracker/exporter/writer/FitFileWriter.java",
+        "app/src/main/java/com/atrainingtracker/trainingtracker/exporter/writer/FitFileWriter.kt",
         "app/src/main/java/com/atrainingtracker/trainingtracker/exporter/uploader/StravaUploader.kt",
         "app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodsRepository.kt",
         "app/src/main/java/com/atrainingtracker/trainingtracker/database/WorkoutClusterDatabaseManager.kt",
