@@ -62,6 +62,11 @@ class PermissionOnboardingLaunchContractTest {
         dataStore = TuningPreferencesDataStore.getInstance(application)
     }
 
+    @org.junit.After
+    fun tearDown() {
+        TuningPreferencesDataStore.setInstanceForTesting(null)
+    }
+
     @Test
     fun cleanInstall_permissionsUngranted_showsOnboardingSheet() = runBlocking {
         dataStore.setHasCompletedPermissionOnboarding(false)

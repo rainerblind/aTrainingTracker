@@ -24,6 +24,7 @@ import android.hardware.SensorManager
 import android.util.Log
 import com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDevice
 import com.atrainingtracker.trainingtracker.settings.RadarLightControlMode
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
@@ -54,10 +55,12 @@ class RadarLightControllerTest {
         RadarStateRepository.reset()
         RadarTrafficSimulator.stop()
         SmartRadarLightEngine.reset()
+        TuningPreferencesDataStore.setInstanceForTesting(null)
     }
 
     @After
     fun tearDown() {
+        TuningPreferencesDataStore.setInstanceForTesting(null)
         SmartBrakeLightDetector.isEnabled = true
         RadarLightController.reset()
         RadarStateRepository.reset()
