@@ -17,15 +17,7 @@ Living requirements use multi-line Markdown headings (`### REQ-XXX: Title [Statu
 | [Jubilee Milestones & App Reviews](requirements/req_aftermath_reviews.md) | Milestone workout auto-naming, jubilee achievements, Google Play in-app reviews, athlete feedback, and supporter tier promotions. | `REV` | 14 | 14 | 0 | 0 |
 | [Store Presence](requirements/req_store_presence.md) | Store presence, Google Play listings, screenshots, store metadata contract testing, and release governance. | `STP` | 10 | 10 | 0 | 0 |
 
-<<<<<<< HEAD
 **Total Living Requirements**: 1193 across 9 domain shards.
-=======
-<<<<<<< HEAD
-**Total Living Requirements**: 1193 across 9 domain shards.
-=======
-**Total Living Requirements**: 1193 across 9 domain shards.
->>>>>>> f0dc36ce (ATT-8144: Persist versioned test and coverage evidence per sprint and release in git instead of a build symlink)
->>>>>>> f64f3ed0 (feat(cockpit): per-tile sparkline color persistence and minimalist color editor UI (ATT-7760))
 
 ---
 
