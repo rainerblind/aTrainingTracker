@@ -4319,7 +4319,29 @@ def verify_po_approval_changelog(issue_data_or_key, base_url=None, role="qa", co
     return False, f"Ticket {issue_key} lacks Product Owner approval changelog entry (not in Vom PO Freigegeben ID 447 by PO)"
 
 
-def format_qa_audit_markdown(sprint_info, audit_results, overall_compliant, auditor_role="qa", total_tickets=None):
+def extract_text_from_description(desc):
+    """Safely extracts plain text from string, Atlassian Document Format (ADF) dict, or None (REQ-PRO-091.6)."""
+    if not desc:
+        return ""
+    if isinstance(desc, str):
+        return desc
+    if isinstance(desc, dict):
+        texts = []
+        def walk(node):
+            if isinstance(node, dict):
+                if node.get("type") == "text" and "text" in node:
+                    texts.append(str(node["text"]))
+                for v in node.values():
+                    walk(v)
+            elif isinstance(node, list):
+                for item in node:
+                    walk(item)
+        walk(desc)
+        return " ".join(texts)
+    return str(desc)
+
+
+def format_qa_audit_markdown(sprint_info, audit_results, overall_compliant, auditor_role="qa", total_tickets=None, random_seed=None):
     import datetime
     date_str = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d")
     s_id = sprint_info.get("id")
@@ -4330,12 +4352,17 @@ def format_qa_audit_markdown(sprint_info, audit_results, overall_compliant, audi
     if total_tickets is None:
         total_tickets = total_sampled
 
+    sampled_keys = [r["key"] for r in audit_results]
     lines = [
         f"# Sprint QA Process-Compliance Audit: Sprint {s_name} (ID: {s_id})",
         "",
         f"**Date**: {date_str}  ",
         f"**Auditor Role**: `{auditor_role}` (Quality Assurance Auditor, independent of Coordinator/Implementer)  ",
-        f"**Sampled Tickets**: {', '.join(r['key'] for r in audit_results)}  ",
+        f"**Sampled Tickets**: {', '.join(sampled_keys)}  ",
+    ]
+    if random_seed is not None:
+        lines.append(f"**Random Seed**: `{random_seed}`  ")
+    lines.extend([
         f"**Overall Process Verdict**: **{verdict_str}**  ",
         "",
         "---",
@@ -4348,6 +4375,11 @@ def format_qa_audit_markdown(sprint_info, audit_results, overall_compliant, audi
         "| :--- | :--- |",
         f"| **Sprint** | {s_name} (ID: {s_id}) |",
         f"| **Sample Size** | {total_sampled} / {total_tickets} tickets (>= 10% dynamic threshold enforced) |",
+    ])
+    if random_seed is not None:
+        lines.append(f"| **Random Seed** | `{random_seed}` |")
+    lines.append(f"| **Sampled Keys** | {', '.join(sampled_keys)} |")
+    lines.extend([
         f"| **Compliant Tickets** | {compliant_count} / {total_sampled} |",
         f"| **Overall Process Verdict** | **{verdict_str}** |",
         "",
@@ -4357,7 +4389,7 @@ def format_qa_audit_markdown(sprint_info, audit_results, overall_compliant, audi
         "",
         "| Ticket | Summary | Deliverables | Gate Sequence | 4-Augen Role Sep | Living Docs Parity | Commit Hygiene | PO Approval | Compliance Verdict |",
         "| :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |",
-    ]
+    ])
 
     for r in audit_results:
         k = r["key"]
@@ -4415,7 +4447,7 @@ def format_qa_audit_markdown(sprint_info, audit_results, overall_compliant, audi
     return "\n".join(lines)
 
 
-def qa_audit(sprint_arg=None, sample_size=None, out_path=None, role="qa", as_role=None, repo_root=None):
+def qa_audit(sprint_arg=None, sample_size=None, out_path=None, role="qa", as_role=None, repo_root=None, seed=None):
     """
     REQ-PRO-061.1 / TST-PRO-061.1 / REQ-PRO-091 / TST-PRO-091:
     Samples >= max(2, ceil(N * 0.10)) sprint tickets and conducts an independent ASPICE SUP.1 QA process-compliance audit.
@@ -4452,7 +4484,7 @@ def qa_audit(sprint_arg=None, sample_size=None, out_path=None, role="qa", as_rol
     issues = fetch_all_sprint_issues(
         base,
         s_id,
-        f"summary,status,issuetype,priority,subtasks,comment,{STORY_POINTS_FIELD}",
+        f"summary,description,status,issuetype,priority,subtasks,comment,{STORY_POINTS_FIELD}",
         role=role
     )
 
@@ -4485,6 +4517,7 @@ def qa_audit(sprint_arg=None, sample_size=None, out_path=None, role="qa", as_rol
 
     # Sampling >= max(2, ceil(len(parent_issues) * 0.10)) tickets
     import math
+    import random
     min_sample = max(2, math.ceil(len(parent_issues) * 0.10))
     sample_size = min_sample if sample_size is None else max(int(sample_size), min_sample)
     completed_parents = [
@@ -4493,7 +4526,12 @@ def qa_audit(sprint_arg=None, sample_size=None, out_path=None, role="qa", as_rol
         in ("final review (human)", "final review (agent)", "final review", "erledigt", "closed", "done")
     ]
     pool = completed_parents if len(completed_parents) >= sample_size else parent_issues
-    sampled = pool[:sample_size] if len(pool) >= sample_size else pool
+    if seed is None:
+        seed = random.randint(10000, 99999)
+    else:
+        seed = int(seed)
+    rng = random.Random(seed)
+    sampled = rng.sample(pool, sample_size) if len(pool) >= sample_size else list(pool)
 
     audit_results = []
     overall_compliant = True
@@ -4514,6 +4552,21 @@ def qa_audit(sprint_arg=None, sample_size=None, out_path=None, role="qa", as_rol
                 tst_master_text = f.read()
         except Exception:
             pass
+
+    # REQ-PRO-091.6: Load all living requirement domain shards with fallback to requirements.md
+    req_shards_dir = os.path.join(repo_root, "docs", "requirements")
+    shard_req_text = ""
+    if os.path.isdir(req_shards_dir):
+        for fname in sorted(os.listdir(req_shards_dir)):
+            if fname.endswith(".md"):
+                try:
+                    with open(os.path.join(req_shards_dir, fname), "r", encoding="utf-8") as f:
+                        shard_req_text += f.read() + "\n"
+                except Exception:
+                    pass
+
+    combined_req_text = (shard_req_text + "\n" + req_master_text) if shard_req_text else req_master_text
+    master_req_ids = set(re.findall(r"\bREQ-[A-Z0-9_-]+\b", combined_req_text))
 
     for item in sampled:
         key = item.get("key")
@@ -4578,32 +4631,44 @@ def qa_audit(sprint_arg=None, sample_size=None, out_path=None, role="qa", as_rol
             )
             gate_pass = all_st_erledigt and all_st_pass
 
-        # 3. 4-Augen-Prinzip & Role Separation
+        # 3. 4-Augen-Prinzip & Role Separation (REQ-PRO-091.6)
         role_sep_pass = True
         agent2_verdicts_count = 0
         agent1_violations_count = 0
+
+        agent1_acc_id = ROLE_ACCOUNT_IDS.get("agent1")
+        agent2_acc_id = ROLE_ACCOUNT_IDS.get("agent2")
+        qa_acc_id = ROLE_ACCOUNT_IDS.get("qa")
 
         for st in subtasks:
             st_comments = st.get("comments", []) or st.get("fields", {}).get("comment", {}).get("comments", [])
             for c in st_comments:
                 body = c.get("body", "")
                 author = c.get("author", {})
-                author_name = author.get("displayName") or author.get("name") or author.get("accountId") or ""
+                author_acc_id = author.get("accountId") or ""
+                author_name = author.get("displayName") or author.get("name") or author_acc_id
 
                 is_verdict = "GATE_VERDICT:" in body.upper() or "GATE-VERDICT" in body.upper() or "VERDICT: PASS" in body.upper() or "VERDICT: REVISION" in body.upper()
                 if is_verdict:
-                    if "[ROLE: agent1]" in body or "agent1" in author_name.lower():
+                    if author_acc_id and author_acc_id == agent1_acc_id:
                         agent1_violations_count += 1
-                    if "[ROLE: agent2]" in body or "agent2" in body.lower() or "agent2" in author_name.lower() or "reviewer" in author_name.lower():
+                    elif author_acc_id and (author_acc_id == agent2_acc_id or author_acc_id == qa_acc_id):
+                        agent2_verdicts_count += 1
+                    elif "[ROLE: agent1]" in body:
+                        agent1_violations_count += 1
+                    elif "[ROLE: agent2]" in body or "[ROLE: qa]" in body:
+                        agent2_verdicts_count += 1
+                    elif "agent1" in author_name.lower():
+                        agent1_violations_count += 1
+                    elif "agent2" in author_name.lower() or "reviewer" in author_name.lower() or "qa" in author_name.lower():
                         agent2_verdicts_count += 1
 
         if agent1_violations_count > 0 or agent2_verdicts_count == 0:
             role_sep_pass = False
 
-        # 4. Living Documentation Parity
-        master_req_ids = set(re.findall(r"\bREQ-[A-Z0-9_-]+\b", req_master_text))
-        desc = item.get("fields", {}).get("description", "") or ""
-        ticket_text_combined = f"{summary} {desc}"
+        # 4. Living Documentation Parity (REQ-PRO-091.6)
+        desc_text = extract_text_from_description(item.get("fields", {}).get("description"))
+        ticket_text_combined = f"{summary} {desc_text}"
         referenced_reqs = set(re.findall(r"\bREQ-[A-Z0-9_-]+\b", ticket_text_combined))
 
         for d_path in [
@@ -4618,13 +4683,13 @@ def qa_audit(sprint_arg=None, sample_size=None, out_path=None, role="qa", as_rol
                 except Exception:
                     pass
 
-        for line in req_master_text.splitlines():
+        for line in combined_req_text.splitlines():
             if key in line:
                 referenced_reqs.update(re.findall(r"\bREQ-[A-Z0-9_-]+\b", line))
 
         if referenced_reqs and master_req_ids:
             living_doc_pass = referenced_reqs.issubset(master_req_ids)
-        elif key in req_master_text:
+        elif key in combined_req_text or key in req_master_text:
             living_doc_pass = True
         else:
             living_doc_pass = False
@@ -4677,6 +4742,7 @@ def qa_audit(sprint_arg=None, sample_size=None, out_path=None, role="qa", as_rol
         overall_compliant=overall_compliant,
         auditor_role=role,
         total_tickets=len(parent_issues),
+        random_seed=seed,
     )
 
     if not out_path:
@@ -5295,6 +5361,7 @@ if __name__ == "__main__":
         sprint_arg = None
         sample_arg = None
         out_arg = None
+        seed_arg = None
         idx = 1
         while idx < len(remaining_argv):
             a = remaining_argv[idx]
@@ -5308,6 +5375,11 @@ if __name__ == "__main__":
             elif a == "--sample" and idx + 1 < len(remaining_argv):
                 sample_arg = int(remaining_argv[idx + 1])
                 idx += 1
+            elif a.startswith("--seed="):
+                seed_arg = int(a.split("=", 1)[1])
+            elif a == "--seed" and idx + 1 < len(remaining_argv):
+                seed_arg = int(remaining_argv[idx + 1])
+                idx += 1
             elif a.startswith("--out="):
                 out_arg = a.split("=", 1)[1]
             elif a == "--out" and idx + 1 < len(remaining_argv):
@@ -5317,7 +5389,7 @@ if __name__ == "__main__":
                 sprint_arg = a
             idx += 1
         try:
-            qa_audit(sprint_arg=sprint_arg, sample_size=sample_arg, out_path=out_arg, role=active_role)
+            qa_audit(sprint_arg=sprint_arg, sample_size=sample_arg, out_path=out_arg, role=active_role, seed=seed_arg)
         except ValueError as err:
             print(str(err), file=sys.stderr)
             sys.exit(1)

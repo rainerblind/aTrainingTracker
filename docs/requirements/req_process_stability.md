@@ -4976,11 +4976,12 @@ The workflow SHALL mandate that:
   1. *Independent QA Auditor Role Enforcement (`REQ-PRO-091.1`)*:
      • The QA process audit tool (`qa-audit`) and audit records in `docs/engineering/qa_audits/<sprint>.md` SHALL enforce an independent auditor role (`qa` / `agent2` / `quality-assurance`) that is strictly distinct from the sprint coordinator (`coordinator`) and ticket implementers (`agent1`).
      • Invoking `qa-audit` with `role="coordinator"` or `role="agent1"` SHALL be forbidden and rejected with exit code 1.
-  2. *Representative Statistical Sampling Ratio (`REQ-PRO-091.2`)*:
+  2. *Representative Statistical Sampling Ratio & Seeded Randomization (`REQ-PRO-091.2`)*:
      • The QA audit tool SHALL dynamically compute the minimum required sample size as at least 10% of completed parent sprint tickets:
        $$\text{sample\_size} \ge \max(2, \lceil 0.10 \times N \rceil)$$
-       where $N$ is the count of completed parent sprint tickets (or a documented risk-based sampling rationale).
-     • The audit report in `docs/engineering/qa_audits/<sprint>.md` SHALL explicitly document the total sprint population, sample size, and statistical/risk rationale in Section 1.
+       where $N$ is the count of completed parent sprint tickets.
+     • Sample selection SHALL use seeded pseudo-random sampling (`random.Random(seed).sample`), accepting an optional seed parameter (`--seed`) or generating a random integer seed.
+     • The audit report in `docs/engineering/qa_audits/<sprint>.md` SHALL explicitly document the total sprint population, sample size, random seed, and sampled ticket keys in Section 1.
   3. *Closed-Loop Jira Corrective-Action Tracking (`REQ-PRO-091.3`)*:
      • For any audit evaluating a `NON-COMPLIANT` overall verdict or finding, Section 4 of `docs/engineering/qa_audits/<sprint>.md` SHALL link every non-compliant finding to a dedicated Jira corrective-action ticket (formatted as `[ATT-XXXX](https://.../browse/ATT-XXXX)` or `ATT-XXXX`).
      • Generic placeholder text without authentic Jira ticket links is prohibited.
@@ -4991,10 +4992,14 @@ The workflow SHALL mandate that:
        (a) Auditor role is independent (not `coordinator` or `agent1`),
        (b) Sample size is $\ge \max(2, \lceil 0.10 \times N \rceil)$ or documented rationale, and
        (c) Every `NON-COMPLIANT` audit record contains valid Jira ticket links for each non-compliant finding.
+  6. *Objective Process-Compliance Verification Criteria (`REQ-PRO-091.6`)*:
+     • Living Documentation Parity: `qa-audit` SHALL load and evaluate referenced requirement IDs against all living requirement domain shards in `docs/requirements/req_*.md` (~1,194 active requirements) and `docs/tests/tst_*.md`, rather than summary-only master tables.
+     • Issue Description Ingestion: `fetch_all_sprint_issues` SHALL include the `description` field in Jira Cloud queries to evaluate requirement references in ticket bodies.
+     • AccountId-Based 4-Augen Role Separation: `qa-audit` SHALL verify author and reviewer separation by evaluating Atlassian `accountId`s against `ROLE_ACCOUNT_IDS` rather than matching display-name strings.
 - **Requirement Archaeology & Chesterton's Fence Audit**:
-  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-091` (`REQ-PRO-091.1`–`REQ-PRO-091.5`), refining and extending `REQ-PRO-061` (*Sprint-Level QA Process-Compliance Audit*). Targets `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `tools/hoechstmass/`, `.agents/skills/sprint-planner/SKILL.md`, and `docs/engineering/qa_audits/`.
-  2. *Historical Origin & Commit Trace*: Introduced in Sprint 2026-46.3 via ATT-6154 (`REQ-PRO-061`). Finding F1 in ASPICE independent evaluation (2026-11-12) identified that `coordinator` authored audits, under-sampled, and left non-compliances open-loop.
-  3. *Root Reason for Existing Formulation*: Early tooling prioritized basic automated markdown generation over strict organizational independence and closed-loop corrective action tracking.
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-091` (`REQ-PRO-091.1`–`REQ-PRO-091.6`), refining and extending `REQ-PRO-061` (*Sprint-Level QA Process-Compliance Audit*). Targets `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `tools/hoechstmass/`, `.agents/skills/sprint-planner/SKILL.md`, and `docs/engineering/qa_audits/`.
+  2. *Historical Origin & Commit Trace*: Introduced in Sprint 2026-46.3 via ATT-6154 (`REQ-PRO-061`); extended in Sprint 2026-46.6 via ATT-7558; bugfixed in Sprint 2026-11-16_02_Spät via ATT-8152 (Finding M5).
+  3. *Root Reason for Existing Formulation*: Early tooling prioritized basic automated markdown generation and checked only `docs/requirements.md` before domain shards were introduced; description was omitted from query; role separation relied on display-name heuristics.
   4. *Preservation of Core Invariants*: Existing CLI commands (`qa-audit`, `--check-qa-audits`) remain backward-compatible; pure Python standard library; zero production Android runtime code changes.
 - **Acceptance Criteria (Given-When-Then)**:
   • *Given* an execution of `qa-audit`,
@@ -5002,13 +5007,19 @@ The workflow SHALL mandate that:
   • *Then* it executes under an independent role (`qa` / `agent2`), and aborts if invoked under `coordinator` or `agent1`.
   • *Given* a sprint with $N$ completed parent tickets,
   • *When* `qa-audit` draws the sample,
-  • *Then* the sample size is $\ge \max(2, \lceil 0.10 \times N \rceil)$ with documented sampling rationale.
+  • *Then* the sample size is $\ge \max(2, \lceil 0.10 \times N \rceil)$ with seeded random selection, documenting seed and sampled keys.
   • *Given* an audit record with a `NON-COMPLIANT` finding,
   • *When* validated by `verify_requirement_governance.py --check-qa-audits`,
   • *Then* it passes only if every non-compliant finding links to an authentic Jira corrective-action ticket.
   • *Given* Ceremony 1 in `sprint-planner/SKILL.md`,
   • *When* executed at Sprint-Start,
   • *Then* it includes verification of open corrective action tickets from the prior sprint's QA audit.
+  • *Given* a compliant ticket whose requirement resides in a domain shard,
+  • *When* `qa-audit` evaluates Living Documentation Parity,
+  • *Then* the requirement ID is resolved against `docs/requirements/req_*.md` shards and passes.
+  • *Given* subtasks reviewed by `agent2`,
+  • *When* `qa-audit` evaluates 4-Augen Role Separation,
+  • *Then* `accountId`s are matched against `ROLE_ACCOUNT_IDS` and passes.
 - **Invariants**: Zero Android runtime code changes; pure Python 3 standard library; Rule 3 human-only gate preserved.
 
 
