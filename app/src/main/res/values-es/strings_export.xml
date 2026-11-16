@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="file_format_raw_sensor">Datos sin procesar del sensor</string>
+    <string name="report_raw_sensor_data">Notificar datos del sensor</string>
+    <string name="diagnostic_share_sheet_title">Paquete de diagnóstico del sensor</string>
+    <string name="diagnostic_share_sheet_description">Empaquetar registros sin procesar del sensor y métricas para solucionar problemas.</string>
+    <string name="diagnostic_include_gps_location">Incluir ubicación GPS</string>
+    <string name="diagnostic_include_gps_description">Incluir coordenadas geográficas en el paquete de diagnóstico.</string>
+    <string name="diagnostic_symptom_notes">Notas de síntomas</string>
+    <string name="diagnostic_symptom_notes_placeholder">Describa desconexiones, picos o problemas observados…</string>
+    <string name="diagnostic_share_button">Compartir paquete de diagnóstico</string>
+    <string name="diagnostic_bundle_packaging">Empaquetando diagnóstico…</string>
+    <string name="diagnostic_no_sidecar_warning">No hay registro de sensor sin procesar disponible para este entrenamiento.</string>
+</resources>

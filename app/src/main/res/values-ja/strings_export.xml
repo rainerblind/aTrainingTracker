@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="file_format_raw_sensor">生センサーデータ</string>
+    <string name="report_raw_sensor_data">生センサーデータを報告</string>
+    <string name="diagnostic_share_sheet_title">センサー診断バンドル</string>
+    <string name="diagnostic_share_sheet_description">トラブルシューティング用に生センサー記録とセッション指標をまとめます。</string>
+    <string name="diagnostic_include_gps_location">GPS位置情報を含める</string>
+    <string name="diagnostic_include_gps_description">診断バンドルに地理座標を含めます。</string>
+    <string name="diagnostic_symptom_notes">症状メモ</string>
+    <string name="diagnostic_symptom_notes_placeholder">センサーの切断、スパイク、または発生した問題を記入してください…</string>
+    <string name="diagnostic_share_button">診断バンドルを共有</string>
+    <string name="diagnostic_bundle_packaging">診断バンドルを作成中…</string>
+    <string name="diagnostic_no_sidecar_warning">このワークアウトには生センサー記録がありません。</string>
+</resources>

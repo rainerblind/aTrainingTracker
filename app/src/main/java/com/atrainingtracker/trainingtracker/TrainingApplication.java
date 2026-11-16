@@ -187,6 +187,7 @@ public class TrainingApplication extends Application {
     public static final String SP_EXPORT_CSV = "export_csv";
     public static final String SP_EXPORT_GC_JSON = "export_gcjson";
     public static final String SP_EXPORT_FIT = "export_fit";
+    public static final String SP_EXPORT_RAW_SENSOR = "export_raw_sensor";
     public static final String SP_CHECK_ANT_INSTALLATION = "checkANTInstallation";
     public static final String MIN_WALK_SPEED = "minWalkSpeed";
     public static final String MAX_WALK_SPEED = "maxWalkSpeed";
@@ -1493,6 +1494,14 @@ public class TrainingApplication extends Application {
         cSharedPreferences.edit().putBoolean(SP_EXPORT_FIT, value).apply();
     }
 
+    public static boolean exportToRawSensor() {
+        return cSharedPreferences.getBoolean(SP_EXPORT_RAW_SENSOR, false);
+    }
+
+    public static void setExportToRawSensor(boolean value) {
+        cSharedPreferences.edit().putBoolean(SP_EXPORT_RAW_SENSOR, value).apply();
+    }
+
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     public static boolean exportToFile(@NonNull FileFormat fileFormat) {
@@ -1502,6 +1511,7 @@ public class TrainingApplication extends Application {
             case TCX -> exportToTCX();
             case GPX -> exportToGPX();
             case FIT -> exportToFIT();
+            case RAW_SENSOR -> exportToRawSensor();
             case STRAVA -> uploadToStrava();
             case HEALTH_CONNECT -> false;
         };

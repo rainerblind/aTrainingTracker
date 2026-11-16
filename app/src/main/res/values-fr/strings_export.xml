@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="file_format_raw_sensor">Données brutes du capteur</string>
+    <string name="report_raw_sensor_data">Signaler les données du capteur</string>
+    <string name="diagnostic_share_sheet_title">Pack de diagnostic du capteur</string>
+    <string name="diagnostic_share_sheet_description">Rassembler les enregistrements bruts du capteur et les métriques pour le dépannage.</string>
+    <string name="diagnostic_include_gps_location">Inclure la position GPS</string>
+    <string name="diagnostic_include_gps_description">Inclure les coordonnées géographiques dans le pack de diagnostic.</string>
+    <string name="diagnostic_symptom_notes">Notes sur les symptômes</string>
+    <string name="diagnostic_symptom_notes_placeholder">Décrivez les pertes de signal, pics ou anomalies observés…</string>
+    <string name="diagnostic_share_button">Partager le pack de diagnostic</string>
+    <string name="diagnostic_bundle_packaging">Création du pack de diagnostic…</string>
+    <string name="diagnostic_no_sidecar_warning">Aucun enregistrement brut disponible pour cet entraînement.</string>
+</resources>

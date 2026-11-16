@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="file_format_raw_sensor">Dados brutos do sensor</string>
+    <string name="report_raw_sensor_data">Relatar dados do sensor</string>
+    <string name="diagnostic_share_sheet_title">Pacote de diagnóstico do sensor</string>
+    <string name="diagnostic_share_sheet_description">Reunir gravações brutas do sensor e métricas da sessão para resolução de problemas.</string>
+    <string name="diagnostic_include_gps_location">Incluir localização GPS</string>
+    <string name="diagnostic_include_gps_description">Incluir coordenadas geográficas no pacote de diagnóstico.</string>
+    <string name="diagnostic_symptom_notes">Notas sobre sintomas</string>
+    <string name="diagnostic_symptom_notes_placeholder">Descreva quedas de sinal, picos ou problemas observados no sensor…</string>
+    <string name="diagnostic_share_button">Compartilhar pacote de diagnóstico</string>
+    <string name="diagnostic_bundle_packaging">Criando pacote de diagnóstico…</string>
+    <string name="diagnostic_no_sidecar_warning">Nenhuma gravação bruta de sensor disponível para este treino.</string>
+</resources>

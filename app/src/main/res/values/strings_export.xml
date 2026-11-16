@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="file_format_raw_sensor">Raw Sensor Data</string>
+    <string name="report_raw_sensor_data">Report Raw Sensor Data</string>
+    <string name="diagnostic_share_sheet_title">Sensor Diagnostic Bundle</string>
+    <string name="diagnostic_share_sheet_description">Package raw sensor recordings and session metrics for troubleshooting.</string>
+    <string name="diagnostic_include_gps_location">Include GPS Location</string>
+    <string name="diagnostic_include_gps_description">Include geographical coordinates in diagnostic bundle.</string>
+    <string name="diagnostic_symptom_notes">Symptom Notes</string>
+    <string name="diagnostic_symptom_notes_placeholder">Describe any sensor dropouts, spikes, or issues observed…</string>
+    <string name="diagnostic_share_button">Share Diagnostic Bundle</string>
+    <string name="diagnostic_bundle_packaging">Packaging diagnostic bundle…</string>
+    <string name="diagnostic_no_sidecar_warning">No raw sensor sidecar recording available for this workout.</string>
+</resources>

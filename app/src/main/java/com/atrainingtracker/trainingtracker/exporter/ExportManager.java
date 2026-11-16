@@ -48,6 +48,7 @@ import com.atrainingtracker.util.CursorUtils;
 import com.atrainingtracker.trainingtracker.exporter.writer.FitFileWriter;
 import com.atrainingtracker.trainingtracker.exporter.writer.GCFileWriter;
 import com.atrainingtracker.trainingtracker.exporter.writer.GPXFileWriter;
+import com.atrainingtracker.trainingtracker.exporter.writer.RawSensorFileExporter;
 import com.atrainingtracker.trainingtracker.exporter.writer.TCXFileWriter;
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData;
 
@@ -85,6 +86,7 @@ public class ExportManager {
                     case TCX -> new TCXFileWriter(context);
                     case GPX -> new GPXFileWriter(context);
                     case FIT -> new FitFileWriter(context);
+                    case RAW_SENSOR -> new RawSensorFileExporter(context);
                     case STRAVA -> new TCXFileWriter(context);
                     default -> new NotYetImplementedExporter(context);
                 };

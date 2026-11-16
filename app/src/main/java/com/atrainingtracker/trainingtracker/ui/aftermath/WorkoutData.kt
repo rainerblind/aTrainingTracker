@@ -185,7 +185,8 @@ data class WorkoutData(
             clusterName = clusterName,
             startLocationName = startLocationName,
             endLocationName = endLocationName,
-            recordingErrors = recordingErrors
+            recordingErrors = recordingErrors,
+            fileBaseName = fileBaseName
         )
 
 

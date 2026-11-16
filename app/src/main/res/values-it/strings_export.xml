@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="file_format_raw_sensor">Dati grezzi del sensore</string>
+    <string name="report_raw_sensor_data">Segnala dati del sensore</string>
+    <string name="diagnostic_share_sheet_title">Pacchetto diagnostico sensore</string>
+    <string name="diagnostic_share_sheet_description">Raccogli registrazioni grezze del sensore e metriche per la risoluzione dei problemi.</string>
+    <string name="diagnostic_include_gps_location">Includi posizione GPS</string>
+    <string name="diagnostic_include_gps_description">Includi coordinate geografiche nel pacchetto diagnostico.</string>
+    <string name="diagnostic_symptom_notes">Note sui sintomi</string>
+    <string name="diagnostic_symptom_notes_placeholder">Descrivi disconnessioni, picchi o problemi riscontrati…</string>
+    <string name="diagnostic_share_button">Condividi pacchetto diagnostico</string>
+    <string name="diagnostic_bundle_packaging">Creazione pacchetto diagnostico…</string>
+    <string name="diagnostic_no_sidecar_warning">Nessuna registrazione grezza disponibile per questo allenamento.</string>
+</resources>
