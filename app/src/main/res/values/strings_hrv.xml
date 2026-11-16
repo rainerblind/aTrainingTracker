@@ -317,4 +317,7 @@
     <string name="tuning_show_morning_check_on_start_screen_desc">Displays a button on the start tracking screen before workout to launch the morning HRV check if a heart rate sensor is paired.</string>
     <string name="tuning_morning_check_cutoff_hour_title">Morning Check Cutoff Hour</string>
     <string name="tuning_morning_check_cutoff_hour_desc">Displayed on start screen until %d:00.</string>
+    <string name="tuning_cat_morning_check">Morning Checks &amp; Wellness</string>
+    <string name="tuning_morning_check_start_short">Start button (until %02d:00)</string>
+    <string name="tuning_morning_check_none_enabled">Disabled</string>
 </resources>

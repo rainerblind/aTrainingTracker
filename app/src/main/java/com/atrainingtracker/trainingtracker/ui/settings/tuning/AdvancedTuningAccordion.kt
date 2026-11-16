@@ -72,6 +72,7 @@ enum class TuningSection {
     CYCLING_RADAR,
     WORKOUT_MASKS_CARDS,
     PHYSIOLOGY_MODELS,
+    MORNING_CHECK,
     ROUTE_CLUSTERING,
     AFTERMATH_ANALYSIS,
     SWIMMING
@@ -143,6 +144,22 @@ object TuningSubtitleFormatter {
         enableCogganPowerMetrics: Boolean, enablePmcModel: Boolean, enableAerobicEfficiencyModel: Boolean,
         enableCriticalPowerModel: Boolean, context: Context
     ): String = formatPhysiologyModelsSubtitle(enableCogganPowerMetrics, enablePmcModel, enableAerobicEfficiencyModel, enableCriticalPowerModel, false, context)
+
+    /**
+     * Formats live Morning Checks & Wellness summary subtitle (REQ-SET-113.2, ATT-8117).
+     */
+    fun formatMorningCheckSubtitle(
+        enableMorningSleepAndWellness: Boolean,
+        showMorningCheckOnStartScreen: Boolean,
+        morningCheckCutoffHour: Int,
+        context: Context
+    ): String {
+        val activeItems = buildList {
+            if (enableMorningSleepAndWellness) add(context.getString(R.string.tuning_morning_sleep_wellness_short))
+            if (showMorningCheckOnStartScreen) add(context.getString(R.string.tuning_morning_check_start_short, morningCheckCutoffHour))
+        }
+        return activeItems.ifEmpty { listOf(context.getString(R.string.tuning_morning_check_none_enabled)) }.joinToString(", ")
+    }
 
     fun formatAftermathSubtitle(
         elevationDomain: ProfileXAxisDomain, telemetryDomain: ProfileXAxisDomain, context: Context,

@@ -317,4 +317,7 @@
     <string name="tuning_show_morning_check_on_start_screen_desc">Muestra un botón en la pantalla de inicio de seguimiento antes del entrenamiento para iniciar el chequeo VFC matutino si hay un sensor de frecuencia cardíaca emparejado.</string>
     <string name="tuning_morning_check_cutoff_hour_title">Hora límite del chequeo matutino</string>
     <string name="tuning_morning_check_cutoff_hour_desc">Visible en la pantalla de inicio hasta las %d:00.</string>
+    <string name="tuning_cat_morning_check">Chequeos matutinos y bienestar</string>
+    <string name="tuning_morning_check_start_short">Botón inicio (hasta %02d:00)</string>
+    <string name="tuning_morning_check_none_enabled">Desactivado</string>
 </resources>

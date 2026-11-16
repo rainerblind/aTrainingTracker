@@ -317,4 +317,7 @@
     <string name="tuning_show_morning_check_on_start_screen_desc">Wyświetla przycisk na ekranie startowym przed treningiem, aby rozpocząć poranny pomiar HRV, jeśli sparowany jest czujnik tętna.</string>
     <string name="tuning_morning_check_cutoff_hour_title">Godzina graniczna porannego pomiaru</string>
     <string name="tuning_morning_check_cutoff_hour_desc">Wyświetlany na ekranie startowym do godziny %d:00.</string>
+    <string name="tuning_cat_morning_check">Poranne pomiary i samopoczucie</string>
+    <string name="tuning_morning_check_start_short">Ekran startowy (do %02d:00)</string>
+    <string name="tuning_morning_check_none_enabled">Wyłączone</string>
 </resources>

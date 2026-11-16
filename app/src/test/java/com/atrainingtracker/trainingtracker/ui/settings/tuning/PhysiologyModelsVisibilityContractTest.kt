@@ -350,13 +350,51 @@ class PhysiologyModelsVisibilityContractTest {
             "PhysiologyModelsSection must not contain redundant tuning_dfa_a1_t2_title slider",
             content.contains("R.string.tuning_dfa_a1_t2_title")
         )
-        assertTrue(
-            "PhysiologyModelsSection must retain HRV Artifact Gate slider",
+        assertFalse(
+            "PhysiologyModelsSection must not retain HRV Artifact Gate slider (relocated to SensorsGpsFilterSection in ATT-8117)",
             content.contains("R.string.tuning_hrv_artifact_gate_title")
+        )
+        assertFalse(
+            "PhysiologyModelsSection must not contain Morning Check toggles (relocated to MorningCheckSection in ATT-8117)",
+            content.contains("R.string.tuning_morning_sleep_wellness_title") ||
+                content.contains("R.string.tuning_show_morning_check_on_start_screen_title")
         )
         assertTrue(
             "PhysiologyModelsSection must reference tuning_physiology_hrv_zones_link",
             content.contains("R.string.tuning_physiology_hrv_zones_link")
+        )
+        assertTrue(
+            "PhysiologyModelsSection must retain showRpeAndFeel toggle",
+            content.contains("R.string.settings_workout_card_rpe_feel")
+        )
+    }
+
+    @Test
+    fun `TST-SET-115_1 testSensorsGpsFilterSection_hostsHrvArtifactGateAndMorningCheckSectionHostsMorningControls`() {
+        // TST-SET-115
+        val sensorsFile = listOf(
+            File("app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/categories/SensorsGpsFilterSection.kt"),
+            File("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/categories/SensorsGpsFilterSection.kt")
+        ).firstOrNull { it.exists() } ?: error("Could not find SensorsGpsFilterSection.kt")
+        val sensorsContent = sensorsFile.readText()
+        assertTrue(
+            "SensorsGpsFilterSection must host tuning_hrv_artifact_gate_title",
+            sensorsContent.contains("R.string.tuning_hrv_artifact_gate_title")
+        )
+
+        val morningFile = listOf(
+            File("app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/categories/MorningCheckSection.kt"),
+            File("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/categories/MorningCheckSection.kt")
+        ).firstOrNull { it.exists() } ?: error("Could not find MorningCheckSection.kt")
+        val morningContent = morningFile.readText()
+        assertTrue(
+            "MorningCheckSection must host morning sleep & wellness toggle",
+            morningContent.contains("R.string.tuning_morning_sleep_wellness_title")
+        )
+        assertTrue(
+            "MorningCheckSection must host start screen morning check toggle & cutoff hour slider",
+            morningContent.contains("R.string.tuning_show_morning_check_on_start_screen_title") &&
+                morningContent.contains("R.string.tuning_morning_check_cutoff_hour_title")
         )
     }
 }

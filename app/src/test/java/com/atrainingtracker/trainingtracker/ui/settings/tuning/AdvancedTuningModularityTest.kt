@@ -46,7 +46,8 @@ class AdvancedTuningModularityTest {
             "com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.NavigationSectionKt",
             "com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.SensorSearchTuningSectionKt",
             "com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.ClusterTuningSectionKt",
-            "com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.PhysiologyModelsSectionKt"
+            "com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.PhysiologyModelsSectionKt",
+            "com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.MorningCheckSectionKt"
         )
 
         for (className in expectedClasses) {
@@ -57,6 +58,7 @@ class AdvancedTuningModularityTest {
 
     @Test
     fun testCategoryComposables_areDecoupledAndExposed() {
+        // TST-SET-115
         val categoryClasses = listOf(
             "com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.CockpitTypographySectionKt",
             "com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.AmoledBatterySaverSectionKt",
@@ -66,7 +68,8 @@ class AdvancedTuningModularityTest {
             "com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.NavigationSectionKt",
             "com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.SensorSearchTuningSectionKt",
             "com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.ClusterTuningSectionKt",
-            "com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.PhysiologyModelsSectionKt"
+            "com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.PhysiologyModelsSectionKt",
+            "com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.MorningCheckSectionKt"
         )
 
         for (className in categoryClasses) {

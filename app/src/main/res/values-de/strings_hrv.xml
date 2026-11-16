@@ -317,4 +317,7 @@
     <string name="tuning_show_morning_check_on_start_screen_desc">Zeigt vor dem Training einen Button zum Starten des morgendlichen HRV-Checks an, sofern ein Herzfrequenzsensor gekoppelt ist.</string>
     <string name="tuning_morning_check_cutoff_hour_title">Endzeit für morgendlichen Check</string>
     <string name="tuning_morning_check_cutoff_hour_desc">Wird bis %d:00 Uhr auf dem Startbildschirm angezeigt.</string>
+    <string name="tuning_cat_morning_check">Morgendliche Checks &amp; Wohlbefinden</string>
+    <string name="tuning_morning_check_start_short">Start-Button (bis %02d:00)</string>
+    <string name="tuning_morning_check_none_enabled">Deaktiviert</string>
 </resources>

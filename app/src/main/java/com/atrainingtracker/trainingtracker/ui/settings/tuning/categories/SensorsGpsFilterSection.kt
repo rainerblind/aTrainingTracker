@@ -21,6 +21,8 @@ package com.atrainingtracker.trainingtracker.ui.settings.tuning.categories
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
@@ -35,9 +37,10 @@ import java.util.Locale
 import kotlin.math.roundToInt
 
 /**
- * Sensors, GPS and filtering tuning category composable (REQ-UI-262, REQ-TRK-018, REQ-SET-080).
- * Encapsulates GPS accuracy, altitude filter window, and minimum slope speed thresholds.
- * Auto-pause configuration is now located in its own dedicated settings section (ATT-4836).
+ * Sensors, GPS and filtering tuning category composable (REQ-UI-262, REQ-TRK-018, REQ-SET-080, REQ-SET-113.1).
+ * Encapsulates GPS accuracy, altitude filter window, minimum slope speed thresholds,
+ * post-workout ERTS smoothing, and HRV RR-interval artifact gate filtering.
+ * Auto-pause configuration is located in its own dedicated settings section (ATT-4836).
  */
 @Composable
 fun SensorsGpsFilterSection(
@@ -48,7 +51,9 @@ fun SensorsGpsFilterSection(
     slopeMinSpeed: Float,
     onSlopeMinSpeedChange: (Float) -> Unit,
     postWorkoutErtsSmoothingEnabled: Boolean = false,
-    onPostWorkoutErtsSmoothingChange: (Boolean) -> Unit = {}
+    onPostWorkoutErtsSmoothingChange: (Boolean) -> Unit = {},
+    hrvArtifactGateThresholdPercent: Float = TuningPreferencesDefaults.DEFAULT_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT,
+    onHrvArtifactGateThresholdPercentChange: (Float) -> Unit = {}
 ) {
     val currentLocale = LocalConfiguration.current.locales[0]
     Column(
@@ -98,6 +103,30 @@ fun SensorsGpsFilterSection(
             isChecked = postWorkoutErtsSmoothingEnabled,
             onCheckedChange = onPostWorkoutErtsSmoothingChange,
             summary = stringResource(R.string.tuning_post_workout_erts_smoothing_desc)
+        )
+
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+
+        // HRV RR-interval signal quality / artifact gate threshold (REQ-TRK-061.2, REQ-SET-113.1, ATT-8117)
+        TuningSliderItem(
+            title = stringResource(R.string.tuning_hrv_artifact_gate_title),
+            valueText = String.format(Locale.US, "%.1f%%", hrvArtifactGateThresholdPercent),
+            helperText = stringResource(R.string.tuning_hrv_artifact_gate_desc),
+            defaultText = stringResource(
+                R.string.tuning_hrv_artifact_gate_default,
+                TuningPreferencesDefaults.DEFAULT_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT
+            ),
+            value = hrvArtifactGateThresholdPercent,
+            onValueChange = { newValue ->
+                val rounded = Math.round(newValue * 10f) / 10f
+                val clamped = rounded.coerceIn(
+                    TuningPreferencesDefaults.MIN_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT,
+                    TuningPreferencesDefaults.MAX_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT
+                )
+                onHrvArtifactGateThresholdPercentChange(clamped)
+            },
+            valueRange = TuningPreferencesDefaults.MIN_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT..TuningPreferencesDefaults.MAX_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT,
+            steps = 3
         )
     }
 }

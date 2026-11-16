@@ -37,6 +37,7 @@ import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Sensors
 import androidx.compose.material.icons.filled.TextFields
+import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -64,6 +65,7 @@ import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.Amoled
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.ClusterTuningSection
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.CockpitTypographySection
 import com.atrainingtracker.trainingtracker.climbs.ClimbScoringFormula
+import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.MorningCheckSection
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.NavigationSection
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.PhysiologyModelsSection
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.PoolLengthPreset
@@ -417,7 +419,9 @@ fun AdvancedTuningScreen(
                     altitudeWindowSec = altitudeWindowSec, onAltitudeWindowChange = { altitudeWindowSec = it },
                     slopeMinSpeed = slopeMinSpeed, onSlopeMinSpeedChange = { slopeMinSpeed = it },
                     postWorkoutErtsSmoothingEnabled = postWorkoutErtsSmoothingEnabled,
-                    onPostWorkoutErtsSmoothingChange = { postWorkoutErtsSmoothingEnabled = it }
+                    onPostWorkoutErtsSmoothingChange = { postWorkoutErtsSmoothingEnabled = it },
+                    hrvArtifactGateThresholdPercent = hrvArtifactGateThresholdPercent,
+                    onHrvArtifactGateThresholdPercentChange = { hrvArtifactGateThresholdPercent = it }
                 )
             }
 
@@ -488,19 +492,37 @@ fun AdvancedTuningScreen(
                     showCriticalPowerInWorkoutSummary = showCriticalPowerInWorkoutSummary, onShowCriticalPowerInWorkoutSummaryChange = { showCriticalPowerInWorkoutSummary = it },
                     enableCardioPowerDynamics = enableCardioPowerDynamics, onEnableCardioPowerDynamicsChange = { enableCardioPowerDynamics = it },
                     showCardioPowerInWorkoutSummary = showCardioPowerInWorkoutSummary, onShowCardioPowerInWorkoutSummaryChange = { showCardioPowerInWorkoutSummary = it },
-                    dfaA1ThresholdT1 = dfaA1ThresholdT1, onDfaA1ThresholdT1Change = { dfaA1ThresholdT1 = it }, dfaA1ThresholdT2 = dfaA1ThresholdT2, onDfaA1ThresholdT2Change = { dfaA1ThresholdT2 = it },
-                    hrvArtifactGateThresholdPercent = hrvArtifactGateThresholdPercent, onHrvArtifactGateThresholdPercentChange = { hrvArtifactGateThresholdPercent = it },
-                    enableMorningSleepAndWellness = enableMorningSleepAndWellness, onEnableMorningSleepAndWellnessChange = { enableMorningSleepAndWellness = it },
-                    enableSleepDurationAndQuality = enableSleepDurationAndQuality, onEnableSleepDurationAndQualityChange = { enableSleepDurationAndQuality = it },
-                    enableMorningEnergy = enableMorningEnergy, onEnableMorningEnergyChange = { enableMorningEnergy = it },
-                    enableMuscleSoreness = enableMuscleSoreness, onEnableMuscleSorenessChange = { enableMuscleSoreness = it },
-                    enableContextTags = enableContextTags, onEnableContextTagsChange = { enableContextTags = it },
+                    showRpeAndFeel = workoutCardPrefs.showRpeAndFeel,
+                    onShowRpeAndFeelChange = { workoutCardPrefs = workoutCardPrefs.copy(showRpeAndFeel = it) }
+                )
+            }
+
+            // Section 9b: Morgendliche Checks & Wohlbefinden (REQ-SET-113.2, ATT-8117)
+            TuningAccordionSection(
+                icon = Icons.Default.WbSunny, title = stringResource(R.string.tuning_cat_morning_check),
+                subtitle = TuningSubtitleFormatter.formatMorningCheckSubtitle(
+                    enableMorningSleepAndWellness = enableMorningSleepAndWellness,
+                    showMorningCheckOnStartScreen = showMorningCheckOnStartScreen,
+                    morningCheckCutoffHour = morningCheckCutoffHour,
+                    context = context
+                ),
+                isExpanded = isSectionExpanded(TuningSection.MORNING_CHECK), onToggle = { toggleSection(TuningSection.MORNING_CHECK) }
+            ) {
+                MorningCheckSection(
+                    enableMorningSleepAndWellness = enableMorningSleepAndWellness,
+                    onEnableMorningSleepAndWellnessChange = { enableMorningSleepAndWellness = it },
+                    enableSleepDurationAndQuality = enableSleepDurationAndQuality,
+                    onEnableSleepDurationAndQualityChange = { enableSleepDurationAndQuality = it },
+                    enableMorningEnergy = enableMorningEnergy,
+                    onEnableMorningEnergyChange = { enableMorningEnergy = it },
+                    enableMuscleSoreness = enableMuscleSoreness,
+                    onEnableMuscleSorenessChange = { enableMuscleSoreness = it },
+                    enableContextTags = enableContextTags,
+                    onEnableContextTagsChange = { enableContextTags = it },
                     showMorningCheckOnStartScreen = showMorningCheckOnStartScreen,
                     onShowMorningCheckOnStartScreenChange = { showMorningCheckOnStartScreen = it },
                     morningCheckCutoffHour = morningCheckCutoffHour,
-                    onMorningCheckCutoffHourChange = { morningCheckCutoffHour = it },
-                    showRpeAndFeel = workoutCardPrefs.showRpeAndFeel,
-                    onShowRpeAndFeelChange = { workoutCardPrefs = workoutCardPrefs.copy(showRpeAndFeel = it) }
+                    onMorningCheckCutoffHourChange = { morningCheckCutoffHour = it }
                 )
             }
 

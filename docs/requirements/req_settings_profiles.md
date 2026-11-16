@@ -2577,5 +2577,41 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 **Invariants**: Standard `BTLEHeartRateDevice` unchanged when opt-in is `0` or API < 33; `Devices.db` v14 `DEFAULT 0` preserves existing user configs; Verity Sense `ACC` single-owner lock; `WorkoutRr.db` never receives optical Verity PPG rows; `HIGH-RISK` Stage 4 (`subagent_pro` Doing / `subagent_flash` Gate 4 per `Rule 7.1`); Stage 4 UI screenshot verified (`Rule 8.5`).
 
 
+### REQ-SET-113: Expert Settings HRV Artifact Gate Relocation & Dedicated Morning Checks Section (`ATT-8117`) [Verified]
+- **Tests**: `TST-SET-115`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `AdvancedTuningAccordion.kt`, `AdvancedTuningScreen.kt`, `AdvancedTuningDialog.kt`, `SensorsGpsFilterSection.kt`, `PhysiologyModelsSection.kt`, `MorningCheckSection.kt`, `res/values*/strings_hrv.xml`
+- **Rationale**: `PhysiologyModelsSection.kt` mixes physiological training models, HRV RR-interval signal filtering (`hrvArtifactGateThresholdPercent`), and 7 morning wellness check settings. Relocating the HRV Artifact Gate slider to `SensorsGpsFilterSection` and extracting the 7 Morning Check controls into a dedicated `TuningSection.MORNING_CHECK` (`MorningCheckSection`) improves thematic cohesion across both `AdvancedTuningScreen` and `@Deprecated AdvancedTuningDialog` while preserving all persisted DataStore keys (`ATT-8117`, Epic `ATT-355`, refining `REQ-UI-403`, `REQ-UI-463.2`, `REQ-UI-525.1`).
+- **Description**:
+  1. *HRV Artifact Gate Relocation (`REQ-SET-113.1`)*:
+     - `hrvArtifactGateThresholdPercent` (`tuning_hrv_artifact_gate_title` slider, range `3.0%..5.0%`, default `5.0%`) SHALL be moved from `PhysiologyModelsSection.kt` to `SensorsGpsFilterSection.kt` (`TuningSection.SENSORS_GPS`) and wired identically from both `AdvancedTuningScreen.kt` and `@Deprecated AdvancedTuningDialog.kt` without altering persisted `TuningPreferencesDataStore` keys, defaults, or clamping bounds.
+     - `tuning_physiology_hrv_zones_link` and `showRpeAndFeel` SHALL remain in `PhysiologyModelsSection.kt`.
+  2. *Dedicated Morning Checks Section (`REQ-SET-113.2`)*:
+     - `TuningSection` in `AdvancedTuningAccordion.kt` SHALL add `TuningSection.MORNING_CHECK` (expanding the canonical lifecycle enum to 12 entries), paired with `TuningSubtitleFormatter.formatMorningCheckSubtitle(...)` and a dedicated `MorningCheckSection` composable under `ui/settings/tuning/categories/`.
+     - `MorningCheckSection` SHALL house all 7 Morning Check settings (`enableMorningSleepAndWellness`, `enableSleepDurationAndQuality`, `enableMorningEnergy`, `enableMuscleSoreness`, `enableContextTags`, `showMorningCheckOnStartScreen`, `morningCheckCutoffHour`) and SHALL be mounted symmetrically in both `AdvancedTuningScreen.kt` and `@Deprecated AdvancedTuningDialog.kt`.
+  3. *Design Guidelines Compliance, Contract Synchronization & 9-Language Parity (`REQ-SET-113.3`)*:
+     - `SensorsGpsFilterSection`, `PhysiologyModelsSection`, and `MorningCheckSection` MUST comply strictly with `TuningDesignGuidelinesContractTest` (`TuningToggleItem`, `SubordinateTuningToggleItem`, `TuningSliderItem`, and `HorizontalDivider` only; zero `FilterChip`, raw `Switch(`, or nested `ElevatedCard(`).
+     - `PhysiologyModelsVisibilityContractTest`, `AdvancedTuningAccordionTest` (12-entry `TuningSection` enum & subtitle formatter), `AdvancedTuningModularityTest`, `AdvancedTuningScreenTest`, and `AdvancedTuningVisualContractTest` SHALL be updated consistently with the new section architecture.
+     - All new user-facing strings (`tuning_cat_morning_check`, morning check subtitle strings) SHALL maintain 100% 9-language localization parity across `values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, and `values-pt/` with zero emojis, verified by `TranslationParityTest`.
+  4. *Visual Compose Screenshot Verification (`REQ-SET-113.4`, Rule 8.5)*:
+     - A Robolectric Compose screenshot test SHALL capture `docs/engineering/walkthroughs/img/ATT-8117_tuning_sections.png` verifying `SensorsGpsFilterSection` (with HRV Artifact Gate), `MorningCheckSection` (all 7 controls), and `PhysiologyModelsSection` (trimmed of Morning Check and HRV Artifact Gate) against the 4-point visual checklist.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Refines `REQ-UI-403` (*Physiology & Training Models*), `REQ-UI-463.2` (*Expert Settings Thematic Grouping*), and `REQ-UI-525.1` (*Morning HRV Check Cutoff & Start Screen Toggle*) in `docs/requirements/req_ui_design_system.md`. Targets `AdvancedTuningAccordion.kt`, `AdvancedTuningScreen.kt`, `AdvancedTuningDialog.kt`, `SensorsGpsFilterSection.kt`, `PhysiologyModelsSection.kt`, and new `MorningCheckSection.kt`.
+2. *Historical Origin & Commit Trace*: `ATT-7532` (`647ef674`) and `ATT-7740` (`6267d2c0`) appended Morning Check toggles/cutoff controls to `PhysiologyModelsSection.kt` alongside the HRV Artifact Gate slider (`ATT-6715`).
+3. *Root Reason for Existing Formulation*: Incremental HRV feature delivery reused the existing `PhysiologyModelsSection` container to avoid introducing a new `TuningSection` enum entry and 9-locale section header strings.
+4. *Preservation of Core Invariants*: All `TuningPreferencesDataStore` keys, defaults (`08:00`, `6..23`, `3.0%..5.0%`), `ControlTrackingViewModel` start-screen gating, `TrackingViewModelHrvTest`, `showRpeAndFeel`, `tuning_physiology_hrv_zones_link`, and `SecondaryTabbedHeadersContractTest` navigation chrome remain 100% preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* the user opens Expert Settings (`AdvancedTuningScreen` or `AdvancedTuningDialog`) and expands *Sensors, GPS & Filtering*, *When* inspecting its controls, *Then* the HRV Artifact Gate threshold slider (`tuning_hrv_artifact_gate_title`, `3.0%..5.0%`) is rendered there and persists to the unchanged DataStore key.
+• *Given* the user expands the new *Morning Checks* (`TuningSection.MORNING_CHECK`) accordion section, *When* toggling wellness/start-screen options or adjusting cutoff hour, *Then* all 7 Morning Check settings are grouped there with a live subtitle summary while *Physiology & Training Models* retains training models, `tuning_physiology_hrv_zones_link`, and `showRpeAndFeel`.
+• *Given* all category composables under `ui/settings/tuning/categories/` and 9-locale `strings*.xml` files, *When* running contract and localization tests, *Then* `TuningDesignGuidelinesContractTest`, `PhysiologyModelsVisibilityContractTest`, `AdvancedTuningAccordionTest` (12 entries), `AdvancedTuningModularityTest`, `AdvancedTuningScreenTest`, `TranslationParityTest`, and Rule 8.5 Compose PNG inspection pass cleanly.
+
+**Invariants**: Zero `TuningPreferencesDataStore` key/default/bound changes; zero `FilterChip`, raw `Switch(`, or nested `ElevatedCard(` in tuning categories; 100% 9-language parity with zero emojis; dual-host symmetry across `AdvancedTuningScreen` and `AdvancedTuningDialog`.
+
+
+
 
 

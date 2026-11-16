@@ -48,10 +48,13 @@ class AdvancedTuningScreenTest {
 
     @Test
     fun testAccordionSections_canonicalLifecycleSequence() {
+        // TST-SET-115
         val strings = LocalizationTestCache.getStrings("values", "strings.xml")
         assertNotNull(strings["tuning_group_cockpit_tracking"])
         assertNotNull(strings["tuning_group_sensors_gps"])
         assertNotNull(strings["tuning_group_analysis_models"])
+        val hrvStrings = LocalizationTestCache.getStrings("values", "strings_hrv.xml")
+        assertNotNull(hrvStrings["tuning_cat_morning_check"])
 
         val sectionEnum = Class.forName("com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningSection")
         val constants = sectionEnum.enumConstants!!.map { it.toString() }
@@ -65,6 +68,7 @@ class AdvancedTuningScreenTest {
         assertTrue(constants.contains("WORKOUT_MASKS_CARDS"))
         assertTrue(constants.contains("AFTERMATH_ANALYSIS"))
         assertTrue(constants.contains("PHYSIOLOGY_MODELS"))
+        assertTrue(constants.contains("MORNING_CHECK"))
         assertTrue(constants.contains("ROUTE_CLUSTERING"))
     }
 
