@@ -769,4 +769,48 @@ class RadarLightControllerTest {
         RadarLightController.onWorkoutStarted(mockContext, isCycling = true)
         assertTrue(RadarLightController.isAutoMode.value)
     }
+
+    /**
+     * TST-CON-031 / TST-CON-031.2 / TST-CON-031.5 / ATT-7737:
+     * Reconciling failed hardware GATT write reverts matching optimistic mode to confirmed fallback
+     * while ignoring stale failures once user has switched to a newer mode.
+     */
+    @Test
+    fun testRadarLightController_onHardwareLightModeWriteFailed_reconcilesCleanly() {
+        val mockDevice = mockk<BTLERadarDevice>(relaxed = true)
+        every { mockDevice.setLightMode(any()) } returns true
+        RadarLightController.registerRadarDevice(mockDevice, lightSupported = true, isStvzo = false)
+
+        assertTrue(RadarLightController.setManualLightMode(RadarLightMode.NIGHT_FLASH))
+        assertEquals(RadarLightMode.NIGHT_FLASH, RadarLightController.currentMode.value)
+        assertEquals(RadarLightMode.NIGHT_FLASH, RadarStateRepository.getState().lightMode)
+
+        // Write failure while NIGHT_FLASH is still active -> reverts cleanly to SOLID
+        RadarLightController.onHardwareLightModeWriteFailed(RadarLightMode.NIGHT_FLASH, RadarLightMode.SOLID)
+        assertEquals(RadarLightMode.SOLID, RadarLightController.currentMode.value)
+        assertEquals(RadarLightMode.SOLID, RadarStateRepository.getState().lightMode)
+
+        // Stale failure for NIGHT_FLASH must not stomp newer DAY_FLASH selection
+        assertTrue(RadarLightController.setManualLightMode(RadarLightMode.DAY_FLASH))
+        RadarLightController.onHardwareLightModeWriteFailed(RadarLightMode.NIGHT_FLASH, RadarLightMode.OFF)
+        assertEquals(RadarLightMode.DAY_FLASH, RadarLightController.currentMode.value)
+        assertEquals(RadarLightMode.DAY_FLASH, RadarStateRepository.getState().lightMode)
+    }
+
+    /**
+     * TST-CON-031.4 / TST-CON-031.5 / ATT-7737:
+     * Under StVZO pruning, setManualLightMode synchronizes RadarStateRepository to pruned SOLID mode
+     * consistently with EditDeviceDialog's live currentMode selector binding.
+     */
+    @Test
+    fun testRadarLightController_setManualLightMode_stvzoSynchronizesRepositoryState() {
+        val mockDevice = mockk<BTLERadarDevice>(relaxed = true)
+        every { mockDevice.setLightMode(any()) } returns true
+        RadarLightController.registerRadarDevice(mockDevice, lightSupported = true, isStvzo = true)
+
+        assertTrue(RadarLightController.setManualLightMode(RadarLightMode.NIGHT_FLASH))
+        assertEquals(RadarLightMode.SOLID, RadarLightController.currentMode.value)
+        assertEquals(RadarLightMode.SOLID, RadarStateRepository.getState().lightMode)
+        assertFalse(RadarLightController.isAutoMode.value)
+    }
 }

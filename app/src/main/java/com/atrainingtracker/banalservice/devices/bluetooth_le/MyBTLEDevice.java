@@ -171,8 +171,12 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
         public boolean execute(BluetoothGatt gatt) {
             if (characteristic == null || gatt == null) return false;
             int properties = characteristic.getProperties();
-            if ((properties & BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE) != 0
-                    && (properties & BluetoothGattCharacteristic.PROPERTY_WRITE) == 0) {
+            // Prefer acknowledged Write Request (WRITE_TYPE_DEFAULT) whenever PROPERTY_WRITE is supported so
+            // control-point indications and SMP authentication/bonding work; use WRITE_TYPE_NO_RESPONSE only
+            // for characteristics that advertise PROPERTY_WRITE_NO_RESPONSE without PROPERTY_WRITE (REQ-CON-031.2).
+            if ((properties & BluetoothGattCharacteristic.PROPERTY_WRITE) != 0) {
+                characteristic.setWriteType(BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT);
+            } else if ((properties & BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE) != 0) {
                 characteristic.setWriteType(BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE);
             }
             characteristic.setValue(value);
@@ -698,7 +702,12 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
 
         @Override
         public void onCharacteristicWrite(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
-            if (DEBUG) Log.i(TAG, "onCharacteristicWrite: " + (characteristic != null ? characteristic.getUuid() : "null") + " status: " + status);
+            if (status != BluetoothGatt.GATT_SUCCESS) {
+                Log.w(TAG, "onCharacteristicWrite failed: " + (characteristic != null ? characteristic.getUuid() : "null") + " status=" + status);
+            } else if (DEBUG) {
+                Log.i(TAG, "onCharacteristicWrite: " + (characteristic != null ? characteristic.getUuid() : "null") + " status: " + status);
+            }
+            onCharacteristicWriteCompleted(gatt, characteristic, status);
             onGattOperationCompleted();
         }
 
@@ -990,6 +999,12 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
     }
 
     protected void onDescriptorWriteCompleted(BluetoothGatt gatt, BluetoothGattDescriptor descriptor, int status) {
+    }
+
+    /**
+     * Subclass hook invoked after a GATT characteristic write completes (REQ-CON-031.2, ATT-7737).
+     */
+    protected void onCharacteristicWriteCompleted(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
     }
 
     protected void onMtuConfigurationCompleted(BluetoothGatt gatt, int mtu, int status) {
