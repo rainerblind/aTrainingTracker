@@ -1559,14 +1559,14 @@
 - **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-ARC-005`
 - **Component**: **Java Core Services Architecture Decision Record & Migration Strategy Verification Suite**
-- **Jira**: `ATT-7566`
+- **Jira**: `ATT-7566`, `ATT-8115`
 - **Test Description**:
   1. *ADR Existence & Structural Integrity Contract Test (`TST-ARC-005.1`, `JavaCoreMigrationStrategyContractTest.kt`)*:
   • Verify that `docs/architecture/adr_001_java_core_services_migration.md` exists and contains required sections: Context, Java Inventory, Decision Matrix, Phased Roadmap (Tiers 0–6), Quality Safeguards, and Child Tickets.
   2. *Class Inventory & Decision Coverage Test (`TST-ARC-005.2`, `JavaCoreMigrationStrategyContractTest.kt`)*:
-  • Verify that ADR-001 accounts for all top Java anchors (`TrackerService`, `BANALService`, `WorkoutSummariesDatabaseManager`, `TrainingApplication`, `DevicesDatabaseManager`, `DeviceManager`, `BTLERadarDevice`, `FitFileWriter`) with unambiguous Migrate/Keep/Retire determinations.
+  • Verify that ADR-001 accounts for all top Java anchors (`TrackerService`, `BANALService`, `WorkoutSummariesDatabaseManager`, `TrainingApplication`, `DevicesDatabaseManager`, `DeviceManager`, `BTLERadarDevice`, `FitFileWriter`) with unambiguous Migrate/Keep/Retire determinations, and verify `<= 149` Java classes in main production sources.
   3. *Child Ticket Sizing & Traceability Audit (`TST-ARC-005.3`, `JavaCoreMigrationStrategyContractTest.kt`)*:
-  • Verify that all child tickets identified in ADR-001 have defined Story Points between 1 and 3 SP and map to Epic `ATT-431`.
+  • Verify that `REGISTERED_CHILD_TICKETS` contains exactly the 3 authorized migration child tickets (`ATT-7903`, `ATT-7905`, `ATT-7906`) sized between 1 and 3 SP and mapped to Epic `ATT-431`.
   4. *Targeted & Full Suite Clean-Room Regression Execution (`TST-ARC-005.4`)*:
   • Execute `./gradlew testDebugUnitTest --tests com.atrainingtracker.architecture.JavaCoreMigrationStrategyContractTest` verifying 100% pass rate.
 

@@ -2325,13 +2325,14 @@ The workflow SHALL mandate that:
 - **Type**: Non-Functional
 - **Verification Method**: Unit / Review
 - **Implementation**: `docs/architecture/adr_001_java_core_services_migration.md`, `JavaCoreMigrationStrategyContractTest.kt`, `docs/architecture.md`
-- **Rationale**: To address ASPICE evaluation finding F9, eliminate Java platform types (`T!`) across core boundaries, ensure SWE.3 compile-time null safety, unify static analysis under Detekt/KtLint, and modernize concurrency models, an authoritative Architecture Decision Record (ADR-001) SHALL document the class-by-class inventory, migrate/keep/retire determinations, dependency-ordered migration tiers (Tiers 0–6), quality safeguards, and atomic child tickets (1–3 SP) under Epic ATT-431 (ATT-7566):
+- **Rationale**: To address ASPICE evaluation finding F9, eliminate Java platform types (`T!`) across core boundaries, ensure SWE.3 compile-time null safety, unify static analysis under Detekt/KtLint, and modernize concurrency models, an authoritative Architecture Decision Record (ADR-001) SHALL document the class-by-class inventory, migrate/keep/retire determinations, dependency-ordered migration tiers (Tiers 0–6), quality safeguards, and atomic child tickets (1–3 SP) under Epic ATT-431 (ATT-7566, ATT-8115):
 1. *Comprehensive Quantitative Inventory & Classification (`REQ-ARC-005.1`)*:
 • An authoritative ADR (`docs/architecture/adr_001_java_core_services_migration.md`) SHALL catalog all 149 Java classes (45,167 LOC) across 12 architectural subsystems, documenting size, commit churn, unit test coverage, and defect risk per class.
 2. *Class-by-Class Migrate vs. Keep vs. Retire Decision Matrix (`REQ-ARC-005.2`)*:
 • The ADR SHALL record an explicit decision for every core subsystem:
-  - Migrate: Core tracking (`TrackerService`), peripheral device ingestion (`BANALService`, `DeviceManager`, `CyclingPowerMetricsDevice`, `BTLERadarDevice`), sensor formatting/filters, and file exporters (`FitFileWriter`, `TCXFileWriter`).
+  - Migrate: Leaf sensor formatters (`ATT-7903`), pure signal filters (`ATT-7905`), and file exporters (`ATT-7906`, `FitFileWriter`, `TCXFileWriter`).
   - Keep / Modernize via Repository: SQLite database managers (`WorkoutSummariesDatabaseManager`, `WorkoutSamplesDatabaseManager`).
+  - Keep: Core tracking (`TrackerService`), peripheral device ingestion (`BANALService`, `DeviceManager`, `CyclingPowerMetricsDevice`, `BTLERadarDevice`, `ANTHeartRateDevice`) per Product Owner architecture decision (2026-11-14, ATT-8115) to safeguard endurance telemetry stability.
   - Keep / Sunset: Legacy Pebble smartwatch integration (7 files, 1,739 LOC) frozen for formal deprecation.
   - Keep / Replace with standard library: 3rd-party embedded `au.com.bytecode.opencsv` (3 files, 493 LOC).
 3. *Phased, Bottom-Up Migration Sequencing & Integration Seams (`REQ-ARC-005.3`)*:
@@ -2350,15 +2351,16 @@ The workflow SHALL mandate that:
   - Platform type nullability shielding: Adjacent Java boundaries must be fortified with `@NonNull` / `@Nullable` annotations.
   - 100% clean-room test pass rate under `./gradlew testDebugUnitTest`.
 5. *Atomic Backlog Ticket Decomposition (`REQ-ARC-005.5`)*:
-• All resulting migration work SHALL be partitioned into atomic backlog tickets sized between 1 and 3 Story Points under Epic `ATT-431` (*Clean Code*), precluding monolithic multi-thousand LOC migration tickets.
+• Active migration work under Epic `ATT-431` (*Clean Code*) SHALL be partitioned into atomic backlog tickets sized between 1 and 3 Story Points strictly bounded to the 3 authorized leaf components: `ATT-7903` (2 SP, Tier 1), `ATT-7905` (2 SP, Tier 1), and `ATT-7906` (3 SP, Tier 2). Remaining subsystems (`ATT-7902`, `ATT-7907`..`ATT-7910`) are retained as Keep or characterisation scaffolding (ATT-8115).
 6. *Automated Strategy Contract Test Verification (`REQ-ARC-005.6`)*:
-• `JavaCoreMigrationStrategyContractTest.kt` SHALL programmatically assert the existence of ADR-001, verify that all core Java classes cited in the inventory are accounted for with valid decision classifications, and check that required quality safeguards and child tickets are documented.
+• `JavaCoreMigrationStrategyContractTest.kt` SHALL programmatically assert the existence of ADR-001, verify that all core Java classes cited in the inventory are accounted for with valid decision classifications, check that <= 149 Java classes exist in main production sources, and assert that exactly 3 authorized child tickets (`ATT-7903`, `ATT-7905`, `ATT-7906`) are registered.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
 1. *Original Requirement ID & Target*: Net-new requirement `REQ-ARC-005` under Epic `ATT-431` (*Clean Code*), extending `REQ-ARC-001` through `REQ-ARC-004`. Targets `docs/architecture/adr_001_java_core_services_migration.md`, `JavaCoreMigrationStrategyContractTest.kt`, and `docs/architecture.md`.
 2. *Historical Origin & Commit Trace*: Initiated in Sprint `2026-46.6` under ticket `ATT-7566` to resolve ASPICE evaluation finding F9.
 3. *Root Reason for Existing Formulation*: Java core was retained during Kotlin adoption to prevent regressions in high-frequency sensor/GPS ingestion. A documented, phased migration strategy with pre-existing characterisation tests eliminates migration risk while restoring null safety and architectural homogeneity.
 4. *Preservation of Core Invariants*: Zero production code modification in this ticket; all existing telemetry processing, database schemas, and background services remain unaltered.
+5. *PO Scope Refinement & Child Ticket Reduction (`ATT-8115`)*: Refined in Sprint `2026-11-16_02_Spät` under ticket `ATT-8115` to codify the Product Owner decision (2026-11-14): restrict active migration to leaf formatters (`ATT-7903`), filters (`ATT-7905`), and exporters (`ATT-7906`), while retaining core tracking and BLE/ANT+ drivers in Java (`Keep`). `JavaCoreMigrationStrategyContractTest.kt` reduces `REGISTERED_CHILD_TICKETS` to 3 tickets.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* the Java codebase inventory in `aTrainingTracker`,
