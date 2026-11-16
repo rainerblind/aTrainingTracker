@@ -3,7 +3,7 @@
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Requirements**: 169
+**Total Requirements**: 170
 
 ---
 
@@ -5460,3 +5460,37 @@ The workflow SHALL mandate that:
   • *When* `--check-reverse-sys-trace` and `--check-verified-evidence` execute,
   • *Then* zero unclassified SWE requirements exist and zero unbacked `[Verified]` tests are detected.
 - **Invariants**: Zero runtime behavior changes in `app/src/main/`; `ANT-Android-SDKs` untouched at `160000`; existing synthetic governance test fixtures continue to pass.
+
+---
+
+### REQ-PRO-105: Explicit PO Approval & Changelog Provenance for Agent-Originated Change Requests (ATT-8166) [Verified]
+- **Tests**: `TST-PRO-105`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `tools/jira_util.py`, `tools/test_jira_accounts.py`
+- **Rationale**: ASPICE 4.0 Finding SUP.10 (Change Request Management, SUP.10 BP3/BP4) requires explicit, auditable Product Owner authorization for all change requests before work commences. Autonomous sprint injection by AI agents undermines scope control. Tooling must enforce that agent-created tickets remain in raw Backlog, prohibit agents from moving issues from Backlog into `Vom PO Freigegeben` (ID 447) or active sprints, verify human PO changelog provenance in QA process compliance audits, and record formal disposition records for approved historical exceptions.
+- **Description**:
+  1. *Raw Backlog Enforcement on Agent Issue Creation (`REQ-PRO-105.1`)*: When `create-issue` is invoked by any agent role (`agent1`, `agent2`, `coordinator`), issues SHALL always be created in raw Backlog with `sprint` unset. Any attempt by agents to specify `--add-to-sprint` or directly target an active sprint SHALL be rejected with an error, preserving ceremony exceptions (`ensure-retro`, `ensure-weekly-reviews`).
+  2. *Two-Way Barrier on PO Queue (`Vom PO Freigegeben`) (`REQ-PRO-105.2`)*: Moving raw Backlog issues into `Vom PO Freigegeben` (ID 447) or an active sprint by ANY AI agent role (`agent1`, `agent2`, `coordinator`) SHALL be strictly prohibited and hard-rejected with a clear error. ONLY authorized Coordinator ceremonies (`pack-sprint` moving from `447 -> target_sprint_id`, and `return-unstarted` moving from `active_sprint -> 447`) SHALL be permitted.
+  3. *Jira Changelog Provenance Verification in QA Audits (`REQ-PRO-105.3`)*: `tools/jira_util.py` SHALL implement `verify_po_approval_changelog()` querying the issue changelog (`/rest/api/2/issue/{key}?expand=changelog`) to confirm human PO `accountId` (`HUMAN_ACCOUNT_ID`) provenance (placement into `Vom PO Freigegeben` or direct creation by human PO) for all regular sprint tickets, integrating Dimension 6 (`po_approval_pass`) into `qa-audit` without failing on legitimate ceremony tickets (`Review & Retro`, `Weekly Dual-Vendor Code Review`).
+  4. *Audit Trail & Exception Disposition (`REQ-PRO-105.4`)*: Approved historical change-request exceptions (e.g. `ATT-7902` tests-only core service scaffolding approved in Jira comment on `2026-11-14T20:28:50`) SHALL have formal SUP.10 disposition comments recorded in Jira and living documentation.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Extends `REQ-PRO-064` (Change Impact Analysis / SUP.10), `REQ-PRO-091` (QA audit protocol), and `REQ-PRO-097` (Sprint bin-packing) via net-new `REQ-PRO-105`. Targets `tools/jira_util.py` and `tools/test_jira_accounts.py`.
+  2. *Historical Origin & Commit Trace*: `ATT-7749` (Sprint 46.6 Retro), `ATT-7902` (`43846f1a`), `ATT-8030` (Three-Tier Board Guard), `ATT-8162` (12h continuous sprint).
+  3. *Root Reason for Existing Formulation*: Prior conventions lacked automated changelog verification, allowing unverified backlog items to enter active sprints without documented PO approval.
+  4. *Preservation of Core Invariants*: Preserve `return-unstarted` returning untouched sprint tickets to ID 447; preserve `ensure-retro` active sprint placement; keep `ANT-Android-SDKs` untouched at `160000 commit 0e8cea714a231fb9565170d4ed01eafa868f9798`.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* an agent attempting to create an issue with `--add-to-sprint`,
+  • *When* `create-issue` runs,
+  • *Then* direct sprint placement is blocked and the issue is created strictly in raw Backlog.
+  • *Given* an issue in raw Backlog,
+  • *When* an agent role invokes `move` or `pack-sprint` targeting `Vom PO Freigegeben` (ID 447) or an active sprint,
+  • *Then* the operation is hard-rejected with a descriptive governance error.
+  • *Given* an active sprint with regular sampled tickets and ceremony tickets,
+  • *When* `qa-audit` executes Dimension 6,
+  • *Then* regular tickets verify human PO changelog provenance, ceremony tickets pass exemption, and audit reports reflect `po_approval_pass`.
+  • *Given* `ATT-7902`,
+  • *When* audited under SUP.10,
+  • *Then* formal disposition documentation confirms tests-only authorization by the Product Owner.
+- **Invariants**: Zero `app/src/main/` production changes; `ANT-Android-SDKs` untouched at `160000`; coordinator ceremony flows (`pack-sprint`, `return-unstarted`, `ensure-retro`) preserved.

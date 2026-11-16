@@ -3,7 +3,7 @@
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Tests**: 200
+**Total Tests**: 201
 
 ---
 
@@ -3381,3 +3381,22 @@
   • Verify `--check-req-description` enforces `- **Description**:` on non-baselined requirements (including `REQ-PRO-104`), rejects new REQs lacking description, and verify `--report-req-field-coverage` outputs accurate percentages for Description, Acceptance Criteria, and Allocation fields.
   4. *Restored Requirement Governance & Evidence Cross-Check Test (`TST-PRO-104.4`, tools/test_verify_requirement_governance.py)*:
   • Verify all restored requirements in `SYSTEM_REFINED_PREFIXES` define valid `- **System Requirement(s)**:`, no restored test is marked `[Verified]` without test code evidence, and `--check-verified-evidence` and `--check-reverse-sys-trace` exit `0`.
+
+---
+
+### TST-PRO-105: **Explicit PO Approval & Changelog Provenance for Agent-Originated Change Requests Suite (ATT-8166)** [Verified]
+- **Requirement(s)**: `REQ-PRO-105`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Component**: `tools/jira_util.py`, `tools/test_jira_accounts.py`
+- **Jira**: `ATT-8166`
+- **Test Description**:
+  1. *Agent Backlog Placement & Direct Sprint Block Test (`TST-PRO-105.1`, tools/test_jira_accounts.py)*:
+  • Verify `create_issue` creates issues in raw Backlog without sprint assignment and rejects `--add-to-sprint` when invoked under agent roles (`agent1`, `agent2`, `coordinator`).
+  2. *Backlog-to-PO-Queue Two-Way Guard Test (`TST-PRO-105.2`, tools/test_jira_accounts.py)*:
+  • Verify moving issues from raw Backlog into `Vom PO Freigegeben` (ID 447) or an active sprint is hard-rejected for all agent roles, while Coordinator `pack-sprint` (`447 -> active_sprint`) and `return-unstarted` (`active_sprint -> 447`) continue to function.
+  3. *PO Changelog Provenance & QA Audit Dimension 6 Test (`TST-PRO-105.3`, tools/test_jira_accounts.py)*:
+  • Verify `verify_po_approval_changelog()` parses Jira changelog history, passes issues moved to ID 447 or created by human PO `accountId`, rejects unapproved agent-originated issues, and asserts `qa_audit()` integrates Dimension 6 (`po_approval_pass`) while exempting ceremony tickets.
+  4. *Historical Exception Disposition & Living Doc Parity Test (`TST-PRO-105.4`, Jira / tools/test_jira_accounts.py)*:
+  • Verify `ATT-7902` disposition record confirms tests-only PO authorization, and verify all living doc shards pass governance checks with Description field ratchet compliance.
