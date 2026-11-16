@@ -35,6 +35,7 @@ data class WorkoutTelemetrySample(
     val latitude: Double? = null,
     val longitude: Double? = null,
     val altitude: Double? = null,
+    val distanceMeters: Double? = null,
     val heartRate: Int? = null,
     val powerWatts: Double? = null,
     val speedMps: Double? = null,
@@ -84,6 +85,7 @@ open class WorkoutSamplesRepository(
                 val latCol = cursor.getColumnIndex(SensorType.LATITUDE.name)
                 val lonCol = cursor.getColumnIndex(SensorType.LONGITUDE.name)
                 val altCol = cursor.getColumnIndex(SensorType.ALTITUDE.name)
+                val distCol = cursor.getColumnIndex(SensorType.DISTANCE_m.name)
                 val hrCol = cursor.getColumnIndex(SensorType.HR.name)
                 val pwrCol = cursor.getColumnIndex(SensorType.POWER.name)
                 val spdCol = cursor.getColumnIndex(SensorType.SPEED_mps.name)
@@ -95,6 +97,7 @@ open class WorkoutSamplesRepository(
                     val lat = if (latCol >= 0 && !cursor.isNull(latCol)) cursor.getDouble(latCol) else null
                     val lon = if (lonCol >= 0 && !cursor.isNull(lonCol)) cursor.getDouble(lonCol) else null
                     val alt = if (altCol >= 0 && !cursor.isNull(altCol)) cursor.getDouble(altCol) else null
+                    val dist = if (distCol >= 0 && !cursor.isNull(distCol)) cursor.getDouble(distCol) else null
                     val hr = if (hrCol >= 0 && !cursor.isNull(hrCol)) cursor.getInt(hrCol) else null
                     val pwr = if (pwrCol >= 0 && !cursor.isNull(pwrCol)) cursor.getDouble(pwrCol) else null
                     val spd = if (spdCol >= 0 && !cursor.isNull(spdCol)) cursor.getDouble(spdCol) else null
@@ -107,6 +110,7 @@ open class WorkoutSamplesRepository(
                             latitude = lat,
                             longitude = lon,
                             altitude = alt,
+                            distanceMeters = dist,
                             heartRate = hr,
                             powerWatts = pwr,
                             speedMps = spd,

@@ -151,7 +151,10 @@ class TrackingViewsDbMigrationV21Test {
         }
 
         assertTrue(DatabaseSchemaRegistry.isVersionSupported("TrackingViews.db", 21))
-        assertEquals(21, DatabaseSchemaRegistry.getMaxSupportedVersion("TrackingViews.db"))
+        assertTrue(
+            "Max supported version must be >= 21 after v21 migration test",
+            (DatabaseSchemaRegistry.getMaxSupportedVersion("TrackingViews.db") ?: 0) >= 21
+        )
 
         // Idempotency check
         helper.onUpgrade(database, 20, 21)

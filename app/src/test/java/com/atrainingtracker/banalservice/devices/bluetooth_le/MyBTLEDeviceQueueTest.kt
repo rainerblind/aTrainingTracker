@@ -61,8 +61,20 @@ class MyBTLEDeviceQueueTest {
         deviceId: Long,
         address: String
     ) : MyBTLEDevice(context, sensorManager, deviceType, deviceId, address) {
+        var lastWriteCompletedCharacteristic: BluetoothGattCharacteristic? = null
+        var lastWriteCompletedStatus: Int? = null
+
         override fun addSensors() {}
         override fun measurementCharacteristicUpdate(gatt: BluetoothGatt?, characteristic: BluetoothGattCharacteristic?) {}
+
+        override fun onCharacteristicWriteCompleted(
+            gatt: BluetoothGatt?,
+            characteristic: BluetoothGattCharacteristic?,
+            status: Int
+        ) {
+            lastWriteCompletedCharacteristic = characteristic
+            lastWriteCompletedStatus = status
+        }
 
         fun setMockGatt(gatt: BluetoothGatt, handler: Handler) {
             mBluetoothGatt = gatt
@@ -274,7 +286,7 @@ class MyBTLEDeviceQueueTest {
     }
 
     /**
-     * TST-CON-031.2b / ATT-7737: Verify WriteCharacteristicOp automatically sets WRITE_TYPE_NO_RESPONSE
+     * TST-CON-031 / TST-CON-031.2: Verify WriteCharacteristicOp automatically sets WRITE_TYPE_NO_RESPONSE
      * when characteristic supports PROPERTY_WRITE_NO_RESPONSE and not PROPERTY_WRITE.
      */
     @Test
@@ -291,5 +303,47 @@ class MyBTLEDeviceQueueTest {
         io.mockk.verify { mockChar.writeType = BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE }
         io.mockk.verify { mockChar.value = byteArrayOf(0x06, 0x09, 0x01, 0x14) }
         io.mockk.verify { mockGatt.writeCharacteristic(mockChar) }
+    }
+
+    /**
+     * TST-CON-031 / TST-CON-031.2: Verify WriteCharacteristicOp selects WRITE_TYPE_DEFAULT
+     * whenever PROPERTY_WRITE is advertised (e.g. RearVue 6a4e2f11 WRITE | INDICATE).
+     */
+    @Test
+    fun testWriteCharacteristicOp_prefersWriteTypeDefaultWhenPropertyWritePresent() {
+        val mockChar = mockk<BluetoothGattCharacteristic>(relaxed = true)
+        val mockGatt = mockk<BluetoothGatt>(relaxed = true)
+        every { mockChar.properties } returns (BluetoothGattCharacteristic.PROPERTY_WRITE or BluetoothGattCharacteristic.PROPERTY_INDICATE)
+        every { mockGatt.writeCharacteristic(any()) } returns true
+
+        val op = MyBTLEDevice.WriteCharacteristicOp(mockChar, byteArrayOf(0x06, 0x09, 0x01, 0x14))
+        val executed = op.execute(mockGatt)
+
+        assertTrue("WriteCharacteristicOp must succeed", executed)
+        io.mockk.verify { mockChar.writeType = BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT }
+        io.mockk.verify { mockGatt.writeCharacteristic(mockChar) }
+    }
+
+    /**
+     * TST-CON-031.2: Verify onCharacteristicWrite propagates status to onCharacteristicWriteCompleted
+     * and drains the serialized GATT queue even on failure status.
+     */
+    @Test
+    fun testOnCharacteristicWrite_propagatesFailureStatusToSubclassHook() {
+        val mockChar = mockk<BluetoothGattCharacteristic>(relaxed = true)
+        every { mockGatt.writeCharacteristic(any()) } returns true
+
+        testDevice.enqueueWriteCharacteristic(mockChar, byteArrayOf(0x06, 0x09, 0x01, 0x14))
+        assertTrue(testDevice.isGattOperationPendingForTesting)
+
+        testDevice.gattCallbackForTesting.onCharacteristicWrite(
+            mockGatt,
+            mockChar,
+            BluetoothGatt.GATT_INSUFFICIENT_AUTHENTICATION
+        )
+
+        assertEquals(mockChar, testDevice.lastWriteCompletedCharacteristic)
+        assertEquals(BluetoothGatt.GATT_INSUFFICIENT_AUTHENTICATION, testDevice.lastWriteCompletedStatus)
+        assertFalse("Pending flag must clear after write error callback", testDevice.isGattOperationPendingForTesting)
     }
 }

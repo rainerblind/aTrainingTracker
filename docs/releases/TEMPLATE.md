@@ -51,8 +51,19 @@ In accordance with **REQ-PRO-072** and `.agents/skills/release-manager/SKILL.md`
 
 ---
 
-## 4. Release Decision & Formal Sign-Off
-Release candidate tag creation and Play Store distribution are approved only when all 4 gates pass without deviations.
+## 4. Human PO Physical Field Verification Attestation (REQ-PRO-098)
+In accordance with ASPICE 4.0 Finding K1 and REQ-PRO-098, physical field verification records SHALL derive exclusively from authentic workouts recorded on the reference Google Pixel 10. Autonomous AI agents are strictly forbidden from signing physical execution or synthesizing hardware data.
+
+* **Attesting Product Owner**: ___________________________ Date: ____________
+* **Reference Hardware**: Google Pixel 10 (Serial: `<PIXEL_10_SERIAL>`)
+* **Sprint / Build Commit SHA**: `<GIT_COMMIT_SHA>`
+* **Attested Workout / FIT Session IDs**: `<WORKOUT_IDS>`
+* **PO Attestation Verdict**: [ PASS / REVISION / FAIL ]
+
+---
+
+## 5. Release Decision & Formal Sign-Off
+Release candidate tag creation and Play Store distribution are approved only when all gates pass and the Product Owner has formally attested to physical field verification.
 
 * **Release Manager**: ___________________________ Date: ____________
 * **System Verification Lead**: ___________________ Date: ____________

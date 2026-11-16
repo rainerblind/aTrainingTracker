@@ -423,7 +423,9 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
             WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_ACTIVE_s,
             WorkoutSummariesDatabaseManager.WorkoutSummaries.CALORIES,
             WorkoutSummariesDatabaseManager.WorkoutSummaries.LAPS,
-            WorkoutSummariesDatabaseManager.WorkoutSummaries.DISTANCE_TOTAL_m
+            WorkoutSummariesDatabaseManager.WorkoutSummaries.DISTANCE_TOTAL_m,
+            WorkoutSummariesDatabaseManager.WorkoutSummaries.ASCENDING,
+            WorkoutSummariesDatabaseManager.WorkoutSummaries.DESCENDING
         )
         summariesManager.database.query(
             WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE,
@@ -440,15 +442,44 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                 val caloriesCol = cursor.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.CALORIES)
                 val lapsCol = cursor.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.LAPS)
                 val distanceCol = cursor.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.DISTANCE_TOTAL_m)
+                val ascentCol = cursor.getColumnIndex(WorkoutSummariesDatabaseManager.WorkoutSummaries.ASCENDING)
+                val descentCol = cursor.getColumnIndex(WorkoutSummariesDatabaseManager.WorkoutSummaries.DESCENDING)
+
+                val workoutId = cursor.getLong(idCol)
+                val timeActive = cursor.getInt(timeActiveCol)
+                val distanceTotal = cursor.getDouble(distanceCol)
+                val laps = cursor.getInt(lapsCol)
+                val ascent = if (ascentCol >= 0 && !cursor.isNull(ascentCol)) cursor.getDouble(ascentCol) else 0.0
+                val descent = if (descentCol >= 0 && !cursor.isNull(descentCol)) cursor.getDouble(descentCol) else 0.0
+
+                var timeLap = timeActive
+                var distanceLap = distanceTotal
+                if (laps > 1) {
+                    try {
+                        val completedLaps = getLaps(workoutId)
+                        if (!completedLaps.isNullOrEmpty()) {
+                            val completedTime = completedLaps.sumOf { it.timeTotalS }
+                            val completedDist = completedLaps.sumOf { it.distanceTotalM }
+                            timeLap = maxOf(0, timeActive - completedTime)
+                            distanceLap = maxOf(0.0, distanceTotal - completedDist)
+                        }
+                    } catch (t: Throwable) {
+                        Log.w("WorkoutRepository", "Failed to compute active lap metrics from laps table for workout $workoutId", t)
+                    }
+                }
 
                 return TrackerService.ResumedWorkoutState(
                     cursor.getString(baseFileNameCol) ?: "",
-                    cursor.getLong(idCol),
+                    workoutId,
                     cursor.getInt(timeTotalCol),
-                    cursor.getInt(timeActiveCol),
+                    timeActive,
                     cursor.getInt(caloriesCol),
-                    cursor.getInt(lapsCol),
-                    cursor.getDouble(distanceCol)
+                    laps,
+                    distanceTotal,
+                    ascent,
+                    descent,
+                    timeLap,
+                    distanceLap
                 )
             }
         }
@@ -640,6 +671,12 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                 val radarVehCountIdx = col(SensorType.RADAR_VEHICLE_COUNT.name)
                 val radarPassingDistIdx = col(SensorType.RADAR_PASSING_DISTANCE_m.name)
                 val radarLargeVehCountIdx = col(SensorType.RADAR_LARGE_VEHICLE_COUNT.name)
+                val balanceIdx = col(SensorType.PEDAL_POWER_BALANCE.name)
+                val teLIdx = col(SensorType.TORQUE_EFFECTIVENESS_L.name)
+                val teRIdx = col(SensorType.TORQUE_EFFECTIVENESS_R.name)
+                val psLIdx = col(SensorType.PEDAL_SMOOTHNESS_L.name)
+                val psRIdx = col(SensorType.PEDAL_SMOOTHNESS_R.name)
+                val psCombIdx = col(SensorType.PEDAL_SMOOTHNESS.name)
 
                 fun getDoubleOrNull(idx: Int): Double? =
                     if (idx >= 0 && !cursor.isNull(idx)) {
@@ -678,7 +715,13 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                         radarApproachSpeedMps = getDoubleOrNull(radarApproachSpdIdx),
                         radarVehicleCount = getIntOrNull(radarVehCountIdx),
                         radarPassingDistanceM = getDoubleOrNull(radarPassingDistIdx),
-                        radarLargeVehicleCount = getIntOrNull(radarLargeVehCountIdx)
+                        radarLargeVehicleCount = getIntOrNull(radarLargeVehCountIdx),
+                        pedalPowerBalance = getDoubleOrNull(balanceIdx),
+                        torqueEffectivenessL = getDoubleOrNull(teLIdx),
+                        torqueEffectivenessR = getDoubleOrNull(teRIdx),
+                        pedalSmoothnessL = getDoubleOrNull(psLIdx),
+                        pedalSmoothnessR = getDoubleOrNull(psRIdx),
+                        pedalSmoothnessCombined = getDoubleOrNull(psCombIdx)
                     )
                     consumer.accept(record)
                 }
@@ -1470,6 +1513,84 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
         updateWorkoutSummary(workoutId, updateVals)
     }
 
+    /**
+     * Recalculates swim workout metrics, patches sample streams, and updates laps
+     * following user adjustment in Aftermath (REQ-SET-111.3, ATT-8001).
+     */
+    suspend fun recalculateSwimWorkout(
+        workoutId: Long,
+        poolLengthMeters: Double,
+        lengthCount: Int
+    ): Boolean = withContext(Dispatchers.IO) {
+        val baseFileName = summariesManager.getString(workoutId, WorkoutSummariesDatabaseManager.WorkoutSummaries.FILE_BASE_NAME)
+            ?: return@withContext false
+        val activeTimeSec = summariesManager.getLong(workoutId, WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_ACTIVE_s) ?: 0L
+        val startTimeStr = summariesManager.getString(workoutId, WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_START)
+        val sportId = summariesManager.getLong(workoutId, WorkoutSummariesDatabaseManager.WorkoutSummaries.SPORT_ID) ?: 0L
+        val bSportName = summariesManager.getString(workoutId, WorkoutSummariesDatabaseManager.WorkoutSummaries.B_SPORT) ?: BSportType.UNKNOWN.name
+
+        val startTimeMs = if (!startTimeStr.isNullOrEmpty()) {
+            try {
+                java.time.LocalDateTime.parse(startTimeStr.replace(" ", "T"))
+                    .atZone(java.time.ZoneId.systemDefault())
+                    .toInstant()
+                    .toEpochMilli()
+            } catch (e: Exception) {
+                System.currentTimeMillis() - (activeTimeSec * 1000L)
+            }
+        } else {
+            System.currentTimeMillis() - (activeTimeSec * 1000L)
+        }
+
+        val totalDurationMs = Math.max(1000L, activeTimeSec * 1000L)
+        val safeLengthCount = Math.max(1, lengthCount)
+        val totalDistanceM = safeLengthCount * poolLengthMeters
+        val avgSpeedMps = if (totalDurationMs > 0) totalDistanceM / (totalDurationMs / 1000.0) else 0.0
+
+        // 1. Patch samples with uniform swim kinematics
+        samplesManager.patchSwimKinematicsUniform(
+            baseFileName,
+            startTimeMs,
+            totalDurationMs,
+            safeLengthCount,
+            poolLengthMeters
+        )
+
+        // 2. Re-create discrete laps in Laps.db
+        lapsDatabaseManager.deleteWorkout(workoutId)
+        val intervalDurMs = Math.max(500L, totalDurationMs / safeLengthCount)
+        var prevLapMs = startTimeMs
+        for (i in 0 until safeLengthCount) {
+            val lapNr = (i + 1).toLong()
+            val lapEndMs = if (i == safeLengthCount - 1) (startTimeMs + totalDurationMs) else (startTimeMs + (i + 1) * intervalDurMs)
+            val lapDurSec = Math.max(1, ((lapEndMs - prevLapMs) / 1000L).toInt())
+            val lapSpeedMps = if (lapDurSec > 0) poolLengthMeters / lapDurSec else 0.0
+            lapsDatabaseManager.saveLap(workoutId, lapNr, lapDurSec, poolLengthMeters, lapSpeedMps)
+            prevLapMs = lapEndMs
+        }
+
+        // 3. Update summaries in WorkoutSummaries.db
+        summariesManager.updateSwimMetrics(
+            workoutId,
+            sportId,
+            bSportName,
+            totalDistanceM,
+            safeLengthCount,
+            avgSpeedMps
+        )
+
+        // 4. Invalidate export cache
+        try {
+            exportManager.invalidateWorkoutExport(baseFileName)
+        } catch (e: Exception) {
+            Log.w(TAG, "Non-fatal export cache invalidation exception after swim recalculate: ${e.message}")
+        }
+
+        // 5. Reload workout in memory
+        reloadWorkoutData(workoutId)
+        true
+    }
+
     fun updateWorkoutName(workoutId: Long, name: String) {
         val updateVals = ContentValues().apply {
             put(WorkoutSummariesDatabaseManager.WorkoutSummaries.WORKOUT_NAME, name)
@@ -1729,6 +1850,36 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
      */
     fun getEquipmentStatsForPeriod(equipmentId: Long, startS: Long, endS: Long): WorkoutStatsSummary {
         val s = summariesManager.getEquipmentStatsForPeriod(equipmentId, startS, endS)
+        return WorkoutStatsSummary(
+            totalDistanceM = s.totalDistanceM,
+            totalActiveTimeS = s.totalActiveTimeS,
+            totalAscentM = s.totalAscentM,
+            firstUsage = s.firstUsage,
+            lastUsage = s.lastUsage,
+            count = s.count
+        )
+    }
+
+    /**
+     * Gets aggregate lifetime sport type statistics (REQ-ARC-009.1).
+     */
+    fun getSportTypeStats(sportTypeId: Long): WorkoutStatsSummary {
+        val s = summariesManager.getSportTypeStats(sportTypeId)
+        return WorkoutStatsSummary(
+            totalDistanceM = s.totalDistanceM,
+            totalActiveTimeS = s.totalActiveTimeS,
+            totalAscentM = s.totalAscentM,
+            firstUsage = s.firstUsage,
+            lastUsage = s.lastUsage,
+            count = s.count
+        )
+    }
+
+    /**
+     * Gets aggregate sport type statistics for a specific time period (REQ-ARC-009.1).
+     */
+    fun getSportTypeStatsForPeriod(sportTypeId: Long, startS: Long, endS: Long): WorkoutStatsSummary {
+        val s = summariesManager.getSportTypeStatsForPeriod(sportTypeId, startS, endS)
         return WorkoutStatsSummary(
             totalDistanceM = s.totalDistanceM,
             totalActiveTimeS = s.totalActiveTimeS,
@@ -3561,7 +3712,7 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                 val cursor = summariesManager.getCursorForAllWorkouts()
                 val allLoadedWorkouts = mutableListOf<WorkoutData>()
                 
-                cursor.use { c ->
+                cursor?.use { c ->
                     if (!c.moveToFirst()) return@withContext
 
                     val batchSize = 50

@@ -433,4 +433,89 @@ class FitLosslessRoundTripTest {
         assertFalse("isRace must default to false", parsed.isRace)
         assertFalse("foundSensors must not contain radar", parsed.foundSensors.contains(SensorType.RADAR_VEHICLE_COUNT))
     }
+
+    /**
+     * TST-EXP-043.2: Verify Cycling Pedal Dynamics (L/R Balance, TE, PS) lossless round-trip.
+     */
+    @Test
+    fun testPedalDynamicsLosslessRoundTrip() {
+        val baseFileName = "test_pedal_dynamics_roundtrip"
+        val header = WorkoutExportHeader(
+            workoutId = 205L,
+            fileBaseName = baseFileName,
+            startTime = "2026-11-15 10:00:00",
+            totalTime = "120",
+            data = "DSHCP",
+            workoutName = "Assioma Duo Dual-Sided Dynamics Ride"
+        )
+        every { mockRepo.getWorkoutExportHeader(baseFileName) } returns header
+        every { mockRepo.getWorkoutIdByBaseFileName(baseFileName) } returns 205L
+        every { mockRepo.hasRadarData(any(), any()) } returns false
+        every { mockRepo.streamSamples(any(), any()) } answers {
+            val consumer = secondArg<SampleConsumer>()
+            consumer.accept(
+                WorkoutSampleRecord(
+                    time = "2026-11-15 10:00:01",
+                    speedMps = 10.0,
+                    power = 280.0,
+                    cadence = 90.0,
+                    pedalPowerBalance = 52.0, // 48% L / 52% R
+                    torqueEffectivenessL = 78.5,
+                    torqueEffectivenessR = 81.0,
+                    pedalSmoothnessL = 24.0,
+                    pedalSmoothnessR = 25.5,
+                    pedalSmoothnessCombined = 24.5
+                )
+            )
+            consumer.accept(
+                WorkoutSampleRecord(
+                    time = "2026-11-15 10:00:02",
+                    speedMps = 10.2,
+                    power = 285.0,
+                    cadence = 91.0,
+                    pedalPowerBalance = 54.0, // 46% L / 54% R
+                    torqueEffectivenessL = 79.5,
+                    torqueEffectivenessR = 82.0,
+                    pedalSmoothnessL = 25.0,
+                    pedalSmoothnessR = 26.0,
+                    pedalSmoothnessCombined = 25.5
+                )
+            )
+        }
+
+        val exportInfo = ExportInfo(baseFileName, FileFormat.FIT, ExportType.FILE)
+        val writer = FitFileWriter(mockContext)
+        val exportResult = writer.doExport(exportInfo)
+        assertTrue("FIT export should succeed: ${exportResult.answer()}", exportResult.success())
+        val outputFile = File(tempDir, exportInfo.shortPath)
+        assertTrue("Output file must exist", outputFile.exists() && outputFile.length() > 0)
+
+        val parseResult = FitWorkoutParser.parse(outputFile, mockContext)
+        assertTrue("Parsing must succeed: ${parseResult.exceptionOrNull()?.message}", parseResult.isSuccess)
+
+        val parsed = parseResult.getOrThrow()
+        assertTrue("foundSensors must contain PEDAL_POWER_BALANCE", parsed.foundSensors.contains(SensorType.PEDAL_POWER_BALANCE))
+        assertTrue("foundSensors must contain TORQUE_EFFECTIVENESS_L", parsed.foundSensors.contains(SensorType.TORQUE_EFFECTIVENESS_L))
+        assertTrue("foundSensors must contain TORQUE_EFFECTIVENESS_R", parsed.foundSensors.contains(SensorType.TORQUE_EFFECTIVENESS_R))
+        assertTrue("foundSensors must contain PEDAL_SMOOTHNESS_L", parsed.foundSensors.contains(SensorType.PEDAL_SMOOTHNESS_L))
+        assertTrue("foundSensors must contain PEDAL_SMOOTHNESS_R", parsed.foundSensors.contains(SensorType.PEDAL_SMOOTHNESS_R))
+        assertTrue("foundSensors must contain PEDAL_SMOOTHNESS", parsed.foundSensors.contains(SensorType.PEDAL_SMOOTHNESS))
+
+        assertEquals("Must have 2 buffered samples", 2, parsed.bufferedSamples.size)
+        val s1 = parsed.bufferedSamples[0]
+        assertEquals(52.0, s1.getAsDouble(SensorType.PEDAL_POWER_BALANCE.name)!!, 0.1)
+        assertEquals(78.5, s1.getAsDouble(SensorType.TORQUE_EFFECTIVENESS_L.name)!!, 0.1)
+        assertEquals(81.0, s1.getAsDouble(SensorType.TORQUE_EFFECTIVENESS_R.name)!!, 0.1)
+        assertEquals(24.0, s1.getAsDouble(SensorType.PEDAL_SMOOTHNESS_L.name)!!, 0.1)
+        assertEquals(25.5, s1.getAsDouble(SensorType.PEDAL_SMOOTHNESS_R.name)!!, 0.1)
+        assertEquals(24.5, s1.getAsDouble(SensorType.PEDAL_SMOOTHNESS.name)!!, 0.1)
+
+        val s2 = parsed.bufferedSamples[1]
+        assertEquals(54.0, s2.getAsDouble(SensorType.PEDAL_POWER_BALANCE.name)!!, 0.1)
+        assertEquals(79.5, s2.getAsDouble(SensorType.TORQUE_EFFECTIVENESS_L.name)!!, 0.1)
+        assertEquals(82.0, s2.getAsDouble(SensorType.TORQUE_EFFECTIVENESS_R.name)!!, 0.1)
+        assertEquals(25.0, s2.getAsDouble(SensorType.PEDAL_SMOOTHNESS_L.name)!!, 0.1)
+        assertEquals(26.0, s2.getAsDouble(SensorType.PEDAL_SMOOTHNESS_R.name)!!, 0.1)
+        assertEquals(25.5, s2.getAsDouble(SensorType.PEDAL_SMOOTHNESS.name)!!, 0.1)
+    }
 }

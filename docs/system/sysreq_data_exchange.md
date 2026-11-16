@@ -25,15 +25,15 @@ These requirements satisfy ASPICE 4.0 **SYS.2 (System Requirements Analysis)** B
 ### SYSREQ-DEX-001: Multi-Format Telemetry Export Interoperability
 * **Title**: Multi-Format Telemetry Export Interoperability
 * **Statement**: The system SHALL export completed endurance workouts into standard open formats without loss of captured metric fidelity:
-  1. *Flexible & Interoperable Data Transfer (FIT)*: Garmin FIT 2.0 binary container (`.fit`, `FileFormat.FIT`, MIME `application/vnd.ant.fit`) via `FitFileWriter.java` with file header, device info, record mesgs (timestamp, lat/lng, distance, speed, HR, cadence, power, temperature, elevation), lap mesgs, and session summaries.
-  2. *Garmin Training Center XML (TCX)*: Standard XML schema (`.tcx`, `FileFormat.TCX`, MIME `application/vnd.garmin.tcx+xml`) via `TCXFileWriter.java` including trackpoint extensions (`TPX`).
+  1. *Flexible & Interoperable Data Transfer (FIT)*: Garmin FIT 2.0 binary container (`.fit`, `FileFormat.FIT`, MIME `application/vnd.ant.fit`) via `FitFileWriter.kt` with file header, device info, record mesgs (timestamp, lat/lng, distance, speed, HR, cadence, power, temperature, elevation), lap mesgs, and session summaries.
+  2. *Garmin Training Center XML (TCX)*: Standard XML schema (`.tcx`, `FileFormat.TCX`, MIME `application/vnd.garmin.tcx+xml`) via `TCXFileWriter.kt` including trackpoint extensions (`TPX`).
   3. *GPS Exchange Format (GPX)*: Open geospatial standard (`.gpx`, `FileFormat.GPX`, MIME `application/gpx+xml`) via `GPXFileWriter.java` containing trackpoints, elevation, and Garmin TrackPointExtension elements.
   4. *Tabular Plaintext (CSV)*: Comma-separated values (`.csv`, `FileFormat.CSV`, MIME `text/csv`) via `CSVFileWriter.java` exporting raw 1-Hz discrete telemetry rows for external spreadsheet or scientific analysis.
   5. The export pipeline SHALL enforce canonical distance (`DistanceFormatter`), elevation (`AltitudeFormatter`), and speed/pace formatting across all export serialization paths.
 * **Rationale**: Athletes require vendor-neutral mobility of their training data across desktop software (GoldenCheetah), third-party ecosystems, and long-term offline archives.
 * **Priority**: High
 * **Verification Method**: Test & Demonstration (`SystemDataExchangeRequirementsContractTest`, `FitFileWriterTest.kt`, `TCXRoundTripTest.kt`)
-* **Traced Software Components**: `ExportManager.java`, `FileFormat.java`, `FitFileWriter.java`, `TCXFileWriter.java`, `GPXFileWriter.java`, `CSVFileWriter.java`
+* **Traced Software Components**: `ExportManager.java`, `FileFormat.java`, `FitFileWriter.kt`, `TCXFileWriter.kt`, `GPXFileWriter.java`, `CSVFileWriter.java`
 
 ### SYSREQ-DEX-002: Multi-Format Workout Ingestion & Collision Deduplication
 * **Title**: Multi-Format Workout Ingestion & Collision Deduplication
@@ -117,7 +117,7 @@ The following matrix establishes bidirectional traceability between system data 
 
 | System Requirement | System Title | Refining Software Requirements (`REQ-*`) | Grounded Classes & Verification Test |
 | :--- | :--- | :--- | :--- |
-| `SYSREQ-DEX-001` | Multi-Format Telemetry Export | `REQ-EXP-001`, `REQ-EXP-022`, `REQ-DAT-018`, `REQ-DAT-027`, `REQ-DAT-028` | `ExportManager.java`, `FitFileWriter.java`, `TCXFileWriter.java`, `GPXFileWriter.java`, `CSVFileWriter.java`, `SystemDataExchangeRequirementsContractTest.kt` |
+| `SYSREQ-DEX-001` | Multi-Format Telemetry Export | `REQ-EXP-001`, `REQ-EXP-022`, `REQ-DAT-018`, `REQ-DAT-027`, `REQ-DAT-028` | `ExportManager.java`, `FitFileWriter.kt`, `TCXFileWriter.kt`, `GPXFileWriter.java`, `CSVFileWriter.java`, `SystemDataExchangeRequirementsContractTest.kt` |
 | `SYSREQ-DEX-002` | Multi-Format Workout Ingestion & Deduplication | `REQ-DAT-001`, `REQ-DAT-019`, `REQ-DAT-021`, `REQ-DAT-025` | `LegacyImportEngine.kt`, `StravaBulkExportImporter.kt`, `StravaCsvParser.kt`, `WorkoutSamplesDatabaseManager.java`, `SystemDataExchangeRequirementsContractTest.kt` |
 | `SYSREQ-DEX-003` | Cloud Activity Sync (Strava) | `REQ-EXP-002`, `REQ-EXP-005`, `REQ-EXP-008`, `REQ-EXP-009`, `REQ-EXP-011`, `REQ-EXP-012`, `REQ-EXP-019`, `REQ-EXP-021`, `REQ-EXT-004` | `StravaUploader.kt`, `StravaEquipmentSyncWorker.kt`, `StravaRoutesSyncWorker.kt`, `StravaSegmentsSyncWorker.kt`, `SystemDataExchangeRequirementsContractTest.kt` |
 | `SYSREQ-DEX-004` | Cloud Storage Sync (Dropbox & GDrive) | `REQ-DAT-020`, `REQ-DAT-022`, `REQ-DAT-024`, `REQ-DAT-029` | `DropboxBackupManager.kt`, `GoogleDriveBackupManager.kt`, `GoogleDriveUploader.kt`, `BackupWorker.kt`, `SystemDataExchangeRequirementsContractTest.kt` |

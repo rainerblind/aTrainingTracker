@@ -816,16 +816,28 @@ class RadarService(Service):
 class RadarControlWriteCharacteristic(Characteristic):
     """Garmin RearVue 820 Tail Light Command characteristic (6a4e2f11)."""
     def __init__(self, bus, index, service, engine, notify_char=None, legacy_char=None):
-        super().__init__(bus, index, RADAR_CONTROL_WRITE_UUID, ['write', 'write-without-response'], service)
+        super().__init__(bus, index, RADAR_CONTROL_WRITE_UUID, ['write', 'indicate'], service)
         self.engine = engine
         self.notify_char = notify_char
         self.legacy_char = legacy_char
+        self.notifying = False
 
     def set_peers(self, notify_char, legacy_char):
         self.notify_char = notify_char
         self.legacy_char = legacy_char
 
+    def StartNotify(self):
+        self.notifying = True
+        print("[REARVUE LIGHT] Client subscribed to 6a4e2f11 control indications.")
+
+    def StopNotify(self):
+        self.notifying = False
+        print("[REARVUE LIGHT] Client unsubscribed from 6a4e2f11 control indications.")
+
     def WriteValue(self, value, options):
+        # Garmin RearVue 820 requires 6a4e2f11 CCCD indications enabled before accepting writes (REQ-CON-031.6)
+        if not self.notifying:
+            raise InvalidArgsException("6a4e2f11 control indications (CCCD 0x2902) must be enabled before writing")
         # Format: 06 09 01 TT
         if not value or len(value) < 4:
             raise InvalidArgsException(f"Payload too short for RearVue control: len={len(value) if value else 0}")
@@ -838,6 +850,13 @@ class RadarControlWriteCharacteristic(Characteristic):
         success = self.engine.set_light_mode(legacy_mode)
         if not success:
             raise InvalidArgsException(f"Engine rejected light mode: {legacy_mode}")
+        rearvue_mode = LEGACY_TO_REARVUE_MAP.get(self.engine.light_mode, REARVUE_MODE_OFF)
+        indication_payload = [0x01, 0x00, 0xFF, rearvue_mode]
+        self.PropertiesChanged(
+            GATT_CHRC_IFACE,
+            {'Value': dbus.ByteArray(indication_payload)},
+            []
+        )
         if self.notify_char:
             self.notify_char.notify_light_mode(self.engine.light_mode)
         if self.legacy_char:

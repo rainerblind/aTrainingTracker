@@ -189,7 +189,7 @@ class AthleteProfileViewModel @JvmOverloads constructor(
 
     private val repository = AthleteMetricsRepository.getInstance(application)
     private val settingsDataStore = SettingsDataStore.getInstance(application)
-    private val tuningDataStore = TuningPreferencesDataStore(application)
+    private val tuningDataStore = TuningPreferencesDataStore.getInstance(application)
     private val hrvReadinessRepo: HrvReadinessRepository = HrvReadinessRepository.getInstance(application)
 
     private val _selectedPlotMetric = MutableStateFlow(PlotMetricType.WEIGHT)

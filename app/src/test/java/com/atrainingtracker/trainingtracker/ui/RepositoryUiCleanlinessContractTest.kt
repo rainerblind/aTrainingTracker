@@ -251,4 +251,45 @@ class RepositoryUiCleanlinessContractTest {
             )
         }
     }
+
+    @Test
+    fun testDevicesTabbedViewModel_zeroDatabaseManagerReferences() {
+        val file = resolveFile("src/main/java/com/atrainingtracker/banalservice/ui/devices/devicetabs/DevicesTabbedViewModel.kt")
+        assertTrue("DevicesTabbedViewModel.kt must exist", file.exists())
+        val content = file.readText()
+
+        val matches = dbManagerPattern.findAll(content).map { it.value }.toList()
+        assertTrue(
+            "DevicesTabbedViewModel.kt must contain zero DatabaseManager references (REQ-ARC-009.1), found: $matches",
+            matches.isEmpty()
+        )
+        assertTrue(
+            "DevicesTabbedViewModel.kt must route device name resolution through DeviceDataRepository",
+            content.contains("deviceDBRepository.getDeviceName(deviceId)")
+        )
+        assertTrue(
+            "DevicesTabbedViewModel.kt must route device type resolution through DeviceDataRepository",
+            content.contains("deviceDBRepository.getDeviceType(deviceId)")
+        )
+    }
+
+    @Test
+    fun testSportTypeViewModel_zeroWorkoutSummariesDatabaseManagerReferences() {
+        val file = resolveFile("src/main/java/com/atrainingtracker/banalservice/ui/sporttype/SportTypeViewModel.kt")
+        assertTrue("SportTypeViewModel.kt must exist", file.exists())
+        val content = file.readText()
+
+        assertFalse(
+            "SportTypeViewModel.kt must not instantiate WorkoutSummariesDatabaseManager directly (REQ-ARC-009.1)",
+            content.contains("WorkoutSummariesDatabaseManager")
+        )
+        assertTrue(
+            "SportTypeViewModel.kt must route sport stats through WorkoutRepository",
+            content.contains("workoutRepository.getSportTypeStats(")
+        )
+        assertTrue(
+            "SportTypeViewModel.kt must route period sport stats through WorkoutRepository",
+            content.contains("workoutRepository.getSportTypeStatsForPeriod(")
+        )
+    }
 }

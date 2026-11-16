@@ -48,9 +48,15 @@ import com.atrainingtracker.banalservice.tpms.IndirectTpmsEstimator
 import com.atrainingtracker.trainingtracker.database.WheelCircumferenceRecord
 import com.atrainingtracker.trainingtracker.database.WheelPosition
 import com.atrainingtracker.R
+import androidx.annotation.VisibleForTesting
 import com.atrainingtracker.trainingtracker.TrackingMode
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager
+import com.atrainingtracker.trainingtracker.database.WorkoutSamplesRepository
+import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
+import com.atrainingtracker.trainingtracker.database.WorkoutTelemetrySample
 import com.atrainingtracker.trainingtracker.ui.WorkoutNavigationEvents
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.atrainingtracker.trainingtracker.ui.tracking.LiveSparklineBuffer
 import com.atrainingtracker.trainingtracker.ui.util.SingleLiveEvent
 import com.atrainingtracker.trainingtracker.util.SnapshotChunkedList
@@ -67,6 +73,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 
 /**
@@ -119,6 +126,20 @@ class BANALServiceRepository private constructor(context: Context) {
 
     // --- Live Cockpit Sparkline Buffers (REQ-TRK-059.6, ATT-6710) ---
     private val sparklineBuffers = ConcurrentHashMap<Long, SparklineRegistration>()
+
+    private var workoutSamplesRepo: WorkoutSamplesRepository = WorkoutSamplesRepository.getInstance(context)
+    private val trackLock = Any()
+
+    @Volatile
+    private var cachedRehydrationSamples: List<WorkoutTelemetrySample>? = null
+
+    @Volatile
+    private var isRehydrating = false
+
+    @VisibleForTesting
+    fun setWorkoutSamplesRepositoryForTesting(repo: WorkoutSamplesRepository) {
+        workoutSamplesRepo = repo
+    }
 
     // --- Service Connection State ---
     private val _serviceBinder = MutableStateFlow<BANALService.BANALServiceComm?>(null)
@@ -244,6 +265,9 @@ class BANALServiceRepository private constructor(context: Context) {
             if (previousMode == TrackingMode.READY && newTrackingMode == TrackingMode.TRACKING) {
                 clearSparklineBuffers()
             }
+            if (newTrackingMode == TrackingMode.TRACKING || newTrackingMode == TrackingMode.PAUSED) {
+                checkAndTriggerRehydration()
+            }
         }
     }
 
@@ -345,6 +369,8 @@ class BANALServiceRepository private constructor(context: Context) {
             }
         }
 
+        checkAndTriggerRehydration()
+
         // Start the long-lived observation loop that reacts to the binder state.
         // It will automatically start/stop based on whether we are connected to the service.
         startObservingBANALService()
@@ -361,6 +387,7 @@ class BANALServiceRepository private constructor(context: Context) {
             if (binder != null) {
                 registeredRrBeatListeners.forEach { binder.addRrBeatListener(it) }
             }
+            checkAndTriggerRehydration()
         }
 
         override fun onServiceDisconnected(name: ComponentName?) {
@@ -524,7 +551,9 @@ class BANALServiceRepository private constructor(context: Context) {
                             }
 
                             if (!isSpiderJitter && TrainingApplication.getTrackingMode() == TrackingMode.TRACKING) {
-                                _currentTrack.value = appendToTrack(_currentTrack.value, location)
+                                synchronized(trackLock) {
+                                    _currentTrack.value = appendToTrack(_currentTrack.value, location)
+                                }
                             }
                         }
 
@@ -550,7 +579,9 @@ class BANALServiceRepository private constructor(context: Context) {
                                     latLng = location,
                                     altitude = currentAltitude ?: 0.0
                                 )
-                                _currentPathPoints.value = appendToTrack(_currentPathPoints.value, newPathPoint)
+                                synchronized(trackLock) {
+                                    _currentPathPoints.value = appendToTrack(_currentPathPoints.value, newPathPoint)
+                                }
                             }
                         }
 
@@ -688,12 +719,15 @@ class BANALServiceRepository private constructor(context: Context) {
 
     fun clearBreadcrumbs() {
         if (DEBUG) Log.i(TAG, "clearBreadcrumbs()")
-        _currentTrack.value = emptyList()
-        _currentPathPoints.value = emptyList()
+        synchronized(trackLock) {
+            _currentTrack.value = emptyList()
+            _currentPathPoints.value = emptyList()
+        }
         itpmsEstimator.resetSession()
         perDeviceItpmsEstimators.values.forEach { it.resetSession() }
         dualWheelTpmsEstimator.resetSession()
         clearSparklineBuffers()
+        cachedRehydrationSamples = null
     }
 
     /**
@@ -840,6 +874,13 @@ class BANALServiceRepository private constructor(context: Context) {
         val buffer = LiveSparklineBuffer(horizonSeconds)
         if (existing != null && existing.configHash == configHash) {
             buffer.transferFrom(existing.buffer)
+        } else {
+            cachedRehydrationSamples?.let { cached ->
+                val metricValues = cached.mapNotNull { extractSampleValueForSensorType(it, sensorType) }
+                if (metricValues.isNotEmpty()) {
+                    buffer.backfillHistoricalSamples(metricValues)
+                }
+            }
         }
         sparklineBuffers[sensorFieldId] = SparklineRegistration(
             sensorFieldId = sensorFieldId,
@@ -887,6 +928,7 @@ class BANALServiceRepository private constructor(context: Context) {
      */
     fun clearSparklineBuffers() {
         sparklineBuffers.values.forEach { it.buffer.clear() }
+        cachedRehydrationSamples = null
     }
 
     /**
@@ -938,6 +980,94 @@ class BANALServiceRepository private constructor(context: Context) {
             current.append(element)
         } else {
             SnapshotChunkedList.from(current).append(element)
+        }
+    }
+
+    /**
+     * Checks if active session requires telemetry rehydration on process restart / reconnect (REQ-TRK-080.1, ATT-7877).
+     */
+    fun checkAndTriggerRehydration() {
+        val mode = TrainingApplication.getTrackingMode()
+        if (mode != TrackingMode.TRACKING && mode != TrackingMode.PAUSED) return
+        if (_currentTrack.value.isNotEmpty()) return
+        if (isRehydrating) return
+
+        isRehydrating = true
+        repositoryScope.launch(Dispatchers.IO) {
+            try {
+                val activeWorkoutId = TrainingApplication.getActiveWorkoutID()
+                val baseFileName = if (activeWorkoutId > 0) {
+                    WorkoutSummariesDatabaseManager.getInstance(appContext).getBaseFileName(activeWorkoutId)
+                } else {
+                    WorkoutRepository.getInstance(appContext).getResumedWorkoutState()?.baseFileName
+                }
+
+                if (!baseFileName.isNullOrBlank()) {
+                    rehydrateActiveWorkoutTelemetry(baseFileName)
+                }
+            } catch (e: RuntimeException) {
+                runCatching { if (DEBUG) Log.w(TAG, "Telemetry rehydration skipped", e) }
+            } finally {
+                isRehydrating = false
+            }
+        }
+    }
+
+    /**
+     * Asynchronously rehydrates GPS track breadcrumbs, elevation path points, and sparkline buffers
+     * from WorkoutSamples.db for an active resumed workout session (REQ-TRK-080, ATT-7877).
+     *
+     * @param baseFileName SQLite table base file name for active workout.
+     */
+    suspend fun rehydrateActiveWorkoutTelemetry(baseFileName: String) = withContext(Dispatchers.IO) {
+        if (baseFileName.isBlank()) return@withContext
+        val samples = workoutSamplesRepo.getSamples(baseFileName)
+        if (samples.isEmpty()) return@withContext
+
+        cachedRehydrationSamples = samples
+
+        // 1. Rehydrate map track and path points
+        val historicalTrack = samples.mapNotNull { s ->
+            if (s.latitude != null && s.longitude != null) {
+                LatLng(s.latitude, s.longitude)
+            } else null
+        }
+        val historicalPathPoints = samples.mapNotNull { s ->
+            if (s.latitude != null && s.longitude != null) {
+                com.atrainingtracker.trainingtracker.ui.map.PathPoint(
+                    distance = s.distanceMeters ?: 0.0,
+                    latLng = LatLng(s.latitude, s.longitude),
+                    altitude = s.altitude ?: 0.0
+                )
+            } else null
+        }
+
+        synchronized(trackLock) {
+            val currentLiveTrack = _currentTrack.value
+            _currentTrack.value = SnapshotChunkedList.from(historicalTrack + currentLiveTrack)
+
+            val currentLivePathPoints = _currentPathPoints.value
+            _currentPathPoints.value = SnapshotChunkedList.from(historicalPathPoints + currentLivePathPoints)
+        }
+
+        // 2. Backfill registered sparkline buffers
+        for (reg in sparklineBuffers.values) {
+            val metricValues = samples.mapNotNull { extractSampleValueForSensorType(it, reg.sensorType) }
+            if (metricValues.isNotEmpty()) {
+                reg.buffer.backfillHistoricalSamples(metricValues)
+            }
+        }
+    }
+
+    private fun extractSampleValueForSensorType(sample: WorkoutTelemetrySample, sensorType: SensorType): Float? {
+        return when (sensorType) {
+            SensorType.HR -> sample.heartRate?.toFloat()
+            SensorType.SPEED_mps -> sample.speedMps?.toFloat()
+            SensorType.POWER -> sample.powerWatts?.toFloat()
+            SensorType.CADENCE -> sample.cadenceRpm?.toFloat()
+            SensorType.ALTITUDE -> sample.altitude?.toFloat()
+            SensorType.DISTANCE_m -> sample.distanceMeters?.toFloat()
+            else -> null
         }
     }
 

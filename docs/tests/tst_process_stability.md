@@ -1628,6 +1628,49 @@
   4. *Zero Production Code Change Governance Audit (`TST-ARC-008.4`)*:
   • Verify via `git status` that `app/src/main/` contains zero modifications.
 
+### TST-ARC-009: **Java Core Migration: Modernize SQLite Database Managers via Repository Interfaces Test Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Integration
+- **Requirement(s)**: `REQ-ARC-009`
+- **Component**: **Repository & Database Manager Modernization Verification Suite**
+- **Jira**: `ATT-7909`
+- **Test Description**:
+  1. *ViewModel Repository Encapsulation Contract Verification (`TST-ARC-009.1`)*:
+  • Execute `RepositoryCleanlinessContractTest` to verify that `DevicesTabbedViewModel` and `SportTypeViewModel` contain zero direct `DatabaseManager.getInstance` invocations and that `TrackingViewsRepository` exposes no database manager types in public signatures.
+  2. *DeviceDataRepository & DevicesTabbedViewModel Modernization Suite (`TST-ARC-009.2`)*:
+  • Execute `DevicesTabbedViewModelTest` to verify that device name and type resolution route through `DeviceDataRepository` off the main thread.
+  3. *WorkoutRepository & SportTypeViewModel Statistics Suite (`TST-ARC-009.3`)*:
+  • Execute `SportTypeViewModelRetiredTest` / `SportTypeViewModelTest` to verify that sport type stats queries route through `WorkoutRepository.getSportTypeStats()` and `WorkoutRepository.getSportTypeStatsForPeriod()` on `Dispatchers.IO`.
+  4. *Null-Hardened Cursor & Resource Safety Verification (`TST-ARC-009.4`)*:
+  • Execute unit tests verifying that null or empty cursors in `WorkoutRepository.loadAllWorkouts()` and `PeriodsRepository.startMigration()` return safely via `?.use {}` without `NullPointerException`.
+  • Run `TryWithResourcesCursorAuditTest` to verify all cursor acquisition paths adhere to resource cleanup rules.
+  5. *Merged Features Regression Verification (`TST-ARC-009.5`)*:
+  • Verify that `dismissPolarSyncPending()`, `setPolarSyncPending()`, `clearPolarSyncPending()`, and crash-recovery accumulator preservation methods compile and function without regression.
+
+### TST-ARC-010: **Java Core Migration: Streaming File Writers (BaseFileWriter, TCXFileWriter, FitFileWriter) Kotlin Migration Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Integration
+- **Requirement(s)**: `REQ-ARC-010`
+- **Component**: **Streaming File Writers Kotlin Migration Verification Suite**
+- **Jira**: `ATT-7906`
+- **Test Description**:
+  1. *Binary FIT Protocol Serialization & Golden Master Parity (`TST-ARC-010.1`)*:
+  • Execute `FitFileWriterTest`, `FitFileWriterRadarTest`, and `FitFileWriterHrvTest` verifying binary FIT Protocol V2.0 message encoding, `FileEncoder.use {}` scoping, developer data ID headers, and $O(1)$ memory sample streaming without SQLite imports.
+  2. *FIT Lossless Round-Trip & Developer Field Fidelity (`TST-ARC-010.2`)*:
+  • Execute `FitLosslessRoundTripTest` verifying lossless round-trip through `FitWorkoutParser` for pedal dynamics (`ATT-8196`), swimming pool length (`ATT-7999`), session metadata developer fields (`ATT-7747`), radar threat alerts (`ATT-5096`), and RPE/Feel (`ATT-6879`).
+  3. *TCX XML Schema & Structured DTO Serialization (`TST-ARC-010.3`)*:
+  • Execute `TCXFileWriterLapTest`, `TCXFileWriterWorkoutNameTest`, and `TCXRoundTripTest` verifying Garmin TCX v2 sequence ordering, XML character escaping, and `TcxSerializer` structured DTO generation.
+  4. *Java Subclass Interoperability Verification (`TST-ARC-010.4`)*:
+  • Execute `GPXFileWriterTest`, `GCFileWriterTest`, and `CSVFileWriterTest` verifying that legacy Java writers inheriting from `open class BaseFileWriter` compile and function without behavioral regressions.
+  5. *Architectural Contract & Exception Handling Governance (`TST-ARC-010.5`)*:
+  • Execute `RepositoryEngineCleanlinessContractTest` verifying zero SQLite imports in `BaseFileWriter`, `TCXFileWriter`, and `FitFileWriter`.
+  • Execute `ExceptionHandlingHygieneTest` verifying `FitFileWriter.kt` contains zero unlogged empty catch blocks and zero `catch (Throwable)`.
+  • Execute `JavaCoreMigrationStrategyContractTest` verifying Java class count decreases while remaining `<= 149`.
+
 ### TST-PRO-020: **Agile Agentic ASPICE (AAA) Governance, Constructive Resistance, Hypothesis Verification, Stage 5 Resource Gate & Ceremony 2 Completeness Sweep Verification** [Verified]
 - **Priority**: High
 - **Type**: Non-Functional
@@ -2349,15 +2392,20 @@
 - **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-PRO-062`
 - **Component**: `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `tools/hoechstmass/tools/jira_util.py`, `tools/hoechstmass/tools/verify_requirement_governance.py`, `tools/test_jira_accounts.py`, `tools/test_verify_requirement_governance.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`
-- **Jira**: `ATT-6155`
+- **Jira**: `ATT-6155`, `ATT-8142`
 - **Test Description**:
   1. *`record-review` CLI Command & Report Generation (`TST-PRO-062.1`, tools/test_jira_accounts.py & tools/hoechstmass/tools/test_hoechstmass_tools.py)*:
   • Execute `record-review` for Human Ceremony 2 review and Cross-Vendor AI review; verify structured markdown output and metadata serialization.
+  • Test that `record-review` with `--verdict PASS` or `FAIL` without `--findings` fails with usage error.
+  • Test that `record-review` with `--verdict SKIPPED` or `NOT PERFORMED` generates truthful record without default success text and includes Rule 1.3 deviation header.
+  • Test invalid verdict string is rejected.
   2. *Independent Review Governance Verification (`TST-PRO-062.2`, tools/test_verify_requirement_governance.py)*:
-  • Run `verify_independent_reviews` against valid vs missing and malformed review records; assert pass/fail status and schema diagnostics.
-  3. *Counterpart Parity & Tooling Integration (`TST-PRO-062.3`, tools/hoechstmass/tools/test_hoechstmass_tools.py)*:
+  • Run `verify_independent_reviews` against valid vs missing and malformed review records, including `PASS`, `FAIL`, `SKIPPED`, `NOT PERFORMED`, and `PARTIAL`; assert pass/fail status and schema diagnostics.
+  3. *Review File Correction & Evidence Integrity (`TST-PRO-062.3`, docs/engineering/reviews/sprint_2026-46.6.md)*:
+  • Verify `docs/engineering/reviews/sprint_2026-46.6.md` contains verdict `SKIPPED` and correction note referencing Finding K2.
+  4. *Counterpart Parity & Tooling Integration (`TST-PRO-062.4`, tools/hoechstmass/tools/test_hoechstmass_tools.py)*:
   • Assert `record-review` and `verify_independent_reviews` in Höchstmaß mirror match root tooling behavior.
-  4. *Canonical Directory Registration (`TST-PRO-062.4`, tools/test_verify_requirement_governance.py)*:
+  5. *Canonical Directory Registration (`TST-PRO-062.5`, tools/test_verify_requirement_governance.py)*:
   • Assert `"reviews"` exists in `ALLOWED_ENGINEERING_ENTRIES` and `hoechstmass_config.json`.
 
 ### TST-PRO-063: **Problem Severity Classification & Defect Trend Metrics Suite** [Verified]
@@ -2453,11 +2501,11 @@
   • Assert presence of step packaging `junit-test-results-<tag>.zip` (or `.tar.gz`) from unit test report directories.
   • Assert that release assets attached via `softprops/action-gh-release@v2` include the versioned test results archive pattern.
   • Assert workflow artifact upload for release test results.
-  3. *Local Developer Symlink Integrity Test (`TST-PRO-067.3`, ReleaseCiAndLintConfigContractTest.kt & tools/verify_requirement_governance.py)*:
-  • Assert `docs/engineering/test_results` exists and is a symbolic link.
-  • Assert the link target points to `../../app/build/reports/tests/testDebugUnitTest`.
+  3. *Test Results Symlink Retirement & Evidence Directory Contract Test (`TST-PRO-067.3`, ReleaseCiAndLintConfigContractTest.kt & tools/verify_requirement_governance.py)*:
+  • Assert `docs/engineering/test_results` symlink to transient build output is retired.
+  • Assert `docs/engineering/test_evidence/` is established as canonical directory in living docs and governance scripts.
   4. *Governance Tooling Integration (`TST-PRO-067.4`, tools/test_verify_requirement_governance.py)*:
-  • Assert `verify_engineering_directory_structure()` in `tools/verify_requirement_governance.py` validates `docs/engineering/test_results` symlink target integrity.
+  • Assert `verify_engineering_directory_structure()` in `tools/verify_requirement_governance.py` validates canonical `test_evidence/` layout and rejects obsolete symlink.
   5. *Workflow YAML Syntax Validation (`TST-PRO-067.5`, tools/test_verify_requirement_governance.py & ReleaseCiAndLintConfigContractTest.kt)*:
   • Parse `.github/workflows/android-branch-build.yml` and `.github/workflows/android-release.yml` with YAML parser and assert zero syntax errors.
 
@@ -3038,17 +3086,17 @@
 
 ---
 
-### TST-PRO-088: **System Verification Protocol Sign-Off & Release Gating Verification Suite** [Verified]
+### TST-PRO-088: **System Verification Protocol Sign-Off & Release Gating Verification Suite** [Planned]
 - **Verifies**: `REQ-PRO-088`
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit / Review
 - **Component**: `docs/releases/V5.0.0/sys_verification_record.md`, `tools/run_system_integration_tests.py`, `.github/workflows/android-release.yml`, `tools/test_generate_release_verification_summary.py`, `tools/test_system_integration_tests.py`
-- **Jira**: `ATT-7560`
+- **Jira**: `ATT-7560`, `ATT-8141`
 - **Test Description**:
-  1. *SYS.5 Verification Record & Release Gating Contract*: Verify that `docs/releases/V5.0.0/sys_verification_record.md` exists, defines all 8 `SYS-VRF-001`..`008` cases with `PASS`, includes hardware serials, and has formal sign-offs.
+  1. *SYS.5 Verification Record & Release Gating Contract*: Verify that `docs/releases/V5.0.0/sys_verification_record.md` exists, defines all 8 `SYS-VRF-001`..`008` cases, validates absence of synthetic placeholder serials (`*-REF-*`), and enforces human PO attestation prior to release qualification.
   2. *System Integration Runner & Wire Protocol Alignment*: Execute `tools/run_system_integration_tests.py` verifying all 6 cases (`SYS-INT-001`..`006`) pass cleanly including `SYS-INT-003`.
-  3. *Release Verification Summary Generation*: Run `tools/generate_release_verification_summary.py --tag V5.0.0 --fail-on-deviations` asserting exit code 0 and `PASS (READY FOR RELEASE)`.
+  3. *Release Verification Summary Gating*: Run `tools/generate_release_verification_summary.py --tag V5.0.0 --fail-on-deviations` asserting that unbacked or placeholder verification records correctly yield `BLOCKED` and missing human attestation prevents release candidate authorization.
   4. *Targeted Regression Test Execution*: Run unit tests in `tools/test_generate_release_verification_summary.py` and `tools/test_system_integration_tests.py` asserting 100% pass rate.
 
 
@@ -3148,3 +3196,114 @@
   2. *Strict Verifier Execution*: Run `verify_requirement_attributes(enforce_attributes=True)` and assert pass with message `PASS: 100% of living requirements define valid Priority, Type, and Verification Method attributes.`
   3. *Negative Mutation Verification*: In `tools/test_verify_requirement_governance.py`, assert that any requirement without attributes fails verification.
   4. *Governance Parity Verification*: Execute `python3 tools/verify_requirement_governance.py` and confirm 100% parity with zero warnings.
+
+
+---
+
+### TST-PRO-095: **Weekly Dual-Vendor Code Review Governance and Automation Verification** [Verified]
+- **Verifies**: `REQ-PRO-095`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Component**: `tools/jira_util.py`, `tools/test_jira_accounts.py`, `tools/verify_requirement_governance.py`, `tools/test_verify_requirement_governance.py`, `docs/engineering/code_reviews/`
+- **Jira**: `ATT-8213`
+- **Test Description**:
+  1. *Canonical Directory Registration Test (`tools/test_verify_requirement_governance.py`)*: Assert `code_reviews` is recognized in `ALLOWED_ENGINEERING_ENTRIES` and `verify_canonical_engineering_entries()` passes with `docs/engineering/code_reviews/` present.
+  2. *Subsystem Coverage Matrix Parsing & Slice Selection Test (`tools/test_jira_accounts.py`)*: Assert helper function `get_next_review_subsystem()` correctly parses `coverage_matrix.md` and selects unreviewed or oldest audited subsystem slices.
+  3. *Weekly Review Ticket Creation & Deduplication Test (`tools/test_jira_accounts.py`)*: Mock Jira API and verify `ensure_weekly_review_ticket()` creates a ticket with `rank_top=True` under `ATT-232` when overdue and skips creation when an active review ticket already exists.
+  4. *Governance Documentation & Policy Grounding Review*: Verify policy alignment across `docs/coding_standards.md`, `.agents/rules/aspice_governance.md`, `sprint-planner/SKILL.md`, and `release-manager/SKILL.md`.
+  5. *Living Documentation Master Parity*: Run `python3 tools/verify_requirement_governance.py` confirming 100% parity across `docs/requirements.md` and `docs/tests.md`.
+
+
+---
+
+### TST-PRO-096: **ASPICE 4.0 SUP.1 QA Governance, Audit Evidence Store, and Automation Verification** [Verified]
+- **Verifies**: `REQ-PRO-096`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Component**: `docs/management/qa_plan.md`, `tools/jira_util.py`, `tools/test_jira_accounts.py`, `tools/verify_requirement_governance.py`, `tools/test_verify_requirement_governance.py`, `docs/engineering/aspice_audits/`
+- **Jira**: `ATT-8212`
+- **Test Description**:
+  1. *Canonical Directory Registration Test (`tools/test_verify_requirement_governance.py`)*: Assert `aspice_audits` is recognized in `ALLOWED_ENGINEERING_ENTRIES` and `verify_canonical_engineering_entries()` passes with `docs/engineering/aspice_audits/` present.
+  2. *ASPICE Audit Currency & Overdue Check Test (`tools/test_jira_accounts.py`)*: Assert `is_weekly_aspice_audit_overdue()` correctly evaluates elapsed days against records in `docs/engineering/aspice_audits/`.
+  3. *Weekly ASPICE Audit Ticket Creation & Deduplication Test (`tools/test_jira_accounts.py`)*: Mock Jira API and verify `ensure_weekly_aspice_audit_ticket()` creates a ticket with `rank_top=True` under `ATT-232` when overdue and skips creation when an active ticket already exists.
+  4. *SUP.1 QA Plan Governance & Release Gate Review*: Verify alignment across `docs/management/qa_plan.md`, `cm_plan.md`, `sprint-planner/SKILL.md`, and `release-manager/SKILL.md`.
+  5. *Living Documentation Parity*: Run `python3 tools/verify_requirement_governance.py` confirming 100% parity across `docs/requirements.md` and `docs/tests.md`.
+
+
+---
+
+### TST-PRO-097: **Capacity-Bound Bin-Packing, V5.0.0 Release Plan, and FixVersion Governance Verification** [Verified]
+- **Verifies**: `REQ-PRO-097`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Component**: `docs/management/release_plan.md`, `tools/jira_util.py`, `tools/test_jira_accounts.py`, `sprint-planner/SKILL.md`, `release-manager/SKILL.md`, `.agents/rules/aspice_governance.md`
+- **Jira**: `ATT-8162`
+- **Test Description**:
+  1. *Multi-Lane Capacity Bin-Packing Test (`tools/test_jira_accounts.py`)*: Assert `select_greedy_bin_pack_tickets()` packs candidate tickets in strict `ORDER BY rank ASC` across disjoint Epics, respects `max_sp_per_lane` / capacity bounds, and preserves excess tickets of saturated Epics for subsequent sprints.
+  2. *FixVersion Warning Suppression Test (`tools/test_jira_accounts.py`)*: Assert `show_issue()` does not emit FixVersion missing warnings when tickets are in non-terminal statuses (`Zu erledigen`, `In Bearbeitung`, `In Überprüfung`), but alerts when status is `Erledigt` and `fixVersions` is empty.
+  3. *Release Plan Structure and Quality Gate Review*: Inspect `docs/management/release_plan.md` confirming full coverage of `V5.0.0` milestone epics, 12h continuous cadence, Google Pixel 10 daily-ride verification, and quality gate exit criteria.
+  4. *Governance & Lifecycle Parity Review*: Verify consistency across `.agents/rules/aspice_governance.md` (Rule 8.3 & Rule 85), `sprint-planner/SKILL.md`, and `release-manager/SKILL.md`.
+  5. *Living Documentation Parity*: Execute `python3 tools/verify_requirement_governance.py` confirming 100% parity across `docs/requirements.md` and `docs/tests.md`.
+
+
+---
+
+### TST-PRO-098: **Human-Attested Field Evidence Extractor, Release Guarding and Governance Verification Suite** [Verified]
+- **Verifies**: `REQ-PRO-098`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Component**: `tools/extract_pixel_field_evidence.py`, `tools/generate_release_verification_summary.py`, `tools/test_generate_release_verification_summary.py`, `docs/releases/TEMPLATE.md`, `docs/releases/V5.0.0/sys_verification_record.md`, `.agents/rules/aspice_governance.md`
+- **Jira**: `ATT-8141`
+- **Test Description**:
+  1. *Placeholder Serial & Synthetic Data Rejection Test*: In `tools/test_generate_release_verification_summary.py`, verify that `collect_sys5_summary()` detects placeholder serials (`P8-REF-2024-001`, `P6-REF-2022-044`, `*-REF-*`) and treats them as blocking deviations.
+  2. *Human PO Attestation Gating Test*: In `tools/test_generate_release_verification_summary.py`, assert that missing human PO attestation (missing signature, date, or build SHA) reports `BLOCKED` under `generate_release_verification_summary.py`.
+  3. *Pixel Telemetry Extractor & Gap Coach Test*: Verify that `tools/extract_pixel_field_evidence.py` parses workout session telemetry, populates `EXTRACTED_AWAITING_PO_ATTESTATION`, and outputs prioritized gap recommendations for unexercised sensor combinations.
+  4. *V5.0.0 Protocol & Template Schema Audit*: Verify `docs/releases/TEMPLATE.md` and `docs/releases/V5.0.0/sys_verification_record.md` contain the Human PO Attestation block and zero synthetic assertions.
+  5. *Agent Governance Rule Verification*: Assert that `.agents/rules/aspice_governance.md` mandates `human-execution` labeling and forbids autonomous agents from fabricating physical test evidence.
+  6. *Living Documentation Parity*: Execute `python3 tools/verify_requirement_governance.py` confirming 100% parity across `docs/requirements.md` and `docs/tests.md`.
+
+
+---
+
+### TST-PRO-099: **Test Result-Driven Verification Status & Evidence Gating Suite** [Verified]
+- **Requirement(s)**: `REQ-PRO-099`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Component**: `tools/verify_requirement_governance.py`, `tools/jira_util.py`, `tools/hoechstmass/tools/jira_util.py`, `tools/test_verify_requirement_governance.py`, `tools/test_jira_accounts.py`, `.agents/skills/stage5-verification/SKILL.md`
+- **Jira**: `ATT-8143`
+- **Test Description**:
+  1. *JUnit XML Result Ingestion & TST Mapping Test (`tools/test_verify_requirement_governance.py`)*: Assert parser extracts testcases from JUnit XML files (`TEST-*.xml`), maps method names and code tags to `TST-XXX` IDs, and aggregates pass/fail/error counts.
+  2. *Failing Test Result Evidence Gate Test (`tools/test_verify_requirement_governance.py`)*: Assert `verify_verified_test_evidence()` rejects `[Verified]` status with exit code 1 when a mapped test has `<failure>` or `<error>` in JUnit XML.
+  3. *Unbacked TST Rejection & Ratchet Baseline Test (`tools/test_verify_requirement_governance.py`)*: Assert net-new `[Verified]` TST without passing test evidence fails, while legacy baseline items within `LEGACY_UNBACKED_VERIFIED_TSTS` pass with warning.
+  4. *Stage 5 Evidence-Gated Promotion Test (`tools/test_jira_accounts.py`)*: Assert `auto_verify_living_docs_on_stage5()` checks test results before flipping status, promoting only items with passing evidence and keeping unbacked/failing items as `[Implemented]`.
+  5. *Clean Worktree Default Verification Safety Test*: Assert default `verify_requirement_governance.py` passes cleanly in fresh worktree without requiring pre-existing build artifacts.
+  6. *Living Documentation Parity*: Execute `python3 tools/verify_requirement_governance.py` confirming 100% parity across `docs/requirements.md` and `docs/tests.md`.
+
+---
+
+### TST-PRO-100: **Versioned Test and Coverage Evidence Contract & Gating Suite** [Verified]
+- **Requirement(s)**: `REQ-PRO-100`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Component**: `tools/generate_test_evidence.py`, `tools/test_generate_test_evidence.py`, `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `tools/test_verify_requirement_governance.py`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ReleaseCiAndLintConfigContractTest.kt`, `docs/management/cm_plan.md`, `.agents/rules/aspice_governance.md`
+- **Jira**: `ATT-8144`
+- **Test Description**:
+  1. *Test Evidence Generator Unit Suite (`TST-PRO-100.1`, tools/test_generate_test_evidence.py)*:
+  • Assert parser extracts JUnit XML test results and calculates total, passed, failed, error, and skipped counts.
+  • Assert parser correlates test cases to `TST-XXX` IDs and produces structured pass/fail mapping.
+  • Assert parser parses Kover XML report and extracts global and per-package line and branch coverage percentages.
+  • Assert generator produces valid, readable `docs/engineering/test_evidence/<target>.md` and `.json` files.
+  2. *Governance Gating & Directory Structure Test (`TST-PRO-100.2`, tools/test_verify_requirement_governance.py)*:
+  • Assert `verify_engineering_directory_structure()` allows `docs/engineering/test_evidence/` and rejects `docs/engineering/test_results` symlink.
+  • Assert `verify_requirement_governance.py --check-test-evidence` validates presence, format, and non-empty status of sprint and release evidence files.
+  3. *Release CI Contract & CM Plan Verification (`TST-PRO-100.3`, ReleaseCiAndLintConfigContractTest.kt)*:
+  • Assert `ReleaseCiAndLintConfigContractTest.kt` verifies retirement of `docs/engineering/test_results` symlink and presence of `docs/engineering/test_evidence/`.
+  • Assert `docs/management/cm_plan.md` registers `docs/engineering/test_evidence/` under controlled Configuration Items.
+  4. *Living Documentation Parity*:
+  • Execute `python3 tools/verify_requirement_governance.py` confirming 100% parity across `docs/requirements.md` and `docs/tests.md`.

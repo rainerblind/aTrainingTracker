@@ -2068,23 +2068,27 @@
 
 ### TST-CON-031: **BLE Radar Tail Light Mode Control Test Suite** [Verified]
 - **Requirement(s)**: `REQ-CON-031` (`REQ-CON-031.1`..`REQ-CON-031.8`)
-- **Component**: `BTLERadarDevice.java`, `RadarLightController.kt`, `RadarLightMode.kt`, `RadarEdgeOverlay.kt`, `RadarSettingsSection.kt`, `TuningPreferencesDataStore.kt`, `TrackerService.java`, `RadarLightQuickSwitchSheet.kt`, `EditDeviceDialog.kt`, `strings_radar.xml`
-- **Jira**: `ATT-5102`, `ATT-6707`, `ATT-7545`, `ATT-7540`, `ATT-7538`, `ATT-7991`
+- **Component**: `BTLERadarDevice.java`, `MyBTLEDevice.java`, `RadarLightController.kt`, `RadarLightMode.kt`, `RadarEdgeOverlay.kt`, `RadarSettingsSection.kt`, `TuningPreferencesDataStore.kt`, `TrackerService.java`, `RadarLightQuickSwitchSheet.kt`, `EditDeviceDialog.kt`, `strings_radar.xml`, `tools/ble_radar_simulator.py`, `MyBTLEDeviceQueueTest.kt`, `tools/test_ble_radar_simulator.py`
+- **Jira**: `ATT-5102`, `ATT-6707`, `ATT-7545`, `ATT-7540`, `ATT-7538`, `ATT-7991`, `ATT-7737`
 - **Test Description**:
-  1. *Light Characteristic Discovery, Model Number Query & Queue Routing Tests (`TST-CON-031.1`, `BTLERadarDeviceTest.kt`)*:
-  • Verify discovery of RearVue 820 Control Service `6a4e2f00` (write `6a4e2f11`, notify `6a4e2f14`) and CCCD subscription on `6a4e2f14`, transparent legacy fallback to `6a4e3202` on service `6a4e3200`, read of Device Information `0x2A24` (Model Number string), StVZO detection (`isStvzo = true` for `010-03180-10`, `RTL516`), initial read/registration of light control on connect, active light mode re-dispatch on mid-ride reconnect, and serialized write queueing.
-  2. *Mode Command Encoding, Slot Notification Decoding, StVZO Pruning & Gated Mutation Tests (`TST-CON-031.2`, `BTLERadarDeviceTest.kt`, `RadarLightControllerTest.kt`)*:
-  • Verify dispatch of 4-byte mode commands `06 09 01 TT` (`0x11` SOLID, `0x12` PELOTON, `0x13` DAY_FLASH, `0x14` NIGHT_FLASH, `0x1F` OFF) on `6a4e2f11` configured with `WRITE_TYPE_NO_RESPONSE`, `MyBTLEDevice` write queue write type enforcement, immediate `RadarLightController.updateHardwareLightMode(mode)` update, legacy 1-byte command dispatch on `6a4e3202`, decoding of 4-byte slot notifications `01 [slot] ff [type]` on `6a4e2f14` updating `RadarLightController` without reverting active mode, flashing mode pruning under StVZO, and verification that `_currentMode` and `RadarStateRepository` mutate strictly when `dispatched == true`.
+  1. *Light Characteristic Discovery, `6a4e2f11` CCCD Handshake, Model Number Query & Queue Routing Tests (`TST-CON-031.1`, `BTLERadarDeviceTest.kt`)*:
+  • Verify discovery of RearVue 820 Control Service `6a4e2f00` (write+indicate `6a4e2f11`, notify `6a4e2f14`), enabling `setCharacteristicNotification(controlWriteChar, true)` and queuing `0x2902` CCCD (`ENABLE_INDICATION_VALUE` / `ENABLE_NOTIFICATION_VALUE`) on **`6a4e2f11`** strictly *before* any initial `setLightMode()` control write, alongside CCCD subscription on `6a4e2f14`.
+  • Verify `onOtherCharacteristicUpdate()` decodes/handles indication responses on `6a4e2f11`, transparent legacy fallback to `6a4e3202` on service `6a4e3200`, read of Device Information `0x2A24` (Model Number string), StVZO detection (`isStvzo = true` for `010-03180-10`, `RTL516`), active light mode re-dispatch on mid-ride reconnect after CCCD queueing, and serialized write queueing.
+  2. *Property-Aware Write Type, Write Error Propagation, Slot Decoding, StVZO Pruning & Gated Mutation Tests (`TST-CON-031.2`, `BTLERadarDeviceTest.kt`, `MyBTLEDeviceQueueTest.kt`, `RadarLightControllerTest.kt`)*:
+  • Verify dispatch of 4-byte mode commands `06 09 01 TT` (`0x11` SOLID, `0x12` PELOTON, `0x13` DAY_FLASH, `0x14` NIGHT_FLASH, `0x1F` OFF) on `6a4e2f11` using `WRITE_TYPE_DEFAULT` whenever `PROPERTY_WRITE` is supported (`(WRITE, INDICATE)`), while `MyBTLEDevice.WriteCharacteristicOp` and `BTLERadarDevice` select `WRITE_TYPE_NO_RESPONSE` strictly when `PROPERTY_WRITE == 0 && (properties & PROPERTY_WRITE_NO_RESPONSE) != 0` (preserving legacy `6a4e3202`).
+  • Verify `MyBTLEDevice.onCharacteristicWrite()` propagates `(gatt, characteristic, status)` to `BTLERadarDevice.onCharacteristicWriteCompleted()`: non-`GATT_SUCCESS` status logs error diagnostics, handles `GATT_INSUFFICIENT_AUTHENTICATION` bonding check/request, and reconciles/rolls back optimistic `mLastConfiguredLightMode` / `RadarLightController` state cleanly rather than silently masking failure until `6a4e2f14` snaps back to `OFF`.
+  • Verify legacy 1-byte command dispatch on `6a4e3202`, decoding of 4-byte slot notifications `01 [slot] ff [type]` on `6a4e2f14` updating `RadarLightController`, flashing mode pruning under StVZO, and verification that `_currentMode` and `RadarStateRepository` mutate strictly when `dispatched == true`.
   3. *Cockpit Quick-Switch Sheet Automatik & Physical Mode Selection Tests (`TST-CON-031.3`, `RadarLightQuickSwitchSheetTest.kt`)*:
   • Verify modal sheet rendering with `Automatik` as the first selectable option followed by available physical modes, live active state indication for both `isAutoMode` and `currentMode`, proper callback invocation clearing manual override on `Automatik` selection and persisting `radarLightDefaultMode` on explicit physical mode selection, non-interactive badge behavior on devices lacking light characteristic, styling using `MaterialTheme.colorScheme.outline`, and `@Preview` coverage.
   4. *Workout Lifecycle Auto-Switch Automation & Pause Safety Tests (`TST-CON-031.4`, `RadarLightControllerTest.kt`, `TrackerServiceTest.kt`)*:
   • Verify automatic activation of persisted user lighting selection (`AUTO` starts `SmartRadarLightEngine`; explicit mode dispatches directly) on tracker start/resume (`START_NORMAL`, `RESUME_BY_USER`, `RESUME_AUTOMATICALLY`), preservation of tail light illumination across workout pause, and synchronous dispatch of `OFF` on explicit stop (`handleActionStop`) without erasing or overwriting persisted user preferences for future workouts.
-  5. *Unified Persistence Migration, Expert Settings Retirement & EditDeviceDialog Tests (`TST-CON-031.5`, `TuningPreferencesDataStoreRadarLightControlModeTest.kt`, `RadarSettingsSectionTest.kt`, `RadarLightControllerTest.kt`, `EditDeviceDialogTest.kt`)*:
+  5. *Unified Persistence Migration, Expert Settings Retirement & EditDeviceDialog UI Consistency Tests (`TST-CON-031.5`, `TuningPreferencesDataStoreRadarLightControlModeTest.kt`, `RadarSettingsSectionTest.kt`, `RadarLightControllerTest.kt`, `EditDeviceDialogTest.kt`)*:
   • Verify DataStore migration from legacy `RadarLightControlMode` to unified `isAutoMode: Boolean` + `radarLightDefaultMode: RadarLightMode` with fallback defaults (`true` and `DAY_FLASH`).
   • Verify retirement of redundant 3-way mode segmented button and default mode dropdown in `RadarSettingsSection.kt`, and preservation of `radarBrakeLightEnabled` toggle.
-  • Verify `EditDeviceDialog` live tail light controls: conditional visibility gating (`BIKE_RADAR`, connected, `isLightControlAvailable`), inclusion of `Automatik` as first option alongside physical modes, immediate dispatch via `RadarLightController`, draft state decoupling, and StVZO option restriction.
-  6. *Traffic Simulator Light State Tests (`TST-CON-031.6`, `RadarTrafficSimulatorTest.kt`)*:
+  • Verify `EditDeviceDialog` live tail light controls: conditional visibility gating (`BIKE_RADAR`, connected, `isLightControlAvailable`), inclusion of `Automatik` as first option alongside physical modes, immediate dispatch via `RadarLightController`, draft state decoupling, StVZO option restriction, and UI binding consistency with `RadarLightController.currentMode` / `isAutoMode` on dialog close and reopen.
+  6. *Traffic Simulator & BLE Peripheral Simulator Fidelity Tests (`TST-CON-031.6`, `RadarTrafficSimulatorTest.kt`, `tools/test_ble_radar_simulator.py`)*:
   • Verify light command handling and simulated state reflections in `RadarTrafficSimulator`.
+  • Verify `tools/ble_radar_simulator.py` (`RadarControlWriteCharacteristic` on `6a4e2f11`) exposes `['write', 'indicate']` properties (never `write-without-response`) and rejects writes when `6a4e2f11` CCCD indications are not subscribed.
   7. *9-Language Localization Parity Test (`TST-CON-031.7`, `TranslationParityTest.kt`)*:
   • Verify 100% key and format parity for light mode, Automatik, and status string resources across all 9 supported locales.
   8. *Clean-Room Targeted Test Suite Execution (`TST-CON-031.8`)*:
@@ -2871,3 +2875,97 @@
      • Verify zero new strings added and existing `R.string.devices_altitude_from_pressure` across all 9 locales (EN, DE, ES, FR, IT, JA, NL, PL, PT) plus legacy `ATT-5073` names are recognized as barometric columns.
   5. *Targeted Tier-1 Unit & Contract Verification (`TST-FIL-018.5`)*:
      • Run targeted Gradle suite (`WorkoutSamplesDatabaseManager*`, `LiveWorkoutSession*`, `AltitudeFromPressure*`, `TrackerServiceCrashRecoveryCharacterisationTest`, `SourceTextReadingAuditContractTest`, `AspiceSweAuditContractTest`) + `:app:lintDebug` + scoped `:app:detekt`.
+
+### TST-TRK-078: **Mid-Workout Crash Recovery Accumulator Preservation and Continuity Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-TRK-078` (`REQ-TRK-078.1`..`REQ-TRK-078.4`)
+- **Component**: `TrackerServiceResumeTest.kt`, `TrackerServiceCrashRecoveryCharacterisationTest.kt`, `MyAccumulatorSensorTest.kt`
+- **Test Type**: Unit & Regression
+- **Verification Method**: Unit
+- **Procedure**:
+  1. *Omission of Reset Intent on Resume Test (`TST-TRK-078.1`, `TrackerServiceResumeTest.kt`)*:
+     • Simulate `onStartCommand()` with `StartType.RESUME_SERVICE_RECREATION` and `mBanalService == null`, followed by `onServiceConnected()`. Verify `sentBroadcasts` does NOT contain `BANALService.RESET_ACCUMULATORS_INTENT`.
+  2. *Resumed Workout State Elevation & Active Lap Rehydration Test (`TST-TRK-078.2`, `TrackerServiceResumeTest.kt`)*:
+     • Verify `getResumedWorkoutState()` extracts `ASCENDING`, `DESCENDING`, and computes active lap duration and distance when multiple laps exist or single lap exists.
+  3. *Full Sensor Baseline Seeding Verification Test (`TST-TRK-078.3`, `TrackerServiceResumeTest.kt`)*:
+     • Verify `applyResumedState()` calls `BANALService.setInitialSensorValue` for `ASCENT`, `DESCENT`, `TIME_LAP`, and `DISTANCE_m_LAP` with exact state values.
+  4. *Late-Binding Sensor Initial Value Inheritance Test (`TST-TRK-078.4`, `MyAccumulatorSensorTest.kt`)*:
+     • Verify newly instantiated `MyAccumulatorSensor` initializes `mInitialValue` from `MySensorManager.getInitialValue(sensorType)`.
+  5. *Monotonic Continuity Across Recovery Boundary Characterisation Test (`TST-TRK-078.5`, `TrackerServiceCrashRecoveryCharacterisationTest.kt`)*:
+     • Verify end-to-end simulation where pre-crash workout state produces subsequent sample values monotonically non-decreasing (`v >= v_pre`) for time, distance, and elevation.
+  6. *Targeted Tier-1 Unit & Contract Verification (`TST-TRK-078.6`)*:
+     • Run targeted Gradle suite (`TrackerServiceResumeTest`, `TrackerServiceCrashRecoveryCharacterisationTest`, `TrackerServiceLapTest`, `MyAccumulatorSensorTest`) asserting 100% pass rate.
+
+### TST-TRK-079: **DataStore Singleton Lifecycle, Offscreen Map Disposal & Lifecycle Gating Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-TRK-079` (`REQ-TRK-079.1`..`REQ-TRK-079.3`)
+- **Component**: `TuningPreferencesDataStoreLifecycleTest.kt`, `TrackingViewModelMapStateTest.kt`, `TrackingTabsScreenLayoutTest.kt`
+- **Test Type**: Unit & Lifecycle
+- **Verification Method**: Unit
+- **Procedure**:
+  1. *DataStore Singleton & Application Context Normalization Test (`TST-TRK-079.1`, `TuningPreferencesDataStoreLifecycleTest.kt`)*:
+     • Verify calling `TuningPreferencesDataStore.getInstance(activityContext)` returns identical singleton reference across multiple invocations and stores `applicationContext`.
+     • Verify all 19 production call sites route through `getInstance(context)`.
+  2. *Bounded Viewport Page Count & Inactive Tab Map Guard Test (`TST-TRK-079.2`, `TrackingTabsScreenLayoutTest.kt`)*:
+     • Verify `HorizontalPager.beyondViewportPageCount` is bounded (`0` or `1`) rather than `trackingViews.size + 1`.
+     • Verify `TrackingMapContainer` renders a lightweight placeholder or skips `GoogleMap` composition when `isTabActive == false`.
+  3. *Lifecycle-Gated Map State Emission Test (`TST-TRK-079.3`, `TrackingViewModelMapStateTest.kt`)*:
+     • Simulate `Lifecycle.State.STOPPED` / background transition; verify live `TrackingMapState` emissions pause and resume when returning to `Lifecycle.State.STARTED`.
+  4. *TrackerService Background Persistence Neutrality Test (`TST-TRK-079.4`, `TrackerServiceResumeTest.kt` / `TrackerServiceIntegrationTest.kt`)*:
+     • Verify `TrackerService` 1-Hz database sample insertion continues independently when UI is in `STOPPED` state.
+  5. *Tier 1 Targeted Unit & Contract Verification (`TST-TRK-079.5`)*:
+     • Run targeted Gradle suite (`TuningPreferences*`, `TrackingViewModel*`, `TrackingTabs*`) asserting 100% pass rate.
+
+
+
+### TST-TRK-080: **Mid-Workout Telemetry, Live Map Track & Sparkline Rehydration Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Tickets**: `ATT-7877`
+- **Requirement(s)**: `REQ-TRK-080` (`REQ-TRK-080.1`..`REQ-TRK-080.4`)
+- **Component**: `BANALServiceRepositoryTest.kt`, `LiveSparklineBufferTest.kt`, `TrackerServiceResumeTest.kt`
+- **Test Type**: Unit, Concurrency & Regression
+- **Verification Method**: Unit
+- **Procedure**:
+  1. *Asynchronous Rehydration Gating & StartType Neutrality Test (`TST-TRK-080.1`, `BANALServiceRepositoryTest.kt`)*:
+     • Verify observing `TrackingMode.TRACKING` / `PAUSED` with active workout ID triggers async rehydration on `Dispatchers.IO`.
+     • Verify observing `TrackingMode.STOPPED` or fresh workout start (`START_NORMAL`) does NOT invoke database rehydration.
+  2. *Live Map Track & PathPoint Rehydration Parity Test (`TST-TRK-080.2`, `BANALServiceRepositoryTest.kt`)*:
+     • Mock `WorkoutSamplesDatabaseManager` returning historical GPS rows (`LATITUDE`, `LONGITUDE`, `DISTANCE_m`, `ALTITUDE`).
+     • Verify `_currentTrack` and `_currentPathPoints` are populated via `SnapshotChunkedList.from()` matching persisted coordinates and elevations exactly.
+  3. *LiveSparklineBuffer Backfill & Capacity Clamping Test (`TST-TRK-080.3`, `LiveSparklineBufferTest.kt`)*:
+     • Instantiate `LiveSparklineBuffer(maxCapacity = 300)`. Call `backfillHistoricalSamples` with 400 floats.
+     • Assert buffer contains only the most recent 300 samples, preserving chronological order and `currentSpanSeconds == 300`.
+  4. *Concurrent Live Tick Merge & Race Condition Guard Test (`TST-TRK-080.4`, `LiveSparklineBufferTest.kt` & `BANALServiceRepositoryTest.kt`)*:
+     • Simulate live `addSample()` / location update occurring simultaneously with historical backfill across concurrent threads.
+     • Assert thread safety (`synchronized(lock)`), monotonic timestamp ordering, and absence of data loss or buffer corruption.
+  5. *Tier 1 Targeted Unit & Concurrency Verification Suite (`TST-TRK-080.5`)*:
+     • Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.repositories.BANALServiceRepositoryTest" --tests "com.atrainingtracker.trainingtracker.ui.sparkline.LiveSparklineBufferTest"`.
+
+
+
+### TST-TRK-081: **Per-Tile Cockpit Sparkline Graph Color Persistence and Minimalist Color Editor UI Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Tickets**: `ATT-7760`
+- **Requirement(s)**: `REQ-TRK-081` (`REQ-TRK-081.1`..`REQ-TRK-081.5`)
+- **Component**: `TrackingViewsDatabaseManagerTest.kt`, `TrackingViewsDbMigrationV22Test.kt`, `TrackingViewsRepositoryTest.kt`, `EditSensorFieldViewModelTest.kt`, `SensorFieldViewTest.kt`, `TranslationParityTest.kt`
+- **Test Type**: Unit, Database Migration, ViewModel, Localization & Screenshot
+- **Verification Method**: Unit
+- **Procedure**:
+  1. *Database Schema v22 Migration & Backup Compatibility Test (`TST-TRK-081.1`, `TrackingViewsDbMigrationV22Test.kt`)*:
+     • Create a v21 database with existing layouts containing `ShowGraph` and `GraphHorizonS`. Run SQLite upgrade to v22.
+     • Verify `GraphColor` column exists with default `'GLOBAL_DEFAULT'`. Verify existing rows retain layout data and receive default.
+     • Verify `.attbackup` export includes `graphColor` and import with missing `graphColor` key safely defaults to `"GLOBAL_DEFAULT"`.
+  2. *Repository & State Flow Threading Test (`TST-TRK-081.2`, `TrackingViewsRepositoryTest.kt`)*:
+     • Insert, update, and query `SensorFieldConfig` with various `graphColor` values (`"GLOBAL_DEFAULT"`, `"THEME_DEFAULT"`, `"DYNAMIC_ZONE"`, `"CYAN"`).
+     • Verify `SensorFieldState.graphColor` reflects persisted value.
+  3. *ViewModel State & Scope Toggle Logic Test (`TST-TRK-081.3`, `EditSensorFieldViewModelTest.kt`)*:
+     • Test color selection with scope `This tile`: asserts only field config `graphColor` is updated.
+     • Test color selection with scope `All <Metric>`: asserts `TelemetryGraphColorPreferences` is updated for that sensor type, and field config `graphColor` is set to `"GLOBAL_DEFAULT"`.
+     • Test dynamic zone visibility gating: asserts `isDynamicZoneSupported` is true for `HR`, `POWER`, `HRV_DFA_A1`, and false for `SPEED_mps`, `CADENCE`, `ALTITUDE`.
+  4. *Sparkline Color Resolution Test (`TST-TRK-081.4`, `SensorFieldViewTest.kt`)*:
+     • Verify sparkline line color resolution across `"GLOBAL_DEFAULT"`, `"THEME_DEFAULT"`, `"DYNAMIC_ZONE"`, and explicit palette tokens in Light and Dark themes.
+  5. *9-Language Localization & Translation Parity Test (`TST-TRK-081.5`, `TranslationParityTest.kt`)*:
+     • Verify 100% translation parity, matching format specifiers, and zero missing keys across all 9 locales for all new string tokens.
+  6. *Visual Compose Screenshot Verification Test (`TST-TRK-081.6`, `EditSensorFieldDialogScreenshotTest.kt`)*:
+     • Render `EditSensorFieldDialog` in Light and Dark themes and capture `docs/engineering/walkthroughs/img/ATT-7760_color_picker.png` verifying Rule 8.5 4-point visual checklist.
+

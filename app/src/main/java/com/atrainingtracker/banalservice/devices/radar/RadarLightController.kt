@@ -225,6 +225,29 @@ object RadarLightController {
     }
 
     /**
+     * Reconciles optimistic UI state when a peripheral GATT characteristic write fails (REQ-CON-031.2, ATT-7737).
+     * Reverts [_currentMode] and [RadarStateRepository] to [confirmedFallbackMode] (or [RadarLightMode.OFF] if unknown)
+     * when the displayed mode still matches the rejected [failedMode].
+     */
+    @JvmStatic
+    fun onHardwareLightModeWriteFailed(failedMode: RadarLightMode, confirmedFallbackMode: RadarLightMode?) {
+        val fallback = confirmedFallbackMode ?: RadarLightMode.OFF
+        val shouldRevert = synchronized(this) {
+            if (_currentMode.value == failedMode) {
+                _currentMode.value = fallback
+                true
+            } else {
+                false
+            }
+        }
+        if (shouldRevert) {
+            val current = RadarStateRepository.getState()
+            RadarStateRepository.updateState(current.copy(lightMode = fallback, isAutoMode = _isAutoMode.value))
+        }
+        Log.w(TAG, "Hardware light mode write rejected for $failedMode; reconciled state to $fallback (reverted=$shouldRevert)")
+    }
+
+    /**
      * Dispatches a light mode command to the active radar peripheral or simulator.
      *
      * Automatically prunes flashing modes under StVZO regulations to [RadarLightMode.SOLID].
@@ -296,12 +319,13 @@ object RadarLightController {
             pendingTargetMode = null
             _isAutoMode.value = false
         }
-        updateCachedPreferences(autoMode = false, defaultMode = mode)
-        SmartRadarLightEngine.onManualOverride(mode)
-        val result = setLightMode(mode)
+        val targetMode = if (_isStvzo.value && !mode.isStvzoCompliant) RadarLightMode.SOLID else mode
+        updateCachedPreferences(autoMode = false, defaultMode = targetMode)
+        SmartRadarLightEngine.onManualOverride(targetMode)
+        val result = setLightMode(targetMode)
         val current = RadarStateRepository.getState()
-        RadarStateRepository.updateState(current.copy(isAutoMode = false, lightMode = mode))
-        persistSelectionAsync(isAuto = false, mode = mode)
+        RadarStateRepository.updateState(current.copy(isAutoMode = false, lightMode = _currentMode.value))
+        persistSelectionAsync(isAuto = false, mode = targetMode)
         return result
     }
 

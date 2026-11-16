@@ -58,7 +58,9 @@ def load_config(custom_path=None):
                 "reviews",
                 "test_specs",
                 "walkthroughs",
-                "test_results",
+                "test_evidence",
+                "aspice_audits",
+                "code_reviews",
                 "rule_history_archive.md",
                 "workflow_overview.html"
             ]
@@ -271,16 +273,14 @@ def verify_engineering_directory_structure(eng_dir=None, allowed=None):
 
     test_results_path = os.path.join(eng_dir, "test_results")
     if os.path.lexists(test_results_path):
-        if not os.path.islink(test_results_path):
-            return False, [
-                f"ERROR: {test_results_path} must be a symbolic link (Rule 67, REQ-PRO-067.3)."
-            ]
-        target = os.readlink(test_results_path)
-        expected_target = "../../app/build/reports/tests/testDebugUnitTest"
-        if target != expected_target:
-            return False, [
-                f"ERROR: {test_results_path} symlink target '{target}' does not match expected canonical target '{expected_target}' (Rule 67, REQ-PRO-067.3)."
-            ]
+        return False, [
+            f"ERROR: {test_results_path} symlink is obsolete and retired (REQ-PRO-067.3, REQ-PRO-100). Use docs/engineering/test_evidence/ instead."
+        ]
+    test_evidence_path = os.path.join(eng_dir, "test_evidence")
+    if not os.path.isdir(test_evidence_path):
+        return False, [
+            f"ERROR: Canonical test evidence directory missing: {test_evidence_path} (REQ-PRO-100.1)."
+        ]
 
     return True, []
 
@@ -656,7 +656,7 @@ def verify_independent_reviews(sprint_name=None, repo_root=None):
                 (r"(?:\*\*Reviewer\*\*|Reviewer:?)\s*([^\n\r]+)", "Reviewer"),
                 (r"(?:\*\*Date\*\*|Date:?)\s*([^\n\r]+)", "Date"),
                 (r"(?:\*\*Scope\*\*|Scope:?)\s*([^\n\r]+)", "Scope"),
-                (r"(?:\*\*Verdict\*\*|Verdict|Process Verdict)[\s:\*]+(PASS|FAIL|ACCEPTED|COMPLIANT)", "Verdict"),
+                (r"(?:\*\*Verdict\*\*|Verdict|Process Verdict)[\s:\*]+(PASS|FAIL|ACCEPTED|COMPLIANT|NOT PERFORMED|SKIPPED|PARTIAL)", "Verdict"),
             ]
             for pat, field_name in required_patterns:
                 if not re.search(pat, content, re.IGNORECASE):

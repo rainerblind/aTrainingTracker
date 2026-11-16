@@ -1076,7 +1076,7 @@ fun HrvDfaA1SettingsContent(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val dataStore = tuningPreferencesDataStore ?: remember { TuningPreferencesDataStore(context) }
+    val dataStore = tuningPreferencesDataStore ?: remember { TuningPreferencesDataStore.getInstance(context) }
     val appSettingsDataStore = settingsDataStore ?: remember { SettingsDataStore.getInstance(context) }
     val scope = rememberCoroutineScope()
     val scrollState = rememberScrollState()

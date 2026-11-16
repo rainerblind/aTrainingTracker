@@ -212,7 +212,7 @@ fun ATrainingTrackerMap(
         }
     }
 
-    val tuningDataStore = remember { TuningPreferencesDataStore(context) }
+    val tuningDataStore = remember { TuningPreferencesDataStore.getInstance(context) }
     val tuningConfig by tuningDataStore.tuningConfigFlow.collectAsState(initial = TuningConfig())
 
     androidx.compose.runtime.CompositionLocalProvider(LocalMapStyle provides style.copy(isDark = isDark)) {

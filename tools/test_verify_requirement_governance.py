@@ -70,6 +70,12 @@ from tools.verify_requirement_governance import (
     load_traceability_baseline,
     verify_traceability_orphans,
     TraceabilityOrphansResult,
+    parse_junit_xml_results,
+    correlate_test_results_to_tsts,
+    verify_verified_test_evidence,
+    has_verified_test_evidence,
+    verify_test_evidence,
+    LEGACY_UNBACKED_VERIFIED_TSTS,
 )
 
 
@@ -212,7 +218,7 @@ index 1234567..89abcdef 100644
                     imported_modules.add(node.module.split(".")[0])
 
         # Allowed standard library modules
-        std_lib_modules = {"os", "sys", "re", "subprocess", "argparse", "unittest", "json", "math"}
+        std_lib_modules = {"os", "sys", "re", "subprocess", "argparse", "unittest", "json", "math", "xml", "zipfile"}
         for mod in imported_modules:
             self.assertIn(
                 mod,
@@ -518,23 +524,45 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
             self.assertIn("across 1 domain shards.", updated_text)
 
     def test_scenario_13_canonical_engineering_directory_allows_gates(self):
-        """Scenario 13: ALLOWED_ENGINEERING_ENTRIES registers 'gates', 'qa_audits', and 'reviews' (TST-PRO-059.3, TST-PRO-061.4, TST-PRO-062.3)."""
+        """Scenario 13: ALLOWED_ENGINEERING_ENTRIES registers 'gates', 'qa_audits', 'reviews', 'code_reviews', and 'aspice_audits' (TST-PRO-059.3, TST-PRO-061.4, TST-PRO-062.3, TST-PRO-095.1, TST-PRO-096.1)."""
         self.assertIn("gates", ALLOWED_ENGINEERING_ENTRIES)
         self.assertIn("qa_audits", ALLOWED_ENGINEERING_ENTRIES)
         self.assertIn("reviews", ALLOWED_ENGINEERING_ENTRIES)
+        self.assertIn("code_reviews", ALLOWED_ENGINEERING_ENTRIES)
+        self.assertIn("aspice_audits", ALLOWED_ENGINEERING_ENTRIES)
         with tempfile.TemporaryDirectory() as tmpdir:
             eng_dir = os.path.join(tmpdir, "docs", "engineering")
             os.makedirs(os.path.join(eng_dir, "gates"), exist_ok=True)
             os.makedirs(os.path.join(eng_dir, "analysis"), exist_ok=True)
             os.makedirs(os.path.join(eng_dir, "reviews"), exist_ok=True)
+            os.makedirs(os.path.join(eng_dir, "code_reviews"), exist_ok=True)
+            os.makedirs(os.path.join(eng_dir, "aspice_audits"), exist_ok=True)
             ok, errors = verify_engineering_directory_structure(eng_dir=eng_dir)
-            self.assertTrue(ok, f"Expected gates and reviews to be allowed, got errors: {errors}")
+            self.assertTrue(ok, f"Expected gates, reviews, code_reviews, and aspice_audits to be allowed, got errors: {errors}")
 
             # Non-canonical entry should fail
             os.makedirs(os.path.join(eng_dir, "invalid_dir"), exist_ok=True)
             ok_bad, errors_bad = verify_engineering_directory_structure(eng_dir=eng_dir)
             self.assertFalse(ok_bad)
             self.assertTrue(any("invalid_dir" in e for e in errors_bad))
+
+    def test_scenario_weekly_dual_vendor_code_reviews_registration(self):
+        """TST-PRO-095.1: Assert 'code_reviews' is canonical in ALLOWED_ENGINEERING_ENTRIES."""
+        self.assertIn("code_reviews", ALLOWED_ENGINEERING_ENTRIES)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            eng_dir = os.path.join(tmpdir, "docs", "engineering")
+            os.makedirs(os.path.join(eng_dir, "code_reviews"), exist_ok=True)
+            ok, errors = verify_engineering_directory_structure(eng_dir=eng_dir)
+            self.assertTrue(ok, f"Expected code_reviews to be allowed, got errors: {errors}")
+
+    def test_scenario_weekly_dual_vendor_aspice_audits_registration(self):
+        """TST-PRO-096.1: Assert 'aspice_audits' is canonical in ALLOWED_ENGINEERING_ENTRIES."""
+        self.assertIn("aspice_audits", ALLOWED_ENGINEERING_ENTRIES)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            eng_dir = os.path.join(tmpdir, "docs", "engineering")
+            os.makedirs(os.path.join(eng_dir, "aspice_audits"), exist_ok=True)
+            ok, errors = verify_engineering_directory_structure(eng_dir=eng_dir)
+            self.assertTrue(ok, f"Expected aspice_audits to be allowed, got errors: {errors}")
 
     def test_scenario_14_verify_gate_records_validation(self):
         """Scenario 14: verify_gate_records validates export presence and failure modes (TST-PRO-059.2)."""
@@ -825,7 +853,15 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
             self.assertTrue(ok, f"Expected pass, got: {msgs}")
             self.assertTrue(any("PASS" in m for m in msgs))
 
-            # 6. Wildcard verification without sprint name
+            # 6. Valid SKIPPED, NOT PERFORMED, and PARTIAL verdicts
+            for alt_verdict in ("SKIPPED", "NOT PERFORMED", "PARTIAL"):
+                alt_content = valid_content.replace("**Verdict**: **PASS**", f"**Verdict**: **{alt_verdict}**")
+                with open(target_file, "w", encoding="utf-8") as f:
+                    f.write(alt_content)
+                ok_alt, msgs_alt = verify_independent_reviews(sprint_name="sprint/2026-46.3", repo_root=tmpdir)
+                self.assertTrue(ok_alt, f"Expected pass for verdict {alt_verdict}, got: {msgs_alt}")
+
+            # 7. Wildcard verification without sprint name
             ok_any, msgs_any = verify_independent_reviews(sprint_name=None, repo_root=tmpdir)
             self.assertTrue(ok_any, f"Expected pass, got: {msgs_any}")
             self.assertTrue(any("Verified 1 independent review record(s)" in m for m in msgs_any))
@@ -1030,31 +1066,25 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
         self.assertEqual(set(dups.keys()), set())
         self.assertEqual(LEGACY_DUPLICATE_IDS, frozenset())
 
-    def test_scenario_24_verify_engineering_directory_structure_test_results_symlink(self):
-        """TST-PRO-067.4: Verify verify_engineering_directory_structure enforces test_results symlink."""
+    def test_scenario_24_verify_engineering_directory_structure_test_evidence(self):
+        """TST-PRO-067.3 / TST-PRO-067.4 / TST-PRO-100.2: Verify verify_engineering_directory_structure enforces test_evidence and rejects retired test_results symlink."""
+        self.assertIn("test_evidence", ALLOWED_ENGINEERING_ENTRIES)
+        self.assertNotIn("test_results", ALLOWED_ENGINEERING_ENTRIES)
         with tempfile.TemporaryDirectory() as tmpdir:
             eng_dir = os.path.join(tmpdir, "docs", "engineering")
             os.makedirs(eng_dir, exist_ok=True)
-            for entry in ["analysis", "test_specs", "plans", "walkthroughs", "retros"]:
+            for entry in ["analysis", "test_specs", "plans", "walkthroughs", "retros", "test_evidence"]:
                 os.makedirs(os.path.join(eng_dir, entry), exist_ok=True)
 
-            # 1. Non-symlink test_results directory fails
+            # 1. Obsolete test_results symlink fails
             bad_results = os.path.join(eng_dir, "test_results")
-            os.makedirs(bad_results, exist_ok=True)
+            os.symlink("/some/target", bad_results)
             ok_bad, errs_bad = verify_engineering_directory_structure(eng_dir=eng_dir)
             self.assertFalse(ok_bad)
-            self.assertTrue(any("must be a symbolic link" in e for e in errs_bad))
-            os.rmdir(bad_results)
-
-            # 2. Symlink with wrong target fails
-            os.symlink("/wrong/target", bad_results)
-            ok_wrong, errs_wrong = verify_engineering_directory_structure(eng_dir=eng_dir)
-            self.assertFalse(ok_wrong)
-            self.assertTrue(any("does not match expected canonical target" in e for e in errs_wrong))
+            self.assertTrue(any("obsolete and retired" in e for e in errs_bad))
             os.unlink(bad_results)
 
-            # 3. Canonical symlink passes
-            os.symlink("../../app/build/reports/tests/testDebugUnitTest", bad_results)
+            # 2. Canonical test_evidence directory passes
             ok_good, errs_good = verify_engineering_directory_structure(eng_dir=eng_dir)
             self.assertTrue(ok_good, f"Expected pass, got: {errs_good}")
 
@@ -2298,6 +2328,158 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
         )
         self.assertTrue(ok_comp)
         self.assertTrue(any("PASS: 100% of living requirements define valid Priority, Type, and Verification Method attributes" in msg for msg in diag_comp))
+
+    def test_scenario_58_tst_pro_099_1_junit_xml_parsing_and_mapping(self):
+        """TST-PRO-099.1: Verify parsing JUnit XML results and mapping testcases to TST-XXX IDs."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            xml_path = os.path.join(tmpdir, "TEST-com.atrainingtracker.ExampleTest.xml")
+            with open(xml_path, "w", encoding="utf-8") as f:
+                f.write(
+                    '<?xml version="1.0" encoding="UTF-8"?>\n'
+                    '<testsuite name="com.atrainingtracker.ExampleTest" tests="3" failures="0" errors="0" skipped="1" time="0.35">\n'
+                    '  <testcase classname="com.atrainingtracker.ExampleTest" name="testFoo_TST_PRO_099" time="0.10"/>\n'
+                    '  <testcase classname="com.atrainingtracker.ExampleTest" name="testBar_TST_PRO_005" time="0.15"/>\n'
+                    '  <testcase classname="com.atrainingtracker.ExampleTest" name="testSkipped" time="0.10">\n'
+                    '    <skipped message="temporarily skipped"/>\n'
+                    '  </testcase>\n'
+                    '</testsuite>\n'
+                )
+
+            res = parse_junit_xml_results(results_dir=tmpdir)
+            self.assertEqual(res["summary"]["total"], 3)
+            self.assertEqual(res["summary"]["passed"], 2)
+            self.assertEqual(res["summary"]["skipped"], 1)
+            self.assertEqual(res["summary"]["failures"], 0)
+            self.assertEqual(res["summary"]["errors"], 0)
+            self.assertIn("TST-PRO-099", res["by_tst"])
+            self.assertEqual(res["by_tst"]["TST-PRO-099"]["status"], "PASS")
+            self.assertEqual(len(res["by_tst"]["TST-PRO-099"]["passing_cases"]), 1)
+            self.assertIn("TST-PRO-005", res["by_tst"])
+
+    def test_scenario_59_tst_pro_099_2_failing_evidence_rejection(self):
+        """TST-PRO-099.2: Verify verify_verified_test_evidence rejects [Verified] when testcase fails (Criterion 1)."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            xml_path = os.path.join(tmpdir, "TEST-com.atrainingtracker.FailureTest.xml")
+            with open(xml_path, "w", encoding="utf-8") as f:
+                f.write(
+                    '<?xml version="1.0" encoding="UTF-8"?>\n'
+                    '<testsuite name="com.atrainingtracker.FailureTest" tests="1" failures="1" errors="0" time="0.05">\n'
+                    '  <testcase classname="com.atrainingtracker.FailureTest" name="testBroken_TST_PRO_099" time="0.05">\n'
+                    '    <failure message="AssertionError: expected true but got false">Stack trace details</failure>\n'
+                    '  </testcase>\n'
+                    '</testsuite>\n'
+                )
+
+            synthetic_tsts = {
+                "docs/tests/tst_test.md": (
+                    "### TST-PRO-099: Test Result-Driven Verification [Verified]\n"
+                    "- **Requirement(s)**: `REQ-PRO-099`\n"
+                )
+            }
+            ok, diag = verify_verified_test_evidence(
+                results_dir=tmpdir,
+                tst_shards=synthetic_tsts,
+            )
+            self.assertFalse(ok, "Failing test result must cause verification to fail (Criterion 1)")
+            self.assertTrue(any("ERROR" in msg and "TST-PRO-099" in msg and "AssertionError" in msg for msg in diag))
+
+    def test_scenario_60_tst_pro_099_3_unbacked_tst_ratchet_baseline(self):
+        """TST-PRO-099.3: Verify novel unbacked TST fails while legacy ratchet baseline items pass (Criterion 2 & 3)."""
+        # 1. Legacy unbacked item in baseline (e.g. TST-BUG-001) passes with warning
+        legacy_shard = {
+            "docs/tests/tst_legacy.md": (
+                "### TST-BUG-001: Legacy Bug Test [Verified]\n"
+                "- **Requirement(s)**: `REQ-BUG-001`\n"
+            )
+        }
+        empty_results = {"testcases": [], "summary": {}, "by_tst": {}}
+        ok_leg, diag_leg = verify_verified_test_evidence(
+            test_results=empty_results,
+            code_tags={},
+            tst_shards=legacy_shard,
+        )
+        self.assertTrue(ok_leg, "Legacy unbacked item in baseline must pass")
+        self.assertTrue(any("WARNING (Legacy unbacked TST)" in msg and "TST-BUG-001" in msg for msg in diag_leg))
+
+        # 2. Novel unbacked item outside baseline fails with ERROR
+        novel_shard = {
+            "docs/tests/tst_novel.md": (
+                "### TST-NOVEL-999: Novel Test Without Code [Verified]\n"
+                "- **Requirement(s)**: `REQ-NOVEL-999`\n"
+            )
+        }
+        ok_nov, diag_nov = verify_verified_test_evidence(
+            test_results=empty_results,
+            code_tags={},
+            tst_shards=novel_shard,
+        )
+        self.assertFalse(ok_nov, "Novel unbacked item outside baseline must fail (Criterion 2)")
+        self.assertTrue(any("ERROR" in msg and "TST-NOVEL-999" in msg and "outside ratchet baseline" in msg for msg in diag_nov))
+
+    def test_scenario_61_tst_pro_099_clean_worktree_safety(self):
+        """TST-PRO-099: Verify clean worktree safety when test-results directory does not exist (REQ-PRO-099.5)."""
+        clean_shard = {
+            "docs/tests/tst_clean.md": (
+                "### TST-BUG-001: Legacy Bug [Verified]\n"
+                "- **Requirement(s)**: `REQ-BUG-001`\n"
+            )
+        }
+        ok, diag = verify_verified_test_evidence(
+            results_dir="/path/that/does/not/exist/in/clean/worktree",
+            tst_shards=clean_shard,
+        )
+        self.assertTrue(ok, "Clean worktree without build outputs must not crash or fail unexpectedly")
+
+    def test_scenario_62_tst_pro_100_verify_test_evidence(self):
+        """TST-PRO-100.2: Verify verify_test_evidence validates test evidence records and rejects failures (REQ-PRO-100.4)."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            ev_dir = os.path.join(tmpdir, "docs", "engineering", "test_evidence")
+            os.makedirs(ev_dir, exist_ok=True)
+
+            # 1. Clean initialized directory with README.md passes
+            with open(os.path.join(ev_dir, "README.md"), "w", encoding="utf-8") as f:
+                f.write("# Test Evidence\n")
+            ok_clean, diag_clean = verify_test_evidence(repo_root=tmpdir)
+            self.assertTrue(ok_clean, f"Clean initialized directory must pass: {diag_clean}")
+            self.assertTrue(any("README.md verified" in m for m in diag_clean))
+
+            # 2. Passing sprint evidence record passes
+            passing_data = {
+                "target": "sprint_2026-46.8",
+                "type": "sprint",
+                "commit": "abc1234",
+                "timestamp": "2026-11-16T00:00:00Z",
+                "unit_tests": {"total": 10, "passed": 10, "failures": 0, "errors": 0},
+            }
+            with open(os.path.join(ev_dir, "sprint_2026-46.8.json"), "w", encoding="utf-8") as f:
+                json.dump(passing_data, f)
+
+            ok_pass, diag_pass = verify_test_evidence(repo_root=tmpdir)
+            self.assertTrue(ok_pass, f"Passing evidence record must pass: {diag_pass}")
+
+            # Specific target query passes
+            ok_spec, diag_spec = verify_test_evidence(target_id="sprint_2026-46.8", repo_root=tmpdir)
+            self.assertTrue(ok_spec)
+
+            # Missing specific target query fails
+            ok_miss, diag_miss = verify_test_evidence(target_id="sprint_9999-99.9", repo_root=tmpdir)
+            self.assertFalse(ok_miss)
+            self.assertTrue(any("Missing test evidence record" in m for m in diag_miss))
+
+            # 3. Failing evidence record triggers error
+            failing_data = {
+                "target": "sprint_2026-46.9",
+                "type": "sprint",
+                "commit": "def5678",
+                "timestamp": "2026-11-16T01:00:00Z",
+                "unit_tests": {"total": 10, "passed": 8, "failures": 2, "errors": 0},
+            }
+            with open(os.path.join(ev_dir, "sprint_2026-46.9.json"), "w", encoding="utf-8") as f:
+                json.dump(failing_data, f)
+
+            ok_fail, diag_fail = verify_test_evidence(repo_root=tmpdir)
+            self.assertFalse(ok_fail)
+            self.assertTrue(any("reports 2 failure(s)" in m for m in diag_fail))
 
 
 

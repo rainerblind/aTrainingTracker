@@ -34,7 +34,7 @@ import kotlinx.coroutines.launch
  */
 class AutoPauseViewModel @JvmOverloads constructor(
     application: Application,
-    private val dataStore: TuningPreferencesDataStore = TuningPreferencesDataStore(application)
+    private val dataStore: TuningPreferencesDataStore = TuningPreferencesDataStore.getInstance(application)
 ) : AndroidViewModel(application) {
 
     val tuningConfig: StateFlow<TuningConfig> = dataStore.tuningConfigStateFlow

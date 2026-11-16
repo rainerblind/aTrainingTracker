@@ -176,7 +176,7 @@ fun MapDetailLayout(
         }
     }
 
-    val tuningDataStore = remember { TuningPreferencesDataStore(context) }
+    val tuningDataStore = remember { TuningPreferencesDataStore.getInstance(context) }
     val tuningConfig by tuningDataStore.tuningConfigFlow.collectAsState(
         initial = TuningConfig()
     )

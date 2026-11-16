@@ -232,7 +232,7 @@ fun SensorGridScreen(
     isTabActive: Boolean = true
 ) {
     val context = LocalContext.current
-    val tuningDataStore = remember { TuningPreferencesDataStore(context) }
+    val tuningDataStore = remember { TuningPreferencesDataStore.getInstance(context) }
     val tuningConfig by tuningDataStore.tuningConfigFlow.collectAsState(
         initial = TuningConfig()
     )
@@ -492,7 +492,8 @@ fun SensorGridScreen(
                                     TrackingMapContainer(
                                         mapState = state.mapState,
                                         currentLocationFlow = currentLocationFlow,
-                                        modifier = Modifier.fillMaxSize()
+                                        modifier = Modifier.fillMaxSize(),
+                                        isTabActive = isTabActive
                                     )
                                 }
 
@@ -958,7 +959,8 @@ fun SensorGridScreen(
                             TrackingMapContainer(
                                 mapState = state.mapState,
                                 currentLocationFlow = currentLocationFlow,
-                                modifier = Modifier.fillMaxSize()
+                                modifier = Modifier.fillMaxSize(),
+                                isTabActive = isTabActive
                             )
                         }
                     }
@@ -1335,9 +1337,10 @@ fun NavigationHintsOverlay(
 fun TrackingMapContainer(
     mapState: TrackingMapState,
     currentLocationFlow: StateFlow<LatLng?>,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isTabActive: Boolean = true
 ) {
-    if (mapState.showMap) {
+    if (mapState.showMap && isTabActive) {
         val mapContent: MapContentScope.() -> Unit = remember(
             mapState.mapTracks,
             mapState.mapSegments,

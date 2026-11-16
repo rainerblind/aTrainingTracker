@@ -21,12 +21,16 @@ package com.atrainingtracker.trainingtracker.ui.tracking.tracking
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.awaitCancellation
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldState
@@ -58,10 +62,22 @@ fun TrackingTabGridContent(
         viewModel.updateScreenMode(screenMode)
     }
 
-    val uiState by viewModel.uiState.collectAsState()
-    val editingFieldId by viewModel.editingFieldId.collectAsState()
-    val pendingAddition by viewModel.pendingAddition.collectAsState()
-    val selectedFieldForMove by viewModel.selectedFieldForMove.collectAsState()
+    val lifecycleOwner = LocalLifecycleOwner.current
+    LaunchedEffect(lifecycleOwner, isTabActive) {
+        lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            viewModel.setUiActive(isTabActive)
+            try {
+                awaitCancellation()
+            } finally {
+                viewModel.setUiActive(false)
+            }
+        }
+    }
+
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle(minActiveState = Lifecycle.State.STARTED)
+    val editingFieldId by viewModel.editingFieldId.collectAsStateWithLifecycle(minActiveState = Lifecycle.State.STARTED)
+    val pendingAddition by viewModel.pendingAddition.collectAsStateWithLifecycle(minActiveState = Lifecycle.State.STARTED)
+    val selectedFieldForMove by viewModel.selectedFieldForMove.collectAsStateWithLifecycle(minActiveState = Lifecycle.State.STARTED)
     val gridActions = object : GridActions {
         override fun onEditField(fieldState: SensorFieldState) {
             viewModel.onEditField(fieldState)
@@ -157,7 +173,7 @@ fun TrackingTabGridContent(
         isTabActive = isTabActive
     )
 
-    val currentActivityType by viewModel.activityType.collectAsState()
+    val currentActivityType by viewModel.activityType.collectAsStateWithLifecycle(minActiveState = Lifecycle.State.STARTED)
 
     // Handle Dialogs (Edit field / Add sensor)
     if (editingFieldId != null) {

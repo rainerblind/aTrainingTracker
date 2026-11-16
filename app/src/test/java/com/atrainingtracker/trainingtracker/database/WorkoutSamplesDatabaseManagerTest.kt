@@ -306,4 +306,11 @@ class WorkoutSamplesDatabaseManagerTest {
             assertEquals(448.0, cursor.getDouble(1), 0.001)
         }
     }
+
+    @Test
+    fun testPatchSwimKinematics_nonExistentTable_returnsSafelyWithoutException() {
+        // Must safely return without throwing SQLiteException when table does not exist (ATT-8001 Stage 6 Finding 3)
+        dbManager.patchSwimKinematics("non_existent_swim_table", 1_700_000_000_000L, 60_000L, listOf(1_700_000_030_000L), 25.0)
+        dbManager.patchSwimKinematicsUniform("non_existent_swim_table", 1_700_000_000_000L, 60_000L, 4, 25.0)
+    }
 }

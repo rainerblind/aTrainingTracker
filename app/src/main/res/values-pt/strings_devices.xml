@@ -171,4 +171,9 @@
     <string name="polar_verity_retry_sync_desc">O sensor óptico estava inacessível ao encerrar o treino. Ligue o seu Polar Verity Sense no modo sensor azul e toque em Sincronizar agora.</string>
     <string name="polar_verity_retry_syncing">Sincronizando Polar Verity Sense…</string>
     <string name="polar_verity_retry_sync_failed">Não foi possível conectar ao Polar Verity Sense. Ligue-o no modo sensor azul e tente novamente.</string>
+
+    <!-- Polar Verity Sense Swim Mode & SYSTEM_BUSY Guidance (ATT-8000, REQ-SET-110) -->
+    <string name="polar_verity_swim_busy_title">Polar Verity Sense em modo de natação</string>
+    <string name="polar_verity_swim_busy_desc">Prima o botão no Polar Verity Sense para sair do modo de natação (voltar ao LED azul) e toque em Sincronizar agora.</string>
+    <string name="polar_verity_swim_syncing">A sincronizar dados do modo de natação…</string>
 </resources>

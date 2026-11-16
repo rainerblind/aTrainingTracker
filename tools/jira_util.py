@@ -28,9 +28,25 @@ from sprint_metrics import (
 )
 
 try:
-    from verify_requirement_governance import validate_impact_analysis_section
+    from verify_requirement_governance import (
+        validate_impact_analysis_section,
+        has_verified_test_evidence,
+        parse_junit_xml_results,
+        extract_test_code_tags,
+    )
 except ImportError:
-    validate_impact_analysis_section = None
+    try:
+        from tools.verify_requirement_governance import (
+            validate_impact_analysis_section,
+            has_verified_test_evidence,
+            parse_junit_xml_results,
+            extract_test_code_tags,
+        )
+    except ImportError:
+        validate_impact_analysis_section = None
+        has_verified_test_evidence = None
+        parse_junit_xml_results = None
+        extract_test_code_tags = None
 
 # Transitions for ATT project
 TRANSITIONS = {
@@ -545,28 +561,37 @@ def show_issue(issue_key, role="agent1"):
     if labels:
         print(f"\n*Labels*: {', '.join(labels)}")
 
-    # Fix Version / Lösungsversion
+    # Fix Version / Lösungsversion (REQ-PRO-097.3 / Rule 8.3)
     fix_versions = issue['fields'].get('fixVersions', [])
     if fix_versions:
         fv_names = ", ".join([v.get('name', '') for v in fix_versions])
         print(f"\n*Lösungsversion (Fix Version/s)*: {fv_names}")
     else:
-        # Check if parent has a fixVersion if this is a subtask
-        parent_fv = None
-        if issue['fields'].get('parent'):
-            parent_key = issue['fields']['parent']['key']
-            parent_url = f"{config['JIRA_URL']}/rest/api/2/issue/{parent_key}?fields=fixVersions"
-            try:
-                parent_res = jira_request(parent_url, role=role)
-                pfvs = parent_res.get('fields', {}).get('fixVersions', [])
-                if pfvs:
-                    parent_fv = ", ".join([v.get('name', '') for v in pfvs])
-            except Exception:
-                pass
-        if parent_fv:
-            print(f"\n*Lösungsversion (Fix Version/s)*: None on subtask (Inherited from Parent: {parent_fv})")
+        # Check if this is a subtask
+        is_subtask = itype.lower() in ("sub-task", "subtask") or issue['fields'].get('issuetype', {}).get('subtask', False)
+        if is_subtask:
+            parent_fv = None
+            if issue['fields'].get('parent'):
+                parent_key = issue['fields']['parent']['key']
+                parent_url = f"{config['JIRA_URL']}/rest/api/2/issue/{parent_key}?fields=fixVersions"
+                try:
+                    parent_res = jira_request(parent_url, role=role)
+                    pfvs = parent_res.get('fields', {}).get('fixVersions', [])
+                    if pfvs:
+                        parent_fv = ", ".join([v.get('name', '') for v in pfvs])
+                except Exception:
+                    pass
+            if parent_fv:
+                print(f"\n*Lösungsversion (Fix Version/s)*: None on subtask (Inherited from Parent: {parent_fv})")
+            else:
+                print(f"\n*Lösungsversion (Fix Version/s)*: None on subtask (per Core Rule 8.3)")
         else:
-            print(f"\n*Lösungsversion (Fix Version/s)*: None (WARNING: Mandatory field missing!)")
+            # For parent tickets, only completed issues without FixVersion trigger warning
+            is_terminal = status.lower() in ("erledigt", "done", "closed", "abgeschlossen")
+            if is_terminal:
+                print(f"\n*Lösungsversion (Fix Version/s)*: None (WARNING: Mandatory field missing on completed issue!)")
+            else:
+                print(f"\n*Lösungsversion (Fix Version/s)*: None (In-Sprint / Set upon completion per Rule 8.3)")
 
     # Epic/Parent context
     parent = issue['fields'].get('parent')
@@ -593,7 +618,8 @@ def show_issue(issue_key, role="agent1"):
         st_status = st.get('fields', {}).get('status', {}).get('name', 'Unknown')
         print(f"* {st_key}: {st_summary} [{st_status}]")
 
-    print(f"\n*Description*:\n{issue['fields']['description']}")
+    desc = issue['fields'].get('description') or 'No description'
+    print(f"\n*Description*:\n{desc}")
 
     print("\n*Attachments*:")
     attachments = issue['fields'].get('attachment', [])
@@ -603,7 +629,10 @@ def show_issue(issue_key, role="agent1"):
         print(f"* {a['filename']} ({a['size']} bytes) - ID: {a['id']} - URL: {a['content']}")
 
     print("\n*Comments*:")
-    for c in issue['fields']['comment']['comments']:
+    comments = issue['fields'].get('comment', {}).get('comments', [])
+    if not comments:
+        print("None")
+    for c in comments:
         print(f"--- {c['author']['displayName']} ({c['created']}) ---\n{c['body']}\n")
 
 def list_versions(role="agent1"):
@@ -1085,16 +1114,17 @@ def transition_issue(issue_key, status_name, role="agent1", inject_context=True,
 
 def auto_verify_living_docs_on_stage5(parent_key, repo_root=None):
     """
-    Automatically flips 'Planned' / 'Status: Planned (<KEY>)' status cells and multi-line headings
+    Automatically flips 'Planned' / 'Implemented' status cells and multi-line headings
     to 'Verified' across docs/requirements.md, docs/tests.md, docs/requirements/*.md, and docs/tests/*.md
-    when submitting Stage 5 (Rule 60).
+    when submitting Stage 5 (Rule 60), conditioned on machine-readable test evidence (REQ-PRO-099.4).
+    Unbacked or failing items remain or are updated to [Implemented].
     """
     if not parent_key:
         return 0
     if repo_root is None:
         repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
-    status_words = r"(?:Planned|Specified|In\s+Progress|Draft)"
+    status_words = r"(?:Planned|Specified|In\s+Progress|Draft|Implemented)"
     trailing_planned_re = re.compile(
         r"\|\s*(?:Status:\s*)?" + status_words + r"(?:\s*\([^)]*\))?\s*\|(\s*)$",
         re.IGNORECASE,
@@ -1116,6 +1146,18 @@ def auto_verify_living_docs_on_stage5(parent_key, repo_root=None):
         re.IGNORECASE,
     )
 
+    # Pre-cache test evidence
+    cached_results = None
+    cached_tags = None
+    if has_verified_test_evidence is not None:
+        try:
+            if parse_junit_xml_results is not None:
+                cached_results = parse_junit_xml_results(repo_root=repo_root)
+            if extract_test_code_tags is not None:
+                cached_tags = extract_test_code_tags(repo_root=repo_root)
+        except Exception as e:
+            print(f"Notice: Test result pre-caching encountered: {e}", file=sys.stderr)
+
     # Collect target files
     target_files = ["docs/requirements.md", "docs/tests.md"]
     for shard_dir in ("docs/requirements", "docs/tests"):
@@ -1124,6 +1166,61 @@ def auto_verify_living_docs_on_stage5(parent_key, repo_root=None):
             for fname in sorted(os.listdir(abs_shard_dir)):
                 if fname.endswith(".md"):
                     target_files.append(os.path.join(shard_dir, fname))
+
+    # Pre-parse REQ to TST mapping from requirements shards
+    req_to_tsts = {}
+    for shard_file in target_files:
+        if "docs/requirements/" in shard_file:
+            abs_p = os.path.join(repo_root, shard_file)
+            if os.path.exists(abs_p):
+                try:
+                    with open(abs_p, "r", encoding="utf-8") as f:
+                        cur_req = None
+                        for l in f:
+                            m_h = re.match(r"^#{2,4}\s*(REQ-[A-Z0-9_.-]+)", l)
+                            if m_h:
+                                cur_req = m_h.group(1)
+                            elif cur_req and "- **Tests**:" in l:
+                                refs = re.findall(r"TST-[A-Z]+-[0-9]+", l)
+                                req_to_tsts[cur_req] = refs
+                except Exception:
+                    pass
+
+    def check_spec_verified(spec_id, block_text=""):
+        if not spec_id or has_verified_test_evidence is None:
+            return True, "verifier not available"
+        if spec_id.startswith("TST-"):
+            return has_verified_test_evidence(
+                spec_id,
+                repo_root=repo_root,
+                test_results=cached_results,
+                code_tags=cached_tags,
+            )
+        elif spec_id.startswith("REQ-"):
+            m_tests = re.search(r"-\s*\*\*Tests\*\*:\s*([^\n]+)", block_text)
+            tst_refs = re.findall(r"TST-[A-Z]+-[0-9]+", m_tests.group(1)) if m_tests else req_to_tsts.get(spec_id, [])
+            if not tst_refs:
+                return False, "No valid test specifications cited"
+            for t in tst_refs:
+                ok, reason = has_verified_test_evidence(
+                    t,
+                    repo_root=repo_root,
+                    test_results=cached_results,
+                    code_tags=cached_tags,
+                )
+                if not ok:
+                    return False, f"Cited test {t} lacks verified evidence: {reason}"
+            return True, "All cited tests have verified evidence"
+        return True, "non-REQ/TST specification"
+
+    heading_planned_any_re = re.compile(
+        r"^(#{2,4}\s*(?:REQ|TST)-[A-Z0-9_.-]+:.*?\[)(?:Status:\s*)?" + status_words + r"(?:\s*\([^)]*\))?(\])",
+        re.IGNORECASE,
+    )
+    bullet_planned_any_re = re.compile(
+        r"(\*\*(?:Status|Verification Status)\*\*:\s*)(?:Status:\s*)?" + status_words + r"(?:\s*\([^)]*\))?",
+        re.IGNORECASE,
+    )
 
     total_updated = 0
     for rel_path in target_files:
@@ -1139,23 +1236,17 @@ def auto_verify_living_docs_on_stage5(parent_key, repo_root=None):
                 new_line = line
                 if line.lstrip().startswith("|") and trailing_planned_re.search(line):
                     if parent_key in line or "Planned (" not in line:
-                        new_line = trailing_planned_re.sub(r"| Verified |\1", line)
-                elif parent_key in line and inline_planned_key_re.search(line):
-                    new_line = inline_planned_key_re.sub("Verified", line)
-                elif heading_planned_key_re.search(line):
-                    new_line = heading_planned_key_re.sub(r"\1Verified\2", line)
-                elif parent_key in line and heading_planned_gen_re.search(line):
-                    new_line = heading_planned_gen_re.sub(r"\1Verified\2", line)
-                elif bullet_planned_key_re.search(line):
-                    new_line = bullet_planned_key_re.sub(r"\1Verified", line)
+                        m_row_id = re.search(r"\b((?:REQ|TST)-[A-Z0-9_.-]+)\b", line)
+                        row_spec_id = m_row_id.group(1) if m_row_id else ""
+                        is_ver, _ = check_spec_verified(row_spec_id, line)
+                        target_status = "Verified" if is_ver else "Implemented"
+                        new_line = trailing_planned_re.sub(rf"| {target_status} |\1", line)
 
                 if new_line != line:
                     updated_count += 1
                 new_lines.append(new_line)
 
-            # Multi-line heading block support: if parent_key is present in the section body
-            # (e.g. - **Tickets**: <parent_key> or - **Jira**: <parent_key>) but not on the heading line,
-            # flip the section heading from Planned to Verified (ATT-5431)
+            # Multi-line heading block support: process each specification section
             sec_indices = [
                 idx for idx, l in enumerate(new_lines)
                 if re.match(r"^#{2,4}\s*(?:REQ|TST)-", l)
@@ -1167,15 +1258,28 @@ def auto_verify_living_docs_on_stage5(parent_key, repo_root=None):
                 block_text = "".join(new_lines[s_idx:e_idx])
                 if parent_key in block_text:
                     orig_hdr = new_lines[s_idx]
-                    mod_hdr = heading_planned_gen_re.sub(r"\1Verified\2", orig_hdr)
+                    m_id = re.match(r"^#{2,4}\s*((?:REQ|TST)-[A-Z0-9_.-]+)", orig_hdr)
+                    spec_id = m_id.group(1) if m_id else ""
+                    is_ver, reason = check_spec_verified(spec_id, block_text)
+                    target_status = "Verified" if is_ver else "Implemented"
+                    if not is_ver:
+                        print(f"Notice: {spec_id} lacks verified passing test evidence ({reason}); remaining [{target_status}] (REQ-PRO-099.4).")
+                    mod_hdr = heading_planned_any_re.sub(rf"\g<1>{target_status}\2", orig_hdr)
                     if mod_hdr != orig_hdr:
                         new_lines[s_idx] = mod_hdr
                         updated_count += 1
+                    for b_idx in range(s_idx + 1, e_idx):
+                        b_line = new_lines[b_idx]
+                        if bullet_planned_any_re.search(b_line):
+                            new_b_line = bullet_planned_any_re.sub(rf"\g<1>{target_status}", b_line)
+                            if new_b_line != b_line:
+                                new_lines[b_idx] = new_b_line
+                                updated_count += 1
 
             if updated_count > 0:
                 with open(abs_path, "w", encoding="utf-8") as f:
                     f.writelines(new_lines)
-                print(f"Auto-updated {updated_count} row(s) from Planned to Verified in {rel_path} for {parent_key}.")
+                print(f"Auto-updated {updated_count} row(s) in {rel_path} for {parent_key}.")
                 total_updated += updated_count
         except Exception as e:
             print(f"Warning: Could not auto-update {rel_path} for {parent_key}: {e}", file=sys.stderr)
@@ -2325,16 +2429,24 @@ def move_issues_to_sprint_guarded(target_sprint_id, issue_keys, role="coordinato
     return list(issue_keys)
 
 
-def select_greedy_bin_pack_tickets(ranked_issues, max_lanes=3):
+def select_greedy_bin_pack_tickets(ranked_issues, max_lanes=3, max_sp_per_lane=None):
     """
-    Multi-Lane Greedy Bin-Packing (ATT-8030):
-    Iterates ranked issues in strict ORDER BY rank ASC (never top[:X]) and picks up to `max_lanes`
-    non-subtask tickets from completely disjoint Parent Epics in `Zu erledigen`.
+    Multi-Lane Greedy Bin-Packing (ATT-8030, ATT-8162, REQ-PRO-097.2):
+    Iterates ranked issues in strict ORDER BY rank ASC (never top[:X]) and packs tickets
+    into up to `max_lanes` disjoint Parent Epic lanes in `Zu erledigen`.
+
+    If `max_sp_per_lane` is specified (e.g. 10 SP), each lane accumulates tickets belonging to its
+    designated Epic up to `max_sp_per_lane`. When a lane reaches capacity, excess tickets of that Epic
+    remain in the queue without blocking subsequent disjoint Epics from filling remaining lanes.
+    If `max_sp_per_lane` is None, exactly one ticket is chosen per disjoint Epic lane.
+
     Issues without an explicit Parent Epic use their own key as a synthetic lane group so unrelated
     standalone items never collide with named Epics.
     """
     selected = []
-    seen_epics = set()
+    lane_epics = []
+    lane_sp = {}
+
     for issue in ranked_issues:
         fields = issue.get("fields", {})
         itype = fields.get("issuetype", {}).get("name", "").lower()
@@ -2346,18 +2458,35 @@ def select_greedy_bin_pack_tickets(ranked_issues, max_lanes=3):
         status_name = fields.get("status", {}).get("name", "").strip().lower()
         if status_name != "zu erledigen":
             continue
+
         parent_obj = fields.get("parent") or {}
         epic_key = parent_obj.get("key") or f"__NO_EPIC__:{issue.get('key')}"
-        if epic_key in seen_epics:
-            continue
-        seen_epics.add(epic_key)
-        selected.append(issue)
-        if len(selected) >= max_lanes:
-            break
+
+        # Story Points extraction (default 3.0 SP per ATT-8162)
+        raw_sp = fields.get(STORY_POINTS_FIELD)
+        try:
+            issue_sp = float(raw_sp) if raw_sp is not None else 3.0
+        except (ValueError, TypeError):
+            issue_sp = 3.0
+
+        if epic_key in lane_sp:
+            # Epic is already assigned to an active lane
+            if max_sp_per_lane is not None:
+                if lane_sp[epic_key] + issue_sp <= max_sp_per_lane:
+                    lane_sp[epic_key] += issue_sp
+                    selected.append(issue)
+                # Excess tickets exceeding max_sp_per_lane remain in Vom PO Freigegeben
+        else:
+            # Epic not yet assigned; can we open a new lane?
+            if len(lane_epics) < max_lanes:
+                lane_epics.append(epic_key)
+                lane_sp[epic_key] = issue_sp
+                selected.append(issue)
+
     return selected
 
 
-def pack_sprint_from_po_queue(target_sprint_id, max_lanes=3, role="coordinator"):
+def pack_sprint_from_po_queue(target_sprint_id, max_lanes=3, max_sp_per_lane=None, role="coordinator"):
     """Pulls PO-approved tickets out of 'Vom PO Freigegeben' (ID 447) into target sprint via greedy bin-packing."""
     if role != "coordinator":
         print("Error: pack-sprint is restricted to '--as coordinator'.", file=sys.stderr)
@@ -2369,7 +2498,7 @@ def pack_sprint_from_po_queue(target_sprint_id, max_lanes=3, role="coordinator")
     base = config['JIRA_URL'].rstrip('/')
     jql = f"project = ATT AND sprint = {PO_RELEASED_QUEUE_SPRINT_ID} AND issuetype != Sub-task ORDER BY rank ASC"
     ranked = paged_jql_search(jql, ["summary", "status", "issuetype", "parent", STORY_POINTS_FIELD], role=role, config=config)
-    chosen = select_greedy_bin_pack_tickets(ranked, max_lanes=max_lanes)
+    chosen = select_greedy_bin_pack_tickets(ranked, max_lanes=max_lanes, max_sp_per_lane=max_sp_per_lane)
     keys = [c["key"] for c in chosen]
     if not keys:
         print(f"No eligible 'Zu erledigen' tickets found in '{PO_RELEASED_QUEUE_NAME}' (ID {PO_RELEASED_QUEUE_SPRINT_ID}).")
@@ -2506,6 +2635,258 @@ def ensure_weekly_retro_ticket(role="coordinator"):
     )
     print(f"Created rolling Wochen Review & Retro ticket {new_key} ({week_label}).")
     return new_key
+
+
+def get_next_review_subsystem(matrix_path=None, repo_root=None):
+    """
+    REQ-PRO-095.2 / REQ-PRO-095.3:
+    Parses docs/engineering/code_reviews/coverage_matrix.md and returns
+    the next target subsystem to audit: (domain, target_path, status).
+    Selects the first UNREVIEWED subsystem, or if all are AUDITED,
+    the subsystem with the oldest Last Audited Date.
+    """
+    if repo_root is None:
+        repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    if matrix_path is None:
+        matrix_path = os.path.join(repo_root, "docs", "engineering", "code_reviews", "coverage_matrix.md")
+
+    if not os.path.isfile(matrix_path):
+        return ("tracker/", "app/src/main/java/com/atrainingtracker/trainingtracker/tracker/", "UNREVIEWED")
+
+    subsystems = []
+    with open(matrix_path, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line.startswith("|") or line.startswith("| :---"):
+                continue
+            cols = [c.strip() for c in line.split("|")[1:-1]]
+            if len(cols) < 7:
+                continue
+            domain, target_path, last_date, last_sha, gemini_model, claude_model, status = cols[:7]
+            if domain == "Subsystem Domain":
+                continue
+            subsystems.append({
+                "domain": domain.strip("`"),
+                "target_path": target_path.strip("`"),
+                "last_date": last_date.strip("`"),
+                "status": status.strip("`").upper()
+            })
+
+    if not subsystems:
+        return ("tracker/", "app/src/main/java/com/atrainingtracker/trainingtracker/tracker/", "UNREVIEWED")
+
+    # 1. First check for UNREVIEWED
+    for s in subsystems:
+        if s["status"] == "UNREVIEWED":
+            return (s["domain"], s["target_path"], "UNREVIEWED")
+
+    # 2. Otherwise find oldest audited date
+    def parse_date(d_str):
+        try:
+            return datetime.strptime(d_str, "%Y-%m-%d")
+        except Exception:
+            return datetime.min
+
+    oldest = min(subsystems, key=lambda s: parse_date(s["last_date"]))
+    return (oldest["domain"], oldest["target_path"], oldest["status"])
+
+
+def is_weekly_review_overdue(reviews_dir=None, days_threshold=7, repo_root=None):
+    """
+    REQ-PRO-095.3 / REQ-PRO-095.4:
+    Returns True if more than days_threshold days have elapsed since the latest
+    completed review in docs/engineering/code_reviews/ or if unreviewed subsystems remain.
+    """
+    if repo_root is None:
+        repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    if reviews_dir is None:
+        reviews_dir = os.path.join(repo_root, "docs", "engineering", "code_reviews")
+
+    next_domain, _, status = get_next_review_subsystem(repo_root=repo_root)
+    if status == "UNREVIEWED":
+        return True
+
+    if not os.path.isdir(reviews_dir):
+        return True
+
+    review_files = [
+        f for f in os.listdir(reviews_dir)
+        if f.endswith("_dual_vendor_code_review.md") and not f.startswith("template_")
+    ]
+    if not review_files:
+        return True
+
+    latest_date = None
+    for f in review_files:
+        m = re.match(r"^(\d{4}-\d{2}-\d{2})_", f)
+        if m:
+            try:
+                dt = datetime.strptime(m.group(1), "%Y-%m-%d")
+                if latest_date is None or dt > latest_date:
+                    latest_date = dt
+            except Exception:
+                pass
+
+    if latest_date is None:
+        return True
+
+    elapsed = (datetime.now() - latest_date).days
+    return elapsed >= days_threshold
+
+
+def ensure_weekly_review_ticket(role="coordinator", force=False):
+    """
+    REQ-PRO-095.3:
+    Ensures one open Weekly Dual-Vendor (Gemini + Claude) Code Review ticket exists
+    under Epic ATT-232, ranked at rank-top, pre-populated with the next target subsystem.
+    """
+    config = get_config()
+    jql = 'project = ATT AND parent = ATT-232 AND status != "Erledigt" AND (summary ~ "Weekly Dual-Vendor" OR summary ~ "Dual-Vendor Code Review") ORDER BY created DESC'
+    existing = paged_jql_search(jql, ["summary", "status", "labels"], role=role, config=config)
+    for issue in existing:
+        summary = issue.get("fields", {}).get("summary", "")
+        if "dual-vendor" in summary.lower() and "code review" in summary.lower():
+            status = issue.get("fields", {}).get("status", {}).get("name", "Unknown")
+            print(f"Weekly Dual-Vendor Code Review ticket already open: {issue['key']} — {summary} [{status}]")
+            return issue["key"]
+
+    if not force and not is_weekly_review_overdue():
+        print("Weekly Dual-Vendor Code Review is not overdue (< 7 days and all subsystems audited).")
+        return None
+
+    target_domain, target_path, _ = get_next_review_subsystem()
+    iso_year, iso_week, _ = datetime.now().isocalendar()
+    week_label = f"{iso_year}-KW{iso_week:02d}"
+    summary = f"Weekly Dual-Vendor Gemini and Claude Code Review - {target_domain} ({week_label})"
+    desc = (
+        f"h2. Mandatory Weekly Dual-Vendor Code & Architecture Review ({week_label})\n"
+        f"*Target Subsystem*: `{target_domain}` ({target_path})\n"
+        f"*Cadence*: Weekly dual-vendor holistic code & architecture review (REQ-PRO-095 / ATT-8213).\n"
+        f"*Dual AI Vendors*: Google Gemini (Gemini 2.5 Pro / Gemini 4 Carbon) + Anthropic Claude (Claude 3.7 Sonnet).\n\n"
+        "h3. Review Scope & Execution Protocol\n"
+        f"1. Audit full subsystem `{target_domain}` alongside recent commits on develop (not restricted to incremental diffs!).\n"
+        "2. Independent blind evaluations by Gemini and Claude covering:\n"
+        "   - Concurrency & thread safety (coroutine dispatchers, race conditions)\n"
+        "   - Resource leaks (SQLite cursors, broadcast receivers, memory)\n"
+        "   - Architectural boundaries, monolith complexity & repository encapsulation\n"
+        "   - Defensive error handling and test assertion validity\n"
+        f"3. Reconcile findings into docs/engineering/code_reviews/{datetime.now().strftime('%Y-%m-%d')}_dual_vendor_code_review.md.\n"
+        "4. File discovered defects/refactorings as Jira tickets under ATT-232 / ATT-8138.\n"
+        f"5. Update {target_domain} status to AUDITED in docs/engineering/code_reviews/coverage_matrix.md.\n"
+    )
+    new_key = create_issue(
+        summary=summary,
+        description=desc,
+        issuetype_id="Verbesserung",
+        parent_key="ATT-232",
+        role=role,
+        add_to_sprint=False,
+        labels=["process", "code-review", "dual-vendor", "weekly-review"],
+        rank_top=True,
+        points=2.0,
+    )
+    print(f"Created Weekly Dual-Vendor Code Review ticket {new_key} for {target_domain} ({week_label}) ranked at top of backlog.")
+    return new_key
+
+
+def is_weekly_aspice_audit_overdue(audits_dir=None, days_threshold=7, repo_root=None):
+    """
+    REQ-PRO-096.3 / REQ-PRO-096.4:
+    Returns True if more than days_threshold days have elapsed since the latest
+    completed audit in docs/engineering/aspice_audits/ or if no completed audit exists.
+    """
+    if repo_root is None:
+        repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    if audits_dir is None:
+        audits_dir = os.path.join(repo_root, "docs", "engineering", "aspice_audits")
+
+    if not os.path.isdir(audits_dir):
+        return True
+
+    audit_files = [
+        f for f in os.listdir(audits_dir)
+        if f.endswith("_dual_vendor_aspice_audit.md") and not f.startswith("template_")
+    ]
+    if not audit_files:
+        return True
+
+    latest_date = None
+    for f in audit_files:
+        m = re.match(r"^(\d{4}-\d{2}-\d{2})_", f)
+        if m:
+            try:
+                dt = datetime.strptime(m.group(1), "%Y-%m-%d")
+                if latest_date is None or dt > latest_date:
+                    latest_date = dt
+            except Exception:
+                pass
+
+    if latest_date is None:
+        return True
+
+    elapsed = (datetime.now() - latest_date).days
+    return elapsed >= days_threshold
+
+
+def ensure_weekly_aspice_audit_ticket(role="coordinator", force=False):
+    """
+    REQ-PRO-096.3:
+    Ensures one open Weekly Dual-Vendor (Gemini + Claude) ASPICE 4.0 Audit ticket exists
+    under Epic ATT-232, ranked at rank-top.
+    """
+    config = get_config()
+    jql = 'project = ATT AND parent = ATT-232 AND status != "Erledigt" AND (summary ~ "Weekly Dual-Vendor" OR summary ~ "ASPICE 4.0 Audit") ORDER BY created DESC'
+    existing = paged_jql_search(jql, ["summary", "status", "labels"], role=role, config=config)
+    for issue in existing:
+        summary = issue.get("fields", {}).get("summary", "")
+        if "dual-vendor" in summary.lower() and "aspice" in summary.lower():
+            status = issue.get("fields", {}).get("status", {}).get("name", "Unknown")
+            print(f"Weekly Dual-Vendor ASPICE Audit ticket already open: {issue['key']} — {summary} [{status}]")
+            return issue["key"]
+
+    if not force and not is_weekly_aspice_audit_overdue():
+        print("Weekly Dual-Vendor ASPICE Audit is not overdue (< 7 days).")
+        return None
+
+    iso_year, iso_week, _ = datetime.now().isocalendar()
+    week_label = f"{iso_year}-KW{iso_week:02d}"
+    summary = f"Weekly Dual-Vendor Gemini and Claude ASPICE 4.0 Cross-Audit ({week_label})"
+    desc = (
+        f"h2. Mandatory Weekly Dual-Vendor ASPICE 4.0 Cross-Audit ({week_label})\n"
+        f"*Cadence*: Weekly dual-vendor ASPICE 4.0 process and evidence cross-audit (REQ-PRO-096 / ATT-8212).\n"
+        f"*Dual AI Vendors*: Google Gemini (Gemini 2.5 Pro / Gemini 4 Carbon) + Anthropic Claude (Claude 3.7 Sonnet).\n\n"
+        "h3. Audit Scope & Protocol (SUP.1 / GP 2.1.6)\n"
+        "1. Independent cross-vendor compliance evaluation across ASPICE VDA processes (SWE.1–SWE.6, SUP.1, SUP.8, SUP.9, SUP.10, MAN.3).\n"
+        "2. Verification of quality gate records (Gates 1–5), First-Time Pass Rate (FTPR) integrity, and role separation.\n"
+        "3. Traceability verification between System and Software requirements (SYS.2 <-> SYS.3).\n"
+        f"4. Reconcile findings into docs/engineering/aspice_audits/{datetime.now().strftime('%Y-%m-%d')}_dual_vendor_aspice_audit.md.\n"
+        "5. File discovered defects or process non-conformances as Jira tickets under Epic ATT-232 / ATT-8138.\n"
+    )
+    new_key = create_issue(
+        summary=summary,
+        description=desc,
+        issuetype_id="Verbesserung",
+        parent_key="ATT-232",
+        role=role,
+        add_to_sprint=False,
+        labels=["process", "aspice-audit", "dual-vendor", "weekly-review"],
+        rank_top=True,
+        points=2.0,
+    )
+    print(f"Created Weekly Dual-Vendor ASPICE Audit ticket {new_key} ({week_label}) ranked at top of backlog.")
+    return new_key
+
+
+def ensure_weekly_reviews(role="coordinator", force=False):
+    """
+    REQ-PRO-095.3 / REQ-PRO-096.3:
+    Coordinates both weekly dual-vendor pillars:
+    1. Weekly Dual-Vendor Code Review ticket (ATT-8213)
+    2. Weekly Dual-Vendor ASPICE 4.0 Audit ticket (ATT-8212)
+    """
+    code_review_key = ensure_weekly_review_ticket(role=role, force=force)
+    aspice_audit_key = ensure_weekly_aspice_audit_ticket(role=role, force=force)
+    return {"code_review": code_review_key, "aspice_audit": aspice_audit_key}
 
 
 def collect_sprint_metrics_for_id(sprint_id, sprint_name, board_id, role="coordinator"):
@@ -2979,6 +3360,86 @@ def export_gates(sprint_arg=None, out_path=None, role="coordinator", as_role=Non
     return out_path, records
 
 
+def export_test_evidence(sprint_arg=None, release_arg=None, target_arg=None, out_dir=None,
+                         test_results_dir=None, archive_path=None, kover_xml_path=None,
+                         role="coordinator", as_role=None):
+    """
+    REQ-PRO-100.4 / TST-PRO-100.1:
+    Exports persistent, version-controlled test and coverage evidence to
+    docs/engineering/test_evidence/<target>.md and .json.
+    """
+    if as_role:
+        role = as_role
+
+    target_id = None
+    target_type = "sprint"
+
+    if release_arg:
+        target_id = release_arg.strip()
+        target_type = "release"
+    elif sprint_arg:
+        target_id = sprint_arg.strip()
+        target_type = "sprint"
+    elif target_arg:
+        target_id = target_arg.strip()
+        target_type = "generic"
+    else:
+        try:
+            active_sprint = get_active_sprint(role=role)
+            if active_sprint:
+                target_id = active_sprint.get("name") or f"sprint_{active_sprint.get('id')}"
+                target_type = "sprint"
+        except Exception:
+            pass
+
+    if not target_id:
+        try:
+            branch = subprocess.check_output(
+                ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+                stderr=subprocess.DEVNULL,
+                text=True,
+            ).strip()
+            if branch.startswith("sprint/"):
+                target_id = branch.replace("sprint/", "sprint_")
+            else:
+                target_id = "sprint_2026-46.8"
+        except Exception:
+            target_id = "sprint_2026-46.8"
+
+    if target_type == "sprint" and not target_id.startswith("sprint_"):
+        target_id = f"sprint_{target_id}"
+
+    try:
+        from generate_test_evidence import generate_test_evidence as gen_fn
+    except ImportError:
+        try:
+            from tools.generate_test_evidence import generate_test_evidence as gen_fn
+        except ImportError:
+            import importlib.util
+            spec = importlib.util.spec_from_file_location(
+                "generate_test_evidence",
+                os.path.join(os.path.dirname(__file__), "generate_test_evidence.py"),
+            )
+            mod = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(mod)
+            gen_fn = mod.generate_test_evidence
+
+    repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    if os.path.basename(os.path.dirname(__file__)) == "tools" and os.path.basename(os.path.dirname(os.path.dirname(__file__))) == "hoechstmass":
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+
+    md_path, json_path, payload = gen_fn(
+        target_id=target_id,
+        target_type=target_type,
+        repo_root=repo_root,
+        results_dir=test_results_dir,
+        archive_path=archive_path,
+        kover_xml_path=kover_xml_path,
+        out_dir=out_dir,
+    )
+    return md_path, json_path, payload
+
+
 def format_qa_audit_markdown(sprint_info, audit_results, overall_compliant, auditor_role="qa", total_tickets=None):
     import datetime
     date_str = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d")
@@ -3366,6 +3827,15 @@ def format_review_markdown(
     s_id = sprint_info.get("id", "N/A")
     t_str = ", ".join(tickets) if isinstance(tickets, (list, set, tuple)) else str(tickets)
 
+    findings_clean = findings.strip() if findings else ""
+    if verdict in ("SKIPPED", "NOT PERFORMED"):
+        if not findings_clean.startswith("### [PROCESS DEVIATION") and not findings_clean.startswith("[PROCESS DEVIATION"):
+            findings_text = f"### [PROCESS DEVIATION — Rule 1.3]\n{findings_clean}"
+        else:
+            findings_text = findings_clean
+    else:
+        findings_text = findings_clean
+
     lines = [
         f"# Independent QA Review Record: Sprint {s_name}",
         "",
@@ -3391,7 +3861,7 @@ def format_review_markdown(
         "---",
         "",
         "## 2. Findings & Assessment Notes",
-        findings if findings else "Independent review conducted successfully. Zero critical process or technical deviations identified.",
+        findings_text,
         "",
         "---",
         "",
@@ -3403,6 +3873,9 @@ def format_review_markdown(
     return "\n".join(lines)
 
 
+ALLOWED_REVIEW_VERDICTS = {"PASS", "FAIL", "SKIPPED", "NOT PERFORMED", "PARTIAL"}
+
+
 def record_review(
     sprint_arg=None,
     ticket_key=None,
@@ -3411,7 +3884,7 @@ def record_review(
     model=None,
     version=None,
     scope=None,
-    verdict="PASS",
+    verdict=None,
     findings=None,
     out_path=None,
     role="coordinator",
@@ -3427,6 +3900,35 @@ def record_review(
         role = as_role
     if repo_root is None:
         repo_root = os.getcwd()
+
+    if not verdict:
+        raise ValueError(
+            "Review verdict is required. Allowed verdicts: "
+            + ", ".join(sorted(ALLOWED_REVIEW_VERDICTS))
+        )
+    verdict_clean = verdict.upper().strip()
+    if verdict_clean not in ALLOWED_REVIEW_VERDICTS:
+        raise ValueError(
+            f"Invalid verdict '{verdict}'. Allowed verdicts: "
+            + ", ".join(sorted(ALLOWED_REVIEW_VERDICTS))
+        )
+
+    if not findings or not str(findings).strip():
+        if verdict_clean in ("PASS", "FAIL"):
+            raise ValueError(
+                f"Review findings are mandatory for verdict '{verdict_clean}'. "
+                "Provide --findings with assessment details."
+            )
+        elif verdict_clean in ("SKIPPED", "NOT PERFORMED"):
+            raise ValueError(
+                f"A skip rationale is mandatory for verdict '{verdict_clean}'. "
+                "Provide --findings with justification."
+            )
+        else:
+            raise ValueError(
+                f"Findings are mandatory for verdict '{verdict_clean}'. "
+                "Provide --findings with assessment details."
+            )
 
     config = get_config()
     base = config['JIRA_URL'].rstrip('/')
@@ -3539,8 +4041,10 @@ USAGE_TEXT = (
     "  search JQL                                            Search issues using JQL\n"
     "  ensure-retro                                          Check/create 'Review & Retro' ticket in the active sprint\n"
     "  ensure-weekly-retro                                   Check/create rolling 'Wochen Review & Retro' ticket under ATT-232\n"
+    "  ensure-weekly-reviews [--force]                       Check/create mandatory Weekly Dual-Vendor Code Review ticket\n"
     "  add-label KEY LABEL[,LABEL2]                          Append label(s) to an issue idempotently\n"
-    "  pack-sprint TARGET_SPRINT_ID [--lanes N]              Pull disjoint-Epic tickets from Vom PO Freigegeben (447) in rank order\n"
+    "  pack-sprint TARGET_SPRINT_ID [--lanes N] [--max-sp-per-lane SP]\n"
+    "                                                        Pull disjoint-Epic tickets from Vom PO Freigegeben (447) in rank order\n"
     "  return-unstarted [SPRINT_ARG]                         Return untouched Zu erledigen sprint tickets to Vom PO Freigegeben (447)\n"
     "  swap-po-queue FUTURE_SPRINT_ID                        Keep Vom PO Freigegeben (447) positioned right above Product Backlog\n"
     "  check-gate KEY                                        Verify Impl-Plan subtask is Erledigt (Gate 3)\n"
@@ -3567,9 +4071,11 @@ USAGE_TEXT = (
     "                                                        Calculate PA 4.1 sprint metrics and PA 4.2 SPC control limits\n"
     "  export-gates [--sprint <ID|NAME>] [--out <FILE>]\n"
     "                                                        Export sprint gate records to docs/engineering/gates/<sprint>.md\n"
+    "  export-test-evidence [--sprint <ID|NAME>] [--release <TAG>] [--out-dir <DIR>]\n"
+    "                                                        Export versioned test and coverage evidence to docs/engineering/test_evidence/\n"
     "  qa-audit [--sprint <ID|NAME>] [--sample N] [--out <FILE>]\n"
     "                                                        Sample >= 2 sprint tickets and audit ASPICE process compliance\n"
-    "  record-review [--sprint <ID|NAME>] [--ticket KEY] [--reviewer NAME] [--vendor VENDOR] [--model MODEL] [--version VER] [--scope SCOPE] [--verdict PASS|FAIL|NOT PERFORMED] [--findings FINDINGS] [--out FILE]\n"
+    "  record-review [--sprint <ID|NAME>] [--ticket KEY] [--reviewer NAME] [--vendor VENDOR] [--model MODEL] [--version VER] [--scope SCOPE] [--verdict PASS|FAIL|NOT PERFORMED|SKIPPED|PARTIAL] [--findings FINDINGS] [--out FILE]\n"
     "                                                        Record Human Sprint Review or Cross-Vendor AI Review in docs/engineering/reviews/\n"
     "  create-issue SUMMARY DESC [TYPE_ID|Bug|Feature|Verbesserung] [PARENT_KEY] [--type=...] [--parent=...] [--bottom] [--points=N] [--severity=critical|major|minor|cosmetic]"
 )
@@ -3595,11 +4101,15 @@ if __name__ == "__main__":
         ensure_retro_ticket(role=active_role)
     elif cmd in ("ensure-weekly-retro", "ensure_weekly_retro"):
         ensure_weekly_retro_ticket(role=active_role)
+    elif cmd in ("ensure-weekly-reviews", "ensure_weekly_reviews", "ensure-weekly-review", "ensure_weekly_review"):
+        force = "--force" in remaining_argv
+        ensure_weekly_reviews(role=active_role, force=force)
     elif cmd in ("add-label", "add_label") and len(remaining_argv) == 3:
         add_label(remaining_argv[1], remaining_argv[2], role=active_role)
     elif cmd in ("pack-sprint", "pack_sprint") and len(remaining_argv) >= 2:
         t_sprint = remaining_argv[1]
         max_lanes = 3
+        max_sp_per_lane = None
         idx = 2
         while idx < len(remaining_argv):
             a = remaining_argv[idx]
@@ -3608,8 +4118,13 @@ if __name__ == "__main__":
             elif a == "--lanes" and idx + 1 < len(remaining_argv):
                 max_lanes = int(remaining_argv[idx + 1])
                 idx += 1
+            elif a.startswith("--max-sp-per-lane="):
+                max_sp_per_lane = float(a.split("=", 1)[1])
+            elif a == "--max-sp-per-lane" and idx + 1 < len(remaining_argv):
+                max_sp_per_lane = float(remaining_argv[idx + 1])
+                idx += 1
             idx += 1
-        pack_sprint_from_po_queue(t_sprint, max_lanes=max_lanes, role=active_role)
+        pack_sprint_from_po_queue(t_sprint, max_lanes=max_lanes, max_sp_per_lane=max_sp_per_lane, role=active_role)
     elif cmd in ("return-unstarted", "return_unstarted"):
         s_arg = remaining_argv[1] if len(remaining_argv) >= 2 else None
         return_unstarted_to_po_queue(sprint_arg=s_arg, role=active_role)
@@ -3837,6 +4352,32 @@ if __name__ == "__main__":
                 sprint_arg = a
             idx += 1
         export_gates(sprint_arg=sprint_arg, out_path=out_arg, role=active_role)
+    elif cmd in ("export-test-evidence", "export_test_evidence"):
+        sprint_arg = None
+        release_arg = None
+        out_arg = None
+        idx = 1
+        while idx < len(remaining_argv):
+            a = remaining_argv[idx]
+            if a.startswith("--sprint="):
+                sprint_arg = a.split("=", 1)[1]
+            elif a == "--sprint" and idx + 1 < len(remaining_argv):
+                sprint_arg = remaining_argv[idx + 1]
+                idx += 1
+            elif a.startswith("--release="):
+                release_arg = a.split("=", 1)[1]
+            elif a == "--release" and idx + 1 < len(remaining_argv):
+                release_arg = remaining_argv[idx + 1]
+                idx += 1
+            elif a.startswith("--out-dir="):
+                out_arg = a.split("=", 1)[1]
+            elif a == "--out-dir" and idx + 1 < len(remaining_argv):
+                out_arg = remaining_argv[idx + 1]
+                idx += 1
+            elif not a.startswith("--") and not sprint_arg and not release_arg:
+                sprint_arg = a
+            idx += 1
+        export_test_evidence(sprint_arg=sprint_arg, release_arg=release_arg, out_dir=out_arg, role=active_role)
     elif cmd in ("qa-audit", "qa_audit"):
         sprint_arg = None
         sample_arg = None
@@ -3875,7 +4416,7 @@ if __name__ == "__main__":
         model_arg = None
         version_arg = None
         scope_arg = None
-        verdict_arg = "PASS"
+        verdict_arg = None
         findings_arg = None
         out_arg = None
         idx = 1
@@ -3932,19 +4473,23 @@ if __name__ == "__main__":
                 out_arg = remaining_argv[idx + 1]
                 idx += 1
             idx += 1
-        record_review(
-            sprint_arg=sprint_arg,
-            ticket_key=ticket_arg,
-            reviewer=reviewer_arg,
-            vendor=vendor_arg,
-            model=model_arg,
-            version=version_arg,
-            scope=scope_arg,
-            verdict=verdict_arg,
-            findings=findings_arg,
-            out_path=out_arg,
-            role=active_role,
-        )
+        try:
+            record_review(
+                sprint_arg=sprint_arg,
+                ticket_key=ticket_arg,
+                reviewer=reviewer_arg,
+                vendor=vendor_arg,
+                model=model_arg,
+                version=version_arg,
+                scope=scope_arg,
+                verdict=verdict_arg,
+                findings=findings_arg,
+                out_path=out_arg,
+                role=active_role,
+            )
+        except ValueError as err:
+            print(f"Error: {err}", file=sys.stderr)
+            sys.exit(1)
     elif cmd == "add-to-sprint" and len(remaining_argv) == 2:
         if active_role in ("agent1", "agent2", "coordinator"):
             print("Error: Agents must not move tickets to sprints! Only the human user assigns tickets to sprints during Sprint-Start Screening.", file=sys.stderr)

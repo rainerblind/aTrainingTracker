@@ -18,7 +18,11 @@
 
 package com.atrainingtracker.trainingtracker.ui.tracking
 
+import androidx.compose.material3.lightColorScheme
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.atrainingtracker.banalservice.sensor.SensorType
+import com.atrainingtracker.trainingtracker.ui.theme.TelemetryGraphColor
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -137,5 +141,44 @@ class SensorSparklineViewTest {
         val clazz = Class.forName("com.atrainingtracker.trainingtracker.ui.tracking.SensorSparklineViewKt")
         val composableMethod = clazz.declaredMethods.find { it.name.startsWith("SensorSparklineView") }
         assertNotNull("SensorSparklineView composable must exist", composableMethod)
+    }
+
+    /**
+     * TST-TRK-081.2: resolveSparklineLineColor verifies deterministic resolution for
+     * DYNAMIC_ZONE, THEME_DEFAULT, GLOBAL_DEFAULT, and explicit palette tokens.
+     */
+    @Test
+    fun testResolveSparklineLineColor_allTokens() {
+        // TST-TRK-081
+        val colorScheme = lightColorScheme(primary = Color.Blue)
+
+        // 1. THEME_DEFAULT returns primary
+        assertEquals(
+            Color.Blue,
+            resolveSparklineLineColor("THEME_DEFAULT", zoneColor = Color.Red, showTextColor = true, sensorType = SensorType.HR, colorScheme = colorScheme)
+        )
+
+        // 2. DYNAMIC_ZONE returns active zoneColor if valid, else falls back to primary
+        assertEquals(
+            Color.Green,
+            resolveSparklineLineColor("DYNAMIC_ZONE", zoneColor = Color.Green, showTextColor = true, sensorType = SensorType.HR, colorScheme = colorScheme)
+        )
+        assertEquals(
+            Color.Blue,
+            resolveSparklineLineColor("DYNAMIC_ZONE", zoneColor = Color.Transparent, showTextColor = true, sensorType = SensorType.HR, colorScheme = colorScheme)
+        )
+
+        // 3. Explicit palette token returns resolved color
+        val crimsonLight = TelemetryGraphColor.CRIMSON.lightColor
+        assertEquals(
+            crimsonLight,
+            resolveSparklineLineColor("CRIMSON", zoneColor = Color.Transparent, showTextColor = false, sensorType = SensorType.HR, colorScheme = colorScheme)
+        )
+
+        // 4. Unknown/malformed token safely falls back to primary
+        assertEquals(
+            Color.Blue,
+            resolveSparklineLineColor("NON_EXISTENT_COLOR", zoneColor = Color.Transparent, showTextColor = false, sensorType = SensorType.HR, colorScheme = colorScheme)
+        )
     }
 }

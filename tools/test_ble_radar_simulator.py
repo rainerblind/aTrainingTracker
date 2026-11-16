@@ -268,8 +268,10 @@ class TestBleRadarSimulator(unittest.TestCase):
 
     def test_rearvue_light_control_service(self):
         """
-        Verify Garmin RearVue 820 dedicated Control Service 6a4e2f00 (REQ-SIM-002.3):
-        - Characteristic 6a4e2f11 accepts 4-byte command '06 09 01 TT'.
+        Verify Garmin RearVue 820 dedicated Control Service 6a4e2f00 (REQ-SIM-002.3, TST-CON-031.6):
+        - Characteristic 6a4e2f11 advertises ['write', 'indicate'] (never 'write-without-response').
+        - Characteristic 6a4e2f11 rejects writes until 0x2902 CCCD indications are enabled (StartNotify).
+        - Characteristic 6a4e2f11 accepts 4-byte command '06 09 01 TT' and emits 6a4e2f11 indication.
         - Characteristic 6a4e2f14 emits 4-byte slot notifications '01 00 ff TT'.
         - Bidirectional synchronization with legacy 6a4e3202 characteristic.
         - Invalid command formats rejected with InvalidArgsException.
@@ -288,9 +290,21 @@ class TestBleRadarSimulator(unittest.TestCase):
         )
         legacy_char.set_peer_notify_char(notify_char)
 
+        # TST-CON-031.6: 6a4e2f11 MUST expose ['write', 'indicate'] (no write-without-response)
+        self.assertEqual(write_char.flags, ['write', 'indicate'])
+        self.assertNotIn('write-without-response', write_char.flags)
+
+        # 0. Writes rejected before 6a4e2f11 CCCD StartNotify() is enabled
+        with self.assertRaises(InvalidArgsException):
+            write_char.WriteValue([0x06, 0x09, 0x01, 0x13], {})
+
+        # Enable 6a4e2f11 CCCD indications
+        write_char.StartNotify()
+
         # 1. Test 6a4e2f11 write command for DAY_FLASH (0x13)
         write_char.WriteValue([0x06, 0x09, 0x01, 0x13], {})
         self.assertEqual(engine.light_mode, RadarLightMode.DAY_FLASH)
+        self.assertEqual(write_char.last_notified_value, [0x01, 0x00, 0xFF, 0x13])
         self.assertEqual(notify_char.last_notified_value, [0x01, 0x00, 0xFF, 0x13])
         self.assertEqual(legacy_char.last_notified_value, [RadarLightMode.DAY_FLASH])
 

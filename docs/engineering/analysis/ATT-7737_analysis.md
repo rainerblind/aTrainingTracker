@@ -1,61 +1,35 @@
-# Stage 1 Analysis: ATT-7737 - EditDeviceDialog Tail Light Mode Reverts to Off
+# Root Cause Analysis: ATT-7737 — RearVue 820 BLE Tail Light Control Fails & Reverts to Off
+**Ticket**: ATT-7737 (`2 SP`, Epic `ATT-1286`) | **Target Release**: `V5.0.0`
 
-## 1. Problem Description & Operational Context
-During physical testing of Sprint 2026-46.5 on Pixel 10 with Garmin Varia / RearVue 820 radar, selecting a tail light mode in `EditDeviceDialog` (e.g., Night Flash, Day Flash, Solid) did not change the physical light on the radar unit. Furthermore, closing and reopening the dialog showed that the mode selection reverted back to `Off`.
+## 1. Independent Peer Review & Verification
+- **Author**: `agent1` (`subagent_pro`, Stage 1) | **Gate 1 Reviewer**: Pending `agent2` (`subagent_flash`)
+- **Prior Attempt Context**: Reopened after `60e14c9b` (forcing `WRITE_TYPE_NO_RESPONSE`) passed Stage 6 on simulator but failed physical Garmin RearVue 820 + Pixel 10 verification in Ceremony 2 (`SmartRadarLightEngine` logged `Manual override active: NIGHT_FLASH`, physical light stayed off, UI reverted to `Off`).
 
----
+## 2. User Scope Grounding
+Fix Garmin RearVue 820 BLE tail light mode control (`6a4e2f00` service) so `EditDeviceDialog` / `RadarLightQuickSwitchSheet` selections physically switch the light and stay synchronized instead of snapping back to `Off`.
+- **Stage 4 Visual/UI Verification (`Rule 8.5` / `Rule 7.8` check)**: Compose UI layout in `EditDeviceDialog.kt` and `RadarSettingsSection.kt` (`Bremslicht-Erkennung` only per `REQ-CON-031.5`) is **not modified**, so Stage 4 Compose PNG screenshot inspection (`Rule 8.5`) does **not** apply unless UI widgets are added in Stage 3. However, `Rule 7.1` still mandates `subagent_pro` for Stage 4 because BLE GATT is a **Binary Protocol / High-Risk** ticket.
 
-## 2. Forensic Root Cause Analysis (RCA)
-Investigation of BLE traffic and command execution revealed two compounding root causes:
-1. **Missing `WRITE_TYPE_NO_RESPONSE` on Command Characteristic (`6a4e2f11`)**:
-   `BTLERadarDevice.setLightMode()` generates the 4-byte command `06 09 01 <type>` and enqueues it to `mRadarControlWriteChar` (`6a4e2f11`). In `MyBTLEDevice.java:WriteCharacteristicOp.execute()`, `gatt.writeCharacteristic(characteristic)` is called. However, Android's `BluetoothGattCharacteristic` write type defaults to `WRITE_TYPE_DEFAULT` (Write Request with response). The Garmin RearVue 820 control point `6a4e2f11` requires `WRITE_TYPE_NO_RESPONSE` (Write Command). The peripheral rejects/ignores write requests, so the physical hardware never switches light modes.
-2. **Premature Echo Guard Expiration and Stale Hardware Status Echo**:
-   Because the physical light mode never changed, the radar continues emitting its periodic status notifications (`6a4e2f14`) containing payload `01 <slot> ff 1F` (where `0x1F` corresponds to `RadarLightMode.OFF`). `BTLERadarDevice` employs an echo guard (`ECHO_GUARD_WINDOW_MS = 1000ms`). Once 1000ms expires, incoming status notification `0x1F` is decoded by `parseRearVueModeType(0x1F) == OFF`, which calls `RadarLightController.updateHardwareLightMode(OFF)`. This overwrites `currentMode` with `OFF`, causing `EditDeviceDialog` to display `Off`.
-3. **Queue Write Type Enforcement**:
-   `MyBTLEDevice.java` did not inspect characteristic properties (`PROPERTY_WRITE_NO_RESPONSE` vs `PROPERTY_WRITE`) when executing write operations, nor did `BTLERadarDevice` explicitly configure `mRadarControlWriteChar.setWriteType(WRITE_TYPE_NO_RESPONSE)` upon discovery.
+## 3. Requirement Archaeology & Chesterton's Fence Audit
+1. **Original Requirement ID & Target**: `REQ-CON-031.1`, `REQ-CON-031.2`, `REQ-CON-031.5` targeting `BTLERadarDevice.java`, `MyBTLEDevice.java`, `RadarLightController.kt`, and `EditDeviceDialog.kt`.
+2. **Historical Origin & Commit Trace**: `ATT-7545` (`6bfac996`) introduced service `6a4e2f00` (`6a4e2f11` `(WRITE, INDICATE)`, `6a4e2f14` `(NOTIFY)`); `ATT-7540` added `RadarLightControlSection` in `EditDeviceDialog.kt`; `60e14c9b` hardcoded `WRITE_TYPE_NO_RESPONSE` on `6a4e2f11`.
+3. **Root Reason for Failure (4 Interacting Causes)**:
+   - **Missing `6a4e2f11` CCCD Subscription (Primary BLE Protocol Gap)**: `BTLERadarDevice.configureServices()` (`L339-350`) subscribes only to `6a4e2f14` (`mRadarControlNotifyChar`) CCCD and **never** calls `setCharacteristicNotification(controlWriteChar, true)` or writes `0x2902` CCCD (`ENABLE_INDICATION_VALUE` / `ENABLE_NOTIFICATION_VALUE`) on `6a4e2f11`. Garmin Varia 820 requires `6a4e2f11` indications/notifications enabled before accepting control writes (`rale/radarble` + `ATT-7545_analysis.md`), and `onOtherCharacteristicUpdate()` ignores `6a4e2f11` responses.
+   - **Forced `WRITE_TYPE_NO_RESPONSE` Mismatch (`60e14c9b` Regression)**: `BTLERadarDevice.java` (`L332, L645`) forces `WRITE_TYPE_NO_RESPONSE` unconditionally. `6a4e2f11` is documented `(WRITE, INDICATE)` (`ATT-7545_analysis.md:12`), whereas `tools/ble_radar_simulator.py:130` falsely exposed `['write', 'write-without-response']` without `indicate`. Sending ATT Write Command (`0x52`) to a `PROPERTY_WRITE` characteristic gets dropped and suppresses SMP `GATT_INSUFFICIENT_AUTHENTICATION` bonding elevation.
+   - **Optimistic State + Silent Write Failure + `6a4e2f14` Snap-Back to `Off`**: `MyBTLEDevice.onCharacteristicWrite` (`L700-703`) discards `status != GATT_SUCCESS`. `BTLERadarDevice.setLightMode` (`L651`) optimistically updates `RadarLightController.updateHardwareLightMode(mode)` and returns `true`, and `RadarLightController.setManualLightMode` (`L302-303`) writes `mode` to `RadarStateRepository`. Because the physical light stays `OFF`, once `ECHO_GUARD_WINDOW_MS` (`1000L` ms, `L108`) expires, periodic `6a4e2f14` `01 [slot] ff 1F` (`OFF`) frames overwrite `_currentMode` back to `OFF` (`L711-720`), flipping `EditDeviceDialog` (`L1175`) back to `Off`. Also `unregisterRadarDevice` (`L154`) resets `_currentMode` to `OFF` on disconnect/reconnect.
+   - **BLE vs ANT+ Path Comparison**: `ANTBikeLightDevice.kt` (`L387-443`) completes Page `0x21` association and sends acknowledged Page `0x22` commands tracking `pendingModeCommand` until Page `0x01` confirmation, without blindly assuming success. UI persistence (`TuningPreferencesDataStore`) saves `radarLightDefaultMode`, whereas `EditDeviceDialog` reflects live `RadarLightController.currentMode` (GATT-driven).
+4. **Preservation of Core Invariants**: Preserve `WRITE_TYPE_NO_RESPONSE` strictly for `WRITE_NO_RESPONSE`-only legacy `6a4e3202`; keep `MyBTLEDevice` serialized GATT FIFO queue, `ECHO_GUARD_WINDOW_MS`, `ANTBikeLightDevice` path, `RadarSettingsSection`, and StVZO pruning.
 
----
+## 4. Change-Request Impact Analysis (SUP.10)
+1. **Affected Requirements**: `REQ-CON-031.1` (add `6a4e2f11` CCCD subscription before control writes), `REQ-CON-031.2` (property-driven write type + `onCharacteristicWrite` status gating; supersede unconditional `WRITE_TYPE_NO_RESPONSE`), `REQ-CON-031.5` (`EditDeviceDialog` status coherence).
+2. **Affected Architecture Elements**: `BTLERadarDevice.java`, `MyBTLEDevice.java`, `RadarLightController.kt`, `tools/ble_radar_simulator.py`. (`EditDeviceDialog.kt`, `RadarSettingsSection.kt`, and `ANTBikeLightDevice.kt` unchanged.)
+3. **Technical & Regression Risk**: Regressing legacy `6a4e3202` (`WRITE_NO_RESPONSE`-only) if write type overrides `PROPERTY_WRITE_NO_RESPONSE`; physical RearVue 820 + Pixel 10 bonding/GATT write-status (`0`) verification needed at Ceremony 2 (`Rule 7.6`).
+4. **Verification Impact & Test Surface**: Update `BTLERadarDeviceTest.kt`, `RadarLightControllerTest.kt`, `TST-CON-031`, and `tools/ble_radar_simulator.py` (`6a4e2f11` as `['write', 'indicate']` rejecting writes without CCCD) for `6a4e2f11` CCCD handshake, property-driven `writeType`, and `onCharacteristicWrite` non-zero status handling.
 
-## 3. User Scope Grounding (ATT-1250)
-* **In-Scope Goals**:
-  * Ensure RearVue 820 write characteristic (`6a4e2f11`) explicitly sets `WRITE_TYPE_NO_RESPONSE`.
-  * Ensure `MyBTLEDevice.WriteCharacteristicOp` respects `PROPERTY_WRITE_NO_RESPONSE` when `PROPERTY_WRITE` is absent.
-  * Ensure `setLightMode()` in `BTLERadarDevice` reliably delivers commands to physical hardware.
-  * Ensure `RadarLightController` state remains resilient during command dispatch and status echo.
-  * Add unit tests verifying `WRITE_TYPE_NO_RESPONSE` configuration and RearVue 820 command payload formatting.
-* **Out-of-Scope Non-Goals (Scope Bounding)**:
-  * No UI changes to `EditDeviceDialog` layout or Compose components.
-  * No modifications to ANT+ radar tail light command encoding.
-  * No modification to StVZO restrictions logic.
+## 5. Architectural Strategy
+1. **Subscribe `6a4e2f11` CCCD Before Control Writes**: In `BTLERadarDevice.configureServices()`, enable `setCharacteristicNotification(controlWriteChar, true)` and enqueue its `0x2902` CCCD (`ENABLE_INDICATION_VALUE` if `PROPERTY_INDICATE` else `ENABLE_NOTIFICATION_VALUE`) before re-applying active mode; decode/log `6a4e2f11` indication payloads in `onOtherCharacteristicUpdate()`.
+2. **Property-Driven Write Type Selection**: Replace unconditional `WRITE_TYPE_NO_RESPONSE` on `mRadarControlWriteChar` (`BTLERadarDevice.java:332,645`) with property inspection: use `WRITE_TYPE_DEFAULT` when `(properties & PROPERTY_WRITE) != 0`, and `WRITE_TYPE_NO_RESPONSE` only when `PROPERTY_WRITE == 0 && (properties & PROPERTY_WRITE_NO_RESPONSE) != 0` (matching `MyBTLEDevice.WriteCharacteristicOp` `L174-177`).
+3. **Propagate `onCharacteristicWrite` Status & Guard Optimistic State**: Forward `onCharacteristicWrite(gatt, characteristic, status)` hook from `MyBTLEDevice` to `BTLERadarDevice`; log non-`GATT_SUCCESS` codes clearly and reconcile/revert optimistic `mLastConfiguredLightMode` instead of silently snapping back to `OFF`. Also confirm/request bonding if `status == GATT_INSUFFICIENT_AUTHENTICATION`.
 
----
-
-## 4. Requirement Archaeology & Chesterton's Fence Audit
-* **Original Requirement ID & Target**: `REQ-CON-031.2` (RearVue 820 Control Point Command Encoding), `REQ-CON-031.5` (Bidirectional Mode Synchronization).
-* **Historical Origin & Commit Trace**: Added in ATT-7545 (Sprint 2026-46.5).
-* **Root Reason for Existing Formulation**: `RadarLightController.updateHardwareLightMode` was introduced to maintain bidirectional synchronization when the light mode is toggled physically on the hardware or externally. The 1000ms echo guard was added to filter initial echoes.
-* **Preservation of Core Invariants**: Bidirectional synchronization must be preserved; setting `WRITE_TYPE_NO_RESPONSE` allows the hardware to execute the command, so its subsequent echo confirms rather than reverts the selected mode.
-
----
-
-## 5. Change-Request Impact Analysis (SUP.10)
-* **Affected Requirements**: `REQ-CON-031.2` (explicit write-without-response specification), `REQ-CON-031.5` (state persistence & confirmation).
-* **Affected Architecture Elements**: `BTLERadarDevice.java`, `MyBTLEDevice.java`, `RadarLightControllerTest.kt`, `BTLERadarDeviceTest.kt`.
-* **Verification Impact & Test Surface**: BLE unit tests simulating RearVue 820 GATT write operations and notification echo cycles; end-to-end mode transition tests.
-* **Risk Assessment & Invariants**: Low-to-Medium risk. Isolated to BLE GATT write characteristic handling for radar control points. Existing sensor writes (e.g. CSC, HRM) remain unaffected.
-
----
-
-## 6. Architectural Strategy & High-Level Solution
-* Explicitly configure `mRadarControlWriteChar.setWriteType(BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE)` upon service discovery in `BTLERadarDevice.java`.
-* In `MyBTLEDevice.java:WriteCharacteristicOp.execute()`, check `(characteristic.getProperties() & BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE) != 0` and `(characteristic.getProperties() & BluetoothGattCharacteristic.PROPERTY_WRITE) == 0`, ensuring `WRITE_TYPE_NO_RESPONSE` is applied.
-* Add unit tests covering write type configuration, write execution, and mode confirmation.
-
----
-
-## 7. System Invariants & Risk Assessment
-* **Core Invariants**:
-  1. Backward compatibility with standard BLE write characteristics requiring responses.
-  2. StVZO mode restrictions remain inviolate.
-  3. UI state reflects hardware state without premature reversion.
-* **Risk Rating**: **LOW** (surgical BLE GATT configuration fix, 2 SP).
+## 6. System Invariants & Risk Assessment
+- **GATT FIFO Ordering**: `6a4e2f11` CCCD write MUST precede the initial `setLightMode` command in `MyBTLEDevice`'s serialized queue; mid-ride mode writes remain debounced (`400 ms`).
+- **Scope Boundary**: Zero UI layout changes in `EditDeviceDialog.kt` or `RadarSettingsSection.kt`; `ANTBikeLightDevice.kt` untouched; `ANT-Android-SDKs` stays `160000`.

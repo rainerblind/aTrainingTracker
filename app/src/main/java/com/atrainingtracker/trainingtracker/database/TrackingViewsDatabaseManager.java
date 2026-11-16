@@ -200,6 +200,36 @@ public class TrackingViewsDatabaseManager {
             boolean showGraph,
             int graphHorizonSeconds
     ) {
+        updateSensorView(
+                sensorFieldId,
+                sensorType,
+                viewSize,
+                sourceDeviceId,
+                filterType,
+                filterConstant,
+                showValue,
+                showBar,
+                colWeight,
+                showGraph,
+                graphHorizonSeconds,
+                TrackingViewsDbHelper.DEFAULT_GRAPH_COLOR
+        );
+    }
+
+    public void updateSensorView(
+            long sensorFieldId,
+            SensorType sensorType,
+            ViewSize viewSize,
+            @Nullable Long sourceDeviceId,
+            FilterType filterType,
+            double filterConstant,
+            boolean showValue,
+            boolean showBar,
+            float colWeight,
+            boolean showGraph,
+            int graphHorizonSeconds,
+            @Nullable String graphColor
+    ) {
         ContentValues values = new ContentValues();
         values.put(TrackingViewsDbHelper.SENSOR_TYPE, sensorType.name());
         values.put(TrackingViewsDbHelper.VIEW_SIZE, viewSize.name());
@@ -220,6 +250,9 @@ public class TrackingViewsDatabaseManager {
         if (hasGraphColumns(getDatabase())) {
             values.put(TrackingViewsDbHelper.SHOW_GRAPH, showGraph ? 1 : 0);
             values.put(TrackingViewsDbHelper.GRAPH_HORIZON_S, graphHorizonSeconds);
+        }
+        if (hasGraphColorColumn(getDatabase())) {
+            values.put(TrackingViewsDbHelper.GRAPH_COLOR, graphColor != null ? graphColor : TrackingViewsDbHelper.DEFAULT_GRAPH_COLOR);
         }
 
         getDatabase().update(TrackingViewsDbHelper.ROWS_TABLE,
@@ -292,6 +325,20 @@ public class TrackingViewsDatabaseManager {
                 int nameIdx = cursor.getColumnIndex("name");
                 while (cursor.moveToNext()) {
                     if (TrackingViewsDbHelper.SHOW_GRAPH.equalsIgnoreCase(cursor.getString(nameIdx))) {
+                        return true;
+                    }
+                }
+            }
+        } catch (Exception ignored) {}
+        return false;
+    }
+
+    private boolean hasGraphColorColumn(SQLiteDatabase db) {
+        try (Cursor cursor = db.rawQuery("PRAGMA table_info(" + TrackingViewsDbHelper.ROWS_TABLE + ")", null)) {
+            if (cursor != null) {
+                int nameIdx = cursor.getColumnIndex("name");
+                while (cursor.moveToNext()) {
+                    if (TrackingViewsDbHelper.GRAPH_COLOR.equalsIgnoreCase(cursor.getString(nameIdx))) {
                         return true;
                     }
                 }
@@ -392,6 +439,39 @@ public class TrackingViewsDatabaseManager {
             float colWeight,
             boolean showGraph,
             int graphHorizonSeconds) {
+        insertSensorFieldAt(
+                tabViewId,
+                rowNr,
+                colNr,
+                sensorType,
+                viewSize,
+                sourceDeviceId,
+                filterType,
+                filterConstant,
+                showValue,
+                showBar,
+                colWeight,
+                showGraph,
+                graphHorizonSeconds,
+                TrackingViewsDbHelper.DEFAULT_GRAPH_COLOR
+        );
+    }
+
+    public void insertSensorFieldAt(
+            long tabViewId,
+            int rowNr,
+            int colNr,                        // -1 means new row
+            SensorType sensorType,
+            ViewSize viewSize,
+            @Nullable Long sourceDeviceId,    // null means none = best
+            FilterType filterType,
+            double filterConstant,
+            boolean showValue,
+            boolean showBar,
+            float colWeight,
+            boolean showGraph,
+            int graphHorizonSeconds,
+            @Nullable String graphColor) {
 
         if (tabViewId <= 0 || rowNr < 1) {
             Log.w(TAG, "Invalid parameters for insertSensorFieldAt: tabViewId=" + tabViewId + ", rowNr=" + rowNr);
@@ -449,6 +529,9 @@ public class TrackingViewsDatabaseManager {
             if (hasGraphColumns(db)) {
                 values.put(TrackingViewsDbHelper.SHOW_GRAPH, showGraph ? 1 : 0);
                 values.put(TrackingViewsDbHelper.GRAPH_HORIZON_S, graphHorizonSeconds);
+            }
+            if (hasGraphColorColumn(db)) {
+                values.put(TrackingViewsDbHelper.GRAPH_COLOR, graphColor != null ? graphColor : TrackingViewsDbHelper.DEFAULT_GRAPH_COLOR);
             }
 
             db.insertOrThrow(TrackingViewsDbHelper.ROWS_TABLE, null, values);
@@ -1198,7 +1281,8 @@ public class TrackingViewsDatabaseManager {
         // public static final int DB_VERSION = 18; // upgraded to version 18 at 01.11.2026: Sport-dependent bar gating & upgrade migration (ATT-4927)
         // public static final int DB_VERSION = 19; // upgraded to version 19 at 10.11.2026: Configurable live sparkline graph tiles & time horizon (ATT-1294)
         // public static final int DB_VERSION = 20; // upgraded to version 20 at 11.11.2026: Adding Live MMP Curve to Cockpit tracking layouts (ATT-6688)
-        public static final int DB_VERSION = 21; // upgraded to version 21 at 15.11.2026: Adding ShowRadarLight column to ViewsTable (ATT-7972)
+        // public static final int DB_VERSION = 21; // upgraded to version 21 at 15.11.2026: Adding ShowRadarLight column to ViewsTable (ATT-7972)
+        public static final int DB_VERSION = 22; // upgraded to version 22 at 16.11.2026: Adding GraphColor column to LayoutRowsTable (ATT-7760)
         public static final String VIEWS_TABLE = "ViewsTable";                // the table for the different 'tabs'
         public static final String ROWS_TABLE = "LayoutRowsTable";            // the table for the sensor fields within each tab
         public static final String SECTION_DIVIDERS_TABLE = "SectionDividersTable"; // new in version 14 (ATT-4055)
@@ -1230,6 +1314,8 @@ public class TrackingViewsDatabaseManager {
         public static final String COL_WEIGHT = "ColWeight";      // new in version 17 (ATT-4861)
         public static final String SHOW_GRAPH = "ShowGraph";      // new in version 19 (ATT-1294)
         public static final String GRAPH_HORIZON_S = "GraphHorizonS"; // new in version 19 (ATT-1294)
+        public static final String GRAPH_COLOR = "GraphColor"; // new in version 22 (ATT-7760)
+        public static final String DEFAULT_GRAPH_COLOR = "GLOBAL_DEFAULT";
         // protected static final int SMALL = 20;                 removed in version 8
         // protected static final int MEDIUM = 25;                removed in version 8
         // protected static final int LARGE = 30;                 removed in version 8
@@ -1526,6 +1612,24 @@ public class TrackingViewsDatabaseManager {
                 + SHOW_GRAPH + " int DEFAULT 0, "
                 + GRAPH_HORIZON_S + " int DEFAULT 300)";
 
+        protected static final String CREATE_LAYOUTS_TABLE_V22 = "create table " + ROWS_TABLE + " ("
+                + ROW_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
+                + VIEW_ID + " int, "
+                + ROW_NR + " int, "
+                + COL_NR + " int, "
+                + SENSOR_TYPE + " text, "
+                + TEXT_SIZE + " int, "
+                + VIEW_SIZE + " text, "
+                + SOURCE_DEVICE_ID + " int, "
+                + FILTER_TYPE + " text, "
+                + FILTER_CONSTANT + " real, "
+                + SHOW_VALUE + " int DEFAULT 1, "
+                + SHOW_BAR + " int DEFAULT 0, "
+                + COL_WEIGHT + " real DEFAULT 1.0, "
+                + SHOW_GRAPH + " int DEFAULT 0, "
+                + GRAPH_HORIZON_S + " int DEFAULT 300, "
+                + GRAPH_COLOR + " text DEFAULT 'GLOBAL_DEFAULT')";
+
         protected static final String CREATE_SECTION_DIVIDERS_TABLE_V14 = "CREATE TABLE IF NOT EXISTS "
                 + SECTION_DIVIDERS_TABLE + " ("
                 + C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
@@ -1553,11 +1657,11 @@ public class TrackingViewsDatabaseManager {
         @Override
         public void onCreate(@NonNull SQLiteDatabase db) {
             db.execSQL(CREATE_VIEWS_TABLE_V21);
-            db.execSQL(CREATE_LAYOUTS_TABLE_V19);
+            db.execSQL(CREATE_LAYOUTS_TABLE_V22);
             db.execSQL(CREATE_SECTION_DIVIDERS_TABLE_V14);
 
             if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_VIEWS_TABLE_V21);
-            if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_LAYOUTS_TABLE_V19);
+            if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_LAYOUTS_TABLE_V22);
             if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_SECTION_DIVIDERS_TABLE_V14);
 
 
@@ -1757,6 +1861,7 @@ public class TrackingViewsDatabaseManager {
                 values.put(COL_WEIGHT, rowData.colWeight());
                 values.put(SHOW_GRAPH, 0);
                 values.put(GRAPH_HORIZON_S, 300);
+                values.put(GRAPH_COLOR, DEFAULT_GRAPH_COLOR);
                 db.insert(ROWS_TABLE, null, values);
             }
 
@@ -2251,6 +2356,32 @@ public class TrackingViewsDatabaseManager {
                                 + SHOW_RADAR_LIGHT + " IS NULL OR " + SHOW_RADAR_LIGHT + " = 0);");
                     }
                     db.execSQL("UPDATE " + VIEWS_TABLE + " SET " + SHOW_RADAR_LIGHT + " = 0 WHERE " + SHOW_RADAR_LIGHT + " IS NULL;");
+                    db.setTransactionSuccessful();
+                } finally {
+                    db.endTransaction();
+                }
+            }
+
+            if (oldVersion < 22 && (newVersion >= 22 || newVersion == 0)) {
+                Log.i(TAG, "Upgrading database to version 22: Adding GraphColor column to LayoutRowsTable (ATT-7760)");
+                db.beginTransaction();
+                try {
+                    boolean columnExists = false;
+                    try (Cursor cursor = db.rawQuery("PRAGMA table_info(" + ROWS_TABLE + ")", null)) {
+                        if (cursor != null) {
+                            int nameIndex = cursor.getColumnIndex("name");
+                            while (cursor.moveToNext()) {
+                                if (GRAPH_COLOR.equalsIgnoreCase(cursor.getString(nameIndex))) {
+                                    columnExists = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    if (!columnExists) {
+                        addColumn(db, ROWS_TABLE, GRAPH_COLOR, "text DEFAULT 'GLOBAL_DEFAULT'");
+                    }
+                    db.execSQL("UPDATE " + ROWS_TABLE + " SET " + GRAPH_COLOR + " = 'GLOBAL_DEFAULT' WHERE " + GRAPH_COLOR + " IS NULL;");
                     db.setTransactionSuccessful();
                 } finally {
                     db.endTransaction();

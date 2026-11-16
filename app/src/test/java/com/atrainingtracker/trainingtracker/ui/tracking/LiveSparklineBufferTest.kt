@@ -124,4 +124,73 @@ class LiveSparklineBufferTest {
         assertTrue(executor.awaitTermination(3, TimeUnit.SECONDS))
         assertEquals(300, buffer.size)
     }
+
+    // --- TST-TRK-080: Mid-Workout Telemetry & Sparkline Rehydration ---
+
+    @Test
+    fun testBackfillHistoricalSamples_fixedHorizon_underCapacity_TST_TRK_080_3() {
+        // TST-TRK-080.3: Backfill samples under capacity retains all samples in order
+        val buffer = LiveSparklineBuffer(horizonSeconds = 300)
+        val history = (1..50).map { it.toFloat() }
+        buffer.backfillHistoricalSamples(history)
+
+        assertEquals(50, buffer.size)
+        val samples = buffer.getSamples()
+        assertEquals(1.0f, samples.first(), 0.001f)
+        assertEquals(50.0f, samples.last(), 0.001f)
+        assertEquals(49, buffer.currentSpanSeconds)
+    }
+
+    @Test
+    fun testBackfillHistoricalSamples_fixedHorizon_exceedsCapacity_TST_TRK_080_3() {
+        // TST-TRK-080.3: Backfill samples exceeding capacity keeps newest maxCapacity
+        val buffer = LiveSparklineBuffer(horizonSeconds = 300)
+        val history = (1..400).map { it.toFloat() }
+        buffer.backfillHistoricalSamples(history)
+
+        assertEquals(300, buffer.size)
+        val samples = buffer.getSamples()
+        assertEquals(101.0f, samples.first(), 0.001f)
+        assertEquals(400.0f, samples.last(), 0.001f)
+        assertEquals(300, buffer.currentSpanSeconds)
+    }
+
+    @Test
+    fun testBackfillHistoricalSamples_mergesMonotonicallyWithConcurrentLiveTicks_TST_TRK_080_4() {
+        // TST-TRK-080.4: Live samples ingested ahead of async backfill are preserved at tail
+        val buffer = LiveSparklineBuffer(horizonSeconds = 300)
+        // 2 live ticks arrived before async DB query returned
+        buffer.addSample(101.0f)
+        buffer.addSample(102.0f)
+
+        // Historical query returns 100 points [1f..100f]
+        val history = (1..100).map { it.toFloat() }
+        buffer.backfillHistoricalSamples(history)
+
+        assertEquals(102, buffer.size)
+        val samples = buffer.getSamples()
+        assertEquals(1.0f, samples.first(), 0.001f)
+        assertEquals(100.0f, samples[99], 0.001f)
+        assertEquals(101.0f, samples[100], 0.001f)
+        assertEquals(102.0f, samples[101], 0.001f)
+        assertEquals(101, buffer.currentSpanSeconds)
+    }
+
+    @Test
+    fun testBackfillHistoricalSamples_fullWorkout_decimatesProperly_TST_TRK_080_3() {
+        // TST-TRK-080.3: Full Workout (horizon 0) decimates when exceeding MAX_FULL_WORKOUT_SAMPLES
+        val buffer = LiveSparklineBuffer(horizonSeconds = 0)
+        val history = (1..400).map { it.toFloat() }
+        buffer.backfillHistoricalSamples(history)
+
+        assertTrue(buffer.size <= LiveSparklineBuffer.MAX_FULL_WORKOUT_SAMPLES)
+        assertTrue(buffer.getSamples().isNotEmpty())
+    }
+
+    @Test
+    fun testBackfillHistoricalSamples_emptyList_noOp_TST_TRK_080_3() {
+        val buffer = LiveSparklineBuffer(horizonSeconds = 60)
+        buffer.backfillHistoricalSamples(emptyList())
+        assertEquals(0, buffer.size)
+    }
 }

@@ -67,4 +67,11 @@
     <string name="sensor_sub_category_phone_battery">Batterie du smartphone</string>
     <string name="sensor_capability_bar">Barre</string>
     <string name="sensor_capability_graph">Graphique</string>
+
+    <!-- Cockpit Live Sparkline Graph Color Customization (REQ-TRK-081, ATT-7760) -->
+    <string name="cockpit_graph_color_title">Couleur du graphique</string>
+    <string name="cockpit_graph_color_this_tile">Cette tuile</string>
+    <string name="cockpit_graph_color_all_metric">Tous %1$s</string>
+    <string name="cockpit_graph_color_theme_default">Thème par défaut</string>
+    <string name="cockpit_graph_color_dynamic_zone">Zone dynamique</string>
 </resources>

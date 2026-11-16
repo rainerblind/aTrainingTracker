@@ -21,8 +21,11 @@ package com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield
 import android.content.res.Configuration
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
@@ -39,6 +42,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -55,14 +61,17 @@ import com.atrainingtracker.trainingtracker.MyHelper
 import com.atrainingtracker.trainingtracker.MyUnits
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
+import com.atrainingtracker.trainingtracker.settings.TelemetryGraphColorPreferences
 import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
 import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
 import com.atrainingtracker.trainingtracker.ui.settings.AthleteWeightDialog
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
+import com.atrainingtracker.trainingtracker.ui.theme.TelemetryGraphColor
 import com.atrainingtracker.trainingtracker.ui.theme.safePainterResource
 import com.atrainingtracker.trainingtracker.ui.tracking.DEFAULT_PREVIEW_SPARKLINE_SAMPLES
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorSparklineView
 import com.atrainingtracker.trainingtracker.ui.tracking.getDisplayName
+import com.atrainingtracker.trainingtracker.ui.tracking.resolveSparklineLineColor
 import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -286,9 +295,130 @@ fun EditSensorFieldDialog(
                         color = MaterialTheme.colorScheme.outline
                     )
                 }
+                Spacer(Modifier.height(12.dp))
+
+                // --- Minimalist Color Editor UI (REQ-TRK-081.3, ATT-7760) ---
+                Text(
+                    text = stringResource(R.string.cockpit_graph_color_title),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(6.dp))
+
+                val context = LocalContext.current
+                val activeGlobalColor = TelemetryGraphColorPreferences.getGraphColor(
+                    context,
+                    uiState.selectedSensorType ?: SensorType.SPEED_mps
+                )
+                val isThemeDefaultSelected = uiState.graphColor == "THEME_DEFAULT" ||
+                    (uiState.graphColor == "GLOBAL_DEFAULT" && activeGlobalColor == TelemetryGraphColor.THEME_DEFAULT)
+                val isDynamicZoneSelected = uiState.graphColor == "DYNAMIC_ZONE"
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    FilterChip(
+                        selected = isThemeDefaultSelected,
+                        onClick = { viewModel.onGraphColorChanged("THEME_DEFAULT") },
+                        label = { Text(stringResource(R.string.cockpit_graph_color_theme_default)) }
+                    )
+                    if (uiState.isDynamicZoneSupported) {
+                        FilterChip(
+                            selected = isDynamicZoneSelected,
+                            onClick = {
+                                viewModel.onGraphColorChanged("DYNAMIC_ZONE")
+                                if (uiState.graphColorScope == GraphColorScope.ALL_METRIC) {
+                                    viewModel.onGraphColorScopeChanged(GraphColorScope.THIS_TILE)
+                                }
+                            },
+                            label = { Text(stringResource(R.string.cockpit_graph_color_dynamic_zone)) }
+                        )
+                    }
+                }
+
                 Spacer(Modifier.height(8.dp))
 
-                // --- Live Sparkline Preview in Edit Dialog (REQ-TRK-059.11, ATT-7314) ---
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TelemetryGraphColor.PALETTE_COLORS.forEach { paletteColor ->
+                        val isDark = TelemetryGraphColor.isDarkSurface(MaterialTheme.colorScheme)
+                        val colorVal = if (isDark) paletteColor.darkColor else paletteColor.lightColor
+                        val isSelected = uiState.graphColor == paletteColor.name ||
+                            (uiState.graphColor == "GLOBAL_DEFAULT" && activeGlobalColor == paletteColor)
+
+                        Box(
+                            modifier = Modifier
+                                .size(30.dp)
+                                .clip(CircleShape)
+                                .background(colorVal)
+                                .then(
+                                    if (isSelected) {
+                                        Modifier.border(2.dp, MaterialTheme.colorScheme.onSurface, CircleShape)
+                                    } else {
+                                        Modifier
+                                    }
+                                )
+                                .clickable {
+                                    viewModel.onGraphColorChanged(paletteColor.name)
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (isSelected) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = paletteColor.name,
+                                    tint = if (colorVal.luminance() > 0.5f) Color.Black else Color.White,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(10.dp))
+
+                SingleChoiceSegmentedButtonRow(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    SegmentedButton(
+                        selected = uiState.graphColorScope == GraphColorScope.THIS_TILE,
+                        onClick = { viewModel.onGraphColorScopeChanged(GraphColorScope.THIS_TILE) },
+                        shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
+                        icon = {}
+                    ) {
+                        Text(
+                            text = stringResource(R.string.cockpit_graph_color_this_tile),
+                            style = MaterialTheme.typography.labelMedium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                    SegmentedButton(
+                        selected = uiState.graphColorScope == GraphColorScope.ALL_METRIC,
+                        onClick = { viewModel.onGraphColorScopeChanged(GraphColorScope.ALL_METRIC) },
+                        shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
+                        enabled = uiState.graphColor != "DYNAMIC_ZONE",
+                        icon = {}
+                    ) {
+                        val metricShortName = uiState.selectedSensorType?.let { stringResource(it.shortNameId) }
+                            ?: stringResource(R.string.sensor)
+                        Text(
+                            text = stringResource(R.string.cockpit_graph_color_all_metric, metricShortName),
+                            style = MaterialTheme.typography.labelMedium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(12.dp))
+
+                // --- Live Sparkline Preview in Edit Dialog (REQ-TRK-059.11, REQ-TRK-081.2, ATT-7314, ATT-7760) ---
                 Surface(
                     color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                     shape = MaterialTheme.shapes.small,
@@ -305,10 +435,18 @@ fun EditSensorFieldDialog(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(Modifier.height(4.dp))
+                        val previewLineColor = resolveSparklineLineColor(
+                            graphColor = uiState.graphColor,
+                            zoneColor = Color.Transparent,
+                            showTextColor = false,
+                            sensorType = uiState.selectedSensorType,
+                            colorScheme = MaterialTheme.colorScheme,
+                            context = context
+                        )
                         SensorSparklineView(
                             samples = DEFAULT_PREVIEW_SPARKLINE_SAMPLES,
                             spanSeconds = if (uiState.graphHorizonSeconds > 0) uiState.graphHorizonSeconds else 300,
-                            lineColor = MaterialTheme.colorScheme.primary,
+                            lineColor = previewLineColor,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(44.dp)

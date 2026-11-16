@@ -253,6 +253,19 @@ public class WorkoutSummariesDatabaseManager {
     }
 
     /**
+     * Updates swim metrics and sport classification in WorkoutSummaries (REQ-SET-111, ATT-8001).
+     */
+    public void updateSwimMetrics(long workoutId, long sportId, @NonNull String bSportName, double distanceTotalM, int laps, double avgSpeedMps) {
+        ContentValues values = new ContentValues();
+        values.put(WorkoutSummaries.SPORT_ID, sportId);
+        values.put(WorkoutSummaries.B_SPORT, bSportName);
+        values.put(WorkoutSummaries.DISTANCE_TOTAL_m, distanceTotalM);
+        values.put(WorkoutSummaries.LAPS, laps);
+        values.put(WorkoutSummaries.SPEED_AVERAGE_mps, avgSpeedMps);
+        getDatabase().update(WorkoutSummaries.TABLE, values, WorkoutSummaries.C_ID + "=?", new String[]{String.valueOf(workoutId)});
+    }
+
+    /**
      * In-memory record representing pending Polar H10 sync metadata (REQ-SET-106.1, ATT-7919).
      */
     public static class PolarPendingSyncData {

@@ -300,3 +300,13 @@ This document serves as the authoritative living source of truth for software en
     * **Filter Subsystem** (`com.atrainingtracker.banalservice.filters`): $\ge 70\%$ Line, $\ge 50\%$ Branch.
     * **Sensors & Protocols Subsystem** (`com.atrainingtracker.banalservice.devices`, `com.atrainingtracker.banalservice.sensor`): $\ge 60\%$ Line, $\ge 50\%$ Branch.
   * Running `./gradlew koverVerifyDebug` executes all unit tests prior to computing coverage and fails fast if any global or subsystem bound is violated.
+
+### 5.12 Mandatory Weekly Dual-Vendor Full-Subsystem Code & Architecture Reviews (REQ-PRO-095 / ATT-8213)
+* **Whole-Codebase Scope Beyond Incremental Diffs**:
+  * In-sprint Stage 6 reviews evaluate single-ticket diffs in isolation. To systematically uncover latent architectural debt, concurrency hazards, and resource leaks across the ~200k+ LoC codebase, developers and AI agents **MUST** participate in mandatory weekly ("in der Regel wöchentlich", cadence $\le 7$ days) dual-vendor reviews.
+  * Reviews MUST **NOT** be restricted to `git diff <last_sha>..develop`. Every weekly review inspects **full production & test subsystem slices** of the existing codebase alongside recent changes until 100% of packages are reviewed end-to-end, tracked via `docs/engineering/code_reviews/coverage_matrix.md` across 9 domains (`tracker/`, `banalservice/`, `database/`, `exporter/`, `ui/tracking/`, `ui/aftermath/`, `ui/settings/`, `tools/`, `test/`).
+* **Cross-Vendor Independence (Google Gemini + Anthropic Claude)**:
+  * Independent blind evaluations by **Google Gemini** (`Gemini 2.5 Pro` / `Gemini 4 Carbon`) and **Anthropic Claude** (`Claude 3.7 Sonnet`) probe concurrency/thread safety, resource/cursor/coroutine leaks, architectural boundaries, monolith complexity, defensive error handling, and behavioral test validity.
+  * Findings are reconciled into `docs/engineering/code_reviews/YYYY-MM-DD_dual_vendor_code_review.md` and filed as backlog tickets under Epic `ATT-232` / `ATT-8138`.
+* **Automated Top-of-Backlog Placement (`ensure-weekly-reviews`)**:
+  * Whenever $\ge 7$ days elapse since the last completed review record (or `UNREVIEWED` subsystems remain), `tools/jira_util.py ensure-weekly-reviews` automatically creates a deduplicated review ticket under `ATT-232` pre-populated with the next target slice from `coverage_matrix.md` and ranks it at the very top of the Product Backlog (`rank-top`).

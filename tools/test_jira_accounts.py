@@ -13,6 +13,7 @@ import sys
 import io
 import base64
 import tempfile
+from datetime import datetime, timedelta
 from unittest.mock import patch, MagicMock
 
 # Ensure tools directory is on sys.path
@@ -499,6 +500,7 @@ class TestJiraCliTooling(unittest.TestCase):
         mock_transition.assert_called_once_with("ATT-4301", "freigabe", role="agent2", inject_context=True)
 
     def test_auto_verify_living_docs_on_stage5(self):
+        """TST-PRO-099.4: auto_verify_living_docs_on_stage5 promotes backed items and keeps unbacked items Implemented."""
         import tempfile
         with tempfile.TemporaryDirectory() as tmpdir:
             docs_dir = os.path.join(tmpdir, "docs")
@@ -522,9 +524,53 @@ class TestJiraCliTooling(unittest.TestCase):
             with open(tst_path, "r", encoding="utf-8") as f:
                 tst_content = f.read()
             self.assertNotIn("Planned", req_content)
-            self.assertEqual(req_content.count("| Verified |"), 3)
+            # Unbacked requirements remain/flip to Implemented under REQ-PRO-099.4
+            self.assertIn("Implemented", req_content)
             self.assertNotIn("Planned", tst_content)
+            # TST-UI-001 is tolerated in ratchet baseline, so it promotes to Verified
             self.assertIn("| Verified |", tst_content)
+
+    def test_stage5_evidence_gating_unbacked_and_backed(self):
+        """TST-PRO-099.4: Verify auto_verify_living_docs_on_stage5 conditions Verified on passing test evidence."""
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmpdir:
+            shards_req = os.path.join(tmpdir, "docs", "requirements")
+            shards_tst = os.path.join(tmpdir, "docs", "tests")
+            os.makedirs(shards_req, exist_ok=True)
+            os.makedirs(shards_tst, exist_ok=True)
+
+            tst_shard_file = os.path.join(shards_tst, "tst_test.md")
+            with open(tst_shard_file, "w", encoding="utf-8") as f:
+                f.write(
+                    "### TST-NOVEL-999: Novel Test Without Evidence [Planned]\n"
+                    "- **Tickets**: `ATT-8888`\n"
+                    "- **Requirements**: `REQ-NOVEL-999`\n"
+                )
+
+            tst_backed_file = os.path.join(shards_tst, "tst_backed.md")
+            with open(tst_backed_file, "w", encoding="utf-8") as f:
+                f.write(
+                    "### TST-PRO-099: Backed Test [Planned]\n"
+                    "- **Tickets**: `ATT-8888`\n"
+                    "- **Requirements**: `REQ-PRO-099`\n"
+                )
+
+            with patch("jira_util.has_verified_test_evidence") as mock_evidence:
+                def side_effect(tst_id, **kwargs):
+                    if tst_id == "TST-PRO-099":
+                        return True, "Passing evidence"
+                    return False, "Unbacked"
+                mock_evidence.side_effect = side_effect
+
+                jira_util.auto_verify_living_docs_on_stage5("ATT-8888", repo_root=tmpdir)
+
+            with open(tst_shard_file, "r", encoding="utf-8") as f:
+                novel_text = f.read()
+            with open(tst_backed_file, "r", encoding="utf-8") as f:
+                backed_text = f.read()
+
+            self.assertIn("### TST-NOVEL-999: Novel Test Without Evidence [Implemented]", novel_text)
+            self.assertIn("### TST-PRO-099: Backed Test [Verified]", backed_text)
 
     @patch("jira_util.jira_request")
     def test_export_gates_command_generates_markdown(self, mock_request):
@@ -597,6 +643,38 @@ class TestJiraCliTooling(unittest.TestCase):
             self.assertIn("Gate 6 | Final Review (Agent) (Gate 6)", content)
             self.assertIn("| ATT-6149 | ATT-7247 | Gate 1 | Analysis (Gate 1) | PASS | agent2 | Agent 2 (Reviewer) |", content)
             self.assertIn("| ATT-6149 | - | Gate 6 | Final Review (Agent) (Gate 6) | PASS | agent2 | Agent 2 (Reviewer) |", content)
+
+    @patch("jira_util.jira_request")
+    @patch("jira_util.get_config")
+    def test_export_test_evidence_command_generates_files(self, mock_config, mock_request):
+        """TST-PRO-100.1 / TST-PRO-100.4: export-test-evidence CLI exports persistent test and coverage evidence."""
+        import tempfile
+        mock_config.return_value = {
+            "JIRA_URL": "https://example.atlassian.net",
+            "JIRA_USER": "test@example.com",
+            "JIRA_API_TOKEN": "token",
+        }
+        mock_request.side_effect = lambda url, **kwargs: (
+            {"values": [{"id": 1, "name": "Sprint Board"}]} if "/rest/agile/1.0/board" in url and "sprint" not in url
+            else ({"values": [{"id": 440, "name": "2026-46.3"}]} if "/rest/agile/1.0/board/1/sprint?state=active" in url
+            else {})
+        )
+        with tempfile.TemporaryDirectory() as tmp_root:
+            out_dir = os.path.join(tmp_root, "test_evidence")
+            results_dir = os.path.join(tmp_root, "test-results")
+            os.makedirs(results_dir, exist_ok=True)
+            with open(os.path.join(results_dir, "TEST-Sample.xml"), "w", encoding="utf-8") as f:
+                f.write('<?xml version="1.0"?><testsuite tests="1" failures="0" errors="0" skipped="0" time="0.1"><testcase name="testA_TST_PRO_100" classname="Sample"/></testsuite>')
+
+            md_path, json_path, payload = jira_util.export_test_evidence(
+                sprint_arg="2026-46.3",
+                out_dir=out_dir,
+                test_results_dir=results_dir,
+            )
+            self.assertTrue(os.path.isfile(md_path))
+            self.assertTrue(os.path.isfile(json_path))
+            self.assertEqual(payload["target"], "sprint_2026-46.3")
+            self.assertEqual(payload["unit_tests"]["total"], 1)
 
     @patch("jira_util.jira_request")
     def test_qa_audit_command_generates_markdown(self, mock_request):
@@ -916,6 +994,71 @@ class TestJiraCliTooling(unittest.TestCase):
             self.assertIn("ATT-6155", content_ai)
             self.assertIn("ASPICE compliance and role integrity verified.", content_ai)
 
+    @patch("jira_util.jira_request")
+    def test_record_review_validation_and_skipped_handling(self, mock_request):
+        """TST-PRO-062.1: Verify record-review validates verdicts, mandates findings, and handles SKIPPED/NOT PERFORMED."""
+        mock_request.return_value = {}
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # 1. Missing verdict raises ValueError
+            with self.assertRaises(ValueError):
+                jira_util.record_review(repo_root=tmpdir, verdict=None, findings="notes")
+
+            # 2. Invalid verdict raises ValueError
+            with self.assertRaises(ValueError):
+                jira_util.record_review(repo_root=tmpdir, verdict="INVALID_VERDICT", findings="notes")
+
+            # 3. Missing findings for PASS raises ValueError
+            with self.assertRaises(ValueError):
+                jira_util.record_review(repo_root=tmpdir, verdict="PASS", findings=None)
+            with self.assertRaises(ValueError):
+                jira_util.record_review(repo_root=tmpdir, verdict="PASS", findings="")
+
+            # 4. Missing findings for FAIL raises ValueError
+            with self.assertRaises(ValueError):
+                jira_util.record_review(repo_root=tmpdir, verdict="FAIL", findings="")
+
+            # 5. Missing findings for SKIPPED raises ValueError
+            with self.assertRaises(ValueError):
+                jira_util.record_review(repo_root=tmpdir, verdict="SKIPPED", findings="")
+
+            # 6. Valid SKIPPED review generates Rule 1.3 deviation header and omits default success text
+            out_skip = os.path.join(tmpdir, "docs", "engineering", "reviews", "sprint_2026-46.6.md")
+            path_s, meta_s = jira_util.record_review(
+                sprint_arg="2026-46.6",
+                ticket_key="ATT-7755",
+                reviewer="Human",
+                scope="Ceremony 2 Sprint Review (Skipped per PO instruction)",
+                verdict="SKIPPED",
+                findings="Individual ticket review skipped per PO instruction to proceed directly to Retro.",
+                out_path=out_skip,
+                repo_root=tmpdir,
+            )
+            self.assertEqual(path_s, out_skip)
+            with open(out_skip, "r", encoding="utf-8") as f:
+                content_s = f.read()
+
+            self.assertIn("**Verdict**: **SKIPPED**", content_s)
+            self.assertIn("[PROCESS DEVIATION — Rule 1.3]", content_s)
+            self.assertIn("Individual ticket review skipped per PO instruction", content_s)
+            self.assertNotIn("Independent review conducted successfully", content_s)
+            self.assertNotIn("Zero critical process or technical deviations", content_s)
+
+            # 7. Valid PARTIAL review
+            out_part = os.path.join(tmpdir, "docs", "engineering", "reviews", "partial.md")
+            path_p, _ = jira_util.record_review(
+                sprint_arg="2026-46.8",
+                ticket_key="ATT-8142",
+                reviewer="Human",
+                verdict="PARTIAL",
+                findings="Partial review conducted for high-risk items only.",
+                out_path=out_part,
+                repo_root=tmpdir,
+            )
+            with open(out_part, "r", encoding="utf-8") as f:
+                content_p = f.read()
+            self.assertIn("**Verdict**: **PARTIAL**", content_p)
+            self.assertIn("Partial review conducted for high-risk items only.", content_p)
+
     @patch("jira_util.rank_at_top_of_backlog")
     @patch("jira_util.jira_request")
     def test_create_issue_requires_severity_for_bugs(self, mock_request, mock_rank):
@@ -1080,6 +1223,232 @@ class TestJiraCliTooling(unittest.TestCase):
         key2 = jira_util.ensure_weekly_retro_ticket(role="coordinator")
         self.assertEqual(key2, "ATT-9100")
         mock_create.assert_not_called()
+
+    def test_get_next_review_subsystem_unreviewed_and_rotation(self):
+        """TST-PRO-095.2: Parsing coverage_matrix.md and rotating through UNREVIEWED and oldest AUDITED slices."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            matrix_file = os.path.join(tmpdir, "coverage_matrix.md")
+            # 1. When UNREVIEWED rows exist, pick first UNREVIEWED
+            content_unreviewed = (
+                "# Matrix\n\n"
+                "| Subsystem Domain | Target Path(s) | Last Audited Date | Audited Commit SHA | Gemini Model | Claude Model | Status | Active / Next Target |\n"
+                "| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |\n"
+                "| `tracker/` | `app/tracker/` | 2026-11-01 | abc | Pro | Sonnet | `AUDITED` | - |\n"
+                "| `banalservice/` | `app/banalservice/` | - | - | - | - | `UNREVIEWED` | `NEXT` |\n"
+                "| `database/` | `app/database/` | - | - | - | - | `UNREVIEWED` | - |\n"
+            )
+            with open(matrix_file, "w", encoding="utf-8") as f:
+                f.write(content_unreviewed)
+
+            domain, path, status = jira_util.get_next_review_subsystem(matrix_path=matrix_file)
+            self.assertEqual(domain, "banalservice/")
+            self.assertEqual(status, "UNREVIEWED")
+
+            # 2. When all are AUDITED, pick oldest date
+            content_all_audited = (
+                "# Matrix\n\n"
+                "| Subsystem Domain | Target Path(s) | Last Audited Date | Audited Commit SHA | Gemini Model | Claude Model | Status | Active / Next Target |\n"
+                "| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |\n"
+                "| `tracker/` | `app/tracker/` | 2026-11-10 | abc | Pro | Sonnet | `AUDITED` | - |\n"
+                "| `banalservice/` | `app/banalservice/` | 2026-11-01 | def | Pro | Sonnet | `AUDITED` | - |\n"
+                "| `database/` | `app/database/` | 2026-11-05 | ghi | Pro | Sonnet | `AUDITED` | - |\n"
+            )
+            with open(matrix_file, "w", encoding="utf-8") as f:
+                f.write(content_all_audited)
+
+            domain2, path2, status2 = jira_util.get_next_review_subsystem(matrix_path=matrix_file)
+            self.assertEqual(domain2, "banalservice/")
+            self.assertEqual(status2, "AUDITED")
+
+    def test_is_weekly_review_overdue(self):
+        """TST-PRO-095.3: Overdue determination based on elapsed days and review directory."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            matrix_file = os.path.join(tmpdir, "coverage_matrix.md")
+            reviews_dir = os.path.join(tmpdir, "code_reviews")
+            os.makedirs(reviews_dir, exist_ok=True)
+
+            two_days_ago = (datetime.now() - timedelta(days=2)).strftime("%Y-%m-%d")
+            content = (
+                "# Matrix\n\n"
+                "| Subsystem Domain | Target Path(s) | Last Audited Date | Audited Commit SHA | Gemini Model | Claude Model | Status | Active / Next Target |\n"
+                "| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |\n"
+                f"| `tracker/` | `app/tracker/` | {two_days_ago} | abc | Pro | Sonnet | `AUDITED` | - |\n"
+            )
+            with open(matrix_file, "w", encoding="utf-8") as f:
+                f.write(content)
+            with open(os.path.join(reviews_dir, f"{two_days_ago}_dual_vendor_code_review.md"), "w") as f:
+                f.write("# Review")
+
+            with patch("jira_util.get_next_review_subsystem", return_value=("tracker/", "app/tracker/", "AUDITED")):
+                overdue = jira_util.is_weekly_review_overdue(reviews_dir=reviews_dir, days_threshold=7)
+                self.assertFalse(overdue)
+
+            ten_days_ago = (datetime.now() - timedelta(days=10)).strftime("%Y-%m-%d")
+            os.remove(os.path.join(reviews_dir, f"{two_days_ago}_dual_vendor_code_review.md"))
+            with open(os.path.join(reviews_dir, f"{ten_days_ago}_dual_vendor_code_review.md"), "w") as f:
+                f.write("# Review")
+
+            with patch("jira_util.get_next_review_subsystem", return_value=("tracker/", "app/tracker/", "AUDITED")):
+                overdue_10 = jira_util.is_weekly_review_overdue(reviews_dir=reviews_dir, days_threshold=7)
+                self.assertTrue(overdue_10)
+
+    @patch("jira_util.create_issue", return_value="ATT-9200")
+    @patch("jira_util.paged_jql_search", return_value=[])
+    @patch("jira_util.get_config", return_value={"JIRA_URL": "https://example.atlassian.net"})
+    def test_ensure_weekly_review_creates_and_deduplicates(self, mock_config, mock_search, mock_create):
+        """TST-PRO-095.3: Automated weekly review ticket creates when overdue/missing and reuses when open."""
+        with patch("jira_util.is_weekly_review_overdue", return_value=True), \
+             patch("jira_util.get_next_review_subsystem", return_value=("tracker/", "app/tracker/", "UNREVIEWED")):
+            key1 = jira_util.ensure_weekly_review_ticket(role="coordinator")
+            self.assertEqual(key1, "ATT-9200")
+            mock_create.assert_called_once()
+            self.assertTrue(mock_create.call_args[1].get("rank_top"))
+            self.assertEqual(mock_create.call_args[1].get("parent_key"), "ATT-232")
+
+        # Deduplication test: when already open
+        mock_create.reset_mock()
+        mock_search.return_value = [
+            {"key": "ATT-9200", "fields": {"summary": "Weekly Dual-Vendor Gemini and Claude Code Review - tracker/ (2026-KW46)", "status": {"name": "Zu erledigen"}}}
+        ]
+        key2 = jira_util.ensure_weekly_review_ticket(role="coordinator")
+        self.assertEqual(key2, "ATT-9200")
+        mock_create.assert_not_called()
+
+    def test_is_weekly_aspice_audit_overdue(self):
+        """TST-PRO-096.3: Overdue determination for ASPICE audit based on elapsed days."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            audits_dir = os.path.join(tmpdir, "aspice_audits")
+            os.makedirs(audits_dir, exist_ok=True)
+
+            # 1. No audit files -> overdue
+            self.assertTrue(jira_util.is_weekly_aspice_audit_overdue(audits_dir=audits_dir, days_threshold=7))
+
+            # 2. Recent audit (2 days ago) -> not overdue
+            two_days_ago = (datetime.now() - timedelta(days=2)).strftime("%Y-%m-%d")
+            recent_file = os.path.join(audits_dir, f"{two_days_ago}_dual_vendor_aspice_audit.md")
+            with open(recent_file, "w", encoding="utf-8") as f:
+                f.write("# Audit")
+            self.assertFalse(jira_util.is_weekly_aspice_audit_overdue(audits_dir=audits_dir, days_threshold=7))
+
+            # 3. Old audit (10 days ago) -> overdue
+            os.remove(recent_file)
+            ten_days_ago = (datetime.now() - timedelta(days=10)).strftime("%Y-%m-%d")
+            with open(os.path.join(audits_dir, f"{ten_days_ago}_dual_vendor_aspice_audit.md"), "w", encoding="utf-8") as f:
+                f.write("# Audit")
+            self.assertTrue(jira_util.is_weekly_aspice_audit_overdue(audits_dir=audits_dir, days_threshold=7))
+
+    @patch("jira_util.create_issue", return_value="ATT-9201")
+    @patch("jira_util.paged_jql_search", return_value=[])
+    @patch("jira_util.get_config", return_value={"JIRA_URL": "https://example.atlassian.net"})
+    def test_ensure_weekly_aspice_audit_creates_and_deduplicates(self, mock_config, mock_search, mock_create):
+        """TST-PRO-096.3: Automated weekly ASPICE audit ticket creates when overdue and reuses when open."""
+        with patch("jira_util.is_weekly_aspice_audit_overdue", return_value=True):
+            key1 = jira_util.ensure_weekly_aspice_audit_ticket(role="coordinator")
+            self.assertEqual(key1, "ATT-9201")
+            mock_create.assert_called_once()
+            self.assertTrue(mock_create.call_args[1].get("rank_top"))
+            self.assertEqual(mock_create.call_args[1].get("parent_key"), "ATT-232")
+
+        # Deduplication test: when already open
+        mock_create.reset_mock()
+        mock_search.return_value = [
+            {"key": "ATT-9201", "fields": {"summary": "Weekly Dual-Vendor Gemini and Claude ASPICE 4.0 Cross-Audit (2026-KW46)", "status": {"name": "Zu erledigen"}}}
+        ]
+        key2 = jira_util.ensure_weekly_aspice_audit_ticket(role="coordinator")
+        self.assertEqual(key2, "ATT-9201")
+        mock_create.assert_not_called()
+
+    @patch("jira_util.ensure_weekly_aspice_audit_ticket", return_value="ATT-9201")
+    @patch("jira_util.ensure_weekly_review_ticket", return_value="ATT-9200")
+    def test_ensure_weekly_reviews_coordinates_both_pillars(self, mock_review, mock_audit):
+        """TST-PRO-096.3: ensure_weekly_reviews dispatches both code review and ASPICE audit tickets."""
+        res = jira_util.ensure_weekly_reviews(role="coordinator", force=True)
+        self.assertEqual(res, {"code_review": "ATT-9200", "aspice_audit": "ATT-9201"})
+        mock_review.assert_called_once_with(role="coordinator", force=True)
+        mock_audit.assert_called_once_with(role="coordinator", force=True)
+
+    def test_select_greedy_bin_pack_tickets_with_capacity_ceiling(self):
+        """TST-PRO-097.1: Multi-lane greedy bin-packing accumulates tickets up to max_sp_per_lane."""
+        ranked = [
+            {"key": "ATT-1", "fields": {"issuetype": {"name": "Bug"}, "summary": "A1", "status": {"name": "Zu erledigen"}, "parent": {"key": "EPIC-A"}, jira_util.STORY_POINTS_FIELD: 3.0}},
+            {"key": "ATT-2", "fields": {"issuetype": {"name": "Bug"}, "summary": "A2", "status": {"name": "Zu erledigen"}, "parent": {"key": "EPIC-A"}, jira_util.STORY_POINTS_FIELD: 5.0}},
+            {"key": "ATT-3", "fields": {"issuetype": {"name": "Bug"}, "summary": "A3", "status": {"name": "Zu erledigen"}, "parent": {"key": "EPIC-A"}, jira_util.STORY_POINTS_FIELD: 5.0}},
+            {"key": "ATT-4", "fields": {"issuetype": {"name": "Feature"}, "summary": "B1", "status": {"name": "Zu erledigen"}, "parent": {"key": "EPIC-B"}, jira_util.STORY_POINTS_FIELD: 8.0}},
+            {"key": "ATT-5", "fields": {"issuetype": {"name": "Feature"}, "summary": "C1", "status": {"name": "Zu erledigen"}, "parent": {"key": "EPIC-C"}, jira_util.STORY_POINTS_FIELD: 3.0}},
+            {"key": "ATT-6", "fields": {"issuetype": {"name": "Feature"}, "summary": "D1", "status": {"name": "Zu erledigen"}, "parent": {"key": "EPIC-D"}, jira_util.STORY_POINTS_FIELD: 2.0}},
+        ]
+        # With max_lanes=3 and max_sp_per_lane=10:
+        # Lane 1 (EPIC-A): ATT-1 (3 SP) + ATT-2 (5 SP) = 8 SP <= 10. ATT-3 (5 SP) -> 13 SP > 10, left in queue.
+        # Lane 2 (EPIC-B): ATT-4 (8 SP).
+        # Lane 3 (EPIC-C): ATT-5 (3 SP).
+        # ATT-6 (EPIC-D): 4th Epic, exceeds max_lanes=3.
+        packed = jira_util.select_greedy_bin_pack_tickets(ranked, max_lanes=3, max_sp_per_lane=10.0)
+        self.assertEqual([i["key"] for i in packed], ["ATT-1", "ATT-2", "ATT-4", "ATT-5"])
+
+    @patch("sys.stdout", new_callable=io.StringIO)
+    @patch("jira_util.jira_request")
+    @patch("jira_util.get_config", return_value={"JIRA_URL": "https://example.atlassian.net"})
+    def test_show_issue_fixversion_warning_alignment(self, mock_config, mock_request, mock_stdout):
+        """TST-PRO-097.2: FixVersion warning suppressed for active in-sprint issues and emitted for completed ones."""
+        # 1. Active in-sprint issue (In Bearbeitung) without FixVersion -> No warning
+        mock_request.return_value = {
+            "key": "ATT-100",
+            "fields": {
+                "summary": "Active Issue",
+                "issuetype": {"name": "Verbesserung", "subtask": False},
+                "status": {"name": "In Bearbeitung"},
+                "fixVersions": [],
+                "description": "Active in-sprint description",
+                "comment": {"comments": []},
+            }
+        }
+        jira_util.show_issue("ATT-100")
+        output1 = mock_stdout.getvalue()
+        self.assertIn("*Lösungsversion (Fix Version/s)*: None (In-Sprint / Set upon completion per Rule 8.3)", output1)
+        self.assertNotIn("WARNING: Mandatory field missing!", output1)
+
+        # 2. Completed issue (Erledigt) without FixVersion -> Warning
+        mock_stdout.truncate(0)
+        mock_stdout.seek(0)
+        mock_request.return_value = {
+            "key": "ATT-101",
+            "fields": {
+                "summary": "Completed Issue",
+                "issuetype": {"name": "Verbesserung", "subtask": False},
+                "status": {"name": "Erledigt"},
+                "fixVersions": [],
+                "description": "Completed description",
+                "comment": {"comments": []},
+            }
+        }
+        jira_util.show_issue("ATT-101")
+        output2 = mock_stdout.getvalue()
+        self.assertIn("*Lösungsversion (Fix Version/s)*: None (WARNING: Mandatory field missing on completed issue!)", output2)
+
+        # 3. Subtask without FixVersion -> Subtask message, no warning
+        mock_stdout.truncate(0)
+        mock_stdout.seek(0)
+        mock_subtask = {
+            "key": "ATT-102",
+            "fields": {
+                "summary": "Sub-task Issue",
+                "issuetype": {"name": "Sub-task", "subtask": True},
+                "status": {"name": "In Bearbeitung"},
+                "fixVersions": [],
+                "parent": {"key": "ATT-100", "fields": {"summary": "Parent", "issuetype": {"name": "Verbesserung"}}},
+                "description": "Subtask description",
+                "comment": {"comments": []},
+            }
+        }
+        # Parent lookup returns no fixVersions
+        mock_request.side_effect = [
+            mock_subtask,
+            {"fields": {"fixVersions": []}}
+        ]
+        jira_util.show_issue("ATT-102")
+        output3 = mock_stdout.getvalue()
+        self.assertIn("*Lösungsversion (Fix Version/s)*: None on subtask (per Core Rule 8.3)", output3)
+        self.assertNotIn("WARNING: Mandatory field missing!", output3)
 
 
 if __name__ == "__main__":

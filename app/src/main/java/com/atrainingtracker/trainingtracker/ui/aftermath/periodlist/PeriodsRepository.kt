@@ -212,18 +212,14 @@ class PeriodsRepository @androidx.annotation.VisibleForTesting internal construc
             // --- PHASE 1: RAPID READ & GROUPING (O(N)) ---
             val allWorkouts = withContext(Dispatchers.IO) {
                 val list = mutableListOf<WorkoutData>()
-                val cursor = workoutSummariesManager.getCursorForAllWorkouts() // Sorted DESC
-                if (cursor.count == 0) {
-                    cursor.close()
-                    return@withContext emptyList<WorkoutData>()
-                }
+                val cursor = workoutSummariesManager.getCursorForAllWorkouts() ?: return@withContext emptyList<WorkoutData>()
 
-                val total = cursor.count
                 val chunkSize = 100
                 val stravaUploadDbHelper = com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper.getInstance(application)
 
                 cursor.use { c ->
                     if (!c.moveToFirst()) return@withContext emptyList<WorkoutData>()
+                    val total = c.count
                     
                     while (!c.isAfterLast) {
                         // 1. Gather IDs and names for the next chunk

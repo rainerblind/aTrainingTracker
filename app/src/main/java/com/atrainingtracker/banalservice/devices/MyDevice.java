@@ -101,6 +101,10 @@ public abstract class MyDevice {
         return mDeviceId;
     }
 
+    public MySensorManager getMySensorManager() {
+        return mMySensorManager;
+    }
+
     // Note,  this will only work properly, when the device is in the database...
     @Nullable
     public String getName() {

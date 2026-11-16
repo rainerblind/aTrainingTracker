@@ -57,10 +57,11 @@ python3 tools/jira_util.py comment <RELEASE_TICKET_KEY> "h4. Release Progress: S
 2. `Gradle: Version: Remove -dev` (Set clean production `versionName`)
 3. `Build: Signed APK` (`app-release.apk`)
 4. `Build: Signed APP Bundle` (`app-release.aab`)
-* **[MANDATORY SYSTEM EVIDENCE GATE - ASPICE SYS.4 & SYS.5]**: Release candidate tag creation (Step 7) and Play Store distribution (Step 6) are **STRICTLY BLOCKED** unless verified system evidence artifacts exist under `docs/releases/<tag>/` and pass all criteria:
+* **[MANDATORY SYSTEM & GOVERNANCE EVIDENCE GATES - ASPICE SYS.4, SYS.5 & SWE.2/SWE.3/SUP.1]**: Release branch initiation and release candidate tag creation (Step 7) / Play Store distribution (Step 6) are **STRICTLY BLOCKED** if mandatory weekly dual-vendor code reviews are overdue (`is_weekly_review_overdue()`) or unless verified system evidence artifacts exist under `docs/releases/<tag>/` and pass all criteria:
   - SYS.4: `docs/releases/<tag>/system_integration_results.json` (from `tools/run_system_integration_tests.py`)
   - SYS.5: `docs/releases/<tag>/sys_verification_record.md` (per `docs/system/sys_verification_protocol.md`)
   - Verification Summary: `docs/releases/<tag>/verification_summary.md` (from `tools/generate_release_verification_summary.py`)
+  - Release Plan & Governance: `docs/management/release_plan.md` exit criteria verified and `FixVersion` stamped on all completed parent issues per Core Rule 8.3 (`REQ-PRO-097`)
 5. `Jira: Finish Release & Create new one` (Release current version, create next FixVersion)
 6. `Play Store: Upload as Testing` (Upload `.aab` to Internal/Closed Testing track — blocked if system evidence missing/failing)
 7. `Gitflow: Finish Release` (Merge into `master` with tags, merge back into `develop` — tag creation blocked if system evidence missing/failing)
@@ -81,6 +82,13 @@ python3 tools/jira_util.py comment <RELEASE_TICKET_KEY> "h4. Release Progress: S
    git pull origin develop
    git status
    ```
+
+   * **Mandatory Weekly Dual-Vendor Governance Currency Gate (`REQ-PRO-095`, `REQ-PRO-096` / `ATT-8212`, `ATT-8213`)**:
+     Prior to cutting the release branch, verify that both the weekly Dual-Vendor (Google Gemini + Anthropic Claude) Code Review and ASPICE 4.0 Cross-Audit are current ($\le 7$ days old) and recorded in `docs/engineering/code_reviews/` and `docs/engineering/aspice_audits/`:
+     ```bash
+     python3 -c "import tools.jira_util as ju; exit(1 if (ju.is_weekly_review_overdue() or ju.is_weekly_aspice_audit_overdue()) else 0)"
+     ```
+     If either review is overdue, release preparation is **STRICTLY BLOCKED** until the pending review ticket is resolved or human exception is recorded.
 
 2. **Inspect Current Version in `app/build.gradle`**:
    Read `versionName` and `versionCode` from the `defaultConfig` block in `app/build.gradle`:
@@ -204,13 +212,16 @@ test -f docs/releases/V${VERSION_NAME}__${VERSION_CODE}/sys_verification_record.
 * Objective criteria met: sample loss $\le 1.0\%$, RF reconnection latency $\le 10.0\text{ s}$, battery drain rate $\le 8.0\%/\text{hr}$, FIT/TCX integrity valid with zero CRC errors.
 * Formal sign-off signatures and approval dates from System Verification Engineer and Quality Gatekeeper are present.
 
-#### 3. Release Verification Summary Generation (ASPICE SWE.6 BP5, REQ-PRO-074)
-Generate the consolidated release verification summary markdown document aggregating unit tests, traceability coverage, and system verification results:
+#### 3. Release Verification Summary Generation & Test Evidence (ASPICE SWE.6 BP5, REQ-PRO-074, REQ-PRO-100)
+Generate the consolidated release verification summary markdown document aggregating unit tests, traceability coverage, and system verification results, and export persistent test & coverage evidence:
 ```bash
 python3 tools/generate_release_verification_summary.py --tag V${VERSION_NAME}__${VERSION_CODE}
+python3 tools/jira_util.py export-test-evidence --release V${VERSION_NAME}__${VERSION_CODE}
+python3 tools/verify_requirement_governance.py --check-test-evidence V${VERSION_NAME}__${VERSION_CODE}
 ```
 *Verification Checklist*:
 * Output file `docs/releases/V${VERSION_NAME}__${VERSION_CODE}/verification_summary.md` generated.
+* Test evidence files `docs/engineering/test_evidence/V${VERSION_NAME}__${VERSION_CODE}.md` and `.json` generated.
 * Overall status is `PASS (READY FOR RELEASE)`.
 * Zero open deviations listed under `Deviations Requiring Human Approval`.
 * Link to versioned JUnit archive `build-evidence/junit-test-results-<tag>.zip` verified.

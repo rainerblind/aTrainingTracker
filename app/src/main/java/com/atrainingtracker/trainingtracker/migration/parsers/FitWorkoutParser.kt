@@ -33,6 +33,7 @@ import com.garmin.fit.HrvMesg
 import com.garmin.fit.HrvMesgListener
 import com.garmin.fit.LapMesg
 import com.garmin.fit.LapMesgListener
+import com.garmin.fit.LeftRightBalance
 import com.garmin.fit.MesgBroadcaster
 import com.garmin.fit.RecordMesg
 import com.garmin.fit.RecordMesgListener
@@ -278,6 +279,47 @@ object FitWorkoutParser {
                 record.temperature?.toDouble()?.let { temp ->
                     values.put(SensorType.TEMPERATURE.name, temp)
                     foundSensors.add(SensorType.TEMPERATURE)
+                }
+
+                // Decode Cycling Power Dynamics (REQ-EXP-043.4 / ATT-8196)
+                record.leftRightBalance?.let { rawBalance ->
+                    val balanceInt = rawBalance.toInt()
+                    val isRight = (balanceInt and LeftRightBalance.RIGHT.toInt()) != 0
+                    val pct = (balanceInt and LeftRightBalance.MASK.toInt()).toDouble()
+                    if (isRight && pct in 0.0..100.0) {
+                        values.put(SensorType.PEDAL_POWER_BALANCE.name, pct)
+                        foundSensors.add(SensorType.PEDAL_POWER_BALANCE)
+                    }
+                }
+                record.leftTorqueEffectiveness?.toDouble()?.let { teL ->
+                    if (teL in 0.0..100.0) {
+                        values.put(SensorType.TORQUE_EFFECTIVENESS_L.name, teL)
+                        foundSensors.add(SensorType.TORQUE_EFFECTIVENESS_L)
+                    }
+                }
+                record.rightTorqueEffectiveness?.toDouble()?.let { teR ->
+                    if (teR in 0.0..100.0) {
+                        values.put(SensorType.TORQUE_EFFECTIVENESS_R.name, teR)
+                        foundSensors.add(SensorType.TORQUE_EFFECTIVENESS_R)
+                    }
+                }
+                record.leftPedalSmoothness?.toDouble()?.let { psL ->
+                    if (psL in 0.0..100.0) {
+                        values.put(SensorType.PEDAL_SMOOTHNESS_L.name, psL)
+                        foundSensors.add(SensorType.PEDAL_SMOOTHNESS_L)
+                    }
+                }
+                record.rightPedalSmoothness?.toDouble()?.let { psR ->
+                    if (psR in 0.0..100.0) {
+                        values.put(SensorType.PEDAL_SMOOTHNESS_R.name, psR)
+                        foundSensors.add(SensorType.PEDAL_SMOOTHNESS_R)
+                    }
+                }
+                record.combinedPedalSmoothness?.toDouble()?.let { psComb ->
+                    if (psComb in 0.0..100.0) {
+                        values.put(SensorType.PEDAL_SMOOTHNESS.name, psComb)
+                        foundSensors.add(SensorType.PEDAL_SMOOTHNESS)
+                    }
                 }
 
                 // Decode Garmin FIT V2.0 Developer Fields for Bike Radar (REQ-MIG-053.4 / ATT-7747)

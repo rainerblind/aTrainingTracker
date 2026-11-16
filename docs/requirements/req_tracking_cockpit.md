@@ -4096,18 +4096,19 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
-- **Implementation**: `BTLERadarDevice.java`, `BluetoothConstants.java`, `RadarLightController.kt`, `RadarLightMode.kt`, `RadarEdgeOverlay.kt`, `RadarSettingsSection.kt`, `TuningPreferencesDataStore.kt`, `TrackerService.java`, `RadarLightQuickSwitchSheet.kt`, `EditDeviceDialog.kt`, `strings_radar.xml`
-- **Rationale**: Garmin Varia radar tail lights (e.g. RearVue 820, RTL515, RTL516) expose tail light mode control. On next-generation RearVue 820 hardware, control operates over dedicated Control Service `6a4e2f00-667b-11e3-949a-0800200c9a66` (write characteristic `6a4e2f11-667b-11e3-949a-0800200c9a66`, notify characteristic `6a4e2f14-667b-11e3-949a-0800200c9a66`), while legacy units expose characteristic `6a4e3202-667b-11e3-949a-0800200c9a66` on service `6a4e3200-667b-11e3-949a-0800200c9a66`. Cyclists require on-the-fly handlebar switching of tail light modes without reaching behind the saddle, bidirectional sync of physical device button presses, unified preference persistence remembering active operating state (Automatik vs. explicit mode) across rides, seamless transition without trapping automation, and automated workout start/finish lighting control to preserve peripheral battery and prevent riding without active lighting (ATT-5102, ATT-6707, ATT-7545, ATT-7540, ATT-7538, ATT-7991, Parent Epic ATT-1286, extending `REQ-CON-028`, `REQ-CON-029`, and `REQ-CON-030`):
-1. *BLE Light Control Discovery, StVZO Detection & Serialized Queue Routing (`REQ-CON-031.1`)*:
-• Upon service discovery on `BTLERadarDevice`, the system SHALL discover dedicated Control Service `6a4e2f00` (characteristics `6a4e2f11` for writes and `6a4e2f14` for notifications) if present; if absent, it SHALL fall back to discovering legacy characteristic `6a4e3202` on service `6a4e3200`.
-• When service `6a4e2f00` is present, `BTLERadarDevice` SHALL register light control capabilities and subscribe to `6a4e2f14` CCCD notifications.
+- **Implementation**: `BTLERadarDevice.java`, `MyBTLEDevice.java`, `BluetoothConstants.java`, `RadarLightController.kt`, `RadarLightMode.kt`, `RadarEdgeOverlay.kt`, `RadarSettingsSection.kt`, `TuningPreferencesDataStore.kt`, `TrackerService.java`, `RadarLightQuickSwitchSheet.kt`, `EditDeviceDialog.kt`, `strings_radar.xml`, `tools/ble_radar_simulator.py`
+- **Rationale**: Garmin Varia radar tail lights (e.g. RearVue 820, RTL515, RTL516) expose tail light mode control. On next-generation RearVue 820 hardware, control operates over dedicated Control Service `6a4e2f00-667b-11e3-949a-0800200c9a66` (write+indicate characteristic `6a4e2f11-667b-11e3-949a-0800200c9a66`, notify characteristic `6a4e2f14-667b-11e3-949a-0800200c9a66`), while legacy units expose characteristic `6a4e3202-667b-11e3-949a-0800200c9a66` on service `6a4e3200-667b-11e3-949a-0800200c9a66`. Cyclists require on-the-fly handlebar switching of tail light modes without reaching behind the saddle, bidirectional sync of physical device button presses, unified preference persistence remembering active operating state (Automatik vs. explicit mode) across rides, seamless transition without trapping automation, and automated workout start/finish lighting control to preserve peripheral battery and prevent riding without active lighting (ATT-5102, ATT-6707, ATT-7545, ATT-7540, ATT-7538, ATT-7991, ATT-7737, Parent Epic ATT-1286, extending `REQ-CON-028`, `REQ-CON-029`, and `REQ-CON-030`):
+1. *BLE Light Control Discovery, `6a4e2f11` CCCD Handshake, StVZO Detection & Serialized Queue Routing (`REQ-CON-031.1`)*:
+• Upon service discovery on `BTLERadarDevice`, the system SHALL discover dedicated Control Service `6a4e2f00` (characteristics `6a4e2f11` for `(WRITE, INDICATE)` control and `6a4e2f14` for notifications) if present; if absent, it SHALL fall back to discovering legacy characteristic `6a4e3202` on service `6a4e3200`.
+• When service `6a4e2f00` is present, `BTLERadarDevice` SHALL register light control capabilities, enable local notifications and subscribe to `0x2902` CCCD on **`6a4e2f11`** (`ENABLE_INDICATION_VALUE` if `PROPERTY_INDICATE` else `ENABLE_NOTIFICATION_VALUE`) *before* dispatching any control writes, and subscribe to `6a4e2f14` CCCD notifications.
 • The device SHALL discover Device Information service `0x180A` and read `0x2A24` (Model Number string); if the model string corresponds to StVZO hardware (e.g. `010-03180-10`, `RTL516`), `isStvzo` SHALL be set to `true`.
-• On connect or reconnect, `BTLERadarDevice` SHALL read/subscribe `6a4e2f14` (or legacy `6a4e3202`) to reflect physical light state and re-apply the active workout light mode upon mid-ride reconnect.
-2. *Tail Light Mode Command Mapping, StVZO Capability Pruning & Gated Mutation (`REQ-CON-031.2`)*:
+• On connect or reconnect, `BTLERadarDevice` SHALL read/subscribe `6a4e2f11` and `6a4e2f14` (or legacy `6a4e3202`) to reflect physical light state, handle `6a4e2f11` indication/response frames in `onOtherCharacteristicUpdate()`, and re-apply the active workout light mode upon mid-ride reconnect strictly after `6a4e2f11` CCCD subscription is queued.
+2. *Property-Aware Tail Light Mode Command Mapping, Write Status Propagation, StVZO Pruning & Gated Mutation (`REQ-CON-031.2`)*:
 • The system SHALL support `RadarLightMode` states (`OFF`, `DAY_FLASH`, `NIGHT_FLASH`, `SOLID`, `PELOTON`).
-• When `6a4e2f11` is active, mode changes SHALL dispatch a 4-byte set-mode override command `06 09 01 TT` where `TT` is `0x11` (SOLID), `0x12` (PELOTON), `0x13` (DAY_FLASH), `0x14` (NIGHT_FLASH), `0x1F` (OFF) using write type `WRITE_TYPE_NO_RESPONSE` (`BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE`), and `MyBTLEDevice` write queue SHALL enforce `WRITE_TYPE_NO_RESPONSE` for characteristics supporting `PROPERTY_WRITE_NO_RESPONSE` without `PROPERTY_WRITE`.
+• When `6a4e2f11` is active, mode changes SHALL dispatch a 4-byte set-mode override command `06 09 01 TT` where `TT` is `0x11` (SOLID), `0x12` (PELOTON), `0x13` (DAY_FLASH), `0x14` (NIGHT_FLASH), `0x1F` (OFF). Both `BTLERadarDevice` and `MyBTLEDevice.WriteCharacteristicOp` SHALL select write type strictly from characteristic properties: `WRITE_TYPE_DEFAULT` (GATT Write Request, preserving SMP `GATT_INSUFFICIENT_AUTHENTICATION` bonding elevation) whenever `(properties & PROPERTY_WRITE) != 0`, and `WRITE_TYPE_NO_RESPONSE` ONLY when `(properties & PROPERTY_WRITE) == 0 && (properties & PROPERTY_WRITE_NO_RESPONSE) != 0` (such as legacy `6a4e3202`).
 • When legacy `6a4e3202` is active, mode changes SHALL dispatch a 1-byte command `mode.getCommandByte()`.
-• Mode dispatch SHALL immediately update `RadarLightController.updateHardwareLightMode(mode)` upon verified queue submission. Physical button press notifications and status frames on `6a4e2f14` formatted as 4-byte frames `01 [slot] ff [type]` SHALL be decoded (`0x11` SOLID, `0x12` PELOTON, `0x13` DAY_FLASH, `0x14` NIGHT_FLASH, `0x1F` OFF, `0x01` custom/SOLID) and synchronized with `RadarLightController.updateHardwareLightMode(mode)` while preserving optimistic user selection during hardware mode transition.
+• `MyBTLEDevice.onCharacteristicWrite()` SHALL propagate `(gatt, characteristic, status)` to `BTLERadarDevice` via a subclass hook (`onCharacteristicWriteCompleted`). On `status != BluetoothGatt.GATT_SUCCESS`, `BTLERadarDevice` SHALL log the failure status, verify/initiate bonding if `status == BluetoothGatt.GATT_INSUFFICIENT_AUTHENTICATION`, and reconcile/roll back optimistic `mLastConfiguredLightMode` and `RadarLightController` state cleanly rather than silently masking write rejection until `6a4e2f14` snaps back to `OFF`.
+• Physical button press notifications and status frames on `6a4e2f14` formatted as 4-byte frames `01 [slot] ff [type]` SHALL be decoded (`0x11` SOLID, `0x12` PELOTON, `0x13` DAY_FLASH, `0x14` NIGHT_FLASH, `0x1F` OFF, `0x01` custom/SOLID) and synchronized with `RadarLightController.updateHardwareLightMode(mode)` while preserving confirmed/optimistic user selection during verified hardware transitions.
 • When connected to StVZO-certified hardware, flashing modes (`DAY_FLASH`, `NIGHT_FLASH`, `PELOTON`) SHALL be pruned automatically from user selection, exposing only legal steady modes (`SOLID`, `OFF`). `RadarLightController.setLightMode()` SHALL mutate `_currentMode` and `RadarStateRepository` strictly when `dispatched == true` (or confirmed by GATT).
 3. *Cockpit Quick-Switch Bottom Sheet & Automatik Selection (`REQ-CON-031.3`)*:
 • Tapping the radar status badge in `RadarEdgeOverlay` SHALL display a modal quick-switch bottom sheet (`RadarLightQuickSwitchSheet.kt`) presenting `Automatik` (`R.string.radar_light_control_mode_smart`) as the first selectable option followed by available physical light modes, with live active state indication for both the user selection (`isAutoMode`) and the live underlying mode (`currentMode`).
@@ -4120,13 +4121,14 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 • During workout **Pause**, the system SHALL strictly preserve active tail light illumination and NEVER extinguish the rear safety light.
 • On explicit workout finish/stop (`onWorkoutStopped` / `handleActionStop`), the system SHALL command `RadarLightMode.OFF` synchronously *before* unbinding `BANALService`, stopping sensor listeners and disconnecting light **without overwriting** or erasing the user's persisted lighting preference for subsequent workouts.
 • `RadarLightController` SHALL use synchronously cached preferences without spawning unstructured background coroutines or accessing `context.filesDir` (Coding Standards §5.5).
-5. *Unified Preference Persistence, Migration & Expert Settings Retirement (`REQ-CON-031.5`)*:
+5. *Unified Preference Persistence, Migration, Expert Settings Retirement & EditDeviceDialog UI Consistency (`REQ-CON-031.5`)*:
 • `TuningPreferencesDataStore` SHALL persist radar tail light preference as a unified selection model: `isAutoMode: Boolean` (defaulting to `true` on fresh installations) and `radarLightDefaultMode: RadarLightMode` (defaulting to `DAY_FLASH`), with reactive flows `radarLightIsAutoFlow` and `radarLightDefaultModeFlow`.
 • DataStore deserialization SHALL seamlessly migrate legacy preferences: legacy `SMART_AUTOMATION` maps to `isAutoMode = true`; legacy `FIXED_WORKOUT_MODE` maps to `isAutoMode = false` with existing `radarLightDefaultMode` preserved; legacy `MANUAL` maps to `isAutoMode = false` with `radarLightDefaultMode = OFF` (or last explicit mode).
 • In compliance with Design Guidelines §3.2 (single unambiguous configuration surface), `RadarSettingsSection.kt` SHALL retire the redundant 3-way `Rücklicht-Steuerung` segmented button row and conditional `Lichtmodus` dropdown, while strictly retaining the `Bremslicht-Erkennung` (`radarBrakeLightEnabled`) toggle.
-• `EditDeviceDialog.kt` (`RadarLightControlSection`) SHALL provide parity with `RadarLightQuickSwitchSheet.kt`, exposing `Automatik` as the first selectable option alongside physical modes with live active state indication, dispatching selection immediately to `RadarLightController` without dirtying device draft state.
-6. *Traffic Simulator Light State Emulation (`REQ-CON-031.6`)*:
+• `EditDeviceDialog.kt` (`RadarLightControlSection`) SHALL provide parity with `RadarLightQuickSwitchSheet.kt`, exposing `Automatik` as the first selectable option alongside physical modes with live active state indication bound consistently to `RadarLightController.isAutoMode` and `RadarLightController.currentMode` via `collectAsStateWithLifecycle()`, dispatching selection immediately to `RadarLightController` without dirtying device draft state and reflecting active hardware state upon dialog close and reopen.
+6. *Traffic Simulator & BLE Peripheral Simulator Light State Fidelity (`REQ-CON-031.6`)*:
 • `RadarTrafficSimulator` SHALL emulate tail light command reception and state transitions for UI testing without physical peripheral hardware.
+• `tools/ble_radar_simulator.py` (`RadarControlWriteCharacteristic` on `6a4e2f11`) SHALL faithfully expose GATT flags `['write', 'indicate']` (never `write-without-response`) and enforce `6a4e2f11` CCCD subscription before accepting control writes, preventing simulator tests from masking `WRITE_TYPE_NO_RESPONSE` or missing-CCCD defects.
 7. *9-Language Localization Parity (`REQ-CON-031.7`)*:
 • All light mode names, dialog titles, and settings strings in `strings_radar.xml` SHALL maintain 100% key and format parity across EN, DE, ES, FR, IT, JA, NL, PL, PT (zero inline emojis).
 8. *StVZO-Aware Debounced Hardware Mode Cycling & Reactive State Separation (`REQ-CON-031.8`)*:
@@ -4155,14 +4157,18 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
   - *Given* the user opens Expert Settings -> Bike Radar or opens `RadarLightQuickSwitchSheet` / `EditDeviceDialog`,
   - *When* inspecting the Tail Light section,
   - *Then* the legacy 3-way mode selector and dropdown are absent from Expert Settings, `Bremslicht-Erkennung` remains intact, and `Automatik` is directly selectable in both `RadarLightQuickSwitchSheet` and `EditDeviceDialog`.
+• *Criterion 5 (`6a4e2f11` CCCD Handshake, Property-Aware Write Type & Write Status Reconciliation)*:
+  - *Given* a connected RearVue 820 radar exposing `6a4e2f11` with `(PROPERTY_WRITE | PROPERTY_INDICATE)`,
+  - *When* `configureServices()` runs and the user selects `NIGHT_FLASH` in `EditDeviceDialog`,
+  - *Then* `6a4e2f11` CCCD (`ENABLE_INDICATION_VALUE`) is queued before any `setLightMode` write, the command transmits with `WRITE_TYPE_DEFAULT`, `MyBTLEDevice.onCharacteristicWrite()` propagates GATT status (`GATT_SUCCESS` confirms while non-zero status logs/reconciles optimistic state and handles `GATT_INSUFFICIENT_AUTHENTICATION`), `EditDeviceDialog` reflects `NIGHT_FLASH` upon close/reopen, and `tools/ble_radar_simulator.py` enforces `['write', 'indicate']` + CCCD subscription.
 
-**Invariants**: Non-blocking serialized GATT writes; ~400 ms command debouncing (zero GATT queue flooding); StVZO regulatory compliance; safety illumination during pause stops; fail-safe degradation on radar-only hardware; zero SQLite schema modifications; zero MockK crashes in unit tests; 100% 9-language translation parity.
+**Invariants**: Non-blocking serialized GATT writes (`6a4e2f11` CCCD before initial `setLightMode`); ~400 ms command debouncing (zero GATT queue flooding); legacy `6a4e3202` `WRITE_TYPE_NO_RESPONSE` preservation; StVZO regulatory compliance; safety illumination during pause stops; fail-safe degradation on radar-only hardware; zero UI layout changes in `EditDeviceDialog.kt` / `RadarSettingsSection.kt`; `ANTBikeLightDevice.kt` untouched; zero SQLite schema modifications; zero MockK crashes in unit tests; 100% 9-language translation parity.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: `REQ-CON-031.3` (Quick-Switch Sheet), `REQ-CON-031.4` (Workout Lifecycle), and `REQ-CON-031.5` (Settings & Device Controls), targeting `RadarLightController.kt`, `TuningPreferencesDataStore.kt`, `RadarSettingsSection.kt`, `RadarLightQuickSwitchSheet.kt`, and `EditDeviceDialog.kt`.
-2. *Historical Origin & Commit Trace*: Introduced in Sprint 2026-46.1 via `ATT-5102` (`c1d27049`), refined in `ATT-6707` (`fe09f672`), `ATT-7545` (`6bfac996`), `ATT-7540`, and `ATT-7538` (`b645651f`).
-3. *Root Reason for Existing Formulation*: `ATT-7538` established a 3-way Expert Settings mode (`MANUAL`, `FIXED_WORKOUT_MODE`, `SMART_AUTOMATION`) to prevent conflicting booleans. However, this isolated `Automatik` within Expert Settings, turning the live Cockpit sheet into a one-way manual override trap with no UI path back to `Automatik`, and coupled workout shutdown to preference erasure.
-4. *Preservation of Core Invariants*: StVZO regulatory compliance (skip flashing modes when `isStvzo == true`); non-blocking GATT FIFO queueing with ~400 ms debounce protection; safety illumination during pause stops; independent deceleration brake light (`radarBrakeLightEnabled`); backward-compatible preference migration; 100% 9-language localization parity.
+1. *Original Requirement ID & Target*: `REQ-CON-031.1`, `REQ-CON-031.2`, `REQ-CON-031.5`, and `REQ-CON-031.6`, targeting `BTLERadarDevice.java`, `MyBTLEDevice.java`, `RadarLightController.kt`, `EditDeviceDialog.kt`, and `tools/ble_radar_simulator.py`.
+2. *Historical Origin & Commit Trace*: Introduced in Sprint 2026-46.1 via `ATT-5102` (`c1d27049`), refined in `ATT-6707` (`fe09f672`), `ATT-7545` (`6bfac996`), `ATT-7540`, `ATT-7538` (`b645651f`), and `ATT-7737` (`60e14c9b`, reopened after physical RearVue 820 + Pixel 10 verification in Ceremony 2).
+3. *Root Reason for Existing Formulation*: `60e14c9b` assumed RearVue 820 control characteristic `6a4e2f11` required `WRITE_TYPE_NO_RESPONSE` because `tools/ble_radar_simulator.py` advertised `['write', 'write-without-response']`. In reality, `6a4e2f11` is `(WRITE, INDICATE)`, requiring `0x2902` CCCD indication subscription before control writes, `WRITE_TYPE_DEFAULT` (GATT Write Request + SMP bonding compatibility), and `onCharacteristicWrite()` status propagation so rejected writes do not silently leave optimistic UI state to snap back to `OFF` via `6a4e2f14`.
+4. *Preservation of Core Invariants*: Legacy `6a4e3202` (`WRITE_NO_RESPONSE`-only) preserves `WRITE_TYPE_NO_RESPONSE`; non-blocking GATT FIFO queueing and `ECHO_GUARD_WINDOW_MS` (`1000L` ms) remain intact; StVZO regulatory pruning, `ANTBikeLightDevice.kt` path, `EditDeviceDialog.kt` / `RadarSettingsSection.kt` UI layout, and 9-language parity remain untouched.
 
 ### REQ-CON-032: ANT+ Cycling Rearview Radar Profile (Device Type 0x28) Acquisition & Target Demuxing [Verified]
 - **Tests**: `TST-CON-032`
@@ -5716,3 +5722,188 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 • *Then* `altStats.getAverage()` remains around `445 m + meanCorrection` (never divided by ~20).
 
 **Invariants**: Non-barometric columns 100% immutable; pre-crash calibrated rows untouched on `RESUME_SERVICE_RECREATION`; 1-Hz `altStats.count` and `sum` dimensionally consistent; passive DB `onOpen()`; 100% clean-room test pass rate.
+
+### REQ-TRK-078: Mid-Workout Crash Recovery Accumulator Preservation and Baseline Seeding [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-TRK-078`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `TrackerService.java`, `WorkoutRepository.kt`, `BANALService.java`, `MyAccumulatorSensor.java`, `TrackerServiceResumeTest.kt`
+- **Rationale**: Prevent mid-workout process recreation (`StartType.RESUME_SERVICE_RECREATION` and `StartType.RESUME_BY_USER`) from resetting session accumulators (`TIME_TOTAL`, `TIME_ACTIVE`, `DISTANCE_m`, `CALORIES`, `LAP_NR`, `ASCENT`, `DESCENT`, `TIME_LAP`, `DISTANCE_m_LAP`), which causes data loss in summaries, exports (`.fit`, `.tcx`, `.gpx`), and fold-back elevation/telemetry artifacts in Aftermath (`ATT-7875`, refining `REQ-TRK-026` and `REQ-TRK-031`).
+- **Description**:
+  1. *Omission of Reset Accumulators Intent on Resume (`REQ-TRK-078.1`)*:
+     - `TrackerService.mBanalConnection.onServiceConnected()` SHALL NOT broadcast `BANALService.RESET_ACCUMULATORS_INTENT` when resuming tracking (`mResumeTrackingWhenConnectedToBanalService` or `mResumeFromPausedWhenConnectedToBanalService`).
+     - `BANALService.RESET_ACCUMULATORS_INTENT` SHALL strictly be reserved for fresh workout starts (`StartType.START_NORMAL` in `TrainingApplication.startTracking()`).
+  2. *Extended Resumed Workout State Rehydration (`REQ-TRK-078.2`)*:
+     - `ResumedWorkoutState` SHALL encapsulate `ascent: Double`, `descent: Double`, `timeLap_s: Int`, and `distanceLap_m: Double` alongside `baseFileName`, `workoutId`, `timeTotal_s`, `timeActive_s`, `calories`, `lapNr`, and `distanceTotal_m`.
+     - `WorkoutRepository.getResumedWorkoutState(workoutId)` SHALL query `ASCENDING` and `DESCENDING` from `WorkoutSummaries.db`.
+     - For active lap metrics: when `lapNr > 1`, `timeLap_s = timeActive_s - sum(completedLapTime)` and `distanceLap_m = distanceTotal_m - sum(completedLapDistance)` derived from `LapsDatabaseManager.getLaps(workoutId)`; when `lapNr == 1`, `timeLap_s = timeActive_s` and `distanceLap_m = distanceTotal_m`.
+  3. *Full Sensor Baseline Seeding on Resume (`REQ-TRK-078.3`)*:
+     - In `TrackerService.applyResumedState(@NonNull ResumedWorkoutState state)`, `TrackerService` SHALL invoke `BANALService.setInitialSensorValue` for `SensorType.ASCENT`, `SensorType.DESCENT`, `SensorType.TIME_LAP`, and `SensorType.DISTANCE_m_LAP` in addition to `TIME_TOTAL`, `TIME_ACTIVE`, `CALORIES`, `LAP_NR`, and `DISTANCE_m`.
+  4. *Late-Binding Sensor Initial Value Inheritance (`REQ-TRK-078.4`)*:
+     - `MyAccumulatorSensor` constructor SHALL query `mMySensorManager.getInitialValue(sensorType)` and seed `mInitialValue` when an initial value has been registered in `MySensorManager`, ensuring sensors connecting after service restart inherit the pre-crash baseline rather than defaulting to zero.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Refines `REQ-TRK-026` (`TST-TRK-018`) and complements `REQ-TRK-031` (`ATT-3987`, *Resumed LiveWorkoutSession Rehydration*). Targets `TrackerService.java`, `WorkoutRepository.kt`, `BANALService.java`, `MyAccumulatorSensor.java`, and `TrackerServiceResumeTest.kt`.
+2. *Historical Origin & Commit Trace*: `845818c2cfe0` (Aug 2019) introduced `RESET_ACCUMULATORS_INTENT` unconditionally in `onServiceConnected()`. `ATT-3980` (`f4650d74e8b4`) ordered table name initialization in `recreateValuesWhenResuming()` but retained the unconditional reset broadcast.
+3. *Root Reason for Existing Formulation*: In legacy code, `TrackerService` lacked distinct state tracking between fresh workout initialization and sticky process recreation; the reset intent was broadcast to ensure sensors did not carry over stale state from previously stopped workouts in the same process.
+4. *Preservation of Core Invariants*: Fresh workout start resets via `TrainingApplication.startTracking()` remain 100% untouched. Backward compatibility of `ResumedWorkoutState` constructors is preserved. The `mTableInitializationFuture` barrier (`REQ-TRK-026.3`) and single-thread DB execution contracts remain strictly intact.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an active workout with persisted `timeTotal_s = 643`, `timeActive_s = 643`, `distanceTotal_m = 1098.8`, `ascent = 21.0`, `descent = 1.7`, `lapNr = 1`,
+• *When* `TrackerService` restarts via `StartType.RESUME_SERVICE_RECREATION` and binds to `BANALService`,
+• *Then* `RESET_ACCUMULATORS_INTENT` is not broadcast, all 9 accumulators are restored with pre-crash initial values, and subsequent samples proceed monotonically without resetting to 0.
+• *Given* an active workout on `lapNr = 2` with lap 1 having `time = 300 s` and `distance = 500 m`,
+• *When* `TrackerService` recovers from crash,
+• *Then* `TIME_LAP` is initialized to `timeActive_s - 300` and `DISTANCE_m_LAP` is initialized to `distanceTotal_m - 500`.
+• *Given* a new accumulator sensor instantiated after resume has executed,
+• *When* constructed with a sensor type registered in `MySensorManager`,
+• *Then* its initial value reflects the restored baseline rather than zero.
+
+**Invariants**: Monotonic non-decreasing accumulator progression across service recreation boundaries; `START_NORMAL` fresh workout start behavior and resets remain strictly unchanged; 100% clean-room test pass rate.
+
+### REQ-TRK-079: Application-Scoped DataStore Lifecycle and Offscreen Cockpit Map Disposal [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-TRK-079`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
+- **Implementation**: `TuningPreferencesDataStore.kt`, `TrackingTabsScreen.kt`, `TrackingViewModel.kt`, `SensorGridScreen.kt`
+- **Rationale**: Prevent fatal 512 MB OutOfMemoryError heap exhaustion, native JNI map crashes, GC stalls, and background CPU usage process kills during active workouts by enforcing application-scoped singleton DataStore lifecycle, bounding HorizontalPager offscreen composition, and gating live UI map telemetry on `Lifecycle.State.STARTED` (ATT-7874, extending `REQ-SET-073` and `REQ-MAP-051`).
+- **Description**:
+  1. *Application-Scoped TuningPreferencesDataStore Singleton Lifecycle (`REQ-TRK-079.1`)*:
+     - `TuningPreferencesDataStore` primary constructor SHALL be scoped to internal / `@VisibleForTesting`, and production callers SHALL exclusively obtain instances via `TuningPreferencesDataStore.getInstance(context)`.
+     - `getInstance(context)` SHALL normalize any supplied `Context` to `context.applicationContext`, preventing retention of `Activity`, `View`, or Compose hierarchies.
+     - `TuningPreferencesDataStore` internal startup maintenance (such as legacy map camera preference purging) SHALL run within `appScope` rather than spawning independent unmanaged `CoroutineScope(Dispatchers.IO)` workers.
+     - All 19 existing production call sites SHALL be migrated to `TuningPreferencesDataStore.getInstance(context.applicationContext)`.
+  2. *Bounded Viewport Composition & Inactive Tab Map Disposal (`REQ-TRK-079.2`)*:
+     - `TrackingTabsScreen` `HorizontalPager` SHALL NOT set `beyondViewportPageCount = trackingViews.size + 1`. It SHALL set `beyondViewportPageCount = 0` (or default bounded window), ensuring offscreen Cockpit tabs are not actively composed.
+     - When a Cockpit tab containing `TrackingMapContainer` is not the active visible page (`!isTabActive`), the underlying `GoogleMap` composable and view hierarchy SHALL be disposed, freeing native map renderer resources and bitmap textures.
+  3. *Lifecycle-Gated Cockpit Telemetry Collection (`REQ-TRK-079.3`)*:
+     - In `TrackingViewModel`, live 1-Hz map telemetry and polyline state pipelines (`observeMapState`) and Compose collectors (`collectAsStateWithLifecycle`) SHALL gate emission on `Lifecycle.State.STARTED`.
+     - When the athlete turns off the screen or moves the app to the background (`STOPPED`), UI map and polyline emissions SHALL pause completely, while `TrackerService` 1-Hz GPS tracking and SQLite database recording continue without interruption.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-TRK-079`, extending `REQ-SET-073` (*Advanced Tuning Preferences*) and `REQ-MAP-051` (*Map Segment Layer Isolation*). Targets `TuningPreferencesDataStore.kt`, `TrackingTabsScreen.kt`, `TrackingViewModel.kt`, `SensorGridScreen.kt`, and `ATrainingTrackerMap.kt`.
+2. *Historical Origin & Commit Trace*: `ATT-2945` (`commit f3ff8577`) introduced `beyondViewportPageCount = trackingViews.size + 1` in `TrackingTabsScreen` to eliminate tab switching latency when athletes swipe between Cockpit tabs during tracking.
+3. *Root Reason for Existing Formulation*: At the time, Cockpit tabs only hosted lightweight View/Compose text metric tiles; multi-tab Google Map composition and 1-Hz `observeMapState` coroutine pipelines were not present.
+4. *Preservation of Core Invariants*: Tab swiping responsiveness for sensor metric grids is preserved while heavy native `GoogleMap` composition is deferred on inactive tabs; `TrackerService` 1-Hz background GPS tracking and SQLite database recording remain 100% independent and unaffected.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* repeated navigation across Cockpit tabs, Aftermath screens, Elevation Profiles, and Settings,
+• *When* `TuningPreferencesDataStore` is queried,
+• *Then* exactly one application-scoped instance exists and zero `Activity` contexts or orphaned coroutine scopes are retained.
+• *Given* an active workout with multiple Cockpit tabs including map views,
+• *When* the athlete is viewing a non-map tab or the device screen is turned off (`STOPPED`),
+• *Then* offscreen `GoogleMap` composables are disposed and `TrackingViewModel.observeMapState()` pauses live polyline/marker emissions.
+• *Given* an active workout with screen turned off,
+• *When* `TrackerService` runs in the foreground service,
+• *Then* 1-Hz workout sample recording to `WorkoutSamples.db` continues uninterrupted with zero data loss.
+
+**Invariants**: `TrackerService` 1-Hz background recording 100% unaffected; immediate persistence of tuning preferences preserved; zero leak of `Activity` references; 100% clean-room test pass rate.
+
+
+
+### REQ-TRK-080: Mid-Workout Process Restart Cockpit Telemetry, Live Map Track & Sparkline Rehydration [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-TRK-080`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `BANALServiceRepository.kt`, `LiveSparklineBuffer.kt`, `WorkoutSamplesDatabaseManager.java`, `WorkoutRepository.kt`
+- **Rationale**: When `aTrainingTracker` recovers from background process termination (`StartType.RESUME_SERVICE_RECREATION`) or when UI reconnects mid-workout, accumulator recovery (REQ-TRK-078) restores service scalar state, but `BANALServiceRepository` initializes empty `_currentTrack`, `_currentPathPoints`, and `sparklineBuffers`. Rehydrating telemetry asynchronously from `WorkoutSamples.db` ensures athletes immediately see their full pre-crash GPS route, elevation profile, and sparkline trends without UI stutter or data resets (ATT-7877, extending REQ-TRK-059 and REQ-TRK-042).
+- **Description**:
+  1. *Asynchronous Rehydration Dispatch & State Gating (`REQ-TRK-080.1`)*:
+     - When `BANALServiceRepository` observes `TrackingMode.TRACKING` or `TrackingMode.PAUSED` for an active workout session with a valid `baseFileName` / `workoutId` (via `WorkoutRepository.getResumedWorkoutState()` or `TrainingApplication.getActiveWorkoutID()`) while `_currentTrack.value.isEmpty()`:
+     - `BANALServiceRepository` SHALL dispatch an asynchronous rehydration task on `Dispatchers.IO` to load persisted coordinates and numeric sensor histories from `WorkoutSamples.db`.
+     - Rehydration SHALL NOT execute during fresh workout starts (`StartType.START_NORMAL`), preserving clean initial states.
+     - Telemetry emission to the UI layer SHALL preserve `Lifecycle.State.STARTED` gating per `REQ-TRK-079.3`.
+  2. *Live Map Track & PathPoint Rehydration (`REQ-TRK-080.2`)*:
+     - Persisted GPS samples (`LATITUDE`, `LONGITUDE`, `DISTANCE_m`, and `ALTITUDE`) ordered chronologically by `TIME` SHALL be retrieved from `WorkoutSamples.db` and converted into `List<LatLng>` and `List<PathPoint>`.
+     - `_currentTrack` and `_currentPathPoints` SHALL be atomically populated using `SnapshotChunkedList.from()`, preserving chunked memory bounds and immutability.
+     - Any live GPS location updates received concurrently while the asynchronous query is executing SHALL be merged monotonically at the tail, preventing dropped coordinates or out-of-order vertices.
+  3. *LiveSparklineBuffer Horizon Historical Backfill (`REQ-TRK-080.3`)*:
+     - For registered `sparklineBuffers`, `LiveSparklineBuffer` SHALL support `backfillHistoricalSamples(samples: List<Float>)` protected by thread-safe synchronization (`synchronized(lock)`).
+     - Query results for the corresponding numeric sensor column (`HR`, `SPEED_mps`, `POWER_W`, `CADENCE`, `ALTITUDE`) across the past `horizonSeconds` window SHALL populate the buffer up to its configured `maxCapacity`.
+     - Live samples appended via `updateSparklineBuffers()` concurrently with the asynchronous fetch SHALL be preserved monotonically without buffer overrun or corruption.
+  4. *Localization Neutrality & System Invariants (`REQ-TRK-080.4`)*:
+     - Rehydration operates exclusively within the data and repository layer; zero new UI string resources or layout changes are required across all 9 supported locales.
+     - Query execution MUST NOT block the Android main thread. Total in-memory allocations MUST remain bounded via `SnapshotChunkedList` and `LiveSparklineBuffer` capacity limits.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-TRK-080`, extending `REQ-TRK-059` (*Live Sparklines*), `REQ-TRK-042` (*Snapshot Chunked Track*), and `REQ-TRK-078` (*Crash Recovery Accumulators*). Targets `BANALServiceRepository.kt`, `LiveSparklineBuffer.kt`, and `WorkoutSamplesDatabaseManager.java`.
+2. *Historical Origin & Commit Trace*: `ATT-6710` introduced in-memory `LiveSparklineBuffer` for 1-Hz streaming; `REQ-TRK-042` introduced `SnapshotChunkedList` for live breadcrumbs. Both assumed a continuous lifecycle from workout start to stop.
+3. *Root Reason for Existing Formulation*: Buffers were created empty at component construction because tracking was originally assumed to run within an uninterrupted process lifecycle.
+4. *Preservation of Core Invariants*: Streaming 1-Hz updates, `SnapshotChunkedList` memory bounding, `ATT-7874` offscreen map disposal, and `ATT-7875` accumulator preservation remain 100% intact.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an active workout with 15 minutes of persisted 1-Hz telemetry in `WorkoutSamples.db` and configured Cockpit sparkline fields,
+• *When* the app recovers from background process termination (`RESUME_SERVICE_RECREATION`) or UI reconnection,
+• *Then* `_currentTrack`, `_currentPathPoints`, and registered `sparklineBuffers` backfill from `WorkoutSamples.db` on `Dispatchers.IO`, restoring the map route and 15-minute telemetry trend immediately.
+• *Given* an ongoing rehydration task on `Dispatchers.IO`,
+• *When* new 1-Hz GPS or sensor ticks arrive from `BANALService`,
+• *Then* incoming samples are merged monotonically after the historical baseline with zero dropped ticks and zero race conditions.
+• *Given* a new workout initialized via `StartType.START_NORMAL`,
+• *When* `BANALServiceRepository` starts,
+• *Then* rehydration is skipped and track collections remain empty.
+
+**Invariants**: Zero main-thread blocking (`Dispatchers.IO`); strictly bounded memory footprint via `SnapshotChunkedList` and `LiveSparklineBuffer`; monotonic timestamp ordering; clean-room test pass rate.
+
+
+### REQ-TRK-081: Per-Tile Cockpit Sparkline Graph Color Persistence and Minimalist Color Editor UI [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-TRK-081`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `TrackingViewsDatabaseManager.java`, `TrackingViewsRepository.kt`, `SensorFieldState.kt`, `SensorFieldView.kt`, `EditSensorFieldDialog.kt`, `EditSensorFieldViewModel.kt`, `TelemetryGraphColorPreferences.kt`
+- **Rationale**: Cockpit sparkline tiles allow configurable time horizons, but lack persistent graph colors and default to theme or zone colors. Providing per-tile color override options from the centralized 8-color telemetry palette, Theme Default, and Dynamic Zone (for HR, Power, and HRV DFA α1), paired with a compact 2-segment scope toggle ("This tile" vs "All <Metric>") and SQLite schema v22 persistence, enables customized live data differentiation while preserving global preference coherence and legacy backup backward compatibility (ATT-7760, Parent Epic ATT-5908, refining `REQ-TRK-059` and `REQ-UI-530`).
+- **Description**:
+  1. *Database Schema v22 Persistence & Migration (`REQ-TRK-081.1`)*:
+     - SQLite `DB_VERSION` in `TrackingViewsDatabaseManager.java` SHALL increment to 22.
+     - `ROWS_TABLE` SHALL add column `GraphColor text DEFAULT 'GLOBAL_DEFAULT'`.
+     - `onUpgrade` for version 22 SHALL execute `ALTER TABLE LayoutRowsTable ADD COLUMN GraphColor text DEFAULT 'GLOBAL_DEFAULT'`, preserving all existing cockpit tile layouts without data loss.
+     - Backup/restore (.attbackup JSON serialization and deserialization) SHALL include `graphColor`. Missing or null `graphColor` keys during import SHALL default safely to `"GLOBAL_DEFAULT"`.
+  2. *Color Mode Model & Repository/State Threading (`REQ-TRK-081.2`)*:
+     - The system SHALL support the following graph color tokens: `"GLOBAL_DEFAULT"`, `"THEME_DEFAULT"`, `"DYNAMIC_ZONE"`, and the 8 fixed telemetry palette color tokens (`"CRIMSON"`, `"VIOLET"`, `"EMERALD"`, `"AMBER"`, `"TEAL"`, `"MAGENTA"`, `"CYAN"`, `"CORAL"`).
+     - `SensorFieldConfig` and `SensorFieldState` SHALL include `val graphColor: String = "GLOBAL_DEFAULT"`.
+     - `TrackingViewsRepository` SHALL query and persist `graphColor` across insert, update, and fetch operations.
+     - In `SensorFieldView.kt`, live sparkline stroke color SHALL resolve deterministically:
+       • `"DYNAMIC_ZONE"`: resolves to `fieldState.zoneColor` when zone color is active (`zoneColor != Color.Transparent`), falling back to `MaterialTheme.colorScheme.primary`.
+       • `"THEME_DEFAULT"`: resolves to `MaterialTheme.colorScheme.primary`.
+       • `"GLOBAL_DEFAULT"`: resolves via `TelemetryGraphColorPreferences.getGraphColor(context, sensorType).resolveColor(colorScheme, isDarkTheme)`.
+       • Explicit palette name: resolves via `TelemetryGraphColor.valueOf(graphColor).resolveColor(colorScheme, isDarkTheme)`.
+  3. *Minimalist Color Editor UI & Scope Toggle (`REQ-TRK-081.3`)*:
+     - When `isGraphSupported` and `showGraph` are true in `EditSensorFieldDialog.kt`, a minimalist color editor section SHALL be rendered directly below the time-horizon slider.
+     - The editor SHALL display a compact row containing circular swatches for the 8 fixed palette colors, a chip for `Theme Default`, and a chip for `Dynamic Zone` (gated strictly to `SensorType.HR`, `SensorType.POWER` family, and `SensorType.HRV_DFA_A1`).
+     - Below the swatches, a compact 2-segment scope toggle SHALL offer:
+       • `This tile`: applies color selection strictly to the current tile's local `graphColor`.
+       • `All <Metric>`: applies color selection globally to `TelemetryGraphColorPreferences.setGraphColor(context, sensorType, color)` and sets the current tile's `graphColor` to `"GLOBAL_DEFAULT"`.
+  4. *9-Language Localization Parity (`REQ-TRK-081.4`)*:
+     - All user-facing strings for the scope toggle (`cockpit_graph_color_this_tile`, `cockpit_graph_color_all_metric`), chips (`cockpit_graph_color_theme_default`, `cockpit_graph_color_dynamic_zone`), and section header (`cockpit_graph_color_title`) SHALL maintain 100% translation parity across all 9 supported locales: `values/` (EN), `values-de/` (DE), `values-es/` (ES), `values-fr/` (FR), `values-it/` (IT), `values-ja/` (JA), `values-nl/` (NL), `values-pl/` (PL), and `values-pt/` (PT), verified by `TranslationParityTest`.
+  5. *Visual Compose Screenshot Verification (`REQ-TRK-081.5`)*:
+     - Per Rule 8.5, visual self-inspection SHALL be conducted via a Robolectric Compose screenshot test generating `docs/engineering/walkthroughs/img/ATT-7760_color_picker.png` verifying the 4-point visual checklist (orientation & geometry, color mapping & M3 artifacts, typography & wrapping, touch ergonomics).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-TRK-081`, refining `REQ-TRK-059` (*Configurable Live Sparkline Graph Cockpit Tiles*) and integrating with `REQ-UI-530` (*Centralized Telemetry Color Palette*). Targets `TrackingViewsDatabaseManager.java`, `TrackingViewsRepository.kt`, `SensorFieldState.kt`, `SensorFieldView.kt`, `EditSensorFieldDialog.kt`, `EditSensorFieldViewModel.kt`, and `TelemetryGraphColorPreferences.kt`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-44.1 via `ATT-1294` added `ShowGraph` and `GraphHorizonS` to SQLite v19. `SensorFieldView.kt` lines 461-465 hardcoded sparkline colors to `zoneColor` or `MaterialTheme.colorScheme.primary`. Sprint 2026-46.7 via `ATT-7759` introduced `TelemetryGraphColorPreferences` and the 8-color palette.
+3. *Root Reason for Existing Formulation*: During initial sparkline MVP (`ATT-1294`), color selection was omitted to minimize dialog complexity and database migrations.
+4. *Preservation of Core Invariants*: Existing database rows and backups default to `GLOBAL_DEFAULT`, preserving current visual behavior without data loss or layout resets; non-graph tiles and unsupported sensor types remain completely unaffected; 100% 9-language translation parity preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an athlete edits a Power tile with `showGraph` enabled and scope set to `This tile`,
+• *When* they select Cyan and save,
+• *Then* only that tile persists `GRAPH_COLOR = CYAN`, while other Power tiles and Workout Detail charts remain unchanged.
+• *Given* an athlete edits a Heart Rate tile and switches scope to `All HR`,
+• *When* they select Violet and save,
+• *Then* `TelemetryGraphColorPreferences` for Heart Rate is updated to Violet, updating Workout Detail and all Heart Rate tiles set to `GLOBAL_DEFAULT`.
+• *Given* `EditSensorFieldDialog` is open with `showGraph = true`,
+• *When* the selected sensor is `HR`, `POWER`, or `HRV_DFA_A1`,
+• *Then* the `Dynamic Zone` chip is visible; for other sensors (Speed, Cadence, Altitude), `Dynamic Zone` is hidden.
+• *Given* an existing database (v21) or legacy `.attbackup` without `GRAPH_COLOR`,
+• *When* upgraded to v22 or restored,
+• *Then* all existing graph tiles default cleanly to `GLOBAL_DEFAULT` without crashing or resetting layouts.
+
+**Invariants**: SQLite schema backward compatibility guaranteed; legacy backup JSON imports default cleanly; zero Compose snapshot state writes during composition; 100% 9-language localization parity; clean-room test pass rate.
+

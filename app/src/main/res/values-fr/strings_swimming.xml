@@ -13,4 +13,8 @@
     <string name="tuning_swim_pool_custom_meters_label">Longueur personnalisée : %1$d m</string>
     <string name="tuning_swim_subtitle_active">Actif, bassin %1$s</string>
     <string name="tuning_swim_subtitle_inactive">Inactif, bassin %1$s</string>
+    <string name="swim_adjust_card_title">Paramètres de natation</string>
+    <string name="swim_adjust_pool_length_label">Longueur de bassin</string>
+    <string name="swim_adjust_lengths_label">Longueurs</string>
+    <string name="swim_adjust_recalculating">Recalcul des métriques de natation…</string>
 </resources>

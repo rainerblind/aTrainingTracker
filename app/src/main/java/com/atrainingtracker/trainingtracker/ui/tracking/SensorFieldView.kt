@@ -58,6 +58,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
@@ -68,6 +69,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.Typography
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
@@ -76,7 +78,10 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.sensor.SensorType
+import com.atrainingtracker.trainingtracker.settings.TelemetryGraphColorPreferences
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
+import com.atrainingtracker.trainingtracker.ui.theme.TelemetryGraphColor
 import com.atrainingtracker.trainingtracker.ui.tracking.typography.LocalCockpitTypography
 
 
@@ -455,14 +460,18 @@ fun SensorFieldView(
                         )
                     }
 
-                    // Optional Live Sparkline Graph (REQ-TRK-059, ATT-1294, ATT-7314, ATT-7522)
+                    // Optional Live Sparkline Graph (REQ-TRK-059, ATT-1294, ATT-7314, ATT-7522, ATT-7760)
                     if (fieldState.showGraph) {
                         Spacer(modifier = Modifier.height(4.dp))
-                        val sparklineLineColor = if (fieldState.zoneColor != Color.Transparent && fieldState.zoneDisplayOptions.showTextColor) {
-                            fieldState.zoneColor
-                        } else {
-                            MaterialTheme.colorScheme.primary
-                        }
+                        val context = LocalContext.current
+                        val sparklineLineColor = resolveSparklineLineColor(
+                            graphColor = fieldState.graphColor,
+                            zoneColor = fieldState.zoneColor,
+                            showTextColor = fieldState.zoneDisplayOptions.showTextColor,
+                            sensorType = fieldState.sensorType,
+                            colorScheme = MaterialTheme.colorScheme,
+                            context = context
+                        )
                         val hasLiveSamples = fieldState.sparklineSamples.isNotEmpty()
                         val effectiveSamples = resolveSparklineEffectiveSamples(fieldState.sparklineSamples)
                         val effectiveSpanSeconds = resolveSparklineEffectiveSpanSeconds(

@@ -20,7 +20,8 @@ import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 import com.atrainingtracker.trainingtracker.database.SportTypeEquipmentLinkManager
-import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutStatsSummary
 import io.mockk.*
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -29,28 +30,29 @@ import org.junit.Test
 
 /**
  * Unit tests verifying that SportTypeViewModel.availableEquipment queries active equipment only
- * (REQ-UI-158, TST-UI-111, ATT-1118).
+ * (REQ-UI-158, TST-UI-111, ATT-1118) and that sport type stats route through WorkoutRepository (REQ-ARC-009.1, TST-ARC-009.3).
  */
 class SportTypeViewModelRetiredTest {
 
     private lateinit var mockApplication: Application
     private lateinit var mockEquipmentDbHelper: EquipmentDbHelper
+    private lateinit var mockWorkoutRepository: WorkoutRepository
 
     @Before
     fun setUp() {
         mockApplication = mockk(relaxed = true)
 
         mockkStatic(SportTypeDatabaseManager::class)
-        mockkStatic(WorkoutSummariesDatabaseManager::class)
         mockkObject(SportTypeEquipmentLinkManager.Companion)
 
         val mockSportTypeManager = mockk<SportTypeDatabaseManager>(relaxed = true)
-        val mockSummariesManager = mockk<WorkoutSummariesDatabaseManager>(relaxed = true)
         val mockLinksHelper = mockk<SportTypeEquipmentLinkManager>(relaxed = true)
 
         every { SportTypeDatabaseManager.getInstance(any()) } returns mockSportTypeManager
-        every { WorkoutSummariesDatabaseManager.getInstance(any()) } returns mockSummariesManager
         every { SportTypeEquipmentLinkManager.getInstance(any()) } returns mockLinksHelper
+
+        mockWorkoutRepository = mockk(relaxed = true)
+        WorkoutRepository.resetForTesting(mockWorkoutRepository)
 
         mockEquipmentDbHelper = mockk(relaxed = true)
         EquipmentDbHelper.resetForTesting(mockEquipmentDbHelper)
@@ -58,6 +60,7 @@ class SportTypeViewModelRetiredTest {
 
     @After
     fun tearDown() {
+        WorkoutRepository.resetForTesting(null)
         EquipmentDbHelper.resetForTesting(null)
         unmockkAll()
     }
@@ -72,10 +75,28 @@ class SportTypeViewModelRetiredTest {
             mockEquipmentDbHelper.getEquipmentItems(BSportType.BIKE, true)
         } returns listOf(activeBike)
 
-        val viewModel = SportTypeViewModel(mockApplication)
+        val viewModel = SportTypeViewModel(mockApplication, mockWorkoutRepository)
         val result = viewModel.availableEquipment(BSportType.BIKE)
 
         assertEquals(listOf(activeBike), result)
         verify { mockEquipmentDbHelper.getEquipmentItems(BSportType.BIKE, true) }
+    }
+
+    @Test
+    fun testGetDetailedStats_routesThroughWorkoutRepository() {
+        val summary = WorkoutStatsSummary(
+            totalDistanceM = 15000.0,
+            totalActiveTimeS = 3600L,
+            totalAscentM = 250,
+            firstUsage = "2026-01-01 10:00:00",
+            lastUsage = "2026-02-01 10:00:00",
+            count = 5
+        )
+        every { mockWorkoutRepository.getSportTypeStatsForPeriod(1L, any(), any()) } returns summary
+
+        val viewModel = SportTypeViewModel(mockApplication, mockWorkoutRepository)
+        val statsList = viewModel.getDetailedStats("Cycling", 1L, "2026-01-01")
+
+        verify(atLeast = 1) { mockWorkoutRepository.getSportTypeStatsForPeriod(1L, any(), any()) }
     }
 }

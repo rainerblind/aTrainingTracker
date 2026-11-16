@@ -307,7 +307,7 @@ class MainActivityWithNavigation :
     }
 
     val tuningPreferencesDataStore: TuningPreferencesDataStore by lazy {
-        TuningPreferencesDataStore(applicationContext)
+        TuningPreferencesDataStore.getInstance(applicationContext)
     }
     var isAntMissingAdapterDialogSuppressed: Boolean = false
         internal set

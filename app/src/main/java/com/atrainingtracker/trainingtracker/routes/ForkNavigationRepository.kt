@@ -224,7 +224,7 @@ class ForkNavigationRepository internal constructor(
                 instance ?: ForkNavigationRepository(
                     routesRepository = RoutesRepository.getInstance(context.applicationContext),
                     banalRepository = BANALServiceRepository.getInstance(context.applicationContext),
-                    tuningPreferencesDataStore = TuningPreferencesDataStore(context.applicationContext)
+                    tuningPreferencesDataStore = TuningPreferencesDataStore.getInstance(context.applicationContext)
                 ).also { instance = it }
             }
         }

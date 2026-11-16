@@ -44,6 +44,8 @@ import com.garmin.fit.FileIdMesgListener
 import com.garmin.fit.Fit
 import com.garmin.fit.LapMesg
 import com.garmin.fit.LapMesgListener
+import com.garmin.fit.LeftRightBalance
+import com.garmin.fit.LeftRightBalance100
 import com.garmin.fit.MesgBroadcaster
 import com.garmin.fit.RecordMesg
 import com.garmin.fit.RecordMesgListener
@@ -197,7 +199,13 @@ class FitFileWriterTest {
             SensorType.HR.name,
             SensorType.CADENCE.name,
             SensorType.POWER.name,
-            SensorType.TEMPERATURE.name
+            SensorType.TEMPERATURE.name,
+            SensorType.PEDAL_POWER_BALANCE.name,
+            SensorType.TORQUE_EFFECTIVENESS_L.name,
+            SensorType.TORQUE_EFFECTIVENESS_R.name,
+            SensorType.PEDAL_SMOOTHNESS_L.name,
+            SensorType.PEDAL_SMOOTHNESS_R.name,
+            SensorType.PEDAL_SMOOTHNESS.name
         )
 
         every { cursor.count } returns samples.size
@@ -248,6 +256,7 @@ class FitFileWriterTest {
 
     @Test
     fun testFitFileWriter_generatesValidBinaryFitFile_andDecodesCleanly() {
+        // TST-ARC-010: Binary FIT Protocol Serialization & Golden Master Parity (REQ-ARC-010.1, REQ-ARC-010.3)
         val summaryCursor = createMockSummaryCursor()
         every {
             mockSqlDb.query(WorkoutSummaries.TABLE, any(), any(), any(), any(), any(), any())
@@ -767,6 +776,170 @@ class FitFileWriterTest {
         } finally {
             com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore.setInstanceForTesting(null)
         }
+    }
+
+    /**
+     * TST-EXP-043.1: Verify FIT encoding of Left/Right Balance, Torque Effectiveness, and Pedal Smoothness
+     * on RecordMesg, LapMesg, and SessionMesg.
+     */
+    @Test
+    fun testFitFileWriter_encodesPedalDynamicsOnRecordLapSession() {
+        val summaryCursor = createMockSummaryCursor(timeStart = "2026-10-03 10:00:00", totalTime = "120", distanceTotal = "1000.0")
+        every {
+            mockSqlDb.query(WorkoutSummaries.TABLE, any(), any(), any(), any(), any(), any())
+        } returns summaryCursor
+
+        val sampleList = listOf(
+            mapOf(
+                WorkoutSamplesDbHelper.TIME to "2026-10-03 10:00:00",
+                SensorType.POWER.name to 250.0,
+                SensorType.PEDAL_POWER_BALANCE.name to 52.0,
+                SensorType.TORQUE_EFFECTIVENESS_L.name to 78.5,
+                SensorType.TORQUE_EFFECTIVENESS_R.name to 81.0,
+                SensorType.PEDAL_SMOOTHNESS_L.name to 24.0,
+                SensorType.PEDAL_SMOOTHNESS_R.name to 25.5,
+                SensorType.PEDAL_SMOOTHNESS.name to 24.5
+            ),
+            mapOf(
+                WorkoutSamplesDbHelper.TIME to "2026-10-03 10:00:01",
+                SensorType.POWER.name to 260.0,
+                SensorType.PEDAL_POWER_BALANCE.name to 54.0,
+                SensorType.TORQUE_EFFECTIVENESS_L.name to 79.5,
+                SensorType.TORQUE_EFFECTIVENESS_R.name to 82.0,
+                SensorType.PEDAL_SMOOTHNESS_L.name to 25.0,
+                SensorType.PEDAL_SMOOTHNESS_R.name to 26.5,
+                SensorType.PEDAL_SMOOTHNESS.name to 25.5
+            )
+        )
+        val samplesCursor = createMockSamplesCursor(sampleList)
+        every {
+            mockSqlDb.query(match { it.startsWith("samples_") }, any(), any(), any(), any(), any(), any())
+        } returns samplesCursor
+
+        every { mockSportTypeDb.getBSportType(1L) } returns BSportType.BIKE
+        every { mockSportTypeDb.getTcxName(1L) } returns "Biking"
+        every { mockLapsDb.getLaps(101L) } returns emptyList()
+
+        val exportInfo = ExportInfo("workout_pedal_dynamics", FileFormat.FIT, ExportType.FILE)
+        val result = FitFileWriter(mockContext).doExport(exportInfo)
+        assertTrue("FIT export with pedal dynamics must succeed", result.success())
+
+        val records = mutableListOf<RecordMesg>()
+        val laps = mutableListOf<LapMesg>()
+        val sessions = mutableListOf<SessionMesg>()
+
+        val decode = Decode()
+        val broadcaster = MesgBroadcaster(decode)
+        broadcaster.addListener(RecordMesgListener { records.add(it) })
+        broadcaster.addListener(LapMesgListener { laps.add(it) })
+        broadcaster.addListener(SessionMesgListener { sessions.add(it) })
+        FileInputStream(File(tempDir, exportInfo.shortPath)).use { decode.read(it, broadcaster) }
+
+        assertEquals(2, records.size)
+        // Record 0 assertions
+        val r0 = records[0]
+        val expectedR0Bal = ((52 and LeftRightBalance.MASK.toInt()) or LeftRightBalance.RIGHT.toInt()).toShort()
+        assertEquals(expectedR0Bal, r0.leftRightBalance)
+        assertEquals(78.5f, r0.leftTorqueEffectiveness!!, 0.01f)
+        assertEquals(81.0f, r0.rightTorqueEffectiveness!!, 0.01f)
+        assertEquals(24.0f, r0.leftPedalSmoothness!!, 0.01f)
+        assertEquals(25.5f, r0.rightPedalSmoothness!!, 0.01f)
+        assertEquals(24.5f, r0.combinedPedalSmoothness!!, 0.01f)
+
+        // Record 1 assertions
+        val r1 = records[1]
+        val expectedR1Bal = ((54 and LeftRightBalance.MASK.toInt()) or LeftRightBalance.RIGHT.toInt()).toShort()
+        assertEquals(expectedR1Bal, r1.leftRightBalance)
+        assertEquals(79.5f, r1.leftTorqueEffectiveness!!, 0.01f)
+        assertEquals(82.0f, r1.rightTorqueEffectiveness!!, 0.01f)
+        assertEquals(25.0f, r1.leftPedalSmoothness!!, 0.01f)
+        assertEquals(26.5f, r1.rightPedalSmoothness!!, 0.01f)
+        assertEquals(25.5f, r1.combinedPedalSmoothness!!, 0.01f)
+
+        // Session & Lap summary assertions (avg balance = 53.0 -> 5300 | 0x8000 = 38068)
+        val expectedSessionBal = ((5300 and LeftRightBalance100.MASK) or LeftRightBalance100.RIGHT)
+        assertEquals(1, sessions.size)
+        val s = sessions[0]
+        assertEquals(expectedSessionBal, s.leftRightBalance)
+        assertEquals(79.0f, s.avgLeftTorqueEffectiveness!!, 0.01f)
+        assertEquals(81.5f, s.avgRightTorqueEffectiveness!!, 0.01f)
+        assertEquals(24.5f, s.avgLeftPedalSmoothness!!, 0.01f)
+        assertEquals(26.0f, s.avgRightPedalSmoothness!!, 0.01f)
+        assertEquals(25.0f, s.avgCombinedPedalSmoothness!!, 0.01f)
+
+        assertEquals(1, laps.size)
+        val l = laps[0]
+        assertEquals(expectedSessionBal, l.leftRightBalance)
+        assertEquals(79.0f, l.avgLeftTorqueEffectiveness!!, 0.01f)
+        assertEquals(81.5f, l.avgRightTorqueEffectiveness!!, 0.01f)
+        assertEquals(24.5f, l.avgLeftPedalSmoothness!!, 0.01f)
+        assertEquals(26.0f, l.avgRightPedalSmoothness!!, 0.01f)
+        assertEquals(25.0f, l.avgCombinedPedalSmoothness!!, 0.01f)
+    }
+
+    /**
+     * TST-EXP-043.1: Verify workouts without pedal dynamics omit all balance/TE/PS fields cleanly (no 0% defaults).
+     */
+    @Test
+    fun testFitFileWriter_withoutPedalDynamics_omitsFieldsCleanly() {
+        val summaryCursor = createMockSummaryCursor(timeStart = "2026-10-03 10:00:00", totalTime = "120", distanceTotal = "1000.0")
+        every {
+            mockSqlDb.query(WorkoutSummaries.TABLE, any(), any(), any(), any(), any(), any())
+        } returns summaryCursor
+
+        val sampleList = listOf(
+            mapOf(
+                WorkoutSamplesDbHelper.TIME to "2026-10-03 10:00:00",
+                SensorType.POWER.name to 200.0
+            )
+        )
+        val samplesCursor = createMockSamplesCursor(sampleList)
+        every {
+            mockSqlDb.query(match { it.startsWith("samples_") }, any(), any(), any(), any(), any(), any())
+        } returns samplesCursor
+
+        every { mockSportTypeDb.getBSportType(1L) } returns BSportType.RUN
+        every { mockSportTypeDb.getTcxName(1L) } returns "Running"
+        every { mockLapsDb.getLaps(101L) } returns emptyList()
+
+        val exportInfo = ExportInfo("workout_no_pedal_dynamics", FileFormat.FIT, ExportType.FILE)
+        val result = FitFileWriter(mockContext).doExport(exportInfo)
+        assertTrue("FIT export must succeed", result.success())
+
+        val records = mutableListOf<RecordMesg>()
+        val laps = mutableListOf<LapMesg>()
+        val sessions = mutableListOf<SessionMesg>()
+
+        val decode = Decode()
+        val broadcaster = MesgBroadcaster(decode)
+        broadcaster.addListener(RecordMesgListener { records.add(it) })
+        broadcaster.addListener(LapMesgListener { laps.add(it) })
+        broadcaster.addListener(SessionMesgListener { sessions.add(it) })
+        FileInputStream(File(tempDir, exportInfo.shortPath)).use { decode.read(it, broadcaster) }
+
+        assertEquals(1, records.size)
+        assertNull("Record leftRightBalance must be null", records[0].leftRightBalance)
+        assertNull("Record leftTorqueEffectiveness must be null", records[0].leftTorqueEffectiveness)
+        assertNull("Record rightTorqueEffectiveness must be null", records[0].rightTorqueEffectiveness)
+        assertNull("Record leftPedalSmoothness must be null", records[0].leftPedalSmoothness)
+        assertNull("Record rightPedalSmoothness must be null", records[0].rightPedalSmoothness)
+        assertNull("Record combinedPedalSmoothness must be null", records[0].combinedPedalSmoothness)
+
+        assertEquals(1, sessions.size)
+        assertNull("Session leftRightBalance must be null", sessions[0].leftRightBalance)
+        assertNull("Session avgLeftTorqueEffectiveness must be null", sessions[0].avgLeftTorqueEffectiveness)
+        assertNull("Session avgRightTorqueEffectiveness must be null", sessions[0].avgRightTorqueEffectiveness)
+        assertNull("Session avgLeftPedalSmoothness must be null", sessions[0].avgLeftPedalSmoothness)
+        assertNull("Session avgRightPedalSmoothness must be null", sessions[0].avgRightPedalSmoothness)
+        assertNull("Session avgCombinedPedalSmoothness must be null", sessions[0].avgCombinedPedalSmoothness)
+
+        assertEquals(1, laps.size)
+        assertNull("Lap leftRightBalance must be null", laps[0].leftRightBalance)
+        assertNull("Lap avgLeftTorqueEffectiveness must be null", laps[0].avgLeftTorqueEffectiveness)
+        assertNull("Lap avgRightTorqueEffectiveness must be null", laps[0].avgRightTorqueEffectiveness)
+        assertNull("Lap avgLeftPedalSmoothness must be null", laps[0].avgLeftPedalSmoothness)
+        assertNull("Lap avgRightPedalSmoothness must be null", laps[0].avgRightPedalSmoothness)
+        assertNull("Lap avgCombinedPedalSmoothness must be null", laps[0].avgCombinedPedalSmoothness)
     }
 }
 

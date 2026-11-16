@@ -110,42 +110,44 @@ class RepositoryEngineCleanlinessContractTest {
 
     @Test
     fun testFitFileWriter_zeroDatabaseManagerInstantiation() {
-        val file = resolveFile("src/main/java/com/atrainingtracker/trainingtracker/exporter/writer/FitFileWriter.java")
-        assertTrue("FitFileWriter.java must exist", file.exists())
+        val ktFile = resolveFile("src/main/java/com/atrainingtracker/trainingtracker/exporter/writer/FitFileWriter.kt")
+        val file = if (ktFile.exists()) ktFile else resolveFile("src/main/java/com/atrainingtracker/trainingtracker/exporter/writer/FitFileWriter.java")
+        assertTrue("FitFileWriter source must exist (.kt or .java)", file.exists())
         val content = file.readText()
 
         val matches = directDbInstantiationPattern.findAll(content).map { it.value }.toList()
         assertTrue(
-            "FitFileWriter.java must contain zero DatabaseManager/DbHelper getInstance references (REQ-DAT-041.4), found: $matches",
+            "FitFileWriter must contain zero DatabaseManager/DbHelper getInstance references (REQ-DAT-041.4), found: $matches",
             matches.isEmpty()
         )
         assertTrue(
-            "FitFileWriter.java must route through WorkoutRepository",
+            "FitFileWriter must route through WorkoutRepository",
             content.contains("WorkoutRepository.getInstance")
         )
         assertTrue(
-            "FitFileWriter.java must route through SportTypesRepository",
+            "FitFileWriter must route through SportTypesRepository",
             content.contains("SportTypesRepository.getInstance")
         )
     }
 
     @Test
     fun testTCXFileWriter_zeroDatabaseManagerInstantiation() {
-        val file = resolveFile("src/main/java/com/atrainingtracker/trainingtracker/exporter/writer/TCXFileWriter.java")
-        assertTrue("TCXFileWriter.java must exist", file.exists())
+        val ktFile = resolveFile("src/main/java/com/atrainingtracker/trainingtracker/exporter/writer/TCXFileWriter.kt")
+        val file = if (ktFile.exists()) ktFile else resolveFile("src/main/java/com/atrainingtracker/trainingtracker/exporter/writer/TCXFileWriter.java")
+        assertTrue("TCXFileWriter source must exist (.kt or .java)", file.exists())
         val content = file.readText()
 
         val matches = directDbInstantiationPattern.findAll(content).map { it.value }.toList()
         assertTrue(
-            "TCXFileWriter.java must contain zero DatabaseManager/DbHelper getInstance references (REQ-DAT-041.4), found: $matches",
+            "TCXFileWriter must contain zero DatabaseManager/DbHelper getInstance references (REQ-DAT-041.4), found: $matches",
             matches.isEmpty()
         )
         assertTrue(
-            "TCXFileWriter.java must route through WorkoutRepository",
+            "TCXFileWriter must route through WorkoutRepository",
             content.contains("WorkoutRepository.getInstance")
         )
         assertTrue(
-            "TCXFileWriter.java must route through SportTypesRepository",
+            "TCXFileWriter must route through SportTypesRepository",
             content.contains("SportTypesRepository.getInstance")
         )
     }
@@ -219,9 +221,18 @@ class RepositoryEngineCleanlinessContractTest {
     @Test
     fun testTST_DAT_038_2_phaseBEngines_zeroProhibitedDatabaseImports() {
         val filesToCheck = listOf(
-            "src/main/java/com/atrainingtracker/trainingtracker/exporter/writer/FitFileWriter.java",
-            "src/main/java/com/atrainingtracker/trainingtracker/exporter/writer/TCXFileWriter.java",
-            "src/main/java/com/atrainingtracker/trainingtracker/exporter/writer/BaseFileWriter.java",
+            if (resolveFile("src/main/java/com/atrainingtracker/trainingtracker/exporter/writer/FitFileWriter.kt").exists())
+                "src/main/java/com/atrainingtracker/trainingtracker/exporter/writer/FitFileWriter.kt"
+            else
+                "src/main/java/com/atrainingtracker/trainingtracker/exporter/writer/FitFileWriter.java",
+            if (resolveFile("src/main/java/com/atrainingtracker/trainingtracker/exporter/writer/TCXFileWriter.kt").exists())
+                "src/main/java/com/atrainingtracker/trainingtracker/exporter/writer/TCXFileWriter.kt"
+            else
+                "src/main/java/com/atrainingtracker/trainingtracker/exporter/writer/TCXFileWriter.java",
+            if (resolveFile("src/main/java/com/atrainingtracker/trainingtracker/exporter/writer/BaseFileWriter.kt").exists())
+                "src/main/java/com/atrainingtracker/trainingtracker/exporter/writer/BaseFileWriter.kt"
+            else
+                "src/main/java/com/atrainingtracker/trainingtracker/exporter/writer/BaseFileWriter.java",
             "src/main/java/com/atrainingtracker/trainingtracker/migration/LegacyImportEngine.kt",
             "src/main/java/com/atrainingtracker/trainingtracker/database/WorkoutDeletionHelper.java",
             "src/main/java/com/atrainingtracker/trainingtracker/exporter/uploader/StravaUploader.kt",

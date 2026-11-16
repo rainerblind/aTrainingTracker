@@ -2223,6 +2223,22 @@
   5. *Third-Party FIT Backward Compatibility Test (`FitLosslessRoundTripTest.kt`)*:
      - Verify parsing standard FIT files lacking developer fields produces null metadata without crashing or throwing exceptions.
 
+### TST-EXP-043: **Garmin FIT Pedal Dynamics Export, Online Aggregation & Lossless Round-Trip Test** [Verified]
+- **Requirement(s)**: `REQ-EXP-043`
+- **Component**: `FitFileWriter.java`, `FitWorkoutParser.kt`, `WorkoutExportHeader.kt`, `WorkoutRepository.kt`, `FitFileWriterTest.kt`, `FitLosslessRoundTripTest.kt`
+- **Jira**: `ATT-8196`
+- **Test Description**:
+  1. *Per-Record Trackpoint Encoding Test (`FitFileWriterTest.kt`)*:
+     - Verify `FitFileWriter` serializes `LeftRightBalance` on `RecordMesg` with `0x80` Right bitmask (`(Math.round(rightPct) & 0x7F) | 0x80`), `leftTorqueEffectiveness`, `rightTorqueEffectiveness`, `leftPedalSmoothness`, `rightPedalSmoothness`, and `combinedPedalSmoothness`.
+  2. *Session & Lap Online Summary Aggregation Test (`FitFileWriterTest.kt`)*:
+     - Verify `LapMesg` and `SessionMesg` serialize `LeftRightBalance100` with `0x8000` Right bitmask (`0.01%` resolution) and write average TE and PS values across recorded samples.
+     - Verify workouts without pedal dynamics omit all balance, TE, and PS fields from `RecordMesg`, `LapMesg`, and `SessionMesg` without writing 0% defaults.
+  3. *Lossless FIT Round-Trip Test (`FitLosslessRoundTripTest.kt`)*:
+     - Verify `FitWorkoutParser` decodes balance, TE, and PS from `RecordMesg` into `bufferedSamples` and registers `SensorType` entries in `foundSensors`, maintaining exact bilateral values without inversion.
+  4. *Clean-Room Regression Suite Execution*:
+     - Verify `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.exporter.*" --tests "com.atrainingtracker.trainingtracker.migration.*"`.
+
+
 
 
 

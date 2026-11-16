@@ -109,4 +109,90 @@ class BANALServiceRepositoryTest {
             content.contains("forceUnbindFromBANALService()")
         )
     }
+
+    // --- TST-TRK-080: Telemetry Rehydration Tests ---
+
+    @Test
+    fun testRehydrationGatingAndStartTypeNeutrality_contract_TST_TRK_080_1() {
+        val file = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/repositories/BANALServiceRepository.kt")
+        val content = file.readText()
+
+        // TST-TRK-080.1: checkAndTriggerRehydration checks tracking mode, empty track, and active workout
+        assertTrue(
+            "checkAndTriggerRehydration must exist",
+            content.contains("fun checkAndTriggerRehydration()")
+        )
+        assertTrue(
+            "checkAndTriggerRehydration must check TRACKING and PAUSED modes",
+            content.contains("mode != TrackingMode.TRACKING && mode != TrackingMode.PAUSED")
+        )
+        assertTrue(
+            "checkAndTriggerRehydration must guard against already populated track",
+            content.contains("_currentTrack.value.isNotEmpty()")
+        )
+        assertTrue(
+            "checkAndTriggerRehydration must offload to Dispatchers.IO",
+            content.contains("repositoryScope.launch(Dispatchers.IO)")
+        )
+        assertTrue(
+            "trackingModeReceiver must trigger rehydration on TRACKING or PAUSED",
+            content.contains("newTrackingMode == TrackingMode.TRACKING || newTrackingMode == TrackingMode.PAUSED") &&
+            content.contains("checkAndTriggerRehydration()")
+        )
+        assertTrue(
+            "clearSparklineBuffers must reset cached rehydration samples",
+            content.contains("cachedRehydrationSamples = null")
+        )
+    }
+
+    @Test
+    fun testRehydrationTelemetry_dataFlowContract_TST_TRK_080_2() {
+        val file = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/repositories/BANALServiceRepository.kt")
+        val content = file.readText()
+
+        // TST-TRK-080.2: rehydrateActiveWorkoutTelemetry fetches samples and updates currentTrack / currentPathPoints
+        assertTrue(
+            "rehydrateActiveWorkoutTelemetry must exist with Dispatchers.IO",
+            content.contains("suspend fun rehydrateActiveWorkoutTelemetry(baseFileName: String) = withContext(Dispatchers.IO)")
+        )
+        assertTrue(
+            "rehydrateActiveWorkoutTelemetry must construct LatLng track",
+            content.contains("LatLng(s.latitude, s.longitude)")
+        )
+        assertTrue(
+            "rehydrateActiveWorkoutTelemetry must construct PathPoint with distance and altitude",
+            content.contains("com.atrainingtracker.trainingtracker.ui.map.PathPoint(") &&
+            content.contains("distance = s.distanceMeters ?: 0.0") &&
+            content.contains("altitude = s.altitude ?: 0.0")
+        )
+        assertTrue(
+            "rehydrateActiveWorkoutTelemetry must use SnapshotChunkedList.from()",
+            content.contains("SnapshotChunkedList.from(historicalTrack + currentLiveTrack)")
+        )
+        assertTrue(
+            "rehydrateActiveWorkoutTelemetry must update path points via SnapshotChunkedList",
+            content.contains("SnapshotChunkedList.from(historicalPathPoints + currentLivePathPoints)")
+        )
+    }
+
+    @Test
+    fun testSparklineRehydrationAndConcurrentMerge_contract_TST_TRK_080_4() {
+        val file = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/repositories/BANALServiceRepository.kt")
+        val content = file.readText()
+
+        // TST-TRK-080.4: backfills sparklineBuffers and synchronizes track updates
+        assertTrue(
+            "rehydrateActiveWorkoutTelemetry must backfill registered buffers",
+            content.contains("reg.buffer.backfillHistoricalSamples(metricValues)")
+        )
+        assertTrue(
+            "registerSparklineBuffer must backfill from cachedRehydrationSamples when newly registered",
+            content.contains("cachedRehydrationSamples?.let") &&
+            content.contains("buffer.backfillHistoricalSamples(metricValues)")
+        )
+        assertTrue(
+            "track mutations must synchronize on trackLock",
+            content.contains("synchronized(trackLock)")
+        )
+    }
 }

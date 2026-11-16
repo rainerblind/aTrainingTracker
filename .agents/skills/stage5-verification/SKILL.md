@@ -39,9 +39,9 @@ Reuse the Epic-scoped (or standalone ticket) persistent `TypeName: "self"` subag
    - **Ceremony 2 (Sprint-End Joint Review)**: Evaluate the integrated sprint build on the real physical phone (`Pixel 10`, `ANDROID_SERIAL=<physical_serial> ./gradlew installDebug`).
 3. **Walkthrough Documentation & Automatic Living Documentation Synchronization (Concise Cap $\le 60\text{--}80$ Lines)**:
    - Author `docs/engineering/walkthroughs/<TICKET_KEY>_walkthrough.md` using `templates/walkthrough_template.md` in a **concise bullet-and-table format (target $\le 60\text{--}80$ lines)**.
-    - Note: `submit-stage <TICKET_KEY> 5` **automatically** flips `Planned` / `Status: Planned (<TICKET_KEY>)` rows and headings across `docs/requirements/`, `docs/tests/`, `docs/requirements.md` and `docs/tests.md` to `Verified`—no manual `replace_file_content` calls are needed just to flip the status column.
+    - Note: `submit-stage <TICKET_KEY> 5` synchronizes living documentation rows and headings across `docs/requirements/`, `docs/tests/`, `docs/requirements.md` and `docs/tests.md`. Status promotion from `Planned` / `Implemented` to `Verified` is conditioned on verified machine-readable test evidence (REQ-PRO-099); unbacked or failing items remain `[Implemented]`.
 4. **Single-Turn Stage Submission (`submit-stage`)**:
-   - Submit Stage 5 walkthrough in a single composite CLI call (auto-flips `Planned` $\rightarrow$ `Verified` in living docs, creates/updates `[Test]` sub-task, and moves it to `In Überprüfung`):
+   - Submit Stage 5 walkthrough in a single composite CLI call (evaluates test evidence, promotes verified items in living docs, creates/updates `[Test]` sub-task, and moves it to `In Überprüfung`):
      ```bash
      python3 tools/jira_util.py --as agent1 submit-stage <TICKET_KEY> 5 @docs/engineering/walkthroughs/<TICKET_KEY>_walkthrough.md
      ```

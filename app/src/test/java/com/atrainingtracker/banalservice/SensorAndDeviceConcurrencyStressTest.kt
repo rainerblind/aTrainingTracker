@@ -293,7 +293,7 @@ class SensorAndDeviceConcurrencyStressTest {
 
         val accumulatorSensor: MyAccumulatorSensor<Int> = MyIntegerAccumulatorSensor(
             deviceA,
-            SensorType.LAP_NR,
+            SensorType.STRIDES,
             false,
             0
         )

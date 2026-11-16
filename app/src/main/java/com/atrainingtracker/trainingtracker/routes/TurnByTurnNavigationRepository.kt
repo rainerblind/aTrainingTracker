@@ -134,7 +134,7 @@ class TurnByTurnNavigationRepository internal constructor(
                     context = context.applicationContext,
                     routesRepository = RoutesRepository.getInstance(context.applicationContext),
                     banalRepository = BANALServiceRepository.getInstance(context.applicationContext),
-                    tuningDataStore = TuningPreferencesDataStore(context.applicationContext),
+                    tuningDataStore = TuningPreferencesDataStore.getInstance(context.applicationContext),
                     audioAlertManager = NavigationAudioAlertManager()
                 ).also { instance = it }
             }

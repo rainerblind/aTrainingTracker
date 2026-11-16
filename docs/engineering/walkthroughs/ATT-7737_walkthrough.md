@@ -1,49 +1,18 @@
-# Stage 5: Walkthrough & Verification - ATT-7737: EditDeviceDialog Radar Tail Light Mode Reverts to Off
+# Walkthrough - ATT-7737: RearVue 820 Tail Light Control & State Reconciliation
 
-**Ticket**: [ATT-7737](https://rainerblind.atlassian.net/browse/ATT-7737)  
-**Parent Epic**: [ATT-1286](https://rainerblind.atlassian.net/browse/ATT-1286) (*Cycling Rearview Radar*)  
-**Target Release**: `V5.0.0` | **Active Sprint**: `Sprint 2026-46.6` | **Branch**: `feat/ATT-7737`  
-**Requirement Mapping**: `REQ-CON-031` (`REQ-CON-031.2`, `REQ-CON-031.5`)  
-**Test Mapping**: `TST-CON-031` (`TST-CON-031.2`, `TST-CON-031.5`)  
-**Author**: AI Agent 1 (Implementer, `subagent_flash`) | **Date**: 2026-11-14  
+Resolved why selecting a radar tail light mode (e.g., Night Flash) in `EditDeviceDialog` failed to control the RearVue 820 physical light and snapped back to `Off`.
 
----
+## 1. Requirements & Acceptance Fulfilled
+- **REQ-CON-031.1 (`6a4e2f11` CCCD Handshake & Indications)**: `BTLERadarDevice.configureServices()` now calls `enableCharacteristicSubscription()` on `6a4e2f11` (`WRITE, INDICATE`) before `6a4e2f14` (`NOTIFY`) and before mid-ride `setLightMode()`. `onOtherCharacteristicUpdate()` decodes `6a4e2f11` indications via `parseControlIndicationMode()` and guards `6a4e2f14` slot notifications against stale `OFF` overwrites while `mPendingLightMode` is active.
+- **REQ-CON-031.2 (Property-Aware Write Type & Error Propagation)**: `BTLERadarDevice.resolveControlWriteType()` and `MyBTLEDevice.WriteCharacteristicOp.execute()` select `WRITE_TYPE_DEFAULT` whenever `PROPERTY_WRITE` is set, reserving `WRITE_TYPE_NO_RESPONSE` strictly for `PROPERTY_WRITE_NO_RESPONSE`-only characteristics (`6a4e3202`). `MyBTLEDevice.onCharacteristicWrite()` propagates status to `BTLERadarDevice.onCharacteristicWriteCompleted()`, initiating `createBond()` on auth/encryption failure and reconciling via `RadarLightController.onHardwareLightModeWriteFailed()`.
+- **REQ-CON-031.5 (`EditDeviceDialog` & StVZO Parity)**: `RadarLightController.setManualLightMode()` aligns StVZO-pruned `targetMode` and `_currentMode.value` with `RadarStateRepository`; `EditDeviceDialog.kt` UI layout is unchanged (`RadarLightControlSection` binds directly to `RadarLightController` flows).
+- **REQ-CON-031.6 (Simulator Parity)**: `tools/ble_radar_simulator.py` (`6a4e2f11`) now exposes `['write', 'indicate']`, enforces `StartNotify()` before accepting writes, and emits `6a4e2f11` indications.
 
-## 1. Executive Summary & Verification Overview
+## 2. Modified Code & Test Scope (Stage 4 SHA `cac2979b70547c772434761cfc40009e3f76883a`)
+- Production: `BTLERadarDevice.java`, `MyBTLEDevice.java`, `RadarLightController.kt`, `tools/ble_radar_simulator.py` (`EditDeviceDialog.kt` layout unchanged -> non-UI ticket, no emulator deploy).
+- Tests: `BTLERadarDeviceTest.kt`, `MyBTLEDeviceQueueTest.kt`, `RadarLightControllerTest.kt`, `tools/test_ble_radar_simulator.py`.
 
-During physical testing on Pixel 10 with Garmin RearVue 820 radar, selecting a tail light mode in `EditDeviceDialog` (e.g. Night Flash) failed to switch the hardware light and subsequently reverted back to `Off`. Forensic analysis revealed that control characteristic `6a4e2f11` requires `WRITE_TYPE_NO_RESPONSE`, whereas Android defaults to `WRITE_TYPE_DEFAULT` (write with response), causing the peripheral to reject the command. After the 1000ms echo guard expired, periodic notifications reporting `0x1F` (Off) reverted `RadarLightController.currentMode`.
-
-ATT-7737 resolves this issue via:
-1. **Control Characteristic Write Type Configuration (`BTLERadarDevice.java`)**: Configures `controlWriteChar.setWriteType(BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE)` upon discovering control service `6a4e2f00` (`REQ-CON-031.2`).
-2. **Command Dispatch Write Type Guarantee (`BTLERadarDevice.java`)**: Guarantees `mRadarControlWriteChar.setWriteType(BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE)` in `setLightMode()` prior to queueing the 4-byte command `06 09 01 TT` (`REQ-CON-031.2`).
-3. **Queue Write Operation Enforcement (`MyBTLEDevice.java`)**: In `WriteCharacteristicOp.execute()`, automatically enforces `WRITE_TYPE_NO_RESPONSE` when the characteristic supports `PROPERTY_WRITE_NO_RESPONSE` and lacks `PROPERTY_WRITE` (`REQ-CON-028.2`, `REQ-CON-031.2`).
-4. **Verification & Testing**: Extended `BTLERadarDeviceTest.kt` and `MyBTLEDeviceQueueTest.kt` verifying write type configuration and command dispatch; verified full `RadarLightControllerTest.kt` suite.
-
----
-
-## 2. Requirement & Test Verification Matrix
-
-| Requirement | Test Spec | Verification Method | Result | Status in Living Docs |
-| :--- | :--- | :--- | :--- | :--- |
-| `REQ-CON-031.2` | `[TST-CON-031.2a]` | Unit Test (`BTLERadarDeviceTest.testConfigureServices_discoversRearVueControlService`) | **PASSED** | `Verified` |
-| `REQ-CON-031.2` | `[TST-CON-031.2b]` | Unit Test (`MyBTLEDeviceQueueTest.testWriteCharacteristicOp_enforcesNoResponseWhenPropertyMatches`) | **PASSED** | `Verified` |
-| `REQ-CON-031.2`, `REQ-CON-031.5` | `[TST-CON-031.2c]` | Unit Test (`BTLERadarDeviceTest.testSetLightMode_rearVueEnforcesWriteTypeNoResponseAndPreventsReversion`) | **PASSED** | `Verified` |
-| `REQ-CON-031.1`–`031.5` | `[TST-CON-031]` | Tier 1 Suite (`RadarLightControllerTest`, `BTLERadarDeviceTest`, `MyBTLEDeviceQueueTest`) | **PASSED** | `Verified` |
-
----
-
-## 3. Automated Test Evidence
-
-### Tier 1 Targeted Regression Scope
-- Command: `python3 tools/parallel_sprint_lock.py --timeout 1800 ./gradlew testDebugUnitTest --tests "com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest" --tests "com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDeviceQueueTest" --tests "com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" --max-workers=2`
-- Result: **All targeted tests passed** (0 failures, 0 errors, 0 skipped under sprint lock).
-- Governance Verification: `python3 tools/verify_requirement_governance.py` $\to$ **PASSED** (100% requirement & test spec parity, 0 violations).
-
----
-
-## 4. Invariant & Governance Verification
-
-1. **Write Characteristic Invariant**: BLE characteristics requiring response (HRM, Speed/Cadence control points) continue using default write type without side effects.
-2. **StVZO Compliance**: Steady-only mode enforcement for StVZO models (`010-03180-10`, `RTL516`) remains strictly intact.
-3. **UI Decoupling**: Zero changes to `EditDeviceDialog.kt` layout or Compose hierarchy.
-4. **Target Release Governance**: Aligned to active unreleased release `V5.0.0` (Core Rule 8).
+## 3. Verification Results (Tier 1)
+- **TST-CON-031 (`tools/test_ble_radar_simulator.py`)**: **PASS** (`python3 -m unittest tools/test_ble_radar_simulator.py` -> **8/8 passed**, verified on Stage 4 SHA and re-run in Stage 5).
+- **TST-CON-031 (`./gradlew :app:testDebugUnitTest --tests BTLERadarDeviceTest --tests MyBTLEDeviceQueueTest --tests RadarLightControllerTest`)**: **PASS** (Stage 4 clean-room run on unchanged Kotlin/Java code SHA `cac2979b`: **98/98 passed** — `BTLERadarDeviceTest` **55/55**, `MyBTLEDeviceQueueTest` **8/8**, `RadarLightControllerTest` **35/35**, 0 failed, 0 skipped; no redundant Gradle re-run per `Rule 7.5`).
+- **Governance & Living Docs (`REQ-CON-031`, `TST-CON-031`)**: Promoted `[Implemented]` -> `[Verified]` with `--sync-indexes` and verified via `verify_requirement_governance.py`.

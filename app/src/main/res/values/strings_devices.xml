@@ -213,4 +213,9 @@
     <string name="polar_verity_retry_syncing">Syncing Polar Verity Sense…</string>
     <string name="polar_verity_retry_sync_failed">Could not connect to Polar Verity Sense. Turn it on in Blue Sensor Mode and try again.</string>
 
+    <!-- Polar Verity Sense Swim Mode & SYSTEM_BUSY Guidance (ATT-8000, REQ-SET-110) -->
+    <string name="polar_verity_swim_busy_title">Polar Verity Sense in Swim Mode</string>
+    <string name="polar_verity_swim_busy_desc">Please press the button on your Polar Verity Sense to exit Swim Mode (return to blue LED) and tap Sync Now.</string>
+    <string name="polar_verity_swim_syncing">Syncing Swim Mode data…</string>
+
 </resources>
