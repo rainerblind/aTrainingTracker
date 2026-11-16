@@ -56,14 +56,19 @@ data class SmoothedOdometryPoint(
  */
 data class RawOdometrySample(
     val timestampMs: Long,
-    val latitude: Double,
-    val longitude: Double,
+    val latitude: Double? = null,
+    val longitude: Double? = null,
     val speedMps: Double? = null,
     val bearingDeg: Double? = null,
     val accuracyMeters: Double? = null,
     val worldYawRateRadPerSec: Double? = null,
     val wheelSpeedMps: Double? = null
-)
+) {
+    /**
+     * Checks whether this sample contains a physically valid, non-Null-Island GNSS position fix (REQ-FIL-019.1).
+     */
+    fun hasValidGnssFix(): Boolean = ExtendedRtsOdometrySmoother.hasValidGnssFix(latitude, longitude)
+}
 
 /**
  * Post-workout Extended Rauch-Tung-Striebel (ERTS/RTS) backward smoother for 5-state unicycle odometry
@@ -77,6 +82,20 @@ object ExtendedRtsOdometrySmoother {
 
     const val STATE_DIM = 5
     const val EARTH_RADIUS_METERS = 6371000.0
+
+    /**
+     * Checks whether the given coordinates represent a physically valid GNSS fix (REQ-FIL-019.2).
+     *
+     * Returns false if coordinates are null, NaN, out of geographic bounds ([-90, 90], [-180, 180]),
+     * or at Null Island (0.0, 0.0) in the Gulf of Guinea.
+     */
+    fun hasValidGnssFix(lat: Double?, lon: Double?): Boolean {
+        if (lat == null || lon == null) return false
+        if (lat.isNaN() || lon.isNaN()) return false
+        val inBounds = lat in -90.0..90.0 && lon in -180.0..180.0
+        val notNullIsland = abs(lat) > 1e-6 || abs(lon) > 1e-6
+        return inBounds && notNullIsland
+    }
 
     /**
      * Runs backward RTS recursion on a recorded list of forward [OdometrySnapshot] points.
@@ -225,10 +244,14 @@ object ExtendedRtsOdometrySmoother {
         samples: List<RawOdometrySample>,
         initialHeadingRad: Double = PI / 2.0
     ): List<SmoothedOdometryPoint> {
-        if (samples.isEmpty()) return emptyList()
+        // REQ-FIL-019.2: Select tangent-plane reference origin strictly from the first valid GNSS sample
+        val firstValidFix = samples.firstOrNull { it.hasValidGnssFix() }
+        if (firstValidFix == null) {
+            return emptyList()
+        }
 
-        val refLat = samples.first().latitude
-        val refLon = samples.first().longitude
+        val refLat = firstValidFix.latitude!!
+        val refLon = firstValidFix.longitude!!
 
         // Initialize forward EKF
         val ekf = UnicycleOdometryEkf(
@@ -263,14 +286,17 @@ object ExtendedRtsOdometrySmoother {
             val priorCov = ekf.getCovarianceCopy()
             val transJac = ekf.getTransitionJacobianCopy()
 
-            // 2. Ingest measurements
-            val (eastM, northM) = latLngToEnu(sample.latitude, sample.longitude, refLat, refLon)
-            val acc = sample.accuracyMeters ?: 10.0
-            ekf.updateGnssPosition(eastM, northM, acc, sample.timestampMs)
+            // 2. Ingest measurements (REQ-FIL-019.2: strictly gate GNSS position update on valid fix)
+            if (sample.hasValidGnssFix()) {
+                val (eastM, northM) = latLngToEnu(sample.latitude!!, sample.longitude!!, refLat, refLon)
+                val acc = sample.accuracyMeters ?: 10.0
+                ekf.updateGnssPosition(eastM, northM, acc, sample.timestampMs)
+            }
 
             sample.wheelSpeedMps?.let { ws ->
                 ekf.updateSpeed(ws, 0.5, sample.timestampMs)
             } ?: sample.speedMps?.let { s ->
+                val acc = sample.accuracyMeters ?: 10.0
                 val sVar = max(0.5, (acc * 0.25) * (acc * 0.25))
                 ekf.updateSpeed(s, sVar, sample.timestampMs)
             }

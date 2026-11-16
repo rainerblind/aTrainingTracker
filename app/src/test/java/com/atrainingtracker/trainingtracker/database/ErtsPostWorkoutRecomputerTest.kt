@@ -211,4 +211,176 @@ class ErtsPostWorkoutRecomputerTest {
             assertTrue("Total distance > 0", totalDist > 0.0)
         }
     }
+
+    // TST-FIL-019.3: Leading/trailing NULL preservation & map polyline exclusion test
+    @Test
+    fun testLeadingNullCoordinatesPreservedInDbAndExcludedFromPolyline() = runBlocking {
+        val baseFileName = "2026-11-16_060310"
+        val workoutId = createWorkout(baseFileName)
+
+        val samplesDb = samplesDbManager.database
+        val tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
+
+        val canonicalTypes = listOf(
+            SensorType.LATITUDE,
+            SensorType.LONGITUDE,
+            SensorType.SPEED_mps,
+            SensorType.PACE_spm,
+            SensorType.DISTANCE_m,
+            SensorType.BEARING,
+            SensorType.ALTITUDE,
+            SensorType.SLOPE,
+            SensorType.VERTICAL_SPEED,
+            SensorType.ASCENT,
+            SensorType.DESCENT
+        )
+        samplesDbManager.createNewTable(baseFileName, canonicalTypes)
+
+        val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).apply {
+            timeZone = TimeZone.getTimeZone("UTC")
+        }
+        val startTs = 1_700_000_100_000L
+
+        // 30 rows: first 5 have NULL GPS coordinates, next 25 have valid fixes at Schönaich
+        samplesDb.beginTransaction()
+        try {
+            for (sec in 0 until 30) {
+                val cv = ContentValues().apply {
+                    put("time", sdf.format(Date(startTs + sec * 1000L)))
+                    if (sec < 5) {
+                        putNull(SensorType.LATITUDE.name)
+                        putNull(SensorType.LONGITUDE.name)
+                        putNull(SensorType.BEARING.name)
+                        put(SensorType.SPEED_mps.name, 0.0)
+                    } else {
+                        put(SensorType.LATITUDE.name, 48.6567 + (sec - 5) * 0.0001)
+                        put(SensorType.LONGITUDE.name, 9.0545 + (sec - 5) * 0.0001)
+                        put(SensorType.BEARING.name, 90.0)
+                        put(SensorType.SPEED_mps.name, 5.0)
+                    }
+                    put(SensorType.DISTANCE_m.name, if (sec < 5) 0.0 else (sec - 5) * 5.0)
+                    put(SensorType.ALTITUDE.name, 500.0)
+                    put(SensorType.SLOPE.name, 0.0)
+                    put(SensorType.VERTICAL_SPEED.name, 0.0)
+                    put(SensorType.ASCENT.name, 0.0)
+                    put(SensorType.DESCENT.name, 0.0)
+                }
+                samplesDb.insert(tableName, null, cv)
+            }
+            samplesDb.setTransactionSuccessful()
+        } finally {
+            samplesDb.endTransaction()
+        }
+
+        val success = ErtsPostWorkoutRecomputer.recomputeWorkout(context, workoutId)
+        assertTrue("Recomputation should succeed", success)
+
+        // Verify WorkoutSamples.db: rows 0..4 MUST preserve SQLite NULL coordinates!
+        samplesDb.query(tableName, null, null, null, null, null, "_id ASC").use { cursor ->
+            val latIdx = cursor.getColumnIndexOrThrow(SensorType.LATITUDE.name)
+            val lonIdx = cursor.getColumnIndexOrThrow(SensorType.LONGITUDE.name)
+
+            var rowIdx = 0
+            while (cursor.moveToNext()) {
+                if (rowIdx < 5) {
+                    assertTrue("Row $rowIdx LATITUDE must be NULL in SQLite", cursor.isNull(latIdx))
+                    assertTrue("Row $rowIdx LONGITUDE must be NULL in SQLite", cursor.isNull(lonIdx))
+                } else {
+                    assertTrue("Row $rowIdx LATITUDE must not be null", !cursor.isNull(latIdx))
+                    assertTrue("Row $rowIdx LONGITUDE must not be null", !cursor.isNull(lonIdx))
+                    val lat = cursor.getDouble(latIdx)
+                    val lon = cursor.getDouble(lonIdx)
+                    assertTrue("Latitude must be near Schönaich (was $lat)", kotlin.math.abs(lat - 48.6567) < 0.01)
+                    assertTrue("Longitude must be near Schönaich (was $lon)", kotlin.math.abs(lon - 9.0545) < 0.01)
+                }
+                rowIdx++
+            }
+            assertEquals(30, rowIdx)
+        }
+
+        // Verify WorkoutSummaries.db: polyline must exclude the 5 leading no-fix rows (size == 25)
+        summariesDbManager.database.query(
+            WorkoutSummaries.TABLE,
+            null,
+            "${WorkoutSummaries.C_ID} = ?",
+            arrayOf(workoutId.toString()),
+            null,
+            null,
+            null
+        ).use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            val polyline = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.MAP_POLYLINE))
+            assertNotNull("Polyline must exist", polyline)
+            val decodedPoints = PolyUtil.decode(polyline)
+            assertEquals(
+                "Polyline must contain exactly 25 valid fix points (5 no-fix rows excluded)",
+                25,
+                decodedPoints.size
+            )
+            for (pt in decodedPoints) {
+                assertTrue(
+                    "Polyline point must not be near Null Island (was ${pt.latitude}, ${pt.longitude})",
+                    pt.latitude > 40.0
+                )
+            }
+        }
+    }
+
+    // TST-FIL-019.4: Output sanity guard anomaly abort test
+    @Test
+    fun testOutputSanityGuardAbortsCorruptedOutputAndPreservesLiveData() {
+        val corruptedOdom = listOf(
+            com.atrainingtracker.banalservice.odometry.SmoothedOdometryPoint(
+                timestampMs = 1000L,
+                eastMeters = 0.0,
+                northMeters = 0.0,
+                speedMps = 720_735.0, // Non-physical speed shock!
+                headingRad = 0.0,
+                gyroBiasRadPerSec = 0.0,
+                latitude = 48.0,
+                longitude = 11.0,
+                bearingDeg = 0.0,
+                deltaDistanceMeters = 720_735.0
+            )
+        )
+
+        val isSane = ErtsPostWorkoutRecomputer.isSmoothedOutputSane(emptyList(), corruptedOdom, null)
+        org.junit.Assert.assertFalse("Sanity guard must reject speed > 100 m/s", isSane)
+
+        // Non-finite value check
+        val nanOdom = listOf(
+            com.atrainingtracker.banalservice.odometry.SmoothedOdometryPoint(
+                timestampMs = 1000L,
+                eastMeters = 0.0,
+                northMeters = 0.0,
+                speedMps = Double.NaN,
+                headingRad = 0.0,
+                gyroBiasRadPerSec = 0.0,
+                latitude = 48.0,
+                longitude = 11.0,
+                bearingDeg = 0.0,
+                deltaDistanceMeters = 10.0
+            )
+        )
+        val isNanSane = ErtsPostWorkoutRecomputer.isSmoothedOutputSane(emptyList(), nanOdom, null)
+        org.junit.Assert.assertFalse("Sanity guard must reject NaN values", isNanSane)
+
+        // Distance > 1,000 km check
+        val hugeDistOdom = listOf(
+            com.atrainingtracker.banalservice.odometry.SmoothedOdometryPoint(
+                timestampMs = 1000L,
+                eastMeters = 0.0,
+                northMeters = 0.0,
+                speedMps = 20.0,
+                headingRad = 0.0,
+                gyroBiasRadPerSec = 0.0,
+                latitude = 48.0,
+                longitude = 11.0,
+                bearingDeg = 0.0,
+                deltaDistanceMeters = 1_500_000.0 // 1,500 km
+            )
+        )
+        val isHugeDistSane = ErtsPostWorkoutRecomputer.isSmoothedOutputSane(emptyList(), hugeDistOdom, null)
+        org.junit.Assert.assertFalse("Sanity guard must reject distance > 1,000 km", isHugeDistSane)
+    }
 }

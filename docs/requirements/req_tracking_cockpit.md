@@ -3,7 +3,7 @@
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Requirements**: 152
+**Total Requirements**: 153
 
 ---
 
@@ -5869,6 +5869,51 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 • *Then* `altStats.getAverage()` remains around `445 m + meanCorrection` (never divided by ~20).
 
 **Invariants**: Non-barometric columns 100% immutable; pre-crash calibrated rows untouched on `RESUME_SERVICE_RECREATION`; 1-Hz `altStats.count` and `sum` dimensionally consistent; passive DB `onOpen()`; 100% clean-room test pass rate.
+
+### REQ-FIL-019: Post-Workout ERTS Smoother GNSS Fix Gating, Origin Anchoring & Output Sanity Guard [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-FIL-019`
+- **System Requirement(s)**: `SYSREQ-TRK-003`, `SYSREQ-TRK-004`
+- **Priority**: Critical
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `ErtsPostWorkoutRecomputer.kt`, `ExtendedRtsOdometrySmoother.kt`, `WorkoutSamplesDatabaseManager.java`, `WorkoutSummariesDatabaseManager.java`
+- **Rationale**: Prevent leading SQLite `NULL` coordinates from coercing to `0.0` ("Null Island" in Gulf of Guinea), anchoring the ENU reference origin to `(0.0, 0.0)`, and triggering catastrophic velocity shocks (~477 km/s) during post-workout Extended Rauch-Tung-Striebel (ERTS) smoothing that corrupt `WorkoutSamples.db`, `WorkoutSummaries.db` (10,196 km total distance), exports, period statistics, and route clusters (`ATT-8337`, extending `REQ-FIL-017`).
+- **Description**:
+  1. *Preservation of Nullable GNSS Coordinates (`REQ-FIL-019.1`)*:
+     - `RawOdometrySample` SHALL support nullable `latitude: Double?` and `longitude: Double?` (defaulting to `null`).
+     - `ErtsPostWorkoutRecomputer` SHALL preserve SQLite `NULL` coordinates when constructing `RawOdometrySample` objects and SHALL NEVER coerce `null` coordinates to `0.0`.
+     - In `WorkoutSamplesDatabaseManager`, queries retrieving coordinates for post-workout smoothing or spatial calculations SHALL guard column reads with `cursor.isNull(idx)`.
+  2. *First Valid GNSS Fix Reference Origin & Gated Measurement Ingestion (`REQ-FIL-019.2`)*:
+     - `ExtendedRtsOdometrySmoother.smoothSamples()` SHALL select local tangent-plane reference coordinates `refLat` and `refLon` strictly from the **first valid GNSS sample** (`latitude != null && longitude != null && !latitude.isNaN() && !longitude.isNaN() && (abs(latitude) > 1e-6 || abs(longitude) > 1e-6)`).
+     - If no sample in the workout contains a valid GNSS fix, `smoothSamples()` SHALL bypass odometry smoothing and return an empty list (preserving raw live coordinates).
+     - In the forward EKF replay loop, `ekf.updateGnssPosition()` SHALL ONLY be invoked for samples with a valid GNSS fix; samples lacking a valid GNSS fix SHALL execute EKF prediction and wheel-speed / yaw-rate updates only without pulling the state toward `(0.0, 0.0)`.
+  3. *Pre-Fix / Missing-Fix Column Integrity & Polyline Exclusion (`REQ-FIL-019.3`)*:
+     - Leading and trailing workout rows lacking a valid GNSS fix SHALL NOT be populated with backward-smoothed coordinates or Null Island coordinates in `WorkoutSamples.db` (preserving SQLite `NULL` values).
+     - `ErtsPostWorkoutRecomputer.updateWorkoutSummaries()` SHALL exclude samples lacking a valid GNSS fix (`(0.0, 0.0)` or `null`) from `mapPolyline` generation (`PolyUtil.encode`), start/end location extrema in `WorkoutSummaries.db`, and bounds calculation.
+  4. *Post-Workout ERTS Output Sanity Guard (`REQ-FIL-019.4`)*:
+     - Before committing smoothed odometry or altitude streams to `WorkoutSamples.db` or `WorkoutSummaries.db`, `ErtsPostWorkoutRecomputer` SHALL execute a sanity validation on the smoothed results.
+     - The sanity guard MUST verify that smoothed total distance does not exceed raw distance by an impossible factor (e.g. $|\text{smoothed} - \text{raw}| > 3\times$ or total distance $> 1,000\text{ km}$), maximum smoothed speed is physically plausible ($< 100\text{ m/s}$ for cycling/running), and coordinates are finite within geographic bounds ($\text{lat} \in [-90, 90], \text{lon} \in [-180, 180]$).
+     - If the sanity check fails, the transaction SHALL be aborted, original live tracking data in SQLite preserved, and an error logged.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new `REQ-FIL-019` extending `REQ-FIL-017` (*Post-Workout ERTS Zero-Phase Smoothing Engine*). Targets `ErtsPostWorkoutRecomputer.kt`, `ExtendedRtsOdometrySmoother.kt`, and `WorkoutSamplesDatabaseManager.java`.
+2. *Historical Origin & Commit Trace*: `ATT-7750` (`d56b001a`) introduced `ExtendedRtsOdometrySmoother` assuming continuous GNSS fix availability and anchored `refLat`/`refLon` to `samples.first()`.
+3. *Root Reason for Existing Formulation*: Workout initialization with indoor cold-starts or delayed GPS lock was not covered in the original unit test fixtures, which always passed complete synthetic circular/straight tracks starting with valid coordinates.
+4. *Preservation of Core Invariants*: Preserves 5-state unicycle model $[E, N, v, \psi, b_{\omega_z}]^T$, backward RTS recursion equations, zero-phase error elimination on valid GNSS segments, device column isolation (`ALLOWED_CANONICAL_COLUMNS`), and opt-in Expert Settings gating (`KEY_POST_WORKOUT_ERTS_SMOOTHING`).
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a workout where the first $N$ samples ($N \ge 1$) have `LATITUDE = NULL, LONGITUDE = NULL` prior to the first valid GNSS fix,
+• *When* `ErtsPostWorkoutRecomputer.recomputeWorkout()` / `ExtendedRtsOdometrySmoother.smoothSamples()` executes,
+• *Then* `refLat`/`refLon` is anchored to the first valid GNSS fix, no `updateGnssPosition(0.0, 0.0)` is invoked, leading no-fix rows remain `NULL` in `WorkoutSamples.db`, and smoothed distance matches true ground track.
+• *Given* a workout with mid-ride GNSS gaps (e.g. tunnel or forest canopy dropout),
+• *When* `ExtendedRtsOdometrySmoother.smoothSamples()` executes,
+• *Then* gap samples execute EKF prediction and wheel/yaw updates without pulling toward `(0.0, 0.0)` and backward RTS smoothly bridges the gap.
+• *Given* smoothed odometry producing non-finite coordinates, impossible speeds ($> 100\text{ m/s}$), or total distance $> 1,000\text{ km}$,
+• *When* `ErtsPostWorkoutRecomputer` validates the result,
+• *Then* the SQLite update is aborted, original live data is preserved, and an error is logged.
+
+**Invariants**: Zero Null Island $(0.0, 0.0)$ coordinates persisted to `WorkoutSamples.db` or encoded into `mapPolyline`; device-attributed columns 100% untouched; raw live data preserved if smoothing diverges; 100% test pass rate.
 
 ### REQ-TRK-078: Mid-Workout Crash Recovery Accumulator Preservation and Baseline Seeding [Verified]
 - **Target Release**: `V5.0.0`

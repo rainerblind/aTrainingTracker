@@ -75,6 +75,13 @@ object ErtsPostWorkoutRecomputer {
         SensorType.DESCENT.name
     )
 
+    const val MAX_PLAUSIBLE_SPEED_MPS = 100.0 // 360 km/h
+    const val MAX_PLAUSIBLE_WORKOUT_DISTANCE_M = 1_000_000.0 // 1,000 km
+    const val MAX_DISTANCE_DIVERGENCE_FACTOR = 3.0
+    const val MIN_PLAUSIBLE_ALTITUDE_M = -1000.0
+    const val MAX_PLAUSIBLE_ALTITUDE_M = 9000.0
+    const val MAX_PLAUSIBLE_ASCENT_M = 20_000.0
+
     @JvmStatic
     fun recomputeWorkoutBlocking(context: Context, workoutId: Long): Boolean {
         return runBlocking(Dispatchers.IO) {
@@ -105,10 +112,11 @@ object ErtsPostWorkoutRecomputer {
                 return@withContext false
             }
 
-            // 1. Run 5-State Odometry ERTS Backward Smoother if GPS data present
-            val hasGpsData = rawRows.any { it.latitude != null && it.longitude != null && (it.latitude != 0.0 || it.longitude != 0.0) }
+            // 1. Run 5-State Odometry ERTS Backward Smoother if valid GPS data present
+            val hasGpsData = rawRows.any { ExtendedRtsOdometrySmoother.hasValidGnssFix(it.latitude, it.longitude) }
             val smoothedOdometry = if (hasGpsData) {
-                runOdometrySmoothing(rawRows)
+                val odom = runOdometrySmoothing(rawRows)
+                if (odom.isNotEmpty()) odom else null
             } else {
                 null
             }
@@ -123,6 +131,15 @@ object ErtsPostWorkoutRecomputer {
 
             if (smoothedOdometry == null && smoothedAltitude == null) {
                 Log.i(TAG, "Neither GPS nor Altitude data present to smooth for workout $workoutId")
+                return@withContext false
+            }
+
+            // REQ-FIL-019.4: Output Sanity Guard before modifying SQLite
+            if (!isSmoothedOutputSane(rawRows, smoothedOdometry, smoothedAltitude)) {
+                Log.e(
+                    TAG,
+                    "ERTS smoothed output failed sanity check for workout $workoutId; aborting recomputation and preserving live data"
+                )
                 return@withContext false
             }
 
@@ -217,8 +234,8 @@ object ErtsPostWorkoutRecomputer {
         val rawSamples = rawRows.map { row ->
             RawOdometrySample(
                 timestampMs = row.timestampMs,
-                latitude = row.latitude ?: 0.0,
-                longitude = row.longitude ?: 0.0,
+                latitude = row.latitude,
+                longitude = row.longitude,
                 speedMps = row.speedMps,
                 bearingDeg = row.bearingDeg,
                 accuracyMeters = row.accuracyM,
@@ -304,7 +321,7 @@ object ErtsPostWorkoutRecomputer {
 
                 var bindIdx = 1
                 for (col in colsToUpdate) {
-                    bindColumnValue(stmt, bindIdx++, col, odom, alt, cumulativeDist)
+                    bindColumnValue(stmt, bindIdx++, col, odom, alt, cumulativeDist, row)
                 }
                 stmt.bindLong(bindIdx, row.rowId)
                 stmt.executeUpdateDelete()
@@ -322,14 +339,17 @@ object ErtsPostWorkoutRecomputer {
         columnName: String,
         odom: SmoothedOdometryPoint?,
         alt: SmoothedAltitudeSlopePoint?,
-        cumulativeDist: Double
+        cumulativeDist: Double,
+        row: RawSampleRow
     ) {
+        val hasRawFix = ExtendedRtsOdometrySmoother.hasValidGnssFix(row.latitude, row.longitude)
         when (columnName) {
             SensorType.LATITUDE.name -> {
-                if (odom != null) stmt.bindDouble(bindIdx, odom.latitude) else stmt.bindNull(bindIdx)
+                // REQ-FIL-019.3: Pre-fix / missing-fix rows preserve SQLite NULL; never populate (0.0, 0.0)
+                if (odom != null && hasRawFix) stmt.bindDouble(bindIdx, odom.latitude) else stmt.bindNull(bindIdx)
             }
             SensorType.LONGITUDE.name -> {
-                if (odom != null) stmt.bindDouble(bindIdx, odom.longitude) else stmt.bindNull(bindIdx)
+                if (odom != null && hasRawFix) stmt.bindDouble(bindIdx, odom.longitude) else stmt.bindNull(bindIdx)
             }
             SensorType.SPEED_mps.name -> {
                 if (odom != null) stmt.bindDouble(bindIdx, odom.speedMps) else stmt.bindNull(bindIdx)
@@ -345,7 +365,7 @@ object ErtsPostWorkoutRecomputer {
                 stmt.bindDouble(bindIdx, cumulativeDist)
             }
             SensorType.BEARING.name -> {
-                if (odom != null) stmt.bindDouble(bindIdx, odom.bearingDeg) else stmt.bindNull(bindIdx)
+                if (odom != null && hasRawFix) stmt.bindDouble(bindIdx, odom.bearingDeg) else stmt.bindNull(bindIdx)
             }
             SensorType.ALTITUDE.name -> {
                 if (alt != null) stmt.bindDouble(bindIdx, alt.altitudeM) else stmt.bindNull(bindIdx)
@@ -384,8 +404,17 @@ object ErtsPostWorkoutRecomputer {
         var totalDistance = 0.0
 
         if (smoothedOdometry != null && smoothedOdometry.isNotEmpty()) {
-            val latLngs = smoothedOdometry.map { LatLng(it.latitude, it.longitude) }
-            polyline = PolyUtil.encode(latLngs)
+            // REQ-FIL-019.3: Exclude invalid/Null-Island coordinates from mapPolyline
+            val validLatLngs = rawRows.indices.mapNotNull { i ->
+                val row = rawRows[i]
+                val odom = smoothedOdometry.getOrNull(i)
+                if (odom != null && ExtendedRtsOdometrySmoother.hasValidGnssFix(row.latitude, row.longitude)) {
+                    LatLng(odom.latitude, odom.longitude)
+                } else null
+            }
+            if (validLatLngs.isNotEmpty()) {
+                polyline = PolyUtil.encode(validLatLngs)
+            }
 
             var cumDist = 0.0
             val distances = smoothedOdometry.map { pt ->
@@ -428,13 +457,14 @@ object ErtsPostWorkoutRecomputer {
         }
 
         // Update extrema values
-        updateExtrema(summariesDbManager, summariesDb, workoutId, smoothedOdometry, smoothedAltitude)
+        updateExtrema(summariesDbManager, summariesDb, workoutId, rawRows, smoothedOdometry, smoothedAltitude)
     }
 
     private fun updateExtrema(
         summariesManager: WorkoutSummariesDatabaseManager,
         summariesDb: SQLiteDatabase,
         workoutId: Long,
+        rawRows: List<RawSampleRow>,
         smoothedOdometry: List<SmoothedOdometryPoint>?,
         smoothedAltitude: List<SmoothedAltitudeSlopePoint>?
     ) {
@@ -448,14 +478,20 @@ object ErtsPostWorkoutRecomputer {
                 summariesManager.updateExtremaValue(summariesDb, workoutId, SensorType.SPEED_mps, ExtremaType.MAX, maxSpeed, null)
                 summariesManager.updateExtremaValue(summariesDb, workoutId, SensorType.SPEED_mps, ExtremaType.AVG, avgSpeed, null)
 
-                val startPt = smoothedOdometry.first()
-                val endPt = smoothedOdometry.last()
-                val startPos = LatLng(startPt.latitude, startPt.longitude)
-                val endPos = LatLng(endPt.latitude, endPt.longitude)
-                summariesManager.updateExtremaValue(summariesDb, workoutId, SensorType.LATITUDE, ExtremaType.START, startPos.latitude, startPos)
-                summariesManager.updateExtremaValue(summariesDb, workoutId, SensorType.LONGITUDE, ExtremaType.START, startPos.longitude, startPos)
-                summariesManager.updateExtremaValue(summariesDb, workoutId, SensorType.LATITUDE, ExtremaType.END, endPos.latitude, endPos)
-                summariesManager.updateExtremaValue(summariesDb, workoutId, SensorType.LONGITUDE, ExtremaType.END, endPos.longitude, endPos)
+                // REQ-FIL-019.3: Exclude Null Island / no-fix rows from START and END position extrema
+                val validIndices = rawRows.indices.filter { i ->
+                    ExtendedRtsOdometrySmoother.hasValidGnssFix(rawRows[i].latitude, rawRows[i].longitude)
+                }
+                if (validIndices.isNotEmpty()) {
+                    val startPt = smoothedOdometry[validIndices.first()]
+                    val endPt = smoothedOdometry[validIndices.last()]
+                    val startPos = LatLng(startPt.latitude, startPt.longitude)
+                    val endPos = LatLng(endPt.latitude, endPt.longitude)
+                    summariesManager.updateExtremaValue(summariesDb, workoutId, SensorType.LATITUDE, ExtremaType.START, startPos.latitude, startPos)
+                    summariesManager.updateExtremaValue(summariesDb, workoutId, SensorType.LONGITUDE, ExtremaType.START, startPos.longitude, startPos)
+                    summariesManager.updateExtremaValue(summariesDb, workoutId, SensorType.LATITUDE, ExtremaType.END, endPos.latitude, endPos)
+                    summariesManager.updateExtremaValue(summariesDb, workoutId, SensorType.LONGITUDE, ExtremaType.END, endPos.longitude, endPos)
+                }
             }
 
             if (smoothedAltitude != null && smoothedAltitude.isNotEmpty()) {
@@ -481,6 +517,94 @@ object ErtsPostWorkoutRecomputer {
         }
     }
 
+    /**
+     * Enforces the post-workout ERTS output sanity guard (REQ-FIL-019.4).
+     *
+     * Verifies that smoothed odometry and altitude results are finite, plausible, and do not
+     * exhibit non-physical divergence before committing to SQLite.
+     */
+    internal fun isSmoothedOutputSane(
+        rawRows: List<RawSampleRow>,
+        smoothedOdometry: List<SmoothedOdometryPoint>?,
+        smoothedAltitude: List<SmoothedAltitudeSlopePoint>?
+    ): Boolean {
+        if (smoothedOdometry != null && !isOdometrySane(rawRows, smoothedOdometry)) {
+            return false
+        }
+        if (smoothedAltitude != null && !isAltitudeSane(smoothedAltitude)) {
+            return false
+        }
+        return true
+    }
+
+    private fun isNonFinite(vararg values: Double): Boolean = values.any { it.isNaN() || it.isInfinite() }
+
+    private fun isOdometrySane(rawRows: List<RawSampleRow>, smoothedOdometry: List<SmoothedOdometryPoint>): Boolean {
+        var cumulativeDist = 0.0
+        for (pt in smoothedOdometry) {
+            if (isNonFinite(pt.speedMps, pt.latitude, pt.longitude, pt.deltaDistanceMeters)) {
+                Log.w(TAG, "Sanity check failed: Non-finite value in smoothed odometry point")
+                return false
+            }
+
+            if (pt.speedMps > MAX_PLAUSIBLE_SPEED_MPS || pt.speedMps < 0.0) {
+                Log.w(TAG, "Sanity check failed: Non-physical smoothed speed: ${pt.speedMps} m/s")
+                return false
+            }
+
+            val inBounds = pt.latitude in -90.0..90.0 && pt.longitude in -180.0..180.0
+            if (!inBounds) {
+                Log.w(TAG, "Sanity check failed: Smoothed coordinates out of bounds: (${pt.latitude}, ${pt.longitude})")
+                return false
+            }
+
+            cumulativeDist += pt.deltaDistanceMeters
+        }
+
+        if (cumulativeDist > MAX_PLAUSIBLE_WORKOUT_DISTANCE_M) {
+            Log.w(TAG, "Sanity check failed: Total smoothed distance exceeds 1,000 km: $cumulativeDist m")
+            return false
+        }
+
+        val rawSpeeds = rawRows.mapNotNull { it.speedMps }
+        if (rawSpeeds.isNotEmpty()) {
+            val rawAvgSpeed = rawSpeeds.average()
+            val durationSec = (rawRows.last().timestampMs - rawRows.first().timestampMs) / 1000.0
+            if (durationSec > 0.0 && rawAvgSpeed > 0.5) {
+                val approxRawDist = rawAvgSpeed * durationSec
+                if (approxRawDist > 1000.0 && cumulativeDist > approxRawDist * MAX_DISTANCE_DIVERGENCE_FACTOR) {
+                    Log.w(
+                        TAG,
+                        "Sanity check failed: Smoothed distance ($cumulativeDist m) diverges > 3x from raw estimate"
+                    )
+                    return false
+                }
+            }
+        }
+        return true
+    }
+
+    private fun isAltitudeSane(smoothedAltitude: List<SmoothedAltitudeSlopePoint>): Boolean {
+        for (alt in smoothedAltitude) {
+            if (isNonFinite(alt.altitudeM, alt.slopePercent, alt.verticalSpeedMps, alt.ascentM, alt.descentM)) {
+                Log.w(TAG, "Sanity check failed: Non-finite value in smoothed altitude point")
+                return false
+            }
+
+            val altInBounds = alt.altitudeM in MIN_PLAUSIBLE_ALTITUDE_M..MAX_PLAUSIBLE_ALTITUDE_M
+            if (!altInBounds) {
+                Log.w(TAG, "Sanity check failed: Smoothed altitude out of physical bounds: ${alt.altitudeM} m")
+                return false
+            }
+
+            if (alt.ascentM > MAX_PLAUSIBLE_ASCENT_M || alt.descentM > MAX_PLAUSIBLE_ASCENT_M) {
+                Log.w(TAG, "Sanity check failed: Smoothed ascent/descent exceeds 20,000 m")
+                return false
+            }
+        }
+        return true
+    }
+
     private fun parseTimestampMs(timeStr: String?): Long? {
         if (timeStr.isNullOrBlank()) return null
         val formats = listOf(
@@ -502,7 +626,7 @@ object ErtsPostWorkoutRecomputer {
         return null
     }
 
-    private data class RawSampleRow(
+    internal data class RawSampleRow(
         val rowId: Long,
         val timestampMs: Long,
         val latitude: Double?,
