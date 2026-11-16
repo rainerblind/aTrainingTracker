@@ -869,8 +869,9 @@ class TestJiraCliTooling(unittest.TestCase):
                 content = f.read()
             self.assertIn("NON-COMPLIANT", content)
             self.assertIn("Corrective Action Ticket:", content)
-            self.assertIn("[ATT-9001]", content)
-            self.assertIn("[ATT-9003]", content)
+            self.assertIn("**ATT-9001**:", content)
+            self.assertIn("**ATT-9003**:", content)
+            self.assertIn("[ATT-CA-", content)
 
     @patch("jira_util.jira_request")
     def test_qa_audit_enforces_independent_role(self, mock_request):
@@ -2277,6 +2278,81 @@ Verdict: PASS."""
             self.assertIn("`42`", report_content)
             for k in keys1:
                 self.assertIn(k, report_content)
+
+    @patch("jira_util.jira_request")
+    def test_tst_pro_091_11_dedicated_corrective_action_creation_and_deduplication(self, mock_request):
+        # TST-PRO-091.11: Dedicated Corrective Action Ticket Creation & Deduplication Test
+        created_issues = []
+        def mock_jira(url, method="GET", payload=None, role="qa"):
+            if "/rest/agile/1.0/board" in url and "/sprint" not in url:
+                return {"values": [{"id": 1, "name": "B"}]}
+            elif "/sprint?state=active" in url:
+                return {"values": [{"id": 440, "name": "Sprint 2026-48.1", "state": "active"}]}
+            elif "/rest/agile/1.0/sprint/440/issue" in url:
+                return {
+                    "issues": [
+                        {
+                            "key": "ATT-9401",
+                            "fields": {
+                                "summary": "Ticket 1 failing role separation",
+                                "status": {"name": "Erledigt"},
+                                "issuetype": {"subtask": False},
+                                "subtasks": [
+                                    {"key": "ATT-9402", "fields": {"summary": "[Analysis] Task", "status": {"name": "Erledigt"}}, "comments": [{"author": {"accountId": jira_util.ROLE_ACCOUNT_IDS["agent1"]}, "body": "GATE_VERDICT: PASS"}]}
+                                ],
+                            },
+                        },
+                        {
+                            "key": "ATT-9403",
+                            "fields": {
+                                "summary": "Ticket 2 failing role separation",
+                                "status": {"name": "Erledigt"},
+                                "issuetype": {"subtask": False},
+                                "subtasks": [
+                                    {"key": "ATT-9404", "fields": {"summary": "[Analysis] Task", "status": {"name": "Erledigt"}}, "comments": [{"author": {"accountId": jira_util.ROLE_ACCOUNT_IDS["agent1"]}, "body": "GATE_VERDICT: PASS"}]}
+                                ],
+                            },
+                        },
+                    ]
+                }
+            elif method == "POST" and "/rest/api/2/issue" in url:
+                new_key = f"ATT-CA-{len(created_issues) + 100}"
+                created_issues.append({"key": new_key, "payload": payload})
+                return {"key": new_key}
+            elif "/rest/api/2/search" in url:
+                return {"issues": []}
+            return {}
+
+        mock_request.side_effect = mock_jira
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            out_file = os.path.join(tmpdir, "audit.md")
+            _, results = jira_util.qa_audit(sample_size=2, out_path=out_file, role="qa", repo_root=tmpdir)
+            self.assertEqual(len(results), 2)
+            self.assertFalse(results[0]["compliant"])
+            self.assertFalse(results[1]["compliant"])
+
+            # Verify deduplicated corrective action ticket created
+            self.assertIn("ca_keys", results[0])
+            self.assertIn("ca_keys", results[1])
+            self.assertEqual(results[0]["ca_keys"], results[1]["ca_keys"])
+            self.assertNotEqual(results[0]["ca_keys"][0], results[0]["key"])
+            self.assertNotEqual(results[1]["ca_keys"][0], results[1]["key"])
+
+            with open(out_file, "r", encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("Corrective Action Ticket:", content)
+            self.assertNotIn("Corrective Action Ticket: [ATT-9401]", content)
+            self.assertNotIn("Corrective Action Ticket: [ATT-9403]", content)
+
+    def test_tst_pro_091_13_ceremony2_retrospective_qa_tracking_protocol(self):
+        # TST-PRO-091.13: Ceremony 2 Retrospective QA Tracking Protocol Test
+        skill_path = os.path.join(REPO_ROOT, ".agents", "skills", "sprint-planner", "SKILL.md")
+        with open(skill_path, "r", encoding="utf-8") as f:
+            skill_text = f.read()
+        self.assertIn("QA Findings & Corrective Actions", skill_text)
+        self.assertIn("> 2 sprints", skill_text)
+        self.assertIn("PO Escalation", skill_text)
 
 
 if __name__ == "__main__":

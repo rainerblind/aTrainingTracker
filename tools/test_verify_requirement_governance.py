@@ -2818,6 +2818,54 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
         c_ok, c_diag, _ = verify_code_traceability_orphans(fail_on_orphans=True)
         self.assertTrue(c_ok, f"Code orphans failed on live repo: {c_diag}")
 
+    def test_scenario_76_tst_pro_091_12_verifier_rejects_self_referential_corrective_actions(self):
+        # TST-PRO-091.12: Self-Reference Rejection in Verifier Test (REQ-PRO-091.3 / ATT-8153)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            audits_dir = os.path.join(tmpdir, "docs", "engineering", "qa_audits")
+            os.makedirs(audits_dir, exist_ok=True)
+
+            target_file = os.path.join(audits_dir, "sprint_2026-11-16_03_nacht.md")
+            content_self_referential = (
+                "# Sprint QA Process-Compliance Audit: Sprint 2026-11-16_03_Nacht\n\n"
+                "**Auditor Role**: `qa`\n\n"
+                "**Overall Process Verdict**: **NON-COMPLIANT**\n\n"
+                "| Metric | Value |\n| :--- | :--- |\n| **Sample Size** | 2 / 10 |\n\n"
+                "| Ticket | Summary | Verdict |\n| :--- | :--- | :---: |\n"
+                "| ATT-9901 | Test 1 | FAIL |\n"
+                "| ATT-9902 | Test 2 | PASS |\n\n"
+                "## 4. Non-Compliance Tracking & Remediation\n\n"
+                "* **ATT-9901**: Process deviation in Role Separation; Corrective Action Ticket: [ATT-9901](https://example.com/ATT-9901)\n"
+            )
+            with open(target_file, "w", encoding="utf-8") as f:
+                f.write(content_self_referential)
+
+            ok, msgs = verify_qa_audits(sprint_name="sprint/2026-11-16_03_Nacht", repo_root=tmpdir)
+            self.assertFalse(ok)
+            self.assertTrue(any("self-referential corrective action ticket" in m for m in msgs))
+
+            content_distinct = (
+                "# Sprint QA Process-Compliance Audit: Sprint 2026-11-16_03_Nacht\n\n"
+                "**Auditor Role**: `qa`\n\n"
+                "**Overall Process Verdict**: **NON-COMPLIANT**\n\n"
+                "| Metric | Value |\n| :--- | :--- |\n| **Sample Size** | 2 / 10 |\n\n"
+                "| Ticket | Summary | Verdict |\n| :--- | :--- | :---: |\n"
+                "| ATT-9901 | Test 1 | FAIL |\n"
+                "| ATT-9902 | Test 2 | PASS |\n\n"
+                "## 4. Non-Compliance Tracking & Remediation\n\n"
+                "* **ATT-9901**: Process deviation in Role Separation; Corrective Action Ticket: [ATT-9999](https://example.com/ATT-9999)\n"
+            )
+            with open(target_file, "w", encoding="utf-8") as f:
+                f.write(content_distinct)
+
+            ok2, msgs2 = verify_qa_audits(sprint_name="sprint/2026-11-16_03_Nacht", repo_root=tmpdir)
+            self.assertTrue(ok2, f"Expected pass with distinct corrective action ticket, got: {msgs2}")
+
+            gf_file = os.path.join(audits_dir, "sprint_2026-46.6.md")
+            with open(gf_file, "w", encoding="utf-8") as f:
+                f.write(content_self_referential.replace("2026-11-16_03_Nacht", "2026-46.6"))
+            ok3, msgs3 = verify_qa_audits(sprint_name="sprint/2026-46.6", repo_root=tmpdir)
+            self.assertTrue(ok3, f"Expected grandfathered pass for legacy 2026-46.6 audit, got: {msgs3}")
+
 
 
 

@@ -778,11 +778,37 @@ def _validate_single_qa_audit(found_file, sprint_name=None):
                     f"ERROR: Non-compliant audit {found_file} is missing Section 4 ('## 4. Non-Compliance Tracking & Remediation') (REQ-PRO-091.3)."
                 ]
             sec4_text = sec4_m.group(1).strip()
-            ca_links = re.findall(r"\[(ATT-\d+|PROJ-\d+)\]", sec4_text)
+            ca_links = re.findall(r"\[(ATT-\d+|PROJ-\d+|ATT-CA-[A-Za-z0-9_-]+)\]", sec4_text)
             if not ca_links:
                 return False, [
                     f"ERROR: Non-compliant audit in {found_file} lacks required Jira corrective action ticket links [ATT-XXXX] in Section 4 (REQ-PRO-091.3)."
                 ]
+
+            # REQ-PRO-091.3 / ATT-8153: Enforce ca_key != audited_key for current/future audits
+            base_fn = os.path.basename(found_file).lower()
+            is_grandfathered = any(
+                base_fn.startswith(prefix)
+                for prefix in ("sprint_2026-46.", "sprint_2026-47.", "sprint_2026-11-16_02_")
+            ) or (
+                sprint_name and any(
+                    str(sprint_name).lower().startswith(prefix)
+                    for prefix in ("2026-46.", "2026-47.", "2026-11-16_02_")
+                )
+            )
+
+            if not is_grandfathered:
+                for line in sec4_text.splitlines():
+                    aud_m = re.match(r"\s*\*\s*\*\*([A-Z]+-\d+)\*\*:", line)
+                    if aud_m:
+                        audited_key = aud_m.group(1)
+                        ca_part_m = re.search(r"Corrective Action Ticket:\s*(.*)", line)
+                        if ca_part_m:
+                            line_ca_links = re.findall(r"\[([A-Z0-9_-]+)\]", ca_part_m.group(1))
+                            for lk in line_ca_links:
+                                if lk == audited_key:
+                                    return False, [
+                                        f"ERROR: Non-compliant audit in {found_file} has self-referential corrective action ticket {lk} for audited ticket {audited_key} (REQ-PRO-091.3)."
+                                    ]
 
         sprint_label = sprint_name if sprint_name else os.path.basename(found_file)
         return True, [f"PASS: Sprint QA audit report verified for '{sprint_label}' ({total_sampled} sampled tickets): {found_file}"]

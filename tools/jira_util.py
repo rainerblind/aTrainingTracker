@@ -4444,8 +4444,12 @@ def format_qa_audit_markdown(sprint_info, audit_results, overall_compliant, audi
         lines.append("Non-compliances detected during sampling. Action items and tracking tickets:")
         for r in audit_results:
             if not r["compliant"]:
-                ca_key = r.get("corrective_action") or f"[{r['key']}](https://rainerblind.atlassian.net/browse/{r['key']})"
-                lines.append(f"* **{r['key']}**: Process deviation noted; Corrective Action Ticket: {ca_key}")
+                ca_key_str = r.get("corrective_action")
+                if not ca_key_str:
+                    fallback_key = f"ATT-CA-{r['key']}"
+                    ca_key_str = f"[{fallback_key}](https://rainerblind.atlassian.net/browse/{fallback_key})"
+                failed_str = ", ".join(r.get("failed_categories", [])) or "Process deviation"
+                lines.append(f"* **{r['key']}**: Process deviation in {failed_str}; Corrective Action Ticket: {ca_key_str}")
 
     lines.append("")
     return "\n".join(lines)
@@ -4726,6 +4730,20 @@ def qa_audit(sprint_arg=None, sample_size=None, out_path=None, role="qa", as_rol
         if not ticket_compliant:
             overall_compliant = False
 
+        failed_cats = []
+        if not deliv_pass:
+            failed_cats.append("Lifecycle Deliverables")
+        if not gate_pass:
+            failed_cats.append("Stage Subtask Progression")
+        if not role_sep_pass:
+            failed_cats.append("4-Augen Role Separation")
+        if not living_doc_pass:
+            failed_cats.append("Living Documentation Parity")
+        if not commit_pass:
+            failed_cats.append("Commit Hygiene")
+        if not po_approval_pass:
+            failed_cats.append("PO Approval Provenance")
+
         audit_results.append({
             "key": key,
             "summary": summary,
@@ -4738,7 +4756,76 @@ def qa_audit(sprint_arg=None, sample_size=None, out_path=None, role="qa", as_rol
             "po_reason": po_reason,
             "compliant": ticket_compliant,
             "deliv_details": deliv_checks,
+            "failed_categories": failed_cats,
         })
+
+    # REQ-PRO-091.3 / ATT-8153: Deduplicated Corrective Action Ticket Creation
+    if not overall_compliant:
+        category_to_tickets = {}
+        for r in audit_results:
+            if not r["compliant"]:
+                for cat in r.get("failed_categories", []):
+                    category_to_tickets.setdefault(cat, []).append(r["key"])
+
+        category_to_ca_key = {}
+        for cat, ticket_keys in category_to_tickets.items():
+            summary_title = f"[QA Corrective Action] {cat} - Sprint {s_name}"
+            existing_key = None
+            try:
+                jql = f'project = ATT AND summary ~ "\\"{summary_title}\\""'
+                search_url = f"{base}/rest/api/2/search?jql={urllib.parse.quote(jql)}&maxResults=5&fields=summary"
+                s_res = jira_request(search_url, role=role)
+                for issue in s_res.get("issues", []):
+                    if summary_title.lower() in issue.get("fields", {}).get("summary", "").lower():
+                        existing_key = issue.get("key")
+                        break
+            except Exception:
+                existing_key = None
+
+            if not existing_key and board_id:
+                try:
+                    b_url = f"{base}/rest/agile/1.0/board/{board_id}/backlog?maxResults=50&fields=summary"
+                    b_res = jira_request(b_url, role=role)
+                    for issue in b_res.get("issues", []):
+                        if summary_title.lower() in issue.get("fields", {}).get("summary", "").lower():
+                            existing_key = issue.get("key")
+                            break
+                except Exception:
+                    existing_key = None
+
+            if existing_key:
+                category_to_ca_key[cat] = existing_key
+            else:
+                desc = (
+                    f"## QA Process Non-Conformance: {cat}\n\n"
+                    f"* **Sprint**: {s_name} (ID: {s_id})\n"
+                    f"* **Audited Tickets**: {', '.join(ticket_keys)}\n"
+                    f"* **Auditor**: `{role}`\n\n"
+                    f"### Remediation Action Required\n"
+                    f"Investigate root cause of process non-conformance under ASPICE SUP.1 (Quality Assurance) "
+                    f"and enact systemic countermeasures prior to next sprint planning."
+                )
+                try:
+                    new_ca_key = create_issue(
+                        summary=summary_title,
+                        description=desc,
+                        issuetype_id="10005",  # Verbesserung
+                        parent_key="ATT-8138",
+                        role=role,
+                        add_to_sprint=False,
+                        rank_top=True,
+                    )
+                    category_to_ca_key[cat] = new_ca_key
+                except Exception:
+                    cat_slug = re.sub(r"[^A-Za-z0-9]+", "-", cat).strip("-")
+                    category_to_ca_key[cat] = f"ATT-CA-{cat_slug}"
+
+        for r in audit_results:
+            if not r["compliant"]:
+                ca_keys = [category_to_ca_key[c] for c in r.get("failed_categories", []) if c in category_to_ca_key]
+                if ca_keys:
+                    r["ca_keys"] = ca_keys
+                    r["corrective_action"] = ", ".join(f"[{k}](https://rainerblind.atlassian.net/browse/{k})" for k in ca_keys)
 
     md_content = format_qa_audit_markdown(
         sprint_info={"id": s_id, "name": s_name},

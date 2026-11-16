@@ -4983,10 +4983,13 @@ The workflow SHALL mandate that:
      • Sample selection SHALL use seeded pseudo-random sampling (`random.Random(seed).sample`), accepting an optional seed parameter (`--seed`) or generating a random integer seed.
      • The audit report in `docs/engineering/qa_audits/<sprint>.md` SHALL explicitly document the total sprint population, sample size, random seed, and sampled ticket keys in Section 1.
   3. *Closed-Loop Jira Corrective-Action Tracking (`REQ-PRO-091.3`)*:
-     • For any audit evaluating a `NON-COMPLIANT` overall verdict or finding, Section 4 of `docs/engineering/qa_audits/<sprint>.md` SHALL link every non-compliant finding to a dedicated Jira corrective-action ticket (formatted as `[ATT-XXXX](https://.../browse/ATT-XXXX)` or `ATT-XXXX`).
-     • Generic placeholder text without authentic Jira ticket links is prohibited.
-  4. *Ceremony 1 Corrective Action Closure Verification (`REQ-PRO-091.4`)*:
-     • `.agents/skills/sprint-planner/SKILL.md` Ceremony 1 (Sprint Planning) SHALL mandate reviewing the previous sprint's QA process-compliance audit in `docs/engineering/qa_audits/` and verifying that all corrective-action tickets from non-compliant findings are either closed or scheduled for remediation in the active sprint.
+     • For any audit evaluating a `NON-COMPLIANT` overall verdict or finding, Section 4 of `docs/engineering/qa_audits/<sprint>.md` SHALL link every non-compliant finding to a distinct, dedicated Jira corrective-action ticket (`ca_key != audited_key`). Self-referential links naming the audited ticket itself are strictly prohibited.
+     • The QA audit tool SHALL idempotently create or link dedicated corrective action tickets (`issuetype_id="10005"` / `Verbesserung`, parent Epic `ATT-8138` or `ATT-232`) in raw Backlog (`add_to_sprint=False`, `rank_top=True`), deduplicated per non-conformance category per sprint (`[QA Corrective Action] <Category> - Sprint <Sprint>`).
+     • `tools/verify_requirement_governance.py --check-qa-audits` SHALL enforce `ca_key != audited_key` for current and future sprints while grandfathering legacy audits prior to sprint `2026-11-16_02_Spät`.
+  4. *Retrospective & Ceremony Corrective Action Tracking & Escalation (`REQ-PRO-091.4`)*:
+     • `.agents/skills/sprint-planner/SKILL.md` Ceremony 1 (Sprint Planning) SHALL mandate reviewing open QA corrective action tickets from the prior sprint's audit.
+     • Ceremony 2 (Sprint Review & Retrospective) SHALL mandate a dedicated 'QA Findings & Corrective Actions' section in `docs/engineering/retros/Sprint_Review_and_Retro_<KEY>.md`, auditing the status of all active corrective action tickets.
+     • When an open QA corrective action remains unresolved for more than 2 sprints (> 2 sprints) or repeats across consecutive sprints, Ceremony 2 SHALL explicitly escalate the deviation to the Product Owner (PO) in the Retrospective deliverable.
   5. *Automated Governance Verifier Enforcement (`REQ-PRO-091.5`)*:
      • `tools/verify_requirement_governance.py --check-qa-audits` (and Höchstmaß mirror) SHALL validate that:
        (a) Auditor role is independent (not `coordinator` or `agent1`),
@@ -4998,8 +5001,8 @@ The workflow SHALL mandate that:
      • AccountId-Based 4-Augen Role Separation: `qa-audit` SHALL verify author and reviewer separation by evaluating Atlassian `accountId`s against `ROLE_ACCOUNT_IDS` rather than matching display-name strings.
 - **Requirement Archaeology & Chesterton's Fence Audit**:
   1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-091` (`REQ-PRO-091.1`–`REQ-PRO-091.6`), refining and extending `REQ-PRO-061` (*Sprint-Level QA Process-Compliance Audit*). Targets `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `tools/hoechstmass/`, `.agents/skills/sprint-planner/SKILL.md`, and `docs/engineering/qa_audits/`.
-  2. *Historical Origin & Commit Trace*: Introduced in Sprint 2026-46.3 via ATT-6154 (`REQ-PRO-061`); extended in Sprint 2026-46.6 via ATT-7558; bugfixed in Sprint 2026-11-16_02_Spät via ATT-8152 (Finding M5).
-  3. *Root Reason for Existing Formulation*: Early tooling prioritized basic automated markdown generation and checked only `docs/requirements.md` before domain shards were introduced; description was omitted from query; role separation relied on display-name heuristics.
+  2. *Historical Origin & Commit Trace*: Introduced in Sprint 2026-46.3 via ATT-6154 (`REQ-PRO-061`); extended in Sprint 2026-46.6 via ATT-7558; bugfixed in Sprint 2026-11-16_02_Spät via ATT-8152 (Finding M5); corrective action escalation and retro tracking added via ATT-8153.
+  3. *Root Reason for Existing Formulation*: Early tooling prioritized basic automated markdown generation and checked only `docs/requirements.md` before domain shards were introduced; description was omitted from query; role separation relied on display-name heuristics; self-referential ticket keys were used as placeholders before closed-loop corrective action ticket creation under Epic ATT-8138/ATT-232 and multi-sprint PO escalation were integrated.
   4. *Preservation of Core Invariants*: Existing CLI commands (`qa-audit`, `--check-qa-audits`) remain backward-compatible; pure Python standard library; zero production Android runtime code changes.
 - **Acceptance Criteria (Given-When-Then)**:
   • *Given* an execution of `qa-audit`,
@@ -5020,6 +5023,15 @@ The workflow SHALL mandate that:
   • *Given* subtasks reviewed by `agent2`,
   • *When* `qa-audit` evaluates 4-Augen Role Separation,
   • *Then* `accountId`s are matched against `ROLE_ACCOUNT_IDS` and passes.
+  • *Given* an execution of `qa-audit` with non-compliant tickets,
+  • *When* Section 4 is formatted,
+  • *Then* it generates or links dedicated corrective action tickets in raw Backlog deduplicated by category, ensuring `ca_key != audited_key`.
+  • *Given* an audit report evaluated by `verify_qa_audits`,
+  • *When* checked for current and future sprints,
+  • *Then* it rejects reports containing self-referential corrective action links (`ca_key == audited_key`), while grandfathering legacy historical sprints prior to `2026-11-16_02_Spät`.
+  • *Given* Ceremony 2 in `sprint-planner/SKILL.md`,
+  • *When* executed at Sprint-End,
+  • *Then* it includes a mandatory 'QA Findings & Corrective Actions' section in the Retrospective and escalates open actions older than 2 sprints to the PO.
 - **Invariants**: Zero Android runtime code changes; pure Python 3 standard library; Rule 3 human-only gate preserved.
 
 

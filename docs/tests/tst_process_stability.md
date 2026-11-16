@@ -3139,8 +3139,8 @@
 - **Type**: Non-Functional
 - **Verification Method**: Unit / Review
 - **Component**: `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `tools/hoechstmass/`, `tools/test_jira_accounts.py`, `tools/test_verify_requirement_governance.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`, `docs/engineering/qa_audits/`
-- **Jira**: `ATT-7558`, `ATT-8152`
-- **Evidence**: Verified by `test_tst_pro_091_7_living_doc_shard_resolution`, `test_tst_pro_091_8_issue_description_ingestion`, `test_tst_pro_091_9_account_id_role_separation`, and `test_tst_pro_091_10_seeded_random_sampling` in `tools/test_jira_accounts.py` (77/77 tests passed), plus re-audit of Sprint 2026-46.6 in `docs/engineering/qa_audits/sprint_2026-46.6.md` demonstrating 100% Living Documentation Parity resolution across 5 sampled tickets.
+- **Jira**: `ATT-7558`, `ATT-8152`, `ATT-8153`
+- **Evidence**: Verified by `test_tst_pro_091_7_living_doc_shard_resolution`, `test_tst_pro_091_8_issue_description_ingestion`, `test_tst_pro_091_9_account_id_role_separation`, `test_tst_pro_091_10_seeded_random_sampling`, `test_tst_pro_091_11_dedicated_corrective_action_creation_and_deduplication`, and `test_tst_pro_091_13_ceremony2_retrospective_qa_tracking_protocol` in `tools/test_jira_accounts.py` (79/79 tests passed), `test_scenario_76_tst_pro_091_12_verifier_rejects_self_referential_corrective_actions` in `tools/test_verify_requirement_governance.py` (82/82 tests passed), and full Python test suite pass (181/181 passed).
 - **Test Description**:
   1. *QA Auditor Role Independence & Coordinator Rejection*: Test in `test_jira_accounts.py` that `qa_audit` executes under `qa` / `agent2` and rejects `role="coordinator"` or `role="agent1"`.
   2. *Representative Sample Size Dynamic Scaling*: Test in `test_jira_accounts.py` that `qa_audit` samples $\ge 10\%$ when population exceeds 20 tickets (e.g. 25 tickets $\rightarrow \ge 3$ sampled).
@@ -3152,6 +3152,9 @@
   8. *Issue Description Ingestion (`TST-PRO-091.8`, tools/test_jira_accounts.py)*: Verify `fetch_all_sprint_issues` requests and parses the `description` field for requirement references.
   9. *AccountId Role Separation (`TST-PRO-091.9`, tools/test_jira_accounts.py)*: Verify `qa_audit` checks comment author `accountId` against `ROLE_ACCOUNT_IDS`, correctly evaluating independent reviews.
   10. *Seeded Random Sampling (`TST-PRO-091.10`, tools/test_jira_accounts.py)*: Verify `qa_audit` uses seeded pseudo-random sampling and records the random seed and sampled keys in the markdown header.
+  11. *Dedicated Corrective Action Ticket Creation & Deduplication (`TST-PRO-091.11`, tools/test_jira_accounts.py)*: Verify `qa_audit` creates or links distinct dedicated corrective action tickets in raw Backlog (`add_to_sprint=False`, `rank_top=True`), deduplicated by non-conformance category, ensuring `ca_key != audited_key` in Section 4.
+  12. *Self-Reference Rejection in Verifier (`TST-PRO-091.12`, tools/test_verify_requirement_governance.py)*: Verify `verify_qa_audits` rejects reports where corrective action links match the audited ticket key (`ca_key == audited_key`) for active/current sprints while grandfathering legacy historical audits prior to `2026-11-16_02_Spät`.
+  13. *Ceremony 2 Retrospective QA Tracking & Multi-Sprint PO Escalation (`TST-PRO-091.13`, .agents/skills/sprint-planner/SKILL.md)*: Verify Ceremony 2 instructions require a dedicated 'QA Findings & Corrective Actions' section in the Retrospective and explicit PO escalation when an unclosed corrective action remains open for > 2 sprints.
 
 
 
