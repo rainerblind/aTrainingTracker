@@ -2951,13 +2951,16 @@ def _is_po_queue_sprint(sprint_id=None, sprint_name=None):
     return False
 
 
-def move_issues_to_sprint_guarded(target_sprint_id, issue_keys, role="coordinator", cutoff_return=False, source_sprint_id=None):
+def move_issues_to_sprint_guarded(target_sprint_id, issue_keys, role="coordinator", cutoff_return=False, source_sprint_id=None, wip_carryover=False):
     """
     Moves issues between sprints under ATT-8030 / SUP.10.BP4 tamper protection:
     - 'agent1' and 'agent2' cannot modify sprint memberships manually.
     - Agents/Coordinator MUST NEVER promote backlog issues into 'Vom PO Freigegeben' (ID 447).
-    - Coordinator may ONLY move into ID 447 during the 03:25/15:25 start-cutoff (`cutoff_return=True`)
-      when returning untouched 'Zu erledigen' issues that belonged to `source_sprint_id != 447`.
+    - Coordinator may return untouched 'Zu erledigen' issues into ID 447 (`cutoff_return=True`).
+    - Coordinator may roll in-flight WIP across Schichten (`wip_carryover=True`) from an execution sprint
+      into the target Schicht without pausing worktrees (`Rule 2.2`).
+    - Coordinator may archive completed `Final Review (Human)` items into 'Bereit für PO Abnahme' (ID 453)
+      or `human-execution` items into 'Bereit für PO Systemtest' (ID 454).
     """
     if role in ("agent1", "agent2"):
         print("Error: agent1/agent2 cannot assign or move tickets across sprints; only coordinator/human operations are permitted.", file=sys.stderr)
@@ -2978,8 +2981,20 @@ def move_issues_to_sprint_guarded(target_sprint_id, issue_keys, role="coordinato
             print(f"Error: Only coordinator/human may move issues into pseudo-sprint ID {target_id_int}.", file=sys.stderr)
             sys.exit(1)
     elif role != "human":
-        # Target is an active sprint: only permitted via pack-sprint from PO queue (source_sprint_id == 447)
-        if not source_sprint_id or int(source_sprint_id) != PO_RELEASED_QUEUE_SPRINT_ID:
+        if wip_carryover:
+            if (
+                role != "coordinator"
+                or not source_sprint_id
+                or int(source_sprint_id) in PROTECTED_PSEUDO_SPRINT_IDS
+                or int(source_sprint_id) == target_id_int
+            ):
+                print(
+                    "Error: WIP carryover is restricted to '--as coordinator' from a non-protected execution sprint to a distinct Schicht sprint.",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+        elif not source_sprint_id or int(source_sprint_id) != PO_RELEASED_QUEUE_SPRINT_ID:
+            # Target is an active sprint: only permitted via pack-sprint from PO queue (source_sprint_id == 447)
             print(
                 "Error: Moving raw Backlog tickets directly into active sprints is strictly forbidden for AI agents (REQ-PRO-105.2). "
                 f"Tickets must be placed into '{PO_RELEASED_QUEUE_NAME}' (ID {PO_RELEASED_QUEUE_SPRINT_ID}) by the Product Owner first.",
@@ -2988,14 +3003,17 @@ def move_issues_to_sprint_guarded(target_sprint_id, issue_keys, role="coordinato
             sys.exit(1)
     config = get_config()
     base = config['JIRA_URL'].rstrip('/')
-    jira_request(
-        f"{base}/rest/agile/1.0/sprint/{target_id_int}/issue",
-        method="POST",
-        payload={"issues": list(issue_keys)},
-        role=role,
-    )
-    print(f"Moved {len(issue_keys)} issue(s) to sprint {target_id_int}: {', '.join(issue_keys)}")
-    return list(issue_keys)
+    keys_list = list(issue_keys)
+    for idx in range(0, len(keys_list), 50):
+        batch = keys_list[idx:idx + 50]
+        jira_request(
+            f"{base}/rest/agile/1.0/sprint/{target_id_int}/issue",
+            method="POST",
+            payload={"issues": batch},
+            role=role,
+        )
+    print(f"Moved {len(keys_list)} issue(s) to sprint {target_id_int}: {', '.join(keys_list)}")
+    return keys_list
 
 
 def select_greedy_bin_pack_tickets(ranked_issues, max_lanes=3, max_sp_per_lane=None):
@@ -3171,8 +3189,8 @@ def swap_future_sprint_keep_po_queue_last(new_future_sprint_id, role="coordinato
         print("Error: swap-po-queue is restricted to '--as coordinator'.", file=sys.stderr)
         sys.exit(1)
     new_id_int = int(new_future_sprint_id)
-    if new_id_int == PO_RELEASED_QUEUE_SPRINT_ID:
-        print(f"Error: Cannot swap '{PO_RELEASED_QUEUE_NAME}' (ID {PO_RELEASED_QUEUE_SPRINT_ID}) with itself.", file=sys.stderr)
+    if new_id_int in PROTECTED_PSEUDO_SPRINT_IDS:
+        print(f"Error: Cannot swap protected pseudo-sprint (ID {new_id_int}).", file=sys.stderr)
         sys.exit(1)
     config = get_config()
     base = config['JIRA_URL'].rstrip('/')
@@ -3184,6 +3202,92 @@ def swap_future_sprint_keep_po_queue_last(new_future_sprint_id, role="coordinato
     )
     print(f"Swapped future sprint {new_id_int} above '{PO_RELEASED_QUEUE_NAME}' (ID {PO_RELEASED_QUEUE_SPRINT_ID}).")
     return True
+
+
+def carryover_wip_to_sprint(from_sprint_arg, to_sprint_arg, role="coordinator"):
+    """
+    Continuous 8h Schicht Rollover (Rule 2.2):
+    Moves in-flight WIP tickets (status not in {'Zu erledigen', 'Final Review (Human)', 'Erledigt'}
+    and excluding 'Review & Retro') from the closing Schicht directly into the target Schicht sprint
+    without interrupting active worktrees.
+    """
+    if role != "coordinator":
+        print("Error: carryover-wip is restricted to '--as coordinator'.", file=sys.stderr)
+        sys.exit(1)
+    config = get_config()
+    base = config['JIRA_URL'].rstrip('/')
+    boards = jira_request(f"{base}/rest/agile/1.0/board", role=role).get("values", [])
+    if not boards:
+        print("Error: No Agile board found.", file=sys.stderr)
+        sys.exit(1)
+    board_id = boards[0]["id"]
+    src_sprint = resolve_sprint_object(base, board_id, sprint_arg=from_sprint_arg, role=role)
+    dst_sprint = resolve_sprint_object(base, board_id, sprint_arg=to_sprint_arg, role=role)
+    if not src_sprint or not dst_sprint:
+        print("Error: Source or target sprint not found.", file=sys.stderr)
+        sys.exit(1)
+    src_id = int(src_sprint["id"])
+    dst_id = int(dst_sprint["id"])
+    if src_id in PROTECTED_PSEUDO_SPRINT_IDS or dst_id in PROTECTED_PSEUDO_SPRINT_IDS:
+        print("Error: carryover-wip cannot use protected pseudo-sprints.", file=sys.stderr)
+        sys.exit(1)
+    issues = fetch_all_sprint_issues(base, src_id, "summary,status,issuetype", role=role)
+    wip_keys = []
+    terminal_or_todo = {"zu erledigen", "final review (human)", "erledigt"}
+    for issue in issues:
+        fields = issue.get("fields", {})
+        if fields.get("issuetype", {}).get("subtask", False):
+            continue
+        summary = fields.get("summary", "")
+        if "review & retro" in summary.lower():
+            continue
+        status_name = fields.get("status", {}).get("name", "").strip().lower()
+        if status_name not in terminal_or_todo:
+            wip_keys.append(issue["key"])
+    if not wip_keys:
+        print(f"No in-flight WIP tickets to carry over from sprint '{src_sprint.get('name')}' (ID {src_id}).")
+        return []
+    return move_issues_to_sprint_guarded(dst_id, wip_keys, role=role, source_sprint_id=src_id, wip_carryover=True)
+
+
+def archive_po_acceptance(sprint_arg=None, role="coordinator"):
+    """
+    Post-close PO Acceptance Staging (Rule 9.1):
+    Moves completed 'Final Review (Human)' tickets (excluding 'human-execution') from a sprint into
+    protected pseudo-sprint 'Bereit für PO Abnahme' (ID 453) so Backlog and 'Vom PO Freigegeben' remain uncluttered.
+    """
+    if role != "coordinator":
+        print("Error: archive-po-acceptance is restricted to '--as coordinator'.", file=sys.stderr)
+        sys.exit(1)
+    config = get_config()
+    base = config['JIRA_URL'].rstrip('/')
+    boards = jira_request(f"{base}/rest/agile/1.0/board", role=role).get("values", [])
+    if not boards:
+        print("Error: No Agile board found.", file=sys.stderr)
+        sys.exit(1)
+    board_id = boards[0]["id"]
+    src_sprint = resolve_sprint_object(base, board_id, sprint_arg=sprint_arg, role=role)
+    if not src_sprint:
+        print("Error: Source sprint not found.", file=sys.stderr)
+        sys.exit(1)
+    src_id = int(src_sprint["id"])
+    if src_id in PROTECTED_PSEUDO_SPRINT_IDS:
+        print(f"Error: Source sprint cannot be protected pseudo-sprint ID {src_id}.", file=sys.stderr)
+        sys.exit(1)
+    issues = fetch_all_sprint_issues(base, src_id, "summary,status,issuetype,labels", role=role)
+    ready_keys = []
+    for issue in issues:
+        fields = issue.get("fields", {})
+        if fields.get("issuetype", {}).get("subtask", False):
+            continue
+        status_name = fields.get("status", {}).get("name", "").strip().lower()
+        labels = [str(l).strip().lower() for l in (fields.get("labels") or [])]
+        if status_name == "final review (human)" and "human-execution" not in labels:
+            ready_keys.append(issue["key"])
+    if not ready_keys:
+        print(f"No 'Final Review (Human)' tickets to move into '{PO_REVIEW_QUEUE_NAME}' (ID {PO_REVIEW_QUEUE_SPRINT_ID}).")
+        return []
+    return move_issues_to_sprint_guarded(PO_REVIEW_QUEUE_SPRINT_ID, ready_keys, role=role, source_sprint_id=src_id)
 
 
 def ensure_weekly_retro_ticket(role="coordinator"):
@@ -4737,6 +4841,8 @@ USAGE_TEXT = (
     "                                                        Pull disjoint-Epic tickets from Vom PO Freigegeben (447) in rank order\n"
     "  return-unstarted [SPRINT_ARG]                         Return untouched Zu erledigen sprint tickets to Vom PO Freigegeben (447)\n"
     "  swap-po-queue FUTURE_SPRINT_ID                        Keep Vom PO Freigegeben (447) positioned right above Product Backlog\n"
+    "  carryover-wip FROM_SPRINT TO_SPRINT                   Move in-flight WIP directly across 8h Schicht boundaries\n"
+    "  archive-po-acceptance [SPRINT_ARG]                    Move completed Final Review (Human) tickets into Bereit für PO Abnahme (453)\n"
     "  defer-systemtest KEY                                  Label human-execution, assign human, and move to Bereit für PO Systemtest (454)\n"
     "  check-gate KEY                                        Verify Impl-Plan subtask is Erledigt (Gate 3)\n"
     "  submit-stage PARENT_KEY STAGE TEXT_OR_@FILE [--summary \"...\"]\n"
@@ -4827,6 +4933,11 @@ if __name__ == "__main__":
         return_unstarted_to_po_queue(sprint_arg=s_arg, role=active_role)
     elif cmd in ("swap-po-queue", "swap_po_queue") and len(remaining_argv) == 2:
         swap_future_sprint_keep_po_queue_last(remaining_argv[1], role=active_role)
+    elif cmd in ("carryover-wip", "carryover_wip") and len(remaining_argv) == 3:
+        carryover_wip_to_sprint(remaining_argv[1], remaining_argv[2], role=active_role)
+    elif cmd in ("archive-po-acceptance", "archive_po_acceptance"):
+        s_arg = remaining_argv[1] if len(remaining_argv) >= 2 else None
+        archive_po_acceptance(sprint_arg=s_arg, role=active_role)
     elif cmd in ("defer-systemtest", "defer_systemtest") and len(remaining_argv) == 2:
         defer_to_systemtest_queue(remaining_argv[1], role=active_role)
     elif cmd == "show" and len(remaining_argv) == 2:
