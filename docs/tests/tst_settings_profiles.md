@@ -1409,3 +1409,21 @@
   • Verify `PolarOnlineStreamingBridge.syncCadenceSensorRegistration()` calls `mStridesSensor.accumulate(0)` on `BSportType.RUN` registration so stride `1` is counted immediately without baseline swallowing in `MyIntegerAccumulatorSensor`.
   5. *Canonical Strides/Min FIT Export Parity (`TST-SET-116.5`)*:
   • Verify `PolarOnlineStreamingBridge` emits half-step strides/min matching `ANTRunSpeedDevice`/`BTLERunSpeedDevice` and `FitFileWriter` (`RecordMesg.cadence`/`SessionMesg.avgCadence` `UINT8` serialization without scaling).
+---
+
+### TST-SET-118: **Polar H10 200 Hz Running Dynamics & FIT Export Test Suite (`ATT-8018`)** [Verified]
+- **Requirement(s)**: `REQ-SET-116`
+- **Component**: `PolarH10RunningDynamicsEstimator.kt`, `PolarOnlineStreamingBridge.kt`, `FitFileWriter.kt`, `SensorType.java`
+- **Jira**: `ATT-8018`
+- **Status**: Verified
+- **Test Description**:
+  1. *200 Hz Tilted-Axis Alignment, VO Double-Integration & GCT Accuracy (`TST-SET-118.1`)*:
+  • Verify `PolarH10RunningDynamicsEstimator` aligns tilted trunk gravity (`~0.25 Hz` LPF), computes drift-free detrended rolling VO (`5.0..13.0 cm` over 5–8 steps), and detects `5 ms`-resolution GCT (`140..400 ms` across `150–195 spm`) within physiological plausibility bounds.
+  2. *Walking GCT Suppression, Standstill Reset & 200 Hz PMD Activation (`TST-SET-118.2`)*:
+  • Verify `< 130 spm` (`< 65 strides/min`) walking cleanly suppresses GCT emission, standstill/disconnect resets state, and `PolarOnlineStreamingBridge` negotiates `200 Hz` `ACC` exclusively for H10 in `BSportType.RUN` while leaving Verity Sense (`52 Hz`) and non-running sports unchanged.
+  3. *SensorType, ActivityType Partition & 9-Language Localization Parity (`TST-SET-118.3`)*:
+  • Verify `SensorType.VERTICAL_OSCILLATION` (`cm`), `SensorType.GROUND_CONTACT_TIME` (`ms`), `ActivityType.RUN_SPEED_AND_CADENCE`, `SensorCategoryAndSelectorContractTest`, and 9-locale `TranslationParityTest` (`EN, DE, ES, FR, IT, JA, NL, PL, PT`).
+  4. *End-to-End Sample Persistence & Summary Extrema (`TST-SET-118.4`)*:
+  • Verify `TrackerService`, `WorkoutDataMapper`, and `WorkoutRepository` (`streamSamples()` & `calculateAndSaveExtrema()`) persist 1-Hz `cm`/`ms` series and Aftermath `AVG`/`MIN`/`MAX` summaries with zero SQLite schema bumps.
+  5. *FIT SDK `mm` (`cm * 10f`) & `ms` Record/Lap/Session Encoding (`TST-SET-118.5`)*:
+  • Verify `FitFileWriterTest` decodes emitted FIT binaries and asserts exact `cm * 10f` (`mm`) `verticalOscillation`/`avgVerticalOscillation` and `ms` `stanceTime`/`avgStanceTime` across `RecordMesg`, `LapMesg`, and `SessionMesg`.

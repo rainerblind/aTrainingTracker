@@ -52,6 +52,7 @@ class SensorCategoryAndSelectorContractTest {
 
     @Test
     fun testSensorCategory_exhaustive63MetricPartition() {
+        // TST-SET-118.3
         val categories = SensorCategory.values()
         assertEquals("SensorCategory must define exactly 6 categories", 6, categories.size)
         categories.forEach { category ->
@@ -66,7 +67,7 @@ class SensorCategoryAndSelectorContractTest {
         }
 
         val allSensors = SensorType.values().toList()
-        assertEquals("SensorType must contain 65 constants", 65, allSensors.size)
+        assertEquals("SensorType must contain 67 constants", 67, allSensors.size)
         allSensors.forEach { sensorType ->
             assertNotNull("SensorType.${sensorType.name} must have a non-null category", sensorType.category)
         }
@@ -111,7 +112,9 @@ class SensorCategoryAndSelectorContractTest {
                 SensorType.PACE_spm,
                 SensorType.DISTANCE_m,
                 SensorType.CADENCE,
-                SensorType.STRIDES
+                SensorType.STRIDES,
+                SensorType.VERTICAL_OSCILLATION,
+                SensorType.GROUND_CONTACT_TIME
             ),
             SensorCategory.TIME_AND_LAPS to setOf(
                 SensorType.TIME_ACTIVE,
@@ -234,6 +237,8 @@ class SensorCategoryAndSelectorContractTest {
             SensorType.DISTANCE_m,
             SensorType.CADENCE,
             SensorType.STRIDES,
+            SensorType.VERTICAL_OSCILLATION,
+            SensorType.GROUND_CONTACT_TIME,
             SensorType.TIME_ACTIVE,
             SensorType.TIME_TOTAL,
             SensorType.TIME_OF_DAY,

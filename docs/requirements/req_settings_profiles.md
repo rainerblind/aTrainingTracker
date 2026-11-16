@@ -2640,3 +2640,29 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 • *Given* the runner stops moving during an active run, *When* standstill persists for `>= 3s`, *Then* motion-energy gating drops `SensorType.CADENCE` cleanly to `0.0`.
 
 **Invariants**: Canonical strides/min (`CADENCE` `36–120` active or `0.0` standstill); `BSportType.RUN`-only gating & `MySensorManager.CADENCE_PRIORITY` (`RUN_SPEED`/`BIKE_*` > `HRM`) preserved; zero UI/DB/exporter/`ANT-Android-SDKs` edits; `HIGH-RISK` Stage 4 (`subagent_pro` Doing / `subagent_flash` Gate 4 per `Rule 7.1`, non-UI DSP engine).
+---
+
+### REQ-SET-116: Polar H10 200 Hz Live Running Dynamics (Vertical Oscillation & Ground Contact Time) & FIT Export (`ATT-8018`) [Verified]
+- **Tests**: `TST-SET-118`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit / Integration
+- **Implementation**: `PolarH10RunningDynamicsEstimator.kt`, `PolarOnlineStreamingBridge.kt`, `SensorType.java`, `ActivityType.java`, `TrackerService.java`, `WorkoutRepository.kt`, `FitFileWriter.kt`, `docs/architecture.md`
+- **Rationale**: Wearing a Polar H10 chest strap at 200 Hz (5 ms resolution) near the runner's center of mass provides sternum vertical acceleration transients capable of computing live Vertical Oscillation (`cm`) and Ground Contact Time (`ms`) for Cockpit telemetry, 1-Hz `WorkoutSamples.db`/`WorkoutSummaries.db` persistence, and native Garmin FIT Running Dynamics export without proprietary hardware.
+- **Description**:
+1. *H10-Only 200 Hz `BSportType.RUN` Activation & Safe Shutdown (`REQ-SET-116.1`)*:
+   - `PolarOnlineStreamingBridge` SHALL activate `highRateRunningDynamicsActive = true` and negotiate `H10_HIGH_RATE_ACC_HZ` (`200 Hz`, graceful fallback to `100/50 Hz`) exclusively for Polar H10 (`!isVeritySense`) during `BSportType.RUN`, MUST keep Verity Sense (`52 Hz`) and non-running sports unchanged, and MUST reset estimator state cleanly on disconnect, sport switch, or `shutDown()`.
+2. *200 Hz Sternum Biomechanics DSP, Physiological Bounds & Walking Guard (`REQ-SET-116.2`)*:
+   - `PolarH10RunningDynamicsEstimator` SHALL continuously align the trunk vertical axis using a `~0.25 Hz` low-pass gravity estimator and project `200 Hz` `ACC` onto that vertical axis.
+   - Over each running step interval `T_step`, it SHALL apply zero-mean detrended double-integration to compute peak-to-trough **Vertical Oscillation** (`cm`, bounded within physiological `5.0..13.0 cm` plausibility and smoothed across a `5–8` step rolling window without cumulative integration drift).
+   - It SHALL detect foot-strike impact peak/jerk onset to toe-off upward-acceleration inflection at `5 ms` resolution for **Ground Contact Time** (`ms`, bounded within `140..400 ms`), and SHALL suppress GCT output during walking (`cadence < 130 steps/min`, i.e., `< 65 strides/min`) and zero/clear state cleanly on standstill (`>= 2–3 s`) or lower sample rates.
+3. *Sensor Channels, Persistence, Aftermath Extrema & 9-Language Parity (`REQ-SET-116.3`)*:
+   - Register `SensorType.VERTICAL_OSCILLATION` (`cm`, `units_cm`, `DOUBLE`) and `SensorType.GROUND_CONTACT_TIME` (`ms`, `units_time_ms`, `DOUBLE`) under `SensorCategory.SPEED_PACE_AND_DISTANCE`, wire them into `ActivityType.RUN_SPEED_AND_CADENCE`, `DeviceType.HRM`, `TrackerService`, `WorkoutDataMapper`, and `WorkoutRepository` (`streamSamples()`/`calculateAndSaveExtrema()`) with zero SQLite schema bumps, pass `SensorCategoryAndSelectorContractTest`, and provide full 9-language localization parity (`EN, DE, ES, FR, IT, JA, NL, PL, PT`) for display names and `cm`/`ms` units.
+4. *Native Garmin FIT SDK Unit Scaling (`REQ-SET-116.4`)*:
+   - `FitFileWriter.kt` SHALL convert Vertical Oscillation from `cm` to FIT SDK **millimeters (`mm`)** (`cm * 10f`) on `RecordMesg.setVerticalOscillation`, `LapMesg.setAvgVerticalOscillation`, and `SessionMesg.setAvgVerticalOscillation`, and write Ground Contact Time in **milliseconds (`ms`)** via `RecordMesg.setStanceTime`, `LapMesg.setAvgStanceTime`, and `SessionMesg.setAvgStanceTime`.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `200 Hz` Polar H10 `ACC` streams across tilted chest orientations (`150–195 spm`) and walking (`< 130 spm`), *When* processed by `PolarH10RunningDynamicsEstimator`, *Then* running yields drift-free rolling Vertical Oscillation (`5.0..13.0 cm`) and GCT (`140..400 ms`), while walking (`< 130 spm`) cleanly suppresses GCT without invalid output.
+• *Given* a recorded run with Polar H10 Running Dynamics, *When* persisted to `WorkoutSamples.db`/`WorkoutSummaries.db` and exported via `FitFileWriter`, *Then* Cockpit/Aftermath reflect `cm` and `ms` metrics, all 9 `values*/strings*.xml` files pass `TranslationParityTest`, and `FitFileWriter` encodes `mm` (`cm * 10f`) and `ms` on `RecordMesg`, `LapMesg`, and `SessionMesg`.
+
+**Invariants**: Cross-lane ID collision guard skips `REQ-SET-115` (`ATT-8108`) -> uses `REQ-SET-116` (`TST-SET-118`); zero DB schema bumps; `FitFileWriter` strictly scales `cm * 10f -> mm`; walking (`< 130 spm`) emits no GCT; `ATT-8017` cadence (`strides/min`) & `CADENCE_PRIORITY` preserved; `HIGH-RISK` Role Rotation (`agent1` Flash: S1, G2+S3, G4+S5; `agent2` Pro: G1+S2, G3+S4, G5+merge).

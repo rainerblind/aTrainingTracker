@@ -65,7 +65,10 @@ class WorkoutDataMapper(
 ) {
 
     // Define all sensors to check
-    val sensorsToCheck = SensorType.CORE_METRICS
+    val sensorsToCheck = SensorType.CORE_METRICS + listOf(
+        SensorType.VERTICAL_OSCILLATION,
+        SensorType.GROUND_CONTACT_TIME
+    )
 
     /**
      * Creates a WorkoutData object from the current position of a cursor.
@@ -1023,7 +1026,9 @@ class WorkoutDataMapper(
             SensorType.HR -> R.drawable.ic_heart_rate
             SensorType.SPEED_mps -> R.drawable.ic_speed
             SensorType.PACE_spm -> R.drawable.ic_speed
-            SensorType.CADENCE -> R.drawable.ic_cadence
+            SensorType.CADENCE,
+            SensorType.VERTICAL_OSCILLATION,
+            SensorType.GROUND_CONTACT_TIME -> R.drawable.ic_cadence
             SensorType.POWER -> R.drawable.ic_power
             SensorType.ALTITUDE -> R.drawable.ic_altitude
             SensorType.TEMPERATURE -> R.drawable.ic_temp_max
@@ -1031,7 +1036,8 @@ class WorkoutDataMapper(
         }
 
         val isMinRelevant = when (sensorType) {
-            SensorType.SPEED_mps, SensorType.PACE_spm, SensorType.CADENCE, SensorType.POWER -> {
+            SensorType.SPEED_mps, SensorType.PACE_spm, SensorType.CADENCE, SensorType.POWER,
+            SensorType.VERTICAL_OSCILLATION, SensorType.GROUND_CONTACT_TIME -> {
                 min != null && min != "0" && min != "0.0"&& min != "0,0" && min != "0:00" && min != "~~"
             }
             else -> true
@@ -1048,7 +1054,7 @@ class WorkoutDataMapper(
             iconResId = iconResId,
             isMinRelevant = isMinRelevant,
             boldMin = sensorType == SensorType.ALTITUDE || sensorType == SensorType.TEMPERATURE,
-            boldAvg = sensorType == SensorType.HR || sensorType == SensorType.SPEED_mps || sensorType == SensorType.PACE_spm || sensorType == SensorType.CADENCE || sensorType == SensorType.POWER,
+            boldAvg = sensorType == SensorType.HR || sensorType == SensorType.SPEED_mps || sensorType == SensorType.PACE_spm || sensorType == SensorType.CADENCE || sensorType == SensorType.POWER || sensorType == SensorType.VERTICAL_OSCILLATION || sensorType == SensorType.GROUND_CONTACT_TIME,
             boldMax = sensorType == SensorType.HR || sensorType == SensorType.POWER || sensorType == SensorType.ALTITUDE || sensorType == SensorType.TEMPERATURE
         )
 

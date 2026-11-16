@@ -109,6 +109,8 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
     private var mRrIntervalSensor: MySensor<Int>? = null
     private var mCadenceSensor: MySensor<Double>? = null
     private var mStridesSensor: MyIntegerAccumulatorSensor? = null
+    private var mVerticalOscillationSensor: MySensor<Double>? = null
+    private var mGroundContactTimeSensor: MySensor<Double>? = null
 
     private val rrBeatListeners = CopyOnWriteArrayList<RrBeatListener>()
     private val imuFrameListeners = CopyOnWriteArrayList<ImuFrameListener>()
@@ -147,6 +149,12 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
             },
             onCadence = { cadenceSpm -> mCadenceSensor?.newValue(cadenceSpm) },
             onStride = { cumulativeStrides -> mStridesSensor?.accumulate(cumulativeStrides) }
+        )
+    }
+    private val runningDynamicsEstimator: PolarH10RunningDynamicsEstimator by lazy {
+        PolarH10RunningDynamicsEstimator(
+            onVerticalOscillation = { voCm -> mVerticalOscillationSensor?.newValue(voCm) },
+            onGroundContactTime = { gctMs -> mGroundContactTimeSensor?.newValue(gctMs) }
         )
     }
 
@@ -303,6 +311,7 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
             Log.w(TAG, "Skipping online ACC stream on $polarId: ACC channel locked by offline recording.")
             return
         }
+        highRateRunningDynamicsActive = !isVeritySense && isRunSportActive()
         accJob?.cancel()
         accJob = scope.launch {
             try {
@@ -484,6 +493,11 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
             for (sample in data.samples) {
                 val timestampMs = if (sample.timeStamp > 0L) sample.timeStamp / NS_PER_MS else 0L
                 cadenceEstimator.onAccSample(sample.x, sample.y, sample.z, timestampMs)
+                if (!isVeritySense) {
+                    val cadenceStepsPerMin = cadenceEstimator.latestCadenceStridesPerMin * 2.0
+                    runningDynamicsEstimator.setCurrentCadenceStepsPerMin(cadenceStepsPerMin)
+                    runningDynamicsEstimator.onAccSample(sample.x, sample.y, sample.z, timestampMs)
+                }
             }
         }
     }
@@ -520,6 +534,7 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
      */
     fun syncCadenceSensorRegistration(runActive: Boolean = isRunSportActive()) {
         if (isShutDown.get()) return
+        highRateRunningDynamicsActive = !isVeritySense && runActive
         if (runActive) {
             if (mCadenceSensor == null) {
                 val cadSensor = MySensor<Double>(this, SensorType.CADENCE)
@@ -532,6 +547,18 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
                 addAndRegisterSensor(strideSensor)
                 // Seed baseline 0 so the first detected stride increments SensorType.STRIDES to 1.
                 strideSensor.accumulate(0)
+            }
+            if (!isVeritySense) {
+                if (mVerticalOscillationSensor == null) {
+                    val voSensor = MySensor<Double>(this, SensorType.VERTICAL_OSCILLATION)
+                    mVerticalOscillationSensor = voSensor
+                    addAndRegisterSensor(voSensor)
+                }
+                if (mGroundContactTimeSensor == null) {
+                    val gctSensor = MySensor<Double>(this, SensorType.GROUND_CONTACT_TIME)
+                    mGroundContactTimeSensor = gctSensor
+                    addAndRegisterSensor(gctSensor)
+                }
             }
         } else {
             unregisterImuCadenceSensors()
@@ -549,8 +576,19 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
             removeSensor(SensorType.STRIDES)
             mStridesSensor = null
         }
+        mVerticalOscillationSensor?.let { sensor ->
+            mMySensorManager?.unregisterSensor(sensor)
+            removeSensor(SensorType.VERTICAL_OSCILLATION)
+            mVerticalOscillationSensor = null
+        }
+        mGroundContactTimeSensor?.let { sensor ->
+            mMySensorManager?.unregisterSensor(sensor)
+            removeSensor(SensorType.GROUND_CONTACT_TIME)
+            mGroundContactTimeSensor = null
+        }
         synchronized(cadenceEstimatorLock) {
             cadenceEstimator.reset()
+            runningDynamicsEstimator.reset()
         }
     }
 

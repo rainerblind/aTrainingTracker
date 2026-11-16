@@ -183,4 +183,10 @@
     <string name="device_polar_verity_live_imu_desc">Trasmette FC e dati ACC/GYRO in modalità sensore blu su una singola connessione Polar per la cadenza di corsa senza footpod attivo.</string>
     <string name="device_polar_live_imu_requires_android_13">Richiede Android 13 o versione successiva.</string>
 
+    <!-- Polar H10 Running Dynamics (ATT-8018, REQ-SET-116) -->
+    <string name="vertical_oscillation">Oscillazione verticale</string>
+    <string name="vertical_oscillation_short">Osc. vert.</string>
+    <string name="ground_contact_time">Tempo contatto suolo</string>
+    <string name="ground_contact_time_short">TCS</string>
+
 </resources>

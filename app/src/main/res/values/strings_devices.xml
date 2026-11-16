@@ -224,4 +224,11 @@
     <string name="device_polar_verity_live_imu_desc">Streams live HR and ACC/GYRO data in Blue Sensor Mode over a single Polar connection for running cadence when no footpod is active.</string>
     <string name="device_polar_live_imu_requires_android_13">Requires Android 13 or newer.</string>
 
+    <!-- Polar H10 Running Dynamics (ATT-8018, REQ-SET-116) -->
+    <string name="units_cm" translatable="false">cm</string>
+    <string name="vertical_oscillation">Vertical Oscillation</string>
+    <string name="vertical_oscillation_short">Vert. Osc.</string>
+    <string name="ground_contact_time">Ground Contact Time</string>
+    <string name="ground_contact_time_short">GCT</string>
+
 </resources>

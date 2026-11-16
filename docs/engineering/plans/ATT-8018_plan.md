@@ -1,0 +1,32 @@
+# Stage 3: Implementation Plan - ATT-8018: Polar H10 200 Hz Live Running Dynamics & FIT Export
+
+**Ticket**: [ATT-8018](https://issue-tracker/ATT-8018) (`3 SP`) | **Epic**: `ATT-5910` | **Sprint**: `2026-47.1`  
+**Target Release**: `V5.0.0` | **Req**: `REQ-SET-116` | **Test**: `TST-SET-118` | **Branch**: `feature/ATT-8018`  
+**Author**: `agent1` (`subagent_flash`, Role Rotation `Rule 7.1`) | **Stage 4 Risk**: **HIGH-RISK** (`subagent_pro` Doing / `subagent_flash` Gate 4)
+
+## 1. Problem Description & Traceability
+- Enable Polar H10 `200 Hz` (`5 ms`) sternum `ACC` biomechanics (`Vertical Oscillation` in `cm`, `Ground Contact Time` in `ms`), Cockpit/Aftermath persistence (zero SQLite schema bump), 9-locale parity, and native Garmin FIT export (`mm` & `ms`).
+- Traceability: `REQ-SET-116.1`->`TST-SET-118.2`; `REQ-SET-116.2`->`TST-SET-118.1/.2`; `REQ-SET-116.3`->`TST-SET-118.3/.4`; `REQ-SET-116.4`->`TST-SET-118.5`.
+
+## 2. System Invariants & UI Consistency
+1. **H10-Only 200 Hz**: `highRateRunningDynamicsActive` activates ONLY for Polar H10 (`!isVeritySense`) during `BSportType.RUN`; Verity Sense (`52 Hz`), non-running sports, `CADENCE_PRIORITY`, and `ATT-8017` strides/min stay unchanged.
+2. **Walking Guard & Bounds**: Suppress GCT when cadence `< 130 steps/min` (`< 65 strides/min`); bound running VO (`5.0..13.0 cm` rolling `5–8` steps) and GCT (`140..400 ms`); clear/zero on standstill (`>= 2–3 s`) or sport switch.
+3. **FIT SDK Units (`com.garmin:fit:21.141.0`)**: Encode VO in **millimeters (`mm`)** (`(voCm * 10.0).toFloat()`) and GCT in **milliseconds (`ms`)** (`Float`) on `RecordMesg`, `LapMesg`, and `SessionMesg`.
+4. **Zero DB Schema Bumps & UI Parity**: `WorkoutSamples.db` dynamically includes `SensorType.values()`; `TABLE_EXTREMA_VALUES` is key-value; Cockpit `EditSensorFieldDialog` uses existing `resolveSensorUnitText` / `MyHelper.getUnitsId` (`units_cm`, `units_time_ms`) across 9 locales with zero Compose layout changes.
+
+## 3. Proposed Architectural Changes
+- **DSP (`PolarH10RunningDynamicsEstimator.kt`)**: Pure-Kotlin 200 Hz estimator: `~0.25 Hz` 3D low-pass gravity tracker -> unit vertical projection `a_v`; per-step detrended/band-passed double-integration VO (`cm`, `5–8` step rolling average); `5 ms` foot-strike peak/jerk onset -> toe-off upward-acceleration inflection GCT (`140..400 ms`, `< 130 spm` walking suppression); standstill reset (`>= 2.5 s`).
+- **Bridge (`PolarOnlineStreamingBridge.kt`)**: Set `highRateRunningDynamicsActive = !isVeritySense && isRunSportActive()` before `startAccCollection()`, register `VERTICAL_OSCILLATION` & `GROUND_CONTACT_TIME` on H10 `BSportType.RUN` alongside `CADENCE`/`STRIDES`, route 200 Hz `ACC` + cadence to `PolarH10RunningDynamicsEstimator`, and reset on unregister/disconnect/sport switch.
+- **Sensors, Persistence & FIT (`SensorType`, `DeviceType`, `ActivityType`, `TrackerService`, `WorkoutExportHeader`, `WorkoutRepository`, `WorkoutDataMapper`, `FitFileWriter`)**: Add `VERTICAL_OSCILLATION` (`cm`, `DefaultNumberFormatter`) & `GROUND_CONTACT_TIME` (`ms`, `IntegerFormatter`) under `SPEED_PACE_AND_DISTANCE`; register in `ActivityType.RUN_SPEED_AND_CADENCE` & `DeviceType.HRM`; wire `TrackerService.IMPORTANT_SENSOR_TYPES`, `WorkoutRepository.streamSamples()`/`calculateAndSaveExtrema()`, `WorkoutDataMapper.sensorsToCheck`, and `FitFileWriter` (`RecordMesg`, `LapMesg`, `SessionMesg` via `RunningDynamicsAccumulator`).
+
+## 4. Atomic Implementation Sequence (Stage 4 Construction)
+1. **Step 1 (Sensors, Units & 9-Locale Strings)**: Add `units_cm` (`translatable="false"`, `"cm"`) + localized `vertical_oscillation`/`_short` & `ground_contact_time`/`_short` across all 9 `values*/strings*.xml`; add `VERTICAL_OSCILLATION` & `GROUND_CONTACT_TIME` to `SensorType.java` (`SPEED_PACE_AND_DISTANCE`), `ActivityType.RUN_SPEED_AND_CADENCE`, and `DeviceType.getDeviceTypeList()` (`HRM`); update `SensorCategoryAndSelectorContractTest.kt` (`L109-115, 227-256`) & `ActivityTypeTest.kt` (`// TST-SET-118.3`).
+2. **Step 2 (200 Hz Biomechanics DSP `PolarH10RunningDynamicsEstimator.kt`)**: Implement `~0.25 Hz` gravity alignment, per-step detrended double-integration VO (`5.0..13.0 cm`, 5–8 step smoothing), 5 ms GCT (`140..400 ms`), `< 130 spm` walking GCT suppression, and standstill reset; add `PolarH10RunningDynamicsEstimatorTest.kt` (`// TST-SET-118.1`, `// TST-SET-118.2`).
+3. **Step 3 (`PolarOnlineStreamingBridge.kt` 200 Hz Wiring)**: Enable `highRateRunningDynamicsActive` for H10 `BSportType.RUN`, register/unregister `VERTICAL_OSCILLATION` & `GROUND_CONTACT_TIME`, feed 200 Hz `ACC` + current cadence into `PolarH10RunningDynamicsEstimator`, and extend `PolarOnlineStreamingBridgeTest.kt` (`// TST-SET-118.2`).
+4. **Step 4 (Persistence & Aftermath Wiring)**: Add both sensors to `TrackerService.IMPORTANT_SENSOR_TYPES`, `WorkoutRepository.calculateAndSaveExtrema()`, `WorkoutSampleRecord` (`WorkoutExportHeader.kt`), `WorkoutRepository.streamSamples()`, and `WorkoutDataMapper.sensorsToCheck` + `createExtremaRow()`; add tests (`// TST-SET-118.4`).
+5. **Step 5 (`FitFileWriter.kt` Native FIT Export & SWE.2 Docs)**: Encode `setVerticalOscillation((voCm * 10.0).toFloat())` (`mm`) & `setStanceTime(gctMs.toFloat())` (`ms`) on `RecordMesg`, plus per-lap/session averages via `RunningDynamicsAccumulator` on `LapMesg`/`SessionMesg` (`setAvgVerticalOscillation`, `setAvgStanceTime`); extend `FitFileWriterTest.kt` with FIT decode assertions (`// TST-SET-118.5`) and update `docs/architecture.md` (`Rule 8.8`).
+
+## 5. Verification & Rollback Plan
+- **Tier 1 Command** *(all new tests tagged `// TST-SET-118.*` per `ATT-8143`)*:
+  `./gradlew :app:testDebugUnitTest --tests "com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10RunningDynamicsEstimatorTest" --tests "com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOnlineStreamingBridgeTest" --tests "com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarLiveRunningCadenceEstimatorTest" --tests "com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.SensorCategoryAndSelectorContractTest" --tests "com.atrainingtracker.banalservice.ActivityTypeTest" --tests "com.atrainingtracker.trainingtracker.exporter.writer.FitFileWriterTest" --tests "com.atrainingtracker.trainingtracker.localization.TranslationParityTest"`
+- **Governance & Rollback**: `python3 tools/verify_requirement_governance.py`; isolated on `feature/ATT-8018` with zero SQLite migrations.

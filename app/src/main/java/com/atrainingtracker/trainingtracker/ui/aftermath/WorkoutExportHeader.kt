@@ -79,7 +79,9 @@ data class WorkoutSampleRecord(
     val torqueEffectivenessR: Double? = null,
     val pedalSmoothnessL: Double? = null,
     val pedalSmoothnessR: Double? = null,
-    val pedalSmoothnessCombined: Double? = null
+    val pedalSmoothnessCombined: Double? = null,
+    val verticalOscillationCm: Double? = null,
+    val groundContactTimeMs: Double? = null
 )
 
 /**

@@ -677,6 +677,8 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                 val psLIdx = col(SensorType.PEDAL_SMOOTHNESS_L.name)
                 val psRIdx = col(SensorType.PEDAL_SMOOTHNESS_R.name)
                 val psCombIdx = col(SensorType.PEDAL_SMOOTHNESS.name)
+                val voIdx = col(SensorType.VERTICAL_OSCILLATION.name)
+                val gctIdx = col(SensorType.GROUND_CONTACT_TIME.name)
 
                 fun getDoubleOrNull(idx: Int): Double? =
                     if (idx >= 0 && !cursor.isNull(idx)) {
@@ -721,7 +723,9 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                         torqueEffectivenessR = getDoubleOrNull(teRIdx),
                         pedalSmoothnessL = getDoubleOrNull(psLIdx),
                         pedalSmoothnessR = getDoubleOrNull(psRIdx),
-                        pedalSmoothnessCombined = getDoubleOrNull(psCombIdx)
+                        pedalSmoothnessCombined = getDoubleOrNull(psCombIdx),
+                        verticalOscillationCm = getDoubleOrNull(voIdx),
+                        groundContactTimeMs = getDoubleOrNull(gctIdx)
                     )
                     consumer.accept(record)
                 }
@@ -1391,7 +1395,8 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
     ) {
         val sensorsToCalculate = mutableListOf(
             SensorType.HR, SensorType.CADENCE, SensorType.POWER, SensorType.SPEED_mps,
-            SensorType.ALTITUDE, SensorType.TEMPERATURE
+            SensorType.ALTITUDE, SensorType.TEMPERATURE,
+            SensorType.VERTICAL_OSCILLATION, SensorType.GROUND_CONTACT_TIME
         )
         if (hasRadarData(workoutId, baseFileName)) {
             sensorsToCalculate.addAll(

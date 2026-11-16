@@ -183,4 +183,10 @@
     <string name="device_polar_verity_live_imu_desc">Streamt live hartslag en ACC/GYRO-gegevens in de blauwe sensormodus via één Polar-verbinding voor hardloopcadans zonder actieve footpod.</string>
     <string name="device_polar_live_imu_requires_android_13">Vereist Android 13 of nieuwer.</string>
 
+    <!-- Polar H10 Running Dynamics (ATT-8018, REQ-SET-116) -->
+    <string name="vertical_oscillation">Verticale oscillatie</string>
+    <string name="vertical_oscillation_short">Vert. osc.</string>
+    <string name="ground_contact_time">Grondcontacttijd</string>
+    <string name="ground_contact_time_short">GCT</string>
+
 </resources>

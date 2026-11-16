@@ -182,4 +182,10 @@
     <string name="device_polar_h10_live_imu_desc">Transmite FC/RR e dados de acelerómetro ao vivo numa única ligação Polar para cadência de corrida sem podómetro ativo.</string>
     <string name="device_polar_verity_live_imu_desc">Transmite FC e dados ACC/GYRO no modo sensor azul numa única ligação Polar para cadência de corrida sem podómetro ativo.</string>
     <string name="device_polar_live_imu_requires_android_13">Requer Android 13 ou mais recente.</string>
+
+    <!-- Polar H10 Running Dynamics (ATT-8018, REQ-SET-116) -->
+    <string name="vertical_oscillation">Oscilação vertical</string>
+    <string name="vertical_oscillation_short">Osc. vert.</string>
+    <string name="ground_contact_time">Tempo contato solo</string>
+    <string name="ground_contact_time_short">TCS</string>
 </resources>

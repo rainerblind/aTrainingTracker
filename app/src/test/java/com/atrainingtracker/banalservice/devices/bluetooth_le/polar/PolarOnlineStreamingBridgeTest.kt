@@ -47,6 +47,7 @@ import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.flowOf
 import kotlin.math.PI
+import kotlin.math.cos
 import kotlin.math.roundToInt
 import kotlin.math.sin
 import org.junit.After
@@ -364,6 +365,95 @@ class PolarOnlineStreamingBridgeTest {
         val strides = bridge.getSensor(SensorType.STRIDES).value as Int
         assertEquals("Verity Sense arm-swing bridge must publish 84.0 strides/min", 84.0, cadenceSpm, 1.5)
         assertTrue("Verity Sense bridge must increment SensorType.STRIDES, got $strides", strides >= 10)
+        assertNull("Verity Sense must never register H10 Running Dynamics VO", bridge.getSensor(SensorType.VERTICAL_OSCILLATION))
+        assertNull("Verity Sense must never register H10 Running Dynamics GCT", bridge.getSensor(SensorType.GROUND_CONTACT_TIME))
+        assertEquals(false, bridge.highRateRunningDynamicsActive)
+
+        bridge.shutDown()
+    }
+
+    @Test
+    fun testH10Running200HzActivation_publishesRunningDynamics_andResetsOnSportSwitch() {
+        // TST-SET-118.2
+        TrainingApplication.setTrackingModeForTesting(TrackingMode.TRACKING)
+        val db = DevicesDatabaseManager.getInstance(context)
+        val h10Id = db.insertNewBluetoothDeviceIntoDB(
+            DeviceType.HRM,
+            "AA:BB:CC:DD:EE:99",
+            "Polar H10 99001122",
+            "Polar Electro",
+            95,
+            true
+        )
+
+        val mockApi = mockk<PolarBleApi>(relaxed = true)
+        val selected200Setting = PolarSensorSetting(
+            mapOf(
+                PolarSensorSetting.SettingType.SAMPLE_RATE to 200,
+                PolarSensorSetting.SettingType.RESOLUTION to 16,
+                PolarSensorSetting.SettingType.RANGE to 8
+            )
+        )
+        val accAvailable = mockk<PolarSensorSetting> {
+            every { settings } returns mutableMapOf(
+                PolarSensorSetting.SettingType.SAMPLE_RATE to setOf(50, 100, 200),
+                PolarSensorSetting.SettingType.RESOLUTION to setOf(16),
+                PolarSensorSetting.SettingType.RANGE to setOf(8)
+            )
+            every { maxSettings() } returns selected200Setting
+        }
+        val capturedSettings = mutableListOf<PolarSensorSetting>()
+        coEvery { mockApi.requestStreamSettings("99001122", PolarBleApi.PolarDeviceDataType.ACC) } returns accAvailable
+        every { mockApi.startAccStreaming("99001122", capture(capturedSettings)) } returns flowOf()
+        every { mockApi.startHrStreaming("99001122") } returns flowOf()
+
+        var currentSport = BSportType.RUN
+        val bridge = PolarOnlineStreamingBridge(
+            context = context,
+            mySensorManager = sensorManager,
+            deviceId = h10Id,
+            macAddress = "AA:BB:CC:DD:EE:99",
+            dispatcher = Dispatchers.Unconfined,
+            sdkIntProvider = { 34 },
+            sportTypeProvider = { currentSport },
+            apiFactory = { _, _ -> mockApi }
+        )
+
+        bridge.startSearching()
+        val cb = bridge.getSdkCallbackForTesting()
+        cb.deviceConnected(PolarDeviceInfo("99001122", "AA:BB:CC:DD:EE:99", -55, "Polar H10", true))
+        cb.bleSdkFeatureReady("99001122", PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_ONLINE_STREAMING)
+
+        assertTrue("H10 in BSportType.RUN must activate highRateRunningDynamicsActive", bridge.highRateRunningDynamicsActive)
+        assertTrue("H10 must negotiate 200 Hz ACC sample rate", capturedSettings.isNotEmpty())
+        assertEquals(200, capturedSettings.first().settings[PolarSensorSetting.SettingType.SAMPLE_RATE]?.first())
+
+        // Stream 8s of 200 Hz sternum running ACC at 172 spm, ~8.5 cm VO
+        val fStep = 172.0 / 60.0
+        val omega = 2.0 * PI * fStep
+        val ampMg = ((0.085 / 2.0) * omega * omega / 9.80665) * 1000.0
+        val samples200Hz = (0..1600).map { i ->
+            val tMs = i * 5L
+            val zMg = (1000.0 + ampMg * cos(omega * (tMs / 1000.0))).roundToInt()
+            PolarAccelerometerData.PolarAccelerometerDataSample(tMs * 1_000_000L, 0, 0, zMg)
+        }
+        for (chunk in samples200Hz.chunked(40)) {
+            bridge.processAccData(PolarAccelerometerData(chunk))
+        }
+
+        val voCm = bridge.getSensor(SensorType.VERTICAL_OSCILLATION)?.value as? Double
+        val gctMs = bridge.getSensor(SensorType.GROUND_CONTACT_TIME)?.value as? Double
+        assertNotNull("VERTICAL_OSCILLATION sensor must emit value on 200 Hz H10 run", voCm)
+        assertNotNull("GROUND_CONTACT_TIME sensor must emit value on 200 Hz H10 run", gctMs)
+        assertTrue("VO must stay inside physiological 5.0..13.0 cm (got $voCm)", voCm!! in 5.0..13.0)
+        assertTrue("GCT must stay inside physiological 140..400 ms (got $gctMs)", gctMs!! in 140.0..400.0)
+
+        // Switching to BIKE cleanly deactivates 200 Hz flag and unregisters VO/GCT
+        currentSport = BSportType.BIKE
+        bridge.syncCadenceSensorRegistration()
+        assertEquals(false, bridge.highRateRunningDynamicsActive)
+        assertNull(bridge.getSensor(SensorType.VERTICAL_OSCILLATION))
+        assertNull(bridge.getSensor(SensorType.GROUND_CONTACT_TIME))
 
         bridge.shutDown()
     }

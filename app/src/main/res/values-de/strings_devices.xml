@@ -195,4 +195,10 @@
     <string name="device_polar_verity_live_imu_desc">Überträgt Live-HF- sowie ACC/GYRO-Daten im blauen Sensormodus über eine einzelne Polar-Verbindung für Laufkadenz ohne aktiven Laufsensor.</string>
     <string name="device_polar_live_imu_requires_android_13">Erfordert Android 13 oder neuer.</string>
 
+    <!-- Polar H10 Running Dynamics (ATT-8018, REQ-SET-116) -->
+    <string name="vertical_oscillation">Vertikale Oszillation</string>
+    <string name="vertical_oscillation_short">Vert. Osz.</string>
+    <string name="ground_contact_time">Bodenkontaktzeit</string>
+    <string name="ground_contact_time_short">BKZ</string>
+
 </resources>
