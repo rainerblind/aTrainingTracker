@@ -645,6 +645,38 @@ class TestJiraCliTooling(unittest.TestCase):
             self.assertIn("| ATT-6149 | - | Gate 6 | Final Review (Agent) (Gate 6) | PASS | agent2 | Agent 2 (Reviewer) |", content)
 
     @patch("jira_util.jira_request")
+    @patch("jira_util.get_config")
+    def test_export_test_evidence_command_generates_files(self, mock_config, mock_request):
+        """TST-PRO-100.1 / TST-PRO-100.4: export-test-evidence CLI exports persistent test and coverage evidence."""
+        import tempfile
+        mock_config.return_value = {
+            "JIRA_URL": "https://example.atlassian.net",
+            "JIRA_USER": "test@example.com",
+            "JIRA_API_TOKEN": "token",
+        }
+        mock_request.side_effect = lambda url, **kwargs: (
+            {"values": [{"id": 1, "name": "Sprint Board"}]} if "/rest/agile/1.0/board" in url and "sprint" not in url
+            else ({"values": [{"id": 440, "name": "2026-46.3"}]} if "/rest/agile/1.0/board/1/sprint?state=active" in url
+            else {})
+        )
+        with tempfile.TemporaryDirectory() as tmp_root:
+            out_dir = os.path.join(tmp_root, "test_evidence")
+            results_dir = os.path.join(tmp_root, "test-results")
+            os.makedirs(results_dir, exist_ok=True)
+            with open(os.path.join(results_dir, "TEST-Sample.xml"), "w", encoding="utf-8") as f:
+                f.write('<?xml version="1.0"?><testsuite tests="1" failures="0" errors="0" skipped="0" time="0.1"><testcase name="testA_TST_PRO_100" classname="Sample"/></testsuite>')
+
+            md_path, json_path, payload = jira_util.export_test_evidence(
+                sprint_arg="2026-46.3",
+                out_dir=out_dir,
+                test_results_dir=results_dir,
+            )
+            self.assertTrue(os.path.isfile(md_path))
+            self.assertTrue(os.path.isfile(json_path))
+            self.assertEqual(payload["target"], "sprint_2026-46.3")
+            self.assertEqual(payload["unit_tests"]["total"], 1)
+
+    @patch("jira_util.jira_request")
     def test_qa_audit_command_generates_markdown(self, mock_request):
         """TST-PRO-061.1: Verify qa-audit CLI command generates structured report for >= 2 tickets."""
         stages = [

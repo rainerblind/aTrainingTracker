@@ -509,7 +509,7 @@ ALLOWED_ENGINEERING_ENTRIES = {
     "reviews",
     "test_specs",
     "walkthroughs",
-    "test_results",
+    "test_evidence",
     "rule_history_archive.md",
     "workflow_overview.html",
 }
@@ -921,34 +921,107 @@ def verify_independent_reviews(sprint_name=None, repo_root=None):
         return True, [f"PASS: Verified {valid_files} independent review record(s) in {rev_dir}."]
 
 
+def verify_test_evidence(target_id=None, repo_root=None):
+    """
+    REQ-PRO-100.4 / TST-PRO-100.2:
+    Verifies that persistent test and coverage evidence records in docs/engineering/test_evidence/
+    conform to schema and report zero test failures.
+    """
+    if repo_root is None:
+        repo_root = os.getcwd()
+
+    evidence_dir = os.path.join(repo_root, "docs", "engineering", "test_evidence")
+    if not os.path.isdir(evidence_dir):
+        return False, [f"ERROR: Test evidence directory does not exist: {evidence_dir} (REQ-PRO-100.1)."]
+
+    if target_id and str(target_id).strip():
+        clean_target = str(target_id).strip()
+        slug = clean_target.replace("/", "_")
+        candidates = [
+            slug,
+            f"sprint_{slug}" if not slug.startswith("sprint_") else slug,
+            slug.replace("sprint_", "", 1) if slug.startswith("sprint_") else slug,
+        ]
+
+        found_json = None
+        for cand in candidates:
+            cand_p = os.path.join(evidence_dir, f"{cand}.json")
+            if os.path.isfile(cand_p):
+                found_json = cand_p
+                break
+
+        if not found_json:
+            return False, [
+                f"ERROR: Missing test evidence record for target '{target_id}'. "
+                f"Expected one of {[os.path.join('docs/engineering/test_evidence', f'{c}.json') for c in candidates]}."
+            ]
+
+        try:
+            with open(found_json, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            unit_tests = data.get("unit_tests", {})
+            failures = unit_tests.get("failures", 0)
+            errors = unit_tests.get("errors", 0)
+            if failures > 0 or errors > 0:
+                return False, [f"ERROR: Test evidence for '{target_id}' reports {failures} failure(s) and {errors} error(s)."]
+        except Exception as e:
+            return False, [f"ERROR: Failed to parse test evidence JSON {found_json}: {e}"]
+
+        return True, [f"PASS: Verified test evidence record for target '{target_id}' ({found_json})."]
+
+    all_files = os.listdir(evidence_dir)
+    json_files = [f for f in all_files if f.endswith(".json")]
+
+    if not json_files:
+        readme_path = os.path.join(evidence_dir, "README.md")
+        if os.path.isfile(readme_path):
+            return True, [f"PASS: docs/engineering/test_evidence/ is canonical and clean (README.md verified)."]
+        return False, [f"ERROR: docs/engineering/test_evidence/ contains neither evidence records nor README.md."]
+
+    diagnostics = []
+    has_failing = False
+    for jf in json_files:
+        jp = os.path.join(evidence_dir, jf)
+        try:
+            with open(jp, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            unit_tests = data.get("unit_tests", {})
+            failures = unit_tests.get("failures", 0)
+            errors = unit_tests.get("errors", 0)
+            if failures > 0 or errors > 0:
+                diagnostics.append(f"ERROR: Test evidence {jf} reports {failures} failure(s) and {errors} error(s).")
+                has_failing = True
+        except Exception as e:
+            diagnostics.append(f"ERROR: Failed to parse test evidence {jf}: {e}")
+            has_failing = True
+
+    if has_failing:
+        return False, diagnostics
+
+    return True, [f"PASS: Verified {len(json_files)} test evidence record(s) in {evidence_dir} with 0 failures."]
+
+
 
 
 def verify_engineering_directory_structure(eng_dir="docs/engineering"):
     """
     Verifies that docs/engineering/ contains only canonical ASPICE directories and approved files
     (no stray folders like summaries/, impl_plans/, test_reports/, implementation/, or stray symlinks),
-    and enforces symlink integrity for test_results (Rule 67, REQ-PRO-067.3).
+    and enforces canonical test_evidence directory layout (Rule 8.4, REQ-PRO-100.1, REQ-PRO-067.3).
     """
     if not os.path.isdir(eng_dir):
         return True, []
+    test_results_path = os.path.join(eng_dir, "test_results")
+    if os.path.lexists(test_results_path):
+        return False, [
+            f"ERROR: {test_results_path} symlink is obsolete and retired (REQ-PRO-067.3, REQ-PRO-100). Use docs/engineering/test_evidence/ instead."
+        ]
     unexpected = sorted(set(os.listdir(eng_dir)) - ALLOWED_ENGINEERING_ENTRIES)
     if unexpected:
         return False, [
             f"ERROR: Non-canonical entries found in {eng_dir}/: {', '.join(unexpected)}. "
             f"Allowed entries: {', '.join(sorted(ALLOWED_ENGINEERING_ENTRIES))}."
         ]
-    test_results_path = os.path.join(eng_dir, "test_results")
-    if os.path.lexists(test_results_path):
-        if not os.path.islink(test_results_path):
-            return False, [
-                f"ERROR: {test_results_path} must be a symbolic link (Rule 67, REQ-PRO-067.3)."
-            ]
-        target = os.readlink(test_results_path)
-        expected_target = "../../app/build/reports/tests/testDebugUnitTest"
-        if target != expected_target:
-            return False, [
-                f"ERROR: {test_results_path} symlink target '{target}' does not match expected canonical target '{expected_target}' (Rule 67, REQ-PRO-067.3)."
-            ]
     return True, []
 
 
@@ -3840,6 +3913,13 @@ def main():
         help="Verify that all [Verified] TST specifications are backed by passing test evidence and reject failing or unbacked items (REQ-PRO-099).",
     )
     parser.add_argument(
+        "--check-test-evidence",
+        nargs="?",
+        const="",
+        default=None,
+        help="Verify persistent sprint and release test evidence in docs/engineering/test_evidence/ (REQ-PRO-100.4).",
+    )
+    parser.add_argument(
         "--test-results-dir",
         type=str,
         default=None,
@@ -3947,6 +4027,13 @@ def main():
             results_dir=args.test_results_dir,
             archive_path=args.test_archive_path,
         )
+        for msg in diag:
+            print(msg, file=sys.stderr if not ok and msg.startswith("ERROR") else sys.stdout)
+        sys.exit(0 if ok else 1)
+
+    if args.check_test_evidence is not None:
+        target_sprint = args.check_test_evidence if args.check_test_evidence != "" else None
+        ok, diag = verify_test_evidence(target_id=target_sprint)
         for msg in diag:
             print(msg, file=sys.stderr if not ok and msg.startswith("ERROR") else sys.stdout)
         sys.exit(0 if ok else 1)

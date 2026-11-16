@@ -4065,15 +4065,15 @@ The workflow SHALL mandate that:
   2. *Release Tag JUnit Test Results Packaging & Attachment (`REQ-PRO-067.2`, .github/workflows/android-release.yml)*:
      • `.github/workflows/android-release.yml` SHALL package unit test results into a versioned archive `junit-test-results-<tag>.zip` (or `.tar.gz`) named with the release tag and attach it to the GitHub Release via `softprops/action-gh-release@v2` alongside release APK and AAB binaries.
      • The release workflow SHALL also upload the test results as a workflow artifact.
-  3. *Local 1-Click Developer Symlink Preservation (`REQ-PRO-067.3`, docs/engineering/test_results)*:
-     • `docs/engineering/test_results` SHALL remain a symbolic link pointing to `../../app/build/reports/tests/testDebugUnitTest` (Rule 67), enabling immediate 1-click inspection of local test reports without committing transient HTML files to git.
+  3. *Transition to Versioned Test Evidence Archival (`REQ-PRO-067.3`, docs/engineering/test_evidence)*:
+     • The ephemeral `docs/engineering/test_results` symlink into transient build outputs is retired and replaced with persistent, version-controlled test and coverage evidence in `docs/engineering/test_evidence/` per `REQ-PRO-100`.
   4. *Governance & Contract Verification (`REQ-PRO-067.4`, ReleaseCiAndLintConfigContractTest.kt & tools/verify_requirement_governance.py)*:
-     • `ReleaseCiAndLintConfigContractTest.kt` and `tools/verify_requirement_governance.py` SHALL verify workflow YAML presence and configuration, ensure `if: always()` is configured for CI unit test uploads, verify release archive attachment patterns, and enforce symlink integrity for `docs/engineering/test_results`.
+     • `ReleaseCiAndLintConfigContractTest.kt` and `tools/verify_requirement_governance.py` SHALL verify workflow YAML presence and configuration, ensure `if: always()` is configured for CI unit test uploads, verify release archive attachment patterns, and enforce canonical layout rules for `docs/engineering/test_evidence/`.
 - **Requirement Archaeology & Chesterton's Fence Audit**:
-  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-067` (`REQ-PRO-067.1`–`REQ-PRO-067.4`). Targets `.github/workflows/android-branch-build.yml`, `.github/workflows/android-release.yml`, `docs/engineering/test_results`, `tools/verify_requirement_governance.py`, and `ReleaseCiAndLintConfigContractTest.kt`.
-  2. *Historical Origin & Commit Trace*: Introduced in Sprint 2026-46.4 via ATT-6137 under Epic ATT-6119 (ASPICE CL2 Remediation A-10).
-  3. *Root Reason for Existing Formulation*: Historical CI workflows only uploaded lint and build binaries; release tags lacked attached unit test verification evidence.
-  4. *Preservation of Core Invariants*: Rule 67 canonical layout intact; 100% clean-room test pass rate; release signing and publishing workflows remain non-breaking.
+  1. *Original Requirement ID & Target*: Modified requirement `REQ-PRO-067` (`REQ-PRO-067.3`, `REQ-PRO-067.4`). Targets `.github/workflows/android-branch-build.yml`, `.github/workflows/android-release.yml`, `docs/engineering/test_results` (retired), `docs/engineering/test_evidence/`, `tools/verify_requirement_governance.py`, and `ReleaseCiAndLintConfigContractTest.kt`.
+  2. *Historical Origin & Commit Trace*: Introduced in Sprint 2026-46.4 via ATT-6137 under Epic ATT-6119 (ASPICE CL2 Remediation A-10); amended in Sprint 2026-46.8 via ATT-8144 under Epic ATT-8138 (ASPICE Finding M7).
+  3. *Root Reason for Existing Formulation*: Historical CI workflows only uploaded lint and build binaries; local symlink provided quick inspection but lacked versioning and git baseline control.
+  4. *Preservation of Core Invariants*: Local test inspection preserved via compact versioned markdown and JSON summaries in `docs/engineering/test_evidence/`; immutable baseline control achieved; zero production runtime code changes.
 - **Acceptance Criteria (Given-When-Then)**:
   • *Given* a CI branch build executing unit tests,
   • *When* the test execution step completes (pass or fail),
@@ -4082,11 +4082,11 @@ The workflow SHALL mandate that:
   • *When* unit tests complete and release assets are published,
   • *Then* a versioned `junit-test-results-<tag>.zip` (or `.tar.gz`) archive is attached to the GitHub Release.
   • *Given* the repository checkout,
-  • *When* inspecting `docs/engineering/test_results`,
-  • *Then* it is a valid symbolic link pointing to `../../app/build/reports/tests/testDebugUnitTest`.
+  • *When* inspecting `docs/engineering/`,
+  • *Then* the ephemeral `test_results` symlink is retired and replaced with versioned evidence under `docs/engineering/test_evidence/`.
   • *Given* the automated contract tests and governance script,
   • *When* executed,
-  • *Then* symlink integrity and workflow YAML validity pass with 100% success.
+  • *Then* canonical directory structure and workflow YAML validity pass with 100% success.
 - **Invariants**: Zero modifications to Android production runtime code in `app/src/main/`; Rule 67 canonical directory structure preserved.
 
 ### REQ-PRO-068: System Integration Verification & Sensor Simulators Specification [Verified]
@@ -5243,3 +5243,44 @@ The workflow SHALL mandate that:
   • *When* `verify_requirement_governance.py --check-verified-evidence` runs,
   • *Then* legacy unbacked items within the ratchet baseline do not trigger failure.
 - **Invariants**: Zero changes to production runtime logic (`app/src/main/`); existing master table parity intact; pure Python standard library retained.
+
+### REQ-PRO-100: Versioned Sprint and Release Test & Coverage Evidence Archival [Verified]
+- **Tests**: `TST-PRO-100`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `tools/generate_test_evidence.py`, `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ReleaseCiAndLintConfigContractTest.kt`, `docs/management/cm_plan.md`, `.agents/rules/aspice_governance.md`
+- **Rationale**: Under ASPICE 4.0 Major Finding M7 (SWE.4 BP5, SWE.5 BP7, SWE.6 BP5, GP 2.2.3), test execution results must be baseline-controlled, immutable, and versioned in git rather than pointing to ephemeral local build directories via a symlink (`docs/engineering/test_results`). Furthermore, while Kover enforces coverage floors in Gradle, measured coverage percentages (lines and branches) across project and critical packages must be committed and baselined alongside test totals, failures, and per-TST pass/fail results.
+- **Description**:
+  1. *Canonical Test Evidence Store & Layout (`REQ-PRO-100.1`)*:
+     • The repository SHALL establish `docs/engineering/test_evidence/` as a canonical, version-controlled directory (replacing the volatile `docs/engineering/test_results` symlink per Rule 8.4 and `cm_plan.md`).
+     • Every sprint completion / merge into develop and every tagged release SHALL persist an immutable evidence markdown report (`docs/engineering/test_evidence/<sprint|release>.md`) and machine-readable companion dataset (`docs/engineering/test_evidence/<sprint|release>.json`).
+  2. *JUnit Test Metrics & Per-TST Verification Summary (`REQ-PRO-100.2`)*:
+     • `tools/generate_test_evidence.py` SHALL parse machine-readable JUnit XML test results (`app/build/test-results/testDebugUnitTest/` or test archive) and correlate tests to `TST-XXX` IDs.
+     • Persisted evidence records SHALL document git commit SHA, timestamp, total tests, passed, failures, errors, skipped, execution time, and individual pass/fail records mapped to each evaluated `TST-XXX` specification.
+  3. *Kover Code Coverage Ingestion & Package Breakdown (`REQ-PRO-100.3`)*:
+     • The test evidence generator SHALL parse the Kover XML report (`app/build/reports/kover/reportDebug.xml`) and record exact measured line and branch coverage percentages for:
+       - Global project codebase.
+       - Critical Tracking subsystem (`com.atrainingtracker.trainingtracker.tracking`).
+       - Critical Filters subsystem (`com.atrainingtracker.trainingtracker.filters`).
+       - Critical Sensors subsystem (`com.atrainingtracker.trainingtracker.sensors`).
+  4. *Tooling Automation & Governance Gating (`REQ-PRO-100.4`)*:
+     • `tools/jira_util.py export-test-evidence [--sprint <ID>] [--release <TAG>]` SHALL automate generating and committing evidence records during Ceremony 2 (Sprint Review) and release pipelines.
+     • `tools/verify_requirement_governance.py --check-test-evidence` SHALL verify that evidence records exist, are non-empty, and match the active sprint/release without missing data or unresolved test failures.
+     • `ReleaseCiAndLintConfigContractTest.kt` SHALL assert that `docs/engineering/test_results` symlink is retired and `docs/engineering/test_evidence/` is present and tracked.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-100`. Targets `tools/generate_test_evidence.py`, `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `ReleaseCiAndLintConfigContractTest.kt`, `cm_plan.md`, and `.agents/rules/aspice_governance.md`.
+  2. *Historical Origin & Commit Trace*: Sprint 2026-46.8 via ticket `ATT-8144` under Epic `ATT-8138` (ASPICE 4.0 Audit Remediation Finding M7).
+  3. *Root Reason for Existing Formulation*: Prior `test_results` build symlink was unversioned, ephemeral, and absent from git configuration management (SUP.8).
+  4. *Preservation of Core Invariants*: Replaces ephemeral build symlink with persistent, baseline-controlled markdown and JSON evidence in `docs/engineering/test_evidence/`; zero Android runtime code modifications; Rule 3 Human Gate intact.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* the repository tree,
+  • *When* `docs/engineering/test_results` is inspected,
+  • *Then* it is no longer a symbolic link to ephemeral build outputs, and `docs/engineering/test_evidence/` exists as a canonical tracked directory.
+  • *Given* a sprint completion or release candidate build,
+  • *When* `tools/generate_test_evidence.py` or `tools/jira_util.py export-test-evidence` is executed,
+  • *Then* `docs/engineering/test_evidence/<target>.md` and `.json` are generated containing commit SHA, timestamp, test metrics, per-TST status, and Kover line/branch coverage per critical package.
+  • *Given* generated test evidence files,
+  • *When* `tools/verify_requirement_governance.py --check-test-evidence` executes,
+  • *Then* it validates evidence integrity and reports PASS if complete or fails with exit code 1 if missing or failing.
+- **Invariants**: Zero Android runtime bytecode changes; Gradle Kover verification thresholds in `app/build.gradle` remain unchanged; POSIX flock mutual exclusion and Rule 3 human gates preserved.

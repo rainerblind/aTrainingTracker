@@ -3360,6 +3360,86 @@ def export_gates(sprint_arg=None, out_path=None, role="coordinator", as_role=Non
     return out_path, records
 
 
+def export_test_evidence(sprint_arg=None, release_arg=None, target_arg=None, out_dir=None,
+                         test_results_dir=None, archive_path=None, kover_xml_path=None,
+                         role="coordinator", as_role=None):
+    """
+    REQ-PRO-100.4 / TST-PRO-100.1:
+    Exports persistent, version-controlled test and coverage evidence to
+    docs/engineering/test_evidence/<target>.md and .json.
+    """
+    if as_role:
+        role = as_role
+
+    target_id = None
+    target_type = "sprint"
+
+    if release_arg:
+        target_id = release_arg.strip()
+        target_type = "release"
+    elif sprint_arg:
+        target_id = sprint_arg.strip()
+        target_type = "sprint"
+    elif target_arg:
+        target_id = target_arg.strip()
+        target_type = "generic"
+    else:
+        try:
+            active_sprint = get_active_sprint(role=role)
+            if active_sprint:
+                target_id = active_sprint.get("name") or f"sprint_{active_sprint.get('id')}"
+                target_type = "sprint"
+        except Exception:
+            pass
+
+    if not target_id:
+        try:
+            branch = subprocess.check_output(
+                ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+                stderr=subprocess.DEVNULL,
+                text=True,
+            ).strip()
+            if branch.startswith("sprint/"):
+                target_id = branch.replace("sprint/", "sprint_")
+            else:
+                target_id = "sprint_2026-46.8"
+        except Exception:
+            target_id = "sprint_2026-46.8"
+
+    if target_type == "sprint" and not target_id.startswith("sprint_"):
+        target_id = f"sprint_{target_id}"
+
+    try:
+        from generate_test_evidence import generate_test_evidence as gen_fn
+    except ImportError:
+        try:
+            from tools.generate_test_evidence import generate_test_evidence as gen_fn
+        except ImportError:
+            import importlib.util
+            spec = importlib.util.spec_from_file_location(
+                "generate_test_evidence",
+                os.path.join(os.path.dirname(__file__), "generate_test_evidence.py"),
+            )
+            mod = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(mod)
+            gen_fn = mod.generate_test_evidence
+
+    repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    if os.path.basename(os.path.dirname(__file__)) == "tools" and os.path.basename(os.path.dirname(os.path.dirname(__file__))) == "hoechstmass":
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+
+    md_path, json_path, payload = gen_fn(
+        target_id=target_id,
+        target_type=target_type,
+        repo_root=repo_root,
+        results_dir=test_results_dir,
+        archive_path=archive_path,
+        kover_xml_path=kover_xml_path,
+        out_dir=out_dir,
+    )
+    return md_path, json_path, payload
+
+
 def format_qa_audit_markdown(sprint_info, audit_results, overall_compliant, auditor_role="qa", total_tickets=None):
     import datetime
     date_str = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d")
@@ -3991,6 +4071,8 @@ USAGE_TEXT = (
     "                                                        Calculate PA 4.1 sprint metrics and PA 4.2 SPC control limits\n"
     "  export-gates [--sprint <ID|NAME>] [--out <FILE>]\n"
     "                                                        Export sprint gate records to docs/engineering/gates/<sprint>.md\n"
+    "  export-test-evidence [--sprint <ID|NAME>] [--release <TAG>] [--out-dir <DIR>]\n"
+    "                                                        Export versioned test and coverage evidence to docs/engineering/test_evidence/\n"
     "  qa-audit [--sprint <ID|NAME>] [--sample N] [--out <FILE>]\n"
     "                                                        Sample >= 2 sprint tickets and audit ASPICE process compliance\n"
     "  record-review [--sprint <ID|NAME>] [--ticket KEY] [--reviewer NAME] [--vendor VENDOR] [--model MODEL] [--version VER] [--scope SCOPE] [--verdict PASS|FAIL|NOT PERFORMED|SKIPPED|PARTIAL] [--findings FINDINGS] [--out FILE]\n"
@@ -4270,6 +4352,32 @@ if __name__ == "__main__":
                 sprint_arg = a
             idx += 1
         export_gates(sprint_arg=sprint_arg, out_path=out_arg, role=active_role)
+    elif cmd in ("export-test-evidence", "export_test_evidence"):
+        sprint_arg = None
+        release_arg = None
+        out_arg = None
+        idx = 1
+        while idx < len(remaining_argv):
+            a = remaining_argv[idx]
+            if a.startswith("--sprint="):
+                sprint_arg = a.split("=", 1)[1]
+            elif a == "--sprint" and idx + 1 < len(remaining_argv):
+                sprint_arg = remaining_argv[idx + 1]
+                idx += 1
+            elif a.startswith("--release="):
+                release_arg = a.split("=", 1)[1]
+            elif a == "--release" and idx + 1 < len(remaining_argv):
+                release_arg = remaining_argv[idx + 1]
+                idx += 1
+            elif a.startswith("--out-dir="):
+                out_arg = a.split("=", 1)[1]
+            elif a == "--out-dir" and idx + 1 < len(remaining_argv):
+                out_arg = remaining_argv[idx + 1]
+                idx += 1
+            elif not a.startswith("--") and not sprint_arg and not release_arg:
+                sprint_arg = a
+            idx += 1
+        export_test_evidence(sprint_arg=sprint_arg, release_arg=release_arg, out_dir=out_arg, role=active_role)
     elif cmd in ("qa-audit", "qa_audit"):
         sprint_arg = None
         sample_arg = None

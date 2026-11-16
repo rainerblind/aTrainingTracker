@@ -136,7 +136,7 @@ Jointly review all completed sprint tickets with the human user against expectat
       ```bash
       ./gradlew testDebugUnitTest --max-workers=2 && python3 tools/verify_requirement_governance.py
       ```
-      Since Rule 66 this run is a **confirmation** of the green Tier 2 gate executed at the end of Phase 2 and ensures `docs/engineering/test_results/index.html` (`app/build/reports/tests/testDebugUnitTest/index.html`) displays the complete HTML report of all unit tests (Rule 67 — `ATT-4936`); any failure here is itself a retro anomaly.
+      Since Rule 66 this run is a **confirmation** of the green Tier 2 gate executed at the end of Phase 2 and ensures unit tests pass cleanly before `docs/engineering/test_evidence/<sprint>.md` is exported (`REQ-PRO-100`); any failure here is itself a retro anomaly.
 
 2. **Query Tickets Ready for Review in Rank Order**:
    Find all sprint tickets in status `Final Review (Human)` sorted strictly by backlog rank for the exact active sprint ID or name:
@@ -209,6 +209,13 @@ Jointly review all completed sprint tickets with the human user against expectat
      python3 tools/verify_requirement_governance.py --check-gates
      ```
      This exports all gate decisions, review comments, evaluator roles, actor IDs, and timestamps to `docs/engineering/gates/<sprint>.md`.
+   * **Mandatory Sprint Test & Coverage Evidence Export (`REQ-PRO-100`, `ATT-8144`)**:
+     To maintain baseline-controlled test results and coverage metrics in repository configuration management (`SUP.8`), the Coordinator **MUST** export unit test counts, per-TST statuses, and Kover line/branch coverage to version control and verify its presence before sprint merge:
+     ```bash
+     python3 tools/jira_util.py --as coordinator export-test-evidence
+     python3 tools/verify_requirement_governance.py --check-test-evidence
+     ```
+     This persists versioned evidence to `docs/engineering/test_evidence/<sprint>.md` and `<sprint>.json`.
    * **Mandatory Sprint QA Process-Compliance Audit (`REQ-PRO-061`, `REQ-PRO-091`, `ATT-6154`, `ATT-7558`)**:
      To maintain independent ASPICE SUP.1 process compliance evidence, an independent QA auditor (`--as qa` or `--as agent2`, rejecting `coordinator` and `agent1` per `REQ-PRO-091`) **MUST** dynamically sample $\ge \max(2, \lceil 0.10 \times N \rceil)$ sprint tickets and execute an independent QA process-compliance audit before sprint merge:
      ```bash

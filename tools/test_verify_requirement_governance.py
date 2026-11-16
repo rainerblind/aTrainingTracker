@@ -74,6 +74,7 @@ from tools.verify_requirement_governance import (
     correlate_test_results_to_tsts,
     verify_verified_test_evidence,
     has_verified_test_evidence,
+    verify_test_evidence,
     LEGACY_UNBACKED_VERIFIED_TSTS,
 )
 
@@ -1065,31 +1066,25 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
         self.assertEqual(set(dups.keys()), set())
         self.assertEqual(LEGACY_DUPLICATE_IDS, frozenset())
 
-    def test_scenario_24_verify_engineering_directory_structure_test_results_symlink(self):
-        """TST-PRO-067.4: Verify verify_engineering_directory_structure enforces test_results symlink."""
+    def test_scenario_24_verify_engineering_directory_structure_test_evidence(self):
+        """TST-PRO-067.3 / TST-PRO-067.4 / TST-PRO-100.2: Verify verify_engineering_directory_structure enforces test_evidence and rejects retired test_results symlink."""
+        self.assertIn("test_evidence", ALLOWED_ENGINEERING_ENTRIES)
+        self.assertNotIn("test_results", ALLOWED_ENGINEERING_ENTRIES)
         with tempfile.TemporaryDirectory() as tmpdir:
             eng_dir = os.path.join(tmpdir, "docs", "engineering")
             os.makedirs(eng_dir, exist_ok=True)
-            for entry in ["analysis", "test_specs", "plans", "walkthroughs", "retros"]:
+            for entry in ["analysis", "test_specs", "plans", "walkthroughs", "retros", "test_evidence"]:
                 os.makedirs(os.path.join(eng_dir, entry), exist_ok=True)
 
-            # 1. Non-symlink test_results directory fails
+            # 1. Obsolete test_results symlink fails
             bad_results = os.path.join(eng_dir, "test_results")
-            os.makedirs(bad_results, exist_ok=True)
+            os.symlink("/some/target", bad_results)
             ok_bad, errs_bad = verify_engineering_directory_structure(eng_dir=eng_dir)
             self.assertFalse(ok_bad)
-            self.assertTrue(any("must be a symbolic link" in e for e in errs_bad))
-            os.rmdir(bad_results)
-
-            # 2. Symlink with wrong target fails
-            os.symlink("/wrong/target", bad_results)
-            ok_wrong, errs_wrong = verify_engineering_directory_structure(eng_dir=eng_dir)
-            self.assertFalse(ok_wrong)
-            self.assertTrue(any("does not match expected canonical target" in e for e in errs_wrong))
+            self.assertTrue(any("obsolete and retired" in e for e in errs_bad))
             os.unlink(bad_results)
 
-            # 3. Canonical symlink passes
-            os.symlink("../../app/build/reports/tests/testDebugUnitTest", bad_results)
+            # 2. Canonical test_evidence directory passes
             ok_good, errs_good = verify_engineering_directory_structure(eng_dir=eng_dir)
             self.assertTrue(ok_good, f"Expected pass, got: {errs_good}")
 
@@ -2434,6 +2429,57 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
             tst_shards=clean_shard,
         )
         self.assertTrue(ok, "Clean worktree without build outputs must not crash or fail unexpectedly")
+
+    def test_scenario_62_tst_pro_100_verify_test_evidence(self):
+        """TST-PRO-100.2: Verify verify_test_evidence validates test evidence records and rejects failures (REQ-PRO-100.4)."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            ev_dir = os.path.join(tmpdir, "docs", "engineering", "test_evidence")
+            os.makedirs(ev_dir, exist_ok=True)
+
+            # 1. Clean initialized directory with README.md passes
+            with open(os.path.join(ev_dir, "README.md"), "w", encoding="utf-8") as f:
+                f.write("# Test Evidence\n")
+            ok_clean, diag_clean = verify_test_evidence(repo_root=tmpdir)
+            self.assertTrue(ok_clean, f"Clean initialized directory must pass: {diag_clean}")
+            self.assertTrue(any("README.md verified" in m for m in diag_clean))
+
+            # 2. Passing sprint evidence record passes
+            passing_data = {
+                "target": "sprint_2026-46.8",
+                "type": "sprint",
+                "commit": "abc1234",
+                "timestamp": "2026-11-16T00:00:00Z",
+                "unit_tests": {"total": 10, "passed": 10, "failures": 0, "errors": 0},
+            }
+            with open(os.path.join(ev_dir, "sprint_2026-46.8.json"), "w", encoding="utf-8") as f:
+                json.dump(passing_data, f)
+
+            ok_pass, diag_pass = verify_test_evidence(repo_root=tmpdir)
+            self.assertTrue(ok_pass, f"Passing evidence record must pass: {diag_pass}")
+
+            # Specific target query passes
+            ok_spec, diag_spec = verify_test_evidence(target_id="sprint_2026-46.8", repo_root=tmpdir)
+            self.assertTrue(ok_spec)
+
+            # Missing specific target query fails
+            ok_miss, diag_miss = verify_test_evidence(target_id="sprint_9999-99.9", repo_root=tmpdir)
+            self.assertFalse(ok_miss)
+            self.assertTrue(any("Missing test evidence record" in m for m in diag_miss))
+
+            # 3. Failing evidence record triggers error
+            failing_data = {
+                "target": "sprint_2026-46.9",
+                "type": "sprint",
+                "commit": "def5678",
+                "timestamp": "2026-11-16T01:00:00Z",
+                "unit_tests": {"total": 10, "passed": 8, "failures": 2, "errors": 0},
+            }
+            with open(os.path.join(ev_dir, "sprint_2026-46.9.json"), "w", encoding="utf-8") as f:
+                json.dump(failing_data, f)
+
+            ok_fail, diag_fail = verify_test_evidence(repo_root=tmpdir)
+            self.assertFalse(ok_fail)
+            self.assertTrue(any("reports 2 failure(s)" in m for m in diag_fail))
 
 
 

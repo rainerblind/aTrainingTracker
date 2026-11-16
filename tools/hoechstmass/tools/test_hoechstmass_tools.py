@@ -37,6 +37,7 @@ from tools.hoechstmass.tools.jira_util import (
     count_final_review_bounces,
     final_review_verdict,
     export_gates,
+    export_test_evidence,
     collect_sprint_metrics_for_id,
     VALID_ROLES,
     qa_audit,
@@ -421,6 +422,27 @@ class TestEpicCommands(unittest.TestCase):
                     content = f.read()
                 self.assertIn("# Sprint Quality Gate Records: Sprint 100", content)
                 self.assertIn("| PROJ-101 | PROJ-102 | Gate 1 | Analysis (Gate 1) | PASS | agent2 | Agent 2 |", content)
+
+    def test_export_test_evidence_hoechstmass(self):
+        """TST-PRO-100.1 / TST-PRO-100.4: export_test_evidence command in hoechstmass."""
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmpdir:
+            out_dir = os.path.join(tmpdir, "test_evidence")
+            res_dir = os.path.join(tmpdir, "test-results")
+            os.makedirs(res_dir, exist_ok=True)
+            with open(os.path.join(res_dir, "TEST-Sample.xml"), "w", encoding="utf-8") as f:
+                f.write('<?xml version="1.0"?><testsuite tests="1" failures="0" errors="0" skipped="0" time="0.1"><testcase name="testA_TST_PRO_100" classname="Sample"/></testsuite>')
+
+            md_path, json_path, payload = export_test_evidence(
+                sprint_arg="sprint_100",
+                out_dir=out_dir,
+                test_results_dir=res_dir,
+                as_role="coordinator",
+            )
+            self.assertTrue(os.path.isfile(md_path))
+            self.assertTrue(os.path.isfile(json_path))
+            self.assertEqual(payload["target"], "sprint_100")
+            self.assertEqual(payload["unit_tests"]["total"], 1)
 
     def test_verify_sprint_metrics_hoechstmass(self):
         """TST-PRO-060.2 / TST-PRO-060.3: verify_sprint_metrics in hoechstmass."""

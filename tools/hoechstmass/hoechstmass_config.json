@@ -52,7 +52,9 @@
       "reviews",
       "test_specs",
       "walkthroughs",
-      "test_results",
+      "test_evidence",
+      "aspice_audits",
+      "code_reviews",
       "rule_history_archive.md",
       "workflow_overview.html"
     ]

@@ -895,29 +895,29 @@ class ReleaseCiAndLintConfigContractTest {
     }
 
     /**
-     * Asserts that docs/engineering/test_results exists, is a symbolic link pointing to
-     * canonical target ../../app/build/reports/tests/testDebugUnitTest, enabling 1-click
-     * developer inspection (REQ-PRO-067.3, TST-PRO-067.3, Rule 67, ATT-6137).
+     * Asserts that docs/engineering/test_results volatile build symlink is retired and
+     * docs/engineering/test_evidence exists as a canonical, tracked directory with README.md
+     * for baseline-controlled sprint and release verification records (REQ-PRO-100.1, REQ-PRO-100.4,
+     * REQ-PRO-067.3, TST-PRO-100.3, TST-PRO-067.3, Rule 8.4, ATT-8144).
      */
     @Test
-    fun testEngineeringTestResultsSymlink_integrityAndCanonicalTarget() {
+    fun testEngineeringTestResultsSymlink_retiredAndEvidenceDirectoryPresent() {
         val repoRoot = findRepoRootDir()
         val testResultsFile = File(repoRoot, "docs/engineering/test_results")
+        val testEvidenceDir = File(repoRoot, "docs/engineering/test_evidence")
+        val testEvidenceReadme = File(testEvidenceDir, "README.md")
 
-        assertTrue(
-            "docs/engineering/test_results must exist in workspace (REQ-PRO-067.3, Rule 67)",
+        assertFalse(
+            "docs/engineering/test_results symlink must be retired (REQ-PRO-067.3, TST-PRO-067.3, ATT-8144)",
             testResultsFile.exists() || java.nio.file.Files.isSymbolicLink(testResultsFile.toPath())
         )
         assertTrue(
-            "docs/engineering/test_results must be a symbolic link (REQ-PRO-067.3, Rule 67)",
-            java.nio.file.Files.isSymbolicLink(testResultsFile.toPath())
+            "docs/engineering/test_evidence directory must exist in workspace (REQ-PRO-100.1, TST-PRO-100.3, Rule 8.4)",
+            testEvidenceDir.exists() && testEvidenceDir.isDirectory
         )
-
-        val target = java.nio.file.Files.readSymbolicLink(testResultsFile.toPath()).toString()
-        val expectedTarget = "../../app/build/reports/tests/testDebugUnitTest"
         assertTrue(
-            "Symlink target '$target' must match expected '$expectedTarget' (REQ-PRO-067.3, Rule 67)",
-            target == expectedTarget
+            "docs/engineering/test_evidence/README.md must exist (REQ-PRO-100.1, TST-PRO-100.3)",
+            testEvidenceReadme.exists() && testEvidenceReadme.isFile
         )
     }
 

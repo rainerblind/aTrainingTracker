@@ -2479,11 +2479,11 @@
   • Assert presence of step packaging `junit-test-results-<tag>.zip` (or `.tar.gz`) from unit test report directories.
   • Assert that release assets attached via `softprops/action-gh-release@v2` include the versioned test results archive pattern.
   • Assert workflow artifact upload for release test results.
-  3. *Local Developer Symlink Integrity Test (`TST-PRO-067.3`, ReleaseCiAndLintConfigContractTest.kt & tools/verify_requirement_governance.py)*:
-  • Assert `docs/engineering/test_results` exists and is a symbolic link.
-  • Assert the link target points to `../../app/build/reports/tests/testDebugUnitTest`.
+  3. *Test Results Symlink Retirement & Evidence Directory Contract Test (`TST-PRO-067.3`, ReleaseCiAndLintConfigContractTest.kt & tools/verify_requirement_governance.py)*:
+  • Assert `docs/engineering/test_results` symlink to transient build output is retired.
+  • Assert `docs/engineering/test_evidence/` is established as canonical directory in living docs and governance scripts.
   4. *Governance Tooling Integration (`TST-PRO-067.4`, tools/test_verify_requirement_governance.py)*:
-  • Assert `verify_engineering_directory_structure()` in `tools/verify_requirement_governance.py` validates `docs/engineering/test_results` symlink target integrity.
+  • Assert `verify_engineering_directory_structure()` in `tools/verify_requirement_governance.py` validates canonical `test_evidence/` layout and rejects obsolete symlink.
   5. *Workflow YAML Syntax Validation (`TST-PRO-067.5`, tools/test_verify_requirement_governance.py & ReleaseCiAndLintConfigContractTest.kt)*:
   • Parse `.github/workflows/android-branch-build.yml` and `.github/workflows/android-release.yml` with YAML parser and assert zero syntax errors.
 
@@ -3261,3 +3261,27 @@
   4. *Stage 5 Evidence-Gated Promotion Test (`tools/test_jira_accounts.py`)*: Assert `auto_verify_living_docs_on_stage5()` checks test results before flipping status, promoting only items with passing evidence and keeping unbacked/failing items as `[Implemented]`.
   5. *Clean Worktree Default Verification Safety Test*: Assert default `verify_requirement_governance.py` passes cleanly in fresh worktree without requiring pre-existing build artifacts.
   6. *Living Documentation Parity*: Execute `python3 tools/verify_requirement_governance.py` confirming 100% parity across `docs/requirements.md` and `docs/tests.md`.
+
+---
+
+### TST-PRO-100: **Versioned Test and Coverage Evidence Contract & Gating Suite** [Verified]
+- **Requirement(s)**: `REQ-PRO-100`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Component**: `tools/generate_test_evidence.py`, `tools/test_generate_test_evidence.py`, `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `tools/test_verify_requirement_governance.py`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ReleaseCiAndLintConfigContractTest.kt`, `docs/management/cm_plan.md`, `.agents/rules/aspice_governance.md`
+- **Jira**: `ATT-8144`
+- **Test Description**:
+  1. *Test Evidence Generator Unit Suite (`TST-PRO-100.1`, tools/test_generate_test_evidence.py)*:
+  • Assert parser extracts JUnit XML test results and calculates total, passed, failed, error, and skipped counts.
+  • Assert parser correlates test cases to `TST-XXX` IDs and produces structured pass/fail mapping.
+  • Assert parser parses Kover XML report and extracts global and per-package line and branch coverage percentages.
+  • Assert generator produces valid, readable `docs/engineering/test_evidence/<target>.md` and `.json` files.
+  2. *Governance Gating & Directory Structure Test (`TST-PRO-100.2`, tools/test_verify_requirement_governance.py)*:
+  • Assert `verify_engineering_directory_structure()` allows `docs/engineering/test_evidence/` and rejects `docs/engineering/test_results` symlink.
+  • Assert `verify_requirement_governance.py --check-test-evidence` validates presence, format, and non-empty status of sprint and release evidence files.
+  3. *Release CI Contract & CM Plan Verification (`TST-PRO-100.3`, ReleaseCiAndLintConfigContractTest.kt)*:
+  • Assert `ReleaseCiAndLintConfigContractTest.kt` verifies retirement of `docs/engineering/test_results` symlink and presence of `docs/engineering/test_evidence/`.
+  • Assert `docs/management/cm_plan.md` registers `docs/engineering/test_evidence/` under controlled Configuration Items.
+  4. *Living Documentation Parity*:
+  • Execute `python3 tools/verify_requirement_governance.py` confirming 100% parity across `docs/requirements.md` and `docs/tests.md`.

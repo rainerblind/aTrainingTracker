@@ -212,13 +212,16 @@ test -f docs/releases/V${VERSION_NAME}__${VERSION_CODE}/sys_verification_record.
 * Objective criteria met: sample loss $\le 1.0\%$, RF reconnection latency $\le 10.0\text{ s}$, battery drain rate $\le 8.0\%/\text{hr}$, FIT/TCX integrity valid with zero CRC errors.
 * Formal sign-off signatures and approval dates from System Verification Engineer and Quality Gatekeeper are present.
 
-#### 3. Release Verification Summary Generation (ASPICE SWE.6 BP5, REQ-PRO-074)
-Generate the consolidated release verification summary markdown document aggregating unit tests, traceability coverage, and system verification results:
+#### 3. Release Verification Summary Generation & Test Evidence (ASPICE SWE.6 BP5, REQ-PRO-074, REQ-PRO-100)
+Generate the consolidated release verification summary markdown document aggregating unit tests, traceability coverage, and system verification results, and export persistent test & coverage evidence:
 ```bash
 python3 tools/generate_release_verification_summary.py --tag V${VERSION_NAME}__${VERSION_CODE}
+python3 tools/jira_util.py export-test-evidence --release V${VERSION_NAME}__${VERSION_CODE}
+python3 tools/verify_requirement_governance.py --check-test-evidence V${VERSION_NAME}__${VERSION_CODE}
 ```
 *Verification Checklist*:
 * Output file `docs/releases/V${VERSION_NAME}__${VERSION_CODE}/verification_summary.md` generated.
+* Test evidence files `docs/engineering/test_evidence/V${VERSION_NAME}__${VERSION_CODE}.md` and `.json` generated.
 * Overall status is `PASS (READY FOR RELEASE)`.
 * Zero open deviations listed under `Deviations Requiring Human Approval`.
 * Link to versioned JUnit archive `build-evidence/junit-test-results-<tag>.zip` verified.
