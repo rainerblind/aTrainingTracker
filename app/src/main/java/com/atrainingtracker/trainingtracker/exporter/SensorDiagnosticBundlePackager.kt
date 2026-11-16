@@ -8,7 +8,7 @@
  * (at your option) any later version.
  */
 
-package com.atrainingtracker.trainingtracker.ui.dialogs
+package com.atrainingtracker.trainingtracker.exporter
 
 import android.content.Context
 import android.os.Build

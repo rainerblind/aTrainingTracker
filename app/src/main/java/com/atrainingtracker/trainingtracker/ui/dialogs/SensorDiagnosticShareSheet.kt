@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import com.atrainingtracker.BuildConfig
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.exporter.SensorDiagnosticBundlePackager
 import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
 import kotlinx.coroutines.launch
 

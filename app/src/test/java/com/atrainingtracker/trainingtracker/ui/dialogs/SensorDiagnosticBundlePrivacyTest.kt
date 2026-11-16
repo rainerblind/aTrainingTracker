@@ -14,6 +14,7 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarRawTelemetryRecorder
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager
+import com.atrainingtracker.trainingtracker.exporter.SensorDiagnosticBundlePackager
 import kotlinx.coroutines.runBlocking
 import org.json.JSONObject
 import org.junit.After
