@@ -18,7 +18,9 @@
 
 package com.atrainingtracker.banalservice.devices.bluetooth_le.polar
 
+import android.app.Application
 import android.content.Context
+import android.os.Looper
 import androidx.test.core.app.ApplicationProvider
 import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.BSportType
@@ -46,12 +48,15 @@ import io.mockk.spyk
 import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.runTest
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.roundToInt
 import kotlin.math.sin
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
@@ -61,6 +66,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows
 
 /**
  * Unit tests for [PolarOnlineStreamingBridge] single-GATT PMD streaming, `HR`/`RR` forwarding,
@@ -456,5 +462,300 @@ class PolarOnlineStreamingBridgeTest {
         assertNull(bridge.getSensor(SensorType.GROUND_CONTACT_TIME))
 
         bridge.shutDown()
+    }
+
+    @Test
+    fun testSearchTimeout_triggersNotifyStopSearchingFalse_andDisconnects() = runTest {
+        // Traces to: REQ-CON-045.1, TST-CON-045.1
+        val db = DevicesDatabaseManager.getInstance(context)
+        val deviceId = db.insertNewBluetoothDeviceIntoDB(
+            DeviceType.HRM,
+            "AA:BB:CC:DD:EE:01",
+            "Polar H10 00112233",
+            "Polar Electro",
+            95,
+            true
+        )
+        val mockApi = mockk<PolarBleApi>(relaxed = true)
+        val shadowApp = Shadows.shadowOf(ApplicationProvider.getApplicationContext<Application>())
+        shadowApp.clearBroadcastIntents()
+
+        val testDispatcher = StandardTestDispatcher(testScheduler)
+        val bridge = PolarOnlineStreamingBridge(
+            context = context,
+            mySensorManager = sensorManager,
+            deviceId = deviceId,
+            macAddress = "AA:BB:CC:DD:EE:01",
+            dispatcher = testDispatcher,
+            sdkIntProvider = { 34 },
+            sportTypeProvider = { BSportType.RUN },
+            apiFactory = { _, _ -> mockApi },
+            searchTimeoutMsProvider = { 5000L }
+        )
+
+        try {
+            bridge.startSearching()
+            assertTrue("Bridge must be in searching state", bridge.isSearching)
+            verify(exactly = 1) { mockApi.connectToDevice("00112233") }
+
+            // Advance time past the 5000ms timeout
+            testScheduler.advanceTimeBy(5001L)
+            Shadows.shadowOf(Looper.getMainLooper()).idle()
+
+            assertFalse("Bridge must stop searching after timeout", bridge.isSearching)
+            verify(atLeast = 1) { mockApi.disconnectFromDevice("00112233") }
+            val stopIntent = shadowApp.broadcastIntents.lastOrNull {
+                it.action == BANALService.SEARCHING_STOPPED_FOR_ONE_INTENT &&
+                    it.getLongExtra(BANALService.DEVICE_ID, -1L) == deviceId
+            }
+            assertNotNull("SEARCHING_STOPPED_FOR_ONE_INTENT must be broadcast", stopIntent)
+            assertFalse("Timeout must notify failure (success=false)", stopIntent!!.getBooleanExtra(BANALService.SEARCHING_FINISHED_SUCCESS, true))
+        } finally {
+            bridge.shutDown()
+        }
+    }
+
+    @Test
+    fun testStartSearching_withExistingPolarApi_reconnectsAndArmsTimeout() = runTest {
+        // Traces to: REQ-CON-045.2, TST-CON-045.2
+        val db = DevicesDatabaseManager.getInstance(context)
+        val deviceId = db.insertNewBluetoothDeviceIntoDB(
+            DeviceType.HRM,
+            "AA:BB:CC:DD:EE:02",
+            "Polar H10 22334455",
+            "Polar Electro",
+            95,
+            true
+        )
+        val mockApi = mockk<PolarBleApi>(relaxed = true)
+        val testDispatcher = StandardTestDispatcher(testScheduler)
+        val bridge = PolarOnlineStreamingBridge(
+            context = context,
+            mySensorManager = sensorManager,
+            deviceId = deviceId,
+            macAddress = "AA:BB:CC:DD:EE:02",
+            dispatcher = testDispatcher,
+            sdkIntProvider = { 34 },
+            sportTypeProvider = { BSportType.RUN },
+            apiFactory = { _, _ -> mockApi },
+            searchTimeoutMsProvider = { 5000L }
+        )
+
+        try {
+            bridge.startSearching()
+            verify(exactly = 1) { mockApi.connectToDevice("22334455") }
+
+            // Simulate disconnect -> bridge stays disconnected
+            bridge.getSdkCallbackForTesting().deviceDisconnected(PolarDeviceInfo("22334455", "AA:BB:CC:DD:EE:02", -60, "Polar H10", true))
+            assertFalse(bridge.isReceivingData())
+
+            // Re-trigger startSearching with polarApi already populated
+            bridge.startSearching()
+            assertTrue(bridge.isSearching)
+            assertNotNull(bridge.getSearchTimeoutJobForTesting())
+            assertTrue(bridge.getSearchTimeoutJobForTesting()!!.isActive)
+            verify(exactly = 2) { mockApi.connectToDevice("22334455") }
+        } finally {
+            bridge.shutDown()
+        }
+    }
+
+    @Test
+    fun testStartSearching_whenAlreadyConnected_immediatelyDispatchesStopSearchingTrue() = runTest {
+        // Traces to: REQ-CON-045.2, TST-CON-045.2
+        val db = DevicesDatabaseManager.getInstance(context)
+        val deviceId = db.insertNewBluetoothDeviceIntoDB(
+            DeviceType.HRM,
+            "AA:BB:CC:DD:EE:03",
+            "Polar H10 33445566",
+            "Polar Electro",
+            95,
+            true
+        )
+        val mockApi = mockk<PolarBleApi>(relaxed = true)
+        val shadowApp = Shadows.shadowOf(ApplicationProvider.getApplicationContext<Application>())
+        shadowApp.clearBroadcastIntents()
+
+        val testDispatcher = StandardTestDispatcher(testScheduler)
+        val bridge = PolarOnlineStreamingBridge(
+            context = context,
+            mySensorManager = sensorManager,
+            deviceId = deviceId,
+            macAddress = "AA:BB:CC:DD:EE:03",
+            dispatcher = testDispatcher,
+            sdkIntProvider = { 34 },
+            sportTypeProvider = { BSportType.RUN },
+            apiFactory = { _, _ -> mockApi },
+            searchTimeoutMsProvider = { 5000L }
+        )
+
+        try {
+            bridge.startSearching()
+            bridge.getSdkCallbackForTesting().deviceConnected(PolarDeviceInfo("33445566", "AA:BB:CC:DD:EE:03", -50, "Polar H10", true))
+            assertTrue(bridge.isReceivingData())
+            shadowApp.clearBroadcastIntents()
+
+            // Invoke startSearching again while already connected
+            bridge.startSearching()
+            Shadows.shadowOf(Looper.getMainLooper()).idle()
+            val stopIntent = shadowApp.broadcastIntents.lastOrNull {
+                it.action == BANALService.SEARCHING_STOPPED_FOR_ONE_INTENT &&
+                    it.getLongExtra(BANALService.DEVICE_ID, -1L) == deviceId
+            }
+            assertNotNull("SEARCHING_STOPPED_FOR_ONE_INTENT must be broadcast immediately", stopIntent)
+            assertTrue("Must notify search success", stopIntent!!.getBooleanExtra(BANALService.SEARCHING_FINISHED_SUCCESS, false))
+            assertNull("Timeout watchdog should not be armed when already connected", bridge.getSearchTimeoutJobForTesting())
+            verify(exactly = 1) { mockApi.connectToDevice("33445566") }
+        } finally {
+            bridge.shutDown()
+        }
+    }
+
+    @Test
+    fun testDeviceConnected_cancelsSearchTimeoutWatchdog() = runTest {
+        // Traces to: REQ-CON-045.3, TST-CON-045.3
+        val db = DevicesDatabaseManager.getInstance(context)
+        val deviceId = db.insertNewBluetoothDeviceIntoDB(
+            DeviceType.HRM,
+            "AA:BB:CC:DD:EE:04",
+            "Polar H10 44556677",
+            "Polar Electro",
+            95,
+            true
+        )
+        val mockApi = mockk<PolarBleApi>(relaxed = true)
+        val shadowApp = Shadows.shadowOf(ApplicationProvider.getApplicationContext<Application>())
+        shadowApp.clearBroadcastIntents()
+
+        val testDispatcher = StandardTestDispatcher(testScheduler)
+        val bridge = PolarOnlineStreamingBridge(
+            context = context,
+            mySensorManager = sensorManager,
+            deviceId = deviceId,
+            macAddress = "AA:BB:CC:DD:EE:04",
+            dispatcher = testDispatcher,
+            sdkIntProvider = { 34 },
+            sportTypeProvider = { BSportType.RUN },
+            apiFactory = { _, _ -> mockApi },
+            searchTimeoutMsProvider = { 5000L }
+        )
+
+        try {
+            bridge.startSearching()
+            assertTrue(bridge.isSearching)
+            assertNotNull(bridge.getSearchTimeoutJobForTesting())
+
+            // Simulate connection before timeout
+            bridge.getSdkCallbackForTesting().deviceConnected(PolarDeviceInfo("44556677", "AA:BB:CC:DD:EE:04", -50, "Polar H10", true))
+            assertNull("Timeout watchdog must be cancelled and null on connection", bridge.getSearchTimeoutJobForTesting())
+            Shadows.shadowOf(Looper.getMainLooper()).idle()
+
+            val stopIntent = shadowApp.broadcastIntents.lastOrNull {
+                it.action == BANALService.SEARCHING_STOPPED_FOR_ONE_INTENT &&
+                    it.getLongExtra(BANALService.DEVICE_ID, -1L) == deviceId
+            }
+            assertNotNull("SEARCHING_STOPPED_FOR_ONE_INTENT must be broadcast", stopIntent)
+            assertTrue("Connection must notify success", stopIntent!!.getBooleanExtra(BANALService.SEARCHING_FINISHED_SUCCESS, false))
+
+            // Advance time past the original 5000ms timeout
+            testScheduler.advanceTimeBy(6000L)
+            Shadows.shadowOf(Looper.getMainLooper()).idle()
+
+            val stopIntentsCount = shadowApp.broadcastIntents.count {
+                it.action == BANALService.SEARCHING_STOPPED_FOR_ONE_INTENT &&
+                    it.getLongExtra(BANALService.DEVICE_ID, -1L) == deviceId
+            }
+            assertEquals("No additional timeout events should be sent", 1, stopIntentsCount)
+            verify(exactly = 0) { mockApi.disconnectFromDevice(any()) }
+        } finally {
+            bridge.shutDown()
+        }
+    }
+
+    @Test
+    fun testBlePowerStateChanged_false_cancelsSearchTimeoutAndResetsState() = runTest {
+        // Traces to: REQ-CON-045.4, TST-CON-045.4
+        val db = DevicesDatabaseManager.getInstance(context)
+        val deviceId = db.insertNewBluetoothDeviceIntoDB(
+            DeviceType.HRM,
+            "AA:BB:CC:DD:EE:05",
+            "Polar H10 55667788",
+            "Polar Electro",
+            95,
+            true
+        )
+        val mockApi = mockk<PolarBleApi>(relaxed = true)
+        val shadowApp = Shadows.shadowOf(ApplicationProvider.getApplicationContext<Application>())
+        shadowApp.clearBroadcastIntents()
+
+        val testDispatcher = StandardTestDispatcher(testScheduler)
+        val bridge = PolarOnlineStreamingBridge(
+            context = context,
+            mySensorManager = sensorManager,
+            deviceId = deviceId,
+            macAddress = "AA:BB:CC:DD:EE:05",
+            dispatcher = testDispatcher,
+            sdkIntProvider = { 34 },
+            sportTypeProvider = { BSportType.RUN },
+            apiFactory = { _, _ -> mockApi },
+            searchTimeoutMsProvider = { 5000L }
+        )
+
+        try {
+            bridge.startSearching()
+            assertTrue(bridge.isSearching)
+
+            // BT adapter powers off
+            bridge.getSdkCallbackForTesting().blePowerStateChanged(false)
+            Shadows.shadowOf(Looper.getMainLooper()).idle()
+
+            assertFalse(bridge.isSearching)
+            assertNull(bridge.getSearchTimeoutJobForTesting())
+
+            val stopIntent = shadowApp.broadcastIntents.lastOrNull {
+                it.action == BANALService.SEARCHING_STOPPED_FOR_ONE_INTENT &&
+                    it.getLongExtra(BANALService.DEVICE_ID, -1L) == deviceId
+            }
+            assertNotNull("SEARCHING_STOPPED_FOR_ONE_INTENT must be broadcast on BT power off while searching", stopIntent)
+            assertFalse("Power off while searching must notify failure", stopIntent!!.getBooleanExtra(BANALService.SEARCHING_FINISHED_SUCCESS, true))
+        } finally {
+            bridge.shutDown()
+        }
+    }
+
+    @Test
+    fun testShutDown_cancelsSearchTimeoutCleanly() = runTest {
+        // Traces to: REQ-CON-045.4, TST-CON-045.4
+        val db = DevicesDatabaseManager.getInstance(context)
+        val deviceId = db.insertNewBluetoothDeviceIntoDB(
+            DeviceType.HRM,
+            "AA:BB:CC:DD:EE:06",
+            "Polar H10 66778899",
+            "Polar Electro",
+            95,
+            true
+        )
+        val mockApi = mockk<PolarBleApi>(relaxed = true)
+        val testDispatcher = StandardTestDispatcher(testScheduler)
+        val bridge = PolarOnlineStreamingBridge(
+            context = context,
+            mySensorManager = sensorManager,
+            deviceId = deviceId,
+            macAddress = "AA:BB:CC:DD:EE:06",
+            dispatcher = testDispatcher,
+            sdkIntProvider = { 34 },
+            sportTypeProvider = { BSportType.RUN },
+            apiFactory = { _, _ -> mockApi },
+            searchTimeoutMsProvider = { 5000L }
+        )
+
+        bridge.startSearching()
+        val job = bridge.getSearchTimeoutJobForTesting()
+        assertNotNull(job)
+        assertTrue(job!!.isActive)
+
+        bridge.shutDown()
+        assertFalse(job.isActive)
+        assertTrue(job.isCancelled)
     }
 }
