@@ -20,6 +20,7 @@
 
 package com.atrainingtracker.banalservice.devices.bluetooth_le.polar
 
+import android.annotation.SuppressLint
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -240,6 +241,8 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
 
     override fun isReceivingData(): Boolean = isConnectedFlag.get() && !isShutDown.get()
 
+    // Runtime API >= 33 gate is enforced via sdkIntProvider() seam for unit testability.
+    @SuppressLint("NewApi")
     override fun startSearching() {
         if (isShutDown.get() || sdkIntProvider() < Build.VERSION_CODES.TIRAMISU) {
             notifyStopSearching(false)
