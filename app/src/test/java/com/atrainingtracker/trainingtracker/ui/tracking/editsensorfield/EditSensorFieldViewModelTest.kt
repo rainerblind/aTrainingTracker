@@ -784,4 +784,122 @@ class EditSensorFieldViewModelTest {
 
         assertFalse("Adding field to a new row must result in single-field row", viewModel.uiState.value.isMultiFieldRow)
     }
+
+    /**
+     * TST-TRK-081.2: EditSensorFieldViewModel onGraphColorChanged and saveChanges in THIS_TILE scope.
+     */
+    @Test
+    fun testGraphColor_thisTileScope_persistsColorToRepository() = runTest {
+        // TST-TRK-081
+        val viewModel = createViewModel(sensorFieldId = -1L)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.onGraphColorChanged("CRIMSON")
+        viewModel.onGraphColorScopeChanged(GraphColorScope.THIS_TILE)
+        assertEquals("CRIMSON", viewModel.uiState.value.graphColor)
+        assertEquals(GraphColorScope.THIS_TILE, viewModel.uiState.value.graphColorScope)
+
+        viewModel.saveChanges()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        coVerify {
+            trackingViewsRepo.insertSensorFieldConfig(
+                tabViewId = 1L,
+                rowNr = 0,
+                colNr = 0,
+                newSensorType = any(),
+                newViewSize = any(),
+                newSourceDeviceId = any(),
+                newSourceDeviceName = any(),
+                newFilterType = any(),
+                newFilterConstant = any(),
+                showValue = any(),
+                showBar = any(),
+                colWeight = any(),
+                showGraph = any(),
+                graphHorizonSeconds = any(),
+                graphColor = "CRIMSON"
+            )
+        }
+    }
+
+    /**
+     * TST-TRK-081.2: EditSensorFieldViewModel saveChanges in ALL_METRIC scope updates
+     * TelemetryGraphColorPreferences and persists GLOBAL_DEFAULT to repository.
+     */
+    @Test
+    fun testGraphColor_allMetricScope_persistsGlobalAndResetsTileToGlobalDefault() = runTest {
+        // TST-TRK-081
+        val viewModel = createViewModel(sensorFieldId = -1L)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.onSensorTypeChanged(SensorType.POWER)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.onGraphColorChanged("VIOLET")
+        viewModel.onGraphColorScopeChanged(GraphColorScope.ALL_METRIC)
+        assertEquals("VIOLET", viewModel.uiState.value.graphColor)
+        assertEquals(GraphColorScope.ALL_METRIC, viewModel.uiState.value.graphColorScope)
+
+        viewModel.saveChanges()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        coVerify {
+            trackingViewsRepo.insertSensorFieldConfig(
+                tabViewId = 1L,
+                rowNr = 0,
+                colNr = 0,
+                newSensorType = any(),
+                newViewSize = any(),
+                newSourceDeviceId = any(),
+                newSourceDeviceName = any(),
+                newFilterType = any(),
+                newFilterConstant = any(),
+                showValue = any(),
+                showBar = any(),
+                colWeight = any(),
+                showGraph = any(),
+                graphHorizonSeconds = any(),
+                graphColor = "GLOBAL_DEFAULT"
+            )
+        }
+    }
+
+    /**
+     * TST-TRK-081.3: isDynamicZoneSupported returns true strictly for HR, POWER family, and HRV_DFA_A1.
+     */
+    @Test
+    fun testIsDynamicZoneSupported_gatedToHrPowerHrvAlpha1() = runTest {
+        // TST-TRK-081
+        val viewModel = createViewModel()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.onSensorTypeChanged(SensorType.HR)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertTrue(viewModel.uiState.value.isDynamicZoneSupported)
+
+        viewModel.onSensorTypeChanged(SensorType.POWER)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertTrue(viewModel.uiState.value.isDynamicZoneSupported)
+
+        viewModel.onSensorTypeChanged(SensorType.NORMALIZED_POWER)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertTrue(viewModel.uiState.value.isDynamicZoneSupported)
+
+        viewModel.onSensorTypeChanged(SensorType.HRV_DFA_A1)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertTrue(viewModel.uiState.value.isDynamicZoneSupported)
+
+        viewModel.onSensorTypeChanged(SensorType.SPEED_mps)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertFalse(viewModel.uiState.value.isDynamicZoneSupported)
+
+        viewModel.onSensorTypeChanged(SensorType.CADENCE)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertFalse(viewModel.uiState.value.isDynamicZoneSupported)
+
+        viewModel.onSensorTypeChanged(SensorType.HRV_RMSSD)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertFalse(viewModel.uiState.value.isDynamicZoneSupported)
+    }
 }

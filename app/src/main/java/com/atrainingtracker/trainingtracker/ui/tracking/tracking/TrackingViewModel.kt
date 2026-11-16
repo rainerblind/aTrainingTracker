@@ -677,6 +677,7 @@ class TrackingViewModel @JvmOverloads constructor(
                             graphHorizonSeconds = config.graphHorizonSeconds,
                             sparklineSamples = sparklineSamples,
                             sparklineSpanSeconds = sparklineSpanSeconds,
+                            graphColor = config.graphColor,
                             colWeight = config.colWeight,
                             dfaA1ThresholdT1 = currentTuning.dfaA1ThresholdT1,
                             dfaA1ThresholdT2 = currentTuning.dfaA1ThresholdT2,

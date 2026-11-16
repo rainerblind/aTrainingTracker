@@ -95,7 +95,8 @@ data class SensorFieldConfig(
     val showBar: Boolean = false,
     val showGraph: Boolean = false,
     val graphHorizonSeconds: Int = 300,
-    val colWeight: Float = 1.0f
+    val colWeight: Float = 1.0f,
+    val graphColor: String = "GLOBAL_DEFAULT"
 )
 
 /**
@@ -246,6 +247,7 @@ class TrackingViewsRepository private constructor(private val context: Context) 
                 val colWeightIndex = c.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.COL_WEIGHT)
                 val showGraphIndex = c.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_GRAPH)
                 val graphHorizonIndex = c.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.GRAPH_HORIZON_S)
+                val graphColorIndex = c.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.GRAPH_COLOR)
 
                 do {
                     val viewSize = safeEnumValueOf(c.getString(viewSizeIndex), ViewSize.NORMAL)
@@ -274,6 +276,11 @@ class TrackingViewsRepository private constructor(private val context: Context) 
                     }
                     val showGraph = if (showGraphIndex != -1 && !c.isNull(showGraphIndex)) c.getInt(showGraphIndex) == 1 else false
                     val graphHorizonSeconds = if (graphHorizonIndex != -1 && !c.isNull(graphHorizonIndex)) c.getInt(graphHorizonIndex) else 300
+                    val graphColor = if (graphColorIndex != -1 && !c.isNull(graphColorIndex)) {
+                        c.getString(graphColorIndex) ?: "GLOBAL_DEFAULT"
+                    } else {
+                        "GLOBAL_DEFAULT"
+                    }
 
                     fieldList.add(
                         SensorFieldConfig(
@@ -290,7 +297,8 @@ class TrackingViewsRepository private constructor(private val context: Context) 
                             showBar = showBar,
                             showGraph = showGraph,
                             graphHorizonSeconds = graphHorizonSeconds,
-                            colWeight = colWeight
+                            colWeight = colWeight,
+                            graphColor = graphColor
                         )
                     )
                 } while (c.moveToNext())
@@ -331,6 +339,7 @@ class TrackingViewsRepository private constructor(private val context: Context) 
                     val colWeightIndex = c.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.COL_WEIGHT)
                     val showGraphIndex = c.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_GRAPH)
                     val graphHorizonIndex = c.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.GRAPH_HORIZON_S)
+                    val graphColorIndex = c.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.GRAPH_COLOR)
                     val showValue = if (showValueIndex != -1 && !c.isNull(showValueIndex)) c.getInt(showValueIndex) == 1 else true
                     val showBar = if (showBarIndex != -1 && !c.isNull(showBarIndex)) {
                         c.getInt(showBarIndex) == 1
@@ -345,6 +354,11 @@ class TrackingViewsRepository private constructor(private val context: Context) 
                     }
                     val showGraph = if (showGraphIndex != -1 && !c.isNull(showGraphIndex)) c.getInt(showGraphIndex) == 1 else false
                     val graphHorizonSeconds = if (graphHorizonIndex != -1 && !c.isNull(graphHorizonIndex)) c.getInt(graphHorizonIndex) else 300
+                    val graphColor = if (graphColorIndex != -1 && !c.isNull(graphColorIndex)) {
+                        c.getString(graphColorIndex) ?: "GLOBAL_DEFAULT"
+                    } else {
+                        "GLOBAL_DEFAULT"
+                    }
 
                     return@withContext SensorFieldConfig(
                         sensorFieldId = sensorFieldId,
@@ -360,7 +374,8 @@ class TrackingViewsRepository private constructor(private val context: Context) 
                         showBar = showBar,
                         showGraph = showGraph,
                         graphHorizonSeconds = graphHorizonSeconds,
-                        colWeight = colWeight
+                        colWeight = colWeight,
+                        graphColor = graphColor
                     )
                 } else {
                     return@withContext null // Return null if not found
@@ -399,7 +414,8 @@ class TrackingViewsRepository private constructor(private val context: Context) 
         showBar: Boolean = false,
         colWeight: Float = 1.0f,
         showGraph: Boolean = false,
-        graphHorizonSeconds: Int = 300
+        graphHorizonSeconds: Int = 300,
+        graphColor: String = "GLOBAL_DEFAULT"
     ) {
         withContext(Dispatchers.IO) {
 
@@ -415,7 +431,8 @@ class TrackingViewsRepository private constructor(private val context: Context) 
                 showBar,
                 colWeight,
                 showGraph,
-                graphHorizonSeconds
+                graphHorizonSeconds,
+                graphColor
             )
         }
 
@@ -439,7 +456,8 @@ class TrackingViewsRepository private constructor(private val context: Context) 
         showBar: Boolean = false,
         colWeight: Float = 1.0f,
         showGraph: Boolean = false,
-        graphHorizonSeconds: Int = 300
+        graphHorizonSeconds: Int = 300,
+        graphColor: String = "GLOBAL_DEFAULT"
     ) {
         Log.i("TrackingRepository", "insertSensorFieldConfig: $tabViewId, $rowNr, $colNr")
 
@@ -457,7 +475,8 @@ class TrackingViewsRepository private constructor(private val context: Context) 
                 showBar,
                 colWeight,
                 showGraph,
-                graphHorizonSeconds
+                graphHorizonSeconds,
+                graphColor
             )
         }
 

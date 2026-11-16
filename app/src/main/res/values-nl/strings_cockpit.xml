@@ -67,4 +67,11 @@
     <string name="sensor_sub_category_phone_battery">Smartphone batterij</string>
     <string name="sensor_capability_bar">Balk</string>
     <string name="sensor_capability_graph">Grafiek</string>
+
+    <!-- Cockpit Live Sparkline Graph Color Customization (REQ-TRK-081, ATT-7760) -->
+    <string name="cockpit_graph_color_title">Grafiekkleur</string>
+    <string name="cockpit_graph_color_this_tile">Deze tegel</string>
+    <string name="cockpit_graph_color_all_metric">Alle %1$s</string>
+    <string name="cockpit_graph_color_theme_default">Themastandaard</string>
+    <string name="cockpit_graph_color_dynamic_zone">Dynamische zone</string>
 </resources>

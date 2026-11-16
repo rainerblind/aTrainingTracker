@@ -75,6 +75,7 @@ data class SensorFieldState(
     val graphHorizonSeconds: Int = 300,
     val sparklineSamples: List<Float> = emptyList(),
     val sparklineSpanSeconds: Int = 0,
+    val graphColor: String = "GLOBAL_DEFAULT",
 
     // Proportional horizontal width weight (REQ-UI-437, ATT-4861)
     val colWeight: Float = 1.0f,

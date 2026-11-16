@@ -2940,3 +2940,32 @@
      • Assert thread safety (`synchronized(lock)`), monotonic timestamp ordering, and absence of data loss or buffer corruption.
   5. *Tier 1 Targeted Unit & Concurrency Verification Suite (`TST-TRK-080.5`)*:
      • Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.repositories.BANALServiceRepositoryTest" --tests "com.atrainingtracker.trainingtracker.ui.sparkline.LiveSparklineBufferTest"`.
+
+
+
+### TST-TRK-081: **Per-Tile Cockpit Sparkline Graph Color Persistence and Minimalist Color Editor UI Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Tickets**: `ATT-7760`
+- **Requirement(s)**: `REQ-TRK-081` (`REQ-TRK-081.1`..`REQ-TRK-081.5`)
+- **Component**: `TrackingViewsDatabaseManagerTest.kt`, `TrackingViewsDbMigrationV22Test.kt`, `TrackingViewsRepositoryTest.kt`, `EditSensorFieldViewModelTest.kt`, `SensorFieldViewTest.kt`, `TranslationParityTest.kt`
+- **Test Type**: Unit, Database Migration, ViewModel, Localization & Screenshot
+- **Verification Method**: Unit
+- **Procedure**:
+  1. *Database Schema v22 Migration & Backup Compatibility Test (`TST-TRK-081.1`, `TrackingViewsDbMigrationV22Test.kt`)*:
+     • Create a v21 database with existing layouts containing `ShowGraph` and `GraphHorizonS`. Run SQLite upgrade to v22.
+     • Verify `GraphColor` column exists with default `'GLOBAL_DEFAULT'`. Verify existing rows retain layout data and receive default.
+     • Verify `.attbackup` export includes `graphColor` and import with missing `graphColor` key safely defaults to `"GLOBAL_DEFAULT"`.
+  2. *Repository & State Flow Threading Test (`TST-TRK-081.2`, `TrackingViewsRepositoryTest.kt`)*:
+     • Insert, update, and query `SensorFieldConfig` with various `graphColor` values (`"GLOBAL_DEFAULT"`, `"THEME_DEFAULT"`, `"DYNAMIC_ZONE"`, `"CYAN"`).
+     • Verify `SensorFieldState.graphColor` reflects persisted value.
+  3. *ViewModel State & Scope Toggle Logic Test (`TST-TRK-081.3`, `EditSensorFieldViewModelTest.kt`)*:
+     • Test color selection with scope `This tile`: asserts only field config `graphColor` is updated.
+     • Test color selection with scope `All <Metric>`: asserts `TelemetryGraphColorPreferences` is updated for that sensor type, and field config `graphColor` is set to `"GLOBAL_DEFAULT"`.
+     • Test dynamic zone visibility gating: asserts `isDynamicZoneSupported` is true for `HR`, `POWER`, `HRV_DFA_A1`, and false for `SPEED_mps`, `CADENCE`, `ALTITUDE`.
+  4. *Sparkline Color Resolution Test (`TST-TRK-081.4`, `SensorFieldViewTest.kt`)*:
+     • Verify sparkline line color resolution across `"GLOBAL_DEFAULT"`, `"THEME_DEFAULT"`, `"DYNAMIC_ZONE"`, and explicit palette tokens in Light and Dark themes.
+  5. *9-Language Localization & Translation Parity Test (`TST-TRK-081.5`, `TranslationParityTest.kt`)*:
+     • Verify 100% translation parity, matching format specifiers, and zero missing keys across all 9 locales for all new string tokens.
+  6. *Visual Compose Screenshot Verification Test (`TST-TRK-081.6`, `EditSensorFieldDialogScreenshotTest.kt`)*:
+     • Render `EditSensorFieldDialog` in Light and Dark themes and capture `docs/engineering/walkthroughs/img/ATT-7760_color_picker.png` verifying Rule 8.5 4-point visual checklist.
+

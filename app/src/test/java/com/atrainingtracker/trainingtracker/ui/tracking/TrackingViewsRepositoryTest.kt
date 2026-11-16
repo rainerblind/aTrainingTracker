@@ -21,6 +21,7 @@ package com.atrainingtracker.trainingtracker.ui.tracking
 import android.content.Context
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
+import android.util.Log
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
 import com.atrainingtracker.banalservice.filters.FilterType
 import com.atrainingtracker.banalservice.sensor.SensorType
@@ -67,6 +68,11 @@ class TrackingViewsRepositoryTest {
 
         mockkStatic(DevicesDatabaseManager::class)
         every { DevicesDatabaseManager.getInstance(any()) } returns mockDevicesDbManager
+
+        mockkStatic(Log::class)
+        every { Log.i(any(), any()) } returns 0
+        every { Log.w(any(), any<String>()) } returns 0
+        every { Log.e(any(), any<String>()) } returns 0
 
         resetSingleton()
     }
@@ -470,6 +476,85 @@ class TrackingViewsRepositoryTest {
         assertEquals(0, result)
         verify(exactly = 1) {
             mockViewsDbManager.moveTabView(10L, true)
+        }
+    }
+
+    /**
+     * TST-TRK-081.2: TrackingViewsRepository insert and update delegate graphColor to TrackingViewsDatabaseManager.
+     */
+    @Test
+    fun testInsertAndUpdateSensorFieldConfig_delegatesGraphColor() = runBlocking {
+        // TST-TRK-081
+        val repository = TrackingViewsRepository.getInstance(mockContext)
+
+        repository.insertSensorFieldConfig(
+            tabViewId = 1L,
+            rowNr = 2,
+            colNr = 0,
+            newSensorType = SensorType.POWER,
+            newViewSize = ViewSize.NORMAL,
+            newSourceDeviceId = null,
+            newSourceDeviceName = null,
+            newFilterType = FilterType.INSTANTANEOUS,
+            newFilterConstant = 1.0,
+            showValue = true,
+            showBar = false,
+            colWeight = 1.0f,
+            showGraph = true,
+            graphHorizonSeconds = 300,
+            graphColor = "VIOLET"
+        )
+
+        verify(exactly = 1) {
+            mockViewsDbManager.insertSensorFieldAt(
+                1L,
+                2,
+                0,
+                SensorType.POWER,
+                ViewSize.NORMAL,
+                null,
+                FilterType.INSTANTANEOUS,
+                1.0,
+                true,
+                false,
+                1.0f,
+                true,
+                300,
+                "VIOLET"
+            )
+        }
+
+        repository.updateSensorFieldConfig(
+            sensorFieldId = 42L,
+            newSensorType = SensorType.HR,
+            newViewSize = ViewSize.LARGE,
+            newSourceDeviceId = 12L,
+            newSourceDeviceName = "Garmin HRM",
+            newFilterType = FilterType.AVERAGE,
+            newFilterConstant = 5.0,
+            showValue = true,
+            showBar = true,
+            colWeight = 2.0f,
+            showGraph = true,
+            graphHorizonSeconds = 600,
+            graphColor = "CRIMSON"
+        )
+
+        verify(exactly = 1) {
+            mockViewsDbManager.updateSensorView(
+                42L,
+                SensorType.HR,
+                ViewSize.LARGE,
+                12L,
+                FilterType.AVERAGE,
+                5.0,
+                true,
+                true,
+                2.0f,
+                true,
+                600,
+                "CRIMSON"
+            )
         }
     }
 }

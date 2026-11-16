@@ -5849,3 +5849,61 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 • *Then* rehydration is skipped and track collections remain empty.
 
 **Invariants**: Zero main-thread blocking (`Dispatchers.IO`); strictly bounded memory footprint via `SnapshotChunkedList` and `LiveSparklineBuffer`; monotonic timestamp ordering; clean-room test pass rate.
+
+
+### REQ-TRK-081: Per-Tile Cockpit Sparkline Graph Color Persistence and Minimalist Color Editor UI [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-TRK-081`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `TrackingViewsDatabaseManager.java`, `TrackingViewsRepository.kt`, `SensorFieldState.kt`, `SensorFieldView.kt`, `EditSensorFieldDialog.kt`, `EditSensorFieldViewModel.kt`, `TelemetryGraphColorPreferences.kt`
+- **Rationale**: Cockpit sparkline tiles allow configurable time horizons, but lack persistent graph colors and default to theme or zone colors. Providing per-tile color override options from the centralized 8-color telemetry palette, Theme Default, and Dynamic Zone (for HR, Power, and HRV DFA α1), paired with a compact 2-segment scope toggle ("This tile" vs "All <Metric>") and SQLite schema v22 persistence, enables customized live data differentiation while preserving global preference coherence and legacy backup backward compatibility (ATT-7760, Parent Epic ATT-5908, refining `REQ-TRK-059` and `REQ-UI-530`).
+- **Description**:
+  1. *Database Schema v22 Persistence & Migration (`REQ-TRK-081.1`)*:
+     - SQLite `DB_VERSION` in `TrackingViewsDatabaseManager.java` SHALL increment to 22.
+     - `ROWS_TABLE` SHALL add column `GraphColor text DEFAULT 'GLOBAL_DEFAULT'`.
+     - `onUpgrade` for version 22 SHALL execute `ALTER TABLE LayoutRowsTable ADD COLUMN GraphColor text DEFAULT 'GLOBAL_DEFAULT'`, preserving all existing cockpit tile layouts without data loss.
+     - Backup/restore (.attbackup JSON serialization and deserialization) SHALL include `graphColor`. Missing or null `graphColor` keys during import SHALL default safely to `"GLOBAL_DEFAULT"`.
+  2. *Color Mode Model & Repository/State Threading (`REQ-TRK-081.2`)*:
+     - The system SHALL support the following graph color tokens: `"GLOBAL_DEFAULT"`, `"THEME_DEFAULT"`, `"DYNAMIC_ZONE"`, and the 8 fixed telemetry palette color tokens (`"CRIMSON"`, `"VIOLET"`, `"EMERALD"`, `"AMBER"`, `"TEAL"`, `"MAGENTA"`, `"CYAN"`, `"CORAL"`).
+     - `SensorFieldConfig` and `SensorFieldState` SHALL include `val graphColor: String = "GLOBAL_DEFAULT"`.
+     - `TrackingViewsRepository` SHALL query and persist `graphColor` across insert, update, and fetch operations.
+     - In `SensorFieldView.kt`, live sparkline stroke color SHALL resolve deterministically:
+       • `"DYNAMIC_ZONE"`: resolves to `fieldState.zoneColor` when zone color is active (`zoneColor != Color.Transparent`), falling back to `MaterialTheme.colorScheme.primary`.
+       • `"THEME_DEFAULT"`: resolves to `MaterialTheme.colorScheme.primary`.
+       • `"GLOBAL_DEFAULT"`: resolves via `TelemetryGraphColorPreferences.getGraphColor(context, sensorType).resolveColor(colorScheme, isDarkTheme)`.
+       • Explicit palette name: resolves via `TelemetryGraphColor.valueOf(graphColor).resolveColor(colorScheme, isDarkTheme)`.
+  3. *Minimalist Color Editor UI & Scope Toggle (`REQ-TRK-081.3`)*:
+     - When `isGraphSupported` and `showGraph` are true in `EditSensorFieldDialog.kt`, a minimalist color editor section SHALL be rendered directly below the time-horizon slider.
+     - The editor SHALL display a compact row containing circular swatches for the 8 fixed palette colors, a chip for `Theme Default`, and a chip for `Dynamic Zone` (gated strictly to `SensorType.HR`, `SensorType.POWER` family, and `SensorType.HRV_DFA_A1`).
+     - Below the swatches, a compact 2-segment scope toggle SHALL offer:
+       • `This tile`: applies color selection strictly to the current tile's local `graphColor`.
+       • `All <Metric>`: applies color selection globally to `TelemetryGraphColorPreferences.setGraphColor(context, sensorType, color)` and sets the current tile's `graphColor` to `"GLOBAL_DEFAULT"`.
+  4. *9-Language Localization Parity (`REQ-TRK-081.4`)*:
+     - All user-facing strings for the scope toggle (`cockpit_graph_color_this_tile`, `cockpit_graph_color_all_metric`), chips (`cockpit_graph_color_theme_default`, `cockpit_graph_color_dynamic_zone`), and section header (`cockpit_graph_color_title`) SHALL maintain 100% translation parity across all 9 supported locales: `values/` (EN), `values-de/` (DE), `values-es/` (ES), `values-fr/` (FR), `values-it/` (IT), `values-ja/` (JA), `values-nl/` (NL), `values-pl/` (PL), and `values-pt/` (PT), verified by `TranslationParityTest`.
+  5. *Visual Compose Screenshot Verification (`REQ-TRK-081.5`)*:
+     - Per Rule 8.5, visual self-inspection SHALL be conducted via a Robolectric Compose screenshot test generating `docs/engineering/walkthroughs/img/ATT-7760_color_picker.png` verifying the 4-point visual checklist (orientation & geometry, color mapping & M3 artifacts, typography & wrapping, touch ergonomics).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-TRK-081`, refining `REQ-TRK-059` (*Configurable Live Sparkline Graph Cockpit Tiles*) and integrating with `REQ-UI-530` (*Centralized Telemetry Color Palette*). Targets `TrackingViewsDatabaseManager.java`, `TrackingViewsRepository.kt`, `SensorFieldState.kt`, `SensorFieldView.kt`, `EditSensorFieldDialog.kt`, `EditSensorFieldViewModel.kt`, and `TelemetryGraphColorPreferences.kt`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-44.1 via `ATT-1294` added `ShowGraph` and `GraphHorizonS` to SQLite v19. `SensorFieldView.kt` lines 461-465 hardcoded sparkline colors to `zoneColor` or `MaterialTheme.colorScheme.primary`. Sprint 2026-46.7 via `ATT-7759` introduced `TelemetryGraphColorPreferences` and the 8-color palette.
+3. *Root Reason for Existing Formulation*: During initial sparkline MVP (`ATT-1294`), color selection was omitted to minimize dialog complexity and database migrations.
+4. *Preservation of Core Invariants*: Existing database rows and backups default to `GLOBAL_DEFAULT`, preserving current visual behavior without data loss or layout resets; non-graph tiles and unsupported sensor types remain completely unaffected; 100% 9-language translation parity preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an athlete edits a Power tile with `showGraph` enabled and scope set to `This tile`,
+• *When* they select Cyan and save,
+• *Then* only that tile persists `GRAPH_COLOR = CYAN`, while other Power tiles and Workout Detail charts remain unchanged.
+• *Given* an athlete edits a Heart Rate tile and switches scope to `All HR`,
+• *When* they select Violet and save,
+• *Then* `TelemetryGraphColorPreferences` for Heart Rate is updated to Violet, updating Workout Detail and all Heart Rate tiles set to `GLOBAL_DEFAULT`.
+• *Given* `EditSensorFieldDialog` is open with `showGraph = true`,
+• *When* the selected sensor is `HR`, `POWER`, or `HRV_DFA_A1`,
+• *Then* the `Dynamic Zone` chip is visible; for other sensors (Speed, Cadence, Altitude), `Dynamic Zone` is hidden.
+• *Given* an existing database (v21) or legacy `.attbackup` without `GRAPH_COLOR`,
+• *When* upgraded to v22 or restored,
+• *Then* all existing graph tiles default cleanly to `GLOBAL_DEFAULT` without crashing or resetting layouts.
+
+**Invariants**: SQLite schema backward compatibility guaranteed; legacy backup JSON imports default cleanly; zero Compose snapshot state writes during composition; 100% 9-language localization parity; clean-room test pass rate.
+

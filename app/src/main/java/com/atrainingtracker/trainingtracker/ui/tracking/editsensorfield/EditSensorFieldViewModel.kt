@@ -35,8 +35,10 @@ import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
+import com.atrainingtracker.trainingtracker.settings.TelemetryGraphColorPreferences
 import com.atrainingtracker.trainingtracker.settings.TuningConfig
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
+import com.atrainingtracker.trainingtracker.ui.theme.TelemetryGraphColor
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldConfig
 import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepository
 import com.atrainingtracker.trainingtracker.ui.tracking.ViewSize
@@ -125,6 +127,11 @@ fun calculateIsMultiFieldRow(existingFieldsInTargetRow: Int, isNewField: Boolean
     return if (isNewField) existingFieldsInTargetRow >= 1 else existingFieldsInTargetRow > 1
 }
 
+enum class GraphColorScope {
+    THIS_TILE,
+    ALL_METRIC
+}
+
 // This class will hold all the state for our dialog
 data class EditDialogUiState(
     val selectedSensorType: SensorType? = null,
@@ -145,6 +152,8 @@ data class EditDialogUiState(
     val showBar: Boolean = false,
     val showGraph: Boolean = false,
     val graphHorizonSeconds: Int = 300,
+    val graphColor: String = "GLOBAL_DEFAULT",
+    val graphColorScope: GraphColorScope = GraphColorScope.THIS_TILE,
     val colWeight: Float = 1.0f,
     val isMultiFieldRow: Boolean = false
 ) {
@@ -153,6 +162,24 @@ data class EditDialogUiState(
 
     val isGraphSupported: Boolean
         get() = TrackingViewsDatabaseManager.TrackingViewsDbHelper.isGraphSupported(selectedSensorType)
+
+    val isDynamicZoneSupported: Boolean
+        get() = when (selectedSensorType) {
+            SensorType.HR,
+            SensorType.POWER,
+            SensorType.NORMALIZED_POWER,
+            SensorType.POWER_5S,
+            SensorType.POWER_1M,
+            SensorType.POWER_5M,
+            SensorType.POWER_20M,
+            SensorType.POWER_PEAK_5S,
+            SensorType.POWER_PEAK_1M,
+            SensorType.POWER_PEAK_5M,
+            SensorType.POWER_PEAK_20M,
+            SensorType.POWER_TO_WEIGHT,
+            SensorType.HRV_DFA_A1 -> true
+            else -> false
+        }
 
     val activePreset: FilterPreset
         get() = if (isCustomFilterExpanded && resolveFilterPreset(selectedFilterType, filterConstant, movingAverageUnit) != FilterPreset.CUSTOM) {
@@ -286,6 +313,8 @@ class EditSensorFieldViewModel(
                 showBar = isBarSupported,
                 showGraph = false,
                 graphHorizonSeconds = 300,
+                graphColor = "GLOBAL_DEFAULT",
+                graphColorScope = GraphColorScope.THIS_TILE,
                 isMultiFieldRow = false
             )
         }
@@ -353,6 +382,8 @@ class EditSensorFieldViewModel(
                 showBar = showBar,
                 showGraph = showGraph,
                 graphHorizonSeconds = graphHorizonSeconds,
+                graphColor = initialConfig.graphColor,
+                graphColorScope = GraphColorScope.THIS_TILE,
                 colWeight = initialConfig.colWeight,
                 isMultiFieldRow = isMulti
             )
@@ -434,6 +465,14 @@ class EditSensorFieldViewModel(
 
     fun onGraphHorizonChanged(horizonSeconds: Int) {
         _uiState.update { it.copy(graphHorizonSeconds = horizonSeconds) }
+    }
+
+    fun onGraphColorChanged(newColor: String) {
+        _uiState.update { it.copy(graphColor = newColor) }
+    }
+
+    fun onGraphColorScopeChanged(newScope: GraphColorScope) {
+        _uiState.update { it.copy(graphColorScope = newScope) }
     }
 
     fun onDeviceChanged(newDeviceId: Long, newDeviceName: String) {
@@ -694,6 +733,20 @@ class EditSensorFieldViewModel(
         val graphHorizonSeconds = currentState.graphHorizonSeconds
         val colWeight = currentState.colWeight
 
+        val effectiveTileColor = if (currentState.graphColorScope == GraphColorScope.ALL_METRIC) {
+            val colorToken = currentState.graphColor
+            val colorEnum = try {
+                TelemetryGraphColor.valueOf(colorToken)
+            } catch (e: Exception) {
+                TelemetryGraphColor.THEME_DEFAULT
+            }
+            val appContext = getApplication<Application>().applicationContext
+            TelemetryGraphColorPreferences.setGraphColor(appContext, newSensorType, colorEnum)
+            TrackingViewsDatabaseManager.TrackingViewsDbHelper.DEFAULT_GRAPH_COLOR
+        } else {
+            currentState.graphColor
+        }
+
         viewModelScope.launch {
             if (isNewField) {
                 trackingViewsRepository.insertSensorFieldConfig(
@@ -710,7 +763,8 @@ class EditSensorFieldViewModel(
                     showBar = showBar,
                     colWeight = colWeight,
                     showGraph = showGraph,
-                    graphHorizonSeconds = graphHorizonSeconds
+                    graphHorizonSeconds = graphHorizonSeconds,
+                    graphColor = effectiveTileColor
                 )
             } else {
                 trackingViewsRepository.updateSensorFieldConfig(
@@ -725,7 +779,8 @@ class EditSensorFieldViewModel(
                     showBar = showBar,
                     colWeight = colWeight,
                     showGraph = showGraph,
-                    graphHorizonSeconds = graphHorizonSeconds
+                    graphHorizonSeconds = graphHorizonSeconds,
+                    graphColor = effectiveTileColor
                 )
             }
         }

@@ -18,11 +18,13 @@
 
 package com.atrainingtracker.trainingtracker.ui.tracking
 
+import android.content.Context
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -41,6 +43,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.sensor.SensorType
+import com.atrainingtracker.trainingtracker.settings.TelemetryGraphColorPreferences
+import com.atrainingtracker.trainingtracker.ui.theme.TelemetryGraphColor
 
 /**
  * Resolves the sparkline container height dynamically based on tile [ViewSize] and display mode (REQ-TRK-059.5, ATT-1294, ATT-6695).
@@ -290,3 +295,54 @@ fun SensorSparklineView(
         }
     }
 }
+
+/**
+ * Resolves the sparkline stroke color for a cockpit sensor field (REQ-TRK-081.2, ATT-7760).
+ *
+ * Supports:
+ * - "DYNAMIC_ZONE": active physiological zone color, falling back to primary.
+ * - "THEME_DEFAULT": MaterialTheme.colorScheme.primary.
+ * - "GLOBAL_DEFAULT": global preference store for the sensor type, falling back to primary or zone color.
+ * - Explicit 8-color palette token: [TelemetryGraphColor.valueOf(token).resolveColor(colorScheme, isDark)].
+ */
+fun resolveSparklineLineColor(
+    graphColor: String?,
+    zoneColor: Color,
+    showTextColor: Boolean,
+    sensorType: SensorType?,
+    colorScheme: ColorScheme,
+    context: Context? = null
+): Color {
+    val token = graphColor ?: "GLOBAL_DEFAULT"
+    return when (token) {
+        "DYNAMIC_ZONE" -> {
+            if (zoneColor != Color.Transparent) zoneColor else colorScheme.primary
+        }
+        "THEME_DEFAULT" -> colorScheme.primary
+        "GLOBAL_DEFAULT" -> {
+            if (sensorType != null) {
+                val isDark = TelemetryGraphColor.isDarkSurface(colorScheme)
+                if (context != null) {
+                    val prefColor = TelemetryGraphColorPreferences.getGraphColor(context, sensorType)
+                    prefColor.resolveColor(colorScheme, isDark)
+                } else {
+                    val defaultColor = TelemetryGraphColorPreferences.getDefaultColor(sensorType)
+                    defaultColor.resolveColor(colorScheme, isDark)
+                }
+            } else if (zoneColor != Color.Transparent && showTextColor) {
+                zoneColor
+            } else {
+                colorScheme.primary
+            }
+        }
+        else -> {
+            try {
+                val isDark = TelemetryGraphColor.isDarkSurface(colorScheme)
+                TelemetryGraphColor.valueOf(token).resolveColor(colorScheme, isDark)
+            } catch (ignored: IllegalArgumentException) {
+                colorScheme.primary
+            }
+        }
+    }
+}
+
