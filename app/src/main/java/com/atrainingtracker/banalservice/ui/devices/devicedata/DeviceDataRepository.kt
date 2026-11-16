@@ -44,6 +44,7 @@ import com.atrainingtracker.trainingtracker.database.EquipmentAndSportTypeDiscov
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 import com.atrainingtracker.trainingtracker.repositories.EquipmentRepository
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
@@ -162,7 +163,11 @@ class DeviceDataRepository @androidx.annotation.VisibleForTesting internal const
         fun isSharedSensor(deviceType: DeviceType?): Boolean = DevicesDatabaseManager.isSharedSensor(deviceType)
     }
 
-    private val repositoryScope = CoroutineScope(mainDispatcher + SupervisorJob())
+    private val repositoryScope = CoroutineScope(
+        mainDispatcher + SupervisorJob() + CoroutineExceptionHandler { _, throwable ->
+            runCatching { if (DEBUG) Log.e(TAG, "DeviceDataRepository coroutine error", throwable) }
+        }
+    )
 
     @androidx.annotation.VisibleForTesting
     fun cancelScopeForTesting() {

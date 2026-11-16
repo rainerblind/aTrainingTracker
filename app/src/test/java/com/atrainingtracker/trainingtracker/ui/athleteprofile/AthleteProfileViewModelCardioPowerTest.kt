@@ -87,10 +87,12 @@ class AthleteProfileViewModelCardioPowerTest {
         every { WorkoutSummariesDatabaseManager.getInstance(any()) } returns mockDb
         every { mockDb.getWorkoutTrainingLoadRecords() } returns emptyList()
 
-        mockkConstructor(TuningPreferencesDataStore::class)
-        every { anyConstructed<TuningPreferencesDataStore>().tuningConfigFlow } returns flowOf(
+        val mockTuningDataStore = mockk<TuningPreferencesDataStore>(relaxed = true)
+        every { mockTuningDataStore.tuningConfigFlow } returns flowOf(
             TuningConfig(enableCardioPowerDynamics = true)
         )
+        mockkObject(TuningPreferencesDataStore.Companion)
+        every { TuningPreferencesDataStore.getInstance(any()) } returns mockTuningDataStore
     }
 
     @After

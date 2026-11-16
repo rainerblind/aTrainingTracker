@@ -992,21 +992,23 @@ class BANALServiceRepository private constructor(context: Context) {
         if (_currentTrack.value.isNotEmpty()) return
         if (isRehydrating) return
 
-        val activeWorkoutId = TrainingApplication.getActiveWorkoutID()
-        val baseFileName = if (activeWorkoutId > 0) {
-            WorkoutSummariesDatabaseManager.getInstance(appContext).getBaseFileName(activeWorkoutId)
-        } else {
-            WorkoutRepository.getInstance(appContext).getResumedWorkoutState()?.baseFileName
-        }
-
-        if (!baseFileName.isNullOrBlank()) {
-            isRehydrating = true
-            repositoryScope.launch(Dispatchers.IO) {
-                try {
-                    rehydrateActiveWorkoutTelemetry(baseFileName)
-                } finally {
-                    isRehydrating = false
+        isRehydrating = true
+        repositoryScope.launch(Dispatchers.IO) {
+            try {
+                val activeWorkoutId = TrainingApplication.getActiveWorkoutID()
+                val baseFileName = if (activeWorkoutId > 0) {
+                    WorkoutSummariesDatabaseManager.getInstance(appContext).getBaseFileName(activeWorkoutId)
+                } else {
+                    WorkoutRepository.getInstance(appContext).getResumedWorkoutState()?.baseFileName
                 }
+
+                if (!baseFileName.isNullOrBlank()) {
+                    rehydrateActiveWorkoutTelemetry(baseFileName)
+                }
+            } catch (e: RuntimeException) {
+                runCatching { if (DEBUG) Log.w(TAG, "Telemetry rehydration skipped", e) }
+            } finally {
+                isRehydrating = false
             }
         }
     }

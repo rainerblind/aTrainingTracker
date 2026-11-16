@@ -37,7 +37,7 @@ This specification establishes normative, bidirectional traceability between bla
 
 | System Requirement | System Title | Refining Software Requirements (`REQ-*`) | Grounded Classes & Verification Test |
 | :--- | :--- | :--- | :--- |
-| `SYSREQ-DEX-001` | Multi-Format Telemetry Export | `REQ-EXP-001`, `REQ-EXP-022`, `REQ-DAT-018`, `REQ-DAT-027`, `REQ-DAT-028` | `ExportManager.java`, `FitFileWriter.java`, `TCXFileWriter.java`, `GPXFileWriter.java`, `CSVFileWriter.java`, `SystemDataExchangeRequirementsContractTest.kt` |
+| `SYSREQ-DEX-001` | Multi-Format Telemetry Export | `REQ-EXP-001`, `REQ-EXP-022`, `REQ-DAT-018`, `REQ-DAT-027`, `REQ-DAT-028` | `ExportManager.java`, `FitFileWriter.kt`, `TCXFileWriter.kt`, `GPXFileWriter.java`, `CSVFileWriter.java`, `SystemDataExchangeRequirementsContractTest.kt` |
 | `SYSREQ-DEX-002` | Multi-Format Workout Ingestion & Deduplication | `REQ-DAT-001`, `REQ-DAT-019`, `REQ-DAT-021`, `REQ-DAT-025` | `LegacyImportEngine.kt`, `StravaBulkExportImporter.kt`, `StravaCsvParser.kt`, `WorkoutSamplesDatabaseManager.java`, `SystemDataExchangeRequirementsContractTest.kt` |
 | `SYSREQ-DEX-003` | Cloud Activity Sync (Strava) | `REQ-EXP-002`, `REQ-EXP-005`, `REQ-EXP-008`, `REQ-EXP-009`, `REQ-EXP-011`, `REQ-EXP-012`, `REQ-EXP-019`, `REQ-EXP-021`, `REQ-EXT-004` | `StravaUploader.kt`, `StravaEquipmentSyncWorker.kt`, `StravaRoutesSyncWorker.kt`, `StravaSegmentsSyncWorker.kt`, `SystemDataExchangeRequirementsContractTest.kt` |
 | `SYSREQ-DEX-004` | Cloud Storage Sync (Dropbox & GDrive) | `REQ-DAT-020`, `REQ-DAT-022`, `REQ-DAT-024`, `REQ-DAT-029` | `DropboxBackupManager.kt`, `GoogleDriveBackupManager.kt`, `GoogleDriveUploader.kt`, `BackupWorker.kt`, `SystemDataExchangeRequirementsContractTest.kt` |
