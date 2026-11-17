@@ -3,7 +3,7 @@
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Tests**: 219
+**Total Tests**: 220
 
 ---
 
@@ -3681,3 +3681,20 @@
   • Verify `docs/architecture.md` §4.9 references `TrackerService#acquireWakeLock` / `releaseWakeLock` (zero brittle `:line` citations), `ArchitectureConformanceContractTest.testArchitectureDoc_definesResourceAndTimingBudgets` enforces symbol anchors alongside `PARTIAL_WAKE_LOCK`, `mScheduler`, `mDbExecutor`, and `REQ-NFR-003`..`014`, Section 2 includes `SPT`, `HRV`, `RAD`, `WKO`, `CLM`, and SWE.2 BP headings align to ASPICE 4.0 (`BP1`–`BP5`).
   3. *Source-Reading Audit & Governance Parity (`TST-PRO-115.3`, SourceTextReadingAuditContractTest.kt & verify_requirement_governance.py)*:
   • Verify `SourceTextReadingAuditContractTest` remains 100% green (new test makes zero `src/main` file reads) and `verify_requirement_governance.py` exits `0`. (`Localization Parity: N/A - no UI strings`).
+
+---
+
+### TST-PRO-116: **Retrospective Architecture Decision Records (ADR-002..ADR-007) & Reflection Contract Suite (ATT-8161)** [Verified]
+- **Requirement(s)**: `REQ-PRO-116`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Component**: `app/src/test/java/com/atrainingtracker/trainingtracker/build/AdrCompletenessContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/AspiceSweAuditContractTest.kt`, `app/src/test/java/com/atrainingtracker/architecture/JavaCoreMigrationStrategyContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SourceTextReadingAuditContractTest.kt`, `docs/architecture.md`, `docs/architecture/adr_002_foreground_tracking_service.md`, `docs/architecture/adr_003_banal_sensor_bus.md`, `docs/architecture/adr_004_sqlite_managers_vs_room.md`, `docs/architecture/adr_005_hybrid_preferences_datastore.md`, `docs/architecture/adr_006_incremental_compose_navigation.md`, `docs/architecture/adr_007_ble_ant_sensor_abstraction.md`
+- **Jira**: `ATT-8161`
+- **Test Description**:
+  1. *ADR Structural, Alternatives & Honest PO Sign-Off Verification (`TST-PRO-116.1`, AdrCompletenessContractTest.kt)*:
+  • Verify `docs/architecture/adr_002..007_*.md` all exist and contain `ADR-001` sections (`Context & Problem Statement`, `Decision Drivers & Evaluated Alternatives`, `Decision Outcome`, `Architectural Consequences & Trade-offs`), `>= 2` evaluated alternatives (`Rejected`/`Selected`), honest `Pending PO Sign-Off` status/decider fields, and zero phantom class tokens (`TrackPointsDatabaseManager`, `ANTDevice`, `BTLEDevice`).
+  2. *JVM-Reflection Production Class Grounding & Index Parity (`TST-PRO-116.2`, AdrCompletenessContractTest.kt & AspiceSweAuditContractTest.kt)*:
+  • Verify via `Class.forName` (zero `app/src/main/` file reading per `REQ-PRO-049`) that core classes cited in `ADR-002`..`ADR-007` (`TrackerService`, `BANALService`, `BANALServiceRepository`, `WorkoutSamplesDatabaseManager`, `WorkoutSummariesDatabaseManager`, `WorkoutRepository`, `SettingsDataStore`, `TuningPreferencesDataStore`, `MainActivityWithNavigation`, `MyDevice`, `MyRemoteDevice`, `MyANTDevice`, `MyBTLEDevice`, `PolarOnlineStreamingBridge`, `DeviceManager`) exist in compiled bytecode, and `docs/architecture.md` links `ADR-001`..`ADR-007`.
+  3. *ADR-001 Preservation, Source-Reading & Governance Parity (`TST-PRO-116.3`, JavaCoreMigrationStrategyContractTest.kt, SourceTextReadingAuditContractTest.kt, verify_requirement_governance.py)*:
+  • Verify `JavaCoreMigrationStrategyContractTest` stays green (`ADR-001` untouched), `SourceTextReadingAuditContractTest` flags zero `ATT-8161` reads, and `verify_requirement_governance.py` exits `0`. (`Localization Parity: N/A - no UI strings`).

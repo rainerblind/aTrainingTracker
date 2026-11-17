@@ -3,7 +3,7 @@
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Requirements**: 180
+**Total Requirements**: 181
 
 ---
 
@@ -5940,3 +5940,37 @@ The workflow SHALL mandate that:
   • *When* inspected and validated by `ArchitectureConformanceContractTest` and `AspiceSweAuditContractTest`,
   • *Then* WakeLock uses symbol anchors (`acquireWakeLock`/`releaseWakeLock`), Section 2 lists `SPT` (and `HRV`, `RAD`, `WKO`, `CLM`), and all SWE.2 headings use ASPICE 4.0 `BP1`–`BP5` labels.
 - **Invariants**: Zero edits to `app/src/main/` and `ANT-Android-SDKs`; `Localization Parity: N/A - no UI strings`; `SourceTextReadingAuditContractTest` remains 100% green.
+
+
+---
+
+### REQ-PRO-116: Retrospective Architecture Decision Records (ADR-002..ADR-007) & Reflection Contract (ATT-8161) [Verified]
+- **Tests**: `TST-PRO-116`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `docs/architecture/adr_002_foreground_tracking_service.md`, `docs/architecture/adr_003_banal_sensor_bus.md`, `docs/architecture/adr_004_sqlite_managers_vs_room.md`, `docs/architecture/adr_005_hybrid_preferences_datastore.md`, `docs/architecture/adr_006_incremental_compose_navigation.md`, `docs/architecture/adr_007_ble_ant_sensor_abstraction.md`, `docs/architecture.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/AdrCompletenessContractTest.kt`
+- **Rationale**: Resolves ASPICE 4.0 Audit Finding `Minor (SWE.2)` (`SWE.2 BP3/BP5`, `ATT-8161`), refining `REQ-ARC-005`, `REQ-PRO-043`, and `REQ-PRO-049`: only `ADR-001` exists (`adr_001_java_core_services_migration.md`), leaving the 6 foundational architectural decisions without documented criteria, evaluated alternatives, or consequences to protect Chesterton's Fence invariants.
+- **Description**:
+  1. *Six Retrospective ADRs (`REQ-PRO-116.1`, `docs/architecture/adr_002..007_*.md`)*: The repository SHALL document six retrospective ADRs matching the `ADR-001` structure (`Status`, `Deciders`, `Date`, `Context & Problem Statement`, `Decision Drivers & Evaluated Alternatives` with `>= 2` alternatives explicitly evaluated as `Rejected` or `Selected`, `Decision Outcome`, `Architectural Consequences & Trade-offs`):
+     - `ADR-002`: Foreground Tracking Service (`TrackerService`, `foregroundServiceType="location|health"`, `START_STICKY`, `PARTIAL_WAKE_LOCK`, `mScheduler`/`mDbExecutor`/`mRrFlushExecutor`) vs `WorkManager`/`JobScheduler`.
+     - `ADR-003`: Sensor Ingestion Bus (`BANALService`, `BANALServiceComm`, `MySensorManager`, `ProxySensor`, `FilterManager`, `BANALServiceRepository` `StateFlow`) vs static EventBus or cross-process AIDL.
+     - `ADR-004`: SQLite Managers vs Room ORM (`WorkoutSamplesDatabaseManager` dynamic per-workout tables, `WorkoutSummariesDatabaseManager`, `LapsDatabaseManager`, `DevicesDatabaseManager`, WAL + repository encapsulation via `WorkoutRepository`, `DeviceDataRepository`, `KnownLocationsRepository`) vs full Room ORM migration.
+     - `ADR-005`: Hybrid Preferences (`PreferenceManager.getDefaultSharedPreferences` in legacy/service hotpaths alongside `SettingsDataStore`, `TuningPreferencesDataStore`, `MyPreferenceManager`, `AttFusedPreferences`, `SettingsDataStoreJavaHelper`) vs pure `SharedPreferences` or big-bang DataStore rewrite.
+     - `ADR-006`: Incremental Single-Activity Compose Navigation (`MainActivityWithNavigation`, `ATrainingTrackerApp`, `NavHost`, `AppNavigationDrawer`, MVI `StateFlow` ViewModels coexisting with legacy XML/fragments `ConfigViewsActivityClassic`, `ConfigViewsFragment`, `TrackOnMapHelper`) vs pure multi-Fragment XML or big-bang Compose rewrite.
+     - `ADR-007`: Unified BLE & ANT+ Hardware Abstraction (`MyDevice` -> `MyRemoteDevice` -> `MyANTDevice` over pinned `ANT-Android-SDKs` `0e8cea71` & `MyBTLEDevice` + `PolarOnlineStreamingBridge`, unified by `DeviceManager` into `MySensor`/`ProxySensor` `SensorType`) vs protocol-specific tracking/UI branches.
+  2. *Honest PO Sign-Off & Architecture Index (`REQ-PRO-116.2`, `docs/architecture.md`)*: Per `ATT-8138` evidence integrity, each ADR MUST record `Status: Retrospective (Pending PO Sign-Off)` and `Deciders: Architecture Board, Product Owner (Pending Sign-Off)` unless explicitly signed off by the PO (zero fabricated approval). `docs/architecture.md` SHALL index `ADR-001`..`ADR-007` and cite only real `app/src/main/` classes (zero phantom `TrackPointsDatabaseManager`, `ANTDevice`, or `BTLEDevice`).
+  3. *JVM-Reflection & Structure Contract Test (`REQ-PRO-116.3`, `AdrCompletenessContractTest.kt`)*: `AdrCompletenessContractTest.kt` SHALL validate `ADR-002`..`ADR-007` structural sections, `>= 2` evaluated alternatives per ADR, honest PO sign-off status, `docs/architecture.md` index links, and verify cited production classes via **JVM reflection (`Class.forName`)** with ZERO `app/src/main/` `.readText()` file reads (`REQ-PRO-049`).
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new `REQ-PRO-116` refining `REQ-ARC-005` (`ADR-001` & `JavaCoreMigrationStrategyContractTest.kt`), `REQ-PRO-043` (`docs/architecture.md` & `AspiceSweAuditContractTest.kt`), and `REQ-PRO-049` (`SourceTextReadingAuditContractTest.kt`).
+  2. *Historical Origin & Commit Trace*: `ATT-7566` / `ATT-8115` (`REQ-ARC-005`), `ATT-5431` / `ATT-6727` (`REQ-PRO-043`), `ATT-6186` (`REQ-PRO-049`), extended via `ATT-8161`.
+  3. *Root Reason for Existing Formulation*: `ADR-001` covered only Java-to-Kotlin migration scope, leaving the 6 underlying platform/persistence/UI/HAL architectural choices undocumented as formal ADRs.
+  4. *Preservation of Core Invariants*: Preserves `ADR-001` (`JavaCoreMigrationStrategyContractTest.kt`), all `AspiceSweAuditContractTest` & `ArchitectureConformanceContractTest` assertions, `SourceTextReadingAuditContractTest` (`22` guards, `105` baseline), `app/src/main/`, and `ANT-Android-SDKs` (`0e8cea71`).
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `docs/architecture/adr_002..007_*.md` and `docs/architecture.md`,
+  • *When* `AdrCompletenessContractTest` and `AspiceSweAuditContractTest` execute under `./gradlew testDebugUnitTest`,
+  • *Then* all 6 ADRs pass structural, `>= 2`-alternative, honest PO sign-off, index, and JVM-reflection class checks with zero `src/main/` text reads.
+  • *Given* `tools/verify_requirement_governance.py`,
+  • *When* executed across the repository,
+  • *Then* all governance and code-grounding checks exit `0`.
+- **Invariants**: Zero edits to `app/src/main/`, `ANT-Android-SDKs`, or `ADR-001`; `Localization Parity: N/A - no UI strings`; zero phantom class names.

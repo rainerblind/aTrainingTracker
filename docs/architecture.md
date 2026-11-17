@@ -342,6 +342,19 @@ In accordance with **ADR-001** ([`docs/architecture/adr_001_java_core_services_m
 ### 5.4 Canonical SensorType Storage, Display & Export Unit Data Dictionary (`REQ-TRK-083`)
 All 67 telemetry metrics declared in `SensorType` (`SensorType.java`) follow a strict separation between internal SQLite/sensor-bus storage units (`SensorType.getInternalUnit()`), UI display formatting (`MyFormatter`, `MyHelper.getUnitsId()`), and file export conversions (`FitFileWriter`, `TCXFileWriter`, `GPXFileWriter`, `CSVFileWriter`, `GCFileWriter`). The authoritative 67-entry unit, sentinel, and export data dictionary is maintained in [`docs/architecture/sensor_units.md`](architecture/sensor_units.md) and enforced by JVM contract test `SensorTypeUnitsContractTest`.
 
+### 5.5 Architecture Decision Records Registry (SWE.2.BP3, BP5, `REQ-ARC-005`, `REQ-PRO-116`)
+Foundational architectural choices, evaluated alternatives, and Chesterton's Fence invariants are recorded under `docs/architecture/` and enforced by `JavaCoreMigrationStrategyContractTest` (`ADR-001`) and `AdrCompletenessContractTest` (`ADR-002`..`ADR-007`):
+
+| ADR ID | Decision Title | Status | Document |
+| :--- | :--- | :--- | :--- |
+| `ADR-001` | Java Core Services Prioritized Migration Strategy | Approved | [`adr_001_java_core_services_migration.md`](architecture/adr_001_java_core_services_migration.md) |
+| `ADR-002` | Foreground Tracking Service Architecture (`TrackerService`) | Retrospective (Pending PO Sign-Off) | [`adr_002_foreground_tracking_service.md`](architecture/adr_002_foreground_tracking_service.md) |
+| `ADR-003` | Sensor Ingestion Bus (`BANALService` & `BANALServiceRepository`) | Retrospective (Pending PO Sign-Off) | [`adr_003_banal_sensor_bus.md`](architecture/adr_003_banal_sensor_bus.md) |
+| `ADR-004` | SQLite Database Managers vs Room ORM | Retrospective (Pending PO Sign-Off) | [`adr_004_sqlite_managers_vs_room.md`](architecture/adr_004_sqlite_managers_vs_room.md) |
+| `ADR-005` | Hybrid Preferences (`SharedPreferences` + Jetpack `DataStore`) | Retrospective (Pending PO Sign-Off) | [`adr_005_hybrid_preferences_datastore.md`](architecture/adr_005_hybrid_preferences_datastore.md) |
+| `ADR-006` | Incremental Single-Activity Compose Navigation (`MainActivityWithNavigation`) | Retrospective (Pending PO Sign-Off) | [`adr_006_incremental_compose_navigation.md`](architecture/adr_006_incremental_compose_navigation.md) |
+| `ADR-007` | Unified BLE & ANT+ Hardware Sensor Abstraction (`MyDevice` / `MyRemoteDevice`) | Retrospective (Pending PO Sign-Off) | [`adr_007_ble_ant_sensor_abstraction.md`](architecture/adr_007_ble_ant_sensor_abstraction.md) |
+
 ---
 
 ## 6. Software Integration and Verification Strategy (SWE.5.BP1)
