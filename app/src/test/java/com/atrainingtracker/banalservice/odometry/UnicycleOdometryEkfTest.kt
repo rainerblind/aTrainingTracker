@@ -212,4 +212,63 @@ class UnicycleOdometryEkfTest {
         assertEquals(5, snap.statePosterior.size)
         assertEquals(5, snap.covariancePosterior.size)
     }
+
+    // TST-FIL-023.1: ZUPT & stationary GNSS jump gating blocks cold-fix velocity leak
+    @Test
+    fun testZeroVelocityUpdate_blocksStationaryGnssJumpVelocityLeak_tstFil023_1() {
+        ekf.reset(east = 0.0, north = 0.0, speed = 0.0, headingRad = PI / 2.0)
+
+        // Simulate 7s of 50-Hz IMU predictions building covariance before cold GNSS fix tightens
+        repeat(350) { i ->
+            ekf.predict(dtSec = 0.02, gyroYawRateRadPerSec = 0.0, timestampMs = (i + 1) * 20L)
+        }
+
+        ekf.applyZeroVelocityUpdate(timestampMs = 7000L)
+        assertEquals(0.0, ekf.speedMps, 1e-9)
+
+        // 25.2 m jump at 16.0 m accuracy while stationary must be rejected
+        val acceptedJump = ekf.updateGnssPosition(
+            eastMeters = 25.2,
+            northMeters = 0.0,
+            accuracyMeters = 16.0,
+            timestampMs = 7000L,
+            isStationary = true
+        )
+        assertFalse("Stationary 25.2 m cold GNSS jump at 16.0 m accuracy must be gated out", acceptedJump)
+        assertEquals(0.0, ekf.eastMeters, 1e-6)
+        assertEquals(0.0, ekf.speedMps, 1e-9)
+
+        // Small within-gate stationary convergence fix (4.0 m) must NOT inject speed
+        val acceptedSmall = ekf.updateGnssPosition(
+            eastMeters = 4.0,
+            northMeters = 0.0,
+            accuracyMeters = 16.0,
+            timestampMs = 8000L,
+            isStationary = true
+        )
+        assertTrue("Small within-gate stationary update should be accepted", acceptedSmall)
+        assertEquals("Stationary GNSS update must never leak velocity into speedMps", 0.0, ekf.speedMps, 1e-9)
+    }
+
+    // TST-FIL-023.1: Moving GNSS Huber down-weighting preserves tunnel exit while damping gross outliers
+    @Test
+    fun testGnssPositionUpdate_movingOutlierHuberDamped_tstFil023_1() {
+        ekf.reset(east = 0.0, north = 0.0, speed = 6.0, headingRad = 0.0)
+        ekf.predict(dtSec = 1.0, gyroYawRateRadPerSec = 0.0, timestampMs = 1000L)
+        val eastBeforeSpike = ekf.eastMeters
+
+        // Gross 120 m multipath outlier with small reported 3.0 m accuracy while moving
+        val accepted = ekf.updateGnssPosition(
+            eastMeters = eastBeforeSpike + 120.0,
+            northMeters = 0.0,
+            accuracyMeters = 3.0,
+            timestampMs = 2000L,
+            isStationary = false
+        )
+        assertTrue(accepted)
+        assertTrue(
+            "Huber down-weighting must prevent 120 m outlier teleport (delta=${ekf.eastMeters - eastBeforeSpike})",
+            ekf.eastMeters - eastBeforeSpike < 20.0
+        )
+    }
 }

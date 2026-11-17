@@ -62,6 +62,10 @@ class UnicycleOdometryEkf(
         const val MAX_GNSS_ACCURACY_METERS = 20.0
         const val MIN_DOPPLER_SPEED_MPS = 3.0
         const val HUBER_THRESHOLD_GAMMA = 2.5
+        const val GNSS_HUBER_GAMMA = 3.0
+        const val MIN_STATIONARY_GNSS_JUMP_GATE_METERS = 8.0
+        const val STATIONARY_GNSS_ACCURACY_GATE_FACTOR = 0.75
+        const val ZUPT_SPEED_VARIANCE = 2.0
 
         // Process noise intensities per second
         private const val Q_POS = 0.01 // m^2 / s
@@ -290,30 +294,80 @@ class UnicycleOdometryEkf(
     }
 
     /**
+     * Applies a Zero-Velocity Update (ZUPT) clamping forward speed to 0.0 m/s and decoupling
+     * position-velocity cross-covariances so subsequent GNSS position fixes cannot leak velocity
+     * spikes into [speedMps] (REQ-FIL-023.1, ATT-8576).
+     */
+    fun applyZeroVelocityUpdate(timestampMs: Long = currentTimestampMs) {
+        currentTimestampMs = timestampMs
+        x[2] = 0.0
+        p[2][2] = max(p[2][2], ZUPT_SPEED_VARIANCE)
+        decoupleVelocityCovariance(p)
+        symmetrizeCovariance()
+        commitSnapshot()
+    }
+
+    private fun decoupleVelocityCovariance(matrix: Array<DoubleArray>) {
+        for (idx in 0 until STATE_DIM) {
+            if (idx != 2) {
+                matrix[idx][2] = 0.0
+                matrix[2][idx] = 0.0
+            }
+        }
+    }
+
+    /**
      * Updates 2D geographic position [E, N] via high-confidence GNSS fixes.
      *
      * Fixes with accuracy > [MAX_GNSS_ACCURACY_METERS] are strictly gated out to prevent
      * multipath and degraded GPS jumps from pulling the odometry trajectory.
+     * When [isStationary] is true, large cold-convergence jumps exceeding
+     * `max(8.0 m, 0.75 * accuracy)` are rejected and velocity coupling is suppressed (REQ-FIL-023.1).
+     * While moving, gross positional outliers exceeding [GNSS_HUBER_GAMMA] sigma are Huber down-weighted.
      */
+    @JvmOverloads
     fun updateGnssPosition(
         eastMeters: Double,
         northMeters: Double,
         accuracyMeters: Double,
-        timestampMs: Long = currentTimestampMs
+        timestampMs: Long = currentTimestampMs,
+        isStationary: Boolean = false
     ): Boolean {
         if (accuracyMeters <= 0.0 || accuracyMeters > MAX_GNSS_ACCURACY_METERS) {
             return false
         }
         currentTimestampMs = timestampMs
 
-        val rVar = accuracyMeters * accuracyMeters
         // Innovation y = z - H*x where H = [1 0 0 0 0; 0 1 0 0 0]
         val y0 = eastMeters - x[0]
         val y1 = northMeters - x[1]
 
-        // Innovation covariance S (2x2):
-        // S_00 = P_00 + rVar, S_01 = P_01
-        // S_10 = P_10,        S_11 = P_11 + rVar
+        if (isStationary) {
+            val jumpMeters = sqrt(y0 * y0 + y1 * y1)
+            val maxStationaryJump = max(MIN_STATIONARY_GNSS_JUMP_GATE_METERS, accuracyMeters * STATIONARY_GNSS_ACCURACY_GATE_FACTOR)
+            if (jumpMeters > maxStationaryJump) {
+                return false
+            }
+        }
+
+        val rVarBase = accuracyMeters * accuracyMeters
+        val s00Base = p[0][0] + rVarBase
+        val s01Base = p[0][1]
+        val s10Base = p[1][0]
+        val s11Base = p[1][1] + rVarBase
+        val detBase = s00Base * s11Base - s01Base * s10Base
+        if (abs(detBase) <= 1e-12) return false
+
+        val mahalanobisSq = max(0.0, (y0 * y0 * s11Base - 2.0 * y0 * y1 * s01Base + y1 * y1 * s00Base) / detBase)
+        val mahalanobis = sqrt(mahalanobisSq)
+        val rVar = if (mahalanobis > GNSS_HUBER_GAMMA) {
+            val scale = mahalanobis / GNSS_HUBER_GAMMA
+            rVarBase * scale * scale
+        } else {
+            rVarBase
+        }
+
+        // Innovation covariance S (2x2) with Huber-weighted measurement variance:
         val s00 = p[0][0] + rVar
         val s01 = p[0][1]
         val s10 = p[1][0]
@@ -337,10 +391,17 @@ class UnicycleOdometryEkf(
             k[i][0] = p0 * invS00 + p1 * invS10
             k[i][1] = p0 * invS01 + p1 * invS11
         }
+        if (isStationary) {
+            k[2][0] = 0.0
+            k[2][1] = 0.0
+        }
 
         // State update: x += K * y
         for (i in 0 until STATE_DIM) {
             x[i] += k[i][0] * y0 + k[i][1] * y1
+        }
+        if (isStationary) {
+            x[2] = 0.0
         }
         x[3] = normalizeAngle(x[3])
 
@@ -350,6 +411,9 @@ class UnicycleOdometryEkf(
             for (j in 0 until STATE_DIM) {
                 pNew[i][j] = p[i][j] - (k[i][0] * p[0][j] + k[i][1] * p[1][j])
             }
+        }
+        if (isStationary) {
+            decoupleVelocityCovariance(pNew)
         }
         for (i in 0 until STATE_DIM) {
             System.arraycopy(pNew[i], 0, p[i], 0, STATE_DIM)

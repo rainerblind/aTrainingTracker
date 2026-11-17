@@ -341,4 +341,64 @@ class KinematicAltitudeSlopeEkfTest {
         assertEquals(0.0, ekf.p12, 1e-9)
         assertEquals(0.0, ekf.p21, 1e-9)
     }
+
+    // TST-FIL-023.2: Pre-stop -21% slope decays cleanly to 0% during sustained standstill while preserving baroBias
+    @Test
+    fun testStandstillSlopeDecay_clearsPreStopSlopeAndPreservesBaroBias_tstFil023_2() {
+        ekf.setMode(true)
+        var trueAlt = 480.0
+        val weatherOffset = 130.4
+        ekf.updateReferenceAltitude(trueAlt, KinematicAltitudeSlopeEkf.DEFAULT_VAR_DEM)
+        ekf.updateBarometer(trueAlt + weatherOffset, isStandstill = false, speedMps = 6.0)
+
+        // Ride downhill -20% at 6.0 m/s for 20s
+        repeat(20) {
+            trueAlt += -0.20 * 6.0
+            ekf.predict(1.0, 6.0)
+            ekf.updateBarometer(trueAlt + weatherOffset, isStandstill = false, speedMps = 6.0)
+        }
+        assertTrue("Pre-stop slope must be strongly negative (was ${ekf.slopePercent}%)", ekf.slopePercent < -12.0)
+
+        val altAtStop = ekf.altitude
+        val biasAtStop = ekf.baroBias
+
+        // Sustained 15s bakery stop (speed = 0.0 m/s)
+        repeat(15) {
+            ekf.predict(1.0, 0.0)
+            ekf.updateBarometer(trueAlt + weatherOffset, isStandstill = true, speedMps = 0.0)
+        }
+
+        assertEquals("Altitude must stay clamped during stop", altAtStop, ekf.altitude, 1e-6)
+        assertEquals("baroBias must remain preserved during stop", biasAtStop, ekf.baroBias, 0.5)
+        assertTrue("Standstill slope must decay near 0% (was ${ekf.slopePercent}%)", kotlin.math.abs(ekf.slopePercent) < 1.0)
+    }
+
+    // TST-FIL-023.3: Low-speed roll-away (0.85 m/s) over flat DEM damps baro chatter without +29% spike
+    @Test
+    fun testLowSpeedBaroChatter_dampedWithout29PercentSpike_tstFil023_3() {
+        ekf.setMode(true)
+        val flatAlt = 442.0
+        ekf.updateReferenceAltitude(flatAlt, KinematicAltitudeSlopeEkf.DEFAULT_VAR_DEM)
+        ekf.updateBarometer(flatAlt, isStandstill = false, speedMps = 5.0)
+
+        // Simulate 1000m prior riding so p11 would have inflated without MAX_SLOPE_VARIANCE
+        repeat(200) {
+            ekf.predict(1.0, 5.0)
+            ekf.updateBarometer(flatAlt, isStandstill = false, speedMps = 5.0)
+        }
+
+        // Roll away at walking speed (0.85 m/s) for 30s with +/- 0.35 m 5-Hz baro noise
+        var maxAbsSlopePct = 0.0
+        for (sec in 0 until 30) {
+            ekf.predict(1.0, 0.85)
+            repeat(5) { sub ->
+                val noise = 0.35 * kotlin.math.sin((sec * 5 + sub) * 0.9)
+                ekf.updateBarometer(flatAlt + noise, isStandstill = false, speedMps = 0.85)
+                maxAbsSlopePct = maxOf(maxAbsSlopePct, kotlin.math.abs(ekf.slopePercent))
+            }
+        }
+
+        assertTrue("Low-speed slope must not spike to +/-29% (max was $maxAbsSlopePct%)", maxAbsSlopePct < 8.0)
+        assertTrue("Flat altitude must remain stable (was ${ekf.altitude})", kotlin.math.abs(ekf.altitude - flatAlt) < 1.5)
+    }
 }

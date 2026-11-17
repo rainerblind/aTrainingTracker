@@ -3,7 +3,7 @@
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Requirements**: 162
+**Total Requirements**: 163
 
 ---
 
@@ -6530,6 +6530,45 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 • *Then* `mAltitudeSensor` reports `438.0 m`, `mAscentSensor` and `mDescentSensor` both remain `0.0 m` (`N/A - no UI strings`).
 
 **Invariants**: 2-state `p00 = varBaro` preserved; standstill `dh = 0`; DEM-over-GPS precedence (`REQ-FIL-020.1`); `2.0 m` hysteresis (`REQ-FIL-020.2`); `baroBias` thermal drift isolation; `@Synchronized` thread safety; `N/A - no UI strings`.
+
+### REQ-FIL-023: att_fused Cold GNSS Jump Gating, Standstill Slope Clearing & Low-Speed Slope Damping [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-FIL-023`
+- **System Requirement(s)**: `SYSREQ-TRK-003`, `SYSREQ-TRK-004`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `app/src/main/java/com/atrainingtracker/banalservice/devices/SpeedAndLocationDevice_ATTFused.kt`, `app/src/main/java/com/atrainingtracker/banalservice/odometry/UnicycleOdometryEkf.kt`, `app/src/main/java/com/atrainingtracker/banalservice/devices/AltitudeAndSlopeDevice_ATTFused.kt`, `app/src/main/java/com/atrainingtracker/banalservice/odometry/KinematicAltitudeSlopeEkf.kt`
+- **Rationale**: During Pixel 10 ride `Zum Bäcker #56` (`ATT-8576`), cold GNSS convergence (`25.1 m -> 16.0 m` at `0.00 m/s` GPS speed) combined with premature `refLat/refLon` anchoring, pre-speed EKF position updates, and `location.accuracy` masking produced a `25.2 m / 1 s` jump (`46.3 km/h` spike, `-4.37 m` altitude drop, `-31%` slope), stops froze `SLOPE` at `-21%`, and `0.82–0.99 m/s` roll-away spiked `SLOPE` to `+29%` and inflated `ASCENT` to `26.00 m` (vs `6.13 m`). Hardening initial GNSS anchoring/gating, decaying/publishing `0%` slope on sustained standstill, and damping low-speed slope coupling eliminates these artifacts (`ATT-8576`, refining `REQ-FIL-007`, `REQ-SEN-028.3`, `REQ-FIL-016.1`/`.2`, and `REQ-FIL-022`):
+- **Description**:
+  1. *Cold GNSS Convergence Gating & Accuracy Preservation (`REQ-FIL-023.1`)*:
+     - `SpeedAndLocationDevice_ATTFused.onLocationChanged()` SHALL NOT anchor `refLat`/`refLon` or forward unanchored fixes to `onNewLocation()` when GNSS `accuracy > UnicycleOdometryEkf.MAX_GNSS_ACCURACY_METERS` (`20.0 m`) prior to the first valid GNSS anchor; `refLat`/`refLon` SHALL initialize on the first valid fix (`acc <= 20.0 m`) without emitting synthetic start distance.
+     - `SpeedAndLocationDevice_ATTFused` SHALL ingest available speed/ZUPT updates before `ekf.updateGnssPosition()` and preserve `location.accuracy >= acc` (`max(acc, sqrt(ekf.positionVariance))`), preventing artificial `escapeRadius` shrinkage in `SpeedAndLocationDevice.onNewLocation()`.
+     - `UnicycleOdometryEkf.updateGnssPosition()` SHALL apply innovation/ZUPT gating against stationary/cold convergence position jumps while preserving `REQ-FIL-009` tunnel re-acquisition during active riding.
+  2. *Standstill Slope Decay & 0% Cockpit Clearing (`REQ-FIL-023.2`)*:
+     - During sustained standstill (`speedMps < minSpeed`, default `0.5 m/s`, or `ekf` standstill `speed < standstillSpeedThresholdMps`), `KinematicAltitudeSlopeEkf` SHALL decay/reset `slope` toward `0.0` (preserving `dh = 0`, `Q_g = 0`, and `REQ-FIL-022` `baroBias` convergence), and `AltitudeAndSlopeDevice_ATTFused.publishAltitudeAndMetrics()` SHALL publish the zeroed/decayed `SLOPE` value (`0%`) instead of leaving pre-stop slope frozen in Cockpit and `WorkoutSamples.db` (`ATT-8473`/`ATT-8474` coherence; `Localization Parity: N/A - no UI strings`).
+  3. *Low-Speed Slope Coupling Damping & Grade Bounds (`REQ-FIL-023.3`)*:
+     - At low speeds (`< ~1.2 m/s`), `KinematicAltitudeSlopeEkf` SHALL damp slope innovation gain / process sensitivity over small `deltaDist` steps and enforce physical terrain grade bounds so barometric micro-noise at walking speed (`0.82–0.99 m/s`) cannot spike `SLOPE` to `+29%` / `-31%` or inflate `ASCENT` across the `2.0 m` hysteresis deadband (`REQ-FIL-020.2`), while preserving accurate slope and ascent on real climbs (`>= 1.5 m/s`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new `REQ-FIL-023` refining `REQ-FIL-007`, `REQ-SEN-028.3`, `REQ-FIL-016.1`/`.2`, and `REQ-FIL-022`. Targets `SpeedAndLocationDevice_ATTFused.kt`, `UnicycleOdometryEkf.kt`, `AltitudeAndSlopeDevice_ATTFused.kt`, and `KinematicAltitudeSlopeEkf.kt`.
+2. *Historical Origin & Commit Trace*: `bc4a4109` (`ATT-131`), `75c1497e` (`ATT-6279`), `8b0eba41` (`ATT-8081`), `e9766625` (`ATT-8575`), and `196b3e67` (`ATT-6256` / `REQ-TRK-056`).
+3. *Root Reason for Existing Formulation*: `ATT-131`/`ATT-7751` assumed initial fixes already satisfied `<= 20 m` accuracy and movement; `ATT-6279` mirrored `VerticalSpeedAndSlopeDevice` by skipping `mSlopeSensor` below `minSpeed` and left `ekf.slope` unbounded/undamped above `0.3 m/s`.
+4. *Preservation of Core Invariants*: Preserves `SpeedAndLocationDevice.java` `REQ-TRK-056` fallback, `REQ-FIL-009` tunnel re-acquisition, `REQ-FIL-020.1`/`.2` DEM precedence & `2.0 m` hysteresis, `REQ-FIL-022` 3-state `baroBias` & 2-state `p00 = varBaro`, `@Synchronized` thread safety, and `ExtendedRts*Smoother.kt` post-workout logic (`N/A - no UI strings`).
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `SpeedAndLocationDevice_ATTFused` receiving a cold `25.1 m` fix at `0.00 m/s` followed by a converged `16.0 m` fix `25.2 m` away at `0.00 m/s` (`t=7 s`),
+• *When* `onLocationChanged()` processes both fixes,
+• *Then* no `25.2 m` distance jump or `46.3 km/h` speed spike is emitted (`SPEED_mps < 2.0 m/s`, `DISTANCE_m < 5.0 m`), and `location.accuracy` is not masked below GNSS `acc`.
+• *Given* `AltitudeAndSlopeDevice_ATTFused` / `KinematicAltitudeSlopeEkf` holding `-21%` slope before stopping at a traffic light (`speed = 0.0 m/s` for `>= 10 s`),
+• *When* `calculateMetrics()` runs during standstill,
+• *Then* `ekf.slopePercent` and `mSlopeSensor` smoothly clear to `0%` while `mAscentSensor` and `mDescentSensor` remain unchanged.
+• *Given* roll-away at `0.82–0.99 m/s` on flat terrain with `±0.35 m` barometric noise,
+• *When* 5-Hz `handlePressureMeasurement()` and 1-Hz `calculateMetrics()` execute for `30 s`,
+• *Then* `SLOPE` stays bounded without `+29%` spikes and `ASCENT` does not inflate spuriously, while a true `+8%` climb at `5.0 m/s` still tracks accurately.
+
+**Invariants**: `SpeedAndLocationDevice.java` `REQ-TRK-056` untouched; `REQ-FIL-009` tunnel exit preserved; `REQ-FIL-020` & `REQ-FIL-022` preserved; `@Synchronized` thread safety; `REQ-PRO-049.1` behavioral tests; `N/A - no UI strings`.
+
 
 
 

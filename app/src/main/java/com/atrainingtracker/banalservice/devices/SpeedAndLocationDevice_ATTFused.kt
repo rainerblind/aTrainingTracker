@@ -90,9 +90,15 @@ open class SpeedAndLocationDevice_ATTFused(
     var refLat: Double? = null
     var refLon: Double? = null
 
+    @Volatile
+    var hasValidGnssAnchor: Boolean = false
+        private set
+
     // Wheel odometry and auto-calibration state
     var currentTotalRevolutions: Double? = null
         private set
+    private var mLastWheelMeasurementMs: Long = 0L
+    private var mLastWheelSpeedMps: Double = 0.0
     private var mLastCalibLat: Double? = null
     private var mLastCalibLon: Double? = null
     private var mLastCalibAlt: Double? = null
@@ -215,7 +221,9 @@ open class SpeedAndLocationDevice_ATTFused(
                         event.values[2].toDouble()
                     }
                     val timestampMs = System.currentTimeMillis()
-                    ekf.predict(dtSec, worldYawRate, timestampMs)
+                    synchronized(ekf) {
+                        ekf.predict(dtSec, worldYawRate, timestampMs)
+                    }
                     mWorldYawRateSensor?.newValue(worldYawRate)
                     setLastActive()
                 }
@@ -235,9 +243,29 @@ open class SpeedAndLocationDevice_ATTFused(
         val acc = if (location.hasAccuracy() && !location.accuracy.isNaN()) location.accuracy.toDouble() else 10.0
         val timestampMs = if (location.time > 0L) location.time else System.currentTimeMillis()
 
-        if (refLat == null || refLon == null) {
+        val hasGpsSpeed = location.hasSpeed() && !location.speed.isNaN() && location.speed >= 0.0f
+        val gpsSpeed = if (hasGpsSpeed) location.speed.toDouble() else Double.NaN
+        val isWheelMoving = mLastWheelMeasurementMs > 0L &&
+            (timestampMs - mLastWheelMeasurementMs) in 0..5000L &&
+            mLastWheelSpeedMps > SPEED_ZERO_THRESHOLD
+        val isGpsZero = hasGpsSpeed && gpsSpeed <= SPEED_ZERO_THRESHOLD
+        val isStationary = isGpsZero && !isWheelMoving && (
+            isExternalSpeedSensorStationary(timestampMs) ||
+                isAccelerometerAtRest(timestampMs) ||
+                ekf.speedMps <= SPEED_ZERO_THRESHOLD
+            )
+
+        // REQ-FIL-023.1: Defer tangent-plane origin anchoring until a valid GNSS accuracy fix arrives
+        if (!hasValidGnssAnchor || refLat == null || refLon == null) {
+            if (acc <= 0.0 || acc > UnicycleOdometryEkf.MAX_GNSS_ACCURACY_METERS) {
+                if (isStationary) {
+                    synchronized(ekf) { ekf.applyZeroVelocityUpdate(timestampMs) }
+                }
+                return
+            }
             refLat = lat
             refLon = lon
+            hasValidGnssAnchor = true
         }
 
         val rLat = refLat!!
@@ -247,16 +275,41 @@ open class SpeedAndLocationDevice_ATTFused(
         val northMeters = dLatRad * EARTH_RADIUS_METERS
         val eastMeters = dLonRad * EARTH_RADIUS_METERS * cos(Math.toRadians(rLat))
 
-        ekf.updateGnssPosition(eastMeters, northMeters, acc, timestampMs)
-
-        // Finding 1: Feed GNSS speed into EKF before overwriting location.speed
-        if (location.hasSpeed() && !location.speed.isNaN() && location.speed >= 0.0f) {
-            val speedVar = if (location.hasAccuracy() && !location.accuracy.isNaN()) {
-                max(0.5, (location.accuracy.toDouble() * 0.25).pow(2))
-            } else {
-                1.0
+        // REQ-FIL-023.1: Apply speed / ZUPT before GNSS position update to block velocity-leak spikes
+        val gnssAccepted: Boolean
+        val fusedEast: Double
+        val fusedNorth: Double
+        val fusedSpeed: Double
+        val fusedBearing: Double
+        val fusedPosVar: Double
+        synchronized(ekf) {
+            if (isStationary) {
+                ekf.applyZeroVelocityUpdate(timestampMs)
+            } else if (hasGpsSpeed) {
+                val speedVar = if (location.hasAccuracy() && !location.accuracy.isNaN()) {
+                    max(0.5, (location.accuracy.toDouble() * 0.25).pow(2))
+                } else {
+                    1.0
+                }
+                ekf.updateSpeed(gpsSpeed, speedVar, timestampMs)
             }
-            ekf.updateSpeed(location.speed.toDouble(), speedVar, timestampMs)
+
+            gnssAccepted = ekf.updateGnssPosition(
+                eastMeters = eastMeters,
+                northMeters = northMeters,
+                accuracyMeters = acc,
+                timestampMs = timestampMs,
+                isStationary = isStationary
+            )
+            fusedEast = ekf.eastMeters
+            fusedNorth = ekf.northMeters
+            fusedSpeed = ekf.speedMps
+            fusedBearing = ekf.bearingDeg
+            fusedPosVar = ekf.positionVariance
+        }
+
+        if (!gnssAccepted && (isStationary || fusedSpeed <= SPEED_ZERO_THRESHOLD)) {
+            return
         }
 
         if (location.hasSpeed() && location.hasBearing() &&
@@ -264,7 +317,9 @@ open class SpeedAndLocationDevice_ATTFused(
         ) {
             val cogDeg = location.bearing.toDouble()
             val enuHeadingRad = Math.toRadians((450.0 - cogDeg) % 360.0)
-            ekf.updateDopplerHeading(enuHeadingRad, Math.toRadians(5.0) * Math.toRadians(5.0), timestampMs)
+            synchronized(ekf) {
+                ekf.updateDopplerHeading(enuHeadingRad, Math.toRadians(5.0) * Math.toRadians(5.0), timestampMs)
+            }
         }
 
         // Finding 2: Feed distance & revolutions into auto-calibration step
@@ -290,7 +345,7 @@ open class SpeedAndLocationDevice_ATTFused(
                         dist2d
                     }
                     val yawRate = mWorldYawRateSensor?.value ?: 0.0
-                    val speed = if (location.hasSpeed() && !location.speed.isNaN()) location.speed.toDouble() else ekf.speedMps
+                    val speed = if (location.hasSpeed() && !location.speed.isNaN()) location.speed.toDouble() else fusedSpeed
                     processWheelCalibrationStep(
                         deltaDistance3d = dist3d,
                         deltaRevolutions = deltaRevs,
@@ -306,14 +361,15 @@ open class SpeedAndLocationDevice_ATTFused(
             mLastCalibRevolutions = currentRevs
         }
 
-        val fusedLat = rLat + Math.toDegrees(ekf.northMeters / EARTH_RADIUS_METERS)
-        val fusedLon = rLon + Math.toDegrees(ekf.eastMeters / (EARTH_RADIUS_METERS * cos(Math.toRadians(rLat))))
+        val fusedLat = rLat + Math.toDegrees(fusedNorth / EARTH_RADIUS_METERS)
+        val fusedLon = rLon + Math.toDegrees(fusedEast / (EARTH_RADIUS_METERS * cos(Math.toRadians(rLat))))
 
         location.latitude = fusedLat
         location.longitude = fusedLon
-        location.speed = ekf.speedMps.toFloat()
-        location.bearing = ekf.bearingDeg.toFloat()
-        location.accuracy = sqrt(ekf.positionVariance).toFloat()
+        location.speed = fusedSpeed.toFloat()
+        location.bearing = fusedBearing.toFloat()
+        // REQ-FIL-023.1: Preserve GNSS uncertainty floor so SpeedAndLocationDevice escapeRadius does not shrink falsely
+        location.accuracy = max(acc, sqrt(fusedPosVar)).toFloat()
 
         onNewLocation(location)
     }
@@ -324,7 +380,11 @@ open class SpeedAndLocationDevice_ATTFused(
         timestampMs: Long
     ) {
         if (!AttFusedPreferences.isEffectiveWheelActive(mContext)) return
-        ekf.updateSpeed(speedMps, variance, timestampMs)
+        mLastWheelMeasurementMs = timestampMs
+        mLastWheelSpeedMps = speedMps
+        synchronized(ekf) {
+            ekf.updateSpeed(speedMps, variance, timestampMs)
+        }
         setLastActive()
     }
 
@@ -375,9 +435,33 @@ open class SpeedAndLocationDevice_ATTFused(
         timestampMs: Long = System.currentTimeMillis()
     ) {
         val worldYawRate = gyroProjector.projectYawRate(gameRotationVector, gyroValues)
-        ekf.predict(dtSec, worldYawRate, timestampMs)
+        synchronized(ekf) {
+            ekf.predict(dtSec, worldYawRate, timestampMs)
+        }
         mWorldYawRateSensor?.newValue(worldYawRate)
         setLastActive()
+    }
+
+    @Synchronized
+    override fun onAccumulatorsReset() {
+        super.onAccumulatorsReset()
+        resetOriginAndEkf()
+    }
+
+    @Synchronized
+    private fun resetOriginAndEkf() {
+        refLat = null
+        refLon = null
+        hasValidGnssAnchor = false
+        mLastWheelMeasurementMs = 0L
+        mLastWheelSpeedMps = 0.0
+        mLastCalibLat = null
+        mLastCalibLon = null
+        mLastCalibAlt = null
+        mLastCalibRevolutions = null
+        synchronized(ekf) {
+            ekf.reset()
+        }
     }
 
     @Synchronized
@@ -404,6 +488,7 @@ open class SpeedAndLocationDevice_ATTFused(
             }
         }
         mSensorsRegistered = false
+        resetOriginAndEkf()
 
         super.shutDown()
     }

@@ -67,6 +67,7 @@ open class AltitudeAndSlopeDevice_ATTFused @JvmOverloads constructor(
         const val TECHNICAL_DEVICE_NAME = "att_fused_altitude_slope"
         const val ASCENT_DESCENT_HYSTERESIS_METERS = 2.0
         const val DEM_STALENESS_THRESHOLD_MS = 15_000L
+        const val STANDSTILL_SLOPE_CLEAR_DELAY_MS = 10_000L
     }
 
     val ekf = KinematicAltitudeSlopeEkf()
@@ -91,6 +92,7 @@ open class AltitudeAndSlopeDevice_ATTFused @JvmOverloads constructor(
     private var mLastAltitude: Double = Double.NaN
     private var mAscentDescentAnchorAltitude: Double = Double.NaN
     private var mLastStepTimestampMs: Long = 0L
+    private var mStandstillStartTimestampMs: Long = 0L
     private var mLastDemUpdateTimestampMs: Long = 0L
     private var mLastGpsUpdateTimestampMs: Long = 0L
 
@@ -191,6 +193,7 @@ open class AltitudeAndSlopeDevice_ATTFused @JvmOverloads constructor(
         mLastAltitude = Double.NaN
         mAscentDescentAnchorAltitude = Double.NaN
         mLastStepTimestampMs = 0L
+        mStandstillStartTimestampMs = 0L
         mLastDemUpdateTimestampMs = 0L
         mLastGpsUpdateTimestampMs = 0L
     }
@@ -261,8 +264,8 @@ open class AltitudeAndSlopeDevice_ATTFused @JvmOverloads constructor(
         val isStandstill = speed < ekf.standstillSpeedThresholdMps
 
         ekf.setMode(isEffectiveDem || isEffectiveGps)
-        ekf.updateBarometer(slewAlt, isStandstill = isStandstill)
-        publishAltitudeAndMetrics(speed)
+        ekf.updateBarometer(slewAlt, isStandstill = isStandstill, speedMps = speed)
+        publishAltitudeAndMetrics(speed, timestampMs)
     }
 
     @Synchronized
@@ -276,7 +279,7 @@ open class AltitudeAndSlopeDevice_ATTFused @JvmOverloads constructor(
         if (reanchored) {
             resetAscentDescentAnchor()
         }
-        publishAltitudeAndMetrics(getCurrentSpeed())
+        publishAltitudeAndMetrics(getCurrentSpeed(), System.currentTimeMillis())
     }
 
     @Synchronized
@@ -299,7 +302,7 @@ open class AltitudeAndSlopeDevice_ATTFused @JvmOverloads constructor(
         checkReferenceAltitudeFromSensors(nowMs)
 
         ekf.predict(dtSec, speed)
-        publishAltitudeAndMetrics(speed)
+        publishAltitudeAndMetrics(speed, nowMs)
     }
 
     private fun checkReferenceAltitudeFromSensors(nowMs: Long) {
@@ -362,7 +365,7 @@ open class AltitudeAndSlopeDevice_ATTFused @JvmOverloads constructor(
     }
 
     @Synchronized
-    private fun publishAltitudeAndMetrics(speedMps: Double) {
+    private fun publishAltitudeAndMetrics(speedMps: Double, nowMs: Long = System.currentTimeMillis()) {
         if (!ekf.isInitialized) return
 
         val currentAlt = ekf.altitude
@@ -391,7 +394,19 @@ open class AltitudeAndSlopeDevice_ATTFused @JvmOverloads constructor(
         }
 
         if (speedMps >= minSpeed) {
+            mStandstillStartTimestampMs = 0L
             mSlopeSensor?.newValue(Math.round(ekf.slopePercent).toInt())
+        } else {
+            if (mStandstillStartTimestampMs == 0L) {
+                mStandstillStartTimestampMs = nowMs
+            }
+            val standstillMs = max(0L, nowMs - mStandstillStartTimestampMs)
+            // REQ-FIL-023.2: Publish decaying/cleared 0% slope on sustained standstill instead of freezing pre-stop grade
+            if (standstillMs >= STANDSTILL_SLOPE_CLEAR_DELAY_MS) {
+                mSlopeSensor?.newValue(0)
+            } else if (ekf.standstillDurationSec >= KinematicAltitudeSlopeEkf.STANDSTILL_SLOPE_GRACE_SEC) {
+                mSlopeSensor?.newValue(Math.round(ekf.slopePercent).toInt())
+            }
         }
 
         val vam = ekf.getVamMph(speedMps)

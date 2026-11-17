@@ -281,4 +281,95 @@ class SpeedAndLocationDevice_ATTFusedTest {
         // Verify unregistration was safely handled
         assertTrue("Device shutDown should complete cleanly", true)
     }
+
+    // TST-FIL-023.1: Cold GNSS convergence (25.1m -> 16.0m, 25.2m jump at 0 m/s) must not emit 46.3 km/h spike
+    @Test
+    fun testColdGnssFixTightening_suppresses25mJumpAnd46KmhSpike_tstFil023_1() {
+        val device = SpeedAndLocationDevice_ATTFused(mockContext, mockSensorManager)
+        val distanceSensor = device.sensors.first { it.sensorType == SensorType.DISTANCE_m }
+        val speedSensor = device.sensors.first { it.sensorType == SensorType.SPEED_mps }
+
+        // 1. Degraded cold fix (acc = 25.1 m > 20.0 m) at 0.00 m/s must NOT anchor refLat/refLon
+        val coldFix = mockk<Location>(relaxed = true) {
+            every { latitude } returns 48.0000
+            every { longitude } returns 11.0000
+            every { hasAccuracy() } returns true
+            every { accuracy } returns 25.1f
+            every { hasSpeed() } returns true
+            every { speed } returns 0.0f
+            every { time } returns 1000L
+        }
+        device.onLocationChanged(coldFix)
+
+        assertTrue("Degraded 25.1 m initial fix must NOT anchor origin", !device.hasValidGnssAnchor)
+        assertEquals(0.0, (distanceSensor.value as? Number)?.toDouble() ?: 0.0, 1e-6)
+        assertEquals(0.0, (speedSensor.value as? Number)?.toDouble() ?: 0.0, 1e-6)
+
+        // 2. First valid converged fix (acc = 16.0 m <= 20.0 m) 25.2 m North at 0.00 m/s anchors origin cleanly
+        var fix2Acc = 16.0f
+        var fix2Speed = 0.0f
+        var fix2Lat = 48.000227
+        val validFix1 = mockk<Location>(relaxed = true) {
+            every { latitude } answers { fix2Lat }
+            every { latitude = any() } answers { fix2Lat = firstArg() }
+            every { longitude } returns 11.0000
+            every { hasAccuracy() } returns true
+            every { accuracy } answers { fix2Acc }
+            every { accuracy = any() } answers { fix2Acc = firstArg() }
+            every { hasSpeed() } returns true
+            every { speed } answers { fix2Speed }
+            every { speed = any() } answers { fix2Speed = firstArg() }
+            every { time } returns 7000L
+        }
+        device.onLocationChanged(validFix1)
+
+        assertTrue("First <=20m fix must anchor origin", device.hasValidGnssAnchor)
+        assertEquals(48.000227, device.refLat ?: 0.0, 1e-6)
+        assertTrue("Accuracy must not shrink below GNSS 16.0m (was $fix2Acc)", fix2Acc >= 16.0f)
+        assertEquals(0.0, (distanceSensor.value as? Number)?.toDouble() ?: 0.0, 1e-6)
+        assertEquals(0.0, (speedSensor.value as? Number)?.toDouble() ?: 0.0, 1e-6)
+
+        // 3. Subsequent stationary 25.2 m convergence jump at acc = 16.0 m and GPS speed = 0.0 m/s
+        var fix3Acc = 16.0f
+        var fix3Speed = 0.0f
+        val jumpFix = mockk<Location>(relaxed = true) {
+            every { latitude } returns 48.000454 // +25.2 m North
+            every { longitude } returns 11.0000
+            every { hasAccuracy() } returns true
+            every { accuracy } answers { fix3Acc }
+            every { accuracy = any() } answers { fix3Acc = firstArg() }
+            every { hasSpeed() } returns true
+            every { speed } answers { fix3Speed }
+            every { speed = any() } answers { fix3Speed = firstArg() }
+            every { time } returns 8000L
+            every { distanceTo(any()) } returns 25.2f
+        }
+        every { validFix1.distanceTo(jumpFix) } returns 25.2f
+        device.onLocationChanged(jumpFix)
+
+        val emittedSpeedMps = (speedSensor.value as? Number)?.toDouble() ?: 0.0
+        val emittedDistanceM = (distanceSensor.value as? Number)?.toDouble() ?: 0.0
+        assertTrue("46.3 km/h spike must be suppressed (was $emittedSpeedMps m/s)", emittedSpeedMps < 2.0)
+        assertTrue("25.2 m phantom jump must be suppressed (was $emittedDistanceM m)", emittedDistanceM < 5.0)
+
+        // 4. Genuine riding start at 5.5 m/s must engage normally without lockout
+        var moveSpeed = 5.5f
+        val moveFix = mockk<Location>(relaxed = true) {
+            every { latitude } returns 48.000276 // +5.5 m North from anchor
+            every { longitude } returns 11.0000
+            every { hasAccuracy() } returns true
+            every { accuracy } returns 4.0f
+            every { hasSpeed() } returns true
+            every { speed } answers { moveSpeed }
+            every { speed = any() } answers { moveSpeed = firstArg() }
+            every { hasBearing() } returns true
+            every { bearing } returns 0.0f
+            every { time } returns 9000L
+        }
+        every { validFix1.distanceTo(moveFix) } returns 5.5f
+        device.onLocationChanged(moveFix)
+
+        val movingSpeedMps = (speedSensor.value as? Number)?.toDouble() ?: 0.0
+        assertTrue("Genuine start movement must update speed (was $movingSpeedMps m/s)", movingSpeedMps > 2.0)
+    }
 }

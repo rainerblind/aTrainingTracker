@@ -3,7 +3,7 @@
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Tests**: 138
+**Total Tests**: 139
 
 ---
 
@@ -3218,6 +3218,26 @@
      • Assert `mAltitudeSensor` updates to `438.0 ± 0.5 m` and both `mAscentSensor` and `mDescentSensor` remain `0.0 m` (zero `+130.4 m` phantom descent/ascent), followed by true `25 m` climb accumulating `~25 m` ascent.
   4. *Tier 1 Targeted Regression Execution (`TST-FIL-022.4`)*:
      • Execute `./gradlew :app:testDebugUnitTest --tests "com.atrainingtracker.banalservice.odometry.KinematicAltitudeSlopeEkfTest" --tests "com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest" --tests "com.atrainingtracker.trainingtracker.build.MeasuredNfrBenchmarkTest"` asserting 100% pass rate (`Localization parity: N/A - no UI strings`).
+
+
+### TST-FIL-023: **att_fused Cold GNSS Jump Gating, Standstill Slope Clearing & Low-Speed Slope Damping Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Tickets**: `ATT-8576`
+- **Requirement(s)**: `REQ-FIL-023` (`REQ-FIL-023.1`..`REQ-FIL-023.3`)
+- **Component**: `app/src/test/java/com/atrainingtracker/banalservice/devices/SpeedAndLocationDevice_ATTFusedTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/odometry/UnicycleOdometryEkfTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/devices/AltitudeAndSlopeDevice_ATTFusedTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/odometry/KinematicAltitudeSlopeEkfTest.kt`
+- **Test Type**: Unit
+- **Verification Method**: Unit
+- **Procedure**:
+  1. *Cold GNSS Fix Tightening & Accuracy Preservation Test (`TST-FIL-023.1`, `SpeedAndLocationDevice_ATTFusedTest.kt` & `UnicycleOdometryEkfTest.kt`)*:
+     • Feed `SpeedAndLocationDevice_ATTFused.onLocationChanged()` an initial degraded fix (`accuracy = 25.1 m`, `speed = 0.0f`) followed by a converged fix (`accuracy = 16.0 m`, `25.2 m` offset, `speed = 0.0f`).
+     • Assert no `25.2 m` jump or `46.3 km/h` speed spike (`mSpeedSensor < 2.0 m/s`, `mDistanceSensor < 5.0 m`), `location.accuracy >= 16.0f`, and `UnicycleOdometryEkf.updateGnssPosition()` gates stationary/cold innovation jumps while still re-acquiring valid GNSS fixes during moving tunnel exit (`REQ-FIL-009`).
+  2. *Standstill Slope Clearing Test (`TST-FIL-023.2`, `KinematicAltitudeSlopeEkfTest.kt` & `AltitudeAndSlopeDevice_ATTFusedTest.kt`)*:
+     • Establish a non-zero pre-stop slope (e.g. `-21%` / `-10%` during motion), then transition to `speed = 0.0 m/s` for sustained standstill ticks (`>= 10 s`).
+     • Assert `ekf.slopePercent` decays cleanly to `0%`, `mSlopeSensor` publishes `0` (not frozen at `-21`), `mAscentSensor`/`mDescentSensor` remain unchanged, and 3-state `baroBias` remains preserved (`REQ-FIL-022`).
+  3. *Low-Speed Slope Damping & Real Climb Preservation Test (`TST-FIL-023.3`, `KinematicAltitudeSlopeEkfTest.kt` & `AltitudeAndSlopeDevice_ATTFusedTest.kt`)*:
+     • Simulate `0.85 m/s` roll-away over flat DEM (`442.0 m`) with `±0.35 m` 5-Hz baro noise for `30 s`; assert `SLOPE` stays bounded without `+29%` spikes and `ASCENT` stays near `0.0 m`. Then simulate a real `+8%` climb at `5.0 m/s` and verify accurate slope and ascent accumulation.
+  4. *Tier 1 Targeted Regression Execution (`TST-FIL-023.4`)*:
+     • Execute `./gradlew :app:testDebugUnitTest --tests "com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFusedTest" --tests "com.atrainingtracker.banalservice.odometry.UnicycleOdometryEkfTest" --tests "com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest" --tests "com.atrainingtracker.banalservice.odometry.KinematicAltitudeSlopeEkfTest" --tests "com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceStationaryJitterTest" --tests "com.atrainingtracker.banalservice.odometry.OdometrySimulationTest"` asserting 100% pass rate with zero `src/main` source-reading calls (`REQ-PRO-049.1`; `Localization parity: N/A - no UI strings`).
 
 
 
