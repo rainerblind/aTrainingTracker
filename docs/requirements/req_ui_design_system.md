@@ -3,7 +3,7 @@
 **Domain**: `ui_design_system`  
 **Prefixes**: `UI`, `UNT`  
 **Scope**: Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts.  
-**Total Requirements**: 461
+**Total Requirements**: 462
 
 ---
 
@@ -17480,3 +17480,42 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 • *Then* exactly one `HorizontalDivider` SHALL separate `sourceDevice` from `activeBackups`.
 
 **Invariants**: Layout spacing, semantic color tokens (`TTColor.SensorSourceActive`, `TTColor.SensorBackupActive`), device click actions, and canonical priority sorting (`REQ-UI-268.5`) MUST NOT be altered.
+
+### REQ-UI-2782: EditSensorFieldDialog Logical Section Ordering [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-UI-2782`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `EditSensorFieldDialog.kt`
+- **Rationale**: In `EditSensorFieldDialog.kt`, incremental feature additions interleaved data-source, tile-geometry, and visual-presentation controls so that enabling the live Sparkline graph pushed `Relative Breite` and `Filter / Glättung` below the fold, separating `Quelle` from `Filter / Glättung` and `Textgröße` from `Relative Breite` (`ATT-8462`). Regrouping the dialog body into three cohesive vertical tiers improves scannability and keeps high-frequency data and geometry controls above the visual graph editor.
+- **Description**: Logical 3-Group Vertical Ordering in `EditSensorFieldDialog`.
+
+1. *Group 1 — Messdaten (Data & Signal) (`REQ-UI-2782.1`)*:
+• `EditSensorFieldDialog.kt` SHALL render Group 1 in strict top-to-bottom order: `SensorTypeSelectorSection` -> `Spinner` (*Quelle*, omitted when `deviceList.size == 1 && deviceList[0].first == -1L`) -> `OutlinedButton` (*Filter / Glättung*, rendered strictly when `uiState.selectedSensorType?.filteringPossible == true`).
+
+2. *Group 2 — Kachel-Geometrie (Tile Geometry) (`REQ-UI-2782.2`)*:
+• Immediately below Group 1, `EditSensorFieldDialog.kt` SHALL render Group 2 in strict top-to-bottom order: `Spinner` (*Textgröße*) -> *Relative Breite* (`1x`, `2x`, `3x` `FilterChip` row, rendered strictly when `uiState.isMultiFieldRow == true`).
+
+3. *Group 3 — Visuelle Darstellung & Metrik-Hinweise (`REQ-UI-2782.3`)*:
+• Immediately below Group 2, `EditSensorFieldDialog.kt` SHALL render Group 3 in strict top-to-bottom order: *Anzeigeelemente* (`FilterChip`s *Wert* / *Balken* / *Graph*, gated by `uiState.isBarSupported || uiState.isGraphSupported`) -> expanded Graph options (`uiState.isGraphSupported && uiState.showGraph`: Sparkline Time Horizon `Slider`, Graph Color Editor chips/swatches/`SingleChoiceSegmentedButtonRow`, and Live `SensorSparklineView` preview) -> metric-specific guidance blocks (`POWER_TO_WEIGHT` weight button + `AthleteWeightDialog`, `INTENSITY_FACTOR`/`TSS` FTP `Surface`, and `isHrvMetric` info button + `HrvInfoBottomSheet`).
+• All existing `EditSensorFieldViewModel` callbacks, conditional visibility guards, `ConfigureFilterDialog` overlay wiring, `AppModalBottomSheet(scrollable = true)` scroll safety, and 9-locale string parity MUST remain preserved without adding new string keys or altering ViewModel/DB state.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-UI-2782`, complementing `REQ-UI-471.3` (*Field Configuration Dialog Polish*), `REQ-UI-437.3` (*Relative Width Cardinality Gating*), `REQ-UI-395` (*Categorized Sensor Picker*), `REQ-TRK-059.3/.11` (*Display Elements, Slider & Sparkline Preview*), and `REQ-TRK-081.3` (*Graph Color Editor*), targeting `EditSensorFieldDialog.kt`.
+2. *Historical Origin & Commit Trace*: Built incrementally across `ATT-3852` (`SensorTypeSelectorSection`), `ATT-4861`/`ATT-5192` (`Relative Breite`), `ATT-1294`/`ATT-6690`/`ATT-7314` (Display Elements, Slider, Preview), and `ATT-7760` (`65d2c2d5`, Graph Color Editor).
+3. *Root Reason for Existing Formulation*: Subsequent controls were appended sequentially to the bottom of the `Column` without regrouping earlier geometry and filter controls.
+4. *Preservation of Core Invariants*: Preserves all conditional guards (`deviceList` single-best check, `filteringPossible`, `uiState.isMultiFieldRow`, `isBarSupported || isGraphSupported`, `isGraphSupported && showGraph`, metric-type checks), `REQ-TRK-081.3` color-editor placement below the time-horizon slider, `REQ-UI-471.3` title/icon/alignment polish, `AppModalBottomSheet` scroll safety, and 9-language localization parity.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `EditSensorFieldDialog` with all three groups active (`deviceList` size > 1, `filteringPossible = true`, `isMultiFieldRow = true`, `isGraphSupported = true`, `showGraph = true`, and metric guidance applicable),
+• *When* the dialog body renders,
+• *Then* vertical `boundsInRoot().top` positions strictly satisfy `Sensortyp < Quelle < Filter < Textgröße < Relative Breite < Anzeigeelemente < Zeitfenster < Graph-Farbe < Vorschau < Metrik-Hinweis`.
+• *Given* a field where `filteringPossible == false` or `isMultiFieldRow == false` or `deviceList` contains only `-1L` or `showGraph == false`,
+• *When* the dialog renders,
+• *Then* each disabled section is omitted while all remaining active sections preserve the strict Group 1 -> Group 2 -> Group 3 vertical order.
+• *Given* `EditSensorFieldDialog` rendered in Light or Dark mode,
+• *When* any control in Group 1, Group 2, or Group 3 is interacted with,
+• *Then* the corresponding `EditSensorFieldViewModel` callback fires and the sheet renders cleanly without clipping, overlapping, or nested scrolling.
+
+**Invariants**: Zero `EditSensorFieldViewModel` / DB schema / repository signature changes; all conditional guards and callbacks preserved; `AppModalBottomSheet` scroll safety preserved; 9-locale parity unchanged.

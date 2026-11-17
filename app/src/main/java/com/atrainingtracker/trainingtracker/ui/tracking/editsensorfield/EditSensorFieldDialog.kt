@@ -168,7 +168,8 @@ fun EditSensorFieldDialog(
                 .padding(horizontal = 24.dp, vertical = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // --- Categorized & Searchable Sensor Type Selector (ATT-3852 / REQ-UI-395) ---
+            // --- Group 1: Messdaten (Data & Signal) (REQ-UI-2782.1) ---
+            // Categorized & Searchable Sensor Type Selector (ATT-3852 / REQ-UI-395)
             val availableSensorTypes = uiState.availableSensorTypesForCurrentActivityType
                 .ifEmpty { SensorType.entries }
             SensorTypeSelectorSection(
@@ -182,7 +183,7 @@ fun EditSensorFieldDialog(
 
             Spacer(Modifier.height(12.dp))
 
-            // --- Source Device Spinner ---
+            // Source Device Spinner
             val deviceList = uiState.availableDevices
             if (deviceList.size == 1 && deviceList[0].first == -1L) {
                 // when there is only the 'best' sensor available, there is no choice.
@@ -199,7 +200,38 @@ fun EditSensorFieldDialog(
                 Spacer(Modifier.height(12.dp))
             }
 
-            // --- View Size Spinner ---
+            // Configure Filter Button (grouped with data/signal controls; REQ-UI-2782.1)
+            if (uiState.selectedSensorType?.filteringPossible == true) {
+                OutlinedButton(
+                    onClick = { viewModel.onConfigureFilterClicked() },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Tune,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = "${stringResource(R.string.filter)}: ${uiState.filterSummary}",
+                        modifier = Modifier.weight(1f, fill = false),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Icon(
+                        imageVector = Icons.Default.ArrowDropDown,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                Spacer(Modifier.height(12.dp))
+            }
+
+            Spacer(Modifier.height(4.dp))
+
+            // --- Group 2: Kachel-Geometrie (Tile Geometry) (REQ-UI-2782.2) ---
+            // View Size Spinner
             Spinner(
                 label = stringResource(R.string.text_size),
                 items = uiState.availableViewSizes.map { it.getDisplayName(context) },
@@ -209,9 +241,35 @@ fun EditSensorFieldDialog(
                 }
             )
 
+            // Relative Width (REQ-UI-437, ATT-4861, ATT-5077, ATT-5192)
+            if (uiState.isMultiFieldRow) {
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    text = stringResource(R.string.sensor_field_relative_weight),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(4.dp))
+                val weights = listOf(1f to "1x", 2f to "2x", 3f to "3x")
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    weights.forEach { (w, label) ->
+                        FilterChip(
+                            selected = (uiState.colWeight == w),
+                            onClick = { viewModel.onColWeightChanged(w) },
+                            label = { Text(label) }
+                        )
+                    }
+                }
+            }
+
             Spacer(Modifier.height(16.dp))
 
-            // --- Display Elements Selection (REQ-TRK-046, ATT-4841, ATT-1294) ---
+            // --- Group 3: Visuelle Darstellung & Metrik-Hinweise (REQ-UI-2782.3) ---
+            // Display Elements Selection (REQ-TRK-046, ATT-4841, ATT-1294)
             if (uiState.isBarSupported || uiState.isGraphSupported) {
                 Text(
                     text = stringResource(R.string.sensor_field_display_elements_title),
@@ -246,7 +304,7 @@ fun EditSensorFieldDialog(
                 Spacer(Modifier.height(16.dp))
             }
 
-            // --- Sparkline Time Horizon Selection (REQ-TRK-059.3, ATT-1294, ATT-6690) ---
+            // Sparkline Time Horizon Selection (REQ-TRK-059.3, ATT-1294, ATT-6690)
             if (uiState.isGraphSupported && uiState.showGraph) {
                 val currentHorizonIndex = durationSecondsToSliderIndex(uiState.graphHorizonSeconds)
                 val activeHorizonLabelResId = SPARKLINE_HORIZONS[currentHorizonIndex].second
@@ -298,7 +356,7 @@ fun EditSensorFieldDialog(
                 }
                 Spacer(Modifier.height(12.dp))
 
-                // --- Minimalist Color Editor UI (REQ-TRK-081.3, ATT-7760) ---
+                // Minimalist Color Editor UI (REQ-TRK-081.3, ATT-7760)
                 Text(
                     text = stringResource(R.string.cockpit_graph_color_title),
                     style = MaterialTheme.typography.labelLarge,
@@ -306,7 +364,6 @@ fun EditSensorFieldDialog(
                 )
                 Spacer(Modifier.height(6.dp))
 
-                val context = LocalContext.current
                 val activeGlobalColor = TelemetryGraphColorPreferences.getGraphColor(
                     context,
                     uiState.selectedSensorType ?: SensorType.SPEED_mps
@@ -419,7 +476,7 @@ fun EditSensorFieldDialog(
 
                 Spacer(Modifier.height(12.dp))
 
-                // --- Live Sparkline Preview in Edit Dialog (REQ-TRK-059.11, REQ-TRK-081.2, ATT-7314, ATT-7760) ---
+                // Live Sparkline Preview in Edit Dialog (REQ-TRK-059.11, REQ-TRK-081.2, ATT-7314, ATT-7760)
                 Surface(
                     color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                     shape = MaterialTheme.shapes.small,
@@ -460,59 +517,6 @@ fun EditSensorFieldDialog(
                     }
                 }
                 Spacer(Modifier.height(16.dp))
-            }
-
-            // --- Relative Width (REQ-UI-437, ATT-4861, ATT-5077, ATT-5192) ---
-            if (uiState.isMultiFieldRow) {
-                Text(
-                    text = stringResource(R.string.sensor_field_relative_weight),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(Modifier.height(4.dp))
-                val weights = listOf(1f to "1x", 2f to "2x", 3f to "3x")
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    weights.forEach { (w, label) ->
-                        FilterChip(
-                            selected = (uiState.colWeight == w),
-                            onClick = { viewModel.onColWeightChanged(w) },
-                            label = { Text(label) }
-                        )
-                    }
-                }
-                Spacer(Modifier.height(16.dp))
-            }
-
-            // --- Optionally: Configure Filter Button ---
-            if (uiState.selectedSensorType?.filteringPossible == true) {
-                OutlinedButton(
-                    onClick = { viewModel.onConfigureFilterClicked() },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Tune,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        text = "${stringResource(R.string.filter)}: ${uiState.filterSummary}",
-                        modifier = Modifier.weight(1f, fill = false),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Icon(
-                        imageVector = Icons.Default.ArrowDropDown,
-                        contentDescription = null,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-                Spacer(Modifier.height(8.dp))
             }
 
             // Athlete Weight Configuration for Power-to-Weight (ATT-1289, REQ-TRK-019)

@@ -3,7 +3,7 @@
 **Domain**: `ui_design_system`  
 **Prefixes**: `UI`, `UNT`  
 **Scope**: Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts.  
-**Total Tests**: 475
+**Total Tests**: 476
 
 ---
 
@@ -8649,4 +8649,23 @@
   3. *Targeted Regression Suite & Requirement Governance (`TST-UI-2781.3`)*:
      - Execute `./gradlew testDebugUnitTest --tests "*SensorSourceDialog*" --tests "*SensorStatus*" --max-workers=2`.
      - Execute `python3 tools/verify_requirement_governance.py --check-code-orphans --check-req-description`.
+     - Assert 100% pass rate.
+
+### TST-UI-2782: EditSensorFieldDialog Logical Section Ordering & Guard Verification [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-UI-2782` (`REQ-UI-2782.1`, `REQ-UI-2782.2`, `REQ-UI-2782.3`)
+- **Component**: `EditSensorFieldDialog.kt`, `EditSensorFieldDialogScreenshotTest.kt`, `EditSensorFieldDialogOrderTest.kt`
+- **Jira**: `ATT-8462`
+- **Test Description**:
+  1. *3-Group Vertical Ordering Compose UI Test (`TST-UI-2782.1`, `EditSensorFieldDialogOrderTest.kt`)*:
+     - Render `EditSensorFieldDialog` via Robolectric `createComposeRule()` with multi-device source list, `filteringPossible = true`, `isMultiFieldRow = true`, `isGraphSupported = true`, `showGraph = true`, and a metric with guidance (`HRV_DFA_A1` / `POWER_TO_WEIGHT` / `INTENSITY_FACTOR`).
+     - Assert strict top-to-bottom `boundsInRoot().top` ordering across all 3 logical groups: `Sensortyp < Quelle < Filter < Textgröße < Relative Breite < Anzeigeelemente < Zeitfenster < Graph-Farbe < Vorschau < Metrik-Hinweis`.
+  2. *Conditional Guards & Callback Preservation Tests (`TST-UI-2782.2`, `EditSensorFieldDialogOrderTest.kt`)*:
+     - Verify omission when `filteringPossible == false` (Filter button absent), `isMultiFieldRow == false` (Relative Breite absent), single `-1L` `deviceList` (Quelle absent), and `showGraph == false` / `isGraphSupported == false` (Graph options absent while `Textgröße` / `Relative Breite` remain above `Anzeigeelemente`).
+     - Verify `POWER_TO_WEIGHT`, `INTENSITY_FACTOR`/`TSS`, and `isHrvMetric` guidance blocks render below Visual Representation.
+     - Verify interactive callbacks (`onConfigureFilterClicked`, `onColWeightChanged`, `onShowGraphChanged`, `saveChanges`) remain wired and functional.
+  3. *Rule 8.5 Light & Dark Mode Visual Screenshot Inspection (`TST-UI-2782.3`, `EditSensorFieldDialogScreenshotTest.kt`)*:
+     - Capture Light and Dark mode screenshots of the reordered `EditSensorFieldDialog` (`ATT-8462_dialog_light.png`, `ATT-8462_dialog_dark.png`) and inspect via `read_file` for spacing, alignment, typography wrapping, contrast, and touch ergonomics.
+  4. *Targeted Regression & Governance Suite (`TST-UI-2782.4`)*:
+     - Execute `./gradlew :app:testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.*" --tests "com.atrainingtracker.trainingtracker.ui.tracking.TrackingTabsPolishContractTest" --tests "com.atrainingtracker.trainingtracker.ui.components.core.ModalBottomSheetDialogsIntegrityTest"` and `python3 tools/verify_requirement_governance.py`.
      - Assert 100% pass rate.
