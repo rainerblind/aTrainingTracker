@@ -65,7 +65,6 @@ fun WorkoutClustersTabsScreen(
     migrationStatus: com.atrainingtracker.trainingtracker.ui.util.MigrationStatus? = null,
     onNavigateToAdvancedSettings: () -> Unit = {},
     onMergeRequest: (WorkoutCluster) -> Unit = {},
-    onSplitRequest: (WorkoutCluster) -> Unit = {},
     onMenuClick: (() -> Unit)? = null,
     onBackClick: (() -> Unit)? = null
 ) {
@@ -195,8 +194,7 @@ fun WorkoutClustersTabsScreen(
                         headerHeightDp = headerHeightDp,
                         density = density,
                         emptyMessage = emptyMessage,
-                        onMergeRequest = onMergeRequest,
-                        onSplitRequest = onSplitRequest
+                        onMergeRequest = onMergeRequest
                     )
                 }
             }

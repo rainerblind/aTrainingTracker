@@ -16524,14 +16524,14 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: 44dp emblem size; single-line button text (`Rule 38`); visual hierarchy states (`REQ-UI-501`); 100% unit test pass rate.
 
-### REQ-UI-505: WorkoutClusterSplitSheet Embedded Color-Coded Map Preview & List-Level Split Action [Verified]
+### REQ-UI-505: WorkoutClusterSplitSheet Embedded Color-Coded Map Preview & List Context Menu Split Exclusion [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-UI-505`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
-- **Implementation**: `app/src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/WorkoutClusterSplitSheet.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/map/PathPreviewMap.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/WorkoutClustersViewModel.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/WorkoutClusterComponents.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/WorkoutClustersTabsScreen.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/WorkoutClustersScreen.kt`
-- **Rationale**: When opening `WorkoutClusterSplitSheet` (`AppModalBottomSheet`), the detected corridor variants (`splitVariantPaths`) are currently rendered only on the background heatmap of `WorkoutClusterHeatmapScreen`, which is largely obscured by the modal sheet and darkened scrim. Furthermore, when browsing clusters in the tabbed list view (`WorkoutClustersScreen`), no background map exists and the card 3-dot context menu lacks a split action. The system SHALL embed an interactive, color-coded map preview directly above the corridor sensitivity slider within `WorkoutClusterSplitSheet` and expose the split action in cluster card context menus.
+- **Implementation**: `app/src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/WorkoutClusterSplitSheet.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/map/PathPreviewMap.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/WorkoutClustersViewModel.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/WorkoutClusterComponents.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/WorkoutClustersList.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/WorkoutClustersTabsScreen.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/WorkoutClustersScreen.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/WorkoutClusterHeatmapScreen.kt`
+- **Rationale**: When opening `WorkoutClusterSplitSheet` (`AppModalBottomSheet`) from `WorkoutClusterHeatmapScreen`, the background heatmap is largely obscured by the modal sheet and darkened scrim; therefore `WorkoutClusterSplitSheet` SHALL embed an interactive, color-coded `PathPreviewMap` directly above the corridor sensitivity slider (`ATT-6318`). Furthermore (`ATT-8464`), exposing *"Split Favorite Route…"* (`R.string.cluster_split_action`) inside the `WorkoutClustersScreen` list-level long-click context menu alongside *"Merge"* and *"Delete"* is semantically mismatched; route splitting SHALL be scoped exclusively to the cluster detail/heatmap view (`WorkoutClusterHeatmapScreen.kt`, `REQ-SET-096.1`).
 - **Description**:
   1. *Embedded Color-Coded Map Preview (`REQ-UI-505.1`)*:
      - In `WorkoutClusterSplitSheet.kt`, directly above the corridor sensitivity slider (`cluster_split_corridor_threshold`), the sheet SHALL render an embedded map preview (`PathPreviewMap`) hosted within a rounded surface (`RoundedCornerShape(12.dp)` with height `200.dp`).
@@ -16541,11 +16541,17 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
      - Adjusting the corridor sensitivity slider SHALL dynamically recalculate variant groupings and update the embedded map preview in real time, visually reflecting the redistribution of member workout polylines across primary and secondary corridors.
   3. *Multi-Path Support in PathPreviewMap (`REQ-UI-505.3`)*:
      - `PathPreviewMap.kt` SHALL support rendering multiple polyline paths via `paths: List<MappablePath> = emptyList()` alongside the existing single `path: MappablePath? = null` parameter, computing unified bounding box coordinates across all supplied paths while preserving `liteMode(true)` touch isolation and backward compatibility for all single-path callers.
-  4. *List-Level Split Action Entry Point (`REQ-UI-505.4`)*:
-     - In `WorkoutClusterComponents.kt` (`ClusterItem` / `WorkoutClusterCard`), for clusters having `hitCount >= 2`, the 3-dot context menu SHALL expose a "Split Favorite Route…" (`cluster_split_action`, `Icons.Default.CallSplit`) action.
-     - Selecting this action SHALL open `WorkoutClusterSplitSheet` directly from `WorkoutClustersScreen.kt` with cluster workouts asynchronously loaded, operating identically to the heatmap screen entry point.
+  4. *List-Level Context Menu Split Exclusion (`REQ-UI-505.4` — Amended by `ATT-8464`)*:
+     - In `WorkoutClusterComponents.kt` (`ClusterItem`), the long-click `DropdownMenu` SHALL NOT expose `R.string.cluster_split_action` or `Icons.Default.CallSplit`, and `ClusterItem` SHALL NOT declare `onSplitRequest`, retaining exclusively Merge (`onMergeRequest`, `R.string.cluster_menu_merge`) and Delete (`onDeleteRequest`, `R.string.delete`).
+     - `WorkoutClustersList.kt`, `WorkoutClustersTabsScreen.kt`, and `WorkoutClustersScreen.kt` SHALL NOT forward `onSplitRequest`, maintain `clusterToSplit` state, or instantiate `WorkoutClusterSplitSheet`.
   5. *Preservation of Invariants & Scope Boundaries (`REQ-UI-505.5`)*:
-     - Invariants: `WorkoutClusterEngine.kt` clustering heuristics and medoid algorithms SHALL NOT be modified; single-path `PathPreviewMap` callers (`CreateLapOnMapSheet`, `MoveLapBoundaryOnMapSheet`, `CropWorkoutScreen`, `WorkoutSummary`) SHALL remain 100% backward-compatible; 9-language localization parity SHALL be preserved.
+     - Invariants: `WorkoutClusterHeatmapScreen.kt` (`CallSplit` header button for `hitCount >= 2`, `REQ-SET-096.1`), `WorkoutClusterSplitSheet`, and `WorkoutClustersViewModel.openSplitPreview()` SHALL remain fully functional; `R.string.cluster_split_action` SHALL remain present in all 9 locales; `WorkoutClusterEngine.kt` clustering heuristics SHALL NOT be modified; single-path `PathPreviewMap` callers (`CreateLapOnMapSheet`, `MoveLapBoundaryOnMapSheet`, `CropWorkoutScreen`, `WorkoutSummary`) SHALL remain 100% backward-compatible.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Amends `REQ-UI-505` (`REQ-UI-505.4`, introduced in `ATT-6318`) targeting `WorkoutClusterComponents.kt`, `WorkoutClustersList.kt`, `WorkoutClustersTabsScreen.kt`, and `WorkoutClustersScreen.kt`.
+2. *Historical Origin & Commit Trace*: Split action + `WorkoutClusterSplitSheet` were introduced in `ATT-5900` (`43a25302`, `REQ-SET-096.1`) in `WorkoutClusterHeatmapScreen`; `ATT-6318` (`ea954e51`) embedded `PathPreviewMap` in `WorkoutClusterSplitSheet` and added the list-level long-click entry (`REQ-UI-505.4`).
+3. *Root Reason for Existing Formulation*: `ATT-6318` added list-level split access so users could split directly from the cluster list without opening the detail heatmap, and embedded `PathPreviewMap` because the list screen lacked a background map.
+4. *Preservation of Core Invariants*: Removing list-level split entry (`REQ-UI-505.4`) restores clean list menu semantics (Merge & Delete only) while preserving 100% of `REQ-UI-505.1–505.3` (embedded map preview in `WorkoutClusterSplitSheet`), `REQ-SET-096.1–096.6` (detail `CallSplit` entry point in `WorkoutClusterHeatmapScreen`), `WorkoutClustersViewModel.openSplitPreview()`, and 9-language parity for `R.string.cluster_split_action`.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* `WorkoutClusterSplitSheet` open for a route cluster with detected sub-corridors,
@@ -16554,11 +16560,14 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 • *Given* the corridor sensitivity slider inside `WorkoutClusterSplitSheet`,
 • *When* the athlete drags the slider between 250m and 1500m,
 • *Then* `splitVariantPaths` are recalculated asynchronously and the embedded map polylines update their groupings and colors dynamically without UI stutter.
-• *Given* a cluster card in `WorkoutClustersScreen` with `hitCount >= 2`,
-• *When* the athlete opens the 3-dot context menu,
-• *Then* "Split Favorite Route…" (`cluster_split_action`) is displayed, and tapping it opens `WorkoutClusterSplitSheet` with the embedded map preview and loaded variants.
+• *Given* any cluster card (including `hitCount >= 2`) in `WorkoutClustersScreen`,
+• *When* the athlete long-presses the card to open the context menu,
+• *Then* only *"Merge with other favorite route…"* (`cluster_menu_merge`) and *"Delete"* (`delete`) are displayed; *"Split Favorite Route…"* (`cluster_split_action`) is absent.
+• *Given* a cluster with `hitCount >= 2` open in `WorkoutClusterHeatmapScreen`,
+• *When* the athlete views the detail header and taps the `CallSplit` icon (`R.string.cluster_split_action`),
+• *Then* `WorkoutClusterSplitSheet` opens via `viewModel.openSplitPreview()` with the embedded color-coded map preview intact.
 
-**Invariants**: `WorkoutClusterEngine.kt` algorithms unmodified; `liteMode(true)` touch isolation preserved; single-path `PathPreviewMap` callers backward-compatible; 100% unit test pass rate.
+**Invariants**: `WorkoutClusterHeatmapScreen` `CallSplit` (`REQ-SET-096.1`) and `WorkoutClusterSplitSheet` preserved; `R.string.cluster_split_action` preserved across all 9 locales; `WorkoutClusterEngine.kt` unmodified; `liteMode(true)` touch isolation preserved; single-path `PathPreviewMap` callers backward-compatible; 100% unit test pass rate.
 
 ### REQ-UI-506: Decoupled Compose UI State Models (WorkoutLaps, WorkoutSummaryCard, WorkoutExtrema) [Verified]
 - **Target Release**: `V5.0.0`

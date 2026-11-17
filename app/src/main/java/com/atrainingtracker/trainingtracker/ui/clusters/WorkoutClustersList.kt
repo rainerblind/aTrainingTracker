@@ -47,8 +47,7 @@ fun WorkoutClustersList(
     headerHeightDp: Dp,
     density: Density,
     emptyMessage: String,
-    onMergeRequest: (WorkoutCluster) -> Unit = {},
-    onSplitRequest: (WorkoutCluster) -> Unit = {}
+    onMergeRequest: (WorkoutCluster) -> Unit = {}
 ) {
     val currentAppBarOffsetDp = with(density) { appBarOffsetPx.toDp() }
 
@@ -84,8 +83,7 @@ fun WorkoutClustersList(
                         onClick = { onClusterClick(cluster) },
                         onDeleteRequest = onDeleteRequest,
                         onHitCountClick = onHitCountClick,
-                        onMergeRequest = onMergeRequest,
-                        onSplitRequest = onSplitRequest
+                        onMergeRequest = onMergeRequest
                     )
                 }
             }

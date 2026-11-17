@@ -8146,20 +8146,21 @@
   3. *Tier 1 Targeted Unit Test Regression (`TST-UI-504.3`)*:
   • Execute targeted test suite (`ui.settings.supporter.*`, `ui.branding.*`, `ui.theme.ThemeColorCentralizationAuditTest`, `build.*`) asserting 100% pass rate.
 
-### TST-UI-505: **WorkoutClusterSplitSheet Embedded Map Preview & Split Action Verification Suite** [Verified]
+### TST-UI-505: **WorkoutClusterSplitSheet Embedded Map Preview & Split Action Scope Verification Suite** [Verified]
 - **Target Release**: `V5.0.0`
 - **Requirement(s)**: `REQ-UI-505`
-- **Component**: `WorkoutClusterSplitSheet.kt`, `PathPreviewMap.kt`, `WorkoutClustersViewModel.kt`, `WorkoutClusterComponents.kt`, `WorkoutClustersScreen.kt`, `WorkoutClusterSplitMapPreviewTest.kt`
-- **Jira**: `ATT-6318`
+- **Component**: `WorkoutClusterSplitSheet.kt`, `PathPreviewMap.kt`, `WorkoutClustersViewModel.kt`, `WorkoutClusterComponents.kt`, `WorkoutClustersList.kt`, `WorkoutClustersTabsScreen.kt`, `WorkoutClustersScreen.kt`, `WorkoutClusterHeatmapScreen.kt`, `WorkoutClusterSplitMapPreviewTest.kt`, `WorkoutClusterSplitDialogContractTest.kt`
+- **Jira**: `ATT-6318, ATT-8464`
 - **Test Description**:
   1. *Embedded Map Composable Layout & Placement Contract (`TST-UI-505.1`)*:
   • Verify via contract test in `WorkoutClusterSplitMapPreviewTest.kt` that `WorkoutClusterSplitSheet.kt` embeds `PathPreviewMap` directly above the sensitivity slider column with `paths = splitVariantPaths` and a bounded 200dp height.
   2. *PathPreviewMap Multi-Path Rendering & Backward Compatibility (`TST-UI-505.2`)*:
   • Verify in `PathPreviewMapContractTest.kt` that `PathPreviewMap` accepts `paths: List<MappablePath> = emptyList()` with default parameter hygiene, renders polyline loops, and accurately computes composite `LatLngBounds` across multiple paths.
-  3. *List-Level Split Action Context Menu Integration (`TST-UI-505.3`)*:
-  • Verify in `WorkoutClusterComponentsContractTest.kt` / `WorkoutClusterSplitMapPreviewTest.kt` that `ClusterItem` context menu contains `cluster_split_action` when `cluster.hitCount >= 2`, and that triggering the action invokes the split sheet callback.
+  3. *List-Level Split Action Exclusion & Detail View Preservation (`TST-UI-505.3`)*:
+  • Verify in `WorkoutClusterSplitMapPreviewTest.kt` that `WorkoutClusterComponents.kt` (`ClusterItem`), `WorkoutClustersList.kt`, `WorkoutClustersTabsScreen.kt`, and `WorkoutClustersScreen.kt` do NOT declare or reference `onSplitRequest`, `clusterToSplit`, `cluster_split_action`, `Icons.Default.CallSplit`, or `WorkoutClusterSplitSheet(`, while `ClusterItem` retains `cluster_menu_merge` and `delete`.
+  • Verify in `WorkoutClusterSplitMapPreviewTest.kt` and `WorkoutClusterSplitDialogContractTest.kt` that `WorkoutClusterHeatmapScreen.kt` retains the `CallSplit` action (`cluster.hitCount >= 2`, `R.string.cluster_split_action`), `WorkoutClusterSplitSheet` / `WorkoutClustersViewModel.openSplitPreview()` remain intact, and `R.string.cluster_split_action` maintains 9-language parity.
   4. *Tier 1 Targeted Unit Test Regression (`TST-UI-505.4`)*:
-  • Execute targeted test suite (`ui.clusters.*`, `ui.map.*`, `ui.theme.ThemeColorCentralizationAuditTest`, `ui.components.core.*`, `build.*`) asserting 100% pass rate.
+  • Execute targeted test suite (`ui.clusters.*`, `ui.GlobalDeleteContextMenuAuditTest`, `ui.map.*`, `ui.theme.ThemeColorCentralizationAuditTest`, `ui.components.core.*`, `build.*`) asserting 100% pass rate.
 
 ### TST-UI-506: **Decoupled Compose UI State Models & Mapping Verification Suite** [Verified]
 - **Target Release**: `V5.0.0`
