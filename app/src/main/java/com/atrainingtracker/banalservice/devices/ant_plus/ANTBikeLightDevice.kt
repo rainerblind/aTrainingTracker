@@ -346,8 +346,9 @@ class ANTBikeLightDevice(
             isAssociated = true
             if (!previouslyAssociated) {
                 RadarLightController.registerRadarDevice(this, true, false)
-                val current = RadarStateRepository.getState()
-                RadarStateRepository.updateState(current.copy(isLightControlSupported = true, lightMode = decodedMode))
+                RadarStateRepository.updateControlState { current ->
+                    current.copy(isLightControlSupported = true, lightMode = decodedMode)
+                }
             }
 
             val pending = pendingTargetMode

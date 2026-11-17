@@ -24,12 +24,20 @@ import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.unmockkAll
 import io.mockk.verify
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -392,5 +400,63 @@ class RadarTrafficSimulatorTest {
         val restoredFrame = RadarTrafficSimulator.tick(RadarScenario.SINGLE_CAR, 1000L)
         assertTrue(restoredFrame.isAutoMode)
         assertTrue(RadarStateRepository.getState().isAutoMode)
+    }
+
+    /**
+     * TST-CON-046.2 / REQ-CON-046.1, REQ-CON-046.2 (ATT-8455 Bounce 1 Heal):
+     * Verifies pre-tick setSimulatedLightMode() does not leak RadarSource.NONE into sourceStates
+     * and high-frequency Dispatchers.Default simulator frames interleaved with setManualLightMode()
+     * / setAutoMode() exhibit zero lost control-state updates.
+     */
+    @Test
+    fun testConcurrentTelemetryVsControlUpdates_zeroLostUpdatesAndNoNoneSourceLeak() = runBlocking {
+        // Pre-tick light mode change on fresh repo must not leak RadarSource.NONE into sourceStates
+        RadarStateRepository.reset()
+        RadarTrafficSimulator.setSimulatedLightMode(RadarLightMode.SOLID)
+        assertEquals(RadarLightMode.SOLID, RadarStateRepository.getState().lightMode)
+        assertTrue(RadarStateRepository.getState().isLightControlSupported)
+        assertEquals(RadarSource.NONE, RadarStateRepository.getActiveSource())
+        assertEquals(
+            "RadarSource.NONE must not be inserted into sourceStates",
+            RadarLightMode.OFF,
+            RadarStateRepository.getState(RadarSource.NONE).lightMode
+        )
+
+        // High-frequency background telemetry ticks interleaved with manual/auto transitions
+        val running = AtomicBoolean(true)
+        val startedLatch = CountDownLatch(1)
+        val producerJob: Job = launch(Dispatchers.Default) {
+            startedLatch.countDown()
+            var elapsed = 0L
+            while (running.get() && isActive) {
+                RadarTrafficSimulator.tick(RadarScenario.COUNTRY_ROAD_LOOP, elapsed)
+                elapsed += 125L
+            }
+        }
+
+        assertTrue(startedLatch.await(2, TimeUnit.SECONDS))
+
+        repeat(25) {
+            RadarLightController.setManualLightMode(RadarLightMode.SOLID)
+            repeat(10) {
+                assertFalse(
+                    "Concurrent telemetry must never overwrite manual isAutoMode=false",
+                    RadarStateRepository.getState().isAutoMode
+                )
+                Thread.sleep(1)
+            }
+
+            RadarLightController.setAutoMode()
+            repeat(10) {
+                assertTrue(
+                    "Concurrent telemetry must never overwrite restored isAutoMode=true",
+                    RadarStateRepository.getState().isAutoMode
+                )
+                Thread.sleep(1)
+            }
+        }
+
+        running.set(false)
+        producerJob.join()
     }
 }

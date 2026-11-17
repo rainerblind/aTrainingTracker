@@ -355,4 +355,53 @@ class RadarStateRepositoryTest {
         assertTrue(RadarStateRepository.getState().isAutoMode)
         assertFalse(RadarStateRepository.getState().audioSnoozeState.isSnoozed)
     }
+
+    /**
+     * TST-CON-046.4 / REQ-CON-046.2 (ATT-8455 Bounce 1 Heal):
+     * Preemption by higher-priority BLE with default flags (isAutoMode=true, INACTIVE snooze) and
+     * disconnect failover with stale default flags must NOT corrupt active manual isAutoMode=false
+     * or active audioSnoozeState across any tracked sourceStates.
+     */
+    @Test
+    fun testPreemptionAndFailoverWithDefaultSnapshots_preserveControlStateAcrossAllSources() {
+        val activeSnooze = RadarAudioSnoozeState(isSnoozed = true, mode = RadarAudioSnoozeMode.SNOOZE_30M)
+
+        // 1. SIMULATOR and ANT_PLUS connect, then user sets manual mode + snooze
+        RadarStateRepository.updateState(
+            RadarState(connectionState = RadarConnectionState.CONNECTED, source = RadarSource.SIMULATOR)
+        )
+        RadarStateRepository.updateState(
+            RadarState(connectionState = RadarConnectionState.CONNECTED, source = RadarSource.ANT_PLUS)
+        )
+        RadarStateRepository.updateControlState {
+            it.copy(isAutoMode = false, lightMode = RadarLightMode.SOLID, audioSnoozeState = activeSnooze)
+        }
+
+        // 2. Higher-priority BLE preempts ANT_PLUS with default isAutoMode=true & INACTIVE snooze
+        RadarStateRepository.updateState(
+            RadarState(connectionState = RadarConnectionState.CONNECTED, source = RadarSource.BLE)
+        )
+        assertEquals(RadarSource.BLE, RadarStateRepository.getActiveSource())
+        assertFalse("BLE preemption must preserve isAutoMode=false", RadarStateRepository.getState().isAutoMode)
+        assertTrue("BLE preemption must preserve active snooze", RadarStateRepository.getState().audioSnoozeState.isSnoozed)
+        assertFalse(RadarStateRepository.getState(RadarSource.BLE).isAutoMode)
+        assertFalse(RadarStateRepository.getState(RadarSource.ANT_PLUS).isAutoMode)
+        assertFalse(RadarStateRepository.getState(RadarSource.SIMULATOR).isAutoMode)
+
+        // 3. BLE disconnects carrying stale default isAutoMode=true & INACTIVE snooze -> fails over to ANT_PLUS
+        RadarStateRepository.updateState(
+            RadarState(connectionState = RadarConnectionState.DISCONNECTED, source = RadarSource.BLE)
+        )
+        assertEquals(RadarSource.ANT_PLUS, RadarStateRepository.getActiveSource())
+        assertFalse("Failover to ANT_PLUS must preserve isAutoMode=false", RadarStateRepository.getState().isAutoMode)
+        assertEquals(RadarAudioSnoozeMode.SNOOZE_30M, RadarStateRepository.getState().audioSnoozeState.mode)
+        assertFalse("Standby SIMULATOR must remain isAutoMode=false", RadarStateRepository.getState(RadarSource.SIMULATOR).isAutoMode)
+        assertTrue("Standby SIMULATOR must retain active snooze", RadarStateRepository.getState(RadarSource.SIMULATOR).audioSnoozeState.isSnoozed)
+        assertFalse("Disconnected BLE entry must remain synced at isAutoMode=false", RadarStateRepository.getState(RadarSource.BLE).isAutoMode)
+
+        // 4. Conditional telemetry returning null leaves repository untouched
+        val skipped = RadarStateRepository.updateTelemetryStateIf { null }
+        assertEquals(null, skipped)
+        assertFalse(RadarStateRepository.getState().isAutoMode)
+    }
 }

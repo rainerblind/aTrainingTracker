@@ -57,49 +57,70 @@ object RadarStateRepository {
         }
     }
 
+    /**
+     * Atomically builds and publishes a telemetry/lifecycle [RadarState] under [lock] from the
+     * latest repository snapshot, eliminating TOCTOU races with concurrent [updateControlState] calls.
+     */
+    @JvmStatic
+    fun updateTelemetryState(buildState: (RadarState) -> RadarState): RadarState {
+        synchronized(lock) {
+            val newState = buildState(_radarState.value)
+            updateStateLocked(newState)
+            return newState
+        }
+    }
+
+    /**
+     * Atomically evaluates a conditional telemetry/lifecycle [RadarState] under [lock].
+     * Returns `null` without mutating repository state when [buildState] returns `null`.
+     */
+    @JvmStatic
+    fun updateTelemetryStateIf(buildState: (RadarState) -> RadarState?): RadarState? {
+        synchronized(lock) {
+            val newState = buildState(_radarState.value) ?: return null
+            updateStateLocked(newState)
+            return newState
+        }
+    }
+
     @JvmStatic
     fun updateState(newState: RadarState) {
         synchronized(lock) {
-            val previousState = _radarState.value
-            val previousActiveSource = activeSource
-            sourceStates[newState.source] = newState
+            updateStateLocked(newState)
+        }
+    }
 
-            if (previousActiveSource == RadarSource.NONE || newState.source == previousActiveSource) {
-                syncControlFieldsAcrossSourcesLocked(newState)
-            }
+    private fun updateStateLocked(newState: RadarState) {
+        val previousState = _radarState.value
+        val previousActiveSource = activeSource
+        sourceStates[newState.source] = newState
 
-            // Two-level arbitration: CONNECTED sources strictly take precedence over CONNECTING sources (REQ-CON-041.2).
-            // An active CONNECTED stream (e.g. ANT+) must never be preempted by a CONNECTING source (e.g. BLE scanning).
-            val bestActive = sourceStates.values
-                .filter { it.connectionState == RadarConnectionState.CONNECTED }
+        // Two-level arbitration: CONNECTED sources strictly take precedence over CONNECTING sources (REQ-CON-041.2).
+        // An active CONNECTED stream (e.g. ANT+) must never be preempted by a CONNECTING source (e.g. BLE scanning).
+        val bestActive = sourceStates.values
+            .filter { it.connectionState == RadarConnectionState.CONNECTED }
+            .maxByOrNull { it.source.priority }
+            ?: sourceStates.values
+                .filter { it.connectionState == RadarConnectionState.CONNECTING }
                 .maxByOrNull { it.source.priority }
-                ?: sourceStates.values
-                    .filter { it.connectionState == RadarConnectionState.CONNECTING }
-                    .maxByOrNull { it.source.priority }
 
-            if (bestActive != null) {
-                val resolvedBest = preserveControlFieldsOnFailoverLocked(bestActive, newState, previousState, previousActiveSource)
-                activeSource = resolvedBest.source
-                _radarState.value = resolvedBest
+        val resolvedBest = if (bestActive != null) {
+            preserveControlFieldsAcrossSourcesLocked(bestActive, previousState, previousActiveSource)
+        } else if (previousActiveSource == RadarSource.NONE || previousActiveSource == newState.source) {
+            preserveControlFieldsAcrossSourcesLocked(newState, previousState, previousActiveSource)
+        } else {
+            val bestSource = sourceStates.values.maxByOrNull { it.source.priority }
+            if (bestSource != null) {
+                preserveControlFieldsAcrossSourcesLocked(bestSource, previousState, previousActiveSource)
             } else {
-                // If no sources are connected, update from the incoming source if it matches active or if active was NONE
-                if (previousActiveSource == RadarSource.NONE || previousActiveSource == newState.source) {
-                    activeSource = newState.source
-                    _radarState.value = newState
-                } else {
-                    val bestSource = sourceStates.values.maxByOrNull { it.source.priority }
-                    if (bestSource != null) {
-                        val resolvedBest = preserveControlFieldsOnFailoverLocked(bestSource, newState, previousState, previousActiveSource)
-                        activeSource = resolvedBest.source
-                        _radarState.value = resolvedBest
-                        syncControlFieldsAcrossSourcesLocked(resolvedBest)
-                    } else {
-                        activeSource = newState.source
-                        _radarState.value = newState
-                    }
-                }
+                preserveControlFieldsAcrossSourcesLocked(newState, previousState, previousActiveSource)
             }
         }
+
+        activeSource = resolvedBest.source
+        sourceStates[resolvedBest.source] = resolvedBest
+        _radarState.value = resolvedBest
+        syncControlFieldsAcrossSourcesLocked(resolvedBest)
     }
 
     private fun syncControlFieldsAcrossSourcesLocked(authoritative: RadarState) {
@@ -113,22 +134,54 @@ object RadarStateRepository {
         }
     }
 
-    private fun preserveControlFieldsOnFailoverLocked(
+    private fun preserveControlFieldsAcrossSourcesLocked(
         candidate: RadarState,
-        incomingState: RadarState,
         previousState: RadarState,
         previousActiveSource: RadarSource
     ): RadarState {
-        if (previousActiveSource == RadarSource.NONE ||
-            candidate.source == previousActiveSource ||
-            candidate.source == incomingState.source
-        ) {
-            return candidate
+        val crossesSourceOrActiveOverride =
+            previousActiveSource != RadarSource.NONE || candidate.source != previousState.source
+        val preservedIsAutoMode = if (!previousState.isAutoMode && candidate.isAutoMode && crossesSourceOrActiveOverride) {
+            false
+        } else {
+            candidate.isAutoMode
         }
-        return candidate.copy(
-            isAutoMode = previousState.isAutoMode,
-            audioSnoozeState = previousState.audioSnoozeState
-        ).also { sourceStates[it.source] = it }
+        val preservedSnooze = if (previousState.audioSnoozeState.isSnoozed &&
+            !candidate.audioSnoozeState.isSnoozed &&
+            crossesSourceOrActiveOverride
+        ) {
+            previousState.audioSnoozeState
+        } else {
+            candidate.audioSnoozeState
+        }
+        val preservedLightMode = if (previousActiveSource == RadarSource.NONE &&
+            candidate.source != previousState.source &&
+            previousState.lightMode != RadarLightMode.OFF &&
+            candidate.lightMode == RadarLightMode.OFF
+        ) {
+            previousState.lightMode
+        } else {
+            candidate.lightMode
+        }
+        val preservedLightSupported = candidate.isLightControlSupported ||
+            (previousActiveSource == RadarSource.NONE &&
+                candidate.source != previousState.source &&
+                previousState.isLightControlSupported)
+
+        return if (preservedIsAutoMode == candidate.isAutoMode &&
+            preservedSnooze == candidate.audioSnoozeState &&
+            preservedLightMode == candidate.lightMode &&
+            preservedLightSupported == candidate.isLightControlSupported
+        ) {
+            candidate
+        } else {
+            candidate.copy(
+                isAutoMode = preservedIsAutoMode,
+                audioSnoozeState = preservedSnooze,
+                lightMode = preservedLightMode,
+                isLightControlSupported = preservedLightSupported
+            )
+        }
     }
 
     @JvmStatic
