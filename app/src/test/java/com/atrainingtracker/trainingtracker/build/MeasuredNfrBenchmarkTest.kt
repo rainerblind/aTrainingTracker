@@ -27,6 +27,9 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
 import android.content.ServiceConnection
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorManager
 import android.location.Location
 import android.os.Looper
 import android.os.PowerManager
@@ -39,6 +42,7 @@ import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.BANALService.BANALServiceComm
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.devices.MyDevice
+import com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFused
 import com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_GPS
 import com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeRadarDevice
 import com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDevice
@@ -84,6 +88,7 @@ import kotlinx.coroutines.test.setMain
 import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.After
+import org.junit.AfterClass
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -97,14 +102,18 @@ import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowLooper
 import org.robolectric.shadows.ShadowPowerManager
 import java.io.File
+import java.io.RandomAccessFile
 import java.lang.reflect.Field
 import java.lang.reflect.Method
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 import java.util.Locale
 import java.util.concurrent.AbstractExecutorService
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
+import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -125,6 +134,11 @@ import kotlin.math.sin
 class MeasuredNfrBenchmarkTest {
 
     companion object {
+        private val GROUP_A_REQ_IDS = listOf(
+            "REQ-NFR-001", "REQ-NFR-002", "REQ-NFR-003", "REQ-NFR-005",
+            "REQ-NFR-007", "REQ-NFR-008", "REQ-NFR-009", "REQ-NFR-010",
+            "REQ-NFR-011", "REQ-NFR-013", "REQ-NFR-014"
+        )
         private val recordedMeasurements = ConcurrentHashMap<String, NfrMeasurement>()
 
         private fun resolveRepoRoot(): File {
@@ -133,37 +147,84 @@ class MeasuredNfrBenchmarkTest {
                 ?: File(".")
         }
 
-        private fun resolveMeasurementsFile(): File {
+        private fun resolveReportDir(): File {
             val reportDir = File(resolveRepoRoot(), "app/build/reports/nfr")
             reportDir.mkdirs()
-            return File(reportDir, "nfr_measurements.json")
+            return reportDir
+        }
+
+        private fun resolveMeasurementsFile(): File = File(resolveReportDir(), "nfr_measurements.json")
+
+        private fun atomicWriteFile(target: File, content: String) {
+            val tmp = File(
+                target.parentFile,
+                "${target.name}.tmp.${java.util.UUID.randomUUID()}"
+            )
+            tmp.writeText(content)
+            try {
+                Files.move(
+                    tmp.toPath(),
+                    target.toPath(),
+                    StandardCopyOption.ATOMIC_MOVE,
+                    StandardCopyOption.REPLACE_EXISTING
+                )
+            } catch (_: Throwable) {
+                Files.move(tmp.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING)
+            }
+        }
+
+        private fun measurementToJson(m: NfrMeasurement): JSONObject = JSONObject().apply {
+            put("req_id", m.reqId)
+            put("tst_id", m.tstId)
+            put("name", m.name)
+            put("metric", m.metric)
+            put("measured_value", m.measuredValue)
+            put("unit", m.unit)
+            put("budget", m.budget)
+            put("passed", m.passed)
+            put("warmup_iterations", m.warmupIterations)
+            put("measured_iterations", m.measuredIterations)
+            put("details", m.details)
+        }
+
+        private fun rebuildCombinedMeasurementsLocked(reportDir: File): JSONObject {
+            val byReq = sortedMapOf<String, JSONObject>()
+            reportDir.listFiles { file ->
+                file.isFile && file.name.startsWith("REQ-NFR-") && file.name.endsWith(".json")
+            }?.sortedBy { it.name }?.forEach { perFile ->
+                val obj = JSONObject(perFile.readText())
+                val reqId = obj.optString("req_id", "")
+                if (reqId.isNotEmpty()) {
+                    byReq[reqId] = obj
+                }
+            }
+            val arr = JSONArray()
+            byReq.values.forEach { arr.put(it) }
+            val complete = GROUP_A_REQ_IDS.all { byReq.containsKey(it) }
+            val root = JSONObject().apply {
+                put("schema_version", 1)
+                put("suite", "MeasuredNfrBenchmarkTest")
+                put("complete", complete)
+                put("expected_count", GROUP_A_REQ_IDS.size)
+                put("measurements", arr)
+            }
+            atomicWriteFile(File(reportDir, "nfr_measurements.json"), root.toString(2))
+            return root
         }
 
         @Synchronized
         private fun recordMeasurement(entry: NfrMeasurement) {
             recordedMeasurements[entry.reqId] = entry
-            val root = JSONObject()
-            root.put("schema_version", 1)
-            root.put("suite", "MeasuredNfrBenchmarkTest")
-            val arr = JSONArray()
-            recordedMeasurements.keys.sorted().forEach { key ->
-                val m = recordedMeasurements[key] ?: return@forEach
-                val obj = JSONObject()
-                obj.put("req_id", m.reqId)
-                obj.put("tst_id", m.tstId)
-                obj.put("name", m.name)
-                obj.put("metric", m.metric)
-                obj.put("measured_value", m.measuredValue)
-                obj.put("unit", m.unit)
-                obj.put("budget", m.budget)
-                obj.put("passed", m.passed)
-                obj.put("warmup_iterations", m.warmupIterations)
-                obj.put("measured_iterations", m.measuredIterations)
-                obj.put("details", m.details)
-                arr.put(obj)
+            val reportDir = resolveReportDir()
+            val obj = measurementToJson(entry)
+            atomicWriteFile(File(reportDir, "${entry.reqId}.json"), obj.toString(2))
+
+            val lockFile = File(reportDir, ".nfr.lock")
+            RandomAccessFile(lockFile, "rw").channel.use { ch ->
+                ch.lock().use {
+                    rebuildCombinedMeasurementsLocked(reportDir)
+                }
             }
-            root.put("measurements", arr)
-            resolveMeasurementsFile().writeText(root.toString(2))
             println(
                 String.format(
                     Locale.US,
@@ -178,6 +239,27 @@ class MeasuredNfrBenchmarkTest {
                     entry.details
                 )
             )
+        }
+
+        @AfterClass
+        @JvmStatic
+        fun verifyCombinedMeasurementsAtomic() {
+            if (recordedMeasurements.isEmpty()) return
+            val reportDir = resolveReportDir()
+            val lockFile = File(reportDir, ".nfr.lock")
+            val root = RandomAccessFile(lockFile, "rw").channel.use { ch ->
+                ch.lock().use {
+                    rebuildCombinedMeasurementsLocked(reportDir)
+                }
+            }
+            val arr = root.getJSONArray("measurements")
+            for (i in 0 until arr.length()) {
+                val obj = arr.getJSONObject(i)
+                assertTrue(
+                    "${obj.optString("req_id")} must record passed=true",
+                    obj.optBoolean("passed", false)
+                )
+            }
         }
 
         private fun percentile(sortedValues: List<Double>, p: Double): Double {
@@ -440,79 +522,138 @@ class MeasuredNfrBenchmarkTest {
         return service
     }
 
+    private fun createSyntheticSensorEvent(sensorType: Int, timestampNs: Long, data: FloatArray): SensorEvent {
+        val mockSensor = mockk<Sensor>(relaxed = true)
+        every { mockSensor.type } returns sensorType
+        val ctor = SensorEvent::class.java.getDeclaredConstructor(Int::class.javaPrimitiveType).apply {
+            isAccessible = true
+        }
+        val event = ctor.newInstance(data.size)
+        event.sensor = mockSensor
+        event.timestamp = timestampNs
+        System.arraycopy(data, 0, event.values, 0, data.size)
+        return event
+    }
+
     /**
-     * TST-NFR-001: Measured EKF timing & hardware delta-T determinism on UnicycleOdometryEkf
-     * and KinematicAltitudeSlopeEkf after JIT warmup.
+     * TST-NFR-001: Measured EKF timing & hardware delta-T determinism on real SpeedAndLocationDevice_ATTFused
+     * (with synthetic SensorEvent.timestamp vs arrival-thread jitter) and KinematicAltitudeSlopeEkf after JIT warmup.
      */
     @Test
     fun testNfr001_ekfTimingAndDeltaTDeterminism_measuredWithin2Ms() {
-        val odometryEkf = UnicycleOdometryEkf(initialSpeed = 8.0)
+        val androidSensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
+        val hwGyro = mockk<Sensor>(relaxed = true)
+        every { hwGyro.type } returns Sensor.TYPE_GYROSCOPE
+        @Suppress("DEPRECATION")
+        Shadows.shadowOf(androidSensorManager).addSensor(hwGyro)
+
+        val sensorManager = MySensorManager(context)
+        val device = SpeedAndLocationDevice_ATTFused(context, sensorManager)
         val altEkf = KinematicAltitudeSlopeEkf(is3StateMode = true)
-        val expectedDtSec = 0.02
-        val warmupCount = 200
-        val measuredCount = 1000
+        try {
+            val expectedDtSec = 0.02
+            val yawRateRadPerSec = 0.05f
+            val warmupCount = 200
+            val measuredCount = 1000
 
-        // JIT warmup
-        var hwTsNs = 1_000_000_000L
-        for (i in 0 until warmupCount) {
-            val nextHwNs = hwTsNs + 20_000_000L
-            val dtSec = (nextHwNs - hwTsNs) / 1_000_000_000.0
-            hwTsNs = nextHwNs
-            odometryEkf.predict(dtSec, 0.05, hwTsNs / 1_000_000L)
-            odometryEkf.updateSpeed(8.0, 0.25, hwTsNs / 1_000_000L)
-            altEkf.predict(dtSec, 8.0)
-            altEkf.updateBarometer(520.0 + i * 0.01)
-        }
-
-        val cycleDurationsMs = ArrayList<Double>(measuredCount)
-        var maxDtErrorMs = 0.0
-        for (i in 0 until measuredCount) {
-            val nextHwNs = hwTsNs + 20_000_000L
-            val dtSec = (nextHwNs - hwTsNs) / 1_000_000_000.0
-            hwTsNs = nextHwNs
-            val dtErrorMs = kotlin.math.abs(dtSec - expectedDtSec) * 1000.0
-            if (dtErrorMs > maxDtErrorMs) maxDtErrorMs = dtErrorMs
-
-            val t0 = System.nanoTime()
-            odometryEkf.predict(dtSec, 0.04, hwTsNs / 1_000_000L)
-            odometryEkf.updateSpeed(8.2, 0.25, hwTsNs / 1_000_000L)
-            if (i % 50 == 0) {
-                odometryEkf.updateGnssPosition(odometryEkf.eastMeters + 0.1, odometryEkf.northMeters + 0.1, 4.0, hwTsNs / 1_000_000L)
-            }
-            altEkf.predict(dtSec, 8.2)
-            altEkf.updateBarometer(525.0)
-            val elapsedMs = (System.nanoTime() - t0) / 1_000_000.0
-            cycleDurationsMs.add(elapsedMs)
-        }
-
-        val sorted = cycleDurationsMs.sorted()
-        val p95Ms = percentile(sorted, 95.0)
-        val maxCycleMs = sorted.last()
-        val passed = maxDtErrorMs <= 2.0 && p95Ms <= 2.0
-
-        recordMeasurement(
-            NfrMeasurement(
-                reqId = "REQ-NFR-001",
-                tstId = "TST-NFR-001",
-                name = "Deterministic EKF Timing",
-                metric = "ekf_cycle_p95_ms",
-                measuredValue = p95Ms,
-                unit = "ms",
-                budget = "<= 2.0 ms",
-                passed = passed,
-                warmupIterations = warmupCount,
-                measuredIterations = measuredCount,
-                details = String.format(
-                    Locale.US,
-                    "max_dt_error_ms=%.4f, p95_cycle_ms=%.4f, max_cycle_ms=%.4f",
-                    maxDtErrorMs,
-                    p95Ms,
-                    maxCycleMs
+            // Seed orientation quaternion once via TYPE_ROTATION_VECTOR so gyroProjector runs authentically
+            device.onSensorChanged(
+                createSyntheticSensorEvent(
+                    Sensor.TYPE_ROTATION_VECTOR,
+                    1_000_000_000L,
+                    floatArrayOf(0f, 0f, 0f, 1f)
                 )
             )
-        )
-        assertTrue("Hardware delta-T error ($maxDtErrorMs ms) must be <= 2.0 ms", maxDtErrorMs <= 2.0)
-        assertTrue("EKF p95 cycle latency ($p95Ms ms) must be <= 2.0 ms", p95Ms <= 2.0)
+
+            // JIT warmup
+            var hwTsNs = 1_000_000_000L
+            for (i in 0 until warmupCount) {
+                hwTsNs += 20_000_000L
+                val gyroEvent = createSyntheticSensorEvent(
+                    Sensor.TYPE_GYROSCOPE,
+                    hwTsNs,
+                    floatArrayOf(0f, 0f, yawRateRadPerSec)
+                )
+                device.onSensorChanged(gyroEvent)
+                device.ekf.updateSpeed(8.0, 0.25, hwTsNs / 1_000_000L)
+                altEkf.predict(expectedDtSec, 8.0)
+                altEkf.updateBarometer(520.0 + i * 0.01)
+            }
+
+            val headingBeforeMeasured = device.ekf.headingRad
+            val cycleDurationsMs = ArrayList<Double>(measuredCount)
+            var injectedArrivalJitterMs = 0.0
+            for (i in 0 until measuredCount) {
+                // Inject real wall-clock thread arrival jitter every 50th event outside the EKF cycle timer
+                if (i % 50 == 25) {
+                    val j0 = System.nanoTime()
+                    Thread.sleep(2)
+                    injectedArrivalJitterMs += (System.nanoTime() - j0) / 1_000_000.0
+                }
+                hwTsNs += 20_000_000L
+                val gyroEvent = createSyntheticSensorEvent(
+                    Sensor.TYPE_GYROSCOPE,
+                    hwTsNs,
+                    floatArrayOf(0f, 0f, yawRateRadPerSec)
+                )
+
+                val t0 = System.nanoTime()
+                device.onSensorChanged(gyroEvent)
+                device.ekf.updateSpeed(8.2, 0.25, hwTsNs / 1_000_000L)
+                if (i % 50 == 0) {
+                    device.ekf.updateGnssPosition(
+                        device.ekf.eastMeters,
+                        device.ekf.northMeters,
+                        4.0,
+                        hwTsNs / 1_000_000L
+                    )
+                }
+                altEkf.predict(expectedDtSec, 8.2)
+                altEkf.updateBarometer(525.0)
+                val elapsedMs = (System.nanoTime() - t0) / 1_000_000.0
+                cycleDurationsMs.add(elapsedMs)
+            }
+
+            val expectedHeadingAfter = UnicycleOdometryEkf.normalizeAngle(
+                headingBeforeMeasured + measuredCount * expectedDtSec * yawRateRadPerSec.toDouble()
+            )
+            val headingErrorRad = abs(UnicycleOdometryEkf.normalizeAngle(device.ekf.headingRad - expectedHeadingAfter))
+            val dtEquivErrorMs = (headingErrorRad / yawRateRadPerSec.toDouble()) * 1000.0
+
+            val sorted = cycleDurationsMs.sorted()
+            val p95Ms = percentile(sorted, 95.0)
+            val maxCycleMs = sorted.last()
+            val passed = dtEquivErrorMs <= 2.0 && p95Ms <= 2.0 && injectedArrivalJitterMs >= 20.0
+
+            recordMeasurement(
+                NfrMeasurement(
+                    reqId = "REQ-NFR-001",
+                    tstId = "TST-NFR-001",
+                    name = "Deterministic EKF Timing",
+                    metric = "ekf_cycle_p95_ms",
+                    measuredValue = p95Ms,
+                    unit = "ms",
+                    budget = "<= 2.0 ms",
+                    passed = passed,
+                    warmupIterations = warmupCount,
+                    measuredIterations = measuredCount,
+                    details = String.format(
+                        Locale.US,
+                        "dt_equiv_error_ms=%.4f, injected_arrival_jitter_ms=%.2f, p95_cycle_ms=%.4f, max_cycle_ms=%.4f",
+                        dtEquivErrorMs,
+                        injectedArrivalJitterMs,
+                        p95Ms,
+                        maxCycleMs
+                    )
+                )
+            )
+            assertTrue("Arrival jitter ($injectedArrivalJitterMs ms) must have been injected", injectedArrivalJitterMs >= 20.0)
+            assertTrue("Hardware delta-T equivalent error ($dtEquivErrorMs ms) must be <= 2.0 ms", dtEquivErrorMs <= 2.0)
+            assertTrue("EKF p95 cycle latency ($p95Ms ms) must be <= 2.0 ms", p95Ms <= 2.0)
+        } finally {
+            device.shutDown()
+            sensorManager.shutDown()
+        }
     }
 
     /**
@@ -699,42 +840,54 @@ class MeasuredNfrBenchmarkTest {
     }
 
     /**
-     * TST-NFR-005: Measured retained heap delta (< 40 MB) after 3,600-tick LiveWorkoutSession replay.
+     * TST-NFR-005: Measured retained heap delta (< 40 MB) and process ceiling check after
+     * 3,600-tick LiveWorkoutSession + recordStreamPoint replay.
      */
     @Test
     fun testNfr005_dedicatedHeapFootprint_measuredBelow40Mb() {
         val avgSensors = setOf(SensorType.HR, SensorType.SPEED_mps, SensorType.CADENCE, SensorType.POWER)
         val warmupSession = LiveWorkoutSession(99L, avgSensors)
         for (i in 0 until 200) {
-            warmupSession.addSample(SensorType.HR, 140.0, LatLng(48.137, 11.575))
+            val pos = LatLng(48.137, 11.575)
+            warmupSession.addSample(SensorType.HR, 140.0, pos)
+            warmupSession.recordStreamPoint(pos, 520.0, i * 8.0)
         }
 
         val runtime = Runtime.getRuntime()
         System.gc()
-        Thread.sleep(25)
+        Thread.sleep(50)
         val baselineUsedBytes = runtime.totalMemory() - runtime.freeMemory()
 
         val session = LiveWorkoutSession(100L, avgSensors)
         val replayTicks = 3600
+        var streamIncrements = 0
         for (sec in 0 until replayTicks) {
             val pos = LatLng(48.137 + sec * 0.00005, 11.575 + sec * 0.00005)
+            val alt = 520.0 + (sec % 20)
+            val dist = sec * 8.5
             session.addSample(SensorType.HR, 142.0 + (sec % 15), pos)
             session.addSample(SensorType.SPEED_mps, 8.5, pos)
             session.addSample(SensorType.CADENCE, 90.0, pos)
             session.addSample(SensorType.POWER, 240.0, pos)
-            session.addSample(SensorType.ALTITUDE, 520.0 + (sec % 20), pos)
-            session.addSample(SensorType.DISTANCE_m, sec * 8.5, pos)
-            session.addSampledAltitudeWithTimestamp(520.0 + (sec % 20), 1_700_000_000_000L + sec * 1000L)
+            session.addSample(SensorType.ALTITUDE, alt, pos)
+            session.addSample(SensorType.DISTANCE_m, dist, pos)
+            session.addSampledAltitudeWithTimestamp(alt, 1_700_000_000_000L + sec * 1000L)
+            if (session.recordStreamPoint(pos, alt, dist) != null) {
+                streamIncrements++
+            }
         }
 
         System.gc()
-        Thread.sleep(25)
+        Thread.sleep(50)
         val afterUsedBytes = runtime.totalMemory() - runtime.freeMemory()
-        val deltaMb = kotlin.math.max(0.0, (afterUsedBytes - baselineUsedBytes) / (1024.0 * 1024.0))
+        val baselineHeapMb = baselineUsedBytes / (1024.0 * 1024.0)
         val totalHeapMb = afterUsedBytes / (1024.0 * 1024.0)
+        val deltaMb = kotlin.math.max(0.0, (afterUsedBytes - baselineUsedBytes) / (1024.0 * 1024.0))
         // Keep session reachable until after heap reading
         assertNotNull(session.startLatLng)
-        val passed = deltaMb < 40.0
+        // Enforce < 40 MB dedicated delta AND <= 150 MB total ceiling (or bounded below baseline + 40 MB when Robolectric test harness shadow classes pre-occupy >110 MB)
+        val totalCeilingMb = if (baselineHeapMb <= 110.0) 150.0 else baselineHeapMb + 40.0
+        val passed = deltaMb < 40.0 && totalHeapMb <= totalCeilingMb && streamIncrements > 0
 
         recordMeasurement(
             NfrMeasurement(
@@ -744,86 +897,116 @@ class MeasuredNfrBenchmarkTest {
                 metric = "retained_heap_delta_mb",
                 measuredValue = deltaMb,
                 unit = "MB",
-                budget = "< 40.0 MB",
+                budget = "< 40.0 MB (total <= 150 MB)",
                 passed = passed,
                 warmupIterations = 200,
                 measuredIterations = replayTicks,
                 details = String.format(
                     Locale.US,
-                    "delta_mb=%.3f, total_used_heap_mb=%.3f, samples=%d",
+                    "delta_mb=%.3f, baseline_heap_mb=%.3f, total_used_heap_mb=%.3f, total_ceiling_mb=%.1f, stream_increments=%d, samples=%d",
                     deltaMb,
+                    baselineHeapMb,
                     totalHeapMb,
+                    totalCeilingMb,
+                    streamIncrements,
                     replayTicks
                 )
             )
         )
-        assertTrue("Retained LiveWorkoutSession heap delta ($deltaMb MB) must be < 40.0 MB", passed)
+        assertTrue("recordStreamPoint must emit stream increments during 3,600-tick replay", streamIncrements > 0)
+        assertTrue("Retained LiveWorkoutSession heap delta ($deltaMb MB) must be < 40.0 MB", deltaMb < 40.0)
+        assertTrue(
+            "Total heap ($totalHeapMb MB) must remain within ceiling ($totalCeilingMb MB)",
+            totalHeapMb <= totalCeilingMb
+        )
     }
 
     /**
-     * TST-NFR-007: Measured end-to-end sensor dispatch latency across MySensor -> ProxySensor -> SensorListener.
+     * TST-NFR-007: Measured end-to-end sensor dispatch latency across MySensor -> MySensorManager ->
+     * ProxySensor -> BANALService -> SensorListener.
      */
     @Test
     fun testNfr007_sensorDispatchLatency_measuredBelow25Ms() {
+        val sensorManager = MySensorManager(context)
+        val banalService = BANALService()
+        val attachMethod = ContextWrapper::class.java.getDeclaredMethod("attachBaseContext", Context::class.java).apply {
+            isAccessible = true
+        }
+        attachMethod.invoke(banalService, context)
+        BANALService.setSensorManagerForTesting(sensorManager)
+        val banalComm = banalService.onBind(Intent(context, BANALService::class.java)) as BANALServiceComm
+
         val mockDevice = mockk<MyDevice>(relaxed = true)
         every { mockDevice.name } returns "TestHrDevice"
         every { mockDevice.deviceId } returns 77L
 
         val sourceSensor = MySensor<Int>(mockDevice, SensorType.HR)
-        val proxySensor = ProxySensor(mockDevice, SensorType.HR, sourceSensor)
+        sensorManager.registerSensor(sourceSensor)
+        val proxySensor = sensorManager.getSensor(SensorType.HR) as ProxySensor<*>
 
         var deliveredCount = 0
         var lastDeliveryNs = 0L
-        val listener = MySensor.SensorListener<Int> {
+        val listener = MySensor.SensorListener<Any> {
             lastDeliveryNs = System.nanoTime()
             deliveredCount++
         }
-        proxySensor.addSensorListener(listener)
+        @Suppress("UNCHECKED_CAST")
+        (proxySensor as ProxySensor<Any>).addSensorListener(listener)
 
-        val warmupCount = 200
-        val measuredCount = 1000
-        for (i in 0 until warmupCount) {
-            sourceSensor.newValue(130 + (i % 20))
-        }
-        deliveredCount = 0
+        try {
+            val warmupCount = 200
+            val measuredCount = 1000
+            for (i in 0 until warmupCount) {
+                sourceSensor.newValue(130 + (i % 20))
+            }
+            deliveredCount = 0
 
-        val latenciesMs = ArrayList<Double>(measuredCount)
-        for (i in 0 until measuredCount) {
-            val t0 = System.nanoTime()
-            sourceSensor.newValue(140 + (i % 30))
-            val elapsedMs = (lastDeliveryNs - t0) / 1_000_000.0
-            latenciesMs.add(elapsedMs.coerceAtLeast(0.0))
-        }
+            val latenciesMs = ArrayList<Double>(measuredCount)
+            var lastExpectedHr = 0
+            for (i in 0 until measuredCount) {
+                lastExpectedHr = 140 + (i % 30)
+                val t0 = System.nanoTime()
+                sourceSensor.newValue(lastExpectedHr)
+                val elapsedMs = (lastDeliveryNs - t0) / 1_000_000.0
+                latenciesMs.add(elapsedMs.coerceAtLeast(0.0))
+            }
+            val banalObservedHr = banalComm.getBestSensorData(SensorType.HR)?.value
 
-        val sorted = latenciesMs.sorted()
-        val p99Ms = percentile(sorted, 99.0)
-        val maxMs = sorted.last()
-        val passed = deliveredCount == measuredCount && p99Ms < 25.0
+            val sorted = latenciesMs.sorted()
+            val p99Ms = percentile(sorted, 99.0)
+            val maxMs = sorted.last()
+            val passed = deliveredCount == measuredCount && p99Ms < 25.0 && banalObservedHr == lastExpectedHr
 
-        recordMeasurement(
-            NfrMeasurement(
-                reqId = "REQ-NFR-007",
-                tstId = "TST-NFR-007",
-                name = "Sensor Dispatch Latency Budget",
-                metric = "dispatch_p99_ms",
-                measuredValue = p99Ms,
-                unit = "ms",
-                budget = "< 25.0 ms",
-                passed = passed,
-                warmupIterations = warmupCount,
-                measuredIterations = measuredCount,
-                details = String.format(
-                    Locale.US,
-                    "delivered=%d/%d, p99_ms=%.4f, max_ms=%.4f",
-                    deliveredCount,
-                    measuredCount,
-                    p99Ms,
-                    maxMs
+            recordMeasurement(
+                NfrMeasurement(
+                    reqId = "REQ-NFR-007",
+                    tstId = "TST-NFR-007",
+                    name = "Sensor Dispatch Latency Budget",
+                    metric = "dispatch_p99_ms",
+                    measuredValue = p99Ms,
+                    unit = "ms",
+                    budget = "< 25.0 ms",
+                    passed = passed,
+                    warmupIterations = warmupCount,
+                    measuredIterations = measuredCount,
+                    details = String.format(
+                        Locale.US,
+                        "delivered=%d/%d, banal_hr=%s, p99_ms=%.4f, max_ms=%.4f",
+                        deliveredCount,
+                        measuredCount,
+                        banalObservedHr,
+                        p99Ms,
+                        maxMs
+                    )
                 )
             )
-        )
-        assertEquals("Zero dropped sensor dispatch events expected", measuredCount, deliveredCount)
-        assertTrue("Sensor dispatch p99 ($p99Ms ms) must be < 25.0 ms", p99Ms < 25.0)
+            assertEquals("BANALServiceComm must expose latest dispatched HR value", lastExpectedHr, banalObservedHr)
+            assertEquals("Zero dropped sensor dispatch events expected", measuredCount, deliveredCount)
+            assertTrue("Sensor dispatch p99 ($p99Ms ms) must be < 25.0 ms", p99Ms < 25.0)
+        } finally {
+            BANALService.setSensorManagerForTesting(null)
+            sensorManager.shutDown()
+        }
     }
 
     /**
@@ -886,36 +1069,107 @@ class MeasuredNfrBenchmarkTest {
     }
 
     /**
-     * TST-NFR-009: Measured PowerManager PARTIAL_WAKE_LOCK bounding & release timing on TrackerService.
+     * TST-NFR-009: Measured PowerManager PARTIAL_WAKE_LOCK bounding & release timing on real
+     * TrackerService lifecycle (onCreate -> onStartCommand(START_NORMAL) -> PAUSED -> TRACKING -> ACTION_STOP -> onDestroy).
      */
     @Test
     fun testNfr009_wakeLockBounding_measuredZeroLeaksOnStop() {
         val sensorMap = mutableMapOf<SensorType, SensorData<*>>()
-        val service = buildTestableTrackerService(sensorMap)
+        val service = TestableTrackerService()
+        val attachMethod = ContextWrapper::class.java.getDeclaredMethod("attachBaseContext", Context::class.java).apply {
+            isAccessible = true
+        }
+        attachMethod.invoke(service, context)
+        // Inject mock Application via LoadedApk / field after attachBaseContext
+        val mockApp = mockk<TrainingApplication>(relaxed = true)
         try {
             assertFalse(
                 "No WakeLock should be held before TrackerService start",
                 ShadowPowerManager.getLatestWakeLock()?.isHeld == true
             )
 
-            // Acquire via TrackerService.acquireWakeLock() (invoked in onCreate/onStartCommand)
-            val acquireMethod = TrackerService::class.java.getDeclaredMethod("acquireWakeLock").apply {
+            service.onCreate()
+            val heldAfterOnCreate = ShadowPowerManager.getLatestWakeLock()?.isHeld == true
+
+            // Replace external service bindings/repos/scheduler with isolated test collaborators
+            val dbExec = Executors.newSingleThreadExecutor()
+            TrackerService::class.java.getDeclaredField("mDbExecutor").apply {
                 isAccessible = true
+                set(service, dbExec)
             }
-            acquireMethod.invoke(service)
+            TrackerService::class.java.getDeclaredField("mRrFlushExecutor").apply {
+                isAccessible = true
+                set(service, DirectExecutorService())
+            }
+            TrackerService::class.java.getDeclaredField("mScheduler").apply {
+                isAccessible = true
+                set(service, mockk<ScheduledExecutorService>(relaxed = true))
+            }
+            val mockBanalComm = mockk<BANALServiceComm>(relaxed = true)
+            every { mockBanalComm.bSportType } returns BSportType.BIKE
+            every { mockBanalComm.sportTypeId } returns 1L
+            every { mockBanalComm.databaseIdsOfActiveRemoteDevices } returns emptyList()
+            every { mockBanalComm.allSensorData } answers { sensorMap.values.toList() }
+            every { mockBanalComm.getBestSensorData(any<SensorType>()) } answers { sensorMap[firstArg()] }
+            TrackerService::class.java.getDeclaredField("mBanalService").apply {
+                isAccessible = true
+                set(service, mockBanalComm)
+            }
+            TrackerService::class.java.getDeclaredField("mTrainingApplication").apply {
+                isAccessible = true
+                set(service, mockApp)
+            }
+            val mockSportRepo = mockk<com.atrainingtracker.trainingtracker.repositories.SportTypesRepository>(relaxed = true)
+            every { mockSportRepo.getBSportType(any()) } returns BSportType.BIKE
+            every { mockSportRepo.getUIName(any()) } returns "Cycling"
+            TrackerService::class.java.getDeclaredField("mSportTypesRepository").apply {
+                isAccessible = true
+                set(service, mockSportRepo)
+            }
+            TrackerService::class.java.getDeclaredField("mKnownLocationsRepository").apply {
+                isAccessible = true
+                set(service, mockk<com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepository>(relaxed = true))
+            }
+
+            TrainingApplication.setTrackingModeForTesting(TrackingMode.TRACKING)
+            val startIntent = Intent(context, TrackerService::class.java).apply {
+                putExtra(TrackerService.START_TYPE, TrackerService.StartType.START_NORMAL.name)
+            }
+            service.onStartCommand(startIntent, 0, 1)
+            val initFuture = TrackerService::class.java.getDeclaredField("mTableInitializationFuture").apply {
+                isAccessible = true
+            }.get(service) as? java.util.concurrent.CompletableFuture<*>
+            initFuture?.get(10, TimeUnit.SECONDS)
+            dbExec.submit {}.get(10, TimeUnit.SECONDS)
             val heldDuringTracking = ShadowPowerManager.getLatestWakeLock()?.isHeld == true
 
-            val releaseMethod = TrackerService::class.java.getDeclaredMethod("releaseWakeLock").apply {
+            // Verify PAUSED retains WakeLock so 1-Hz TIME_TOTAL & auto-resume continue while screen off (REQ-TRK-018)
+            TrainingApplication.setTrackingModeForTesting(TrackingMode.PAUSED)
+            val trackerRunnable = TrackerService::class.java.getDeclaredField("tracker").apply {
                 isAccessible = true
+            }.get(service) as Runnable
+            trackerRunnable.run()
+            dbExec.submit {}.get(10, TimeUnit.SECONDS)
+            val heldDuringPaused = ShadowPowerManager.getLatestWakeLock()?.isHeld == true
+
+            TrainingApplication.setTrackingModeForTesting(TrackingMode.TRACKING)
+            val stopIntent = Intent(context, TrackerService::class.java).apply {
+                action = TrackerService.ACTION_STOP
             }
+            service.onStartCommand(stopIntent, 0, 2)
+            dbExec.submit {}.get(10, TimeUnit.SECONDS)
+
+            // Main-looper teardown executes releaseWakeLock() synchronously upon finalization completion
             val t0 = System.nanoTime()
-            releaseMethod.invoke(service)
+            ShadowLooper.idleMainLooper()
             val releaseLatencyMs = (System.nanoTime() - t0) / 1_000_000.0
+            service.finalizationFuture.get(10, TimeUnit.SECONDS)
 
             val wakeLockField = TrackerService::class.java.getDeclaredField("wakeLock").apply { isAccessible = true }
             val clearedRef = wakeLockField.get(service) == null
             val releasedAfterStop = ShadowPowerManager.getLatestWakeLock()?.isHeld == false
-            val passed = heldDuringTracking && releasedAfterStop && clearedRef
+            val passed = heldAfterOnCreate && heldDuringTracking && heldDuringPaused &&
+                releasedAfterStop && clearedRef && service.stopped
 
             recordMeasurement(
                 NfrMeasurement(
@@ -931,72 +1185,86 @@ class MeasuredNfrBenchmarkTest {
                     measuredIterations = 1,
                     details = String.format(
                         Locale.US,
-                        "held_during_tracking=%s, released_after_stop=%s, ref_cleared=%s",
+                        "held_on_create=%s, held_tracking=%s, held_paused=%s, released_after_stop=%s, ref_cleared=%s, stopped=%s",
+                        heldAfterOnCreate,
                         heldDuringTracking,
+                        heldDuringPaused,
                         releasedAfterStop,
-                        clearedRef
+                        clearedRef,
+                        service.stopped
                     )
                 )
             )
+            assertTrue("WakeLock must be acquired on TrackerService onCreate", heldAfterOnCreate)
             assertTrue("WakeLock must be held during active tracking", heldDuringTracking)
-            assertTrue("WakeLock must be released on stop", releasedAfterStop)
+            assertTrue("WakeLock must remain held during PAUSED for auto-resume monitoring", heldDuringPaused)
+            assertTrue("WakeLock must be released on ACTION_STOP", releasedAfterStop)
             assertTrue("WakeLock reference must be cleared", clearedRef)
+            assertTrue("TrackerService must call stopSelf after ACTION_STOP finalization", service.stopped)
         } finally {
             destroyTrackerServiceAndDrain(service)
         }
     }
 
     /**
-     * TST-NFR-010: Measured SQLite WAL 1-Hz sample write latency (< 30 ms) strictly off main thread.
+     * TST-NFR-010: Measured SQLite WAL 1-Hz sample write latency (< 30 ms) strictly off main thread
+     * via TrackerService's mDbExecutor and WorkoutRepository.recordLiveSample().
      */
     @Test
     fun testNfr010_databaseSampleWriteLatency_measuredOffMainThreadBelow30Ms() {
-        val dbExecutor = Executors.newSingleThreadExecutor()
-        try {
-            val summariesMgr = WorkoutSummariesDatabaseManager.getInstance(context)
-            val samplesMgr = WorkoutSamplesDatabaseManager.getInstance(context)
-            val fileBaseName = "2026-11-17-080000"
-            val summaryCv = ContentValues().apply {
-                put(WorkoutSummaries.WORKOUT_NAME, "NFR-010 Latency Benchmark")
-                put(WorkoutSummaries.FILE_BASE_NAME, fileBaseName)
-                put(WorkoutSummaries.SPORT_ID, 1L)
-                put(WorkoutSummaries.B_SPORT, BSportType.BIKE.name)
-                put(WorkoutSummaries.TIME_START, "2026-11-17 08:00:00")
-                put(WorkoutSummaries.TIME_ACTIVE_s, 100)
-                put(WorkoutSummaries.TIME_TOTAL_s, 100)
-                put(WorkoutSummaries.DISTANCE_TOTAL_m, 1000.0)
-                put(WorkoutSummaries.FINISHED, 1)
-            }
-            summariesMgr.database.insertOrThrow(WorkoutSummaries.TABLE, null, summaryCv)
+        WorkoutSummariesDatabaseManager.getInstance(context).database
+            .rawQuery("PRAGMA journal_mode=WAL", null).use { it.moveToFirst() }
+        WorkoutSamplesDatabaseManager.getInstance(context).database
+            .rawQuery("PRAGMA journal_mode=WAL", null).use { it.moveToFirst() }
 
-            val sensors = listOf(
-                SensorType.TIME_TOTAL,
-                SensorType.TIME_ACTIVE,
-                SensorType.DISTANCE_m,
-                SensorType.SPEED_mps,
-                SensorType.HR,
-                SensorType.POWER,
-                SensorType.CADENCE,
-                SensorType.ALTITUDE,
-                SensorType.LATITUDE,
-                SensorType.LONGITUDE
-            )
-            samplesMgr.createNewTable(fileBaseName, sensors)
-            val samplesTable = WorkoutSamplesDatabaseManager.getTableName(fileBaseName)
-            val samplesDb = samplesMgr.database
-            samplesDb.rawQuery("PRAGMA journal_mode=WAL", null).use { it.moveToFirst() }
+        val sensorMap = mutableMapOf<SensorType, SensorData<*>>()
+        val service = buildTestableTrackerService(sensorMap)
+        try {
+            val startIntent = Intent(context, TrackerService::class.java).apply {
+                putExtra(TrackerService.START_TYPE, TrackerService.StartType.START_NORMAL.name)
+            }
+            service.onStartCommand(startIntent, 0, 1)
+
+            val initFuture = TrackerService::class.java.getDeclaredField("mTableInitializationFuture").apply {
+                isAccessible = true
+            }.get(service) as? java.util.concurrent.CompletableFuture<*>
+            initFuture?.get(10, TimeUnit.SECONDS)
+
+            val dbExecutor = TrackerService::class.java.getDeclaredField("mDbExecutor").apply {
+                isAccessible = true
+            }.get(service) as java.util.concurrent.ExecutorService
+            val baseFileName = TrackerService::class.java.getDeclaredField("mBaseFileName").apply {
+                isAccessible = true
+            }.get(service) as String
+            val workoutId = TrackerService::class.java.getDeclaredField("mWorkoutID").apply {
+                isAccessible = true
+            }.getLong(service)
+            val workoutRepo = WorkoutRepository.getInstance(context)
 
             val warmupWrites = 100
             val measuredWrites = 1000
             var ranOffMainThread = true
+            var allInserted = true
             val writeLatenciesMs = ArrayList<Double>(measuredWrites)
+            val sensorName2Type = mapOf(
+                SensorType.TIME_TOTAL.name to SensorType.TIME_TOTAL.sensorValueType,
+                SensorType.TIME_ACTIVE.name to SensorType.TIME_ACTIVE.sensorValueType,
+                SensorType.DISTANCE_m.name to SensorType.DISTANCE_m.sensorValueType,
+                SensorType.SPEED_mps.name to SensorType.SPEED_mps.sensorValueType,
+                SensorType.HR.name to SensorType.HR.sensorValueType,
+                SensorType.POWER.name to SensorType.POWER.sensorValueType,
+                SensorType.CADENCE.name to SensorType.CADENCE.sensorValueType,
+                SensorType.ALTITUDE.name to SensorType.ALTITUDE.sensorValueType,
+                SensorType.LATITUDE.name to SensorType.LATITUDE.sensorValueType,
+                SensorType.LONGITUDE.name to SensorType.LONGITUDE.sensorValueType
+            )
 
             dbExecutor.submit {
                 for (i in 1..(warmupWrites + measuredWrites)) {
                     if (Looper.getMainLooper().isCurrentThread) {
                         ranOffMainThread = false
                     }
-                    val cv = ContentValues().apply {
+                    val samplingValues = ContentValues().apply {
                         put(SensorType.TIME_TOTAL.name, i)
                         put(SensorType.TIME_ACTIVE.name, i)
                         put(SensorType.DISTANCE_m.name, i * 8.5)
@@ -1008,9 +1276,24 @@ class MeasuredNfrBenchmarkTest {
                         put(SensorType.LATITUDE.name, 48.137 + i * 0.00005)
                         put(SensorType.LONGITUDE.name, 11.575 + i * 0.00005)
                     }
+                    val summaryValues = ContentValues().apply {
+                        put(WorkoutSummaries.TIME_TOTAL_s, i)
+                        put(WorkoutSummaries.TIME_ACTIVE_s, i)
+                        put(WorkoutSummaries.DISTANCE_TOTAL_m, i * 8.5)
+                    }
                     val t0 = System.nanoTime()
-                    samplesDb.insertOrThrow(samplesTable, null, cv)
+                    val inserted = workoutRepo.recordLiveSample(
+                        baseFileName,
+                        workoutId,
+                        samplingValues,
+                        summaryValues,
+                        emptyList(),
+                        null,
+                        sensorName2Type,
+                        null
+                    )
                     val elapsedMs = (System.nanoTime() - t0) / 1_000_000.0
+                    if (!inserted) allInserted = false
                     if (i > warmupWrites) {
                         writeLatenciesMs.add(elapsedMs)
                     }
@@ -1021,7 +1304,7 @@ class MeasuredNfrBenchmarkTest {
             val p95Ms = percentile(sorted, 95.0)
             val p99Ms = percentile(sorted, 99.0)
             val maxMs = sorted.last()
-            val passed = ranOffMainThread && p99Ms < 30.0
+            val passed = ranOffMainThread && allInserted && p99Ms < 30.0
 
             recordMeasurement(
                 NfrMeasurement(
@@ -1037,8 +1320,9 @@ class MeasuredNfrBenchmarkTest {
                     measuredIterations = measuredWrites,
                     details = String.format(
                         Locale.US,
-                        "off_main_thread=%s, p95_ms=%.3f, p99_ms=%.3f, max_ms=%.3f",
+                        "off_main_thread=%s, all_inserted=%s, p95_ms=%.3f, p99_ms=%.3f, max_ms=%.3f",
                         ranOffMainThread,
+                        allInserted,
                         p95Ms,
                         p99Ms,
                         maxMs
@@ -1046,9 +1330,10 @@ class MeasuredNfrBenchmarkTest {
                 )
             )
             assertTrue("SQLite sample writes must execute off main thread", ranOffMainThread)
+            assertTrue("All WorkoutRepository.recordLiveSample calls must succeed", allInserted)
             assertTrue("SQLite sample write p99 ($p99Ms ms) must be < 30.0 ms", p99Ms < 30.0)
         } finally {
-            dbExecutor.shutdownNow()
+            destroyTrackerServiceAndDrain(service)
         }
     }
 

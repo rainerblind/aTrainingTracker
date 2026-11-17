@@ -346,6 +346,59 @@ class TestGenerateTestEvidence(unittest.TestCase):
             self.assertEqual(valid_res["passed_count"], 2)
             self.assertEqual(valid_res["failed_count"], 0)
 
+            # Verify missing manual protocol template reports MISSING PROTOCOL honestly
+            missing_tpl_res = parse_nfr_measurements(
+                valid_path,
+                manual_protocol_path=os.path.join(tmp_dir, "absent_template.md"),
+            )
+            self.assertFalse(missing_tpl_res["manual_protocol_present"])
+            self.assertTrue(all(m["status"] == "MISSING PROTOCOL" for m in missing_tpl_res["manual_protocols"]))
+
+            # Verify attested PASS / FAIL rows in nfr_manual_protocol_template.md are parsed accurately
+            attested_tpl = os.path.join(tmp_dir, "attested_manual.md")
+            with open(attested_tpl, "w", encoding="utf-8") as f:
+                f.write(
+                    "| REQ / TST ID | Budget Target | Verification Procedure & Exact Tooling | Device / Build | Date | Operator | Measured Value | Verdict |\n"
+                    "| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |\n"
+                    "| `REQ-NFR-004` / `TST-NFR-004` | `< 5.0%` | simpleperf | `Pixel 8 / AP3A` | `2026-11-17` | `Rainer` | `3.2%` | `PASS` |\n"
+                    "| `REQ-NFR-006` / `TST-NFR-006` | `<= 5.0%/h` | Battery Historian | `Pixel 8 / AP3A` | `2026-11-17` | `Rainer` | `6.1%/h` | `FAIL` |\n"
+                    "| `REQ-NFR-012` / `TST-NFR-012` | `< 16.6 ms` | gfxinfo | `<TBD>` | `<TBD>` | `<TBD>` | `<NOT MEASURED>` | `PENDING MANUAL` |\n"
+                )
+            attested_res = parse_nfr_measurements(valid_path, manual_protocol_path=attested_tpl)
+            by_req = {m["req_id"]: m for m in attested_res["manual_protocols"]}
+            self.assertEqual(by_req["REQ-NFR-004"]["status"], "PASS")
+            self.assertEqual(by_req["REQ-NFR-004"]["device_build"], "Pixel 8 / AP3A")
+            self.assertEqual(by_req["REQ-NFR-004"]["measured_value"], "3.2%")
+            self.assertEqual(by_req["REQ-NFR-006"]["status"], "FAIL")
+            self.assertEqual(by_req["REQ-NFR-012"]["status"], "PENDING MANUAL")
+
+            # Verify per-NFR atomic REQ-NFR-*.json fallback/merge without combined nfr_measurements.json
+            per_nfr_path = os.path.join(tmp_dir, "REQ-NFR-007.json")
+            with open(per_nfr_path, "w", encoding="utf-8") as f:
+                json.dump(
+                    {
+                        "req_id": "REQ-NFR-007",
+                        "tst_id": "TST-NFR-007",
+                        "name": "Sensor Dispatch",
+                        "metric": "dispatch_p99_ms",
+                        "measured_value": 0.01,
+                        "unit": "ms",
+                        "budget": "< 25.0 ms",
+                        "passed": True,
+                        "warmup_iterations": 200,
+                        "measured_iterations": 1000,
+                        "details": "ok",
+                    },
+                    f,
+                )
+            merged_res = parse_nfr_measurements(
+                os.path.join(tmp_dir, "missing_combined.json"),
+                manual_protocol_path=attested_tpl,
+            )
+            self.assertTrue(merged_res["measured"])
+            self.assertEqual(merged_res["measured_count"], 1)
+            self.assertEqual(merged_res["measurements"][0]["req_id"], "REQ-NFR-007")
+
     def test_generate_test_evidence_ingests_nfr_measurements_and_manual_protocols(self):
         """TST-PRO-113.3: Verify end-to-end evidence generation renders NFR Group A metrics & Group B manual status."""
         with tempfile.TemporaryDirectory() as tmp_root:

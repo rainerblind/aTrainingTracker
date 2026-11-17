@@ -2794,9 +2794,9 @@
 - **Jira**: `ATT-6139`, `ATT-6735`, `ATT-8158`
 - **Test Description**:
   1. *Scope*: Measured `ShadowPowerManager` WakeLock Lifecycle Test (`TST-NFR-009.1`, `MeasuredNfrBenchmarkTest.kt`).
-  2. *Preconditions*: Robolectric `TrackerService` lifecycle driving Idle -> Tracking -> Paused -> Tracking -> Stopped.
+  2. *Preconditions*: Robolectric `TrackerService` lifecycle driving `onCreate` -> `onStartCommand(START_NORMAL)` -> `PAUSED` -> `TRACKING` -> `ACTION_STOP` -> `onDestroy`.
   3. *Action*: Assert `ShadowPowerManager` WakeLock `isHeld()` for `aTrainingTracker:TrackingLock` across every transition, measure release latency (`ms`), and emit JSON metrics to `app/build/reports/nfr/nfr_measurements.json`.
-  4. *Expected Result*: WakeLock held strictly in `TRACKING` state; released immediately (`0` leaked WakeLocks) in `PAUSED` and `STOPPED`.
+  4. *Expected Result*: WakeLock held throughout active tracking and pause monitoring; released immediately (`0` leaked WakeLocks) upon `ACTION_STOP` / `onDestroy` finalization.
 
 ### TST-NFR-010: **Database Sample Write Latency Budget Verification** [Verified]
 - **Priority**: High

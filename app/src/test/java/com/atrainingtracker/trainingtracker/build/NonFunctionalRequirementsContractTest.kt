@@ -24,6 +24,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
+import java.io.RandomAccessFile
 import java.util.Locale
 
 /**
@@ -91,36 +92,69 @@ class NonFunctionalRequirementsContractTest {
             )
         }
 
-        // If MeasuredNfrBenchmarkTest has already emitted measurements in this build, validate schema & verdicts
+        assertTrue(
+            "MeasuredNfrBenchmarkTest.kt must declare @AfterClass atomic completeness validator",
+            benchmarkSource.contains("verifyCombinedMeasurementsAtomic")
+        )
+
+        // Validate atomic per-NFR JSON artifacts & combined nfr_measurements.json without parallel-fork races
         val repoRoot = findRepoRootFile("tools/generate_test_evidence.py")
             .canonicalFile
             .parentFile
             ?.parentFile
             ?: error("Could not resolve repository root")
-        val measurementsFile = File(repoRoot, "app/build/reports/nfr/nfr_measurements.json")
+        val reportDir = File(repoRoot, "app/build/reports/nfr")
+        val perNfrFiles = reportDir.listFiles { file ->
+            file.isFile && file.name.startsWith("REQ-NFR-") && file.name.endsWith(".json")
+        }?.sortedBy { it.name }.orEmpty()
+
+        val observedByReq = mutableMapOf<String, JSONObject>()
+        for (perFile in perNfrFiles) {
+            val obj = JSONObject(perFile.readText())
+            val reqId = obj.getString("req_id")
+            assertTrue("$reqId measured NFR must pass", obj.getBoolean("passed"))
+            assertTrue("$reqId must record positive measured_iterations", obj.getInt("measured_iterations") > 0)
+            observedByReq[reqId] = obj
+        }
+
+        val measurementsFile = File(reportDir, "nfr_measurements.json")
         if (measurementsFile.isFile) {
-            val root = JSONObject(measurementsFile.readText())
+            val lockFile = File(reportDir, ".nfr.lock")
+            val root = RandomAccessFile(lockFile, "rw").channel.use { ch ->
+                ch.lock().use {
+                    JSONObject(measurementsFile.readText())
+                }
+            }
             val arr = root.getJSONArray("measurements")
             val byReq = mutableMapOf<String, JSONObject>()
             for (i in 0 until arr.length()) {
                 val obj = arr.getJSONObject(i)
                 byReq[obj.getString("req_id")] = obj
             }
-            for (id in GROUP_A_MEASURABLE_IDS) {
-                val reqId = String.format(Locale.US, "REQ-NFR-%03d", id)
-                val entry = byReq[reqId]
-                if (entry != null) {
+            val isComplete = root.optBoolean("complete", false) || perNfrFiles.size == GROUP_A_MEASURABLE_IDS.size
+            if (isComplete) {
+                for (id in GROUP_A_MEASURABLE_IDS) {
+                    val reqId = String.format(Locale.US, "REQ-NFR-%03d", id)
+                    val entry = byReq[reqId]
+                    assertTrue("Complete NFR report must contain $reqId (no silent skip)", entry != null)
+                    assertTrue("$reqId measured NFR must pass", entry!!.getBoolean("passed"))
+                    assertTrue("$reqId must record positive measured_iterations", entry.getInt("measured_iterations") > 0)
+                }
+            } else {
+                for ((reqId, entry) in byReq) {
                     assertTrue("$reqId measured NFR must pass", entry.getBoolean("passed"))
                     assertTrue("$reqId must record positive measured_iterations", entry.getInt("measured_iterations") > 0)
                 }
             }
-            for (id in GROUP_B_MANUAL_IDS) {
-                val reqId = String.format(Locale.US, "REQ-NFR-%03d", id)
-                assertFalse(
-                    "Group B manual NFR $reqId must never be emitted by JVM benchmark JSON",
-                    byReq.containsKey(reqId)
-                )
-            }
+            observedByReq.putAll(byReq)
+        }
+
+        for (id in GROUP_B_MANUAL_IDS) {
+            val reqId = String.format(Locale.US, "REQ-NFR-%03d", id)
+            assertFalse(
+                "Group B manual NFR $reqId must never be emitted by JVM benchmark JSON",
+                observedByReq.containsKey(reqId)
+            )
         }
     }
 

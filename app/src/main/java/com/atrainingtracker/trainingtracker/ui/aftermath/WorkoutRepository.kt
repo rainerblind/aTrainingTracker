@@ -4076,6 +4076,10 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
      * Implementation: Updates both the flat [WorkoutData] fields and the specific
      * row in the [WorkoutData.extremaRows] list to ensure the UI reflects the change immediately.
      */
+    /**
+     * Updates an extrema value in SQLite and in the reactive in-memory [_allWorkouts] cache.
+     */
+    @JvmOverloads
     fun updateExtremaValue(
         workoutId: Long,
         sensorType: SensorType,
@@ -4084,37 +4088,7 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
         position: LatLng? = null
     ) {
         summariesManager.updateExtremaValue(workoutId, sensorType, extremaType, value, position)
-        val formattedValue = sensorType.myFormatter.format(value)
-        updateWorkoutInMemory(workoutId) { workout ->
-            var updated = workout
-
-            // 1. Update specific raw fields
-            when (sensorType) {
-                SensorType.LINE_DISTANCE_m -> if (extremaType == ExtremaType.MAX) updated = updated.copy(maxDisplacement = value)
-                SensorType.ALTITUDE -> {
-                    when (extremaType) {
-                        ExtremaType.MIN -> updated = updated.copy(minAltitude = value)
-                        ExtremaType.MAX -> updated = updated.copy(maxAltitude = value)
-                        else -> {}
-                    }
-                }
-                else -> {}
-            }
-
-            // 2. Update the ExtremaDataRow in the list
-            val sensorLabel = application.getString(sensorType.shortNameId)
-            val updatedRows = updated.extremaRows.map { row ->
-                if (row.sensorLabel == sensorLabel) {
-                    when (extremaType) {
-                        ExtremaType.MIN -> row.copy(minValue = formattedValue, minLatLng = position)
-                        ExtremaType.AVG -> row.copy(avgValue = formattedValue)
-                        ExtremaType.MAX -> row.copy(maxValue = formattedValue, maxLatLng = position)
-                        else -> row
-                    }
-                } else row
-            }
-            updated.copy(extremaRows = updatedRows)
-        }
+        updateExtremaValueInMemory(workoutId, sensorType, extremaType, value, position)
     }
 
     fun updateExtremaValue(
@@ -4130,6 +4104,22 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
         } else {
             summariesManager.updateExtremaValue(workoutId, sensorType, extremaType, value, position)
         }
+        updateExtremaValueInMemory(workoutId, sensorType, extremaType, value, position)
+    }
+
+    /**
+     * Updates an extrema value purely in the reactive in-memory [_allWorkouts] cache without
+     * performing synchronous SQLite I/O on the caller thread (used by 1-Hz [TrackerService] ticks,
+     * whose DB writes are batched atomically in [recordLiveSample] on `mDbExecutor`).
+     */
+    @JvmOverloads
+    fun updateExtremaValueInMemory(
+        workoutId: Long,
+        sensorType: SensorType,
+        extremaType: ExtremaType,
+        value: Double,
+        position: LatLng? = null
+    ) {
         val formattedValue = sensorType.myFormatter.format(value)
         updateWorkoutInMemory(workoutId) { workout ->
             var updated = workout

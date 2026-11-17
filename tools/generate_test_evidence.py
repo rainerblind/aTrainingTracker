@@ -216,26 +216,106 @@ def parse_kover_xml_report(kover_xml_path: str) -> Dict[str, Any]:
         }
 
 
+def _strip_md_cell(text: str) -> str:
+    """Strips Markdown backticks and bold/italic markers from a table cell."""
+    return text.strip().strip("*").strip("`").strip()
+
+
+def _parse_manual_protocol_ledger(manual_protocol_path: Optional[str]) -> Tuple[bool, List[Dict[str, Any]]]:
+    """
+    Parses attested Group B manual protocol rows from nfr_manual_protocol_template.md.
+    Never fabricates PASS/Verified status: reports MISSING PROTOCOL if file absent,
+    or the actual table verdict (e.g. PENDING MANUAL, PASS, FAIL) per REQ-NFR row.
+    """
+    manual_exists = bool(manual_protocol_path and os.path.isfile(manual_protocol_path))
+    parsed_rows: Dict[str, Dict[str, str]] = {}
+
+    if manual_exists and manual_protocol_path:
+        try:
+            with open(manual_protocol_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    stripped = line.strip()
+                    if not stripped.startswith("|"):
+                        continue
+                    cells = [c.strip() for c in stripped.strip("|").split("|")]
+                    if len(cells) < 8:
+                        continue
+                    req_match = re.search(r"REQ-NFR-\d{3}", cells[0])
+                    if not req_match:
+                        continue
+                    req_id = req_match.group(0)
+                    parsed_rows[req_id] = {
+                        "device_build": _strip_md_cell(cells[3]),
+                        "date": _strip_md_cell(cells[4]),
+                        "operator": _strip_md_cell(cells[5]),
+                        "measured_value": _strip_md_cell(cells[6]),
+                        "status": _strip_md_cell(cells[7]) or "PENDING MANUAL",
+                    }
+        except OSError:
+            manual_exists = False
+
+    entries: List[Dict[str, Any]] = []
+    for item in GROUP_B_MANUAL_NFRS:
+        row = parsed_rows.get(item["req_id"])
+        if not manual_exists:
+            status = "MISSING PROTOCOL"
+            device_build = "<MISSING>"
+            date = "<MISSING>"
+            operator = "<MISSING>"
+            measured_val = "<NOT MEASURED>"
+        elif row is None:
+            status = "PENDING MANUAL"
+            device_build = "<TBD>"
+            date = "<TBD>"
+            operator = "<TBD>"
+            measured_val = "<NOT MEASURED>"
+        else:
+            status = row["status"]
+            device_build = row["device_build"]
+            date = row["date"]
+            operator = row["operator"]
+            measured_val = row["measured_value"]
+
+        entries.append(
+            {
+                **item,
+                "verification_method": "On-Device Manual",
+                "device_build": device_build,
+                "date": date,
+                "operator": operator,
+                "measured_value": measured_val,
+                "status": status,
+                "note": "MANUAL PROTOCOL — NOT EXECUTED IN JVM"
+                if status in ("PENDING MANUAL", "MISSING PROTOCOL")
+                else f"ATTESTED ON-DEVICE ({device_build}, {date})",
+            }
+        )
+    return manual_exists, entries
+
+
 def parse_nfr_measurements(
     nfr_json_path: str,
     manual_protocol_path: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
-    Parses measured JVM/Robolectric NFR benchmark results (nfr_measurements.json)
-    and records Group B On-Device Manual protocol status (REQ-PRO-113.3 / ATT-8158).
+    Parses measured JVM/Robolectric NFR benchmark results (nfr_measurements.json and/or
+    atomic per-NFR REQ-NFR-*.json files) and parses Group B On-Device Manual protocol
+    status from nfr_manual_protocol_template.md (REQ-PRO-113.3 / ATT-8158).
     """
-    manual_exists = bool(manual_protocol_path and os.path.isfile(manual_protocol_path))
-    manual_entries = [
-        {
-            **item,
-            "verification_method": "On-Device Manual",
-            "status": "PENDING MANUAL",
-            "note": "MANUAL PROTOCOL — NOT EXECUTED IN JVM",
-        }
-        for item in GROUP_B_MANUAL_NFRS
-    ]
+    manual_exists, manual_entries = _parse_manual_protocol_ledger(manual_protocol_path)
 
-    if not os.path.isfile(nfr_json_path):
+    nfr_dir = os.path.dirname(nfr_json_path)
+    per_nfr_files = (
+        sorted(
+            os.path.join(nfr_dir, fn)
+            for fn in os.listdir(nfr_dir)
+            if fn.startswith("REQ-NFR-") and fn.endswith(".json") and os.path.isfile(os.path.join(nfr_dir, fn))
+        )
+        if nfr_dir and os.path.isdir(nfr_dir)
+        else []
+    )
+
+    if not os.path.isfile(nfr_json_path) and not per_nfr_files:
         return {
             "measured": False,
             "reason": f"NFR measurement report not found at {nfr_json_path}",
@@ -248,18 +328,31 @@ def parse_nfr_measurements(
         }
 
     try:
-        with open(nfr_json_path, "r", encoding="utf-8") as f:
-            raw = json.load(f)
-        items = raw.get("measurements", [])
-        if not isinstance(items, list):
-            raise ValueError("'measurements' field must be a list")
+        items_by_req: Dict[str, Dict[str, Any]] = {}
+        suite_name = "MeasuredNfrBenchmarkTest"
+
+        if os.path.isfile(nfr_json_path):
+            with open(nfr_json_path, "r", encoding="utf-8") as f:
+                raw = json.load(f)
+            suite_name = raw.get("suite", suite_name)
+            items = raw.get("measurements", [])
+            if not isinstance(items, list):
+                raise ValueError("'measurements' field must be a list")
+            for entry in items:
+                if isinstance(entry, dict) and entry.get("req_id"):
+                    items_by_req[str(entry["req_id"])] = entry
+
+        for per_path in per_nfr_files:
+            with open(per_path, "r", encoding="utf-8") as pf:
+                per_entry = json.load(pf)
+            if isinstance(per_entry, dict) and per_entry.get("req_id"):
+                items_by_req[str(per_entry["req_id"])] = per_entry
 
         cleaned: List[Dict[str, Any]] = []
         passed_count = 0
         failed_count = 0
-        for entry in items:
-            if not isinstance(entry, dict):
-                continue
+        for req_key in sorted(items_by_req.keys()):
+            entry = items_by_req[req_key]
             passed = bool(entry.get("passed", False))
             if passed:
                 passed_count += 1
@@ -281,7 +374,7 @@ def parse_nfr_measurements(
 
         return {
             "measured": len(cleaned) > 0,
-            "suite": raw.get("suite", "MeasuredNfrBenchmarkTest"),
+            "suite": suite_name,
             "measured_count": len(cleaned),
             "passed_count": passed_count,
             "failed_count": failed_count,
@@ -421,13 +514,14 @@ def render_markdown_evidence(
             md.extend([
                 "",
                 "### Group B — On-Device Manual Protocols (`[MANUAL PROTOCOL — NOT EXECUTED IN JVM]`)",
-                "| REQ ID | TST ID | Budget | Method | Status |",
-                "| :--- | :--- | :---: | :--- | :---: |",
+                "| REQ ID | TST ID | Budget | Method | Device / Build | Measured | Verdict |",
+                "| :--- | :--- | :---: | :--- | :--- | :---: | :---: |",
             ])
             for m in manual_items:
                 md.append(
                     f"| `{m.get('req_id')}` | `{m.get('tst_id')}` | `{m.get('budget')}` | "
-                    f"{m.get('verification_method')} | **{m.get('status')}** |"
+                    f"{m.get('verification_method')} | `{m.get('device_build', '<TBD>')}` | "
+                    f"`{m.get('measured_value', '<NOT MEASURED>')}` | **{m.get('status')}** |"
                 )
 
     md.append("")

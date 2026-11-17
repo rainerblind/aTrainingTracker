@@ -351,22 +351,22 @@
 - **Type**: Non-Functional
 - **Verification Method**: Integration
 - **Implementation**: `TrackerService.java`, `docs/architecture.md` §4.9
-- **Rationale**: `PowerManager.PARTIAL_WAKE_LOCK` (`aTrainingTracker:TrackingLock`) SHALL be acquired solely by `TrackerService` upon tracking start and MUST be released immediately upon tracking stop.
-- **Description**: `PARTIAL_WAKE_LOCK` (`aTrainingTracker:TrackingLock`) SHALL be held strictly during active `TRACKING` state (`TrackerService.java`); zero WakeLocks SHALL remain acquired when tracking is paused, stopped, or discarded, with release latency measured on transition.
-- **Measurement Procedure**: Measured Robolectric `ShadowPowerManager` lifecycle test driving `TrackerService` through Idle -> Tracking -> Paused -> Tracking -> Stopped, verifying `isHeld()` transitions and measuring release timing (`ms`).
+- **Rationale**: `PowerManager.PARTIAL_WAKE_LOCK` (`aTrainingTracker:TrackingLock`) SHALL be acquired solely by `TrackerService` upon tracking start and MUST be released immediately upon tracking stop/destroy finalization.
+- **Description**: `PARTIAL_WAKE_LOCK` (`aTrainingTracker:TrackingLock`) SHALL be held during active `TrackerService` recording sessions (including `PAUSED` so 1-Hz `TIME_TOTAL` and auto-resume evaluation continue while screen off per `REQ-TRK-018`) and SHALL be released immediately upon `ACTION_STOP` / `onDestroy` finalization with zero leaked WakeLocks.
+- **Measurement Procedure**: Measured Robolectric `ShadowPowerManager` lifecycle test driving `TrackerService` (`onCreate` -> `onStartCommand(START_NORMAL)` -> `PAUSED` -> `TRACKING` -> `ACTION_STOP` -> `onDestroy`), verifying `isHeld()` transitions and measuring release timing (`ms`).
 - **Requirement Archaeology & Chesterton's Fence Audit**:
   1. *Original Requirement ID & Target*: `REQ-NFR-009` (`[Verified]`, `Unit`, `TrackerService.java`) in `docs/requirements/req_process_stability.md`.
-  2. *Historical Origin & Commit Trace*: Introduced via `fb45b2bd` (`ATT-6181`), quantified in `04e67a33` (`ATT-6139`), attributed to `TrackerService` in `0777baa6` (`ATT-6735`).
-  3. *Root Reason for Existing Formulation*: Guarded against battery-draining WakeLock leaks across pause/stop transitions, but relied on doc-string assertions rather than `ShadowPowerManager` lifecycle measurement.
-  4. *Preservation of Core Invariants*: Preserves strict `aTrainingTracker:TrackingLock` scoping in `TrackerService.java` while backing it with authentic Robolectric WakeLock hold-state and timing measurements.
+  2. *Historical Origin & Commit Trace*: Introduced via `fb45b2bd` (`ATT-6181`), quantified in `04e67a33` (`ATT-6139`), attributed to `TrackerService` in `0777baa6` (`ATT-6735`), reconciled with `TrackerService` pause/auto-resume behavior in `ATT-8158`.
+  3. *Root Reason for Existing Formulation*: Guarded against battery-draining WakeLock leaks on stop, while earlier draft wording overlooked that `TrackerService` keeps the WakeLock during `PAUSED` for `TIME_TOTAL` (`SCRUM-97`) and `evaluateAutoPauseTick` auto-resume (`REQ-TRK-018`).
+  4. *Preservation of Core Invariants*: Preserves strict `aTrainingTracker:TrackingLock` scoping in `TrackerService.java`, preserves pause-state auto-resume/total-time continuity, and backs stop release with authentic Robolectric `ShadowPowerManager` lifecycle measurements.
 - **Acceptance Criteria (Given-When-Then)**:
-  • *Given* `TrackerService` in idle or stopped state,
+  • *Given* `TrackerService` prior to start or after `ACTION_STOP` / `onDestroy`,
   • *When* checking `PowerManager.WakeLock.isHeld()`,
-  • *Then* it SHALL return `false`.
-  • *Given* `TrackerService` transitioning from `TRACKING` to `STOPPED`,
-  • *When* stop tracking executes,
-  • *Then* `aTrainingTracker:TrackingLock` SHALL be released immediately with 0 active WakeLock allocations.
-- **Invariants**: Background tracking service must not be terminated by Android OS while recording.
+  • *Then* it SHALL return `false` with 0 active WakeLock allocations.
+  • *Given* `TrackerService` in active `TRACKING` or `PAUSED` recording session,
+  • *When* checking `PowerManager.WakeLock.isHeld()`,
+  • *Then* `aTrainingTracker:TrackingLock` SHALL remain held until `ACTION_STOP` / `onDestroy` finalization completes, and then release immediately.
+- **Invariants**: Background tracking service must not be terminated by Android OS while recording or auto-pause monitoring.
 
 ### REQ-NFR-010: Database Sample Write Latency Budget [Verified]
 - **Tests**: `TST-NFR-010`, `TST-PRO-052`
@@ -5870,7 +5870,7 @@ The workflow SHALL mandate that:
   1. *Original Requirement ID & Target*: Net-new `REQ-PRO-113` refining `REQ-NFR-001`..`018`, `REQ-PRO-052`, and `REQ-PRO-100` across `NonFunctionalRequirementsContractTest.kt`, `tools/generate_test_evidence.py`, and living documentation shards.
   2. *Historical Origin & Commit Trace*: Sprint `2026-11-17_01_Früh` via `ATT-8158`, following `ATT-8157` (`1750ab64`) under Epic `ATT-8138`.
   3. *Root Reason for Existing Formulation*: `ATT-6139` / `ATT-6181` / `ATT-6735` relied on `NonFunctionalRequirementsContractTest.kt` doc-string assertions and had no mechanism to measure budgets or feed NFR metrics into `docs/engineering/test_evidence/`.
-  4. *Preservation of Core Invariants*: Preserves all 18 numeric budgets, `ArchitectureConformanceContractTest.kt` §4.9 checks, `TrackerService.java` runtime behavior (`app/src/main/` unchanged), and `ANT-Android-SDKs` (`0e8cea71`).
+  4. *Preservation of Core Invariants*: Preserves all 18 numeric budgets, `ArchitectureConformanceContractTest.kt` §4.9 checks, `TrackerService` / `WorkoutRepository` SQLite persistence correctness (offloading synchronous extrema SQLite I/O from the 1-Hz tick to `mDbExecutor` while keeping in-memory StateFlow updates reactive), and `ANT-Android-SDKs` (`0e8cea71`).
 - **Acceptance Criteria (Given-When-Then)**:
   • *Given* the 11 JVM-measurable NFR benchmarks executed under `./gradlew testDebugUnitTest`,
   • *When* warmup and measured loops complete,
@@ -5881,4 +5881,4 @@ The workflow SHALL mandate that:
   • *Given* `NonFunctionalRequirementsContractTest.kt` and `tools/verify_requirement_governance.py`,
   • *When* executed,
   • *Then* string-only doc-presence verification is replaced by authentic benchmark/protocol verification and governance exits `0`.
-- **Invariants**: Zero Android production code modifications (`app/src/main/`); `ANT-Android-SDKs` untouched; zero fabricated physical-device `[Verified]` statuses.
+- **Invariants**: Zero unverified hardware `[Verified]` statuses; `ANT-Android-SDKs` untouched; zero main-thread or 1-Hz tick synchronous SQLite extrema writes.

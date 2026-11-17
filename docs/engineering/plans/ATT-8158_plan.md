@@ -15,7 +15,7 @@
 * **Evidence & Contract**: `REQ-PRO-113.3`, `REQ-PRO-100` -> `TST-PRO-113.3`, `TST-PRO-100`, `TST-PRO-052`.
 
 ## 3. System Invariants & Preserved Behavior
-1. **Zero Production & Submodule Edits**: `app/src/main/` and `ANT-Android-SDKs` (`0e8cea714a231fb9565170d4ed01eafa868f9798`) remain untouched; all 18 §4.9 numeric budgets and `ArchitectureConformanceContractTest.kt` traceability remain preserved.
+1. **Surgical Production Isolation & Submodule Lock**: `ANT-Android-SDKs` (`0e8cea714a231fb9565170d4ed01eafa868f9798`) remains untouched; `app/src/main/` is untouched except decoupling synchronous SQLite extrema writes from `TrackerService.sampleAndWriteToDb()` onto `mDbExecutor` via `WorkoutRepository.updateExtremaValueInMemory()` (`REQ-NFR-003`, `REQ-NFR-010`). All 18 §4.9 numeric budgets and `ArchitectureConformanceContractTest.kt` traceability remain preserved.
 2. **Honest Evidence Boundary**: Group B NFRs stay `[Implemented]` / `[Planned]` (`On-Device Manual`) — zero fabricated hardware measurements or `[Verified]` claims in JVM tests.
 3. **UI Consistency**: N/A (zero UI/Compose layout or `strings*.xml` modifications).
 
@@ -39,4 +39,4 @@
 1. **Original Requirement ID & Target**: `REQ-NFR-001`..`REQ-NFR-018` (`TST-NFR-001`..`018`) in `docs/requirements/req_process_stability.md` / `docs/tests/tst_process_stability.md`, plus `NonFunctionalRequirementsContractTest.kt` and `tools/generate_test_evidence.py`.
 2. **Historical Origin & Commit Trace**: `fb45b2bd` (`ATT-6181`), `04e67a33` (`ATT-6139`), `0777baa6` (`ATT-6735`); updated under `ATT-8158`.
 3. **Root Reason for Existing Formulation**: Established quantitative §4.9 targets, but `NonFunctionalRequirementsContractTest.kt` checked only doc-string presence and marked unexecuted device NFRs `[Verified]` under `Unit`.
-4. **Preservation of Core Invariants**: Preserves all 18 numeric budgets, `ArchitectureConformanceContractTest.kt` §4.9 traceability, zero `app/src/main/` edits, and `ANT-Android-SDKs` (`0e8cea71`).
+4. **Preservation of Core Invariants**: Preserves all 18 numeric budgets, `ArchitectureConformanceContractTest.kt` §4.9 traceability, atomic `mDbExecutor` sample/extrema persistence, and `ANT-Android-SDKs` (`0e8cea71`).

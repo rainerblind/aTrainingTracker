@@ -2662,13 +2662,13 @@ public class TrackerService extends Service {
 
                     if ((changed & LiveWorkoutSession.RunningStats.CHANGED_MIN) != 0) {
                         if (mWorkoutRepository != null) {
-                            mWorkoutRepository.updateExtremaValue(mWorkoutID, sensorType, ExtremaType.MIN, stats.min, stats.minPos);
+                            mWorkoutRepository.updateExtremaValueInMemory(mWorkoutID, sensorType, ExtremaType.MIN, stats.min, stats.minPos);
                         }
                         extremaUpdates.add(new ExtremaUpdate(sensorType, ExtremaType.MIN, stats.min, stats.minPos));
                     }
                     if ((changed & LiveWorkoutSession.RunningStats.CHANGED_MAX) != 0) {
                         if (mWorkoutRepository != null) {
-                            mWorkoutRepository.updateExtremaValue(mWorkoutID, sensorType, ExtremaType.MAX, stats.max, stats.maxPos);
+                            mWorkoutRepository.updateExtremaValueInMemory(mWorkoutID, sensorType, ExtremaType.MAX, stats.max, stats.maxPos);
                         }
                         extremaUpdates.add(new ExtremaUpdate(sensorType, ExtremaType.MAX, stats.max, stats.maxPos));
                     }
@@ -2677,7 +2677,7 @@ public class TrackerService extends Service {
                         // authoritative distance/time calculation (SCRUM-108)
                         if (sensorType != SensorType.SPEED_mps) {
                             if (mWorkoutRepository != null) {
-                                mWorkoutRepository.updateExtremaValue(mWorkoutID, sensorType, ExtremaType.AVG, stats.getAverage(), null);
+                                mWorkoutRepository.updateExtremaValueInMemory(mWorkoutID, sensorType, ExtremaType.AVG, stats.getAverage(), null);
                             }
                             if (updateAvgInDb) {
                                 extremaUpdates.add(new ExtremaUpdate(sensorType, ExtremaType.AVG, stats.getAverage(), null, stats.getCount()));
@@ -2759,7 +2759,7 @@ public class TrackerService extends Service {
             // We do this every sample to ensure UI consistency while tracking.
             if (mLiveSession != null && !mIsRehydrating && mLiveSession.getSensorStats().containsKey(SensorType.SPEED_mps)) {
                 if (mWorkoutRepository != null) {
-                    mWorkoutRepository.updateExtremaValue(mWorkoutID, SensorType.SPEED_mps, ExtremaType.AVG, authoritativeAvgSpeed, null);
+                    mWorkoutRepository.updateExtremaValueInMemory(mWorkoutID, SensorType.SPEED_mps, ExtremaType.AVG, authoritativeAvgSpeed, null);
                 }
                 if (updateAvgInDb) {
                     LiveWorkoutSession.RunningStats speedStats = mLiveSession.getSensorStats().get(SensorType.SPEED_mps);
