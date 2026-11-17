@@ -9,6 +9,7 @@ Verifies:
 
 import unittest
 import os
+import re
 import sys
 import io
 import base64
@@ -3001,38 +3002,78 @@ class TestSup9ProblemResolution(unittest.TestCase):
                 jira_util.gate_verdict("ATT-912", "PASS", "Gate 5 PASS: [x] Checked tools/jira_util.py:10", role="agent2")
             self.assertEqual(cm_g5.exception.code, 1)
 
-    @patch("jira_util.create_issue", return_value="ATT-9950")
-    @patch("jira_util.paged_jql_search")
+    @patch("jira_util.rank_at_top_of_backlog")
+    @patch("jira_util.resolve_valid_epic_key", side_effect=lambda k, role="agent1": k)
+    @patch("jira_util.jira_request")
     @patch("jira_util.get_config", return_value={"JIRA_URL": "https://example.atlassian.net"})
     def test_tst_pro_121_4_process_escape_bug_deduplication_and_revision_hook(
-        self, _mock_cfg, mock_jql, mock_create
+        self, _mock_cfg, mock_request, _mock_epic, mock_rank
     ):
-        """TST-PRO-121.4: create_process_escape_bug & gate-verdict REVISION deduplicate via Cloud v3 paged_jql_search."""
-        # 1. No existing open process-escape Bug -> creates new Bug
-        mock_jql.return_value = []
+        """TST-PRO-121.4: create_process_escape_bug & gate-verdict REVISION deduplicate via real create_issue() + Cloud v3 search."""
+        stored_issues = []
+
+        def fake_jira_request(url, method="GET", payload=None, role="agent1"):
+            if url.endswith("/rest/api/3/search/jql"):
+                jql = (payload or {}).get("jql", "")
+                m = re.search(r'summary ~ "(?:\\")?([^"\\]+)(?:\\")?"', jql)
+                phrase = m.group(1).lower() if m else ""
+                matched = [
+                    it for it in stored_issues
+                    if not phrase or phrase in it["fields"]["summary"].lower()
+                ]
+                return {"issues": matched, "isLast": True}
+            if url.endswith("/rest/api/2/issue") and method == "POST":
+                fields = (payload or {}).get("fields", {})
+                new_key = f"ATT-{9950 + len(stored_issues)}"
+                stored_issues.append({
+                    "key": new_key,
+                    "fields": {
+                        "summary": fields.get("summary", ""),
+                        "status": {"name": "Zu erledigen"},
+                        "labels": list(fields.get("labels") or []),
+                        "issuetype": fields.get("issuetype"),
+                        "description": fields.get("description", ""),
+                    },
+                })
+                return {"key": new_key}
+            raise AssertionError(f"Unexpected jira_request call: {method} {url}")
+
+        mock_request.side_effect = fake_jira_request
+
+        # 1. No existing open process-escape Bug -> creates new Bug via real create_issue()
         key1, created1 = jira_util.create_process_escape_bug(
             "Tier-2 unit test failure on sprint", "Stacktrace details", severity="major", source="tier2", role="agent2"
         )
         self.assertEqual(key1, "ATT-9950")
         self.assertTrue(created1)
-        mock_create.assert_called_once()
-        self.assertEqual(mock_create.call_args[1]["issuetype_id"], "10006")
-        self.assertIn("process-escape", mock_create.call_args[1]["labels"])
+        self.assertEqual(len(stored_issues), 1)
+        self.assertEqual(stored_issues[0]["fields"]["issuetype"]["id"], "10006")
+        self.assertEqual(stored_issues[0]["fields"]["summary"], "Process-Escape: Tier-2 unit test failure on sprint")
+        self.assertIn("process-escape", stored_issues[0]["fields"]["labels"])
+        self.assertIn("severity-major", stored_issues[0]["fields"]["labels"])
+        mock_rank.assert_called_once_with("ATT-9950", role="agent2")
 
-        # 2. Existing open process-escape Bug -> deduplicates without calling create_issue again
-        mock_create.reset_mock()
-        mock_jql.return_value = [
-            {"key": "ATT-9950", "fields": {"summary": "[Process-Escape] Tier-2 unit test failure on sprint", "status": {"name": "Zu erledigen"}}}
-        ]
+        # 2. Repeated call -> deduplicates cleanly against stored summary from real create_issue()
         key2, created2 = jira_util.create_process_escape_bug(
             "Tier-2 unit test failure on sprint", "Duplicate details", severity="major", source="tier2", role="agent2"
         )
         self.assertEqual(key2, "ATT-9950")
         self.assertFalse(created2)
-        mock_create.assert_not_called()
+        self.assertEqual(len(stored_issues), 1)
 
-        # 3. gate-verdict REVISION with file_escape_bug=True files deduplicated process-escape Bug
-        mock_jql.return_value = []
+        # 3. Legacy bracketed or explicit Process-Escape prefix -> still deduplicates to ATT-9950
+        for variant in (
+            "[Process-Escape] Tier-2 unit test failure on sprint",
+            "Process-Escape: Tier-2 unit test failure on sprint",
+        ):
+            key_var, created_var = jira_util.create_process_escape_bug(
+                variant, "Variant duplicate", severity="major", source="tier2", role="agent2"
+            )
+            self.assertEqual(key_var, "ATT-9950")
+            self.assertFalse(created_var)
+        self.assertEqual(len(stored_issues), 1)
+
+        # 4. gate-verdict REVISION with file_escape_bug=True files & deduplicates via real create_issue()
         with patch("jira_util.assign_issue"), \
              patch("jira_util.add_comment"), \
              patch("jira_util.transition_issue"), \
@@ -3040,9 +3081,16 @@ class TestSup9ProblemResolution(unittest.TestCase):
             jira_util.gate_verdict(
                 "ATT-921", "REVISION", "Missed edge case", role="agent2", file_escape_bug=True, escape_severity="critical"
             )
-            mock_create.assert_called_once()
-            self.assertEqual(mock_create.call_args[1]["severity"], "critical")
-            self.assertIn("escape-gate-revision", mock_create.call_args[1]["labels"])
+            self.assertEqual(len(stored_issues), 2)
+            self.assertIn("severity-critical", stored_issues[1]["fields"]["labels"])
+            self.assertIn("escape-gate-revision", stored_issues[1]["fields"]["labels"])
+            self.assertEqual(stored_issues[1]["fields"]["summary"], "Process-Escape: Gate REVISION on ATT-920 (ATT-921)")
+
+            # Second gate REVISION on same subtask deduplicates without creating a duplicate Bug
+            jira_util.gate_verdict(
+                "ATT-921", "REVISION", "Still missing edge case", role="agent2", file_escape_bug=True, escape_severity="critical"
+            )
+            self.assertEqual(len(stored_issues), 2)
 
 
 if __name__ == "__main__":

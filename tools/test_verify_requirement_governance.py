@@ -13,6 +13,8 @@ Scenarios tested:
   5. Standard Library Footprint Invariant: Zero external pip dependencies; imports only standard library.
 """
 
+import contextlib
+import io
 import json
 import os
 import subprocess
@@ -28,6 +30,7 @@ from tools.verify_requirement_governance import (
     LEGACY_DANGLING_TST_REFS,
     LEGACY_DANGLING_REQ_REFS,
     find_dangling_references,
+    main as governance_cli_main,
     verify_dangling_references,
     find_duplicate_heading_ids,
     parse_diff_requirements,
@@ -3452,6 +3455,108 @@ class TestConflictMarkersAndCommitHygiene(unittest.TestCase):
             subprocess.run(["git", "add", "staged.txt"], cwd=tmpdir, env=git_env, check=True, stdout=subprocess.DEVNULL)
             res_pre_good = subprocess.run([pre_commit_hook], cwd=tmpdir, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
             self.assertEqual(res_pre_good.returncode, 0)
+
+    def test_tst_pro_121_3_combined_check_flags_execute_all_checks_without_short_circuit(self):
+        """TST-PRO-121.3: Combined --check-* CLI flags run all requested checks and exit 0 iff all pass."""
+        def _run_cli(args):
+            out_buf = io.StringIO()
+            err_buf = io.StringIO()
+            with contextlib.redirect_stdout(out_buf), contextlib.redirect_stderr(err_buf):
+                with self.assertRaises(SystemExit) as cm:
+                    governance_cli_main(args)
+            return cm.exception.code, out_buf.getvalue(), err_buf.getvalue()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            git_env = dict(
+                os.environ,
+                GIT_AUTHOR_NAME="T",
+                GIT_AUTHOR_EMAIL="t@e.com",
+                GIT_COMMITTER_NAME="T",
+                GIT_COMMITTER_EMAIL="t@e.com",
+            )
+            subprocess.run(["git", "init", "-b", "develop"], cwd=tmpdir, env=git_env, check=True, stdout=subprocess.DEVNULL)
+
+            # Valid governed doc header + clean commit with ATT-8165 + clean file
+            mgt_dir = os.path.join(tmpdir, "docs", "management")
+            os.makedirs(mgt_dir, exist_ok=True)
+            with open(os.path.join(mgt_dir, "cm_plan.md"), "w", encoding="utf-8") as f:
+                f.write(
+                    "# Configuration Management Plan\n\n"
+                    "**Document ID**: `DOC-MGT-001`\n"
+                    "**Version**: `1.0.0`\n"
+                    "**Status**: `Draft`\n"
+                    "**Owner**: Rainer Blind\n"
+                    "**Approver**: Pending Human Review\n\n"
+                    "## Change History\n"
+                    "| Version | Date | Author | Ticket | Summary |\n"
+                    "| :--- | :--- | :--- | :--- | :--- |\n"
+                    "| `1.0.0` | 2026-11-17 | AI Agent (`ATT-8165`) | `ATT-8165` | Initial |\n"
+                )
+            subprocess.run(["git", "add", "."], cwd=tmpdir, env=git_env, check=True, stdout=subprocess.DEVNULL)
+            post_env = dict(git_env, GIT_AUTHOR_DATE="1800000000 +0000", GIT_COMMITTER_DATE="1800000000 +0000")
+            subprocess.run(["git", "commit", "-m", "docs(ATT-8165): baseline"], cwd=tmpdir, env=post_env, check=True, stdout=subprocess.DEVNULL)
+
+            # 1. All 3 combined checks pass -> exit 0 and all 3 PASS lines printed
+            code, out, err = _run_cli([
+                "--repo-root", tmpdir,
+                "--base-ref", "develop",
+                "--check-doc-headers",
+                "--check-commit-hygiene",
+                "--check-conflict-markers",
+            ])
+            self.assertEqual(code, 0, f"Expected exit 0, got stderr={err}")
+            self.assertIn("Work-product headers", out)
+            self.assertIn("Commit hygiene verified", out)
+            self.assertIn("Zero Git conflict markers detected", out)
+
+            # 2. First two pass, later --check-conflict-markers fails -> must NOT skip 3rd check
+            broken_fp = os.path.join(tmpdir, "broken.txt")
+            with open(broken_fp, "w", encoding="utf-8") as f:
+                f.write(("<" * 7) + " HEAD\nleft\n" + ("=" * 7) + "\nright\n" + (">" * 7) + " branch\n")
+            subprocess.run(["git", "add", "broken.txt"], cwd=tmpdir, env=git_env, check=True, stdout=subprocess.DEVNULL)
+            subprocess.run(["git", "commit", "-m", "fix(ATT-8165): add file"], cwd=tmpdir, env=post_env, check=True, stdout=subprocess.DEVNULL)
+
+            code_fail3, out_fail3, err_fail3 = _run_cli([
+                "--repo-root", tmpdir,
+                "--base-ref", "develop",
+                "--check-doc-headers",
+                "--check-commit-hygiene",
+                "--check-conflict-markers",
+            ])
+            self.assertEqual(code_fail3, 1)
+            self.assertIn("Work-product headers", out_fail3)
+            self.assertIn("Commit hygiene verified", out_fail3)
+            self.assertIn("Unresolved Git conflict marker", err_fail3)
+
+            # 3. Both middle (--check-commit-hygiene) AND last (--check-conflict-markers) fail -> both errors reported
+            subprocess.run(["git", "commit", "--amend", "-m", "missing ticket key"], cwd=tmpdir, env=post_env, check=True, stdout=subprocess.DEVNULL)
+            code_both, out_both, err_both = _run_cli([
+                "--repo-root", tmpdir,
+                "--base-ref", "develop",
+                "--check-doc-headers",
+                "--check-commit-hygiene",
+                "--check-conflict-markers",
+            ])
+            self.assertEqual(code_both, 1)
+            self.assertIn("Work-product headers", out_both)
+            self.assertIn("lacks a mandatory Jira ticket key", err_both)
+            self.assertIn("Unresolved Git conflict marker", err_both)
+
+            # 4. Combined --check-doc-headers --check-qa-audits --check-impact also aggregates later failures
+            analysis_dir = os.path.join(tmpdir, "docs", "engineering", "analysis")
+            os.makedirs(analysis_dir, exist_ok=True)
+            with open(os.path.join(analysis_dir, "ATT-8165_analysis.md"), "w", encoding="utf-8") as f:
+                f.write("# Incomplete analysis\n")
+            code_other, out_other, err_other = _run_cli([
+                "--repo-root", tmpdir,
+                "--base-ref", "develop",
+                "--check-doc-headers",
+                "--check-qa-audits",
+                "--check-impact",
+            ])
+            self.assertEqual(code_other, 1)
+            self.assertIn("Work-product headers", out_other)
+            self.assertIn("failed validation", err_other)
 
 
 if __name__ == "__main__":

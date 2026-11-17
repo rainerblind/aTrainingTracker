@@ -5380,7 +5380,7 @@ def verify_governance(
     return True, diagnostics
 
 
-def main():
+def main(argv=None):
     """CLI interface for verify_requirement_governance.py."""
     import argparse
 
@@ -5399,6 +5399,11 @@ def main():
         "--base-ref",
         default="develop",
         help="Git base ref to diff against (default: develop).",
+    )
+    parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Optional repository root override for standalone governance checks.",
     )
     parser.add_argument(
         "--sync-indexes",
@@ -5675,195 +5680,7 @@ def main():
         help="Report field completion coverage percentages (Description, Given-When-Then, Allocation) across all living requirements (REQ-PRO-104.3).",
     )
 
-    args = parser.parse_args()
-
-    if args.check_orphans:
-        ok, diag, _ = verify_traceability_orphans(
-            baseline_path=args.traceability_baseline,
-            fail_on_orphans=args.fail_on_orphans,
-        )
-        for msg in diag:
-            print(msg, file=sys.stderr if not ok and "ERROR" in msg else sys.stdout)
-        sys.exit(0 if ok else 1)
-
-    if args.check_code_orphans:
-        ok, diag, _ = verify_code_traceability_orphans(fail_on_orphans=args.fail_on_orphans)
-        for msg in diag:
-            print(msg, file=sys.stderr if not ok and "ERROR" in msg else sys.stdout)
-        sys.exit(0 if ok else 1)
-
-    if args.check_shard_headers:
-        ok, diag = verify_shard_header_counts()
-        for msg in diag:
-            print(msg, file=sys.stderr if not ok and "ERROR" in msg else sys.stdout)
-        sys.exit(0 if ok else 1)
-
-    if args.check_req_description:
-        ok, diag, _ = verify_req_descriptions(fail_on_missing=True)
-        for msg in diag:
-            print(msg, file=sys.stderr if not ok and "ERROR" in msg else sys.stdout)
-        sys.exit(0 if ok else 1)
-
-    if args.report_req_field_coverage:
-        cov = calculate_req_field_coverage()
-        print(format_req_field_coverage(cov))
-        sys.exit(0)
-
-    if args.check_evidence:
-        ok, diag = verify_requirement_evidence_status(fail_on_unverified=args.enforce_evidence)
-        for msg in diag:
-            print(msg, file=sys.stderr if not ok else sys.stdout)
-        sys.exit(0 if ok else 1)
-
-    if args.verify_sys_trace or args.check_reverse_sys_trace or args.report_sys_coverage:
-        ok, diag, report = verify_system_software_traceability(
-            fail_on_unclassified_swe=args.check_reverse_sys_trace,
-        )
-        for msg in diag:
-            print(msg, file=sys.stderr if not ok and "ERROR" in msg else sys.stdout)
-        if args.report_sys_coverage:
-            print("\nSYSREQ-to-SWE Requirement Coverage Report:")
-            print(f"Forward Coverage (SYSREQ -> Product REQ): {report['covered_count']}/{report['sysreq_count']} ({report['coverage_pct']}%)")
-            for sys_id, reqs in sorted(report["sys_to_swe_map"].items()):
-                print(f"  {sys_id} ({len(reqs)} REQs): {', '.join(sorted(reqs))}")
-            print(
-                f"\nReverse Coverage (Product REQ [System-Refinement] -> SYSREQ): "
-                f"{report['swe_refinement_covered_count']}/{report['swe_refinement_total_count']} "
-                f"({report['swe_refinement_coverage_pct']}%)"
-            )
-            print(
-                f"Derived (SW-only) System-Refinement REQs: {report['swe_derived_sw_only_count']}"
-            )
-            print(
-                f"Total Classified System-Refinement REQs: "
-                f"{report['reverse_classified_count']}/{report['swe_refinement_total_count']} "
-                f"({report['reverse_classified_pct']}%)"
-            )
-            print(f"Unclassified System-Refinement SWE REQs: {len(report['unclassified_swe_refinement_reqs'])}")
-        sys.exit(0 if ok else 1)
-
-    if args.check_verified_evidence:
-        ok, diag = verify_verified_test_evidence(
-            results_dir=args.test_results_dir,
-            archive_path=args.test_archive_path,
-        )
-        for msg in diag:
-            print(msg, file=sys.stderr if not ok and msg.startswith("ERROR") else sys.stdout)
-        sys.exit(0 if ok else 1)
-
-    if args.triage_unbacked:
-        _, diag = triage_unbacked_verified_tsts(out_csv=args.triage_csv)
-        for msg in diag:
-            print(msg)
-        sys.exit(0)
-
-    if args.check_test_evidence is not None:
-        target_sprint = args.check_test_evidence if args.check_test_evidence != "" else None
-        ok, diag = verify_test_evidence(target_id=target_sprint)
-        for msg in diag:
-            print(msg, file=sys.stderr if not ok and msg.startswith("ERROR") else sys.stdout)
-        sys.exit(0 if ok else 1)
-
-    if args.check_tests_format:
-        ok, diag = verify_tests_field_format()
-        for msg in diag:
-            print(msg, file=sys.stderr if not ok else sys.stdout)
-        sys.exit(0 if ok else 1)
-
-    if args.check_attributes:
-        diff_content = None
-        if args.diff_file and os.path.exists(args.diff_file):
-            with open(args.diff_file, "r", encoding="utf-8") as f:
-                diff_content = f.read()
-        ok, diag = verify_requirement_attributes(
-            enforce_attributes=args.enforce_attributes,
-            diff_text=diff_content,
-            base_ref=args.base_ref,
-        )
-        for msg in diag:
-            print(msg, file=sys.stderr if not ok and msg.startswith("ERROR") else sys.stdout)
-        sys.exit(0 if ok else 1)
-
-    if (
-        args.coverage
-        or args.coverage_json
-        or args.min_req_tst_coverage is not None
-        or args.min_tst_code_coverage is not None
-        or args.max_code_without_spec is not None
-        or args.min_bidirectional_coverage is not None
-    ):
-        report = calculate_traceability_coverage()
-        ok, diag = verify_coverage_thresholds(
-            report,
-            min_req_tst_coverage=args.min_req_tst_coverage,
-            min_tst_code_coverage=args.min_tst_code_coverage,
-            max_code_without_spec=args.max_code_without_spec,
-            min_bidirectional_coverage=args.min_bidirectional_coverage,
-        )
-        if args.coverage_json:
-            out_dict = report.to_dict()
-            out_dict["gate_result"] = {"passed": ok, "diagnostics": diag}
-            print(json.dumps(out_dict, indent=2))
-        else:
-            print(format_coverage_markdown(report))
-            print("")
-            for msg in diag:
-                print(msg, file=sys.stderr if not ok else sys.stdout)
-        sys.exit(0 if ok else 1)
-
-    if args.check_links:
-        ok, diag = verify_dangling_references(fail_on_dangling=args.enforce_links)
-        for msg in diag:
-            print(msg, file=sys.stderr if not ok else sys.stdout)
-        sys.exit(0 if ok else 1)
-
-    if args.check_unique_ids:
-        ok, diag = verify_unique_ids(fail_on_duplicates=args.enforce_unique)
-        for msg in diag:
-            print(msg, file=sys.stderr if not ok else sys.stdout)
-        sys.exit(0 if ok else 1)
-
-    if args.check_impact is not None:
-        target_file = args.check_impact.strip() if args.check_impact.strip() else None
-        ok, diag = verify_stage1_impact_analysis(analysis_file=target_file)
-        for msg in diag:
-            print(msg, file=sys.stderr if not ok else sys.stdout)
-        sys.exit(0 if ok else 1)
-
-    if args.check_gates is not None:
-        target_sprint = args.check_gates if args.check_gates != "" else None
-        ok, diag = verify_gate_records(sprint_name=target_sprint)
-        for msg in diag:
-            print(msg, file=sys.stderr if not ok else sys.stdout)
-        sys.exit(0 if ok else 1)
-
-    if args.check_metrics is not None:
-        target_sprint = args.check_metrics if args.check_metrics != "" else None
-        ok, diag = verify_sprint_metrics(sprint_name=target_sprint)
-        for msg in diag:
-            print(msg, file=sys.stderr if not ok else sys.stdout)
-        sys.exit(0 if ok else 1)
-
-    if args.check_qa_audits is not None:
-        target_sprint = args.check_qa_audits if args.check_qa_audits != "" else None
-        ok, diag = verify_qa_audits(sprint_name=target_sprint)
-        for msg in diag:
-            print(msg, file=sys.stderr if not ok else sys.stdout)
-        sys.exit(0 if ok else 1)
-
-    if args.check_reviews is not None:
-        target_sprint = args.check_reviews if args.check_reviews != "" else None
-        ok, diag = verify_independent_reviews(sprint_name=target_sprint)
-        for msg in diag:
-            print(msg, file=sys.stderr if not ok else sys.stdout)
-        sys.exit(0 if ok else 1)
-
-    if args.check_retro_allowlist is not None:
-        target_ref = args.check_retro_allowlist if args.check_retro_allowlist != "" else None
-        ok, diag = verify_retro_write_allowlist(commit_ref=target_ref, base_ref=args.base_ref)
-        for msg in diag:
-            print(msg, file=sys.stderr if not ok else sys.stdout)
-        sys.exit(0 if ok else 1)
+    args = parser.parse_args(argv)
 
     if args.sync_indexes:
         recalculate_master_index_tables()
@@ -5903,41 +5720,213 @@ def main():
         with open(args.diff_file, "r", encoding="utf-8") as f:
             diff_content = f.read()
 
-    if args.check_composable_islands:
-        ok, diag = verify_composable_islands(diff_text=diff_content, base_ref=args.base_ref)
+    ran_checks = False
+    all_ok = True
+
+    def _record_check(ok, diag, err_only_on_error=False, error_prefix_only=False):
+        nonlocal ran_checks, all_ok
+        ran_checks = True
+        if not ok:
+            all_ok = False
         for msg in diag:
-            print(msg, file=sys.stderr if not ok else sys.stdout)
-        sys.exit(0 if ok else 1)
+            if error_prefix_only:
+                is_err = not ok and msg.startswith("ERROR")
+            elif err_only_on_error:
+                is_err = not ok and "ERROR" in msg
+            else:
+                is_err = not ok
+            print(msg, file=sys.stderr if is_err else sys.stdout)
+
+    if args.check_orphans:
+        ok, diag, _ = verify_traceability_orphans(
+            repo_root=args.repo_root,
+            baseline_path=args.traceability_baseline,
+            fail_on_orphans=args.fail_on_orphans,
+        )
+        _record_check(ok, diag, err_only_on_error=True)
+
+    if args.check_code_orphans:
+        ok, diag, _ = verify_code_traceability_orphans(
+            repo_root=args.repo_root,
+            fail_on_orphans=args.fail_on_orphans,
+        )
+        _record_check(ok, diag, err_only_on_error=True)
+
+    if args.check_shard_headers:
+        ok, diag = verify_shard_header_counts(repo_root=args.repo_root)
+        _record_check(ok, diag, err_only_on_error=True)
+
+    if args.check_req_description:
+        ok, diag, _ = verify_req_descriptions(repo_root=args.repo_root, fail_on_missing=True)
+        _record_check(ok, diag, err_only_on_error=True)
+
+    if args.report_req_field_coverage:
+        cov = calculate_req_field_coverage()
+        print(format_req_field_coverage(cov))
+        ran_checks = True
+
+    if args.check_evidence:
+        ok, diag = verify_requirement_evidence_status(
+            repo_root=args.repo_root,
+            fail_on_unverified=args.enforce_evidence,
+        )
+        _record_check(ok, diag)
+
+    if args.verify_sys_trace or args.check_reverse_sys_trace or args.report_sys_coverage:
+        ok, diag, report = verify_system_software_traceability(
+            repo_root=args.repo_root,
+            fail_on_unclassified_swe=args.check_reverse_sys_trace,
+        )
+        _record_check(ok, diag, err_only_on_error=True)
+        if args.report_sys_coverage:
+            print("\nSYSREQ-to-SWE Requirement Coverage Report:")
+            print(f"Forward Coverage (SYSREQ -> Product REQ): {report['covered_count']}/{report['sysreq_count']} ({report['coverage_pct']}%)")
+            for sys_id, reqs in sorted(report["sys_to_swe_map"].items()):
+                print(f"  {sys_id} ({len(reqs)} REQs): {', '.join(sorted(reqs))}")
+            print(
+                f"\nReverse Coverage (Product REQ [System-Refinement] -> SYSREQ): "
+                f"{report['swe_refinement_covered_count']}/{report['swe_refinement_total_count']} "
+                f"({report['swe_refinement_coverage_pct']}%)"
+            )
+            print(
+                f"Derived (SW-only) System-Refinement REQs: {report['swe_derived_sw_only_count']}"
+            )
+            print(
+                f"Total Classified System-Refinement REQs: "
+                f"{report['reverse_classified_count']}/{report['swe_refinement_total_count']} "
+                f"({report['reverse_classified_pct']}%)"
+            )
+            print(f"Unclassified System-Refinement SWE REQs: {len(report['unclassified_swe_refinement_reqs'])}")
+
+    if args.check_verified_evidence:
+        ok, diag = verify_verified_test_evidence(
+            repo_root=args.repo_root,
+            results_dir=args.test_results_dir,
+            archive_path=args.test_archive_path,
+        )
+        _record_check(ok, diag, error_prefix_only=True)
+
+    if args.triage_unbacked:
+        _, diag = triage_unbacked_verified_tsts(out_csv=args.triage_csv)
+        for msg in diag:
+            print(msg)
+        ran_checks = True
+
+    if args.check_test_evidence is not None:
+        target_sprint = args.check_test_evidence if args.check_test_evidence != "" else None
+        ok, diag = verify_test_evidence(target_id=target_sprint, repo_root=args.repo_root)
+        _record_check(ok, diag, error_prefix_only=True)
+
+    if args.check_tests_format:
+        ok, diag = verify_tests_field_format(repo_root=args.repo_root)
+        _record_check(ok, diag)
+
+    if args.check_attributes:
+        ok, diag = verify_requirement_attributes(
+            repo_root=args.repo_root,
+            enforce_attributes=args.enforce_attributes,
+            diff_text=diff_content,
+            base_ref=args.base_ref,
+        )
+        _record_check(ok, diag, error_prefix_only=True)
+
+    if (
+        args.coverage
+        or args.coverage_json
+        or args.min_req_tst_coverage is not None
+        or args.min_tst_code_coverage is not None
+        or args.max_code_without_spec is not None
+        or args.min_bidirectional_coverage is not None
+    ):
+        report = calculate_traceability_coverage()
+        ok, diag = verify_coverage_thresholds(
+            report,
+            min_req_tst_coverage=args.min_req_tst_coverage,
+            min_tst_code_coverage=args.min_tst_code_coverage,
+            max_code_without_spec=args.max_code_without_spec,
+            min_bidirectional_coverage=args.min_bidirectional_coverage,
+        )
+        ran_checks = True
+        if not ok:
+            all_ok = False
+        if args.coverage_json:
+            out_dict = report.to_dict()
+            out_dict["gate_result"] = {"passed": ok, "diagnostics": diag}
+            print(json.dumps(out_dict, indent=2))
+        else:
+            print(format_coverage_markdown(report))
+            print("")
+            for msg in diag:
+                print(msg, file=sys.stderr if not ok else sys.stdout)
+
+    if args.check_links:
+        ok, diag = verify_dangling_references(repo_root=args.repo_root, fail_on_dangling=args.enforce_links)
+        _record_check(ok, diag)
+
+    if args.check_unique_ids:
+        ok, diag = verify_unique_ids(repo_root=args.repo_root, fail_on_duplicates=args.enforce_unique)
+        _record_check(ok, diag)
+
+    if args.check_impact is not None:
+        target_file = args.check_impact.strip() if args.check_impact.strip() else None
+        ok, diag = verify_stage1_impact_analysis(analysis_file=target_file, repo_root=args.repo_root)
+        _record_check(ok, diag)
+
+    if args.check_gates is not None:
+        target_sprint = args.check_gates if args.check_gates != "" else None
+        ok, diag = verify_gate_records(sprint_name=target_sprint, repo_root=args.repo_root)
+        _record_check(ok, diag)
+
+    if args.check_metrics is not None:
+        target_sprint = args.check_metrics if args.check_metrics != "" else None
+        ok, diag = verify_sprint_metrics(sprint_name=target_sprint, repo_root=args.repo_root)
+        _record_check(ok, diag)
+
+    if args.check_qa_audits is not None:
+        target_sprint = args.check_qa_audits if args.check_qa_audits != "" else None
+        ok, diag = verify_qa_audits(sprint_name=target_sprint, repo_root=args.repo_root)
+        _record_check(ok, diag)
+
+    if args.check_reviews is not None:
+        target_sprint = args.check_reviews if args.check_reviews != "" else None
+        ok, diag = verify_independent_reviews(sprint_name=target_sprint, repo_root=args.repo_root)
+        _record_check(ok, diag)
+
+    if args.check_retro_allowlist is not None:
+        target_ref = args.check_retro_allowlist if args.check_retro_allowlist != "" else None
+        ok, diag = verify_retro_write_allowlist(
+            commit_ref=target_ref,
+            base_ref=args.base_ref,
+            repo_root=args.repo_root,
+        )
+        _record_check(ok, diag)
+
+    if args.check_composable_islands:
+        ok, diag = verify_composable_islands(diff_text=diff_content, repo_root=args.repo_root, base_ref=args.base_ref)
+        _record_check(ok, diag)
 
     if args.check_repo_encapsulation:
-        ok, diag = verify_repository_encapsulation(diff_text=diff_content, base_ref=args.base_ref)
-        for msg in diag:
-            print(msg, file=sys.stderr if not ok else sys.stdout)
-        sys.exit(0 if ok else 1)
+        ok, diag = verify_repository_encapsulation(diff_text=diff_content, repo_root=args.repo_root, base_ref=args.base_ref)
+        _record_check(ok, diag)
 
     if args.check_specs:
-        ok, diag = verify_architecture_and_system_specs(diff_text=diff_content, base_ref=args.base_ref)
-        for msg in diag:
-            print(msg, file=sys.stderr if not ok else sys.stdout)
-        sys.exit(0 if ok else 1)
+        ok, diag = verify_architecture_and_system_specs(diff_text=diff_content, repo_root=args.repo_root, base_ref=args.base_ref)
+        _record_check(ok, diag)
 
     if args.check_doc_headers:
-        ok, diag = verify_work_product_headers(base_ref=args.base_ref, check_diff=True)
-        for msg in diag:
-            print(msg, file=sys.stderr if not ok else sys.stdout)
-        sys.exit(0 if ok else 1)
+        ok, diag = verify_work_product_headers(repo_root=args.repo_root, base_ref=args.base_ref, check_diff=True)
+        _record_check(ok, diag)
 
     if args.check_conflict_markers:
-        ok, diag = verify_conflict_markers()
-        for msg in diag:
-            print(msg, file=sys.stderr if not ok else sys.stdout)
-        sys.exit(0 if ok else 1)
+        ok, diag = verify_conflict_markers(repo_root=args.repo_root)
+        _record_check(ok, diag)
 
     if args.check_commit_hygiene:
-        ok, diag = verify_commit_hygiene(base_ref=args.base_ref)
-        for msg in diag:
-            print(msg, file=sys.stderr if not ok else sys.stdout)
-        sys.exit(0 if ok else 1)
+        ok, diag = verify_commit_hygiene(repo_root=args.repo_root, base_ref=args.base_ref)
+        _record_check(ok, diag)
+
+    if ran_checks and not args.check_text_only:
+        sys.exit(0 if all_ok else 1)
 
     text_content = ""
     if args.text_file:
@@ -5987,7 +5976,7 @@ def main():
         valid, errors = validate_archaeology_section(text_content)
         if valid:
             print("PASS: Archaeology section is structurally valid.")
-            sys.exit(0)
+            sys.exit(0 if all_ok else 1)
         else:
             print("FAIL: Archaeology section validation errors:", file=sys.stderr)
             for err in errors:

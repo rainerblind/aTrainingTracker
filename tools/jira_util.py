@@ -2152,7 +2152,7 @@ def gate_verdict(subtask_key, verdict_arg, text_or_file, role="agent2", file_esc
             if reason_txt.startswith("@") and os.path.exists(reason_txt[1:]):
                 with open(reason_txt[1:], "r", encoding="utf-8") as f:
                     reason_txt = f.read()
-            esc_summary = f"[Process-Escape] Gate REVISION on {parent_key or subtask_key} ({subtask_key})"
+            esc_summary = f"Process-Escape: Gate REVISION on {parent_key or subtask_key} ({subtask_key})"
             esc_desc = (
                 f"h2. Process Escape Problem Record (SUP.9)\n"
                 f"* *Source*: Gate REVISION on {subtask_key} ({summary or 'Gate Subtask'})\n"
@@ -3002,6 +3002,18 @@ def resolve_bug(issue_key, resolution_arg, duplicate_of=None, reason=None, role=
     return {"key": issue_key, "resolution": display_res, "label": res_label, "jira_resolution": matched_jira_res}
 
 
+def _split_priority_and_process_escape_core(summary):
+    """Extracts leading priority tags and the normalized core summary for process-escape Bugs."""
+    sanitized = sanitize_issue_summary(summary).strip()
+    m = re.match(r'^((?:\[(?:highest|high|medium|low|lowest)\]\s*)+)(.*)$', sanitized, re.IGNORECASE)
+    priority_prefix = m.group(1).strip() if m else ""
+    body = (m.group(2) if m else sanitized).strip()
+    core = re.sub(r'^process-escape:\s*', '', body, flags=re.IGNORECASE).strip()
+    if not core:
+        core = body or sanitized or str(summary or "").strip()
+    return priority_prefix, core
+
+
 def create_process_escape_bug(summary, description, severity="major", source="tier2", ticket_key=None, parent_epic="ATT-8138", role="agent2"):
     """
     REQ-PRO-121.4: Creates (or deduplicates via Cloud v3 paged_jql_search) a Bug (10006)
@@ -3012,17 +3024,18 @@ def create_process_escape_bug(summary, description, severity="major", source="ti
         print(f"Error: Invalid severity '{severity}'. Must be one of: {', '.join(VALID_SEVERITIES)}.", file=sys.stderr)
         sys.exit(1)
 
-    clean_summary = sanitize_issue_summary(summary)
-    if "[process-escape]" not in clean_summary.lower():
-        clean_summary = f"[Process-Escape] {clean_summary}"
+    priority_prefix, core_summary = _split_priority_and_process_escape_core(summary)
+    # Use non-bracketed prefix so create_issue() -> sanitize_issue_summary() (Rule 13) preserves it verbatim.
+    clean_summary = f"{priority_prefix} Process-Escape: {core_summary}".strip() if priority_prefix else f"Process-Escape: {core_summary}"
 
     config = get_config()
-    escaped_phrase = clean_summary.replace('"', '\\"')
+    escaped_phrase = core_summary.replace('"', '\\"')
     jql = f'project = ATT AND issuetype = Bug AND status != "Erledigt" AND labels = "process-escape" AND summary ~ "\\"{escaped_phrase}\\""'
     existing = paged_jql_search(jql, ["summary", "status", "labels"], role=role, config=config, max_total=10)
     for item in existing:
-        existing_sum = str((item.get("fields") or {}).get("summary", "")).strip().lower()
-        if clean_summary.lower() == existing_sum or clean_summary.lower() in existing_sum:
+        existing_raw = str((item.get("fields") or {}).get("summary", "")).strip()
+        _, existing_core = _split_priority_and_process_escape_core(existing_raw)
+        if clean_summary.lower() == existing_raw.lower() or existing_core.lower() == core_summary.lower():
             ex_key = item.get("key")
             print(f"Deduplicated existing process-escape Bug: {ex_key}")
             return ex_key, False
