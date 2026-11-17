@@ -35,5 +35,5 @@ Inspected `docs/engineering/walkthroughs/img/ATT-8456_quick_switch_preview.png` 
 ---
 
 ## 4. Invariant & Governance Verification
-1. **Living Documentation**: `REQ-CON-047` & `TST-CON-047` promoted to `[Verified]`; `REQ-CON-031` & `TST-CON-031` `[Verified]`; `python3 tools/verify_requirement_governance.py` and `--text-file` checks PASSED (exit `0`; Total REQs `1204`, Verified `967`; Total TSTs `1207`, Verified `992`).
+1. **Living Documentation**: `REQ-CON-047` & `TST-CON-047` promoted to `[Verified]`; `REQ-CON-031` & `TST-CON-031` `[Verified]`; `python3 tools/verify_requirement_governance.py` and `--text-file` checks PASSED (exit `0`; Total REQs `1205`, Verified `968`; Total TSTs `1212`, Verified `997`).
 2. **Submodule & Scope Hygiene**: `ANT-Android-SDKs` untouched (`0e8cea714a231fb9565170d4ed01eafa868f9798`); zero SQLite or XML string edits; StVZO pruning & `Automatik`-first invariant intact.
