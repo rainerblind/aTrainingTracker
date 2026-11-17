@@ -3,7 +3,7 @@
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Tests**: 217
+**Total Tests**: 218
 
 ---
 
@@ -3646,3 +3646,20 @@
   • Verify that `NonFunctionalRequirementsContractTest.kt` checks authentic benchmark/evidence artifacts and enforces `On-Device Manual` + non-`[Verified]` status for unattested hardware NFRs (`004, 006, 012, 015, 016, 017, 018`) instead of raw doc-string presence.
   3. *Test Evidence Ingestion & Governance Parity (`TST-PRO-113.3`, tools/test_generate_test_evidence.py & verify_requirement_governance.py)*:
   • Verify that `tools/generate_test_evidence.py` ingests `app/build/reports/nfr/nfr_measurements.json` and manual protocol status into `docs/engineering/test_evidence/<target>.{md,json}`, and `verify_requirement_governance.py` passes with exit 0.
+
+---
+
+### TST-PRO-114: **Living Detailed Design & Code-Parity Verification Suite (ATT-8159)** [Verified]
+- **Requirement(s)**: `REQ-PRO-114`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Component**: `app/src/test/java/com/atrainingtracker/trainingtracker/build/DetailedDesignParityContractTest.kt`, `docs/architecture/detailed_design/tracker_service.md`, `docs/architecture/detailed_design/banal_service.md`, `docs/architecture/detailed_design/my_btle_device.md`, `docs/architecture.md`, `.agents/skills/stage3-impl-plan/SKILL.md`
+- **Jira**: `ATT-8159`
+- **Test Description**:
+  1. *Detailed Design Structural & Mermaid Completeness Test (`TST-PRO-114.1`, DetailedDesignParityContractTest.kt)*:
+  • Verify that `docs/architecture/detailed_design/tracker_service.md`, `banal_service.md`, and `my_btle_device.md` exist, each declare `stateDiagram-v2`, event/guard/transition tables, interface/threading/error-handling sections, and reference authentic `ATT-7902` characterisation and unit test classes.
+  2. *Code-Parity Symbol & State Existence Verification (`TST-PRO-114.2`, DetailedDesignParityContractTest.kt)*:
+  • Verify that every documented enum/state constant (`TrackingMode`, `AutoPauseState`, `TrackerService.StartType`, `MyBTLEDevice.State`), key lifecycle/concurrency field & method symbol, and cited test class resolves verbatim against `app/src/main/` and `app/src/test/` with zero drift.
+  3. *SWE.2 Cross-Reference, Stage 3 Governance & Living Doc Parity (`TST-PRO-114.3`, DetailedDesignParityContractTest.kt & verify_requirement_governance.py)*:
+  • Verify `docs/architecture.md` cross-references `docs/architecture/detailed_design/`, `.agents/skills/stage3-impl-plan/SKILL.md` mandates living detailed-design updates for the 3 core units in Stage 3 plans/reviews, and `verify_requirement_governance.py` exits `0`.

@@ -240,6 +240,14 @@ To support forensic telemetry diagnostics without impacting standard workout exp
 3. **Privacy-Preserving GPS Stripping**: When "Include GPS Location" is unchecked in `SensorDiagnosticShareSheet`, latitude and longitude columns are omitted from `samples_1hz.csv` and GPS map polylines are cleared from `workout_summary.json` (`REQ-EXP-044.3`).
 4. **Secure Sharing & Localization Parity**: The bundle is shared via `Intent.ACTION_SEND` using Android `FileProvider` (`<cache-path name="diagnostics" path="diagnostics/" />`). All user-facing strings across all 9 supported locales are verified in `strings_export.xml` without emojis (`REQ-EXP-044.4`, `Rule 38`).
 
+### 3.5 Unit-Level Living Detailed Design & State Machine Models (ASPICE SWE.3, `REQ-PRO-114`)
+Unit-level dynamic state machine models, event/guard/transition tables, `IF-SWE-*` interface mappings, threading contracts, error-handling mechanisms, and `ATT-7902` characterisation-test traceability for the three core service/peripheral units are maintained under `docs/architecture/detailed_design/`:
+- **Tracking Foreground Service**: [`docs/architecture/detailed_design/tracker_service.md`](architecture/detailed_design/tracker_service.md) (`TrackerService`, `TrackingMode`, `AutoPauseState`, `StartType`, `mScheduler`, `mDbExecutor`, `mRrFlushExecutor`)
+- **Sensor Ingestion & Search Orchestration**: [`docs/architecture/detailed_design/banal_service.md`](architecture/detailed_design/banal_service.md) (`BANALService`, `DeviceManager`, `MyRemoteDevice`, `MySensorManager`, `ProxySensor`)
+- **Bluetooth LE Peripheral State Machine & GATT Queue**: [`docs/architecture/detailed_design/my_btle_device.md`](architecture/detailed_design/my_btle_device.md) (`MyBTLEDevice`, `MyBTLEDevice.State`, `mGattQueue`, `mGattLock`)
+
+Code-to-documentation parity is continuously enforced by [`DetailedDesignParityContractTest`](../app/src/test/java/com/atrainingtracker/trainingtracker/build/DetailedDesignParityContractTest.kt).
+
 ---
 
 ## 4. Concurrency, Threading & Resource Invariants (SWE.2.BP5)

@@ -3,7 +3,7 @@
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Requirements**: 178
+**Total Requirements**: 179
 
 ---
 
@@ -5882,3 +5882,33 @@ The workflow SHALL mandate that:
   • *When* executed,
   • *Then* string-only doc-presence verification is replaced by authentic benchmark/protocol verification and governance exits `0`.
 - **Invariants**: Zero unverified hardware `[Verified]` statuses; `ANT-Android-SDKs` untouched; zero main-thread or 1-Hz tick synchronous SQLite extrema writes.
+
+---
+
+### REQ-PRO-114: Living Detailed Design & State Machine Models for Core Services (ATT-8159) [Verified]
+- **Tests**: `TST-PRO-114`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `docs/architecture/detailed_design/tracker_service.md`, `docs/architecture/detailed_design/banal_service.md`, `docs/architecture/detailed_design/my_btle_device.md`, `docs/architecture.md`, `.agents/skills/stage3-impl-plan/SKILL.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/DetailedDesignParityContractTest.kt`
+- **Rationale**: Resolves ASPICE 4.0 Assessment (2026-11-15) Finding `M9` (`SWE.3 BP1/BP2/BP4`, `ATT-8159`): detailed design previously existed only as frozen per-ticket implementation plans, KDoc, and requirement prose, with no unit-level dynamic state machine models for the three core services (`TrackerService`, `BANALService`, `MyBTLEDevice`) and no Stage 3 governance rule enforcing living detailed-design maintenance.
+- **Description**:
+  1. *Unit Detailed Design Documents & State Machine Models (`REQ-PRO-114.1`, [Verified])*: `docs/architecture/detailed_design/` SHALL maintain three unit-level detailed-design documents (`tracker_service.md`, `banal_service.md`, `my_btle_device.md`), each specifying a Mermaid `stateDiagram-v2` model, event/guard/transition tables, external/internal interface tables (`IF-SWE-*` / SWE.2 alignment), threading & concurrency contracts, error-handling & fault-recovery mechanisms, and bidirectional traceability to `ATT-7902` characterisation and unit test suites (`TrackerServiceStateMachineCharacterisationTest`, `TrackerServiceCrashRecoveryCharacterisationTest`, `TrackerServiceIntegrationTest`, `TrackerServiceFinalizationTest`, `TrackerServiceResilienceTest`, `TrackerServiceAsyncInitTest`, `TrackerServiceResumeTest`, `TrackerServiceRrFlushTest`, `TrackerServiceExportGatingTest`, `BANALServiceArbitrationCharacterisationTest`, `BANALServiceLifecycleTest`, `MyBTLEDeviceLifecycleTest`, `MyBTLEDeviceQueueTest`, `MyBTLEDeviceAddressAndSearchTest`).
+  2. *SWE.2 Cross-Reference & Stage 3 Living Detailed-Design Rule (`REQ-PRO-114.2`, [Verified])*: `docs/architecture.md` SHALL cross-reference `docs/architecture/detailed_design/` as the authoritative SWE.3 unit-design layer, and `.agents/skills/stage3-impl-plan/SKILL.md` SHALL require scheduling a living detailed-design update step whenever an implementation plan modifies state handling, transitions, or concurrency contracts of `TrackerService`, `BANALService` / `DeviceManager`, or `MyBTLEDevice`.
+  3. *Automated Code-Parity Contract Verification (`REQ-PRO-114.3`, [Verified])*: `DetailedDesignParityContractTest.kt` SHALL parse the living detailed-design documents under `docs/architecture/detailed_design/` and assert that every documented state/enum constant (`TrackingMode`, `AutoPauseState`, `TrackerService.StartType`, `MyBTLEDevice.State`), key lifecycle/concurrency field & method symbol (`mIsStopping`, `mTrackingInterrupted`, `mIsRehydrating`, `mSessionGeneration`, `mDbExecutor`, `mScheduler`, `mRrFlushExecutor`, `cMyRemoteDeviceCurrentlySearchingFor`, `mSearchQueue`, `mMyRemoteDeviceTries`, `mGattQueue`, `mGattLock`, `pauseGattOperations`, `resumeGattOperations`, `startScanAssistance`, `readNextCharacteristic`, `configureServices`), and cited test class exists verbatim in `app/src/main/` and `app/src/test/` with zero drift.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new `REQ-PRO-114` refining `REQ-PRO-034`, `REQ-PRO-043`, and `REQ-ARC-008` across `docs/architecture/detailed_design/`, `docs/architecture.md`, `.agents/skills/stage3-impl-plan/SKILL.md`, and `app/src/test/java/com/atrainingtracker/trainingtracker/build/DetailedDesignParityContractTest.kt`.
+  2. *Historical Origin & Commit Trace*: `053531cb` (`ATT-5431` SWE.2 `docs/architecture.md` & Stage 3 SWE.2 rule), `0d437b9c` (`ATT-6727` dynamic SWE.2 symbol parity), `ATT-7902` (`REQ-ARC-008` Golden Master characterisation tests); extended in Sprint `2026-11-17_01_Früh` via `ATT-8159` under Epic `ATT-8138`.
+  3. *Root Reason for Existing Formulation*: SWE.2 component architecture (`docs/architecture.md`, `interfaces.md`) and Golden Master characterisation tests (`ATT-7902`) were established prior to unit-level SWE.3 state machine modeling so behavioral baselines could first be locked down without production code changes.
+  4. *Preservation of Core Invariants*: Preserves all existing `AspiceSweAuditContractTest` and `ArchitectureConformanceContractTest` checks, keeps `app/src/main/` and `ANT-Android-SDKs` (`0e8cea71`) strictly untouched, and accurately models the real code split (`BANALService` delegating search state to `DeviceManager` without a `SearchingState` enum; `MyBTLEDevice.State` having 4 states; `TrackerService` combining `TrackingMode`, `AutoPauseState`, `StartType`, and volatile lifecycle flags).
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `docs/architecture/detailed_design/{tracker_service,banal_service,my_btle_device}.md`,
+  • *When* audited for SWE.3 BP1/BP2/BP4 completeness,
+  • *Then* each document contains a Mermaid `stateDiagram-v2`, event/guard/transition table, interface & threading contracts, error-handling mechanisms, and test traceability.
+  • *Given* a change to state handling in `TrackerService`, `BANALService` / `DeviceManager`, or `MyBTLEDevice`,
+  • *When* a Stage 3 plan is authored or reviewed per `.agents/skills/stage3-impl-plan/SKILL.md`,
+  • *Then* the plan includes the corresponding living detailed-design update step.
+  • *Given* `DetailedDesignParityContractTest.kt` executed under `./gradlew testDebugUnitTest`,
+  • *When* comparing documented states, symbols, and test classes against `app/src/main/` and `app/src/test/`,
+  • *Then* 100% of documented states/transitions/symbols resolve verbatim in source with zero drift.
+- **Invariants**: Zero edits to `app/src/main/` production behavior; `ANT-Android-SDKs` untouched at `0e8cea714a231fb9565170d4ed01eafa868f9798`; all existing characterisation and contract tests remain 100% green.
