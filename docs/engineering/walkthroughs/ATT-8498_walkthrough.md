@@ -1,7 +1,7 @@
-# Stage 5 Walkthrough: ATT-8498 - ZoneDisplayOptions in Cockpit & Kacheln
+# Stage 5 Walkthrough: ATT-8498 (PO Rejection Redesign)
 
 **Ticket**: [ATT-8498](https://rainerblind.atlassian.net/browse/ATT-8498) | **Parent Epic**: [ATT-5908](https://rainerblind.atlassian.net/browse/ATT-5908) (*Cockpit & Live-Tracking UX*)  
-**Target Release**: `V5.0.0` | **Active Sprint**: `2026-11-16_03_Nacht` | **Branch**: `feature/ATT-8498`  
+**Target Release**: `V5.0.0` | **Active Sprint**: `2026-11-17_02_Spät` | **Branch**: `feature/ATT-8498`  
 **Requirement Mapping**: `REQ-UI-2783` (`REQ-UI-2783.1`..`REQ-UI-2783.3`)  
 **Test Spec Mapping**: `TST-UI-2783` (`TST-UI-2783.1`..`TST-UI-2783.4`)  
 **Author**: AI Agent 1 (`--as agent1`) | **Date**: 2026-11-17
@@ -9,10 +9,11 @@
 ---
 
 ## 1. Executive Summary & Changes Implemented
-Implemented profile-scoped `ZoneDisplayOptions` configuration and live combined zone preview directly inside **Cockpit & Kacheln** (`9044611040643dbfa6f9b50352ba70dd7d811f8b`):
-1. **Shared Controls & `ZonesSettingsActivity` Reuse (`REQ-UI-2783.2`)**: Created `ZoneDisplayOptionsControls.kt` (`ZoneProfileTarget`, `ZoneDisplayOptionsDraft` with `applyToAllFrom` preserving `hrv.showGauge` and `persistTo`, and `ZoneDisplayOptionsToggleList` with host toggle slot). Refactored `ZonesSettingsActivity.kt` (`SettingsScreenContent` & `HrvDfaA1SettingsContent`) to reuse `ZoneDisplayOptionsToggleList` while retaining `R.string.zone_display_gauge` & `displayOptions.showGauge` (`HrvDfaA1SettingsContractTest`).
-2. **Cockpit Integration & Combined Preview (`REQ-UI-2783.1`, `.3`)**: Added `CockpitZoneDisplaySubsection.kt` using strictly `TuningSegmentedButtonRow`, `TuningToggleItem`, `OutlinedButton` (`R.string.zone_display_apply_all`), and `HorizontalDivider` (zero `FilterChip`/`Switch`/`ElevatedCard`). Embedded it in `CockpitTypographySection.kt` (**334 LOC** `< 400` LOC invariant `REQ-UI-277.3`), and updated `PreviewCockpitTile` with `TTColor.Zone2` 12% background tint, `6.dp` left/right bars (`IntrinsicSize.Min`), `showTextColor`, and `ZoneGaugeBar` (`HRV_DFA_A1 && showGauge`).
-3. **Dual-Host State Wiring & 9-Locale Parity (`REQ-UI-2783.3`)**: Hydrated `zoneDisplayDraft` once via `SettingsDataStore.snapshotFlow` (`isZoneDisplayInitialized`) in both `AdvancedTuningScreen.kt` and `AdvancedTuningDialog.kt` (Save persists, Cancel discards, Reset resets only `ZoneDisplayOptions()` keeping thresholds). Added `zone_display_apply_all` across all 9 `values*/strings.xml` files.
+Relocated `ZoneDisplayOptions` configuration out of **Experteneinstellungen** and into both PO-requested target UX locations on `feature/ATT-8498` (rebased onto `sprint/2026-11-17_02_Spät` @ `b1329131`):
+1. **Expert Settings Removal (`REQ-UI-2783.1`)**: Reverted `ZoneDisplayOptions` UI/draft/Save/Reset wiring in `AdvancedTuningScreen.kt` & `AdvancedTuningDialog.kt`, restored `CockpitTypographySection.kt` to **367 LOC** (`< 400`, `REQ-UI-277.3`), deleted `CockpitZoneDisplaySubsection.kt` & `AdvancedTuningZoneDisplayTest.kt` (eliminating `file.readLines()` on `src/main`), and removed `ATT-8498` screenshot capture from `AdvancedTuningSectionsScreenshotTest.kt`.
+2. **Shared Controls & Atomic DataStore (`REQ-UI-2783.2`, `.3`)**: Extended `ZoneDisplayOptionsControls.kt` with `resolveZoneProfileTarget`, `defaultZoneProfileTarget`, `ZoneDisplaySwitchRow`, `ZoneDisplayProfileSegmentedSelector` (`SingleChoiceSegmentedButtonRow`, `icon = {}`, `PaddingValues(6.dp, 0.dp)`, `labelSmall`, `maxLines = 1, softWrap = false, TextOverflow.Ellipsis`), `ZoneDisplayConfigSection`, and Light/Dark `@Preview`s; added atomic `SettingsDataStore.saveAllZoneDisplayOptions(...)` while preserving `ZonesSettingsActivity` (`HrvDfaA1SettingsContractTest`).
+3. **Sensor Tile Long-Press (`EditSensorFieldViewModel` + `EditSensorFieldDialog`, `REQ-UI-2783.2`)**: Hydrated `ZoneDisplayOptionsDraft` from `SettingsDataStore.snapshotFlow` preserving draft across async `loadInitialState()` (`_uiState.update`), added `refreshZoneDisplayDraftIfClean()` / `discardZoneDisplayChanges()` across Cancel/reopen of cached ViewModels, rendered `ZoneDisplayConfigSection` in Group 3 solely for `(HR, RUN)`, `(HR, BIKE)`, `(POWER, BIKE)`, and `(HRV_DFA_A1, *)`, and persisted only on `saveChanges()`.
+4. **Tracking Tabs Config (`TrackingTabGridContent` + `SensorGridScreen`, `REQ-UI-2783.3`)**: Passed `activityType` to `SensorGridScreen` and mounted `TrackingTabZoneDisplaySection` in `ScreenMode.CONFIGURATION` with immediate `SettingsDataStore` persistence and Light/Dark `@Preview`s.
 
 ---
 
@@ -20,21 +21,27 @@ Implemented profile-scoped `ZoneDisplayOptions` configuration and live combined 
 
 | Requirement | Test Spec | Verification Method | Result | Living Docs |
 | :--- | :--- | :--- | :--- | :--- |
-| `REQ-UI-2783.1`, `.3` | `TST-UI-2783.1` | Compose UI: `AdvancedTuningZoneDisplayTest` (profile switch, toggles, `PreviewCockpitTile`) | **PASSED** (Stage 4 SHA `90446110`) | `Verified` |
-| `REQ-UI-2783.1`, `.3` | `TST-UI-2783.2` | Unit/UI: `AdvancedTuningZoneDisplayTest` (apply-all, Screen & Dialog Save/Cancel/Reset) | **PASSED** (Stage 4 SHA `90446110`) | `Verified` |
-| `REQ-UI-2783.1`, `.2` | `TST-UI-2783.3` | Contract: `< 400` LOC, `TuningDesignGuidelinesContractTest`, `HrvDfaA1SettingsContractTest`, modularity | **PASSED** (Stage 4 SHA `90446110`) | `Verified` |
-| `REQ-UI-2783.3` | `TST-UI-2783.4` | Localization (`ZoneDisplayLocalizationTest` / `TranslationParityTest`) + Rule 8.5 screenshots | **PASSED** (Stage 4 SHA `90446110`)* | `Verified` |
+| `REQ-UI-2783.1` | `TST-UI-2783.1` | Compose UI + Contracts: `EditSensorFieldZoneDisplayTest`, `ui.settings.tuning.*`, `HrvDfaA1SettingsContractTest` | **PASSED** (Post-heal) | `Verified` |
+| `REQ-UI-2783.2` | `TST-UI-2783.2` | Unit + DataStore + Compose UI: `EditSensorFieldZoneDisplayTest` (**6/6**, incl. async race & cancel-reopen) | **PASSED** (Post-heal) | `Verified` |
+| `REQ-UI-2783.3` | `TST-UI-2783.3` | Compose UI + DataStore: `TrackingTabConfigZoneDisplayTest` (**3/3**, `CONFIGURATION` profile & sync) | **PASSED** (Post-heal) | `Verified` |
+| `REQ-UI-2783.2`, `.3` | `TST-UI-2783.4` | i18n (`ZoneDisplayLocalizationTest` **3/3**, `TranslationParityTest` **10/10**) + Rule 8.5 PNG | **PASSED** (Post-heal) | `Verified` |
 
 ---
 
-## 3. Automated Test & Governance Evidence
-* **Stage 4 Targeted Gradle Verification on Code SHA `90446110`** (`./gradlew :app:testDebugUnitTest --tests "*ZoneDisplay*" --tests "*CockpitPreviewTileContractTest*" --tests "*AdvancedTuningModularityTest*" --tests "*TuningDesignGuidelinesContractTest*" --tests "*HrvDfaA1SettingsContractTest*" --tests "*CockpitTypography*" --tests "*Localization*" --tests "*AdvancedTuningSectionsScreenshotTest*" --tests "*AdvancedTuningScreenTest*" :app:compileDebugAndroidTestKotlin --max-workers=2`): **BUILD SUCCESSFUL** — **191 / 191 tests passed, 0 skipped, 0 failed** (`AdvancedTuningZoneDisplayTest` 6/6, `AdvancedTuningSectionsScreenshotTest` 2/2, `TuningDesignGuidelinesContractTest` 5/5, `HrvDfaA1SettingsContractTest` 12/12, `CockpitPreviewTileContractTest` 1/1, `AdvancedTuningModularityTest` 2/2, `AdvancedTuningScreenTest` 6/6, `ZoneDisplayLocalizationTest` 3/3, `ZoneDisplayOptionsTest` 4/4, `SensorFieldZoneDisplayTest` 7/7, plus localization & typography suites).
-* **Zero Redundant Re-Runs (`Rule 7.5`) & Tier-2 Lock Discipline**: Code SHA `90446110` is unchanged in Stage 5a; Gradle was intentionally not re-run while parent Tier-2 executes (`*`Gate 5 on `2026-11-17_01_Früh` will attach/inspect Light & Dark walkthrough PNGs and execute merged-tree Gradle verification).
-* **Governance Sync & Audit**: `python3 tools/verify_requirement_governance.py --sync-indexes` and `python3 tools/verify_requirement_governance.py` -> **100% PASS**.
+## 3. Automated Test, Governance & Visual Evidence (Post-Heal & Post-Rebase on `b1329131`)
+* **Targeted & Contract Gradle Suite** (`python3 tools/parallel_sprint_lock.py ./gradlew :app:testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.*" --tests "com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingTabConfigZoneDisplayTest" --tests "com.atrainingtracker.trainingtracker.ui.tracking.tracking.SensorGrid*" --tests "com.atrainingtracker.trainingtracker.ui.settings.tuning.*" --tests "com.atrainingtracker.trainingtracker.zones.HrvDfaA1SettingsContractTest" --tests "com.atrainingtracker.trainingtracker.localization.ZoneDisplayLocalizationTest" --tests "com.atrainingtracker.trainingtracker.localization.TranslationParityTest" --tests "com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest"`):
+  * **BUILD SUCCESSFUL** — **274 / 274 tests PASSED** (0 failures, 0 errors, 0 skipped across 48 suites): `EditSensorField*` 7 suites (**57/57**, incl. `EditSensorFieldZoneDisplayTest` **6/6**), `SensorGrid*` + `TrackingTabConfigZoneDisplayTest` 10 suites (**57/57**), `ui.settings.tuning.*` 26 suites (**130/130**), `HrvDfaA1SettingsContractTest` (**12/12**), `ZoneDisplayLocalizationTest` (**3/3**), `TranslationParityTest` (**10/10**), `ThemeColorCentralizationAuditTest` (**5/5**).
+* **Living Documentation & Governance**: `python3 tools/verify_requirement_governance.py --sync-indexes`, `python3 tools/verify_requirement_governance.py`, and `--text-file docs/engineering/walkthroughs/ATT-8498_walkthrough.md` exited **`0`** (100% parity, 4 new `@Composable`s reachable, 4-field Chesterton's Fence audit PASS).
+* **Visual Proof (`Rule 8.5`)**: Inspected `docs/engineering/walkthroughs/img/ATT-8498_zone_display_tile_and_tabs.png` via `read_file`: German (`de-rDE`) Light & Dark cards show single-line `Lauf HF | Rad HF | Rad Leistung | HRV (DFA α1)` segmented buttons, 4/5 toggles (`Zonen-Balken` on HRV), and full-width `Auf alle anwenden` with zero clipping or wrapping.
 
 ---
 
 ## 4. System Invariants & Hygiene
-* `CockpitTypographySection.kt` = **334 LOC** (`< 400` LOC); zero `FilterChip`/`Switch`/`ElevatedCard` in `categories/`.
-* Zero zone threshold mutations on Reset; 9-locale parity complete (`zone_display_apply_all`).
-* `ANT-Android-SDKs` untouched (`0e8cea714a231fb9565170d4ed01eafa868f9798`).
+* `CockpitTypographySection.kt` = **367 LOC** (`< 400`); zero `ZoneDisplayOptions` UI/state in `AdvancedTuning*` or `CockpitTypographySection`.
+* Zero `src/main` file reads in `EditSensorFieldZoneDisplayTest.kt` or `TrackingTabConfigZoneDisplayTest.kt` (`REQ-PRO-049.1`); `ANT-Android-SDKs` untouched at `0e8cea714a231fb9565170d4ed01eafa868f9798`.
+
+### Requirement Archaeology & Chesterton's Fence Audit
+* **Original Requirement ID & Target**: `REQ-UI-2783` (originally Expert Settings), refining `REQ-UI-172`, `REQ-UI-262.5`, `REQ-UI-277.3`, `REQ-UI-376`, `REQ-TRK-061.4`, `REQ-PRO-049.1`.
+* **Historical Origin & Commit Trace**: `ATT-1390` (`e3966ebf`) added `ZoneDisplayOptions` in `ZonesSettingsActivity`; `ATT-8498` (`81af2506`) placed them in `CockpitTypographySection` (Ceremony 2 PO rejected `2026-11-17T15:59`).
+* **Root Reason for Existing Formulation**: `81af2506` co-located zone toggles with Expert Settings typography tuning; PO directed tile long-press & tracking tabs config instead.
+* **Preservation of Core Invariants**: Preserves `< 400` LOC `CockpitTypographySection`, `CockpitPreviewTileContractTest`, `AdvancedTuningModularityTest`, `TuningDesignGuidelinesContractTest`, `HrvDfaA1SettingsContractTest`, zero `src/main` reads, and zone thresholds.

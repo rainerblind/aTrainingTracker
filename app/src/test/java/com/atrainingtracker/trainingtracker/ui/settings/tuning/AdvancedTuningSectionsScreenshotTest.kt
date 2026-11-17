@@ -45,19 +45,10 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
-import com.atrainingtracker.trainingtracker.settings.ZoneDisplayOptions
-import com.atrainingtracker.trainingtracker.ui.settings.ZoneDisplayOptionsDraft
-import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.CockpitTypographySection
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.MorningCheckSection
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.PhysiologyModelsSection
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.SensorsGpsFilterSection
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
-import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldVariant
-import com.atrainingtracker.trainingtracker.ui.tracking.typography.CockpitFontFamily
-import com.atrainingtracker.trainingtracker.ui.tracking.typography.CockpitFontWeight
-import androidx.compose.material.icons.filled.TextFields
-import androidx.compose.ui.test.onAllNodesWithText
-import androidx.compose.ui.test.performClick
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -225,85 +216,5 @@ class AdvancedTuningSectionsScreenshotTest {
                 }
             }
         }
-    }
-
-    /**
-     * TST-UI-2783.4: Rule 8.5 Light & Dark Compose Screenshot verification for ATT-8498.
-     * Captures CockpitTypographySection with ZoneDisplayOptions & combined PreviewCockpitTile (HRV gauge active).
-     */
-    // Traces to: REQ-UI-2783, TST-UI-2783.4
-    @Test
-    @Config(sdk = [34], qualifiers = "w960dp-h1400dp-xhdpi")
-    fun testCaptureCockpitZoneDisplayScreenshot_LightAndDark() {
-        val draft = ZoneDisplayOptionsDraft(
-            hrv = ZoneDisplayOptions(
-                showBackground = true,
-                showLeftBar = true,
-                showRightBar = true,
-                showTextColor = true,
-                showGauge = true
-            )
-        )
-        composeTestRule.setContent {
-            Row(
-                modifier = Modifier
-                    .width(920.dp)
-                    .background(Color(0xFF888888))
-                    .padding(12.dp)
-                    .testTag("cockpit_zone_display_comparison"),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                listOf(false to "Light Theme", true to "Dark Theme").forEach { (isDark, label) ->
-                    ATrainingTrackerTheme(darkTheme = isDark) {
-                        Surface(
-                            color = MaterialTheme.colorScheme.background,
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Column(modifier = Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                Text(text = label, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onBackground)
-                                TuningAccordionSection(
-                                    icon = Icons.Default.TextFields,
-                                    title = stringResource(R.string.tuning_cat_cockpit_typography),
-                                    subtitle = "System • Bold • Card",
-                                    isExpanded = true,
-                                    onToggle = {}
-                                ) {
-                                    CockpitTypographySection(
-                                        cockpitFontFamily = CockpitFontFamily.SYSTEM_DEFAULT,
-                                        onFontFamilyChange = {},
-                                        cockpitFontWeight = CockpitFontWeight.BOLD,
-                                        onFontWeightChange = {},
-                                        sensorFieldVariant = SensorFieldVariant.ELEVATED_CARDS,
-                                        sensorFieldCornerRadius = 12f,
-                                        sensorFieldBorderThickness = 1f,
-                                        sensorFieldBorderContrast = 0.2f,
-                                        zoneDisplayDraft = draft,
-                                        onZoneDisplayDraftChange = {}
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        composeTestRule.waitForIdle()
-        // Switch both Light and Dark panels to HRV (DFA α1) so the 5th gauge toggle & ZoneGaugeBar preview render
-        val hrvNodes = composeTestRule.onAllNodesWithText(
-            androidx.test.core.app.ApplicationProvider.getApplicationContext<android.content.Context>()
-                .getString(R.string.tab_hrv_dfa_a1)
-        )
-        hrvNodes[0].performClick()
-        hrvNodes[1].performClick()
-        composeTestRule.waitForIdle()
-
-        val bmp = composeTestRule.onNodeWithTag("cockpit_zone_display_comparison")
-            .captureToImage()
-            .asAndroidBitmap()
-        val repoRoot = if (File("..", "docs/engineering/walkthroughs/img").exists()) File("..") else File(".")
-        val outFile = File(repoRoot, "docs/engineering/walkthroughs/img/ATT-8498_cockpit_zone_display.png")
-        outFile.parentFile?.mkdirs()
-        FileOutputStream(outFile).use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
-        assertTrue("Screenshot must exist and be non-empty", outFile.exists() && outFile.length() > 0)
     }
 }

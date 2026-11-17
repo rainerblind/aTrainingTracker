@@ -8670,23 +8670,23 @@
      - Execute `./gradlew :app:testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.*" --tests "com.atrainingtracker.trainingtracker.ui.tracking.TrackingTabsPolishContractTest" --tests "com.atrainingtracker.trainingtracker.ui.components.core.ModalBottomSheetDialogsIntegrityTest"` and `python3 tools/verify_requirement_governance.py`.
      - Assert 100% pass rate.
 
-### TST-UI-2783: ZoneDisplayOptions Cockpit Integration, Apply-All & Save/Cancel/Reset Verification [Verified]
+### TST-UI-2783: ZoneDisplayOptions Removal from Expert Settings & Tile/Tab Config Verification [Verified]
 - **Target Release**: `V5.0.0`
 - **Requirement(s)**: `REQ-UI-2783` (`REQ-UI-2783.1`, `REQ-UI-2783.2`, `REQ-UI-2783.3`)
-- **Component**: `ZoneDisplayOptionsControls.kt`, `CockpitTypographySection.kt`, `ZonesSettingsActivity.kt`, `AdvancedTuningScreen.kt`, `AdvancedTuningDialog.kt`, `AdvancedTuningZoneDisplayTest.kt`, `AdvancedTuningSectionsScreenshotTest.kt`
+- **Component**: `ZoneDisplayOptionsControls.kt`, `EditSensorFieldDialog.kt`, `EditSensorFieldViewModel.kt`, `SensorGridScreen.kt`, `ZonesSettingsActivity.kt`, `EditSensorFieldZoneDisplayTest.kt`, `TrackingTabConfigZoneDisplayTest.kt`
 - **Jira**: `ATT-8498`
 - **Test Description**:
-  1. *Profile Selection, Toggling & Combined Preview Compose UI Tests (`TST-UI-2783.1`, `AdvancedTuningZoneDisplayTest.kt`)*:
-     - Verify `CockpitTypographySection` switches between `HR_RUN`, `HR_BIKE`, `PWR_BIKE`, and `HRV_DFA_A1` via `TuningSegmentedButtonRow` and mutates per-profile `ZoneDisplayOptions` via `TuningToggleItem` (`zone_display_gauge` shown strictly for `HRV_DFA_A1`).
-     - Verify `PreviewCockpitTile` updates live with `zone_2` tint, left/right bars, text color, and HRV gauge bar.
-  2. *Apply-All & Draft State Unit Tests (`TST-UI-2783.2`, `AdvancedTuningZoneDisplayTest.kt`)*:
-     - Verify `zone_display_apply_all` copies `showBackground`, `showLeftBar`, `showRightBar`, and `showTextColor` across all 4 profiles while preserving `HRV.showGauge`.
-     - Verify **Save** persists all 4 profiles via `SettingsDataStore`, **Cancel** discards uncommitted changes, and **Reset to Defaults** resets only `ZoneDisplayOptions()` without altering zone thresholds (`hrRunZoneMax`, `hrBikeZoneMax`, `pwrBikeZoneMax`).
-  3. *Design Guidelines, Modularity & ZonesSettingsActivity Contracts (`TST-UI-2783.3`)*:
-     - Verify `CockpitTypographySection.kt` `< 400` LOC (`REQ-UI-277.3`), `TuningDesignGuidelinesContractTest`, `HrvDfaA1SettingsContractTest`, `CockpitPreviewTileContractTest`, and `AdvancedTuningModularityTest` pass 100%.
-  4. *9-Locale Parity & Rule 8.5 Light/Dark Screenshot Inspection (`TST-UI-2783.4`)*:
-     - Verify `zone_display_apply_all` across all 9 locales (`ZoneDisplayLocalizationTest` / `TranslationParityTest`).
-     - Capture Light & Dark screenshots of the Zone Display subsection + combined `PreviewCockpitTile` in `AdvancedTuningSectionsScreenshotTest.kt` and inspect via `read_file`.
+  1. *Expert Settings Removal & Contract Guards (`TST-UI-2783.1`)*:
+     - Verify `AdvancedTuningScreen`, `AdvancedTuningDialog`, and `CockpitTypographySection` no longer render `zone_display_title` / `zone_display_apply_all` (`AdvancedTuningScreenTest` / Compose test).
+     - Verify `CockpitPreviewTileContractTest`, `AdvancedTuningModularityTest`, `TuningDesignGuidelinesContractTest`, `HrvDfaA1SettingsContractTest`, and `SourceTextReadingAuditContractTest` (zero `src/main` file reads in new/modified tests) pass 100%.
+  2. *Tile Long-Press `EditSensorFieldDialog` & ViewModel Verification (`TST-UI-2783.2`, `EditSensorFieldZoneDisplayTest.kt`)*:
+     - Verify profile mapping matches `TrackingViewModel.resolveDisplayOptions`: `(HR, RUN) -> HR_RUN`, `(HR, BIKE) -> HR_BIKE`, `(POWER, BIKE) -> PWR_BIKE`, `(HRV_DFA_A1, *) -> HRV_DFA_A1`, and non-zone / unmapped metrics (`SPEED`, `HR` in `UNKNOWN`, `POWER` in `RUN`) hide the Zone Display section.
+     - Verify `zone_display_gauge` is shown strictly for `HRV_DFA_A1`, `zone_display_apply_all` preserves `HRV.showGauge`, **Cancel** discards changes, and **Save** (`saveChanges()`) persists to `SettingsDataStore` without altering zone thresholds.
+  3. *Tracking Tabs Config `SensorGridScreen` Verification (`TST-UI-2783.3`, `TrackingTabConfigZoneDisplayTest.kt`)*:
+     - Verify `SensorGridScreen` in `ScreenMode.CONFIGURATION` renders the Zone Display section with `SingleChoiceSegmentedButtonRow` pre-selected from `ActivityType`, `ZoneDisplayOptionsToggleList`, and `zone_display_apply_all`, persisting toggles immediately to `SettingsDataStore`.
+  4. *9-Locale Parity & Rule 8.5 Light/Dark Visual Verification (`TST-UI-2783.4`)*:
+     - Verify `ZoneDisplayLocalizationTest` and `TranslationParityTest` pass across all 9 locales (`values`..`values-pt`).
+     - Capture combined Light & Dark Compose screenshot `docs/engineering/walkthroughs/img/ATT-8498_zone_display_tile_and_tabs.png` and inspect via `read_file`.
 
 ### TST-UI-2784: RadarTrafficSummaryCard Canonical Speed Unit Verification [Verified]
 - **Target Release**: `V5.0.0`

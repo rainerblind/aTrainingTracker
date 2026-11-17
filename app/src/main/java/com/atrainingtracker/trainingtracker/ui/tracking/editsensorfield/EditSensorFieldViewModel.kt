@@ -35,9 +35,14 @@ import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
+import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import com.atrainingtracker.trainingtracker.settings.TelemetryGraphColorPreferences
 import com.atrainingtracker.trainingtracker.settings.TuningConfig
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
+import com.atrainingtracker.trainingtracker.settings.ZoneDisplayOptions
+import com.atrainingtracker.trainingtracker.ui.settings.ZoneDisplayOptionsDraft
+import com.atrainingtracker.trainingtracker.ui.settings.ZoneProfileTarget
+import com.atrainingtracker.trainingtracker.ui.settings.resolveZoneProfileTarget
 import com.atrainingtracker.trainingtracker.ui.theme.TelemetryGraphColor
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldConfig
 import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepository
@@ -155,8 +160,12 @@ data class EditDialogUiState(
     val graphColor: String = "GLOBAL_DEFAULT",
     val graphColorScope: GraphColorScope = GraphColorScope.THIS_TILE,
     val colWeight: Float = 1.0f,
-    val isMultiFieldRow: Boolean = false
+    val isMultiFieldRow: Boolean = false,
+    val zoneDisplayDraft: ZoneDisplayOptionsDraft = ZoneDisplayOptionsDraft()
 ) {
+    val zoneProfileTarget: ZoneProfileTarget?
+        get() = resolveZoneProfileTarget(selectedSensorType, sportType)
+
     val isBarSupported: Boolean
         get() = TrackingViewsDatabaseManager.TrackingViewsDbHelper.isBarSupported(selectedSensorType, sportType)
 
@@ -209,11 +218,20 @@ class EditSensorFieldViewModel(
         TuningPreferencesDataStore.getInstance(application).tuningConfigFlow
     } else {
         flowOf(TuningConfig())
+    },
+    private val settingsDataStore: SettingsDataStore? = if (application is TrainingApplication) {
+        SettingsDataStore.getInstance(application)
+    } else {
+        null
     }
 ) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow(EditDialogUiState())
     val uiState: StateFlow<EditDialogUiState> = _uiState.asStateFlow()
+
+    private val dirtyZoneTargets = mutableSetOf<ZoneProfileTarget>()
+    private var isApplyAllZoneDisplay = false
+    private var hasLocalZoneDisplayEdits = false
 
     private val activeTuningConfig: StateFlow<TuningConfig> = tuningConfigFlow.stateIn(
         scope = viewModelScope,
@@ -264,6 +282,35 @@ class EditSensorFieldViewModel(
                 )
             }
         }.launchIn(viewModelScope)
+
+        refreshZoneDisplayDraftIfClean()
+    }
+
+    /**
+     * Re-hydrates [EditDialogUiState.zoneDisplayDraft] from [settingsDataStore] when there are no
+     * uncommitted local zone display edits (`REQ-UI-2783.2`).
+     */
+    fun refreshZoneDisplayDraftIfClean() {
+        val dataStore = settingsDataStore ?: return
+        viewModelScope.launch {
+            val snapshot = dataStore.snapshotFlow.first()
+            if (!hasLocalZoneDisplayEdits) {
+                _uiState.update { state ->
+                    state.copy(zoneDisplayDraft = ZoneDisplayOptionsDraft.fromSnapshot(snapshot))
+                }
+            }
+        }
+    }
+
+    /**
+     * Discards uncommitted [ZoneDisplayOptions] edits and re-hydrates from [settingsDataStore]
+     * so reopening the same cached ViewModel instance reflects persisted preferences (`REQ-UI-2783.2`).
+     */
+    fun discardZoneDisplayChanges() {
+        hasLocalZoneDisplayEdits = false
+        dirtyZoneTargets.clear()
+        isApplyAllZoneDisplay = false
+        refreshZoneDisplayDraftIfClean()
     }
 
     private fun setupDefaultState() {
@@ -365,28 +412,32 @@ class EditSensorFieldViewModel(
             val fieldsInRow = configs.filter { it.rowNr == initialConfig.rowNr }
             val isMulti = calculateIsMultiFieldRow(fieldsInRow.size, isNewField = false)
 
-            _uiState.value = EditDialogUiState(
-                selectedSensorType = initialConfig.sensorType,
-                sportType = sportType,
-                availableSensorTypesForCurrentActivityType = getFilteredSensorTypes(context, initialConfig.sensorType),
-                selectedDeviceId = initialConfig.sourceDeviceId,
-                selectedDeviceName = initialConfig.sourceDeviceName,
-                availableDevices = getFullDeviceList(initialConfig.sensorType),
-                selectedViewSize = initialConfig.viewSize,
-                filterSummary = initialConfig.filterType.getSummary(context, initialConfig.filterConstant),
-                selectedFilterType = initialConfig.filterType,
-                filterConstant = displayConstant,
-                movingAverageUnit = initialUnit,
-                isCustomFilterExpanded = (initialPreset == FilterPreset.CUSTOM),
-                showValue = showValue,
-                showBar = showBar,
-                showGraph = showGraph,
-                graphHorizonSeconds = graphHorizonSeconds,
-                graphColor = initialConfig.graphColor,
-                graphColorScope = GraphColorScope.THIS_TILE,
-                colWeight = initialConfig.colWeight,
-                isMultiFieldRow = isMulti
-            )
+            val devices = getFullDeviceList(initialConfig.sensorType)
+            _uiState.update { current ->
+                EditDialogUiState(
+                    selectedSensorType = initialConfig.sensorType,
+                    sportType = sportType,
+                    availableSensorTypesForCurrentActivityType = getFilteredSensorTypes(context, initialConfig.sensorType),
+                    selectedDeviceId = initialConfig.sourceDeviceId,
+                    selectedDeviceName = initialConfig.sourceDeviceName,
+                    availableDevices = devices,
+                    selectedViewSize = initialConfig.viewSize,
+                    filterSummary = initialConfig.filterType.getSummary(context, initialConfig.filterConstant),
+                    selectedFilterType = initialConfig.filterType,
+                    filterConstant = displayConstant,
+                    movingAverageUnit = initialUnit,
+                    isCustomFilterExpanded = (initialPreset == FilterPreset.CUSTOM),
+                    showValue = showValue,
+                    showBar = showBar,
+                    showGraph = showGraph,
+                    graphHorizonSeconds = graphHorizonSeconds,
+                    graphColor = initialConfig.graphColor,
+                    graphColorScope = GraphColorScope.THIS_TILE,
+                    colWeight = initialConfig.colWeight,
+                    isMultiFieldRow = isMulti,
+                    zoneDisplayDraft = current.zoneDisplayDraft
+                )
+            }
         }
     }
 
@@ -473,6 +524,29 @@ class EditSensorFieldViewModel(
 
     fun onGraphColorScopeChanged(newScope: GraphColorScope) {
         _uiState.update { it.copy(graphColorScope = newScope) }
+    }
+
+    /**
+     * Updates uncommitted [ZoneDisplayOptions] for [target] in the dialog draft until Save (`REQ-UI-2783.2`).
+     */
+    fun onZoneDisplayOptionsChanged(target: ZoneProfileTarget, updated: ZoneDisplayOptions) {
+        hasLocalZoneDisplayEdits = true
+        dirtyZoneTargets.add(target)
+        _uiState.update { state ->
+            state.copy(zoneDisplayDraft = state.zoneDisplayDraft.withUpdated(target, updated))
+        }
+    }
+
+    /**
+     * Copies `showBackground`, `showLeftBar`, `showRightBar`, and `showTextColor` from [sourceTarget]
+     * to all 4 zone profiles in the uncommitted draft while preserving `HRV.showGauge` (`REQ-UI-2783.2`).
+     */
+    fun onApplyZoneDisplayToAll(sourceTarget: ZoneProfileTarget) {
+        hasLocalZoneDisplayEdits = true
+        isApplyAllZoneDisplay = true
+        _uiState.update { state ->
+            state.copy(zoneDisplayDraft = state.zoneDisplayDraft.applyToAllFrom(sourceTarget))
+        }
     }
 
     fun onDeviceChanged(newDeviceId: Long, newDeviceName: String) {
@@ -747,6 +821,13 @@ class EditSensorFieldViewModel(
             currentState.graphColor
         }
 
+        val persistZoneEdits = settingsDataStore != null && hasLocalZoneDisplayEdits
+        val persistApplyAll = isApplyAllZoneDisplay
+        val targetsToPersist = dirtyZoneTargets.toList()
+        hasLocalZoneDisplayEdits = false
+        dirtyZoneTargets.clear()
+        isApplyAllZoneDisplay = false
+
         viewModelScope.launch {
             if (isNewField) {
                 trackingViewsRepository.insertSensorFieldConfig(
@@ -782,6 +863,19 @@ class EditSensorFieldViewModel(
                     graphHorizonSeconds = graphHorizonSeconds,
                     graphColor = effectiveTileColor
                 )
+            }
+            if (persistZoneEdits && settingsDataStore != null) {
+                if (persistApplyAll) {
+                    currentState.zoneDisplayDraft.persistTo(settingsDataStore)
+                } else {
+                    for (target in targetsToPersist) {
+                        ZoneDisplayOptionsDraft.persistTarget(
+                            dataStore = settingsDataStore,
+                            target = target,
+                            options = currentState.zoneDisplayDraft.optionsFor(target)
+                        )
+                    }
+                }
             }
         }
     }
