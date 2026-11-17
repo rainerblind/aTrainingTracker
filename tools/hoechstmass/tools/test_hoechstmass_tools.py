@@ -851,5 +851,22 @@ class TestHoechstmassFlock(unittest.TestCase):
                 run_locked([sys.executable, "-c", "pass"], lock_path=self.lock_file, timeout_sec=0.3)
 
 
+class TestHoechstmassSprintMetricsParity(unittest.TestCase):
+    """TST-PRO-122.5: Verify tools/hoechstmass/tools/sprint_metrics.py parity."""
+
+    def test_hoechstmass_sprint_metrics_spc_bounds_and_acceptance(self):
+        from tools.hoechstmass.tools import sprint_metrics as hm_sm
+
+        hist = [
+            {"process_version": "1.0", "quality_gates": {"overall_ftpr_percent": 65.0, "human_acceptance_rate_percent": 40.0, "total_subtasks_evaluated": 40}, "throughput": {"total_tickets": 20, "completed_tickets": 8, "completed_story_points": 16.0}},
+            {"process_version": "1.0", "quality_gates": {"overall_ftpr_percent": 100.0, "human_acceptance_rate_percent": 100.0, "total_subtasks_evaluated": 40}, "throughput": {"total_tickets": 20, "completed_tickets": 20, "completed_story_points": 40.0}},
+        ]
+        spc = hm_sm.calculate_spc_limits(hist)
+        self.assertLessEqual(spc["limits"]["overall_ftpr"]["ucl"], 100.0)
+        self.assertLessEqual(spc["limits"]["human_acceptance"]["ucl"], 100.0)
+        reset = hm_sm.calculate_spc_limits(hist, current_metrics={"process_version": "2.0"})
+        self.assertTrue(reset.get("baseline_reset"))
+
+
 if __name__ == "__main__":
     unittest.main()

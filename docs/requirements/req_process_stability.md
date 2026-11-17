@@ -1,14 +1,14 @@
 # Living Requirements: Engineering Process, Stability & Architecture
 
 **Document ID**: `DOC-REQ-PRO`  
-**Version**: 1.0.3  
+**Version**: 1.0.6  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Requirements**: 186
+**Total Requirements**: 187
 
 ---
 
@@ -6112,6 +6112,34 @@ The workflow SHALL mandate that:
 
 ---
 
+### REQ-PRO-122: Quantitative Sprint Metrics Statistical Correctness & Capability Level Claim Suspension (ATT-8168) [Verified]
+- **Tests**: `TST-PRO-122`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `tools/sprint_metrics.py`, `tools/hoechstmass/tools/sprint_metrics.py`, `docs/project_protocol.md`, `tools/hoechstmass/docs/project_protocol.md`, `tools/hoechstmass/README.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/HoechstmassCoreFrameworkContractTest.kt`
+- **Rationale**: ASPICE 4.0 Audit Finding `Observation (PA 4.x)` (`ATT-8168`) identified unbounded `UCL > 100%` SPC calculations (`115.86%`/`117.93%` on `n=19`), unpartitioned mixed-era history, `human_acceptance_rate_percent` conflated with `completion_rate_percent`, synthetic `p = 0.02` escape probability substitution (`2.37e-08`), Gate 1–5 plausibility warnings masked by Gate 6 bounces, and premature CL3/CL4/CL5 operational claims before CL2 attainment.
+- **Description**:
+  1. *Bounded SPC Limits & `process_version` Baseline Resets (`REQ-PRO-122.1`)*: `calculate_spc_limits()` in `tools/sprint_metrics.py` SHALL compute binomial p-chart control limits (or sample-bounded `[0.0, 100.0]` limits when denominators are absent) for percentage metrics (`overall_ftpr`, `human_acceptance`) strictly clamped to `[0.0, 100.0]`, and MUST partition `process_metrics.jsonl` history by `process_version` so baseline changes reset control bands without mixing incompatible eras.
+  2. *Truthful Human Acceptance vs. Completion Separation (`REQ-PRO-122.2`)*: `parse_sprint_gate_metrics()` SHALL decouple `human_acceptance_rate_percent` from `completion_rate_percent`, counting only terminal human-accepted statuses (`Erledigt`, `Done`, `Closed`) and never counting `Final Review (Human)` or `Final Review (Agent)` as human-accepted.
+  3. *Removal of Fabricated `p = 0.02` Escape Floor (`REQ-PRO-122.3`)*: `parse_sprint_gate_metrics()` MUST NOT substitute nominal `p = 0.02` when gate escape rate is zero, reporting strictly empirical escape metrics without fabricated `10^-8`–`10^-11` products.
+  4. *Unmasked Gate 1–5 FTPR Plausibility Warning (`REQ-PRO-122.4`)*: `parse_sprint_gate_metrics()` SHALL evaluate `total_revisions_all` strictly over Gates 1–5 (excluding `rev6` and `bounces6`) so 100.0% Gate 1–5 FTPR across $\ge 20$ evaluated subtasks emits `PA 4.1 Plausibility Warning` even when Gate 6 records bounces or revisions.
+  5. *Höchstmaß Mirror Parity (`REQ-PRO-122.5`)*: `tools/hoechstmass/tools/sprint_metrics.py` SHALL implement full statistical and plausibility parity with `tools/sprint_metrics.py`.
+  6. *Suspension of Unsupported CL3/CL4/CL5 Claims (`REQ-PRO-122.6`)*: `docs/project_protocol.md`, `tools/hoechstmass/docs/project_protocol.md`, `tools/hoechstmass/README.md`, and `sprint_metrics.py` docstrings SHALL mark Capability Level 3, 4, and 5 entries as `[Target / Not Yet Claimed]` pending verified CL2 attainment while preserving exact `"Level 1: Performed"`..`"Level 5: Innovating"` and `"PA 1.1"`..`"PA 5.2"` strings required by `HoechstmassCoreFrameworkContractTest.kt`.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Refines `REQ-PRO-038` (`ATT-5765`) and `REQ-PRO-092` (`ATT-7559`) across `tools/sprint_metrics.py`, `tools/hoechstmass/tools/sprint_metrics.py`, `docs/project_protocol.md`, `tools/hoechstmass/docs/project_protocol.md`, and `tools/hoechstmass/README.md`.
+  2. *Historical Origin & Commit Trace*: `REQ-PRO-038` established rapid normal $\mu \pm 2\sigma$ SPC and PA 1.1–5.2 matrices; `REQ-PRO-092` added plausibility warnings and Swiss Cheese escape tracking (`2de2a41c` added `REQ-PRO-120` headers).
+  3. *Root Reason for Existing Formulation*: Early SPC used unclamped normal approximation, `0.02` avoided zero-product collapse, and PA 3.x–5.x rows used operational wording to describe roadmap capabilities.
+  4. *Preservation of Core Invariants*: Preserves `process_metrics.jsonl` schema compatibility (`verify_sprint_metrics()`), `TST-PRO-107.3` rubber-stamping alert, `HoechstmassCoreFrameworkContractTest` / `AspiceSweAuditContractTest` matrix keys, and `REQ-PRO-120` header/version governance.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `process_metrics.jsonl` history spanning multiple `process_version` eras and high FTPR variance, *When* `calculate_spc_limits()` runs, *Then* percentage `lcl`/`ucl` remain within `[0.0, 100.0]` and limits compute only within the active `process_version` baseline.
+  • *Given* sprint tickets in `Final Review (Human)` and `Final Review (Agent)` alongside `Erledigt` tickets, *When* `parse_sprint_gate_metrics()` runs, *Then* `human_acceptance_rate_percent` reflects only terminal human-accepted tickets while `completion_rate_percent` remains independent.
+  • *Given* zero Gate 1–5 revisions across $\ge 20$ subtasks with Gate 6 bounces and `p_g == 0`, *When* `parse_sprint_gate_metrics()` runs, *Then* no `0.02` floor is injected and `plausibility_warnings` is non-empty.
+  • *Given* `docs/project_protocol.md`, `tools/hoechstmass/docs/project_protocol.md`, and `tools/hoechstmass/README.md`, *When* `HoechstmassCoreFrameworkContractTest` runs, *Then* CL3–CL5 claims are explicitly `[Target / Not Yet Claimed]` and all contract tests pass.
+- **Invariants**: Zero `app/src/main/` edits; `ANT-Android-SDKs` untouched; `Localization Parity: N/A - no UI strings`; backward-compatible JSONL schema; zero live Jira API calls in unit tests (`Rule 5`).
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -6120,3 +6148,6 @@ The workflow SHALL mandate that:
 | `1.0.1` | 2026-11-17 | AI Agent (`ATT-8165`) | `ATT-8165` | Added `[Planned]` `REQ-PRO-121` (`SUP.9` bug trend/age, resolution states, fix verification, commit/conflict guards, `process-escape` bugs). |
 | `1.0.2` | 2026-11-17 | AI Agent (`ATT-8165`) | `ATT-8165` | Promoted `REQ-PRO-121` to `[Implemented]` in Stage 4. |
 | `1.0.3` | 2026-11-17 | AI Agent (`ATT-8165`) | `ATT-8165` | Promoted `REQ-PRO-121` to `[Verified]` after Stage 5 verification. |
+| `1.0.4` | 2026-11-17 | AI Agent (`ATT-8168`) | `ATT-8168` | Added `[Planned]` `REQ-PRO-122` (bounded SPC/p-chart, `process_version` reset, truthful human acceptance, empirical escape rates, unmasked plausibility warning, CL3–CL5 suspension). |
+| `1.0.5` | 2026-11-17 | AI Agent (`ATT-8168`) | `ATT-8168` | Promoted `REQ-PRO-122` to `[Implemented]` in Stage 4. |
+| `1.0.6` | 2026-11-17 | AI Agent (`ATT-8168`) | `ATT-8168` | Promoted `REQ-PRO-122` to `[Verified]` after Stage 5 verification. |

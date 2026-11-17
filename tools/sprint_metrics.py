@@ -2,13 +2,13 @@
 """
 tools/sprint_metrics.py
 
-Höchstmaß (ASPICE Level 4/5): Automated Quantitative Sprint Metrics (PA 4.1)
-& Statistical Process Control (PA 4.2).
+Höchstmaß [Target PA 4.1/4.2 — CL3–CL5 Not Yet Claimed]: Automated Quantitative Sprint Metrics
+& Statistical Process Control (bounded [0, 100] p-chart / clamped limits & process_version baselines).
 
 Extracts Gate 1–5 First-Time-Pass-Rates (FTPR), empirical Swiss Cheese layer
-defect escape probabilities (p1..p5), Human Acceptance Rate, and velocity directly
+defect escape rates (p1..p6), terminal Human Acceptance Rate, and velocity directly
 from Jira [ROLE: agent2] subtask review comments. Persists time-series to
-docs/engineering/metrics/process_metrics.jsonl and calculates SPC control limits (mu +/- 2sigma).
+docs/engineering/metrics/process_metrics.jsonl and calculates bounded SPC control limits.
 """
 
 import datetime
@@ -43,6 +43,7 @@ FINAL_REVIEW_ESCALATED_RE = re.compile(
 )
 
 DEFAULT_METRICS_PATH = "docs/engineering/metrics/process_metrics.jsonl"
+ACTIVE_PROCESS_VERSION = "2.0"
 SEVERITY_LEVELS = ("Critical", "Major", "Minor", "Cosmetic")
 NON_FIX_RESOLUTION_LABELS = {
     "resolution-rejected": "Rejected",
@@ -252,6 +253,7 @@ def parse_sprint_gate_metrics(parent_issues, sprint_info, history=None, now=None
     # 1. Throughput & Story Points
     total_tickets = len(parent_issues)
     completed_tickets = 0
+    human_accepted_tickets = 0
     total_sp = 0.0
     completed_sp = 0.0
     risk_counts = {"Low": 0, "Medium": 0, "High": 0, "Highest": 0}
@@ -277,10 +279,13 @@ def parse_sprint_gate_metrics(parent_issues, sprint_info, history=None, now=None
     for issue in parent_issues:
         fields = issue.get("fields", {})
         status_name = fields.get("status", {}).get("name", "").lower()
-        is_completed = status_name in ("erledigt", "closed", "done", "final review (human)", "final review (agent)", "final review")
+        is_human_accepted = status_name in ("erledigt", "closed", "done")
+        is_completed = is_human_accepted or status_name in ("final review (human)", "final review (agent)", "final review")
 
         if is_completed:
             completed_tickets += 1
+        if is_human_accepted:
+            human_accepted_tickets += 1
 
         # Story points
         sp_val = fields.get("customfield_10016") or fields.get("customfield_10026") or fields.get("story_points")
@@ -486,19 +491,21 @@ def parse_sprint_gate_metrics(parent_issues, sprint_info, history=None, now=None
         "escape_rate_p": escape_rate6,
     }
 
-    # Cumulative Swiss Cheese escape probability: product of (p1 * p2 * p3 * p4 * p5 [* p6])
-    # If a layer has 0 revisions in the sample, substitute a nominal baseline (e.g. 0.02)
-    cumulative_escape_prob = 1.0
+    # Empirical cumulative escape product across active layers (zero synthetic floor substitution).
+    # If any active layer has 0.0 observed escape rate, the raw product is 0.0 rather than a fabricated nominal constant.
     active_p_layers = list(p_layers) + ([escape_rate6] if tot6 > 0 else [])
-    for p in active_p_layers:
-        effective_p = p if p > 0 else 0.02  # nominal minimum barrier leakage
-        cumulative_escape_prob *= effective_p
-    cumulative_escape_prob = float(f"{cumulative_escape_prob:.2e}")
+    if not active_p_layers or any(p <= 0.0 for p in active_p_layers):
+        cumulative_escape_prob = 0.0
+    else:
+        cumulative_escape_prob = 1.0
+        for p in active_p_layers:
+            cumulative_escape_prob *= p
+        cumulative_escape_prob = float(f"{cumulative_escape_prob:.2e}")
 
-    # Human Acceptance Rate (parent tickets reaching completion without rework)
+    # Truthful Human Acceptance Rate: exclusively terminal human-accepted statuses (Erledigt/Done/Closed)
     human_acceptance_rate = (
-        round((completed_tickets / total_tickets) * 100.0, 1)
-        if total_tickets > 0 else 100.0
+        round((human_accepted_tickets / total_tickets) * 100.0, 1)
+        if total_tickets > 0 else 0.0
     )
 
     resolved_bug_count = closed_bugs + fixed_awaiting_human
@@ -508,15 +515,20 @@ def parse_sprint_gate_metrics(parent_issues, sprint_info, history=None, now=None
     )
     open_bug_age_days = _summarize_bug_ages(open_ages_by_sev)
 
-    # REQ-PRO-092.5: Metric Plausibility Warning Thresholds
+    # REQ-PRO-092.5 / REQ-PRO-122.4: Metric Plausibility Warning Thresholds (Gates 1-5 only; never masked by Gate 6)
     plausibility_warnings = []
-    total_revisions_all = sum(gate_data[g]["revisions"] for g in range(1, 6)) + rev6 + bounces6
-    if total_evaluated_subtasks >= 20 and overall_ftpr >= 100.0 and total_revisions_all == 0:
+    total_revisions_gates_1_to_5 = sum(gate_data[g]["revisions"] for g in range(1, 6))
+    if total_evaluated_subtasks >= 20 and overall_ftpr >= 100.0 and total_revisions_gates_1_to_5 == 0:
+        gate6_note = (
+            f" (despite {rev6} Gate 6 revisions and {bounces6} bounces)"
+            if (rev6 > 0 or bounces6 > 0) else ""
+        )
         plausibility_warnings.append(
-            f"PA 4.1 Plausibility Warning: Gate first-time pass rate is 100.0% across {total_evaluated_subtasks} subtasks without revisions, indicating potential gate discrimination blind spots."
+            f"PA 4.1 Plausibility Warning: Gate 1-5 first-time pass rate is 100.0% across {total_evaluated_subtasks} subtasks without revisions{gate6_note}, indicating potential gate discrimination blind spots."
         )
 
     metrics = {
+        "process_version": ACTIVE_PROCESS_VERSION,
         "sprint_id": sprint_id,
         "sprint_name": sprint_name,
         "recorded_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
@@ -556,6 +568,7 @@ def parse_sprint_gate_metrics(parent_issues, sprint_info, history=None, now=None
                 "theoretical_cumulative_escape_prob": cumulative_escape_prob,
             },
             "human_acceptance_rate_percent": human_acceptance_rate,
+            "human_accepted_tickets": human_accepted_tickets,
         },
         "plausibility_warnings": plausibility_warnings,
     }
@@ -565,75 +578,160 @@ def parse_sprint_gate_metrics(parent_issues, sprint_info, history=None, now=None
     return metrics
 
 
+def _compute_percentage_spc_bounds(values, sample_sizes=None):
+    """
+    Computes bounded [0.0, 100.0] SPC limits for percentage metrics.
+    Uses binomial p-chart bounds when valid sample denominators are present;
+    otherwise clamps normal mu +/- 2*sigma limits to [0.0, 100.0].
+    """
+    n_sprints = len(values)
+    mu = sum(values) / n_sprints
+    if n_sprints >= 2:
+        variance = sum((x - mu) ** 2 for x in values) / (n_sprints - 1)
+        sigma = math.sqrt(variance)
+    else:
+        sigma = 0.0
+
+    if sample_sizes and len(sample_sizes) == n_sprints and all(isinstance(s, (int, float)) and s > 0 for s in sample_sizes):
+        total_denom = sum(sample_sizes)
+        p_bar = min(1.0, max(0.0, sum((v / 100.0) * s for v, s in zip(values, sample_sizes)) / total_denom))
+        n_bar = total_denom / n_sprints
+        se_pct = 100.0 * math.sqrt((p_bar * (1.0 - p_bar)) / n_bar)
+        center = p_bar * 100.0
+        ucl = round(min(100.0, max(0.0, center + 2.0 * se_pct)), 2)
+        lcl = round(max(0.0, min(100.0, center - 2.0 * se_pct)), 2)
+        return round(center, 2), round(sigma, 2), lcl, ucl, "p_chart"
+
+    ucl = round(min(100.0, max(0.0, mu + 2.0 * sigma)), 2)
+    lcl = round(max(0.0, min(100.0, mu - 2.0 * sigma)), 2)
+    return round(mu, 2), round(sigma, 2), lcl, ucl, "clamped_normal"
+
+
 def calculate_spc_limits(history, current_metrics=None):
     """
-    PA 4.2 Statistical Process Control:
-    Calculates rolling mean (mu) and standard deviation (sigma) across historical sprints.
-    Computes upper and lower control limits (mu +/- 2sigma).
-    If current_metrics is provided, checks for special cause variation outliers.
+    PA 4.2 Statistical Process Control [Target / Not Yet Claimed]:
+    Partitions history by process_version so baseline changes reset control bands,
+    computes binomial p-chart / [0, 100]-clamped bounds for percentage metrics,
+    and flags Special Cause Variations when current_metrics falls out of control.
     """
     if not history:
         return {"has_history": False, "warnings": [], "limits": {}}
 
+    if current_metrics is not None:
+        target_version = current_metrics.get("process_version", "legacy")
+    else:
+        target_version = history[-1].get("process_version", "legacy")
+
+    filtered_history = [
+        h for h in history
+        if h.get("process_version", "legacy") == target_version
+    ]
+    if not filtered_history:
+        return {
+            "has_history": False,
+            "baseline_reset": True,
+            "process_version": target_version,
+            "sample_size": 0,
+            "limits": {},
+            "warnings": [],
+        }
+
     keys_to_track = [
-        ("overall_ftpr", lambda m: m.get("quality_gates", {}).get("overall_ftpr_percent", 100.0)),
-        ("human_acceptance", lambda m: m.get("quality_gates", {}).get("human_acceptance_rate_percent", 100.0)),
-        ("completed_tickets", lambda m: m.get("throughput", {}).get("completed_tickets", 0)),
-        ("completed_sp", lambda m: m.get("throughput", {}).get("completed_story_points", 0.0)),
+        (
+            "overall_ftpr",
+            lambda m: m.get("quality_gates", {}).get("overall_ftpr_percent", 100.0),
+            lambda m: m.get("quality_gates", {}).get("total_subtasks_evaluated"),
+            True,
+        ),
+        (
+            "human_acceptance",
+            lambda m: m.get("quality_gates", {}).get("human_acceptance_rate_percent", 100.0),
+            lambda m: m.get("throughput", {}).get("total_tickets"),
+            True,
+        ),
+        (
+            "completed_tickets",
+            lambda m: m.get("throughput", {}).get("completed_tickets", 0),
+            None,
+            False,
+        ),
+        (
+            "completed_sp",
+            lambda m: m.get("throughput", {}).get("completed_story_points", 0.0),
+            None,
+            False,
+        ),
     ]
 
     spc_results = {}
     warnings = []
 
-    for name, extractor in keys_to_track:
-        values = [extractor(h) for h in history if extractor(h) is not None]
-        n = len(values)
+    for name, extractor, denom_extractor, is_pct in keys_to_track:
+        paired = [
+            (extractor(h), denom_extractor(h) if denom_extractor else None)
+            for h in filtered_history
+            if extractor(h) is not None
+        ]
+        n = len(paired)
         if n < 1:
             continue
+        values = [p[0] for p in paired]
+        denoms = [p[1] for p in paired] if denom_extractor else None
 
-        mu = sum(values) / n
-        if n >= 2:
-            variance = sum((x - mu) ** 2 for x in values) / (n - 1)
-            sigma = math.sqrt(variance)
+        if is_pct:
+            mu_r, sigma_r, lcl, ucl, method = _compute_percentage_spc_bounds(values, sample_sizes=denoms)
+            spc_results[name] = {
+                "n": n,
+                "mu": mu_r,
+                "sigma": sigma_r,
+                "ucl": ucl,
+                "lcl": lcl,
+                "method": method,
+            }
         else:
-            sigma = 0.0
-
-        ucl = round(mu + 2 * sigma, 2)
-        lcl = round(max(0.0, mu - 2 * sigma), 2)
-
-        spc_results[name] = {
-            "n": n,
-            "mu": round(mu, 2),
-            "sigma": round(sigma, 2),
-            "ucl": ucl,
-            "lcl": lcl,
-        }
+            mu = sum(values) / n
+            if n >= 2:
+                variance = sum((x - mu) ** 2 for x in values) / (n - 1)
+                sigma = math.sqrt(variance)
+            else:
+                sigma = 0.0
+            mu_r = round(mu, 2)
+            sigma_r = round(sigma, 2)
+            ucl = round(mu + 2 * sigma, 2)
+            lcl = round(max(0.0, mu - 2 * sigma), 2)
+            spc_results[name] = {
+                "n": n,
+                "mu": mu_r,
+                "sigma": sigma_r,
+                "ucl": ucl,
+                "lcl": lcl,
+            }
 
         if current_metrics:
             curr_val = extractor(current_metrics)
             if curr_val is not None:
                 # For rates (FTPR, acceptance), dropping below LCL is an alert
-                if "ftpr" in name or "acceptance" in name:
+                if is_pct:
                     if curr_val < lcl:
                         warnings.append(
                             f"⚠️ PA 4.2 Special Cause Variation on {name.upper()}: "
-                            f"{curr_val}% is below Lower Control Limit (LCL: {lcl}%, mu: {round(mu, 1)}%, sigma: {round(sigma, 1)}%). "
+                            f"{curr_val}% is below Lower Control Limit (LCL: {lcl}%, mu: {round(mu_r, 1)}%, sigma: {round(sigma_r, 1)}%). "
                             "Root-Cause Analysis (RCA) in Retro required."
                         )
                 else:
                     if curr_val < lcl or (ucl > 0 and curr_val > ucl * 1.5):
                         warnings.append(
                             f"⚠️ PA 4.2 Variation on {name.upper()}: {curr_val} outside [{lcl}, {ucl}] "
-                            f"(mu: {round(mu, 1)}, sigma: {round(sigma, 1)})."
+                            f"(mu: {round(mu_r, 1)}, sigma: {round(sigma_r, 1)})."
                         )
 
     # ASPICE 4.0 Finding M3 / REQ-PRO-107.3: Multi-Sprint 100% FTPR Rubber-Stamping Alert
-    if current_metrics and history:
+    if current_metrics and filtered_history:
         curr_ftpr = current_metrics.get("quality_gates", {}).get("overall_ftpr_percent", 0.0)
         curr_subtasks = current_metrics.get("quality_gates", {}).get("total_subtasks_evaluated", 0)
         if curr_ftpr >= 100.0 and curr_subtasks > 0:
             consecutive_100_count = 1
-            for hist in reversed(history):
+            for hist in reversed(filtered_history):
                 h_ftpr = hist.get("quality_gates", {}).get("overall_ftpr_percent", 0.0)
                 h_subtasks = hist.get("quality_gates", {}).get("total_subtasks_evaluated", 0)
                 if h_ftpr >= 100.0 and h_subtasks > 0:
@@ -647,7 +745,8 @@ def calculate_spc_limits(history, current_metrics=None):
 
     return {
         "has_history": True,
-        "sample_size": len(history),
+        "process_version": target_version,
+        "sample_size": len(filtered_history),
         "limits": spc_results,
         "warnings": warnings,
     }
@@ -722,13 +821,17 @@ def format_metrics_markdown(metrics, spc=None, history=None):
     gates = qg.get("gates", {})
     sc = qg.get("swiss_cheese", {})
 
+    accepted_suffix = (
+        f" ({qg.get('human_accepted_tickets')}/{tp.get('total_tickets')} terminal Erledigt/Done/Closed)"
+        if "human_accepted_tickets" in qg else ""
+    )
     lines = [
-        f"h2. Quantitative Sprint Process Metrics (PA 4.1 & PA 4.2) — Sprint {s_name}",
+        f"h2. Quantitative Sprint Process Metrics (PA 4.1 & PA 4.2 — Target / Not Yet Claimed) — Sprint {s_name}",
         "",
         "h3. 1. Throughput & Quality Gate First-Time-Pass-Rates (FTPR)",
         f"* *Ticket Throughput*: {tp.get('completed_tickets')}/{tp.get('total_tickets')} tickets ({tp.get('completion_rate_percent')}%) | *Velocity*: {tp.get('completed_story_points')} SP",
         f"* *Overall Gate FTPR*: *{qg.get('overall_ftpr_percent')}%* (evaluated across {qg.get('total_subtasks_evaluated')} sub-tasks)",
-        f"* *Human Acceptance Rate*: *{qg.get('human_acceptance_rate_percent')}%*",
+        f"* *Human Acceptance Rate*: *{qg.get('human_acceptance_rate_percent')}%*{accepted_suffix}",
         "",
         "|| Gate / Stage || Sub-tasks || 1st-Time Pass || Revisions || FTPR % || Defect Escape Rate (p) ||",
     ]
@@ -749,7 +852,7 @@ def format_metrics_markdown(metrics, spc=None, history=None):
         "",
         "h3. 2. Empirical Swiss Cheese Multiplicative Defect Reduction (Reason Model)",
         f"* *Empirical Escape Rates*: p1={sc.get('p1_analysis_escape')}, p2={sc.get('p2_req_test_spec_escape')}, p3={sc.get('p3_impl_plan_escape')}, p4={sc.get('p4_implementation_escape')}, p5={sc.get('p5_test_verification_escape')}{p6_str}",
-        f"* *Theoretical Cumulative Defect Escape Probability*: P(escaped defect) = {sc.get('theoretical_cumulative_escape_prob')}",
+        f"* *Empirical Cumulative Escape Product*: P(escaped defect) = {sc.get('theoretical_cumulative_escape_prob')} (empirical, no synthetic floor)",
     ])
 
     pt = metrics.get("problem_trends", {})
@@ -816,6 +919,13 @@ def format_metrics_markdown(metrics, spc=None, history=None):
                 lines.append(f"* {w}")
         else:
             lines.append("*Process Stability*: All metrics within +/- 2sigma control limits (In Statistical Control).")
+    elif spc and spc.get("baseline_reset"):
+        spc_num = "4" if pt else "3"
+        lines.extend([
+            "",
+            f"h3. {spc_num}. Statistical Process Control (SPC — PA 4.2, Baseline Reset for process_version={spc.get('process_version')})",
+            "* *Process Stability*: New process baseline initialized; awaiting historical sprints in this process_version.",
+        ])
 
     plausibility_warnings = metrics.get("plausibility_warnings", [])
     if plausibility_warnings:

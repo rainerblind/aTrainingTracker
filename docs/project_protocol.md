@@ -1,7 +1,7 @@
 # Agile Agentic ASPICE (AAA) Protocol & Architecture Pointer: aTrainingTracker
 
 **Document ID**: `DOC-GOV-PROTOCOL`  
-**Version**: 1.0.1  
+**Version**: 1.0.2  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -40,19 +40,19 @@ To allow frictionless human review of source code (`.kt`, `.java`, `.py`, `.xml`
 
 ## ASPICE Process Capability Level 1–5 Governance Matrix (ISO/IEC 33020 / PAM)
 
-Höchstmaß systematically maps Automotive SPICE Process Attributes (`PA 1.1` through `PA 5.2`) to deterministic AI pair-programming and verification mechanisms:
+Höchstmaß systematically maps Automotive SPICE Process Attributes (`PA 1.1` through `PA 5.2`) to deterministic AI pair-programming and verification mechanisms *(Level 1–2 active baseline; **Level 3–5 entries are `[Target / Not Yet Claimed]`** pending verified CL2 attainment)*:
 
-| Capability Level | Process Attribute (PA) | ISO/IEC 33020 Definition | Höchstmaß Operational Implementation |
+| Capability Level | Process Attribute (PA) | ISO/IEC 33020 Definition | Höchstmaß Operational Implementation / Target Status |
 | :--- | :--- | :--- | :--- |
 | **Level 1: Performed** | **PA 1.1: Process Performance** | The process achieves its defined outcomes. | **6-Stage ASPICE Lifecycle**: Stages 1–5 execution (`SWE.1`–`SWE.6` sub-tasks) + Stage 6 Cold Final Review (`Final Review (Agent)`); atomic squash-merge per ticket; verifiable artifact deliverables at each stage boundary. |
 | **Level 2: Managed** | **PA 2.1: Performance Management** | Process performance is planned, monitored, and adjusted. | **Sprint Capacity Envelope**: Capacity bounding (~24–30 SP across 12–15 atomic tickets); story point estimation split guardrail ($\le 3$ SP); autonomous in-sprint zipper ping-pong; velocity monitoring. |
 | | **PA 2.2: Work Product Management** | Work products are documented, controlled, and integrity is maintained. | **Rule 67 Canonical Deliverables**: Standardized `docs/engineering/` directories; living documentation sharding and master index parity (`verify_requirement_governance.py`); strict branch isolation (`feature/` $\rightarrow$ `sprint/` $\rightarrow$ `develop`). |
-| **Level 3: Established** | **PA 3.1: Process Definition** | A standard process is established across the organization. | **Document Triad & Skills**: Universal 9 Core In-Sprint Governance Rules (`aspice_governance.md`); 11 parameterized agent skills (`SKILL.md`); standardized deliverable templates; coding standards and design guidelines. |
-| | **PA 3.2: Process Deployment** | The standard process is systematically deployed and enforced. | **Tooling Enforcement & Role Isolation**: Automated CLI enforcement (`tools/jira_util.py`); pre-warmed prompt injection; separate role accounts and API tokens (`agent1`, `agent2`, `coordinator`, `human`). |
-| **Level 4: Predictable** | **PA 4.1: Quantitative Analysis** | Quantitative objectives are established and measured. | **Quantitative Sprint Scorecard**: Automated aggregation of Gate 1–5 First-Time-Pass-Rates (FTPR); empirical Swiss Cheese escape rates ($p_1 \dots p_5$, $P_{\text{escape}} = \prod p_i$); Human Acceptance Rate; historical persistence in `docs/engineering/metrics/process_metrics.jsonl`. |
-| | **PA 4.2: Quantitative Control** | Process is statistically controlled to achieve predictability. | **Statistical Process Control (SPC)**: 3-sprint moving baseline $\mu \pm 2\sigma$ control bands ($UCL$, $LCL$); automated detection and warning of out-of-control conditions (Special Cause Variations) in Ceremony 2. |
-| **Level 5: Innovating** | **PA 5.1: Process Innovation** | Continuous, systematic evaluation of process innovations. | **AI Architectural Innovations**: Multi-model adversarial reviews (intra-sprint `pro` $\leftrightarrow$ `flash` plus cross-vendor **Claude** & **ChatGPT**); isolated in-place `.reviews/` Emacs sandbox; dynamic contract tests. |
-| | **PA 5.2: Process Optimization** | Continuous closed-loop improvement based on quantitative feedback. | **Closed-Loop Ceremony 2 Retro Countermeasures**: Mandatory root-cause analysis (RCA) and concrete process/skill adjustments in the Retrospective prior to sprint merge whenever a PA 4.2 Special Cause Variation is detected. |
+| **Level 3: Established** `[Target / Not Yet Claimed]` | **PA 3.1: Process Definition** | A standard process is established across the organization. | **`[Target / Not Yet Claimed]` — Document Triad & Skills**: Universal 9 Core In-Sprint Governance Rules (`aspice_governance.md`); 11 parameterized agent skills (`SKILL.md`); standardized deliverable templates; coding standards and design guidelines. |
+| | **PA 3.2: Process Deployment** | The standard process is systematically deployed and enforced. | **`[Target / Not Yet Claimed]` — Tooling Enforcement & Role Isolation**: Automated CLI enforcement (`tools/jira_util.py`); pre-warmed prompt injection; separate role accounts and API tokens (`agent1`, `agent2`, `coordinator`, `human`). |
+| **Level 4: Predictable** `[Target / Not Yet Claimed]` | **PA 4.1: Quantitative Analysis** | Quantitative objectives are established and measured. | **`[Target / Not Yet Claimed]` — Quantitative Sprint Scorecard**: Automated aggregation of Gate 1–5 First-Time-Pass-Rates (FTPR); empirical Swiss Cheese escape rates ($p_1 \dots p_5$); terminal Human Acceptance Rate; historical persistence in `docs/engineering/metrics/process_metrics.jsonl`. |
+| | **PA 4.2: Quantitative Control** | Process is statistically controlled to achieve predictability. | **`[Target / Not Yet Claimed]` — Statistical Process Control (SPC)**: Bounded `[0, 100]` p-chart / clamped control bands ($UCL$, $LCL$) partitioned by `process_version`; automated detection and warning of out-of-control conditions (Special Cause Variations) in Ceremony 2. |
+| **Level 5: Innovating** `[Target / Not Yet Claimed]` | **PA 5.1: Process Innovation** | Continuous, systematic evaluation of process innovations. | **`[Target / Not Yet Claimed]` — AI Architectural Innovations**: Multi-model adversarial reviews (intra-sprint `pro` $\leftrightarrow$ `flash` plus cross-vendor **Claude** & **ChatGPT**); isolated in-place `.reviews/` Emacs sandbox; dynamic contract tests. |
+| | **PA 5.2: Process Optimization** | Continuous closed-loop improvement based on quantitative feedback. | **`[Target / Not Yet Claimed]` — Closed-Loop Ceremony 2 Retro Countermeasures**: Mandatory root-cause analysis (RCA) and concrete process/skill adjustments in the Retrospective prior to sprint merge whenever a PA 4.2 Special Cause Variation is detected. |
 
 ## Two-Tier Device Verification Policy (ATT-6506 / REQ-TST-004)
 To ensure 24/7 autonomous agent execution without disrupting the Product Owner's physical daily driver smartphone (`Pixel 10`), a strict Two-Tier Device Policy is enforced across all tooling and governance:
@@ -71,3 +71,4 @@ To ensure 24/7 autonomous agent execution without disrupting the Product Owner's
 | :--- | :--- | :--- | :--- | :--- |
 | `1.0.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Added `DOC-GOV-PROTOCOL` header and reconciled `9 Core Rules`, `Rules 1–85+`, and `6-Stage` lifecycle (`Stages 1–5` + `Stage 6`). |
 | `1.0.1` | 2026-11-17 | AI Agent (`ATT-8165`) | `ATT-8165` | Documented SUP.9 commit-key/conflict-marker hooks, bug resolution states, and `process-escape` problem records (`REQ-PRO-121`). |
+| `1.0.2` | 2026-11-17 | AI Agent (`ATT-8168`) | `ATT-8168` | Suspended unsupported CL3–CL5 claims as `[Target / Not Yet Claimed]` pending verified CL2 attainment (`REQ-PRO-122.6`). |

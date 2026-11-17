@@ -540,6 +540,74 @@ class TestSprintMetrics(unittest.TestCase):
         md = format_metrics_markdown(metrics)
         self.assertIn("PA 4.1 Plausibility Warning", md)
 
+    def test_spc_percentage_bounds_and_process_version_reset(self):
+        """TST-PRO-122.5: Mirror bounded [0, 100] SPC limits and process_version baseline reset."""
+        legacy_history = [
+            {
+                "process_version": "1.0",
+                "quality_gates": {"overall_ftpr_percent": 68.0, "human_acceptance_rate_percent": 40.0, "total_subtasks_evaluated": 50},
+                "throughput": {"total_tickets": 20, "completed_tickets": 8, "completed_story_points": 16.0},
+            },
+            {
+                "process_version": "1.0",
+                "quality_gates": {"overall_ftpr_percent": 100.0, "human_acceptance_rate_percent": 100.0, "total_subtasks_evaluated": 50},
+                "throughput": {"total_tickets": 20, "completed_tickets": 20, "completed_story_points": 40.0},
+            },
+        ]
+        spc_v1 = calculate_spc_limits(legacy_history)
+        self.assertTrue(spc_v1["has_history"])
+        self.assertLessEqual(spc_v1["limits"]["overall_ftpr"]["ucl"], 100.0)
+        self.assertLessEqual(spc_v1["limits"]["human_acceptance"]["ucl"], 100.0)
+        self.assertGreaterEqual(spc_v1["limits"]["overall_ftpr"]["lcl"], 0.0)
+
+        curr_v2 = {
+            "process_version": "2.0",
+            "quality_gates": {"overall_ftpr_percent": 85.0, "human_acceptance_rate_percent": 50.0, "total_subtasks_evaluated": 20},
+            "throughput": {"total_tickets": 10, "completed_tickets": 5, "completed_story_points": 10.0},
+        }
+        spc_reset = calculate_spc_limits(legacy_history, current_metrics=curr_v2)
+        self.assertFalse(spc_reset["has_history"])
+        self.assertTrue(spc_reset.get("baseline_reset"))
+
+    def test_acceptance_separation_zero_floor_and_unmasked_plausibility(self):
+        """TST-PRO-122.5: Mirror acceptance separation, no p=0.02 floor, and unmasked plausibility warning."""
+        subtasks = []
+        for i in range(20):
+            g = (i % 5) + 1
+            stage_name = ["Analysis", "Req & Test Spec", "Impl-Plan", "Implementation", "Test"][g - 1]
+            subtasks.append({
+                "fields": {"summary": f"[{stage_name}] S{i}", "status": {"name": "Erledigt"}},
+                "comments": [{"author": {"displayName": "Agent 2"}, "body": f"[ROLE: agent2] Gate {g} PASS"}],
+            })
+        parent_issues = [
+            {
+                "key": "HM-1",
+                "fields": {
+                    "summary": "Review pending",
+                    "status": {"name": "Final Review (Human)"},
+                    "priority": {"name": "Medium"},
+                    "customfield_10016": 2.0,
+                    "comment": {"comments": [{"author": {"displayName": "Agent 2"}, "body": "[ROLE: agent2] Stage 6 Final Review (Agent) BOUNCE (1/3): Defect."}]},
+                    "subtasks": subtasks,
+                },
+            },
+            {
+                "key": "HM-2",
+                "fields": {
+                    "summary": "Accepted",
+                    "status": {"name": "Erledigt"},
+                    "priority": {"name": "Medium"},
+                    "customfield_10016": 2.0,
+                    "subtasks": [],
+                },
+            },
+        ]
+        metrics = parse_sprint_gate_metrics(parent_issues, {"id": 10, "name": "Mirror-Sprint"})
+        self.assertEqual(metrics["throughput"]["completion_rate_percent"], 100.0)
+        self.assertEqual(metrics["quality_gates"]["human_acceptance_rate_percent"], 50.0)
+        self.assertEqual(metrics["quality_gates"]["swiss_cheese"]["theoretical_cumulative_escape_prob"], 0.0)
+        self.assertTrue(any("PA 4.1 Plausibility Warning" in w for w in metrics.get("plausibility_warnings", [])))
+
 
 if __name__ == "__main__":
     unittest.main()

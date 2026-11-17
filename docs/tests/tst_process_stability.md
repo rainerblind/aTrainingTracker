@@ -1,14 +1,14 @@
 # Living Test Specification: Engineering Process, Stability & Architecture
 
 **Document ID**: `DOC-TST-PRO`  
-**Version**: 1.0.3  
+**Version**: 1.0.6  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Tests**: 225
+**Total Tests**: 226
 
 ---
 
@@ -3807,6 +3807,29 @@
 
 ---
 
+### TST-PRO-122: **Sprint Metrics Statistical Correctness, Mirror Parity & CL3–CL5 Claim Suspension Suite (ATT-8168)** [Verified]
+- **Requirement(s)**: `REQ-PRO-122`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Component**: `tools/sprint_metrics.py`, `tools/test_sprint_metrics.py`, `tools/hoechstmass/tools/sprint_metrics.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`, `docs/project_protocol.md`, `tools/hoechstmass/docs/project_protocol.md`, `tools/hoechstmass/README.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/HoechstmassCoreFrameworkContractTest.kt`
+- **Jira**: `ATT-8168`
+- **Test Description**:
+  1. *SPC Percentage Bounds & `process_version` Reset (`TST-PRO-122.1`, tools/test_sprint_metrics.py)*:
+     • *Given* `process_metrics.jsonl`-shaped histories with high percentage variance and mixed `process_version` eras, *When* `calculate_spc_limits()` runs, *Then* percentage `lcl`/`ucl` satisfy `0.0 <= lcl <= ucl <= 100.0` (binomial p-chart / clamped bounds) and limits reflect only records matching the active `process_version`.
+  2. *Truthful Human Acceptance vs. Completion (`TST-PRO-122.2`, tools/test_sprint_metrics.py)*:
+     • *Given* mocked sprint issues in `Erledigt`, `Final Review (Human)`, `Final Review (Agent)`, and `In Progress`, *When* `parse_sprint_gate_metrics()` executes, *Then* `human_acceptance_rate_percent` counts only terminal human-accepted tickets (`Erledigt`/`Done`/`Closed`) and differs from `completion_rate_percent` when tickets await final review.
+  3. *No Fabricated `p = 0.02` Escape Floor (`TST-PRO-122.3`, tools/test_sprint_metrics.py)*:
+     • *Given* sprint gates with `0` upstream revisions, *When* `parse_sprint_gate_metrics()` computes Swiss Cheese escape fields, *Then* no `0.02` synthetic floor is substituted and `theoretical_cumulative_escape_prob` does not report fabricated `10^-8`–`10^-11` probabilities.
+  4. *Unmasked Gate 1–5 Plausibility Warning (`TST-PRO-122.4`, tools/test_sprint_metrics.py)*:
+     • *Given* $\ge 20$ Gate 1–5 subtasks with `100.0%` Gate 1–5 FTPR (`0` Gate 1–5 revisions) alongside non-zero Gate 6 `revisions` and `bounces`, *When* `parse_sprint_gate_metrics()` runs, *Then* `plausibility_warnings` contains the `PA 4.1 Plausibility Warning`.
+  5. *Höchstmaß Mirror Parity (`TST-PRO-122.5`, tools/hoechstmass/tools/test_hoechstmass_tools.py)*:
+     • *Given* equivalent test fixtures run against `tools/hoechstmass/tools/sprint_metrics.py`, *When* `calculate_spc_limits()` and `parse_sprint_gate_metrics()` execute, *Then* all `[0, 100]` SPC bounds, `process_version` resets, acceptance separation, zero-floor removal, and Gate 1–5 plausibility warnings match `tools/sprint_metrics.py`.
+  6. *CL3–CL5 Suspension & Matrix Contract Regression (`TST-PRO-122.6`, HoechstmassCoreFrameworkContractTest.kt & verify_requirement_governance.py)*:
+     • *Given* updated `docs/project_protocol.md`, `tools/hoechstmass/docs/project_protocol.md`, `tools/hoechstmass/README.md`, and `sprint_metrics.py` docstrings, *When* `HoechstmassCoreFrameworkContractTest` and `python3 tools/verify_requirement_governance.py` execute, *Then* CL3–CL5 claims are explicitly `[Target / Not Yet Claimed]`, all `"Level 1..5"` / `"PA 1.1..5.2"` contract assertions pass, and governance exits `0`. (`Localization Parity: N/A - no UI strings`).
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -3815,3 +3838,6 @@
 | `1.0.1` | 2026-11-17 | AI Agent (`ATT-8165`) | `ATT-8165` | Added `[Planned]` `TST-PRO-121` test specifications (`SUP.9` bug trends, resolutions, commit/conflict guards, `process-escape`). |
 | `1.0.2` | 2026-11-17 | AI Agent (`ATT-8165`) | `ATT-8165` | Promoted `TST-PRO-121` to `[Implemented]` in Stage 4. |
 | `1.0.3` | 2026-11-17 | AI Agent (`ATT-8165`) | `ATT-8165` | Promoted `TST-PRO-121` to `[Verified]` after Stage 5 verification. |
+| `1.0.4` | 2026-11-17 | AI Agent (`ATT-8168`) | `ATT-8168` | Added `[Planned]` `TST-PRO-122` test specifications (bounded SPC, `process_version` reset, acceptance separation, no `0.02` floor, unmasked plausibility warning, mirror parity, CL3–CL5 suspension). |
+| `1.0.5` | 2026-11-17 | AI Agent (`ATT-8168`) | `ATT-8168` | Promoted `TST-PRO-122` to `[Implemented]` in Stage 4. |
+| `1.0.6` | 2026-11-17 | AI Agent (`ATT-8168`) | `ATT-8168` | Promoted `TST-PRO-122` to `[Verified]` after Stage 5 verification. |
