@@ -999,6 +999,7 @@ RETRO_ALLOWLIST_PATTERNS = [
     re.compile(r"^docs/engineering/test_evidence/.+"),
     re.compile(r"^docs/engineering/metrics/process_metrics\.jsonl$"),
     re.compile(r"^docs/management/risk_register\.md$"),
+    re.compile(r"^docs/releases/[^/]+/manifest\.md$"),
 ]
 
 RETRO_PROTECTED_PREFIXES = (

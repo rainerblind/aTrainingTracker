@@ -2,9 +2,9 @@
 
 **Document Identifier**: `CM-PLAN-ATT`  
 **Standard**: ASPICE 4.0 `SUP.8` (Configuration Management)  
-**Target Release**: `V5.0.0` | **Version**: 1.0.0  
-**Status**: Approved | **Date**: 2026-11-11  
-**Governing Ticket**: [ATT-6152](https://rainerblind.atlassian.net/browse/ATT-6152), [ATT-6733](https://rainerblind.atlassian.net/browse/ATT-6733) | **Requirement**: `REQ-STP-009`, `REQ-PRO-057`  
+**Target Release**: `V5.0.0` | **Version**: 1.1.0  
+**Status**: Approved | **Date**: 2026-11-17  
+**Governing Ticket**: [ATT-6152](https://rainerblind.atlassian.net/browse/ATT-6152), [ATT-6733](https://rainerblind.atlassian.net/browse/ATT-6733), [ATT-8163](https://rainerblind.atlassian.net/browse/ATT-8163) | **Requirement**: `REQ-STP-009`, `REQ-PRO-057`, `REQ-PRO-119`  
 
 ---
 
@@ -32,7 +32,8 @@ All work products subject to formal configuration control are classified as Conf
 | **Management & CM Plans** | `docs/management/*.md` (`cm_plan.md`, `qa_plan.md`, `risk_register.md`) | Git (ASPICE SUP.8 CM Plan & Policies) |
 | **Project Release Plan** | `docs/management/release_plan.md` | Git (V5.0.0 milestone scope, 12h cadence, Pixel 10 verification per REQ-PRO-097) |
 | **Living Requirements & Tests** | `docs/requirements/`, `docs/tests/`, `docs/requirements.md`, `docs/tests.md` | Git (9 domain shards, synchronized master indexes) |
-| **Engineering Deliverables** | `docs/engineering/analysis/`, `plans/`, `test_specs/`, `walkthroughs/`, `retros/`, `code_reviews/`, `aspice_audits/`, `test_evidence/` | Git (Canonical directories per Rule 8.4, REQ-PRO-100) |
+| **Engineering Deliverables** | `docs/engineering/analysis/`, `plans/`, `test_specs/`, `walkthroughs/`, `retros/`, `gates/`, `qa_audits/`, `reviews/`, `code_reviews/`, `aspice_audits/`, `test_evidence/` | Git (Canonical directories per Rule 8.4, `REQ-PRO-059`, `REQ-PRO-061`, `REQ-PRO-062`, `REQ-PRO-100`) |
+| **Release & Baseline Dossiers** | `docs/releases/` (`manifest.md`, `sys_verification_record.md`, `verification_summary.md`, `release_dossier.md`) | Git (SUP.8 baseline manifests & SYS.5/SWE.6 evidence per `REQ-PRO-072`, `REQ-PRO-119`) |
 | **Code Review Coverage Matrix** | `docs/engineering/code_reviews/coverage_matrix.md`, review reports | Git (Weekly Dual-Vendor review evidence per REQ-PRO-095) |
 | **ASPICE Audit Records** | `docs/engineering/aspice_audits/` (`YYYY-MM-DD_dual_vendor_aspice_audit.md`) | Git (Weekly Dual-Vendor ASPICE audits per REQ-PRO-096) |
 | **Store & Visual Assets** | `docs/store_presence/`, `docs/guide/` | Git (Markdown, verified PNGs/SVGs) |
@@ -50,9 +51,9 @@ All work products subject to formal configuration control are classified as Conf
 
 ## 3. Branching, Tagging & Worktree Strategy (SUP.8.BP3 - Branching & Merging)
 
-### GitFlow Branch Hierarchy
-1. **`master`**: Production release baseline (`origin/master`). Only fast-forward merges from release finish or hotfix branches. Every release commit on `master` is tagged.
-2. **`develop`**: Active development integration baseline. Contains all merged sprint increments.
+### GitFlow Branch Hierarchy & Merge Policy
+1. **`master`**: Production release baseline (`origin/master`). Integrated via `--no-ff` merge commits from `git flow release finish` or hotfix branches. Every release commit on `master` is tagged with immutable annotated tags.
+2. **`develop`**: Active development integration baseline. Contains all merged sprint increments integrated via `--no-ff` merge commits from `sprint/<SPRINT_NAME>` at Ceremony 2 close (and `--no-ff` back-merges from `release/<VERSION>`).
 3. **`sprint/<SPRINT_NAME>`** (e.g. `sprint/2026-46.1`): Active sprint baseline branched from `develop` at Sprint-Start (Ceremony 1). All sprint tickets merge into this branch.
 4. **`feature/<KEY>` / `bugfix/<KEY>`**: Isolated ticket branches. Merged into `sprint/<SPRINT_NAME>` as **strictly one squashed atomic commit** (`git merge --squash feature/<KEY>`) upon Stage 5 Gate approval.
 5. **`release/<VERSION>`**: Release stabilization branch for version bumping, signed APK generation, and Store deployment.
@@ -61,10 +62,16 @@ All work products subject to formal configuration control are classified as Conf
 * Subagents operate in dedicated worktrees (`Workspace: "share"`).
 * Heavy resource operations (compilation, unit tests, branch squashing) are serialized via POSIX `flock` (`/tmp/att_build_merge.lock` via `tools/parallel_sprint_lock.py`).
 
-### Milestone & Release Tagging Nomenclature
-* **Sprint Milestone Tags**: At sprint close (Ceremony 2 Step 6), an immutable milestone tag `sprint/<SPRINT_NAME>` (e.g. `sprint/2026-46.1`) is cut on `develop` to baseline all merged sprint increment commits.
-* **Production Release Tags**: Every production release commit on `master` follows the immutable convention:
-  - Dual format: `V<versionName>__<versionCode>` (e.g. `V5.0.0__273`) alongside `V<versionName>` (e.g. `v5.0.0` or `V5.0.0`).
+### Milestone & Release Tagging Nomenclature (Immutable Annotated Baselines)
+* **Immutability & Collision Guard (`REQ-PRO-119.1`)**: All sprint and release baseline tags MUST be created as annotated Git tag objects (`git tag -a` via `tools/baseline_manager.py tag`). Force-overwriting existing tags (`git tag -f`) is strictly prohibited; tooling refuses with non-zero exit if `refs/tags/<baseline>` already exists or collides with `refs/heads/<baseline>` / `refs/remotes/origin/<baseline>`.
+* **Sprint Milestone Tags**: At sprint close (Ceremony 2 Step 6), an immutable annotated milestone tag `sprint/<SPRINT_NAME>` (e.g. `sprint/2026-46.1`) is cut on the `--no-ff` merge commit in `develop`, accompanied by `docs/releases/sprint_<SPRINT_NAME>/manifest.md`.
+* **Production Release Tags**: Every production release commit on `master` follows the immutable annotated convention (never fabricated prior to SYS.5 sign-off):
+  - Dual format: `V<versionName>__<versionCode>` (e.g. `V5.0.0__273`) alongside `V<versionName>` (e.g. `V5.0.0`), accompanied by `docs/releases/V<versionName>/manifest.md`.
+
+### Branch & Tag Hygiene Policy (`REQ-PRO-119.5`)
+* Local merged `feature/<KEY>` / `sprint/<SPRINT_NAME>` branches are deleted immediately after squash-merge or `--no-ff` sprint closure (`git branch -d`).
+* Periodic repository hygiene runs `python3 tools/baseline_manager.py cleanup-audit` (dry-run by default), listing merged local branches, stale remote branches, and legacy lightweight tags without mutating refs.
+* Destructive cleanup of merged local branches requires `--execute --confirm-po` (history-preserving `git branch -d` only); remote branch deletions and historical tag conversions require explicit Product Owner confirmation and MUST preserve commit history.
 
 ### Formal Release Deliverables Package (SUP.8.BP4 - Release Contents)
 Every formal production release baseline on `master` comprises the following auditable deliverables:
@@ -113,3 +120,16 @@ Changes must traverse 5 sequential verification gates before baseline integratio
 
 ### Athlete Data Disaster Recovery
 * Standalone Full-App Backup & Restore (`.attbackup`) ensures athlete data sovereignty and disaster recovery independent of cloud infrastructure.
+
+### Configuration Status Accounting & Reporting (SUP.8.BP7)
+* **Baseline Content Manifest (`docs/releases/<baseline>/manifest.md`)**: Generated deterministically at every sprint closure (Ceremony 2) and production release finish via `python3 tools/baseline_manager.py manifest <baseline>`. Records the baseline tag, resolved commit SHA, living-doc REQ/TST totals (`docs/requirements.md`, `docs/tests.md`), linked `docs/engineering/test_evidence/` verdict, active High/Medium risks (`docs/management/risk_register.md`) and open release deviations, and `tools/verify_requirement_governance.py` status.
+* **Sprint Status Records**: Coupled with `docs/engineering/gates/<sprint>.md`, `qa_audits/<sprint>.md`, `reviews/<sprint>.md`, `test_evidence/<sprint>.md`, and `docs/engineering/metrics/process_metrics.jsonl` for end-to-end SUP.8 configuration status accounting.
+
+---
+
+## 7. Revision History
+
+| Version | Date | Author | Ticket | Summary of Changes |
+| :--- | :--- | :--- | :--- | :--- |
+| `1.0.0` | 2026-11-11 | AI Agent / PO | `ATT-6152`, `ATT-6733` | Initial ASPICE `SUP.8` CM Plan, CI inventory, `master` grounding, and submodule pinning. |
+| `1.1.0` | 2026-11-17 | AI Agent (`ATT-8163`) | `ATT-8163` | Aligned `--no-ff` sprint/release merge policy, added `gates/`/`qa_audits/`/`reviews/`/`docs/releases/` CIs, enforced immutable annotated tags (`baseline_manager.py`, zero `git tag -f`), added `SUP.8.BP7` Configuration Status Accounting (`manifest.md`), and defined dry-run/PO-gated branch & tag hygiene policy. |

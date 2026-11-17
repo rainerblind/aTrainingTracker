@@ -3,7 +3,7 @@
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Requirements**: 183
+**Total Requirements**: 184
 
 ---
 
@@ -6026,3 +6026,29 @@ The workflow SHALL mandate that:
   • *Given* tickets with authentic `agent2` `Gate N ... PASS` comments, `[ATT-XXXX]` / `fix(ATT-XXXX):` / `(ATT-XXXX)` commits, and `REQ-FIL-*` wildcards, *When* audited by `qa_audit()`, *Then* 4-Augen Role Separation, Commit Hygiene, and Living Documentation Parity evaluate `PASS`.
   • *Given* `verify_requirement_governance.py --check-qa-audits`, *When* evaluating a post-cutoff non-compliant report containing `ATT-CA-*` vs real `ATT-\d+` keys, *Then* `ATT-CA-*` fails with exit `1` and real/grandfathered reports pass with exit `0`.
 - **Invariants**: Zero `app/src/main/` changes; `ANT-Android-SDKs` untouched; zero live Jira tickets created by automated unit tests (`Rule 5`).
+
+---
+
+### REQ-PRO-119: Immutable Annotated Baselines, Content Manifest & CM Plan Alignment (ATT-8163) [Verified]
+- **Tests**: `TST-PRO-119`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `tools/baseline_manager.py`, `tools/verify_requirement_governance.py`, `docs/management/cm_plan.md`, `docs/releases/README.md`, `.agents/skills/sprint-planner/SKILL.md`, `tools/hoechstmass/.agents/skills/sprint-planner/SKILL.md`, `.agents/skills/release-manager/SKILL.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ReleaseCiAndLintConfigContractTest.kt`
+- **Rationale**: ASPICE 4.0 Audit Finding `M11 / SUP.8` (`SUP.8 BP5/BP6/BP7`, `GP 2.2.3`) identified mutable `git tag -f` lightweight tagging in `sprint-planner`, absence of baseline content manifests (`docs/releases/<baseline>/manifest.md`), stale `ff-only` and incomplete CI/status-accounting documentation in `docs/management/cm_plan.md`, and uncurated stale branches/lightweight tags.
+- **Description**:
+  1. *Immutable Annotated Baseline Tagging (`REQ-PRO-119.1`)*: `tools/baseline_manager.py` (`tag`), `.agents/skills/sprint-planner/SKILL.md`, `tools/hoechstmass/.agents/skills/sprint-planner/SKILL.md`, and `.agents/skills/release-manager/SKILL.md` SHALL create strictly annotated Git tags (`git tag -a <tag> <commit> -m ...`), eliminate all `git tag -f` force-overwrite commands, verify `refs/tags/<tag>` does not already exist (refusing with non-zero exit if present), and reject tag/branch ref collisions where `refs/heads/<tag>` or `refs/remotes/origin/<tag>` exists.
+  2. *Baseline Content Manifest (`REQ-PRO-119.2`)*: `tools/baseline_manager.py` (`manifest`) SHALL deterministically generate `docs/releases/<baseline>/manifest.md` at sprint close (Ceremony 2) and release finish recording: baseline identifier/tag, target commit SHA, master living-doc REQ and TST counts (`docs/requirements.md`, `docs/tests.md`), linked `docs/engineering/test_evidence/` artifact path and status, open risks/deviations (`docs/management/risk_register.md` and `verification_summary.md` when present), and `tools/verify_requirement_governance.py` verdict.
+  3. *Ceremony 2 Manifest Allowlist Parity (`REQ-PRO-119.3`)*: `tools/verify_requirement_governance.py` (`RETRO_ALLOWLIST_PATTERNS`) SHALL allow `docs/releases/[^/]+/manifest\.md` in autonomous `chore(ceremony2)` commits alongside the existing 7 evidence/log paths while keeping all protected rule/skill/standard/tool paths (`REQ-PRO-117.2`) blocked.
+  4. *CM Plan Alignment & SUP.8.BP7 Status Accounting (`REQ-PRO-119.4`)*: `docs/management/cm_plan.md` (updated to `v1.1.0` with a Revision History table) SHALL align merge policy to `--no-ff` merge commits for sprint (`sprint/<SPRINT_NAME>` -> `develop`) and release (`release/<VERSION>` -> `master`) integrations (removing the inaccurate `ff-only` claim), include `docs/engineering/gates/`, `docs/engineering/qa_audits/`, `docs/engineering/reviews/`, and `docs/releases/` in the Configuration Items table, document Configuration Status Accounting & Reporting (`SUP.8.BP7`) referencing `docs/releases/<baseline>/manifest.md`, and preserve all `REQ-STP-009` and `REQ-PRO-057` markers (`master`, no `` `main` ``, `SUP.8.BP1..BP7`); `docs/releases/README.md` SHALL document `manifest.md`.
+  5. *Safe Branch & Tag Hygiene Policy (`REQ-PRO-119.5`)*: `docs/management/cm_plan.md` and `tools/baseline_manager.py` (`cleanup-audit`) SHALL define a dry-run-by-default branch/tag hygiene policy reporting merged local branches, stale remote branches, and legacy lightweight tags without mutating refs; any destructive branch deletion or remote cleanup SHALL require `--execute` plus explicit PO confirmation (`--confirm-po`), preserve commit history, never touch `ANT-Android-SDKs`, and never fabricate a pre-release `V5.0.0` tag while `V5.0.0` remains `5.0.0-dev` / `SYS.5 OPEN`.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Refines `REQ-PRO-057` (`ATT-6733`, CM plan repo grounding), `REQ-STP-009` (`ATT-6152`, CM plan & submodule pinning), and `REQ-PRO-117` (`ATT-8584`, Ceremony 2 allowlist) across `docs/management/cm_plan.md`, skills, and `tools/`.
+  2. *Historical Origin & Commit Trace*: `ATT-6152` introduced `cm_plan.md` with boilerplate `ff-only` wording; `ATT-6733` aligned `master` and `sprint/<SPRINT_NAME>`; `ATT-8584` introduced `RETRO_ALLOWLIST_PATTERNS` before baseline manifests existed.
+  3. *Root Reason for Existing Formulation*: `sprint-planner` used `git tag -f` for idempotent re-runs without immutability checks, and `cm_plan.md` predated `gates/`, `qa_audits/`, `reviews/`, and `docs/releases/`.
+  4. *Preservation of Core Invariants*: Preserves all `[Verified]` `REQ-STP-009`, `REQ-PRO-057`, `REQ-PRO-072`, `REQ-PRO-100`, `REQ-PRO-112`, and `REQ-PRO-117` invariants and contract test markers (`ReleaseCiAndLintConfigContractTest`, `ReleaseManagerSystemEvidenceContractTest`, `AspiceSweAuditContractTest`, `HoechstmassCoreFrameworkContractTest`).
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* an existing sprint or release tag, *When* Ceremony 2 or release tagging runs via `tools/baseline_manager.py tag`, *Then* it refuses overwrite with a non-zero exit code instead of forcing.
+  • *Given* a new sprint or release baseline, *When* baselined via `tools/baseline_manager.py`, *Then* an annotated Git tag (`tag` object) and `docs/releases/<baseline>/manifest.md` referencing commit SHA, REQ/TST counts, test evidence, open risks/deviations, and governance status exist.
+  • *Given* `docs/management/cm_plan.md` and `tools/baseline_manager.py cleanup-audit`, *When* audited by contract tests and unit tests, *Then* `--no-ff` policy, `gates/`/`qa_audits/`/`reviews/`/`releases/` CIs, `SUP.8.BP7` status accounting, Revision History, and dry-run/PO-gated cleanup are verified.
+- **Invariants**: Zero `app/src/main/` edits; `ANT-Android-SDKs` untouched; `Localization Parity: N/A - no UI strings`; zero unconfirmed remote/history mutations; zero live Jira API calls in unit tests (`Rule 5`).

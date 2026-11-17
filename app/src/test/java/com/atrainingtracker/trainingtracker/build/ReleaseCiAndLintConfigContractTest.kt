@@ -1092,4 +1092,46 @@ class ReleaseCiAndLintConfigContractTest {
             governanceIndex < assembleIndex
         )
     }
+
+    /**
+     * Asserts that docs/management/cm_plan.md v1.1.0, docs/releases/README.md, and sprint/release skills
+     * enforce immutable annotated baseline tags (no git tag -f), --no-ff merge policy, complete CI inventory,
+     * SUP.8.BP7 status accounting via manifest.md, and dry-run/PO-gated branch hygiene (REQ-PRO-119, TST-PRO-119.5, ATT-8163).
+     */
+    // Traces to: REQ-PRO-119, TST-PRO-119
+    @Test
+    fun testBaselineImmutabilityManifestAndCmPlanAlignment_contract() {
+        val cmPlanContent = findRepoRootFile("docs/management/cm_plan.md", "../docs/management/cm_plan.md").readText()
+        assertTrue("CM plan must be updated to Version 1.1.0 (REQ-PRO-119.4)", cmPlanContent.contains("**Version**: 1.1.0"))
+        assertTrue("CM plan must include Revision History (REQ-PRO-119.4)", cmPlanContent.contains("Revision History"))
+        assertFalse("CM plan must not claim fast-forward-only merges on master (REQ-PRO-119.4)", cmPlanContent.contains("Only fast-forward merges"))
+        assertTrue("CM plan must document --no-ff merge policy (REQ-PRO-119.4)", cmPlanContent.contains("--no-ff"))
+        for (ciPath in listOf("gates/", "qa_audits/", "reviews/", "docs/releases/")) {
+            assertTrue("CM plan CI table must include '$ciPath' (REQ-PRO-119.4)", cmPlanContent.contains(ciPath))
+        }
+        assertTrue("CM plan must document Configuration Status Accounting & Reporting (SUP.8.BP7) (REQ-PRO-119.4)",
+            cmPlanContent.contains("Configuration Status Accounting & Reporting (SUP.8.BP7)"))
+        assertTrue("CM plan must document Branch & Tag Hygiene Policy (REQ-PRO-119.5)",
+            cmPlanContent.contains("Branch & Tag Hygiene Policy"))
+        assertTrue("CM plan must reference baseline_manager.py (REQ-PRO-119.1)",
+            cmPlanContent.contains("baseline_manager.py"))
+
+        val releasesReadme = findRepoRootFile("docs/releases/README.md", "../docs/releases/README.md").readText()
+        assertTrue("docs/releases/README.md must document manifest.md (REQ-PRO-119.4)", releasesReadme.contains("manifest.md"))
+
+        for (skillPath in listOf(
+            ".agents/skills/sprint-planner/SKILL.md",
+            "tools/hoechstmass/.agents/skills/sprint-planner/SKILL.md"
+        )) {
+            val skillText = findRepoRootFile(skillPath, "../$skillPath").readText()
+            assertFalse("$skillPath must not use mutable 'git tag -f' (REQ-PRO-119.1)", skillText.contains("git tag -f"))
+            assertTrue("$skillPath must invoke tools/baseline_manager.py tag (REQ-PRO-119.1)", skillText.contains("baseline_manager.py tag"))
+            assertTrue("$skillPath must invoke tools/baseline_manager.py manifest (REQ-PRO-119.2)", skillText.contains("baseline_manager.py manifest"))
+        }
+
+        val releaseSkill = findRepoRootFile(".agents/skills/release-manager/SKILL.md", "../.agents/skills/release-manager/SKILL.md").readText()
+        assertTrue("release-manager/SKILL.md must refuse existing release tags (REQ-PRO-119.1)", releaseSkill.contains("FATAL: Release tag already exists"))
+        assertTrue("release-manager/SKILL.md must invoke baseline_manager.py tag (REQ-PRO-119.1)", releaseSkill.contains("baseline_manager.py tag"))
+        assertTrue("release-manager/SKILL.md must invoke baseline_manager.py manifest (REQ-PRO-119.2)", releaseSkill.contains("baseline_manager.py manifest"))
+    }
 }

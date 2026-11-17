@@ -275,21 +275,27 @@ python3 tools/jira_util.py comment <KEY> "h4. Mandatory System Verification Evid
    ```
 
 2. **Finish GitFlow Release**:
-   Once the build is approved and system evidence is verified, finish the release branch:
+   Once the build is approved and system evidence is verified, first confirm neither release tag (`V${VERSION_NAME}__${VERSION_CODE}` nor `V${VERSION_NAME}`) already exists (immutable tag invariant — `REQ-PRO-119.1`), then finish the release branch:
    ```bash
+   if git rev-parse -q --verify "refs/tags/V${VERSION_NAME}__${VERSION_CODE}" >/dev/null || git rev-parse -q --verify "refs/tags/V${VERSION_NAME}" >/dev/null; then
+       echo "FATAL: Release tag already exists. Overwriting immutable baseline tags is prohibited (REQ-PRO-119.1)." >&2
+       exit 1
+   fi
    git flow release finish -m "Release V${VERSION_NAME}__${VERSION_CODE}" V${VERSION_NAME}__${VERSION_CODE}
    ```
    *Actions performed by git-flow*:
    * Merges `release/V...` into `master` (`--no-ff`).
-   * Tags `master` with tag `V${VERSION_NAME}__${VERSION_CODE}`.
+   * Creates annotated tag `V${VERSION_NAME}__${VERSION_CODE}` on `master`.
    * Merges `release/V...` back into `develop` (`--no-ff`).
    * Deletes local branch `release/V...`.
 
-3. **Add Clean Major Tag (Repository Invariant)**:
-   Historically, the repository tags both `V<Version>__<Code>` and clean `V<Version>` on the release commit:
+3. **Add Clean Major Tag & Generate Baseline Content Manifest (Repository Invariant)**:
+   Historically, the repository tags both `V<Version>__<Code>` and clean `V<Version>` on the release commit. Create the clean annotated tag via `tools/baseline_manager.py` (refusing overwrites/collisions) and emit `docs/releases/V${VERSION_NAME}/manifest.md` (`REQ-PRO-119.2`):
    ```bash
    git checkout master
-   git tag -a "V${VERSION_NAME}" -m "Release V${VERSION_NAME}"
+   python3 tools/baseline_manager.py tag "V${VERSION_NAME}" --target HEAD -m "Release V${VERSION_NAME}"
+   python3 tools/baseline_manager.py manifest "V${VERSION_NAME}" --target "V${VERSION_NAME}"
+   git add "docs/releases/V${VERSION_NAME}/manifest.md" && git commit -m "chore(release): record baseline manifest for V${VERSION_NAME}"
    ```
 
 4. **Push Master, Develop, and Tags to Remote**:

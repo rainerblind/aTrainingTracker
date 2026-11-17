@@ -259,18 +259,20 @@ Jointly review all completed sprint tickets with the human user against expectat
      * **Protected Paths (`PROHIBITED` Without Interactive PO / Dedicated PO-Approved Ticket)**: `.agents/rules/**`, `.agents/skills/**`, `docs/coding_standards.md`, `docs/design_guidelines.md`, `docs/project_governance.md`, `docs/project_protocol.md`, `docs/engineering/rule_history_archive.md`, and `tools/**`. During autonomous Schicht closes, do **NOT** edit these protected paths directly; instead, record any proposed rule, skill, or standard change as a structured proposal in `docs/engineering/retros/Sprint_Review_and_Retro_<KEY>.md` and the rolling `Wochen Review & Retro` ticket for weekly PO review (or execute only inside an interactive `Interactive-PO:` session or PO-approved ticket).
    * Commit retrospective deliverables to `sprint/<SPRINT_NAME>` (verified via `python3 tools/verify_requirement_governance.py --check-retro-allowlist`).
 6. **Sprint Closure, Milestone Tagging & Merge to `develop`**:
-   * Once all tickets and the Retrospective are signed off, merge `sprint/<SPRINT_NAME>` into `develop`, delete the local sprint branch (to keep the active branch list clean), and create an immutable `sprint/<SPRINT_NAME>` Git tag on the `--no-ff` merge commit so every completed sprint remains directly addressable by name (`git checkout sprint/<SPRINT_NAME>`, `git diff`, `regression-bisect`):
+   * Once all tickets and the Retrospective are signed off, merge `sprint/<SPRINT_NAME>` into `develop` with `--no-ff`, delete the local sprint branch (to keep the active branch list clean), create an **immutable annotated** `sprint/<SPRINT_NAME>` Git tag (`git tag -a`, never `-f` force overwrite) and generate the baseline content manifest `docs/releases/sprint_<SPRINT_NAME>/manifest.md` via `tools/baseline_manager.py` (`REQ-PRO-119`) so every completed sprint remains directly addressable and reproducible (`git checkout sprint/<SPRINT_NAME>`, `git diff`, `regression-bisect`):
    ```bash
    git checkout develop
    git pull origin develop
    git merge --no-ff sprint/<SPRINT_NAME> -m "Merge branch 'sprint/<SPRINT_NAME>' into develop"
    git branch -d sprint/<SPRINT_NAME>
-   git tag -f sprint/<SPRINT_NAME>
+   python3 tools/baseline_manager.py tag sprint/<SPRINT_NAME> --target HEAD -m "Sprint baseline sprint/<SPRINT_NAME>"
+   python3 tools/baseline_manager.py manifest sprint/<SPRINT_NAME> --target sprint/<SPRINT_NAME>
+   git add docs/releases/sprint_<SPRINT_NAME>/manifest.md && git commit -m "chore(baseline): record manifest for sprint/<SPRINT_NAME>"
    git push origin develop
    git push origin sprint/<SPRINT_NAME>
-   # Post-condition verification: ensure no merged sprint branches remain locally and sprint tag exists
+   # Post-condition verification: ensure no merged sprint branches remain locally and annotated sprint tag exists
    git branch --list 'sprint/*'
-   git tag --list 'sprint/<SPRINT_NAME>'
+   git cat-file -t refs/tags/sprint/<SPRINT_NAME>  # must print 'tag'
    ```
    * Transition the sprint's `Review & Retro` ticket to `Final Review (Human)` (for human closure to `Erledigt`).
    * Post final integration notice to Jira.

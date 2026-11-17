@@ -3,7 +3,7 @@
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Tests**: 222
+**Total Tests**: 223
 
 ---
 
@@ -3740,3 +3740,24 @@
      • Execute unit tests verifying `_validate_single_qa_audit()` rejects `ATT-CA-*` placeholders on current/post-cutoff non-compliant reports, accepts real `ATT-\d+` keys, and cleanly handles grandfathered/re-audited reports so `--check-qa-audits` exits `0`.
   6. *Re-Audit & Full Governance Validation (`TST-PRO-118.6`, sprint_2026-11-16_03_nacht.md)*:
      • Re-run `qa-audit --as agent2` for Sprint `2026-11-16_03_Nacht`, verify `python3 tools/verify_requirement_governance.py` and `--check-qa-audits` exit `0`, and confirm `tools/test_jira_accounts.py` + `tools/test_verify_requirement_governance.py` pass 100% offline. (`Localization Parity: N/A - no UI strings`).
+
+---
+
+### TST-PRO-119: **Immutable Annotated Baselines, Content Manifest & CM Plan Alignment Suite (ATT-8163)** [Verified]
+- **Requirement(s)**: `REQ-PRO-119`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Component**: `tools/baseline_manager.py`, `tools/test_baseline_manager.py`, `tools/verify_requirement_governance.py`, `tools/test_verify_requirement_governance.py`, `docs/management/cm_plan.md`, `docs/releases/README.md`, `.agents/skills/sprint-planner/SKILL.md`, `tools/hoechstmass/.agents/skills/sprint-planner/SKILL.md`, `.agents/skills/release-manager/SKILL.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ReleaseCiAndLintConfigContractTest.kt`
+- **Jira**: `ATT-8163`
+- **Test Description**:
+  1. *Immutable Annotated Tagging & Collision Refusal (`TST-PRO-119.1`, tools/test_baseline_manager.py)*:
+     • Execute offline unit tests against isolated temporary Git repositories verifying `baseline_manager.py tag` creates an annotated tag (`git cat-file -t <tag> == "tag"`), refuses with non-zero exit when the tag already exists (no `-f` overwrite), and refuses when a same-named branch ref (`refs/heads/<tag>`) exists.
+  2. *Baseline Content Manifest Generation (`TST-PRO-119.2`, tools/test_baseline_manager.py)*:
+     • Execute unit tests verifying `baseline_manager.py manifest` writes `docs/releases/<baseline>/manifest.md` containing baseline tag, resolved commit SHA, REQ/TST counts from living-doc indexes, linked `docs/engineering/test_evidence/` file & verdict, open risks/deviations, and governance status deterministically.
+  3. *Dry-Run Branch/Tag Hygiene & PO Gate (`TST-PRO-119.3`, tools/test_baseline_manager.py)*:
+     • Execute unit tests verifying `baseline_manager.py cleanup-audit` lists merged branches and lightweight tags in dry-run mode with zero ref mutations, refuses `--execute` without `--confirm-po`, and deletes only explicitly targeted merged local branches when both `--execute` and `--confirm-po` are supplied.
+  4. *Ceremony 2 Manifest Allowlist Parity (`TST-PRO-119.4`, tools/test_verify_requirement_governance.py)*:
+     • Execute unit tests verifying `verify_retro_write_allowlist()` accepts `docs/releases/<baseline>/manifest.md` in `chore(ceremony2)` commits while still rejecting protected skill/rule/tool edits (`REQ-PRO-117.2`).
+  5. *CM Plan, Skills & Governance Contract Suite (`TST-PRO-119.5`, ReleaseCiAndLintConfigContractTest.kt & verify_requirement_governance.py)*:
+     • Execute targeted JVM contract tests (`./gradlew :app:testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.ReleaseCiAndLintConfigContractTest" --tests "com.atrainingtracker.trainingtracker.build.ReleaseManagerSystemEvidenceContractTest" --tests "com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest" --tests "com.atrainingtracker.trainingtracker.build.HoechstmassCoreFrameworkContractTest"`) asserting `--no-ff` merge policy, complete CI inventory (`gates/`, `qa_audits/`, `reviews/`, `releases/`), `SUP.8.BP7` status accounting, Revision History, `manifest.md` in `docs/releases/README.md`, zero `git tag -f` in `sprint-planner` skills, and `python3 tools/verify_requirement_governance.py` exit `0`. (`Localization Parity: N/A - no UI strings`).

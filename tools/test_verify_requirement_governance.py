@@ -3022,6 +3022,26 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
             ok_gf, msgs_gf = verify_qa_audits(sprint_name="sprint/2026-11-17_01_Früh", repo_root=tmpdir)
             self.assertTrue(ok_gf, f"Expected pre-fix closed audit 2026-11-17_01_Früh to remain grandfathered, got: {msgs_gf}")
 
+    def test_scenario_79_tst_pro_119_4_ceremony2_allowlist_permits_baseline_manifest(self):
+        """TST-PRO-119.4: verify_retro_write_allowlist accepts docs/releases/<baseline>/manifest.md in chore(ceremony2) (REQ-PRO-119.3)."""
+        ok, msgs = verify_retro_write_allowlist(
+            changed_files=[
+                "docs/releases/sprint_2026-11-17_02_Spät/manifest.md",
+                "docs/engineering/retros/Sprint_Review_and_Retro_ATT-8655.md",
+            ],
+            commit_message="chore(ceremony2): close sprint and record baseline manifest",
+        )
+        self.assertTrue(ok, f"Expected baseline manifest to be allowlisted in ceremony2, got: {msgs}")
+
+        bad_ok, bad_msgs = verify_retro_write_allowlist(
+            changed_files=[
+                "docs/releases/sprint_2026-11-17_02_Spät/manifest.md",
+                "tools/baseline_manager.py",
+            ],
+            commit_message="chore(ceremony2): unauthorized tool edit",
+        )
+        self.assertFalse(bad_ok, f"Protected tool path must still fail in ceremony2, got: {bad_msgs}")
+
 
 
 
