@@ -298,6 +298,8 @@
     <string name="tuning_morning_context_tags_title">Kontext-Tags (Krank, Alkohol, Reise, Ruhetag)</string>
 
     <string name="morning_hrv_wellness_title">Morgenschlaf &amp; Wohlbefinden</string>
+    <string name="morning_hrv_wellness_subtitle">Subjektiver Schlaf- &amp; Bereitschaftscheck</string>
+    <string name="morning_hrv_wellness_empty_hint">Keine Wohlbefindens-Metriken in den Experteneinstellungen aktiviert.</string>
     <string name="morning_hrv_sleep_duration_label">Schlafdauer: %s</string>
     <string name="morning_hrv_sleep_quality_label">Schlafqualität: %d/5</string>
     <string name="morning_hrv_morning_energy_label">Morgendliche Energie: %d/5</string>

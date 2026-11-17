@@ -298,6 +298,8 @@
     <string name="tuning_morning_context_tags_title">コンテキストタグ (体調不良、飲酒、移動、休養)</string>
 
     <string name="morning_hrv_wellness_title">朝の睡眠とウェルネス</string>
+    <string name="morning_hrv_wellness_subtitle">主観的な睡眠とコンディションの記録</string>
+    <string name="morning_hrv_wellness_empty_hint">詳細設定でウェルネス項目が有効になっていません。</string>
     <string name="morning_hrv_sleep_duration_label">睡眠時間: %s</string>
     <string name="morning_hrv_sleep_quality_label">睡眠の質: %d/5</string>
     <string name="morning_hrv_morning_energy_label">朝のエネルギー: %d/5</string>

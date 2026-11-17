@@ -298,6 +298,8 @@
     <string name="tuning_morning_context_tags_title">Tagi kontekstowe (Choroba, Alkohol, Podróż, Odpoczynek)</string>
 
     <string name="morning_hrv_wellness_title">Poranny sen i samopoczucie</string>
+    <string name="morning_hrv_wellness_subtitle">Subiektywna ocena snu i gotowości</string>
+    <string name="morning_hrv_wellness_empty_hint">Brak włączonych metryk samopoczucia w ustawieniach zaawansowanych.</string>
     <string name="morning_hrv_sleep_duration_label">Czas snu: %s</string>
     <string name="morning_hrv_sleep_quality_label">Jakość snu: %d/5</string>
     <string name="morning_hrv_morning_energy_label">Poranna energia: %d/5</string>

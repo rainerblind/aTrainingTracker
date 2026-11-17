@@ -298,6 +298,8 @@
     <string name="tuning_morning_context_tags_title">Etiquetas de contexto (Enfermo, Alcohol, Viaje, Descanso)</string>
 
     <string name="morning_hrv_wellness_title">Sueño y bienestar matutino</string>
+    <string name="morning_hrv_wellness_subtitle">Registro subjetivo de sueño y preparación</string>
+    <string name="morning_hrv_wellness_empty_hint">No hay métricas de bienestar activadas en Ajustes avanzados.</string>
     <string name="morning_hrv_sleep_duration_label">Duración del sueño: %s</string>
     <string name="morning_hrv_sleep_quality_label">Calidad del sueño: %d/5</string>
     <string name="morning_hrv_morning_energy_label">Energía matutina: %d/5</string>

@@ -298,6 +298,8 @@
     <string name="tuning_morning_context_tags_title">Context Tags (Sick, Alcohol, Travel, Rest)</string>
 
     <string name="morning_hrv_wellness_title">Morning Sleep &amp; Wellness</string>
+    <string name="morning_hrv_wellness_subtitle">Subjective sleep &amp; readiness check</string>
+    <string name="morning_hrv_wellness_empty_hint">No wellness metrics enabled in Expert Settings.</string>
     <string name="morning_hrv_sleep_duration_label">Sleep Duration: %s</string>
     <string name="morning_hrv_sleep_quality_label">Sleep Quality: %d/5</string>
     <string name="morning_hrv_morning_energy_label">Morning Energy: %d/5</string>

@@ -3,7 +3,7 @@
 **Domain**: `aftermath_periods`  
 **Prefixes**: `PER`, `PERF`, `RAD`, `SPT`  
 **Scope**: Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers.  
-**Total Tests**: 65
+**Total Tests**: 66
 
 ---
 
@@ -1090,4 +1090,26 @@
      • Install debug APK onto `emulator-5554`, launch `com.atrainingtracker.debug`, navigate to the **Periods** hub, verify the screen renders cleanly without crashing (`logcat` free of `FATAL EXCEPTION` / `PeriodsViewModel`), and capture UI/screenshot verification.
   4. *Tier 1 Targeted Unit Test Regression (`TST-PER-051.4`)*:
      • Run `./gradlew :app:testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsViewModelTest" --tests "com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClustersViewModelTest"` asserting 100% pass rate (`N/A - no UI strings`).
+
+---
+
+### TST-HRV-043: **Pure Wellness Mode & HRV Fallback Verification Suite** (`ATT-8598`) [Verified]
+- **Requirement(s)**: `REQ-HRV-043` (`REQ-HRV-043.1`..`REQ-HRV-043.4`)
+- **Component**: `MorningHrvCheckViewModel.kt`, `MorningHrvCheckScreen.kt`, `MorningHrvCheckViewModelTest.kt`, `MorningHrvCheckScreenTest.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-8598`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Test Description**:
+  1. *ViewModel `showMorningCheckOnStartScreen` Reactive Mapping (`TST-HRV-043.1`, `MorningHrvCheckViewModelTest.kt`)*:
+     • Update `TuningPreferencesDataStore` (`showMorningCheckOnStartScreen = false`, `enableMorningSleepAndWellness = true`) and verify `MorningHrvCheckViewModel.uiState` reflects `showMorningCheckOnStartScreen == false` and `enableMorningSleepAndWellness == true`, while `saveStandaloneWellness()` persists with `rmssdMs == null` and sets `isWellnessSaved == true`.
+  2. *Compose UI Pure Wellness Mode & Empty-State Verification (`TST-HRV-043.2`, `MorningHrvCheckScreenTest.kt`)*:
+     • Render `MorningHrvCheckContent` with `showMorningCheckOnStartScreen = false`, `enableMorningSleepAndWellness = true`, `phase = READY`: assert wellness TopAppBar title/subtitle, `MorningWellnessInputCard` visibility, promoted primary `Save Morning Wellness` button (plus green `Saved` state when `isWellnessSaved = true`), and absence of `WakingProtocolChecklistCard`, `PostureAndDurationCard`, `MeasurementPacingCard`, HRV info button, and `Start Measurement` button.
+     • Render with all 4 wellness sub-toggles `false`: assert `morning_hrv_wellness_empty_hint` is displayed.
+  3. *Compose UI Enabled HRV & Fallback Verification (`TST-HRV-043.3`, `MorningHrvCheckScreenTest.kt`)*:
+     • Verify full HRV layout (TopAppBar HRV title/info icon, protocol/posture/duration/pacing cards, `Start Measurement` button) renders when (a) `showMorningCheckOnStartScreen = true`, (b) `showMorningCheckOnStartScreen = false && enableMorningSleepAndWellness = false` (Athlete Profile fallback), and (c) `phase = MEASURING` (active measurement protection).
+  4. *9-Locale Parity & Rule 8.5 Light/Dark Compose PNG (`TST-HRV-043.4`, `TranslationParityTest.kt`, `MorningHrvCheckScreenTest.kt`)*:
+     • Verify `morning_hrv_wellness_subtitle` and `morning_hrv_wellness_empty_hint` across all 9 locales (`EN/DE/ES/FR/IT/JA/NL/PL/PT`) with zero emojis, and inspect captured Light & Dark PNG (`docs/engineering/walkthroughs/img/ATT-8598_morning_wellness_mode.png`) via `read_file`.
+  5. *Tier 1 Targeted Regression Suite (`TST-HRV-043.5`)*:
+     • Run `./gradlew :app:testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.hrv.MorningHrvCheckViewModelTest" --tests "com.atrainingtracker.trainingtracker.ui.hrv.MorningHrvCheckScreenTest" --tests "com.atrainingtracker.trainingtracker.localization.TranslationParityTest" --tests "com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest"`.
 

@@ -298,6 +298,8 @@
     <string name="tuning_morning_context_tags_title">Tag contestuali (Malato, Alcol, Viaggio, Riposo)</string>
 
     <string name="morning_hrv_wellness_title">Sonno e benessere mattutino</string>
+    <string name="morning_hrv_wellness_subtitle">Controllo soggettivo di sonno e recupero</string>
+    <string name="morning_hrv_wellness_empty_hint">Nessuna metrica di benessere attivata nelle impostazioni avanzate.</string>
     <string name="morning_hrv_sleep_duration_label">Durata del sonno: %s</string>
     <string name="morning_hrv_sleep_quality_label">Qualità del sonno: %d/5</string>
     <string name="morning_hrv_morning_energy_label">Energia mattutina: %d/5</string>

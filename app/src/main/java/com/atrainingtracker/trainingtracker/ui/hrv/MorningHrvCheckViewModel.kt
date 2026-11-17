@@ -40,6 +40,7 @@ import com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessRepository
 import com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessResult
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -88,6 +89,7 @@ data class MorningHrvUiState(
     val errorMessageResId: Int? = null,
     val errorMessage: String? = null,
     val enableMorningSleepAndWellness: Boolean = false,
+    val showMorningCheckOnStartScreen: Boolean = TuningPreferencesDefaults.DEFAULT_SHOW_MORNING_CHECK_ON_START_SCREEN,
     val enableSleepDurationAndQuality: Boolean = true,
     val enableMorningEnergy: Boolean = true,
     val enableMuscleSoreness: Boolean = false,
@@ -147,6 +149,7 @@ class MorningHrvCheckViewModel @JvmOverloads constructor(
                 _uiState.update { current ->
                     current.copy(
                         enableMorningSleepAndWellness = config.enableMorningSleepAndWellness,
+                        showMorningCheckOnStartScreen = config.showMorningCheckOnStartScreen,
                         enableSleepDurationAndQuality = config.enableSleepDurationAndQuality,
                         enableMorningEnergy = config.enableMorningEnergy,
                         enableMuscleSoreness = config.enableMuscleSoreness,
@@ -230,11 +233,13 @@ class MorningHrvCheckViewModel @JvmOverloads constructor(
         enableSleepDurationAndQuality: Boolean = true,
         enableMorningEnergy: Boolean = true,
         enableMuscleSoreness: Boolean = true,
-        enableContextTags: Boolean = true
+        enableContextTags: Boolean = true,
+        showMorningCheckOnStartScreen: Boolean = _uiState.value.showMorningCheckOnStartScreen
     ) {
         _uiState.update {
             it.copy(
                 enableMorningSleepAndWellness = enableMorningSleepAndWellness,
+                showMorningCheckOnStartScreen = showMorningCheckOnStartScreen,
                 enableSleepDurationAndQuality = enableSleepDurationAndQuality,
                 enableMorningEnergy = enableMorningEnergy,
                 enableMuscleSoreness = enableMuscleSoreness,

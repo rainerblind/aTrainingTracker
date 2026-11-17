@@ -3,7 +3,7 @@
 **Domain**: `aftermath_periods`  
 **Prefixes**: `PER`, `PERF`, `RAD`, `SPT`  
 **Scope**: Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers.  
-**Total Requirements**: 59
+**Total Requirements**: 60
 
 ---
 
@@ -1732,3 +1732,39 @@
   • *When* opening the app and navigating to the Periods screen,
   • *Then* the Periods screen renders cleanly without crashing.
 - **Invariants**: `REQ-PER-040.2` peek reconciliation and `workoutName` immutability preserved; zero DB schema, API, or `ANT-Android-SDKs` changes; `Localization Parity: N/A - no UI strings`.
+
+---
+
+### REQ-HRV-043: Pure Wellness Mode Gating & HRV Fallback on MorningHrvCheckScreen (`ATT-8598`) [Verified]
+- **System Requirement(s)**: Derived (SW-only) — Pure morning sleep & wellness UI gating and HRV fallback on MorningHrvCheckScreen (refining `REQ-HRV-040` and `REQ-PER-032`)
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-HRV-043`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Implementation**: `MorningHrvCheckViewModel.kt`, `MorningHrvCheckScreen.kt`, `res/values*/strings_hrv.xml`
+- **Rationale**: `ATT-8469` enabled the Start-screen *"Morning Check"* launcher for pure subjective sleep & wellness tracking (`showMorningCheckOnStartScreen = false`, `enableMorningSleepAndWellness = true`), yet `MorningHrvCheckScreen` still displays all HRV measurement cards, HRV TopAppBar metadata, and the *Start Measurement* CTA above `MorningWellnessInputCard` (`ATT-8598`).
+- **Description**:
+  1. *ViewModel Flag Exposure & Pure Wellness Mode Derivation (`REQ-HRV-043.1`)*:
+     - `MorningHrvUiState` (`MorningHrvCheckViewModel.kt`) SHALL expose `showMorningCheckOnStartScreen: Boolean = TuningPreferencesDefaults.DEFAULT_SHOW_MORNING_CHECK_ON_START_SCREEN`, collected reactively from `tuningDataStore.tuningConfigFlow`.
+     - Pure wellness mode SHALL evaluate to `true` iff `!uiState.showMorningCheckOnStartScreen && uiState.enableMorningSleepAndWellness && uiState.phase == MorningHrvPhase.READY`.
+  2. *Pure Wellness Mode UI & Empty-State Presentation (`REQ-HRV-043.2`)*:
+     - In pure wellness mode, `MorningHrvCheckScreen` SHALL hide `WakingProtocolChecklistCard`, `PostureAndDurationCard`, `MeasurementPacingCard`, the TopAppBar HRV Info `IconButton` (`HrvInfoBottomSheet`), and the HRV *Start Measurement* CTA (`morning_hrv_btn_start`).
+     - The `TopAppBar` SHALL adapt its title to `R.string.hrv_morning_check_start_button` and subtitle to `R.string.morning_hrv_wellness_subtitle`.
+     - `ActionButtonsSection` SHALL promote *Save Morning Wellness* (`onSaveStandaloneWellness`, `morning_hrv_btn_save_wellness`) to the primary filled `Button` (transitioning to the `TTColor.ReadinessOptimal` green *Saved* state with checkmark when `isWellnessSaved == true`).
+     - If all 4 wellness dimension sub-toggles (`enableSleepDurationAndQuality`, `enableMorningEnergy`, `enableMuscleSoreness`, `enableContextTags`) are `false`, `MorningWellnessInputCard` SHALL render an informative empty-state hint (`R.string.morning_hrv_wellness_empty_hint`).
+  3. *Enabled HRV Mode & Direct Profile Fallback (`REQ-HRV-043.3`)*:
+     - When `showMorningCheckOnStartScreen == true`, OR `!enableMorningSleepAndWellness` (e.g., direct navigation via `AthleteProfileScreen` `hrv_measure_morning_cta`), OR `phase != MorningHrvPhase.READY` (active `STABILIZING`/`MEASURING` sensor session or `COMPLETED` review), `MorningHrvCheckScreen` SHALL preserve the complete HRV (+ optional Wellness) layout, TopAppBar HRV title/subtitle/info action, and *Start Measurement* primary button intact.
+  4. *9-Language Localization Parity & Compose Previews (`REQ-HRV-043.4`)*:
+     - New strings `morning_hrv_wellness_subtitle` and `morning_hrv_wellness_empty_hint` SHALL maintain 100% parity across all 9 locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`) with zero emojis (`ATT-5400`).
+     - `MorningHrvCheckScreen.kt` SHALL extract stateless `MorningHrvCheckContent` with Light, Dark, and AMOLED `@Preview` composables covering pure wellness mode, full HRV+Wellness mode, and active measurement.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: `REQ-HRV-040` (`Standalone No-Strap Morning Wellness Logging`, `ATT-7034`), `REQ-PER-032` (`REQ-PER-032.1`, `REQ-PER-032.6`, `ATT-3556`/`ATT-6719`), and `REQ-UI-525` (`ATT-8469`), targeting `MorningHrvCheckViewModel.kt` and `MorningHrvCheckScreen.kt`.
+  2. *Historical Origin & Commit Trace*: `MorningHrvCheckScreen` was introduced HRV-first in `ATT-3556` (`dc034c08`), extended with optional `MorningWellnessInputCard` in `ATT-7034` (`a77ce176`), and launched from the Start screen in pure wellness mode via `ATT-8469` (`241df3a3`).
+  3. *Root Reason for Existing Formulation*: Subjective wellness was originally added as an optional card inside an HRV-centric screen before `ATT-8469` allowed launching the screen with Morning HRV Check disabled.
+  4. *Preservation of Core Invariants*: Zero SQLite schema changes (`HrvReadinessDbHelper`), zero workout generation, `keepScreenOn` during `STABILIZING`/`MEASURING` preserved, standalone wellness persistence (`rmssdMs = null`, `isPrimaryForDay = true`) and Start-screen auto-hide preserved (`REQ-UI-525.4`), and `AthleteProfileScreen` HRV CTA fallback intact.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `showMorningCheckOnStartScreen = false` and `enableMorningSleepAndWellness = true` in `MorningHrvPhase.READY`, *When* opening `MorningHrvCheckScreen`, *Then* HRV protocol/posture/duration/pacing cards, info icon, and *Start Measurement* are hidden, TopAppBar shows wellness title/subtitle, and *Save Morning Wellness* renders as the primary filled `Button`.
+  • *Given* pure wellness mode with all 4 wellness sub-toggles `false`, *When* `MorningWellnessInputCard` renders, *Then* `morning_hrv_wellness_empty_hint` is displayed inside the card.
+  • *Given* `showMorningCheckOnStartScreen = true` OR `enableMorningSleepAndWellness = false` OR `phase != MorningHrvPhase.READY`, *When* `MorningHrvCheckScreen` renders, *Then* the full HRV measurement layout and TopAppBar HRV metadata remain visible.
+- **Invariants**: Zero DB migrations, zero changes to `ControlTrackingViewModel`/`MorningCheckSection`, full HRV layout preserved when enabled or measuring, 100% 9-locale parity.
