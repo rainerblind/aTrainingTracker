@@ -3,7 +3,7 @@
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Requirements**: 173
+**Total Requirements**: 174
 
 ---
 
@@ -5633,3 +5633,38 @@ The workflow SHALL mandate that:
   • *When* the atomic squash commit is created,
   • *Then* the commit message contains valid `Agent-Role:`, `Agent-Model:`, and `Reviewed-by:` git trailers.
 - **Invariants**: Zero Android production code impact (`app/src/main/`); `ANT-Android-SDKs` untouched at `160000`; existing test fixtures and POSIX flock semantics preserved.
+
+---
+
+### REQ-PRO-109: Stage Transition Precondition Enforcement, Impl-Plan Gate Validation & Bypass Prevention (ATT-8154) [Verified]
+- **Tests**: `TST-PRO-109`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `tools/jira_util.py`, `tools/test_jira_accounts.py`
+- **Rationale**: ASPICE 4.0 Audit Finding `Observation (SUP)` (SUP.1 BP3, GP 2.1.4) identified four critical gate bypass paths in tooling: `submit_stage` auto-advanced parent tickets through multiple stages at once without gate approvals, `final_review_verdict` moved parents past Gate 5 from any prior status, `check_gate` accepted arbitrary non-Impl-Plan keys as long as status was `Erledigt`, and the Stage 6 Pros/Cons check was a naive substring search susceptible to keyword stuffing. Enforcing strict predecessor status preconditions, validating `[Impl-Plan]` subtasks, and demanding structured review ceremony sections guarantees that quality gates cannot be skipped programmatically.
+- **Description**:
+  1. *Strict Predecessor Stage Validation in `submit-stage` (`REQ-PRO-109.1`, [Verified])*: `tools/jira_util.py submit-stage` SHALL enforce that the parent ticket is in the exact expected predecessor stage before creating or advancing a stage sub-task. For Stage 1 (`spec["parent_stage"] == "analysis"`), the parent SHALL be in `zu erledigen` (advancing single-step to `analysis` per Rule 78) or already in `analysis`; for Stages 2 through 5, `submit-stage` SHALL strictly require that `current_parent_status == desired_parent_stage` (`test spec`, `implementation plan`, `implementation`, `test` respectively), rejecting any multi-stage skip (such as calling Stage 4 while parent is in `Analysis`) with an exit code of 1.
+  2. *Strict Stage 6 Gate 5 Prerequisite Validation in `final-review-verdict` (`REQ-PRO-109.2`, [Verified])*: `tools/jira_util.py final-review-verdict` SHALL strictly reject execution on parent tickets that are not in `Final Review (Agent)`, prohibiting premature parent stage advancement past Gate 5, while preserving `--bounce-target` healing and standard bounce transitions back to `Implementation`, `Analysis`, or `Zu erledigen`.
+  3. *Strict Subtask & Impl-Plan Summary Validation in `check-gate` (`REQ-PRO-109.3`, [Verified])*: `tools/jira_util.py check-gate` SHALL query `issuetype`, `summary`, `status`, and `parent`, validating that `issue_key` is a sub-task (`issuetype.subtask == True`) and that its summary matches the `[Impl-Plan]` prefix/pattern (Gate 3). If the issue is not a sub-task or does not represent an `[Impl-Plan]` subtask, it SHALL reject verification with an exit code of 1 regardless of issue status.
+  4. *Structured Pros/Cons & Recommendation Validation in `final-review-verdict` (`REQ-PRO-109.4`, [Verified])*: `tools/jira_util.py final-review-verdict` on `PASS` SHALL validate that the report text contains structured markdown sections with non-empty content for Pros (`* *Pros*:` or `Pros (Was ist gut/gelungen?)`), Cons / Defects (`* *Cons*:` or `Cons / Auffälligkeiten / Defects Identified`), and Recommendation (`* *Würdest du das freigeben?*:` or `Freigabe-Empfehlung`), or a structured markdown table with >= 2 evaluated options, rejecting bare keyword stuffing.
+  5. *Sanctioned Workflow & Protection Invariants (`REQ-PRO-109.5`, [Verified])*: Tooling changes SHALL strictly preserve all sanctioned Coordinator workflows (`pack-sprint`, `return-unstarted`, `carryover-wip`, `archive-po-acceptance`, `defer-systemtest`), `ATT-8153` QA non-conformance escalation, `ATT-8426` decoupled 7-day review currency, and post-bounce parent transitions back to `Final Review (Agent)`.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-109` refining `REQ-PRO-016` (Human Gate & Preconditions), `REQ-PRO-058` (Stage 6 Carbon Review), and `REQ-PRO-060` (Stage submissions). Targets `tools/jira_util.py` and `tools/test_jira_accounts.py`.
+  2. *Historical Origin & Commit Trace*: Sprint 2026-11-16_03_Nacht via ticket `ATT-8154` under Epic `ATT-8138` (ASPICE 4.0 Audit Remediation).
+  3. *Root Reason for Existing Formulation*: Early composite CLI commands auto-walked parent stages forward in a loop for local development convenience, creating bypass paths observed during ASPICE audit.
+  4. *Preservation of Core Invariants*: Inviolable human decision gate (`REQ-PRO-016`), role separation (`agent1` vs `agent2`), 3-bounce healing loop, POSIX flock merge lock, pure Python stdlib offline resilience strictly preserved.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* a parent ticket in `Analysis`,
+  • *When* `tools/jira_util.py submit-stage <PARENT> 4 ...` is invoked,
+  • *Then* the command fails with an error and non-zero exit code, rejecting multi-stage forward jumping.
+  • *Given* a parent ticket not in `Final Review (Agent)` (e.g. in `Implementation` or `Test`),
+  • *When* `tools/jira_util.py final-review-verdict <PARENT> PASS ...` is invoked,
+  • *Then* the command fails with an error and non-zero exit code.
+  • *Given* an issue key that is not an `[Impl-Plan]` subtask (e.g. an Analysis subtask or parent ticket),
+  • *When* `tools/jira_util.py check-gate <KEY>` is run,
+  • *Then* the command fails with an error and non-zero exit code even if the status is `Erledigt`.
+  • *Given* a Stage 6 review report with plain keyword stuffing but without structured section headers,
+  • *When* `tools/jira_util.py final-review-verdict <PARENT> PASS ...` is invoked,
+  • *Then* the command rejects the report with an error.
+- **Invariants**: Zero Android production code impact (`app/src/main/`); `ANT-Android-SDKs` untouched at `160000 commit 0e8cea714a231fb9565170d4ed01eafa868f9798`; existing test fixtures and POSIX flock semantics preserved.

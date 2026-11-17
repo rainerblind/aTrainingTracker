@@ -1163,7 +1163,7 @@ class TestRadarProtocolAndService(unittest.TestCase):
             size_category=VehicleSizeCategory.CAR,
             lane_state=LaneState.PASSING_LANE
         )
-        payload = RadarPayloadBuilder.build_v2_payload([target])
+        payload = RadarPayloadBuilder.build_v2_payload([target], authentic=False)
         # Header byte 0x01 + 8 stride bytes = 9 bytes
         self.assertEqual(len(payload), 9)
         self.assertEqual(payload[0], 0x01)
@@ -1179,7 +1179,7 @@ class TestRadarProtocolAndService(unittest.TestCase):
             size_category=VehicleSizeCategory.CAR,
             lane_state=LaneState.PASSING_LANE
         )
-        payload = RadarPayloadBuilder.build_v1_payload([target])
+        payload = RadarPayloadBuilder.build_v1_payload([target], authentic=False)
         # Header byte 0x00 + 3 stride bytes = 4 bytes
         self.assertEqual(len(payload), 4)
         self.assertEqual(payload[0], 0x00)
@@ -1187,9 +1187,9 @@ class TestRadarProtocolAndService(unittest.TestCase):
         self.assertEqual(payload[2], 120)  # Range meters (uint8)
 
     def test_radar_empty_payloads(self):
-        v2_empty = RadarPayloadBuilder.build_v2_payload([])
+        v2_empty = RadarPayloadBuilder.build_v2_payload([], authentic=False)
         self.assertEqual(v2_empty, [0x01])
-        v1_empty = RadarPayloadBuilder.build_v1_payload([])
+        v1_empty = RadarPayloadBuilder.build_v1_payload([], authentic=False)
         self.assertEqual(v1_empty, [0x00])
 
 

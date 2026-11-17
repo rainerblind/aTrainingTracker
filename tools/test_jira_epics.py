@@ -29,6 +29,11 @@ spec = importlib.util.spec_from_file_location("hm_jira_util", hm_path)
 hm_jira = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(hm_jira)
 
+# Clean up sys.path pollution from hoechstmass so root tools are preserved
+hm_tools_dir = os.path.dirname(hm_path)
+if hm_tools_dir in sys.path:
+    sys.path.remove(hm_tools_dir)
+
 
 class TestListEpics(unittest.TestCase):
     """TST-PRO-040.1: list-epics command & child count aggregation."""
@@ -392,7 +397,18 @@ class TestStage6FinalReview(unittest.TestCase):
                 "comment": {"comments": []},
             },
         }
-        res_pass = root_jira.final_review_verdict("ATT-7101", "PASS", "All criteria satisfied.", role="agent2")
+        report_text = (
+            "h3. Cold Final Review (Agent) — Executive Summary\n"
+            "* *Commit*: a1b2c3d4e5\n"
+            "* *What Changed*: Validated changes\n"
+            "* *Pros (Was ist gut/gelungen?)*:\n"
+            "  * Clean implementation without regressions\n"
+            "* *Cons / Auffälligkeiten / Defects Identified (Was ist kritisch/unvollständig?)*:\n"
+            "  * Keine kritischen Mängel festgestellt\n"
+            "* *Würdest du das freigeben? (Freigabe-Empfehlung)*:\n"
+            "  * **JA — Freigabe empfohlen**: All criteria satisfied.\n"
+        )
+        res_pass = root_jira.final_review_verdict("ATT-7101", "PASS", report_text, role="agent2")
         self.assertEqual(res_pass, "PASS")
         mock_transition.assert_called_with("ATT-7101", "final review (human)", role="agent2", inject_context=False)
 

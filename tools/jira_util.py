@@ -767,13 +767,36 @@ def print_status(issue_key, role="agent1"):
     return status
 
 def check_gate(issue_key, role="agent1"):
+    """
+    REQ-PRO-109.3 / ATT-8154 / Core Rule 4:
+    Verifies that issue_key is an authentic [Impl-Plan] subtask (Gate 3) in status 'Erledigt'.
+    Rejects non-subtasks or subtasks of different stages to prevent gate bypass.
+    """
     config = get_config()
-    url = f"{config['JIRA_URL']}/rest/api/2/issue/{issue_key}?fields=status"
+    url = f"{config['JIRA_URL']}/rest/api/2/issue/{issue_key}?fields=status,summary,issuetype,parent"
     issue = jira_request(url, role=role)
-    status = issue['fields'].get('status', {}).get('name', 'Unknown')
+    fields = issue.get("fields", {})
+
+    is_subtask = fields.get("issuetype", {}).get("subtask", False)
+    if not is_subtask:
+        print(
+            f"Error: Gate check rejected for '{issue_key}'. Issue is not a sub-task (must be an [Impl-Plan] subtask) (REQ-PRO-109.3).",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    summary = fields.get("summary", "")
+    if not re.search(r"^\[(impl-plan|impl\s*plan|implementation\s*plan|design|plan)\]", summary.strip(), re.IGNORECASE):
+        print(
+            f"Error: Gate check rejected for '{issue_key}'. Subtask summary '{summary}' does not match [Impl-Plan] (Stage 3) (REQ-PRO-109.3).",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    status = fields.get("status", {}).get("name", "Unknown")
     if status == "Erledigt":
         print(f"GATE_PASSED: {issue_key} is Erledigt")
-        sys.exit(0)
+        return True
     else:
         print(f"GATE_BLOCKED: {issue_key} is in status '{status}' (Expected: Erledigt)")
         sys.exit(1)
@@ -1524,13 +1547,28 @@ def submit_stage(parent_key, stage_arg, text_or_file, summary_override=None, rol
                     )
                     sys.exit(1)
 
-    # Ensure parent is in the matching stage status
-    if current_parent_status in PARENT_STAGE_ORDER and desired_parent_stage in PARENT_STAGE_ORDER:
-        curr_idx = PARENT_STAGE_ORDER.index(current_parent_status)
-        target_idx = PARENT_STAGE_ORDER.index(desired_parent_stage)
-        if curr_idx < target_idx:
-            for step_stage in PARENT_STAGE_ORDER[curr_idx + 1 : target_idx + 1]:
-                transition_issue(parent_key, step_stage, role=role, inject_context=False)
+    # REQ-PRO-109.1 / ATT-8154: Strict predecessor stage validation (prevent multi-stage skipping)
+    if stage_id == "1":
+        # Rule 78: JIT transition from 'zu erledigen' to 'analysis' allowed for Stage 1
+        if current_parent_status in ("zu erledigen", "to do", "open"):
+            transition_issue(parent_key, "analysis", role=role, inject_context=False)
+            current_parent_status = "analysis"
+        elif current_parent_status != "analysis":
+            print(
+                f"Error: Cannot submit Stage 1: parent ticket '{parent_key}' is in status '{current_parent_status}'. "
+                "Parent must be in 'Zu erledigen' or 'Analysis' (REQ-PRO-109.1).",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+    else:
+        # Stages 2..5 strictly require parent to be in matching stage (preceding gate already passed)
+        if current_parent_status != desired_parent_stage:
+            print(
+                f"Error: Cannot submit Stage {stage_id}: parent ticket '{parent_key}' is in status '{current_parent_status}', "
+                f"expected '{desired_parent_stage}'. Stage transitions cannot skip preceding gates (REQ-PRO-109.1).",
+                file=sys.stderr,
+            )
+            sys.exit(1)
 
     # Check if sub-task for this stage already exists
     subtasks = parent_fields.get("subtasks", [])
@@ -2199,16 +2237,74 @@ def count_final_review_bounces(comments):
     return max(count, max_bounce)
 
 
+def validate_stage6_review_structure(report_text):
+    """
+    REQ-PRO-109.4 / ATT-8154:
+    Validates that a Stage 6 Final Review report contains structured Pros/Cons/Recommendation
+    sections (Markdown headers '###' / 'h3.', bold bullets '* *Pros*:', '* **Pros**:') or a comparison table
+    with >= 2 evaluated options, rejecting bare keyword stuffing.
+    Returns (is_valid, list_of_errors).
+    """
+    if not report_text or not report_text.strip():
+        return False, ["Review report is empty."]
+
+    # Option 1: Comparison table with >= 2 options
+    table_lines = [l.strip() for l in report_text.splitlines() if l.strip().startswith("|")]
+    if len(table_lines) >= 3:
+        header_lower = table_lines[0].lower()
+        if ("pro" in header_lower or "vorteil" in header_lower) and ("con" in header_lower or "nachteil" in header_lower):
+            data_rows = [l for l in table_lines[1:] if not re.match(r"^\|\s*:?---+", l)]
+            if len(data_rows) >= 2:
+                return True, []
+
+    # Option 2: Structured ceremony sections / bullets
+    errors = []
+    pros_pattern = re.compile(
+        r"(?:^|\n)\s*(?:\*+|\#+|h[1-6]\.)\s*\*?\*?(?:pros|vorteile|pro\b)",
+        re.IGNORECASE,
+    )
+    cons_pattern = re.compile(
+        r"(?:^|\n)\s*(?:\*+|\#+|h[1-6]\.)\s*\*?\*?(?:cons|nachteile|auffälligkeiten|defects\s+identified|contra\b)",
+        re.IGNORECASE,
+    )
+    rec_pattern = re.compile(
+        r"(?:^|\n)\s*(?:\*+|\#+|h[1-6]\.)\s*\*?\*?(?:würdest\s+du\s+das\s+freigeben|freigabe[- ]empfehlung|empfehlung|recommendation)",
+        re.IGNORECASE,
+    )
+
+    pros_match = pros_pattern.search(report_text)
+    cons_match = cons_pattern.search(report_text)
+    rec_match = rec_pattern.search(report_text)
+
+    if not pros_match:
+        errors.append("Missing structured 'Pros' section header (e.g. '* *Pros*:')")
+    if not cons_match:
+        errors.append("Missing structured 'Cons / Auffälligkeiten' section header (e.g. '* *Cons*:')")
+    if not rec_match:
+        errors.append("Missing structured 'Würdest du das freigeben? (Freigabe-Empfehlung)' section header")
+
+    if not errors:
+        pos = sorted([(pros_match.start(), "pros"), (cons_match.start(), "cons"), (rec_match.start(), "rec")])
+        for idx, (p_start, name) in enumerate(pos):
+            next_start = pos[idx + 1][0] if idx + 1 < len(pos) else len(report_text)
+            section_content = report_text[p_start:next_start].strip()
+            lines = [l.strip() for l in section_content.splitlines() if l.strip()]
+            if len(lines) <= 1:
+                errors.append(f"Structured '{name}' section header has no substantive content/bullets below it")
+
+    return len(errors) == 0, errors
+
+
 def final_review_verdict(parent_key, verdict_arg, text_or_file, bounce_target="implementation", role="agent2", config=None):
     """
-    REQ-PRO-058.2 / TST-PRO-058.2:
+    REQ-PRO-058.2 / REQ-PRO-109.2 / REQ-PRO-109.4:
     Composite Stage 6 ('Final Review (Agent)') verdict command for the Cold Carbon Reviewer (agent2):
-    - PASS: Posts [FINAL REVIEW (AGENT) — PASS], transitions parent ticket from 'Final Review (Agent)'
-      to 'Final Review (Human)' (via 'I.O.'), and assigns to 'human'.
-    - BOUNCE: Counts prior [FINAL REVIEW (AGENT) — BOUNCE X/3] comments on the parent ticket.
-      * If bounce_count <= 3: Posts [FINAL REVIEW (AGENT) — BOUNCE {bounce_count}/3], transitions
-        parent ticket back to bounce_target ('implementation', 'analysis', or 'zu erledigen'),
-        and assigns to 'agent1'.
+    - Strictly rejects execution unless parent is in 'Final Review (Agent)'.
+    - PASS: Validates structured Pros/Cons, posts [FINAL REVIEW (AGENT) — PASS], transitions
+      parent ticket from 'Final Review (Agent)' to 'Final Review (Human)', and assigns to 'human'.
+    - BOUNCE: Tracks 3-bounce healing loop back to bounce_target (implementation/analysis/zu erledigen).
+      * If bounce_count <= 3: Posts [FINAL REVIEW (AGENT) — BOUNCE X/3], transitions to bounce_target,
+        and assigns back to 'agent1'.
       * If bounce_count > 3: Posts [FINAL REVIEW (AGENT) — ESCALATED AFTER 3 BOUNCES], transitions
         parent ticket to 'Final Review (Human)', and assigns to 'human'.
     """
@@ -2238,32 +2334,35 @@ def final_review_verdict(parent_key, verdict_arg, text_or_file, bounce_target="i
         print(f"Error: final-review-verdict operates strictly on parent tickets, not sub-task '{parent_key}'.", file=sys.stderr)
         sys.exit(1)
 
+    # REQ-PRO-109.2 / ATT-8154: Strict Gate 5 prerequisite (no multi-stage auto-advancement past Gate 5)
     current_status = fields_data.get("status", {}).get("name", "").strip().lower()
-    if current_status != "final review (agent)" and current_status in PARENT_STAGE_ORDER:
-        curr_idx = PARENT_STAGE_ORDER.index(current_status)
-        agent_rev_idx = PARENT_STAGE_ORDER.index("final review (agent)")
-        if curr_idx < agent_rev_idx:
-            for step_stage in PARENT_STAGE_ORDER[curr_idx + 1 : agent_rev_idx + 1]:
-                transition_issue(parent_key, step_stage, role=auditor_role, inject_context=False)
+    if current_status != "final review (agent)":
+        print(
+            f"Error: Cannot execute final-review-verdict on parent '{parent_key}' in status '{current_status}'. "
+            "Parent ticket must strictly be in 'Final Review (Agent)' (REQ-PRO-109.2).",
+            file=sys.stderr,
+        )
+        sys.exit(1)
 
     assign_issue(parent_key, auditor_role, role=auditor_role)
 
     if is_pass:
-        report_lower = report_text.lower()
-        has_pros = any(kw in report_lower for kw in ("pros", "vorteile", "pro:"))
-        has_cons = any(kw in report_lower for kw in ("cons", "nachteile", "auffälligkeiten", "defects"))
-        has_recommendation = any(kw in report_lower for kw in ("freigeben", "freigabe", "recommend", "würdest du"))
-        if not (has_pros and has_cons and has_recommendation):
-            missing = []
-            if not has_pros: missing.append("Pros")
-            if not has_cons: missing.append("Cons / Defects Identified / Auffälligkeiten")
-            if not has_recommendation: missing.append("Würdest du das freigeben? (Freigabe-Empfehlung)")
-            print(f"Error: Stage 6 Final Review report missing mandatory review ceremony questions: {', '.join(missing)}.\n"
-                  f"Every Stage 6 Cold Carbon review MUST answer:\n"
-                  f"* *Pros (Was ist gut/gelungen?)*:\n"
-                  f"* *Cons / Auffälligkeiten / Defects Identified (Was ist kritisch/unvollständig?)*:\n"
-                  f"* *Würdest du das freigeben? (Freigabe-Empfehlung)*:\n",
-                  file=sys.stderr)
+        is_valid_structure, structure_errors = validate_stage6_review_structure(report_text)
+        if not is_valid_structure:
+            print(
+                f"Error: Stage 6 Final Review report failed structured Pros/Cons validation (REQ-PRO-109.4):",
+                file=sys.stderr,
+            )
+            for err in structure_errors:
+                print(f"  - {err}", file=sys.stderr)
+            print(
+                "Every Stage 6 Cold Review report MUST structure either:\n"
+                "* *Pros (Was ist gut/gelungen?)*:\n"
+                "* *Cons / Auffälligkeiten / Defects Identified (Was ist kritisch/unvollständig?)*:\n"
+                "* *Würdest du das freigeben? (Freigabe-Empfehlung)*:\n"
+                "or provide a markdown comparison table with >= 2 options.",
+                file=sys.stderr,
+            )
             sys.exit(1)
 
         comment_body = report_text if FINAL_REVIEW_PASS_TAG in report_text else f"{FINAL_REVIEW_PASS_TAG}\n\n{report_text}"

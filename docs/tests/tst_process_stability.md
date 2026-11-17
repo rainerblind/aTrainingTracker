@@ -3,7 +3,7 @@
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Tests**: 204
+**Total Tests**: 205
 
 ---
 
@@ -3466,3 +3466,24 @@
   • Verify that `_merge_ticket_impl` formats squash commit messages with standard git trailers (`Agent-Role:`, `Agent-Model:`, `Reviewed-by:`), correctly reading from environment or arguments and passing automated trailer validation.
   4. *Single-OS User Residual Risk Review Test (`TST-PRO-108.4`, docs/management/risk_register.md)*:
   • Verify that `docs/management/risk_register.md` contains an approved entry documenting the residual risk and defense-in-depth controls for co-located subagent execution under a single OS account.
+
+---
+
+### TST-PRO-109: **Stage Transition Precondition Enforcement, Impl-Plan Gate Validation & Bypass Prevention Suite (ATT-8154)** [Verified]
+- **Requirement(s)**: `REQ-PRO-109`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Component**: `tools/jira_util.py`, `tools/test_jira_accounts.py`
+- **Jira**: `ATT-8154`
+- **Test Description**:
+  1. *Predecessor Stage Precondition Enforcement in `submit-stage` Test (`TST-PRO-109.1`, tools/test_jira_accounts.py)*:
+  • Verify that calling `submit_stage` with stage 4 on a parent ticket in `Analysis` raises SystemExit with non-zero exit code. Verify that Stage 1 allows transition from `zu erledigen` to `analysis`, and Stages 2..5 succeed when the parent is in the expected stage.
+  2. *Stage 6 Gate 5 Prerequisite Enforcement in `final-review-verdict` Test (`TST-PRO-109.2`, tools/test_jira_accounts.py)*:
+  • Verify that `final_review_verdict` raises SystemExit with non-zero exit code when called on a parent ticket whose status is not `Final Review (Agent)`. Verify that `--bounce-target` healing flow back to `Implementation` or `Analysis` continues to succeed.
+  3. *Strict Subtask & Impl-Plan Summary Validation in `check-gate` Test (`TST-PRO-109.3`, tools/test_jira_accounts.py)*:
+  • Verify that `check_gate` raises SystemExit with exit code 1 when passed a non-subtask issue key or a subtask with summary `[Analysis]` even if its status is `Erledigt`. Verify that it passes (exit code 0) only when the issue is a sub-task, its summary matches `[Impl-Plan]`, and its status is `Erledigt`.
+  4. *Structured Pros/Cons & Recommendation Validation Test (`TST-PRO-109.4`, tools/test_jira_accounts.py)*:
+  • Verify that `final_review_verdict` rejects plain keyword-stuffed unstructured text on `PASS`, and successfully accepts structured reports matching `stage6-final-review/SKILL.md` sections with bullets or structured options tables.
+  5. *Sanctioned Coordinator Workflow Invariants Test (`TST-PRO-109.5`, tools/test_jira_accounts.py)*:
+  • Verify that Coordinator operations (`pack_sprint`, `return_unstarted`, `carryover_wip`, `archive_po_acceptance`, `defer_to_systemtest_queue`), `ATT-8153` QA non-conformance ticket generation, and `ATT-8426` decoupled 7-day review currency checks remain 100% functional.

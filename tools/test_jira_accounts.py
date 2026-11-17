@@ -19,8 +19,9 @@ from unittest.mock import patch, MagicMock
 # Ensure tools directory is on sys.path
 REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 TOOLS_DIR = os.path.join(REPO_ROOT, "tools")
-if TOOLS_DIR not in sys.path:
-    sys.path.insert(0, TOOLS_DIR)
+while TOOLS_DIR in sys.path:
+    sys.path.remove(TOOLS_DIR)
+sys.path.insert(0, TOOLS_DIR)
 
 import jira_util
 import review_agent
@@ -1834,6 +1835,7 @@ class TestSeparatedAuthorshipAndGateEvidence(unittest.TestCase):
 
         # 5. Stage 1 submission (no preceding stage) -> succeeds
         mock_transition.reset_mock()
+        parent_info["fields"]["status"]["name"] = "Analysis"
         st_key = jira_util.submit_stage("ATT-9000", "1", "Stage 1 analysis", role="agent2")
         self.assertEqual(st_key, "ATT-9999")
 
@@ -2363,6 +2365,267 @@ Verdict: PASS."""
         self.assertIn("PO Escalation", skill_text)
 
 
+
+class TestGateBypassPrevention(unittest.TestCase):
+    """
+    REQ-PRO-109 / TST-PRO-109: Stage & Gate Transition Bypass Prevention.
+    Verifies:
+    - TST-PRO-109.1: Predecessor Stage Validation in submit-stage
+    - TST-PRO-109.2: Parent Status Validation in final-review-verdict
+    - TST-PRO-109.3: Gate Subtask & Summary Validation in check-gate
+    - TST-PRO-109.4: Structured Pros/Cons Validation in Stage 6 Reviews
+    - TST-PRO-109.5: Coordinator Stage & Gate Operations Preserved
+    """
+
+    @patch("jira_util.transition_issue")
+    @patch("jira_util.create_subtask", return_value="ATT-8888")
+    @patch("jira_util.update_issue_description")
+    @patch("jira_util.jira_request")
+    @patch("jira_util.get_config", return_value={"JIRA_URL": "https://example.atlassian.net"})
+    def test_tst_pro_109_1_submit_stage_predecessor_equality_and_skipping(
+        self, mock_config, mock_request, mock_update, mock_create, mock_transition
+    ):
+        """TST-PRO-109.1: submit-stage rejects skips while permitting Stage 1 from Zu erledigen."""
+        # 1. Stage 1 from 'Zu erledigen' -> succeeds and transitions parent to 'analysis'
+        mock_request.return_value = {
+            "key": "ATT-100",
+            "fields": {
+                "issuetype": {"name": "Feature", "subtask": False},
+                "status": {"name": "Zu erledigen"},
+                "summary": "Parent Feature",
+                "subtasks": [],
+            },
+        }
+        subtask_key = jira_util.submit_stage("ATT-100", "1", "Stage 1 Analysis Deliverable", role="agent1")
+        self.assertEqual(subtask_key, "ATT-8888")
+        mock_transition.assert_any_call("ATT-100", "analysis", role="agent1", inject_context=False)
+
+        # 2. Stage 1 from 'Analysis' -> succeeds without re-transitioning parent to analysis
+        mock_transition.reset_mock()
+        mock_request.return_value["fields"]["status"]["name"] = "Analysis"
+        subtask_key = jira_util.submit_stage("ATT-100", "1", "Stage 1 Analysis Deliverable", role="agent1")
+        self.assertEqual(subtask_key, "ATT-8888")
+        # Ensure parent was not re-transitioned to analysis
+        for call in mock_transition.call_args_list:
+            self.assertNotEqual(call[0][0], "ATT-100")
+
+        # 3. Stage 1 from invalid status ('Implementation') -> rejected with exit code 1
+        mock_request.return_value["fields"]["status"]["name"] = "Implementation"
+        with self.assertRaises(SystemExit) as cm:
+            jira_util.submit_stage("ATT-100", "1", "Stage 1 Analysis Deliverable", role="agent1")
+        self.assertEqual(cm.exception.code, 1)
+
+        # 4. Stage 4 from 'Analysis' (skipping Gates 1..3) -> rejected with exit code 1
+        mock_request.return_value["fields"]["status"]["name"] = "Analysis"
+        with self.assertRaises(SystemExit) as cm:
+            jira_util.submit_stage("ATT-100", "4", "Stage 4 Implementation Summary", role="agent1")
+        self.assertEqual(cm.exception.code, 1)
+
+        # 5. Stage 4 from 'Implementation' (matching predecessor gate) -> succeeds
+        mock_request.return_value["fields"]["status"]["name"] = "Implementation"
+        subtask_key = jira_util.submit_stage("ATT-100", "4", "Stage 4 Implementation Summary", role="agent1")
+        self.assertEqual(subtask_key, "ATT-8888")
+
+        # 6. Stage 3 from 'Zu erledigen' (skipping Stage 1 and 2) -> rejected with exit code 1
+        mock_request.return_value["fields"]["status"]["name"] = "Zu erledigen"
+        with self.assertRaises(SystemExit) as cm:
+            jira_util.submit_stage("ATT-100", "3", "Stage 3 Impl Plan", role="agent1")
+        self.assertEqual(cm.exception.code, 1)
+
+    @patch("jira_util.assign_issue")
+    @patch("jira_util.transition_issue")
+    @patch("jira_util.add_comment")
+    @patch("jira_util.jira_request")
+    @patch("jira_util.get_config", return_value={"JIRA_URL": "https://example.atlassian.net"})
+    def test_tst_pro_109_2_final_review_verdict_rejects_non_agent_review_parent(
+        self, mock_config, mock_request, mock_comment, mock_transition, mock_assign
+    ):
+        """TST-PRO-109.2: final-review-verdict strictly requires parent in 'Final Review (Agent)'."""
+        structured_pass_report = (
+            "h3. Cold Final Review (Agent) — Executive Summary\n"
+            "* *Commit*: a1b2c3d4e5\n"
+            "* *What Changed*: Tested changes\n"
+            "* *Pros (Was ist gut/gelungen?)*:\n"
+            "  * Implementation satisfies all acceptance criteria.\n"
+            "* *Cons / Auffälligkeiten / Defects Identified (Was ist kritisch/unvollständig?)*:\n"
+            "  * Keine kritischen Mängel festgestellt\n"
+            "* *Würdest du das freigeben? (Freigabe-Empfehlung)*:\n"
+            "  * **JA — Freigabe empfohlen**: Release approved.\n"
+        )
+
+        # 1. When parent is in 'Test', execution is rejected with exit code 1 (Gate 5 bypass prevented)
+        mock_request.return_value = {
+            "key": "ATT-200",
+            "fields": {
+                "issuetype": {"name": "Bug", "subtask": False},
+                "status": {"name": "Test"},
+                "comment": {"comments": []},
+            },
+        }
+        with self.assertRaises(SystemExit) as cm:
+            jira_util.final_review_verdict("ATT-200", "PASS", structured_pass_report, role="agent2")
+        self.assertEqual(cm.exception.code, 1)
+
+        # 2. When parent is in 'Implementation', execution is rejected
+        mock_request.return_value["fields"]["status"]["name"] = "Implementation"
+        with self.assertRaises(SystemExit) as cm:
+            jira_util.final_review_verdict("ATT-200", "BOUNCE", "Need rework.", role="agent2")
+        self.assertEqual(cm.exception.code, 1)
+
+        # 3. When parent is in 'Zu erledigen', execution is rejected
+        mock_request.return_value["fields"]["status"]["name"] = "Zu erledigen"
+        with self.assertRaises(SystemExit) as cm:
+            jira_util.final_review_verdict("ATT-200", "PASS", structured_pass_report, role="agent2")
+        self.assertEqual(cm.exception.code, 1)
+
+        # 4. When parent is strictly in 'Final Review (Agent)', execution proceeds cleanly
+        mock_request.return_value["fields"]["status"]["name"] = "Final Review (Agent)"
+        res = jira_util.final_review_verdict("ATT-200", "PASS", structured_pass_report, role="agent2")
+        self.assertEqual(res, "PASS")
+        mock_transition.assert_called_with("ATT-200", "final review (human)", role="agent2", inject_context=False)
+
+    @patch("jira_util.jira_request")
+    @patch("jira_util.get_config", return_value={"JIRA_URL": "https://example.atlassian.net"})
+    def test_tst_pro_109_3_check_gate_subtask_and_summary_validation(self, mock_config, mock_request):
+        """TST-PRO-109.3: check-gate verifies subtask type, [Impl-Plan] summary, and Erledigt status."""
+        # 1. Rejects non-subtask issue
+        mock_request.return_value = {
+            "key": "ATT-300",
+            "fields": {
+                "issuetype": {"name": "Bug", "subtask": False},
+                "summary": "[Impl-Plan] Architecture Design",
+                "status": {"name": "Erledigt"},
+            },
+        }
+        with self.assertRaises(SystemExit) as cm:
+            jira_util.check_gate("ATT-300", role="agent1")
+        self.assertEqual(cm.exception.code, 1)
+
+        # 2. Rejects subtask with wrong stage summary (e.g. [Analysis])
+        mock_request.return_value = {
+            "key": "ATT-301",
+            "fields": {
+                "issuetype": {"name": "Sub-task", "subtask": True},
+                "summary": "[Analysis] Problem Domain Analysis",
+                "status": {"name": "Erledigt"},
+            },
+        }
+        with self.assertRaises(SystemExit) as cm:
+            jira_util.check_gate("ATT-301", role="agent1")
+        self.assertEqual(cm.exception.code, 1)
+
+        # 3. Rejects authentic [Impl-Plan] subtask when status is not Erledigt
+        mock_request.return_value = {
+            "key": "ATT-302",
+            "fields": {
+                "issuetype": {"name": "Sub-task", "subtask": True},
+                "summary": "[Impl-Plan] Atomic Implementation Steps",
+                "status": {"name": "In Progress"},
+            },
+        }
+        with self.assertRaises(SystemExit) as cm:
+            jira_util.check_gate("ATT-302", role="agent1")
+        self.assertEqual(cm.exception.code, 1)
+
+        # 4. Accepts authentic [Impl-Plan] subtask in Erledigt status
+        mock_request.return_value = {
+            "key": "ATT-303",
+            "fields": {
+                "issuetype": {"name": "Sub-task", "subtask": True},
+                "summary": "[Impl-Plan] Atomic Implementation Steps",
+                "status": {"name": "Erledigt"},
+            },
+        }
+        result = jira_util.check_gate("ATT-303", role="agent1")
+        self.assertTrue(result)
+
+    def test_tst_pro_109_4_stage6_structured_pros_cons_validation(self):
+        """TST-PRO-109.4: validate_stage6_review_structure enforces Pros/Cons/Recommendation structure."""
+        # 1. Valid bold bullets format
+        valid_bullets = (
+            "* *Pros*:\n"
+            "  * Solid error handling and tests.\n"
+            "* *Cons*:\n"
+            "  * Minor log verbosity.\n"
+            "* *Würdest du das freigeben? (Freigabe-Empfehlung)*:\n"
+            "  * **JA — Freigabe empfohlen**.\n"
+        )
+        is_valid, errors = jira_util.validate_stage6_review_structure(valid_bullets)
+        self.assertTrue(is_valid)
+        self.assertEqual(errors, [])
+
+        # 2. Valid markdown headers format
+        valid_headers = (
+            "### Pros\n"
+            "Clean architecture and zero regressions.\n"
+            "### Cons / Auffälligkeiten\n"
+            "None identified.\n"
+            "### Freigabe-Empfehlung\n"
+            "Approved for production.\n"
+        )
+        is_valid, errors = jira_util.validate_stage6_review_structure(valid_headers)
+        self.assertTrue(is_valid)
+        self.assertEqual(errors, [])
+
+        # 3. Valid comparison table format (>= 2 data options)
+        valid_table = (
+            "| Option | Pros | Cons |\n"
+            "|---|---|---|\n"
+            "| Approach A | Minimal change | Limited scalability |\n"
+            "| Approach B | Robust design | Slightly higher complexity |\n"
+        )
+        is_valid, errors = jira_util.validate_stage6_review_structure(valid_table)
+        self.assertTrue(is_valid)
+        self.assertEqual(errors, [])
+
+        # 4. Bare keyword stuffing in prose without structured headers or content fails
+        keyword_stuffing = (
+            "We checked the pros and cons and would you release this freigabe-empfehlung without any headers."
+        )
+        is_valid, errors = jira_util.validate_stage6_review_structure(keyword_stuffing)
+        self.assertFalse(is_valid)
+        self.assertGreater(len(errors), 0)
+
+        # 5. Header present but empty content below header fails
+        empty_section = (
+            "* *Pros*:\n"
+            "* *Cons*:\n"
+            "  * Missing pros content above.\n"
+            "* *Würdest du das freigeben? (Freigabe-Empfehlung)*:\n"
+            "  * JA\n"
+        )
+        is_valid, errors = jira_util.validate_stage6_review_structure(empty_section)
+        self.assertFalse(is_valid)
+
+        # 6. Empty report text fails
+        is_valid, errors = jira_util.validate_stage6_review_structure("")
+        self.assertFalse(is_valid)
+
+    @patch("jira_util.jira_request")
+    @patch("jira_util.get_config", return_value={"JIRA_URL": "https://example.atlassian.net"})
+    def test_tst_pro_109_5_coordinator_stage_operations_preserved(self, mock_config, mock_request):
+        """TST-PRO-109.5: Coordinator role operations remain intact and unimpeded."""
+        # Verify role account and token resolution
+        config = {
+            "JIRA_COORDINATOR_USER": "coord@example.com",
+            "JIRA_COORDINATOR_TOKEN": "coord_token",
+            "JIRA_USER": "fallback@example.com",
+            "JIRA_TOKEN": "fallback_token",
+        }
+        user, token = jira_util.resolve_account("coordinator", config)
+        self.assertEqual(user, "coord@example.com")
+        self.assertEqual(token, "coord_token")
+
+        # Verify coordinator can query status without gate bypass interference
+        mock_request.return_value = {
+            "key": "ATT-400",
+            "fields": {"status": {"name": "Analysis"}},
+        }
+        status = jira_util.print_status("ATT-400", role="coordinator")
+        self.assertEqual(status, "Analysis")
+
+
 if __name__ == "__main__":
     unittest.main()
+
 
