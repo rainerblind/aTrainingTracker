@@ -3,7 +3,7 @@
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Tests**: 210
+**Total Tests**: 215
 
 ---
 
@@ -154,6 +154,50 @@
   1. Inject raw GATT characteristic byte arrays for Heart Rate (`0x2A37`), Cycling Power (`0x2A63`), and Radar (`6a4e3204` V1 & V2 `parseV2ThreatPacket`), plus `Location` fixes via `SpeedAndLocationDevice_GPS.onNewLocation()`.
   2. Assert binary parsing into `MySensorManager` sensors, `RrBeatEvent` callbacks, and `RadarStateRepository` targets.
   3. Assert real `BTLERadarDevice` watchdog timeout (`WATCHDOG_TIMEOUT_MS` = 3,500 ms via `getWatchdogRunnableForTesting()`) transitions `RadarStateRepository` to `DISCONNECTED_ERROR`.
+
+### TST-INT-013: **INT-SWE-05 Domain Calculators & Algorithms Integration Verification** [Verified]
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Integration
+- **Requirement(s)**: `REQ-PRO-111`
+- **Component**: `tracker/autopause/AutoPauseManager.kt`, `physiology/PowerPhysiologyCalculator.kt`, `physiology/PowerHrDynamicsCalculator.kt`, `database/WorkoutClusterEngine.kt`, `climbs/ClimbDetector.kt`
+- **Jira**: `ATT-8156`
+- **Test Description**:
+  1. Execute real `AutoPauseManager.evaluateTick()`, `PowerPhysiologyCalculator.calculateNormalizedPower()`, `PowerHrDynamicsCalculator.calculate()`, `WorkoutClusterEngine.suggestCluster()`, and `ClimbDetector.detectClimbs()` using synthetic multi-sensor time-series and elevation profiles.
+  2. Assert deterministic NP/TSS, cardiac drift, cluster apex, climb detection, and auto-pause debounce transitions without primitive constant stubs.
+
+### TST-INT-014: **INT-SWE-06 Persistence SQLite Foundation Integration Verification** [Verified]
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Integration
+- **Requirement(s)**: `REQ-PRO-111`
+- **Component**: `database/WorkoutSamplesDatabaseManager.java`, `database/WorkoutSummariesDatabaseManager.java`, `database/KnownLocationsDatabaseManager.java`, `database/LapsDatabaseManager.java`, `repositories/KnownLocationsRepository.kt`
+- **Jira**: `ATT-8156`
+- **Test Description**:
+  1. Exercise real Robolectric SQLite databases (`WorkoutSamplesDatabaseManager`, `WorkoutSummariesDatabaseManager`, `KnownLocationsDatabaseManager`, `LapsDatabaseManager`) and `KnownLocationsRepository.recordWorkoutStart()`.
+  2. Assert WAL concurrency, dynamic `createNewTable` sample persistence, and non-destructive `onUpgrade` schema parity (`v1 -> v6`) via `RealSqliteTestHelper`.
+
+### TST-INT-015: **INT-SWE-07 Repository/ExportManager to File Exporters Integration Verification** [Verified]
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Integration
+- **Requirement(s)**: `REQ-PRO-111`
+- **Component**: `exporter/ExportManager.java`, `exporter/writer/FitFileWriter.kt`, `exporter/writer/GPXFileWriter.java`, `exporter/writer/TCXFileWriter.kt`, `exporter/db/ExportStatusDatabaseManager.java`
+- **Jira**: `ATT-8156`
+- **Test Description**:
+  1. Seed real SQLite workout/sample/lap records and invoke `FitFileWriter`, `GPXFileWriter`, and `TCXFileWriter` via `ExportManager` into temporary storage.
+  2. Assert valid FIT/GPX/TCX byte/XML output, zero leftover `.tmp` artifacts after write, and authentic `ExportStatusDatabaseManager` status persistence.
+
+### TST-INT-016: **INT-SWE-08 Cloud APIs & Health Connect Integration Verification** [Verified]
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Integration
+- **Requirement(s)**: `REQ-PRO-111`
+- **Component**: `exporter/uploader/StravaUploader.kt`, `exporter/uploader/DropboxUploader.java`, `cloud/healthconnect/HealthConnectManager.kt`, `cloud/healthconnect/HealthConnectHrvImporter.kt`, `database/hrv/HrvReadinessRepository.kt`
+- **Jira**: `ATT-8156`
+- **Test Description**:
+  1. Wire real `StravaUploader` to an authentic `OkHttpClient` `Interceptor` transport double and real `ExportStatusRepository` / `StravaUploadDbHelper`, verifying bearer-token multipart upload + polling + activity PUT update, HTTP 503 retry classification, and `DropboxUploader` missing-credential guard.
+  2. Wire real `HealthConnectManager` and `HealthConnectHrvImporter` to an authentic `HealthConnectClient` test double and real `ExportStatusDatabaseManager` / `HrvReadinessRepository`, verifying idempotent workout sync and nocturnal HRV ingestion.
 
 ### TST-PRO-001: **Jira Attachment Download** [Verified]
 - **Priority**: High
@@ -3554,3 +3598,20 @@
   • Verify that `tools/generate_test_evidence.py` and `tools/jira_util.py export-test-evidence` parse JUnit XML results for `INT-SWE-01..04` and archive versioned evidence under `docs/engineering/test_evidence/`.
   4. *Living Documentation & Shard Parity Test (`TST-PRO-110.4`, tools/verify_requirement_governance.py)*:
   • Verify that all living documentation shards pass governance checks with zero dangling references and zero code orphans.
+
+---
+
+### TST-PRO-111: **INT-SWE-05..08 Integration Verification & Strategy Parity Suite (ATT-8156)** [Verified]
+- **Requirement(s)**: `REQ-PRO-111`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Integration / Review
+- **Component**: `app/src/test/java/com/atrainingtracker/trainingtracker/build/AspiceSweAuditContractTest.kt`, `docs/architecture/integration_strategy.md`
+- **Jira**: `ATT-8156`
+- **Test Description**:
+  1. *Integration Test Suite & Spec Lock (`TST-PRO-111.1`, build/AspiceSweAuditContractTest.kt)*:
+  • Verify `DomainCalculatorsIntegrationTest.kt`, `PersistenceSqliteIntegrationTest.kt`, `FileExportersIntegrationTest.kt`, and `CloudHealthConnectIntegrationTest.kt` exist on disk, use `RobolectricTestRunner` (`sdk = [34]`), and cite `TST-INT-013..016`.
+  2. *Integration Strategy Factual Sync (`TST-PRO-111.2`, docs/architecture/integration_strategy.md)*:
+  • Verify `integration_strategy.md` reflects authentic `sprint_455.md` / `ATT-8500` metrics (`6,540` tests, `1,119` suites, `29m 21s` Tier-2 / `2,635.73s` sum), Level 1 `INT-SWE-01..08` scope, and `emulator-5554` policy.
+  3. *Machine-Readable Evidence & Governance (`TST-PRO-111.3`, tools/verify_requirement_governance.py)*:
+  • Verify JUnit XML captures `TST-INT-013..016` and `TST-PRO-111`, and living documentation shards pass governance checks with zero dangling references or code orphans.

@@ -3,7 +3,7 @@
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Requirements**: 175
+**Total Requirements**: 176
 
 ---
 
@@ -5701,4 +5701,42 @@ The workflow SHALL mandate that:
   • *Given* GATT byte streams for HR (`0x2A37`), Power (`0x2A63`), Radar V1/V2 (`6a4e3204`), and `Location` fixes,
   • *When* ingested via `BTLEHeartRateDevice`, `BTLEBikePowerDevice`, `BTLERadarDevice`, and `SpeedAndLocationDevice_GPS`,
   • *Then* packets parse into `MySensorManager` / `RadarStateRepository` and `BTLERadarDevice` watchdog (`3,500 ms`) transitions to `DISCONNECTED_ERROR`.
+- **Invariants**: Zero Android production code impact (`app/src/main/`); `ANT-Android-SDKs` untouched at `160000 commit 0e8cea714a231fb9565170d4ed01eafa868f9798`; existing test fixtures and POSIX flock semantics preserved.
+
+---
+
+### REQ-PRO-111: Integration Verification Test Cases for INT-SWE-05 to INT-SWE-08 (ATT-8156) [Verified]
+- **Tests**: `TST-PRO-111`, `TST-INT-013`, `TST-INT-014`, `TST-INT-015`, `TST-INT-016`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Integration / Review
+- **Implementation**: `app/src/test/java/com/atrainingtracker/trainingtracker/integration/DomainCalculatorsIntegrationTest.kt`, `PersistenceSqliteIntegrationTest.kt`, `FileExportersIntegrationTest.kt`, `CloudHealthConnectIntegrationTest.kt`, `build/AspiceSweAuditContractTest.kt`, `docs/architecture/integration_strategy.md`
+- **Rationale**: Completes ASPICE 4.0 Assessment (2026-11-15) Finding `M6` (SWE.5 BP1–BP7) remediation after `ATT-8155` (`INT-SWE-01..04`) by establishing genuine real-component cross-boundary integration tests for `INT-SWE-05..08` (`IF-SWE-05..08`) and reconciling stale metrics and emulator policy in `docs/architecture/integration_strategy.md` against `docs/engineering/test_evidence/sprint_455.md` and `.agents/skills/stage5-verification/SKILL.md`.
+- **Description**:
+  1. *INT-SWE-05: Domain Calculators & Algorithms (`REQ-PRO-111.1`, [Verified])*: Pure-JVM calculators (`AutoPauseManager`, `PowerPhysiologyCalculator`, `PowerHrDynamicsCalculator`, `WorkoutClusterEngine`, `ClimbDetector`) SHALL have integration test coverage driven by synthetic telemetry and elevation time-series without primitive constant stubs.
+  2. *INT-SWE-06: Persistence SQLite Foundation (`REQ-PRO-111.2`, [Verified])*: Database managers (`WorkoutSamplesDatabaseManager`, `WorkoutSummariesDatabaseManager`, `KnownLocationsDatabaseManager`, `LapsDatabaseManager`) and `KnownLocationsRepository` SHALL have Robolectric SQLite integration test coverage asserting WAL concurrency, dynamic sample table creation, bulk inserts, and non-destructive `onUpgrade` schema parity.
+  3. *INT-SWE-07: Repository/ExportManager to File Exporters (`REQ-PRO-111.3`, [Verified])*: Streaming file writers (`FitFileWriter`, `GPXFileWriter`, `TCXFileWriter`) driven from real SQLite records via `ExportManager` / `WorkoutRepository` SHALL have integration test coverage asserting valid FIT/GPX/TCX output, `.tmp` atomic cleanup, and `ExportStatusDatabaseManager` updates.
+  4. *INT-SWE-08: Repository/ExportManager to Cloud & Health Connect (`REQ-PRO-111.4`, [Verified])*: External uploaders and Health Connect connectors (`StravaUploader`, `DropboxUploader`, `HealthConnectManager`, `HealthConnectHrvImporter`) wired to real `ExportStatusDatabaseManager` / `HrvReadinessRepository` with authentic OkHttp `Interceptor` / `HealthConnectClient` doubles SHALL have integration test coverage asserting bearer-token injection, multipart upload + polling + PUT update, HTTP 503 retry classification, `DropboxUploader` missing-credential guard, session mapping, and nocturnal HRV import.
+  5. *Integration Strategy Factual Sync (`REQ-PRO-111.5`, [Verified])*: `docs/architecture/integration_strategy.md` MUST be synchronized with authentic `sprint_455.md` metrics (`6,540` unit tests / `2,635.73s` sum; `1,119` suites / `29m 21s` Tier-2 wall-clock per `Sprint_Review_and_Retro_ATT-8500.md`), Level 1 `INT-SWE-01..08` coverage, and `emulator-5554` (`Pixel_8_Android_15`) Stage 5 policy.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-111` refining `REQ-PRO-045` (`docs/architecture/integration_strategy.md`) and `docs/architecture/interfaces.md` (`IF-SWE-05..08`).
+  2. *Historical Origin & Commit Trace*: Sprint `2026-11-17_01_Früh` via `ATT-8156`, extending healed `ATT-8155` (`b81888c8`) for ASPICE 4.0 Finding `M6`.
+  3. *Root Reason for Existing Formulation*: `integration_strategy.md` specified `INT-SWE-05..08` without executable test suites and retained outdated test counts (`3,660+`), runtime estimates (`~2–3 minutes`), and retired-emulator text.
+  4. *Preservation of Core Invariants*: Preserves `REQ-PRO-045`, `REQ-PRO-110`, `TST-INT-002..012`, zero `app/src/main/` modifications, and `ANT-Android-SDKs` at `0e8cea71`.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* synthetic telemetry and elevation profiles,
+  • *When* evaluated by real `AutoPauseManager`, `PowerPhysiologyCalculator`, `PowerHrDynamicsCalculator`, `WorkoutClusterEngine`, and `ClimbDetector`,
+  • *Then* calculated physiology, cluster, climb, and auto-pause transitions match deterministic invariants.
+  • *Given* real SQLite database managers and `KnownLocationsRepository`,
+  • *When* dynamic tables are created, concurrent WAL writes occur, and `onUpgrade` runs,
+  • *Then* schema parity and persisted records remain intact without locks or data loss.
+  • *Given* persisted SQLite workout data and temp storage,
+  • *When* `ExportManager` executes `FitFileWriter`, `GPXFileWriter`, and `TCXFileWriter`,
+  • *Then* valid FIT/GPX/TCX outputs are generated, `.tmp` artifacts are cleaned up, and `ExportStatusDatabaseManager` records completion.
+  • *Given* `StravaUploader`/`DropboxUploader` (OkHttp `Interceptor` double) and `HealthConnectManager`/`HealthConnectHrvImporter` (fake `HealthConnectClient`) wired to real `ExportStatusDatabaseManager` and `HrvReadinessRepository`,
+  • *When* upload, HTTP 503 retry check, Dropbox credential guard, workout sync, and HRV import execute,
+  • *Then* bearer-token multipart upload/PUT + retry classification, Health Connect record mapping, and nocturnal HRV persistence succeed.
+  • *Given* `docs/architecture/integration_strategy.md`,
+  • *When* reviewed against `sprint_455.md` and `stage5-verification/SKILL.md`,
+  • *Then* test counts (`6,540`), suite counts (`1,119`), runtime (`29m 21s` Tier-2 / `2,635.73s` sum), and `emulator-5554` policy match reality.
 - **Invariants**: Zero Android production code impact (`app/src/main/`); `ANT-Android-SDKs` untouched at `160000 commit 0e8cea714a231fb9565170d4ed01eafa868f9798`; existing test fixtures and POSIX flock semantics preserved.

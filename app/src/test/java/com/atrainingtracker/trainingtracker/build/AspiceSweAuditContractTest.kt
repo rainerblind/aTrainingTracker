@@ -601,4 +601,47 @@ class AspiceSweAuditContractTest {
             assertTrue("test spec must cite $tstIntId", specContent.contains(tstIntId))
         }
     }
+
+    /**
+     * Verifies that integration verification test classes for INT-SWE-05 through INT-SWE-08 exist on disk,
+     * implement the required Robolectric runner, map to TST-INT-013..016, and that integration_strategy.md
+     * matches authentic sprint_455 metrics and emulator-5554 policy (ASPICE SWE.5 Finding M6,
+     * REQ-PRO-111, TST-PRO-111, ATT-8156).
+     */
+    @Test
+    fun testSoftwareIntegrationVerification_intSwe05to08_testClassesAndStrategyParity() {
+        val integrationTestFiles = listOf(
+            "app/src/test/java/com/atrainingtracker/trainingtracker/integration/DomainCalculatorsIntegrationTest.kt" to "TST-INT-013",
+            "app/src/test/java/com/atrainingtracker/trainingtracker/integration/PersistenceSqliteIntegrationTest.kt" to "TST-INT-014",
+            "app/src/test/java/com/atrainingtracker/trainingtracker/integration/FileExportersIntegrationTest.kt" to "TST-INT-015",
+            "app/src/test/java/com/atrainingtracker/trainingtracker/integration/CloudHealthConnectIntegrationTest.kt" to "TST-INT-016"
+        )
+
+        for ((relPath, tstId) in integrationTestFiles) {
+            val file = findRepoRootFile(relPath)
+            assertTrue("$relPath must exist on disk (REQ-PRO-111, $tstId)", file.exists())
+            val content = file.readText()
+            assertTrue("$relPath must cite test ID $tstId", content.contains(tstId))
+            assertTrue("$relPath must use RobolectricTestRunner", content.contains("RobolectricTestRunner"))
+            assertTrue("$relPath must target SDK 34", content.contains("sdk = [34]"))
+        }
+
+        // TST-PRO-111.1: Test spec exists and maps REQ-PRO-111 + TST-INT-013..016
+        val specFile = findRepoRootFile("docs/engineering/test_specs/ATT-8156_test_spec.md")
+        assertTrue("docs/engineering/test_specs/ATT-8156_test_spec.md must exist (TST-PRO-111.1)", specFile.exists())
+        val specContent = specFile.readText()
+        assertTrue("test spec must cite REQ-PRO-111", specContent.contains("REQ-PRO-111"))
+        assertTrue("test spec must cite TST-PRO-111", specContent.contains("TST-PRO-111"))
+        for (i in 13..16) {
+            val tstIntId = String.format("TST-INT-%03d", i)
+            assertTrue("test spec must cite $tstIntId", specContent.contains(tstIntId))
+        }
+
+        // TST-PRO-111.2: integration_strategy.md reflects authentic sprint_455 metrics and emulator-5554 policy
+        val strategyContent = findRepoRootFile("docs/architecture/integration_strategy.md").readText()
+        assertTrue("integration_strategy.md must cite 6,540 tests", strategyContent.contains("6,540"))
+        assertTrue("integration_strategy.md must cite 1,119 suites", strategyContent.contains("1,119"))
+        assertTrue("integration_strategy.md must cite emulator-5554 policy", strategyContent.contains("emulator-5554"))
+        assertTrue("integration_strategy.md must cover INT-SWE-01 through INT-SWE-08", strategyContent.contains("`INT-SWE-01` through `INT-SWE-08`"))
+    }
 }
