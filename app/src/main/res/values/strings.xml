@@ -821,6 +821,7 @@
     <string name="pedal_balance_left_marker">L</string>
     <string name="pedal_balance_right_marker">R</string>
     <string name="zone_display_preview_title">Preview</string>
+    <string name="zone_display_apply_all">Apply to all</string>
 
     <string name="url_privacy">https://github.com/rainerblind/aTrainingTracker/blob/develop/privacy.md</string> <!-- TODO: replace develop with master -->
     <string name="prefEmailExport">e-Mail</string>

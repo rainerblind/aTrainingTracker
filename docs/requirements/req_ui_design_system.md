@@ -3,7 +3,7 @@
 **Domain**: `ui_design_system`  
 **Prefixes**: `UI`, `UNT`  
 **Scope**: Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts.  
-**Total Requirements**: 462
+**Total Requirements**: 464
 
 ---
 
@@ -17519,3 +17519,70 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 • *Then* the corresponding `EditSensorFieldViewModel` callback fires and the sheet renders cleanly without clipping, overlapping, or nested scrolling.
 
 **Invariants**: Zero `EditSensorFieldViewModel` / DB schema / repository signature changes; all conditional guards and callbacks preserved; `AppModalBottomSheet` scroll safety preserved; 9-locale parity unchanged.
+
+### REQ-UI-2783: ZoneDisplayOptions Integration & Combined Zone Preview in Cockpit & Kacheln [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-UI-2783`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `ZoneDisplayOptionsControls.kt`, `CockpitTypographySection.kt`, `ZonesSettingsActivity.kt`, `AdvancedTuningScreen.kt`, `AdvancedTuningDialog.kt`, `values*/strings.xml`
+- **Rationale**: Athletes configuring Cockpit typography, tile variants, corner radius, and borders under **Cockpit & Kacheln** previously had to navigate separately to `ZonesSettingsActivity` to toggle `ZoneDisplayOptions` (`showBackground`, `showLeftBar`, `showRightBar`, `showTextColor`, `showGauge`), and `PreviewCockpitTile` lacked live zone tint/bar/text-color/gauge rendering (`ATT-8498`). Integrating profile-scoped `ZoneDisplayOptions` controls and a combined zone preview into `CockpitTypographySection` unifies live tile styling while respecting all tuning design guidelines and existing contract tests.
+- **Description**: Profile-Scoped `ZoneDisplayOptions`, Apply-All, and Combined Tile Preview in Cockpit & Kacheln.
+
+1. *Profile-Scoped ZoneDisplayOptions Controls in Cockpit & Kacheln (`REQ-UI-2783.1`)*:
+• `CockpitTypographySection.kt` (remaining strictly `< 400` LOC per `REQ-UI-277.3`) SHALL integrate a Zone Display subsection separated by `HorizontalDivider` (no nested `ElevatedCard`) providing:
+  - Profile selector across `HR_RUN`, `HR_BIKE`, `PWR_BIKE`, and `HRV_DFA_A1` implemented via `TuningSegmentedButtonRow` (`maxLines = 1, softWrap = false`, zero `FilterChip` in `categories/` per `REQ-UI-262.5`).
+  - Shared `ZoneDisplayOptions` toggle rows using `TuningToggleItem` (`zero raw Switch(` in `categories/`): `zone_display_background`, `zone_display_left_bar`, `zone_display_right_bar`, `zone_display_text_color`, and `zone_display_gauge` (when `HRV_DFA_A1` is active).
+  - An `"Apply to all"` (`R.string.zone_display_apply_all`) action copying `showBackground`, `showLeftBar`, `showRightBar`, and `showTextColor` from the active profile across all 4 profiles while preserving `HRV_DFA_A1.showGauge`.
+
+2. *Shared Controls & ZonesSettingsActivity Preservation (`REQ-UI-2783.2`)*:
+• Shared `ZoneDisplayOptionsControls` (outside `ui/settings/tuning/categories/`) SHALL be reused cleanly without violating `TuningDesignGuidelinesContractTest` or `HrvDfaA1SettingsContractTest` (`ZonesSettingsActivity.kt` MUST preserve `R.string.zone_display_gauge`, `displayOptions.showGauge`, and `showBar = displayOptions.showGauge`).
+
+3. *Combined Preview, Host State Parity & 9-Locale Completeness (`REQ-UI-2783.3`)*:
+• `PreviewCockpitTile` in `CockpitTypographySection.kt` SHALL reflect the active profile's `ZoneDisplayOptions` using `TTColor.Zone2` (`R.color.zone_2`): 12% background tint (`showBackground`), `6.dp` left/right accent bars (`showLeftBar`/`showRightBar`), zone-colored primary text (`showTextColor`), and HRV gauge bar when `HRV_DFA_A1` + `showGauge == true`, alongside font family, weight, variant, corner radius, and border styling.
+• Both `AdvancedTuningScreen.kt` and `AdvancedTuningDialog.kt` SHALL hydrate `hrRun`/`hrBike`/`pwrBike`/`hrvDisplayOptions` once from `SettingsDataStore`, persist via `saveZoneDisplayOptions` & `saveHrvZoneDisplayOptions` on **Save**, discard local edits on **Cancel**, and reset only `ZoneDisplayOptions()` (never zone thresholds) on **Reset to Defaults**.
+• `zone_display_apply_all` SHALL maintain 100% parity across all 9 locales (`values`, `de`, `es`, `fr`, `it`, `ja`, `nl`, `pl`, `pt`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new `REQ-UI-2783`, extending `REQ-UI-172` (*Zone Display Options*), `REQ-UI-262.5` (*Tuning Design Guidelines*), `REQ-UI-277.3` (*CockpitTypographySection < 400 LOC & `PreviewCockpitTile`*), `REQ-UI-376` (*HRV Gauge*), and `REQ-TRK-061.4` (`HrvDfaA1SettingsContractTest`).
+2. *Historical Origin & Commit Trace*: `ATT-1390` (`e3966ebf`) introduced `ZoneDisplayOptions` in `ZonesSettingsActivity.kt`; `ATT-2457` added `PreviewCockpitTile` and `< 400` LOC limit; `ATT-7539` added `TuningDesignGuidelinesContractTest`; `ATT-7742` added `HrvDfaA1SettingsContractTest`.
+3. *Root Reason for Existing Formulation*: `ZoneDisplayOptions` were originally confined to `ZonesSettingsActivity.kt`, separate from Cockpit tile geometry tuning.
+4. *Preservation of Core Invariants*: Preserves `CockpitTypographySection.kt < 400` LOC, zero `FilterChip`/`Switch`/`ElevatedCard` in `categories/`, `HrvDfaA1SettingsContractTest` contracts, `SettingsDataStore` threshold integrity, and 9-locale parity.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* **Cockpit & Kacheln** expanded in `AdvancedTuningScreen` or `AdvancedTuningDialog`, *When* an athlete switches profiles via `TuningSegmentedButtonRow` and toggles `ZoneDisplayOptions` via `TuningToggleItem`, *Then* `PreviewCockpitTile` immediately updates its `zone_2` tint, `6.dp` side bars, text color, and HRV gauge bar alongside tile geometry/typography.
+• *Given* `zone_display_apply_all` is tapped while editing a profile with `HRV.showGauge = true`, *When* applied, *Then* `showBackground`, `showLeftBar`, `showRightBar`, and `showTextColor` match across all 4 profiles while `HRV.showGauge` remains unchanged.
+• *Given* unsaved `ZoneDisplayOptions` edits in `AdvancedTuningScreen` or `AdvancedTuningDialog`, *When* **Cancel** is tapped, changes are discarded; *When* **Reset to Defaults** is tapped, only `ZoneDisplayOptions()` resets (zone thresholds preserved); *When* **Save** is tapped, all 4 profiles persist to `SettingsDataStore`.
+• *Given* the codebase and 9 locale `strings.xml` files, *When* contract, localization, and screenshot tests execute, *Then* `CockpitTypographySection.kt < 400` LOC, `TuningDesignGuidelinesContractTest`, `HrvDfaA1SettingsContractTest`, `CockpitPreviewTileContractTest`, `AdvancedTuningModularityTest`, 9-locale parity, and Light/Dark Rule 8.5 visuals all pass.
+
+**Invariants**: `CockpitTypographySection.kt < 400` LOC; zero `FilterChip`/`Switch`/`ElevatedCard` in `categories/`; `ZonesSettingsActivity` & `HrvDfaA1SettingsContractTest` preserved; zone thresholds untouched on Reset; 9-locale parity maintained.
+
+### REQ-UI-2784: RadarTrafficSummaryCard Canonical Speed Unit Formatting (`Rule 36`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-UI-2784`
+- **System Requirement(s)**: `SYSREQ-TRK-006`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `RadarTrafficSummaryCard.kt`, `MetricFormatterContext.kt`, `SpeedFormatter.kt`, `WorkoutDetailTabbedContent.kt`
+- **Rationale**: `RadarTrafficSummaryCard.kt` (`L131`, `L138`) hardcoded `String.format(locale, "%.1f km/h", ... * 3.6)` for `summary.maxApproachSpeedMps` and `summary.maxVehicleSpeedMps`, showing `km/h` to Imperial (`MyUnits.IMPERIAL`) athletes in violation of `Rule 36` (Single Source of Truth). Delegating speed formatting to `LocalMetricFormatter.current.speed.format_with_units(...)` aligns `RadarTrafficSummaryCard` with sibling aftermath cards (`TrackOnMapScreen.kt`, `WorkoutSummaryCompact.kt`) (`ATT-8440`, refining `REQ-RAD-005`):
+- **Description**:
+  1. *Canonical Speed Formatting (`REQ-UI-2784.1`)*:
+     - `RadarTrafficSummaryCard.kt` SHALL format `summary.maxApproachSpeedMps` and `summary.maxVehicleSpeedMps` using `LocalMetricFormatter.current.speed.format_with_units(...)` (`SpeedFormatter.kt` via `MetricFormatterContext.kt`), emitting `km/h` (`* 3.6`) under `MyUnits.METRIC` and `mile/h` (`* 2.23693629` via `MyHelper.mps2userUnit`) under `MyUnits.IMPERIAL`.
+  2. *Scope & Guard Preservation (`REQ-UI-2784.2`)*:
+     - `RadarTrafficSummaryCard` SHALL preserve its early-return guard `if (summary == null || summary.totalVehicles <= 0) return`, `locale` formatting on `vehiclesPerKm` / `vehiclesPerHour` (`L110`, `L117`), `minPassingDistanceM` (`L157`), and `WorkoutDetailTabbedContent.kt:932` integration; `RadarTrafficSummaryFormatter.kt` (`REQ-RAD-007`) remains untouched.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new `REQ-UI-2784` refining `REQ-RAD-005` (`ATT-5088`) and enforcing `Rule 36`; targets `RadarTrafficSummaryCard.kt:131,138`.
+2. *Historical Origin & Commit Trace*: Commit `624bea5e` (`ATT-5088`) introduced `RadarTrafficSummaryCard.kt`; commit `6a694bb1` added `LocalConfiguration.current.locales[0]`.
+3. *Root Reason for Existing Formulation*: Initial implementation hardcoded `* 3.6` and `"km/h"` prior to `LocalMetricFormatter.current.speed` alignment.
+4. *Preservation of Core Invariants*: Preserves null/zero-vehicle early return (`L56`), non-speed density/clearance formatting (`L110`, `L117`, `L157`), `Locale.getDefault()` in `SpeedFormatter`, and `RadarTrafficSummaryFormatter.kt` untouched.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `RadarTrafficSummary` with `totalVehicles > 0`, `maxApproachSpeedMps = 10.0`, `maxVehicleSpeedMps = 20.0`,
+  - *When* `TrainingApplication.getUnit()` is `MyUnits.METRIC`, *Then* `RadarTrafficSummaryCard` displays `36.0 km/h` (or `36,0 km/h`) and `72.0 km/h` (or `72,0 km/h`).
+  - *When* `TrainingApplication.getUnit()` is `MyUnits.IMPERIAL`, *Then* `RadarTrafficSummaryCard` displays `22.4 mile/h` (or `22,4 mile/h`) and `44.7 mile/h` (or `44,7 mile/h`).
+• *Given* `summary == null` or `summary.totalVehicles <= 0`, *When* `RadarTrafficSummaryCard` composes, *Then* nothing is rendered.
+
+**Invariants**: Zero SQLite/DTO changes; `TrainingApplication.setUnitForTesting(null)` cleanup in tests; Light/Dark theme readability preserved; `ANT-Android-SDKs` untouched.

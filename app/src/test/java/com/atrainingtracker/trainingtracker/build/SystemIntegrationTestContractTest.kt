@@ -18,22 +18,23 @@
 
 package com.atrainingtracker.trainingtracker.build
 
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
 
 /**
- * System Integration Verification Contract Test (ASPICE SYS.4 BP1-BP7,
- * REQ-PRO-068, TST-PRO-068, ATT-6166).
+ * Developer Sensor Simulator Self-Test & Interface Spec Contract Test
+ * (REQ-PRO-068, TST-PRO-068, REQ-PRO-112, TST-PRO-112, ATT-6166, ATT-8157).
  *
  * Enforces:
- * 1. docs/system/sys_integration_tests.md exists and contains required metadata header (TST-PRO-068.1).
- * 2. All 6 formal System Integration Test Cases (SYS-INT-001 through SYS-INT-006) are defined.
- * 3. Complete external interface coverage across SYS-IF-01 (BLE), SYS-IF-02 (ANT+), SYS-IF-03 (GNSS), and SYS-IF-05 (Cloud).
- * 4. Bidirectional system requirements allocation to SYSREQ-TRK-* and SYSREQ-DEX-* without dangling IDs (TST-PRO-068.2).
- * 5. Documented automated commands and verification scripts exist on disk in tools/ (TST-PRO-068.3).
- * 6. Quantified pass/fail criteria, timing tolerances, and release artifact archival are specified.
- * 7. Compliance with ATT-6186: zero source-text reading of production files.
+ * 1. docs/system/sys_integration_tests.md exists, documents external interfaces (SYS-IF-01, 02, 03, 05),
+ *    and explicitly discloses simulator-only scope vs INT-SWE-01..08 / AppSmokeAndroidTest / manual SYS.5.
+ * 2. Simulator self-test cases (SIM-HR-001, SIM-PWR-001, SIM-RDR-001, SIM-GPS-001, SIM-RPL-001) are documented.
+ * 3. Bidirectional system requirements allocation to SYSREQ-TRK-* and SYSREQ-DEX-* without dangling IDs.
+ * 4. Renamed tools/run_simulator_self_tests.py and tools/test_simulator_self_tests.py exist on disk,
+ *    while legacy tools/run_system_integration_tests.py is removed.
+ * 5. Zero release-gate claims on simulator JSON in sys_integration_tests.md.
  */
 class SystemIntegrationTestContractTest {
 
@@ -44,47 +45,49 @@ class SystemIntegrationTestContractTest {
             File("../../$relativePath")
         )
         return candidates.firstOrNull { it.exists() }
-            ?: throw IllegalStateException("Could not locate $relativePath in working directory: ${File(".").absolutePath}")
+            ?: File(relativePath)
     }
 
     /**
-     * Asserts docs/system/sys_integration_tests.md exists and contains formal header and Mermaid diagram (TST-PRO-068.1).
+     * Asserts docs/system/sys_integration_tests.md exists, references REQs/TSTs, and discloses simulator-only scope (TST-PRO-068.1).
      */
     @Test
-    fun testSysIntegrationTests_fileExistsAndHasHeader() {
+    fun testSysIntegrationTests_fileExistsAndDisclosesSimulatorScope() {
         val docFile = findRepoRootFile("docs/system/sys_integration_tests.md")
         assertTrue("docs/system/sys_integration_tests.md must exist (REQ-PRO-068.1)", docFile.exists())
 
         val content = docFile.readText()
         assertTrue("Specification must not be empty", content.isNotBlank())
-        assertTrue("Must reference ASPICE SYS.4", content.contains("SYS.4"))
         assertTrue("Must reference REQ-PRO-068", content.contains("REQ-PRO-068"))
         assertTrue("Must reference TST-PRO-068", content.contains("TST-PRO-068"))
+        assertTrue("Must reference REQ-PRO-112", content.contains("REQ-PRO-112"))
         assertTrue("Must include Mermaid architectural diagram", content.contains("```mermaid"))
         assertTrue("Must declare graph TD diagram", content.contains("graph TD"))
-        assertTrue("Must detail Environment A (Headless CI)", content.contains("Environment A"))
-        assertTrue("Must detail Environment B (Hardware-in-the-Loop)", content.contains("Environment B"))
+        assertTrue("Must detail Environment A", content.contains("Environment A"))
+        assertTrue("Must detail Environment B", content.contains("Environment B"))
+        assertTrue("Must explicitly state simulator tests do NOT execute Android APK",
+            content.contains("NOT") && content.contains("Android APK"))
+        assertTrue("Must reference real app integration INT-SWE-01..08", content.contains("INT-SWE-01..08"))
     }
 
     /**
-     * Asserts all 6 formal system integration test cases (SYS-INT-001..006) are defined (TST-PRO-068.1).
+     * Asserts simulator self-test IDs are documented cleanly (TST-PRO-068.1 / TST-PRO-112.1).
      */
     @Test
-    fun testSysIntegrationTests_coversAllSixTestCases() {
+    fun testSysIntegrationTests_documentsSimulatorSelfTests() {
         val docFile = findRepoRootFile("docs/system/sys_integration_tests.md")
         val content = docFile.readText()
 
-        val expectedTestCases = listOf(
-            "SYS-INT-001", // BLE Heart Rate & RR Interval
-            "SYS-INT-002", // BLE Cycling Power & Cadence
-            "SYS-INT-003", // BLE Garmin Varia Radar Multi-Target
-            "SYS-INT-004", // ANT+ Radio IPC
-            "SYS-INT-005", // Multi-Source GNSS Positioning
-            "SYS-INT-006"  // Cloud Synchronization & Rate Governance
+        val expectedSelfTests = listOf(
+            "SIM-HR-001",
+            "SIM-PWR-001",
+            "SIM-RDR-001",
+            "SIM-GPS-001",
+            "SIM-RPL-001"
         )
 
-        for (testId in expectedTestCases) {
-            assertTrue("sys_integration_tests.md must define test case $testId", content.contains(testId))
+        for (testId in expectedSelfTests) {
+            assertTrue("sys_integration_tests.md must define simulator self-test $testId", content.contains(testId))
         }
     }
 
@@ -107,7 +110,6 @@ class SystemIntegrationTestContractTest {
             assertTrue("sys_integration_tests.md must cover system interface $ifId", content.contains(ifId))
         }
 
-        // Verify specific GATT UUIDs and services
         assertTrue("Must document Heart Rate Service 0x180D", content.contains("0x180D"))
         assertTrue("Must document Cycling Power Service 0x1818", content.contains("0x1818"))
         assertTrue("Must document Radar Service 6a4e3200", content.contains("6a4e3200"))
@@ -125,12 +127,12 @@ class SystemIntegrationTestContractTest {
         val content = docFile.readText()
 
         val requiredSysreqs = listOf(
-            "SYSREQ-TRK-001", // Multi-Sensor Acquisition
-            "SYSREQ-TRK-002", // Automatic Reconnection
-            "SYSREQ-TRK-003", // 1-Hz Sampling Loop
-            "SYSREQ-TRK-004", // Multi-Source GNSS
-            "SYSREQ-DEX-001", // Telemetry Export
-            "SYSREQ-DEX-003"  // Cloud Activity Synchronization
+            "SYSREQ-TRK-001",
+            "SYSREQ-TRK-002",
+            "SYSREQ-TRK-003",
+            "SYSREQ-TRK-004",
+            "SYSREQ-DEX-001",
+            "SYSREQ-DEX-003"
         )
 
         for (sysreq in requiredSysreqs) {
@@ -138,11 +140,11 @@ class SystemIntegrationTestContractTest {
         }
 
         val requiredElements = listOf(
-            "SYS-EL-01", // Host Application
-            "SYS-EL-02", // BLE Sensors
-            "SYS-EL-03", // ANT+ Sensors
-            "SYS-EL-04", // Platform Services
-            "SYS-EL-05"  // Cloud Platforms
+            "SYS-EL-01",
+            "SYS-EL-02",
+            "SYS-EL-03",
+            "SYS-EL-04",
+            "SYS-EL-05"
         )
 
         for (elId in requiredElements) {
@@ -151,13 +153,13 @@ class SystemIntegrationTestContractTest {
     }
 
     /**
-     * Asserts referenced simulator scripts and execution runner exist on disk in tools/ (TST-PRO-068.3).
+     * Asserts renamed simulator self-test scripts exist and legacy fake integration runner is gone (TST-PRO-068.3 / TST-PRO-112.1).
      */
     @Test
-    fun testSysIntegrationTests_referencedSimulatorToolsExist() {
+    fun testSysIntegrationTests_renamedSimulatorToolsExistAndLegacyRemoved() {
         val requiredTools = listOf(
-            "tools/run_system_integration_tests.py",
-            "tools/test_system_integration_tests.py",
+            "tools/run_simulator_self_tests.py",
+            "tools/test_simulator_self_tests.py",
             "tools/ble_hr_simulator.py",
             "tools/ble_power_simulator.py",
             "tools/ble_radar_simulator.py",
@@ -170,19 +172,30 @@ class SystemIntegrationTestContractTest {
             assertTrue("Simulator tool $toolPath must exist on disk", toolFile.exists())
             assertTrue("Simulator tool $toolPath must be a regular file", toolFile.isFile)
         }
+
+        assertFalse(
+            "Legacy tools/run_system_integration_tests.py must be removed (REQ-PRO-112.1)",
+            findRepoRootFile("tools/run_system_integration_tests.py").exists()
+        )
+        assertFalse(
+            "Legacy tools/test_system_integration_tests.py must be removed (REQ-PRO-112.1)",
+            findRepoRootFile("tools/test_system_integration_tests.py").exists()
+        )
     }
 
     /**
-     * Asserts pass/fail criteria, timing tolerances, and release artifact archival are specified (TST-PRO-068.1).
+     * Asserts sys_integration_tests.md enforces non-gating simulator classification (TST-PRO-112.1 / TST-PRO-112.3).
      */
     @Test
-    fun testSysIntegrationTests_specifiesCriteriaAndArtifactLogging() {
+    fun testSysIntegrationTests_doesNotClaimReleaseGating() {
         val docFile = findRepoRootFile("docs/system/sys_integration_tests.md")
         val content = docFile.readText()
 
-        assertTrue("Must specify Pass / Fail Criteria", content.contains("Pass / Fail Gate Criteria") || content.contains("Pass / Fail Criteria"))
-        assertTrue("Must specify timing tolerances", content.contains("tolerances") || content.contains("Tolerances"))
-        assertTrue("Must specify release artifact logging path under docs/releases/<tag>/", content.contains("docs/releases/<tag>/"))
-        assertTrue("Must specify JSON result filename", content.contains("system_integration_results.json"))
+        assertTrue("Must state simulator self-tests are never a blocking release gate",
+            content.contains("never") && content.contains("blocking release gate"))
+        assertFalse("Must not reference retired run_system_integration_tests.py",
+            content.contains("run_system_integration_tests.py"))
+        assertFalse("Must not mandate docs/releases/<tag>/system_integration_results.json",
+            content.contains("docs/releases/<tag>/system_integration_results.json"))
     }
 }

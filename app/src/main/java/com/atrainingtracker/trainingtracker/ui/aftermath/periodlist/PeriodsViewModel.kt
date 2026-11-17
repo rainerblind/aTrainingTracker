@@ -70,19 +70,6 @@ class PeriodsViewModel @JvmOverloads constructor(
     private val periodsRepo = PeriodsRepository.getInstance(application)
     private val prefManager = com.atrainingtracker.trainingtracker.MyPreferenceManager(application)
 
-    init {
-        viewModelScope.launch {
-            workoutRepo.allWorkouts.collectIgnoringUnstubbedMock { workouts ->
-                val peeked = _peekedWorkoutDataWithTrack.value ?: return@collectIgnoringUnstubbedMock
-                val workoutData = peeked.workoutData ?: return@collectIgnoringUnstubbedMock
-                val updated = workouts.find { it.id == workoutData.id } ?: return@collectIgnoringUnstubbedMock
-                if (updated != workoutData) {
-                    _peekedWorkoutDataWithTrack.value = peeked.copy(workoutData = updated)
-                }
-            }
-        }
-    }
-
     private val _selectedMetric = MutableStateFlow(PeriodBarMetric.DURATION)
     val selectedMetric: StateFlow<PeriodBarMetric> = _selectedMetric.asStateFlow()
 
@@ -418,5 +405,19 @@ class PeriodsViewModel @JvmOverloads constructor(
     fun clearPeekSelection() {
         peekJob?.cancel()
         _peekedWorkoutDataWithTrack.value = null
+    }
+
+    // Keep init after all property initializers: StateFlow.collect emits synchronously on Dispatchers.Main.immediate.
+    init {
+        viewModelScope.launch {
+            workoutRepo.allWorkouts.collectIgnoringUnstubbedMock { workouts ->
+                val peeked = _peekedWorkoutDataWithTrack.value ?: return@collectIgnoringUnstubbedMock
+                val workoutData = peeked.workoutData ?: return@collectIgnoringUnstubbedMock
+                val updated = workouts.find { it.id == workoutData.id } ?: return@collectIgnoringUnstubbedMock
+                if (updated != workoutData) {
+                    _peekedWorkoutDataWithTrack.value = peeked.copy(workoutData = updated)
+                }
+            }
+        }
     }
 }

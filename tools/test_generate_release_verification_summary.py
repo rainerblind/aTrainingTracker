@@ -198,8 +198,8 @@ class TestGenerateReleaseVerificationSummary(unittest.TestCase):
 
 
 
-    def test_collect_sys4_summary_pass(self):
-        """TST-PRO-074.4: Parse valid SYS.4 JSON report."""
+    def test_collect_sys4_summary_legacy_informational(self):
+        """TST-PRO-074.4 / TST-PRO-112.2: Parse optional legacy simulator JSON as non-blocking info."""
         rel_dir = os.path.join(self.test_dir, "docs", "releases", self.tag)
         os.makedirs(rel_dir, exist_ok=True)
         sys4_file = os.path.join(rel_dir, "system_integration_results.json")
@@ -213,10 +213,6 @@ class TestGenerateReleaseVerificationSummary(unittest.TestCase):
             "test_results": {
                 "SYS-INT-001": {"name": "BLE HRM Ingestion", "passed": True, "details": "PASS"},
                 "SYS-INT-002": {"name": "BLE Cycling Power", "passed": True, "details": "PASS"},
-                "SYS-INT-003": {"name": "ANT+ Cadence", "passed": True, "details": "PASS"},
-                "SYS-INT-004": {"name": "GNSS Multipath", "passed": True, "details": "PASS"},
-                "SYS-INT-005": {"name": "Radar Alerting", "passed": True, "details": "PASS"},
-                "SYS-INT-006": {"name": "FIT/TCX Storage", "passed": True, "details": "PASS"},
             }
         }
         with open(sys4_file, "w") as f:
@@ -224,12 +220,13 @@ class TestGenerateReleaseVerificationSummary(unittest.TestCase):
 
         res = collect_sys4_summary(self.test_dir, self.tag)
         self.assertTrue(res["available"])
+        self.assertFalse(res["blocking"])
         self.assertEqual(res["overall_status"], "PASS")
         self.assertEqual(res["passed_cases"], 6)
         self.assertEqual(len(res["deviations"]), 0)
 
-    def test_collect_sys4_summary_failing(self):
-        """TST-PRO-074.4: Detect failing SYS.4 test cases."""
+    def test_collect_sys4_summary_legacy_failing_is_non_blocking(self):
+        """TST-PRO-074.4 / TST-PRO-112.2: Legacy simulator JSON never acts as a blocking release gate."""
         rel_dir = os.path.join(self.test_dir, "docs", "releases", self.tag)
         os.makedirs(rel_dir, exist_ok=True)
         sys4_file = os.path.join(rel_dir, "system_integration_results.json")
@@ -240,7 +237,6 @@ class TestGenerateReleaseVerificationSummary(unittest.TestCase):
             "failed_test_cases": 1,
             "test_results": {
                 "SYS-INT-001": {"name": "BLE HRM Ingestion", "passed": False, "details": "Timeout"},
-                "SYS-INT-002": {"name": "BLE Cycling Power", "passed": True, "details": "PASS"},
             }
         }
         with open(sys4_file, "w") as f:
@@ -248,15 +244,16 @@ class TestGenerateReleaseVerificationSummary(unittest.TestCase):
 
         res = collect_sys4_summary(self.test_dir, self.tag)
         self.assertTrue(res["available"])
+        self.assertFalse(res["blocking"])
         self.assertEqual(res["overall_status"], "FAIL")
-        self.assertTrue(any("SYS.4 verification non-pass" in d for d in res["deviations"]))
-        self.assertTrue(any("SYS-INT-001" in d for d in res["deviations"]))
+        self.assertEqual(len(res["deviations"]), 0)
 
-    def test_collect_sys4_summary_missing(self):
-        """TST-PRO-074.4: Flag missing SYS.4 evidence."""
+    def test_collect_sys4_summary_missing_is_non_blocking(self):
+        """TST-PRO-074.4 / TST-PRO-112.2: Missing system_integration_results.json raises zero deviations."""
         res = collect_sys4_summary(self.test_dir, self.tag)
         self.assertFalse(res["available"])
-        self.assertIn("SYS.4 evidence missing", res["deviations"][0])
+        self.assertFalse(res["blocking"])
+        self.assertEqual(len(res["deviations"]), 0)
 
     def test_collect_sys5_summary_pass(self):
         """TST-PRO-074.4: Parse valid SYS.5 markdown sign-off record."""
@@ -420,23 +417,11 @@ class TestGenerateReleaseVerificationSummary(unittest.TestCase):
         self.assertEqual(status, "BLOCKED / REQUIRES HUMAN APPROVAL")
 
     def test_render_markdown_and_end_to_end(self):
-        """TST-PRO-074.5: End-to-end execution generates verification_summary.md."""
+        """TST-PRO-074.5 / TST-PRO-112.2: End-to-end summary passes without system_integration_results.json."""
         rel_dir = os.path.join(self.test_dir, "docs", "releases", self.tag)
         os.makedirs(rel_dir, exist_ok=True)
 
-        # Create valid SYS.4
-        with open(os.path.join(rel_dir, "system_integration_results.json"), "w") as f:
-            json.dump({
-                "overall_status": "PASS",
-                "total_test_cases": 6,
-                "passed_test_cases": 6,
-                "failed_test_cases": 0,
-                "timestamp": "2026-11-12",
-                "git_commit": "123456",
-                "test_results": {f"SYS-INT-00{i}": {"name": f"Test {i}", "passed": True} for i in range(1, 7)}
-            }, f)
-
-        # Create valid SYS.5
+        # Create valid SYS.5 (no system_integration_results.json required)
         with open(os.path.join(rel_dir, "sys_verification_record.md"), "w") as f:
             f.write("""# Record
 **Overall Verdict**: **PASS**
@@ -479,7 +464,8 @@ class TestGenerateReleaseVerificationSummary(unittest.TestCase):
         self.assertIn("Executive Verification Dashboard", content)
         self.assertIn("Unit & Regression Testing Evidence", content)
         self.assertIn("Bidirectional Requirement & Test Traceability Matrix", content)
-        self.assertIn("System Integration Verification Summary", content)
+        self.assertIn("Legacy Simulator Self-Test Record (Informational / Non-Gating, REQ-PRO-112)", content)
+        self.assertIn("[ INFO / NON-GATING ]", content)
         self.assertIn("System Verification Protocol Sign-Off Summary", content)
         self.assertIn("Deviations Requiring Human Approval", content)
 

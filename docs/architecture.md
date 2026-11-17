@@ -1,10 +1,10 @@
-# Software Architecture: aTrainingTracker (ASPICE SWE.2)
+# Software Architecture: aTrainingTracker (ASPICE 4.0 SWE.2)
 
-This document establishes the comprehensive software architectural design and component interfaces of **aTrainingTracker**, fulfilling the **Automotive SPICE (ASPICE v3.1 / v4.0) SWE.2** standard across Base Practices `BP.1` through `BP.5`.
+This document establishes the comprehensive software architectural design and component interfaces of **aTrainingTracker**, fulfilling the **Automotive SPICE (ASPICE v4.0) SWE.2** standard across Base Practices `BP1` through `BP5`.
 
 ---
 
-## 1. Architectural Overview & Component Model (SWE.2.BP1, BP2)
+## 1. Architectural Overview & Component Model (SWE.2.BP1)
 
 aTrainingTracker is engineered as an offline-first, reactive Android fitness tracking platform combining real-time hardware telemetry ingestion (ANT+ and Bluetooth Low Energy) with high-performance Jetpack Compose user interfaces, multi-layer SQLite persistence, and mathematical domain engines.
 
@@ -79,16 +79,16 @@ graph TD
 
 ---
 
-## 2. Requirement Allocation to Architecture (SWE.2.BP3)
+## 2. Requirement Allocation to Architecture (SWE.2.BP1, BP4)
 
 All system requirements across the 9 living domain shards are allocated directly to corresponding architectural subsystems:
 
 | Domain Shard | Requirement Prefix Families | Allocated Architectural Components | Primary Responsibilities |
 | :--- | :--- | :--- | :--- |
 | **Tracking & Live Sensor Cockpit** | `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA` | `BANALService`, `TrackerService`, `ProxySensor`, `MySensorManager`, `AutoPauseManager`, `CyclingPowerMetricsDevice`, `SlidingWindowPowerAccumulator`, `LiveMmpCurveChart`, `HRVMetricsDevice`, `RrArtifactFilter`, `DfaCalculator`, `HrvSignalQualityAnalyzer`, `QuaternionGyroProjector`, `WheelCircumferenceCalibrator`, `UnicycleOdometryEkf`, `SpeedAndLocationDevice_ATTFused`, `AttFusedPreferences`, `KinematicAltitudeSlopeEkf`, `AltitudeAndSlopeDevice_ATTFused`, `AttFusedAltitudePreferences`, `ExtendedRtsOdometrySmoother`, `ExtendedRtsAltitudeSlopeSmoother` | ANT+/BLE telemetry ingestion, sensor fusion, auto-pause debounce, 1-Hz sample recording, live MMP curve & duration benchmarks, real-time HRV metric calculation, artifact filtering & firmware smoothing/synthetic signal quality analysis, quaternion-projected gyro yaw-rate & dead-reckoning odometry EKF sensor fusion, online wheel circumference auto-calibration, pairable ATT Fused virtual sensor device routing and hardware/pairing guards, kinematic altitude and slope EKF fusion with standstill drift clamping, and Extended RTS backward odometry/altitude smoothing engines. |
-| **Post-Workout Analytics & Periods** | `PER`, `PERF` | `WorkoutRepository`, `PowerPhysiologyCalculator`, `ZoneDistributionCalculator`, `PeriodsRepository`, `HrvReadinessRepository`, `HrvReadinessDatabaseManager`, `HrvReadinessCalculator`, `HealthConnectHrvImporter`, `MorningHrvCheckViewModel`, `HrvReadinessTrendMath`, `HrvReadinessTrendCard`, `HrvReadinessTrendChart`, `WorkoutRrRepository`, `WorkoutRrDatabaseManager`, `HrvPostWorkoutRecomputer`, `ErtsPostWorkoutRecomputer`, `PowerHrDynamicsCalculator`, `PowerHrDynamicsInfoDialog` | Physiological computation (NP, TSS), 5/7 power zone distributions, period statistics & trend filters, morning HRV readiness persistence & per-posture SWC baseline analytics, nocturnal Health Connect HRV ingestion, guided morning resting HRV protocol, longitudinal HRV readiness trend charts in Periods screen, lossless workout RR intervals persistence and centered post-workout HRV recomputation, non-causal bidirectional Extended RTS trajectory and altitude profile recomputation with strict canonical column invariant, 1st-order dynamical Power-HR system identification & explanation sheet. |
-| **Maps, Polylines & Navigation** | `GEO`, `MAP`, `NAV`, `ROU` | `ClimbDetector`, `PolylineProgressTracker`, `MapFragmentWithTrackViewModel`, `ATrainingTrackerMap` | Web Mercator tile rendering, polyline compression, climb categorization, live segment gate matching. |
-| **Persistence, Migration & Cloud Export** | `DAT`, `EXP`, `EXT`, `MIG` | `WorkoutSamplesDatabaseManager`, `WorkoutSummariesDatabaseManager`, `WorkoutRrDatabaseManager`, `HrvReadinessDatabaseManager`, `FitFileWriter`, `GPXFileWriter`, `TCXFileWriter`, `RawSensorFileExporter`, `SensorDiagnosticBundlePackager`, `SensorDiagnosticShareSheet`, `StravaUploader`, `GoogleDriveBackupManager` | Time-series SQLite storage, workout RR intervals storage, morning HRV readiness SQLite storage, schema migration, Strava OAuth/upload retry, FIT/TCX/GPX serialization with native Garmin FIT HrvMesg export/import, raw Polar sensor telemetry sidecar export across Local/Dropbox/Google Drive, and 1-tap Aftermath diagnostic ZIP bundle packaging with privacy-preserving GPS stripping (`REQ-EXP-044`, `ATT-8020`). |
+| **Post-Workout Analytics & Periods** | `HRV`, `PER`, `PERF`, `RAD`, `SPT`, `WKO` | `WorkoutRepository`, `PowerPhysiologyCalculator`, `ZoneDistributionCalculator`, `PeriodsRepository`, `HrvReadinessRepository`, `HrvReadinessDatabaseManager`, `HrvReadinessCalculator`, `HealthConnectHrvImporter`, `MorningHrvCheckViewModel`, `HrvReadinessTrendMath`, `HrvReadinessTrendCard`, `HrvReadinessTrendChart`, `WorkoutRrRepository`, `WorkoutRrDatabaseManager`, `HrvPostWorkoutRecomputer`, `ErtsPostWorkoutRecomputer`, `PowerHrDynamicsCalculator`, `PowerHrDynamicsInfoDialog` | Physiological computation (NP, TSS), 5/7 power zone distributions, period statistics & trend filters, morning HRV readiness persistence & per-posture SWC baseline analytics, nocturnal Health Connect HRV ingestion, guided morning resting HRV protocol, longitudinal HRV readiness trend charts in Periods screen, lossless workout RR intervals persistence and centered post-workout HRV recomputation, non-causal bidirectional Extended RTS trajectory and altitude profile recomputation with strict canonical column invariant, 1st-order dynamical Power-HR system identification & explanation sheet. |
+| **Maps, Polylines & Navigation** | `CLM`, `GEO`, `MAP`, `NAV`, `RAD`, `ROU` | `ClimbDetector`, `PolylineProgressTracker`, `MapFragmentWithTrackViewModel`, `ATrainingTrackerMap` | Web Mercator tile rendering, polyline compression, climb categorization, live segment gate matching. |
+| **Persistence, Migration & Cloud Export** | `DAT`, `EXP`, `EXT`, `MIG`, `RAD` | `WorkoutSamplesDatabaseManager`, `WorkoutSummariesDatabaseManager`, `WorkoutRrDatabaseManager`, `HrvReadinessDatabaseManager`, `FitFileWriter`, `GPXFileWriter`, `TCXFileWriter`, `RawSensorFileExporter`, `SensorDiagnosticBundlePackager`, `SensorDiagnosticShareSheet`, `StravaUploader`, `GoogleDriveBackupManager` | Time-series SQLite storage, workout RR intervals storage, morning HRV readiness SQLite storage, schema migration, Strava OAuth/upload retry, FIT/TCX/GPX serialization with native Garmin FIT HrvMesg export/import, raw Polar sensor telemetry sidecar export across Local/Dropbox/Google Drive, and 1-tap Aftermath diagnostic ZIP bundle packaging with privacy-preserving GPS stripping (`REQ-EXP-044`, `ATT-8020`). |
 | **Settings, Profiles & Localization** | `LOC`, `MON`, `PRI`, `SET` | `TuningPreferencesDataStore`, `EquipmentDbHelper`, `EquipmentRepository`, `ProFeatureManager`, `SupporterTier`, `GarageLeagueDetector`, `HealthConnectManager`, `HealthConnectRecordMapper`, `SensorQuotaReconciliationManager`, `DevicesDatabaseManager`, `PolarOfflineGattCoordinator`, `PolarOfflineCapabilityStore`, `PolarH10OfflineController`, `PolarVeritySenseOfflineController`, `PolarOnlineStreamingBridge`, `PolarLiveRunningCadenceEstimator`, `PolarH10RunningDynamicsEstimator`, `PolarRawTelemetryRecorder`, `PolarRawTelemetryReader`, `PolarRawTelemetryPruner`, `RawSensorRetentionPolicy` | DataStore persistence, 9-locale string parity, sensor quotas, monetization, vehicle equipment, Health Connect sync & record mapping, Devices.db v14 offline recording & live IMU toggle persistence, Polar H10 (RR) / Verity Sense (optical HR) offline recording control, persistent single-GATT Polar PMD live HR/RR + ACC/GYRO streaming with shared GATT arbitration, Verity ACC mutual exclusion, BSportType.RUN-gated cadence priority, pure-Kotlin H10 ACC / Verity GYRO+ACC running cadence & stride estimation, 200 Hz H10 sternum Running Dynamics (`VERTICAL_OSCILLATION` cm, `GROUND_CONTACT_TIME` ms) with FIT `mm`/`ms` export, and streaming compressed raw Polar telemetry sidecars (`.polar_raw.csv.gz`) with rolling retention policy (30d default, 7d, Keep all, Off) outside SQLite WorkoutSamples.db. |
 | **UI Components & Design System** | `UI`, `UNT` | Jetpack Compose theme (`ATrainingTrackerTheme`), `MetricItem`, `ElevationProfile`, `TelemetryMetricGraph`, `AppModalBottomSheet`, `WorkoutPhotoStrip`, `WorkoutTimePhotoPickerSheet`, `MorningHrvCheckScreen` | High-contrast AMOLED theming, responsive landscape layouts, chart scrubbing, reusable Compose components, chronological workout photo selection, guided morning resting HRV acquisition. |
 | **Engineering Process & Stability** | `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST` | ASPICE Dual-Agent Quality Gates, `jira_util.py`, `verify_requirement_governance.py`, ProGuard rules, [ADR-001](architecture/adr_001_java_core_services_migration.md), `JavaCoreMigrationStrategyContractTest` | CI/CD build hygiene, Chesterton's fence archaeology, crash resilience, process kill simulation, Java core services migration governance (`REQ-ARC-005`). |
@@ -97,7 +97,7 @@ All system requirements across the 9 living domain shards are allocated directly
 
 ---
 
-## 3. Dynamic Behavior & State Machines (SWE.2.BP4)
+## 3. Dynamic Behavior & State Machines (SWE.2.BP2)
 
 ### 3.1 Workout Tracking Lifecycle & Crash Recovery
 The recording state machine transitions deterministically across top-level `TrackingMode` states: `IDLE`, `READY`, `TRACKING`, and `PAUSED`. Internal pause sub-states are delegated to `AutoPauseManager` / `AutoPauseState` (`TRACKING`, `PAUSE_DEBOUNCE_PENDING`, `AUTO_PAUSED`, `MANUAL_PAUSED`, `SENSOR_LOST`). Persistent database state enables active session recovery upon unexpected process termination.
@@ -240,9 +240,17 @@ To support forensic telemetry diagnostics without impacting standard workout exp
 3. **Privacy-Preserving GPS Stripping**: When "Include GPS Location" is unchecked in `SensorDiagnosticShareSheet`, latitude and longitude columns are omitted from `samples_1hz.csv` and GPS map polylines are cleared from `workout_summary.json` (`REQ-EXP-044.3`).
 4. **Secure Sharing & Localization Parity**: The bundle is shared via `Intent.ACTION_SEND` using Android `FileProvider` (`<cache-path name="diagnostics" path="diagnostics/" />`). All user-facing strings across all 9 supported locales are verified in `strings_export.xml` without emojis (`REQ-EXP-044.4`, `Rule 38`).
 
+### 3.5 Unit-Level Living Detailed Design & State Machine Models (ASPICE SWE.3, `REQ-PRO-114`)
+Unit-level dynamic state machine models, event/guard/transition tables, `IF-SWE-*` interface mappings, threading contracts, error-handling mechanisms, and `ATT-7902` characterisation-test traceability for the three core service/peripheral units are maintained under `docs/architecture/detailed_design/`:
+- **Tracking Foreground Service**: [`docs/architecture/detailed_design/tracker_service.md`](architecture/detailed_design/tracker_service.md) (`TrackerService`, `TrackingMode`, `AutoPauseState`, `StartType`, `mScheduler`, `mDbExecutor`, `mRrFlushExecutor`)
+- **Sensor Ingestion & Search Orchestration**: [`docs/architecture/detailed_design/banal_service.md`](architecture/detailed_design/banal_service.md) (`BANALService`, `DeviceManager`, `MyRemoteDevice`, `MySensorManager`, `ProxySensor`)
+- **Bluetooth LE Peripheral State Machine & GATT Queue**: [`docs/architecture/detailed_design/my_btle_device.md`](architecture/detailed_design/my_btle_device.md) (`MyBTLEDevice`, `MyBTLEDevice.State`, `mGattQueue`, `mGattLock`)
+
+Code-to-documentation parity is continuously enforced by [`DetailedDesignParityContractTest`](../app/src/test/java/com/atrainingtracker/trainingtracker/build/DetailedDesignParityContractTest.kt).
+
 ---
 
-## 4. Concurrency, Threading & Resource Invariants (SWE.2.BP5)
+## 4. Concurrency, Threading & Resource Invariants (SWE.2.BP3)
 
 ### 4.1 Coroutine Dispatcher Separation
 To prevent UI jank, thread contention, and Android SQLite database lock errors, execution threads are strictly partitioned:
@@ -286,8 +294,8 @@ To prevent UI jank, thread contention, and Android SQLite database lock errors, 
 - **Google Fused Priority Over GPS**: In `MySensorManager`, `DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED` strictly precedes `DeviceType.SPEED_AND_LOCATION_GPS` across `SPEED_PRIORITY`, `ALTITUDE_PRIORITY`, and `LOCATION_PRIORITY`. While dedicated physical wheel/footpod sensors (`RUN_SPEED`, `BIKE_SPEED`, `BIKE_POWER`) and barometric pressure sensors (`ALTITUDE_FROM_PRESSURE`) retain absolute precedence, Google Fused Location Provider delivers faster time-to-first-fix and greater trajectory stability than raw GPS when location-derived speed, distance, altitude, or coordinates are utilized.
 - **Fresh Installation Default Pairing & De-Googled Fallback**: On fresh database initialization (`DevicesDatabaseManager.DevicesDbHelper.addLocationDevicesToDb`), Google Play Services availability is evaluated via `GooglePlayServicesUtil.isGooglePlayServicesAvailable(mContext) == ConnectionResult.SUCCESS`. If available, `SPEED_AND_LOCATION_GOOGLE_FUSED` is paired by default (`PAIRED = true`) and raw GPS is left unpaired (`PAIRED = false`). On de-Googled environments where Play Services is absent or unresolvable, the system deterministically falls back to pairing raw GPS (`PAIRED = true`). Existing installations and database upgrades preserve the athlete's persisted sensor pairing configuration without modification.
 
-### 4.9 Resource and Timing Budgets (SWE.2.BP4, `REQ-PRO-052`, `REQ-NFR-003`..`REQ-NFR-014`)
-In accordance with **ASPICE SWE.2 Base Practice 4 (Describe resource and timing budgets)**, the system establishes quantified resource consumption limits and latency budgets across runtime-critical subsystems to guarantee responsiveness, prevent thread starvation, and ensure all-day battery efficiency during multi-hour endurance sessions:
+### 4.9 Resource and Timing Budgets (SWE.2.BP3, BP4, `REQ-PRO-052`, `REQ-NFR-003`..`REQ-NFR-014`)
+In accordance with **ASPICE 4.0 SWE.2 Base Practice 3 (Analyze software architecture — resource and timing budgets)** and **Base Practice 4 (Ensure consistency and establish bidirectional traceability)**, the system establishes quantified resource consumption limits and latency budgets across runtime-critical subsystems to guarantee responsiveness, prevent thread starvation, and ensure all-day battery efficiency during multi-hour endurance sessions:
 
 | Subsystem Domain | Critical Component | Resource / Timing Metric | Budget Ceiling | Allocation Rationale & Non-Functional Trace (REQ-NFR-*, ATT-6139) |
 | :--- | :--- | :--- | :--- | :--- |
@@ -297,7 +305,7 @@ In accordance with **ASPICE SWE.2 Base Practice 4 (Describe resource and timing 
 | **Tracking Core** | `TrackerService` | Battery Consumption | < 5%/h | `REQ-NFR-006`: Background recording with screen off, active GPS, and BLE/ANT+ sensors. |
 | **Sensor Layer** | `BANALService` / `ProxySensor` | Sensor Dispatch Latency | < 25 ms | `REQ-NFR-007`: Time from hardware event ingestion to listener notification across registered sensors. |
 | **Sensor Layer** | `BANALService` / `ProxySensor` | Connection Failover Window | 3.5 s | `REQ-NFR-008`: Maximum timeout before initiating automatic failover or sensor reconnection. |
-| **Tracking Core** | `TrackerService` | Power Management (WakeLock) | Bound to Tracking | `REQ-NFR-009`, `REQ-TRK-003`: `PARTIAL_WAKE_LOCK` (`aTrainingTracker:TrackingLock`) strictly acquired only during `TRACKING` and released immediately on `STOP` (`TrackerService.java:842-857`). |
+| **Tracking Core** | `TrackerService` | Power Management (WakeLock) | Bound to Tracking | `REQ-NFR-009`, `REQ-TRK-003`: `PARTIAL_WAKE_LOCK` (`aTrainingTracker:TrackingLock`) strictly acquired only during `TRACKING` via `TrackerService#acquireWakeLock` and released immediately on `STOP` via `TrackerService#releaseWakeLock`. |
 | **Persistence** | `WorkoutSamplesDatabaseManager` | SQLite Sample Write Latency | < 30 ms | `REQ-NFR-010`: Live 1-Hz sample insertion; strictly executed off main thread via `TrackerService`'s `mScheduler` / `mDbExecutor` (`Dispatchers.IO` for repository/import writes; `dbDispatcher` strictly for `KnownLocationsRepository`). |
 | **Persistence** | `WorkoutSamplesDatabaseManager` | Storage Growth Rate | ~360 KB/h | `REQ-NFR-011`: At 1-Hz telemetry recording (~100 bytes/sample); ~3.6 MB for a 10-hour endurance activity. |
 | **Cockpit & UI** | `SensorGridScreen` | UI Frame Rendering Time | < 16.6 ms (60 FPS) | `REQ-NFR-012`: Compose telemetry grid recomposition bound to 16.6 ms budget without dropped frames. |
@@ -306,9 +314,9 @@ In accordance with **ASPICE SWE.2 Base Practice 4 (Describe resource and timing 
 
 ---
 
-## 5. Software Interface Specifications (SWE.2.BP2)
+## 5. Software Interface Specifications (SWE.2.BP1)
 
-In accordance with **ASPICE SWE.2 Base Practice 2 (Specify interfaces of software elements)**, all boundaries between presentation, domain, service, repository, persistence, and external layers are formally specified in [`docs/architecture/interfaces.md`](architecture/interfaces.md).
+In accordance with **ASPICE 4.0 SWE.2 Base Practice 1 (Specify static aspects of the software architecture — interfaces of software elements)**, all boundaries between presentation, domain, service, repository, persistence, and external layers are formally specified in [`docs/architecture/interfaces.md`](architecture/interfaces.md).
 
 ### 5.1 Software Interface Summary Matrix
 
@@ -331,11 +339,27 @@ To mitigate ASPICE evaluation finding F9, boundaries between legacy Java core se
 ### 5.3 Java Core Services Migration Strategy (ADR-001)
 In accordance with **ADR-001** ([`docs/architecture/adr_001_java_core_services_migration.md`](architecture/adr_001_java_core_services_migration.md)), the 149 Java classes (45,174 LOC) across 12 architectural subsystems are governed by a prioritized migration strategy under Epic `ATT-431` (*Clean Code*). Per Product Owner architecture decision (2026-11-14, ATT-8115), active Kotlin migration is strictly bounded to leaf sensor formatters (`ATT-7903`), pure signal filters (`ATT-7905`), and streaming file writers (`ATT-7906`). Remaining subsystems (`TrackerService`, `BANALService`, BLE/ANT+ peripheral drivers, SQLite database managers, legacy Pebble) deliberately remain in Java (`Keep`) or encapsulated behind clean Kotlin repositories (`WorkoutRepository`, `REQ-ARC-004`/`REQ-ARC-009`) to safeguard runtime telemetry and endurance tracking stability. Migration is bounded by mandatory quality safeguards: pre-existing characterisation test harnesses, strict refactoring invariance (zero functional changes), nullability shielding, and atomic child tickets ($\le 3$ Story Points).
 
+### 5.4 Canonical SensorType Storage, Display & Export Unit Data Dictionary (`REQ-TRK-083`)
+All 67 telemetry metrics declared in `SensorType` (`SensorType.java`) follow a strict separation between internal SQLite/sensor-bus storage units (`SensorType.getInternalUnit()`), UI display formatting (`MyFormatter`, `MyHelper.getUnitsId()`), and file export conversions (`FitFileWriter`, `TCXFileWriter`, `GPXFileWriter`, `CSVFileWriter`, `GCFileWriter`). The authoritative 67-entry unit, sentinel, and export data dictionary is maintained in [`docs/architecture/sensor_units.md`](architecture/sensor_units.md) and enforced by JVM contract test `SensorTypeUnitsContractTest`.
+
+### 5.5 Architecture Decision Records Registry (SWE.2.BP3, BP5, `REQ-ARC-005`, `REQ-PRO-116`)
+Foundational architectural choices, evaluated alternatives, and Chesterton's Fence invariants are recorded under `docs/architecture/` and enforced by `JavaCoreMigrationStrategyContractTest` (`ADR-001`) and `AdrCompletenessContractTest` (`ADR-002`..`ADR-007`):
+
+| ADR ID | Decision Title | Status | Document |
+| :--- | :--- | :--- | :--- |
+| `ADR-001` | Java Core Services Prioritized Migration Strategy | Approved | [`adr_001_java_core_services_migration.md`](architecture/adr_001_java_core_services_migration.md) |
+| `ADR-002` | Foreground Tracking Service Architecture (`TrackerService`) | Retrospective (Pending PO Sign-Off) | [`adr_002_foreground_tracking_service.md`](architecture/adr_002_foreground_tracking_service.md) |
+| `ADR-003` | Sensor Ingestion Bus (`BANALService` & `BANALServiceRepository`) | Retrospective (Pending PO Sign-Off) | [`adr_003_banal_sensor_bus.md`](architecture/adr_003_banal_sensor_bus.md) |
+| `ADR-004` | SQLite Database Managers vs Room ORM | Retrospective (Pending PO Sign-Off) | [`adr_004_sqlite_managers_vs_room.md`](architecture/adr_004_sqlite_managers_vs_room.md) |
+| `ADR-005` | Hybrid Preferences (`SharedPreferences` + Jetpack `DataStore`) | Retrospective (Pending PO Sign-Off) | [`adr_005_hybrid_preferences_datastore.md`](architecture/adr_005_hybrid_preferences_datastore.md) |
+| `ADR-006` | Incremental Single-Activity Compose Navigation (`MainActivityWithNavigation`) | Retrospective (Pending PO Sign-Off) | [`adr_006_incremental_compose_navigation.md`](architecture/adr_006_incremental_compose_navigation.md) |
+| `ADR-007` | Unified BLE & ANT+ Hardware Sensor Abstraction (`MyDevice` / `MyRemoteDevice`) | Retrospective (Pending PO Sign-Off) | [`adr_007_ble_ant_sensor_abstraction.md`](architecture/adr_007_ble_ant_sensor_abstraction.md) |
+
 ---
 
 ## 6. Software Integration and Verification Strategy (SWE.5.BP1)
 
-In accordance with **Automotive SPICE (ASPICE v3.1 / v4.0) SWE.5 Base Practice 1 (Develop software integration strategy and software verification strategy)**, the complete software integration sequence across architectural interfaces (`IF-SWE-01` through `IF-SWE-08`), three hierarchical verification levels (Level 1 JVM/Robolectric, Level 2 Instrumented/Emulator, Level 3 Physical Hardware & Simulators), entry/exit criteria, and two-tier regression selection are formally specified in [`docs/architecture/integration_strategy.md`](architecture/integration_strategy.md).
+In accordance with **Automotive SPICE (ASPICE v4.0) SWE.5 Base Practice 1 (Develop software integration strategy and software verification strategy)**, the complete software integration sequence across architectural interfaces (`IF-SWE-01` through `IF-SWE-08`), three hierarchical verification levels (Level 1 JVM/Robolectric, Level 2 Instrumented/Emulator, Level 3 Physical Hardware & Simulators), entry/exit criteria, and two-tier regression selection are formally specified in [`docs/architecture/integration_strategy.md`](architecture/integration_strategy.md).
 
 ### 6.1 Integration Sequence & Boundary Allocation
 
@@ -354,11 +378,11 @@ Software components are integrated bottom-up to validate database persistence an
 
 For complete verification level definitions, entry/exit criteria, two-tier regression selection, and defect bisection workflows, see [`docs/architecture/integration_strategy.md`](architecture/integration_strategy.md).
 
-### 6.2 System Integration Verification with Sensor Simulators (ASPICE SYS.4, `REQ-PRO-068`, `TST-PRO-068`)
+### 6.2 Developer Sensor Simulator Self-Tests & Verification Boundary (`REQ-PRO-068`, `TST-PRO-068`, `REQ-PRO-112`)
 
-In accordance with **ASPICE SYS.4 (System Integration and Integration Verification)**, Level 3 integration verification between the Android host application (`SYS-EL-01`) and external wireless sensors, GNSS providers, and cloud platforms is formally specified in [`docs/system/sys_integration_tests.md`](system/sys_integration_tests.md):
-* **Interfaces Verified**: `SYS-IF-01` (BLE Heart Rate `0x180D`, Cycling Power `0x1818`, Garmin Varia Radar `6a4e3200`), `SYS-IF-02` (ANT+ IPC Radio Socket), `SYS-IF-03` (Multi-Source GNSS Fixes), and `SYS-IF-05` (Cloud Sync / Strava REST API).
-* **Automated CI Execution**: Headless virtual execution via `python3 tools/run_system_integration_tests.py --headless`, generating structured JSON verification evidence (`docs/releases/<tag>/system_integration_results.json`) for audit compliance and pre-release gating.
+External hardware interfaces (`SYS-IF-01` BLE GATT `0x180D` / `0x1818` / `6a4e3200`, `SYS-IF-02` ANT+ IPC, `SYS-IF-03` GNSS, and `SYS-IF-05` Cloud REST APIs) are documented alongside simulator tooling in [`docs/system/sys_integration_tests.md`](system/sys_integration_tests.md):
+* **Developer Simulator Self-Tests (Non-Gating)**: `python3 tools/run_simulator_self_tests.py` exercises Python developer tools (`tools/ble_hr_simulator.py`, `tools/ble_power_simulator.py`, `tools/ble_radar_simulator.py`, `tools/fake_gps.py`, `tools/replay_workout.py`) ONLY. These self-tests do **not** execute the Android APK, emulator, or physical sensors and are **not** a blocking release gate (`REQ-PRO-112`).
+* **Automated App Verification Gap & Coverage**: Automated software-boundary integration across Android components runs via Robolectric Level 1 (`INT-SWE-01..08`) and connected CI smoke tests (`AppSmokeAndroidTest.kt`). End-to-end physical RF/sensor integration remains manual hardware-in-the-loop under **ASPICE SYS.5** (§6.3).
 
 ### 6.3 System Verification Protocol on Real Hardware & Sensors (ASPICE SYS.5, `REQ-PRO-069`, `TST-PRO-069`)
 
@@ -367,11 +391,11 @@ In accordance with **ASPICE SYS.5 (System Verification)**, end-to-end qualificat
 * **Environmental Operating Conditions**: 5 quantified operational endurance environments: (E1) Urban Canyon, (E2) Rural Road / High Speed, (E3) Alpine Climb & Barometric Variation, (E4) Indoor Smart Trainer, and (E5) Extended Endurance Battery Longevity.
 * **Release Qualification**: Formal test cases (`SYS-VRF-001` through `SYS-VRF-008`), objective pass/fail criteria (sample loss $\le 1\%$, battery drain $\le 8\%$/hr, RF reconnection within backoff window, FIT/TCX schema validity), and release sign-off record generation under `docs/releases/<tag>/sys_verification_record.md`.
 
-### 6.4 Release Process Gating & System Verification Evidence (ASPICE SUP.8, SYS.4, SYS.5, `REQ-PRO-072`, `TST-PRO-072`)
+### 6.4 Release Process Gating & System Verification Evidence (ASPICE SUP.8, SWE.6, SYS.5, `REQ-PRO-072`, `TST-PRO-072`, `REQ-PRO-112`)
 
-In accordance with **ASPICE SUP.8 (Configuration and Release Management)**, **SYS.4**, and **SYS.5**, release qualification enforces mandatory system-level evidence integration into the release lifecycle governed by [`.agents/skills/release-manager/SKILL.md`](../.agents/skills/release-manager/SKILL.md) and [`docs/releases/`](releases/):
-* **Release Evidence Dossier Structure**: Every release candidate tag (`<tag>`) requires an evidence directory `docs/releases/<tag>/` containing automated SYS.4 test results (`system_integration_results.json`) and physical SYS.5 verification protocol records (`sys_verification_record.md`), templated in [`docs/releases/TEMPLATE.md`](releases/TEMPLATE.md) and documented in [`docs/releases/README.md`](releases/README.md).
-* **Blocking Tag Creation Gate**: Creating release candidate tags (`V<versionName>__<versionCode>`), finishing GitFlow releases, or uploading artifacts to Google Play tracks is strictly blocked if either system integration or verification record is missing, incomplete, or contains failing test verdicts.
+In accordance with **ASPICE SUP.8 (Configuration and Release Management)**, **SWE.6**, and **SYS.5**, release qualification enforces verified unit/software-integration evidence (`INT-SWE-01..08`, `AppSmokeAndroidTest.kt`) and hardware-in-the-loop SYS.5 verification records in the release lifecycle governed by [`.agents/skills/release-manager/SKILL.md`](../.agents/skills/release-manager/SKILL.md) and [`docs/releases/`](releases/):
+* **Release Evidence Dossier Structure**: Every release candidate tag (`<tag>`) requires an evidence directory `docs/releases/<tag>/` containing hardware-in-the-loop SYS.5 verification protocol records (`sys_verification_record.md`) and consolidated release summary (`verification_summary.md`), templated in [`docs/releases/TEMPLATE.md`](releases/TEMPLATE.md) and documented in [`docs/releases/README.md`](releases/README.md). Python simulator artifacts (`system_integration_results.json`) are **retired as a blocking release gate**.
+* **Blocking Tag Creation Gate**: Creating release candidate tags (`V<versionName>__<versionCode>`), finishing GitFlow releases, or uploading artifacts to Google Play tracks is strictly blocked if unit/integration tests fail, `sys_verification_record.md` is missing/unsigned, or `verification_summary.md` reports unapproved deviations.
 
 
 

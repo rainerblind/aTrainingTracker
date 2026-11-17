@@ -686,4 +686,54 @@ class PeriodsViewModelTest {
         assertNull(viewModel.peekedWorkoutDataWithTrack.value?.workoutData?.clusterName)
         assertEquals("Morning Run", viewModel.peekedWorkoutDataWithTrack.value?.workoutData?.workoutName)
     }
+
+    /**
+     * TST-PER-051.1: Constructing PeriodsViewModel under UnconfinedTestDispatcher (simulating
+     * Dispatchers.Main.immediate) with empty or populated WorkoutRepository.allWorkouts StateFlow
+     * completes without NullPointerException and preserves live peek reconciliation (REQ-PER-043.1).
+     */
+    @Test
+    fun testEagerMainDispatcherInit_withEmptyAndPopulatedAllWorkouts_doesNotThrowNpe_TST_PER_051_1() {
+        val eagerDispatcher = UnconfinedTestDispatcher()
+        Dispatchers.setMain(eagerDispatcher)
+
+        // 1. Empty StateFlow emits synchronously inside init
+        val emptyWorkoutsFlow = MutableStateFlow<List<WorkoutData>>(emptyList())
+        every { mockWorkoutRepo.allWorkouts } returns emptyWorkoutsFlow
+        val emptyViewModel = createViewModel(
+            ioDispatcher = eagerDispatcher,
+            defaultDispatcher = eagerDispatcher
+        )
+        assertNull(emptyViewModel.peekedWorkoutDataWithTrack.value)
+
+        // 2. Populated StateFlow emits synchronously inside init, then reconciles on update
+        val initialWorkout = mockk<WorkoutData>(relaxed = true) {
+            every { id } returns 401L
+            every { workoutName } returns "Evening Ride"
+            every { clusterId } returns 20L
+            every { clusterName } returns "River Loop"
+        }
+        val renamedWorkout = mockk<WorkoutData>(relaxed = true) {
+            every { id } returns 401L
+            every { workoutName } returns "Evening Ride"
+            every { clusterId } returns 20L
+            every { clusterName } returns "Canal Loop"
+        }
+        val populatedWorkoutsFlow = MutableStateFlow(listOf(initialWorkout))
+        every { mockWorkoutRepo.allWorkouts } returns populatedWorkoutsFlow
+        coEvery { mockWorkoutRepo.getWorkoutTrackPoints(401L, any()) } returns emptyList()
+
+        val populatedViewModel = createViewModel(
+            ioDispatcher = eagerDispatcher,
+            defaultDispatcher = eagerDispatcher
+        )
+        assertNull(populatedViewModel.peekedWorkoutDataWithTrack.value)
+
+        populatedViewModel.selectWorkoutForPeek(401L)
+        assertEquals("River Loop", populatedViewModel.peekedWorkoutDataWithTrack.value?.workoutData?.clusterName)
+
+        populatedWorkoutsFlow.value = listOf(renamedWorkout)
+        assertEquals("Canal Loop", populatedViewModel.peekedWorkoutDataWithTrack.value?.workoutData?.clusterName)
+        assertEquals("Evening Ride", populatedViewModel.peekedWorkoutDataWithTrack.value?.workoutData?.workoutName)
+    }
 }

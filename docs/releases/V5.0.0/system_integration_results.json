@@ -1,5 +1,9 @@
 {
-  "title": "System Integration Verification Report (ASPICE SYS.4)",
+  "title": "Legacy Developer Simulator Self-Test Report (Reclassified per ATT-8157 / REQ-PRO-112)",
+  "classification": "legacy-simulator-self-tests-only",
+  "executes_android_app": false,
+  "release_gate": false,
+  "reclassification_note": "Recorded 2026-11-13 by legacy tools/run_system_integration_tests.py (renamed to tools/run_simulator_self_tests.py). Pure-Python simulator checks only; zero Android APK, ADB, or emulator execution.",
   "timestamp": "2026-11-13T13:28:34.975878",
   "git_commit": "9a3b72d90754f9230620977939c8cdae60e7fe18",
   "overall_status": "PASS",

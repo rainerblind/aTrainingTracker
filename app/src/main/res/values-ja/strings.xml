@@ -653,6 +653,7 @@
     <string name="pedal_balance_left_marker">L</string>
     <string name="pedal_balance_right_marker">R</string>
     <string name="zone_display_preview_title">プレビュー</string>
+    <string name="zone_display_apply_all">すべてに適用</string>
 
     <string name="prefEmailExport">eメール</string>
 

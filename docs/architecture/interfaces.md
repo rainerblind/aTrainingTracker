@@ -1,6 +1,6 @@
-# Software Interface Specifications: aTrainingTracker (ASPICE SWE.2.BP2)
+# Software Interface Specifications: aTrainingTracker (ASPICE 4.0 SWE.2.BP1)
 
-This document formalizes the software interface specifications of **aTrainingTracker** in accordance with **Automotive SPICE (ASPICE v3.1 / v4.0) SWE.2 Base Practice 2 (Specify interfaces of software elements)**.
+This document formalizes the software interface specifications of **aTrainingTracker** in accordance with **Automotive SPICE (ASPICE v4.0) SWE.2 Base Practice 1 (Specify static aspects of the software architecture — interfaces of software elements)**.
 
 Each architectural interface defines its provider, consumer, operations, data schemas, threading contracts, and error handling protocols.
 
@@ -52,10 +52,10 @@ Each architectural interface defines its provider, consumer, operations, data sc
   * `suspend fun loadWorkout(id: Long)`: Asynchronously loads workout entity into active memory (`WorkoutRepository`).
   * `fun getWorkoutById(id: Long): Flow<WorkoutData?>`: Reactive stream of workout record and live database updates (`WorkoutRepository`).
   * `fun saveWorkout(userEditedWorkout: WorkoutData?)`: Transactional update of workout metadata (`WorkoutRepository`).
-  * `fun updateExtremaValue(workoutId: Long, extremaUpdate: ExtremaUpdate)`: Records updated sensor extremum (`WorkoutRepository`).
+  * `fun updateExtremaValue(workoutId: Long, sensorType: SensorType, extremaType: ExtremaType, value: Double, position: LatLng? = null)`: Records updated sensor extremum with 6-param `(..., count: Int?)` overload (`WorkoutRepository`).
   * `val allFilteredSensorData: StateFlow<List<FilteredSensorData<*>>>`: Hot shared flow of live filtered sensor telemetry (`BANALServiceRepository`).
 * **Data Payloads / Schemas**:
-  * Domain DTOs (`WorkoutData`, `LapData`, `ExtremaUpdate`, `ExtremaType`, `SportType`, `FilteredSensorData`).
+  * Domain DTOs (`WorkoutData`, `LapData`, `SensorType`, `ExtremaType`, `SportType`, `FilteredSensorData`).
 * **Concurrency & Threading**:
   * All I/O operations execute under `Dispatchers.IO` using structured concurrency.
 * **Error Handling & Fault Tolerance**:
@@ -66,8 +66,8 @@ Each architectural interface defines its provider, consumer, operations, data sc
 * **Provider**: `BANALServiceComm` (Local Binder exposed by `BANALService`).
 * **Consumer**: `TrackerService`.
 * **Operations / Method Signatures**:
-  * `fun getAllFilteredSensorData(): List<FilteredSensorData>`: 1-Hz batch poll of active physical/virtual sensors.
-  * `fun getBestSensorData(sensorType: SensorType): SensorData<?>`: Priority-resolved single metric query.
+  * `fun getAllFilteredSensorData(): List<FilteredSensorData<?>>`: 1-Hz batch poll of active physical/virtual sensors (`BANALServiceComm`).
+  * `fun getBestSensorData(sensorType: SensorType): SensorData`: Priority-resolved single metric query (`BANALServiceComm`).
   * `Intent(RESET_ACCUMULATORS_INTENT)` / `Intent(REQUEST_PAUSE_TRACKING)`: IPC action broadcast signaling.
 * **Data Payloads / Schemas**:
   * `SensorData<T>` and `FilteredSensorData` holding timestamp, raw value, smoothed value, and sensor address.
@@ -98,12 +98,12 @@ Each architectural interface defines its provider, consumer, operations, data sc
 * **Provider**: Pure JVM Domain Calculators (`AutoPauseManager`, `PowerPhysiologyCalculator`, `PowerHrDynamicsCalculator`, `WorkoutClusterEngine`, `ClimbDetector`).
 * **Consumer**: `TrackerService`, `WorkoutRepository`, `LiveSegmentsRepository`.
 * **Operations / Method Signatures**:
-  * `fun evaluateTick(currentSpeedMps: Double?, currentTimestampMs: Long): AutoPauseTransition`: Evaluates debounce auto-pause (`AutoPauseManager`).
-  * `fun calculateNormalizedPower(powerSamplesWatts: List<Double>, sampleIntervalSec: Double): Double`: Computes 30s Coggan rolling weighted power (`PowerPhysiologyCalculator`).
-  * `fun calculate(powerSamples: List<Double>, hrSamples: List<Double>, workoutId: Long, dtSec: Double): CardioPowerDynamicsRecord?`: Identifies 1st-order Output-Error dynamical Power-HR parameters and cardiac drift (`PowerHrDynamicsCalculator`).
-  * `fun suggestCluster(start: LatLng, end: LatLng, apex: LatLng, distance: Double, candidateSportTypes: Set<BSportType>): WorkoutCluster?`: Spatial route cluster suggestion for completed workout (`WorkoutClusterEngine`).
-  * `fun findApexFromPoints(start: LatLng, points: List<LatLng>, end: LatLng?): LatLng`: Determines furthest apex waypoint from route polyline (`WorkoutClusterEngine`).
-  * `fun detectClimbs(points: List<PathPoint>): List<Climb>`: Detects steep climb segments from workout elevation profile (`ClimbDetector`).
+  * `fun evaluateTick(currentSpeedMps: Double?, packetTimestampMs: Long, currentTimestampMs: Long, sportType: BSportType, config: AutoPauseConfig, manualPauseLocked: Boolean, hasSpeedSource: Boolean = ...): AutoPauseTransition`: Evaluates debounce auto-pause (`AutoPauseManager`).
+  * `fun calculateNormalizedPower(powerSamplesWatts: List<Double?>, sampleIntervalSec: Double = 1.0): Double?`: Computes 30s Coggan rolling weighted power (`PowerPhysiologyCalculator`).
+  * `fun calculate(powerSamples: List<Double?>?, hrSamples: List<Double?>?, workoutId: Long = 0L, dt: Double = 1.0, timestampsSec: List<Long>? = null): CardioPowerDynamicsRecord?`: Identifies 1st-order Output-Error dynamical Power-HR parameters and cardiac drift (`PowerHrDynamicsCalculator`).
+  * `fun suggestCluster(start: LatLng, end: LatLng, apex: LatLng, distance: Double, workoutName: String? = null, candidateSportTypes: Set<BSportType>, minAltPos: LatLng? = null, maxAltPos: LatLng? = null, cachedClusters: List<WorkoutCluster>? = null, scoreThreshold: Double = ..., workoutPolyline: List<LatLng>? = null): WorkoutCluster?`: Spatial route cluster suggestion for completed workout (`WorkoutClusterEngine`).
+  * `fun findApexFromPoints(start: LatLng, points: List<LatLng>, end: LatLng? = null): LatLng`: Determines furthest apex waypoint from route polyline (`WorkoutClusterEngine`).
+  * `fun detectClimbs(points: List<PathPoint>, minLengthMeters: Double = ..., minGradePercent: Double = ..., minGainMeters: Double = ..., routeId: Long? = null, context: Context? = null): List<Climb>`: Detects steep climb segments from workout elevation profile (`ClimbDetector`).
 * **Data Payloads / Schemas**:
   * `AutoPauseTransition`, `CardioPowerDynamicsRecord`, `WorkoutCluster`, `LatLng`, `PathPoint`, `Climb`, and Skiba $W'_{\text{bal}}$ parameters.
 * **Concurrency & Threading**:
@@ -116,11 +116,11 @@ Each architectural interface defines its provider, consumer, operations, data sc
 * **Provider**: SQLite Database Managers (`WorkoutSamplesDatabaseManager`, `WorkoutSummariesDatabaseManager`, `LapsDatabaseManager`, `WorkoutClusterDatabaseManager`).
 * **Consumer**: `TrackerService`, `WorkoutRepository`, `KnownLocationsRepository`.
 * **Operations / Method Signatures**:
-  * `fun recordLiveSample(fileBaseName: String, timestampMs: Long, sampleValues: Map<SensorType, Double>, isAutoPaused: Boolean)`: 1-Hz bulk time-series insert (`WorkoutRepository` / `WorkoutSamplesDatabaseManager`).
+  * `fun recordLiveSample(baseFileName: String, workoutId: Long, samplingValues: ContentValues, summaryValues: ContentValues, extremaUpdates: List<TrackerService.ExtremaUpdate>, streamIncrement: LiveWorkoutSession.StreamIncrement?, name2Type: Map<String, SensorValueType>?, onSampleFailure: LiveSampleFailureCallback? = null): Boolean`: 1-Hz bulk time-series insert (`WorkoutRepository`).
   * `fun createNewTable(workoutName: String, sensorTypes: List<SensorType>)`: Creates dynamic SQLite table for new workout telemetry (`WorkoutSamplesDatabaseManager`).
   * `fun updateWorkoutData(workoutData: WorkoutData)`: Atomic update of aggregate workout summary record (`WorkoutSummariesDatabaseManager`).
   * `fun insertCluster(cluster: WorkoutCluster): Long`: Inserts spatial route cluster definition (`WorkoutClusterDatabaseManager`).
-  * `fun saveCardioPowerDynamics(workoutId: Long, record: CardioPowerDynamicsRecord): Long`: Persists identified dynamical parameters (`WorkoutRepository`).
+  * `fun saveCardioPowerDynamics(workoutId: Long, record: CardioPowerDynamicsRecord)`: Persists identified dynamical parameters (`WorkoutRepository`).
 * **Data Payloads / Schemas**:
   * Android `ContentValues`, typed SQLite tables, `WorkoutData`, `WorkoutCluster`, `CardioPowerDynamicsRecord`.
 * **Concurrency & Threading**:
@@ -148,8 +148,8 @@ Each architectural interface defines its provider, consumer, operations, data sc
 * **Consumer**: `ExportManager`, `TrainingApplication`, `EditWorkoutScreen`, `HrvReadinessRepository`.
 * **Operations / Method Signatures**:
   * `fun export(exportInfo: ExportInfo): ExportResult`: Direct OkHttp REST multipart upload (`StravaUploader`) or Dropbox API v2 export (`DropboxUploader`).
-  * `suspend fun syncWorkout(context: Context, workoutData: WorkoutData): Result<Unit>`: Idempotent session and telemetry sync to Android Health Connect (`HealthConnectManager`).
-  * `suspend fun importRecentHrv(context: Context, daysBack: Int): Result<Int>`: Nocturnal resting HRV and HR ingestion (`HealthConnectHrvImporter`).
+  * `suspend fun syncWorkout(context: Context, workoutData: WorkoutData, force: Boolean = false): Result<Unit>`: Idempotent session and telemetry sync to Android Health Connect (`HealthConnectManager`).
+  * `suspend fun importRecentHrv(context: Context, daysBack: Int = 14, repository: HrvReadinessRepository = ..., clientOverride: HealthConnectClient? = null): Result<Int>`: Nocturnal resting HRV and HR ingestion (`HealthConnectHrvImporter`).
 * **Data Payloads / Schemas**:
   * `ExportInfo`, `ExportResult`, `WorkoutData`, `HealthConnectClient`.
 * **Concurrency & Threading**:

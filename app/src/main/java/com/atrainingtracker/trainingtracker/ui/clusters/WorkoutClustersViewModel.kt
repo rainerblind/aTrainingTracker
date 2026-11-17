@@ -296,11 +296,6 @@ class WorkoutClustersViewModel @JvmOverloads constructor(
     var useAltitudePosForClustering by mutableStateOf(TrainingApplication.useAltitudePosForClustering())
     var clusterScoreThreshold by mutableStateOf(TrainingApplication.getClusterScoreThreshold())
 
-    init {
-        refresh()
-        observeClusterMutations()
-    }
-
     private inline fun updatePeekedWorkout(transform: (WorkoutData) -> WorkoutData) {
         _peekedWorkoutDataWithTrack.update { peeked ->
             val currentWorkout = peeked?.workoutData ?: return@update peeked
@@ -846,5 +841,11 @@ class WorkoutClustersViewModel @JvmOverloads constructor(
                 selectClusterById(cluster.id)
             }
         }
+    }
+
+    // Keep init after all property initializers (including _peekedWorkoutDataWithTrack) for eager-dispatch safety.
+    init {
+        refresh()
+        observeClusterMutations()
     }
 }

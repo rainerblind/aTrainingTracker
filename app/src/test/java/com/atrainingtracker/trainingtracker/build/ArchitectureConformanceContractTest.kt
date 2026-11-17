@@ -345,11 +345,16 @@ class ArchitectureConformanceContractTest {
         assertTrue("Must specify database storage growth rate (~360 KB/h) (REQ-PRO-052.1)", content.contains("360 KB/h"))
         assertTrue("Must specify UI frame render budget (< 16.6 ms) (REQ-PRO-052.1)", content.contains("16.6 ms"))
 
-        // TST-PRO-052.3: WakeLock attribution & threading accuracy (ATT-6735, REQ-PRO-052.2)
+        // TST-PRO-052.3 & TST-PRO-115.2: WakeLock attribution & symbol-anchor accuracy (ATT-6735, ATT-8160, REQ-PRO-052.2, REQ-PRO-115.2)
         assertTrue(
-            "Section 4.9 must attribute PARTIAL_WAKE_LOCK to TrackerService under Tracking Core (ATT-6735)",
+            "Section 4.9 must attribute PARTIAL_WAKE_LOCK to TrackerService via symbol anchors (ATT-6735, ATT-8160)",
             content.contains("`PARTIAL_WAKE_LOCK` (`aTrainingTracker:TrackingLock`)") &&
-                content.contains("TrackerService.java:842-857")
+                content.contains("TrackerService#acquireWakeLock") &&
+                content.contains("TrackerService#releaseWakeLock")
+        )
+        assertFalse(
+            "Section 4.9 must not rely on brittle TrackerService.java:842-857 line numbers (ATT-8160)",
+            content.contains("TrackerService.java:842-857")
         )
         assertTrue(
             "Section 4.9 must accurately attribute 1-Hz database writes to mScheduler / mDbExecutor (ATT-6735)",

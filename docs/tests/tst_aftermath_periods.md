@@ -3,7 +3,7 @@
 **Domain**: `aftermath_periods`  
 **Prefixes**: `PER`, `PERF`, `RAD`, `SPT`  
 **Scope**: Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers.  
-**Total Tests**: 64
+**Total Tests**: 65
 
 ---
 
@@ -1069,4 +1069,25 @@
   • Verify horizontal scrubbing in `DISTANCE` and `TIME` domains (both GPS and trackless workouts) updates overlaid source readout values synchronously while preserving `Rule 64` plot alignment.
   5. *9-Locale Parity & Rule 8.5 Compose PNG (`TST-PER-050.5`, `TranslationParityTest.kt`, `MultiSensorChartsScreenshotTest.kt`)*:
   • Verify 100% 9-locale parity (`EN/DE/ES/FR/IT/JA/NL/PL/PT`) with zero emojis (`ATT-5400`) and inspect rendered `docs/engineering/walkthroughs/img/ATT-8096_multisensor_charts.png` (Light + Dark) via `read_file` (`Rule 8.5`).
+
+
+---
+
+### TST-PER-051: **Eager Init-Order Safety Verification for PeriodsViewModel & Sibling** (`ATT-8569`) [Verified]
+- **Requirement(s)**: `REQ-PER-043` (`REQ-PER-043.1`, `REQ-PER-043.2`)
+- **Component**: `PeriodsViewModel.kt`, `WorkoutClustersViewModel.kt`, `PeriodsViewModelTest.kt`, `WorkoutClustersViewModelTest.kt`
+- **Jira**: `ATT-8569`
+- **Priority**: Critical
+- **Type**: Functional
+- **Verification Method**: Unit, On-Device Manual
+- **Localization Parity**: `N/A - no UI strings`
+- **Test Description**:
+  1. *`PeriodsViewModel` Eager `UnconfinedTestDispatcher` Init & Reconciliation (`TST-PER-051.1`, `PeriodsViewModelTest.kt`)*:
+     • Override `Dispatchers.setMain(UnconfinedTestDispatcher())` (simulating `Dispatchers.Main.immediate`) and instantiate `PeriodsViewModel` with both an empty `MutableStateFlow<List<WorkoutData>>(emptyList())` and a populated `MutableStateFlow` holding `WorkoutData` entries; assert construction succeeds without throwing `NullPointerException`, then select a workout for peek (`selectWorkoutForPeek`) and emit a cluster-renamed `WorkoutData` on `allWorkouts` to verify `peekedWorkoutDataWithTrack` reconciles `clusterName` while preserving `workoutName` (`REQ-PER-040.2`).
+  2. *`WorkoutClustersViewModel` Defensive Eager Init (`TST-PER-051.2`, `WorkoutClustersViewModelTest.kt`)*:
+     • Verify `WorkoutClustersViewModel` initializes `_peekedWorkoutDataWithTrack` prior to `init` (`observeClusterMutations()`), succeeding without `NullPointerException` under `UnconfinedTestDispatcher()` even if `clusterMutationEvents` emits synchronously at subscription time.
+  3. *Emulator UI Launch Smoke Check (`TST-PER-051.3`, `emulator-5554`)*:
+     • Install debug APK onto `emulator-5554`, launch `com.atrainingtracker.debug`, navigate to the **Periods** hub, verify the screen renders cleanly without crashing (`logcat` free of `FATAL EXCEPTION` / `PeriodsViewModel`), and capture UI/screenshot verification.
+  4. *Tier 1 Targeted Unit Test Regression (`TST-PER-051.4`)*:
+     • Run `./gradlew :app:testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsViewModelTest" --tests "com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClustersViewModelTest"` asserting 100% pass rate (`N/A - no UI strings`).
 

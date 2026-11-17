@@ -52,6 +52,7 @@ class KinematicAltitudeSlopeEkf(
         const val DEFAULT_Q_ALTITUDE = 1e-3 // Vertical process noise per second of travel
         const val DEFAULT_Q_BIAS = 1e-4 // Baro bias process noise per second
         const val DEFAULT_VAR_BARO = 0.25 // (0.5 m)^2
+        const val DEFAULT_UNANCHORED_ALT_VAR = 400.0 // (20.0 m)^2 unanchored 3-state baro variance
         const val DEFAULT_VAR_DEM = 4.0 // (2.0 m)^2
         const val DEFAULT_VAR_GPS = 16.0 // (4.0 m)^2
         const val DEFAULT_HUBER_K = 3.0 // 3-sigma innovation clamp
@@ -78,6 +79,14 @@ class KinematicAltitudeSlopeEkf(
     var isInitialized: Boolean = false
         private set
 
+    @Volatile
+    var hasReferenceAnchor: Boolean = false
+        private set
+
+    @Volatile
+    var hasBarometerSample: Boolean = false
+        private set
+
     // Covariance elements
     @Volatile var p00: Double = 1.0 // var(h)
     @Volatile var p01: Double = 0.0 // cov(h, g)
@@ -94,7 +103,7 @@ class KinematicAltitudeSlopeEkf(
         altitude = initialAlt
         slope = initialSlope
         baroBias = initialBias
-        p00 = rBaro
+        p00 = if (is3StateMode) DEFAULT_UNANCHORED_ALT_VAR else rBaro
         p01 = 0.0
         p10 = 0.0
         p11 = 0.01
@@ -103,6 +112,8 @@ class KinematicAltitudeSlopeEkf(
         p12 = 0.0
         p21 = 0.0
         p22 = 100.0
+        hasReferenceAnchor = false
+        hasBarometerSample = false
         isInitialized = false
     }
 
@@ -110,8 +121,14 @@ class KinematicAltitudeSlopeEkf(
     fun setMode(threeState: Boolean) {
         if (is3StateMode == threeState) return
         is3StateMode = threeState
+        hasReferenceAnchor = false
         if (threeState) {
             baroBias = 0.0
+            if (isInitialized) {
+                p00 = DEFAULT_UNANCHORED_ALT_VAR
+                p01 = 0.0
+                p10 = 0.0
+            }
             p02 = 0.0
             p20 = 0.0
             p12 = 0.0
@@ -179,23 +196,33 @@ class KinematicAltitudeSlopeEkf(
             altitude = baroAltM
             slope = 0.0
             baroBias = 0.0
-            p00 = varBaro
+            p00 = if (is3StateMode) DEFAULT_UNANCHORED_ALT_VAR else varBaro
             p11 = 0.01
             p22 = 100.0
+            hasBarometerSample = true
             isInitialized = true
             return
         }
 
+        if (is3StateMode && hasReferenceAnchor && !hasBarometerSample) {
+            // Ref-before-Baro: absorb initial weather-pressure offset into baroBias without pulling altitude
+            baroBias = baroAltM - altitude
+            hasBarometerSample = true
+            return
+        }
+        hasBarometerSample = true
+
         if (isStandstill) {
             // In standstill mode: ground altitude is clamped (dh = 0).
-            // In 3-State mode: barometric drift updates baroBias directly.
-            if (is3StateMode) {
+            // In 3-State mode (once anchored): barometric drift updates baroBias directly
+            // without collapsing bias variance below altitude uncertainty p00.
+            if (is3StateMode && hasReferenceAnchor) {
                 val y = baroAltM - (altitude + baroBias)
                 val s = p22 + varBaro
                 val yH = applyHuber(y, s)
                 val kBias = p22 / s
                 baroBias += kBias * yH
-                p22 = max(1e-6, (1.0 - kBias) * p22)
+                p22 = max(1e-6, max(p00, (1.0 - kBias) * p22))
             }
             return
         }
@@ -247,10 +274,13 @@ class KinematicAltitudeSlopeEkf(
 
     /**
      * Ingests an absolute reference altitude (DEM or GPS elevation).
+     *
+     * @return `true` if this call performed initial 3-state re-anchoring from uncalibrated barometer altitude.
      */
     @Synchronized
-    fun updateReferenceAltitude(refAltM: Double, varRef: Double = rDem) {
-        if (refAltM.isNaN() || refAltM.isInfinite()) return
+    @Suppress("ReturnCount")
+    fun updateReferenceAltitude(refAltM: Double, varRef: Double = rDem): Boolean {
+        if (refAltM.isNaN() || refAltM.isInfinite()) return false
 
         if (!isInitialized) {
             altitude = refAltM
@@ -259,8 +289,27 @@ class KinematicAltitudeSlopeEkf(
             p00 = varRef
             p11 = 0.01
             p22 = 100.0
+            hasReferenceAnchor = true
             isInitialized = true
-            return
+            return false
+        }
+
+        if (is3StateMode && !hasReferenceAnchor) {
+            // Baro-before-Ref: snap altitude to first absolute reference and absorb weather offset into baroBias
+            if (hasBarometerSample) {
+                baroBias += (altitude - refAltM)
+            }
+            altitude = refAltM
+            p00 = varRef
+            p01 = 0.0
+            p10 = 0.0
+            p02 = 0.0
+            p20 = 0.0
+            p12 = 0.0
+            p21 = 0.0
+            p22 = 100.0
+            hasReferenceAnchor = true
+            return true
         }
 
         if (!is3StateMode) {
@@ -305,6 +354,7 @@ class KinematicAltitudeSlopeEkf(
             p21 = p12
             p22 = max(1e-6, p22 - k2 * v2)
         }
+        return false
     }
 
     @Synchronized

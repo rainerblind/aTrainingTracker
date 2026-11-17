@@ -155,7 +155,7 @@ jobs:
       - name: Verify ASPICE requirement governance
         run: python3 tools/verify_requirement_governance.py
 
-      - name: Verify release candidate system evidence (ASPICE SYS.4 & SYS.5)
+      - name: Verify release candidate verification summary & SYS.5 evidence (ASPICE SWE.6 & SYS.5)
         run: |
           TAG_NAME="${GITHUB_REF_NAME:-release}"
           python3 tools/generate_release_verification_summary.py --tag "${TAG_NAME}" --fail-on-deviations

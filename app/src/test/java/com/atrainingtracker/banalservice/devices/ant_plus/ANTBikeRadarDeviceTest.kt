@@ -805,4 +805,42 @@ class ANTBikeRadarDeviceTest {
         assertEquals(RadarAudioSnoozeMode.SNOOZE_30M, state.audioSnoozeState.mode)
         assertEquals(RadarSource.ANT_PLUS, state.source)
     }
+
+    /**
+     * TST-CON-046.3 / REQ-CON-046.1 (ATT-8455):
+     * Verifies all 3 ANTBikeRadarDevice RadarState emission paths (publishTargets, onWatchdogTimeout,
+     * and shutDown) preserve isAutoMode == false and restore cleanly on RadarLightController.setAutoMode().
+     */
+    @Test
+    fun testAllThreeEmissionSites_preserveManualIsAutoModeAndRestoreOnSetAutoMode() {
+        RadarStateRepository.updateControlState {
+            it.copy(isLightControlSupported = true, lightMode = RadarLightMode.SOLID, isAutoMode = false)
+        }
+        assertFalse(RadarStateRepository.getState().isAutoMode)
+
+        val validPayload = byteArrayOf(
+            0x30.toByte(), 0x01.toByte(), 0x00.toByte(),
+            0x10.toByte(), 0x00.toByte(), 0x00.toByte(),
+            0x05.toByte(), 0x00.toByte()
+        )
+
+        // 1. publishTargets() via decodeBroadcastData()
+        radarDevice.decodeBroadcastData(validPayload)
+        assertEquals(RadarConnectionState.CONNECTED, RadarStateRepository.getState().connectionState)
+        assertFalse("publishTargets must preserve isAutoMode=false", RadarStateRepository.getState().isAutoMode)
+
+        // 2. onWatchdogTimeout()
+        radarDevice.onWatchdogTimeout()
+        assertEquals(RadarConnectionState.DISCONNECTED_ERROR, RadarStateRepository.getState().connectionState)
+        assertFalse("onWatchdogTimeout must preserve isAutoMode=false", RadarStateRepository.getState().isAutoMode)
+
+        // 3. shutDown()
+        radarDevice.shutDown()
+        assertEquals(RadarConnectionState.DISCONNECTED, RadarStateRepository.getState().connectionState)
+        assertFalse("shutDown must preserve isAutoMode=false", RadarStateRepository.getState().isAutoMode)
+
+        // Explicit restoration via RadarLightController.setAutoMode()
+        com.atrainingtracker.banalservice.devices.radar.RadarLightController.setAutoMode()
+        assertTrue(RadarStateRepository.getState().isAutoMode)
+    }
 }

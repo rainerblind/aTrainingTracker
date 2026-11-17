@@ -1,4 +1,4 @@
-# Release Qualification Dossier: Release <TAG> (ASPICE SUP.8, SYS.4, SYS.5)
+# Release Qualification Dossier: Release <TAG> (ASPICE SUP.8, SWE.5, SYS.5)
 
 **Release Tag**: `<TAG>` (e.g. `V5.0.0__263` / `V5.0.0`)  
 **Target Version Name**: `<VERSION_NAME>`  
@@ -10,30 +10,20 @@
 ---
 
 ## 1. Executive Summary & Verification Gating Checklist
-In accordance with **REQ-PRO-072** and `.agents/skills/release-manager/SKILL.md`, release qualification requires mandatory system-level evidence before release candidate tag creation and distribution.
+In accordance with **REQ-PRO-072**, **REQ-PRO-112**, and `.agents/skills/release-manager/SKILL.md`, release qualification requires mandatory unit/software-integration evidence and physical SYS.5 verification evidence before release candidate tag creation and distribution.
 
 | Gate | Category | Evidence Artifact | Required Threshold | Verdict |
 | :--- | :--- | :--- | :--- | :--- |
-| **Gate 1** | Unit & Component Verification | Gradle unit test reports | 100% test pass rate, 0 failures | [ PASS / FAIL ] |
+| **Gate 1** | Unit & Software Integration (`INT-SWE-01..08`, `AppSmokeAndroidTest`) | Gradle unit/integration & CI smoke reports | 100% test pass rate, 0 failures | [ PASS / FAIL ] |
 | **Gate 2** | Code Signing & Integrity | `apksigner verify` & AAB signatures | v2 scheme = true, signer = aTrainingTracker | [ PASS / FAIL ] |
-| **Gate 3** | System Integration Verification (SYS.4) | `docs/releases/<TAG>/system_integration_results.json` | 6/6 tests PASS, 0 failures | [ PASS / FAIL ] |
-| **Gate 4** | System Verification Protocol (SYS.5) | `docs/releases/<TAG>/sys_verification_record.md` | 8/8 tests PASS, formal QA sign-off | [ PASS / FAIL ] |
+| **Gate 3** | Release Verification Summary (SWE.6) | `docs/releases/<TAG>/verification_summary.md` | `PASS (READY FOR RELEASE)`, 0 deviations | [ PASS / FAIL ] |
+| **Gate 4** | System Verification Protocol (SYS.5) | `docs/releases/<TAG>/sys_verification_record.md` | 8/8 tests PASS, formal QA + PO sign-off | [ PASS / FAIL ] |
 
 ---
 
-## 2. SYS.4 System Integration Verification Summary
-* **Artifact Path**: `docs/releases/<TAG>/system_integration_results.json`
-* **Test Runner**: `python3 tools/run_system_integration_tests.py --headless`
-* **Execution Timestamp**: `<TIMESTAMP>`
-* **Git Commit**: `<GIT_COMMIT>`
-* **Results Breakdown**:
-  - `SYS-INT-001` (BLE HRM Ingestion & Backoff): [ PASS / FAIL ]
-  - `SYS-INT-002` (BLE Cycling Power & Cadence): [ PASS / FAIL ]
-  - `SYS-INT-003` (ANT+ Cadence & Profile Dispatch): [ PASS / FAIL ]
-  - `SYS-INT-004` (GNSS Multipath & Barometric Fusion): [ PASS / FAIL ]
-  - `SYS-INT-005` (Radar Alerting & Threat Assessment): [ PASS / FAIL ]
-  - `SYS-INT-006` (FIT/TCX Storage Deduplication): [ PASS / FAIL ]
-* **Overall SYS.4 Status**: [ PASS / FAIL ]
+## 2. Software Integration & Simulator Tooling Notes (Non-Gating Simulators)
+* **Automated Android Integration**: Verified via `./gradlew :app:testDebugUnitTest` (`INT-SWE-01..08`) and connected CI `AppSmokeAndroidTest.kt`.
+* **Developer Simulator Self-Tests (Optional / Non-Gating)**: `python3 tools/run_simulator_self_tests.py` tests Python simulator tools only and does **not** certify Android APK execution (`REQ-PRO-112`).
 
 ---
 

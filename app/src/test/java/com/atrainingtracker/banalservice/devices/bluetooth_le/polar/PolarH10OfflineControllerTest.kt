@@ -27,6 +27,7 @@ import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
 import com.atrainingtracker.banalservice.devices.DeviceManager
 import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDevice
+import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.hrv.HrvPostWorkoutRecomputer
@@ -289,6 +290,7 @@ class PolarH10OfflineControllerTest {
         assertTrue("Backfill should succeed", result)
         coVerify(exactly = 1) { mockApi.fetchExercise("1C3B2421", testEntry) }
         verify(exactly = 1) { mockSamplesDb.patchMissingHeartRateSamples("2026-11-15_123456", any(), any()) }
+        verify(exactly = 1) { mockWorkoutRepo.addAccumulatedSensorTypes(123L, setOf(SensorType.HR)) }
         coVerify(exactly = 1) { mockRrRepo.insertIntervals(any()) }
         coVerify(exactly = 1) { HrvPostWorkoutRecomputer.recomputeWorkout(any(), 123L) }
         coVerify(exactly = 1) { mockApi.removeExercise("1C3B2421", testEntry) }
@@ -404,6 +406,7 @@ class PolarH10OfflineControllerTest {
         // Then (TST-SET-108.4): Deferred sync patches DBs, clears flag, removes exercise from strap, refreshes UI
         assertTrue("Deferred sync should succeed", result)
         coVerify(exactly = 1) { mockApi.fetchExercise("1C3B2421", testEntry) }
+        verify(exactly = 1) { mockWorkoutRepo.addAccumulatedSensorTypes(123L, setOf(SensorType.HR)) }
         coVerify(exactly = 1) { mockRrRepo.insertIntervals(any()) }
         coVerify(exactly = 1) { HrvPostWorkoutRecomputer.recomputeWorkout(any(), 123L) }
         verify(exactly = 1) { mockSummariesDb.clearPolarSyncPending(123L) }
@@ -418,5 +421,67 @@ class PolarH10OfflineControllerTest {
 
         // Then (TST-SET-108.5): dismissPolarSyncPending invoked without touching sensor exercise
         verify { mockWorkoutRepo.dismissPolarSyncPending(123L) }
+    }
+
+    @Test
+    fun testSyncPendingWorkout_nullBaseFileName_doesNotRecordHrAccumulatedSensorType() = runBlocking {
+        // REQ-TRK-084.4: Deferred sync without a valid baseFileName must not patch or record SensorType.HR
+        PolarH10OfflineController.sdkIntOverride = 33
+        PolarH10OfflineController.apiOverride = mockApi
+
+        val pendingData = WorkoutSummariesDatabaseManager.PolarPendingSyncData(
+            "1C3B2421",
+            "ATT_TEST_EX",
+            1000L,
+            2000L,
+            true
+        )
+        every { mockSummariesDb.getPolarPendingSyncData(123L) } returns pendingData
+        every { mockWorkoutRepo.getBaseFileName(123L) } returns null
+        every { mockSummariesDb.getBaseFileName(123L) } returns null
+
+        val exerciseData = PolarExerciseData(recordingInterval = 1, hrSamples = listOf(800, 850, 750))
+        coEvery { mockApi.connectToDevice("1C3B2421") } just Runs
+        coEvery { mockApi.waitForConnection("1C3B2421") } just Runs
+        coEvery { mockApi.requestRecordingStatus("1C3B2421") } returns PolarH10OfflineExerciseApi.PolarRecordingStatus(false, "", true)
+        every { mockApi.listExercises("1C3B2421") } returns flowOf(testEntry)
+        coEvery { mockApi.fetchExercise("1C3B2421", testEntry) } returns exerciseData
+        coEvery { mockRrRepo.insertIntervals(any()) } returns 3
+        coEvery { mockApi.removeExercise("1C3B2421", testEntry) } just Runs
+        coEvery { mockApi.disconnectFromDevice("1C3B2421") } just Runs
+
+        val result = PolarH10OfflineController.syncPendingWorkout(context, 123L)
+
+        assertTrue(result)
+        verify(exactly = 0) { mockSamplesDb.patchMissingHeartRateSamples(any(), any(), any()) }
+        verify(exactly = 0) { mockWorkoutRepo.addAccumulatedSensorTypes(any(), any()) }
+    }
+
+    @Test
+    fun testStopAndBackfill_zeroPatchedRows_doesNotRecordHrAccumulatedSensorType() = runBlocking {
+        // REQ-TRK-084.4: When patchMissingHeartRateSamples returns 0, SensorType.HR is not upserted
+        PolarH10OfflineController.sdkIntOverride = 33
+        PolarH10OfflineController.apiOverride = mockApi
+        PolarH10OfflineController.setArmedForTesting(true)
+
+        every { mockRrRepo.getIntervalsForWorkoutBlocking(123L) } returns emptyList()
+        every { mockSamplesDb.hasMissingHeartRateSamples("2026-11-15_123456") } returns true
+        every { mockSamplesDb.patchMissingHeartRateSamples("2026-11-15_123456", any(), any()) } returns 0
+
+        val exerciseData = PolarExerciseData(recordingInterval = 1, hrSamples = listOf(800, 850, 750))
+        coEvery { mockApi.connectToDevice(any()) } just Runs
+        coEvery { mockApi.waitForConnection(any()) } just Runs
+        coEvery { mockApi.requestRecordingStatus(any()) } returns PolarH10OfflineExerciseApi.PolarRecordingStatus(false, "", true)
+        every { mockApi.listExercises(any()) } returns flowOf(testEntry)
+        coEvery { mockApi.fetchExercise("1C3B2421", testEntry) } returns exerciseData
+        coEvery { mockRrRepo.insertIntervals(any()) } returns 3
+        coEvery { mockApi.removeExercise("1C3B2421", testEntry) } just Runs
+        coEvery { mockApi.disconnectFromDevice(any()) } just Runs
+
+        val result = PolarH10OfflineController.stopAndBackfillWorkout(context, 123L, "2026-11-15_123456", 1000L)
+
+        assertTrue(result)
+        verify(exactly = 1) { mockSamplesDb.patchMissingHeartRateSamples("2026-11-15_123456", any(), any()) }
+        verify(exactly = 0) { mockWorkoutRepo.addAccumulatedSensorTypes(any(), any()) }
     }
 }

@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.ui.settings.tuning.categories
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -26,19 +27,26 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.util.Locale
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.settings.ZoneDisplayOptions
+import com.atrainingtracker.trainingtracker.ui.settings.ZoneDisplayOptionsDraft
+import com.atrainingtracker.trainingtracker.ui.settings.ZoneProfileTarget
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningSegmentedButtonRow
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningSliderItem
+import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldStyle
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldVariant
+import com.atrainingtracker.trainingtracker.ui.tracking.ZoneGaugeBar
+import com.atrainingtracker.trainingtracker.ui.tracking.ZoneGaugeState
 import com.atrainingtracker.trainingtracker.ui.tracking.typography.CockpitFontFamily
 import com.atrainingtracker.trainingtracker.ui.tracking.typography.CockpitFontWeight
 import com.atrainingtracker.trainingtracker.ui.tracking.typography.CockpitTypography
@@ -62,68 +70,30 @@ fun CockpitTypographySection(
     sensorFieldBorderThickness: Float = 1.0f,
     onBorderThicknessChange: (Float) -> Unit = {},
     sensorFieldBorderContrast: Float = 0.0f,
-    onBorderContrastChange: (Float) -> Unit = {}
+    onBorderContrastChange: (Float) -> Unit = {},
+    zoneDisplayDraft: ZoneDisplayOptionsDraft = ZoneDisplayOptionsDraft(),
+    onZoneDisplayDraftChange: (ZoneDisplayOptionsDraft) -> Unit = {}
 ) {
+    var selectedZoneProfile by remember { mutableStateOf(ZoneProfileTarget.HR_RUN) }
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         // Font Family Selector
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Text(
-                text = stringResource(R.string.tuning_cockpit_font_family_title),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold
-            )
-
-            var expanded by remember { mutableStateOf(false) }
-
-            ExposedDropdownMenuBox(
-                expanded = expanded,
-                onExpandedChange = { expanded = !expanded }
-            ) {
-                OutlinedTextField(
-                    value = stringResource(cockpitFontFamily.getDisplayNameRes()),
-                    onValueChange = {},
-                    readOnly = true,
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .menuAnchor(),
-                    textStyle = MaterialTheme.typography.bodyLarge.copy(
-                        fontFamily = CockpitTypography.resolveFontFamily(cockpitFontFamily),
-                        fontWeight = cockpitFontWeight.asFontWeight()
-                    )
-                )
-                ExposedDropdownMenu(
-                    expanded = expanded,
-                    onDismissRequest = { expanded = false },
-                    modifier = Modifier.heightIn(max = 360.dp)
-                ) {
-                    CockpitFontFamily.values().forEach { family ->
-                        val itemFontFamily = remember(family) {
-                            CockpitTypography.resolveFontFamily(family)
-                        }
-                        DropdownMenuItem(
-                            text = {
-                                Text(
-                                    text = stringResource(family.getDisplayNameRes()),
-                                    fontFamily = itemFontFamily,
-                                    fontWeight = cockpitFontWeight.asFontWeight()
-                                )
-                            },
-                            onClick = {
-                                onFontFamilyChange(family)
-                                expanded = false
-                            }
-                        )
-                    }
-                }
-            }
-        }
+        CockpitDropdownSelector(
+            title = stringResource(R.string.tuning_cockpit_font_family_title),
+            options = CockpitFontFamily.values().toList(),
+            selectedOption = cockpitFontFamily,
+            selectedLabel = stringResource(cockpitFontFamily.getDisplayNameRes()),
+            onOptionSelected = onFontFamilyChange,
+            itemLabel = { family -> stringResource(family.getDisplayNameRes()) },
+            textStyle = MaterialTheme.typography.bodyLarge.copy(
+                fontFamily = CockpitTypography.resolveFontFamily(cockpitFontFamily),
+                fontWeight = cockpitFontWeight.asFontWeight()
+            ),
+            itemFontFamily = { family -> CockpitTypography.resolveFontFamily(family) },
+            itemFontWeight = { cockpitFontWeight.asFontWeight() }
+        )
 
         // Boldness (Font Weight) Selector (REQ-UI-257, REQ-UI-262.5 / ATT-7539)
         TuningSegmentedButtonRow(
@@ -135,57 +105,21 @@ fun CockpitTypographySection(
         )
 
         // Cockpit Tile Design & Grid Style Selector (REQ-UI-258)
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Text(
-                text = stringResource(R.string.tuning_sensor_field_variant_title),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold
-            )
-
-            var variantExpanded by remember { mutableStateOf(false) }
-
-            ExposedDropdownMenuBox(
-                expanded = variantExpanded,
-                onExpandedChange = { variantExpanded = !variantExpanded }
-            ) {
-                OutlinedTextField(
-                    value = stringResource(sensorFieldVariant.titleResId),
-                    onValueChange = {},
-                    readOnly = true,
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = variantExpanded) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .menuAnchor()
-                )
-                ExposedDropdownMenu(
-                    expanded = variantExpanded,
-                    onDismissRequest = { variantExpanded = false },
-                    modifier = Modifier.heightIn(max = 360.dp)
-                ) {
-                    SensorFieldVariant.values().forEach { variant ->
-                        DropdownMenuItem(
-                            text = {
-                                Text(
-                                    text = stringResource(variant.titleResId),
-                                    fontWeight = if (sensorFieldVariant == variant) FontWeight.Bold else FontWeight.Normal
-                                )
-                            },
-                            onClick = {
-                                onSensorFieldVariantChange(variant)
-                                val baseline = SensorFieldStyle.forVariant(variant)
-                                onCornerRadiusChange(baseline.cornerRadius.value)
-                                onBorderThicknessChange(baseline.borderThickness.value)
-                                onBorderContrastChange(baseline.borderContrast)
-                                variantExpanded = false
-                            }
-                        )
-                    }
-                }
-            }
-        }
+        CockpitDropdownSelector(
+            title = stringResource(R.string.tuning_sensor_field_variant_title),
+            options = SensorFieldVariant.values().toList(),
+            selectedOption = sensorFieldVariant,
+            selectedLabel = stringResource(sensorFieldVariant.titleResId),
+            onOptionSelected = { variant ->
+                onSensorFieldVariantChange(variant)
+                val baseline = SensorFieldStyle.forVariant(variant)
+                onCornerRadiusChange(baseline.cornerRadius.value)
+                onBorderThicknessChange(baseline.borderThickness.value)
+                onBorderContrastChange(baseline.borderContrast)
+            },
+            itemLabel = { variant -> stringResource(variant.titleResId) },
+            itemFontWeight = { variant -> if (sensorFieldVariant == variant) FontWeight.Bold else FontWeight.Normal }
+        )
 
         // Granular Tile Geometry & Border Sliders (ATT-2456 / REQ-UI-276)
         TuningSliderItem(
@@ -219,6 +153,14 @@ fun CockpitTypographySection(
             onValueChange = onBorderContrastChange,
             valueRange = 0.0f..1.0f,
             steps = 9
+        )
+
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+        CockpitZoneDisplaySubsection(
+            selectedProfile = selectedZoneProfile,
+            onProfileSelected = { selectedZoneProfile = it },
+            zoneDisplayDraft = zoneDisplayDraft,
+            onZoneDisplayDraftChange = onZoneDisplayDraftChange
         )
 
         // Live Preview Card
@@ -268,8 +210,11 @@ fun CockpitTypographySection(
                     )
                 }
 
+                val activeZoneOptions = zoneDisplayDraft.optionsFor(selectedZoneProfile)
+                val previewTileMetrics = resolveZonePreviewTileMetrics(selectedZoneProfile, activeZoneOptions)
+
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
                     horizontalArrangement = if (effectiveSpacing > 0.dp) {
                         Arrangement.spacedBy(effectiveSpacing, Alignment.CenterHorizontally)
                     } else {
@@ -278,18 +223,21 @@ fun CockpitTypographySection(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     PreviewCockpitTile(
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
                         shape = tileShape,
                         border = tileBorder,
                         borderThickness = sensorFieldBorderThickness.dp,
                         elevation = tileElevation,
-                        value = "148",
-                        unit = "bpm",
+                        value = previewTileMetrics.value,
+                        unit = previewTileMetrics.unit,
                         previewFamily = previewFamily,
-                        previewWeight = previewWeight
+                        previewWeight = previewWeight,
+                        zoneColor = TTColor.Zone2,
+                        zoneDisplayOptions = activeZoneOptions,
+                        zoneGaugeState = previewTileMetrics.gaugeState
                     )
                     PreviewCockpitTile(
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
                         shape = tileShape,
                         border = tileBorder,
                         borderThickness = sensorFieldBorderThickness.dp,
@@ -300,7 +248,7 @@ fun CockpitTypographySection(
                         previewWeight = previewWeight
                     )
                     PreviewCockpitTile(
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
                         shape = tileShape,
                         border = tileBorder,
                         borderThickness = sensorFieldBorderThickness.dp,
@@ -326,42 +274,61 @@ private fun PreviewCockpitTile(
     value: String,
     unit: String,
     previewFamily: FontFamily,
-    previewWeight: FontWeight
+    previewWeight: FontWeight,
+    zoneColor: Color = Color.Transparent,
+    zoneDisplayOptions: ZoneDisplayOptions = ZoneDisplayOptions(),
+    zoneGaugeState: ZoneGaugeState? = null
 ) {
+    val containerColor = if (zoneColor != Color.Transparent && zoneDisplayOptions.showBackground) {
+        zoneColor.copy(alpha = 0.12f).compositeOver(MaterialTheme.colorScheme.surface)
+    } else {
+        MaterialTheme.colorScheme.surface
+    }
     Card(
         modifier = modifier,
         shape = shape,
         border = border,
         elevation = elevation,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        )
+        colors = CardDefaults.cardColors(containerColor = containerColor)
     ) {
         val hPadding = (4.dp + borderThickness / 2f).coerceAtLeast(4.dp)
         val vPadding = (8.dp + borderThickness / 2f).coerceAtLeast(8.dp)
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = vPadding, horizontal = hPadding),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Text(
-                text = value,
-                fontFamily = previewFamily,
-                fontWeight = previewWeight,
-                fontSize = if (value.length > 5) 18.sp else 22.sp,
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-                softWrap = false
-            )
-            Text(
-                text = unit,
-                fontFamily = previewFamily,
-                fontSize = 10.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1
-            )
+        Row(modifier = Modifier.fillMaxWidth().fillMaxHeight()) {
+            if (zoneColor != Color.Transparent && zoneDisplayOptions.showLeftBar) {
+                Spacer(modifier = Modifier.width(6.dp).fillMaxHeight().background(zoneColor))
+            }
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .padding(vertical = vPadding, horizontal = hPadding),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = value,
+                    fontFamily = previewFamily,
+                    fontWeight = previewWeight,
+                    fontSize = if (value.length > 5) 18.sp else 22.sp,
+                    color = if (zoneColor != Color.Transparent && zoneDisplayOptions.showTextColor) zoneColor else MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    softWrap = false
+                )
+                Text(
+                    text = unit,
+                    fontFamily = previewFamily,
+                    fontSize = 10.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1
+                )
+                if (zoneGaugeState != null) {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    ZoneGaugeBar(state = zoneGaugeState, modifier = Modifier.fillMaxWidth(), trackHeight = 4.dp, showBadge = false)
+                }
+            }
+            if (zoneColor != Color.Transparent && zoneDisplayOptions.showRightBar) {
+                Spacer(modifier = Modifier.width(6.dp).fillMaxHeight().background(zoneColor))
+            }
         }
     }
 }

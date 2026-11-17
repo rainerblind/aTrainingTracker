@@ -172,6 +172,12 @@ class HrvPostWorkoutRecomputerTest {
             }
         }
         assertTrue("Should have non-null rMSSD values in centered window", nonNullRmssdCount > 0)
+
+        val accumulated = summariesDbManager.getAccumulatedSensorTypes(workoutId)
+        assertTrue("HRV_ARTIFACT_RATE must be persisted", accumulated.contains(SensorType.HRV_ARTIFACT_RATE))
+        assertTrue("HRV_RMSSD must be persisted when computed", accumulated.contains(SensorType.HRV_RMSSD))
+        assertTrue("HRV_DFA_A1 must be persisted when computed", accumulated.contains(SensorType.HRV_DFA_A1))
+        assertTrue("HRV_SDNN must be persisted when computed", accumulated.contains(SensorType.HRV_SDNN))
     }
 
     @Test
@@ -318,5 +324,58 @@ class HrvPostWorkoutRecomputerTest {
         assertTrue("Must have non-empty rMSSD samples", rmssdValues.size >= 5)
         // Check that sample 0 and sample 1 (within first 5s) share identical latched value
         assertEquals("Sample 1 must latch value from sample 0 on 5s grid", rmssdValues[0], rmssdValues[1], 0.0001)
+    }
+
+    @Test
+    fun recomputeWorkout_conditionalAccumulatedSensors_omitsUncomputedMetrics() = runBlocking {
+        // TST-TRK-084.4: High-artifact / sparse beat series yields empty rmssdValues, empty dfaValues, null sessionSdnn
+        val baseFileName = "2026-11-17_hrv_sparse"
+        val workoutId = createWorkout(baseFileName)
+        samplesDbManager.createNewTable(baseFileName, java.util.Arrays.asList(*SensorType.values()))
+
+        val startTs = 1_700_000_000_000L
+        val samplesDb = samplesDbManager.database
+        val tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
+        val sdf = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US).apply {
+            timeZone = java.util.TimeZone.getTimeZone("UTC")
+        }
+        samplesDb.beginTransaction()
+        try {
+            for (sec in 0 until 20) {
+                val cv = ContentValues().apply {
+                    put("time", sdf.format(java.util.Date(startTs + sec * 1000L)))
+                    put(SensorType.HR.name, 75.0)
+                }
+                samplesDb.insert(tableName, null, cv)
+            }
+            samplesDb.setTransactionSuccessful()
+        } finally {
+            samplesDb.endTransaction()
+        }
+
+        // 15 gap-flagged RR intervals -> 100% artifact rate (>5%), 0 valid RMSSD pairs, <32 DFA beats
+        val rrList = mutableListOf<WorkoutRrInterval>()
+        var beatTs = startTs
+        for (idx in 0 until 15) {
+            val rr = 800f
+            rrList.add(
+                WorkoutRrInterval(
+                    workoutId = workoutId,
+                    beatIndex = idx,
+                    beatTimestampMs = beatTs,
+                    rrMs = rr,
+                    artifactFlag = com.atrainingtracker.banalservice.devices.RrBeatEvent.ARTIFACT_GAP,
+                    gapBeats = 0
+                )
+            )
+            beatTs += rr.toLong()
+        }
+        WorkoutRrRepository.getInstance(context).insertIntervals(rrList)
+
+        val success = HrvPostWorkoutRecomputer.recomputeWorkout(context, workoutId)
+        assertTrue("Recomputation should complete and write HRV_ARTIFACT_RATE", success)
+
+        val accumulated = summariesDbManager.getAccumulatedSensorTypes(workoutId)
+        assertEquals(setOf(SensorType.HRV_ARTIFACT_RATE), accumulated)
     }
 }

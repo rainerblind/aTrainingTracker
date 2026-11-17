@@ -18,25 +18,30 @@
 
 package com.atrainingtracker.trainingtracker.ui.tracking.radar
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -44,9 +49,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
@@ -54,7 +64,9 @@ import com.atrainingtracker.banalservice.devices.radar.RadarAudioSnoozeMode
 import com.atrainingtracker.banalservice.devices.radar.RadarAudioSnoozeState
 import com.atrainingtracker.banalservice.devices.radar.RadarLightMode
 import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
+import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
+import com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.resolveLightVisuals
 
 /**
  * Modal quick-switch sheet for Garmin Varia BLE radar tail light mode selection
@@ -129,7 +141,7 @@ fun RadarLightQuickSwitchSheetContent(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(horizontal = 16.dp, vertical = 4.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         if (isLightControlSupported) {
@@ -139,7 +151,7 @@ fun RadarLightQuickSwitchSheetContent(
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(8.dp))
                         .background(TTColor.RadarDisconnectedAmber.copy(alpha = 0.15f))
-                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                        .padding(horizontal = 12.dp, vertical = 6.dp)
                 ) {
                     Text(
                         text = stringResource(R.string.radar_light_stvzo_notice),
@@ -148,105 +160,103 @@ fun RadarLightQuickSwitchSheetContent(
                         fontWeight = FontWeight.Medium
                     )
                 }
-                Spacer(modifier = Modifier.height(4.dp))
             }
 
-            // Automatik Option (REQ-CON-031.3)
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .clickable { onAutoSelected() }
-                    .padding(horizontal = 12.dp, vertical = 10.dp)
-                    .testTag("RadarLightMode_AUTO"),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(10.dp)
-                        .clip(CircleShape)
-                        .background(TTColor.RadarClearGreen)
-                )
-
-                Spacer(modifier = Modifier.width(12.dp))
-
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = stringResource(R.string.radar_light_control_mode_smart),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        fontWeight = if (isAutoMode) FontWeight.Bold else FontWeight.Normal
+            // Unified 2-column compact tile grid (REQ-CON-047.1, REQ-CON-047.2, REQ-CON-047.3):
+            // Automatik first, followed by ascending-intensity physical modes.
+            // When availableModes has an even count (e.g. StVZO: OFF, SOLID), Automatik spans row 1
+            // and the modes fill row 2 evenly; when odd (5 modes), Automatik + 5 modes form 3 even 2-col rows.
+            val activeAutoSubtitle = if (isAutoMode) {
+                stringResource(R.string.radar_light_active_mode_format, stringResource(currentMode.titleResId))
+            } else {
+                null
+            }
+            val lightTiles = buildList {
+                add(
+                    LightTileSpec(
+                        testTag = "RadarLightMode_AUTO",
+                        label = stringResource(R.string.radar_light_control_mode_smart),
+                        subtitle = activeAutoSubtitle,
+                        icon = Icons.Default.AutoAwesome,
+                        iconTint = TTColor.RadarLightBadgeAuto,
+                        isSelected = isAutoMode,
+                        onClick = onAutoSelected
                     )
-                    if (isAutoMode) {
-                        Text(
-                            text = stringResource(
-                                R.string.radar_light_active_mode_format,
-                                stringResource(currentMode.titleResId)
-                            ),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                availableModes.forEach { mode ->
+                    val (modeIcon, modeColor) = resolveLightVisuals(mode)
+                    add(
+                        LightTileSpec(
+                            testTag = "RadarLightMode_${mode.name}",
+                            label = stringResource(mode.titleResId),
+                            subtitle = null,
+                            icon = modeIcon,
+                            iconTint = modeColor,
+                            isSelected = !isAutoMode && mode == currentMode,
+                            onClick = { onModeSelected(mode) }
                         )
-                    }
+                    )
                 }
+            }
 
-                RadioButton(
-                    selected = isAutoMode,
-                    onClick = { onAutoSelected() }
+            if (availableModes.size % 2 == 0) {
+                RadarQuickSwitchLightTile(
+                    spec = lightTiles.first(),
+                    modifier = Modifier.fillMaxWidth()
                 )
-            }
-
-            availableModes.forEach { mode ->
-                val isSelected = !isAutoMode && mode == currentMode
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .clickable { onModeSelected(mode) }
-                        .padding(horizontal = 12.dp, vertical = 10.dp)
-                        .testTag("RadarLightMode_${mode.name}"),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    val dotColor = when (mode) {
-                        RadarLightMode.OFF -> MaterialTheme.colorScheme.outline
-                        RadarLightMode.SOLID -> TTColor.RadarThreatRed
-                        RadarLightMode.DAY_FLASH -> TTColor.RadarThreatAmber
-                        RadarLightMode.NIGHT_FLASH -> TTColor.RadarThreatAmber.copy(alpha = 0.7f)
-                        RadarLightMode.PELOTON -> TTColor.RadarThreatRed.copy(alpha = 0.5f)
-                    }
-                    Box(
+                lightTiles.drop(1).chunked(2).forEach { pair ->
+                    Row(
                         modifier = Modifier
-                            .size(10.dp)
-                            .clip(CircleShape)
-                            .background(dotColor)
-                    )
-
-                    Spacer(modifier = Modifier.width(12.dp))
-
-                    Text(
-                        text = stringResource(mode.titleResId),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                        modifier = Modifier.weight(1f)
-                    )
-
-                    RadioButton(
-                        selected = isSelected,
-                        onClick = { onModeSelected(mode) }
-                    )
+                            .fillMaxWidth()
+                            .height(IntrinsicSize.Min),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        pair.forEach { spec ->
+                            RadarQuickSwitchLightTile(
+                                spec = spec,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxHeight()
+                            )
+                        }
+                        if (pair.size == 1) {
+                            Spacer(modifier = Modifier.weight(1f))
+                        }
+                    }
+                }
+            } else {
+                lightTiles.chunked(2).forEach { pair ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(IntrinsicSize.Min),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        pair.forEach { spec ->
+                            RadarQuickSwitchLightTile(
+                                spec = spec,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxHeight()
+                            )
+                        }
+                        if (pair.size == 1) {
+                            Spacer(modifier = Modifier.weight(1f))
+                        }
+                    }
                 }
             }
 
-            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+            HorizontalDivider(modifier = Modifier.padding(vertical = 2.dp))
         }
 
-        // Audio Snooze Section (REQ-TRK-064.1)
+        // Audio Snooze Section (REQ-TRK-064.1, REQ-CON-047.1)
         Text(
             text = stringResource(R.string.radar_snooze_title),
             style = MaterialTheme.typography.titleSmall,
             color = MaterialTheme.colorScheme.primary,
             fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.padding(start = 4.dp, top = 4.dp)
+            modifier = Modifier.padding(start = 2.dp)
         )
 
         if (snoozeState.isSnoozed) {
@@ -255,16 +265,15 @@ fun RadarLightQuickSwitchSheetContent(
                     onResumeAudio()
                     onDismiss()
                 },
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 4.dp)
                     .testTag("RadarSnooze_Resume")
             ) {
                 Text(text = stringResource(R.string.radar_snooze_resume))
             }
         }
 
-        // Snooze Options
         val snoozeOptions = listOf(
             Pair(RadarAudioSnoozeMode.SNOOZE_15M, R.string.radar_snooze_15m),
             Pair(RadarAudioSnoozeMode.SNOOZE_30M, R.string.radar_snooze_30m),
@@ -272,46 +281,180 @@ fun RadarLightQuickSwitchSheetContent(
             Pair(RadarAudioSnoozeMode.REST_OF_RIDE, R.string.radar_snooze_rest_of_ride)
         )
 
-        snoozeOptions.forEach { (mode, stringResId) ->
-            val isSelected = snoozeState.isSnoozed && snoozeState.mode == mode
+        snoozeOptions.chunked(2).forEach { pair ->
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .clickable {
-                        onSnoozeSelected(mode)
-                        onDismiss()
-                    }
-                    .padding(horizontal = 12.dp, vertical = 10.dp)
-                    .testTag("RadarSnooze_${mode.name}"),
-                verticalAlignment = Alignment.CenterVertically
+                    .height(IntrinsicSize.Min),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text(
-                    text = stringResource(stringResId),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                    modifier = Modifier.weight(1f)
-                )
-
-                RadioButton(
-                    selected = isSelected,
-                    onClick = {
-                        onSnoozeSelected(mode)
-                        onDismiss()
-                    }
-                )
+                pair.forEach { (mode, stringResId) ->
+                    val isSelected = snoozeState.isSnoozed && snoozeState.mode == mode
+                    RadarQuickSwitchSnoozeTile(
+                        label = stringResource(stringResId),
+                        isSelected = isSelected,
+                        onClick = {
+                            onSnoozeSelected(mode)
+                            onDismiss()
+                        },
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .testTag("RadarSnooze_${mode.name}")
+                    )
+                }
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(8.dp))
+    }
+}
+
+private data class LightTileSpec(
+    val testTag: String,
+    val label: String,
+    val subtitle: String?,
+    val icon: ImageVector,
+    val iconTint: Color,
+    val isSelected: Boolean,
+    val onClick: () -> Unit
+)
+
+@Composable
+private fun RadarQuickSwitchLightTile(
+    spec: LightTileSpec,
+    modifier: Modifier = Modifier
+) {
+    val containerColor = if (spec.isSelected) {
+        MaterialTheme.colorScheme.primaryContainer
+    } else {
+        MaterialTheme.colorScheme.surfaceContainerLow
+    }
+    val contentColor = if (spec.isSelected) {
+        MaterialTheme.colorScheme.onPrimaryContainer
+    } else {
+        MaterialTheme.colorScheme.onSurface
+    }
+    val borderColor = if (spec.isSelected) {
+        MaterialTheme.colorScheme.primary
+    } else {
+        MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+    }
+
+    Surface(
+        modifier = modifier
+            .testTag(spec.testTag)
+            .semantics(mergeDescendants = true) { selected = spec.isSelected }
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(role = Role.RadioButton) { spec.onClick() },
+        shape = RoundedCornerShape(12.dp),
+        color = containerColor,
+        border = BorderStroke(if (spec.isSelected) 1.5.dp else 1.dp, borderColor)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 10.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(28.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(TTColor.RadarLightContainer),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = spec.icon,
+                    contentDescription = null,
+                    tint = spec.iconTint,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = spec.label,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = contentColor,
+                    fontWeight = if (spec.isSelected) FontWeight.Bold else FontWeight.Medium,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                if (spec.subtitle != null) {
+                    Text(
+                        text = spec.subtitle,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (spec.isSelected) {
+                            contentColor.copy(alpha = 0.85f)
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RadarQuickSwitchSnoozeTile(
+    label: String,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val containerColor = if (isSelected) {
+        MaterialTheme.colorScheme.primaryContainer
+    } else {
+        MaterialTheme.colorScheme.surfaceContainerLow
+    }
+    val contentColor = if (isSelected) {
+        MaterialTheme.colorScheme.onPrimaryContainer
+    } else {
+        MaterialTheme.colorScheme.onSurface
+    }
+    val borderColor = if (isSelected) {
+        MaterialTheme.colorScheme.primary
+    } else {
+        MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+    }
+
+    Surface(
+        modifier = modifier
+            .semantics(mergeDescendants = true) { selected = isSelected }
+            .clip(RoundedCornerShape(10.dp))
+            .clickable(role = Role.RadioButton) { onClick() },
+        shape = RoundedCornerShape(10.dp),
+        color = containerColor,
+        border = BorderStroke(if (isSelected) 1.5.dp else 1.dp, borderColor)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 10.dp, vertical = 9.dp),
+            contentAlignment = Alignment.CenterStart
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelMedium,
+                color = contentColor,
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
     }
 }
 
 @Preview(name = "RadarLightQuickSwitchSheet - Light", showBackground = true)
 @Composable
 private fun RadarLightQuickSwitchSheetPreviewLight() {
-    MaterialTheme {
+    ATrainingTrackerTheme(darkTheme = false) {
         Surface {
             RadarLightQuickSwitchSheetContent(
                 currentMode = RadarLightMode.DAY_FLASH,
@@ -333,7 +476,7 @@ private fun RadarLightQuickSwitchSheetPreviewLight() {
 )
 @Composable
 private fun RadarLightQuickSwitchSheetPreviewDark() {
-    MaterialTheme {
+    ATrainingTrackerTheme(darkTheme = true) {
         Surface {
             RadarLightQuickSwitchSheetContent(
                 currentMode = RadarLightMode.SOLID,
@@ -351,7 +494,7 @@ private fun RadarLightQuickSwitchSheetPreviewDark() {
 @Preview(name = "RadarLightQuickSwitchSheet - StVZO", showBackground = true)
 @Composable
 private fun RadarLightQuickSwitchSheetPreviewStvzo() {
-    MaterialTheme {
+    ATrainingTrackerTheme(darkTheme = false) {
         Surface {
             RadarLightQuickSwitchSheetContent(
                 currentMode = RadarLightMode.SOLID,

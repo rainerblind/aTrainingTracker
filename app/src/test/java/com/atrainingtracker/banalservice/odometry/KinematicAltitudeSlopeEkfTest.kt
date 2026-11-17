@@ -196,4 +196,149 @@ class KinematicAltitudeSlopeEkfTest {
         assertTrue("Altitude must be a valid finite number", !ekf.altitude.isNaN() && !ekf.altitude.isInfinite())
         assertTrue("Covariance p00 must be positive", ekf.p00 > 0.0)
     }
+
+    /**
+     * TST-FIL-022.1: 3-State Baro-before-Ref +130.4 m weather-pressure offset at standstill (ATT-8575).
+     */
+    @Test
+    fun testThreeStateBaroBeforeRef_anchorsAndAbsorbs130mWeatherOffsetAtStandstill() {
+        ekf.setMode(true)
+
+        // Barometer arrives first at standstill with +130.4 m synoptic offset (568.4 m vs 438.0 m true)
+        repeat(10) {
+            ekf.predict(1.0, 0.0)
+            ekf.updateBarometer(568.4, isStandstill = true)
+        }
+        assertTrue("Unanchored 3-state p00 must exceed 0.25 (was ${ekf.p00})", ekf.p00 > 0.25)
+
+        // Single DEM anchor arrives at 438.0 m
+        val reanchored = ekf.updateReferenceAltitude(438.0, KinematicAltitudeSlopeEkf.DEFAULT_VAR_DEM)
+        assertTrue("Initial DEM arrival after barometer must report reanchored=true", reanchored)
+        assertEquals("Altitude must anchor at 438.0 m DEM", 438.0, ekf.altitude, 0.5)
+        assertEquals("baroBias must absorb +130.4 m weather offset", 130.4, ekf.baroBias, 0.5)
+
+        // Subsequent 5-Hz standstill & moving barometer readings at 568.4 m must NOT pull altitude back
+        repeat(10) {
+            ekf.predict(0.2, 0.0)
+            ekf.updateBarometer(568.4, isStandstill = true)
+        }
+        repeat(10) {
+            ekf.predict(1.0, 5.0)
+            ekf.updateBarometer(568.4, isStandstill = false)
+        }
+
+        assertEquals("Altitude must stay anchored at 438.0 m", 438.0, ekf.altitude, 0.5)
+        assertEquals("baroBias must remain ~130.4 m", 130.4, ekf.baroBias, 0.5)
+    }
+
+    /**
+     * TST-FIL-022.2: 3-State Ref-before-Baro +130.4 m offset, 2-State p00 preservation, and reset/setMode hygiene.
+     */
+    @Test
+    fun testThreeStateRefBeforeBaro_andTwoStateGuard_preservesP00AndClearsFlags() {
+        // 1. Ref-before-Baro in 3-state mode
+        ekf.setMode(true)
+        val initialRefReanchored = ekf.updateReferenceAltitude(438.0, KinematicAltitudeSlopeEkf.DEFAULT_VAR_DEM)
+        assertFalse("First-ever initialization via DEM has no prior jump", initialRefReanchored)
+        assertTrue(ekf.hasReferenceAnchor)
+
+        repeat(10) {
+            ekf.predict(1.0, 5.0)
+            ekf.updateBarometer(568.4, isStandstill = false)
+        }
+        repeat(10) {
+            ekf.predict(1.0, 0.0)
+            ekf.updateBarometer(568.4, isStandstill = true)
+        }
+        assertEquals("Altitude must remain near 438.0 m without Huber pull", 438.0, ekf.altitude, 0.5)
+        assertEquals("baroBias must absorb +130.4 m weather offset", 130.4, ekf.baroBias, 0.5)
+
+        // 2. reset() & setMode() clear flags cleanly; 2-state preserves p00 = varBaro
+        ekf.reset()
+        assertFalse(ekf.isInitialized)
+        assertFalse(ekf.hasReferenceAnchor)
+        assertFalse(ekf.hasBarometerSample)
+
+        ekf.setMode(false)
+        ekf.updateBarometer(200.0, isStandstill = false)
+        assertEquals("2-state mode must preserve p00 = varBaro (0.25)", KinematicAltitudeSlopeEkf.DEFAULT_VAR_BARO, ekf.p00, 1e-6)
+        ekf.predict(1800.0, 5.0)
+        assertTrue("2-state p00 must stay < 10.0 after MAX_DT_SEC clamp", ekf.p00 < 10.0)
+    }
+
+    /**
+     * Stage 6 Bounce 1/3 regression: GPS-before-DEM coarse initial anchor followed by standstill baro warmup
+     * must NOT freeze baroBias against subsequent async DEM fixes.
+     */
+    @Test
+    fun testThreeStateGpsBeforeDem_recoversFromCoarseGpsAnchorWithoutBiasFreeze() {
+        ekf.setMode(true)
+
+        // 1. Standstill baro warmup (+130.4 m weather offset)
+        repeat(5) {
+            ekf.predict(1.0, 0.0)
+            ekf.updateBarometer(568.4, isStandstill = true)
+        }
+
+        // 2. Coarse GPS anchor arrives (+15 m error above true 438.0 m)
+        val reanchored = ekf.updateReferenceAltitude(453.0, KinematicAltitudeSlopeEkf.DEFAULT_VAR_GPS)
+        assertTrue(reanchored)
+        assertEquals(453.0, ekf.altitude, 0.5)
+
+        // 3. 15s standstill baro updates must NOT collapse p22 below p00
+        repeat(15) {
+            ekf.predict(1.0, 0.0)
+            ekf.updateBarometer(568.4, isStandstill = true)
+        }
+        assertTrue("p22 (${ekf.p22}) must not collapse below p00 (${ekf.p00}) during standstill", ekf.p22 >= ekf.p00)
+
+        // 4. Async DEM fixes arrive at 438.0 m across standstill & moving phases
+        repeat(5) {
+            ekf.predict(1.0, 0.0)
+            ekf.updateReferenceAltitude(438.0, KinematicAltitudeSlopeEkf.DEFAULT_VAR_DEM)
+            ekf.updateBarometer(568.4, isStandstill = true)
+        }
+        repeat(15) {
+            ekf.predict(1.0, 5.0)
+            ekf.updateBarometer(568.4, isStandstill = false)
+            if (it % 3 == 0) {
+                ekf.updateReferenceAltitude(438.0, KinematicAltitudeSlopeEkf.DEFAULT_VAR_DEM)
+            }
+        }
+
+        assertEquals("Altitude must recover from coarse GPS anchor to 438.0 m DEM", 438.0, ekf.altitude, 1.0)
+        assertEquals("baroBias must converge to +130.4 m", 130.4, ekf.baroBias, 1.0)
+    }
+
+    /**
+     * Stage 6 Bounce 1/3 regression: Initialized 2-State -> 3-State transition via setMode(true)
+     * must restore unanchored p00 = DEFAULT_UNANCHORED_ALT_VAR, zero p01/p10, and re-anchor cleanly.
+     */
+    @Test
+    fun testTwoStateToThreeStateTransition_resetsUnanchoredP00AndReanchorsCleanly() {
+        ekf.setMode(false)
+        ekf.updateBarometer(200.0, isStandstill = false)
+        repeat(10) { i ->
+            ekf.predict(1.0, 5.0)
+            ekf.updateBarometer(201.0 + i, isStandstill = false)
+        }
+        assertTrue("2-state climb must produce non-zero p01 covariance", ekf.p01 != 0.0)
+
+        // Mid-ride switch from 2-State to 3-State
+        ekf.setMode(true)
+        assertEquals(KinematicAltitudeSlopeEkf.DEFAULT_UNANCHORED_ALT_VAR, ekf.p00, 1e-6)
+        assertEquals(0.0, ekf.p01, 1e-9)
+        assertEquals(0.0, ekf.p10, 1e-9)
+        assertEquals(0.0, ekf.baroBias, 1e-9)
+        assertEquals(100.0, ekf.p22, 1e-6)
+        assertFalse(ekf.hasReferenceAnchor)
+
+        val currentBaro = ekf.altitude
+        val reanchored = ekf.updateReferenceAltitude(438.0, KinematicAltitudeSlopeEkf.DEFAULT_VAR_DEM)
+        assertTrue(reanchored)
+        assertEquals(438.0, ekf.altitude, 1e-6)
+        assertEquals(currentBaro - 438.0, ekf.baroBias, 1e-6)
+        assertEquals(0.0, ekf.p12, 1e-9)
+        assertEquals(0.0, ekf.p21, 1e-9)
+    }
 }

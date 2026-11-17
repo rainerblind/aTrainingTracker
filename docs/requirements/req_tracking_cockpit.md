@@ -3,7 +3,7 @@
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Requirements**: 156
+**Total Requirements**: 162
 
 ---
 
@@ -4250,9 +4250,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 • `RadarLightController` and `RadarState` SHALL expose two distinct reactive `StateFlow`s:
   1. `isAutoMode: StateFlow<Boolean>` representing whether `Automatik` is the active user selection.
   2. `currentMode: StateFlow<RadarLightMode>` representing the live physical operating mode on the tail light (reflecting `SmartRadarLightEngine` escalations and transient brake overrides).
-• `RadarLightController.cycleNextMode()` SHALL step through valid modes:
-  - Non-StVZO: `AUTO` -> `DAY_FLASH` -> `SOLID` -> `PELOTON` -> `NIGHT_FLASH` -> `OFF` -> `AUTO`.
-  - StVZO (`isStvzo == true`): `AUTO` -> `SOLID` -> `OFF` -> `AUTO`.
+• `RadarLightController.cycleNextMode()` SHALL step through valid modes in ascending intensity order matching `RadarLightMode.getAvailableModes()`:
+  - Non-StVZO: `AUTO` -> `OFF` -> `PELOTON` -> `SOLID` -> `NIGHT_FLASH` -> `DAY_FLASH` -> `AUTO`.
+  - StVZO (`isStvzo == true`): `AUTO` -> `OFF` -> `SOLID` -> `AUTO`.
 • `cycleNextMode()` SHALL update UI-observable target state immediately on each invocation, while debouncing outbound hardware commands (BLE GATT / ANT+ `0x23`) over a ~400 ms window to coalesce rapid multi-tap sequences and protect the peripheral GATT queue.
 
 **Acceptance Criteria (Given-When-Then)**:
@@ -4262,8 +4262,8 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
   - *Then* the physical tail light turns `OFF` upon workout stop, and automatically resumes `Tag-Blinken` (or `Automatik`) when the next cycling workout starts without preference erasure.
 • *Criterion 2 (Debounced Mode Cycling & StVZO Filtering)*:
   - *Given* a connected non-StVZO radar light in `Automatik` mode,
-  - *When* `cycleNextMode()` is invoked 3 times within 250 ms (`AUTO` -> `DAY_FLASH` -> `SOLID` -> `PELOTON`),
-  - *Then* UI state updates immediately on each step, and only a single hardware command (`PELOTON`) is transmitted after the ~400 ms debounce window expires (and on StVZO hardware, non-StVZO flashing modes are skipped).
+  - *When* `cycleNextMode()` is invoked 3 times within 250 ms (`AUTO` -> `OFF` -> `PELOTON` -> `SOLID`),
+  - *Then* UI state updates immediately on each step, and only a single hardware command (`SOLID`) is transmitted after the ~400 ms debounce window expires (and on StVZO hardware, non-StVZO flashing modes are skipped).
 • *Criterion 3 (Live Status Separation in Auto Mode)*:
   - *Given* `Automatik` is selected,
   - *When* `SmartRadarLightEngine` escalates from `OFF` to `SOLID` or `DAY_FLASH` due to approaching traffic or tunnel entry,
@@ -4280,10 +4280,10 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 **Invariants**: Non-blocking serialized GATT writes (`6a4e2f11` CCCD before initial `setLightMode`); ~400 ms command debouncing (zero GATT queue flooding); legacy `6a4e3202` `WRITE_TYPE_NO_RESPONSE` preservation; StVZO regulatory compliance; safety illumination during pause stops; fail-safe degradation on radar-only hardware; zero UI layout changes in `EditDeviceDialog.kt` / `RadarSettingsSection.kt`; `ANTBikeLightDevice.kt` untouched; zero SQLite schema modifications; zero MockK crashes in unit tests; 100% 9-language translation parity.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: `REQ-CON-031.1`, `REQ-CON-031.2`, `REQ-CON-031.5`, and `REQ-CON-031.6`, targeting `BTLERadarDevice.java`, `MyBTLEDevice.java`, `RadarLightController.kt`, `EditDeviceDialog.kt`, and `tools/ble_radar_simulator.py`.
-2. *Historical Origin & Commit Trace*: Introduced in Sprint 2026-46.1 via `ATT-5102` (`c1d27049`), refined in `ATT-6707` (`fe09f672`), `ATT-7545` (`6bfac996`), `ATT-7540`, `ATT-7538` (`b645651f`), and `ATT-7737` (`60e14c9b`, reopened after physical RearVue 820 + Pixel 10 verification in Ceremony 2).
-3. *Root Reason for Existing Formulation*: `60e14c9b` assumed RearVue 820 control characteristic `6a4e2f11` required `WRITE_TYPE_NO_RESPONSE` because `tools/ble_radar_simulator.py` advertised `['write', 'write-without-response']`. In reality, `6a4e2f11` is `(WRITE, INDICATE)`, requiring `0x2902` CCCD indication subscription before control writes, `WRITE_TYPE_DEFAULT` (GATT Write Request + SMP bonding compatibility), and `onCharacteristicWrite()` status propagation so rejected writes do not silently leave optimistic UI state to snap back to `OFF` via `6a4e2f14`.
-4. *Preservation of Core Invariants*: Legacy `6a4e3202` (`WRITE_NO_RESPONSE`-only) preserves `WRITE_TYPE_NO_RESPONSE`; non-blocking GATT FIFO queueing and `ECHO_GUARD_WINDOW_MS` (`1000L` ms) remain intact; StVZO regulatory pruning, `ANTBikeLightDevice.kt` path, `EditDeviceDialog.kt` / `RadarSettingsSection.kt` UI layout, and 9-language parity remain untouched.
+1. *Original Requirement ID & Target*: `REQ-CON-031.1`, `REQ-CON-031.2`, `REQ-CON-031.3`, `REQ-CON-031.5`, `REQ-CON-031.6`, and `REQ-CON-031.8`, targeting `BTLERadarDevice.java`, `MyBTLEDevice.java`, `RadarLightController.kt`, `RadarLightMode.kt`, `RadarLightQuickSwitchSheet.kt`, `EditDeviceDialog.kt`, and `tools/ble_radar_simulator.py`.
+2. *Historical Origin & Commit Trace*: Introduced in Sprint 2026-46.1 via `ATT-5102` (`c1d27049`), refined in `ATT-6707` (`fe09f672`), `ATT-7545` (`6bfac996`), `ATT-7540`, `ATT-7538` (`b645651f`), `ATT-7991` (`c422e1b6`), `ATT-7737` (`60e14c9b`), and `ATT-8456` (ascending intensity mode order).
+3. *Root Reason for Existing Formulation*: `c1d27049` listed `RadarLightMode` enum values in arbitrary order (`OFF, DAY_FLASH, NIGHT_FLASH, SOLID, PELOTON`), and `c422e1b6` added `cycleNextMode()` with `DAY_FLASH -> SOLID -> PELOTON -> NIGHT_FLASH -> OFF`; unifying both to ascending intensity (`OFF -> PELOTON -> SOLID -> NIGHT_FLASH -> DAY_FLASH`) eliminates sheet-vs-tap cognitive dissonance. Meanwhile `60e14c9b` established `6a4e2f11` CCCD + `WRITE_TYPE_DEFAULT` + `onCharacteristicWrite()` reconciliation.
+4. *Preservation of Core Invariants*: `Automatik` remains first; StVZO pruning strictly removes flashing modes (`OFF`, `SOLID` only); `TuningPreferencesDataStore` persists `.name` (never `.ordinal`); legacy `6a4e3202` `WRITE_TYPE_NO_RESPONSE`, ~400 ms debounce, `commandByte` wire mappings, `ANTBikeLightDevice.kt` path, and 9-language parity remain intact.
 
 ### REQ-CON-032: ANT+ Cycling Rearview Radar Profile (Device Type 0x28) Acquisition & Target Demuxing [Verified]
 - **Tests**: `TST-CON-032`
@@ -4883,6 +4883,88 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
   - *Then* active timeout jobs are cancelled, connection state is cleared, streaming jobs are halted, and if searching, `notifyStopSearching(false)` is dispatched.
 
 **Invariants**: `TrainingApplication.getBtleSearchPeriodMs()` remains source of truth; zero regression on standard `BTLEHeartRateDevice` fallback (< API 33 or live IMU disabled); `MySensorManager.CADENCE_PRIORITY` ranking (`RUN_SPEED` > `BIKE_*` > `HRM`) preserved; `PolarOfflineGattCoordinator` session sharing preserved; `activeBridges` registry (`ATT-8019`) preserved; zero localized string changes.
+
+### REQ-CON-046: Radar `isAutoMode` Preservation Across Telemetry Frames, Simulator & Source Arbitration [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-CON-046`
+- **System Requirement(s)**: `SYSREQ-TRK-002`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `RadarState.kt`, `RadarStateRepository.kt`, `BTLERadarDevice.java`, `ANTBikeRadarDevice.kt`, `RadarTrafficSimulator.kt`, `RadarLightController.kt`
+- **Rationale**: When a cyclist selects a manual tail-light mode (`RadarLightController.setManualLightMode()` / `cycleNextMode()`), `isAutoMode = false` is published to `RadarStateRepository`. However, telemetry and lifecycle `RadarState` constructions in `BTLERadarDevice.java`, `ANTBikeRadarDevice.kt`, and `RadarTrafficSimulator.kt` omit `isAutoMode`, falling back to the Kotlin default `isAutoMode = true` at 4–8 Hz and causing Cockpit UI (`TrackingTabsScreen.kt`) to revert immediately to `Automatik` (`ATT-8455`, extending `REQ-CON-031.8` and `REQ-CON-042.3`):
+- **Description**:
+  1. *Driver & Simulator `isAutoMode` Preservation (`REQ-CON-046.1`)*:
+     - All 6 `RadarState` emission sites in `BTLERadarDevice.java` (`mWatchdogRunnable`, `startSearching`, `notifyStopSearching`, `configureServices`, `processTargets`, `disconnectFromGatt`), all 3 sites in `ANTBikeRadarDevice.kt` (`publishTargets`, `onWatchdogTimeout`, `shutDown`), and `RadarTrafficSimulator.kt` (`generateFrame`, `tick`, `start`, `stop`) SHALL propagate the current `isAutoMode` flag without resetting manual overrides to `true`.
+  2. *Cross-Source Control-State Sync & Failover Continuity (`REQ-CON-046.2`)*:
+     - `RadarStateRepository` SHALL preserve and synchronize `isAutoMode` (and `audioSnoozeState` per `REQ-CON-042.3`) across `sourceStates` entries during multi-source arbitration and failover (`BLE` <-> `ANT_PLUS` <-> `SIMULATOR`), while explicit `RadarLightController.setAutoMode()` transitions SHALL restore `isAutoMode = true` and manual overrides SHALL keep `SmartRadarLightEngine` automation suspended.
+  3. *Repository Isolation & Reset Contract (`REQ-CON-046.3`)*:
+     - `RadarStateRepository.reset()` SHALL remain cleanly decoupled from `RadarLightController`, clearing `sourceStates` and resetting `_radarState` to default `RadarState()` without leaking state across unit tests (`REQ-CON-042.3`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new `REQ-CON-046` extending `REQ-CON-031.8` and `REQ-CON-042.3`; targets `BTLERadarDevice.java`, `ANTBikeRadarDevice.kt`, `RadarTrafficSimulator.kt`, `RadarStateRepository.kt`, and `RadarLightController.kt`.
+2. *Historical Origin & Commit Trace*: Commit `a3783bd7` (`ATT-7574`, `REQ-CON-042`) established `lightMode`/`audioSnoozeState` preservation; commit `c422e1b6` (`ATT-7991`, `REQ-CON-031.8`) appended `val isAutoMode: Boolean = true` to `RadarState.kt:123`.
+3. *Root Reason for Existing Formulation*: `ATT-7991` added `isAutoMode = true` as a 9th `@JvmOverloads` parameter, leaving existing 8-arg Java calls (`BTLERadarDevice.java`) and Kotlin constructor/copy sites (`ANTBikeRadarDevice.kt`, `RadarTrafficSimulator.kt`) silently defaulting to `true`.
+4. *Preservation of Core Invariants*: Preserves `REQ-CON-041` source priority (`BLE > ANT_PLUS > SIMULATOR`), `REQ-CON-042.2` pre-preemption state sampling, `REQ-CON-042.3` application state preservation, `SmartRadarLightEngine` manual override suspension, and `RadarStateRepository.reset()` isolation.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Criterion 1 (Telemetry & Lifecycle Frame Preservation)*:
+  - *Given* `RadarStateRepository` has `isAutoMode == false` after manual light selection,
+  - *When* telemetry or lifecycle frames are emitted by `BTLERadarDevice`, `ANTBikeRadarDevice`, or `RadarTrafficSimulator` (`generateFrame`/`tick`/`start`/`stop`),
+  - *Then* `RadarStateRepository.getState().isAutoMode` remains `false`.
+• *Criterion 2 (Explicit Auto Restoration & Multi-Source Failover)*:
+  - *Given* `isAutoMode == false` across active `BLE`/`ANT_PLUS`/`SIMULATOR` streams,
+  - *When* the active source fails over to another transport in `RadarStateRepository.sourceStates`,
+  - *Then* `isAutoMode` remains `false`, and *When* `RadarLightController.setAutoMode()` is invoked, *Then* `isAutoMode` transitions cleanly to `true` and resumes `SmartRadarLightEngine`.
+• *Criterion 3 (Reset Isolation)*:
+  - *Given* non-default `isAutoMode == false` in `RadarStateRepository`,
+  - *When* `RadarStateRepository.reset()` is called,
+  - *Then* `sourceStates` clears and `RadarStateRepository.getState()` resets to default `RadarState()` (`isAutoMode == true`).
+
+**Invariants**: `REQ-CON-041` priority (`BLE > ANT_PLUS > SIMULATOR`), `REQ-CON-042.3` `lightMode`/`audioSnoozeState` preservation, `SmartRadarLightEngine` override gating, zero SQLite schema changes, zero localization changes.
+
+### REQ-CON-047: Compact Quick-Switch Sheet Layout, Button-Matching Icons & Ascending Mode Order [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-CON-047`
+- **System Requirement(s)**: `SYSREQ-TRK-002`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `RadarLightQuickSwitchSheet.kt`, `RadarLightButton.kt`, `RadarLightMode.kt`, `RadarLightController.kt`, `EditDeviceDialog.kt`
+- **Rationale**: PO review on Pixel 10 (`ATT-7972`) observed `RadarLightQuickSwitchSheet` overflowing vertically past the 4th audio snooze option due to 10 tall full-width `RadioButton` rows, using generic `10.dp` colored dots instead of the semantic vector icons from `RadarLightButton`, and presenting a different mode sequence than `RadarLightController.cycleNextMode()` (`ATT-8456`, refining `REQ-CON-031.3` and `REQ-CON-031.8`):
+- **Description**:
+  1. *Compact Non-Scrolling Quick-Switch Layout (`REQ-CON-047.1`)*:
+     - `RadarLightQuickSwitchSheet` / `RadarLightQuickSwitchSheetContent` SHALL arrange all light modes (including `Automatik`) and all 4 audio snooze options (`SNOOZE_15M`, `SNOOZE_30M`, `FAST_ONLY`, `REST_OF_RIDE`, plus `Resume Audio` when snoozed) in a compact layout that fits completely within standard smartphone viewports (e.g. Pixel 10) without vertical scroll clipping, while retaining all `RadarLightMode_*` and `RadarSnooze_*` testTags and Light/Dark/StVZO `@Preview`s.
+  2. *Shared Semantic Mode Vector Icons (`REQ-CON-047.2`)*:
+     - `RadarLightQuickSwitchSheet` SHALL display the same semantic vector icons and mode colors (`resolveLightVisuals` in `RadarLightButton.kt`: `FlashlightOff`, `Groups`, `FlashlightOn`, `NightlightRound`, `WbSunny`) instead of `10.dp` `CircleShape` dots, using `MaterialTheme.colorScheme.outline` / shared contrast tokens cleanly across Light and Dark themes.
+  3. *Unified Ascending-Intensity Mode Order (`REQ-CON-047.3`)*:
+     - `RadarLightMode.getAvailableModes()`, `RadarLightController.cycleNextMode()`, `RadarLightQuickSwitchSheet`, and `EditDeviceDialog` SHALL share the identical ascending-intensity order:
+       - Non-StVZO: `Automatik` -> `OFF` (0 lm) -> `PELOTON` (~8 lm) -> `SOLID` (~25 lm) -> `NIGHT_FLASH` (~40 lm) -> `DAY_FLASH` (100 lm) (-> `Automatik`).
+       - StVZO (`isStvzo == true`): `Automatik` -> `OFF` -> `SOLID` (-> `Automatik`).
+  4. *Localization & Persistence Preservation (`REQ-CON-047.4`)*:
+     - All UI labels SHALL reuse existing 9-locale string resources in `strings_radar.xml` (zero hardcoded English/German literals), and `TuningPreferencesDataStore` `.name` persistence + `RadarLightMode.commandByte` wire bytes SHALL remain unchanged.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new `REQ-CON-047` refining `REQ-CON-031.3` and `REQ-CON-031.8`; targets `RadarLightQuickSwitchSheet.kt`, `RadarLightButton.kt`, `RadarLightMode.kt`, `RadarLightController.kt`, and `EditDeviceDialog.kt`.
+2. *Historical Origin & Commit Trace*: `ATT-5102` (`c1d27049`) introduced `RadarLightMode` enum order; `ATT-7991` (`c422e1b6`) added `Automatik` and `cycleNextMode()`.
+3. *Root Reason for Existing Formulation*: Mode ordering in `RadarLightMode` and `cycleNextMode()` diverged across tickets, and vertical `RadioButton` rows exceeded viewport height once `Automatik` and 4 snooze options coexisted.
+4. *Preservation of Core Invariants*: `Automatik` remains first; StVZO pruning excludes flashing modes; `TuningPreferencesDataStore` persists `.name` (never `.ordinal`); ~400 ms `cycleNextMode()` debounce and `commandByte` payloads remain intact.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Criterion 1 (Compact Non-Scrolling Layout & Semantic Icons)*:
+  - *Given* `RadarLightQuickSwitchSheetContent` is rendered with `isLightControlSupported = true` and `isStvzo = false` (and snooze active/inactive),
+  - *When* inspected in Compose UI tests and Light/Dark `@Preview` / emulator screenshots,
+  - *Then* `RadarLightMode_AUTO`, all 5 `RadarLightMode_*` options, and all 4 `RadarSnooze_*` options are visible without vertical clipping, and each light mode displays its `resolveLightVisuals` icon matching `RadarLightButton`.
+• *Criterion 2 (Unified Ascending Mode Order Across UI & Tap Cycling)*:
+  - *Given* non-StVZO or StVZO hardware,
+  - *When* querying `RadarLightMode.getAvailableModes()`, `RadarLightController.getAvailableModes()`, `EditDeviceDialog` options, `RadarLightQuickSwitchSheet` options, and stepping through `RadarLightController.cycleNextMode()`,
+  - *Then* all 4 surfaces follow the exact ascending order `Automatik -> OFF -> PELOTON -> SOLID -> NIGHT_FLASH -> DAY_FLASH` (StVZO: `Automatik -> OFF -> SOLID`).
+• *Criterion 3 (Zero Hardcoded Strings)*:
+  - *Given* `RadarLightQuickSwitchSheet.kt`,
+  - *When* rendered in any supported locale,
+  - *Then* all labels resolve exclusively via `stringResource(R.string.*)` in `strings_radar.xml`.
+
+**Invariants**: `Automatik` always first; StVZO pruning excludes `PELOTON`/`NIGHT_FLASH`/`DAY_FLASH`; `RadarLightMode.commandByte` unchanged; `TuningPreferencesDataStore` `.name` persistence unchanged; ~400 ms debounce unchanged; zero SQLite changes.
 
 ### REQ-TRK-064: 1-Tap Radar Audio Snooze, Peloton-Mode Audio Sync & Smart Urban Alert Suppression [Verified]
 - **Tests**: `TST-TRK-064`
@@ -6283,5 +6365,173 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 • *Then* it renders cleanly without divide-by-zero or invalid gradient stops, falling back to placeholder dashed styling or solid `lineColor`.
 
 **Invariants**: Zero extra per-sample color allocations in `List<Float>` ring buffers; zero SQLite v22 schema changes; monotonically non-decreasing `Brush.verticalGradient` stops in `[0f, 1f]`; zero Compose snapshot state writes during composition; clean-room test pass rate and Rule 8.5 PNG inspection.
+
+
+### REQ-TRK-083: Canonical Internal Storage, Display & Export Unit Specification for SensorType [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-TRK-083`
+- **System Requirement(s)**: `SYSREQ-TRK-001`, `SYSREQ-TRK-003`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `app/src/main/java/com/atrainingtracker/banalservice/sensor/SensorType.java`, `docs/architecture/sensor_units.md`, `docs/architecture.md`, `app/src/test/java/com/atrainingtracker/banalservice/sensor/SensorTypeUnitsContractTest.kt`
+- **Rationale**: Only 10 of 67 `SensorType` constants encode physical units in their enum name, while `SensorType.unitId` points to UI display resources (`R.string.units_*`) that diverge from internal SQLite/sensor-bus storage units after formatter scaling or `MyHelper.getUnitsId()` remapping. This ambiguity caused a 3600x vertical speed unit mismatch (`ATT-8577`, `ErtsPostWorkoutRecomputer` writing `m/s` into `m/h` `VERTICAL_SPEED`). Establishing a canonical 67-entry data dictionary in `docs/architecture/sensor_units.md`, structured `internalUnit` metadata and per-constant Javadoc in `SensorType.java`, and an automated bidirectional contract test eliminates storage/display/export unit ambiguity without altering runtime behavior or SQLite schemas (`ATT-8579`, Epic `ATT-431`, complementing `REQ-TRK-070` and `REQ-PRO-043`).
+- **Description**:
+  1. *Canonical Sensor Unit Data Dictionary (`REQ-TRK-083.1`)*:
+     - `docs/architecture/sensor_units.md` (linked from `docs/architecture.md`) SHALL define a complete data-dictionary table covering all **67** `SensorType` enum constants, specifying per constant:
+       • Enum `name()`, `SensorCategory`, and `SensorSubCategory` (`null` if direct core metric).
+       • Internal SQLite/sensor-bus storage unit (exact SI/physical unit, e.g., `m/s`, `m/h`, `m`, `s`, `ms`, `cm`, `rad/s`, `%`, `W`, `kJ`, `bpm`, `deg`, `kcal`, `Nm`, `W/kg`, `degC`, or `dimensionless`).
+       • `SensorValueType` (`INTEGER`, `DOUBLE`, `STRING`), valid physical range, and sentinel conventions (including `BATTERY_REMAINING_TIME`: `-1` charging, `<= -2` stabilizing; `PACE_spm`: `> BANALService.MAX_PACE` -> `"~~"`; `HRV_DFA_A1`, `POWER_TO_WEIGHT`, `W_PRIME_BAL`: `< 0`, `NaN`, `Infinite` -> `"--.--"` / `"--"`).
+       • UI formatter (`MyFormatter` class) and Metric/Imperial display unit conversion via `MyHelper.getUnitsId()`.
+       • File export units across FIT (`FitFileWriter.kt`), TCX (`TCXFileWriter.kt`), GPX (`GPXFileWriter.java`), CSV (`CSVFileWriter.java`), and Golden Cheetah (`GCFileWriter.java`).
+     - Authentic existing discrepancies (`W_PRIME_BAL` emitting `kJ` while formatted with `PowerToWeightFormatter` `"W/kg"`; `MyHelper.getUnitsId()` omitting radar distance/speed types and falling back to `units_distance_basic`/`units_speed_basic`) SHALL be documented explicitly without altering runtime formatter/helper/exporter behavior.
+  2. *Code-Level `internalUnit` Metadata & Per-Constant Javadoc (`REQ-TRK-083.2`)*:
+     - `app/src/main/java/com/atrainingtracker/banalservice/sensor/SensorType.java` SHALL declare a non-null `private final String internalUnit` field and `public String getInternalUnit()` accessor on every `SensorType` constant, together with per-constant Javadoc documenting internal storage unit, valid range/sentinel behavior, and UI display/export conversion.
+     - Enum declaration order (`Parcelable` `ordinal()`), enum `name()` identifiers (`WorkoutSamples.db` column names), `@Deprecated getUnitId()`, and all runtime formatter, exporter, and device calculation behaviors MUST remain unchanged (`N/A - no UI strings`).
+  3. *Automated Bidirectional Parity Contract (`REQ-TRK-083.3`)*:
+     - `app/src/test/java/com/atrainingtracker/banalservice/sensor/SensorTypeUnitsContractTest.kt` SHALL execute on the JVM (`./gradlew testDebugUnitTest`) and assert:
+       • 100% coverage of `SensorType.values()` (every constant has a non-blank `getInternalUnit()` and a matching per-constant Javadoc block in `SensorType.java`).
+       • 100% bidirectional set parity (`codeConstants == docConstants`) and metadata parity (`SensorCategory`, `SensorValueType`, `internalUnit`) between `SensorType.values()` and `docs/architecture/sensor_units.md`, plus cross-link verification in `docs/architecture.md`.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* all 67 enum constants in `SensorType.values()`,
+• *When* `SensorTypeUnitsContractTest` inspects `SensorType.getInternalUnit()`, `SensorType.java` source Javadoc, `docs/architecture/sensor_units.md`, and `docs/architecture.md`,
+• *Then* 100% of constants have non-blank `internalUnit`, per-constant Javadoc, and matching dictionary rows in `docs/architecture/sensor_units.md` with zero missing or orphaned entries.
+• *Given* an existing `SensorType` consumer (`Parcelable` `CREATOR`, `WorkoutSamplesDatabaseManager`, `MyFormatter`, `MyHelper`, or `FitFileWriter`),
+• *When* `SensorType` metadata and documentation are added,
+• *Then* `ordinal()`, `name()`, `getUnitId()`, SQLite column names, and runtime formatting/export outputs remain identical.
+
+**Invariants**: `SensorType` `ordinal()` and `name()` unchanged; `WorkoutSamples.db` schema unchanged; `@Deprecated getUnitId()` contract preserved; zero UI strings added (`N/A - no UI strings`); zero runtime formatter/exporter/device behavioral changes; `./gradlew testDebugUnitTest` passes cleanly.
+
+
+### REQ-TRK-084: Valid-Data `AccumulatedSensors` Persistence Filtering, Resume Rehydration & Post-Workout Backfill Upsert [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-TRK-084`
+- **System Requirement(s)**: `SYSREQ-TRK-004`, `SYSREQ-TRK-006`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `TrackerService.java`, `LiveWorkoutSession.java`, `WorkoutSummariesDatabaseManager.java`, `WorkoutRepository.kt`, `PolarH10OfflineController.kt`, `PolarVeritySenseOfflineController.kt`, `HrvPostWorkoutRecomputer.kt`
+- **Rationale**: `MySensorManager.registerSensor()` unconditionally inserts every registered `SensorType` into `mAccumulatedSensorTypeSet` on first registration, while `BANALService.onCreate()` unconditionally constructs `CyclingPowerMetricsDevice` (15 sensors), `HRVMetricsDevice` (3 sensors), and `VerticalSpeedAndSlopeDevice` (4 sensors) alongside `ClockDevice`, `BatteryDevice`, and location/altitude devices (40 total). Because `TrackerService.endWorkout()` persisted `getAccumulatedSensorTypeSet()` verbatim into `AccumulatedSensors`, workouts recorded without HR, Power, or Cadence hardware (`GCData = "TDS----AG--"`) falsely persisted ~40 unattached virtual/derived sensor rows. Filtering `AccumulatedSensors` persistence to sensor types that actually produced valid non-null telemetry—while preserving `MySensorManager.getAccumulatedSensorTypeSet()` (`REQ-TRK-030.2`), `BanalFinalizationSnapshot` (`REQ-TRK-035`), resume continuity, and post-workout Polar/HRV backfill—eliminates false-positive sensor rows (`ATT-8578`).
+- **Description**:
+  1. *Live Valid-Sample Observation & Virtual-Device Silence (`REQ-TRK-084.1`)*:
+     - During 1 Hz sampling (`TrackerService.sampleAndWriteToDb()`), `LiveWorkoutSession` SHALL record a `SensorType` into its `observedSensorTypes` set strictly when `sensorData != null && sensorData.getValue() != null` is observed. Unattached virtual/derived sensors (`CyclingPowerMetricsDevice`, `HRVMetricsDevice`, `VerticalSpeedAndSlopeDevice`) or disconnected hardware sensors that never emit non-null values SHALL NOT enter `observedSensorTypes`.
+     - In `TrackerService.endWorkout(@Nullable BanalFinalizationSnapshot snapshot)`, after committing `FINISHED = 1` first (`REQ-TRK-030.1`), `TrackerService` SHALL persist `observedSensorTypes` into `AccumulatedSensors` whenever `mLiveSession != null`, while preserving the `snapshot.accumulatedSensorTypes` (or `banalService.getAccumulatedSensorTypeSet()`) fallback when `mLiveSession == null` (`REQ-TRK-035.3`, `TST-TRK-027.3`).
+  2. *`finalizeLiveSession()` Post-Processed Metric Upsert (`REQ-TRK-084.2`)*:
+     - Because `endWorkout()` saves `AccumulatedSensors` prior to `finalizeLiveSession()` (`REQ-TRK-030.1`), `finalizeLiveSession()` SHALL idempotently upsert into `AccumulatedSensors` (via `WorkoutRepository`) any derived metrics that produce non-null persisted values during session finalization (`NORMALIZED_POWER`, `INTENSITY_FACTOR`, `TSS`, `WORK_KJ`, `POWER_TO_WEIGHT`, and `LINE_DISTANCE_m` when computed from valid `startPos`/`sampledLatLngs`).
+  3. *Workout Resume Rehydration & Idempotent Deduplication (`REQ-TRK-084.3`)*:
+     - Upon `RESUME_BY_USER` or `RESUME_SERVICE_RECREATION`, `TrackerService.rehydrateLiveSession()` SHALL rehydrate `LiveWorkoutSession.observedSensorTypes` from existing `AccumulatedSensors` rows (`WorkoutRepository.getAccumulatedSensorTypes(workoutId)`) and persisted extrema sensors so pre-resume sensors survive process death.
+     - `WorkoutSummariesDatabaseManager.saveAccumulatedSensorTypes(workoutId, sensorTypes)` (and any `addAccumulatedSensorTypes(workoutId, sensorTypes)` upsert helper) MUST deduplicate against existing `(workout_id, sensor_type)` rows for `workoutId` inside a transaction without modifying the `AccumulatedSensors` table schema (`N/A - no UI strings`).
+  4. *Polar Offline Backfill & Conditional HRV Recomputation Upserts (`REQ-TRK-084.4`)*:
+     - `PolarH10OfflineController` (both synchronous `stopAndBackfillWorkoutBlocking` and deferred `syncPendingWorkout`) SHALL idempotently upsert `SensorType.HR` into `AccumulatedSensors` whenever `patchMissingHeartRateSamples()` receives non-empty HR/RR samples.
+     - `PolarVeritySenseOfflineController` SHALL idempotently upsert `SensorType.HR` into `AccumulatedSensors` in both `applyBackfillAndCommit()` and `applySwimBackfillAndCommit()` whenever `hrPairs` is non-empty.
+     - `HrvPostWorkoutRecomputer.recomputeWorkout()` SHALL upsert `SensorType.HRV_ARTIFACT_RATE` when written, and conditionally upsert `SensorType.HRV_RMSSD` (only when `rmssdValues.isNotEmpty()`), `SensorType.HRV_DFA_A1` (only when `dfaValues.isNotEmpty()`), and `SensorType.HRV_SDNN` (only when `sessionSdnn != null`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Complements `REQ-TRK-030` (`REQ-TRK-030.2`, `MySensorManager.getAccumulatedSensorTypeSet()`), `REQ-TRK-035` (`REQ-TRK-035.1`/`.3`, `BanalFinalizationSnapshot`), `REQ-SET-105` (Polar H10 backfill), `REQ-SET-108` (Polar Verity Sense backfill), and `REQ-PER-034.3` (`HrvPostWorkoutRecomputer`).
+2. *Historical Origin & Commit Trace*: `ATT-3986` (`0bf6fb05`) hardened `MySensorManager.getAccumulatedSensorTypeSet()` with a defensive copy; `ATT-4099` (`aa0e9097`) introduced `BanalFinalizationSnapshot`; `a7049ef9` retired legacy `CalcExtremaWorker` readers of `getAccumulatedSensorTypes()`; `ATT-7918`/`ATT-7923` added Polar H10/Verity Sense offline backfill and `HrvPostWorkoutRecomputer` post-workout recomputation.
+3. *Root Reason for Existing Formulation*: `REQ-TRK-030.2` (`TST-TRK-022.3`) tests immediate registration visibility on `MySensorManager.getAccumulatedSensorTypeSet()`, and `REQ-TRK-035.3` (`TST-TRK-027.3`) tests `endWorkout(snapshot)` persistence when `mLiveSession == null`. Meanwhile, `PolarH10OfflineController`, `PolarVeritySenseOfflineController`, and `HrvPostWorkoutRecomputer` ran after `endWorkout()`'s `saveAccumulatedSensorTypes()` call without upserting backfilled sensor types.
+4. *Preservation of Core Invariants*: Preserves `MySensorManager.getAccumulatedSensorTypeSet()` registration semantics (`TST-TRK-022.3`), `BanalFinalizationSnapshot.capture()` (`TST-TRK-027.1`), `mLiveSession == null` snapshot fallback (`TST-TRK-027.3`), `FINISHED = 1` first-commit isolation (`REQ-TRK-030.1`), zero schema migrations, and complete post-workout HR/HRV backfill coverage.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a live workout with GPS/Clock/Battery active and no HR, Power, or Cadence hardware connected (`CyclingPowerMetricsDevice`, `HRVMetricsDevice`, and `VerticalSpeedAndSlopeDevice` registered in `BANALService` emitting `null`),
+• *When* `TrackerService.sampleAndWriteToDb()` and `endWorkout()` complete,
+• *Then* `AccumulatedSensors` contains only sensors that emitted non-null telemetry and contains zero `HR`, `POWER`, `HRV_*`, `POWER_*`, `TSS`, `W_PRIME_BAL`, or `LIVE_HR_DRIFT` rows.
+• *Given* a workout with valid power/HR/GPS samples whose derived metrics (`NORMALIZED_POWER`, `INTENSITY_FACTOR`, `TSS`, `WORK_KJ`, `POWER_TO_WEIGHT`, `LINE_DISTANCE_m`) are computed in `finalizeLiveSession()`,
+• *When* `endWorkout()` and `finalizeLiveSession()` complete,
+• *Then* `FINISHED = 1` still commits first (`REQ-TRK-030.1`) and those computed non-null metric types are idempotently present in `AccumulatedSensors`.
+• *Given* a resumed workout (`RESUME_BY_USER` / `RESUME_SERVICE_RECREATION`) with prior `AccumulatedSensors` rows or repeated `saveAccumulatedSensorTypes()`/`addAccumulatedSensorTypes()` calls,
+• *When* `rehydrateLiveSession()` and `endWorkout()` execute,
+• *Then* pre-resume sensor types are retained without duplicate `(workout_id, sensor_type)` rows.
+• *Given* a Polar H10 (synchronous or deferred `syncPendingWorkout`) or Polar Verity Sense (`applyBackfillAndCommit` / `applySwimBackfillAndCommit`) offline backfill with non-empty HR/RR samples,
+• *When* backfill and `HrvPostWorkoutRecomputer.recomputeWorkout()` complete,
+• *Then* `SensorType.HR` is upserted into `AccumulatedSensors`, `HRV_ARTIFACT_RATE` is upserted when written, and `HRV_RMSSD`, `HRV_DFA_A1`, and `HRV_SDNN` are upserted strictly when their computed outputs are non-empty/non-null.
+
+**Invariants**: `REQ-TRK-030.1` (`FINISHED = 1` first), `REQ-TRK-030.2` (`TST-TRK-022.3` defensive copy), `REQ-TRK-035.1`/`.3` (`TST-TRK-027.1`/`.3` snapshot contract), `GCData` 11-char mask, zero `AccumulatedSensors` schema changes, zero duplicate `(workout_id, sensor_type)` rows, and `N/A - no UI strings`.
+
+
+### REQ-FIL-021: Post-Workout ERTS `VERTICAL_SPEED` `m/h` Unit Conversion, Clamping & Integer Persistence [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-FIL-021`
+- **System Requirement(s)**: `SYSREQ-TRK-003`, `SYSREQ-TRK-004`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `app/src/main/java/com/atrainingtracker/trainingtracker/database/ErtsPostWorkoutRecomputer.kt`, `app/src/main/java/com/atrainingtracker/banalservice/sensor/SensorType.java`, `docs/architecture/sensor_units.md`
+- **Rationale**: `SensorType.VERTICAL_SPEED` declares `SensorValueType.INTEGER` and `internalUnit = "m/h"` (`REQ-TRK-083`), and live devices (`VerticalSpeedAndSlopeDevice`, `AltitudeAndSlopeDevice_ATTFused`) emit rounded integer `m/h` clamped to `[-3000, 3000]` (`REQ-FIL-012`). Previously, `ErtsPostWorkoutRecomputer.bindColumnValue()` bound `SmoothedAltitudeSlopePoint.verticalSpeedMps` (`m/s`, clamped to `[-3.0, 3.0] m/s` in `ExtendedRtsAltitudeSlopeSmoother`) directly via `stmt.bindDouble()`, introducing a 3600x unit mismatch in `WorkoutSamples.db` and causing `CSVFileWriter.doExport()` (`cursor.getInt()`) to truncate sub-unit `m/s` values to `0` (`ATT-8577`, refining `REQ-FIL-017.3`, `REQ-FIL-012`, and `REQ-TRK-083`).
+- **Description**:
+  1. *`m/s` to `m/h` Conversion, Clamping & Integer SQLite Binding (`REQ-FIL-021.1`)*:
+     - In `ErtsPostWorkoutRecomputer.bindColumnValue()`, when `columnName == SensorType.VERTICAL_SPEED.name` and `alt != null`, the system SHALL convert `alt.verticalSpeedMps * 3600.0`, clamp the result to `[-3000.0, 3000.0]` `m/h`, round via `Math.round(...)` to `Long`, and bind the integer value via `stmt.bindLong(bindIdx, vamMph)`.
+     - When `alt == null`, `bindColumnValue()` SHALL preserve `stmt.bindNull(bindIdx)`.
+     - `SmoothedAltitudeSlopePoint.verticalSpeedMps` MUST remain in `m/s` on the `ExtendedRtsAltitudeSlopeSmoother` API, and `ALLOWED_CANONICAL_COLUMNS`, device-attributed columns (`" ("`), `SLOPE`, `KEY_POST_WORKOUT_ERTS_SMOOTHING` (default `false`), and `SensorType.ordinal()`/`name()` MUST remain unchanged (`Localization Parity: N/A - no UI strings`).
+  2. *Canonical Unit Documentation Synchronization (`REQ-FIL-021.2`)*:
+     - `SensorType.java` (`VERTICAL_SPEED` Javadoc) and `docs/architecture/sensor_units.md` (`VERTICAL_SPEED` row and Section 2 note) SHALL reflect that `ATT-8577` resolved the legacy `ErtsPostWorkoutRecomputer` `m/s` mismatch while preserving the `"ATT-8577"` token asserted by `SensorTypeUnitsContractTest`.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new `REQ-FIL-021` refining `REQ-FIL-017.3` (*Strict Column Scope Invariant*), `REQ-FIL-012` (*Stabilized VAM Metric*), and `REQ-TRK-083` (*Canonical SensorType Unit Specification*). Targets `ErtsPostWorkoutRecomputer.kt`, `SensorType.java`, `docs/architecture/sensor_units.md`, and `ErtsPostWorkoutRecomputerTest.kt`.
+2. *Historical Origin & Commit Trace*: `ed6acfee` (`ATT-7750`) added `ErtsPostWorkoutRecomputer.kt` and `ExtendedRtsAltitudeSlopeSmoother.kt`; `ed972bad` (`ATT-8337`) added null/sanity guards; `367a412f` (`ATT-8579`) formalized `VERTICAL_SPEED` `"m/h"` in `SensorType.java` and `sensor_units.md`.
+3. *Root Reason for Existing Formulation*: `ExtendedRtsAltitudeSlopeSmoother` operates in SI `m/s` (`dh/dt`), and `ATT-7750` bound `alt.verticalSpeedMps` verbatim into SQLite without applying `SensorType.VERTICAL_SPEED`'s `m/h` `INTEGER` and `[-3000, 3000]` contract.
+4. *Preservation of Core Invariants*: Preserves `SmoothedAltitudeSlopePoint.verticalSpeedMps` (`m/s`), strict canonical column scope (`REQ-FIL-017.3`), device column immutability, `KEY_POST_WORKOUT_ERTS_SMOOTHING = false` default, `SensorType` `ordinal()`/`name()`, and `"ATT-8577"` token in `docs/architecture/sensor_units.md`.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a workout with positive smoothed altitude climb (`alt.verticalSpeedMps = 0.25 m/s`),
+• *When* `ErtsPostWorkoutRecomputer.recomputeWorkout()` updates `WorkoutSamples.db`,
+• *Then* `VERTICAL_SPEED` stores integer `900` (`m/h`).
+• *Given* a workout with negative smoothed vertical speed requiring fractional rounding (e.g. `alt.verticalSpeedMps` yielding non-integer `m/h` or `-0.25 m/s`),
+• *When* `ErtsPostWorkoutRecomputer.recomputeWorkout()` executes,
+• *Then* `VERTICAL_SPEED` stores `Math.round((alt.verticalSpeedMps * 3600.0).coerceIn(-3000.0, 3000.0))` as an integer (`-900` for `-0.25 m/s`).
+• *Given* extreme smoothed vertical speeds at the `ExtendedRtsAltitudeSlopeSmoother` bounds (`+3.0 m/s` and `-3.0 m/s`),
+• *When* `ErtsPostWorkoutRecomputer.bindColumnValue()` binds `VERTICAL_SPEED`,
+• *Then* values clamp strictly to `+3000` and `-3000` `m/h` respectively via `stmt.bindLong()`.
+• *Given* `alt == null` in `ErtsPostWorkoutRecomputer.bindColumnValue()` alongside device-attributed columns (`"ALTITUDE (Höhe aus Luftdruck)"`, etc.),
+• *When* `ErtsPostWorkoutRecomputer.recomputeWorkout()` runs,
+• *Then* `VERTICAL_SPEED` binds SQLite `NULL` when `alt == null` and all device-attributed columns remain 100% byte-for-byte untouched, while `SensorTypeUnitsContractTest` passes cleanly (`N/A - no UI strings`).
+
+**Invariants**: `SmoothedAltitudeSlopePoint.verticalSpeedMps` remains `m/s`; `ALLOWED_CANONICAL_COLUMNS` & device-column immutability (`REQ-FIL-017.3`); `[-3000, 3000]` `m/h` live parity (`REQ-FIL-012`); `SensorType` `ordinal()`/`name()` & `"ATT-8577"` contract token preserved; `N/A - no UI strings`.
+
+
+### REQ-FIL-022: 3-State EKF Barometer Weather-Offset Bias Initialization & Calibration Jump Ascent Guard [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-FIL-022`
+- **System Requirement(s)**: `SYSREQ-TRK-003`, `SYSREQ-TRK-004`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `app/src/main/java/com/atrainingtracker/banalservice/odometry/KinematicAltitudeSlopeEkf.kt`, `app/src/main/java/com/atrainingtracker/banalservice/devices/AltitudeAndSlopeDevice_ATTFused.kt`
+- **Rationale**: In 3-state mode (`is3StateMode = true`), `KinematicAltitudeSlopeEkf.updateBarometer()` previously initialized uncalibrated standard-atmosphere barometer altitude with `p00 = varBaro = 0.25` and `baroBias = 0.0`, causing Huber clamping (`K = 3.0`) and zero `p02` cross-covariance to lock in `+130 m` synoptic weather-pressure offsets against delayed DEM/GPS reference fixes (and conversely causing `Ref-before-Baro` `+130 m` offsets to pull `altitude` upward due to `p22 = 100.0` `13σ` clamping). Separating 3-state unanchored barometer startup from 2-state `p00 = varBaro` tracking and resetting the hysteresis anchor on initial reference calibration eliminates weather-pressure altitude lock-in and phantom `ASCENT`/`DESCENT` spikes (`ATT-8575`, refining `REQ-FIL-016.1`/`.2` and `REQ-FIL-020.2`).
+- **Description**:
+  1. *3-State Baro-before-Ref Weather-Offset Anchoring (`REQ-FIL-022.1`)*:
+     - When `is3StateMode == true` and `updateBarometer()` initializes before any reference altitude anchor (`DEM` / `KnownLocation` / `GPS`), `KinematicAltitudeSlopeEkf` SHALL initialize `p00` with high unanchored altitude uncertainty (MUST NOT lock `p00 = 0.25`) and track that no reference anchor has been ingested yet.
+     - Upon arrival of the first valid reference altitude `refAltM` (`updateReferenceAltitude(refAltM, varRef)`), even at standstill (`v < 0.3 m/s`), the EKF SHALL anchor `altitude = refAltM` (`p00 = varRef`), absorb the accumulated barometric offset into `baroBias` (`baroBias += oldAltitude - refAltM`), clear cross-covariances (`p01`, `p10`, `p02`, `p20`), and signal that initial calibration re-anchoring occurred.
+  2. *3-State Ref-before-Baro Calibration & 2-State Covariance Guard (`REQ-FIL-022.2`)*:
+     - When `updateReferenceAltitude()` initializes the EKF first (`hasReferenceAnchor = true`) and the first `updateBarometer(baroAltM)` subsequently arrives in 3-state mode, `KinematicAltitudeSlopeEkf` SHALL seed `baroBias = baroAltM - altitude` directly so large weather-pressure offsets (`>= 130 m`) do not trigger Huber-clamped pulling of `altitude` away from the valid reference.
+     - In **2-state mode (`!is3StateMode`)**, `updateBarometer()` MUST preserve `p00 = varBaro` (`0.25`) and existing covariance propagation (`ekf.p00 < 10.0` after `predict(1800.0, 5.0)`). `reset()` and `setMode()` SHALL cleanly reset reference/barometer initialization tracking flags (`Localization Parity: N/A - no UI strings`).
+  3. *Calibration Jump Ascent/Descent Guard (`REQ-FIL-022.3`)*:
+     - In `AltitudeAndSlopeDevice_ATTFused` (`handleReferenceAltitude()` and `checkReferenceAltitudeFromSensors()`), whenever `ekf.updateReferenceAltitude(...)` performs initial reference re-anchoring, the device SHALL reset/align `mAscentDescentAnchorAltitude` and `mLastAltitude` prior to `publishAltitudeAndMetrics()` so the calibration jump adds `0.0 m` bogus `ASCENT` or `DESCENT`.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new `REQ-FIL-022` refining `REQ-FIL-016.1`/`.2` (*Kinematic Terrain-Slope EKF & Observability Modes*) and `REQ-FIL-020.2` (*Anchor-Based Elevation Hysteresis Deadband*). Targets `KinematicAltitudeSlopeEkf.kt` and `AltitudeAndSlopeDevice_ATTFused.kt`.
+2. *Historical Origin & Commit Trace*: `75c1497e` (`ATT-6279`) introduced `KinematicAltitudeSlopeEkf` (`p00 = varBaro`, `p22 = 100.0`); `8b0eba41` (`ATT-8081`) introduced DEM precedence, MSL normalization, and `2.0 m` `mAscentDescentAnchorAltitude` hysteresis.
+3. *Root Reason for Existing Formulation*: `ATT-6279` initialized `p00 = varBaro` identically in 2-state and 3-state modes and tested 3-state thermal drift (`testThreeStateMode`) with `0 m` initial baro-vs-DEM offset.
+4. *Preservation of Core Invariants*: Preserves 2-state `p00 = varBaro` (`testPredict_clampsLargeDtSec`), standstill clamping (`v < 0.3 m/s -> dh = 0`), DEM-over-GPS precedence (`REQ-FIL-020.1`), `2.0 m` hysteresis (`REQ-FIL-020.2`), 3-state thermal drift absorption (`testThreeStateMode`), and `@Synchronized` thread safety.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `KinematicAltitudeSlopeEkf` in 3-state mode initialized at standstill with uncalibrated barometer `568.4 m` (`+130.4 m` weather offset),
+• *When* a single DEM reference `438.0 m` arrives (`updateReferenceAltitude(438.0, DEFAULT_VAR_DEM)`) followed by 5-Hz `568.4 m` barometer updates,
+• *Then* `altitude` anchors at `438.0 m` (±`0.5 m`), `baroBias` absorbs `+130.4 m` (±`0.5 m`), and subsequent barometer updates do not pull `altitude` back toward `568.4 m`.
+• *Given* `KinematicAltitudeSlopeEkf` in 3-state mode initialized first by DEM `438.0 m` (`Ref-before-Baro`),
+• *When* uncalibrated barometer readings at `568.4 m` (`+130.4 m` offset) arrive while moving or stationary,
+• *Then* `baroBias` initializes to `+130.4 m` and `altitude` remains anchored near `438.0 m` without Huber-clamped drift.
+• *Given* `KinematicAltitudeSlopeEkf` in **2-state mode (`is3StateMode = false`)**,
+• *When* `updateBarometer(200.0)` and `predict(1800.0, 5.0)` execute,
+• *Then* initial `p00 = varBaro` (`0.25`) is preserved and `ekf.p00 < 10.0`.
+• *Given* `AltitudeAndSlopeDevice_ATTFused` receiving `568.4 m` pressure before first `438.0 m` DEM/GPS lock,
+• *When* `calculateMetrics()` ingests the first DEM/GPS reference and publishes metrics,
+• *Then* `mAltitudeSensor` reports `438.0 m`, `mAscentSensor` and `mDescentSensor` both remain `0.0 m` (`N/A - no UI strings`).
+
+**Invariants**: 2-state `p00 = varBaro` preserved; standstill `dh = 0`; DEM-over-GPS precedence (`REQ-FIL-020.1`); `2.0 m` hysteresis (`REQ-FIL-020.2`); `baroBias` thermal drift isolation; `@Synchronized` thread safety; `N/A - no UI strings`.
+
+
+
 
 

@@ -61,15 +61,15 @@ Verification is partitioned across three hierarchical environments:
 ### Level 1: JVM & Robolectric Integration (Subsystem & Fast Integration)
 * **Execution Environment**: Local JVM workstation and CI test runner (`./gradlew testDebugUnitTest`).
 * **Scope**:
-  * Unit tests and subsystem integration tests spanning `INT-SWE-06`, `INT-SWE-05`, `INT-SWE-02`, and `INT-SWE-07`.
-  * Robolectric Android framework shadowing for `SharedPreferences`, `Cursor`, SQLite, and Jetpack Compose composables.
-* **Turnaround Time**: 10–30 seconds for targeted suites; ~2–3 minutes for complete test suite.
-* **Execution Rule**: Fast gate executed on every commit and branch review.
+  * Unit tests and Robolectric subsystem integration tests spanning all eight bottom-up steps (`INT-SWE-01` through `INT-SWE-08`: UI/ViewModel `UiPresentationIntegrationTest`, Repository/SQLite `ViewModelRepositoryIntegrationTest`, Inter-Service `InterServiceIngestionIntegrationTest`, Hardware HAL `HardwareHalIngestionIntegrationTest`, Domain Calculators `DomainCalculatorsIntegrationTest`, SQLite Persistence `PersistenceSqliteIntegrationTest`, File Exporters `FileExportersIntegrationTest`, and Cloud/Health Connect `CloudHealthConnectIntegrationTest`).
+  * Robolectric Android framework shadowing for `SharedPreferences`, `Cursor`, SQLite, and Jetpack Compose composables (`sdk = [34]`).
+* **Turnaround Time**: 10–30 seconds for targeted package/class suites; ~29 minutes wall-clock across all 1,119 suites (6,540 tests; 2,635.73s cumulative suite sum per `docs/engineering/test_evidence/sprint_455.md` and `docs/engineering/retros/Sprint_Review_and_Retro_ATT-8500.md`).
+* **Execution Rule**: Targeted Tier 1 suites executed on every ticket commit and branch review; full Tier 2 suite executed at Sprint Integration Gate / weekly / release boundaries.
 
 ### Level 2: Instrumented Android & CI Emulator Smoke Integration
 * **Execution Environment**:
   * **CI Smoke Gate**: GitHub Actions `emulator-test` job running on Android 14 (`api-level: 34`, `target: google_apis`, `arch: x86_64`) matching `.github/workflows/android-branch-build.yml` (ATT-6737). The job pre-builds debug and test APKs (`./gradlew :app:assembleDebug :app:assembleDebugAndroidTest`) and executes `:app:connectedDebugAndroidTest` on `reactivecircus/android-emulator-runner@v2` with hardware acceleration (KVM).
-  * **Autonomous In-Sprint Policy (Rule 79)**: Local software emulator is retired during in-sprint development. Local verification relies on JVM unit tests, Robolectric Compose tests, living documentation, and Gradle Tier 2 lint/detekt gates.
+  * **Autonomous In-Sprint Emulator Policy (Rules 60, 62 & 76)**: Per `.agents/skills/stage5-verification/SKILL.md`, UI, Compose, resource, navigation, and foreground-service tickets deploy and verify during Stages 1–5 exclusively on the local Android emulator (`emulator-5554`, `Pixel_8_Android_15`, bootstrapped via `tools/agent_emulator.py`). Non-UI backend, algorithm, database query, and test-only tickets skip APK deployment and verify via Level 1 Robolectric/JVM suites + `:app:compileDebugAndroidTestKotlin`. The physical `Pixel 10` phone is reserved strictly for Ceremony 2 Joint Review.
 * **Scope**:
   * Real ART runtime execution and `AppSmokeAndroidTest.kt` activity launch (`MainActivityWithNavigation`).
   * Real SQLite transaction concurrency and multi-threaded WAL locks.
@@ -124,9 +124,9 @@ Verification is partitioned across three hierarchical environments:
      `./gradlew testDebugUnitTest --tests "com.atrainingtracker.<modified_package>.*"` plus contract tests (`AspiceSweAuditContractTest`).
    * Provides rapid feedback loop ($\le 30$ seconds) while guaranteeing boundary invariants.
 2. **Tier 2 (Sprint Integration Gate)**:
-   * Executed at the conclusion of every sprint phase under lock:
+   * Executed under lock at Sprint Integration Gate / weekly / release boundaries:
      `python3 tools/parallel_sprint_lock.py ./gradlew testDebugUnitTest --max-workers=2`
-   * Runs all 3,660+ tests across the entire codebase without filters.
+   * Runs all 6,540+ tests across 1,119+ suites without filters (~29m 21s wall-clock, 2,635.73s cumulative suite duration as recorded in `docs/engineering/test_evidence/sprint_455.md`).
 
 ### Defect Bisection Workflow
 * When an unexpected regression is identified across integrated subsystems, the defect is localized using Git bisection and automated sprint milestone tooling:

@@ -302,8 +302,9 @@ object RadarSnoozeController {
 
     private fun publishSnoozeStateLocked() {
         val state = buildSnoozeStateLocked()
-        val current = RadarStateRepository.getState()
-        RadarStateRepository.updateState(current.copy(audioSnoozeState = state))
+        RadarStateRepository.updateControlState { current ->
+            current.copy(audioSnoozeState = state)
+        }
     }
 
     private fun ensureTickerRunningLocked() {

@@ -3,7 +3,7 @@
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Tests**: 132
+**Total Tests**: 138
 
 ---
 
@@ -2094,7 +2094,7 @@
   8. *Clean-Room Targeted Test Suite Execution (`TST-CON-031.8`)*:
   • Execute targeted package tests asserting 100% pass rate.
   9. *Debounced Mode Stepping & Reactive State Separation Tests (`TST-CON-031.9`, `RadarLightControllerTest.kt`)*:
-  • Verify `cycleNextMode()` sequence: `AUTO` -> `DAY_FLASH` -> `SOLID` -> `PELOTON` -> `NIGHT_FLASH` -> `OFF` -> `AUTO` on non-StVZO hardware, and `AUTO` -> `SOLID` -> `OFF` -> `AUTO` on StVZO hardware.
+  • Verify `cycleNextMode()` sequence: `AUTO` -> `OFF` -> `PELOTON` -> `SOLID` -> `NIGHT_FLASH` -> `DAY_FLASH` -> `AUTO` on non-StVZO hardware, and `AUTO` -> `OFF` -> `SOLID` -> `AUTO` on StVZO hardware.
   • Verify immediate UI-observable target mode updates on rapid successive taps, with ~400 ms debounce window coalescing outbound commands into a single physical dispatch.
   • Verify distinct reactive emission of `isAutoMode` and `currentMode` `StateFlow`s during auto-escalation and manual override.
 
@@ -2401,6 +2401,53 @@
      • During an active search or connected stream, trigger `sdkCallback.blePowerStateChanged(false)`.
      • Assert `isConnectedFlag == false`, active streaming jobs are cancelled, search timeout is cancelled, and `notifyStopSearching(false)` is broadcast.
      • Call `shutDown()`; assert active timeout jobs, receivers, and coroutine scopes are cancelled cleanly.
+
+### TST-CON-046: **Radar `isAutoMode` Preservation Across Telemetry Frames, Simulator & Source Arbitration Test Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-CON-046` (`REQ-CON-046.1`..`REQ-CON-046.3`)
+- **Component**: `RadarState.kt`, `RadarStateRepository.kt`, `BTLERadarDevice.java`, `ANTBikeRadarDevice.kt`, `RadarTrafficSimulator.kt`, `RadarLightController.kt`
+- **Jira**: `ATT-8455`
+- **Test Type**: Unit & Integration
+- **Verification Method**: Unit
+- **Procedure**:
+  1. *BTLERadarDevice 6-Site `isAutoMode` Preservation & Restore (`TST-CON-046.1`, `BTLERadarDeviceTest.kt`)*:
+     • Given `RadarStateRepository` / `RadarLightController` with `isAutoMode == false`,
+     • When exercising all 6 `BTLERadarDevice` emission paths (`startSearching`, `notifyStopSearching`, `configureServices`, `processTargets`, `mWatchdogRunnable`, `disconnectFromGatt`),
+     • Assert `RadarStateRepository.getState().isAutoMode` remains `false`; then invoke `RadarLightController.setAutoMode()` and assert `isAutoMode == true`.
+  2. *RadarTrafficSimulator Lifecycle & Tick Preservation (`TST-CON-046.2`, `RadarTrafficSimulatorTest.kt`)*:
+     • Given `isAutoMode == false` in `RadarStateRepository`,
+     • When running `generateFrame`, `tick`, `start` coroutine loop frames, and `stop`,
+     • Assert `RadarStateRepository.getState().isAutoMode` remains `false` throughout and `setAutoMode()` restores `true`.
+  3. *ANTBikeRadarDevice 3-Site `isAutoMode` Preservation (`TST-CON-046.3`, `ANTBikeRadarDeviceTest.kt`)*:
+     • Given `isAutoMode == false` in `RadarStateRepository`,
+     • When invoking `publishTargets`, `onWatchdogTimeout`, and `shutDown`,
+     • Assert `RadarStateRepository.getState().isAutoMode` remains `false` and `setAutoMode()` restores `true`.
+  4. *Repository `sourceStates` Failover & `reset()` Isolation (`TST-CON-046.4`, `RadarStateRepositoryTest.kt`)*:
+     • Given concurrent `BLE` and `ANT_PLUS` sources with manual override `isAutoMode == false`,
+     • When `BLE` disconnects and `RadarStateRepository` fails over to `ANT_PLUS` (or `SIMULATOR`),
+     • Assert `isAutoMode` stays `false` (and `audioSnoozeState` stays intact per `REQ-CON-042.3`); when `RadarStateRepository.reset()` is invoked, assert clean reset to default `RadarState()` (`isAutoMode == true`).
+  5. *Light Controller Manual Override vs Adaptive Automation (`TST-CON-046.5`, `RadarLightControllerTest.kt`)*:
+     • Given `setManualLightMode()` or `cycleNextMode()` followed by incoming telemetry updates,
+     • Assert `RadarLightController.isAutoMode.value == false`, `RadarStateRepository.getState().isAutoMode == false`, and `SmartRadarLightEngine` automation remains suspended until `setAutoMode()` restores `true`.
+
+### TST-CON-047: **Compact Quick-Switch Sheet, Button-Matching Icons & Ascending Mode Order Test Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-CON-047` (`REQ-CON-047.1`..`REQ-CON-047.4`), `REQ-CON-031` (`REQ-CON-031.3`, `REQ-CON-031.8`)
+- **Component**: `RadarLightQuickSwitchSheet.kt`, `RadarLightButton.kt`, `RadarLightMode.kt`, `RadarLightController.kt`, `EditDeviceDialog.kt`
+- **Jira**: `ATT-8456`
+- **Test Type**: Unit & UI (Compose/Robolectric + Emulator Visual)
+- **Verification Method**: Unit
+- **Procedure**:
+  1. *Compact Quick-Switch Sheet & Semantic Icon Parity (`TST-CON-047.1`, `RadarLightQuickSwitchSheetTest.kt`)*:
+     • Given `RadarLightQuickSwitchSheetContent` rendered in Robolectric (`isLightControlSupported = true`, `isStvzo = false`, and constrained smartphone height),
+     • Assert `RadarLightMode_AUTO`, all 5 `RadarLightMode_*` tags, and all 4 `RadarSnooze_*` tags are displayed without clipping, and light mode items render semantic vector icons matching `resolveLightVisuals` in `RadarLightButton.kt`.
+  2. *Unified Ascending Mode Order Across `RadarLightMode`, `cycleNextMode()`, Sheet & Dialog (`TST-CON-047.2`, `RadarLightControllerTest.kt`, `RadarLightQuickSwitchSheetTest.kt`)*:
+     • Assert `RadarLightMode.getAvailableModes(false)` returns `[OFF, PELOTON, SOLID, NIGHT_FLASH, DAY_FLASH]` and `getAvailableModes(true)` returns `[OFF, SOLID]`.
+     • Assert `RadarLightController.cycleNextMode()` steps through `AUTO -> OFF -> PELOTON -> SOLID -> NIGHT_FLASH -> DAY_FLASH -> AUTO` (non-StVZO) and `AUTO -> OFF -> SOLID -> AUTO` (StVZO), and `RadarLightQuickSwitchSheet` / `EditDeviceDialog` consume the identical sequence.
+  3. *9-Locale String Resource & Zero-Hardcoded-String Verification (`TST-CON-047.3`, `RadarLightQuickSwitchSheetTest.kt`, `TranslationParityTest.kt`)*:
+     • Verify all labels in `RadarLightQuickSwitchSheet.kt` use existing `strings_radar.xml` resources with zero hardcoded display text and 100% 9-locale parity.
+  4. *Light & Dark Theme Visual Inspection (`TST-CON-047.4`, Stage 5 Emulator / Preview)*:
+     • Capture Light and Dark screenshots of `RadarLightQuickSwitchSheet` on emulator / Compose preview and verify zero clipping, crisp vector icon contrast, and balanced compact spacing.
 
 ### TST-TRK-064: **1-Tap Radar Audio Snooze, Peloton Sync & Urban Suppression Test Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-064` (`REQ-TRK-064.1`..`REQ-TRK-064.7`)
@@ -3088,5 +3135,89 @@
      • Verify `HRV_DFA_A1` zone gradient stops are suppressed when `hrvSignalQualityStatus` is `SMOOTHED_STREAM` or `QUANTIZED_SYNTHETIC`.
   4. *Visual Compose Screenshot Verification Test (`TST-TRK-082.4`, `SensorFieldViewDynamicZoneScreenshotTest.kt`)*:
      • Render `SensorFieldView` / `SensorSparklineView` tiles in Light and Dark/AMOLED themes covering HR (5-zone), Power (7-zone incl. Zone 7 dark contrast), HRV DFA α1 (inverted polarity with aerobic green at bottom and anaerobic red at top), decoupled fixed-color + `showTextColor = true`, and placeholder/flat-line fallbacks; capture `docs/engineering/walkthroughs/img/ATT-7761_dynamic_zone_sparkline.png` and certify against Rule 8.5 4-point visual checklist.
+
+
+### TST-TRK-083: **Canonical SensorType Storage, Display & Export Unit Parity Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Tickets**: `ATT-8579`
+- **Requirement(s)**: `REQ-TRK-083` (`REQ-TRK-083.1`..`REQ-TRK-083.3`)
+- **Component**: `app/src/test/java/com/atrainingtracker/banalservice/sensor/SensorTypeUnitsContractTest.kt`
+- **Test Type**: Unit / Contract
+- **Verification Method**: Unit
+- **Procedure**:
+  1. *Code-Level `internalUnit` & Javadoc Coverage Test (`TST-TRK-083.1`, `SensorTypeUnitsContractTest.kt`)*:
+     • Iterate over all `SensorType.values()` (67 constants) and assert `sensorType.getInternalUnit()` is non-null, non-blank, and free of placeholder markers.
+     • Parse `app/src/main/java/com/atrainingtracker/banalservice/sensor/SensorType.java` and assert every enum constant declaration is preceded by a per-constant Javadoc block (`/** ... */`) documenting its internal unit.
+  2. *Bidirectional `docs/architecture/sensor_units.md` & Cross-Link Parity Test (`TST-TRK-083.2`, `SensorTypeUnitsContractTest.kt`)*:
+     • Parse `docs/architecture/sensor_units.md` data-dictionary table and assert exact bidirectional set equality (`docConstants == SensorType.values().map { it.name }.toSet()`), plus per-row agreement on `SensorCategory`, `SensorValueType`, and `internalUnit`.
+     • Assert `docs/architecture.md` contains an active reference link to `architecture/sensor_units.md` and that `sensor_units.md` documents sentinel values (`BATTERY_REMAINING_TIME` `-1` / `<= -2`, `PACE_spm` `MAX_PACE`, `HRV_DFA_A1` / `POWER_TO_WEIGHT` / `W_PRIME_BAL`) and export conversions (`FitFileWriter.kt`, `TCXFileWriter.kt`, `GPXFileWriter.java`, `CSVFileWriter.java`, `GCFileWriter.java`).
+  3. *Invariants & Regression Suite (`TST-TRK-083.3`)*:
+     • Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.banalservice.sensor.SensorTypeUnitsContractTest" --tests "com.atrainingtracker.banalservice.sensor.SensorTypeFormatterTest" --tests "com.atrainingtracker.banalservice.sensor.SensorTypeMmpTest" --tests "com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest" --tests "com.atrainingtracker.trainingtracker.build.ArchitectureConformanceContractTest"` and verify 100% pass with zero runtime/UI regressions (Localization parity: `N/A - no UI strings`).
+
+
+### TST-TRK-084: **Valid-Data `AccumulatedSensors` Persistence Filtering, Resume Rehydration & Post-Workout Backfill Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Tickets**: `ATT-8578`
+- **Requirement(s)**: `REQ-TRK-084` (`REQ-TRK-084.1`..`REQ-TRK-084.4`)
+- **Component**: `TrackerServiceFinalizationTest.kt`, `TrackerServiceIntegrationTest.kt`, `TrackerServiceResumeTest.kt`, `WorkoutSummariesAccumulatedSensorsTest.kt`, `PolarH10OfflineControllerTest.kt`, `PolarVeritySenseOfflineControllerTest.kt`, `HrvPostWorkoutRecomputerTest.kt`
+- **Test Type**: Unit & Integration
+- **Verification Method**: Unit
+- **Procedure**:
+  1. *Live Non-Null Observation & Virtual-Device Silence Test (`TST-TRK-084.1`, `TrackerServiceFinalizationTest.kt`)*:
+     • Run `sampleAndWriteToDb()` with `BANALServiceComm.getAllSensorData()` returning valid `TIME_TOTAL`, `SPEED_mps`, `LATITUDE`, `LONGITUDE` plus `null`-valued `HR`, `POWER`, `HRV_DFA_A1`, `HRV_RMSSD`, `HRV_ARTIFACT_RATE`, `POWER_5S`, `TSS`, `W_PRIME_BAL`, `LIVE_HR_DRIFT`, and `BANALServiceComm.getAccumulatedSensorTypeSet()` returning all 40 registered types.
+     • Invoke `endWorkout(snapshot)` and assert `AccumulatedSensors` persists strictly the observed non-null types (`TIME_TOTAL`, `SPEED_mps`, `LATITUDE`, `LONGITUDE`) and zero unattached virtual HRV/Power/Dynamics sensors.
+     • Verify `mLiveSession == null` fallback still persists `snapshot.accumulatedSensorTypes` (`TST-TRK-027.3`) and `MySensorManager.getAccumulatedSensorTypeSet()` registration behavior (`TST-TRK-022.3`) remains unchanged.
+  2. *`finalizeLiveSession()` Post-Processed Metric Upsert Test (`TST-TRK-084.2`, `TrackerServiceFinalizationTest.kt`)*:
+     • Execute `endWorkout()` + `finalizeLiveSession()` for a session with recorded power/HR/GPS samples producing `NORMALIZED_POWER`, `INTENSITY_FACTOR`, `TSS`, `WORK_KJ`, `POWER_TO_WEIGHT`, and `LINE_DISTANCE_m`.
+     • Assert `FINISHED = 1` commits before auxiliary saves (`REQ-TRK-030.1`) and `finalizeLiveSession()` upserts the non-null computed metrics into `AccumulatedSensors`.
+  3. *Resume Rehydration & Idempotent DB Deduplication Test (`TST-TRK-084.3`, `TrackerServiceResumeTest.kt` & `WorkoutSummariesAccumulatedSensorsTest.kt`)*:
+     • Persist initial `AccumulatedSensors` rows (`HR`, `SPEED_mps`) for a workout, run `rehydrateLiveSession()` on resume, record new `POWER` samples, and finalize; assert `AccumulatedSensors` contains `{HR, SPEED_mps, POWER}` with zero duplicate rows.
+     • Invoke `saveAccumulatedSensorTypes()` / `addAccumulatedSensorTypes()` repeatedly with overlapping `SensorType` sets and assert `SELECT COUNT(*)` in `AccumulatedSensors` matches the deduplicated set size (`0` duplicates).
+  4. *Polar H10 / Verity Sense Backfill & Conditional HRV Recomputation Upsert Test (`TST-TRK-084.4`, `PolarH10OfflineControllerTest.kt`, `PolarVeritySenseOfflineControllerTest.kt`, `HrvPostWorkoutRecomputerTest.kt`)*:
+     • Exercise `PolarH10OfflineController` (synchronous stop backfill and deferred `syncPendingWorkout()`) and `PolarVeritySenseOfflineController` (`applyBackfillAndCommit()` and `applySwimBackfillAndCommit()`) with non-empty HR/RR samples; assert `SensorType.HR` is upserted into `AccumulatedSensors`.
+     • Exercise `HrvPostWorkoutRecomputer.recomputeWorkout()` across full-HRV (`rmssdValues`, `dfaValues`, `sessionSdnn` all populated) and sparse/artifact-gated (`dfaValues` empty or `sessionSdnn == null`) cases; assert `HRV_ARTIFACT_RATE` is upserted when written and `HRV_RMSSD`, `HRV_DFA_A1`, `HRV_SDNN` are upserted strictly when non-empty/non-null.
+  5. *Tier 1 Targeted Regression Suite & Localization Parity (`TST-TRK-084.5`)*:
+     • Run `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.tracker.*" --tests "com.atrainingtracker.trainingtracker.database.*" --tests "com.atrainingtracker.banalservice.devices.bluetooth_le.polar.*" --tests "com.atrainingtracker.trainingtracker.build.*"` asserting 100% pass (Localization parity: `N/A - no UI strings`).
+
+
+### TST-FIL-021: **Post-Workout ERTS `VERTICAL_SPEED` `m/h` Conversion, Clamping & Integer Persistence Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Tickets**: `ATT-8577`
+- **Requirement(s)**: `REQ-FIL-021` (`REQ-FIL-021.1`..`REQ-FIL-021.2`)
+- **Component**: `app/src/test/java/com/atrainingtracker/trainingtracker/database/ErtsPostWorkoutRecomputerTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/sensor/SensorTypeUnitsContractTest.kt`
+- **Test Type**: Unit / Contract
+- **Verification Method**: Unit
+- **Procedure**:
+  1. *Positive Climb & Negative Descent `m/h` Scaling & Rounding Test (`TST-FIL-021.1`, `ErtsPostWorkoutRecomputerTest.kt`)*:
+     • Populate `WorkoutSamples.db` with climbing (`+0.2 m/s` / `+0.25 m/s` grade) and descending (`-0.25 m/s` / fractional `m/s`) altitude profiles alongside device-attributed columns.
+     • Run `ErtsPostWorkoutRecomputer.recomputeWorkout(context, workoutId)`.
+     • Assert canonical `VERTICAL_SPEED` rows store integer `m/h` values matching `Math.round((alt.verticalSpeedMps * 3600.0).coerceIn(-3000.0, 3000.0))` (e.g., positive climb `~720..900 m/h` and negative descent `~-900 m/h`, never raw `m/s` fractional values), while device-attributed columns remain byte-for-byte identical.
+  2. *Boundary Clamping (`[-3000, 3000] m/h`) & Null-Safety Test (`TST-FIL-021.2`, `ErtsPostWorkoutRecomputerTest.kt`)*:
+     • Exercise `ErtsPostWorkoutRecomputer` / `bindColumnValue()` with extreme smoothed vertical speeds (`+3.0 m/s` and `-3.0 m/s` from `ExtendedRtsAltitudeSlopeSmoother` bounds, i.e., `±10800 m/h`) and verify persisted SQLite `VERTICAL_SPEED` values are clamped to `+3000` and `-3000` `m/h` respectively.
+     • Verify `alt == null` binds SQLite `NULL` into `VERTICAL_SPEED`.
+  3. *Unit Contract Doc Parity & Regression Execution (`TST-FIL-021.3`)*:
+     • Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.database.ErtsPostWorkoutRecomputerTest" --tests "com.atrainingtracker.banalservice.odometry.ExtendedRtsAltitudeSlopeSmootherTest" --tests "com.atrainingtracker.banalservice.sensor.SensorTypeUnitsContractTest"` asserting 100% pass rate (`Localization parity: N/A - no UI strings`).
+
+
+### TST-FIL-022: **3-State EKF Barometer Weather-Offset Anchoring & Calibration Jump Ascent Guard Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Tickets**: `ATT-8575`
+- **Requirement(s)**: `REQ-FIL-022` (`REQ-FIL-022.1`..`REQ-FIL-022.3`)
+- **Component**: `app/src/test/java/com/atrainingtracker/banalservice/odometry/KinematicAltitudeSlopeEkfTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/devices/AltitudeAndSlopeDevice_ATTFusedTest.kt`
+- **Test Type**: Unit
+- **Verification Method**: Unit
+- **Procedure**:
+  1. *3-State Baro-before-Ref `+130 m` Standstill Anchoring Test (`TST-FIL-022.1`, `KinematicAltitudeSlopeEkfTest.kt`)*:
+     • Configure `KinematicAltitudeSlopeEkf(is3StateMode = true)`. Feed 10 standstill barometer updates at `568.4 m`, then invoke a single `updateReferenceAltitude(438.0, DEFAULT_VAR_DEM)` followed by 20 more `568.4 m` barometer updates (both standstill and moving).
+     • Assert `ekf.altitude` anchors within `438.0 ± 0.5 m`, `ekf.baroBias` converges within `130.4 ± 0.5 m`, and `p00` does not remain locked at `0.25` prior to reference arrival.
+  2. *3-State Ref-before-Baro Offset & 2-State Covariance Guard Test (`TST-FIL-022.2`, `KinematicAltitudeSlopeEkfTest.kt`)*:
+     • Initialize 3-state EKF with `updateReferenceAltitude(438.0, DEFAULT_VAR_DEM)`, then feed 20 moving/standstill barometer updates starting at `568.4 m` (`+130.4 m` offset). Assert `ekf.baroBias` absorbs `130.4 ± 0.5 m` and `ekf.altitude` stays within `438.0 ± 0.5 m`.
+     • Verify 2-state mode (`is3StateMode = false`) continues initializing `p00 = varBaro` (`0.25`) with `ekf.p00 < 10.0` after `predict(1800.0, 5.0)`, and `reset()` / `setMode()` clears anchor state cleanly.
+  3. *Device Calibration Jump Ascent/Descent Guard Test (`TST-FIL-022.3`, `AltitudeAndSlopeDevice_ATTFusedTest.kt`)*:
+     • With DEM (or GPS) active on `AltitudeAndSlopeDevice_ATTFused`, feed uncalibrated pressure (`~568.4 m`) before the first `438.0 m` DEM fix arrives during `calculateMetrics()`.
+     • Assert `mAltitudeSensor` updates to `438.0 ± 0.5 m` and both `mAscentSensor` and `mDescentSensor` remain `0.0 m` (zero `+130.4 m` phantom descent/ascent), followed by true `25 m` climb accumulating `~25 m` ascent.
+  4. *Tier 1 Targeted Regression Execution (`TST-FIL-022.4`)*:
+     • Execute `./gradlew :app:testDebugUnitTest --tests "com.atrainingtracker.banalservice.odometry.KinematicAltitudeSlopeEkfTest" --tests "com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest" --tests "com.atrainingtracker.trainingtracker.build.MeasuredNfrBenchmarkTest"` asserting 100% pass rate (`Localization parity: N/A - no UI strings`).
+
 
 

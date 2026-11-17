@@ -657,6 +657,7 @@
     <string name="pedal_balance_left_marker">L</string>
     <string name="pedal_balance_right_marker">R</string>
     <string name="zone_display_preview_title">Vista previa</string>
+    <string name="zone_display_apply_all">Aplicar a todos</string>
 
     <string name="prefEmailExport">e-Mail</string>
 

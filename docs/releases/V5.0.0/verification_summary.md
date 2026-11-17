@@ -15,7 +15,7 @@ In accordance with **ASPICE SWE.6 BP5** (Work Product Verification), **SUP.8** (
 | :--- | :--- | :--- | :--- | :--- |
 | **Unit & Regression Tests** | ASPICE SWE.6 BP3, BP4 | `build-evidence/junit-test-results-V5.0.0.zip` | 0/0 passed (0 failed) | [ FAIL ] |
 | **Traceability Coverage** | ASPICE SWE.1, SWE.6 | `tools/verify_requirement_governance.py` | REQ-TST: 100.0%, TST-Code: 65.0% | [ PASS ] |
-| **System Integration (SYS.4)** | ASPICE SYS.4 BP5 | `docs/releases/V5.0.0/system_integration_results.json` | 6/6 tests PASS | [ PASS ] |
+| **Legacy Simulator Self-Tests (Non-Gating)** | Developer Simulators Only (`REQ-PRO-112`) | `docs/releases/V5.0.0/system_integration_results.json` | 6/6 legacy simulator checks (no APK run) | [ INFO / SIMULATOR-ONLY ] |
 | **System Protocol (SYS.5)** | ASPICE SYS.5 BP5, BP6 | `docs/releases/V5.0.0/sys_verification_record.md` | Verdict: OPEN, Sign-off: Incomplete | [ FAIL ] |
 
 ---
@@ -40,21 +40,24 @@ In accordance with **ASPICE SWE.6 BP5** (Work Product Verification), **SUP.8** (
 
 ---
 
-## 4. System Integration Verification Summary (SYS.4 / ATT-6166)
+## 4. Legacy Simulator Self-Test Record (Informational / Non-Gating, ATT-8157)
+
+> [!NOTE]
+> **Reclassified Legacy Simulator Artifact (`REQ-PRO-112`)**: This 2026-11-13 artifact was produced by legacy `tools/run_system_integration_tests.py` (renamed to `tools/run_simulator_self_tests.py`) and executed pure-Python simulator checks only (**zero** Android APK, ADB, or emulator execution). It is **not** a blocking SYS.4 release gate; automated Android integration is covered by `INT-SWE-01..08` + `AppSmokeAndroidTest.kt`, and physical sensor verification remains hardware-in-the-loop under Section 5 (`SYS.5`).
 
 * **Artifact**: [`docs/releases/V5.0.0/system_integration_results.json`](../../../docs/releases/V5.0.0/system_integration_results.json)
 * **Execution Timestamp**: `2026-11-13T13:28:34.975878`
 * **Baseline Commit**: `9a3b72d90754f9230620977939c8cdae60e7fe18`
-* **Overall Status**: **PASS** (6/6 cases passed)
+* **Recorded Simulator Status**: **PASS** (6/6 legacy simulator checks; non-gating)
 
-| Test Case ID | Description / Interface | Result |
+| Legacy Check ID | Simulator Scope | Recorded Simulator Result |
 | :--- | :--- | :--- |
-| `SYS-INT-001` | BLE Heart Rate & RR Interval Integration | [ PASS ] |
-| `SYS-INT-002` | BLE Cycling Power & Cadence Integration | [ PASS ] |
-| `SYS-INT-003` | BLE Garmin Varia Radar Integration | [ PASS ] |
-| `SYS-INT-004` | ANT+ Radio IPC Integration | [ PASS ] |
-| `SYS-INT-005` | Multi-Source GNSS Positioning Integration | [ PASS ] |
-| `SYS-INT-006` | Cloud Synchronization & Rate Governance | [ PASS ] |
+| `SYS-INT-001` | BLE Heart Rate & RR Interval Simulator | [ SIMULATOR PASS ] |
+| `SYS-INT-002` | BLE Cycling Power Simulator | [ SIMULATOR PASS ] |
+| `SYS-INT-003` | BLE Garmin Varia Radar Simulator | [ SIMULATOR PASS ] |
+| `SYS-INT-004` | ANT+ Arithmetic Check (Retired) | [ SIMULATOR PASS ] |
+| `SYS-INT-005` | Static Geodesic Trackpoint Check (Retired) | [ SIMULATOR PASS ] |
+| `SYS-INT-006` | Static OAuth Dict Check (Retired) | [ SIMULATOR PASS ] |
 
 ---
 

@@ -11,12 +11,12 @@ Aggregates:
    versioned JUnit test archive (per ATT-6137).
 2. Bidirectional requirement-to-test coverage matrix via
    tools/verify_requirement_governance.py --coverage-json (per ATT-6122).
-3. SYS.4 System Integration Verification results from
-   docs/releases/<tag>/system_integration_results.json (per ATT-6166).
+3. Optional non-blocking legacy simulator self-test record from
+   docs/releases/<tag>/system_integration_results.json (when present, informational only per ATT-8157 / REQ-PRO-112).
 4. SYS.5 System Verification Protocol sign-off record status from
    docs/releases/<tag>/sys_verification_record.md (per ATT-6167).
-5. Open deviations section explicitly enumerating any failing test, sub-threshold
-   coverage, or missing system evidence under "Deviations Requiring Human Approval".
+5. Open deviations section explicitly enumerating any failing unit/integration test, sub-threshold
+   coverage, or missing SYS.5 evidence under "Deviations Requiring Human Approval".
 """
 
 import argparse
@@ -263,7 +263,8 @@ def collect_coverage_summary(
 
 def collect_sys4_summary(repo_root: str, tag: str) -> Dict[str, Any]:
     """
-    Parses docs/releases/<tag>/system_integration_results.json (ASPICE SYS.4).
+    Optionally reads docs/releases/<tag>/system_integration_results.json as informational
+    legacy simulator telemetry ONLY (non-blocking release gate per REQ-PRO-112 / ATT-8157).
     """
     sys4_rel_path = os.path.join("docs", "releases", tag, "system_integration_results.json")
     sys4_path = os.path.join(repo_root, sys4_rel_path)
@@ -271,10 +272,14 @@ def collect_sys4_summary(repo_root: str, tag: str) -> Dict[str, Any]:
     if not os.path.isfile(sys4_path):
         return {
             "available": False,
+            "blocking": False,
             "path": sys4_rel_path,
-            "deviations": [
-                f"SYS.4 evidence missing: '{sys4_rel_path}' does not exist (mandatory gate per REQ-PRO-072)."
-            ],
+            "deviations": [],
+            "note": (
+                "No legacy system_integration_results.json present (not required: "
+                "simulator self-tests are non-gating per REQ-PRO-112; app integration "
+                "is verified via INT-SWE-01..08 and AppSmokeAndroidTest)."
+            ),
         }
 
     try:
@@ -283,8 +288,10 @@ def collect_sys4_summary(repo_root: str, tag: str) -> Dict[str, Any]:
     except Exception as e:
         return {
             "available": False,
+            "blocking": False,
             "path": sys4_rel_path,
-            "deviations": [f"SYS.4 evidence corrupted: Could not parse '{sys4_rel_path}': {e}"],
+            "deviations": [],
+            "note": f"Optional legacy simulator JSON unreadable ('{sys4_rel_path}': {e}); ignored as non-gating.",
         }
 
     overall_status = data.get("overall_status", "UNKNOWN")
@@ -295,24 +302,9 @@ def collect_sys4_summary(repo_root: str, tag: str) -> Dict[str, Any]:
     timestamp = data.get("timestamp", "UNKNOWN")
     git_commit = data.get("git_commit", "UNKNOWN")
 
-    deviations: List[str] = []
-    if overall_status != "PASS":
-        deviations.append(
-            f"SYS.4 verification non-pass: Overall status is '{overall_status}' with {failed_cases} failed test cases."
-        )
-    if total_cases < 6:
-        deviations.append(
-            f"SYS.4 suite incomplete: Expected at least 6 test cases (SYS-INT-001..006), found {total_cases}."
-        )
-
-    for case_id, res in test_results.items():
-        if not res.get("passed", False):
-            deviations.append(
-                f"SYS.4 test failure: {case_id} ('{res.get('name', '')}') failed: {res.get('details', '')}"
-            )
-
     return {
         "available": True,
+        "blocking": False,
         "path": sys4_rel_path,
         "overall_status": overall_status,
         "total_cases": total_cases,
@@ -321,7 +313,11 @@ def collect_sys4_summary(repo_root: str, tag: str) -> Dict[str, Any]:
         "timestamp": timestamp,
         "git_commit": git_commit,
         "test_results": test_results,
-        "deviations": deviations,
+        "deviations": [],
+        "note": (
+            "Legacy pure-Python simulator output (informational/non-gating only; "
+            "does not verify Android APK execution per REQ-PRO-112)."
+        ),
     }
 
 
@@ -506,7 +502,7 @@ def render_markdown_summary(
     # Determine gate badges
     unit_gate = "PASS" if not unit_summary.get("deviations") and unit_summary.get("available") else "FAIL"
     cov_gate = "PASS" if not coverage_summary.get("deviations") and coverage_summary.get("available") else "FAIL"
-    sys4_gate = "PASS" if not sys4_summary.get("deviations") and sys4_summary.get("available") else "FAIL"
+    sys4_gate = "INFO / SIMULATOR-ONLY" if sys4_summary.get("available") else "INFO / NON-GATING"
     sys5_gate = "PASS" if not sys5_summary.get("deviations") and sys5_summary.get("available") else "FAIL"
 
     # Coverage stats
@@ -533,7 +529,7 @@ def render_markdown_summary(
         "| :--- | :--- | :--- | :--- | :--- |",
         f"| **Unit & Regression Tests** | ASPICE SWE.6 BP3, BP4 | `{unit_summary.get('archive_path', 'build-evidence/junit-test-results-' + tag + '.zip')}` | {unit_summary.get('passed_tests', 0)}/{unit_summary.get('total_tests', 0)} passed ({unit_summary.get('failed_tests', 0)} failed) | [ {unit_gate} ] |",
         f"| **Traceability Coverage** | ASPICE SWE.1, SWE.6 | `tools/verify_requirement_governance.py` | REQ-TST: {req_tst_pct:.1f}%, TST-Code: {tst_code_pct:.1f}% | [ {cov_gate} ] |",
-        f"| **System Integration (SYS.4)** | ASPICE SYS.4 BP5 | `{sys4_summary.get('path', 'docs/releases/' + tag + '/system_integration_results.json')}` | {sys4_summary.get('passed_cases', 0)}/{sys4_summary.get('total_cases', 0)} tests PASS | [ {sys4_gate} ] |",
+        f"| **Legacy Simulator Record (Non-Gating)** | Developer Simulators (Informational) | `{sys4_summary.get('path') if sys4_summary.get('available') else 'N/A (Not Required)'}` | {str(sys4_summary.get('passed_cases', 0)) + '/' + str(sys4_summary.get('total_cases', 0)) + ' simulator checks (non-gating)' if sys4_summary.get('available') else 'App integration via INT-SWE-01..08 & AppSmokeAndroidTest'} | [ {sys4_gate} ] |",
         f"| **System Protocol (SYS.5)** | ASPICE SYS.5 BP5, BP6 | `{sys5_summary.get('path', 'docs/releases/' + tag + '/sys_verification_record.md')}` | Verdict: {sys5_summary.get('overall_verdict', 'UNKNOWN')}, Sign-off: {'Signed' if (sys5_summary.get('has_signoff') and sys5_summary.get('has_po_attestation')) else 'Incomplete'} | [ {sys5_gate} ] |",
         "",
         "---",
@@ -584,25 +580,30 @@ def render_markdown_summary(
         "",
         "---",
         "",
-        "## 4. System Integration Verification Summary (SYS.4 / ATT-6166)",
+        "## 4. Legacy Simulator Self-Test Record (Informational / Non-Gating, REQ-PRO-112)",
         "",
     ])
 
     if sys4_summary.get("available"):
         lines.extend([
+            "> [!NOTE]",
+            "> **Informational Simulator Artifact Only**: This legacy artifact reflects pure-Python simulator checks only (zero Android APK/emulator execution) and is **not** an ASPICE SYS.4 release gate.",
+            "",
             f"* **Artifact**: [`{sys4_summary['path']}`](../../../{sys4_summary['path']})",
             f"* **Execution Timestamp**: `{sys4_summary.get('timestamp')}`",
             f"* **Baseline Commit**: `{sys4_summary.get('git_commit')}`",
-            f"* **Overall Status**: **{sys4_summary.get('overall_status')}** ({sys4_summary.get('passed_cases')}/{sys4_summary.get('total_cases')} cases passed)",
+            f"* **Recorded Simulator Status**: **{sys4_summary.get('overall_status')}** ({sys4_summary.get('passed_cases')}/{sys4_summary.get('total_cases')} simulator checks; non-gating)",
             "",
-            "| Test Case ID | Description / Interface | Result |",
+            "| Check ID | Description / Simulator Scope | Recorded Simulator Result |",
             "| :--- | :--- | :--- |",
         ])
         for cid, cres in sorted(sys4_summary.get("test_results", {}).items()):
-            verdict = "PASS" if cres.get("passed") else "FAIL"
+            verdict = "SIMULATOR PASS" if cres.get("passed") else "SIMULATOR FAIL"
             lines.append(f"| `{cid}` | {cres.get('name', '')} | [ {verdict} ] |")
     else:
-        lines.append(f"> [!CAUTION]\n> **Missing Evidence**: `{sys4_summary.get('path')}` does not exist. SYS.4 verification is required before release candidate approval.")
+        lines.append(
+            f"> [!NOTE]\n> **No Simulator Artifact Required**: Developer sensor simulator self-tests (`tools/run_simulator_self_tests.py`) are non-gating developer tools. Software integration is verified via `INT-SWE-01..08` (`./gradlew :app:testDebugUnitTest`) and CI `AppSmokeAndroidTest`, while physical sensor/RF integration is gated by hardware-in-the-loop SYS.5 in Section 5."
+        )
 
     lines.extend([
         "",
@@ -638,7 +639,7 @@ def render_markdown_summary(
     if not deviations:
         lines.extend([
             "> [!NOTE]",
-            "> **Zero Open Deviations**: All unit tests, traceability coverage thresholds, system integration simulations (SYS.4), and on-device protocol sign-offs (SYS.5) passed without deviations. Release candidate is approved for distribution.",
+            "> **Zero Open Deviations**: All unit/integration tests (`INT-SWE-01..08`), traceability coverage thresholds, and on-device protocol sign-offs (SYS.5) passed without deviations. Release candidate is approved for distribution.",
         ])
     else:
         lines.extend([

@@ -567,6 +567,7 @@ class PolarVeritySenseOfflineControllerTest {
         assertTrue(result)
         assertFalse(PolarVeritySenseOfflineController.isRecordingArmed())
         assertEquals(3, pairsSlot.captured.size)
+        verify(exactly = 1) { mockWorkoutRepo.addAccumulatedSensorTypes(88L, setOf(SensorType.HR)) }
         val aligned = PolarVeritySenseOfflineController.alignHrSamples(hrRecording, anchorMs)
         assertEquals(
             listOf(
@@ -1107,6 +1108,7 @@ class PolarVeritySenseOfflineControllerTest {
         )
 
         every { mockSamplesDb.hasMissingHeartRateSamples(baseFileName) } returns false
+        every { mockSamplesDb.patchMissingHeartRateSamples(baseFileName, anchorMs, any()) } returns 3
         every { mockSportTypesRepo.ensureSwimSportTypeExists() } returns 101L
 
         val committed = PolarVeritySenseOfflineController.applySwimBackfillAndCommit(
@@ -1142,6 +1144,9 @@ class PolarVeritySenseOfflineControllerTest {
                 25.0,
                 any()
             )
+        }
+        verify(exactly = 1) {
+            mockWorkoutRepo.addAccumulatedSensorTypes(workoutId, setOf(SensorType.HR))
         }
     }
 }

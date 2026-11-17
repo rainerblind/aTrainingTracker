@@ -3,7 +3,7 @@
 **Domain**: `aftermath_periods`  
 **Prefixes**: `PER`, `PERF`, `RAD`, `SPT`  
 **Scope**: Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers.  
-**Total Requirements**: 58
+**Total Requirements**: 59
 
 ---
 
@@ -1697,3 +1697,38 @@
 • *Given* an active multi-sensor overlay on `HR`, `POWER`, or `CADENCE`, *When* scrubbing horizontally across `DISTANCE` or `TIME`, *Then* the vertical marker and header/readout display synchronized values for active overlaid sources in sync with all Workout Details charts.
 
 **Invariants**: `<= 1` named source shows zero overlay UI; `Rule 64` & `Rule 48` preserved; `telemetry_graph_color_SENSOR_CADENCE` reused; zero `WorkoutSamples.db` schema changes; zero emojis across 9 locales (`ATT-5400`).
+
+---
+
+### REQ-PER-043: Safe Eager ViewModel Initialization Order for Periods & Route Clusters (`ATT-8569`) [Verified]
+- **System Requirement(s)**: Derived (SW-only) — Safe eager ViewModel init-order initialization for Periods and Route Clusters
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-PER-051`
+- **Priority**: Critical
+- **Type**: Functional
+- **Verification Method**: Unit, On-Device Manual
+- **Implementation**: `PeriodsViewModel.kt`, `WorkoutClustersViewModel.kt`
+- **Rationale**: In `PeriodsViewModel.kt`, `init` (`ATT-7758` / `608c4e31`) launches a `viewModelScope` coroutine (`Dispatchers.Main.immediate` on Android) collecting `WorkoutRepository.allWorkouts` (`StateFlow`), which emits synchronously during construction and dereferences `_peekedWorkoutDataWithTrack` before its property initializer executes, crashing with `NullPointerException` upon opening the Periods screen (`ATT-8569`). `WorkoutClustersViewModel.kt` exhibits the same latent ordering hazard (`init` before `_peekedWorkoutDataWithTrack`).
+- **Description**:
+  1. *`PeriodsViewModel` Init-Order Safety (`REQ-PER-043.1`)*:
+     - `PeriodsViewModel` SHALL initialize `_peekedWorkoutDataWithTrack` (and all other ViewModel properties referenced inside `init`) prior to executing `init`, so instantiating `PeriodsViewModel` under `Dispatchers.Main.immediate` or `UnconfinedTestDispatcher` with either an empty or populated `WorkoutRepository.allWorkouts` `StateFlow` completes without throwing `NullPointerException`.
+     - Subsequent `allWorkouts` emissions MUST continue reconciling `peekedWorkoutDataWithTrack` in-place while preserving `WorkoutData.workoutName` immutability (`REQ-PER-040.2`).
+  2. *`WorkoutClustersViewModel` Defensive Init-Order Safety (`REQ-PER-043.2`)*:
+     - `WorkoutClustersViewModel` SHALL initialize `_peekedWorkoutDataWithTrack` (and all other ViewModel properties) prior to executing `init` (`refresh()`, `observeClusterMutations()`), preventing `NullPointerException` even when `clusterMutationEvents` emits synchronously at subscription time.
+  3. *Localization Parity*: `N/A - no UI strings`.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: `REQ-PER-040` / `REQ-PER-040.2` (`TST-PER-048`, `ATT-7758`), targeting `PeriodsViewModel.kt` and `WorkoutClustersViewModel.kt`.
+  2. *Historical Origin & Commit Trace*: Introduced in commit `608c4e31` (`ATT-7758`, 2026-11-15) to propagate `RouteCluster` rename/merge/delete/split updates immediately into peek sheet `WorkoutData`.
+  3. *Root Reason for Existing Formulation*: `PeriodsViewModel._peekedWorkoutDataWithTrack` was declared near `selectWorkoutForPeek()` at the bottom of the class while the `allWorkouts` collector `init` block was placed near constructor repositories; `PeriodsViewModelTest` used `StandardTestDispatcher()`, masking synchronous `Dispatchers.Main.immediate` emission.
+  4. *Preservation of Core Invariants*: Preserves 100% of `REQ-PER-040.2` reactive peek reconciliation, `WorkoutData.workoutName` immutability, `collectIgnoringUnstubbedMock` MockK resilience, and `StandardTestDispatcher` test behavior.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `WorkoutRepository.allWorkouts` holds an empty or populated `StateFlow` and `Dispatchers.Main` executes eagerly (`Dispatchers.Main.immediate` / `UnconfinedTestDispatcher`),
+  • *When* `PeriodsViewModel` is instantiated,
+  • *Then* initialization completes without throwing `NullPointerException`, and subsequent `allWorkouts` emissions still reconcile `peekedWorkoutDataWithTrack` without mutating `workoutName`.
+  • *Given* `WorkoutClustersViewModel` is constructed when `clusterMutationEvents` emits eagerly or on `Dispatchers.Main.immediate`,
+  • *When* `init` invokes `refresh()` and `observeClusterMutations()`,
+  • *Then* `_peekedWorkoutDataWithTrack` is already initialized and never throws `NullPointerException`.
+  • *Given* a debug build installed on `emulator-5554`,
+  • *When* opening the app and navigating to the Periods screen,
+  • *Then* the Periods screen renders cleanly without crashing.
+- **Invariants**: `REQ-PER-040.2` peek reconciliation and `workoutName` immutability preserved; zero DB schema, API, or `ANT-Android-SDKs` changes; `Localization Parity: N/A - no UI strings`.

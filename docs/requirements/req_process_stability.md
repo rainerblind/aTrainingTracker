@@ -3,7 +3,7 @@
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Requirements**: 174
+**Total Requirements**: 181
 
 ---
 
@@ -187,10 +187,15 @@
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
-- **Implementation**: `TrackerService.java`, `docs/architecture.md` §4.9
+- **Implementation**: `UnicycleOdometryEkf.kt`, `KinematicAltitudeSlopeEkf.kt`, `SpeedAndLocationDevice_ATTFused.kt`, `docs/architecture.md` §4.9
 - **Rationale**: The estimation loop SHALL use hardware event timestamps and dynamic Delta-T calculation to ensure mathematical robustness against Android CPU jitter.
-- **Description**: The Extended Kalman Filter (EKF) estimation loop SHALL dynamically compute Delta-T from hardware sensor timestamps rather than wall-clock arrival times, bounding Delta-T jitter to <= 2.0 ms across consecutive sensor updates.
-- **Measurement Procedure**: Sensor simulation test harness evaluating synthetic IMU timestamp deltas vs calculated Delta-T under simulated CPU load.
+- **Description**: The Extended Kalman Filter (EKF) estimation loop SHALL dynamically compute Delta-T from hardware sensor timestamps rather than wall-clock arrival times, bounding Delta-T jitter to <= 2.0 ms across consecutive sensor updates and sustaining JVM EKF predict/update cycle latency <= 2.0 ms.
+- **Measurement Procedure**: Measured JVM micro-benchmark executing `UnicycleOdometryEkf` / `KinematicAltitudeSlopeEkf` across synthetic IMU timestamp deltas under thread jitter after JIT warmup, recording measured p95/max latency and delta-T error to `app/build/reports/nfr/nfr_measurements.json`.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: `REQ-NFR-001` (`[Verified]`, `Unit`, `TrackerService.java`) in `docs/requirements/req_process_stability.md`.
+  2. *Historical Origin & Commit Trace*: Introduced via `fb45b2bd` (`ATT-6181`), quantified in `04e67a33` (`ATT-6139`), linked in `0777baa6` (`ATT-6735`).
+  3. *Root Reason for Existing Formulation*: Preserved ASPICE SWE.1/SWE.2 EKF timing budget while `NonFunctionalRequirementsContractTest.kt` only checked doc-string substrings and misattributed EKF to `TrackerService.java`.
+  4. *Preservation of Core Invariants*: Preserves <= 2.0 ms Delta-T budget and mathematical stability while reconciling implementation to `UnicycleOdometryEkf.kt` / `KinematicAltitudeSlopeEkf.kt` / `SpeedAndLocationDevice_ATTFused.kt` and requiring real measured JVM evidence.
 - **Acceptance Criteria (Given-When-Then)**:
   • *Given* high-frequency sensor updates arriving with variable thread scheduling jitter,
   • *When* the EKF estimation loop computes the motion update step,
@@ -202,10 +207,15 @@
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
-- **Implementation**: `TrackerService.java`, `docs/architecture.md` §4.9
+- **Implementation**: `SpeedAndLocationDevice.java`, `SpeedAndLocationDevice_ATTFused.kt`, `docs/architecture.md` §4.9
 - **Rationale**: The system SHALL detect "Not Moving" events via IMU variance and coordinate clustering to prevent stationary "Drunkard's Walk" artifacts.
-- **Description**: When IMU accelerometer variance indicates no motion, the position estimation filter SHALL pin coordinate updates, limiting stationary horizontal drift to < 0.5 m/min.
-- **Measurement Procedure**: Sensor replay harness processing stationary IMU accelerometer and GNSS coordinate records over a 30-minute stationary simulation window.
+- **Description**: When IMU accelerometer variance or stationary deadband indicates no motion, `SpeedAndLocationDevice` SHALL pin coordinate updates, limiting stationary horizontal drift to < 0.5 m/min and unpinning within <= 1.0 s of movement resumption.
+- **Measurement Procedure**: Robolectric replay harness feeding 30 minutes of simulated stationary GNSS jitter + IMU rest updates to `SpeedAndLocationDevice` followed by motion resumption, measuring accumulated drift (m/min), unpin latency (s), and replay runtime.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: `REQ-NFR-002` (`[Verified]`, `Unit`, `TrackerService.java`) in `docs/requirements/req_process_stability.md`.
+  2. *Historical Origin & Commit Trace*: Introduced via `fb45b2bd` (`ATT-6181`), quantified in `04e67a33` (`ATT-6139`), refined in `0777baa6` (`ATT-6735`).
+  3. *Root Reason for Existing Formulation*: Established < 0.5 m/min stationary drift ceiling; originally attributed to `TrackerService.java` and verified only via doc-string checks.
+  4. *Preservation of Core Invariants*: Preserves < 0.5 m/min drift ceiling and <= 1.0 s unpinning while attributing real pinning logic in `SpeedAndLocationDevice.java` and demanding measured replay evidence.
 - **Acceptance Criteria (Given-When-Then)**:
   • *Given* an active recording session with the device stationary and IMU accelerometer variance below stillness threshold,
   • *When* position estimation updates are processed over 30 minutes,
@@ -216,26 +226,36 @@
 - **Tests**: `TST-NFR-003`, `TST-PRO-052`
 - **Priority**: High
 - **Type**: Non-Functional
-- **Verification Method**: Unit
+- **Verification Method**: Integration
 - **Implementation**: `TrackerService.java`, `docs/architecture.md` §4.9
 - **Rationale**: `TrackerService` periodic tick execution latency SHALL NOT exceed 50 ms per 1000 ms cycle (`scheduleAtFixedRate`) on background thread, guaranteeing >= 950 ms idle headroom.
 - **Description**: `TrackerService`'s periodic 1-Hz timer loop scheduled on `mScheduler` SHALL complete all state evaluation, duration accumulation, and notification dispatch within <= 50 ms per tick.
-- **Measurement Procedure**: Android Studio CPU Profiler / System.nanoTime instrumentation measuring tick execution duration over a 1000-cycle recording session.
+- **Measurement Procedure**: Measured Robolectric integration test using `System.nanoTime` instrumentation over >= 200 post-warmup 1-Hz tracking ticks in `TrackerService`, recording p95/p99/max tick duration against the 50 ms budget (1000 ms cycle).
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: `REQ-NFR-003` (`[Verified]`, `Unit`, `TrackerService.java`) in `docs/requirements/req_process_stability.md`.
+  2. *Historical Origin & Commit Trace*: Introduced via `fb45b2bd` (`ATT-6181`), quantified in `04e67a33` (`ATT-6139`), linked in `0777baa6` (`ATT-6735`).
+  3. *Root Reason for Existing Formulation*: Bounded 1-Hz `mScheduler` tick latency to < 50 ms per 1000 ms cycle; previously asserted only via markdown substring matching.
+  4. *Preservation of Core Invariants*: Preserves 50 ms tick ceiling, 1000 ms period, and >= 950 ms headroom while upgrading verification to measured `Integration` timing.
 - **Acceptance Criteria (Given-When-Then)**:
   • *Given* an active workout recording session in `TrackerService`,
   • *When* periodic 1-Hz ticks execute on `mScheduler`,
   • *Then* execution duration for 99% of ticks SHALL be < 50 ms, leaving >= 950 ms idle headroom per 1000 ms cycle.
 - **Invariants**: Timer period remains strictly 1000 ms; zero dropped ticks.
 
-### REQ-NFR-004: CPU Consumption Ceiling [Verified]
+### REQ-NFR-004: CPU Consumption Ceiling [Implemented]
 - **Tests**: `TST-NFR-004`, `TST-PRO-052`
 - **Priority**: High
 - **Type**: Non-Functional
-- **Verification Method**: Unit
+- **Verification Method**: On-Device Manual
 - **Implementation**: `TrackerService.java`, `docs/architecture.md` §4.9
 - **Rationale**: `TrackerService` background tracking CPU consumption SHALL NOT exceed 5% of a single core on mid-tier reference hardware, preventing thermal throttling and CPU starvation.
 - **Description**: Background telemetry processing, sensor calculation, and state management in `TrackerService` SHALL NOT exceed 5.0% single-core CPU utilization on mid-tier reference hardware.
-- **Measurement Procedure**: Android Studio CPU Profiler / `simpleperf` CPU trace during 30 minutes of continuous background tracking with GPS and 2 BLE sensors connected.
+- **Measurement Procedure**: Attested On-Device Manual Protocol: Android Studio CPU Profiler / `simpleperf` + `adb shell dumpsys cpuinfo` trace over 30 minutes of continuous background tracking on reference Pixel hardware (screen off, GPS + 2 BLE sensors), recorded in an attested manual report (never simulated in JVM).
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: `REQ-NFR-004` (`[Verified]`, `Unit`, `TrackerService.java`) in `docs/requirements/req_process_stability.md`.
+  2. *Historical Origin & Commit Trace*: Introduced via `fb45b2bd` (`ATT-6181`), quantified in `04e67a33` (`ATT-6139`), linked in `0777baa6` (`ATT-6735`).
+  3. *Root Reason for Existing Formulation*: Marked `[Verified]` under `Unit` despite requiring physical ARM SoC CPU profiling impossible on host JVM.
+  4. *Preservation of Core Invariants*: Preserves < 5.0% single-core CPU ceiling and full calculation fidelity while honestly reclassifying to `On-Device Manual` (`[Implemented]` until physical Pixel run is attested).
 - **Acceptance Criteria (Given-When-Then)**:
   • *Given* `TrackerService` tracking in background with screen off and active GNSS + BLE sensors,
   • *When* measuring CPU utilization over a 30-minute interval on reference hardware,
@@ -246,26 +266,36 @@
 - **Tests**: `TST-NFR-005`, `TST-PRO-052`
 - **Priority**: High
 - **Type**: Non-Functional
-- **Verification Method**: Unit
-- **Implementation**: `TrackerService.java`, `docs/architecture.md` §4.9
+- **Verification Method**: Integration
+- **Implementation**: `TrackerService.java`, `LiveWorkoutSession.java`, `docs/architecture.md` §4.9
 - **Rationale**: `TrackerService` dedicated heap allocation SHALL NOT exceed 40 MB, preventing GC pressure and OutOfMemoryError during 12+ hour endurance recordings.
-- **Description**: Dedicated memory retained by `TrackerService` and its active state accumulators SHALL NOT exceed 40 MB heap, and total application peak heap RAM SHALL NOT exceed 150 MB during multi-hour endurance tracking sessions with map rendering.
-- **Measurement Procedure**: Android Studio Memory Profiler / Android heap dump (`am dumpheap`) analyzed for retained memory after 2 hours of synthetic 1-Hz telemetry recording.
+- **Description**: Dedicated memory retained by `TrackerService` and `LiveWorkoutSession` accumulators SHALL NOT exceed 40 MB heap, and total application peak heap RAM SHALL NOT exceed 150 MB during multi-hour endurance tracking sessions with map rendering.
+- **Measurement Procedure**: Measured JVM/Robolectric endurance replay test recording 3,600+ 1-Hz telemetry samples into `LiveWorkoutSession` / `TrackerService`, forcing GC and measuring live retained heap delta (`Runtime` used heap MB) against the 40 MB / 150 MB ceilings.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: `REQ-NFR-005` (`[Verified]`, `Unit`, `TrackerService.java`) in `docs/requirements/req_process_stability.md`.
+  2. *Historical Origin & Commit Trace*: Introduced via `fb45b2bd` (`ATT-6181`), quantified in `04e67a33` (`ATT-6139`), linked in `0777baa6` (`ATT-6735`).
+  3. *Root Reason for Existing Formulation*: Set 40 MB dedicated / 150 MB peak heap budgets to prevent OOM on endurance rides, but checked only doc strings and omitted `LiveWorkoutSession.java`.
+  4. *Preservation of Core Invariants*: Preserves 40 MB / 150 MB ceilings and zero-leak lifecycle invariant while adding `LiveWorkoutSession.java` attribution and measured heap-delta verification.
 - **Acceptance Criteria (Given-When-Then)**:
   • *Given* an ongoing tracking session recording 1-Hz telemetry for 2+ hours,
-  • *When* inspecting JVM heap allocation via memory dump,
-  • *Then* dedicated `TrackerService` retained heap SHALL be < 40 MB, and total app heap RAM SHALL NOT exceed 150 MB.
+  • *When* inspecting JVM heap allocation after GC,
+  • *Then* dedicated `TrackerService` / `LiveWorkoutSession` retained heap delta SHALL be < 40 MB, and total app heap RAM SHALL NOT exceed 150 MB.
 - **Invariants**: Zero memory leaks across workout start, pause, resume, and stop lifecycles.
 
-### REQ-NFR-006: Tracking Battery Drain Ceiling [Verified]
+### REQ-NFR-006: Tracking Battery Drain Ceiling [Implemented]
 - **Tests**: `TST-NFR-006`, `TST-PRO-052`
 - **Priority**: High
 - **Type**: Non-Functional
-- **Verification Method**: Unit
+- **Verification Method**: On-Device Manual
 - **Implementation**: `TrackerService.java`, `docs/architecture.md` §4.9
 - **Rationale**: Total background battery consumption during active recording with screen off, active GNSS, and connected BLE/ANT+ sensors SHALL NOT exceed 5%/h, and screen-on tracking with cockpit map rendering SHALL NOT exceed 12%/h.
 - **Description**: Active recording power drain SHALL NOT exceed 5.0%/h in background mode (screen off, GNSS 1 Hz, BLE/ANT+ connected) and SHALL NOT exceed 12.0%/h in foreground cockpit mode (screen on at 50% brightness, map rendering at 60 FPS).
-- **Measurement Procedure**: Android Battery Historian / Android Studio Energy Profiler (`dumpsys batterystats`) over a 60-minute active tracking benchmark on standard reference hardware.
+- **Measurement Procedure**: Attested On-Device Manual Protocol: Android Battery Historian / `adb shell dumpsys batterystats` over 60-minute screen-off and 60-minute screen-on (50% brightness) sessions on physical Pixel hardware, recorded in an attested manual report.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: `REQ-NFR-006` (`[Verified]`, `Unit`, `TrackerService.java`) in `docs/requirements/req_process_stability.md`.
+  2. *Historical Origin & Commit Trace*: Introduced via `fb45b2bd` (`ATT-6181`), quantified in `04e67a33` (`ATT-6139`), linked in `0777baa6` (`ATT-6735`).
+  3. *Root Reason for Existing Formulation*: Falsely claimed `Unit` `[Verified]` for battery drain percentages that depend strictly on physical radio/display/battery hardware.
+  4. *Preservation of Core Invariants*: Preserves 5.0%/h and 12.0%/h discharge ceilings and 1-Hz sampling invariant while reclassifying to `On-Device Manual` (`[Implemented]` until physical Pixel run is attested).
 - **Acceptance Criteria (Given-When-Then)**:
   • *Given* an active workout recording session with GNSS and paired sensors,
   • *When* tracked for 60 minutes with screen off,
@@ -279,15 +309,20 @@
 - **Tests**: `TST-NFR-007`, `TST-PRO-052`
 - **Priority**: High
 - **Type**: Non-Functional
-- **Verification Method**: Unit
+- **Verification Method**: Integration
 - **Implementation**: `BANALService.java`, `ProxySensor.java`, `docs/architecture.md` §4.9
 - **Rationale**: Sensor ingestion dispatch latency from hardware event receipt to subscriber notification across registered sensors SHALL NOT exceed 25 ms.
-- **Description**: The elapsed time from HAL callback receipt (`onCharacteristicChanged` / ANT+ broadcast) to delivery at `TrackerService` / UI subscriber StateFlow SHALL NOT exceed 25 ms for 99% of events.
-- **Measurement Procedure**: Synthetic sensor event benchmark measuring timestamp delta between HAL injection and subscriber callback.
+- **Description**: The elapsed time from HAL callback receipt (`onCharacteristicChanged` / ANT+ broadcast) to delivery at `BANALService` / `ProxySensor` subscribers SHALL NOT exceed 25 ms for 99% of events.
+- **Measurement Procedure**: Measured Robolectric integration benchmark dispatching >= 1,000 post-warmup sensor events through `ProxySensor` / `BANALService`, recording p95/p99/max elapsed dispatch latency against 25 ms.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: `REQ-NFR-007` (`[Verified]`, `Unit`, `BANALService.java`, `ProxySensor.java`) in `docs/requirements/req_process_stability.md`.
+  2. *Historical Origin & Commit Trace*: Introduced via `fb45b2bd` (`ATT-6181`), quantified in `04e67a33` (`ATT-6139`), linked in `0777baa6` (`ATT-6735`).
+  3. *Root Reason for Existing Formulation*: Established 25 ms sensor dispatch ceiling; previously asserted only via doc-string substring presence.
+  4. *Preservation of Core Invariants*: Preserves < 25 ms p99 dispatch ceiling and zero-drop concurrency while upgrading verification to measured `Integration` timing.
 - **Acceptance Criteria (Given-When-Then)**:
   • *Given* incoming BLE or ANT+ sensor packets,
-  • *When* processed through `BANALService` and dispatched to subscribers,
-  • *Then* end-to-end dispatch latency SHALL be < 25 ms.
+  • *When* processed through `BANALService` and dispatched via `ProxySensor`,
+  • *Then* end-to-end dispatch latency SHALL be < 25 ms for >= 99% of events.
 - **Invariants**: Thread safety across concurrent sensor streams; zero dropped packets.
 
 ### REQ-NFR-008: Sensor Connection Failover Timeout [Verified]
@@ -295,10 +330,15 @@
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
-- **Implementation**: `BANALService.java`, `ProxySensor.java`, `docs/architecture.md` §4.9
+- **Implementation**: `BTLERadarDevice.java`, `ANTBikeRadarDevice.kt`, `MyBTLEDevice.java`, `BANALService.java`, `ProxySensor.java`, `docs/architecture.md` §4.9
 - **Rationale**: The sensor reconnection and failover window upon signal dropout SHALL NOT exceed 3.5 s before initiating automatic reconnection or source failover.
-- **Description**: When a connected sensor drops signal or fails to emit packets within expected timeout, `BANALService` SHALL initiate reconnect or failover to secondary source within <= 3.5 s.
-- **Measurement Procedure**: Mock BLE/ANT+ disconnection simulation measuring elapsed duration until failover/reconnection state transition.
+- **Description**: When a connected sensor drops signal or fails to emit packets within expected timeout, device watchdogs (`WATCHDOG_TIMEOUT_MS = 3500L`) and `ProxySensor` / `MyBTLEDevice` SHALL initiate reconnect or failover to secondary source within <= 3.5 s.
+- **Measurement Procedure**: Measured Robolectric/JVM watchdog & failover test simulating abrupt packet starvation on radar/BLE/proxy sensors and measuring elapsed Looper/scheduler time until failover/reconnect transition (`<= 3500 ms`).
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: `REQ-NFR-008` (`[Verified]`, `Unit`, `BANALService.java`, `ProxySensor.java`) in `docs/requirements/req_process_stability.md`.
+  2. *Historical Origin & Commit Trace*: Introduced via `fb45b2bd` (`ATT-6181`), quantified in `04e67a33` (`ATT-6139`), linked in `0777baa6` (`ATT-6735`).
+  3. *Root Reason for Existing Formulation*: Specified 3.5 s failover window, omitting `BTLERadarDevice.java`, `ANTBikeRadarDevice.kt`, and `MyBTLEDevice.java` where watchdog/reconnect timers execute.
+  4. *Preservation of Core Invariants*: Preserves <= 3.5 s timeout and §4.8 priority hierarchy while reconciling device symbols and requiring measured failover latency.
 - **Acceptance Criteria (Given-When-Then)**:
   • *Given* an active primary sensor that abruptly ceases transmitting data packets,
   • *When* signal silence exceeds the timeout threshold,
@@ -309,29 +349,39 @@
 - **Tests**: `TST-NFR-009`, `TST-PRO-052`
 - **Priority**: High
 - **Type**: Non-Functional
-- **Verification Method**: Unit
+- **Verification Method**: Integration
 - **Implementation**: `TrackerService.java`, `docs/architecture.md` §4.9
-- **Rationale**: `PowerManager.PARTIAL_WAKE_LOCK` (`aTrainingTracker:TrackingLock`) SHALL be acquired solely by `TrackerService` upon tracking start and MUST be released immediately upon tracking stop.
-- **Description**: `PARTIAL_WAKE_LOCK` (`aTrainingTracker:TrackingLock`) SHALL be held strictly during active `TRACKING` state (`TrackerService.java:842-857`); zero WakeLocks SHALL remain acquired when tracking is paused, stopped, or discarded.
-- **Measurement Procedure**: PowerManager mock verification unit test and Android `dumpsys power` inspection across full tracking lifecycle.
+- **Rationale**: `PowerManager.PARTIAL_WAKE_LOCK` (`aTrainingTracker:TrackingLock`) SHALL be acquired solely by `TrackerService` upon tracking start and MUST be released immediately upon tracking stop/destroy finalization.
+- **Description**: `PARTIAL_WAKE_LOCK` (`aTrainingTracker:TrackingLock`) SHALL be held during active `TrackerService` recording sessions (including `PAUSED` so 1-Hz `TIME_TOTAL` and auto-resume evaluation continue while screen off per `REQ-TRK-018`) and SHALL be released immediately upon `ACTION_STOP` / `onDestroy` finalization with zero leaked WakeLocks.
+- **Measurement Procedure**: Measured Robolectric `ShadowPowerManager` lifecycle test driving `TrackerService` (`onCreate` -> `onStartCommand(START_NORMAL)` -> `PAUSED` -> `TRACKING` -> `ACTION_STOP` -> `onDestroy`), verifying `isHeld()` transitions and measuring release timing (`ms`).
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: `REQ-NFR-009` (`[Verified]`, `Unit`, `TrackerService.java`) in `docs/requirements/req_process_stability.md`.
+  2. *Historical Origin & Commit Trace*: Introduced via `fb45b2bd` (`ATT-6181`), quantified in `04e67a33` (`ATT-6139`), attributed to `TrackerService` in `0777baa6` (`ATT-6735`), reconciled with `TrackerService` pause/auto-resume behavior in `ATT-8158`.
+  3. *Root Reason for Existing Formulation*: Guarded against battery-draining WakeLock leaks on stop, while earlier draft wording overlooked that `TrackerService` keeps the WakeLock during `PAUSED` for `TIME_TOTAL` (`SCRUM-97`) and `evaluateAutoPauseTick` auto-resume (`REQ-TRK-018`).
+  4. *Preservation of Core Invariants*: Preserves strict `aTrainingTracker:TrackingLock` scoping in `TrackerService.java`, preserves pause-state auto-resume/total-time continuity, and backs stop release with authentic Robolectric `ShadowPowerManager` lifecycle measurements.
 - **Acceptance Criteria (Given-When-Then)**:
-  • *Given* `TrackerService` in idle or stopped state,
+  • *Given* `TrackerService` prior to start or after `ACTION_STOP` / `onDestroy`,
   • *When* checking `PowerManager.WakeLock.isHeld()`,
-  • *Then* it SHALL return `false`.
-  • *Given* `TrackerService` transitioning from `TRACKING` to `STOPPED`,
-  • *When* stop tracking executes,
-  • *Then* `aTrainingTracker:TrackingLock` SHALL be released immediately with 0 active WakeLock allocations.
-- **Invariants**: Background tracking service must not be terminated by Android OS while recording.
+  • *Then* it SHALL return `false` with 0 active WakeLock allocations.
+  • *Given* `TrackerService` in active `TRACKING` or `PAUSED` recording session,
+  • *When* checking `PowerManager.WakeLock.isHeld()`,
+  • *Then* `aTrainingTracker:TrackingLock` SHALL remain held until `ACTION_STOP` / `onDestroy` finalization completes, and then release immediately.
+- **Invariants**: Background tracking service must not be terminated by Android OS while recording or auto-pause monitoring.
 
 ### REQ-NFR-010: Database Sample Write Latency Budget [Verified]
 - **Tests**: `TST-NFR-010`, `TST-PRO-052`
 - **Priority**: High
 - **Type**: Non-Functional
-- **Verification Method**: Unit
+- **Verification Method**: Integration
 - **Implementation**: `TrackerService.java`, `WorkoutSamplesDatabaseManager.java`, `docs/architecture.md` §4.9
 - **Rationale**: Live 1-Hz sample insertion latency in `WorkoutSamplesDatabaseManager` SHALL NOT exceed 30 ms and MUST execute strictly off the main thread via `TrackerService`'s `mScheduler` / `mDbExecutor`.
-- **Description**: Each live 1-Hz telemetry sample write to SQLite in `WorkoutSamplesDatabaseManager` SHALL execute within <= 30 ms on `mScheduler` / `mDbExecutor` with zero main-thread disk I/O.
-- **Measurement Procedure**: SQLite insertion benchmark measuring `WorkoutSamplesDatabaseManager.addSampleToDb()` duration over 3,600 consecutive inserts under WAL mode.
+- **Description**: Each live 1-Hz telemetry sample write to SQLite via `WorkoutSamplesDatabaseManager` (`WorkoutSamplesDbHelper` / `SQLiteDatabase.insertOrThrow`) SHALL execute within <= 30 ms on `mScheduler` / `mDbExecutor` with zero main-thread disk I/O.
+- **Measurement Procedure**: Measured Robolectric real-SQLite WAL benchmark inserting >= 1,000 consecutive 1-Hz samples off the main thread, recording p95/p99/max write latency against 30 ms and asserting non-main-thread execution.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: `REQ-NFR-010` (`[Verified]`, `Unit`, `WorkoutSamplesDatabaseManager.addSampleToDb()`) in `docs/requirements/req_process_stability.md`.
+  2. *Historical Origin & Commit Trace*: Introduced via `fb45b2bd` (`ATT-6181`), quantified in `04e67a33` (`ATT-6139`), reconciled to `mScheduler`/`mDbExecutor` in `0777baa6` (`ATT-6735`).
+  3. *Root Reason for Existing Formulation*: Cited nonexistent `addSampleToDb()` symbol and checked only doc-string tokens instead of measuring real SQLite write latency.
+  4. *Preservation of Core Invariants*: Preserves <= 30 ms write budget, WAL concurrency, and off-main-thread `mScheduler` / `mDbExecutor` invariant while replacing nonexistent symbol with real SQLite APIs and measured benchmarks.
 - **Acceptance Criteria (Given-When-Then)**:
   • *Given* live 1-Hz telemetry samples generated during active tracking,
   • *When* inserted into SQLite via `WorkoutSamplesDatabaseManager`,
@@ -342,26 +392,36 @@
 - **Tests**: `TST-NFR-011`, `TST-PRO-052`
 - **Priority**: High
 - **Type**: Non-Functional
-- **Verification Method**: Unit
+- **Verification Method**: Integration
 - **Implementation**: `WorkoutSamplesDatabaseManager.java`, `docs/architecture.md` §4.9
 - **Rationale**: Workout samples SQLite storage growth rate SHALL NOT exceed ~360 KB/h at 1-Hz telemetry recording (~100 bytes/sample, ~3.6 MB for a 10-hour activity).
 - **Description**: SQLite database storage consumption for workout sample records SHALL NOT exceed an average rate of 360 KB per hour of continuous 1-Hz recording (bounding a 10-hour session to <= 3.6 MB).
-- **Measurement Procedure**: Integration test measuring database file size delta on disk before and after inserting 3,600 consecutive 1-Hz telemetry rows.
+- **Measurement Procedure**: Measured Robolectric SQLite integration test creating a workout sample table, inserting 3,600 consecutive 1-Hz multi-sensor rows, checkpointing WAL, and measuring exact `.db` file size delta in KB/h.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: `REQ-NFR-011` (`[Verified]`, `Unit`, `WorkoutSamplesDatabaseManager.java`) in `docs/requirements/req_process_stability.md`.
+  2. *Historical Origin & Commit Trace*: Introduced via `fb45b2bd` (`ATT-6181`), quantified in `04e67a33` (`ATT-6139`), linked in `0777baa6` (`ATT-6735`).
+  3. *Root Reason for Existing Formulation*: Bounded storage expansion for 10+ hour workouts, but lacked an automated test measuring real SQLite file byte growth.
+  4. *Preservation of Core Invariants*: Preserves <= 360 KB/h growth budget and full sensor channel persistence while requiring measured SQLite file-size delta verification.
 - **Acceptance Criteria (Given-When-Then)**:
   • *Given* a 1-hour workout recorded at 1-Hz telemetry frequency (3,600 samples),
   • *When* database file size expansion is measured,
   • *Then* storage growth SHALL NOT exceed 360 KB/h (~100 bytes per sample).
 - **Invariants**: Complete sensor channel persistence without truncating required telemetry fields.
 
-### REQ-NFR-012: Cockpit Frame Render Budget [Verified]
+### REQ-NFR-012: Cockpit Frame Render Budget [Implemented]
 - **Tests**: `TST-NFR-012`, `TST-PRO-052`
 - **Priority**: High
 - **Type**: Non-Functional
-- **Verification Method**: Unit
+- **Verification Method**: On-Device Manual
 - **Implementation**: `SensorGridScreen.kt`, `docs/architecture.md` §4.9
 - **Rationale**: Live cockpit telemetry frame recomposition and rendering in `SensorGridScreen` SHALL NOT exceed 16.6 ms per frame (sustaining 60 FPS without dropped frames).
 - **Description**: Jetpack Compose UI recomposition and draw passes for live telemetry sensor cards in `SensorGridScreen` SHALL complete within <= 16.6 ms per frame, sustaining >= 60 FPS.
-- **Measurement Procedure**: AndroidX Macrobenchmark `FrameTimingMetric` measuring frame render durations during active live telemetry streaming.
+- **Measurement Procedure**: Attested On-Device Manual Protocol: AndroidX Macrobenchmark `FrameTimingMetric` / `adb shell dumpsys gfxinfo` on physical Pixel hardware during 60 s live telemetry cockpit rendering, recorded in an attested manual report.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: `REQ-NFR-012` (`[Verified]`, `Unit`, `SensorGridScreen.kt`) in `docs/requirements/req_process_stability.md`.
+  2. *Historical Origin & Commit Trace*: Introduced via `fb45b2bd` (`ATT-6181`), quantified in `04e67a33` (`ATT-6139`), linked in `0777baa6` (`ATT-6735`).
+  3. *Root Reason for Existing Formulation*: Claimed `[Verified]` under `Unit` despite SurfaceFlinger/GPU frame timing requiring real hardware rendering.
+  4. *Preservation of Core Invariants*: Preserves < 16.6 ms (60 FPS) render budget and UI precision while reclassifying to `On-Device Manual` (`[Implemented]` until physical Pixel run is attested).
 - **Acceptance Criteria (Given-When-Then)**:
   • *Given* `SensorGridScreen` displaying live updating telemetry fields at 1 Hz,
   • *When* Compose frames are rendered on reference device,
@@ -373,10 +433,15 @@
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
-- **Implementation**: `ATrainingTrackerMap.kt`, `docs/architecture.md` §4.9
+- **Implementation**: `MapLayers.kt`, `ATrainingTrackerMap.kt`, `docs/architecture.md` §4.9
 - **Rationale**: Dynamic polyline path geometry update latency on the live map canvas upon receiving location updates SHALL NOT exceed 30 ms.
-- **Description**: Updating the live GPS track polyline geometry and triggering map canvas re-render upon receiving a new GPS coordinate fix SHALL execute within <= 30 ms.
-- **Measurement Procedure**: Map canvas benchmark measuring time delta from location update ingestion to polyline layer geometry update completion.
+- **Description**: Updating the live GPS track polyline geometry via `IncrementalTrackDecimator` / `decimateLiveTrack` (`MapLayers.kt`) for `ATrainingTrackerMap` upon receiving a new GPS coordinate fix SHALL execute within <= 30 ms.
+- **Measurement Procedure**: Measured JVM benchmark running `IncrementalTrackDecimator` / `decimateLiveTrack` across a 10,000-point track and incremental point appends after warmup, recording p95/max update latency against 30 ms.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: `REQ-NFR-013` (`[Verified]`, `Unit`, `ATrainingTrackerMap.kt`) in `docs/requirements/req_process_stability.md`.
+  2. *Historical Origin & Commit Trace*: Introduced via `fb45b2bd` (`ATT-6181`), quantified in `04e67a33` (`ATT-6139`), linked in `0777baa6` (`ATT-6735`).
+  3. *Root Reason for Existing Formulation*: Bounded live track geometry updates to < 30 ms, but cited only `ATrainingTrackerMap.kt` while incremental decimation lives in `MapLayers.kt` (`IncrementalTrackDecimator`).
+  4. *Preservation of Core Invariants*: Preserves < 30 ms update budget, 10,000-point scale, and simplify/LOD behavior while attributing `MapLayers.kt` and requiring measured JVM timings.
 - **Acceptance Criteria (Given-When-Then)**:
   • *Given* an active map view displaying a live GPS track of up to 10,000 points,
   • *When* a new location point is appended to the path,
@@ -388,81 +453,100 @@
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
-- **Implementation**: `TrackingTabsViewModel.kt`, `docs/architecture.md` §4.9
-- **Rationale**: Telemetry StateFlow emissions from `TrackingTabsViewModel` to cockpit tabs SHALL be conflated to 1 Hz, preventing UI recomposition churn during high-frequency sensor updates.
-- **Description**: Live sensor metrics updated at varying frequencies (e.g., 4 Hz wheel speed, 2 Hz cadence, 1 Hz GPS) SHALL be conflated to a maximum UI emission rate of 1.0 Hz in `TrackingTabsViewModel`.
-- **Measurement Procedure**: Coroutine Turbine / TestScope unit test verifying emission count over simulated multi-sensor streams.
+- **Implementation**: `BANALServiceRepository.kt`, `TrackingTabsViewModel.kt`, `docs/architecture.md` §4.9
+- **Rationale**: Telemetry StateFlow emissions from `BANALServiceRepository` / `TrackingTabsViewModel` to cockpit tabs SHALL be conflated/throttled to 1 Hz, preventing UI recomposition churn during high-frequency sensor updates.
+- **Description**: Live sensor metrics updated at varying frequencies (e.g., 4 Hz wheel speed, 2 Hz cadence, 1 Hz GPS) SHALL be polled/emitted to UI `StateFlow`s (`BANALServiceRepository.allFilteredSensorData`, `TrackingTabsViewModel.currentAltitude`) at a maximum UI emission rate of 1.0 Hz.
+- **Measurement Procedure**: Measured coroutine `TestScope` unit test driving high-frequency (> 4 Hz) sensor changes and observing emissions over a 5.0-second virtual window, recording actual emission count (`<= 5` distinct 1-Hz ticks) and interval.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: `REQ-NFR-014` (`[Verified]`, `Unit`, `TrackingTabsViewModel.uiState`) in `docs/requirements/req_process_stability.md`.
+  2. *Historical Origin & Commit Trace*: Introduced via `fb45b2bd` (`ATT-6181`), quantified in `04e67a33` (`ATT-6139`), linked in `0777baa6` (`ATT-6735`).
+  3. *Root Reason for Existing Formulation*: Referenced nonexistent `TrackingTabsViewModel.uiState` while real 1-Hz `delay(1000)` throttling lives in `BANALServiceRepository.kt` (`allFilteredSensorData`).
+  4. *Preservation of Core Invariants*: Preserves 1.0 Hz maximum emission rate and freshest-value reflection while correcting symbols to `BANALServiceRepository.kt` / `TrackingTabsViewModel.kt` and enforcing measured coroutine tests.
 - **Acceptance Criteria (Given-When-Then)**:
   • *Given* sensor inputs updating at high frequency (> 4 Hz),
-  • *When* observing `TrackingTabsViewModel.uiState` flow over 5.0 seconds,
-  • *Then* no more than 5 distinct emissions SHALL occur (conflated to 1.0 Hz).
+  • *When* observing `BANALServiceRepository.allFilteredSensorData` / `TrackingTabsViewModel` streams over 5.0 seconds,
+  • *Then* no more than 5 distinct periodic UI emissions SHALL occur (throttled to 1.0 Hz).
 - **Invariants**: UI metrics must always reflect the freshest sensor values at the 1-Hz tick boundary.
 
-### REQ-NFR-015: Cold Start Startup Latency Budget [Verified]
+### REQ-NFR-015: Cold Start Startup Latency Budget [Implemented]
 - **Tests**: `TST-NFR-015`
 - **Priority**: High
 - **Type**: Non-Functional
-- **Verification Method**: Unit
+- **Verification Method**: On-Device Manual
 - **Implementation**: `MainActivityWithNavigation.kt`, `docs/architecture.md` §4.9
 - **Rationale**: App startup responsiveness directly affects athlete experience when initiating workout recording; cold start latency to interactive dashboard SHALL NOT exceed 1500 ms.
 - **Description**: Application cold startup from process creation to initial interactive frame display (Time-to-Initial-Display / TTID) SHALL NOT exceed 1200 ms, and Time-to-Full-Display (TTFD) SHALL NOT exceed 1500 ms on mid-tier reference hardware (Android 12+).
-- **Measurement Procedure**: AndroidX Macrobenchmark `StartupBenchmark` with `StartupMode.COLD` measuring `startupTimingMetric`, and Google Play Console Android Vitals cold start percentiles.
+- **Measurement Procedure**: Attested On-Device Manual Protocol: AndroidX Macrobenchmark `StartupMode.COLD` / `adb shell am start -W` measuring TTID (`TotalTime`) and TTFD across >= 5 cold launches on physical Pixel hardware, plus Play Vitals cold start percentiles.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: `REQ-NFR-015` (`[Verified]`, `Unit`, `MainActivityWithNavigation.kt`) in `docs/requirements/req_process_stability.md`.
+  2. *Historical Origin & Commit Trace*: Introduced in `04e67a33` (`ATT-6139`) under Epic `ATT-6142`.
+  3. *Root Reason for Existing Formulation*: Falsely claimed `Unit` `[Verified]` for cold-start ART process initialization and WindowManager frame display times impossible in host JVM tests.
+  4. *Preservation of Core Invariants*: Preserves TTID <= 1200 ms and TTFD <= 1500 ms targets while reclassifying to `On-Device Manual` (`[Implemented]` until physical Pixel run is attested).
 - **Acceptance Criteria (Given-When-Then)**:
   • *Given* a cold process launch of the application on reference device,
   • *When* measuring startup timing from `Application.onCreate` to interactive dashboard rendering,
   • *Then* TTID SHALL be <= 1200 ms and TTFD SHALL be <= 1500 ms.
 - **Invariants**: Database schema migrations and essential initialization must complete safely without main-thread ANR.
 
-### REQ-NFR-016: GNSS Horizontal Trajectory Accuracy [Verified]
+### REQ-NFR-016: GNSS Horizontal Trajectory Accuracy [Implemented]
 - **Tests**: `TST-NFR-016`
 - **Priority**: High
 - **Type**: Non-Functional
-- **Verification Method**: Unit
-- **Implementation**: `MySensorManager.java`, `docs/architecture.md` §4.8
+- **Verification Method**: On-Device Manual
+- **Implementation**: `MySensorManager.java`, `SpeedAndLocationDevice_ATTFused.kt`, `docs/architecture.md` §4.8
 - **Rationale**: Workout distance, pace, and segment matching rely on accurate GNSS trajectory recording; horizontal position error relative to reference tracks SHALL be bounded.
 - **Description**: GNSS location recording under open-sky conditions SHALL achieve a 95th-percentile horizontal position error <= 5.0 m and cross-track root-mean-square error (RMSE) <= 3.0 m relative to a surveyed ground-truth reference trajectory.
-- **Measurement Procedure**: Track replay harness evaluating recorded coordinates against RTK/surveyed reference track with orthogonal projection error analysis; Android GNSS Analysis Tool.
+- **Measurement Procedure**: Attested On-Device Manual Protocol: Open-sky field track acquisition on physical Pixel hardware compared against surveyed RTK/ground-truth reference polyline via orthogonal projection error analysis (`GnssLogger` / exported GPX).
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: `REQ-NFR-016` (`[Verified]`, `Unit`, `MySensorManager.java`) in `docs/requirements/req_process_stability.md`.
+  2. *Historical Origin & Commit Trace*: Introduced in `04e67a33` (`ATT-6139`) under Epic `ATT-6142`.
+  3. *Root Reason for Existing Formulation*: Claimed `Unit` `[Verified]` for open-sky RF GNSS accuracy that requires physical antenna/constellation field measurement.
+  4. *Preservation of Core Invariants*: Preserves <= 5.0 m p95 and <= 3.0 m RMSE bounds and double-precision accumulation while adding `SpeedAndLocationDevice_ATTFused.kt` and reclassifying to `On-Device Manual`.
 - **Acceptance Criteria (Given-When-Then)**:
   • *Given* a recorded workout track acquired under open-sky conditions,
   • *When* compared against a surveyed ground-truth reference track via orthogonal projection,
   • *Then* 95% of location fixes SHALL have horizontal error <= 5.0 m, and cross-track RMSE SHALL be <= 3.0 m.
 - **Invariants**: Speed and distance accumulators maintain raw double-precision meters without artificial clamping.
 
-### REQ-NFR-017: Production Crash-Free Session Stability [Verified]
+### REQ-NFR-017: Production Crash-Free Session Stability [Implemented]
 - **Tests**: `TST-NFR-017`
 - **Priority**: High
 - **Type**: Non-Functional
-- **Verification Method**: Unit
-- **Implementation**: `TrainingApplication.kt`, `docs/architecture.md`
+- **Verification Method**: On-Device Manual
+- **Implementation**: `TrainingApplication.java`, `docs/architecture.md`
 - **Rationale**: Workout recording reliability requires zero mid-activity crashes; production crash-free session rate SHALL meet high-availability stability standards.
 - **Description**: The application SHALL maintain a production crash-free user session rate >= 99.5% across all active user sessions over a rolling 30-day window, with a per-release staging gate of >= 99.0%.
-- **Measurement Procedure**: Google Play Console Android Vitals (Crash Rate metric) and Firebase Crashlytics telemetry dashboard monitoring release sessions.
+- **Measurement Procedure**: Attested On-Device Manual Protocol: Google Play Console Android Vitals (Crash Rate metric) and Crashlytics release dashboard export over a rolling 30-day production/staging window.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: `REQ-NFR-017` (`[Verified]`, `Unit`, `TrainingApplication.kt`) in `docs/requirements/req_process_stability.md`.
+  2. *Historical Origin & Commit Trace*: Introduced in `04e67a33` (`ATT-6139`) under Epic `ATT-6142`.
+  3. *Root Reason for Existing Formulation*: Cited nonexistent `TrainingApplication.kt` (actual file is `TrainingApplication.java`) and claimed `Unit` `[Verified]` for 30-day Play Console production telemetry.
+  4. *Preservation of Core Invariants*: Preserves >= 99.5% production / >= 99.0% staging crash-free gates while correcting file extension to `TrainingApplication.java` and reclassifying to `On-Device Manual`.
 - **Acceptance Criteria (Given-When-Then)**:
   • *Given* production release builds deployed to user devices,
   • *When* evaluating session stability telemetry over a rolling 30-day window,
   • *Then* the crash-free session rate SHALL be >= 99.5%.
 - **Invariants**: Unhandled exceptions in background services must be caught with graceful workout recovery and state preservation.
 
-### REQ-NFR-018: Application Not Responding (ANR) Rate Ceiling [Verified]
+### REQ-NFR-018: Application Not Responding (ANR) Rate Ceiling [Implemented]
 - **Tests**: `TST-NFR-018`
 - **Priority**: High
 - **Type**: Non-Functional
-- **Verification Method**: Unit
+- **Verification Method**: On-Device Manual
 - **Implementation**: `TrackerService.java`, `WorkoutSamplesDatabaseManager.java`, `docs/architecture.md` §4.9
 - **Rationale**: UI thread responsiveness prevents Android OS ANR dialogs; production ANR rate SHALL remain well below Google Play Bad Behavior thresholds.
 - **Description**: The application SHALL maintain a user-perceived ANR rate <= 0.05% in production (far below the Google Play Bad Behavior threshold of 0.47%), and UI main-thread blocking latency SHALL NOT exceed 100 ms for any single event.
-- **Measurement Procedure**: Google Play Console Android Vitals (ANR Rate metric) and Android StrictMode / Systrace main-thread disk/network IO violation monitoring.
+- **Measurement Procedure**: Attested On-Device Manual Protocol: Google Play Console Android Vitals (ANR Rate metric) over a rolling 30-day window paired with on-device StrictMode / Perfetto main-thread audit during workout recording.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: `REQ-NFR-018` (`[Verified]`, `Unit`, `TrackerService.java`, `WorkoutSamplesDatabaseManager.java`) in `docs/requirements/req_process_stability.md`.
+  2. *Historical Origin & Commit Trace*: Introduced in `04e67a33` (`ATT-6139`) under Epic `ATT-6142`.
+  3. *Root Reason for Existing Formulation*: Claimed `Unit` `[Verified]` for 30-day Play Vitals user-perceived ANR rate impossible to measure in host unit tests.
+  4. *Preservation of Core Invariants*: Preserves <= 0.05% ANR rate ceiling, < 100 ms blocking limit, and off-main-thread `Dispatchers.IO` / `mDbExecutor` invariant while reclassifying to `On-Device Manual`.
 - **Acceptance Criteria (Given-When-Then)**:
   • *Given* production release builds operating across diverse Android devices,
   • *When* evaluating Google Play Vitals ANR telemetry over a rolling 30-day window,
   • *Then* the ANR rate SHALL be <= 0.05%, with zero blocking disk/network operations on the UI main thread.
 - **Invariants**: All database, network, file export, and cryptographic operations MUST execute off the main thread (`Dispatchers.IO` / `mDbExecutor`).
-
-**Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: `REQ-NFR-001` through `REQ-NFR-014` (`[Planned]`) in `docs/requirements/req_process_stability.md`, refining `REQ-PRO-052` (*Architectural Resource and Timing Budgets Specification*).
-2. *Historical Origin & Commit Trace*: Stubs introduced in Sprint 2026-46.1 under ATT-6181 and refined under ATT-6735 to establish SWE.2 BP4 traceability.
-3. *Root Reason for Existing Formulation*: Placeholders preserved IDs while full SWE.1 BP1/BP4 quantification was prioritized for dedicated sprint ticket ATT-6139.
-4. *Preservation of Core Invariants*: All 12 Section 4.9 budget targets, threading attributions (`TrackerService` `mScheduler` / `mDbExecutor`), WakeLock bounding, and 100% unit test pass rate remain strictly preserved without Android production runtime code changes.
 
 ### REQ-PRO-012: Project Protocol Hardening [Implemented]
 - **Tests**: `TST-STR-017`
@@ -4141,35 +4225,33 @@ The workflow SHALL mandate that:
   • *Then* canonical directory structure and workflow YAML validity pass with 100% success.
 - **Invariants**: Zero modifications to Android production runtime code in `app/src/main/`; Rule 67 canonical directory structure preserved.
 
-### REQ-PRO-068: System Integration Verification & Sensor Simulators Specification [Verified]
+### REQ-PRO-068: Developer Sensor Simulator Self-Test Harness & Honest System Boundary Specification [Verified]
 - **Tests**: `TST-PRO-068`
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit / Review
-- **Implementation**: `app/src/test/java/com/atrainingtracker/trainingtracker/build/SystemIntegrationTestContractTest.kt`
-- **Rationale**: Under ASPICE SYS.4 (Finding S-06), system integration test specifications and repeatable verification procedures must be established covering all external system interfaces (BLE, ANT+, GNSS, Cloud) using sensor simulators to ensure reproducible integration verification in CI and pre-release audits:
-  1. *System Integration Test Specification (`REQ-PRO-068.1`, docs/system/sys_integration_tests.md)*:
-     • `docs/system/sys_integration_tests.md` SHALL specify formal system integration test cases (`SYS-INT-001` through `SYS-INT-006`) covering external interfaces: BLE Heart Rate (`0x180D`), BLE Cycling Power (`0x1818`), BLE Garmin Varia Radar (`6a4e3200`), ANT+ Radio IPC (`SYS-IF-02`), GNSS Positioning (`SYS-IF-03`), and Cloud Synchronization (`SYS-IF-05`).
-     • Every integration test case SHALL trace bidirectionally to corresponding system requirements (`SYSREQ-TRK-*`, `SYSREQ-DEX-*`) and system elements (`SYS-EL-01` through `SYS-EL-05`).
-     • Pass/fail criteria, timing tolerances, and artifact logging under `docs/releases/<tag>/` SHALL be formally specified.
-  2. *Headless CI Integration Test Runner (`REQ-PRO-068.2`, tools/run_system_integration_tests.py)*:
-     • `tools/run_system_integration_tests.py` SHALL execute automated system integration verification headless without physical hardware in CI, simulating peripheral data streams and logging structured execution results in JSON format.
-  3. *Integration Runner Test Suite (`REQ-PRO-068.3`, tools/test_system_integration_tests.py)*:
-     • `tools/test_system_integration_tests.py` SHALL verify runner functionality, interface simulation handlers, CLI arguments, and error reporting using standard library unittest.
+- **Implementation**: `app/src/test/java/com/atrainingtracker/trainingtracker/build/SystemIntegrationTestContractTest.kt`, `docs/system/sys_integration_tests.md`
+- **Rationale**: Under ASPICE SYS.4 / SUP.1 (Finding S-06, remediated for M6 honesty under `ATT-8157`), sensor simulator tools (`tools/ble_hr_simulator.py`, `tools/ble_power_simulator.py`, `tools/ble_radar_simulator.py`, `tools/fake_gps.py`, `tools/replay_workout.py`) require an explicit developer simulator self-test harness and honest documentation separating pure-Python simulator self-tests from real Android software integration (`INT-SWE-01..08`, `AppSmokeAndroidTest.kt`) and physical hardware-in-the-loop verification (`SYS.5`):
+  1. *System Integration Boundary & Gap Disclosure (`REQ-PRO-068.1`, docs/system/sys_integration_tests.md)*:
+     • `docs/system/sys_integration_tests.md` SHALL document external interfaces (`SYS-IF-01` BLE, `SYS-IF-02` ANT+, `SYS-IF-03` GNSS, `SYS-IF-05` Cloud), trace to `SYSREQ-TRK-*`, `SYSREQ-DEX-*`, and `SYS-EL-01..05`, and explicitly disclose that headless Python simulator tests do NOT execute the Android APK or physical RF hardware.
+  2. *Simulator Self-Test Runner (`REQ-PRO-068.2`, tools/run_simulator_self_tests.py)*:
+     • Renamed from `tools/run_system_integration_tests.py`, `tools/run_simulator_self_tests.py` SHALL execute deterministic pure-Python self-tests against the BLE simulator modules (`ble_hr_simulator`, `ble_power_simulator`, `ble_radar_simulator`) without claiming constant-arithmetic stubs represent Android integration or blocking releases (`--output` JSON optional).
+  3. *Simulator Self-Test Runner Unit Suite (`REQ-PRO-068.3`, tools/test_simulator_self_tests.py)*:
+     • Renamed from `tools/test_system_integration_tests.py`, `tools/test_simulator_self_tests.py` SHALL verify simulator self-test handlers, CLI `--output` arguments, and pure Python 3 stdlib compliance using `unittest`.
   4. *Contract Testing & Governance (`REQ-PRO-068.4`, SystemIntegrationTestContractTest.kt & verify_requirement_governance.py)*:
-     • `SystemIntegrationTestContractTest.kt` SHALL verify `docs/system/sys_integration_tests.md` structural completeness, interface coverage, system requirement allocation mapping, and automated command availability.
+     • `SystemIntegrationTestContractTest.kt` SHALL verify `docs/system/sys_integration_tests.md` structural completeness, honest simulator-only gap disclosure, interface traceability, and existence of the simulator tools and `tools/run_simulator_self_tests.py` / `tools/test_simulator_self_tests.py`.
 - **Requirement Archaeology & Chesterton's Fence Audit**:
-  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-068` (`REQ-PRO-068.1`–`REQ-PRO-068.4`). Targets `docs/system/sys_integration_tests.md`, `tools/run_system_integration_tests.py`, `tools/test_system_integration_tests.py`, and `SystemIntegrationTestContractTest.kt`.
-  2. *Historical Origin & Commit Trace*: Sprint 2026-46.4 via ticket `ATT-6166` under Epic `ATT-6142` (ASPICE CL2 Remediation S-06).
-  3. *Root Reason for Existing Formulation*: ASPICE 4.0 assessment of 2026-11-08 rated SYS.4 as CL0 due to the absence of a documented system integration test specification and repeatable procedure.
-  4. *Preservation of Core Invariants*: Zero modifications to Android production runtime code in `app/src/main/`; pure Python standard library for simulator verification tooling.
+  1. *Original Requirement ID & Target*: `REQ-PRO-068` (`REQ-PRO-068.1`–`REQ-PRO-068.4`). Targets `docs/system/sys_integration_tests.md`, `tools/run_system_integration_tests.py` (renamed to `tools/run_simulator_self_tests.py`), `tools/test_system_integration_tests.py` (renamed to `tools/test_simulator_self_tests.py`), and `SystemIntegrationTestContractTest.kt`.
+  2. *Historical Origin & Commit Trace*: Originally created in Sprint 2026-46.4 via `ATT-6166` (`ATT-6142`); rescoped in Sprint `2026-11-17_01_Früh` via `ATT-8157` (`REQ-PRO-112`).
+  3. *Root Reason for Existing Formulation*: `ATT-6166` sought repeatable headless sensor simulator checks in CI, but named and framed them as SYS.4 system integration tests (`SYS-INT-001..006`) despite executing zero Android code or emulator ADB workflows.
+  4. *Preservation of Core Invariants*: Preserves pure-Python simulator self-testing, external interface traceability (`SYS-IF-01..05`, `SYSREQ-TRK-*`, `SYSREQ-DEX-*`), and zero `app/src/main/` modifications while eliminating misleading SYS.4 claims.
 - **Acceptance Criteria (Given-When-Then)**:
   • *Given* `docs/system/sys_integration_tests.md`,
   • *When* inspected,
-  • *Then* formal integration test cases cover each external system interface (`SYS-IF-01` through `SYS-IF-05`) with bidirectional traceability to `SYSREQ-*` requirements.
-  • *Given* the headless CI runner `tools/run_system_integration_tests.py`,
-  • *When* executed in CI without hardware,
-  • *Then* it executes all simulator integration test scenarios, logs structured results, and exits with code 0.
+  • *Then* it documents external interfaces (`SYS-IF-01`..`05`), `SYSREQ-*` traceability, and explicitly classifies the Python runner as non-gating simulator self-tests alongside `INT-SWE-01..08` and manual `SYS.5`.
+  • *Given* `tools/run_simulator_self_tests.py` and `tools/test_simulator_self_tests.py`,
+  • *When* executed in Python,
+  • *Then* simulator self-tests and `unittest` cases pass with exit code 0 using `--output` JSON export when requested.
   • *Given* `SystemIntegrationTestContractTest.kt`,
   • *When* executed via Gradle,
   • *Then* all contract tests pass with 100% success.
@@ -4282,27 +4364,27 @@ The workflow SHALL mandate that:
 - **Type**: Non-Functional
 - **Verification Method**: Unit / Review
 - **Implementation**: `.agents/skills/release-manager/SKILL.md`, `docs/releases/README.md`, `docs/releases/TEMPLATE.md`, `docs/architecture.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ReleaseManagerSystemEvidenceContractTest.kt`
-- **Rationale**: Under ASPICE SYS.5 and SUP.8 (Finding S-08), release decisions and release checklists must reference system-level evidence (SYS.4 integration verification and SYS.5 system verification protocol records). The release manager skill, release checklists, and release documentation must require verified system integration and system verification evidence, explicitly blocking release candidate tag creation if records are missing or failing:
+- **Rationale**: Under ASPICE SYS.5 and SUP.8 (Finding S-08, updated for evidence honesty under `ATT-8157`), release decisions and release checklists must be gated strictly on real software/integration verification (`testDebugUnitTest` including `INT-SWE-01..08`, CI `AppSmokeAndroidTest.kt`) and authentic hardware-in-the-loop SYS.5 system verification records (`docs/releases/<tag>/sys_verification_record.md`), rather than synthetic Python simulator JSON (`system_integration_results.json`):
   1. *Mandatory System Evidence Gate Specification (`REQ-PRO-072.1`, .agents/skills/release-manager/SKILL.md)*:
-     • `.agents/skills/release-manager/SKILL.md` SHALL specify mandatory verification gates requiring both SYS.4 System Integration Verification results (`docs/releases/<tag>/system_integration_results.json` generated by `tools/run_system_integration_tests.py`) and SYS.5 System Verification Protocol sign-off records (`docs/releases/<tag>/sys_verification_record.md` per `docs/system/sys_verification_protocol.md`).
+     • `.agents/skills/release-manager/SKILL.md` SHALL specify mandatory release verification gates requiring unit/software integration tests (`INT-SWE-01..08` + CI `AppSmokeAndroidTest.kt`), SYS.5 System Verification Protocol sign-off (`docs/releases/<tag>/sys_verification_record.md` per `docs/system/sys_verification_protocol.md`), and `docs/releases/<tag>/verification_summary.md` — without mandating `system_integration_results.json` as a blocking release gate.
   2. *Release Tagging Blocking Gate (`REQ-PRO-072.2`, .agents/skills/release-manager/SKILL.md)*:
-     • The release checklist and step-by-step procedures in `.agents/skills/release-manager/SKILL.md` SHALL explicitly block the creation of release candidate tags (`V<versionName>__<versionCode>`) and production distribution if either system verification record is missing, incomplete, or contains failing test verdicts.
+     • The release checklist and step-by-step procedures in `.agents/skills/release-manager/SKILL.md` SHALL explicitly block creating release candidate tags (`V<versionName>__<versionCode>`) and Google Play Store distribution if `sys_verification_record.md` or `verification_summary.md` is missing, incomplete, or contains failing verdicts / unapproved deviations.
   3. *Standardized Release Evidence Directory & Template (`REQ-PRO-072.3`, docs/releases/)*:
-     • A standardized release evidence specification and template (`docs/releases/README.md` and `docs/releases/TEMPLATE.md`) SHALL be established defining required directory structure `docs/releases/<tag>/`, artifact schemas, and cross-references to SYS.4 and SYS.5 sign-off criteria.
+     • `docs/releases/README.md` and `docs/releases/TEMPLATE.md` SHALL define `docs/releases/<tag>/` layout (`sys_verification_record.md`, `verification_summary.md`, optional `release_dossier.md`), explicitly marking `system_integration_results.json` retired/non-gating.
   4. *Release Manager System Evidence Contract Testing (`REQ-PRO-072.4`, ReleaseManagerSystemEvidenceContractTest.kt)*:
-     • An automated JUnit contract test `ReleaseManagerSystemEvidenceContractTest.kt` SHALL verify that `.agents/skills/release-manager/SKILL.md` and release templates enforce the mandatory SYS.4 and SYS.5 gating criteria and block release candidate creation upon missing/failing evidence.
+     • `ReleaseManagerSystemEvidenceContractTest.kt` SHALL verify that `.agents/skills/release-manager/SKILL.md`, `docs/releases/`, and `docs/architecture.md` §6.4 enforce `SYS.5` / `verification_summary.md` blocking gates and do NOT mandate fake `system_integration_results.json` gating.
 - **Requirement Archaeology & Chesterton's Fence Audit**:
-  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-072` (`REQ-PRO-072.1`–`REQ-PRO-072.4`). Targets `.agents/skills/release-manager/SKILL.md`, `docs/releases/`, `docs/architecture.md`, and `ReleaseManagerSystemEvidenceContractTest.kt`.
-  2. *Historical Origin & Commit Trace*: Sprint 2026-46.4 via ticket `ATT-6169` under Epic `ATT-6142` (ASPICE CL2 Remediation S-08). Builds on `daab754c` (ATT-6166) and `0d18ef1a` (ATT-6167).
-  3. *Root Reason for Existing Formulation*: ASPICE 4.0 assessment of 2026-11-08 identified that release checklists only verified unit compilation and APK signing without verifying system-level evidence against system requirements.
-  4. *Preservation of Core Invariants*: Canonical 10-step release process from ATT-170 is preserved with mandatory system evidence verification prerequisites; zero production Android runtime code changes in `app/src/main/`.
+  1. *Original Requirement ID & Target*: `REQ-PRO-072` (`REQ-PRO-072.1`–`REQ-PRO-072.4`). Targets `.agents/skills/release-manager/SKILL.md`, `docs/releases/README.md`, `docs/releases/TEMPLATE.md`, `docs/architecture.md`, and `ReleaseManagerSystemEvidenceContractTest.kt`.
+  2. *Historical Origin & Commit Trace*: Originally created in Sprint 2026-46.4 via `ATT-6169` (`ATT-6142`); updated in Sprint `2026-11-17_01_Früh` via `ATT-8157` (`REQ-PRO-112`).
+  3. *Root Reason for Existing Formulation*: `ATT-6169` gated releases on `system_integration_results.json` alongside `sys_verification_record.md`, but `system_integration_results.json` came from pure-Python simulator arithmetic checks and `SKILL.md` even passed an invalid `--output-json` flag.
+  4. *Preservation of Core Invariants*: Preserves the canonical 10-step release process (`ATT-170`), mandatory `SYS.5` real-device sign-off (`sys_verification_record.md`), `verification_summary.md` blocking gate, and zero `app/src/main/` changes.
 - **Acceptance Criteria (Given-When-Then)**:
-  • *Given* `.agents/skills/release-manager/SKILL.md`,
+  • *Given* `.agents/skills/release-manager/SKILL.md`, `docs/releases/README.md`, and `docs/releases/TEMPLATE.md`,
   • *When* inspected,
-  • *Then* it specifies mandatory gates requiring `docs/releases/<tag>/system_integration_results.json` and `docs/releases/<tag>/sys_verification_record.md`.
+  • *Then* they mandate `docs/releases/<tag>/sys_verification_record.md` and `verification_summary.md` as blocking release gates and do not treat `system_integration_results.json` as a blocking SYS.4 gate.
   • *Given* release candidate preparation,
-  • *When* system verification records are missing or failing,
-  • *Then* the release procedure blocks release candidate tag creation.
+  • *When* `sys_verification_record.md` or `verification_summary.md` has open deviations or missing sign-off,
+  • *Then* tag creation and Play Store upload are blocked.
   • *Given* `ReleaseManagerSystemEvidenceContractTest.kt`,
   • *When* executed via Gradle,
   • *Then* all assertions pass with 100% success.
@@ -4349,31 +4431,31 @@ The workflow SHALL mandate that:
 - **Type**: Non-Functional
 - **Verification Method**: Unit / Review
 - **Implementation**: `tools/generate_release_verification_summary.py`, `tools/test_generate_release_verification_summary.py`, `.agents/skills/release-manager/SKILL.md`, `docs/releases/README.md`
-- **Rationale**: Under ASPICE SWE.6 BP5 (Finding A-11), release decisions must be based on recorded, baseline-controlled verification evidence. A standalone generator script SHALL consolidate unit test counts/results, bidirectional requirement-to-test traceability matrices, system integration verification results (SYS.4), and system verification protocol sign-off records (SYS.5) into an authoritative Markdown summary per release tag (`docs/releases/<tag>/verification_summary.md`), explicitly highlighting all deviations requiring human approval:
+- **Rationale**: Under ASPICE SWE.6 BP5 (Finding A-11, updated for `ATT-8157` release gate honesty), release decisions must be based on recorded, baseline-controlled verification evidence. A standalone generator script SHALL consolidate unit/integration test counts/results, bidirectional requirement-to-test traceability matrices, optional informational simulator records (when present), and hardware-in-the-loop system verification protocol sign-off records (SYS.5) into an authoritative Markdown summary per release tag (`docs/releases/<tag>/verification_summary.md`), explicitly highlighting all deviations requiring human approval:
   1. *Automated Release Verification Summary CLI (`REQ-PRO-074.1`, tools/generate_release_verification_summary.py)*:
      • `tools/generate_release_verification_summary.py` SHALL provide a command-line interface accepting `--tag <TAG>` (e.g. `V5.0.0__2026111201`), optional `--commit <SHA>` (defaulting to current HEAD), optional `--out <PATH>` (defaulting to `docs/releases/<tag>/verification_summary.md`), and optional threshold parameters (`--min-req-tst-coverage`, `--min-tst-code-coverage`, `--min-bidirectional-coverage`).
   2. *Unit & Regression Test Evidence Aggregation (`REQ-PRO-074.2`, tools/generate_release_verification_summary.py)*:
-     • The generator SHALL aggregate total unit test count, passed, failed, and skipped tests from `app/build/test-results/testDebugUnitTest/` or test archive files, and reference the versioned JUnit test archive artifact (`build-evidence/junit-test-results-<tag>.zip` per ATT-6137).
+     • The generator SHALL aggregate total unit/integration test count, passed, failed, and skipped tests from `app/build/test-results/testDebugUnitTest/` or test archive files, and reference the versioned JUnit test archive artifact (`build-evidence/junit-test-results-<tag>.zip` per ATT-6137).
   3. *Bidirectional REQ-TST Traceability Matrix Aggregation (`REQ-PRO-074.3`, tools/generate_release_verification_summary.py)*:
      • The generator SHALL query and embed bidirectional requirement-to-test coverage data via `tools/verify_requirement_governance.py --coverage-json` (per ATT-6122), presenting REQ-to-TST coverage %, TST-to-code coverage %, and bidirectional coverage metrics.
-  4. *System Integration & Verification Protocol Status Aggregation (`REQ-PRO-074.4`, tools/generate_release_verification_summary.py)*:
-     • The generator SHALL parse and summarize SYS.4 System Integration Verification results from `docs/releases/<tag>/system_integration_results.json` (per ATT-6166) and SYS.5 System Verification Protocol sign-off records from `docs/releases/<tag>/sys_verification_record.md` (per ATT-6167).
+  4. *System Verification Status & Non-Blocking Legacy Simulator Summary (`REQ-PRO-074.4`, tools/generate_release_verification_summary.py)*:
+     • The generator SHALL parse and gate on SYS.5 System Verification Protocol sign-off records (`docs/releases/<tag>/sys_verification_record.md` per `ATT-6167`). `collect_sys4_summary()` SHALL treat `docs/releases/<tag>/system_integration_results.json` as **optional non-blocking simulator/legacy telemetry** (raising zero missing-file deviation and never gating or falsely certifying Android app SYS.4 pass status if absent or legacy).
   5. *Open Deviations & Human Approval Gating (`REQ-PRO-074.5`, tools/generate_release_verification_summary.py)*:
-     • The generator SHALL evaluate whether any test failure, missing evidence file, or coverage below configured thresholds exists, and enumerate them under an explicit `Deviations Requiring Human Approval` section, assigning an overall status of `PASS` or `BLOCKED / REQUIRES HUMAN APPROVAL`.
+     • The generator SHALL evaluate whether any unit/integration test failure, missing SYS.5 evidence, or coverage below configured thresholds exists, and enumerate them under an explicit `Deviations Requiring Human Approval` section, assigning an overall status of `PASS (READY FOR RELEASE)` or `BLOCKED / REQUIRES HUMAN APPROVAL`.
 - **Requirement Archaeology & Chesterton's Fence Audit**:
-  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-074` (`REQ-PRO-074.1`–`REQ-PRO-074.5`). Targets `tools/generate_release_verification_summary.py`, `tools/test_generate_release_verification_summary.py`, `.agents/skills/release-manager/SKILL.md`, and `docs/releases/README.md`.
-  2. *Historical Origin & Commit Trace*: Sprint 2026-46.4 via ticket `ATT-6138` under Epic `ATT-6119` (ASPICE CL2 Remediation A-11). Builds on `ddd1024a` (ATT-6137), `687e8388` (ATT-6122), `daab754c` (ATT-6166), `0d18ef1a` (ATT-6167), and `bf31bead` (ATT-6169).
-  3. *Root Reason for Existing Formulation*: ASPICE 4.0 assessment finding A-11 identified that release decisions lacked a consolidated, baseline-controlled verification summary file documenting all verification dimensions and deviations.
-  4. *Preservation of Core Invariants*: Canonical release workflow preserved; pure Python 3 standard library CLI; zero production Android runtime code changes in `app/src/main/`.
+  1. *Original Requirement ID & Target*: `REQ-PRO-074` (`REQ-PRO-074.1`–`REQ-PRO-074.5`). Targets `tools/generate_release_verification_summary.py`, `tools/test_generate_release_verification_summary.py`, `.agents/skills/release-manager/SKILL.md`, and `docs/releases/README.md`.
+  2. *Historical Origin & Commit Trace*: Sprint 2026-46.4 via `ATT-6138` (`ATT-6119`), building on `ATT-6137`, `ATT-6122`, `ATT-6166`, `ATT-6167`, `ATT-6169`; `REQ-PRO-074.4` updated in Sprint `2026-11-17_01_Früh` via `ATT-8157` (`REQ-PRO-112`).
+  3. *Root Reason for Existing Formulation*: `collect_sys4_summary()` previously flagged absent `system_integration_results.json` as a blocking release deviation and rendered simulator self-tests as `[ PASS ]` SYS.4 evidence.
+  4. *Preservation of Core Invariants*: Preserves unit test, traceability coverage, and SYS.5 sign-off blocking gates, pure Python 3 stdlib CLI, and zero `app/src/main/` runtime changes.
 - **Acceptance Criteria (Given-When-Then)**:
-  • *Given* release evidence artifacts for a release tag,
+  • *Given* valid unit test evidence, traceability coverage, and signed `sys_verification_record.md` without `system_integration_results.json`,
   • *When* `tools/generate_release_verification_summary.py --tag <TAG>` executes,
-  • *Then* `docs/releases/<tag>/verification_summary.md` is generated with unit tests, coverage matrix, SYS.4, and SYS.5 sections.
-  • *Given* any failing test, missing evidence, or coverage below threshold,
+  • *Then* `docs/releases/<tag>/verification_summary.md` reports `PASS (READY FOR RELEASE)` with zero missing-SYS.4 deviations.
+  • *Given* any failing unit/integration test, missing/incomplete `sys_verification_record.md`, or coverage below threshold,
   • *When* the summary is generated,
   • *Then* it is explicitly listed under `Deviations Requiring Human Approval` with overall status `BLOCKED / REQUIRES HUMAN APPROVAL`.
   • *Given* `tools/test_generate_release_verification_summary.py`,
-  • *When* executed via pytest/unittest,
+  • *When* executed via `unittest`,
   • *Then* 100% of unit tests pass.
 - **Invariants**: Zero Android production runtime code changes in `app/src/main/`.
 
@@ -5668,3 +5750,227 @@ The workflow SHALL mandate that:
   • *When* `tools/jira_util.py final-review-verdict <PARENT> PASS ...` is invoked,
   • *Then* the command rejects the report with an error.
 - **Invariants**: Zero Android production code impact (`app/src/main/`); `ANT-Android-SDKs` untouched at `160000 commit 0e8cea714a231fb9565170d4ed01eafa868f9798`; existing test fixtures and POSIX flock semantics preserved.
+
+---
+
+### REQ-PRO-110: Integration Verification Test Cases for INT-SWE-01 to INT-SWE-04 (ATT-8155) [Verified]
+- **Tests**: `TST-PRO-110`, `TST-INT-009`, `TST-INT-010`, `TST-INT-011`, `TST-INT-012`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Integration / Review
+- **Implementation**: `app/src/test/java/com/atrainingtracker/trainingtracker/integration/UiPresentationIntegrationTest.kt`, `ViewModelRepositoryIntegrationTest.kt`, `InterServiceIngestionIntegrationTest.kt`, `HardwareHalIngestionIntegrationTest.kt`, `build/AspiceSweAuditContractTest.kt`
+- **Rationale**: ASPICE 4.0 Assessment (2026-11-15) Finding `M6` (SWE.5 BP1–BP7, rating PA 1.1 = P) established that while `docs/architecture/integration_strategy.md` defines integration steps `INT-SWE-01..08` across interfaces `IF-SWE-01..08`, integration test verification was non-effective: `INT-SWE-01..04` were never refined into traceable test specifications (`TST-INT-*`), instrumented tests were limited to 3 smoke checks with zero Compose UI tests, and no versioned machine-readable JUnit XML evidence existed for component boundary interactions. Implementing formal test specifications, Robolectric JVM integration tests, and evidence export for `INT-SWE-01..04` establishes verifiable SWE.5 compliance.
+- **Description**:
+  1. *INT-SWE-01: UI to ViewModel MVI Integration (`REQ-PRO-110.1`, [Verified])*: Jetpack Compose Composables (`ControlTrackingButton.kt`) and ViewModels (`TrackingViewModel.kt`, `ControlTrackingViewModel.kt`, `TrackingTabsViewModel.kt`) SHALL have integration verification test coverage via Robolectric `createComposeRule()` asserting unidirectional MVI `StateFlow` / `LiveData` collection (`uiState`, `screenMode`, `trackingMode`) and action dispatch (`onStartTracking()`, `onPauseTracking()`, `onResumeTracking()`, `onStopTracking()`, `updateScreenMode()`, `setScreenMode()`) with `waitForIdle()` Compose node recomposition checks without emulator dependency.
+  2. *INT-SWE-02: ViewModel to Repository Data Layer Integration (`REQ-PRO-110.2`, [Verified])*: ViewModels (`WorkoutSummariesViewModel.kt`) and repositories (`WorkoutRepository.kt`, `BANALServiceRepository.kt`) SHALL have integration test coverage asserting real SQLite updates (`WorkoutSummariesDatabaseManager.java` via `RealSqliteTestHelper.kt`) trigger reactive `Flow` emissions (`getWorkoutById`, `allWorkouts`) to ViewModel `StateFlow` without main-thread deadlocks.
+  3. *INT-SWE-03: Inter-Service Ingestion Binder IPC Integration (`REQ-PRO-110.3`, [Verified])*: Inter-service communication between `TrackerService.java` and `BANALService.java` via `BANALServiceComm` local binder SHALL have integration test coverage asserting 1-Hz batch polling (`sampleAndWriteToDb`, `getBestSensorData()`, `getAllSensorData()`) into `LiveWorkoutSession` and SQLite (`WorkoutSamplesDatabaseManager.java`, `WorkoutSummariesDatabaseManager.java`), sensor priority arbitration via `MySensorManager.java`, and unbind null-safety resilience.
+  4. *INT-SWE-04: Hardware HAL Byte Stream Ingestion & Sensor Replay (`REQ-PRO-110.4`, [Verified])*: Ingestion of Bluetooth SIG GATT characteristic byte streams (`BTLEHeartRateDevice.java` `0x2A37`, `BTLEBikePowerDevice.java` `0x2A63`, `BTLERadarDevice.java` `6a4e3204` V1 & V2 `parseV2ThreatPacket`) and Location updates (`SpeedAndLocationDevice_GPS.java` `onNewLocation()`) into `MySensorManager.java` and `RadarStateRepository.kt` SHALL have integration test coverage asserting binary packet parsing, location accumulation, and real `BTLERadarDevice` watchdog timeout debounce (`WATCHDOG_TIMEOUT_MS` = 3,500 ms).
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: `REQ-PRO-110` refining `REQ-PRO-045` (`docs/architecture/integration_strategy.md`) and `docs/architecture/interfaces.md` (`IF-SWE-01..04`). Targets `app/src/test/java/com/atrainingtracker/trainingtracker/integration/` and `tools/generate_test_evidence.py`.
+  2. *Historical Origin & Commit Trace*: Sprint `2026-11-16_03_Nacht` / `2026-11-17_01_Früh` via ticket `ATT-8155` (`96bfc669`, `23009d93`, Bounce 2/3 Rule 8.7 grounding remediation) resolving ASPICE 4.0 Assessment (2026-11-15) Finding `M6` (SWE.5 BP1–BP7, PA 1.1 = P).
+  3. *Root Reason for Existing Formulation*: Initial `REQ-PRO-110` text inherited unverified component aliases before exact class/method verification under Rule 8.7; Bounce 2/3 aligned every cited path/symbol with real production code and added `TrackingViewModel` (`uiState`, `updateScreenMode()`) Compose recomposition verification.
+  4. *Preservation of Core Invariants*: Preserves the 8-step bottom-up integration order, legacy `TST-INT-002..008`, Rule 79 / Level 1 Robolectric fast gate, and zero modifications to `app/src/main/` or `ANT-Android-SDKs` (`0e8cea71`).
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `ControlTrackingButton.kt`, `ControlTrackingViewModel.kt`, `TrackingTabsViewModel.kt`, and `TrackingViewModel.kt` composed via `createComposeRule()`,
+  • *When* `onStartTracking()`, `onPauseTracking()`, `onResumeTracking()`, `onStopTracking()`, `updateScreenMode()`, or `setScreenMode()` are dispatched,
+  • *Then* `uiState` / `screenMode` / `trackingMode` state changes recompose Compose UI nodes (`waitForIdle()` + `assertTextEquals()`) without exceptions.
+  • *Given* `WorkoutRepository.kt` and `WorkoutSummariesViewModel.kt` backed by real `WorkoutSummariesDatabaseManager.java` SQLite,
+  • *When* workout summary records are inserted and updated,
+  • *Then* `getWorkoutById` and `allWorkouts` emit updated records to the ViewModel StateFlow.
+  • *Given* `TrackerService.java` connected to real `BANALService.java` (`BANALServiceComm`),
+  • *When* `sampleAndWriteToDb()` polls `getBestSensorData()` and `getAllSensorData()`,
+  • *Then* sensor telemetry is arbitrated by `MySensorManager.java`, persisted to SQLite, and unbind handles null gracefully.
+  • *Given* GATT byte streams for HR (`0x2A37`), Power (`0x2A63`), Radar V1/V2 (`6a4e3204`), and `Location` fixes,
+  • *When* ingested via `BTLEHeartRateDevice`, `BTLEBikePowerDevice`, `BTLERadarDevice`, and `SpeedAndLocationDevice_GPS`,
+  • *Then* packets parse into `MySensorManager` / `RadarStateRepository` and `BTLERadarDevice` watchdog (`3,500 ms`) transitions to `DISCONNECTED_ERROR`.
+- **Invariants**: Zero Android production code impact (`app/src/main/`); `ANT-Android-SDKs` untouched at `160000 commit 0e8cea714a231fb9565170d4ed01eafa868f9798`; existing test fixtures and POSIX flock semantics preserved.
+
+---
+
+### REQ-PRO-111: Integration Verification Test Cases for INT-SWE-05 to INT-SWE-08 (ATT-8156) [Verified]
+- **Tests**: `TST-PRO-111`, `TST-INT-013`, `TST-INT-014`, `TST-INT-015`, `TST-INT-016`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Integration / Review
+- **Implementation**: `app/src/test/java/com/atrainingtracker/trainingtracker/integration/DomainCalculatorsIntegrationTest.kt`, `PersistenceSqliteIntegrationTest.kt`, `FileExportersIntegrationTest.kt`, `CloudHealthConnectIntegrationTest.kt`, `build/AspiceSweAuditContractTest.kt`, `docs/architecture/integration_strategy.md`
+- **Rationale**: Completes ASPICE 4.0 Assessment (2026-11-15) Finding `M6` (SWE.5 BP1–BP7) remediation after `ATT-8155` (`INT-SWE-01..04`) by establishing genuine real-component cross-boundary integration tests for `INT-SWE-05..08` (`IF-SWE-05..08`) and reconciling stale metrics and emulator policy in `docs/architecture/integration_strategy.md` against `docs/engineering/test_evidence/sprint_455.md` and `.agents/skills/stage5-verification/SKILL.md`.
+- **Description**:
+  1. *INT-SWE-05: Domain Calculators & Algorithms (`REQ-PRO-111.1`, [Verified])*: Pure-JVM calculators (`AutoPauseManager`, `PowerPhysiologyCalculator`, `PowerHrDynamicsCalculator`, `WorkoutClusterEngine`, `ClimbDetector`) SHALL have integration test coverage driven by synthetic telemetry and elevation time-series without primitive constant stubs.
+  2. *INT-SWE-06: Persistence SQLite Foundation (`REQ-PRO-111.2`, [Verified])*: Database managers (`WorkoutSamplesDatabaseManager`, `WorkoutSummariesDatabaseManager`, `KnownLocationsDatabaseManager`, `LapsDatabaseManager`) and `KnownLocationsRepository` SHALL have Robolectric SQLite integration test coverage asserting WAL concurrency, dynamic sample table creation, bulk inserts, and non-destructive `onUpgrade` schema parity.
+  3. *INT-SWE-07: Repository/ExportManager to File Exporters (`REQ-PRO-111.3`, [Verified])*: Streaming file writers (`FitFileWriter`, `GPXFileWriter`, `TCXFileWriter`) driven from real SQLite records via `ExportManager` / `WorkoutRepository` SHALL have integration test coverage asserting valid FIT/GPX/TCX output, `.tmp` atomic cleanup, and `ExportStatusDatabaseManager` updates.
+  4. *INT-SWE-08: Repository/ExportManager to Cloud & Health Connect (`REQ-PRO-111.4`, [Verified])*: External uploaders and Health Connect connectors (`StravaUploader`, `DropboxUploader`, `HealthConnectManager`, `HealthConnectHrvImporter`) wired to real `ExportStatusDatabaseManager` / `HrvReadinessRepository` with authentic OkHttp `Interceptor` / `HealthConnectClient` doubles SHALL have integration test coverage asserting bearer-token injection, multipart upload + polling + PUT update, HTTP 503 retry classification, `DropboxUploader` missing-credential guard, session mapping, and nocturnal HRV import.
+  5. *Integration Strategy Factual Sync (`REQ-PRO-111.5`, [Verified])*: `docs/architecture/integration_strategy.md` MUST be synchronized with authentic `sprint_455.md` metrics (`6,540` unit tests / `2,635.73s` sum; `1,119` suites / `29m 21s` Tier-2 wall-clock per `Sprint_Review_and_Retro_ATT-8500.md`), Level 1 `INT-SWE-01..08` coverage, and `emulator-5554` (`Pixel_8_Android_15`) Stage 5 policy.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-111` refining `REQ-PRO-045` (`docs/architecture/integration_strategy.md`) and `docs/architecture/interfaces.md` (`IF-SWE-05..08`).
+  2. *Historical Origin & Commit Trace*: Sprint `2026-11-17_01_Früh` via `ATT-8156`, extending healed `ATT-8155` (`b81888c8`) for ASPICE 4.0 Finding `M6`.
+  3. *Root Reason for Existing Formulation*: `integration_strategy.md` specified `INT-SWE-05..08` without executable test suites and retained outdated test counts (`3,660+`), runtime estimates (`~2–3 minutes`), and retired-emulator text.
+  4. *Preservation of Core Invariants*: Preserves `REQ-PRO-045`, `REQ-PRO-110`, `TST-INT-002..012`, zero `app/src/main/` modifications, and `ANT-Android-SDKs` at `0e8cea71`.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* synthetic telemetry and elevation profiles,
+  • *When* evaluated by real `AutoPauseManager`, `PowerPhysiologyCalculator`, `PowerHrDynamicsCalculator`, `WorkoutClusterEngine`, and `ClimbDetector`,
+  • *Then* calculated physiology, cluster, climb, and auto-pause transitions match deterministic invariants.
+  • *Given* real SQLite database managers and `KnownLocationsRepository`,
+  • *When* dynamic tables are created, concurrent WAL writes occur, and `onUpgrade` runs,
+  • *Then* schema parity and persisted records remain intact without locks or data loss.
+  • *Given* persisted SQLite workout data and temp storage,
+  • *When* `ExportManager` executes `FitFileWriter`, `GPXFileWriter`, and `TCXFileWriter`,
+  • *Then* valid FIT/GPX/TCX outputs are generated, `.tmp` artifacts are cleaned up, and `ExportStatusDatabaseManager` records completion.
+  • *Given* `StravaUploader`/`DropboxUploader` (OkHttp `Interceptor` double) and `HealthConnectManager`/`HealthConnectHrvImporter` (fake `HealthConnectClient`) wired to real `ExportStatusDatabaseManager` and `HrvReadinessRepository`,
+  • *When* upload, HTTP 503 retry check, Dropbox credential guard, workout sync, and HRV import execute,
+  • *Then* bearer-token multipart upload/PUT + retry classification, Health Connect record mapping, and nocturnal HRV persistence succeed.
+  • *Given* `docs/architecture/integration_strategy.md`,
+  • *When* reviewed against `sprint_455.md` and `stage5-verification/SKILL.md`,
+  • *Then* test counts (`6,540`), suite counts (`1,119`), runtime (`29m 21s` Tier-2 / `2,635.73s` sum), and `emulator-5554` policy match reality.
+- **Invariants**: Zero Android production code impact (`app/src/main/`); `ANT-Android-SDKs` untouched at `160000 commit 0e8cea714a231fb9565170d4ed01eafa868f9798`; existing test fixtures and POSIX flock semantics preserved.
+
+---
+
+### REQ-PRO-112: Simulator Self-Test Scoping & Release Gate Honesty (ATT-8157) [Verified]
+- **Tests**: `TST-PRO-112`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `app/src/test/java/com/atrainingtracker/trainingtracker/build/SystemIntegrationTestContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ReleaseManagerSystemEvidenceContractTest.kt`, `tools/generate_release_verification_summary.py`, `.agents/skills/release-manager/SKILL.md`, `docs/architecture.md`, `docs/system/sys_integration_tests.md`, `docs/releases/README.md`, `docs/releases/TEMPLATE.md`
+- **Rationale**: Resolves ASPICE 4.0 Assessment (2026-11-15) Finding `M6` on system-level testing honesty (`ATT-8157`): `tools/run_system_integration_tests.py` ran pure-Python simulator checks and constant-arithmetic assertions without executing the Android APK, ADB, or emulator, while `.agents/skills/release-manager/SKILL.md` (with broken `--output-json` CLI drift vs `--output`), `tools/generate_release_verification_summary.py`, `docs/architecture.md`, `docs/releases/`, and `docs/releases/V5.0.0/` represented `system_integration_results.json` as a blocking SYS.4 app-integration release gate.
+- **Description**:
+  1. *Simulator Self-Test Rename & Rescoping (`REQ-PRO-112.1`, [Verified])*: `tools/run_system_integration_tests.py` and `tools/test_system_integration_tests.py` SHALL be renamed and rescoped to `tools/run_simulator_self_tests.py` and `tools/test_simulator_self_tests.py` (`SimulatorSelfTestRunner`), explicitly classified as pure-Python developer simulator self-tests (testing `ble_hr_simulator.py`, `ble_power_simulator.py`, `ble_radar_simulator.py` contracts), eliminating misleading constant-arithmetic claims (`(10 - 65530) & 0xFFFF`, local `backoffs`/`oauth_response` literals) and aligning CLI `--output` parity with `SystemIntegrationTestContractTest.kt`.
+  2. *Non-Blocking Release Gate Removal (`REQ-PRO-112.2`, [Verified])*: `system_integration_results.json` SHALL be removed as a mandatory blocking SYS.4 release gate in `tools/generate_release_verification_summary.py` (`collect_sys4_summary()`), `tools/test_generate_release_verification_summary.py`, `.agents/skills/release-manager/SKILL.md`, `docs/releases/README.md`, `docs/releases/TEMPLATE.md`, and `ReleaseManagerSystemEvidenceContractTest.kt`; blocking release gating remains anchored strictly on unit/integration tests (`INT-SWE-01..08`, CI `AppSmokeAndroidTest.kt`) and hardware-in-the-loop `SYS.5` sign-off (`sys_verification_record.md`) + `verification_summary.md`.
+  3. *Honest Documentation & V5.0.0 Reclassification (`REQ-PRO-112.3`, [Verified])*: `docs/architecture.md` (§6.2, §6.4), `docs/system/sys_integration_tests.md`, and `docs/releases/V5.0.0/` (`verification_summary.md`, `system_integration_results.json`) SHALL disclose honestly that Python simulators are developer tools only, physical-sensor system verification is manual hardware-in-the-loop (`SYS.5`), and legacy `V5.0.0` `system_integration_results.json` reflects historical simulator self-tests rather than app execution (without fabricating hardware logs).
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new `REQ-PRO-112` refining `REQ-PRO-068`, `REQ-PRO-072`, and `REQ-PRO-074.4` across `tools/`, `.agents/skills/release-manager/SKILL.md`, `docs/architecture.md`, `docs/system/sys_integration_tests.md`, `docs/releases/`, and build contract tests.
+  2. *Historical Origin & Commit Trace*: Sprint `2026-11-17_01_Früh` via `ATT-8157`, following `ATT-8155` (`b81888c8`) and `ATT-8156` (`84767320`) under Epic `ATT-8138`.
+  3. *Root Reason for Existing Formulation*: `ATT-6166`, `ATT-6169`, and `ATT-6138` wired Python simulator JSON into release blocking gates while `SKILL.md` referenced a nonexistent `--output-json` flag, producing false SYS.4 confidence without executing Android code.
+  4. *Preservation of Core Invariants*: Preserves simulator tool unit testing (`ble_hr_simulator.py`, `ble_power_simulator.py`, `ble_radar_simulator.py`, `fake_gps.py`, `replay_workout.py`), `SYS.5` real-device release gating, `verification_summary.md` deviation blocking, zero `app/src/main/` changes, and `ANT-Android-SDKs` (`0e8cea71`).
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `tools/run_simulator_self_tests.py` and `tools/test_simulator_self_tests.py`,
+  • *When* executed via `python3`,
+  • *Then* simulator self-tests pass against real simulator modules without claiming Android/emulator integration, and `--output` JSON export works cleanly.
+  • *Given* `tools/generate_release_verification_summary.py` run for a release tag without `system_integration_results.json`,
+  • *When* unit tests, traceability coverage, and `sys_verification_record.md` pass,
+  • *Then* `collect_sys4_summary()` raises zero missing-gate deviations and `verification_summary.md` evaluates to `PASS (READY FOR RELEASE)`.
+  • *Given* `docs/architecture.md`, `docs/system/sys_integration_tests.md`, `docs/releases/{README,TEMPLATE}.md`, `docs/releases/V5.0.0/`, `.agents/skills/release-manager/SKILL.md`, `SystemIntegrationTestContractTest.kt`, and `ReleaseManagerSystemEvidenceContractTest.kt`,
+  • *When* audited via Gradle contract tests and `verify_requirement_governance.py`,
+  • *Then* all tests pass with explicit honest simulator classification and zero false SYS.4 blocking claims.
+- **Invariants**: Zero Android production code impact (`app/src/main/`); `ANT-Android-SDKs` untouched at `0e8cea714a231fb9565170d4ed01eafa868f9798`; pure Python 3 stdlib for `tools/` test runners.
+
+---
+
+### REQ-PRO-113: Measured NFR Verification, Manual Protocol Honesty & Evidence Pipeline (ATT-8158) [Verified]
+- **Tests**: `TST-PRO-113`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Integration / Review
+- **Implementation**: `app/src/test/java/com/atrainingtracker/trainingtracker/build/MeasuredNfrBenchmarkTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/NonFunctionalRequirementsContractTest.kt`, `docs/engineering/test_evidence/nfr_manual_protocol_template.md`, `tools/generate_test_evidence.py`, `tools/test_generate_test_evidence.py`, `docs/requirements/req_process_stability.md`, `docs/tests/tst_process_stability.md`
+- **Rationale**: Resolves ASPICE 4.0 Assessment (2026-11-15) Finding `M8` (`SWE.2 BP3`, `SWE.6 BP3`, `ATT-8158`): `NonFunctionalRequirementsContractTest.kt` previously marked all 18 `REQ-NFR-001`..`018` and `TST-NFR-001`..`018` as `[Verified]` solely via markdown substring matching, without runtime timing, memory, storage, or throttle measurements, and without distinguishing JVM-measurable NFRs from hardware-only manual protocols.
+- **Description**:
+  1. *Measured JVM/Robolectric NFR Benchmarks (`REQ-PRO-113.1`, [Verified])*: The 11 JVM-measurable NFRs (`REQ-NFR-001, 002, 003, 005, 007, 008, 009, 010, 011, 013, 014`) SHALL be verified by executable JVM/Robolectric benchmarks/tests that execute JIT warmup, measure actual elapsed timing, heap delta, SQLite file growth, or emission rate metrics against the documented §4.9 budgets, and emit machine-readable NFR metrics (`app/build/reports/nfr/nfr_measurements.json`).
+  2. *Honest Attested Manual Protocol Classification (`REQ-PRO-113.2`, [Verified])*: The 7 hardware/battery/Doze/Play-Vitals NFRs (`REQ-NFR-004, 006, 012, 015, 016, 017, 018`) SHALL use `Verification Method: On-Device Manual` and MUST remain `[Implemented]` / `[Planned]` (never `[Verified]` via unit tests) until an attested physical-device measurement report is recorded.
+  3. *Evidence Ingestion & Contract Guardrail (`REQ-PRO-113.3`, [Verified])*: `tools/generate_test_evidence.py` SHALL ingest measured NFR JSON metrics and manual-protocol attestation status into `docs/engineering/test_evidence/<target>.{md,json}`, and `NonFunctionalRequirementsContractTest.kt` SHALL enforce measured benchmark & manual-protocol artifact integrity rather than raw markdown threshold-string presence.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new `REQ-PRO-113` refining `REQ-NFR-001`..`018`, `REQ-PRO-052`, and `REQ-PRO-100` across `NonFunctionalRequirementsContractTest.kt`, `tools/generate_test_evidence.py`, and living documentation shards.
+  2. *Historical Origin & Commit Trace*: Sprint `2026-11-17_01_Früh` via `ATT-8158`, following `ATT-8157` (`1750ab64`) under Epic `ATT-8138`.
+  3. *Root Reason for Existing Formulation*: `ATT-6139` / `ATT-6181` / `ATT-6735` relied on `NonFunctionalRequirementsContractTest.kt` doc-string assertions and had no mechanism to measure budgets or feed NFR metrics into `docs/engineering/test_evidence/`.
+  4. *Preservation of Core Invariants*: Preserves all 18 numeric budgets, `ArchitectureConformanceContractTest.kt` §4.9 checks, `TrackerService` / `WorkoutRepository` SQLite persistence correctness (offloading synchronous extrema SQLite I/O from the 1-Hz tick to `mDbExecutor` while keeping in-memory StateFlow updates reactive), and `ANT-Android-SDKs` (`0e8cea71`).
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* the 11 JVM-measurable NFR benchmarks executed under `./gradlew testDebugUnitTest`,
+  • *When* warmup and measured loops complete,
+  • *Then* all 11 measured metrics satisfy documented budgets and emit structured values to `app/build/reports/nfr/nfr_measurements.json`.
+  • *Given* `tools/generate_test_evidence.py` executed after unit tests,
+  • *When* generating `docs/engineering/test_evidence/<target>.{md,json}`,
+  • *Then* measured Group A metrics and Group B `On-Device Manual` `[Planned]`/`[Implemented]` statuses appear transparently without fabricated hardware results.
+  • *Given* `NonFunctionalRequirementsContractTest.kt` and `tools/verify_requirement_governance.py`,
+  • *When* executed,
+  • *Then* string-only doc-presence verification is replaced by authentic benchmark/protocol verification and governance exits `0`.
+- **Invariants**: Zero unverified hardware `[Verified]` statuses; `ANT-Android-SDKs` untouched; zero main-thread or 1-Hz tick synchronous SQLite extrema writes.
+
+---
+
+### REQ-PRO-114: Living Detailed Design & State Machine Models for Core Services (ATT-8159) [Verified]
+- **Tests**: `TST-PRO-114`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `docs/architecture/detailed_design/tracker_service.md`, `docs/architecture/detailed_design/banal_service.md`, `docs/architecture/detailed_design/my_btle_device.md`, `docs/architecture.md`, `.agents/skills/stage3-impl-plan/SKILL.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/DetailedDesignParityContractTest.kt`
+- **Rationale**: Resolves ASPICE 4.0 Assessment (2026-11-15) Finding `M9` (`SWE.3 BP1/BP2/BP4`, `ATT-8159`): detailed design previously existed only as frozen per-ticket implementation plans, KDoc, and requirement prose, with no unit-level dynamic state machine models for the three core services (`TrackerService`, `BANALService`, `MyBTLEDevice`) and no Stage 3 governance rule enforcing living detailed-design maintenance.
+- **Description**:
+  1. *Unit Detailed Design Documents & State Machine Models (`REQ-PRO-114.1`, [Verified])*: `docs/architecture/detailed_design/` SHALL maintain three unit-level detailed-design documents (`tracker_service.md`, `banal_service.md`, `my_btle_device.md`), each specifying a Mermaid `stateDiagram-v2` model, event/guard/transition tables, external/internal interface tables (`IF-SWE-*` / SWE.2 alignment), threading & concurrency contracts, error-handling & fault-recovery mechanisms, and bidirectional traceability to `ATT-7902` characterisation and unit test suites (`TrackerServiceStateMachineCharacterisationTest`, `TrackerServiceCrashRecoveryCharacterisationTest`, `TrackerServiceIntegrationTest`, `TrackerServiceFinalizationTest`, `TrackerServiceResilienceTest`, `TrackerServiceAsyncInitTest`, `TrackerServiceResumeTest`, `TrackerServiceRrFlushTest`, `TrackerServiceExportGatingTest`, `BANALServiceArbitrationCharacterisationTest`, `BANALServiceLifecycleTest`, `MyBTLEDeviceLifecycleTest`, `MyBTLEDeviceQueueTest`, `MyBTLEDeviceAddressAndSearchTest`).
+  2. *SWE.2 Cross-Reference & Stage 3 Living Detailed-Design Rule (`REQ-PRO-114.2`, [Verified])*: `docs/architecture.md` SHALL cross-reference `docs/architecture/detailed_design/` as the authoritative SWE.3 unit-design layer, and `.agents/skills/stage3-impl-plan/SKILL.md` SHALL require scheduling a living detailed-design update step whenever an implementation plan modifies state handling, transitions, or concurrency contracts of `TrackerService`, `BANALService` / `DeviceManager`, or `MyBTLEDevice`.
+  3. *Automated Code-Parity Contract Verification (`REQ-PRO-114.3`, [Verified])*: `DetailedDesignParityContractTest.kt` SHALL parse the living detailed-design documents under `docs/architecture/detailed_design/` and assert that every documented state/enum constant (`TrackingMode`, `AutoPauseState`, `TrackerService.StartType`, `MyBTLEDevice.State`), key lifecycle/concurrency field & method symbol (`mIsStopping`, `mTrackingInterrupted`, `mIsRehydrating`, `mSessionGeneration`, `mDbExecutor`, `mScheduler`, `mRrFlushExecutor`, `cMyRemoteDeviceCurrentlySearchingFor`, `mSearchQueue`, `mMyRemoteDeviceTries`, `mGattQueue`, `mGattLock`, `pauseGattOperations`, `resumeGattOperations`, `startScanAssistance`, `readNextCharacteristic`, `configureServices`), and cited test class exists verbatim in `app/src/main/` and `app/src/test/` with zero drift.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new `REQ-PRO-114` refining `REQ-PRO-034`, `REQ-PRO-043`, and `REQ-ARC-008` across `docs/architecture/detailed_design/`, `docs/architecture.md`, `.agents/skills/stage3-impl-plan/SKILL.md`, and `app/src/test/java/com/atrainingtracker/trainingtracker/build/DetailedDesignParityContractTest.kt`.
+  2. *Historical Origin & Commit Trace*: `053531cb` (`ATT-5431` SWE.2 `docs/architecture.md` & Stage 3 SWE.2 rule), `0d437b9c` (`ATT-6727` dynamic SWE.2 symbol parity), `ATT-7902` (`REQ-ARC-008` Golden Master characterisation tests); extended in Sprint `2026-11-17_01_Früh` via `ATT-8159` under Epic `ATT-8138`.
+  3. *Root Reason for Existing Formulation*: SWE.2 component architecture (`docs/architecture.md`, `interfaces.md`) and Golden Master characterisation tests (`ATT-7902`) were established prior to unit-level SWE.3 state machine modeling so behavioral baselines could first be locked down without production code changes.
+  4. *Preservation of Core Invariants*: Preserves all existing `AspiceSweAuditContractTest` and `ArchitectureConformanceContractTest` checks, keeps `app/src/main/` and `ANT-Android-SDKs` (`0e8cea71`) strictly untouched, and accurately models the real code split (`BANALService` delegating search state to `DeviceManager` without a `SearchingState` enum; `MyBTLEDevice.State` having 4 states; `TrackerService` combining `TrackingMode`, `AutoPauseState`, `StartType`, and volatile lifecycle flags).
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `docs/architecture/detailed_design/{tracker_service,banal_service,my_btle_device}.md`,
+  • *When* audited for SWE.3 BP1/BP2/BP4 completeness,
+  • *Then* each document contains a Mermaid `stateDiagram-v2`, event/guard/transition table, interface & threading contracts, error-handling mechanisms, and test traceability.
+  • *Given* a change to state handling in `TrackerService`, `BANALService` / `DeviceManager`, or `MyBTLEDevice`,
+  • *When* a Stage 3 plan is authored or reviewed per `.agents/skills/stage3-impl-plan/SKILL.md`,
+  • *Then* the plan includes the corresponding living detailed-design update step.
+  • *Given* `DetailedDesignParityContractTest.kt` executed under `./gradlew testDebugUnitTest`,
+  • *When* comparing documented states, symbols, and test classes against `app/src/main/` and `app/src/test/`,
+  • *Then* 100% of documented states/transitions/symbols resolve verbatim in source with zero drift.
+- **Invariants**: Zero edits to `app/src/main/` production behavior; `ANT-Android-SDKs` untouched at `0e8cea714a231fb9565170d4ed01eafa868f9798`; all existing characterisation and contract tests remain 100% green.
+
+
+---
+
+### REQ-PRO-115: Architecture & Interface Documentation Drift Remediation and JVM-Reflection Signature Check (ATT-8160) [Verified]
+- **Tests**: `TST-PRO-115`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `docs/architecture.md`, `docs/architecture/interfaces.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ArchitectureConformanceContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/InterfaceSignatureDriftContractTest.kt`
+- **Rationale**: Resolves ASPICE 4.0 Audit Finding `Minor (SWE.2)` (`SWE.2 BP1/BP2/BP4`, `ATT-8160`), refining `REQ-PRO-044`, `REQ-PRO-052`, and `REQ-PRO-049`: `docs/architecture/interfaces.md` drifted from live `app/src/main/` signatures (parameter counts, parameter types, return types, nullability), `docs/architecture.md` cited brittle `TrackerService.java:842-857` line numbers, omitted requirement prefix families (`SPT` etc.) from Section 2, and mixed ASPICE 3.1 and 4.0 SWE.2 Base Practice labels.
+- **Description**:
+  1. *Interface Signature & Nullability Remediation (`REQ-PRO-115.1`, `docs/architecture/interfaces.md`)*: `docs/architecture/interfaces.md` SHALL accurately match live `app/src/main/` declarations across all drifted signatures: `IF-SWE-02` `WorkoutRepository.updateExtremaValue(workoutId, sensorType, extremaType, value, position?)` (+ 6-param overload), `IF-SWE-03` `BANALServiceComm.getAllFilteredSensorData(): List<FilteredSensorData<?>>` and `getBestSensorData(sensorType: SensorType): SensorData`, `IF-SWE-05` `AutoPauseManager.evaluateTick` (7 params), `PowerPhysiologyCalculator.calculateNormalizedPower(List<Double?>, Double = 1.0): Double?`, `PowerHrDynamicsCalculator.calculate(List<Double?>?, List<Double?>?, Long = 0L, Double = 1.0, List<Long>? = null): CardioPowerDynamicsRecord?`, `WorkoutClusterEngine.suggestCluster` (11 params), `ClimbDetector.detectClimbs` (6 params), `IF-SWE-06` `WorkoutRepository.recordLiveSample` (8 params returning `Boolean`), `IF-SWE-08` `HealthConnectManager.syncWorkout` (3 params) and `HealthConnectHrvImporter.importRecentHrv` (4 params).
+  2. *Symbol Anchors, Prefix Allocation & ASPICE 4.0 BP Alignment (`REQ-PRO-115.2`, `docs/architecture.md`, `ArchitectureConformanceContractTest.kt`)*: `docs/architecture.md` SHALL replace brittle `:line` citations (`TrackerService.java:842-857`) with stable symbol anchors (`TrackerService#acquireWakeLock` / `releaseWakeLock`), add missing requirement prefixes (`SPT`, `HRV`, `RAD`, `WKO`, `CLM`) to Section 2, and standardize all SWE.2 labels across `docs/architecture.md` and `docs/architecture/interfaces.md` to **ASPICE 4.0** (`BP1` Static & Interfaces, `BP2` Dynamic Behavior, `BP3` Analyze Architecture & Resource/Timing Budgets, `BP4` Consistency & Bidirectional Traceability/Allocation, `BP5` Communicate Agreed Architecture). `ArchitectureConformanceContractTest.kt` SHALL check the WakeLock symbol anchors while preserving `PARTIAL_WAKE_LOCK`, `mScheduler`, `mDbExecutor`, and `REQ-NFR-003`..`014` assertions.
+  3. *JVM-Reflection Signature-Drift Contract Verification (`REQ-PRO-115.3`, `InterfaceSignatureDriftContractTest.kt`)*: `InterfaceSignatureDriftContractTest.kt` SHALL parse documented operation signatures in `docs/architecture/interfaces.md` and verify via **JVM reflection** (`Class.forName`, `declaredMethods`, parameter arity, parameter types, return types, and `@Nullable`/`@NotNull` nullability) against compiled `app/src/main/` classes, performing ZERO `.readText()` / `.readLines()` reads on `app/src/main/` in compliance with `REQ-PRO-049` (`SourceTextReadingAuditContractTest`).
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new `REQ-PRO-115` refining `REQ-PRO-044` (`interfaces.md` & `AspiceSweAuditContractTest.kt`), `REQ-PRO-052` (`docs/architecture.md` §4.9 & `ArchitectureConformanceContractTest.kt`), and `REQ-PRO-049` (`SourceTextReadingAuditContractTest.kt`).
+  2. *Historical Origin & Commit Trace*: `ATT-6180`/`ATT-6732` (`REQ-PRO-044` added name-only regex grounding), `0777baa6` (`ATT-6735`, `REQ-PRO-052` hardcoded `TrackerService.java:842-857`), and `ATT-6186` (`REQ-PRO-049` prohibits unallowlisted `src/main` file reads in tests).
+  3. *Root Reason for Existing Formulation*: Regex name checks missed parameter arity, type, and nullability evolution; `:842-857` predated later `TrackerService.java` growth (`acquireWakeLock` at L1079-1092, `releaseWakeLock` at L1094-1102); ASPICE 3.1 BP numbering persisted in early headings.
+  4. *Preservation of Core Invariants*: Preserves all `AspiceSweAuditContractTest` Section 2/5/6 checks, all `ArchitectureConformanceContractTest` `PARTIAL_WAKE_LOCK`/`mScheduler`/`mDbExecutor`/`REQ-NFR-003..014` checks, `DetailedDesignParityContractTest` anchors, `SourceTextReadingAuditContractTest` counts (`22` guards, `105` baseline), and `ANT-Android-SDKs` (`0e8cea71`).
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `docs/architecture/interfaces.md` and compiled `app/src/main/` classes,
+  • *When* `InterfaceSignatureDriftContractTest` executes under `./gradlew testDebugUnitTest`,
+  • *Then* all documented interface signatures match compiled JVM reflection signatures (names, parameter arity/types, return types, nullability) with zero `src/main/` text reads.
+  • *Given* `docs/architecture.md`,
+  • *When* inspected and validated by `ArchitectureConformanceContractTest` and `AspiceSweAuditContractTest`,
+  • *Then* WakeLock uses symbol anchors (`acquireWakeLock`/`releaseWakeLock`), Section 2 lists `SPT` (and `HRV`, `RAD`, `WKO`, `CLM`), and all SWE.2 headings use ASPICE 4.0 `BP1`–`BP5` labels.
+- **Invariants**: Zero edits to `app/src/main/` and `ANT-Android-SDKs`; `Localization Parity: N/A - no UI strings`; `SourceTextReadingAuditContractTest` remains 100% green.
+
+
+---
+
+### REQ-PRO-116: Retrospective Architecture Decision Records (ADR-002..ADR-007) & Reflection Contract (ATT-8161) [Verified]
+- **Tests**: `TST-PRO-116`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `docs/architecture/adr_002_foreground_tracking_service.md`, `docs/architecture/adr_003_banal_sensor_bus.md`, `docs/architecture/adr_004_sqlite_managers_vs_room.md`, `docs/architecture/adr_005_hybrid_preferences_datastore.md`, `docs/architecture/adr_006_incremental_compose_navigation.md`, `docs/architecture/adr_007_ble_ant_sensor_abstraction.md`, `docs/architecture.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/AdrCompletenessContractTest.kt`
+- **Rationale**: Resolves ASPICE 4.0 Audit Finding `Minor (SWE.2)` (`SWE.2 BP3/BP5`, `ATT-8161`), refining `REQ-ARC-005`, `REQ-PRO-043`, and `REQ-PRO-049`: only `ADR-001` exists (`adr_001_java_core_services_migration.md`), leaving the 6 foundational architectural decisions without documented criteria, evaluated alternatives, or consequences to protect Chesterton's Fence invariants.
+- **Description**:
+  1. *Six Retrospective ADRs (`REQ-PRO-116.1`, `docs/architecture/adr_002..007_*.md`)*: The repository SHALL document six retrospective ADRs matching the `ADR-001` structure (`Status`, `Deciders`, `Date`, `Context & Problem Statement`, `Decision Drivers & Evaluated Alternatives` with `>= 2` alternatives explicitly evaluated as `Rejected` or `Selected`, `Decision Outcome`, `Architectural Consequences & Trade-offs`):
+     - `ADR-002`: Foreground Tracking Service (`TrackerService`, `foregroundServiceType="location|health"`, `START_STICKY`, `PARTIAL_WAKE_LOCK`, `mScheduler`/`mDbExecutor`/`mRrFlushExecutor`) vs `WorkManager`/`JobScheduler`.
+     - `ADR-003`: Sensor Ingestion Bus (`BANALService`, `BANALServiceComm`, `MySensorManager`, `ProxySensor`, `FilterManager`, `BANALServiceRepository` `StateFlow`) vs static EventBus or cross-process AIDL.
+     - `ADR-004`: SQLite Managers vs Room ORM (`WorkoutSamplesDatabaseManager` dynamic per-workout tables, `WorkoutSummariesDatabaseManager`, `LapsDatabaseManager`, `DevicesDatabaseManager`, WAL + repository encapsulation via `WorkoutRepository`, `DeviceDataRepository`, `KnownLocationsRepository`) vs full Room ORM migration.
+     - `ADR-005`: Hybrid Preferences (`PreferenceManager.getDefaultSharedPreferences` in legacy/service hotpaths alongside `SettingsDataStore`, `TuningPreferencesDataStore`, `MyPreferenceManager`, `AttFusedPreferences`, `SettingsDataStoreJavaHelper`) vs pure `SharedPreferences` or big-bang DataStore rewrite.
+     - `ADR-006`: Incremental Single-Activity Compose Navigation (`MainActivityWithNavigation`, `ATrainingTrackerApp`, `NavHost`, `AppNavigationDrawer`, MVI `StateFlow` ViewModels coexisting with legacy XML/fragments `ConfigViewsActivityClassic`, `ConfigViewsFragment`, `TrackOnMapHelper`) vs pure multi-Fragment XML or big-bang Compose rewrite.
+     - `ADR-007`: Unified BLE & ANT+ Hardware Abstraction (`MyDevice` -> `MyRemoteDevice` -> `MyANTDevice` over pinned `ANT-Android-SDKs` `0e8cea71` & `MyBTLEDevice` + `PolarOnlineStreamingBridge`, unified by `DeviceManager` into `MySensor`/`ProxySensor` `SensorType`) vs protocol-specific tracking/UI branches.
+  2. *Honest PO Sign-Off & Architecture Index (`REQ-PRO-116.2`, `docs/architecture.md`)*: Per `ATT-8138` evidence integrity, each ADR MUST record `Status: Retrospective (Pending PO Sign-Off)` and `Deciders: Architecture Board, Product Owner (Pending Sign-Off)` unless explicitly signed off by the PO (zero fabricated approval). `docs/architecture.md` SHALL index `ADR-001`..`ADR-007` and cite only real `app/src/main/` classes (zero phantom `TrackPointsDatabaseManager`, `ANTDevice`, or `BTLEDevice`).
+  3. *JVM-Reflection & Structure Contract Test (`REQ-PRO-116.3`, `AdrCompletenessContractTest.kt`)*: `AdrCompletenessContractTest.kt` SHALL validate `ADR-002`..`ADR-007` structural sections, `>= 2` evaluated alternatives per ADR, honest PO sign-off status, `docs/architecture.md` index links, and verify cited production classes via **JVM reflection (`Class.forName`)** with ZERO `app/src/main/` `.readText()` file reads (`REQ-PRO-049`).
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new `REQ-PRO-116` refining `REQ-ARC-005` (`ADR-001` & `JavaCoreMigrationStrategyContractTest.kt`), `REQ-PRO-043` (`docs/architecture.md` & `AspiceSweAuditContractTest.kt`), and `REQ-PRO-049` (`SourceTextReadingAuditContractTest.kt`).
+  2. *Historical Origin & Commit Trace*: `ATT-7566` / `ATT-8115` (`REQ-ARC-005`), `ATT-5431` / `ATT-6727` (`REQ-PRO-043`), `ATT-6186` (`REQ-PRO-049`), extended via `ATT-8161`.
+  3. *Root Reason for Existing Formulation*: `ADR-001` covered only Java-to-Kotlin migration scope, leaving the 6 underlying platform/persistence/UI/HAL architectural choices undocumented as formal ADRs.
+  4. *Preservation of Core Invariants*: Preserves `ADR-001` (`JavaCoreMigrationStrategyContractTest.kt`), all `AspiceSweAuditContractTest` & `ArchitectureConformanceContractTest` assertions, `SourceTextReadingAuditContractTest` (`22` guards, `105` baseline), `app/src/main/`, and `ANT-Android-SDKs` (`0e8cea71`).
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `docs/architecture/adr_002..007_*.md` and `docs/architecture.md`,
+  • *When* `AdrCompletenessContractTest` and `AspiceSweAuditContractTest` execute under `./gradlew testDebugUnitTest`,
+  • *Then* all 6 ADRs pass structural, `>= 2`-alternative, honest PO sign-off, index, and JVM-reflection class checks with zero `src/main/` text reads.
+  • *Given* `tools/verify_requirement_governance.py`,
+  • *When* executed across the repository,
+  • *Then* all governance and code-grounding checks exit `0`.
+- **Invariants**: Zero edits to `app/src/main/`, `ANT-Android-SDKs`, or `ADR-001`; `Localization Parity: N/A - no UI strings`; zero phantom class names.

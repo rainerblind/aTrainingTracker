@@ -3,7 +3,7 @@
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Tests**: 205
+**Total Tests**: 220
 
 ---
 
@@ -106,6 +106,98 @@
 - **Component**: **Settings Cleanup Verification**
 - **Jira**: ``ATT-268``
 - **Test Description**: 1. Gradle Build: Ensure the project compiles successfully after reorganization and deletions. 2. Navigation Test: Verify all settings items in the drawer (Units, Display, Search, Export, Strava, Dropbox, Tracking Tabs) still function correctly.
+
+### TST-INT-009: **INT-SWE-01 Presentation Layer UI to ViewModel MVI Verification** [Verified]
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Integration
+- **Requirement(s)**: `REQ-PRO-110`
+- **Component**: `ui/tracking/controltracking/ControlTrackingButton.kt`, `ui/tracking/controltracking/ControlTrackingViewModel.kt`, `ui/tracking/tracking/TrackingViewModel.kt`, `ui/tracking/trackingtabs/TrackingTabsViewModel.kt`
+- **Jira**: `ATT-8155`
+- **Test Description**:
+  1. Initialize real `ControlTrackingViewModel`, `TrackingTabsViewModel`, and `TrackingViewModel` in Robolectric Compose test harness (`createComposeRule()`).
+  2. Compose `ControlTrackingButton` and Compose observers bound to `TrackingViewModel.uiState` / `screenMode` and `TrackingTabsViewModel.screenMode` / coachmark StateFlows.
+  3. Dispatch UI actions (`onStartTracking()`, `onPauseTracking()`, `onResumeTracking()`, `onStopTracking()`, `updateScreenMode()`, `setScreenMode()`), invoke `waitForIdle()`, and assert Compose UI nodes recompose with `assertTextEquals()` and broadcast dispatch.
+
+### TST-INT-010: **INT-SWE-02 ViewModel to Repository Data Layer Verification** [Verified]
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Integration
+- **Requirement(s)**: `REQ-PRO-110`
+- **Component**: `ui/aftermath/WorkoutRepository.kt`, `ui/aftermath/workoutlist/WorkoutSummariesViewModel.kt`, `repositories/BANALServiceRepository.kt`, `database/WorkoutSummariesDatabaseManager.java`
+- **Jira**: `ATT-8155`
+- **Test Description**:
+  1. Instantiate `WorkoutRepository` and `WorkoutSummariesViewModel` with real Robolectric SQLite `WorkoutSummariesDatabaseManager` (verified via `RealSqliteTestHelper`).
+  2. Collect reactive `Flow` emissions via `getWorkoutById()`, `WorkoutSummariesViewModel.allWorkouts`, and `BANALServiceRepository.allFilteredSensorData`.
+  3. Insert and update real SQLite workout summary rows; assert reactive emissions deliver updated `WorkoutData` records without main-thread blocking.
+
+### TST-INT-011: **INT-SWE-03 Inter-Service Ingestion Binder IPC Verification** [Verified]
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Integration
+- **Requirement(s)**: `REQ-PRO-110`
+- **Component**: `tracker/TrackerService.java`, `banalservice/BANALService.java`, `banalservice/sensor/MySensorManager.java`, `database/WorkoutSamplesDatabaseManager.java`, `database/WorkoutSummariesDatabaseManager.java`
+- **Jira**: `ATT-8155`
+- **Test Description**:
+  1. Wire `TrackerService` to real `BANALService.BANALServiceComm` local binder backed by real `MySensorManager`.
+  2. Execute 1-Hz batch poll (`sampleAndWriteToDb()`) polling `getBestSensorData()` and `getAllSensorData()`, verifying `LiveWorkoutSession` stats and real SQLite sample/summary row writes.
+  3. Verify sensor priority arbitration (`BIKE_SPEED` > `SPEED_AND_LOCATION_GPS`) and verify null-safety on `getBanalConnectionForTesting().onServiceDisconnected()` and `sampleAndWriteToDb(null)`.
+
+### TST-INT-012: **INT-SWE-04 Hardware HAL Byte Stream Ingestion & Sensor Replay Verification** [Verified]
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Integration
+- **Requirement(s)**: `REQ-PRO-110`
+- **Component**: `banalservice/devices/bluetooth_le/BTLEHeartRateDevice.java`, `banalservice/devices/bluetooth_le/BTLEBikePowerDevice.java`, `banalservice/devices/bluetooth_le/BTLERadarDevice.java`, `banalservice/devices/radar/RadarStateRepository.kt`, `banalservice/devices/SpeedAndLocationDevice_GPS.java`, `banalservice/sensor/MySensorManager.java`
+- **Jira**: `ATT-8155`
+- **Test Description**:
+  1. Inject raw GATT characteristic byte arrays for Heart Rate (`0x2A37`), Cycling Power (`0x2A63`), and Radar (`6a4e3204` V1 & V2 `parseV2ThreatPacket`), plus `Location` fixes via `SpeedAndLocationDevice_GPS.onNewLocation()`.
+  2. Assert binary parsing into `MySensorManager` sensors, `RrBeatEvent` callbacks, and `RadarStateRepository` targets.
+  3. Assert real `BTLERadarDevice` watchdog timeout (`WATCHDOG_TIMEOUT_MS` = 3,500 ms via `getWatchdogRunnableForTesting()`) transitions `RadarStateRepository` to `DISCONNECTED_ERROR`.
+
+### TST-INT-013: **INT-SWE-05 Domain Calculators & Algorithms Integration Verification** [Verified]
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Integration
+- **Requirement(s)**: `REQ-PRO-111`
+- **Component**: `tracker/autopause/AutoPauseManager.kt`, `physiology/PowerPhysiologyCalculator.kt`, `physiology/PowerHrDynamicsCalculator.kt`, `database/WorkoutClusterEngine.kt`, `climbs/ClimbDetector.kt`
+- **Jira**: `ATT-8156`
+- **Test Description**:
+  1. Execute real `AutoPauseManager.evaluateTick()`, `PowerPhysiologyCalculator.calculateNormalizedPower()`, `PowerHrDynamicsCalculator.calculate()`, `WorkoutClusterEngine.suggestCluster()`, and `ClimbDetector.detectClimbs()` using synthetic multi-sensor time-series and elevation profiles.
+  2. Assert deterministic NP/TSS, cardiac drift, cluster apex, climb detection, and auto-pause debounce transitions without primitive constant stubs.
+
+### TST-INT-014: **INT-SWE-06 Persistence SQLite Foundation Integration Verification** [Verified]
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Integration
+- **Requirement(s)**: `REQ-PRO-111`
+- **Component**: `database/WorkoutSamplesDatabaseManager.java`, `database/WorkoutSummariesDatabaseManager.java`, `database/KnownLocationsDatabaseManager.java`, `database/LapsDatabaseManager.java`, `repositories/KnownLocationsRepository.kt`
+- **Jira**: `ATT-8156`
+- **Test Description**:
+  1. Exercise real Robolectric SQLite databases (`WorkoutSamplesDatabaseManager`, `WorkoutSummariesDatabaseManager`, `KnownLocationsDatabaseManager`, `LapsDatabaseManager`) and `KnownLocationsRepository.recordWorkoutStart()`.
+  2. Assert WAL concurrency, dynamic `createNewTable` sample persistence, and non-destructive `onUpgrade` schema parity (`v1 -> v6`) via `RealSqliteTestHelper`.
+
+### TST-INT-015: **INT-SWE-07 Repository/ExportManager to File Exporters Integration Verification** [Verified]
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Integration
+- **Requirement(s)**: `REQ-PRO-111`
+- **Component**: `exporter/ExportManager.java`, `exporter/writer/FitFileWriter.kt`, `exporter/writer/GPXFileWriter.java`, `exporter/writer/TCXFileWriter.kt`, `exporter/db/ExportStatusDatabaseManager.java`
+- **Jira**: `ATT-8156`
+- **Test Description**:
+  1. Seed real SQLite workout/sample/lap records and invoke `FitFileWriter`, `GPXFileWriter`, and `TCXFileWriter` via `ExportManager` into temporary storage.
+  2. Assert valid FIT/GPX/TCX byte/XML output, zero leftover `.tmp` artifacts after write, and authentic `ExportStatusDatabaseManager` status persistence.
+
+### TST-INT-016: **INT-SWE-08 Cloud APIs & Health Connect Integration Verification** [Verified]
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Integration
+- **Requirement(s)**: `REQ-PRO-111`
+- **Component**: `exporter/uploader/StravaUploader.kt`, `exporter/uploader/DropboxUploader.java`, `cloud/healthconnect/HealthConnectManager.kt`, `cloud/healthconnect/HealthConnectHrvImporter.kt`, `database/hrv/HrvReadinessRepository.kt`
+- **Jira**: `ATT-8156`
+- **Test Description**:
+  1. Wire real `StravaUploader` to an authentic `OkHttpClient` `Interceptor` transport double and real `ExportStatusRepository` / `StravaUploadDbHelper`, verifying bearer-token multipart upload + polling + activity PUT update, HTTP 503 retry classification, and `DropboxUploader` missing-credential guard.
+  2. Wire real `HealthConnectManager` and `HealthConnectHrvImporter` to an authentic `HealthConnectClient` test double and real `ExportStatusDatabaseManager` / `HrvReadinessRepository`, verifying idempotent workout sync and nocturnal HRV ingestion.
 
 ### TST-PRO-001: **Jira Attachment Download** [Verified]
 - **Priority**: High
@@ -2509,26 +2601,23 @@
   5. *Workflow YAML Syntax Validation (`TST-PRO-067.5`, tools/test_verify_requirement_governance.py & ReleaseCiAndLintConfigContractTest.kt)*:
   • Parse `.github/workflows/android-branch-build.yml` and `.github/workflows/android-release.yml` with YAML parser and assert zero syntax errors.
 
-### TST-PRO-068: **System Integration Verification & Sensor Simulators Specification Contract Test Suite** [Verified]
+### TST-PRO-068: **Developer Sensor Simulator Self-Test Harness Contract Test Suite** [Verified]
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-PRO-068`
-- **Component**: `docs/system/sys_integration_tests.md`, `tools/run_system_integration_tests.py`, `tools/test_system_integration_tests.py`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SystemIntegrationTestContractTest.kt`
-- **Jira**: `ATT-6166`
+- **Component**: `docs/system/sys_integration_tests.md`, `tools/run_simulator_self_tests.py`, `tools/test_simulator_self_tests.py`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SystemIntegrationTestContractTest.kt`
+- **Jira**: `ATT-6166`, `ATT-8157`
 - **Test Description**:
-  1. *System Integration Specification Structural Integrity (`TST-PRO-068.1`, SystemIntegrationTestContractTest.kt)*:
-  • Assert `docs/system/sys_integration_tests.md` exists and contains required metadata header.
-  • Assert all 6 integration test cases (`SYS-INT-001` through `SYS-INT-006`) are defined.
-  • Assert coverage across all external system interfaces (`SYS-IF-01` BLE, `SYS-IF-02` ANT+, `SYS-IF-03` GNSS, `SYS-IF-05` Cloud).
+  1. *System Integration Boundary & Gap Disclosure (`TST-PRO-068.1`, SystemIntegrationTestContractTest.kt)*:
+  • Assert `docs/system/sys_integration_tests.md` exists, contains required metadata header, and explicitly discloses that Python simulators do not execute the Android APK or physical hardware.
+  • Assert documentation covers external system interfaces (`SYS-IF-01` BLE, `SYS-IF-02` ANT+, `SYS-IF-03` GNSS, `SYS-IF-05` Cloud) and honest allocation across `INT-SWE-01..08`, `AppSmokeAndroidTest.kt`, and manual `SYS.5`.
   2. *System Requirements Bidirectional Traceability (`TST-PRO-068.2`, SystemIntegrationTestContractTest.kt)*:
-  • Assert all integration test cases trace to system requirements (`SYSREQ-TRK-*`, `SYSREQ-DEX-*`) and system elements (`SYS-EL-*`).
-  • Assert exact bidirectional parity between referenced requirements and system documents.
-  3. *Headless CI Runner Execution & Artifact Generation (`TST-PRO-068.3`, tools/test_system_integration_tests.py)*:
-  • Execute `tools/run_system_integration_tests.py` in headless mode.
-  • Verify output report structure, pass/fail status, timestamping, and exit code 0.
-  4. *Integration Runner Unit Test Suite (`TST-PRO-068.4`, tools/test_system_integration_tests.py)*:
-  • Verify unit tests for simulation handlers, error paths, and CLI arguments pass cleanly under Python unittest.
+  • Assert interface specifications trace to system requirements (`SYSREQ-TRK-*`, `SYSREQ-DEX-*`) and system elements (`SYS-EL-01`..`05`).
+  3. *Simulator Self-Test Runner Execution (`TST-PRO-068.3`, tools/test_simulator_self_tests.py)*:
+  • Execute `tools/run_simulator_self_tests.py` against real simulator modules (`ble_hr_simulator.py`, `ble_power_simulator.py`, `ble_radar_simulator.py`) and verify JSON report schema via `--output`, explicit simulator-only metadata, and exit code 0.
+  4. *Simulator Self-Test Unit Suite (`TST-PRO-068.4`, tools/test_simulator_self_tests.py)*:
+  • Verify `unittest` suite for simulator handlers, targeted filtering, CLI `--output` arguments, and pure Python 3 stdlib compliance passes cleanly.
 
 ### TST-PRO-069: **System Verification Protocol & Hardware Reference Specification Contract Test Suite** [Verified]
 - **Priority**: High
@@ -2597,234 +2686,234 @@
 - **Type**: Non-Functional
 - **Verification Method**: Unit
 - **Requirement(s)**: `REQ-NFR-001`
-- **Component**: `TrackerService.java`, `docs/architecture.md` §4.9
-- **Jira**: `ATT-6139`
+- **Component**: `UnicycleOdometryEkf.kt`, `KinematicAltitudeSlopeEkf.kt`, `SpeedAndLocationDevice_ATTFused.kt`, `docs/architecture.md` §4.9
+- **Jira**: `ATT-6139`, `ATT-8158`
 - **Test Description**:
-  1. *Scope*: Sensor Simulation & Timing Benchmark (`TST-NFR-001.1`).
-  2. *Preconditions*: High-frequency synthetic IMU hardware timestamps with thread scheduling jitter.
-  3. *Action*: Ingest sensor packets into EKF filter, compute Delta-T vs hardware event timestamps.
-  4. *Expected Result*: Calculated Delta-T jitter <= 2.0 ms across consecutive sensor updates.
+  1. *Scope*: Measured JVM EKF Timing & Delta-T Benchmark (`TST-NFR-001.1`, `MeasuredNfrBenchmarkTest.kt`).
+  2. *Preconditions*: JIT warmup completed; high-frequency synthetic IMU hardware timestamps with simulated thread arrival jitter.
+  3. *Action*: Run `UnicycleOdometryEkf` / `KinematicAltitudeSlopeEkf` motion predict/update loops measuring elapsed step latency (`System.nanoTime`) and hardware-timestamp Delta-T deviation, emitting JSON metrics to `app/build/reports/nfr/nfr_measurements.json`.
+  4. *Expected Result*: Delta-T jitter <= 2.0 ms and measured EKF cycle p95 latency <= 2.0 ms.
 
 ### TST-NFR-002: **Stationary Pinning Drift Prevention Verification** [Verified]
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
 - **Requirement(s)**: `REQ-NFR-002`
-- **Component**: `TrackerService.java`, `docs/architecture.md` §4.9
-- **Jira**: `ATT-6139`
+- **Component**: `SpeedAndLocationDevice.java`, `SpeedAndLocationDevice_ATTFused.kt`, `docs/architecture.md` §4.9
+- **Jira**: `ATT-6139`, `ATT-8158`
 - **Test Description**:
-  1. *Scope*: Sensor Replay Simulation (`TST-NFR-002.1`).
-  2. *Preconditions*: Simulated stationary state with IMU accelerometer variance below stillness threshold.
-  3. *Action*: Run 30-minute position estimation loop with synthetic stationary coordinates and IMU inputs.
-  4. *Expected Result*: Accumulated coordinate drift < 0.5 m/min; coordinate unpinning within 1.0 s of movement resumption.
+  1. *Scope*: Measured Stationary Replay Simulation (`TST-NFR-002.1`, `MeasuredNfrBenchmarkTest.kt`).
+  2. *Preconditions*: Robolectric replay with stationary GNSS jitter within deadband + IMU rest state on `SpeedAndLocationDevice`.
+  3. *Action*: Replay 30-minute (1,800-tick) stationary window followed by movement resumption, measuring horizontal drift (m/min), unpin latency (s), and replay runtime, emitting JSON metrics to `app/build/reports/nfr/nfr_measurements.json`.
+  4. *Expected Result*: Accumulated horizontal drift < 0.5 m/min; coordinate unpinning <= 1.0 s upon movement resumption.
 
 ### TST-NFR-003: **Periodic Tick Latency Budget Verification** [Verified]
 - **Priority**: High
 - **Type**: Non-Functional
-- **Verification Method**: Unit
+- **Verification Method**: Integration
 - **Requirement(s)**: `REQ-NFR-003`
 - **Component**: `TrackerService.java`, `docs/architecture.md` §4.9
-- **Jira**: `ATT-6139`, `ATT-6181`
+- **Jira**: `ATT-6139`, `ATT-6181`, `ATT-8158`
 - **Test Description**:
-  1. *Scope*: Android Studio CPU Profiler / System.nanoTime instrumentation (`TST-NFR-003.1`).
-  2. *Preconditions*: Active workout recording session on background `mScheduler`.
-  3. *Action*: Profile 1000 consecutive periodic 1-Hz tick executions.
-  4. *Expected Result*: Execution duration < 50 ms for >= 99% of cycles, guaranteeing >= 950 ms idle headroom.
+  1. *Scope*: Measured `TrackerService` 1-Hz Tick Latency Integration Benchmark (`TST-NFR-003.1`, `MeasuredNfrBenchmarkTest.kt`).
+  2. *Preconditions*: Active `TrackerService` Robolectric recording session after JIT warmup.
+  3. *Action*: Measure >= 200 consecutive 1-Hz tick cycles via `System.nanoTime`, compute p95/p99/max execution duration, and emit JSON metrics to `app/build/reports/nfr/nfr_measurements.json`.
+  4. *Expected Result*: Tick p99 execution duration < 50 ms on 1000 ms cycle (>= 950 ms headroom).
 
-### TST-NFR-004: **CPU Consumption Ceiling Verification** [Verified]
+### TST-NFR-004: **CPU Consumption Ceiling Verification** [Planned]
 - **Priority**: High
 - **Type**: Non-Functional
-- **Verification Method**: Unit
+- **Verification Method**: On-Device Manual
 - **Requirement(s)**: `REQ-NFR-004`
 - **Component**: `TrackerService.java`, `docs/architecture.md` §4.9
-- **Jira**: `ATT-6139`, `ATT-6181`
+- **Jira**: `ATT-6139`, `ATT-6181`, `ATT-8158`
 - **Test Description**:
-  1. *Scope*: Android Studio CPU Profiler / simpleperf CPU trace (`TST-NFR-004.1`).
-  2. *Preconditions*: Continuous 30-minute background recording with screen off, active GNSS, and 2 connected BLE sensors.
-  3. *Action*: Measure average CPU utilization across single-core reference device.
-  4. *Expected Result*: Average CPU consumption < 5.0% single-core on mid-tier reference hardware.
+  1. *Scope*: Attested On-Device Manual Protocol — `simpleperf` / `dumpsys cpuinfo` (`TST-NFR-004.1`).
+  2. *Preconditions*: Physical Pixel reference device; active 30-minute background tracking session with screen off, GNSS 1 Hz, and 2 BLE sensors connected.
+  3. *Action*: Execute `adb shell dumpsys cpuinfo` / Android Studio CPU Profiler capture across the 30-minute session and record attestation (device model, Android build, date, operator, measured % single-core CPU, PASS/FAIL). Never falsely satisfied by JVM unit tests.
+  4. *Expected Result*: Attested average single-core CPU consumption < 5.0%.
 
 ### TST-NFR-005: **Dedicated Heap Footprint Ceiling Verification** [Verified]
 - **Priority**: High
 - **Type**: Non-Functional
-- **Verification Method**: Unit
+- **Verification Method**: Integration
 - **Requirement(s)**: `REQ-NFR-005`
-- **Component**: `TrackerService.java`, `docs/architecture.md` §4.9
-- **Jira**: `ATT-6139`, `ATT-6181`
+- **Component**: `TrackerService.java`, `LiveWorkoutSession.java`, `docs/architecture.md` §4.9
+- **Jira**: `ATT-6139`, `ATT-6181`, `ATT-8158`
 - **Test Description**:
-  1. *Scope*: Android Memory Profiler / Heap Dump (`TST-NFR-005.1`).
-  2. *Preconditions*: Continuous 12+ hour simulated workout recording with map display and 1-Hz telemetry.
-  3. *Action*: Capture heap dump (`am dumpheap`) and evaluate retained memory allocations in LeakCanary / Memory Profiler.
-  4. *Expected Result*: Dedicated `TrackerService` heap <= 40 MB; total application peak heap RAM <= 150 MB.
+  1. *Scope*: Measured Endurance Heap Footprint Benchmark (`TST-NFR-005.1`, `MeasuredNfrBenchmarkTest.kt`).
+  2. *Preconditions*: Warmed JVM/Robolectric `TrackerService` / `LiveWorkoutSession` session with post-GC baseline heap recorded.
+  3. *Action*: Replay 3,600+ 1-Hz multi-sensor telemetry ticks, invoke GC, measure retained heap delta (`MB`) and total heap (`MB`), and emit JSON metrics to `app/build/reports/nfr/nfr_measurements.json`.
+  4. *Expected Result*: Dedicated retained heap delta < 40 MB; total heap RAM <= 150 MB.
 
-### TST-NFR-006: **Tracking Battery Drain Ceiling Verification** [Verified]
+### TST-NFR-006: **Tracking Battery Drain Ceiling Verification** [Planned]
 - **Priority**: High
 - **Type**: Non-Functional
-- **Verification Method**: Unit
+- **Verification Method**: On-Device Manual
 - **Requirement(s)**: `REQ-NFR-006`
 - **Component**: `TrackerService.java`, `docs/architecture.md` §4.9
-- **Jira**: `ATT-6139`, `ATT-6181`
+- **Jira**: `ATT-6139`, `ATT-6181`, `ATT-8158`
 - **Test Description**:
-  1. *Scope*: Android Battery Historian / Energy Profiler (`TST-NFR-006.1`).
-  2. *Preconditions*: 60-minute active tracking benchmark on calibrated reference hardware with active GNSS and BLE sensors.
-  3. *Action*: Measure discharge rate in screen-off background mode and screen-on cockpit map mode (50% brightness).
-  4. *Expected Result*: Battery drain <= 5.0%/h screen off; <= 12.0%/h screen on with cockpit map rendering.
+  1. *Scope*: Attested On-Device Manual Protocol — Battery Historian / `dumpsys batterystats` (`TST-NFR-006.1`).
+  2. *Preconditions*: Physical Pixel reference device unplugged at >= 90% SoC; active GNSS + paired BLE/ANT+ sensors.
+  3. *Action*: Reset `adb shell dumpsys batterystats --reset`, run 60-minute screen-off tracking and 60-minute screen-on cockpit map tracking (50% brightness), dump `batterystats`, and record attested discharge rates (%/h), device, build, date, operator, and verdict.
+  4. *Expected Result*: Attested battery drain <= 5.0%/h screen off; <= 12.0%/h screen on with cockpit map.
 
 ### TST-NFR-007: **Sensor Dispatch Latency Budget Verification** [Verified]
 - **Priority**: High
 - **Type**: Non-Functional
-- **Verification Method**: Unit
+- **Verification Method**: Integration
 - **Requirement(s)**: `REQ-NFR-007`
 - **Component**: `BANALService.java`, `ProxySensor.java`, `docs/architecture.md` §4.9
-- **Jira**: `ATT-6139`, `ATT-6181`
+- **Jira**: `ATT-6139`, `ATT-6181`, `ATT-8158`
 - **Test Description**:
-  1. *Scope*: Synthetic Sensor Event Benchmark (`TST-NFR-007.1`).
-  2. *Preconditions*: Registered sensor subscribers across `TrackerService` and UI listeners.
-  3. *Action*: Measure timestamp delta from HAL ingestion to subscriber notification callback across 10,000 packets.
-  4. *Expected Result*: Dispatch latency < 25 ms for >= 99% of events.
+  1. *Scope*: Measured Sensor Dispatch Latency Benchmark (`TST-NFR-007.1`, `MeasuredNfrBenchmarkTest.kt`).
+  2. *Preconditions*: Warmed Robolectric `BANALService` / `ProxySensor` pipeline with active subscribers.
+  3. *Action*: Dispatch >= 1,000 synthetic sensor events, measure timestamp delta (`System.nanoTime`) to subscriber delivery, and emit p99/max latency (ms) to `app/build/reports/nfr/nfr_measurements.json`.
+  4. *Expected Result*: Measured p99 dispatch latency < 25 ms with zero dropped packets.
 
 ### TST-NFR-008: **Sensor Connection Failover Timeout Verification** [Verified]
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
 - **Requirement(s)**: `REQ-NFR-008`
-- **Component**: `BANALService.java`, `ProxySensor.java`, `docs/architecture.md` §4.9
-- **Jira**: `ATT-6139`, `ATT-6181`
+- **Component**: `BTLERadarDevice.java`, `ANTBikeRadarDevice.kt`, `MyBTLEDevice.java`, `BANALService.java`, `ProxySensor.java`, `docs/architecture.md` §4.9
+- **Jira**: `ATT-6139`, `ATT-6181`, `ATT-8158`
 - **Test Description**:
-  1. *Scope*: Disconnect Simulation Harness (`TST-NFR-008.1`).
-  2. *Preconditions*: Primary sensor emitting telemetry with secondary fallback paired.
-  3. *Action*: Abruptly drop primary sensor packet stream and measure time until reconnection or failover initiation.
-  4. *Expected Result*: Failover or automatic reconnect initiated within <= 3.5 s.
+  1. *Scope*: Measured Disconnect/Watchdog Failover Benchmark (`TST-NFR-008.1`, `MeasuredNfrBenchmarkTest.kt`).
+  2. *Preconditions*: Active radar/BLE/proxy sensor state with `WATCHDOG_TIMEOUT_MS = 3500L` and secondary source or reconnect handler.
+  3. *Action*: Simulate abrupt packet starvation, advance/observe watchdog & failover dispatch timing, measure elapsed failover/reconnect initiation latency (`ms`), and emit JSON metrics to `app/build/reports/nfr/nfr_measurements.json`.
+  4. *Expected Result*: Measured failover/reconnect initiation <= 3.5 s (`3500 ms`) observing §4.8 priority hierarchy.
 
 ### TST-NFR-009: **Tracking WakeLock Bounding Verification** [Verified]
 - **Priority**: High
 - **Type**: Non-Functional
-- **Verification Method**: Unit
+- **Verification Method**: Integration
 - **Requirement(s)**: `REQ-NFR-009`
 - **Component**: `TrackerService.java`, `docs/architecture.md` §4.9
-- **Jira**: `ATT-6139`, `ATT-6735`
+- **Jira**: `ATT-6139`, `ATT-6735`, `ATT-8158`
 - **Test Description**:
-  1. *Scope*: PowerManager Mock Unit Test & Dumpsys Power Inspection (`TST-NFR-009.1`).
-  2. *Preconditions*: Full lifecycle transition sequence: Idle -> Tracking -> Paused -> Tracking -> Stopped.
-  3. *Action*: Assert `isHeld()` on `aTrainingTracker:TrackingLock` across each state transition.
-  4. *Expected Result*: WakeLock held strictly in `TRACKING` state; immediately released in `STOPPED` and `PAUSED` with 0 leak.
+  1. *Scope*: Measured `ShadowPowerManager` WakeLock Lifecycle Test (`TST-NFR-009.1`, `MeasuredNfrBenchmarkTest.kt`).
+  2. *Preconditions*: Robolectric `TrackerService` lifecycle driving `onCreate` -> `onStartCommand(START_NORMAL)` -> `PAUSED` -> `TRACKING` -> `ACTION_STOP` -> `onDestroy`.
+  3. *Action*: Assert `ShadowPowerManager` WakeLock `isHeld()` for `aTrainingTracker:TrackingLock` across every transition, measure release latency (`ms`), and emit JSON metrics to `app/build/reports/nfr/nfr_measurements.json`.
+  4. *Expected Result*: WakeLock held throughout active tracking and pause monitoring; released immediately (`0` leaked WakeLocks) upon `ACTION_STOP` / `onDestroy` finalization.
 
 ### TST-NFR-010: **Database Sample Write Latency Budget Verification** [Verified]
 - **Priority**: High
 - **Type**: Non-Functional
-- **Verification Method**: Unit
+- **Verification Method**: Integration
 - **Requirement(s)**: `REQ-NFR-010`
 - **Component**: `TrackerService.java`, `WorkoutSamplesDatabaseManager.java`, `docs/architecture.md` §4.9
-- **Jira**: `ATT-6139`, `ATT-6735`
+- **Jira**: `ATT-6139`, `ATT-6735`, `ATT-8158`
 - **Test Description**:
-  1. *Scope*: SQLite Write Latency Benchmark (`TST-NFR-010.1`).
-  2. *Preconditions*: Active SQLite database in WAL mode on `mScheduler` / `mDbExecutor`.
-  3. *Action*: Measure insertion duration for 3,600 consecutive 1-Hz workout sample rows.
-  4. *Expected Result*: Write latency < 30 ms per sample with zero operations on the Android main thread.
+  1. *Scope*: Measured SQLite WAL Write Latency Benchmark (`TST-NFR-010.1`, `MeasuredNfrBenchmarkTest.kt`).
+  2. *Preconditions*: Real Robolectric SQLite database in WAL mode after warmup inserts on a background executor (`mDbExecutor` semantics).
+  3. *Action*: Measure per-row `SQLiteDatabase.insertOrThrow` latency over >= 1,000 consecutive 1-Hz workout sample rows, verify non-main-thread execution, and emit p95/p99/max ms to `app/build/reports/nfr/nfr_measurements.json`.
+  4. *Expected Result*: Measured p99 write latency < 30 ms per sample with zero operations on the Android main thread.
 
 ### TST-NFR-011: **Telemetry Storage Growth Rate Ceiling Verification** [Verified]
 - **Priority**: High
 - **Type**: Non-Functional
-- **Verification Method**: Unit
+- **Verification Method**: Integration
 - **Requirement(s)**: `REQ-NFR-011`
 - **Component**: `WorkoutSamplesDatabaseManager.java`, `docs/architecture.md` §4.9
-- **Jira**: `ATT-6139`, `ATT-6181`
+- **Jira**: `ATT-6139`, `ATT-6181`, `ATT-8158`
 - **Test Description**:
-  1. *Scope*: Database Storage Progression Integration Test (`TST-NFR-011.1`).
-  2. *Preconditions*: 3,600 consecutive 1-Hz telemetry samples recorded in database.
-  3. *Action*: Measure database file size growth on disk before and after workout insertion.
-  4. *Expected Result*: Storage growth <= 360 KB/h (~100 bytes/sample, <= 3.6 MB for a 10-hour activity).
+  1. *Scope*: Measured SQLite Storage Progression Integration Test (`TST-NFR-011.1`, `MeasuredNfrBenchmarkTest.kt`).
+  2. *Preconditions*: Real Robolectric SQLite workout samples table with WAL checkpoint baseline size measured.
+  3. *Action*: Insert 3,600 consecutive 1-Hz multi-sensor rows (1-hour workout), run `PRAGMA wal_checkpoint(TRUNCATE)`, measure `.db` file byte delta (`KB/h`), and emit JSON metrics to `app/build/reports/nfr/nfr_measurements.json`.
+  4. *Expected Result*: Measured storage growth <= 360 KB/h (~100 bytes/sample).
 
-### TST-NFR-012: **Cockpit Frame Render Budget Verification** [Verified]
+### TST-NFR-012: **Cockpit Frame Render Budget Verification** [Planned]
 - **Priority**: High
 - **Type**: Non-Functional
-- **Verification Method**: Unit
+- **Verification Method**: On-Device Manual
 - **Requirement(s)**: `REQ-NFR-012`
 - **Component**: `SensorGridScreen.kt`, `docs/architecture.md` §4.9
-- **Jira**: `ATT-6139`, `ATT-6181`
+- **Jira**: `ATT-6139`, `ATT-6181`, `ATT-8158`
 - **Test Description**:
-  1. *Scope*: AndroidX Macrobenchmark FrameTimingMetric (`TST-NFR-012.1`).
-  2. *Preconditions*: `SensorGridScreen` rendering live telemetry card updates at 1 Hz on reference hardware.
-  3. *Action*: Measure 95th-percentile frame render durations over a 60-second scrolling and streaming session.
-  4. *Expected Result*: Render duration < 16.6 ms per frame (sustaining >= 60 FPS without dropped frames).
+  1. *Scope*: Attested On-Device Manual Protocol — AndroidX Macrobenchmark `FrameTimingMetric` / `dumpsys gfxinfo` (`TST-NFR-012.1`).
+  2. *Preconditions*: Physical Pixel device rendering `SensorGridScreen` live 1-Hz telemetry cards for 60 seconds.
+  3. *Action*: Collect `adb shell dumpsys gfxinfo com.atrainingtracker.trainingtracker framestats` (or Macrobenchmark `FrameTimingMetric`) and record attested p95 frame time (ms), device, build, date, operator, and verdict.
+  4. *Expected Result*: Attested 95th-percentile frame render duration < 16.6 ms (sustaining >= 60 FPS).
 
 ### TST-NFR-013: **Map Polyline Update Latency Budget Verification** [Verified]
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
 - **Requirement(s)**: `REQ-NFR-013`
-- **Component**: `ATrainingTrackerMap.kt`, `docs/architecture.md` §4.9
-- **Jira**: `ATT-6139`, `ATT-6181`
+- **Component**: `MapLayers.kt`, `ATrainingTrackerMap.kt`, `docs/architecture.md` §4.9
+- **Jira**: `ATT-6139`, `ATT-6181`, `ATT-8158`
 - **Test Description**:
-  1. *Scope*: Map Canvas Render Pipeline Benchmark (`TST-NFR-013.1`).
-  2. *Preconditions*: Live GPS track with 10,000 points displayed on canvas.
-  3. *Action*: Ingest coordinate update and measure time to recalculate polyline geometry and complete canvas draw.
-  4. *Expected Result*: Polyline path update latency < 30 ms.
+  1. *Scope*: Measured Map Polyline Decimation Benchmark (`TST-NFR-013.1`, `MeasuredNfrBenchmarkTest.kt`).
+  2. *Preconditions*: Warmed JVM benchmark with a 10,000-point synthetic GPS `LatLng` track.
+  3. *Action*: Execute `IncrementalTrackDecimator` / `decimateLiveTrack` (`MapLayers.kt`) across incremental coordinate appends, measure elapsed `System.nanoTime` (ms), and emit p95/max ms to `app/build/reports/nfr/nfr_measurements.json`.
+  4. *Expected Result*: Measured polyline geometry update latency < 30 ms.
 
 ### TST-NFR-014: **Cockpit Telemetry Emission Rate Throttling Verification** [Verified]
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
 - **Requirement(s)**: `REQ-NFR-014`
-- **Component**: `TrackingTabsViewModel.kt`, `docs/architecture.md` §4.9
-- **Jira**: `ATT-6139`, `ATT-6181`
+- **Component**: `BANALServiceRepository.kt`, `TrackingTabsViewModel.kt`, `docs/architecture.md` §4.9
+- **Jira**: `ATT-6139`, `ATT-6181`, `ATT-8158`
 - **Test Description**:
-  1. *Scope*: Coroutine Turbine / TestScope StateFlow Test (`TST-NFR-014.1`).
-  2. *Preconditions*: High-frequency mock sensor streams updating at > 4 Hz.
-  3. *Action*: Collect emissions from `TrackingTabsViewModel.uiState` over 5.0 seconds.
-  4. *Expected Result*: Maximum 5 distinct UI state emissions (strictly conflated to 1.0 Hz).
+  1. *Scope*: Measured Coroutine `TestScope` 1-Hz Emission Throttling Test (`TST-NFR-014.1`, `MeasuredNfrBenchmarkTest.kt`).
+  2. *Preconditions*: High-frequency (> 4 Hz) mock sensor updates feeding `BANALServiceRepository` / `TrackingTabsViewModel`.
+  3. *Action*: Advance virtual time over 5.0 seconds (`5,000 ms`), count distinct `allFilteredSensorData` / `StateFlow` periodic emissions, verify rate <= 1.0 Hz, and emit measured emission count & interval to `app/build/reports/nfr/nfr_measurements.json`.
+  4. *Expected Result*: <= 5 distinct periodic UI emissions over 5.0 seconds (throttled to <= 1.0 Hz).
 
-### TST-NFR-015: **Cold Start Startup Latency Budget Verification** [Verified]
+### TST-NFR-015: **Cold Start Startup Latency Budget Verification** [Planned]
 - **Priority**: High
 - **Type**: Non-Functional
-- **Verification Method**: Unit
+- **Verification Method**: On-Device Manual
 - **Requirement(s)**: `REQ-NFR-015`
 - **Component**: `MainActivityWithNavigation.kt`, `docs/architecture.md` §4.9
-- **Jira**: `ATT-6139`
+- **Jira**: `ATT-6139`, `ATT-8158`
 - **Test Description**:
-  1. *Scope*: AndroidX Macrobenchmark StartupBenchmark / Google Play Vitals (`TST-NFR-015.1`).
-  2. *Preconditions*: Cold process launch from launcher intent on reference device.
-  3. *Action*: Measure Time-to-Initial-Display (TTID) and Time-to-Full-Display (TTFD).
-  4. *Expected Result*: TTID <= 1200 ms; TTFD <= 1500 ms to interactive dashboard rendering.
+  1. *Scope*: Attested On-Device Manual Protocol — Cold Start `am start -W` / Macrobenchmark `StartupMode.COLD` (`TST-NFR-015.1`).
+  2. *Preconditions*: Physical Pixel device with app force-stopped before each of >= 5 cold launches.
+  3. *Action*: Measure TTID (`TotalTime`) and TTFD (`reportFullyDrawn`) via `adb shell am start -W` / Macrobenchmark and record attested median/p95 ms, device, build, date, operator, and verdict.
+  4. *Expected Result*: Attested TTID <= 1200 ms; TTFD <= 1500 ms.
 
-### TST-NFR-016: **GNSS Horizontal Trajectory Accuracy Verification** [Verified]
+### TST-NFR-016: **GNSS Horizontal Trajectory Accuracy Verification** [Planned]
 - **Priority**: High
 - **Type**: Non-Functional
-- **Verification Method**: Unit
+- **Verification Method**: On-Device Manual
 - **Requirement(s)**: `REQ-NFR-016`
-- **Component**: `MySensorManager.java`, `docs/architecture.md` §4.8
-- **Jira**: `ATT-6139`
+- **Component**: `MySensorManager.java`, `SpeedAndLocationDevice_ATTFused.kt`, `docs/architecture.md` §4.8
+- **Jira**: `ATT-6139`, `ATT-8158`
 - **Test Description**:
-  1. *Scope*: Track Replay & Orthogonal Error Analysis (`TST-NFR-016.1`).
-  2. *Preconditions*: Open-sky recorded workout track and RTK-surveyed ground-truth reference polyline.
-  3. *Action*: Compute orthogonal distance error for each recorded fix against reference track.
-  4. *Expected Result*: 95th-percentile horizontal position error <= 5.0 m; cross-track RMSE <= 3.0 m.
+  1. *Scope*: Attested On-Device Manual Protocol — Open-Sky Field Track vs Surveyed Reference (`TST-NFR-016.1`).
+  2. *Preconditions*: Open-sky field course with surveyed RTK/ground-truth polyline on physical Pixel device.
+  3. *Action*: Record workout track, export GPX, compute orthogonal cross-track error against reference polyline, and record attested p95 error (m), RMSE (m), device, build, date, operator, and verdict.
+  4. *Expected Result*: Attested 95th-percentile horizontal error <= 5.0 m; cross-track RMSE <= 3.0 m.
 
-### TST-NFR-017: **Production Crash-Free Session Stability Verification** [Verified]
+### TST-NFR-017: **Production Crash-Free Session Stability Verification** [Planned]
 - **Priority**: High
 - **Type**: Non-Functional
-- **Verification Method**: Unit
+- **Verification Method**: On-Device Manual
 - **Requirement(s)**: `REQ-NFR-017`
-- **Component**: `TrainingApplication.kt`, `docs/architecture.md`
-- **Jira**: `ATT-6139`
+- **Component**: `TrainingApplication.java`, `docs/architecture.md`
+- **Jira**: `ATT-6139`, `ATT-8158`
 - **Test Description**:
-  1. *Scope*: Google Play Console Android Vitals & Firebase Crashlytics Telemetry (`TST-NFR-017.1`).
-  2. *Preconditions*: Production release builds running across user base over rolling 30-day window.
-  3. *Action*: Evaluate crash rate metrics across all recorded user sessions.
-  4. *Expected Result*: Production crash-free session rate >= 99.5%; per-release staging gate >= 99.0%.
+  1. *Scope*: Attested On-Device Manual Protocol — Play Console Android Vitals Crash Rate (`TST-NFR-017.1`).
+  2. *Preconditions*: Production/staging release telemetry accumulated in Google Play Console Android Vitals over rolling 30-day window.
+  3. *Action*: Export rolling 30-day crash-free session rate from Play Console / Crashlytics and record attested percentage, release version, date, operator, and verdict.
+  4. *Expected Result*: Attested production crash-free session rate >= 99.5% (staging >= 99.0%).
 
-### TST-NFR-018: **Application Not Responding (ANR) Rate Ceiling Verification** [Verified]
+### TST-NFR-018: **Application Not Responding (ANR) Rate Ceiling Verification** [Planned]
 - **Priority**: High
 - **Type**: Non-Functional
-- **Verification Method**: Unit
+- **Verification Method**: On-Device Manual
 - **Requirement(s)**: `REQ-NFR-018`
 - **Component**: `TrackerService.java`, `WorkoutSamplesDatabaseManager.java`, `docs/architecture.md` §4.9
-- **Jira**: `ATT-6139`
+- **Jira**: `ATT-6139`, `ATT-8158`
 - **Test Description**:
-  1. *Scope*: Google Play Console Android Vitals & StrictMode Audit (`TST-NFR-018.1`).
-  2. *Preconditions*: Production release builds monitored via Play Console Android Vitals.
-  3. *Action*: Query user-perceived ANR rate over 30 days and run StrictMode thread policy audit in debug tests.
-  4. *Expected Result*: Production ANR rate <= 0.05% (Google Play Bad Behavior threshold: 0.47%); zero main-thread I/O violations.
+  1. *Scope*: Attested On-Device Manual Protocol — Play Console Android Vitals ANR Rate & StrictMode (`TST-NFR-018.1`).
+  2. *Preconditions*: Production release monitored in Google Play Console Android Vitals plus on-device StrictMode session audit.
+  3. *Action*: Export rolling 30-day user-perceived ANR rate from Play Console, inspect StrictMode/Perfetto logs, and record attested ANR rate (%), release version, date, operator, and verdict.
+  4. *Expected Result*: Attested production ANR rate <= 0.05% (threshold 0.47%); zero main-thread blocking I/O violations.
 
 ### TST-PRO-072: **Release Manager System Verification Evidence Integration & Release Gating Test Suite** [Verified]
 - **Priority**: High
@@ -2832,14 +2921,14 @@
 - **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-PRO-072`
 - **Component**: `.agents/skills/release-manager/SKILL.md`, `docs/releases/README.md`, `docs/releases/TEMPLATE.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ReleaseManagerSystemEvidenceContractTest.kt`, `docs/architecture.md`
-- **Jira**: `ATT-6169`
+- **Jira**: `ATT-6169`, `ATT-8157`
 - **Test Description**:
   1. *Skill System Evidence Gate Specification Contract Test (`TST-PRO-072.1`, ReleaseManagerSystemEvidenceContractTest.kt)*:
-  • Assert that `.agents/skills/release-manager/SKILL.md` exists and mandates SYS.4 (`system_integration_results.json`) and SYS.5 (`sys_verification_record.md`) verification gates.
+  • Assert that `.agents/skills/release-manager/SKILL.md` exists, mandates unit/`INT-SWE-01..08` + `SYS.5` (`sys_verification_record.md`) + `verification_summary.md` release gates, and does NOT mandate `system_integration_results.json` or invalid `--output-json` as a blocking SYS.4 gate.
   2. *Release Tag Blocking Logic Contract Test (`TST-PRO-072.2`, ReleaseManagerSystemEvidenceContractTest.kt)*:
-  • Assert that the release checklist and step-by-step procedures explicitly define pre-tagging blocking checks that reject tag creation if system verification records are missing or failing.
+  • Assert that the release checklist and step-by-step procedures explicitly block tag creation and Play Store distribution if `sys_verification_record.md` or `verification_summary.md` is missing, failing, or has unapproved deviations.
   3. *Release Template & Directory Structure Contract Test (`TST-PRO-072.3`, ReleaseManagerSystemEvidenceContractTest.kt)*:
-  • Assert that `docs/releases/` contains `README.md` and `TEMPLATE.md` specifying `docs/releases/<tag>/` artifact requirements and SYS.4/SYS.5 sign-off criteria.
+  • Assert that `docs/releases/` `README.md` and `TEMPLATE.md` specify `docs/releases/<tag>/` layout, `SYS.5` sign-off criteria, and non-gating simulator self-test status.
   4. *Contract Test Suite Execution & Governance Parity (`TST-PRO-072.4`, ReleaseManagerSystemEvidenceContractTest.kt & tools/verify_requirement_governance.py)*:
   • Assert `ReleaseManagerSystemEvidenceContractTest.kt` passes cleanly under Gradle and `python3 tools/verify_requirement_governance.py` confirms 100% living documentation parity.
 
@@ -2867,7 +2956,7 @@
 - **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-PRO-074`
 - **Component**: `tools/generate_release_verification_summary.py`, `tools/test_generate_release_verification_summary.py`, `.agents/skills/release-manager/SKILL.md`, `docs/releases/README.md`
-- **Jira**: `ATT-6138`
+- **Jira**: `ATT-6138`, `ATT-8157`
 - **Test Description**:
   1. *CLI Argument Parsing & Default Output Path Test (`TST-PRO-074.1`, test_generate_release_verification_summary.py)*:
   • Verify CLI accepts `--tag`, `--commit`, `--out`, and coverage threshold flags, correctly defaulting output to `docs/releases/<tag>/verification_summary.md`.
@@ -2875,8 +2964,8 @@
   • Verify parsing of JUnit XML reports and versioned archive reference `build-evidence/junit-test-results-<tag>.zip`.
   3. *Coverage JSON Integration & Threshold Verification Test (`TST-PRO-074.3`, test_generate_release_verification_summary.py)*:
   • Verify extraction of bidirectional REQ-TST and TST-Code metrics from `--coverage-json` output and threshold breach detection.
-  4. *SYS.4 and SYS.5 Evidence Parsing & Deviation Detection Test (`TST-PRO-074.4`, test_generate_release_verification_summary.py)*:
-  • Verify parsing of `system_integration_results.json` and `sys_verification_record.md`, flagging missing files, failed tests, and unsigned protocols under deviations requiring human approval.
+  4. *SYS.5 Gate & Non-Blocking Legacy Simulator Summary Test (`TST-PRO-074.4`, test_generate_release_verification_summary.py)*:
+  • Verify parsing of `sys_verification_record.md` flags missing/unsigned SYS.5 protocols under deviations requiring human approval, while missing `system_integration_results.json` raises zero blocking deviations and legacy files render honestly as non-blocking simulator/informational telemetry.
   5. *End-to-End Markdown Summary Generation & Governance Parity Test (`TST-PRO-074.5`, test_generate_release_verification_summary.py & tools/verify_requirement_governance.py)*:
   • Verify end-to-end generation of `verification_summary.md` and confirm 100% living documentation parity.
 
@@ -3487,3 +3576,125 @@
   • Verify that `final_review_verdict` rejects plain keyword-stuffed unstructured text on `PASS`, and successfully accepts structured reports matching `stage6-final-review/SKILL.md` sections with bullets or structured options tables.
   5. *Sanctioned Coordinator Workflow Invariants Test (`TST-PRO-109.5`, tools/test_jira_accounts.py)*:
   • Verify that Coordinator operations (`pack_sprint`, `return_unstarted`, `carryover_wip`, `archive_po_acceptance`, `defer_to_systemtest_queue`), `ATT-8153` QA non-conformance ticket generation, and `ATT-8426` decoupled 7-day review currency checks remain 100% functional.
+
+---
+
+### TST-PRO-110: **Integration Verification Test Strategy & Evidence Integrity Suite (ATT-8155)** [Verified]
+- **Requirement(s)**: `REQ-PRO-110`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Integration / Review
+- **Component**: `app/src/test/java/com/atrainingtracker/trainingtracker/build/AspiceSweAuditContractTest.kt`, `tools/generate_test_evidence.py`
+- **Jira**: `ATT-8155`
+- **Test Description**:
+  1. *Architecture Integration Sequence Parity Test (`TST-PRO-110.1`, build/AspiceSweAuditContractTest.kt)*:
+  • Verify that `AspiceSweAuditContractTest` asserts 100% bidirectional traceability between `INT-SWE-01..04`, `IF-SWE-01..04`, and executable integration test classes.
+  2. *Robolectric Level 1 Execution & Fast Feedback Test (`TST-PRO-110.2`, integration/*.kt)*:
+  • Verify that all four integration test suites execute under `./gradlew testDebugUnitTest` within fast turnaround bounds (<= 30s) without requiring emulator or physical hardware.
+  3. *Machine-Readable Test Evidence & JUnit XML Archival Test (`TST-PRO-110.3`, tools/generate_test_evidence.py)*:
+  • Verify that `tools/generate_test_evidence.py` and `tools/jira_util.py export-test-evidence` parse JUnit XML results for `INT-SWE-01..04` and archive versioned evidence under `docs/engineering/test_evidence/`.
+  4. *Living Documentation & Shard Parity Test (`TST-PRO-110.4`, tools/verify_requirement_governance.py)*:
+  • Verify that all living documentation shards pass governance checks with zero dangling references and zero code orphans.
+
+---
+
+### TST-PRO-111: **INT-SWE-05..08 Integration Verification & Strategy Parity Suite (ATT-8156)** [Verified]
+- **Requirement(s)**: `REQ-PRO-111`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Integration / Review
+- **Component**: `app/src/test/java/com/atrainingtracker/trainingtracker/build/AspiceSweAuditContractTest.kt`, `docs/architecture/integration_strategy.md`
+- **Jira**: `ATT-8156`
+- **Test Description**:
+  1. *Integration Test Suite & Spec Lock (`TST-PRO-111.1`, build/AspiceSweAuditContractTest.kt)*:
+  • Verify `DomainCalculatorsIntegrationTest.kt`, `PersistenceSqliteIntegrationTest.kt`, `FileExportersIntegrationTest.kt`, and `CloudHealthConnectIntegrationTest.kt` exist on disk, use `RobolectricTestRunner` (`sdk = [34]`), and cite `TST-INT-013..016`.
+  2. *Integration Strategy Factual Sync (`TST-PRO-111.2`, docs/architecture/integration_strategy.md)*:
+  • Verify `integration_strategy.md` reflects authentic `sprint_455.md` / `ATT-8500` metrics (`6,540` tests, `1,119` suites, `29m 21s` Tier-2 / `2,635.73s` sum), Level 1 `INT-SWE-01..08` scope, and `emulator-5554` policy.
+  3. *Machine-Readable Evidence & Governance (`TST-PRO-111.3`, tools/verify_requirement_governance.py)*:
+  • Verify JUnit XML captures `TST-INT-013..016` and `TST-PRO-111`, and living documentation shards pass governance checks with zero dangling references or code orphans.
+
+---
+
+### TST-PRO-112: **Simulator Self-Test Scoping & Release Gate Honesty Test Suite (ATT-8157)** [Verified]
+- **Requirement(s)**: `REQ-PRO-112`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Component**: `app/src/test/java/com/atrainingtracker/trainingtracker/build/SystemIntegrationTestContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ReleaseManagerSystemEvidenceContractTest.kt`, `tools/test_generate_release_verification_summary.py`, `tools/verify_requirement_governance.py`
+- **Jira**: `ATT-8157`
+- **Test Description**:
+  1. *Simulator Self-Test Rename & Purity Test (`TST-PRO-112.1`, tools/test_simulator_self_tests.py & SystemIntegrationTestContractTest.kt)*:
+  • Verify `tools/run_simulator_self_tests.py` (`SimulatorSelfTestRunner`) tests `ble_hr_simulator.py`, `ble_power_simulator.py`, and `ble_radar_simulator.py` without fake Android/constant-arithmetic claims, `--output` JSON export succeeds, legacy `run_system_integration_tests.py` is removed, and `SystemIntegrationTestContractTest.kt` passes.
+  2. *Non-Blocking Release Gate Removal Test (`TST-PRO-112.2`, tools/test_generate_release_verification_summary.py & ReleaseManagerSystemEvidenceContractTest.kt)*:
+  • Verify `collect_sys4_summary()` in `tools/generate_release_verification_summary.py` raises zero deviations when `system_integration_results.json` is absent, does not falsely emit `[ PASS ]` SYS.4 app integration status, and `ReleaseManagerSystemEvidenceContractTest.kt` asserts `SKILL.md` / `docs/releases/` / `docs/architecture.md` gate strictly on unit/`INT-SWE-01..08`, `SYS.5`, and `verification_summary.md`.
+  3. *Honest Documentation & V5.0.0 Reclassification Audit (`TST-PRO-112.3`, tools/verify_requirement_governance.py)*:
+  • Verify `docs/architecture.md` (§6.2, §6.4), `docs/system/sys_integration_tests.md`, `docs/releases/V5.0.0/` (`verification_summary.md`, `system_integration_results.json`), and living docs explicitly state simulator-only scope, `INT-SWE-01..08` + `AppSmokeAndroidTest.kt` + manual `SYS.5` boundaries, and pass `verify_requirement_governance.py` with exit 0.
+
+---
+
+### TST-PRO-113: **Measured NFR Verification, Manual Protocol & Evidence Ingestion Suite (ATT-8158)** [Verified]
+- **Requirement(s)**: `REQ-PRO-113`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Integration / Review
+- **Component**: `app/src/test/java/com/atrainingtracker/trainingtracker/build/MeasuredNfrBenchmarkTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/NonFunctionalRequirementsContractTest.kt`, `docs/engineering/test_evidence/nfr_manual_protocol_template.md`, `tools/generate_test_evidence.py`, `tools/test_generate_test_evidence.py`, `tools/verify_requirement_governance.py`
+- **Jira**: `ATT-8158`
+- **Test Description**:
+  1. *Measured JVM/Robolectric NFR Benchmark Execution (`TST-PRO-113.1`, MeasuredNfrBenchmarkTest.kt)*:
+  • Verify that the 11 measurable NFR benchmarks (`TST-NFR-001, 002, 003, 005, 007, 008, 009, 010, 011, 013, 014`) run warmup + measured passes, assert documented budgets, and emit structured JSON metrics to `app/build/reports/nfr/nfr_measurements.json`.
+  2. *Manual Protocol Classification & Anti-False-Green Guard (`TST-PRO-113.2`, NonFunctionalRequirementsContractTest.kt)*:
+  • Verify that `NonFunctionalRequirementsContractTest.kt` checks authentic benchmark/evidence artifacts and enforces `On-Device Manual` + non-`[Verified]` status for unattested hardware NFRs (`004, 006, 012, 015, 016, 017, 018`) instead of raw doc-string presence.
+  3. *Test Evidence Ingestion & Governance Parity (`TST-PRO-113.3`, tools/test_generate_test_evidence.py & verify_requirement_governance.py)*:
+  • Verify that `tools/generate_test_evidence.py` ingests `app/build/reports/nfr/nfr_measurements.json` and manual protocol status into `docs/engineering/test_evidence/<target>.{md,json}`, and `verify_requirement_governance.py` passes with exit 0.
+
+---
+
+### TST-PRO-114: **Living Detailed Design & Code-Parity Verification Suite (ATT-8159)** [Verified]
+- **Requirement(s)**: `REQ-PRO-114`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Component**: `app/src/test/java/com/atrainingtracker/trainingtracker/build/DetailedDesignParityContractTest.kt`, `docs/architecture/detailed_design/tracker_service.md`, `docs/architecture/detailed_design/banal_service.md`, `docs/architecture/detailed_design/my_btle_device.md`, `docs/architecture.md`, `.agents/skills/stage3-impl-plan/SKILL.md`
+- **Jira**: `ATT-8159`
+- **Test Description**:
+  1. *Detailed Design Structural & Mermaid Completeness Test (`TST-PRO-114.1`, DetailedDesignParityContractTest.kt)*:
+  • Verify that `docs/architecture/detailed_design/tracker_service.md`, `banal_service.md`, and `my_btle_device.md` exist, each declare `stateDiagram-v2`, event/guard/transition tables, interface/threading/error-handling sections, and reference authentic `ATT-7902` characterisation and unit test classes.
+  2. *Code-Parity Symbol & State Existence Verification (`TST-PRO-114.2`, DetailedDesignParityContractTest.kt)*:
+  • Verify that every documented enum/state constant (`TrackingMode`, `AutoPauseState`, `TrackerService.StartType`, `MyBTLEDevice.State`), key lifecycle/concurrency field & method symbol, and cited test class resolves verbatim against `app/src/main/` and `app/src/test/` with zero drift.
+  3. *SWE.2 Cross-Reference, Stage 3 Governance & Living Doc Parity (`TST-PRO-114.3`, DetailedDesignParityContractTest.kt & verify_requirement_governance.py)*:
+  • Verify `docs/architecture.md` cross-references `docs/architecture/detailed_design/`, `.agents/skills/stage3-impl-plan/SKILL.md` mandates living detailed-design updates for the 3 core units in Stage 3 plans/reviews, and `verify_requirement_governance.py` exits `0`.
+
+---
+
+### TST-PRO-115: **Architecture & Interface Drift Remediation and JVM-Reflection Signature Contract Suite (ATT-8160)** [Verified]
+- **Requirement(s)**: `REQ-PRO-115`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Component**: `app/src/test/java/com/atrainingtracker/trainingtracker/build/InterfaceSignatureDriftContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ArchitectureConformanceContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/AspiceSweAuditContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SourceTextReadingAuditContractTest.kt`, `docs/architecture.md`, `docs/architecture/interfaces.md`
+- **Jira**: `ATT-8160`
+- **Test Description**:
+  1. *JVM-Reflection Interface Signature Drift Verification (`TST-PRO-115.1`, InterfaceSignatureDriftContractTest.kt)*:
+  • Parse operation/method signatures in `docs/architecture/interfaces.md` (`IF-SWE-01`..`IF-SWE-08`) and resolve provider classes via `Class.forName` without reading `app/src/main/` source files (`REQ-PRO-049`).
+  • Verify via `declaredMethods` that every documented method/property exists with matching parameter count (arity), parameter types, return type, and nullability (`@Nullable`/`@NotNull` or Kotlin nullable signature parity), including `evaluateTick` (7 params), `calculateNormalizedPower` (nullable `Double?` return and `List<Double?>`), `PowerHrDynamicsCalculator.calculate` (5 params), `suggestCluster` (11 params), `detectClimbs` (6 params), `recordLiveSample` (8 params returning `Boolean`), `updateExtremaValue` (5/6 params), `syncWorkout` (3 params), `importRecentHrv` (4 params), and `BANALServiceComm` generic/raw return types.
+  2. *Symbol Anchor, Allocation Prefix & ASPICE 4.0 BP Conformance (`TST-PRO-115.2`, ArchitectureConformanceContractTest.kt & AspiceSweAuditContractTest.kt)*:
+  • Verify `docs/architecture.md` §4.9 references `TrackerService#acquireWakeLock` / `releaseWakeLock` (zero brittle `:line` citations), `ArchitectureConformanceContractTest.testArchitectureDoc_definesResourceAndTimingBudgets` enforces symbol anchors alongside `PARTIAL_WAKE_LOCK`, `mScheduler`, `mDbExecutor`, and `REQ-NFR-003`..`014`, Section 2 includes `SPT`, `HRV`, `RAD`, `WKO`, `CLM`, and SWE.2 BP headings align to ASPICE 4.0 (`BP1`–`BP5`).
+  3. *Source-Reading Audit & Governance Parity (`TST-PRO-115.3`, SourceTextReadingAuditContractTest.kt & verify_requirement_governance.py)*:
+  • Verify `SourceTextReadingAuditContractTest` remains 100% green (new test makes zero `src/main` file reads) and `verify_requirement_governance.py` exits `0`. (`Localization Parity: N/A - no UI strings`).
+
+---
+
+### TST-PRO-116: **Retrospective Architecture Decision Records (ADR-002..ADR-007) & Reflection Contract Suite (ATT-8161)** [Verified]
+- **Requirement(s)**: `REQ-PRO-116`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Component**: `app/src/test/java/com/atrainingtracker/trainingtracker/build/AdrCompletenessContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/AspiceSweAuditContractTest.kt`, `app/src/test/java/com/atrainingtracker/architecture/JavaCoreMigrationStrategyContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SourceTextReadingAuditContractTest.kt`, `docs/architecture.md`, `docs/architecture/adr_002_foreground_tracking_service.md`, `docs/architecture/adr_003_banal_sensor_bus.md`, `docs/architecture/adr_004_sqlite_managers_vs_room.md`, `docs/architecture/adr_005_hybrid_preferences_datastore.md`, `docs/architecture/adr_006_incremental_compose_navigation.md`, `docs/architecture/adr_007_ble_ant_sensor_abstraction.md`
+- **Jira**: `ATT-8161`
+- **Test Description**:
+  1. *ADR Structural, Alternatives & Honest PO Sign-Off Verification (`TST-PRO-116.1`, AdrCompletenessContractTest.kt)*:
+  • Verify `docs/architecture/adr_002..007_*.md` all exist and contain `ADR-001` sections (`Context & Problem Statement`, `Decision Drivers & Evaluated Alternatives`, `Decision Outcome`, `Architectural Consequences & Trade-offs`), `>= 2` evaluated alternatives (`Rejected`/`Selected`), honest `Pending PO Sign-Off` status/decider fields, and zero phantom class tokens (`TrackPointsDatabaseManager`, `ANTDevice`, `BTLEDevice`).
+  2. *JVM-Reflection Production Class Grounding & Index Parity (`TST-PRO-116.2`, AdrCompletenessContractTest.kt & AspiceSweAuditContractTest.kt)*:
+  • Verify via `Class.forName` (zero `app/src/main/` file reading per `REQ-PRO-049`) that core classes cited in `ADR-002`..`ADR-007` (`TrackerService`, `BANALService`, `BANALServiceRepository`, `WorkoutSamplesDatabaseManager`, `WorkoutSummariesDatabaseManager`, `WorkoutRepository`, `SettingsDataStore`, `TuningPreferencesDataStore`, `MainActivityWithNavigation`, `MyDevice`, `MyRemoteDevice`, `MyANTDevice`, `MyBTLEDevice`, `PolarOnlineStreamingBridge`, `DeviceManager`) exist in compiled bytecode, and `docs/architecture.md` links `ADR-001`..`ADR-007`.
+  3. *ADR-001 Preservation, Source-Reading & Governance Parity (`TST-PRO-116.3`, JavaCoreMigrationStrategyContractTest.kt, SourceTextReadingAuditContractTest.kt, verify_requirement_governance.py)*:
+  • Verify `JavaCoreMigrationStrategyContractTest` stays green (`ADR-001` untouched), `SourceTextReadingAuditContractTest` flags zero `ATT-8161` reads, and `verify_requirement_governance.py` exits `0`. (`Localization Parity: N/A - no UI strings`).

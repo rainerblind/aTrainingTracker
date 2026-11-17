@@ -1423,4 +1423,69 @@ class BTLERadarDeviceTest {
         radarDevice.notifyStopSearchingForTesting(false)
         assertEquals(RadarConnectionState.DISCONNECTED_ERROR, RadarStateRepository.getState().connectionState)
     }
+
+    /**
+     * TST-CON-046.1 / REQ-CON-046.1 (ATT-8455):
+     * All 6 RadarState emission paths in BTLERadarDevice preserve manual isAutoMode == false,
+     * and explicit RadarLightController.setAutoMode() restores isAutoMode == true.
+     */
+    @Test
+    fun testAllSixEmissionSites_preserveManualIsAutoModeAndRestoreOnSetAutoMode() {
+        val mockGatt = mockk<BluetoothGatt>(relaxed = true)
+        val mockRadarService = mockk<BluetoothGattService>(relaxed = true)
+        val mockControlService = mockk<BluetoothGattService>(relaxed = true)
+        val mockWriteChar = mockk<BluetoothGattCharacteristic>(relaxed = true)
+        val mockNotifyChar = mockk<BluetoothGattCharacteristic>(relaxed = true)
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_RADAR) } returns mockRadarService
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_RADAR_CONTROL) } returns mockControlService
+        every { mockControlService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_CONTROL_WRITE) } returns mockWriteChar
+        every { mockControlService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_CONTROL_NOTIFY) } returns mockNotifyChar
+
+        // Start in manual mode (isAutoMode = false)
+        RadarLightController.setManualLightMode(RadarLightMode.SOLID)
+        assertFalse(RadarStateRepository.getState().isAutoMode)
+
+        // 1. startSearching() -> CONNECTING
+        radarDevice.startSearching()
+        assertEquals(RadarConnectionState.CONNECTING, RadarStateRepository.getState().connectionState)
+        assertFalse("startSearching must preserve isAutoMode=false", RadarStateRepository.getState().isAutoMode)
+
+        // 2. notifyStopSearching(false) -> DISCONNECTED
+        radarDevice.notifyStopSearchingForTesting(false)
+        assertEquals(RadarConnectionState.DISCONNECTED, RadarStateRepository.getState().connectionState)
+        assertFalse("notifyStopSearching must preserve isAutoMode=false", RadarStateRepository.getState().isAutoMode)
+
+        // 3. configureServices() -> CONNECTED
+        radarDevice.configureServices(mockGatt)
+        assertEquals(RadarConnectionState.CONNECTED, RadarStateRepository.getState().connectionState)
+        assertFalse("configureServices must preserve isAutoMode=false", RadarStateRepository.getState().isAutoMode)
+
+        // Re-apply manual light mode after device registration and verify 4-8 Hz processTargets()
+        RadarLightController.setManualLightMode(RadarLightMode.SOLID)
+        assertFalse(RadarStateRepository.getState().isAutoMode)
+
+        // 4. processTargets() -> CONNECTED (4-8 Hz telemetry)
+        val targets = listOf(RadarTarget(1, 35f, 12f, ThreatLevel.APPROACHING))
+        radarDevice.processTargetsForTesting(targets)
+        assertEquals(RadarConnectionState.CONNECTED, RadarStateRepository.getState().connectionState)
+        assertFalse("processTargets must preserve isAutoMode=false", RadarStateRepository.getState().isAutoMode)
+
+        // 5. mWatchdogRunnable -> DISCONNECTED_ERROR
+        radarDevice.watchdogRunnableForTesting.run()
+        assertEquals(RadarConnectionState.DISCONNECTED_ERROR, RadarStateRepository.getState().connectionState)
+        assertFalse("watchdog must preserve isAutoMode=false", RadarStateRepository.getState().isAutoMode)
+
+        // 6. disconnectFromGatt() -> DISCONNECTED
+        radarDevice.disconnectFromGatt()
+        assertEquals(RadarConnectionState.DISCONNECTED, RadarStateRepository.getState().connectionState)
+        assertFalse("disconnectFromGatt must preserve isAutoMode=false", RadarStateRepository.getState().isAutoMode)
+
+        // Explicit restoration via setAutoMode()
+        RadarLightController.setAutoMode()
+        assertTrue("setAutoMode must restore isAutoMode=true", RadarStateRepository.getState().isAutoMode)
+
+        // Subsequent telemetry preserves restored isAutoMode=true
+        radarDevice.processTargetsForTesting(targets)
+        assertTrue(RadarStateRepository.getState().isAutoMode)
+    }
 }

@@ -1714,19 +1714,55 @@ public class WorkoutSummariesDatabaseManager {
 
 
     /**
-     * Persists the list of sensor types that were active during a workout.
+     * Persists the list of sensor types that were active during a workout, idempotently
+     * deduplicating against existing {@code AccumulatedSensors} rows for {@code workoutId}
+     * inside a transaction ({@code REQ-TRK-084.3}).
      */
-    public void saveAccumulatedSensorTypes(long workoutId, @NonNull Iterable<SensorType> sensorTypes) {
+    public synchronized void saveAccumulatedSensorTypes(long workoutId, @NonNull Iterable<SensorType> sensorTypes) {
         if (DEBUG) Log.i(TAG, "saveAccumulatedSensors for workoutId: " + workoutId);
+        if (workoutId <= 0 || !sensorTypes.iterator().hasNext()) {
+            return;
+        }
 
         SQLiteDatabase summariesDb = getDatabase();
-        ContentValues values = new ContentValues();
-        values.put(WorkoutSummaries.WORKOUT_ID, workoutId);
+        summariesDb.beginTransaction();
+        try {
+            Set<String> existingSensorNames = new HashSet<>();
+            try (Cursor cursor = summariesDb.query(
+                    WorkoutSummaries.TABLE_ACCUMULATED_SENSORS,
+                    new String[]{WorkoutSummaries.SENSOR_TYPE},
+                    WorkoutSummaries.WORKOUT_ID + "=?",
+                    new String[]{Long.toString(workoutId)},
+                    null, null, null)) {
+                if (cursor != null) {
+                    int colIdx = cursor.getColumnIndex(WorkoutSummaries.SENSOR_TYPE);
+                    while (cursor.moveToNext()) {
+                        if (colIdx >= 0) {
+                            String name = cursor.getString(colIdx);
+                            if (name != null) {
+                                existingSensorNames.add(name);
+                            }
+                        }
+                    }
+                }
+            }
 
-        for (SensorType sensorType : sensorTypes) {
-            if (DEBUG) Log.i(TAG, "saving sensorType: " + sensorType.name());
-            values.put(WorkoutSummaries.SENSOR_TYPE, sensorType.name());
-            summariesDb.insert(WorkoutSummaries.TABLE_ACCUMULATED_SENSORS, null, values);
+            ContentValues values = new ContentValues();
+            values.put(WorkoutSummaries.WORKOUT_ID, workoutId);
+
+            for (SensorType sensorType : sensorTypes) {
+                if (sensorType == null) continue;
+                String sensorName = sensorType.name();
+                if (!existingSensorNames.add(sensorName)) {
+                    continue;
+                }
+                if (DEBUG) Log.i(TAG, "saving sensorType: " + sensorName);
+                values.put(WorkoutSummaries.SENSOR_TYPE, sensorName);
+                summariesDb.insert(WorkoutSummaries.TABLE_ACCUMULATED_SENSORS, null, values);
+            }
+            summariesDb.setTransactionSuccessful();
+        } finally {
+            summariesDb.endTransaction();
         }
     }
 
@@ -1738,22 +1774,27 @@ public class WorkoutSummariesDatabaseManager {
         if (DEBUG) Log.i(TAG, "getAccumulatedSensorTypes for workoutId: " + workoutId);
 
         Set<SensorType> accumulatedSensorTypesSet = new HashSet<>();
+        if (workoutId <= 0) {
+            return accumulatedSensorTypesSet;
+        }
 
-
-        try(Cursor cursor = getDatabase().query(WorkoutSummaries.TABLE_ACCUMULATED_SENSORS,
+        try (Cursor cursor = getDatabase().query(WorkoutSummaries.TABLE_ACCUMULATED_SENSORS,
                 new String[]{WorkoutSummaries.SENSOR_TYPE}, // columns
                 WorkoutSummaries.WORKOUT_ID + "=?", // selection
                 new String[]{Long.toString(workoutId)}, //selectionArgs,
                 null, null, null)) { // groupBy, having, orderBy)
 
-            while (cursor.moveToNext()) {
-                String sensorTypeName = cursor.getString(cursor.getColumnIndex(WorkoutSummaries.SENSOR_TYPE));
-                if (DEBUG) Log.i(TAG, "got sensor: " + sensorTypeName);
-                SensorType sensorType = EnumUtils.safeValueOfOrNull(SensorType.class, sensorTypeName, TAG);
-                if (sensorType != null) {
-                    accumulatedSensorTypesSet.add(sensorType);
-                } else {
-                    Log.w(TAG, "Skipping unrecognized accumulated sensor type: " + sensorTypeName);
+            if (cursor != null) {
+                int colIdx = cursor.getColumnIndex(WorkoutSummaries.SENSOR_TYPE);
+                while (colIdx >= 0 && cursor.moveToNext()) {
+                    String sensorTypeName = cursor.getString(colIdx);
+                    if (DEBUG) Log.i(TAG, "got sensor: " + sensorTypeName);
+                    SensorType sensorType = EnumUtils.safeValueOfOrNull(SensorType.class, sensorTypeName, TAG);
+                    if (sensorType != null) {
+                        accumulatedSensorTypesSet.add(sensorType);
+                    } else {
+                        Log.w(TAG, "Skipping unrecognized accumulated sensor type: " + sensorTypeName);
+                    }
                 }
             }
         }

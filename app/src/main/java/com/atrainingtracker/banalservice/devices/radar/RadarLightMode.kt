@@ -33,20 +33,20 @@ enum class RadarLightMode(
     @StringRes val titleResId: Int,
     val isStvzoCompliant: Boolean
 ) {
-    /** Tail light extinguished (radar tracking active only). */
+    /** Tail light extinguished (radar tracking active only, 0 lm, StVZO compliant). */
     OFF(0x00, R.string.radar_light_mode_off, true),
 
-    /** High-intensity day flash (up to 100 lm, non-StVZO). */
-    DAY_FLASH(0x07, R.string.radar_light_mode_day_flash, false),
-
-    /** Low-intensity night flash (approx 40 lm, non-StVZO). */
-    NIGHT_FLASH(0x06, R.string.radar_light_mode_night_flash, false),
+    /** Low-intensity steady/pulse mode for group peloton riding (approx 8 lm, non-StVZO). */
+    PELOTON(0x05, R.string.radar_light_mode_peloton, false),
 
     /** Steady continuous red beam (approx 25 lm, StVZO compliant). */
     SOLID(0x01, R.string.radar_light_mode_solid, true),
 
-    /** Low-intensity steady/pulse mode for group peloton riding (approx 8 lm, non-StVZO). */
-    PELOTON(0x05, R.string.radar_light_mode_peloton, false);
+    /** Low-intensity night flash (approx 40 lm, non-StVZO). */
+    NIGHT_FLASH(0x06, R.string.radar_light_mode_night_flash, false),
+
+    /** High-intensity day flash (up to 100 lm, non-StVZO). */
+    DAY_FLASH(0x07, R.string.radar_light_mode_day_flash, false);
 
     companion object {
         /**

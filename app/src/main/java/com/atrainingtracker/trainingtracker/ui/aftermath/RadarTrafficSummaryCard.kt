@@ -43,10 +43,11 @@ import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.ui.components.MetricItem
 import com.atrainingtracker.trainingtracker.ui.components.MetricLayout
+import com.atrainingtracker.trainingtracker.ui.util.LocalMetricFormatter
 import java.util.Locale
 
 /**
- * Dedicated Aftermath summary card displaying post-workout cycling rearview radar traffic statistics (REQ-RAD-005 / ATT-5088).
+ * Dedicated Aftermath summary card displaying post-workout cycling rearview radar traffic statistics (REQ-RAD-005, REQ-UI-2784 / ATT-5088, ATT-8440).
  */
 @Composable
 fun RadarTrafficSummaryCard(
@@ -55,6 +56,7 @@ fun RadarTrafficSummaryCard(
 ) {
     if (summary == null || summary.totalVehicles <= 0) return
     val locale = LocalConfiguration.current.locales[0]
+    val speedFormatter = LocalMetricFormatter.current.speed
 
     ElevatedCard(
         shape = RoundedCornerShape(12.dp),
@@ -128,14 +130,14 @@ fun RadarTrafficSummaryCard(
                 MetricItem(
                     iconRes = null,
                     label = stringResource(R.string.radar_max_closing_speed),
-                    value = String.format(locale, "%.1f km/h", summary.maxApproachSpeedMps * 3.6),
+                    value = speedFormatter.format_with_units(summary.maxApproachSpeedMps),
                     layout = MetricLayout.VERTICAL,
                     modifier = Modifier.weight(1f)
                 )
                 MetricItem(
                     iconRes = null,
                     label = stringResource(R.string.radar_max_vehicle_speed),
-                    value = String.format(locale, "%.1f km/h", summary.maxVehicleSpeedMps * 3.6),
+                    value = speedFormatter.format_with_units(summary.maxVehicleSpeedMps),
                     layout = MetricLayout.VERTICAL,
                     modifier = Modifier.weight(1f)
                 )

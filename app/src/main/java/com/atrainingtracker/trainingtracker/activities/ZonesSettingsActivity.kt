@@ -73,6 +73,7 @@ import com.atrainingtracker.trainingtracker.settings.SettingsDataStore.Zone
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
 import com.atrainingtracker.trainingtracker.settings.ZoneDisplayOptions
+import com.atrainingtracker.trainingtracker.ui.settings.ZoneDisplayOptionsToggleList
 import com.atrainingtracker.trainingtracker.settings.ZoneProfileState
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.theme.CockpitThemeMode
@@ -577,36 +578,17 @@ fun SettingsScreenContent(
             Column(
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
             ) {
-                // Toggle: Tinted background
-                ZoneDisplayToggleRow(
-                    label = stringResource(R.string.zone_display_background),
-                    checked = displayOptions.showBackground,
-                    onCheckedChange = { onUpdateDisplayOptions(displayOptions.copy(showBackground = it)) }
-                )
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-
-                // Toggle: Left bar
-                ZoneDisplayToggleRow(
-                    label = stringResource(R.string.zone_display_left_bar),
-                    checked = displayOptions.showLeftBar,
-                    onCheckedChange = { onUpdateDisplayOptions(displayOptions.copy(showLeftBar = it)) }
-                )
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-
-                // Toggle: Right bar
-                ZoneDisplayToggleRow(
-                    label = stringResource(R.string.zone_display_right_bar),
-                    checked = displayOptions.showRightBar,
-                    onCheckedChange = { onUpdateDisplayOptions(displayOptions.copy(showRightBar = it)) }
-                )
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-
-                // Toggle: Text color
-                ZoneDisplayToggleRow(
-                    label = stringResource(R.string.zone_display_text_color),
-                    checked = displayOptions.showTextColor,
-                    onCheckedChange = { onUpdateDisplayOptions(displayOptions.copy(showTextColor = it)) }
-                )
+                ZoneDisplayOptionsToggleList(
+                    displayOptions = displayOptions,
+                    onUpdateDisplayOptions = onUpdateDisplayOptions,
+                    showGaugeToggle = false
+                ) { label, checked, onCheckedChange ->
+                    ZoneDisplayToggleRow(
+                        label = label,
+                        checked = checked,
+                        onCheckedChange = onCheckedChange
+                    )
+                }
             }
         }
 
@@ -1277,44 +1259,19 @@ fun HrvDfaA1SettingsContent(
             Column(
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
             ) {
-                ZoneDisplayToggleRow(
-                    label = stringResource(R.string.zone_display_background),
-                    checked = displayOptions.showBackground,
-                    onCheckedChange = {
-                        val updated = displayOptions.copy(showBackground = it)
+                ZoneDisplayOptionsToggleList(
+                    displayOptions = displayOptions,
+                    onUpdateDisplayOptions = { updated ->
                         scope.launch { appSettingsDataStore.saveHrvZoneDisplayOptions(updated) }
-                    }
-                )
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-
-                ZoneDisplayToggleRow(
-                    label = stringResource(R.string.zone_display_left_bar),
-                    checked = displayOptions.showLeftBar,
-                    onCheckedChange = {
-                        val updated = displayOptions.copy(showLeftBar = it)
-                        scope.launch { appSettingsDataStore.saveHrvZoneDisplayOptions(updated) }
-                    }
-                )
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-
-                ZoneDisplayToggleRow(
-                    label = stringResource(R.string.zone_display_right_bar),
-                    checked = displayOptions.showRightBar,
-                    onCheckedChange = {
-                        val updated = displayOptions.copy(showRightBar = it)
-                        scope.launch { appSettingsDataStore.saveHrvZoneDisplayOptions(updated) }
-                    }
-                )
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-
-                ZoneDisplayToggleRow(
-                    label = stringResource(R.string.zone_display_text_color),
-                    checked = displayOptions.showTextColor,
-                    onCheckedChange = {
-                        val updated = displayOptions.copy(showTextColor = it)
-                        scope.launch { appSettingsDataStore.saveHrvZoneDisplayOptions(updated) }
-                    }
-                )
+                    },
+                    showGaugeToggle = false
+                ) { label, checked, onCheckedChange ->
+                    ZoneDisplayToggleRow(
+                        label = label,
+                        checked = checked,
+                        onCheckedChange = onCheckedChange
+                    )
+                }
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
                 ZoneDisplayToggleRow(
