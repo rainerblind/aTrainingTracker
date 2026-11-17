@@ -3,7 +3,7 @@
 **Domain**: `store_presence`  
 **Prefixes**: `STP`  
 **Scope**: Store presence, Google Play listings, screenshots, store metadata contract testing, and release governance.  
-**Total Requirements**: 10
+**Total Requirements**: 11
 
 ---
 
@@ -196,6 +196,28 @@
      - Ceremony 2: Coordinator SHALL review `risk_register.md` and record either an updated risk evaluation (if new risks or mitigations surfaced) or an explicit 'No Change / Risks Monitored & Stable' row for the closing sprint.
   3. The directory `docs/management/` SHALL reside outside `docs/engineering/` to preserve Rule 67 canonical directory boundaries.
   4. An automated build contract test in `ReleaseCiAndLintConfigContractTest.kt` SHALL verify the presence, mandatory section headers (`MAN.5` and `MAN.3.BP5`), registered risks `RISK-001` through `RISK-011`, High-exposure mitigation tickets (`ATT-6148`, `ATT-6150`), and Ceremony 1 & 2 integration in `.agents/skills/sprint-planner/SKILL.md`.
+
+### REQ-STP-011: Risk Register Mitigation Citation Integrity & Anti-Regression Contract Guard [Verified]
+- **Tests**: `TST-STP-011`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `docs/management/risk_register.md`, `ReleaseCiAndLintConfigContractTest.kt`
+- **Rationale**: Refines `REQ-STP-010` after PO review of `ATT-8167` discovered that `RISK-003` (*Google Play Policy & Foreground Service Restrictions*) cited `ATT-8084` (which is actually an unrelated Garmin FIT Manufacturer ID feature ticket). All Jira keys cited in `docs/management/risk_register.md` must match authentic issues or be replaced with accurate non-misleading maintenance descriptors.
+- **Description**:
+  1. In `docs/management/risk_register.md`, `RISK-003` (*Google Play Policy & Foreground Service Restrictions*, Medium exposure $E=12$) SHALL replace the incorrect `Continuous Target SDK Maintenance (ATT-8084)` citation with accurate Target SDK maintenance tracking text (`Continuous Target SDK Maintenance (Rule 29 & ManifestSecurityContractTest)`), containing zero misleading Jira ticket keys.
+  2. All `Mitigation Ticket` references across `RISK-001` through `RISK-011` SHALL remain verified against Jira, with all High-exposure risks ($E \ge 15$: `RISK-001`, `RISK-002`) linked to authentic Jira remediation tickets (`ATT-6148`/`ATT-6152`, `ATT-6150`/`ATT-6141`).
+  3. `docs/management/risk_register.md` SHALL record the `Last Review Date` and `Sprint Review Log` update accurately.
+  4. `ReleaseCiAndLintConfigContractTest.kt` (`testProjectRiskRegister_existsAndHighExposureMitigated`) SHALL retain all existing `REQ-STP-010` assertions and MUST assert `!riskContent.contains("ATT-8084")` as a regression guard.
+- **Acceptance Criteria (Given-When-Then)**:
+  - *Given* `docs/management/risk_register.md`, *When* `RISK-003` is inspected, *Then* `ATT-8084` is absent and `RISK-003` references `Continuous Target SDK Maintenance (Rule 29 & ManifestSecurityContractTest)`.
+  - *Given* `RISK-001`..`RISK-011` in `docs/management/risk_register.md`, *When* audited against Jira, *Then* all cited Jira keys match authentic issues and all High-exposure risks ($E \ge 15$) remain linked.
+  - *Given* `ReleaseCiAndLintConfigContractTest.testProjectRiskRegister_existsAndHighExposureMitigated`, *When* executed via Gradle, *Then* all `REQ-STP-010` assertions and the `!riskContent.contains("ATT-8084")` regression guard pass.
+- **Chesterton's Fence Audit**:
+  - **Original Requirement ID & Target**: Refines `REQ-STP-010` (`docs/requirements/req_store_presence.md` L181–198) without modifying `[Verified]` `REQ-STP-010` or `TST-STP-010`.
+  - **Historical Origin & Commit Trace**: `REQ-STP-010` was established in `ATT-6151` and extended to ASPICE 4.0 `MAN.5` in `ec57013f` (`ATT-8167`), which inadvertently introduced `ATT-8084` into `RISK-003`.
+  - **Root Reason for Existing Formulation**: `REQ-STP-010.1` mandates concrete linked remediation tickets strictly for High-exposure risks ($E \ge 15$) and non-placeholder maintenance tracking for Medium/Low risks (`RISK-003`, $E=12$).
+  - **Preservation of Core Invariants**: Existing `[Verified]` `REQ-STP-010` contracts, `ATT-6148`/`ATT-6150` links, `MAN.5`/`MAN.3.BP5` headers, and `docs/management/` canonical placement remain strictly preserved.
 
 
 

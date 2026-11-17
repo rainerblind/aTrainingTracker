@@ -3,7 +3,7 @@
 **Domain**: `store_presence`  
 **Prefixes**: `STP`  
 **Scope**: Store presence, Google Play listings, screenshots, store metadata contract testing, and release governance.  
-**Total Tests**: 10
+**Total Tests**: 11
 
 ---
 
@@ -187,3 +187,22 @@
      • Execute `python3 tools/verify_requirement_governance.py` and verify exit code 0, confirming zero non-canonical entries in `docs/engineering/`.
   4. *Build Contract Suite Execution (`TST-STP-010.4`)*:
      • Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.ReleaseCiAndLintConfigContractTest.testProjectRiskRegister_existsAndHighExposureMitigated"` asserting 100% pass rate in CI.
+
+### TST-STP-011: Risk Register Mitigation Citation Integrity & Anti-Regression Contract Test [Verified]
+- **Requirement(s)**: `REQ-STP-011`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Component**: `docs/management/risk_register.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ReleaseCiAndLintConfigContractTest.kt`
+- **Jira**: `ATT-8586`
+- **Localization Parity**: N/A - no UI strings
+- **Test Description**:
+  1. *RISK-003 Mitigation Citation Inspection (`TST-STP-011.1`)*:
+     • Inspect `docs/management/risk_register.md` (`RISK-003` row) and confirm `ATT-8084` is removed and replaced with `Continuous Target SDK Maintenance (Rule 29 & ManifestSecurityContractTest)`.
+     • Confirm `Last Review Date` / `Sprint Review Log` reflects the update without altering historical `2026-46.1` or `2026-46.6` `SKIPPED` entries.
+  2. *RISK-001..011 Mitigation Ticket Audit (`TST-STP-011.2`)*:
+     • Verify all `Mitigation Ticket` keys across `RISK-001`..`RISK-011` resolve to authentic Jira issues and High-exposure risks ($E \ge 15$: `RISK-001`, `RISK-002`) remain linked to `ATT-6148`/`ATT-6152` and `ATT-6150`/`ATT-6141`.
+  3. *Automated Anti-Regression Contract Execution (`TST-STP-011.3`)*:
+     • Execute `./gradlew :app:testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.ReleaseCiAndLintConfigContractTest.testProjectRiskRegister_existsAndHighExposureMitigated"` and assert `testProjectRiskRegister_existsAndHighExposureMitigated` passes, including the `!riskContent.contains("ATT-8084")` guard and all `REQ-STP-010` assertions.
+  4. *Governance Parity Check (`TST-STP-011.4`)*:
+     • Execute `python3 tools/verify_requirement_governance.py` and verify exit code `0`.

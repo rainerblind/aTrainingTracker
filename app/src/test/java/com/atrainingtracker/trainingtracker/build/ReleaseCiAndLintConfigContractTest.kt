@@ -762,10 +762,11 @@ class ReleaseCiAndLintConfigContractTest {
     /**
      * Asserts that docs/management/risk_register.md exists, conforms to ASPICE 4.0 MAN.5 (and legacy MAN.3.BP5),
      * registers risks RISK-001 through RISK-011, links High-exposure risks to Jira remediation tickets,
+     * prevents regression of the erroneous ATT-8084 citation in RISK-003,
      * and is governed by Ceremony 1 and Ceremony 2 in .agents/skills/sprint-planner/SKILL.md
-     * (REQ-STP-010, TST-STP-010, ATT-6151, ATT-8167).
+     * (REQ-STP-010, TST-STP-010, REQ-STP-011, TST-STP-011, ATT-6151, ATT-8167, ATT-8586).
      */
-    // Traces to: REQ-STP-010, TST-STP-010
+    // Traces to: REQ-STP-010, TST-STP-010, REQ-STP-011, TST-STP-011
     @Test
     fun testProjectRiskRegister_existsAndHighExposureMitigated() {
         val riskRegisterFile = findRepoRootFile("docs/management/risk_register.md", "../docs/management/risk_register.md")
@@ -809,6 +810,16 @@ class ReleaseCiAndLintConfigContractTest {
         assertTrue(
             "High-exposure risk RISK-002 must link to mitigation ticket ATT-6150 (REQ-STP-010.1, TST-STP-010.1)",
             riskContent.contains("ATT-6150")
+        )
+
+        // Verify RISK-003 Target SDK mitigation integrity (REQ-STP-011.1, REQ-STP-011.4, TST-STP-011.3, ATT-8586)
+        assertFalse(
+            "Risk register RISK-003 must not cite unrelated Garmin FIT ticket ATT-8084 (REQ-STP-011.4, TST-STP-011.3)",
+            riskContent.contains("ATT-8084")
+        )
+        assertTrue(
+            "Risk register RISK-003 must reference Continuous Target SDK Maintenance (Rule 29 & ManifestSecurityContractTest) (REQ-STP-011.1, TST-STP-011.3)",
+            riskContent.contains("Continuous Target SDK Maintenance (Rule 29 & ManifestSecurityContractTest)")
         )
 
         // Verify Sprint Review Log records active sprint baseline and historical close gap remediation
