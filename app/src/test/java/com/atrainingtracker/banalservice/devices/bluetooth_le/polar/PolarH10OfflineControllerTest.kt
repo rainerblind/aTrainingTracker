@@ -26,6 +26,7 @@ import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
 import com.atrainingtracker.banalservice.devices.DeviceManager
 import com.atrainingtracker.banalservice.devices.DeviceType
+import com.atrainingtracker.banalservice.devices.MyRemoteDevice
 import com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDevice
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager
@@ -115,12 +116,14 @@ class PolarH10OfflineControllerTest {
         mockkObject(HrvPostWorkoutRecomputer)
         coEvery { HrvPostWorkoutRecomputer.recomputeWorkout(any(), any()) } returns true
 
+        PolarOfflineGattCoordinator.resetForTesting()
         PolarH10OfflineController.resetForTesting()
         PolarH10OfflineController.dispatcher = Dispatchers.Unconfined
     }
 
     @After
     fun tearDown() {
+        PolarOfflineGattCoordinator.resetForTesting()
         PolarH10OfflineController.resetForTesting()
         WorkoutRrRepository.resetForTesting(null)
         WorkoutSamplesDatabaseManager.resetForTesting(null)
@@ -483,5 +486,85 @@ class PolarH10OfflineControllerTest {
         assertTrue(result)
         verify(exactly = 1) { mockSamplesDb.patchMissingHeartRateSamples("2026-11-15_123456", any(), any()) }
         verify(exactly = 0) { mockWorkoutRepo.addAccumulatedSensorTypes(any(), any()) }
+    }
+
+    @Test
+    fun testBackfillAndPendingSync_reuseSharedCoordinatorSingletonWithoutCleanup() = runBlocking {
+        // TST-SET-120.1, TST-SET-120.3
+        PolarH10OfflineController.sdkIntOverride = 33
+        PolarH10OfflineController.apiOverride = null
+
+        val sharedMockApi = mockk<PolarBleApi>(relaxed = true)
+        var factoryCalls = 0
+        PolarOfflineGattCoordinator.apiFactoryForTesting = { _, features ->
+            factoryCalls++
+            org.junit.Assert.assertEquals(PolarOfflineGattCoordinator.ALL_POLAR_FEATURES, features)
+            sharedMockApi
+        }
+
+        // Simulate an active sibling persistent session holding refCount = 1
+        val bridgeCallback = mockk<com.polar.sdk.api.PolarBleApiCallback>(relaxed = true)
+        PolarOfflineGattCoordinator.acquirePersistentSession(
+            context = context,
+            polarId = "A1B2C3D4",
+            macAddress = "24:AC:AC:24:82:56",
+            callback = bridgeCallback
+        )
+
+        // 1. stopAndBackfillWorkout fast path
+        every { mockRrRepo.getIntervalsForWorkoutBlocking(123L) } returns listOf(
+            WorkoutRrInterval(
+                workoutId = 123L,
+                beatIndex = 0,
+                beatTimestampMs = 1000L,
+                rrMs = 800f,
+                artifactFlag = 0,
+                gapBeats = 0
+            )
+        )
+        every { mockSamplesDb.hasMissingHeartRateSamples("2026-11-17_120000") } returns false
+        coEvery { sharedMockApi.connectToDevice(any()) } just Runs
+        coEvery { sharedMockApi.waitForConnection(any()) } just Runs
+        coEvery { sharedMockApi.requestRecordingStatus(any()) } returns
+            PolarH10OfflineExerciseApi.PolarRecordingStatus(false, "", true)
+        every { sharedMockApi.listExercises(any()) } returns emptyFlow()
+        coEvery { sharedMockApi.disconnectFromDevice(any()) } just Runs
+
+        val backfillResult = PolarH10OfflineController.stopAndBackfillWorkout(
+            context,
+            123L,
+            "2026-11-17_120000",
+            1000L
+        )
+        assertTrue(backfillResult)
+
+        // 2. syncPendingWorkout
+        val pendingData = WorkoutSummariesDatabaseManager.PolarPendingSyncData("1C3B2421", "ex1", 1000L, 2000L, true)
+        every { mockSummariesDb.getPolarPendingSyncData(456L) } returns pendingData
+        val syncResult = PolarH10OfflineController.syncPendingWorkout(context, 456L)
+        assertFalse(syncResult) // empty exercises returns false cleanly
+
+        assertEquals(1, factoryCalls)
+        assertEquals(1, PolarOfflineGattCoordinator.getActiveLeaseCountForTesting())
+        verify(exactly = 0) { sharedMockApi.cleanup() }
+        verify(exactly = 0) { sharedMockApi.shutDown() }
+    }
+
+    @Test
+    fun testArmForActiveWorkout_skipsUnwornH10WhenOtherHrmReceives() = runBlocking {
+        // TST-SET-120.4
+        PolarH10OfflineController.sdkIntOverride = 33
+        PolarH10OfflineController.apiOverride = mockApi
+
+        val activeOtherHrm = mockk<MyRemoteDevice>(relaxed = true)
+        every { activeOtherHrm.deviceType } returns DeviceType.HRM
+        every { activeOtherHrm.isReceivingData } returns true
+        every { activeOtherHrm.deviceId } returns 99L
+        every { mockDeviceManager.remoteDeviceList } returns java.util.LinkedList(listOf(activeOtherHrm))
+
+        val armed = PolarH10OfflineController.armForActiveWorkout(context)
+
+        assertFalse(armed)
+        coVerify(exactly = 0) { mockApi.connectToDevice(any()) }
     }
 }

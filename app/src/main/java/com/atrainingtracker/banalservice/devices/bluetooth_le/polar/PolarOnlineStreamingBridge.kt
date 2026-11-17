@@ -49,7 +49,6 @@ import com.polar.androidcommunications.api.ble.model.DisInfo
 import com.polar.androidcommunications.api.ble.model.gatt.client.pmd.PmdMeasurementType
 import com.polar.sdk.api.PolarBleApi
 import com.polar.sdk.api.PolarBleApiCallback
-import com.polar.sdk.api.PolarBleApiDefaultImpl
 import com.polar.sdk.api.model.PolarAccelerometerData
 import com.polar.sdk.api.model.PolarDeviceInfo
 import com.polar.sdk.api.model.PolarGyroData
@@ -264,6 +263,7 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
         }
 
         override fun deviceConnected(polarDeviceInfo: PolarDeviceInfo) {
+            if (!PolarOfflineGattCoordinator.matchesDeviceInfo(polarId, macAddress, polarDeviceInfo)) return
             cancelSearchTimeoutWatchdog()
             isConnectedFlag.set(true)
             setLastActive()
@@ -278,6 +278,7 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
         }
 
         override fun deviceDisconnected(polarDeviceInfo: PolarDeviceInfo) {
+            if (!PolarOfflineGattCoordinator.matchesDeviceInfo(polarId, macAddress, polarDeviceInfo)) return
             isConnectedFlag.set(false)
             activeBridges.remove(this@PolarOnlineStreamingBridge)
             isAccStreamingActive.set(false)
@@ -294,7 +295,11 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
             identifier: String,
             feature: PolarBleApi.PolarBleSdkFeature
         ) {
-            if (!identifier.equals(polarId, ignoreCase = true) && identifier != polarId) return
+            if (!PolarOfflineGattCoordinator.matchesDeviceIdentifier(polarId, identifier) &&
+                !PolarOfflineGattCoordinator.matchesDeviceIdentifier(macAddress, identifier)
+            ) {
+                return
+            }
             when (feature) {
                 PolarBleApi.PolarBleSdkFeature.FEATURE_HR -> startHrCollection()
                 PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_ONLINE_STREAMING -> startImuCollection()
@@ -303,7 +308,9 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
         }
 
         override fun batteryLevelReceived(identifier: String, level: Int) {
-            if ((identifier.equals(polarId, ignoreCase = true) || identifier == polarId) && level in 0..100) {
+            val matches = PolarOfflineGattCoordinator.matchesDeviceIdentifier(polarId, identifier) ||
+                PolarOfflineGattCoordinator.matchesDeviceIdentifier(macAddress, identifier)
+            if (matches && level in 0..100) {
                 setBatteryPercentage(level)
             }
         }
@@ -349,13 +356,15 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
         try {
             var api = polarApi
             if (api == null) {
-                val features = buildRequiredFeatures()
-                api = apiFactory?.invoke(mContext, features)
-                    ?: PolarBleApiDefaultImpl.defaultImplementation(mContext, features)
+                api = PolarOfflineGattCoordinator.acquirePersistentSession(
+                    context = mContext,
+                    polarId = polarId,
+                    macAddress = macAddress,
+                    callback = sdkCallback,
+                    apiFactory = apiFactory
+                )
                 polarApi = api
                 api.setAutomaticReconnection(true)
-                api.setApiCallback(sdkCallback)
-                PolarOfflineGattCoordinator.registerActiveSession(polarId, api, sdkCallback)
             }
             api.connectToDevice(polarId)
         } catch (t: Throwable) {
@@ -363,23 +372,6 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
             cancelSearchTimeoutWatchdog()
             notifyStopSearching(false)
         }
-    }
-
-    private fun buildRequiredFeatures(): Set<PolarBleApi.PolarBleSdkFeature> {
-        val features = mutableSetOf(
-            PolarBleApi.PolarBleSdkFeature.FEATURE_HR,
-            PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_ONLINE_STREAMING,
-            PolarBleApi.PolarBleSdkFeature.FEATURE_BATTERY_INFO,
-            PolarBleApi.PolarBleSdkFeature.FEATURE_DEVICE_INFO,
-            PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_DEVICE_TIME_SETUP
-        )
-        if (isVeritySense) {
-            features.add(PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_OFFLINE_RECORDING)
-            features.add(PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_TRAINING_DATA)
-        } else {
-            features.add(PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_H10_EXERCISE_RECORDING)
-        }
-        return features
     }
 
     private fun startHrCollection() {
@@ -780,17 +772,16 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
                 }
             }
             PolarOfflineGattCoordinator.releaseAccChannel(polarId, PolarOfflineGattCoordinator.ACC_OWNER_ONLINE)
-            PolarOfflineGattCoordinator.unregisterActiveSession(polarId, api)
             try {
                 api.disconnectFromDevice(polarId)
             } catch (_: Throwable) {
             }
-            if (apiFactory == null) {
-                try {
-                    api.cleanup()
-                } catch (_: Throwable) {
-                }
-            }
+            PolarOfflineGattCoordinator.releasePersistentSession(
+                polarId = polarId,
+                macAddress = macAddress,
+                api = api,
+                callback = sdkCallback
+            )
         } else {
             PolarOfflineGattCoordinator.releaseAccChannel(polarId, PolarOfflineGattCoordinator.ACC_OWNER_ONLINE)
         }

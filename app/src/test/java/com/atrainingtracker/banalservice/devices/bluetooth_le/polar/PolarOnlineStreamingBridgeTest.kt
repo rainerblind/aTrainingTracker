@@ -758,4 +758,91 @@ class PolarOnlineStreamingBridgeTest {
         assertFalse(job.isActive)
         assertTrue(job.isCancelled)
     }
+
+    @Test
+    fun testTwoBridges_shareSinglePolarBleApi_multiplexCallbacksAndFilterForeignDevices() = runTest {
+        // TST-SET-120.1, TST-SET-120.2, TST-SET-120.3
+        val db = DevicesDatabaseManager.getInstance(context)
+        val h10Id = db.insertNewBluetoothDeviceIntoDB(
+            DeviceType.HRM,
+            "24:AC:AC:25:0F:A6",
+            "Polar H10",
+            "Polar Electro",
+            95,
+            true
+        )
+        val verityId = db.insertNewBluetoothDeviceIntoDB(
+            DeviceType.HRM,
+            "24:AC:AC:24:82:56",
+            "Polar Verity Sense A1B2C3D4",
+            "Polar Electro",
+            95,
+            true
+        )
+
+        val sharedMockApi = mockk<PolarBleApi>(relaxed = true)
+        var factoryCalls = 0
+        var capturedFeatures: Set<PolarBleApi.PolarBleSdkFeature>? = null
+        val sharedFactory: (Context, Set<PolarBleApi.PolarBleSdkFeature>) -> PolarBleApi = { _, features ->
+            factoryCalls++
+            capturedFeatures = features
+            sharedMockApi
+        }
+        val testDispatcher = StandardTestDispatcher(testScheduler)
+
+        val h10Bridge = PolarOnlineStreamingBridge(
+            context = context,
+            mySensorManager = sensorManager,
+            deviceId = h10Id,
+            macAddress = "24:AC:AC:25:0F:A6",
+            dispatcher = testDispatcher,
+            sdkIntProvider = { 34 },
+            sportTypeProvider = { BSportType.RUN },
+            apiFactory = sharedFactory,
+            searchTimeoutMsProvider = { 5000L }
+        )
+        val verityBridge = PolarOnlineStreamingBridge(
+            context = context,
+            mySensorManager = sensorManager,
+            deviceId = verityId,
+            macAddress = "24:AC:AC:24:82:56",
+            dispatcher = testDispatcher,
+            sdkIntProvider = { 34 },
+            sportTypeProvider = { BSportType.RUN },
+            apiFactory = sharedFactory,
+            searchTimeoutMsProvider = { 5000L }
+        )
+
+        h10Bridge.startSearching()
+        verityBridge.startSearching()
+
+        assertEquals(1, factoryCalls)
+        assertEquals(PolarOfflineGattCoordinator.ALL_POLAR_FEATURES, capturedFeatures)
+        verify(exactly = 1) { sharedMockApi.setApiCallback(any()) }
+
+        // Foreign deviceConnected on h10Bridge callback must be ignored; matching MAC connects H10 only
+        val verityInfo = PolarDeviceInfo("A1B2C3D4", "24:AC:AC:24:82:56", -55, "Polar Verity Sense", true)
+        h10Bridge.getSdkCallbackForTesting().deviceConnected(verityInfo)
+        assertFalse(h10Bridge.isReceivingData())
+
+        val h10Info = PolarDeviceInfo("1C3B2421", "24:AC:AC:25:0F:A6", -48, "Polar H10", true)
+        val mux = PolarOfflineGattCoordinator.getMultiplexerCallbackForTesting()
+        mux.deviceConnected(h10Info)
+        assertTrue(h10Bridge.isReceivingData())
+        assertFalse(verityBridge.isReceivingData())
+
+        // Foreign deviceDisconnected must not disconnect H10
+        h10Bridge.getSdkCallbackForTesting().deviceDisconnected(verityInfo)
+        assertTrue(h10Bridge.isReceivingData())
+
+        // Shutting down H10 bridge keeps Verity's shared singleton alive
+        h10Bridge.shutDown()
+        verify(exactly = 0) { sharedMockApi.cleanup() }
+        verify(exactly = 0) { sharedMockApi.shutDown() }
+
+        // Shutting down Verity bridge releases the final reference and shuts down singleton cleanly
+        verityBridge.shutDown()
+        verify(exactly = 0) { sharedMockApi.cleanup() }
+        verify(exactly = 1) { sharedMockApi.shutDown() }
+    }
 }

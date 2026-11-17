@@ -46,7 +46,6 @@ import com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrInterval
 import com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrRepository
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.polar.sdk.api.PolarBleApi
-import com.polar.sdk.api.PolarBleApiDefaultImpl
 import com.polar.sdk.api.PolarH10OfflineExerciseApi
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -55,7 +54,6 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withTimeoutOrNull
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.util.concurrent.atomic.AtomicBoolean
@@ -87,6 +85,11 @@ object PolarH10OfflineController {
     const val ARMING_TIMEOUT_MS = 15_000L
     const val BACKFILL_TIMEOUT_MS = 30_000L
     const val POLAR_SYNC_NOTIFICATION_ID = 8045
+
+    private val H10_OFFLINE_FEATURES = setOf(
+        PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_H10_EXERCISE_RECORDING,
+        PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_DEVICE_TIME_SETUP
+    )
 
     private val isArmed = AtomicBoolean(false)
     private var scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -266,160 +269,136 @@ object PolarH10OfflineController {
         val needsBackfill = shouldBackfill(appContext, baseFileName, workoutId)
         Log.i(TAG, "Polar H10 stopAndBackfillWorkout: polarId=$targetId, needsBackfill=$needsBackfill")
 
-        val deviceManager = BANALService.getDeviceManager()
-        val btleDevice = deviceManager?.getBtleDeviceByAddress(targetMac)
-
-        btleDevice?.pauseGattOperations()
         if (needsBackfill) {
             showSyncNotification(appContext)
         }
 
         return try {
-            val sharedApi = if (apiOverride == null) PolarOfflineGattCoordinator.getActiveSession(targetId) else null
-            val ownsApiLifecycle = apiOverride == null && sharedApi == null
-            val timeoutResult = withTimeoutOrNull(BACKFILL_TIMEOUT_MS) {
-                val api = apiOverride ?: sharedApi ?: PolarBleApiDefaultImpl.defaultImplementation(
-                    appContext,
-                    setOf(
-                        PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_H10_EXERCISE_RECORDING,
-                        PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_DEVICE_TIME_SETUP
-                    )
-                )
+            val timeoutResult = PolarOfflineGattCoordinator.withGattYieldAndPolarApi(
+                context = appContext,
+                macAddress = targetMac,
+                polarId = targetId,
+                features = H10_OFFLINE_FEATURES,
+                timeoutMs = BACKFILL_TIMEOUT_MS,
+                apiOverride = apiOverride
+            ) { api ->
+                api.connectToDevice(targetId)
+                api.waitForConnection(targetId)
 
+                // 1. Stop ongoing recording on strap
                 try {
-                    api.connectToDevice(targetId)
-                    api.waitForConnection(targetId)
+                    val status = api.requestRecordingStatus(targetId)
+                    if (status.ongoing) {
+                        api.stopRecording(targetId)
+                    }
+                } catch (e: Exception) {
+                    Log.w(TAG, "Error checking/stopping recording for $targetId: ${e.message}")
+                }
 
-                    // 1. Stop ongoing recording on strap
+                // 2. Zero-gap fast path: bypass PFTP download and clean up exercises immediately
+                if (!needsBackfill) {
+                    Log.i(TAG, "Zero-gap fast path: bypassing PFTP download, cleaning up exercises.")
                     try {
-                        val status = api.requestRecordingStatus(targetId)
-                        if (status.ongoing) {
-                            api.stopRecording(targetId)
+                        val exercises = api.listExercises(targetId).toList()
+                        for (entry in exercises) {
+                            api.removeExercise(targetId, entry)
                         }
                     } catch (e: Exception) {
-                        Log.w(TAG, "Error checking/stopping recording for $targetId: ${e.message}")
+                        Log.w(TAG, "Error cleaning up exercises in fast path: ${e.message}")
                     }
+                    return@withGattYieldAndPolarApi true
+                }
 
-                    // 2. Zero-gap fast path: bypass PFTP download and clean up exercises immediately
-                    if (!needsBackfill) {
-                        Log.i(TAG, "Zero-gap fast path: bypassing PFTP download, cleaning up exercises.")
-                        try {
-                            val exercises = api.listExercises(targetId).toList()
-                            for (entry in exercises) {
-                                api.removeExercise(targetId, entry)
-                            }
-                        } catch (e: Exception) {
-                            Log.w(TAG, "Error cleaning up exercises in fast path: ${e.message}")
-                        }
-                        return@withTimeoutOrNull true
-                    }
+                // 3. Needs backfill: List exercises and fetch recorded RR samples
+                val exercises = try {
+                    api.listExercises(targetId).toList()
+                } catch (e: Exception) {
+                    Log.w(TAG, "Error listing exercises for backfill on $targetId: ${e.message}")
+                    emptyList()
+                }
 
-                    // 3. Needs backfill: List exercises and fetch recorded RR samples
-                    val exercises = try {
-                        api.listExercises(targetId).toList()
-                    } catch (e: Exception) {
-                        Log.w(TAG, "Error listing exercises for backfill on $targetId: ${e.message}")
-                        emptyList()
-                    }
+                if (exercises.isEmpty()) {
+                    Log.w(TAG, "No exercises found on Polar H10 for backfill.")
+                    return@withGattYieldAndPolarApi false
+                }
 
-                    if (exercises.isEmpty()) {
-                        Log.w(TAG, "No exercises found on Polar H10 for backfill.")
-                        return@withTimeoutOrNull false
-                    }
-
-                    var allPatchedSuccessfully = true
-                    for (entry in exercises) {
-                        try {
-                            val data = api.fetchExercise(targetId, entry)
-                            val hrSamples = data.hrSamples
-                            if (hrSamples.isNotEmpty()) {
-                                val anchorMs = if (startTimeMs > 0) {
-                                    startTimeMs
-                                } else {
-                                    entry.date.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
-                                }
-
-                                val intervals = mutableListOf<WorkoutRrInterval>()
-                                val hrPairs = mutableListOf<android.util.Pair<Long, Int>>()
-                                var cumulativeMs = 0L
-                                var beatIndex = 0
-
-                                for (rr in hrSamples) {
-                                    cumulativeMs += rr
-                                    val beatTs = anchorMs + cumulativeMs
-                                    val bpm = (60_000.0 / rr).roundToInt().coerceIn(30, 250)
-                                    hrPairs.add(android.util.Pair(beatTs, bpm))
-                                    intervals.add(
-                                        WorkoutRrInterval(
-                                            workoutId = workoutId,
-                                            beatIndex = beatIndex++,
-                                            beatTimestampMs = beatTs,
-                                            rrMs = rr.toFloat(),
-                                            artifactFlag = 0,
-                                            gapBeats = 0
-                                        )
-                                    )
-                                }
-
-                                // Patch WorkoutSamples.db and record SensorType.HR when rows are patched
-                                PolarOfflineGattCoordinator.patchMissingHeartRateAndRecordSensorType(
-                                    appContext,
-                                    workoutId,
-                                    baseFileName,
-                                    anchorMs,
-                                    hrPairs
-                                )
-
-                                // Patch WorkoutRr.db
-                                val rrRepo = WorkoutRrRepository.getInstance(appContext)
-                                rrRepo.insertIntervals(intervals)
-
-                                // Persist raw telemetry sidecar (REQ-SET-117.1, ATT-8019)
-                                try {
-                                    PolarRawTelemetryRecorder.recordOfflineExercise(
-                                        appContext,
-                                        baseFileName,
-                                        targetId,
-                                        anchorMs,
-                                        hrSamples
-                                    )
-                                } catch (e: Exception) {
-                                    Log.w(TAG, "Error recording raw telemetry sidecar for offline exercise on $targetId: ${e.message}")
-                                }
-
-                                // Recompute HRV summaries
-                                HrvPostWorkoutRecomputer.recomputeWorkout(appContext, workoutId)
-                                WorkoutRepository.getInstance(appContext).refreshWorkout(workoutId)
-
-                                // Transactional slot cleanup: removeExercise strictly AFTER SQLite commit
-                                api.removeExercise(targetId, entry)
-                                Log.i(TAG, "Successfully backfilled and removed exercise ${entry.path} on $targetId")
+                var allPatchedSuccessfully = true
+                for (entry in exercises) {
+                    try {
+                        val data = api.fetchExercise(targetId, entry)
+                        val hrSamples = data.hrSamples
+                        if (hrSamples.isNotEmpty()) {
+                            val anchorMs = if (startTimeMs > 0) {
+                                startTimeMs
                             } else {
-                                api.removeExercise(targetId, entry)
+                                entry.date.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
                             }
-                        } catch (e: Exception) {
-                            Log.e(TAG, "Failed backfill processing for entry ${entry.path}: ${e.message}", e)
-                            allPatchedSuccessfully = false
-                        }
-                    }
 
-                    if (ownsApiLifecycle) {
-                        try {
-                            api.disconnectFromDevice(targetId)
-                        } catch (ignored: Exception) {
-                        }
-                    }
+                            val intervals = mutableListOf<WorkoutRrInterval>()
+                            val hrPairs = mutableListOf<android.util.Pair<Long, Int>>()
+                            var cumulativeMs = 0L
+                            var beatIndex = 0
 
-                    allPatchedSuccessfully
-                } finally {
-                    if (ownsApiLifecycle) {
-                        try {
-                            api.cleanup()
-                        } catch (t: Throwable) {
-                            Log.w(TAG, "Error cleaning up PolarBleApi: ${t.message}")
+                            for (rr in hrSamples) {
+                                cumulativeMs += rr
+                                val beatTs = anchorMs + cumulativeMs
+                                val bpm = (60_000.0 / rr).roundToInt().coerceIn(30, 250)
+                                hrPairs.add(android.util.Pair(beatTs, bpm))
+                                intervals.add(
+                                    WorkoutRrInterval(
+                                        workoutId = workoutId,
+                                        beatIndex = beatIndex++,
+                                        beatTimestampMs = beatTs,
+                                        rrMs = rr.toFloat(),
+                                        artifactFlag = 0,
+                                        gapBeats = 0
+                                    )
+                                )
+                            }
+
+                            // Patch WorkoutSamples.db and record SensorType.HR when rows are patched
+                            PolarOfflineGattCoordinator.patchMissingHeartRateAndRecordSensorType(
+                                appContext,
+                                workoutId,
+                                baseFileName,
+                                anchorMs,
+                                hrPairs
+                            )
+
+                            // Patch WorkoutRr.db
+                            val rrRepo = WorkoutRrRepository.getInstance(appContext)
+                            rrRepo.insertIntervals(intervals)
+
+                            // Persist raw telemetry sidecar (REQ-SET-117.1, ATT-8019)
+                            try {
+                                PolarRawTelemetryRecorder.recordOfflineExercise(
+                                    appContext,
+                                    baseFileName,
+                                    targetId,
+                                    anchorMs,
+                                    hrSamples
+                                )
+                            } catch (e: Exception) {
+                                Log.w(TAG, "Error recording raw telemetry sidecar for offline exercise on $targetId: ${e.message}")
+                            }
+
+                            // Recompute HRV summaries
+                            HrvPostWorkoutRecomputer.recomputeWorkout(appContext, workoutId)
+                            WorkoutRepository.getInstance(appContext).refreshWorkout(workoutId)
+
+                            // Transactional slot cleanup: removeExercise strictly AFTER SQLite commit
+                            api.removeExercise(targetId, entry)
+                            Log.i(TAG, "Successfully backfilled and removed exercise ${entry.path} on $targetId")
+                        } else {
+                            api.removeExercise(targetId, entry)
                         }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Failed backfill processing for entry ${entry.path}: ${e.message}", e)
+                        allPatchedSuccessfully = false
                     }
                 }
+
+                allPatchedSuccessfully
             }
             val success = timeoutResult ?: false
             if (timeoutResult == null) {
@@ -440,7 +419,6 @@ object PolarH10OfflineController {
             if (needsBackfill) {
                 dismissSyncNotification(appContext)
             }
-            btleDevice?.resumeGattOperations()
         }
     }
 
@@ -507,157 +485,135 @@ object PolarH10OfflineController {
                 }
             }
         }
-        val deviceManager = BANALService.getDeviceManager()
-        val btleDevice = targetMac?.let { deviceManager?.getBtleDeviceByAddress(it) }
-        btleDevice?.pauseGattOperations()
-
-        val sharedApi = if (apiOverride == null) PolarOfflineGattCoordinator.getActiveSession(targetId) else null
-        val ownsApiLifecycle = apiOverride == null && sharedApi == null
-        try {
-            return withTimeoutOrNull(BACKFILL_TIMEOUT_MS) {
-                val api = apiOverride ?: sharedApi ?: PolarBleApiDefaultImpl.defaultImplementation(
-                    appContext,
-                    setOf(
-                        PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_H10_EXERCISE_RECORDING,
-                        PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_DEVICE_TIME_SETUP
-                    )
-                )
+        return try {
+            PolarOfflineGattCoordinator.withGattYieldAndPolarApi(
+                context = appContext,
+                macAddress = targetMac,
+                polarId = targetId,
+                features = H10_OFFLINE_FEATURES,
+                timeoutMs = BACKFILL_TIMEOUT_MS,
+                apiOverride = apiOverride
+            ) { api ->
+                api.connectToDevice(targetId)
+                api.waitForConnection(targetId)
 
                 try {
-                    api.connectToDevice(targetId)
-                    api.waitForConnection(targetId)
-
-                    try {
-                        val status = api.requestRecordingStatus(targetId)
-                        if (status.ongoing) {
-                            api.stopRecording(targetId)
-                        }
-                    } catch (e: Exception) {
-                        Log.w(TAG, "Error checking/stopping recording for $targetId: ${e.message}")
+                    val status = api.requestRecordingStatus(targetId)
+                    if (status.ongoing) {
+                        api.stopRecording(targetId)
                     }
+                } catch (e: Exception) {
+                    Log.w(TAG, "Error checking/stopping recording for $targetId: ${e.message}")
+                }
 
-                    val exercises = try {
-                        api.listExercises(targetId).toList()
-                    } catch (e: Exception) {
-                        Log.w(TAG, "Error listing exercises for pending sync on $targetId: ${e.message}")
-                        emptyList()
-                    }
+                val exercises = try {
+                    api.listExercises(targetId).toList()
+                } catch (e: Exception) {
+                    Log.w(TAG, "Error listing exercises for pending sync on $targetId: ${e.message}")
+                    emptyList()
+                }
 
-                    if (exercises.isEmpty()) {
-                        Log.w(TAG, "No exercises found on Polar H10 for pending sync.")
-                        return@withTimeoutOrNull false
-                    }
+                if (exercises.isEmpty()) {
+                    Log.w(TAG, "No exercises found on Polar H10 for pending sync.")
+                    return@withGattYieldAndPolarApi false
+                }
 
-                    val matchingEntry = exercises.firstOrNull { entry ->
-                        if (!pendingData.exerciseId.isNullOrEmpty() && entry.path.contains(pendingData.exerciseId)) {
-                            true
-                        } else {
-                            val entryEpochMs = entry.date.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
-                            (pendingData.expectedStartMs > 0 && Math.abs(entryEpochMs - pendingData.expectedStartMs) <= 600_000L) ||
-                                (pendingData.expectedEndMs > 0 && entryEpochMs in pendingData.expectedStartMs..pendingData.expectedEndMs)
-                        }
-                    } ?: exercises.firstOrNull()
-
-                    if (matchingEntry == null) {
-                        Log.w(TAG, "No matching exercise found for workout $workoutId")
-                        return@withTimeoutOrNull false
-                    }
-
-                    val data = api.fetchExercise(targetId, matchingEntry)
-                    val hrSamples = data.hrSamples
-                    if (hrSamples.isNotEmpty()) {
-                        val anchorMs = if (pendingData.expectedStartMs > 0) {
-                            pendingData.expectedStartMs
-                        } else {
-                            matchingEntry.date.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
-                        }
-
-                        val intervals = mutableListOf<WorkoutRrInterval>()
-                        val hrPairs = mutableListOf<android.util.Pair<Long, Int>>()
-                        var cumulativeMs = 0L
-                        var beatIndex = 0
-
-                        for (rr in hrSamples) {
-                            cumulativeMs += rr
-                            val beatTs = anchorMs + cumulativeMs
-                            val bpm = (60_000.0 / rr).roundToInt().coerceIn(30, 250)
-                            hrPairs.add(android.util.Pair(beatTs, bpm))
-                            intervals.add(
-                                WorkoutRrInterval(
-                                    workoutId = workoutId,
-                                    beatIndex = beatIndex++,
-                                    beatTimestampMs = beatTs,
-                                    rrMs = rr.toFloat(),
-                                    artifactFlag = 0,
-                                    gapBeats = 0
-                                )
-                            )
-                        }
-
-                        val repo = WorkoutRepository.getInstance(appContext)
-                        val baseFileName = repo.getBaseFileName(workoutId) ?: summariesDb.getBaseFileName(workoutId)
-
-                        PolarOfflineGattCoordinator.patchMissingHeartRateAndRecordSensorType(
-                            appContext,
-                            workoutId,
-                            baseFileName,
-                            anchorMs,
-                            hrPairs
-                        )
-
-                        val rrRepo = WorkoutRrRepository.getInstance(appContext)
-                        rrRepo.insertIntervals(intervals)
-
-                        HrvPostWorkoutRecomputer.recomputeWorkout(appContext, workoutId)
-
-                        summariesDb.clearPolarSyncPending(workoutId)
-
-                        api.removeExercise(targetId, matchingEntry)
-                        Log.i(TAG, "Successfully performed deferred sync and removed exercise ${matchingEntry.path}")
-
-                        repo.refreshWorkout(workoutId)
-                        val updatedWorkout = try {
-                            repo.allWorkouts.value.find { it.id == workoutId }
-                        } catch (t: Throwable) {
-                            Log.w(TAG, "Failed to resolve updated workout from repository: ${t.message}")
-                            null
-                        }
-                        if (updatedWorkout != null) {
-                            try {
-                                val exportManager = com.atrainingtracker.trainingtracker.exporter.ExportManager(appContext)
-                                if (baseFileName != null) {
-                                    exportManager.invalidateWorkoutExport(baseFileName)
-                                }
-                                exportManager.exportWorkout(updatedWorkout)
-                            } catch (e: Exception) {
-                                Log.w(TAG, "Non-fatal export exception after deferred sync: ${e.message}")
-                            }
-                        }
+                val matchingEntry = exercises.firstOrNull { entry ->
+                    if (!pendingData.exerciseId.isNullOrEmpty() && entry.path.contains(pendingData.exerciseId)) {
                         true
                     } else {
-                        api.removeExercise(targetId, matchingEntry)
-                        summariesDb.clearPolarSyncPending(workoutId)
-                        WorkoutRepository.getInstance(appContext).refreshWorkout(workoutId)
-                        true
+                        val entryEpochMs = entry.date.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+                        (pendingData.expectedStartMs > 0 && Math.abs(entryEpochMs - pendingData.expectedStartMs) <= 600_000L) ||
+                            (pendingData.expectedEndMs > 0 && entryEpochMs in pendingData.expectedStartMs..pendingData.expectedEndMs)
                     }
-                } finally {
-                    if (ownsApiLifecycle) {
+                } ?: exercises.firstOrNull()
+
+                if (matchingEntry == null) {
+                    Log.w(TAG, "No matching exercise found for workout $workoutId")
+                    return@withGattYieldAndPolarApi false
+                }
+
+                val data = api.fetchExercise(targetId, matchingEntry)
+                val hrSamples = data.hrSamples
+                if (hrSamples.isNotEmpty()) {
+                    val anchorMs = if (pendingData.expectedStartMs > 0) {
+                        pendingData.expectedStartMs
+                    } else {
+                        matchingEntry.date.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+                    }
+
+                    val intervals = mutableListOf<WorkoutRrInterval>()
+                    val hrPairs = mutableListOf<android.util.Pair<Long, Int>>()
+                    var cumulativeMs = 0L
+                    var beatIndex = 0
+
+                    for (rr in hrSamples) {
+                        cumulativeMs += rr
+                        val beatTs = anchorMs + cumulativeMs
+                        val bpm = (60_000.0 / rr).roundToInt().coerceIn(30, 250)
+                        hrPairs.add(android.util.Pair(beatTs, bpm))
+                        intervals.add(
+                            WorkoutRrInterval(
+                                workoutId = workoutId,
+                                beatIndex = beatIndex++,
+                                beatTimestampMs = beatTs,
+                                rrMs = rr.toFloat(),
+                                artifactFlag = 0,
+                                gapBeats = 0
+                            )
+                        )
+                    }
+
+                    val repo = WorkoutRepository.getInstance(appContext)
+                    val baseFileName = repo.getBaseFileName(workoutId) ?: summariesDb.getBaseFileName(workoutId)
+
+                    PolarOfflineGattCoordinator.patchMissingHeartRateAndRecordSensorType(
+                        appContext,
+                        workoutId,
+                        baseFileName,
+                        anchorMs,
+                        hrPairs
+                    )
+
+                    val rrRepo = WorkoutRrRepository.getInstance(appContext)
+                    rrRepo.insertIntervals(intervals)
+
+                    HrvPostWorkoutRecomputer.recomputeWorkout(appContext, workoutId)
+
+                    summariesDb.clearPolarSyncPending(workoutId)
+
+                    api.removeExercise(targetId, matchingEntry)
+                    Log.i(TAG, "Successfully performed deferred sync and removed exercise ${matchingEntry.path}")
+
+                    repo.refreshWorkout(workoutId)
+                    val updatedWorkout = try {
+                        repo.allWorkouts.value.find { it.id == workoutId }
+                    } catch (t: Throwable) {
+                        Log.w(TAG, "Failed to resolve updated workout from repository: ${t.message}")
+                        null
+                    }
+                    if (updatedWorkout != null) {
                         try {
-                            api.disconnectFromDevice(targetId)
-                        } catch (ignored: Exception) {}
-                        try {
-                            api.cleanup()
-                        } catch (t: Throwable) {
-                            Log.w(TAG, "Error cleaning up PolarBleApi: ${t.message}")
+                            val exportManager = com.atrainingtracker.trainingtracker.exporter.ExportManager(appContext)
+                            if (baseFileName != null) {
+                                exportManager.invalidateWorkoutExport(baseFileName)
+                            }
+                            exportManager.exportWorkout(updatedWorkout)
+                        } catch (e: Exception) {
+                            Log.w(TAG, "Non-fatal export exception after deferred sync: ${e.message}")
                         }
                     }
+                    true
+                } else {
+                    api.removeExercise(targetId, matchingEntry)
+                    summariesDb.clearPolarSyncPending(workoutId)
+                    WorkoutRepository.getInstance(appContext).refreshWorkout(workoutId)
+                    true
                 }
             } ?: false
         } catch (t: Throwable) {
             Log.e(TAG, "Exception during Polar H10 syncPendingWorkout: ${t.message}", t)
-            return false
-        } finally {
-            btleDevice?.resumeGattOperations()
+            false
         }
     }
 
@@ -717,10 +673,7 @@ object PolarH10OfflineController {
                 context = context,
                 macAddress = macAddress,
                 polarId = polarId,
-                features = setOf(
-                    PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_H10_EXERCISE_RECORDING,
-                    PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_DEVICE_TIME_SETUP
-                ),
+                features = H10_OFFLINE_FEATURES,
                 timeoutMs = ARMING_TIMEOUT_MS,
                 apiOverride = apiOverride
             ) { api ->
