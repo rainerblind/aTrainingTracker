@@ -3,7 +3,7 @@
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Tests**: 216
+**Total Tests**: 217
 
 ---
 
@@ -2686,234 +2686,234 @@
 - **Type**: Non-Functional
 - **Verification Method**: Unit
 - **Requirement(s)**: `REQ-NFR-001`
-- **Component**: `TrackerService.java`, `docs/architecture.md` §4.9
-- **Jira**: `ATT-6139`
+- **Component**: `UnicycleOdometryEkf.kt`, `KinematicAltitudeSlopeEkf.kt`, `SpeedAndLocationDevice_ATTFused.kt`, `docs/architecture.md` §4.9
+- **Jira**: `ATT-6139`, `ATT-8158`
 - **Test Description**:
-  1. *Scope*: Sensor Simulation & Timing Benchmark (`TST-NFR-001.1`).
-  2. *Preconditions*: High-frequency synthetic IMU hardware timestamps with thread scheduling jitter.
-  3. *Action*: Ingest sensor packets into EKF filter, compute Delta-T vs hardware event timestamps.
-  4. *Expected Result*: Calculated Delta-T jitter <= 2.0 ms across consecutive sensor updates.
+  1. *Scope*: Measured JVM EKF Timing & Delta-T Benchmark (`TST-NFR-001.1`, `MeasuredNfrBenchmarkTest.kt`).
+  2. *Preconditions*: JIT warmup completed; high-frequency synthetic IMU hardware timestamps with simulated thread arrival jitter.
+  3. *Action*: Run `UnicycleOdometryEkf` / `KinematicAltitudeSlopeEkf` motion predict/update loops measuring elapsed step latency (`System.nanoTime`) and hardware-timestamp Delta-T deviation, emitting JSON metrics to `app/build/reports/nfr/nfr_measurements.json`.
+  4. *Expected Result*: Delta-T jitter <= 2.0 ms and measured EKF cycle p95 latency <= 2.0 ms.
 
 ### TST-NFR-002: **Stationary Pinning Drift Prevention Verification** [Verified]
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
 - **Requirement(s)**: `REQ-NFR-002`
-- **Component**: `TrackerService.java`, `docs/architecture.md` §4.9
-- **Jira**: `ATT-6139`
+- **Component**: `SpeedAndLocationDevice.java`, `SpeedAndLocationDevice_ATTFused.kt`, `docs/architecture.md` §4.9
+- **Jira**: `ATT-6139`, `ATT-8158`
 - **Test Description**:
-  1. *Scope*: Sensor Replay Simulation (`TST-NFR-002.1`).
-  2. *Preconditions*: Simulated stationary state with IMU accelerometer variance below stillness threshold.
-  3. *Action*: Run 30-minute position estimation loop with synthetic stationary coordinates and IMU inputs.
-  4. *Expected Result*: Accumulated coordinate drift < 0.5 m/min; coordinate unpinning within 1.0 s of movement resumption.
+  1. *Scope*: Measured Stationary Replay Simulation (`TST-NFR-002.1`, `MeasuredNfrBenchmarkTest.kt`).
+  2. *Preconditions*: Robolectric replay with stationary GNSS jitter within deadband + IMU rest state on `SpeedAndLocationDevice`.
+  3. *Action*: Replay 30-minute (1,800-tick) stationary window followed by movement resumption, measuring horizontal drift (m/min), unpin latency (s), and replay runtime, emitting JSON metrics to `app/build/reports/nfr/nfr_measurements.json`.
+  4. *Expected Result*: Accumulated horizontal drift < 0.5 m/min; coordinate unpinning <= 1.0 s upon movement resumption.
 
 ### TST-NFR-003: **Periodic Tick Latency Budget Verification** [Verified]
 - **Priority**: High
 - **Type**: Non-Functional
-- **Verification Method**: Unit
+- **Verification Method**: Integration
 - **Requirement(s)**: `REQ-NFR-003`
 - **Component**: `TrackerService.java`, `docs/architecture.md` §4.9
-- **Jira**: `ATT-6139`, `ATT-6181`
+- **Jira**: `ATT-6139`, `ATT-6181`, `ATT-8158`
 - **Test Description**:
-  1. *Scope*: Android Studio CPU Profiler / System.nanoTime instrumentation (`TST-NFR-003.1`).
-  2. *Preconditions*: Active workout recording session on background `mScheduler`.
-  3. *Action*: Profile 1000 consecutive periodic 1-Hz tick executions.
-  4. *Expected Result*: Execution duration < 50 ms for >= 99% of cycles, guaranteeing >= 950 ms idle headroom.
+  1. *Scope*: Measured `TrackerService` 1-Hz Tick Latency Integration Benchmark (`TST-NFR-003.1`, `MeasuredNfrBenchmarkTest.kt`).
+  2. *Preconditions*: Active `TrackerService` Robolectric recording session after JIT warmup.
+  3. *Action*: Measure >= 200 consecutive 1-Hz tick cycles via `System.nanoTime`, compute p95/p99/max execution duration, and emit JSON metrics to `app/build/reports/nfr/nfr_measurements.json`.
+  4. *Expected Result*: Tick p99 execution duration < 50 ms on 1000 ms cycle (>= 950 ms headroom).
 
-### TST-NFR-004: **CPU Consumption Ceiling Verification** [Verified]
+### TST-NFR-004: **CPU Consumption Ceiling Verification** [Planned]
 - **Priority**: High
 - **Type**: Non-Functional
-- **Verification Method**: Unit
+- **Verification Method**: On-Device Manual
 - **Requirement(s)**: `REQ-NFR-004`
 - **Component**: `TrackerService.java`, `docs/architecture.md` §4.9
-- **Jira**: `ATT-6139`, `ATT-6181`
+- **Jira**: `ATT-6139`, `ATT-6181`, `ATT-8158`
 - **Test Description**:
-  1. *Scope*: Android Studio CPU Profiler / simpleperf CPU trace (`TST-NFR-004.1`).
-  2. *Preconditions*: Continuous 30-minute background recording with screen off, active GNSS, and 2 connected BLE sensors.
-  3. *Action*: Measure average CPU utilization across single-core reference device.
-  4. *Expected Result*: Average CPU consumption < 5.0% single-core on mid-tier reference hardware.
+  1. *Scope*: Attested On-Device Manual Protocol — `simpleperf` / `dumpsys cpuinfo` (`TST-NFR-004.1`).
+  2. *Preconditions*: Physical Pixel reference device; active 30-minute background tracking session with screen off, GNSS 1 Hz, and 2 BLE sensors connected.
+  3. *Action*: Execute `adb shell dumpsys cpuinfo` / Android Studio CPU Profiler capture across the 30-minute session and record attestation (device model, Android build, date, operator, measured % single-core CPU, PASS/FAIL). Never falsely satisfied by JVM unit tests.
+  4. *Expected Result*: Attested average single-core CPU consumption < 5.0%.
 
 ### TST-NFR-005: **Dedicated Heap Footprint Ceiling Verification** [Verified]
 - **Priority**: High
 - **Type**: Non-Functional
-- **Verification Method**: Unit
+- **Verification Method**: Integration
 - **Requirement(s)**: `REQ-NFR-005`
-- **Component**: `TrackerService.java`, `docs/architecture.md` §4.9
-- **Jira**: `ATT-6139`, `ATT-6181`
+- **Component**: `TrackerService.java`, `LiveWorkoutSession.java`, `docs/architecture.md` §4.9
+- **Jira**: `ATT-6139`, `ATT-6181`, `ATT-8158`
 - **Test Description**:
-  1. *Scope*: Android Memory Profiler / Heap Dump (`TST-NFR-005.1`).
-  2. *Preconditions*: Continuous 12+ hour simulated workout recording with map display and 1-Hz telemetry.
-  3. *Action*: Capture heap dump (`am dumpheap`) and evaluate retained memory allocations in LeakCanary / Memory Profiler.
-  4. *Expected Result*: Dedicated `TrackerService` heap <= 40 MB; total application peak heap RAM <= 150 MB.
+  1. *Scope*: Measured Endurance Heap Footprint Benchmark (`TST-NFR-005.1`, `MeasuredNfrBenchmarkTest.kt`).
+  2. *Preconditions*: Warmed JVM/Robolectric `TrackerService` / `LiveWorkoutSession` session with post-GC baseline heap recorded.
+  3. *Action*: Replay 3,600+ 1-Hz multi-sensor telemetry ticks, invoke GC, measure retained heap delta (`MB`) and total heap (`MB`), and emit JSON metrics to `app/build/reports/nfr/nfr_measurements.json`.
+  4. *Expected Result*: Dedicated retained heap delta < 40 MB; total heap RAM <= 150 MB.
 
-### TST-NFR-006: **Tracking Battery Drain Ceiling Verification** [Verified]
+### TST-NFR-006: **Tracking Battery Drain Ceiling Verification** [Planned]
 - **Priority**: High
 - **Type**: Non-Functional
-- **Verification Method**: Unit
+- **Verification Method**: On-Device Manual
 - **Requirement(s)**: `REQ-NFR-006`
 - **Component**: `TrackerService.java`, `docs/architecture.md` §4.9
-- **Jira**: `ATT-6139`, `ATT-6181`
+- **Jira**: `ATT-6139`, `ATT-6181`, `ATT-8158`
 - **Test Description**:
-  1. *Scope*: Android Battery Historian / Energy Profiler (`TST-NFR-006.1`).
-  2. *Preconditions*: 60-minute active tracking benchmark on calibrated reference hardware with active GNSS and BLE sensors.
-  3. *Action*: Measure discharge rate in screen-off background mode and screen-on cockpit map mode (50% brightness).
-  4. *Expected Result*: Battery drain <= 5.0%/h screen off; <= 12.0%/h screen on with cockpit map rendering.
+  1. *Scope*: Attested On-Device Manual Protocol — Battery Historian / `dumpsys batterystats` (`TST-NFR-006.1`).
+  2. *Preconditions*: Physical Pixel reference device unplugged at >= 90% SoC; active GNSS + paired BLE/ANT+ sensors.
+  3. *Action*: Reset `adb shell dumpsys batterystats --reset`, run 60-minute screen-off tracking and 60-minute screen-on cockpit map tracking (50% brightness), dump `batterystats`, and record attested discharge rates (%/h), device, build, date, operator, and verdict.
+  4. *Expected Result*: Attested battery drain <= 5.0%/h screen off; <= 12.0%/h screen on with cockpit map.
 
 ### TST-NFR-007: **Sensor Dispatch Latency Budget Verification** [Verified]
 - **Priority**: High
 - **Type**: Non-Functional
-- **Verification Method**: Unit
+- **Verification Method**: Integration
 - **Requirement(s)**: `REQ-NFR-007`
 - **Component**: `BANALService.java`, `ProxySensor.java`, `docs/architecture.md` §4.9
-- **Jira**: `ATT-6139`, `ATT-6181`
+- **Jira**: `ATT-6139`, `ATT-6181`, `ATT-8158`
 - **Test Description**:
-  1. *Scope*: Synthetic Sensor Event Benchmark (`TST-NFR-007.1`).
-  2. *Preconditions*: Registered sensor subscribers across `TrackerService` and UI listeners.
-  3. *Action*: Measure timestamp delta from HAL ingestion to subscriber notification callback across 10,000 packets.
-  4. *Expected Result*: Dispatch latency < 25 ms for >= 99% of events.
+  1. *Scope*: Measured Sensor Dispatch Latency Benchmark (`TST-NFR-007.1`, `MeasuredNfrBenchmarkTest.kt`).
+  2. *Preconditions*: Warmed Robolectric `BANALService` / `ProxySensor` pipeline with active subscribers.
+  3. *Action*: Dispatch >= 1,000 synthetic sensor events, measure timestamp delta (`System.nanoTime`) to subscriber delivery, and emit p99/max latency (ms) to `app/build/reports/nfr/nfr_measurements.json`.
+  4. *Expected Result*: Measured p99 dispatch latency < 25 ms with zero dropped packets.
 
 ### TST-NFR-008: **Sensor Connection Failover Timeout Verification** [Verified]
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
 - **Requirement(s)**: `REQ-NFR-008`
-- **Component**: `BANALService.java`, `ProxySensor.java`, `docs/architecture.md` §4.9
-- **Jira**: `ATT-6139`, `ATT-6181`
+- **Component**: `BTLERadarDevice.java`, `ANTBikeRadarDevice.kt`, `MyBTLEDevice.java`, `BANALService.java`, `ProxySensor.java`, `docs/architecture.md` §4.9
+- **Jira**: `ATT-6139`, `ATT-6181`, `ATT-8158`
 - **Test Description**:
-  1. *Scope*: Disconnect Simulation Harness (`TST-NFR-008.1`).
-  2. *Preconditions*: Primary sensor emitting telemetry with secondary fallback paired.
-  3. *Action*: Abruptly drop primary sensor packet stream and measure time until reconnection or failover initiation.
-  4. *Expected Result*: Failover or automatic reconnect initiated within <= 3.5 s.
+  1. *Scope*: Measured Disconnect/Watchdog Failover Benchmark (`TST-NFR-008.1`, `MeasuredNfrBenchmarkTest.kt`).
+  2. *Preconditions*: Active radar/BLE/proxy sensor state with `WATCHDOG_TIMEOUT_MS = 3500L` and secondary source or reconnect handler.
+  3. *Action*: Simulate abrupt packet starvation, advance/observe watchdog & failover dispatch timing, measure elapsed failover/reconnect initiation latency (`ms`), and emit JSON metrics to `app/build/reports/nfr/nfr_measurements.json`.
+  4. *Expected Result*: Measured failover/reconnect initiation <= 3.5 s (`3500 ms`) observing §4.8 priority hierarchy.
 
 ### TST-NFR-009: **Tracking WakeLock Bounding Verification** [Verified]
 - **Priority**: High
 - **Type**: Non-Functional
-- **Verification Method**: Unit
+- **Verification Method**: Integration
 - **Requirement(s)**: `REQ-NFR-009`
 - **Component**: `TrackerService.java`, `docs/architecture.md` §4.9
-- **Jira**: `ATT-6139`, `ATT-6735`
+- **Jira**: `ATT-6139`, `ATT-6735`, `ATT-8158`
 - **Test Description**:
-  1. *Scope*: PowerManager Mock Unit Test & Dumpsys Power Inspection (`TST-NFR-009.1`).
-  2. *Preconditions*: Full lifecycle transition sequence: Idle -> Tracking -> Paused -> Tracking -> Stopped.
-  3. *Action*: Assert `isHeld()` on `aTrainingTracker:TrackingLock` across each state transition.
-  4. *Expected Result*: WakeLock held strictly in `TRACKING` state; immediately released in `STOPPED` and `PAUSED` with 0 leak.
+  1. *Scope*: Measured `ShadowPowerManager` WakeLock Lifecycle Test (`TST-NFR-009.1`, `MeasuredNfrBenchmarkTest.kt`).
+  2. *Preconditions*: Robolectric `TrackerService` lifecycle driving Idle -> Tracking -> Paused -> Tracking -> Stopped.
+  3. *Action*: Assert `ShadowPowerManager` WakeLock `isHeld()` for `aTrainingTracker:TrackingLock` across every transition, measure release latency (`ms`), and emit JSON metrics to `app/build/reports/nfr/nfr_measurements.json`.
+  4. *Expected Result*: WakeLock held strictly in `TRACKING` state; released immediately (`0` leaked WakeLocks) in `PAUSED` and `STOPPED`.
 
 ### TST-NFR-010: **Database Sample Write Latency Budget Verification** [Verified]
 - **Priority**: High
 - **Type**: Non-Functional
-- **Verification Method**: Unit
+- **Verification Method**: Integration
 - **Requirement(s)**: `REQ-NFR-010`
 - **Component**: `TrackerService.java`, `WorkoutSamplesDatabaseManager.java`, `docs/architecture.md` §4.9
-- **Jira**: `ATT-6139`, `ATT-6735`
+- **Jira**: `ATT-6139`, `ATT-6735`, `ATT-8158`
 - **Test Description**:
-  1. *Scope*: SQLite Write Latency Benchmark (`TST-NFR-010.1`).
-  2. *Preconditions*: Active SQLite database in WAL mode on `mScheduler` / `mDbExecutor`.
-  3. *Action*: Measure insertion duration for 3,600 consecutive 1-Hz workout sample rows.
-  4. *Expected Result*: Write latency < 30 ms per sample with zero operations on the Android main thread.
+  1. *Scope*: Measured SQLite WAL Write Latency Benchmark (`TST-NFR-010.1`, `MeasuredNfrBenchmarkTest.kt`).
+  2. *Preconditions*: Real Robolectric SQLite database in WAL mode after warmup inserts on a background executor (`mDbExecutor` semantics).
+  3. *Action*: Measure per-row `SQLiteDatabase.insertOrThrow` latency over >= 1,000 consecutive 1-Hz workout sample rows, verify non-main-thread execution, and emit p95/p99/max ms to `app/build/reports/nfr/nfr_measurements.json`.
+  4. *Expected Result*: Measured p99 write latency < 30 ms per sample with zero operations on the Android main thread.
 
 ### TST-NFR-011: **Telemetry Storage Growth Rate Ceiling Verification** [Verified]
 - **Priority**: High
 - **Type**: Non-Functional
-- **Verification Method**: Unit
+- **Verification Method**: Integration
 - **Requirement(s)**: `REQ-NFR-011`
 - **Component**: `WorkoutSamplesDatabaseManager.java`, `docs/architecture.md` §4.9
-- **Jira**: `ATT-6139`, `ATT-6181`
+- **Jira**: `ATT-6139`, `ATT-6181`, `ATT-8158`
 - **Test Description**:
-  1. *Scope*: Database Storage Progression Integration Test (`TST-NFR-011.1`).
-  2. *Preconditions*: 3,600 consecutive 1-Hz telemetry samples recorded in database.
-  3. *Action*: Measure database file size growth on disk before and after workout insertion.
-  4. *Expected Result*: Storage growth <= 360 KB/h (~100 bytes/sample, <= 3.6 MB for a 10-hour activity).
+  1. *Scope*: Measured SQLite Storage Progression Integration Test (`TST-NFR-011.1`, `MeasuredNfrBenchmarkTest.kt`).
+  2. *Preconditions*: Real Robolectric SQLite workout samples table with WAL checkpoint baseline size measured.
+  3. *Action*: Insert 3,600 consecutive 1-Hz multi-sensor rows (1-hour workout), run `PRAGMA wal_checkpoint(TRUNCATE)`, measure `.db` file byte delta (`KB/h`), and emit JSON metrics to `app/build/reports/nfr/nfr_measurements.json`.
+  4. *Expected Result*: Measured storage growth <= 360 KB/h (~100 bytes/sample).
 
-### TST-NFR-012: **Cockpit Frame Render Budget Verification** [Verified]
+### TST-NFR-012: **Cockpit Frame Render Budget Verification** [Planned]
 - **Priority**: High
 - **Type**: Non-Functional
-- **Verification Method**: Unit
+- **Verification Method**: On-Device Manual
 - **Requirement(s)**: `REQ-NFR-012`
 - **Component**: `SensorGridScreen.kt`, `docs/architecture.md` §4.9
-- **Jira**: `ATT-6139`, `ATT-6181`
+- **Jira**: `ATT-6139`, `ATT-6181`, `ATT-8158`
 - **Test Description**:
-  1. *Scope*: AndroidX Macrobenchmark FrameTimingMetric (`TST-NFR-012.1`).
-  2. *Preconditions*: `SensorGridScreen` rendering live telemetry card updates at 1 Hz on reference hardware.
-  3. *Action*: Measure 95th-percentile frame render durations over a 60-second scrolling and streaming session.
-  4. *Expected Result*: Render duration < 16.6 ms per frame (sustaining >= 60 FPS without dropped frames).
+  1. *Scope*: Attested On-Device Manual Protocol — AndroidX Macrobenchmark `FrameTimingMetric` / `dumpsys gfxinfo` (`TST-NFR-012.1`).
+  2. *Preconditions*: Physical Pixel device rendering `SensorGridScreen` live 1-Hz telemetry cards for 60 seconds.
+  3. *Action*: Collect `adb shell dumpsys gfxinfo com.atrainingtracker.trainingtracker framestats` (or Macrobenchmark `FrameTimingMetric`) and record attested p95 frame time (ms), device, build, date, operator, and verdict.
+  4. *Expected Result*: Attested 95th-percentile frame render duration < 16.6 ms (sustaining >= 60 FPS).
 
 ### TST-NFR-013: **Map Polyline Update Latency Budget Verification** [Verified]
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
 - **Requirement(s)**: `REQ-NFR-013`
-- **Component**: `ATrainingTrackerMap.kt`, `docs/architecture.md` §4.9
-- **Jira**: `ATT-6139`, `ATT-6181`
+- **Component**: `MapLayers.kt`, `ATrainingTrackerMap.kt`, `docs/architecture.md` §4.9
+- **Jira**: `ATT-6139`, `ATT-6181`, `ATT-8158`
 - **Test Description**:
-  1. *Scope*: Map Canvas Render Pipeline Benchmark (`TST-NFR-013.1`).
-  2. *Preconditions*: Live GPS track with 10,000 points displayed on canvas.
-  3. *Action*: Ingest coordinate update and measure time to recalculate polyline geometry and complete canvas draw.
-  4. *Expected Result*: Polyline path update latency < 30 ms.
+  1. *Scope*: Measured Map Polyline Decimation Benchmark (`TST-NFR-013.1`, `MeasuredNfrBenchmarkTest.kt`).
+  2. *Preconditions*: Warmed JVM benchmark with a 10,000-point synthetic GPS `LatLng` track.
+  3. *Action*: Execute `IncrementalTrackDecimator` / `decimateLiveTrack` (`MapLayers.kt`) across incremental coordinate appends, measure elapsed `System.nanoTime` (ms), and emit p95/max ms to `app/build/reports/nfr/nfr_measurements.json`.
+  4. *Expected Result*: Measured polyline geometry update latency < 30 ms.
 
 ### TST-NFR-014: **Cockpit Telemetry Emission Rate Throttling Verification** [Verified]
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
 - **Requirement(s)**: `REQ-NFR-014`
-- **Component**: `TrackingTabsViewModel.kt`, `docs/architecture.md` §4.9
-- **Jira**: `ATT-6139`, `ATT-6181`
+- **Component**: `BANALServiceRepository.kt`, `TrackingTabsViewModel.kt`, `docs/architecture.md` §4.9
+- **Jira**: `ATT-6139`, `ATT-6181`, `ATT-8158`
 - **Test Description**:
-  1. *Scope*: Coroutine Turbine / TestScope StateFlow Test (`TST-NFR-014.1`).
-  2. *Preconditions*: High-frequency mock sensor streams updating at > 4 Hz.
-  3. *Action*: Collect emissions from `TrackingTabsViewModel.uiState` over 5.0 seconds.
-  4. *Expected Result*: Maximum 5 distinct UI state emissions (strictly conflated to 1.0 Hz).
+  1. *Scope*: Measured Coroutine `TestScope` 1-Hz Emission Throttling Test (`TST-NFR-014.1`, `MeasuredNfrBenchmarkTest.kt`).
+  2. *Preconditions*: High-frequency (> 4 Hz) mock sensor updates feeding `BANALServiceRepository` / `TrackingTabsViewModel`.
+  3. *Action*: Advance virtual time over 5.0 seconds (`5,000 ms`), count distinct `allFilteredSensorData` / `StateFlow` periodic emissions, verify rate <= 1.0 Hz, and emit measured emission count & interval to `app/build/reports/nfr/nfr_measurements.json`.
+  4. *Expected Result*: <= 5 distinct periodic UI emissions over 5.0 seconds (throttled to <= 1.0 Hz).
 
-### TST-NFR-015: **Cold Start Startup Latency Budget Verification** [Verified]
+### TST-NFR-015: **Cold Start Startup Latency Budget Verification** [Planned]
 - **Priority**: High
 - **Type**: Non-Functional
-- **Verification Method**: Unit
+- **Verification Method**: On-Device Manual
 - **Requirement(s)**: `REQ-NFR-015`
 - **Component**: `MainActivityWithNavigation.kt`, `docs/architecture.md` §4.9
-- **Jira**: `ATT-6139`
+- **Jira**: `ATT-6139`, `ATT-8158`
 - **Test Description**:
-  1. *Scope*: AndroidX Macrobenchmark StartupBenchmark / Google Play Vitals (`TST-NFR-015.1`).
-  2. *Preconditions*: Cold process launch from launcher intent on reference device.
-  3. *Action*: Measure Time-to-Initial-Display (TTID) and Time-to-Full-Display (TTFD).
-  4. *Expected Result*: TTID <= 1200 ms; TTFD <= 1500 ms to interactive dashboard rendering.
+  1. *Scope*: Attested On-Device Manual Protocol — Cold Start `am start -W` / Macrobenchmark `StartupMode.COLD` (`TST-NFR-015.1`).
+  2. *Preconditions*: Physical Pixel device with app force-stopped before each of >= 5 cold launches.
+  3. *Action*: Measure TTID (`TotalTime`) and TTFD (`reportFullyDrawn`) via `adb shell am start -W` / Macrobenchmark and record attested median/p95 ms, device, build, date, operator, and verdict.
+  4. *Expected Result*: Attested TTID <= 1200 ms; TTFD <= 1500 ms.
 
-### TST-NFR-016: **GNSS Horizontal Trajectory Accuracy Verification** [Verified]
+### TST-NFR-016: **GNSS Horizontal Trajectory Accuracy Verification** [Planned]
 - **Priority**: High
 - **Type**: Non-Functional
-- **Verification Method**: Unit
+- **Verification Method**: On-Device Manual
 - **Requirement(s)**: `REQ-NFR-016`
-- **Component**: `MySensorManager.java`, `docs/architecture.md` §4.8
-- **Jira**: `ATT-6139`
+- **Component**: `MySensorManager.java`, `SpeedAndLocationDevice_ATTFused.kt`, `docs/architecture.md` §4.8
+- **Jira**: `ATT-6139`, `ATT-8158`
 - **Test Description**:
-  1. *Scope*: Track Replay & Orthogonal Error Analysis (`TST-NFR-016.1`).
-  2. *Preconditions*: Open-sky recorded workout track and RTK-surveyed ground-truth reference polyline.
-  3. *Action*: Compute orthogonal distance error for each recorded fix against reference track.
-  4. *Expected Result*: 95th-percentile horizontal position error <= 5.0 m; cross-track RMSE <= 3.0 m.
+  1. *Scope*: Attested On-Device Manual Protocol — Open-Sky Field Track vs Surveyed Reference (`TST-NFR-016.1`).
+  2. *Preconditions*: Open-sky field course with surveyed RTK/ground-truth polyline on physical Pixel device.
+  3. *Action*: Record workout track, export GPX, compute orthogonal cross-track error against reference polyline, and record attested p95 error (m), RMSE (m), device, build, date, operator, and verdict.
+  4. *Expected Result*: Attested 95th-percentile horizontal error <= 5.0 m; cross-track RMSE <= 3.0 m.
 
-### TST-NFR-017: **Production Crash-Free Session Stability Verification** [Verified]
+### TST-NFR-017: **Production Crash-Free Session Stability Verification** [Planned]
 - **Priority**: High
 - **Type**: Non-Functional
-- **Verification Method**: Unit
+- **Verification Method**: On-Device Manual
 - **Requirement(s)**: `REQ-NFR-017`
-- **Component**: `TrainingApplication.kt`, `docs/architecture.md`
-- **Jira**: `ATT-6139`
+- **Component**: `TrainingApplication.java`, `docs/architecture.md`
+- **Jira**: `ATT-6139`, `ATT-8158`
 - **Test Description**:
-  1. *Scope*: Google Play Console Android Vitals & Firebase Crashlytics Telemetry (`TST-NFR-017.1`).
-  2. *Preconditions*: Production release builds running across user base over rolling 30-day window.
-  3. *Action*: Evaluate crash rate metrics across all recorded user sessions.
-  4. *Expected Result*: Production crash-free session rate >= 99.5%; per-release staging gate >= 99.0%.
+  1. *Scope*: Attested On-Device Manual Protocol — Play Console Android Vitals Crash Rate (`TST-NFR-017.1`).
+  2. *Preconditions*: Production/staging release telemetry accumulated in Google Play Console Android Vitals over rolling 30-day window.
+  3. *Action*: Export rolling 30-day crash-free session rate from Play Console / Crashlytics and record attested percentage, release version, date, operator, and verdict.
+  4. *Expected Result*: Attested production crash-free session rate >= 99.5% (staging >= 99.0%).
 
-### TST-NFR-018: **Application Not Responding (ANR) Rate Ceiling Verification** [Verified]
+### TST-NFR-018: **Application Not Responding (ANR) Rate Ceiling Verification** [Planned]
 - **Priority**: High
 - **Type**: Non-Functional
-- **Verification Method**: Unit
+- **Verification Method**: On-Device Manual
 - **Requirement(s)**: `REQ-NFR-018`
 - **Component**: `TrackerService.java`, `WorkoutSamplesDatabaseManager.java`, `docs/architecture.md` §4.9
-- **Jira**: `ATT-6139`
+- **Jira**: `ATT-6139`, `ATT-8158`
 - **Test Description**:
-  1. *Scope*: Google Play Console Android Vitals & StrictMode Audit (`TST-NFR-018.1`).
-  2. *Preconditions*: Production release builds monitored via Play Console Android Vitals.
-  3. *Action*: Query user-perceived ANR rate over 30 days and run StrictMode thread policy audit in debug tests.
-  4. *Expected Result*: Production ANR rate <= 0.05% (Google Play Bad Behavior threshold: 0.47%); zero main-thread I/O violations.
+  1. *Scope*: Attested On-Device Manual Protocol — Play Console Android Vitals ANR Rate & StrictMode (`TST-NFR-018.1`).
+  2. *Preconditions*: Production release monitored in Google Play Console Android Vitals plus on-device StrictMode session audit.
+  3. *Action*: Export rolling 30-day user-perceived ANR rate from Play Console, inspect StrictMode/Perfetto logs, and record attested ANR rate (%), release version, date, operator, and verdict.
+  4. *Expected Result*: Attested production ANR rate <= 0.05% (threshold 0.47%); zero main-thread blocking I/O violations.
 
 ### TST-PRO-072: **Release Manager System Verification Evidence Integration & Release Gating Test Suite** [Verified]
 - **Priority**: High
@@ -3629,3 +3629,20 @@
   • Verify `collect_sys4_summary()` in `tools/generate_release_verification_summary.py` raises zero deviations when `system_integration_results.json` is absent, does not falsely emit `[ PASS ]` SYS.4 app integration status, and `ReleaseManagerSystemEvidenceContractTest.kt` asserts `SKILL.md` / `docs/releases/` / `docs/architecture.md` gate strictly on unit/`INT-SWE-01..08`, `SYS.5`, and `verification_summary.md`.
   3. *Honest Documentation & V5.0.0 Reclassification Audit (`TST-PRO-112.3`, tools/verify_requirement_governance.py)*:
   • Verify `docs/architecture.md` (§6.2, §6.4), `docs/system/sys_integration_tests.md`, `docs/releases/V5.0.0/` (`verification_summary.md`, `system_integration_results.json`), and living docs explicitly state simulator-only scope, `INT-SWE-01..08` + `AppSmokeAndroidTest.kt` + manual `SYS.5` boundaries, and pass `verify_requirement_governance.py` with exit 0.
+
+---
+
+### TST-PRO-113: **Measured NFR Verification, Manual Protocol & Evidence Ingestion Suite (ATT-8158)** [Verified]
+- **Requirement(s)**: `REQ-PRO-113`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Integration / Review
+- **Component**: `app/src/test/java/com/atrainingtracker/trainingtracker/build/MeasuredNfrBenchmarkTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/NonFunctionalRequirementsContractTest.kt`, `docs/engineering/test_evidence/nfr_manual_protocol_template.md`, `tools/generate_test_evidence.py`, `tools/test_generate_test_evidence.py`, `tools/verify_requirement_governance.py`
+- **Jira**: `ATT-8158`
+- **Test Description**:
+  1. *Measured JVM/Robolectric NFR Benchmark Execution (`TST-PRO-113.1`, MeasuredNfrBenchmarkTest.kt)*:
+  • Verify that the 11 measurable NFR benchmarks (`TST-NFR-001, 002, 003, 005, 007, 008, 009, 010, 011, 013, 014`) run warmup + measured passes, assert documented budgets, and emit structured JSON metrics to `app/build/reports/nfr/nfr_measurements.json`.
+  2. *Manual Protocol Classification & Anti-False-Green Guard (`TST-PRO-113.2`, NonFunctionalRequirementsContractTest.kt)*:
+  • Verify that `NonFunctionalRequirementsContractTest.kt` checks authentic benchmark/evidence artifacts and enforces `On-Device Manual` + non-`[Verified]` status for unattested hardware NFRs (`004, 006, 012, 015, 016, 017, 018`) instead of raw doc-string presence.
+  3. *Test Evidence Ingestion & Governance Parity (`TST-PRO-113.3`, tools/test_generate_test_evidence.py & verify_requirement_governance.py)*:
+  • Verify that `tools/generate_test_evidence.py` ingests `app/build/reports/nfr/nfr_measurements.json` and manual protocol status into `docs/engineering/test_evidence/<target>.{md,json}`, and `verify_requirement_governance.py` passes with exit 0.

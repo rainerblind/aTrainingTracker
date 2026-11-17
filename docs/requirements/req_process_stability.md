@@ -3,7 +3,7 @@
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Requirements**: 177
+**Total Requirements**: 178
 
 ---
 
@@ -187,10 +187,15 @@
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
-- **Implementation**: `TrackerService.java`, `docs/architecture.md` §4.9
+- **Implementation**: `UnicycleOdometryEkf.kt`, `KinematicAltitudeSlopeEkf.kt`, `SpeedAndLocationDevice_ATTFused.kt`, `docs/architecture.md` §4.9
 - **Rationale**: The estimation loop SHALL use hardware event timestamps and dynamic Delta-T calculation to ensure mathematical robustness against Android CPU jitter.
-- **Description**: The Extended Kalman Filter (EKF) estimation loop SHALL dynamically compute Delta-T from hardware sensor timestamps rather than wall-clock arrival times, bounding Delta-T jitter to <= 2.0 ms across consecutive sensor updates.
-- **Measurement Procedure**: Sensor simulation test harness evaluating synthetic IMU timestamp deltas vs calculated Delta-T under simulated CPU load.
+- **Description**: The Extended Kalman Filter (EKF) estimation loop SHALL dynamically compute Delta-T from hardware sensor timestamps rather than wall-clock arrival times, bounding Delta-T jitter to <= 2.0 ms across consecutive sensor updates and sustaining JVM EKF predict/update cycle latency <= 2.0 ms.
+- **Measurement Procedure**: Measured JVM micro-benchmark executing `UnicycleOdometryEkf` / `KinematicAltitudeSlopeEkf` across synthetic IMU timestamp deltas under thread jitter after JIT warmup, recording measured p95/max latency and delta-T error to `app/build/reports/nfr/nfr_measurements.json`.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: `REQ-NFR-001` (`[Verified]`, `Unit`, `TrackerService.java`) in `docs/requirements/req_process_stability.md`.
+  2. *Historical Origin & Commit Trace*: Introduced via `fb45b2bd` (`ATT-6181`), quantified in `04e67a33` (`ATT-6139`), linked in `0777baa6` (`ATT-6735`).
+  3. *Root Reason for Existing Formulation*: Preserved ASPICE SWE.1/SWE.2 EKF timing budget while `NonFunctionalRequirementsContractTest.kt` only checked doc-string substrings and misattributed EKF to `TrackerService.java`.
+  4. *Preservation of Core Invariants*: Preserves <= 2.0 ms Delta-T budget and mathematical stability while reconciling implementation to `UnicycleOdometryEkf.kt` / `KinematicAltitudeSlopeEkf.kt` / `SpeedAndLocationDevice_ATTFused.kt` and requiring real measured JVM evidence.
 - **Acceptance Criteria (Given-When-Then)**:
   • *Given* high-frequency sensor updates arriving with variable thread scheduling jitter,
   • *When* the EKF estimation loop computes the motion update step,
@@ -202,10 +207,15 @@
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
-- **Implementation**: `TrackerService.java`, `docs/architecture.md` §4.9
+- **Implementation**: `SpeedAndLocationDevice.java`, `SpeedAndLocationDevice_ATTFused.kt`, `docs/architecture.md` §4.9
 - **Rationale**: The system SHALL detect "Not Moving" events via IMU variance and coordinate clustering to prevent stationary "Drunkard's Walk" artifacts.
-- **Description**: When IMU accelerometer variance indicates no motion, the position estimation filter SHALL pin coordinate updates, limiting stationary horizontal drift to < 0.5 m/min.
-- **Measurement Procedure**: Sensor replay harness processing stationary IMU accelerometer and GNSS coordinate records over a 30-minute stationary simulation window.
+- **Description**: When IMU accelerometer variance or stationary deadband indicates no motion, `SpeedAndLocationDevice` SHALL pin coordinate updates, limiting stationary horizontal drift to < 0.5 m/min and unpinning within <= 1.0 s of movement resumption.
+- **Measurement Procedure**: Robolectric replay harness feeding 30 minutes of simulated stationary GNSS jitter + IMU rest updates to `SpeedAndLocationDevice` followed by motion resumption, measuring accumulated drift (m/min), unpin latency (s), and replay runtime.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: `REQ-NFR-002` (`[Verified]`, `Unit`, `TrackerService.java`) in `docs/requirements/req_process_stability.md`.
+  2. *Historical Origin & Commit Trace*: Introduced via `fb45b2bd` (`ATT-6181`), quantified in `04e67a33` (`ATT-6139`), refined in `0777baa6` (`ATT-6735`).
+  3. *Root Reason for Existing Formulation*: Established < 0.5 m/min stationary drift ceiling; originally attributed to `TrackerService.java` and verified only via doc-string checks.
+  4. *Preservation of Core Invariants*: Preserves < 0.5 m/min drift ceiling and <= 1.0 s unpinning while attributing real pinning logic in `SpeedAndLocationDevice.java` and demanding measured replay evidence.
 - **Acceptance Criteria (Given-When-Then)**:
   • *Given* an active recording session with the device stationary and IMU accelerometer variance below stillness threshold,
   • *When* position estimation updates are processed over 30 minutes,
@@ -216,26 +226,36 @@
 - **Tests**: `TST-NFR-003`, `TST-PRO-052`
 - **Priority**: High
 - **Type**: Non-Functional
-- **Verification Method**: Unit
+- **Verification Method**: Integration
 - **Implementation**: `TrackerService.java`, `docs/architecture.md` §4.9
 - **Rationale**: `TrackerService` periodic tick execution latency SHALL NOT exceed 50 ms per 1000 ms cycle (`scheduleAtFixedRate`) on background thread, guaranteeing >= 950 ms idle headroom.
 - **Description**: `TrackerService`'s periodic 1-Hz timer loop scheduled on `mScheduler` SHALL complete all state evaluation, duration accumulation, and notification dispatch within <= 50 ms per tick.
-- **Measurement Procedure**: Android Studio CPU Profiler / System.nanoTime instrumentation measuring tick execution duration over a 1000-cycle recording session.
+- **Measurement Procedure**: Measured Robolectric integration test using `System.nanoTime` instrumentation over >= 200 post-warmup 1-Hz tracking ticks in `TrackerService`, recording p95/p99/max tick duration against the 50 ms budget (1000 ms cycle).
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: `REQ-NFR-003` (`[Verified]`, `Unit`, `TrackerService.java`) in `docs/requirements/req_process_stability.md`.
+  2. *Historical Origin & Commit Trace*: Introduced via `fb45b2bd` (`ATT-6181`), quantified in `04e67a33` (`ATT-6139`), linked in `0777baa6` (`ATT-6735`).
+  3. *Root Reason for Existing Formulation*: Bounded 1-Hz `mScheduler` tick latency to < 50 ms per 1000 ms cycle; previously asserted only via markdown substring matching.
+  4. *Preservation of Core Invariants*: Preserves 50 ms tick ceiling, 1000 ms period, and >= 950 ms headroom while upgrading verification to measured `Integration` timing.
 - **Acceptance Criteria (Given-When-Then)**:
   • *Given* an active workout recording session in `TrackerService`,
   • *When* periodic 1-Hz ticks execute on `mScheduler`,
   • *Then* execution duration for 99% of ticks SHALL be < 50 ms, leaving >= 950 ms idle headroom per 1000 ms cycle.
 - **Invariants**: Timer period remains strictly 1000 ms; zero dropped ticks.
 
-### REQ-NFR-004: CPU Consumption Ceiling [Verified]
+### REQ-NFR-004: CPU Consumption Ceiling [Implemented]
 - **Tests**: `TST-NFR-004`, `TST-PRO-052`
 - **Priority**: High
 - **Type**: Non-Functional
-- **Verification Method**: Unit
+- **Verification Method**: On-Device Manual
 - **Implementation**: `TrackerService.java`, `docs/architecture.md` §4.9
 - **Rationale**: `TrackerService` background tracking CPU consumption SHALL NOT exceed 5% of a single core on mid-tier reference hardware, preventing thermal throttling and CPU starvation.
 - **Description**: Background telemetry processing, sensor calculation, and state management in `TrackerService` SHALL NOT exceed 5.0% single-core CPU utilization on mid-tier reference hardware.
-- **Measurement Procedure**: Android Studio CPU Profiler / `simpleperf` CPU trace during 30 minutes of continuous background tracking with GPS and 2 BLE sensors connected.
+- **Measurement Procedure**: Attested On-Device Manual Protocol: Android Studio CPU Profiler / `simpleperf` + `adb shell dumpsys cpuinfo` trace over 30 minutes of continuous background tracking on reference Pixel hardware (screen off, GPS + 2 BLE sensors), recorded in an attested manual report (never simulated in JVM).
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: `REQ-NFR-004` (`[Verified]`, `Unit`, `TrackerService.java`) in `docs/requirements/req_process_stability.md`.
+  2. *Historical Origin & Commit Trace*: Introduced via `fb45b2bd` (`ATT-6181`), quantified in `04e67a33` (`ATT-6139`), linked in `0777baa6` (`ATT-6735`).
+  3. *Root Reason for Existing Formulation*: Marked `[Verified]` under `Unit` despite requiring physical ARM SoC CPU profiling impossible on host JVM.
+  4. *Preservation of Core Invariants*: Preserves < 5.0% single-core CPU ceiling and full calculation fidelity while honestly reclassifying to `On-Device Manual` (`[Implemented]` until physical Pixel run is attested).
 - **Acceptance Criteria (Given-When-Then)**:
   • *Given* `TrackerService` tracking in background with screen off and active GNSS + BLE sensors,
   • *When* measuring CPU utilization over a 30-minute interval on reference hardware,
@@ -246,26 +266,36 @@
 - **Tests**: `TST-NFR-005`, `TST-PRO-052`
 - **Priority**: High
 - **Type**: Non-Functional
-- **Verification Method**: Unit
-- **Implementation**: `TrackerService.java`, `docs/architecture.md` §4.9
+- **Verification Method**: Integration
+- **Implementation**: `TrackerService.java`, `LiveWorkoutSession.java`, `docs/architecture.md` §4.9
 - **Rationale**: `TrackerService` dedicated heap allocation SHALL NOT exceed 40 MB, preventing GC pressure and OutOfMemoryError during 12+ hour endurance recordings.
-- **Description**: Dedicated memory retained by `TrackerService` and its active state accumulators SHALL NOT exceed 40 MB heap, and total application peak heap RAM SHALL NOT exceed 150 MB during multi-hour endurance tracking sessions with map rendering.
-- **Measurement Procedure**: Android Studio Memory Profiler / Android heap dump (`am dumpheap`) analyzed for retained memory after 2 hours of synthetic 1-Hz telemetry recording.
+- **Description**: Dedicated memory retained by `TrackerService` and `LiveWorkoutSession` accumulators SHALL NOT exceed 40 MB heap, and total application peak heap RAM SHALL NOT exceed 150 MB during multi-hour endurance tracking sessions with map rendering.
+- **Measurement Procedure**: Measured JVM/Robolectric endurance replay test recording 3,600+ 1-Hz telemetry samples into `LiveWorkoutSession` / `TrackerService`, forcing GC and measuring live retained heap delta (`Runtime` used heap MB) against the 40 MB / 150 MB ceilings.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: `REQ-NFR-005` (`[Verified]`, `Unit`, `TrackerService.java`) in `docs/requirements/req_process_stability.md`.
+  2. *Historical Origin & Commit Trace*: Introduced via `fb45b2bd` (`ATT-6181`), quantified in `04e67a33` (`ATT-6139`), linked in `0777baa6` (`ATT-6735`).
+  3. *Root Reason for Existing Formulation*: Set 40 MB dedicated / 150 MB peak heap budgets to prevent OOM on endurance rides, but checked only doc strings and omitted `LiveWorkoutSession.java`.
+  4. *Preservation of Core Invariants*: Preserves 40 MB / 150 MB ceilings and zero-leak lifecycle invariant while adding `LiveWorkoutSession.java` attribution and measured heap-delta verification.
 - **Acceptance Criteria (Given-When-Then)**:
   • *Given* an ongoing tracking session recording 1-Hz telemetry for 2+ hours,
-  • *When* inspecting JVM heap allocation via memory dump,
-  • *Then* dedicated `TrackerService` retained heap SHALL be < 40 MB, and total app heap RAM SHALL NOT exceed 150 MB.
+  • *When* inspecting JVM heap allocation after GC,
+  • *Then* dedicated `TrackerService` / `LiveWorkoutSession` retained heap delta SHALL be < 40 MB, and total app heap RAM SHALL NOT exceed 150 MB.
 - **Invariants**: Zero memory leaks across workout start, pause, resume, and stop lifecycles.
 
-### REQ-NFR-006: Tracking Battery Drain Ceiling [Verified]
+### REQ-NFR-006: Tracking Battery Drain Ceiling [Implemented]
 - **Tests**: `TST-NFR-006`, `TST-PRO-052`
 - **Priority**: High
 - **Type**: Non-Functional
-- **Verification Method**: Unit
+- **Verification Method**: On-Device Manual
 - **Implementation**: `TrackerService.java`, `docs/architecture.md` §4.9
 - **Rationale**: Total background battery consumption during active recording with screen off, active GNSS, and connected BLE/ANT+ sensors SHALL NOT exceed 5%/h, and screen-on tracking with cockpit map rendering SHALL NOT exceed 12%/h.
 - **Description**: Active recording power drain SHALL NOT exceed 5.0%/h in background mode (screen off, GNSS 1 Hz, BLE/ANT+ connected) and SHALL NOT exceed 12.0%/h in foreground cockpit mode (screen on at 50% brightness, map rendering at 60 FPS).
-- **Measurement Procedure**: Android Battery Historian / Android Studio Energy Profiler (`dumpsys batterystats`) over a 60-minute active tracking benchmark on standard reference hardware.
+- **Measurement Procedure**: Attested On-Device Manual Protocol: Android Battery Historian / `adb shell dumpsys batterystats` over 60-minute screen-off and 60-minute screen-on (50% brightness) sessions on physical Pixel hardware, recorded in an attested manual report.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: `REQ-NFR-006` (`[Verified]`, `Unit`, `TrackerService.java`) in `docs/requirements/req_process_stability.md`.
+  2. *Historical Origin & Commit Trace*: Introduced via `fb45b2bd` (`ATT-6181`), quantified in `04e67a33` (`ATT-6139`), linked in `0777baa6` (`ATT-6735`).
+  3. *Root Reason for Existing Formulation*: Falsely claimed `Unit` `[Verified]` for battery drain percentages that depend strictly on physical radio/display/battery hardware.
+  4. *Preservation of Core Invariants*: Preserves 5.0%/h and 12.0%/h discharge ceilings and 1-Hz sampling invariant while reclassifying to `On-Device Manual` (`[Implemented]` until physical Pixel run is attested).
 - **Acceptance Criteria (Given-When-Then)**:
   • *Given* an active workout recording session with GNSS and paired sensors,
   • *When* tracked for 60 minutes with screen off,
@@ -279,15 +309,20 @@
 - **Tests**: `TST-NFR-007`, `TST-PRO-052`
 - **Priority**: High
 - **Type**: Non-Functional
-- **Verification Method**: Unit
+- **Verification Method**: Integration
 - **Implementation**: `BANALService.java`, `ProxySensor.java`, `docs/architecture.md` §4.9
 - **Rationale**: Sensor ingestion dispatch latency from hardware event receipt to subscriber notification across registered sensors SHALL NOT exceed 25 ms.
-- **Description**: The elapsed time from HAL callback receipt (`onCharacteristicChanged` / ANT+ broadcast) to delivery at `TrackerService` / UI subscriber StateFlow SHALL NOT exceed 25 ms for 99% of events.
-- **Measurement Procedure**: Synthetic sensor event benchmark measuring timestamp delta between HAL injection and subscriber callback.
+- **Description**: The elapsed time from HAL callback receipt (`onCharacteristicChanged` / ANT+ broadcast) to delivery at `BANALService` / `ProxySensor` subscribers SHALL NOT exceed 25 ms for 99% of events.
+- **Measurement Procedure**: Measured Robolectric integration benchmark dispatching >= 1,000 post-warmup sensor events through `ProxySensor` / `BANALService`, recording p95/p99/max elapsed dispatch latency against 25 ms.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: `REQ-NFR-007` (`[Verified]`, `Unit`, `BANALService.java`, `ProxySensor.java`) in `docs/requirements/req_process_stability.md`.
+  2. *Historical Origin & Commit Trace*: Introduced via `fb45b2bd` (`ATT-6181`), quantified in `04e67a33` (`ATT-6139`), linked in `0777baa6` (`ATT-6735`).
+  3. *Root Reason for Existing Formulation*: Established 25 ms sensor dispatch ceiling; previously asserted only via doc-string substring presence.
+  4. *Preservation of Core Invariants*: Preserves < 25 ms p99 dispatch ceiling and zero-drop concurrency while upgrading verification to measured `Integration` timing.
 - **Acceptance Criteria (Given-When-Then)**:
   • *Given* incoming BLE or ANT+ sensor packets,
-  • *When* processed through `BANALService` and dispatched to subscribers,
-  • *Then* end-to-end dispatch latency SHALL be < 25 ms.
+  • *When* processed through `BANALService` and dispatched via `ProxySensor`,
+  • *Then* end-to-end dispatch latency SHALL be < 25 ms for >= 99% of events.
 - **Invariants**: Thread safety across concurrent sensor streams; zero dropped packets.
 
 ### REQ-NFR-008: Sensor Connection Failover Timeout [Verified]
@@ -295,10 +330,15 @@
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
-- **Implementation**: `BANALService.java`, `ProxySensor.java`, `docs/architecture.md` §4.9
+- **Implementation**: `BTLERadarDevice.java`, `ANTBikeRadarDevice.kt`, `MyBTLEDevice.java`, `BANALService.java`, `ProxySensor.java`, `docs/architecture.md` §4.9
 - **Rationale**: The sensor reconnection and failover window upon signal dropout SHALL NOT exceed 3.5 s before initiating automatic reconnection or source failover.
-- **Description**: When a connected sensor drops signal or fails to emit packets within expected timeout, `BANALService` SHALL initiate reconnect or failover to secondary source within <= 3.5 s.
-- **Measurement Procedure**: Mock BLE/ANT+ disconnection simulation measuring elapsed duration until failover/reconnection state transition.
+- **Description**: When a connected sensor drops signal or fails to emit packets within expected timeout, device watchdogs (`WATCHDOG_TIMEOUT_MS = 3500L`) and `ProxySensor` / `MyBTLEDevice` SHALL initiate reconnect or failover to secondary source within <= 3.5 s.
+- **Measurement Procedure**: Measured Robolectric/JVM watchdog & failover test simulating abrupt packet starvation on radar/BLE/proxy sensors and measuring elapsed Looper/scheduler time until failover/reconnect transition (`<= 3500 ms`).
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: `REQ-NFR-008` (`[Verified]`, `Unit`, `BANALService.java`, `ProxySensor.java`) in `docs/requirements/req_process_stability.md`.
+  2. *Historical Origin & Commit Trace*: Introduced via `fb45b2bd` (`ATT-6181`), quantified in `04e67a33` (`ATT-6139`), linked in `0777baa6` (`ATT-6735`).
+  3. *Root Reason for Existing Formulation*: Specified 3.5 s failover window, omitting `BTLERadarDevice.java`, `ANTBikeRadarDevice.kt`, and `MyBTLEDevice.java` where watchdog/reconnect timers execute.
+  4. *Preservation of Core Invariants*: Preserves <= 3.5 s timeout and §4.8 priority hierarchy while reconciling device symbols and requiring measured failover latency.
 - **Acceptance Criteria (Given-When-Then)**:
   • *Given* an active primary sensor that abruptly ceases transmitting data packets,
   • *When* signal silence exceeds the timeout threshold,
@@ -309,11 +349,16 @@
 - **Tests**: `TST-NFR-009`, `TST-PRO-052`
 - **Priority**: High
 - **Type**: Non-Functional
-- **Verification Method**: Unit
+- **Verification Method**: Integration
 - **Implementation**: `TrackerService.java`, `docs/architecture.md` §4.9
 - **Rationale**: `PowerManager.PARTIAL_WAKE_LOCK` (`aTrainingTracker:TrackingLock`) SHALL be acquired solely by `TrackerService` upon tracking start and MUST be released immediately upon tracking stop.
-- **Description**: `PARTIAL_WAKE_LOCK` (`aTrainingTracker:TrackingLock`) SHALL be held strictly during active `TRACKING` state (`TrackerService.java:842-857`); zero WakeLocks SHALL remain acquired when tracking is paused, stopped, or discarded.
-- **Measurement Procedure**: PowerManager mock verification unit test and Android `dumpsys power` inspection across full tracking lifecycle.
+- **Description**: `PARTIAL_WAKE_LOCK` (`aTrainingTracker:TrackingLock`) SHALL be held strictly during active `TRACKING` state (`TrackerService.java`); zero WakeLocks SHALL remain acquired when tracking is paused, stopped, or discarded, with release latency measured on transition.
+- **Measurement Procedure**: Measured Robolectric `ShadowPowerManager` lifecycle test driving `TrackerService` through Idle -> Tracking -> Paused -> Tracking -> Stopped, verifying `isHeld()` transitions and measuring release timing (`ms`).
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: `REQ-NFR-009` (`[Verified]`, `Unit`, `TrackerService.java`) in `docs/requirements/req_process_stability.md`.
+  2. *Historical Origin & Commit Trace*: Introduced via `fb45b2bd` (`ATT-6181`), quantified in `04e67a33` (`ATT-6139`), attributed to `TrackerService` in `0777baa6` (`ATT-6735`).
+  3. *Root Reason for Existing Formulation*: Guarded against battery-draining WakeLock leaks across pause/stop transitions, but relied on doc-string assertions rather than `ShadowPowerManager` lifecycle measurement.
+  4. *Preservation of Core Invariants*: Preserves strict `aTrainingTracker:TrackingLock` scoping in `TrackerService.java` while backing it with authentic Robolectric WakeLock hold-state and timing measurements.
 - **Acceptance Criteria (Given-When-Then)**:
   • *Given* `TrackerService` in idle or stopped state,
   • *When* checking `PowerManager.WakeLock.isHeld()`,
@@ -327,11 +372,16 @@
 - **Tests**: `TST-NFR-010`, `TST-PRO-052`
 - **Priority**: High
 - **Type**: Non-Functional
-- **Verification Method**: Unit
+- **Verification Method**: Integration
 - **Implementation**: `TrackerService.java`, `WorkoutSamplesDatabaseManager.java`, `docs/architecture.md` §4.9
 - **Rationale**: Live 1-Hz sample insertion latency in `WorkoutSamplesDatabaseManager` SHALL NOT exceed 30 ms and MUST execute strictly off the main thread via `TrackerService`'s `mScheduler` / `mDbExecutor`.
-- **Description**: Each live 1-Hz telemetry sample write to SQLite in `WorkoutSamplesDatabaseManager` SHALL execute within <= 30 ms on `mScheduler` / `mDbExecutor` with zero main-thread disk I/O.
-- **Measurement Procedure**: SQLite insertion benchmark measuring `WorkoutSamplesDatabaseManager.addSampleToDb()` duration over 3,600 consecutive inserts under WAL mode.
+- **Description**: Each live 1-Hz telemetry sample write to SQLite via `WorkoutSamplesDatabaseManager` (`WorkoutSamplesDbHelper` / `SQLiteDatabase.insertOrThrow`) SHALL execute within <= 30 ms on `mScheduler` / `mDbExecutor` with zero main-thread disk I/O.
+- **Measurement Procedure**: Measured Robolectric real-SQLite WAL benchmark inserting >= 1,000 consecutive 1-Hz samples off the main thread, recording p95/p99/max write latency against 30 ms and asserting non-main-thread execution.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: `REQ-NFR-010` (`[Verified]`, `Unit`, `WorkoutSamplesDatabaseManager.addSampleToDb()`) in `docs/requirements/req_process_stability.md`.
+  2. *Historical Origin & Commit Trace*: Introduced via `fb45b2bd` (`ATT-6181`), quantified in `04e67a33` (`ATT-6139`), reconciled to `mScheduler`/`mDbExecutor` in `0777baa6` (`ATT-6735`).
+  3. *Root Reason for Existing Formulation*: Cited nonexistent `addSampleToDb()` symbol and checked only doc-string tokens instead of measuring real SQLite write latency.
+  4. *Preservation of Core Invariants*: Preserves <= 30 ms write budget, WAL concurrency, and off-main-thread `mScheduler` / `mDbExecutor` invariant while replacing nonexistent symbol with real SQLite APIs and measured benchmarks.
 - **Acceptance Criteria (Given-When-Then)**:
   • *Given* live 1-Hz telemetry samples generated during active tracking,
   • *When* inserted into SQLite via `WorkoutSamplesDatabaseManager`,
@@ -342,26 +392,36 @@
 - **Tests**: `TST-NFR-011`, `TST-PRO-052`
 - **Priority**: High
 - **Type**: Non-Functional
-- **Verification Method**: Unit
+- **Verification Method**: Integration
 - **Implementation**: `WorkoutSamplesDatabaseManager.java`, `docs/architecture.md` §4.9
 - **Rationale**: Workout samples SQLite storage growth rate SHALL NOT exceed ~360 KB/h at 1-Hz telemetry recording (~100 bytes/sample, ~3.6 MB for a 10-hour activity).
 - **Description**: SQLite database storage consumption for workout sample records SHALL NOT exceed an average rate of 360 KB per hour of continuous 1-Hz recording (bounding a 10-hour session to <= 3.6 MB).
-- **Measurement Procedure**: Integration test measuring database file size delta on disk before and after inserting 3,600 consecutive 1-Hz telemetry rows.
+- **Measurement Procedure**: Measured Robolectric SQLite integration test creating a workout sample table, inserting 3,600 consecutive 1-Hz multi-sensor rows, checkpointing WAL, and measuring exact `.db` file size delta in KB/h.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: `REQ-NFR-011` (`[Verified]`, `Unit`, `WorkoutSamplesDatabaseManager.java`) in `docs/requirements/req_process_stability.md`.
+  2. *Historical Origin & Commit Trace*: Introduced via `fb45b2bd` (`ATT-6181`), quantified in `04e67a33` (`ATT-6139`), linked in `0777baa6` (`ATT-6735`).
+  3. *Root Reason for Existing Formulation*: Bounded storage expansion for 10+ hour workouts, but lacked an automated test measuring real SQLite file byte growth.
+  4. *Preservation of Core Invariants*: Preserves <= 360 KB/h growth budget and full sensor channel persistence while requiring measured SQLite file-size delta verification.
 - **Acceptance Criteria (Given-When-Then)**:
   • *Given* a 1-hour workout recorded at 1-Hz telemetry frequency (3,600 samples),
   • *When* database file size expansion is measured,
   • *Then* storage growth SHALL NOT exceed 360 KB/h (~100 bytes per sample).
 - **Invariants**: Complete sensor channel persistence without truncating required telemetry fields.
 
-### REQ-NFR-012: Cockpit Frame Render Budget [Verified]
+### REQ-NFR-012: Cockpit Frame Render Budget [Implemented]
 - **Tests**: `TST-NFR-012`, `TST-PRO-052`
 - **Priority**: High
 - **Type**: Non-Functional
-- **Verification Method**: Unit
+- **Verification Method**: On-Device Manual
 - **Implementation**: `SensorGridScreen.kt`, `docs/architecture.md` §4.9
 - **Rationale**: Live cockpit telemetry frame recomposition and rendering in `SensorGridScreen` SHALL NOT exceed 16.6 ms per frame (sustaining 60 FPS without dropped frames).
 - **Description**: Jetpack Compose UI recomposition and draw passes for live telemetry sensor cards in `SensorGridScreen` SHALL complete within <= 16.6 ms per frame, sustaining >= 60 FPS.
-- **Measurement Procedure**: AndroidX Macrobenchmark `FrameTimingMetric` measuring frame render durations during active live telemetry streaming.
+- **Measurement Procedure**: Attested On-Device Manual Protocol: AndroidX Macrobenchmark `FrameTimingMetric` / `adb shell dumpsys gfxinfo` on physical Pixel hardware during 60 s live telemetry cockpit rendering, recorded in an attested manual report.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: `REQ-NFR-012` (`[Verified]`, `Unit`, `SensorGridScreen.kt`) in `docs/requirements/req_process_stability.md`.
+  2. *Historical Origin & Commit Trace*: Introduced via `fb45b2bd` (`ATT-6181`), quantified in `04e67a33` (`ATT-6139`), linked in `0777baa6` (`ATT-6735`).
+  3. *Root Reason for Existing Formulation*: Claimed `[Verified]` under `Unit` despite SurfaceFlinger/GPU frame timing requiring real hardware rendering.
+  4. *Preservation of Core Invariants*: Preserves < 16.6 ms (60 FPS) render budget and UI precision while reclassifying to `On-Device Manual` (`[Implemented]` until physical Pixel run is attested).
 - **Acceptance Criteria (Given-When-Then)**:
   • *Given* `SensorGridScreen` displaying live updating telemetry fields at 1 Hz,
   • *When* Compose frames are rendered on reference device,
@@ -373,10 +433,15 @@
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
-- **Implementation**: `ATrainingTrackerMap.kt`, `docs/architecture.md` §4.9
+- **Implementation**: `MapLayers.kt`, `ATrainingTrackerMap.kt`, `docs/architecture.md` §4.9
 - **Rationale**: Dynamic polyline path geometry update latency on the live map canvas upon receiving location updates SHALL NOT exceed 30 ms.
-- **Description**: Updating the live GPS track polyline geometry and triggering map canvas re-render upon receiving a new GPS coordinate fix SHALL execute within <= 30 ms.
-- **Measurement Procedure**: Map canvas benchmark measuring time delta from location update ingestion to polyline layer geometry update completion.
+- **Description**: Updating the live GPS track polyline geometry via `IncrementalTrackDecimator` / `decimateLiveTrack` (`MapLayers.kt`) for `ATrainingTrackerMap` upon receiving a new GPS coordinate fix SHALL execute within <= 30 ms.
+- **Measurement Procedure**: Measured JVM benchmark running `IncrementalTrackDecimator` / `decimateLiveTrack` across a 10,000-point track and incremental point appends after warmup, recording p95/max update latency against 30 ms.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: `REQ-NFR-013` (`[Verified]`, `Unit`, `ATrainingTrackerMap.kt`) in `docs/requirements/req_process_stability.md`.
+  2. *Historical Origin & Commit Trace*: Introduced via `fb45b2bd` (`ATT-6181`), quantified in `04e67a33` (`ATT-6139`), linked in `0777baa6` (`ATT-6735`).
+  3. *Root Reason for Existing Formulation*: Bounded live track geometry updates to < 30 ms, but cited only `ATrainingTrackerMap.kt` while incremental decimation lives in `MapLayers.kt` (`IncrementalTrackDecimator`).
+  4. *Preservation of Core Invariants*: Preserves < 30 ms update budget, 10,000-point scale, and simplify/LOD behavior while attributing `MapLayers.kt` and requiring measured JVM timings.
 - **Acceptance Criteria (Given-When-Then)**:
   • *Given* an active map view displaying a live GPS track of up to 10,000 points,
   • *When* a new location point is appended to the path,
@@ -388,81 +453,100 @@
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
-- **Implementation**: `TrackingTabsViewModel.kt`, `docs/architecture.md` §4.9
-- **Rationale**: Telemetry StateFlow emissions from `TrackingTabsViewModel` to cockpit tabs SHALL be conflated to 1 Hz, preventing UI recomposition churn during high-frequency sensor updates.
-- **Description**: Live sensor metrics updated at varying frequencies (e.g., 4 Hz wheel speed, 2 Hz cadence, 1 Hz GPS) SHALL be conflated to a maximum UI emission rate of 1.0 Hz in `TrackingTabsViewModel`.
-- **Measurement Procedure**: Coroutine Turbine / TestScope unit test verifying emission count over simulated multi-sensor streams.
+- **Implementation**: `BANALServiceRepository.kt`, `TrackingTabsViewModel.kt`, `docs/architecture.md` §4.9
+- **Rationale**: Telemetry StateFlow emissions from `BANALServiceRepository` / `TrackingTabsViewModel` to cockpit tabs SHALL be conflated/throttled to 1 Hz, preventing UI recomposition churn during high-frequency sensor updates.
+- **Description**: Live sensor metrics updated at varying frequencies (e.g., 4 Hz wheel speed, 2 Hz cadence, 1 Hz GPS) SHALL be polled/emitted to UI `StateFlow`s (`BANALServiceRepository.allFilteredSensorData`, `TrackingTabsViewModel.currentAltitude`) at a maximum UI emission rate of 1.0 Hz.
+- **Measurement Procedure**: Measured coroutine `TestScope` unit test driving high-frequency (> 4 Hz) sensor changes and observing emissions over a 5.0-second virtual window, recording actual emission count (`<= 5` distinct 1-Hz ticks) and interval.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: `REQ-NFR-014` (`[Verified]`, `Unit`, `TrackingTabsViewModel.uiState`) in `docs/requirements/req_process_stability.md`.
+  2. *Historical Origin & Commit Trace*: Introduced via `fb45b2bd` (`ATT-6181`), quantified in `04e67a33` (`ATT-6139`), linked in `0777baa6` (`ATT-6735`).
+  3. *Root Reason for Existing Formulation*: Referenced nonexistent `TrackingTabsViewModel.uiState` while real 1-Hz `delay(1000)` throttling lives in `BANALServiceRepository.kt` (`allFilteredSensorData`).
+  4. *Preservation of Core Invariants*: Preserves 1.0 Hz maximum emission rate and freshest-value reflection while correcting symbols to `BANALServiceRepository.kt` / `TrackingTabsViewModel.kt` and enforcing measured coroutine tests.
 - **Acceptance Criteria (Given-When-Then)**:
   • *Given* sensor inputs updating at high frequency (> 4 Hz),
-  • *When* observing `TrackingTabsViewModel.uiState` flow over 5.0 seconds,
-  • *Then* no more than 5 distinct emissions SHALL occur (conflated to 1.0 Hz).
+  • *When* observing `BANALServiceRepository.allFilteredSensorData` / `TrackingTabsViewModel` streams over 5.0 seconds,
+  • *Then* no more than 5 distinct periodic UI emissions SHALL occur (throttled to 1.0 Hz).
 - **Invariants**: UI metrics must always reflect the freshest sensor values at the 1-Hz tick boundary.
 
-### REQ-NFR-015: Cold Start Startup Latency Budget [Verified]
+### REQ-NFR-015: Cold Start Startup Latency Budget [Implemented]
 - **Tests**: `TST-NFR-015`
 - **Priority**: High
 - **Type**: Non-Functional
-- **Verification Method**: Unit
+- **Verification Method**: On-Device Manual
 - **Implementation**: `MainActivityWithNavigation.kt`, `docs/architecture.md` §4.9
 - **Rationale**: App startup responsiveness directly affects athlete experience when initiating workout recording; cold start latency to interactive dashboard SHALL NOT exceed 1500 ms.
 - **Description**: Application cold startup from process creation to initial interactive frame display (Time-to-Initial-Display / TTID) SHALL NOT exceed 1200 ms, and Time-to-Full-Display (TTFD) SHALL NOT exceed 1500 ms on mid-tier reference hardware (Android 12+).
-- **Measurement Procedure**: AndroidX Macrobenchmark `StartupBenchmark` with `StartupMode.COLD` measuring `startupTimingMetric`, and Google Play Console Android Vitals cold start percentiles.
+- **Measurement Procedure**: Attested On-Device Manual Protocol: AndroidX Macrobenchmark `StartupMode.COLD` / `adb shell am start -W` measuring TTID (`TotalTime`) and TTFD across >= 5 cold launches on physical Pixel hardware, plus Play Vitals cold start percentiles.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: `REQ-NFR-015` (`[Verified]`, `Unit`, `MainActivityWithNavigation.kt`) in `docs/requirements/req_process_stability.md`.
+  2. *Historical Origin & Commit Trace*: Introduced in `04e67a33` (`ATT-6139`) under Epic `ATT-6142`.
+  3. *Root Reason for Existing Formulation*: Falsely claimed `Unit` `[Verified]` for cold-start ART process initialization and WindowManager frame display times impossible in host JVM tests.
+  4. *Preservation of Core Invariants*: Preserves TTID <= 1200 ms and TTFD <= 1500 ms targets while reclassifying to `On-Device Manual` (`[Implemented]` until physical Pixel run is attested).
 - **Acceptance Criteria (Given-When-Then)**:
   • *Given* a cold process launch of the application on reference device,
   • *When* measuring startup timing from `Application.onCreate` to interactive dashboard rendering,
   • *Then* TTID SHALL be <= 1200 ms and TTFD SHALL be <= 1500 ms.
 - **Invariants**: Database schema migrations and essential initialization must complete safely without main-thread ANR.
 
-### REQ-NFR-016: GNSS Horizontal Trajectory Accuracy [Verified]
+### REQ-NFR-016: GNSS Horizontal Trajectory Accuracy [Implemented]
 - **Tests**: `TST-NFR-016`
 - **Priority**: High
 - **Type**: Non-Functional
-- **Verification Method**: Unit
-- **Implementation**: `MySensorManager.java`, `docs/architecture.md` §4.8
+- **Verification Method**: On-Device Manual
+- **Implementation**: `MySensorManager.java`, `SpeedAndLocationDevice_ATTFused.kt`, `docs/architecture.md` §4.8
 - **Rationale**: Workout distance, pace, and segment matching rely on accurate GNSS trajectory recording; horizontal position error relative to reference tracks SHALL be bounded.
 - **Description**: GNSS location recording under open-sky conditions SHALL achieve a 95th-percentile horizontal position error <= 5.0 m and cross-track root-mean-square error (RMSE) <= 3.0 m relative to a surveyed ground-truth reference trajectory.
-- **Measurement Procedure**: Track replay harness evaluating recorded coordinates against RTK/surveyed reference track with orthogonal projection error analysis; Android GNSS Analysis Tool.
+- **Measurement Procedure**: Attested On-Device Manual Protocol: Open-sky field track acquisition on physical Pixel hardware compared against surveyed RTK/ground-truth reference polyline via orthogonal projection error analysis (`GnssLogger` / exported GPX).
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: `REQ-NFR-016` (`[Verified]`, `Unit`, `MySensorManager.java`) in `docs/requirements/req_process_stability.md`.
+  2. *Historical Origin & Commit Trace*: Introduced in `04e67a33` (`ATT-6139`) under Epic `ATT-6142`.
+  3. *Root Reason for Existing Formulation*: Claimed `Unit` `[Verified]` for open-sky RF GNSS accuracy that requires physical antenna/constellation field measurement.
+  4. *Preservation of Core Invariants*: Preserves <= 5.0 m p95 and <= 3.0 m RMSE bounds and double-precision accumulation while adding `SpeedAndLocationDevice_ATTFused.kt` and reclassifying to `On-Device Manual`.
 - **Acceptance Criteria (Given-When-Then)**:
   • *Given* a recorded workout track acquired under open-sky conditions,
   • *When* compared against a surveyed ground-truth reference track via orthogonal projection,
   • *Then* 95% of location fixes SHALL have horizontal error <= 5.0 m, and cross-track RMSE SHALL be <= 3.0 m.
 - **Invariants**: Speed and distance accumulators maintain raw double-precision meters without artificial clamping.
 
-### REQ-NFR-017: Production Crash-Free Session Stability [Verified]
+### REQ-NFR-017: Production Crash-Free Session Stability [Implemented]
 - **Tests**: `TST-NFR-017`
 - **Priority**: High
 - **Type**: Non-Functional
-- **Verification Method**: Unit
-- **Implementation**: `TrainingApplication.kt`, `docs/architecture.md`
+- **Verification Method**: On-Device Manual
+- **Implementation**: `TrainingApplication.java`, `docs/architecture.md`
 - **Rationale**: Workout recording reliability requires zero mid-activity crashes; production crash-free session rate SHALL meet high-availability stability standards.
 - **Description**: The application SHALL maintain a production crash-free user session rate >= 99.5% across all active user sessions over a rolling 30-day window, with a per-release staging gate of >= 99.0%.
-- **Measurement Procedure**: Google Play Console Android Vitals (Crash Rate metric) and Firebase Crashlytics telemetry dashboard monitoring release sessions.
+- **Measurement Procedure**: Attested On-Device Manual Protocol: Google Play Console Android Vitals (Crash Rate metric) and Crashlytics release dashboard export over a rolling 30-day production/staging window.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: `REQ-NFR-017` (`[Verified]`, `Unit`, `TrainingApplication.kt`) in `docs/requirements/req_process_stability.md`.
+  2. *Historical Origin & Commit Trace*: Introduced in `04e67a33` (`ATT-6139`) under Epic `ATT-6142`.
+  3. *Root Reason for Existing Formulation*: Cited nonexistent `TrainingApplication.kt` (actual file is `TrainingApplication.java`) and claimed `Unit` `[Verified]` for 30-day Play Console production telemetry.
+  4. *Preservation of Core Invariants*: Preserves >= 99.5% production / >= 99.0% staging crash-free gates while correcting file extension to `TrainingApplication.java` and reclassifying to `On-Device Manual`.
 - **Acceptance Criteria (Given-When-Then)**:
   • *Given* production release builds deployed to user devices,
   • *When* evaluating session stability telemetry over a rolling 30-day window,
   • *Then* the crash-free session rate SHALL be >= 99.5%.
 - **Invariants**: Unhandled exceptions in background services must be caught with graceful workout recovery and state preservation.
 
-### REQ-NFR-018: Application Not Responding (ANR) Rate Ceiling [Verified]
+### REQ-NFR-018: Application Not Responding (ANR) Rate Ceiling [Implemented]
 - **Tests**: `TST-NFR-018`
 - **Priority**: High
 - **Type**: Non-Functional
-- **Verification Method**: Unit
+- **Verification Method**: On-Device Manual
 - **Implementation**: `TrackerService.java`, `WorkoutSamplesDatabaseManager.java`, `docs/architecture.md` §4.9
 - **Rationale**: UI thread responsiveness prevents Android OS ANR dialogs; production ANR rate SHALL remain well below Google Play Bad Behavior thresholds.
 - **Description**: The application SHALL maintain a user-perceived ANR rate <= 0.05% in production (far below the Google Play Bad Behavior threshold of 0.47%), and UI main-thread blocking latency SHALL NOT exceed 100 ms for any single event.
-- **Measurement Procedure**: Google Play Console Android Vitals (ANR Rate metric) and Android StrictMode / Systrace main-thread disk/network IO violation monitoring.
+- **Measurement Procedure**: Attested On-Device Manual Protocol: Google Play Console Android Vitals (ANR Rate metric) over a rolling 30-day window paired with on-device StrictMode / Perfetto main-thread audit during workout recording.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: `REQ-NFR-018` (`[Verified]`, `Unit`, `TrackerService.java`, `WorkoutSamplesDatabaseManager.java`) in `docs/requirements/req_process_stability.md`.
+  2. *Historical Origin & Commit Trace*: Introduced in `04e67a33` (`ATT-6139`) under Epic `ATT-6142`.
+  3. *Root Reason for Existing Formulation*: Claimed `Unit` `[Verified]` for 30-day Play Vitals user-perceived ANR rate impossible to measure in host unit tests.
+  4. *Preservation of Core Invariants*: Preserves <= 0.05% ANR rate ceiling, < 100 ms blocking limit, and off-main-thread `Dispatchers.IO` / `mDbExecutor` invariant while reclassifying to `On-Device Manual`.
 - **Acceptance Criteria (Given-When-Then)**:
   • *Given* production release builds operating across diverse Android devices,
   • *When* evaluating Google Play Vitals ANR telemetry over a rolling 30-day window,
   • *Then* the ANR rate SHALL be <= 0.05%, with zero blocking disk/network operations on the UI main thread.
 - **Invariants**: All database, network, file export, and cryptographic operations MUST execute off the main thread (`Dispatchers.IO` / `mDbExecutor`).
-
-**Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: `REQ-NFR-001` through `REQ-NFR-014` (`[Planned]`) in `docs/requirements/req_process_stability.md`, refining `REQ-PRO-052` (*Architectural Resource and Timing Budgets Specification*).
-2. *Historical Origin & Commit Trace*: Stubs introduced in Sprint 2026-46.1 under ATT-6181 and refined under ATT-6735 to establish SWE.2 BP4 traceability.
-3. *Root Reason for Existing Formulation*: Placeholders preserved IDs while full SWE.1 BP1/BP4 quantification was prioritized for dedicated sprint ticket ATT-6139.
-4. *Preservation of Core Invariants*: All 12 Section 4.9 budget targets, threading attributions (`TrackerService` `mScheduler` / `mDbExecutor`), WakeLock bounding, and 100% unit test pass rate remain strictly preserved without Android production runtime code changes.
 
 ### REQ-PRO-012: Project Protocol Hardening [Implemented]
 - **Tests**: `TST-STR-017`
@@ -5768,3 +5852,33 @@ The workflow SHALL mandate that:
   • *When* audited via Gradle contract tests and `verify_requirement_governance.py`,
   • *Then* all tests pass with explicit honest simulator classification and zero false SYS.4 blocking claims.
 - **Invariants**: Zero Android production code impact (`app/src/main/`); `ANT-Android-SDKs` untouched at `0e8cea714a231fb9565170d4ed01eafa868f9798`; pure Python 3 stdlib for `tools/` test runners.
+
+---
+
+### REQ-PRO-113: Measured NFR Verification, Manual Protocol Honesty & Evidence Pipeline (ATT-8158) [Verified]
+- **Tests**: `TST-PRO-113`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Integration / Review
+- **Implementation**: `app/src/test/java/com/atrainingtracker/trainingtracker/build/MeasuredNfrBenchmarkTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/NonFunctionalRequirementsContractTest.kt`, `docs/engineering/test_evidence/nfr_manual_protocol_template.md`, `tools/generate_test_evidence.py`, `tools/test_generate_test_evidence.py`, `docs/requirements/req_process_stability.md`, `docs/tests/tst_process_stability.md`
+- **Rationale**: Resolves ASPICE 4.0 Assessment (2026-11-15) Finding `M8` (`SWE.2 BP3`, `SWE.6 BP3`, `ATT-8158`): `NonFunctionalRequirementsContractTest.kt` previously marked all 18 `REQ-NFR-001`..`018` and `TST-NFR-001`..`018` as `[Verified]` solely via markdown substring matching, without runtime timing, memory, storage, or throttle measurements, and without distinguishing JVM-measurable NFRs from hardware-only manual protocols.
+- **Description**:
+  1. *Measured JVM/Robolectric NFR Benchmarks (`REQ-PRO-113.1`, [Verified])*: The 11 JVM-measurable NFRs (`REQ-NFR-001, 002, 003, 005, 007, 008, 009, 010, 011, 013, 014`) SHALL be verified by executable JVM/Robolectric benchmarks/tests that execute JIT warmup, measure actual elapsed timing, heap delta, SQLite file growth, or emission rate metrics against the documented §4.9 budgets, and emit machine-readable NFR metrics (`app/build/reports/nfr/nfr_measurements.json`).
+  2. *Honest Attested Manual Protocol Classification (`REQ-PRO-113.2`, [Verified])*: The 7 hardware/battery/Doze/Play-Vitals NFRs (`REQ-NFR-004, 006, 012, 015, 016, 017, 018`) SHALL use `Verification Method: On-Device Manual` and MUST remain `[Implemented]` / `[Planned]` (never `[Verified]` via unit tests) until an attested physical-device measurement report is recorded.
+  3. *Evidence Ingestion & Contract Guardrail (`REQ-PRO-113.3`, [Verified])*: `tools/generate_test_evidence.py` SHALL ingest measured NFR JSON metrics and manual-protocol attestation status into `docs/engineering/test_evidence/<target>.{md,json}`, and `NonFunctionalRequirementsContractTest.kt` SHALL enforce measured benchmark & manual-protocol artifact integrity rather than raw markdown threshold-string presence.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new `REQ-PRO-113` refining `REQ-NFR-001`..`018`, `REQ-PRO-052`, and `REQ-PRO-100` across `NonFunctionalRequirementsContractTest.kt`, `tools/generate_test_evidence.py`, and living documentation shards.
+  2. *Historical Origin & Commit Trace*: Sprint `2026-11-17_01_Früh` via `ATT-8158`, following `ATT-8157` (`1750ab64`) under Epic `ATT-8138`.
+  3. *Root Reason for Existing Formulation*: `ATT-6139` / `ATT-6181` / `ATT-6735` relied on `NonFunctionalRequirementsContractTest.kt` doc-string assertions and had no mechanism to measure budgets or feed NFR metrics into `docs/engineering/test_evidence/`.
+  4. *Preservation of Core Invariants*: Preserves all 18 numeric budgets, `ArchitectureConformanceContractTest.kt` §4.9 checks, `TrackerService.java` runtime behavior (`app/src/main/` unchanged), and `ANT-Android-SDKs` (`0e8cea71`).
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* the 11 JVM-measurable NFR benchmarks executed under `./gradlew testDebugUnitTest`,
+  • *When* warmup and measured loops complete,
+  • *Then* all 11 measured metrics satisfy documented budgets and emit structured values to `app/build/reports/nfr/nfr_measurements.json`.
+  • *Given* `tools/generate_test_evidence.py` executed after unit tests,
+  • *When* generating `docs/engineering/test_evidence/<target>.{md,json}`,
+  • *Then* measured Group A metrics and Group B `On-Device Manual` `[Planned]`/`[Implemented]` statuses appear transparently without fabricated hardware results.
+  • *Given* `NonFunctionalRequirementsContractTest.kt` and `tools/verify_requirement_governance.py`,
+  • *When* executed,
+  • *Then* string-only doc-presence verification is replaced by authentic benchmark/protocol verification and governance exits `0`.
+- **Invariants**: Zero Android production code modifications (`app/src/main/`); `ANT-Android-SDKs` untouched; zero fabricated physical-device `[Verified]` statuses.

@@ -15,17 +15,21 @@ sys.path.insert(0, os.path.dirname(__file__))
 try:
     from tools.generate_test_evidence import (
         CRITICAL_SUBSYSTEMS,
+        GROUP_B_MANUAL_NFRS,
         generate_test_evidence,
         get_git_commit,
         parse_kover_xml_report,
+        parse_nfr_measurements,
         render_markdown_evidence,
     )
 except ImportError:
     from generate_test_evidence import (  # type: ignore
         CRITICAL_SUBSYSTEMS,
+        GROUP_B_MANUAL_NFRS,
         generate_test_evidence,
         get_git_commit,
         parse_kover_xml_report,
+        parse_nfr_measurements,
         render_markdown_evidence,
     )
 
@@ -273,6 +277,142 @@ class TestGenerateTestEvidence(unittest.TestCase):
                 skip_kover=True,
             )
             self.assertFalse(payload_forced["coverage"]["measured"])
+
+    def test_parse_nfr_measurements_valid_missing_and_malformed(self):
+        """TST-PRO-113.3: Verify NFR JSON parser handles valid, missing, and malformed inputs cleanly."""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            manual_tpl = os.path.join(tmp_dir, "nfr_manual_protocol_template.md")
+            with open(manual_tpl, "w", encoding="utf-8") as f:
+                f.write("[MANUAL PROTOCOL — NOT EXECUTED IN JVM]\n")
+
+            missing_res = parse_nfr_measurements(
+                os.path.join(tmp_dir, "missing.json"),
+                manual_protocol_path=manual_tpl,
+            )
+            self.assertFalse(missing_res["measured"])
+            self.assertEqual(missing_res["measured_count"], 0)
+            self.assertTrue(missing_res["manual_protocol_present"])
+            self.assertEqual(len(missing_res["manual_protocols"]), len(GROUP_B_MANUAL_NFRS))
+            self.assertTrue(all(m["status"] == "PENDING MANUAL" for m in missing_res["manual_protocols"]))
+
+            malformed_path = os.path.join(tmp_dir, "bad.json")
+            with open(malformed_path, "w", encoding="utf-8") as f:
+                f.write("{broken json")
+            malformed_res = parse_nfr_measurements(malformed_path, manual_protocol_path=manual_tpl)
+            self.assertFalse(malformed_res["measured"])
+            self.assertIn("Failed to parse NFR measurement report", malformed_res["reason"])
+
+            valid_path = os.path.join(tmp_dir, "nfr_measurements.json")
+            with open(valid_path, "w", encoding="utf-8") as f:
+                json.dump(
+                    {
+                        "schema_version": 1,
+                        "suite": "MeasuredNfrBenchmarkTest",
+                        "measurements": [
+                            {
+                                "req_id": "REQ-NFR-001",
+                                "tst_id": "TST-NFR-001",
+                                "name": "Deterministic EKF Timing",
+                                "metric": "ekf_cycle_p95_ms",
+                                "measured_value": 0.042,
+                                "unit": "ms",
+                                "budget": "<= 2.0 ms",
+                                "passed": True,
+                                "warmup_iterations": 200,
+                                "measured_iterations": 1000,
+                                "details": "max_dt_error_ms=0.0000",
+                            },
+                            {
+                                "req_id": "REQ-NFR-011",
+                                "tst_id": "TST-NFR-011",
+                                "name": "Telemetry Storage Growth Rate Ceiling",
+                                "metric": "storage_growth_kb_per_h",
+                                "measured_value": 240.0,
+                                "unit": "KB/h",
+                                "budget": "<= 360.0 KB/h",
+                                "passed": True,
+                                "warmup_iterations": 0,
+                                "measured_iterations": 3600,
+                                "details": "bytes_per_sample=68.2",
+                            },
+                        ],
+                    },
+                    f,
+                )
+
+            valid_res = parse_nfr_measurements(valid_path, manual_protocol_path=manual_tpl)
+            self.assertTrue(valid_res["measured"])
+            self.assertEqual(valid_res["measured_count"], 2)
+            self.assertEqual(valid_res["passed_count"], 2)
+            self.assertEqual(valid_res["failed_count"], 0)
+
+    def test_generate_test_evidence_ingests_nfr_measurements_and_manual_protocols(self):
+        """TST-PRO-113.3: Verify end-to-end evidence generation renders NFR Group A metrics & Group B manual status."""
+        with tempfile.TemporaryDirectory() as tmp_root:
+            out_dir = os.path.join(tmp_root, "docs", "engineering", "test_evidence")
+            results_dir = os.path.join(tmp_root, "app", "build", "test-results")
+            nfr_dir = os.path.join(tmp_root, "app", "build", "reports", "nfr")
+            os.makedirs(out_dir, exist_ok=True)
+            os.makedirs(results_dir, exist_ok=True)
+            os.makedirs(nfr_dir, exist_ok=True)
+
+            with open(os.path.join(out_dir, "nfr_manual_protocol_template.md"), "w", encoding="utf-8") as f:
+                f.write("[MANUAL PROTOCOL — NOT EXECUTED IN JVM]\n")
+            with open(os.path.join(results_dir, "TEST-SampleTest.xml"), "w", encoding="utf-8") as f:
+                f.write('<testsuite name="T" tests="1" failures="0" errors="0" skipped="0" time="0.1"><testcase name="t_TST_PRO_113" classname="T" time="0.1"/></testsuite>')
+
+            nfr_json = os.path.join(nfr_dir, "nfr_measurements.json")
+            with open(nfr_json, "w", encoding="utf-8") as f:
+                json.dump(
+                    {
+                        "schema_version": 1,
+                        "suite": "MeasuredNfrBenchmarkTest",
+                        "measurements": [
+                            {
+                                "req_id": "REQ-NFR-003",
+                                "tst_id": "TST-NFR-003",
+                                "name": "Periodic Tick Latency Budget",
+                                "metric": "tick_p99_ms",
+                                "measured_value": 4.25,
+                                "unit": "ms",
+                                "budget": "< 50.0 ms",
+                                "passed": True,
+                                "warmup_iterations": 20,
+                                "measured_iterations": 200,
+                                "details": "p99_ms=4.250",
+                            }
+                        ],
+                    },
+                    f,
+                )
+
+            md_path, json_path, payload = generate_test_evidence(
+                target_id="sprint_2026-11-17_01_Früh",
+                target_type="sprint",
+                repo_root=tmp_root,
+                results_dir=results_dir,
+                out_dir=out_dir,
+                commit_sha="12345678",
+                timestamp="2026-11-17T09:00:00Z",
+            )
+
+            self.assertTrue(payload["nfr_verification"]["measured"])
+            self.assertEqual(payload["nfr_verification"]["passed_count"], 1)
+            self.assertEqual(len(payload["nfr_verification"]["manual_protocols"]), 7)
+
+            with open(md_path, "r", encoding="utf-8") as f:
+                md_text = f.read()
+            self.assertIn("4. Non-Functional Requirements (NFR) Verification Summary", md_text)
+            self.assertIn("`REQ-NFR-003`", md_text)
+            self.assertIn("`4.2500 ms`", md_text)
+            self.assertIn("`REQ-NFR-004`", md_text)
+            self.assertIn("PENDING MANUAL", md_text)
+            self.assertIn("[MANUAL PROTOCOL — NOT EXECUTED IN JVM]", md_text)
+
+            with open(json_path, "r", encoding="utf-8") as f:
+                disk_payload = json.load(f)
+            self.assertIn("nfr_verification", disk_payload)
+            self.assertEqual(disk_payload["nfr_verification"]["measurements"][0]["measured_value"], 4.25)
 
 
 if __name__ == "__main__":

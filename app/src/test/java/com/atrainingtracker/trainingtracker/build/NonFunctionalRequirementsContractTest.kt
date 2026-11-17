@@ -18,27 +18,35 @@
 
 package com.atrainingtracker.trainingtracker.build
 
+import org.json.JSONObject
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
 import java.util.Locale
 
 /**
- * Contract verification test for Non-Functional Requirements (NFRs)
- * under ASPICE SWE.1 BP1, BP4 and SWE.2 BP4 (REQ-NFR-001..018, TST-NFR-001..018,
- * REQ-PRO-052, TST-PRO-052, ATT-6139).
+ * Contract verification test for Non-Functional Requirements (NFRs) under ASPICE SWE.1 BP1/BP4,
+ * SWE.2 BP3/BP4, and SWE.6 BP3 (`REQ-PRO-113`, `TST-PRO-113`, `REQ-NFR-001`..`018`, `ATT-8158`).
  *
- * Enforces:
- * 1. Living requirements shard (docs/requirements/req_process_stability.md) defines
- *    all 18 quantified NFRs (REQ-NFR-001 through REQ-NFR-018) with [Verified] status.
- * 2. Every REQ-NFR defines Given-When-Then acceptance criteria, numeric target thresholds,
- *    concrete measurement procedures, and bidirectional TST-NFR links.
- * 3. Living tests shard (docs/tests/tst_process_stability.md) defines all 18 test specifications
- *    (TST-NFR-001 through TST-NFR-018) with bidirectional requirement links, test procedures,
- *    and expected quantitative results.
- * 4. Architecture Section 4.9 budget matrix links directly to REQ-NFR-003..014.
+ * Replaces legacy doc-string presence checks with authentic verification enforcement:
+ * 1. Group A (11 JVM/Robolectric measurable NFRs: 001, 002, 003, 005, 007, 008, 009, 010, 011, 013, 014)
+ *    MUST have executable warmup+measured benchmark implementations in `MeasuredNfrBenchmarkTest.kt`,
+ *    and when `app/build/reports/nfr/nfr_measurements.json` is generated, every recorded entry MUST pass.
+ * 2. Group B (7 hardware/battery/Vitals NFRs: 004, 006, 012, 015, 016, 017, 018) MUST be classified as
+ *    `Verification Method: On-Device Manual`, MUST NOT be falsely marked `[Verified]` by JVM unit tests
+ *    without an attested physical-device protocol report, and MUST be covered in
+ *    `docs/engineering/test_evidence/nfr_manual_protocol_template.md`.
+ * 3. Living requirements/test shards maintain bidirectional `REQ-NFR` <-> `TST-NFR` traceability
+ *    and Architecture §4.9 traceability (`REQ-NFR-003`..`014`).
  */
 class NonFunctionalRequirementsContractTest {
+
+    companion object {
+        val GROUP_A_MEASURABLE_IDS = listOf(1, 2, 3, 5, 7, 8, 9, 10, 11, 13, 14)
+        val GROUP_B_MANUAL_IDS = listOf(4, 6, 12, 15, 16, 17, 18)
+    }
 
     private fun findRepoRootFile(relativePath: String): File {
         val candidates = listOf(
@@ -50,75 +58,143 @@ class NonFunctionalRequirementsContractTest {
             ?: error("Could not locate $relativePath in ${File(".").absolutePath}")
     }
 
-    @Test
-    fun testRequirementsShard_definesQuantifiedNfrsWithGivenWhenThenAndMeasurement() {
-        val reqFile = findRepoRootFile("docs/requirements/req_process_stability.md")
-        assertTrue("req_process_stability.md must exist", reqFile.exists())
-        val content = reqFile.readText()
+    private fun extractSection(content: String, headingPrefix: String): String {
+        val idx = content.indexOf(headingPrefix)
+        assertTrue("Missing section starting with '$headingPrefix'", idx >= 0)
+        val nextHeadingIdx = content.indexOf("\n### ", idx + headingPrefix.length)
+        return if (nextHeadingIdx > idx) content.substring(idx, nextHeadingIdx) else content.substring(idx)
+    }
 
-        val expectedNfrs = mapOf(
-            1 to listOf("EKF", "2.0 ms", "TST-NFR-001"),
-            2 to listOf("Stationary", "0.5 m/min", "TST-NFR-002"),
-            3 to listOf("50 ms", "1000 ms", "TST-NFR-003"),
-            4 to listOf("5", "%", "TST-NFR-004"),
-            5 to listOf("40 MB", "150 MB", "TST-NFR-005"),
-            6 to listOf("5.0%/h", "12.0%/h", "TST-NFR-006"),
-            7 to listOf("25 ms", "TST-NFR-007"),
-            8 to listOf("3.5 s", "TST-NFR-008"),
-            9 to listOf("PARTIAL_WAKE_LOCK", "TrackingLock", "TST-NFR-009"),
-            10 to listOf("30 ms", "mScheduler", "TST-NFR-010"),
-            11 to listOf("360 KB/h", "TST-NFR-011"),
-            12 to listOf("16.6 ms", "60 FPS", "TST-NFR-012"),
-            13 to listOf("30 ms", "TST-NFR-013"),
-            14 to listOf("1", "Hz", "TST-NFR-014"),
-            15 to listOf("1200 ms", "1500 ms", "TST-NFR-015"),
-            16 to listOf("5.0 m", "3.0 m", "TST-NFR-016"),
-            17 to listOf("99.5%", "TST-NFR-017"),
-            18 to listOf("0.05%", "TST-NFR-018")
+    @Test
+    fun testGroupA_measurableNfrsHaveRealBenchmarkImplementationsInMeasuredNfrBenchmarkTest() {
+        val benchmarkFile = findRepoRootFile(
+            "app/src/test/java/com/atrainingtracker/trainingtracker/build/MeasuredNfrBenchmarkTest.kt"
+        )
+        val benchmarkSource = benchmarkFile.readText()
+        val reqContent = findRepoRootFile("docs/requirements/req_process_stability.md").readText()
+        val tstContent = findRepoRootFile("docs/tests/tst_process_stability.md").readText()
+
+        for (id in GROUP_A_MEASURABLE_IDS) {
+            val reqId = String.format(Locale.US, "REQ-NFR-%03d", id)
+            val tstId = String.format(Locale.US, "TST-NFR-%03d", id)
+
+            assertTrue("MeasuredNfrBenchmarkTest.kt must implement $tstId", benchmarkSource.contains(tstId))
+            assertTrue("MeasuredNfrBenchmarkTest.kt must record measurement for $reqId", benchmarkSource.contains(reqId))
+
+            val reqSection = extractSection(reqContent, "### $reqId:")
+            val tstSection = extractSection(tstContent, "### $tstId:")
+            assertTrue("$reqId must cite $tstId", reqSection.contains(tstId))
+            assertTrue("$tstId must cite $reqId", tstSection.contains(reqId))
+            assertFalse(
+                "$reqId is JVM/Robolectric measurable and must not be On-Device Manual",
+                reqSection.contains("**Verification Method**: On-Device Manual")
+            )
+        }
+
+        // If MeasuredNfrBenchmarkTest has already emitted measurements in this build, validate schema & verdicts
+        val repoRoot = findRepoRootFile("tools/generate_test_evidence.py")
+            .canonicalFile
+            .parentFile
+            ?.parentFile
+            ?: error("Could not resolve repository root")
+        val measurementsFile = File(repoRoot, "app/build/reports/nfr/nfr_measurements.json")
+        if (measurementsFile.isFile) {
+            val root = JSONObject(measurementsFile.readText())
+            val arr = root.getJSONArray("measurements")
+            val byReq = mutableMapOf<String, JSONObject>()
+            for (i in 0 until arr.length()) {
+                val obj = arr.getJSONObject(i)
+                byReq[obj.getString("req_id")] = obj
+            }
+            for (id in GROUP_A_MEASURABLE_IDS) {
+                val reqId = String.format(Locale.US, "REQ-NFR-%03d", id)
+                val entry = byReq[reqId]
+                if (entry != null) {
+                    assertTrue("$reqId measured NFR must pass", entry.getBoolean("passed"))
+                    assertTrue("$reqId must record positive measured_iterations", entry.getInt("measured_iterations") > 0)
+                }
+            }
+            for (id in GROUP_B_MANUAL_IDS) {
+                val reqId = String.format(Locale.US, "REQ-NFR-%03d", id)
+                assertFalse(
+                    "Group B manual NFR $reqId must never be emitted by JVM benchmark JSON",
+                    byReq.containsKey(reqId)
+                )
+            }
+        }
+    }
+
+    @Test
+    fun testGroupB_manualHardwareNfrsEnforceOnDeviceManualHonestyAndProtocolTemplate() {
+        val reqContent = findRepoRootFile("docs/requirements/req_process_stability.md").readText()
+        val tstContent = findRepoRootFile("docs/tests/tst_process_stability.md").readText()
+        val benchmarkSource = findRepoRootFile(
+            "app/src/test/java/com/atrainingtracker/trainingtracker/build/MeasuredNfrBenchmarkTest.kt"
+        ).readText()
+        val protocolFile = findRepoRootFile("docs/engineering/test_evidence/nfr_manual_protocol_template.md")
+        val protocolContent = protocolFile.readText()
+
+        assertTrue(
+            "Manual protocol template must carry explicit non-JVM execution stamp",
+            protocolContent.contains("[MANUAL PROTOCOL — NOT EXECUTED IN JVM]")
+        )
+        assertTrue(
+            "Manual protocol template must require device, build, date, operator, measured value, verdict",
+            protocolContent.contains("Device / Build") &&
+                protocolContent.contains("Operator") &&
+                protocolContent.contains("Measured Value") &&
+                protocolContent.contains("Verdict")
         )
 
-        for ((id, tokens) in expectedNfrs) {
+        for (id in GROUP_B_MANUAL_IDS) {
             val reqId = String.format(Locale.US, "REQ-NFR-%03d", id)
-            assertTrue("Requirements shard must contain $reqId", content.contains(reqId))
-            val verified = content.contains("$reqId:") && content.contains("[Verified]")
-            assertTrue("$reqId must be marked [Verified]", verified)
-
-            for (token in tokens) {
-                assertTrue("$reqId must contain expected threshold/trace '$token'", content.contains(token))
-            }
-
-            assertTrue("Must specify Measurement Procedure for $reqId", content.contains("Measurement Procedure"))
-            val gwt = content.contains("Acceptance Criteria (Given-When-Then)")
-            assertTrue("Must specify Acceptance Criteria (Given-When-Then)", gwt)
-        }
-    }
-
-    @Test
-    fun testTestSpecificationShard_definesTstNfrsWithBidirectionalLinks() {
-        val tstFile = findRepoRootFile("docs/tests/tst_process_stability.md")
-        assertTrue("tst_process_stability.md must exist", tstFile.exists())
-        val content = tstFile.readText()
-
-        for (id in 1..18) {
             val tstId = String.format(Locale.US, "TST-NFR-%03d", id)
-            val reqId = String.format(Locale.US, "REQ-NFR-%03d", id)
 
-            assertTrue("Test shard must contain $tstId", content.contains(tstId))
-            assertTrue("$tstId must link back to $reqId", content.contains(reqId))
-            val verified = content.contains("$tstId:") && content.contains("[Verified]")
-            assertTrue("$tstId must be marked [Verified]", verified)
-            assertTrue("$tstId must define Expected Result", content.contains("Expected Result"))
+            val reqSection = extractSection(reqContent, "### $reqId:")
+            val tstSection = extractSection(tstContent, "### $tstId:")
+
+            assertTrue(
+                "$reqId must declare Verification Method: On-Device Manual",
+                reqSection.contains("**Verification Method**: On-Device Manual")
+            )
+            assertTrue(
+                "$tstId must declare Verification Method: On-Device Manual",
+                tstSection.contains("**Verification Method**: On-Device Manual")
+            )
+            assertFalse(
+                "$reqId must NOT claim [Verified] without an attested physical-device run",
+                reqSection.lines().first().contains("[Verified]")
+            )
+            assertFalse(
+                "$tstId must NOT claim [Verified] without an attested physical-device run",
+                tstSection.lines().first().contains("[Verified]")
+            )
+            assertTrue(
+                "Manual protocol template must list $reqId and $tstId",
+                protocolContent.contains(reqId) && protocolContent.contains(tstId)
+            )
+            assertFalse(
+                "MeasuredNfrBenchmarkTest.kt must not falsely record JVM measurements for manual $reqId",
+                benchmarkSource.contains("reqId = \"$reqId\"")
+            )
         }
     }
 
     @Test
-    fun testArchitectureSection49_traceabilityToNfrs() {
+    fun testArchitectureSection49_traceabilityToNfrsAndPro113() {
         val archFile = findRepoRootFile("docs/architecture.md")
-        val content = archFile.readText()
+        val archContent = archFile.readText()
 
         for (id in 3..14) {
             val reqId = String.format(Locale.US, "REQ-NFR-%03d", id)
-            assertTrue("Architecture Section 4.9 must trace to $reqId", content.contains(reqId))
+            assertTrue("Architecture Section 4.9 must trace to $reqId", archContent.contains(reqId))
         }
+
+        val reqContent = findRepoRootFile("docs/requirements/req_process_stability.md").readText()
+        val tstContent = findRepoRootFile("docs/tests/tst_process_stability.md").readText()
+        assertEquals(11, GROUP_A_MEASURABLE_IDS.size)
+        assertEquals(7, GROUP_B_MANUAL_IDS.size)
+        assertTrue("req_process_stability.md must define REQ-PRO-113", reqContent.contains("### REQ-PRO-113:"))
+        assertTrue("tst_process_stability.md must define TST-PRO-113:", tstContent.contains("### TST-PRO-113:"))
     }
 }

@@ -68,6 +68,16 @@ CRITICAL_SUBSYSTEMS = {
     },
 }
 
+GROUP_B_MANUAL_NFRS = [
+    {"req_id": "REQ-NFR-004", "tst_id": "TST-NFR-004", "name": "CPU Consumption Ceiling", "budget": "< 5.0% single-core"},
+    {"req_id": "REQ-NFR-006", "tst_id": "TST-NFR-006", "name": "Tracking Battery Drain Ceiling", "budget": "<= 5.0%/h bg / <= 12.0%/h fg"},
+    {"req_id": "REQ-NFR-012", "tst_id": "TST-NFR-012", "name": "Cockpit Frame Render Budget", "budget": "< 16.6 ms p95 (60 FPS)"},
+    {"req_id": "REQ-NFR-015", "tst_id": "TST-NFR-015", "name": "Cold Start Startup Latency Budget", "budget": "TTID <= 1200 ms / TTFD <= 1500 ms"},
+    {"req_id": "REQ-NFR-016", "tst_id": "TST-NFR-016", "name": "GNSS Horizontal Trajectory Accuracy", "budget": "p95 <= 5.0 m / RMSE <= 3.0 m"},
+    {"req_id": "REQ-NFR-017", "tst_id": "TST-NFR-017", "name": "Production Crash-Free Session Stability", "budget": ">= 99.5% prod / >= 99.0% staging"},
+    {"req_id": "REQ-NFR-018", "tst_id": "TST-NFR-018", "name": "Application Not Responding (ANR) Rate Ceiling", "budget": "<= 0.05% ANR / < 100 ms main thread"},
+]
+
 
 def get_git_commit(repo_root: str) -> str:
     """Retrieves current Git commit SHA from repo_root."""
@@ -206,6 +216,92 @@ def parse_kover_xml_report(kover_xml_path: str) -> Dict[str, Any]:
         }
 
 
+def parse_nfr_measurements(
+    nfr_json_path: str,
+    manual_protocol_path: Optional[str] = None,
+) -> Dict[str, Any]:
+    """
+    Parses measured JVM/Robolectric NFR benchmark results (nfr_measurements.json)
+    and records Group B On-Device Manual protocol status (REQ-PRO-113.3 / ATT-8158).
+    """
+    manual_exists = bool(manual_protocol_path and os.path.isfile(manual_protocol_path))
+    manual_entries = [
+        {
+            **item,
+            "verification_method": "On-Device Manual",
+            "status": "PENDING MANUAL",
+            "note": "MANUAL PROTOCOL — NOT EXECUTED IN JVM",
+        }
+        for item in GROUP_B_MANUAL_NFRS
+    ]
+
+    if not os.path.isfile(nfr_json_path):
+        return {
+            "measured": False,
+            "reason": f"NFR measurement report not found at {nfr_json_path}",
+            "measured_count": 0,
+            "passed_count": 0,
+            "failed_count": 0,
+            "measurements": [],
+            "manual_protocol_present": manual_exists,
+            "manual_protocols": manual_entries,
+        }
+
+    try:
+        with open(nfr_json_path, "r", encoding="utf-8") as f:
+            raw = json.load(f)
+        items = raw.get("measurements", [])
+        if not isinstance(items, list):
+            raise ValueError("'measurements' field must be a list")
+
+        cleaned: List[Dict[str, Any]] = []
+        passed_count = 0
+        failed_count = 0
+        for entry in items:
+            if not isinstance(entry, dict):
+                continue
+            passed = bool(entry.get("passed", False))
+            if passed:
+                passed_count += 1
+            else:
+                failed_count += 1
+            cleaned.append({
+                "req_id": entry.get("req_id", ""),
+                "tst_id": entry.get("tst_id", ""),
+                "name": entry.get("name", ""),
+                "metric": entry.get("metric", ""),
+                "measured_value": entry.get("measured_value"),
+                "unit": entry.get("unit", ""),
+                "budget": entry.get("budget", ""),
+                "passed": passed,
+                "warmup_iterations": entry.get("warmup_iterations", 0),
+                "measured_iterations": entry.get("measured_iterations", 0),
+                "details": entry.get("details", ""),
+            })
+
+        return {
+            "measured": len(cleaned) > 0,
+            "suite": raw.get("suite", "MeasuredNfrBenchmarkTest"),
+            "measured_count": len(cleaned),
+            "passed_count": passed_count,
+            "failed_count": failed_count,
+            "measurements": cleaned,
+            "manual_protocol_present": manual_exists,
+            "manual_protocols": manual_entries,
+        }
+    except Exception as e:
+        return {
+            "measured": False,
+            "reason": f"Failed to parse NFR measurement report ({nfr_json_path}): {e}",
+            "measured_count": 0,
+            "passed_count": 0,
+            "failed_count": 0,
+            "measurements": [],
+            "manual_protocol_present": manual_exists,
+            "manual_protocols": manual_entries,
+        }
+
+
 def render_markdown_evidence(
     target_id: str,
     target_type: str,
@@ -214,6 +310,7 @@ def render_markdown_evidence(
     test_summary: Dict[str, Any],
     tst_results: Dict[str, Any],
     coverage_summary: Dict[str, Any],
+    nfr_summary: Optional[Dict[str, Any]] = None,
 ) -> str:
     """Renders structured Markdown test evidence deliverable (REQ-PRO-100.1)."""
     failures = test_summary.get("failures", 0)
@@ -289,6 +386,50 @@ def render_markdown_evidence(
     if len(sorted_tsts) > 50:
         md.append(f"\n*(Remaining {len(sorted_tsts) - 50} TST specifications recorded in companion JSON)*")
 
+    if nfr_summary is not None:
+        md.extend([
+            "",
+            "---",
+            "",
+            "## 4. Non-Functional Requirements (NFR) Verification Summary",
+        ])
+        if nfr_summary.get("measured", False):
+            md.append(
+                f"- **Group A (JVM/Robolectric Measured)**: {nfr_summary.get('passed_count', 0)}/"
+                f"{nfr_summary.get('measured_count', 0)} passed "
+                f"({nfr_summary.get('failed_count', 0)} failed)"
+            )
+            md.append("")
+            md.append("| REQ ID | TST ID | Metric | Measured Value | Budget | Verdict |")
+            md.append("| :--- | :--- | :--- | :---: | :---: | :---: |")
+            for item in nfr_summary.get("measurements", []):
+                verdict = "PASS" if item.get("passed") else "FAIL"
+                val = item.get("measured_value")
+                unit = item.get("unit", "")
+                val_str = f"`{val:.4f} {unit}`" if isinstance(val, (int, float)) else f"`{val} {unit}`"
+                md.append(
+                    f"| `{item.get('req_id')}` | `{item.get('tst_id')}` | `{item.get('metric')}` | "
+                    f"{val_str} | `{item.get('budget')}` | **{verdict}** |"
+                )
+        else:
+            md.append(
+                f"- **Group A (JVM/Robolectric Measured)**: Not Measured ({nfr_summary.get('reason', 'N/A')})"
+            )
+
+        manual_items = nfr_summary.get("manual_protocols", [])
+        if manual_items:
+            md.extend([
+                "",
+                "### Group B — On-Device Manual Protocols (`[MANUAL PROTOCOL — NOT EXECUTED IN JVM]`)",
+                "| REQ ID | TST ID | Budget | Method | Status |",
+                "| :--- | :--- | :---: | :--- | :---: |",
+            ])
+            for m in manual_items:
+                md.append(
+                    f"| `{m.get('req_id')}` | `{m.get('tst_id')}` | `{m.get('budget')}` | "
+                    f"{m.get('verification_method')} | **{m.get('status')}** |"
+                )
+
     md.append("")
     return "\n".join(md)
 
@@ -322,6 +463,7 @@ def generate_test_evidence(
     commit_sha: Optional[str] = None,
     timestamp: Optional[str] = None,
     skip_kover: bool = False,
+    nfr_json_path: Optional[str] = None,
 ) -> Tuple[str, str, Dict[str, Any]]:
     """
     Main test evidence generator function (REQ-PRO-100).
@@ -367,6 +509,11 @@ def generate_test_evidence(
         effective_kover_xml = kover_xml_path or os.path.join(root, "app", "build", "reports", "kover", "reportDebug.xml")
         coverage_summary = parse_kover_xml_report(effective_kover_xml)
 
+    # 2b. Parse NFR Benchmark Measurements & Manual Protocol Status (REQ-PRO-113.3)
+    effective_nfr_json = nfr_json_path or os.path.join(root, "app", "build", "reports", "nfr", "nfr_measurements.json")
+    manual_protocol_path = os.path.join(root, "docs", "engineering", "test_evidence", "nfr_manual_protocol_template.md")
+    nfr_summary = parse_nfr_measurements(effective_nfr_json, manual_protocol_path=manual_protocol_path)
+
     # 3. Assemble JSON Payload
     tst_clean_results: Dict[str, Any] = {}
     for tid, tdata in tst_results.items():
@@ -388,6 +535,7 @@ def generate_test_evidence(
         "unit_tests": test_summary,
         "coverage": coverage_summary,
         "tst_results": tst_clean_results,
+        "nfr_verification": nfr_summary,
     }
 
     # 4. Write Files
@@ -407,6 +555,7 @@ def generate_test_evidence(
         test_summary=test_summary,
         tst_results=tst_results,
         coverage_summary=coverage_summary,
+        nfr_summary=nfr_summary,
     )
     with open(md_path, "w", encoding="utf-8") as f:
         f.write(md_content)
@@ -482,6 +631,12 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
         default=None,
         help="Commit SHA (defaults to git rev-parse HEAD).",
     )
+    parser.add_argument(
+        "--nfr-json",
+        type=str,
+        default=None,
+        help="Path to measured NFR benchmark JSON (default: app/build/reports/nfr/nfr_measurements.json).",
+    )
     return parser.parse_args(argv)
 
 
@@ -507,6 +662,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         out_dir=args.out_dir,
         commit_sha=args.commit,
         skip_kover=args.no_kover,
+        nfr_json_path=args.nfr_json,
     )
     return 0
 
