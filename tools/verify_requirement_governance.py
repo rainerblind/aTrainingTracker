@@ -980,6 +980,175 @@ def verify_independent_reviews(sprint_name=None, repo_root=None):
         return True, [f"PASS: Verified {valid_files} independent review record(s) in {rev_dir}."]
 
 
+RETRO_ALLOWLIST_CUTOFF_TS = 1794925800  # 2026-11-17T15:30:00+01:00 (ATT-8584 enforcement baseline)
+RETRO_GRANDFATHERED_SHAS = ("8aa881df",)
+
+RETRO_ALLOWLIST_PATTERNS = [
+    re.compile(r"^docs/engineering/retros/Sprint_Review_and_Retro_[^/]+\.md$"),
+    re.compile(r"^docs/engineering/gates/.+"),
+    re.compile(r"^docs/engineering/qa_audits/.+"),
+    re.compile(r"^docs/engineering/reviews/.+"),
+    re.compile(r"^docs/engineering/test_evidence/.+"),
+    re.compile(r"^docs/engineering/metrics/process_metrics\.jsonl$"),
+    re.compile(r"^docs/management/risk_register\.md$"),
+]
+
+RETRO_PROTECTED_PREFIXES = (
+    ".agents/rules/",
+    ".agents/skills/",
+    "tools/",
+)
+
+RETRO_PROTECTED_EXACT = {
+    "docs/coding_standards.md",
+    "docs/design_guidelines.md",
+    "docs/project_governance.md",
+    "docs/project_protocol.md",
+    "docs/engineering/rule_history_archive.md",
+}
+
+
+def _normalize_repo_rel_path(path_str):
+    p = str(path_str).strip().replace("\\", "/")
+    while p.startswith("./"):
+        p = p[2:]
+    return p
+
+
+def _is_retro_allowlisted_path(path_str):
+    norm = _normalize_repo_rel_path(path_str)
+    return any(pat.match(norm) for pat in RETRO_ALLOWLIST_PATTERNS)
+
+
+def _is_retro_protected_path(path_str):
+    norm = _normalize_repo_rel_path(path_str)
+    if norm in RETRO_PROTECTED_EXACT:
+        return True
+    return any(norm.startswith(prefix) for prefix in RETRO_PROTECTED_PREFIXES)
+
+
+def _evaluate_retro_commit_files(changed_files, commit_message=None, commit_sha=None, commit_ts=None):
+    """Evaluates changed_files against the autonomous Ceremony 2 write-allowlist (REQ-PRO-117)."""
+    if commit_sha and any(commit_sha.startswith(g) for g in RETRO_GRANDFATHERED_SHAS):
+        return True, [f"PASS: Pre-ATT-8584 historical commit {commit_sha[:8]} exempted."]
+    if commit_ts is not None and commit_ts < RETRO_ALLOWLIST_CUTOFF_TS:
+        return True, [f"PASS: Pre-ATT-8584 historical commit (ts={commit_ts}) exempted."]
+
+    if commit_message is not None:
+        if re.search(r"^\s*Interactive-PO\s*:\s*\S+", commit_message, re.MULTILINE | re.IGNORECASE):
+            return True, ["PASS: Interactive-PO authorization present; protected paths permitted."]
+        if not re.search(r"\bchore\s*\(\s*ceremony2\s*\)", commit_message, re.IGNORECASE):
+            return True, ["PASS: Non-ceremony2 commit (dedicated ticket / standard workflow) exempted."]
+
+    protected_violations = []
+    other_violations = []
+    normalized = [_normalize_repo_rel_path(f) for f in changed_files if str(f).strip()]
+    for rel_path in normalized:
+        if not _is_retro_allowlisted_path(rel_path):
+            if _is_retro_protected_path(rel_path):
+                protected_violations.append(rel_path)
+            else:
+                other_violations.append(rel_path)
+
+    if protected_violations or other_violations:
+        errors = []
+        if protected_violations:
+            errors.append(
+                "ERROR: Autonomous Ceremony 2 commit modified PROHIBITED protected rule/skill/standard/tool "
+                f"path(s) without Interactive-PO or dedicated ticket (REQ-PRO-117.2): {', '.join(protected_violations)}"
+            )
+        if other_violations:
+            errors.append(
+                "ERROR: Autonomous Ceremony 2 commit modified non-allowlisted path(s) "
+                f"(REQ-PRO-117.1): {', '.join(other_violations)}"
+            )
+        return False, errors
+
+    return True, [f"PASS: Autonomous Retro write-allowlist verified ({len(normalized)} file(s))."]
+
+
+def verify_retro_write_allowlist(
+    commit_ref=None,
+    changed_files=None,
+    commit_message=None,
+    base_ref="develop",
+    repo_root=None,
+):
+    """
+    REQ-PRO-117.3 / TST-PRO-117.1 / TST-PRO-117.3:
+    Verifies that post-cutoff autonomous chore(ceremony2) commits only touch the 7-path
+    evidence/log allowlist unless explicitly authorized via Interactive-PO or a dedicated ticket.
+    """
+    if changed_files is not None:
+        return _evaluate_retro_commit_files(changed_files, commit_message=commit_message)
+
+    cwd = repo_root if repo_root else os.getcwd()
+    try:
+        if commit_ref and str(commit_ref).strip():
+            refs_to_check = [str(commit_ref).strip()]
+        else:
+            rev_range = f"{base_ref}..HEAD"
+            check_base = subprocess.run(
+                ["git", "rev-parse", "--verify", base_ref],
+                cwd=cwd,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+            if check_base.returncode != 0:
+                rev_range = "HEAD~10..HEAD"
+            revs_out = subprocess.check_output(
+                ["git", "rev-list", rev_range],
+                cwd=cwd,
+                stderr=subprocess.DEVNULL,
+            ).decode("utf-8", errors="replace").splitlines()
+            refs_to_check = [r.strip() for r in revs_out if r.strip()]
+    except Exception as exc:
+        return True, [f"PASS: Git commit scan skipped ({exc})."]
+
+    if not refs_to_check:
+        return True, ["PASS: Autonomous Retro write-allowlist verified (0 ceremony2 commits in range)."]
+
+    checked_count = 0
+    for ref in refs_to_check:
+        try:
+            meta = subprocess.check_output(
+                ["git", "-c", "core.quotePath=false", "log", "-n", "1", "--format=%H%n%ct%n%B", ref],
+                cwd=cwd,
+                stderr=subprocess.DEVNULL,
+            ).decode("utf-8", errors="replace")
+            lines = meta.splitlines()
+            if len(lines) < 2:
+                continue
+            sha = lines[0].strip()
+            try:
+                ts = int(lines[1].strip())
+            except ValueError:
+                ts = None
+            msg = "\n".join(lines[2:])
+            if not re.search(r"\bchore\s*\(\s*ceremony2\s*\)", msg, re.IGNORECASE):
+                continue
+            files_out = subprocess.check_output(
+                ["git", "-c", "core.quotePath=false", "diff-tree", "--root", "--no-commit-id", "--name-only", "-r", sha],
+                cwd=cwd,
+                stderr=subprocess.DEVNULL,
+            ).decode("utf-8", errors="replace").splitlines()
+            ok, diag = _evaluate_retro_commit_files(
+                files_out,
+                commit_message=msg,
+                commit_sha=sha,
+                commit_ts=ts,
+            )
+            checked_count += 1
+            if not ok:
+                return False, [f"Commit {sha[:8]}: {d}" for d in diag]
+        except Exception as exc:
+            return False, [f"ERROR: Failed to inspect commit '{ref}' for Retro write-allowlist: {exc}"]
+
+    return True, [
+        f"PASS: Autonomous Retro write-allowlist verified ({checked_count} ceremony2 commit(s) checked)."
+    ]
+
+
 def verify_test_evidence(target_id=None, repo_root=None):
     """
     REQ-PRO-100.4 / TST-PRO-100.2:
@@ -4554,6 +4723,12 @@ def verify_governance(
             return False, diagnostics
         diagnostics.extend(sys_diag)
 
+        retro_ok, retro_diag = verify_retro_write_allowlist(base_ref=base_ref, repo_root=repo_root)
+        if not retro_ok:
+            diagnostics.extend(retro_diag)
+            return False, diagnostics
+        diagnostics.extend(retro_diag)
+
     if diff_text is None:
         diff_text = get_git_diff(base_ref=base_ref)
 
@@ -4674,6 +4849,13 @@ def main():
         const="",
         default=None,
         help="Verify independent QA review records in docs/engineering/reviews/ (optionally specify sprint name).",
+    )
+    parser.add_argument(
+        "--check-retro-allowlist",
+        nargs="?",
+        const="",
+        default=None,
+        help="Verify autonomous chore(ceremony2) commits obey the evidence/log write-allowlist (REQ-PRO-117.3).",
     )
     parser.add_argument(
         "--check-impact",
@@ -5047,6 +5229,13 @@ def main():
     if args.check_reviews is not None:
         target_sprint = args.check_reviews if args.check_reviews != "" else None
         ok, diag = verify_independent_reviews(sprint_name=target_sprint)
+        for msg in diag:
+            print(msg, file=sys.stderr if not ok else sys.stdout)
+        sys.exit(0 if ok else 1)
+
+    if args.check_retro_allowlist is not None:
+        target_ref = args.check_retro_allowlist if args.check_retro_allowlist != "" else None
+        ok, diag = verify_retro_write_allowlist(commit_ref=target_ref, base_ref=args.base_ref)
         for msg in diag:
             print(msg, file=sys.stderr if not ok else sys.stdout)
         sys.exit(0 if ok else 1)

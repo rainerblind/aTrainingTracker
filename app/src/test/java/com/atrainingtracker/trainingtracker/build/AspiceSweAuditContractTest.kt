@@ -31,10 +31,10 @@ import java.io.File
  * 3. Software interface specifications (SWE.2.BP2) for IF-SWE-01 through IF-SWE-08 (REQ-PRO-044).
  * 4. Status header standardization across all 9 requirement and test domain shards.
  * 5. Master-to-shard table count parity in docs/requirements.md and docs/tests.md.
- * 6. Skill & rule governance contracts (universal read_file image audit, doc code-grounding, SWE.2 maintenance).
+ * 6. Skill & rule governance contracts (universal read_file image audit, doc code-grounding, SWE.2 maintenance, autonomous Retro write-allowlist REQ-PRO-117).
  * 7. Software integration verification strategy (SWE.5.BP1) for INT-SWE-01 through INT-SWE-08 (REQ-PRO-045).
  */
-// Linked test specs: TST-PRO-078, TST-PRO-093
+// Linked test specs: TST-PRO-078, TST-PRO-093, TST-PRO-117
 class AspiceSweAuditContractTest {
 
     private fun findRepoRootFile(relativePath: String): File {
@@ -230,6 +230,54 @@ class AspiceSweAuditContractTest {
 
         val stage5 = findRepoRootFile(".agents/skills/stage5-verification/SKILL.md").readText()
         assertTrue("Stage 5 must include SWE.2 architecture parity", stage5.contains("SWE.2 Architecture Parity"))
+    }
+
+    // Traces to: REQ-PRO-117, TST-PRO-117
+    @Test
+    fun testAutonomousRetroWriteAllowlist_protectedRulesAndSkillsContract() {
+        val rulesText = findRepoRootFile(".agents/rules/aspice_governance.md").readText()
+        val plannerText = findRepoRootFile(".agents/skills/sprint-planner/SKILL.md").readText()
+
+        val expectedAllowlistTokens = listOf(
+            "Sprint_Review_and_Retro_",
+            "docs/engineering/gates/",
+            "docs/engineering/qa_audits/",
+            "docs/engineering/reviews/",
+            "docs/engineering/test_evidence/",
+            "docs/engineering/metrics/process_metrics.jsonl",
+            "docs/management/risk_register.md"
+        )
+        val expectedProtectedTokens = listOf(
+            ".agents/rules/",
+            ".agents/skills/",
+            "docs/coding_standards.md",
+            "docs/design_guidelines.md",
+            "docs/project_governance.md",
+            "docs/project_protocol.md",
+            "docs/engineering/rule_history_archive.md",
+            "tools/"
+        )
+
+        for (label in listOf("aspice_governance.md" to rulesText, "sprint-planner/SKILL.md" to plannerText)) {
+            val (name, text) = label
+            assertTrue("$name must reference REQ-PRO-117", text.contains("REQ-PRO-117"))
+            assertTrue("$name must route proposals to Wochen Review & Retro", text.contains("Wochen Review & Retro"))
+            for (token in expectedAllowlistTokens) {
+                assertTrue("$name must list allowlisted path '$token' (REQ-PRO-117.1)", text.contains(token))
+            }
+            for (token in expectedProtectedTokens) {
+                assertTrue("$name must protect path '$token' (REQ-PRO-117.2)", text.contains(token))
+            }
+        }
+
+        // Preserve REQ-STP-010.2 and HoechstmassCoreFrameworkContractTest markers in sprint-planner/SKILL.md
+        assertTrue("sprint-planner/SKILL.md must preserve REQ-STP-010.2", plannerText.contains("REQ-STP-010.2"))
+        assertTrue(
+            "sprint-planner/SKILL.md must preserve sprint-metrics & PA 4.2/PA 5.2",
+            plannerText.contains("sprint-metrics --record --post-to-retro") &&
+                plannerText.contains("PA 4.2") &&
+                plannerText.contains("PA 5.2")
+        )
     }
 
     /**

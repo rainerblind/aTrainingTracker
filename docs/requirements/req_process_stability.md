@@ -3,7 +3,7 @@
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Requirements**: 181
+**Total Requirements**: 182
 
 ---
 
@@ -5974,3 +5974,28 @@ The workflow SHALL mandate that:
   • *When* executed across the repository,
   • *Then* all governance and code-grounding checks exit `0`.
 - **Invariants**: Zero edits to `app/src/main/`, `ANT-Android-SDKs`, or `ADR-001`; `Localization Parity: N/A - no UI strings`; zero phantom class names.
+
+### REQ-PRO-117: Autonomous Schicht Retro Write-Allowlist & Protected Governance Boundary (ATT-8584) [Verified]
+- **Tests**: `TST-PRO-117`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `.agents/rules/aspice_governance.md`, `.agents/skills/sprint-planner/SKILL.md`, `tools/verify_requirement_governance.py`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/AspiceSweAuditContractTest.kt`
+- **Rationale**: In continuous 3-Schicht autonomous operation (`Rule 2.2`), per-Schicht Ceremony 2 (`Review & Retro`) closes execute without the human PO present. Leaving `.agents/skills/sprint-planner/SKILL.md` L257 with unrestricted permission to modify rules, skills, and standards risks unapproved weakening of quality gates or governance rules, bypassing `REQ-PRO-105` (`ATT-8166`).
+- **Description**:
+  1. *Autonomous Schicht-End Close Write-Allowlist (`REQ-PRO-117.1`)*: `.agents/rules/aspice_governance.md` and `.agents/skills/sprint-planner/SKILL.md` SHALL restrict autonomous `chore(ceremony2)` writes strictly to evidence and log paths: `docs/engineering/retros/Sprint_Review_and_Retro_*.md`, `docs/engineering/gates/*`, `docs/engineering/qa_audits/*`, `docs/engineering/reviews/*`, `docs/engineering/test_evidence/*`, `docs/engineering/metrics/process_metrics.jsonl`, and `docs/management/risk_register.md` (Sprint Review Log updates per `REQ-STP-010.2`).
+  2. *Protected Governance Paths & Escalation Routing (`REQ-PRO-117.2`)*: During autonomous Schicht-end closes without interactive PO authorization or a dedicated PO-approved ticket, agents MUST NOT modify `.agents/rules/**`, `.agents/skills/**`, `docs/coding_standards.md`, `docs/design_guidelines.md`, `docs/project_governance.md`, `docs/project_protocol.md`, `docs/engineering/rule_history_archive.md`, or `tools/**`. Proposed rule, skill, or standard changes SHALL be recorded as structured proposals in `docs/engineering/retros/Sprint_Review_and_Retro_<KEY>.md` and the rolling `Wochen Review & Retro` ticket, while preserving `HoechstmassCoreFrameworkContractTest.kt` markers (`sprint-metrics --record --post-to-retro`, `PA 4.2`, `PA 5.2`) and `REQ-STP-010.2`.
+  3. *Automated Write-Allowlist Verifier (`REQ-PRO-117.3`)*: `tools/verify_requirement_governance.py` SHALL provide `verify_retro_write_allowlist()` (`--check-retro-allowlist`) rejecting any autonomous `chore(ceremony2)` commit or provided file set that modifies protected or non-allowlisted paths, while cleanly exempting pre-cutoff historical commits (`<= 8aa881df`), dedicated PO-approved ticket commits (`ATT-*`), and commits carrying explicit interactive PO authorization (`Interactive-PO:` trailer).
+  4. *Dual-Layer Verification (`REQ-PRO-117.4`)*: `tools/test_verify_requirement_governance.py` SHALL verify allowlist passes and protected-path rejections, and `AspiceSweAuditContractTest.kt` SHALL assert the allowlist and protected-path escalation rules in `.agents/rules/aspice_governance.md` and `.agents/skills/sprint-planner/SKILL.md`.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Refines `REQ-PRO-105` (`ATT-8166`, PO approval provenance) and `REQ-STP-010.2` (`ATT-8167`, Ceremony 2 risk review) without altering `[Verified]` `REQ-PRO-105` or `REQ-STP-010`.
+  2. *Historical Origin & Commit Trace*: `REQ-PRO-105` (`ATT-8166`) established Jira changelog PO provenance; `Rule 2.2` (`ATT-8030`) introduced continuous autonomous 3-Schicht rollovers and rolling `Wochen Review & Retro`.
+  3. *Root Reason for Existing Formulation*: Interactive Ceremony 2 sessions co-facilitated by the human PO previously allowed direct rule/skill edits in `SKILL.md` L257.
+  4. *Preservation of Core Invariants*: Preserves `[Verified]` `REQ-PRO-105`, `REQ-STP-010.2` (`risk_register.md` Sprint Review Log), `ensure-weekly-retro`, `HoechstmassCoreFrameworkContractTest` markers, and dedicated PO-approved ticket authority (`Vom PO Freigegeben` `447`).
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `.agents/rules/aspice_governance.md` and `.agents/skills/sprint-planner/SKILL.md`,
+  • *When* inspected by `AspiceSweAuditContractTest` and `HoechstmassCoreFrameworkContractTest`,
+  • *Then* both define the 7-path autonomous Retro write-allowlist, protect rules/skills/standards/tools, route proposals to Retro + `Wochen Review & Retro`, and preserve `sprint-metrics` / `PA 4.2` / `PA 5.2` / `REQ-STP-010.2`.
+  • *Given* `tools/verify_requirement_governance.py --check-retro-allowlist`,
+  • *When* evaluated against allowlisted `chore(ceremony2)` files vs protected-path violations vs ticket-backed or pre-cutoff (`8aa881df`) commits,
+  • *Then* allowlisted, ticket-backed, and pre-cutoff commits exit `0` while unauthorized protected/non-allowlisted edits in `chore(ceremony2)` fail with exit `1`.

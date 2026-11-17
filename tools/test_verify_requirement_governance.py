@@ -41,6 +41,7 @@ from tools.verify_requirement_governance import (
     verify_master_table_parity,
     verify_qa_audits,
     verify_repository_encapsulation,
+    verify_retro_write_allowlist,
     verify_sprint_metrics,
     verify_independent_reviews,
     verify_unique_ids,
@@ -2870,6 +2871,115 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
                 f.write(content_self_referential.replace("2026-11-16_03_Nacht", "2026-46.6"))
             ok3, msgs3 = verify_qa_audits(sprint_name="sprint/2026-46.6", repo_root=tmpdir)
             self.assertTrue(ok3, f"Expected grandfathered pass for legacy 2026-46.6 audit, got: {msgs3}")
+
+    def test_scenario_77_tst_pro_117_1_retro_write_allowlist_and_exemptions(self):
+        # TST-PRO-117.1: Autonomous Retro Write-Allowlist & Protected Path Guard (REQ-PRO-117 / ATT-8584)
+        allowed_files = [
+            "docs/engineering/retros/Sprint_Review_and_Retro_ATT-8655.md",
+            "docs/engineering/gates/sprint_2026-11-17_02_spaet.md",
+            "docs/engineering/qa_audits/sprint_2026-11-17_02_spaet.md",
+            "docs/engineering/reviews/sprint_2026-11-17_02_spaet.md",
+            "docs/engineering/test_evidence/sprint_2026-11-17_02_Spät.json",
+            "docs/engineering/test_evidence/sprint_2026-11-17_02_Spät.md",
+            "docs/engineering/metrics/process_metrics.jsonl",
+            "docs/management/risk_register.md",
+        ]
+        ok, msgs = verify_retro_write_allowlist(
+            changed_files=allowed_files,
+            commit_message="chore(ceremony2): sprint 2026-11-17_02_Spät closure (ATT-8655)",
+        )
+        self.assertTrue(ok, f"Allowlisted ceremony2 files should pass: {msgs}")
+
+        protected_cases = [
+            ".agents/rules/aspice_governance.md",
+            ".agents/skills/sprint-planner/SKILL.md",
+            "docs/coding_standards.md",
+            "docs/design_guidelines.md",
+            "docs/project_governance.md",
+            "docs/project_protocol.md",
+            "docs/engineering/rule_history_archive.md",
+            "tools/verify_requirement_governance.py",
+        ]
+        for protected_path in protected_cases:
+            bad_ok, bad_msgs = verify_retro_write_allowlist(
+                changed_files=allowed_files + [protected_path],
+                commit_message="chore(ceremony2): sprint 2026-11-17_02_Spät closure (ATT-8655)",
+            )
+            self.assertFalse(bad_ok, f"Protected path {protected_path} must be rejected in ceremony2")
+            self.assertTrue(any("PROHIBITED protected" in m and protected_path in m for m in bad_msgs), bad_msgs)
+
+        non_allow_ok, non_allow_msgs = verify_retro_write_allowlist(
+            changed_files=["app/src/main/java/Foo.kt"],
+            commit_message="chore(ceremony2): sprint 2026-11-17_02_Spät closure (ATT-8655)",
+        )
+        self.assertFalse(non_allow_ok)
+        self.assertTrue(any("non-allowlisted" in m for m in non_allow_msgs), non_allow_msgs)
+
+        # Dedicated ticket commit (non-ceremony2) and Interactive-PO trailer are exempted
+        ticket_ok, ticket_msgs = verify_retro_write_allowlist(
+            changed_files=[".agents/rules/aspice_governance.md", "tools/verify_requirement_governance.py"],
+            commit_message="ATT-8584: Restrict files editable during autonomous Schicht Retro",
+        )
+        self.assertTrue(ticket_ok, f"Dedicated ticket commit must be exempted: {ticket_msgs}")
+
+        po_ok, po_msgs = verify_retro_write_allowlist(
+            changed_files=[".agents/rules/aspice_governance.md", "docs/coding_standards.md"],
+            commit_message="chore(ceremony2): interactive PO hardening\n\nInteractive-PO: Rainer Blind",
+        )
+        self.assertTrue(po_ok, f"Interactive-PO commit must be exempted: {po_msgs}")
+
+        # Pre-cutoff historical commit (8aa881df) on live repo passes without false positives
+        hist_ok, hist_msgs = verify_retro_write_allowlist(commit_ref="8aa881df")
+        self.assertTrue(hist_ok, f"Historical pre-cutoff commit 8aa881df must pass: {hist_msgs}")
+
+        # Real git repo test with post-cutoff (> 1794925800) UTF-8 umlaut filenames & protected-path violation
+        with tempfile.TemporaryDirectory() as tmpdir:
+            git_env = dict(os.environ)
+            git_env["GIT_AUTHOR_DATE"] = "2026-11-17T22:00:00+01:00"
+            git_env["GIT_COMMITTER_DATE"] = "2026-11-17T22:00:00+01:00"
+            subprocess.check_call(["git", "init"], cwd=tmpdir, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.check_call(["git", "config", "user.name", "Test Agent"], cwd=tmpdir)
+            subprocess.check_call(["git", "config", "user.email", "test@atrainingtracker.local"], cwd=tmpdir)
+
+            umlaut_allowed = [
+                "docs/engineering/gates/sprint_2026-11-17_02_spät.md",
+                "docs/engineering/qa_audits/sprint_2026-11-17_02_spät.md",
+                "docs/engineering/reviews/sprint_2026-11-17_02_spät.md",
+                "docs/engineering/test_evidence/sprint_2026-11-17_02_Spät.json",
+                "docs/engineering/retros/Sprint_Review_and_Retro_ATT-8655.md",
+                "docs/engineering/metrics/process_metrics.jsonl",
+                "docs/management/risk_register.md",
+            ]
+            for rel in umlaut_allowed:
+                full_p = os.path.join(tmpdir, rel)
+                os.makedirs(os.path.dirname(full_p), exist_ok=True)
+                with open(full_p, "w", encoding="utf-8") as f:
+                    f.write("test\n")
+
+            subprocess.check_call(["git", "add", "--all"], cwd=tmpdir)
+            subprocess.check_call(
+                ["git", "commit", "-m", "chore(ceremony2): sprint 2026-11-17_02_Spät closure (ATT-8655)"],
+                cwd=tmpdir,
+                env=git_env,
+                stdout=subprocess.DEVNULL,
+            )
+            umlaut_ok, umlaut_msgs = verify_retro_write_allowlist(commit_ref="HEAD", repo_root=tmpdir)
+            self.assertTrue(umlaut_ok, f"Post-cutoff umlaut ceremony2 commit must pass with core.quotePath=false: {umlaut_msgs}")
+
+            prot_file = os.path.join(tmpdir, ".agents", "rules", "aspice_governance.md")
+            os.makedirs(os.path.dirname(prot_file), exist_ok=True)
+            with open(prot_file, "w", encoding="utf-8") as f:
+                f.write("unauthorized\n")
+            subprocess.check_call(["git", "add", "--all"], cwd=tmpdir)
+            subprocess.check_call(
+                ["git", "commit", "-m", "chore(ceremony2): unauthorized rule edit (ATT-8655)"],
+                cwd=tmpdir,
+                env=git_env,
+                stdout=subprocess.DEVNULL,
+            )
+            prot_ok, prot_msgs = verify_retro_write_allowlist(commit_ref="HEAD", repo_root=tmpdir)
+            self.assertFalse(prot_ok, "Post-cutoff ceremony2 protected-path edit must fail")
+            self.assertTrue(any("PROHIBITED protected" in m and ".agents/rules/aspice_governance.md" in m for m in prot_msgs), prot_msgs)
 
 
 

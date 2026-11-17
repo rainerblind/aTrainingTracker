@@ -3,7 +3,7 @@
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Tests**: 220
+**Total Tests**: 221
 
 ---
 
@@ -3698,3 +3698,21 @@
   • Verify via `Class.forName` (zero `app/src/main/` file reading per `REQ-PRO-049`) that core classes cited in `ADR-002`..`ADR-007` (`TrackerService`, `BANALService`, `BANALServiceRepository`, `WorkoutSamplesDatabaseManager`, `WorkoutSummariesDatabaseManager`, `WorkoutRepository`, `SettingsDataStore`, `TuningPreferencesDataStore`, `MainActivityWithNavigation`, `MyDevice`, `MyRemoteDevice`, `MyANTDevice`, `MyBTLEDevice`, `PolarOnlineStreamingBridge`, `DeviceManager`) exist in compiled bytecode, and `docs/architecture.md` links `ADR-001`..`ADR-007`.
   3. *ADR-001 Preservation, Source-Reading & Governance Parity (`TST-PRO-116.3`, JavaCoreMigrationStrategyContractTest.kt, SourceTextReadingAuditContractTest.kt, verify_requirement_governance.py)*:
   • Verify `JavaCoreMigrationStrategyContractTest` stays green (`ADR-001` untouched), `SourceTextReadingAuditContractTest` flags zero `ATT-8161` reads, and `verify_requirement_governance.py` exits `0`. (`Localization Parity: N/A - no UI strings`).
+
+---
+
+### TST-PRO-117: **Autonomous Schicht Retro Write-Allowlist & Protected Governance Boundary Suite (ATT-8584)** [Verified]
+- **Requirement(s)**: `REQ-PRO-117`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Component**: `tools/verify_requirement_governance.py`, `tools/test_verify_requirement_governance.py`, `.agents/rules/aspice_governance.md`, `.agents/skills/sprint-planner/SKILL.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/AspiceSweAuditContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/HoechstmassCoreFrameworkContractTest.kt`
+- **Jira**: `ATT-8584`
+- **Localization Parity**: N/A - no UI strings
+- **Test Description**:
+  1. *Python Unit Tests for `verify_retro_write_allowlist()` (`TST-PRO-117.1`, tools/test_verify_requirement_governance.py)*:
+     • Execute `python3 -m unittest tools/test_verify_requirement_governance.py` covering: (a) allowlisted `chore(ceremony2)` file set (`retros/Sprint_Review_and_Retro_*.md`, `gates/*`, `qa_audits/*`, `reviews/*`, `test_evidence/*`, `metrics/process_metrics.jsonl`, `docs/management/risk_register.md`) passes; (b) unauthorized edits to protected paths (`.agents/rules/**`, `.agents/skills/**`, `docs/coding_standards.md`, `docs/design_guidelines.md`, `docs/project_governance.md`, `docs/project_protocol.md`, `docs/engineering/rule_history_archive.md`, `tools/**`) or `app/src/**` during `chore(ceremony2)` fail cleanly; (c) dedicated ticket-backed commits (`ATT-8584`), interactive PO-authorized commits (`Interactive-PO: true`), and pre-cutoff historical commits (`8aa881df`) pass without false positives.
+  2. *Kotlin Contract & Parity Tests (`TST-PRO-117.2`, AspiceSweAuditContractTest.kt & HoechstmassCoreFrameworkContractTest.kt)*:
+     • Execute `./gradlew :app:testDebugUnitTest --tests "*.AspiceSweAuditContractTest" --tests "*.HoechstmassCoreFrameworkContractTest"` verifying `.agents/rules/aspice_governance.md` and `.agents/skills/sprint-planner/SKILL.md` codify the autonomous Retro write-allowlist, protected paths, and `Wochen Review & Retro` proposal routing while preserving `sprint-metrics --record --post-to-retro`, `PA 4.2`, `PA 5.2`, and `REQ-STP-010.2`.
+  3. *CLI & Living-Doc Governance Parity (`TST-PRO-117.3`, verify_requirement_governance.py)*:
+     • Execute `python3 tools/verify_requirement_governance.py` and `python3 tools/verify_requirement_governance.py --check-retro-allowlist` confirming exit code `0`. (`Localization Parity: N/A - no UI strings`).
