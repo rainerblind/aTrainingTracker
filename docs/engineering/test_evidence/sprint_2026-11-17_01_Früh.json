@@ -1,0 +1,883 @@
+{
+  "target": "sprint_2026-11-17_01_Fr\u00fch",
+  "type": "sprint",
+  "commit": "8f4d914827bd30fe31bf5b95b884b66c984a9b37",
+  "timestamp": "2026-11-17T14:04:33.934807+00:00",
+  "unit_tests": {
+    "total": 413,
+    "passed": 413,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "time": 634.7919999999999
+  },
+  "coverage": {
+    "measured": false,
+    "reason": "Kover skipped for regular Schicht (executed in weekly Code Review / ASPICE Audit and releases)",
+    "global": {
+      "line_percent": null,
+      "branch_percent": null
+    },
+    "critical_packages": {}
+  },
+  "tst_results": {
+    "TST-PER-040": {
+      "status": "PASS",
+      "passing_cases_count": 11,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-TRK-072": {
+      "status": "PASS",
+      "passing_cases_count": 29,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PER-032": {
+      "status": "PASS",
+      "passing_cases_count": 17,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PER-048": {
+      "status": "PASS",
+      "passing_cases_count": 33,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PER-035": {
+      "status": "PASS",
+      "passing_cases_count": 15,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PER-051": {
+      "status": "PASS",
+      "passing_cases_count": 32,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PER-049": {
+      "status": "PASS",
+      "passing_cases_count": 17,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-SET-111": {
+      "status": "PASS",
+      "passing_cases_count": 22,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-SET-110": {
+      "status": "PASS",
+      "passing_cases_count": 22,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-SET-112": {
+      "status": "PASS",
+      "passing_cases_count": 22,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-FIL-022": {
+      "status": "PASS",
+      "passing_cases_count": 25,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-FIL-020": {
+      "status": "PASS",
+      "passing_cases_count": 15,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-FIL-016": {
+      "status": "PASS",
+      "passing_cases_count": 25,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-CON-038": {
+      "status": "PASS",
+      "passing_cases_count": 22,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-CON-046": {
+      "status": "PASS",
+      "passing_cases_count": 136,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-CON-044": {
+      "status": "PASS",
+      "passing_cases_count": 79,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-CON-032": {
+      "status": "PASS",
+      "passing_cases_count": 22,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-CON-042": {
+      "status": "PASS",
+      "passing_cases_count": 93,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-CON-039": {
+      "status": "PASS",
+      "passing_cases_count": 22,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-CON-040": {
+      "status": "PASS",
+      "passing_cases_count": 79,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-CON-041": {
+      "status": "PASS",
+      "passing_cases_count": 86,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-CON-028": {
+      "status": "PASS",
+      "passing_cases_count": 57,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-CON-030": {
+      "status": "PASS",
+      "passing_cases_count": 57,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-TRK-062": {
+      "status": "PASS",
+      "passing_cases_count": 57,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-CON-031": {
+      "status": "PASS",
+      "passing_cases_count": 102,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-SET-108": {
+      "status": "PASS",
+      "passing_cases_count": 14,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-SET-107": {
+      "status": "PASS",
+      "passing_cases_count": 14,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-SET-106": {
+      "status": "PASS",
+      "passing_cases_count": 14,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-CON-035": {
+      "status": "PASS",
+      "passing_cases_count": 36,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-CON-029": {
+      "status": "PASS",
+      "passing_cases_count": 14,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-TRK-083": {
+      "status": "PASS",
+      "passing_cases_count": 2,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PRO-116": {
+      "status": "PASS",
+      "passing_cases_count": 2,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PRO-050": {
+      "status": "PASS",
+      "passing_cases_count": 9,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PRO-115": {
+      "status": "PASS",
+      "passing_cases_count": 12,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PRO-052": {
+      "status": "PASS",
+      "passing_cases_count": 9,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-INT-009": {
+      "status": "PASS",
+      "passing_cases_count": 15,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-INT-012": {
+      "status": "PASS",
+      "passing_cases_count": 16,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-INT-014": {
+      "status": "PASS",
+      "passing_cases_count": 14,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PRO-043": {
+      "status": "PASS",
+      "passing_cases_count": 11,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PRO-078": {
+      "status": "PASS",
+      "passing_cases_count": 11,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-INT-016": {
+      "status": "PASS",
+      "passing_cases_count": 14,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PRO-110": {
+      "status": "PASS",
+      "passing_cases_count": 11,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PRO-093": {
+      "status": "PASS",
+      "passing_cases_count": 11,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-INT-010": {
+      "status": "PASS",
+      "passing_cases_count": 14,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PRO-111": {
+      "status": "PASS",
+      "passing_cases_count": 11,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-INT-015": {
+      "status": "PASS",
+      "passing_cases_count": 14,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-INT-013": {
+      "status": "PASS",
+      "passing_cases_count": 14,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PRO-034": {
+      "status": "PASS",
+      "passing_cases_count": 11,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-INT-011": {
+      "status": "PASS",
+      "passing_cases_count": 14,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PRO-045": {
+      "status": "PASS",
+      "passing_cases_count": 11,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PRO-044": {
+      "status": "PASS",
+      "passing_cases_count": 11,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PRO-114": {
+      "status": "PASS",
+      "passing_cases_count": 3,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-NFR-002": {
+      "status": "PASS",
+      "passing_cases_count": 11,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-NFR-014": {
+      "status": "PASS",
+      "passing_cases_count": 11,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-NFR-003": {
+      "status": "PASS",
+      "passing_cases_count": 11,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PRO-113": {
+      "status": "PASS",
+      "passing_cases_count": 14,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-NFR-007": {
+      "status": "PASS",
+      "passing_cases_count": 11,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-NFR-013": {
+      "status": "PASS",
+      "passing_cases_count": 11,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-NFR-008": {
+      "status": "PASS",
+      "passing_cases_count": 11,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-NFR-005": {
+      "status": "PASS",
+      "passing_cases_count": 11,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-NFR-009": {
+      "status": "PASS",
+      "passing_cases_count": 11,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-NFR-010": {
+      "status": "PASS",
+      "passing_cases_count": 11,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-NFR-001": {
+      "status": "PASS",
+      "passing_cases_count": 11,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-NFR-011": {
+      "status": "PASS",
+      "passing_cases_count": 11,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PRO-112": {
+      "status": "PASS",
+      "passing_cases_count": 10,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PRO-072": {
+      "status": "PASS",
+      "passing_cases_count": 4,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PRO-068": {
+      "status": "PASS",
+      "passing_cases_count": 6,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-FIL-019": {
+      "status": "PASS",
+      "passing_cases_count": 5,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-FIL-021": {
+      "status": "PASS",
+      "passing_cases_count": 5,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-FIL-017": {
+      "status": "PASS",
+      "passing_cases_count": 5,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-TRK-084": {
+      "status": "PASS",
+      "passing_cases_count": 61,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PER-042": {
+      "status": "PASS",
+      "passing_cases_count": 9,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-TRK-075": {
+      "status": "PASS",
+      "passing_cases_count": 6,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-STR-013": {
+      "status": "PASS",
+      "passing_cases_count": 10,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-STR-014": {
+      "status": "PASS",
+      "passing_cases_count": 10,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-LOC-001": {
+      "status": "PASS",
+      "passing_cases_count": 10,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-STR-018": {
+      "status": "PASS",
+      "passing_cases_count": 10,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-STR-019": {
+      "status": "PASS",
+      "passing_cases_count": 10,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PRO-041": {
+      "status": "PASS",
+      "passing_cases_count": 10,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-STR-016": {
+      "status": "PASS",
+      "passing_cases_count": 10,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-UI-124": {
+      "status": "PASS",
+      "passing_cases_count": 3,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-TRK-008": {
+      "status": "PASS",
+      "passing_cases_count": 28,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-TRK-027": {
+      "status": "PASS",
+      "passing_cases_count": 28,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-TRK-076": {
+      "status": "PASS",
+      "passing_cases_count": 28,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-TRK-026": {
+      "status": "PASS",
+      "passing_cases_count": 28,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-TRK-025": {
+      "status": "PASS",
+      "passing_cases_count": 28,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-TRK-022": {
+      "status": "PASS",
+      "passing_cases_count": 28,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-TRK-078": {
+      "status": "PASS",
+      "passing_cases_count": 17,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-TRK-023": {
+      "status": "PASS",
+      "passing_cases_count": 17,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-DAT-002": {
+      "status": "PASS",
+      "passing_cases_count": 17,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-TRK-029": {
+      "status": "PASS",
+      "passing_cases_count": 17,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-TRK-018": {
+      "status": "PASS",
+      "passing_cases_count": 17,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-UI-2784": {
+      "status": "PASS",
+      "passing_cases_count": 5,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PER-030": {
+      "status": "PASS",
+      "passing_cases_count": 14,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PER-031": {
+      "status": "PASS",
+      "passing_cases_count": 14,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PER-028": {
+      "status": "PASS",
+      "passing_cases_count": 14,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-UI-513": {
+      "status": "PASS",
+      "passing_cases_count": 14,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-UI-091": {
+      "status": "PASS",
+      "passing_cases_count": 16,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-SET-115": {
+      "status": "PASS",
+      "passing_cases_count": 2,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-UI-2783": {
+      "status": "PASS",
+      "passing_cases_count": 8,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-CON-047": {
+      "status": "PASS",
+      "passing_cases_count": 9,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-CON-043": {
+      "status": "PASS",
+      "passing_cases_count": 4,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    }
+  },
+  "nfr_verification": {
+    "measured": true,
+    "suite": "MeasuredNfrBenchmarkTest",
+    "measured_count": 11,
+    "passed_count": 11,
+    "failed_count": 0,
+    "measurements": [
+      {
+        "req_id": "REQ-NFR-001",
+        "tst_id": "TST-NFR-001",
+        "name": "Deterministic EKF Timing",
+        "metric": "ekf_cycle_p95_ms",
+        "measured_value": 0.653669,
+        "unit": "ms",
+        "budget": "<= 2.0 ms",
+        "passed": true,
+        "warmup_iterations": 200,
+        "measured_iterations": 1000,
+        "details": "dt_equiv_error_ms=0.1866, injected_arrival_jitter_ms=41.48, p95_cycle_ms=0.6537, max_cycle_ms=0.9626"
+      },
+      {
+        "req_id": "REQ-NFR-002",
+        "tst_id": "TST-NFR-002",
+        "name": "Stationary Pinning Drift Prevention",
+        "metric": "stationary_drift_m_per_min",
+        "measured_value": 0,
+        "unit": "m/min",
+        "budget": "< 0.5 m/min",
+        "passed": true,
+        "warmup_iterations": 0,
+        "measured_iterations": 1800,
+        "details": "total_drift_m=0.000, pinned=true, unpinned_on_motion=true, replay_ms=427.84"
+      },
+      {
+        "req_id": "REQ-NFR-003",
+        "tst_id": "TST-NFR-003",
+        "name": "Periodic Tick Latency Budget",
+        "metric": "tick_p99_ms",
+        "measured_value": 29.128979,
+        "unit": "ms",
+        "budget": "< 50.0 ms",
+        "passed": true,
+        "warmup_iterations": 100,
+        "measured_iterations": 1000,
+        "details": "p50_ms=13.317, p90_ms=17.737, p95_ms=19.552, p99_ms=29.129, max_ms=52.015, min_headroom_ms=970.871"
+      },
+      {
+        "req_id": "REQ-NFR-005",
+        "tst_id": "TST-NFR-005",
+        "name": "Dedicated Heap Footprint Ceiling",
+        "metric": "retained_heap_delta_mb",
+        "measured_value": 0,
+        "unit": "MB",
+        "budget": "< 40.0 MB (total <= 150 MB)",
+        "passed": true,
+        "warmup_iterations": 200,
+        "measured_iterations": 3600,
+        "details": "delta_mb=0.000, baseline_heap_mb=160.868, total_used_heap_mb=160.646, total_ceiling_mb=200.9, stream_increments=180, samples=3600"
+      },
+      {
+        "req_id": "REQ-NFR-007",
+        "tst_id": "TST-NFR-007",
+        "name": "Sensor Dispatch Latency Budget",
+        "metric": "dispatch_p99_ms",
+        "measured_value": 0.000469,
+        "unit": "ms",
+        "budget": "< 25.0 ms",
+        "passed": true,
+        "warmup_iterations": 200,
+        "measured_iterations": 1000,
+        "details": "delivered=1000/1000, banal_hr=149, p99_ms=0.0005, max_ms=0.0516"
+      },
+      {
+        "req_id": "REQ-NFR-008",
+        "tst_id": "TST-NFR-008",
+        "name": "Sensor Connection Failover Timeout",
+        "metric": "watchdog_failover_ms",
+        "measured_value": 3500,
+        "unit": "ms",
+        "budget": "<= 3500 ms",
+        "passed": true,
+        "warmup_iterations": 0,
+        "measured_iterations": 1,
+        "details": "final_state=DISCONNECTED_ERROR, btle_const=3500, ant_const=3500"
+      },
+      {
+        "req_id": "REQ-NFR-009",
+        "tst_id": "TST-NFR-009",
+        "name": "Tracking WakeLock Bounding",
+        "metric": "wakelock_release_latency_ms",
+        "measured_value": 151.731052,
+        "unit": "ms",
+        "budget": "0 leaks (immediate release)",
+        "passed": true,
+        "warmup_iterations": 0,
+        "measured_iterations": 1,
+        "details": "held_on_create=true, held_tracking=true, held_paused=true, released_after_stop=true, ref_cleared=true, stopped=true"
+      },
+      {
+        "req_id": "REQ-NFR-010",
+        "tst_id": "TST-NFR-010",
+        "name": "Database Sample Write Latency Budget",
+        "metric": "db_write_p99_ms",
+        "measured_value": 0.414181,
+        "unit": "ms",
+        "budget": "< 30.0 ms",
+        "passed": true,
+        "warmup_iterations": 100,
+        "measured_iterations": 1000,
+        "details": "off_main_thread=true, all_inserted=true, p95_ms=0.341, p99_ms=0.414, max_ms=9.672"
+      },
+      {
+        "req_id": "REQ-NFR-011",
+        "tst_id": "TST-NFR-011",
+        "name": "Telemetry Storage Growth Rate Ceiling",
+        "metric": "storage_growth_kb_per_h",
+        "measured_value": 260,
+        "unit": "KB/h",
+        "budget": "<= 360.0 KB/h",
+        "passed": true,
+        "warmup_iterations": 0,
+        "measured_iterations": 3600,
+        "details": "delta_bytes=266240, bytes_per_sample=73.96, before=20480, after=286720"
+      },
+      {
+        "req_id": "REQ-NFR-013",
+        "tst_id": "TST-NFR-013",
+        "name": "Map Polyline Update Latency Budget",
+        "metric": "polyline_update_p95_ms",
+        "measured_value": 0.006869,
+        "unit": "ms",
+        "budget": "< 30.0 ms",
+        "passed": true,
+        "warmup_iterations": 10,
+        "measured_iterations": 100,
+        "details": "track_points=10000, p95_ms=0.0069, max_ms=0.3600"
+      },
+      {
+        "req_id": "REQ-NFR-014",
+        "tst_id": "TST-NFR-014",
+        "name": "Cockpit Telemetry Emission Rate Throttling",
+        "metric": "emissions_in_5s",
+        "measured_value": 5,
+        "unit": "emissions",
+        "budget": "<= 5 emissions / 5s (<= 1.0 Hz)",
+        "passed": true,
+        "warmup_iterations": 0,
+        "measured_iterations": 5,
+        "details": "emissions=5, window_ms=5000, poll_delay_ms=1000"
+      }
+    ],
+    "manual_protocol_present": true,
+    "manual_protocols": [
+      {
+        "req_id": "REQ-NFR-004",
+        "tst_id": "TST-NFR-004",
+        "name": "CPU Consumption Ceiling",
+        "budget": "< 5.0% single-core",
+        "verification_method": "On-Device Manual",
+        "device_build": "<TBD>",
+        "date": "<TBD>",
+        "operator": "<TBD>",
+        "measured_value": "<NOT MEASURED>",
+        "status": "PENDING MANUAL",
+        "note": "MANUAL PROTOCOL \u2014 NOT EXECUTED IN JVM"
+      },
+      {
+        "req_id": "REQ-NFR-006",
+        "tst_id": "TST-NFR-006",
+        "name": "Tracking Battery Drain Ceiling",
+        "budget": "<= 5.0%/h bg / <= 12.0%/h fg",
+        "verification_method": "On-Device Manual",
+        "device_build": "<TBD>",
+        "date": "<TBD>",
+        "operator": "<TBD>",
+        "measured_value": "<NOT MEASURED>",
+        "status": "PENDING MANUAL",
+        "note": "MANUAL PROTOCOL \u2014 NOT EXECUTED IN JVM"
+      },
+      {
+        "req_id": "REQ-NFR-012",
+        "tst_id": "TST-NFR-012",
+        "name": "Cockpit Frame Render Budget",
+        "budget": "< 16.6 ms p95 (60 FPS)",
+        "verification_method": "On-Device Manual",
+        "device_build": "<TBD>",
+        "date": "<TBD>",
+        "operator": "<TBD>",
+        "measured_value": "<NOT MEASURED>",
+        "status": "PENDING MANUAL",
+        "note": "MANUAL PROTOCOL \u2014 NOT EXECUTED IN JVM"
+      },
+      {
+        "req_id": "REQ-NFR-015",
+        "tst_id": "TST-NFR-015",
+        "name": "Cold Start Startup Latency Budget",
+        "budget": "TTID <= 1200 ms / TTFD <= 1500 ms",
+        "verification_method": "On-Device Manual",
+        "device_build": "<TBD>",
+        "date": "<TBD>",
+        "operator": "<TBD>",
+        "measured_value": "<NOT MEASURED>",
+        "status": "PENDING MANUAL",
+        "note": "MANUAL PROTOCOL \u2014 NOT EXECUTED IN JVM"
+      },
+      {
+        "req_id": "REQ-NFR-016",
+        "tst_id": "TST-NFR-016",
+        "name": "GNSS Horizontal Trajectory Accuracy",
+        "budget": "p95 <= 5.0 m / RMSE <= 3.0 m",
+        "verification_method": "On-Device Manual",
+        "device_build": "<TBD>",
+        "date": "<TBD>",
+        "operator": "<TBD>",
+        "measured_value": "<NOT MEASURED>",
+        "status": "PENDING MANUAL",
+        "note": "MANUAL PROTOCOL \u2014 NOT EXECUTED IN JVM"
+      },
+      {
+        "req_id": "REQ-NFR-017",
+        "tst_id": "TST-NFR-017",
+        "name": "Production Crash-Free Session Stability",
+        "budget": ">= 99.5% prod / >= 99.0% staging",
+        "verification_method": "On-Device Manual",
+        "device_build": "<TBD>",
+        "date": "<TBD>",
+        "operator": "<TBD>",
+        "measured_value": "<NOT MEASURED>",
+        "status": "PENDING MANUAL",
+        "note": "MANUAL PROTOCOL \u2014 NOT EXECUTED IN JVM"
+      },
+      {
+        "req_id": "REQ-NFR-018",
+        "tst_id": "TST-NFR-018",
+        "name": "Application Not Responding (ANR) Rate Ceiling",
+        "budget": "<= 0.05% ANR / < 100 ms main thread",
+        "verification_method": "On-Device Manual",
+        "device_build": "<TBD>",
+        "date": "<TBD>",
+        "operator": "<TBD>",
+        "measured_value": "<NOT MEASURED>",
+        "status": "PENDING MANUAL",
+        "note": "MANUAL PROTOCOL \u2014 NOT EXECUTED IN JVM"
+      }
+    ]
+  }
+}
