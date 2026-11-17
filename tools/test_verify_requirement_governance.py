@@ -2981,6 +2981,47 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
             self.assertFalse(prot_ok, "Post-cutoff ceremony2 protected-path edit must fail")
             self.assertTrue(any("PROHIBITED protected" in m and ".agents/rules/aspice_governance.md" in m for m in prot_msgs), prot_msgs)
 
+    def test_scenario_78_tst_pro_118_5_verifier_rejects_synthetic_att_ca_links(self):
+        """TST-PRO-118.5: verify_qa_audits rejects synthetic ATT-CA-* placeholders on post-cutoff audits (REQ-PRO-118.5)."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            audits_dir = os.path.join(tmpdir, "docs", "engineering", "qa_audits")
+            os.makedirs(audits_dir, exist_ok=True)
+
+            post_file = os.path.join(audits_dir, "sprint_2026-11-17_02_spät.md")
+            synthetic_content = (
+                "# Sprint QA Process-Compliance Audit: Sprint 2026-11-17_02_Spät\n\n"
+                "**Auditor Role**: `agent2`\n\n"
+                "**Overall Process Verdict**: **NON-COMPLIANT**\n\n"
+                "| Metric | Value |\n| :--- | :--- |\n| **Sample Size** | 2 / 10 |\n\n"
+                "| Ticket | Summary | Verdict |\n| :--- | :--- | :---: |\n"
+                "| ATT-9901 | Test 1 | FAIL |\n"
+                "| ATT-9902 | Test 2 | PASS |\n\n"
+                "## 4. Non-Compliance Tracking & Remediation\n\n"
+                "* **ATT-9901**: Process deviation in 4-Augen Role Separation; Corrective Action Ticket: [ATT-CA-4-Augen-Role-Separation](https://example.com/ATT-CA-4-Augen-Role-Separation)\n"
+            )
+            with open(post_file, "w", encoding="utf-8") as f:
+                f.write(synthetic_content)
+
+            ok, msgs = verify_qa_audits(sprint_name="sprint/2026-11-17_02_Spät", repo_root=tmpdir)
+            self.assertFalse(ok)
+            self.assertTrue(any("synthetic placeholder corrective action link(s)" in m for m in msgs), msgs)
+
+            real_content = synthetic_content.replace(
+                "[ATT-CA-4-Augen-Role-Separation](https://example.com/ATT-CA-4-Augen-Role-Separation)",
+                "[ATT-9999](https://atrainingtracker.atlassian.net/browse/ATT-9999)",
+            )
+            with open(post_file, "w", encoding="utf-8") as f:
+                f.write(real_content)
+
+            ok_real, msgs_real = verify_qa_audits(sprint_name="sprint/2026-11-17_02_Spät", repo_root=tmpdir)
+            self.assertTrue(ok_real, f"Expected pass with real ATT-9999 link, got: {msgs_real}")
+
+            gf_file = os.path.join(audits_dir, "sprint_2026-11-17_01_früh.md")
+            with open(gf_file, "w", encoding="utf-8") as f:
+                f.write(synthetic_content.replace("2026-11-17_02_Spät", "2026-11-17_01_Früh"))
+            ok_gf, msgs_gf = verify_qa_audits(sprint_name="sprint/2026-11-17_01_Früh", repo_root=tmpdir)
+            self.assertTrue(ok_gf, f"Expected pre-fix closed audit 2026-11-17_01_Früh to remain grandfathered, got: {msgs_gf}")
+
 
 
 

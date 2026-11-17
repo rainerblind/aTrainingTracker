@@ -3,7 +3,7 @@
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Requirements**: 182
+**Total Requirements**: 183
 
 ---
 
@@ -5066,7 +5066,7 @@ The workflow SHALL mandate that:
      • The audit report in `docs/engineering/qa_audits/<sprint>.md` SHALL explicitly document the total sprint population, sample size, random seed, and sampled ticket keys in Section 1.
   3. *Closed-Loop Jira Corrective-Action Tracking (`REQ-PRO-091.3`)*:
      • For any audit evaluating a `NON-COMPLIANT` overall verdict or finding, Section 4 of `docs/engineering/qa_audits/<sprint>.md` SHALL link every non-compliant finding to a distinct, dedicated Jira corrective-action ticket (`ca_key != audited_key`). Self-referential links naming the audited ticket itself are strictly prohibited.
-     • The QA audit tool SHALL idempotently create or link dedicated corrective action tickets (`issuetype_id="10005"` / `Verbesserung`, parent Epic `ATT-8138` or `ATT-232`) in raw Backlog (`add_to_sprint=False`, `rank_top=True`), deduplicated per non-conformance category per sprint (`[QA Corrective Action] <Category> - Sprint <Sprint>`).
+     • The QA audit tool SHALL idempotently create or link dedicated corrective action tickets (`issuetype_id="10008"` / `Verbesserung`, parent Epic `ATT-8138` or `ATT-232`) in raw Backlog (`add_to_sprint=False`, `rank_top=True`), deduplicated per non-conformance category per sprint (`[QA Corrective Action] <Category> - Sprint <Sprint>`), querying duplicates via `get_search_endpoint` / `paged_jql_search` (`/rest/api/3/search/jql` on Cloud) and failing loudly without synthetic `ATT-CA-*` fallback if live Jira creation fails (`REQ-PRO-118`).
      • `tools/verify_requirement_governance.py --check-qa-audits` SHALL enforce `ca_key != audited_key` for current and future sprints while grandfathering legacy audits prior to sprint `2026-11-16_02_Spät`.
   4. *Retrospective & Ceremony Corrective Action Tracking & Escalation (`REQ-PRO-091.4`)*:
      • `.agents/skills/sprint-planner/SKILL.md` Ceremony 1 (Sprint Planning) SHALL mandate reviewing open QA corrective action tickets from the prior sprint's audit.
@@ -5083,7 +5083,7 @@ The workflow SHALL mandate that:
      • AccountId-Based 4-Augen Role Separation: `qa-audit` SHALL verify author and reviewer separation by evaluating Atlassian `accountId`s against `ROLE_ACCOUNT_IDS` rather than matching display-name strings.
 - **Requirement Archaeology & Chesterton's Fence Audit**:
   1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-091` (`REQ-PRO-091.1`–`REQ-PRO-091.6`), refining and extending `REQ-PRO-061` (*Sprint-Level QA Process-Compliance Audit*). Targets `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `tools/hoechstmass/`, `.agents/skills/sprint-planner/SKILL.md`, and `docs/engineering/qa_audits/`.
-  2. *Historical Origin & Commit Trace*: Introduced in Sprint 2026-46.3 via ATT-6154 (`REQ-PRO-061`); extended in Sprint 2026-46.6 via ATT-7558; bugfixed in Sprint 2026-11-16_02_Spät via ATT-8152 (Finding M5); corrective action escalation and retro tracking added via ATT-8153.
+  2. *Historical Origin & Commit Trace*: Introduced in Sprint 2026-46.3 via ATT-6154 (`REQ-PRO-061`); extended in Sprint 2026-46.6 via ATT-7558; bugfixed in Sprint 2026-11-16_02_Spät via ATT-8152 (Finding M5); corrective action escalation and retro tracking added via ATT-8153; corrected `issuetype_id="10008"` and Cloud v3 search / fail-loud guard via ATT-8559 (`REQ-PRO-118`).
   3. *Root Reason for Existing Formulation*: Early tooling prioritized basic automated markdown generation and checked only `docs/requirements.md` before domain shards were introduced; description was omitted from query; role separation relied on display-name heuristics; self-referential ticket keys were used as placeholders before closed-loop corrective action ticket creation under Epic ATT-8138/ATT-232 and multi-sprint PO escalation were integrated.
   4. *Preservation of Core Invariants*: Existing CLI commands (`qa-audit`, `--check-qa-audits`) remain backward-compatible; pure Python standard library; zero production Android runtime code changes.
 - **Acceptance Criteria (Given-When-Then)**:
@@ -5999,3 +5999,30 @@ The workflow SHALL mandate that:
   • *Given* `tools/verify_requirement_governance.py --check-retro-allowlist`,
   • *When* evaluated against allowlisted `chore(ceremony2)` files vs protected-path violations vs ticket-backed or pre-cutoff (`8aa881df`) commits,
   • *Then* allowlisted, ticket-backed, and pre-cutoff commits exit `0` while unauthorized protected/non-allowlisted edits in `chore(ceremony2)` fail with exit `1`.
+
+---
+
+### REQ-PRO-118: Reliable qa-audit Corrective Action Creation, Synthetic ATT-CA Guard & Heuristic Parity (ATT-8559) [Verified]
+- **Tests**: `TST-PRO-118`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `docs/engineering/qa_audits/sprint_2026-11-16_03_nacht.md`
+- **Rationale**: `qa_audit()` in `tools/jira_util.py` previously queried CA duplicates via deprecated `GET /rest/api/2/search` (`410 Gone` on Cloud), passed invalid `issuetype_id="10005"` instead of `"10008"` (`Verbesserung`), swallowed exceptions into dead `ATT-CA-*` links with a hardcoded host, and triggered false-positive `FAIL`s on valid `agent2` gate comments, standard commit formats, and `REQ-XXX-*` wildcards, while `tools/verify_requirement_governance.py:781` accepted `ATT-CA-*` tokens in live audits.
+- **Description**:
+  1. *Cloud-Compatible CA Deduplication & Valid Issue Type (`REQ-PRO-118.1`)*: `qa_audit()` SHALL query existing CA tickets via `paged_jql_search()` / `get_search_endpoint(config)` (`/rest/api/3/search/jql` on Cloud, `/rest/api/2/search` on Data Center), create missing CA tickets using `issuetype_id="10008"` (`Verbesserung`), and construct browse URLs from `config['JIRA_URL'].rstrip('/')` rather than hardcoded hosts.
+  2. *Fail-Loud CA Error Handling (`REQ-PRO-118.2`)*: `qa_audit()` MUST NOT swallow Jira CA search/create failures or synthesize placeholder `ATT-CA-*` keys (`ATT-CA-<slug>` / `ATT-CA-{key}`); live CA search or creation errors SHALL raise explicitly so audit corruption fails loudly.
+  3. *4-Augen Gate Verdict Recognition (`REQ-PRO-118.3`)*: `qa_audit()` SHALL recognize genuine `agent2` / `qa` `accountId` gate review comments matching either explicit `GATE_VERDICT:` / `GATE-VERDICT` / `VERDICT: PASS|REVISION` markers or standard Gate review headers (`Gate <1..5> ... PASS|REVISION|FREIGABE` or `[Automated comment by AI Agent 2 (Auditor)]` with `PASS|REVISION`).
+  4. *Commit Hygiene & Living-Docs Wildcard Parity (`REQ-PRO-118.4`)*: `qa_audit()` Commit Hygiene SHALL accept standard squashed/bounce commit formats (`^KEY:`, `[KEY]`, `type(KEY):`, `(KEY)`, and `Ticket: KEY` trailer), and Living Documentation Parity SHALL ignore family-wildcard patterns ending in `*` (e.g., `REQ-FIL-*`) prior to subset evaluation against `master_req_ids`.
+  5. *Verifier Synthetic `ATT-CA-*` Rejection (`REQ-PRO-118.5`)*: `tools/verify_requirement_governance.py` (`_validate_single_qa_audit()` / `--check-qa-audits`) SHALL reject synthetic `ATT-CA-*` tokens on post-cutoff/current sprint QA audits (requiring real `ATT-\d+` or `PROJ-\d+` Jira keys), while cleanly handling legacy pre-cutoff audits (including `sprint_2026-11-17_01_früh.md` or re-audited reports) so `--check-qa-audits` passes deterministically (`0`).
+  6. *Strict Offline HTTP Mocking (`Rule 5` / `REQ-PRO-118.6`)*: Automated unit tests in `tools/test_jira_accounts.py` and `tools/test_verify_requirement_governance.py` MUST mock all Jira HTTP calls (`jira_request` / `get_search_endpoint`) and MUST NEVER create live Jira issues during test execution.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Refines and fixes `REQ-PRO-091.3` / `REQ-PRO-091.5` / `REQ-PRO-091.6` (`ATT-7558`, `ATT-8152`, `ATT-8153`) targeting `tools/jira_util.py` and `tools/verify_requirement_governance.py`.
+  2. *Historical Origin & Commit Trace*: `ATT-8153` introduced `issuetype_id="10005"` (`# Verbesserung`) and added `ATT-CA-*` to `_validate_single_qa_audit()` alongside `test_tst_pro_091_11`'s mock `ATT-CA-100` key.
+  3. *Root Reason for Existing Formulation*: `ATT-8153` assumed `"10005"` mapped to `Verbesserung` and allowed `ATT-CA-*` in the verifier regex without separating offline test mocks from live sprint audits.
+  4. *Preservation of Core Invariants*: Independent auditor enforcement (`qa`/`agent2`), dynamic `>= max(2, ceil(0.10*N))` sampling, `ca_key != audited_key`, deduplicated raw Backlog creation (`add_to_sprint=False`, `rank_top=True`), and `Rule 5` offline test mocking remain preserved.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* a non-compliant live `qa_audit()` run, *When* CA deduplication and creation execute, *Then* `qa_audit()` queries via `get_search_endpoint` / `paged_jql_search`, creates `Verbesserung` (`"10008"`) tickets with `config['JIRA_URL']` browse links, and fails loudly without `ATT-CA-*` fallback on API errors.
+  • *Given* tickets with authentic `agent2` `Gate N ... PASS` comments, `[ATT-XXXX]` / `fix(ATT-XXXX):` / `(ATT-XXXX)` commits, and `REQ-FIL-*` wildcards, *When* audited by `qa_audit()`, *Then* 4-Augen Role Separation, Commit Hygiene, and Living Documentation Parity evaluate `PASS`.
+  • *Given* `verify_requirement_governance.py --check-qa-audits`, *When* evaluating a post-cutoff non-compliant report containing `ATT-CA-*` vs real `ATT-\d+` keys, *Then* `ATT-CA-*` fails with exit `1` and real/grandfathered reports pass with exit `0`.
+- **Invariants**: Zero `app/src/main/` changes; `ANT-Android-SDKs` untouched; zero live Jira tickets created by automated unit tests (`Rule 5`).

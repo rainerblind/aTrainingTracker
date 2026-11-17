@@ -3,7 +3,7 @@
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Tests**: 221
+**Total Tests**: 222
 
 ---
 
@@ -3716,3 +3716,27 @@
      • Execute `./gradlew :app:testDebugUnitTest --tests "*.AspiceSweAuditContractTest" --tests "*.HoechstmassCoreFrameworkContractTest"` verifying `.agents/rules/aspice_governance.md` and `.agents/skills/sprint-planner/SKILL.md` codify the autonomous Retro write-allowlist, protected paths, and `Wochen Review & Retro` proposal routing while preserving `sprint-metrics --record --post-to-retro`, `PA 4.2`, `PA 5.2`, and `REQ-STP-010.2`.
   3. *CLI & Living-Doc Governance Parity (`TST-PRO-117.3`, verify_requirement_governance.py)*:
      • Execute `python3 tools/verify_requirement_governance.py` and `python3 tools/verify_requirement_governance.py --check-retro-allowlist` confirming exit code `0`. (`Localization Parity: N/A - no UI strings`).
+
+---
+
+### TST-PRO-118: **qa-audit Corrective Action Creation, Synthetic ATT-CA Guard & Heuristic Parity Suite (ATT-8559)** [Verified]
+- **Requirement(s)**: `REQ-PRO-118`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Component**: `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `tools/test_jira_accounts.py`, `tools/test_verify_requirement_governance.py`, `docs/engineering/qa_audits/sprint_2026-11-16_03_nacht.md`
+- **Jira**: `ATT-8559`
+- **Localization Parity**: N/A - no UI strings
+- **Test Description**:
+  1. *Mocked Cloud v3 CA Search & `10008` Creation (`TST-PRO-118.1`, tools/test_jira_accounts.py)*:
+     • Execute mocked unit test (`Rule 5`: zero live Jira API calls) verifying `qa_audit()` queries CA duplicates via `get_search_endpoint` / `paged_jql_search` (`/rest/api/3/search/jql`), creates CA issues with `issuetype_id="10008"` (`Verbesserung`) under `ATT-8138`, and builds browse links from `config['JIRA_URL']`.
+  2. *Fail-Loud CA Error Handling (`TST-PRO-118.2`, tools/test_jira_accounts.py)*:
+     • Execute mocked unit test verifying Jira CA search/create exceptions propagate loudly instead of silently generating `ATT-CA-*` placeholder keys.
+  3. *4-Augen Gate Verdict Recognition (`TST-PRO-118.3`, tools/test_jira_accounts.py)*:
+     • Execute mocked unit test verifying `qa_audit()` passes `role_sep_pass` for `agent2` comments using `Gate 1 PASS` / `Gate 2 Audit PASS` headers as well as `GATE_VERDICT: PASS`, while failing `agent1`-authored verdicts.
+  4. *Commit Hygiene & Wildcard Parity (`TST-PRO-118.4`, tools/test_jira_accounts.py)*:
+     • Execute mocked unit test verifying `[ATT-XXXX]`, `fix(ATT-XXXX):`, `...(ATT-XXXX)`, and `Ticket: ATT-XXXX` satisfy `commit_pass`, and wildcard `REQ-FIL-*` in deliverables is excluded so `living_doc_pass` succeeds when real IDs resolve.
+  5. *Verifier Synthetic `ATT-CA-*` Guard (`TST-PRO-118.5`, tools/test_verify_requirement_governance.py)*:
+     • Execute unit tests verifying `_validate_single_qa_audit()` rejects `ATT-CA-*` placeholders on current/post-cutoff non-compliant reports, accepts real `ATT-\d+` keys, and cleanly handles grandfathered/re-audited reports so `--check-qa-audits` exits `0`.
+  6. *Re-Audit & Full Governance Validation (`TST-PRO-118.6`, sprint_2026-11-16_03_nacht.md)*:
+     • Re-run `qa-audit --as agent2` for Sprint `2026-11-16_03_Nacht`, verify `python3 tools/verify_requirement_governance.py` and `--check-qa-audits` exit `0`, and confirm `tools/test_jira_accounts.py` + `tools/test_verify_requirement_governance.py` pass 100% offline. (`Localization Parity: N/A - no UI strings`).

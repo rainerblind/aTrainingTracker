@@ -4544,8 +4544,9 @@ def format_qa_audit_markdown(sprint_info, audit_results, overall_compliant, audi
             if not r["compliant"]:
                 ca_key_str = r.get("corrective_action")
                 if not ca_key_str:
-                    fallback_key = f"ATT-CA-{r['key']}"
-                    ca_key_str = f"[{fallback_key}](https://rainerblind.atlassian.net/browse/{fallback_key})"
+                    raise RuntimeError(
+                        f"QA audit non-compliant ticket {r['key']} is missing an authentic Jira corrective action ticket (REQ-PRO-118.2)."
+                    )
                 failed_str = ", ".join(r.get("failed_categories", [])) or "Process deviation"
                 lines.append(f"* **{r['key']}**: Process deviation in {failed_str}; Corrective Action Ticket: {ca_key_str}")
 
@@ -4606,6 +4607,30 @@ def qa_audit(sprint_arg=None, sample_size=None, out_path=None, role="qa", as_rol
         and "review & retro" not in i.get("fields", {}).get("summary", "").lower()
         and i.get("key") != "ATT-232"
     ]
+
+    if not parent_issues:
+        # Archived closed sprints move completed tickets out of the sprint into Bereit für PO Abnahme (453)
+        # with label sprint-<s_name>; fall back to JQL label lookup when sprint issue list has no parents.
+        safe_s_name = s_name.replace('"', '\\"')
+        label_candidates = [f"sprint-{safe_s_name}"]
+        underscored = re.sub(r"\s+", "_", safe_s_name)
+        if underscored != safe_s_name:
+            label_candidates.append(f"sprint-{underscored}")
+        labels_jql = ", ".join(f'"{lbl}"' for lbl in label_candidates)
+        fallback_jql = (
+            f"project = ATT AND issuetype != Sub-task "
+            f"AND labels in ({labels_jql}) ORDER BY key ASC"
+        )
+        fallback_fields = [
+            "summary", "description", "status", "issuetype", "priority", "subtasks", "comment", STORY_POINTS_FIELD
+        ]
+        archived_issues = paged_jql_search(fallback_jql, fallback_fields, role=role, config=config)
+        parent_issues = [
+            i for i in archived_issues
+            if not i.get("fields", {}).get("issuetype", {}).get("subtask", False)
+            and "review & retro" not in i.get("fields", {}).get("summary", "").lower()
+            and i.get("key") != "ATT-232"
+        ]
 
     for p in parent_issues:
         subtasks = p.get("fields", {}).get("subtasks", [])
@@ -4754,7 +4779,18 @@ def qa_audit(sprint_arg=None, sample_size=None, out_path=None, role="qa", as_rol
                 author_acc_id = author.get("accountId") or ""
                 author_name = author.get("displayName") or author.get("name") or author_acc_id
 
-                is_verdict = "GATE_VERDICT:" in body.upper() or "GATE-VERDICT" in body.upper() or "VERDICT: PASS" in body.upper() or "VERDICT: REVISION" in body.upper()
+                body_upper = body.upper()
+                is_verdict = (
+                    "GATE_VERDICT:" in body_upper
+                    or "GATE-VERDICT" in body_upper
+                    or "VERDICT: PASS" in body_upper
+                    or "VERDICT: REVISION" in body_upper
+                    or bool(re.search(r"\bGATE\s+[1-5]\b.*\b(?:PASS|REVISION|FREIGABE)\b", body, re.IGNORECASE))
+                    or (
+                        "[Automated comment by AI Agent 2 (Auditor)]" in body
+                        and bool(re.search(r"\b(?:PASS|REVISION|FREIGABE)\b", body, re.IGNORECASE))
+                    )
+                )
                 if is_verdict:
                     if author_acc_id and author_acc_id == agent1_acc_id:
                         agent1_violations_count += 1
@@ -4772,10 +4808,14 @@ def qa_audit(sprint_arg=None, sample_size=None, out_path=None, role="qa", as_rol
         if agent1_violations_count > 0 or agent2_verdicts_count == 0:
             role_sep_pass = False
 
-        # 4. Living Documentation Parity (REQ-PRO-091.6)
+        # 4. Living Documentation Parity (REQ-PRO-091.6 / REQ-PRO-118.4)
+        def _extract_concrete_req_ids(text):
+            cleaned = re.sub(r"\bREQ-[A-Z0-9_-]*\*", "", text or "")
+            return set(re.findall(r"\bREQ-[A-Z0-9_-]+\b", cleaned))
+
         desc_text = extract_text_from_description(item.get("fields", {}).get("description"))
         ticket_text_combined = f"{summary} {desc_text}"
-        referenced_reqs = set(re.findall(r"\bREQ-[A-Z0-9_-]+\b", ticket_text_combined))
+        referenced_reqs = _extract_concrete_req_ids(ticket_text_combined)
 
         for d_path in [
             os.path.join(repo_root, "docs", "engineering", "test_specs", f"{key}_test_spec.md"),
@@ -4785,13 +4825,13 @@ def qa_audit(sprint_arg=None, sample_size=None, out_path=None, role="qa", as_rol
             if os.path.isfile(d_path):
                 try:
                     with open(d_path, "r", encoding="utf-8") as f:
-                        referenced_reqs.update(re.findall(r"\bREQ-[A-Z0-9_-]+\b", f.read()))
+                        referenced_reqs.update(_extract_concrete_req_ids(f.read()))
                 except Exception:
                     pass
 
         for line in combined_req_text.splitlines():
             if key in line:
-                referenced_reqs.update(re.findall(r"\bREQ-[A-Z0-9_-]+\b", line))
+                referenced_reqs.update(_extract_concrete_req_ids(line))
 
         if referenced_reqs and master_req_ids:
             living_doc_pass = referenced_reqs.issubset(master_req_ids)
@@ -4800,22 +4840,21 @@ def qa_audit(sprint_arg=None, sample_size=None, out_path=None, role="qa", as_rol
         else:
             living_doc_pass = False
 
-        # 5. Commit Hygiene
+        # 5. Commit Hygiene (REQ-PRO-118.4)
         commit_pass = False
+        key_pat = re.compile(
+            rf"(?:^{re.escape(key)}:|\[{re.escape(key)}\]|^[a-zA-Z0-9_-]+\({re.escape(key)}\):|\({re.escape(key)}\)|^Ticket:\s*{re.escape(key)}\b)",
+            re.MULTILINE,
+        )
         try:
-            cmd = ["git", "log", f"--grep=^{key}:", "-n", "1", "--oneline"]
-            res = subprocess.run(cmd, cwd=repo_root, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=5)
-            if res.returncode == 0 and res.stdout.strip():
-                commit_pass = True
-            else:
-                cmd_all = ["git", "log", f"--grep={key}", "-n", "10", "--oneline"]
-                res_all = subprocess.run(cmd_all, cwd=repo_root, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=5)
-                if res_all.returncode == 0:
-                    for line in res_all.stdout.strip().splitlines():
-                        parts = line.split(maxsplit=1)
-                        if len(parts) > 1 and parts[1].strip().startswith(f"{key}:"):
-                            commit_pass = True
-                            break
+            cmd_all = ["git", "log", f"--grep={key}", "-n", "20", "--format=%s%n%b%x1e"]
+            res_all = subprocess.run(cmd_all, cwd=repo_root, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=5)
+            if res_all.returncode == 0 and res_all.stdout.strip():
+                for entry in res_all.stdout.split("\x1e"):
+                    entry_s = entry.strip()
+                    if entry_s and key_pat.search(entry_s):
+                        commit_pass = True
+                        break
         except Exception:
             commit_pass = False
 
@@ -4869,27 +4908,20 @@ def qa_audit(sprint_arg=None, sample_size=None, out_path=None, role="qa", as_rol
         for cat, ticket_keys in category_to_tickets.items():
             summary_title = f"[QA Corrective Action] {cat} - Sprint {s_name}"
             existing_key = None
-            try:
-                jql = f'project = ATT AND summary ~ "\\"{summary_title}\\""'
-                search_url = f"{base}/rest/api/2/search?jql={urllib.parse.quote(jql)}&maxResults=5&fields=summary"
-                s_res = jira_request(search_url, role=role)
-                for issue in s_res.get("issues", []):
+            jql = f'project = ATT AND summary ~ "\\"{summary_title}\\""'
+            s_issues = paged_jql_search(jql, ["summary"], role=role, config=config, max_total=5)
+            for issue in s_issues:
+                if summary_title.lower() in issue.get("fields", {}).get("summary", "").lower():
+                    existing_key = issue.get("key")
+                    break
+
+            if not existing_key and board_id:
+                b_url = f"{base}/rest/agile/1.0/board/{board_id}/backlog?maxResults=50&fields=summary"
+                b_res = jira_request(b_url, role=role)
+                for issue in b_res.get("issues", []):
                     if summary_title.lower() in issue.get("fields", {}).get("summary", "").lower():
                         existing_key = issue.get("key")
                         break
-            except Exception:
-                existing_key = None
-
-            if not existing_key and board_id:
-                try:
-                    b_url = f"{base}/rest/agile/1.0/board/{board_id}/backlog?maxResults=50&fields=summary"
-                    b_res = jira_request(b_url, role=role)
-                    for issue in b_res.get("issues", []):
-                        if summary_title.lower() in issue.get("fields", {}).get("summary", "").lower():
-                            existing_key = issue.get("key")
-                            break
-                except Exception:
-                    existing_key = None
 
             if existing_key:
                 category_to_ca_key[cat] = existing_key
@@ -4903,27 +4935,27 @@ def qa_audit(sprint_arg=None, sample_size=None, out_path=None, role="qa", as_rol
                     f"Investigate root cause of process non-conformance under ASPICE SUP.1 (Quality Assurance) "
                     f"and enact systemic countermeasures prior to next sprint planning."
                 )
-                try:
-                    new_ca_key = create_issue(
-                        summary=summary_title,
-                        description=desc,
-                        issuetype_id="10005",  # Verbesserung
-                        parent_key="ATT-8138",
-                        role=role,
-                        add_to_sprint=False,
-                        rank_top=True,
+                new_ca_key = create_issue(
+                    summary=summary_title,
+                    description=desc,
+                    issuetype_id="10008",  # Verbesserung
+                    parent_key="ATT-8138",
+                    role=role,
+                    add_to_sprint=False,
+                    rank_top=True,
+                )
+                if not new_ca_key or str(new_ca_key).startswith("ATT-CA-"):
+                    raise RuntimeError(
+                        f"Invalid QA Corrective Action key '{new_ca_key}' returned for '{cat}' (REQ-PRO-118.2)."
                     )
-                    category_to_ca_key[cat] = new_ca_key
-                except Exception:
-                    cat_slug = re.sub(r"[^A-Za-z0-9]+", "-", cat).strip("-")
-                    category_to_ca_key[cat] = f"ATT-CA-{cat_slug}"
+                category_to_ca_key[cat] = new_ca_key
 
         for r in audit_results:
             if not r["compliant"]:
                 ca_keys = [category_to_ca_key[c] for c in r.get("failed_categories", []) if c in category_to_ca_key]
                 if ca_keys:
                     r["ca_keys"] = ca_keys
-                    r["corrective_action"] = ", ".join(f"[{k}](https://rainerblind.atlassian.net/browse/{k})" for k in ca_keys)
+                    r["corrective_action"] = ", ".join(f"[{k}]({base}/browse/{k})" for k in ca_keys)
 
     md_content = format_qa_audit_markdown(
         sprint_info={"id": s_id, "name": s_name},
