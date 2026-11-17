@@ -10,7 +10,7 @@
 ---
 
 ## 1. Problem Description & Background
-Remediates ASPICE 4.0 Audit Finding `Observation (PA 4.x)`: `tools/sprint_metrics.py` emits `UCL > 100%` (`116.58%`/`118.01%`), mixes incompatible process eras, conflates `human_acceptance_rate_percent` with `completion_rate_percent`, fabricates `p = 0.02` escape floors (`2.37e-08`), masks Gate 1–5 plausibility warnings with Gate 6 bounces, and frames CL3–CL5 as operational achievements before CL2 attainment.
+Remediates ASPICE 4.0 Audit Finding `Observation (PA 4.x)`: `tools/sprint_metrics.py` emits `UCL > 100%` (`115.86%`/`117.93%` on `n=19`), mixes incompatible process eras, conflates `human_acceptance_rate_percent` with `completion_rate_percent`, fabricates `p = 0.02` escape floors (`2.37e-08`), masks Gate 1–5 plausibility warnings with Gate 6 bounces, and frames CL3–CL5 as operational achievements before CL2 attainment.
 
 ---
 

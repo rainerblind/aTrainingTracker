@@ -9,7 +9,7 @@
 
 ## 1. Problem Statement & Motivation
 ASPICE 4.0 Audit Finding `Observation (PA 4.x)` identified statistical defects in `tools/sprint_metrics.py` and unsupported Capability Level 3/4/5 claims in documentation:
-1. **Unbounded SPC Limits**: Percentage metrics (`overall_ftpr`, `human_acceptance`) use unbounded $\mu \pm 2\sigma$, producing `UCL > 100%` (`116.58%` and `118.01%` on current `process_metrics.jsonl`, `n=18`), and mix incompatible process eras without baseline resets.
+1. **Unbounded SPC Limits**: Percentage metrics (`overall_ftpr`, `human_acceptance`) use unbounded $\mu \pm 2\sigma$, producing `UCL > 100%` (`115.86%` and `117.93%` across all 19 rows of `process_metrics.jsonl`, `n=19`), and mix incompatible process eras without baseline resets.
 2. **Misnamed Acceptance Rate**: `human_acceptance_rate_percent` equals `completion_rate_percent` (`completed_tickets / total_tickets`) and counts tickets still in `Final Review (Human)` / `Final Review (Agent)` as human-accepted.
 3. **Fabricated Escape Probability**: Zero-revision gates substitute nominal `p = 0.02`, yielding `2.37e-08` in Sprint `2026-46.6` alongside `17` open bugs.
 4. **Suppressed Plausibility Warning**: `100%` Gate 1–5 FTPR blind-spot warnings are suppressed whenever Gate 6 records bounces (`rev6 + bounces6`).
@@ -18,13 +18,13 @@ ASPICE 4.0 Audit Finding `Observation (PA 4.x)` identified statistical defects i
 ---
 
 ## 2. Root Cause Analysis & Independent Hypothesis Verification
-* **RCA 1 (Unclamped Normal SPC & Unpartitioned History)**: `calculate_spc_limits()` (`tools/sprint_metrics.py` L568–653) applies normal $\mu \pm 2\sigma$ (`ucl = round(mu + 2 * sigma, 2)` at L601) to proportions instead of binomial/p-chart limits clamped to `[0, 100]`, over all 18 mixed-era JSONL rows (`process_metrics.jsonl` L1–19).
+* **RCA 1 (Unclamped Normal SPC & Unpartitioned History)**: `calculate_spc_limits()` (`tools/sprint_metrics.py` L568–653) applies normal $\mu \pm 2\sigma$ (`ucl = round(mu + 2 * sigma, 2)` at L601) to proportions instead of binomial/p-chart limits clamped to `[0, 100]`, over all 19 mixed-era JSONL rows (`process_metrics.jsonl` L1–19).
 * **RCA 2 (Status & Formula Conflation)**: `is_completed` (L280) includes `final review*` states and `human_acceptance_rate` (L499–502) duplicates `completion_rate_percent` (L526) instead of measuring terminal human acceptance (`Erledigt`/`Done`/`Closed`).
 * **RCA 3 (Synthetic Floor & Blind-Spot Masking)**: L494 substitutes `0.02` when `p == 0`, while L513 adds `rev6 + bounces6` into `total_revisions_all`, silencing L514–517 even when Gate 6 catches escapes missed by Gates 1–5.
 * **RCA 4 (Premature Maturity Framing)**: `REQ-PRO-038` docs (`docs/project_protocol.md`, `tools/hoechstmass/`) frame PA 3.1–5.2 as active operational status instead of future targets pending CL2 attainment.
 * **Independent Peer Review & Verification**:
   * Verified `tools/sprint_metrics.py` line shifts post-`ATT-8165`: nominal `p=0.02` is L490–496 (ticket cited L338–343), `human_acceptance_rate` is L498–502 (cited L346–350), plausibility check is L511–517 (cited L359–363), and `tools/hoechstmass/tools/sprint_metrics.py` mirrors the pre-`ATT-8165` bugs (L337–363, L408–475).
-  * Executed `calculate_spc_limits()` against `docs/engineering/metrics/process_metrics.jsonl` (`n=18`): confirmed `overall_ftpr` `UCL=116.58`, `human_acceptance` `UCL=118.01`, and `2026-46.6` (L11) `theoretical_cumulative_escape_prob=2.37e-08` with `open_bugs=17` and `plausibility_warnings=[]`.
+  * Executed `calculate_spc_limits()` against `docs/engineering/metrics/process_metrics.jsonl` (`n=19`; `n=18` excl. latest): confirmed `overall_ftpr` `UCL=115.86` (`116.58` for `n=18`), `human_acceptance` `UCL=117.93` (`118.01` for `n=18`), and `2026-46.6` (L11) `theoretical_cumulative_escape_prob=2.37e-08` with `open_bugs=17` and `plausibility_warnings=[]`.
   * Audited `docs/project_protocol.md` (L41–55), `tools/hoechstmass/docs/project_protocol.md` (L96–110), `tools/hoechstmass/README.md` (L77–92), `tools/sprint_metrics.py` (L5), and `docs/presentations/agile_agentic_aspice_beamer.tex` (L1–1047): presentation contains zero CL3/CL4 achievement claims; `HoechstmassCoreFrameworkContractTest.kt` (L223–254) pins exact strings `"Level 1: Performed"`..`"Level 5: Innovating"` and `"PA 1.1"`..`"PA 5.2"`, which must remain as explicitly marked **Target / Suspended** roadmap entries.
 
 ---
