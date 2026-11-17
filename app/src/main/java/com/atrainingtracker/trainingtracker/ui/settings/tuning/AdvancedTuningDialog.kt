@@ -50,11 +50,13 @@ import com.atrainingtracker.trainingtracker.WorkoutCardSectionPreferences
 import com.atrainingtracker.trainingtracker.WorkoutDetailPreferences
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutSectionType
 import com.atrainingtracker.trainingtracker.settings.RawSensorRetentionPolicy
+import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import com.atrainingtracker.trainingtracker.settings.TuningConfig
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
 import com.atrainingtracker.trainingtracker.ui.components.core.AppBottomSheetContent
 import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
+import com.atrainingtracker.trainingtracker.ui.settings.ZoneDisplayOptionsDraft
 import com.atrainingtracker.trainingtracker.ui.settings.radar.RadarSettingsSection
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.AftermathAnalysisSection
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.AmoledBatterySaverSection
@@ -85,6 +87,8 @@ fun AdvancedTuningDialog(
     val scope = rememberCoroutineScope()
     val tuningDataStore = remember { TuningPreferencesDataStore.getInstance(context) }
     val persistedConfig by tuningDataStore.tuningConfigFlow.collectAsState(initial = null)
+    val settingsDataStore = remember { SettingsDataStore.getInstance(context) }
+    val persistedSettingsSnapshot by settingsDataStore.snapshotFlow.collectAsState(initial = null)
 
     val preferenceManager = remember { MyPreferenceManager(context.applicationContext) }
     val persistedWorkoutCardPrefs by preferenceManager.workoutCardPreferencesFlow.collectAsState(initial = null)
@@ -129,6 +133,7 @@ fun AdvancedTuningDialog(
     var workoutCardPrefs by remember { mutableStateOf(WorkoutCardSectionPreferences()) }; var isAftermathPrefsInitialized by remember { mutableStateOf(false) }
     var workoutDetailPrefs by remember { mutableStateOf(WorkoutDetailPreferences()) }; var isDetailPrefsInitialized by remember { mutableStateOf(false) }
     var workoutSectionsOrder by remember { mutableStateOf(WorkoutSectionType.DEFAULT_ORDER) }; var isSectionsOrderInitialized by remember { mutableStateOf(false) }
+    var zoneDisplayDraft by remember { mutableStateOf(ZoneDisplayOptionsDraft()) }; var isZoneDisplayInitialized by remember { mutableStateOf(false) }
 
     var expandedSections by rememberSaveable { mutableStateOf(emptySet<String>()) }
     fun isSectionExpanded(section: TuningSection): Boolean = expandedSections.contains(section.name)
@@ -147,6 +152,10 @@ fun AdvancedTuningDialog(
     LaunchedEffect(persistedWorkoutSectionsOrder) {
         val order = persistedWorkoutSectionsOrder
         if (!isSectionsOrderInitialized && order != null) { workoutSectionsOrder = order; isSectionsOrderInitialized = true }
+    }
+    LaunchedEffect(persistedSettingsSnapshot) {
+        val snap = persistedSettingsSnapshot
+        if (!isZoneDisplayInitialized && snap != null) { zoneDisplayDraft = ZoneDisplayOptionsDraft.fromSnapshot(snap); isZoneDisplayInitialized = true }
     }
     LaunchedEffect(Unit) { tuningDataStore.purgeLegacyMapCameraPreferences() }
     fun applyConfig(config: TuningConfig) {
@@ -232,6 +241,7 @@ fun AdvancedTuningDialog(
                     )
                     scope.launch {
                         tuningDataStore.saveTuningConfig(newConfig)
+                        zoneDisplayDraft.persistTo(settingsDataStore)
                         preferenceManager.setWorkoutCardPreferences(workoutCardPrefs); preferenceManager.setWorkoutDetailPreferences(workoutDetailPrefs)
                         preferenceManager.setWorkoutSectionsOrder(workoutSectionsOrder); SensorSearchPreferences.save(context, sensorSearchPrefs)
                         onSettingsChanged?.invoke(); onDismiss()
@@ -260,7 +270,8 @@ fun AdvancedTuningDialog(
                     sensorFieldVariant = sensorFieldVariant, onSensorFieldVariantChange = { sensorFieldVariant = it },
                     sensorFieldCornerRadius = sensorFieldCornerRadius, onCornerRadiusChange = { sensorFieldCornerRadius = it },
                     sensorFieldBorderThickness = sensorFieldBorderThickness, onBorderThicknessChange = { sensorFieldBorderThickness = it },
-                    sensorFieldBorderContrast = sensorFieldBorderContrast, onBorderContrastChange = { sensorFieldBorderContrast = it }
+                    sensorFieldBorderContrast = sensorFieldBorderContrast, onBorderContrastChange = { sensorFieldBorderContrast = it },
+                    zoneDisplayDraft = zoneDisplayDraft, onZoneDisplayDraftChange = { zoneDisplayDraft = it }
                 )
             }
 
@@ -458,13 +469,18 @@ fun AdvancedTuningDialog(
                 onClick = {
                     scope.launch {
                         tuningDataStore.resetToDefaults()
+                        val resetZoneDraft = ZoneDisplayOptionsDraft()
+                        resetZoneDraft.persistTo(settingsDataStore)
+                        zoneDisplayDraft = resetZoneDraft
                         preferenceManager.setWorkoutCardPreferences(WorkoutCardSectionPreferences()); workoutCardPrefs = WorkoutCardSectionPreferences()
                         preferenceManager.setWorkoutDetailPreferences(WorkoutDetailPreferences()); workoutDetailPrefs = WorkoutDetailPreferences()
                         preferenceManager.setWorkoutSectionsOrder(WorkoutSectionType.DEFAULT_ORDER); workoutSectionsOrder = WorkoutSectionType.DEFAULT_ORDER
                         SensorSearchPreferences.reset(context); sensorSearchPrefs = SensorSearchPreferences()
                         applyConfig(TuningConfig())
                         onSettingsChanged?.invoke()
-                        Toast.makeText(context, R.string.reset_to_defaults_success, Toast.LENGTH_SHORT).show()
+                        val showResetToast = { Toast.makeText(context, R.string.reset_to_defaults_success, Toast.LENGTH_SHORT).show() }
+                        if (android.os.Looper.myLooper() == android.os.Looper.getMainLooper()) showResetToast()
+                        else android.os.Handler(android.os.Looper.getMainLooper()).post(showResetToast)
                     }
                 }
             )

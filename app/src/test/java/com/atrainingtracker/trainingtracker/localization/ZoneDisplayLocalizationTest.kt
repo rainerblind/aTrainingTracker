@@ -43,7 +43,8 @@ class ZoneDisplayLocalizationTest {
         "zone_display_right_bar",
         "zone_display_text_color",
         "zone_display_gauge",
-        "zone_display_preview_title"
+        "zone_display_preview_title",
+        "zone_display_apply_all"
     )
 
     private lateinit var resDir: File

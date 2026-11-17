@@ -3,7 +3,7 @@
 **Domain**: `ui_design_system`  
 **Prefixes**: `UI`, `UNT`  
 **Scope**: Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts.  
-**Total Tests**: 476
+**Total Tests**: 477
 
 ---
 
@@ -8669,3 +8669,21 @@
   4. *Targeted Regression & Governance Suite (`TST-UI-2782.4`)*:
      - Execute `./gradlew :app:testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.*" --tests "com.atrainingtracker.trainingtracker.ui.tracking.TrackingTabsPolishContractTest" --tests "com.atrainingtracker.trainingtracker.ui.components.core.ModalBottomSheetDialogsIntegrityTest"` and `python3 tools/verify_requirement_governance.py`.
      - Assert 100% pass rate.
+
+### TST-UI-2783: ZoneDisplayOptions Cockpit Integration, Apply-All & Save/Cancel/Reset Verification [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-UI-2783` (`REQ-UI-2783.1`, `REQ-UI-2783.2`, `REQ-UI-2783.3`)
+- **Component**: `ZoneDisplayOptionsControls.kt`, `CockpitTypographySection.kt`, `ZonesSettingsActivity.kt`, `AdvancedTuningScreen.kt`, `AdvancedTuningDialog.kt`, `AdvancedTuningZoneDisplayTest.kt`, `AdvancedTuningSectionsScreenshotTest.kt`
+- **Jira**: `ATT-8498`
+- **Test Description**:
+  1. *Profile Selection, Toggling & Combined Preview Compose UI Tests (`TST-UI-2783.1`, `AdvancedTuningZoneDisplayTest.kt`)*:
+     - Verify `CockpitTypographySection` switches between `HR_RUN`, `HR_BIKE`, `PWR_BIKE`, and `HRV_DFA_A1` via `TuningSegmentedButtonRow` and mutates per-profile `ZoneDisplayOptions` via `TuningToggleItem` (`zone_display_gauge` shown strictly for `HRV_DFA_A1`).
+     - Verify `PreviewCockpitTile` updates live with `zone_2` tint, left/right bars, text color, and HRV gauge bar.
+  2. *Apply-All & Draft State Unit Tests (`TST-UI-2783.2`, `AdvancedTuningZoneDisplayTest.kt`)*:
+     - Verify `zone_display_apply_all` copies `showBackground`, `showLeftBar`, `showRightBar`, and `showTextColor` across all 4 profiles while preserving `HRV.showGauge`.
+     - Verify **Save** persists all 4 profiles via `SettingsDataStore`, **Cancel** discards uncommitted changes, and **Reset to Defaults** resets only `ZoneDisplayOptions()` without altering zone thresholds (`hrRunZoneMax`, `hrBikeZoneMax`, `pwrBikeZoneMax`).
+  3. *Design Guidelines, Modularity & ZonesSettingsActivity Contracts (`TST-UI-2783.3`)*:
+     - Verify `CockpitTypographySection.kt` `< 400` LOC (`REQ-UI-277.3`), `TuningDesignGuidelinesContractTest`, `HrvDfaA1SettingsContractTest`, `CockpitPreviewTileContractTest`, and `AdvancedTuningModularityTest` pass 100%.
+  4. *9-Locale Parity & Rule 8.5 Light/Dark Screenshot Inspection (`TST-UI-2783.4`)*:
+     - Verify `zone_display_apply_all` across all 9 locales (`ZoneDisplayLocalizationTest` / `TranslationParityTest`).
+     - Capture Light & Dark screenshots of the Zone Display subsection + combined `PreviewCockpitTile` in `AdvancedTuningSectionsScreenshotTest.kt` and inspect via `read_file`.
