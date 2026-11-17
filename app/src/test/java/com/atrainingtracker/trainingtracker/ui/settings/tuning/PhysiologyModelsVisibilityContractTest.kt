@@ -359,8 +359,9 @@ class PhysiologyModelsVisibilityContractTest {
             content.contains("R.string.tuning_morning_sleep_wellness_title") ||
                 content.contains("R.string.tuning_show_morning_check_on_start_screen_title")
         )
-        assertTrue(
-            "PhysiologyModelsSection must reference tuning_physiology_hrv_zones_link",
+        // Traces to: REQ-SET-113
+        assertFalse(
+            "PhysiologyModelsSection must not contain tuning_physiology_hrv_zones_link (removed in ATT-8468)",
             content.contains("R.string.tuning_physiology_hrv_zones_link")
         )
         assertTrue(
