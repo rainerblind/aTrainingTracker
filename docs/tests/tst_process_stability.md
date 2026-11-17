@@ -3,7 +3,7 @@
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Tests**: 215
+**Total Tests**: 216
 
 ---
 
@@ -2601,26 +2601,23 @@
   5. *Workflow YAML Syntax Validation (`TST-PRO-067.5`, tools/test_verify_requirement_governance.py & ReleaseCiAndLintConfigContractTest.kt)*:
   • Parse `.github/workflows/android-branch-build.yml` and `.github/workflows/android-release.yml` with YAML parser and assert zero syntax errors.
 
-### TST-PRO-068: **System Integration Verification & Sensor Simulators Specification Contract Test Suite** [Verified]
+### TST-PRO-068: **Developer Sensor Simulator Self-Test Harness Contract Test Suite** [Verified]
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-PRO-068`
-- **Component**: `docs/system/sys_integration_tests.md`, `tools/run_system_integration_tests.py`, `tools/test_system_integration_tests.py`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SystemIntegrationTestContractTest.kt`
-- **Jira**: `ATT-6166`
+- **Component**: `docs/system/sys_integration_tests.md`, `tools/run_simulator_self_tests.py`, `tools/test_simulator_self_tests.py`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SystemIntegrationTestContractTest.kt`
+- **Jira**: `ATT-6166`, `ATT-8157`
 - **Test Description**:
-  1. *System Integration Specification Structural Integrity (`TST-PRO-068.1`, SystemIntegrationTestContractTest.kt)*:
-  • Assert `docs/system/sys_integration_tests.md` exists and contains required metadata header.
-  • Assert all 6 integration test cases (`SYS-INT-001` through `SYS-INT-006`) are defined.
-  • Assert coverage across all external system interfaces (`SYS-IF-01` BLE, `SYS-IF-02` ANT+, `SYS-IF-03` GNSS, `SYS-IF-05` Cloud).
+  1. *System Integration Boundary & Gap Disclosure (`TST-PRO-068.1`, SystemIntegrationTestContractTest.kt)*:
+  • Assert `docs/system/sys_integration_tests.md` exists, contains required metadata header, and explicitly discloses that Python simulators do not execute the Android APK or physical hardware.
+  • Assert documentation covers external system interfaces (`SYS-IF-01` BLE, `SYS-IF-02` ANT+, `SYS-IF-03` GNSS, `SYS-IF-05` Cloud) and honest allocation across `INT-SWE-01..08`, `AppSmokeAndroidTest.kt`, and manual `SYS.5`.
   2. *System Requirements Bidirectional Traceability (`TST-PRO-068.2`, SystemIntegrationTestContractTest.kt)*:
-  • Assert all integration test cases trace to system requirements (`SYSREQ-TRK-*`, `SYSREQ-DEX-*`) and system elements (`SYS-EL-*`).
-  • Assert exact bidirectional parity between referenced requirements and system documents.
-  3. *Headless CI Runner Execution & Artifact Generation (`TST-PRO-068.3`, tools/test_system_integration_tests.py)*:
-  • Execute `tools/run_system_integration_tests.py` in headless mode.
-  • Verify output report structure, pass/fail status, timestamping, and exit code 0.
-  4. *Integration Runner Unit Test Suite (`TST-PRO-068.4`, tools/test_system_integration_tests.py)*:
-  • Verify unit tests for simulation handlers, error paths, and CLI arguments pass cleanly under Python unittest.
+  • Assert interface specifications trace to system requirements (`SYSREQ-TRK-*`, `SYSREQ-DEX-*`) and system elements (`SYS-EL-01`..`05`).
+  3. *Simulator Self-Test Runner Execution (`TST-PRO-068.3`, tools/test_simulator_self_tests.py)*:
+  • Execute `tools/run_simulator_self_tests.py` against real simulator modules (`ble_hr_simulator.py`, `ble_power_simulator.py`, `ble_radar_simulator.py`) and verify JSON report schema via `--output`, explicit simulator-only metadata, and exit code 0.
+  4. *Simulator Self-Test Unit Suite (`TST-PRO-068.4`, tools/test_simulator_self_tests.py)*:
+  • Verify `unittest` suite for simulator handlers, targeted filtering, CLI `--output` arguments, and pure Python 3 stdlib compliance passes cleanly.
 
 ### TST-PRO-069: **System Verification Protocol & Hardware Reference Specification Contract Test Suite** [Verified]
 - **Priority**: High
@@ -2924,14 +2921,14 @@
 - **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-PRO-072`
 - **Component**: `.agents/skills/release-manager/SKILL.md`, `docs/releases/README.md`, `docs/releases/TEMPLATE.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ReleaseManagerSystemEvidenceContractTest.kt`, `docs/architecture.md`
-- **Jira**: `ATT-6169`
+- **Jira**: `ATT-6169`, `ATT-8157`
 - **Test Description**:
   1. *Skill System Evidence Gate Specification Contract Test (`TST-PRO-072.1`, ReleaseManagerSystemEvidenceContractTest.kt)*:
-  • Assert that `.agents/skills/release-manager/SKILL.md` exists and mandates SYS.4 (`system_integration_results.json`) and SYS.5 (`sys_verification_record.md`) verification gates.
+  • Assert that `.agents/skills/release-manager/SKILL.md` exists, mandates unit/`INT-SWE-01..08` + `SYS.5` (`sys_verification_record.md`) + `verification_summary.md` release gates, and does NOT mandate `system_integration_results.json` or invalid `--output-json` as a blocking SYS.4 gate.
   2. *Release Tag Blocking Logic Contract Test (`TST-PRO-072.2`, ReleaseManagerSystemEvidenceContractTest.kt)*:
-  • Assert that the release checklist and step-by-step procedures explicitly define pre-tagging blocking checks that reject tag creation if system verification records are missing or failing.
+  • Assert that the release checklist and step-by-step procedures explicitly block tag creation and Play Store distribution if `sys_verification_record.md` or `verification_summary.md` is missing, failing, or has unapproved deviations.
   3. *Release Template & Directory Structure Contract Test (`TST-PRO-072.3`, ReleaseManagerSystemEvidenceContractTest.kt)*:
-  • Assert that `docs/releases/` contains `README.md` and `TEMPLATE.md` specifying `docs/releases/<tag>/` artifact requirements and SYS.4/SYS.5 sign-off criteria.
+  • Assert that `docs/releases/` `README.md` and `TEMPLATE.md` specify `docs/releases/<tag>/` layout, `SYS.5` sign-off criteria, and non-gating simulator self-test status.
   4. *Contract Test Suite Execution & Governance Parity (`TST-PRO-072.4`, ReleaseManagerSystemEvidenceContractTest.kt & tools/verify_requirement_governance.py)*:
   • Assert `ReleaseManagerSystemEvidenceContractTest.kt` passes cleanly under Gradle and `python3 tools/verify_requirement_governance.py` confirms 100% living documentation parity.
 
@@ -2959,7 +2956,7 @@
 - **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-PRO-074`
 - **Component**: `tools/generate_release_verification_summary.py`, `tools/test_generate_release_verification_summary.py`, `.agents/skills/release-manager/SKILL.md`, `docs/releases/README.md`
-- **Jira**: `ATT-6138`
+- **Jira**: `ATT-6138`, `ATT-8157`
 - **Test Description**:
   1. *CLI Argument Parsing & Default Output Path Test (`TST-PRO-074.1`, test_generate_release_verification_summary.py)*:
   • Verify CLI accepts `--tag`, `--commit`, `--out`, and coverage threshold flags, correctly defaulting output to `docs/releases/<tag>/verification_summary.md`.
@@ -2967,8 +2964,8 @@
   • Verify parsing of JUnit XML reports and versioned archive reference `build-evidence/junit-test-results-<tag>.zip`.
   3. *Coverage JSON Integration & Threshold Verification Test (`TST-PRO-074.3`, test_generate_release_verification_summary.py)*:
   • Verify extraction of bidirectional REQ-TST and TST-Code metrics from `--coverage-json` output and threshold breach detection.
-  4. *SYS.4 and SYS.5 Evidence Parsing & Deviation Detection Test (`TST-PRO-074.4`, test_generate_release_verification_summary.py)*:
-  • Verify parsing of `system_integration_results.json` and `sys_verification_record.md`, flagging missing files, failed tests, and unsigned protocols under deviations requiring human approval.
+  4. *SYS.5 Gate & Non-Blocking Legacy Simulator Summary Test (`TST-PRO-074.4`, test_generate_release_verification_summary.py)*:
+  • Verify parsing of `sys_verification_record.md` flags missing/unsigned SYS.5 protocols under deviations requiring human approval, while missing `system_integration_results.json` raises zero blocking deviations and legacy files render honestly as non-blocking simulator/informational telemetry.
   5. *End-to-End Markdown Summary Generation & Governance Parity Test (`TST-PRO-074.5`, test_generate_release_verification_summary.py & tools/verify_requirement_governance.py)*:
   • Verify end-to-end generation of `verification_summary.md` and confirm 100% living documentation parity.
 
@@ -3615,3 +3612,20 @@
   • Verify `integration_strategy.md` reflects authentic `sprint_455.md` / `ATT-8500` metrics (`6,540` tests, `1,119` suites, `29m 21s` Tier-2 / `2,635.73s` sum), Level 1 `INT-SWE-01..08` scope, and `emulator-5554` policy.
   3. *Machine-Readable Evidence & Governance (`TST-PRO-111.3`, tools/verify_requirement_governance.py)*:
   • Verify JUnit XML captures `TST-INT-013..016` and `TST-PRO-111`, and living documentation shards pass governance checks with zero dangling references or code orphans.
+
+---
+
+### TST-PRO-112: **Simulator Self-Test Scoping & Release Gate Honesty Test Suite (ATT-8157)** [Verified]
+- **Requirement(s)**: `REQ-PRO-112`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Component**: `app/src/test/java/com/atrainingtracker/trainingtracker/build/SystemIntegrationTestContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ReleaseManagerSystemEvidenceContractTest.kt`, `tools/test_generate_release_verification_summary.py`, `tools/verify_requirement_governance.py`
+- **Jira**: `ATT-8157`
+- **Test Description**:
+  1. *Simulator Self-Test Rename & Purity Test (`TST-PRO-112.1`, tools/test_simulator_self_tests.py & SystemIntegrationTestContractTest.kt)*:
+  • Verify `tools/run_simulator_self_tests.py` (`SimulatorSelfTestRunner`) tests `ble_hr_simulator.py`, `ble_power_simulator.py`, and `ble_radar_simulator.py` without fake Android/constant-arithmetic claims, `--output` JSON export succeeds, legacy `run_system_integration_tests.py` is removed, and `SystemIntegrationTestContractTest.kt` passes.
+  2. *Non-Blocking Release Gate Removal Test (`TST-PRO-112.2`, tools/test_generate_release_verification_summary.py & ReleaseManagerSystemEvidenceContractTest.kt)*:
+  • Verify `collect_sys4_summary()` in `tools/generate_release_verification_summary.py` raises zero deviations when `system_integration_results.json` is absent, does not falsely emit `[ PASS ]` SYS.4 app integration status, and `ReleaseManagerSystemEvidenceContractTest.kt` asserts `SKILL.md` / `docs/releases/` / `docs/architecture.md` gate strictly on unit/`INT-SWE-01..08`, `SYS.5`, and `verification_summary.md`.
+  3. *Honest Documentation & V5.0.0 Reclassification Audit (`TST-PRO-112.3`, tools/verify_requirement_governance.py)*:
+  • Verify `docs/architecture.md` (§6.2, §6.4), `docs/system/sys_integration_tests.md`, `docs/releases/V5.0.0/` (`verification_summary.md`, `system_integration_results.json`), and living docs explicitly state simulator-only scope, `INT-SWE-01..08` + `AppSmokeAndroidTest.kt` + manual `SYS.5` boundaries, and pass `verify_requirement_governance.py` with exit 0.

@@ -354,11 +354,11 @@ Software components are integrated bottom-up to validate database persistence an
 
 For complete verification level definitions, entry/exit criteria, two-tier regression selection, and defect bisection workflows, see [`docs/architecture/integration_strategy.md`](architecture/integration_strategy.md).
 
-### 6.2 System Integration Verification with Sensor Simulators (ASPICE SYS.4, `REQ-PRO-068`, `TST-PRO-068`)
+### 6.2 Developer Sensor Simulator Self-Tests & Verification Boundary (`REQ-PRO-068`, `TST-PRO-068`, `REQ-PRO-112`)
 
-In accordance with **ASPICE SYS.4 (System Integration and Integration Verification)**, Level 3 integration verification between the Android host application (`SYS-EL-01`) and external wireless sensors, GNSS providers, and cloud platforms is formally specified in [`docs/system/sys_integration_tests.md`](system/sys_integration_tests.md):
-* **Interfaces Verified**: `SYS-IF-01` (BLE Heart Rate `0x180D`, Cycling Power `0x1818`, Garmin Varia Radar `6a4e3200`), `SYS-IF-02` (ANT+ IPC Radio Socket), `SYS-IF-03` (Multi-Source GNSS Fixes), and `SYS-IF-05` (Cloud Sync / Strava REST API).
-* **Automated CI Execution**: Headless virtual execution via `python3 tools/run_system_integration_tests.py --headless`, generating structured JSON verification evidence (`docs/releases/<tag>/system_integration_results.json`) for audit compliance and pre-release gating.
+External hardware interfaces (`SYS-IF-01` BLE GATT `0x180D` / `0x1818` / `6a4e3200`, `SYS-IF-02` ANT+ IPC, `SYS-IF-03` GNSS, and `SYS-IF-05` Cloud REST APIs) are documented alongside simulator tooling in [`docs/system/sys_integration_tests.md`](system/sys_integration_tests.md):
+* **Developer Simulator Self-Tests (Non-Gating)**: `python3 tools/run_simulator_self_tests.py` exercises Python developer tools (`tools/ble_hr_simulator.py`, `tools/ble_power_simulator.py`, `tools/ble_radar_simulator.py`, `tools/fake_gps.py`, `tools/replay_workout.py`) ONLY. These self-tests do **not** execute the Android APK, emulator, or physical sensors and are **not** a blocking release gate (`REQ-PRO-112`).
+* **Automated App Verification Gap & Coverage**: Automated software-boundary integration across Android components runs via Robolectric Level 1 (`INT-SWE-01..08`) and connected CI smoke tests (`AppSmokeAndroidTest.kt`). End-to-end physical RF/sensor integration remains manual hardware-in-the-loop under **ASPICE SYS.5** (§6.3).
 
 ### 6.3 System Verification Protocol on Real Hardware & Sensors (ASPICE SYS.5, `REQ-PRO-069`, `TST-PRO-069`)
 
@@ -367,11 +367,11 @@ In accordance with **ASPICE SYS.5 (System Verification)**, end-to-end qualificat
 * **Environmental Operating Conditions**: 5 quantified operational endurance environments: (E1) Urban Canyon, (E2) Rural Road / High Speed, (E3) Alpine Climb & Barometric Variation, (E4) Indoor Smart Trainer, and (E5) Extended Endurance Battery Longevity.
 * **Release Qualification**: Formal test cases (`SYS-VRF-001` through `SYS-VRF-008`), objective pass/fail criteria (sample loss $\le 1\%$, battery drain $\le 8\%$/hr, RF reconnection within backoff window, FIT/TCX schema validity), and release sign-off record generation under `docs/releases/<tag>/sys_verification_record.md`.
 
-### 6.4 Release Process Gating & System Verification Evidence (ASPICE SUP.8, SYS.4, SYS.5, `REQ-PRO-072`, `TST-PRO-072`)
+### 6.4 Release Process Gating & System Verification Evidence (ASPICE SUP.8, SWE.6, SYS.5, `REQ-PRO-072`, `TST-PRO-072`, `REQ-PRO-112`)
 
-In accordance with **ASPICE SUP.8 (Configuration and Release Management)**, **SYS.4**, and **SYS.5**, release qualification enforces mandatory system-level evidence integration into the release lifecycle governed by [`.agents/skills/release-manager/SKILL.md`](../.agents/skills/release-manager/SKILL.md) and [`docs/releases/`](releases/):
-* **Release Evidence Dossier Structure**: Every release candidate tag (`<tag>`) requires an evidence directory `docs/releases/<tag>/` containing automated SYS.4 test results (`system_integration_results.json`) and physical SYS.5 verification protocol records (`sys_verification_record.md`), templated in [`docs/releases/TEMPLATE.md`](releases/TEMPLATE.md) and documented in [`docs/releases/README.md`](releases/README.md).
-* **Blocking Tag Creation Gate**: Creating release candidate tags (`V<versionName>__<versionCode>`), finishing GitFlow releases, or uploading artifacts to Google Play tracks is strictly blocked if either system integration or verification record is missing, incomplete, or contains failing test verdicts.
+In accordance with **ASPICE SUP.8 (Configuration and Release Management)**, **SWE.6**, and **SYS.5**, release qualification enforces verified unit/software-integration evidence (`INT-SWE-01..08`, `AppSmokeAndroidTest.kt`) and hardware-in-the-loop SYS.5 verification records in the release lifecycle governed by [`.agents/skills/release-manager/SKILL.md`](../.agents/skills/release-manager/SKILL.md) and [`docs/releases/`](releases/):
+* **Release Evidence Dossier Structure**: Every release candidate tag (`<tag>`) requires an evidence directory `docs/releases/<tag>/` containing hardware-in-the-loop SYS.5 verification protocol records (`sys_verification_record.md`) and consolidated release summary (`verification_summary.md`), templated in [`docs/releases/TEMPLATE.md`](releases/TEMPLATE.md) and documented in [`docs/releases/README.md`](releases/README.md). Python simulator artifacts (`system_integration_results.json`) are **retired as a blocking release gate**.
+* **Blocking Tag Creation Gate**: Creating release candidate tags (`V<versionName>__<versionCode>`), finishing GitFlow releases, or uploading artifacts to Google Play tracks is strictly blocked if unit/integration tests fail, `sys_verification_record.md` is missing/unsigned, or `verification_summary.md` reports unapproved deviations.
 
 
 

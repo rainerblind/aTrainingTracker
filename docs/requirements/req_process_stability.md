@@ -3,7 +3,7 @@
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Requirements**: 176
+**Total Requirements**: 177
 
 ---
 
@@ -4141,35 +4141,33 @@ The workflow SHALL mandate that:
   • *Then* canonical directory structure and workflow YAML validity pass with 100% success.
 - **Invariants**: Zero modifications to Android production runtime code in `app/src/main/`; Rule 67 canonical directory structure preserved.
 
-### REQ-PRO-068: System Integration Verification & Sensor Simulators Specification [Verified]
+### REQ-PRO-068: Developer Sensor Simulator Self-Test Harness & Honest System Boundary Specification [Verified]
 - **Tests**: `TST-PRO-068`
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit / Review
-- **Implementation**: `app/src/test/java/com/atrainingtracker/trainingtracker/build/SystemIntegrationTestContractTest.kt`
-- **Rationale**: Under ASPICE SYS.4 (Finding S-06), system integration test specifications and repeatable verification procedures must be established covering all external system interfaces (BLE, ANT+, GNSS, Cloud) using sensor simulators to ensure reproducible integration verification in CI and pre-release audits:
-  1. *System Integration Test Specification (`REQ-PRO-068.1`, docs/system/sys_integration_tests.md)*:
-     • `docs/system/sys_integration_tests.md` SHALL specify formal system integration test cases (`SYS-INT-001` through `SYS-INT-006`) covering external interfaces: BLE Heart Rate (`0x180D`), BLE Cycling Power (`0x1818`), BLE Garmin Varia Radar (`6a4e3200`), ANT+ Radio IPC (`SYS-IF-02`), GNSS Positioning (`SYS-IF-03`), and Cloud Synchronization (`SYS-IF-05`).
-     • Every integration test case SHALL trace bidirectionally to corresponding system requirements (`SYSREQ-TRK-*`, `SYSREQ-DEX-*`) and system elements (`SYS-EL-01` through `SYS-EL-05`).
-     • Pass/fail criteria, timing tolerances, and artifact logging under `docs/releases/<tag>/` SHALL be formally specified.
-  2. *Headless CI Integration Test Runner (`REQ-PRO-068.2`, tools/run_system_integration_tests.py)*:
-     • `tools/run_system_integration_tests.py` SHALL execute automated system integration verification headless without physical hardware in CI, simulating peripheral data streams and logging structured execution results in JSON format.
-  3. *Integration Runner Test Suite (`REQ-PRO-068.3`, tools/test_system_integration_tests.py)*:
-     • `tools/test_system_integration_tests.py` SHALL verify runner functionality, interface simulation handlers, CLI arguments, and error reporting using standard library unittest.
+- **Implementation**: `app/src/test/java/com/atrainingtracker/trainingtracker/build/SystemIntegrationTestContractTest.kt`, `docs/system/sys_integration_tests.md`
+- **Rationale**: Under ASPICE SYS.4 / SUP.1 (Finding S-06, remediated for M6 honesty under `ATT-8157`), sensor simulator tools (`tools/ble_hr_simulator.py`, `tools/ble_power_simulator.py`, `tools/ble_radar_simulator.py`, `tools/fake_gps.py`, `tools/replay_workout.py`) require an explicit developer simulator self-test harness and honest documentation separating pure-Python simulator self-tests from real Android software integration (`INT-SWE-01..08`, `AppSmokeAndroidTest.kt`) and physical hardware-in-the-loop verification (`SYS.5`):
+  1. *System Integration Boundary & Gap Disclosure (`REQ-PRO-068.1`, docs/system/sys_integration_tests.md)*:
+     • `docs/system/sys_integration_tests.md` SHALL document external interfaces (`SYS-IF-01` BLE, `SYS-IF-02` ANT+, `SYS-IF-03` GNSS, `SYS-IF-05` Cloud), trace to `SYSREQ-TRK-*`, `SYSREQ-DEX-*`, and `SYS-EL-01..05`, and explicitly disclose that headless Python simulator tests do NOT execute the Android APK or physical RF hardware.
+  2. *Simulator Self-Test Runner (`REQ-PRO-068.2`, tools/run_simulator_self_tests.py)*:
+     • Renamed from `tools/run_system_integration_tests.py`, `tools/run_simulator_self_tests.py` SHALL execute deterministic pure-Python self-tests against the BLE simulator modules (`ble_hr_simulator`, `ble_power_simulator`, `ble_radar_simulator`) without claiming constant-arithmetic stubs represent Android integration or blocking releases (`--output` JSON optional).
+  3. *Simulator Self-Test Runner Unit Suite (`REQ-PRO-068.3`, tools/test_simulator_self_tests.py)*:
+     • Renamed from `tools/test_system_integration_tests.py`, `tools/test_simulator_self_tests.py` SHALL verify simulator self-test handlers, CLI `--output` arguments, and pure Python 3 stdlib compliance using `unittest`.
   4. *Contract Testing & Governance (`REQ-PRO-068.4`, SystemIntegrationTestContractTest.kt & verify_requirement_governance.py)*:
-     • `SystemIntegrationTestContractTest.kt` SHALL verify `docs/system/sys_integration_tests.md` structural completeness, interface coverage, system requirement allocation mapping, and automated command availability.
+     • `SystemIntegrationTestContractTest.kt` SHALL verify `docs/system/sys_integration_tests.md` structural completeness, honest simulator-only gap disclosure, interface traceability, and existence of the simulator tools and `tools/run_simulator_self_tests.py` / `tools/test_simulator_self_tests.py`.
 - **Requirement Archaeology & Chesterton's Fence Audit**:
-  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-068` (`REQ-PRO-068.1`–`REQ-PRO-068.4`). Targets `docs/system/sys_integration_tests.md`, `tools/run_system_integration_tests.py`, `tools/test_system_integration_tests.py`, and `SystemIntegrationTestContractTest.kt`.
-  2. *Historical Origin & Commit Trace*: Sprint 2026-46.4 via ticket `ATT-6166` under Epic `ATT-6142` (ASPICE CL2 Remediation S-06).
-  3. *Root Reason for Existing Formulation*: ASPICE 4.0 assessment of 2026-11-08 rated SYS.4 as CL0 due to the absence of a documented system integration test specification and repeatable procedure.
-  4. *Preservation of Core Invariants*: Zero modifications to Android production runtime code in `app/src/main/`; pure Python standard library for simulator verification tooling.
+  1. *Original Requirement ID & Target*: `REQ-PRO-068` (`REQ-PRO-068.1`–`REQ-PRO-068.4`). Targets `docs/system/sys_integration_tests.md`, `tools/run_system_integration_tests.py` (renamed to `tools/run_simulator_self_tests.py`), `tools/test_system_integration_tests.py` (renamed to `tools/test_simulator_self_tests.py`), and `SystemIntegrationTestContractTest.kt`.
+  2. *Historical Origin & Commit Trace*: Originally created in Sprint 2026-46.4 via `ATT-6166` (`ATT-6142`); rescoped in Sprint `2026-11-17_01_Früh` via `ATT-8157` (`REQ-PRO-112`).
+  3. *Root Reason for Existing Formulation*: `ATT-6166` sought repeatable headless sensor simulator checks in CI, but named and framed them as SYS.4 system integration tests (`SYS-INT-001..006`) despite executing zero Android code or emulator ADB workflows.
+  4. *Preservation of Core Invariants*: Preserves pure-Python simulator self-testing, external interface traceability (`SYS-IF-01..05`, `SYSREQ-TRK-*`, `SYSREQ-DEX-*`), and zero `app/src/main/` modifications while eliminating misleading SYS.4 claims.
 - **Acceptance Criteria (Given-When-Then)**:
   • *Given* `docs/system/sys_integration_tests.md`,
   • *When* inspected,
-  • *Then* formal integration test cases cover each external system interface (`SYS-IF-01` through `SYS-IF-05`) with bidirectional traceability to `SYSREQ-*` requirements.
-  • *Given* the headless CI runner `tools/run_system_integration_tests.py`,
-  • *When* executed in CI without hardware,
-  • *Then* it executes all simulator integration test scenarios, logs structured results, and exits with code 0.
+  • *Then* it documents external interfaces (`SYS-IF-01`..`05`), `SYSREQ-*` traceability, and explicitly classifies the Python runner as non-gating simulator self-tests alongside `INT-SWE-01..08` and manual `SYS.5`.
+  • *Given* `tools/run_simulator_self_tests.py` and `tools/test_simulator_self_tests.py`,
+  • *When* executed in Python,
+  • *Then* simulator self-tests and `unittest` cases pass with exit code 0 using `--output` JSON export when requested.
   • *Given* `SystemIntegrationTestContractTest.kt`,
   • *When* executed via Gradle,
   • *Then* all contract tests pass with 100% success.
@@ -4282,27 +4280,27 @@ The workflow SHALL mandate that:
 - **Type**: Non-Functional
 - **Verification Method**: Unit / Review
 - **Implementation**: `.agents/skills/release-manager/SKILL.md`, `docs/releases/README.md`, `docs/releases/TEMPLATE.md`, `docs/architecture.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ReleaseManagerSystemEvidenceContractTest.kt`
-- **Rationale**: Under ASPICE SYS.5 and SUP.8 (Finding S-08), release decisions and release checklists must reference system-level evidence (SYS.4 integration verification and SYS.5 system verification protocol records). The release manager skill, release checklists, and release documentation must require verified system integration and system verification evidence, explicitly blocking release candidate tag creation if records are missing or failing:
+- **Rationale**: Under ASPICE SYS.5 and SUP.8 (Finding S-08, updated for evidence honesty under `ATT-8157`), release decisions and release checklists must be gated strictly on real software/integration verification (`testDebugUnitTest` including `INT-SWE-01..08`, CI `AppSmokeAndroidTest.kt`) and authentic hardware-in-the-loop SYS.5 system verification records (`docs/releases/<tag>/sys_verification_record.md`), rather than synthetic Python simulator JSON (`system_integration_results.json`):
   1. *Mandatory System Evidence Gate Specification (`REQ-PRO-072.1`, .agents/skills/release-manager/SKILL.md)*:
-     • `.agents/skills/release-manager/SKILL.md` SHALL specify mandatory verification gates requiring both SYS.4 System Integration Verification results (`docs/releases/<tag>/system_integration_results.json` generated by `tools/run_system_integration_tests.py`) and SYS.5 System Verification Protocol sign-off records (`docs/releases/<tag>/sys_verification_record.md` per `docs/system/sys_verification_protocol.md`).
+     • `.agents/skills/release-manager/SKILL.md` SHALL specify mandatory release verification gates requiring unit/software integration tests (`INT-SWE-01..08` + CI `AppSmokeAndroidTest.kt`), SYS.5 System Verification Protocol sign-off (`docs/releases/<tag>/sys_verification_record.md` per `docs/system/sys_verification_protocol.md`), and `docs/releases/<tag>/verification_summary.md` — without mandating `system_integration_results.json` as a blocking release gate.
   2. *Release Tagging Blocking Gate (`REQ-PRO-072.2`, .agents/skills/release-manager/SKILL.md)*:
-     • The release checklist and step-by-step procedures in `.agents/skills/release-manager/SKILL.md` SHALL explicitly block the creation of release candidate tags (`V<versionName>__<versionCode>`) and production distribution if either system verification record is missing, incomplete, or contains failing test verdicts.
+     • The release checklist and step-by-step procedures in `.agents/skills/release-manager/SKILL.md` SHALL explicitly block creating release candidate tags (`V<versionName>__<versionCode>`) and Google Play Store distribution if `sys_verification_record.md` or `verification_summary.md` is missing, incomplete, or contains failing verdicts / unapproved deviations.
   3. *Standardized Release Evidence Directory & Template (`REQ-PRO-072.3`, docs/releases/)*:
-     • A standardized release evidence specification and template (`docs/releases/README.md` and `docs/releases/TEMPLATE.md`) SHALL be established defining required directory structure `docs/releases/<tag>/`, artifact schemas, and cross-references to SYS.4 and SYS.5 sign-off criteria.
+     • `docs/releases/README.md` and `docs/releases/TEMPLATE.md` SHALL define `docs/releases/<tag>/` layout (`sys_verification_record.md`, `verification_summary.md`, optional `release_dossier.md`), explicitly marking `system_integration_results.json` retired/non-gating.
   4. *Release Manager System Evidence Contract Testing (`REQ-PRO-072.4`, ReleaseManagerSystemEvidenceContractTest.kt)*:
-     • An automated JUnit contract test `ReleaseManagerSystemEvidenceContractTest.kt` SHALL verify that `.agents/skills/release-manager/SKILL.md` and release templates enforce the mandatory SYS.4 and SYS.5 gating criteria and block release candidate creation upon missing/failing evidence.
+     • `ReleaseManagerSystemEvidenceContractTest.kt` SHALL verify that `.agents/skills/release-manager/SKILL.md`, `docs/releases/`, and `docs/architecture.md` §6.4 enforce `SYS.5` / `verification_summary.md` blocking gates and do NOT mandate fake `system_integration_results.json` gating.
 - **Requirement Archaeology & Chesterton's Fence Audit**:
-  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-072` (`REQ-PRO-072.1`–`REQ-PRO-072.4`). Targets `.agents/skills/release-manager/SKILL.md`, `docs/releases/`, `docs/architecture.md`, and `ReleaseManagerSystemEvidenceContractTest.kt`.
-  2. *Historical Origin & Commit Trace*: Sprint 2026-46.4 via ticket `ATT-6169` under Epic `ATT-6142` (ASPICE CL2 Remediation S-08). Builds on `daab754c` (ATT-6166) and `0d18ef1a` (ATT-6167).
-  3. *Root Reason for Existing Formulation*: ASPICE 4.0 assessment of 2026-11-08 identified that release checklists only verified unit compilation and APK signing without verifying system-level evidence against system requirements.
-  4. *Preservation of Core Invariants*: Canonical 10-step release process from ATT-170 is preserved with mandatory system evidence verification prerequisites; zero production Android runtime code changes in `app/src/main/`.
+  1. *Original Requirement ID & Target*: `REQ-PRO-072` (`REQ-PRO-072.1`–`REQ-PRO-072.4`). Targets `.agents/skills/release-manager/SKILL.md`, `docs/releases/README.md`, `docs/releases/TEMPLATE.md`, `docs/architecture.md`, and `ReleaseManagerSystemEvidenceContractTest.kt`.
+  2. *Historical Origin & Commit Trace*: Originally created in Sprint 2026-46.4 via `ATT-6169` (`ATT-6142`); updated in Sprint `2026-11-17_01_Früh` via `ATT-8157` (`REQ-PRO-112`).
+  3. *Root Reason for Existing Formulation*: `ATT-6169` gated releases on `system_integration_results.json` alongside `sys_verification_record.md`, but `system_integration_results.json` came from pure-Python simulator arithmetic checks and `SKILL.md` even passed an invalid `--output-json` flag.
+  4. *Preservation of Core Invariants*: Preserves the canonical 10-step release process (`ATT-170`), mandatory `SYS.5` real-device sign-off (`sys_verification_record.md`), `verification_summary.md` blocking gate, and zero `app/src/main/` changes.
 - **Acceptance Criteria (Given-When-Then)**:
-  • *Given* `.agents/skills/release-manager/SKILL.md`,
+  • *Given* `.agents/skills/release-manager/SKILL.md`, `docs/releases/README.md`, and `docs/releases/TEMPLATE.md`,
   • *When* inspected,
-  • *Then* it specifies mandatory gates requiring `docs/releases/<tag>/system_integration_results.json` and `docs/releases/<tag>/sys_verification_record.md`.
+  • *Then* they mandate `docs/releases/<tag>/sys_verification_record.md` and `verification_summary.md` as blocking release gates and do not treat `system_integration_results.json` as a blocking SYS.4 gate.
   • *Given* release candidate preparation,
-  • *When* system verification records are missing or failing,
-  • *Then* the release procedure blocks release candidate tag creation.
+  • *When* `sys_verification_record.md` or `verification_summary.md` has open deviations or missing sign-off,
+  • *Then* tag creation and Play Store upload are blocked.
   • *Given* `ReleaseManagerSystemEvidenceContractTest.kt`,
   • *When* executed via Gradle,
   • *Then* all assertions pass with 100% success.
@@ -4349,31 +4347,31 @@ The workflow SHALL mandate that:
 - **Type**: Non-Functional
 - **Verification Method**: Unit / Review
 - **Implementation**: `tools/generate_release_verification_summary.py`, `tools/test_generate_release_verification_summary.py`, `.agents/skills/release-manager/SKILL.md`, `docs/releases/README.md`
-- **Rationale**: Under ASPICE SWE.6 BP5 (Finding A-11), release decisions must be based on recorded, baseline-controlled verification evidence. A standalone generator script SHALL consolidate unit test counts/results, bidirectional requirement-to-test traceability matrices, system integration verification results (SYS.4), and system verification protocol sign-off records (SYS.5) into an authoritative Markdown summary per release tag (`docs/releases/<tag>/verification_summary.md`), explicitly highlighting all deviations requiring human approval:
+- **Rationale**: Under ASPICE SWE.6 BP5 (Finding A-11, updated for `ATT-8157` release gate honesty), release decisions must be based on recorded, baseline-controlled verification evidence. A standalone generator script SHALL consolidate unit/integration test counts/results, bidirectional requirement-to-test traceability matrices, optional informational simulator records (when present), and hardware-in-the-loop system verification protocol sign-off records (SYS.5) into an authoritative Markdown summary per release tag (`docs/releases/<tag>/verification_summary.md`), explicitly highlighting all deviations requiring human approval:
   1. *Automated Release Verification Summary CLI (`REQ-PRO-074.1`, tools/generate_release_verification_summary.py)*:
      • `tools/generate_release_verification_summary.py` SHALL provide a command-line interface accepting `--tag <TAG>` (e.g. `V5.0.0__2026111201`), optional `--commit <SHA>` (defaulting to current HEAD), optional `--out <PATH>` (defaulting to `docs/releases/<tag>/verification_summary.md`), and optional threshold parameters (`--min-req-tst-coverage`, `--min-tst-code-coverage`, `--min-bidirectional-coverage`).
   2. *Unit & Regression Test Evidence Aggregation (`REQ-PRO-074.2`, tools/generate_release_verification_summary.py)*:
-     • The generator SHALL aggregate total unit test count, passed, failed, and skipped tests from `app/build/test-results/testDebugUnitTest/` or test archive files, and reference the versioned JUnit test archive artifact (`build-evidence/junit-test-results-<tag>.zip` per ATT-6137).
+     • The generator SHALL aggregate total unit/integration test count, passed, failed, and skipped tests from `app/build/test-results/testDebugUnitTest/` or test archive files, and reference the versioned JUnit test archive artifact (`build-evidence/junit-test-results-<tag>.zip` per ATT-6137).
   3. *Bidirectional REQ-TST Traceability Matrix Aggregation (`REQ-PRO-074.3`, tools/generate_release_verification_summary.py)*:
      • The generator SHALL query and embed bidirectional requirement-to-test coverage data via `tools/verify_requirement_governance.py --coverage-json` (per ATT-6122), presenting REQ-to-TST coverage %, TST-to-code coverage %, and bidirectional coverage metrics.
-  4. *System Integration & Verification Protocol Status Aggregation (`REQ-PRO-074.4`, tools/generate_release_verification_summary.py)*:
-     • The generator SHALL parse and summarize SYS.4 System Integration Verification results from `docs/releases/<tag>/system_integration_results.json` (per ATT-6166) and SYS.5 System Verification Protocol sign-off records from `docs/releases/<tag>/sys_verification_record.md` (per ATT-6167).
+  4. *System Verification Status & Non-Blocking Legacy Simulator Summary (`REQ-PRO-074.4`, tools/generate_release_verification_summary.py)*:
+     • The generator SHALL parse and gate on SYS.5 System Verification Protocol sign-off records (`docs/releases/<tag>/sys_verification_record.md` per `ATT-6167`). `collect_sys4_summary()` SHALL treat `docs/releases/<tag>/system_integration_results.json` as **optional non-blocking simulator/legacy telemetry** (raising zero missing-file deviation and never gating or falsely certifying Android app SYS.4 pass status if absent or legacy).
   5. *Open Deviations & Human Approval Gating (`REQ-PRO-074.5`, tools/generate_release_verification_summary.py)*:
-     • The generator SHALL evaluate whether any test failure, missing evidence file, or coverage below configured thresholds exists, and enumerate them under an explicit `Deviations Requiring Human Approval` section, assigning an overall status of `PASS` or `BLOCKED / REQUIRES HUMAN APPROVAL`.
+     • The generator SHALL evaluate whether any unit/integration test failure, missing SYS.5 evidence, or coverage below configured thresholds exists, and enumerate them under an explicit `Deviations Requiring Human Approval` section, assigning an overall status of `PASS (READY FOR RELEASE)` or `BLOCKED / REQUIRES HUMAN APPROVAL`.
 - **Requirement Archaeology & Chesterton's Fence Audit**:
-  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-074` (`REQ-PRO-074.1`–`REQ-PRO-074.5`). Targets `tools/generate_release_verification_summary.py`, `tools/test_generate_release_verification_summary.py`, `.agents/skills/release-manager/SKILL.md`, and `docs/releases/README.md`.
-  2. *Historical Origin & Commit Trace*: Sprint 2026-46.4 via ticket `ATT-6138` under Epic `ATT-6119` (ASPICE CL2 Remediation A-11). Builds on `ddd1024a` (ATT-6137), `687e8388` (ATT-6122), `daab754c` (ATT-6166), `0d18ef1a` (ATT-6167), and `bf31bead` (ATT-6169).
-  3. *Root Reason for Existing Formulation*: ASPICE 4.0 assessment finding A-11 identified that release decisions lacked a consolidated, baseline-controlled verification summary file documenting all verification dimensions and deviations.
-  4. *Preservation of Core Invariants*: Canonical release workflow preserved; pure Python 3 standard library CLI; zero production Android runtime code changes in `app/src/main/`.
+  1. *Original Requirement ID & Target*: `REQ-PRO-074` (`REQ-PRO-074.1`–`REQ-PRO-074.5`). Targets `tools/generate_release_verification_summary.py`, `tools/test_generate_release_verification_summary.py`, `.agents/skills/release-manager/SKILL.md`, and `docs/releases/README.md`.
+  2. *Historical Origin & Commit Trace*: Sprint 2026-46.4 via `ATT-6138` (`ATT-6119`), building on `ATT-6137`, `ATT-6122`, `ATT-6166`, `ATT-6167`, `ATT-6169`; `REQ-PRO-074.4` updated in Sprint `2026-11-17_01_Früh` via `ATT-8157` (`REQ-PRO-112`).
+  3. *Root Reason for Existing Formulation*: `collect_sys4_summary()` previously flagged absent `system_integration_results.json` as a blocking release deviation and rendered simulator self-tests as `[ PASS ]` SYS.4 evidence.
+  4. *Preservation of Core Invariants*: Preserves unit test, traceability coverage, and SYS.5 sign-off blocking gates, pure Python 3 stdlib CLI, and zero `app/src/main/` runtime changes.
 - **Acceptance Criteria (Given-When-Then)**:
-  • *Given* release evidence artifacts for a release tag,
+  • *Given* valid unit test evidence, traceability coverage, and signed `sys_verification_record.md` without `system_integration_results.json`,
   • *When* `tools/generate_release_verification_summary.py --tag <TAG>` executes,
-  • *Then* `docs/releases/<tag>/verification_summary.md` is generated with unit tests, coverage matrix, SYS.4, and SYS.5 sections.
-  • *Given* any failing test, missing evidence, or coverage below threshold,
+  • *Then* `docs/releases/<tag>/verification_summary.md` reports `PASS (READY FOR RELEASE)` with zero missing-SYS.4 deviations.
+  • *Given* any failing unit/integration test, missing/incomplete `sys_verification_record.md`, or coverage below threshold,
   • *When* the summary is generated,
   • *Then* it is explicitly listed under `Deviations Requiring Human Approval` with overall status `BLOCKED / REQUIRES HUMAN APPROVAL`.
   • *Given* `tools/test_generate_release_verification_summary.py`,
-  • *When* executed via pytest/unittest,
+  • *When* executed via `unittest`,
   • *Then* 100% of unit tests pass.
 - **Invariants**: Zero Android production runtime code changes in `app/src/main/`.
 
@@ -5740,3 +5738,33 @@ The workflow SHALL mandate that:
   • *When* reviewed against `sprint_455.md` and `stage5-verification/SKILL.md`,
   • *Then* test counts (`6,540`), suite counts (`1,119`), runtime (`29m 21s` Tier-2 / `2,635.73s` sum), and `emulator-5554` policy match reality.
 - **Invariants**: Zero Android production code impact (`app/src/main/`); `ANT-Android-SDKs` untouched at `160000 commit 0e8cea714a231fb9565170d4ed01eafa868f9798`; existing test fixtures and POSIX flock semantics preserved.
+
+---
+
+### REQ-PRO-112: Simulator Self-Test Scoping & Release Gate Honesty (ATT-8157) [Verified]
+- **Tests**: `TST-PRO-112`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `app/src/test/java/com/atrainingtracker/trainingtracker/build/SystemIntegrationTestContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ReleaseManagerSystemEvidenceContractTest.kt`, `tools/generate_release_verification_summary.py`, `.agents/skills/release-manager/SKILL.md`, `docs/architecture.md`, `docs/system/sys_integration_tests.md`, `docs/releases/README.md`, `docs/releases/TEMPLATE.md`
+- **Rationale**: Resolves ASPICE 4.0 Assessment (2026-11-15) Finding `M6` on system-level testing honesty (`ATT-8157`): `tools/run_system_integration_tests.py` ran pure-Python simulator checks and constant-arithmetic assertions without executing the Android APK, ADB, or emulator, while `.agents/skills/release-manager/SKILL.md` (with broken `--output-json` CLI drift vs `--output`), `tools/generate_release_verification_summary.py`, `docs/architecture.md`, `docs/releases/`, and `docs/releases/V5.0.0/` represented `system_integration_results.json` as a blocking SYS.4 app-integration release gate.
+- **Description**:
+  1. *Simulator Self-Test Rename & Rescoping (`REQ-PRO-112.1`, [Verified])*: `tools/run_system_integration_tests.py` and `tools/test_system_integration_tests.py` SHALL be renamed and rescoped to `tools/run_simulator_self_tests.py` and `tools/test_simulator_self_tests.py` (`SimulatorSelfTestRunner`), explicitly classified as pure-Python developer simulator self-tests (testing `ble_hr_simulator.py`, `ble_power_simulator.py`, `ble_radar_simulator.py` contracts), eliminating misleading constant-arithmetic claims (`(10 - 65530) & 0xFFFF`, local `backoffs`/`oauth_response` literals) and aligning CLI `--output` parity with `SystemIntegrationTestContractTest.kt`.
+  2. *Non-Blocking Release Gate Removal (`REQ-PRO-112.2`, [Verified])*: `system_integration_results.json` SHALL be removed as a mandatory blocking SYS.4 release gate in `tools/generate_release_verification_summary.py` (`collect_sys4_summary()`), `tools/test_generate_release_verification_summary.py`, `.agents/skills/release-manager/SKILL.md`, `docs/releases/README.md`, `docs/releases/TEMPLATE.md`, and `ReleaseManagerSystemEvidenceContractTest.kt`; blocking release gating remains anchored strictly on unit/integration tests (`INT-SWE-01..08`, CI `AppSmokeAndroidTest.kt`) and hardware-in-the-loop `SYS.5` sign-off (`sys_verification_record.md`) + `verification_summary.md`.
+  3. *Honest Documentation & V5.0.0 Reclassification (`REQ-PRO-112.3`, [Verified])*: `docs/architecture.md` (§6.2, §6.4), `docs/system/sys_integration_tests.md`, and `docs/releases/V5.0.0/` (`verification_summary.md`, `system_integration_results.json`) SHALL disclose honestly that Python simulators are developer tools only, physical-sensor system verification is manual hardware-in-the-loop (`SYS.5`), and legacy `V5.0.0` `system_integration_results.json` reflects historical simulator self-tests rather than app execution (without fabricating hardware logs).
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new `REQ-PRO-112` refining `REQ-PRO-068`, `REQ-PRO-072`, and `REQ-PRO-074.4` across `tools/`, `.agents/skills/release-manager/SKILL.md`, `docs/architecture.md`, `docs/system/sys_integration_tests.md`, `docs/releases/`, and build contract tests.
+  2. *Historical Origin & Commit Trace*: Sprint `2026-11-17_01_Früh` via `ATT-8157`, following `ATT-8155` (`b81888c8`) and `ATT-8156` (`84767320`) under Epic `ATT-8138`.
+  3. *Root Reason for Existing Formulation*: `ATT-6166`, `ATT-6169`, and `ATT-6138` wired Python simulator JSON into release blocking gates while `SKILL.md` referenced a nonexistent `--output-json` flag, producing false SYS.4 confidence without executing Android code.
+  4. *Preservation of Core Invariants*: Preserves simulator tool unit testing (`ble_hr_simulator.py`, `ble_power_simulator.py`, `ble_radar_simulator.py`, `fake_gps.py`, `replay_workout.py`), `SYS.5` real-device release gating, `verification_summary.md` deviation blocking, zero `app/src/main/` changes, and `ANT-Android-SDKs` (`0e8cea71`).
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `tools/run_simulator_self_tests.py` and `tools/test_simulator_self_tests.py`,
+  • *When* executed via `python3`,
+  • *Then* simulator self-tests pass against real simulator modules without claiming Android/emulator integration, and `--output` JSON export works cleanly.
+  • *Given* `tools/generate_release_verification_summary.py` run for a release tag without `system_integration_results.json`,
+  • *When* unit tests, traceability coverage, and `sys_verification_record.md` pass,
+  • *Then* `collect_sys4_summary()` raises zero missing-gate deviations and `verification_summary.md` evaluates to `PASS (READY FOR RELEASE)`.
+  • *Given* `docs/architecture.md`, `docs/system/sys_integration_tests.md`, `docs/releases/{README,TEMPLATE}.md`, `docs/releases/V5.0.0/`, `.agents/skills/release-manager/SKILL.md`, `SystemIntegrationTestContractTest.kt`, and `ReleaseManagerSystemEvidenceContractTest.kt`,
+  • *When* audited via Gradle contract tests and `verify_requirement_governance.py`,
+  • *Then* all tests pass with explicit honest simulator classification and zero false SYS.4 blocking claims.
+- **Invariants**: Zero Android production code impact (`app/src/main/`); `ANT-Android-SDKs` untouched at `0e8cea714a231fb9565170d4ed01eafa868f9798`; pure Python 3 stdlib for `tools/` test runners.

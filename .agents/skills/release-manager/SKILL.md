@@ -8,7 +8,7 @@ description: Orchestrates the production release lifecycle based on GitFlow, ATT
 ## Overview
 This skill governs the end-to-end production release process for aTrainingTracker. It standardizes the workflow defined in template ticket **ATT-170**, active release tickets (e.g. **ATT-1191**), and ASPICE CL2 release governance requirements (**REQ-PRO-072**).
 
-The lifecycle bridges GitFlow branch management, Gradle build automation, signed artifact verification, mandatory system integration and verification evidence gating under `docs/releases/<tag>/` (**ASPICE SYS.4 & SYS.5**), Google Play Store distribution, real-time Jira release ticket checklist maintenance, structured audit commenting, and version incrementation for the next development cycle.
+The lifecycle bridges GitFlow branch management, Gradle build automation, signed artifact verification, mandatory software integration (`INT-SWE-01..08`, `AppSmokeAndroidTest.kt`) and hardware-in-the-loop system verification evidence gating under `docs/releases/<tag>/` (**ASPICE SWE.5, SWE.6 & SYS.5**), Google Play Store distribution, real-time Jira release ticket checklist maintenance, structured audit commenting, and version incrementation for the next development cycle.
 
 ---
 
@@ -57,11 +57,12 @@ python3 tools/jira_util.py comment <RELEASE_TICKET_KEY> "h4. Release Progress: S
 2. `Gradle: Version: Remove -dev` (Set clean production `versionName`)
 3. `Build: Signed APK` (`app-release.apk`)
 4. `Build: Signed APP Bundle` (`app-release.aab`)
-* **[MANDATORY SYSTEM & GOVERNANCE EVIDENCE GATES - ASPICE SYS.4, SYS.5 & SWE.2/SWE.3/SUP.1]**: Release branch initiation and release candidate tag creation (Step 7) / Play Store distribution (Step 6) are **STRICTLY BLOCKED** if mandatory weekly dual-vendor code reviews are overdue (`is_weekly_review_overdue()`) or unless verified system evidence artifacts exist under `docs/releases/<tag>/` and pass all criteria:
-  - SYS.4: `docs/releases/<tag>/system_integration_results.json` (from `tools/run_system_integration_tests.py`)
+* **[MANDATORY SYSTEM & GOVERNANCE EVIDENCE GATES - ASPICE SYS.5 & SWE.2/SWE.3/SWE.5/SWE.6/SUP.1]**: Release branch initiation and release candidate tag creation (Step 7) / Play Store distribution (Step 6) are **STRICTLY BLOCKED** if mandatory weekly dual-vendor code reviews are overdue (`is_weekly_review_overdue()`) or unless verified software and hardware-in-the-loop system evidence artifacts pass all criteria:
+  - Automated Unit & Software Integration: `./gradlew :app:testDebugUnitTest` (including `INT-SWE-01..08`) + CI `AppSmokeAndroidTest.kt`
   - SYS.5: `docs/releases/<tag>/sys_verification_record.md` (per `docs/system/sys_verification_protocol.md`)
   - Verification Summary: `docs/releases/<tag>/verification_summary.md` (from `tools/generate_release_verification_summary.py`)
   - Release Plan & Governance: `docs/management/release_plan.md` exit criteria verified and `FixVersion` stamped on all completed parent issues per Core Rule 8.3 (`REQ-PRO-097`)
+  - *(Note: `tools/run_simulator_self_tests.py` runs optional pure-Python developer simulator self-tests only — NOT an Android integration test or release gate per `REQ-PRO-112`.)*
 5. `Jira: Finish Release & Create new one` (Release current version, create next FixVersion)
 6. `Play Store: Upload as Testing` (Upload `.aab` to Internal/Closed Testing track — blocked if system evidence missing/failing)
 7. `Gitflow: Finish Release` (Merge into `master` with tags, merge back into `develop` — tag creation blocked if system evidence missing/failing)
@@ -180,26 +181,22 @@ python3 tools/jira_util.py comment <RELEASE_TICKET_KEY> "h4. Release Progress: S
 
 ---
 
-### Phase 2.5: Mandatory System Verification Evidence Gate (ASPICE SYS.4, SYS.5, SUP.8, REQ-PRO-072)
+### Phase 2.5: Mandatory System Verification Evidence Gate (ASPICE SYS.5, SWE.6, SUP.8, REQ-PRO-072, REQ-PRO-112)
 
-Before proceeding to Jira release finalization, Play Store distribution, or GitFlow release candidate tag creation, the release manager **MUST verify and commit both system-level evidence artifacts** under `docs/releases/<tag>/` (where `<tag>` is `V${VERSION_NAME}__${VERSION_CODE}` or `V${VERSION_NAME}`):
+Before proceeding to Jira release finalization, Play Store distribution, or GitFlow release candidate tag creation, the release manager **MUST verify and commit release verification evidence** under `docs/releases/<tag>/` (where `<tag>` is `V${VERSION_NAME}__${VERSION_CODE}` or `V${VERSION_NAME}`):
 
 ```
 docs/releases/<tag>/
-├── system_integration_results.json   # SYS.4 System Integration Verification Evidence
-├── sys_verification_record.md        # SYS.5 System Verification Protocol Sign-Off Record
+├── sys_verification_record.md        # SYS.5 Hardware-in-the-Loop System Verification Sign-Off
 └── verification_summary.md           # SWE.6 BP5 / REQ-PRO-074 Release Verification Summary per Tag
 ```
 
-#### 1. SYS.4: System Integration Verification Execution & Logging
-Run the automated headless system integration test runner across all 6 interface simulation test cases (`SYS-INT-001` through `SYS-INT-006`):
+#### 1. Optional Developer Simulator Self-Tests (Non-Gating)
+Developer Python sensor simulators (`ble_hr_simulator.py`, `ble_power_simulator.py`, `ble_radar_simulator.py`, `fake_gps.py`, `replay_workout.py`) may be sanity-checked using:
 ```bash
-python3 tools/run_system_integration_tests.py --headless --output-json docs/releases/V${VERSION_NAME}__${VERSION_CODE}/system_integration_results.json
+python3 tools/run_simulator_self_tests.py --output /tmp/simulator_self_tests.json
 ```
-*Verification Checklist*:
-* Exit code is `0` and overall status is `"PASS"`.
-* All 6 test cases (`SYS-INT-001` through `SYS-INT-006`) pass without assertion failures.
-* Telemetry phase conservation drift is $\le 5.0\text{ ms}$.
+*Scope Note*: This runner checks Python simulator tools only (zero Android APK/emulator execution) and is **NOT** a blocking release gate. Automated Android integration is verified via `INT-SWE-01..08` (`./gradlew :app:testDebugUnitTest`) and CI `AppSmokeAndroidTest.kt`.
 
 #### 2. SYS.5: System Verification Protocol Sign-Off Verification
 Verify that real-hardware system verification has been executed across the hardware reference matrix and target environmental scenarios per `docs/system/sys_verification_protocol.md`:
@@ -213,7 +210,7 @@ test -f docs/releases/V${VERSION_NAME}__${VERSION_CODE}/sys_verification_record.
 * Formal sign-off signatures and approval dates from System Verification Engineer and Quality Gatekeeper are present.
 
 #### 3. Release Verification Summary Generation & Test Evidence (ASPICE SWE.6 BP5, REQ-PRO-074, REQ-PRO-100)
-Generate the consolidated release verification summary markdown document aggregating unit tests, traceability coverage, and system verification results, and export persistent test & coverage evidence:
+Generate the consolidated release verification summary markdown document aggregating unit/integration tests, traceability coverage, and SYS.5 verification results, and export persistent test & coverage evidence:
 ```bash
 python3 tools/generate_release_verification_summary.py --tag V${VERSION_NAME}__${VERSION_CODE}
 python3 tools/jira_util.py export-test-evidence --release V${VERSION_NAME}__${VERSION_CODE}
@@ -230,16 +227,15 @@ python3 tools/verify_requirement_governance.py --check-test-evidence V${VERSION_
 > [!CAUTION]
 > **TAGGING & DISTRIBUTION BLOCKED ON MISSING/FAILING SYSTEM EVIDENCE**:
 > Creating the release candidate tag (`V${VERSION_NAME}__${VERSION_CODE}` in Phase 4 `git flow release finish`) and uploading artifacts to the Google Play Store (Phase 3) are **STRICTLY BLOCKED** if:
-> 1. `docs/releases/<tag>/system_integration_results.json` is missing or has failing test cases.
-> 2. `docs/releases/<tag>/sys_verification_record.md` is missing, incomplete, or contains `REVISION` / `FAIL` verdicts.
-> 3. `docs/releases/<tag>/verification_summary.md` is missing or contains unresolved deviations requiring human approval.
+> 1. `docs/releases/<tag>/sys_verification_record.md` is missing, incomplete, or contains `REVISION` / `FAIL` verdicts.
+> 2. `docs/releases/<tag>/verification_summary.md` is missing or contains unresolved deviations requiring human approval.
 >
 > If either check fails, the release manager MUST halt the release immediately and post a blocking issue comment on the Jira release ticket.
 
 #### 5. Update Jira Release Ticket:
 Post audit comment documenting verified system evidence:
 ```bash
-python3 tools/jira_util.py comment <KEY> "h4. Mandatory System Verification Evidence Verified (ASPICE SYS.4 & SYS.5)\n* SYS.4 Integration Results: docs/releases/V${VERSION_NAME}__${VERSION_CODE}/system_integration_results.json (6/6 PASS)\n* SYS.5 Verification Protocol: docs/releases/V${VERSION_NAME}__${VERSION_CODE}/sys_verification_record.md (8/8 PASS, QA Signed-off)\n* Verification Summary: docs/releases/V${VERSION_NAME}__${VERSION_CODE}/verification_summary.md (PASS)\n* Release candidate tag creation APPROVED."
+python3 tools/jira_util.py comment <KEY> "h4. Mandatory System Verification Evidence Verified (ASPICE SYS.5 & SWE.6)\n* SYS.5 Verification Protocol: docs/releases/V${VERSION_NAME}__${VERSION_CODE}/sys_verification_record.md (8/8 PASS, QA Signed-off)\n* Verification Summary: docs/releases/V${VERSION_NAME}__${VERSION_CODE}/verification_summary.md (PASS)\n* Release candidate tag creation APPROVED."
 ```
 
 ---
@@ -270,9 +266,9 @@ python3 tools/jira_util.py comment <KEY> "h4. Mandatory System Verification Evid
 ### Phase 4: GitFlow Finalization & Branch Synchronization
 
 1. **Pre-Tagging System Evidence Verification**:
-   Verify that system integration and verification evidence exist and pass before allowing release candidate tags:
+   Verify that SYS.5 verification evidence and `verification_summary.md` exist and pass before allowing release candidate tags:
    ```bash
-   if [ ! -f "docs/releases/V${VERSION_NAME}__${VERSION_CODE}/system_integration_results.json" ] || [ ! -f "docs/releases/V${VERSION_NAME}__${VERSION_CODE}/sys_verification_record.md" ]; then
+   if [ ! -f "docs/releases/V${VERSION_NAME}__${VERSION_CODE}/sys_verification_record.md" ] || [ ! -f "docs/releases/V${VERSION_NAME}__${VERSION_CODE}/verification_summary.md" ]; then
        echo "FATAL: Release candidate tag creation BLOCKED. Missing mandatory system verification evidence (REQ-PRO-072)." >&2
        exit 1
    fi

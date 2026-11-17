@@ -18,20 +18,21 @@
 
 package com.atrainingtracker.trainingtracker.build
 
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
 
 /**
  * Release Manager System Verification Evidence Integration Contract Test
- * (ASPICE SYS.4, SYS.5, SUP.8, REQ-PRO-072, TST-PRO-072, ATT-6169).
+ * (ASPICE SYS.5, SWE.6, SUP.8, REQ-PRO-072, TST-PRO-072, REQ-PRO-112, TST-PRO-112, ATT-6169, ATT-8157).
  *
  * Enforces:
- * 1. .agents/skills/release-manager/SKILL.md mandates SYS.4 and SYS.5 system verification evidence (TST-PRO-072.1).
- * 2. Release checklist and procedures explicitly block release candidate tag creation if system evidence is missing or failing (TST-PRO-072.2).
- * 3. docs/releases/ README.md and TEMPLATE.md exist and specify release evidence dossier layout and sign-off criteria (TST-PRO-072.3).
- * 4. docs/architecture.md Section 6 references release process gating and system evidence (TST-PRO-072.4).
- * 5. Compliance with ATT-6186: zero source-text reading of production files.
+ * 1. .agents/skills/release-manager/SKILL.md mandates SYS.5 verification evidence and verification_summary.md (TST-PRO-072.1).
+ * 2. SKILL.md does NOT mandate Python simulator system_integration_results.json or broken --output-json as a release gate (TST-PRO-112.2).
+ * 3. Release checklist and procedures block release candidate tag creation and Play Store upload on missing/failing SYS.5/summary evidence (TST-PRO-072.2).
+ * 4. docs/releases/ README.md and TEMPLATE.md define release dossier layout without fake SYS.4 gating (TST-PRO-072.3).
+ * 5. docs/architecture.md Section 6 links release gating to SYS.5 evidence and discloses simulator boundaries (TST-PRO-072.4).
  */
 class ReleaseManagerSystemEvidenceContractTest {
 
@@ -46,28 +47,29 @@ class ReleaseManagerSystemEvidenceContractTest {
     }
 
     /**
-     * Asserts .agents/skills/release-manager/SKILL.md exists and specifies mandatory system verification gates (TST-PRO-072.1).
+     * Asserts .agents/skills/release-manager/SKILL.md enforces SYS.5 + verification_summary.md without fake simulator gating (TST-PRO-072.1 / TST-PRO-112.2).
      */
     @Test
-    fun testReleaseManagerSkill_specifiesMandatorySystemEvidenceGates() {
+    fun testReleaseManagerSkill_specifiesHonestSystemEvidenceGates() {
         val skillFile = findRepoRootFile(".agents/skills/release-manager/SKILL.md")
         assertTrue(".agents/skills/release-manager/SKILL.md must exist (REQ-PRO-072.1)", skillFile.exists())
 
         val content = skillFile.readText()
         assertTrue("Skill must not be empty", content.isNotBlank())
-        assertTrue("Must reference ASPICE SYS.4", content.contains("SYS.4"))
         assertTrue("Must reference ASPICE SYS.5", content.contains("SYS.5"))
         assertTrue("Must reference REQ-PRO-072", content.contains("REQ-PRO-072"))
+        assertTrue("Must reference REQ-PRO-112", content.contains("REQ-PRO-112"))
 
-        // Must mandate both SYS.4 and SYS.5 artifact paths under docs/releases/<tag>/
-        assertTrue("Must mandate system_integration_results.json artifact", content.contains("system_integration_results.json"))
         assertTrue("Must mandate sys_verification_record.md artifact", content.contains("sys_verification_record.md"))
+        assertTrue("Must mandate verification_summary.md artifact", content.contains("verification_summary.md"))
         assertTrue("Must specify release evidence directory under docs/releases/", content.contains("docs/releases/"))
-
-        // Must specify execution of automated integration test runner
-        assertTrue("Must cite run_system_integration_tests.py execution", content.contains("run_system_integration_tests.py"))
-        // Must cite system verification protocol
         assertTrue("Must cite sys_verification_protocol.md", content.contains("sys_verification_protocol.md"))
+        assertTrue("Must reference INT-SWE-01..08 real integration boundary", content.contains("INT-SWE-01..08"))
+
+        assertFalse("Must NOT cite broken --output-json flag", content.contains("--output-json"))
+        assertFalse("Must NOT cite retired run_system_integration_tests.py", content.contains("run_system_integration_tests.py"))
+        assertFalse("Must NOT mandate system_integration_results.json in Phase 2.5/4",
+            content.contains("system_integration_results.json"))
     }
 
     /**
@@ -78,7 +80,6 @@ class ReleaseManagerSystemEvidenceContractTest {
         val skillFile = findRepoRootFile(".agents/skills/release-manager/SKILL.md")
         val content = skillFile.readText()
 
-        // Verify blocking rules in checklist and detailed procedures
         assertTrue("Must declare tag creation blocked if evidence missing/failing",
             content.contains("BLOCKED") && content.contains("tag"))
         assertTrue("Must specify blocking on Play Store upload",
@@ -89,35 +90,38 @@ class ReleaseManagerSystemEvidenceContractTest {
     }
 
     /**
-     * Asserts docs/releases/ README.md and TEMPLATE.md exist and define release dossier layout (TST-PRO-072.3).
+     * Asserts docs/releases/ README.md and TEMPLATE.md define release dossier layout without fake SYS.4 gating (TST-PRO-072.3 / TST-PRO-112.2).
      */
     @Test
-    fun testReleaseEvidenceTemplates_existAndDefineDossierLayout() {
+    fun testReleaseEvidenceTemplates_existAndDefineHonestDossierLayout() {
         val readmeFile = findRepoRootFile("docs/releases/README.md")
         assertTrue("docs/releases/README.md must exist (REQ-PRO-072.3)", readmeFile.exists())
 
         val readmeContent = readmeFile.readText()
         assertTrue("README must reference ASPICE SUP.8", readmeContent.contains("SUP.8"))
-        assertTrue("README must reference ASPICE SYS.4", readmeContent.contains("SYS.4"))
         assertTrue("README must reference ASPICE SYS.5", readmeContent.contains("SYS.5"))
-        assertTrue("README must document system_integration_results.json", readmeContent.contains("system_integration_results.json"))
         assertTrue("README must document sys_verification_record.md", readmeContent.contains("sys_verification_record.md"))
+        assertTrue("README must document verification_summary.md", readmeContent.contains("verification_summary.md"))
         assertTrue("README must state blocking enforcement", readmeContent.contains("BLOCKED"))
+        assertTrue("README must state system_integration_results.json is retired as a blocking release gate",
+            readmeContent.contains("retired as a blocking release gate"))
+        assertFalse("README must NOT cite broken --output-json flag", readmeContent.contains("--output-json"))
 
         val templateFile = findRepoRootFile("docs/releases/TEMPLATE.md")
         assertTrue("docs/releases/TEMPLATE.md must exist (REQ-PRO-072.3)", templateFile.exists())
 
         val templateContent = templateFile.readText()
         assertTrue("Template must contain release dossier header", templateContent.contains("Release Qualification Dossier"))
-        assertTrue("Template must include Gate 3 System Integration Verification (SYS.4)", templateContent.contains("SYS.4"))
         assertTrue("Template must include Gate 4 System Verification Protocol (SYS.5)", templateContent.contains("SYS.5"))
-        assertTrue("Template must reference system_integration_results.json", templateContent.contains("system_integration_results.json"))
         assertTrue("Template must reference sys_verification_record.md", templateContent.contains("sys_verification_record.md"))
+        assertTrue("Template must reference verification_summary.md", templateContent.contains("verification_summary.md"))
         assertTrue("Template must include sign-off signatures", templateContent.contains("Sign-Off") || templateContent.contains("Formal Sign-Off"))
+        assertFalse("Template must NOT require system_integration_results.json", templateContent.contains("system_integration_results.json"))
+        assertFalse("Template must NOT cite retired run_system_integration_tests.py", templateContent.contains("run_system_integration_tests.py"))
     }
 
     /**
-     * Asserts docs/architecture.md Section 6 links release gating to system verification evidence (TST-PRO-072.4).
+     * Asserts docs/architecture.md Section 6 links release gating to SYS.5 evidence and discloses simulator scope (TST-PRO-072.4 / TST-PRO-112.3).
      */
     @Test
     fun testArchitecture_linksReleaseGatingToSystemEvidence() {
@@ -125,10 +129,14 @@ class ReleaseManagerSystemEvidenceContractTest {
         assertTrue("docs/architecture.md must exist", archFile.exists())
 
         val content = archFile.readText()
+        assertTrue("docs/architecture.md must have Section 6.2", content.contains("### 6.2"))
         assertTrue("docs/architecture.md must have Section 6.4", content.contains("### 6.4"))
         assertTrue("Section 6.4 must reference REQ-PRO-072", content.contains("REQ-PRO-072"))
         assertTrue("Section 6.4 must reference TST-PRO-072", content.contains("TST-PRO-072"))
+        assertTrue("Section 6.4 must reference REQ-PRO-112", content.contains("REQ-PRO-112"))
         assertTrue("Section 6.4 must reference release-manager skill", content.contains("release-manager/SKILL.md"))
         assertTrue("Section 6.4 must reference docs/releases/", content.contains("docs/releases/"))
+        assertFalse("docs/architecture.md must NOT cite retired run_system_integration_tests.py",
+            content.contains("run_system_integration_tests.py"))
     }
 }
