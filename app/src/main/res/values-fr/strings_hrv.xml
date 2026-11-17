@@ -298,6 +298,8 @@
     <string name="tuning_morning_context_tags_title">Balises contextuelles (Malade, Alcool, Voyage, Repos)</string>
 
     <string name="morning_hrv_wellness_title">Sommeil et bien-être matinal</string>
+    <string name="morning_hrv_wellness_subtitle">Suivi subjectif du sommeil et de la forme</string>
+    <string name="morning_hrv_wellness_empty_hint">Aucune métrique de bien-être activée dans les paramètres experts.</string>
     <string name="morning_hrv_sleep_duration_label">Durée du sommeil : %s</string>
     <string name="morning_hrv_sleep_quality_label">Qualité du sommeil : %d/5</string>
     <string name="morning_hrv_morning_energy_label">Énergie matinale : %d/5</string>

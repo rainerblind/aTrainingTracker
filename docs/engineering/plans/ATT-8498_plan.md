@@ -1,47 +1,43 @@
-# Stage 3: Implementation Plan - ATT-8498: ZoneDisplayOptions in Cockpit & Kacheln
+# Stage 3: Implementation Plan - ATT-8498 (PO Rejection Redesign)
 
-**Ticket**: [ATT-8498](https://rainerblind.atlassian.net/browse/ATT-8498) | **Epic**: [ATT-5908](https://rainerblind.atlassian.net/browse/ATT-5908)  
-**Target Release**: `V5.0.0` | **Sprint**: `2026-11-16_03_Nacht` | **Branch**: `feature/ATT-8498`  
-**Requirements**: `REQ-UI-2783` (`REQ-UI-2783.1`..`.3`) | **Tests**: `TST-UI-2783` (`TST-UI-2783.1`..`.4`)  
-**Author**: AI Agent 1 (`--as agent1`) | **Date**: 2026-11-17
+**Ticket**: [ATT-8498](https://rainerblind.atlassian.net/browse/ATT-8498) | **Epic**: [ATT-5908](https://rainerblind.atlassian.net/browse/ATT-5908) | **Release**: `V5.0.0`  
+**Sprint**: `2026-11-17_02_Spät` | **Branch**: `feature/ATT-8498` | **Author**: `--as agent1`  
+**Requirements**: `REQ-UI-2783` (`REQ-UI-2783.1`..`.3`) | **Tests**: `TST-UI-2783` (`TST-UI-2783.1`..`.4`)
 
 ---
 
-## 1. Traceability & System Invariants
-* **`REQ-UI-2783.1`** -> **`TST-UI-2783.1`, `.2`, `.3`**: `TuningSegmentedButtonRow`, `TuningToggleItem`, `HorizontalDivider`, `zone_display_apply_all` (preserving `HRV.showGauge`), `CockpitTypographySection.kt < 400` LOC (`REQ-UI-277.3`), zero `FilterChip`/`Switch`/`ElevatedCard` in `categories/` (`REQ-UI-262.5`).
-* **`REQ-UI-2783.2`** -> **`TST-UI-2783.3`**: Shared `ZoneDisplayOptionsControls` in `ui/settings/` preserving `HrvDfaA1SettingsContractTest` (`R.string.zone_display_gauge`, `displayOptions.showGauge`, `showBar = displayOptions.showGauge` in `ZonesSettingsActivity.kt`).
-* **`REQ-UI-2783.3`** -> **`TST-UI-2783.1`, `.2`, `.4`**: Combined `PreviewCockpitTile` (`TTColor.Zone2`), Save/Cancel/Reset parity across `AdvancedTuningScreen` & `AdvancedTuningDialog` (thresholds untouched), 9-locale `zone_display_apply_all`, Light/Dark Rule 8.5 screenshots.
+## 1. Traceability, UI Consistency & System Invariants
+* **`REQ-UI-2783.1`** -> **`TST-UI-2783.1`**: Zero Zone Display UI/draft/Save/Reset in `AdvancedTuningScreen`, `AdvancedTuningDialog`, `CockpitTypographySection` (`< 400` LOC, `REQ-UI-277.3`); delete `CockpitZoneDisplaySubsection.kt` & `AdvancedTuningZoneDisplayTest.kt`; remove `ATT-8498` screenshot from `AdvancedTuningSectionsScreenshotTest.kt`.
+* **`REQ-UI-2783.2`** -> **`TST-UI-2783.2`, `.4`**: `EditSensorFieldDialog` / `EditSensorFieldViewModel` maps `(selectedSensorType, sportType)` 1:1 with `TrackingViewModel.resolveDisplayOptions`, hydrating `ZoneDisplayOptionsDraft` from `SettingsDataStore` and persisting only on Save.
+* **`REQ-UI-2783.3`** -> **`TST-UI-2783.3`, `.4`**: `SensorGridScreen` (`CONFIGURATION`) hosts `SingleChoiceSegmentedButtonRow` (`ZoneProfileTarget` pre-selected from `ActivityType`) + `ZoneDisplayOptionsToggleList` + `zone_display_apply_all` with immediate `SettingsDataStore` persistence; `ZonesSettingsActivity` (`HrvDfaA1SettingsContractTest`) & 9-locale strings preserved.
+* **UI Consistency (`docs/design_guidelines.md §1, §5.6, §5.8`)**: Use `SingleChoiceSegmentedButtonRow` with `SegmentedButton(..., icon = {}, contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp))` and `Text(..., style = MaterialTheme.typography.labelSmall, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)` so German (`de`) labels fit cleanly without clipping or wrapping; use `ZoneDisplayOptionsToggleList` inside `AppModalBottomSheet` (`scrollable = true`, zero nested `verticalScroll`); single-line `OutlinedButton` for `zone_display_apply_all`; Light/Dark `@Preview`s in `ATrainingTrackerTheme`.
+
+### Requirement Archaeology & Chesterton's Fence Audit
+* **Original Requirement ID & Target**: `REQ-UI-2783` (originally `ATT-8498` Expert Settings), refining `REQ-UI-172`, `REQ-UI-262.5`, `REQ-UI-277.3`, `REQ-UI-376`, `REQ-TRK-061.4`, `REQ-PRO-049.1`.
+* **Historical Origin & Commit Trace**: `ATT-1390` (`e3966ebf`) added `ZoneDisplayOptions` in `ZonesSettingsActivity`; `ATT-8498` (`81af2506`) placed them in `CockpitTypographySection` (Ceremony 2 PO rejected `2026-11-17T15:59`).
+* **Root Reason for Existing Formulation**: `81af2506` co-located zone toggles with Expert Settings typography tuning; PO directed tile long-press & tracking tabs config instead.
+* **Preservation of Core Invariants**: Preserves `< 400` LOC `CockpitTypographySection`, `CockpitPreviewTileContractTest`, `AdvancedTuningModularityTest`, `TuningDesignGuidelinesContractTest`, `HrvDfaA1SettingsContractTest`, zero `src/main` reads, and zone thresholds.
 
 ---
 
 ## 2. Step-by-Step Implementation Sequence (Stage 4 Construction)
 
-### Step 1: Shared `ZoneDisplayOptionsControls.kt` & `ZonesSettingsActivity.kt` Reuse (`REQ-UI-2783.2`)
-* **Files**: `ui/settings/ZoneDisplayOptionsControls.kt` (new), `activities/ZonesSettingsActivity.kt`
-* **Changes**:
-  - Define `ZoneProfileTarget` (`HR_RUN`, `HR_BIKE`, `PWR_BIKE`, `HRV_DFA_A1`) and `ZoneDisplayOptionsDraft` (pure helpers `optionsFor`, `withUpdated`, `applyToAllFrom` copying `showBackground`/`showLeftBar`/`showRightBar`/`showTextColor` while preserving `hrv.showGauge`, `persistTo(dataStore)`).
-  - Extract reusable `ZoneDisplayOptionsToggleList` accepting a `toggleRow` slot so `ZonesSettingsActivity.kt` (`L570–611`, `L1270–1329`) keeps `Card` + `ZoneDisplayToggleRow` and retains `R.string.zone_display_gauge` / `displayOptions.showGauge` / `showBar = displayOptions.showGauge` literals (`HrvDfaA1SettingsContractTest`).
+### Step 1: Remove ZoneDisplayOptions from Expert Settings (`REQ-UI-2783.1`, `TST-UI-2783.1`)
+* **Files**: `AdvancedTuningScreen.kt`, `AdvancedTuningDialog.kt`, `CockpitTypographySection.kt`, `CockpitZoneDisplaySubsection.kt` (delete), `AdvancedTuningZoneDisplayTest.kt` (delete), `AdvancedTuningSectionsScreenshotTest.kt`.
+* **Changes**: Revert `zoneDisplayDraft` state/persistence/Reset wiring in `AdvancedTuningScreen.kt` & `AdvancedTuningDialog.kt`; restore `CockpitTypographySection.kt` to pre-`81af2506` inline `ExposedDropdownMenuBox` & clean `PreviewCockpitTile` (`< 400` LOC, passing `CockpitPreviewTileContractTest` & `AdvancedTuningModularityTest`); delete `CockpitZoneDisplaySubsection.kt` & `AdvancedTuningZoneDisplayTest.kt` (clearing `ATT-8631` `src/main` violation); remove `testCaptureCockpitZoneDisplayScreenshot_LightAndDark`.
 
-### Step 2: `CockpitZoneDisplaySubsection.kt` & `CockpitTypographySection.kt` (`REQ-UI-2783.1`, `.3`)
-* **Files**: `ui/settings/tuning/categories/CockpitZoneDisplaySubsection.kt` (new), `ui/settings/tuning/categories/CockpitTypographySection.kt`
-* **Changes**:
-  - In `CockpitZoneDisplaySubsection.kt` (strictly `TuningSegmentedButtonRow` + `TuningToggleItem` + `OutlinedButton(zone_display_apply_all)` + `HorizontalDivider`, zero `FilterChip`/`Switch`/`ElevatedCard` per `TuningDesignGuidelinesContractTest`): render profile selector (`tab_hr_run`, `tab_hr_bike`, `tab_pwr_bike`, `tab_hrv_dfa_a1`), 4/5 toggles (`zone_display_gauge` strictly for `HRV_DFA_A1`), and Apply-All button.
-  - In `CockpitTypographySection.kt` (keep `< 400` LOC per `REQ-UI-277.3`): add defaulted `zoneDisplayDraft` / `onZoneDisplayDraftChange` parameters, embed `HorizontalDivider` + `CockpitZoneDisplaySubsection`, and enhance `PreviewCockpitTile` (kept inside `CockpitTypographySection.kt` per `CockpitPreviewTileContractTest`) so tile 1 renders active profile value (`148 bpm` / `245 W` / `0.82 α1`) with `TTColor.Zone2` 12% tint, `6.dp` left/right bars (`IntrinsicSize.Min`), `showTextColor`, and `ZoneGaugeBar` (`HRV_DFA_A1 && showGauge`).
+### Step 2: Shared Mapping Helper & Controls Reuse (`REQ-UI-2783.2`, `.3`)
+* **Files**: `ui/settings/ZoneDisplayOptionsControls.kt`, `activities/ZonesSettingsActivity.kt` (unchanged).
+* **Changes**: Add pure helpers `resolveZoneProfileTarget(sensorType: SensorType?, sportType: BSportType): ZoneProfileTarget?` (matching `TrackingViewModel.resolveDisplayOptions`: `(HR, RUN)->HR_RUN`, `(HR, BIKE)->HR_BIKE`, `(POWER, BIKE)->PWR_BIKE`, `(HRV_DFA_A1, *)->HRV_DFA_A1`) and `defaultZoneProfileTarget(activityType: ActivityType): ZoneProfileTarget`, plus shared `ZoneDisplayToggleRow` / profile card helper while preserving `ZonesSettingsActivity` (`HrvDfaA1SettingsContractTest`).
 
-### Step 3: Save / Cancel / Reset State Wiring in Both Tuning Hosts (`REQ-UI-2783.3`)
-* **Files**: `ui/settings/tuning/AdvancedTuningScreen.kt`, `ui/settings/tuning/AdvancedTuningDialog.kt`
-* **Changes**:
-  - In both files, collect `SettingsDataStore.getInstance(context).snapshotFlow` with `isZoneDisplayInitialized` guard to hydrate `zoneDisplayDraft` once.
-  - Pass `zoneDisplayDraft` + `onZoneDisplayDraftChange` to `CockpitTypographySection`.
-  - On **Save**: call `zoneDisplayDraft.persistTo(settingsDataStore)` (`saveZoneDisplayOptions` + `saveHrvZoneDisplayOptions`). On **Cancel**: discard draft. On **Reset**: set `zoneDisplayDraft = ZoneDisplayOptionsDraft()` and persist `ZoneDisplayOptions()` via `persistTo(settingsDataStore)` (zone thresholds untouched).
+### Step 3: Tile Long-Press in `EditSensorFieldViewModel` & `EditSensorFieldDialog` (`REQ-UI-2783.2`, `TST-UI-2783.2`)
+* **Files**: `EditSensorFieldViewModel.kt`, `EditSensorFieldDialog.kt`.
+* **Changes**: Hydrate `zoneDisplayDraft` from `SettingsDataStore.snapshotFlow` in `EditSensorFieldViewModel` (plus `isZoneDisplayDirty` flag); expose `onZoneDisplayOptionsChanged` / `onApplyZoneDisplayToAll` updating draft state only; persist modified `ZoneDisplayOptions` via `SettingsDataStore` exclusively inside `saveChanges()` (discarded on Cancel). In `EditSensorFieldDialog` Group 3, when `resolveZoneProfileTarget(uiState.selectedSensorType, uiState.sportType) != null`, render profile-labeled `ZoneDisplayOptionsToggleList` (`showGaugeToggle = target == HRV_DFA_A1`) + `zone_display_apply_all` `OutlinedButton` (zero nested `verticalScroll`) + Light/Dark `@Preview`s.
 
-### Step 4: 9-Locale Localization (`REQ-UI-2783.3`)
-* **Files**: `app/src/main/res/values{,-de,-es,-fr,-it,-ja,-nl,-pl,-pt}/strings.xml`, `ZoneDisplayLocalizationTest.kt`
-* **Changes**: Add `zone_display_apply_all` across all 9 locales (`"Apply to all"`, `"Auf alle anwenden"`, `"Aplicar a todos"`, `"Appliquer à tout"`, `"Applica a tutti"`, `"すべてに適用"`, `"Op alles toepassen"`, `"Zastosuj do wszystkich"`, `"Aplicar a todos"`); extend `ZoneDisplayLocalizationTest`.
+### Step 4: Tracking Tabs Config in `TrackingTabGridContent` & `SensorGridScreen` (`REQ-UI-2783.3`, `TST-UI-2783.3`)
+* **Files**: `TrackingTabGridContent.kt`, `SensorGridScreen.kt`.
+* **Changes**: Pass `currentActivityType` (`ActivityType`) to `SensorGridScreen`; in `ScreenMode.CONFIGURATION`, render a collapsible/card Zone Display section below the WYSIWYG toggles using `SingleChoiceSegmentedButtonRow` (compact padding, `icon = {}`, `maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis`), `ZoneDisplayOptionsToggleList` (`showGaugeToggle = selected == HRV_DFA_A1`), and `zone_display_apply_all`, persisting immediately to `SettingsDataStore` on tap, with Light/Dark `@Preview`s.
 
-### Step 5: Unit, Contract & Rule 8.5 Screenshot Verification (`TST-UI-2783.1`..`.4`)
-* **Files**: `AdvancedTuningZoneDisplayTest.kt` (new), `AdvancedTuningSectionsScreenshotTest.kt`
-* **Changes**:
-  - Add Compose UI + DataStore Save/Cancel/Reset + `applyToAllFrom` tests in `AdvancedTuningZoneDisplayTest.kt`.
-  - Add Light/Dark `CockpitTypographySection` Zone Display capture in `AdvancedTuningSectionsScreenshotTest.kt` and inspect via `read_file` (`Rule 8.5`).
-  - Verify `wc -l CockpitTypographySection.kt` (`< 400`) and run targeted Gradle tests (`ui.settings.tuning.*`, `ZoneDisplayLocalizationTest`, `TranslationParityTest`, `HrvDfaA1SettingsContractTest`).
+### Step 5: Tests, Visual Inspection & Verification (`TST-UI-2783.1`..`.4`)
+* **Files**: `EditSensorFieldZoneDisplayTest.kt` (new), `TrackingTabConfigZoneDisplayTest.kt` (new), `ZoneDisplayLocalizationTest.kt`.
+* **Changes**: Add ViewModel/Compose/DataStore tests & Light/Dark screenshot capture (`docs/engineering/walkthroughs/img/ATT-8498_zone_display_tile_and_tabs.png` inspected via `read_file`) with ZERO `src/main` file reads (`REQ-PRO-049`). Run under `python3 tools/parallel_sprint_lock.py`: `EditSensorField*Test`, `TrackingTab*Test`/`SensorGrid*Test`, `CockpitPreviewTileContractTest`, `AdvancedTuningModularityTest`, `TuningDesignGuidelinesContractTest`, `HrvDfaA1SettingsContractTest`, `ZoneDisplayLocalizationTest`, `TranslationParityTest`, `ThemeColorCentralizationAuditTest`, and `SourceTextReadingAuditContractTest`.

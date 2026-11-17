@@ -1236,4 +1236,32 @@ class SettingsDataStore(
             prefs[HRV_DFA_A1_ZONE_SHOW_GAUGE] = options.showGauge
         }
     }
+
+    /** Atomically persists [ZoneDisplayOptions] across all 4 zone profiles in one DataStore edit (`REQ-UI-2783`). */
+    suspend fun saveAllZoneDisplayOptions(
+        hrRun: ZoneDisplayOptions,
+        hrBike: ZoneDisplayOptions,
+        pwrBike: ZoneDisplayOptions,
+        hrv: ZoneDisplayOptions
+    ) {
+        dataStore.edit { prefs ->
+            listOf(
+                ZoneType.HR_RUN to hrRun,
+                ZoneType.HR_BIKE to hrBike,
+                ZoneType.PWR_BIKE to pwrBike
+            ).forEach { (zoneType, options) ->
+                val keys = getZoneDisplayKeys(zoneType)
+                prefs[keys.bgKey] = options.showBackground
+                prefs[keys.leftBarKey] = options.showLeftBar
+                prefs[keys.rightBarKey] = options.showRightBar
+                prefs[keys.textColorKey] = options.showTextColor
+                prefs[keys.gaugeKey] = options.showGauge
+            }
+            prefs[HRV_DFA_A1_ZONE_SHOW_BACKGROUND] = hrv.showBackground
+            prefs[HRV_DFA_A1_ZONE_SHOW_LEFT_BAR] = hrv.showLeftBar
+            prefs[HRV_DFA_A1_ZONE_SHOW_RIGHT_BAR] = hrv.showRightBar
+            prefs[HRV_DFA_A1_ZONE_SHOW_TEXT_COLOR] = hrv.showTextColor
+            prefs[HRV_DFA_A1_ZONE_SHOW_GAUGE] = hrv.showGauge
+        }
+    }
 }

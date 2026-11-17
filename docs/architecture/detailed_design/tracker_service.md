@@ -1,5 +1,10 @@
 # Detailed Design: TrackerService (ASPICE SWE.3)
 
+**Document ID**: `DOC-ARC-DD-TRK`  
+**Version**: 1.0.0  
+**Status**: Reviewed  
+**Approver**: Pending PO Sign-Off  
+
 **Unit**: `TrackerService` (`app/src/main/java/com/atrainingtracker/trainingtracker/tracker/TrackerService.java`, 3,552 LOC)  
 **Collaborators**: `TrackingMode` (`TrackingMode.kt`), `AutoPauseManager` / `AutoPauseState` (`AutoPauseManager.kt`), `TrainingApplication`, `BANALServiceComm`, `LiveWorkoutSession`, `WorkoutRepository`  
 **SWE.2 Alignment**: `docs/architecture.md` §3.1, §3.3, §4.2, §4.9 (`IF-SWE-03`, `IF-SWE-05`, `IF-SWE-06`)  
@@ -115,3 +120,11 @@ stateDiagram-v2
 | `TrackerServiceCrashRecoveryCharacterisationTest` | `StartType` startup recovery tiers, `applyResumedState` valid & invalid `mBaseFileName`, `recreateValuesWhenResuming` missing record, `handleTrackingAborted`, monotonic continuity across crash recovery (`TST-ARC-008.2`) |
 | `TrackerServiceIntegrationTest` | End-to-end start/pause/resume/auto-pause/stop SQLite persistence (`INT-SWE-03`, `INT-SWE-06`) |
 | `TrackerServiceFinalizationTest`, `TrackerServiceResilienceTest`, `TrackerServiceAsyncInitTest`, `TrackerServiceResumeTest`, `TrackerServiceRrFlushTest`, `TrackerServiceExportGatingTest` | `handleActionStop` vs `onDestroy` `mSessionGeneration` / `mDbExecutor` invariants, async DB init abort, `mLiveRrQueue` flush, and export gating |
+
+---
+
+## Change History
+
+| Version | Date | Author | Ticket | Summary of Changes |
+| :--- | :--- | :--- | :--- | :--- |
+| `1.0.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Added standardized `DOC-ARC-DD-TRK` work-product control header and Change History. |

@@ -30,15 +30,19 @@ import com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessDatabaseMan
 import com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessDbHelper
 import com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessRepository
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
+import com.atrainingtracker.trainingtracker.settings.TuningConfig
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
+import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.mockkStatic
 import io.mockk.unmockkObject
 import io.mockk.unmockkStatic
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -532,5 +536,72 @@ class MorningHrvCheckViewModelTest {
                 HrvSignalQualityStatus.HIGH_ARTIFACTS
             )
         assertTrue(recommendDiscardHighArtifacts)
+    }
+
+    @Test
+    fun testShowMorningCheckOnStartScreenReactiveMapping_TST_HRV_043() = runTest(testDispatcher) {
+        val configFlow = MutableStateFlow(
+            TuningConfig(
+                enableMorningSleepAndWellness = true,
+                showMorningCheckOnStartScreen = false
+            )
+        )
+        val mockTuningDataStore = mockk<TuningPreferencesDataStore>(relaxed = true)
+        every { mockTuningDataStore.tuningConfigFlow } returns configFlow
+        TuningPreferencesDataStore.setInstanceForTesting(mockTuningDataStore)
+
+        try {
+            val viewModel = MorningHrvCheckViewModel(
+                application = application,
+                banalServiceRepository = banalRepository,
+                hrvReadinessRepository = hrvRepository,
+                dispatcher = testDispatcher
+            )
+            advanceUntilIdle()
+
+            assertFalse(
+                "Pure wellness config must expose showMorningCheckOnStartScreen = false",
+                viewModel.uiState.value.showMorningCheckOnStartScreen
+            )
+            assertTrue(
+                "Pure wellness config must expose enableMorningSleepAndWellness = true",
+                viewModel.uiState.value.enableMorningSleepAndWellness
+            )
+
+            // Persist standalone wellness and verify null HRV metrics + saved state
+            val rowId = viewModel.saveStandaloneWellness()
+            advanceUntilIdle()
+            assertTrue(rowId > 0)
+            assertTrue(viewModel.uiState.value.isWellnessSaved)
+
+            val saved = hrvRepository.getEntryById(rowId)
+            assertNotNull(saved)
+            assertNull(saved!!.rmssdMs)
+
+            // Reactive update when user re-enables HRV check
+            configFlow.value = configFlow.value.copy(showMorningCheckOnStartScreen = true)
+            advanceUntilIdle()
+            assertTrue(viewModel.uiState.value.showMorningCheckOnStartScreen)
+        } finally {
+            TuningPreferencesDataStore.setInstanceForTesting(null)
+        }
+    }
+
+    @Test
+    fun testSetWellnessTogglesForTestingUpdatesShowMorningCheckFlag_TST_HRV_043() = runTest(testDispatcher) {
+        val viewModel = MorningHrvCheckViewModel(
+            application = application,
+            banalServiceRepository = banalRepository,
+            hrvReadinessRepository = hrvRepository,
+            dispatcher = testDispatcher
+        )
+        advanceUntilIdle()
+
+        viewModel.setWellnessTogglesForTesting(
+            enableMorningSleepAndWellness = true,
+            showMorningCheckOnStartScreen = false
+        )
+        assertFalse(viewModel.uiState.value.showMorningCheckOnStartScreen)
+        assertTrue(viewModel.uiState.value.enableMorningSleepAndWellness)
     }
 }

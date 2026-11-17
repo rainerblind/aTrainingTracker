@@ -1,11 +1,13 @@
 # System Requirements Specification: Data Exchange and Cloud Integration
 
-**Document Version**: 1.0.0  
+**Document ID**: `DOC-SYS-DEX`  
+**Version**: 1.1.0  
 **ASPICE Process Areas**: SYS.2 (System Requirements Analysis, BP1–BP3)  
 **Requirement Reference**: `REQ-PRO-055` (`REQ-PRO-055.1`, `REQ-PRO-055.2`)  
 **Test Reference**: `TST-PRO-055` (`TST-PRO-055.1`–`TST-PRO-055.3`)  
 **Author**: Antigravity Autonomous Engineering Pair  
-**Status**: Approved & Grounded in Live Source Code  
+**Status**: Reviewed  
+**Approver**: Pending PO Sign-Off  
 
 ---
 
@@ -124,3 +126,11 @@ The following matrix establishes bidirectional traceability between system data 
 | `SYSREQ-DEX-005` | Full State Backup & Atomic Recovery | `REQ-DAT-004`, `REQ-DAT-005`, `REQ-DAT-006`, `REQ-DAT-007`, `REQ-DAT-008`, `REQ-DAT-009`, `REQ-DAT-011`, `REQ-DAT-015`, `REQ-DAT-016`, `REQ-DAT-020`, `REQ-DAT-026`, `REQ-DAT-033`, `REQ-DAT-035`, `REQ-DAT-036`, `REQ-DAT-044`, `REQ-MIG-001`, `REQ-MIG-004`, `REQ-MIG-005`, `REQ-MIG-006`, `REQ-MIG-011`, `REQ-MIG-012`, `REQ-MIG-013`, `REQ-MIG-014`, `REQ-MIG-015`, `REQ-MIG-016`, `REQ-MIG-017`, `REQ-MIG-020`, `REQ-MIG-021`, `REQ-MIG-023`, `REQ-MIG-025`, `REQ-MIG-026`, `REQ-MIG-027`, `REQ-MIG-029`, `REQ-MIG-032`, `REQ-MIG-041`, `REQ-MIG-042`, `REQ-MIG-043`, `REQ-MIG-044`, `REQ-MIG-045`, `REQ-MIG-047`, `REQ-MIG-048` | `BackupManager.kt`, `SecureZipExtractor.kt`, `BackupRestoreViewModel.kt`, `DatabaseConnectionManager.kt`, `SystemDataExchangeRequirementsContractTest.kt` |
 | `SYSREQ-DEX-006` | Security Isolation & Credentials Shield | `REQ-DAT-024`, `REQ-EXP-020`, `REQ-EXT-009`, `REQ-EXT-011`, `REQ-EXT-012` | `AuthCredentialsStore.kt`, `full_backup_content.xml`, `data_extraction_rules.xml`, `HealthConnectHrvImporter.kt`, `SystemDataExchangeRequirementsContractTest.kt` |
 
+---
+
+## Change History
+
+| Version | Date | Author | Ticket | Summary of Changes |
+| :--- | :--- | :--- | :--- | :--- |
+| `1.0.0` | 2026-11-16 | AI Agent | `ATT-6142` | Prior system specification baseline. |
+| `1.1.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Standardized `DOC-SYS-DEX` header, bumped version, reset status to `Reviewed` (`Pending PO Sign-Off`). |

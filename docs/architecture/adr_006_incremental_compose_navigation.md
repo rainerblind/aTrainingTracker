@@ -1,6 +1,9 @@
 # ADR-006: Incremental Single-Activity Compose Navigation (`MainActivityWithNavigation`)
 
+- **Document ID**: `DOC-ARC-ADR006`
+- **Version**: 1.0.0
 - **Status**: Retrospective (Pending PO Sign-Off)
+- **Approver**: Product Owner (Pending Sign-Off)
 - **Deciders**: Architecture Board, Product Owner (Pending Sign-Off)
 - **Date**: 2026-11-17
 - **Target Release**: `5.1.0` (Active Sprint: `2026-11-17_01_Früh`)
@@ -43,3 +46,11 @@ Key selection criteria: (1) continuous sprint shippability without multi-month U
 
 ### Negative / Mitigated Consequences
 - **Dual UI Boundary Maintenance**: `MainActivityWithNavigation` temporarily bridges Compose `NavHostController` with legacy preference/activity hooks; mitigated by `UiPresentationIntegrationTest` and `ArchitectureConformanceContractTest`.
+
+---
+
+## Change History
+
+| Version | Date | Author | Ticket | Summary of Changes |
+| :--- | :--- | :--- | :--- | :--- |
+| `1.0.0` | 2026-11-17 | AI Agent (`ATT-8161`, `ATT-8164`) | `ATT-8161`, `ATT-8164` | Retrospective ADR baseline with standardized `DOC-ARC-ADR006` control header. |

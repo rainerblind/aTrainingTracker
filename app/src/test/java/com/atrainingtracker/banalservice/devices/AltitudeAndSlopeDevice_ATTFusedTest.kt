@@ -544,4 +544,121 @@ class AltitudeAndSlopeDevice_ATTFusedTest {
         assertTrue("Post-lock real 25 m climb must accumulate ~25 m ascent (was $ascentAfterClimb)", ascentAfterClimb in 22.0..27.0)
         assertEquals("Descent must stay 0.0 m during pure climb", 0.0, descentAfterClimb, 1e-6)
     }
+
+    // TST-FIL-023.2: Pre-stop -21% slope clears to 0% on sustained standstill instead of staying frozen
+    @Test
+    fun testStandstillSlopeClearing_publishesZeroInsteadOfFrozenNegativeSlope_tstFil023_2() {
+        every { AttFusedAltitudePreferences.isEffectiveDemActive(any()) } returns true
+        every { AttFusedAltitudePreferences.isEffectiveGpsActive(any()) } returns false
+
+        val speedSensor = mockk<com.atrainingtracker.banalservice.sensor.MySensor<Number>>(relaxed = true)
+        every { speedSensor.value } returns 6.0
+        every { mockSensorManager.getSensor(SensorType.SPEED_mps) } returns speedSensor
+
+        val demSensor = mockk<com.atrainingtracker.banalservice.sensor.MySensor<Number>>(relaxed = true)
+        var currentAlt = 500.0
+        every { demSensor.value } answers { currentAlt }
+        var demTs = 1000L
+        every { demSensor.lastUpdateTimestamp } answers { demTs }
+        every {
+            mockSensorManager.getSensorForDeviceType(SensorType.ALTITUDE, DeviceType.ALTITUDE_FROM_POSITION)
+        } returns demSensor
+
+        val device = AltitudeAndSlopeDevice_ATTFused(mockContext, mockSensorManager, autoStartScheduler = false)
+        device.refreshCachedPreferences()
+        device.calculateMetrics(1000L)
+
+        // Ride downhill -20% at 6.0 m/s for 20s
+        var tMs = 2000L
+        for (i in 1..20) {
+            currentAlt -= 1.2
+            demTs = tMs
+            val p = SensorManager.PRESSURE_STANDARD_ATMOSPHERE *
+                Math.pow(1.0 - currentAlt / 44330.0, 5.255).toFloat()
+            device.handlePressureMeasurement(p, tMs)
+            device.calculateMetrics(tMs)
+            tMs += 1000L
+        }
+        val slopeBeforeStop = device.mSlopeSensor?.value ?: 0
+        assertTrue("Slope before stop must be strongly negative (was $slopeBeforeStop%)", slopeBeforeStop <= -10)
+
+        val ascentAtStop = (device.mAscentSensor?.value as? Number)?.toDouble() ?: 0.0
+        val descentAtStop = (device.mDescentSensor?.value as? Number)?.toDouble() ?: 0.0
+
+        // Stop for 13 seconds (t=200..213s scenario)
+        every { speedSensor.value } returns 0.0
+        val pStop = SensorManager.PRESSURE_STANDARD_ATMOSPHERE *
+            Math.pow(1.0 - currentAlt / 44330.0, 5.255).toFloat()
+        for (i in 1..13) {
+            device.handlePressureMeasurement(pStop, tMs)
+            device.calculateMetrics(tMs)
+            tMs += 1000L
+        }
+
+        assertEquals("Slope must clear to 0% at sustained stop", 0, device.mSlopeSensor?.value)
+        assertEquals(ascentAtStop, (device.mAscentSensor?.value as? Number)?.toDouble() ?: 0.0, 1e-6)
+        assertEquals(descentAtStop, (device.mDescentSensor?.value as? Number)?.toDouble() ?: 0.0, 1e-6)
+    }
+
+    // TST-FIL-023.3: Walking-speed roll-away (0.85 m/s) prevents +29% slope & ascent inflation while keeping +8% climbs
+    @Test
+    fun testLowSpeedRollAway_suppressesSlopeSpikeAndAscentInflation_tstFil023_3() {
+        every { AttFusedAltitudePreferences.isEffectiveDemActive(any()) } returns true
+        every { AttFusedAltitudePreferences.isEffectiveGpsActive(any()) } returns false
+
+        val speedSensor = mockk<com.atrainingtracker.banalservice.sensor.MySensor<Number>>(relaxed = true)
+        every { speedSensor.value } returns 0.85
+        every { mockSensorManager.getSensor(SensorType.SPEED_mps) } returns speedSensor
+
+        val demSensor = mockk<com.atrainingtracker.banalservice.sensor.MySensor<Number>>(relaxed = true)
+        var demAlt = 442.0
+        every { demSensor.value } answers { demAlt }
+        var demTs = 1000L
+        every { demSensor.lastUpdateTimestamp } answers { demTs }
+        every {
+            mockSensorManager.getSensorForDeviceType(SensorType.ALTITUDE, DeviceType.ALTITUDE_FROM_POSITION)
+        } returns demSensor
+
+        val device = AltitudeAndSlopeDevice_ATTFused(mockContext, mockSensorManager, autoStartScheduler = false)
+        device.refreshCachedPreferences()
+        device.calculateMetrics(1000L)
+
+        // Roll away at 0.85 m/s for 30s on flat 442m DEM with +/- 0.35m 5-Hz baro chatter
+        var maxAbsSlope = 0
+        var tMs = 2000L
+        for (sec in 0 until 30) {
+            for (sub in 0 until 5) {
+                val baroAlt = 442.0 + 0.35 * kotlin.math.sin((sec * 5 + sub) * 0.9)
+                val p = SensorManager.PRESSURE_STANDARD_ATMOSPHERE *
+                    Math.pow(1.0 - baroAlt / 44330.0, 5.255).toFloat()
+                device.handlePressureMeasurement(p, tMs + sub * 200L)
+                maxAbsSlope = maxOf(maxAbsSlope, kotlin.math.abs(device.mSlopeSensor?.value ?: 0))
+            }
+            demTs = tMs
+            device.calculateMetrics(tMs)
+            maxAbsSlope = maxOf(maxAbsSlope, kotlin.math.abs(device.mSlopeSensor?.value ?: 0))
+            tMs += 1000L
+        }
+
+        val ascentAfterFlatWalk = (device.mAscentSensor?.value as? Number)?.toDouble() ?: 0.0
+        assertTrue("Flat low-speed roll-away must not spike slope (max was $maxAbsSlope%)", maxAbsSlope < 10)
+        assertTrue("Flat low-speed roll-away must not inflate ascent (was $ascentAfterFlatWalk m)", ascentAfterFlatWalk < 2.0)
+
+        // Transition to genuine +8% climb at 5.0 m/s (+0.4 m/s) for 60s -> ~24 m ascent
+        every { speedSensor.value } returns 5.0
+        for (sec in 1..60) {
+            demAlt += 0.4
+            demTs = tMs
+            val p = SensorManager.PRESSURE_STANDARD_ATMOSPHERE *
+                Math.pow(1.0 - demAlt / 44330.0, 5.255).toFloat()
+            device.handlePressureMeasurement(p, tMs)
+            device.calculateMetrics(tMs)
+            tMs += 1000L
+        }
+
+        val ascentAfterClimb = (device.mAscentSensor?.value as? Number)?.toDouble() ?: 0.0
+        val slopeOnClimb = device.mSlopeSensor?.value ?: 0
+        assertTrue("Real +8% climb must accumulate ~24 m ascent (was $ascentAfterClimb)", ascentAfterClimb in 21.0..27.0)
+        assertTrue("Real +8% climb must report positive slope 5..11% (was $slopeOnClimb%)", slopeOnClimb in 5..11)
+    }
 }

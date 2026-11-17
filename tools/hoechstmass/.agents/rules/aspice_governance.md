@@ -3,7 +3,7 @@
 These **9 Core Rules** operationalize **Agile Agentic ASPICE (AAA)** (Tripwires, Infinite Context, and Constructive Resistance) and are strictly binding on all AI agents during in-sprint execution.
 * **Domain Standards**: See [`docs/design_guidelines.md`](docs/design_guidelines.md) (UI/Compose/Charts) and [`docs/coding_standards.md`](docs/coding_standards.md) (Architecture/DRY/Android Lifecycles).
 * **Sprint Ceremonies & Hotfixes**: See [`.agents/skills/sprint-planner/SKILL.md`](.agents/skills/sprint-planner/SKILL.md) (Ceremony 1 & 2 rules) and [`.agents/skills/release-manager/SKILL.md`](.agents/skills/release-manager/SKILL.md).
-* **Historical Archive**: Legacy Rules 1–84+ and retrospective rationales are archived in [`docs/engineering/rule_history_archive.md`](docs/engineering/rule_history_archive.md).
+* **Historical Archive**: Legacy Rules 1–85+ and retrospective rationales are archived in [`docs/engineering/rule_history_archive.md`](docs/engineering/rule_history_archive.md).
 
 ---
 
@@ -77,7 +77,7 @@ These **9 Core Rules** operationalize **Agile Agentic ASPICE (AAA)** (Tripwires,
 * **Rule 8.9 (Evidence-Based Living Requirement Status Model)**: Requirements and test specifications SHALL maintain status: `[Planned]`, `[Implemented]`, or `[Verified]`. Master tables enforce 100% mathematical parity across the 4 status columns.
 
 ## Rule 9: Parallel Sprint Execution Across Disjoint Epics
-* **Rule 9.1 (Strict Concurrency Bounding & Disjoint Epics Only)**: Concurrent ticket execution (`concurrency = 3`) is permitted ONLY across completely disjoint Parent Epics with zero package and zero living-doc shard overlap. Concurrent execution within the same Epic is strictly prohibited.
+* **Rule 9.1 (Strict Concurrency Bounding & Disjoint Epics Only)**: Concurrent ticket execution (`max 3` lanes ceiling; `2` active lanes operational token-budget default per `Rule 7.2`) is permitted ONLY across completely disjoint Parent Epics with zero package and zero living-doc shard overlap. Concurrent execution within the same Epic is strictly prohibited.
 * **Rule 9.2 (Worktree Isolation & Submodule Hygiene)**: Parallel subagent pairs operate in isolated Git worktrees (`Workspace: "share"`) on detached `HEAD`. Subagents SHALL NEVER create filesystem symlinks at submodule paths (`ANT-Android-SDKs`) or stage them via `git add -A`.
 * **Rule 9.3 (POSIX flock Mutual Exclusion & Deterministic --merge-ticket)**: Gradle builds, unit tests, device installs, and ticket integration merges SHALL be serialized under POSIX `flock -w 600 /tmp/att_build_merge.lock` via `python3 tools/parallel_sprint_lock.py` or `./gradlew`.
 * **Rule 9.4 (Domain-Partitioned Localization)**: String resources MAY be partitioned into `app/src/main/res/values*/strings_<domain>.xml` to eliminate merge conflicts during concurrent additions.

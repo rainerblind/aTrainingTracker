@@ -56,12 +56,10 @@ import com.atrainingtracker.trainingtracker.repositories.SportTypesRepository
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutSectionType
 import com.atrainingtracker.trainingtracker.settings.PoolLengthUnit
 import com.atrainingtracker.trainingtracker.settings.RawSensorRetentionPolicy
-import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import com.atrainingtracker.trainingtracker.settings.TuningConfig
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
 import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
-import com.atrainingtracker.trainingtracker.ui.settings.ZoneDisplayOptionsDraft
 import com.atrainingtracker.trainingtracker.ui.settings.radar.RadarSettingsSection
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.AftermathAnalysisSection
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.AmoledBatterySaverSection
@@ -96,8 +94,6 @@ fun AdvancedTuningScreen(
     val scope = rememberCoroutineScope()
     val tuningDataStore = remember { TuningPreferencesDataStore.getInstance(context) }
     val persistedConfig by tuningDataStore.tuningConfigFlow.collectAsState(initial = null)
-    val settingsDataStore = remember { SettingsDataStore.getInstance(context) }
-    val persistedSettingsSnapshot by settingsDataStore.snapshotFlow.collectAsState(initial = null)
     val preferenceManager = remember { MyPreferenceManager(context.applicationContext) }
     val persistedWorkoutCardPrefs by preferenceManager.workoutCardPreferencesFlow.collectAsState(initial = null)
     val persistedWorkoutDetailPrefs by preferenceManager.workoutDetailPreferencesFlow.collectAsState(initial = null)
@@ -144,7 +140,6 @@ fun AdvancedTuningScreen(
     var workoutCardPrefs by remember { mutableStateOf(WorkoutCardSectionPreferences()) }; var isAftermathPrefsInitialized by remember { mutableStateOf(false) }
     var workoutDetailPrefs by remember { mutableStateOf(WorkoutDetailPreferences()) }; var isDetailPrefsInitialized by remember { mutableStateOf(false) }
     var workoutSectionsOrder by remember { mutableStateOf(WorkoutSectionType.DEFAULT_ORDER) }; var isSectionsOrderInitialized by remember { mutableStateOf(false) }
-    var zoneDisplayDraft by remember { mutableStateOf(ZoneDisplayOptionsDraft()) }; var isZoneDisplayInitialized by remember { mutableStateOf(false) }
 
     var expandedSections by rememberSaveable { mutableStateOf(emptySet<String>()) }
     fun isSectionExpanded(section: TuningSection): Boolean = expandedSections.contains(section.name)
@@ -155,7 +150,6 @@ fun AdvancedTuningScreen(
     LaunchedEffect(persistedWorkoutCardPrefs) { persistedWorkoutCardPrefs?.let { if (!isAftermathPrefsInitialized) { workoutCardPrefs = it; isAftermathPrefsInitialized = true } } }
     LaunchedEffect(persistedWorkoutDetailPrefs) { persistedWorkoutDetailPrefs?.let { if (!isDetailPrefsInitialized) { workoutDetailPrefs = it; isDetailPrefsInitialized = true } } }
     LaunchedEffect(persistedWorkoutSectionsOrder) { persistedWorkoutSectionsOrder?.let { if (!isSectionsOrderInitialized) { workoutSectionsOrder = it; isSectionsOrderInitialized = true } } }
-    LaunchedEffect(persistedSettingsSnapshot) { persistedSettingsSnapshot?.let { if (!isZoneDisplayInitialized) { zoneDisplayDraft = ZoneDisplayOptionsDraft.fromSnapshot(it); isZoneDisplayInitialized = true } } }
     LaunchedEffect(Unit) { tuningDataStore.purgeLegacyMapCameraPreferences() }
 
     fun applyConfig(config: TuningConfig) {
@@ -206,18 +200,13 @@ fun AdvancedTuningScreen(
     fun onResetToDefaults() {
         scope.launch {
             tuningDataStore.resetToDefaults()
-            val resetZoneDraft = ZoneDisplayOptionsDraft()
-            resetZoneDraft.persistTo(settingsDataStore)
-            zoneDisplayDraft = resetZoneDraft
             preferenceManager.setWorkoutCardPreferences(WorkoutCardSectionPreferences()); workoutCardPrefs = WorkoutCardSectionPreferences()
             preferenceManager.setWorkoutDetailPreferences(WorkoutDetailPreferences()); workoutDetailPrefs = WorkoutDetailPreferences()
             preferenceManager.setWorkoutSectionsOrder(WorkoutSectionType.DEFAULT_ORDER); workoutSectionsOrder = WorkoutSectionType.DEFAULT_ORDER
             SensorSearchPreferences.reset(context); sensorSearchPrefs = SensorSearchPreferences()
             applyConfig(TuningConfig())
             onSettingsChanged?.invoke()
-            val showResetToast = { Toast.makeText(context, R.string.reset_to_defaults_success, Toast.LENGTH_SHORT).show() }
-            if (android.os.Looper.myLooper() == android.os.Looper.getMainLooper()) showResetToast()
-            else android.os.Handler(android.os.Looper.getMainLooper()).post(showResetToast)
+            Toast.makeText(context, R.string.reset_to_defaults_success, Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -260,7 +249,6 @@ fun AdvancedTuningScreen(
         )
         scope.launch {
             tuningDataStore.saveTuningConfig(newConfig)
-            zoneDisplayDraft.persistTo(settingsDataStore)
             if (isSwimActivated) {
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                     SportTypesRepository.getInstance(context).ensureSwimSportTypeExists()
@@ -327,8 +315,7 @@ fun AdvancedTuningScreen(
                     sensorFieldVariant = sensorFieldVariant, onSensorFieldVariantChange = { sensorFieldVariant = it },
                     sensorFieldCornerRadius = sensorFieldCornerRadius, onCornerRadiusChange = { sensorFieldCornerRadius = it },
                     sensorFieldBorderThickness = sensorFieldBorderThickness, onBorderThicknessChange = { sensorFieldBorderThickness = it },
-                    sensorFieldBorderContrast = sensorFieldBorderContrast, onBorderContrastChange = { sensorFieldBorderContrast = it },
-                    zoneDisplayDraft = zoneDisplayDraft, onZoneDisplayDraftChange = { zoneDisplayDraft = it }
+                    sensorFieldBorderContrast = sensorFieldBorderContrast, onBorderContrastChange = { sensorFieldBorderContrast = it }
                 )
             }
 

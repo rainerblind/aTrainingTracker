@@ -8,6 +8,7 @@ Human Acceptance Rate) and PA 4.2 Statistical Process Control (mu +/- 2sigma out
 JSONL time-series persistence, and formatting).
 """
 
+import datetime
 import os
 import shutil
 import sys
@@ -539,6 +540,91 @@ class TestSprintMetrics(unittest.TestCase):
 
         md = format_metrics_markdown(metrics)
         self.assertIn("PA 4.1 Plausibility Warning", md)
+
+    def test_bug_age_resolution_states_and_multi_sprint_trend(self):
+        """TST-PRO-121.1: Verify open bug age, awaiting-human/non-fix resolutions, and multi-sprint trend chart."""
+        ref_now = datetime.datetime(2026, 11, 17, 18, 0, 0, tzinfo=datetime.timezone.utc)
+        parent_issues = [
+            {
+                "key": "ATT-901",
+                "fields": {
+                    "summary": "Critical open bug aged 10 days",
+                    "status": {"name": "Analysis"},
+                    "priority": {"name": "Highest"},
+                    "issuetype": {"id": "10006", "name": "Bug"},
+                    "labels": ["severity-critical"],
+                    "created": "2026-11-07T18:00:00.000+0000",
+                    "customfield_10016": 2.0,
+                    "subtasks": [],
+                },
+            },
+            {
+                "key": "ATT-902",
+                "fields": {
+                    "summary": "Major bug fixed awaiting human sign-off",
+                    "status": {"name": "Final Review (Human)"},
+                    "priority": {"name": "High"},
+                    "issuetype": {"id": "10006", "name": "Bug"},
+                    "labels": ["severity-major", "resolution-fixed"],
+                    "created": "2026-11-15T18:00:00.000+0000",
+                    "customfield_10016": 1.0,
+                    "subtasks": [],
+                },
+            },
+            {
+                "key": "ATT-903",
+                "fields": {
+                    "summary": "Minor duplicate bug closed via label",
+                    "status": {"name": "Final Review (Human)"},
+                    "priority": {"name": "Medium"},
+                    "issuetype": {"id": "10006", "name": "Bug"},
+                    "labels": ["severity-minor", "resolution-duplicate"],
+                    "created": "2026-11-16T18:00:00.000+0000",
+                    "customfield_10016": 1.0,
+                    "subtasks": [],
+                },
+            },
+        ]
+        history = [
+            {
+                "sprint_id": 443,
+                "sprint_name": "2026-46.6",
+                "problem_trends": {
+                    "total_bugs": 17,
+                    "open_bugs": 17,
+                    "closed_bugs": 0,
+                    "resolution_rate_percent": 0.0,
+                    "by_severity": {"Critical": 3, "Major": 8, "Minor": 6, "Cosmetic": 0},
+                },
+            }
+        ]
+        metrics = parse_sprint_gate_metrics(
+            parent_issues,
+            {"id": 457, "name": "2026-11-17_02_Spät"},
+            history=history,
+            now=ref_now,
+        )
+        pt = metrics["problem_trends"]
+        self.assertEqual(pt["total_bugs"], 3)
+        self.assertEqual(pt["open_bugs"], 1)
+        self.assertEqual(pt["fixed_awaiting_human"], 1)
+        self.assertEqual(pt["closed_bugs"], 1)
+        self.assertEqual(pt["resolution_rate_percent"], 66.7)
+        self.assertEqual(pt["by_resolution"]["Duplicate"], 1)
+        self.assertEqual(pt["by_resolution"]["Fixed"], 1)
+        age = pt["open_bug_age_days"]
+        self.assertEqual(age["avg"], 10.0)
+        self.assertEqual(age["max"], 10.0)
+        self.assertEqual(age["gt_7d"], 1)
+        self.assertEqual(age["by_severity"]["Critical"]["gt_7d"], 1)
+        self.assertEqual(len(pt["bug_trend_history"]), 2)
+
+        md = format_metrics_markdown(metrics)
+        self.assertIn("Open Bug Age (days)", md)
+        self.assertIn("Awaiting Human", md)
+        self.assertIn("Bug Trend vs Previous Sprints", md)
+        self.assertIn("2026-46.6", md)
+        self.assertIn("2026-11-17_02_Spät", md)
 
 
 if __name__ == "__main__":

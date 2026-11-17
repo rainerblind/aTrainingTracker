@@ -28,6 +28,7 @@ Reuse the ticket's two persistent `TypeName: "self"` subagents via `send_message
      - **Description**: Normative contract specification...
      ```
    - (or conduct Chesterton's Fence archaeology if modifying existing lines).
+   - Bump `**Version**` patch (keeping `**Status**: Reviewed` and updating `Change History`) on any modified living requirement/test shard (`docs/requirements/*.md`, `docs/tests/*.md`) per `REQ-PRO-120`.
    - Validate governance via `python3 tools/verify_requirement_governance.py`.
 2. **Test Specification (`TST-XXX`)**:
    - Specify deterministic unit, repository, ViewModel, database, and UI test cases.

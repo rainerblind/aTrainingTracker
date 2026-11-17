@@ -1,5 +1,10 @@
 # Canonical SensorType Internal Storage, Display & Export Unit Data Dictionary (REQ-TRK-083)
 
+**Document ID**: `DOC-ARC-UNITS`  
+**Version**: 1.0.0  
+**Status**: Reviewed  
+**Approver**: Pending PO Sign-Off  
+
 This document defines the canonical unit contract for all **67** enum constants in [`SensorType.java`](../../app/src/main/java/com/atrainingtracker/banalservice/sensor/SensorType.java).
 It separates **internal SQLite / sensor-bus storage units** (`SensorType.getInternalUnit()`, SQLite columns named `sensorType.name()` via `WorkoutSamplesDatabaseManager.makeColumns`) from **UI display formatting** (`MyFormatter`, `SensorType.getUnitId()`, `MyHelper.getUnitsId()`) and **file export conversions** (`FitFileWriter.kt`, `TCXFileWriter.kt`, `GPXFileWriter.java`, `CSVFileWriter.java`, `GCFileWriter.java`).
 
@@ -88,3 +93,11 @@ It separates **internal SQLite / sensor-bus storage units** (`SensorType.getInte
    - **FIT (`FitFileWriter.kt`)**: `LATITUDE`/`LONGITUDE` `deg -> semicircles` (`* SEMICIRCLES_FACTOR`); `VERTICAL_OSCILLATION` `cm -> mm` (`* CM_TO_MM`); `WORK_KJ` `kJ -> J` (`* 1000.0`); `RR_INTERVAL` `ms -> s` (`rrMs / 1000.0f`); `PEDAL_POWER_BALANCE` bit-packed right-pedal `%`.
    - **Golden Cheetah (`GCFileWriter.java`)**: `DISTANCE_m -> km` (`/ 1000.0`, `KM`); `SPEED_mps -> km/h` (`* 3.6`, `KPH`).
    - **TCX (`TCXFileWriter.kt`), GPX (`GPXFileWriter.java`), CSV (`CSVFileWriter.java`)**: Export raw internal SI/SQLite values (`m`, `m/s`, `deg`, `bpm`, `W`, `1/min`, `s`, or verbatim SQLite text/numbers in CSV).
+
+---
+
+## Change History
+
+| Version | Date | Author | Ticket | Summary of Changes |
+| :--- | :--- | :--- | :--- | :--- |
+| `1.0.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Added standardized `DOC-ARC-UNITS` work-product control header and Change History. |

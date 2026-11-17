@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM || true)
+if [ -z "$STAGED_FILES" ]; then
+  exit 0
+fi
+
+FOUND=0
+while IFS= read -r file; do
+  [ -z "$file" ] && continue
+  # Skip binary files via grep -I on index blob
+  if git show ":$file" 2>/dev/null | grep -n -I -E '^(<{7}( .*)?|={7}|>{7}( .*)?)$'; then
+    echo "ERROR: Unresolved Git conflict marker detected in staged file '$file' (REQ-PRO-121.3)." >&2
+    FOUND=1
+  fi
+done <<< "$STAGED_FILES"
+
+if [ "$FOUND" -ne 0 ]; then
+  exit 1
+fi

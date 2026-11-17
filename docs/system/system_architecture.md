@@ -1,11 +1,13 @@
 # System Architectural Design Specification (ASPICE SYS.3)
 
-**Document Version**: 1.0.0  
+**Document ID**: `DOC-SYS-ARC`  
+**Version**: 1.1.0  
 **ASPICE Process Areas**: SYS.3 (System Architectural Design, BP1–BP6)  
 **Parent Epic**: [ATT-6142](https://rainerblind.atlassian.net/browse/ATT-6142) (*ASPICE CL2 – System Level, Architecture Conformance, Integration & Quality Gates*)  
 **Requirement Reference**: `REQ-PRO-056` (`REQ-PRO-056.1`, `REQ-PRO-056.2`)  
 **Test Reference**: `TST-PRO-056` (`TST-PRO-056.1`–`TST-PRO-056.4`)  
-**Status**: Approved & Grounded in Live Source Code  
+**Status**: Reviewed  
+**Approver**: Pending PO Sign-Off  
 
 ---
 
@@ -220,3 +222,12 @@ Every system requirement across both functional domains is allocated to designat
 * **To System Requirements (SYS.2)**: 100% of all 12 `SYSREQ-*` requirements map to $\ge 1$ system element and interface.
 * **To Software Architecture (SWE.2)**: System Elements `SYS-EL-01` through `SYS-EL-05` trace directly to SWE.2 component definitions in `docs/architecture.md`.
 * **To Verification Tests**: Every system interface and allocation is verified by automated contract tests under `app/src/test/.../build/` without reading production source files (ATT-6186).
+
+---
+
+## Change History
+
+| Version | Date | Author | Ticket | Summary of Changes |
+| :--- | :--- | :--- | :--- | :--- |
+| `1.0.0` | 2026-11-16 | AI Agent | `ATT-6142` | Prior system specification baseline. |
+| `1.1.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Standardized `DOC-SYS-ARC` header, bumped version, reset status to `Reviewed` (`Pending PO Sign-Off`). |

@@ -1,5 +1,10 @@
 # Software Integration Verification Strategy: aTrainingTracker (ASPICE SWE.5.BP1)
 
+**Document ID**: `DOC-ARC-INT`  
+**Version**: 1.0.0  
+**Status**: Reviewed  
+**Approver**: Pending PO Sign-Off  
+
 This document establishes the authoritative **Software Integration and Verification Strategy** for **aTrainingTracker** in accordance with **Automotive SPICE (ASPICE v3.1 / v4.0) SWE.5 Base Practice 1 (Develop software integration strategy and software verification strategy)**.
 
 It formalizes the bottom-up integration order across all architectural boundaries (`IF-SWE-01` through `IF-SWE-08`), allocates integration test steps (`INT-SWE-01` through `INT-SWE-08`), defines hierarchical verification levels, specifies entry and exit criteria, and details regression test selection.
@@ -144,3 +149,11 @@ Verification is partitioned across three hierarchical environments:
        ```
   3. **Culprit Commit Analysis**:
      * Run `python3 tools/sprint_bisect.py analyze <commit>` to perform Chesterton's Fence forensic analysis on the culprit commit prior to formulating a fix.
+
+---
+
+## Change History
+
+| Version | Date | Author | Ticket | Summary of Changes |
+| :--- | :--- | :--- | :--- | :--- |
+| `1.0.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Added standardized `DOC-ARC-INT` work-product control header and Change History. |

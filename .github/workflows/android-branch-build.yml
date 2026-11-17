@@ -142,7 +142,10 @@ jobs:
           path: app/build/reports/kover/
 
       - name: Verify ASPICE requirement governance
-        run: python3 tools/verify_requirement_governance.py
+        run: |
+          python3 tools/verify_requirement_governance.py
+          python3 tools/verify_requirement_governance.py --check-conflict-markers
+          python3 tools/verify_requirement_governance.py --check-commit-hygiene --base-ref "${{ github.base_ref || 'develop' }}"
 
       - name: Build debug APK
         run: ./gradlew :app:assembleDebug

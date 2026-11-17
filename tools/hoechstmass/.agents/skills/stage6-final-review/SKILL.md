@@ -1,6 +1,6 @@
 ---
 name: stage6-final-review
-description: Executes Stage 6 ('Final Review (Agent)') of the agile ASPICE lifecycle. Conducts an independent, zero-context, adversarial Cold Carbon (Model: 'pro') code & architecture review of the squashed commit on the sprint branch, enforces up to 3 autonomous healing bounces back to the implementing pair, and posts a structured Executive Review Summary before advancing the ticket to 'Final Review (Human)'.
+description: Executes Stage 6 ('Final Review (Agent)') of the agile ASPICE lifecycle. Conducts an independent, zero-context, adversarial Cold Final Review (Model 'flash' for low-risk/1-2 SP/doc/tooling/single-component fixes; Model 'pro' for high-risk/architectural/complex UI/concurrency/bounce escalations) of the squashed commit on the sprint branch, enforces up to 3 autonomous healing bounces back to the implementing pair, and posts a structured Executive Review Summary before advancing the ticket to 'Final Review (Human)'.
 ---
 
 # Skill: stage6-final-review
@@ -8,7 +8,7 @@ description: Executes Stage 6 ('Final Review (Agent)') of the agile ASPICE lifec
 ## Overview
 This skill guides the agent through **Stage 6 (`Final Review (Agent)` / Gate 6)**. While Stages 1–5 (`Analysis` $\rightarrow$ `Test Spec` $\rightarrow$ `Implementation Plan` $\rightarrow$ `Implementation` $\rightarrow$ `Test`) are executed by a persistent Epic-scoped `pro`/`flash` subagent pair (`Rules 60–63`), **Stage 6 (`Final Review (Agent)`)** introduces an orthogonal Swiss Cheese defensive barrier ($p_6$).
 
-A freshly spawned **Cold `Gemini 4 Carbon` (`Model: "pro"`)** reviewer — with **zero shared conversational history** from Stages 1–5 — acts as a **skeptical, adversarial Principal Engineer** auditing the integrated commit on `sprint/<SPRINT_NAME>` to uncover subtle runtime bugs, math/unit errors, lifecycle leaks, incomplete UI/protocol wiring, and test blind spots *before* the ticket reaches the human Product Owner (`Final Review (Human)`).
+A freshly spawned **Cold Reviewer** (`Model: "flash"` for Low-Risk / `1–2 SP` / tooling / doc / single-component fixes; `Model: "pro"` reserved for High-Risk / multi-component architectural, complex UI, concurrency/DB/sensor-protocol, or Bounce 2–3 escalations per `Rule 7.2`) — with **zero shared conversational history** from Stages 1–5 — acts as a **skeptical, adversarial Principal Engineer** auditing the integrated commit on `sprint/<SPRINT_NAME>` to uncover subtle runtime bugs, math/unit errors, lifecycle leaks, incomplete UI/protocol wiring, and test blind spots *before* the ticket reaches the human Product Owner (`Final Review (Human)`).
 
 ---
 

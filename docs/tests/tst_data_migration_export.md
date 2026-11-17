@@ -1,5 +1,10 @@
 # Living Test Specification: Persistence, Migration & Cloud Export
 
+**Document ID**: `DOC-TST-MIG`  
+**Version**: 1.0.0  
+**Status**: Reviewed  
+**Approver**: Pending PO Sign-Off  
+
 **Domain**: `data_migration_export`  
 **Prefixes**: `DAT`, `EXP`, `EXT`, `MIG`  
 **Scope**: Database schema, backup/restore, migration pipelines, Strava/cloud upload, FIT/GPX export.  
@@ -2260,17 +2265,10 @@
      - Run `TranslationParityTest` verifying all 9 locales (`EN`, `DE`, `ES`, `FR`, `IT`, `JA`, `NL`, `PL`, `PT`) define all diagnostic bundle and raw sensor export labels without emojis (`Rule 38`).
      - Verify Stage 4 generates and inspects `docs/engineering/walkthroughs/img/ATT-8020_diagnostic_share_sheet.png` (`Rule 8.5`).
 
+---
 
+## Change History
 
-
-
-
-
-
-
-
-
-
-
-
-
+| Version | Date | Author | Ticket | Summary of Changes |
+| :--- | :--- | :--- | :--- | :--- |
+| `1.0.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Added standardized `DOC-TST-MIG` work-product control header and Change History. |

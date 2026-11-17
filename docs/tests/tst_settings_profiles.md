@@ -1,5 +1,10 @@
 # Living Test Specification: Settings, Profiles & Localization
 
+**Document ID**: `DOC-TST-SET`  
+**Version**: 1.0.0  
+**Status**: Reviewed  
+**Approver**: Pending PO Sign-Off  
+
 **Domain**: `settings_profiles`  
 **Prefixes**: `LOC`, `MON`, `PRI`, `SET`  
 **Scope**: Athlete settings, bike/sensor profiles, privacy zones, data stores, monetization, and 9-locale parity.  
@@ -1473,3 +1478,10 @@
   • Verify `SensorsGpsFilterSection` displays the retention selector using M3 components fitting 360dp widths across all 9 locales.
   • Verify Stage 4 generates `docs/engineering/walkthroughs/img/ATT-8019_raw_telemetry_settings.png` and passes 4-point visual inspection (`Rule 8.5`).
 
+---
+
+## Change History
+
+| Version | Date | Author | Ticket | Summary of Changes |
+| :--- | :--- | :--- | :--- | :--- |
+| `1.0.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Added standardized `DOC-TST-SET` work-product control header and Change History. |

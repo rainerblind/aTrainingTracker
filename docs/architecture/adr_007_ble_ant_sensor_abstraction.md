@@ -1,6 +1,9 @@
 # ADR-007: Unified BLE & ANT+ Hardware Sensor Abstraction (`MyDevice` / `MyRemoteDevice`)
 
+- **Document ID**: `DOC-ARC-ADR007`
+- **Version**: 1.0.0
 - **Status**: Retrospective (Pending PO Sign-Off)
+- **Approver**: Product Owner (Pending Sign-Off)
 - **Deciders**: Architecture Board, Product Owner (Pending Sign-Off)
 - **Date**: 2026-11-17
 - **Target Release**: `5.1.0` (Active Sprint: `2026-11-17_01_Früh`)
@@ -43,3 +46,11 @@ All hardware peripherals MUST register metrics into `MySensorManager` through `M
 
 ### Negative / Mitigated Consequences
 - **Legacy Java Inheritance Tree**: `MyDevice` / `MyRemoteDevice` remain in Java per `ADR-001`; mitigated by unit/characterisation coverage (`MyBTLEDeviceLifecycleTest`, `MyBTLEDeviceQueueTest`, `HardwareHalIngestionIntegrationTest`) and `detailed_design/my_btle_device.md`.
+
+---
+
+## Change History
+
+| Version | Date | Author | Ticket | Summary of Changes |
+| :--- | :--- | :--- | :--- | :--- |
+| `1.0.0` | 2026-11-17 | AI Agent (`ATT-8161`, `ATT-8164`) | `ATT-8161`, `ATT-8164` | Retrospective ADR baseline with standardized `DOC-ARC-ADR007` control header. |

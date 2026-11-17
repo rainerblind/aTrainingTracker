@@ -1,5 +1,10 @@
 # Detailed Design: BANALService & DeviceManager (ASPICE SWE.3)
 
+**Document ID**: `DOC-ARC-DD-BANAL`  
+**Version**: 1.0.0  
+**Status**: Reviewed  
+**Approver**: Pending PO Sign-Off  
+
 **Units**: `BANALService` (`app/src/main/java/com/atrainingtracker/banalservice/BANALService.java`, 948 LOC), `DeviceManager` (`app/src/main/java/com/atrainingtracker/banalservice/devices/DeviceManager.java`, 1,451 LOC), `MyRemoteDevice` (`MyRemoteDevice.java`, 139 LOC)  
 **Collaborators**: `MySensorManager`, `ProxySensor`, `FilterManager`, `SportTypesRepository`, `BANALServiceComm`  
 **SWE.2 Alignment**: `docs/architecture.md` §3.2, §4.2, §4.7, §4.8, §4.9 (`IF-SWE-03`, `IF-SWE-04`)  
@@ -88,3 +93,11 @@ stateDiagram-v2
 | `BANALServiceArbitrationCharacterisationTest` | `SPEED_PRIORITY` (`ATT_FUSED > BIKE_SPEED > GPS`) & dynamic fallback, `ALTITUDE_PRIORITY` (`ATT_FUSED > POSITION > PRESSURE`), `ProxySensor` transparent listener migration on source switch, `WheelMeasurementListener` dispatch, `shutDown()` unbound proxy cleanup (`TST-ARC-008.3`) |
 | `BANALServiceLifecycleTest` | `onDestroy()` nullifies `BANALService.getDeviceManager()` & `getSensorData()`, unbound `ProxySensor` exclusion from available set, `DeviceManager.shutDown()` nullifies internal devices (`TST-TRK-055.4`) |
 | `HardwareHalIngestionIntegrationTest` | HAL -> `BANALService` / `MySensorManager` integration verification (`INT-SWE-04`, `TST-INT-012`) |
+
+---
+
+## Change History
+
+| Version | Date | Author | Ticket | Summary of Changes |
+| :--- | :--- | :--- | :--- | :--- |
+| `1.0.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Added standardized `DOC-ARC-DD-BANAL` work-product control header and Change History. |

@@ -33,6 +33,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.util.Locale
 
@@ -65,6 +66,10 @@ object RadarLightController {
     private val _isAutoMode = MutableStateFlow(true)
     @get:JvmStatic
     val isAutoMode: StateFlow<Boolean> = _isAutoMode.asStateFlow()
+
+    private val _preferredMode = MutableStateFlow(TuningPreferencesDefaults.RADAR_LIGHT_DEFAULT_MODE)
+    @get:JvmStatic
+    val preferredMode: StateFlow<RadarLightMode> = _preferredMode.asStateFlow()
 
     private val _isLightControlAvailable = MutableStateFlow(false)
     @get:JvmStatic
@@ -149,6 +154,7 @@ object RadarLightController {
             if (activeRadarDevice === device) {
                 activeRadarDevice = null
                 _isLightControlAvailable.value = false
+                _isStvzo.value = false
                 _hasHardwareBrakeSensor.value = false
                 _isAutoBypassed.value = false
                 SmartBrakeLightDetector.isAutoBypassed = false
@@ -173,6 +179,7 @@ object RadarLightController {
     private var cachedLightDefaultMode: RadarLightMode = TuningPreferencesDefaults.RADAR_LIGHT_DEFAULT_MODE
     private var cachedControlMode: RadarLightControlMode = TuningPreferencesDefaults.RADAR_LIGHT_CONTROL_MODE
     private var hasLoadedInitialPreferences: Boolean = false
+    private var hasUserModifiedSelection: Boolean = false
 
     @JvmStatic
     fun updateCachedPreferences(autoMode: Boolean, defaultMode: RadarLightMode) {
@@ -184,6 +191,7 @@ object RadarLightController {
             hasLoadedInitialPreferences = true
         }
         _isAutoMode.value = autoMode
+        _preferredMode.value = defaultMode
         RadarStateRepository.updateControlState { it.copy(isAutoMode = autoMode) }
     }
 
@@ -209,8 +217,71 @@ object RadarLightController {
             hasLoadedInitialPreferences = true
         }
         val isAuto = (controlMode == RadarLightControlMode.SMART_AUTOMATION)
+        val resolvedDefault = synchronized(this) { cachedLightDefaultMode }
         _isAutoMode.value = isAuto
+        _preferredMode.value = resolvedDefault
         RadarStateRepository.updateControlState { it.copy(isAutoMode = isAuto) }
+    }
+
+    /**
+     * Hydrates persisted [isAutoMode] and [preferredMode] from [TuningPreferencesDataStore] on cold start
+     * prior to workout start (`REQ-CON-048.2`, `ATT-8450`). Safe to call from plain-JVM tests.
+     */
+    @JvmStatic
+    @JvmOverloads
+    fun hydrateFromPreferences(context: Context? = null): Boolean {
+        synchronized(this) {
+            if (hasLoadedInitialPreferences) return true
+        }
+        val ctx = context?.applicationContext ?: context ?: synchronized(this) { appContext } ?: runCatching {
+            com.atrainingtracker.trainingtracker.TrainingApplication.getAppContext()
+        }.getOrNull()
+        if (ctx != null && TuningPreferencesDataStore.hasInitializedInstance()) {
+            try {
+                val cfg = TuningPreferencesDataStore.getInstance(ctx).getTuningConfig()
+                applyHydratedPreferences(cfg.radarLightAutoMode, cfg.radarLightDefaultMode, cfg.radarBrakeLightEnabled)
+                return true
+            } catch (_: Throwable) {
+                // Ignore uninitialized or mock context failures
+            }
+        }
+        return false
+    }
+
+    /**
+     * Suspends to read the initial persisted DataStore preferences for Compose/UI entry points (`REQ-CON-048.2`, `ATT-8450`).
+     * Never overwrites an explicit in-session user selection made before disk load finishes.
+     */
+    suspend fun hydrateFromPreferencesAsync(context: Context) {
+        hydrateFromPreferences(context)
+        val appCtx = runCatching { context.applicationContext ?: context }.getOrNull() ?: return
+        val filesDir = runCatching { appCtx.filesDir }.getOrNull() ?: return
+        if (filesDir.javaClass != java.io.File::class.java) return
+        try {
+            val cfg = TuningPreferencesDataStore.getInstance(appCtx).tuningConfigFlow.first()
+            applyHydratedPreferences(cfg.radarLightAutoMode, cfg.radarLightDefaultMode, cfg.radarBrakeLightEnabled)
+        } catch (_: Throwable) {
+            // Ignore in isolated/unattached contexts
+        }
+    }
+
+    private fun applyHydratedPreferences(autoMode: Boolean, defaultMode: RadarLightMode, brakeLightEnabled: Boolean) {
+        val applied = synchronized(this) {
+            if (hasUserModifiedSelection) return
+            cachedAutoMode = autoMode
+            cachedLightDefaultMode = defaultMode
+            cachedAutoLightControl = !autoMode
+            cachedControlMode = if (autoMode) RadarLightControlMode.SMART_AUTOMATION else RadarLightControlMode.FIXED_WORKOUT_MODE
+            hasLoadedInitialPreferences = true
+            true
+        }
+        if (applied) {
+            SmartBrakeLightDetector.isEnabled = brakeLightEnabled
+            SmartRadarLightEngine.isAutomationEnabled = autoMode
+            _isAutoMode.value = autoMode
+            _preferredMode.value = defaultMode
+            RadarStateRepository.updateControlState { it.copy(isAutoMode = autoMode) }
+        }
     }
 
     /**
@@ -295,6 +366,7 @@ object RadarLightController {
             } catch (_: Exception) {}
             pendingTargetMode = null
             _isAutoMode.value = true
+            hasUserModifiedSelection = true
         }
         updateCachedPreferences(autoMode = true, defaultMode = synchronized(this) { cachedLightDefaultMode })
         SmartRadarLightEngine.resumeAutomation()
@@ -315,6 +387,7 @@ object RadarLightController {
             } catch (_: Exception) {}
             pendingTargetMode = null
             _isAutoMode.value = false
+            hasUserModifiedSelection = true
         }
         val targetMode = if (_isStvzo.value && !mode.isStvzoCompliant) RadarLightMode.SOLID else mode
         updateCachedPreferences(autoMode = false, defaultMode = targetMode)
@@ -368,6 +441,7 @@ object RadarLightController {
             _isAutoMode.value = false
             pendingTargetMode = targetMode
             _currentMode.value = targetMode
+            hasUserModifiedSelection = true
             try {
                 handler.removeCallbacks(debouncedDispatchRunnable)
                 handler.postDelayed(debouncedDispatchRunnable, DEBOUNCE_DELAY_MS)
@@ -447,6 +521,8 @@ object RadarLightController {
                         cachedAutoLightControl = !cfg.radarLightAutoMode
                         cachedControlMode = if (cfg.radarLightAutoMode) RadarLightControlMode.SMART_AUTOMATION else RadarLightControlMode.FIXED_WORKOUT_MODE
                         hasLoadedInitialPreferences = true
+                        _isAutoMode.value = cfg.radarLightAutoMode
+                        _preferredMode.value = cfg.radarLightDefaultMode
                     }
                 }
                 SmartRadarLightEngine.isAutomationEnabled = synchronized(this) { cachedAutoMode }
@@ -705,6 +781,7 @@ object RadarLightController {
             _hasHardwareBrakeSensor.value = false
             _isAutoBypassed.value = false
             _isAutoMode.value = true
+            _preferredMode.value = TuningPreferencesDefaults.RADAR_LIGHT_DEFAULT_MODE
             _currentMode.value = RadarLightMode.OFF
             isBrakeActive = false
             preBrakeMode = RadarLightMode.OFF
@@ -714,6 +791,7 @@ object RadarLightController {
             cachedAutoLightControl = TuningPreferencesDefaults.RADAR_AUTO_LIGHT_CONTROL
             cachedLightDefaultMode = TuningPreferencesDefaults.RADAR_LIGHT_DEFAULT_MODE
             hasLoadedInitialPreferences = false
+            hasUserModifiedSelection = false
             try {
                 handler.removeCallbacks(brakeHoldRunnable)
                 handler.removeCallbacks(debouncedDispatchRunnable)

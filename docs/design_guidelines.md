@@ -1,5 +1,10 @@
 # aTrainingTracker: UI & Interaction Design Guidelines
 
+**Document ID**: `DOC-STD-DESIGN`  
+**Version**: 1.0.0  
+**Status**: Reviewed  
+**Approver**: Pending PO Sign-Off  
+
 This document serves as the living source of truth for UI/UX patterns, component selection heuristics, and touch interaction principles across **aTrainingTracker**. All new Jetpack Compose implementations, refactorings, and settings screens should align with these guidelines to ensure visual harmony, intuitive interaction, and brand consistency.
 
 ---
@@ -465,3 +470,11 @@ Row(
 * **Single Spatial Authority**:
   * Map camera tracking, Follow-Me lookahead offsets, and viewport content paddings MUST share a single spatial authority to prevent conflicting animation loops and viewport jitter.
   * Avoid competing camera updates where Google Maps `contentPadding` recalculation in `BoxWithConstraints` fights with `cameraPositionState.animate(...)`. Keep map paddings symmetric or fixed, and implement forward camera lookahead analytically via target coordinate projection (ATT-3054 / ATT-3102).
+
+---
+
+## Change History
+
+| Version | Date | Author | Ticket | Summary of Changes |
+| :--- | :--- | :--- | :--- | :--- |
+| `1.0.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Added standardized `DOC-STD-DESIGN` work-product control header and Change History. |

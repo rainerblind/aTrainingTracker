@@ -24,6 +24,7 @@ import android.hardware.SensorManager
 import android.util.Log
 import com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDevice
 import com.atrainingtracker.trainingtracker.settings.RadarLightControlMode
+import com.atrainingtracker.trainingtracker.settings.TuningConfig
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import io.mockk.every
 import io.mockk.mockk
@@ -865,5 +866,77 @@ class RadarLightControllerTest {
         assertTrue(RadarLightController.isAutoMode.value)
         assertTrue(RadarStateRepository.getState().isAutoMode)
         assertFalse(SmartRadarLightEngine.isManualOverridden)
+    }
+
+    /**
+     * TST-CON-048.2 / REQ-CON-048.2 (ATT-8450):
+     * Offline manual mode selection updates preferredMode without live GATT dispatch, so UI never
+     * highlights OFF when user configures SOLID/DAY_FLASH offline.
+     */
+    @Test
+    fun testRadarLightController_offlineManualMode_updatesPreferredModeWithoutOffHighlight() {
+        val dispatched = RadarLightController.setManualLightMode(RadarLightMode.SOLID)
+        assertFalse("Offline dispatch must return false", dispatched)
+        assertFalse(RadarLightController.isAutoMode.value)
+        assertEquals(
+            "Live currentMode remains OFF while disconnected",
+            RadarLightMode.OFF,
+            RadarLightController.currentMode.value
+        )
+        assertEquals(
+            "Configured preferredMode must update to SOLID offline",
+            RadarLightMode.SOLID,
+            RadarLightController.preferredMode.value
+        )
+
+        // Switching back to Automatik retains last preferred manual mode and sets isAutoMode = true
+        RadarLightController.setAutoMode()
+        assertTrue(RadarLightController.isAutoMode.value)
+        assertEquals(RadarLightMode.SOLID, RadarLightController.preferredMode.value)
+    }
+
+    /**
+     * TST-CON-048.2 / REQ-CON-048.2 (ATT-8450):
+     * Cold-start hydrateFromPreferences() populates isAutoMode and preferredMode from
+     * TuningPreferencesDataStore before any workout starts.
+     */
+    @Test
+    fun testRadarLightController_hydrateFromPreferences_loadsPersistedSelectionBeforeWorkoutStart() {
+        val mockDataStore = mockk<TuningPreferencesDataStore>(relaxed = true)
+        every { mockDataStore.getTuningConfig() } returns TuningConfig(
+            radarLightAutoMode = false,
+            radarLightDefaultMode = RadarLightMode.NIGHT_FLASH
+        )
+        TuningPreferencesDataStore.setInstanceForTesting(mockDataStore)
+        val mockContext = mockk<Context>(relaxed = true)
+
+        assertTrue(RadarLightController.hydrateFromPreferences(mockContext))
+        assertFalse(RadarLightController.isAutoMode.value)
+        assertEquals(RadarLightMode.NIGHT_FLASH, RadarLightController.preferredMode.value)
+
+        // Subsequent workout start applies hydrated mode once hardware connects
+        val mockDevice = mockk<BTLERadarDevice>(relaxed = true)
+        every { mockDevice.setLightMode(any()) } returns true
+        RadarLightController.registerRadarDevice(mockDevice, lightSupported = true, isStvzo = false)
+        RadarLightController.onWorkoutStarted(mockContext, isCycling = true)
+
+        assertEquals(RadarLightMode.NIGHT_FLASH, RadarLightController.currentMode.value)
+        verify { mockDevice.setLightMode(RadarLightMode.NIGHT_FLASH) }
+    }
+
+    /**
+     * TST-CON-048.2 / REQ-CON-048.2 (ATT-8450):
+     * Disconnecting an StVZO radar must reset isStvzo so subsequent offline EditDeviceDialog views
+     * do not inherit a stale StVZO flag.
+     */
+    @Test
+    fun testRadarLightController_unregisterRadarDevice_resetsIsStvzo() {
+        val mockDevice = mockk<BTLERadarDevice>(relaxed = true)
+        RadarLightController.registerRadarDevice(mockDevice, lightSupported = true, isStvzo = true)
+        assertTrue(RadarLightController.isStvzo.value)
+
+        RadarLightController.unregisterRadarDevice(mockDevice)
+        assertFalse(RadarLightController.isLightControlAvailable.value)
+        assertFalse("isStvzo must reset to false on disconnect", RadarLightController.isStvzo.value)
     }
 }

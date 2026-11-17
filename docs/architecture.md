@@ -1,5 +1,10 @@
 # Software Architecture: aTrainingTracker (ASPICE 4.0 SWE.2)
 
+**Document ID**: `DOC-ARC-MAIN`  
+**Version**: 1.0.0  
+**Status**: Reviewed  
+**Approver**: Pending PO Sign-Off  
+
 This document establishes the comprehensive software architectural design and component interfaces of **aTrainingTracker**, fulfilling the **Automotive SPICE (ASPICE v4.0) SWE.2** standard across Base Practices `BP1` through `BP5`.
 
 ---
@@ -397,9 +402,10 @@ In accordance with **ASPICE SUP.8 (Configuration and Release Management)**, **SW
 * **Release Evidence Dossier Structure**: Every release candidate tag (`<tag>`) requires an evidence directory `docs/releases/<tag>/` containing hardware-in-the-loop SYS.5 verification protocol records (`sys_verification_record.md`) and consolidated release summary (`verification_summary.md`), templated in [`docs/releases/TEMPLATE.md`](releases/TEMPLATE.md) and documented in [`docs/releases/README.md`](releases/README.md). Python simulator artifacts (`system_integration_results.json`) are **retired as a blocking release gate**.
 * **Blocking Tag Creation Gate**: Creating release candidate tags (`V<versionName>__<versionCode>`), finishing GitFlow releases, or uploading artifacts to Google Play tracks is strictly blocked if unit/integration tests fail, `sys_verification_record.md` is missing/unsigned, or `verification_summary.md` reports unapproved deviations.
 
+---
 
+## Change History
 
-
-
-
-
+| Version | Date | Author | Ticket | Summary of Changes |
+| :--- | :--- | :--- | :--- | :--- |
+| `1.0.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Added standardized `DOC-ARC-MAIN` work-product control header and Change History. |

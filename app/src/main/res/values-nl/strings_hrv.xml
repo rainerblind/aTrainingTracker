@@ -298,6 +298,8 @@
     <string name="tuning_morning_context_tags_title">Contextlabels (Ziek, Alcohol, Reizen, Rust)</string>
 
     <string name="morning_hrv_wellness_title">Ochtendslaap &amp; welzijn</string>
+    <string name="morning_hrv_wellness_subtitle">Subjectieve slaap- &amp; herstelcheck</string>
+    <string name="morning_hrv_wellness_empty_hint">Geen welzijnsstatistieken ingeschakeld in Expertinstellingen.</string>
     <string name="morning_hrv_sleep_duration_label">Slaapduur: %s</string>
     <string name="morning_hrv_sleep_quality_label">Slaapkwaliteit: %d/5</string>
     <string name="morning_hrv_morning_energy_label">Ochtendenergie: %d/5</string>

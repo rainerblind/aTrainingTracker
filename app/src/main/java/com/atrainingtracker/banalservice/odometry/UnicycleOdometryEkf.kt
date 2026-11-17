@@ -62,6 +62,12 @@ class UnicycleOdometryEkf(
         const val MAX_GNSS_ACCURACY_METERS = 20.0
         const val MIN_DOPPLER_SPEED_MPS = 3.0
         const val HUBER_THRESHOLD_GAMMA = 2.5
+        const val GNSS_HUBER_GAMMA = 3.0
+        const val MIN_STATIONARY_GNSS_JUMP_GATE_METERS = 8.0
+        const val STATIONARY_GNSS_ACCURACY_GATE_FACTOR = 0.75
+        const val ZUPT_SPEED_VARIANCE = 2.0
+        const val GNSS_OUTAGE_RECOVERY_GAP_MS = 15_000L
+        const val GNSS_CLUSTER_MAX_STEP_GAP_MS = 5_000L
 
         // Process noise intensities per second
         private const val Q_POS = 0.01 // m^2 / s
@@ -89,15 +95,29 @@ class UnicycleOdometryEkf(
     }
 
     // 5x5 error covariance matrix P
+    private val initialPosVar = initialPositionStdDev * initialPositionStdDev
     private val p = Array(STATE_DIM) { DoubleArray(STATE_DIM) }.apply {
-        this[0][0] = initialPositionStdDev * initialPositionStdDev
-        this[1][1] = initialPositionStdDev * initialPositionStdDev
+        this[0][0] = initialPosVar
+        this[1][1] = initialPosVar
         this[2][2] = initialSpeedStdDev * initialSpeedStdDev
         this[3][3] = initialHeadingStdDev * initialHeadingStdDev
         this[4][4] = initialGyroBiasStdDev * initialGyroBiasStdDev
     }
 
     private var currentTimestampMs: Long = 0L
+    private var lastAcceptedGnssTimestampMs: Long = 0L
+    private var lastAcceptedGnssAccuracyMeters: Double = Double.POSITIVE_INFINITY
+    private var consecutiveStationaryOutliers: Int = 0
+    private var lastStationaryOutlierEast: Double = 0.0
+    private var lastStationaryOutlierNorth: Double = 0.0
+    private var lastStationaryOutlierTimestampMs: Long = 0L
+    private var lastStationaryOutlierAccuracyMeters: Double = Double.POSITIVE_INFINITY
+    private var stationaryClusterSnapped: Boolean = false
+    private var consecutiveMovingOutliers: Int = 0
+    private var lastMovingOutlierEast: Double = 0.0
+    private var lastMovingOutlierNorth: Double = 0.0
+    private var lastMovingOutlierTimestampMs: Long = 0L
+    private var postOutageClusterGapMs: Long = 0L
 
     // Snapshot buffer for offline RTS backward smoother
     private val snapshotList = mutableListOf<OdometrySnapshot>()
@@ -290,30 +310,236 @@ class UnicycleOdometryEkf(
     }
 
     /**
+     * Returns and clears whether the most recent [updateGnssPosition] call executed a stationary
+     * cluster snap re-anchoring `[E, N]` (REQ-FIL-023.1, ATT-8576).
+     */
+    fun consumeStationaryClusterSnapped(): Boolean {
+        val snapped = stationaryClusterSnapped
+        stationaryClusterSnapped = false
+        return snapped
+    }
+
+    /**
+     * Re-anchors the local ENU position [E, N], resets position variances to [initialPosVar],
+     * and zeroes all position cross-covariances without disturbing speed, heading, or gyro bias
+     * (REQ-FIL-023.1, ATT-8576). Used when pre-anchor dead-reckoning precedes the first valid GNSS fix.
+     */
+    fun reanchorPosition(eastMeters: Double = 0.0, northMeters: Double = 0.0) {
+        x[0] = eastMeters
+        x[1] = northMeters
+        resetPositionCovariance(initialPosVar)
+        resetGnssTrackingState()
+        symmetrizeCovariance()
+    }
+
+    /**
+     * Applies a Zero-Velocity Update (ZUPT) clamping forward speed to 0.0 m/s and decoupling
+     * position-velocity cross-covariances so subsequent GNSS position fixes cannot leak velocity
+     * spikes into [speedMps] (REQ-FIL-023.1, ATT-8576).
+     */
+    fun applyZeroVelocityUpdate(timestampMs: Long = currentTimestampMs) {
+        currentTimestampMs = timestampMs
+        x[2] = 0.0
+        p[2][2] = max(p[2][2], ZUPT_SPEED_VARIANCE)
+        decoupleVelocityCovariance(p)
+        symmetrizeCovariance()
+        commitSnapshot()
+    }
+
+    private fun resetPositionCovariance(posVar: Double) {
+        p[0][0] = posVar
+        p[1][1] = posVar
+        p[0][1] = 0.0
+        p[1][0] = 0.0
+        for (j in 2 until STATE_DIM) {
+            p[0][j] = 0.0
+            p[j][0] = 0.0
+            p[1][j] = 0.0
+            p[j][1] = 0.0
+        }
+    }
+
+    private fun resetGnssTrackingState() {
+        lastAcceptedGnssTimestampMs = 0L
+        lastAcceptedGnssAccuracyMeters = Double.POSITIVE_INFINITY
+        consecutiveStationaryOutliers = 0
+        lastStationaryOutlierEast = 0.0
+        lastStationaryOutlierNorth = 0.0
+        lastStationaryOutlierTimestampMs = 0L
+        lastStationaryOutlierAccuracyMeters = Double.POSITIVE_INFINITY
+        stationaryClusterSnapped = false
+        consecutiveMovingOutliers = 0
+        lastMovingOutlierEast = 0.0
+        lastMovingOutlierNorth = 0.0
+        lastMovingOutlierTimestampMs = 0L
+        postOutageClusterGapMs = 0L
+    }
+
+    private fun decoupleVelocityCovariance(matrix: Array<DoubleArray>) {
+        for (idx in 0 until STATE_DIM) {
+            if (idx != 2) {
+                matrix[idx][2] = 0.0
+                matrix[2][idx] = 0.0
+            }
+        }
+    }
+
+    /**
      * Updates 2D geographic position [E, N] via high-confidence GNSS fixes.
      *
      * Fixes with accuracy > [MAX_GNSS_ACCURACY_METERS] are strictly gated out to prevent
      * multipath and degraded GPS jumps from pulling the odometry trajectory.
+     * When [isStationary] is true, single-epoch jumps exceeding `max(8.0 m, 0.75 * accuracy)` are
+     * rejected, while temporally and spatially adjacent stationary clusters (>= 3 fixes, or >= 2 fixes
+     * after prolonged >= 15 s outage / significant accuracy tightening) cleanly re-anchor `[E, N]`
+     * with `x[2] = 0.0`. While moving, single-epoch outliers exceeding [GNSS_HUBER_GAMMA] sigma are
+     * Huber down-weighted, while confirmed post-outage clusters (>= 2 agreeing fixes after >= 15 s gap,
+     * or >= 3 agreeing fixes) inflate position covariance and recover rapidly (REQ-FIL-009, REQ-FIL-023.1).
      */
+    @JvmOverloads
     fun updateGnssPosition(
         eastMeters: Double,
         northMeters: Double,
         accuracyMeters: Double,
-        timestampMs: Long = currentTimestampMs
+        timestampMs: Long = currentTimestampMs,
+        isStationary: Boolean = false
     ): Boolean {
+        stationaryClusterSnapped = false
         if (accuracyMeters <= 0.0 || accuracyMeters > MAX_GNSS_ACCURACY_METERS) {
             return false
         }
         currentTimestampMs = timestampMs
 
-        val rVar = accuracyMeters * accuracyMeters
+        val outageMs = if (lastAcceptedGnssTimestampMs > 0L && timestampMs >= lastAcceptedGnssTimestampMs) {
+            timestampMs - lastAcceptedGnssTimestampMs
+        } else {
+            0L
+        }
+
         // Innovation y = z - H*x where H = [1 0 0 0 0; 0 1 0 0 0]
         val y0 = eastMeters - x[0]
         val y1 = northMeters - x[1]
 
-        // Innovation covariance S (2x2):
-        // S_00 = P_00 + rVar, S_01 = P_01
-        // S_10 = P_10,        S_11 = P_11 + rVar
+        if (isStationary) {
+            val jumpMeters = sqrt(y0 * y0 + y1 * y1)
+            val maxStationaryJump = max(MIN_STATIONARY_GNSS_JUMP_GATE_METERS, accuracyMeters * STATIONARY_GNSS_ACCURACY_GATE_FACTOR)
+            if (jumpMeters > maxStationaryJump) {
+                val clusterRadius = max(6.0, accuracyMeters)
+                val dtStationaryMs = if (lastStationaryOutlierTimestampMs > 0L && timestampMs >= lastStationaryOutlierTimestampMs) {
+                    timestampMs - lastStationaryOutlierTimestampMs
+                } else {
+                    0L
+                }
+                val distFromPrev = sqrt(
+                    (eastMeters - lastStationaryOutlierEast) * (eastMeters - lastStationaryOutlierEast) +
+                        (northMeters - lastStationaryOutlierNorth) * (northMeters - lastStationaryOutlierNorth)
+                )
+                val withinClusterWindow = consecutiveStationaryOutliers > 0 &&
+                    lastStationaryOutlierTimestampMs > 0L &&
+                    dtStationaryMs <= GNSS_CLUSTER_MAX_STEP_GAP_MS &&
+                    distFromPrev <= clusterRadius
+                consecutiveStationaryOutliers = if (withinClusterWindow) {
+                    consecutiveStationaryOutliers + 1
+                } else {
+                    1
+                }
+                lastStationaryOutlierEast = eastMeters
+                lastStationaryOutlierNorth = northMeters
+                lastStationaryOutlierTimestampMs = timestampMs
+
+                val significantTightening = lastAcceptedGnssAccuracyMeters.isFinite() &&
+                    accuracyMeters <= lastAcceptedGnssAccuracyMeters * 0.5 &&
+                    lastStationaryOutlierAccuracyMeters <= lastAcceptedGnssAccuracyMeters * 0.5
+                lastStationaryOutlierAccuracyMeters = accuracyMeters
+                val prolongedOutage = outageMs >= GNSS_OUTAGE_RECOVERY_GAP_MS
+                val shouldReanchor = consecutiveStationaryOutliers >= 3 ||
+                    (consecutiveStationaryOutliers >= 2 && (prolongedOutage || significantTightening))
+
+                if (!shouldReanchor) {
+                    return false
+                }
+
+                // Confirmed stationary recovery: snap [E, N] cleanly without leaking velocity into x[2]
+                x[0] = eastMeters
+                x[1] = northMeters
+                x[2] = 0.0
+                resetPositionCovariance(accuracyMeters * accuracyMeters)
+                decoupleVelocityCovariance(p)
+                consecutiveStationaryOutliers = 0
+                lastStationaryOutlierTimestampMs = 0L
+                consecutiveMovingOutliers = 0
+                postOutageClusterGapMs = 0L
+                lastMovingOutlierTimestampMs = 0L
+                stationaryClusterSnapped = true
+                lastAcceptedGnssTimestampMs = timestampMs
+                lastAcceptedGnssAccuracyMeters = accuracyMeters
+                symmetrizeCovariance()
+                commitSnapshot()
+                return true
+            }
+            consecutiveStationaryOutliers = 0
+            lastStationaryOutlierTimestampMs = 0L
+        } else {
+            consecutiveStationaryOutliers = 0
+            lastStationaryOutlierTimestampMs = 0L
+        }
+
+        val rVarBase = accuracyMeters * accuracyMeters
+        val s00Base = p[0][0] + rVarBase
+        val s01Base = p[0][1]
+        val s10Base = p[1][0]
+        val s11Base = p[1][1] + rVarBase
+        val detBase = s00Base * s11Base - s01Base * s10Base
+        if (abs(detBase) <= 1e-12) return false
+
+        val mahalanobisSq = max(0.0, (y0 * y0 * s11Base - 2.0 * y0 * y1 * s01Base + y1 * y1 * s00Base) / detBase)
+        val mahalanobis = sqrt(mahalanobisSq)
+        val rVar: Double
+        if (!isStationary && mahalanobis > GNSS_HUBER_GAMMA) {
+            val dtOutlierMs = if (lastMovingOutlierTimestampMs > 0L && timestampMs >= lastMovingOutlierTimestampMs) {
+                timestampMs - lastMovingOutlierTimestampMs
+            } else {
+                0L
+            }
+            val distFromPrevOutlier = sqrt(
+                (eastMeters - lastMovingOutlierEast) * (eastMeters - lastMovingOutlierEast) +
+                    (northMeters - lastMovingOutlierNorth) * (northMeters - lastMovingOutlierNorth)
+            )
+            val dtOutlierSec = dtOutlierMs / 1000.0
+            val travelTolerance = max(15.0, abs(x[2]) * dtOutlierSec + 2.0 * accuracyMeters)
+            if (consecutiveMovingOutliers > 0 &&
+                dtOutlierMs <= GNSS_CLUSTER_MAX_STEP_GAP_MS &&
+                distFromPrevOutlier <= travelTolerance
+            ) {
+                consecutiveMovingOutliers += 1
+            } else {
+                consecutiveMovingOutliers = 1
+                postOutageClusterGapMs = outageMs
+            }
+            lastMovingOutlierEast = eastMeters
+            lastMovingOutlierNorth = northMeters
+            lastMovingOutlierTimestampMs = timestampMs
+
+            val confirmedPostOutage = consecutiveMovingOutliers >= 3 ||
+                (consecutiveMovingOutliers >= 2 && postOutageClusterGapMs >= GNSS_OUTAGE_RECOVERY_GAP_MS)
+            if (confirmedPostOutage) {
+                // Confirmed moving corridor after outage: inflate position variance to re-converge in 1-2 fixes
+                p[0][0] = max(p[0][0], y0 * y0)
+                p[1][1] = max(p[1][1], y1 * y1)
+                rVar = rVarBase
+                consecutiveMovingOutliers = 0
+                postOutageClusterGapMs = 0L
+            } else {
+                val scale = mahalanobis / GNSS_HUBER_GAMMA
+                rVar = rVarBase * scale * scale
+            }
+        } else {
+            consecutiveMovingOutliers = 0
+            postOutageClusterGapMs = 0L
+            rVar = rVarBase
+        }
+
+        // Innovation covariance S (2x2) with Huber-weighted measurement variance:
         val s00 = p[0][0] + rVar
         val s01 = p[0][1]
         val s10 = p[1][0]
@@ -337,10 +563,17 @@ class UnicycleOdometryEkf(
             k[i][0] = p0 * invS00 + p1 * invS10
             k[i][1] = p0 * invS01 + p1 * invS11
         }
+        if (isStationary) {
+            k[2][0] = 0.0
+            k[2][1] = 0.0
+        }
 
         // State update: x += K * y
         for (i in 0 until STATE_DIM) {
             x[i] += k[i][0] * y0 + k[i][1] * y1
+        }
+        if (isStationary) {
+            x[2] = 0.0
         }
         x[3] = normalizeAngle(x[3])
 
@@ -351,10 +584,17 @@ class UnicycleOdometryEkf(
                 pNew[i][j] = p[i][j] - (k[i][0] * p[0][j] + k[i][1] * p[1][j])
             }
         }
+        if (isStationary) {
+            decoupleVelocityCovariance(pNew)
+        }
         for (i in 0 until STATE_DIM) {
             System.arraycopy(pNew[i], 0, p[i], 0, STATE_DIM)
         }
 
+        if (consecutiveMovingOutliers == 0) {
+            lastAcceptedGnssTimestampMs = timestampMs
+            lastAcceptedGnssAccuracyMeters = accuracyMeters
+        }
         symmetrizeCovariance()
         commitSnapshot()
         return true
@@ -448,6 +688,7 @@ class UnicycleOdometryEkf(
         x[3] = normalizeAngle(headingRad)
         x[4] = gyroBias
         currentTimestampMs = timestampMs
+        resetGnssTrackingState()
 
         for (i in 0 until STATE_DIM) {
             for (j in 0 until STATE_DIM) {

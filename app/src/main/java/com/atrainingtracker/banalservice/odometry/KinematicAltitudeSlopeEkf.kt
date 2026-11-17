@@ -19,7 +19,9 @@
 package com.atrainingtracker.banalservice.odometry
 
 import kotlin.math.abs
+import kotlin.math.exp
 import kotlin.math.max
+import kotlin.math.min
 import kotlin.math.sqrt
 
 /**
@@ -57,6 +59,11 @@ class KinematicAltitudeSlopeEkf(
         const val DEFAULT_VAR_GPS = 16.0 // (4.0 m)^2
         const val DEFAULT_HUBER_K = 3.0 // 3-sigma innovation clamp
         const val DEFAULT_STANDSTILL_THRESHOLD_MPS = 0.3
+        const val LOW_SPEED_SLOPE_THRESHOLD_MPS = 1.2 // Low-speed slope damping ceiling (REQ-FIL-023.3)
+        const val MAX_PHYSICAL_SLOPE = 0.35 // +/-35% grade clamp (REQ-FIL-023.3)
+        const val MAX_SLOPE_VARIANCE = 0.015 // Prevents unbounded p11 growth over long rides
+        const val STANDSTILL_SLOPE_GRACE_SEC = 2.0
+        const val STANDSTILL_SLOPE_DECAY_TAU_SEC = 2.5
         const val MAX_DT_SEC = 5.0 // Maximum allowable delta-time propagation step
     }
 
@@ -87,6 +94,13 @@ class KinematicAltitudeSlopeEkf(
     var hasBarometerSample: Boolean = false
         private set
 
+    @Volatile
+    var standstillDurationSec: Double = 0.0
+        private set
+
+    @Volatile
+    private var lastSpeedMps: Double = 0.0
+
     // Covariance elements
     @Volatile var p00: Double = 1.0 // var(h)
     @Volatile var p01: Double = 0.0 // cov(h, g)
@@ -114,6 +128,8 @@ class KinematicAltitudeSlopeEkf(
         p22 = 100.0
         hasReferenceAnchor = false
         hasBarometerSample = false
+        standstillDurationSec = 0.0
+        lastSpeedMps = 0.0
         isInitialized = false
     }
 
@@ -137,9 +153,23 @@ class KinematicAltitudeSlopeEkf(
         }
     }
 
+    private fun lowSpeedSlopeGainFactor(speedMps: Double): Double {
+        if (speedMps < standstillSpeedThresholdMps) return 0.0
+        if (speedMps >= LOW_SPEED_SLOPE_THRESHOLD_MPS) return 1.0
+        val ratio = (speedMps - standstillSpeedThresholdMps) /
+            (LOW_SPEED_SLOPE_THRESHOLD_MPS - standstillSpeedThresholdMps)
+        return ratio * ratio
+    }
+
+    private fun clampPhysicalSlope(rawSlope: Double): Double {
+        return rawSlope.coerceIn(-MAX_PHYSICAL_SLOPE, MAX_PHYSICAL_SLOPE)
+    }
+
     /**
      * Propagates state and covariance forward across $\Delta t$ seconds at speed $v$.
-     * Enforces standstill clamping when $v < v_{threshold}$ ($\Delta s = 0 \implies dh = 0, Q_g = 0$).
+     * Enforces standstill clamping when $v < v_{threshold}$ ($\Delta s = 0 \implies dh = 0, Q_g = 0$),
+     * smoothly decays stale slope toward 0 during sustained standstill (REQ-FIL-023.2), and damps
+     * low-speed slope process noise below [LOW_SPEED_SLOPE_THRESHOLD_MPS] (REQ-FIL-023.3).
      * Bounds `dtSec` to `MAX_DT_SEC` to prevent unbounded covariance growth after pause.
      */
     @Synchronized
@@ -148,28 +178,43 @@ class KinematicAltitudeSlopeEkf(
 
         val dtClamped = dtSec.coerceIn(0.0, MAX_DT_SEC)
         val speed = max(0.0, speedMps)
+        lastSpeedMps = speed
         val deltaDistCalculated = if (deltaDistM == speedMps * dtSec) speed * dtClamped else deltaDistM
         val isStandstill = speed < standstillSpeedThresholdMps || deltaDistCalculated < 1e-5
         val deltaDist = if (isStandstill) 0.0 else max(0.0, deltaDistCalculated)
 
         if (isStandstill) {
             // Standstill clamping: dh = 0, Qg = 0, Qh = 0
+            standstillDurationSec += dtClamped
+            if (standstillDurationSec >= STANDSTILL_SLOPE_GRACE_SEC && slope != 0.0) {
+                val decay = exp(-dtClamped / STANDSTILL_SLOPE_DECAY_TAU_SEC)
+                val decayed = slope * decay
+                slope = if (abs(decayed) < 0.005) 0.0 else decayed
+                p01 *= decay
+                p10 = p01
+                if (is3StateMode) {
+                    p12 *= decay
+                    p21 = p12
+                }
+            }
             if (is3StateMode) {
                 p22 += qBias * dtClamped
             }
             return
         }
+        standstillDurationSec = 0.0
 
         // Kinematic state propagation: h_k = h_{k-1} + g_{k-1} * deltaDist
         altitude += slope * deltaDist
 
-        // Covariance propagation: P^- = F * P * F^T + Q
-        val qgVal = qg * deltaDist
+        // Covariance propagation: P^- = F * P * F^T + Q (damped below LOW_SPEED_SLOPE_THRESHOLD_MPS)
+        val gainScale = lowSpeedSlopeGainFactor(speed)
+        val qgVal = qg * deltaDist * gainScale
         val qhVal = qh * dtClamped
 
         val p00New = p00 + 2.0 * deltaDist * p01 + deltaDist * deltaDist * p11 + qhVal
         val p01New = p01 + deltaDist * p11
-        val p11New = p11 + qgVal
+        val p11New = min(MAX_SLOPE_VARIANCE, p11 + qgVal)
 
         p00 = p00New
         p01 = p01New
@@ -189,7 +234,13 @@ class KinematicAltitudeSlopeEkf(
      */
     @Synchronized
     @Suppress("ReturnCount")
-    fun updateBarometer(baroAltM: Double, varBaro: Double = rBaro, isStandstill: Boolean = false) {
+    @JvmOverloads
+    fun updateBarometer(
+        baroAltM: Double,
+        varBaro: Double = rBaro,
+        isStandstill: Boolean = false,
+        speedMps: Double = lastSpeedMps
+    ) {
         if (baroAltM.isNaN() || baroAltM.isInfinite()) return
 
         if (!isInitialized) {
@@ -227,21 +278,23 @@ class KinematicAltitudeSlopeEkf(
             return
         }
 
+        val gainScale = lowSpeedSlopeGainFactor(max(0.0, speedMps))
+
         if (!is3StateMode) {
             // 2-State update: z = h
             val y = baroAltM - altitude
             val s = p00 + varBaro
             val yH = applyHuber(y, s)
             val k0 = p00 / s
-            val k1 = p10 / s
+            val k1Eff = (p10 / s) * gainScale
 
             altitude += k0 * yH
-            slope += k1 * yH
+            slope = clampPhysicalSlope(slope + k1Eff * yH)
 
             p00 = max(1e-6, (1.0 - k0) * p00)
             p01 = (1.0 - k0) * p01
             p10 = p01
-            p11 = max(1e-8, p11 - k1 * p01)
+            p11 = max(1e-8, p11 - k1Eff * p01)
         } else {
             // 3-State update: z = h + b_baro
             val y = baroAltM - (altitude + baroBias)
@@ -249,11 +302,11 @@ class KinematicAltitudeSlopeEkf(
             val yH = applyHuber(y, s)
 
             val k0 = (p00 + p02) / s
-            val k1 = (p10 + p12) / s
+            val k1Eff = ((p10 + p12) / s) * gainScale
             val k2 = (p20 + p22) / s
 
             altitude += k0 * yH
-            slope += k1 * yH
+            slope = clampPhysicalSlope(slope + k1Eff * yH)
             baroBias += k2 * yH
 
             val v0 = p00 + p20
@@ -264,8 +317,8 @@ class KinematicAltitudeSlopeEkf(
             p01 -= k0 * v1
             p02 -= k0 * v2
             p10 = p01
-            p11 = max(1e-8, p11 - k1 * v1)
-            p12 -= k1 * v2
+            p11 = max(1e-8, p11 - k1Eff * v1)
+            p12 -= k1Eff * v2
             p20 = p02
             p21 = p12
             p22 = max(1e-6, p22 - k2 * v2)
@@ -312,20 +365,22 @@ class KinematicAltitudeSlopeEkf(
             return true
         }
 
+        val gainScale = lowSpeedSlopeGainFactor(lastSpeedMps)
+
         if (!is3StateMode) {
             val y = refAltM - altitude
             val s = p00 + varRef
             val yH = applyHuber(y, s)
             val k0 = p00 / s
-            val k1 = p10 / s
+            val k1Eff = (p10 / s) * gainScale
 
             altitude += k0 * yH
-            slope += k1 * yH
+            slope = clampPhysicalSlope(slope + k1Eff * yH)
 
             p00 = max(1e-6, (1.0 - k0) * p00)
             p01 = (1.0 - k0) * p01
             p10 = p01
-            p11 = max(1e-8, p11 - k1 * p01)
+            p11 = max(1e-8, p11 - k1Eff * p01)
         } else {
             // In 3-State mode: z = h (H = [1, 0, 0])
             val y = refAltM - altitude
@@ -333,11 +388,11 @@ class KinematicAltitudeSlopeEkf(
             val yH = applyHuber(y, s)
 
             val k0 = p00 / s
-            val k1 = p10 / s
+            val k1Eff = (p10 / s) * gainScale
             val k2 = p20 / s
 
             altitude += k0 * yH
-            slope += k1 * yH
+            slope = clampPhysicalSlope(slope + k1Eff * yH)
             baroBias += k2 * yH
 
             val v0 = p00
@@ -348,8 +403,8 @@ class KinematicAltitudeSlopeEkf(
             p01 -= k0 * v1
             p02 -= k0 * v2
             p10 = p01
-            p11 = max(1e-8, p11 - k1 * v1)
-            p12 -= k1 * v2
+            p11 = max(1e-8, p11 - k1Eff * v1)
+            p12 -= k1Eff * v2
             p20 = p02
             p21 = p12
             p22 = max(1e-6, p22 - k2 * v2)

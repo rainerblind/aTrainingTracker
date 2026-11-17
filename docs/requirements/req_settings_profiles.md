@@ -1,5 +1,10 @@
 # Living Requirements: Settings, Profiles & Localization
 
+**Document ID**: `DOC-REQ-SET`  
+**Version**: 1.0.0  
+**Status**: Reviewed  
+**Approver**: Pending PO Sign-Off  
+
 **Domain**: `settings_profiles`  
 **Prefixes**: `LOC`, `MON`, `PRI`, `SET`  
 **Scope**: Athlete settings, bike/sensor profiles, privacy zones, data stores, monetization, and 9-locale parity.  
@@ -2748,3 +2753,10 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 
 **Invariants**: `WorkoutSamples.db` strictly retains 1-Hz sampling with zero schema modifications; BLE GATT loops never block on file I/O; empty sessions leave zero orphan files; `ANT-Android-SDKs` submodule remains untouched at `160000 commit 0e8cea714a231fb9565170d4ed01eafa868f9798`; Role Rotation (`agent2` Pro: S2, S4, Gate 5).
 
+---
+
+## Change History
+
+| Version | Date | Author | Ticket | Summary of Changes |
+| :--- | :--- | :--- | :--- | :--- |
+| `1.0.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Added standardized `DOC-REQ-SET` work-product control header and Change History. |

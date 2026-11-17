@@ -161,6 +161,8 @@ fun TrackingTabGridContent(
         }
     }
 
+    val currentActivityType by viewModel.activityType.collectAsStateWithLifecycle(minActiveState = Lifecycle.State.STARTED)
+
     // Map the UI state and interactions to the SensorGridScreen
     SensorGridScreen(
         state = uiState,
@@ -170,10 +172,9 @@ fun TrackingTabGridContent(
         liveSegments = viewModel.activeLiveSegments,
         selectedFieldForMove = selectedFieldForMove,
         tabToggleActions = tabToggleActions,
-        isTabActive = isTabActive
+        isTabActive = isTabActive,
+        activityType = currentActivityType
     )
-
-    val currentActivityType by viewModel.activityType.collectAsStateWithLifecycle(minActiveState = Lifecycle.State.STARTED)
 
     // Handle Dialogs (Edit field / Add sensor)
     if (editingFieldId != null) {

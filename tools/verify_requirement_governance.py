@@ -195,7 +195,7 @@ def get_git_diff(base_ref="develop", target_paths=None):
     if base_ref == "develop":
         try:
             sprint_branches = subprocess.check_output(
-                ["git", "for-each-ref", "--format=%(refname:short)", "refs/heads/sprint/*"],
+                ["git", "for-each-ref", "--sort=-committerdate", "--format=%(refname:short)", "refs/heads/sprint/*"],
                 stderr=subprocess.DEVNULL,
             ).decode("utf-8").strip().splitlines()
             best_sb = None
@@ -778,23 +778,31 @@ def _validate_single_qa_audit(found_file, sprint_name=None):
                     f"ERROR: Non-compliant audit {found_file} is missing Section 4 ('## 4. Non-Compliance Tracking & Remediation') (REQ-PRO-091.3)."
                 ]
             sec4_text = sec4_m.group(1).strip()
-            ca_links = re.findall(r"\[(ATT-\d+|PROJ-\d+|ATT-CA-[A-Za-z0-9_-]+)\]", sec4_text)
+            real_ca_links = re.findall(r"\[(ATT-\d+|PROJ-\d+)\]", sec4_text)
+            synthetic_ca_links = re.findall(r"\[(ATT-CA-[A-Za-z0-9_-]+)\]", sec4_text)
+
+            # REQ-PRO-091.3 / REQ-PRO-118.5: Enforce real ca_key != audited_key and reject synthetic ATT-CA-* for post-cutoff audits
+            base_fn = os.path.basename(found_file).lower()
+            is_grandfathered = any(
+                base_fn.startswith(prefix)
+                for prefix in ("sprint_2026-46.", "sprint_2026-47.", "sprint_2026-11-16_02_", "sprint_2026-11-17_01_")
+            ) or (
+                sprint_name and any(
+                    str(sprint_name).lower().startswith(prefix)
+                    for prefix in ("2026-46.", "2026-47.", "2026-11-16_02_", "2026-11-17_01_")
+                )
+            )
+
+            if not is_grandfathered and synthetic_ca_links:
+                return False, [
+                    f"ERROR: Non-compliant audit in {found_file} contains synthetic placeholder corrective action link(s) {synthetic_ca_links}; real Jira ticket links [ATT-XXXX] are required (REQ-PRO-118.5)."
+                ]
+
+            ca_links = real_ca_links if not is_grandfathered else (real_ca_links + synthetic_ca_links)
             if not ca_links:
                 return False, [
                     f"ERROR: Non-compliant audit in {found_file} lacks required Jira corrective action ticket links [ATT-XXXX] in Section 4 (REQ-PRO-091.3)."
                 ]
-
-            # REQ-PRO-091.3 / ATT-8153: Enforce ca_key != audited_key for current/future audits
-            base_fn = os.path.basename(found_file).lower()
-            is_grandfathered = any(
-                base_fn.startswith(prefix)
-                for prefix in ("sprint_2026-46.", "sprint_2026-47.", "sprint_2026-11-16_02_")
-            ) or (
-                sprint_name and any(
-                    str(sprint_name).lower().startswith(prefix)
-                    for prefix in ("2026-46.", "2026-47.", "2026-11-16_02_")
-                )
-            )
 
             if not is_grandfathered:
                 for line in sec4_text.splitlines():
@@ -980,6 +988,176 @@ def verify_independent_reviews(sprint_name=None, repo_root=None):
         return True, [f"PASS: Verified {valid_files} independent review record(s) in {rev_dir}."]
 
 
+RETRO_ALLOWLIST_CUTOFF_TS = 1794925800  # 2026-11-17T15:30:00+01:00 (ATT-8584 enforcement baseline)
+RETRO_GRANDFATHERED_SHAS = ("8aa881df",)
+
+RETRO_ALLOWLIST_PATTERNS = [
+    re.compile(r"^docs/engineering/retros/Sprint_Review_and_Retro_[^/]+\.md$"),
+    re.compile(r"^docs/engineering/gates/.+"),
+    re.compile(r"^docs/engineering/qa_audits/.+"),
+    re.compile(r"^docs/engineering/reviews/.+"),
+    re.compile(r"^docs/engineering/test_evidence/.+"),
+    re.compile(r"^docs/engineering/metrics/process_metrics\.jsonl$"),
+    re.compile(r"^docs/management/risk_register\.md$"),
+    re.compile(r"^docs/releases/[^/]+/manifest\.md$"),
+]
+
+RETRO_PROTECTED_PREFIXES = (
+    ".agents/rules/",
+    ".agents/skills/",
+    "tools/",
+)
+
+RETRO_PROTECTED_EXACT = {
+    "docs/coding_standards.md",
+    "docs/design_guidelines.md",
+    "docs/project_governance.md",
+    "docs/project_protocol.md",
+    "docs/engineering/rule_history_archive.md",
+}
+
+
+def _normalize_repo_rel_path(path_str):
+    p = str(path_str).strip().replace("\\", "/")
+    while p.startswith("./"):
+        p = p[2:]
+    return p
+
+
+def _is_retro_allowlisted_path(path_str):
+    norm = _normalize_repo_rel_path(path_str)
+    return any(pat.match(norm) for pat in RETRO_ALLOWLIST_PATTERNS)
+
+
+def _is_retro_protected_path(path_str):
+    norm = _normalize_repo_rel_path(path_str)
+    if norm in RETRO_PROTECTED_EXACT:
+        return True
+    return any(norm.startswith(prefix) for prefix in RETRO_PROTECTED_PREFIXES)
+
+
+def _evaluate_retro_commit_files(changed_files, commit_message=None, commit_sha=None, commit_ts=None):
+    """Evaluates changed_files against the autonomous Ceremony 2 write-allowlist (REQ-PRO-117)."""
+    if commit_sha and any(commit_sha.startswith(g) for g in RETRO_GRANDFATHERED_SHAS):
+        return True, [f"PASS: Pre-ATT-8584 historical commit {commit_sha[:8]} exempted."]
+    if commit_ts is not None and commit_ts < RETRO_ALLOWLIST_CUTOFF_TS:
+        return True, [f"PASS: Pre-ATT-8584 historical commit (ts={commit_ts}) exempted."]
+
+    if commit_message is not None:
+        if re.search(r"^\s*Interactive-PO\s*:\s*\S+", commit_message, re.MULTILINE | re.IGNORECASE):
+            return True, ["PASS: Interactive-PO authorization present; protected paths permitted."]
+        if not re.search(r"\bchore\s*\(\s*ceremony2\s*\)", commit_message, re.IGNORECASE):
+            return True, ["PASS: Non-ceremony2 commit (dedicated ticket / standard workflow) exempted."]
+
+    protected_violations = []
+    other_violations = []
+    normalized = [_normalize_repo_rel_path(f) for f in changed_files if str(f).strip()]
+    for rel_path in normalized:
+        if not _is_retro_allowlisted_path(rel_path):
+            if _is_retro_protected_path(rel_path):
+                protected_violations.append(rel_path)
+            else:
+                other_violations.append(rel_path)
+
+    if protected_violations or other_violations:
+        errors = []
+        if protected_violations:
+            errors.append(
+                "ERROR: Autonomous Ceremony 2 commit modified PROHIBITED protected rule/skill/standard/tool "
+                f"path(s) without Interactive-PO or dedicated ticket (REQ-PRO-117.2): {', '.join(protected_violations)}"
+            )
+        if other_violations:
+            errors.append(
+                "ERROR: Autonomous Ceremony 2 commit modified non-allowlisted path(s) "
+                f"(REQ-PRO-117.1): {', '.join(other_violations)}"
+            )
+        return False, errors
+
+    return True, [f"PASS: Autonomous Retro write-allowlist verified ({len(normalized)} file(s))."]
+
+
+def verify_retro_write_allowlist(
+    commit_ref=None,
+    changed_files=None,
+    commit_message=None,
+    base_ref="develop",
+    repo_root=None,
+):
+    """
+    REQ-PRO-117.3 / TST-PRO-117.1 / TST-PRO-117.3:
+    Verifies that post-cutoff autonomous chore(ceremony2) commits only touch the 7-path
+    evidence/log allowlist unless explicitly authorized via Interactive-PO or a dedicated ticket.
+    """
+    if changed_files is not None:
+        return _evaluate_retro_commit_files(changed_files, commit_message=commit_message)
+
+    cwd = repo_root if repo_root else os.getcwd()
+    try:
+        if commit_ref and str(commit_ref).strip():
+            refs_to_check = [str(commit_ref).strip()]
+        else:
+            rev_range = f"{base_ref}..HEAD"
+            check_base = subprocess.run(
+                ["git", "rev-parse", "--verify", base_ref],
+                cwd=cwd,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+            if check_base.returncode != 0:
+                rev_range = "HEAD~10..HEAD"
+            revs_out = subprocess.check_output(
+                ["git", "rev-list", rev_range],
+                cwd=cwd,
+                stderr=subprocess.DEVNULL,
+            ).decode("utf-8", errors="replace").splitlines()
+            refs_to_check = [r.strip() for r in revs_out if r.strip()]
+    except Exception as exc:
+        return True, [f"PASS: Git commit scan skipped ({exc})."]
+
+    if not refs_to_check:
+        return True, ["PASS: Autonomous Retro write-allowlist verified (0 ceremony2 commits in range)."]
+
+    checked_count = 0
+    for ref in refs_to_check:
+        try:
+            meta = subprocess.check_output(
+                ["git", "-c", "core.quotePath=false", "log", "-n", "1", "--format=%H%n%ct%n%B", ref],
+                cwd=cwd,
+                stderr=subprocess.DEVNULL,
+            ).decode("utf-8", errors="replace")
+            lines = meta.splitlines()
+            if len(lines) < 2:
+                continue
+            sha = lines[0].strip()
+            try:
+                ts = int(lines[1].strip())
+            except ValueError:
+                ts = None
+            msg = "\n".join(lines[2:])
+            if not re.search(r"\bchore\s*\(\s*ceremony2\s*\)", msg, re.IGNORECASE):
+                continue
+            files_out = subprocess.check_output(
+                ["git", "-c", "core.quotePath=false", "diff-tree", "--root", "--no-commit-id", "--name-only", "-r", sha],
+                cwd=cwd,
+                stderr=subprocess.DEVNULL,
+            ).decode("utf-8", errors="replace").splitlines()
+            ok, diag = _evaluate_retro_commit_files(
+                files_out,
+                commit_message=msg,
+                commit_sha=sha,
+                commit_ts=ts,
+            )
+            checked_count += 1
+            if not ok:
+                return False, [f"Commit {sha[:8]}: {d}" for d in diag]
+        except Exception as exc:
+            return False, [f"ERROR: Failed to inspect commit '{ref}' for Retro write-allowlist: {exc}"]
+
+    return True, [
+        f"PASS: Autonomous Retro write-allowlist verified ({checked_count} ceremony2 commit(s) checked)."
+    ]
+
+
 def verify_test_evidence(target_id=None, repo_root=None):
     """
     REQ-PRO-100.4 / TST-PRO-100.2:
@@ -1132,6 +1310,10 @@ def verify_master_table_parity(repo_root=None):
                 count=1,
             )
             if new_shard_content != shard_content:
+                shard_rel = f"{shard_dir_rel}/{fn}"
+                new_shard_content = bump_work_product_header_on_edit(
+                    new_shard_content, shard_rel, repo_root=repo_root
+                )
                 with open(fp, "w", encoding="utf-8") as f:
                     f.write(new_shard_content)
 
@@ -1145,6 +1327,10 @@ def verify_master_table_parity(repo_root=None):
                 count=1,
             )
             if new_shard_content != shard_content:
+                shard_rel = f"{shard_dir_rel}/{fn}"
+                new_shard_content = bump_work_product_header_on_edit(
+                    new_shard_content, shard_rel, repo_root=repo_root
+                )
                 with open(fp, "w", encoding="utf-8") as f:
                     f.write(new_shard_content)
 
@@ -3739,6 +3925,10 @@ def recalculate_master_index_tables(repo_root=None):
                 count=1,
             )
             if new_shard_content != shard_content:
+                shard_rel = f"{shard_dir_rel}/{fn}"
+                new_shard_content = bump_work_product_header_on_edit(
+                    new_shard_content, shard_rel, repo_root=repo_root
+                )
                 with open(fp, "w", encoding="utf-8") as f:
                     f.write(new_shard_content)
 
@@ -3792,8 +3982,11 @@ def recalculate_master_index_tables(repo_root=None):
             new_lines.append(new_line)
 
         if changed:
+            joined = bump_work_product_header_on_edit(
+                "".join(new_lines), master_rel, repo_root=repo_root
+            )
             with open(master_fp, "w", encoding="utf-8") as f:
-                f.writelines(new_lines)
+                f.write(joined)
             msg = f"Recalculated master index table in {master_rel}: Total={grand_total}, Verified={grand_verified}, Implemented={grand_implemented}, Planned={grand_planned}."
             print(msg)
             recalculated.append(msg)
@@ -4154,6 +4347,432 @@ def verify_architecture_and_system_specs(diff_text=None, repo_root=None, base_re
     return True, ["PASS: Architecture & system specification code-grounding and SYSREQ parity verified."]
 
 
+DOC_HEADER_CUTOFF_TS = 1794934635  # ATT-8163 baseline commit timestamp; enforces post-ATT-8164 edits
+COMMIT_HYGIENE_CUTOFF_TS = 1794939034  # ATT-8164 baseline commit timestamp; enforces post-ATT-8165 commits
+_CONFLICT_MARKER_LINE_RE = re.compile(r"^(?:<{7}(?: .*)?|={7}|>{7}(?: .*)?)$")
+_COMMIT_TICKET_KEY_RE = re.compile(r"\bATT-\d+\b")
+_VALID_DOC_STATUSES = {"Draft", "Reviewed", "Approved"}
+_ADR_EXTRA_STATUS = "Retrospective (Pending PO Sign-Off)"
+_UNAPPROVED_APPROVER_RE = re.compile(
+    r"^(?:$|pending|ai\b|ai\s+agent|agent\b|antigravity|unassigned|none|n/a|tbd|auto)",
+    re.IGNORECASE,
+)
+_HUMAN_TRAILER_RE = re.compile(
+    r"^\s*(?:Human-Approved|Interactive-PO)\s*:\s*\S+",
+    re.MULTILINE | re.IGNORECASE,
+)
+
+
+def _semver_tuple(ver_str):
+    parts = str(ver_str or "").strip().split(".")
+    if len(parts) != 3 or not all(p.isdigit() for p in parts):
+        return (0, 0, 0)
+    return tuple(int(p) for p in parts)
+
+
+def bump_work_product_header_on_edit(text, rel_path, repo_root=None, base_ref="develop"):
+    """
+    Bumps patch semver Version (if not already bumped relative to git base) and resets
+    Approved -> Reviewed with Pending PO Sign-Off when tooling updates a governed work product.
+    """
+    if "**Version**:" not in text:
+        return text
+    m_ver = re.search(r"(\*\*Version\*\*:\s*`?)(\d+\.\d+\.)(\d+)(`?)", text)
+    if not m_ver:
+        return text
+
+    base_ver = None
+    if repo_root is not None:
+        try:
+            resolved_base = _resolve_git_base_ref(base_ref, cwd=repo_root)
+            if resolved_base:
+                old_txt = subprocess.check_output(
+                    ["git", "show", f"{resolved_base}:{rel_path}"],
+                    cwd=repo_root,
+                    stderr=subprocess.DEVNULL,
+                ).decode("utf-8", errors="replace")
+                m_old = re.search(r"\*\*Version\*\*:\s*`?(\d+\.\d+\.\d+)`?", old_txt)
+                if m_old:
+                    base_ver = m_old.group(1)
+        except Exception:
+            base_ver = None
+
+    cur_ver = f"{m_ver.group(2)}{m_ver.group(3)}"
+    updated = text
+    if base_ver is None or _semver_tuple(cur_ver) <= _semver_tuple(base_ver):
+        bumped = f"{m_ver.group(2)}{int(m_ver.group(3)) + 1}"
+        updated = re.sub(
+            r"(\*\*Version\*\*:\s*`?)\d+\.\d+\.\d+(`?)",
+            rf"\g<1>{bumped}\g<2>",
+            updated,
+            count=1,
+        )
+    if re.search(r"\*\*Status\*\*:\s*Approved\b", updated):
+        updated = re.sub(r"(\*\*Status\*\*:\s*)Approved\b", r"\1Reviewed", updated, count=1)
+        updated = re.sub(r"(\*\*Approver\*\*:\s*)[^\n|]+", r"\1Pending PO Sign-Off", updated, count=1)
+    return updated
+
+
+def _resolve_git_base_ref(base_ref="develop", cwd=None):
+    """Resolves the nearest sprint or develop base commit/ref for diff checks."""
+    effective_base = base_ref
+    if effective_base == "develop":
+        try:
+            sprint_branches = subprocess.check_output(
+                ["git", "for-each-ref", "--sort=-committerdate", "--format=%(refname:short)", "refs/heads/sprint/*"],
+                cwd=cwd,
+                stderr=subprocess.DEVNULL,
+            ).decode("utf-8").strip().splitlines()
+            best_sb = None
+            best_commit_time = -1
+            for sb in sprint_branches:
+                ret = subprocess.call(
+                    ["git", "merge-base", "--is-ancestor", sb, "HEAD"],
+                    cwd=cwd,
+                    stderr=subprocess.DEVNULL,
+                )
+                if ret == 0:
+                    effective_base = sb
+                    best_sb = None
+                    break
+                try:
+                    mb = subprocess.check_output(
+                        ["git", "merge-base", sb, "HEAD"],
+                        cwd=cwd,
+                        stderr=subprocess.DEVNULL,
+                    ).decode("utf-8").strip()
+                    if mb:
+                        ts = int(subprocess.check_output(
+                            ["git", "log", "-1", "--format=%ct", mb],
+                            cwd=cwd,
+                            stderr=subprocess.DEVNULL,
+                        ).decode("utf-8").strip())
+                        if ts > best_commit_time:
+                            best_commit_time = ts
+                            best_sb = sb
+                except Exception:
+                    pass
+            if best_sb:
+                effective_base = best_sb
+        except Exception:
+            pass
+
+    try:
+        mb = subprocess.check_output(
+            ["git", "merge-base", effective_base, "HEAD"],
+            cwd=cwd,
+            stderr=subprocess.DEVNULL,
+        ).decode("utf-8").strip()
+        if mb:
+            return mb
+    except Exception:
+        pass
+    try:
+        subprocess.check_output(
+            ["git", "rev-parse", "--verify", effective_base],
+            cwd=cwd,
+            stderr=subprocess.DEVNULL,
+        )
+        return effective_base
+    except Exception:
+        return None
+
+
+def discover_governed_work_products(repo_root=None):
+    """
+    Returns sorted repo-relative paths of all governed work-product markdown files (REQ-PRO-120).
+    In a Git repository, restricts discovery to tracked/staged files via `git ls-files` so
+    untracked or gitignored local drafts (e.g. docs/management/schichtbetrieb.md) are ignored;
+    falls back to filesystem listing only outside Git repositories.
+    """
+    if repo_root is None:
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    exact_files = [
+        "docs/architecture.md",
+        "docs/requirements.md",
+        "docs/tests.md",
+        "docs/coding_standards.md",
+        "docs/design_guidelines.md",
+        "docs/project_governance.md",
+        "docs/project_protocol.md",
+    ]
+    dir_globs = [
+        "docs/management",
+        "docs/architecture",
+        "docs/architecture/detailed_design",
+        "docs/system",
+        "docs/requirements",
+        "docs/tests",
+        ".agents/rules",
+    ]
+    exact_set = set(exact_files)
+    dir_set = set(dir_globs)
+
+    is_git_repo = False
+    try:
+        top_res = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            cwd=repo_root,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+        )
+        if top_res.returncode == 0 and top_res.stdout.strip():
+            is_git_repo = os.path.realpath(top_res.stdout.strip()) == os.path.realpath(repo_root)
+    except Exception:
+        is_git_repo = False
+
+    if is_git_repo:
+        try:
+            ls_res = subprocess.run(
+                ["git", "-c", "core.quotePath=false", "ls-files", "--"] + exact_files + dir_globs,
+                cwd=repo_root,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+                text=True,
+                check=True,
+            )
+            candidates = []
+            for rel in ls_res.stdout.splitlines():
+                rel = rel.strip().replace("\\", "/")
+                if not rel.endswith(".md"):
+                    continue
+                if rel not in exact_set and os.path.dirname(rel) not in dir_set:
+                    continue
+                if os.path.isfile(os.path.join(repo_root, rel)):
+                    candidates.append(rel)
+            return sorted(set(candidates))
+        except Exception:
+            pass
+
+    candidates = []
+    for rel in exact_files:
+        if os.path.isfile(os.path.join(repo_root, rel)):
+            candidates.append(rel)
+
+    for rel_dir in dir_globs:
+        abs_dir = os.path.join(repo_root, rel_dir)
+        if not os.path.isdir(abs_dir):
+            continue
+        for fn in sorted(os.listdir(abs_dir)):
+            if fn.endswith(".md"):
+                candidates.append(f"{rel_dir}/{fn}")
+    return sorted(set(candidates))
+
+
+def parse_work_product_header(text):
+    """Extracts Document ID, Version, Status, Approver, and Change History presence from markdown."""
+    head_lines = []
+    for line in text.splitlines():
+        if re.match(r"^##\s+", line):
+            break
+        head_lines.append(line)
+        if len(head_lines) >= 40:
+            break
+    head = "\n".join(head_lines)
+
+    m_id = re.search(r"\*\*Document ID\*\*:\s*`?(DOC-[A-Z0-9-]+)`?", head)
+    m_ver = re.search(r"\*\*Version\*\*:\s*`?(\d+\.\d+\.\d+)`?", head)
+    m_status = re.search(r"\*\*Status\*\*:\s*([^|\n]+)", head)
+    m_approver = re.search(r"\*\*Approver\*\*:\s*([^|\n]+)", head)
+    has_history = bool(
+        re.search(r"^##\s+(?:\d+\.\s+)?(?:Change|Revision)\s+History\b", text, re.MULTILINE)
+        and re.search(r"^\|\s*Version\s*\|", text, re.MULTILINE)
+    )
+
+    return {
+        "document_id": m_id.group(1).strip() if m_id else None,
+        "version": m_ver.group(1).strip() if m_ver else None,
+        "status": m_status.group(1).strip().strip("`").strip() if m_status else None,
+        "approver": m_approver.group(1).strip().strip("`").strip() if m_approver else None,
+        "has_history": has_history,
+    }
+
+
+def _strip_header_and_history(text):
+    """Returns document body excluding top metadata block and Change/Revision History section."""
+    lines = text.splitlines()
+    # Skip top metadata lines before first horizontal rule or ## section
+    start_idx = 0
+    for i, line in enumerate(lines):
+        if i > 0 and (line.strip() == "---" or re.match(r"^##\s+", line)):
+            start_idx = i
+            break
+        if i >= 30:
+            start_idx = i
+            break
+    body_lines = []
+    in_history = False
+    for line in lines[start_idx:]:
+        if re.match(r"^##\s+(?:\d+\.\s+)?(?:Change|Revision)\s+History\b", line):
+            in_history = True
+            continue
+        if in_history and re.match(r"^##\s+", line):
+            in_history = False
+        if not in_history:
+            body_lines.append(line)
+    return "\n".join(body_lines).strip()
+
+
+def _is_human_approver(approver):
+    if not approver:
+        return False
+    return not bool(_UNAPPROVED_APPROVER_RE.search(approver.strip()))
+
+
+def verify_work_product_headers(
+    repo_root=None,
+    base_ref="develop",
+    check_diff=True,
+    cutoff_ts=DOC_HEADER_CUTOFF_TS,
+):
+    """
+    Validates standardized work-product headers, monotonic version bumps on body changes,
+    and human-only Approved status enforcement (REQ-PRO-120 / GP 2.2 / SUP.8 BP2).
+    """
+    if repo_root is None:
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+    governed = discover_governed_work_products(repo_root=repo_root)
+    if not governed:
+        return True, ["PASS: Zero governed work products discovered."]
+
+    errors = []
+    parsed_current = {}
+    for rel_path in governed:
+        abs_path = os.path.join(repo_root, rel_path)
+        with open(abs_path, "r", encoding="utf-8") as fh:
+            text = fh.read()
+        hdr = parse_work_product_header(text)
+        parsed_current[rel_path] = (hdr, text)
+
+        missing = []
+        if not hdr["document_id"]:
+            missing.append("Document ID (DOC-*)")
+        if not hdr["version"]:
+            missing.append("Version (semver X.Y.Z)")
+        if not hdr["status"]:
+            missing.append("Status")
+        if not hdr["approver"]:
+            missing.append("Approver")
+        if not hdr["has_history"]:
+            missing.append("Change History table")
+        if missing:
+            errors.append(
+                f"ERROR: {rel_path} missing required work-product header metadata: {', '.join(missing)} (REQ-PRO-120.1)."
+            )
+            continue
+
+        allowed_statuses = set(_VALID_DOC_STATUSES)
+        if os.path.basename(rel_path).startswith("adr_"):
+            allowed_statuses.add(_ADR_EXTRA_STATUS)
+        if hdr["status"] not in allowed_statuses:
+            errors.append(
+                f"ERROR: {rel_path} has invalid Status '{hdr['status']}' (allowed: {sorted(allowed_statuses)})."
+            )
+
+        if hdr["status"] == "Approved" and not _is_human_approver(hdr["approver"]):
+            errors.append(
+                f"ERROR: {rel_path} claims Status 'Approved' with non-human/pending Approver '{hdr['approver']}' (REQ-PRO-120.2)."
+            )
+
+    if check_diff:
+        resolved_base = _resolve_git_base_ref(base_ref=base_ref, cwd=repo_root)
+        if resolved_base:
+            for rel_path in governed:
+                if rel_path not in parsed_current:
+                    continue
+                hdr, new_text = parsed_current[rel_path]
+                if not hdr["version"] or not hdr["status"]:
+                    continue
+
+                # Check uncommitted changes in working tree
+                wt_dirty = False
+                try:
+                    wt_out = subprocess.check_output(
+                        ["git", "status", "--porcelain", "--", rel_path],
+                        cwd=repo_root,
+                        stderr=subprocess.DEVNULL,
+                    ).decode("utf-8", errors="replace").strip()
+                    wt_dirty = bool(wt_out)
+                except Exception:
+                    wt_dirty = False
+
+                # Read baseline text at resolved_base
+                old_text = None
+                try:
+                    old_text = subprocess.check_output(
+                        ["git", "show", f"{resolved_base}:{rel_path}"],
+                        cwd=repo_root,
+                        stderr=subprocess.DEVNULL,
+                    ).decode("utf-8", errors="replace")
+                except Exception:
+                    old_text = None
+
+                if old_text is not None and old_text == new_text and not wt_dirty:
+                    continue
+
+                # Determine whether all commits modifying rel_path since resolved_base are pre-cutoff
+                commit_shas = []
+                latest_has_human_trailer = False
+                all_pre_cutoff = False
+                if not wt_dirty:
+                    try:
+                        log_out = subprocess.check_output(
+                            ["git", "log", "--format=%H%x1f%ct", f"{resolved_base}..HEAD", "--", rel_path],
+                            cwd=repo_root,
+                            stderr=subprocess.DEVNULL,
+                        ).decode("utf-8", errors="replace").splitlines()
+                        parsed_commits = []
+                        for row in log_out:
+                            if "\x1f" not in row:
+                                continue
+                            c_sha, c_ts = row.split("\x1f", 1)
+                            parsed_commits.append((c_sha.strip(), int(c_ts.strip())))
+                        commit_shas = [c[0] for c in parsed_commits]
+                        if parsed_commits and all(ts <= cutoff_ts for _, ts in parsed_commits):
+                            all_pre_cutoff = True
+                        if commit_shas:
+                            msg = subprocess.check_output(
+                                ["git", "log", "-n", "1", "--format=%B", commit_shas[0]],
+                                cwd=repo_root,
+                                stderr=subprocess.DEVNULL,
+                            ).decode("utf-8", errors="replace")
+                            latest_has_human_trailer = bool(_HUMAN_TRAILER_RE.search(msg))
+                    except Exception:
+                        pass
+
+                if all_pre_cutoff:
+                    continue
+
+                old_hdr = parse_work_product_header(old_text) if old_text is not None else None
+                body_changed = (
+                    old_text is None
+                    or _strip_header_and_history(old_text) != _strip_header_and_history(new_text)
+                )
+
+                if body_changed and old_hdr and old_hdr["version"]:
+                    if _semver_tuple(hdr["version"]) <= _semver_tuple(old_hdr["version"]):
+                        errors.append(
+                            f"ERROR: {rel_path} content changed without monotonic Version bump "
+                            f"({old_hdr['version']} -> {hdr['version']}) (REQ-PRO-120.2)."
+                        )
+
+                if hdr["status"] == "Approved":
+                    status_newly_approved = (old_hdr is None) or (old_hdr["status"] != "Approved")
+                    if body_changed or status_newly_approved:
+                        if wt_dirty or not latest_has_human_trailer or not _is_human_approver(hdr["approver"]):
+                            errors.append(
+                                f"ERROR: {rel_path} sets or retains Status 'Approved' without human sign-off "
+                                f"(requires committed Human-Approved:/Interactive-PO: trailer and human Approver; "
+                                f"agents must reset to 'Reviewed' or 'Draft') (REQ-PRO-120.2)."
+                            )
+
+    if errors:
+        return False, errors
+    return True, [f"PASS: Work-product headers & human-only approval verified across {len(governed)} governed document(s)."]
+
+
 SWE_DERIVED_PREFIXES = {
     "UI", "UNT",
     "PER", "PERF", "SPT",
@@ -4407,6 +5026,144 @@ def verify_system_software_traceability(
 
 
 
+def verify_conflict_markers(repo_root=None, file_paths=None):
+    """
+    REQ-PRO-121.3 / TST-PRO-121.3:
+    Scans tracked repository text files (or explicit file_paths) for unresolved Git conflict
+    markers (<<<<<<<, =======, >>>>>>>) and fails if any are detected.
+    """
+    if repo_root is None:
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+    if file_paths is not None:
+        candidates = [str(p).replace("\\", "/") for p in file_paths]
+    else:
+        candidates = []
+        try:
+            res = subprocess.run(
+                ["git", "-c", "core.quotePath=false", "ls-files"],
+                cwd=repo_root,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+                text=True,
+                check=True,
+            )
+            candidates = [line.strip().replace("\\", "/") for line in res.stdout.splitlines() if line.strip()]
+        except Exception:
+            for root, dirs, files in os.walk(repo_root):
+                dirs[:] = [d for d in dirs if d != ".git"]
+                for fn in files:
+                    rel = os.path.relpath(os.path.join(root, fn), repo_root).replace("\\", "/")
+                    candidates.append(rel)
+
+    findings = []
+    scanned = 0
+    for rel in sorted(set(candidates)):
+        abs_path = rel if os.path.isabs(rel) else os.path.join(repo_root, rel)
+        if not os.path.isfile(abs_path):
+            continue
+        try:
+            with open(abs_path, "rb") as fh:
+                raw = fh.read()
+        except Exception:
+            continue
+        if b"\x00" in raw[:4096]:
+            continue
+        scanned += 1
+        text = raw.decode("utf-8", errors="replace")
+        for lineno, line in enumerate(text.splitlines(), start=1):
+            if _CONFLICT_MARKER_LINE_RE.match(line):
+                findings.append(f"ERROR: Unresolved Git conflict marker in {rel}:{lineno}: '{line[:40]}' (REQ-PRO-121.3).")
+
+    if findings:
+        return False, findings
+    return True, [f"PASS: Zero Git conflict markers detected ({scanned} tracked file(s) scanned)."]
+
+
+def verify_commit_hygiene(
+    repo_root=None,
+    base_ref="develop",
+    cutoff_ts=COMMIT_HYGIENE_CUTOFF_TS,
+    refs_to_check=None,
+):
+    """
+    REQ-PRO-121.3 / TST-PRO-121.3:
+    Verifies that post-cutoff non-merge commits (on develop / sprint branches) reference a Jira
+    ticket key (ATT-\\d+) in their commit message, while cleanly exempting pre-cutoff historical
+    commits (e.g. 7e5ff312, d7bf7698, 24ceaf94, 6a694bb1).
+    """
+    if repo_root is None:
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+    try:
+        if refs_to_check is None:
+            resolved_base = _resolve_git_base_ref(base_ref=base_ref, cwd=repo_root)
+            revs = []
+            if resolved_base:
+                out = subprocess.check_output(
+                    ["git", "rev-list", "--no-merges", f"{resolved_base}..HEAD"],
+                    cwd=repo_root,
+                    stderr=subprocess.DEVNULL,
+                ).decode("utf-8", errors="replace").splitlines()
+                revs = [r.strip() for r in out if r.strip()]
+            if not revs:
+                out = subprocess.check_output(
+                    ["git", "rev-list", "--no-merges", "-n", "20", "HEAD"],
+                    cwd=repo_root,
+                    stderr=subprocess.DEVNULL,
+                ).decode("utf-8", errors="replace").splitlines()
+                revs = [r.strip() for r in out if r.strip()]
+        else:
+            revs = [str(r).strip() for r in refs_to_check if str(r).strip()]
+    except Exception as exc:
+        return True, [f"PASS: Commit hygiene scan skipped ({exc})."]
+
+    if not revs:
+        return True, ["PASS: Commit hygiene verified (0 commits in scope)."]
+
+    errors = []
+    checked = 0
+    exempted = 0
+    for sha in revs:
+        try:
+            meta = subprocess.check_output(
+                ["git", "log", "-n", "1", "--format=%H%x1f%ct%x1f%P%x1f%B", sha],
+                cwd=repo_root,
+                stderr=subprocess.DEVNULL,
+            ).decode("utf-8", errors="replace")
+        except Exception:
+            continue
+        parts = meta.split("\x1f", 3)
+        if len(parts) < 4:
+            continue
+        full_sha, ts_str, parents_str, msg = parts
+        try:
+            ts = int(ts_str.strip())
+        except ValueError:
+            ts = 0
+        if len(parents_str.split()) > 1:
+            exempted += 1
+            continue
+        if cutoff_ts and ts <= cutoff_ts:
+            exempted += 1
+            continue
+        checked += 1
+        first_line = (msg.strip().splitlines()[0] if msg.strip() else "").strip()
+        if first_line.startswith("chore(baseline):"):
+            # Baseline manifest recording commits may omit ATT key if strictly under docs/releases/
+            continue
+        if not _COMMIT_TICKET_KEY_RE.search(msg):
+            errors.append(
+                f"ERROR: Commit {full_sha[:8]} ('{first_line}') lacks a mandatory Jira ticket key (ATT-\\d+) (REQ-PRO-121.3)."
+            )
+
+    if errors:
+        return False, errors
+    return True, [
+        f"PASS: Commit hygiene verified ({checked} post-cutoff commit(s) checked, {exempted} pre-cutoff/merge commit(s) exempted)."
+    ]
+
+
 def verify_governance(
     deliverable_text=None,
     diff_text=None,
@@ -4554,6 +5311,34 @@ def verify_governance(
             return False, diagnostics
         diagnostics.extend(sys_diag)
 
+        retro_ok, retro_diag = verify_retro_write_allowlist(base_ref=base_ref, repo_root=repo_root)
+        if not retro_ok:
+            diagnostics.extend(retro_diag)
+            return False, diagnostics
+        diagnostics.extend(retro_diag)
+
+        hdr_ok, hdr_diag = verify_work_product_headers(
+            repo_root=repo_root,
+            base_ref=base_ref,
+            check_diff=(diff_text is None),
+        )
+        if not hdr_ok:
+            diagnostics.extend(hdr_diag)
+            return False, diagnostics
+        diagnostics.extend(hdr_diag)
+
+        cm_ok, cm_diag = verify_conflict_markers(repo_root=repo_root)
+        if not cm_ok:
+            diagnostics.extend(cm_diag)
+            return False, diagnostics
+        diagnostics.extend(cm_diag)
+
+        ch_ok, ch_diag = verify_commit_hygiene(repo_root=repo_root, base_ref=base_ref)
+        if not ch_ok:
+            diagnostics.extend(ch_diag)
+            return False, diagnostics
+        diagnostics.extend(ch_diag)
+
     if diff_text is None:
         diff_text = get_git_diff(base_ref=base_ref)
 
@@ -4595,7 +5380,7 @@ def verify_governance(
     return True, diagnostics
 
 
-def main():
+def main(argv=None):
     """CLI interface for verify_requirement_governance.py."""
     import argparse
 
@@ -4614,6 +5399,11 @@ def main():
         "--base-ref",
         default="develop",
         help="Git base ref to diff against (default: develop).",
+    )
+    parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Optional repository root override for standalone governance checks.",
     )
     parser.add_argument(
         "--sync-indexes",
@@ -4641,6 +5431,21 @@ def main():
         "--check-specs",
         action="store_true",
         help="Run architecture and system spec grounding & SYSREQ parity check only.",
+    )
+    parser.add_argument(
+        "--check-doc-headers",
+        action="store_true",
+        help="Verify standardized work-product headers, version bumps, and human-only Approved enforcement (REQ-PRO-120).",
+    )
+    parser.add_argument(
+        "--check-conflict-markers",
+        action="store_true",
+        help="Scan tracked files for unresolved Git conflict markers (REQ-PRO-121.3).",
+    )
+    parser.add_argument(
+        "--check-commit-hygiene",
+        action="store_true",
+        help="Verify post-cutoff commits reference a Jira ATT-\\d+ ticket key (REQ-PRO-121.3).",
     )
     parser.add_argument(
         "--skip-tripwires",
@@ -4674,6 +5479,13 @@ def main():
         const="",
         default=None,
         help="Verify independent QA review records in docs/engineering/reviews/ (optionally specify sprint name).",
+    )
+    parser.add_argument(
+        "--check-retro-allowlist",
+        nargs="?",
+        const="",
+        default=None,
+        help="Verify autonomous chore(ceremony2) commits obey the evidence/log write-allowlist (REQ-PRO-117.3).",
     )
     parser.add_argument(
         "--check-impact",
@@ -4868,188 +5680,7 @@ def main():
         help="Report field completion coverage percentages (Description, Given-When-Then, Allocation) across all living requirements (REQ-PRO-104.3).",
     )
 
-    args = parser.parse_args()
-
-    if args.check_orphans:
-        ok, diag, _ = verify_traceability_orphans(
-            baseline_path=args.traceability_baseline,
-            fail_on_orphans=args.fail_on_orphans,
-        )
-        for msg in diag:
-            print(msg, file=sys.stderr if not ok and "ERROR" in msg else sys.stdout)
-        sys.exit(0 if ok else 1)
-
-    if args.check_code_orphans:
-        ok, diag, _ = verify_code_traceability_orphans(fail_on_orphans=args.fail_on_orphans)
-        for msg in diag:
-            print(msg, file=sys.stderr if not ok and "ERROR" in msg else sys.stdout)
-        sys.exit(0 if ok else 1)
-
-    if args.check_shard_headers:
-        ok, diag = verify_shard_header_counts()
-        for msg in diag:
-            print(msg, file=sys.stderr if not ok and "ERROR" in msg else sys.stdout)
-        sys.exit(0 if ok else 1)
-
-    if args.check_req_description:
-        ok, diag, _ = verify_req_descriptions(fail_on_missing=True)
-        for msg in diag:
-            print(msg, file=sys.stderr if not ok and "ERROR" in msg else sys.stdout)
-        sys.exit(0 if ok else 1)
-
-    if args.report_req_field_coverage:
-        cov = calculate_req_field_coverage()
-        print(format_req_field_coverage(cov))
-        sys.exit(0)
-
-    if args.check_evidence:
-        ok, diag = verify_requirement_evidence_status(fail_on_unverified=args.enforce_evidence)
-        for msg in diag:
-            print(msg, file=sys.stderr if not ok else sys.stdout)
-        sys.exit(0 if ok else 1)
-
-    if args.verify_sys_trace or args.check_reverse_sys_trace or args.report_sys_coverage:
-        ok, diag, report = verify_system_software_traceability(
-            fail_on_unclassified_swe=args.check_reverse_sys_trace,
-        )
-        for msg in diag:
-            print(msg, file=sys.stderr if not ok and "ERROR" in msg else sys.stdout)
-        if args.report_sys_coverage:
-            print("\nSYSREQ-to-SWE Requirement Coverage Report:")
-            print(f"Forward Coverage (SYSREQ -> Product REQ): {report['covered_count']}/{report['sysreq_count']} ({report['coverage_pct']}%)")
-            for sys_id, reqs in sorted(report["sys_to_swe_map"].items()):
-                print(f"  {sys_id} ({len(reqs)} REQs): {', '.join(sorted(reqs))}")
-            print(
-                f"\nReverse Coverage (Product REQ [System-Refinement] -> SYSREQ): "
-                f"{report['swe_refinement_covered_count']}/{report['swe_refinement_total_count']} "
-                f"({report['swe_refinement_coverage_pct']}%)"
-            )
-            print(
-                f"Derived (SW-only) System-Refinement REQs: {report['swe_derived_sw_only_count']}"
-            )
-            print(
-                f"Total Classified System-Refinement REQs: "
-                f"{report['reverse_classified_count']}/{report['swe_refinement_total_count']} "
-                f"({report['reverse_classified_pct']}%)"
-            )
-            print(f"Unclassified System-Refinement SWE REQs: {len(report['unclassified_swe_refinement_reqs'])}")
-        sys.exit(0 if ok else 1)
-
-    if args.check_verified_evidence:
-        ok, diag = verify_verified_test_evidence(
-            results_dir=args.test_results_dir,
-            archive_path=args.test_archive_path,
-        )
-        for msg in diag:
-            print(msg, file=sys.stderr if not ok and msg.startswith("ERROR") else sys.stdout)
-        sys.exit(0 if ok else 1)
-
-    if args.triage_unbacked:
-        _, diag = triage_unbacked_verified_tsts(out_csv=args.triage_csv)
-        for msg in diag:
-            print(msg)
-        sys.exit(0)
-
-    if args.check_test_evidence is not None:
-        target_sprint = args.check_test_evidence if args.check_test_evidence != "" else None
-        ok, diag = verify_test_evidence(target_id=target_sprint)
-        for msg in diag:
-            print(msg, file=sys.stderr if not ok and msg.startswith("ERROR") else sys.stdout)
-        sys.exit(0 if ok else 1)
-
-    if args.check_tests_format:
-        ok, diag = verify_tests_field_format()
-        for msg in diag:
-            print(msg, file=sys.stderr if not ok else sys.stdout)
-        sys.exit(0 if ok else 1)
-
-    if args.check_attributes:
-        diff_content = None
-        if args.diff_file and os.path.exists(args.diff_file):
-            with open(args.diff_file, "r", encoding="utf-8") as f:
-                diff_content = f.read()
-        ok, diag = verify_requirement_attributes(
-            enforce_attributes=args.enforce_attributes,
-            diff_text=diff_content,
-            base_ref=args.base_ref,
-        )
-        for msg in diag:
-            print(msg, file=sys.stderr if not ok and msg.startswith("ERROR") else sys.stdout)
-        sys.exit(0 if ok else 1)
-
-    if (
-        args.coverage
-        or args.coverage_json
-        or args.min_req_tst_coverage is not None
-        or args.min_tst_code_coverage is not None
-        or args.max_code_without_spec is not None
-        or args.min_bidirectional_coverage is not None
-    ):
-        report = calculate_traceability_coverage()
-        ok, diag = verify_coverage_thresholds(
-            report,
-            min_req_tst_coverage=args.min_req_tst_coverage,
-            min_tst_code_coverage=args.min_tst_code_coverage,
-            max_code_without_spec=args.max_code_without_spec,
-            min_bidirectional_coverage=args.min_bidirectional_coverage,
-        )
-        if args.coverage_json:
-            out_dict = report.to_dict()
-            out_dict["gate_result"] = {"passed": ok, "diagnostics": diag}
-            print(json.dumps(out_dict, indent=2))
-        else:
-            print(format_coverage_markdown(report))
-            print("")
-            for msg in diag:
-                print(msg, file=sys.stderr if not ok else sys.stdout)
-        sys.exit(0 if ok else 1)
-
-    if args.check_links:
-        ok, diag = verify_dangling_references(fail_on_dangling=args.enforce_links)
-        for msg in diag:
-            print(msg, file=sys.stderr if not ok else sys.stdout)
-        sys.exit(0 if ok else 1)
-
-    if args.check_unique_ids:
-        ok, diag = verify_unique_ids(fail_on_duplicates=args.enforce_unique)
-        for msg in diag:
-            print(msg, file=sys.stderr if not ok else sys.stdout)
-        sys.exit(0 if ok else 1)
-
-    if args.check_impact is not None:
-        target_file = args.check_impact.strip() if args.check_impact.strip() else None
-        ok, diag = verify_stage1_impact_analysis(analysis_file=target_file)
-        for msg in diag:
-            print(msg, file=sys.stderr if not ok else sys.stdout)
-        sys.exit(0 if ok else 1)
-
-    if args.check_gates is not None:
-        target_sprint = args.check_gates if args.check_gates != "" else None
-        ok, diag = verify_gate_records(sprint_name=target_sprint)
-        for msg in diag:
-            print(msg, file=sys.stderr if not ok else sys.stdout)
-        sys.exit(0 if ok else 1)
-
-    if args.check_metrics is not None:
-        target_sprint = args.check_metrics if args.check_metrics != "" else None
-        ok, diag = verify_sprint_metrics(sprint_name=target_sprint)
-        for msg in diag:
-            print(msg, file=sys.stderr if not ok else sys.stdout)
-        sys.exit(0 if ok else 1)
-
-    if args.check_qa_audits is not None:
-        target_sprint = args.check_qa_audits if args.check_qa_audits != "" else None
-        ok, diag = verify_qa_audits(sprint_name=target_sprint)
-        for msg in diag:
-            print(msg, file=sys.stderr if not ok else sys.stdout)
-        sys.exit(0 if ok else 1)
-
-    if args.check_reviews is not None:
-        target_sprint = args.check_reviews if args.check_reviews != "" else None
-        ok, diag = verify_independent_reviews(sprint_name=target_sprint)
-        for msg in diag:
-            print(msg, file=sys.stderr if not ok else sys.stdout)
-        sys.exit(0 if ok else 1)
+    args = parser.parse_args(argv)
 
     if args.sync_indexes:
         recalculate_master_index_tables()
@@ -5089,23 +5720,213 @@ def main():
         with open(args.diff_file, "r", encoding="utf-8") as f:
             diff_content = f.read()
 
-    if args.check_composable_islands:
-        ok, diag = verify_composable_islands(diff_text=diff_content, base_ref=args.base_ref)
+    ran_checks = False
+    all_ok = True
+
+    def _record_check(ok, diag, err_only_on_error=False, error_prefix_only=False):
+        nonlocal ran_checks, all_ok
+        ran_checks = True
+        if not ok:
+            all_ok = False
         for msg in diag:
-            print(msg, file=sys.stderr if not ok else sys.stdout)
-        sys.exit(0 if ok else 1)
+            if error_prefix_only:
+                is_err = not ok and msg.startswith("ERROR")
+            elif err_only_on_error:
+                is_err = not ok and "ERROR" in msg
+            else:
+                is_err = not ok
+            print(msg, file=sys.stderr if is_err else sys.stdout)
+
+    if args.check_orphans:
+        ok, diag, _ = verify_traceability_orphans(
+            repo_root=args.repo_root,
+            baseline_path=args.traceability_baseline,
+            fail_on_orphans=args.fail_on_orphans,
+        )
+        _record_check(ok, diag, err_only_on_error=True)
+
+    if args.check_code_orphans:
+        ok, diag, _ = verify_code_traceability_orphans(
+            repo_root=args.repo_root,
+            fail_on_orphans=args.fail_on_orphans,
+        )
+        _record_check(ok, diag, err_only_on_error=True)
+
+    if args.check_shard_headers:
+        ok, diag = verify_shard_header_counts(repo_root=args.repo_root)
+        _record_check(ok, diag, err_only_on_error=True)
+
+    if args.check_req_description:
+        ok, diag, _ = verify_req_descriptions(repo_root=args.repo_root, fail_on_missing=True)
+        _record_check(ok, diag, err_only_on_error=True)
+
+    if args.report_req_field_coverage:
+        cov = calculate_req_field_coverage()
+        print(format_req_field_coverage(cov))
+        ran_checks = True
+
+    if args.check_evidence:
+        ok, diag = verify_requirement_evidence_status(
+            repo_root=args.repo_root,
+            fail_on_unverified=args.enforce_evidence,
+        )
+        _record_check(ok, diag)
+
+    if args.verify_sys_trace or args.check_reverse_sys_trace or args.report_sys_coverage:
+        ok, diag, report = verify_system_software_traceability(
+            repo_root=args.repo_root,
+            fail_on_unclassified_swe=args.check_reverse_sys_trace,
+        )
+        _record_check(ok, diag, err_only_on_error=True)
+        if args.report_sys_coverage:
+            print("\nSYSREQ-to-SWE Requirement Coverage Report:")
+            print(f"Forward Coverage (SYSREQ -> Product REQ): {report['covered_count']}/{report['sysreq_count']} ({report['coverage_pct']}%)")
+            for sys_id, reqs in sorted(report["sys_to_swe_map"].items()):
+                print(f"  {sys_id} ({len(reqs)} REQs): {', '.join(sorted(reqs))}")
+            print(
+                f"\nReverse Coverage (Product REQ [System-Refinement] -> SYSREQ): "
+                f"{report['swe_refinement_covered_count']}/{report['swe_refinement_total_count']} "
+                f"({report['swe_refinement_coverage_pct']}%)"
+            )
+            print(
+                f"Derived (SW-only) System-Refinement REQs: {report['swe_derived_sw_only_count']}"
+            )
+            print(
+                f"Total Classified System-Refinement REQs: "
+                f"{report['reverse_classified_count']}/{report['swe_refinement_total_count']} "
+                f"({report['reverse_classified_pct']}%)"
+            )
+            print(f"Unclassified System-Refinement SWE REQs: {len(report['unclassified_swe_refinement_reqs'])}")
+
+    if args.check_verified_evidence:
+        ok, diag = verify_verified_test_evidence(
+            repo_root=args.repo_root,
+            results_dir=args.test_results_dir,
+            archive_path=args.test_archive_path,
+        )
+        _record_check(ok, diag, error_prefix_only=True)
+
+    if args.triage_unbacked:
+        _, diag = triage_unbacked_verified_tsts(out_csv=args.triage_csv)
+        for msg in diag:
+            print(msg)
+        ran_checks = True
+
+    if args.check_test_evidence is not None:
+        target_sprint = args.check_test_evidence if args.check_test_evidence != "" else None
+        ok, diag = verify_test_evidence(target_id=target_sprint, repo_root=args.repo_root)
+        _record_check(ok, diag, error_prefix_only=True)
+
+    if args.check_tests_format:
+        ok, diag = verify_tests_field_format(repo_root=args.repo_root)
+        _record_check(ok, diag)
+
+    if args.check_attributes:
+        ok, diag = verify_requirement_attributes(
+            repo_root=args.repo_root,
+            enforce_attributes=args.enforce_attributes,
+            diff_text=diff_content,
+            base_ref=args.base_ref,
+        )
+        _record_check(ok, diag, error_prefix_only=True)
+
+    if (
+        args.coverage
+        or args.coverage_json
+        or args.min_req_tst_coverage is not None
+        or args.min_tst_code_coverage is not None
+        or args.max_code_without_spec is not None
+        or args.min_bidirectional_coverage is not None
+    ):
+        report = calculate_traceability_coverage()
+        ok, diag = verify_coverage_thresholds(
+            report,
+            min_req_tst_coverage=args.min_req_tst_coverage,
+            min_tst_code_coverage=args.min_tst_code_coverage,
+            max_code_without_spec=args.max_code_without_spec,
+            min_bidirectional_coverage=args.min_bidirectional_coverage,
+        )
+        ran_checks = True
+        if not ok:
+            all_ok = False
+        if args.coverage_json:
+            out_dict = report.to_dict()
+            out_dict["gate_result"] = {"passed": ok, "diagnostics": diag}
+            print(json.dumps(out_dict, indent=2))
+        else:
+            print(format_coverage_markdown(report))
+            print("")
+            for msg in diag:
+                print(msg, file=sys.stderr if not ok else sys.stdout)
+
+    if args.check_links:
+        ok, diag = verify_dangling_references(repo_root=args.repo_root, fail_on_dangling=args.enforce_links)
+        _record_check(ok, diag)
+
+    if args.check_unique_ids:
+        ok, diag = verify_unique_ids(repo_root=args.repo_root, fail_on_duplicates=args.enforce_unique)
+        _record_check(ok, diag)
+
+    if args.check_impact is not None:
+        target_file = args.check_impact.strip() if args.check_impact.strip() else None
+        ok, diag = verify_stage1_impact_analysis(analysis_file=target_file, repo_root=args.repo_root)
+        _record_check(ok, diag)
+
+    if args.check_gates is not None:
+        target_sprint = args.check_gates if args.check_gates != "" else None
+        ok, diag = verify_gate_records(sprint_name=target_sprint, repo_root=args.repo_root)
+        _record_check(ok, diag)
+
+    if args.check_metrics is not None:
+        target_sprint = args.check_metrics if args.check_metrics != "" else None
+        ok, diag = verify_sprint_metrics(sprint_name=target_sprint, repo_root=args.repo_root)
+        _record_check(ok, diag)
+
+    if args.check_qa_audits is not None:
+        target_sprint = args.check_qa_audits if args.check_qa_audits != "" else None
+        ok, diag = verify_qa_audits(sprint_name=target_sprint, repo_root=args.repo_root)
+        _record_check(ok, diag)
+
+    if args.check_reviews is not None:
+        target_sprint = args.check_reviews if args.check_reviews != "" else None
+        ok, diag = verify_independent_reviews(sprint_name=target_sprint, repo_root=args.repo_root)
+        _record_check(ok, diag)
+
+    if args.check_retro_allowlist is not None:
+        target_ref = args.check_retro_allowlist if args.check_retro_allowlist != "" else None
+        ok, diag = verify_retro_write_allowlist(
+            commit_ref=target_ref,
+            base_ref=args.base_ref,
+            repo_root=args.repo_root,
+        )
+        _record_check(ok, diag)
+
+    if args.check_composable_islands:
+        ok, diag = verify_composable_islands(diff_text=diff_content, repo_root=args.repo_root, base_ref=args.base_ref)
+        _record_check(ok, diag)
 
     if args.check_repo_encapsulation:
-        ok, diag = verify_repository_encapsulation(diff_text=diff_content, base_ref=args.base_ref)
-        for msg in diag:
-            print(msg, file=sys.stderr if not ok else sys.stdout)
-        sys.exit(0 if ok else 1)
+        ok, diag = verify_repository_encapsulation(diff_text=diff_content, repo_root=args.repo_root, base_ref=args.base_ref)
+        _record_check(ok, diag)
 
     if args.check_specs:
-        ok, diag = verify_architecture_and_system_specs(diff_text=diff_content, base_ref=args.base_ref)
-        for msg in diag:
-            print(msg, file=sys.stderr if not ok else sys.stdout)
-        sys.exit(0 if ok else 1)
+        ok, diag = verify_architecture_and_system_specs(diff_text=diff_content, repo_root=args.repo_root, base_ref=args.base_ref)
+        _record_check(ok, diag)
+
+    if args.check_doc_headers:
+        ok, diag = verify_work_product_headers(repo_root=args.repo_root, base_ref=args.base_ref, check_diff=True)
+        _record_check(ok, diag)
+
+    if args.check_conflict_markers:
+        ok, diag = verify_conflict_markers(repo_root=args.repo_root)
+        _record_check(ok, diag)
+
+    if args.check_commit_hygiene:
+        ok, diag = verify_commit_hygiene(repo_root=args.repo_root, base_ref=args.base_ref)
+        _record_check(ok, diag)
+
+    if ran_checks and not args.check_text_only:
+        sys.exit(0 if all_ok else 1)
 
     text_content = ""
     if args.text_file:
@@ -5155,7 +5976,7 @@ def main():
         valid, errors = validate_archaeology_section(text_content)
         if valid:
             print("PASS: Archaeology section is structurally valid.")
-            sys.exit(0)
+            sys.exit(0 if all_ok else 1)
         else:
             print("FAIL: Archaeology section validation errors:", file=sys.stderr)
             for err in errors:

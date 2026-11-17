@@ -106,9 +106,12 @@ class JavaCoreMigrationStrategyContractTest {
         val content = adrFile.readText()
         assertTrue("ADR-001 must not be empty", content.length > 5000)
 
-        // Metadata & Governance
-        val hasApprovedStatus = content.contains("Status**: Approved") || content.contains("Status: Approved")
-        assertTrue("ADR-001 must have Status: Approved", hasApprovedStatus)
+        // Metadata & Governance (REQ-PRO-120: agent-authored docs default to Reviewed until human sign-off)
+        val hasControlledStatus = content.contains("Status**: Reviewed") ||
+            content.contains("Status: Reviewed") ||
+            content.contains("Status**: Approved") ||
+            content.contains("Status: Approved")
+        assertTrue("ADR-001 must have controlled Status: Reviewed or Approved", hasControlledStatus)
         assertTrue("ADR-001 must reference REQ-ARC-005", content.contains("REQ-ARC-005"))
         assertTrue("ADR-001 must reference TST-ARC-005", content.contains("TST-ARC-005"))
         assertTrue("ADR-001 must reference parent epic ATT-431", content.contains("ATT-431"))

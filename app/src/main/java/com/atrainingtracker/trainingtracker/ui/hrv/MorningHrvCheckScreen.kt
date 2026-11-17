@@ -111,12 +111,13 @@ import com.atrainingtracker.trainingtracker.ui.tracking.HrvInfoBottomSheet
 import kotlinx.coroutines.launch
 
 /**
- * Screen presenting guided morning resting HRV acquisition protocol (`REQ-PER-032`).
+ * Screen presenting guided morning resting HRV acquisition protocol (`REQ-PER-032`)
+ * and subjective sleep & wellness logging (`REQ-HRV-040`, `REQ-HRV-043`).
  *
  * Implements waking protocol guidance, sticky posture memory, live pacing countdown,
- * amber artifact warning for rate > 5.0%, and post-hoc SWC readiness evaluation.
+ * amber artifact warning for rate > 5.0%, post-hoc SWC readiness evaluation, and pure
+ * wellness mode when Morning HRV Check is disabled in Expert Settings.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MorningHrvCheckScreen(
     viewModel: MorningHrvCheckViewModel = viewModel(),
@@ -124,7 +125,6 @@ fun MorningHrvCheckScreen(
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    var showInfoSheet by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
 
@@ -137,20 +137,99 @@ fun MorningHrvCheckScreen(
         }
     }
 
+    MorningHrvCheckContent(
+        uiState = uiState,
+        onNavigateBack = onNavigateBack,
+        onPostureSelected = viewModel::setPosture,
+        onDurationSelected = viewModel::setDurationSec,
+        onSleepDurationChange = viewModel::setSleepDurationMinutes,
+        onSleepQualityChange = viewModel::setSleepQuality,
+        onMorningEnergyChange = viewModel::setMorningEnergy,
+        onMuscleSorenessChange = viewModel::setMuscleSoreness,
+        onToggleContextTag = viewModel::toggleContextTag,
+        onStart = viewModel::startMeasurement,
+        onCancel = viewModel::cancelMeasurement,
+        onDiscard = viewModel::resetMeasurement,
+        onSave = {
+            coroutineScope.launch {
+                val rowId = viewModel.saveReading()
+                if (rowId > 0) {
+                    Toast.makeText(
+                        context,
+                        R.string.morning_hrv_saved_toast,
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+        },
+        onSaveStandaloneWellness = {
+            coroutineScope.launch {
+                val rowId = viewModel.saveStandaloneWellness()
+                if (rowId > 0) {
+                    Toast.makeText(
+                        context,
+                        R.string.morning_hrv_wellness_saved_toast,
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+        },
+        modifier = modifier
+    )
+}
+
+/**
+ * Stateless content for [MorningHrvCheckScreen] supporting pure wellness mode (`REQ-HRV-043`),
+ * full HRV + wellness mode (`REQ-PER-032`), and direct Compose previews/testing.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun MorningHrvCheckContent(
+    uiState: MorningHrvUiState,
+    onNavigateBack: () -> Unit,
+    onPostureSelected: (HrvPosture) -> Unit = {},
+    onDurationSelected: (Int) -> Unit = {},
+    onSleepDurationChange: (Int) -> Unit = {},
+    onSleepQualityChange: (Int) -> Unit = {},
+    onMorningEnergyChange: (Int) -> Unit = {},
+    onMuscleSorenessChange: (Int) -> Unit = {},
+    onToggleContextTag: (String) -> Unit = {},
+    onStart: () -> Unit = {},
+    onCancel: () -> Unit = {},
+    onDiscard: () -> Unit = {},
+    onSave: () -> Unit = {},
+    onSaveStandaloneWellness: () -> Unit = {},
+    modifier: Modifier = Modifier
+) {
+    var showInfoSheet by remember { mutableStateOf(false) }
+    val isPureWellnessMode = !uiState.showMorningCheckOnStartScreen &&
+        uiState.enableMorningSleepAndWellness &&
+        uiState.phase == MorningHrvPhase.READY
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
                     Column {
                         Text(
-                            text = stringResource(R.string.morning_hrv_title),
+                            text = stringResource(
+                                if (isPureWellnessMode) R.string.hrv_morning_check_start_button
+                                else R.string.morning_hrv_title
+                            ),
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                         Text(
-                            text = stringResource(R.string.morning_hrv_subtitle),
+                            text = stringResource(
+                                if (isPureWellnessMode) R.string.morning_hrv_wellness_subtitle
+                                else R.string.morning_hrv_subtitle
+                            ),
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 },
@@ -163,11 +242,16 @@ fun MorningHrvCheckScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { showInfoSheet = true }) {
-                        Icon(
-                            imageVector = Icons.Default.Info,
-                            contentDescription = stringResource(R.string.hrv_info_title)
-                        )
+                    if (!isPureWellnessMode) {
+                        IconButton(
+                            onClick = { showInfoSheet = true },
+                            modifier = Modifier.testTag("morning_hrv_info_button")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = stringResource(R.string.hrv_info_title)
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -205,33 +289,44 @@ fun MorningHrvCheckScreen(
                 }
             }
 
-            // 1. Checklist / Protocol Card
-            WakingProtocolChecklistCard()
-
-            // 2. Configuration Controls (Posture & Duration) - Enabled only in READY phase
-            if (uiState.phase == MorningHrvPhase.READY) {
-                PostureAndDurationCard(
-                    selectedPosture = uiState.posture,
-                    selectedDurationSec = uiState.durationSec,
-                    onPostureSelected = { viewModel.setPosture(it) },
-                    onDurationSelected = { viewModel.setDurationSec(it) }
+            if (!isPureWellnessMode) {
+                // 1. Checklist / Protocol Card
+                WakingProtocolChecklistCard(
+                    modifier = Modifier.testTag("morning_hrv_protocol_card")
                 )
+
+                // 2. Configuration Controls (Posture & Duration) - Enabled only in READY phase
+                if (uiState.phase == MorningHrvPhase.READY) {
+                    PostureAndDurationCard(
+                        selectedPosture = uiState.posture,
+                        selectedDurationSec = uiState.durationSec,
+                        onPostureSelected = onPostureSelected,
+                        onDurationSelected = onDurationSelected,
+                        modifier = Modifier.testTag("morning_hrv_posture_duration_card")
+                    )
+                }
             }
 
             // Morning Sleep & Minimal Wellness Card (REQ-HRV-038, REQ-HRV-040, REQ-HRV-041)
             if (uiState.enableMorningSleepAndWellness) {
                 MorningWellnessInputCard(
                     uiState = uiState,
-                    onSleepDurationChange = { viewModel.setSleepDurationMinutes(it) },
-                    onSleepQualityChange = { viewModel.setSleepQuality(it) },
-                    onMorningEnergyChange = { viewModel.setMorningEnergy(it) },
-                    onMuscleSorenessChange = { viewModel.setMuscleSoreness(it) },
-                    onToggleContextTag = { viewModel.toggleContextTag(it) }
+                    onSleepDurationChange = onSleepDurationChange,
+                    onSleepQualityChange = onSleepQualityChange,
+                    onMorningEnergyChange = onMorningEnergyChange,
+                    onMuscleSorenessChange = onMuscleSorenessChange,
+                    onToggleContextTag = onToggleContextTag,
+                    modifier = Modifier.testTag("morning_hrv_wellness_card")
                 )
             }
 
-            // 3. Live Pacing / Measurement Status Card
-            MeasurementPacingCard(uiState = uiState)
+            if (!isPureWellnessMode) {
+                // 3. Live Pacing / Measurement Status Card
+                MeasurementPacingCard(
+                    uiState = uiState,
+                    modifier = Modifier.testTag("morning_hrv_pacing_card")
+                )
+            }
 
             // 4. Artifact Warning (Amber Badge if > 5.0%)
             if (uiState.highArtifactWarning) {
@@ -259,38 +354,17 @@ fun MorningHrvCheckScreen(
             // 6. Action Buttons
             ActionButtonsSection(
                 uiState = uiState,
-                onStart = { viewModel.startMeasurement() },
-                onCancel = { viewModel.cancelMeasurement() },
-                onDiscard = { viewModel.resetMeasurement() },
-                onSave = {
-                    coroutineScope.launch {
-                        val rowId = viewModel.saveReading()
-                        if (rowId > 0) {
-                            Toast.makeText(
-                                context,
-                                R.string.morning_hrv_saved_toast,
-                                Toast.LENGTH_SHORT
-                            ).show()
-                        }
-                    }
-                },
-                onSaveStandaloneWellness = {
-                    coroutineScope.launch {
-                        val rowId = viewModel.saveStandaloneWellness()
-                        if (rowId > 0) {
-                            Toast.makeText(
-                                context,
-                                R.string.morning_hrv_wellness_saved_toast,
-                                Toast.LENGTH_SHORT
-                            ).show()
-                        }
-                    }
-                }
+                isPureWellnessMode = isPureWellnessMode,
+                onStart = onStart,
+                onCancel = onCancel,
+                onDiscard = onDiscard,
+                onSave = onSave,
+                onSaveStandaloneWellness = onSaveStandaloneWellness
             )
         }
     }
 
-    if (showInfoSheet) {
+    if (showInfoSheet && !isPureWellnessMode) {
         HrvInfoBottomSheet(
             onDismissRequest = { showInfoSheet = false },
             signalQualityStatus = uiState.signalQualityStatus
@@ -756,11 +830,12 @@ private fun ReadinessResultCard(
 }
 
 /**
- * Action button bar managing lifecycle operations (`REQ-PER-032.1`, `REQ-PER-032.5`, `REQ-HRV-040`).
+ * Action button bar managing lifecycle operations (`REQ-PER-032.1`, `REQ-PER-032.5`, `REQ-HRV-040`, `REQ-HRV-043`).
  */
 @Composable
 private fun ActionButtonsSection(
     uiState: MorningHrvUiState,
+    isPureWellnessMode: Boolean,
     onStart: () -> Unit,
     onCancel: () -> Unit,
     onDiscard: () -> Unit,
@@ -775,49 +850,58 @@ private fun ActionButtonsSection(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Button(
-                        onClick = onStart,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(min = 52.dp),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Text(
-                            text = stringResource(R.string.morning_hrv_btn_start),
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-
-                    if (uiState.enableMorningSleepAndWellness) {
-                        OutlinedButton(
+                    if (isPureWellnessMode) {
+                        Button(
                             onClick = onSaveStandaloneWellness,
                             enabled = !uiState.isWellnessSaved,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .heightIn(min = 52.dp),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            if (uiState.isWellnessSaved) {
-                                Icon(
-                                    imageVector = Icons.Default.Check,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = stringResource(R.string.morning_hrv_btn_saved),
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
+                                .heightIn(min = 52.dp)
+                                .testTag("morning_hrv_save_wellness_primary_button"),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = if (uiState.isWellnessSaved) {
+                                ButtonDefaults.buttonColors(
+                                    containerColor = TTColor.ReadinessOptimal,
+                                    contentColor = TTColor.ReadinessOnStatus,
+                                    disabledContainerColor = TTColor.ReadinessOptimal,
+                                    disabledContentColor = TTColor.ReadinessOnStatus
                                 )
                             } else {
-                                Text(
-                                    text = stringResource(R.string.morning_hrv_btn_save_wellness),
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
+                                ButtonDefaults.buttonColors()
+                            }
+                        ) {
+                            SaveWellnessButtonContent(isWellnessSaved = uiState.isWellnessSaved)
+                        }
+                    } else {
+                        Button(
+                            onClick = onStart,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 52.dp)
+                                .testTag("morning_hrv_start_button"),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.morning_hrv_btn_start),
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                softWrap = false,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+
+                        if (uiState.enableMorningSleepAndWellness) {
+                            OutlinedButton(
+                                onClick = onSaveStandaloneWellness,
+                                enabled = !uiState.isWellnessSaved,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(min = 52.dp)
+                                    .testTag("morning_hrv_save_wellness_secondary_button"),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                SaveWellnessButtonContent(isWellnessSaved = uiState.isWellnessSaved)
                             }
                         }
                     }
@@ -939,6 +1023,34 @@ private fun ActionButtonsSection(
 }
 
 /**
+ * Shared label and saved-checkmark content for standalone wellness save buttons.
+ */
+@Composable
+private fun SaveWellnessButtonContent(isWellnessSaved: Boolean) {
+    if (isWellnessSaved) {
+        Icon(
+            imageVector = Icons.Default.Check,
+            contentDescription = null,
+            modifier = Modifier.size(18.dp)
+        )
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(
+            text = stringResource(R.string.morning_hrv_btn_saved),
+            maxLines = 1,
+            softWrap = false,
+            overflow = TextOverflow.Ellipsis
+        )
+    } else {
+        Text(
+            text = stringResource(R.string.morning_hrv_btn_save_wellness),
+            maxLines = 1,
+            softWrap = false,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+/**
  * Interactive subjective sleep and morning wellness input card (`REQ-HRV-038`, `REQ-HRV-040`, `REQ-HRV-041`).
  */
 @Composable
@@ -968,6 +1080,19 @@ private fun MorningWellnessInputCard(
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
             )
+
+            val hasAnyDimensionEnabled = uiState.enableSleepDurationAndQuality ||
+                uiState.enableMorningEnergy ||
+                uiState.enableMuscleSoreness ||
+                uiState.enableContextTags
+            if (!hasAnyDimensionEnabled) {
+                Text(
+                    text = stringResource(R.string.morning_hrv_wellness_empty_hint),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.testTag("morning_hrv_wellness_empty_hint")
+                )
+            }
 
             // Sleep Duration & Quality
             if (uiState.enableSleepDurationAndQuality) {
@@ -1097,39 +1222,89 @@ private fun MorningWellnessInputCard(
     }
 }
 
-@Preview(name = "Light Mode", showBackground = true)
+@Preview(name = "Pure Wellness - Light Mode", showBackground = true)
 @Composable
-private fun MorningHrvCheckScreenPreviewLight() {
+private fun MorningHrvCheckPureWellnessPreviewLight() {
     ATrainingTrackerTheme(darkTheme = false) {
-        Surface {
-            MeasurementPacingCard(
-                uiState = MorningHrvUiState(
-                    phase = MorningHrvPhase.READY,
-                    currentHeartRateBpm = 54
-                )
-            )
-        }
+        MorningHrvCheckContent(
+            uiState = MorningHrvUiState(
+                showMorningCheckOnStartScreen = false,
+                enableMorningSleepAndWellness = true,
+                enableSleepDurationAndQuality = true,
+                enableMorningEnergy = true,
+                enableMuscleSoreness = true,
+                enableContextTags = false
+            ),
+            onNavigateBack = {}
+        )
     }
 }
 
-@Preview(name = "Dark Mode", showBackground = true)
+@Preview(name = "Pure Wellness - Dark Mode", showBackground = true)
+@Composable
+private fun MorningHrvCheckPureWellnessPreviewDark() {
+    ATrainingTrackerTheme(darkTheme = true) {
+        MorningHrvCheckContent(
+            uiState = MorningHrvUiState(
+                showMorningCheckOnStartScreen = false,
+                enableMorningSleepAndWellness = true,
+                enableSleepDurationAndQuality = true,
+                enableMorningEnergy = true,
+                isWellnessSaved = true
+            ),
+            onNavigateBack = {}
+        )
+    }
+}
+
+@Preview(name = "Pure Wellness - AMOLED Dark Mode", showBackground = true)
+@Composable
+private fun MorningHrvCheckPureWellnessPreviewAmoled() {
+    ATrainingTrackerTheme(darkTheme = true, amoled = true) {
+        MorningHrvCheckContent(
+            uiState = MorningHrvUiState(
+                showMorningCheckOnStartScreen = false,
+                enableMorningSleepAndWellness = true,
+                enableSleepDurationAndQuality = true,
+                enableMorningEnergy = true
+            ),
+            onNavigateBack = {}
+        )
+    }
+}
+
+@Preview(name = "Full HRV + Wellness - Light Mode", showBackground = true)
+@Composable
+private fun MorningHrvCheckFullPreviewLight() {
+    ATrainingTrackerTheme(darkTheme = false) {
+        MorningHrvCheckContent(
+            uiState = MorningHrvUiState(
+                showMorningCheckOnStartScreen = true,
+                enableMorningSleepAndWellness = true,
+                currentHeartRateBpm = 54
+            ),
+            onNavigateBack = {}
+        )
+    }
+}
+
+@Preview(name = "Measuring HRV - Dark Mode", showBackground = true)
 @Composable
 private fun MorningHrvCheckScreenPreviewDark() {
     ATrainingTrackerTheme(darkTheme = true) {
-        Surface {
-            MeasurementPacingCard(
-                uiState = MorningHrvUiState(
-                    phase = MorningHrvPhase.MEASURING,
-                    remainingSec = 45,
-                    currentHeartRateBpm = 52,
-                    beatCount = 18
-                )
-            )
-        }
+        MorningHrvCheckContent(
+            uiState = MorningHrvUiState(
+                phase = MorningHrvPhase.MEASURING,
+                remainingSec = 45,
+                currentHeartRateBpm = 52,
+                beatCount = 18
+            ),
+            onNavigateBack = {}
+        )
     }
 }
 
-@Preview(name = "AMOLED Dark Mode", showBackground = true)
+@Preview(name = "Result Card - AMOLED Dark Mode", showBackground = true)
 @Composable
 private fun MorningHrvCheckScreenPreviewAmoled() {
     ATrainingTrackerTheme(darkTheme = true, amoled = true) {

@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+MSG_FILE="${1:?commit-msg hook requires message file path}"
+CONTENT=$(grep -v '^#' "$MSG_FILE" || true)
+
+# Allow automated Git merge/revert/fixup messages
+if echo "$CONTENT" | grep -qE '^(Merge |Revert "Merge |fixup! |squash! |chore\(baseline\):)'; then
+  exit 0
+fi
+
+if ! echo "$CONTENT" | grep -qE '\bATT-[0-9]+\b'; then
+  echo "ERROR: Commit message must reference a Jira ticket key (e.g. 'ATT-1234')." >&2
+  echo "Every hotfix or code fix requires a tracked problem record (ASPICE SUP.9 / REQ-PRO-121.3)." >&2
+  exit 1
+fi

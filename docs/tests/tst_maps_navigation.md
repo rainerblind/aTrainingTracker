@@ -1,5 +1,10 @@
 # Living Test Specification: Maps, Polylines & Navigation
 
+**Document ID**: `DOC-TST-MAPS`  
+**Version**: 1.0.0  
+**Status**: Reviewed  
+**Approver**: Pending PO Sign-Off  
+
 **Domain**: `maps_navigation`  
 **Prefixes**: `GEO`, `MAP`, `NAV`, `ROU`  
 **Scope**: Map rendering, polylines, navigation overlays, GPX track follow-me, and routing.  
@@ -1280,12 +1285,10 @@
   • Verify that geographic bounding box pre-filtering discards non-overlapping climb pairs in $O(1)$ without evaluating heading or segment cross-track distance.
   • Verify that deduplicating a dense synthetic list of 300 climbs completes in $\le 100\text{ ms}$ on JVM without blocking or thread starvation.
 
+---
 
+## Change History
 
-
-
-
-
-
-
-
+| Version | Date | Author | Ticket | Summary of Changes |
+| :--- | :--- | :--- | :--- | :--- |
+| `1.0.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Added standardized `DOC-TST-MAPS` work-product control header and Change History. |

@@ -23,6 +23,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -41,13 +42,16 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.devices.AttFusedAltitudePreferences
@@ -196,9 +200,12 @@ fun EditDeviceDialog(
                     AttFusedAltitudeConfigSection()
                 }
 
-                // 8. Radar Tail Light Mode Control (ATT-7540, REQ-CON-031.5)
+                // 8. Radar Tail Light Mode Control (ATT-7540, ATT-8450, REQ-CON-031.5, REQ-CON-048)
                 if (data.deviceType == DeviceType.BIKE_RADAR) {
-                    RadarLightControlSection(isConnected = isConnected)
+                    RadarLightControlSection(
+                        isConnected = isConnected,
+                        deviceName = currentDevice.deviceName
+                    )
                 }
 
                 // 9. Wheel Sensor Guidance (ATT-7752, REQ-SEN-029.4)
@@ -1102,31 +1109,93 @@ private fun AttFusedToggleRow(
 }
 
 /**
- * Live tail light mode selector for connected radar devices supporting light control (REQ-CON-031.5, ATT-7540).
- *
- * Mode selections are dispatched immediately via [RadarLightController.setManualLightMode] and do not
- * modify [EditDeviceViewModel] draft state.
+ * Returns `true` when [deviceName] explicitly identifies a radar-only unit without tail light hardware
+ * (such as Garmin Varia RVR315) (`REQ-CON-048.1`, `ATT-8450`).
  */
-@OptIn(ExperimentalMaterial3Api::class)
+internal fun isKnownRadarWithoutLight(deviceName: String?): Boolean {
+    if (deviceName.isNullOrBlank()) return false
+    val upper = deviceName.uppercase(java.util.Locale.US)
+    return upper.contains("RVR315") || upper.contains("RVR 315")
+}
+
+/**
+ * Determines whether [RadarLightControlSection] should be visible for a [DeviceType.BIKE_RADAR] device
+ * (`REQ-CON-048.1`, `ATT-8450`).
+ */
+internal fun shouldShowRadarLightControlSection(
+    isConnected: Boolean,
+    isSimulating: Boolean,
+    isLightControlAvailable: Boolean,
+    deviceName: String?
+): Boolean {
+    if (isSimulating) return true
+    if (isConnected) return isLightControlAvailable
+    return !isKnownRadarWithoutLight(deviceName)
+}
+
+/**
+ * Tail light mode selector for radar devices (`REQ-CON-031.5`, `REQ-CON-048`, `ATT-7540`, `ATT-8450`).
+ *
+ * Remains visible and interactive offline (unless known radar-only such as RVR315 or connected without
+ * light support), hydrating persisted mode preferences on cold start and applying selections on next
+ * connection without modifying [EditDeviceViewModel] draft state.
+ */
 @Composable
-@Suppress("LongMethod", "CyclomaticComplexMethod")
 private fun RadarLightControlSection(
     isConnected: Boolean,
+    deviceName: String?,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+    LaunchedEffect(Unit) {
+        RadarLightController.hydrateFromPreferencesAsync(context)
+    }
+
     val isLightControlAvailable by RadarLightController.isLightControlAvailable.collectAsStateWithLifecycle()
     val isSimulating by RadarTrafficSimulator.isSimulatingFlow.collectAsStateWithLifecycle()
-    if (!isSimulating && (!isConnected || !isLightControlAvailable)) {
+    if (!shouldShowRadarLightControlSection(isConnected, isSimulating, isLightControlAvailable, deviceName)) {
         return
     }
 
     val isAutoMode by RadarLightController.isAutoMode.collectAsStateWithLifecycle()
     val currentMode by RadarLightController.currentMode.collectAsStateWithLifecycle()
+    val preferredMode by RadarLightController.preferredMode.collectAsStateWithLifecycle()
     val isStvzo by RadarLightController.isStvzo.collectAsStateWithLifecycle()
+    val isOffline = !isConnected && !isSimulating
+    val effectiveMode = if (isOffline) preferredMode else currentMode
+
+    RadarLightControlSectionContent(
+        isOffline = isOffline,
+        isAutoMode = isAutoMode,
+        effectiveMode = effectiveMode,
+        isStvzo = isStvzo,
+        onSelectAuto = { RadarLightController.setAutoMode() },
+        onSelectMode = { mode -> RadarLightController.setManualLightMode(mode) },
+        modifier = modifier
+    )
+}
+
+/**
+ * Stateless UI content for [RadarLightControlSection] (`REQ-CON-048`, `ATT-8450`).
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+@Suppress("LongMethod", "CyclomaticComplexMethod")
+internal fun RadarLightControlSectionContent(
+    isOffline: Boolean,
+    isAutoMode: Boolean,
+    effectiveMode: RadarLightMode,
+    isStvzo: Boolean,
+    onSelectAuto: () -> Unit,
+    onSelectMode: (RadarLightMode) -> Unit,
+    modifier: Modifier = Modifier
+) {
     val availableModes = remember(isStvzo) { RadarLightMode.getAvailableModes(isStvzo) }
 
     Column(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .testTag("RadarLightControlSection"),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Text(
@@ -1136,6 +1205,32 @@ private fun RadarLightControlSection(
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
+        if (isOffline) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f))
+                    .padding(horizontal = 12.dp, vertical = 8.dp)
+                    .testTag("RadarLightOfflineHint"),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Info,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = stringResource(R.string.radar_light_offline_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+
         if (isStvzo) {
             Box(
                 modifier = Modifier
@@ -1143,6 +1238,7 @@ private fun RadarLightControlSection(
                     .clip(RoundedCornerShape(8.dp))
                     .background(TTColor.RadarDisconnectedAmber.copy(alpha = 0.15f))
                     .padding(horizontal = 12.dp, vertical = 8.dp)
+                    .testTag("RadarLightStvzoNotice")
             ) {
                 Text(
                     text = stringResource(R.string.radar_light_stvzo_notice),
@@ -1158,7 +1254,7 @@ private fun RadarLightControlSection(
                 val totalCount = 1 + availableModes.size
                 SegmentedButton(
                     selected = isAutoMode,
-                    onClick = { RadarLightController.setAutoMode() },
+                    onClick = onSelectAuto,
                     shape = SegmentedButtonDefaults.itemShape(index = 0, count = totalCount),
                     icon = {},
                     modifier = Modifier.testTag("RadarLightMode_AUTO")
@@ -1173,10 +1269,10 @@ private fun RadarLightControlSection(
                 }
 
                 availableModes.forEachIndexed { index, mode ->
-                    val isSelected = !isAutoMode && mode == currentMode
+                    val isSelected = !isAutoMode && mode == effectiveMode
                     SegmentedButton(
                         selected = isSelected,
-                        onClick = { RadarLightController.setManualLightMode(mode) },
+                        onClick = { onSelectMode(mode) },
                         shape = SegmentedButtonDefaults.itemShape(index = index + 1, count = totalCount),
                         icon = {},
                         modifier = Modifier.testTag("RadarLightMode_${mode.name}")
@@ -1192,11 +1288,11 @@ private fun RadarLightControlSection(
                 }
             }
 
-            if (isAutoMode) {
+            if (isAutoMode && !isOffline) {
                 Text(
                     text = stringResource(
                         R.string.radar_light_active_mode_format,
-                        stringResource(currentMode.titleResId)
+                        stringResource(effectiveMode.titleResId)
                     ),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -1209,7 +1305,11 @@ private fun RadarLightControlSection(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(8.dp))
-                    .clickable { RadarLightController.setAutoMode() }
+                    .selectable(
+                        selected = isAutoMode,
+                        role = Role.RadioButton,
+                        onClick = onSelectAuto
+                    )
                     .padding(horizontal = 12.dp, vertical = 8.dp)
                     .testTag("RadarLightMode_AUTO"),
                 verticalAlignment = Alignment.CenterVertically
@@ -1232,11 +1332,11 @@ private fun RadarLightControlSection(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                    if (isAutoMode) {
+                    if (isAutoMode && !isOffline) {
                         Text(
                             text = stringResource(
                                 R.string.radar_light_active_mode_format,
-                                stringResource(currentMode.titleResId)
+                                stringResource(effectiveMode.titleResId)
                             ),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -1246,17 +1346,21 @@ private fun RadarLightControlSection(
 
                 RadioButton(
                     selected = isAutoMode,
-                    onClick = { RadarLightController.setAutoMode() }
+                    onClick = null
                 )
             }
 
             availableModes.forEach { mode ->
-                val isSelected = !isAutoMode && mode == currentMode
+                val isSelected = !isAutoMode && mode == effectiveMode
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(8.dp))
-                        .clickable { RadarLightController.setManualLightMode(mode) }
+                        .selectable(
+                            selected = isSelected,
+                            role = Role.RadioButton,
+                            onClick = { onSelectMode(mode) }
+                        )
                         .padding(horizontal = 12.dp, vertical = 8.dp)
                         .testTag("RadarLightMode_${mode.name}"),
                     verticalAlignment = Alignment.CenterVertically
@@ -1289,10 +1393,78 @@ private fun RadarLightControlSection(
 
                     RadioButton(
                         selected = isSelected,
-                        onClick = { RadarLightController.setManualLightMode(mode) }
+                        onClick = null
                     )
                 }
             }
+        }
+    }
+}
+
+@Preview(showBackground = true, name = "Offline Multi-Mode Light")
+@Composable
+internal fun RadarLightControlSectionOfflineMultiModeLightPreview() {
+    ATrainingTrackerTheme(darkTheme = false) {
+        Surface(color = MaterialTheme.colorScheme.surface, modifier = Modifier.padding(16.dp)) {
+            RadarLightControlSectionContent(
+                isOffline = true,
+                isAutoMode = false,
+                effectiveMode = RadarLightMode.SOLID,
+                isStvzo = false,
+                onSelectAuto = {},
+                onSelectMode = {}
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true, name = "Offline Multi-Mode Dark")
+@Composable
+internal fun RadarLightControlSectionOfflineMultiModeDarkPreview() {
+    ATrainingTrackerTheme(darkTheme = true) {
+        Surface(color = MaterialTheme.colorScheme.surface, modifier = Modifier.padding(16.dp)) {
+            RadarLightControlSectionContent(
+                isOffline = true,
+                isAutoMode = true,
+                effectiveMode = RadarLightMode.DAY_FLASH,
+                isStvzo = false,
+                onSelectAuto = {},
+                onSelectMode = {}
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true, name = "Offline StVZO Light")
+@Composable
+internal fun RadarLightControlSectionOfflineStvzoLightPreview() {
+    ATrainingTrackerTheme(darkTheme = false) {
+        Surface(color = MaterialTheme.colorScheme.surface, modifier = Modifier.padding(16.dp)) {
+            RadarLightControlSectionContent(
+                isOffline = true,
+                isAutoMode = false,
+                effectiveMode = RadarLightMode.SOLID,
+                isStvzo = true,
+                onSelectAuto = {},
+                onSelectMode = {}
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true, name = "Offline StVZO Dark")
+@Composable
+internal fun RadarLightControlSectionOfflineStvzoDarkPreview() {
+    ATrainingTrackerTheme(darkTheme = true) {
+        Surface(color = MaterialTheme.colorScheme.surface, modifier = Modifier.padding(16.dp)) {
+            RadarLightControlSectionContent(
+                isOffline = true,
+                isAutoMode = true,
+                effectiveMode = RadarLightMode.OFF,
+                isStvzo = true,
+                onSelectAuto = {},
+                onSelectMode = {}
+            )
         }
     }
 }

@@ -36,6 +36,8 @@ try:
         has_verified_test_evidence,
         parse_junit_xml_results,
         extract_test_code_tags,
+        recalculate_master_index_tables as _gov_recalculate_master_index_tables,
+        bump_work_product_header_on_edit,
     )
 except ImportError:
     try:
@@ -44,12 +46,16 @@ except ImportError:
             has_verified_test_evidence,
             parse_junit_xml_results,
             extract_test_code_tags,
+            recalculate_master_index_tables as _gov_recalculate_master_index_tables,
+            bump_work_product_header_on_edit,
         )
     except ImportError:
         validate_impact_analysis_section = None
         has_verified_test_evidence = None
         parse_junit_xml_results = None
         extract_test_code_tags = None
+        _gov_recalculate_master_index_tables = None
+        bump_work_product_header_on_edit = None
 
 # Transitions for ATT project
 TRANSITIONS = {
@@ -962,15 +968,16 @@ def inject_stage_context(stage_name_lower, config=None):
         print(f"{'=' * 72}\n")
         print(skill_text)
         print(f"\n{'=' * 72}")
-        print("=== CORE IN-SPRINT GOVERNANCE REMINDER (8 CORE RULES) ===")
+        print("=== CORE IN-SPRINT GOVERNANCE REMINDER (9 CORE RULES) ===")
         print("1. Rule 1 (Obey the Rules): Explicit view_file of aspice_governance.md + domain doc at Ticket Start / Post-Compaction; stage SKILL.md injected above.")
-        print("2. Rule 2 (Autonomous Execution): Proceed continuously through Stages 1-5 and across sprint tickets without pausing.")
+        print("2. Rule 2 (Autonomous Execution): Proceed continuously through Stages 1-5 + Stage 6 Cold Review across sprint tickets without pausing.")
         print("3. Rule 3 (Human Gate): Agents end at 'Final Review (Human)'; never transition parent tickets to 'Erledigt'.")
         print("4. Rule 4 (Code Lock Until Gate 3): Run 'jira_util.py check-gate <Impl-Plan-Key>' before any Stage 4 production code edits.")
         print("5. Rule 5 (Ticket Creation Stops): Creating a backlog/follow-up ticket never triggers implementation.")
         print("6. Rule 6 (Unattended Escalation): Assign blocked sub-task to 'human' with question comment and continue with next ticket.")
-        print("7. Rule 7 (Zipper Ping-Pong): 2 persistent self subagents per ticket (subagent_pro & subagent_flash) reused via send_message (S1 pro/flash | S2 flash/pro | S3 pro/flash | S4 flash/pro | S5 flash/pro) and killed after Stage 5.")
+        print("7. Rule 7 (Zipper Ping-Pong): 2 persistent self subagents per lane/ticket (subagent_pro & subagent_flash) reused via send_message across S1-S5 + Cold S6.")
         print("8. Rule 8 (One Commit & Hygiene): Use 'submit-stage' (agent1) and 'gate-verdict' (agent2); 1 squashed commit per ticket on sprint/<ID>.")
+        print("9. Rule 9 (Parallel Lanes): Max 3 disjoint lanes (2 active token-budget default per Rule 7.2) in isolated worktrees under flock /tmp/att_build_merge.lock.")
         print(f"{'=' * 72}\n")
     except Exception as e:
         print(f"Notice: Could not inject stage context for {skill_dir}: {e}", file=sys.stderr)
@@ -1175,6 +1182,9 @@ def transition_issue(issue_key, status_name, role="agent1", inject_context=True,
                   f"This transition is a Human Decision Gate reserved exclusively for the human user.", file=sys.stderr)
             sys.exit(1)
 
+    if not is_subtask and target_name == "final review (human)" and _is_bug_issue(fields_data):
+        _verify_bug_ready_for_human_review(issue_key, role=role)
+
     trans_id = chosen_trans["id"]
     jira_request(url, method="POST", payload={"transition": {"id": trans_id}}, role=role)
     target_status = chosen_trans.get("to", {}).get("name", status_name)
@@ -1365,8 +1375,13 @@ def auto_verify_living_docs_on_stage5(parent_key, repo_root=None):
                                 updated_count += 1
 
             if updated_count > 0:
+                updated_text = "".join(new_lines)
+                if bump_work_product_header_on_edit is not None:
+                    updated_text = bump_work_product_header_on_edit(
+                        updated_text, rel_path, repo_root=repo_root
+                    )
                 with open(abs_path, "w", encoding="utf-8") as f:
-                    f.writelines(new_lines)
+                    f.write(updated_text)
                 print(f"Auto-updated {updated_count} row(s) in {rel_path} for {parent_key}.")
                 total_updated += updated_count
         except Exception as e:
@@ -1377,94 +1392,13 @@ def auto_verify_living_docs_on_stage5(parent_key, repo_root=None):
 
 def recalculate_master_index_tables(repo_root=None):
     """
-    Recalculates summary tables ('Total', 'Verified', 'Implemented', 'Planned / Open') and total requirement/test
-    counts in docs/requirements.md and docs/tests.md based on actual parsed section headings
-    in the 9 domain shards under docs/requirements/ and docs/tests/ (ATT-5431, ATT-6126).
+    Delegates master index recalculation & governed version bumping to
+    verify_requirement_governance.recalculate_master_index_tables (REQ-PRO-120).
     """
-    if repo_root is None:
-        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-
-    specs = [
-        ("docs/requirements.md", "docs/requirements", "REQ"),
-        ("docs/tests.md", "docs/tests", "TST"),
-    ]
-    for master_rel, shard_dir_rel, prefix in specs:
-        abs_shard_dir = os.path.join(repo_root, shard_dir_rel)
-        if not os.path.isdir(abs_shard_dir):
-            continue
-        shard_counts = {}
-        for fn in sorted(os.listdir(abs_shard_dir)):
-            if not fn.endswith(".md"):
-                continue
-            fp = os.path.join(abs_shard_dir, fn)
-            tot = ver = impl = plan = 0
-            with open(fp, "r", encoding="utf-8") as f:
-                for line in f:
-                    m = re.match(r"^(#{2,4})\s*(" + prefix + r"-[A-Z0-9_-]+):?\s*(.*?)$", line.strip())
-                    if not m:
-                        continue
-                    tot += 1
-                    if "[Verified]" in line:
-                        ver += 1
-                    elif "[Implemented]" in line:
-                        impl += 1
-                    else:
-                        plan += 1
-            shard_counts[fn] = (tot, ver, impl, plan)
-
-        master_fp = os.path.join(repo_root, master_rel)
-        if not os.path.exists(master_fp):
-            continue
-        with open(master_fp, "r", encoding="utf-8") as f:
-            master_lines = f.readlines()
-
-        grand_total = sum(c[0] for c in shard_counts.values())
-        grand_verified = sum(c[1] for c in shard_counts.values())
-        grand_implemented = sum(c[2] for c in shard_counts.values())
-        grand_planned = sum(c[3] for c in shard_counts.values())
-
-        new_lines = []
-        changed = False
-        for line in master_lines:
-            new_line = line
-            if re.search(r"\|\s*Total\s*\|\s*Verified\s*\|\s*Planned\s*/\s*Open\s*\|", line):
-                new_line = re.sub(
-                    r"\|\s*Total\s*\|\s*Verified\s*\|\s*Planned\s*/\s*Open\s*\|",
-                    "| Total | Verified | Implemented | Planned / Open |",
-                    line,
-                )
-            elif re.search(r"\|\s*:---\s*:\s*\|\s*:---\s*:\s*\|\s*:---\s*:\s*\|", line) and line.count(":---:") == 3:
-                new_line = line.rstrip() + " :---: |\n"
-            m_link = re.search(r"\((?:requirements|tests)/((?:req|tst)_[^)]+\.md)\)", line)
-            if m_link:
-                s_name = m_link.group(1)
-                if s_name in shard_counts:
-                    t, v, i, p = shard_counts[s_name]
-                    new_line = re.sub(
-                        r"\|\s*\d+\s*\|\s*\d+(?:\s*\|\s*\d+)?\s*\|\s*\d+\s*\|(\s*)$",
-                        rf"| {t} | {v} | {i} | {p} |\1",
-                        line,
-                    )
-            elif "links to the " in line:
-                new_line = re.sub(
-                    r"(links to the )\d+( domain-sharded)",
-                    rf"\g<1>{len(shard_counts)}\g<2>",
-                    line,
-                )
-            elif "Total Living " in line:
-                new_line = re.sub(
-                    r"(\*\*Total Living (?:Requirements|Tests)\*\*:\s*)\d+(\s*across )\d+(\s*domain shards\.)",
-                    rf"\g<1>{grand_total}\g<2>{len(shard_counts)}\g<3>",
-                    line,
-                )
-            if new_line != line:
-                changed = True
-            new_lines.append(new_line)
-
-        if changed:
-            with open(master_fp, "w", encoding="utf-8") as f:
-                f.writelines(new_lines)
-            print(f"Recalculated master index table in {master_rel}: Total={grand_total}, Verified={grand_verified}, Implemented={grand_implemented}, Planned={grand_planned}.")
+    if _gov_recalculate_master_index_tables is not None:
+        return _gov_recalculate_master_index_tables(repo_root=repo_root)
+    from verify_requirement_governance import recalculate_master_index_tables as _recalc
+    return _recalc(repo_root=repo_root)
 
 def submit_stage(parent_key, stage_arg, text_or_file, summary_override=None, role="agent1", author=None, bypass_authorship=False):
     """
@@ -2096,7 +2030,7 @@ def validate_gate_verdict_content(text):
     return (len(errors) == 0), errors
 
 
-def gate_verdict(subtask_key, verdict_arg, text_or_file, role="agent2"):
+def gate_verdict(subtask_key, verdict_arg, text_or_file, role="agent2", file_escape_bug=False, escape_severity="major"):
     """
     Composite Gate-Verdict Command for agent2 (ATT-4290 Process Improvement #2).
     Hardwired to role='agent2' (Anti-Spoofing lock).
@@ -2198,6 +2132,10 @@ def gate_verdict(subtask_key, verdict_arg, text_or_file, role="agent2"):
                     print(f"  - {err}", file=sys.stderr)
                 sys.exit(1)
 
+        # ATT-8165 / REQ-PRO-121.2: Enforce fix-verification evidence on Stage 5 [Test] subtasks for Bug parents
+        if summary and re.search(r"^\[test\]", summary, re.IGNORECASE) and parent_key:
+            _verify_bug_stage5_fix_evidence(parent_key, comment_content, desc or "", role=auditor_role)
+
         assign_issue(subtask_key, auditor_role, role=auditor_role)
         add_comment(subtask_key, text_or_file, role=auditor_role)
         transition_issue(subtask_key, "freigabe", role=auditor_role, inject_context=True)
@@ -2208,6 +2146,27 @@ def gate_verdict(subtask_key, verdict_arg, text_or_file, role="agent2"):
         transition_issue(subtask_key, "in_progress", role=auditor_role, inject_context=False)
         assign_issue(subtask_key, "agent1", role=auditor_role)
         print(f"GATE_VERDICT: REVISION recorded on {subtask_key} by {auditor_role} (reassigned to agent1).")
+        if file_escape_bug:
+            summary, _, parent_key = get_subtask_summary_and_desc(subtask_key, role=auditor_role)
+            reason_txt = text_or_file
+            if reason_txt.startswith("@") and os.path.exists(reason_txt[1:]):
+                with open(reason_txt[1:], "r", encoding="utf-8") as f:
+                    reason_txt = f.read()
+            esc_summary = f"Process-Escape: Gate REVISION on {parent_key or subtask_key} ({subtask_key})"
+            esc_desc = (
+                f"h2. Process Escape Problem Record (SUP.9)\n"
+                f"* *Source*: Gate REVISION on {subtask_key} ({summary or 'Gate Subtask'})\n"
+                f"* *Parent Ticket*: {parent_key or 'N/A'}\n\n"
+                f"h3. Audit Finding\n{reason_txt}\n"
+            )
+            create_process_escape_bug(
+                summary=esc_summary,
+                description=esc_desc,
+                severity=escape_severity,
+                source="gate-revision",
+                ticket_key=parent_key or subtask_key,
+                role=auditor_role,
+            )
 
 
 FINAL_REVIEW_BOUNCE_RE = re.compile(
@@ -2851,6 +2810,253 @@ def resolve_valid_epic_key(parent_key, role="agent1"):
         return parent_key
 
 VALID_SEVERITIES = ("critical", "major", "minor", "cosmetic")
+
+BUG_RESOLUTION_STATES = {
+    "rejected": ("Rejected", "resolution-rejected"),
+    "duplicate": ("Duplicate", "resolution-duplicate"),
+    "cannot-reproduce": ("Cannot Reproduce", "resolution-cannot-reproduce"),
+    "cannot_reproduce": ("Cannot Reproduce", "resolution-cannot-reproduce"),
+    "fixed": ("Fixed", "resolution-fixed"),
+}
+NON_FIX_RESOLUTION_LABELS = frozenset({
+    "resolution-rejected",
+    "resolution-duplicate",
+    "resolution-cannot-reproduce",
+})
+FIX_VERIFICATION_EVIDENCE_RE = re.compile(
+    r"(?:\bfix[- ]verif|\breproduc|\bregression\s+test|\bverified\s+fix|\broot\s+cause\b|TST-|testDebugUnitTest)",
+    re.IGNORECASE,
+)
+
+
+def _is_bug_issue(fields_data):
+    if not isinstance(fields_data, dict):
+        return False
+    itype = fields_data.get("issuetype") or {}
+    if itype.get("subtask", False):
+        return False
+    itype_id = str(itype.get("id", ""))
+    itype_name = str(itype.get("name", "")).strip().lower()
+    return itype_id == "10006" or itype_name in ("bug", "fehler")
+
+
+def _extract_comment_body_text(body):
+    if isinstance(body, str):
+        return body
+    if isinstance(body, dict):
+        parts = []
+        if "text" in body and isinstance(body["text"], str):
+            parts.append(body["text"])
+        for c in body.get("content") or []:
+            parts.append(_extract_comment_body_text(c))
+        return " ".join(p for p in parts if p)
+    return ""
+
+
+def _verify_bug_stage5_fix_evidence(parent_key, comment_content, subtask_desc, role="agent2"):
+    """REQ-PRO-121.2: Requires fix-verification evidence on Stage 5 [Test] PASS for Bug parents."""
+    try:
+        config = get_config()
+        base = config["JIRA_URL"].rstrip("/")
+        p_info = jira_request(f"{base}/rest/api/2/issue/{parent_key}?fields=issuetype,labels", role=role)
+    except Exception:
+        return
+    if not isinstance(p_info, dict):
+        return
+    p_fields = p_info.get("fields") or {}
+    if not _is_bug_issue(p_fields):
+        return
+    p_labels = {str(l).strip().lower() for l in (p_fields.get("labels") or [])}
+    if p_labels.intersection(NON_FIX_RESOLUTION_LABELS) or "resolution-fixed" in p_labels:
+        return
+    combined = f"{comment_content or ''}\n{subtask_desc or ''}"
+    if not FIX_VERIFICATION_EVIDENCE_RE.search(combined):
+        print(
+            f"Error: Gate 5 approval rejected for Bug {parent_key}. Stage 5 [Test] verification for a Bug "
+            "must include explicit fix-verification evidence (reproduction, regression test, or verified fix) (REQ-PRO-121.2).",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+
+def _verify_bug_ready_for_human_review(issue_key, role="agent1"):
+    """REQ-PRO-121.2: Ensures Bug tickets have a non-fix resolution or fix-verification evidence before Final Review (Human)."""
+    config = get_config()
+    base = config["JIRA_URL"].rstrip("/")
+    info = jira_request(f"{base}/rest/api/2/issue/{issue_key}?fields=labels,comment,subtasks", role=role)
+    if not isinstance(info, dict):
+        return
+    fields = info.get("fields") or {}
+    labels = {str(l).strip().lower() for l in (fields.get("labels") or [])}
+    if labels.intersection(NON_FIX_RESOLUTION_LABELS) or "resolution-fixed" in labels:
+        return
+    for st in (fields.get("subtasks") or []):
+        st_f = st.get("fields") or {}
+        st_sum = str(st_f.get("summary", "")).strip()
+        st_stat = str((st_f.get("status") or {}).get("name", "")).strip().lower()
+        if re.search(r"^\[test\]", st_sum, re.IGNORECASE) and st_stat in ("erledigt", "done", "closed"):
+            return
+    for c in ((fields.get("comment") or {}).get("comments") or []):
+        c_txt = _extract_comment_body_text(c.get("body", ""))
+        if "[FINAL REVIEW (AGENT) — PASS]" in c_txt or "[SUP.9 RESOLUTION:" in c_txt or FIX_VERIFICATION_EVIDENCE_RE.search(c_txt):
+            return
+    print(
+        f"Error: Bug {issue_key} cannot advance to 'Final Review (Human)' without fix-verification evidence "
+        "or an explicit resolution via 'jira_util.py resolve-bug' (REQ-PRO-121.2).",
+        file=sys.stderr,
+    )
+    sys.exit(1)
+
+
+def resolve_bug(issue_key, resolution_arg, duplicate_of=None, reason=None, role="agent1", advance_to_human=True):
+    """
+    REQ-PRO-121.2: Records explicit SUP.9 bug resolution state (Rejected, Duplicate, Cannot Reproduce, Fixed)
+    using standardized resolution-* labels, Jira resolution field (when configured in /rest/api/3/resolution),
+    and audit comment, preserving REQ-PRO-016 (Human Decision Gate: Erledigt remains human-only).
+    """
+    norm_res = (resolution_arg or "").strip().lower()
+    if norm_res not in BUG_RESOLUTION_STATES:
+        print(
+            f"Error: Invalid bug resolution '{resolution_arg}'. Must be one of: rejected, duplicate, cannot-reproduce, fixed.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    display_res, res_label = BUG_RESOLUTION_STATES[norm_res]
+    if norm_res == "duplicate" and not (duplicate_of and str(duplicate_of).strip()):
+        print("Error: --duplicate-of=<KEY> is required when resolving a bug as 'duplicate'.", file=sys.stderr)
+        sys.exit(1)
+
+    config = get_config()
+    base = config["JIRA_URL"].rstrip("/")
+    issue = jira_request(f"{base}/rest/api/2/issue/{issue_key}?fields=issuetype,status,labels,comment,subtasks", role=role)
+    fields_data = issue.get("fields") or {}
+    if not _is_bug_issue(fields_data):
+        print(f"Error: resolve-bug applies strictly to Bug issues (got {issue_key}).", file=sys.stderr)
+        sys.exit(1)
+
+    if norm_res == "fixed":
+        has_evidence = bool(reason and FIX_VERIFICATION_EVIDENCE_RE.search(reason))
+        if not has_evidence:
+            for c in ((fields_data.get("comment") or {}).get("comments") or []):
+                if FIX_VERIFICATION_EVIDENCE_RE.search(_extract_comment_body_text(c.get("body", ""))):
+                    has_evidence = True
+                    break
+        if not has_evidence:
+            for st in (fields_data.get("subtasks") or []):
+                st_f = st.get("fields") or {}
+                if re.search(r"^\[test\]", str(st_f.get("summary", "")), re.IGNORECASE) and str((st_f.get("status") or {}).get("name", "")).lower() in ("erledigt", "done", "closed"):
+                    has_evidence = True
+                    break
+        if not has_evidence:
+            print(
+                f"Error: Resolving Bug {issue_key} as 'Fixed' requires fix-verification evidence "
+                "(pass --reason referencing reproduction/regression test or complete Stage 5 [Test]).",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+
+    # Query /rest/api/3/resolution to match native resolution if configured (Jira Cloud may only have 'Fertig')
+    matched_jira_res = None
+    available_res_names = []
+    try:
+        res_catalog = jira_request(f"{base}/rest/api/3/resolution", role=role) or []
+        for r in res_catalog:
+            r_name = str(r.get("name", "")).strip()
+            if r_name:
+                available_res_names.append(r_name)
+                if r_name.lower() == display_res.lower():
+                    matched_jira_res = r_name
+    except Exception:
+        pass
+
+    existing_labels = list(fields_data.get("labels") or [])
+    updated_labels = [l for l in existing_labels if not str(l).strip().lower().startswith("resolution-")]
+    updated_labels.append(res_label)
+    if duplicate_of:
+        dup_lbl = f"duplicate-of-{str(duplicate_of).strip().upper()}"
+        if dup_lbl not in updated_labels:
+            updated_labels.append(dup_lbl)
+
+    put_fields = {"labels": updated_labels}
+    if matched_jira_res:
+        put_fields["resolution"] = {"name": matched_jira_res}
+
+    jira_request(f"{base}/rest/api/2/issue/{issue_key}", method="PUT", payload={"fields": put_fields}, role=role)
+
+    comment_lines = [f"[SUP.9 RESOLUTION: {display_res}]"]
+    if duplicate_of:
+        comment_lines.append(f"* *Duplicate Of*: {str(duplicate_of).strip().upper()}")
+    if reason:
+        comment_lines.append(f"* *Rationale / Verification*: {reason.strip()}")
+    if matched_jira_res:
+        comment_lines.append(f"* *Jira Resolution Field*: {matched_jira_res}")
+    else:
+        avail_str = ", ".join(available_res_names) if available_res_names else "none"
+        comment_lines.append(f"* *Label Recorded*: `{res_label}` (Jira global resolutions available: {avail_str})")
+    add_comment(issue_key, "\n".join(comment_lines), role=role)
+
+    cur_status = str((fields_data.get("status") or {}).get("name", "")).strip().lower()
+    if advance_to_human and cur_status not in ("final review (human)", "erledigt", "closed", "done"):
+        transition_issue(issue_key, "final review (human)", role=role, inject_context=False)
+    print(f"BUG_RESOLVED: {issue_key} -> {display_res} (label={res_label}, jira_resolution={matched_jira_res or 'label-only'}).")
+    return {"key": issue_key, "resolution": display_res, "label": res_label, "jira_resolution": matched_jira_res}
+
+
+def _split_priority_and_process_escape_core(summary):
+    """Extracts leading priority tags and the normalized core summary for process-escape Bugs."""
+    sanitized = sanitize_issue_summary(summary).strip()
+    m = re.match(r'^((?:\[(?:highest|high|medium|low|lowest)\]\s*)+)(.*)$', sanitized, re.IGNORECASE)
+    priority_prefix = m.group(1).strip() if m else ""
+    body = (m.group(2) if m else sanitized).strip()
+    core = re.sub(r'^process-escape:\s*', '', body, flags=re.IGNORECASE).strip()
+    if not core:
+        core = body or sanitized or str(summary or "").strip()
+    return priority_prefix, core
+
+
+def create_process_escape_bug(summary, description, severity="major", source="tier2", ticket_key=None, parent_epic="ATT-8138", role="agent2"):
+    """
+    REQ-PRO-121.4: Creates (or deduplicates via Cloud v3 paged_jql_search) a Bug (10006)
+    labeled 'process-escape' for gate REVISIONs or Tier-2 CI failures (Rule 5 compliant).
+    """
+    sev_clean = str(severity or "major").strip().lower()
+    if sev_clean not in VALID_SEVERITIES:
+        print(f"Error: Invalid severity '{severity}'. Must be one of: {', '.join(VALID_SEVERITIES)}.", file=sys.stderr)
+        sys.exit(1)
+
+    priority_prefix, core_summary = _split_priority_and_process_escape_core(summary)
+    # Use non-bracketed prefix so create_issue() -> sanitize_issue_summary() (Rule 13) preserves it verbatim.
+    clean_summary = f"{priority_prefix} Process-Escape: {core_summary}".strip() if priority_prefix else f"Process-Escape: {core_summary}"
+
+    config = get_config()
+    escaped_phrase = core_summary.replace('"', '\\"')
+    jql = f'project = ATT AND issuetype = Bug AND status != "Erledigt" AND labels = "process-escape" AND summary ~ "\\"{escaped_phrase}\\""'
+    existing = paged_jql_search(jql, ["summary", "status", "labels"], role=role, config=config, max_total=10)
+    for item in existing:
+        existing_raw = str((item.get("fields") or {}).get("summary", "")).strip()
+        _, existing_core = _split_priority_and_process_escape_core(existing_raw)
+        if clean_summary.lower() == existing_raw.lower() or existing_core.lower() == core_summary.lower():
+            ex_key = item.get("key")
+            print(f"Deduplicated existing process-escape Bug: {ex_key}")
+            return ex_key, False
+
+    labels = ["process-escape", f"escape-{str(source or 'tier2').strip().lower()}"]
+    if ticket_key:
+        labels.append(f"source-{str(ticket_key).strip().upper()}")
+
+    new_key = create_issue(
+        summary=clean_summary,
+        description=description,
+        issuetype_id="10006",
+        parent_key=parent_epic,
+        role=role,
+        add_to_sprint=False,
+        labels=labels,
+        rank_top=True,
+        severity=sev_clean,
+    )
+    print(f"Created process-escape Bug: {new_key}")
+    return new_key, True
 
 
 def create_issue(summary, description, issuetype_id="10007", parent_key=None, role="agent1", add_to_sprint=False, fix_version=None, priority=None, labels=None, rank_top=True, points=None, severity=None):
@@ -3775,13 +3981,13 @@ def ensure_weekly_reviews(role="coordinator", force=False):
     return {"code_review": code_review_key, "aspice_audit": aspice_audit_key}
 
 
-def collect_sprint_metrics_for_id(sprint_id, sprint_name, board_id, role="coordinator"):
+def collect_sprint_metrics_for_id(sprint_id, sprint_name, board_id, role="coordinator", history=None):
     config = get_config()
     base = config['JIRA_URL'].rstrip('/')
     issues = fetch_all_sprint_issues(
         base,
         sprint_id,
-        f"summary,status,issuetype,priority,subtasks,comment,labels,description,{STORY_POINTS_FIELD}",
+        f"summary,status,issuetype,priority,subtasks,comment,labels,description,created,resolution,resolutiondate,{STORY_POINTS_FIELD}",
         role=role
     )
 
@@ -3807,7 +4013,7 @@ def collect_sprint_metrics_for_id(sprint_id, sprint_name, board_id, role="coordi
                         st["comments"] = []
 
     sprint_info = {"id": sprint_id, "name": sprint_name}
-    return parse_sprint_gate_metrics(parent_issues, sprint_info)
+    return parse_sprint_gate_metrics(parent_issues, sprint_info, history=history)
 
 
 def cmd_sprint_metrics(sprint_arg=None, record=False, post_to_retro=False, backfill=None, role="coordinator"):
@@ -3884,11 +4090,11 @@ def cmd_sprint_metrics(sprint_arg=None, record=False, post_to_retro=False, backf
     s_id = target_sprint["id"]
     s_name = target_sprint["name"]
     print(f"Collecting quantitative metrics for Sprint '{s_name}' (ID: {s_id})...")
-    metrics = collect_sprint_metrics_for_id(s_id, s_name, board_id, role=role)
     history = load_historical_metrics()
+    metrics = collect_sprint_metrics_for_id(s_id, s_name, board_id, role=role, history=history)
     spc = calculate_spc_limits(history, current_metrics=metrics)
 
-    report_md = format_metrics_markdown(metrics, spc)
+    report_md = format_metrics_markdown(metrics, spc, history=history)
     print("\n" + report_md + "\n")
 
     if record:
@@ -4544,8 +4750,9 @@ def format_qa_audit_markdown(sprint_info, audit_results, overall_compliant, audi
             if not r["compliant"]:
                 ca_key_str = r.get("corrective_action")
                 if not ca_key_str:
-                    fallback_key = f"ATT-CA-{r['key']}"
-                    ca_key_str = f"[{fallback_key}](https://rainerblind.atlassian.net/browse/{fallback_key})"
+                    raise RuntimeError(
+                        f"QA audit non-compliant ticket {r['key']} is missing an authentic Jira corrective action ticket (REQ-PRO-118.2)."
+                    )
                 failed_str = ", ".join(r.get("failed_categories", [])) or "Process deviation"
                 lines.append(f"* **{r['key']}**: Process deviation in {failed_str}; Corrective Action Ticket: {ca_key_str}")
 
@@ -4606,6 +4813,30 @@ def qa_audit(sprint_arg=None, sample_size=None, out_path=None, role="qa", as_rol
         and "review & retro" not in i.get("fields", {}).get("summary", "").lower()
         and i.get("key") != "ATT-232"
     ]
+
+    if not parent_issues:
+        # Archived closed sprints move completed tickets out of the sprint into Bereit für PO Abnahme (453)
+        # with label sprint-<s_name>; fall back to JQL label lookup when sprint issue list has no parents.
+        safe_s_name = s_name.replace('"', '\\"')
+        label_candidates = [f"sprint-{safe_s_name}"]
+        underscored = re.sub(r"\s+", "_", safe_s_name)
+        if underscored != safe_s_name:
+            label_candidates.append(f"sprint-{underscored}")
+        labels_jql = ", ".join(f'"{lbl}"' for lbl in label_candidates)
+        fallback_jql = (
+            f"project = ATT AND issuetype != Sub-task "
+            f"AND labels in ({labels_jql}) ORDER BY key ASC"
+        )
+        fallback_fields = [
+            "summary", "description", "status", "issuetype", "priority", "subtasks", "comment", STORY_POINTS_FIELD
+        ]
+        archived_issues = paged_jql_search(fallback_jql, fallback_fields, role=role, config=config)
+        parent_issues = [
+            i for i in archived_issues
+            if not i.get("fields", {}).get("issuetype", {}).get("subtask", False)
+            and "review & retro" not in i.get("fields", {}).get("summary", "").lower()
+            and i.get("key") != "ATT-232"
+        ]
 
     for p in parent_issues:
         subtasks = p.get("fields", {}).get("subtasks", [])
@@ -4754,7 +4985,18 @@ def qa_audit(sprint_arg=None, sample_size=None, out_path=None, role="qa", as_rol
                 author_acc_id = author.get("accountId") or ""
                 author_name = author.get("displayName") or author.get("name") or author_acc_id
 
-                is_verdict = "GATE_VERDICT:" in body.upper() or "GATE-VERDICT" in body.upper() or "VERDICT: PASS" in body.upper() or "VERDICT: REVISION" in body.upper()
+                body_upper = body.upper()
+                is_verdict = (
+                    "GATE_VERDICT:" in body_upper
+                    or "GATE-VERDICT" in body_upper
+                    or "VERDICT: PASS" in body_upper
+                    or "VERDICT: REVISION" in body_upper
+                    or bool(re.search(r"\bGATE\s+[1-5]\b.*\b(?:PASS|REVISION|FREIGABE)\b", body, re.IGNORECASE))
+                    or (
+                        "[Automated comment by AI Agent 2 (Auditor)]" in body
+                        and bool(re.search(r"\b(?:PASS|REVISION|FREIGABE)\b", body, re.IGNORECASE))
+                    )
+                )
                 if is_verdict:
                     if author_acc_id and author_acc_id == agent1_acc_id:
                         agent1_violations_count += 1
@@ -4772,10 +5014,14 @@ def qa_audit(sprint_arg=None, sample_size=None, out_path=None, role="qa", as_rol
         if agent1_violations_count > 0 or agent2_verdicts_count == 0:
             role_sep_pass = False
 
-        # 4. Living Documentation Parity (REQ-PRO-091.6)
+        # 4. Living Documentation Parity (REQ-PRO-091.6 / REQ-PRO-118.4)
+        def _extract_concrete_req_ids(text):
+            cleaned = re.sub(r"\bREQ-[A-Z0-9_-]*\*", "", text or "")
+            return set(re.findall(r"\bREQ-[A-Z0-9_-]+\b", cleaned))
+
         desc_text = extract_text_from_description(item.get("fields", {}).get("description"))
         ticket_text_combined = f"{summary} {desc_text}"
-        referenced_reqs = set(re.findall(r"\bREQ-[A-Z0-9_-]+\b", ticket_text_combined))
+        referenced_reqs = _extract_concrete_req_ids(ticket_text_combined)
 
         for d_path in [
             os.path.join(repo_root, "docs", "engineering", "test_specs", f"{key}_test_spec.md"),
@@ -4785,13 +5031,13 @@ def qa_audit(sprint_arg=None, sample_size=None, out_path=None, role="qa", as_rol
             if os.path.isfile(d_path):
                 try:
                     with open(d_path, "r", encoding="utf-8") as f:
-                        referenced_reqs.update(re.findall(r"\bREQ-[A-Z0-9_-]+\b", f.read()))
+                        referenced_reqs.update(_extract_concrete_req_ids(f.read()))
                 except Exception:
                     pass
 
         for line in combined_req_text.splitlines():
             if key in line:
-                referenced_reqs.update(re.findall(r"\bREQ-[A-Z0-9_-]+\b", line))
+                referenced_reqs.update(_extract_concrete_req_ids(line))
 
         if referenced_reqs and master_req_ids:
             living_doc_pass = referenced_reqs.issubset(master_req_ids)
@@ -4800,22 +5046,21 @@ def qa_audit(sprint_arg=None, sample_size=None, out_path=None, role="qa", as_rol
         else:
             living_doc_pass = False
 
-        # 5. Commit Hygiene
+        # 5. Commit Hygiene (REQ-PRO-118.4)
         commit_pass = False
+        key_pat = re.compile(
+            rf"(?:^{re.escape(key)}:|\[{re.escape(key)}\]|^[a-zA-Z0-9_-]+\({re.escape(key)}\):|\({re.escape(key)}\)|^Ticket:\s*{re.escape(key)}\b)",
+            re.MULTILINE,
+        )
         try:
-            cmd = ["git", "log", f"--grep=^{key}:", "-n", "1", "--oneline"]
-            res = subprocess.run(cmd, cwd=repo_root, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=5)
-            if res.returncode == 0 and res.stdout.strip():
-                commit_pass = True
-            else:
-                cmd_all = ["git", "log", f"--grep={key}", "-n", "10", "--oneline"]
-                res_all = subprocess.run(cmd_all, cwd=repo_root, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=5)
-                if res_all.returncode == 0:
-                    for line in res_all.stdout.strip().splitlines():
-                        parts = line.split(maxsplit=1)
-                        if len(parts) > 1 and parts[1].strip().startswith(f"{key}:"):
-                            commit_pass = True
-                            break
+            cmd_all = ["git", "log", f"--grep={key}", "-n", "20", "--format=%s%n%b%x1e"]
+            res_all = subprocess.run(cmd_all, cwd=repo_root, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=5)
+            if res_all.returncode == 0 and res_all.stdout.strip():
+                for entry in res_all.stdout.split("\x1e"):
+                    entry_s = entry.strip()
+                    if entry_s and key_pat.search(entry_s):
+                        commit_pass = True
+                        break
         except Exception:
             commit_pass = False
 
@@ -4869,27 +5114,20 @@ def qa_audit(sprint_arg=None, sample_size=None, out_path=None, role="qa", as_rol
         for cat, ticket_keys in category_to_tickets.items():
             summary_title = f"[QA Corrective Action] {cat} - Sprint {s_name}"
             existing_key = None
-            try:
-                jql = f'project = ATT AND summary ~ "\\"{summary_title}\\""'
-                search_url = f"{base}/rest/api/2/search?jql={urllib.parse.quote(jql)}&maxResults=5&fields=summary"
-                s_res = jira_request(search_url, role=role)
-                for issue in s_res.get("issues", []):
+            jql = f'project = ATT AND summary ~ "\\"{summary_title}\\""'
+            s_issues = paged_jql_search(jql, ["summary"], role=role, config=config, max_total=5)
+            for issue in s_issues:
+                if summary_title.lower() in issue.get("fields", {}).get("summary", "").lower():
+                    existing_key = issue.get("key")
+                    break
+
+            if not existing_key and board_id:
+                b_url = f"{base}/rest/agile/1.0/board/{board_id}/backlog?maxResults=50&fields=summary"
+                b_res = jira_request(b_url, role=role)
+                for issue in b_res.get("issues", []):
                     if summary_title.lower() in issue.get("fields", {}).get("summary", "").lower():
                         existing_key = issue.get("key")
                         break
-            except Exception:
-                existing_key = None
-
-            if not existing_key and board_id:
-                try:
-                    b_url = f"{base}/rest/agile/1.0/board/{board_id}/backlog?maxResults=50&fields=summary"
-                    b_res = jira_request(b_url, role=role)
-                    for issue in b_res.get("issues", []):
-                        if summary_title.lower() in issue.get("fields", {}).get("summary", "").lower():
-                            existing_key = issue.get("key")
-                            break
-                except Exception:
-                    existing_key = None
 
             if existing_key:
                 category_to_ca_key[cat] = existing_key
@@ -4903,27 +5141,27 @@ def qa_audit(sprint_arg=None, sample_size=None, out_path=None, role="qa", as_rol
                     f"Investigate root cause of process non-conformance under ASPICE SUP.1 (Quality Assurance) "
                     f"and enact systemic countermeasures prior to next sprint planning."
                 )
-                try:
-                    new_ca_key = create_issue(
-                        summary=summary_title,
-                        description=desc,
-                        issuetype_id="10005",  # Verbesserung
-                        parent_key="ATT-8138",
-                        role=role,
-                        add_to_sprint=False,
-                        rank_top=True,
+                new_ca_key = create_issue(
+                    summary=summary_title,
+                    description=desc,
+                    issuetype_id="10008",  # Verbesserung
+                    parent_key="ATT-8138",
+                    role=role,
+                    add_to_sprint=False,
+                    rank_top=True,
+                )
+                if not new_ca_key or str(new_ca_key).startswith("ATT-CA-"):
+                    raise RuntimeError(
+                        f"Invalid QA Corrective Action key '{new_ca_key}' returned for '{cat}' (REQ-PRO-118.2)."
                     )
-                    category_to_ca_key[cat] = new_ca_key
-                except Exception:
-                    cat_slug = re.sub(r"[^A-Za-z0-9]+", "-", cat).strip("-")
-                    category_to_ca_key[cat] = f"ATT-CA-{cat_slug}"
+                category_to_ca_key[cat] = new_ca_key
 
         for r in audit_results:
             if not r["compliant"]:
                 ca_keys = [category_to_ca_key[c] for c in r.get("failed_categories", []) if c in category_to_ca_key]
                 if ca_keys:
                     r["ca_keys"] = ca_keys
-                    r["corrective_action"] = ", ".join(f"[{k}](https://rainerblind.atlassian.net/browse/{k})" for k in ca_keys)
+                    r["corrective_action"] = ", ".join(f"[{k}]({base}/browse/{k})" for k in ca_keys)
 
     md_content = format_qa_audit_markdown(
         sprint_info={"id": s_id, "name": s_name},
@@ -5196,7 +5434,12 @@ USAGE_TEXT = (
     "  check-gate KEY                                        Verify Impl-Plan subtask is Erledigt (Gate 3)\n"
     "  submit-stage PARENT_KEY STAGE TEXT_OR_@FILE [--summary \"...\"]\n"
     "                                                        Create/update stage subtask (1..5) and move to In Überprüfung\n"
-    "  gate-verdict SUBTASK_KEY PASS|REVISION TEXT_OR_@FILE  Record agent2 gate verdict, close/advance on PASS or reopen on REVISION\n"
+    "  gate-verdict SUBTASK_KEY PASS|REVISION TEXT_OR_@FILE [--file-escape-bug] [--severity=major]\n"
+    "                                                        Record agent2 gate verdict, close/advance on PASS or reopen on REVISION\n"
+    "  resolve-bug KEY <rejected|duplicate|cannot-reproduce|fixed> [--duplicate-of=KEY] [--reason=TEXT]\n"
+    "                                                        Record SUP.9 bug resolution label/field and audit comment (Human Gate preserved)\n"
+    "  file-process-escape SUMMARY DESC [--severity=major] [--source=tier2|gate-revision] [--ticket=KEY] [--parent=ATT-8138]\n"
+    "                                                        Create or deduplicate a process-escape Bug (10006) via Cloud v3 JQL\n"
     "  final-review-verdict PARENT_KEY PASS|BOUNCE TEXT_OR_@FILE [--bounce-target=implementation|analysis|zu erledigen]\n"
     "                                                        Record Stage 6 Cold Carbon review verdict on parent ticket\n"
     "  move KEY <target>                                     Transition issue (todo|in_progress|in_review|freigabe|analysis|test|final review (agent)|final review (human))\n"
@@ -5321,8 +5564,83 @@ if __name__ == "__main__":
                 bypass_auth = True
             idx += 1
         submit_stage(parent_k, stage_arg, text_arg, summary_override=summ_override, role=active_role, author=author_override, bypass_authorship=bypass_auth)
-    elif cmd in ("gate-verdict", "gate_verdict") and len(remaining_argv) == 4:
-        gate_verdict(remaining_argv[1], remaining_argv[2], remaining_argv[3], role="agent2")
+    elif cmd in ("gate-verdict", "gate_verdict") and len(remaining_argv) >= 4:
+        file_escape = "--file-escape-bug" in remaining_argv[4:]
+        esc_sev = "major"
+        for a in remaining_argv[4:]:
+            if a.startswith("--severity="):
+                esc_sev = a.split("=", 1)[1]
+        gate_verdict(
+            remaining_argv[1],
+            remaining_argv[2],
+            remaining_argv[3],
+            role="agent2",
+            file_escape_bug=file_escape,
+            escape_severity=esc_sev,
+        )
+    elif cmd in ("resolve-bug", "resolve_bug") and len(remaining_argv) >= 3:
+        bug_k = remaining_argv[1]
+        res_arg = remaining_argv[2]
+        dup_of = None
+        reason_arg = None
+        no_advance = False
+        idx = 3
+        while idx < len(remaining_argv):
+            a = remaining_argv[idx]
+            if a.startswith("--duplicate-of="):
+                dup_of = a.split("=", 1)[1]
+            elif a == "--duplicate-of" and idx + 1 < len(remaining_argv):
+                dup_of = remaining_argv[idx + 1]
+                idx += 1
+            elif a.startswith("--reason="):
+                reason_arg = a.split("=", 1)[1]
+            elif a == "--reason" and idx + 1 < len(remaining_argv):
+                reason_arg = remaining_argv[idx + 1]
+                idx += 1
+            elif a == "--no-advance":
+                no_advance = True
+            idx += 1
+        resolve_bug(bug_k, res_arg, duplicate_of=dup_of, reason=reason_arg, role=active_role, advance_to_human=(not no_advance))
+    elif cmd in ("file-process-escape", "file_process_escape") and len(remaining_argv) >= 3:
+        esc_sum = remaining_argv[1]
+        esc_desc = remaining_argv[2]
+        esc_sev = "major"
+        esc_src = "tier2"
+        esc_tkt = None
+        esc_parent = "ATT-8138"
+        idx = 3
+        while idx < len(remaining_argv):
+            a = remaining_argv[idx]
+            if a.startswith("--severity="):
+                esc_sev = a.split("=", 1)[1]
+            elif a == "--severity" and idx + 1 < len(remaining_argv):
+                esc_sev = remaining_argv[idx + 1]
+                idx += 1
+            elif a.startswith("--source="):
+                esc_src = a.split("=", 1)[1]
+            elif a == "--source" and idx + 1 < len(remaining_argv):
+                esc_src = remaining_argv[idx + 1]
+                idx += 1
+            elif a.startswith("--ticket="):
+                esc_tkt = a.split("=", 1)[1]
+            elif a == "--ticket" and idx + 1 < len(remaining_argv):
+                esc_tkt = remaining_argv[idx + 1]
+                idx += 1
+            elif a.startswith("--parent="):
+                esc_parent = a.split("=", 1)[1]
+            elif a == "--parent" and idx + 1 < len(remaining_argv):
+                esc_parent = remaining_argv[idx + 1]
+                idx += 1
+            idx += 1
+        create_process_escape_bug(
+            esc_sum,
+            esc_desc,
+            severity=esc_sev,
+            source=esc_src,
+            ticket_key=esc_tkt,
+            parent_epic=esc_parent,
+            role=active_role,
+        )
     elif cmd in ("final-review-verdict", "final_review_verdict") and len(remaining_argv) >= 4:
         parent_k = remaining_argv[1]
         verdict_a = remaining_argv[2]

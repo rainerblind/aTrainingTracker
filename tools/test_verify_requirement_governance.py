@@ -13,6 +13,8 @@ Scenarios tested:
   5. Standard Library Footprint Invariant: Zero external pip dependencies; imports only standard library.
 """
 
+import contextlib
+import io
 import json
 import os
 import subprocess
@@ -28,6 +30,7 @@ from tools.verify_requirement_governance import (
     LEGACY_DANGLING_TST_REFS,
     LEGACY_DANGLING_REQ_REFS,
     find_dangling_references,
+    main as governance_cli_main,
     verify_dangling_references,
     find_duplicate_heading_ids,
     parse_diff_requirements,
@@ -41,6 +44,7 @@ from tools.verify_requirement_governance import (
     verify_master_table_parity,
     verify_qa_audits,
     verify_repository_encapsulation,
+    verify_retro_write_allowlist,
     verify_sprint_metrics,
     verify_independent_reviews,
     verify_unique_ids,
@@ -85,6 +89,11 @@ from tools.verify_requirement_governance import (
     verify_req_descriptions,
     calculate_req_field_coverage,
     format_req_field_coverage,
+    discover_governed_work_products,
+    parse_work_product_header,
+    verify_work_product_headers,
+    verify_conflict_markers,
+    verify_commit_hygiene,
 )
 
 
@@ -2871,7 +2880,683 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
             ok3, msgs3 = verify_qa_audits(sprint_name="sprint/2026-46.6", repo_root=tmpdir)
             self.assertTrue(ok3, f"Expected grandfathered pass for legacy 2026-46.6 audit, got: {msgs3}")
 
+    def test_scenario_77_tst_pro_117_1_retro_write_allowlist_and_exemptions(self):
+        # TST-PRO-117.1: Autonomous Retro Write-Allowlist & Protected Path Guard (REQ-PRO-117 / ATT-8584)
+        allowed_files = [
+            "docs/engineering/retros/Sprint_Review_and_Retro_ATT-8655.md",
+            "docs/engineering/gates/sprint_2026-11-17_02_spaet.md",
+            "docs/engineering/qa_audits/sprint_2026-11-17_02_spaet.md",
+            "docs/engineering/reviews/sprint_2026-11-17_02_spaet.md",
+            "docs/engineering/test_evidence/sprint_2026-11-17_02_Spät.json",
+            "docs/engineering/test_evidence/sprint_2026-11-17_02_Spät.md",
+            "docs/engineering/metrics/process_metrics.jsonl",
+            "docs/management/risk_register.md",
+        ]
+        ok, msgs = verify_retro_write_allowlist(
+            changed_files=allowed_files,
+            commit_message="chore(ceremony2): sprint 2026-11-17_02_Spät closure (ATT-8655)",
+        )
+        self.assertTrue(ok, f"Allowlisted ceremony2 files should pass: {msgs}")
 
+        protected_cases = [
+            ".agents/rules/aspice_governance.md",
+            ".agents/skills/sprint-planner/SKILL.md",
+            "docs/coding_standards.md",
+            "docs/design_guidelines.md",
+            "docs/project_governance.md",
+            "docs/project_protocol.md",
+            "docs/engineering/rule_history_archive.md",
+            "tools/verify_requirement_governance.py",
+        ]
+        for protected_path in protected_cases:
+            bad_ok, bad_msgs = verify_retro_write_allowlist(
+                changed_files=allowed_files + [protected_path],
+                commit_message="chore(ceremony2): sprint 2026-11-17_02_Spät closure (ATT-8655)",
+            )
+            self.assertFalse(bad_ok, f"Protected path {protected_path} must be rejected in ceremony2")
+            self.assertTrue(any("PROHIBITED protected" in m and protected_path in m for m in bad_msgs), bad_msgs)
+
+        non_allow_ok, non_allow_msgs = verify_retro_write_allowlist(
+            changed_files=["app/src/main/java/Foo.kt"],
+            commit_message="chore(ceremony2): sprint 2026-11-17_02_Spät closure (ATT-8655)",
+        )
+        self.assertFalse(non_allow_ok)
+        self.assertTrue(any("non-allowlisted" in m for m in non_allow_msgs), non_allow_msgs)
+
+        # Dedicated ticket commit (non-ceremony2) and Interactive-PO trailer are exempted
+        ticket_ok, ticket_msgs = verify_retro_write_allowlist(
+            changed_files=[".agents/rules/aspice_governance.md", "tools/verify_requirement_governance.py"],
+            commit_message="ATT-8584: Restrict files editable during autonomous Schicht Retro",
+        )
+        self.assertTrue(ticket_ok, f"Dedicated ticket commit must be exempted: {ticket_msgs}")
+
+        po_ok, po_msgs = verify_retro_write_allowlist(
+            changed_files=[".agents/rules/aspice_governance.md", "docs/coding_standards.md"],
+            commit_message="chore(ceremony2): interactive PO hardening\n\nInteractive-PO: Rainer Blind",
+        )
+        self.assertTrue(po_ok, f"Interactive-PO commit must be exempted: {po_msgs}")
+
+        # Pre-cutoff historical commit (8aa881df) on live repo passes without false positives
+        hist_ok, hist_msgs = verify_retro_write_allowlist(commit_ref="8aa881df")
+        self.assertTrue(hist_ok, f"Historical pre-cutoff commit 8aa881df must pass: {hist_msgs}")
+
+        # Real git repo test with post-cutoff (> 1794925800) UTF-8 umlaut filenames & protected-path violation
+        with tempfile.TemporaryDirectory() as tmpdir:
+            git_env = dict(os.environ)
+            git_env["GIT_AUTHOR_DATE"] = "2026-11-17T22:00:00+01:00"
+            git_env["GIT_COMMITTER_DATE"] = "2026-11-17T22:00:00+01:00"
+            subprocess.check_call(["git", "init"], cwd=tmpdir, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.check_call(["git", "config", "user.name", "Test Agent"], cwd=tmpdir)
+            subprocess.check_call(["git", "config", "user.email", "test@atrainingtracker.local"], cwd=tmpdir)
+
+            umlaut_allowed = [
+                "docs/engineering/gates/sprint_2026-11-17_02_spät.md",
+                "docs/engineering/qa_audits/sprint_2026-11-17_02_spät.md",
+                "docs/engineering/reviews/sprint_2026-11-17_02_spät.md",
+                "docs/engineering/test_evidence/sprint_2026-11-17_02_Spät.json",
+                "docs/engineering/retros/Sprint_Review_and_Retro_ATT-8655.md",
+                "docs/engineering/metrics/process_metrics.jsonl",
+                "docs/management/risk_register.md",
+            ]
+            for rel in umlaut_allowed:
+                full_p = os.path.join(tmpdir, rel)
+                os.makedirs(os.path.dirname(full_p), exist_ok=True)
+                with open(full_p, "w", encoding="utf-8") as f:
+                    f.write("test\n")
+
+            subprocess.check_call(["git", "add", "--all"], cwd=tmpdir)
+            subprocess.check_call(
+                ["git", "commit", "-m", "chore(ceremony2): sprint 2026-11-17_02_Spät closure (ATT-8655)"],
+                cwd=tmpdir,
+                env=git_env,
+                stdout=subprocess.DEVNULL,
+            )
+            umlaut_ok, umlaut_msgs = verify_retro_write_allowlist(commit_ref="HEAD", repo_root=tmpdir)
+            self.assertTrue(umlaut_ok, f"Post-cutoff umlaut ceremony2 commit must pass with core.quotePath=false: {umlaut_msgs}")
+
+            prot_file = os.path.join(tmpdir, ".agents", "rules", "aspice_governance.md")
+            os.makedirs(os.path.dirname(prot_file), exist_ok=True)
+            with open(prot_file, "w", encoding="utf-8") as f:
+                f.write("unauthorized\n")
+            subprocess.check_call(["git", "add", "--all"], cwd=tmpdir)
+            subprocess.check_call(
+                ["git", "commit", "-m", "chore(ceremony2): unauthorized rule edit (ATT-8655)"],
+                cwd=tmpdir,
+                env=git_env,
+                stdout=subprocess.DEVNULL,
+            )
+            prot_ok, prot_msgs = verify_retro_write_allowlist(commit_ref="HEAD", repo_root=tmpdir)
+            self.assertFalse(prot_ok, "Post-cutoff ceremony2 protected-path edit must fail")
+            self.assertTrue(any("PROHIBITED protected" in m and ".agents/rules/aspice_governance.md" in m for m in prot_msgs), prot_msgs)
+
+    def test_scenario_78_tst_pro_118_5_verifier_rejects_synthetic_att_ca_links(self):
+        """TST-PRO-118.5: verify_qa_audits rejects synthetic ATT-CA-* placeholders on post-cutoff audits (REQ-PRO-118.5)."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            audits_dir = os.path.join(tmpdir, "docs", "engineering", "qa_audits")
+            os.makedirs(audits_dir, exist_ok=True)
+
+            post_file = os.path.join(audits_dir, "sprint_2026-11-17_02_spät.md")
+            synthetic_content = (
+                "# Sprint QA Process-Compliance Audit: Sprint 2026-11-17_02_Spät\n\n"
+                "**Auditor Role**: `agent2`\n\n"
+                "**Overall Process Verdict**: **NON-COMPLIANT**\n\n"
+                "| Metric | Value |\n| :--- | :--- |\n| **Sample Size** | 2 / 10 |\n\n"
+                "| Ticket | Summary | Verdict |\n| :--- | :--- | :---: |\n"
+                "| ATT-9901 | Test 1 | FAIL |\n"
+                "| ATT-9902 | Test 2 | PASS |\n\n"
+                "## 4. Non-Compliance Tracking & Remediation\n\n"
+                "* **ATT-9901**: Process deviation in 4-Augen Role Separation; Corrective Action Ticket: [ATT-CA-4-Augen-Role-Separation](https://example.com/ATT-CA-4-Augen-Role-Separation)\n"
+            )
+            with open(post_file, "w", encoding="utf-8") as f:
+                f.write(synthetic_content)
+
+            ok, msgs = verify_qa_audits(sprint_name="sprint/2026-11-17_02_Spät", repo_root=tmpdir)
+            self.assertFalse(ok)
+            self.assertTrue(any("synthetic placeholder corrective action link(s)" in m for m in msgs), msgs)
+
+            real_content = synthetic_content.replace(
+                "[ATT-CA-4-Augen-Role-Separation](https://example.com/ATT-CA-4-Augen-Role-Separation)",
+                "[ATT-9999](https://atrainingtracker.atlassian.net/browse/ATT-9999)",
+            )
+            with open(post_file, "w", encoding="utf-8") as f:
+                f.write(real_content)
+
+            ok_real, msgs_real = verify_qa_audits(sprint_name="sprint/2026-11-17_02_Spät", repo_root=tmpdir)
+            self.assertTrue(ok_real, f"Expected pass with real ATT-9999 link, got: {msgs_real}")
+
+            gf_file = os.path.join(audits_dir, "sprint_2026-11-17_01_früh.md")
+            with open(gf_file, "w", encoding="utf-8") as f:
+                f.write(synthetic_content.replace("2026-11-17_02_Spät", "2026-11-17_01_Früh"))
+            ok_gf, msgs_gf = verify_qa_audits(sprint_name="sprint/2026-11-17_01_Früh", repo_root=tmpdir)
+            self.assertTrue(ok_gf, f"Expected pre-fix closed audit 2026-11-17_01_Früh to remain grandfathered, got: {msgs_gf}")
+
+    def test_scenario_79_tst_pro_119_4_ceremony2_allowlist_permits_baseline_manifest(self):
+        """TST-PRO-119.4: verify_retro_write_allowlist accepts docs/releases/<baseline>/manifest.md in chore(ceremony2) (REQ-PRO-119.3)."""
+        ok, msgs = verify_retro_write_allowlist(
+            changed_files=[
+                "docs/releases/sprint_2026-11-17_02_Spät/manifest.md",
+                "docs/engineering/retros/Sprint_Review_and_Retro_ATT-8655.md",
+            ],
+            commit_message="chore(ceremony2): close sprint and record baseline manifest",
+        )
+        self.assertTrue(ok, f"Expected baseline manifest to be allowlisted in ceremony2, got: {msgs}")
+
+        bad_ok, bad_msgs = verify_retro_write_allowlist(
+            changed_files=[
+                "docs/releases/sprint_2026-11-17_02_Spät/manifest.md",
+                "tools/baseline_manager.py",
+            ],
+            commit_message="chore(ceremony2): unauthorized tool edit",
+        )
+        self.assertFalse(bad_ok, f"Protected tool path must still fail in ceremony2, got: {bad_msgs}")
+
+    def test_scenario_80_tst_pro_120_1_work_product_header_validation(self):
+        """TST-PRO-120.1: verify_work_product_headers validates DOC-* header fields and rejects unapproved Approved claims."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            mgt_dir = os.path.join(tmpdir, "docs", "management")
+            os.makedirs(mgt_dir, exist_ok=True)
+            cm_path = os.path.join(mgt_dir, "cm_plan.md")
+
+            valid_doc = (
+                "# Configuration Management Plan\n\n"
+                "**Document ID**: `DOC-MGT-CM`  \n"
+                "**Version**: 1.0.0  \n"
+                "**Status**: Reviewed  \n"
+                "**Approver**: Pending PO Sign-Off  \n\n"
+                "## 1. Purpose\nBody content.\n\n"
+                "## Change History\n\n"
+                "| Version | Date | Author | Ticket | Summary of Changes |\n"
+                "| :--- | :--- | :--- | :--- | :--- |\n"
+                "| `1.0.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Initial baseline. |\n"
+            )
+            with open(cm_path, "w", encoding="utf-8") as f:
+                f.write(valid_doc)
+
+            ok, msgs = verify_work_product_headers(repo_root=tmpdir, check_diff=False)
+            self.assertTrue(ok, f"Valid Reviewed doc should pass: {msgs}")
+
+            # Missing header fields fails
+            with open(cm_path, "w", encoding="utf-8") as f:
+                f.write("# CM Plan\n\nNo metadata header.\n")
+            ok_miss, msgs_miss = verify_work_product_headers(repo_root=tmpdir, check_diff=False)
+            self.assertFalse(ok_miss)
+            self.assertTrue(any("missing required work-product header metadata" in m for m in msgs_miss), msgs_miss)
+
+            # Status: Approved with non-human / Pending Approver fails
+            self_approved = valid_doc.replace("**Status**: Reviewed", "**Status**: Approved")
+            with open(cm_path, "w", encoding="utf-8") as f:
+                f.write(self_approved)
+            ok_app, msgs_app = verify_work_product_headers(repo_root=tmpdir, check_diff=False)
+            self.assertFalse(ok_app)
+            self.assertTrue(any("non-human/pending Approver" in m for m in msgs_app), msgs_app)
+
+    def test_scenario_81_tst_pro_120_2_human_only_approval_and_version_bump(self):
+        """TST-PRO-120.2: verify_work_product_headers enforces version bump and human-only Approved on git diff (Rule 5)."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            git_env = dict(os.environ)
+            git_env.update({
+                "GIT_AUTHOR_NAME": "Test Runner",
+                "GIT_AUTHOR_EMAIL": "runner@example.com",
+                "GIT_COMMITTER_NAME": "Test Runner",
+                "GIT_COMMITTER_EMAIL": "runner@example.com",
+            })
+            subprocess.run(["git", "init", "-b", "develop"], cwd=tmpdir, env=git_env, check=True, stdout=subprocess.DEVNULL)
+            mgt_dir = os.path.join(tmpdir, "docs", "management")
+            os.makedirs(mgt_dir, exist_ok=True)
+            cm_path = os.path.join(mgt_dir, "cm_plan.md")
+
+            def write_doc(version, status, approver, body="Initial body."):
+                content = (
+                    "# CM Plan\n\n"
+                    "**Document ID**: `DOC-MGT-CM`  \n"
+                    f"**Version**: {version}  \n"
+                    f"**Status**: {status}  \n"
+                    f"**Approver**: {approver}  \n\n"
+                    f"## 1. Scope\n{body}\n\n"
+                    "## Change History\n\n"
+                    "| Version | Date | Author | Ticket | Summary of Changes |\n"
+                    "| :--- | :--- | :--- | :--- | :--- |\n"
+                    f"| `{version}` | 2026-11-17 | Test | `ATT-8164` | Update. |\n"
+                )
+                with open(cm_path, "w", encoding="utf-8") as f:
+                    f.write(content)
+
+            write_doc("1.0.0", "Approved", "Rainer Blind", "Baseline v1.")
+            subprocess.run(["git", "add", "."], cwd=tmpdir, env=git_env, check=True, stdout=subprocess.DEVNULL)
+            subprocess.run(
+                ["git", "commit", "-m", "chore: initial baseline\n\nHuman-Approved: Rainer Blind"],
+                cwd=tmpdir,
+                env=git_env,
+                check=True,
+                stdout=subprocess.DEVNULL,
+            )
+            subprocess.run(["git", "checkout", "-b", "feature/ATT-9999"], cwd=tmpdir, env=git_env, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+            # (a) Body changed without version bump -> FAIL
+            write_doc("1.0.0", "Reviewed", "Pending PO Sign-Off", "Modified body without bump.")
+            subprocess.run(["git", "add", "."], cwd=tmpdir, env=git_env, check=True, stdout=subprocess.DEVNULL)
+            subprocess.run(["git", "commit", "-m", "docs: edit without bump"], cwd=tmpdir, env=git_env, check=True, stdout=subprocess.DEVNULL)
+            ok_nobump, msgs_nobump = verify_work_product_headers(repo_root=tmpdir, base_ref="develop", cutoff_ts=0)
+            self.assertFalse(ok_nobump)
+            self.assertTrue(any("without monotonic Version bump" in m for m in msgs_nobump), msgs_nobump)
+
+            # (b) Version bumped, but kept Status: Approved without Human-Approved trailer -> FAIL
+            write_doc("1.1.0", "Approved", "Rainer Blind", "Modified body retaining Approved without human trailer.")
+            subprocess.run(["git", "add", "."], cwd=tmpdir, env=git_env, check=True, stdout=subprocess.DEVNULL)
+            subprocess.run(["git", "commit", "-m", "docs: agent bump keeping Approved"], cwd=tmpdir, env=git_env, check=True, stdout=subprocess.DEVNULL)
+            ok_agent_app, msgs_agent_app = verify_work_product_headers(repo_root=tmpdir, base_ref="develop", cutoff_ts=0)
+            self.assertFalse(ok_agent_app)
+            self.assertTrue(any("without human sign-off" in m for m in msgs_agent_app), msgs_agent_app)
+
+            # (c) Agent resets Approved -> Reviewed with version bump -> PASS
+            write_doc("1.2.0", "Reviewed", "Pending PO Sign-Off", "Modified body cleanly reset to Reviewed.")
+            subprocess.run(["git", "add", "."], cwd=tmpdir, env=git_env, check=True, stdout=subprocess.DEVNULL)
+            subprocess.run(["git", "commit", "-m", "docs: bump and reset to Reviewed"], cwd=tmpdir, env=git_env, check=True, stdout=subprocess.DEVNULL)
+            ok_reset, msgs_reset = verify_work_product_headers(repo_root=tmpdir, base_ref="develop", cutoff_ts=0)
+            self.assertTrue(ok_reset, f"Resetting Approved -> Reviewed with version bump should pass: {msgs_reset}")
+
+            # (d) Human grants Approved with Human-Approved trailer + human Approver -> PASS
+            write_doc("1.3.0", "Approved", "Rainer Blind", "Modified body cleanly reset to Reviewed.")
+            subprocess.run(["git", "add", "."], cwd=tmpdir, env=git_env, check=True, stdout=subprocess.DEVNULL)
+            subprocess.run(
+                ["git", "commit", "-m", "docs: PO approval\n\nHuman-Approved: Rainer Blind"],
+                cwd=tmpdir,
+                env=git_env,
+                check=True,
+                stdout=subprocess.DEVNULL,
+            )
+            ok_human, msgs_human = verify_work_product_headers(repo_root=tmpdir, base_ref="develop", cutoff_ts=0)
+            self.assertTrue(ok_human, f"Human-Approved commit should pass: {msgs_human}")
+
+            # (e) Unapproved commit exempt if pre-cutoff
+            subprocess.run(["git", "checkout", "-b", "feature/pre-cutoff", "develop"], cwd=tmpdir, env=git_env, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            write_doc("1.0.0", "Approved", "Rainer Blind", "Pre-cutoff historical edit.")
+            subprocess.run(["git", "add", "."], cwd=tmpdir, env=git_env, check=True, stdout=subprocess.DEVNULL)
+            old_env = dict(git_env)
+            old_env["GIT_COMMITTER_DATE"] = "2026-01-01T00:00:00Z"
+            old_env["GIT_AUTHOR_DATE"] = "2026-01-01T00:00:00Z"
+            subprocess.run(["git", "commit", "-m", "docs: historical edit"], cwd=tmpdir, env=old_env, check=True, stdout=subprocess.DEVNULL)
+            ok_pre, msgs_pre = verify_work_product_headers(repo_root=tmpdir, base_ref="develop", cutoff_ts=1790000000)
+            self.assertTrue(ok_pre, f"Pre-cutoff historical commit should be exempted: {msgs_pre}")
+
+    def test_scenario_82_auto_verify_living_docs_and_rollover_sprint_base_ref(self):
+        """TST-PRO-120.2: auto_verify_living_docs_on_stage5 bumps governed shard/index versions and _resolve_git_base_ref picks newest sprint ancestor."""
+        from tools.jira_util import auto_verify_living_docs_on_stage5
+        from tools.verify_requirement_governance import _resolve_git_base_ref
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            git_env = dict(os.environ)
+            git_env.update({
+                "GIT_AUTHOR_NAME": "Test Runner",
+                "GIT_AUTHOR_EMAIL": "runner@example.com",
+                "GIT_COMMITTER_NAME": "Test Runner",
+                "GIT_COMMITTER_EMAIL": "runner@example.com",
+            })
+            subprocess.run(["git", "init", "-b", "develop"], cwd=tmpdir, env=git_env, check=True, stdout=subprocess.DEVNULL)
+
+            os.makedirs(os.path.join(tmpdir, "docs", "requirements"), exist_ok=True)
+            os.makedirs(os.path.join(tmpdir, "docs", "tests"), exist_ok=True)
+            os.makedirs(os.path.join(tmpdir, "app", "src", "test", "java"), exist_ok=True)
+            os.makedirs(os.path.join(tmpdir, "app", "build", "test-results", "testDebugUnitTest"), exist_ok=True)
+
+            req_shard = (
+                "# Living Requirements: Process\n\n"
+                "**Document ID**: `DOC-REQ-PRO`  \n"
+                "**Version**: 1.0.0  \n"
+                "**Status**: Reviewed  \n"
+                "**Approver**: Pending PO Sign-Off  \n"
+                "**Total Requirements**: 1\n\n"
+                "### REQ-PRO-999: Sample (ATT-9999) [Implemented]\n"
+                "- **Tests**: `TST-PRO-999`\n\n"
+                "## Change History\n\n"
+                "| Version | Date | Author | Ticket | Summary of Changes |\n"
+                "| :--- | :--- | :--- | :--- | :--- |\n"
+                "| `1.0.0` | 2026-11-17 | Test | `ATT-8164` | Init. |\n"
+            )
+            tst_shard = (
+                "# Living Test Specification: Process\n\n"
+                "**Document ID**: `DOC-TST-PRO`  \n"
+                "**Version**: 1.0.0  \n"
+                "**Status**: Reviewed  \n"
+                "**Approver**: Pending PO Sign-Off  \n"
+                "**Total Tests**: 1\n\n"
+                "### TST-PRO-999: Sample (ATT-9999) [Implemented]\n"
+                "- **Requirement(s)**: `REQ-PRO-999`\n\n"
+                "## Change History\n\n"
+                "| Version | Date | Author | Ticket | Summary of Changes |\n"
+                "| :--- | :--- | :--- | :--- | :--- |\n"
+                "| `1.0.0` | 2026-11-17 | Test | `ATT-8164` | Init. |\n"
+            )
+            req_master = (
+                "# Living Requirements Index\n\n"
+                "**Document ID**: `DOC-REQ-INDEX`  \n"
+                "**Version**: 1.0.0  \n"
+                "**Status**: Reviewed  \n"
+                "**Approver**: Pending PO Sign-Off  \n\n"
+                "This master index links to the 1 domain-sharded requirement files under `docs/requirements/`.\n\n"
+                "| Domain Shard | Prefixes | Total | Verified | Implemented | Planned / Open |\n"
+                "| :--- | :--- | :---: | :---: | :---: | :---: |\n"
+                "| [Process](requirements/req_process_stability.md) | `PRO` | 1 | 0 | 1 | 0 |\n\n"
+                "**Total Living Requirements**: 1 across 1 domain shards.\n\n"
+                "## Change History\n\n"
+                "| Version | Date | Author | Ticket | Summary of Changes |\n"
+                "| :--- | :--- | :--- | :--- | :--- |\n"
+                "| `1.0.0` | 2026-11-17 | Test | `ATT-8164` | Init. |\n"
+            )
+            tst_master = (
+                "# Living Tests Index\n\n"
+                "**Document ID**: `DOC-TST-INDEX`  \n"
+                "**Version**: 1.0.0  \n"
+                "**Status**: Reviewed  \n"
+                "**Approver**: Pending PO Sign-Off  \n\n"
+                "This master index links to the 1 domain-sharded test specification files under `docs/tests/`.\n\n"
+                "| Domain Shard | Prefixes | Total | Verified | Implemented | Planned / Open |\n"
+                "| :--- | :--- | :---: | :---: | :---: | :---: |\n"
+                "| [Process](tests/tst_process_stability.md) | `PRO` | 1 | 0 | 1 | 0 |\n\n"
+                "**Total Living Tests**: 1 across 1 domain shards.\n\n"
+                "## Change History\n\n"
+                "| Version | Date | Author | Ticket | Summary of Changes |\n"
+                "| :--- | :--- | :--- | :--- | :--- |\n"
+                "| `1.0.0` | 2026-11-17 | Test | `ATT-8164` | Init. |\n"
+            )
+            with open(os.path.join(tmpdir, "docs", "requirements", "req_process_stability.md"), "w", encoding="utf-8") as f:
+                f.write(req_shard)
+            with open(os.path.join(tmpdir, "docs", "tests", "tst_process_stability.md"), "w", encoding="utf-8") as f:
+                f.write(tst_shard)
+            with open(os.path.join(tmpdir, "docs", "requirements.md"), "w", encoding="utf-8") as f:
+                f.write(req_master)
+            with open(os.path.join(tmpdir, "docs", "tests.md"), "w", encoding="utf-8") as f:
+                f.write(tst_master)
+            with open(os.path.join(tmpdir, "app", "src", "test", "java", "SampleContractTest.kt"), "w", encoding="utf-8") as f:
+                f.write("// Traces to: TST-PRO-999\nclass SampleContractTest { fun testSample_TST_PRO_999() {} }\n")
+            with open(os.path.join(tmpdir, "app", "build", "test-results", "testDebugUnitTest", "TEST-SampleContractTest.xml"), "w", encoding="utf-8") as f:
+                f.write('<testsuite name="SampleContractTest" tests="1" failures="0" errors="0" skipped="0"><testcase name="testSample_TST_PRO_999" classname="SampleContractTest"/></testsuite>\n')
+
+            subprocess.run(["git", "add", "."], cwd=tmpdir, env=git_env, check=True, stdout=subprocess.DEVNULL)
+            old_env = dict(git_env)
+            old_env["GIT_COMMITTER_DATE"] = "2026-11-17T10:00:00Z"
+            old_env["GIT_AUTHOR_DATE"] = "2026-11-17T10:00:00Z"
+            subprocess.run(["git", "commit", "-m", "chore: baseline"], cwd=tmpdir, env=old_env, check=True, stdout=subprocess.DEVNULL)
+
+            # Create older sprint branch (alphabetically smaller and larger tests) and newer sprint branch
+            subprocess.run(["git", "checkout", "-b", "sprint/2026-11-16_03_Nacht"], cwd=tmpdir, env=git_env, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.run(["git", "commit", "--allow-empty", "-m", "chore: old sprint"], cwd=tmpdir, env=old_env, check=True, stdout=subprocess.DEVNULL)
+            old_sprint_sha = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=tmpdir).decode().strip()
+
+            subprocess.run(["git", "checkout", "-b", "sprint/2026-11-17_02_Spät"], cwd=tmpdir, env=git_env, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            new_env = dict(git_env)
+            new_env["GIT_COMMITTER_DATE"] = "2026-11-17T15:00:00Z"
+            new_env["GIT_AUTHOR_DATE"] = "2026-11-17T15:00:00Z"
+            subprocess.run(["git", "commit", "--allow-empty", "-m", "chore: newest sprint"], cwd=tmpdir, env=new_env, check=True, stdout=subprocess.DEVNULL)
+            newest_sprint_sha = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=tmpdir).decode().strip()
+
+            subprocess.run(["git", "checkout", "-b", "feature/ATT-9999"], cwd=tmpdir, env=git_env, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            resolved = _resolve_git_base_ref("develop", cwd=tmpdir)
+            self.assertEqual(resolved, newest_sprint_sha)
+            self.assertNotEqual(resolved, old_sprint_sha)
+
+            updated = auto_verify_living_docs_on_stage5("ATT-9999", repo_root=tmpdir)
+            self.assertGreaterEqual(updated, 2)
+
+            ok_hdr, hdr_msgs = verify_work_product_headers(repo_root=tmpdir, base_ref="develop", cutoff_ts=0)
+            self.assertTrue(ok_hdr, f"auto_verify_living_docs_on_stage5 must bump shard/index versions cleanly: {hdr_msgs}")
+            for rel_check in (
+                "docs/requirements/req_process_stability.md",
+                "docs/tests/tst_process_stability.md",
+                "docs/requirements.md",
+                "docs/tests.md",
+            ):
+                with open(os.path.join(tmpdir, rel_check), "r", encoding="utf-8") as f:
+                    hdr = parse_work_product_header(f.read())
+                self.assertEqual(hdr["version"], "1.0.1", f"Expected patched version 1.0.1 on {rel_check}, got {hdr}")
+
+    def test_scenario_83_tst_pro_120_ignores_untracked_and_gitignored_drafts(self):
+        """TST-PRO-120.2: discover_governed_work_products and verify_work_product_headers ignore untracked/gitignored drafts in Git repos."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            git_env = dict(os.environ)
+            git_env.update({
+                "GIT_AUTHOR_NAME": "Test Runner",
+                "GIT_AUTHOR_EMAIL": "runner@example.com",
+                "GIT_COMMITTER_NAME": "Test Runner",
+                "GIT_COMMITTER_EMAIL": "runner@example.com",
+            })
+            subprocess.run(["git", "init", "-b", "develop"], cwd=tmpdir, env=git_env, check=True, stdout=subprocess.DEVNULL)
+            mgt_dir = os.path.join(tmpdir, "docs", "management")
+            os.makedirs(mgt_dir, exist_ok=True)
+
+            with open(os.path.join(tmpdir, ".gitignore"), "w", encoding="utf-8") as f:
+                f.write("docs/management/schichtbetrieb.md\n")
+
+            valid_cm = (
+                "# CM Plan\n\n"
+                "**Document ID**: `DOC-MGT-CM`  \n"
+                "**Version**: 1.0.0  \n"
+                "**Status**: Reviewed  \n"
+                "**Approver**: Pending PO Sign-Off  \n\n"
+                "## 1. Scope\nBody.\n\n"
+                "## Change History\n\n"
+                "| Version | Date | Author | Ticket | Summary of Changes |\n"
+                "| :--- | :--- | :--- | :--- | :--- |\n"
+                "| `1.0.0` | 2026-11-17 | Test | `ATT-8164` | Baseline. |\n"
+            )
+            with open(os.path.join(mgt_dir, "cm_plan.md"), "w", encoding="utf-8") as f:
+                f.write(valid_cm)
+            subprocess.run(["git", "add", ".gitignore", "docs/management/cm_plan.md"], cwd=tmpdir, env=git_env, check=True, stdout=subprocess.DEVNULL)
+            subprocess.run(["git", "commit", "-m", "chore: baseline"], cwd=tmpdir, env=git_env, check=True, stdout=subprocess.DEVNULL)
+
+            # Create gitignored draft and untracked draft without headers
+            with open(os.path.join(mgt_dir, "schichtbetrieb.md"), "w", encoding="utf-8") as f:
+                f.write("# PO Draft\n\nUnformatted personal draft.\n")
+            with open(os.path.join(mgt_dir, "local_notes.md"), "w", encoding="utf-8") as f:
+                f.write("# Untracked Notes\n\nNot tracked in Git.\n")
+
+            discovered = discover_governed_work_products(repo_root=tmpdir)
+            self.assertEqual(discovered, ["docs/management/cm_plan.md"])
+            ok, msgs = verify_work_product_headers(repo_root=tmpdir, base_ref="develop", cutoff_ts=0)
+            self.assertTrue(ok, f"Untracked/gitignored drafts must not fail header verification: {msgs}")
+
+
+class TestConflictMarkersAndCommitHygiene(unittest.TestCase):
+    """TST-PRO-121.3: Offline conflict-marker, commit-key hygiene, and .githooks enforcement."""
+
+    def test_tst_pro_121_3_conflict_markers_detected_and_clean_repo_passes(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            git_env = dict(os.environ, GIT_AUTHOR_NAME="T", GIT_AUTHOR_EMAIL="t@e.com", GIT_COMMITTER_NAME="T", GIT_COMMITTER_EMAIL="t@e.com")
+            subprocess.run(["git", "init", "-b", "develop"], cwd=tmpdir, env=git_env, check=True, stdout=subprocess.DEVNULL)
+            clean_fp = os.path.join(tmpdir, "clean.md")
+            with open(clean_fp, "w", encoding="utf-8") as f:
+                f.write("# Clean\nNormal content.\n")
+            subprocess.run(["git", "add", "clean.md"], cwd=tmpdir, env=git_env, check=True, stdout=subprocess.DEVNULL)
+            subprocess.run(["git", "commit", "-m", "docs(ATT-8165): clean file"], cwd=tmpdir, env=git_env, check=True, stdout=subprocess.DEVNULL)
+
+            ok, msgs = verify_conflict_markers(repo_root=tmpdir)
+            self.assertTrue(ok, f"Clean repo must pass: {msgs}")
+
+            # Introduce conflict markers via programmatic concatenation (no literal conflict marker lines in test source)
+            bad_fp = os.path.join(tmpdir, "broken.txt")
+            marker_blob = ("<" * 7) + " HEAD\nfoo\n" + ("=" * 7) + "\nbar\n" + (">" * 7) + " feature\n"
+            with open(bad_fp, "w", encoding="utf-8") as f:
+                f.write(marker_blob)
+            subprocess.run(["git", "add", "broken.txt"], cwd=tmpdir, env=git_env, check=True, stdout=subprocess.DEVNULL)
+
+            ok_bad, errs_bad = verify_conflict_markers(repo_root=tmpdir)
+            self.assertFalse(ok_bad)
+            self.assertTrue(any("broken.txt" in e for e in errs_bad))
+
+    def test_tst_pro_121_3_commit_hygiene_enforces_att_key_post_cutoff_and_exempts_historical(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            git_env = dict(os.environ, GIT_AUTHOR_NAME="T", GIT_AUTHOR_EMAIL="t@e.com", GIT_COMMITTER_NAME="T", GIT_COMMITTER_EMAIL="t@e.com")
+            subprocess.run(["git", "init", "-b", "develop"], cwd=tmpdir, env=git_env, check=True, stdout=subprocess.DEVNULL)
+
+            # 1. Pre-cutoff historical commit without ATT key -> exempted cleanly
+            with open(os.path.join(tmpdir, "a.txt"), "w", encoding="utf-8") as f:
+                f.write("v1\n")
+            subprocess.run(["git", "add", "a.txt"], cwd=tmpdir, env=git_env, check=True, stdout=subprocess.DEVNULL)
+            old_env = dict(git_env, GIT_AUTHOR_DATE="1794685976 +0000", GIT_COMMITTER_DATE="1794685976 +0000")
+            subprocess.run(["git", "commit", "-m", "fix(tier2): historical fix"], cwd=tmpdir, env=old_env, check=True, stdout=subprocess.DEVNULL)
+
+            ok_hist, msgs_hist = verify_commit_hygiene(repo_root=tmpdir, base_ref="develop")
+            self.assertTrue(ok_hist, f"Pre-cutoff commit should be exempted: {msgs_hist}")
+
+            # 2. Post-cutoff commit without ATT key -> fails
+            with open(os.path.join(tmpdir, "a.txt"), "w", encoding="utf-8") as f:
+                f.write("v2\n")
+            subprocess.run(["git", "add", "a.txt"], cwd=tmpdir, env=git_env, check=True, stdout=subprocess.DEVNULL)
+            new_env = dict(git_env, GIT_AUTHOR_DATE="1800000000 +0000", GIT_COMMITTER_DATE="1800000000 +0000")
+            subprocess.run(["git", "commit", "-m", "hotfix(settings): missing ticket key"], cwd=tmpdir, env=new_env, check=True, stdout=subprocess.DEVNULL)
+
+            ok_bad, errs_bad = verify_commit_hygiene(repo_root=tmpdir, base_ref="develop")
+            self.assertFalse(ok_bad)
+            self.assertTrue(any("ATT-" in e for e in errs_bad))
+
+            # 3. Reset back and commit WITH ATT-8165 -> passes
+            subprocess.run(["git", "reset", "--hard", "HEAD~1"], cwd=tmpdir, env=git_env, check=True, stdout=subprocess.DEVNULL)
+            with open(os.path.join(tmpdir, "a.txt"), "w", encoding="utf-8") as f:
+                f.write("v3\n")
+            subprocess.run(["git", "add", "a.txt"], cwd=tmpdir, env=git_env, check=True, stdout=subprocess.DEVNULL)
+            subprocess.run(["git", "commit", "-m", "fix(ATT-8165): tracked fix"], cwd=tmpdir, env=new_env, check=True, stdout=subprocess.DEVNULL)
+
+            ok_good, msgs_good = verify_commit_hygiene(repo_root=tmpdir, base_ref="develop")
+            self.assertTrue(ok_good, f"Post-cutoff commit with ATT-8165 should pass: {msgs_good}")
+
+    def test_tst_pro_121_3_githooks_scripts_enforce_att_key_and_conflict_markers(self):
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+        commit_msg_hook = os.path.join(repo_root, ".githooks", "commit-msg")
+        pre_commit_hook = os.path.join(repo_root, ".githooks", "pre-commit")
+        self.assertTrue(os.path.isfile(commit_msg_hook))
+        self.assertTrue(os.path.isfile(pre_commit_hook))
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            git_env = dict(os.environ, GIT_AUTHOR_NAME="T", GIT_AUTHOR_EMAIL="t@e.com", GIT_COMMITTER_NAME="T", GIT_COMMITTER_EMAIL="t@e.com")
+            subprocess.run(["git", "init", "-b", "develop"], cwd=tmpdir, env=git_env, check=True, stdout=subprocess.DEVNULL)
+
+            msg_bad = os.path.join(tmpdir, "MSG_BAD")
+            with open(msg_bad, "w", encoding="utf-8") as f:
+                f.write("hotfix: missing key\n")
+            res_bad = subprocess.run([commit_msg_hook, msg_bad], cwd=tmpdir, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            self.assertNotEqual(res_bad.returncode, 0)
+
+            msg_good = os.path.join(tmpdir, "MSG_GOOD")
+            with open(msg_good, "w", encoding="utf-8") as f:
+                f.write("fix(ATT-8165): tracked fix\n")
+            res_good = subprocess.run([commit_msg_hook, msg_good], cwd=tmpdir, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            self.assertEqual(res_good.returncode, 0)
+
+            # pre-commit rejects staged conflict markers and accepts clean files
+            staged_bad = os.path.join(tmpdir, "staged.txt")
+            with open(staged_bad, "w", encoding="utf-8") as f:
+                f.write(("<" * 7) + " HEAD\nconflict\n" + ("=" * 7) + "\nother\n" + (">" * 7) + " b\n")
+            subprocess.run(["git", "add", "staged.txt"], cwd=tmpdir, env=git_env, check=True, stdout=subprocess.DEVNULL)
+            res_pre_bad = subprocess.run([pre_commit_hook], cwd=tmpdir, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            self.assertNotEqual(res_pre_bad.returncode, 0)
+
+            with open(staged_bad, "w", encoding="utf-8") as f:
+                f.write("clean resolved content\n")
+            subprocess.run(["git", "add", "staged.txt"], cwd=tmpdir, env=git_env, check=True, stdout=subprocess.DEVNULL)
+            res_pre_good = subprocess.run([pre_commit_hook], cwd=tmpdir, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            self.assertEqual(res_pre_good.returncode, 0)
+
+    def test_tst_pro_121_3_combined_check_flags_execute_all_checks_without_short_circuit(self):
+        """TST-PRO-121.3: Combined --check-* CLI flags run all requested checks and exit 0 iff all pass."""
+        def _run_cli(args):
+            out_buf = io.StringIO()
+            err_buf = io.StringIO()
+            with contextlib.redirect_stdout(out_buf), contextlib.redirect_stderr(err_buf):
+                with self.assertRaises(SystemExit) as cm:
+                    governance_cli_main(args)
+            return cm.exception.code, out_buf.getvalue(), err_buf.getvalue()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            git_env = dict(
+                os.environ,
+                GIT_AUTHOR_NAME="T",
+                GIT_AUTHOR_EMAIL="t@e.com",
+                GIT_COMMITTER_NAME="T",
+                GIT_COMMITTER_EMAIL="t@e.com",
+            )
+            subprocess.run(["git", "init", "-b", "develop"], cwd=tmpdir, env=git_env, check=True, stdout=subprocess.DEVNULL)
+
+            # Valid governed doc header + clean commit with ATT-8165 + clean file
+            mgt_dir = os.path.join(tmpdir, "docs", "management")
+            os.makedirs(mgt_dir, exist_ok=True)
+            with open(os.path.join(mgt_dir, "cm_plan.md"), "w", encoding="utf-8") as f:
+                f.write(
+                    "# Configuration Management Plan\n\n"
+                    "**Document ID**: `DOC-MGT-001`\n"
+                    "**Version**: `1.0.0`\n"
+                    "**Status**: `Draft`\n"
+                    "**Owner**: Rainer Blind\n"
+                    "**Approver**: Pending Human Review\n\n"
+                    "## Change History\n"
+                    "| Version | Date | Author | Ticket | Summary |\n"
+                    "| :--- | :--- | :--- | :--- | :--- |\n"
+                    "| `1.0.0` | 2026-11-17 | AI Agent (`ATT-8165`) | `ATT-8165` | Initial |\n"
+                )
+            subprocess.run(["git", "add", "."], cwd=tmpdir, env=git_env, check=True, stdout=subprocess.DEVNULL)
+            post_env = dict(git_env, GIT_AUTHOR_DATE="1800000000 +0000", GIT_COMMITTER_DATE="1800000000 +0000")
+            subprocess.run(["git", "commit", "-m", "docs(ATT-8165): baseline"], cwd=tmpdir, env=post_env, check=True, stdout=subprocess.DEVNULL)
+
+            # 1. All 3 combined checks pass -> exit 0 and all 3 PASS lines printed
+            code, out, err = _run_cli([
+                "--repo-root", tmpdir,
+                "--base-ref", "develop",
+                "--check-doc-headers",
+                "--check-commit-hygiene",
+                "--check-conflict-markers",
+            ])
+            self.assertEqual(code, 0, f"Expected exit 0, got stderr={err}")
+            self.assertIn("Work-product headers", out)
+            self.assertIn("Commit hygiene verified", out)
+            self.assertIn("Zero Git conflict markers detected", out)
+
+            # 2. First two pass, later --check-conflict-markers fails -> must NOT skip 3rd check
+            broken_fp = os.path.join(tmpdir, "broken.txt")
+            with open(broken_fp, "w", encoding="utf-8") as f:
+                f.write(("<" * 7) + " HEAD\nleft\n" + ("=" * 7) + "\nright\n" + (">" * 7) + " branch\n")
+            subprocess.run(["git", "add", "broken.txt"], cwd=tmpdir, env=git_env, check=True, stdout=subprocess.DEVNULL)
+            subprocess.run(["git", "commit", "-m", "fix(ATT-8165): add file"], cwd=tmpdir, env=post_env, check=True, stdout=subprocess.DEVNULL)
+
+            code_fail3, out_fail3, err_fail3 = _run_cli([
+                "--repo-root", tmpdir,
+                "--base-ref", "develop",
+                "--check-doc-headers",
+                "--check-commit-hygiene",
+                "--check-conflict-markers",
+            ])
+            self.assertEqual(code_fail3, 1)
+            self.assertIn("Work-product headers", out_fail3)
+            self.assertIn("Commit hygiene verified", out_fail3)
+            self.assertIn("Unresolved Git conflict marker", err_fail3)
+
+            # 3. Both middle (--check-commit-hygiene) AND last (--check-conflict-markers) fail -> both errors reported
+            subprocess.run(["git", "commit", "--amend", "-m", "missing ticket key"], cwd=tmpdir, env=post_env, check=True, stdout=subprocess.DEVNULL)
+            code_both, out_both, err_both = _run_cli([
+                "--repo-root", tmpdir,
+                "--base-ref", "develop",
+                "--check-doc-headers",
+                "--check-commit-hygiene",
+                "--check-conflict-markers",
+            ])
+            self.assertEqual(code_both, 1)
+            self.assertIn("Work-product headers", out_both)
+            self.assertIn("lacks a mandatory Jira ticket key", err_both)
+            self.assertIn("Unresolved Git conflict marker", err_both)
+
+            # 4. Combined --check-doc-headers --check-qa-audits --check-impact also aggregates later failures
+            analysis_dir = os.path.join(tmpdir, "docs", "engineering", "analysis")
+            os.makedirs(analysis_dir, exist_ok=True)
+            with open(os.path.join(analysis_dir, "ATT-8165_analysis.md"), "w", encoding="utf-8") as f:
+                f.write("# Incomplete analysis\n")
+            code_other, out_other, err_other = _run_cli([
+                "--repo-root", tmpdir,
+                "--base-ref", "develop",
+                "--check-doc-headers",
+                "--check-qa-audits",
+                "--check-impact",
+            ])
+            self.assertEqual(code_other, 1)
+            self.assertIn("Work-product headers", out_other)
+            self.assertIn("failed validation", err_other)
 
 
 if __name__ == "__main__":

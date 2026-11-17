@@ -62,9 +62,12 @@ import com.atrainingtracker.trainingtracker.MyUnits
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import com.atrainingtracker.trainingtracker.settings.TelemetryGraphColorPreferences
+import com.atrainingtracker.trainingtracker.settings.ZoneDisplayOptions
 import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
 import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
 import com.atrainingtracker.trainingtracker.ui.settings.AthleteWeightDialog
+import com.atrainingtracker.trainingtracker.ui.settings.ZoneDisplayConfigSection
+import com.atrainingtracker.trainingtracker.ui.settings.ZoneProfileTarget
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.theme.TelemetryGraphColor
 import com.atrainingtracker.trainingtracker.ui.theme.safePainterResource
@@ -147,8 +150,17 @@ fun EditSensorFieldDialog(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
 
+    LaunchedEffect(viewModel) {
+        viewModel.refreshZoneDisplayDraftIfClean()
+    }
+
+    val dismissWithoutSaving = {
+        viewModel.discardZoneDisplayChanges()
+        onDismissRequest()
+    }
+
     AppModalBottomSheet(
-        onDismissRequest = onDismissRequest,
+        onDismissRequest = dismissWithoutSaving,
         title = title,
         icon = Icons.Default.Edit,
         actions = {
@@ -157,7 +169,7 @@ fun EditSensorFieldDialog(
                     viewModel.saveChanges()
                     onDismissRequest()
                 },
-                onCancel = onDismissRequest,
+                onCancel = dismissWithoutSaving,
                 saveText = stringResource(R.string.save)
             )
         }
@@ -516,6 +528,23 @@ fun EditSensorFieldDialog(
                         )
                     }
                 }
+                Spacer(Modifier.height(16.dp))
+            }
+
+            // Zone Display Highlighting for zone-capable metrics (REQ-UI-2783.2)
+            val zoneTarget = uiState.zoneProfileTarget
+            if (zoneTarget != null) {
+                ZoneDisplayConfigSection(
+                    selectedProfile = zoneTarget,
+                    displayOptions = uiState.zoneDisplayDraft.optionsFor(zoneTarget),
+                    onUpdateDisplayOptions = { updated ->
+                        viewModel.onZoneDisplayOptionsChanged(zoneTarget, updated)
+                    },
+                    onApplyToAll = {
+                        viewModel.onApplyZoneDisplayToAll(zoneTarget)
+                    },
+                    onProfileSelected = null
+                )
                 Spacer(Modifier.height(16.dp))
             }
 
@@ -1211,6 +1240,29 @@ private fun SensorTypeSelectorSectionPreview() {
                     selectedSensorType = SensorType.POWER_TO_WEIGHT,
                     onSensorTypeSelected = {},
                     initiallyExpanded = true
+                )
+            }
+        }
+    }
+}
+
+@Preview(name = "EditSensorField ZoneDisplay - Light", showBackground = true)
+@Preview(
+    name = "EditSensorField ZoneDisplay - Dark",
+    showBackground = true,
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+private fun EditSensorFieldZoneDisplayPreview() {
+    ATrainingTrackerTheme {
+        Surface {
+            Column(modifier = Modifier.padding(16.dp)) {
+                ZoneDisplayConfigSection(
+                    selectedProfile = ZoneProfileTarget.HRV_DFA_A1,
+                    displayOptions = ZoneDisplayOptions(showGauge = true),
+                    onUpdateDisplayOptions = {},
+                    onApplyToAll = {},
+                    onProfileSelected = null
                 )
             }
         }

@@ -1,5 +1,10 @@
 # Detailed Design: MyBTLEDevice (ASPICE SWE.3)
 
+**Document ID**: `DOC-ARC-DD-BTLE`  
+**Version**: 1.0.0  
+**Status**: Reviewed  
+**Approver**: Pending PO Sign-Off  
+
 **Unit**: `MyBTLEDevice` (`app/src/main/java/com/atrainingtracker/banalservice/devices/bluetooth_le/MyBTLEDevice.java`, 1,177 LOC)  
 **Superclass / Subclasses**: Extends `MyRemoteDevice`; specialized by BLE profiles (`BTLEHeartRateDevice`, `BTLERadarDevice`, cycling speed/cadence/power devices)  
 **SWE.2 Alignment**: `docs/architecture.md` §3.4, §4.5, §4.9 (`IF-SWE-04`)  
@@ -96,3 +101,11 @@ stateDiagram-v2
 | `MyBTLEDeviceLifecycleTest` | Null `mBluetoothGatt` guards in `readNextCharacteristic`, TOCTOU race immunity, `disconnectFromGatt` queue & lock cleanup, `mBatteryReadRunnable` cancellation on disconnect, `onConnectionStateChange` null guard, `shutDown()` cleanup, `BLUETOOTH_CONNECT` permission guard, `TRANSPORT_LE` connection (`REQ-CON-012`, `TST-CON-003`) |
 | `MyBTLEDeviceQueueTest` | Sequential `mGattQueue` execution without dropping, queue clear on `disconnectFromGatt`, read-behind-descriptor serialization, `mBatteryReadRunnable` & `mReadCharacteristicQueue` routing through `mGattQueue`, `WriteCharacteristicOp` write-type selection, `onCharacteristicWriteCompleted` failure status propagation (`TST-CON-028.1`) |
 | `MyBTLEDeviceAddressAndSearchTest` | `isRandomStaticAddress` MAC classification, scan-assist `ScanFilter` & stop on timeout/disconnect/shutdown, scan-resolved GATT replacement & stale callback rejection, `onScanFailed` direct-connect fallback (`REQ-CON-023`, `TST-CON-023`) |
+
+---
+
+## Change History
+
+| Version | Date | Author | Ticket | Summary of Changes |
+| :--- | :--- | :--- | :--- | :--- |
+| `1.0.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Added standardized `DOC-ARC-DD-BTLE` work-product control header and Change History. |

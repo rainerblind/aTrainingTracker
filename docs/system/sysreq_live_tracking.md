@@ -1,11 +1,13 @@
 # System Requirements Specification: Live Tracking with Sensors
 
-**Document Version**: 1.0.0  
+**Document ID**: `DOC-SYS-TRK`  
+**Version**: 1.1.0  
 **ASPICE Process Areas**: SYS.2 (System Requirements Analysis, BP1–BP3)  
 **Requirement Reference**: `REQ-PRO-054` (`REQ-PRO-054.1`, `REQ-PRO-054.2`)  
 **Test Reference**: `TST-PRO-054` (`TST-PRO-054.1`–`TST-PRO-054.3`)  
 **Author**: Antigravity Autonomous Engineering Pair  
-**Status**: Approved & Grounded in Live Source Code  
+**Status**: Reviewed  
+**Approver**: Pending PO Sign-Off  
 
 ---
 
@@ -123,3 +125,11 @@ The following matrix establishes bidirectional traceability between system track
 | `SYSREQ-TRK-005` | Foreground Service & Power Management | `REQ-TRK-003`, `REQ-TRK-005`, `REQ-TRK-008`, `REQ-TRK-015`, `REQ-TRK-016`, `REQ-TRK-023`, `REQ-TRK-028`, `REQ-TRK-033`, `REQ-TRK-045`, `REQ-TRK-046`, `REQ-TRK-051`, `REQ-TRK-053`, `REQ-TRK-058`, `REQ-TRK-059`, `REQ-TRK-063`, `REQ-TRK-064` | `TrackerService.java`, `TrainingApplication.java`, `SystemLiveTrackingRequirementsContractTest.kt` |
 | `SYSREQ-TRK-006` | Real-Time Alerts & Cockpit Feedback | `REQ-CON-013`, `REQ-CON-014`, `REQ-CON-015`, `REQ-CON-016`, `REQ-CON-021`, `REQ-CON-022`, `REQ-CON-028`, `REQ-CON-034`, `REQ-GEO-001`, `REQ-GEO-002`, `REQ-NAV-043`, `REQ-NAV-056`, `REQ-RAD-005`, `REQ-TRK-018`, `REQ-TRK-019`, `REQ-TRK-020`, `REQ-TRK-021`, `REQ-TRK-027`, `REQ-TRK-035`, `REQ-TRK-038`, `REQ-TRK-054`, `REQ-TRK-060`, `REQ-TRK-061`, `REQ-TRK-065`, `REQ-TRK-067`, `REQ-TRK-068`, `REQ-TRK-073`, `REQ-TRK-082` | `SensorGridScreen.kt`, `RadarEdgeOverlay.kt`, `RadarAlertManager.kt`, `SystemLiveTrackingRequirementsContractTest.kt` |
 
+---
+
+## Change History
+
+| Version | Date | Author | Ticket | Summary of Changes |
+| :--- | :--- | :--- | :--- | :--- |
+| `1.0.0` | 2026-11-16 | AI Agent | `ATT-6142` | Prior system specification baseline. |
+| `1.1.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Standardized `DOC-SYS-TRK` header, bumped version, reset status to `Reviewed` (`Pending PO Sign-Off`). |

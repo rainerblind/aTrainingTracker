@@ -1,9 +1,14 @@
 # Living Test Specification: Tracking & Live Sensor Cockpit
 
+**Document ID**: `DOC-TST-TRK`  
+**Version**: 1.0.3  
+**Status**: Reviewed  
+**Approver**: Pending PO Sign-Off  
+
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Tests**: 138
+**Total Tests**: 140
 
 ---
 
@@ -2085,7 +2090,7 @@
   5. *Unified Persistence Migration, Expert Settings Retirement & EditDeviceDialog UI Consistency Tests (`TST-CON-031.5`, `TuningPreferencesDataStoreRadarLightControlModeTest.kt`, `RadarSettingsSectionTest.kt`, `RadarLightControllerTest.kt`, `EditDeviceDialogTest.kt`)*:
   • Verify DataStore migration from legacy `RadarLightControlMode` to unified `isAutoMode: Boolean` + `radarLightDefaultMode: RadarLightMode` with fallback defaults (`true` and `DAY_FLASH`).
   • Verify retirement of redundant 3-way mode segmented button and default mode dropdown in `RadarSettingsSection.kt`, and preservation of `radarBrakeLightEnabled` toggle.
-  • Verify `EditDeviceDialog` live tail light controls: conditional visibility gating (`BIKE_RADAR`, connected, `isLightControlAvailable`), inclusion of `Automatik` as first option alongside physical modes, immediate dispatch via `RadarLightController`, draft state decoupling, StVZO option restriction, and UI binding consistency with `RadarLightController.currentMode` / `isAutoMode` on dialog close and reopen.
+  • Verify `EditDeviceDialog` live tail light controls: conditional visibility gating (`BIKE_RADAR`, connected, `isLightControlAvailable`; offline `BIKE_RADAR` visibility extended by `TST-CON-048`), inclusion of `Automatik` as first option alongside physical modes, immediate dispatch via `RadarLightController`, draft state decoupling, StVZO option restriction, and UI binding consistency with `RadarLightController.currentMode` / `isAutoMode` on dialog close and reopen.
   6. *Traffic Simulator & BLE Peripheral Simulator Fidelity Tests (`TST-CON-031.6`, `RadarTrafficSimulatorTest.kt`, `tools/test_ble_radar_simulator.py`)*:
   • Verify light command handling and simulated state reflections in `RadarTrafficSimulator`.
   • Verify `tools/ble_radar_simulator.py` (`RadarControlWriteCharacteristic` on `6a4e2f11`) exposes `['write', 'indicate']` properties (never `write-without-response`) and rejects writes when `6a4e2f11` CCCD indications are not subscribed.
@@ -3219,5 +3224,54 @@
   4. *Tier 1 Targeted Regression Execution (`TST-FIL-022.4`)*:
      • Execute `./gradlew :app:testDebugUnitTest --tests "com.atrainingtracker.banalservice.odometry.KinematicAltitudeSlopeEkfTest" --tests "com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest" --tests "com.atrainingtracker.trainingtracker.build.MeasuredNfrBenchmarkTest"` asserting 100% pass rate (`Localization parity: N/A - no UI strings`).
 
+---
+
+### TST-FIL-023: **att_fused Cold GNSS Jump Gating, Standstill Slope Clearing & Low-Speed Slope Damping Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Tickets**: `ATT-8576`
+- **Requirement(s)**: `REQ-FIL-023` (`REQ-FIL-023.1`..`REQ-FIL-023.3`)
+- **Component**: `app/src/test/java/com/atrainingtracker/banalservice/devices/SpeedAndLocationDevice_ATTFusedTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/odometry/UnicycleOdometryEkfTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/devices/AltitudeAndSlopeDevice_ATTFusedTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/odometry/KinematicAltitudeSlopeEkfTest.kt`
+- **Test Type**: Unit
+- **Verification Method**: Unit
+- **Procedure**:
+  1. *Cold GNSS Fix Tightening & Accuracy Preservation Test (`TST-FIL-023.1`, `SpeedAndLocationDevice_ATTFusedTest.kt` & `UnicycleOdometryEkfTest.kt`)*:
+     • Feed `SpeedAndLocationDevice_ATTFused.onLocationChanged()` an initial degraded fix (`accuracy = 25.1 m`, `speed = 0.0f`) followed by a converged fix (`accuracy = 16.0 m`, `25.2 m` offset, `speed = 0.0f`).
+     • Assert no `25.2 m` jump or `46.3 km/h` speed spike (`mSpeedSensor < 2.0 m/s`, `mDistanceSensor < 5.0 m`), `location.accuracy >= 16.0f`, and `UnicycleOdometryEkf.updateGnssPosition()` gates stationary/cold innovation jumps while still re-acquiring valid GNSS fixes during moving tunnel exit (`REQ-FIL-009`).
+  2. *Standstill Slope Clearing Test (`TST-FIL-023.2`, `KinematicAltitudeSlopeEkfTest.kt` & `AltitudeAndSlopeDevice_ATTFusedTest.kt`)*:
+     • Establish a non-zero pre-stop slope (e.g. `-21%` / `-10%` during motion), then transition to `speed = 0.0 m/s` for sustained standstill ticks (`>= 10 s`).
+     • Assert `ekf.slopePercent` decays cleanly to `0%`, `mSlopeSensor` publishes `0` (not frozen at `-21`), `mAscentSensor`/`mDescentSensor` remain unchanged, and 3-state `baroBias` remains preserved (`REQ-FIL-022`).
+  3. *Low-Speed Slope Damping & Real Climb Preservation Test (`TST-FIL-023.3`, `KinematicAltitudeSlopeEkfTest.kt` & `AltitudeAndSlopeDevice_ATTFusedTest.kt`)*:
+     • Simulate `0.85 m/s` roll-away over flat DEM (`442.0 m`) with `±0.35 m` 5-Hz baro noise for `30 s`; assert `SLOPE` stays bounded without `+29%` spikes and `ASCENT` stays near `0.0 m`. Then simulate a real `+8%` climb at `5.0 m/s` and verify accurate slope and ascent accumulation.
+  4. *Tier 1 Targeted Regression Execution (`TST-FIL-023.4`)*:
+     • Execute `./gradlew :app:testDebugUnitTest --tests "com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFusedTest" --tests "com.atrainingtracker.banalservice.odometry.UnicycleOdometryEkfTest" --tests "com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest" --tests "com.atrainingtracker.banalservice.odometry.KinematicAltitudeSlopeEkfTest" --tests "com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceStationaryJitterTest" --tests "com.atrainingtracker.banalservice.odometry.OdometrySimulationTest"` asserting 100% pass rate with zero `src/main` source-reading calls (`REQ-PRO-049.1`; `Localization parity: N/A - no UI strings`).
+
+### TST-CON-048: **Offline EditDeviceDialog Radar Tail Light Config, Hydration & StVZO Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Tickets**: `ATT-8450`
+- **Requirement(s)**: `REQ-CON-048` (`REQ-CON-048.1`..`REQ-CON-048.4`)
+- **Component**: `EditDeviceDialog.kt`, `RadarLightController.kt`, `strings_radar.xml`, `RadarLightControllerTest.kt`, `EditDeviceDialogRadarLightTest.kt`, `TranslationParityTest.kt`
+- **Test Type**: Unit
+- **Verification Method**: Unit
+- **Procedure**:
+  1. *Offline Visibility, Radar-Only Exclusion & Apply-on-Connect Hint Tests (`TST-CON-048.1`, `EditDeviceDialogRadarLightTest.kt`)*:
+     • Render `EditDeviceDialog` / `RadarLightControlSection` via Robolectric `createComposeRule()` for `DeviceType.BIKE_RADAR` (`RearVue8`) with `isConnected = false`, `isSimulating = false`, `isStvzo = false`; assert `Automatik` and all 5 ascending modes (`OFF`, `PELOTON`, `SOLID`, `NIGHT_FLASH`, `DAY_FLASH`) plus the localized offline hint are displayed, and zero StVZO notice is shown.
+     • Assert section is hidden when `deviceName` identifies `RVR315` offline and when `isConnected = true`, `isLightControlAvailable = false`, `isSimulating = false`.
+  2. *Offline Mode Persistence, Cold-Start Hydration & StVZO Disconnect Reset Tests (`TST-CON-048.2`, `RadarLightControllerTest.kt`)*:
+     • Verify offline `setManualLightMode(SOLID)` / `setAutoMode()` updates effective UI selection (`preferredMode` / `isAutoMode`) and persists to `TuningPreferencesDataStore` without highlighting `OFF`.
+     • Verify cold-start DataStore hydration restores persisted `isAutoMode` and `preferredMode` prior to any workout start, and verify `unregisterRadarDevice()` resets `_isStvzo` to `false`.
+  3. *Offline StVZO Multi-Mode, Light/Dark `@Preview` & `Rule 8.5` PNG Tests (`TST-CON-048.3`, `EditDeviceDialogRadarLightTest.kt`)*:
+     • Verify offline StVZO state (`isConnected = false`, `isStvzo = true`) renders `Automatik`, `OFF`, `SOLID` with StVZO notice while pruning flashing modes, and verify offline Multi-Mode rendering, Light/Dark `@Preview` composables, and `Rule 8.5` PNG capture inspection with zero `app/src/main` source reads (`REQ-PRO-049.1`).
+  4. *9-Language Localization Parity & Targeted Regression (`TST-CON-048.4`, `TranslationParityTest.kt`)*:
+     • Verify 100% key and format parity across all 9 `strings_radar.xml` locales (`values`, `de`, `es`, `fr`, `it`, `ja`, `nl`, `pl`, `pt`), and execute targeted Gradle unit and Compose UI tests asserting 100% pass rate.
 
 
+---
+
+## Change History
+
+| Version | Date | Author | Ticket | Summary of Changes |
+| :--- | :--- | :--- | :--- | :--- |
+| `1.0.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Added standardized `DOC-TST-TRK` work-product control header and Change History. |
+| `1.0.1` | 2026-11-17 | AI Agent (`ATT-8450`) | `ATT-8450` | Added `TST-CON-048` [Planned] and cross-referenced `TST-CON-031.5` for offline `EditDeviceDialog` radar light config. |
+| `1.0.2` | 2026-11-17 | AI Agent (`ATT-8450`) | `ATT-8450` | Promoted `TST-CON-048` to `[Implemented]` following Stage 4 unit & Compose UI test construction. |
+| `1.0.3` | 2026-11-17 | AI Agent (`ATT-8450`) | `ATT-8450` | Promoted `TST-CON-048` to `[Verified]` in Stage 5 following post-rebase verification. |

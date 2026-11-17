@@ -1,6 +1,9 @@
 # ADR-001: Java Core Services Architecture Decision Record & Prioritized Migration Strategy
 
-- **Status**: Approved
+- **Document ID**: `DOC-ARC-ADR001`
+- **Version**: 1.1.0
+- **Status**: Reviewed
+- **Approver**: Pending PO Sign-Off
 - **Deciders**: Architecture Board, Dual-Agent Pair (Implementer / Reviewer)
 - **Date**: 2026-11-14
 - **Target Release**: `5.1.0` (Active Sprint: `2026-46.6`)
@@ -339,3 +342,12 @@ Per Product Owner decision recorded on 2026-11-14 (see comments in `ATT-7566`, `
 ### Negative / Mitigated Consequences
 - **Transient Interoperability Overhead**: Temporary maintenance of `@JvmStatic` / `@JvmOverloads` annotations while Java callers remain. Mitigated by bottom-up tier ordering.
 - **Migration Effort**: Requires disciplined test characterisation before code conversion. Mitigated by limiting ticket sizes to <= 3 SP.
+
+---
+
+## Change History
+
+| Version | Date | Author | Ticket | Summary of Changes |
+| :--- | :--- | :--- | :--- | :--- |
+| `1.0.0` | 2026-11-14 | AI Agent (`ATT-7566`) | `ATT-7566`, `ATT-8115` | Initial Java core services migration strategy ADR. |
+| `1.1.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Added `DOC-ARC-ADR001` header, reset self-declared `Approved` to `Reviewed` (`Pending PO Sign-Off`), and added Change History. |

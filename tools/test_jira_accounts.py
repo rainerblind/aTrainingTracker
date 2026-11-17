@@ -9,6 +9,7 @@ Verifies:
 
 import unittest
 import os
+import re
 import sys
 import io
 import base64
@@ -689,8 +690,9 @@ class TestJiraCliTooling(unittest.TestCase):
             self.assertEqual(payload["target"], "sprint_2026-46.3")
             self.assertEqual(payload["unit_tests"]["total"], 1)
 
+    @patch("jira_util.get_config", return_value={"JIRA_URL": "https://atrainingtracker.atlassian.net"})
     @patch("jira_util.jira_request")
-    def test_qa_audit_command_generates_markdown(self, mock_request):
+    def test_qa_audit_command_generates_markdown(self, mock_request, _mock_cfg):
         """TST-PRO-061.1: Verify qa-audit CLI command generates structured report for >= 2 tickets."""
         stages = [
             (1, "[Analysis]"),
@@ -805,11 +807,12 @@ class TestJiraCliTooling(unittest.TestCase):
             self.assertIn("ATT-6150", content)
             self.assertIn("COMPLIANT", content)
 
+    @patch("jira_util.get_config", return_value={"JIRA_URL": "https://atrainingtracker.atlassian.net"})
     @patch("jira_util.jira_request")
-    def test_qa_audit_rejects_non_compliant_tickets(self, mock_request):
+    def test_qa_audit_rejects_non_compliant_tickets(self, mock_request, _mock_cfg):
         """TST-PRO-061.1: Verify qa-audit flags missing deliverables, incomplete gates, role violation, and missing commits."""
         def mock_jira_side_effect(url, method="GET", payload=None, role="coordinator"):
-            if "/rest/agile/1.0/board" in url and "/sprint" not in url:
+            if "/rest/agile/1.0/board" in url and "/sprint" not in url and "/backlog" not in url:
                 return {"values": [{"id": 1, "name": "ATT Board"}]}
             elif "/rest/agile/1.0/board/1/sprint?state=active" in url:
                 return {"values": [{"id": 440, "name": "2026-46.3", "state": "active"}]}
@@ -848,6 +851,10 @@ class TestJiraCliTooling(unittest.TestCase):
                         }
                     ]
                 }
+            elif "/rest/api/3/search/jql" in url or "/rest/api/2/search" in url:
+                return {"issues": [], "isLast": True}
+            elif method == "POST" and "/rest/api/2/issue" in url:
+                return {"key": "ATT-9991"}
             return {}
 
         mock_request.side_effect = mock_jira_side_effect
@@ -872,7 +879,8 @@ class TestJiraCliTooling(unittest.TestCase):
             self.assertIn("Corrective Action Ticket:", content)
             self.assertIn("**ATT-9001**:", content)
             self.assertIn("**ATT-9003**:", content)
-            self.assertIn("[ATT-CA-", content)
+            self.assertIn("[ATT-9991](https://atrainingtracker.atlassian.net/browse/ATT-9991)", content)
+            self.assertNotIn("ATT-CA-", content)
 
     @patch("jira_util.jira_request")
     def test_qa_audit_enforces_independent_role(self, mock_request):
@@ -889,11 +897,12 @@ class TestJiraCliTooling(unittest.TestCase):
                 jira_util.qa_audit(role="agent1", out_path=out_file, repo_root=tmpdir)
             self.assertIn("Auditor role cannot be 'agent1'", str(cm2.exception))
 
+    @patch("jira_util.get_config", return_value={"JIRA_URL": "https://atrainingtracker.atlassian.net"})
     @patch("jira_util.jira_request")
-    def test_qa_audit_dynamic_sample_size(self, mock_request):
+    def test_qa_audit_dynamic_sample_size(self, mock_request, _mock_cfg):
         """TST-PRO-091.2: Verify qa-audit dynamically scales sample size to >= max(2, ceil(N * 0.10))."""
         def mock_jira_side_effect(url, method="GET", payload=None, role="qa"):
-            if "/rest/agile/1.0/board" in url and "/sprint" not in url:
+            if "/rest/agile/1.0/board" in url and "/sprint" not in url and "/backlog" not in url:
                 return {"values": [{"id": 1, "name": "ATT Board"}]}
             elif "/rest/agile/1.0/board/1/sprint?state=active" in url:
                 return {"values": [{"id": 440, "name": "2026-46.3", "state": "active"}]}
@@ -911,6 +920,10 @@ class TestJiraCliTooling(unittest.TestCase):
                     for idx in range(25)
                 ]
                 return {"issues": issues, "total": 25}
+            elif "/rest/api/3/search/jql" in url or "/rest/api/2/search" in url:
+                return {"issues": [], "isLast": True}
+            elif method == "POST" and "/rest/api/2/issue" in url:
+                return {"key": "ATT-9992"}
             return {}
 
         mock_request.side_effect = mock_jira_side_effect
@@ -2057,8 +2070,9 @@ Verdict: PASS."""
         self.assertIn("Single-OS User", risk_text)
         self.assertIn("ATT-8151", risk_text)
 
+    @patch("jira_util.get_config", return_value={"JIRA_URL": "https://atrainingtracker.atlassian.net"})
     @patch("jira_util.jira_request")
-    def test_tst_pro_091_7_living_doc_shard_resolution(self, mock_request):
+    def test_tst_pro_091_7_living_doc_shard_resolution(self, mock_request, _mock_cfg):
         # TST-PRO-091.7: Living Document Shard Resolution Test
         import subprocess
         def mock_jira(url, method="GET", payload=None, role="coordinator"):
@@ -2168,8 +2182,9 @@ Verdict: PASS."""
         extracted = jira_util.extract_text_from_description(adf)
         self.assertIn("REQ-PRO-060", extracted)
 
+    @patch("jira_util.get_config", return_value={"JIRA_URL": "https://atrainingtracker.atlassian.net"})
     @patch("jira_util.jira_request")
-    def test_tst_pro_091_9_account_id_role_separation(self, mock_request):
+    def test_tst_pro_091_9_account_id_role_separation(self, mock_request, _mock_cfg):
         # TST-PRO-091.9: AccountId Role Separation Test
         def make_mock(reviewer_account_id):
             return {
@@ -2218,9 +2233,11 @@ Verdict: PASS."""
         with tempfile.TemporaryDirectory() as tmpdir:
             # 1. Review by Agent 2 (valid separation)
             mock_request.side_effect = lambda url, **kwargs: (
-                {"values": [{"id": 1, "name": "B"}]} if "/board" in url and "/sprint" not in url
+                {"values": [{"id": 1, "name": "B"}]} if "/board" in url and "/sprint" not in url and "/backlog" not in url
                 else {"values": [{"id": 440, "name": "S", "state": "active"}]} if "/sprint?state=active" in url
                 else make_mock(agent2_id) if "/sprint/440/issue" in url
+                else {"issues": [], "isLast": True} if "/rest/api/3/search/jql" in url or "/rest/api/2/search" in url
+                else {"key": "ATT-9993"} if kwargs.get("method") == "POST" and "/rest/api/2/issue" in url
                 else {"values": [{"author": {"accountId": jira_util.ROLE_ACCOUNT_IDS["human"]}, "items": [{"field": "status", "toString": "Approved"}]}]}
             )
             _, res_valid = jira_util.qa_audit(sample_size=1, out_path=os.path.join(tmpdir, "a1.md"), role="qa", repo_root=tmpdir)
@@ -2228,16 +2245,19 @@ Verdict: PASS."""
 
             # 2. Review by Agent 1 (violation)
             mock_request.side_effect = lambda url, **kwargs: (
-                {"values": [{"id": 1, "name": "B"}]} if "/board" in url and "/sprint" not in url
+                {"values": [{"id": 1, "name": "B"}]} if "/board" in url and "/sprint" not in url and "/backlog" not in url
                 else {"values": [{"id": 440, "name": "S", "state": "active"}]} if "/sprint?state=active" in url
                 else make_mock(agent1_id) if "/sprint/440/issue" in url
+                else {"issues": [], "isLast": True} if "/rest/api/3/search/jql" in url or "/rest/api/2/search" in url
+                else {"key": "ATT-9993"} if kwargs.get("method") == "POST" and "/rest/api/2/issue" in url
                 else {"values": [{"author": {"accountId": jira_util.ROLE_ACCOUNT_IDS["human"]}, "items": [{"field": "status", "toString": "Approved"}]}]}
             )
             _, res_invalid = jira_util.qa_audit(sample_size=1, out_path=os.path.join(tmpdir, "a2.md"), role="qa", repo_root=tmpdir)
             self.assertFalse(res_invalid[0]["role_sep_pass"])
 
+    @patch("jira_util.get_config", return_value={"JIRA_URL": "https://atrainingtracker.atlassian.net"})
     @patch("jira_util.jira_request")
-    def test_tst_pro_091_10_seeded_random_sampling(self, mock_request):
+    def test_tst_pro_091_10_seeded_random_sampling(self, mock_request, _mock_cfg):
         # TST-PRO-091.10: Seeded Random Sampling Test
         ten_issues = [
             {
@@ -2253,12 +2273,16 @@ Verdict: PASS."""
         ]
 
         def mock_jira(url, **kwargs):
-            if "/board" in url and "/sprint" not in url:
+            if "/board" in url and "/sprint" not in url and "/backlog" not in url:
                 return {"values": [{"id": 1, "name": "B"}]}
             elif "/sprint?state=active" in url:
                 return {"values": [{"id": 440, "name": "S", "state": "active"}]}
             elif "/sprint/440/issue" in url:
                 return {"issues": ten_issues}
+            elif "/rest/api/3/search/jql" in url or "/rest/api/2/search" in url:
+                return {"issues": [], "isLast": True}
+            elif kwargs.get("method") == "POST" and "/rest/api/2/issue" in url:
+                return {"key": "ATT-9994"}
             return {}
 
         mock_request.side_effect = mock_jira
@@ -2289,12 +2313,15 @@ Verdict: PASS."""
             for k in keys1:
                 self.assertIn(k, report_content)
 
+    @patch("jira_util.get_config", return_value={"JIRA_URL": "https://atrainingtracker.atlassian.net"})
     @patch("jira_util.jira_request")
-    def test_tst_pro_091_11_dedicated_corrective_action_creation_and_deduplication(self, mock_request):
-        # TST-PRO-091.11: Dedicated Corrective Action Ticket Creation & Deduplication Test
+    def test_tst_pro_091_11_dedicated_corrective_action_creation_and_deduplication(self, mock_request, _mock_cfg):
+        # TST-PRO-091.11 & TST-PRO-118.1: Dedicated Corrective Action Ticket Creation (Cloud v3 search + issuetype 10008) & Deduplication
         created_issues = []
+        search_calls = []
+
         def mock_jira(url, method="GET", payload=None, role="qa"):
-            if "/rest/agile/1.0/board" in url and "/sprint" not in url:
+            if "/rest/agile/1.0/board" in url and "/sprint" not in url and "/backlog" not in url:
                 return {"values": [{"id": 1, "name": "B"}]}
             elif "/sprint?state=active" in url:
                 return {"values": [{"id": 440, "name": "Sprint 2026-48.1", "state": "active"}]}
@@ -2325,12 +2352,15 @@ Verdict: PASS."""
                         },
                     ]
                 }
+            elif "/rest/api/3/search/jql" in url:
+                search_calls.append({"url": url, "method": method, "payload": payload})
+                return {"issues": [], "isLast": True}
+            elif "/rest/api/2/issue/ATT-8138" in url:
+                return {"key": "ATT-8138", "fields": {"issuetype": {"name": "Epic"}}}
             elif method == "POST" and "/rest/api/2/issue" in url:
-                new_key = f"ATT-CA-{len(created_issues) + 100}"
+                new_key = f"ATT-99{10 + len(created_issues)}"
                 created_issues.append({"key": new_key, "payload": payload})
                 return {"key": new_key}
-            elif "/rest/api/2/search" in url:
-                return {"issues": []}
             return {}
 
         mock_request.side_effect = mock_jira
@@ -2342,7 +2372,15 @@ Verdict: PASS."""
             self.assertFalse(results[0]["compliant"])
             self.assertFalse(results[1]["compliant"])
 
-            # Verify deduplicated corrective action ticket created
+            # Verify Cloud v3 search endpoint used and issuetype_id="10008" (Verbesserung)
+            self.assertGreaterEqual(len(search_calls), 1)
+            self.assertTrue(all(sc["method"] == "POST" for sc in search_calls))
+            self.assertGreaterEqual(len(created_issues), 1)
+            for ci in created_issues:
+                self.assertEqual(ci["payload"]["fields"]["issuetype"]["id"], "10008")
+                self.assertEqual(ci["payload"]["fields"]["parent"]["key"], "ATT-8138")
+
+            # Verify deduplicated corrective action tickets created across both non-compliant tickets
             self.assertIn("ca_keys", results[0])
             self.assertIn("ca_keys", results[1])
             self.assertEqual(results[0]["ca_keys"], results[1]["ca_keys"])
@@ -2352,8 +2390,256 @@ Verdict: PASS."""
             with open(out_file, "r", encoding="utf-8") as f:
                 content = f.read()
             self.assertIn("Corrective Action Ticket:", content)
+            self.assertIn("https://atrainingtracker.atlassian.net/browse/ATT-9910", content)
+            self.assertNotIn("ATT-CA-", content)
+            self.assertNotIn("rainerblind.atlassian.net", content)
             self.assertNotIn("Corrective Action Ticket: [ATT-9401]", content)
             self.assertNotIn("Corrective Action Ticket: [ATT-9403]", content)
+
+    @patch("jira_util.get_config", return_value={"JIRA_URL": "https://atrainingtracker.atlassian.net"})
+    @patch("jira_util.jira_request")
+    def test_tst_pro_118_2_fail_loud_on_ca_api_failure(self, mock_request, _mock_cfg):
+        # TST-PRO-118.2: qa_audit must fail loudly on CA search/creation errors rather than writing ATT-CA-* placeholders
+        def mock_jira_create_fail(url, method="GET", payload=None, role="qa"):
+            if "/rest/agile/1.0/board" in url and "/sprint" not in url and "/backlog" not in url:
+                return {"values": [{"id": 1, "name": "B"}]}
+            elif "/sprint?state=active" in url:
+                return {"values": [{"id": 440, "name": "Sprint 2026-48.1", "state": "active"}]}
+            elif "/rest/agile/1.0/sprint/440/issue" in url:
+                return {
+                    "issues": [
+                        {
+                            "key": "ATT-9501",
+                            "fields": {
+                                "summary": "Failing ticket",
+                                "status": {"name": "Erledigt"},
+                                "issuetype": {"subtask": False},
+                                "subtasks": [],
+                            },
+                        }
+                    ]
+                }
+            elif "/rest/api/3/search/jql" in url:
+                return {"issues": [], "isLast": True}
+            elif method == "POST" and "/rest/api/2/issue" in url:
+                raise RuntimeError("HTTP 400 Bad Request: invalid issuetype")
+            return {}
+
+        mock_request.side_effect = mock_jira_create_fail
+        with tempfile.TemporaryDirectory() as tmpdir:
+            out_file = os.path.join(tmpdir, "audit.md")
+            with self.assertRaises(RuntimeError) as ctx:
+                jira_util.qa_audit(sample_size=1, out_path=out_file, role="qa", repo_root=tmpdir)
+            self.assertIn("400 Bad Request", str(ctx.exception))
+            self.assertFalse(os.path.exists(out_file))
+
+    @patch("jira_util.get_config", return_value={"JIRA_URL": "https://atrainingtracker.atlassian.net"})
+    @patch("jira_util.jira_request")
+    def test_tst_pro_118_3_and_4_heuristics_gate_headers_commits_and_wildcards(self, mock_request, _mock_cfg):
+        # TST-PRO-118.3 & TST-PRO-118.4: Gate <1..5> PASS headers, [KEY]/fix(KEY):/(KEY) commits, and REQ-FIL-* wildcard parity
+        import subprocess
+        agent1_id = jira_util.ROLE_ACCOUNT_IDS["agent1"]
+        agent2_id = jira_util.ROLE_ACCOUNT_IDS["agent2"]
+
+        def make_subtasks(author_id, body_text):
+            return [
+                {
+                    "key": f"ATT-96{i}",
+                    "fields": {"summary": f"[{lbl}] Task", "status": {"name": "Erledigt"}},
+                    "comments": [{"author": {"accountId": author_id, "displayName": "Agent 2 (Reviewer)"}, "body": body_text}],
+                }
+                for i, lbl in enumerate(["Analysis", "Req & Test Spec", "Impl-Plan", "Implementation", "Test"], start=1)
+            ]
+
+        def mock_jira(url, method="GET", payload=None, role="qa"):
+            if "/rest/agile/1.0/board" in url and "/sprint" not in url and "/backlog" not in url:
+                return {"values": [{"id": 1, "name": "B"}]}
+            elif "/sprint?state=active" in url:
+                return {"values": [{"id": 440, "name": "2026-11-17_01_Früh", "state": "active"}]}
+            elif "/rest/agile/1.0/sprint/440/issue" in url:
+                return {
+                    "issues": [
+                        {
+                            "key": "ATT-9601",
+                            "fields": {
+                                "summary": "EKF Barometer Fix",
+                                "description": "Refines REQ-FIL-016",
+                                "status": {"name": "Final Review (Human)"},
+                                "issuetype": {"subtask": False},
+                                "subtasks": make_subtasks(agent2_id, "[Automated comment by AI Agent 2 (Auditor)]\n\nGate 1 PASS — verified"),
+                            },
+                        },
+                        {
+                            "key": "ATT-9602",
+                            "fields": {
+                                "summary": "Governance Fix",
+                                "description": "Implements REQ-PRO-118",
+                                "status": {"name": "Final Review (Human)"},
+                                "issuetype": {"subtask": False},
+                                "subtasks": make_subtasks(agent2_id, "[Automated comment by AI Agent 2 (Auditor)]\n\nh2. Gate 2 Audit PASS"),
+                            },
+                        },
+                        {
+                            "key": "ATT-9603",
+                            "fields": {
+                                "summary": "Self-approved violation",
+                                "description": "Implements REQ-PRO-118",
+                                "status": {"name": "Final Review (Human)"},
+                                "issuetype": {"subtask": False},
+                                "subtasks": make_subtasks(agent1_id, "Gate 1 PASS"),
+                            },
+                        },
+                    ]
+                }
+            elif "/changelog" in url:
+                return {"values": [{"author": {"accountId": jira_util.ROLE_ACCOUNT_IDS["human"]}, "items": [{"field": "status", "toString": "Approved"}]}]}
+            elif "/rest/api/3/search/jql" in url:
+                return {"issues": [], "isLast": True}
+            elif method == "POST" and "/rest/api/2/issue" in url:
+                return {"key": "ATT-9995"}
+            return {}
+
+        mock_request.side_effect = mock_jira
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            subprocess.run(["git", "init"], cwd=tmpdir, check=True, stdout=subprocess.DEVNULL)
+            subprocess.run(["git", "config", "user.name", "Tester"], cwd=tmpdir, check=True)
+            subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=tmpdir, check=True)
+            subprocess.run(["git", "commit", "--allow-empty", "-m", "[ATT-9601] Fix EKF offset"], cwd=tmpdir, check=True, stdout=subprocess.DEVNULL)
+            subprocess.run(["git", "commit", "--allow-empty", "-m", "fix(ATT-9601): heal Stage 6"], cwd=tmpdir, check=True, stdout=subprocess.DEVNULL)
+            subprocess.run(["git", "commit", "--allow-empty", "-m", "feat(governance): dual-vendor (ATT-9602)"], cwd=tmpdir, check=True, stdout=subprocess.DEVNULL)
+            subprocess.run(["git", "commit", "--allow-empty", "-m", "ATT-9603: Self-approved"], cwd=tmpdir, check=True, stdout=subprocess.DEVNULL)
+
+            for k in ["ATT-9601", "ATT-9602", "ATT-9603"]:
+                for subfolder, suffix in [("analysis", "_analysis.md"), ("test_specs", "_test_spec.md"), ("plans", "_plan.md"), ("walkthroughs", "_walkthrough.md")]:
+                    d = os.path.join(tmpdir, "docs", "engineering", subfolder)
+                    os.makedirs(d, exist_ok=True)
+                    with open(os.path.join(d, f"{k}{suffix}"), "w", encoding="utf-8") as f:
+                        if k == "ATT-9601":
+                            f.write("Affected Requirements: Net-new `REQ-FIL-*` refining `REQ-FIL-016`.\n")
+                        else:
+                            f.write("Implements `REQ-PRO-118`.\n")
+
+            req_dir = os.path.join(tmpdir, "docs", "requirements")
+            os.makedirs(req_dir, exist_ok=True)
+            with open(os.path.join(req_dir, "req_test.md"), "w", encoding="utf-8") as f:
+                f.write("### REQ-FIL-016: EKF [Verified]\n### REQ-PRO-118: QA [Verified]\n")
+
+            out_file = os.path.join(tmpdir, "audit.md")
+            _, results = jira_util.qa_audit(sample_size=3, out_path=out_file, role="qa", repo_root=tmpdir)
+            by_key = {r["key"]: r for r in results}
+
+            self.assertTrue(by_key["ATT-9601"]["compliant"], by_key["ATT-9601"])
+            self.assertTrue(by_key["ATT-9601"]["role_sep_pass"])
+            self.assertTrue(by_key["ATT-9601"]["living_doc_pass"])
+            self.assertTrue(by_key["ATT-9601"]["commit_pass"])
+
+            self.assertTrue(by_key["ATT-9602"]["compliant"], by_key["ATT-9602"])
+            self.assertTrue(by_key["ATT-9602"]["role_sep_pass"])
+            self.assertTrue(by_key["ATT-9602"]["commit_pass"])
+
+            # agent1 posting "Gate 1 PASS" must STILL be caught as a 4-Augen role violation
+            self.assertFalse(by_key["ATT-9603"]["role_sep_pass"])
+            self.assertFalse(by_key["ATT-9603"]["compliant"])
+
+    @patch("jira_util.get_config", return_value={"JIRA_URL": "https://atrainingtracker.atlassian.net"})
+    @patch("jira_util.jira_request")
+    def test_tst_pro_118_archived_sprint_label_fallback(self, mock_request, _mock_cfg):
+        # Rule 5 mocked test: when a closed sprint's tickets were archived to 453 with label sprint-<s_name>,
+        # qa_audit falls back to paged_jql_search on labels in ("sprint-<s_name>") and audits >= 2 tickets.
+        import subprocess
+        agent2_id = jira_util.ROLE_ACCOUNT_IDS["agent2"]
+        fallback_jql_queries = []
+
+        def make_subtasks(prefix):
+            return [
+                {"key": f"{prefix}-{i}", "fields": {"summary": f"[{lbl}] Task", "status": {"name": "Erledigt"}}}
+                for i, lbl in enumerate(["Analysis", "Req & Test Spec", "Impl-Plan", "Implementation", "Test"], start=1)
+            ]
+
+        def mock_jira(url, method="GET", payload=None, role="agent2"):
+            if "/rest/agile/1.0/board" in url and "/sprint" not in url and "/backlog" not in url:
+                return {"values": [{"id": 1, "name": "B"}]}
+            elif "/rest/agile/1.0/board/1/sprint" in url and "issue" not in url:
+                return {"values": [{"id": 455, "name": "2026-11-16_03_Nacht", "state": "closed"}]}
+            elif "/rest/agile/1.0/sprint/455/issue" in url:
+                return {"issues": [], "total": 0}
+            elif "/rest/api/3/search/jql" in url:
+                jql = (payload or {}).get("jql", "")
+                fallback_jql_queries.append(jql)
+                return {
+                    "issues": [
+                        {
+                            "key": "ATT-8426",
+                            "fields": {
+                                "summary": "Dual-Vendor Reviews",
+                                "description": "Implements REQ-PRO-095",
+                                "status": {"name": "Erledigt"},
+                                "issuetype": {"subtask": False},
+                                "subtasks": make_subtasks("ATT-852"),
+                            },
+                        },
+                        {
+                            "key": "ATT-8462",
+                            "fields": {
+                                "summary": "EditSensorFieldDialog ordering",
+                                "description": "Implements REQ-UI-2782",
+                                "status": {"name": "Erledigt"},
+                                "issuetype": {"subtask": False},
+                                "subtasks": make_subtasks("ATT-854"),
+                            },
+                        },
+                        {
+                            "key": "ATT-8500",
+                            "fields": {
+                                "summary": "Review & Retro - 2026-11-16_03_Nacht",
+                                "status": {"name": "Erledigt"},
+                                "issuetype": {"subtask": False},
+                                "subtasks": [],
+                            },
+                        },
+                    ],
+                    "isLast": True,
+                }
+            elif "/comment" in url:
+                return {
+                    "comments": [
+                        {
+                            "author": {"accountId": agent2_id, "displayName": "Agent 2 (Reviewer)"},
+                            "body": "[Automated comment by AI Agent 2 (Auditor)]\n\nGate 1 PASS — verified",
+                        }
+                    ]
+                }
+            elif "/changelog" in url:
+                return {"values": [{"author": {"accountId": jira_util.ROLE_ACCOUNT_IDS["human"]}, "items": [{"field": "status", "toString": "Approved"}]}]}
+            return {}
+
+        mock_request.side_effect = mock_jira
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            subprocess.run(["git", "init"], cwd=tmpdir, check=True, stdout=subprocess.DEVNULL)
+            subprocess.run(["git", "config", "user.name", "Tester"], cwd=tmpdir, check=True)
+            subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=tmpdir, check=True)
+            subprocess.run(["git", "commit", "--allow-empty", "-m", "feat(governance): dual-vendor (ATT-8426)"], cwd=tmpdir, check=True, stdout=subprocess.DEVNULL)
+            subprocess.run(["git", "commit", "--allow-empty", "-m", "ATT-8462: EditSensorFieldDialog"], cwd=tmpdir, check=True, stdout=subprocess.DEVNULL)
+
+            for k in ["ATT-8426", "ATT-8462"]:
+                for subfolder, suffix in [("analysis", "_analysis.md"), ("test_specs", "_test_spec.md"), ("plans", "_plan.md"), ("walkthroughs", "_walkthrough.md")]:
+                    d = os.path.join(tmpdir, "docs", "engineering", subfolder)
+                    os.makedirs(d, exist_ok=True)
+                    with open(os.path.join(d, f"{k}{suffix}"), "w", encoding="utf-8") as f:
+                        f.write(f"# {k}\n")
+
+            req_dir = os.path.join(tmpdir, "docs", "requirements")
+            os.makedirs(req_dir, exist_ok=True)
+            with open(os.path.join(req_dir, "req_test.md"), "w", encoding="utf-8") as f:
+                f.write("### REQ-PRO-095: Reviews [Verified]\n### REQ-UI-2782: Dialog [Verified]\n")
+
+            out_file = os.path.join(tmpdir, "sprint_2026-11-16_03_nacht.md")
+            _, results = jira_util.qa_audit(sprint_arg="2026-11-16_03_Nacht", out_path=out_file, role="agent2", repo_root=tmpdir)
+            self.assertEqual(len(results), 2)
+            self.assertTrue(all(r["compliant"] for r in results), results)
+            self.assertTrue(any('labels in ("sprint-2026-11-16_03_Nacht")' in q for q in fallback_jql_queries), fallback_jql_queries)
 
     def test_tst_pro_091_13_ceremony2_retrospective_qa_tracking_protocol(self):
         # TST-PRO-091.13: Ceremony 2 Retrospective QA Tracking Protocol Test
@@ -2623,6 +2909,188 @@ class TestGateBypassPrevention(unittest.TestCase):
         }
         status = jira_util.print_status("ATT-400", role="coordinator")
         self.assertEqual(status, "Analysis")
+
+
+class TestSup9ProblemResolution(unittest.TestCase):
+    """TST-PRO-121.2 & TST-PRO-121.4: SUP.9 Bug resolution states, fix-verification gate, and process-escape creation."""
+
+    @patch("jira_util.transition_issue")
+    @patch("jira_util.add_comment")
+    @patch("jira_util.jira_request")
+    @patch("jira_util.get_config", return_value={"JIRA_URL": "https://example.atlassian.net"})
+    def test_tst_pro_121_2_resolve_bug_supports_all_states_with_single_jira_resolution(
+        self, _mock_cfg, mock_request, mock_comment, mock_transition
+    ):
+        """TST-PRO-121.2: resolve-bug records resolution-* labels cleanly even when Jira only has Fertig (10000)."""
+        base_bug = {
+            "key": "ATT-910",
+            "fields": {
+                "issuetype": {"id": "10006", "name": "Bug", "subtask": False},
+                "status": {"name": "Analysis"},
+                "labels": ["severity-minor"],
+                "comment": {"comments": []},
+                "subtasks": [],
+            },
+        }
+        resolutions_api = [{"id": "10000", "name": "Fertig"}]
+
+        # 1. Duplicate requires --duplicate-of
+        with self.assertRaises(SystemExit) as cm:
+            jira_util.resolve_bug("ATT-910", "duplicate", role="agent1")
+        self.assertEqual(cm.exception.code, 1)
+
+        # 2. Duplicate with --duplicate-of records label & advances to Final Review (Human)
+        mock_request.side_effect = [base_bug, resolutions_api, {}]
+        res_dup = jira_util.resolve_bug(
+            "ATT-910", "duplicate", duplicate_of="ATT-800", reason="Same root cause as ATT-800", role="agent1"
+        )
+        self.assertEqual(res_dup["label"], "resolution-duplicate")
+        self.assertIsNone(res_dup["jira_resolution"])
+        put_payload = mock_request.call_args_list[2][1]["payload"]
+        self.assertIn("resolution-duplicate", put_payload["fields"]["labels"])
+        self.assertIn("duplicate-of-ATT-800", put_payload["fields"]["labels"])
+        mock_comment.assert_called()
+        mock_transition.assert_called_with("ATT-910", "final review (human)", role="agent1", inject_context=False)
+
+        # 3. Rejected & Cannot Reproduce
+        for arg, expected_lbl in [("rejected", "resolution-rejected"), ("cannot-reproduce", "resolution-cannot-reproduce")]:
+            mock_request.side_effect = [base_bug, resolutions_api, {}]
+            out = jira_util.resolve_bug("ATT-910", arg, reason="Out of scope / non-reproducible", role="agent1")
+            self.assertEqual(out["label"], expected_lbl)
+
+        # 4. Fixed requires fix-verification evidence
+        mock_request.side_effect = [base_bug]
+        with self.assertRaises(SystemExit) as cm_fix:
+            jira_util.resolve_bug("ATT-910", "fixed", reason="Changed a line", role="agent1")
+        self.assertEqual(cm_fix.exception.code, 1)
+
+        mock_request.side_effect = [base_bug, resolutions_api, {}]
+        out_fix = jira_util.resolve_bug(
+            "ATT-910", "fixed", reason="Reproduced crash and verified regression test TST-PRO-121", role="agent1"
+        )
+        self.assertEqual(out_fix["label"], "resolution-fixed")
+
+    def test_tst_pro_121_2_bug_fix_verification_gate_before_human_review(self):
+        """TST-PRO-121.2: Advancing Bug to Final Review (Human) or passing Stage 5 [Test] requires fix verification."""
+        with patch("jira_util.get_config", return_value={"JIRA_URL": "https://example.atlassian.net"}), \
+             patch("jira_util.jira_request") as mock_req, \
+             patch("jira_util.assign_issue"):
+            # Unverified Bug moving directly to Final Review (Human) is blocked
+            mock_req.side_effect = [
+                {"fields": {"issuetype": {"id": "10006", "name": "Bug", "subtask": False}, "status": {"name": "Test"}, "summary": "Bug", "parent": {}}},
+                {"transitions": [{"id": "9", "name": "Final Review (Human)", "to": {"name": "Final Review (Human)"}}]},
+                {"fields": {"labels": ["severity-major"], "comment": {"comments": []}, "subtasks": []}},
+            ]
+            with self.assertRaises(SystemExit) as cm:
+                jira_util.transition_issue("ATT-911", "final review (human)", role="agent1")
+            self.assertEqual(cm.exception.code, 1)
+
+            # Bug with resolution-fixed label advances cleanly to Final Review (Human)
+            mock_req.side_effect = [
+                {"fields": {"issuetype": {"id": "10006", "name": "Bug", "subtask": False}, "status": {"name": "Test"}, "summary": "Bug", "parent": {}}},
+                {"transitions": [{"id": "9", "name": "Final Review (Human)", "to": {"name": "Final Review (Human)"}}]},
+                {"fields": {"labels": ["severity-major", "resolution-fixed"], "comment": {"comments": []}, "subtasks": []}},
+                {},
+            ]
+            jira_util.transition_issue("ATT-911", "final review (human)", role="agent1")
+
+        # Gate 5 Stage 5 [Test] rejects Bug pass lacking fix-verification evidence
+        with patch("jira_util.get_config", return_value={"JIRA_URL": "https://example.atlassian.net"}), \
+             patch("jira_util.get_subtask_summary_and_desc", return_value=("[Test] Bug", "Ran build", "ATT-911")), \
+             patch("jira_util.jira_request", return_value={"fields": {"issuetype": {"id": "10006", "name": "Bug", "subtask": False}, "labels": []}}):
+            with self.assertRaises(SystemExit) as cm_g5:
+                jira_util.gate_verdict("ATT-912", "PASS", "Gate 5 PASS: [x] Checked tools/jira_util.py:10", role="agent2")
+            self.assertEqual(cm_g5.exception.code, 1)
+
+    @patch("jira_util.rank_at_top_of_backlog")
+    @patch("jira_util.resolve_valid_epic_key", side_effect=lambda k, role="agent1": k)
+    @patch("jira_util.jira_request")
+    @patch("jira_util.get_config", return_value={"JIRA_URL": "https://example.atlassian.net"})
+    def test_tst_pro_121_4_process_escape_bug_deduplication_and_revision_hook(
+        self, _mock_cfg, mock_request, _mock_epic, mock_rank
+    ):
+        """TST-PRO-121.4: create_process_escape_bug & gate-verdict REVISION deduplicate via real create_issue() + Cloud v3 search."""
+        stored_issues = []
+
+        def fake_jira_request(url, method="GET", payload=None, role="agent1"):
+            if url.endswith("/rest/api/3/search/jql"):
+                jql = (payload or {}).get("jql", "")
+                m = re.search(r'summary ~ "(?:\\")?([^"\\]+)(?:\\")?"', jql)
+                phrase = m.group(1).lower() if m else ""
+                matched = [
+                    it for it in stored_issues
+                    if not phrase or phrase in it["fields"]["summary"].lower()
+                ]
+                return {"issues": matched, "isLast": True}
+            if url.endswith("/rest/api/2/issue") and method == "POST":
+                fields = (payload or {}).get("fields", {})
+                new_key = f"ATT-{9950 + len(stored_issues)}"
+                stored_issues.append({
+                    "key": new_key,
+                    "fields": {
+                        "summary": fields.get("summary", ""),
+                        "status": {"name": "Zu erledigen"},
+                        "labels": list(fields.get("labels") or []),
+                        "issuetype": fields.get("issuetype"),
+                        "description": fields.get("description", ""),
+                    },
+                })
+                return {"key": new_key}
+            raise AssertionError(f"Unexpected jira_request call: {method} {url}")
+
+        mock_request.side_effect = fake_jira_request
+
+        # 1. No existing open process-escape Bug -> creates new Bug via real create_issue()
+        key1, created1 = jira_util.create_process_escape_bug(
+            "Tier-2 unit test failure on sprint", "Stacktrace details", severity="major", source="tier2", role="agent2"
+        )
+        self.assertEqual(key1, "ATT-9950")
+        self.assertTrue(created1)
+        self.assertEqual(len(stored_issues), 1)
+        self.assertEqual(stored_issues[0]["fields"]["issuetype"]["id"], "10006")
+        self.assertEqual(stored_issues[0]["fields"]["summary"], "Process-Escape: Tier-2 unit test failure on sprint")
+        self.assertIn("process-escape", stored_issues[0]["fields"]["labels"])
+        self.assertIn("severity-major", stored_issues[0]["fields"]["labels"])
+        mock_rank.assert_called_once_with("ATT-9950", role="agent2")
+
+        # 2. Repeated call -> deduplicates cleanly against stored summary from real create_issue()
+        key2, created2 = jira_util.create_process_escape_bug(
+            "Tier-2 unit test failure on sprint", "Duplicate details", severity="major", source="tier2", role="agent2"
+        )
+        self.assertEqual(key2, "ATT-9950")
+        self.assertFalse(created2)
+        self.assertEqual(len(stored_issues), 1)
+
+        # 3. Legacy bracketed or explicit Process-Escape prefix -> still deduplicates to ATT-9950
+        for variant in (
+            "[Process-Escape] Tier-2 unit test failure on sprint",
+            "Process-Escape: Tier-2 unit test failure on sprint",
+        ):
+            key_var, created_var = jira_util.create_process_escape_bug(
+                variant, "Variant duplicate", severity="major", source="tier2", role="agent2"
+            )
+            self.assertEqual(key_var, "ATT-9950")
+            self.assertFalse(created_var)
+        self.assertEqual(len(stored_issues), 1)
+
+        # 4. gate-verdict REVISION with file_escape_bug=True files & deduplicates via real create_issue()
+        with patch("jira_util.assign_issue"), \
+             patch("jira_util.add_comment"), \
+             patch("jira_util.transition_issue"), \
+             patch("jira_util.get_subtask_summary_and_desc", return_value=("[Implementation] Fix", "Desc", "ATT-920")):
+            jira_util.gate_verdict(
+                "ATT-921", "REVISION", "Missed edge case", role="agent2", file_escape_bug=True, escape_severity="critical"
+            )
+            self.assertEqual(len(stored_issues), 2)
+            self.assertIn("severity-critical", stored_issues[1]["fields"]["labels"])
+            self.assertIn("escape-gate-revision", stored_issues[1]["fields"]["labels"])
+            self.assertEqual(stored_issues[1]["fields"]["summary"], "Process-Escape: Gate REVISION on ATT-920 (ATT-921)")
+
+            # Second gate REVISION on same subtask deduplicates without creating a duplicate Bug
+            jira_util.gate_verdict(
+                "ATT-921", "REVISION", "Still missing edge case", role="agent2", file_escape_bug=True, escape_severity="critical"
+            )
+            self.assertEqual(len(stored_issues), 2)
 
 
 if __name__ == "__main__":

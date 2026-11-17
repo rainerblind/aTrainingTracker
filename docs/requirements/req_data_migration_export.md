@@ -1,5 +1,10 @@
 # Living Requirements: Persistence, Migration & Cloud Export
 
+**Document ID**: `DOC-REQ-MIG`  
+**Version**: 1.0.0  
+**Status**: Reviewed  
+**Approver**: Pending PO Sign-Off  
+
 **Domain**: `data_migration_export`  
 **Prefixes**: `DAT`, `EXP`, `EXT`, `MIG`  
 **Scope**: Database schema, backup/restore, migration pipelines, Strava/cloud upload, FIT/GPX export.  
@@ -4054,17 +4059,10 @@
 
 **Invariants**: Standard exports (`.fit`, `.tcx`, `.gpx`, `.csv`) completely unaffected by sidecar availability; zero BLE or UI thread blocking during diagnostic zip creation; GPS stripping strictly enforced when opted out; `ANT-Android-SDKs` remains untouched at `160000 commit 0e8cea714a231fb9565170d4ed01eafa868f9798`.
 
+---
 
+## Change History
 
-
-
-
-
-
-
-
-
-
-
-
-
+| Version | Date | Author | Ticket | Summary of Changes |
+| :--- | :--- | :--- | :--- | :--- |
+| `1.0.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Added standardized `DOC-REQ-MIG` work-product control header and Change History. |

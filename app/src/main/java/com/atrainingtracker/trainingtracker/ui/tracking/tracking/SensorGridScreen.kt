@@ -133,10 +133,15 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.ActivityType
 import com.atrainingtracker.trainingtracker.TrackingMode
 import com.atrainingtracker.trainingtracker.segments.LiveSegment
+import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import com.atrainingtracker.trainingtracker.settings.TuningConfig
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
+import com.atrainingtracker.trainingtracker.ui.settings.ZoneDisplayConfigSection
+import com.atrainingtracker.trainingtracker.ui.settings.ZoneDisplayOptionsDraft
+import com.atrainingtracker.trainingtracker.ui.settings.defaultZoneProfileTarget
 import com.atrainingtracker.trainingtracker.ui.map.ATrainingTrackerMap
 import com.atrainingtracker.trainingtracker.ui.map.ElevationProfile
 import com.atrainingtracker.trainingtracker.ui.map.MapContentScope
@@ -229,7 +234,8 @@ fun SensorGridScreen(
     fieldShape: Shape = RectangleShape,
     fieldElevation: CardElevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     tabToggleActions: TabToggleActions = TabToggleActions.Empty,
-    isTabActive: Boolean = true
+    isTabActive: Boolean = true,
+    activityType: ActivityType = ActivityType.getDefaultActivityType()
 ) {
     val context = LocalContext.current
     val tuningDataStore = remember { TuningPreferencesDataStore.getInstance(context) }
@@ -906,6 +912,12 @@ fun SensorGridScreen(
                         onToggle = { tabToggleActions.onToggleMmpCurve(it) },
                         icon = Icons.Default.TrendingUp,
                         modifier = Modifier.fillMaxWidth()
+                    )
+
+                    // Profile-scoped Zone Display options (REQ-UI-2783.3)
+                    TrackingTabZoneDisplaySection(
+                        activityType = activityType,
+                        modifier = Modifier.padding(top = 4.dp)
                     )
                 }
             }
@@ -1888,5 +1900,54 @@ private fun SensorGridScreenLandscapeWidescreenDarkPreview() {
             currentLocationFlow = dummyLocationFlow,
             liveSegments = dummySegmentsFlow
         )
+    }
+}
+
+/**
+ * Profile-scoped Zone Display configuration section rendered inside [SensorGridScreen]
+ * `ScreenMode.CONFIGURATION`, persisting immediately to [SettingsDataStore] (`REQ-UI-2783.3`).
+ */
+@Composable
+internal fun TrackingTabZoneDisplaySection(
+    activityType: ActivityType,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val settingsDataStore = remember(context) { SettingsDataStore.getInstance(context) }
+    val snapshot by settingsDataStore.snapshotFlow.collectAsState(initial = null)
+    val draft = remember(snapshot) {
+        snapshot?.let { ZoneDisplayOptionsDraft.fromSnapshot(it) } ?: ZoneDisplayOptionsDraft()
+    }
+    var selectedProfile by remember(activityType) {
+        mutableStateOf(defaultZoneProfileTarget(activityType))
+    }
+
+    ZoneDisplayConfigSection(
+        selectedProfile = selectedProfile,
+        displayOptions = draft.optionsFor(selectedProfile),
+        onUpdateDisplayOptions = { updated ->
+            scope.launch {
+                ZoneDisplayOptionsDraft.persistTarget(settingsDataStore, selectedProfile, updated)
+            }
+        },
+        onApplyToAll = {
+            scope.launch {
+                draft.applyToAllFrom(selectedProfile).persistTo(settingsDataStore)
+            }
+        },
+        onProfileSelected = { selectedProfile = it },
+        modifier = modifier
+    )
+}
+
+@Preview(showBackground = true, name = "Config ZoneDisplay Light")
+@Preview(showBackground = true, name = "Config ZoneDisplay Dark", uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+private fun TrackingTabZoneDisplaySectionPreview() {
+    ATrainingTrackerTheme {
+        Surface(color = MaterialTheme.colorScheme.background, modifier = Modifier.padding(12.dp)) {
+            TrackingTabZoneDisplaySection(activityType = ActivityType.BIKE_POWER)
+        }
     }
 }

@@ -7,10 +7,12 @@ In compliance with **ASPICE CL2 SUP.8** (Configuration & Release Management), **
 Each release candidate tag (`<tag>`, e.g., `V5.0.0` or `V4.9.38__262`) MUST have a corresponding dossier directory:
 ```
 docs/releases/<tag>/
+├── manifest.md                       # SUP.8 / REQ-PRO-119: Deterministic baseline content manifest (SHA, REQ/TST counts, test evidence, open risks, governance)
 ├── sys_verification_record.md        # SYS.5: On-device hardware-in-the-loop verification sign-off record
 ├── verification_summary.md           # SWE.6 BP5 / REQ-PRO-074: Release verification summary per tag
 └── release_dossier.md                 # SUP.8: Release qualification summary and audit sign-off (optional)
 ```
+*(Sprint baselines cut at Ceremony 2 also persist `docs/releases/<sprint_baseline>/manifest.md` via `python3 tools/baseline_manager.py manifest <baseline>`.)*
 
 *(Note per `REQ-PRO-112` / `ATT-8157`: `system_integration_results.json` from Python sensor simulators is **retired as a blocking release gate**. Developer simulator self-tests are run via `python3 tools/run_simulator_self_tests.py --output <path>` and never represent Android app execution.)*
 
