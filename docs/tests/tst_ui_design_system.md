@@ -3,7 +3,7 @@
 **Domain**: `ui_design_system`  
 **Prefixes**: `UI`, `UNT`  
 **Scope**: Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts.  
-**Total Tests**: 477
+**Total Tests**: 478
 
 ---
 
@@ -8687,3 +8687,22 @@
   4. *9-Locale Parity & Rule 8.5 Light/Dark Screenshot Inspection (`TST-UI-2783.4`)*:
      - Verify `zone_display_apply_all` across all 9 locales (`ZoneDisplayLocalizationTest` / `TranslationParityTest`).
      - Capture Light & Dark screenshots of the Zone Display subsection + combined `PreviewCockpitTile` in `AdvancedTuningSectionsScreenshotTest.kt` and inspect via `read_file`.
+
+### TST-UI-2784: RadarTrafficSummaryCard Canonical Speed Unit Verification [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-UI-2784` (`REQ-UI-2784.1`, `REQ-UI-2784.2`)
+- **Component**: `RadarTrafficSummaryCard.kt`, `MetricFormatterContext.kt`, `SpeedFormatter.kt`, `RadarTrafficSummaryCardTest.kt`, `SpeedFormatterTest.kt`
+- **Jira**: `ATT-8440`
+- **Test Description**:
+  1. *Metric & Imperial Speed Formatting Compose UI Test (`TST-UI-2784.1`, `RadarTrafficSummaryCardTest.kt`)*:
+     - Render `RadarTrafficSummaryCard` via Robolectric `createComposeRule()` with `totalVehicles = 12`, `maxApproachSpeedMps = 10.0`, `maxVehicleSpeedMps = 20.0`.
+     - Under `TrainingApplication.setUnitForTesting(MyUnits.METRIC)`, assert `km/h` values (`36.0 km/h` / `36,0 km/h` and `72.0 km/h` / `72,0 km/h`) are displayed.
+     - Under `TrainingApplication.setUnitForTesting(MyUnits.IMPERIAL)`, assert `mile/h` values (`22.4 mile/h` / `22,4 mile/h` and `44.7 mile/h` / `44,7 mile/h`) are displayed and zero `km/h` speed strings remain.
+     - Reset `TrainingApplication.setUnitForTesting(null)` in `@After`.
+  2. *Null / Zero-Vehicle Guard & Out-of-Scope Field Preservation (`TST-UI-2784.2`, `RadarTrafficSummaryCardTest.kt`)*:
+     - Verify `RadarTrafficSummaryCard(null)` and `RadarTrafficSummaryCard(RadarTrafficSummary(totalVehicles = 0))` render zero nodes.
+     - Verify non-speed metrics (`vehiclesPerKm`, `vehiclesPerHour`, `minPassingDistanceM`) remain unaffected.
+  3. *Rule 8.5 Light & Dark Visual Verification (`TST-UI-2784.3`, `RadarTrafficSummaryCardTest.kt`)*:
+     - Capture Light and Dark screenshots of `RadarTrafficSummaryCard` under `MyUnits.IMPERIAL` (`ATrainingTrackerTheme`) and inspect via `read_file`.
+  4. *Targeted Regression Suite (`TST-UI-2784.4`)*:
+     - Execute `RadarTrafficSummaryCardTest`, `RadarTrafficSummaryTest`, `RadarTrafficSummaryFormatterTest`, and `SpeedFormatterTest` asserting 100% pass rate.

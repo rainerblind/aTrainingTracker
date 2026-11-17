@@ -3,7 +3,7 @@
 **Domain**: `ui_design_system`  
 **Prefixes**: `UI`, `UNT`  
 **Scope**: Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts.  
-**Total Requirements**: 463
+**Total Requirements**: 464
 
 ---
 
@@ -17557,3 +17557,32 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 • *Given* the codebase and 9 locale `strings.xml` files, *When* contract, localization, and screenshot tests execute, *Then* `CockpitTypographySection.kt < 400` LOC, `TuningDesignGuidelinesContractTest`, `HrvDfaA1SettingsContractTest`, `CockpitPreviewTileContractTest`, `AdvancedTuningModularityTest`, 9-locale parity, and Light/Dark Rule 8.5 visuals all pass.
 
 **Invariants**: `CockpitTypographySection.kt < 400` LOC; zero `FilterChip`/`Switch`/`ElevatedCard` in `categories/`; `ZonesSettingsActivity` & `HrvDfaA1SettingsContractTest` preserved; zone thresholds untouched on Reset; 9-locale parity maintained.
+
+### REQ-UI-2784: RadarTrafficSummaryCard Canonical Speed Unit Formatting (`Rule 36`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-UI-2784`
+- **System Requirement(s)**: `SYSREQ-TRK-006`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `RadarTrafficSummaryCard.kt`, `MetricFormatterContext.kt`, `SpeedFormatter.kt`, `WorkoutDetailTabbedContent.kt`
+- **Rationale**: `RadarTrafficSummaryCard.kt` (`L131`, `L138`) hardcoded `String.format(locale, "%.1f km/h", ... * 3.6)` for `summary.maxApproachSpeedMps` and `summary.maxVehicleSpeedMps`, showing `km/h` to Imperial (`MyUnits.IMPERIAL`) athletes in violation of `Rule 36` (Single Source of Truth). Delegating speed formatting to `LocalMetricFormatter.current.speed.format_with_units(...)` aligns `RadarTrafficSummaryCard` with sibling aftermath cards (`TrackOnMapScreen.kt`, `WorkoutSummaryCompact.kt`) (`ATT-8440`, refining `REQ-RAD-005`):
+- **Description**:
+  1. *Canonical Speed Formatting (`REQ-UI-2784.1`)*:
+     - `RadarTrafficSummaryCard.kt` SHALL format `summary.maxApproachSpeedMps` and `summary.maxVehicleSpeedMps` using `LocalMetricFormatter.current.speed.format_with_units(...)` (`SpeedFormatter.kt` via `MetricFormatterContext.kt`), emitting `km/h` (`* 3.6`) under `MyUnits.METRIC` and `mile/h` (`* 2.23693629` via `MyHelper.mps2userUnit`) under `MyUnits.IMPERIAL`.
+  2. *Scope & Guard Preservation (`REQ-UI-2784.2`)*:
+     - `RadarTrafficSummaryCard` SHALL preserve its early-return guard `if (summary == null || summary.totalVehicles <= 0) return`, `locale` formatting on `vehiclesPerKm` / `vehiclesPerHour` (`L110`, `L117`), `minPassingDistanceM` (`L157`), and `WorkoutDetailTabbedContent.kt:932` integration; `RadarTrafficSummaryFormatter.kt` (`REQ-RAD-007`) remains untouched.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new `REQ-UI-2784` refining `REQ-RAD-005` (`ATT-5088`) and enforcing `Rule 36`; targets `RadarTrafficSummaryCard.kt:131,138`.
+2. *Historical Origin & Commit Trace*: Commit `624bea5e` (`ATT-5088`) introduced `RadarTrafficSummaryCard.kt`; commit `6a694bb1` added `LocalConfiguration.current.locales[0]`.
+3. *Root Reason for Existing Formulation*: Initial implementation hardcoded `* 3.6` and `"km/h"` prior to `LocalMetricFormatter.current.speed` alignment.
+4. *Preservation of Core Invariants*: Preserves null/zero-vehicle early return (`L56`), non-speed density/clearance formatting (`L110`, `L117`, `L157`), `Locale.getDefault()` in `SpeedFormatter`, and `RadarTrafficSummaryFormatter.kt` untouched.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `RadarTrafficSummary` with `totalVehicles > 0`, `maxApproachSpeedMps = 10.0`, `maxVehicleSpeedMps = 20.0`,
+  - *When* `TrainingApplication.getUnit()` is `MyUnits.METRIC`, *Then* `RadarTrafficSummaryCard` displays `36.0 km/h` (or `36,0 km/h`) and `72.0 km/h` (or `72,0 km/h`).
+  - *When* `TrainingApplication.getUnit()` is `MyUnits.IMPERIAL`, *Then* `RadarTrafficSummaryCard` displays `22.4 mile/h` (or `22,4 mile/h`) and `44.7 mile/h` (or `44,7 mile/h`).
+• *Given* `summary == null` or `summary.totalVehicles <= 0`, *When* `RadarTrafficSummaryCard` composes, *Then* nothing is rendered.
+
+**Invariants**: Zero SQLite/DTO changes; `TrainingApplication.setUnitForTesting(null)` cleanup in tests; Light/Dark theme readability preserved; `ANT-Android-SDKs` untouched.
