@@ -39,6 +39,7 @@ import com.atrainingtracker.banalservice.odometry.WheelCircumferenceCalibrator
 import com.atrainingtracker.banalservice.sensor.MySensor
 import com.atrainingtracker.banalservice.sensor.MySensorManager
 import com.atrainingtracker.banalservice.sensor.SensorType
+import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.max
 import kotlin.math.pow
@@ -97,7 +98,9 @@ open class SpeedAndLocationDevice_ATTFused(
     // Wheel odometry and auto-calibration state
     var currentTotalRevolutions: Double? = null
         private set
+    @Volatile
     private var mLastWheelMeasurementMs: Long = 0L
+    @Volatile
     private var mLastWheelSpeedMps: Double = 0.0
     private var mLastCalibLat: Double? = null
     private var mLastCalibLon: Double? = null
@@ -245,31 +248,40 @@ open class SpeedAndLocationDevice_ATTFused(
 
         val hasGpsSpeed = location.hasSpeed() && !location.speed.isNaN() && location.speed >= 0.0f
         val gpsSpeed = if (hasGpsSpeed) location.speed.toDouble() else Double.NaN
-        val isWheelMoving = mLastWheelMeasurementMs > 0L &&
-            (timestampMs - mLastWheelMeasurementMs) in 0..5000L &&
-            mLastWheelSpeedMps > SPEED_ZERO_THRESHOLD
+        val lastWheelMs = mLastWheelMeasurementMs
+        val lastWheelSpeed = mLastWheelSpeedMps
+        val isWheelMoving = lastWheelMs > 0L &&
+            abs(timestampMs - lastWheelMs) <= 5000L &&
+            lastWheelSpeed > SPEED_ZERO_THRESHOLD
         val isGpsZero = hasGpsSpeed && gpsSpeed <= SPEED_ZERO_THRESHOLD
+        val currentEkfSpeed = synchronized(ekf) { ekf.speedMps }
         val isStationary = isGpsZero && !isWheelMoving && (
             isExternalSpeedSensorStationary(timestampMs) ||
                 isAccelerometerAtRest(timestampMs) ||
-                ekf.speedMps <= SPEED_ZERO_THRESHOLD
+                currentEkfSpeed <= SPEED_ZERO_THRESHOLD
             )
 
         // REQ-FIL-023.1: Defer tangent-plane origin anchoring until a valid GNSS accuracy fix arrives
-        if (!hasValidGnssAnchor || refLat == null || refLon == null) {
-            if (acc <= 0.0 || acc > UnicycleOdometryEkf.MAX_GNSS_ACCURACY_METERS) {
-                if (isStationary) {
-                    synchronized(ekf) { ekf.applyZeroVelocityUpdate(timestampMs) }
+        val rLat: Double
+        val rLon: Double
+        synchronized(ekf) {
+            if (!hasValidGnssAnchor || refLat == null || refLon == null) {
+                if (acc <= 0.0 || acc > UnicycleOdometryEkf.MAX_GNSS_ACCURACY_METERS) {
+                    if (isStationary) {
+                        ekf.applyZeroVelocityUpdate(timestampMs)
+                    }
+                    return
                 }
-                return
+                refLat = lat
+                refLon = lon
+                hasValidGnssAnchor = true
+                // Atomically re-anchor pre-fix dead-reckoning coordinates to (0, 0) at origin lock
+                ekf.reanchorPosition(0.0, 0.0)
             }
-            refLat = lat
-            refLon = lon
-            hasValidGnssAnchor = true
+            rLat = refLat!!
+            rLon = refLon!!
         }
 
-        val rLat = refLat!!
-        val rLon = refLon!!
         val dLatRad = Math.toRadians(lat - rLat)
         val dLonRad = Math.toRadians(lon - rLon)
         val northMeters = dLatRad * EARTH_RADIUS_METERS
@@ -277,6 +289,7 @@ open class SpeedAndLocationDevice_ATTFused(
 
         // REQ-FIL-023.1: Apply speed / ZUPT before GNSS position update to block velocity-leak spikes
         val gnssAccepted: Boolean
+        val clusterSnapped: Boolean
         val fusedEast: Double
         val fusedNorth: Double
         val fusedSpeed: Double
@@ -301,6 +314,7 @@ open class SpeedAndLocationDevice_ATTFused(
                 timestampMs = timestampMs,
                 isStationary = isStationary
             )
+            clusterSnapped = ekf.consumeStationaryClusterSnapped()
             fusedEast = ekf.eastMeters
             fusedNorth = ekf.northMeters
             fusedSpeed = ekf.speedMps
@@ -370,6 +384,15 @@ open class SpeedAndLocationDevice_ATTFused(
         location.bearing = fusedBearing.toFloat()
         // REQ-FIL-023.1: Preserve GNSS uncertainty floor so SpeedAndLocationDevice escapeRadius does not shrink falsely
         location.accuracy = max(acc, sqrt(fusedPosVar)).toFloat()
+
+        if (clusterSnapped) {
+            // Synchronize base stationary anchor unconditionally (even if not yet pinned) on genuine cluster snap
+            mStationaryAnchor = location
+            mIsStationaryPinned = true
+            mStationaryHysteresisCount = 0
+            mFilteredLatitude = fusedLat
+            mFilteredLongitude = fusedLon
+        }
 
         onNewLocation(location)
     }

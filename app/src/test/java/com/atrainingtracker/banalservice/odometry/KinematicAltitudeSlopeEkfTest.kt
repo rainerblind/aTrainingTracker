@@ -401,4 +401,32 @@ class KinematicAltitudeSlopeEkfTest {
         assertTrue("Low-speed slope must not spike to +/-29% (max was $maxAbsSlopePct%)", maxAbsSlopePct < 8.0)
         assertTrue("Flat altitude must remain stable (was ${ekf.altitude})", kotlin.math.abs(ekf.altitude - flatAlt) < 1.5)
     }
+
+    // TST-FIL-023.2 (Bounce 1/3): Standstill slope decay symmetrically decays p12/p21 in 3-state mode
+    @Test
+    fun testStandstillSlopeDecay_decaysP12SymmetricallyInThreeStateMode_tstFil023_2() {
+        ekf.setMode(true)
+        var alt = 450.0
+        ekf.updateReferenceAltitude(alt, KinematicAltitudeSlopeEkf.DEFAULT_VAR_DEM)
+        ekf.updateBarometer(alt + 50.0, isStandstill = false, speedMps = 6.0)
+
+        repeat(15) {
+            alt += 0.6
+            ekf.predict(1.0, 6.0)
+            ekf.updateBarometer(alt + 50.0, isStandstill = false, speedMps = 6.0)
+        }
+        val p12BeforeStop = ekf.p12
+        assertTrue("Moving 3-state climb should produce non-zero p12 (was $p12BeforeStop)", kotlin.math.abs(p12BeforeStop) > 1e-6)
+        assertEquals(p12BeforeStop, ekf.p21, 1e-12)
+
+        repeat(15) {
+            ekf.predict(1.0, 0.0)
+        }
+        assertEquals(0.0, ekf.slope, 1e-6)
+        assertEquals("p12 and p21 must remain symmetric after standstill decay", ekf.p12, ekf.p21, 1e-12)
+        assertTrue(
+            "p12 must decay symmetrically during standstill slope decay (before=$p12BeforeStop, after=${ekf.p12})",
+            kotlin.math.abs(ekf.p12) < kotlin.math.abs(p12BeforeStop) * 0.1
+        )
+    }
 }

@@ -271,4 +271,100 @@ class UnicycleOdometryEkfTest {
             ekf.eastMeters - eastBeforeSpike < 20.0
         )
     }
+
+    // TST-FIL-023.1 (Bounce 1/3): Stationary recovery from off-target 18 m anchor on tight 4 m cluster
+    @Test
+    fun testStationaryGnssCluster_recoversFromOffTargetAnchorWithoutVelocityLeak_tstFil023_1() {
+        ekf.reset(east = 0.0, north = 0.0, speed = 0.0, headingRad = PI / 2.0)
+        assertTrue(ekf.updateGnssPosition(0.0, 0.0, accuracyMeters = 18.0, timestampMs = 1000L, isStationary = true))
+
+        // Single transient 25 m spike must remain gated out
+        assertFalse(ekf.updateGnssPosition(25.0, 0.0, accuracyMeters = 16.0, timestampMs = 2000L, isStationary = true))
+
+        // Two agreeing tight 4.0 m fixes 20 m away (significant tightening <= 0.5 * 18 m) trigger stationary recovery
+        assertFalse(ekf.updateGnssPosition(20.0, 0.0, accuracyMeters = 4.0, timestampMs = 3000L, isStationary = true))
+        assertTrue(ekf.updateGnssPosition(20.2, 0.1, accuracyMeters = 4.0, timestampMs = 4000L, isStationary = true))
+        assertEquals(20.2, ekf.eastMeters, 1e-6)
+        assertEquals(0.1, ekf.northMeters, 1e-6)
+        assertEquals(0.0, ekf.speedMps, 1e-9)
+    }
+
+    // TST-FIL-023.1 (Bounce 1/3): Post-outage moving corridor recovers rapidly after >= 15 s gap without 3-min Huber stall
+    @Test
+    fun testPostOutageMovingRecovery_convergesRapidlyAfter15sGap_tstFil023_1() {
+        val preOutageEkf = UnicycleOdometryEkf(initialEast = 0.0, initialNorth = 0.0, initialSpeed = 8.0, initialHeadingRad = 0.0)
+        assertTrue(preOutageEkf.updateGnssPosition(0.0, 0.0, accuracyMeters = 3.0, timestampMs = 1000L, isStationary = false))
+
+        // Simulate 30s tunnel dead-reckoning with wheel speed keeping p00 small
+        for (sec in 1..30) {
+            val ts = 1000L + sec * 1000L
+            preOutageEkf.predict(1.0, 0.0, timestampMs = ts)
+            preOutageEkf.updateSpeed(8.0, variance = 0.05, timestampMs = ts)
+        }
+        // True exit is 100m West of dead-reckoned estimate at t=32s, 33s
+        val trueEast1 = preOutageEkf.eastMeters - 100.0
+        // Fix 1 after 31s gap is still Huber-damped (protects against single-epoch multipath spike)
+        assertTrue(preOutageEkf.updateGnssPosition(trueEast1, 0.0, accuracyMeters = 3.0, timestampMs = 32_000L, isStationary = false))
+        assertTrue(
+            "Single first fix after outage should be Huber-damped (< 25m step)",
+            abs(preOutageEkf.eastMeters - trueEast1) > 70.0
+        )
+
+        // Fix 2 (1s later, moving 8m East along real corridor) confirms post-outage corridor & recovers immediately
+        preOutageEkf.predict(1.0, 0.0, timestampMs = 33_000L)
+        val trueEast2 = trueEast1 + 8.0
+        assertTrue(preOutageEkf.updateGnssPosition(trueEast2, 0.0, accuracyMeters = 3.0, timestampMs = 33_000L, isStationary = false))
+        assertTrue(
+            "Confirmed post-outage moving cluster must converge rapidly (< 15m error, was ${abs(preOutageEkf.eastMeters - trueEast2)})",
+            abs(preOutageEkf.eastMeters - trueEast2) < 15.0
+        )
+    }
+
+    // TST-FIL-023.1 (Bounce 2/3): reanchorPosition resets position & cross-covariances without collapsing p33/p44
+    @Test
+    fun testReanchorPosition_resetsCovarianceWithoutCollapsingHeadingOrGyroBias_tstFil023_1() {
+        ekf.reset(east = 0.0, north = 0.0, speed = 6.0, headingRad = 0.0)
+        // 20s of 50-Hz pre-anchor dead-reckoning builds p[0][3] / p[0][4] cross-covariances
+        for (i in 1..1000) {
+            ekf.predict(dtSec = 0.02, gyroYawRateRadPerSec = 0.05, timestampMs = i * 20L)
+        }
+        val covBeforeReanchor = ekf.getCovarianceCopy()
+        assertTrue("20s dead-reckoning should couple position and heading", abs(covBeforeReanchor[0][3]) > 1e-3 || abs(covBeforeReanchor[1][3]) > 1e-3)
+        val p33Before = covBeforeReanchor[3][3]
+        val p44Before = covBeforeReanchor[4][4]
+
+        ekf.reanchorPosition(0.0, 0.0)
+        assertTrue(ekf.updateGnssPosition(0.0, 0.0, accuracyMeters = 5.0, timestampMs = 20_000L, isStationary = false))
+
+        val covAfter = ekf.getCovarianceCopy()
+        assertEquals("Heading variance p33 must NOT collapse on origin re-anchor", p33Before, covAfter[3][3], 1e-9)
+        assertEquals("Gyro bias variance p44 must NOT collapse on origin re-anchor", p44Before, covAfter[4][4], 1e-12)
+    }
+
+    // TST-FIL-023.1 (Bounce 2/3): Temporal adjacency guard (> 5s gap) rejects stale stationary glitches & clears moving outliers on snap
+    @Test
+    fun testStationaryOutlierTemporalGuard_rejectsSeparatedGlitchesAndClearsMovingOutliers_tstFil023_1() {
+        ekf.reset(east = 0.0, north = 0.0, speed = 0.0, headingRad = PI / 2.0)
+        assertTrue(ekf.updateGnssPosition(0.0, 0.0, accuracyMeters = 18.0, timestampMs = 1000L, isStationary = true))
+        assertFalse(ekf.consumeStationaryClusterSnapped())
+
+        // Two stationary outliers at (25, 0) separated by 7s (> GNSS_CLUSTER_MAX_STEP_GAP_MS = 5000 ms) must NOT snap
+        assertFalse(ekf.updateGnssPosition(25.0, 0.0, accuracyMeters = 4.0, timestampMs = 2000L, isStationary = true))
+        assertFalse(ekf.updateGnssPosition(25.0, 0.0, accuracyMeters = 4.0, timestampMs = 9000L, isStationary = true))
+        assertFalse(ekf.consumeStationaryClusterSnapped())
+        assertEquals(0.0, ekf.eastMeters, 1e-6)
+
+        // Induce moving outlier streak, then stationary cluster snap must clear consecutiveMovingOutliers
+        ekf.updateSpeed(6.0, variance = 0.1, timestampMs = 9500L)
+        assertTrue(ekf.updateGnssPosition(150.0, 0.0, accuracyMeters = 3.0, timestampMs = 10_000L, isStationary = false))
+        assertFalse(ekf.updateGnssPosition(25.0, 0.0, accuracyMeters = 4.0, timestampMs = 11_000L, isStationary = true))
+        assertTrue(ekf.updateGnssPosition(25.1, 0.0, accuracyMeters = 4.0, timestampMs = 12_000L, isStationary = true))
+        assertTrue("Stationary cluster snap must signal consumeStationaryClusterSnapped()", ekf.consumeStationaryClusterSnapped())
+        assertFalse("consumeStationaryClusterSnapped() must be one-shot", ekf.consumeStationaryClusterSnapped())
+
+        // Subsequent single moving outlier at (180, 0) must still be Huber-damped (streak was reset on snap)
+        ekf.updateSpeed(6.0, variance = 0.1, timestampMs = 12_500L)
+        assertTrue(ekf.updateGnssPosition(180.0, 0.0, accuracyMeters = 3.0, timestampMs = 13_000L, isStationary = false))
+        assertTrue("Single moving outlier after stationary snap must be Huber-damped (east=${ekf.eastMeters})", ekf.eastMeters < 60.0)
+    }
 }

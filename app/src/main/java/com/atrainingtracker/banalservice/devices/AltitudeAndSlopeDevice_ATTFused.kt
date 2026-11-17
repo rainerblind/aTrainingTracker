@@ -270,7 +270,11 @@ open class AltitudeAndSlopeDevice_ATTFused @JvmOverloads constructor(
 
     @Synchronized
     @VisibleForTesting
-    fun handleReferenceAltitude(refAltM: Double, isDem: Boolean = true) {
+    fun handleReferenceAltitude(
+        refAltM: Double,
+        isDem: Boolean = true,
+        nowMs: Long = System.currentTimeMillis()
+    ) {
         ekf.setMode(isEffectiveDem || isEffectiveGps)
         val reanchored = ekf.updateReferenceAltitude(
             refAltM,
@@ -279,7 +283,7 @@ open class AltitudeAndSlopeDevice_ATTFused @JvmOverloads constructor(
         if (reanchored) {
             resetAscentDescentAnchor()
         }
-        publishAltitudeAndMetrics(getCurrentSpeed(), System.currentTimeMillis())
+        publishAltitudeAndMetrics(getCurrentSpeed(), nowMs)
     }
 
     @Synchronized

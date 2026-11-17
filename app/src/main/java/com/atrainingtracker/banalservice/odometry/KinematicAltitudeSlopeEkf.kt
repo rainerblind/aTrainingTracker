@@ -192,6 +192,10 @@ class KinematicAltitudeSlopeEkf(
                 slope = if (abs(decayed) < 0.005) 0.0 else decayed
                 p01 *= decay
                 p10 = p01
+                if (is3StateMode) {
+                    p12 *= decay
+                    p21 = p12
+                }
             }
             if (is3StateMode) {
                 p22 += qBias * dtClamped
