@@ -53,7 +53,9 @@ import com.atrainingtracker.trainingtracker.TrainingApplication;
 public enum SensorType
         implements Parcelable {
     /**
-     * Comma-separated list of accumulated {@link SensorType#name()} tokens.
+     * 11-character monotonic session-accumulated sensor bitmask string populated from
+     * {@code MySensorManager.mAccumulatedGCData} (initialized to {@code "-----------"}, setting
+     * {@code T,D,S,P,H,C,N,A,G} at indices {@code 0..8}, matching {@link #SENSORS} format).
      * Internal unit: {@code dimensionless} ({@code STRING}); sentinel: {@code null} -> {@code "--"};
      * display: {@link DefaultStringFormatter}; export: CSV raw text.
      */
@@ -100,7 +102,7 @@ public enum SensorType
     /**
      * Cumulative energy expenditure.
      * Internal unit: {@code kcal} ({@code INTEGER}, {@code >= 0}); sentinel: {@code null} -> {@code "--"};
-     * display: {@link IntegerFormatter} ({@code kcal}); export: FIT/TCX session/lap {@code kcal}, CSV raw {@code kcal}.
+     * display: {@link IntegerFormatter} ({@code kcal}); export: FIT {@code SessionMesg.totalCalories} ({@code kcal}, never {@code LapMesg}; TCX passes {@code null} for lap calories), CSV raw {@code kcal}.
      */
     CALORIES(SensorCategory.HEART_RATE_AND_ENERGY, R.string.calories, R.string.calories_short, R.string.units_calories, SensorValueType.INTEGER, new IntegerFormatter(), false, "kcal"),
     /**
@@ -332,7 +334,7 @@ public enum SensorType
     /**
      * Cumulative active (unpaused) recording duration.
      * Internal unit: {@code s} ({@code INTEGER}, {@code >= 0}); sentinel: {@code null} -> {@code "--:--:--"};
-     * display: {@link TimeFormatter} ({@code H:MM:SS}); export: FIT {@code totalTimerTime} ({@code s}), CSV raw {@code s}.
+     * display: {@link TimeFormatter} ({@code H:MM:SS}); export: CSV raw {@code s} (not read by {@code FitFileWriter}; FIT {@code totalTimerTime} derives from {@code WorkoutSummaries.TIME_TOTAL_s} / {@code elapsedSampleSec}).
      */
     TIME_ACTIVE(SensorCategory.TIME_AND_LAPS, R.string.time_active, R.string.time_active_short, R.string.units_time_basic, SensorValueType.INTEGER, new TimeFormatter(), false, "s"),
     /**
@@ -350,7 +352,7 @@ public enum SensorType
     /**
      * Total elapsed wall duration including pauses.
      * Internal unit: {@code s} ({@code INTEGER}, {@code >= 0}); sentinel: {@code null} -> {@code "--:--:--"};
-     * display: {@link TimeFormatter} ({@code H:MM:SS}); export: FIT {@code totalElapsedTime} ({@code s}), GC {@code SECS} ({@code s}), CSV raw {@code s}.
+     * display: {@link TimeFormatter} ({@code H:MM:SS}); export: FIT {@code SessionMesg.totalTimerTime} / {@code totalElapsedTime} via {@code WorkoutExportHeader.totalTime} ({@code TIME_TOTAL_s}) / {@code elapsedSampleSec} ({@code s}), GC {@code SECS} ({@code s}), CSV raw {@code s}.
      */
     TIME_TOTAL(SensorCategory.TIME_AND_LAPS, R.string.time_total, R.string.time_total_short, R.string.units_time_basic, SensorValueType.INTEGER, new TimeFormatter(), false, "s"),
     /**

@@ -1,7 +1,7 @@
 # Stage 5: Walkthrough & Verification - ATT-8579: Canonical SensorType Storage and Display Units
 
 **Ticket**: `ATT-8579` (`2 SP`, Epic `ATT-431`) | **Target Release**: `V5.0.0`  
-**Branch**: `feature/ATT-8579` (base `sprint/2026-11-17_01_Früh` @ `e3c278bb`, Stage 4 Commit `cb131de1`)  
+**Branch**: `feature/ATT-8579` (squashed commit `367a412f` on `sprint/2026-11-17_01_Früh`, plus Stage 6 Bounce 1/3 remediation)  
 **Requirement Mapping**: `REQ-TRK-083` (`REQ-TRK-083.1`..`REQ-TRK-083.3`) | **Test Mapping**: `TST-TRK-083` (`TST-TRK-083.1`..`TST-TRK-083.3`)  
 **UI Consistency**: `N/A - no UI or strings modified`
 
@@ -33,3 +33,4 @@
 ## 3. Invariant & Governance Verification
 1. **Living Documentation**: `REQ-TRK-083` (`docs/requirements/req_tracking_cockpit.md`) and `TST-TRK-083` (`docs/tests/tst_tracking_cockpit.md`) promoted to `[Verified]`; master indexes synchronized (`docs/requirements.md`: `1208` total, `971` Verified; `docs/tests.md`: `1215` total, `1000` Verified).
 2. **Governance & Submodule Hygiene**: `verify_requirement_governance.py` and `--text-file docs/engineering/walkthroughs/ATT-8579_walkthrough.md` passed (`exit 0`); `ANT-Android-SDKs` untouched at `0e8cea714a231fb9565170d4ed01eafa868f9798`; zero UI strings or APK runtime behavior modified (`N/A - no UI or strings modified`).
+3. **Stage 6 Bounce 1/3 Remediation**: Corrected `ACCUMULATED_SENSORS` (`MySensorManager.mAccumulatedGCData` 11-char mask), `CALORIES` (FIT `SessionMesg.totalCalories` only; TCX lap calories `null`), and `TIME_ACTIVE`/`TIME_TOTAL` (`FitFileWriter` `totalTimerTime`/`totalElapsedTime` from `WorkoutExportHeader.totalTime` = `TIME_TOTAL_s` / `elapsedSampleSec`) in `SensorType.java` and `docs/architecture/sensor_units.md`.
