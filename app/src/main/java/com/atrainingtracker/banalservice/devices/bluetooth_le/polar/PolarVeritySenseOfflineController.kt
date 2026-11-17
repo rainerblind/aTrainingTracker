@@ -980,9 +980,13 @@ object PolarVeritySenseOfflineController {
         val anchorMs = if (swimSession.startTimeMs > 0L) swimSession.startTimeMs else fallbackAnchorMs
         val hrPairs = buildHrPairsFromIntList(swimSession.hrSamples, anchorMs)
         if (!baseFileName.isNullOrEmpty() && hrPairs.isNotEmpty()) {
-            val samplesManager = WorkoutSamplesDatabaseManager.getInstance(appContext)
-            samplesManager.patchMissingHeartRateSamples(baseFileName, anchorMs, hrPairs)
-            PolarOfflineGattCoordinator.recordBackfilledSensorTypes(appContext, workoutId, SensorType.HR)
+            PolarOfflineGattCoordinator.patchMissingHeartRateAndRecordSensorType(
+                appContext,
+                workoutId,
+                baseFileName,
+                anchorMs,
+                hrPairs
+            )
             recomputeHrSummaryMetrics(appContext, workoutId, baseFileName)
         }
 
@@ -1168,9 +1172,13 @@ object PolarVeritySenseOfflineController {
         val anchorMs = resolveRecordingAnchorMs(hrData, fallbackAnchorMs)
         val hrPairs = buildHrPairs(hrData, anchorMs)
         if (!baseFileName.isNullOrEmpty() && hrPairs.isNotEmpty()) {
-            val samplesManager = WorkoutSamplesDatabaseManager.getInstance(appContext)
-            samplesManager.patchMissingHeartRateSamples(baseFileName, anchorMs, hrPairs)
-            PolarOfflineGattCoordinator.recordBackfilledSensorTypes(appContext, workoutId, SensorType.HR)
+            PolarOfflineGattCoordinator.patchMissingHeartRateAndRecordSensorType(
+                appContext,
+                workoutId,
+                baseFileName,
+                anchorMs,
+                hrPairs
+            )
             recomputeHrSummaryMetrics(appContext, workoutId, baseFileName)
         }
         if (clearPendingFlag) {

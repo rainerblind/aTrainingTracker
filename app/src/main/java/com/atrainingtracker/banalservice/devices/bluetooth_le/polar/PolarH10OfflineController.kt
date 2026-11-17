@@ -361,10 +361,14 @@ object PolarH10OfflineController {
                                     )
                                 }
 
-                                // Patch WorkoutSamples.db
-                                val samplesManager = WorkoutSamplesDatabaseManager.getInstance(appContext)
-                                samplesManager.patchMissingHeartRateSamples(baseFileName, anchorMs, hrPairs)
-                                PolarOfflineGattCoordinator.recordBackfilledSensorTypes(appContext, workoutId, SensorType.HR)
+                                // Patch WorkoutSamples.db and record SensorType.HR when rows are patched
+                                PolarOfflineGattCoordinator.patchMissingHeartRateAndRecordSensorType(
+                                    appContext,
+                                    workoutId,
+                                    baseFileName,
+                                    anchorMs,
+                                    hrPairs
+                                )
 
                                 // Patch WorkoutRr.db
                                 val rrRepo = WorkoutRrRepository.getInstance(appContext)
@@ -593,11 +597,13 @@ object PolarH10OfflineController {
                         val repo = WorkoutRepository.getInstance(appContext)
                         val baseFileName = repo.getBaseFileName(workoutId) ?: summariesDb.getBaseFileName(workoutId)
 
-                        if (!baseFileName.isNullOrEmpty()) {
-                            val samplesManager = WorkoutSamplesDatabaseManager.getInstance(appContext)
-                            samplesManager.patchMissingHeartRateSamples(baseFileName, anchorMs, hrPairs)
-                        }
-                        PolarOfflineGattCoordinator.recordBackfilledSensorTypes(appContext, workoutId, SensorType.HR)
+                        PolarOfflineGattCoordinator.patchMissingHeartRateAndRecordSensorType(
+                            appContext,
+                            workoutId,
+                            baseFileName,
+                            anchorMs,
+                            hrPairs
+                        )
 
                         val rrRepo = WorkoutRrRepository.getInstance(appContext)
                         rrRepo.insertIntervals(intervals)

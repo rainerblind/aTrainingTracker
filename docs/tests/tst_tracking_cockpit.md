@@ -3170,7 +3170,7 @@
   2. *`finalizeLiveSession()` Post-Processed Metric Upsert Test (`TST-TRK-084.2`, `TrackerServiceFinalizationTest.kt`)*:
      • Execute `endWorkout()` + `finalizeLiveSession()` for a session with recorded power/HR/GPS samples producing `NORMALIZED_POWER`, `INTENSITY_FACTOR`, `TSS`, `WORK_KJ`, `POWER_TO_WEIGHT`, and `LINE_DISTANCE_m`.
      • Assert `FINISHED = 1` commits before auxiliary saves (`REQ-TRK-030.1`) and `finalizeLiveSession()` upserts the non-null computed metrics into `AccumulatedSensors`.
-  3. *Resume Rehydration & Idempotent DB Deduplication Test (`TST-TRK-084.3`, `TrackerServiceResumeTest.kt` & `WorkoutSummariesDatabaseManagerTest.kt`)*:
+  3. *Resume Rehydration & Idempotent DB Deduplication Test (`TST-TRK-084.3`, `TrackerServiceResumeTest.kt` & `WorkoutSummariesAccumulatedSensorsTest.kt`)*:
      • Persist initial `AccumulatedSensors` rows (`HR`, `SPEED_mps`) for a workout, run `rehydrateLiveSession()` on resume, record new `POWER` samples, and finalize; assert `AccumulatedSensors` contains `{HR, SPEED_mps, POWER}` with zero duplicate rows.
      • Invoke `saveAccumulatedSensorTypes()` / `addAccumulatedSensorTypes()` repeatedly with overlapping `SensorType` sets and assert `SELECT COUNT(*)` in `AccumulatedSensors` matches the deduplicated set size (`0` duplicates).
   4. *Polar H10 / Verity Sense Backfill & Conditional HRV Recomputation Upsert Test (`TST-TRK-084.4`, `PolarH10OfflineControllerTest.kt`, `PolarVeritySenseOfflineControllerTest.kt`, `HrvPostWorkoutRecomputerTest.kt`)*:

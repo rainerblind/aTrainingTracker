@@ -28,6 +28,7 @@ import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
 import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.sensor.SensorType
+import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.polar.androidcommunications.api.ble.model.DisInfo
 import com.polar.sdk.api.PolarBleApi
@@ -400,6 +401,27 @@ object PolarOfflineGattCoordinator {
         } finally {
             btleDevice?.resumeGattOperations()
         }
+    }
+
+    /**
+     * Patches missing HR samples into `WorkoutSamples.db` when [baseFileName] and [hrPairs] are
+     * non-empty, and idempotently records [SensorType.HR] into `AccumulatedSensors` strictly
+     * when at least one row was patched (`REQ-TRK-084.4`).
+     */
+    fun patchMissingHeartRateAndRecordSensorType(
+        appContext: Context,
+        workoutId: Long,
+        baseFileName: String?,
+        anchorMs: Long,
+        hrPairs: List<android.util.Pair<Long, Int>>
+    ): Int {
+        if (baseFileName.isNullOrEmpty() || hrPairs.isEmpty()) return 0
+        val samplesManager = WorkoutSamplesDatabaseManager.getInstance(appContext)
+        val patchedCount = samplesManager.patchMissingHeartRateSamples(baseFileName, anchorMs, hrPairs)
+        if (patchedCount > 0) {
+            recordBackfilledSensorTypes(appContext, workoutId, SensorType.HR)
+        }
+        return patchedCount
     }
 
     /**

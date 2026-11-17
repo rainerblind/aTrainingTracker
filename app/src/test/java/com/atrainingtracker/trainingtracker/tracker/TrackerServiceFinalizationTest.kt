@@ -244,6 +244,8 @@ class TrackerServiceFinalizationTest {
 
     @After
     fun tearDown() {
+        com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine.resetForTesting(null)
+        com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository.resetForTesting(null)
         unmockkAll()
     }
 
@@ -1404,33 +1406,47 @@ class TrackerServiceFinalizationTest {
                 hrSamples = emptyList()
             )
 
-        val liveSession = LiveWorkoutSession(555L, TrackerService.IMPORTANT_SENSOR_TYPES)
-        liveSession.addSample(SensorType.SPEED_mps, 8.0, LatLng(48.10, 11.50))
-        liveSession.rehydrateStreams(
-            listOf(LatLng(48.10, 11.50), LatLng(48.11, 11.51)),
-            listOf(500.0, 505.0),
-            listOf(0.0, 1500.0)
-        )
+        val engineMock = mockk<com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine>(relaxed = true)
+        every { engineMock.findApexFromPoints(any(), any(), any()) } returns LatLng(48.11, 11.51)
+        com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine.resetForTesting(engineMock)
+        mockkObject(com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine.Companion)
+        every { com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine.getInstance(any()) } returns engineMock
 
-        val snapshot = TrackerService.BanalFinalizationSnapshot(
-            1, 60, 1500.0,
-            emptySet(), emptySet(), null,
-            BSportType.BIKE, BSportType.BIKE, 1L,
-            8.0, true, 1500.0, 60
-        )
+        val banalRepoMock = mockk<com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository>(relaxed = true)
+        com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository.resetForTesting(banalRepoMock)
 
-        service.finalizeLiveSession(snapshot, 555L, baseFileName, liveSession)
+        try {
+            val liveSession = LiveWorkoutSession(555L, TrackerService.IMPORTANT_SENSOR_TYPES)
+            liveSession.addSample(SensorType.SPEED_mps, 8.0, LatLng(48.10, 11.50))
+            liveSession.rehydrateStreams(
+                listOf(LatLng(48.10, 11.50), LatLng(48.11, 11.51)),
+                listOf(500.0, 505.0),
+                listOf(0.0, 1500.0)
+            )
 
-        val upsertedSlot = slot<Set<SensorType>>()
-        verify(exactly = 1) {
-            repoMock.addAccumulatedSensorTypes(555L, capture(upsertedSlot))
+            val snapshot = TrackerService.BanalFinalizationSnapshot(
+                1, 60, 1500.0,
+                emptySet(), emptySet(), null,
+                BSportType.BIKE, BSportType.BIKE, 1L,
+                8.0, true, 1500.0, 60
+            )
+
+            service.finalizeLiveSession(snapshot, 555L, baseFileName, liveSession)
+
+            val upsertedSlot = slot<Set<SensorType>>()
+            verify(exactly = 1) {
+                repoMock.addAccumulatedSensorTypes(555L, capture(upsertedSlot))
+            }
+            assertTrue(upsertedSlot.captured.contains(SensorType.LINE_DISTANCE_m))
+            assertTrue(upsertedSlot.captured.contains(SensorType.NORMALIZED_POWER))
+            assertTrue(upsertedSlot.captured.contains(SensorType.INTENSITY_FACTOR))
+            assertTrue(upsertedSlot.captured.contains(SensorType.TSS))
+            assertTrue(upsertedSlot.captured.contains(SensorType.WORK_KJ))
+            assertTrue(upsertedSlot.captured.contains(SensorType.POWER_TO_WEIGHT))
+        } finally {
+            com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine.resetForTesting(null)
+            com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository.resetForTesting(null)
         }
-        assertTrue(upsertedSlot.captured.contains(SensorType.LINE_DISTANCE_m))
-        assertTrue(upsertedSlot.captured.contains(SensorType.NORMALIZED_POWER))
-        assertTrue(upsertedSlot.captured.contains(SensorType.INTENSITY_FACTOR))
-        assertTrue(upsertedSlot.captured.contains(SensorType.TSS))
-        assertTrue(upsertedSlot.captured.contains(SensorType.WORK_KJ))
-        assertTrue(upsertedSlot.captured.contains(SensorType.POWER_TO_WEIGHT))
     }
 }
 

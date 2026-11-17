@@ -1108,6 +1108,7 @@ class PolarVeritySenseOfflineControllerTest {
         )
 
         every { mockSamplesDb.hasMissingHeartRateSamples(baseFileName) } returns false
+        every { mockSamplesDb.patchMissingHeartRateSamples(baseFileName, anchorMs, any()) } returns 3
         every { mockSportTypesRepo.ensureSwimSportTypeExists() } returns 101L
 
         val committed = PolarVeritySenseOfflineController.applySwimBackfillAndCommit(
