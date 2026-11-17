@@ -124,6 +124,11 @@ class KinematicAltitudeSlopeEkf(
         hasReferenceAnchor = false
         if (threeState) {
             baroBias = 0.0
+            if (isInitialized) {
+                p00 = DEFAULT_UNANCHORED_ALT_VAR
+                p01 = 0.0
+                p10 = 0.0
+            }
             p02 = 0.0
             p20 = 0.0
             p12 = 0.0
@@ -209,14 +214,15 @@ class KinematicAltitudeSlopeEkf(
 
         if (isStandstill) {
             // In standstill mode: ground altitude is clamped (dh = 0).
-            // In 3-State mode: barometric drift updates baroBias directly.
-            if (is3StateMode) {
+            // In 3-State mode (once anchored): barometric drift updates baroBias directly
+            // without collapsing bias variance below altitude uncertainty p00.
+            if (is3StateMode && hasReferenceAnchor) {
                 val y = baroAltM - (altitude + baroBias)
                 val s = p22 + varBaro
                 val yH = applyHuber(y, s)
                 val kBias = p22 / s
                 baroBias += kBias * yH
-                p22 = max(1e-6, (1.0 - kBias) * p22)
+                p22 = max(1e-6, max(p00, (1.0 - kBias) * p22))
             }
             return
         }
@@ -299,6 +305,9 @@ class KinematicAltitudeSlopeEkf(
             p10 = 0.0
             p02 = 0.0
             p20 = 0.0
+            p12 = 0.0
+            p21 = 0.0
+            p22 = 100.0
             hasReferenceAnchor = true
             return true
         }
