@@ -719,4 +719,162 @@ class VerticalSpeedAndSlopeDeviceTest {
         device.shutDown()
         unmockkAll()
     }
+
+    /**
+     * TST-FIL-024.1c: Reproduces the Cold Stage 6 active-barometer calibration race where
+     * AltitudeFromPressureDevice updates its sensor value (>= 15.0m) and calculateMetrics()
+     * executes before asynchronous ALTITUDE_CORRECTION_INTENT delivery; verifies zero premature
+     * reseed and zero double-shift.
+     */
+    @Test
+    fun testActiveBaroCalibrationAboveThreshold_beforeCorrectionBroadcast_noDoubleShiftOrReseed() {
+        mockkConstructor(Intent::class)
+        every { anyConstructed<Intent>().setPackage(any()) } answers { self as Intent }
+        mockkStatic(ContextCompat::class)
+        every { ContextCompat.registerReceiver(any(), any(), any(), any()) } returns null
+        mockkStatic(DevicesDatabaseManager::class)
+        every { DevicesDatabaseManager.getInstance(any()) } returns mockk(relaxed = true)
+        mockkStatic(TrainingApplication::class)
+        every { TrainingApplication.isTracking() } returns true
+        every { TrainingApplication.isPaused() } returns false
+        every { TrainingApplication.isAutoPaused() } returns false
+        mockkStatic(SettingsDataStoreJavaHelper::class)
+        every { SettingsDataStoreJavaHelper.getSlopeMinSpeed(any()) } returns 0.5f
+
+        val mockFilterManager = mockk<FilterManager>(relaxed = true)
+        BANALService.setFilterManager(mockFilterManager)
+
+        var filter21 = 413.0
+        var filter300 = 413.0
+        every { mockFilterManager.getFilteredSensorData(any()) } answers {
+            val fd = firstArg<FilterData>()
+            when (fd.sensorType) {
+                SensorType.ALTITUDE -> {
+                    val v = if (fd.filterConstant == 21.0) filter21 else filter300
+                    FilteredSensorData(SensorType.ALTITUDE, v, "$v m", null, FilterType.MOVING_AVERAGE_TIME, fd.filterConstant)
+                }
+                SensorType.SPEED_mps -> FilteredSensorData(SensorType.SPEED_mps, 3.0, "3 m/s", null, FilterType.MOVING_AVERAGE_TIME, 21.0)
+                else -> FilteredSensorData(SensorType.ACCURACY, 5.0, "5 m", null, FilterType.INSTANTANEOUS, 1.0)
+            }
+        }
+        every { mockFilterManager.shiftFilter(any(), any()) } answers {
+            val fd = firstArg<FilterData>()
+            val d = secondArg<Double>()
+            if (fd.filterConstant == 21.0) filter21 += d else filter300 += d
+        }
+
+        val mockContext = mockk<Context>(relaxed = true)
+        val mockSensorManager = mockk<MySensorManager>(relaxed = true)
+        val baroDevice = mockk<MyDevice>(relaxed = true)
+        every { baroDevice.name } returns "Barometer"
+        every { baroDevice.deviceType } returns DeviceType.ALTITUDE_FROM_PRESSURE
+        var rawAlt = 413.0
+        val baroSensor = mockk<MySensor<Number>>(relaxed = true)
+        every { baroSensor.device } returns baroDevice
+        every { baroSensor.value } answers { rawAlt }
+        val proxySensor = mockk<ProxySensor<Number>>(relaxed = true)
+        every { proxySensor.bestSensor } returns baroSensor
+        every { mockSensorManager.getSensor(SensorType.ALTITUDE) } returns proxySensor
+
+        val device = VerticalSpeedAndSlopeDevice(mockContext, mockSensorManager, false)
+        // Steady pre-calibration baseline at 413.0m
+        device.calculateMetrics()
+        device.calculateMetrics()
+        assertEquals(413.0, device.lastAltitudeSuperFiltered, 0.001)
+
+        // Baro calibrates +25.0m (413m -> 438m): newValue() updates synchronously before Intent arrives
+        rawAlt = 438.0
+        device.calculateMetrics()
+
+        verify(exactly = 0) { mockFilterManager.reseedFilter(any(), any()) }
+        assertEquals("Super-filtered baseline must remain 413.0m until broadcast shift", 413.0, device.lastAltitudeSuperFiltered, 0.001)
+
+        // Now asynchronous ALTITUDE_CORRECTION_INTENT (+25.0m) arrives
+        val intent = mockk<Intent>()
+        every { intent.getDoubleExtra(AltitudeFromPressureDevice.ALTITUDE_CORRECTION_VALUE, 0.0) } returns 25.0
+        device.altitudeCorrectionReceiver.onReceive(mockContext, intent)
+
+        assertEquals("Must shift once to 438.0m, never double-shift to 463.0m", 438.0, device.lastAltitudeSuperFiltered, 0.001)
+        assertEquals(438.0, filter21, 0.001)
+        assertEquals(438.0, filter300, 0.001)
+        verify(exactly = 1) { mockFilterManager.shiftFilter(match { it.filterConstant == 21.0 }, 25.0) }
+        verify(exactly = 1) { mockFilterManager.shiftFilter(match { it.filterConstant == 300.0 }, 25.0) }
+
+        // Next tick at calibrated 438.0m produces zero phantom ascent/descent
+        device.calculateMetrics()
+        assertEquals(0.0, (device.ascentSensor.value as Number).toDouble(), 0.001)
+        assertEquals(0.0, (device.descentSensor.value as Number).toDouble(), 0.001)
+
+        device.shutDown()
+        unmockkAll()
+    }
+
+    /**
+     * TST-FIL-024.3c: Verifies non-finite delta (NaN, +/-Infinity) in ALTITUDE_CORRECTION_INTENT
+     * and non-finite rawAlt in checkAltitudeSourceTransition() are rejected without poisoning baselines.
+     */
+    @Test
+    fun testNonFiniteDeltaAndRawAltitude_rejectedCleanly() {
+        mockkConstructor(Intent::class)
+        every { anyConstructed<Intent>().setPackage(any()) } answers { self as Intent }
+        mockkStatic(ContextCompat::class)
+        every { ContextCompat.registerReceiver(any(), any(), any(), any()) } returns null
+        mockkStatic(DevicesDatabaseManager::class)
+        every { DevicesDatabaseManager.getInstance(any()) } returns mockk(relaxed = true)
+        mockkStatic(TrainingApplication::class)
+        every { TrainingApplication.isTracking() } returns true
+        every { TrainingApplication.isPaused() } returns false
+        every { TrainingApplication.isAutoPaused() } returns false
+        mockkStatic(SettingsDataStoreJavaHelper::class)
+        every { SettingsDataStoreJavaHelper.getSlopeMinSpeed(any()) } returns 0.5f
+
+        val mockFilterManager = mockk<FilterManager>(relaxed = true)
+        BANALService.setFilterManager(mockFilterManager)
+        every { mockFilterManager.getFilteredSensorData(any()) } answers {
+            val fd = firstArg<FilterData>()
+            when (fd.sensorType) {
+                SensorType.ALTITUDE -> FilteredSensorData(SensorType.ALTITUDE, 438.0, "438 m", null, FilterType.MOVING_AVERAGE_TIME, fd.filterConstant)
+                SensorType.SPEED_mps -> FilteredSensorData(SensorType.SPEED_mps, 2.0, "2 m/s", null, FilterType.MOVING_AVERAGE_TIME, 21.0)
+                else -> FilteredSensorData(SensorType.ACCURACY, 5.0, "5 m", null, FilterType.INSTANTANEOUS, 1.0)
+            }
+        }
+
+        val mockContext = mockk<Context>(relaxed = true)
+        val mockSensorManager = mockk<MySensorManager>(relaxed = true)
+        val baroDevice = mockk<MyDevice>(relaxed = true)
+        every { baroDevice.deviceType } returns DeviceType.ALTITUDE_FROM_PRESSURE
+        var rawAlt = 438.0
+        val altSensor = mockk<MySensor<Number>>(relaxed = true)
+        every { altSensor.device } returns baroDevice
+        every { altSensor.value } answers { rawAlt }
+        every { mockSensorManager.getSensor(SensorType.ALTITUDE) } returns altSensor
+
+        val device = VerticalSpeedAndSlopeDevice(mockContext, mockSensorManager, false)
+        device.calculateMetrics()
+        assertEquals(438.0, device.lastAltitude, 0.001)
+        assertEquals(438.0, device.lastAltitudeSuperFiltered, 0.001)
+
+        // Reject NaN, +Infinity, -Infinity deltas in ALTITUDE_CORRECTION_INTENT
+        for (badDelta in listOf(Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY)) {
+            val intent = mockk<Intent>()
+            every { intent.getDoubleExtra(AltitudeFromPressureDevice.ALTITUDE_CORRECTION_VALUE, 0.0) } returns badDelta
+            device.altitudeCorrectionReceiver.onReceive(mockContext, intent)
+        }
+        verify(exactly = 0) { mockFilterManager.shiftFilter(any(), any()) }
+        assertEquals(438.0, device.lastAltitudeSuperFiltered, 0.001)
+        assertEquals(438.0, device.lastAltitude, 0.001)
+
+        // Reject +Infinity, -Infinity, NaN rawAlt on same-device ATTFused or baro ticks
+        every { baroDevice.deviceType } returns DeviceType.ALTITUDE_AND_SLOPE_ATT_FUSED
+        for (badRaw in listOf(Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY, Double.NaN)) {
+            rawAlt = badRaw
+            device.calculateMetrics()
+        }
+        verify(exactly = 0) { mockFilterManager.reseedFilter(any(), any()) }
+        assertEquals(438.0, device.lastAltitude, 0.001)
+        assertEquals(438.0, device.lastAltitudeSuperFiltered, 0.001)
+
+        device.shutDown()
+        unmockkAll()
+    }
 }

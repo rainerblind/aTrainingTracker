@@ -1,7 +1,7 @@
 # Living Test Specification: Tracking & Live Sensor Cockpit
 
 **Document ID**: `DOC-TST-TRK`  
-**Version**: 1.0.6  
+**Version**: 1.0.7  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -3274,13 +3274,13 @@
 - **Procedure**:
   1. *Non-Baro Canonical `ALTITUDE_CORRECTION_INTENT` Guard & Active-Baro Parity Test (`TST-FIL-024.1`, `VerticalSpeedAndSlopeDeviceTest.kt`)*:
      • Configure `SensorType.ALTITUDE` backed by `DeviceType.ALTITUDE_AND_SLOPE_ATT_FUSED` (or `ALTITUDE_FROM_POSITION`) via `ProxySensor.bestSensor` and invoke `mAltitudeCorrectionReceiver.onReceive(...)` with `delta = +100.0 m`. Assert `mLastAltitudeSuperFiltered` remains unchanged and `FilterManager.shiftFilter` is NOT invoked (`verify(exactly = 0)`).
-     • Configure `SensorType.ALTITUDE` backed by `DeviceType.ALTITUDE_FROM_PRESSURE` and invoke `mAltitudeCorrectionReceiver.onReceive(...)` with `delta = +25.0 m`. Assert `mLastAltitudeSuperFiltered` shifts by `+25.0 m` and `shiftFilter` is invoked for both `21.0s` and `300.0s` filters (`TST-FIL-004.5` parity).
+     • Configure `SensorType.ALTITUDE` backed by `DeviceType.ALTITUDE_FROM_PRESSURE` and invoke `mAltitudeCorrectionReceiver.onReceive(...)` with `delta = +25.0 m`. Assert `mLastAltitudeSuperFiltered` shifts by `+25.0 m` and `shiftFilter` is invoked for both `21.0s` and `300.0s` filters (`TST-FIL-004.5` parity); verify active-baro calibration `>= 15.0 m` followed by `calculateMetrics()` before `ALTITUDE_CORRECTION_INTENT` delivery neither triggers premature `reseedFilter` nor double-shifts filters (`TST-FIL-024.1c`).
   2. *Synchronized `onAccumulatorsReset()` State Clearing Test (`TST-FIL-024.2`, `VerticalSpeedAndSlopeDeviceTest.kt`)*:
      • Populate `VerticalSpeedAndSlopeDevice` with pre-start altitude samples (`mLastAltitudeSuperFiltered`, `mAltitudeHistory`, `mLastAltitudeSourceDevice`), then invoke `onAccumulatorsReset()`.
      • Assert `mLastAltitudeSuperFiltered == null`, `mLastAltitude == null`, `mLastAltitudeSourceDevice == null`, and `mAltitudeHistoryCount == 0` / `mAltitudeHistoryHead == 0`, so subsequent startup ticks emit `0.0 m` `DESCENT` / `ASCENT`.
   3. *Same-Device Step / EKF Re-Anchor Re-Seeding & Steady-State Preservation Test (`TST-FIL-024.3`, `VerticalSpeedAndSlopeDeviceTest.kt`)*:
      • Keep `SensorType.ALTITUDE` on the same `ALTITUDE_AND_SLOPE_ATT_FUSED` device; stream initial uncalibrated `538.0 m` samples, then inject an abrupt same-device snap to `438.0 m` (`-100.0 m` DEM/GPS re-anchor) during `calculateMetrics()`. Assert `reseedAltitudeFilters(438.0)` triggers, `DESCENT`/`ASCENT` remain `0.0 m`, and `SLOPE` records zero `-203%` spike.
-     • Follow with a genuine steady climb and steady descent (`0.5 m/s` / `-0.5 m/s` at `5.0 m/s` horizontal speed) and verify `ASCENT`, `DESCENT`, `VERTICAL_SPEED`, and `SLOPE` integrate accurately.
+     • Follow with a genuine steady climb and steady descent (`0.5 m/s` / `-0.5 m/s` at `5.0 m/s` horizontal speed) and verify `ASCENT`, `DESCENT`, `VERTICAL_SPEED`, and `SLOPE` integrate accurately; verify non-finite `NaN` / `±Infinity` `delta` and `rawAlt` inputs are rejected cleanly (`TST-FIL-024.3c`).
   4. *Targeted Tier-1 Unit Regression (`TST-FIL-024.4`)*:
      • Execute `./gradlew :app:testDebugUnitTest --tests "com.atrainingtracker.banalservice.devices.VerticalSpeedAndSlopeDeviceTest" --tests "com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest"` asserting 100% pass rate with zero `src/main` reads (`REQ-PRO-049.1`; `Localization parity: N/A - no UI strings`).
 
@@ -3298,3 +3298,4 @@
 | `1.0.4` | 2026-11-17 | AI Agent (`ATT-8707`) | `ATT-8707` | Added `TST-FIL-024` [Proposed] for `VerticalSpeedAndSlopeDevice` baro broadcast guard, `onAccumulatorsReset()`, and same-device step re-seeding. |
 | `1.0.5` | 2026-11-17 | AI Agent (`ATT-8707`) | `ATT-8707` | Promoted `TST-FIL-024` to `[Implemented]` following Stage 4 unit test implementation. |
 | `1.0.6` | 2026-11-17 | AI Agent (`ATT-8707`) | `ATT-8707` | Promoted `TST-FIL-024` to `[Verified]` in Stage 5 following targeted unit regression verification. |
+| `1.0.7` | 2026-11-17 | AI Agent (`ATT-8707`) | `ATT-8707` | Stage 6 Bounce 1/3 heal: added active-baro no-double-shift regression (`TST-FIL-024.1c`) and `Double.isFinite` rejection test (`TST-FIL-024.3c`). |

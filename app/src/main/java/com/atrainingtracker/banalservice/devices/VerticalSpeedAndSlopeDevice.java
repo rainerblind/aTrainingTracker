@@ -92,7 +92,7 @@ public class VerticalSpeedAndSlopeDevice extends MyDevice {
         public void onReceive(Context context, Intent intent) {
             if (intent == null) return;
             double delta = intent.getDoubleExtra(AltitudeFromPressureDevice.ALTITUDE_CORRECTION_VALUE, 0.0);
-            if (Math.abs(delta) < 0.1 || Math.abs(delta) > 500.0) return;
+            if (!Double.isFinite(delta) || Math.abs(delta) < 0.1 || Math.abs(delta) > 500.0) return;
 
             // REQ-FIL-024.1: Only shift filters when barometric pressure is the active canonical ALTITUDE source.
             MySensor<?> activeAltSensor = resolveActiveAltitudeSensor();
@@ -300,9 +300,11 @@ public class VerticalSpeedAndSlopeDevice extends MyDevice {
         FilteredSensorData<Double> speedFilteredSensorData = BANALService.getFilteredSensorData(cSpeedFilter);
         FilteredSensorData<Double> accuracyFilteredSensorData = BANALService.getFilteredSensorData(cAccuracyFilter);
 
-        // check if we have filtered altitude values
-        if (altitudeFilteredSensorData == null || altitudeFilteredSensorData.getValue() == null) {
-            if (DEBUG) Log.i(TAG, "calculateMetrics(): no filtered altitude -> return");
+        // check if we have finite filtered altitude values
+        if (altitudeFilteredSensorData == null
+                || altitudeFilteredSensorData.getValue() == null
+                || !Double.isFinite(altitudeFilteredSensorData.getValue())) {
+            if (DEBUG) Log.i(TAG, "calculateMetrics(): no finite filtered altitude -> return");
             return;
         }
 
@@ -337,7 +339,9 @@ public class VerticalSpeedAndSlopeDevice extends MyDevice {
 
         // similar procedure for the ascent and descent but with the more filtered values
         altitudeFilteredSensorData = BANALService.getFilteredSensorData(cAltitudeSuperFilter);
-        if (altitudeFilteredSensorData == null || altitudeFilteredSensorData.getValue() == null) {
+        if (altitudeFilteredSensorData == null
+                || altitudeFilteredSensorData.getValue() == null
+                || !Double.isFinite(altitudeFilteredSensorData.getValue())) {
             return;
         }
 
@@ -389,7 +393,7 @@ public class VerticalSpeedAndSlopeDevice extends MyDevice {
 
         Object val = altSensor.getValue();
         Double rawAlt = (val instanceof Number) ? ((Number) val).doubleValue() : null;
-        boolean hasValidRawAlt = rawAlt != null && !Double.isNaN(rawAlt);
+        boolean hasValidRawAlt = rawAlt != null && Double.isFinite(rawAlt);
 
         if (mLastAltitudeSourceDevice != null && currentDevice != mLastAltitudeSourceDevice) {
             if (hasValidRawAlt) {
@@ -405,7 +409,11 @@ public class VerticalSpeedAndSlopeDevice extends MyDevice {
                 mLastAltitude = rawAlt;
             }
         } else if (hasValidRawAlt) {
-            if (mLastAltitude != null && Math.abs(rawAlt - mLastAltitude) >= ALTITUDE_STEP_RESEED_THRESHOLD_METERS) {
+            // Exclude ALTITUDE_FROM_PRESSURE from same-device step reseeding: its calibration jumps
+            // are shifted coherently via ALTITUDE_CORRECTION_INTENT without double-shifting filters.
+            if (currentDevice.getDeviceType() != DeviceType.ALTITUDE_FROM_PRESSURE
+                    && mLastAltitude != null
+                    && Math.abs(rawAlt - mLastAltitude) >= ALTITUDE_STEP_RESEED_THRESHOLD_METERS) {
                 if (DEBUG) Log.i(TAG, "Same-device altitude step detected on "
                         + currentDevice.getName() + ": " + mLastAltitude + " -> " + rawAlt
                         + "; reseeding filters");
