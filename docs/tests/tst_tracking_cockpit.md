@@ -3,7 +3,7 @@
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Tests**: 134
+**Total Tests**: 135
 
 ---
 
@@ -3135,5 +3135,23 @@
      • Verify `HRV_DFA_A1` zone gradient stops are suppressed when `hrvSignalQualityStatus` is `SMOOTHED_STREAM` or `QUANTIZED_SYNTHETIC`.
   4. *Visual Compose Screenshot Verification Test (`TST-TRK-082.4`, `SensorFieldViewDynamicZoneScreenshotTest.kt`)*:
      • Render `SensorFieldView` / `SensorSparklineView` tiles in Light and Dark/AMOLED themes covering HR (5-zone), Power (7-zone incl. Zone 7 dark contrast), HRV DFA α1 (inverted polarity with aerobic green at bottom and anaerobic red at top), decoupled fixed-color + `showTextColor = true`, and placeholder/flat-line fallbacks; capture `docs/engineering/walkthroughs/img/ATT-7761_dynamic_zone_sparkline.png` and certify against Rule 8.5 4-point visual checklist.
+
+
+### TST-TRK-083: **Canonical SensorType Storage, Display & Export Unit Parity Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Tickets**: `ATT-8579`
+- **Requirement(s)**: `REQ-TRK-083` (`REQ-TRK-083.1`..`REQ-TRK-083.3`)
+- **Component**: `app/src/test/java/com/atrainingtracker/banalservice/sensor/SensorTypeUnitsContractTest.kt`
+- **Test Type**: Unit / Contract
+- **Verification Method**: Unit
+- **Procedure**:
+  1. *Code-Level `internalUnit` & Javadoc Coverage Test (`TST-TRK-083.1`, `SensorTypeUnitsContractTest.kt`)*:
+     • Iterate over all `SensorType.values()` (67 constants) and assert `sensorType.getInternalUnit()` is non-null, non-blank, and free of placeholder markers.
+     • Parse `app/src/main/java/com/atrainingtracker/banalservice/sensor/SensorType.java` and assert every enum constant declaration is preceded by a per-constant Javadoc block (`/** ... */`) documenting its internal unit.
+  2. *Bidirectional `docs/architecture/sensor_units.md` & Cross-Link Parity Test (`TST-TRK-083.2`, `SensorTypeUnitsContractTest.kt`)*:
+     • Parse `docs/architecture/sensor_units.md` data-dictionary table and assert exact bidirectional set equality (`docConstants == SensorType.values().map { it.name }.toSet()`), plus per-row agreement on `SensorCategory`, `SensorValueType`, and `internalUnit`.
+     • Assert `docs/architecture.md` contains an active reference link to `architecture/sensor_units.md` and that `sensor_units.md` documents sentinel values (`BATTERY_REMAINING_TIME` `-1` / `<= -2`, `PACE_spm` `MAX_PACE`, `HRV_DFA_A1` / `POWER_TO_WEIGHT` / `W_PRIME_BAL`) and export conversions (`FitFileWriter.kt`, `TCXFileWriter.kt`, `GPXFileWriter.java`, `CSVFileWriter.java`, `GCFileWriter.java`).
+  3. *Invariants & Regression Suite (`TST-TRK-083.3`)*:
+     • Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.banalservice.sensor.SensorTypeUnitsContractTest" --tests "com.atrainingtracker.banalservice.sensor.SensorTypeFormatterTest" --tests "com.atrainingtracker.banalservice.sensor.SensorTypeMmpTest" --tests "com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest" --tests "com.atrainingtracker.trainingtracker.build.ArchitectureConformanceContractTest"` and verify 100% pass with zero runtime/UI regressions (Localization parity: `N/A - no UI strings`).
 
 

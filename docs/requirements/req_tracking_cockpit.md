@@ -3,7 +3,7 @@
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Requirements**: 158
+**Total Requirements**: 159
 
 ---
 
@@ -6365,5 +6365,42 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 • *Then* it renders cleanly without divide-by-zero or invalid gradient stops, falling back to placeholder dashed styling or solid `lineColor`.
 
 **Invariants**: Zero extra per-sample color allocations in `List<Float>` ring buffers; zero SQLite v22 schema changes; monotonically non-decreasing `Brush.verticalGradient` stops in `[0f, 1f]`; zero Compose snapshot state writes during composition; clean-room test pass rate and Rule 8.5 PNG inspection.
+
+
+### REQ-TRK-083: Canonical Internal Storage, Display & Export Unit Specification for SensorType [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-TRK-083`
+- **System Requirement(s)**: `SYSREQ-TRK-001`, `SYSREQ-TRK-003`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `app/src/main/java/com/atrainingtracker/banalservice/sensor/SensorType.java`, `docs/architecture/sensor_units.md`, `docs/architecture.md`, `app/src/test/java/com/atrainingtracker/banalservice/sensor/SensorTypeUnitsContractTest.kt`
+- **Rationale**: Only 10 of 67 `SensorType` constants encode physical units in their enum name, while `SensorType.unitId` points to UI display resources (`R.string.units_*`) that diverge from internal SQLite/sensor-bus storage units after formatter scaling or `MyHelper.getUnitsId()` remapping. This ambiguity caused a 3600x vertical speed unit mismatch (`ATT-8577`, `ErtsPostWorkoutRecomputer` writing `m/s` into `m/h` `VERTICAL_SPEED`). Establishing a canonical 67-entry data dictionary in `docs/architecture/sensor_units.md`, structured `internalUnit` metadata and per-constant Javadoc in `SensorType.java`, and an automated bidirectional contract test eliminates storage/display/export unit ambiguity without altering runtime behavior or SQLite schemas (`ATT-8579`, Epic `ATT-431`, complementing `REQ-TRK-070` and `REQ-PRO-043`).
+- **Description**:
+  1. *Canonical Sensor Unit Data Dictionary (`REQ-TRK-083.1`)*:
+     - `docs/architecture/sensor_units.md` (linked from `docs/architecture.md`) SHALL define a complete data-dictionary table covering all **67** `SensorType` enum constants, specifying per constant:
+       • Enum `name()`, `SensorCategory`, and `SensorSubCategory` (`null` if direct core metric).
+       • Internal SQLite/sensor-bus storage unit (exact SI/physical unit, e.g., `m/s`, `m/h`, `m`, `s`, `ms`, `cm`, `rad/s`, `%`, `W`, `kJ`, `bpm`, `deg`, `kcal`, `Nm`, `W/kg`, `degC`, or `dimensionless`).
+       • `SensorValueType` (`INTEGER`, `DOUBLE`, `STRING`), valid physical range, and sentinel conventions (including `BATTERY_REMAINING_TIME`: `-1` charging, `<= -2` stabilizing; `PACE_spm`: `> BANALService.MAX_PACE` -> `"~~"`; `HRV_DFA_A1`, `POWER_TO_WEIGHT`, `W_PRIME_BAL`: `< 0`, `NaN`, `Infinite` -> `"--.--"` / `"--"`).
+       • UI formatter (`MyFormatter` class) and Metric/Imperial display unit conversion via `MyHelper.getUnitsId()`.
+       • File export units across FIT (`FitFileWriter.kt`), TCX (`TCXFileWriter.kt`), GPX (`GPXFileWriter.java`), CSV (`CSVFileWriter.java`), and Golden Cheetah (`GCFileWriter.java`).
+     - Authentic existing discrepancies (`W_PRIME_BAL` emitting `kJ` while formatted with `PowerToWeightFormatter` `"W/kg"`; `MyHelper.getUnitsId()` omitting radar distance/speed types and falling back to `units_distance_basic`/`units_speed_basic`) SHALL be documented explicitly without altering runtime formatter/helper/exporter behavior.
+  2. *Code-Level `internalUnit` Metadata & Per-Constant Javadoc (`REQ-TRK-083.2`)*:
+     - `app/src/main/java/com/atrainingtracker/banalservice/sensor/SensorType.java` SHALL declare a non-null `private final String internalUnit` field and `public String getInternalUnit()` accessor on every `SensorType` constant, together with per-constant Javadoc documenting internal storage unit, valid range/sentinel behavior, and UI display/export conversion.
+     - Enum declaration order (`Parcelable` `ordinal()`), enum `name()` identifiers (`WorkoutSamples.db` column names), `@Deprecated getUnitId()`, and all runtime formatter, exporter, and device calculation behaviors MUST remain unchanged (`N/A - no UI strings`).
+  3. *Automated Bidirectional Parity Contract (`REQ-TRK-083.3`)*:
+     - `app/src/test/java/com/atrainingtracker/banalservice/sensor/SensorTypeUnitsContractTest.kt` SHALL execute on the JVM (`./gradlew testDebugUnitTest`) and assert:
+       • 100% coverage of `SensorType.values()` (every constant has a non-blank `getInternalUnit()` and a matching per-constant Javadoc block in `SensorType.java`).
+       • 100% bidirectional set parity (`codeConstants == docConstants`) and metadata parity (`SensorCategory`, `SensorValueType`, `internalUnit`) between `SensorType.values()` and `docs/architecture/sensor_units.md`, plus cross-link verification in `docs/architecture.md`.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* all 67 enum constants in `SensorType.values()`,
+• *When* `SensorTypeUnitsContractTest` inspects `SensorType.getInternalUnit()`, `SensorType.java` source Javadoc, `docs/architecture/sensor_units.md`, and `docs/architecture.md`,
+• *Then* 100% of constants have non-blank `internalUnit`, per-constant Javadoc, and matching dictionary rows in `docs/architecture/sensor_units.md` with zero missing or orphaned entries.
+• *Given* an existing `SensorType` consumer (`Parcelable` `CREATOR`, `WorkoutSamplesDatabaseManager`, `MyFormatter`, `MyHelper`, or `FitFileWriter`),
+• *When* `SensorType` metadata and documentation are added,
+• *Then* `ordinal()`, `name()`, `getUnitId()`, SQLite column names, and runtime formatting/export outputs remain identical.
+
+**Invariants**: `SensorType` `ordinal()` and `name()` unchanged; `WorkoutSamples.db` schema unchanged; `@Deprecated getUnitId()` contract preserved; zero UI strings added (`N/A - no UI strings`); zero runtime formatter/exporter/device behavioral changes; `./gradlew testDebugUnitTest` passes cleanly.
 
 
