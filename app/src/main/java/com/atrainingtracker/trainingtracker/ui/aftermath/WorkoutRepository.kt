@@ -433,6 +433,24 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
         summariesManager.saveAccumulatedSensorTypes(workoutId, sensorTypes)
     }
 
+    /**
+     * Idempotently upserts additional active [SensorType] entries into `AccumulatedSensors`
+     * for [workoutId] without duplicating existing rows (`REQ-TRK-084.2`, `REQ-TRK-084.3`, `REQ-TRK-084.4`).
+     */
+    fun addAccumulatedSensorTypes(workoutId: Long, sensorTypes: Set<SensorType>) {
+        if (workoutId <= 0L || sensorTypes.isEmpty()) return
+        summariesManager.saveAccumulatedSensorTypes(workoutId, sensorTypes)
+    }
+
+    /**
+     * Retrieves the persisted [SensorType] set recorded in `AccumulatedSensors` for [workoutId]
+     * (`REQ-TRK-084.3`).
+     */
+    fun getAccumulatedSensorTypes(workoutId: Long): Set<SensorType> {
+        if (workoutId <= 0L) return emptySet()
+        return summariesManager.getAccumulatedSensorTypes(workoutId)
+    }
+
     fun saveLap(workoutId: Long, lapNr: Long, lapTime: Int, lapDistance: Double, averageSpeed: Double) {
         lapsDatabaseManager.saveLap(workoutId, lapNr, lapTime, lapDistance, averageSpeed)
     }

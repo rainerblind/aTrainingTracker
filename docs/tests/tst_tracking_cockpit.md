@@ -3,7 +3,7 @@
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Tests**: 135
+**Total Tests**: 136
 
 ---
 
@@ -3153,5 +3153,31 @@
      • Assert `docs/architecture.md` contains an active reference link to `architecture/sensor_units.md` and that `sensor_units.md` documents sentinel values (`BATTERY_REMAINING_TIME` `-1` / `<= -2`, `PACE_spm` `MAX_PACE`, `HRV_DFA_A1` / `POWER_TO_WEIGHT` / `W_PRIME_BAL`) and export conversions (`FitFileWriter.kt`, `TCXFileWriter.kt`, `GPXFileWriter.java`, `CSVFileWriter.java`, `GCFileWriter.java`).
   3. *Invariants & Regression Suite (`TST-TRK-083.3`)*:
      • Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.banalservice.sensor.SensorTypeUnitsContractTest" --tests "com.atrainingtracker.banalservice.sensor.SensorTypeFormatterTest" --tests "com.atrainingtracker.banalservice.sensor.SensorTypeMmpTest" --tests "com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest" --tests "com.atrainingtracker.trainingtracker.build.ArchitectureConformanceContractTest"` and verify 100% pass with zero runtime/UI regressions (Localization parity: `N/A - no UI strings`).
+
+
+### TST-TRK-084: **Valid-Data `AccumulatedSensors` Persistence Filtering, Resume Rehydration & Post-Workout Backfill Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Tickets**: `ATT-8578`
+- **Requirement(s)**: `REQ-TRK-084` (`REQ-TRK-084.1`..`REQ-TRK-084.4`)
+- **Component**: `TrackerServiceFinalizationTest.kt`, `TrackerServiceIntegrationTest.kt`, `TrackerServiceResumeTest.kt`, `WorkoutSummariesAccumulatedSensorsTest.kt`, `PolarH10OfflineControllerTest.kt`, `PolarVeritySenseOfflineControllerTest.kt`, `HrvPostWorkoutRecomputerTest.kt`
+- **Test Type**: Unit & Integration
+- **Verification Method**: Unit
+- **Procedure**:
+  1. *Live Non-Null Observation & Virtual-Device Silence Test (`TST-TRK-084.1`, `TrackerServiceFinalizationTest.kt`)*:
+     • Run `sampleAndWriteToDb()` with `BANALServiceComm.getAllSensorData()` returning valid `TIME_TOTAL`, `SPEED_mps`, `LATITUDE`, `LONGITUDE` plus `null`-valued `HR`, `POWER`, `HRV_DFA_A1`, `HRV_RMSSD`, `HRV_ARTIFACT_RATE`, `POWER_5S`, `TSS`, `W_PRIME_BAL`, `LIVE_HR_DRIFT`, and `BANALServiceComm.getAccumulatedSensorTypeSet()` returning all 40 registered types.
+     • Invoke `endWorkout(snapshot)` and assert `AccumulatedSensors` persists strictly the observed non-null types (`TIME_TOTAL`, `SPEED_mps`, `LATITUDE`, `LONGITUDE`) and zero unattached virtual HRV/Power/Dynamics sensors.
+     • Verify `mLiveSession == null` fallback still persists `snapshot.accumulatedSensorTypes` (`TST-TRK-027.3`) and `MySensorManager.getAccumulatedSensorTypeSet()` registration behavior (`TST-TRK-022.3`) remains unchanged.
+  2. *`finalizeLiveSession()` Post-Processed Metric Upsert Test (`TST-TRK-084.2`, `TrackerServiceFinalizationTest.kt`)*:
+     • Execute `endWorkout()` + `finalizeLiveSession()` for a session with recorded power/HR/GPS samples producing `NORMALIZED_POWER`, `INTENSITY_FACTOR`, `TSS`, `WORK_KJ`, `POWER_TO_WEIGHT`, and `LINE_DISTANCE_m`.
+     • Assert `FINISHED = 1` commits before auxiliary saves (`REQ-TRK-030.1`) and `finalizeLiveSession()` upserts the non-null computed metrics into `AccumulatedSensors`.
+  3. *Resume Rehydration & Idempotent DB Deduplication Test (`TST-TRK-084.3`, `TrackerServiceResumeTest.kt` & `WorkoutSummariesDatabaseManagerTest.kt`)*:
+     • Persist initial `AccumulatedSensors` rows (`HR`, `SPEED_mps`) for a workout, run `rehydrateLiveSession()` on resume, record new `POWER` samples, and finalize; assert `AccumulatedSensors` contains `{HR, SPEED_mps, POWER}` with zero duplicate rows.
+     • Invoke `saveAccumulatedSensorTypes()` / `addAccumulatedSensorTypes()` repeatedly with overlapping `SensorType` sets and assert `SELECT COUNT(*)` in `AccumulatedSensors` matches the deduplicated set size (`0` duplicates).
+  4. *Polar H10 / Verity Sense Backfill & Conditional HRV Recomputation Upsert Test (`TST-TRK-084.4`, `PolarH10OfflineControllerTest.kt`, `PolarVeritySenseOfflineControllerTest.kt`, `HrvPostWorkoutRecomputerTest.kt`)*:
+     • Exercise `PolarH10OfflineController` (synchronous stop backfill and deferred `syncPendingWorkout()`) and `PolarVeritySenseOfflineController` (`applyBackfillAndCommit()` and `applySwimBackfillAndCommit()`) with non-empty HR/RR samples; assert `SensorType.HR` is upserted into `AccumulatedSensors`.
+     • Exercise `HrvPostWorkoutRecomputer.recomputeWorkout()` across full-HRV (`rmssdValues`, `dfaValues`, `sessionSdnn` all populated) and sparse/artifact-gated (`dfaValues` empty or `sessionSdnn == null`) cases; assert `HRV_ARTIFACT_RATE` is upserted when written and `HRV_RMSSD`, `HRV_DFA_A1`, `HRV_SDNN` are upserted strictly when non-empty/non-null.
+  5. *Tier 1 Targeted Regression Suite & Localization Parity (`TST-TRK-084.5`)*:
+     • Run `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.tracker.*" --tests "com.atrainingtracker.trainingtracker.database.*" --tests "com.atrainingtracker.banalservice.devices.bluetooth_le.polar.*" --tests "com.atrainingtracker.trainingtracker.build.*"` asserting 100% pass (Localization parity: `N/A - no UI strings`).
+
 
 

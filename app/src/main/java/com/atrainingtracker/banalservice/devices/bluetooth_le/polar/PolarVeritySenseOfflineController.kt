@@ -982,6 +982,7 @@ object PolarVeritySenseOfflineController {
         if (!baseFileName.isNullOrEmpty() && hrPairs.isNotEmpty()) {
             val samplesManager = WorkoutSamplesDatabaseManager.getInstance(appContext)
             samplesManager.patchMissingHeartRateSamples(baseFileName, anchorMs, hrPairs)
+            PolarOfflineGattCoordinator.recordBackfilledSensorTypes(appContext, workoutId, SensorType.HR)
             recomputeHrSummaryMetrics(appContext, workoutId, baseFileName)
         }
 
@@ -1169,6 +1170,7 @@ object PolarVeritySenseOfflineController {
         if (!baseFileName.isNullOrEmpty() && hrPairs.isNotEmpty()) {
             val samplesManager = WorkoutSamplesDatabaseManager.getInstance(appContext)
             samplesManager.patchMissingHeartRateSamples(baseFileName, anchorMs, hrPairs)
+            PolarOfflineGattCoordinator.recordBackfilledSensorTypes(appContext, workoutId, SensorType.HR)
             recomputeHrSummaryMetrics(appContext, workoutId, baseFileName)
         }
         if (clearPendingFlag) {

@@ -27,6 +27,8 @@ import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
 import com.atrainingtracker.banalservice.devices.DeviceType
+import com.atrainingtracker.banalservice.sensor.SensorType
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.polar.androidcommunications.api.ble.model.DisInfo
 import com.polar.sdk.api.PolarBleApi
 import com.polar.sdk.api.PolarBleApiCallback
@@ -397,6 +399,19 @@ object PolarOfflineGattCoordinator {
             }
         } finally {
             btleDevice?.resumeGattOperations()
+        }
+    }
+
+    /**
+     * Idempotently records [sensorTypes] into `AccumulatedSensors` after offline Polar backfill
+     * completes so backfilled workouts retain accurate sensor metadata (`REQ-TRK-084.4`).
+     */
+    fun recordBackfilledSensorTypes(context: Context, workoutId: Long, vararg sensorTypes: SensorType) {
+        if (workoutId <= 0L || sensorTypes.isEmpty()) return
+        try {
+            WorkoutRepository.getInstance(context).addAccumulatedSensorTypes(workoutId, sensorTypes.toSet())
+        } catch (t: Throwable) {
+            Log.w(TAG, "Non-fatal error recording backfilled sensor types for workout $workoutId: ${t.message}")
         }
     }
 }

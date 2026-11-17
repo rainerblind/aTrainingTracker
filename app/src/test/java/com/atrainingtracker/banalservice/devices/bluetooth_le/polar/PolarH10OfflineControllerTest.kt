@@ -27,6 +27,7 @@ import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
 import com.atrainingtracker.banalservice.devices.DeviceManager
 import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDevice
+import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.hrv.HrvPostWorkoutRecomputer
@@ -289,6 +290,7 @@ class PolarH10OfflineControllerTest {
         assertTrue("Backfill should succeed", result)
         coVerify(exactly = 1) { mockApi.fetchExercise("1C3B2421", testEntry) }
         verify(exactly = 1) { mockSamplesDb.patchMissingHeartRateSamples("2026-11-15_123456", any(), any()) }
+        verify(exactly = 1) { mockWorkoutRepo.addAccumulatedSensorTypes(123L, setOf(SensorType.HR)) }
         coVerify(exactly = 1) { mockRrRepo.insertIntervals(any()) }
         coVerify(exactly = 1) { HrvPostWorkoutRecomputer.recomputeWorkout(any(), 123L) }
         coVerify(exactly = 1) { mockApi.removeExercise("1C3B2421", testEntry) }
@@ -404,6 +406,7 @@ class PolarH10OfflineControllerTest {
         // Then (TST-SET-108.4): Deferred sync patches DBs, clears flag, removes exercise from strap, refreshes UI
         assertTrue("Deferred sync should succeed", result)
         coVerify(exactly = 1) { mockApi.fetchExercise("1C3B2421", testEntry) }
+        verify(exactly = 1) { mockWorkoutRepo.addAccumulatedSensorTypes(123L, setOf(SensorType.HR)) }
         coVerify(exactly = 1) { mockRrRepo.insertIntervals(any()) }
         coVerify(exactly = 1) { HrvPostWorkoutRecomputer.recomputeWorkout(any(), 123L) }
         verify(exactly = 1) { mockSummariesDb.clearPolarSyncPending(123L) }

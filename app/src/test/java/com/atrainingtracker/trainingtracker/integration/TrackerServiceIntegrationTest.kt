@@ -572,4 +572,60 @@ class TrackerServiceIntegrationTest {
         assertEquals(1L, lap.lapNr)
         assertEquals(2400.0, lap.distanceTotalM, 0.01)
     }
+
+    /**
+     * TST-TRK-084.1 (End-to-End Integration): Verifies that sampleAndWriteToDb() + endWorkout()
+     * persists only sensors that emitted non-null values and suppresses all 18+ unattached virtual
+     * HRV/Power/Dynamics sensors even when BANALService.getAccumulatedSensorTypeSet() contains them.
+     */
+    @Test
+    fun testSampleAndWriteToDb_andEndWorkout_filtersNullValuedVirtualSensorsInSqlite() {
+        val startIntent = Intent(context, TrackerService::class.java).apply {
+            putExtra(TrackerService.START_TYPE, TrackerService.StartType.START_NORMAL.name)
+        }
+        service.onStartCommand(startIntent, 0, 1)
+        val workoutId = getWorkoutId()
+
+        // BANAL reports 40 registered sensors including unattached HRV/Power/Dynamics
+        every { mockBanalComm.accumulatedSensorTypeSet } returns setOf(
+            SensorType.TIME_TOTAL, SensorType.DISTANCE_m, SensorType.SPEED_mps,
+            SensorType.ALTITUDE, SensorType.LATITUDE, SensorType.LONGITUDE,
+            SensorType.HR, SensorType.POWER, SensorType.CADENCE,
+            SensorType.HRV_DFA_A1, SensorType.HRV_RMSSD, SensorType.HRV_ARTIFACT_RATE,
+            SensorType.LIVE_HR_DRIFT, SensorType.POWER_5S, SensorType.POWER_1M,
+            SensorType.POWER_5M, SensorType.POWER_20M, SensorType.POWER_PEAK_5S,
+            SensorType.POWER_PEAK_1M, SensorType.POWER_PEAK_5M, SensorType.POWER_PEAK_20M,
+            SensorType.NORMALIZED_POWER, SensorType.INTENSITY_FACTOR, SensorType.WORK_KJ,
+            SensorType.TSS, SensorType.W_PRIME_BAL, SensorType.POWER_TO_WEIGHT
+        )
+
+        // Only TIME_TOTAL, DISTANCE_m, SPEED_mps, LATITUDE, LONGITUDE emit non-null values; virtual/HR/Power emit null
+        setSimulatedSensor(SensorType.TIME_TOTAL, 60)
+        setSimulatedSensor(SensorType.DISTANCE_m, 500.0)
+        setSimulatedSensor(SensorType.SPEED_mps, 3.0)
+        setSimulatedSensor(SensorType.LATITUDE, 48.10)
+        setSimulatedSensor(SensorType.LONGITUDE, 11.50)
+        simulatedSensorMap[SensorType.HRV_DFA_A1] = SensorData(SensorType.HRV_DFA_A1, null, "--", null, 0L)
+        simulatedSensorMap[SensorType.HRV_RMSSD] = SensorData(SensorType.HRV_RMSSD, null, "--", null, 0L)
+        simulatedSensorMap[SensorType.POWER_5S] = SensorData(SensorType.POWER_5S, null, "--", null, 0L)
+        simulatedSensorMap[SensorType.TSS] = SensorData(SensorType.TSS, null, "--", null, 0L)
+        simulatedSensorMap[SensorType.W_PRIME_BAL] = SensorData(SensorType.W_PRIME_BAL, null, "--", null, 0L)
+        simulatedSensorMap[SensorType.SENSORS] = SensorData(SensorType.SENSORS, "TDS----AG--", "TDS----AG--", null, 0L)
+        simulatedSensorMap[SensorType.ACCUMULATED_SENSORS] = SensorData(SensorType.ACCUMULATED_SENSORS, "TDS----AG--", "TDS----AG--", null, 0L)
+
+        invokeSampleAndWriteToDb()
+        service.endWorkout()
+
+        val persisted = WorkoutRepository.getInstance(context).getAccumulatedSensorTypes(workoutId)
+        assertEquals(
+            setOf(
+                SensorType.TIME_TOTAL,
+                SensorType.DISTANCE_m,
+                SensorType.SPEED_mps,
+                SensorType.LATITUDE,
+                SensorType.LONGITUDE
+            ),
+            persisted
+        )
+    }
 }

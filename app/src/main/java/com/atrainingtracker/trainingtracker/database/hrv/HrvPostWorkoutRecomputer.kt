@@ -249,6 +249,7 @@ object HrvPostWorkoutRecomputer {
             }
 
             // 3. Update session extrema in WorkoutSummaries.db
+            val sessionSdnn = computeSessionSdnn(sortedBeats)
             val summariesDb = summariesDbManager.database
             summariesDb.beginTransaction()
             try {
@@ -268,13 +269,29 @@ object HrvPostWorkoutRecomputer {
                     summariesDbManager.updateExtremaValue(summariesDb, workoutId, SensorType.HRV_DFA_A1, ExtremaType.MAX, maxDfa, null)
                     summariesDbManager.updateExtremaValue(summariesDb, workoutId, SensorType.HRV_DFA_A1, ExtremaType.AVG, avgDfa, null)
                 }
-                val sessionSdnn = computeSessionSdnn(sortedBeats)
                 if (sessionSdnn != null) {
                     summariesDbManager.updateExtremaValue(summariesDb, workoutId, SensorType.HRV_SDNN, ExtremaType.AVG, sessionSdnn, null)
                 }
                 summariesDb.setTransactionSuccessful()
             } finally {
                 summariesDb.endTransaction()
+            }
+
+            // 3b. Upsert HRV AccumulatedSensors types conditionally based on actually computed outputs (REQ-TRK-084.4)
+            try {
+                val hrvAccumulated = mutableSetOf(SensorType.HRV_ARTIFACT_RATE)
+                if (rmssdValues.isNotEmpty()) {
+                    hrvAccumulated.add(SensorType.HRV_RMSSD)
+                }
+                if (dfaValues.isNotEmpty()) {
+                    hrvAccumulated.add(SensorType.HRV_DFA_A1)
+                }
+                if (sessionSdnn != null) {
+                    hrvAccumulated.add(SensorType.HRV_SDNN)
+                }
+                WorkoutRepository.getInstance(context).addAccumulatedSensorTypes(workoutId, hrvAccumulated)
+            } catch (t: Throwable) {
+                Log.w(TAG, "Could not upsert HRV accumulated sensor types for workout $workoutId: ${t.message}")
             }
 
             // 4. Compute and persist Autonomic Durability & Drift (REQ-PER-038, ATT-4970)

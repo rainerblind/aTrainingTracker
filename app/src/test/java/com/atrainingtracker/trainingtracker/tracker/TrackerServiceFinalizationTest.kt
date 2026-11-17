@@ -1311,6 +1311,127 @@ class TrackerServiceFinalizationTest {
             com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository.resetForTesting(null)
         }
     }
+
+    /**
+     * TST-TRK-084.1: Verifies that endWorkout() persists strictly liveSession.observedSensorTypes
+     * rather than unfiltered BANALService.getAccumulatedSensorTypeSet() when liveSession is active,
+     * excluding unattached virtual HRV/Power/Dynamics sensors (REQ-TRK-084.1).
+     */
+    @Test
+    fun testEndWorkout_withActiveLiveSession_persistsOnlyObservedSensorTypes() {
+        service.delegateToRealEndWorkout = true
+        val workoutId = 4321L
+        setWorkoutId(workoutId)
+        setField("mBaseFileName", "2026-11-17_test")
+        setField("mTimeActive_s", 120)
+        setField("mDistanceTotal_m", 600.0)
+
+        mockkConstructor(ContentValues::class)
+        every { anyConstructed<ContentValues>().put(any(), any<Int>()) } returns Unit
+        every { anyConstructed<ContentValues>().put(any(), any<Long>()) } returns Unit
+        every { anyConstructed<ContentValues>().put(any(), any<String>()) } returns Unit
+        every { anyConstructed<ContentValues>().size() } returns 1
+
+        mockkConstructor(Intent::class)
+        every { anyConstructed<Intent>().setPackage(any()) } answers { self as Intent }
+        every { anyConstructed<Intent>().putExtra(any(), any<Long>()) } answers { self as Intent }
+
+        val repositoryMock = mockk<WorkoutRepository>(relaxed = true)
+        setField("mWorkoutRepository", repositoryMock)
+
+        val liveSession = LiveWorkoutSession(workoutId, TrackerService.IMPORTANT_SENSOR_TYPES)
+        liveSession.recordObservedSensorType(SensorType.TIME_TOTAL)
+        liveSession.recordObservedSensorType(SensorType.SPEED_mps)
+        liveSession.recordObservedSensorType(SensorType.LATITUDE)
+        liveSession.recordObservedSensorType(SensorType.LONGITUDE)
+        setField("mLiveSession", liveSession)
+
+        // Snapshot still carries the 40 registered virtual sensors from BANALService
+        val registeredSet = setOf(
+            SensorType.TIME_TOTAL, SensorType.SPEED_mps, SensorType.LATITUDE, SensorType.LONGITUDE,
+            SensorType.HR, SensorType.POWER,
+            SensorType.HRV_DFA_A1, SensorType.HRV_RMSSD, SensorType.HRV_ARTIFACT_RATE,
+            SensorType.LIVE_HR_DRIFT, SensorType.POWER_5S, SensorType.NORMALIZED_POWER,
+            SensorType.INTENSITY_FACTOR, SensorType.TSS, SensorType.WORK_KJ,
+            SensorType.W_PRIME_BAL, SensorType.POWER_TO_WEIGHT
+        )
+        val snapshot = TrackerService.BanalFinalizationSnapshot(
+            1, 120, 600.0,
+            emptySet(), registeredSet, "TDS----AG--",
+            BSportType.RUN, BSportType.RUN, 1L,
+            5.0, true, 600.0, 120
+        )
+
+        service.endWorkout(snapshot)
+
+        val savedSensorsSlot = slot<Set<SensorType>>()
+        verifyOrder {
+            repositoryMock.markWorkoutFinishedBlocking(workoutId)
+            repositoryMock.saveAccumulatedSensorTypes(workoutId, capture(savedSensorsSlot))
+        }
+        assertEquals(
+            setOf(SensorType.TIME_TOTAL, SensorType.SPEED_mps, SensorType.LATITUDE, SensorType.LONGITUDE),
+            savedSensorsSlot.captured
+        )
+    }
+
+    /**
+     * TST-TRK-084.2: Verifies that finalizeLiveSession() idempotently upserts non-null
+     * computed metrics (LINE_DISTANCE_m, NORMALIZED_POWER, INTENSITY_FACTOR, TSS, WORK_KJ,
+     * POWER_TO_WEIGHT) into AccumulatedSensors after FINISHED = 1 (REQ-TRK-084.2).
+     */
+    @Test
+    fun testFinalizeLiveSession_upsertsComputedPowerAndLineDistanceMetrics() {
+        val service = TestableTrackerService()
+        val repoMock = mockk<WorkoutRepository>(relaxed = true)
+        val repoField = TrackerService::class.java.getDeclaredField("mWorkoutRepository").apply { isAccessible = true }
+        repoField.set(service, repoMock)
+
+        mockkStatic(com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper::class)
+        every {
+            com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.resolveEffectiveFtpAt(any(), any())
+        } returns 250
+        every {
+            com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.resolveEffectiveWeightKgAt(any(), any())
+        } returns 70.0f
+
+        val baseFileName = "2026-11-17_power_test"
+        val powerSamples = List(60) { 200.0 }
+        every { repoMock.getPowerSpeedHrSamples(baseFileName) } returns
+            com.atrainingtracker.trainingtracker.ui.aftermath.PowerSpeedHrSamples(
+                powerSamples = powerSamples,
+                speedSamples = emptyList(),
+                hrSamples = emptyList()
+            )
+
+        val liveSession = LiveWorkoutSession(555L, TrackerService.IMPORTANT_SENSOR_TYPES)
+        liveSession.addSample(SensorType.SPEED_mps, 8.0, LatLng(48.10, 11.50))
+        liveSession.rehydrateStreams(
+            listOf(LatLng(48.10, 11.50), LatLng(48.11, 11.51)),
+            listOf(500.0, 505.0),
+            listOf(0.0, 1500.0)
+        )
+
+        val snapshot = TrackerService.BanalFinalizationSnapshot(
+            1, 60, 1500.0,
+            emptySet(), emptySet(), null,
+            BSportType.BIKE, BSportType.BIKE, 1L,
+            8.0, true, 1500.0, 60
+        )
+
+        service.finalizeLiveSession(snapshot, 555L, baseFileName, liveSession)
+
+        val upsertedSlot = slot<Set<SensorType>>()
+        verify(exactly = 1) {
+            repoMock.addAccumulatedSensorTypes(555L, capture(upsertedSlot))
+        }
+        assertTrue(upsertedSlot.captured.contains(SensorType.LINE_DISTANCE_m))
+        assertTrue(upsertedSlot.captured.contains(SensorType.NORMALIZED_POWER))
+        assertTrue(upsertedSlot.captured.contains(SensorType.INTENSITY_FACTOR))
+        assertTrue(upsertedSlot.captured.contains(SensorType.TSS))
+        assertTrue(upsertedSlot.captured.contains(SensorType.WORK_KJ))
+        assertTrue(upsertedSlot.captured.contains(SensorType.POWER_TO_WEIGHT))
+    }
 }
 
 

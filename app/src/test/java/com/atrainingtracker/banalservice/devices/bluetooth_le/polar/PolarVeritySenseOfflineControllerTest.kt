@@ -567,6 +567,7 @@ class PolarVeritySenseOfflineControllerTest {
         assertTrue(result)
         assertFalse(PolarVeritySenseOfflineController.isRecordingArmed())
         assertEquals(3, pairsSlot.captured.size)
+        verify(exactly = 1) { mockWorkoutRepo.addAccumulatedSensorTypes(88L, setOf(SensorType.HR)) }
         val aligned = PolarVeritySenseOfflineController.alignHrSamples(hrRecording, anchorMs)
         assertEquals(
             listOf(
@@ -1142,6 +1143,9 @@ class PolarVeritySenseOfflineControllerTest {
                 25.0,
                 any()
             )
+        }
+        verify(exactly = 1) {
+            mockWorkoutRepo.addAccumulatedSensorTypes(workoutId, setOf(SensorType.HR))
         }
     }
 }

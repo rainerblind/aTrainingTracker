@@ -37,6 +37,7 @@ import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
 import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.devices.RrBeatEvent
 import com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDevice
+import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
@@ -363,6 +364,7 @@ object PolarH10OfflineController {
                                 // Patch WorkoutSamples.db
                                 val samplesManager = WorkoutSamplesDatabaseManager.getInstance(appContext)
                                 samplesManager.patchMissingHeartRateSamples(baseFileName, anchorMs, hrPairs)
+                                PolarOfflineGattCoordinator.recordBackfilledSensorTypes(appContext, workoutId, SensorType.HR)
 
                                 // Patch WorkoutRr.db
                                 val rrRepo = WorkoutRrRepository.getInstance(appContext)
@@ -595,6 +597,7 @@ object PolarH10OfflineController {
                             val samplesManager = WorkoutSamplesDatabaseManager.getInstance(appContext)
                             samplesManager.patchMissingHeartRateSamples(baseFileName, anchorMs, hrPairs)
                         }
+                        PolarOfflineGattCoordinator.recordBackfilledSensorTypes(appContext, workoutId, SensorType.HR)
 
                         val rrRepo = WorkoutRrRepository.getInstance(appContext)
                         rrRepo.insertIntervals(intervals)

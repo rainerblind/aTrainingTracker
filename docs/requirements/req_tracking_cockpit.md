@@ -3,7 +3,7 @@
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Requirements**: 159
+**Total Requirements**: 160
 
 ---
 
@@ -6402,5 +6402,52 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 • *Then* `ordinal()`, `name()`, `getUnitId()`, SQLite column names, and runtime formatting/export outputs remain identical.
 
 **Invariants**: `SensorType` `ordinal()` and `name()` unchanged; `WorkoutSamples.db` schema unchanged; `@Deprecated getUnitId()` contract preserved; zero UI strings added (`N/A - no UI strings`); zero runtime formatter/exporter/device behavioral changes; `./gradlew testDebugUnitTest` passes cleanly.
+
+
+### REQ-TRK-084: Valid-Data `AccumulatedSensors` Persistence Filtering, Resume Rehydration & Post-Workout Backfill Upsert [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-TRK-084`
+- **System Requirement(s)**: `SYSREQ-TRK-004`, `SYSREQ-TRK-006`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `TrackerService.java`, `LiveWorkoutSession.java`, `WorkoutSummariesDatabaseManager.java`, `WorkoutRepository.kt`, `PolarH10OfflineController.kt`, `PolarVeritySenseOfflineController.kt`, `HrvPostWorkoutRecomputer.kt`
+- **Rationale**: `MySensorManager.registerSensor()` unconditionally inserts every registered `SensorType` into `mAccumulatedSensorTypeSet` on first registration, while `BANALService.onCreate()` unconditionally constructs `CyclingPowerMetricsDevice` (15 sensors), `HRVMetricsDevice` (3 sensors), and `VerticalSpeedAndSlopeDevice` (4 sensors) alongside `ClockDevice`, `BatteryDevice`, and location/altitude devices (40 total). Because `TrackerService.endWorkout()` persisted `getAccumulatedSensorTypeSet()` verbatim into `AccumulatedSensors`, workouts recorded without HR, Power, or Cadence hardware (`GCData = "TDS----AG--"`) falsely persisted ~40 unattached virtual/derived sensor rows. Filtering `AccumulatedSensors` persistence to sensor types that actually produced valid non-null telemetry—while preserving `MySensorManager.getAccumulatedSensorTypeSet()` (`REQ-TRK-030.2`), `BanalFinalizationSnapshot` (`REQ-TRK-035`), resume continuity, and post-workout Polar/HRV backfill—eliminates false-positive sensor rows (`ATT-8578`).
+- **Description**:
+  1. *Live Valid-Sample Observation & Virtual-Device Silence (`REQ-TRK-084.1`)*:
+     - During 1 Hz sampling (`TrackerService.sampleAndWriteToDb()`), `LiveWorkoutSession` SHALL record a `SensorType` into its `observedSensorTypes` set strictly when `sensorData != null && sensorData.getValue() != null` is observed. Unattached virtual/derived sensors (`CyclingPowerMetricsDevice`, `HRVMetricsDevice`, `VerticalSpeedAndSlopeDevice`) or disconnected hardware sensors that never emit non-null values SHALL NOT enter `observedSensorTypes`.
+     - In `TrackerService.endWorkout(@Nullable BanalFinalizationSnapshot snapshot)`, after committing `FINISHED = 1` first (`REQ-TRK-030.1`), `TrackerService` SHALL persist `observedSensorTypes` into `AccumulatedSensors` whenever `mLiveSession != null`, while preserving the `snapshot.accumulatedSensorTypes` (or `banalService.getAccumulatedSensorTypeSet()`) fallback when `mLiveSession == null` (`REQ-TRK-035.3`, `TST-TRK-027.3`).
+  2. *`finalizeLiveSession()` Post-Processed Metric Upsert (`REQ-TRK-084.2`)*:
+     - Because `endWorkout()` saves `AccumulatedSensors` prior to `finalizeLiveSession()` (`REQ-TRK-030.1`), `finalizeLiveSession()` SHALL idempotently upsert into `AccumulatedSensors` (via `WorkoutRepository`) any derived metrics that produce non-null persisted values during session finalization (`NORMALIZED_POWER`, `INTENSITY_FACTOR`, `TSS`, `WORK_KJ`, `POWER_TO_WEIGHT`, and `LINE_DISTANCE_m` when computed from valid `startPos`/`sampledLatLngs`).
+  3. *Workout Resume Rehydration & Idempotent Deduplication (`REQ-TRK-084.3`)*:
+     - Upon `RESUME_BY_USER` or `RESUME_SERVICE_RECREATION`, `TrackerService.rehydrateLiveSession()` SHALL rehydrate `LiveWorkoutSession.observedSensorTypes` from existing `AccumulatedSensors` rows (`WorkoutRepository.getAccumulatedSensorTypes(workoutId)`) and persisted extrema sensors so pre-resume sensors survive process death.
+     - `WorkoutSummariesDatabaseManager.saveAccumulatedSensorTypes(workoutId, sensorTypes)` (and any `addAccumulatedSensorTypes(workoutId, sensorTypes)` upsert helper) MUST deduplicate against existing `(workout_id, sensor_type)` rows for `workoutId` inside a transaction without modifying the `AccumulatedSensors` table schema (`N/A - no UI strings`).
+  4. *Polar Offline Backfill & Conditional HRV Recomputation Upserts (`REQ-TRK-084.4`)*:
+     - `PolarH10OfflineController` (both synchronous `stopAndBackfillWorkoutBlocking` and deferred `syncPendingWorkout`) SHALL idempotently upsert `SensorType.HR` into `AccumulatedSensors` whenever `patchMissingHeartRateSamples()` receives non-empty HR/RR samples.
+     - `PolarVeritySenseOfflineController` SHALL idempotently upsert `SensorType.HR` into `AccumulatedSensors` in both `applyBackfillAndCommit()` and `applySwimBackfillAndCommit()` whenever `hrPairs` is non-empty.
+     - `HrvPostWorkoutRecomputer.recomputeWorkout()` SHALL upsert `SensorType.HRV_ARTIFACT_RATE` when written, and conditionally upsert `SensorType.HRV_RMSSD` (only when `rmssdValues.isNotEmpty()`), `SensorType.HRV_DFA_A1` (only when `dfaValues.isNotEmpty()`), and `SensorType.HRV_SDNN` (only when `sessionSdnn != null`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Complements `REQ-TRK-030` (`REQ-TRK-030.2`, `MySensorManager.getAccumulatedSensorTypeSet()`), `REQ-TRK-035` (`REQ-TRK-035.1`/`.3`, `BanalFinalizationSnapshot`), `REQ-SET-105` (Polar H10 backfill), `REQ-SET-108` (Polar Verity Sense backfill), and `REQ-PER-034.3` (`HrvPostWorkoutRecomputer`).
+2. *Historical Origin & Commit Trace*: `ATT-3986` (`0bf6fb05`) hardened `MySensorManager.getAccumulatedSensorTypeSet()` with a defensive copy; `ATT-4099` (`aa0e9097`) introduced `BanalFinalizationSnapshot`; `a7049ef9` retired legacy `CalcExtremaWorker` readers of `getAccumulatedSensorTypes()`; `ATT-7918`/`ATT-7923` added Polar H10/Verity Sense offline backfill and `HrvPostWorkoutRecomputer` post-workout recomputation.
+3. *Root Reason for Existing Formulation*: `REQ-TRK-030.2` (`TST-TRK-022.3`) tests immediate registration visibility on `MySensorManager.getAccumulatedSensorTypeSet()`, and `REQ-TRK-035.3` (`TST-TRK-027.3`) tests `endWorkout(snapshot)` persistence when `mLiveSession == null`. Meanwhile, `PolarH10OfflineController`, `PolarVeritySenseOfflineController`, and `HrvPostWorkoutRecomputer` ran after `endWorkout()`'s `saveAccumulatedSensorTypes()` call without upserting backfilled sensor types.
+4. *Preservation of Core Invariants*: Preserves `MySensorManager.getAccumulatedSensorTypeSet()` registration semantics (`TST-TRK-022.3`), `BanalFinalizationSnapshot.capture()` (`TST-TRK-027.1`), `mLiveSession == null` snapshot fallback (`TST-TRK-027.3`), `FINISHED = 1` first-commit isolation (`REQ-TRK-030.1`), zero schema migrations, and complete post-workout HR/HRV backfill coverage.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a live workout with GPS/Clock/Battery active and no HR, Power, or Cadence hardware connected (`CyclingPowerMetricsDevice`, `HRVMetricsDevice`, and `VerticalSpeedAndSlopeDevice` registered in `BANALService` emitting `null`),
+• *When* `TrackerService.sampleAndWriteToDb()` and `endWorkout()` complete,
+• *Then* `AccumulatedSensors` contains only sensors that emitted non-null telemetry and contains zero `HR`, `POWER`, `HRV_*`, `POWER_*`, `TSS`, `W_PRIME_BAL`, or `LIVE_HR_DRIFT` rows.
+• *Given* a workout with valid power/HR/GPS samples whose derived metrics (`NORMALIZED_POWER`, `INTENSITY_FACTOR`, `TSS`, `WORK_KJ`, `POWER_TO_WEIGHT`, `LINE_DISTANCE_m`) are computed in `finalizeLiveSession()`,
+• *When* `endWorkout()` and `finalizeLiveSession()` complete,
+• *Then* `FINISHED = 1` still commits first (`REQ-TRK-030.1`) and those computed non-null metric types are idempotently present in `AccumulatedSensors`.
+• *Given* a resumed workout (`RESUME_BY_USER` / `RESUME_SERVICE_RECREATION`) with prior `AccumulatedSensors` rows or repeated `saveAccumulatedSensorTypes()`/`addAccumulatedSensorTypes()` calls,
+• *When* `rehydrateLiveSession()` and `endWorkout()` execute,
+• *Then* pre-resume sensor types are retained without duplicate `(workout_id, sensor_type)` rows.
+• *Given* a Polar H10 (synchronous or deferred `syncPendingWorkout`) or Polar Verity Sense (`applyBackfillAndCommit` / `applySwimBackfillAndCommit`) offline backfill with non-empty HR/RR samples,
+• *When* backfill and `HrvPostWorkoutRecomputer.recomputeWorkout()` complete,
+• *Then* `SensorType.HR` is upserted into `AccumulatedSensors`, `HRV_ARTIFACT_RATE` is upserted when written, and `HRV_RMSSD`, `HRV_DFA_A1`, and `HRV_SDNN` are upserted strictly when their computed outputs are non-empty/non-null.
+
+**Invariants**: `REQ-TRK-030.1` (`FINISHED = 1` first), `REQ-TRK-030.2` (`TST-TRK-022.3` defensive copy), `REQ-TRK-035.1`/`.3` (`TST-TRK-027.1`/`.3` snapshot contract), `GCData` 11-char mask, zero `AccumulatedSensors` schema changes, zero duplicate `(workout_id, sensor_type)` rows, and `N/A - no UI strings`.
+
 
 

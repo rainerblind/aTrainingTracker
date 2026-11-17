@@ -2081,6 +2081,17 @@ public class TrackerService extends Service {
                             : (activeTimeSeconds > 0 ? activeTimeSeconds : 1);
                     session.rehydrateSensorStats(sensorType, minVal, minPos, maxVal, maxPos, avgVal, sampleCount);
                 }
+                session.recordObservedSensorTypes(sensorsWithExtrema);
+            }
+
+            // Rehydrate previously persisted AccumulatedSensors entries so resumed workouts retain prior sensors (REQ-TRK-084.3)
+            try {
+                Set<SensorType> persistedObserved = workoutRepository.getAccumulatedSensorTypes(workoutId);
+                if (persistedObserved != null && !persistedObserved.isEmpty()) {
+                    session.recordObservedSensorTypes(persistedObserved);
+                }
+            } catch (Throwable t) {
+                Log.w(TAG, "rehydrateLiveSession: Could not rehydrate accumulated sensor types for workoutId=" + workoutId, t);
             }
         } catch (Throwable t) {
             Log.e(TAG, "rehydrateLiveSession: Failed to rehydrate LiveWorkoutSession for workoutId=" + workoutId, t);
@@ -2403,9 +2414,13 @@ public class TrackerService extends Service {
             }
 
             // 2. Save the accumulated SensorTypes in an isolated block so failures cannot roll back FINISHED = 1
-            Set<SensorType> accumulatedSensors = (snapshot != null && !snapshot.accumulatedSensorTypes.isEmpty())
-                    ? snapshot.accumulatedSensorTypes
-                    : (banalService != null ? banalService.getAccumulatedSensorTypeSet() : null);
+            // REQ-TRK-084.1: Persist live-observed non-null SensorTypes when liveSession is active;
+            // retain snapshot/BANAL fallback when liveSession == null (REQ-TRK-035.3, TST-TRK-027.3).
+            Set<SensorType> accumulatedSensors = (liveSession != null)
+                    ? liveSession.getObservedSensorTypes()
+                    : ((snapshot != null && !snapshot.accumulatedSensorTypes.isEmpty())
+                            ? snapshot.accumulatedSensorTypes
+                            : (banalService != null ? banalService.getAccumulatedSensorTypeSet() : null));
             if (accumulatedSensors != null) {
                 try {
                     getWorkoutRepository().saveAccumulatedSensorTypes(workoutId, accumulatedSensors);
@@ -2705,6 +2720,11 @@ public class TrackerService extends Service {
                 if (sensorData == null || sensorData.getValue() == null) continue;
 
                 SensorType sensorType = sensorData.getSensorType();
+                if (mLiveSession != null && !mIsRehydrating
+                        && sensorType != SensorType.SENSORS
+                        && sensorType != SensorType.ACCUMULATED_SENSORS) {
+                    mLiveSession.recordObservedSensorType(sensorType);
+                }
 
                 String sensorName = sensorType.name();
                 String deviceName = sensorData.getDeviceName();
@@ -3186,6 +3206,8 @@ public class TrackerService extends Service {
             mDiagnosticCollector.record(DiagnosticStage.FINALIZE, t, "Error persisting map polyline and elevation/distance streams");
         }
 
+        final Set<SensorType> finalizedPowerAndLineSensors = java.util.EnumSet.noneOf(SensorType.class);
+
         // 2. Save START and END locations, Sensor Extrema, and Max Line Distance (REQ-TRK-030.4)
         try {
             LatLng startPos = liveSession.getStartLatLng();
@@ -3237,6 +3259,7 @@ public class TrackerService extends Service {
                 LatLng calculatedApex = WorkoutClusterEngine.getInstance(this).findApexFromPoints(startPos, sampledPoints, endPos);
                 double calculatedMaxDisp = WorkoutClusterEngine.Companion.distanceBetween(startPos, calculatedApex);
                 repository.updateExtremaValue(workoutId, SensorType.LINE_DISTANCE_m, ExtremaType.MAX, calculatedMaxDisp, calculatedApex);
+                finalizedPowerAndLineSensors.add(SensorType.LINE_DISTANCE_m);
             }
         } catch (Throwable t) {
             Log.e(TAG, "finalizeLiveSession: Error persisting start/end locations and sensor extrema", t);
@@ -3296,37 +3319,51 @@ public class TrackerService extends Service {
                         double np = powerMetrics.getNormalizedPowerWatts();
                         repository.updateExtremaValue(workoutId, SensorType.NORMALIZED_POWER, ExtremaType.AVG, np, null);
                         repository.updateExtremaValue(workoutId, SensorType.NORMALIZED_POWER, ExtremaType.END, np, null);
+                        finalizedPowerAndLineSensors.add(SensorType.NORMALIZED_POWER);
                     }
                     if (powerMetrics.getIntensityFactor() != null) {
                         double ifVal = powerMetrics.getIntensityFactor();
                         repository.updateExtremaValue(workoutId, SensorType.INTENSITY_FACTOR, ExtremaType.AVG, ifVal, null);
                         repository.updateExtremaValue(workoutId, SensorType.INTENSITY_FACTOR, ExtremaType.END, ifVal, null);
+                        finalizedPowerAndLineSensors.add(SensorType.INTENSITY_FACTOR);
                     }
                     if (powerMetrics.getTss() != null) {
                         double tss = powerMetrics.getTss();
                         repository.updateExtremaValue(workoutId, SensorType.TSS, ExtremaType.AVG, tss, null);
                         repository.updateExtremaValue(workoutId, SensorType.TSS, ExtremaType.MAX, tss, null);
                         repository.updateExtremaValue(workoutId, SensorType.TSS, ExtremaType.END, tss, null);
+                        finalizedPowerAndLineSensors.add(SensorType.TSS);
                     }
                     if (powerMetrics.getWorkKj() != null) {
                         double workKj = powerMetrics.getWorkKj();
                         repository.updateExtremaValue(workoutId, SensorType.WORK_KJ, ExtremaType.AVG, workKj, null);
                         repository.updateExtremaValue(workoutId, SensorType.WORK_KJ, ExtremaType.MAX, workKj, null);
                         repository.updateExtremaValue(workoutId, SensorType.WORK_KJ, ExtremaType.END, workKj, null);
+                        finalizedPowerAndLineSensors.add(SensorType.WORK_KJ);
                     }
                     if (powerMetrics.getAvgPowerToWeight() != null) {
                         double avgWPerKg = powerMetrics.getAvgPowerToWeight();
                         repository.updateExtremaValue(workoutId, SensorType.POWER_TO_WEIGHT, ExtremaType.AVG, avgWPerKg, null);
+                        finalizedPowerAndLineSensors.add(SensorType.POWER_TO_WEIGHT);
                     }
                     if (powerMetrics.getMaxPowerToWeight() != null) {
                         double maxWPerKg = powerMetrics.getMaxPowerToWeight();
                         repository.updateExtremaValue(workoutId, SensorType.POWER_TO_WEIGHT, ExtremaType.MAX, maxWPerKg, null);
+                        finalizedPowerAndLineSensors.add(SensorType.POWER_TO_WEIGHT);
                     }
                 }
             }
         } catch (Throwable t) {
             Log.w(TAG, "finalizeLiveSession: Could not compute Aerobic Efficiency / Decoupling or Power Training extrema", t);
             mDiagnosticCollector.record(DiagnosticStage.FINALIZE, t, "Could not compute Aerobic Efficiency / Decoupling or Power Training extrema");
+        }
+
+        if (!finalizedPowerAndLineSensors.isEmpty()) {
+            try {
+                repository.addAccumulatedSensorTypes(workoutId, finalizedPowerAndLineSensors);
+            } catch (Throwable t) {
+                Log.w(TAG, "finalizeLiveSession: Could not upsert finalized sensor types", t);
+            }
         }
 
         // 4. Guess Commute and Trainer (REQ-TRK-030.4)

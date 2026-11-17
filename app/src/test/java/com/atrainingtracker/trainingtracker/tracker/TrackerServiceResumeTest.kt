@@ -1006,4 +1006,25 @@ class TrackerServiceResumeTest {
         assertTrue(service.tableInitializationFuture.isDone)
         assertEquals(workoutId, service.notifiedWorkoutId)
     }
+
+    @Test
+    fun testRehydrateLiveSession_restoresAccumulatedSensorTypesAndCombinesWithNewSamples() {
+        // TST-TRK-084.3 (REQ-TRK-084.3)
+        val workoutId = 204L
+        every { mockDbManager.getEncodedStreams(workoutId) } returns null
+        every { mockDbManager.getExtremaForWorkouts(listOf(workoutId)) } returns emptyList()
+        every { mockDbManager.getAccumulatedSensorTypes(workoutId) } returns setOf(
+            SensorType.HR,
+            SensorType.SPEED_mps
+        )
+
+        val session = LiveWorkoutSession(workoutId, TrackerService.IMPORTANT_SENSOR_TYPES)
+        service.rehydrateLiveSession(session, workoutId, 120)
+        session.recordObservedSensorType(SensorType.POWER)
+
+        assertEquals(
+            setOf(SensorType.HR, SensorType.SPEED_mps, SensorType.POWER),
+            session.observedSensorTypes
+        )
+    }
 }

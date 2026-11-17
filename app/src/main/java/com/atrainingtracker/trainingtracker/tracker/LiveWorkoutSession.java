@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.tracker;
 
 import android.util.Log;
+import androidx.annotation.Nullable;
 import androidx.annotation.VisibleForTesting;
 
 import com.atrainingtracker.banalservice.sensor.SensorType;
@@ -27,7 +28,9 @@ import com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils;
 import com.google.android.gms.maps.model.LatLng;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +43,7 @@ import java.util.Set;
 public class LiveWorkoutSession {
     private volatile long workoutId;
     private final Map<SensorType, RunningStats> sensorStats = new HashMap<>();
+    private final Set<SensorType> observedSensorTypes = EnumSet.noneOf(SensorType.class);
     private final Set<SensorType> sensorsForAverage;
     
     private int stepCounter = 0;
@@ -350,6 +354,40 @@ public class LiveWorkoutSession {
 
     public synchronized Map<SensorType, RunningStats> getSensorStats() {
         return Collections.unmodifiableMap(new HashMap<>(sensorStats));
+    }
+
+    /**
+     * Records a {@link SensorType} that produced at least one valid non-null telemetry sample
+     * during this workout session ({@code REQ-TRK-084.1}).
+     */
+    public synchronized void recordObservedSensorType(@Nullable SensorType sensorType) {
+        if (sensorType != null) {
+            observedSensorTypes.add(sensorType);
+        }
+    }
+
+    /**
+     * Records a collection of observed {@link SensorType}s (e.g. during workout resume
+     * rehydration, {@code REQ-TRK-084.3}).
+     */
+    public synchronized void recordObservedSensorTypes(@Nullable Collection<SensorType> sensorTypes) {
+        if (sensorTypes == null) return;
+        for (SensorType sensorType : sensorTypes) {
+            if (sensorType != null) {
+                observedSensorTypes.add(sensorType);
+            }
+        }
+    }
+
+    /**
+     * Returns an immutable defensive snapshot of all {@link SensorType}s that produced valid
+     * non-null telemetry during this session ({@code REQ-TRK-084.1}).
+     */
+    public synchronized Set<SensorType> getObservedSensorTypes() {
+        if (observedSensorTypes.isEmpty()) {
+            return Collections.emptySet();
+        }
+        return Collections.unmodifiableSet(EnumSet.copyOf(observedSensorTypes));
     }
 
     /**
