@@ -643,5 +643,25 @@ class WorkoutClustersViewModelTest {
             )
         }
     }
+
+    /**
+     * TST-PER-051.2: Constructing WorkoutClustersViewModel under UnconfinedTestDispatcher when
+     * clusterMutationEvents emits synchronously on subscription does not throw NullPointerException (REQ-PER-043.2).
+     */
+    @Test
+    fun testEagerMainDispatcherInit_withSynchronousMutationEmission_doesNotThrowNpe_TST_PER_051_2() {
+        val eagerDispatcher = UnconfinedTestDispatcher()
+        Dispatchers.setMain(eagerDispatcher)
+
+        val eagerMutationFlow = MutableStateFlow<ClusterMutationEvent>(
+            ClusterMutationEvent.Renamed(clusterId = 10L, newName = "Eager Trail")
+        )
+        every { mockClusterRepo.clusterMutationEvents } returns eagerMutationFlow
+
+        val viewModel = WorkoutClustersViewModel(mockApplication, eagerDispatcher)
+        activeViewModel = viewModel
+
+        assertNull(viewModel.peekedWorkoutDataWithTrack.value)
+    }
 }
 
