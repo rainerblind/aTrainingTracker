@@ -1,14 +1,14 @@
 # Living Requirements: Tracking & Live Sensor Cockpit
 
 **Document ID**: `DOC-REQ-TRK`  
-**Version**: 1.0.0  
+**Version**: 1.0.3  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Requirements**: 163
+**Total Requirements**: 164
 
 ---
 
@@ -6574,6 +6574,44 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 **Invariants**: `SpeedAndLocationDevice.java` `REQ-TRK-056` untouched; `REQ-FIL-009` tunnel exit preserved; `REQ-FIL-020` & `REQ-FIL-022` preserved; `@Synchronized` thread safety; `REQ-PRO-049.1` behavioral tests; `N/A - no UI strings`.
 
+### REQ-CON-048: Offline EditDeviceDialog Radar Tail Light Configuration, Cold-Start Hydration & StVZO/Radar-Only Handling [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-CON-048`
+- **System Requirement(s)**: `SYSREQ-TRK-002`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `EditDeviceDialog.kt`, `RadarLightController.kt`, `strings_radar.xml`
+- **Rationale**: Following `ATT-7991` retiring tail light mode selectors from `RadarSettingsSection.kt` (`REQ-CON-031.5`), `EditDeviceDialog.kt:1119` still aborted `RadarLightControlSection` whenever `!isSimulating && (!isConnected || !isLightControlAvailable)`, leaving users with zero offline UI to configure `Automatik` or a preferred default light mode for disconnected radars (e.g. Garmin `RearVue8` in `ATT-8450`). Offline UI must also hydrate persisted preferences on cold start, reflect selected offline modes accurately instead of highlighting `OFF`, hide known radar-only units (`RVR315`), reset stale `_isStvzo` on disconnect, and display an unambiguous apply-on-next-connect hint without spurious StVZO errors (`ATT-8450`, refining `REQ-CON-031.5`, `REQ-CON-031.7`, and `REQ-CON-047.3`):
+- **Description**:
+  1. *Offline Visibility & Radar-Only Exclusion (`REQ-CON-048.1`)*:
+     - `EditDeviceDialog.kt` (`RadarLightControlSection`) SHALL remain visible and interactive for `DeviceType.BIKE_RADAR` even when `!isConnected && !isSimulating`, unless the device is live-connected without light support (`isConnected && !isLightControlAvailable && !isSimulating`) or identifiable as a radar-only model without tail light (e.g. `RVR315` / `RVR 315` in `deviceName`).
+  2. *Cold-Start DataStore Hydration, Offline Selection Persistence & StVZO Disconnect Reset (`REQ-CON-048.2`)*:
+     - `RadarLightController` SHALL hydrate `isAutoMode` and `preferredMode` (`radarLightDefaultMode`) from `TuningPreferencesDataStore` prior to workout start / upon dialog initialization, expose the effective selected mode so offline manual selection persists and highlights the chosen mode (never falling back to `OFF` because live GATT dispatch returned `false`), and reset `_isStvzo` to `false` in `unregisterRadarDevice()`.
+  3. *Offline Apply-on-Connect Hint & Unknown StVZO Handling (`REQ-CON-048.3`)*:
+     - When `!isConnected && !isSimulating`, `RadarLightControlSection` SHALL display an unambiguous localized hint indicating that the selected mode will be applied on the next radar connection, and MUST NOT display a spurious StVZO notice/error while StVZO capability is unknown (`isStvzo == false`), while still applying StVZO pruning (`Automatik`, `OFF`, `SOLID`) whenever `isStvzo == true` and clamping non-StVZO defaults on connection/workout start.
+  4. *9-Language Localization Parity, Previews & Behavioral UI Tests (`REQ-CON-048.4`)*:
+     - All new and existing `strings_radar.xml` resources SHALL maintain 100% key and format parity across EN, DE, ES, FR, IT, JA, NL, PL, PT, accompanied by Light/Dark `@Preview` composables and Robolectric `createComposeRule()` UI tests (covering offline Multi-Mode, offline StVZO, `RVR315` exclusion, and `Rule 8.5` PNG capture) with zero `app/src/main` source-reading calls (`REQ-PRO-049.1`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new `REQ-CON-048` refining `REQ-CON-031.5` and `REQ-CON-031.7` (preserving `REQ-CON-047.3` ascending mode order); targets `EditDeviceDialog.kt`, `RadarLightController.kt`, and `strings_radar.xml`.
+2. *Historical Origin & Commit Trace*: `ATT-7540` introduced `RadarLightControlSection` gated on `isConnected && isLightControlAvailable`; `ATT-7991` (`c422e1b6`, `6e9b3c06`, `533d88b1`) retired Expert Settings mode controls and added `isSimulating`; `ATT-8456` unified ascending mode order (`REQ-CON-047.3`).
+3. *Root Reason for Existing Formulation*: `ATT-7540` hid `RadarLightControlSection` when disconnected or unsupported because Expert Settings (`RadarSettingsSection.kt`) still held the offline mode configuration; after `ATT-7991` retired Expert Settings mode controls, the offline gate blocked all pre-ride configuration.
+4. *Preservation of Core Invariants*: Connected radar-only (`isConnected && !isLightControlAvailable`) and `RVR315` remain hidden; `EditDeviceViewModel` draft state remains decoupled (`saveChanges()` untouched); StVZO pruning & on-connect clamping remain enforced; `RadarLightMode` ascending order (`REQ-CON-047.3`) and 9-locale parity (`REQ-CON-031.7`) remain intact.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a paired, disconnected `RearVue8` (`DeviceType.BIKE_RADAR`, `isConnected = false`, `isSimulating = false`, `isStvzo = false`),
+• *When* the user opens `EditDeviceDialog` and selects `SOLID` or `Automatik`,
+• *Then* `RadarLightControlSection` renders with the offline apply-on-next-connect hint (zero StVZO notice), highlights `SOLID` (not `OFF`) / `Automatik` immediately, and retains the selection after cold restart.
+• *Given* a radar-only unit (`deviceName` containing `RVR315`) or a live-connected radar with `isLightControlAvailable = false` (not simulating),
+• *When* `EditDeviceDialog` renders,
+• *Then* `RadarLightControlSection` is omitted completely.
+• *Given* an active StVZO state (`isStvzo = true`) offline or online,
+• *When* `RadarLightControlSection` renders and then the StVZO radar disconnects (`unregisterRadarDevice()`),
+• *Then* StVZO mode shows only `Automatik`, `OFF`, `SOLID` with the StVZO notice, and `unregisterRadarDevice()` resets `_isStvzo` to `false`.
+
+**Invariants**: Connected `!isLightControlAvailable` & `RVR315` hidden; `EditDeviceViewModel` draft state decoupled; StVZO pruning & on-connect clamping preserved; `REQ-CON-047.3` ascending order preserved; zero SQLite schema changes; 9-locale `strings_radar.xml` parity; zero `src/main` reads in tests (`REQ-PRO-049.1`).
+
 
 ---
 
@@ -6582,3 +6620,6 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
 | `1.0.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Added standardized `DOC-REQ-TRK` work-product control header and Change History. |
+| `1.0.1` | 2026-11-17 | AI Agent (`ATT-8450`) | `ATT-8450` | Added `REQ-CON-048` [Planned] for offline `EditDeviceDialog` radar tail light configuration, cold-start hydration, and StVZO/radar-only handling. |
+| `1.0.2` | 2026-11-17 | AI Agent (`ATT-8450`) | `ATT-8450` | Promoted `REQ-CON-048` to `[Implemented]` following Stage 4 implementation. |
+| `1.0.3` | 2026-11-17 | AI Agent (`ATT-8450`) | `ATT-8450` | Promoted `REQ-CON-048` to `[Verified]` in Stage 5 following post-rebase test verification. |
