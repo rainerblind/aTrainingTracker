@@ -1,6 +1,6 @@
 # Detailed Design: TrackerService (ASPICE SWE.3)
 
-**Unit**: `TrackerService` (`app/src/main/java/com/atrainingtracker/trainingtracker/tracker/TrackerService.java`, 3,515 LOC)  
+**Unit**: `TrackerService` (`app/src/main/java/com/atrainingtracker/trainingtracker/tracker/TrackerService.java`, 3,552 LOC)  
 **Collaborators**: `TrackingMode` (`TrackingMode.kt`), `AutoPauseManager` / `AutoPauseState` (`AutoPauseManager.kt`), `TrainingApplication`, `BANALServiceComm`, `LiveWorkoutSession`, `WorkoutRepository`  
 **SWE.2 Alignment**: `docs/architecture.md` §3.1, §3.3, §4.2, §4.9 (`IF-SWE-03`, `IF-SWE-05`, `IF-SWE-06`)  
 **Requirement Trace**: `REQ-PRO-114.1`, `REQ-ARC-008.1`, `REQ-TRK-018`, `REQ-TRK-026`, `REQ-TRK-033`, `REQ-TRK-034`, `REQ-TRK-076`
@@ -16,7 +16,7 @@
    - `mIsStopping` (`volatile boolean`): gates `tracker` 1-Hz sampling, suppresses duplicate `handleActionStop()`, and guards teardown.
    - `mTrackingInterrupted` (`volatile boolean`): suppresses `endWorkout()` finalization on permission/FGS/resume aborts.
    - `mIsRehydrating` (`volatile boolean`): blocks premature `mLiveSession` mutation during async resume rehydration.
-   - `mSearching` (`volatile boolean`), `mBanalBound` (`boolean`), `mReceiversRegistered` (`boolean`), `mSessionGeneration` (`AtomicInteger`).
+   - `mSearching` (`volatile boolean`), `mBanalBound` (`volatile boolean`), `mReceiversRegistered` (`volatile boolean`), `mSessionGeneration` (`AtomicInteger`).
    - `mTableInitializationFuture` & `mFinalizationFuture` (`CompletableFuture<Void>`): asynchronous barrier gates on `mDbExecutor`.
 
 ---
@@ -97,7 +97,7 @@ stateDiagram-v2
 * **Main Looper**: `onCreate`, `onStartCommand`, `handleActionStop`, `onDestroy`, `runOnMainThread`, `mBanalConnection`, `BroadcastReceiver` callbacks, and `performStartForeground` / `performStopSelf` teardown checks.
 * **`mScheduler` (`Executors.newScheduledThreadPool(1)`)**: Executes 1-Hz `tracker` runnable (`scheduleAtFixedRate(..., 0, 1, TimeUnit.SECONDS)`). Cancelled in `handleActionStop()` (`cancelTrackerHandle()`); `mScheduler.shutdownNow()` deferred to `onDestroy()`.
 * **`mDbExecutor` (`Executors.newSingleThreadExecutor()`)**: Serializes `createNewWorkout`, `createSamplesTable`, `rehydrateLiveSession`, `recordLiveSample` (chained via `mTableInitializationFuture.thenAcceptAsync`), `recordWorkoutStart`, `REQUEST_PAUSE_TRACKING` FIFO flush, and `endWorkout`. Shut down strictly in `onDestroy()`.
-* **`mRrFlushExecutor` (`Executors.newSingleThreadExecutor()`)**: Drains lock-free `mLiveRrQueue` (`ConcurrentLinkedQueue`) every `>= 20` beats or `30000 ms`, plus synchronous drain in `flushLiveRrQueueSync(workoutId)` during `endWorkout()`.
+* **`mRrFlushExecutor` (`Executors.newSingleThreadExecutor()`)**: Drains lock-free `mLiveRrQueue` (`ConcurrentLinkedQueue`) every `>= 100` beats (`RR_FLUSH_BATCH_THRESHOLD = 100`) or `30000 ms`, plus synchronous drain in `flushLiveRrQueueSync(workoutId)` during `endWorkout()`.
 
 ### 4.3 Error Handling & Fault Recovery
 * **Startup / FGS Failure**: `performStartForeground` catching `SecurityException`/`IllegalStateException` cancels `mTableInitializationFuture`, cancels `mTrackerHandle`, sets `mTrackingInterrupted = true`, shows `showTrackingInterruptedNotification()`, and stops self.

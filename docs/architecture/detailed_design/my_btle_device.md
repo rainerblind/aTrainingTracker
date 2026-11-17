@@ -38,7 +38,8 @@ stateDiagram-v2
     CONNECTED_WITH_SERVICE --> DISCONNECTED: onConnectionStateChange(STATE_DISCONNECTED or status != GATT_SUCCESS) -> unregisterSensors() + disconnectFromGatt()
     DISCONNECTED --> SEARCHING: mReconnectRunnable [1s..16s backoff, !mIsShutDown && !mIsGattPaused]
     DISCONNECTED --> SEARCHING: resumeGattOperations() [mState == DISCONNECTED && !mIsShutDown]
-    SEARCHING --> DISCONNECTED: shutDown() or pauseGattOperations() stops scan/timers
+    SEARCHING --> SEARCHING: pauseGattOperations() sets mIsGattPaused=true, stops scan/timers (mState unchanged)
+    SEARCHING --> DISCONNECTED: shutDown()
     CONNECTED_TO_GATT --> DISCONNECTED: shutDown()
     CONNECTED_WITH_SERVICE --> DISCONNECTED: shutDown()
 ```
@@ -61,7 +62,7 @@ stateDiagram-v2
 | `readNextCharacteristic()` | `mReadCharacteristicQueue` empty and `!sensorsRegistered()` | Under `mGattLock`: `mState = CONNECTED_WITH_SERVICE`, `mHasConnectedInSession = true`; `setLastActive()`; `registerSensors()`; post `configureServices(gatt)` (notification + CCCD `enqueueWriteDescriptor` + battery CCCD) | `CONNECTED_WITH_SERVICE` |
 | `onCharacteristicChanged` / `onCharacteristicRead` | `!mIsShutDown` | Clone bytes via `obtainSnapshotCharacteristic` (`REQ-CON-020.1`); dispatch `measurementCharacteristicUpdate` on `mHandler` when `mState == CONNECTED_WITH_SERVICE && gatt == mBluetoothGatt` | `CONNECTED_WITH_SERVICE` |
 | `mGattCallback.onConnectionStateChange` | `newState == STATE_DISCONNECTED` or `(newState == STATE_CONNECTED && status != GATT_SUCCESS)` | `mState = DISCONNECTED`; `unregisterSensors()`; `disconnectFromGatt()`; if `!mIsShutDown` schedule `mReconnectRunnable` with exponential backoff (`1s..16s`) | `DISCONNECTED` |
-| `pauseGattOperations()` / `resumeGattOperations()` | External GATT arbitration (`PolarOfflineGattCoordinator`) | `pauseGattOperations()` sets `mIsGattPaused = true`, `stopScanAssistance()`, cancels `mSearchTimeoutRunnable` & `mReconnectRunnable`; `resumeGattOperations()` clears `mIsGattPaused = false` and restarts `startSearching()` if `mState == DISCONNECTED && !mIsShutDown` | `DISCONNECTED` <-> `SEARCHING` |
+| `pauseGattOperations()` / `resumeGattOperations()` | External GATT arbitration (`PolarOfflineGattCoordinator`) | `pauseGattOperations()` sets `mIsGattPaused = true`, `stopScanAssistance()`, cancels `mSearchTimeoutRunnable` & `mReconnectRunnable` without changing `mState` or closing GATT; `resumeGattOperations()` clears `mIsGattPaused = false` and calls `startSearching()` if `mState == DISCONNECTED && !mIsShutDown` | `mState` preserved on pause; `DISCONNECTED` -> `SEARCHING` on resume |
 | `shutDown()` | Any state | Set `mIsShutDown = true`, `mHasConnectedInSession = false`; `stopScanAssistance()`; clear `mHandler` callbacks; `disconnectFromGatt()`; `super.shutDown()` | `DISCONNECTED` |
 
 ---

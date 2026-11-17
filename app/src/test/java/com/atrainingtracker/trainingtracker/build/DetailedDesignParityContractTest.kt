@@ -25,7 +25,8 @@ import java.io.File
 
 /**
  * Contract test enforcing ASPICE SWE.3 living detailed-design completeness,
- * code-to-documentation parity, SWE.2 cross-referencing, and Stage 3 governance
+ * JVM-reflection code-to-documentation parity (zero production source-text reading),
+ * SWE.2 cross-referencing, and Stage 3 governance
  * (REQ-PRO-114, TST-PRO-114, ATT-8159).
  */
 // Linked test specs: TST-PRO-114
@@ -41,22 +42,31 @@ class DetailedDesignParityContractTest {
             ?: throw IllegalStateException("Could not locate $relativePath from working directory: ${File(".").absolutePath}")
     }
 
-    private fun parseJavaEnumConstants(sourceText: String, enumName: String): List<String> {
-        val match = Regex("""\benum\s+$enumName\s*\{([^}]*)\}""").find(sourceText)
-            ?: error("Could not find Java enum $enumName")
-        return match.groupValues[1]
-            .split(",")
-            .map { it.trim() }
-            .filter { it.isNotEmpty() }
+    private fun loadProductionClass(fqcn: String): Class<*> {
+        return try {
+            Class.forName(fqcn, false, javaClass.classLoader)
+        } catch (e: ClassNotFoundException) {
+            throw AssertionError("Required production class '$fqcn' must exist on classpath", e)
+        }
     }
 
-    private fun parseKotlinEnumConstants(sourceText: String, enumName: String): List<String> {
-        val match = Regex("""\benum\s+class\s+$enumName\s*\{([^}]*)\}""").find(sourceText)
-            ?: error("Could not find Kotlin enum class $enumName")
-        return match.groupValues[1]
-            .lines()
-            .map { it.substringBefore("//").trim().trimEnd(',') }
-            .filter { it.isNotEmpty() }
+    private fun enumConstantNames(fqcn: String): List<String> {
+        val enumClass = loadProductionClass(fqcn)
+        val constants = enumClass.enumConstants
+            ?: throw AssertionError("Class '$fqcn' must be an enum")
+        return constants.map { (it as Enum<*>).name }
+    }
+
+    private fun collectDeclaredMembers(vararg fqcns: String): Set<String> {
+        val members = mutableSetOf<String>()
+        for (fqcn in fqcns) {
+            val clazz = loadProductionClass(fqcn)
+            members.add(clazz.simpleName)
+            clazz.declaredFields.forEach { members.add(it.name) }
+            clazz.declaredMethods.forEach { members.add(it.name) }
+            clazz.declaredClasses.forEach { members.add(it.simpleName) }
+        }
+        return members
     }
 
     /**
@@ -100,8 +110,8 @@ class DetailedDesignParityContractTest {
     }
 
     /**
-     * TST-PRO-114.2: Verifies 100% code-to-documentation parity for all states, enums,
-     * lifecycle/concurrency fields, methods, and cited test classes.
+     * TST-PRO-114.2: Verifies 100% code-to-documentation parity via JVM reflection
+     * for all states, enums, lifecycle/concurrency fields, methods, and cited test classes.
      */
     @Test
     fun testDetailedDesignDocs_codeParityAcrossStatesSymbolsAndTests() {
@@ -109,43 +119,51 @@ class DetailedDesignParityContractTest {
         val banalDesign = findRepoRootFile("docs/architecture/detailed_design/banal_service.md").readText()
         val btleDesign = findRepoRootFile("docs/architecture/detailed_design/my_btle_device.md").readText()
 
-        val trackerSrc = findRepoRootFile("app/src/main/java/com/atrainingtracker/trainingtracker/tracker/TrackerService.java").readText()
-        val trackingModeSrc = findRepoRootFile("app/src/main/java/com/atrainingtracker/trainingtracker/TrackingMode.kt").readText()
-        val autoPauseSrc = findRepoRootFile("app/src/main/java/com/atrainingtracker/trainingtracker/tracker/autopause/AutoPauseManager.kt").readText()
-        val banalSrc = findRepoRootFile("app/src/main/java/com/atrainingtracker/banalservice/BANALService.java").readText()
-        val deviceManagerSrc = findRepoRootFile("app/src/main/java/com/atrainingtracker/banalservice/devices/DeviceManager.java").readText()
-        val remoteDeviceSrc = findRepoRootFile("app/src/main/java/com/atrainingtracker/banalservice/devices/MyRemoteDevice.java").readText()
-        val btleSrc = findRepoRootFile("app/src/main/java/com/atrainingtracker/banalservice/devices/bluetooth_le/MyBTLEDevice.java").readText()
-
-        // 1. Enum constants from production code must all appear in corresponding detailed-design docs
-        for (mode in parseKotlinEnumConstants(trackingModeSrc, "TrackingMode")) {
+        // 1. Enum constants from compiled production classes must all appear in detailed-design docs
+        for (mode in enumConstantNames("com.atrainingtracker.trainingtracker.TrackingMode")) {
             assertTrue("tracker_service.md must document TrackingMode.$mode", trackerDesign.contains(mode))
         }
-        for (apState in parseKotlinEnumConstants(autoPauseSrc, "AutoPauseState")) {
+        for (apState in enumConstantNames("com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseState")) {
             assertTrue("tracker_service.md must document AutoPauseState.$apState", trackerDesign.contains(apState))
         }
-        for (startType in parseJavaEnumConstants(trackerSrc, "StartType")) {
+        for (startType in enumConstantNames("com.atrainingtracker.trainingtracker.tracker.TrackerService\$StartType")) {
             assertTrue("tracker_service.md must document StartType.$startType", trackerDesign.contains(startType))
         }
-        for (btleState in parseJavaEnumConstants(btleSrc, "State")) {
+        for (btleState in enumConstantNames("com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDevice\$State")) {
             assertTrue("my_btle_device.md must document MyBTLEDevice.State.$btleState", btleDesign.contains(btleState))
         }
 
-        // Honest negative guard: BANALService has no SearchingState enum in production code
-        assertFalse("BANALService.java must not be falsely modeled as declaring SearchingState enum", banalSrc.contains("enum SearchingState"))
-        assertTrue("banal_service.md must explicitly clarify absence of SearchingState enum", banalDesign.contains("**no** standalone `SearchingState` enum"))
+        // Honest negative guard: BANALService declares no SearchingState enum in production bytecode
+        val banalClass = loadProductionClass("com.atrainingtracker.banalservice.BANALService")
+        assertFalse(
+            "BANALService must not be falsely modeled as declaring SearchingState enum",
+            banalClass.declaredClasses.any { it.simpleName == "SearchingState" }
+        )
+        assertTrue(
+            "banal_service.md must explicitly clarify absence of SearchingState enum",
+            banalDesign.contains("**no** standalone `SearchingState` enum")
+        )
 
-        // 2. Key fields, flags, and methods cited in each detailed-design doc must exist verbatim in source
+        // 2. Key fields, flags, inner classes, and methods cited in each doc must exist via reflection
+        val trackerMembers = collectDeclaredMembers(
+            "com.atrainingtracker.trainingtracker.tracker.TrackerService"
+        )
         val trackerSymbols = listOf(
             "mIsStopping", "mTrackingInterrupted", "mIsRehydrating", "mSearching", "mBanalBound",
             "mReceiversRegistered", "mSessionGeneration", "mTableInitializationFuture", "mFinalizationFuture",
             "mScheduler", "mDbExecutor", "mRrFlushExecutor", "mLiveRrQueue", "mAutoPauseManager",
-            "mDiagnosticCollector", "onStartCommand", "handleActionStop", "sampleAndWriteToDb",
-            "endWorkout", "recreateValuesWhenResuming", "applyResumedState", "rehydrateLiveSession",
-            "handleTrackingAborted", "performStartForeground", "performStopSelf", "runOnMainThread"
+            "mDiagnosticCollector", "RR_FLUSH_BATCH_THRESHOLD", "onStartCommand", "handleActionStop",
+            "sampleAndWriteToDb", "endWorkout", "recreateValuesWhenResuming", "applyResumedState",
+            "rehydrateLiveSession", "handleTrackingAborted", "performStartForeground", "performStopSelf",
+            "runOnMainThread"
         )
-        assertSymbolsInDesignAndSource("tracker_service.md", trackerDesign, trackerSymbols, trackerSrc)
+        assertSymbolsInDesignAndMembers("tracker_service.md", trackerDesign, trackerSymbols, trackerMembers)
 
+        val banalMembers = collectDeclaredMembers(
+            "com.atrainingtracker.banalservice.BANALService",
+            "com.atrainingtracker.banalservice.devices.DeviceManager",
+            "com.atrainingtracker.banalservice.devices.MyRemoteDevice"
+        )
         val banalSymbols = listOf(
             "cServiceContext", "cSensorManager", "cDeviceManager", "cFilterManager",
             "mIsIndoorMode", "mHaveUserSelectedSportType", "mUserSelectedSportTypeId", "mActivityTypeMax",
@@ -157,9 +175,11 @@ class DetailedDesignParityContractTest {
             "startSearchForNewRemoteDevices", "stopSearchForNewRemoteDevices",
             "mSearching", "notifyStartSearching", "notifyStopSearching"
         )
-        val combinedBanalSource = banalSrc + "\n" + deviceManagerSrc + "\n" + remoteDeviceSrc
-        assertSymbolsInDesignAndSource("banal_service.md", banalDesign, banalSymbols, combinedBanalSource)
+        assertSymbolsInDesignAndMembers("banal_service.md", banalDesign, banalSymbols, banalMembers)
 
+        val btleMembers = collectDeclaredMembers(
+            "com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDevice"
+        )
         val btleSymbols = listOf(
             "mState", "mGattLock", "mBluetoothGatt", "mIsShutDown", "mIsGattPaused", "mIsScanning",
             "mHasConnectedInSession", "mGattOperationPending", "mGattQueue", "mReadCharacteristicQueue",
@@ -171,7 +191,7 @@ class DetailedDesignParityContractTest {
             "disconnectFromGatt", "pauseGattOperations", "resumeGattOperations",
             "obtainSnapshotCharacteristic", "isRandomStaticAddress", "isMidSessionOrWorkoutActive"
         )
-        assertSymbolsInDesignAndSource("my_btle_device.md", btleDesign, btleSymbols, btleSrc)
+        assertSymbolsInDesignAndMembers("my_btle_device.md", btleDesign, btleSymbols, btleMembers)
 
         // 3. Every cited test class in the three detailed-design docs must exist under app/src/test
         val testSrcDir = findRepoRootFile("app/src/test")
@@ -190,15 +210,15 @@ class DetailedDesignParityContractTest {
         }
     }
 
-    private fun assertSymbolsInDesignAndSource(
+    private fun assertSymbolsInDesignAndMembers(
         docName: String,
         designText: String,
         symbols: List<String>,
-        sourceText: String
+        declaredMembers: Set<String>
     ) {
         for (symbol in symbols) {
             assertTrue("$docName must document symbol '$symbol'", designText.contains(symbol))
-            assertTrue("Source for $docName must declare/use symbol '$symbol'", sourceText.contains(symbol))
+            assertTrue("Compiled bytecode for $docName must declare symbol '$symbol'", declaredMembers.contains(symbol))
         }
     }
 
@@ -218,7 +238,9 @@ class DetailedDesignParityContractTest {
         val stage3Skill = findRepoRootFile(".agents/skills/stage3-impl-plan/SKILL.md").readText()
         assertTrue("Stage 3 skill must reference REQ-PRO-114", stage3Skill.contains("REQ-PRO-114"))
         assertTrue("Stage 3 skill must mandate updating docs/architecture/detailed_design/", stage3Skill.contains("docs/architecture/detailed_design/"))
-        assertTrue("Stage 3 skill must cover TrackerService, BANALService, and MyBTLEDevice",
-            stage3Skill.contains("TrackerService") && stage3Skill.contains("BANALService") && stage3Skill.contains("MyBTLEDevice"))
+        assertTrue(
+            "Stage 3 skill must cover TrackerService, BANALService, and MyBTLEDevice",
+            stage3Skill.contains("TrackerService") && stage3Skill.contains("BANALService") && stage3Skill.contains("MyBTLEDevice")
+        )
     }
 }
