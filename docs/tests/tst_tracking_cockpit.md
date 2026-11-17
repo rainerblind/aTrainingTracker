@@ -3,7 +3,7 @@
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Tests**: 132
+**Total Tests**: 133
 
 ---
 
@@ -2401,6 +2401,34 @@
      • During an active search or connected stream, trigger `sdkCallback.blePowerStateChanged(false)`.
      • Assert `isConnectedFlag == false`, active streaming jobs are cancelled, search timeout is cancelled, and `notifyStopSearching(false)` is broadcast.
      • Call `shutDown()`; assert active timeout jobs, receivers, and coroutine scopes are cancelled cleanly.
+
+### TST-CON-046: **Radar `isAutoMode` Preservation Across Telemetry Frames, Simulator & Source Arbitration Test Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-CON-046` (`REQ-CON-046.1`..`REQ-CON-046.3`)
+- **Component**: `RadarState.kt`, `RadarStateRepository.kt`, `BTLERadarDevice.java`, `ANTBikeRadarDevice.kt`, `RadarTrafficSimulator.kt`, `RadarLightController.kt`
+- **Jira**: `ATT-8455`
+- **Test Type**: Unit & Integration
+- **Verification Method**: Unit
+- **Procedure**:
+  1. *BTLERadarDevice 6-Site `isAutoMode` Preservation & Restore (`TST-CON-046.1`, `BTLERadarDeviceTest.kt`)*:
+     • Given `RadarStateRepository` / `RadarLightController` with `isAutoMode == false`,
+     • When exercising all 6 `BTLERadarDevice` emission paths (`startSearching`, `notifyStopSearching`, `configureServices`, `processTargets`, `mWatchdogRunnable`, `disconnectFromGatt`),
+     • Assert `RadarStateRepository.getState().isAutoMode` remains `false`; then invoke `RadarLightController.setAutoMode()` and assert `isAutoMode == true`.
+  2. *RadarTrafficSimulator Lifecycle & Tick Preservation (`TST-CON-046.2`, `RadarTrafficSimulatorTest.kt`)*:
+     • Given `isAutoMode == false` in `RadarStateRepository`,
+     • When running `generateFrame`, `tick`, `start` coroutine loop frames, and `stop`,
+     • Assert `RadarStateRepository.getState().isAutoMode` remains `false` throughout and `setAutoMode()` restores `true`.
+  3. *ANTBikeRadarDevice 3-Site `isAutoMode` Preservation (`TST-CON-046.3`, `ANTBikeRadarDeviceTest.kt`)*:
+     • Given `isAutoMode == false` in `RadarStateRepository`,
+     • When invoking `publishTargets`, `onWatchdogTimeout`, and `shutDown`,
+     • Assert `RadarStateRepository.getState().isAutoMode` remains `false` and `setAutoMode()` restores `true`.
+  4. *Repository `sourceStates` Failover & `reset()` Isolation (`TST-CON-046.4`, `RadarStateRepositoryTest.kt`)*:
+     • Given concurrent `BLE` and `ANT_PLUS` sources with manual override `isAutoMode == false`,
+     • When `BLE` disconnects and `RadarStateRepository` fails over to `ANT_PLUS` (or `SIMULATOR`),
+     • Assert `isAutoMode` stays `false` (and `audioSnoozeState` stays intact per `REQ-CON-042.3`); when `RadarStateRepository.reset()` is invoked, assert clean reset to default `RadarState()` (`isAutoMode == true`).
+  5. *Light Controller Manual Override vs Adaptive Automation (`TST-CON-046.5`, `RadarLightControllerTest.kt`)*:
+     • Given `setManualLightMode()` or `cycleNextMode()` followed by incoming telemetry updates,
+     • Assert `RadarLightController.isAutoMode.value == false`, `RadarStateRepository.getState().isAutoMode == false`, and `SmartRadarLightEngine` automation remains suspended until `setAutoMode()` restores `true`.
 
 ### TST-TRK-064: **1-Tap Radar Audio Snooze, Peloton Sync & Urban Suppression Test Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-064` (`REQ-TRK-064.1`..`REQ-TRK-064.7`)

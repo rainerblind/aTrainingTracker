@@ -463,7 +463,8 @@ class ANTBikeRadarDevice(
             lightMode = currentState.lightMode,
             isLightControlSupported = currentState.isLightControlSupported || (companionLightDevice?.isAssociated == true),
             audioSnoozeState = currentState.audioSnoozeState,
-            source = RadarSource.ANT_PLUS
+            source = RadarSource.ANT_PLUS,
+            isAutoMode = currentState.isAutoMode
         )
         RadarStateRepository.updateState(state)
 
@@ -522,7 +523,8 @@ class ANTBikeRadarDevice(
             lightMode = currentState.lightMode,
             isLightControlSupported = currentState.isLightControlSupported,
             audioSnoozeState = currentState.audioSnoozeState,
-            source = RadarSource.ANT_PLUS
+            source = RadarSource.ANT_PLUS,
+            isAutoMode = currentState.isAutoMode
         )
         RadarStateRepository.updateState(state)
         resetSensorsToClear()
@@ -638,7 +640,8 @@ class ANTBikeRadarDevice(
             lightMode = currentState.lightMode,
             isLightControlSupported = currentState.isLightControlSupported,
             audioSnoozeState = currentState.audioSnoozeState,
-            source = RadarSource.ANT_PLUS
+            source = RadarSource.ANT_PLUS,
+            isAutoMode = currentState.isAutoMode
         )
         RadarStateRepository.updateState(state)
         resetSensorsToClear()

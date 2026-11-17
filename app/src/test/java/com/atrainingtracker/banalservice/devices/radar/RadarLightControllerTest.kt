@@ -816,4 +816,45 @@ class RadarLightControllerTest {
         assertEquals(RadarLightMode.SOLID, RadarStateRepository.getState().lightMode)
         assertFalse(RadarLightController.isAutoMode.value)
     }
+
+    /**
+     * TST-CON-046.5 / REQ-CON-046.2, REQ-CON-031.8 (ATT-8455):
+     * Manual override (setManualLightMode / cycleNextMode) keeps isAutoMode == false and
+     * SmartRadarLightEngine suspended across incoming simulator/telemetry frames until setAutoMode().
+     */
+    @Test
+    fun testRadarLightController_manualOverrideSurvivesIncomingFramesUntilSetAutoMode() {
+        val mockDevice = mockk<BTLERadarDevice>(relaxed = true)
+        every { mockDevice.setLightMode(any()) } returns true
+        RadarLightController.registerRadarDevice(mockDevice, lightSupported = true, isStvzo = false)
+        SmartRadarLightEngine.isAutomationEnabled = true
+
+        // 1. User selects manual mode via QuickSwitch / setManualLightMode
+        assertTrue(RadarLightController.setManualLightMode(RadarLightMode.SOLID))
+        assertFalse(RadarLightController.isAutoMode.value)
+        assertFalse(RadarStateRepository.getState().isAutoMode)
+        assertTrue(SmartRadarLightEngine.isManualOverridden)
+
+        // Incoming simulator tick must NOT revert repository isAutoMode to true
+        RadarTrafficSimulator.tick(RadarScenario.SINGLE_CAR, 500L)
+        assertFalse(RadarLightController.isAutoMode.value)
+        assertFalse(RadarStateRepository.getState().isAutoMode)
+        assertTrue(SmartRadarLightEngine.isManualOverridden)
+
+        // 2. User short-taps cycleNextMode() from SOLID -> PELOTON
+        val selection = RadarLightController.cycleNextMode()
+        assertFalse(selection.isAuto)
+        assertEquals(RadarLightMode.PELOTON, selection.mode)
+        assertFalse(RadarStateRepository.getState().isAutoMode)
+
+        // Another telemetry tick still preserves isAutoMode == false
+        RadarTrafficSimulator.tick(RadarScenario.SINGLE_CAR, 1000L)
+        assertFalse(RadarStateRepository.getState().isAutoMode)
+
+        // 3. Explicit setAutoMode() restores isAutoMode == true and resumes SmartRadarLightEngine
+        RadarLightController.setAutoMode()
+        assertTrue(RadarLightController.isAutoMode.value)
+        assertTrue(RadarStateRepository.getState().isAutoMode)
+        assertFalse(SmartRadarLightEngine.isManualOverridden)
+    }
 }

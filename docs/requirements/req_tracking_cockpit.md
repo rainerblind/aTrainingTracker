@@ -3,7 +3,7 @@
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Requirements**: 156
+**Total Requirements**: 157
 
 ---
 
@@ -4883,6 +4883,45 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
   - *Then* active timeout jobs are cancelled, connection state is cleared, streaming jobs are halted, and if searching, `notifyStopSearching(false)` is dispatched.
 
 **Invariants**: `TrainingApplication.getBtleSearchPeriodMs()` remains source of truth; zero regression on standard `BTLEHeartRateDevice` fallback (< API 33 or live IMU disabled); `MySensorManager.CADENCE_PRIORITY` ranking (`RUN_SPEED` > `BIKE_*` > `HRM`) preserved; `PolarOfflineGattCoordinator` session sharing preserved; `activeBridges` registry (`ATT-8019`) preserved; zero localized string changes.
+
+### REQ-CON-046: Radar `isAutoMode` Preservation Across Telemetry Frames, Simulator & Source Arbitration [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-CON-046`
+- **System Requirement(s)**: `SYSREQ-TRK-002`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `RadarState.kt`, `RadarStateRepository.kt`, `BTLERadarDevice.java`, `ANTBikeRadarDevice.kt`, `RadarTrafficSimulator.kt`, `RadarLightController.kt`
+- **Rationale**: When a cyclist selects a manual tail-light mode (`RadarLightController.setManualLightMode()` / `cycleNextMode()`), `isAutoMode = false` is published to `RadarStateRepository`. However, telemetry and lifecycle `RadarState` constructions in `BTLERadarDevice.java`, `ANTBikeRadarDevice.kt`, and `RadarTrafficSimulator.kt` omit `isAutoMode`, falling back to the Kotlin default `isAutoMode = true` at 4–8 Hz and causing Cockpit UI (`TrackingTabsScreen.kt`) to revert immediately to `Automatik` (`ATT-8455`, extending `REQ-CON-031.8` and `REQ-CON-042.3`):
+- **Description**:
+  1. *Driver & Simulator `isAutoMode` Preservation (`REQ-CON-046.1`)*:
+     - All 6 `RadarState` emission sites in `BTLERadarDevice.java` (`mWatchdogRunnable`, `startSearching`, `notifyStopSearching`, `configureServices`, `processTargets`, `disconnectFromGatt`), all 3 sites in `ANTBikeRadarDevice.kt` (`publishTargets`, `onWatchdogTimeout`, `shutDown`), and `RadarTrafficSimulator.kt` (`generateFrame`, `tick`, `start`, `stop`) SHALL propagate the current `isAutoMode` flag without resetting manual overrides to `true`.
+  2. *Cross-Source Control-State Sync & Failover Continuity (`REQ-CON-046.2`)*:
+     - `RadarStateRepository` SHALL preserve and synchronize `isAutoMode` (and `audioSnoozeState` per `REQ-CON-042.3`) across `sourceStates` entries during multi-source arbitration and failover (`BLE` <-> `ANT_PLUS` <-> `SIMULATOR`), while explicit `RadarLightController.setAutoMode()` transitions SHALL restore `isAutoMode = true` and manual overrides SHALL keep `SmartRadarLightEngine` automation suspended.
+  3. *Repository Isolation & Reset Contract (`REQ-CON-046.3`)*:
+     - `RadarStateRepository.reset()` SHALL remain cleanly decoupled from `RadarLightController`, clearing `sourceStates` and resetting `_radarState` to default `RadarState()` without leaking state across unit tests (`REQ-CON-042.3`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new `REQ-CON-046` extending `REQ-CON-031.8` and `REQ-CON-042.3`; targets `BTLERadarDevice.java`, `ANTBikeRadarDevice.kt`, `RadarTrafficSimulator.kt`, `RadarStateRepository.kt`, and `RadarLightController.kt`.
+2. *Historical Origin & Commit Trace*: Commit `a3783bd7` (`ATT-7574`, `REQ-CON-042`) established `lightMode`/`audioSnoozeState` preservation; commit `c422e1b6` (`ATT-7991`, `REQ-CON-031.8`) appended `val isAutoMode: Boolean = true` to `RadarState.kt:123`.
+3. *Root Reason for Existing Formulation*: `ATT-7991` added `isAutoMode = true` as a 9th `@JvmOverloads` parameter, leaving existing 8-arg Java calls (`BTLERadarDevice.java`) and Kotlin constructor/copy sites (`ANTBikeRadarDevice.kt`, `RadarTrafficSimulator.kt`) silently defaulting to `true`.
+4. *Preservation of Core Invariants*: Preserves `REQ-CON-041` source priority (`BLE > ANT_PLUS > SIMULATOR`), `REQ-CON-042.2` pre-preemption state sampling, `REQ-CON-042.3` application state preservation, `SmartRadarLightEngine` manual override suspension, and `RadarStateRepository.reset()` isolation.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Criterion 1 (Telemetry & Lifecycle Frame Preservation)*:
+  - *Given* `RadarStateRepository` has `isAutoMode == false` after manual light selection,
+  - *When* telemetry or lifecycle frames are emitted by `BTLERadarDevice`, `ANTBikeRadarDevice`, or `RadarTrafficSimulator` (`generateFrame`/`tick`/`start`/`stop`),
+  - *Then* `RadarStateRepository.getState().isAutoMode` remains `false`.
+• *Criterion 2 (Explicit Auto Restoration & Multi-Source Failover)*:
+  - *Given* `isAutoMode == false` across active `BLE`/`ANT_PLUS`/`SIMULATOR` streams,
+  - *When* the active source fails over to another transport in `RadarStateRepository.sourceStates`,
+  - *Then* `isAutoMode` remains `false`, and *When* `RadarLightController.setAutoMode()` is invoked, *Then* `isAutoMode` transitions cleanly to `true` and resumes `SmartRadarLightEngine`.
+• *Criterion 3 (Reset Isolation)*:
+  - *Given* non-default `isAutoMode == false` in `RadarStateRepository`,
+  - *When* `RadarStateRepository.reset()` is called,
+  - *Then* `sourceStates` clears and `RadarStateRepository.getState()` resets to default `RadarState()` (`isAutoMode == true`).
+
+**Invariants**: `REQ-CON-041` priority (`BLE > ANT_PLUS > SIMULATOR`), `REQ-CON-042.3` `lightMode`/`audioSnoozeState` preservation, `SmartRadarLightEngine` override gating, zero SQLite schema changes, zero localization changes.
 
 ### REQ-TRK-064: 1-Tap Radar Audio Snooze, Peloton-Mode Audio Sync & Smart Urban Alert Suppression [Verified]
 - **Tests**: `TST-TRK-064`

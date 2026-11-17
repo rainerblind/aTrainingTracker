@@ -288,4 +288,71 @@ class RadarStateRepositoryTest {
         assertEquals(RadarConnectionState.DISCONNECTED, RadarStateRepository.getState(RadarSource.ANT_PLUS).connectionState)
         assertEquals(RadarSource.ANT_PLUS, RadarStateRepository.getState(RadarSource.ANT_PLUS).source)
     }
+
+    /**
+     * TST-CON-046.4 / REQ-CON-046.2, REQ-CON-046.3 (ATT-8455):
+     * Multi-source failover (BLE -> ANT_PLUS -> SIMULATOR) preserves manual isAutoMode == false
+     * and audioSnoozeState across sourceStates, while reset() cleanly restores default RadarState().
+     */
+    @Test
+    fun testMultiSourceFailover_preservesIsAutoModeAndAudioSnooze_andResetIsolatesCleanly() {
+        val activeSnooze = RadarAudioSnoozeState(isSnoozed = true, mode = RadarAudioSnoozeMode.SNOOZE_15M)
+
+        // Connect SIMULATOR, ANT_PLUS, and BLE initially in auto mode
+        RadarStateRepository.updateState(
+            RadarState(connectionState = RadarConnectionState.CONNECTED, source = RadarSource.SIMULATOR, isAutoMode = true)
+        )
+        RadarStateRepository.updateState(
+            RadarState(connectionState = RadarConnectionState.CONNECTED, source = RadarSource.ANT_PLUS, isAutoMode = true)
+        )
+        RadarStateRepository.updateState(
+            RadarState(connectionState = RadarConnectionState.CONNECTED, source = RadarSource.BLE, isAutoMode = true)
+        )
+        assertEquals(RadarSource.BLE, RadarStateRepository.getActiveSource())
+
+        // User enables manual light mode + audio snooze via updateControlState while BLE is active
+        RadarStateRepository.updateControlState {
+            it.copy(isAutoMode = false, lightMode = RadarLightMode.SOLID, audioSnoozeState = activeSnooze)
+        }
+        assertFalse(RadarStateRepository.getState().isAutoMode)
+        assertFalse(RadarStateRepository.getState(RadarSource.ANT_PLUS).isAutoMode)
+        assertFalse(RadarStateRepository.getState(RadarSource.SIMULATOR).isAutoMode)
+
+        // BLE disconnects -> fails over to ANT_PLUS
+        RadarStateRepository.updateState(
+            RadarState(
+                connectionState = RadarConnectionState.DISCONNECTED,
+                source = RadarSource.BLE,
+                isAutoMode = false,
+                audioSnoozeState = activeSnooze
+            )
+        )
+        assertEquals(RadarSource.ANT_PLUS, RadarStateRepository.getActiveSource())
+        assertFalse("Failover to ANT_PLUS must preserve isAutoMode=false", RadarStateRepository.getState().isAutoMode)
+        assertTrue("Failover to ANT_PLUS must preserve audioSnoozeState", RadarStateRepository.getState().audioSnoozeState.isSnoozed)
+
+        // ANT_PLUS disconnects -> fails over to SIMULATOR
+        RadarStateRepository.updateState(
+            RadarState(
+                connectionState = RadarConnectionState.DISCONNECTED,
+                source = RadarSource.ANT_PLUS,
+                isAutoMode = false,
+                audioSnoozeState = activeSnooze
+            )
+        )
+        assertEquals(RadarSource.SIMULATOR, RadarStateRepository.getActiveSource())
+        assertFalse("Failover to SIMULATOR must preserve isAutoMode=false", RadarStateRepository.getState().isAutoMode)
+        assertEquals(RadarAudioSnoozeMode.SNOOZE_15M, RadarStateRepository.getState().audioSnoozeState.mode)
+
+        // Explicit auto restoration propagates cleanly
+        RadarStateRepository.updateControlState { it.copy(isAutoMode = true) }
+        assertTrue(RadarStateRepository.getState().isAutoMode)
+
+        // reset() isolates cleanly to default RadarState()
+        RadarStateRepository.updateControlState { it.copy(isAutoMode = false, audioSnoozeState = activeSnooze) }
+        RadarStateRepository.reset()
+        assertEquals(RadarState(), RadarStateRepository.getState())
+        assertTrue(RadarStateRepository.getState().isAutoMode)
+        assertFalse(RadarStateRepository.getState().audioSnoozeState.isSnoozed)
+    }
 }

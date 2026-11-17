@@ -40,10 +40,33 @@ object RadarStateRepository {
     private val _radarState = MutableStateFlow(RadarState())
     val radarState: StateFlow<RadarState> = _radarState.asStateFlow()
 
+    /**
+     * Atomically applies an application-level control state transform (e.g. `isAutoMode`, `lightMode`,
+     * `audioSnoozeState`) under [lock] and synchronizes `isAutoMode` and `audioSnoozeState` across
+     * all tracked [sourceStates] entries so multi-source failover cannot revert user overrides.
+     */
+    @JvmStatic
+    fun updateControlState(transform: (RadarState) -> RadarState) {
+        synchronized(lock) {
+            val updated = transform(_radarState.value)
+            _radarState.value = updated
+            if (updated.source != RadarSource.NONE) {
+                sourceStates[updated.source] = updated
+            }
+            syncControlFieldsAcrossSourcesLocked(updated)
+        }
+    }
+
     @JvmStatic
     fun updateState(newState: RadarState) {
         synchronized(lock) {
+            val previousState = _radarState.value
+            val previousActiveSource = activeSource
             sourceStates[newState.source] = newState
+
+            if (previousActiveSource == RadarSource.NONE || newState.source == previousActiveSource) {
+                syncControlFieldsAcrossSourcesLocked(newState)
+            }
 
             // Two-level arbitration: CONNECTED sources strictly take precedence over CONNECTING sources (REQ-CON-041.2).
             // An active CONNECTED stream (e.g. ANT+) must never be preempted by a CONNECTING source (e.g. BLE scanning).
@@ -55,18 +78,21 @@ object RadarStateRepository {
                     .maxByOrNull { it.source.priority }
 
             if (bestActive != null) {
-                activeSource = bestActive.source
-                _radarState.value = bestActive
+                val resolvedBest = preserveControlFieldsOnFailoverLocked(bestActive, newState, previousState, previousActiveSource)
+                activeSource = resolvedBest.source
+                _radarState.value = resolvedBest
             } else {
                 // If no sources are connected, update from the incoming source if it matches active or if active was NONE
-                if (activeSource == RadarSource.NONE || activeSource == newState.source) {
+                if (previousActiveSource == RadarSource.NONE || previousActiveSource == newState.source) {
                     activeSource = newState.source
                     _radarState.value = newState
                 } else {
                     val bestSource = sourceStates.values.maxByOrNull { it.source.priority }
                     if (bestSource != null) {
-                        activeSource = bestSource.source
-                        _radarState.value = bestSource
+                        val resolvedBest = preserveControlFieldsOnFailoverLocked(bestSource, newState, previousState, previousActiveSource)
+                        activeSource = resolvedBest.source
+                        _radarState.value = resolvedBest
+                        syncControlFieldsAcrossSourcesLocked(resolvedBest)
                     } else {
                         activeSource = newState.source
                         _radarState.value = newState
@@ -74,6 +100,35 @@ object RadarStateRepository {
                 }
             }
         }
+    }
+
+    private fun syncControlFieldsAcrossSourcesLocked(authoritative: RadarState) {
+        for ((source, existing) in sourceStates) {
+            if (source != authoritative.source) {
+                sourceStates[source] = existing.copy(
+                    isAutoMode = authoritative.isAutoMode,
+                    audioSnoozeState = authoritative.audioSnoozeState
+                )
+            }
+        }
+    }
+
+    private fun preserveControlFieldsOnFailoverLocked(
+        candidate: RadarState,
+        incomingState: RadarState,
+        previousState: RadarState,
+        previousActiveSource: RadarSource
+    ): RadarState {
+        if (previousActiveSource == RadarSource.NONE ||
+            candidate.source == previousActiveSource ||
+            candidate.source == incomingState.source
+        ) {
+            return candidate
+        }
+        return candidate.copy(
+            isAutoMode = previousState.isAutoMode,
+            audioSnoozeState = previousState.audioSnoozeState
+        ).also { sourceStates[it.source] = it }
     }
 
     @JvmStatic

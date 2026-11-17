@@ -117,12 +117,14 @@ object RadarTrafficSimulator {
      * @param scenario The traffic scenario to evaluate.
      * @param elapsedMs Elapsed time in milliseconds since the scenario started.
      * @param realtimeMs Timestamp assigned to [RadarState.lastUpdateRealtimeMs].
+     * @param isAutoMode Auto light mode flag preserved across generated frames.
      * @return Immutable [RadarState] representing the radar field at [elapsedMs].
      */
     fun generateFrame(
         scenario: RadarScenario,
         elapsedMs: Long,
-        realtimeMs: Long = 0L
+        realtimeMs: Long = 0L,
+        isAutoMode: Boolean = true
     ): RadarState {
         return when (scenario) {
             RadarScenario.SINGLE_CAR -> {
@@ -373,7 +375,7 @@ object RadarTrafficSimulator {
                     }
                 }
             }
-        }
+        }.copy(isAutoMode = isAutoMode)
     }
 
     /**
@@ -385,7 +387,7 @@ object RadarTrafficSimulator {
         aggregator: RadarWindowAggregator = windowAggregator
     ): RadarState {
         val currentState = RadarStateRepository.getState()
-        val frame = generateFrame(scenario, elapsedMs).copy(
+        val frame = generateFrame(scenario, elapsedMs, isAutoMode = currentState.isAutoMode).copy(
             lightMode = if (simulatedLightMode != RadarLightMode.OFF) simulatedLightMode else currentState.lightMode,
             isLightControlSupported = true,
             audioSnoozeState = currentState.audioSnoozeState,
@@ -461,7 +463,7 @@ object RadarTrafficSimulator {
                     }
                     val elapsed = clock() - startTime
                     val currentState = RadarStateRepository.getState()
-                    val frame = generateFrame(scenario, elapsed).copy(
+                    val frame = generateFrame(scenario, elapsed, isAutoMode = currentState.isAutoMode).copy(
                         lightMode = if (simulatedLightMode != RadarLightMode.OFF) simulatedLightMode else currentState.lightMode,
                         isLightControlSupported = true,
                         audioSnoozeState = currentState.audioSnoozeState,
@@ -505,7 +507,8 @@ object RadarTrafficSimulator {
                 lightMode = currentState.lightMode,
                 isLightControlSupported = currentState.isLightControlSupported,
                 audioSnoozeState = currentState.audioSnoozeState,
-                source = RadarSource.SIMULATOR
+                source = RadarSource.SIMULATOR,
+                isAutoMode = currentState.isAutoMode
             )
         )
         windowAggregator.resetSession()

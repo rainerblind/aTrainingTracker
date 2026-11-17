@@ -18,7 +18,10 @@
 
 package com.atrainingtracker.banalservice.devices.radar
 
+import android.util.Log
+import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkStatic
 import io.mockk.unmockkAll
 import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -44,6 +47,13 @@ class RadarTrafficSimulatorTest {
 
     @Before
     fun setUp() {
+        mockkStatic(Log::class)
+        every { Log.d(any<String>(), any<String>()) } returns 0
+        every { Log.i(any<String>(), any<String>()) } returns 0
+        every { Log.w(any<String>(), any<String>()) } returns 0
+        every { Log.e(any<String>(), any<String>()) } returns 0
+        RadarStateRepository.reset()
+        RadarLightController.reset()
         RadarTrafficSimulator.stop()
         RadarTrafficSimulator.registerHardwareActiveProvider(null)
     }
@@ -52,6 +62,9 @@ class RadarTrafficSimulatorTest {
     fun tearDown() {
         RadarTrafficSimulator.stop()
         RadarTrafficSimulator.registerHardwareActiveProvider(null)
+        RadarLightController.reset()
+        RadarStateRepository.reset()
+        unmockkAll()
     }
 
     @Test
@@ -329,5 +342,55 @@ class RadarTrafficSimulatorTest {
         assertTrue(state.isLightControlSupported)
         assertTrue(state.audioSnoozeState.isSnoozed)
         assertEquals(RadarAudioSnoozeMode.SNOOZE_15M, state.audioSnoozeState.mode)
+    }
+
+    /**
+     * TST-CON-046.2 / REQ-CON-046.1 (ATT-8455):
+     * Verifies generateFrame(), tick(), start() loop frames, and stop() preserve isAutoMode == false
+     * and RadarLightController.setAutoMode() explicitly restores isAutoMode == true.
+     */
+    @Test
+    fun testSimulatorLifecycleAndFrames_preserveManualIsAutoModeAndRestoreOnSetAutoMode() = runTest {
+        val testDispatcher = StandardTestDispatcher(testScheduler)
+        val testScope = TestScope(testDispatcher)
+
+        assertTrue(RadarTrafficSimulator.generateFrame(RadarScenario.SINGLE_CAR, 1000L).isAutoMode)
+        assertFalse(RadarTrafficSimulator.generateFrame(RadarScenario.SINGLE_CAR, 1000L, isAutoMode = false).isAutoMode)
+
+        // Set manual mode
+        RadarStateRepository.updateControlState {
+            it.copy(isLightControlSupported = true, lightMode = RadarLightMode.SOLID, isAutoMode = false)
+        }
+        assertFalse(RadarStateRepository.getState().isAutoMode)
+
+        // tick() must preserve isAutoMode = false
+        val tickFrame = RadarTrafficSimulator.tick(RadarScenario.SINGLE_CAR, 500L)
+        assertFalse("tick() frame must preserve isAutoMode=false", tickFrame.isAutoMode)
+        assertFalse("Repository must preserve isAutoMode=false after tick()", RadarStateRepository.getState().isAutoMode)
+
+        // start() coroutine 8 Hz loop frames must preserve isAutoMode = false
+        RadarTrafficSimulator.start(
+            scenario = RadarScenario.CONVOY,
+            scope = testScope,
+            tickIntervalMs = 125L
+        )
+        testScope.runCurrent()
+        assertFalse("start() initial tick must preserve isAutoMode=false", RadarStateRepository.getState().isAutoMode)
+
+        testScope.advanceTimeBy(375L)
+        testScope.runCurrent()
+        assertFalse("start() periodic ticks must preserve isAutoMode=false", RadarStateRepository.getState().isAutoMode)
+
+        // stop() must preserve isAutoMode = false
+        RadarTrafficSimulator.stop()
+        assertEquals(RadarConnectionState.DISCONNECTED, RadarStateRepository.getState().connectionState)
+        assertFalse("stop() must preserve isAutoMode=false", RadarStateRepository.getState().isAutoMode)
+
+        // Explicit setAutoMode() restores isAutoMode = true and subsequent tick() preserves true
+        RadarLightController.setAutoMode()
+        assertTrue(RadarStateRepository.getState().isAutoMode)
+        val restoredFrame = RadarTrafficSimulator.tick(RadarScenario.SINGLE_CAR, 1000L)
+        assertTrue(restoredFrame.isAutoMode)
+        assertTrue(RadarStateRepository.getState().isAutoMode)
     }
 }
