@@ -333,7 +333,7 @@ object ErtsPostWorkoutRecomputer {
         }
     }
 
-    private fun bindColumnValue(
+    internal fun bindColumnValue(
         stmt: SQLiteStatement,
         bindIdx: Int,
         columnName: String,
@@ -374,7 +374,12 @@ object ErtsPostWorkoutRecomputer {
                 if (alt != null) stmt.bindDouble(bindIdx, alt.slopePercent) else stmt.bindNull(bindIdx)
             }
             SensorType.VERTICAL_SPEED.name -> {
-                if (alt != null) stmt.bindDouble(bindIdx, alt.verticalSpeedMps) else stmt.bindNull(bindIdx)
+                if (alt != null && alt.verticalSpeedMps.isFinite()) {
+                    val vamMph = Math.round((alt.verticalSpeedMps * 3600.0).coerceIn(-3000.0, 3000.0))
+                    stmt.bindLong(bindIdx, vamMph)
+                } else {
+                    stmt.bindNull(bindIdx)
+                }
             }
             SensorType.ASCENT.name -> {
                 if (alt != null) stmt.bindDouble(bindIdx, alt.ascentM) else stmt.bindNull(bindIdx)

@@ -3,7 +3,7 @@
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Tests**: 136
+**Total Tests**: 137
 
 ---
 
@@ -3178,6 +3178,25 @@
      • Exercise `HrvPostWorkoutRecomputer.recomputeWorkout()` across full-HRV (`rmssdValues`, `dfaValues`, `sessionSdnn` all populated) and sparse/artifact-gated (`dfaValues` empty or `sessionSdnn == null`) cases; assert `HRV_ARTIFACT_RATE` is upserted when written and `HRV_RMSSD`, `HRV_DFA_A1`, `HRV_SDNN` are upserted strictly when non-empty/non-null.
   5. *Tier 1 Targeted Regression Suite & Localization Parity (`TST-TRK-084.5`)*:
      • Run `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.tracker.*" --tests "com.atrainingtracker.trainingtracker.database.*" --tests "com.atrainingtracker.banalservice.devices.bluetooth_le.polar.*" --tests "com.atrainingtracker.trainingtracker.build.*"` asserting 100% pass (Localization parity: `N/A - no UI strings`).
+
+
+### TST-FIL-021: **Post-Workout ERTS `VERTICAL_SPEED` `m/h` Conversion, Clamping & Integer Persistence Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Tickets**: `ATT-8577`
+- **Requirement(s)**: `REQ-FIL-021` (`REQ-FIL-021.1`..`REQ-FIL-021.2`)
+- **Component**: `app/src/test/java/com/atrainingtracker/trainingtracker/database/ErtsPostWorkoutRecomputerTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/sensor/SensorTypeUnitsContractTest.kt`
+- **Test Type**: Unit / Contract
+- **Verification Method**: Unit
+- **Procedure**:
+  1. *Positive Climb & Negative Descent `m/h` Scaling & Rounding Test (`TST-FIL-021.1`, `ErtsPostWorkoutRecomputerTest.kt`)*:
+     • Populate `WorkoutSamples.db` with climbing (`+0.2 m/s` / `+0.25 m/s` grade) and descending (`-0.25 m/s` / fractional `m/s`) altitude profiles alongside device-attributed columns.
+     • Run `ErtsPostWorkoutRecomputer.recomputeWorkout(context, workoutId)`.
+     • Assert canonical `VERTICAL_SPEED` rows store integer `m/h` values matching `Math.round((alt.verticalSpeedMps * 3600.0).coerceIn(-3000.0, 3000.0))` (e.g., positive climb `~720..900 m/h` and negative descent `~-900 m/h`, never raw `m/s` fractional values), while device-attributed columns remain byte-for-byte identical.
+  2. *Boundary Clamping (`[-3000, 3000] m/h`) & Null-Safety Test (`TST-FIL-021.2`, `ErtsPostWorkoutRecomputerTest.kt`)*:
+     • Exercise `ErtsPostWorkoutRecomputer` / `bindColumnValue()` with extreme smoothed vertical speeds (`+3.0 m/s` and `-3.0 m/s` from `ExtendedRtsAltitudeSlopeSmoother` bounds, i.e., `±10800 m/h`) and verify persisted SQLite `VERTICAL_SPEED` values are clamped to `+3000` and `-3000` `m/h` respectively.
+     • Verify `alt == null` binds SQLite `NULL` into `VERTICAL_SPEED`.
+  3. *Unit Contract Doc Parity & Regression Execution (`TST-FIL-021.3`)*:
+     • Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.database.ErtsPostWorkoutRecomputerTest" --tests "com.atrainingtracker.banalservice.odometry.ExtendedRtsAltitudeSlopeSmootherTest" --tests "com.atrainingtracker.banalservice.sensor.SensorTypeUnitsContractTest"` asserting 100% pass rate (`Localization parity: N/A - no UI strings`).
 
 
 

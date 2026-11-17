@@ -3,7 +3,7 @@
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Requirements**: 160
+**Total Requirements**: 161
 
 ---
 
@@ -6448,6 +6448,47 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 • *Then* `SensorType.HR` is upserted into `AccumulatedSensors`, `HRV_ARTIFACT_RATE` is upserted when written, and `HRV_RMSSD`, `HRV_DFA_A1`, and `HRV_SDNN` are upserted strictly when their computed outputs are non-empty/non-null.
 
 **Invariants**: `REQ-TRK-030.1` (`FINISHED = 1` first), `REQ-TRK-030.2` (`TST-TRK-022.3` defensive copy), `REQ-TRK-035.1`/`.3` (`TST-TRK-027.1`/`.3` snapshot contract), `GCData` 11-char mask, zero `AccumulatedSensors` schema changes, zero duplicate `(workout_id, sensor_type)` rows, and `N/A - no UI strings`.
+
+
+### REQ-FIL-021: Post-Workout ERTS `VERTICAL_SPEED` `m/h` Unit Conversion, Clamping & Integer Persistence [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-FIL-021`
+- **System Requirement(s)**: `SYSREQ-TRK-003`, `SYSREQ-TRK-004`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `app/src/main/java/com/atrainingtracker/trainingtracker/database/ErtsPostWorkoutRecomputer.kt`, `app/src/main/java/com/atrainingtracker/banalservice/sensor/SensorType.java`, `docs/architecture/sensor_units.md`
+- **Rationale**: `SensorType.VERTICAL_SPEED` declares `SensorValueType.INTEGER` and `internalUnit = "m/h"` (`REQ-TRK-083`), and live devices (`VerticalSpeedAndSlopeDevice`, `AltitudeAndSlopeDevice_ATTFused`) emit rounded integer `m/h` clamped to `[-3000, 3000]` (`REQ-FIL-012`). Previously, `ErtsPostWorkoutRecomputer.bindColumnValue()` bound `SmoothedAltitudeSlopePoint.verticalSpeedMps` (`m/s`, clamped to `[-3.0, 3.0] m/s` in `ExtendedRtsAltitudeSlopeSmoother`) directly via `stmt.bindDouble()`, introducing a 3600x unit mismatch in `WorkoutSamples.db` and causing `CSVFileWriter.doExport()` (`cursor.getInt()`) to truncate sub-unit `m/s` values to `0` (`ATT-8577`, refining `REQ-FIL-017.3`, `REQ-FIL-012`, and `REQ-TRK-083`).
+- **Description**:
+  1. *`m/s` to `m/h` Conversion, Clamping & Integer SQLite Binding (`REQ-FIL-021.1`)*:
+     - In `ErtsPostWorkoutRecomputer.bindColumnValue()`, when `columnName == SensorType.VERTICAL_SPEED.name` and `alt != null`, the system SHALL convert `alt.verticalSpeedMps * 3600.0`, clamp the result to `[-3000.0, 3000.0]` `m/h`, round via `Math.round(...)` to `Long`, and bind the integer value via `stmt.bindLong(bindIdx, vamMph)`.
+     - When `alt == null`, `bindColumnValue()` SHALL preserve `stmt.bindNull(bindIdx)`.
+     - `SmoothedAltitudeSlopePoint.verticalSpeedMps` MUST remain in `m/s` on the `ExtendedRtsAltitudeSlopeSmoother` API, and `ALLOWED_CANONICAL_COLUMNS`, device-attributed columns (`" ("`), `SLOPE`, `KEY_POST_WORKOUT_ERTS_SMOOTHING` (default `false`), and `SensorType.ordinal()`/`name()` MUST remain unchanged (`Localization Parity: N/A - no UI strings`).
+  2. *Canonical Unit Documentation Synchronization (`REQ-FIL-021.2`)*:
+     - `SensorType.java` (`VERTICAL_SPEED` Javadoc) and `docs/architecture/sensor_units.md` (`VERTICAL_SPEED` row and Section 2 note) SHALL reflect that `ATT-8577` resolved the legacy `ErtsPostWorkoutRecomputer` `m/s` mismatch while preserving the `"ATT-8577"` token asserted by `SensorTypeUnitsContractTest`.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new `REQ-FIL-021` refining `REQ-FIL-017.3` (*Strict Column Scope Invariant*), `REQ-FIL-012` (*Stabilized VAM Metric*), and `REQ-TRK-083` (*Canonical SensorType Unit Specification*). Targets `ErtsPostWorkoutRecomputer.kt`, `SensorType.java`, `docs/architecture/sensor_units.md`, and `ErtsPostWorkoutRecomputerTest.kt`.
+2. *Historical Origin & Commit Trace*: `ed6acfee` (`ATT-7750`) added `ErtsPostWorkoutRecomputer.kt` and `ExtendedRtsAltitudeSlopeSmoother.kt`; `ed972bad` (`ATT-8337`) added null/sanity guards; `367a412f` (`ATT-8579`) formalized `VERTICAL_SPEED` `"m/h"` in `SensorType.java` and `sensor_units.md`.
+3. *Root Reason for Existing Formulation*: `ExtendedRtsAltitudeSlopeSmoother` operates in SI `m/s` (`dh/dt`), and `ATT-7750` bound `alt.verticalSpeedMps` verbatim into SQLite without applying `SensorType.VERTICAL_SPEED`'s `m/h` `INTEGER` and `[-3000, 3000]` contract.
+4. *Preservation of Core Invariants*: Preserves `SmoothedAltitudeSlopePoint.verticalSpeedMps` (`m/s`), strict canonical column scope (`REQ-FIL-017.3`), device column immutability, `KEY_POST_WORKOUT_ERTS_SMOOTHING = false` default, `SensorType` `ordinal()`/`name()`, and `"ATT-8577"` token in `docs/architecture/sensor_units.md`.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a workout with positive smoothed altitude climb (`alt.verticalSpeedMps = 0.25 m/s`),
+• *When* `ErtsPostWorkoutRecomputer.recomputeWorkout()` updates `WorkoutSamples.db`,
+• *Then* `VERTICAL_SPEED` stores integer `900` (`m/h`).
+• *Given* a workout with negative smoothed vertical speed requiring fractional rounding (e.g. `alt.verticalSpeedMps` yielding non-integer `m/h` or `-0.25 m/s`),
+• *When* `ErtsPostWorkoutRecomputer.recomputeWorkout()` executes,
+• *Then* `VERTICAL_SPEED` stores `Math.round((alt.verticalSpeedMps * 3600.0).coerceIn(-3000.0, 3000.0))` as an integer (`-900` for `-0.25 m/s`).
+• *Given* extreme smoothed vertical speeds at the `ExtendedRtsAltitudeSlopeSmoother` bounds (`+3.0 m/s` and `-3.0 m/s`),
+• *When* `ErtsPostWorkoutRecomputer.bindColumnValue()` binds `VERTICAL_SPEED`,
+• *Then* values clamp strictly to `+3000` and `-3000` `m/h` respectively via `stmt.bindLong()`.
+• *Given* `alt == null` in `ErtsPostWorkoutRecomputer.bindColumnValue()` alongside device-attributed columns (`"ALTITUDE (Höhe aus Luftdruck)"`, etc.),
+• *When* `ErtsPostWorkoutRecomputer.recomputeWorkout()` runs,
+• *Then* `VERTICAL_SPEED` binds SQLite `NULL` when `alt == null` and all device-attributed columns remain 100% byte-for-byte untouched, while `SensorTypeUnitsContractTest` passes cleanly (`N/A - no UI strings`).
+
+**Invariants**: `SmoothedAltitudeSlopePoint.verticalSpeedMps` remains `m/s`; `ALLOWED_CANONICAL_COLUMNS` & device-column immutability (`REQ-FIL-017.3`); `[-3000, 3000]` `m/h` live parity (`REQ-FIL-012`); `SensorType` `ordinal()`/`name()` & `"ATT-8577"` contract token preserved; `N/A - no UI strings`.
+
 
 
 

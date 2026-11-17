@@ -375,7 +375,7 @@ public enum SensorType
     TORQUE_EFFECTIVENESS_R(SensorCategory.POWER_AND_PEDALING, SensorSubCategory.PEDALING_DYNAMICS, R.string.torque_effectiveness_r, R.string.torque_effectiveness_r_short, R.string.units_percent, SensorValueType.INTEGER, new IntegerFormatter(), true, "%"),
     /**
      * Vertical ascent/descent rate (VAM).
-     * Internal unit: {@code m/h} ({@code INTEGER}, live devices clamp {@code [-3000, 3000]} {@code m/h}; see {@code ATT-8577} for legacy ERTS {@code m/s} note);
+     * Internal unit: {@code m/h} ({@code INTEGER}, clamped {@code [-3000, 3000]} {@code m/h} across live devices and post-workout ERTS per {@code ATT-8577});
      * sentinel: {@code null} -> {@code "--"}; display: {@link IntegerFormatter} ({@code m/h}); export: CSV raw {@code m/h}.
      */
     VERTICAL_SPEED(SensorCategory.ELEVATION, R.string.vertical_speed, R.string.vertical_speed_short, R.string.units_vertical_speed_basic, SensorValueType.INTEGER, new IntegerFormatter(), true, "m/h"),

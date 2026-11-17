@@ -21,6 +21,7 @@ package com.atrainingtracker.trainingtracker.database
 import android.content.ContentValues
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import com.atrainingtracker.banalservice.odometry.SmoothedAltitudeSlopePoint
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
 import com.google.android.gms.maps.model.LatLng
@@ -181,12 +182,16 @@ class ErtsPostWorkoutRecomputerTest {
                 val spd = cursor.getDouble(cursor.getColumnIndexOrThrow(SensorType.SPEED_mps.name))
                 val dist = cursor.getDouble(cursor.getColumnIndexOrThrow(SensorType.DISTANCE_m.name))
                 val alt = cursor.getDouble(cursor.getColumnIndexOrThrow(SensorType.ALTITUDE.name))
+                val vamMph = cursor.getLong(cursor.getColumnIndexOrThrow(SensorType.VERTICAL_SPEED.name))
 
                 assertTrue("Smoothed latitude valid", lat > 40.0)
                 assertTrue("Smoothed longitude valid", lon > 10.0)
                 assertTrue("Smoothed speed valid", spd > 0.0)
                 assertTrue("Smoothed distance non-negative", dist >= 0.0)
                 assertTrue("Smoothed altitude valid", alt > 400.0)
+                if (rowIdx in 5..25) {
+                    assertTrue("Smoothed VERTICAL_SPEED must be in m/h (~720 m/h), was $vamMph", vamMph in 400L..1100L)
+                }
 
                 rowIdx++
             }
@@ -382,5 +387,179 @@ class ErtsPostWorkoutRecomputerTest {
         )
         val isHugeDistSane = ErtsPostWorkoutRecomputer.isSmoothedOutputSane(emptyList(), hugeDistOdom, null)
         org.junit.Assert.assertFalse("Sanity guard must reject distance > 1,000 km", isHugeDistSane)
+    }
+
+    // TST-FIL-021.1: Positive climb & negative descent m/h conversion with untouched device columns
+    @Test
+    fun testVerticalSpeedRecomputation_convertsClimbAndDescentToIntegerMphAndPreservesDeviceColumns() = runBlocking {
+        val baseFileName = "2026-11-17_120000"
+        val workoutId = createWorkout(baseFileName)
+
+        val samplesDb = samplesDbManager.database
+        val tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
+        samplesDbManager.createNewTable(
+            baseFileName,
+            listOf(
+                SensorType.LATITUDE,
+                SensorType.LONGITUDE,
+                SensorType.SPEED_mps,
+                SensorType.PACE_spm,
+                SensorType.DISTANCE_m,
+                SensorType.BEARING,
+                SensorType.ALTITUDE,
+                SensorType.SLOPE,
+                SensorType.VERTICAL_SPEED,
+                SensorType.ASCENT,
+                SensorType.DESCENT
+            )
+        )
+        samplesDb.execSQL("ALTER TABLE $tableName ADD COLUMN \"ALTITUDE (Topografische Höhe (DEM))\" REAL")
+
+        val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).apply {
+            timeZone = TimeZone.getTimeZone("UTC")
+        }
+        val startTs = 1_700_000_200_000L
+        val expectedDem = mutableListOf<Double>()
+
+        samplesDb.beginTransaction()
+        try {
+            // 0..19: climb +0.25 m/s (+900 m/h); 20..39: descent -0.25 m/s (-900 m/h)
+            for (sec in 0 until 40) {
+                val alt = if (sec < 20) 500.0 + sec * 0.25 else 500.0 + 19 * 0.25 - (sec - 19) * 0.25
+                expectedDem.add(alt)
+                val cv = ContentValues().apply {
+                    put("time", sdf.format(Date(startTs + sec * 1000L)))
+                    put(SensorType.LATITUDE.name, 48.6567 + sec * 0.0001)
+                    put(SensorType.LONGITUDE.name, 9.0545 + sec * 0.0001)
+                    put(SensorType.SPEED_mps.name, 5.0)
+                    put(SensorType.PACE_spm.name, 0.2)
+                    put(SensorType.DISTANCE_m.name, sec * 5.0)
+                    put(SensorType.BEARING.name, 45.0)
+                    put(SensorType.ALTITUDE.name, alt)
+                    put(SensorType.SLOPE.name, if (sec < 20) 5.0 else -5.0)
+                    put(SensorType.VERTICAL_SPEED.name, 0)
+                    put(SensorType.ASCENT.name, 0.0)
+                    put(SensorType.DESCENT.name, 0.0)
+                    put("\"ALTITUDE (Topografische Höhe (DEM))\"", alt)
+                }
+                samplesDb.insert(tableName, null, cv)
+            }
+            samplesDb.setTransactionSuccessful()
+        } finally {
+            samplesDb.endTransaction()
+        }
+
+        val success = ErtsPostWorkoutRecomputer.recomputeWorkout(context, workoutId)
+        assertTrue("Recomputation should succeed", success)
+
+        val climbVams = mutableListOf<Long>()
+        val descentVams = mutableListOf<Long>()
+        samplesDb.query(tableName, null, null, null, null, null, "_id ASC").use { cursor ->
+            val vamIdx = cursor.getColumnIndexOrThrow(SensorType.VERTICAL_SPEED.name)
+            val demIdx = cursor.getColumnIndexOrThrow("ALTITUDE (Topografische Höhe (DEM))")
+            var rowIdx = 0
+            while (cursor.moveToNext()) {
+                assertEquals(
+                    "Device DEM column must remain untouched at row $rowIdx",
+                    expectedDem[rowIdx],
+                    cursor.getDouble(demIdx),
+                    1e-9
+                )
+                assertEquals(
+                    "VERTICAL_SPEED must be persisted as SQLite INTEGER",
+                    android.database.Cursor.FIELD_TYPE_INTEGER,
+                    cursor.getType(vamIdx)
+                )
+                val vam = cursor.getLong(vamIdx)
+                if (rowIdx in 5..14) climbVams.add(vam)
+                if (rowIdx in 25..34) descentVams.add(vam)
+                rowIdx++
+            }
+            assertEquals(40, rowIdx)
+        }
+
+        assertTrue("Climb VAM should be positive m/h (~900), was $climbVams", climbVams.all { it in 500L..1300L })
+        assertTrue("Descent VAM should be negative m/h (~-900), was $descentVams", descentVams.all { it in -1300L..-500L })
+    }
+
+    // TST-FIL-021.1 & TST-FIL-021.2: Exact scaling, rounding, [-3000, 3000] clamping & NULL safety
+    @Test
+    fun testBindColumnValue_verticalSpeedScalesRoundsClampsAndHandlesNull() {
+        val baseFileName = "2026-11-17_120500"
+        val samplesDb = samplesDbManager.database
+        val tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
+        samplesDbManager.createNewTable(baseFileName, listOf(SensorType.VERTICAL_SPEED))
+
+        val cases = listOf(
+            0.25 to 900L,      // exact positive climb
+            -0.25 to -900L,    // exact negative descent
+            0.0004 to 1L,      // 1.44 -> 1
+            -0.0004 to -1L,    // -1.44 -> -1
+            0.0007 to 3L,      // 2.52 -> 3
+            -0.0007 to -3L,    // -2.52 -> -3
+            3.0 to 3000L,      // +10800 m/h clamped to +3000 m/h
+            -3.0 to -3000L,    // -10800 m/h clamped to -3000 m/h
+            Double.NaN to null,// non-finite -> SQLite NULL
+            null to null       // alt == null -> SQLite NULL
+        )
+
+        val dummyRow = ErtsPostWorkoutRecomputer.RawSampleRow(
+            rowId = 1L,
+            timestampMs = 1000L,
+            latitude = null,
+            longitude = null,
+            speedMps = null,
+            bearingDeg = null,
+            accuracyM = null,
+            yawRateRadPerSec = null,
+            rawAltitude = null,
+            referenceAltitude = null,
+            wheelSpeedMps = null
+        )
+
+        val insertStmt = samplesDb.compileStatement(
+            "INSERT INTO $tableName (${SensorType.VERTICAL_SPEED.name}) VALUES (?)"
+        )
+        for ((mps, _) in cases) {
+            val altPt = mps?.let {
+                SmoothedAltitudeSlopePoint(
+                    timestampMs = 1000L,
+                    altitudeM = 500.0,
+                    slopePercent = 0.0,
+                    verticalSpeedMps = it,
+                    ascentM = 0.0,
+                    descentM = 0.0
+                )
+            }
+            ErtsPostWorkoutRecomputer.bindColumnValue(
+                stmt = insertStmt,
+                bindIdx = 1,
+                columnName = SensorType.VERTICAL_SPEED.name,
+                odom = null,
+                alt = altPt,
+                cumulativeDist = 0.0,
+                row = dummyRow
+            )
+            insertStmt.executeInsert()
+        }
+
+        samplesDb.query(tableName, arrayOf(SensorType.VERTICAL_SPEED.name), null, null, null, null, "_id ASC").use { cursor ->
+            var idx = 0
+            while (cursor.moveToNext()) {
+                val (inputMps, expectedMph) = cases[idx]
+                if (expectedMph == null) {
+                    assertTrue("Case $idx (mps=$inputMps) must bind SQLite NULL", cursor.isNull(0))
+                } else {
+                    assertEquals(
+                        "Case $idx (mps=$inputMps) must store SQLite INTEGER",
+                        android.database.Cursor.FIELD_TYPE_INTEGER,
+                        cursor.getType(0)
+                    )
+                    assertEquals("Case $idx (mps=$inputMps) mismatch", expectedMph, cursor.getLong(0))
+                }
+                idx++
+            }
+            assertEquals(cases.size, idx)
+        }
     }
 }
