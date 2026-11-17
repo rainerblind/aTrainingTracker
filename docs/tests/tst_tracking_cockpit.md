@@ -1,14 +1,14 @@
 # Living Test Specification: Tracking & Live Sensor Cockpit
 
 **Document ID**: `DOC-TST-TRK`  
-**Version**: 1.0.3  
+**Version**: 1.0.6  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Tests**: 140
+**Total Tests**: 141
 
 ---
 
@@ -3264,6 +3264,26 @@
   4. *9-Language Localization Parity & Targeted Regression (`TST-CON-048.4`, `TranslationParityTest.kt`)*:
      • Verify 100% key and format parity across all 9 `strings_radar.xml` locales (`values`, `de`, `es`, `fr`, `it`, `ja`, `nl`, `pl`, `pt`), and execute targeted Gradle unit and Compose UI tests asserting 100% pass rate.
 
+### TST-FIL-024: **VerticalSpeedAndSlopeDevice Baro Source Guard, Accumulator Reset & Same-Device Step Re-Seeding Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Tickets**: `ATT-8707`
+- **Requirement(s)**: `REQ-FIL-024` (`REQ-FIL-024.1`..`REQ-FIL-024.4`), `REQ-FIL-012`
+- **Component**: `app/src/main/java/com/atrainingtracker/banalservice/devices/VerticalSpeedAndSlopeDevice.java`, `app/src/test/java/com/atrainingtracker/banalservice/devices/VerticalSpeedAndSlopeDeviceTest.kt`
+- **Test Type**: Unit
+- **Verification Method**: Unit
+- **Procedure**:
+  1. *Non-Baro Canonical `ALTITUDE_CORRECTION_INTENT` Guard & Active-Baro Parity Test (`TST-FIL-024.1`, `VerticalSpeedAndSlopeDeviceTest.kt`)*:
+     • Configure `SensorType.ALTITUDE` backed by `DeviceType.ALTITUDE_AND_SLOPE_ATT_FUSED` (or `ALTITUDE_FROM_POSITION`) via `ProxySensor.bestSensor` and invoke `mAltitudeCorrectionReceiver.onReceive(...)` with `delta = +100.0 m`. Assert `mLastAltitudeSuperFiltered` remains unchanged and `FilterManager.shiftFilter` is NOT invoked (`verify(exactly = 0)`).
+     • Configure `SensorType.ALTITUDE` backed by `DeviceType.ALTITUDE_FROM_PRESSURE` and invoke `mAltitudeCorrectionReceiver.onReceive(...)` with `delta = +25.0 m`. Assert `mLastAltitudeSuperFiltered` shifts by `+25.0 m` and `shiftFilter` is invoked for both `21.0s` and `300.0s` filters (`TST-FIL-004.5` parity).
+  2. *Synchronized `onAccumulatorsReset()` State Clearing Test (`TST-FIL-024.2`, `VerticalSpeedAndSlopeDeviceTest.kt`)*:
+     • Populate `VerticalSpeedAndSlopeDevice` with pre-start altitude samples (`mLastAltitudeSuperFiltered`, `mAltitudeHistory`, `mLastAltitudeSourceDevice`), then invoke `onAccumulatorsReset()`.
+     • Assert `mLastAltitudeSuperFiltered == null`, `mLastAltitude == null`, `mLastAltitudeSourceDevice == null`, and `mAltitudeHistoryCount == 0` / `mAltitudeHistoryHead == 0`, so subsequent startup ticks emit `0.0 m` `DESCENT` / `ASCENT`.
+  3. *Same-Device Step / EKF Re-Anchor Re-Seeding & Steady-State Preservation Test (`TST-FIL-024.3`, `VerticalSpeedAndSlopeDeviceTest.kt`)*:
+     • Keep `SensorType.ALTITUDE` on the same `ALTITUDE_AND_SLOPE_ATT_FUSED` device; stream initial uncalibrated `538.0 m` samples, then inject an abrupt same-device snap to `438.0 m` (`-100.0 m` DEM/GPS re-anchor) during `calculateMetrics()`. Assert `reseedAltitudeFilters(438.0)` triggers, `DESCENT`/`ASCENT` remain `0.0 m`, and `SLOPE` records zero `-203%` spike.
+     • Follow with a genuine steady climb and steady descent (`0.5 m/s` / `-0.5 m/s` at `5.0 m/s` horizontal speed) and verify `ASCENT`, `DESCENT`, `VERTICAL_SPEED`, and `SLOPE` integrate accurately.
+  4. *Targeted Tier-1 Unit Regression (`TST-FIL-024.4`)*:
+     • Execute `./gradlew :app:testDebugUnitTest --tests "com.atrainingtracker.banalservice.devices.VerticalSpeedAndSlopeDeviceTest" --tests "com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest"` asserting 100% pass rate with zero `src/main` reads (`REQ-PRO-049.1`; `Localization parity: N/A - no UI strings`).
+
 
 ---
 
@@ -3275,3 +3295,6 @@
 | `1.0.1` | 2026-11-17 | AI Agent (`ATT-8450`) | `ATT-8450` | Added `TST-CON-048` [Planned] and cross-referenced `TST-CON-031.5` for offline `EditDeviceDialog` radar light config. |
 | `1.0.2` | 2026-11-17 | AI Agent (`ATT-8450`) | `ATT-8450` | Promoted `TST-CON-048` to `[Implemented]` following Stage 4 unit & Compose UI test construction. |
 | `1.0.3` | 2026-11-17 | AI Agent (`ATT-8450`) | `ATT-8450` | Promoted `TST-CON-048` to `[Verified]` in Stage 5 following post-rebase verification. |
+| `1.0.4` | 2026-11-17 | AI Agent (`ATT-8707`) | `ATT-8707` | Added `TST-FIL-024` [Proposed] for `VerticalSpeedAndSlopeDevice` baro broadcast guard, `onAccumulatorsReset()`, and same-device step re-seeding. |
+| `1.0.5` | 2026-11-17 | AI Agent (`ATT-8707`) | `ATT-8707` | Promoted `TST-FIL-024` to `[Implemented]` following Stage 4 unit test implementation. |
+| `1.0.6` | 2026-11-17 | AI Agent (`ATT-8707`) | `ATT-8707` | Promoted `TST-FIL-024` to `[Verified]` in Stage 5 following targeted unit regression verification. |

@@ -26,6 +26,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.util.Log;
 
+import androidx.annotation.Nullable;
 import androidx.annotation.VisibleForTesting;
 import androidx.core.content.ContextCompat;
 
@@ -41,6 +42,7 @@ import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.util.LifecycleUtils;
 
+import java.util.Arrays;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -82,12 +84,24 @@ public class VerticalSpeedAndSlopeDevice extends MyDevice {
     public static final double VAM_MAX_GPS_ACCURACY_METERS = 20.0;
     public static final double VAM_LOW_SPEED_DRIFT_THRESHOLD_MPS = 1.2;
 
+    // Instantaneous same-device altitude step threshold for EKF/source re-anchor re-seeding (REQ-FIL-024.3, ATT-8707)
+    public static final double ALTITUDE_STEP_RESEED_THRESHOLD_METERS = 15.0;
+
     private final BroadcastReceiver mAltitudeCorrectionReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             if (intent == null) return;
             double delta = intent.getDoubleExtra(AltitudeFromPressureDevice.ALTITUDE_CORRECTION_VALUE, 0.0);
             if (Math.abs(delta) < 0.1 || Math.abs(delta) > 500.0) return;
+
+            // REQ-FIL-024.1: Only shift filters when barometric pressure is the active canonical ALTITUDE source.
+            MySensor<?> activeAltSensor = resolveActiveAltitudeSensor();
+            MyDevice activeDevice = (activeAltSensor != null) ? activeAltSensor.getDevice() : null;
+            if (activeDevice == null || activeDevice.getDeviceType() != DeviceType.ALTITUDE_FROM_PRESSURE) {
+                if (DEBUG) Log.d(TAG, "Ignoring ALTITUDE_CORRECTION_INTENT (active source is not ALTITUDE_FROM_PRESSURE)");
+                return;
+            }
+
             synchronized (VerticalSpeedAndSlopeDevice.this) {
                 if (mLastAltitudeSuperFiltered != null) {
                     mLastAltitudeSuperFiltered += delta;
@@ -95,8 +109,11 @@ public class VerticalSpeedAndSlopeDevice extends MyDevice {
                 if (mLastAltitude != null) {
                     mLastAltitude += delta;
                 }
-                for (int i = 0; i < mAltitudeHistoryCount; i++) {
-                    mAltitudeHistory[i] += delta;
+                int validCount = Math.min(mAltitudeHistoryCount, VAM_WINDOW_SIZE);
+                int startIndex = (mAltitudeHistoryHead - validCount + VAM_WINDOW_SIZE) % VAM_WINDOW_SIZE;
+                for (int k = 0; k < validCount; k++) {
+                    int actualIndex = (startIndex + k) % VAM_WINDOW_SIZE;
+                    mAltitudeHistory[actualIndex] += delta;
                 }
                 BANALService.shiftFilter(cAltitudeFilter, delta);
                 BANALService.shiftFilter(cAltitudeSuperFilter, delta);
@@ -253,8 +270,19 @@ public class VerticalSpeedAndSlopeDevice extends MyDevice {
         return (int) Math.round(verticalSpeed);
     }
 
+    @Override
+    protected synchronized void onAccumulatorsReset() {
+        super.onAccumulatorsReset();
+        mLastAltitudeSuperFiltered = null;
+        mLastAltitude = null;
+        mLastAltitudeSourceDevice = null;
+        mAltitudeHistoryHead = 0;
+        mAltitudeHistoryCount = 0;
+        Arrays.fill(mAltitudeHistory, 0.0);
+    }
+
     @VisibleForTesting
-    void calculateMetrics() {
+    synchronized void calculateMetrics() {
         if (DEBUG) Log.i(TAG, "calculateMetrics()");
 
         if (TrainingApplication.isPaused()) {
@@ -332,35 +360,59 @@ public class VerticalSpeedAndSlopeDevice extends MyDevice {
     }
 
     /**
-     * Checks whether the active source device backing {@link SensorType#ALTITUDE} has transitioned
-     * (e.g. from GPS ellipsoid to DEM elevation or barometric pressure) and re-seeds filters
-     * to eliminate phantom historical decay and linear regression slope jumps (REQ-FIL-012.5, ATT-5373).
+     * Unwraps any {@link ProxySensor} decorators around {@link SensorType#ALTITUDE} to return the
+     * active leaf sensor backing canonical altitude.
      */
-    protected void checkAltitudeSourceTransition() {
-        if (mMySensorManager == null) return;
+    @Nullable
+    protected MySensor<?> resolveActiveAltitudeSensor() {
+        if (mMySensorManager == null) return null;
         MySensor<?> altSensor = mMySensorManager.getSensor(SensorType.ALTITUDE);
         while (altSensor instanceof ProxySensor<?>) {
             altSensor = ((ProxySensor<?>) altSensor).getBestSensor();
         }
+        return altSensor;
+    }
+
+    /**
+     * Checks whether the active source device backing {@link SensorType#ALTITUDE} has transitioned
+     * (e.g. from GPS ellipsoid to DEM elevation or barometric pressure) or experienced a large
+     * same-device step discontinuity (e.g. EKF initial DEM/GPS anchor snap) and re-seeds filters
+     * to eliminate phantom historical decay and linear regression slope jumps
+     * (REQ-FIL-012.5, REQ-FIL-024.3, ATT-5373, ATT-8707).
+     */
+    protected synchronized void checkAltitudeSourceTransition() {
+        MySensor<?> altSensor = resolveActiveAltitudeSensor();
         if (altSensor == null) return;
 
         MyDevice currentDevice = altSensor.getDevice();
         if (currentDevice == null) return;
 
+        Object val = altSensor.getValue();
+        Double rawAlt = (val instanceof Number) ? ((Number) val).doubleValue() : null;
+        boolean hasValidRawAlt = rawAlt != null && !Double.isNaN(rawAlt);
+
         if (mLastAltitudeSourceDevice != null && currentDevice != mLastAltitudeSourceDevice) {
-            Object val = altSensor.getValue();
-            if (val instanceof Number) {
-                double rawAlt = ((Number) val).doubleValue();
-                if (!Double.isNaN(rawAlt)) {
-                    if (DEBUG) Log.i(TAG, "Altitude source transitioned from "
-                            + mLastAltitudeSourceDevice.getName() + " to "
-                            + currentDevice.getName() + ", rawAlt=" + rawAlt);
-                    reseedAltitudeFilters(rawAlt);
-                    mLastAltitudeSourceDevice = currentDevice;
-                }
+            if (hasValidRawAlt) {
+                if (DEBUG) Log.i(TAG, "Altitude source transitioned from "
+                        + mLastAltitudeSourceDevice.getName() + " to "
+                        + currentDevice.getName() + ", rawAlt=" + rawAlt);
+                reseedAltitudeFilters(rawAlt);
+                mLastAltitudeSourceDevice = currentDevice;
             }
         } else if (mLastAltitudeSourceDevice == null) {
             mLastAltitudeSourceDevice = currentDevice;
+            if (hasValidRawAlt) {
+                mLastAltitude = rawAlt;
+            }
+        } else if (hasValidRawAlt) {
+            if (mLastAltitude != null && Math.abs(rawAlt - mLastAltitude) >= ALTITUDE_STEP_RESEED_THRESHOLD_METERS) {
+                if (DEBUG) Log.i(TAG, "Same-device altitude step detected on "
+                        + currentDevice.getName() + ": " + mLastAltitude + " -> " + rawAlt
+                        + "; reseeding filters");
+                reseedAltitudeFilters(rawAlt);
+            } else {
+                mLastAltitude = rawAlt;
+            }
         }
     }
 
@@ -427,5 +479,30 @@ public class VerticalSpeedAndSlopeDevice extends MyDevice {
     @VisibleForTesting
     void setLastAltitudeSuperFiltered(Double alt) {
         mLastAltitudeSuperFiltered = alt;
+    }
+
+    @VisibleForTesting
+    Double getLastAltitude() {
+        return mLastAltitude;
+    }
+
+    @VisibleForTesting
+    void setLastAltitude(Double alt) {
+        mLastAltitude = alt;
+    }
+
+    @VisibleForTesting
+    int getAltitudeHistoryCount() {
+        return mAltitudeHistoryCount;
+    }
+
+    @VisibleForTesting
+    int getAltitudeHistoryHead() {
+        return mAltitudeHistoryHead;
+    }
+
+    @VisibleForTesting
+    double getAltitudeHistoryAt(int index) {
+        return mAltitudeHistory[index];
     }
 }

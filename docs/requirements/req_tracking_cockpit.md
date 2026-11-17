@@ -1,14 +1,14 @@
 # Living Requirements: Tracking & Live Sensor Cockpit
 
 **Document ID**: `DOC-REQ-TRK`  
-**Version**: 1.0.3  
+**Version**: 1.0.6  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Requirements**: 164
+**Total Requirements**: 165
 
 ---
 
@@ -6612,6 +6612,45 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 **Invariants**: Connected `!isLightControlAvailable` & `RVR315` hidden; `EditDeviceViewModel` draft state decoupled; StVZO pruning & on-connect clamping preserved; `REQ-CON-047.3` ascending order preserved; zero SQLite schema changes; 9-locale `strings_radar.xml` parity; zero `src/main` reads in tests (`REQ-PRO-049.1`).
 
+### REQ-FIL-024: Barometric Broadcast Source Guard, Synchronized Workout-Start Reset & Same-Device Step Re-Seeding in VerticalSpeedAndSlopeDevice [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-FIL-024`
+- **System Requirement(s)**: `SYSREQ-TRK-003`, `SYSREQ-TRK-004`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `VerticalSpeedAndSlopeDevice.java`, `VerticalSpeedAndSlopeDeviceTest.kt`
+- **Rationale**: When `AltitudeAndSlopeDevice_ATTFused` (Rank 0) or `AltitudeFromPositionDevice` (Rank 1) outranks `AltitudeFromPressureDevice` (Rank 2) in `MySensorManager.ALTITUDE_PRIORITY`, background barometric calibration broadcasts (`ALTITUDE_CORRECTION_INTENT`) unconditionally shifted `VerticalSpeedAndSlopeDevice` filters (`REQ-FIL-012.6`), producing `+96.4 m` phantom `DESCENT` and `-203%` `SLOPE` spikes during workout startup. Additionally, `VerticalSpeedAndSlopeDevice` lacked an `onAccumulatorsReset()` override, synchronization between `calculateMetrics()` and `mAltitudeCorrectionReceiver`, and same-device altitude step re-seeding (`ATT-8707`, refining `REQ-FIL-012.5`, `REQ-FIL-012.6`, and aligning with `REQ-FIL-018.2`):
+- **Description**:
+  1. *Barometric Broadcast Source Guard (`REQ-FIL-024.1`)*:
+     - `VerticalSpeedAndSlopeDevice.mAltitudeCorrectionReceiver` SHALL unwrap `mMySensorManager.getSensor(SensorType.ALTITUDE)` (`ProxySensor.getBestSensor()`) and apply `ALTITUDE_CORRECTION_INTENT` `delta` shifts (`mLastAltitudeSuperFiltered`, `mLastAltitude`, `mAltitudeHistory`, `cAltitudeFilter`, `cAltitudeSuperFilter`) ONLY when the active `SensorType.ALTITUDE` source device has `DeviceType.ALTITUDE_FROM_PRESSURE`. When a non-barometric source (e.g., `ALTITUDE_AND_SLOPE_ATT_FUSED` or `ALTITUDE_FROM_POSITION`) is active, `mAltitudeCorrectionReceiver` SHALL ignore the broadcast without shifting filters or baselines.
+  2. *Synchronized Workout-Start Reset (`REQ-FIL-024.2`)*:
+     - `VerticalSpeedAndSlopeDevice` SHALL override `onAccumulatorsReset()` (`synchronized` on `VerticalSpeedAndSlopeDevice.this`) to clear `mLastAltitudeSuperFiltered`, `mLastAltitude`, `mLastAltitudeSourceDevice`, and `mAltitudeHistoryHead`/`mAltitudeHistoryCount` (`mAltitudeHistory` zeroed) upon `RESET_ACCUMULATORS_INTENT`.
+     - `VerticalSpeedAndSlopeDevice.calculateMetrics()` MUST synchronize on `VerticalSpeedAndSlopeDevice.this` consistently with `mAltitudeCorrectionReceiver` and `reseedAltitudeFilters()`.
+  3. *Same-Device Altitude Step / EKF Re-Anchor Re-Seeding (`REQ-FIL-024.3`)*:
+     - `VerticalSpeedAndSlopeDevice` SHALL detect non-physical same-device step discontinuities in raw `SensorType.ALTITUDE` (e.g., `AltitudeAndSlopeDevice_ATTFused` initial Baro-to-DEM/GPS anchor snap while `currentDevice == mLastAltitudeSourceDevice`) relative to the active reference (`mLastAltitude` / filtered baseline) and immediately reseed via `reseedAltitudeFilters(rawAlt)` instead of integrating phantom `ASCENT`, `DESCENT`, or extreme `SLOPE`.
+  4. *Steady-State & Barometric Parity Preservation (`REQ-FIL-024.4`)*:
+     - Genuine steady-state ascent/descent/slope integration, `N=15` linear regression VAM, accuracy/low-speed gating, `[-3000, 3000] m/h` clamping, and barometric calibration filter shifting when `DeviceType.ALTITUDE_FROM_PRESSURE` is the active `SensorType.ALTITUDE` source (`TST-FIL-004.5`) SHALL remain intact (`Localization Parity: N/A - no UI strings`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new `REQ-FIL-024` refining `REQ-FIL-012` (`REQ-FIL-012.5`, `REQ-FIL-012.6`) and aligning with `REQ-FIL-018.2`. Targets `VerticalSpeedAndSlopeDevice.java`.
+2. *Historical Origin & Commit Trace*: `31553134` (`ATT-4845`, `mAltitudeCorrectionReceiver`), `8d45376e` (`ATT-5373`, `checkAltitudeSourceTransition` + `shiftFilter`), `75c1497e` (`ATT-6279`, added `ATTFused` at `ALTITUDE_PRIORITY` Rank 0).
+3. *Root Reason for Existing Formulation*: `ATT-5373` assumed `ALTITUDE_CORRECTION_INTENT` always applied to the active `ALTITUDE` filter and that large altitude jumps only occurred across `MyDevice` pointer switches before `ATTFused` existed.
+4. *Preservation of Core Invariants*: Preserves `TST-FIL-004.1-.5` (including baro shift parity when `ALTITUDE_FROM_PRESSURE` is active), `REQ-FIL-012` VAM `N=15` regression and deadbands, `REQ-FIL-018` `TrackerService` handling, and zero DB/UI/submodule changes.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `SensorType.ALTITUDE` is backed by `DeviceType.ALTITUDE_AND_SLOPE_ATT_FUSED` (or `ALTITUDE_FROM_POSITION`),
+• *When* `ALTITUDE_CORRECTION_INTENT` broadcasts `delta = +100.0 m`,
+• *Then* `mLastAltitudeSuperFiltered`, `mAltitudeHistory`, `cAltitudeFilter`, and `cAltitudeSuperFilter` remain unshifted, and `DESCENT`/`SLOPE` remain `0.0 m` / `0%`.
+• *Given* `VerticalSpeedAndSlopeDevice` holds pre-workout `mLastAltitudeSuperFiltered` and `mAltitudeHistory` state,
+• *When* `onAccumulatorsReset()` runs on `RESET_ACCUMULATORS_INTENT`,
+• *Then* `mLastAltitudeSuperFiltered`, `mLastAltitude`, `mLastAltitudeSourceDevice`, and `mAltitudeHistoryCount`/`Head` are cleared cleanly under `VerticalSpeedAndSlopeDevice.this` synchronization.
+• *Given* `SensorType.ALTITUDE` stays on the same `ATTFused` device and snaps by a large calibration step (e.g., `-54 m` or `+100 m` on first DEM/GPS anchor),
+• *When* `calculateMetrics()` executes,
+• *Then* `reseedAltitudeFilters(rawAlt)` reseeds filters and baseline so `DESCENT`, `ASCENT`, and `SLOPE` record zero phantom spikes, while steady climbs/descents and active-baro `ALTITUDE_CORRECTION_INTENT` shifts work as before.
+
+**Invariants**: `REQ-FIL-012` VAM `N=15` linear regression, accuracy/low-speed gating, `[-3000, 3000] m/h` clamp; `TST-FIL-004.5` active-baro shift parity; thread-safe synchronization on `VerticalSpeedAndSlopeDevice.this`; zero DB/UI changes; `N/A - no UI strings`.
+
 
 ---
 
@@ -6623,3 +6662,6 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 | `1.0.1` | 2026-11-17 | AI Agent (`ATT-8450`) | `ATT-8450` | Added `REQ-CON-048` [Planned] for offline `EditDeviceDialog` radar tail light configuration, cold-start hydration, and StVZO/radar-only handling. |
 | `1.0.2` | 2026-11-17 | AI Agent (`ATT-8450`) | `ATT-8450` | Promoted `REQ-CON-048` to `[Implemented]` following Stage 4 implementation. |
 | `1.0.3` | 2026-11-17 | AI Agent (`ATT-8450`) | `ATT-8450` | Promoted `REQ-CON-048` to `[Verified]` in Stage 5 following post-rebase test verification. |
+| `1.0.4` | 2026-11-17 | AI Agent (`ATT-8707`) | `ATT-8707` | Added `REQ-FIL-024` [Planned] for `VerticalSpeedAndSlopeDevice` baro broadcast source guard, synchronized `onAccumulatorsReset()`, and same-device step re-seeding. |
+| `1.0.5` | 2026-11-17 | AI Agent (`ATT-8707`) | `ATT-8707` | Promoted `REQ-FIL-024` to `[Implemented]` following Stage 4 implementation. |
+| `1.0.6` | 2026-11-17 | AI Agent (`ATT-8707`) | `ATT-8707` | Promoted `REQ-FIL-024` to `[Verified]` in Stage 5 following targeted unit regression verification. |
