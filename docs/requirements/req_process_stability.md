@@ -5264,15 +5264,15 @@ The workflow SHALL mandate that:
 - **Implementation**: `tools/extract_pixel_field_evidence.py`, `tools/generate_release_verification_summary.py`, `docs/releases/TEMPLATE.md`, `docs/releases/V5.0.0/sys_verification_record.md`, `.agents/rules/aspice_governance.md`
 - **Rationale**: ASPICE 4.0 Finding K1 (SYS.4/5, SWE.6, SUP.1, SUP.8) identified that autonomous agents must never fabricate physical hardware execution or test results. System-level verification for releases must derive from authentic workout sessions recorded by the PO on the reference Google Pixel 10. Automated tooling must extract authentic telemetry, pre-populate protocol tables (`EXTRACTED_AWAITING_PO_ATTESTATION`), guide upcoming test rides via a coverage-gap report, and enforce human PO attestation prior to release clearance.
 - **Description**:
-  1. *Authentic Pixel 10 Telemetry Extraction & Verification Gap Coaching (`REQ-PRO-098.1`)*: `tools/extract_pixel_field_evidence.py` SHALL extract authentic workout telemetry (GPS, BLE HRM, ANT+ power, cadence, radar) from Pixel 10 databases/FIT exports, populate `SYS-VRF-*` rows with authentic metrics tagged `EXTRACTED_AWAITING_PO_ATTESTATION`, and output a prioritized coverage-gap report indicating uncovered scenarios and sensor combinations for upcoming rides.
+  1. *Authentic Pixel 10 Telemetry Extraction & Verification Gap Coaching (`REQ-PRO-098.1`, [Verified] ATT-8427)*: `tools/extract_pixel_field_evidence.py` SHALL extract authentic workout telemetry from Google Pixel 10 devices and exports. When parsing SQLite databases (`parse_sqlite_database`), it SHALL query authentic tables and columns matching `WorkoutSummariesDatabaseManager.java` (`WorkoutSummaries` columns `_id`, `timeStart`, `timeActive_s`, `distanceTotal_m`, `ascending`, `Sport`, `uploadToStrava`, and `ExtremumValues` columns `workoutID`, `sensorType`, `extremumType`, `value`). It SHALL adhere strictly to Finding K1 zero-fabrication standards: all unmeasured or unrecorded metrics (`sample_loss_pct`, `battery_drain_pct_hr`, `max_rf_dropout_sec`, `fit_valid`, radar presence without sensor stream proof) MUST evaluate to `None` / `"NOT MEASURED"`, across both SQLite and TCX extraction pipelines. Furthermore, `pull_device_evidence_adb` SHALL reliably pull app-private databases directly via `adb exec-out run-as <package> cat databases/WorkoutSummaries.db` with SQLite magic header validation.
   2. *Automated Release Guarding Against Unsubstantiated Verification Evidence (`REQ-PRO-098.2`)*: `tools/generate_release_verification_summary.py` (`collect_sys5_summary()`) SHALL reject any verification record containing placeholder serials (`*-REF-*`), unbacked `PASS` verdicts without authentic telemetry traces, or missing human PO attestation signatures, reporting status `BLOCKED`.
   3. *Release Template & V5.0.0 Verification Protocol Reset (`REQ-PRO-098.3`)*: `docs/releases/TEMPLATE.md` and `docs/releases/V5.0.0/sys_verification_record.md` SHALL be established with a formal Human PO Attestation block (device serial, build SHA, workout/FIT ID references) and reset to `OPEN / NOT PERFORMED`, removing all fabricated Pixel 8/6 data.
   4. *Agent Governance & Human-Execution Lifecycle Tripwire (`REQ-PRO-098.4`)*: `.agents/rules/aspice_governance.md` (and Gate 4/5 checklists) SHALL strictly prohibit autonomous agents from authoring physical hardware test results; tickets requiring real hardware execution SHALL carry label `human-execution` and be restricted to protocol preparation and telemetry extraction by agents.
   5. *Extractor & Release Summary Contract Test Parity (`REQ-PRO-098.5`)*: `tools/test_generate_release_verification_summary.py` and extractor unit tests SHALL verify placeholder rejection, human attestation enforcement, and gap reporting with 100% test pass rate.
 - **Requirement Archaeology & Chesterton's Fence Audit**:
   1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-098`. Targets `tools/extract_pixel_field_evidence.py`, `tools/generate_release_verification_summary.py`, `docs/releases/TEMPLATE.md`, `docs/releases/V5.0.0/sys_verification_record.md`, `.agents/rules/aspice_governance.md`.
-  2. *Historical Origin & Commit Trace*: Sprint 2026-46.8 via ticket `ATT-8141` under Epic `ATT-8138` (ASPICE 4.0 Audit Remediation). Resolves critical Finding K1.
-  3. *Root Reason for Existing Formulation*: Evaluation finding K1 established that V5.0.0 release verification claimed hardware testing that did not occur; authentic continuous Pixel 10 workouts recorded by PO must drive release evidence through automated extraction and human attestation.
+  2. *Historical Origin & Commit Trace*: Sprint 2026-46.8 via ticket `ATT-8141` under Epic `ATT-8138` (ASPICE 4.0 Audit Remediation); amended in Sprint 2026-11-16_03_Nacht via `ATT-8427` to eliminate synthetic/hardcoded metrics and align SQLite queries with authentic `WorkoutSummariesDatabaseManager.java` schema.
+  3. *Root Reason for Existing Formulation*: Evaluation finding K1 established that V5.0.0 release verification claimed hardware testing that did not occur; authentic continuous Pixel 10 workouts recorded by PO must drive release evidence through automated extraction and human attestation; initial extractor draft contained hardcoded dummy metrics and camelCase column fallbacks that violated zero-fabrication integrity.
   4. *Preservation of Core Invariants*: Release candidate gating remains strictly blocked until human PO attestation; zero Android runtime app bytecode changes; Human Decision Gate preserved.
 - **Acceptance Criteria (Given-When-Then)**:
   • *Given* `docs/releases/V5.0.0/sys_verification_record.md`,
@@ -5281,9 +5281,15 @@ The workflow SHALL mandate that:
   • *Given* a verification record with placeholder serials (`*-REF-*`), unbacked PASS claims, or missing human PO attestation,
   • *When* `tools/generate_release_verification_summary.py` runs,
   • *Then* status is reported as `BLOCKED` with specific deviations.
-  • *Given* PO workout data on Pixel 10,
-  • *When* `tools/extract_pixel_field_evidence.py` executes,
-  • *Then* it extracts session telemetry, populates verification rows with `EXTRACTED_AWAITING_PO_ATTESTATION`, and generates an actionable coverage-gap report.
+  • *Given* an authentic or exported `WorkoutSummaries.db` database,
+  • *When* `parse_sqlite_database()` executes,
+  • *Then* it queries authentic `WorkoutSummaries` and `ExtremumValues` tables/columns, extracts true sensor presence, and reports `None` for any unmeasured metric (`sample_loss_pct`, `battery_drain_pct_hr`, `fit_valid`).
+  • *Given* an authentic TCX export file without radar or battery streams,
+  • *When* `parse_tcx_file()` executes,
+  • *Then* it extracts true duration, distance, and trackpoint sensors, while reporting `None` for `sample_loss_pct`, `battery_drain_pct_hr`, `fit_valid`, and `cloud_synced`, with `has_radar == False`.
+  • *Given* a connected reference device via ADB,
+  • *When* `pull_device_evidence_adb()` executes,
+  • *Then* it pulls `WorkoutSummaries.db` directly via `exec-out run-as` and verifies the SQLite format 3 magic header.
 - **Invariants**: Zero changes to production runtime logic (`app/src/main/`); existing master table parity intact; Human Decision Gate inviolable.
 
 
