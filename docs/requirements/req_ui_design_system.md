@@ -3,7 +3,7 @@
 **Domain**: `ui_design_system`  
 **Prefixes**: `UI`, `UNT`  
 **Scope**: Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts.  
-**Total Requirements**: 461
+**Total Requirements**: 462
 
 ---
 
@@ -16524,14 +16524,14 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: 44dp emblem size; single-line button text (`Rule 38`); visual hierarchy states (`REQ-UI-501`); 100% unit test pass rate.
 
-### REQ-UI-505: WorkoutClusterSplitSheet Embedded Color-Coded Map Preview & List-Level Split Action [Verified]
+### REQ-UI-505: WorkoutClusterSplitSheet Embedded Color-Coded Map Preview & List Context Menu Split Exclusion [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-UI-505`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
-- **Implementation**: `app/src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/WorkoutClusterSplitSheet.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/map/PathPreviewMap.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/WorkoutClustersViewModel.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/WorkoutClusterComponents.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/WorkoutClustersTabsScreen.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/WorkoutClustersScreen.kt`
-- **Rationale**: When opening `WorkoutClusterSplitSheet` (`AppModalBottomSheet`), the detected corridor variants (`splitVariantPaths`) are currently rendered only on the background heatmap of `WorkoutClusterHeatmapScreen`, which is largely obscured by the modal sheet and darkened scrim. Furthermore, when browsing clusters in the tabbed list view (`WorkoutClustersScreen`), no background map exists and the card 3-dot context menu lacks a split action. The system SHALL embed an interactive, color-coded map preview directly above the corridor sensitivity slider within `WorkoutClusterSplitSheet` and expose the split action in cluster card context menus.
+- **Implementation**: `app/src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/WorkoutClusterSplitSheet.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/map/PathPreviewMap.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/WorkoutClustersViewModel.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/WorkoutClusterComponents.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/WorkoutClustersList.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/WorkoutClustersTabsScreen.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/WorkoutClustersScreen.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/WorkoutClusterHeatmapScreen.kt`
+- **Rationale**: When opening `WorkoutClusterSplitSheet` (`AppModalBottomSheet`) from `WorkoutClusterHeatmapScreen`, the background heatmap is largely obscured by the modal sheet and darkened scrim; therefore `WorkoutClusterSplitSheet` SHALL embed an interactive, color-coded `PathPreviewMap` directly above the corridor sensitivity slider (`ATT-6318`). Furthermore (`ATT-8464`), exposing *"Split Favorite Route…"* (`R.string.cluster_split_action`) inside the `WorkoutClustersScreen` list-level long-click context menu alongside *"Merge"* and *"Delete"* is semantically mismatched; route splitting SHALL be scoped exclusively to the cluster detail/heatmap view (`WorkoutClusterHeatmapScreen.kt`, `REQ-SET-096.1`).
 - **Description**:
   1. *Embedded Color-Coded Map Preview (`REQ-UI-505.1`)*:
      - In `WorkoutClusterSplitSheet.kt`, directly above the corridor sensitivity slider (`cluster_split_corridor_threshold`), the sheet SHALL render an embedded map preview (`PathPreviewMap`) hosted within a rounded surface (`RoundedCornerShape(12.dp)` with height `200.dp`).
@@ -16541,11 +16541,17 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
      - Adjusting the corridor sensitivity slider SHALL dynamically recalculate variant groupings and update the embedded map preview in real time, visually reflecting the redistribution of member workout polylines across primary and secondary corridors.
   3. *Multi-Path Support in PathPreviewMap (`REQ-UI-505.3`)*:
      - `PathPreviewMap.kt` SHALL support rendering multiple polyline paths via `paths: List<MappablePath> = emptyList()` alongside the existing single `path: MappablePath? = null` parameter, computing unified bounding box coordinates across all supplied paths while preserving `liteMode(true)` touch isolation and backward compatibility for all single-path callers.
-  4. *List-Level Split Action Entry Point (`REQ-UI-505.4`)*:
-     - In `WorkoutClusterComponents.kt` (`ClusterItem` / `WorkoutClusterCard`), for clusters having `hitCount >= 2`, the 3-dot context menu SHALL expose a "Split Favorite Route…" (`cluster_split_action`, `Icons.Default.CallSplit`) action.
-     - Selecting this action SHALL open `WorkoutClusterSplitSheet` directly from `WorkoutClustersScreen.kt` with cluster workouts asynchronously loaded, operating identically to the heatmap screen entry point.
+  4. *List-Level Context Menu Split Exclusion (`REQ-UI-505.4` — Amended by `ATT-8464`)*:
+     - In `WorkoutClusterComponents.kt` (`ClusterItem`), the long-click `DropdownMenu` SHALL NOT expose `R.string.cluster_split_action` or `Icons.Default.CallSplit`, and `ClusterItem` SHALL NOT declare `onSplitRequest`, retaining exclusively Merge (`onMergeRequest`, `R.string.cluster_menu_merge`) and Delete (`onDeleteRequest`, `R.string.delete`).
+     - `WorkoutClustersList.kt`, `WorkoutClustersTabsScreen.kt`, and `WorkoutClustersScreen.kt` SHALL NOT forward `onSplitRequest`, maintain `clusterToSplit` state, or instantiate `WorkoutClusterSplitSheet`.
   5. *Preservation of Invariants & Scope Boundaries (`REQ-UI-505.5`)*:
-     - Invariants: `WorkoutClusterEngine.kt` clustering heuristics and medoid algorithms SHALL NOT be modified; single-path `PathPreviewMap` callers (`CreateLapOnMapSheet`, `MoveLapBoundaryOnMapSheet`, `CropWorkoutScreen`, `WorkoutSummary`) SHALL remain 100% backward-compatible; 9-language localization parity SHALL be preserved.
+     - Invariants: `WorkoutClusterHeatmapScreen.kt` (`CallSplit` header button for `hitCount >= 2`, `REQ-SET-096.1`), `WorkoutClusterSplitSheet`, and `WorkoutClustersViewModel.openSplitPreview()` SHALL remain fully functional; `R.string.cluster_split_action` SHALL remain present in all 9 locales; `WorkoutClusterEngine.kt` clustering heuristics SHALL NOT be modified; single-path `PathPreviewMap` callers (`CreateLapOnMapSheet`, `MoveLapBoundaryOnMapSheet`, `CropWorkoutScreen`, `WorkoutSummary`) SHALL remain 100% backward-compatible.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Amends `REQ-UI-505` (`REQ-UI-505.4`, introduced in `ATT-6318`) targeting `WorkoutClusterComponents.kt`, `WorkoutClustersList.kt`, `WorkoutClustersTabsScreen.kt`, and `WorkoutClustersScreen.kt`.
+2. *Historical Origin & Commit Trace*: Split action + `WorkoutClusterSplitSheet` were introduced in `ATT-5900` (`43a25302`, `REQ-SET-096.1`) in `WorkoutClusterHeatmapScreen`; `ATT-6318` (`ea954e51`) embedded `PathPreviewMap` in `WorkoutClusterSplitSheet` and added the list-level long-click entry (`REQ-UI-505.4`).
+3. *Root Reason for Existing Formulation*: `ATT-6318` added list-level split access so users could split directly from the cluster list without opening the detail heatmap, and embedded `PathPreviewMap` because the list screen lacked a background map.
+4. *Preservation of Core Invariants*: Removing list-level split entry (`REQ-UI-505.4`) restores clean list menu semantics (Merge & Delete only) while preserving 100% of `REQ-UI-505.1–505.3` (embedded map preview in `WorkoutClusterSplitSheet`), `REQ-SET-096.1–096.6` (detail `CallSplit` entry point in `WorkoutClusterHeatmapScreen`), `WorkoutClustersViewModel.openSplitPreview()`, and 9-language parity for `R.string.cluster_split_action`.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* `WorkoutClusterSplitSheet` open for a route cluster with detected sub-corridors,
@@ -16554,11 +16560,14 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 • *Given* the corridor sensitivity slider inside `WorkoutClusterSplitSheet`,
 • *When* the athlete drags the slider between 250m and 1500m,
 • *Then* `splitVariantPaths` are recalculated asynchronously and the embedded map polylines update their groupings and colors dynamically without UI stutter.
-• *Given* a cluster card in `WorkoutClustersScreen` with `hitCount >= 2`,
-• *When* the athlete opens the 3-dot context menu,
-• *Then* "Split Favorite Route…" (`cluster_split_action`) is displayed, and tapping it opens `WorkoutClusterSplitSheet` with the embedded map preview and loaded variants.
+• *Given* any cluster card (including `hitCount >= 2`) in `WorkoutClustersScreen`,
+• *When* the athlete long-presses the card to open the context menu,
+• *Then* only *"Merge with other favorite route…"* (`cluster_menu_merge`) and *"Delete"* (`delete`) are displayed; *"Split Favorite Route…"* (`cluster_split_action`) is absent.
+• *Given* a cluster with `hitCount >= 2` open in `WorkoutClusterHeatmapScreen`,
+• *When* the athlete views the detail header and taps the `CallSplit` icon (`R.string.cluster_split_action`),
+• *Then* `WorkoutClusterSplitSheet` opens via `viewModel.openSplitPreview()` with the embedded color-coded map preview intact.
 
-**Invariants**: `WorkoutClusterEngine.kt` algorithms unmodified; `liteMode(true)` touch isolation preserved; single-path `PathPreviewMap` callers backward-compatible; 100% unit test pass rate.
+**Invariants**: `WorkoutClusterHeatmapScreen` `CallSplit` (`REQ-SET-096.1`) and `WorkoutClusterSplitSheet` preserved; `R.string.cluster_split_action` preserved across all 9 locales; `WorkoutClusterEngine.kt` unmodified; `liteMode(true)` touch isolation preserved; single-path `PathPreviewMap` callers backward-compatible; 100% unit test pass rate.
 
 ### REQ-UI-506: Decoupled Compose UI State Models (WorkoutLaps, WorkoutSummaryCard, WorkoutExtrema) [Verified]
 - **Target Release**: `V5.0.0`
@@ -17138,9 +17147,9 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 **Invariants**: Resource IDs `R.drawable.ic_google_drive` and `R.drawable.ic_health_connect` remain stable; zero changes to OAuth or Health Connect API logic.
 
 
-### REQ-UI-525: Configurable Morning HRV Check Launch Button on Start Tracking Screen (ATT-7740) [Verified]
+### REQ-UI-525: Configurable Morning HRV Check Launch Button on Start Tracking Screen (ATT-8469) [Verified]
 - **Target Release**: `V5.0.0`
-- **Tickets**: `ATT-7532`, `ATT-7740`
+- **Tickets**: `ATT-7532`, `ATT-7740`, `ATT-8469`
 - **Tests**: `TST-UI-525`
 - **Priority**: Medium
 - **Type**: Functional
@@ -17150,7 +17159,7 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 - **Description**:
   1. *Tuning Preferences Configuration (`REQ-UI-525.1`)*:
      - `TuningPreferencesDataStore.kt` and `TuningConfig.kt` SHALL provide `showMorningCheckOnStartScreen: Boolean` (default `true`) and `morningCheckCutoffHour: Int` (`DEFAULT_MORNING_CHECK_CUTOFF_HOUR = 8` [08:00 AM], `MIN_MORNING_CHECK_CUTOFF_HOUR = 6`, `MAX_MORNING_CHECK_CUTOFF_HOUR = 11`, valid range `6..11`; persisted values `> 11` SHALL safely clamp to `11` via `.coerceIn(6, 11)`) (`ATT-7740`).
-     - These preferences SHALL be surfaced under the Morning Checks & Wellness accordion section (`MorningCheckSection.kt`, `TuningSection.MORNING_CHECK`) in `AdvancedTuningScreen.kt` and `AdvancedTuningDialog.kt` with slider range `6f..11f` (`steps = 4`), localized titles/summaries, 2-digit zero-padded hours (`%02d:00`), and Stage 4 Compose PNG screenshot verification (`Rule 8.5`).
+     - These preferences SHALL be surfaced under the Morning Checks & Wellness accordion section (`MorningCheckSection.kt`, `TuningSection.MORNING_CHECK`) in `AdvancedTuningScreen.kt` and `AdvancedTuningDialog.kt` with slider range `6f..11f` (`steps = 4`), localized titles/summaries, 2-digit zero-padded hours (`%02d:00`), and Stage 4 Compose PNG screenshot verification (`Rule 8.5`). The cutoff hour slider (`morningCheckCutoffHour`) SHALL be visible whenever `showMorningCheckOnStartScreen == true || enableMorningSleepAndWellness == true` (`ATT-8469`).
   2. *Paired Heart Rate Sensor Check (`REQ-UI-525.2`)*:
      - `DevicesDatabaseManager.java` SHALL provide `hasPairedHeartRateDevices(): Boolean` which queries SQLite `DEVICES` table for `PAIRED > 0 AND DEVICE_TYPE = 'HRM'`.
      - `DeviceDataRepository.kt` SHALL expose `hasPairedHeartRateDevices(): Boolean` forwarding this query.
@@ -17160,13 +17169,12 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
   4. *Reactive Visibility & Navigation Contract on Start Tracking Screen (`REQ-UI-525.4`)*:
      - `ControlTrackingViewModel.kt` SHALL expose `isMorningHrvCheckVisible: StateFlow<Boolean>` which evaluates to `true` iff ALL of the following conditions hold:
        1. Tracking state is `TrackingMode.READY` (not `RECORDING`, `PAUSED`, or `STOPPED`).
-       2. `showMorningCheckOnStartScreen == true` in tuning preferences.
-       3. At least one HRM device is paired (`hasPairedHeartRateDevices == true`).
-       4. Local system time is before cutoff hour (`LocalTime.now().hour < morningCheckCutoffHour`).
-       5. No morning HRV check entry exists for today's local date (`!hasCompletedMorningCheck(LocalDate.now().toString())`).
+       2. Start-screen morning check is active: either `(showMorningCheckOnStartScreen == true && hasPairedHeartRateDevices == true)` OR pure morning sleep & wellness is enabled (`enableMorningSleepAndWellness == true`) (`ATT-8469`).
+       3. Local system time is before cutoff hour (`LocalTime.now().hour < morningCheckCutoffHour`).
+       4. No morning HRV check entry exists for today's local date (`!hasCompletedMorningCheck(LocalDate.now().toString())`).
      - In `ControlTrackingScreen.kt` / `TrackingTabsScreen.kt`, when `isMorningHrvCheckVisible == true`, `bottomContent` SHALL render a prominent "Morgendlicher Check" CTA button styled with `RoundedCornerShape(8.dp)`, `Icons.Default.Favorite` (or Heart icon), and localized text `R.string.hrv_morning_check_start_button`.
      - Clicking the CTA button SHALL trigger `onNavigateToMorningHrv` navigating to `NavRoutes.MORNING_HRV`.
-     - Once a morning check entry is saved for today and the athlete navigates back to the Start screen, the button SHALL immediately auto-hide for the remainder of the calendar day.
+     - Once a morning check entry (either chest-strap HRV reading or standalone sleep & wellness entry via `saveStandaloneWellness()`) is saved for today and the athlete navigates back to the Start screen, the button SHALL immediately auto-hide for the remainder of the calendar day.
   5. *9-Language Localization Parity (`REQ-UI-525.5`)*:
      - All newly introduced string keys (`hrv_morning_check_start_button`, `pref_show_morning_check_title`, `pref_show_morning_check_summary`, `pref_morning_check_cutoff_title`, `pref_morning_check_cutoff_summary`) SHALL be localized across all 9 supported Android resource directories (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
 
@@ -17174,9 +17182,15 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 • *Given* an athlete with at least one paired HRM sensor opens `ControlTrackingScreen` in `TrackingMode.READY` before cutoff hour (default 08:00 AM) on a day with no morning check recorded,
 • *When* the screen renders,
 • *Then* the "Morgendlicher Check" CTA button is visible in `bottomContent` and tapping it navigates to `NavRoutes.MORNING_HRV`.
-• *Given* the athlete completes and saves today's morning check or the local time passes cutoff hour (default 08:00 AM) or `showMorningCheckOnStartScreen` is disabled,
+• *Given* an athlete with `enableMorningSleepAndWellness == true` and zero paired HRM sensors opens `ControlTrackingScreen` in `TrackingMode.READY` before cutoff hour on a day with no morning check recorded,
+• *When* the screen renders,
+• *Then* the "Morgendlicher Check" CTA button is visible in `bottomContent` and tapping it navigates to `NavRoutes.MORNING_HRV`.
+• *Given* the athlete completes and saves today's morning check (HRV check or standalone wellness via `saveStandaloneWellness()`) or the local time passes cutoff hour or both `showMorningCheckOnStartScreen` and `enableMorningSleepAndWellness` are disabled,
 • *When* `ControlTrackingScreen` renders or resumes,
 • *Then* the CTA button is hidden.
+• *Given* the athlete opens `MorningCheckSection`,
+• *When* `enableMorningSleepAndWellness == true` and `showMorningCheckOnStartScreen == false`,
+• *Then* the cutoff hour slider (`morningCheckCutoffHour`) is visible and interactive.
 • *Given* the athlete starts a workout (`TrackingMode.RECORDING`),
 • *When* the cockpit renders,
 • *Then* the CTA button is hidden.
@@ -17185,10 +17199,10 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 • *Then* all titles and summaries are localized with 100% parity and no placeholder text.
 
 #### Requirement Archaeology & Chesterton's Fence Audit
-1. *Original Requirement ID & Target*: `REQ-UI-525` (`REQ-UI-525.1`), targeting `TuningPreferencesDataStore.kt`, `TuningConfig.kt`, `MorningCheckSection.kt`.
-2. *Historical Origin & Commit Trace*: Introduced in `ATT-7532` (commit `647ef674d06`), extended to `23:00` in `ATT-7740` (`6267d2c0`), relocated to `MorningCheckSection.kt` in `ATT-8117` (`f628f0a6`), and amended in `ATT-7740` (Sprint `2026-47.1`) per PO revision to cap `MAX_MORNING_CHECK_CUTOFF_HOUR` at `11` (`11:00`) while retaining `DEFAULT_MORNING_CHECK_CUTOFF_HOUR = 8` (`08:00`).
-3. *Root Reason for Existing Formulation*: `23:00` permitted afternoon testing but contradicted a morning-only routine (PO feedback: *"23:00 ist für eine morgendliche Routine viel zu spät. Die obere Grenze (MAX_MORNING_CHECK_CUTOFF_HOUR) muss bei 11:00 Uhr liegen (Default bleibt 08:00)."*).
-4. *Preservation of Core Invariants*: `DEFAULT_MORNING_CHECK_CUTOFF_HOUR == 8`, `MIN_MORNING_CHECK_CUTOFF_HOUR == 6`, `.coerceIn(6, 11)` coercion for persisted legacy values `> 11`, reactive gating logic (`hour < morningCheckCutoffHour`), paired HRM requirement, and daily single-completion auto-hide invariant remain strictly preserved. Zero DB schema impact.
+1. *Original Requirement ID & Target*: `REQ-UI-525` (`REQ-UI-525.1`, `REQ-UI-525.4`), targeting `TuningPreferencesDataStore.kt`, `TuningConfig.kt`, `MorningCheckSection.kt`, `ControlTrackingViewModel.kt`.
+2. *Historical Origin & Commit Trace*: Introduced in `ATT-7532` (commit `647ef674d06`), extended to `23:00` in `ATT-7740` (`6267d2c0`), relocated to `MorningCheckSection.kt` in `ATT-8117` (`f628f0a6`), amended in `ATT-7740` (Sprint `2026-47.1`), and refined in `ATT-8469` (Sprint `2026-11-16_03_Nacht`).
+3. *Root Reason for Existing Formulation*: Originally, morning check was exclusively linked to chest-strap HRV measurements, gating button visibility strictly on `showMorningCheckOnStartScreen && hasPairedHeartRateDevices`, and hiding the cutoff slider if `showMorningCheckOnStartScreen` was disabled.
+4. *Preservation of Core Invariants*: Invariants `TrackingMode == READY`, cutoff hour ceiling `6..11` (default `8`), daily single-completion auto-hide, zero DB schema migration, and strict architectural layering (`RepositoryUiCleanlinessContractTest` zero `*DatabaseManager` in `ui/`) remain strictly preserved.
 
 **Invariants**: Zero database migrations on `devices.db` or `hrv_readiness.db`; zero modifications to existing morning check scoring, baseline corridors, or workout tracking lifecycle; zero background alarms or wake locks.
 
@@ -17466,3 +17480,42 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 • *Then* exactly one `HorizontalDivider` SHALL separate `sourceDevice` from `activeBackups`.
 
 **Invariants**: Layout spacing, semantic color tokens (`TTColor.SensorSourceActive`, `TTColor.SensorBackupActive`), device click actions, and canonical priority sorting (`REQ-UI-268.5`) MUST NOT be altered.
+
+### REQ-UI-2782: EditSensorFieldDialog Logical Section Ordering [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-UI-2782`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `EditSensorFieldDialog.kt`
+- **Rationale**: In `EditSensorFieldDialog.kt`, incremental feature additions interleaved data-source, tile-geometry, and visual-presentation controls so that enabling the live Sparkline graph pushed `Relative Breite` and `Filter / Glättung` below the fold, separating `Quelle` from `Filter / Glättung` and `Textgröße` from `Relative Breite` (`ATT-8462`). Regrouping the dialog body into three cohesive vertical tiers improves scannability and keeps high-frequency data and geometry controls above the visual graph editor.
+- **Description**: Logical 3-Group Vertical Ordering in `EditSensorFieldDialog`.
+
+1. *Group 1 — Messdaten (Data & Signal) (`REQ-UI-2782.1`)*:
+• `EditSensorFieldDialog.kt` SHALL render Group 1 in strict top-to-bottom order: `SensorTypeSelectorSection` -> `Spinner` (*Quelle*, omitted when `deviceList.size == 1 && deviceList[0].first == -1L`) -> `OutlinedButton` (*Filter / Glättung*, rendered strictly when `uiState.selectedSensorType?.filteringPossible == true`).
+
+2. *Group 2 — Kachel-Geometrie (Tile Geometry) (`REQ-UI-2782.2`)*:
+• Immediately below Group 1, `EditSensorFieldDialog.kt` SHALL render Group 2 in strict top-to-bottom order: `Spinner` (*Textgröße*) -> *Relative Breite* (`1x`, `2x`, `3x` `FilterChip` row, rendered strictly when `uiState.isMultiFieldRow == true`).
+
+3. *Group 3 — Visuelle Darstellung & Metrik-Hinweise (`REQ-UI-2782.3`)*:
+• Immediately below Group 2, `EditSensorFieldDialog.kt` SHALL render Group 3 in strict top-to-bottom order: *Anzeigeelemente* (`FilterChip`s *Wert* / *Balken* / *Graph*, gated by `uiState.isBarSupported || uiState.isGraphSupported`) -> expanded Graph options (`uiState.isGraphSupported && uiState.showGraph`: Sparkline Time Horizon `Slider`, Graph Color Editor chips/swatches/`SingleChoiceSegmentedButtonRow`, and Live `SensorSparklineView` preview) -> metric-specific guidance blocks (`POWER_TO_WEIGHT` weight button + `AthleteWeightDialog`, `INTENSITY_FACTOR`/`TSS` FTP `Surface`, and `isHrvMetric` info button + `HrvInfoBottomSheet`).
+• All existing `EditSensorFieldViewModel` callbacks, conditional visibility guards, `ConfigureFilterDialog` overlay wiring, `AppModalBottomSheet(scrollable = true)` scroll safety, and 9-locale string parity MUST remain preserved without adding new string keys or altering ViewModel/DB state.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-UI-2782`, complementing `REQ-UI-471.3` (*Field Configuration Dialog Polish*), `REQ-UI-437.3` (*Relative Width Cardinality Gating*), `REQ-UI-395` (*Categorized Sensor Picker*), `REQ-TRK-059.3/.11` (*Display Elements, Slider & Sparkline Preview*), and `REQ-TRK-081.3` (*Graph Color Editor*), targeting `EditSensorFieldDialog.kt`.
+2. *Historical Origin & Commit Trace*: Built incrementally across `ATT-3852` (`SensorTypeSelectorSection`), `ATT-4861`/`ATT-5192` (`Relative Breite`), `ATT-1294`/`ATT-6690`/`ATT-7314` (Display Elements, Slider, Preview), and `ATT-7760` (`65d2c2d5`, Graph Color Editor).
+3. *Root Reason for Existing Formulation*: Subsequent controls were appended sequentially to the bottom of the `Column` without regrouping earlier geometry and filter controls.
+4. *Preservation of Core Invariants*: Preserves all conditional guards (`deviceList` single-best check, `filteringPossible`, `uiState.isMultiFieldRow`, `isBarSupported || isGraphSupported`, `isGraphSupported && showGraph`, metric-type checks), `REQ-TRK-081.3` color-editor placement below the time-horizon slider, `REQ-UI-471.3` title/icon/alignment polish, `AppModalBottomSheet` scroll safety, and 9-language localization parity.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `EditSensorFieldDialog` with all three groups active (`deviceList` size > 1, `filteringPossible = true`, `isMultiFieldRow = true`, `isGraphSupported = true`, `showGraph = true`, and metric guidance applicable),
+• *When* the dialog body renders,
+• *Then* vertical `boundsInRoot().top` positions strictly satisfy `Sensortyp < Quelle < Filter < Textgröße < Relative Breite < Anzeigeelemente < Zeitfenster < Graph-Farbe < Vorschau < Metrik-Hinweis`.
+• *Given* a field where `filteringPossible == false` or `isMultiFieldRow == false` or `deviceList` contains only `-1L` or `showGraph == false`,
+• *When* the dialog renders,
+• *Then* each disabled section is omitted while all remaining active sections preserve the strict Group 1 -> Group 2 -> Group 3 vertical order.
+• *Given* `EditSensorFieldDialog` rendered in Light or Dark mode,
+• *When* any control in Group 1, Group 2, or Group 3 is interacted with,
+• *Then* the corresponding `EditSensorFieldViewModel` callback fires and the sheet renders cleanly without clipping, overlapping, or nested scrolling.
+
+**Invariants**: Zero `EditSensorFieldViewModel` / DB schema / repository signature changes; all conditional guards and callbacks preserved; `AppModalBottomSheet` scroll safety preserved; 9-locale parity unchanged.

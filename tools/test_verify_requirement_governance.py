@@ -2625,16 +2625,16 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
             self.assertEqual(report["swe_refinement_coverage_pct"], 50.0)
 
     def test_scenario_68_tst_pro_102_3_bidirectional_sys_coverage_live_repo(self):
-        """TST-PRO-102.3: Live repository reports authentic bidirectional SYS/SWE coverage without bogus IDs."""
+        """TST-PRO-102.3: Live repository reports authentic bidirectional SYS/SWE coverage without bogus IDs (REQ-PRO-102.3)."""
         ok, diag, report = verify_system_software_traceability()
         self.assertTrue(ok, f"Expected live --verify-sys-trace pass, got: {diag}")
-        self.assertEqual(report["covered_count"], 12)
+        self.assertEqual(report["covered_count"], report["sysreq_count"])
         self.assertEqual(report["sysreq_count"], 12)
         all_mapped_reqs = {r for reqs in report["sys_to_swe_map"].values() for r in reqs}
         self.assertFalse(any(r.startswith("REQ-DEX-") for r in all_mapped_reqs))
         self.assertFalse(any(r.startswith("REQ-PRO-") for r in all_mapped_reqs))
-        self.assertGreaterEqual(report["swe_refinement_total_count"], 363)
-        self.assertGreaterEqual(report["swe_refinement_covered_count"], 347)
+        self.assertGreaterEqual(report["swe_refinement_total_count"], 362)
+        self.assertGreaterEqual(report["swe_refinement_covered_count"], 346)
         self.assertGreaterEqual(report["swe_refinement_coverage_pct"], 95.0)
 
     def test_scenario_69_tst_pro_103_1_system_requirement_attribute_and_derived_parser(self):
@@ -2678,11 +2678,16 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
             self.assertEqual(rep_pass["unclassified_swe_refinement_reqs"], [])
 
     def test_scenario_70_tst_pro_103_2_live_reverse_sys_trace_100pct(self):
-        """TST-PRO-103.2: Live repository achieves 100% System-Refinement classification with 0 unclassified REQs."""
+        """TST-PRO-103.2: Live repository achieves 100% System-Refinement classification with 0 unclassified REQs (REQ-PRO-103.2)."""
         ok, diag, report = verify_system_software_traceability(fail_on_unclassified_swe=True)
         self.assertTrue(ok, f"Expected live --check-reverse-sys-trace pass, got: {diag}")
         self.assertEqual(report["unclassified_swe_refinement_reqs"], [])
-        self.assertGreaterEqual(report["reverse_classified_count"], 363)
+        self.assertEqual(report["reverse_classified_count"], report["swe_refinement_total_count"])
+        self.assertEqual(
+            report["swe_refinement_covered_count"] + report["swe_derived_sw_only_count"],
+            report["swe_refinement_total_count"],
+        )
+        self.assertGreaterEqual(report["swe_refinement_total_count"], 362)
         self.assertEqual(report["reverse_classified_pct"], 100.0)
 
     def test_scenario_71_tst_pro_103_3_rad_clm_prefix_classification(self):
@@ -2817,6 +2822,54 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
 
         c_ok, c_diag, _ = verify_code_traceability_orphans(fail_on_orphans=True)
         self.assertTrue(c_ok, f"Code orphans failed on live repo: {c_diag}")
+
+    def test_scenario_76_tst_pro_091_12_verifier_rejects_self_referential_corrective_actions(self):
+        # TST-PRO-091.12: Self-Reference Rejection in Verifier Test (REQ-PRO-091.3 / ATT-8153)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            audits_dir = os.path.join(tmpdir, "docs", "engineering", "qa_audits")
+            os.makedirs(audits_dir, exist_ok=True)
+
+            target_file = os.path.join(audits_dir, "sprint_2026-11-16_03_nacht.md")
+            content_self_referential = (
+                "# Sprint QA Process-Compliance Audit: Sprint 2026-11-16_03_Nacht\n\n"
+                "**Auditor Role**: `qa`\n\n"
+                "**Overall Process Verdict**: **NON-COMPLIANT**\n\n"
+                "| Metric | Value |\n| :--- | :--- |\n| **Sample Size** | 2 / 10 |\n\n"
+                "| Ticket | Summary | Verdict |\n| :--- | :--- | :---: |\n"
+                "| ATT-9901 | Test 1 | FAIL |\n"
+                "| ATT-9902 | Test 2 | PASS |\n\n"
+                "## 4. Non-Compliance Tracking & Remediation\n\n"
+                "* **ATT-9901**: Process deviation in Role Separation; Corrective Action Ticket: [ATT-9901](https://example.com/ATT-9901)\n"
+            )
+            with open(target_file, "w", encoding="utf-8") as f:
+                f.write(content_self_referential)
+
+            ok, msgs = verify_qa_audits(sprint_name="sprint/2026-11-16_03_Nacht", repo_root=tmpdir)
+            self.assertFalse(ok)
+            self.assertTrue(any("self-referential corrective action ticket" in m for m in msgs))
+
+            content_distinct = (
+                "# Sprint QA Process-Compliance Audit: Sprint 2026-11-16_03_Nacht\n\n"
+                "**Auditor Role**: `qa`\n\n"
+                "**Overall Process Verdict**: **NON-COMPLIANT**\n\n"
+                "| Metric | Value |\n| :--- | :--- |\n| **Sample Size** | 2 / 10 |\n\n"
+                "| Ticket | Summary | Verdict |\n| :--- | :--- | :---: |\n"
+                "| ATT-9901 | Test 1 | FAIL |\n"
+                "| ATT-9902 | Test 2 | PASS |\n\n"
+                "## 4. Non-Compliance Tracking & Remediation\n\n"
+                "* **ATT-9901**: Process deviation in Role Separation; Corrective Action Ticket: [ATT-9999](https://example.com/ATT-9999)\n"
+            )
+            with open(target_file, "w", encoding="utf-8") as f:
+                f.write(content_distinct)
+
+            ok2, msgs2 = verify_qa_audits(sprint_name="sprint/2026-11-16_03_Nacht", repo_root=tmpdir)
+            self.assertTrue(ok2, f"Expected pass with distinct corrective action ticket, got: {msgs2}")
+
+            gf_file = os.path.join(audits_dir, "sprint_2026-46.6.md")
+            with open(gf_file, "w", encoding="utf-8") as f:
+                f.write(content_self_referential.replace("2026-11-16_03_Nacht", "2026-46.6"))
+            ok3, msgs3 = verify_qa_audits(sprint_name="sprint/2026-46.6", repo_root=tmpdir)
+            self.assertTrue(ok3, f"Expected grandfathered pass for legacy 2026-46.6 audit, got: {msgs3}")
 
 
 

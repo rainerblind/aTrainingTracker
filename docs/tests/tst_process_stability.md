@@ -3,7 +3,7 @@
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Tests**: 204
+**Total Tests**: 205
 
 ---
 
@@ -3139,8 +3139,8 @@
 - **Type**: Non-Functional
 - **Verification Method**: Unit / Review
 - **Component**: `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `tools/hoechstmass/`, `tools/test_jira_accounts.py`, `tools/test_verify_requirement_governance.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`, `docs/engineering/qa_audits/`
-- **Jira**: `ATT-7558`, `ATT-8152`
-- **Evidence**: Verified by `test_tst_pro_091_7_living_doc_shard_resolution`, `test_tst_pro_091_8_issue_description_ingestion`, `test_tst_pro_091_9_account_id_role_separation`, and `test_tst_pro_091_10_seeded_random_sampling` in `tools/test_jira_accounts.py` (77/77 tests passed), plus re-audit of Sprint 2026-46.6 in `docs/engineering/qa_audits/sprint_2026-46.6.md` demonstrating 100% Living Documentation Parity resolution across 5 sampled tickets.
+- **Jira**: `ATT-7558`, `ATT-8152`, `ATT-8153`
+- **Evidence**: Verified by `test_tst_pro_091_7_living_doc_shard_resolution`, `test_tst_pro_091_8_issue_description_ingestion`, `test_tst_pro_091_9_account_id_role_separation`, `test_tst_pro_091_10_seeded_random_sampling`, `test_tst_pro_091_11_dedicated_corrective_action_creation_and_deduplication`, and `test_tst_pro_091_13_ceremony2_retrospective_qa_tracking_protocol` in `tools/test_jira_accounts.py` (79/79 tests passed), `test_scenario_76_tst_pro_091_12_verifier_rejects_self_referential_corrective_actions` in `tools/test_verify_requirement_governance.py` (82/82 tests passed), and full Python test suite pass (181/181 passed).
 - **Test Description**:
   1. *QA Auditor Role Independence & Coordinator Rejection*: Test in `test_jira_accounts.py` that `qa_audit` executes under `qa` / `agent2` and rejects `role="coordinator"` or `role="agent1"`.
   2. *Representative Sample Size Dynamic Scaling*: Test in `test_jira_accounts.py` that `qa_audit` samples $\ge 10\%$ when population exceeds 20 tickets (e.g. 25 tickets $\rightarrow \ge 3$ sampled).
@@ -3152,6 +3152,9 @@
   8. *Issue Description Ingestion (`TST-PRO-091.8`, tools/test_jira_accounts.py)*: Verify `fetch_all_sprint_issues` requests and parses the `description` field for requirement references.
   9. *AccountId Role Separation (`TST-PRO-091.9`, tools/test_jira_accounts.py)*: Verify `qa_audit` checks comment author `accountId` against `ROLE_ACCOUNT_IDS`, correctly evaluating independent reviews.
   10. *Seeded Random Sampling (`TST-PRO-091.10`, tools/test_jira_accounts.py)*: Verify `qa_audit` uses seeded pseudo-random sampling and records the random seed and sampled keys in the markdown header.
+  11. *Dedicated Corrective Action Ticket Creation & Deduplication (`TST-PRO-091.11`, tools/test_jira_accounts.py)*: Verify `qa_audit` creates or links distinct dedicated corrective action tickets in raw Backlog (`add_to_sprint=False`, `rank_top=True`), deduplicated by non-conformance category, ensuring `ca_key != audited_key` in Section 4.
+  12. *Self-Reference Rejection in Verifier (`TST-PRO-091.12`, tools/test_verify_requirement_governance.py)*: Verify `verify_qa_audits` rejects reports where corrective action links match the audited ticket key (`ca_key == audited_key`) for active/current sprints while grandfathering legacy historical audits prior to `2026-11-16_02_Spät`.
+  13. *Ceremony 2 Retrospective QA Tracking & Multi-Sprint PO Escalation (`TST-PRO-091.13`, .agents/skills/sprint-planner/SKILL.md)*: Verify Ceremony 2 instructions require a dedicated 'QA Findings & Corrective Actions' section in the Retrospective and explicit PO escalation when an unclosed corrective action remains open for > 2 sprints.
 
 
 
@@ -3214,10 +3217,11 @@
 - **Jira**: `ATT-8213`
 - **Test Description**:
   1. *Canonical Directory Registration Test (`tools/test_verify_requirement_governance.py`)*: Assert `code_reviews` is recognized in `ALLOWED_ENGINEERING_ENTRIES` and `verify_canonical_engineering_entries()` passes with `docs/engineering/code_reviews/` present.
-  2. *Subsystem Coverage Matrix Parsing & Slice Selection Test (`tools/test_jira_accounts.py`)*: Assert helper function `get_next_review_subsystem()` correctly parses `coverage_matrix.md` and selects unreviewed or oldest audited subsystem slices.
-  3. *Weekly Review Ticket Creation & Deduplication Test (`tools/test_jira_accounts.py`)*: Mock Jira API and verify `ensure_weekly_review_ticket()` creates a ticket with `rank_top=True` under `ATT-232` when overdue and skips creation when an active review ticket already exists.
-  4. *Governance Documentation & Policy Grounding Review*: Verify policy alignment across `docs/coding_standards.md`, `.agents/rules/aspice_governance.md`, `sprint-planner/SKILL.md`, and `release-manager/SKILL.md`.
-  5. *Living Documentation Master Parity*: Run `python3 tools/verify_requirement_governance.py` confirming 100% parity across `docs/requirements.md` and `docs/tests.md`.
+  2. *Subsystem Coverage Matrix Parsing & Slice Selection Test (`tools/test_jira_accounts.py`, [Verified] ATT-8426)*: Assert helper function `get_next_review_subsystem()` correctly parses `coverage_matrix.md` with extended package mapping (`repositories/`, `cloud/`, `onlinecommunities/`, `segments/`, `climbs/`) and selects unreviewed or oldest audited subsystem slices.
+  3. *Weekly Review Ticket Creation & Deduplication Test (`tools/test_jira_accounts.py`, [Verified] ATT-8426)*: Mock Jira API and verify `ensure_weekly_review_ticket()` creates a ticket with generic "current top model" specification and `rank_top=True` under `ATT-232` when overdue and skips creation when an active review ticket already exists.
+  4. *7-Day Cadence & Decoupled Release Gate Test (`tools/test_jira_accounts.py`, [Verified] ATT-8426)*: In `test_is_weekly_review_overdue`, verify that `is_weekly_review_overdue()` returns `False` when the latest review is $\le 7$ days old even when other subsystems remain `UNREVIEWED`, preventing release gating deadlock.
+  5. *Governance Documentation, Model Mandate & Claude Non-Simulation Protocol Review (`[Verified] ATT-8426`)*: Verify generic model formulation and explicit Claude non-simulation handoff protocol across `docs/coding_standards.md`, `release_plan.md`, `coverage_matrix.md`, and `template_dual_vendor_code_review.md`.
+  6. *Living Documentation Master Parity*: Run `python3 tools/verify_requirement_governance.py` confirming 100% parity across `docs/requirements.md` and `docs/tests.md`.
 
 
 ---
@@ -3249,7 +3253,7 @@
 - **Test Description**:
   1. *Multi-Lane Capacity Bin-Packing Test (`tools/test_jira_accounts.py`)*: Assert `select_greedy_bin_pack_tickets()` packs candidate tickets in strict `ORDER BY rank ASC` across disjoint Epics, respects `max_sp_per_lane` / capacity bounds, and preserves excess tickets of saturated Epics for subsequent sprints.
   2. *FixVersion Warning Suppression Test (`tools/test_jira_accounts.py`)*: Assert `show_issue()` does not emit FixVersion missing warnings when tickets are in non-terminal statuses (`Zu erledigen`, `In Bearbeitung`, `In Überprüfung`), but alerts when status is `Erledigt` and `fixVersions` is empty.
-  3. *Release Plan Structure and Quality Gate Review*: Inspect `docs/management/release_plan.md` confirming full coverage of `V5.0.0` milestone epics, 12h continuous cadence, Google Pixel 10 daily-ride verification, and quality gate exit criteria.
+  3. *Release Plan Structure, Field Test Path & Pseudo-Sprint Review (`[Verified] ATT-8426`)*: Inspect `docs/management/release_plan.md` confirming full coverage of `V5.0.0` milestone epics, 12h continuous cadence, synchronization with `docs/releases/V5.0.0/sys_verification_record.md` (Section 3), and reference to pseudo-sprint `Bereit für PO Systemtest` (ID 454).
   4. *Governance & Lifecycle Parity Review*: Verify consistency across `.agents/rules/aspice_governance.md` (Rule 8.3 & Rule 85), `sprint-planner/SKILL.md`, and `release-manager/SKILL.md`.
   5. *Living Documentation Parity*: Execute `python3 tools/verify_requirement_governance.py` confirming 100% parity across `docs/requirements.md` and `docs/tests.md`.
 
@@ -3266,7 +3270,7 @@
 - **Test Description**:
   1. *Placeholder Serial & Synthetic Data Rejection Test*: In `tools/test_generate_release_verification_summary.py`, verify that `collect_sys5_summary()` detects placeholder serials (`P8-REF-2024-001`, `P6-REF-2022-044`, `*-REF-*`) and treats them as blocking deviations.
   2. *Human PO Attestation Gating Test*: In `tools/test_generate_release_verification_summary.py`, assert that missing human PO attestation (missing signature, date, or build SHA) reports `BLOCKED` under `generate_release_verification_summary.py`.
-  3. *Pixel Telemetry Extractor & Gap Coach Test*: Verify that `tools/extract_pixel_field_evidence.py` parses workout session telemetry, populates `EXTRACTED_AWAITING_PO_ATTESTATION`, and outputs prioritized gap recommendations for unexercised sensor combinations.
+  3. *Pixel Telemetry Extractor & Gap Coach Test (`TST-PRO-098.3`, [Verified] ATT-8427)*: In `tools/test_extract_pixel_field_evidence.py`, verify that `tools/extract_pixel_field_evidence.py` parses authentic `WorkoutSummaries` and `ExtremumValues` schema, extracts genuine sensor signals, reports `None` for unmeasured metrics, correctly parses TCX XML files without synthetic values, and outputs prioritized gap recommendations for unexercised sensor combinations.
   4. *V5.0.0 Protocol & Template Schema Audit*: Verify `docs/releases/TEMPLATE.md` and `docs/releases/V5.0.0/sys_verification_record.md` contain the Human PO Attestation block and zero synthetic assertions.
   5. *Agent Governance Rule Verification*: Assert that `.agents/rules/aspice_governance.md` mandates `human-execution` labeling and forbids autonomous agents from fabricating physical test evidence.
   6. *Living Documentation Parity*: Execute `python3 tools/verify_requirement_governance.py` confirming 100% parity across `docs/requirements.md` and `docs/tests.md`.
@@ -3348,8 +3352,8 @@
   • Verify a document containing only `SYSREQ-DEX-001` or `SYSREQ-TRK-001` does NOT extract `REQ-DEX-001` / `REQ-TRK-001` into `sys_to_swe` or `_collect_test_file_index()`, while valid standalone `REQ-*` references still match cleanly.
   2. *Derived Prefix Exclusion Test (`TST-PRO-102.2`, tools/test_verify_requirement_governance.py)*:
   • Verify `REQ-PRO-*` (and other `SWE_DERIVED_PREFIXES`) mentioning `SYSREQ-*` are excluded from `sys_to_swe` and `swe_refinement_total_count`.
-  3. *Bidirectional Coverage & Live CLI Verification Test (`TST-PRO-102.3`, tools/test_verify_requirement_governance.py)*:
-  • Verify `report` exposes accurate `swe_refinement_total_count`, `swe_refinement_covered_count`, `swe_refinement_coverage_pct`, and `swe_to_sys_map`; verify live `--verify-sys-trace --report-sys-coverage` prints `12/12` (`100.0%`) forward and `49/355` (`13.8%`) reverse `System-Refinement` coverage with exit code `0`, and `test_scenario_40..43` remain green.
+  3. *Bidirectional Coverage & Live CLI Invariant Verification Test (`TST-PRO-102.3`, [Verified] ATT-8437, tools/test_verify_requirement_governance.py)*:
+  • Verify `report` exposes accurate `swe_refinement_total_count`, `swe_refinement_covered_count`, `swe_refinement_coverage_pct`, and `swe_to_sys_map`; verify live `--verify-sys-trace --report-sys-coverage` prints `12/12` (`100.0%`) forward and reverse `System-Refinement` coverage with exit code `0`, and `test_scenario_68` asserts structural invariants: exact forward parity `covered_count == sysreq_count == 12`, lower-bound floors `swe_refinement_total_count >= 362`, `swe_refinement_covered_count >= 346`, `swe_refinement_coverage_pct >= 95.0`, and zero `REQ-DEX-*` / `REQ-PRO-*` pollution.
 
 ---
 
@@ -3363,8 +3367,8 @@
 - **Test Description**:
   1. *System Requirement(s) Attribute & Derived (SW-only) Parser Test (`TST-PRO-103.1`, tools/test_verify_requirement_governance.py)*:
   • Verify `verify_system_software_traceability()` parses `- **System Requirement(s)**:` for both `SYSREQ-*` links and `Derived (SW-only)` rationales, classifies `RAD`/`CLM` prefixes cleanly, and rejects unclassified `SYSTEM_REFINED_PREFIXES` REQs under `--check-reverse-sys-trace` / `fail_on_unclassified_swe=True`.
-  2. *Live Repository 100% Bidirectional Classification & Matrix Parity Test (`TST-PRO-103.2`, tools/test_verify_requirement_governance.py)*:
-  • Verify `--check-reverse-sys-trace` and `--verify-sys-trace --report-sys-coverage` pass on the live repository with `12/12` (`100.0%`) forward coverage, `0` unclassified `SYSTEM_REFINED_PREFIXES` REQs (`100.0%` classified via `SYSREQ-*` or `Derived (SW-only)`), and `REQ-PRO-*` cleanly excluded.
+  2. *Live Repository 100% Bidirectional Classification & Invariant Test (`TST-PRO-103.2`, [Verified] ATT-8437, tools/test_verify_requirement_governance.py)*:
+  • Verify `--check-reverse-sys-trace` and `--verify-sys-trace --report-sys-coverage` pass on the live repository with `12/12` (`100.0%`) forward coverage, and `test_scenario_70` asserts structural invariants: `reverse_classified_count == swe_refinement_total_count`, `swe_refinement_covered_count + swe_derived_sw_only_count == swe_refinement_total_count`, `unclassified_swe_refinement_reqs == []`, `swe_refinement_total_count >= 362`, and `reverse_classified_pct == 100.0`.
   3. *System Contract & Fixture Compatibility Test (`TST-PRO-103.3`, System*ContractTest.kt & tools/test_verify_requirement_governance.py)*:
   • Verify `SystemLiveTrackingRequirementsContractTest`, `SystemDataExchangeRequirementsContractTest`, `SystemRequirementsSpecificationContractTest`, `SystemVerificationProtocolContractTest`, `AspiceSweAuditContractTest`, and synthetic fixtures (`test_scenario_40..43`, `test_scenario_66..68`) all pass with exit code `0`.
 
@@ -3462,3 +3466,24 @@
   • Verify that `_merge_ticket_impl` formats squash commit messages with standard git trailers (`Agent-Role:`, `Agent-Model:`, `Reviewed-by:`), correctly reading from environment or arguments and passing automated trailer validation.
   4. *Single-OS User Residual Risk Review Test (`TST-PRO-108.4`, docs/management/risk_register.md)*:
   • Verify that `docs/management/risk_register.md` contains an approved entry documenting the residual risk and defense-in-depth controls for co-located subagent execution under a single OS account.
+
+---
+
+### TST-PRO-109: **Stage Transition Precondition Enforcement, Impl-Plan Gate Validation & Bypass Prevention Suite (ATT-8154)** [Verified]
+- **Requirement(s)**: `REQ-PRO-109`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Component**: `tools/jira_util.py`, `tools/test_jira_accounts.py`
+- **Jira**: `ATT-8154`
+- **Test Description**:
+  1. *Predecessor Stage Precondition Enforcement in `submit-stage` Test (`TST-PRO-109.1`, tools/test_jira_accounts.py)*:
+  • Verify that calling `submit_stage` with stage 4 on a parent ticket in `Analysis` raises SystemExit with non-zero exit code. Verify that Stage 1 allows transition from `zu erledigen` to `analysis`, and Stages 2..5 succeed when the parent is in the expected stage.
+  2. *Stage 6 Gate 5 Prerequisite Enforcement in `final-review-verdict` Test (`TST-PRO-109.2`, tools/test_jira_accounts.py)*:
+  • Verify that `final_review_verdict` raises SystemExit with non-zero exit code when called on a parent ticket whose status is not `Final Review (Agent)`. Verify that `--bounce-target` healing flow back to `Implementation` or `Analysis` continues to succeed.
+  3. *Strict Subtask & Impl-Plan Summary Validation in `check-gate` Test (`TST-PRO-109.3`, tools/test_jira_accounts.py)*:
+  • Verify that `check_gate` raises SystemExit with exit code 1 when passed a non-subtask issue key or a subtask with summary `[Analysis]` even if its status is `Erledigt`. Verify that it passes (exit code 0) only when the issue is a sub-task, its summary matches `[Impl-Plan]`, and its status is `Erledigt`.
+  4. *Structured Pros/Cons & Recommendation Validation Test (`TST-PRO-109.4`, tools/test_jira_accounts.py)*:
+  • Verify that `final_review_verdict` rejects plain keyword-stuffed unstructured text on `PASS`, and successfully accepts structured reports matching `stage6-final-review/SKILL.md` sections with bullets or structured options tables.
+  5. *Sanctioned Coordinator Workflow Invariants Test (`TST-PRO-109.5`, tools/test_jira_accounts.py)*:
+  • Verify that Coordinator operations (`pack_sprint`, `return_unstarted`, `carryover_wip`, `archive_po_acceptance`, `defer_to_systemtest_queue`), `ATT-8153` QA non-conformance ticket generation, and `ATT-8426` decoupled 7-day review currency checks remain 100% functional.

@@ -30,7 +30,7 @@ class WorkoutSession:
         self,
         session_id: str,
         start_time: str,
-        duration_sec: float,
+        duration_sec: float = 0.0,
         distance_m: float = 0.0,
         has_hrm: bool = False,
         has_power: bool = False,
@@ -40,13 +40,13 @@ class WorkoutSession:
         has_barometer: bool = False,
         elevation_gain_m: float = 0.0,
         sample_count: int = 0,
-        sample_loss_pct: float = 0.0,
-        battery_drain_pct_hr: float = 0.0,
-        max_rf_dropout_sec: float = 0.0,
+        sample_loss_pct: Optional[float] = None,
+        battery_drain_pct_hr: Optional[float] = None,
+        max_rf_dropout_sec: Optional[float] = None,
         sport_type: str = "BICYCLING",
         environment: str = "E2 Rural",
-        fit_valid: bool = False,
-        cloud_synced: bool = False,
+        fit_valid: Optional[bool] = None,
+        cloud_synced: Optional[bool] = None,
     ):
         self.session_id = session_id
         self.start_time = start_time
@@ -146,11 +146,13 @@ def parse_tcx_file(file_path: str) -> Optional[WorkoutSession]:
             has_barometer=has_altitude,
             elevation_gain_m=round(elev_gain, 1),
             sample_count=len(points),
-            sample_loss_pct=0.2,
-            battery_drain_pct_hr=5.8,
+            sample_loss_pct=None,
+            battery_drain_pct_hr=None,
+            max_rf_dropout_sec=None,
+            sport_type="BICYCLING",
             environment="E2 Rural" if has_gnss else "E4 Indoor",
-            fit_valid=True,
-            cloud_synced=True,
+            fit_valid=None,
+            cloud_synced=None,
         )
     except Exception:
         return None
@@ -165,13 +167,13 @@ def parse_sqlite_database(db_path: str) -> List[WorkoutSession]:
     try:
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
-        
+
         # Check tables present
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
         tables = [row[0] for row in cursor.fetchall()]
-        
+
         summary_table = None
-        for cand in ["summaries", "workout_summaries", "WorkoutSummaries"]:
+        for cand in ["WorkoutSummaries", "workout_summaries", "summaries"]:
             if cand in tables:
                 summary_table = cand
                 break
@@ -179,44 +181,112 @@ def parse_sqlite_database(db_path: str) -> List[WorkoutSession]:
         if summary_table:
             cursor.execute(f"PRAGMA table_info({summary_table})")
             cols = {row[1]: row[0] for row in cursor.fetchall()}
-            
-            # Select relevant columns
-            select_cols = []
-            for col in ["_id", "startTime", "duration", "distance", "avgHr", "avgPower", "avgCadence", "elevationGain", "sportType"]:
-                select_cols.append(col if col in cols else "0")
-                
-            query = f"SELECT {', '.join(select_cols)} FROM {summary_table} ORDER BY _id DESC LIMIT 50"
+
+            # Check if ExtremumValues table exists
+            extrema_table = None
+            for cand in ["ExtremumValues", "extremum_values", "ExtremaValues", "extrema"]:
+                if cand in tables:
+                    extrema_table = cand
+                    break
+
+            id_col = "_id" if "_id" in cols else ("id" if "id" in cols else None)
+            time_start_col = "timeStart" if "timeStart" in cols else ("startTime" if "startTime" in cols else None)
+            dur_col = "timeActive_s" if "timeActive_s" in cols else ("timeTotal_s" if "timeTotal_s" in cols else ("duration" if "duration" in cols else None))
+            dist_col = "distanceTotal_m" if "distanceTotal_m" in cols else ("distance" if "distance" in cols else None)
+            elev_col = "ascending" if "ascending" in cols else ("elevationGain" if "elevationGain" in cols else None)
+            sport_col = "Sport" if "Sport" in cols else ("sportType" if "sportType" in cols else ("sportId" if "sportId" in cols else None))
+            strava_col = "uploadToStrava" if "uploadToStrava" in cols else None
+
+            # Legacy fallback columns for single-table test fixtures
+            avg_hr_col = "avgHr" if "avgHr" in cols else None
+            avg_pow_col = "avgPower" if "avgPower" in cols else None
+            avg_cad_col = "avgCadence" if "avgCadence" in cols else None
+
+            select_parts = [
+                id_col or "0",
+                time_start_col or "''",
+                dur_col or "0.0",
+                dist_col or "0.0",
+                elev_col or "0.0",
+                sport_col or "'BICYCLING'",
+                strava_col or "-1",
+                avg_hr_col or "0",
+                avg_pow_col or "0",
+                avg_cad_col or "0",
+            ]
+
+            query = f"SELECT {', '.join(select_parts)} FROM {summary_table} ORDER BY {id_col or '1'} DESC LIMIT 50"
             cursor.execute(query)
-            for row in cursor.fetchall():
-                sid = f"DB-SES-{row[0]}"
+            rows = cursor.fetchall()
+
+            for row in rows:
+                w_id = row[0]
+                sid = f"DB-SES-{w_id}"
+                start_time_val = str(row[1]) if row[1] else ""
                 dur = float(row[2]) if row[2] else 0.0
                 dist = float(row[3]) if row[3] else 0.0
-                has_hr = bool(row[4] and float(row[4]) > 0)
-                has_pow = bool(row[5] and float(row[5]) > 0)
-                has_cad = bool(row[6] and float(row[6]) > 0)
-                elev = float(row[7]) if row[7] else 0.0
-                stype = str(row[8]) if row[8] else "BICYCLING"
+                elev = float(row[4]) if row[4] else 0.0
+                stype = str(row[5]) if row[5] else "BICYCLING"
+
+                strava_val = row[6]
+                if strava_val == 1 or strava_val == "1":
+                    cloud_synced = True
+                elif strava_val == 0 or strava_val == "0":
+                    cloud_synced = False
+                else:
+                    cloud_synced = None
+
+                has_hr = False
+                has_pow = False
+                has_cad = False
+                has_radar = False
+                has_alt = False
+                has_gnss_pos = False
+
+                if extrema_table and w_id:
+                    cursor.execute(
+                        f"SELECT DISTINCT sensorType FROM {extrema_table} WHERE workoutID = ?",
+                        (w_id,)
+                    )
+                    sensor_types = {r[0] for r in cursor.fetchall() if r[0]}
+                    has_hr = any(st in ("HR", "HEART_RATE") for st in sensor_types)
+                    has_pow = any(st in ("POWER", "BIKE_POWER") for st in sensor_types)
+                    has_cad = any(st in ("CADENCE", "BIKE_CADENCE") for st in sensor_types)
+                    has_radar = any("RADAR" in st for st in sensor_types)
+                    has_alt = any(st in ("ALTITUDE", "BAROMETER") for st in sensor_types)
+                    has_gnss_pos = any(st in ("LATITUDE", "LONGITUDE", "SPEED_mps") for st in sensor_types)
+                else:
+                    has_hr = bool(row[7] and float(row[7]) > 0)
+                    has_pow = bool(row[8] and float(row[8]) > 0)
+                    has_cad = bool(row[9] and float(row[9]) > 0)
+                    has_radar = False
+                    has_alt = elev > 0.0
+                    has_gnss_pos = dist > 0.0
+
+                has_gnss = has_gnss_pos or (dist > 100.0)
+                has_baro = has_alt or (elev > 10.0)
 
                 sessions.append(
                     WorkoutSession(
                         session_id=sid,
-                        start_time=str(row[1]),
+                        start_time=start_time_val,
                         duration_sec=dur,
                         distance_m=dist,
                         has_hrm=has_hr,
                         has_power=has_pow,
                         has_cadence=has_cad,
-                        has_radar=has_pow and has_cad,  # Outdoor kit pairing correlation
-                        has_gnss=dist > 100.0,
-                        has_barometer=elev > 10.0,
+                        has_radar=has_radar,
+                        has_gnss=has_gnss,
+                        has_barometer=has_baro,
                         elevation_gain_m=elev,
-                        sample_count=int(dur) if dur > 0 else 3600,
-                        sample_loss_pct=0.15,
-                        battery_drain_pct_hr=6.2,
+                        sample_count=int(dur) if dur > 0 else 0,
+                        sample_loss_pct=None,
+                        battery_drain_pct_hr=None,
+                        max_rf_dropout_sec=None,
                         sport_type=stype,
                         environment="E3 Climb" if elev > 300 else ("E2 Rural" if dist > 0 else "E4 Indoor"),
-                        fit_valid=True,
-                        cloud_synced=True,
+                        fit_valid=None,
+                        cloud_synced=cloud_synced,
                     )
                 )
         conn.close()
@@ -266,19 +336,22 @@ def pull_device_evidence_adb(
                     if pull_res.returncode == 0 and os.path.exists(local_file):
                         pulled_files.append(local_file)
 
-        # 2. Try pulling WorkoutSummaries.db via run-as
-        db_remote = f"/data/data/{package_name}/databases/WorkoutSummaries.db"
+        # 2. Try pulling WorkoutSummaries.db directly via exec-out run-as
         local_db = os.path.join(dest_dir, "WorkoutSummaries.db")
-        dump_cmd = f"run-as {package_name} cat {db_remote} > /sdcard/Download/temp_summaries.db"
-        dump_res = subprocess.run(["adb", "-s", device_serial, "shell", dump_cmd], capture_output=True, timeout=5)
-        if dump_res.returncode == 0:
-            pull_db = subprocess.run(
-                ["adb", "-s", device_serial, "pull", "/sdcard/Download/temp_summaries.db", local_db],
-                capture_output=True,
-                timeout=10,
-            )
-            if pull_db.returncode == 0 and os.path.exists(local_db):
+        pull_cmd = ["adb", "-s", device_serial, "exec-out", f"run-as {package_name} cat databases/WorkoutSummaries.db"]
+        with open(local_db, "wb") as f_db:
+            pull_res = subprocess.run(pull_cmd, stdout=f_db, stderr=subprocess.PIPE, timeout=10)
+
+        if pull_res.returncode == 0 and os.path.exists(local_db) and os.path.getsize(local_db) >= 16:
+            with open(local_db, "rb") as f_check:
+                header = f_check.read(16)
+            if header.startswith(b"SQLite format 3"):
                 pulled_files.append(local_db)
+            else:
+                try:
+                    os.remove(local_db)
+                except OSError:
+                    pass
     except Exception:
         pass
 
@@ -368,13 +441,14 @@ def evaluate_verification_coverage(sessions: List[WorkoutSession]) -> Tuple[Dict
         if s.has_hrm and s.has_power and s.has_cadence and not matrix["SYS-VRF-001"]["covered"]:
             matrix["SYS-VRF-001"]["covered"] = True
             matrix["SYS-VRF-001"]["result"] = "EXTRACTED_AWAITING_PO_ATTESTATION"
+            loss_str = f"loss={s.sample_loss_pct:.2f}%" if s.sample_loss_pct is not None else "loss=NOT MEASURED"
             matrix["SYS-VRF-001"]["evidence"] = (
                 f"Pixel 10 Session {s.session_id}: simultaneous BLE HRM+Power+Cadence verified; "
-                f"loss={s.sample_loss_pct:.2f}% across {s.duration_sec/60:.0f} min."
+                f"{loss_str} across {s.duration_sec/60:.0f} min."
             )
 
         # SYS-VRF-002: RF Dropout Reconnection
-        if s.max_rf_dropout_sec > 0.0 and s.max_rf_dropout_sec < 10.0 and not matrix["SYS-VRF-002"]["covered"]:
+        if s.max_rf_dropout_sec is not None and s.max_rf_dropout_sec > 0.0 and s.max_rf_dropout_sec < 10.0 and not matrix["SYS-VRF-002"]["covered"]:
             matrix["SYS-VRF-002"]["covered"] = True
             matrix["SYS-VRF-002"]["result"] = "EXTRACTED_AWAITING_PO_ATTESTATION"
             matrix["SYS-VRF-002"]["evidence"] = (
@@ -400,7 +474,7 @@ def evaluate_verification_coverage(sessions: List[WorkoutSession]) -> Tuple[Dict
             )
 
         # SYS-VRF-005: Foreground & Battery (< 8.0 %/hr)
-        if s.duration_sec >= 3600.0 and s.battery_drain_pct_hr > 0.0 and s.battery_drain_pct_hr <= 8.0 and not matrix["SYS-VRF-005"]["covered"]:
+        if s.duration_sec >= 3600.0 and s.battery_drain_pct_hr is not None and s.battery_drain_pct_hr > 0.0 and s.battery_drain_pct_hr <= 8.0 and not matrix["SYS-VRF-005"]["covered"]:
             matrix["SYS-VRF-005"]["covered"] = True
             matrix["SYS-VRF-005"]["result"] = "EXTRACTED_AWAITING_PO_ATTESTATION"
             matrix["SYS-VRF-005"]["evidence"] = (
@@ -417,7 +491,7 @@ def evaluate_verification_coverage(sessions: List[WorkoutSession]) -> Tuple[Dict
             )
 
         # SYS-VRF-007: FIT/TCX Export
-        if s.fit_valid and not matrix["SYS-VRF-007"]["covered"]:
+        if s.fit_valid is True and not matrix["SYS-VRF-007"]["covered"]:
             matrix["SYS-VRF-007"]["covered"] = True
             matrix["SYS-VRF-007"]["result"] = "EXTRACTED_AWAITING_PO_ATTESTATION"
             matrix["SYS-VRF-007"]["evidence"] = (
@@ -425,7 +499,7 @@ def evaluate_verification_coverage(sessions: List[WorkoutSession]) -> Tuple[Dict
             )
 
         # SYS-VRF-008: Cloud Sync
-        if s.cloud_synced and not matrix["SYS-VRF-008"]["covered"]:
+        if s.cloud_synced is True and not matrix["SYS-VRF-008"]["covered"]:
             matrix["SYS-VRF-008"]["covered"] = True
             matrix["SYS-VRF-008"]["result"] = "EXTRACTED_AWAITING_PO_ATTESTATION"
             matrix["SYS-VRF-008"]["evidence"] = (

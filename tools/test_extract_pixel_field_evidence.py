@@ -9,9 +9,11 @@ import json
 import os
 import shutil
 import sqlite3
+import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import MagicMock, patch
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -22,6 +24,7 @@ from extract_pixel_field_evidence import (
     generate_mock_pixel10_workouts,
     parse_sqlite_database,
     parse_tcx_file,
+    pull_device_evidence_adb,
     render_markdown_gap_report,
     update_sys_verification_record_markdown,
 )
@@ -37,6 +40,7 @@ class TestExtractPixelFieldEvidence(unittest.TestCase):
 
     def test_workout_session_to_dict(self):
         """TST-PRO-098.3: Verify WorkoutSession properties and dict serialization."""
+        # Session with explicit metrics
         s = WorkoutSession(
             session_id="TEST-001",
             start_time="2026-11-16T10:00:00",
@@ -63,6 +67,18 @@ class TestExtractPixelFieldEvidence(unittest.TestCase):
         self.assertTrue(d["has_hrm"])
         self.assertTrue(d["has_radar"])
         self.assertEqual(d["elevation_gain_m"], 350.0)
+
+        # Session with defaults (unmeasured metrics must default to None per Finding K1)
+        s_default = WorkoutSession(
+            session_id="TEST-DEF",
+            start_time="2026-11-16T11:00:00",
+        )
+        self.assertIsNone(s_default.sample_loss_pct)
+        self.assertIsNone(s_default.battery_drain_pct_hr)
+        self.assertIsNone(s_default.max_rf_dropout_sec)
+        self.assertIsNone(s_default.fit_valid)
+        self.assertIsNone(s_default.cloud_synced)
+        self.assertFalse(s_default.has_radar)
 
     def test_evaluate_verification_coverage_with_mock_data(self):
         """TST-PRO-098.3: Evaluate matrix coverage and gap generation with authentic mock rides."""
@@ -139,43 +155,155 @@ class TestExtractPixelFieldEvidence(unittest.TestCase):
         self.assertTrue(session.has_cadence)
         self.assertTrue(session.has_gnss)
         self.assertTrue(session.has_barometer)
+        self.assertFalse(session.has_radar)
+        self.assertIsNone(session.sample_loss_pct)
+        self.assertIsNone(session.battery_drain_pct_hr)
+        self.assertIsNone(session.fit_valid)
         self.assertGreater(session.elevation_gain_m, 2.0)
 
     def test_parse_sqlite_database(self):
-        """TST-PRO-098.3: Query SQLite WorkoutSummaries.db for sessions."""
+        """TST-PRO-098.3: Query SQLite WorkoutSummaries.db using authentic schema from WorkoutSummariesDatabaseManager."""
         db_path = os.path.join(self.test_dir, "WorkoutSummaries.db")
         conn = sqlite3.connect(db_path)
         cur = conn.cursor()
         cur.execute("""
-            CREATE TABLE summaries (
+            CREATE TABLE WorkoutSummaries (
                 _id INTEGER PRIMARY KEY,
-                startTime TEXT,
-                duration REAL,
-                distance REAL,
-                avgHr REAL,
-                avgPower REAL,
-                avgCadence REAL,
-                elevationGain REAL,
-                sportType TEXT
+                timeStart TEXT,
+                timeActive_s REAL,
+                distanceTotal_m REAL,
+                ascending REAL,
+                Sport TEXT,
+                uploadToStrava INTEGER DEFAULT -1
             )
         """)
         cur.execute("""
-            INSERT INTO summaries VALUES (
-                101, '2026-11-16T08:00:00', 5400.0, 42000.0, 150.0, 210.0, 88.0, 450.0, 'BICYCLING'
+            CREATE TABLE ExtremumValues (
+                _id INTEGER PRIMARY KEY,
+                workoutID INTEGER,
+                sensorType TEXT,
+                extremumType TEXT,
+                value REAL
             )
         """)
+        # Session 101: Uploaded to Strava (1), has HR, Power, Cadence, Radar
+        cur.execute("""
+            INSERT INTO WorkoutSummaries VALUES (
+                101, '2026-11-16T08:00:00', 5400.0, 42000.0, 450.0, 'BICYCLING', 1
+            )
+        """)
+        cur.executemany("""
+            INSERT INTO ExtremumValues (workoutID, sensorType, extremumType, value) VALUES (?, ?, ?, ?)
+        """, [
+            (101, "HR", "AVG", 150.0),
+            (101, "POWER", "AVG", 210.0),
+            (101, "CADENCE", "AVG", 88.0),
+            (101, "RADAR_THREAT_COUNT", "MAX", 8.0),
+        ])
+
+        # Session 102: Not uploaded (-1), only HR, no power, no cadence, no radar
+        cur.execute("""
+            INSERT INTO WorkoutSummaries VALUES (
+                102, '2026-11-16T12:00:00', 1800.0, 5000.0, 20.0, 'RUNNING', -1
+            )
+        """)
+        cur.execute("""
+            INSERT INTO ExtremumValues (workoutID, sensorType, extremumType, value) VALUES (?, ?, ?, ?)
+        """, (102, "HR", "AVG", 140.0))
+
         conn.commit()
         conn.close()
 
         sessions = parse_sqlite_database(db_path)
-        self.assertEqual(len(sessions), 1)
-        s = sessions[0]
-        self.assertEqual(s.session_id, "DB-SES-101")
-        self.assertEqual(s.duration_sec, 5400.0)
-        self.assertTrue(s.has_hrm)
-        self.assertTrue(s.has_power)
-        self.assertTrue(s.has_cadence)
-        self.assertEqual(s.elevation_gain_m, 450.0)
+        self.assertEqual(len(sessions), 2)
+
+        # Sorted DESC by ID: s102 is first, s101 is second
+        s102 = sessions[0]
+        self.assertEqual(s102.session_id, "DB-SES-102")
+        self.assertEqual(s102.duration_sec, 1800.0)
+        self.assertTrue(s102.has_hrm)
+        self.assertFalse(s102.has_power)
+        self.assertFalse(s102.has_cadence)
+        self.assertFalse(s102.has_radar)
+        self.assertIsNone(s102.cloud_synced)
+        self.assertIsNone(s102.sample_loss_pct)
+        self.assertIsNone(s102.battery_drain_pct_hr)
+        self.assertIsNone(s102.fit_valid)
+
+        s101 = sessions[1]
+        self.assertEqual(s101.session_id, "DB-SES-101")
+        self.assertEqual(s101.duration_sec, 5400.0)
+        self.assertTrue(s101.has_hrm)
+        self.assertTrue(s101.has_power)
+        self.assertTrue(s101.has_cadence)
+        self.assertTrue(s101.has_radar)
+        self.assertTrue(s101.cloud_synced)
+        self.assertEqual(s101.elevation_gain_m, 450.0)
+        self.assertIsNone(s101.sample_loss_pct)
+        self.assertIsNone(s101.battery_drain_pct_hr)
+        self.assertIsNone(s101.fit_valid)
+
+    @patch("subprocess.run")
+    def test_pull_device_evidence_adb_exec_out(self, mock_run):
+        """TST-PRO-098.3: Stream WorkoutSummaries.db via adb exec-out run-as with SQLite header validation."""
+        temp_dest = os.path.join(self.test_dir, "adb_out")
+
+        # Mock 1: adb devices reports DEFAULT_PIXEL_10_SERIAL
+        # Mock 2: external storage list fails / returns empty
+        # Mock 3: second external storage list fails / returns empty
+        # Mock 4: exec-out run-as cat databases/WorkoutSummaries.db writes authentic SQLite header
+        def run_side_effect(*args, **kwargs):
+            cmd = args[0]
+            m = MagicMock()
+            m.returncode = 0
+            if "devices" in cmd:
+                m.stdout = f"List of devices attached\n{DEFAULT_PIXEL_10_SERIAL}\tdevice\n"
+            elif "ls" in cmd:
+                m.returncode = 1
+                m.stdout = ""
+            elif "exec-out" in cmd:
+                if "stdout" in kwargs and hasattr(kwargs["stdout"], "write"):
+                    # Write authentic SQLite 3 format header (at least 16 bytes starting with b"SQLite format 3\0")
+                    kwargs["stdout"].write(b"SQLite format 3\x00\x10\x00\x01\x01\x00@  ")
+                m.returncode = 0
+            return m
+
+        mock_run.side_effect = run_side_effect
+
+        pulled = pull_device_evidence_adb(
+            device_serial=DEFAULT_PIXEL_10_SERIAL,
+            package_name="com.atrainingtracker.trainingtracker",
+            dest_dir=temp_dest,
+        )
+        expected_db = os.path.join(temp_dest, "WorkoutSummaries.db")
+        self.assertIn(expected_db, pulled)
+        self.assertTrue(os.path.exists(expected_db))
+
+        # Test rejection of corrupt / non-sqlite stream
+        def run_corrupt_side_effect(*args, **kwargs):
+            cmd = args[0]
+            m = MagicMock()
+            m.returncode = 0
+            if "devices" in cmd:
+                m.stdout = f"List of devices attached\n{DEFAULT_PIXEL_10_SERIAL}\tdevice\n"
+            elif "ls" in cmd:
+                m.returncode = 1
+                m.stdout = ""
+            elif "exec-out" in cmd:
+                if "stdout" in kwargs and hasattr(kwargs["stdout"], "write"):
+                    kwargs["stdout"].write(b"run-as: package not debuggable\n")
+                m.returncode = 0
+            return m
+
+        mock_run.side_effect = run_corrupt_side_effect
+        temp_dest_corrupt = os.path.join(self.test_dir, "adb_out_corrupt")
+        pulled_corrupt = pull_device_evidence_adb(
+            device_serial=DEFAULT_PIXEL_10_SERIAL,
+            package_name="com.atrainingtracker.trainingtracker",
+            dest_dir=temp_dest_corrupt,
+        )
+        self.assertEqual(len(pulled_corrupt), 0)
+        self.assertFalse(os.path.exists(os.path.join(temp_dest_corrupt, "WorkoutSummaries.db")))
 
     def test_update_sys_verification_record_markdown(self):
         """TST-PRO-098.3: Update sys_verification_record.md table rows and session IDs."""

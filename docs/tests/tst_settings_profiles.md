@@ -1369,24 +1369,25 @@
 
 ---
 
-### TST-SET-115: **Expert Settings HRV Artifact Gate Relocation & Morning Checks Section Verification Suite** [Verified]
+### TST-SET-115: **Expert Settings HRV Artifact Gate Relocation, Morning Checks Section & DFA α1 Info-Card Removal Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-SET-113` (`REQ-SET-113.1`..`REQ-SET-113.4`)
 - **Component**: `AdvancedTuningAccordionTest.kt`, `AdvancedTuningModularityTest.kt`, `AdvancedTuningScreenTest.kt`, `AdvancedTuningVisualContractTest.kt`, `PhysiologyModelsVisibilityContractTest.kt`, `TuningDesignGuidelinesContractTest.kt`, `TranslationParityTest.kt`, `AdvancedTuningSectionsScreenshotTest.kt`
-- **Jira**: `ATT-8117`
+- **Jira**: `ATT-8117`, `ATT-8468`
 - **Status**: Verified
 - **Test Description**:
-  1. *HRV Artifact Gate Relocation & DataStore Key Invariance (`TST-SET-115.1`, `PhysiologyModelsVisibilityContractTest.kt`)*:
-  • Verify `PhysiologyModelsSection.kt` omits `tuning_hrv_artifact_gate_title` and all 7 Morning Check controls while retaining `tuning_physiology_hrv_zones_link` and `showRpeAndFeel`.
+  1. *HRV Artifact Gate Relocation, DataStore Key Invariance & DFA α1 Info-Card Removal (`TST-SET-115.1`, [Verified] ATT-8468, `PhysiologyModelsVisibilityContractTest.kt`)*:
+  • Verify `PhysiologyModelsSection.kt` omits `tuning_hrv_artifact_gate_title` and all 7 Morning Check controls, and omits the static DFA α1 info-card (`R.string.tuning_physiology_hrv_zones_link`), redundant trailing divider, and unused `Card`/`CardDefaults` imports, while retaining `showRpeAndFeel`.
   • Verify `SensorsGpsFilterSection.kt` hosts `tuning_hrv_artifact_gate_title` (`3.0%..5.0%`) and both `AdvancedTuningScreen.kt` and `AdvancedTuningDialog.kt` wire `hrvArtifactGateThresholdPercent` without altering `TuningPreferencesDataStore` keys.
+  • Verify `PhysiologyModelsVisibilityContractTest.kt` asserts `assertFalse` on `tuning_physiology_hrv_zones_link` in `PhysiologyModelsSection.kt`.
   2. *`TuningSection.MORNING_CHECK` & `MorningCheckSection` Wiring (`TST-SET-115.2`, `AdvancedTuningAccordionTest.kt`, `AdvancedTuningModularityTest.kt`, `AdvancedTuningScreenTest.kt`, `AdvancedTuningVisualContractTest.kt`)*:
   • Verify `TuningSection.values()` contains all 12 canonical entries including `MORNING_CHECK`.
   • Verify `TuningSubtitleFormatter.formatMorningCheckSubtitle(...)` produces deterministic live summaries and `MorningCheckSection` exists as a public composable mounted in both `AdvancedTuningScreen` and `AdvancedTuningDialog` with all 7 Morning Check controls.
   3. *Design Guidelines Contract Verification (`TST-SET-115.3`, `TuningDesignGuidelinesContractTest.kt`)*:
   • Verify `SensorsGpsFilterSection.kt`, `PhysiologyModelsSection.kt`, and `MorningCheckSection.kt` strictly use `TuningToggleItem`, `SubordinateTuningToggleItem`, `TuningSliderItem`, and `HorizontalDivider` with zero `FilterChip`, raw `Switch(`, or nested `ElevatedCard(`.
   4. *9-Language Localization Parity (`TST-SET-115.4`, `TranslationParityTest.kt`)*:
-  • Verify 100% translation parity, matching format specifiers, and zero emojis across all 9 locales (`EN, DE, ES, FR, IT, JA, NL, PL, PT`) for all new `MorningCheckSection` and subtitle string resources.
-  5. *Visual Compose Screenshot Verification (`TST-SET-115.5`, `AdvancedTuningSectionsScreenshotTest.kt`, Rule 8.5)*:
-  • Render `SensorsGpsFilterSection`, `MorningCheckSection`, and `PhysiologyModelsSection` in Robolectric Compose, capture `docs/engineering/walkthroughs/img/ATT-8117_tuning_sections.png`, and inspect via `read_file` against the 4-point visual checklist.
+  • Verify 100% translation parity, matching format specifiers, and zero emojis across all 9 locales (`EN, DE, ES, FR, IT, JA, NL, PL, PT`) after symmetric removal of `tuning_physiology_hrv_zones_link`.
+  5. *Visual Compose Screenshot Verification (`TST-SET-115.5`, [Verified] ATT-8468, `AdvancedTuningSectionsScreenshotTest.kt`, Rule 8.5)*:
+  • Render `SensorsGpsFilterSection`, `MorningCheckSection`, and `PhysiologyModelsSection` in Robolectric Compose, capture `docs/engineering/walkthroughs/img/ATT-8117_tuning_sections.png`, and inspect via `read_file` against the 4-point visual checklist verifying the clean layout without the DFA α1 info-card.
 
 ---
 

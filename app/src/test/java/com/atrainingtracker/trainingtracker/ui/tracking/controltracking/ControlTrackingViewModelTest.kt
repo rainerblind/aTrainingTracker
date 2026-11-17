@@ -552,6 +552,104 @@ class ControlTrackingViewModelTest {
         jobAtCutoff.cancel()
     }
 
+    @Test
+    fun isMorningHrvCheckVisible_whenWellnessModeWithoutHrm_emitsTrue() = runTest {
+        // TST-UI-525.4 (ATT-8469 / REQ-UI-525.4)
+        val trackingModeLiveData = MutableLiveData(TrackingMode.READY)
+        every { mockBanalRepo.trackingMode } returns trackingModeLiveData
+
+        val configFlow = MutableStateFlow(
+            TuningConfig(
+                enableMorningSleepAndWellness = true,
+                showMorningCheckOnStartScreen = false,
+                morningCheckCutoffHour = 11
+            )
+        )
+        val mockTuning = mockk<TuningPreferencesDataStore>(relaxed = true)
+        every { mockTuning.tuningConfigFlow } returns configFlow
+
+        val mockHrv = mockk<HrvReadinessRepository>(relaxed = true)
+        coEvery { mockHrv.hasCompletedMorningCheck(any()) } returns false
+
+        // No paired HRM device (only bike speed sensor)
+        allDevicesFlow.value = listOf(
+            createDeviceUiData(2L, DeviceType.BIKE_SPEED, "Speed Sensor")
+        )
+
+        // Time at 08:30 AM (before 11:00 AM cutoff)
+        val testTime = java.time.LocalTime.of(8, 30)
+        val viewModel = ControlTrackingViewModel(
+            application = application,
+            tuningPreferencesDataStore = mockTuning,
+            hrvReadinessRepository = mockHrv,
+            timeProvider = { testTime }
+        )
+
+        val values = mutableListOf<Boolean>()
+        val job = launch(testDispatcher) {
+            viewModel.isMorningHrvCheckVisible.collect { values.add(it) }
+        }
+
+        assertTrue("Expected button visible when pure wellness is enabled even without HRM", values.last())
+
+        // Workout starts (TrackingMode.TRACKING) -> hides
+        trackingModeLiveData.value = TrackingMode.TRACKING
+        assertFalse("Expected button hidden during active tracking", values.last())
+
+        // Back to READY -> visible again
+        trackingModeLiveData.value = TrackingMode.READY
+        assertTrue("Expected button visible again when back in READY", values.last())
+
+        // Standalone wellness entry saved today -> hides
+        coEvery { mockHrv.hasCompletedMorningCheck(any()) } returns true
+        viewModel.refreshMorningCheckStatus()
+        assertFalse("Expected button hidden once standalone wellness is saved today", values.last())
+
+        job.cancel()
+    }
+
+    @Test
+    fun isMorningHrvCheckVisible_whenNeitherHrvNorWellnessEnabled_emitsFalse() = runTest {
+        // TST-UI-525.4 (ATT-8469 / REQ-UI-525.4)
+        val trackingModeLiveData = MutableLiveData(TrackingMode.READY)
+        every { mockBanalRepo.trackingMode } returns trackingModeLiveData
+
+        val configFlow = MutableStateFlow(
+            TuningConfig(
+                enableMorningSleepAndWellness = false,
+                showMorningCheckOnStartScreen = false,
+                morningCheckCutoffHour = 11
+            )
+        )
+        val mockTuning = mockk<TuningPreferencesDataStore>(relaxed = true)
+        every { mockTuning.tuningConfigFlow } returns configFlow
+
+        val mockHrv = mockk<HrvReadinessRepository>(relaxed = true)
+        coEvery { mockHrv.hasCompletedMorningCheck(any()) } returns false
+
+        // Provide paired HRM device
+        allDevicesFlow.value = listOf(
+            createDeviceUiData(1L, DeviceType.HRM, "Polar H10")
+        )
+
+        val testTime = java.time.LocalTime.of(8, 30)
+        val viewModel = ControlTrackingViewModel(
+            application = application,
+            tuningPreferencesDataStore = mockTuning,
+            hrvReadinessRepository = mockHrv,
+            timeProvider = { testTime }
+        )
+
+        val values = mutableListOf<Boolean>()
+        val job = launch(testDispatcher) {
+            viewModel.isMorningHrvCheckVisible.collect { values.add(it) }
+        }
+
+        assertFalse("Expected button hidden when neither HRV start screen nor wellness enabled", values.last())
+
+        job.cancel()
+    }
+
     private fun createDeviceUiData(id: Long, deviceType: DeviceType, name: String): DeviceUiData {
         return DeviceUiData(
             id = id,

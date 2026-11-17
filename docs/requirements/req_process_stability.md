@@ -3,7 +3,7 @@
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Requirements**: 173
+**Total Requirements**: 174
 
 ---
 
@@ -4983,10 +4983,13 @@ The workflow SHALL mandate that:
      • Sample selection SHALL use seeded pseudo-random sampling (`random.Random(seed).sample`), accepting an optional seed parameter (`--seed`) or generating a random integer seed.
      • The audit report in `docs/engineering/qa_audits/<sprint>.md` SHALL explicitly document the total sprint population, sample size, random seed, and sampled ticket keys in Section 1.
   3. *Closed-Loop Jira Corrective-Action Tracking (`REQ-PRO-091.3`)*:
-     • For any audit evaluating a `NON-COMPLIANT` overall verdict or finding, Section 4 of `docs/engineering/qa_audits/<sprint>.md` SHALL link every non-compliant finding to a dedicated Jira corrective-action ticket (formatted as `[ATT-XXXX](https://.../browse/ATT-XXXX)` or `ATT-XXXX`).
-     • Generic placeholder text without authentic Jira ticket links is prohibited.
-  4. *Ceremony 1 Corrective Action Closure Verification (`REQ-PRO-091.4`)*:
-     • `.agents/skills/sprint-planner/SKILL.md` Ceremony 1 (Sprint Planning) SHALL mandate reviewing the previous sprint's QA process-compliance audit in `docs/engineering/qa_audits/` and verifying that all corrective-action tickets from non-compliant findings are either closed or scheduled for remediation in the active sprint.
+     • For any audit evaluating a `NON-COMPLIANT` overall verdict or finding, Section 4 of `docs/engineering/qa_audits/<sprint>.md` SHALL link every non-compliant finding to a distinct, dedicated Jira corrective-action ticket (`ca_key != audited_key`). Self-referential links naming the audited ticket itself are strictly prohibited.
+     • The QA audit tool SHALL idempotently create or link dedicated corrective action tickets (`issuetype_id="10005"` / `Verbesserung`, parent Epic `ATT-8138` or `ATT-232`) in raw Backlog (`add_to_sprint=False`, `rank_top=True`), deduplicated per non-conformance category per sprint (`[QA Corrective Action] <Category> - Sprint <Sprint>`).
+     • `tools/verify_requirement_governance.py --check-qa-audits` SHALL enforce `ca_key != audited_key` for current and future sprints while grandfathering legacy audits prior to sprint `2026-11-16_02_Spät`.
+  4. *Retrospective & Ceremony Corrective Action Tracking & Escalation (`REQ-PRO-091.4`)*:
+     • `.agents/skills/sprint-planner/SKILL.md` Ceremony 1 (Sprint Planning) SHALL mandate reviewing open QA corrective action tickets from the prior sprint's audit.
+     • Ceremony 2 (Sprint Review & Retrospective) SHALL mandate a dedicated 'QA Findings & Corrective Actions' section in `docs/engineering/retros/Sprint_Review_and_Retro_<KEY>.md`, auditing the status of all active corrective action tickets.
+     • When an open QA corrective action remains unresolved for more than 2 sprints (> 2 sprints) or repeats across consecutive sprints, Ceremony 2 SHALL explicitly escalate the deviation to the Product Owner (PO) in the Retrospective deliverable.
   5. *Automated Governance Verifier Enforcement (`REQ-PRO-091.5`)*:
      • `tools/verify_requirement_governance.py --check-qa-audits` (and Höchstmaß mirror) SHALL validate that:
        (a) Auditor role is independent (not `coordinator` or `agent1`),
@@ -4998,8 +5001,8 @@ The workflow SHALL mandate that:
      • AccountId-Based 4-Augen Role Separation: `qa-audit` SHALL verify author and reviewer separation by evaluating Atlassian `accountId`s against `ROLE_ACCOUNT_IDS` rather than matching display-name strings.
 - **Requirement Archaeology & Chesterton's Fence Audit**:
   1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-091` (`REQ-PRO-091.1`–`REQ-PRO-091.6`), refining and extending `REQ-PRO-061` (*Sprint-Level QA Process-Compliance Audit*). Targets `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `tools/hoechstmass/`, `.agents/skills/sprint-planner/SKILL.md`, and `docs/engineering/qa_audits/`.
-  2. *Historical Origin & Commit Trace*: Introduced in Sprint 2026-46.3 via ATT-6154 (`REQ-PRO-061`); extended in Sprint 2026-46.6 via ATT-7558; bugfixed in Sprint 2026-11-16_02_Spät via ATT-8152 (Finding M5).
-  3. *Root Reason for Existing Formulation*: Early tooling prioritized basic automated markdown generation and checked only `docs/requirements.md` before domain shards were introduced; description was omitted from query; role separation relied on display-name heuristics.
+  2. *Historical Origin & Commit Trace*: Introduced in Sprint 2026-46.3 via ATT-6154 (`REQ-PRO-061`); extended in Sprint 2026-46.6 via ATT-7558; bugfixed in Sprint 2026-11-16_02_Spät via ATT-8152 (Finding M5); corrective action escalation and retro tracking added via ATT-8153.
+  3. *Root Reason for Existing Formulation*: Early tooling prioritized basic automated markdown generation and checked only `docs/requirements.md` before domain shards were introduced; description was omitted from query; role separation relied on display-name heuristics; self-referential ticket keys were used as placeholders before closed-loop corrective action ticket creation under Epic ATT-8138/ATT-232 and multi-sprint PO escalation were integrated.
   4. *Preservation of Core Invariants*: Existing CLI commands (`qa-audit`, `--check-qa-audits`) remain backward-compatible; pure Python standard library; zero production Android runtime code changes.
 - **Acceptance Criteria (Given-When-Then)**:
   • *Given* an execution of `qa-audit`,
@@ -5020,6 +5023,15 @@ The workflow SHALL mandate that:
   • *Given* subtasks reviewed by `agent2`,
   • *When* `qa-audit` evaluates 4-Augen Role Separation,
   • *Then* `accountId`s are matched against `ROLE_ACCOUNT_IDS` and passes.
+  • *Given* an execution of `qa-audit` with non-compliant tickets,
+  • *When* Section 4 is formatted,
+  • *Then* it generates or links dedicated corrective action tickets in raw Backlog deduplicated by category, ensuring `ca_key != audited_key`.
+  • *Given* an audit report evaluated by `verify_qa_audits`,
+  • *When* checked for current and future sprints,
+  • *Then* it rejects reports containing self-referential corrective action links (`ca_key == audited_key`), while grandfathering legacy historical sprints prior to `2026-11-16_02_Spät`.
+  • *Given* Ceremony 2 in `sprint-planner/SKILL.md`,
+  • *When* executed at Sprint-End,
+  • *Then* it includes a mandatory 'QA Findings & Corrective Actions' section in the Retrospective and escalates open actions older than 2 sprints to the PO.
 - **Invariants**: Zero Android runtime code changes; pure Python 3 standard library; Rule 3 human-only gate preserved.
 
 
@@ -5153,24 +5165,33 @@ The workflow SHALL mandate that:
 - **Implementation**: `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `docs/management/cm_plan.md`, `docs/coding_standards.md`, `.agents/rules/aspice_governance.md`, `.agents/skills/sprint-planner/SKILL.md`, `.agents/skills/release-manager/SKILL.md`, `docs/engineering/code_reviews/coverage_matrix.md`
 - **Rationale**: In-sprint Stage 6 reviews only inspect single-ticket diffs in isolation. To systematically uncover latent architectural debt, concurrency hazards, resource leaks, and test gaps across the ~200k+ LoC codebase, mandatory weekly dual-vendor reviews (Google Gemini + Anthropic Claude) inspecting entire subsystems alongside delta changes must be governed, tracked in a coverage matrix, and automatically scheduled at the top of the Product Backlog.
 - **Description**:
-  1. *Weekly Dual-Vendor Full-Subsystem Review Policy (`REQ-PRO-095.1`)*: `docs/coding_standards.md`, `.agents/rules/aspice_governance.md`, `sprint-planner/SKILL.md`, `release-manager/SKILL.md`, and `docs/management/cm_plan.md` SHALL mandate weekly dual-vendor holistic code & architecture reviews by both Google Gemini and Anthropic Claude covering full production and test subsystem slices across all 9 codebase packages (`tracker/`, `banalservice/`, `database/`, `exporter/`, `ui/tracking/`, `ui/aftermath/`, `ui/settings/`, `tools/`, `test/`) alongside recent delta commits.
-  2. *Subsystem Audit Coverage Matrix & Evidence Store (`REQ-PRO-095.2`)*: `docs/engineering/code_reviews/` SHALL be established as a canonical engineering deliverable directory (registered in `cm_plan.md` and `verify_requirement_governance.py`), containing `coverage_matrix.md` tracking all 9 subsystem packages, audit timestamps, commit SHAs, model versions, and status (`UNREVIEWED` $\to$ `AUDITED`), cycling continuously.
-  3. *Automated Top-of-Backlog Review Ticket Creation (`REQ-PRO-095.3`)*: `tools/jira_util.py` SHALL implement `ensure-weekly-reviews` CLI and automation (`ensure_weekly_review_ticket`), which checks if `> 7 days` have elapsed since the latest completed review record or if `UNREVIEWED` packages exist; if overdue and no open weekly review ticket exists, it SHALL automatically create a review ticket pre-populated with target subsystems from `coverage_matrix.md` under Epic `ATT-232` and place it at the very top of the Product Backlog (`rank-top`).
-  4. *Sprint Ceremony & Release Gate Enforcement (`REQ-PRO-095.4`)*: `sprint-planner/SKILL.md` (Ceremonies 1 & 2) SHALL invoke `ensure-weekly-reviews` to maintain review ticket presence, and `release-manager/SKILL.md` SHALL verify that no weekly review is overdue prior to completing release readiness.
+  1. *Weekly Dual-Vendor Full-Subsystem Review Policy & Generic Model Specification (`REQ-PRO-095.1`, [Verified] ATT-8426)*: `docs/coding_standards.md` (§5.12), `docs/management/release_plan.md` (§1.1), `docs/engineering/code_reviews/template_dual_vendor_code_review.md`, `.agents/rules/aspice_governance.md`, and `tools/jira_util.py` review ticket templates SHALL generically specify the respective *current top model* ("current top model" / frontier model) of both Google Gemini and Anthropic Claude rather than hardcoding transient version strings (`Gemini 2.5 Pro / Gemini 4 Carbon`, `Claude 3.7 Sonnet`). The concrete model identifier, checkpoint, and version SHALL strictly be recorded dynamically in the completed review artifact (`YYYY-MM-DD_dual_vendor_code_review.md`) and `coverage_matrix.md` row upon execution. Furthermore, under the *Claude Non-Simulation Protocol*, Antigravity agents running on Google models SHALL NEVER simulate, fabricate, or mock Anthropic Claude evaluations; if Claude API or external execution is unavailable, the review deliverable SHALL explicitly mark the Claude evaluation as `PENDING / EXTERNAL HANDOFF REQUIRED` until executed via genuine external Claude CLI or session, preserving ASPICE Finding K2 / evidence integrity.
+  2. *Subsystem Audit Coverage Matrix & Package Completeness (`REQ-PRO-095.2`, [Verified] ATT-8426)*: `docs/engineering/code_reviews/coverage_matrix.md` SHALL maintain an exhaustive mapping of the entire codebase into subsystem domains, explicitly incorporating previously omitted core packages including `repositories/` (data layer & StateFlows), `cloud/` & `onlinecommunities/` (remote sync & integration), and `segments/` & `climbs/` (real-time segment & ascent detection), tracking audit timestamps, commit SHAs, executed model versions, and status (`UNREVIEWED` $\to$ `AUDITED`) across continuous review cycles.
+  3. *Automated Top-of-Backlog Review Ticket Creation & Decoupled Cadence (`REQ-PRO-095.3`, [Verified] ATT-8426)*: `tools/jira_util.py` (`ensure-weekly-reviews` / `ensure_weekly_review_ticket()`) SHALL select target subsystem slices via `get_next_review_subsystem()`, which prioritizes the first `UNREVIEWED` domain slice (or oldest audited slice once fully audited). Overdue evaluation SHALL be governed by actual 7-day review currency without blocking on `UNREVIEWED` status when an audit occurred within $\le 7$ days. When overdue and no open review ticket exists under `ATT-232`, it SHALL create a deduplicated review ticket ranked at `rank-top`.
+  4. *Sprint Ceremony & 7-Day Release Currency Gate (`REQ-PRO-095.4`, [Verified] ATT-8426)*: `release-manager/SKILL.md` (pre-release gate) and `sprint-planner/SKILL.md` (Ceremonies 1 & 2) SHALL verify review currency via `tools/jira_util.py is_weekly_review_overdue()`. `is_weekly_review_overdue()` SHALL evaluate whether the latest completed review record in `docs/engineering/code_reviews/` is $\ge 7$ days old (or if zero completed reviews exist), strictly decoupling the release currency gate from requiring that all subsystem slices in `coverage_matrix.md` have completed their first cycle, preventing a 9-week release preparation deadlock. All PO operational rules (`05:00/15:00/22:00` cadence, 2-lane throttle + Stage 6 Pro Sparhebel, weekly Kover coupling) SHALL remain strictly preserved.
   5. *Review Tooling & Governance Contract Test Parity (`REQ-PRO-095.5`)*: `tools/test_jira_accounts.py` and `tools/test_verify_requirement_governance.py` SHALL verify `ensure-weekly-reviews` CLI parsing, target subsystem slice selection, deduplication logic, and `code_reviews` directory canonical registration.
 - **Requirement Archaeology & Chesterton's Fence Audit**:
   1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-095`. Targets `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `docs/management/cm_plan.md`, `docs/coding_standards.md`, `.agents/rules/aspice_governance.md`, `.agents/skills/sprint-planner/SKILL.md`, `.agents/skills/release-manager/SKILL.md`, `docs/engineering/code_reviews/coverage_matrix.md`.
-  2. *Historical Origin & Commit Trace*: Sprint 2026-46.8 via ticket `ATT-8213` under Epic `ATT-8138` (ASPICE 4.0 Audit Remediation).
-  3. *Root Reason for Existing Formulation*: Prior review governance (`REQ-PRO-062`) was confined to per-sprint diff reviews without full-subsystem scope or automated backlog scheduling.
-  4. *Preservation of Core Invariants*: Human Decision Gate, commit hygiene, zero runtime changes in `app/src/main/`, and pure Python stdlib offline resilience preserved.
+  2. *Historical Origin & Commit Trace*: Sprint 2026-46.8 via ticket `ATT-8213` under Epic `ATT-8138` (ASPICE 4.0 Audit Remediation); amended in Sprint 2026-11-16_03_Nacht via `ATT-8426` to mandate generic top models, establish Claude non-simulation protocol, decouple 7-day release gate from UNREVIEWED deadlock, and expand package coverage.
+  3. *Root Reason for Existing Formulation*: Prior review governance (`REQ-PRO-062`) was confined to per-sprint diff reviews without full-subsystem scope or automated backlog scheduling; initial implementation hardcoded contemporary model strings and conflated UNREVIEWED slice prioritization with 7-day release gating.
+  4. *Preservation of Core Invariants*: ASPICE `GP 2.1.6` cross-vendor independence, 7-day review cadence, Finding K1/K2 zero-fabrication evidence integrity, PO operational rules (`05:00/15:00/22:00` cadence, 2-lane throttle, Stage 6 Pro Sparhebel, weekly Kover coupling), zero `app/src/main/` runtime code changes, and pure Python stdlib offline resilience strictly preserved.
 - **Acceptance Criteria (Given-When-Then)**:
-  • *Given* `docs/coding_standards.md`, `docs/management/cm_plan.md`, and `.agents/rules/aspice_governance.md`,
+  • *Given* `docs/coding_standards.md`, `docs/management/cm_plan.md`, `docs/engineering/code_reviews/template_dual_vendor_code_review.md`, and `tools/jira_util.py`,
   • *When* inspected,
-  • *Then* the weekly dual-vendor full-subsystem review policy and canonical `docs/engineering/code_reviews/` directory are formally specified and registered.
-  • *Given* `> 7 days` have elapsed since the last review or `UNREVIEWED` subsystems remain in `coverage_matrix.md`,
+  • *Then* they specify generic current top models for Google Gemini and Anthropic Claude without hardcoding transient version strings.
+  • *Given* an Antigravity agent without external Claude API or CLI access executing a review ticket,
+  • *When* generating the review artifact,
+  • *Then* the agent does not fabricate Claude findings and marks Claude review as `PENDING / EXTERNAL HANDOFF REQUIRED`.
+  • *Given* `docs/engineering/code_reviews/coverage_matrix.md`,
+  • *When* inspected,
+  • *Then* all core packages including `repositories/`, `cloud/`, `onlinecommunities/`, `segments/`, and `climbs/` are comprehensively mapped into domain slices.
+  • *Given* at least one completed review in `docs/engineering/code_reviews/` $\le 7$ days old and remaining `UNREVIEWED` subsystems in `coverage_matrix.md`,
+  • *When* `is_weekly_review_overdue()` executes,
+  • *Then* it returns `False`, allowing release branch initiation without a 9-week deadlock.
+  • *Given* `> 7 days` have elapsed since the last review or zero reviews exist,
   • *When* `ensure-weekly-reviews` runs,
   • *Then* a deduplicated ticket targeting the next subsystem is created under `ATT-232` and ranked at `rank-top`.
-  • *Given* an overdue weekly review,
+  • *Given* an overdue weekly review (> 7 days),
   • *When* `release-manager` checks release preconditions,
   • *Then* release readiness flags the overdue review.
 - **Invariants**: Zero changes to production runtime logic; existing master table parity intact; Human Decision Gate inviolable.
@@ -5221,14 +5242,14 @@ The workflow SHALL mandate that:
 - **Description**:
   1. *Formal V5.0.0 Release Plan (`REQ-PRO-097.1`)*: `docs/management/release_plan.md` SHALL be established as a canonical configuration item in `cm_plan.md`, specifying target release `V5.0.0`, milestone epics, scheduled 12h sprint cycles, cumulative Google Pixel 10 physical daily-ride workout verification (`ATT-8141`), quality criteria, and gate exit criteria.
   2. *Lane-Aware Greedy Bin-Packing with Capacity Ceiling (`REQ-PRO-097.2`)*: `select_greedy_bin_pack_tickets()` in `tools/jira_util.py` SHALL iterate candidate tickets from `Vom PO Freigegeben` (ID `447`) in strict `ORDER BY rank ASC`, filling up to `max_lanes` (default 3) disjoint Epic lanes up to a configurable per-lane capacity ceiling (`max_sp_per_lane`, default 10 SP, or max tickets per lane). When a lane reaches capacity on Epic A, excess tickets of Epic A SHALL be left in `Vom PO Freigegeben` without skipping higher-ranked eligible tickets, while subsequent disjoint Epics fill Lanes 2 and 3.
-  3. *Jira FixVersion Rule Alignment (`REQ-PRO-097.3`)*: In `tools/jira_util.py` (`show_issue()`), the warning `WARNING: Mandatory field missing!` for missing `FixVersion` SHALL be suppressed for active in-sprint and in-flight tickets (status != `Erledigt`), and SHALL be emitted strictly when an issue is in terminal status (`Erledigt`) without an assigned `fixVersions` array, aligning tooling with Core Rule 8.3.
+  3. *Jira FixVersion Rule Alignment & Release Plan Verification Staging (`REQ-PRO-097.3`, [Verified] ATT-8426)*: In `tools/jira_util.py` (`show_issue()`), the warning `WARNING: Mandatory field missing!` for missing `FixVersion` SHALL be suppressed for active in-sprint and in-flight tickets (status != `Erledigt`), and SHALL be emitted strictly when an issue is in terminal status (`Erledigt`) without an assigned `fixVersions` array, aligning tooling with Core Rule 8.3. Furthermore, `docs/management/release_plan.md` Section 3 SHALL synchronize with Finding K1 / ATT-8141 evidence architecture by referencing `docs/releases/V5.0.0/sys_verification_record.md` (replacing deprecated `docs/engineering/field_tests/`) and staging physical on-device / human-execution verification tickets in protected pseudo-sprint `Bereit für PO Systemtest` (ID 454, ATT-8423) without contaminating development sprints.
   4. *Lifecycle Skills & Governance Parity (`REQ-PRO-097.4`)*: `.agents/rules/aspice_governance.md`, `sprint-planner/SKILL.md`, and `release-manager/SKILL.md` SHALL reflect the capacity-bound multi-lane packing from `Vom PO Freigegeben`, the 12h cadence (`04:00` / `16:00`), and `V5.0.0` release plan compliance.
   5. *Tooling Test Coverage Parity (`REQ-PRO-097.5`)*: `tools/test_jira_accounts.py` SHALL verify multi-ticket lane packing, capacity boundary constraints, rank order integrity, and FixVersion warning emission logic with 100% test pass rate.
 - **Requirement Archaeology & Chesterton's Fence Audit**:
   1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-097`. Targets `docs/management/release_plan.md`, `tools/jira_util.py`, `tools/test_jira_accounts.py`, `sprint-planner/SKILL.md`, `release-manager/SKILL.md`, `.agents/rules/aspice_governance.md`.
-  2. *Historical Origin & Commit Trace*: Sprint 2026-46.8 via ticket `ATT-8162` under Epic `ATT-8138` (ASPICE 4.0 Audit Remediation).
-  3. *Root Reason for Existing Formulation*: Previous sprint planning lacked formal release plan grounding, allowed sprint over-commitment, and `show_issue()` warned indiscriminately on all tickets lacking FixVersion.
-  4. *Preservation of Core Invariants*: Rule 3 human gates, detached worktree isolation, POSIX flock merge lock, and pure Python stdlib offline resilience strictly preserved.
+  2. *Historical Origin & Commit Trace*: Sprint 2026-46.8 via ticket `ATT-8162` under Epic `ATT-8138` (ASPICE 4.0 Audit Remediation); amended in Sprint 2026-11-16_03_Nacht via `ATT-8426` to synchronize release plan Section 3 field test path and stage verification into pseudo-sprint 454.
+  3. *Root Reason for Existing Formulation*: Previous sprint planning lacked formal release plan grounding, allowed sprint over-commitment, and `show_issue()` warned indiscriminately on all tickets lacking FixVersion; Section 3 cited pre-K1 field test paths.
+  4. *Preservation of Core Invariants*: Rule 3 human gates, detached worktree isolation, POSIX flock merge lock, PO operational rules (`05:00/15:00/22:00` cadence, 2-lane throttle, Stage 6 Pro Sparhebel, weekly Kover coupling), and pure Python stdlib offline resilience strictly preserved.
 - **Acceptance Criteria (Given-When-Then)**:
   • *Given* `Vom PO Freigegeben` (ID 447) with multiple tickets across disjoint Epics,
   • *When* `select_greedy_bin_pack_tickets()` is invoked with `max_lanes=3` and `max_sp_per_lane`,
@@ -5239,6 +5260,9 @@ The workflow SHALL mandate that:
   • *Given* `docs/management/release_plan.md`,
   • *When* inspected against ASPICE 4.0 `MAN.3` and `SUP.8`,
   • *Then* it specifies `V5.0.0` scope epics, schedule, cumulative Pixel 10 workout verification, and release exit criteria.
+  • *Given* `docs/management/release_plan.md` Section 3,
+  • *When* inspected,
+  • *Then* it references `docs/releases/V5.0.0/sys_verification_record.md` and documents staging of physical on-device verification into pseudo-sprint `Bereit für PO Systemtest` (ID 454).
 - **Invariants**: Zero changes to production runtime logic (`app/src/main/`); existing master table parity intact; Human Decision Gate inviolable.
 
 
@@ -5252,15 +5276,15 @@ The workflow SHALL mandate that:
 - **Implementation**: `tools/extract_pixel_field_evidence.py`, `tools/generate_release_verification_summary.py`, `docs/releases/TEMPLATE.md`, `docs/releases/V5.0.0/sys_verification_record.md`, `.agents/rules/aspice_governance.md`
 - **Rationale**: ASPICE 4.0 Finding K1 (SYS.4/5, SWE.6, SUP.1, SUP.8) identified that autonomous agents must never fabricate physical hardware execution or test results. System-level verification for releases must derive from authentic workout sessions recorded by the PO on the reference Google Pixel 10. Automated tooling must extract authentic telemetry, pre-populate protocol tables (`EXTRACTED_AWAITING_PO_ATTESTATION`), guide upcoming test rides via a coverage-gap report, and enforce human PO attestation prior to release clearance.
 - **Description**:
-  1. *Authentic Pixel 10 Telemetry Extraction & Verification Gap Coaching (`REQ-PRO-098.1`)*: `tools/extract_pixel_field_evidence.py` SHALL extract authentic workout telemetry (GPS, BLE HRM, ANT+ power, cadence, radar) from Pixel 10 databases/FIT exports, populate `SYS-VRF-*` rows with authentic metrics tagged `EXTRACTED_AWAITING_PO_ATTESTATION`, and output a prioritized coverage-gap report indicating uncovered scenarios and sensor combinations for upcoming rides.
+  1. *Authentic Pixel 10 Telemetry Extraction & Verification Gap Coaching (`REQ-PRO-098.1`, [Verified] ATT-8427)*: `tools/extract_pixel_field_evidence.py` SHALL extract authentic workout telemetry from Google Pixel 10 devices and exports. When parsing SQLite databases (`parse_sqlite_database`), it SHALL query authentic tables and columns matching `WorkoutSummariesDatabaseManager.java` (`WorkoutSummaries` columns `_id`, `timeStart`, `timeActive_s`, `distanceTotal_m`, `ascending`, `Sport`, `uploadToStrava`, and `ExtremumValues` columns `workoutID`, `sensorType`, `extremumType`, `value`). It SHALL adhere strictly to Finding K1 zero-fabrication standards: all unmeasured or unrecorded metrics (`sample_loss_pct`, `battery_drain_pct_hr`, `max_rf_dropout_sec`, `fit_valid`, radar presence without sensor stream proof) MUST evaluate to `None` / `"NOT MEASURED"`, across both SQLite and TCX extraction pipelines. Furthermore, `pull_device_evidence_adb` SHALL reliably pull app-private databases directly via `adb exec-out run-as <package> cat databases/WorkoutSummaries.db` with SQLite magic header validation.
   2. *Automated Release Guarding Against Unsubstantiated Verification Evidence (`REQ-PRO-098.2`)*: `tools/generate_release_verification_summary.py` (`collect_sys5_summary()`) SHALL reject any verification record containing placeholder serials (`*-REF-*`), unbacked `PASS` verdicts without authentic telemetry traces, or missing human PO attestation signatures, reporting status `BLOCKED`.
   3. *Release Template & V5.0.0 Verification Protocol Reset (`REQ-PRO-098.3`)*: `docs/releases/TEMPLATE.md` and `docs/releases/V5.0.0/sys_verification_record.md` SHALL be established with a formal Human PO Attestation block (device serial, build SHA, workout/FIT ID references) and reset to `OPEN / NOT PERFORMED`, removing all fabricated Pixel 8/6 data.
   4. *Agent Governance & Human-Execution Lifecycle Tripwire (`REQ-PRO-098.4`)*: `.agents/rules/aspice_governance.md` (and Gate 4/5 checklists) SHALL strictly prohibit autonomous agents from authoring physical hardware test results; tickets requiring real hardware execution SHALL carry label `human-execution` and be restricted to protocol preparation and telemetry extraction by agents.
   5. *Extractor & Release Summary Contract Test Parity (`REQ-PRO-098.5`)*: `tools/test_generate_release_verification_summary.py` and extractor unit tests SHALL verify placeholder rejection, human attestation enforcement, and gap reporting with 100% test pass rate.
 - **Requirement Archaeology & Chesterton's Fence Audit**:
   1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-098`. Targets `tools/extract_pixel_field_evidence.py`, `tools/generate_release_verification_summary.py`, `docs/releases/TEMPLATE.md`, `docs/releases/V5.0.0/sys_verification_record.md`, `.agents/rules/aspice_governance.md`.
-  2. *Historical Origin & Commit Trace*: Sprint 2026-46.8 via ticket `ATT-8141` under Epic `ATT-8138` (ASPICE 4.0 Audit Remediation). Resolves critical Finding K1.
-  3. *Root Reason for Existing Formulation*: Evaluation finding K1 established that V5.0.0 release verification claimed hardware testing that did not occur; authentic continuous Pixel 10 workouts recorded by PO must drive release evidence through automated extraction and human attestation.
+  2. *Historical Origin & Commit Trace*: Sprint 2026-46.8 via ticket `ATT-8141` under Epic `ATT-8138` (ASPICE 4.0 Audit Remediation); amended in Sprint 2026-11-16_03_Nacht via `ATT-8427` to eliminate synthetic/hardcoded metrics and align SQLite queries with authentic `WorkoutSummariesDatabaseManager.java` schema.
+  3. *Root Reason for Existing Formulation*: Evaluation finding K1 established that V5.0.0 release verification claimed hardware testing that did not occur; authentic continuous Pixel 10 workouts recorded by PO must drive release evidence through automated extraction and human attestation; initial extractor draft contained hardcoded dummy metrics and camelCase column fallbacks that violated zero-fabrication integrity.
   4. *Preservation of Core Invariants*: Release candidate gating remains strictly blocked until human PO attestation; zero Android runtime app bytecode changes; Human Decision Gate preserved.
 - **Acceptance Criteria (Given-When-Then)**:
   • *Given* `docs/releases/V5.0.0/sys_verification_record.md`,
@@ -5269,9 +5293,15 @@ The workflow SHALL mandate that:
   • *Given* a verification record with placeholder serials (`*-REF-*`), unbacked PASS claims, or missing human PO attestation,
   • *When* `tools/generate_release_verification_summary.py` runs,
   • *Then* status is reported as `BLOCKED` with specific deviations.
-  • *Given* PO workout data on Pixel 10,
-  • *When* `tools/extract_pixel_field_evidence.py` executes,
-  • *Then* it extracts session telemetry, populates verification rows with `EXTRACTED_AWAITING_PO_ATTESTATION`, and generates an actionable coverage-gap report.
+  • *Given* an authentic or exported `WorkoutSummaries.db` database,
+  • *When* `parse_sqlite_database()` executes,
+  • *Then* it queries authentic `WorkoutSummaries` and `ExtremumValues` tables/columns, extracts true sensor presence, and reports `None` for any unmeasured metric (`sample_loss_pct`, `battery_drain_pct_hr`, `fit_valid`).
+  • *Given* an authentic TCX export file without radar or battery streams,
+  • *When* `parse_tcx_file()` executes,
+  • *Then* it extracts true duration, distance, and trackpoint sensors, while reporting `None` for `sample_loss_pct`, `battery_drain_pct_hr`, `fit_valid`, and `cloud_synced`, with `has_radar == False`.
+  • *Given* a connected reference device via ADB,
+  • *When* `pull_device_evidence_adb()` executes,
+  • *Then* it pulls `WorkoutSummaries.db` directly via `exec-out run-as` and verifies the SQLite format 3 magic header.
 - **Invariants**: Zero changes to production runtime logic (`app/src/main/`); existing master table parity intact; Human Decision Gate inviolable.
 
 
@@ -5392,7 +5422,7 @@ The workflow SHALL mandate that:
 - **Description**:
   1. *Word/Prefix Boundary Enforcement (`REQ-PRO-102.1`)*: `verify_system_software_traceability()` (`L3710-3716`) and secondary `REQ-*` scanners (`_collect_test_file_index`, `triage_unbacked_verified_tsts`) in `tools/verify_requirement_governance.py` SHALL enforce word/prefix boundary regex `(?<![A-Za-z0-9_-])REQ-[A-Z0-9_-]+(?![A-Za-z0-9_-])` (replacing `"REQ-" in line` substring checks) so `SYSREQ-DEX-001` or `SYSREQ-TRK-001` never false-match as `REQ-DEX-001` or `REQ-TRK-001`.
   2. *Strict `SYSTEM_REFINED_PREFIXES` Filtering (`REQ-PRO-102.2`)*: `verify_system_software_traceability()` SHALL filter `sys_to_swe` refinement sets strictly to requirements whose prefix belongs to `SYSTEM_REFINED_PREFIXES`, excluding `REQ-PRO-*` and all other `SWE_DERIVED_PREFIXES`.
-  3. *Bidirectional Forward & Reverse Coverage Reporting (`REQ-PRO-102.3`)*: `verify_system_software_traceability()` and `--report-sys-coverage` SHALL populate `report` (`swe_refinement_total_count`, `swe_refinement_covered_count`, `swe_refinement_coverage_pct`, `swe_to_sys_map`) and print BOTH forward (`SYSREQ -> SWE`, `12/12` = `100.0%`) and authentic reverse `System-Refinement` (`SWE -> SYSREQ`, `49/355` = `13.8%`) coverage without breaking `--verify-sys-trace` CI pass when forward coverage is 100% and zero dangling `SYSREQ`s exist.
+  3. *Bidirectional Forward & Reverse Coverage Reporting (`REQ-PRO-102.3`, [Verified] ATT-8437)*: `verify_system_software_traceability()` and `--report-sys-coverage` SHALL populate `report` (`swe_refinement_total_count`, `swe_refinement_covered_count`, `swe_refinement_coverage_pct`, `swe_to_sys_map`) and print BOTH forward (`SYSREQ -> SWE`, `12/12` = `100.0%`) and authentic reverse `System-Refinement` (`SWE -> SYSREQ`) coverage without breaking `--verify-sys-trace` CI pass. In live repository regression testing (`test_scenario_68`), assertions SHALL evaluate structural invariants rather than brittle point-in-time snapshot equality counts: exact forward coverage parity (`covered_count == sysreq_count == 12`), lower-bound floors (`swe_refinement_total_count >= 362`, `swe_refinement_covered_count >= 346`, `swe_refinement_coverage_pct >= 95.0`), and zero pollution from `REQ-DEX-*` or `REQ-PRO-*`.
 - **Requirement Archaeology & Chesterton's Fence Audit**:
   1. *Original Requirement ID & Target*: Extends `REQ-PRO-076.4` / `TST-PRO-076` (`tools/verify_requirement_governance.py`). Targets `verify_system_software_traceability()`, `_collect_test_file_index()`, `triage_unbacked_verified_tsts()`, and `--report-sys-coverage`.
   2. *Historical Origin & Commit Trace*: `REQ-PRO-076` introduced in `ATT-6163` (Sprint `2026-46.4`); amended in `ATT-8146` (Sprint `2026-47.1`, Epic `ATT-8138`) to remediate Finding M2.
@@ -5406,8 +5436,8 @@ The workflow SHALL mandate that:
   • *When* `verify_system_software_traceability()` computes system refinements,
   • *Then* `REQ-PRO-*` IDs are excluded from `sys_to_swe` and `swe_refinement_total_count`.
   • *Given* the live repository,
-  • *When* `--report-sys-coverage` executes,
-  • *Then* it reports both `12/12` (`100.0%`) forward `SYSREQ -> SWE` coverage and the authentic `49/355` (`13.8%`) reverse `System-Refinement` `SWE -> SYSREQ` coverage, while `--verify-sys-trace` exits `0`.
+  • *When* `--report-sys-coverage` and `test_scenario_68` execute,
+  • *Then* it reports `12/12` (`100.0%`) forward `SYSREQ -> SWE` coverage, asserts structural invariants (`covered_count == sysreq_count == 12`, `swe_refinement_total_count >= 362`, `swe_refinement_covered_count >= 346`, `swe_refinement_coverage_pct >= 95.0`), and `--verify-sys-trace` exits `0`.
 - **Invariants**: Zero `app/src/main/` or `docs/system/*.md` edits; `ANT-Android-SDKs` untouched at `160000`; `test_scenario_40..43` compatibility preserved.
 
 ---
@@ -5421,17 +5451,17 @@ The workflow SHALL mandate that:
 - **Rationale**: ASPICE 4.0 Major Finding M2 (`ATT-8147`) identified that `306` of `355` `SYSTEM_REFINED_PREFIXES` REQs lack a structured link to a parent `SYSREQ-*` or an explicit `Derived (SW-only)` classification with rationale, and `7` `RAD`/`CLM` REQs lack prefix classification in `SYSTEM_REFINED_PREFIXES` vs `SWE_DERIVED_PREFIXES`. Completing bidirectional traceability enables full SYS.2/SYS.3 to SWE.1 impact analysis.
 - **Description**:
   1. *Structured `System Requirement(s)` Attribute & Prefix Closure (`REQ-PRO-103.1`)*: `verify_system_software_traceability()` in `tools/verify_requirement_governance.py` SHALL parse `- **System Requirement(s)**:` (accepting one or more declared `SYSREQ-*` IDs or `Derived (SW-only)` with documented rationale) across requirement shards, and SHALL classify the `7` `RAD` (`3`) and `CLM` (`4`) REQs cleanly in `SYSTEM_REFINED_PREFIXES` / `docs/system/system_software_traceability.md` §3.1 while keeping `REQ-PRO-*` in `SWE_DERIVED_PREFIXES`.
-  2. *100% System-Refinement Coverage & System Matrix Synchronization (`REQ-PRO-103.2`)*: All `306` previously unlinked `SYSTEM_REFINED_PREFIXES` REQs (`129` in `req_tracking_cockpit.md` incl. `REQ-TRK-082`, `107` in `req_data_migration_export.md`, `70` in `req_maps_navigation.md`), plus the `49` existing traced REQs and `7` `RAD`/`CLM` REQs, SHALL define `- **System Requirement(s)**:` (`SYSREQ-*` or `Derived (SW-only)`), achieving `100.0%` forward (`12/12` `SYSREQ -> SWE`) and `100.0%` reverse (`SWE -> SYSREQ / Derived (SW-only)`) classification, with `docs/system/sysreq_live_tracking.md`, `docs/system/sysreq_data_exchange.md`, and `docs/system/system_software_traceability.md` synchronized cleanly without violating `System*RequirementsContractTest` or `verify_architecture_and_system_specs()` (`declared == allocated` for the `12` `SYSREQ-*` IDs).
+  2. *100% System-Refinement Coverage & Structural Invariant Verification (`REQ-PRO-103.2`, [Verified] ATT-8437)*: All `SYSTEM_REFINED_PREFIXES` software requirements SHALL define `- **System Requirement(s)**:` (`SYSREQ-*` or `Derived (SW-only)`), achieving `100.0%` forward (`12/12` `SYSREQ -> SWE`) and `100.0%` reverse (`SWE -> SYSREQ / Derived (SW-only)`) classification, with `docs/system/sysreq_live_tracking.md`, `docs/system/sysreq_data_exchange.md`, and `docs/system/system_software_traceability.md` synchronized cleanly without violating `System*RequirementsContractTest` or `verify_architecture_and_system_specs()` (`declared == allocated` for the `12` `SYSREQ-*` IDs). In live repository testing (`test_scenario_70`), assertions SHALL enforce structural invariants rather than brittle point-in-time snapshot equality counts: `reverse_classified_count == swe_refinement_total_count`, `swe_refinement_covered_count + swe_derived_sw_only_count == swe_refinement_total_count`, `unclassified_swe_refinement_reqs == []`, `swe_refinement_total_count >= 362`, and `reverse_classified_pct == 100.0`.
   3. *Reverse Trace Enforcement CLI & Ratchet Gate (`REQ-PRO-103.3`)*: `tools/verify_requirement_governance.py` SHALL expose `--check-reverse-sys-trace` (with `fail_on_unclassified_swe` and `LEGACY_UNLINKED_SYS_REFINEMENT_REQS = frozenset()` ratchet) and extend `--report-sys-coverage` to report `SYSREQ`-linked, `Derived (SW-only)`, and unclassified counts/percentages without breaking `test_scenario_41` or `test_scenario_67` synthetic fixtures.
 - **Requirement Archaeology & Chesterton's Fence Audit**:
   1. *Original Requirement ID & Target*: Extends `REQ-PRO-076` (`ATT-6163`) and `REQ-PRO-102` (`ATT-8146`) via net-new `REQ-PRO-103`. Targets `tools/verify_requirement_governance.py`, `req_tracking_cockpit.md`, `req_data_migration_export.md`, `req_maps_navigation.md`, `req_aftermath_periods.md`, `docs/system/sysreq_live_tracking.md`, `docs/system/sysreq_data_exchange.md`, and `docs/system/system_software_traceability.md`.
-  2. *Historical Origin & Commit Trace*: `ATT-6163` established `REQ-PRO-076` (`12/12` forward gate); `ATT-8146` (`5a263429`) exposed the `49/355` (`13.8%`) reverse gap; `ATT-8147` (Sprint `2026-47.1`, Epic `ATT-8138`) completes bidirectional classification.
-  3. *Root Reason for Existing Formulation*: Forward-only `12/12` check left `306` product requirements untraced to `SYSREQ-*` or `Derived (SW-only)` rationale.
+  2. *Historical Origin & Commit Trace*: `ATT-6163` established `REQ-PRO-076` (`12/12` forward gate); `ATT-8146` (`5a263429`) exposed the `49/355` (`13.8%`) reverse gap; `ATT-8147` (Sprint `2026-47.1`, Epic `ATT-8138`) completes bidirectional classification; `ATT-8437` (Sprint `2026-11-16_03_Nacht`) replaces brittle snapshot equality counts with relational invariants in `test_scenario_68/70`.
+  3. *Root Reason for Existing Formulation*: Forward-only `12/12` check left `306` product requirements untraced to `SYSREQ-*` or `Derived (SW-only)` rationale; initial test suites asserted exact snapshot counts (`== 363`) that broke when new refinement requirements were added.
   4. *Preservation of Core Invariants*: Preserves `12` declared `SYSREQ-*` IDs (`declared == allocated`), `REQ-PRO-102.2` exclusion of `REQ-PRO-*` (`SWE_DERIVED_PREFIXES`), `test_scenario_40..43` & `66..68` compatibility, `System*ContractTest` section/filename invariants, zero `app/src/main/` changes, and `ANT-Android-SDKs@160000`.
 - **Acceptance Criteria (Given-When-Then)**:
   • *Given* every requirement in `SYSTEM_REFINED_PREFIXES` (including `RAD` and `CLM`),
-  • *When* `verify_requirement_governance.py --check-reverse-sys-trace` executes,
-  • *Then* `100.0%` carry either a valid `SYSREQ-*` link or explicit `Derived (SW-only)` rationale (`0` unclassified) and exit code is `0`.
+  • *When* `verify_requirement_governance.py --check-reverse-sys-trace` and `test_scenario_70` execute,
+  • *Then* `100.0%` carry either a valid `SYSREQ-*` link or explicit `Derived (SW-only)` rationale (`0` unclassified, `reverse_classified_count == swe_refinement_total_count`, `swe_refinement_covered_count + swe_derived_sw_only_count == swe_refinement_total_count`, `unclassified_swe_refinement_reqs == []`) and exit code is `0`.
   • *Given* `docs/system/sysreq_live_tracking.md`, `docs/system/sysreq_data_exchange.md`, and `docs/system/system_software_traceability.md`,
   • *When* `--verify-sys-trace --report-sys-coverage` and `System*ContractTest` run,
   • *Then* all `12/12` forward `SYSREQ`s list their refining `REQ-*` IDs, reverse classification is `100.0%`, and all contract checks pass.
@@ -5603,3 +5633,38 @@ The workflow SHALL mandate that:
   • *When* the atomic squash commit is created,
   • *Then* the commit message contains valid `Agent-Role:`, `Agent-Model:`, and `Reviewed-by:` git trailers.
 - **Invariants**: Zero Android production code impact (`app/src/main/`); `ANT-Android-SDKs` untouched at `160000`; existing test fixtures and POSIX flock semantics preserved.
+
+---
+
+### REQ-PRO-109: Stage Transition Precondition Enforcement, Impl-Plan Gate Validation & Bypass Prevention (ATT-8154) [Verified]
+- **Tests**: `TST-PRO-109`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `tools/jira_util.py`, `tools/test_jira_accounts.py`
+- **Rationale**: ASPICE 4.0 Audit Finding `Observation (SUP)` (SUP.1 BP3, GP 2.1.4) identified four critical gate bypass paths in tooling: `submit_stage` auto-advanced parent tickets through multiple stages at once without gate approvals, `final_review_verdict` moved parents past Gate 5 from any prior status, `check_gate` accepted arbitrary non-Impl-Plan keys as long as status was `Erledigt`, and the Stage 6 Pros/Cons check was a naive substring search susceptible to keyword stuffing. Enforcing strict predecessor status preconditions, validating `[Impl-Plan]` subtasks, and demanding structured review ceremony sections guarantees that quality gates cannot be skipped programmatically.
+- **Description**:
+  1. *Strict Predecessor Stage Validation in `submit-stage` (`REQ-PRO-109.1`, [Verified])*: `tools/jira_util.py submit-stage` SHALL enforce that the parent ticket is in the exact expected predecessor stage before creating or advancing a stage sub-task. For Stage 1 (`spec["parent_stage"] == "analysis"`), the parent SHALL be in `zu erledigen` (advancing single-step to `analysis` per Rule 78) or already in `analysis`; for Stages 2 through 5, `submit-stage` SHALL strictly require that `current_parent_status == desired_parent_stage` (`test spec`, `implementation plan`, `implementation`, `test` respectively), rejecting any multi-stage skip (such as calling Stage 4 while parent is in `Analysis`) with an exit code of 1.
+  2. *Strict Stage 6 Gate 5 Prerequisite Validation in `final-review-verdict` (`REQ-PRO-109.2`, [Verified])*: `tools/jira_util.py final-review-verdict` SHALL strictly reject execution on parent tickets that are not in `Final Review (Agent)`, prohibiting premature parent stage advancement past Gate 5, while preserving `--bounce-target` healing and standard bounce transitions back to `Implementation`, `Analysis`, or `Zu erledigen`.
+  3. *Strict Subtask & Impl-Plan Summary Validation in `check-gate` (`REQ-PRO-109.3`, [Verified])*: `tools/jira_util.py check-gate` SHALL query `issuetype`, `summary`, `status`, and `parent`, validating that `issue_key` is a sub-task (`issuetype.subtask == True`) and that its summary matches the `[Impl-Plan]` prefix/pattern (Gate 3). If the issue is not a sub-task or does not represent an `[Impl-Plan]` subtask, it SHALL reject verification with an exit code of 1 regardless of issue status.
+  4. *Structured Pros/Cons & Recommendation Validation in `final-review-verdict` (`REQ-PRO-109.4`, [Verified])*: `tools/jira_util.py final-review-verdict` on `PASS` SHALL validate that the report text contains structured markdown sections with non-empty content for Pros (`* *Pros*:` or `Pros (Was ist gut/gelungen?)`), Cons / Defects (`* *Cons*:` or `Cons / Auffälligkeiten / Defects Identified`), and Recommendation (`* *Würdest du das freigeben?*:` or `Freigabe-Empfehlung`), or a structured markdown table with >= 2 evaluated options, rejecting bare keyword stuffing.
+  5. *Sanctioned Workflow & Protection Invariants (`REQ-PRO-109.5`, [Verified])*: Tooling changes SHALL strictly preserve all sanctioned Coordinator workflows (`pack-sprint`, `return-unstarted`, `carryover-wip`, `archive-po-acceptance`, `defer-systemtest`), `ATT-8153` QA non-conformance escalation, `ATT-8426` decoupled 7-day review currency, and post-bounce parent transitions back to `Final Review (Agent)`.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-109` refining `REQ-PRO-016` (Human Gate & Preconditions), `REQ-PRO-058` (Stage 6 Carbon Review), and `REQ-PRO-060` (Stage submissions). Targets `tools/jira_util.py` and `tools/test_jira_accounts.py`.
+  2. *Historical Origin & Commit Trace*: Sprint 2026-11-16_03_Nacht via ticket `ATT-8154` under Epic `ATT-8138` (ASPICE 4.0 Audit Remediation).
+  3. *Root Reason for Existing Formulation*: Early composite CLI commands auto-walked parent stages forward in a loop for local development convenience, creating bypass paths observed during ASPICE audit.
+  4. *Preservation of Core Invariants*: Inviolable human decision gate (`REQ-PRO-016`), role separation (`agent1` vs `agent2`), 3-bounce healing loop, POSIX flock merge lock, pure Python stdlib offline resilience strictly preserved.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* a parent ticket in `Analysis`,
+  • *When* `tools/jira_util.py submit-stage <PARENT> 4 ...` is invoked,
+  • *Then* the command fails with an error and non-zero exit code, rejecting multi-stage forward jumping.
+  • *Given* a parent ticket not in `Final Review (Agent)` (e.g. in `Implementation` or `Test`),
+  • *When* `tools/jira_util.py final-review-verdict <PARENT> PASS ...` is invoked,
+  • *Then* the command fails with an error and non-zero exit code.
+  • *Given* an issue key that is not an `[Impl-Plan]` subtask (e.g. an Analysis subtask or parent ticket),
+  • *When* `tools/jira_util.py check-gate <KEY>` is run,
+  • *Then* the command fails with an error and non-zero exit code even if the status is `Erledigt`.
+  • *Given* a Stage 6 review report with plain keyword stuffing but without structured section headers,
+  • *When* `tools/jira_util.py final-review-verdict <PARENT> PASS ...` is invoked,
+  • *Then* the command rejects the report with an error.
+- **Invariants**: Zero Android production code impact (`app/src/main/`); `ANT-Android-SDKs` untouched at `160000 commit 0e8cea714a231fb9565170d4ed01eafa868f9798`; existing test fixtures and POSIX flock semantics preserved.

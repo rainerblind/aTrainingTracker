@@ -178,21 +178,24 @@
   3. The directory `docs/management/` SHALL reside outside `docs/engineering/` to preserve Rule 67 canonical directory boundaries.
   4. An automated build contract test in `ReleaseCiAndLintConfigContractTest.kt` SHALL verify the presence and core section headers of `docs/management/cm_plan.md` and SHALL assert that `.gitmodules` contains zero floating branch directives.
 
-### REQ-STP-010: Project Risk Register & Sprint-Start Review Governance [Verified]
+### REQ-STP-010: Project Risk Register, ASPICE MAN.5 & Per-Sprint Dual-Ceremony Review Governance [Verified]
 - **Tests**: `TST-STP-010`
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit / Review
 - **Implementation**: `docs/management/risk_register.md`, `.agents/skills/sprint-planner/SKILL.md`, `ReleaseCiAndLintConfigContractTest.kt`
-- **Rationale**: ASPICE MAN.3 (Finding B-06) requires a formal project and product risk register (MAN.3.BP5) with probability, impact, risk exposure, and mitigation tracking. Without a version-controlled risk register and an established review cadence at Sprint-Start, project and technical risks remain unmonitored. Establishing `docs/management/risk_register.md` and integrating an exception-based risk review into Ceremony 1 ensures continuous risk management without disrupting autonomous sprint execution.
+- **Rationale**: ASPICE 4.0 MAN.5 (Risk Management, BP1–BP6) mandates a formal risk management process covering both technical product and operational process risks. The risk register must establish an objective 5x5 scoring matrix, track concrete mitigations for high-exposure risks, and be continuously monitored across sprint lifecycles. Integrating mandatory review checkpoints at both Ceremony 1 (Sprint-Start) and Ceremony 2 (Sprint-Review/Close) guarantees that emerging risks and mitigation progress are actively steered without open-loop drift.
 - **Description**:
-  1. The project SHALL maintain an authoritative Project Risk Register in `docs/management/risk_register.md` defining:
-     - 5x5 Probability and Impact assessment scales ($P, I \in [1..5]$) and Risk Exposure rating ($E = P \times I$: Low 1–6, Medium 8–12, High 15–25).
-     - Initial registered risks covering Single Human Bottleneck (PR-01), AI Model Drift & Context Regressions (PR-02), Google Play Policy & Target SDK Shifts (PR-03), and Sensor Hardware Fragmentation (PR-04).
-     - Clear ownership, last-reviewed date, mitigation strategy, and linked mitigation tickets for all High-exposure risks.
-  2. Ceremony 1 (Sprint-Start) in `.agents/skills/sprint-planner/SKILL.md` SHALL incorporate an explicit exception-based risk register review checkpoint where the Coordinator inspects `risk_register.md` and updates the last-reviewed date.
+  1. The project SHALL maintain an authoritative Project Risk Register in `docs/management/risk_register.md` adhering to ASPICE 4.0 `MAN.5` (BP1–BP6), preserving `MAN.3.BP5` legacy reference for backward compatibility, and defining:
+     - 5x5 Probability and Impact assessment scales ($P, I \in [1..5]$) and Risk Exposure tiers ($E = P \times I$: Low 1–6, Medium 8–12, High 15–25).
+     - Cataloged product, technical, and process risks: Single Human Bottleneck (`RISK-001`), AI Model Drift & Context Regressions (`RISK-002`), Google Play Policy & FGS Limits (`RISK-003`), Sensor Fragmentation (`RISK-004`), Cloud API Throttling (`RISK-005`), SQLite Migrations (`RISK-006`), Subagent Co-location (`RISK-007`), Human PO Review Bottleneck (`RISK-008`), Gate Rubber-Stamping (`RISK-009`), Governance Rule Churn (`RISK-010`), and AI Provider Rate Limits & Model Shifts (`RISK-011`).
+     - Empirical re-scoring of `RISK-002` ($P=4, I=4 \rightarrow E=16$, High Exposure), resolved concrete mitigation links, accurate `ATT-7902` tests-only framing, and closure of the historical `2026-46.6 (Close)` audit gap.
+     - Clear ownership, last-reviewed date, mitigation strategy, and mandatory linked Jira remediation tickets for all High-exposure risks ($E \ge 15$).
+  2. Ceremony 1 (Sprint-Start) and Ceremony 2 (Sprint-Review/Close) in `.agents/skills/sprint-planner/SKILL.md` SHALL incorporate mandatory risk review checkpoints:
+     - Ceremony 1: Coordinator inspects `risk_register.md` and verifies baseline risks for the starting sprint.
+     - Ceremony 2: Coordinator SHALL review `risk_register.md` and record either an updated risk evaluation (if new risks or mitigations surfaced) or an explicit 'No Change / Risks Monitored & Stable' row for the closing sprint.
   3. The directory `docs/management/` SHALL reside outside `docs/engineering/` to preserve Rule 67 canonical directory boundaries.
-  4. An automated build contract test in `ReleaseCiAndLintConfigContractTest.kt` SHALL verify the presence, mandatory risk table columns, initial risk identifiers, and Ceremony 1 skill integration of `docs/management/risk_register.md`.
+  4. An automated build contract test in `ReleaseCiAndLintConfigContractTest.kt` SHALL verify the presence, mandatory section headers (`MAN.5` and `MAN.3.BP5`), registered risks `RISK-001` through `RISK-011`, High-exposure mitigation tickets (`ATT-6148`, `ATT-6150`), and Ceremony 1 & 2 integration in `.agents/skills/sprint-planner/SKILL.md`.
 
 
 

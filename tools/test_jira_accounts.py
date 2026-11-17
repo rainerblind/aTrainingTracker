@@ -19,8 +19,9 @@ from unittest.mock import patch, MagicMock
 # Ensure tools directory is on sys.path
 REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 TOOLS_DIR = os.path.join(REPO_ROOT, "tools")
-if TOOLS_DIR not in sys.path:
-    sys.path.insert(0, TOOLS_DIR)
+while TOOLS_DIR in sys.path:
+    sys.path.remove(TOOLS_DIR)
+sys.path.insert(0, TOOLS_DIR)
 
 import jira_util
 import review_agent
@@ -869,8 +870,9 @@ class TestJiraCliTooling(unittest.TestCase):
                 content = f.read()
             self.assertIn("NON-COMPLIANT", content)
             self.assertIn("Corrective Action Ticket:", content)
-            self.assertIn("[ATT-9001]", content)
-            self.assertIn("[ATT-9003]", content)
+            self.assertIn("**ATT-9001**:", content)
+            self.assertIn("**ATT-9003**:", content)
+            self.assertIn("[ATT-CA-", content)
 
     @patch("jira_util.jira_request")
     def test_qa_audit_enforces_independent_role(self, mock_request):
@@ -1237,7 +1239,8 @@ class TestJiraCliTooling(unittest.TestCase):
         mock_create.assert_not_called()
 
     def test_get_next_review_subsystem_unreviewed_and_rotation(self):
-        """TST-PRO-095.2: Parsing coverage_matrix.md and rotating through UNREVIEWED and oldest AUDITED slices."""
+        """TST-PRO-095.2 / ATT-8426: Parsing coverage_matrix.md and rotating through UNREVIEWED and oldest AUDITED slices."""
+        # Traces to: REQ-PRO-095.2, TST-PRO-095.2
         with tempfile.TemporaryDirectory() as tmpdir:
             matrix_file = os.path.join(tmpdir, "coverage_matrix.md")
             # 1. When UNREVIEWED rows exist, pick first UNREVIEWED
@@ -1246,14 +1249,16 @@ class TestJiraCliTooling(unittest.TestCase):
                 "| Subsystem Domain | Target Path(s) | Last Audited Date | Audited Commit SHA | Gemini Model | Claude Model | Status | Active / Next Target |\n"
                 "| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |\n"
                 "| `tracker/` | `app/tracker/` | 2026-11-01 | abc | Pro | Sonnet | `AUDITED` | - |\n"
-                "| `banalservice/` | `app/banalservice/` | - | - | - | - | `UNREVIEWED` | `NEXT` |\n"
+                "| `repositories/` | `app/repositories/` | - | - | - | - | `UNREVIEWED` | `NEXT` |\n"
+                "| `cloud/` | `app/cloud/` | - | - | - | - | `UNREVIEWED` | - |\n"
+                "| `banalservice/` | `app/banalservice/` | - | - | - | - | `UNREVIEWED` | - |\n"
                 "| `database/` | `app/database/` | - | - | - | - | `UNREVIEWED` | - |\n"
             )
             with open(matrix_file, "w", encoding="utf-8") as f:
                 f.write(content_unreviewed)
 
             domain, path, status = jira_util.get_next_review_subsystem(matrix_path=matrix_file)
-            self.assertEqual(domain, "banalservice/")
+            self.assertEqual(domain, "repositories/")
             self.assertEqual(status, "UNREVIEWED")
 
             # 2. When all are AUDITED, pick oldest date
@@ -1262,53 +1267,54 @@ class TestJiraCliTooling(unittest.TestCase):
                 "| Subsystem Domain | Target Path(s) | Last Audited Date | Audited Commit SHA | Gemini Model | Claude Model | Status | Active / Next Target |\n"
                 "| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |\n"
                 "| `tracker/` | `app/tracker/` | 2026-11-10 | abc | Pro | Sonnet | `AUDITED` | - |\n"
-                "| `banalservice/` | `app/banalservice/` | 2026-11-01 | def | Pro | Sonnet | `AUDITED` | - |\n"
+                "| `repositories/` | `app/repositories/` | 2026-11-01 | def | Pro | Sonnet | `AUDITED` | - |\n"
                 "| `database/` | `app/database/` | 2026-11-05 | ghi | Pro | Sonnet | `AUDITED` | - |\n"
             )
             with open(matrix_file, "w", encoding="utf-8") as f:
                 f.write(content_all_audited)
 
             domain2, path2, status2 = jira_util.get_next_review_subsystem(matrix_path=matrix_file)
-            self.assertEqual(domain2, "banalservice/")
+            self.assertEqual(domain2, "repositories/")
             self.assertEqual(status2, "AUDITED")
 
     def test_is_weekly_review_overdue(self):
-        """TST-PRO-095.3: Overdue determination based on elapsed days and review directory."""
+        """TST-PRO-095.4 / ATT-8426: Decoupled 7-day review currency check (not blocked by UNREVIEWED)."""
+        # Traces to: REQ-PRO-095.3, REQ-PRO-095.4, TST-PRO-095.4
         with tempfile.TemporaryDirectory() as tmpdir:
-            matrix_file = os.path.join(tmpdir, "coverage_matrix.md")
             reviews_dir = os.path.join(tmpdir, "code_reviews")
             os.makedirs(reviews_dir, exist_ok=True)
 
+            # 1. No review files -> overdue (True)
+            self.assertTrue(jira_util.is_weekly_review_overdue(reviews_dir=reviews_dir, days_threshold=7))
+
+            # 2. Recent review (2 days ago) -> not overdue (False), even when get_next_review_subsystem has UNREVIEWED slices
             two_days_ago = (datetime.now() - timedelta(days=2)).strftime("%Y-%m-%d")
-            content = (
-                "# Matrix\n\n"
-                "| Subsystem Domain | Target Path(s) | Last Audited Date | Audited Commit SHA | Gemini Model | Claude Model | Status | Active / Next Target |\n"
-                "| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |\n"
-                f"| `tracker/` | `app/tracker/` | {two_days_ago} | abc | Pro | Sonnet | `AUDITED` | - |\n"
-            )
-            with open(matrix_file, "w", encoding="utf-8") as f:
-                f.write(content)
-            with open(os.path.join(reviews_dir, f"{two_days_ago}_dual_vendor_code_review.md"), "w") as f:
+            review_file = os.path.join(reviews_dir, f"{two_days_ago}_dual_vendor_code_review.md")
+            with open(review_file, "w", encoding="utf-8") as f:
                 f.write("# Review")
 
-            with patch("jira_util.get_next_review_subsystem", return_value=("tracker/", "app/tracker/", "AUDITED")):
+            with patch("jira_util.get_next_review_subsystem", return_value=("repositories/", "app/repositories/", "UNREVIEWED")):
                 overdue = jira_util.is_weekly_review_overdue(reviews_dir=reviews_dir, days_threshold=7)
-                self.assertFalse(overdue)
+                self.assertFalse(overdue, "Recent review within 7 days must not be overdue even if slices remain UNREVIEWED")
 
+            # 3. Old review (10 days ago) -> overdue (True)
+            os.remove(review_file)
             ten_days_ago = (datetime.now() - timedelta(days=10)).strftime("%Y-%m-%d")
-            os.remove(os.path.join(reviews_dir, f"{two_days_ago}_dual_vendor_code_review.md"))
             with open(os.path.join(reviews_dir, f"{ten_days_ago}_dual_vendor_code_review.md"), "w") as f:
                 f.write("# Review")
 
-            with patch("jira_util.get_next_review_subsystem", return_value=("tracker/", "app/tracker/", "AUDITED")):
-                overdue_10 = jira_util.is_weekly_review_overdue(reviews_dir=reviews_dir, days_threshold=7)
-                self.assertTrue(overdue_10)
+            overdue_10 = jira_util.is_weekly_review_overdue(reviews_dir=reviews_dir, days_threshold=7)
+            self.assertTrue(overdue_10, "Review older than 7 days must be overdue")
+
+            # 4. Non-existent directory -> overdue (True)
+            self.assertTrue(jira_util.is_weekly_review_overdue(reviews_dir=os.path.join(tmpdir, "nonexistent"), days_threshold=7))
 
     @patch("jira_util.create_issue", return_value="ATT-9200")
     @patch("jira_util.paged_jql_search", return_value=[])
     @patch("jira_util.get_config", return_value={"JIRA_URL": "https://example.atlassian.net"})
     def test_ensure_weekly_review_creates_and_deduplicates(self, mock_config, mock_search, mock_create):
-        """TST-PRO-095.3: Automated weekly review ticket creates when overdue/missing and reuses when open."""
+        """TST-PRO-095.3 / ATT-8426: Automated review ticket creation with generic models and Claude non-simulation."""
+        # Traces to: REQ-PRO-095.1, REQ-PRO-095.3, TST-PRO-095.3, TST-PRO-095.5
         with patch("jira_util.is_weekly_review_overdue", return_value=True), \
              patch("jira_util.get_next_review_subsystem", return_value=("tracker/", "app/tracker/", "UNREVIEWED")):
             key1 = jira_util.ensure_weekly_review_ticket(role="coordinator")
@@ -1316,6 +1322,10 @@ class TestJiraCliTooling(unittest.TestCase):
             mock_create.assert_called_once()
             self.assertTrue(mock_create.call_args[1].get("rank_top"))
             self.assertEqual(mock_create.call_args[1].get("parent_key"), "ATT-232")
+            desc = mock_create.call_args[1].get("description", "")
+            self.assertIn("Current Top Model of Google Gemini + Current Top Model of Anthropic Claude", desc)
+            self.assertIn("Claude Non-Simulation Protocol", desc)
+            self.assertIn("PENDING / EXTERNAL HANDOFF REQUIRED", desc)
 
         # Deduplication test: when already open
         mock_create.reset_mock()
@@ -1825,6 +1835,7 @@ class TestSeparatedAuthorshipAndGateEvidence(unittest.TestCase):
 
         # 5. Stage 1 submission (no preceding stage) -> succeeds
         mock_transition.reset_mock()
+        parent_info["fields"]["status"]["name"] = "Analysis"
         st_key = jira_util.submit_stage("ATT-9000", "1", "Stage 1 analysis", role="agent2")
         self.assertEqual(st_key, "ATT-9999")
 
@@ -2278,7 +2289,343 @@ Verdict: PASS."""
             for k in keys1:
                 self.assertIn(k, report_content)
 
+    @patch("jira_util.jira_request")
+    def test_tst_pro_091_11_dedicated_corrective_action_creation_and_deduplication(self, mock_request):
+        # TST-PRO-091.11: Dedicated Corrective Action Ticket Creation & Deduplication Test
+        created_issues = []
+        def mock_jira(url, method="GET", payload=None, role="qa"):
+            if "/rest/agile/1.0/board" in url and "/sprint" not in url:
+                return {"values": [{"id": 1, "name": "B"}]}
+            elif "/sprint?state=active" in url:
+                return {"values": [{"id": 440, "name": "Sprint 2026-48.1", "state": "active"}]}
+            elif "/rest/agile/1.0/sprint/440/issue" in url:
+                return {
+                    "issues": [
+                        {
+                            "key": "ATT-9401",
+                            "fields": {
+                                "summary": "Ticket 1 failing role separation",
+                                "status": {"name": "Erledigt"},
+                                "issuetype": {"subtask": False},
+                                "subtasks": [
+                                    {"key": "ATT-9402", "fields": {"summary": "[Analysis] Task", "status": {"name": "Erledigt"}}, "comments": [{"author": {"accountId": jira_util.ROLE_ACCOUNT_IDS["agent1"]}, "body": "GATE_VERDICT: PASS"}]}
+                                ],
+                            },
+                        },
+                        {
+                            "key": "ATT-9403",
+                            "fields": {
+                                "summary": "Ticket 2 failing role separation",
+                                "status": {"name": "Erledigt"},
+                                "issuetype": {"subtask": False},
+                                "subtasks": [
+                                    {"key": "ATT-9404", "fields": {"summary": "[Analysis] Task", "status": {"name": "Erledigt"}}, "comments": [{"author": {"accountId": jira_util.ROLE_ACCOUNT_IDS["agent1"]}, "body": "GATE_VERDICT: PASS"}]}
+                                ],
+                            },
+                        },
+                    ]
+                }
+            elif method == "POST" and "/rest/api/2/issue" in url:
+                new_key = f"ATT-CA-{len(created_issues) + 100}"
+                created_issues.append({"key": new_key, "payload": payload})
+                return {"key": new_key}
+            elif "/rest/api/2/search" in url:
+                return {"issues": []}
+            return {}
+
+        mock_request.side_effect = mock_jira
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            out_file = os.path.join(tmpdir, "audit.md")
+            _, results = jira_util.qa_audit(sample_size=2, out_path=out_file, role="qa", repo_root=tmpdir)
+            self.assertEqual(len(results), 2)
+            self.assertFalse(results[0]["compliant"])
+            self.assertFalse(results[1]["compliant"])
+
+            # Verify deduplicated corrective action ticket created
+            self.assertIn("ca_keys", results[0])
+            self.assertIn("ca_keys", results[1])
+            self.assertEqual(results[0]["ca_keys"], results[1]["ca_keys"])
+            self.assertNotEqual(results[0]["ca_keys"][0], results[0]["key"])
+            self.assertNotEqual(results[1]["ca_keys"][0], results[1]["key"])
+
+            with open(out_file, "r", encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("Corrective Action Ticket:", content)
+            self.assertNotIn("Corrective Action Ticket: [ATT-9401]", content)
+            self.assertNotIn("Corrective Action Ticket: [ATT-9403]", content)
+
+    def test_tst_pro_091_13_ceremony2_retrospective_qa_tracking_protocol(self):
+        # TST-PRO-091.13: Ceremony 2 Retrospective QA Tracking Protocol Test
+        skill_path = os.path.join(REPO_ROOT, ".agents", "skills", "sprint-planner", "SKILL.md")
+        with open(skill_path, "r", encoding="utf-8") as f:
+            skill_text = f.read()
+        self.assertIn("QA Findings & Corrective Actions", skill_text)
+        self.assertIn("> 2 sprints", skill_text)
+        self.assertIn("PO Escalation", skill_text)
+
+
+
+class TestGateBypassPrevention(unittest.TestCase):
+    """
+    REQ-PRO-109 / TST-PRO-109: Stage & Gate Transition Bypass Prevention.
+    Verifies:
+    - TST-PRO-109.1: Predecessor Stage Validation in submit-stage
+    - TST-PRO-109.2: Parent Status Validation in final-review-verdict
+    - TST-PRO-109.3: Gate Subtask & Summary Validation in check-gate
+    - TST-PRO-109.4: Structured Pros/Cons Validation in Stage 6 Reviews
+    - TST-PRO-109.5: Coordinator Stage & Gate Operations Preserved
+    """
+
+    @patch("jira_util.transition_issue")
+    @patch("jira_util.create_subtask", return_value="ATT-8888")
+    @patch("jira_util.update_issue_description")
+    @patch("jira_util.jira_request")
+    @patch("jira_util.get_config", return_value={"JIRA_URL": "https://example.atlassian.net"})
+    def test_tst_pro_109_1_submit_stage_predecessor_equality_and_skipping(
+        self, mock_config, mock_request, mock_update, mock_create, mock_transition
+    ):
+        """TST-PRO-109.1: submit-stage rejects skips while permitting Stage 1 from Zu erledigen."""
+        # 1. Stage 1 from 'Zu erledigen' -> succeeds and transitions parent to 'analysis'
+        mock_request.return_value = {
+            "key": "ATT-100",
+            "fields": {
+                "issuetype": {"name": "Feature", "subtask": False},
+                "status": {"name": "Zu erledigen"},
+                "summary": "Parent Feature",
+                "subtasks": [],
+            },
+        }
+        subtask_key = jira_util.submit_stage("ATT-100", "1", "Stage 1 Analysis Deliverable", role="agent1")
+        self.assertEqual(subtask_key, "ATT-8888")
+        mock_transition.assert_any_call("ATT-100", "analysis", role="agent1", inject_context=False)
+
+        # 2. Stage 1 from 'Analysis' -> succeeds without re-transitioning parent to analysis
+        mock_transition.reset_mock()
+        mock_request.return_value["fields"]["status"]["name"] = "Analysis"
+        subtask_key = jira_util.submit_stage("ATT-100", "1", "Stage 1 Analysis Deliverable", role="agent1")
+        self.assertEqual(subtask_key, "ATT-8888")
+        # Ensure parent was not re-transitioned to analysis
+        for call in mock_transition.call_args_list:
+            self.assertNotEqual(call[0][0], "ATT-100")
+
+        # 3. Stage 1 from invalid status ('Implementation') -> rejected with exit code 1
+        mock_request.return_value["fields"]["status"]["name"] = "Implementation"
+        with self.assertRaises(SystemExit) as cm:
+            jira_util.submit_stage("ATT-100", "1", "Stage 1 Analysis Deliverable", role="agent1")
+        self.assertEqual(cm.exception.code, 1)
+
+        # 4. Stage 4 from 'Analysis' (skipping Gates 1..3) -> rejected with exit code 1
+        mock_request.return_value["fields"]["status"]["name"] = "Analysis"
+        with self.assertRaises(SystemExit) as cm:
+            jira_util.submit_stage("ATT-100", "4", "Stage 4 Implementation Summary", role="agent1")
+        self.assertEqual(cm.exception.code, 1)
+
+        # 5. Stage 4 from 'Implementation' (matching predecessor gate) -> succeeds
+        mock_request.return_value["fields"]["status"]["name"] = "Implementation"
+        subtask_key = jira_util.submit_stage("ATT-100", "4", "Stage 4 Implementation Summary", role="agent1")
+        self.assertEqual(subtask_key, "ATT-8888")
+
+        # 6. Stage 3 from 'Zu erledigen' (skipping Stage 1 and 2) -> rejected with exit code 1
+        mock_request.return_value["fields"]["status"]["name"] = "Zu erledigen"
+        with self.assertRaises(SystemExit) as cm:
+            jira_util.submit_stage("ATT-100", "3", "Stage 3 Impl Plan", role="agent1")
+        self.assertEqual(cm.exception.code, 1)
+
+    @patch("jira_util.assign_issue")
+    @patch("jira_util.transition_issue")
+    @patch("jira_util.add_comment")
+    @patch("jira_util.jira_request")
+    @patch("jira_util.get_config", return_value={"JIRA_URL": "https://example.atlassian.net"})
+    def test_tst_pro_109_2_final_review_verdict_rejects_non_agent_review_parent(
+        self, mock_config, mock_request, mock_comment, mock_transition, mock_assign
+    ):
+        """TST-PRO-109.2: final-review-verdict strictly requires parent in 'Final Review (Agent)'."""
+        structured_pass_report = (
+            "h3. Cold Final Review (Agent) — Executive Summary\n"
+            "* *Commit*: a1b2c3d4e5\n"
+            "* *What Changed*: Tested changes\n"
+            "* *Pros (Was ist gut/gelungen?)*:\n"
+            "  * Implementation satisfies all acceptance criteria.\n"
+            "* *Cons / Auffälligkeiten / Defects Identified (Was ist kritisch/unvollständig?)*:\n"
+            "  * Keine kritischen Mängel festgestellt\n"
+            "* *Würdest du das freigeben? (Freigabe-Empfehlung)*:\n"
+            "  * **JA — Freigabe empfohlen**: Release approved.\n"
+        )
+
+        # 1. When parent is in 'Test', execution is rejected with exit code 1 (Gate 5 bypass prevented)
+        mock_request.return_value = {
+            "key": "ATT-200",
+            "fields": {
+                "issuetype": {"name": "Bug", "subtask": False},
+                "status": {"name": "Test"},
+                "comment": {"comments": []},
+            },
+        }
+        with self.assertRaises(SystemExit) as cm:
+            jira_util.final_review_verdict("ATT-200", "PASS", structured_pass_report, role="agent2")
+        self.assertEqual(cm.exception.code, 1)
+
+        # 2. When parent is in 'Implementation', execution is rejected
+        mock_request.return_value["fields"]["status"]["name"] = "Implementation"
+        with self.assertRaises(SystemExit) as cm:
+            jira_util.final_review_verdict("ATT-200", "BOUNCE", "Need rework.", role="agent2")
+        self.assertEqual(cm.exception.code, 1)
+
+        # 3. When parent is in 'Zu erledigen', execution is rejected
+        mock_request.return_value["fields"]["status"]["name"] = "Zu erledigen"
+        with self.assertRaises(SystemExit) as cm:
+            jira_util.final_review_verdict("ATT-200", "PASS", structured_pass_report, role="agent2")
+        self.assertEqual(cm.exception.code, 1)
+
+        # 4. When parent is strictly in 'Final Review (Agent)', execution proceeds cleanly
+        mock_request.return_value["fields"]["status"]["name"] = "Final Review (Agent)"
+        res = jira_util.final_review_verdict("ATT-200", "PASS", structured_pass_report, role="agent2")
+        self.assertEqual(res, "PASS")
+        mock_transition.assert_called_with("ATT-200", "final review (human)", role="agent2", inject_context=False)
+
+    @patch("jira_util.jira_request")
+    @patch("jira_util.get_config", return_value={"JIRA_URL": "https://example.atlassian.net"})
+    def test_tst_pro_109_3_check_gate_subtask_and_summary_validation(self, mock_config, mock_request):
+        """TST-PRO-109.3: check-gate verifies subtask type, [Impl-Plan] summary, and Erledigt status."""
+        # 1. Rejects non-subtask issue
+        mock_request.return_value = {
+            "key": "ATT-300",
+            "fields": {
+                "issuetype": {"name": "Bug", "subtask": False},
+                "summary": "[Impl-Plan] Architecture Design",
+                "status": {"name": "Erledigt"},
+            },
+        }
+        with self.assertRaises(SystemExit) as cm:
+            jira_util.check_gate("ATT-300", role="agent1")
+        self.assertEqual(cm.exception.code, 1)
+
+        # 2. Rejects subtask with wrong stage summary (e.g. [Analysis])
+        mock_request.return_value = {
+            "key": "ATT-301",
+            "fields": {
+                "issuetype": {"name": "Sub-task", "subtask": True},
+                "summary": "[Analysis] Problem Domain Analysis",
+                "status": {"name": "Erledigt"},
+            },
+        }
+        with self.assertRaises(SystemExit) as cm:
+            jira_util.check_gate("ATT-301", role="agent1")
+        self.assertEqual(cm.exception.code, 1)
+
+        # 3. Rejects authentic [Impl-Plan] subtask when status is not Erledigt
+        mock_request.return_value = {
+            "key": "ATT-302",
+            "fields": {
+                "issuetype": {"name": "Sub-task", "subtask": True},
+                "summary": "[Impl-Plan] Atomic Implementation Steps",
+                "status": {"name": "In Progress"},
+            },
+        }
+        with self.assertRaises(SystemExit) as cm:
+            jira_util.check_gate("ATT-302", role="agent1")
+        self.assertEqual(cm.exception.code, 1)
+
+        # 4. Accepts authentic [Impl-Plan] subtask in Erledigt status
+        mock_request.return_value = {
+            "key": "ATT-303",
+            "fields": {
+                "issuetype": {"name": "Sub-task", "subtask": True},
+                "summary": "[Impl-Plan] Atomic Implementation Steps",
+                "status": {"name": "Erledigt"},
+            },
+        }
+        result = jira_util.check_gate("ATT-303", role="agent1")
+        self.assertTrue(result)
+
+    def test_tst_pro_109_4_stage6_structured_pros_cons_validation(self):
+        """TST-PRO-109.4: validate_stage6_review_structure enforces Pros/Cons/Recommendation structure."""
+        # 1. Valid bold bullets format
+        valid_bullets = (
+            "* *Pros*:\n"
+            "  * Solid error handling and tests.\n"
+            "* *Cons*:\n"
+            "  * Minor log verbosity.\n"
+            "* *Würdest du das freigeben? (Freigabe-Empfehlung)*:\n"
+            "  * **JA — Freigabe empfohlen**.\n"
+        )
+        is_valid, errors = jira_util.validate_stage6_review_structure(valid_bullets)
+        self.assertTrue(is_valid)
+        self.assertEqual(errors, [])
+
+        # 2. Valid markdown headers format
+        valid_headers = (
+            "### Pros\n"
+            "Clean architecture and zero regressions.\n"
+            "### Cons / Auffälligkeiten\n"
+            "None identified.\n"
+            "### Freigabe-Empfehlung\n"
+            "Approved for production.\n"
+        )
+        is_valid, errors = jira_util.validate_stage6_review_structure(valid_headers)
+        self.assertTrue(is_valid)
+        self.assertEqual(errors, [])
+
+        # 3. Valid comparison table format (>= 2 data options)
+        valid_table = (
+            "| Option | Pros | Cons |\n"
+            "|---|---|---|\n"
+            "| Approach A | Minimal change | Limited scalability |\n"
+            "| Approach B | Robust design | Slightly higher complexity |\n"
+        )
+        is_valid, errors = jira_util.validate_stage6_review_structure(valid_table)
+        self.assertTrue(is_valid)
+        self.assertEqual(errors, [])
+
+        # 4. Bare keyword stuffing in prose without structured headers or content fails
+        keyword_stuffing = (
+            "We checked the pros and cons and would you release this freigabe-empfehlung without any headers."
+        )
+        is_valid, errors = jira_util.validate_stage6_review_structure(keyword_stuffing)
+        self.assertFalse(is_valid)
+        self.assertGreater(len(errors), 0)
+
+        # 5. Header present but empty content below header fails
+        empty_section = (
+            "* *Pros*:\n"
+            "* *Cons*:\n"
+            "  * Missing pros content above.\n"
+            "* *Würdest du das freigeben? (Freigabe-Empfehlung)*:\n"
+            "  * JA\n"
+        )
+        is_valid, errors = jira_util.validate_stage6_review_structure(empty_section)
+        self.assertFalse(is_valid)
+
+        # 6. Empty report text fails
+        is_valid, errors = jira_util.validate_stage6_review_structure("")
+        self.assertFalse(is_valid)
+
+    @patch("jira_util.jira_request")
+    @patch("jira_util.get_config", return_value={"JIRA_URL": "https://example.atlassian.net"})
+    def test_tst_pro_109_5_coordinator_stage_operations_preserved(self, mock_config, mock_request):
+        """TST-PRO-109.5: Coordinator role operations remain intact and unimpeded."""
+        # Verify role account and token resolution
+        config = {
+            "JIRA_COORDINATOR_USER": "coord@example.com",
+            "JIRA_COORDINATOR_TOKEN": "coord_token",
+            "JIRA_USER": "fallback@example.com",
+            "JIRA_TOKEN": "fallback_token",
+        }
+        user, token = jira_util.resolve_account("coordinator", config)
+        self.assertEqual(user, "coord@example.com")
+        self.assertEqual(token, "coord_token")
+
+        # Verify coordinator can query status without gate bypass interference
+        mock_request.return_value = {
+            "key": "ATT-400",
+            "fields": {"status": {"name": "Analysis"}},
+        }
+        status = jira_util.print_status("ATT-400", role="coordinator")
+        self.assertEqual(status, "Analysis")
+
 
 if __name__ == "__main__":
     unittest.main()
+
 

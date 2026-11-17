@@ -3,7 +3,7 @@
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Tests**: 131
+**Total Tests**: 132
 
 ---
 
@@ -2373,6 +2373,34 @@
      • Feed broadcast pages to instance 1 only; assert instance 1 returns `true` and instance 2 returns `false`.
   4. *Clean-Room Targeted Test Suite Execution (`TST-CON-044.4`)*:
      • Verify all radar unit test suites pass with 100% success rate.
+
+### TST-CON-045: **Polar Live IMU Streaming Bridge Search Timeout & GATT Contention Recovery Test Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-CON-045` (`REQ-CON-045.1`..`REQ-CON-045.4`)
+- **Component**: `PolarOnlineStreamingBridge.kt`, `PolarOnlineStreamingBridgeTest.kt`
+- **Jira**: `ATT-8451`
+- **Test Type**: Unit & Regression
+- **Verification Method**: Unit
+- **Procedure**:
+  1. *Search Timeout & Queue Unblocking Test (`TST-CON-045.1`, `PolarOnlineStreamingBridgeTest.kt`)*:
+     • Instantiate `PolarOnlineStreamingBridge` with a mock `PolarBleApi` where `connectToDevice` does not emit `deviceConnected`.
+     • Register a broadcast receiver for `SEARCHING_STOPPED_FOR_ONE_INTENT`.
+     • Invoke `startSearching()`.
+     • Advance test dispatcher/scheduler time by `TrainingApplication.getBtleSearchPeriodMs()`.
+     • Assert `notifyStopSearching(false)` broadcast is received, `isSearching == false`, and `api.disconnectFromDevice(polarId)` is invoked.
+  2. *Repeated Search with Existing `polarApi` Test (`TST-CON-045.2`, `PolarOnlineStreamingBridgeTest.kt`)*:
+     • With an initialized disconnected `polarApi` instance, invoke `startSearching()`.
+     • Assert `api.connectToDevice` is called, search timeout is armed, and the search does not hang.
+     • When already connected (`isReceivingData() == true`), invoke `startSearching()`; assert `notifyStopSearching(true)` is immediately returned without re-connecting.
+  3. *Connection Success Timeout Cancellation Test (`TST-CON-045.3`, `PolarOnlineStreamingBridgeTest.kt`)*:
+     • Invoke `startSearching()`.
+     • Trigger `sdkCallback.deviceConnected(polarDeviceInfo)`.
+     • Assert `notifyStopSearching(true)` is broadcast and the search timeout watchdog is cancelled.
+     • Advance test time beyond timeout period; assert no disconnect or `notifyStopSearching(false)` is dispatched.
+  4. *Bluetooth Adapter Power Cycle & Teardown Test (`TST-CON-045.4`, `PolarOnlineStreamingBridgeTest.kt`)*:
+     • During an active search or connected stream, trigger `sdkCallback.blePowerStateChanged(false)`.
+     • Assert `isConnectedFlag == false`, active streaming jobs are cancelled, search timeout is cancelled, and `notifyStopSearching(false)` is broadcast.
+     • Call `shutDown()`; assert active timeout jobs, receivers, and coroutine scopes are cancelled cleanly.
 
 ### TST-TRK-064: **1-Tap Radar Audio Snooze, Peloton Sync & Urban Suppression Test Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-064` (`REQ-TRK-064.1`..`REQ-TRK-064.7`)

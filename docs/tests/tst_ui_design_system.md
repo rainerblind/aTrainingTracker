@@ -3,7 +3,7 @@
 **Domain**: `ui_design_system`  
 **Prefixes**: `UI`, `UNT`  
 **Scope**: Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts.  
-**Total Tests**: 475
+**Total Tests**: 476
 
 ---
 
@@ -8146,20 +8146,21 @@
   3. *Tier 1 Targeted Unit Test Regression (`TST-UI-504.3`)*:
   • Execute targeted test suite (`ui.settings.supporter.*`, `ui.branding.*`, `ui.theme.ThemeColorCentralizationAuditTest`, `build.*`) asserting 100% pass rate.
 
-### TST-UI-505: **WorkoutClusterSplitSheet Embedded Map Preview & Split Action Verification Suite** [Verified]
+### TST-UI-505: **WorkoutClusterSplitSheet Embedded Map Preview & Split Action Scope Verification Suite** [Verified]
 - **Target Release**: `V5.0.0`
 - **Requirement(s)**: `REQ-UI-505`
-- **Component**: `WorkoutClusterSplitSheet.kt`, `PathPreviewMap.kt`, `WorkoutClustersViewModel.kt`, `WorkoutClusterComponents.kt`, `WorkoutClustersScreen.kt`, `WorkoutClusterSplitMapPreviewTest.kt`
-- **Jira**: `ATT-6318`
+- **Component**: `WorkoutClusterSplitSheet.kt`, `PathPreviewMap.kt`, `WorkoutClustersViewModel.kt`, `WorkoutClusterComponents.kt`, `WorkoutClustersList.kt`, `WorkoutClustersTabsScreen.kt`, `WorkoutClustersScreen.kt`, `WorkoutClusterHeatmapScreen.kt`, `WorkoutClusterSplitMapPreviewTest.kt`, `WorkoutClusterSplitDialogContractTest.kt`
+- **Jira**: `ATT-6318, ATT-8464`
 - **Test Description**:
   1. *Embedded Map Composable Layout & Placement Contract (`TST-UI-505.1`)*:
   • Verify via contract test in `WorkoutClusterSplitMapPreviewTest.kt` that `WorkoutClusterSplitSheet.kt` embeds `PathPreviewMap` directly above the sensitivity slider column with `paths = splitVariantPaths` and a bounded 200dp height.
   2. *PathPreviewMap Multi-Path Rendering & Backward Compatibility (`TST-UI-505.2`)*:
   • Verify in `PathPreviewMapContractTest.kt` that `PathPreviewMap` accepts `paths: List<MappablePath> = emptyList()` with default parameter hygiene, renders polyline loops, and accurately computes composite `LatLngBounds` across multiple paths.
-  3. *List-Level Split Action Context Menu Integration (`TST-UI-505.3`)*:
-  • Verify in `WorkoutClusterComponentsContractTest.kt` / `WorkoutClusterSplitMapPreviewTest.kt` that `ClusterItem` context menu contains `cluster_split_action` when `cluster.hitCount >= 2`, and that triggering the action invokes the split sheet callback.
+  3. *List-Level Split Action Exclusion & Detail View Preservation (`TST-UI-505.3`)*:
+  • Verify in `WorkoutClusterSplitMapPreviewTest.kt` that `WorkoutClusterComponents.kt` (`ClusterItem`), `WorkoutClustersList.kt`, `WorkoutClustersTabsScreen.kt`, and `WorkoutClustersScreen.kt` do NOT declare or reference `onSplitRequest`, `clusterToSplit`, `cluster_split_action`, `Icons.Default.CallSplit`, or `WorkoutClusterSplitSheet(`, while `ClusterItem` retains `cluster_menu_merge` and `delete`.
+  • Verify in `WorkoutClusterSplitMapPreviewTest.kt` and `WorkoutClusterSplitDialogContractTest.kt` that `WorkoutClusterHeatmapScreen.kt` retains the `CallSplit` action (`cluster.hitCount >= 2`, `R.string.cluster_split_action`), `WorkoutClusterSplitSheet` / `WorkoutClustersViewModel.openSplitPreview()` remain intact, and `R.string.cluster_split_action` maintains 9-language parity.
   4. *Tier 1 Targeted Unit Test Regression (`TST-UI-505.4`)*:
-  • Execute targeted test suite (`ui.clusters.*`, `ui.map.*`, `ui.theme.ThemeColorCentralizationAuditTest`, `ui.components.core.*`, `build.*`) asserting 100% pass rate.
+  • Execute targeted test suite (`ui.clusters.*`, `ui.GlobalDeleteContextMenuAuditTest`, `ui.map.*`, `ui.theme.ThemeColorCentralizationAuditTest`, `ui.components.core.*`, `build.*`) asserting 100% pass rate.
 
 ### TST-UI-506: **Decoupled Compose UI State Models & Mapping Verification Suite** [Verified]
 - **Target Release**: `V5.0.0`
@@ -8472,11 +8473,11 @@
      - Assert 100% pass rate.
 
 
-### TST-UI-525: **Configurable Morning HRV Check Launch Button on Start Tracking Screen Verification Suite (ATT-7740)** [Verified]
+### TST-UI-525: **Configurable Morning HRV Check Launch Button on Start Tracking Screen Verification Suite (ATT-8469)** [Verified]
 - **Target Release**: `V5.0.0`
 - **Requirement(s)**: `REQ-UI-525`
 - **Component**: `TuningPreferencesDataStore.kt`, `MorningCheckSection.kt`, `DevicesDatabaseManager.java`, `DeviceDataRepository.kt`, `HrvReadinessDatabaseManager.kt`, `HrvReadinessRepository.kt`, `ControlTrackingViewModel.kt`, `TrackingTabsScreen.kt`, `ControlTrackingScreen.kt`, `MorningCheckCutoffScreenshotTest.kt`
-- **Jira**: `ATT-7532`, `ATT-7740`
+- **Jira**: `ATT-7532`, `ATT-7740`, `ATT-8469`
 - **Test Description**:
   1. *Tuning Preferences DataStore & Config Verification (`TST-UI-525.1`, `TuningConfigTest.kt`)*:
      - Verify default values: `showMorningCheckOnStartScreen = true`, `DEFAULT_MORNING_CHECK_CUTOFF_HOUR = 8`, `MIN_MORNING_CHECK_CUTOFF_HOUR = 6`, `MAX_MORNING_CHECK_CUTOFF_HOUR = 11` (`ATT-7740`).
@@ -8488,12 +8489,13 @@
      - Verify `hasCompletedMorningCheck(dateIso)` returns false when no entries exist for `dateIso`.
      - Verify `hasCompletedMorningCheck(dateIso)` returns true once an entry with `dateIso` is inserted.
   4. *ControlTrackingViewModel Reactive Visibility Rules Verification (`TST-UI-525.4`, `ControlTrackingViewModelTest.kt`)*:
-     - Verify `isMorningHrvCheckVisible` evaluates to true when mode is `READY`, pref is true, paired HRM exists, hour < cutoff, and today check is not completed.
-     - Verify `isMorningHrvCheckVisible` evaluates to false when: mode is `RECORDING` or `PAUSED`; pref is false; no paired HRM; hour >= cutoff; or check is already completed.
+     - Verify `isMorningHrvCheckVisible` evaluates to true when mode is `READY`, hour < cutoff, today's check is not completed, and EITHER `(showMorningCheckOnStartScreen == true && hasPairedHeartRateDevices == true)` OR `enableMorningSleepAndWellness == true` (even with zero paired HRM devices and `showMorningCheckOnStartScreen == false`) (`ATT-8469`).
+     - Verify `isMorningHrvCheckVisible` evaluates to false when: mode is `RECORDING` or `PAUSED`; both `showMorningCheckOnStartScreen` and `enableMorningSleepAndWellness` are false; `enableMorningSleepAndWellness` is false and no paired HRM; hour >= cutoff; or check (HRV reading or standalone wellness) is already completed today.
   5. *9-Language Localization Parity Verification (`TST-UI-525.5`, `TranslationParityTest.kt`)*:
-     - Verify all 5 new string resources exist across all 9 locales with 100% parity.
+     - Verify all 5 new string resources exist across all 9 locales with 100% parity, including `hrv_morning_check_start_button` ("Morgendlicher Check") and morning check tuning strings.
   6. *Morning Check Cutoff Slider Visual Compose Screenshot (`TST-UI-525.6`, `MorningCheckCutoffScreenshotTest.kt`, Rule 8.5)*:
-     - Render `MorningCheckSection` in Light & Dark themes verifying slider range `06:00..11:00` (`steps = 4`) and default `08:00`, capturing `docs/engineering/walkthroughs/img/ATT-7740_morning_cutoff.png` for `read_file` visual verification.
+     - Render `MorningCheckSection` in Light & Dark themes verifying slider range `06:00..11:00` (`steps = 4`) and default `08:00`.
+     - Verify slider remains visible and interactive when `enableMorningSleepAndWellness == true` even if `showMorningCheckOnStartScreen == false` (`ATT-8469`).
   7. *Targeted Unit Test Regression Suite (`TST-UI-525.7`)*:
      - Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.settings.TuningConfigTest" --tests "com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingViewModelTest" --tests "com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningAccordionTest" --tests "com.atrainingtracker.trainingtracker.ui.settings.tuning.MorningCheckCutoffScreenshotTest"`.
      - Assert 100% pass rate.
@@ -8647,4 +8649,23 @@
   3. *Targeted Regression Suite & Requirement Governance (`TST-UI-2781.3`)*:
      - Execute `./gradlew testDebugUnitTest --tests "*SensorSourceDialog*" --tests "*SensorStatus*" --max-workers=2`.
      - Execute `python3 tools/verify_requirement_governance.py --check-code-orphans --check-req-description`.
+     - Assert 100% pass rate.
+
+### TST-UI-2782: EditSensorFieldDialog Logical Section Ordering & Guard Verification [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-UI-2782` (`REQ-UI-2782.1`, `REQ-UI-2782.2`, `REQ-UI-2782.3`)
+- **Component**: `EditSensorFieldDialog.kt`, `EditSensorFieldDialogScreenshotTest.kt`, `EditSensorFieldDialogOrderTest.kt`
+- **Jira**: `ATT-8462`
+- **Test Description**:
+  1. *3-Group Vertical Ordering Compose UI Test (`TST-UI-2782.1`, `EditSensorFieldDialogOrderTest.kt`)*:
+     - Render `EditSensorFieldDialog` via Robolectric `createComposeRule()` with multi-device source list, `filteringPossible = true`, `isMultiFieldRow = true`, `isGraphSupported = true`, `showGraph = true`, and a metric with guidance (`HRV_DFA_A1` / `POWER_TO_WEIGHT` / `INTENSITY_FACTOR`).
+     - Assert strict top-to-bottom `boundsInRoot().top` ordering across all 3 logical groups: `Sensortyp < Quelle < Filter < Textgröße < Relative Breite < Anzeigeelemente < Zeitfenster < Graph-Farbe < Vorschau < Metrik-Hinweis`.
+  2. *Conditional Guards & Callback Preservation Tests (`TST-UI-2782.2`, `EditSensorFieldDialogOrderTest.kt`)*:
+     - Verify omission when `filteringPossible == false` (Filter button absent), `isMultiFieldRow == false` (Relative Breite absent), single `-1L` `deviceList` (Quelle absent), and `showGraph == false` / `isGraphSupported == false` (Graph options absent while `Textgröße` / `Relative Breite` remain above `Anzeigeelemente`).
+     - Verify `POWER_TO_WEIGHT`, `INTENSITY_FACTOR`/`TSS`, and `isHrvMetric` guidance blocks render below Visual Representation.
+     - Verify interactive callbacks (`onConfigureFilterClicked`, `onColWeightChanged`, `onShowGraphChanged`, `saveChanges`) remain wired and functional.
+  3. *Rule 8.5 Light & Dark Mode Visual Screenshot Inspection (`TST-UI-2782.3`, `EditSensorFieldDialogScreenshotTest.kt`)*:
+     - Capture Light and Dark mode screenshots of the reordered `EditSensorFieldDialog` (`ATT-8462_dialog_light.png`, `ATT-8462_dialog_dark.png`) and inspect via `read_file` for spacing, alignment, typography wrapping, contrast, and touch ergonomics.
+  4. *Targeted Regression & Governance Suite (`TST-UI-2782.4`)*:
+     - Execute `./gradlew :app:testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.*" --tests "com.atrainingtracker.trainingtracker.ui.tracking.TrackingTabsPolishContractTest" --tests "com.atrainingtracker.trainingtracker.ui.components.core.ModalBottomSheetDialogsIntegrityTest"` and `python3 tools/verify_requirement_governance.py`.
      - Assert 100% pass rate.

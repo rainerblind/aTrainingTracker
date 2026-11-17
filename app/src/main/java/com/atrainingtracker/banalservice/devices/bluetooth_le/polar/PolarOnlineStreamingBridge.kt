@@ -43,6 +43,7 @@ import com.atrainingtracker.banalservice.sensor.MyIntegerAccumulatorSensor
 import com.atrainingtracker.banalservice.sensor.MySensor
 import com.atrainingtracker.banalservice.sensor.MySensorManager
 import com.atrainingtracker.banalservice.sensor.SensorType
+import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.util.LifecycleUtils
 import com.polar.androidcommunications.api.ble.model.DisInfo
 import com.polar.androidcommunications.api.ble.model.gatt.client.pmd.PmdMeasurementType
@@ -61,6 +62,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 import java.util.concurrent.CopyOnWriteArrayList
@@ -69,7 +71,7 @@ import kotlin.math.abs
 
 /**
  * Persistent single-GATT bridge for Polar H10 (`ACC`) and Verity Sense (`ACC` + `GYRO`) live
- * PMD streaming (`ATT-8016`, `REQ-SET-112`).
+ * PMD streaming (`ATT-8016`, `REQ-SET-112`, `ATT-8451`, `REQ-CON-045`).
  *
  * Replaces a parallel `MyBTLEDevice` (`0x180D`) client when live IMU is opted in on Android 13+,
  * feeds `HR`/`RR` into [MySensorManager] and [RrBeatSource], shares the persistent [PolarBleApi]
@@ -85,7 +87,8 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
     private val dispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val sdkIntProvider: () -> Int = { Build.VERSION.SDK_INT },
     private val sportTypeProvider: () -> BSportType = { BANALService.getActiveBSportType() },
-    private val apiFactory: ((Context, Set<PolarBleApi.PolarBleSdkFeature>) -> PolarBleApi)? = null
+    private val apiFactory: ((Context, Set<PolarBleApi.PolarBleSdkFeature>) -> PolarBleApi)? = null,
+    private val searchTimeoutMsProvider: () -> Long = { TrainingApplication.getBtleSearchPeriodMs() }
 ) : MyRemoteDevice(context, mySensorManager, DeviceType.HRM, deviceId), RrBeatSource {
 
     /**
@@ -208,8 +211,60 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
         }
     }
 
+    private var searchTimeoutJob: Job? = null
+
+    private fun armSearchTimeoutWatchdog() {
+        cancelSearchTimeoutWatchdog()
+        val timeoutMs = searchTimeoutMsProvider()
+        searchTimeoutJob = scope.launch {
+            delay(timeoutMs)
+            onSearchTimeout()
+        }
+    }
+
+    private fun cancelSearchTimeoutWatchdog() {
+        searchTimeoutJob?.cancel()
+        searchTimeoutJob = null
+    }
+
+    private fun onSearchTimeout() {
+        if (isShutDown.get()) return
+        if (!isReceivingData()) {
+            Log.i(TAG, "Search timed out for Polar sensor $polarId after ${searchTimeoutMsProvider()} ms")
+            try {
+                polarApi?.disconnectFromDevice(polarId)
+            } catch (t: Throwable) {
+                Log.w(TAG, "Error disconnecting Polar API on search timeout for $polarId: ${t.message}")
+            }
+            notifyStopSearching(false)
+        }
+    }
+
     private val sdkCallback = object : PolarBleApiCallback() {
+        override fun blePowerStateChanged(powered: Boolean) {
+            if (!powered) {
+                isConnectedFlag.set(false)
+                activeBridges.remove(this@PolarOnlineStreamingBridge)
+                isAccStreamingActive.set(false)
+                isGyroStreamingActive.set(false)
+                PolarOfflineGattCoordinator.releaseAccChannel(polarId, PolarOfflineGattCoordinator.ACC_OWNER_ONLINE)
+                unregisterSensors()
+                hrJob?.cancel()
+                accJob?.cancel()
+                gyroJob?.cancel()
+                PolarRawTelemetryRecorder.getActiveRecorder()?.let { recorder ->
+                    removeImuFrameListener(recorder)
+                    removeRrBeatListener(recorder)
+                }
+                if (isSearching) {
+                    cancelSearchTimeoutWatchdog()
+                    notifyStopSearching(false)
+                }
+            }
+        }
+
         override fun deviceConnected(polarDeviceInfo: PolarDeviceInfo) {
+            cancelSearchTimeoutWatchdog()
             isConnectedFlag.set(true)
             setLastActive()
             registerSensors()
@@ -280,24 +335,32 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
             notifyStopSearching(false)
             return
         }
+        if (isReceivingData()) {
+            notifyStopSearching(true)
+            return
+        }
         notifyStartSearching()
+        armSearchTimeoutWatchdog()
         connectPersistentSession()
     }
 
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private fun connectPersistentSession() {
-        if (polarApi != null) return
         try {
-            val features = buildRequiredFeatures()
-            val api = apiFactory?.invoke(mContext, features)
-                ?: PolarBleApiDefaultImpl.defaultImplementation(mContext, features)
-            polarApi = api
-            api.setAutomaticReconnection(true)
-            api.setApiCallback(sdkCallback)
-            PolarOfflineGattCoordinator.registerActiveSession(polarId, api, sdkCallback)
+            var api = polarApi
+            if (api == null) {
+                val features = buildRequiredFeatures()
+                api = apiFactory?.invoke(mContext, features)
+                    ?: PolarBleApiDefaultImpl.defaultImplementation(mContext, features)
+                polarApi = api
+                api.setAutomaticReconnection(true)
+                api.setApiCallback(sdkCallback)
+                PolarOfflineGattCoordinator.registerActiveSession(polarId, api, sdkCallback)
+            }
             api.connectToDevice(polarId)
         } catch (t: Throwable) {
             Log.w(TAG, "Failed to start persistent Polar PMD session for $polarId: ${t.message}", t)
+            cancelSearchTimeoutWatchdog()
             notifyStopSearching(false)
         }
     }
@@ -675,6 +738,9 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
     @VisibleForTesting
     fun isGyroStreamingForTesting(): Boolean = isGyroStreamingActive.get()
 
+    @VisibleForTesting
+    fun getSearchTimeoutJobForTesting(): Job? = searchTimeoutJob
+
     override fun unregisterSensors() {
         unregisterImuCadenceSensors()
         mRrIntervalSensor?.let { sensor ->
@@ -689,6 +755,7 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
 
     override fun shutDown() {
         if (!isShutDown.compareAndSet(false, true)) return
+        cancelSearchTimeoutWatchdog()
         isConnectedFlag.set(false)
         isAccStreamingActive.set(false)
         isGyroStreamingActive.set(false)

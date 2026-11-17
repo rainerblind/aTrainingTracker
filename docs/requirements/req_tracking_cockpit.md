@@ -3,7 +3,7 @@
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Requirements**: 155
+**Total Requirements**: 156
 
 ---
 
@@ -4833,6 +4833,56 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
   - *Then* only that active instance returns `isReceivingData() == true`.
 
 **Invariants**: Zero false-positive device status on Start/Cockpit screens; 100% fail-safe watchdog retention; 100% clean-room test pass rate.
+
+### REQ-CON-045: Polar Live IMU Streaming Bridge Search Timeout & GATT Contention Recovery [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-CON-045`
+- **System Requirement(s)**: `SYSREQ-TRK-001`, `SYSREQ-TRK-002`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `PolarOnlineStreamingBridge.kt`, `DeviceManager.java`
+- **Rationale**: During sequential sensor discovery (`DeviceManager.mSearchQueue`), `PolarOnlineStreamingBridge.startSearching()` starts scanning without a search timeout watchdog. If the Polar sensor (H10 or Verity Sense) is turned off, out of range, or held in an open GATT connection by another application (e.g., Polar Flow suppressing connectable advertisements), Polar SDK's internal scan hangs indefinitely. Without `notifyStopSearching(false)`, the entire peripheral search queue deadlocks, blocking subsequent sensors (such as Garmin Varia Radar or powermeters). Furthermore, if `polarApi != null`, `connectPersistentSession()` exits silently after `notifyStartSearching()` has already been dispatched, permanently freezing the UI on repeated searches or after disconnect / Bluetooth adapter power cycles (`ATT-8451`, extending `REQ-SET-112.2` and `REQ-CON-004`):
+- **Description**:
+  1. *Deterministic Search Timeout & Queue Unblocking (`REQ-CON-045.1`)*:
+     - `PolarOnlineStreamingBridge.startSearching()` SHALL schedule a deterministic search timeout matching `TrainingApplication.getBtleSearchPeriodMs()` (analogous to `MyBTLEDevice`).
+     - If the timeout expires before `deviceConnected` is received, the bridge SHALL abort the ongoing scan/connect attempt, invoke `notifyStopSearching(false)` to unblock `DeviceManager.mSearchQueue`, and (if `!isReceivingData()`) disconnect from the device via `polarApi.disconnectFromDevice(polarId)`.
+  2. *Idempotent Search & Session State Recovery on Cached `polarApi` (`REQ-CON-045.2`)*:
+     - Calling `startSearching()` when `polarApi != null` SHALL NOT silently exit without attempting connection.
+     - If already connected and receiving data (`isReceivingData() == true`), `startSearching()` SHALL immediately invoke `notifyStopSearching(true)` without re-opening sessions.
+     - If disconnected (`isReceivingData() == false`), `startSearching()` SHALL re-initiate `api.connectToDevice(polarId)` (or re-instantiate `polarApi` if the SDK session is invalidated/closed) and schedule the search timeout watchdog.
+  3. *Search Watchdog Cancellation on Connection (`REQ-CON-045.3`)*:
+     - When `deviceConnected(polarDeviceInfo)` callback is received during an active search, `PolarOnlineStreamingBridge` SHALL immediately cancel the active search timeout watchdog, invoke `notifyStopSearching(true)`, register sensors, and synchronize active streaming sessions.
+  4. *Bluetooth Power Cycle & Lifecycle Teardown (`REQ-CON-045.4`)*:
+     - `PolarOnlineStreamingBridge.sdkCallback` SHALL implement `blePowerStateChanged(powered: Boolean)`.
+     - When `powered == false`, the bridge SHALL mark `isConnectedFlag = false`, cancel active streaming coroutines (`hrJob`, `accJob`, `gyroJob`), release the `ACC` ownership lock in `PolarOfflineGattCoordinator`, unregister sensors, and (if currently searching) cancel the search timeout watchdog and invoke `notifyStopSearching(false)`.
+     - `shutDown()` SHALL cancel the search timeout watchdog, disconnect/cleanup `polarApi`, unregister receivers, and cancel the coroutine scope, while strictly preserving `activeBridges` registry contracts (`ATT-8019`), API < 33 fallback, cadence/dynamics arbitration (`REQ-SET-112.4`), and offline GATT sharing (`REQ-SET-112.3`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new `REQ-CON-045` extending `REQ-SET-112.2` and `REQ-CON-004`. Targets `PolarOnlineStreamingBridge.kt` and `DeviceManager.java`.
+2. *Historical Origin & Commit Trace*: Commit `d9f9a263` (`ATT-8016`, persistent single-GATT Polar live IMU streaming bridge).
+3. *Root Reason for Existing Formulation*: In ATT-8016, `connectPersistentSession()` used `if (polarApi != null) return` to avoid duplicate `PolarBleApi` instantiation across workout cycles, but overlooked that repeated search attempts or post-disconnect retries require re-initiating connection. Search timeout was omitted during live streaming focus.
+4. *Preservation of Core Invariants*: Preserves standard `BTLEHeartRateDevice` fallback when live IMU is disabled or `< API 33`; preserves IMU cadence priority and `BSportType.RUN` gating (`REQ-SET-112.4`); preserves offline session sharing (`REQ-SET-112.3`); preserves `activeBridges` registry (`ATT-8019`).
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Criterion 1 (Deterministic Search Timeout & Unblocking)*:
+  - *Given* a paired Polar H10 or Verity Sense with live IMU enabled (`polarLiveImuEnabled = 1`) that is powered off, out of range, or advertisement-starved by an existing Polar Flow GATT connection,
+  - *When* `startSearching()` is invoked by `DeviceManager.searchForNextRemoteDevice()`,
+  - *Then* `notifyStartSearching()` is broadcast, and after `TrainingApplication.getBtleSearchPeriodMs()` elapses without connection, the bridge disconnects and broadcasts `notifyStopSearching(false)`, allowing `DeviceManager.mSearchQueue` to advance to the next sensor.
+• *Criterion 2 (Idempotent Repeated Search with Existing `polarApi`)*:
+  - *Given* a `PolarOnlineStreamingBridge` whose `polarApi` instance is already initialized (e.g. following a prior search, disconnect, or Bluetooth restart) but currently disconnected,
+  - *When* `startSearching()` is invoked again (e.g. manual user search retry),
+  - *Then* the bridge re-initiates connection via `api.connectToDevice(polarId)`, arms the search timeout watchdog, and does not silently deadlock the search queue.
+• *Criterion 3 (Connection Success Timeout Cancellation)*:
+  - *Given* an active search with the search timeout watchdog running,
+  - *When* the Polar sensor connects and `deviceConnected` is received,
+  - *Then* the search timeout watchdog is immediately cancelled, `notifyStopSearching(true)` is broadcast, and live streaming is established without delayed disconnect timeouts.
+• *Criterion 4 (Bluetooth Adapter Power Cycle)*:
+  - *Given* an active search or connected streaming session on `PolarOnlineStreamingBridge`,
+  - *When* the Bluetooth adapter powers off (`blePowerStateChanged(false)`),
+  - *Then* active timeout jobs are cancelled, connection state is cleared, streaming jobs are halted, and if searching, `notifyStopSearching(false)` is dispatched.
+
+**Invariants**: `TrainingApplication.getBtleSearchPeriodMs()` remains source of truth; zero regression on standard `BTLEHeartRateDevice` fallback (< API 33 or live IMU disabled); `MySensorManager.CADENCE_PRIORITY` ranking (`RUN_SPEED` > `BIKE_*` > `HRM`) preserved; `PolarOfflineGattCoordinator` session sharing preserved; `activeBridges` registry (`ATT-8019`) preserved; zero localized string changes.
 
 ### REQ-TRK-064: 1-Tap Radar Audio Snooze, Peloton-Mode Audio Sync & Smart Urban Alert Suppression [Verified]
 - **Tests**: `TST-TRK-064`

@@ -15,6 +15,7 @@
 
 package com.atrainingtracker.trainingtracker.ui.clusters
 
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
@@ -79,43 +80,61 @@ class WorkoutClusterSplitMapPreviewTest {
             content.contains("boundsBuilder.include(it)"))
     }
 
+    // Traces to: REQ-UI-505, REQ-SET-096
     @Test
-    fun testClusterItem_and_WorkoutClustersScreen_wireSplitAction() {
+    fun testClusterItem_and_WorkoutClustersScreen_excludeSplitAction_whileHeatmapRetainsIt() {
         val srcDir = findAppSourceDirectory()
 
-        // 1. ClusterItem in WorkoutClusterComponents.kt
+        // 1. ClusterItem in WorkoutClusterComponents.kt must exclude split action but retain Merge & Delete
         val componentsFile = File(srcDir, "ui/clusters/WorkoutClusterComponents.kt")
         assertTrue("WorkoutClusterComponents.kt must exist", componentsFile.exists())
         val componentsContent = componentsFile.readText()
 
-        assertTrue("ClusterItem must declare onSplitRequest callback parameter",
-            componentsContent.contains("onSplitRequest: ((WorkoutCluster) -> Unit)? = null"))
-        assertTrue("ClusterItem context menu must guard split action by hitCount >= 2",
-            componentsContent.contains("cluster.hitCount >= 2 && onSplitRequest != null"))
-        assertTrue("ClusterItem context menu must display cluster_split_action",
+        assertFalse("ClusterItem must not declare onSplitRequest callback parameter",
+            componentsContent.contains("onSplitRequest"))
+        assertFalse("ClusterItem context menu must not display cluster_split_action",
             componentsContent.contains("R.string.cluster_split_action"))
-        assertTrue("ClusterItem context menu must use CallSplit icon",
-            componentsContent.contains("Icons.Default.CallSplit"))
+        assertFalse("WorkoutClusterComponents must not use CallSplit icon",
+            componentsContent.contains("CallSplit"))
+        assertTrue("ClusterItem context menu must retain Merge action",
+            componentsContent.contains("R.string.cluster_menu_merge"))
+        assertTrue("ClusterItem context menu must retain Delete action",
+            componentsContent.contains("R.string.delete"))
 
-        // 2. WorkoutClustersTabsScreen.kt forwarding
+        // 2. WorkoutClustersList.kt & WorkoutClustersTabsScreen.kt must not thread onSplitRequest
+        val listFile = File(srcDir, "ui/clusters/WorkoutClustersList.kt")
+        assertTrue("WorkoutClustersList.kt must exist", listFile.exists())
+        assertFalse("WorkoutClustersList must not declare or forward onSplitRequest",
+            listFile.readText().contains("onSplitRequest"))
+
         val tabsFile = File(srcDir, "ui/clusters/WorkoutClustersTabsScreen.kt")
         assertTrue("WorkoutClustersTabsScreen.kt must exist", tabsFile.exists())
-        val tabsContent = tabsFile.readText()
-        assertTrue("WorkoutClustersTabsScreen must declare onSplitRequest",
-            tabsContent.contains("onSplitRequest: (WorkoutCluster) -> Unit = {}"))
-        assertTrue("WorkoutClustersTabsScreen must pass onSplitRequest to WorkoutClustersList",
-            tabsContent.contains("onSplitRequest = onSplitRequest"))
+        assertFalse("WorkoutClustersTabsScreen must not declare or forward onSplitRequest",
+            tabsFile.readText().contains("onSplitRequest"))
 
-        // 3. WorkoutClustersScreen.kt split sheet presentation
+        // 3. WorkoutClustersScreen.kt must not host WorkoutClusterSplitSheet
         val screenFile = File(srcDir, "ui/clusters/WorkoutClustersScreen.kt")
         assertTrue("WorkoutClustersScreen.kt must exist", screenFile.exists())
         val screenContent = screenFile.readText()
-        assertTrue("WorkoutClustersScreen must declare clusterToSplit state",
+        assertFalse("WorkoutClustersScreen must not declare clusterToSplit state",
             screenContent.contains("clusterToSplit"))
-        assertTrue("WorkoutClustersScreen must wire onSplitRequest callback",
-            screenContent.contains("onSplitRequest = { clusterToSplit = it }"))
-        assertTrue("WorkoutClustersScreen must display WorkoutClusterSplitSheet when clusterToSplit is active",
+        assertFalse("WorkoutClustersScreen must not wire onSplitRequest callback",
+            screenContent.contains("onSplitRequest"))
+        assertFalse("WorkoutClustersScreen must not host WorkoutClusterSplitSheet",
             screenContent.contains("WorkoutClusterSplitSheet("))
+
+        // 4. WorkoutClusterHeatmapScreen.kt must retain CallSplit action and WorkoutClusterSplitSheet
+        val heatmapFile = File(srcDir, "ui/clusters/WorkoutClusterHeatmapScreen.kt")
+        assertTrue("WorkoutClusterHeatmapScreen.kt must exist", heatmapFile.exists())
+        val heatmapContent = heatmapFile.readText()
+        assertTrue("WorkoutClusterHeatmapScreen must retain hitCount >= 2 guard for split button",
+            heatmapContent.contains("cluster.hitCount >= 2"))
+        assertTrue("WorkoutClusterHeatmapScreen must retain CallSplit icon",
+            heatmapContent.contains("Icons.Default.CallSplit"))
+        assertTrue("WorkoutClusterHeatmapScreen must retain R.string.cluster_split_action",
+            heatmapContent.contains("R.string.cluster_split_action"))
+        assertTrue("WorkoutClusterHeatmapScreen must retain WorkoutClusterSplitSheet",
+            heatmapContent.contains("WorkoutClusterSplitSheet("))
     }
 
     @Test

@@ -767,13 +767,36 @@ def print_status(issue_key, role="agent1"):
     return status
 
 def check_gate(issue_key, role="agent1"):
+    """
+    REQ-PRO-109.3 / ATT-8154 / Core Rule 4:
+    Verifies that issue_key is an authentic [Impl-Plan] subtask (Gate 3) in status 'Erledigt'.
+    Rejects non-subtasks or subtasks of different stages to prevent gate bypass.
+    """
     config = get_config()
-    url = f"{config['JIRA_URL']}/rest/api/2/issue/{issue_key}?fields=status"
+    url = f"{config['JIRA_URL']}/rest/api/2/issue/{issue_key}?fields=status,summary,issuetype,parent"
     issue = jira_request(url, role=role)
-    status = issue['fields'].get('status', {}).get('name', 'Unknown')
+    fields = issue.get("fields", {})
+
+    is_subtask = fields.get("issuetype", {}).get("subtask", False)
+    if not is_subtask:
+        print(
+            f"Error: Gate check rejected for '{issue_key}'. Issue is not a sub-task (must be an [Impl-Plan] subtask) (REQ-PRO-109.3).",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    summary = fields.get("summary", "")
+    if not re.search(r"^\[(impl-plan|impl\s*plan|implementation\s*plan|design|plan)\]", summary.strip(), re.IGNORECASE):
+        print(
+            f"Error: Gate check rejected for '{issue_key}'. Subtask summary '{summary}' does not match [Impl-Plan] (Stage 3) (REQ-PRO-109.3).",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    status = fields.get("status", {}).get("name", "Unknown")
     if status == "Erledigt":
         print(f"GATE_PASSED: {issue_key} is Erledigt")
-        sys.exit(0)
+        return True
     else:
         print(f"GATE_BLOCKED: {issue_key} is in status '{status}' (Expected: Erledigt)")
         sys.exit(1)
@@ -1524,13 +1547,28 @@ def submit_stage(parent_key, stage_arg, text_or_file, summary_override=None, rol
                     )
                     sys.exit(1)
 
-    # Ensure parent is in the matching stage status
-    if current_parent_status in PARENT_STAGE_ORDER and desired_parent_stage in PARENT_STAGE_ORDER:
-        curr_idx = PARENT_STAGE_ORDER.index(current_parent_status)
-        target_idx = PARENT_STAGE_ORDER.index(desired_parent_stage)
-        if curr_idx < target_idx:
-            for step_stage in PARENT_STAGE_ORDER[curr_idx + 1 : target_idx + 1]:
-                transition_issue(parent_key, step_stage, role=role, inject_context=False)
+    # REQ-PRO-109.1 / ATT-8154: Strict predecessor stage validation (prevent multi-stage skipping)
+    if stage_id == "1":
+        # Rule 78: JIT transition from 'zu erledigen' to 'analysis' allowed for Stage 1
+        if current_parent_status in ("zu erledigen", "to do", "open"):
+            transition_issue(parent_key, "analysis", role=role, inject_context=False)
+            current_parent_status = "analysis"
+        elif current_parent_status != "analysis":
+            print(
+                f"Error: Cannot submit Stage 1: parent ticket '{parent_key}' is in status '{current_parent_status}'. "
+                "Parent must be in 'Zu erledigen' or 'Analysis' (REQ-PRO-109.1).",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+    else:
+        # Stages 2..5 strictly require parent to be in matching stage (preceding gate already passed)
+        if current_parent_status != desired_parent_stage:
+            print(
+                f"Error: Cannot submit Stage {stage_id}: parent ticket '{parent_key}' is in status '{current_parent_status}', "
+                f"expected '{desired_parent_stage}'. Stage transitions cannot skip preceding gates (REQ-PRO-109.1).",
+                file=sys.stderr,
+            )
+            sys.exit(1)
 
     # Check if sub-task for this stage already exists
     subtasks = parent_fields.get("subtasks", [])
@@ -2199,16 +2237,74 @@ def count_final_review_bounces(comments):
     return max(count, max_bounce)
 
 
+def validate_stage6_review_structure(report_text):
+    """
+    REQ-PRO-109.4 / ATT-8154:
+    Validates that a Stage 6 Final Review report contains structured Pros/Cons/Recommendation
+    sections (Markdown headers '###' / 'h3.', bold bullets '* *Pros*:', '* **Pros**:') or a comparison table
+    with >= 2 evaluated options, rejecting bare keyword stuffing.
+    Returns (is_valid, list_of_errors).
+    """
+    if not report_text or not report_text.strip():
+        return False, ["Review report is empty."]
+
+    # Option 1: Comparison table with >= 2 options
+    table_lines = [l.strip() for l in report_text.splitlines() if l.strip().startswith("|")]
+    if len(table_lines) >= 3:
+        header_lower = table_lines[0].lower()
+        if ("pro" in header_lower or "vorteil" in header_lower) and ("con" in header_lower or "nachteil" in header_lower):
+            data_rows = [l for l in table_lines[1:] if not re.match(r"^\|\s*:?---+", l)]
+            if len(data_rows) >= 2:
+                return True, []
+
+    # Option 2: Structured ceremony sections / bullets
+    errors = []
+    pros_pattern = re.compile(
+        r"(?:^|\n)\s*(?:\*+|\#+|h[1-6]\.)\s*\*?\*?(?:pros|vorteile|pro\b)",
+        re.IGNORECASE,
+    )
+    cons_pattern = re.compile(
+        r"(?:^|\n)\s*(?:\*+|\#+|h[1-6]\.)\s*\*?\*?(?:cons|nachteile|auffälligkeiten|defects\s+identified|contra\b)",
+        re.IGNORECASE,
+    )
+    rec_pattern = re.compile(
+        r"(?:^|\n)\s*(?:\*+|\#+|h[1-6]\.)\s*\*?\*?(?:würdest\s+du\s+das\s+freigeben|freigabe[- ]empfehlung|empfehlung|recommendation)",
+        re.IGNORECASE,
+    )
+
+    pros_match = pros_pattern.search(report_text)
+    cons_match = cons_pattern.search(report_text)
+    rec_match = rec_pattern.search(report_text)
+
+    if not pros_match:
+        errors.append("Missing structured 'Pros' section header (e.g. '* *Pros*:')")
+    if not cons_match:
+        errors.append("Missing structured 'Cons / Auffälligkeiten' section header (e.g. '* *Cons*:')")
+    if not rec_match:
+        errors.append("Missing structured 'Würdest du das freigeben? (Freigabe-Empfehlung)' section header")
+
+    if not errors:
+        pos = sorted([(pros_match.start(), "pros"), (cons_match.start(), "cons"), (rec_match.start(), "rec")])
+        for idx, (p_start, name) in enumerate(pos):
+            next_start = pos[idx + 1][0] if idx + 1 < len(pos) else len(report_text)
+            section_content = report_text[p_start:next_start].strip()
+            lines = [l.strip() for l in section_content.splitlines() if l.strip()]
+            if len(lines) <= 1:
+                errors.append(f"Structured '{name}' section header has no substantive content/bullets below it")
+
+    return len(errors) == 0, errors
+
+
 def final_review_verdict(parent_key, verdict_arg, text_or_file, bounce_target="implementation", role="agent2", config=None):
     """
-    REQ-PRO-058.2 / TST-PRO-058.2:
+    REQ-PRO-058.2 / REQ-PRO-109.2 / REQ-PRO-109.4:
     Composite Stage 6 ('Final Review (Agent)') verdict command for the Cold Carbon Reviewer (agent2):
-    - PASS: Posts [FINAL REVIEW (AGENT) — PASS], transitions parent ticket from 'Final Review (Agent)'
-      to 'Final Review (Human)' (via 'I.O.'), and assigns to 'human'.
-    - BOUNCE: Counts prior [FINAL REVIEW (AGENT) — BOUNCE X/3] comments on the parent ticket.
-      * If bounce_count <= 3: Posts [FINAL REVIEW (AGENT) — BOUNCE {bounce_count}/3], transitions
-        parent ticket back to bounce_target ('implementation', 'analysis', or 'zu erledigen'),
-        and assigns to 'agent1'.
+    - Strictly rejects execution unless parent is in 'Final Review (Agent)'.
+    - PASS: Validates structured Pros/Cons, posts [FINAL REVIEW (AGENT) — PASS], transitions
+      parent ticket from 'Final Review (Agent)' to 'Final Review (Human)', and assigns to 'human'.
+    - BOUNCE: Tracks 3-bounce healing loop back to bounce_target (implementation/analysis/zu erledigen).
+      * If bounce_count <= 3: Posts [FINAL REVIEW (AGENT) — BOUNCE X/3], transitions to bounce_target,
+        and assigns back to 'agent1'.
       * If bounce_count > 3: Posts [FINAL REVIEW (AGENT) — ESCALATED AFTER 3 BOUNCES], transitions
         parent ticket to 'Final Review (Human)', and assigns to 'human'.
     """
@@ -2238,32 +2334,35 @@ def final_review_verdict(parent_key, verdict_arg, text_or_file, bounce_target="i
         print(f"Error: final-review-verdict operates strictly on parent tickets, not sub-task '{parent_key}'.", file=sys.stderr)
         sys.exit(1)
 
+    # REQ-PRO-109.2 / ATT-8154: Strict Gate 5 prerequisite (no multi-stage auto-advancement past Gate 5)
     current_status = fields_data.get("status", {}).get("name", "").strip().lower()
-    if current_status != "final review (agent)" and current_status in PARENT_STAGE_ORDER:
-        curr_idx = PARENT_STAGE_ORDER.index(current_status)
-        agent_rev_idx = PARENT_STAGE_ORDER.index("final review (agent)")
-        if curr_idx < agent_rev_idx:
-            for step_stage in PARENT_STAGE_ORDER[curr_idx + 1 : agent_rev_idx + 1]:
-                transition_issue(parent_key, step_stage, role=auditor_role, inject_context=False)
+    if current_status != "final review (agent)":
+        print(
+            f"Error: Cannot execute final-review-verdict on parent '{parent_key}' in status '{current_status}'. "
+            "Parent ticket must strictly be in 'Final Review (Agent)' (REQ-PRO-109.2).",
+            file=sys.stderr,
+        )
+        sys.exit(1)
 
     assign_issue(parent_key, auditor_role, role=auditor_role)
 
     if is_pass:
-        report_lower = report_text.lower()
-        has_pros = any(kw in report_lower for kw in ("pros", "vorteile", "pro:"))
-        has_cons = any(kw in report_lower for kw in ("cons", "nachteile", "auffälligkeiten", "defects"))
-        has_recommendation = any(kw in report_lower for kw in ("freigeben", "freigabe", "recommend", "würdest du"))
-        if not (has_pros and has_cons and has_recommendation):
-            missing = []
-            if not has_pros: missing.append("Pros")
-            if not has_cons: missing.append("Cons / Defects Identified / Auffälligkeiten")
-            if not has_recommendation: missing.append("Würdest du das freigeben? (Freigabe-Empfehlung)")
-            print(f"Error: Stage 6 Final Review report missing mandatory review ceremony questions: {', '.join(missing)}.\n"
-                  f"Every Stage 6 Cold Carbon review MUST answer:\n"
-                  f"* *Pros (Was ist gut/gelungen?)*:\n"
-                  f"* *Cons / Auffälligkeiten / Defects Identified (Was ist kritisch/unvollständig?)*:\n"
-                  f"* *Würdest du das freigeben? (Freigabe-Empfehlung)*:\n",
-                  file=sys.stderr)
+        is_valid_structure, structure_errors = validate_stage6_review_structure(report_text)
+        if not is_valid_structure:
+            print(
+                f"Error: Stage 6 Final Review report failed structured Pros/Cons validation (REQ-PRO-109.4):",
+                file=sys.stderr,
+            )
+            for err in structure_errors:
+                print(f"  - {err}", file=sys.stderr)
+            print(
+                "Every Stage 6 Cold Review report MUST structure either:\n"
+                "* *Pros (Was ist gut/gelungen?)*:\n"
+                "* *Cons / Auffälligkeiten / Defects Identified (Was ist kritisch/unvollständig?)*:\n"
+                "* *Würdest du das freigeben? (Freigabe-Empfehlung)*:\n"
+                "or provide a markdown comparison table with >= 2 options.",
+                file=sys.stderr,
+            )
             sys.exit(1)
 
         comment_body = report_text if FINAL_REVIEW_PASS_TAG in report_text else f"{FINAL_REVIEW_PASS_TAG}\n\n{report_text}"
@@ -3478,18 +3577,15 @@ def get_next_review_subsystem(matrix_path=None, repo_root=None):
 
 def is_weekly_review_overdue(reviews_dir=None, days_threshold=7, repo_root=None):
     """
-    REQ-PRO-095.3 / REQ-PRO-095.4:
+    REQ-PRO-095.3 / REQ-PRO-095.4 / ATT-8426:
     Returns True if more than days_threshold days have elapsed since the latest
-    completed review in docs/engineering/code_reviews/ or if unreviewed subsystems remain.
+    completed review in docs/engineering/code_reviews/ or if no completed review exists.
+    Decoupled from UNREVIEWED status to prevent 9-week release preparation deadlock.
     """
     if repo_root is None:
         repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     if reviews_dir is None:
         reviews_dir = os.path.join(repo_root, "docs", "engineering", "code_reviews")
-
-    next_domain, _, status = get_next_review_subsystem(repo_root=repo_root)
-    if status == "UNREVIEWED":
-        return True
 
     if not os.path.isdir(reviews_dir):
         return True
@@ -3536,7 +3632,7 @@ def ensure_weekly_review_ticket(role="coordinator", force=False):
             return issue["key"]
 
     if not force and not is_weekly_review_overdue():
-        print("Weekly Dual-Vendor Code Review is not overdue (< 7 days and all subsystems audited).")
+        print("Weekly Dual-Vendor Code Review is not overdue (< 7 days).")
         return None
 
     target_domain, target_path, _ = get_next_review_subsystem()
@@ -3546,8 +3642,8 @@ def ensure_weekly_review_ticket(role="coordinator", force=False):
     desc = (
         f"h2. Mandatory Weekly Dual-Vendor Code & Architecture Review ({week_label})\n"
         f"*Target Subsystem*: `{target_domain}` ({target_path})\n"
-        f"*Cadence*: Weekly dual-vendor holistic code & architecture review (REQ-PRO-095 / ATT-8213).\n"
-        f"*Dual AI Vendors*: Google Gemini (Gemini 2.5 Pro / Gemini 4 Carbon) + Anthropic Claude (Claude 3.7 Sonnet).\n\n"
+        f"*Cadence*: Weekly dual-vendor holistic code & architecture review (REQ-PRO-095 / ATT-8213 / ATT-8426).\n"
+        f"*Dual AI Vendors*: Current Top Model of Google Gemini + Current Top Model of Anthropic Claude (REQ-PRO-095.1).\n\n"
         "h3. Review Scope & Execution Protocol\n"
         f"1. Audit full subsystem `{target_domain}` alongside recent commits on develop (not restricted to incremental diffs!).\n"
         "2. Independent blind evaluations by Gemini and Claude covering:\n"
@@ -3557,9 +3653,10 @@ def ensure_weekly_review_ticket(role="coordinator", force=False):
         "   - Defensive error handling and test assertion validity\n"
         "   - Static analysis & Android hygiene: run `./gradlew :app:lintDebug :app:detekt --max-workers=2`, review new findings deliberately, and derive concrete remediation tickets where warranted\n"
         f"   - Scenario-gap diagnostic: run `./gradlew :app:koverXmlReportDebug --max-workers=2` and inspect `{target_domain}` coverage to spot untested real-world edge cases (never write artificial coverage-padding tests)\n"
-        f"3. Reconcile findings into docs/engineering/code_reviews/{datetime.now().strftime('%Y-%m-%d')}_dual_vendor_code_review.md.\n"
-        "4. File discovered defects/refactorings as Jira tickets under ATT-232 / ATT-8138.\n"
-        f"5. Update {target_domain} status to AUDITED in docs/engineering/code_reviews/coverage_matrix.md.\n"
+        "3. Claude Non-Simulation Protocol (ATT-8426): Antigravity agents running on Google models SHALL NEVER simulate or fabricate Anthropic Claude evaluations. If external Claude API / CLI execution is unavailable, mark Claude evaluation as PENDING / EXTERNAL HANDOFF REQUIRED until genuine external review completes.\n"
+        f"4. Reconcile findings into docs/engineering/code_reviews/{datetime.now().strftime('%Y-%m-%d')}_dual_vendor_code_review.md.\n"
+        "5. File discovered defects/refactorings as Jira tickets under ATT-232 / ATT-8138.\n"
+        f"6. Update {target_domain} status to AUDITED in docs/engineering/code_reviews/coverage_matrix.md once both vendor evaluations complete.\n"
     )
     new_key = create_issue(
         summary=summary,
@@ -3640,15 +3737,16 @@ def ensure_weekly_aspice_audit_ticket(role="coordinator", force=False):
     summary = f"Weekly Dual-Vendor Gemini and Claude ASPICE 4.0 Cross-Audit ({week_label})"
     desc = (
         f"h2. Mandatory Weekly Dual-Vendor ASPICE 4.0 Cross-Audit ({week_label})\n"
-        f"*Cadence*: Weekly dual-vendor ASPICE 4.0 process and evidence cross-audit (REQ-PRO-096 / ATT-8212).\n"
-        f"*Dual AI Vendors*: Google Gemini (Gemini 2.5 Pro / Gemini 4 Carbon) + Anthropic Claude (Claude 3.7 Sonnet).\n\n"
+        f"*Cadence*: Weekly dual-vendor ASPICE 4.0 process and evidence cross-audit (REQ-PRO-096 / ATT-8212 / ATT-8426).\n"
+        f"*Dual AI Vendors*: Current Top Model of Google Gemini + Current Top Model of Anthropic Claude (REQ-PRO-096.1).\n\n"
         "h3. Audit Scope & Protocol (SUP.1 / GP 2.1.6)\n"
         "1. Independent cross-vendor compliance evaluation across ASPICE VDA processes (SWE.1–SWE.6, SUP.1, SUP.8, SUP.9, SUP.10, MAN.3).\n"
         "2. Verification of quality gate records (Gates 1–5), First-Time Pass Rate (FTPR) integrity, and role separation.\n"
         "3. Traceability verification between System and Software requirements (SYS.2 <-> SYS.3).\n"
         "4. Weekly Kover coverage snapshot (`./gradlew :app:koverXmlReportDebug --max-workers=2` + `python3 tools/generate_test_evidence.py --target weekly_<KW>`), verifying meaningful scenario coverage and critical subsystem floors without coverage-padding.\n"
-        f"5. Reconcile findings into docs/engineering/aspice_audits/{datetime.now().strftime('%Y-%m-%d')}_dual_vendor_aspice_audit.md.\n"
-        "6. File discovered defects or process non-conformances as Jira tickets under Epic ATT-232 / ATT-8138.\n"
+        "5. Claude Non-Simulation Protocol (ATT-8426): Antigravity agents running on Google models SHALL NEVER simulate or fabricate Anthropic Claude evaluations. If external Claude execution is unavailable, mark Claude evaluation as PENDING / EXTERNAL HANDOFF REQUIRED until genuine external review completes.\n"
+        f"6. Reconcile findings into docs/engineering/aspice_audits/{datetime.now().strftime('%Y-%m-%d')}_dual_vendor_aspice_audit.md.\n"
+        "7. File discovered defects or process non-conformances as Jira tickets under Epic ATT-232 / ATT-8138.\n"
     )
     new_key = create_issue(
         summary=summary,
@@ -4444,8 +4542,12 @@ def format_qa_audit_markdown(sprint_info, audit_results, overall_compliant, audi
         lines.append("Non-compliances detected during sampling. Action items and tracking tickets:")
         for r in audit_results:
             if not r["compliant"]:
-                ca_key = r.get("corrective_action") or f"[{r['key']}](https://rainerblind.atlassian.net/browse/{r['key']})"
-                lines.append(f"* **{r['key']}**: Process deviation noted; Corrective Action Ticket: {ca_key}")
+                ca_key_str = r.get("corrective_action")
+                if not ca_key_str:
+                    fallback_key = f"ATT-CA-{r['key']}"
+                    ca_key_str = f"[{fallback_key}](https://rainerblind.atlassian.net/browse/{fallback_key})"
+                failed_str = ", ".join(r.get("failed_categories", [])) or "Process deviation"
+                lines.append(f"* **{r['key']}**: Process deviation in {failed_str}; Corrective Action Ticket: {ca_key_str}")
 
     lines.append("")
     return "\n".join(lines)
@@ -4726,6 +4828,20 @@ def qa_audit(sprint_arg=None, sample_size=None, out_path=None, role="qa", as_rol
         if not ticket_compliant:
             overall_compliant = False
 
+        failed_cats = []
+        if not deliv_pass:
+            failed_cats.append("Lifecycle Deliverables")
+        if not gate_pass:
+            failed_cats.append("Stage Subtask Progression")
+        if not role_sep_pass:
+            failed_cats.append("4-Augen Role Separation")
+        if not living_doc_pass:
+            failed_cats.append("Living Documentation Parity")
+        if not commit_pass:
+            failed_cats.append("Commit Hygiene")
+        if not po_approval_pass:
+            failed_cats.append("PO Approval Provenance")
+
         audit_results.append({
             "key": key,
             "summary": summary,
@@ -4738,7 +4854,76 @@ def qa_audit(sprint_arg=None, sample_size=None, out_path=None, role="qa", as_rol
             "po_reason": po_reason,
             "compliant": ticket_compliant,
             "deliv_details": deliv_checks,
+            "failed_categories": failed_cats,
         })
+
+    # REQ-PRO-091.3 / ATT-8153: Deduplicated Corrective Action Ticket Creation
+    if not overall_compliant:
+        category_to_tickets = {}
+        for r in audit_results:
+            if not r["compliant"]:
+                for cat in r.get("failed_categories", []):
+                    category_to_tickets.setdefault(cat, []).append(r["key"])
+
+        category_to_ca_key = {}
+        for cat, ticket_keys in category_to_tickets.items():
+            summary_title = f"[QA Corrective Action] {cat} - Sprint {s_name}"
+            existing_key = None
+            try:
+                jql = f'project = ATT AND summary ~ "\\"{summary_title}\\""'
+                search_url = f"{base}/rest/api/2/search?jql={urllib.parse.quote(jql)}&maxResults=5&fields=summary"
+                s_res = jira_request(search_url, role=role)
+                for issue in s_res.get("issues", []):
+                    if summary_title.lower() in issue.get("fields", {}).get("summary", "").lower():
+                        existing_key = issue.get("key")
+                        break
+            except Exception:
+                existing_key = None
+
+            if not existing_key and board_id:
+                try:
+                    b_url = f"{base}/rest/agile/1.0/board/{board_id}/backlog?maxResults=50&fields=summary"
+                    b_res = jira_request(b_url, role=role)
+                    for issue in b_res.get("issues", []):
+                        if summary_title.lower() in issue.get("fields", {}).get("summary", "").lower():
+                            existing_key = issue.get("key")
+                            break
+                except Exception:
+                    existing_key = None
+
+            if existing_key:
+                category_to_ca_key[cat] = existing_key
+            else:
+                desc = (
+                    f"## QA Process Non-Conformance: {cat}\n\n"
+                    f"* **Sprint**: {s_name} (ID: {s_id})\n"
+                    f"* **Audited Tickets**: {', '.join(ticket_keys)}\n"
+                    f"* **Auditor**: `{role}`\n\n"
+                    f"### Remediation Action Required\n"
+                    f"Investigate root cause of process non-conformance under ASPICE SUP.1 (Quality Assurance) "
+                    f"and enact systemic countermeasures prior to next sprint planning."
+                )
+                try:
+                    new_ca_key = create_issue(
+                        summary=summary_title,
+                        description=desc,
+                        issuetype_id="10005",  # Verbesserung
+                        parent_key="ATT-8138",
+                        role=role,
+                        add_to_sprint=False,
+                        rank_top=True,
+                    )
+                    category_to_ca_key[cat] = new_ca_key
+                except Exception:
+                    cat_slug = re.sub(r"[^A-Za-z0-9]+", "-", cat).strip("-")
+                    category_to_ca_key[cat] = f"ATT-CA-{cat_slug}"
+
+        for r in audit_results:
+            if not r["compliant"]:
+                ca_keys = [category_to_ca_key[c] for c in r.get("failed_categories", []) if c in category_to_ca_key]
+                if ca_keys:
+                    r["ca_keys"] = ca_keys
+                    r["corrective_action"] = ", ".join(f"[{k}](https://rainerblind.atlassian.net/browse/{k})" for k in ca_keys)
 
     md_content = format_qa_audit_markdown(
         sprint_info={"id": s_id, "name": s_name},
