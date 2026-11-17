@@ -3,7 +3,7 @@
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Tests**: 137
+**Total Tests**: 138
 
 ---
 
@@ -3197,6 +3197,27 @@
      • Verify `alt == null` binds SQLite `NULL` into `VERTICAL_SPEED`.
   3. *Unit Contract Doc Parity & Regression Execution (`TST-FIL-021.3`)*:
      • Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.database.ErtsPostWorkoutRecomputerTest" --tests "com.atrainingtracker.banalservice.odometry.ExtendedRtsAltitudeSlopeSmootherTest" --tests "com.atrainingtracker.banalservice.sensor.SensorTypeUnitsContractTest"` asserting 100% pass rate (`Localization parity: N/A - no UI strings`).
+
+
+### TST-FIL-022: **3-State EKF Barometer Weather-Offset Anchoring & Calibration Jump Ascent Guard Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Tickets**: `ATT-8575`
+- **Requirement(s)**: `REQ-FIL-022` (`REQ-FIL-022.1`..`REQ-FIL-022.3`)
+- **Component**: `app/src/test/java/com/atrainingtracker/banalservice/odometry/KinematicAltitudeSlopeEkfTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/devices/AltitudeAndSlopeDevice_ATTFusedTest.kt`
+- **Test Type**: Unit
+- **Verification Method**: Unit
+- **Procedure**:
+  1. *3-State Baro-before-Ref `+130 m` Standstill Anchoring Test (`TST-FIL-022.1`, `KinematicAltitudeSlopeEkfTest.kt`)*:
+     • Configure `KinematicAltitudeSlopeEkf(is3StateMode = true)`. Feed 10 standstill barometer updates at `568.4 m`, then invoke a single `updateReferenceAltitude(438.0, DEFAULT_VAR_DEM)` followed by 20 more `568.4 m` barometer updates (both standstill and moving).
+     • Assert `ekf.altitude` anchors within `438.0 ± 0.5 m`, `ekf.baroBias` converges within `130.4 ± 0.5 m`, and `p00` does not remain locked at `0.25` prior to reference arrival.
+  2. *3-State Ref-before-Baro Offset & 2-State Covariance Guard Test (`TST-FIL-022.2`, `KinematicAltitudeSlopeEkfTest.kt`)*:
+     • Initialize 3-state EKF with `updateReferenceAltitude(438.0, DEFAULT_VAR_DEM)`, then feed 20 moving/standstill barometer updates starting at `568.4 m` (`+130.4 m` offset). Assert `ekf.baroBias` absorbs `130.4 ± 0.5 m` and `ekf.altitude` stays within `438.0 ± 0.5 m`.
+     • Verify 2-state mode (`is3StateMode = false`) continues initializing `p00 = varBaro` (`0.25`) with `ekf.p00 < 10.0` after `predict(1800.0, 5.0)`, and `reset()` / `setMode()` clears anchor state cleanly.
+  3. *Device Calibration Jump Ascent/Descent Guard Test (`TST-FIL-022.3`, `AltitudeAndSlopeDevice_ATTFusedTest.kt`)*:
+     • With DEM (or GPS) active on `AltitudeAndSlopeDevice_ATTFused`, feed uncalibrated pressure (`~568.4 m`) before the first `438.0 m` DEM fix arrives during `calculateMetrics()`.
+     • Assert `mAltitudeSensor` updates to `438.0 ± 0.5 m` and both `mAscentSensor` and `mDescentSensor` remain `0.0 m` (zero `+130.4 m` phantom descent/ascent), followed by true `25 m` climb accumulating `~25 m` ascent.
+  4. *Tier 1 Targeted Regression Execution (`TST-FIL-022.4`)*:
+     • Execute `./gradlew :app:testDebugUnitTest --tests "com.atrainingtracker.banalservice.odometry.KinematicAltitudeSlopeEkfTest" --tests "com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest" --tests "com.atrainingtracker.trainingtracker.build.MeasuredNfrBenchmarkTest"` asserting 100% pass rate (`Localization parity: N/A - no UI strings`).
 
 
 

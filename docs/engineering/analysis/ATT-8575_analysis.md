@@ -1,0 +1,38 @@
+# Stage 1 Analysis: ATT-8575 - EKF 3-State Barometer Initialization & Reference Re-Anchoring
+
+**Ticket**: `ATT-8575` (Recommended `2 SP`, Epic `ATT-166`) | **Branch**: `feature/ATT-8575` | **Date**: 2026-11-17
+
+## 1. Problem Statement & Motivation
+* During Pixel 10 ride `Zum Bäcker #56` (`2026-11-17_055721`, `workoutID=2182`) with `pref_att_fused_alt_use_dem = true` and `use_gps = true`, `ALTITUDE (att_fused_altitude_slope)` started at `568.42 m` (`563.48–576.56 m`), locked `+130.4 m` above ground truth (`StartLocation2Altitude` `438.0 m`, `DEM` `438.0 m`, calibrated `AltitudeFromPressureDevice` `438.09 m`).
+* Unlike `AltitudeFromPressureDevice.java:154-204` (which calibrates against `KnownLocationsDatabaseManager`), `AltitudeAndSlopeDevice_ATTFused.kt:258` ingests raw standard-atmosphere `SensorManager.getAltitude(1013.25f, pressureHpa)` (`~568 m` under low weather pressure) and relies on 3-state `[h, g, b_baro]^T` fusion to isolate weather offset into `baroBias`.
+
+## 2. Root Cause Analysis & Independent Hypothesis Verification
+* **Primary Cause (`KinematicAltitudeSlopeEkf.kt:178-186`)**: When hardware pressure arrives before 1-Hz `checkReferenceAltitudeFromSensors()` (`AltitudeAndSlopeDevice_ATTFused.kt:296`), `updateBarometer()` initializes `altitude = baroAltM` (`568.4 m`), `baroBias = 0.0`, and `p00 = varBaro = 0.25` (claiming `±0.5 m` absolute certainty), with `p02 = p20 = 0.0`.
+* **Why `updateReferenceAltitude()` (`:281-307`) Fails to Recover**: With `DEM = 438.0 m` (`varRef = 4.0`), `S = 0.25 + 4.0 = 4.25` (`sqrt = 2.06 m`), so Huber (`huberK = 3.0`, `:320-329`) clamps the `-130.4 m` residual to `-6.18 m`, `k0 = 0.25/4.25 = 0.0588` nudges `altitude` only `-0.36 m`, and `k2 = p20/S = 0.0` leaves `baroBias = 0.0`. At standstill (`:138-144`), `predict()` returns early without growing `p00`, `checkReferenceAltitudeFromSensors()` (`:309`) ignores repeated static DEM timestamps, and 5-Hz `updateBarometer()` (`:192-200`, `:219-245`) locks `baroBias` near `0` and `altitude` near `568 m`.
+* **Independent Peer Review & Verification (Live `243e0fbc`)**:
+  * **Reverse Arrival Order Blind Spot (`Ref-before-Baro`)**: Even if `updateReferenceAltitude(438.0)` initializes first (`:255-263`, `p00 = 4.0`, `p22 = 100.0`), the subsequent `updateBarometer(568.4)` sees a `+130.4 m` (`13σ` vs `sqrt(104.25) = 10.2 m`) residual, Huber-clamps to `+30.6 m`, shrinks `p22` to `4.24`, and pulls `altitude` upward while `baroBias` slowly converges.
+  * **Critical Ascent/Descent Jump Side Effect (`AltitudeAndSlopeDevice_ATTFused.kt:352-371`)**: When `handlePressureMeasurement()` (`:265`) runs first at `568.4 m`, `publishAltitudeAndMetrics()` sets `mAscentDescentAnchorAltitude = 568.4 m` (`:360`) and `mLastAltitude = 568.4 m` (`:371`). Re-anchoring `ekf.altitude` to `438.0 m` on the first DEM/GPS lock without resetting `mAscentDescentAnchorAltitude` and `mLastAltitude` would trigger `deltaFromAnchor = -130.4 <= -2.0` (`:366`) and inject `+130.4 m` phantom `DESCENT` (or `ASCENT`).
+  * **Existing Test Constraints (`KinematicAltitudeSlopeEkfTest.kt:155-165`, `AltitudeAndSlopeDevice_ATTFusedTest.kt:270-335`)**: `testPredict_clampsLargeDtSec()` runs in **2-State mode** (`is3StateMode = false`) and asserts `ekf.p00 < 10.0` after `predict(1800.0, 5.0)` — so 2-State `p00 = varBaro` MUST stay unchanged! `testFinding3_demTimestampGating` (`0 m` baro -> `400 m` DEM) and `testFinding4_gpsElevationIngestion` (`590 m` baro -> `600 m` GPS, asserts `altitude > 590.1`) remain compatible when first-reference anchoring sets `p00 = varRef` (`4.0` / `16.0`) and `altitude = refAltM`.
+  * **Sibling Audit**: `ExtendedRtsAltitudeSlopeSmoother.kt:107-115` already seeds `x[0] = referenceAltitudeM ?: rawAltitudeM` with `p[0][0] = 400.0` / `p[2][2] = 400.0` and backward RTS smoothing; `AltitudeFromPositionDevice.java:55` is strictly decoupled from `KnownLocations.db`.
+
+## 3. User Scope Grounding (ATT-1250)
+* **In-Scope**: (1) In 3-State mode (`KinematicAltitudeSlopeEkf.kt`), avoid `p00 = 0.25` lock-in on unanchored barometer startup and absorb initial baro-vs-reference offset into `baroBias` on first reference/baro pairing (both arrival orders, plus `setMode()` / `reset()` hygiene); (2) Reset `mAscentDescentAnchorAltitude` & `mLastAltitude` in `AltitudeAndSlopeDevice_ATTFused.kt` upon initial reference re-anchoring so `ASCENT`/`DESCENT` stay `0.0 m`.
+* **Out-of-Scope**: Modifying 2-State mode (`!is3StateMode`), `ExtendedRtsAltitudeSlopeSmoother.kt`, `BarometricAltitudeFilter.kt`, `AltitudeFromPressureDevice.java`, or `ANT-Android-SDKs`.
+
+## 4. Requirement Archaeology & Chesterton's Fence Audit
+* **Original Requirement ID & Target**: `REQ-FIL-016.1`/`.2` (`TST-FIL-016`, `ATT-6279`, `docs/requirements/req_tracking_cockpit.md:5726-5785`) and `REQ-FIL-020.1`/`.2` (`TST-FIL-020`, `ATT-8081`, `:6091-6131`). Targets `KinematicAltitudeSlopeEkf.kt` and `AltitudeAndSlopeDevice_ATTFused.kt`.
+* **Historical Origin & Commit Trace**: `75c1497e` (`ATT-6279`) introduced `KinematicAltitudeSlopeEkf` (`p00 = varBaro`, `p22 = 100.0`); `8b0eba41` (`ATT-8081`) added DEM precedence, MSL normalization, and `2.0 m` hysteresis (`mAscentDescentAnchorAltitude`).
+* **Root Reason for Existing Formulation**: `ATT-6279` initialized `p00 = varBaro` uniformly for both 2-State and 3-State modes and tested 3-State mode only with `updateReferenceAltitude(200.0)` matching `updateBarometer(200.0)` (`0 m` initial bias).
+* **Preservation of Core Invariants**: 2-State `p00 = varBaro` (`testPredict_clampsLargeDtSec`), standstill clamping (`v < 0.3 m/s -> dh = 0`), DEM-over-GPS precedence (`REQ-FIL-020.1`), 2.0 m hysteresis (`REQ-FIL-020.2`), thermal drift absorption into `baroBias` (`testThreeStateMode`), and thread-safety (`@Synchronized`).
+
+## 5. Change-Request Impact Analysis (SUP.10)
+* **Affected Requirements**: Net-new `REQ-FIL-*` / `TST-FIL-*` refining `REQ-FIL-016.1`/`.2` & `REQ-FIL-020.2`.
+* **Affected Architecture Elements**: `KinematicAltitudeSlopeEkf.kt`, `AltitudeAndSlopeDevice_ATTFused.kt`, `KinematicAltitudeSlopeEkfTest.kt`, `AltitudeAndSlopeDevice_ATTFusedTest.kt`.
+* **Verification Impact & Test Surface**: `KinematicAltitudeSlopeEkfTest`, `AltitudeAndSlopeDevice_ATTFusedTest`, `MeasuredNfrBenchmarkTest` (`N/A - no UI strings`).
+* **Risk Assessment & Invariants**: **LOW–MEDIUM** (`2 SP`). Core EKF state/covariance update; zero DB schema, UI, or `ANT-Android-SDKs` changes.
+
+## 6. Architectural Strategy & System Invariants
+1. Track `hasReferenceAnchor` and `hasBarometerSample` (or `unanchoredBaroOffset` state) in `KinematicAltitudeSlopeEkf` (cleared in `reset()`, `hasReferenceAnchor` cleared on `setMode()`):
+   - In 3-State mode before first reference anchor, initialize unanchored barometer with high altitude variance (`p00 = DEFAULT_UNANCHORED_ALT_VAR`, e.g. `400.0`) rather than `0.25`.
+   - On the first `updateReferenceAltitude(refAltM, varRef)` in 3-State mode (`!hasReferenceAnchor`), if already initialized from barometer, set `baroBias += (altitude - refAltM)`, `altitude = refAltM`, `p00 = varRef`, clear cross-covariances `p01=p10=p02=p20=0.0`, and return `true` (re-anchored); symmetrically, if `updateReferenceAltitude` initialized first (`hasReferenceAnchor = true`) and the first `updateBarometer(baroAltM)` arrives afterward, seed `baroBias = baroAltM - altitude` so large weather offsets (`±130 m`) never pull `altitude`.
+2. In `AltitudeAndSlopeDevice_ATTFused` (`handleReferenceAltitude()` and `checkReferenceAltitudeFromSensors()`), when `ekf.updateReferenceAltitude(...)` reports initial re-anchoring, reset `mAscentDescentAnchorAltitude = Double.NaN` and `mLastAltitude = Double.NaN` before `publishAltitudeAndMetrics()` so `ASCENT` and `DESCENT` remain `0.0 m`.

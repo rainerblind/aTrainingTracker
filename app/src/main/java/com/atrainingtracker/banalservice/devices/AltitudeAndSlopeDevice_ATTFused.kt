@@ -269,10 +269,13 @@ open class AltitudeAndSlopeDevice_ATTFused @JvmOverloads constructor(
     @VisibleForTesting
     fun handleReferenceAltitude(refAltM: Double, isDem: Boolean = true) {
         ekf.setMode(isEffectiveDem || isEffectiveGps)
-        ekf.updateReferenceAltitude(
+        val reanchored = ekf.updateReferenceAltitude(
             refAltM,
             if (isDem) KinematicAltitudeSlopeEkf.DEFAULT_VAR_DEM else KinematicAltitudeSlopeEkf.DEFAULT_VAR_GPS
         )
+        if (reanchored) {
+            resetAscentDescentAnchor()
+        }
         publishAltitudeAndMetrics(getCurrentSpeed())
     }
 
@@ -310,7 +313,9 @@ open class AltitudeAndSlopeDevice_ATTFused @JvmOverloads constructor(
                 val demVal = (demSensor.value as? Number)?.toDouble()
                 if (demVal != null && !demVal.isNaN()) {
                     mLastDemUpdateTimestampMs = demSensor.lastUpdateTimestamp
-                    ekf.updateReferenceAltitude(demVal, KinematicAltitudeSlopeEkf.DEFAULT_VAR_DEM)
+                    if (ekf.updateReferenceAltitude(demVal, KinematicAltitudeSlopeEkf.DEFAULT_VAR_DEM)) {
+                        resetAscentDescentAnchor()
+                    }
                     demConsumed = true
                 }
             } else if (demSensor != null && (nowMs - demSensor.lastUpdateTimestamp) <= DEM_STALENESS_THRESHOLD_MS) {
@@ -334,7 +339,9 @@ open class AltitudeAndSlopeDevice_ATTFused @JvmOverloads constructor(
                 val gpsVal = (gpsSensor.value as? Number)?.toDouble()
                 if (gpsVal != null && !gpsVal.isNaN()) {
                     mLastGpsUpdateTimestampMs = gpsSensor.lastUpdateTimestamp
-                    ekf.updateReferenceAltitude(gpsVal, KinematicAltitudeSlopeEkf.DEFAULT_VAR_GPS)
+                    if (ekf.updateReferenceAltitude(gpsVal, KinematicAltitudeSlopeEkf.DEFAULT_VAR_GPS)) {
+                        resetAscentDescentAnchor()
+                    }
                 }
             }
         }
@@ -346,6 +353,12 @@ open class AltitudeAndSlopeDevice_ATTFused @JvmOverloads constructor(
         val speedSensor = mMySensorManager.getSensor(SensorType.SPEED_mps)
         val speedVal = (speedSensor?.value as? Number)?.toDouble() ?: 0.0
         return max(0.0, speedVal)
+    }
+
+    @Synchronized
+    private fun resetAscentDescentAnchor() {
+        mAscentDescentAnchorAltitude = Double.NaN
+        mLastAltitude = Double.NaN
     }
 
     @Synchronized

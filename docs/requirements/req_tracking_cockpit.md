@@ -3,7 +3,7 @@
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Requirements**: 161
+**Total Requirements**: 162
 
 ---
 
@@ -6488,6 +6488,49 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 • *Then* `VERTICAL_SPEED` binds SQLite `NULL` when `alt == null` and all device-attributed columns remain 100% byte-for-byte untouched, while `SensorTypeUnitsContractTest` passes cleanly (`N/A - no UI strings`).
 
 **Invariants**: `SmoothedAltitudeSlopePoint.verticalSpeedMps` remains `m/s`; `ALLOWED_CANONICAL_COLUMNS` & device-column immutability (`REQ-FIL-017.3`); `[-3000, 3000]` `m/h` live parity (`REQ-FIL-012`); `SensorType` `ordinal()`/`name()` & `"ATT-8577"` contract token preserved; `N/A - no UI strings`.
+
+
+### REQ-FIL-022: 3-State EKF Barometer Weather-Offset Bias Initialization & Calibration Jump Ascent Guard [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-FIL-022`
+- **System Requirement(s)**: `SYSREQ-TRK-003`, `SYSREQ-TRK-004`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `app/src/main/java/com/atrainingtracker/banalservice/odometry/KinematicAltitudeSlopeEkf.kt`, `app/src/main/java/com/atrainingtracker/banalservice/devices/AltitudeAndSlopeDevice_ATTFused.kt`
+- **Rationale**: In 3-state mode (`is3StateMode = true`), `KinematicAltitudeSlopeEkf.updateBarometer()` previously initialized uncalibrated standard-atmosphere barometer altitude with `p00 = varBaro = 0.25` and `baroBias = 0.0`, causing Huber clamping (`K = 3.0`) and zero `p02` cross-covariance to lock in `+130 m` synoptic weather-pressure offsets against delayed DEM/GPS reference fixes (and conversely causing `Ref-before-Baro` `+130 m` offsets to pull `altitude` upward due to `p22 = 100.0` `13σ` clamping). Separating 3-state unanchored barometer startup from 2-state `p00 = varBaro` tracking and resetting the hysteresis anchor on initial reference calibration eliminates weather-pressure altitude lock-in and phantom `ASCENT`/`DESCENT` spikes (`ATT-8575`, refining `REQ-FIL-016.1`/`.2` and `REQ-FIL-020.2`).
+- **Description**:
+  1. *3-State Baro-before-Ref Weather-Offset Anchoring (`REQ-FIL-022.1`)*:
+     - When `is3StateMode == true` and `updateBarometer()` initializes before any reference altitude anchor (`DEM` / `KnownLocation` / `GPS`), `KinematicAltitudeSlopeEkf` SHALL initialize `p00` with high unanchored altitude uncertainty (MUST NOT lock `p00 = 0.25`) and track that no reference anchor has been ingested yet.
+     - Upon arrival of the first valid reference altitude `refAltM` (`updateReferenceAltitude(refAltM, varRef)`), even at standstill (`v < 0.3 m/s`), the EKF SHALL anchor `altitude = refAltM` (`p00 = varRef`), absorb the accumulated barometric offset into `baroBias` (`baroBias += oldAltitude - refAltM`), clear cross-covariances (`p01`, `p10`, `p02`, `p20`), and signal that initial calibration re-anchoring occurred.
+  2. *3-State Ref-before-Baro Calibration & 2-State Covariance Guard (`REQ-FIL-022.2`)*:
+     - When `updateReferenceAltitude()` initializes the EKF first (`hasReferenceAnchor = true`) and the first `updateBarometer(baroAltM)` subsequently arrives in 3-state mode, `KinematicAltitudeSlopeEkf` SHALL seed `baroBias = baroAltM - altitude` directly so large weather-pressure offsets (`>= 130 m`) do not trigger Huber-clamped pulling of `altitude` away from the valid reference.
+     - In **2-state mode (`!is3StateMode`)**, `updateBarometer()` MUST preserve `p00 = varBaro` (`0.25`) and existing covariance propagation (`ekf.p00 < 10.0` after `predict(1800.0, 5.0)`). `reset()` and `setMode()` SHALL cleanly reset reference/barometer initialization tracking flags (`Localization Parity: N/A - no UI strings`).
+  3. *Calibration Jump Ascent/Descent Guard (`REQ-FIL-022.3`)*:
+     - In `AltitudeAndSlopeDevice_ATTFused` (`handleReferenceAltitude()` and `checkReferenceAltitudeFromSensors()`), whenever `ekf.updateReferenceAltitude(...)` performs initial reference re-anchoring, the device SHALL reset/align `mAscentDescentAnchorAltitude` and `mLastAltitude` prior to `publishAltitudeAndMetrics()` so the calibration jump adds `0.0 m` bogus `ASCENT` or `DESCENT`.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new `REQ-FIL-022` refining `REQ-FIL-016.1`/`.2` (*Kinematic Terrain-Slope EKF & Observability Modes*) and `REQ-FIL-020.2` (*Anchor-Based Elevation Hysteresis Deadband*). Targets `KinematicAltitudeSlopeEkf.kt` and `AltitudeAndSlopeDevice_ATTFused.kt`.
+2. *Historical Origin & Commit Trace*: `75c1497e` (`ATT-6279`) introduced `KinematicAltitudeSlopeEkf` (`p00 = varBaro`, `p22 = 100.0`); `8b0eba41` (`ATT-8081`) introduced DEM precedence, MSL normalization, and `2.0 m` `mAscentDescentAnchorAltitude` hysteresis.
+3. *Root Reason for Existing Formulation*: `ATT-6279` initialized `p00 = varBaro` identically in 2-state and 3-state modes and tested 3-state thermal drift (`testThreeStateMode`) with `0 m` initial baro-vs-DEM offset.
+4. *Preservation of Core Invariants*: Preserves 2-state `p00 = varBaro` (`testPredict_clampsLargeDtSec`), standstill clamping (`v < 0.3 m/s -> dh = 0`), DEM-over-GPS precedence (`REQ-FIL-020.1`), `2.0 m` hysteresis (`REQ-FIL-020.2`), 3-state thermal drift absorption (`testThreeStateMode`), and `@Synchronized` thread safety.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `KinematicAltitudeSlopeEkf` in 3-state mode initialized at standstill with uncalibrated barometer `568.4 m` (`+130.4 m` weather offset),
+• *When* a single DEM reference `438.0 m` arrives (`updateReferenceAltitude(438.0, DEFAULT_VAR_DEM)`) followed by 5-Hz `568.4 m` barometer updates,
+• *Then* `altitude` anchors at `438.0 m` (±`0.5 m`), `baroBias` absorbs `+130.4 m` (±`0.5 m`), and subsequent barometer updates do not pull `altitude` back toward `568.4 m`.
+• *Given* `KinematicAltitudeSlopeEkf` in 3-state mode initialized first by DEM `438.0 m` (`Ref-before-Baro`),
+• *When* uncalibrated barometer readings at `568.4 m` (`+130.4 m` offset) arrive while moving or stationary,
+• *Then* `baroBias` initializes to `+130.4 m` and `altitude` remains anchored near `438.0 m` without Huber-clamped drift.
+• *Given* `KinematicAltitudeSlopeEkf` in **2-state mode (`is3StateMode = false`)**,
+• *When* `updateBarometer(200.0)` and `predict(1800.0, 5.0)` execute,
+• *Then* initial `p00 = varBaro` (`0.25`) is preserved and `ekf.p00 < 10.0`.
+• *Given* `AltitudeAndSlopeDevice_ATTFused` receiving `568.4 m` pressure before first `438.0 m` DEM/GPS lock,
+• *When* `calculateMetrics()` ingests the first DEM/GPS reference and publishes metrics,
+• *Then* `mAltitudeSensor` reports `438.0 m`, `mAscentSensor` and `mDescentSensor` both remain `0.0 m` (`N/A - no UI strings`).
+
+**Invariants**: 2-state `p00 = varBaro` preserved; standstill `dh = 0`; DEM-over-GPS precedence (`REQ-FIL-020.1`); `2.0 m` hysteresis (`REQ-FIL-020.2`); `baroBias` thermal drift isolation; `@Synchronized` thread safety; `N/A - no UI strings`.
+
 
 
 

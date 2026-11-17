@@ -476,4 +476,72 @@ class AltitudeAndSlopeDevice_ATTFusedTest {
         )
         assertEquals("att_fused_altitude_slope", device.name)
     }
+
+    // TST-FIL-022.3: Initial 3-state DEM calibration jump resets hysteresis anchor (0.0 m bogus descent)
+    @Test
+    fun testCalibrationJumpAscentDescentGuard_zeroBogusDescentAndRealClimbAfterward_tstFil022_3() {
+        every { AttFusedAltitudePreferences.isEffectiveDemActive(any()) } returns true
+        every { AttFusedAltitudePreferences.isEffectiveGpsActive(any()) } returns false
+
+        val speedSensor = mockk<com.atrainingtracker.banalservice.sensor.MySensor<Number>>(relaxed = true)
+        every { speedSensor.value } returns 0.0 // Standstill at start
+        every { mockSensorManager.getSensor(SensorType.SPEED_mps) } returns speedSensor
+
+        val demSensor = mockk<com.atrainingtracker.banalservice.sensor.MySensor<Number>>(relaxed = true)
+        every { demSensor.value } returns 438.0
+        every { demSensor.lastUpdateTimestamp } returns 5000L
+        every {
+            mockSensorManager.getSensorForDeviceType(SensorType.ALTITUDE, DeviceType.ALTITUDE_FROM_POSITION)
+        } returns demSensor
+
+        val device = AltitudeAndSlopeDevice_ATTFused(mockContext, mockSensorManager, autoStartScheduler = false)
+        device.refreshCachedPreferences()
+
+        // Early barometer arrives at 568.4 m (+130.4 m weather offset) before DEM lock
+        val p568 = SensorManager.PRESSURE_STANDARD_ATMOSPHERE *
+            Math.pow(1.0 - 568.4 / 44330.0, 5.255).toFloat()
+        repeat(5) { idx ->
+            device.handlePressureMeasurement(p568, 1000L + idx * 200L)
+        }
+        assertEquals(568.4, (device.mAltitudeSensor?.value as Number).toDouble(), 1.0)
+
+        // First DEM fix (438.0 m) arrives at calculateMetrics(5000L)
+        device.calculateMetrics(5000L)
+
+        assertEquals("Fused altitude must anchor at 438.0 m DEM", 438.0, (device.mAltitudeSensor?.value as Number).toDouble(), 0.5)
+        assertEquals(
+            "Initial -130.4 m calibration jump must add 0.0 m bogus ascent",
+            0.0,
+            (device.mAscentSensor?.value as? Number)?.toDouble() ?: 0.0,
+            1e-6
+        )
+        assertEquals(
+            "Initial -130.4 m calibration jump must add 0.0 m bogus descent",
+            0.0,
+            (device.mDescentSensor?.value as? Number)?.toDouble() ?: 0.0,
+            1e-6
+        )
+
+        // Now ride uphill +25 m (438 -> 463 m) at 5 m/s (+0.83 m/s within slew limit)
+        every { speedSensor.value } returns 5.0
+        var baroAlt = 568.4
+        var trueAlt = 438.0
+        var tMs = 6000L
+        for (i in 1..30) {
+            baroAlt += 25.0 / 30.0
+            trueAlt += 25.0 / 30.0
+            val p = SensorManager.PRESSURE_STANDARD_ATMOSPHERE *
+                Math.pow(1.0 - baroAlt / 44330.0, 5.255).toFloat()
+            every { demSensor.value } returns trueAlt
+            every { demSensor.lastUpdateTimestamp } returns tMs
+            device.handlePressureMeasurement(p, tMs)
+            device.calculateMetrics(tMs)
+            tMs += 1000L
+        }
+
+        val ascentAfterClimb = (device.mAscentSensor?.value as? Number)?.toDouble() ?: 0.0
+        val descentAfterClimb = (device.mDescentSensor?.value as? Number)?.toDouble() ?: 0.0
+        assertTrue("Post-lock real 25 m climb must accumulate ~25 m ascent (was $ascentAfterClimb)", ascentAfterClimb in 22.0..27.0)
+        assertEquals("Descent must stay 0.0 m during pure climb", 0.0, descentAfterClimb, 1e-6)
+    }
 }
