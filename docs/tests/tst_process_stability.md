@@ -3217,10 +3217,11 @@
 - **Jira**: `ATT-8213`
 - **Test Description**:
   1. *Canonical Directory Registration Test (`tools/test_verify_requirement_governance.py`)*: Assert `code_reviews` is recognized in `ALLOWED_ENGINEERING_ENTRIES` and `verify_canonical_engineering_entries()` passes with `docs/engineering/code_reviews/` present.
-  2. *Subsystem Coverage Matrix Parsing & Slice Selection Test (`tools/test_jira_accounts.py`)*: Assert helper function `get_next_review_subsystem()` correctly parses `coverage_matrix.md` and selects unreviewed or oldest audited subsystem slices.
-  3. *Weekly Review Ticket Creation & Deduplication Test (`tools/test_jira_accounts.py`)*: Mock Jira API and verify `ensure_weekly_review_ticket()` creates a ticket with `rank_top=True` under `ATT-232` when overdue and skips creation when an active review ticket already exists.
-  4. *Governance Documentation & Policy Grounding Review*: Verify policy alignment across `docs/coding_standards.md`, `.agents/rules/aspice_governance.md`, `sprint-planner/SKILL.md`, and `release-manager/SKILL.md`.
-  5. *Living Documentation Master Parity*: Run `python3 tools/verify_requirement_governance.py` confirming 100% parity across `docs/requirements.md` and `docs/tests.md`.
+  2. *Subsystem Coverage Matrix Parsing & Slice Selection Test (`tools/test_jira_accounts.py`, [Verified] ATT-8426)*: Assert helper function `get_next_review_subsystem()` correctly parses `coverage_matrix.md` with extended package mapping (`repositories/`, `cloud/`, `onlinecommunities/`, `segments/`, `climbs/`) and selects unreviewed or oldest audited subsystem slices.
+  3. *Weekly Review Ticket Creation & Deduplication Test (`tools/test_jira_accounts.py`, [Verified] ATT-8426)*: Mock Jira API and verify `ensure_weekly_review_ticket()` creates a ticket with generic "current top model" specification and `rank_top=True` under `ATT-232` when overdue and skips creation when an active review ticket already exists.
+  4. *7-Day Cadence & Decoupled Release Gate Test (`tools/test_jira_accounts.py`, [Verified] ATT-8426)*: In `test_is_weekly_review_overdue`, verify that `is_weekly_review_overdue()` returns `False` when the latest review is $\le 7$ days old even when other subsystems remain `UNREVIEWED`, preventing release gating deadlock.
+  5. *Governance Documentation, Model Mandate & Claude Non-Simulation Protocol Review (`[Verified] ATT-8426`)*: Verify generic model formulation and explicit Claude non-simulation handoff protocol across `docs/coding_standards.md`, `release_plan.md`, `coverage_matrix.md`, and `template_dual_vendor_code_review.md`.
+  6. *Living Documentation Master Parity*: Run `python3 tools/verify_requirement_governance.py` confirming 100% parity across `docs/requirements.md` and `docs/tests.md`.
 
 
 ---
@@ -3252,7 +3253,7 @@
 - **Test Description**:
   1. *Multi-Lane Capacity Bin-Packing Test (`tools/test_jira_accounts.py`)*: Assert `select_greedy_bin_pack_tickets()` packs candidate tickets in strict `ORDER BY rank ASC` across disjoint Epics, respects `max_sp_per_lane` / capacity bounds, and preserves excess tickets of saturated Epics for subsequent sprints.
   2. *FixVersion Warning Suppression Test (`tools/test_jira_accounts.py`)*: Assert `show_issue()` does not emit FixVersion missing warnings when tickets are in non-terminal statuses (`Zu erledigen`, `In Bearbeitung`, `In Überprüfung`), but alerts when status is `Erledigt` and `fixVersions` is empty.
-  3. *Release Plan Structure and Quality Gate Review*: Inspect `docs/management/release_plan.md` confirming full coverage of `V5.0.0` milestone epics, 12h continuous cadence, Google Pixel 10 daily-ride verification, and quality gate exit criteria.
+  3. *Release Plan Structure, Field Test Path & Pseudo-Sprint Review (`[Verified] ATT-8426`)*: Inspect `docs/management/release_plan.md` confirming full coverage of `V5.0.0` milestone epics, 12h continuous cadence, synchronization with `docs/releases/V5.0.0/sys_verification_record.md` (Section 3), and reference to pseudo-sprint `Bereit für PO Systemtest` (ID 454).
   4. *Governance & Lifecycle Parity Review*: Verify consistency across `.agents/rules/aspice_governance.md` (Rule 8.3 & Rule 85), `sprint-planner/SKILL.md`, and `release-manager/SKILL.md`.
   5. *Living Documentation Parity*: Execute `python3 tools/verify_requirement_governance.py` confirming 100% parity across `docs/requirements.md` and `docs/tests.md`.
 

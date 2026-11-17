@@ -3478,18 +3478,15 @@ def get_next_review_subsystem(matrix_path=None, repo_root=None):
 
 def is_weekly_review_overdue(reviews_dir=None, days_threshold=7, repo_root=None):
     """
-    REQ-PRO-095.3 / REQ-PRO-095.4:
+    REQ-PRO-095.3 / REQ-PRO-095.4 / ATT-8426:
     Returns True if more than days_threshold days have elapsed since the latest
-    completed review in docs/engineering/code_reviews/ or if unreviewed subsystems remain.
+    completed review in docs/engineering/code_reviews/ or if no completed review exists.
+    Decoupled from UNREVIEWED status to prevent 9-week release preparation deadlock.
     """
     if repo_root is None:
         repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     if reviews_dir is None:
         reviews_dir = os.path.join(repo_root, "docs", "engineering", "code_reviews")
-
-    next_domain, _, status = get_next_review_subsystem(repo_root=repo_root)
-    if status == "UNREVIEWED":
-        return True
 
     if not os.path.isdir(reviews_dir):
         return True
@@ -3536,7 +3533,7 @@ def ensure_weekly_review_ticket(role="coordinator", force=False):
             return issue["key"]
 
     if not force and not is_weekly_review_overdue():
-        print("Weekly Dual-Vendor Code Review is not overdue (< 7 days and all subsystems audited).")
+        print("Weekly Dual-Vendor Code Review is not overdue (< 7 days).")
         return None
 
     target_domain, target_path, _ = get_next_review_subsystem()
@@ -3546,8 +3543,8 @@ def ensure_weekly_review_ticket(role="coordinator", force=False):
     desc = (
         f"h2. Mandatory Weekly Dual-Vendor Code & Architecture Review ({week_label})\n"
         f"*Target Subsystem*: `{target_domain}` ({target_path})\n"
-        f"*Cadence*: Weekly dual-vendor holistic code & architecture review (REQ-PRO-095 / ATT-8213).\n"
-        f"*Dual AI Vendors*: Google Gemini (Gemini 2.5 Pro / Gemini 4 Carbon) + Anthropic Claude (Claude 3.7 Sonnet).\n\n"
+        f"*Cadence*: Weekly dual-vendor holistic code & architecture review (REQ-PRO-095 / ATT-8213 / ATT-8426).\n"
+        f"*Dual AI Vendors*: Current Top Model of Google Gemini + Current Top Model of Anthropic Claude (REQ-PRO-095.1).\n\n"
         "h3. Review Scope & Execution Protocol\n"
         f"1. Audit full subsystem `{target_domain}` alongside recent commits on develop (not restricted to incremental diffs!).\n"
         "2. Independent blind evaluations by Gemini and Claude covering:\n"
@@ -3557,9 +3554,10 @@ def ensure_weekly_review_ticket(role="coordinator", force=False):
         "   - Defensive error handling and test assertion validity\n"
         "   - Static analysis & Android hygiene: run `./gradlew :app:lintDebug :app:detekt --max-workers=2`, review new findings deliberately, and derive concrete remediation tickets where warranted\n"
         f"   - Scenario-gap diagnostic: run `./gradlew :app:koverXmlReportDebug --max-workers=2` and inspect `{target_domain}` coverage to spot untested real-world edge cases (never write artificial coverage-padding tests)\n"
-        f"3. Reconcile findings into docs/engineering/code_reviews/{datetime.now().strftime('%Y-%m-%d')}_dual_vendor_code_review.md.\n"
-        "4. File discovered defects/refactorings as Jira tickets under ATT-232 / ATT-8138.\n"
-        f"5. Update {target_domain} status to AUDITED in docs/engineering/code_reviews/coverage_matrix.md.\n"
+        "3. Claude Non-Simulation Protocol (ATT-8426): Antigravity agents running on Google models SHALL NEVER simulate or fabricate Anthropic Claude evaluations. If external Claude API / CLI execution is unavailable, mark Claude evaluation as PENDING / EXTERNAL HANDOFF REQUIRED until genuine external review completes.\n"
+        f"4. Reconcile findings into docs/engineering/code_reviews/{datetime.now().strftime('%Y-%m-%d')}_dual_vendor_code_review.md.\n"
+        "5. File discovered defects/refactorings as Jira tickets under ATT-232 / ATT-8138.\n"
+        f"6. Update {target_domain} status to AUDITED in docs/engineering/code_reviews/coverage_matrix.md once both vendor evaluations complete.\n"
     )
     new_key = create_issue(
         summary=summary,
@@ -3640,15 +3638,16 @@ def ensure_weekly_aspice_audit_ticket(role="coordinator", force=False):
     summary = f"Weekly Dual-Vendor Gemini and Claude ASPICE 4.0 Cross-Audit ({week_label})"
     desc = (
         f"h2. Mandatory Weekly Dual-Vendor ASPICE 4.0 Cross-Audit ({week_label})\n"
-        f"*Cadence*: Weekly dual-vendor ASPICE 4.0 process and evidence cross-audit (REQ-PRO-096 / ATT-8212).\n"
-        f"*Dual AI Vendors*: Google Gemini (Gemini 2.5 Pro / Gemini 4 Carbon) + Anthropic Claude (Claude 3.7 Sonnet).\n\n"
+        f"*Cadence*: Weekly dual-vendor ASPICE 4.0 process and evidence cross-audit (REQ-PRO-096 / ATT-8212 / ATT-8426).\n"
+        f"*Dual AI Vendors*: Current Top Model of Google Gemini + Current Top Model of Anthropic Claude (REQ-PRO-096.1).\n\n"
         "h3. Audit Scope & Protocol (SUP.1 / GP 2.1.6)\n"
         "1. Independent cross-vendor compliance evaluation across ASPICE VDA processes (SWE.1–SWE.6, SUP.1, SUP.8, SUP.9, SUP.10, MAN.3).\n"
         "2. Verification of quality gate records (Gates 1–5), First-Time Pass Rate (FTPR) integrity, and role separation.\n"
         "3. Traceability verification between System and Software requirements (SYS.2 <-> SYS.3).\n"
         "4. Weekly Kover coverage snapshot (`./gradlew :app:koverXmlReportDebug --max-workers=2` + `python3 tools/generate_test_evidence.py --target weekly_<KW>`), verifying meaningful scenario coverage and critical subsystem floors without coverage-padding.\n"
-        f"5. Reconcile findings into docs/engineering/aspice_audits/{datetime.now().strftime('%Y-%m-%d')}_dual_vendor_aspice_audit.md.\n"
-        "6. File discovered defects or process non-conformances as Jira tickets under Epic ATT-232 / ATT-8138.\n"
+        "5. Claude Non-Simulation Protocol (ATT-8426): Antigravity agents running on Google models SHALL NEVER simulate or fabricate Anthropic Claude evaluations. If external Claude execution is unavailable, mark Claude evaluation as PENDING / EXTERNAL HANDOFF REQUIRED until genuine external review completes.\n"
+        f"6. Reconcile findings into docs/engineering/aspice_audits/{datetime.now().strftime('%Y-%m-%d')}_dual_vendor_aspice_audit.md.\n"
+        "7. File discovered defects or process non-conformances as Jira tickets under Epic ATT-232 / ATT-8138.\n"
     )
     new_key = create_issue(
         summary=summary,

@@ -1238,7 +1238,8 @@ class TestJiraCliTooling(unittest.TestCase):
         mock_create.assert_not_called()
 
     def test_get_next_review_subsystem_unreviewed_and_rotation(self):
-        """TST-PRO-095.2: Parsing coverage_matrix.md and rotating through UNREVIEWED and oldest AUDITED slices."""
+        """TST-PRO-095.2 / ATT-8426: Parsing coverage_matrix.md and rotating through UNREVIEWED and oldest AUDITED slices."""
+        # Traces to: REQ-PRO-095.2, TST-PRO-095.2
         with tempfile.TemporaryDirectory() as tmpdir:
             matrix_file = os.path.join(tmpdir, "coverage_matrix.md")
             # 1. When UNREVIEWED rows exist, pick first UNREVIEWED
@@ -1247,14 +1248,16 @@ class TestJiraCliTooling(unittest.TestCase):
                 "| Subsystem Domain | Target Path(s) | Last Audited Date | Audited Commit SHA | Gemini Model | Claude Model | Status | Active / Next Target |\n"
                 "| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |\n"
                 "| `tracker/` | `app/tracker/` | 2026-11-01 | abc | Pro | Sonnet | `AUDITED` | - |\n"
-                "| `banalservice/` | `app/banalservice/` | - | - | - | - | `UNREVIEWED` | `NEXT` |\n"
+                "| `repositories/` | `app/repositories/` | - | - | - | - | `UNREVIEWED` | `NEXT` |\n"
+                "| `cloud/` | `app/cloud/` | - | - | - | - | `UNREVIEWED` | - |\n"
+                "| `banalservice/` | `app/banalservice/` | - | - | - | - | `UNREVIEWED` | - |\n"
                 "| `database/` | `app/database/` | - | - | - | - | `UNREVIEWED` | - |\n"
             )
             with open(matrix_file, "w", encoding="utf-8") as f:
                 f.write(content_unreviewed)
 
             domain, path, status = jira_util.get_next_review_subsystem(matrix_path=matrix_file)
-            self.assertEqual(domain, "banalservice/")
+            self.assertEqual(domain, "repositories/")
             self.assertEqual(status, "UNREVIEWED")
 
             # 2. When all are AUDITED, pick oldest date
@@ -1263,53 +1266,54 @@ class TestJiraCliTooling(unittest.TestCase):
                 "| Subsystem Domain | Target Path(s) | Last Audited Date | Audited Commit SHA | Gemini Model | Claude Model | Status | Active / Next Target |\n"
                 "| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |\n"
                 "| `tracker/` | `app/tracker/` | 2026-11-10 | abc | Pro | Sonnet | `AUDITED` | - |\n"
-                "| `banalservice/` | `app/banalservice/` | 2026-11-01 | def | Pro | Sonnet | `AUDITED` | - |\n"
+                "| `repositories/` | `app/repositories/` | 2026-11-01 | def | Pro | Sonnet | `AUDITED` | - |\n"
                 "| `database/` | `app/database/` | 2026-11-05 | ghi | Pro | Sonnet | `AUDITED` | - |\n"
             )
             with open(matrix_file, "w", encoding="utf-8") as f:
                 f.write(content_all_audited)
 
             domain2, path2, status2 = jira_util.get_next_review_subsystem(matrix_path=matrix_file)
-            self.assertEqual(domain2, "banalservice/")
+            self.assertEqual(domain2, "repositories/")
             self.assertEqual(status2, "AUDITED")
 
     def test_is_weekly_review_overdue(self):
-        """TST-PRO-095.3: Overdue determination based on elapsed days and review directory."""
+        """TST-PRO-095.4 / ATT-8426: Decoupled 7-day review currency check (not blocked by UNREVIEWED)."""
+        # Traces to: REQ-PRO-095.3, REQ-PRO-095.4, TST-PRO-095.4
         with tempfile.TemporaryDirectory() as tmpdir:
-            matrix_file = os.path.join(tmpdir, "coverage_matrix.md")
             reviews_dir = os.path.join(tmpdir, "code_reviews")
             os.makedirs(reviews_dir, exist_ok=True)
 
+            # 1. No review files -> overdue (True)
+            self.assertTrue(jira_util.is_weekly_review_overdue(reviews_dir=reviews_dir, days_threshold=7))
+
+            # 2. Recent review (2 days ago) -> not overdue (False), even when get_next_review_subsystem has UNREVIEWED slices
             two_days_ago = (datetime.now() - timedelta(days=2)).strftime("%Y-%m-%d")
-            content = (
-                "# Matrix\n\n"
-                "| Subsystem Domain | Target Path(s) | Last Audited Date | Audited Commit SHA | Gemini Model | Claude Model | Status | Active / Next Target |\n"
-                "| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |\n"
-                f"| `tracker/` | `app/tracker/` | {two_days_ago} | abc | Pro | Sonnet | `AUDITED` | - |\n"
-            )
-            with open(matrix_file, "w", encoding="utf-8") as f:
-                f.write(content)
-            with open(os.path.join(reviews_dir, f"{two_days_ago}_dual_vendor_code_review.md"), "w") as f:
+            review_file = os.path.join(reviews_dir, f"{two_days_ago}_dual_vendor_code_review.md")
+            with open(review_file, "w", encoding="utf-8") as f:
                 f.write("# Review")
 
-            with patch("jira_util.get_next_review_subsystem", return_value=("tracker/", "app/tracker/", "AUDITED")):
+            with patch("jira_util.get_next_review_subsystem", return_value=("repositories/", "app/repositories/", "UNREVIEWED")):
                 overdue = jira_util.is_weekly_review_overdue(reviews_dir=reviews_dir, days_threshold=7)
-                self.assertFalse(overdue)
+                self.assertFalse(overdue, "Recent review within 7 days must not be overdue even if slices remain UNREVIEWED")
 
+            # 3. Old review (10 days ago) -> overdue (True)
+            os.remove(review_file)
             ten_days_ago = (datetime.now() - timedelta(days=10)).strftime("%Y-%m-%d")
-            os.remove(os.path.join(reviews_dir, f"{two_days_ago}_dual_vendor_code_review.md"))
             with open(os.path.join(reviews_dir, f"{ten_days_ago}_dual_vendor_code_review.md"), "w") as f:
                 f.write("# Review")
 
-            with patch("jira_util.get_next_review_subsystem", return_value=("tracker/", "app/tracker/", "AUDITED")):
-                overdue_10 = jira_util.is_weekly_review_overdue(reviews_dir=reviews_dir, days_threshold=7)
-                self.assertTrue(overdue_10)
+            overdue_10 = jira_util.is_weekly_review_overdue(reviews_dir=reviews_dir, days_threshold=7)
+            self.assertTrue(overdue_10, "Review older than 7 days must be overdue")
+
+            # 4. Non-existent directory -> overdue (True)
+            self.assertTrue(jira_util.is_weekly_review_overdue(reviews_dir=os.path.join(tmpdir, "nonexistent"), days_threshold=7))
 
     @patch("jira_util.create_issue", return_value="ATT-9200")
     @patch("jira_util.paged_jql_search", return_value=[])
     @patch("jira_util.get_config", return_value={"JIRA_URL": "https://example.atlassian.net"})
     def test_ensure_weekly_review_creates_and_deduplicates(self, mock_config, mock_search, mock_create):
-        """TST-PRO-095.3: Automated weekly review ticket creates when overdue/missing and reuses when open."""
+        """TST-PRO-095.3 / ATT-8426: Automated review ticket creation with generic models and Claude non-simulation."""
+        # Traces to: REQ-PRO-095.1, REQ-PRO-095.3, TST-PRO-095.3, TST-PRO-095.5
         with patch("jira_util.is_weekly_review_overdue", return_value=True), \
              patch("jira_util.get_next_review_subsystem", return_value=("tracker/", "app/tracker/", "UNREVIEWED")):
             key1 = jira_util.ensure_weekly_review_ticket(role="coordinator")
@@ -1317,6 +1321,10 @@ class TestJiraCliTooling(unittest.TestCase):
             mock_create.assert_called_once()
             self.assertTrue(mock_create.call_args[1].get("rank_top"))
             self.assertEqual(mock_create.call_args[1].get("parent_key"), "ATT-232")
+            desc = mock_create.call_args[1].get("description", "")
+            self.assertIn("Current Top Model of Google Gemini + Current Top Model of Anthropic Claude", desc)
+            self.assertIn("Claude Non-Simulation Protocol", desc)
+            self.assertIn("PENDING / EXTERNAL HANDOFF REQUIRED", desc)
 
         # Deduplication test: when already open
         mock_create.reset_mock()

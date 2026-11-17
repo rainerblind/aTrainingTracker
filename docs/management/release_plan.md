@@ -15,7 +15,7 @@ Release `V5.0.0` represents the production milestone for aTrainingTracker, trans
 ### 1.1 In-Scope Epics
 1. **ATT-8138: ASPICE 4.0 Audit Remediation (Target CL2)**:
    - SUP.1 Quality Assurance Plan & dual-vendor weekly cross-audits (`ATT-8212`).
-   - Weekly dual-vendor Gemini Pro / Claude Sonnet code & architecture reviews (`ATT-8213`).
+   - Weekly dual-vendor code & architecture reviews across current top models of Gemini and Claude (`ATT-8213`, `ATT-8426`).
    - Multi-lane greedy bin-packing and capacity-bound sprint cadence (`ATT-8162`).
    - Bidirectional requirement traceability and First-Time Pass Rate (FTPR) integrity.
 2. **ATT-8141: Google Pixel 10 On-Device Physical Workout Field Verification**:
@@ -53,7 +53,8 @@ In accordance with Core Rule 85 (`ATT-8030`, `ATT-8162`), `V5.0.0` is constructe
 In compliance with ASPICE 4.0 `SWE.6` (Software Qualification Testing) and Finding `K1`:
 * Every pre-release candidate build merged into `develop` is automatically installed on the PO's Google Pixel 10.
 * Real-world outdoor workout sessions verify real sensor pairing, GPS route tracking, UI readability under sunlight, and battery endurance.
-* Field test evidence records (`docs/engineering/field_tests/`) document actual device serial numbers, session timestamps, and FIT file hashes prior to V5.0.0 release authorization.
+* Authentic field verification evidence is recorded in `docs/releases/V5.0.0/sys_verification_record.md` (replacing deprecated `docs/engineering/field_tests/`), documenting actual device serial numbers, session timestamps, and human PO attestation prior to V5.0.0 release authorization.
+* On-device field verification and human PO acceptance tickets are staged in protected pseudo-sprint `Bereit für PO Systemtest` (ID 454, `ATT-8423`) to ensure active development sprints remain uncluttered.
 
 ---
 
