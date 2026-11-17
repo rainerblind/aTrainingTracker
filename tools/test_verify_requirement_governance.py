@@ -89,6 +89,8 @@ from tools.verify_requirement_governance import (
     discover_governed_work_products,
     parse_work_product_header,
     verify_work_product_headers,
+    verify_conflict_markers,
+    verify_commit_hygiene,
 )
 
 
@@ -3351,6 +3353,105 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
             self.assertTrue(ok, f"Untracked/gitignored drafts must not fail header verification: {msgs}")
 
 
+class TestConflictMarkersAndCommitHygiene(unittest.TestCase):
+    """TST-PRO-121.3: Offline conflict-marker, commit-key hygiene, and .githooks enforcement."""
+
+    def test_tst_pro_121_3_conflict_markers_detected_and_clean_repo_passes(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            git_env = dict(os.environ, GIT_AUTHOR_NAME="T", GIT_AUTHOR_EMAIL="t@e.com", GIT_COMMITTER_NAME="T", GIT_COMMITTER_EMAIL="t@e.com")
+            subprocess.run(["git", "init", "-b", "develop"], cwd=tmpdir, env=git_env, check=True, stdout=subprocess.DEVNULL)
+            clean_fp = os.path.join(tmpdir, "clean.md")
+            with open(clean_fp, "w", encoding="utf-8") as f:
+                f.write("# Clean\nNormal content.\n")
+            subprocess.run(["git", "add", "clean.md"], cwd=tmpdir, env=git_env, check=True, stdout=subprocess.DEVNULL)
+            subprocess.run(["git", "commit", "-m", "docs(ATT-8165): clean file"], cwd=tmpdir, env=git_env, check=True, stdout=subprocess.DEVNULL)
+
+            ok, msgs = verify_conflict_markers(repo_root=tmpdir)
+            self.assertTrue(ok, f"Clean repo must pass: {msgs}")
+
+            # Introduce conflict markers via programmatic concatenation (no literal conflict marker lines in test source)
+            bad_fp = os.path.join(tmpdir, "broken.txt")
+            marker_blob = ("<" * 7) + " HEAD\nfoo\n" + ("=" * 7) + "\nbar\n" + (">" * 7) + " feature\n"
+            with open(bad_fp, "w", encoding="utf-8") as f:
+                f.write(marker_blob)
+            subprocess.run(["git", "add", "broken.txt"], cwd=tmpdir, env=git_env, check=True, stdout=subprocess.DEVNULL)
+
+            ok_bad, errs_bad = verify_conflict_markers(repo_root=tmpdir)
+            self.assertFalse(ok_bad)
+            self.assertTrue(any("broken.txt" in e for e in errs_bad))
+
+    def test_tst_pro_121_3_commit_hygiene_enforces_att_key_post_cutoff_and_exempts_historical(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            git_env = dict(os.environ, GIT_AUTHOR_NAME="T", GIT_AUTHOR_EMAIL="t@e.com", GIT_COMMITTER_NAME="T", GIT_COMMITTER_EMAIL="t@e.com")
+            subprocess.run(["git", "init", "-b", "develop"], cwd=tmpdir, env=git_env, check=True, stdout=subprocess.DEVNULL)
+
+            # 1. Pre-cutoff historical commit without ATT key -> exempted cleanly
+            with open(os.path.join(tmpdir, "a.txt"), "w", encoding="utf-8") as f:
+                f.write("v1\n")
+            subprocess.run(["git", "add", "a.txt"], cwd=tmpdir, env=git_env, check=True, stdout=subprocess.DEVNULL)
+            old_env = dict(git_env, GIT_AUTHOR_DATE="1794685976 +0000", GIT_COMMITTER_DATE="1794685976 +0000")
+            subprocess.run(["git", "commit", "-m", "fix(tier2): historical fix"], cwd=tmpdir, env=old_env, check=True, stdout=subprocess.DEVNULL)
+
+            ok_hist, msgs_hist = verify_commit_hygiene(repo_root=tmpdir, base_ref="develop")
+            self.assertTrue(ok_hist, f"Pre-cutoff commit should be exempted: {msgs_hist}")
+
+            # 2. Post-cutoff commit without ATT key -> fails
+            with open(os.path.join(tmpdir, "a.txt"), "w", encoding="utf-8") as f:
+                f.write("v2\n")
+            subprocess.run(["git", "add", "a.txt"], cwd=tmpdir, env=git_env, check=True, stdout=subprocess.DEVNULL)
+            new_env = dict(git_env, GIT_AUTHOR_DATE="1800000000 +0000", GIT_COMMITTER_DATE="1800000000 +0000")
+            subprocess.run(["git", "commit", "-m", "hotfix(settings): missing ticket key"], cwd=tmpdir, env=new_env, check=True, stdout=subprocess.DEVNULL)
+
+            ok_bad, errs_bad = verify_commit_hygiene(repo_root=tmpdir, base_ref="develop")
+            self.assertFalse(ok_bad)
+            self.assertTrue(any("ATT-" in e for e in errs_bad))
+
+            # 3. Reset back and commit WITH ATT-8165 -> passes
+            subprocess.run(["git", "reset", "--hard", "HEAD~1"], cwd=tmpdir, env=git_env, check=True, stdout=subprocess.DEVNULL)
+            with open(os.path.join(tmpdir, "a.txt"), "w", encoding="utf-8") as f:
+                f.write("v3\n")
+            subprocess.run(["git", "add", "a.txt"], cwd=tmpdir, env=git_env, check=True, stdout=subprocess.DEVNULL)
+            subprocess.run(["git", "commit", "-m", "fix(ATT-8165): tracked fix"], cwd=tmpdir, env=new_env, check=True, stdout=subprocess.DEVNULL)
+
+            ok_good, msgs_good = verify_commit_hygiene(repo_root=tmpdir, base_ref="develop")
+            self.assertTrue(ok_good, f"Post-cutoff commit with ATT-8165 should pass: {msgs_good}")
+
+    def test_tst_pro_121_3_githooks_scripts_enforce_att_key_and_conflict_markers(self):
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+        commit_msg_hook = os.path.join(repo_root, ".githooks", "commit-msg")
+        pre_commit_hook = os.path.join(repo_root, ".githooks", "pre-commit")
+        self.assertTrue(os.path.isfile(commit_msg_hook))
+        self.assertTrue(os.path.isfile(pre_commit_hook))
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            git_env = dict(os.environ, GIT_AUTHOR_NAME="T", GIT_AUTHOR_EMAIL="t@e.com", GIT_COMMITTER_NAME="T", GIT_COMMITTER_EMAIL="t@e.com")
+            subprocess.run(["git", "init", "-b", "develop"], cwd=tmpdir, env=git_env, check=True, stdout=subprocess.DEVNULL)
+
+            msg_bad = os.path.join(tmpdir, "MSG_BAD")
+            with open(msg_bad, "w", encoding="utf-8") as f:
+                f.write("hotfix: missing key\n")
+            res_bad = subprocess.run([commit_msg_hook, msg_bad], cwd=tmpdir, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            self.assertNotEqual(res_bad.returncode, 0)
+
+            msg_good = os.path.join(tmpdir, "MSG_GOOD")
+            with open(msg_good, "w", encoding="utf-8") as f:
+                f.write("fix(ATT-8165): tracked fix\n")
+            res_good = subprocess.run([commit_msg_hook, msg_good], cwd=tmpdir, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            self.assertEqual(res_good.returncode, 0)
+
+            # pre-commit rejects staged conflict markers and accepts clean files
+            staged_bad = os.path.join(tmpdir, "staged.txt")
+            with open(staged_bad, "w", encoding="utf-8") as f:
+                f.write(("<" * 7) + " HEAD\nconflict\n" + ("=" * 7) + "\nother\n" + (">" * 7) + " b\n")
+            subprocess.run(["git", "add", "staged.txt"], cwd=tmpdir, env=git_env, check=True, stdout=subprocess.DEVNULL)
+            res_pre_bad = subprocess.run([pre_commit_hook], cwd=tmpdir, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            self.assertNotEqual(res_pre_bad.returncode, 0)
+
+            with open(staged_bad, "w", encoding="utf-8") as f:
+                f.write("clean resolved content\n")
+            subprocess.run(["git", "add", "staged.txt"], cwd=tmpdir, env=git_env, check=True, stdout=subprocess.DEVNULL)
+            res_pre_good = subprocess.run([pre_commit_hook], cwd=tmpdir, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            self.assertEqual(res_pre_good.returncode, 0)
 
 
 if __name__ == "__main__":

@@ -1,14 +1,14 @@
 # Living Test Specification: Engineering Process, Stability & Architecture
 
 **Document ID**: `DOC-TST-PRO`  
-**Version**: 1.0.0  
+**Version**: 1.0.3  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Tests**: 224
+**Total Tests**: 225
 
 ---
 
@@ -3788,8 +3788,30 @@
 
 ---
 
+### TST-PRO-121: **Problem Resolution Hardening, Bug Trend Metrics, Resolution/Fix Verification, Commit/Conflict Guards & Process-Escape Suite (ATT-8165)** [Verified]
+- **Requirement(s)**: `REQ-PRO-121`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Component**: `tools/sprint_metrics.py`, `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `.githooks/commit-msg`, `.githooks/pre-commit`, `.github/workflows/android-branch-build.yml`, `tools/test_sprint_metrics.py`, `tools/test_verify_requirement_governance.py`, `tools/test_jira_accounts.py`
+- **Jira**: `ATT-8165`
+- **Test Description**:
+  1. *Bug Metrics, Open Age & Multi-Sprint Trend Chart (`TST-PRO-121.1`, tools/test_sprint_metrics.py)*:
+     • *Given* mocked Jira sprint issues including `Bug` (`10006`) tickets across `Critical`/`Major`/`Minor`/`Cosmetic` severities with `created`, `resolution`, `resolutiondate`, and `Final Review (Human)` vs `Erledigt` statuses plus multi-sprint `process_metrics.jsonl` history, *When* `parse_sprint_gate_metrics()` and `format_metrics_markdown()` execute, *Then* `open_bug_age_days` (`avg`, `max`, `gt_7d`), `fixed_awaiting_human`, and a multi-sprint Bug Trend table/ASCII chart render accurately while `verify_sprint_metrics()` accepts both legacy and extended JSONL lines.
+  2. *Bug Resolution States & Fix-Verification Gate (`TST-PRO-121.2`, tools/test_jira_accounts.py)*:
+     • *Given* offline mocked Jira REST API responses (including `/rest/api/3/resolution` returning only `id=10000` `Fertig`), *When* `resolve-bug` executes for `rejected`, `duplicate` (with `--duplicate-of`), `cannot-reproduce`, and `fixed`, *Then* standardized `resolution-*` labels and comments are recorded without failing on missing global Jira resolutions, `Erledigt` transitions remain blocked for agents (`REQ-PRO-016`), and advancing a `Bug` to `Final Review (Human)` without fix-verification evidence is rejected.
+  3. *Commit Hygiene, Conflict-Marker CI Gate & Git Hooks (`TST-PRO-121.3`, tools/test_verify_requirement_governance.py)*:
+     • *Given* isolated temporary Git repositories (`tempfile.TemporaryDirectory`), *When* `verify_conflict_markers()` scans tracked files with `<<<<<<<`/`=======`/`>>>>>>>` and `verify_commit_hygiene()` inspects post-cutoff non-merge commits on `develop` without `ATT-\d+`, *Then* both exit `1`, while clean tracked files, merge commits, and pre-cutoff commits (`<= cutoff_ts`) exit `0`; and `.githooks/commit-msg` and `.githooks/pre-commit` reject invalid commits/markers locally.
+  4. *Deduplicated `process-escape` Bug Creation (`TST-PRO-121.4`, tools/test_jira_accounts.py)*:
+     • *Given* offline HTTP mocks for Cloud v3 `paged_jql_search` and `create_issue`, *When* `create_process_escape_bug()` / `gate-verdict REVISION --file-escape-bug` / `file-process-escape` runs once for a new gate or Tier-2 failure and again for an already-open identical summary, *Then* the first creates a `Bug` (`10006`) labeled `process-escape` + `severity-*` and the second returns the existing key without creating a duplicate (`Rule 5`: zero live Jira mutations). (`Localization Parity: N/A - no UI strings`).
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
 | `1.0.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Added standardized `DOC-TST-PRO` work-product control header and Change History. |
+| `1.0.1` | 2026-11-17 | AI Agent (`ATT-8165`) | `ATT-8165` | Added `[Planned]` `TST-PRO-121` test specifications (`SUP.9` bug trends, resolutions, commit/conflict guards, `process-escape`). |
+| `1.0.2` | 2026-11-17 | AI Agent (`ATT-8165`) | `ATT-8165` | Promoted `TST-PRO-121` to `[Implemented]` in Stage 4. |
+| `1.0.3` | 2026-11-17 | AI Agent (`ATT-8165`) | `ATT-8165` | Promoted `TST-PRO-121` to `[Verified]` after Stage 5 verification. |

@@ -43,6 +43,110 @@ FINAL_REVIEW_ESCALATED_RE = re.compile(
 )
 
 DEFAULT_METRICS_PATH = "docs/engineering/metrics/process_metrics.jsonl"
+SEVERITY_LEVELS = ("Critical", "Major", "Minor", "Cosmetic")
+NON_FIX_RESOLUTION_LABELS = {
+    "resolution-rejected": "Rejected",
+    "resolution-duplicate": "Duplicate",
+    "resolution-cannot-reproduce": "Cannot Reproduce",
+}
+
+
+def _parse_iso_datetime(ts_str):
+    """Parses Jira ISO-8601 timestamps (e.g. 2026-11-10T14:22:00.000+0100 or Z) into UTC datetime."""
+    if not ts_str or not isinstance(ts_str, str):
+        return None
+    s = ts_str.strip()
+    if not s:
+        return None
+    if s.endswith("Z"):
+        s = s[:-1] + "+00:00"
+    m_tz = re.search(r"([+-]\d{2})(\d{2})$", s)
+    if m_tz:
+        s = s[:m_tz.start()] + f"{m_tz.group(1)}:{m_tz.group(2)}"
+    try:
+        dt = datetime.datetime.fromisoformat(s)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=datetime.timezone.utc)
+        return dt.astimezone(datetime.timezone.utc)
+    except ValueError:
+        return None
+
+
+def _summarize_bug_ages(ages_by_sev):
+    """Computes open bug age summary (avg, max, >7d) overall and per severity."""
+    all_ages = []
+    per_sev = {}
+    for sev in SEVERITY_LEVELS:
+        vals = ages_by_sev.get(sev, [])
+        all_ages.extend(vals)
+        per_sev[sev] = {
+            "count_with_created": len(vals),
+            "avg": round(sum(vals) / len(vals), 1) if vals else 0.0,
+            "max": round(max(vals), 1) if vals else 0.0,
+            "gt_7d": sum(1 for v in vals if v > 7.0),
+        }
+    return {
+        "count_with_created": len(all_ages),
+        "avg": round(sum(all_ages) / len(all_ages), 1) if all_ages else 0.0,
+        "max": round(max(all_ages), 1) if all_ages else 0.0,
+        "gt_7d": sum(1 for v in all_ages if v > 7.0),
+        "by_severity": per_sev,
+    }
+
+
+def _extract_bug_trend_point(record):
+    """Extracts a compact per-sprint bug trend point from a process_metrics record."""
+    pt = record.get("problem_trends")
+    if not isinstance(pt, dict):
+        return None
+    by_sev = pt.get("by_severity") or {}
+    age_obj = pt.get("open_bug_age_days") or {}
+    return {
+        "sprint_id": record.get("sprint_id"),
+        "sprint_name": str(record.get("sprint_name") or record.get("sprint_id") or "Unknown"),
+        "total_bugs": int(pt.get("total_bugs", 0) or 0),
+        "open_bugs": int(pt.get("open_bugs", 0) or 0),
+        "closed_bugs": int(pt.get("closed_bugs", 0) or 0),
+        "fixed_awaiting_human": int(pt.get("fixed_awaiting_human", 0) or 0),
+        "critical": int(by_sev.get("Critical", 0) or 0),
+        "major": int(by_sev.get("Major", 0) or 0),
+        "minor": int(by_sev.get("Minor", 0) or 0),
+        "cosmetic": int(by_sev.get("Cosmetic", 0) or 0),
+        "resolution_rate_percent": float(pt.get("resolution_rate_percent", 100.0) or 0.0),
+        "avg_open_age_days": float(age_obj.get("avg", 0.0) or 0.0) if isinstance(age_obj, dict) else 0.0,
+    }
+
+
+def _build_bug_trend_history(current_record, history=None, max_entries=6):
+    """Builds chronological multi-sprint bug trend history ending with current_record."""
+    points = []
+    seen = set()
+    cur_sid = current_record.get("sprint_id")
+    cur_sname = str(current_record.get("sprint_name") or "")
+    for rec in (history or []):
+        pt = _extract_bug_trend_point(rec)
+        if not pt:
+            continue
+        if (cur_sid and pt.get("sprint_id") == cur_sid) or (cur_sname and pt.get("sprint_name") == cur_sname):
+            continue
+        key = (pt.get("sprint_id"), pt.get("sprint_name"))
+        if key in seen:
+            continue
+        seen.add(key)
+        points.append(pt)
+    if max_entries > 1 and len(points) > (max_entries - 1):
+        points = points[-(max_entries - 1):]
+    cur_pt = _extract_bug_trend_point(current_record)
+    if cur_pt:
+        points.append(cur_pt)
+    return points
+
+
+def _render_ascii_bar(val, max_val, width=10):
+    if max_val <= 0 or val <= 0:
+        return "." * width
+    filled = max(1, min(width, int(round((val / max_val) * width))))
+    return ("#" * filled) + ("." * (width - filled))
 
 
 def identify_gate_number(summary):
@@ -130,7 +234,7 @@ def parse_verdicts_from_comments(comments):
     return verdicts
 
 
-def parse_sprint_gate_metrics(parent_issues, sprint_info):
+def parse_sprint_gate_metrics(parent_issues, sprint_info, history=None, now=None):
     """
     Calculates PA 4.1 Quantitative Process Metrics from a list of parent issues and their subtasks.
     Each parent issue dict must contain 'fields' with 'summary', 'status', 'priority', 'subtasks',
@@ -138,6 +242,12 @@ def parse_sprint_gate_metrics(parent_issues, sprint_info):
     """
     sprint_id = sprint_info.get("id", 0)
     sprint_name = sprint_info.get("name", "Unknown Sprint")
+    if now is None:
+        ref_now = datetime.datetime.now(datetime.timezone.utc)
+    elif now.tzinfo is None:
+        ref_now = now.replace(tzinfo=datetime.timezone.utc)
+    else:
+        ref_now = now.astimezone(datetime.timezone.utc)
 
     # 1. Throughput & Story Points
     total_tickets = len(parent_issues)
@@ -146,13 +256,17 @@ def parse_sprint_gate_metrics(parent_issues, sprint_info):
     completed_sp = 0.0
     risk_counts = {"Low": 0, "Medium": 0, "High": 0, "Highest": 0}
 
-    # Problem trends containers (REQ-PRO-063)
+    # Problem trends containers (REQ-PRO-063 / REQ-PRO-121.1)
     total_bugs = 0
     open_bugs = 0
     closed_bugs = 0
-    by_severity = {"Critical": 0, "Major": 0, "Minor": 0, "Cosmetic": 0}
-    open_by_severity = {"Critical": 0, "Major": 0, "Minor": 0, "Cosmetic": 0}
-    closed_by_severity = {"Critical": 0, "Major": 0, "Minor": 0, "Cosmetic": 0}
+    fixed_awaiting_human = 0
+    by_severity = {s: 0 for s in SEVERITY_LEVELS}
+    open_by_severity = {s: 0 for s in SEVERITY_LEVELS}
+    closed_by_severity = {s: 0 for s in SEVERITY_LEVELS}
+    awaiting_human_by_severity = {s: 0 for s in SEVERITY_LEVELS}
+    open_ages_by_sev = {s: [] for s in SEVERITY_LEVELS}
+    by_resolution = {"Fixed": 0, "Rejected": 0, "Duplicate": 0, "Cannot Reproduce": 0, "Fertig": 0, "Unresolved": 0}
 
     # Gate statistics containers
     gate_data = {
@@ -185,21 +299,53 @@ def parse_sprint_gate_metrics(parent_issues, sprint_info):
         else:
             risk_counts["Medium"] += 1
 
-        # Problem resolution tracking (REQ-PRO-063)
+        # Problem resolution tracking (REQ-PRO-063 / REQ-PRO-121.1)
         itype = fields.get("issuetype", {})
         itype_id = str(itype.get("id", ""))
         itype_name = itype.get("name", "").lower()
         is_bug = itype_id == "10006" or itype_name in ("bug", "fehler")
         if is_bug:
             total_bugs += 1
-            is_bug_closed = status_name in ("erledigt", "closed", "done")
+            labels = fields.get("labels", []) or []
+            norm_labels = [str(l).strip().lower() for l in labels]
+
+            res_field = fields.get("resolution")
+            jira_res_name = ""
+            if isinstance(res_field, dict):
+                jira_res_name = str(res_field.get("name", "") or "").strip()
+            elif isinstance(res_field, str):
+                jira_res_name = res_field.strip()
+
+            label_res_name = None
+            for nl in norm_labels:
+                if nl in NON_FIX_RESOLUTION_LABELS:
+                    label_res_name = NON_FIX_RESOLUTION_LABELS[nl]
+                    break
+                if nl == "resolution-fixed":
+                    label_res_name = "Fixed"
+                    break
+
+            is_terminal_status = status_name in ("erledigt", "closed", "done")
+            is_awaiting_human_status = status_name in ("final review (human)", "final review")
+            is_bug_closed = is_terminal_status or (label_res_name in ("Rejected", "Duplicate", "Cannot Reproduce")) or (
+                bool(jira_res_name) and not is_awaiting_human_status and status_name not in ("zu erledigen", "analysis", "test spec", "implementation plan", "implementation", "test", "in bearbeitung")
+            )
+            is_bug_awaiting_human = (not is_bug_closed) and is_awaiting_human_status
+
             if is_bug_closed:
                 closed_bugs += 1
+            elif is_bug_awaiting_human:
+                fixed_awaiting_human += 1
             else:
                 open_bugs += 1
 
+            effective_res = label_res_name or jira_res_name or ("Fixed" if is_bug_awaiting_human else ("Fertig" if is_terminal_status else "Unresolved"))
+            if effective_res in by_resolution:
+                by_resolution[effective_res] += 1
+            else:
+                by_resolution["Fixed" if (is_bug_closed or is_bug_awaiting_human) else "Unresolved"] += 1
+
             detected_sev = None
-            labels = fields.get("labels", [])
             for l in labels:
                 ll = str(l).strip().lower()
                 if ll.startswith("severity-"):
@@ -227,8 +373,14 @@ def parse_sprint_gate_metrics(parent_issues, sprint_info):
             by_severity[detected_sev] += 1
             if is_bug_closed:
                 closed_by_severity[detected_sev] += 1
+            elif is_bug_awaiting_human:
+                awaiting_human_by_severity[detected_sev] += 1
             else:
                 open_by_severity[detected_sev] += 1
+                created_dt = _parse_iso_datetime(fields.get("created"))
+                if created_dt is not None:
+                    age_days = max(0.0, (ref_now - created_dt).total_seconds() / 86400.0)
+                    open_ages_by_sev[detected_sev].append(age_days)
 
         # Inspect parent comments for Stage 6 ('Final Review (Agent)') verdicts
         parent_comments = issue.get("comments", []) or fields.get("comment", {}).get("comments", [])
@@ -349,10 +501,12 @@ def parse_sprint_gate_metrics(parent_issues, sprint_info):
         if total_tickets > 0 else 100.0
     )
 
+    resolved_bug_count = closed_bugs + fixed_awaiting_human
     resolution_rate = (
-        round((closed_bugs / total_bugs) * 100.0, 1)
+        round((resolved_bug_count / total_bugs) * 100.0, 1)
         if total_bugs > 0 else 100.0
     )
+    open_bug_age_days = _summarize_bug_ages(open_ages_by_sev)
 
     # REQ-PRO-092.5: Metric Plausibility Warning Thresholds
     plausibility_warnings = []
@@ -378,10 +532,14 @@ def parse_sprint_gate_metrics(parent_issues, sprint_info):
             "total_bugs": total_bugs,
             "open_bugs": open_bugs,
             "closed_bugs": closed_bugs,
+            "fixed_awaiting_human": fixed_awaiting_human,
             "resolution_rate_percent": resolution_rate,
             "by_severity": by_severity,
             "open_by_severity": open_by_severity,
             "closed_by_severity": closed_by_severity,
+            "awaiting_human_by_severity": awaiting_human_by_severity,
+            "by_resolution": by_resolution,
+            "open_bug_age_days": open_bug_age_days,
         },
         "quality_gates": {
             "overall_ftpr_percent": overall_ftpr,
@@ -401,6 +559,8 @@ def parse_sprint_gate_metrics(parent_issues, sprint_info):
         },
         "plausibility_warnings": plausibility_warnings,
     }
+    if history is not None:
+        metrics["problem_trends"]["bug_trend_history"] = _build_bug_trend_history(metrics, history=history)
 
     return metrics
 
@@ -554,7 +714,7 @@ def load_historical_metrics(filepath=DEFAULT_METRICS_PATH, repo_root=None):
     return records
 
 
-def format_metrics_markdown(metrics, spc=None):
+def format_metrics_markdown(metrics, spc=None, history=None):
     """Formats quantitative metrics and SPC analysis into a clean markdown table."""
     s_name = metrics.get("sprint_name", "")
     tp = metrics.get("throughput", {})
@@ -594,21 +754,51 @@ def format_metrics_markdown(metrics, spc=None):
 
     pt = metrics.get("problem_trends", {})
     if pt:
+        awaiting_cnt = pt.get("fixed_awaiting_human", 0)
+        age_info = pt.get("open_bug_age_days") or {}
+        age_by_sev = age_info.get("by_severity") or {}
         lines.extend([
             "",
             "h3. 3. Problem Trends & Defect Severity (ASPICE SUP.9)",
-            f"* *Total Bugs*: {pt.get('total_bugs', 0)} (Open: {pt.get('open_bugs', 0)}, Closed: {pt.get('closed_bugs', 0)}) | *Resolution Rate*: *{pt.get('resolution_rate_percent', 100.0)}%*",
+            f"* *Total Bugs*: {pt.get('total_bugs', 0)} (Open: {pt.get('open_bugs', 0)}, Awaiting Human: {awaiting_cnt}, Closed: {pt.get('closed_bugs', 0)}) | *Resolution Rate*: *{pt.get('resolution_rate_percent', 100.0)}%*",
+            f"* *Open Bug Age (days)*: avg={age_info.get('avg', 0.0)}d, max={age_info.get('max', 0.0)}d, >7d={age_info.get('gt_7d', 0)}",
             "",
-            "|| Severity || Total || Open || Closed ||",
+            "|| Severity || Total || Open || Awaiting Human || Closed || Avg Age (d) || Max Age (d) || >7d ||",
         ])
         by_sev = pt.get("by_severity", {})
         open_by_sev = pt.get("open_by_severity", {})
+        awaiting_by_sev = pt.get("awaiting_human_by_severity", {})
         closed_by_sev = pt.get("closed_by_severity", {})
-        for sev in ("Critical", "Major", "Minor", "Cosmetic"):
+        for sev in SEVERITY_LEVELS:
             tot = by_sev.get(sev, 0)
             op = open_by_sev.get(sev, 0)
+            aw = awaiting_by_sev.get(sev, 0)
             cl = closed_by_sev.get(sev, 0)
-            lines.append(f"| {sev} | {tot} | {op} | {cl} |")
+            s_age = age_by_sev.get(sev) or {}
+            lines.append(
+                f"| {sev} | {tot} | {op} | {aw} | {cl} | "
+                f"{s_age.get('avg', 0.0)} | {s_age.get('max', 0.0)} | {s_age.get('gt_7d', 0)} |"
+            )
+
+        trend_points = pt.get("bug_trend_history")
+        if not trend_points and history is not None:
+            trend_points = _build_bug_trend_history(metrics, history=history)
+        if trend_points:
+            max_open = max((p.get("open_bugs", 0) for p in trend_points), default=0)
+            lines.extend([
+                "",
+                "h4. Bug Trend vs Previous Sprints",
+                "|| Sprint || Total || Open || Resolved || Crit/Maj/Min/Cos || Avg Age (d) || Res % || Open Trend ||",
+            ])
+            for p in trend_points:
+                resolved_p = p.get("closed_bugs", 0) + p.get("fixed_awaiting_human", 0)
+                sev_vec = f"{p.get('critical', 0)}/{p.get('major', 0)}/{p.get('minor', 0)}/{p.get('cosmetic', 0)}"
+                bar = _render_ascii_bar(p.get("open_bugs", 0), max_open)
+                lines.append(
+                    f"| {p.get('sprint_name')} | {p.get('total_bugs', 0)} | {p.get('open_bugs', 0)} | "
+                    f"{resolved_p} | {sev_vec} | {p.get('avg_open_age_days', 0.0)} | "
+                    f"{p.get('resolution_rate_percent', 100.0)}% | `{bar}` |"
+                )
 
     if spc and spc.get("has_history"):
         spc_num = "4" if pt else "3"

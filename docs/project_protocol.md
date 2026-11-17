@@ -1,7 +1,7 @@
 # Agile Agentic ASPICE (AAA) Protocol & Architecture Pointer: aTrainingTracker
 
 **Document ID**: `DOC-GOV-PROTOCOL`  
-**Version**: 1.0.0  
+**Version**: 1.0.1  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -59,6 +59,10 @@ To ensure 24/7 autonomous agent execution without disrupting the Product Owner's
 1. **In-Sprint Per-Ticket Validation (Phase 2, Stages 1–5)**: Autonomous agents execute on-device verification exclusively against an emulated device (`emulator-5554`, `Pixel_8_Android_15` via `tools/agent_emulator.py`). Desk simulation tools (`fake_gps.py`, `simulate_kill.py`, `replay_workout.py`) enforce physical phone guardrails and abort if targeting physical USB hardware in agent mode.
 2. **Full-Sprint Integrated Evaluation (Ceremony 2, Sprint Review)**: The integrated release candidate on `sprint/<SPRINT_NAME>` is built and verified on the **real physical phone** (`Pixel 10`, `ANDROID_SERIAL=<physical_serial> ./gradlew installDebug`), guaranteeing real hardware validation before sprint completion.
 
+## Problem Resolution & Commit Hygiene (`SUP.9` / `REQ-PRO-121`)
+* **Every Fix Has a Problem Record**: Post-cutoff commits (including hotfixes and Tier-2 fixes) MUST reference an `ATT-\d+` ticket key (`.githooks/commit-msg`, `verify_requirement_governance.py --check-commit-hygiene`). Unresolved Git conflict markers are blocked locally (`.githooks/pre-commit`) and in CI (`--check-conflict-markers`). Activate local hooks via `git config core.hooksPath .githooks`.
+* **SUP.9 Resolution States & `process-escape` Tracking**: Bugs support explicit resolution states (`Rejected`, `Duplicate`, `Cannot Reproduce`, `Fixed` via `jira_util.py resolve-bug`), require fix verification before `Final Review (Human)`, and track gate/Tier-2 escapes via deduplicated `process-escape` Bugs (`file-process-escape`).
+
 ---
 
 ## Change History
@@ -66,3 +70,4 @@ To ensure 24/7 autonomous agent execution without disrupting the Product Owner's
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
 | `1.0.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Added `DOC-GOV-PROTOCOL` header and reconciled `9 Core Rules`, `Rules 1–85+`, and `6-Stage` lifecycle (`Stages 1–5` + `Stage 6`). |
+| `1.0.1` | 2026-11-17 | AI Agent (`ATT-8165`) | `ATT-8165` | Documented SUP.9 commit-key/conflict-marker hooks, bug resolution states, and `process-escape` problem records (`REQ-PRO-121`). |

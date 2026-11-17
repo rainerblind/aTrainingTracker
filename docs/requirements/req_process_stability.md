@@ -1,14 +1,14 @@
 # Living Requirements: Engineering Process, Stability & Architecture
 
 **Document ID**: `DOC-REQ-PRO`  
-**Version**: 1.0.0  
+**Version**: 1.0.3  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Requirements**: 185
+**Total Requirements**: 186
 
 ---
 
@@ -6086,8 +6086,37 @@ The workflow SHALL mandate that:
 
 ---
 
+### REQ-PRO-121: Problem Resolution Hardening — Bug Trends, Resolution States, Fix Verification, Commit/Conflict Guards & Process-Escape Records (ATT-8165) [Verified]
+- **Tests**: `TST-PRO-121`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `tools/sprint_metrics.py`, `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `.githooks/commit-msg`, `.githooks/pre-commit`, `.github/workflows/android-branch-build.yml`, `docs/project_governance.md`, `.agents/skills/sprint-planner/SKILL.md`
+- **Rationale**: ASPICE 4.0 Audit Finding `SUP.9` (`SUP.9 BP3/BP4/BP6`, `ATT-8165`) identified that `docs/engineering/metrics/process_metrics.jsonl` recorded `17` open bugs (`3 Critical`, `0` closed, `0.0%` resolution) in Sprint `443` with no Retro trend/age analysis, bugs lacked `Rejected`/`Duplicate`/`Cannot Reproduce` resolution tracking and pre-`Final Review (Human)` fix verification, hotfixes/fixes (`7e5ff312`, `24ceaf94`, `6a694bb1`) lacked `ATT-` keys, stale conflict markers reached `develop` (`d7bf7698`), and gate/Tier-2 escapes did not generate `process-escape` problem records.
+- **Description**:
+  1. *Bug Metrics, Open Age & Multi-Sprint Trend Analysis (`REQ-PRO-121.1`)*: `collect_sprint_metrics_for_id()` in `tools/jira_util.py` SHALL fetch `created`, `resolution`, and `resolutiondate` alongside `labels` and `description`. `parse_sprint_gate_metrics()` in `tools/sprint_metrics.py` SHALL classify Bug (`10006`) lifecycle states (`open_bugs`, `closed_bugs` for terminal/resolved bugs, `fixed_awaiting_human` for `Final Review (Human)`/`Final Review`), compute open-bug age statistics (`open_bug_age_days`: `avg`, `max`, `gt_7d` per severity), and emit cross-sprint trend deltas (`bug_trend_history`) from `process_metrics.jsonl` without breaking `REQ-PRO-063.4` schema fields; `format_metrics_markdown()` (`sprint-metrics --post-to-retro`) SHALL render per-severity open/closed/age counts and a multi-sprint Bug Trend table/ASCII chart.
+  2. *Bug Resolution States & Fix-Verification Gate (`REQ-PRO-121.2`)*: `tools/jira_util.py` SHALL provide `resolve-bug <KEY> <rejected|duplicate|cannot-reproduce|fixed> [--duplicate-of=KEY] [--reason=...]` supporting `Rejected`, `Duplicate`, `Cannot Reproduce`, and `Fixed` resolutions—setting Jira's `resolution` field when the resolution exists in `/rest/api/3/resolution` (gracefully handling Jira Cloud's current single `id=10000` `Fertig` resolution) while persistently recording `resolution-<state>` labels and structured audit comments, strictly preserving `REQ-PRO-016` (`Erledigt` human-only gate). Advancing a `Bug` (`10006`) to `Final Review (Human)` without a non-fix resolution (`rejected`/`duplicate`/`cannot-reproduce`) MUST require fix-verification evidence (reproduction and regression test verified).
+  3. *Commit Hygiene, Conflict-Marker CI Gate & Git Hooks (`REQ-PRO-121.3`)*: `tools/verify_requirement_governance.py` (`verify_conflict_markers()` and `verify_commit_hygiene()`, invoked via CLI flags and the default `verify_governance()` CI path in `.github/workflows/android-branch-build.yml`) SHALL fail with exit code `1` if any tracked file contains Git conflict markers (`^<{7}(?: .*)?$`, `^={7}$`, `^>{7}(?: .*)?$`) or if any post-cutoff non-merge commit on `develop`/`sprint/*` lacks an `ATT-\d+` issue key (cleanly exempting pre-cutoff historical commits `7e5ff312`, `d7bf7698`, `24ceaf94`, `6a694bb1`). Repository hooks `.githooks/commit-msg` and `.githooks/pre-commit` SHALL enforce `ATT-\d+` commit keys and zero conflict markers locally.
+  4. *Deduplicated `process-escape` Problem Record Creation (`REQ-PRO-121.4`)*: `tools/jira_util.py` SHALL provide `create_process_escape_bug()` (exposed via `file-process-escape` CLI and optional `gate-verdict REVISION --file-escape-bug`) using Cloud v3 `paged_jql_search` deduplication to create a `Bug` (`10006`) labeled `process-escape` with mandatory `--severity` (`REQ-PRO-063.1`) for gate `REVISION` or Tier-2 CI escapes without duplicates.
+  5. *Offline & Isolated Verification (`REQ-PRO-121.5`)*: Unit tests (`tools/test_sprint_metrics.py`, `tools/test_verify_requirement_governance.py`, `tools/test_jira_accounts.py`) SHALL validate all behavior offline via `tempfile` Git repos and mocked Jira HTTP APIs (`Rule 5`: zero live Jira mutations).
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new `REQ-PRO-121` (`REQ-PRO-121.1`–`REQ-PRO-121.5`), extending `REQ-PRO-063` (*Problem Severity Classification & Defect Trend Metrics*) and `REQ-PRO-092` (*Process Metrics Credibility & Bug Severity Rubric*) across `tools/sprint_metrics.py`, `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `.githooks/`, and `.github/workflows/android-branch-build.yml`.
+  2. *Historical Origin & Commit Trace*: `REQ-PRO-063` (`ATT-6156`, Sprint `2026-46.3`) and `REQ-PRO-092` (`ATT-7559`), prompted by ASPICE 4.0 Audit Finding `SUP.9` (`ATT-8165`).
+  3. *Root Reason for Existing Formulation*: `REQ-PRO-063`/`REQ-PRO-092` tracked per-sprint bug severity counts but omitted bug age, multi-sprint trends, non-fix resolution states, fix-verification gating, commit/conflict CI enforcement, and `process-escape` bug logging.
+  4. *Preservation of Core Invariants*: Preserves `REQ-PRO-063.4` JSONL backward compatibility on existing `process_metrics.jsonl` records, `REQ-PRO-016` Human Decision Gate (`Erledigt` human-only), `REQ-PRO-120` header versioning, and pre-cutoff historical commits (`7e5ff312`, `d7bf7698`, `24ceaf94`, `6a694bb1`).
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `sprint-metrics --record --post-to-retro` runs during Ceremony 2 across multi-sprint `process_metrics.jsonl` history, *When* rendered via `format_metrics_markdown()`, *Then* the Retro output includes bug counts per severity, open-bug age (`avg`/`max`/`>7d`), and a multi-sprint trend comparison vs previous sprints.
+  • *Given* a commit on `develop` post-cutoff lacking an `ATT-\d+` key or a tracked file containing `<<<<<<<`/`=======`/`>>>>>>>` conflict markers, *When* `python3 tools/verify_requirement_governance.py` (or `.githooks/`) runs, *Then* it exits `1` while pre-cutoff historical commits (`7e5ff312`, `d7bf7698`, `24ceaf94`, `6a694bb1`) pass cleanly.
+  • *Given* `resolve-bug` or `file-process-escape` / `gate-verdict REVISION --file-escape-bug` executes under mocked Jira Cloud v3 HTTP responses, *When* a Bug lacks a fix-verification check or matches an existing open `process-escape` ticket, *Then* premature `Final Review (Human)` transition is blocked, non-fix resolutions record `resolution-*` metadata cleanly, and `paged_jql_search` prevents duplicate `process-escape` Bugs.
+- **Invariants**: Zero `app/src/main/` edits; `ANT-Android-SDKs` untouched; `Localization Parity: N/A - no UI strings`; `REQ-PRO-016` Human Gate preserved; zero live Jira API calls in unit tests (`Rule 5`).
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
 | `1.0.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Added standardized `DOC-REQ-PRO` work-product control header and Change History. |
+| `1.0.1` | 2026-11-17 | AI Agent (`ATT-8165`) | `ATT-8165` | Added `[Planned]` `REQ-PRO-121` (`SUP.9` bug trend/age, resolution states, fix verification, commit/conflict guards, `process-escape` bugs). |
+| `1.0.2` | 2026-11-17 | AI Agent (`ATT-8165`) | `ATT-8165` | Promoted `REQ-PRO-121` to `[Implemented]` in Stage 4. |
+| `1.0.3` | 2026-11-17 | AI Agent (`ATT-8165`) | `ATT-8165` | Promoted `REQ-PRO-121` to `[Verified]` after Stage 5 verification. |

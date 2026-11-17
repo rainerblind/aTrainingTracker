@@ -2910,6 +2910,141 @@ class TestGateBypassPrevention(unittest.TestCase):
         self.assertEqual(status, "Analysis")
 
 
+class TestSup9ProblemResolution(unittest.TestCase):
+    """TST-PRO-121.2 & TST-PRO-121.4: SUP.9 Bug resolution states, fix-verification gate, and process-escape creation."""
+
+    @patch("jira_util.transition_issue")
+    @patch("jira_util.add_comment")
+    @patch("jira_util.jira_request")
+    @patch("jira_util.get_config", return_value={"JIRA_URL": "https://example.atlassian.net"})
+    def test_tst_pro_121_2_resolve_bug_supports_all_states_with_single_jira_resolution(
+        self, _mock_cfg, mock_request, mock_comment, mock_transition
+    ):
+        """TST-PRO-121.2: resolve-bug records resolution-* labels cleanly even when Jira only has Fertig (10000)."""
+        base_bug = {
+            "key": "ATT-910",
+            "fields": {
+                "issuetype": {"id": "10006", "name": "Bug", "subtask": False},
+                "status": {"name": "Analysis"},
+                "labels": ["severity-minor"],
+                "comment": {"comments": []},
+                "subtasks": [],
+            },
+        }
+        resolutions_api = [{"id": "10000", "name": "Fertig"}]
+
+        # 1. Duplicate requires --duplicate-of
+        with self.assertRaises(SystemExit) as cm:
+            jira_util.resolve_bug("ATT-910", "duplicate", role="agent1")
+        self.assertEqual(cm.exception.code, 1)
+
+        # 2. Duplicate with --duplicate-of records label & advances to Final Review (Human)
+        mock_request.side_effect = [base_bug, resolutions_api, {}]
+        res_dup = jira_util.resolve_bug(
+            "ATT-910", "duplicate", duplicate_of="ATT-800", reason="Same root cause as ATT-800", role="agent1"
+        )
+        self.assertEqual(res_dup["label"], "resolution-duplicate")
+        self.assertIsNone(res_dup["jira_resolution"])
+        put_payload = mock_request.call_args_list[2][1]["payload"]
+        self.assertIn("resolution-duplicate", put_payload["fields"]["labels"])
+        self.assertIn("duplicate-of-ATT-800", put_payload["fields"]["labels"])
+        mock_comment.assert_called()
+        mock_transition.assert_called_with("ATT-910", "final review (human)", role="agent1", inject_context=False)
+
+        # 3. Rejected & Cannot Reproduce
+        for arg, expected_lbl in [("rejected", "resolution-rejected"), ("cannot-reproduce", "resolution-cannot-reproduce")]:
+            mock_request.side_effect = [base_bug, resolutions_api, {}]
+            out = jira_util.resolve_bug("ATT-910", arg, reason="Out of scope / non-reproducible", role="agent1")
+            self.assertEqual(out["label"], expected_lbl)
+
+        # 4. Fixed requires fix-verification evidence
+        mock_request.side_effect = [base_bug]
+        with self.assertRaises(SystemExit) as cm_fix:
+            jira_util.resolve_bug("ATT-910", "fixed", reason="Changed a line", role="agent1")
+        self.assertEqual(cm_fix.exception.code, 1)
+
+        mock_request.side_effect = [base_bug, resolutions_api, {}]
+        out_fix = jira_util.resolve_bug(
+            "ATT-910", "fixed", reason="Reproduced crash and verified regression test TST-PRO-121", role="agent1"
+        )
+        self.assertEqual(out_fix["label"], "resolution-fixed")
+
+    def test_tst_pro_121_2_bug_fix_verification_gate_before_human_review(self):
+        """TST-PRO-121.2: Advancing Bug to Final Review (Human) or passing Stage 5 [Test] requires fix verification."""
+        with patch("jira_util.get_config", return_value={"JIRA_URL": "https://example.atlassian.net"}), \
+             patch("jira_util.jira_request") as mock_req, \
+             patch("jira_util.assign_issue"):
+            # Unverified Bug moving directly to Final Review (Human) is blocked
+            mock_req.side_effect = [
+                {"fields": {"issuetype": {"id": "10006", "name": "Bug", "subtask": False}, "status": {"name": "Test"}, "summary": "Bug", "parent": {}}},
+                {"transitions": [{"id": "9", "name": "Final Review (Human)", "to": {"name": "Final Review (Human)"}}]},
+                {"fields": {"labels": ["severity-major"], "comment": {"comments": []}, "subtasks": []}},
+            ]
+            with self.assertRaises(SystemExit) as cm:
+                jira_util.transition_issue("ATT-911", "final review (human)", role="agent1")
+            self.assertEqual(cm.exception.code, 1)
+
+            # Bug with resolution-fixed label advances cleanly to Final Review (Human)
+            mock_req.side_effect = [
+                {"fields": {"issuetype": {"id": "10006", "name": "Bug", "subtask": False}, "status": {"name": "Test"}, "summary": "Bug", "parent": {}}},
+                {"transitions": [{"id": "9", "name": "Final Review (Human)", "to": {"name": "Final Review (Human)"}}]},
+                {"fields": {"labels": ["severity-major", "resolution-fixed"], "comment": {"comments": []}, "subtasks": []}},
+                {},
+            ]
+            jira_util.transition_issue("ATT-911", "final review (human)", role="agent1")
+
+        # Gate 5 Stage 5 [Test] rejects Bug pass lacking fix-verification evidence
+        with patch("jira_util.get_config", return_value={"JIRA_URL": "https://example.atlassian.net"}), \
+             patch("jira_util.get_subtask_summary_and_desc", return_value=("[Test] Bug", "Ran build", "ATT-911")), \
+             patch("jira_util.jira_request", return_value={"fields": {"issuetype": {"id": "10006", "name": "Bug", "subtask": False}, "labels": []}}):
+            with self.assertRaises(SystemExit) as cm_g5:
+                jira_util.gate_verdict("ATT-912", "PASS", "Gate 5 PASS: [x] Checked tools/jira_util.py:10", role="agent2")
+            self.assertEqual(cm_g5.exception.code, 1)
+
+    @patch("jira_util.create_issue", return_value="ATT-9950")
+    @patch("jira_util.paged_jql_search")
+    @patch("jira_util.get_config", return_value={"JIRA_URL": "https://example.atlassian.net"})
+    def test_tst_pro_121_4_process_escape_bug_deduplication_and_revision_hook(
+        self, _mock_cfg, mock_jql, mock_create
+    ):
+        """TST-PRO-121.4: create_process_escape_bug & gate-verdict REVISION deduplicate via Cloud v3 paged_jql_search."""
+        # 1. No existing open process-escape Bug -> creates new Bug
+        mock_jql.return_value = []
+        key1, created1 = jira_util.create_process_escape_bug(
+            "Tier-2 unit test failure on sprint", "Stacktrace details", severity="major", source="tier2", role="agent2"
+        )
+        self.assertEqual(key1, "ATT-9950")
+        self.assertTrue(created1)
+        mock_create.assert_called_once()
+        self.assertEqual(mock_create.call_args[1]["issuetype_id"], "10006")
+        self.assertIn("process-escape", mock_create.call_args[1]["labels"])
+
+        # 2. Existing open process-escape Bug -> deduplicates without calling create_issue again
+        mock_create.reset_mock()
+        mock_jql.return_value = [
+            {"key": "ATT-9950", "fields": {"summary": "[Process-Escape] Tier-2 unit test failure on sprint", "status": {"name": "Zu erledigen"}}}
+        ]
+        key2, created2 = jira_util.create_process_escape_bug(
+            "Tier-2 unit test failure on sprint", "Duplicate details", severity="major", source="tier2", role="agent2"
+        )
+        self.assertEqual(key2, "ATT-9950")
+        self.assertFalse(created2)
+        mock_create.assert_not_called()
+
+        # 3. gate-verdict REVISION with file_escape_bug=True files deduplicated process-escape Bug
+        mock_jql.return_value = []
+        with patch("jira_util.assign_issue"), \
+             patch("jira_util.add_comment"), \
+             patch("jira_util.transition_issue"), \
+             patch("jira_util.get_subtask_summary_and_desc", return_value=("[Implementation] Fix", "Desc", "ATT-920")):
+            jira_util.gate_verdict(
+                "ATT-921", "REVISION", "Missed edge case", role="agent2", file_escape_bug=True, escape_severity="critical"
+            )
+            mock_create.assert_called_once()
+            self.assertEqual(mock_create.call_args[1]["severity"], "critical")
+            self.assertIn("escape-gate-revision", mock_create.call_args[1]["labels"])
+
+
 if __name__ == "__main__":
     unittest.main()
 

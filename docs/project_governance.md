@@ -1,7 +1,7 @@
 # aTrainingTracker: Project & Requirement Governance
 
 **Document ID**: `DOC-GOV-PROJECT`  
-**Version**: 1.0.0  
+**Version**: 1.0.1  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -83,6 +83,11 @@ Bugs originating from application crashes, Application Not Responding (ANR) even
 ### 5.2 Quality Gate Spot-Check Audits
 To prevent gate discrimination blind spots and verify that gate verdicts accurately reflect technical quality, the Coordinator and QA Auditor **SHALL** conduct periodic spot-checks during Ceremony 2 (Sprint Review & Retrospective) sampling completed gate subtasks and recording any verdict discrepancy rates in the retrospective deliverable.
 
+### 5.3 Problem Resolution States, Fix Verification & Process-Escape Records (`SUP.9` / `REQ-PRO-121`)
+* **Explicit Bug Resolution States (`jira_util.py resolve-bug`)**: Every `Bug` (`10006`) closed or triaged without code change **SHALL** record an explicit SUP.9 resolution (`Rejected`, `Duplicate` with `--duplicate-of`, `Cannot Reproduce`, or `Fixed`) via `resolution-<state>` labels, structured audit comment, and Jira's `resolution` field when configured (preserving `REQ-PRO-016` Human Decision Gate at `Final Review (Human)`).
+* **Pre-Human Fix Verification**: Advancing a `Bug` to `Final Review (Human)` without a non-fix resolution requires explicit fix-verification evidence (reproduction and regression test verification in Stage 5 `[Test]` or `resolve-bug fixed`).
+* **Process-Escape Problem Records & Commit/Conflict Hygiene**: Gate `REVISION` escapes (`gate-verdict REVISION --file-escape-bug`) and Tier-2 CI failures (`file-process-escape`) file deduplicated `process-escape` Bugs via Cloud v3 `paged_jql_search`. Post-cutoff commits on `develop`/`sprint/*` MUST reference `ATT-\d+` (enforced by `.githooks/commit-msg` and `verify_requirement_governance.py`) and tracked files MUST contain zero conflict markers (`.githooks/pre-commit` and CI).
+
 ---
 
 ## Change History
@@ -90,5 +95,6 @@ To prevent gate discrimination blind spots and verify that gate verdicts accurat
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
 | `1.0.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Added standardized `DOC-GOV-PROJECT` work-product control header and Change History. |
+| `1.0.1` | 2026-11-17 | AI Agent (`ATT-8165`) | `ATT-8165` | Documented SUP.9 bug resolution states, fix-verification gate, commit/conflict hygiene, and `process-escape` problem records (`REQ-PRO-121`). |
 
 

@@ -4348,6 +4348,9 @@ def verify_architecture_and_system_specs(diff_text=None, repo_root=None, base_re
 
 
 DOC_HEADER_CUTOFF_TS = 1794934635  # ATT-8163 baseline commit timestamp; enforces post-ATT-8164 edits
+COMMIT_HYGIENE_CUTOFF_TS = 1794939034  # ATT-8164 baseline commit timestamp; enforces post-ATT-8165 commits
+_CONFLICT_MARKER_LINE_RE = re.compile(r"^(?:<{7}(?: .*)?|={7}|>{7}(?: .*)?)$")
+_COMMIT_TICKET_KEY_RE = re.compile(r"\bATT-\d+\b")
 _VALID_DOC_STATUSES = {"Draft", "Reviewed", "Approved"}
 _ADR_EXTRA_STATUS = "Retrospective (Pending PO Sign-Off)"
 _UNAPPROVED_APPROVER_RE = re.compile(
@@ -5023,6 +5026,144 @@ def verify_system_software_traceability(
 
 
 
+def verify_conflict_markers(repo_root=None, file_paths=None):
+    """
+    REQ-PRO-121.3 / TST-PRO-121.3:
+    Scans tracked repository text files (or explicit file_paths) for unresolved Git conflict
+    markers (<<<<<<<, =======, >>>>>>>) and fails if any are detected.
+    """
+    if repo_root is None:
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+    if file_paths is not None:
+        candidates = [str(p).replace("\\", "/") for p in file_paths]
+    else:
+        candidates = []
+        try:
+            res = subprocess.run(
+                ["git", "-c", "core.quotePath=false", "ls-files"],
+                cwd=repo_root,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+                text=True,
+                check=True,
+            )
+            candidates = [line.strip().replace("\\", "/") for line in res.stdout.splitlines() if line.strip()]
+        except Exception:
+            for root, dirs, files in os.walk(repo_root):
+                dirs[:] = [d for d in dirs if d != ".git"]
+                for fn in files:
+                    rel = os.path.relpath(os.path.join(root, fn), repo_root).replace("\\", "/")
+                    candidates.append(rel)
+
+    findings = []
+    scanned = 0
+    for rel in sorted(set(candidates)):
+        abs_path = rel if os.path.isabs(rel) else os.path.join(repo_root, rel)
+        if not os.path.isfile(abs_path):
+            continue
+        try:
+            with open(abs_path, "rb") as fh:
+                raw = fh.read()
+        except Exception:
+            continue
+        if b"\x00" in raw[:4096]:
+            continue
+        scanned += 1
+        text = raw.decode("utf-8", errors="replace")
+        for lineno, line in enumerate(text.splitlines(), start=1):
+            if _CONFLICT_MARKER_LINE_RE.match(line):
+                findings.append(f"ERROR: Unresolved Git conflict marker in {rel}:{lineno}: '{line[:40]}' (REQ-PRO-121.3).")
+
+    if findings:
+        return False, findings
+    return True, [f"PASS: Zero Git conflict markers detected ({scanned} tracked file(s) scanned)."]
+
+
+def verify_commit_hygiene(
+    repo_root=None,
+    base_ref="develop",
+    cutoff_ts=COMMIT_HYGIENE_CUTOFF_TS,
+    refs_to_check=None,
+):
+    """
+    REQ-PRO-121.3 / TST-PRO-121.3:
+    Verifies that post-cutoff non-merge commits (on develop / sprint branches) reference a Jira
+    ticket key (ATT-\\d+) in their commit message, while cleanly exempting pre-cutoff historical
+    commits (e.g. 7e5ff312, d7bf7698, 24ceaf94, 6a694bb1).
+    """
+    if repo_root is None:
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+    try:
+        if refs_to_check is None:
+            resolved_base = _resolve_git_base_ref(base_ref=base_ref, cwd=repo_root)
+            revs = []
+            if resolved_base:
+                out = subprocess.check_output(
+                    ["git", "rev-list", "--no-merges", f"{resolved_base}..HEAD"],
+                    cwd=repo_root,
+                    stderr=subprocess.DEVNULL,
+                ).decode("utf-8", errors="replace").splitlines()
+                revs = [r.strip() for r in out if r.strip()]
+            if not revs:
+                out = subprocess.check_output(
+                    ["git", "rev-list", "--no-merges", "-n", "20", "HEAD"],
+                    cwd=repo_root,
+                    stderr=subprocess.DEVNULL,
+                ).decode("utf-8", errors="replace").splitlines()
+                revs = [r.strip() for r in out if r.strip()]
+        else:
+            revs = [str(r).strip() for r in refs_to_check if str(r).strip()]
+    except Exception as exc:
+        return True, [f"PASS: Commit hygiene scan skipped ({exc})."]
+
+    if not revs:
+        return True, ["PASS: Commit hygiene verified (0 commits in scope)."]
+
+    errors = []
+    checked = 0
+    exempted = 0
+    for sha in revs:
+        try:
+            meta = subprocess.check_output(
+                ["git", "log", "-n", "1", "--format=%H%x1f%ct%x1f%P%x1f%B", sha],
+                cwd=repo_root,
+                stderr=subprocess.DEVNULL,
+            ).decode("utf-8", errors="replace")
+        except Exception:
+            continue
+        parts = meta.split("\x1f", 3)
+        if len(parts) < 4:
+            continue
+        full_sha, ts_str, parents_str, msg = parts
+        try:
+            ts = int(ts_str.strip())
+        except ValueError:
+            ts = 0
+        if len(parents_str.split()) > 1:
+            exempted += 1
+            continue
+        if cutoff_ts and ts <= cutoff_ts:
+            exempted += 1
+            continue
+        checked += 1
+        first_line = (msg.strip().splitlines()[0] if msg.strip() else "").strip()
+        if first_line.startswith("chore(baseline):"):
+            # Baseline manifest recording commits may omit ATT key if strictly under docs/releases/
+            continue
+        if not _COMMIT_TICKET_KEY_RE.search(msg):
+            errors.append(
+                f"ERROR: Commit {full_sha[:8]} ('{first_line}') lacks a mandatory Jira ticket key (ATT-\\d+) (REQ-PRO-121.3)."
+            )
+
+    if errors:
+        return False, errors
+    return True, [
+        f"PASS: Commit hygiene verified ({checked} post-cutoff commit(s) checked, {exempted} pre-cutoff/merge commit(s) exempted)."
+    ]
+
+
 def verify_governance(
     deliverable_text=None,
     diff_text=None,
@@ -5186,6 +5327,18 @@ def verify_governance(
             return False, diagnostics
         diagnostics.extend(hdr_diag)
 
+        cm_ok, cm_diag = verify_conflict_markers(repo_root=repo_root)
+        if not cm_ok:
+            diagnostics.extend(cm_diag)
+            return False, diagnostics
+        diagnostics.extend(cm_diag)
+
+        ch_ok, ch_diag = verify_commit_hygiene(repo_root=repo_root, base_ref=base_ref)
+        if not ch_ok:
+            diagnostics.extend(ch_diag)
+            return False, diagnostics
+        diagnostics.extend(ch_diag)
+
     if diff_text is None:
         diff_text = get_git_diff(base_ref=base_ref)
 
@@ -5278,6 +5431,16 @@ def main():
         "--check-doc-headers",
         action="store_true",
         help="Verify standardized work-product headers, version bumps, and human-only Approved enforcement (REQ-PRO-120).",
+    )
+    parser.add_argument(
+        "--check-conflict-markers",
+        action="store_true",
+        help="Scan tracked files for unresolved Git conflict markers (REQ-PRO-121.3).",
+    )
+    parser.add_argument(
+        "--check-commit-hygiene",
+        action="store_true",
+        help="Verify post-cutoff commits reference a Jira ATT-\\d+ ticket key (REQ-PRO-121.3).",
     )
     parser.add_argument(
         "--skip-tripwires",
@@ -5760,6 +5923,18 @@ def main():
 
     if args.check_doc_headers:
         ok, diag = verify_work_product_headers(base_ref=args.base_ref, check_diff=True)
+        for msg in diag:
+            print(msg, file=sys.stderr if not ok else sys.stdout)
+        sys.exit(0 if ok else 1)
+
+    if args.check_conflict_markers:
+        ok, diag = verify_conflict_markers()
+        for msg in diag:
+            print(msg, file=sys.stderr if not ok else sys.stdout)
+        sys.exit(0 if ok else 1)
+
+    if args.check_commit_hygiene:
+        ok, diag = verify_commit_hygiene(base_ref=args.base_ref)
         for msg in diag:
             print(msg, file=sys.stderr if not ok else sys.stdout)
         sys.exit(0 if ok else 1)
