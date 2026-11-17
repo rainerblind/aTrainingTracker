@@ -38,9 +38,13 @@ import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
+import androidx.test.core.app.ApplicationProvider
+import android.content.Context
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
@@ -120,6 +124,26 @@ class MorningCheckCutoffScreenshotTest {
 
         assertTrue("Screenshot must exist", outFile.exists())
         assertTrue("Screenshot size must be > 0", outFile.length() > 0)
+    }
+
+    @Test
+    fun testMorningCheckCutoffSlider_visibleWhenPureWellnessEnabled() {
+        // TST-UI-525.6 (ATT-8469 / REQ-UI-525.1)
+        composeTestRule.setContent {
+            ATrainingTrackerTheme {
+                Surface {
+                    MorningCheckSection(
+                        enableMorningSleepAndWellness = true,
+                        showMorningCheckOnStartScreen = false,
+                        morningCheckCutoffHour = 9
+                    )
+                }
+            }
+        }
+
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val cutoffTitle = context.getString(R.string.tuning_morning_check_cutoff_hour_title)
+        composeTestRule.onNodeWithText(cutoffTitle).assertIsDisplayed()
     }
 
     @Composable

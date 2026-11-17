@@ -110,7 +110,8 @@ fun MorningCheckSection(
             onCheckedChange = onShowMorningCheckOnStartScreenChange,
             summary = stringResource(R.string.tuning_show_morning_check_on_start_screen_desc)
         )
-        if (showMorningCheckOnStartScreen) {
+        // Cutoff hour slider available when either HRV start screen check or morning wellness is enabled (ATT-8469 / REQ-UI-525.1)
+        if (showMorningCheckOnStartScreen || enableMorningSleepAndWellness) {
             TuningSliderItem(
                 title = stringResource(R.string.tuning_morning_check_cutoff_hour_title),
                 valueText = String.format(Locale.US, "%02d:00", morningCheckCutoffHour),
@@ -142,6 +143,20 @@ private fun MorningCheckSectionPreview() {
                 enableMorningSleepAndWellness = true,
                 showMorningCheckOnStartScreen = true,
                 morningCheckCutoffHour = 10
+            )
+        }
+    }
+}
+
+@Preview(name = "Pure Wellness - Light", showBackground = true)
+@Composable
+private fun MorningCheckSectionPureWellnessPreview() {
+    ATrainingTrackerTheme {
+        Surface {
+            MorningCheckSection(
+                enableMorningSleepAndWellness = true,
+                showMorningCheckOnStartScreen = false,
+                morningCheckCutoffHour = 9
             )
         }
     }

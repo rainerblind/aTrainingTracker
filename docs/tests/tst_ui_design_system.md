@@ -8472,11 +8472,11 @@
      - Assert 100% pass rate.
 
 
-### TST-UI-525: **Configurable Morning HRV Check Launch Button on Start Tracking Screen Verification Suite (ATT-7740)** [Verified]
+### TST-UI-525: **Configurable Morning HRV Check Launch Button on Start Tracking Screen Verification Suite (ATT-8469)** [Verified]
 - **Target Release**: `V5.0.0`
 - **Requirement(s)**: `REQ-UI-525`
 - **Component**: `TuningPreferencesDataStore.kt`, `MorningCheckSection.kt`, `DevicesDatabaseManager.java`, `DeviceDataRepository.kt`, `HrvReadinessDatabaseManager.kt`, `HrvReadinessRepository.kt`, `ControlTrackingViewModel.kt`, `TrackingTabsScreen.kt`, `ControlTrackingScreen.kt`, `MorningCheckCutoffScreenshotTest.kt`
-- **Jira**: `ATT-7532`, `ATT-7740`
+- **Jira**: `ATT-7532`, `ATT-7740`, `ATT-8469`
 - **Test Description**:
   1. *Tuning Preferences DataStore & Config Verification (`TST-UI-525.1`, `TuningConfigTest.kt`)*:
      - Verify default values: `showMorningCheckOnStartScreen = true`, `DEFAULT_MORNING_CHECK_CUTOFF_HOUR = 8`, `MIN_MORNING_CHECK_CUTOFF_HOUR = 6`, `MAX_MORNING_CHECK_CUTOFF_HOUR = 11` (`ATT-7740`).
@@ -8488,12 +8488,13 @@
      - Verify `hasCompletedMorningCheck(dateIso)` returns false when no entries exist for `dateIso`.
      - Verify `hasCompletedMorningCheck(dateIso)` returns true once an entry with `dateIso` is inserted.
   4. *ControlTrackingViewModel Reactive Visibility Rules Verification (`TST-UI-525.4`, `ControlTrackingViewModelTest.kt`)*:
-     - Verify `isMorningHrvCheckVisible` evaluates to true when mode is `READY`, pref is true, paired HRM exists, hour < cutoff, and today check is not completed.
-     - Verify `isMorningHrvCheckVisible` evaluates to false when: mode is `RECORDING` or `PAUSED`; pref is false; no paired HRM; hour >= cutoff; or check is already completed.
+     - Verify `isMorningHrvCheckVisible` evaluates to true when mode is `READY`, hour < cutoff, today's check is not completed, and EITHER `(showMorningCheckOnStartScreen == true && hasPairedHeartRateDevices == true)` OR `enableMorningSleepAndWellness == true` (even with zero paired HRM devices and `showMorningCheckOnStartScreen == false`) (`ATT-8469`).
+     - Verify `isMorningHrvCheckVisible` evaluates to false when: mode is `RECORDING` or `PAUSED`; both `showMorningCheckOnStartScreen` and `enableMorningSleepAndWellness` are false; `enableMorningSleepAndWellness` is false and no paired HRM; hour >= cutoff; or check (HRV reading or standalone wellness) is already completed today.
   5. *9-Language Localization Parity Verification (`TST-UI-525.5`, `TranslationParityTest.kt`)*:
-     - Verify all 5 new string resources exist across all 9 locales with 100% parity.
+     - Verify all 5 new string resources exist across all 9 locales with 100% parity, including `hrv_morning_check_start_button` ("Morgendlicher Check") and morning check tuning strings.
   6. *Morning Check Cutoff Slider Visual Compose Screenshot (`TST-UI-525.6`, `MorningCheckCutoffScreenshotTest.kt`, Rule 8.5)*:
-     - Render `MorningCheckSection` in Light & Dark themes verifying slider range `06:00..11:00` (`steps = 4`) and default `08:00`, capturing `docs/engineering/walkthroughs/img/ATT-7740_morning_cutoff.png` for `read_file` visual verification.
+     - Render `MorningCheckSection` in Light & Dark themes verifying slider range `06:00..11:00` (`steps = 4`) and default `08:00`.
+     - Verify slider remains visible and interactive when `enableMorningSleepAndWellness == true` even if `showMorningCheckOnStartScreen == false` (`ATT-8469`).
   7. *Targeted Unit Test Regression Suite (`TST-UI-525.7`)*:
      - Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.settings.TuningConfigTest" --tests "com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingViewModelTest" --tests "com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningAccordionTest" --tests "com.atrainingtracker.trainingtracker.ui.settings.tuning.MorningCheckCutoffScreenshotTest"`.
      - Assert 100% pass rate.

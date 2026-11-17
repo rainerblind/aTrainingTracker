@@ -173,13 +173,12 @@ class ControlTrackingViewModel @JvmOverloads constructor(
     }
 
     /**
-     * Reactive visibility state for the morning HRV check CTA button on the Start screen (ATT-7532 / REQ-UI-525.4).
+     * Reactive visibility state for the morning check CTA button on the Start screen (ATT-7532, ATT-8469 / REQ-UI-525.4).
      * Evaluates to true iff:
      * 1. [trackingMode] == [TrackingMode.READY]
-     * 2. [showMorningCheckOnStartScreen] == true
-     * 3. [hasPairedHeartRateDevices] == true
-     * 4. Current hour < [morningCheckCutoffHour]
-     * 5. [todayMorningCheckCompleted] == false
+     * 2. Either ([showMorningCheckOnStartScreen] == true && [hasPairedHeartRateDevices] == true) OR [enableMorningSleepAndWellness] == true
+     * 3. Current hour < [morningCheckCutoffHour]
+     * 4. [todayMorningCheckCompleted] == false
      */
     val isMorningHrvCheckVisible: StateFlow<Boolean> = combine(
         trackingMode.asFlow(),
@@ -188,10 +187,9 @@ class ControlTrackingViewModel @JvmOverloads constructor(
         todayMorningCheckCompleted
     ) { mode, tuning, hasHrm, completedToday ->
         mode == TrackingMode.READY &&
-                tuning.showMorningCheckOnStartScreen &&
-                hasHrm &&
                 !completedToday &&
-                timeProvider().hour < tuning.morningCheckCutoffHour
+                timeProvider().hour < tuning.morningCheckCutoffHour &&
+                ((tuning.showMorningCheckOnStartScreen && hasHrm) || tuning.enableMorningSleepAndWellness)
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
