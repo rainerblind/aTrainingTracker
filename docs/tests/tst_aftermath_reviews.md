@@ -1,5 +1,10 @@
 # Living Test Specification: Jubilee Milestones & App Reviews
 
+**Document ID**: `DOC-TST-REVIEWS`  
+**Version**: 1.0.0  
+**Status**: Reviewed  
+**Approver**: Pending PO Sign-Off  
+
 **Domain**: `aftermath_reviews`  
 **Prefixes**: `REV`  
 **Scope**: Milestone workout auto-naming, jubilee achievements, Google Play in-app reviews, athlete feedback, and supporter tier promotions.  
@@ -175,6 +180,10 @@
   2. `EditWorkoutScreen.kt` delegates save without redundant duplicate triggers.
   3. `ExportManager` honors per-workout sync selection and preserves fallback when null.
 
+---
 
+## Change History
 
-
+| Version | Date | Author | Ticket | Summary of Changes |
+| :--- | :--- | :--- | :--- | :--- |
+| `1.0.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Added standardized `DOC-TST-REVIEWS` work-product control header and Change History. |

@@ -1,5 +1,10 @@
 # aTrainingTracker: Technical Architecture & Coding Standards
 
+**Document ID**: `DOC-STD-CODING`  
+**Version**: 1.0.0  
+**Status**: Reviewed  
+**Approver**: Pending PO Sign-Off  
+
 This document serves as the authoritative living source of truth for software engineering (SWE.1 / SWE.2) construction invariants, technical architecture patterns, and testing standards across **aTrainingTracker**.
 
 ---
@@ -311,3 +316,22 @@ This document serves as the authoritative living source of truth for software en
   * Findings are reconciled into `docs/engineering/code_reviews/YYYY-MM-DD_dual_vendor_code_review.md` and filed as backlog tickets under Epic `ATT-232` / `ATT-8138`.
 * **Automated Top-of-Backlog Placement (`ensure-weekly-reviews`)**:
   * Whenever $\ge 7$ days elapse since the last completed review record, `tools/jira_util.py ensure-weekly-reviews` automatically creates a deduplicated review ticket under `ATT-232` pre-populated with the next target slice from `coverage_matrix.md` and ranks it at the very top of the Product Backlog (`rank-top`).
+
+### 5.13 Canonical Work-Product Control Headers & Human-Only Approval (ASPICE GP 2.2 / SUP.8 BP2 / REQ-PRO-120)
+* **Mandatory Metadata Block**: Every governed specification, architecture, system, management, and rule document (`docs/management/*.md`, `docs/architecture.md`, `docs/architecture/**/*.md`, `docs/system/*.md`, `docs/requirements.md`, `docs/requirements/*.md`, `docs/tests.md`, `docs/tests/*.md`, `.agents/rules/*.md`, and root governance docs) **MUST** declare:
+  * `**Document ID**`: Unique `DOC-*` identifier (e.g., `DOC-MGT-CM`, `DOC-ARC-MAIN`, `DOC-SYS-CTX`, `DOC-REQ-PRO`, `DOC-GOV-RULES`; never `REQ-*`, `TST-*`, or `SYSREQ-*`).
+  * `**Version**`: Semantic version (`X.Y.Z`).
+  * `**Status**`: Strictly one of `Draft`, `Reviewed`, or `Approved` (with `Retrospective (Pending PO Sign-Off)` permitted for retrospective ADRs per `REQ-PRO-116`).
+  * `**Approver**`: `Pending PO Sign-Off` (or `Product Owner (Pending Sign-Off)` for ADRs) while unapproved, or the human Product Owner's name once formally approved.
+  * `## Change History` (or `## Revision History`) table recording `Version | Date | Author | Ticket | Summary of Changes`.
+* **Human-Only Approval & Version-Bump Invariant**:
+  * Autonomous AI agents **SHALL NEVER** set `Status: Approved` or self-declare human approval. Agents default to `Draft` or `Reviewed`.
+  * Whenever a governed document's body changes, `Version` **MUST** increment monotonically and any prior `Approved` status **MUST** reset to `Reviewed` (`Approver: Pending PO Sign-Off`) unless the modifying commit carries an explicit human sign-off trailer (`Human-Approved:` or `Interactive-PO:`) with a non-agent human `Approver`, enforced automatically by `tools/verify_requirement_governance.py`.
+
+---
+
+## Change History
+
+| Version | Date | Author | Ticket | Summary of Changes |
+| :--- | :--- | :--- | :--- | :--- |
+| `1.0.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Added standardized work-product control header specification (§5.13) and Change History. |

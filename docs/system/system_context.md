@@ -1,11 +1,13 @@
 # System Context and External System Elements Specification
 
-**Document Version**: 1.1.0  
+**Document ID**: `DOC-SYS-CTX`  
+**Version**: 1.2.0  
 **ASPICE Process Areas**: SYS.2 (System Requirements Analysis, BP1), SYS.3 (System Architectural Design)  
 **Requirement Reference**: `REQ-PRO-053` (`REQ-PRO-053.1`, `REQ-PRO-053.2`)  
 **Test Reference**: `TST-PRO-053` (`TST-PRO-053.1`–`TST-PRO-053.4`)  
 **Author**: Antigravity Autonomous Engineering Pair  
-**Status**: Approved & Grounded in Live Source Code  
+**Status**: Reviewed  
+**Approver**: Pending PO Sign-Off  
 
 ---
 
@@ -181,3 +183,12 @@ The application operates within the Android application sandboxing model:
 | Dynamic Filesystem Existence | SYS.3, ATT-5431 | `REQ-PRO-053.2` | `SystemContextContractTest.testSystemContext_allReferencedCodeFilesExistOnDisk` |
 | Platform Symbols Grounding | SYS.3, ATT-5431 | `REQ-PRO-053.1`, `REQ-PRO-053.2` | `SystemContextContractTest.testSystemContext_referencedPlatformSymbolsGrounded` |
 | Operational Assumptions | SYS.2 BP1 | `REQ-PRO-053.1` | `SystemContextContractTest.testSystemContext_documentsOperationalAssumptions` |
+
+---
+
+## Change History
+
+| Version | Date | Author | Ticket | Summary of Changes |
+| :--- | :--- | :--- | :--- | :--- |
+| `1.1.0` | 2026-11-16 | AI Agent | `ATT-6142` | Prior system specification baseline. |
+| `1.2.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Standardized `DOC-SYS-CTX` header, bumped version, reset status to `Reviewed` (`Pending PO Sign-Off`). |

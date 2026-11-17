@@ -1,9 +1,14 @@
 # Living Test Specification: Engineering Process, Stability & Architecture
 
+**Document ID**: `DOC-TST-PRO`  
+**Version**: 1.0.0  
+**Status**: Reviewed  
+**Approver**: Pending PO Sign-Off  
+
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Tests**: 223
+**Total Tests**: 224
 
 ---
 
@@ -1873,7 +1878,7 @@
   1. *README, Project Protocol, Epigraph, Etymology, 2-Column 5-Layer SVG & Entry Barrier Verification (`TST-PRO-035.1`, `HoechstmassCoreFrameworkContractTest.kt`)*:
   • Verify `tools/hoechstmass/README.md` and `tools/hoechstmass/docs/project_protocol.md` exist and contain `# Höchstmaß — The AAA Coding Framework` title, inside-out AAA structure (ASPICE -> Agentic -> Agile), the ChatGPT epigraph quote, human/AI boundary attribution, multi-model review (Claude, Gemini, ChatGPT), Höchstmaß etymology callout (`/ˈhøːçstˌmaːs/`), 2-column 5-layer Swiss Cheese SVG asset (`tools/hoechstmass/assets/swiss_cheese_layers.svg`) with `L1`–`L5` barrier plates and `✕` markers, 5-layer decorrelation formula ($P = p_1 \cdot p_2 \cdot p_3 \cdot p_4 \cdot p_5$), and Chapter 5 Entry Barrier.
   2. *Generalized Document Triad & Isolated In-Place Review Workflow Contract Verification (`TST-PRO-035.2`, `HoechstmassCoreFrameworkContractTest.kt`)*:
-  • Verify existence and content of generalized `.agents/rules/aspice_governance.md` (8 Core Rules), `docs/coding_standards.md` (§1.1–§1.5 invariants), `docs/design_guidelines.md` (component heuristics), `tools/review_tool.py`, protocol `.reviews/` and `Emacs` workflow specification, and `.reviews/` isolation via `.git/info/exclude`.
+  • Verify existence and content of generalized `.agents/rules/aspice_governance.md` (9 Core Rules, preserving Rules 1–8), `docs/coding_standards.md` (§1.1–§1.5 invariants), `docs/design_guidelines.md` (component heuristics), `tools/review_tool.py`, protocol `.reviews/` and `Emacs` workflow specification, and `.reviews/` isolation via `.git/info/exclude`.
   3. *10 Generalized Skills & Deliverable Templates Verification (`TST-PRO-035.3`, `HoechstmassCoreFrameworkContractTest.kt`)*:
   • Verify existence of all 10 project-agnostic `SKILL.md` files under `tools/hoechstmass/.agents/skills/` and all 6 markdown templates under `tools/hoechstmass/templates/`.
   4. *Clean-Room Governance & Regression Execution (`TST-PRO-035.4`)*:
@@ -3761,3 +3766,30 @@
      • Execute unit tests verifying `verify_retro_write_allowlist()` accepts `docs/releases/<baseline>/manifest.md` in `chore(ceremony2)` commits while still rejecting protected skill/rule/tool edits (`REQ-PRO-117.2`).
   5. *CM Plan, Skills & Governance Contract Suite (`TST-PRO-119.5`, ReleaseCiAndLintConfigContractTest.kt & verify_requirement_governance.py)*:
      • Execute targeted JVM contract tests (`./gradlew :app:testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.ReleaseCiAndLintConfigContractTest" --tests "com.atrainingtracker.trainingtracker.build.ReleaseManagerSystemEvidenceContractTest" --tests "com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest" --tests "com.atrainingtracker.trainingtracker.build.HoechstmassCoreFrameworkContractTest"`) asserting `--no-ff` merge policy, complete CI inventory (`gates/`, `qa_audits/`, `reviews/`, `releases/`), `SUP.8.BP7` status accounting, Revision History, `manifest.md` in `docs/releases/README.md`, zero `git tag -f` in `sprint-planner` skills, and `python3 tools/verify_requirement_governance.py` exit `0`. (`Localization Parity: N/A - no UI strings`).
+
+---
+
+### TST-PRO-120: **Work-Product Header, Human-Only Approval Guard & Governance Reconciliation Suite (ATT-8164)** [Verified]
+- **Requirement(s)**: `REQ-PRO-120`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Component**: `tools/verify_requirement_governance.py`, `tools/test_verify_requirement_governance.py`, `tools/jira_util.py`, `docs/coding_standards.md`, `docs/management/`, `docs/architecture/`, `docs/system/`, `docs/requirements/`, `docs/tests/`, `.agents/rules/`, `tools/hoechstmass/`, `AspiceSweAuditContractTest.kt`, `ReleaseCiAndLintConfigContractTest.kt`, `JavaCoreMigrationStrategyContractTest.kt`
+- **Jira**: `ATT-8164`
+- **Test Description**:
+  1. *Standardized Header Coverage (`TST-PRO-120.1`, tools/test_verify_requirement_governance.py & AspiceSweAuditContractTest.kt)*:
+     • Execute offline unit tests and Kotlin contract tests verifying all governed files (`docs/management/`, `docs/architecture/` + `detailed_design/`, `docs/system/`, `docs/requirements.md` + 9 shards, `docs/tests.md` + 9 shards, `.agents/rules/`, root governance docs) declare `Document ID` (`DOC-*`), semver `Version`, valid `Status`, `Approver`, and `Change History` table, and that zero `Approved` docs carry AI/Pending `Approver` values.
+  2. *Human-Only Approval & Version-Bump Enforcement (`TST-PRO-120.2`, tools/test_verify_requirement_governance.py)*:
+     • Execute offline unit tests using isolated temporary Git repositories (`Rule 5`: zero live Jira calls) verifying `verify_work_product_headers()` rejects: (a) missing header fields, (b) governed body edits without a monotonic semver `Version` bump, and (c) setting or retaining `Status: Approved` without `Human-Approved:` / `Interactive-PO:` trailer and non-agent `Approver`; and accepts (d) `Approved` -> `Reviewed` resets with version bump, (e) `Human-Approved:` commits, and (f) pre-cutoff historical commits.
+  3. *Contradiction Reconciliation & `tools/hoechstmass/` Parity (`TST-PRO-120.3`, AspiceSweAuditContractTest.kt & HoechstmassCoreFrameworkContractTest.kt)*:
+     • Execute Gradle contract tests verifying `9 Core Rules` across `.agents/rules/aspice_governance.md`, `docs/project_protocol.md`, `tools/jira_util.py`, and `tools/hoechstmass/.agents/rules/aspice_governance.md`; `Rules 1–85+` in `project_protocol.md`; `6-Stage` lifecycle phrasing; `max 3` / `2 active` lane concurrency reconciliation; and `Rule 3.4 / Rule 83` in `docs/management/risk_register.md` (with zero `app/src/main/` reads per `REQ-PRO-049.1`).
+  4. *Full Contract & Governance Regression (`TST-PRO-120.4`)*:
+     • Execute `python3 tools/test_verify_requirement_governance.py`, `python3 tools/verify_requirement_governance.py`, and `./gradlew :app:testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.*" --tests "com.atrainingtracker.architecture.JavaCoreMigrationStrategyContractTest"` and confirm 100% pass rate (`Localization Parity: N/A - no UI strings`).
+
+---
+
+## Change History
+
+| Version | Date | Author | Ticket | Summary of Changes |
+| :--- | :--- | :--- | :--- | :--- |
+| `1.0.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Added standardized `DOC-TST-PRO` work-product control header and Change History. |

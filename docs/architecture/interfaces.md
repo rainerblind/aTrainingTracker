@@ -1,5 +1,10 @@
 # Software Interface Specifications: aTrainingTracker (ASPICE 4.0 SWE.2.BP1)
 
+**Document ID**: `DOC-ARC-IF`  
+**Version**: 1.0.0  
+**Status**: Reviewed  
+**Approver**: Pending PO Sign-Off  
+
 This document formalizes the software interface specifications of **aTrainingTracker** in accordance with **Automotive SPICE (ASPICE v4.0) SWE.2 Base Practice 1 (Specify static aspects of the software architecture — interfaces of software elements)**.
 
 Each architectural interface defines its provider, consumer, operations, data schemas, threading contracts, and error handling protocols.
@@ -157,3 +162,11 @@ Each architectural interface defines its provider, consumer, operations, data sc
 * **Error Handling & Fault Tolerance**:
   * Automated token expiration handling and silent token refresh.
   * Exponential backoff retry policies for network failures; Health Connect permission checking prior to invocation.
+
+---
+
+## Change History
+
+| Version | Date | Author | Ticket | Summary of Changes |
+| :--- | :--- | :--- | :--- | :--- |
+| `1.0.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Added standardized `DOC-ARC-IF` work-product control header and Change History. |

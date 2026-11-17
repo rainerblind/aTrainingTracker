@@ -1,5 +1,10 @@
 # Living Requirements: Tracking & Live Sensor Cockpit
 
+**Document ID**: `DOC-REQ-TRK`  
+**Version**: 1.0.0  
+**Status**: Reviewed  
+**Approver**: Pending PO Sign-Off  
+
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
@@ -6570,7 +6575,10 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 **Invariants**: `SpeedAndLocationDevice.java` `REQ-TRK-056` untouched; `REQ-FIL-009` tunnel exit preserved; `REQ-FIL-020` & `REQ-FIL-022` preserved; `@Synchronized` thread safety; `REQ-PRO-049.1` behavioral tests; `N/A - no UI strings`.
 
 
+---
 
+## Change History
 
-
-
+| Version | Date | Author | Ticket | Summary of Changes |
+| :--- | :--- | :--- | :--- | :--- |
+| `1.0.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Added standardized `DOC-REQ-TRK` work-product control header and Change History. |

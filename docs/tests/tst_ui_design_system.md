@@ -1,5 +1,10 @@
 # Living Test Specification: UI Components & Design System
 
+**Document ID**: `DOC-TST-UI`  
+**Version**: 1.0.0  
+**Status**: Reviewed  
+**Approver**: Pending PO Sign-Off  
+
 **Domain**: `ui_design_system`  
 **Prefixes**: `UI`, `UNT`  
 **Scope**: Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts.  
@@ -8706,3 +8711,11 @@
      - Capture Light and Dark screenshots of `RadarTrafficSummaryCard` under `MyUnits.IMPERIAL` (`ATrainingTrackerTheme`) and inspect via `read_file`.
   4. *Targeted Regression Suite (`TST-UI-2784.4`)*:
      - Execute `RadarTrafficSummaryCardTest`, `RadarTrafficSummaryTest`, `RadarTrafficSummaryFormatterTest`, and `SpeedFormatterTest` asserting 100% pass rate.
+
+---
+
+## Change History
+
+| Version | Date | Author | Ticket | Summary of Changes |
+| :--- | :--- | :--- | :--- | :--- |
+| `1.0.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Added standardized `DOC-TST-UI` work-product control header and Change History. |

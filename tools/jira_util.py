@@ -36,6 +36,8 @@ try:
         has_verified_test_evidence,
         parse_junit_xml_results,
         extract_test_code_tags,
+        recalculate_master_index_tables as _gov_recalculate_master_index_tables,
+        bump_work_product_header_on_edit,
     )
 except ImportError:
     try:
@@ -44,12 +46,16 @@ except ImportError:
             has_verified_test_evidence,
             parse_junit_xml_results,
             extract_test_code_tags,
+            recalculate_master_index_tables as _gov_recalculate_master_index_tables,
+            bump_work_product_header_on_edit,
         )
     except ImportError:
         validate_impact_analysis_section = None
         has_verified_test_evidence = None
         parse_junit_xml_results = None
         extract_test_code_tags = None
+        _gov_recalculate_master_index_tables = None
+        bump_work_product_header_on_edit = None
 
 # Transitions for ATT project
 TRANSITIONS = {
@@ -962,15 +968,16 @@ def inject_stage_context(stage_name_lower, config=None):
         print(f"{'=' * 72}\n")
         print(skill_text)
         print(f"\n{'=' * 72}")
-        print("=== CORE IN-SPRINT GOVERNANCE REMINDER (8 CORE RULES) ===")
+        print("=== CORE IN-SPRINT GOVERNANCE REMINDER (9 CORE RULES) ===")
         print("1. Rule 1 (Obey the Rules): Explicit view_file of aspice_governance.md + domain doc at Ticket Start / Post-Compaction; stage SKILL.md injected above.")
-        print("2. Rule 2 (Autonomous Execution): Proceed continuously through Stages 1-5 and across sprint tickets without pausing.")
+        print("2. Rule 2 (Autonomous Execution): Proceed continuously through Stages 1-5 + Stage 6 Cold Review across sprint tickets without pausing.")
         print("3. Rule 3 (Human Gate): Agents end at 'Final Review (Human)'; never transition parent tickets to 'Erledigt'.")
         print("4. Rule 4 (Code Lock Until Gate 3): Run 'jira_util.py check-gate <Impl-Plan-Key>' before any Stage 4 production code edits.")
         print("5. Rule 5 (Ticket Creation Stops): Creating a backlog/follow-up ticket never triggers implementation.")
         print("6. Rule 6 (Unattended Escalation): Assign blocked sub-task to 'human' with question comment and continue with next ticket.")
-        print("7. Rule 7 (Zipper Ping-Pong): 2 persistent self subagents per ticket (subagent_pro & subagent_flash) reused via send_message (S1 pro/flash | S2 flash/pro | S3 pro/flash | S4 flash/pro | S5 flash/pro) and killed after Stage 5.")
+        print("7. Rule 7 (Zipper Ping-Pong): 2 persistent self subagents per lane/ticket (subagent_pro & subagent_flash) reused via send_message across S1-S5 + Cold S6.")
         print("8. Rule 8 (One Commit & Hygiene): Use 'submit-stage' (agent1) and 'gate-verdict' (agent2); 1 squashed commit per ticket on sprint/<ID>.")
+        print("9. Rule 9 (Parallel Lanes): Max 3 disjoint lanes (2 active token-budget default per Rule 7.2) in isolated worktrees under flock /tmp/att_build_merge.lock.")
         print(f"{'=' * 72}\n")
     except Exception as e:
         print(f"Notice: Could not inject stage context for {skill_dir}: {e}", file=sys.stderr)
@@ -1365,8 +1372,13 @@ def auto_verify_living_docs_on_stage5(parent_key, repo_root=None):
                                 updated_count += 1
 
             if updated_count > 0:
+                updated_text = "".join(new_lines)
+                if bump_work_product_header_on_edit is not None:
+                    updated_text = bump_work_product_header_on_edit(
+                        updated_text, rel_path, repo_root=repo_root
+                    )
                 with open(abs_path, "w", encoding="utf-8") as f:
-                    f.writelines(new_lines)
+                    f.write(updated_text)
                 print(f"Auto-updated {updated_count} row(s) in {rel_path} for {parent_key}.")
                 total_updated += updated_count
         except Exception as e:
@@ -1377,94 +1389,13 @@ def auto_verify_living_docs_on_stage5(parent_key, repo_root=None):
 
 def recalculate_master_index_tables(repo_root=None):
     """
-    Recalculates summary tables ('Total', 'Verified', 'Implemented', 'Planned / Open') and total requirement/test
-    counts in docs/requirements.md and docs/tests.md based on actual parsed section headings
-    in the 9 domain shards under docs/requirements/ and docs/tests/ (ATT-5431, ATT-6126).
+    Delegates master index recalculation & governed version bumping to
+    verify_requirement_governance.recalculate_master_index_tables (REQ-PRO-120).
     """
-    if repo_root is None:
-        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-
-    specs = [
-        ("docs/requirements.md", "docs/requirements", "REQ"),
-        ("docs/tests.md", "docs/tests", "TST"),
-    ]
-    for master_rel, shard_dir_rel, prefix in specs:
-        abs_shard_dir = os.path.join(repo_root, shard_dir_rel)
-        if not os.path.isdir(abs_shard_dir):
-            continue
-        shard_counts = {}
-        for fn in sorted(os.listdir(abs_shard_dir)):
-            if not fn.endswith(".md"):
-                continue
-            fp = os.path.join(abs_shard_dir, fn)
-            tot = ver = impl = plan = 0
-            with open(fp, "r", encoding="utf-8") as f:
-                for line in f:
-                    m = re.match(r"^(#{2,4})\s*(" + prefix + r"-[A-Z0-9_-]+):?\s*(.*?)$", line.strip())
-                    if not m:
-                        continue
-                    tot += 1
-                    if "[Verified]" in line:
-                        ver += 1
-                    elif "[Implemented]" in line:
-                        impl += 1
-                    else:
-                        plan += 1
-            shard_counts[fn] = (tot, ver, impl, plan)
-
-        master_fp = os.path.join(repo_root, master_rel)
-        if not os.path.exists(master_fp):
-            continue
-        with open(master_fp, "r", encoding="utf-8") as f:
-            master_lines = f.readlines()
-
-        grand_total = sum(c[0] for c in shard_counts.values())
-        grand_verified = sum(c[1] for c in shard_counts.values())
-        grand_implemented = sum(c[2] for c in shard_counts.values())
-        grand_planned = sum(c[3] for c in shard_counts.values())
-
-        new_lines = []
-        changed = False
-        for line in master_lines:
-            new_line = line
-            if re.search(r"\|\s*Total\s*\|\s*Verified\s*\|\s*Planned\s*/\s*Open\s*\|", line):
-                new_line = re.sub(
-                    r"\|\s*Total\s*\|\s*Verified\s*\|\s*Planned\s*/\s*Open\s*\|",
-                    "| Total | Verified | Implemented | Planned / Open |",
-                    line,
-                )
-            elif re.search(r"\|\s*:---\s*:\s*\|\s*:---\s*:\s*\|\s*:---\s*:\s*\|", line) and line.count(":---:") == 3:
-                new_line = line.rstrip() + " :---: |\n"
-            m_link = re.search(r"\((?:requirements|tests)/((?:req|tst)_[^)]+\.md)\)", line)
-            if m_link:
-                s_name = m_link.group(1)
-                if s_name in shard_counts:
-                    t, v, i, p = shard_counts[s_name]
-                    new_line = re.sub(
-                        r"\|\s*\d+\s*\|\s*\d+(?:\s*\|\s*\d+)?\s*\|\s*\d+\s*\|(\s*)$",
-                        rf"| {t} | {v} | {i} | {p} |\1",
-                        line,
-                    )
-            elif "links to the " in line:
-                new_line = re.sub(
-                    r"(links to the )\d+( domain-sharded)",
-                    rf"\g<1>{len(shard_counts)}\g<2>",
-                    line,
-                )
-            elif "Total Living " in line:
-                new_line = re.sub(
-                    r"(\*\*Total Living (?:Requirements|Tests)\*\*:\s*)\d+(\s*across )\d+(\s*domain shards\.)",
-                    rf"\g<1>{grand_total}\g<2>{len(shard_counts)}\g<3>",
-                    line,
-                )
-            if new_line != line:
-                changed = True
-            new_lines.append(new_line)
-
-        if changed:
-            with open(master_fp, "w", encoding="utf-8") as f:
-                f.writelines(new_lines)
-            print(f"Recalculated master index table in {master_rel}: Total={grand_total}, Verified={grand_verified}, Implemented={grand_implemented}, Planned={grand_planned}.")
+    if _gov_recalculate_master_index_tables is not None:
+        return _gov_recalculate_master_index_tables(repo_root=repo_root)
+    from verify_requirement_governance import recalculate_master_index_tables as _recalc
+    return _recalc(repo_root=repo_root)
 
 def submit_stage(parent_key, stage_arg, text_or_file, summary_override=None, role="agent1", author=None, bypass_authorship=False):
     """

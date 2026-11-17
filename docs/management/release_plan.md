@@ -1,10 +1,14 @@
 # V5.0.0 Product Release Plan
 
+**Document ID**: `DOC-MGT-REL`  
+**Version**: 1.0.0  
+**Status**: Reviewed  
+**Approver**: Pending PO Sign-Off  
 **Project**: aTrainingTracker (ATT)  
 **Target Release**: `V5.0.0`  
 **Configuration Item**: `docs/management/release_plan.md` (ASPICE 4.0 `MAN.3`, `SUP.8`, `SUP.10`)  
 **Parent Epic**: `ATT-8138` (*ASPICE 4.0 Audit Remediation 2026-11*)  
-**Associated Ticket**: `ATT-8162` (*Enforce capacity-bound sprint commitment and establish a V5.0.0 release plan*)  
+**Associated Ticket**: `ATT-8162` (*Enforce capacity-bound sprint commitment and establish a V5.0.0 release plan*), `ATT-8164`  
 **Baseline Date**: 2026-11-15  
 
 ---
@@ -72,3 +76,11 @@ A release build for `V5.0.0` may only be tagged and distributed when all followi
 4. **Living Documentation Master Parity**: `verify_requirement_governance.py` reports 100% parity across `docs/requirements.md` and `docs/tests.md`, with zero ungrounded requirements or dangling references.
 5. **Tier 2 Full Regression Suite**: Clean execution of `./gradlew testDebugUnitTest :app:lintDebug :app:detekt assembleDebug`.
 6. **Signed Release Artifacts**: APK and AAB built with production keystore, aligned with `docs/management/cm_plan.md`.
+
+---
+
+## 6. Change History
+
+| Version | Date | Author | Ticket | Summary of Changes |
+| :--- | :--- | :--- | :--- | :--- |
+| `1.0.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Added standardized `DOC-MGT-REL` work-product control header and Change History (`ATT-8162` baseline). |

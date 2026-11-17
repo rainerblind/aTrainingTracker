@@ -1,6 +1,9 @@
 # ADR-005: Hybrid Preferences (`SharedPreferences` + Jetpack `DataStore`)
 
+- **Document ID**: `DOC-ARC-ADR005`
+- **Version**: 1.0.0
 - **Status**: Retrospective (Pending PO Sign-Off)
+- **Approver**: Product Owner (Pending Sign-Off)
 - **Deciders**: Architecture Board, Product Owner (Pending Sign-Off)
 - **Date**: 2026-11-17
 - **Target Release**: `5.1.0` (Active Sprint: `2026-11-17_01_Früh`)
@@ -43,3 +46,11 @@ New UI, zone, and tuning preferences MUST use Jetpack `DataStore` (`SettingsData
 
 ### Negative / Mitigated Consequences
 - **Dual Preference Stores**: Backup/restore (`BackupWorker`, `MigrationEngine`) and legacy settings must account for both `SharedPreferences` and `.preferences_pb` DataStore files; mitigated by explicit `DataStore` backup/migration tests and `DataStoreHotPathContractTest`.
+
+---
+
+## Change History
+
+| Version | Date | Author | Ticket | Summary of Changes |
+| :--- | :--- | :--- | :--- | :--- |
+| `1.0.0` | 2026-11-17 | AI Agent (`ATT-8161`, `ATT-8164`) | `ATT-8161`, `ATT-8164` | Retrospective ADR baseline with standardized `DOC-ARC-ADR005` control header. |

@@ -1,11 +1,13 @@
 # External System Interfaces & Developer Sensor Simulator Specification
 
-**Document Version**: 2.0.0  
+**Document ID**: `DOC-SYS-INT`  
+**Version**: 2.1.0  
 **ASPICE Process Areas**: SWE.5 / SYS.4 Interface Baseline & Simulator Self-Tests  
 **Parent Epic**: [ATT-8138](https://rainerblind.atlassian.net/browse/ATT-8138) (*ASPICE 4.0 Audit Remediation 2026-11*)  
 **Requirement Reference**: `REQ-PRO-068` (`REQ-PRO-068.1`–`REQ-PRO-068.4`), `REQ-PRO-112`  
 **Test Reference**: `TST-PRO-068` (`TST-PRO-068.1`–`TST-PRO-068.4`), `TST-PRO-112`  
-**Status**: Reclassified & Grounded in Live Code (`ATT-8157`)
+**Status**: Reviewed  
+**Approver**: Pending PO Sign-Off  
 
 ---
 
@@ -135,3 +137,12 @@ python3 tools/fake_gps.py --sample munich --speed 25
 ## 6. Release Gate Policy (`REQ-PRO-072`, `REQ-PRO-112`)
 * Developer simulator self-tests (`tools/run_simulator_self_tests.py`) exit `0` when all 5 Python simulator self-tests pass, and are **never** a blocking release gate or substitute for Android execution.
 * Release candidate gating (`docs/releases/<tag>/verification_summary.md` + `docs/releases/<tag>/sys_verification_record.md`) relies strictly on Gradle unit/integration suites (`INT-SWE-01..08`), CI `AppSmokeAndroidTest.kt`, and signed physical hardware-in-the-loop `SYS.5` verification.
+
+---
+
+## Change History
+
+| Version | Date | Author | Ticket | Summary of Changes |
+| :--- | :--- | :--- | :--- | :--- |
+| `2.0.0` | 2026-11-16 | AI Agent | `ATT-6142` | Prior system specification baseline. |
+| `2.1.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Standardized `DOC-SYS-INT` header, bumped version, reset status to `Reviewed` (`Pending PO Sign-Off`). |

@@ -195,7 +195,7 @@ def get_git_diff(base_ref="develop", target_paths=None):
     if base_ref == "develop":
         try:
             sprint_branches = subprocess.check_output(
-                ["git", "for-each-ref", "--format=%(refname:short)", "refs/heads/sprint/*"],
+                ["git", "for-each-ref", "--sort=-committerdate", "--format=%(refname:short)", "refs/heads/sprint/*"],
                 stderr=subprocess.DEVNULL,
             ).decode("utf-8").strip().splitlines()
             best_sb = None
@@ -1310,6 +1310,10 @@ def verify_master_table_parity(repo_root=None):
                 count=1,
             )
             if new_shard_content != shard_content:
+                shard_rel = f"{shard_dir_rel}/{fn}"
+                new_shard_content = bump_work_product_header_on_edit(
+                    new_shard_content, shard_rel, repo_root=repo_root
+                )
                 with open(fp, "w", encoding="utf-8") as f:
                     f.write(new_shard_content)
 
@@ -1323,6 +1327,10 @@ def verify_master_table_parity(repo_root=None):
                 count=1,
             )
             if new_shard_content != shard_content:
+                shard_rel = f"{shard_dir_rel}/{fn}"
+                new_shard_content = bump_work_product_header_on_edit(
+                    new_shard_content, shard_rel, repo_root=repo_root
+                )
                 with open(fp, "w", encoding="utf-8") as f:
                     f.write(new_shard_content)
 
@@ -3917,6 +3925,10 @@ def recalculate_master_index_tables(repo_root=None):
                 count=1,
             )
             if new_shard_content != shard_content:
+                shard_rel = f"{shard_dir_rel}/{fn}"
+                new_shard_content = bump_work_product_header_on_edit(
+                    new_shard_content, shard_rel, repo_root=repo_root
+                )
                 with open(fp, "w", encoding="utf-8") as f:
                     f.write(new_shard_content)
 
@@ -3970,8 +3982,11 @@ def recalculate_master_index_tables(repo_root=None):
             new_lines.append(new_line)
 
         if changed:
+            joined = bump_work_product_header_on_edit(
+                "".join(new_lines), master_rel, repo_root=repo_root
+            )
             with open(master_fp, "w", encoding="utf-8") as f:
-                f.writelines(new_lines)
+                f.write(joined)
             msg = f"Recalculated master index table in {master_rel}: Total={grand_total}, Verified={grand_verified}, Implemented={grand_implemented}, Planned={grand_planned}."
             print(msg)
             recalculated.append(msg)
@@ -4330,6 +4345,429 @@ def verify_architecture_and_system_specs(diff_text=None, repo_root=None, base_re
     if errors:
         return False, errors
     return True, ["PASS: Architecture & system specification code-grounding and SYSREQ parity verified."]
+
+
+DOC_HEADER_CUTOFF_TS = 1794934635  # ATT-8163 baseline commit timestamp; enforces post-ATT-8164 edits
+_VALID_DOC_STATUSES = {"Draft", "Reviewed", "Approved"}
+_ADR_EXTRA_STATUS = "Retrospective (Pending PO Sign-Off)"
+_UNAPPROVED_APPROVER_RE = re.compile(
+    r"^(?:$|pending|ai\b|ai\s+agent|agent\b|antigravity|unassigned|none|n/a|tbd|auto)",
+    re.IGNORECASE,
+)
+_HUMAN_TRAILER_RE = re.compile(
+    r"^\s*(?:Human-Approved|Interactive-PO)\s*:\s*\S+",
+    re.MULTILINE | re.IGNORECASE,
+)
+
+
+def _semver_tuple(ver_str):
+    parts = str(ver_str or "").strip().split(".")
+    if len(parts) != 3 or not all(p.isdigit() for p in parts):
+        return (0, 0, 0)
+    return tuple(int(p) for p in parts)
+
+
+def bump_work_product_header_on_edit(text, rel_path, repo_root=None, base_ref="develop"):
+    """
+    Bumps patch semver Version (if not already bumped relative to git base) and resets
+    Approved -> Reviewed with Pending PO Sign-Off when tooling updates a governed work product.
+    """
+    if "**Version**:" not in text:
+        return text
+    m_ver = re.search(r"(\*\*Version\*\*:\s*`?)(\d+\.\d+\.)(\d+)(`?)", text)
+    if not m_ver:
+        return text
+
+    base_ver = None
+    if repo_root is not None:
+        try:
+            resolved_base = _resolve_git_base_ref(base_ref, cwd=repo_root)
+            if resolved_base:
+                old_txt = subprocess.check_output(
+                    ["git", "show", f"{resolved_base}:{rel_path}"],
+                    cwd=repo_root,
+                    stderr=subprocess.DEVNULL,
+                ).decode("utf-8", errors="replace")
+                m_old = re.search(r"\*\*Version\*\*:\s*`?(\d+\.\d+\.\d+)`?", old_txt)
+                if m_old:
+                    base_ver = m_old.group(1)
+        except Exception:
+            base_ver = None
+
+    cur_ver = f"{m_ver.group(2)}{m_ver.group(3)}"
+    updated = text
+    if base_ver is None or _semver_tuple(cur_ver) <= _semver_tuple(base_ver):
+        bumped = f"{m_ver.group(2)}{int(m_ver.group(3)) + 1}"
+        updated = re.sub(
+            r"(\*\*Version\*\*:\s*`?)\d+\.\d+\.\d+(`?)",
+            rf"\g<1>{bumped}\g<2>",
+            updated,
+            count=1,
+        )
+    if re.search(r"\*\*Status\*\*:\s*Approved\b", updated):
+        updated = re.sub(r"(\*\*Status\*\*:\s*)Approved\b", r"\1Reviewed", updated, count=1)
+        updated = re.sub(r"(\*\*Approver\*\*:\s*)[^\n|]+", r"\1Pending PO Sign-Off", updated, count=1)
+    return updated
+
+
+def _resolve_git_base_ref(base_ref="develop", cwd=None):
+    """Resolves the nearest sprint or develop base commit/ref for diff checks."""
+    effective_base = base_ref
+    if effective_base == "develop":
+        try:
+            sprint_branches = subprocess.check_output(
+                ["git", "for-each-ref", "--sort=-committerdate", "--format=%(refname:short)", "refs/heads/sprint/*"],
+                cwd=cwd,
+                stderr=subprocess.DEVNULL,
+            ).decode("utf-8").strip().splitlines()
+            best_sb = None
+            best_commit_time = -1
+            for sb in sprint_branches:
+                ret = subprocess.call(
+                    ["git", "merge-base", "--is-ancestor", sb, "HEAD"],
+                    cwd=cwd,
+                    stderr=subprocess.DEVNULL,
+                )
+                if ret == 0:
+                    effective_base = sb
+                    best_sb = None
+                    break
+                try:
+                    mb = subprocess.check_output(
+                        ["git", "merge-base", sb, "HEAD"],
+                        cwd=cwd,
+                        stderr=subprocess.DEVNULL,
+                    ).decode("utf-8").strip()
+                    if mb:
+                        ts = int(subprocess.check_output(
+                            ["git", "log", "-1", "--format=%ct", mb],
+                            cwd=cwd,
+                            stderr=subprocess.DEVNULL,
+                        ).decode("utf-8").strip())
+                        if ts > best_commit_time:
+                            best_commit_time = ts
+                            best_sb = sb
+                except Exception:
+                    pass
+            if best_sb:
+                effective_base = best_sb
+        except Exception:
+            pass
+
+    try:
+        mb = subprocess.check_output(
+            ["git", "merge-base", effective_base, "HEAD"],
+            cwd=cwd,
+            stderr=subprocess.DEVNULL,
+        ).decode("utf-8").strip()
+        if mb:
+            return mb
+    except Exception:
+        pass
+    try:
+        subprocess.check_output(
+            ["git", "rev-parse", "--verify", effective_base],
+            cwd=cwd,
+            stderr=subprocess.DEVNULL,
+        )
+        return effective_base
+    except Exception:
+        return None
+
+
+def discover_governed_work_products(repo_root=None):
+    """
+    Returns sorted repo-relative paths of all governed work-product markdown files (REQ-PRO-120).
+    In a Git repository, restricts discovery to tracked/staged files via `git ls-files` so
+    untracked or gitignored local drafts (e.g. docs/management/schichtbetrieb.md) are ignored;
+    falls back to filesystem listing only outside Git repositories.
+    """
+    if repo_root is None:
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    exact_files = [
+        "docs/architecture.md",
+        "docs/requirements.md",
+        "docs/tests.md",
+        "docs/coding_standards.md",
+        "docs/design_guidelines.md",
+        "docs/project_governance.md",
+        "docs/project_protocol.md",
+    ]
+    dir_globs = [
+        "docs/management",
+        "docs/architecture",
+        "docs/architecture/detailed_design",
+        "docs/system",
+        "docs/requirements",
+        "docs/tests",
+        ".agents/rules",
+    ]
+    exact_set = set(exact_files)
+    dir_set = set(dir_globs)
+
+    is_git_repo = False
+    try:
+        top_res = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            cwd=repo_root,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+        )
+        if top_res.returncode == 0 and top_res.stdout.strip():
+            is_git_repo = os.path.realpath(top_res.stdout.strip()) == os.path.realpath(repo_root)
+    except Exception:
+        is_git_repo = False
+
+    if is_git_repo:
+        try:
+            ls_res = subprocess.run(
+                ["git", "-c", "core.quotePath=false", "ls-files", "--"] + exact_files + dir_globs,
+                cwd=repo_root,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+                text=True,
+                check=True,
+            )
+            candidates = []
+            for rel in ls_res.stdout.splitlines():
+                rel = rel.strip().replace("\\", "/")
+                if not rel.endswith(".md"):
+                    continue
+                if rel not in exact_set and os.path.dirname(rel) not in dir_set:
+                    continue
+                if os.path.isfile(os.path.join(repo_root, rel)):
+                    candidates.append(rel)
+            return sorted(set(candidates))
+        except Exception:
+            pass
+
+    candidates = []
+    for rel in exact_files:
+        if os.path.isfile(os.path.join(repo_root, rel)):
+            candidates.append(rel)
+
+    for rel_dir in dir_globs:
+        abs_dir = os.path.join(repo_root, rel_dir)
+        if not os.path.isdir(abs_dir):
+            continue
+        for fn in sorted(os.listdir(abs_dir)):
+            if fn.endswith(".md"):
+                candidates.append(f"{rel_dir}/{fn}")
+    return sorted(set(candidates))
+
+
+def parse_work_product_header(text):
+    """Extracts Document ID, Version, Status, Approver, and Change History presence from markdown."""
+    head_lines = []
+    for line in text.splitlines():
+        if re.match(r"^##\s+", line):
+            break
+        head_lines.append(line)
+        if len(head_lines) >= 40:
+            break
+    head = "\n".join(head_lines)
+
+    m_id = re.search(r"\*\*Document ID\*\*:\s*`?(DOC-[A-Z0-9-]+)`?", head)
+    m_ver = re.search(r"\*\*Version\*\*:\s*`?(\d+\.\d+\.\d+)`?", head)
+    m_status = re.search(r"\*\*Status\*\*:\s*([^|\n]+)", head)
+    m_approver = re.search(r"\*\*Approver\*\*:\s*([^|\n]+)", head)
+    has_history = bool(
+        re.search(r"^##\s+(?:\d+\.\s+)?(?:Change|Revision)\s+History\b", text, re.MULTILINE)
+        and re.search(r"^\|\s*Version\s*\|", text, re.MULTILINE)
+    )
+
+    return {
+        "document_id": m_id.group(1).strip() if m_id else None,
+        "version": m_ver.group(1).strip() if m_ver else None,
+        "status": m_status.group(1).strip().strip("`").strip() if m_status else None,
+        "approver": m_approver.group(1).strip().strip("`").strip() if m_approver else None,
+        "has_history": has_history,
+    }
+
+
+def _strip_header_and_history(text):
+    """Returns document body excluding top metadata block and Change/Revision History section."""
+    lines = text.splitlines()
+    # Skip top metadata lines before first horizontal rule or ## section
+    start_idx = 0
+    for i, line in enumerate(lines):
+        if i > 0 and (line.strip() == "---" or re.match(r"^##\s+", line)):
+            start_idx = i
+            break
+        if i >= 30:
+            start_idx = i
+            break
+    body_lines = []
+    in_history = False
+    for line in lines[start_idx:]:
+        if re.match(r"^##\s+(?:\d+\.\s+)?(?:Change|Revision)\s+History\b", line):
+            in_history = True
+            continue
+        if in_history and re.match(r"^##\s+", line):
+            in_history = False
+        if not in_history:
+            body_lines.append(line)
+    return "\n".join(body_lines).strip()
+
+
+def _is_human_approver(approver):
+    if not approver:
+        return False
+    return not bool(_UNAPPROVED_APPROVER_RE.search(approver.strip()))
+
+
+def verify_work_product_headers(
+    repo_root=None,
+    base_ref="develop",
+    check_diff=True,
+    cutoff_ts=DOC_HEADER_CUTOFF_TS,
+):
+    """
+    Validates standardized work-product headers, monotonic version bumps on body changes,
+    and human-only Approved status enforcement (REQ-PRO-120 / GP 2.2 / SUP.8 BP2).
+    """
+    if repo_root is None:
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+    governed = discover_governed_work_products(repo_root=repo_root)
+    if not governed:
+        return True, ["PASS: Zero governed work products discovered."]
+
+    errors = []
+    parsed_current = {}
+    for rel_path in governed:
+        abs_path = os.path.join(repo_root, rel_path)
+        with open(abs_path, "r", encoding="utf-8") as fh:
+            text = fh.read()
+        hdr = parse_work_product_header(text)
+        parsed_current[rel_path] = (hdr, text)
+
+        missing = []
+        if not hdr["document_id"]:
+            missing.append("Document ID (DOC-*)")
+        if not hdr["version"]:
+            missing.append("Version (semver X.Y.Z)")
+        if not hdr["status"]:
+            missing.append("Status")
+        if not hdr["approver"]:
+            missing.append("Approver")
+        if not hdr["has_history"]:
+            missing.append("Change History table")
+        if missing:
+            errors.append(
+                f"ERROR: {rel_path} missing required work-product header metadata: {', '.join(missing)} (REQ-PRO-120.1)."
+            )
+            continue
+
+        allowed_statuses = set(_VALID_DOC_STATUSES)
+        if os.path.basename(rel_path).startswith("adr_"):
+            allowed_statuses.add(_ADR_EXTRA_STATUS)
+        if hdr["status"] not in allowed_statuses:
+            errors.append(
+                f"ERROR: {rel_path} has invalid Status '{hdr['status']}' (allowed: {sorted(allowed_statuses)})."
+            )
+
+        if hdr["status"] == "Approved" and not _is_human_approver(hdr["approver"]):
+            errors.append(
+                f"ERROR: {rel_path} claims Status 'Approved' with non-human/pending Approver '{hdr['approver']}' (REQ-PRO-120.2)."
+            )
+
+    if check_diff:
+        resolved_base = _resolve_git_base_ref(base_ref=base_ref, cwd=repo_root)
+        if resolved_base:
+            for rel_path in governed:
+                if rel_path not in parsed_current:
+                    continue
+                hdr, new_text = parsed_current[rel_path]
+                if not hdr["version"] or not hdr["status"]:
+                    continue
+
+                # Check uncommitted changes in working tree
+                wt_dirty = False
+                try:
+                    wt_out = subprocess.check_output(
+                        ["git", "status", "--porcelain", "--", rel_path],
+                        cwd=repo_root,
+                        stderr=subprocess.DEVNULL,
+                    ).decode("utf-8", errors="replace").strip()
+                    wt_dirty = bool(wt_out)
+                except Exception:
+                    wt_dirty = False
+
+                # Read baseline text at resolved_base
+                old_text = None
+                try:
+                    old_text = subprocess.check_output(
+                        ["git", "show", f"{resolved_base}:{rel_path}"],
+                        cwd=repo_root,
+                        stderr=subprocess.DEVNULL,
+                    ).decode("utf-8", errors="replace")
+                except Exception:
+                    old_text = None
+
+                if old_text is not None and old_text == new_text and not wt_dirty:
+                    continue
+
+                # Determine whether all commits modifying rel_path since resolved_base are pre-cutoff
+                commit_shas = []
+                latest_has_human_trailer = False
+                all_pre_cutoff = False
+                if not wt_dirty:
+                    try:
+                        log_out = subprocess.check_output(
+                            ["git", "log", "--format=%H%x1f%ct", f"{resolved_base}..HEAD", "--", rel_path],
+                            cwd=repo_root,
+                            stderr=subprocess.DEVNULL,
+                        ).decode("utf-8", errors="replace").splitlines()
+                        parsed_commits = []
+                        for row in log_out:
+                            if "\x1f" not in row:
+                                continue
+                            c_sha, c_ts = row.split("\x1f", 1)
+                            parsed_commits.append((c_sha.strip(), int(c_ts.strip())))
+                        commit_shas = [c[0] for c in parsed_commits]
+                        if parsed_commits and all(ts <= cutoff_ts for _, ts in parsed_commits):
+                            all_pre_cutoff = True
+                        if commit_shas:
+                            msg = subprocess.check_output(
+                                ["git", "log", "-n", "1", "--format=%B", commit_shas[0]],
+                                cwd=repo_root,
+                                stderr=subprocess.DEVNULL,
+                            ).decode("utf-8", errors="replace")
+                            latest_has_human_trailer = bool(_HUMAN_TRAILER_RE.search(msg))
+                    except Exception:
+                        pass
+
+                if all_pre_cutoff:
+                    continue
+
+                old_hdr = parse_work_product_header(old_text) if old_text is not None else None
+                body_changed = (
+                    old_text is None
+                    or _strip_header_and_history(old_text) != _strip_header_and_history(new_text)
+                )
+
+                if body_changed and old_hdr and old_hdr["version"]:
+                    if _semver_tuple(hdr["version"]) <= _semver_tuple(old_hdr["version"]):
+                        errors.append(
+                            f"ERROR: {rel_path} content changed without monotonic Version bump "
+                            f"({old_hdr['version']} -> {hdr['version']}) (REQ-PRO-120.2)."
+                        )
+
+                if hdr["status"] == "Approved":
+                    status_newly_approved = (old_hdr is None) or (old_hdr["status"] != "Approved")
+                    if body_changed or status_newly_approved:
+                        if wt_dirty or not latest_has_human_trailer or not _is_human_approver(hdr["approver"]):
+                            errors.append(
+                                f"ERROR: {rel_path} sets or retains Status 'Approved' without human sign-off "
+                                f"(requires committed Human-Approved:/Interactive-PO: trailer and human Approver; "
+                                f"agents must reset to 'Reviewed' or 'Draft') (REQ-PRO-120.2)."
+                            )
+
+    if errors:
+        return False, errors
+    return True, [f"PASS: Work-product headers & human-only approval verified across {len(governed)} governed document(s)."]
 
 
 SWE_DERIVED_PREFIXES = {
@@ -4738,6 +5176,16 @@ def verify_governance(
             return False, diagnostics
         diagnostics.extend(retro_diag)
 
+        hdr_ok, hdr_diag = verify_work_product_headers(
+            repo_root=repo_root,
+            base_ref=base_ref,
+            check_diff=(diff_text is None),
+        )
+        if not hdr_ok:
+            diagnostics.extend(hdr_diag)
+            return False, diagnostics
+        diagnostics.extend(hdr_diag)
+
     if diff_text is None:
         diff_text = get_git_diff(base_ref=base_ref)
 
@@ -4825,6 +5273,11 @@ def main():
         "--check-specs",
         action="store_true",
         help="Run architecture and system spec grounding & SYSREQ parity check only.",
+    )
+    parser.add_argument(
+        "--check-doc-headers",
+        action="store_true",
+        help="Verify standardized work-product headers, version bumps, and human-only Approved enforcement (REQ-PRO-120).",
     )
     parser.add_argument(
         "--skip-tripwires",
@@ -5301,6 +5754,12 @@ def main():
 
     if args.check_specs:
         ok, diag = verify_architecture_and_system_specs(diff_text=diff_content, base_ref=args.base_ref)
+        for msg in diag:
+            print(msg, file=sys.stderr if not ok else sys.stdout)
+        sys.exit(0 if ok else 1)
+
+    if args.check_doc_headers:
+        ok, diag = verify_work_product_headers(base_ref=args.base_ref, check_diff=True)
         for msg in diag:
             print(msg, file=sys.stderr if not ok else sys.stdout)
         sys.exit(0 if ok else 1)

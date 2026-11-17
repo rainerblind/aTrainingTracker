@@ -280,6 +280,111 @@ class AspiceSweAuditContractTest {
         )
     }
 
+    // Traces to: REQ-PRO-120, TST-PRO-120
+    @Test
+    fun testWorkProductHeadersAndGovernanceReconciliation_contract() {
+        val exactFiles = setOf(
+            "docs/architecture.md",
+            "docs/requirements.md",
+            "docs/tests.md",
+            "docs/coding_standards.md",
+            "docs/design_guidelines.md",
+            "docs/project_governance.md",
+            "docs/project_protocol.md",
+            ".agents/rules/aspice_governance.md"
+        )
+        val governedDirs = setOf(
+            "docs/management",
+            "docs/architecture",
+            "docs/architecture/detailed_design",
+            "docs/system",
+            "docs/requirements",
+            "docs/tests"
+        )
+
+        val repoRoot = findRepoRootFile("docs/architecture.md").parentFile.parentFile
+        val governedFiles = mutableListOf<String>()
+        val gitCmd = mutableListOf("git", "-c", "core.quotePath=false", "ls-files", "--")
+        gitCmd.addAll(exactFiles)
+        gitCmd.addAll(governedDirs)
+
+        val gitFiles = try {
+            val proc = ProcessBuilder(gitCmd).directory(repoRoot).start()
+            val out = proc.inputStream.bufferedReader().readLines()
+            val exit = proc.waitFor()
+            if (exit == 0) out else emptyList()
+        } catch (e: Exception) {
+            emptyList()
+        }
+
+        if (gitFiles.isNotEmpty()) {
+            for (rel in gitFiles) {
+                val norm = rel.trim().replace("\\", "/")
+                if (!norm.endsWith(".md")) continue
+                val parentDir = norm.substringBeforeLast("/", "")
+                if ((norm in exactFiles || parentDir in governedDirs) && File(repoRoot, norm).isFile) {
+                    governedFiles.add(norm)
+                }
+            }
+        } else {
+            governedFiles.addAll(exactFiles)
+            for (dirPath in governedDirs) {
+                val dir = findRepoRootFile(dirPath)
+                dir.listFiles { _, name -> name.endsWith(".md") }?.forEach { f ->
+                    governedFiles.add("$dirPath/${f.name}")
+                }
+            }
+        }
+        assertTrue("Must discover governed work-product files", governedFiles.size >= 45)
+
+        val docIdRegex = Regex("""\*\*Document ID\*\*:\s*`?DOC-[A-Z0-9-]+`?""")
+        val versionRegex = Regex("""\*\*Version\*\*:\s*`?\d+\.\d+\.\d+`?""")
+        val statusRegex = Regex("""\*\*Status\*\*:\s*([^\n|]+)""")
+        val approverRegex = Regex("""\*\*Approver\*\*:\s*([^\n|]+)""")
+        val historyRegex = Regex("""(?m)^##\s+(?:\d+\.\s+)?(?:Change|Revision)\s+History\b""")
+
+        for (relPath in governedFiles.distinct()) {
+            val text = findRepoRootFile(relPath).readText()
+            assertTrue("$relPath must declare **Document ID**: DOC-* (REQ-PRO-120.1)", docIdRegex.containsMatchIn(text))
+            assertTrue("$relPath must declare semver **Version** (REQ-PRO-120.1)", versionRegex.containsMatchIn(text))
+            assertTrue("$relPath must declare **Status** (REQ-PRO-120.1)", statusRegex.containsMatchIn(text))
+            assertTrue("$relPath must declare **Approver** (REQ-PRO-120.1)", approverRegex.containsMatchIn(text))
+            assertTrue("$relPath must include Change/Revision History (REQ-PRO-120.1)", historyRegex.containsMatchIn(text))
+            val status = statusRegex.find(text)!!.groupValues[1].trim()
+            val approver = approverRegex.find(text)!!.groupValues[1].trim()
+            if (status == "Approved") {
+                assertFalse(
+                    "$relPath cannot claim Approved with pending/AI Approver '$approver' (REQ-PRO-120.2)",
+                    approver.contains("Pending", ignoreCase = true) || approver.contains("AI", ignoreCase = true)
+                )
+            }
+        }
+
+        // Verify contradiction reconciliation (REQ-PRO-120.3, REQ-PRO-120.4)
+        val protocolText = findRepoRootFile("docs/project_protocol.md").readText()
+        assertTrue("project_protocol.md must state 9 Core Rules", protocolText.contains("9 Core Rules"))
+        assertFalse("project_protocol.md must not state 8 Core Rules", protocolText.contains("8 Core Rules"))
+        assertTrue("project_protocol.md must reference Rules 1–85+", protocolText.contains("Rules 1–85+"))
+        assertFalse("project_protocol.md must not cite stale Rules 1–55", protocolText.contains("Rules 1–55"))
+        assertTrue("project_protocol.md must reflect 6-Stage lifecycle", protocolText.contains("6-Stage"))
+
+        val jiraUtilText = findRepoRootFile("tools/jira_util.py").readText()
+        assertTrue("jira_util.py reminder must print 9 CORE RULES", jiraUtilText.contains("9 CORE RULES"))
+        assertFalse("jira_util.py reminder must not print 8 CORE RULES", jiraUtilText.contains("8 CORE RULES"))
+
+        val riskRegText = findRepoRootFile("docs/management/risk_register.md").readText()
+        assertTrue("risk_register.md must cite Rule 3.4 / Rule 83", riskRegText.contains("Rule 3.4 / Rule 83"))
+        assertFalse("risk_register.md must not mislabel Stage 6 questions as **Rule 5**", riskRegText.contains("mandatory **Rule 5**"))
+
+        val hmProtocolText = findRepoRootFile("tools/hoechstmass/docs/project_protocol.md").readText()
+        assertTrue("hoechstmass project_protocol.md must cite 9 Core", hmProtocolText.contains("9 Core"))
+        assertTrue("hoechstmass project_protocol.md must cite 6-Stage", hmProtocolText.contains("6-Stage"))
+
+        val hmReadmeText = findRepoRootFile("tools/hoechstmass/README.md").readText()
+        assertTrue("hoechstmass README.md must cite 9 Core", hmReadmeText.contains("9 Core"))
+        assertTrue("hoechstmass README.md must cite 6-Stage", hmReadmeText.contains("6-Stage"))
+    }
+
     /**
      * Asserts that docs/architecture.md references authentic production components and contains no drifted placeholders (REQ-PRO-043, TST-PRO-043).
      */

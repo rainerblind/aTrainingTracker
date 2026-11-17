@@ -1,5 +1,10 @@
 # Living Requirements: Post-Workout Analytics & Periods
 
+**Document ID**: `DOC-REQ-PERIODS`  
+**Version**: 1.0.0  
+**Status**: Reviewed  
+**Approver**: Pending PO Sign-Off  
+
 **Domain**: `aftermath_periods`  
 **Prefixes**: `PER`, `PERF`, `RAD`, `SPT`  
 **Scope**: Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers.  
@@ -1768,3 +1773,11 @@
   • *Given* pure wellness mode with all 4 wellness sub-toggles `false`, *When* `MorningWellnessInputCard` renders, *Then* `morning_hrv_wellness_empty_hint` is displayed inside the card.
   • *Given* `showMorningCheckOnStartScreen = true` OR `enableMorningSleepAndWellness = false` OR `phase != MorningHrvPhase.READY`, *When* `MorningHrvCheckScreen` renders, *Then* the full HRV measurement layout and TopAppBar HRV metadata remain visible.
 - **Invariants**: Zero DB migrations, zero changes to `ControlTrackingViewModel`/`MorningCheckSection`, full HRV layout preserved when enabled or measuring, 100% 9-locale parity.
+
+---
+
+## Change History
+
+| Version | Date | Author | Ticket | Summary of Changes |
+| :--- | :--- | :--- | :--- | :--- |
+| `1.0.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Added standardized `DOC-REQ-PERIODS` work-product control header and Change History. |

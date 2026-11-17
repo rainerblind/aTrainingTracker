@@ -1,10 +1,11 @@
 # Project Risk Register: aTrainingTracker
 
+**Document ID**: `DOC-MGT-RISK`  
 **Document Identifier**: `RISK-REG-ATT`  
 **Standard**: ASPICE 4.0 `MAN.5` (Risk Management — `MAN.5.BP1–BP6`, incorporating legacy ASPICE 3.1 `MAN.3.BP5` Define, monitor and adjust project risks)  
-**Target Release**: `V5.0.0` | **Version**: 1.1.0  
-**Status**: Approved | **Last Review Date**: 2026-11-17  
-**Governing Ticket**: [ATT-6151](https://rainerblind.atlassian.net/browse/ATT-6151), [ATT-8167](https://rainerblind.atlassian.net/browse/ATT-8167) | **Requirement**: `REQ-STP-010` | **Test**: `TST-STP-010`  
+**Target Release**: `V5.0.0` | **Version**: 1.2.0  
+**Status**: Reviewed | **Approver**: Pending PO Sign-Off | **Last Review Date**: 2026-11-17  
+**Governing Ticket**: [ATT-6151](https://rainerblind.atlassian.net/browse/ATT-6151), [ATT-8167](https://rainerblind.atlassian.net/browse/ATT-8167), [ATT-8164](https://rainerblind.atlassian.net/browse/ATT-8164) | **Requirement**: `REQ-STP-010`, `REQ-PRO-120` | **Test**: `TST-STP-010`  
 
 ---
 
@@ -63,7 +64,7 @@ The risk register is reviewed at every Sprint-Start ceremony to capture newly su
 | **2026-11-10** | **2026-46.1** *(Start)* | Sprint Coordinator / Process Owner | Initial risk register baseline established per ASPICE MAN.3.BP5 (ATT-6151). Initial risks RISK-001 through RISK-006 identified; High-exposure risks linked to remediation tickets. |
 | **2026-11-10** | **2026-46.1** *(Close)* | Sprint Coordinator / Human Reviewer | Ceremony 2 review across 66 realized tickets (`146.0 SP`): `ATT-6148` & `ATT-6152` completed toward `RISK-001`; `RISK-002` manifested as unmounted UI/importer islands (`ATT-6702`, `ATT-6711`, `ATT-6712`) and AI symbol/signature hallucinations in `SWE.2`/`SYS.2`/`SYS.3` docs (`ATT-6727`, `ATT-6732`, `ATT-6738`–`ATT-6741`). Enacted **Rule 81** (mandatory caller-site `grep`, dynamic symbol-vs-source & bidirectional `SYSREQ` equality checks, and Tier 2 `lintDebug`/`detekt` CI parity). |
 | **2026-11-10** | **2026-46.2** *(Start)* | Sprint Coordinator (`ATT-6746`) | Ceremony 1 review across 122 queued sprint tickets (`RISK-001`..`RISK-006` verified; High-exposure `RISK-001` [`E=16`] & `RISK-002` [`E=15`] linked to `ATT-6148`/`ATT-6152` & `ATT-6150`/`ATT-6141` plus active Sprint `2026-46.2` remediations `ATT-6743`, `ATT-6727`–`ATT-6741`, and `ATT-6120`–`ATT-6126`; `RISK-003`/`RISK-004`/`RISK-006` actively mitigated via `ATT-6711`, `ATT-6713`/`ATT-6744`, and `ATT-6716`). |
-| **2026-11-11** | **2026-46.2** *(Close)* | Sprint Coordinator / Human Reviewer (`ATT-6746`) | Ceremony 2 review (`ATT-7101` Stage 6 Cold Carbon Review introduced): `RISK-002` mitigated via mandatory **Rule 5** (`Pros` vs. `Cons / Defects Identified` + *"Would you recommend its approval?"*) in `stage6-final-review/SKILL.md`, which caught 34 tickets with subtle edge-case, concurrency, mathematical, or lifecycle defects before `Final Review (Human)` while passing 49 clean tickets (`92.0 SP`). |
+| **2026-11-11** | **2026-46.2** *(Close)* | Sprint Coordinator / Human Reviewer (`ATT-6746`) | Ceremony 2 review (`ATT-7101` Stage 6 Cold Carbon Review introduced): `RISK-002` mitigated via mandatory **Rule 3.4 / Rule 83** (`Pros` vs. `Cons / Defects Identified` + *"Would you recommend its approval?"*) in `stage6-final-review/SKILL.md`, which caught 34 tickets with subtle edge-case, concurrency, mathematical, or lifecycle defects before `Final Review (Human)` while passing 49 clean tickets (`92.0 SP`). |
 | **2026-11-11** | **2026-46.3** *(Start)* | Sprint Coordinator (`ATT-7161`) | Ceremony 1 review across Sprint `2026-46.3` queue (`RISK-001`..`RISK-006` verified; High-exposure `RISK-001` [`E=16`] & `RISK-002` [`E=15`] linked to `ATT-6148`/`ATT-6152` & `ATT-6150`/`ATT-6141` plus active Sprint `2026-46.3` worktree/merge hardening `ATT-7025`, 34 Stage 6 Cold Carbon bounce remediations, and `ATT-6120`–`ATT-6169`; `RISK-004`/`RISK-006` actively mitigated via `ATT-6675`–`ATT-6677`, `ATT-7159`, `ATT-6879`, and `ATT-7034`). |
 | **2026-11-12** | **2026-46.3** *(Close)* | Sprint Coordinator / Human Reviewer (`ATT-7161`) | Ceremony 2 review across 90 realized tickets (`187.0 SP`, 71 accepted with `V5.0.0`, 19 retained in `Final Review (Human)`): `ATT-7025` (deterministic `--merge-ticket` lock) & `ATT-6506` (`emulator-5554` physical-phone protection) accepted; ASPICE CL2/CL4 infrastructure tickets (`ATT-6140`, `ATT-6146`, `ATT-6147`, `ATT-6149`, `ATT-6150`, `ATT-6154`–`ATT-6157`) reached `Final Review (Human)`. Enacted **Rule 82** (prioritizing rollover in-progress/bounced tickets before `Zu erledigen`, forbidding non-null default `collectAsState` form hydration races [`ATT-7319`], and enforcing two-sided `Row` weighting + authentic M3 anti-prototype UI [`ATT-7321`]). |
 | **2026-11-12** | **2026-46.4** *(Start)* | Sprint Coordinator (`ATT-7322`) | Ceremony 1 review across Sprint `2026-46.4` queue (`RISK-001`..`RISK-006` verified; High-exposure `RISK-001` [`E=16`] & `RISK-002` [`E=15`] linked to `ATT-6148`/`ATT-6152` & `ATT-6150`/`ATT-6141`; 14 in-progress rollover tickets prioritized per Rule 82, 39 `Zu erledigen` tickets audited, and 19 `Final Review (Human)` tickets tracked). |
@@ -113,3 +114,12 @@ The risk register is reviewed at every Sprint-Start ceremony to capture newly su
 * **ASPICE Mapping**: Process `MAN.5` (Risk Management, BP1–BP6), dual-citing legacy `MAN.3.BP5` (Define, monitor and adjust project risks).
 * **Requirement**: `REQ-STP-010` (*Project Risk Register, ASPICE MAN.5 & Per-Sprint Dual-Ceremony Review Governance*).
 * **Verification**: Automated build contract test `testProjectRiskRegister_existsAndHighExposureMitigated` in `ReleaseCiAndLintConfigContractTest.kt` (`TST-STP-010`).
+
+---
+
+## 6. Change History
+
+| Version | Date | Author | Ticket | Summary of Changes |
+| :--- | :--- | :--- | :--- | :--- |
+| `1.1.0` | 2026-11-17 | AI Agent (`ATT-8167`) | `ATT-6151`, `ATT-8167` | ASPICE 4.0 `MAN.5` risk register baseline (`RISK-001`..`RISK-011`). |
+| `1.2.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Standardized `DOC-MGT-RISK` header, reset self-declared `Approved` to `Reviewed` (`Pending PO Sign-Off`), corrected `Rule 5` -> `Rule 3.4 / Rule 83`, and added Change History. |

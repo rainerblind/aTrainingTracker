@@ -1,5 +1,10 @@
 # Living Requirements: Store Presence
 
+**Document ID**: `DOC-REQ-STP`  
+**Version**: 1.0.0  
+**Status**: Reviewed  
+**Approver**: Pending PO Sign-Off  
+
 **Domain**: `store_presence`  
 **Prefixes**: `STP`  
 **Scope**: Store presence, Google Play listings, screenshots, store metadata contract testing, and release governance.  
@@ -219,7 +224,10 @@
   - **Root Reason for Existing Formulation**: `REQ-STP-010.1` mandates concrete linked remediation tickets strictly for High-exposure risks ($E \ge 15$) and non-placeholder maintenance tracking for Medium/Low risks (`RISK-003`, $E=12$).
   - **Preservation of Core Invariants**: Existing `[Verified]` `REQ-STP-010` contracts, `ATT-6148`/`ATT-6150` links, `MAN.5`/`MAN.3.BP5` headers, and `docs/management/` canonical placement remain strictly preserved.
 
+---
 
+## Change History
 
-
-
+| Version | Date | Author | Ticket | Summary of Changes |
+| :--- | :--- | :--- | :--- | :--- |
+| `1.0.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Added standardized `DOC-REQ-STP` work-product control header and Change History. |

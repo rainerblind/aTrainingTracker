@@ -1,5 +1,10 @@
 # Living Requirements: Jubilee Milestones & App Reviews
 
+**Document ID**: `DOC-REQ-REVIEWS`  
+**Version**: 1.0.0  
+**Status**: Reviewed  
+**Approver**: Pending PO Sign-Off  
+
 **Domain**: `aftermath_reviews`  
 **Prefixes**: `REV`  
 **Scope**: Milestone workout auto-naming, jubilee achievements, Google Play in-app reviews, athlete feedback, and supporter tier promotions.  
@@ -429,5 +434,10 @@
   • *When* `ExportManager.exportWorkout` executes,
   • *Then* it synchronizes to Health Connect if and only if `TrainingApplication.syncToHealthConnect()` is true.
 
+---
 
+## Change History
 
+| Version | Date | Author | Ticket | Summary of Changes |
+| :--- | :--- | :--- | :--- | :--- |
+| `1.0.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Added standardized `DOC-REQ-REVIEWS` work-product control header and Change History. |

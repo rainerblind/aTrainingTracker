@@ -59,7 +59,7 @@ If the exact same model tier reviews content that it just generated itself, the 
 
 ---
 
-## 3. The 5-Stage Agile ASPICE Lifecycle with Gate Governance
+## 3. The 6-Stage Agile ASPICE Lifecycle with Gate Governance (Stages 1–5 + Stage 6 Cold Review)
 
 Höchstmaß translates Automotive SPICE (ISO/IEC 33061 / VDA Scope) into a fast-paced agile development lifecycle:
 
@@ -69,20 +69,21 @@ Höchstmaß translates Automotive SPICE (ISO/IEC 33061 / VDA Scope) into a fast-
 | **Stage 2** | **Requirement & Test Specification** | `subagent_flash` | `subagent_pro` | **Gate 2 PASS**: Verifies formal `SHALL`/`MUST` requirements, Given-When-Then criteria, and test traceability. Advances to Plan. |
 | **Stage 3** | **Implementation Plan** | `subagent_pro` | `subagent_flash` | **Gate 3 PASS**: Verifies atomic construction steps, invariants, and architectural design. Releases Code Lock. |
 | **Stage 4** | **Software Construction & Implementation** | `subagent_flash` / `subagent_pro` | `subagent_pro` / `subagent_flash` | **Gate 4 PASS**: Audits `git diff`, code quality, KDoc, and targeted tests against Stage 3 plan. Advances to Test. |
-| **Stage 5** | **Verification & Walkthrough** | `subagent_flash` | `subagent_pro` | **Gate 5 PASS**: Full clean-room test suite, image inspection, and squashed atomic merge $\rightarrow$ Advances to **Final Review (Human)**. |
+| **Stage 5** | **Verification & Walkthrough** | `subagent_flash` | `subagent_pro` | **Gate 5 PASS**: Full clean-room test suite, image inspection, and squashed atomic merge $\rightarrow$ Advances to **Final Review (Agent)**. |
+| **Stage 6** | **Cold Final Review (Agent)** | *(Squashed commit)* | Cold Reviewer (`Flash` / `Pro`) | **Gate 6 PASS**: Independent read-only adversarial diff audit $\rightarrow$ Advances to **Final Review (Human)**. |
 
 ---
 
 ## 4. Mapping AAA to the ASPICE Capability Model (ISO/IEC 33020)
 
-Rather than claiming formal automotive certification, **Höchstmaß** uses the **Automotive SPICE Process Assessment Model (ISO/IEC 33020)** (`PA 1.1` through `PA 5.2`) as a structured maturity roadmap — allowing teams to start with the core 5-stage gate loop (Levels 1–2) and progressively adopt quantitative process control and closed-loop retrospectives (Levels 3–5):
+Rather than claiming formal automotive certification, **Höchstmaß** uses the **Automotive SPICE Process Assessment Model (ISO/IEC 33020)** (`PA 1.1` through `PA 5.2`) as a structured maturity roadmap — allowing teams to start with the core 6-stage gate loop (Levels 1–2) and progressively adopt quantitative process control and closed-loop retrospectives (Levels 3–5):
 
 | Capability Level | Process Attribute (PA) | ISO/IEC 33020 Definition | Höchstmaß Operational Implementation |
 | :--- | :--- | :--- | :--- |
-| **Level 1: Performed** | **PA 1.1: Process Performance** | The process achieves its defined outcomes. | **5-Stage ASPICE Lifecycle**: Strict execution of SWE.1 through SWE.6 stages; atomic squash-merge per ticket; verifiable artifact deliverables at each stage boundary. |
+| **Level 1: Performed** | **PA 1.1: Process Performance** | The process achieves its defined outcomes. | **6-Stage ASPICE Lifecycle**: Stages 1–5 execution (SWE.1–SWE.6) + Stage 6 Cold Final Review; atomic squash-merge per ticket; verifiable artifact deliverables at each stage boundary. |
 | **Level 2: Managed** | **PA 2.1: Performance Management** | Process performance is planned, monitored, and adjusted. | **Sprint Capacity Envelope**: Capacity bounding (~24–30 SP across 12–15 atomic tickets); story point estimation split guardrail ($\le 3$ SP); autonomous in-sprint zipper ping-pong; velocity monitoring. |
 | | **PA 2.2: Work Product Management** | Work products are documented, controlled, and integrity is maintained. | **Canonical Deliverables**: Standardized `docs/engineering/` directories; living documentation sharding and master index parity (`verify_requirement_governance.py`); strict branch isolation (`feature/` $\rightarrow$ `sprint/` $\rightarrow$ `develop`). |
-| **Level 3: Established** | **PA 3.1: Process Definition** | A standard process is established across the organization. | **Document Triad & Skills**: Universal 8 Core In-Sprint Governance Rules (`aspice_governance.md`); 10 parameterized agent skills (`SKILL.md`); standardized deliverable templates; coding standards and design guidelines. |
+| **Level 3: Established** | **PA 3.1: Process Definition** | A standard process is established across the organization. | **Document Triad & Skills**: Universal 9 Core In-Sprint Governance Rules (`aspice_governance.md`); 11 parameterized agent skills (`SKILL.md`); standardized deliverable templates; coding standards and design guidelines. |
 | | **PA 3.2: Process Deployment** | The standard process is systematically deployed and enforced. | **Tooling Enforcement & Role Isolation**: Automated CLI enforcement (`tools/jira_util.py`); pre-warmed prompt injection; separate role accounts and API tokens (`agent1`, `agent2`, `coordinator`, `human`). |
 | **Level 4: Predictable** | **PA 4.1: Quantitative Analysis** | Quantitative objectives are established and measured. | **Quantitative Sprint Scorecard**: Automated aggregation of Gate 1–5 First-Time-Pass-Rates (FTPR); empirical Swiss Cheese escape rates ($p_1 \dots p_5$, $P_{\text{escape}} = \prod p_i$); Human Acceptance Rate; historical persistence in `docs/engineering/metrics/process_metrics.jsonl`. |
 | | **PA 4.2: Quantitative Control** | Process is statistically controlled to achieve predictability. | **Statistical Process Control (SPC)**: 3-sprint moving baseline $\mu \pm 2\sigma$ control bands ($UCL$, $LCL$); automated detection and warning of out-of-control conditions (Special Cause Variations) in Ceremony 2. |
@@ -105,13 +106,14 @@ tools/hoechstmass/
 │   └── community/                             # Community governance & contributing guidelines (Part 3)
 ├── .agents/
 │   ├── rules/
-│   │   └── aspice_governance.md               # Universal 8 Core In-Sprint Governance Rules
-│   └── skills/                                # 10 project-agnostic agent skills
+│   │   └── aspice_governance.md               # Universal 9 Core In-Sprint Governance Rules
+│   └── skills/                                # 11 project-agnostic agent skills
 │       ├── stage1-analysis/SKILL.md
 │       ├── stage2-req-test-spec/SKILL.md
 │       ├── stage3-impl-plan/SKILL.md
 │       ├── stage4-implementation/SKILL.md
 │       ├── stage5-verification/SKILL.md
+│       ├── stage6-final-review/SKILL.md
 │       ├── sprint-planner/SKILL.md
 │       ├── jira-workflow/SKILL.md
 │       ├── regression-bisect/SKILL.md

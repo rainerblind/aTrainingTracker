@@ -1,11 +1,13 @@
 # System Verification Protocol: Real Devices, Physical Sensors & Operational Environments (ASPICE SYS.5)
 
-**Document Version**: 1.0.0  
+**Document ID**: `DOC-SYS-VER`  
+**Version**: 1.1.0  
 **ASPICE Process Areas**: SYS.5 (System Verification, BP1–BP7)  
 **Parent Epic**: [ATT-6142](https://rainerblind.atlassian.net/browse/ATT-6142) (*ASPICE CL2 – System Level, Architecture Conformance, Integration & Quality Gates*)  
 **Requirement Reference**: `REQ-PRO-069` (`REQ-PRO-069.1`–`REQ-PRO-069.4`)  
 **Test Reference**: `TST-PRO-069` (`TST-PRO-069.1`–`TST-PRO-069.4`)  
-**Status**: Approved & Grounded in Live System Architecture  
+**Status**: Reviewed  
+**Approver**: Pending PO Sign-Off  
 
 ---
 
@@ -307,3 +309,12 @@ Every release candidate verification run must be documented by copying this temp
 * **System Verification Engineer**: ___________________________ Date: ____________
 * **Process Owner / Quality Gatekeeper**: _____________________ Date: ____________
 ```
+
+---
+
+## Change History
+
+| Version | Date | Author | Ticket | Summary of Changes |
+| :--- | :--- | :--- | :--- | :--- |
+| `1.0.0` | 2026-11-16 | AI Agent | `ATT-6142` | Prior system specification baseline. |
+| `1.1.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Standardized `DOC-SYS-VER` header, bumped version, reset status to `Reviewed` (`Pending PO Sign-Off`). |

@@ -1,17 +1,22 @@
 # Agile Agentic ASPICE (AAA) Protocol & Architecture Pointer: aTrainingTracker
 
+**Document ID**: `DOC-GOV-PROTOCOL`  
+**Version**: 1.0.0  
+**Status**: Reviewed  
+**Approver**: Pending PO Sign-Off  
+
 Agile Agentic ASPICE (AAA) operationalizes Automotive SPICE for autonomous AI pair-programming agents across three core pillars:
-1. **Intentional Engineering Tripwires (*Stolpersteine*)**: Deliberate quality gates (Gates 1–5), bidirectional requirement/test traceability (`REQ-XXX` $\leftrightarrow$ `TST-XXX`), Chesterton's Fence archaeology (`REQ-PRO-022`), and independent `pro`/`flash` cross-auditing prevent autonomous agents from taking unverified shortcuts.
+1. **Intentional Engineering Tripwires (*Stolpersteine*)**: Deliberate quality gates (Gates 1–5 plus Stage 6 Cold Final Review), bidirectional requirement/test traceability (`REQ-XXX` $\leftrightarrow$ `TST-XXX`), Chesterton's Fence archaeology (`REQ-PRO-022`), and independent `pro`/`flash` cross-auditing prevent autonomous agents from taking unverified shortcuts.
 2. **Artifact-Driven Infinite Context**: Stage deliverables in `docs/engineering/` (`analysis/<KEY>_analysis.md`, `test_specs/<KEY>_test_spec.md`, `plans/<KEY>_plan.md`, `walkthroughs/<KEY>_walkthrough.md`, `retros/Sprint_Review_and_Retro_<KEY>.md`, and `test_results/index.html`), plus living specifications (`docs/requirements.md` + `docs/requirements/req_*.md`, `docs/tests.md` + `docs/tests/tst_*.md`), maintain persistent external long-term memory across context compactions and agent turns.
 3. **Constructive Resistance & Documented Deviations (*Pflicht zum Widerspruch & Dokumentierte Abweichungserlaubnis*)**: Agents MUST NOT initiate shortcuts. When the human user requests an exception from standard process, the agent SHALL first offer constructive resistance (explaining the guardrail's purpose and associated risk). Only if the human explicitly insists may the exception proceed—and even then, the exception, its justification, and all changes made MUST be cleanly documented in Jira and the walkthrough/docs.
 
 ## Document Triad & In-Sprint Architecture
 Authoritative engineering governance and living standards are decoupled into the **Document Triad** and modular `.agents/skills/`:
-1. **In-Sprint Core Rules (8 Core Rules)**: [`.agents/rules/aspice_governance.md`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/.agents/rules/aspice_governance.md)
+1. **In-Sprint Core Rules (9 Core Rules)**: [`.agents/rules/aspice_governance.md`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/.agents/rules/aspice_governance.md)
 2. **UI & Interaction Design Guidelines**: [`docs/design_guidelines.md`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/design_guidelines.md)
 3. **Technical Architecture & Coding Standards**: [`docs/coding_standards.md`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/coding_standards.md)
-4. **Stage & Ceremony Skills**: [`.agents/skills/stage1-analysis/SKILL.md`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/.agents/skills/stage1-analysis/SKILL.md) through [`.agents/skills/stage5-verification/SKILL.md`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/.agents/skills/stage5-verification/SKILL.md), [`.agents/skills/sprint-planner/SKILL.md`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/.agents/skills/sprint-planner/SKILL.md), and [`.agents/skills/jira-workflow/SKILL.md`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/.agents/skills/jira-workflow/SKILL.md).
-5. **Historical Rule Archive (Rules 1–55)**: [`docs/engineering/rule_history_archive.md`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/engineering/rule_history_archive.md)
+4. **Stage & Ceremony Skills**: [`.agents/skills/stage1-analysis/SKILL.md`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/.agents/skills/stage1-analysis/SKILL.md) through [`.agents/skills/stage6-final-review/SKILL.md`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/.agents/skills/stage6-final-review/SKILL.md), [`.agents/skills/sprint-planner/SKILL.md`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/.agents/skills/sprint-planner/SKILL.md), and [`.agents/skills/jira-workflow/SKILL.md`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/.agents/skills/jira-workflow/SKILL.md).
+5. **Historical Rule Archive (Rules 1–85+)**: [`docs/engineering/rule_history_archive.md`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/engineering/rule_history_archive.md)
 
 ## Multi-Account Role Segregation & Invariants (`REQ-PRO-020` / `REQ-PRO-022`)
 * **Per-Role Credential Partitioning (`.env.jira.<role>` — `REQ-PRO-019` / ATT-6147)**: To enforce ASPICE SUP.1 and SUP.8 role segregation, credentials are partitioned into gitignored per-role files (`.env.jira.agent1`, `.env.jira.agent2`, `.env.jira.coordinator`) with `.gitignore` covering `.env.jira*`. `tools/jira_util.py` dynamically resolves the active role's file (`agent1` via `JIRA_AGENT1_USER` / `JIRA_AGENT1_TOKEN`, `agent2` via `JIRA_AGENT2_USER` / `JIRA_AGENT2_TOKEN`, `coordinator` via `JIRA_COORDINATOR_USER` / `JIRA_COORDINATOR_TOKEN`) with zero cross-role fallback or disclosure. Human credentials (`JIRA_USER`/`JIRA_TOKEN`) are absent from the workspace.
@@ -39,10 +44,10 @@ Höchstmaß systematically maps Automotive SPICE Process Attributes (`PA 1.1` th
 
 | Capability Level | Process Attribute (PA) | ISO/IEC 33020 Definition | Höchstmaß Operational Implementation |
 | :--- | :--- | :--- | :--- |
-| **Level 1: Performed** | **PA 1.1: Process Performance** | The process achieves its defined outcomes. | **5-Stage ASPICE Lifecycle**: Strict execution of SWE.1 through SWE.6 stages; atomic squash-merge per ticket; verifiable artifact deliverables at each stage boundary. |
+| **Level 1: Performed** | **PA 1.1: Process Performance** | The process achieves its defined outcomes. | **6-Stage ASPICE Lifecycle**: Stages 1–5 execution (`SWE.1`–`SWE.6` sub-tasks) + Stage 6 Cold Final Review (`Final Review (Agent)`); atomic squash-merge per ticket; verifiable artifact deliverables at each stage boundary. |
 | **Level 2: Managed** | **PA 2.1: Performance Management** | Process performance is planned, monitored, and adjusted. | **Sprint Capacity Envelope**: Capacity bounding (~24–30 SP across 12–15 atomic tickets); story point estimation split guardrail ($\le 3$ SP); autonomous in-sprint zipper ping-pong; velocity monitoring. |
 | | **PA 2.2: Work Product Management** | Work products are documented, controlled, and integrity is maintained. | **Rule 67 Canonical Deliverables**: Standardized `docs/engineering/` directories; living documentation sharding and master index parity (`verify_requirement_governance.py`); strict branch isolation (`feature/` $\rightarrow$ `sprint/` $\rightarrow$ `develop`). |
-| **Level 3: Established** | **PA 3.1: Process Definition** | A standard process is established across the organization. | **Document Triad & Skills**: Universal 8 Core In-Sprint Governance Rules (`aspice_governance.md`); 10 parameterized agent skills (`SKILL.md`); standardized deliverable templates; coding standards and design guidelines. |
+| **Level 3: Established** | **PA 3.1: Process Definition** | A standard process is established across the organization. | **Document Triad & Skills**: Universal 9 Core In-Sprint Governance Rules (`aspice_governance.md`); 11 parameterized agent skills (`SKILL.md`); standardized deliverable templates; coding standards and design guidelines. |
 | | **PA 3.2: Process Deployment** | The standard process is systematically deployed and enforced. | **Tooling Enforcement & Role Isolation**: Automated CLI enforcement (`tools/jira_util.py`); pre-warmed prompt injection; separate role accounts and API tokens (`agent1`, `agent2`, `coordinator`, `human`). |
 | **Level 4: Predictable** | **PA 4.1: Quantitative Analysis** | Quantitative objectives are established and measured. | **Quantitative Sprint Scorecard**: Automated aggregation of Gate 1–5 First-Time-Pass-Rates (FTPR); empirical Swiss Cheese escape rates ($p_1 \dots p_5$, $P_{\text{escape}} = \prod p_i$); Human Acceptance Rate; historical persistence in `docs/engineering/metrics/process_metrics.jsonl`. |
 | | **PA 4.2: Quantitative Control** | Process is statistically controlled to achieve predictability. | **Statistical Process Control (SPC)**: 3-sprint moving baseline $\mu \pm 2\sigma$ control bands ($UCL$, $LCL$); automated detection and warning of out-of-control conditions (Special Cause Variations) in Ceremony 2. |
@@ -53,3 +58,11 @@ Höchstmaß systematically maps Automotive SPICE Process Attributes (`PA 1.1` th
 To ensure 24/7 autonomous agent execution without disrupting the Product Owner's physical daily driver smartphone (`Pixel 10`), a strict Two-Tier Device Policy is enforced across all tooling and governance:
 1. **In-Sprint Per-Ticket Validation (Phase 2, Stages 1–5)**: Autonomous agents execute on-device verification exclusively against an emulated device (`emulator-5554`, `Pixel_8_Android_15` via `tools/agent_emulator.py`). Desk simulation tools (`fake_gps.py`, `simulate_kill.py`, `replay_workout.py`) enforce physical phone guardrails and abort if targeting physical USB hardware in agent mode.
 2. **Full-Sprint Integrated Evaluation (Ceremony 2, Sprint Review)**: The integrated release candidate on `sprint/<SPRINT_NAME>` is built and verified on the **real physical phone** (`Pixel 10`, `ANDROID_SERIAL=<physical_serial> ./gradlew installDebug`), guaranteeing real hardware validation before sprint completion.
+
+---
+
+## Change History
+
+| Version | Date | Author | Ticket | Summary of Changes |
+| :--- | :--- | :--- | :--- | :--- |
+| `1.0.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Added `DOC-GOV-PROTOCOL` header and reconciled `9 Core Rules`, `Rules 1–85+`, and `6-Stage` lifecycle (`Stages 1–5` + `Stage 6`). |

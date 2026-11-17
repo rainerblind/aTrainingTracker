@@ -1,5 +1,10 @@
 # Living Test Specification: Tracking & Live Sensor Cockpit
 
+**Document ID**: `DOC-TST-TRK`  
+**Version**: 1.0.0  
+**Status**: Reviewed  
+**Approver**: Pending PO Sign-Off  
+
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
@@ -3219,6 +3224,7 @@
   4. *Tier 1 Targeted Regression Execution (`TST-FIL-022.4`)*:
      • Execute `./gradlew :app:testDebugUnitTest --tests "com.atrainingtracker.banalservice.odometry.KinematicAltitudeSlopeEkfTest" --tests "com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest" --tests "com.atrainingtracker.trainingtracker.build.MeasuredNfrBenchmarkTest"` asserting 100% pass rate (`Localization parity: N/A - no UI strings`).
 
+---
 
 ### TST-FIL-023: **att_fused Cold GNSS Jump Gating, Standstill Slope Clearing & Low-Speed Slope Damping Verification Suite** [Verified]
 - **Target Release**: `V5.0.0`
@@ -3240,4 +3246,10 @@
      • Execute `./gradlew :app:testDebugUnitTest --tests "com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFusedTest" --tests "com.atrainingtracker.banalservice.odometry.UnicycleOdometryEkfTest" --tests "com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest" --tests "com.atrainingtracker.banalservice.odometry.KinematicAltitudeSlopeEkfTest" --tests "com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceStationaryJitterTest" --tests "com.atrainingtracker.banalservice.odometry.OdometrySimulationTest"` asserting 100% pass rate with zero `src/main` source-reading calls (`REQ-PRO-049.1`; `Localization parity: N/A - no UI strings`).
 
 
+---
 
+## Change History
+
+| Version | Date | Author | Ticket | Summary of Changes |
+| :--- | :--- | :--- | :--- | :--- |
+| `1.0.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Added standardized `DOC-TST-TRK` work-product control header and Change History. |

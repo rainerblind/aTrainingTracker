@@ -1,10 +1,11 @@
 # Project Quality Assurance Strategy & Plan: aTrainingTracker
 
+**Document ID**: `DOC-MGT-QA`  
 **Document Identifier**: `QA-PLAN-ATT`  
 **Standard**: ASPICE 4.0 `SUP.1` (Quality Assurance) & `GP 2.1.6` (Ensure independence of quality assurance)  
-**Target Release**: `V5.0.0` | **Version**: 1.1.0  
-**Status**: Approved | **Date**: 2026-11-15  
-**Governing Tickets**: [ATT-8212](https://rainerblind.atlassian.net/browse/ATT-8212), [ATT-8213](https://rainerblind.atlassian.net/browse/ATT-8213) | **Requirements**: `REQ-PRO-095`, `REQ-PRO-096`, `REQ-PRO-061`  
+**Target Release**: `V5.0.0` | **Version**: 1.2.0  
+**Status**: Reviewed | **Approver**: Pending PO Sign-Off | **Date**: 2026-11-17  
+**Governing Tickets**: [ATT-8212](https://rainerblind.atlassian.net/browse/ATT-8212), [ATT-8213](https://rainerblind.atlassian.net/browse/ATT-8213), [ATT-8164](https://rainerblind.atlassian.net/browse/ATT-8164) | **Requirements**: `REQ-PRO-095`, `REQ-PRO-096`, `REQ-PRO-061`, `REQ-PRO-120`  
 
 ---
 
@@ -97,3 +98,12 @@ Under `SWE.2`, `SWE.3.BP4`, `SWE.4.BP2`, `SUP.1.BP1/BP3`, and `GP 2.1.6`, the pr
 * To guarantee that weekly reviews cannot be overlooked or deprioritized during active sprints, `tools/jira_util.py ensure-weekly-reviews` runs during Ceremony 1 (Sprint Planning) and Ceremony 2 (Sprint Review).
 * If `> 7 days` have elapsed since the latest completed review (or unreviewed subsystems remain in `coverage_matrix.md` / `aspice_audits/`) and no open review ticket exists in Jira, the tooling **automatically creates the review ticket under Epic `ATT-232` and ranks it at the very top of the Product Backlog (`rank-top`)**.
 * `release-manager/SKILL.md` verifies that weekly dual-vendor reviews are current prior to production release branch cutting.
+
+---
+
+## 8. Change History
+
+| Version | Date | Author | Ticket | Summary of Changes |
+| :--- | :--- | :--- | :--- | :--- |
+| `1.1.0` | 2026-11-15 | AI Agent (`ATT-8212`, `ATT-8213`) | `ATT-8212`, `ATT-8213` | Established dual-vendor weekly QA review strategy (`SUP.1`, `GP 2.1.6`). |
+| `1.2.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Standardized `DOC-MGT-QA` header, reset self-declared `Approved` to `Reviewed` (`Pending PO Sign-Off`), and added Change History. |

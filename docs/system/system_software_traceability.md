@@ -1,11 +1,13 @@
 # System-to-Software Requirement Traceability & Tailoring Specification
 
-**Document Version**: 1.0.0  
+**Document ID**: `DOC-SYS-TRC`  
+**Version**: 1.1.0  
 **ASPICE Process Areas**: SYS.2 (System Requirements Analysis, BP5), SWE.1 (Software Requirements Analysis, BP5)  
 **Requirement Reference**: `REQ-PRO-076` (`REQ-PRO-076.1`–`REQ-PRO-076.4`)  
 **Test Reference**: `TST-PRO-076` (`TST-PRO-076.1`–`TST-PRO-076.4`)  
 **Author**: Antigravity Autonomous Engineering Pair  
-**Status**: Approved & Grounded in Live Source Code  
+**Status**: Reviewed  
+**Approver**: Pending PO Sign-Off  
 
 ---
 
@@ -72,3 +74,12 @@ The integrity of this traceability specification is automatically verified by `t
 1. **SYSREQ Existence Guard**: All `SYSREQ-*` identifiers cited in requirements or traceability tables must exist in `docs/system/sysreq_*.md`.
 2. **SYSREQ Coverage Guard**: 100% of declared system requirements (`SYSREQ-TRK-001`..`006`, `SYSREQ-DEX-001`..`006`) must be refined by at least one software requirement.
 3. **Tailoring Consistency Guard**: All software requirements belong either to refined system requirement domains or tailored software-derived prefix families.
+
+---
+
+## Change History
+
+| Version | Date | Author | Ticket | Summary of Changes |
+| :--- | :--- | :--- | :--- | :--- |
+| `1.0.0` | 2026-11-16 | AI Agent | `ATT-6142` | Prior system specification baseline. |
+| `1.1.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Standardized `DOC-SYS-TRC` header, bumped version, reset status to `Reviewed` (`Pending PO Sign-Off`). |

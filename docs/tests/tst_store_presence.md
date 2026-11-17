@@ -1,5 +1,10 @@
 # Living Test Specification: Store Presence
 
+**Document ID**: `DOC-TST-STP`  
+**Version**: 1.0.0  
+**Status**: Reviewed  
+**Approver**: Pending PO Sign-Off  
+
 **Domain**: `store_presence`  
 **Prefixes**: `STP`  
 **Scope**: Store presence, Google Play listings, screenshots, store metadata contract testing, and release governance.  
@@ -206,3 +211,11 @@
      • Execute `./gradlew :app:testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.ReleaseCiAndLintConfigContractTest.testProjectRiskRegister_existsAndHighExposureMitigated"` and assert `testProjectRiskRegister_existsAndHighExposureMitigated` passes, including the `!riskContent.contains("ATT-8084")` guard and all `REQ-STP-010` assertions.
   4. *Governance Parity Check (`TST-STP-011.4`)*:
      • Execute `python3 tools/verify_requirement_governance.py` and verify exit code `0`.
+
+---
+
+## Change History
+
+| Version | Date | Author | Ticket | Summary of Changes |
+| :--- | :--- | :--- | :--- | :--- |
+| `1.0.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Added standardized `DOC-TST-STP` work-product control header and Change History. |

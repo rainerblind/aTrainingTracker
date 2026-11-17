@@ -1102,7 +1102,11 @@ class ReleaseCiAndLintConfigContractTest {
     @Test
     fun testBaselineImmutabilityManifestAndCmPlanAlignment_contract() {
         val cmPlanContent = findRepoRootFile("docs/management/cm_plan.md", "../docs/management/cm_plan.md").readText()
-        assertTrue("CM plan must be updated to Version 1.1.0 (REQ-PRO-119.4)", cmPlanContent.contains("**Version**: 1.1.0"))
+        assertTrue(
+            "CM plan must declare semver Version >= 1.1.0 (REQ-PRO-119.4, REQ-PRO-120.1)",
+            Regex("""\*\*Version\*\*:\s*1\.[1-9]\d*\.\d+""").containsMatchIn(cmPlanContent)
+        )
+        assertTrue("CM plan Revision History must retain 1.1.0 baseline (REQ-PRO-119.4)", cmPlanContent.contains("`1.1.0`"))
         assertTrue("CM plan must include Revision History (REQ-PRO-119.4)", cmPlanContent.contains("Revision History"))
         assertFalse("CM plan must not claim fast-forward-only merges on master (REQ-PRO-119.4)", cmPlanContent.contains("Only fast-forward merges"))
         assertTrue("CM plan must document --no-ff merge policy (REQ-PRO-119.4)", cmPlanContent.contains("--no-ff"))

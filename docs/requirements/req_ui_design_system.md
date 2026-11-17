@@ -1,5 +1,10 @@
 # Living Requirements: UI Components & Design System
 
+**Document ID**: `DOC-REQ-UI`  
+**Version**: 1.0.0  
+**Status**: Reviewed  
+**Approver**: Pending PO Sign-Off  
+
 **Domain**: `ui_design_system`  
 **Prefixes**: `UI`, `UNT`  
 **Scope**: Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts.  
@@ -17584,3 +17589,11 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 • *Given* `summary == null` or `summary.totalVehicles <= 0`, *When* `RadarTrafficSummaryCard` composes, *Then* nothing is rendered.
 
 **Invariants**: Zero SQLite/DTO changes; `TrainingApplication.setUnitForTesting(null)` cleanup in tests; Light/Dark theme readability preserved; `ANT-Android-SDKs` untouched.
+
+---
+
+## Change History
+
+| Version | Date | Author | Ticket | Summary of Changes |
+| :--- | :--- | :--- | :--- | :--- |
+| `1.0.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Added standardized `DOC-REQ-UI` work-product control header and Change History. |

@@ -1,10 +1,11 @@
 # Configuration Management Plan: aTrainingTracker
 
+**Document ID**: `DOC-MGT-CM`  
 **Document Identifier**: `CM-PLAN-ATT`  
 **Standard**: ASPICE 4.0 `SUP.8` (Configuration Management)  
-**Target Release**: `V5.0.0` | **Version**: 1.1.0  
-**Status**: Approved | **Date**: 2026-11-17  
-**Governing Ticket**: [ATT-6152](https://rainerblind.atlassian.net/browse/ATT-6152), [ATT-6733](https://rainerblind.atlassian.net/browse/ATT-6733), [ATT-8163](https://rainerblind.atlassian.net/browse/ATT-8163) | **Requirement**: `REQ-STP-009`, `REQ-PRO-057`, `REQ-PRO-119`  
+**Target Release**: `V5.0.0` | **Version**: 1.2.0  
+**Status**: Reviewed | **Approver**: Pending PO Sign-Off | **Date**: 2026-11-17  
+**Governing Ticket**: [ATT-6152](https://rainerblind.atlassian.net/browse/ATT-6152), [ATT-6733](https://rainerblind.atlassian.net/browse/ATT-6733), [ATT-8163](https://rainerblind.atlassian.net/browse/ATT-8163), [ATT-8164](https://rainerblind.atlassian.net/browse/ATT-8164) | **Requirement**: `REQ-STP-009`, `REQ-PRO-057`, `REQ-PRO-119`, `REQ-PRO-120`  
 
 ---
 
@@ -124,12 +125,14 @@ Changes must traverse 5 sequential verification gates before baseline integratio
 ### Configuration Status Accounting & Reporting (SUP.8.BP7)
 * **Baseline Content Manifest (`docs/releases/<baseline>/manifest.md`)**: Generated deterministically at every sprint closure (Ceremony 2) and production release finish via `python3 tools/baseline_manager.py manifest <baseline>`. Records the baseline tag, resolved commit SHA, living-doc REQ/TST totals (`docs/requirements.md`, `docs/tests.md`), linked `docs/engineering/test_evidence/` verdict, active High/Medium risks (`docs/management/risk_register.md`) and open release deviations, and `tools/verify_requirement_governance.py` status.
 * **Sprint Status Records**: Coupled with `docs/engineering/gates/<sprint>.md`, `qa_audits/<sprint>.md`, `reviews/<sprint>.md`, `test_evidence/<sprint>.md`, and `docs/engineering/metrics/process_metrics.jsonl` for end-to-end SUP.8 configuration status accounting.
+* **Work-Product Control Header & Human-Only Approval (`SUP.8.BP2`, `GP 2.2`, `REQ-PRO-120`)**: Every governed work product carries `Document ID` (`DOC-*`), semver `Version`, `Status` (`Draft` / `Reviewed` / `Approved`), `Approver`, and `Change History` (`docs/coding_standards.md` §5.13). Agents default to `Reviewed`/`Draft`; only the human Product Owner (via `Human-Approved:` / `Interactive-PO:` commit sign-off) may grant or retain `Approved` across content revisions, enforced by `tools/verify_requirement_governance.py`.
 
 ---
 
-## 7. Revision History
+## 7. Change History (Revision History)
 
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
 | `1.0.0` | 2026-11-11 | AI Agent / PO | `ATT-6152`, `ATT-6733` | Initial ASPICE `SUP.8` CM Plan, CI inventory, `master` grounding, and submodule pinning. |
 | `1.1.0` | 2026-11-17 | AI Agent (`ATT-8163`) | `ATT-8163` | Aligned `--no-ff` sprint/release merge policy, added `gates/`/`qa_audits/`/`reviews/`/`docs/releases/` CIs, enforced immutable annotated tags (`baseline_manager.py`, zero `git tag -f`), added `SUP.8.BP7` Configuration Status Accounting (`manifest.md`), and defined dry-run/PO-gated branch & tag hygiene policy. |
+| `1.2.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Standardized `DOC-MGT-CM` work-product header, reset self-declared `Approved` to `Reviewed` (`Pending PO Sign-Off`), and codified human-only approval governance (`REQ-PRO-120`). |

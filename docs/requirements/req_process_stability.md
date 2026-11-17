@@ -1,9 +1,14 @@
 # Living Requirements: Engineering Process, Stability & Architecture
 
+**Document ID**: `DOC-REQ-PRO`  
+**Version**: 1.0.0  
+**Status**: Reviewed  
+**Approver**: Pending PO Sign-Off  
+
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Requirements**: 184
+**Total Requirements**: 185
 
 ---
 
@@ -6052,3 +6057,37 @@ The workflow SHALL mandate that:
   • *Given* a new sprint or release baseline, *When* baselined via `tools/baseline_manager.py`, *Then* an annotated Git tag (`tag` object) and `docs/releases/<baseline>/manifest.md` referencing commit SHA, REQ/TST counts, test evidence, open risks/deviations, and governance status exist.
   • *Given* `docs/management/cm_plan.md` and `tools/baseline_manager.py cleanup-audit`, *When* audited by contract tests and unit tests, *Then* `--no-ff` policy, `gates/`/`qa_audits/`/`reviews/`/`releases/` CIs, `SUP.8.BP7` status accounting, Revision History, and dry-run/PO-gated cleanup are verified.
 - **Invariants**: Zero `app/src/main/` edits; `ANT-Android-SDKs` untouched; `Localization Parity: N/A - no UI strings`; zero unconfirmed remote/history mutations; zero live Jira API calls in unit tests (`Rule 5`).
+
+---
+
+### REQ-PRO-120: Work-Product Version/Status/Approval Headers, Human-Only Approval Guard & Governance Contradiction Reconciliation (ATT-8164) [Verified]
+- **Tests**: `TST-PRO-120`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `docs/coding_standards.md`, `docs/management/cm_plan.md`, `tools/verify_requirement_governance.py`, `tools/jira_util.py`, `.agents/rules/aspice_governance.md`, `.agents/skills/sprint-planner/SKILL.md`, `docs/project_protocol.md`, `docs/management/risk_register.md`, `tools/hoechstmass/`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/AspiceSweAuditContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ReleaseCiAndLintConfigContractTest.kt`, `app/src/test/java/com/atrainingtracker/architecture/JavaCoreMigrationStrategyContractTest.kt`
+- **Rationale**: ASPICE 4.0 Audit Finding `GP 2.2` (`GP 2.2.1/2.2.3/2.2.4`, `SUP.8 BP2`) identified missing version, status, approver, and change-history metadata across work products, agent-self-declared `Approved` statuses that never reset on revisions (e.g. `docs/management/cm_plan.md`), 5 governance contradictions (`8 vs 9` core rules, `Rules 1–55 vs 1–84+`, `5 vs 6` stages, `concurrency 2 vs 3`, `Rule 5 vs Rule 83`), and diverged `tools/hoechstmass/` copies.
+- **Description**:
+  1. *Standardized Work-Product Header (`REQ-PRO-120.1`)*: `docs/coding_standards.md` and `docs/management/cm_plan.md` SHALL define the canonical work-product control header (`Document ID` using `DOC-*` prefix, semver `Version`, `Status` in `{Draft, Reviewed, Approved}` with ADR `Retrospective (Pending PO Sign-Off)` compatibility, `Approver`, and `Change History` table), and that header SHALL be applied across `docs/management/*.md`, `docs/architecture/` (`docs/architecture.md`, `adr_001`..`007`, `integration_strategy.md`, `interfaces.md`, `sensor_units.md`, `detailed_design/*.md`), `docs/system/*.md`, `docs/requirements.md` + 9 domain shards, `docs/tests.md` + 9 domain shards, `.agents/rules/aspice_governance.md`, and root governance docs (`docs/design_guidelines.md`, `docs/project_governance.md`, `docs/project_protocol.md`), resetting agent-self-declared `Approved` statuses to `Reviewed` (`Approver: Pending PO Sign-Off`) without breaking `verify_shard_header_counts` or `verify_architecture_and_system_specs`.
+  2. *Human-Only Approval & Version-Bump Verifier (`REQ-PRO-120.2`)*: `tools/verify_requirement_governance.py` (`verify_work_product_headers()`, invoked via `--check-doc-headers` and the default CI `verify_governance()` flow) SHALL validate headers on all governed work products, reject `Status: Approved` when `Approver` is empty, `Pending*`, or an AI agent identifier, and on `git diff` body changes (cleanly exempting pre-cutoff historical commits) MUST require a monotonic semver `Version` bump and reject `Status: Approved` unless the modifying commit carries an explicit human sign-off trailer (`Human-Approved:` or `Interactive-PO:`).
+  3. *Governance Contradiction Reconciliation (`REQ-PRO-120.3`)*: Governance documents and `tools/jira_util.py` SHALL consistently state `9 Core Rules` (`.agents/rules/aspice_governance.md`, `docs/project_protocol.md`, `tools/jira_util.py` reminder printing Rules 1–9), `Rules 1–85+` archive span (`docs/project_protocol.md`, `aspice_governance.md`, `docs/engineering/rule_history_archive.md`), `6-Stage` lifecycle (`Stages 1–5` sub-task execution + `Stage 6` Cold Final Review), `max 3` parallel lanes (`2 lanes` active token-budget operational default per `Rule 7.2`), and `Rule 3.4 / Rule 83` in `docs/management/risk_register.md` (correcting the `Rule 5` mislabel).
+  4. *`tools/hoechstmass/` Alignment (`REQ-PRO-120.4`)*: `tools/hoechstmass/.agents/rules/aspice_governance.md`, `tools/hoechstmass/.agents/skills/sprint-planner/SKILL.md`, `tools/hoechstmass/.agents/skills/stage6-final-review/SKILL.md`, `tools/hoechstmass/docs/project_protocol.md`, and `tools/hoechstmass/README.md` SHALL be synchronized with the reconciled rule counts (`9 Core Rules`, preserving `Rule 1`..`Rule 8`), 6-stage lifecycle phrasing (preserving `Stage 1`..`Stage 5`), and `max 3` / `2 active` lane concurrency policy while keeping `HoechstmassCoreFrameworkContractTest`, `HoechstmassToolingContractTest`, and `ReleaseCiAndLintConfigContractTest` green.
+  5. *Offline & Contract Verification (`REQ-PRO-120.5`)*: `tools/test_verify_requirement_governance.py` SHALL verify header checks, version bumps, and human-only `Approved` enforcement using isolated temporary Git repos/mocked diffs (`Rule 5`: zero live Jira API calls), and Kotlin contract tests (`AspiceSweAuditContractTest.kt`, `ReleaseCiAndLintConfigContractTest.kt`, `JavaCoreMigrationStrategyContractTest.kt`) SHALL verify aligned headers and contract markers without reading `app/src/main/` (`REQ-PRO-049.1`).
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Refines `REQ-PRO-035` (`tools/hoechstmass/` rule/stage framing), `REQ-PRO-041` (`concurrency = 3` vs `Rule 7.2` 2-lane token budget), `REQ-PRO-119` (`cm_plan.md` v1.1.0), and `REQ-ARC-005` (`ADR-001` `Approved` status assertion).
+  2. *Historical Origin & Commit Trace*: `REQ-PRO-035` (`ATT-3922`, `54f85e4`), `REQ-PRO-041` (`ATT-5914`, `d002a9bd`; `ATT-6743`), `REQ-ARC-005` (`ATT-7566`), `REQ-PRO-119` (`ATT-8163`, `c43cd960`).
+  3. *Root Reason for Existing Formulation*: Early templates hardcoded `8 Core Rules` / `5-Stage` / `Rules 1–55` before Rule 9, Stage 6, and Rules 56–85+ were added, and `cm_plan.md` / `ADR-001` contract tests pinned literal strings (`**Version**: 1.1.0`, `Status: Approved`).
+  4. *Preservation of Core Invariants*: Preserves `Rule 1`..`Rule 8` and `Stage 1`..`Stage 5` contract markers, `REQ-PRO-117` Ceremony 2 allowlist, `verify_shard_header_counts` 100% parity, and `ADR-002..007` `Retrospective (Pending PO Sign-Off)` compatibility while replacing agent-self-declared `Approved` claims with verifiable human sign-off.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* any governed document under `docs/management/`, `docs/architecture/`, `docs/system/`, `docs/requirements/`, `docs/tests/`, or `.agents/rules/`, *When* inspected by `verify_work_product_headers()`, *Then* it contains `Document ID` (`DOC-*`), semver `Version`, `Status`, `Approver`, and `Change History`, and zero unapproved `Approved` statuses.
+  • *Given* a governed document whose body changed in `git diff`, *When* `python3 tools/verify_requirement_governance.py` runs in CI, *Then* it fails unless `Version` bumped monotonically and `Status` reset from `Approved` (or the commit carries `Human-Approved:` / `Interactive-PO:` with a human `Approver`).
+  • *Given* `.agents/rules/aspice_governance.md`, `docs/project_protocol.md`, `tools/jira_util.py`, `docs/management/risk_register.md`, `.agents/skills/sprint-planner/SKILL.md`, and `tools/hoechstmass/`, *When* compared, *Then* rule counts (`9 Core Rules`), archive scope (`1–85+`), stage counts (`6 Stages`), concurrency (`max 3`, `2` active default), and `Rule 3.4 / Rule 83` are 100% consistent.
+- **Invariants**: Zero `app/src/main/` edits; `ANT-Android-SDKs` untouched at `0e8cea71`; `Localization Parity: N/A - no UI strings`; zero live Jira API calls in unit tests (`Rule 5`).
+
+---
+
+## Change History
+
+| Version | Date | Author | Ticket | Summary of Changes |
+| :--- | :--- | :--- | :--- | :--- |
+| `1.0.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Added standardized `DOC-REQ-PRO` work-product control header and Change History. |

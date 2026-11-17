@@ -1,5 +1,10 @@
 # aTrainingTracker: Project & Requirement Governance
 
+**Document ID**: `DOC-GOV-PROJECT`  
+**Version**: 1.0.0  
+**Status**: Reviewed  
+**Approver**: Pending PO Sign-Off  
+
 This document establishes the project governance standards for requirement engineering, lifecycle management, and evidence-based status determination across **aTrainingTracker** in compliance with ASPICE 4.0 (SWE.1, SWE.6 BP3, GP 2.2, REQ-PRO-073).
 
 ---
@@ -77,5 +82,13 @@ Bugs originating from application crashes, Application Not Responding (ANR) even
 
 ### 5.2 Quality Gate Spot-Check Audits
 To prevent gate discrimination blind spots and verify that gate verdicts accurately reflect technical quality, the Coordinator and QA Auditor **SHALL** conduct periodic spot-checks during Ceremony 2 (Sprint Review & Retrospective) sampling completed gate subtasks and recording any verdict discrepancy rates in the retrospective deliverable.
+
+---
+
+## Change History
+
+| Version | Date | Author | Ticket | Summary of Changes |
+| :--- | :--- | :--- | :--- | :--- |
+| `1.0.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Added standardized `DOC-GOV-PROJECT` work-product control header and Change History. |
 
 
