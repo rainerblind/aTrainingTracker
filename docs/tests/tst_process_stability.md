@@ -3,7 +3,7 @@
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Tests**: 218
+**Total Tests**: 219
 
 ---
 
@@ -3663,3 +3663,21 @@
   • Verify that every documented enum/state constant (`TrackingMode`, `AutoPauseState`, `TrackerService.StartType`, `MyBTLEDevice.State`), key lifecycle/concurrency field & method symbol, and cited test class resolves verbatim against `app/src/main/` and `app/src/test/` with zero drift.
   3. *SWE.2 Cross-Reference, Stage 3 Governance & Living Doc Parity (`TST-PRO-114.3`, DetailedDesignParityContractTest.kt & verify_requirement_governance.py)*:
   • Verify `docs/architecture.md` cross-references `docs/architecture/detailed_design/`, `.agents/skills/stage3-impl-plan/SKILL.md` mandates living detailed-design updates for the 3 core units in Stage 3 plans/reviews, and `verify_requirement_governance.py` exits `0`.
+
+---
+
+### TST-PRO-115: **Architecture & Interface Drift Remediation and JVM-Reflection Signature Contract Suite (ATT-8160)** [Verified]
+- **Requirement(s)**: `REQ-PRO-115`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Component**: `app/src/test/java/com/atrainingtracker/trainingtracker/build/InterfaceSignatureDriftContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ArchitectureConformanceContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/AspiceSweAuditContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SourceTextReadingAuditContractTest.kt`, `docs/architecture.md`, `docs/architecture/interfaces.md`
+- **Jira**: `ATT-8160`
+- **Test Description**:
+  1. *JVM-Reflection Interface Signature Drift Verification (`TST-PRO-115.1`, InterfaceSignatureDriftContractTest.kt)*:
+  • Parse operation/method signatures in `docs/architecture/interfaces.md` (`IF-SWE-01`..`IF-SWE-08`) and resolve provider classes via `Class.forName` without reading `app/src/main/` source files (`REQ-PRO-049`).
+  • Verify via `declaredMethods` that every documented method/property exists with matching parameter count (arity), parameter types, return type, and nullability (`@Nullable`/`@NotNull` or Kotlin nullable signature parity), including `evaluateTick` (7 params), `calculateNormalizedPower` (nullable `Double?` return and `List<Double?>`), `PowerHrDynamicsCalculator.calculate` (5 params), `suggestCluster` (11 params), `detectClimbs` (6 params), `recordLiveSample` (8 params returning `Boolean`), `updateExtremaValue` (5/6 params), `syncWorkout` (3 params), `importRecentHrv` (4 params), and `BANALServiceComm` generic/raw return types.
+  2. *Symbol Anchor, Allocation Prefix & ASPICE 4.0 BP Conformance (`TST-PRO-115.2`, ArchitectureConformanceContractTest.kt & AspiceSweAuditContractTest.kt)*:
+  • Verify `docs/architecture.md` §4.9 references `TrackerService#acquireWakeLock` / `releaseWakeLock` (zero brittle `:line` citations), `ArchitectureConformanceContractTest.testArchitectureDoc_definesResourceAndTimingBudgets` enforces symbol anchors alongside `PARTIAL_WAKE_LOCK`, `mScheduler`, `mDbExecutor`, and `REQ-NFR-003`..`014`, Section 2 includes `SPT`, `HRV`, `RAD`, `WKO`, `CLM`, and SWE.2 BP headings align to ASPICE 4.0 (`BP1`–`BP5`).
+  3. *Source-Reading Audit & Governance Parity (`TST-PRO-115.3`, SourceTextReadingAuditContractTest.kt & verify_requirement_governance.py)*:
+  • Verify `SourceTextReadingAuditContractTest` remains 100% green (new test makes zero `src/main` file reads) and `verify_requirement_governance.py` exits `0`. (`Localization Parity: N/A - no UI strings`).

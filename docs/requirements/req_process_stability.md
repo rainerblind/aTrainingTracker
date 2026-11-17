@@ -3,7 +3,7 @@
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Requirements**: 179
+**Total Requirements**: 180
 
 ---
 
@@ -5912,3 +5912,31 @@ The workflow SHALL mandate that:
   • *When* comparing documented states, symbols, and test classes against `app/src/main/` and `app/src/test/`,
   • *Then* 100% of documented states/transitions/symbols resolve verbatim in source with zero drift.
 - **Invariants**: Zero edits to `app/src/main/` production behavior; `ANT-Android-SDKs` untouched at `0e8cea714a231fb9565170d4ed01eafa868f9798`; all existing characterisation and contract tests remain 100% green.
+
+
+---
+
+### REQ-PRO-115: Architecture & Interface Documentation Drift Remediation and JVM-Reflection Signature Check (ATT-8160) [Verified]
+- **Tests**: `TST-PRO-115`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `docs/architecture.md`, `docs/architecture/interfaces.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ArchitectureConformanceContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/InterfaceSignatureDriftContractTest.kt`
+- **Rationale**: Resolves ASPICE 4.0 Audit Finding `Minor (SWE.2)` (`SWE.2 BP1/BP2/BP4`, `ATT-8160`), refining `REQ-PRO-044`, `REQ-PRO-052`, and `REQ-PRO-049`: `docs/architecture/interfaces.md` drifted from live `app/src/main/` signatures (parameter counts, parameter types, return types, nullability), `docs/architecture.md` cited brittle `TrackerService.java:842-857` line numbers, omitted requirement prefix families (`SPT` etc.) from Section 2, and mixed ASPICE 3.1 and 4.0 SWE.2 Base Practice labels.
+- **Description**:
+  1. *Interface Signature & Nullability Remediation (`REQ-PRO-115.1`, `docs/architecture/interfaces.md`)*: `docs/architecture/interfaces.md` SHALL accurately match live `app/src/main/` declarations across all drifted signatures: `IF-SWE-02` `WorkoutRepository.updateExtremaValue(workoutId, sensorType, extremaType, value, position?)` (+ 6-param overload), `IF-SWE-03` `BANALServiceComm.getAllFilteredSensorData(): List<FilteredSensorData<?>>` and `getBestSensorData(sensorType: SensorType): SensorData`, `IF-SWE-05` `AutoPauseManager.evaluateTick` (7 params), `PowerPhysiologyCalculator.calculateNormalizedPower(List<Double?>, Double = 1.0): Double?`, `PowerHrDynamicsCalculator.calculate(List<Double?>?, List<Double?>?, Long = 0L, Double = 1.0, List<Long>? = null): CardioPowerDynamicsRecord?`, `WorkoutClusterEngine.suggestCluster` (11 params), `ClimbDetector.detectClimbs` (6 params), `IF-SWE-06` `WorkoutRepository.recordLiveSample` (8 params returning `Boolean`), `IF-SWE-08` `HealthConnectManager.syncWorkout` (3 params) and `HealthConnectHrvImporter.importRecentHrv` (4 params).
+  2. *Symbol Anchors, Prefix Allocation & ASPICE 4.0 BP Alignment (`REQ-PRO-115.2`, `docs/architecture.md`, `ArchitectureConformanceContractTest.kt`)*: `docs/architecture.md` SHALL replace brittle `:line` citations (`TrackerService.java:842-857`) with stable symbol anchors (`TrackerService#acquireWakeLock` / `releaseWakeLock`), add missing requirement prefixes (`SPT`, `HRV`, `RAD`, `WKO`, `CLM`) to Section 2, and standardize all SWE.2 labels across `docs/architecture.md` and `docs/architecture/interfaces.md` to **ASPICE 4.0** (`BP1` Static & Interfaces, `BP2` Dynamic Behavior, `BP3` Analyze Architecture & Resource/Timing Budgets, `BP4` Consistency & Bidirectional Traceability/Allocation, `BP5` Communicate Agreed Architecture). `ArchitectureConformanceContractTest.kt` SHALL check the WakeLock symbol anchors while preserving `PARTIAL_WAKE_LOCK`, `mScheduler`, `mDbExecutor`, and `REQ-NFR-003`..`014` assertions.
+  3. *JVM-Reflection Signature-Drift Contract Verification (`REQ-PRO-115.3`, `InterfaceSignatureDriftContractTest.kt`)*: `InterfaceSignatureDriftContractTest.kt` SHALL parse documented operation signatures in `docs/architecture/interfaces.md` and verify via **JVM reflection** (`Class.forName`, `declaredMethods`, parameter arity, parameter types, return types, and `@Nullable`/`@NotNull` nullability) against compiled `app/src/main/` classes, performing ZERO `.readText()` / `.readLines()` reads on `app/src/main/` in compliance with `REQ-PRO-049` (`SourceTextReadingAuditContractTest`).
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new `REQ-PRO-115` refining `REQ-PRO-044` (`interfaces.md` & `AspiceSweAuditContractTest.kt`), `REQ-PRO-052` (`docs/architecture.md` §4.9 & `ArchitectureConformanceContractTest.kt`), and `REQ-PRO-049` (`SourceTextReadingAuditContractTest.kt`).
+  2. *Historical Origin & Commit Trace*: `ATT-6180`/`ATT-6732` (`REQ-PRO-044` added name-only regex grounding), `0777baa6` (`ATT-6735`, `REQ-PRO-052` hardcoded `TrackerService.java:842-857`), and `ATT-6186` (`REQ-PRO-049` prohibits unallowlisted `src/main` file reads in tests).
+  3. *Root Reason for Existing Formulation*: Regex name checks missed parameter arity, type, and nullability evolution; `:842-857` predated later `TrackerService.java` growth (`acquireWakeLock` at L1079-1092, `releaseWakeLock` at L1094-1102); ASPICE 3.1 BP numbering persisted in early headings.
+  4. *Preservation of Core Invariants*: Preserves all `AspiceSweAuditContractTest` Section 2/5/6 checks, all `ArchitectureConformanceContractTest` `PARTIAL_WAKE_LOCK`/`mScheduler`/`mDbExecutor`/`REQ-NFR-003..014` checks, `DetailedDesignParityContractTest` anchors, `SourceTextReadingAuditContractTest` counts (`22` guards, `105` baseline), and `ANT-Android-SDKs` (`0e8cea71`).
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `docs/architecture/interfaces.md` and compiled `app/src/main/` classes,
+  • *When* `InterfaceSignatureDriftContractTest` executes under `./gradlew testDebugUnitTest`,
+  • *Then* all documented interface signatures match compiled JVM reflection signatures (names, parameter arity/types, return types, nullability) with zero `src/main/` text reads.
+  • *Given* `docs/architecture.md`,
+  • *When* inspected and validated by `ArchitectureConformanceContractTest` and `AspiceSweAuditContractTest`,
+  • *Then* WakeLock uses symbol anchors (`acquireWakeLock`/`releaseWakeLock`), Section 2 lists `SPT` (and `HRV`, `RAD`, `WKO`, `CLM`), and all SWE.2 headings use ASPICE 4.0 `BP1`–`BP5` labels.
+- **Invariants**: Zero edits to `app/src/main/` and `ANT-Android-SDKs`; `Localization Parity: N/A - no UI strings`; `SourceTextReadingAuditContractTest` remains 100% green.
