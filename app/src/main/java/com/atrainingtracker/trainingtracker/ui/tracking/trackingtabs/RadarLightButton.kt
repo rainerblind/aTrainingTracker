@@ -199,7 +199,10 @@ private fun RadarLightButtonContent(
     }
 }
 
-private fun resolveLightVisuals(lightMode: RadarLightMode): Pair<ImageVector, Color> = when (lightMode) {
+/**
+ * Resolves the canonical semantic vector icon and contrast color for [lightMode] (REQ-CON-043.2, REQ-CON-047.2).
+ */
+internal fun resolveLightVisuals(lightMode: RadarLightMode): Pair<ImageVector, Color> = when (lightMode) {
     RadarLightMode.OFF -> Pair(Icons.Default.FlashlightOff, TTColor.RadarLightContentOff)
     RadarLightMode.SOLID -> Pair(Icons.Default.FlashlightOn, TTColor.RadarLightContentSolid)
     RadarLightMode.DAY_FLASH -> Pair(Icons.Default.WbSunny, TTColor.RadarLightContentDayFlash)

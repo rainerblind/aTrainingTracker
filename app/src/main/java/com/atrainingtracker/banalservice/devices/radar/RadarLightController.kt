@@ -326,10 +326,10 @@ object RadarLightController {
     }
 
     /**
-     * Cycles through available radar tail light modes with ~400 ms hardware command debouncing (REQ-CON-031.8).
+     * Cycles through available radar tail light modes in ascending intensity order with ~400 ms hardware command debouncing (REQ-CON-031.8, REQ-CON-047.3).
      *
-     * Non-StVZO sequence: AUTO -> DAY_FLASH -> SOLID -> PELOTON -> NIGHT_FLASH -> OFF -> AUTO.
-     * StVZO sequence: AUTO -> SOLID -> OFF -> AUTO.
+     * Non-StVZO sequence: AUTO -> OFF -> PELOTON -> SOLID -> NIGHT_FLASH -> DAY_FLASH -> AUTO.
+     * StVZO sequence: AUTO -> OFF -> SOLID -> AUTO.
      *
      * Updates UI-observable target state immediately for zero-latency visual feedback, while coalescing
      * outbound hardware dispatch over [DEBOUNCE_DELAY_MS] ms.
@@ -338,28 +338,20 @@ object RadarLightController {
      */
     @JvmStatic
     fun cycleNextMode(): RadarLightSelection {
-        val isStvzoDevice = _isStvzo.value
+        val availableModes = RadarLightMode.getAvailableModes(_isStvzo.value)
         val currentIsAuto = _isAutoMode.value
         val currentExplicit = pendingTargetMode ?: _currentMode.value
 
         if (currentIsAuto) {
-            val nextMode = if (isStvzoDevice) RadarLightMode.SOLID else RadarLightMode.DAY_FLASH
-            return applyDebouncedModeStep(nextMode)
+            return applyDebouncedModeStep(availableModes.first())
         } else {
-            val nextMode: RadarLightMode? = if (isStvzoDevice) {
-                when (currentExplicit) {
-                    RadarLightMode.SOLID -> RadarLightMode.OFF
-                    RadarLightMode.OFF -> null // back to AUTO
-                    else -> RadarLightMode.SOLID
-                }
+            val currentIndex = availableModes.indexOf(currentExplicit)
+            val nextMode: RadarLightMode? = if (currentIndex in 0 until availableModes.lastIndex) {
+                availableModes[currentIndex + 1]
+            } else if (currentIndex < 0) {
+                availableModes.first()
             } else {
-                when (currentExplicit) {
-                    RadarLightMode.DAY_FLASH -> RadarLightMode.SOLID
-                    RadarLightMode.SOLID -> RadarLightMode.PELOTON
-                    RadarLightMode.PELOTON -> RadarLightMode.NIGHT_FLASH
-                    RadarLightMode.NIGHT_FLASH -> RadarLightMode.OFF
-                    RadarLightMode.OFF -> null // back to AUTO
-                }
+                null // back to AUTO
             }
 
             return if (nextMode == null) {

@@ -3,7 +3,7 @@
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Requirements**: 157
+**Total Requirements**: 158
 
 ---
 
@@ -4250,9 +4250,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 • `RadarLightController` and `RadarState` SHALL expose two distinct reactive `StateFlow`s:
   1. `isAutoMode: StateFlow<Boolean>` representing whether `Automatik` is the active user selection.
   2. `currentMode: StateFlow<RadarLightMode>` representing the live physical operating mode on the tail light (reflecting `SmartRadarLightEngine` escalations and transient brake overrides).
-• `RadarLightController.cycleNextMode()` SHALL step through valid modes:
-  - Non-StVZO: `AUTO` -> `DAY_FLASH` -> `SOLID` -> `PELOTON` -> `NIGHT_FLASH` -> `OFF` -> `AUTO`.
-  - StVZO (`isStvzo == true`): `AUTO` -> `SOLID` -> `OFF` -> `AUTO`.
+• `RadarLightController.cycleNextMode()` SHALL step through valid modes in ascending intensity order matching `RadarLightMode.getAvailableModes()`:
+  - Non-StVZO: `AUTO` -> `OFF` -> `PELOTON` -> `SOLID` -> `NIGHT_FLASH` -> `DAY_FLASH` -> `AUTO`.
+  - StVZO (`isStvzo == true`): `AUTO` -> `OFF` -> `SOLID` -> `AUTO`.
 • `cycleNextMode()` SHALL update UI-observable target state immediately on each invocation, while debouncing outbound hardware commands (BLE GATT / ANT+ `0x23`) over a ~400 ms window to coalesce rapid multi-tap sequences and protect the peripheral GATT queue.
 
 **Acceptance Criteria (Given-When-Then)**:
@@ -4262,8 +4262,8 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
   - *Then* the physical tail light turns `OFF` upon workout stop, and automatically resumes `Tag-Blinken` (or `Automatik`) when the next cycling workout starts without preference erasure.
 • *Criterion 2 (Debounced Mode Cycling & StVZO Filtering)*:
   - *Given* a connected non-StVZO radar light in `Automatik` mode,
-  - *When* `cycleNextMode()` is invoked 3 times within 250 ms (`AUTO` -> `DAY_FLASH` -> `SOLID` -> `PELOTON`),
-  - *Then* UI state updates immediately on each step, and only a single hardware command (`PELOTON`) is transmitted after the ~400 ms debounce window expires (and on StVZO hardware, non-StVZO flashing modes are skipped).
+  - *When* `cycleNextMode()` is invoked 3 times within 250 ms (`AUTO` -> `OFF` -> `PELOTON` -> `SOLID`),
+  - *Then* UI state updates immediately on each step, and only a single hardware command (`SOLID`) is transmitted after the ~400 ms debounce window expires (and on StVZO hardware, non-StVZO flashing modes are skipped).
 • *Criterion 3 (Live Status Separation in Auto Mode)*:
   - *Given* `Automatik` is selected,
   - *When* `SmartRadarLightEngine` escalates from `OFF` to `SOLID` or `DAY_FLASH` due to approaching traffic or tunnel entry,
@@ -4280,10 +4280,10 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 **Invariants**: Non-blocking serialized GATT writes (`6a4e2f11` CCCD before initial `setLightMode`); ~400 ms command debouncing (zero GATT queue flooding); legacy `6a4e3202` `WRITE_TYPE_NO_RESPONSE` preservation; StVZO regulatory compliance; safety illumination during pause stops; fail-safe degradation on radar-only hardware; zero UI layout changes in `EditDeviceDialog.kt` / `RadarSettingsSection.kt`; `ANTBikeLightDevice.kt` untouched; zero SQLite schema modifications; zero MockK crashes in unit tests; 100% 9-language translation parity.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: `REQ-CON-031.1`, `REQ-CON-031.2`, `REQ-CON-031.5`, and `REQ-CON-031.6`, targeting `BTLERadarDevice.java`, `MyBTLEDevice.java`, `RadarLightController.kt`, `EditDeviceDialog.kt`, and `tools/ble_radar_simulator.py`.
-2. *Historical Origin & Commit Trace*: Introduced in Sprint 2026-46.1 via `ATT-5102` (`c1d27049`), refined in `ATT-6707` (`fe09f672`), `ATT-7545` (`6bfac996`), `ATT-7540`, `ATT-7538` (`b645651f`), and `ATT-7737` (`60e14c9b`, reopened after physical RearVue 820 + Pixel 10 verification in Ceremony 2).
-3. *Root Reason for Existing Formulation*: `60e14c9b` assumed RearVue 820 control characteristic `6a4e2f11` required `WRITE_TYPE_NO_RESPONSE` because `tools/ble_radar_simulator.py` advertised `['write', 'write-without-response']`. In reality, `6a4e2f11` is `(WRITE, INDICATE)`, requiring `0x2902` CCCD indication subscription before control writes, `WRITE_TYPE_DEFAULT` (GATT Write Request + SMP bonding compatibility), and `onCharacteristicWrite()` status propagation so rejected writes do not silently leave optimistic UI state to snap back to `OFF` via `6a4e2f14`.
-4. *Preservation of Core Invariants*: Legacy `6a4e3202` (`WRITE_NO_RESPONSE`-only) preserves `WRITE_TYPE_NO_RESPONSE`; non-blocking GATT FIFO queueing and `ECHO_GUARD_WINDOW_MS` (`1000L` ms) remain intact; StVZO regulatory pruning, `ANTBikeLightDevice.kt` path, `EditDeviceDialog.kt` / `RadarSettingsSection.kt` UI layout, and 9-language parity remain untouched.
+1. *Original Requirement ID & Target*: `REQ-CON-031.1`, `REQ-CON-031.2`, `REQ-CON-031.3`, `REQ-CON-031.5`, `REQ-CON-031.6`, and `REQ-CON-031.8`, targeting `BTLERadarDevice.java`, `MyBTLEDevice.java`, `RadarLightController.kt`, `RadarLightMode.kt`, `RadarLightQuickSwitchSheet.kt`, `EditDeviceDialog.kt`, and `tools/ble_radar_simulator.py`.
+2. *Historical Origin & Commit Trace*: Introduced in Sprint 2026-46.1 via `ATT-5102` (`c1d27049`), refined in `ATT-6707` (`fe09f672`), `ATT-7545` (`6bfac996`), `ATT-7540`, `ATT-7538` (`b645651f`), `ATT-7991` (`c422e1b6`), `ATT-7737` (`60e14c9b`), and `ATT-8456` (ascending intensity mode order).
+3. *Root Reason for Existing Formulation*: `c1d27049` listed `RadarLightMode` enum values in arbitrary order (`OFF, DAY_FLASH, NIGHT_FLASH, SOLID, PELOTON`), and `c422e1b6` added `cycleNextMode()` with `DAY_FLASH -> SOLID -> PELOTON -> NIGHT_FLASH -> OFF`; unifying both to ascending intensity (`OFF -> PELOTON -> SOLID -> NIGHT_FLASH -> DAY_FLASH`) eliminates sheet-vs-tap cognitive dissonance. Meanwhile `60e14c9b` established `6a4e2f11` CCCD + `WRITE_TYPE_DEFAULT` + `onCharacteristicWrite()` reconciliation.
+4. *Preservation of Core Invariants*: `Automatik` remains first; StVZO pruning strictly removes flashing modes (`OFF`, `SOLID` only); `TuningPreferencesDataStore` persists `.name` (never `.ordinal`); legacy `6a4e3202` `WRITE_TYPE_NO_RESPONSE`, ~400 ms debounce, `commandByte` wire mappings, `ANTBikeLightDevice.kt` path, and 9-language parity remain intact.
 
 ### REQ-CON-032: ANT+ Cycling Rearview Radar Profile (Device Type 0x28) Acquisition & Target Demuxing [Verified]
 - **Tests**: `TST-CON-032`
@@ -4922,6 +4922,49 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
   - *Then* `sourceStates` clears and `RadarStateRepository.getState()` resets to default `RadarState()` (`isAutoMode == true`).
 
 **Invariants**: `REQ-CON-041` priority (`BLE > ANT_PLUS > SIMULATOR`), `REQ-CON-042.3` `lightMode`/`audioSnoozeState` preservation, `SmartRadarLightEngine` override gating, zero SQLite schema changes, zero localization changes.
+
+### REQ-CON-047: Compact Quick-Switch Sheet Layout, Button-Matching Icons & Ascending Mode Order [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-CON-047`
+- **System Requirement(s)**: `SYSREQ-TRK-002`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `RadarLightQuickSwitchSheet.kt`, `RadarLightButton.kt`, `RadarLightMode.kt`, `RadarLightController.kt`, `EditDeviceDialog.kt`
+- **Rationale**: PO review on Pixel 10 (`ATT-7972`) observed `RadarLightQuickSwitchSheet` overflowing vertically past the 4th audio snooze option due to 10 tall full-width `RadioButton` rows, using generic `10.dp` colored dots instead of the semantic vector icons from `RadarLightButton`, and presenting a different mode sequence than `RadarLightController.cycleNextMode()` (`ATT-8456`, refining `REQ-CON-031.3` and `REQ-CON-031.8`):
+- **Description**:
+  1. *Compact Non-Scrolling Quick-Switch Layout (`REQ-CON-047.1`)*:
+     - `RadarLightQuickSwitchSheet` / `RadarLightQuickSwitchSheetContent` SHALL arrange all light modes (including `Automatik`) and all 4 audio snooze options (`SNOOZE_15M`, `SNOOZE_30M`, `FAST_ONLY`, `REST_OF_RIDE`, plus `Resume Audio` when snoozed) in a compact layout that fits completely within standard smartphone viewports (e.g. Pixel 10) without vertical scroll clipping, while retaining all `RadarLightMode_*` and `RadarSnooze_*` testTags and Light/Dark/StVZO `@Preview`s.
+  2. *Shared Semantic Mode Vector Icons (`REQ-CON-047.2`)*:
+     - `RadarLightQuickSwitchSheet` SHALL display the same semantic vector icons and mode colors (`resolveLightVisuals` in `RadarLightButton.kt`: `FlashlightOff`, `Groups`, `FlashlightOn`, `NightlightRound`, `WbSunny`) instead of `10.dp` `CircleShape` dots, using `MaterialTheme.colorScheme.outline` / shared contrast tokens cleanly across Light and Dark themes.
+  3. *Unified Ascending-Intensity Mode Order (`REQ-CON-047.3`)*:
+     - `RadarLightMode.getAvailableModes()`, `RadarLightController.cycleNextMode()`, `RadarLightQuickSwitchSheet`, and `EditDeviceDialog` SHALL share the identical ascending-intensity order:
+       - Non-StVZO: `Automatik` -> `OFF` (0 lm) -> `PELOTON` (~8 lm) -> `SOLID` (~25 lm) -> `NIGHT_FLASH` (~40 lm) -> `DAY_FLASH` (100 lm) (-> `Automatik`).
+       - StVZO (`isStvzo == true`): `Automatik` -> `OFF` -> `SOLID` (-> `Automatik`).
+  4. *Localization & Persistence Preservation (`REQ-CON-047.4`)*:
+     - All UI labels SHALL reuse existing 9-locale string resources in `strings_radar.xml` (zero hardcoded English/German literals), and `TuningPreferencesDataStore` `.name` persistence + `RadarLightMode.commandByte` wire bytes SHALL remain unchanged.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new `REQ-CON-047` refining `REQ-CON-031.3` and `REQ-CON-031.8`; targets `RadarLightQuickSwitchSheet.kt`, `RadarLightButton.kt`, `RadarLightMode.kt`, `RadarLightController.kt`, and `EditDeviceDialog.kt`.
+2. *Historical Origin & Commit Trace*: `ATT-5102` (`c1d27049`) introduced `RadarLightMode` enum order; `ATT-7991` (`c422e1b6`) added `Automatik` and `cycleNextMode()`.
+3. *Root Reason for Existing Formulation*: Mode ordering in `RadarLightMode` and `cycleNextMode()` diverged across tickets, and vertical `RadioButton` rows exceeded viewport height once `Automatik` and 4 snooze options coexisted.
+4. *Preservation of Core Invariants*: `Automatik` remains first; StVZO pruning excludes flashing modes; `TuningPreferencesDataStore` persists `.name` (never `.ordinal`); ~400 ms `cycleNextMode()` debounce and `commandByte` payloads remain intact.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Criterion 1 (Compact Non-Scrolling Layout & Semantic Icons)*:
+  - *Given* `RadarLightQuickSwitchSheetContent` is rendered with `isLightControlSupported = true` and `isStvzo = false` (and snooze active/inactive),
+  - *When* inspected in Compose UI tests and Light/Dark `@Preview` / emulator screenshots,
+  - *Then* `RadarLightMode_AUTO`, all 5 `RadarLightMode_*` options, and all 4 `RadarSnooze_*` options are visible without vertical clipping, and each light mode displays its `resolveLightVisuals` icon matching `RadarLightButton`.
+• *Criterion 2 (Unified Ascending Mode Order Across UI & Tap Cycling)*:
+  - *Given* non-StVZO or StVZO hardware,
+  - *When* querying `RadarLightMode.getAvailableModes()`, `RadarLightController.getAvailableModes()`, `EditDeviceDialog` options, `RadarLightQuickSwitchSheet` options, and stepping through `RadarLightController.cycleNextMode()`,
+  - *Then* all 4 surfaces follow the exact ascending order `Automatik -> OFF -> PELOTON -> SOLID -> NIGHT_FLASH -> DAY_FLASH` (StVZO: `Automatik -> OFF -> SOLID`).
+• *Criterion 3 (Zero Hardcoded Strings)*:
+  - *Given* `RadarLightQuickSwitchSheet.kt`,
+  - *When* rendered in any supported locale,
+  - *Then* all labels resolve exclusively via `stringResource(R.string.*)` in `strings_radar.xml`.
+
+**Invariants**: `Automatik` always first; StVZO pruning excludes `PELOTON`/`NIGHT_FLASH`/`DAY_FLASH`; `RadarLightMode.commandByte` unchanged; `TuningPreferencesDataStore` `.name` persistence unchanged; ~400 ms debounce unchanged; zero SQLite changes.
 
 ### REQ-TRK-064: 1-Tap Radar Audio Snooze, Peloton-Mode Audio Sync & Smart Urban Alert Suppression [Verified]
 - **Tests**: `TST-TRK-064`

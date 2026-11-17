@@ -3,7 +3,7 @@
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Tests**: 133
+**Total Tests**: 134
 
 ---
 
@@ -2094,7 +2094,7 @@
   8. *Clean-Room Targeted Test Suite Execution (`TST-CON-031.8`)*:
   • Execute targeted package tests asserting 100% pass rate.
   9. *Debounced Mode Stepping & Reactive State Separation Tests (`TST-CON-031.9`, `RadarLightControllerTest.kt`)*:
-  • Verify `cycleNextMode()` sequence: `AUTO` -> `DAY_FLASH` -> `SOLID` -> `PELOTON` -> `NIGHT_FLASH` -> `OFF` -> `AUTO` on non-StVZO hardware, and `AUTO` -> `SOLID` -> `OFF` -> `AUTO` on StVZO hardware.
+  • Verify `cycleNextMode()` sequence: `AUTO` -> `OFF` -> `PELOTON` -> `SOLID` -> `NIGHT_FLASH` -> `DAY_FLASH` -> `AUTO` on non-StVZO hardware, and `AUTO` -> `OFF` -> `SOLID` -> `AUTO` on StVZO hardware.
   • Verify immediate UI-observable target mode updates on rapid successive taps, with ~400 ms debounce window coalescing outbound commands into a single physical dispatch.
   • Verify distinct reactive emission of `isAutoMode` and `currentMode` `StateFlow`s during auto-escalation and manual override.
 
@@ -2429,6 +2429,25 @@
   5. *Light Controller Manual Override vs Adaptive Automation (`TST-CON-046.5`, `RadarLightControllerTest.kt`)*:
      • Given `setManualLightMode()` or `cycleNextMode()` followed by incoming telemetry updates,
      • Assert `RadarLightController.isAutoMode.value == false`, `RadarStateRepository.getState().isAutoMode == false`, and `SmartRadarLightEngine` automation remains suspended until `setAutoMode()` restores `true`.
+
+### TST-CON-047: **Compact Quick-Switch Sheet, Button-Matching Icons & Ascending Mode Order Test Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-CON-047` (`REQ-CON-047.1`..`REQ-CON-047.4`), `REQ-CON-031` (`REQ-CON-031.3`, `REQ-CON-031.8`)
+- **Component**: `RadarLightQuickSwitchSheet.kt`, `RadarLightButton.kt`, `RadarLightMode.kt`, `RadarLightController.kt`, `EditDeviceDialog.kt`
+- **Jira**: `ATT-8456`
+- **Test Type**: Unit & UI (Compose/Robolectric + Emulator Visual)
+- **Verification Method**: Unit
+- **Procedure**:
+  1. *Compact Quick-Switch Sheet & Semantic Icon Parity (`TST-CON-047.1`, `RadarLightQuickSwitchSheetTest.kt`)*:
+     • Given `RadarLightQuickSwitchSheetContent` rendered in Robolectric (`isLightControlSupported = true`, `isStvzo = false`, and constrained smartphone height),
+     • Assert `RadarLightMode_AUTO`, all 5 `RadarLightMode_*` tags, and all 4 `RadarSnooze_*` tags are displayed without clipping, and light mode items render semantic vector icons matching `resolveLightVisuals` in `RadarLightButton.kt`.
+  2. *Unified Ascending Mode Order Across `RadarLightMode`, `cycleNextMode()`, Sheet & Dialog (`TST-CON-047.2`, `RadarLightControllerTest.kt`, `RadarLightQuickSwitchSheetTest.kt`)*:
+     • Assert `RadarLightMode.getAvailableModes(false)` returns `[OFF, PELOTON, SOLID, NIGHT_FLASH, DAY_FLASH]` and `getAvailableModes(true)` returns `[OFF, SOLID]`.
+     • Assert `RadarLightController.cycleNextMode()` steps through `AUTO -> OFF -> PELOTON -> SOLID -> NIGHT_FLASH -> DAY_FLASH -> AUTO` (non-StVZO) and `AUTO -> OFF -> SOLID -> AUTO` (StVZO), and `RadarLightQuickSwitchSheet` / `EditDeviceDialog` consume the identical sequence.
+  3. *9-Locale String Resource & Zero-Hardcoded-String Verification (`TST-CON-047.3`, `RadarLightQuickSwitchSheetTest.kt`, `TranslationParityTest.kt`)*:
+     • Verify all labels in `RadarLightQuickSwitchSheet.kt` use existing `strings_radar.xml` resources with zero hardcoded display text and 100% 9-locale parity.
+  4. *Light & Dark Theme Visual Inspection (`TST-CON-047.4`, Stage 5 Emulator / Preview)*:
+     • Capture Light and Dark screenshots of `RadarLightQuickSwitchSheet` on emulator / Compose preview and verify zero clipping, crisp vector icon contrast, and balanced compact spacing.
 
 ### TST-TRK-064: **1-Tap Radar Audio Snooze, Peloton Sync & Urban Suppression Test Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-064` (`REQ-TRK-064.1`..`REQ-TRK-064.7`)

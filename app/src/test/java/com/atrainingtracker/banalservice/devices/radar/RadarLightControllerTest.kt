@@ -97,8 +97,17 @@ class RadarLightControllerTest {
         assertEquals(listOf(RadarLightMode.OFF, RadarLightMode.SOLID), stvzoModes)
 
         val allModes = RadarLightMode.getAvailableModes(isStvzo = false)
-        assertEquals(5, allModes.size)
-        assertTrue(allModes.containsAll(RadarLightMode.entries))
+        assertEquals(
+            listOf(
+                RadarLightMode.OFF,
+                RadarLightMode.PELOTON,
+                RadarLightMode.SOLID,
+                RadarLightMode.NIGHT_FLASH,
+                RadarLightMode.DAY_FLASH
+            ),
+            allModes
+        )
+        assertEquals(allModes, RadarLightMode.entries)
     }
 
     @Test
@@ -661,16 +670,12 @@ class RadarLightControllerTest {
 
         assertTrue("Initial state must be AUTO", RadarLightController.isAutoMode.value)
 
-        // Non-StVZO Cycle
+        // Non-StVZO ascending intensity cycle: AUTO -> OFF -> PELOTON -> SOLID -> NIGHT_FLASH -> DAY_FLASH -> AUTO
         var selection = RadarLightController.cycleNextMode()
         assertFalse(selection.isAuto)
-        assertEquals(RadarLightMode.DAY_FLASH, selection.mode)
-        assertEquals(RadarLightMode.DAY_FLASH, RadarLightController.currentMode.value)
+        assertEquals(RadarLightMode.OFF, selection.mode)
+        assertEquals(RadarLightMode.OFF, RadarLightController.currentMode.value)
         assertFalse(RadarLightController.isAutoMode.value)
-
-        selection = RadarLightController.cycleNextMode()
-        assertFalse(selection.isAuto)
-        assertEquals(RadarLightMode.SOLID, selection.mode)
 
         selection = RadarLightController.cycleNextMode()
         assertFalse(selection.isAuto)
@@ -678,28 +683,32 @@ class RadarLightControllerTest {
 
         selection = RadarLightController.cycleNextMode()
         assertFalse(selection.isAuto)
+        assertEquals(RadarLightMode.SOLID, selection.mode)
+
+        selection = RadarLightController.cycleNextMode()
+        assertFalse(selection.isAuto)
         assertEquals(RadarLightMode.NIGHT_FLASH, selection.mode)
 
         selection = RadarLightController.cycleNextMode()
         assertFalse(selection.isAuto)
-        assertEquals(RadarLightMode.OFF, selection.mode)
+        assertEquals(RadarLightMode.DAY_FLASH, selection.mode)
 
         selection = RadarLightController.cycleNextMode()
         assertTrue(selection.isAuto)
         assertTrue(RadarLightController.isAutoMode.value)
 
-        // StVZO Cycle
+        // StVZO ascending intensity cycle: AUTO -> OFF -> SOLID -> AUTO
         RadarLightController.registerRadarDevice(mockDevice, lightSupported = true, isStvzo = true)
         RadarLightController.setAutoMode()
         assertTrue(RadarLightController.isAutoMode.value)
 
         selection = RadarLightController.cycleNextMode()
         assertFalse(selection.isAuto)
-        assertEquals(RadarLightMode.SOLID, selection.mode)
+        assertEquals(RadarLightMode.OFF, selection.mode)
 
         selection = RadarLightController.cycleNextMode()
         assertFalse(selection.isAuto)
-        assertEquals(RadarLightMode.OFF, selection.mode)
+        assertEquals(RadarLightMode.SOLID, selection.mode)
 
         selection = RadarLightController.cycleNextMode()
         assertTrue(selection.isAuto)
@@ -841,10 +850,10 @@ class RadarLightControllerTest {
         assertFalse(RadarStateRepository.getState().isAutoMode)
         assertTrue(SmartRadarLightEngine.isManualOverridden)
 
-        // 2. User short-taps cycleNextMode() from SOLID -> PELOTON
+        // 2. User short-taps cycleNextMode() from SOLID -> NIGHT_FLASH (ascending intensity order)
         val selection = RadarLightController.cycleNextMode()
         assertFalse(selection.isAuto)
-        assertEquals(RadarLightMode.PELOTON, selection.mode)
+        assertEquals(RadarLightMode.NIGHT_FLASH, selection.mode)
         assertFalse(RadarStateRepository.getState().isAutoMode)
 
         // Another telemetry tick still preserves isAutoMode == false

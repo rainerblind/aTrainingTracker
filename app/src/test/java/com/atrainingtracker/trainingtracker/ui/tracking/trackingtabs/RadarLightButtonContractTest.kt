@@ -18,8 +18,15 @@
 
 package com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.FlashlightOff
+import androidx.compose.material.icons.filled.FlashlightOn
+import androidx.compose.material.icons.filled.Groups
+import androidx.compose.material.icons.filled.NightlightRound
+import androidx.compose.material.icons.filled.WbSunny
 import com.atrainingtracker.banalservice.devices.radar.RadarLightMode
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -101,5 +108,24 @@ class RadarLightButtonContractTest {
         assertTrue("Must include DAY_FLASH", modes.contains(RadarLightMode.DAY_FLASH))
         assertTrue("Must include NIGHT_FLASH", modes.contains(RadarLightMode.NIGHT_FLASH))
         assertTrue("Must include PELOTON", modes.contains(RadarLightMode.PELOTON))
+        assertEquals(
+            listOf(
+                RadarLightMode.OFF,
+                RadarLightMode.PELOTON,
+                RadarLightMode.SOLID,
+                RadarLightMode.NIGHT_FLASH,
+                RadarLightMode.DAY_FLASH
+            ),
+            RadarLightMode.getAvailableModes(isStvzo = false)
+        )
+    }
+
+    @Test
+    fun testResolveLightVisuals_mapsAllModesToSemanticIconsAndTokens() {
+        assertEquals(Pair(Icons.Default.FlashlightOff, TTColor.RadarLightContentOff), resolveLightVisuals(RadarLightMode.OFF))
+        assertEquals(Pair(Icons.Default.Groups, TTColor.RadarLightContentPeloton), resolveLightVisuals(RadarLightMode.PELOTON))
+        assertEquals(Pair(Icons.Default.FlashlightOn, TTColor.RadarLightContentSolid), resolveLightVisuals(RadarLightMode.SOLID))
+        assertEquals(Pair(Icons.Default.NightlightRound, TTColor.RadarLightContentNightFlash), resolveLightVisuals(RadarLightMode.NIGHT_FLASH))
+        assertEquals(Pair(Icons.Default.WbSunny, TTColor.RadarLightContentDayFlash), resolveLightVisuals(RadarLightMode.DAY_FLASH))
     }
 }
