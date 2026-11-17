@@ -40,6 +40,10 @@ import androidx.preference.PreferenceManager
 import androidx.test.core.app.ApplicationProvider
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.ActivityType
+import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.banalservice.filters.FilterType
+import com.atrainingtracker.banalservice.filters.FilteredSensorData
+import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
 import com.atrainingtracker.trainingtracker.TrackingMode
 import com.atrainingtracker.trainingtracker.TrainingApplication
@@ -47,14 +51,20 @@ import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseMan
 import com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessRepository
 import com.atrainingtracker.trainingtracker.monetization.SensorQuotaReconciliationManager
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
+import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
+import com.atrainingtracker.trainingtracker.segments.LiveSegmentsRepository
 import com.atrainingtracker.trainingtracker.settings.TuningConfig
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
+import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldConfig
+import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewInfo
 import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepository
+import com.atrainingtracker.trainingtracker.ui.tracking.ViewSize
 import com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingButton
 import com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingViewModel
+import com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingViewModel
 import com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsViewModel
 import io.mockk.Runs
 import io.mockk.coEvery
@@ -339,5 +349,83 @@ class UiPresentationIntegrationTest {
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithTag("coachmark_state_text")
             .assertTextEquals("Rendered: true, Pending: true")
+    }
+
+    /**
+     * TST-INT-009.4: Verifies real TrackingViewModel uiState (sensor field telemetry + showMap)
+     * and updateScreenMode() StateFlow updates drive Compose UI node recomposition.
+     */
+    @Test
+    fun testTrackingViewModel_uiStateAndUpdateScreenMode_composeRecomposition() {
+        val filteredSensorsFlow = MutableStateFlow<List<FilteredSensorData<*>>>(
+            listOf(FilteredSensorData(SensorType.HR, 148, "148", null, FilterType.INSTANTANEOUS, 1.0))
+        )
+        every { mockBanalRepo.allFilteredSensorData } returns filteredSensorsFlow
+        every { mockBanalRepo.bSportType } returns MutableStateFlow(BSportType.BIKE)
+
+        val hrConfig = SensorFieldConfig(
+            sensorFieldId = 10L,
+            rowNr = 0,
+            colNr = 0,
+            viewSize = ViewSize.NORMAL,
+            sensorType = SensorType.HR,
+            filterType = FilterType.INSTANTANEOUS,
+            filterConstant = 1.0,
+            sourceDeviceId = -1L
+        )
+        val viewInfo = TrackingViewInfo(
+            tabViewId = 1L,
+            name = "Tab 1",
+            showMap = true,
+            showLapButton = true,
+            showLiveSegments = false,
+            showElevationProfile = false
+        )
+        every { mockTrackingViewsRepo.getSensorFieldConfigsForView(1L) } returns flowOf(listOf(hrConfig))
+        every { mockTrackingViewsRepo.getTrackingViewInfoFlow(1L) } returns flowOf(viewInfo)
+        every { mockTrackingViewsRepo.getSectionDividersFlow(1L) } returns flowOf(emptyList())
+
+        val mockLiveSegmentsRepo = mockk<LiveSegmentsRepository>(relaxed = true)
+        every { mockLiveSegmentsRepo.liveSegments } returns MutableStateFlow(emptyList())
+        val mockRoutesRepo = mockk<RoutesRepository>(relaxed = true)
+        every { mockRoutesRepo.allRoutes } returns MutableStateFlow(emptyList())
+        every { mockRoutesRepo.activeNavigatedRouteId } returns MutableStateFlow(null)
+
+        val trackingViewModel = TrackingViewModel(
+            application = application,
+            trackingViewsRepository = mockTrackingViewsRepo,
+            banalServiceRepository = mockBanalRepo,
+            liveSegmentsRepository = mockLiveSegmentsRepo,
+            routesRepository = mockRoutesRepo,
+            viewId = 1L,
+            defaultDispatcher = mainDispatcher
+        )
+
+        composeTestRule.setContent {
+            ATrainingTrackerTheme {
+                val uiState by trackingViewModel.uiState.collectAsState()
+                val screenMode by trackingViewModel.screenMode.collectAsState()
+                val hrValue = uiState.fields.firstOrNull()?.value ?: "--"
+                Text(
+                    text = "Mode: ${screenMode.name}, showMap: ${uiState.showMap}, HR: $hrValue",
+                    modifier = Modifier.testTag("tracking_vm_state_text")
+                )
+            }
+        }
+
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag("tracking_vm_state_text")
+            .assertIsDisplayed()
+            .assertTextEquals("Mode: TRACKING, showMap: true, HR: 148")
+
+        // Emit updated HR telemetry and dispatch updateScreenMode()
+        filteredSensorsFlow.value = listOf(
+            FilteredSensorData(SensorType.HR, 162, "162", null, FilterType.INSTANTANEOUS, 1.0)
+        )
+        trackingViewModel.updateScreenMode(ScreenMode.CONFIGURATION)
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithTag("tracking_vm_state_text")
+            .assertTextEquals("Mode: CONFIGURATION, showMap: true, HR: 162")
     }
 }

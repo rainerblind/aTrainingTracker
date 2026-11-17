@@ -112,48 +112,48 @@
 - **Type**: Functional
 - **Verification Method**: Integration
 - **Requirement(s)**: `REQ-PRO-110`
-- **Component**: `ui/tracking/tracking/TrackingTabsScreen.kt`, `ui/tracking/tracking/TrackingViewModel.kt`, `ui/tracking/tracking/ControlTrackingBar.kt`
+- **Component**: `ui/tracking/controltracking/ControlTrackingButton.kt`, `ui/tracking/controltracking/ControlTrackingViewModel.kt`, `ui/tracking/tracking/TrackingViewModel.kt`, `ui/tracking/trackingtabs/TrackingTabsViewModel.kt`
 - **Jira**: `ATT-8155`
 - **Test Description**:
-  1. Initialize `TrackingViewModel` and `ControlTrackingViewModel` in Robolectric Compose test harness (`createComposeRule()`).
-  2. Compose `TrackingTabsScreen` and `ControlTrackingBar` binding to ViewModel `uiState` / `mapState`.
-  3. Dispatch UI actions (`onStartTracking()`, `updateScreenMode()`) and assert state changes propagate to Compose nodes without recomposition exceptions.
+  1. Initialize real `ControlTrackingViewModel`, `TrackingTabsViewModel`, and `TrackingViewModel` in Robolectric Compose test harness (`createComposeRule()`).
+  2. Compose `ControlTrackingButton` and Compose observers bound to `TrackingViewModel.uiState` / `screenMode` and `TrackingTabsViewModel.screenMode` / coachmark StateFlows.
+  3. Dispatch UI actions (`onStartTracking()`, `onPauseTracking()`, `onResumeTracking()`, `onStopTracking()`, `updateScreenMode()`, `setScreenMode()`), invoke `waitForIdle()`, and assert Compose UI nodes recompose with `assertTextEquals()` and broadcast dispatch.
 
 ### TST-INT-010: **INT-SWE-02 ViewModel to Repository Data Layer Verification** [Verified]
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Integration
 - **Requirement(s)**: `REQ-PRO-110`
-- **Component**: `ui/aftermath/WorkoutRepository.kt`, `banalservice/BANALServiceRepository.kt`, `database/WorkoutSamplesDatabaseManager.kt`
+- **Component**: `ui/aftermath/WorkoutRepository.kt`, `ui/aftermath/workoutlist/WorkoutSummariesViewModel.kt`, `repositories/BANALServiceRepository.kt`, `database/WorkoutSummariesDatabaseManager.java`
 - **Jira**: `ATT-8155`
 - **Test Description**:
-  1. Instantiate `WorkoutRepository` with real SQLite database manager (`RealSqliteTestHelper`).
-  2. Collect reactive `Flow` emissions via `getWorkoutById()` in a background coroutine scope.
-  3. Write simulated workout samples and metadata updates; assert reactive emissions deliver updated records without main-thread blocking.
+  1. Instantiate `WorkoutRepository` and `WorkoutSummariesViewModel` with real Robolectric SQLite `WorkoutSummariesDatabaseManager` (verified via `RealSqliteTestHelper`).
+  2. Collect reactive `Flow` emissions via `getWorkoutById()`, `WorkoutSummariesViewModel.allWorkouts`, and `BANALServiceRepository.allFilteredSensorData`.
+  3. Insert and update real SQLite workout summary rows; assert reactive emissions deliver updated `WorkoutData` records without main-thread blocking.
 
 ### TST-INT-011: **INT-SWE-03 Inter-Service Ingestion Binder IPC Verification** [Verified]
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Integration
 - **Requirement(s)**: `REQ-PRO-110`
-- **Component**: `tracker/TrackerService.kt`, `banalservice/BANALService.kt`, `banalservice/BANALServiceComm.kt`
+- **Component**: `tracker/TrackerService.java`, `banalservice/BANALService.java`, `banalservice/sensor/MySensorManager.java`, `database/WorkoutSamplesDatabaseManager.java`, `database/WorkoutSummariesDatabaseManager.java`
 - **Jira**: `ATT-8155`
 - **Test Description**:
-  1. Create local Binder connection between `TrackerService` and `BANALServiceComm`.
-  2. Execute 1-Hz batch poll (`getAllFilteredSensorData()`) across active sensor streams.
-  3. Verify sensor priority arbitration (BLE vs ANT+) and verify null-safety during abrupt unbind and reconnect cycles.
+  1. Wire `TrackerService` to real `BANALService.BANALServiceComm` local binder backed by real `MySensorManager`.
+  2. Execute 1-Hz batch poll (`sampleAndWriteToDb()`) polling `getBestSensorData()` and `getAllSensorData()`, verifying `LiveWorkoutSession` stats and real SQLite sample/summary row writes.
+  3. Verify sensor priority arbitration (`BIKE_SPEED` > `SPEED_AND_LOCATION_GPS`) and verify null-safety on `getBanalConnectionForTesting().onServiceDisconnected()` and `sampleAndWriteToDb(null)`.
 
 ### TST-INT-012: **INT-SWE-04 Hardware HAL Byte Stream Ingestion & Sensor Replay Verification** [Verified]
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Integration
 - **Requirement(s)**: `REQ-PRO-110`
-- **Component**: `banalservice/BANALService.kt`, `banalservice/devices/BluetoothLeDevice.kt`, `banalservice/devices/GattParser.kt`
+- **Component**: `banalservice/devices/bluetooth_le/BTLEHeartRateDevice.java`, `banalservice/devices/bluetooth_le/BTLEBikePowerDevice.java`, `banalservice/devices/bluetooth_le/BTLERadarDevice.java`, `banalservice/devices/radar/RadarStateRepository.kt`, `banalservice/devices/SpeedAndLocationDevice_GPS.java`, `banalservice/sensor/MySensorManager.java`
 - **Jira**: `ATT-8155`
 - **Test Description**:
-  1. Inject raw GATT characteristic byte arrays for Heart Rate (`0x2A37`), Cycling Power (`0x2A63`), and Radar (`6a4e3204`).
-  2. Assert correct binary parsing into domain `SensorData` models and service listener dispatch.
-  3. Assert sensor dropout debounce behavior when packets cease (> 3.5s timeout).
+  1. Inject raw GATT characteristic byte arrays for Heart Rate (`0x2A37`), Cycling Power (`0x2A63`), and Radar (`6a4e3204` V1 & V2 `parseV2ThreatPacket`), plus `Location` fixes via `SpeedAndLocationDevice_GPS.onNewLocation()`.
+  2. Assert binary parsing into `MySensorManager` sensors, `RrBeatEvent` callbacks, and `RadarStateRepository` targets.
+  3. Assert real `BTLERadarDevice` watchdog timeout (`WATCHDOG_TIMEOUT_MS` = 3,500 ms via `getWatchdogRunnableForTesting()`) transitions `RadarStateRepository` to `DISCONNECTED_ERROR`.
 
 ### TST-PRO-001: **Jira Attachment Download** [Verified]
 - **Priority**: High
