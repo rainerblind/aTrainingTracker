@@ -1,14 +1,14 @@
 # Living Requirements: Engineering Process, Stability & Architecture
 
 **Document ID**: `DOC-REQ-PRO`  
-**Version**: 1.0.6  
+**Version**: 1.0.9  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Requirements**: 187
+**Total Requirements**: 188
 
 ---
 
@@ -6140,6 +6140,27 @@ The workflow SHALL mandate that:
 
 ---
 
+### REQ-PRO-123: CI Custom Safety Guard Gating, Baseline Ratcheting & Java Static Analysis Evaluation (ATT-8169) [Verified]
+- **Tests**: `TST-PRO-123`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `.github/workflows/android-branch-build.yml`, `.github/workflows/android-release.yml`, `tools/lint_cursor_safety.py`, `tools/lint_lifecycle_safety.py`, `tools/lint_safe_enum.py`, `tools/check_static_analysis_baselines.py`, `tools/sprint_metrics.py`, `tools/hoechstmass/tools/sprint_metrics.py`, `docs/management/qa_plan.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ReleaseCiAndLintConfigContractTest.kt`
+- **Rationale**: ASPICE 4.0 Audit Finding `Minor (SWE.4)` (`SWE.4 BP1/BP3`) identified orphaned custom Python safety linters in `tools/`, static baseline ceilings (`<= 9550` Detekt vs 9,516 actual; `<= 239` Lint vs 238 actual) without base-ref ratcheting or sprint metrics reporting, and missing static-analysis tooling evaluation for the 120 retained Java files referenced in `ADR-001`.
+- **Description**:
+  1. *CI Custom Safety Guard Gating (`REQ-PRO-123.1`)*: `.github/workflows/android-branch-build.yml` (with `.github/workflows/android-release.yml` parity) SHALL invoke `tools/lint_cursor_safety.py`, `tools/lint_lifecycle_safety.py`, and `tools/lint_safe_enum.py` prior to `:app:assembleDebug` / `:app:assembleRelease` and MUST fail the build on any non-zero exit code (any new violation).
+  2. *Base-Ref Baseline Ratcheting & Sprint Metrics Reporting (`REQ-PRO-123.2`)*: A deterministic baseline ratchet helper in `tools/` invoked in CI SHALL parse `<ID>` entries in `app/detekt-baseline.xml` (`9,516`) and `<issue>` entries in `app/lint-baseline.xml` (`238`), MUST fail the build if either count increases above its base-ref count or ratcheted ceiling (`9516` / `238`), and `tools/sprint_metrics.py` + `tools/hoechstmass/tools/sprint_metrics.py` SHALL report current Detekt/Lint baseline counts and base-ref/sprint deltas.
+  3. *CI & Lint Contract Preservation (`REQ-PRO-123.3`)*: Existing assertions in `ReleaseCiAndLintConfigContractTest.kt` (`./gradlew :app:lintDebug`, `./gradlew :app:detekt`, `verify_requirement_governance.py` before `:app:assembleDebug`, baseline bounds) SHALL remain intact alongside new contract assertions for CI safety-guard and ratchet steps plus offline Python unit tests.
+  4. *Java Static Analysis Evaluation & Burn-Down Plan (`REQ-PRO-123.4`)*: Engineering documentation outside architecture lock (referencing `ADR-001` / `REQ-ARC-005`) SHALL evaluate **PMD vs. SpotBugs vs. Error Prone** for the remaining `120` `.java` files on Gradle `9.6.0` / AGP `9.4.0` / JDK `21` (Java `17` target) and define an incremental Detekt/Lint baseline burn-down schedule.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `.github/workflows/android-branch-build.yml` and `android-release.yml`, *When* `tools/lint_cursor_safety.py`, `tools/lint_lifecycle_safety.py`, and `tools/lint_safe_enum.py` execute, *Then* clean `HEAD` exits `0` and any violation fails CI prior to assembly.
+  • *Given* `app/detekt-baseline.xml` (`9,516`) and `app/lint-baseline.xml` (`238`), *When* a change increases baseline entry counts vs base ref or ceiling, *Then* the ratchet fails CI while equal or reduced counts pass and `sprint_metrics.py` + mirror report exact counts and deltas.
+  • *Given* `ReleaseCiAndLintConfigContractTest.kt` and `verify_requirement_governance.py`, *When* executed, *Then* preserved pins plus new CI safety-linter/ratchet assertions pass and governance exits `0`.
+  • *Given* the Java tooling evaluation referencing `ADR-001`, *When* reviewed, *Then* PMD, SpotBugs, and Error Prone trade-offs on AGP 9.4 / JDK 21 and the Detekt/Lint burn-down schedule are documented.
+- **Invariants**: Zero `app/src/main/` edits; `ANT-Android-SDKs` untouched; `Localization Parity: N/A - no UI strings`; existing `ReleaseCiAndLintConfigContractTest` pins preserved.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -6151,3 +6172,6 @@ The workflow SHALL mandate that:
 | `1.0.4` | 2026-11-17 | AI Agent (`ATT-8168`) | `ATT-8168` | Added `[Planned]` `REQ-PRO-122` (bounded SPC/p-chart, `process_version` reset, truthful human acceptance, empirical escape rates, unmasked plausibility warning, CL3–CL5 suspension). |
 | `1.0.5` | 2026-11-17 | AI Agent (`ATT-8168`) | `ATT-8168` | Promoted `REQ-PRO-122` to `[Implemented]` in Stage 4. |
 | `1.0.6` | 2026-11-17 | AI Agent (`ATT-8168`) | `ATT-8168` | Promoted `REQ-PRO-122` to `[Verified]` after Stage 5 verification. |
+| `1.0.7` | 2026-11-17 | AI Agent (`ATT-8169`) | `ATT-8169` | Added `[Planned]` `REQ-PRO-123` (CI custom safety guards, Detekt/Lint base-ref ratcheting + sprint metrics tracking, contract preservation, Java static-analysis evaluation referencing `ADR-001`). |
+| `1.0.8` | 2026-11-17 | AI Agent (`ATT-8169`) | `ATT-8169` | Promoted `REQ-PRO-123` to `[Implemented]` in Stage 4 (`tools/check_static_analysis_baselines.py`, CI wiring, `qa_plan.md` Section 8). |
+| `1.0.9` | 2026-11-18 | AI Agent (`ATT-8169`) | `ATT-8169` | Promoted `REQ-PRO-123` to `[Verified]` after Stage 5 verification. |

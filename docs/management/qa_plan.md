@@ -3,9 +3,9 @@
 **Document ID**: `DOC-MGT-QA`  
 **Document Identifier**: `QA-PLAN-ATT`  
 **Standard**: ASPICE 4.0 `SUP.1` (Quality Assurance) & `GP 2.1.6` (Ensure independence of quality assurance)  
-**Target Release**: `V5.0.0` | **Version**: 1.2.0  
+**Target Release**: `V5.0.0` | **Version**: 1.2.1  
 **Status**: Reviewed | **Approver**: Pending PO Sign-Off | **Date**: 2026-11-17  
-**Governing Tickets**: [ATT-8212](https://rainerblind.atlassian.net/browse/ATT-8212), [ATT-8213](https://rainerblind.atlassian.net/browse/ATT-8213), [ATT-8164](https://rainerblind.atlassian.net/browse/ATT-8164) | **Requirements**: `REQ-PRO-095`, `REQ-PRO-096`, `REQ-PRO-061`, `REQ-PRO-120`  
+**Governing Tickets**: [ATT-8212](https://rainerblind.atlassian.net/browse/ATT-8212), [ATT-8213](https://rainerblind.atlassian.net/browse/ATT-8213), [ATT-8164](https://rainerblind.atlassian.net/browse/ATT-8164), [ATT-8169](https://rainerblind.atlassian.net/browse/ATT-8169) | **Requirements**: `REQ-PRO-095`, `REQ-PRO-096`, `REQ-PRO-061`, `REQ-PRO-120`, `REQ-PRO-123`  
 
 ---
 
@@ -101,9 +101,31 @@ Under `SWE.2`, `SWE.3.BP4`, `SWE.4.BP2`, `SUP.1.BP1/BP3`, and `GP 2.1.6`, the pr
 
 ---
 
-## 8. Change History
+## 8. Static Analysis Baseline Governance & Java Tooling Evaluation (SWE.4)
+
+### 8.1 CI Safety Guards & Monotonic Baseline Ratchet (`REQ-PRO-123.1`, `REQ-PRO-123.2`)
+* **Custom Safety Linters**: `.github/workflows/android-branch-build.yml` and `.github/workflows/android-release.yml` execute `tools/lint_cursor_safety.py`, `tools/lint_lifecycle_safety.py`, and `tools/lint_safe_enum.py` prior to `:app:assembleDebug` / `:app:assembleRelease`, failing the build on any non-zero exit code.
+* **Baseline Ratchet**: `tools/check_static_analysis_baselines.py` verifies `app/detekt-baseline.xml` (`9,516` `<ID>` entries) and `app/lint-baseline.xml` (`238` `<issue>` entries) never grow relative to the Git base ref or current ceiling (falling back cleanly to ceiling limits on shallow clones), while `tools/sprint_metrics.py` tracks counts and per-sprint deltas.
+
+### 8.2 Java Static Analysis Evaluation (`ADR-001`, `REQ-PRO-123.4`)
+Per `docs/architecture/adr_001_java_core_services_migration.md` (`ADR-001` / `REQ-ARC-005`), **120** `.java` files remain in `app/src/main/java` under **Gradle `9.6.0`**, **AGP `9.4.0`**, and **JDK `21`** (Java `17` `compileOptions`). Evaluation of dedicated Java analyzers:
+
+| Tool | Build Stack Compatibility (AGP 9.4 / JDK 21) | Adoption Friction & Baseline Support | Determination |
+| :--- | :--- | :--- | :--- |
+| **PMD** | Source-only AST scan; independent of AGP variant bytecode wiring and JDK internals | Low friction; supports ruleset exclusions and ratchetable violation baselines across 120 legacy `.java` files | **Recommended** (incremental adoption on `Keep` core Java subsystems) |
+| **SpotBugs** | Requires AGP `9.4.0` variant bytecode paths across mixed Java/Kotlin compilation | Medium-High friction; large XML exclude filter maintenance across legacy sensor/DB classes | **Deferred** (revisit only if bytecode-only dataflow checks are required) |
+| **Error Prone** | Hooks `javac` internals; requires brittle JDK 21 `--add-exports` flags | High friction; compile-time failures across legacy Java patterns block builds without mass annotation | **Rejected** for legacy codebase |
+
+### 8.3 Detekt & Android Lint Baseline Burn-Down Plan
+* **Detekt (`app/detekt-baseline.xml`, starting baseline: `9,516` `<ID>` entries)**: Target reduction of **250 entries/sprint** via `ADR-001` Tier 1–2 migrations (`ATT-7903`, `ATT-7905`, `ATT-7906`) and boy-scout cleanup on touched Kotlin files.
+* **Android Lint (`app/lint-baseline.xml`, starting baseline: `238` `<issue>` entries)**: Target reduction of **20 entries/sprint** alongside `app/build.gradle` `Range` suppression burn-down (retaining `MissingTranslation` via `TranslationParityTest` and `DuplicatePlatformClasses`).
+
+---
+
+## 9. Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
 | `1.1.0` | 2026-11-15 | AI Agent (`ATT-8212`, `ATT-8213`) | `ATT-8212`, `ATT-8213` | Established dual-vendor weekly QA review strategy (`SUP.1`, `GP 2.1.6`). |
 | `1.2.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Standardized `DOC-MGT-QA` header, reset self-declared `Approved` to `Reviewed` (`Pending PO Sign-Off`), and added Change History. |
+| `1.2.1` | 2026-11-17 | AI Agent (`ATT-8169`) | `ATT-8169` | Added Section 8 documenting CI safety guards, Detekt/Lint baseline ratchet & burn-down plan, and PMD vs SpotBugs vs Error Prone Java evaluation referencing `ADR-001`. |

@@ -147,6 +147,15 @@ jobs:
           python3 tools/verify_requirement_governance.py --check-conflict-markers
           python3 tools/verify_requirement_governance.py --check-commit-hygiene --base-ref "${{ github.base_ref || 'develop' }}"
 
+      - name: Run custom safety linters
+        run: |
+          python3 tools/lint_cursor_safety.py
+          python3 tools/lint_lifecycle_safety.py
+          python3 tools/lint_safe_enum.py
+
+      - name: Verify static analysis baseline ratchet
+        run: python3 tools/check_static_analysis_baselines.py --base-ref "${{ github.base_ref || 'develop' }}"
+
       - name: Build debug APK
         run: ./gradlew :app:assembleDebug
 

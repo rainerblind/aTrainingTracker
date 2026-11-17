@@ -722,6 +722,25 @@ class TestSprintMetrics(unittest.TestCase):
         warnings = metrics.get("plausibility_warnings", [])
         self.assertTrue(any("PA 4.1 Plausibility Warning" in w for w in warnings), f"Expected unmasked warning, got {warnings}")
 
+    def test_static_analysis_baseline_metrics_and_markdown(self):
+        """TST-PRO-123.2: Verify sprint_metrics captures Detekt/Lint baseline counts, deltas, and markdown."""
+        repo_root = Path(self.test_dir) / "repo"
+        (repo_root / "app").mkdir(parents=True)
+        (repo_root / "app" / "detekt-baseline.xml").write_text("<ID>a</ID>\n<ID>b</ID>\n", encoding="utf-8")
+        (repo_root / "app" / "lint-baseline.xml").write_text('<issue id="x"/>\n', encoding="utf-8")
+        history = [{"static_analysis": {"detekt_baseline_count": 5, "lint_baseline_count": 3}}]
+        metrics = parse_sprint_gate_metrics([], {"id": 460, "name": "Sprint 2026-SA"}, history=history, repo_root=repo_root)
+        sa = metrics.get("static_analysis")
+        self.assertIsNotNone(sa)
+        self.assertEqual(sa["detekt_baseline_count"], 2)
+        self.assertEqual(sa["lint_baseline_count"], 1)
+        self.assertEqual(sa["detekt_delta"], -3)
+        self.assertEqual(sa["lint_delta"], -2)
+        md = format_metrics_markdown(metrics, history=history)
+        self.assertIn("Static Analysis Baseline Ratchet", md)
+        self.assertIn("-3", md)
+        self.assertIn("-2", md)
+
 
 if __name__ == "__main__":
     unittest.main()

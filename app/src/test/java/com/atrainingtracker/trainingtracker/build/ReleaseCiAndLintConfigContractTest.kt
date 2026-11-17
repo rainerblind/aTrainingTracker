@@ -1138,4 +1138,43 @@ class ReleaseCiAndLintConfigContractTest {
         assertTrue("release-manager/SKILL.md must invoke baseline_manager.py tag (REQ-PRO-119.1)", releaseSkill.contains("baseline_manager.py tag"))
         assertTrue("release-manager/SKILL.md must invoke baseline_manager.py manifest (REQ-PRO-119.2)", releaseSkill.contains("baseline_manager.py manifest"))
     }
+
+    /**
+     * Asserts that CI branch and release workflows execute custom Python safety linters and
+     * the Detekt/Lint baseline ratchet before assembly, and that docs/management/qa_plan.md
+     * documents the Java static analysis evaluation referencing ADR-001 (REQ-PRO-123, TST-PRO-123, ATT-8169).
+     */
+    // Traces to: REQ-PRO-123, TST-PRO-123
+    @Test
+    fun testCiSafetyLintersBaselineRatchetAndJavaEvaluation_contract() {
+        val requiredSteps = listOf(
+            "python3 tools/lint_cursor_safety.py",
+            "python3 tools/lint_lifecycle_safety.py",
+            "python3 tools/lint_safe_enum.py",
+            "python3 tools/check_static_analysis_baselines.py"
+        )
+
+        val branchContent = findCiWorkflowFile().readText()
+        val branchAssembleIdx = branchContent.indexOf("./gradlew :app:assembleDebug")
+        assertTrue("Branch workflow must contain assembleDebug", branchAssembleIdx != -1)
+        for (step in requiredSteps) {
+            val idx = branchContent.indexOf(step)
+            assertTrue("Branch workflow must run '$step' (REQ-PRO-123.1, REQ-PRO-123.2)", idx != -1)
+            assertTrue("'$step' must precede assembleDebug in branch workflow", idx < branchAssembleIdx)
+        }
+
+        val releaseContent = findReleaseWorkflowFile().readText()
+        val releaseAssembleIdx = releaseContent.indexOf("./gradlew :app:assembleRelease :app:bundleRelease")
+        assertTrue("Release workflow must contain assembleRelease", releaseAssembleIdx != -1)
+        for (step in requiredSteps) {
+            val idx = releaseContent.indexOf(step)
+            assertTrue("Release workflow must run '$step' (REQ-PRO-123.1, REQ-PRO-123.2)", idx != -1)
+            assertTrue("'$step' must precede assembleRelease in release workflow", idx < releaseAssembleIdx)
+        }
+
+        val qaPlanContent = findRepoRootFile("docs/management/qa_plan.md", "../docs/management/qa_plan.md").readText()
+        for (token in listOf("PMD", "SpotBugs", "Error Prone", "ADR-001", "9,516", "238")) {
+            assertTrue("QA plan must document '$token' (REQ-PRO-123.4)", qaPlanContent.contains(token))
+        }
+    }
 }

@@ -1,14 +1,14 @@
 # Living Test Specification: Engineering Process, Stability & Architecture
 
 **Document ID**: `DOC-TST-PRO`  
-**Version**: 1.0.6  
+**Version**: 1.0.9  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Tests**: 226
+**Total Tests**: 227
 
 ---
 
@@ -3830,6 +3830,25 @@
 
 ---
 
+### TST-PRO-123: **CI Custom Safety Guards, Baseline Ratcheting & Java Analysis Evaluation Suite (ATT-8169)** [Verified]
+- **Requirement(s)**: `REQ-PRO-123`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Component**: `.github/workflows/android-branch-build.yml`, `.github/workflows/android-release.yml`, `tools/lint_cursor_safety.py`, `tools/lint_lifecycle_safety.py`, `tools/lint_safe_enum.py`, `tools/check_static_analysis_baselines.py`, `tools/test_check_static_analysis_baselines.py`, `tools/sprint_metrics.py`, `tools/hoechstmass/tools/sprint_metrics.py`, `docs/management/qa_plan.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ReleaseCiAndLintConfigContractTest.kt`
+- **Jira**: `ATT-8169`
+- **Test Description**:
+  1. *Custom Python Safety Guards Execution & CI Wiring (`TST-PRO-123.1`, tools/lint_*.py & workflows)*:
+     • *Given* `tools/lint_cursor_safety.py`, `tools/lint_lifecycle_safety.py`, and `tools/lint_safe_enum.py`, *When* executed on `HEAD` and inspected in `.github/workflows/android-branch-build.yml` + `android-release.yml`, *Then* all three exit `0` on `HEAD`, run prior to `:app:assembleDebug` / `:app:assembleRelease`, and fail CI on any non-zero violation exit.
+  2. *Base-Ref Baseline Ratcheting & Sprint Metrics Parity (`TST-PRO-123.2`, tools/test_*.py, tools/test_sprint_metrics.py & test_hoechstmass_tools.py)*:
+     • *Given* Detekt (`9,516` `<ID>`) and Lint (`238` `<issue>`) baseline XML fixtures compared against base ref / ceilings, *When* the ratchet helper and `sprint_metrics.py` (+ mirror) execute, *Then* equal or reduced baselines pass, any increase fails non-zero, and `sprint_metrics.py` + `tools/hoechstmass/tools/sprint_metrics.py` report current baseline counts and deltas.
+  3. *CI & Lint Contract Test Regression (`TST-PRO-123.3`, ReleaseCiAndLintConfigContractTest.kt)*:
+     • *Given* `.github/workflows/android-branch-build.yml`, `.github/workflows/android-release.yml`, `app/detekt-baseline.xml`, and `app/lint-baseline.xml`, *When* `./gradlew testDebugUnitTest --tests "*ReleaseCiAndLintConfigContractTest*"` executes, *Then* all existing pinned assertions plus new CI safety-linter and ratchet step assertions pass.
+  4. *Java Static Analysis Evaluation & Governance Parity (`TST-PRO-123.4`, verify_requirement_governance.py)*:
+     • *Given* the documented PMD vs. SpotBugs vs. Error Prone evaluation (referencing `ADR-001` for `120` `.java` files on Gradle `9.6.0` / AGP `9.4.0` / JDK `21`) and Detekt/Lint burn-down schedule, *When* `python3 tools/verify_requirement_governance.py` runs, *Then* all governance checks (headers, attributes, traceability, architecture lock) exit `0`. (`Localization Parity: N/A - no UI strings`).
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -3841,3 +3860,6 @@
 | `1.0.4` | 2026-11-17 | AI Agent (`ATT-8168`) | `ATT-8168` | Added `[Planned]` `TST-PRO-122` test specifications (bounded SPC, `process_version` reset, acceptance separation, no `0.02` floor, unmasked plausibility warning, mirror parity, CL3–CL5 suspension). |
 | `1.0.5` | 2026-11-17 | AI Agent (`ATT-8168`) | `ATT-8168` | Promoted `TST-PRO-122` to `[Implemented]` in Stage 4. |
 | `1.0.6` | 2026-11-17 | AI Agent (`ATT-8168`) | `ATT-8168` | Promoted `TST-PRO-122` to `[Verified]` after Stage 5 verification. |
+| `1.0.7` | 2026-11-17 | AI Agent (`ATT-8169`) | `ATT-8169` | Added `[Planned]` `TST-PRO-123` test specifications (CI custom safety guards, Detekt/Lint base-ref ratcheting + sprint metrics parity, `ReleaseCiAndLintConfigContractTest` preservation, Java static-analysis evaluation). |
+| `1.0.8` | 2026-11-17 | AI Agent (`ATT-8169`) | `ATT-8169` | Promoted `TST-PRO-123` to `[Implemented]` in Stage 4 (`test_check_static_analysis_baselines.py`, `sprint_metrics` tests, `ReleaseCiAndLintConfigContractTest`). |
+| `1.0.9` | 2026-11-18 | AI Agent (`ATT-8169`) | `ATT-8169` | Promoted `TST-PRO-123` to `[Verified]` after Stage 5 verification. |

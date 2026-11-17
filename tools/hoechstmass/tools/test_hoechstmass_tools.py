@@ -867,6 +867,25 @@ class TestHoechstmassSprintMetricsParity(unittest.TestCase):
         reset = hm_sm.calculate_spc_limits(hist, current_metrics={"process_version": "2.0"})
         self.assertTrue(reset.get("baseline_reset"))
 
+    def test_hoechstmass_sprint_metrics_static_analysis_baselines(self):
+        """TST-PRO-123.2: Verify tools/hoechstmass/tools/sprint_metrics.py static_analysis reporting."""
+        import tempfile
+        from pathlib import Path
+        from tools.hoechstmass.tools import sprint_metrics as hm_sm
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo_root = Path(tmpdir)
+            (repo_root / "app").mkdir(parents=True)
+            (repo_root / "app" / "detekt-baseline.xml").write_text("<ID>a</ID>\n", encoding="utf-8")
+            (repo_root / "app" / "lint-baseline.xml").write_text('<issue id="x"/>\n', encoding="utf-8")
+            metrics = hm_sm.parse_sprint_gate_metrics(
+                [], {"id": 12, "name": "Mirror-SA"},
+                history=[{"static_analysis": {"detekt_baseline_count": 3, "lint_baseline_count": 2}}],
+                repo_root=repo_root,
+            )
+            self.assertEqual(metrics["static_analysis"]["detekt_delta"], -2)
+            self.assertEqual(metrics["static_analysis"]["lint_delta"], -1)
+
 
 if __name__ == "__main__":
     unittest.main()

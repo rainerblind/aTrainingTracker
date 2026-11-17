@@ -608,6 +608,21 @@ class TestSprintMetrics(unittest.TestCase):
         self.assertEqual(metrics["quality_gates"]["swiss_cheese"]["theoretical_cumulative_escape_prob"], 0.0)
         self.assertTrue(any("PA 4.1 Plausibility Warning" in w for w in metrics.get("plausibility_warnings", [])))
 
+    def test_static_analysis_baseline_metrics_parity(self):
+        """TST-PRO-123.2: Verify mirror sprint_metrics captures static_analysis baseline counts and deltas."""
+        repo_root = Path(self.test_dir) / "repo"
+        (repo_root / "app").mkdir(parents=True)
+        (repo_root / "app" / "detekt-baseline.xml").write_text("<ID>a</ID>\n<ID>b</ID>\n", encoding="utf-8")
+        (repo_root / "app" / "lint-baseline.xml").write_text('<issue id="x"/>\n', encoding="utf-8")
+        history = [{"static_analysis": {"detekt_baseline_count": 4, "lint_baseline_count": 2}}]
+        metrics = parse_sprint_gate_metrics([], {"id": 11, "name": "Mirror-SA"}, history=history, repo_root=repo_root)
+        sa = metrics.get("static_analysis")
+        self.assertIsNotNone(sa)
+        self.assertEqual(sa["detekt_delta"], -2)
+        self.assertEqual(sa["lint_delta"], -1)
+        md = format_metrics_markdown(metrics)
+        self.assertIn("Static Analysis Baseline Ratchet", md)
+
 
 if __name__ == "__main__":
     unittest.main()

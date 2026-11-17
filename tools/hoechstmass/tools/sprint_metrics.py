@@ -16,8 +16,23 @@ import json
 import math
 import os
 import re
+import importlib.util
 import sys
 from pathlib import Path
+
+def _load_baseline_helper():
+    helper_path = Path(__file__).resolve().parents[2] / "check_static_analysis_baselines.py"
+    if not helper_path.is_file():
+        return None, None
+    spec = importlib.util.spec_from_file_location("_root_check_static_analysis_baselines", helper_path)
+    if spec is None or spec.loader is None:
+        return None, None
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod.collect_baseline_metrics, mod.format_static_analysis_lines
+
+
+collect_baseline_metrics, format_static_analysis_lines = _load_baseline_helper()
 
 # Subtask stage markers mapping to Gate numbers
 STAGE_MAP = {
@@ -131,7 +146,7 @@ def parse_verdicts_from_comments(comments):
     return verdicts
 
 
-def parse_sprint_gate_metrics(parent_issues, sprint_info):
+def parse_sprint_gate_metrics(parent_issues, sprint_info, history=None, repo_root=None):
     """
     Calculates PA 4.1 Quantitative Process Metrics from a list of parent issues and their subtasks.
     Each parent issue dict must contain 'fields' with 'summary', 'status', 'priority', 'subtasks',
@@ -414,6 +429,11 @@ def parse_sprint_gate_metrics(parent_issues, sprint_info):
         },
         "plausibility_warnings": plausibility_warnings,
     }
+
+    if collect_baseline_metrics is not None:
+        sa_metrics = collect_baseline_metrics(repo_root=repo_root, history=history)
+        if sa_metrics is not None:
+            metrics["static_analysis"] = sa_metrics
 
     return metrics
 
@@ -718,6 +738,11 @@ def format_metrics_markdown(metrics, spc=None):
             f"h3. {spc_num}. Statistical Process Control (SPC — PA 4.2, Baseline Reset for process_version={spc.get('process_version')})",
             "* *Process Stability*: New process baseline initialized; awaiting historical sprints in this process_version.",
         ])
+
+    sa = metrics.get("static_analysis")
+    if sa and format_static_analysis_lines is not None:
+        sa_num = (4 if pt else 3) + (1 if (spc and (spc.get("has_history") or spc.get("baseline_reset"))) else 0)
+        lines.extend(format_static_analysis_lines(sa, sa_num))
 
     plausibility_warnings = metrics.get("plausibility_warnings", [])
     if plausibility_warnings:
