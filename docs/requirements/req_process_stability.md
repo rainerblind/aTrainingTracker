@@ -3,7 +3,7 @@
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Requirements**: 174
+**Total Requirements**: 175
 
 ---
 
@@ -5667,4 +5667,38 @@ The workflow SHALL mandate that:
   • *Given* a Stage 6 review report with plain keyword stuffing but without structured section headers,
   • *When* `tools/jira_util.py final-review-verdict <PARENT> PASS ...` is invoked,
   • *Then* the command rejects the report with an error.
+- **Invariants**: Zero Android production code impact (`app/src/main/`); `ANT-Android-SDKs` untouched at `160000 commit 0e8cea714a231fb9565170d4ed01eafa868f9798`; existing test fixtures and POSIX flock semantics preserved.
+
+---
+
+### REQ-PRO-110: Integration Verification Test Cases for INT-SWE-01 to INT-SWE-04 (ATT-8155) [Verified]
+- **Tests**: `TST-PRO-110`, `TST-INT-009`, `TST-INT-010`, `TST-INT-011`, `TST-INT-012`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Integration / Review
+- **Implementation**: `app/src/test/java/com/atrainingtracker/trainingtracker/integration/UiPresentationIntegrationTest.kt`, `ViewModelRepositoryIntegrationTest.kt`, `InterServiceIngestionIntegrationTest.kt`, `HardwareHalIngestionIntegrationTest.kt`, `build/AspiceSweAuditContractTest.kt`
+- **Rationale**: ASPICE 4.0 Assessment (2026-11-15) Finding `M6` (SWE.5 BP1–BP7, rating PA 1.1 = P) established that while `docs/architecture/integration_strategy.md` defines integration steps `INT-SWE-01..08` across interfaces `IF-SWE-01..08`, integration test verification was non-effective: `INT-SWE-01..04` were never refined into traceable test specifications (`TST-INT-*`), instrumented tests were limited to 3 smoke checks with zero Compose UI tests, and no versioned machine-readable JUnit XML evidence existed for component boundary interactions. Implementing formal test specifications, Robolectric JVM integration tests, and evidence export for `INT-SWE-01..04` establishes verifiable SWE.5 compliance.
+- **Description**:
+  1. *INT-SWE-01: UI to ViewModel MVI Integration (`REQ-PRO-110.1`, [Verified])*: Jetpack Compose Composables (`TrackingTabsScreen`, `ControlTrackingBar`) and ViewModels (`TrackingViewModel`, `ControlTrackingViewModel`) SHALL have integration verification test coverage via Robolectric `createComposeRule()` asserting unidirectional MVI `StateFlow` collection and action dispatch (`onStartTracking()`, `updateScreenMode()`) without emulator dependency.
+  2. *INT-SWE-02: ViewModel to Repository Data Layer Integration (`REQ-PRO-110.2`, [Verified])*: ViewModels and repositories (`WorkoutRepository`, `BANALServiceRepository`) SHALL have integration test coverage asserting real SQLite updates (`WorkoutSamplesDatabaseManager`) trigger reactive `Flow` emissions to ViewModel `StateFlow` without main-thread deadlocks.
+  3. *INT-SWE-03: Inter-Service Ingestion Binder IPC Integration (`REQ-PRO-110.3`, [Verified])*: Inter-service communication between `TrackerService` and `BANALService` via `BANALServiceComm` local binder SHALL have integration test coverage asserting 1-Hz batch polling (`getAllFilteredSensorData`), sensor priority arbitration (BLE vs ANT+), and unbind null-safety resilience.
+  4. *INT-SWE-04: Hardware HAL Byte Stream Ingestion & Sensor Replay (`REQ-PRO-110.4`, [Verified])*: Ingestion of Bluetooth SIG GATT characteristic byte streams (Heart Rate `0x2A37`, Cycling Power `0x2A63`, Radar `6a4e3204`) and Location updates into `BANALService` / `TrackerService` SHALL have integration test coverage asserting binary packet parsing, synthetic sensor replay, and timeout debounce (>3.5s).
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-110` refining `REQ-PRO-045` (`docs/architecture/integration_strategy.md`) and `docs/architecture/interfaces.md` (`IF-SWE-01..04`). Targets `app/src/test/java/com/atrainingtracker/trainingtracker/integration/` and `tools/generate_test_evidence.py`.
+  2. *Historical Origin & Commit Trace*: Sprint 2026-11-16_03_Nacht via ticket `ATT-8155` resolving ASPICE 4.0 Assessment (2026-11-15) Finding `M6` (SWE.5 BP1–BP7, PA 1.1 = P).
+  3. *Root Reason for Existing Formulation*: `integration_strategy.md` defined `INT-SWE-01..08` abstractly without corresponding test classes or versioned evidence, relying on unit mock tests.
+  4. *Preservation of Core Invariants*: Preserves the 8-step bottom-up integration order, legacy `TST-INT-002..008`, Rule 79 (Robolectric Level 1 fast gate without emulators), and zero modifications to `app/src/main/` or `ANT-Android-SDKs` (`0e8cea71`).
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `TrackingTabsScreen` composed with `TrackingViewModel`,
+  • *When* `updateScreenMode` or tracking control actions are dispatched,
+  • *Then* state changes reflect in Compose nodes without recomposition exceptions.
+  • *Given* `WorkoutRepository` backed by real SQLite,
+  • *When* workout telemetry samples are written,
+  • *Then* `getWorkoutById` emits updated records to the ViewModel StateFlow.
+  • *Given* `TrackerService` connected to `BANALServiceComm`,
+  • *When* 1-Hz polling tick triggers,
+  • *Then* sensor telemetry is retrieved, prioritized, and binder unbind handles null gracefully.
+  • *Given* GATT byte streams for HR (`0x2A37`), Power (`0x2A63`), and Radar (`6a4e3204`),
+  • *When* injected into service listeners,
+  • *Then* packets parse correctly and dropouts (>3.5s) debounce cleanly.
 - **Invariants**: Zero Android production code impact (`app/src/main/`); `ANT-Android-SDKs` untouched at `160000 commit 0e8cea714a231fb9565170d4ed01eafa868f9798`; existing test fixtures and POSIX flock semantics preserved.

@@ -566,4 +566,39 @@ class AspiceSweAuditContractTest {
             assertTrue("architecture.md Section 6 must reference $intId in integration sequence (TST-PRO-045.3)", archContent.contains(intId))
         }
     }
+
+    /**
+     * Verifies that integration verification test classes for INT-SWE-01 through INT-SWE-04 exist on disk,
+     * implement the required Robolectric runner, and map to TST-INT-009..012 (ASPICE SWE.5 Finding M6,
+     * REQ-PRO-110, TST-PRO-110, ATT-8155).
+     */
+    @Test
+    fun testSoftwareIntegrationVerification_intSwe01to04_testClassesAndGovernance() {
+        val integrationTestFiles = listOf(
+            "app/src/test/java/com/atrainingtracker/trainingtracker/integration/UiPresentationIntegrationTest.kt" to "TST-INT-009",
+            "app/src/test/java/com/atrainingtracker/trainingtracker/integration/ViewModelRepositoryIntegrationTest.kt" to "TST-INT-010",
+            "app/src/test/java/com/atrainingtracker/trainingtracker/integration/InterServiceIngestionIntegrationTest.kt" to "TST-INT-011",
+            "app/src/test/java/com/atrainingtracker/trainingtracker/integration/HardwareHalIngestionIntegrationTest.kt" to "TST-INT-012"
+        )
+
+        for ((relPath, tstId) in integrationTestFiles) {
+            val file = findRepoRootFile(relPath)
+            assertTrue("$relPath must exist on disk (REQ-PRO-110, $tstId)", file.exists())
+            val content = file.readText()
+            assertTrue("$relPath must cite test ID $tstId", content.contains(tstId))
+            assertTrue("$relPath must use RobolectricTestRunner", content.contains("RobolectricTestRunner"))
+            assertTrue("$relPath must target SDK 34", content.contains("sdk = [34]"))
+        }
+
+        // TST-PRO-110.1: Test spec exists and maps Given-When-Then criteria
+        val specFile = findRepoRootFile("docs/engineering/test_specs/ATT-8155_test_spec.md")
+        assertTrue("docs/engineering/test_specs/ATT-8155_test_spec.md must exist (TST-PRO-110.1)", specFile.exists())
+        val specContent = specFile.readText()
+        assertTrue("test spec must cite REQ-PRO-110", specContent.contains("REQ-PRO-110"))
+        assertTrue("test spec must cite TST-PRO-110", specContent.contains("TST-PRO-110"))
+        for (i in 9..12) {
+            val tstIntId = String.format("TST-INT-%03d", i)
+            assertTrue("test spec must cite $tstIntId", specContent.contains(tstIntId))
+        }
+    }
 }

@@ -3,7 +3,7 @@
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Tests**: 205
+**Total Tests**: 210
 
 ---
 
@@ -106,6 +106,54 @@
 - **Component**: **Settings Cleanup Verification**
 - **Jira**: ``ATT-268``
 - **Test Description**: 1. Gradle Build: Ensure the project compiles successfully after reorganization and deletions. 2. Navigation Test: Verify all settings items in the drawer (Units, Display, Search, Export, Strava, Dropbox, Tracking Tabs) still function correctly.
+
+### TST-INT-009: **INT-SWE-01 Presentation Layer UI to ViewModel MVI Verification** [Verified]
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Integration
+- **Requirement(s)**: `REQ-PRO-110`
+- **Component**: `ui/tracking/tracking/TrackingTabsScreen.kt`, `ui/tracking/tracking/TrackingViewModel.kt`, `ui/tracking/tracking/ControlTrackingBar.kt`
+- **Jira**: `ATT-8155`
+- **Test Description**:
+  1. Initialize `TrackingViewModel` and `ControlTrackingViewModel` in Robolectric Compose test harness (`createComposeRule()`).
+  2. Compose `TrackingTabsScreen` and `ControlTrackingBar` binding to ViewModel `uiState` / `mapState`.
+  3. Dispatch UI actions (`onStartTracking()`, `updateScreenMode()`) and assert state changes propagate to Compose nodes without recomposition exceptions.
+
+### TST-INT-010: **INT-SWE-02 ViewModel to Repository Data Layer Verification** [Verified]
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Integration
+- **Requirement(s)**: `REQ-PRO-110`
+- **Component**: `ui/aftermath/WorkoutRepository.kt`, `banalservice/BANALServiceRepository.kt`, `database/WorkoutSamplesDatabaseManager.kt`
+- **Jira**: `ATT-8155`
+- **Test Description**:
+  1. Instantiate `WorkoutRepository` with real SQLite database manager (`RealSqliteTestHelper`).
+  2. Collect reactive `Flow` emissions via `getWorkoutById()` in a background coroutine scope.
+  3. Write simulated workout samples and metadata updates; assert reactive emissions deliver updated records without main-thread blocking.
+
+### TST-INT-011: **INT-SWE-03 Inter-Service Ingestion Binder IPC Verification** [Verified]
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Integration
+- **Requirement(s)**: `REQ-PRO-110`
+- **Component**: `tracker/TrackerService.kt`, `banalservice/BANALService.kt`, `banalservice/BANALServiceComm.kt`
+- **Jira**: `ATT-8155`
+- **Test Description**:
+  1. Create local Binder connection between `TrackerService` and `BANALServiceComm`.
+  2. Execute 1-Hz batch poll (`getAllFilteredSensorData()`) across active sensor streams.
+  3. Verify sensor priority arbitration (BLE vs ANT+) and verify null-safety during abrupt unbind and reconnect cycles.
+
+### TST-INT-012: **INT-SWE-04 Hardware HAL Byte Stream Ingestion & Sensor Replay Verification** [Verified]
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Integration
+- **Requirement(s)**: `REQ-PRO-110`
+- **Component**: `banalservice/BANALService.kt`, `banalservice/devices/BluetoothLeDevice.kt`, `banalservice/devices/GattParser.kt`
+- **Jira**: `ATT-8155`
+- **Test Description**:
+  1. Inject raw GATT characteristic byte arrays for Heart Rate (`0x2A37`), Cycling Power (`0x2A63`), and Radar (`6a4e3204`).
+  2. Assert correct binary parsing into domain `SensorData` models and service listener dispatch.
+  3. Assert sensor dropout debounce behavior when packets cease (> 3.5s timeout).
 
 ### TST-PRO-001: **Jira Attachment Download** [Verified]
 - **Priority**: High
@@ -3487,3 +3535,22 @@
   • Verify that `final_review_verdict` rejects plain keyword-stuffed unstructured text on `PASS`, and successfully accepts structured reports matching `stage6-final-review/SKILL.md` sections with bullets or structured options tables.
   5. *Sanctioned Coordinator Workflow Invariants Test (`TST-PRO-109.5`, tools/test_jira_accounts.py)*:
   • Verify that Coordinator operations (`pack_sprint`, `return_unstarted`, `carryover_wip`, `archive_po_acceptance`, `defer_to_systemtest_queue`), `ATT-8153` QA non-conformance ticket generation, and `ATT-8426` decoupled 7-day review currency checks remain 100% functional.
+
+---
+
+### TST-PRO-110: **Integration Verification Test Strategy & Evidence Integrity Suite (ATT-8155)** [Verified]
+- **Requirement(s)**: `REQ-PRO-110`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Integration / Review
+- **Component**: `app/src/test/java/com/atrainingtracker/trainingtracker/build/AspiceSweAuditContractTest.kt`, `tools/generate_test_evidence.py`
+- **Jira**: `ATT-8155`
+- **Test Description**:
+  1. *Architecture Integration Sequence Parity Test (`TST-PRO-110.1`, build/AspiceSweAuditContractTest.kt)*:
+  • Verify that `AspiceSweAuditContractTest` asserts 100% bidirectional traceability between `INT-SWE-01..04`, `IF-SWE-01..04`, and executable integration test classes.
+  2. *Robolectric Level 1 Execution & Fast Feedback Test (`TST-PRO-110.2`, integration/*.kt)*:
+  • Verify that all four integration test suites execute under `./gradlew testDebugUnitTest` within fast turnaround bounds (<= 30s) without requiring emulator or physical hardware.
+  3. *Machine-Readable Test Evidence & JUnit XML Archival Test (`TST-PRO-110.3`, tools/generate_test_evidence.py)*:
+  • Verify that `tools/generate_test_evidence.py` and `tools/jira_util.py export-test-evidence` parse JUnit XML results for `INT-SWE-01..04` and archive versioned evidence under `docs/engineering/test_evidence/`.
+  4. *Living Documentation & Shard Parity Test (`TST-PRO-110.4`, tools/verify_requirement_governance.py)*:
+  • Verify that all living documentation shards pass governance checks with zero dangling references and zero code orphans.
