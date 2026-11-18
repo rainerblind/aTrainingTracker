@@ -1,14 +1,14 @@
 # Living Requirements: Engineering Process, Stability & Architecture
 
 **Document ID**: `DOC-REQ-PRO`  
-**Version**: 1.0.9  
+**Version**: 1.0.12  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Requirements**: 188
+**Total Requirements**: 189
 
 ---
 
@@ -6161,6 +6161,31 @@ The workflow SHALL mandate that:
 
 ---
 
+### REQ-PRO-124: Secret Hygiene, Local Credential File Permissions & CI Secret-Pattern Scanning (ATT-8170) [Verified]
+- **Tests**: `TST-PRO-124`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `tools/check_secrets_hygiene.py`, `.gitignore`, `docs/ci-secrets.md`, `docs/engineering/walkthroughs/ATT-4004_walkthrough.md`, `.github/workflows/android-branch-build.yml`, `.github/workflows/android-release.yml`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ReleaseCiAndLintConfigContractTest.kt`
+- **Rationale**: ASPICE 4.0 Audit Finding `Minor (SUP.8)` (`SUP.8 BP2/BP3`, `ATT-8170`) identified overly permissive local Unix file modes (`0644`/`0664` instead of `0600`) on credential/signing files, missing `.jira_audit.log` entry in `.gitignore`, absence of an automated CI secret-pattern scan on tracked files, and concrete `BuildConfig.java` credentials leaked in `docs/engineering/walkthroughs/ATT-4004_walkthrough.md:L78-L81`.
+- **Description**:
+  1. *Local Credential File Permission Hygiene (`REQ-PRO-124.1`)*: Local untracked credential and signing files (`.env.claude`, `.env.gemini`, `secrets.properties`, `release.properties`, `.env.jira*`) MUST be restricted to owner-only `0600` mode on developer workstations, verified deterministically via `tools/check_secrets_hygiene.py --check-local-perms` (with `--fix-local-perms` remediation helper) and documented in `docs/ci-secrets.md` (preserving `REQ-PRO-120` header governance where applicable).
+  2. *Git Ignore & Tracked Leak Redaction (`REQ-PRO-124.2`)*: `.gitignore` SHALL exclude `.jira_audit.log`. Exposed `BuildConfig.java` credentials in `docs/engineering/walkthroughs/ATT-4004_walkthrough.md` (`L78-L81`) SHALL be redacted to non-sensitive placeholders with an explicit PO key-rotation notice for the exposed Google Maps, Strava, and Dropbox keys.
+  3. *Deterministic Offline CI Secret-Pattern Scanning (`REQ-PRO-124.3`)*: `tools/check_secrets_hygiene.py` SHALL execute an offline stdlib Python secret-pattern scan across tracked files (`git ls-files`), wired into `.github/workflows/android-branch-build.yml` and `.github/workflows/android-release.yml` prior to assembly, failing non-zero on real API keys/tokens/private keys while explicitly allowlisting documented build placeholders (`secrets.defaults.properties`, `app/build.gradle`, `docs/engineering/plans/ATT-4004_plan.md`) and explicit unit test fixtures (`StravaHelperTest.kt`, `tools/test_jira_accounts.py`).
+  4. *Offline Unit & CI Contract Verification (`REQ-PRO-124.4`)*: Offline Python unit tests (`tools/test_check_secrets_hygiene.py`, `Rule 5`) and `ReleaseCiAndLintConfigContractTest` (`REQ-PRO-049.1`: zero `app/src/main/` reads) SHALL verify secret-pattern detection, allowlist precision, `0600` permission checking/remediation, and CI workflow wiring alongside preserved `REQ-SEC-042`, `REQ-STP-008`, and `REQ-PRO-123` assertions.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new `REQ-PRO-124` (`REQ-PRO-124.1`–`REQ-PRO-124.4`), extending `REQ-SEC-042` (`secrets.defaults.properties` placeholders), `REQ-STP-008` (`release.properties` signing hygiene), and `REQ-PRO-123` (CI Python safety guards).
+  2. *Historical Origin & Commit Trace*: `REQ-SEC-042` (`ATT-4004`), `REQ-STP-008` (`ATT-6148`), and `REQ-PRO-123` (`ATT-8169`).
+  3. *Root Reason for Existing Formulation*: Existing controls secured `BuildConfig` defaults and signing password resolution, but did not enforce `0600` local file permissions, ignore `.jira_audit.log`, or scan tracked repo files in CI (allowing `ATT-4004_walkthrough.md:L78-L81` to persist unnoticed).
+  4. *Preservation of Core Invariants*: Preserves `secrets.defaults.properties` (`REQ-SEC-042`), `BuildConfigSecretsContractTest`, `ReleaseCiAndLintConfigContractTest` pins, and `REQ-PRO-049.1`.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* local credential files (`.env.claude`, `.env.gemini`, `secrets.properties`, `release.properties`, `.env.jira*`) with group/world permissions (`0644`/`0664`), *When* `tools/check_secrets_hygiene.py --check-local-perms` runs, *Then* it exits non-zero reporting each file, and after `--fix-local-perms` all files have `0600` and `--check-local-perms` exits `0`.
+  • *Given* tracked files including `secrets.defaults.properties`, `app/build.gradle`, `StravaHelperTest.kt`, `tools/test_jira_accounts.py`, and redacted `ATT-4004_walkthrough.md`, *When* `tools/check_secrets_hygiene.py` executes in CI, *Then* clean tracked files exit `0` while any unallowlisted API key/token/private key fails CI with exit code `1`.
+  • *Given* `.gitignore`, `docs/ci-secrets.md`, CI workflows, and `ReleaseCiAndLintConfigContractTest`, *When* `ReleaseCiAndLintConfigContractTest` and `verify_requirement_governance.py` execute, *Then* `.jira_audit.log` is ignored, CI invokes `check_secrets_hygiene.py` before assembly, and all contract/governance checks exit `0`.
+- **Invariants**: Zero `app/src/main/` edits; `ANT-Android-SDKs` untouched; `secrets.defaults.properties` untouched (`REQ-SEC-042`); `Localization Parity: N/A - no UI strings`; `Rule 5` zero live API calls in tests; `REQ-PRO-049.1` zero `app/src/main/` reads in tests.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -6175,3 +6200,6 @@ The workflow SHALL mandate that:
 | `1.0.7` | 2026-11-17 | AI Agent (`ATT-8169`) | `ATT-8169` | Added `[Planned]` `REQ-PRO-123` (CI custom safety guards, Detekt/Lint base-ref ratcheting + sprint metrics tracking, contract preservation, Java static-analysis evaluation referencing `ADR-001`). |
 | `1.0.8` | 2026-11-17 | AI Agent (`ATT-8169`) | `ATT-8169` | Promoted `REQ-PRO-123` to `[Implemented]` in Stage 4 (`tools/check_static_analysis_baselines.py`, CI wiring, `qa_plan.md` Section 8). |
 | `1.0.9` | 2026-11-18 | AI Agent (`ATT-8169`) | `ATT-8169` | Promoted `REQ-PRO-123` to `[Verified]` after Stage 5 verification. |
+| `1.0.10` | 2026-11-18 | AI Agent (`ATT-8170`) | `ATT-8170` | Added `[Planned]` `REQ-PRO-124` (local `0600` credential permissions, `.jira_audit.log` gitignore, `ATT-4004_walkthrough.md` leak redaction + PO rotation notice, offline CI secret-pattern scan). |
+| `1.0.11` | 2026-11-18 | AI Agent (`ATT-8170`) | `ATT-8170` | Promoted `REQ-PRO-124` to `[Implemented]` in Stage 4 (`tools/check_secrets_hygiene.py`, `.gitignore`, `docs/ci-secrets.md`, `ATT-4004_walkthrough.md` redaction, CI workflows, `0600` permissions). |
+| `1.0.12` | 2026-11-18 | AI Agent (`ATT-8170`) | `ATT-8170` | Promoted `REQ-PRO-124` to `[Verified]` after Stage 5 verification (`8,479` tracked files scan, `9/9` local `0600`, `476/476` Python tests, `46/46` Gradle contract tests). |

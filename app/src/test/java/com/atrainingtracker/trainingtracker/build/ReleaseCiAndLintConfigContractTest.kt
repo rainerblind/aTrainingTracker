@@ -1177,4 +1177,39 @@ class ReleaseCiAndLintConfigContractTest {
             assertTrue("QA plan must document '$token' (REQ-PRO-123.4)", qaPlanContent.contains(token))
         }
     }
+
+    /**
+     * Asserts that CI branch and release workflows execute tools/check_secrets_hygiene.py
+     * prior to assembly, .gitignore ignores .jira_audit.log, and docs/ci-secrets.md documents
+     * 0600 credential file hygiene (REQ-PRO-124, TST-PRO-124, ATT-8170).
+     */
+    // Traces to: REQ-PRO-124, TST-PRO-124
+    @Test
+    fun testSecretsHygieneCiGateGitignoreAndDocs_contract() {
+        val secretStep = "python3 tools/check_secrets_hygiene.py"
+
+        val branchContent = findCiWorkflowFile().readText()
+        val branchAssembleIdx = branchContent.indexOf("./gradlew :app:assembleDebug")
+        val branchSecretIdx = branchContent.indexOf(secretStep)
+        assertTrue("Branch workflow must contain assembleDebug", branchAssembleIdx != -1)
+        assertTrue("Branch workflow must run '$secretStep' (REQ-PRO-124.3)", branchSecretIdx != -1)
+        assertTrue("'$secretStep' must precede assembleDebug in branch workflow", branchSecretIdx < branchAssembleIdx)
+
+        val releaseContent = findReleaseWorkflowFile().readText()
+        val releaseAssembleIdx = releaseContent.indexOf("./gradlew :app:assembleRelease :app:bundleRelease")
+        val releaseSecretIdx = releaseContent.indexOf(secretStep)
+        assertTrue("Release workflow must contain assembleRelease", releaseAssembleIdx != -1)
+        assertTrue("Release workflow must run '$secretStep' (REQ-PRO-124.3)", releaseSecretIdx != -1)
+        assertTrue("'$secretStep' must precede assembleRelease in release workflow", releaseSecretIdx < releaseAssembleIdx)
+
+        val gitignoreContent = findRepoRootFile(".gitignore", "../.gitignore").readText()
+        assertTrue(".gitignore must ignore .jira_audit.log (REQ-PRO-124.2)", gitignoreContent.contains(".jira_audit.log"))
+
+        val ciSecretsContent = findRepoRootFile("docs/ci-secrets.md", "../docs/ci-secrets.md").readText()
+        assertTrue("docs/ci-secrets.md must document 0600 permissions (REQ-PRO-124.1)", ciSecretsContent.contains("0600"))
+        assertTrue(
+            "docs/ci-secrets.md must document check_secrets_hygiene.py (REQ-PRO-124.1)",
+            ciSecretsContent.contains("check_secrets_hygiene.py")
+        )
+    }
 }

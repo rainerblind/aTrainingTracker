@@ -156,6 +156,9 @@ jobs:
       - name: Verify static analysis baseline ratchet
         run: python3 tools/check_static_analysis_baselines.py --base-ref "${{ github.base_ref || 'develop' }}"
 
+      - name: Verify repository secret hygiene
+        run: python3 tools/check_secrets_hygiene.py
+
       - name: Build debug APK
         run: ./gradlew :app:assembleDebug
 

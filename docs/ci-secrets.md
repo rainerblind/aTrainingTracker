@@ -72,6 +72,20 @@ To comply with ASPICE SUP.8 (Finding B-03), keystore passwords are never stored 
    ```
 3. External config outside working tree: `~/.config/atrainingtracker/release.properties` (`chmod 600`).
 
+## Local Credential File Permissions & Secret Hygiene (REQ-PRO-124)
+
+Untracked local credential and signing files (`.env.claude`, `.env.gemini`, `.env.jira*`, `secrets.properties`, `release.properties`, `app/google-services.json`, `release.keystore`) MUST be restricted to owner-only permissions (`0600`) so other local users cannot read developer or Jira tokens:
+
+```bash
+# Verify local credential permissions (exits non-zero on permissive modes)
+python3 tools/check_secrets_hygiene.py --check-local-perms
+
+# Automatically tighten existing local credential files to 0600
+python3 tools/check_secrets_hygiene.py --fix-local-perms
+```
+
+Additionally, CI runs `python3 tools/check_secrets_hygiene.py` before assembling debug/release binaries to scan all tracked files (`git ls-files`) for real API keys, tokens, or private keys while allowlisting `secrets.defaults.properties` placeholders (`REQ-SEC-042`) and explicit unit test fixtures.
+
 ## Verifying the setup
 
 After adding secrets:

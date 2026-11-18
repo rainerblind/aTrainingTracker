@@ -1,14 +1,14 @@
 # Living Test Specification: Engineering Process, Stability & Architecture
 
 **Document ID**: `DOC-TST-PRO`  
-**Version**: 1.0.9  
+**Version**: 1.0.12  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Tests**: 227
+**Total Tests**: 228
 
 ---
 
@@ -3849,6 +3849,25 @@
 
 ---
 
+### TST-PRO-124: **Secret Hygiene, Local Credential Permissions & CI Secret-Pattern Scan Suite (ATT-8170)** [Verified]
+- **Requirement(s)**: `REQ-PRO-124`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Component**: `tools/check_secrets_hygiene.py`, `tools/test_check_secrets_hygiene.py`, `.gitignore`, `docs/ci-secrets.md`, `docs/engineering/walkthroughs/ATT-4004_walkthrough.md`, `.github/workflows/android-branch-build.yml`, `.github/workflows/android-release.yml`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ReleaseCiAndLintConfigContractTest.kt`
+- **Jira**: `ATT-8170`
+- **Test Description**:
+  1. *Local Credential File `0600` Permission Enforcement (`TST-PRO-124.1`, tools/test_check_secrets_hygiene.py & local workspace)*:
+     • *Given* isolated temporary credential fixtures (`.env.claude`, `.env.gemini`, `secrets.properties`, `release.properties`, `.env.jira*`) with `0644`/`0664` modes and live workstation credential files, *When* `tools/check_secrets_hygiene.py --check-local-perms` and `--fix-local-perms` execute, *Then* permissive files fail with non-zero exit code prior to remediation and exit `0` once tightened to `0600`, matching `docs/ci-secrets.md`.
+  2. *Git Ignore & Tracked Leak Redaction (`TST-PRO-124.2`, .gitignore & ATT-4004_walkthrough.md)*:
+     • *Given* updated `.gitignore` and `docs/engineering/walkthroughs/ATT-4004_walkthrough.md`, *When* inspected via `git check-ignore .jira_audit.log` and `tools/check_secrets_hygiene.py`, *Then* `.jira_audit.log` is ignored, `ATT-4004_walkthrough.md:L78-L81` contains redacted placeholders instead of real `BuildConfig.java` credentials, and an explicit PO key-rotation notice is logged.
+  3. *Deterministic Offline Secret-Pattern CI Scan & Allowlist (`TST-PRO-124.3`, tools/test_check_secrets_hygiene.py)*:
+     • *Given* offline `tempfile` fixtures containing synthetic real-looking credentials (`AIza...`, `AKIA...`, `ghp_...`, `ATATT3x...`, PEM private keys, non-placeholder `STRAVA_CLIENT_SECRET`) vs. allowlisted fixtures (`secrets.defaults.properties`, `app/build.gradle`, `ATT-4004_plan.md`, `StravaHelperTest.kt`, `tools/test_jira_accounts.py`), *When* `tools/check_secrets_hygiene.py` runs across both fixtures and live `git ls-files`, *Then* synthetic real secrets fail with exit code `1` while allowlisted placeholders/test fixtures and clean tracked files exit `0` (`Rule 5`: zero live API calls).
+  4. *CI Workflow Contract & Governance Regression (`TST-PRO-124.4`, ReleaseCiAndLintConfigContractTest.kt & verify_requirement_governance.py)*:
+     • *Given* `.github/workflows/android-branch-build.yml` and `.github/workflows/android-release.yml`, *When* `./gradlew testDebugUnitTest --tests "*ReleaseCiAndLintConfigContractTest*"` (`REQ-PRO-049.1`: zero `app/src/main/` reads) and `python3 tools/verify_requirement_governance.py` execute, *Then* `check_secrets_hygiene.py` precedes assembly in both workflows, preserved pins (`REQ-SEC-042`, `REQ-STP-008`, `REQ-PRO-123`) pass, and governance exits `0`. (`Localization Parity: N/A - no UI strings`).
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -3863,3 +3882,6 @@
 | `1.0.7` | 2026-11-17 | AI Agent (`ATT-8169`) | `ATT-8169` | Added `[Planned]` `TST-PRO-123` test specifications (CI custom safety guards, Detekt/Lint base-ref ratcheting + sprint metrics parity, `ReleaseCiAndLintConfigContractTest` preservation, Java static-analysis evaluation). |
 | `1.0.8` | 2026-11-17 | AI Agent (`ATT-8169`) | `ATT-8169` | Promoted `TST-PRO-123` to `[Implemented]` in Stage 4 (`test_check_static_analysis_baselines.py`, `sprint_metrics` tests, `ReleaseCiAndLintConfigContractTest`). |
 | `1.0.9` | 2026-11-18 | AI Agent (`ATT-8169`) | `ATT-8169` | Promoted `TST-PRO-123` to `[Verified]` after Stage 5 verification. |
+| `1.0.10` | 2026-11-18 | AI Agent (`ATT-8170`) | `ATT-8170` | Added `[Planned]` `TST-PRO-124` test specifications (`0600` credential permissions, `.jira_audit.log` gitignore, `ATT-4004_walkthrough.md` redaction + PO rotation notice, offline CI secret-pattern scan & contract tests). |
+| `1.0.11` | 2026-11-18 | AI Agent (`ATT-8170`) | `ATT-8170` | Promoted `TST-PRO-124` to `[Implemented]` in Stage 4 (`tools/test_check_secrets_hygiene.py`, `ReleaseCiAndLintConfigContractTest`, `0600` local verification). |
+| `1.0.12` | 2026-11-18 | AI Agent (`ATT-8170`) | `ATT-8170` | Promoted `TST-PRO-124` to `[Verified]` after Stage 5 verification (`6/6` `test_check_secrets_hygiene.py`, `476/476` Python suite, `46/46` Gradle contract tests, governance `exit 0`). |
