@@ -164,17 +164,18 @@ class WorkoutClusterApexTest {
         every { mockDbManager.updateCluster(capture(slot)) } just Runs
 
         // Delete workout with apex (48.030, 9.030)
-        val workoutToDelete = mockk<WorkoutData>(relaxed = true)
-        every { workoutToDelete.id } returns 103L
-        every { workoutToDelete.clusterId } returns 42L
-        every { workoutToDelete.startLatLng } returns LatLng(48.0, 9.0)
-        every { workoutToDelete.endLatLng } returns LatLng(48.0, 9.0)
-        every { workoutToDelete.maxDisplacementLatLng } returns LatLng(48.030, 9.030)
-        every { workoutToDelete.totalDistance } returns 10000.0
-        every { workoutToDelete.minLat } returns 47.5
-        every { workoutToDelete.maxLat } returns 48.5
-        every { workoutToDelete.minLng } returns 8.5
-        every { workoutToDelete.maxLng } returns 9.5
+        val workoutToDelete = ClusterWorkoutSnapshot(
+            id = 103L,
+            clusterId = 42L,
+            startLatLng = LatLng(48.0, 9.0),
+            endLatLng = LatLng(48.0, 9.0),
+            maxDisplacementLatLng = LatLng(48.030, 9.030),
+            totalDistance = 10000.0,
+            minLat = 47.5,
+            maxLat = 48.5,
+            minLng = 8.5,
+            maxLng = 9.5
+        )
 
         clusterEngine.onWorkoutDeleted(mockContext, workoutToDelete)
 

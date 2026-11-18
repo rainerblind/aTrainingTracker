@@ -1,14 +1,14 @@
 # Living Test Specification: Engineering Process, Stability & Architecture (Part 2 of 2)
 
 **Document ID**: `DOC-TST-PRO-P2`  
-**Version**: 1.0.3  
+**Version**: 1.0.6  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `process_stability_part2`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Tests**: 85
+**Total Tests**: 86
 
 ---
 
@@ -1455,6 +1455,25 @@
 
 ---
 
+### TST-PRO-130: **SWE.2 Heap/Cache/Map Budgets, Bounded HRV Threshold Cache, Subsystem Parity & IF-SWE-05 Upward-Import Ratchet Suite (ATT-8202)** [Verified]
+- **Requirement(s)**: `REQ-PRO-130`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Component**: `docs/architecture.md`, `docs/architecture/interfaces.md`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/WorkoutRepository.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/ClusterWorkoutDataAdapter.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/database/ClusterWorkoutDataPort.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/database/WorkoutClusterEngine.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ArchitectureConformanceContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/InterfaceSignatureDriftContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/AspiceSweAuditContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/NonFunctionalRequirementsContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SystemArchitectureDesignContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/ui/aftermath/WorkoutRepositoryHrvConsensusTest.kt`
+- **Jira**: `ATT-8202`
+- **Test Description**:
+  1. *SWE.2 Heap, Cache, Vertex & GoogleMap Budgets + Bounded `recentHrvThresholdsCache` (`TST-PRO-130.1`, `WorkoutRepository*Test` & Contract Tests)*:
+     • *Given* `docs/architecture.md` §4.9 documenting quantitative bounds and lifecycle cleanup for `WorkoutRepository` (`MAX_OVERLAY_POINTS = 800`, lazy track loading, bounded `recentHrvThresholdsCache`), `PeriodsRepository`/`PeriodMapUtils` (`MAX_SUMMARY_THUMBNAIL_TRACKS = 8`, `<= 5` spatial anchors, `recentlyFinishedWorkoutIds <= 50`, `LruCache(64)`, `2_000`/`8_000` vertices, empty `workoutIdToPathMap`/`workoutIdToAllPolylinesMap`), `RadarStateRepository` (`<= 4` `RadarSource`), `WorkoutClusterRepository` (`extraBufferCapacity = 16`), and `GoogleMap` (`liteMode(true)` thumbnails + `beyondViewportPageCount = 0` GL isolation), *When* behavioral unit tests (`WorkoutRepository*Test`) insert beyond the cache cap or delete/refresh workouts and `ArchitectureConformanceContractTest`, `NonFunctionalRequirementsContractTest`, and `SystemArchitectureDesignContractTest` run, *Then* `recentHrvThresholdsCache` evicts deterministically without OOM, `WorkoutRepository.kt <= 5,117` LoC holds, and all §4.9 / `REQ-NFR-003`..`014` contract assertions pass `100%`. Tag tests with `TST-PRO-130.1`.
+  2. *Swim/RadarLight/TPMS/Polar PFTP Coverage & Truthful `IF-SWE-05` Parity (`TST-PRO-130.2`, `InterfaceSignatureDriftContractTest.kt` & `AspiceSweAuditContractTest.kt`)*:
+     • *Given* `docs/architecture.md` (§2, §5.1) and `docs/architecture/interfaces.md` documenting Swim, RadarLight, TPMS, Polar PFTP, and truthful `IF-SWE-05` boundaries (distinguishing `Context`/SQLite-backed `WorkoutClusterEngine` `<= 1,635` LoC from pure-JVM calculators), *When* `InterfaceSignatureDriftContractTest` and `AspiceSweAuditContractTest` execute, *Then* `100%` of documented signatures match compiled bytecode via JVM reflection with zero `src/main/` text reads. Tag tests with `TST-PRO-130.2`.
+  3. *Full `.ui.*` Database Upward-Import Ratchet & Tripwire (`TST-PRO-130.3`, `ArchitectureConformanceContractTest.kt`)*:
+     • *Given* `ArchitectureConformanceContractTest` scanning `trainingtracker/database/` and `banalservice/database/` using `\bcom\.atrainingtracker\..*\.ui\b` against the ratcheted legacy baseline (excluding decoupled `WorkoutClusterEngine -> WorkoutRepository`), *When* executed against the live tree and a negative tripwire importing `com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository`, *Then* the live tree passes with `0` unallowlisted upward imports, `0` stale baseline entries, `banalservice/database/` == `0`, and the tripwire detects `ui.aftermath` deterministically. Tag tests with `TST-PRO-130.3`.
+  4. *Monolith Ceiling, Governance & Shard-Size Invariants (`TST-PRO-130.4`, `SourceTextReadingAuditContractTest` & `verify_requirement_governance.py`)*:
+     • *Given* `WorkoutRepository.kt <= 5,117` LoC, `WorkoutClusterEngine.kt <= 1,635` LoC, `LEGITIMATE_GOVERNANCE_GUARDS == 22`, `app/source-reading-baseline.txt == 105`, and all `28` living-doc shards `<= 4,000` lines, *When* `SourceTextReadingAuditContractTest`, `shard_living_docs.py --check-size --strict`, and `verify_requirement_governance.py` execute, *Then* all invariants pass and governance exits `0` (`Localization Parity: N/A - no UI strings`).
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -1463,3 +1482,6 @@
 | `1.0.1` | 2026-11-18 | AI Agent (`ATT-8203`) | `ATT-8203` | Added `[Planned]` `TST-PRO-129` test specifications (`ATT-8203_test_spec.md`). |
 | `1.0.2` | 2026-11-18 | AI Agent (`ATT-8203`) | `ATT-8203` | Promoted `TST-PRO-129` to `[Implemented]` in Stage 4 (`JavaCoreMigrationStrategyContractTest.kt`, `ArchitectureConformanceContractTest.kt`, `DetailedDesignParityContractTest.kt`, `tools/test_verify_requirement_governance.py`). |
 | `1.0.3` | 2026-11-18 | AI Agent (`ATT-8203`) | `ATT-8203` | Promoted `TST-PRO-129` to `[Verified]` after Stage 5 verification (`35/35` Gradle contract tests across 6 suites, `TestLivingDocDirectoryLayout` `4/4` PASS, `28/28` shards `<= 4,000` lines, `TST-PRO-129` evidence `True`, governance `exit 0`). |
+| `1.0.4` | 2026-11-18 | AI Agent (`ATT-8202`) | `ATT-8202` | Added `[Planned]` `TST-PRO-130` test specifications (`ATT-8202_test_spec.md`: SWE.2 heap/cache/map budgets & bounded `recentHrvThresholdsCache`, Swim/RadarLight/TPMS/Polar PFTP & `IF-SWE-05` parity, full `.ui.*` upward-import ratchet, monolith & governance invariants). |
+| `1.0.5` | 2026-11-18 | AI Agent (`ATT-8202`) | `ATT-8202` | Promoted `TST-PRO-130` to `[Implemented]` in Stage 4 (`WorkoutRepositoryHrvConsensusTest.kt`, `ArchitectureConformanceContractTest.kt`, `InterfaceSignatureDriftContractTest.kt`, `WorkoutCluster*Test`). |
+| `1.0.6` | 2026-11-18 | AI Agent (`ATT-8202`) | `ATT-8202` | Promoted `TST-PRO-130` to `[Verified]` after Stage 5 verification (`47/47` targeted contract & component XML suites `242/242` PASS; `DeadCodeEliminationContractTest` `4/5` with pre-existing `EditDeviceDialog.kt` `internal @Preview`; `:app:lintDebug` `0` errors). |

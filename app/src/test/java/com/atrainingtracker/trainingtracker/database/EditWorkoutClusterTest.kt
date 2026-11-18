@@ -26,6 +26,7 @@ import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.ExtremaType
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
+import com.atrainingtracker.trainingtracker.ui.aftermath.toClusterWorkoutSnapshot
 import com.google.android.gms.maps.model.LatLng
 import io.mockk.*
 import org.junit.After
@@ -290,7 +291,7 @@ class EditWorkoutClusterTest {
         every { mockSummariesManager.getString(workoutId, WorkoutSummaries.FILE_BASE_NAME) } returns "track_101"
         every { mockSummariesDb.update(any(), any(), any(), any()) } returns 1
 
-        val resultId = clusterEngine.createNewClusterFromWorkout(mockContext, dummyWorkout, "My Lake Route")
+        val resultId = clusterEngine.createNewClusterFromWorkout(mockContext, dummyWorkout.toClusterWorkoutSnapshot(), "My Lake Route")
 
         assertEquals(newGeneratedClusterId, resultId)
         val insertedSlot = slot<WorkoutCluster>()
@@ -455,7 +456,7 @@ class EditWorkoutClusterTest {
         every { mockSummariesManager.getString(workoutId, WorkoutSummaries.FILE_BASE_NAME) } returns "track_102"
         every { mockSummariesDb.update(any(), any(), any(), any()) } returns 1
 
-        val resultId = clusterEngine.createNewClusterFromWorkout(mockContext, dummyWorkout, "Forest Loop")
+        val resultId = clusterEngine.createNewClusterFromWorkout(mockContext, dummyWorkout.toClusterWorkoutSnapshot(), "Forest Loop")
         assertEquals(newClusterId, resultId)
 
         // Verifies that forceIdentity = true updated WORKOUT_NAME to the cluster's formatted name ("Forest Loop" for 1st hit)
@@ -535,7 +536,7 @@ class EditWorkoutClusterTest {
 
         val resultId = clusterEngine.createNewClusterFromWorkout(
             context = mockContext,
-            workout = dummyWorkout,
+            workout = dummyWorkout.toClusterWorkoutSnapshot(),
             customName = "Forest Loop",
             customWorkoutName = "My Custom Typed Name"
         )

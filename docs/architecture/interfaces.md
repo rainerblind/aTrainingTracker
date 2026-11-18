@@ -1,7 +1,7 @@
 # Software Interface Specifications: aTrainingTracker (ASPICE 4.0 SWE.2.BP1)
 
 **Document ID**: `DOC-ARC-IF`  
-**Version**: 1.0.0  
+**Version**: 1.0.1  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -17,9 +17,9 @@ Each architectural interface defines its provider, consumer, operations, data sc
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | `IF-SWE-01` | UI $\to$ ViewModel | ViewModels (`TrackingViewModel`, `TrackOnMapAftermathViewModel`) | Jetpack Compose Composables | Unidirectional MVI / `StateFlow` | `Dispatchers.Main` |
 | `IF-SWE-02` | ViewModel $\to$ Repository | Repositories (`WorkoutRepository`, `BANALServiceRepository`) | ViewModels | Asynchronous Coroutines (`suspend fun`) | `Dispatchers.IO` |
-| `IF-SWE-03` | Inter-Service Ingestion | `BANALServiceComm` (Local Binder on `BANALService`) | `TrackerService` | Android Local Binder IPC & Broadcasts | Service Thread / Binder Pool |
-| `IF-SWE-04` | Hardware $\to$ Services | Hardware HAL (BLE Gatt, ANT+ Plugin, Location Provider) | `BANALService`, `TrackerService` | System Callbacks (`onCharacteristicChanged`) | Hardware Callback Thread |
-| `IF-SWE-05` | Service/Repo $\to$ Domain | Domain Calculators (`AutoPauseManager`, `ClimbDetector`) | Services & Repositories | Pure JVM Synchronous Methods | Caller Thread (`Dispatchers.IO`) |
+| `IF-SWE-03` | Inter-Service Ingestion | `BANALServiceComm` (Local Binder on `BANALService`), `RadarLightController`, `IndirectTpmsEstimator`, `DualWheelTpmsEstimator` | `TrackerService`, `BANALService` | Android Local Binder IPC, Broadcasts & Sensor Estimators | Service Thread / Binder Pool |
+| `IF-SWE-04` | Hardware $\to$ Services | Hardware HAL (BLE Gatt, ANT+ Plugin, Location Provider, Polar PFTP/PMD via `PolarOfflineGattCoordinator`) | `BANALService`, `TrackerService`, `PolarH10OfflineController`, `PolarVeritySenseOfflineController`, `PolarOnlineStreamingBridge` | System Callbacks (`onCharacteristicChanged`) & Polar BleApi | Hardware Callback Thread / `Dispatchers.IO` |
+| `IF-SWE-05` | Service/Repo $\to$ Domain & Clustering | Pure JVM Calculators (`AutoPauseManager`, `PowerPhysiologyCalculator`, `PowerHrDynamicsCalculator`, `ClimbDetector`) + SQLite/Context Engine (`WorkoutClusterEngine` via `ClusterWorkoutDataPort`) | Services, Repositories & `ClusterWorkoutDataPort` | Pure JVM Synchronous Methods (Calculators) & Synchronized Port/SQLite (`clusterLock`) | Caller Thread (`Dispatchers.IO` for Clustering/DB) |
 | `IF-SWE-06` | Service/Repo $\to$ SQLite | Database Managers (`WorkoutSamplesDatabaseManager`) | `TrackerService`, Repositories | SQLite WAL Mode & Synchronized Transactions | `dbDispatcher` / `Dispatchers.IO` |
 | `IF-SWE-07` | Repository $\to$ Exporters | Exporters (`FitFileWriter`, `GPXFileWriter`, `TCXFileWriter`) | `ExportManager`, `WorkoutRepository` | Streaming File Writers & Serializers | `Dispatchers.IO` (WorkManager) |
 | `IF-SWE-08` | Repository $\to$ Cloud APIs | Cloud Endpoints (`StravaUploader`, `HealthConnectManager`, `HealthConnectHrvImporter`) | `ExportManager`, UI Controllers, `HrvReadinessRepository` | REST (OkHttp) & HealthConnectClient | `Dispatchers.IO` (WorkManager) |
@@ -57,6 +57,7 @@ Each architectural interface defines its provider, consumer, operations, data sc
   * `suspend fun loadWorkout(id: Long)`: Asynchronously loads workout entity into active memory (`WorkoutRepository`).
   * `fun getWorkoutById(id: Long): Flow<WorkoutData?>`: Reactive stream of workout record and live database updates (`WorkoutRepository`).
   * `fun saveWorkout(userEditedWorkout: WorkoutData?)`: Transactional update of workout metadata (`WorkoutRepository`).
+  * `suspend fun recalculateSwimWorkout(workoutId: Long, poolLengthMeters: Double, lengthCount: Int): Boolean`: Recalculates pool swim distance, pace, and extrema (`SwimWorkoutAdjustCard` / `SwimmingSection` workflow) (`WorkoutRepository`).
   * `fun updateExtremaValue(workoutId: Long, sensorType: SensorType, extremaType: ExtremaType, value: Double, position: LatLng? = null)`: Records updated sensor extremum with 6-param `(..., count: Int?)` overload (`WorkoutRepository`).
   * `val allFilteredSensorData: StateFlow<List<FilteredSensorData<*>>>`: Hot shared flow of live filtered sensor telemetry (`BANALServiceRepository`).
 * **Data Payloads / Schemas**:
@@ -67,12 +68,15 @@ Each architectural interface defines its provider, consumer, operations, data sc
   * Null-safe queries returning `null` or empty collections rather than throwing unchecked runtime exceptions.
   * Sealed `Result<T>` hierarchies for network-backed repository operations.
 
-### 2.3 IF-SWE-03: Service Layer Inter-Service Communication (TrackerService $\leftrightarrow$ BANALService)
-* **Provider**: `BANALServiceComm` (Local Binder exposed by `BANALService`).
-* **Consumer**: `TrackerService`.
+### 2.3 IF-SWE-03: Service Layer Inter-Service Communication (TrackerService $\leftrightarrow$ BANALService, RadarLight & TPMS)
+* **Provider**: `BANALServiceComm` (Local Binder exposed by `BANALService`), `RadarLightController` (`SmartRadarLightEngine`, `SmartBrakeLightDetector`), `IndirectTpmsEstimator`, and `DualWheelTpmsEstimator`.
+* **Consumer**: `TrackerService`, `BANALService`, and `RadarLightDeviceClient`.
 * **Operations / Method Signatures**:
   * `fun getAllFilteredSensorData(): List<FilteredSensorData<?>>`: 1-Hz batch poll of active physical/virtual sensors (`BANALServiceComm`).
   * `fun getBestSensorData(sensorType: SensorType): SensorData`: Priority-resolved single metric query (`BANALServiceComm`).
+  * `fun setLightMode(mode: RadarLightMode): Boolean`: Dispatches debounced tail-light mode selection to `RadarLightDeviceClient` (`RadarLightController`).
+  * `fun onGatedStep(dist3dMeters: Double, wheelRevDelta: Double): IndirectTpmsEstimator.TpmsAlertResult?`: Evaluates single-wheel CUSUM deflation/puncture drift (`IndirectTpmsEstimator`).
+  * `fun processTelemetry(frontDistanceMeters: Double, rearDistanceMeters: Double, speedMps: Double, yawRateRadPerSec: Double, frontCalibrationMeters: Double = ..., rearCalibrationMeters: Double = ...): DualWheelTpmsEstimator.DualWheelTpmsAlert?`: Evaluates dual-wheel differential puncture alerts (`DualWheelTpmsEstimator`).
   * `Intent(RESET_ACCUMULATORS_INTENT)` / `Intent(REQUEST_PAUSE_TRACKING)`: IPC action broadcast signaling.
 * **Data Payloads / Schemas**:
   * `SensorData<T>` and `FilteredSensorData` holding timestamp, raw value, smoothed value, and sensor address.
@@ -83,13 +87,15 @@ Each architectural interface defines its provider, consumer, operations, data sc
   * Volatile Binder reference guarded by null checks (`if (mBanalComm != null)`).
   * Graceful fallback when `BANALService` is unbinding or restarting during background telemetry interruptions.
 
-### 2.4 IF-SWE-04: Hardware & Sensors to Service Layer
-* **Provider**: Android Bluetooth LE subsystem, ANT+ Plugin API, and Google Play Fused Location Provider.
-* **Consumer**: `BANALService` and `TrackerService`.
+### 2.4 IF-SWE-04: Hardware & Sensors to Service Layer (incl. Polar PFTP & PMD)
+* **Provider**: Android Bluetooth LE subsystem, ANT+ Plugin API, Google Play Fused Location Provider, and Polar BleApi PFTP/PMD (`PolarOfflineGattCoordinator`).
+* **Consumer**: `BANALService`, `TrackerService`, `PolarH10OfflineController`, `PolarVeritySenseOfflineController`, and `PolarOnlineStreamingBridge`.
 * **Operations / Method Signatures**:
   * `BluetoothGattCallback.onCharacteristicChanged(...)`: Raw GATT characteristic byte notification.
   * `AntPluginPcc.IPluginAccessResultReceiver`: ANT+ channel establishment and event delivery.
   * `LocationListener.onLocationChanged(Location)`: GPS / Fused Location coordinate packet.
+  * `fun stopAndBackfillWorkoutBlocking(context: Context, workoutId: Long, baseFileName: String, startTimeMs: Long = ...): Boolean`: Stops Polar PFTP offline flash recording and backfills missing HR/RR telemetry (`PolarH10OfflineController`) (`PolarVeritySenseOfflineController`).
+  * `fun getAddress(): String`: Exposes persistent BLE MAC address for single-GATT PMD live streaming arbitration (`PolarOnlineStreamingBridge`).
 * **Data Payloads / Schemas**:
   * Bluetooth SIG GATT byte streams (Heart Rate Measurement `0x2A37`, Cycling Power `0x2A63`, RSC `0x2A53`).
   * Android `android.location.Location` objects (latitude, longitude, altitude, speed, bearing, accuracy).
@@ -99,20 +105,24 @@ Each architectural interface defines its provider, consumer, operations, data sc
   * Exponential backoff for GATT reconnection; automated fallback to secondary sensors when primary packets timeout (> 3.5s).
   * Runtime permission checks (`ACCESS_FINE_LOCATION`, `BLUETOOTH_SCAN`) prevent security crashes.
 
-### 2.5 IF-SWE-05: Services & Repositories to Domain Calculators
-* **Provider**: Pure JVM Domain Calculators (`AutoPauseManager`, `PowerPhysiologyCalculator`, `PowerHrDynamicsCalculator`, `WorkoutClusterEngine`, `ClimbDetector`).
-* **Consumer**: `TrackerService`, `WorkoutRepository`, `LiveSegmentsRepository`.
+### 2.5 IF-SWE-05: Services & Repositories to Domain Calculators & Route Clustering
+* **Provider**:
+  * Pure JVM Domain Calculators (`AutoPauseManager`, `PowerPhysiologyCalculator`, `PowerHrDynamicsCalculator`, `ClimbDetector`).
+  * Android/SQLite Spatial Clustering Engine (`WorkoutClusterEngine` in `database/`, holding `appContext` and `clusterLock`, persisting clusters via `WorkoutClusterRepository` and workout summaries via `ClusterWorkoutDataPort`).
+* **Consumer**: `TrackerService`, `WorkoutRepository`, `LiveSegmentsRepository`, and `WorkoutClusterRepository` (implementing/bridging `ClusterWorkoutDataPort` without upward `database -> ui.*` imports).
 * **Operations / Method Signatures**:
   * `fun evaluateTick(currentSpeedMps: Double?, packetTimestampMs: Long, currentTimestampMs: Long, sportType: BSportType, config: AutoPauseConfig, manualPauseLocked: Boolean, hasSpeedSource: Boolean = ...): AutoPauseTransition`: Evaluates debounce auto-pause (`AutoPauseManager`).
   * `fun calculateNormalizedPower(powerSamplesWatts: List<Double?>, sampleIntervalSec: Double = 1.0): Double?`: Computes 30s Coggan rolling weighted power (`PowerPhysiologyCalculator`).
   * `fun calculate(powerSamples: List<Double?>?, hrSamples: List<Double?>?, workoutId: Long = 0L, dt: Double = 1.0, timestampsSec: List<Long>? = null): CardioPowerDynamicsRecord?`: Identifies 1st-order Output-Error dynamical Power-HR parameters and cardiac drift (`PowerHrDynamicsCalculator`).
   * `fun suggestCluster(start: LatLng, end: LatLng, apex: LatLng, distance: Double, workoutName: String? = null, candidateSportTypes: Set<BSportType>, minAltPos: LatLng? = null, maxAltPos: LatLng? = null, cachedClusters: List<WorkoutCluster>? = null, scoreThreshold: Double = ..., workoutPolyline: List<LatLng>? = null): WorkoutCluster?`: Spatial route cluster suggestion for completed workout (`WorkoutClusterEngine`).
   * `fun findApexFromPoints(start: LatLng, points: List<LatLng>, end: LatLng? = null): LatLng`: Determines furthest apex waypoint from route polyline (`WorkoutClusterEngine`).
+  * `fun getWorkoutClusterId(workoutId: Long): Long`: Queries workout-to-cluster assignment across the decoupled persistence boundary (`ClusterWorkoutDataPort`).
   * `fun detectClimbs(points: List<PathPoint>, minLengthMeters: Double = ..., minGradePercent: Double = ..., minGainMeters: Double = ..., routeId: Long? = null, context: Context? = null): List<Climb>`: Detects steep climb segments from workout elevation profile (`ClimbDetector`).
 * **Data Payloads / Schemas**:
-  * `AutoPauseTransition`, `CardioPowerDynamicsRecord`, `WorkoutCluster`, `LatLng`, `PathPoint`, `Climb`, and Skiba $W'_{\text{bal}}$ parameters.
+  * `AutoPauseTransition`, `CardioPowerDynamicsRecord`, `WorkoutCluster`, `ClusterWorkoutSnapshot`, `LatLng`, `PathPoint`, `Climb`, and Skiba $W'_{\text{bal}}$ parameters.
 * **Concurrency & Threading**:
-  * Synchronous execution on caller thread; stateless mathematical calculations ensuring strict re-entrancy and thread safety.
+  * Pure JVM calculators execute synchronously and statelessly on caller thread (strict re-entrancy).
+  * `WorkoutClusterEngine` synchronizes stateful cluster/SQLite mutations under `clusterLock` on `Dispatchers.IO` / background executor threads via `ClusterWorkoutDataPort`.
 * **Error Handling & Fault Tolerance**:
   * Guarded against division-by-zero (`Double.NaN` / `Double.POSITIVE_INFINITY` prevention).
   * Post-trim emptiness checks in moving-average and sliding-window accumulators.
@@ -170,3 +180,4 @@ Each architectural interface defines its provider, consumer, operations, data sc
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
 | `1.0.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Added standardized `DOC-ARC-IF` work-product control header and Change History. |
+| `1.0.1` | 2026-11-18 | AI Agent (`ATT-8202`) | `ATT-8202` | Documented Swim (`recalculateSwimWorkout`), RadarLight (`RadarLightController`), TPMS (`IndirectTpmsEstimator`, `DualWheelTpmsEstimator`), Polar PFTP/PMD (`PolarH10OfflineController`, `PolarVeritySenseOfflineController`, `PolarOnlineStreamingBridge`), and truthful `IF-SWE-05` persistence/callback boundary (`WorkoutClusterEngine` + `ClusterWorkoutDataPort`) (`REQ-PRO-130.2`). |

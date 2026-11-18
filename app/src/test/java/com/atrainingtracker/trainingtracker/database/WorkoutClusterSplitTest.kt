@@ -22,6 +22,7 @@ import android.util.Log
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
+import com.atrainingtracker.trainingtracker.ui.aftermath.toClusterWorkoutSnapshot
 import com.google.android.gms.maps.model.LatLng
 import io.mockk.*
 import org.junit.After
@@ -181,7 +182,7 @@ class WorkoutClusterSplitTest {
         }
 
         // Split off w3 and w4 into a variant
-        val variantToSplit = listOf("Commute var 2" to listOf(w3, w4))
+        val variantToSplit = listOf("Commute var 2" to listOf(w3.toClusterWorkoutSnapshot(), w4.toClusterWorkoutSnapshot()))
         val createdIds = clusterEngine.splitCluster(mockContext, primaryId, variantToSplit, renameWorkouts = true)
 
         assertEquals(listOf(newClusterId), createdIds)

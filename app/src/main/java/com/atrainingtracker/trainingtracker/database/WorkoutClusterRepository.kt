@@ -644,10 +644,33 @@ class WorkoutClusterRepository internal constructor(
         variantsToSplit: List<Pair<String, List<WorkoutData>>>,
         renameWorkouts: Boolean = true
     ): List<Long> = withContext(Dispatchers.IO) {
+        val snapshotVariants = variantsToSplit.map { (name, workouts) ->
+            name to workouts.map { w ->
+                ClusterWorkoutSnapshot(
+                    id = w.id,
+                    finished = w.finished,
+                    clusterId = w.clusterId,
+                    sportId = w.sportId,
+                    workoutName = w.workoutName,
+                    totalDistance = w.totalDistance,
+                    startTimeS = w.startTimeS,
+                    mapPolyline = w.mapPolyline,
+                    startLatLng = w.startLatLng,
+                    endLatLng = w.endLatLng,
+                    maxDisplacementLatLng = w.maxDisplacementLatLng,
+                    minLat = w.minLat,
+                    minLng = w.minLng,
+                    maxLat = w.maxLat,
+                    maxLng = w.maxLng,
+                    minAltitudeLatLng = w.minAltitudeLatLng,
+                    maxAltitudeLatLng = w.maxAltitudeLatLng
+                )
+            }
+        }
         val createdClusterIds = WorkoutClusterEngine.getInstance(context).splitCluster(
             context = context,
             primaryClusterId = primaryClusterId,
-            variantsToSplit = variantsToSplit,
+            variantsToSplit = snapshotVariants,
             renameWorkouts = renameWorkouts
         )
         refreshClusters()

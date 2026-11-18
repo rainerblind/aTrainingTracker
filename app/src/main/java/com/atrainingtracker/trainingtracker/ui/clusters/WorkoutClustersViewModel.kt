@@ -45,6 +45,7 @@ import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataWithTrack
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
+import com.atrainingtracker.trainingtracker.ui.aftermath.toClusterWorkoutSnapshot
 import com.atrainingtracker.trainingtracker.ui.map.*
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.PolyUtil
@@ -675,7 +676,7 @@ class WorkoutClustersViewModel @JvmOverloads constructor(
     fun createNewClusterFromWorkout(workout: WorkoutData) {
         viewModelScope.launch(Dispatchers.IO) {
             WorkoutClusterEngine.getInstance(getApplication())
-                .createNewClusterFromWorkout(getApplication(), workout)
+                .createNewClusterFromWorkout(getApplication(), workout.toClusterWorkoutSnapshot())
             repository.refreshClusters()
             _selectedCluster.value?.let { current ->
                 _clusterWorkouts.value = repository.getWorkoutsForCluster(current.id)

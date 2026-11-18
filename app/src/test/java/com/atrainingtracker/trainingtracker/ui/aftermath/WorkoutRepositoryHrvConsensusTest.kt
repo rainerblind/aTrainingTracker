@@ -238,4 +238,59 @@ class WorkoutRepositoryHrvConsensusTest {
         assertEquals(1, thirdResults.size)
         coVerify(exactly = 2) { repository.getWorkoutTelemetryPoints(201L) }
     }
+
+    /**
+     * Verifies bounded LruCache(64) eviction and lifecycle cleanup on delete/reset (REQ-PRO-130.1, TST-PRO-130.1).
+     */
+    // Linked test specs: TST-PRO-130.1
+    @Test
+    fun testRecentHrvThresholdsCache_enforcesLru64CapAndLifecycleEviction() = runBlocking {
+        val totalWorkouts = WorkoutRepository.HRV_THRESHOLD_CACHE_SIZE + 6 // 70 > 64
+        val workouts = (1L..totalWorkouts.toLong()).map { id ->
+            createWorkout(id, startTimeS = nowEpochS - (id % 20 + 1) * 3600L)
+        }
+        val allWorkoutsField = WorkoutRepository::class.java.getDeclaredField("_allWorkouts")
+        allWorkoutsField.isAccessible = true
+        @Suppress("UNCHECKED_CAST")
+        val flow = allWorkoutsField.get(repository) as MutableStateFlow<List<WorkoutData>>
+        val pts = createTelemetryPointsWithHrvAndPower()
+        workouts.forEach { coEvery { repository.getWorkoutTelemetryPoints(it.id) } returns pts }
+
+        // Populate entries one by one in ascending ID order so IDs 1..6 become LRU
+        for (w in workouts) {
+            flow.value = listOf(w)
+            val res = repository.getRecentHrvSessionThresholds(currentWorkoutId = 999L, referenceTimestampMs = nowEpochMs)
+            assertEquals(1, res.size)
+        }
+
+        // Cache size must remain strictly capped at 64
+        assertEquals(WorkoutRepository.HRV_THRESHOLD_CACHE_SIZE, repository.getHrvThresholdsCacheSize())
+
+        // Re-querying oldest ID (1L) must miss evicted entry and recompute telemetry (2nd call),
+        // whereas querying newest ID (70L) must hit cache (still 1 call).
+        flow.value = listOf(workouts.last())
+        repository.getRecentHrvSessionThresholds(currentWorkoutId = 999L, referenceTimestampMs = nowEpochMs)
+        coVerify(exactly = 1) { repository.getWorkoutTelemetryPoints(totalWorkouts.toLong()) }
+
+        flow.value = listOf(workouts.first())
+        repository.getRecentHrvSessionThresholds(currentWorkoutId = 999L, referenceTimestampMs = nowEpochMs)
+        coVerify(exactly = 2) { repository.getWorkoutTelemetryPoints(1L) }
+
+        // deleteWorkoutSummary, deleteWorkoutCascade, and resetForTesting must evict entries cleanly
+        repository.deleteWorkoutSummary(totalWorkouts.toLong())
+        assertEquals(WorkoutRepository.HRV_THRESHOLD_CACHE_SIZE - 1, repository.getHrvThresholdsCacheSize())
+
+        mockkStatic(com.atrainingtracker.trainingtracker.database.LapsDatabaseManager::class)
+        every { com.atrainingtracker.trainingtracker.database.LapsDatabaseManager.getInstance(any()) } returns mockk(relaxed = true)
+        every { mockSummariesDb.getBaseFileName(totalWorkouts.toLong() - 1L) } returns null
+
+        repository.deleteWorkoutCascade(totalWorkouts.toLong() - 1L)
+        assertEquals(WorkoutRepository.HRV_THRESHOLD_CACHE_SIZE - 2, repository.getHrvThresholdsCacheSize())
+
+        repository.refreshWorkout(totalWorkouts.toLong() - 2L)
+        assertEquals(WorkoutRepository.HRV_THRESHOLD_CACHE_SIZE - 3, repository.getHrvThresholdsCacheSize())
+
+        WorkoutRepository.resetForTesting(null)
+        assertEquals(0, repository.getHrvThresholdsCacheSize())
+    }
 }
