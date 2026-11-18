@@ -1,7 +1,7 @@
 # aTrainingTracker: Living Test Specification & Verification Plan (Master Index)
 
 **Document ID**: `DOC-TST-INDEX`  
-**Version**: 1.0.28  
+**Version**: 1.0.29  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -56,3 +56,4 @@ Living test specifications use multi-line Markdown headings (`### TST-XXX: Title
 | `1.0.26` | 2026-11-18 | AI Agent (`ATT-8204`) | `ATT-8204` | Promoted `TST-PRO-062` to `[Implemented]` in Stage 4 (`tools/test_jira_accounts.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`, `tools/test_verify_requirement_governance.py`). |
 | `1.0.27` | 2026-11-18 | AI Agent (`ATT-8204`) | `ATT-8204` | Promoted `TST-PRO-062` to `[Verified]` after Stage 5 verification (`4/4` ATT-8204 tests PASS, `TST-PRO-062` evidence `True`, `3979/4000` lines, governance `exit 0`). |
 | `1.0.28` | 2026-11-18 | AI Agent (`ATT-8679`) | `ATT-8679` | Updated `TST-TRK-062` & `TST-TRK-064` [Verified] (`126/126` unit/Compose UI PASS, `:app:lintDebug` `0` errors, `Rule 8.5` PNG). |
+| `1.0.29` | 2026-11-18 | AI Agent (`ATT-8748`) | `ATT-8748` | Updated `TST-UI-493` [Verified] (`ClusterItemThumbnailComposeTest` + `151/151` PASS + `Rule 8.5` PNG). |

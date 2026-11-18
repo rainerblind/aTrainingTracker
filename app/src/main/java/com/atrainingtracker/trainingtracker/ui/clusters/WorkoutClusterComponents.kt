@@ -15,6 +15,7 @@
 
 package com.atrainingtracker.trainingtracker.ui.clusters
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
@@ -35,16 +36,25 @@ import androidx.compose.foundation.background
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalInspectionMode
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
@@ -57,10 +67,12 @@ import com.atrainingtracker.trainingtracker.ui.components.MetricItem
 import com.atrainingtracker.trainingtracker.ui.map.DarkMapAntiFlashOverlay
 import com.atrainingtracker.trainingtracker.ui.map.DarkMapStyle
 import com.atrainingtracker.trainingtracker.ui.map.createSensorMarker
+import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMapOptions
+import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.JointType
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
@@ -70,6 +82,76 @@ import com.google.maps.android.compose.*
 import androidx.compose.material.icons.filled.EmojiEvents
 import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterStats
+
+/** Standard landscape map preview width in dp (`REQ-UI-493.3`, `ATT-8748`). */
+internal const val THUMBNAIL_WIDTH_DP = 175
+
+/** Standard landscape map preview height in dp (`REQ-UI-493.3`, `ATT-8748`). */
+internal const val THUMBNAIL_HEIGHT_DP = 120
+
+/** Camera bounds padding in pixels for landscape card previews (`16..20 px`, `REQ-UI-493.3`). */
+internal const val THUMBNAIL_BOUNDS_PADDING_PX = 18
+
+internal const val CLUSTER_THUMBNAIL_TEST_TAG = "cluster_map_preview_thumbnail"
+internal const val WORKOUT_THUMBNAIL_TEST_TAG = "unclustered_workout_map_preview_thumbnail"
+internal const val CLUSTER_METADATA_TEST_TAG = "cluster_metadata_block"
+internal const val WORKOUT_METADATA_TEST_TAG = "unclustered_workout_metadata_block"
+
+private const val THUMBNAIL_SPACER_DP = 12
+private const val MIN_METADATA_WIDTH_DP = 160
+private const val MIN_THUMBNAIL_WIDTH_DP = 110
+private const val CARD_HORIZONTAL_OVERHEAD_DP = 52
+private const val THUMBNAIL_CORNER_RADIUS_DP = 12
+private const val INITIAL_CAMERA_SEED_ZOOM = 13f
+private const val DEFAULT_POLYLINE_WIDTH_PX = 4f
+private const val EMPHASIZED_POLYLINE_WIDTH_PX = 6f
+private const val HEATMAP_POLYLINE_ALPHA = 0.2f
+private const val AUTHORITATIVE_ROUTE_Z_INDEX = 10f
+private const val DARK_LUMINANCE_THRESHOLD = 0.5f
+private const val MAX_VALID_LAT = 90.0
+private const val PREVIEW_MARKER_RADIUS_DP = 4
+private const val PREVIEW_PATH_STROKE_DP = 2.5f
+private const val PREVIEW_FRACTION_18 = 0.18f
+private const val PREVIEW_FRACTION_25 = 0.25f
+private const val PREVIEW_FRACTION_32 = 0.32f
+private const val PREVIEW_FRACTION_48 = 0.48f
+private const val PREVIEW_FRACTION_78 = 0.78f
+private const val PREVIEW_FRACTION_82 = 0.82f
+
+/**
+ * Resolves the landscape map preview width in dp so metadata retains at least 160 dp on narrow
+ * viewports (e.g., 360 dp) without placing `BoxWithConstraints` inside `IntrinsicSize.Min`.
+ */
+internal fun resolveClusterThumbnailWidthDp(screenWidthDp: Int): Int {
+    val maxThumbnailForMetadata = screenWidthDp - CARD_HORIZONTAL_OVERHEAD_DP - MIN_METADATA_WIDTH_DP
+    return maxThumbnailForMetadata.coerceIn(MIN_THUMBNAIL_WIDTH_DP, THUMBNAIL_WIDTH_DP)
+}
+
+private fun resolveMapBounds(
+    minLat: Double?,
+    maxLat: Double?,
+    minLng: Double?,
+    maxLng: Double?,
+    start: LatLng?,
+    end: LatLng?,
+    apex: LatLng?
+): LatLngBounds? {
+    return if (minLat != null && maxLat != null && minLng != null && maxLng != null && minLat < MAX_VALID_LAT) {
+        LatLngBounds(LatLng(minLat, minLng), LatLng(maxLat, maxLng))
+    } else if (start != null && end != null && apex != null) {
+        LatLngBounds.Builder().include(start).include(end).include(apex).build()
+    } else {
+        null
+    }
+}
+
+private fun decodePolylineSafely(encoded: String): List<LatLng> {
+    return try {
+        PolyUtil.decode(encoded)
+    } catch (_: IllegalArgumentException) {
+        emptyList()
+    }
+}
 
 /**
  * Standard identity row for a Workout Cluster (Icon + Name).
@@ -256,6 +338,9 @@ fun ClusterItem(
     var showContextMenu by remember { mutableStateOf(false) }
     val haptic = LocalHapticFeedback.current
 
+    val screenWidthDp = LocalConfiguration.current.screenWidthDp
+    val thumbnailWidthDp = resolveClusterThumbnailWidthDp(screenWidthDp)
+
     Box {
         MappableListItem(
             onClick = onClick,
@@ -284,169 +369,103 @@ fun ClusterItem(
                         WorkoutClusterMetadataBlock(
                             cluster = cluster,
                             viewModel = viewModel,
-                            modifier = Modifier.weight(1f).fillMaxHeight(),
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .testTag(CLUSTER_METADATA_TEST_TAG),
                             includeSpacer = true,
                             onHitCountClick = { onHitCountClick(cluster) }
                         )
 
-                        Spacer(modifier = Modifier.width(16.dp))
+                        Spacer(modifier = Modifier.width(THUMBNAIL_SPACER_DP.dp))
 
-                        // RIGHT SIDE: LANDSCAPE MAP THUMBNAIL (REQ-UI-493.3, ATT-5846)
-                        Surface(
-                            modifier = Modifier.size(width = 110.dp, height = 75.dp),
-                            shape = RoundedCornerShape(12.dp),
-                            color = MaterialTheme.colorScheme.surfaceContainerHigh
+                        // RIGHT SIDE: LANDSCAPE MAP THUMBNAIL (REQ-UI-493.3, ATT-8748)
+                        val start = LatLng(cluster.startLat, cluster.startLng)
+                        val end = LatLng(cluster.endLat, cluster.endLng)
+                        val apex = LatLng(cluster.maxDispLat, cluster.maxDispLng)
+                        val bounds = remember(
+                            cluster.minLat,
+                            cluster.maxLat,
+                            cluster.minLng,
+                            cluster.maxLng,
+                            start,
+                            end,
+                            apex
                         ) {
-                            val context = LocalContext.current
-                            val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
-                            val mapProperties = remember(isDark, context) {
-                                DarkMapStyle.resolveMapProperties(isDark, context)
-                            }
-                            Box(modifier = Modifier.fillMaxSize().background(if (isDark) TTColor.DarkMapCanvas else Color.White)) {
-                                val start = LatLng(cluster.startLat, cluster.startLng)
-                                val end = LatLng(cluster.endLat, cluster.endLng)
-                                val apex = LatLng(cluster.maxDispLat, cluster.maxDispLng)
-
-                                val bounds = remember(cluster.minLat, cluster.maxLat, cluster.minLng, cluster.maxLng, start, end, apex) {
-                                    if (cluster.minLat != null && cluster.maxLat != null && cluster.minLng != null && cluster.maxLng != null && cluster.minLat < 90.0) {
-                                        LatLngBounds(LatLng(cluster.minLat, cluster.minLng), LatLng(cluster.maxLat, cluster.maxLng))
-                                    } else {
-                                        LatLngBounds.Builder()
-                                            .include(start)
-                                            .include(end)
-                                            .include(apex)
-                                            .build()
-                                    }
-                                }
-
-                                val cameraPositionState = rememberCameraPositionState()
-                                var isMapLoaded by remember { mutableStateOf(false) }
-
-                                LaunchedEffect(bounds, isMapLoaded) {
-                                    if (isMapLoaded) {
-                                        cameraPositionState.move(CameraUpdateFactory.newLatLngBounds(bounds, 40))
-                                    }
-                                }
-
-                                GoogleMap(
-                                    modifier = Modifier.fillMaxSize().background(if (isDark) TTColor.DarkMapCanvas else Color.White),
-                                    cameraPositionState = cameraPositionState,
-                                    googleMapOptionsFactory = {
-                                        GoogleMapOptions().liteMode(true)
-                                    },
-                                    properties = mapProperties,
-                                    onMapLoaded = { isMapLoaded = true },
-                                    uiSettings = MapUiSettings(
-                                        zoomControlsEnabled = false,
-                                        scrollGesturesEnabled = false,
-                                        zoomGesturesEnabled = false,
-                                        tiltGesturesEnabled = false,
-                                        rotationGesturesEnabled = false,
-                                        myLocationButtonEnabled = false
-                                    ),
-                                    onMapClick = { onClick() }
-                                ) {
-                                    // --- RENDER PREVIEW PATHS (SCRUM-224) ---
-                                    val pathColor = MaterialTheme.colorScheme.primary
-                                    val isHeatmap = cluster.previewPaths.size > 1
-
-                                    cluster.previewPaths.forEach { polyline ->
-                                        val points = remember(polyline) { 
-                                            try { PolyUtil.decode(polyline) } catch (e: Exception) { emptyList() }
-                                        }
-                                        if (points.isNotEmpty()) {
-                                            Polyline(
-                                                points = points,
-                                                color = if (isHeatmap) pathColor.copy(alpha = 0.2f) else pathColor,
-                                                width = if (isHeatmap) 6f else 4f,
-                                                startCap = RoundCap(),
-                                                endCap = RoundCap(),
-                                                jointType = JointType.ROUND
-                                            )
-                                        }
-                                    }
-
-                                    // --- RENDER AUTHORITATIVE ROUTE (ATT-255) ---
-                                    cluster.routePolyline?.let { polyline ->
-                                        val points = remember(polyline) { 
-                                            try { PolyUtil.decode(polyline) } catch (e: Exception) { emptyList() }
-                                        }
-                                        if (points.isNotEmpty()) {
-                                            Polyline(
-                                                points = points,
-                                                color = TTColor.RouteSelected, // Green
-                                                width = 6f,
-                                                startCap = RoundCap(),
-                                                endCap = RoundCap(),
-                                                jointType = JointType.ROUND,
-                                                zIndex = 10f // Ensure it's on top
-                                            )
-                                        }
-                                    }
-
-                                    Marker(
-                                        state = remember(start) { MarkerState(position = start) },
-                                        icon = remember { createSensorMarker(context, R.drawable.control_start, TTColor.StartPoint) }
-                                    )
-                                    Marker(
-                                        state = remember(end) { MarkerState(position = end) },
-                                        icon = remember { createSensorMarker(context, R.drawable.control_stop, TTColor.EndPoint) }
-                                    )
-                                    Marker(
-                                        state = remember(apex) { MarkerState(position = apex) },
-                                        icon = remember { createSensorMarker(context, R.drawable.ic_distance, TTColor.ApexPoint) }
-                                    )
-                                }
-
-                                DarkMapAntiFlashOverlay(
-                                    isMapLoaded = isMapLoaded,
-                                    isDark = isDark
-                                )
-                                
-                                // Transparent overlay to ensure reliable click handling in a scrollable list
-                                Box(modifier = Modifier.fillMaxSize().combinedClickable(
-                                    onClick = onClick,
-                                    onLongClick = {
-                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        showContextMenu = true
-                                    }
-                                ))
-                            }
+                            resolveMapBounds(
+                                minLat = cluster.minLat,
+                                maxLat = cluster.maxLat,
+                                minLng = cluster.minLng,
+                                maxLng = cluster.maxLng,
+                                start = start,
+                                end = end,
+                                apex = apex
+                            )
                         }
+                        ClusterMapPreviewThumbnail(
+                            widthDp = thumbnailWidthDp,
+                            bounds = bounds,
+                            previewPolylines = cluster.previewPaths,
+                            authoritativePolyline = cluster.routePolyline,
+                            start = start,
+                            end = end,
+                            apex = apex,
+                            testTag = CLUSTER_THUMBNAIL_TEST_TAG,
+                            onClick = onClick,
+                            onLongClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                showContextMenu = true
+                            }
+                        )
                     }
                 }
             }
         }
 
         // Context Menu for deletion (Pinned to Top-Start to cover the header area)
-        Box(
+        ClusterItemContextMenu(
+            expanded = showContextMenu,
+            onDismiss = { showContextMenu = false },
+            onMergeRequest = onMergeRequest?.let { merge -> { merge(cluster) } },
+            onDeleteRequest = { onDeleteRequest(cluster) },
             modifier = Modifier
                 .align(Alignment.TopStart)
                 .padding(start = 12.dp, top = 8.dp)
+        )
+    }
+}
+
+@Composable
+private fun ClusterItemContextMenu(
+    expanded: Boolean,
+    onDismiss: () -> Unit,
+    onMergeRequest: (() -> Unit)?,
+    onDeleteRequest: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(modifier = modifier) {
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = onDismiss
         ) {
-            DropdownMenu(
-                expanded = showContextMenu,
-                onDismissRequest = { showContextMenu = false }
-            ) {
-                if (onMergeRequest != null) {
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.cluster_menu_merge)) },
-                        onClick = {
-                            showContextMenu = false
-                            onMergeRequest(cluster)
-                        },
-                        leadingIcon = { Icon(Icons.Default.CallMerge, contentDescription = null) }
-                    )
-                }
+            if (onMergeRequest != null) {
                 DropdownMenuItem(
-                    text = { Text(stringResource(R.string.delete)) },
+                    text = { Text(stringResource(R.string.cluster_menu_merge)) },
                     onClick = {
-                        showContextMenu = false
-                        onDeleteRequest(cluster)
+                        onDismiss()
+                        onMergeRequest()
                     },
-                    leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) }
+                    leadingIcon = { Icon(Icons.Default.CallMerge, contentDescription = null) }
                 )
             }
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.delete)) },
+                onClick = {
+                    onDismiss()
+                    onDeleteRequest()
+                },
+                leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) }
+            )
         }
     }
 }
@@ -457,6 +476,9 @@ fun UnclusteredWorkoutItem(
     viewModel: WorkoutClustersViewModel,
     onClick: () -> Unit
 ) {
+    val screenWidthDp = LocalConfiguration.current.screenWidthDp
+    val thumbnailWidthDp = resolveClusterThumbnailWidthDp(screenWidthDp)
+
     Box {
         MappableListItem(
             onClick = onClick
@@ -498,7 +520,12 @@ fun UnclusteredWorkoutItem(
                     ) {
                         // LEFT SIDE: Metadata & Metrics
                         val distanceFormatter = remember { DistanceFormatter() }
-                        Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .testTag(WORKOUT_METADATA_TEST_TAG)
+                        ) {
                             MetricItem(
                                 iconRes = R.drawable.ic_distance,
                                 value = distanceFormatter.format_with_units(workout.totalDistance),
@@ -529,104 +556,271 @@ fun UnclusteredWorkoutItem(
                             )
                         }
 
-                        Spacer(modifier = Modifier.width(16.dp))
+                        Spacer(modifier = Modifier.width(THUMBNAIL_SPACER_DP.dp))
 
-                        // RIGHT SIDE: LANDSCAPE MAP THUMBNAIL (REQ-UI-493.3, ATT-5846)
-                        Surface(
-                            modifier = Modifier.size(width = 110.dp, height = 75.dp),
-                            shape = RoundedCornerShape(12.dp),
-                            color = MaterialTheme.colorScheme.surfaceContainerHigh
+                        // RIGHT SIDE: LANDSCAPE MAP THUMBNAIL (REQ-UI-493.3, ATT-8748)
+                        val start = workout.startLatLng
+                        val end = workout.endLatLng
+                        val apex = workout.maxDisplacementLatLng
+                        val bounds = remember(
+                            workout.minLat,
+                            workout.maxLat,
+                            workout.minLng,
+                            workout.maxLng,
+                            start,
+                            end,
+                            apex
                         ) {
-                            val context = LocalContext.current
-                            val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
-                            val mapProperties = remember(isDark, context) {
-                                DarkMapStyle.resolveMapProperties(isDark, context)
-                            }
-                            Box(modifier = Modifier.fillMaxSize().background(if (isDark) TTColor.DarkMapCanvas else Color.White)) {
-                                val start = workout.startLatLng
-                                val end = workout.endLatLng
-                                val apex = workout.maxDisplacementLatLng
-
-                                val bounds = remember(workout.minLat, workout.maxLat, workout.minLng, workout.maxLng, start, end, apex) {
-                                    if (workout.minLat != null && workout.maxLat != null && workout.minLng != null && workout.maxLng != null && workout.minLat < 90.0) {
-                                        LatLngBounds(LatLng(workout.minLat, workout.minLng), LatLng(workout.maxLat, workout.maxLng))
-                                    } else if (start != null && end != null && apex != null) {
-                                        LatLngBounds.Builder().include(start).include(end).include(apex).build()
-                                    } else null
-                                }
-
-                                val cameraPositionState = rememberCameraPositionState()
-                                var isMapLoaded by remember { mutableStateOf(false) }
-
-                                LaunchedEffect(bounds, isMapLoaded) {
-                                    if (isMapLoaded && bounds != null) {
-                                        cameraPositionState.move(CameraUpdateFactory.newLatLngBounds(bounds, 40))
-                                    }
-                                }
-
-                                GoogleMap(
-                                    modifier = Modifier.fillMaxSize().background(if (isDark) TTColor.DarkMapCanvas else Color.White),
-                                    cameraPositionState = cameraPositionState,
-                                    googleMapOptionsFactory = {
-                                        GoogleMapOptions().liteMode(true)
-                                    },
-                                    properties = mapProperties,
-                                    onMapLoaded = { isMapLoaded = true },
-                                    uiSettings = MapUiSettings(
-                                        zoomControlsEnabled = false,
-                                        scrollGesturesEnabled = false,
-                                        zoomGesturesEnabled = false,
-                                        tiltGesturesEnabled = false,
-                                        rotationGesturesEnabled = false,
-                                        myLocationButtonEnabled = false
-                                    ),
-                                    onMapClick = { onClick() }
-                                ) {
-                                    if (workout.mapPolyline.isNotEmpty()) {
-                                        val points = remember(workout.mapPolyline) { PolyUtil.decode(workout.mapPolyline) }
-                                        if (points.isNotEmpty()) {
-                                            Polyline(
-                                                points = points,
-                                                color = MaterialTheme.colorScheme.primary,
-                                                width = 4f,
-                                                startCap = RoundCap(),
-                                                endCap = RoundCap(),
-                                                jointType = JointType.ROUND
-                                            )
-                                        }
-                                    }
-
-                                    if (start != null) {
-                                        Marker(
-                                            state = remember(start) { MarkerState(position = start) },
-                                            icon = remember { createSensorMarker(context, R.drawable.control_start, TTColor.StartPoint) }
-                                        )
-                                    }
-                                    if (end != null) {
-                                        Marker(
-                                            state = remember(end) { MarkerState(position = end) },
-                                            icon = remember { createSensorMarker(context, R.drawable.control_stop, TTColor.EndPoint) }
-                                        )
-                                    }
-                                    if (apex != null) {
-                                        Marker(
-                                            state = remember(apex) { MarkerState(position = apex) },
-                                            icon = remember { createSensorMarker(context, R.drawable.ic_distance, TTColor.ApexPoint) }
-                                        )
-                                    }
-                                }
-
-                                DarkMapAntiFlashOverlay(
-                                    isMapLoaded = isMapLoaded,
-                                    isDark = isDark
-                                )
-                                
-                                Box(modifier = Modifier.fillMaxSize().clickable { onClick() })
-                            }
+                            resolveMapBounds(
+                                minLat = workout.minLat,
+                                maxLat = workout.maxLat,
+                                minLng = workout.minLng,
+                                maxLng = workout.maxLng,
+                                start = start,
+                                end = end,
+                                apex = apex
+                            )
                         }
+                        val previewPolylines = remember(workout.mapPolyline) {
+                            if (workout.mapPolyline.isNotEmpty()) listOf(workout.mapPolyline) else emptyList()
+                        }
+                        ClusterMapPreviewThumbnail(
+                            widthDp = thumbnailWidthDp,
+                            bounds = bounds,
+                            previewPolylines = previewPolylines,
+                            authoritativePolyline = null,
+                            start = start,
+                            end = end,
+                            apex = apex,
+                            testTag = WORKOUT_THUMBNAIL_TEST_TAG,
+                            onClick = onClick,
+                            onLongClick = null
+                        )
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun ClusterMapPreviewThumbnail(
+    widthDp: Int,
+    bounds: LatLngBounds?,
+    previewPolylines: List<String>,
+    authoritativePolyline: String?,
+    start: LatLng?,
+    end: LatLng?,
+    apex: LatLng?,
+    testTag: String,
+    onClick: () -> Unit,
+    onLongClick: (() -> Unit)?
+) {
+    val isDark = MaterialTheme.colorScheme.surface.luminance() < DARK_LUMINANCE_THRESHOLD
+    val thumbnailBgColor = if (isDark) TTColor.DarkMapCanvas else MaterialTheme.colorScheme.surfaceContainerHighest
+
+    Surface(
+        modifier = Modifier
+            .size(width = widthDp.dp, height = THUMBNAIL_HEIGHT_DP.dp)
+            .testTag(testTag),
+        shape = RoundedCornerShape(THUMBNAIL_CORNER_RADIUS_DP.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh
+    ) {
+        if (LocalInspectionMode.current) {
+            ClusterMapPreviewInspectionContent(
+                backgroundColor = thumbnailBgColor,
+                hasAuthoritativeRoute = authoritativePolyline != null,
+                onClick = onClick,
+                onLongClick = onLongClick
+            )
+            return@Surface
+        }
+        ClusterMapPreviewLiveMap(
+            isDark = isDark,
+            bounds = bounds,
+            previewPolylines = previewPolylines,
+            authoritativePolyline = authoritativePolyline,
+            start = start,
+            end = end,
+            apex = apex,
+            onClick = onClick,
+            onLongClick = onLongClick
+        )
+    }
+}
+
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+@Composable
+private fun ClusterMapPreviewLiveMap(
+    isDark: Boolean,
+    bounds: LatLngBounds?,
+    previewPolylines: List<String>,
+    authoritativePolyline: String?,
+    start: LatLng?,
+    end: LatLng?,
+    apex: LatLng?,
+    onClick: () -> Unit,
+    onLongClick: (() -> Unit)?
+) {
+    val context = LocalContext.current
+    val mapProperties = remember(isDark, context) { DarkMapStyle.resolveMapProperties(isDark, context) }
+    val bgColor = if (isDark) TTColor.DarkMapCanvas else Color.White
+    val cameraPositionState = rememberCameraPositionState {
+        if (bounds != null) {
+            position = CameraPosition.fromLatLngZoom(bounds.center, INITIAL_CAMERA_SEED_ZOOM)
+        }
+    }
+    var isMapLoaded by remember { mutableStateOf(false) }
+
+    LaunchedEffect(bounds, isMapLoaded) {
+        if (isMapLoaded && bounds != null) {
+            try {
+                cameraPositionState.move(CameraUpdateFactory.newLatLngBounds(bounds, THUMBNAIL_BOUNDS_PADDING_PX))
+            } catch (_: IllegalStateException) {
+                // Map not laid out yet or degenerate bounds
+            }
+        }
+    }
+
+    Box(modifier = Modifier.fillMaxSize().background(bgColor)) {
+        GoogleMap(
+            modifier = Modifier.fillMaxSize().background(bgColor),
+            cameraPositionState = cameraPositionState,
+            googleMapOptionsFactory = { GoogleMapOptions().liteMode(true) },
+            properties = mapProperties,
+            onMapLoaded = { isMapLoaded = true },
+            uiSettings = THUMBNAIL_MAP_UI_SETTINGS,
+            onMapClick = { onClick() }
+        ) {
+            ClusterMapPreviewPolylines(previewPolylines, authoritativePolyline)
+            ClusterMapPreviewMarkers(start = start, end = end, apex = apex)
+        }
+        DarkMapAntiFlashOverlay(isMapLoaded = isMapLoaded, isDark = isDark)
+        val clickModifier = if (onLongClick != null) {
+            Modifier.combinedClickable(onClick = onClick, onLongClick = onLongClick)
+        } else {
+            Modifier.clickable(onClick = onClick)
+        }
+        Box(modifier = Modifier.fillMaxSize().then(clickModifier))
+    }
+}
+
+private val THUMBNAIL_MAP_UI_SETTINGS = MapUiSettings(
+    zoomControlsEnabled = false,
+    scrollGesturesEnabled = false,
+    zoomGesturesEnabled = false,
+    tiltGesturesEnabled = false,
+    rotationGesturesEnabled = false,
+    myLocationButtonEnabled = false
+)
+
+@Composable
+private fun ClusterMapPreviewPolylines(
+    previewPolylines: List<String>,
+    authoritativePolyline: String?
+) {
+    val pathColor = MaterialTheme.colorScheme.primary
+    val isHeatmap = previewPolylines.size > 1
+    previewPolylines.forEach { polyline ->
+        val points = remember(polyline) { decodePolylineSafely(polyline) }
+        if (points.isNotEmpty()) {
+            Polyline(
+                points = points,
+                color = if (isHeatmap) pathColor.copy(alpha = HEATMAP_POLYLINE_ALPHA) else pathColor,
+                width = if (isHeatmap) EMPHASIZED_POLYLINE_WIDTH_PX else DEFAULT_POLYLINE_WIDTH_PX,
+                startCap = RoundCap(),
+                endCap = RoundCap(),
+                jointType = JointType.ROUND
+            )
+        }
+    }
+    authoritativePolyline?.let { polyline ->
+        val points = remember(polyline) { decodePolylineSafely(polyline) }
+        if (points.isNotEmpty()) {
+            Polyline(
+                points = points,
+                color = TTColor.RouteSelected,
+                width = EMPHASIZED_POLYLINE_WIDTH_PX,
+                startCap = RoundCap(),
+                endCap = RoundCap(),
+                jointType = JointType.ROUND,
+                zIndex = AUTHORITATIVE_ROUTE_Z_INDEX
+            )
+        }
+    }
+}
+
+@Composable
+private fun ClusterMapPreviewMarkers(
+    start: LatLng?,
+    end: LatLng?,
+    apex: LatLng?
+) {
+    val context = LocalContext.current
+    if (start != null) {
+        Marker(
+            state = remember(start) { MarkerState(position = start) },
+            icon = remember { createSensorMarker(context, R.drawable.control_start, TTColor.StartPoint) }
+        )
+    }
+    if (end != null) {
+        Marker(
+            state = remember(end) { MarkerState(position = end) },
+            icon = remember { createSensorMarker(context, R.drawable.control_stop, TTColor.EndPoint) }
+        )
+    }
+    if (apex != null) {
+        Marker(
+            state = remember(apex) { MarkerState(position = apex) },
+            icon = remember { createSensorMarker(context, R.drawable.ic_distance, TTColor.ApexPoint) }
+        )
+    }
+}
+
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+@Composable
+private fun ClusterMapPreviewInspectionContent(
+    backgroundColor: Color,
+    hasAuthoritativeRoute: Boolean,
+    onClick: () -> Unit,
+    onLongClick: (() -> Unit)?
+) {
+    val routeColor = if (hasAuthoritativeRoute) TTColor.RouteSelected else MaterialTheme.colorScheme.primary
+    val clickModifier = if (onLongClick != null) {
+        Modifier.combinedClickable(onClick = onClick, onLongClick = onLongClick)
+    } else {
+        Modifier.clickable(onClick = onClick)
+    }
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(backgroundColor)
+            .then(clickModifier)
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val startPt = Offset(size.width * PREVIEW_FRACTION_18, size.height * PREVIEW_FRACTION_78)
+            val midTop = Offset(size.width * PREVIEW_FRACTION_48, size.height * PREVIEW_FRACTION_25)
+            val apexPt = Offset(size.width * PREVIEW_FRACTION_82, size.height * PREVIEW_FRACTION_32)
+            val endPt = Offset(size.width * PREVIEW_FRACTION_25, size.height * PREVIEW_FRACTION_82)
+            val routePath = Path().apply {
+                moveTo(startPt.x, startPt.y)
+                lineTo(midTop.x, midTop.y)
+                lineTo(apexPt.x, apexPt.y)
+                lineTo(endPt.x, endPt.y)
+            }
+            drawPath(
+                path = routePath,
+                color = routeColor,
+                style = Stroke(
+                    width = PREVIEW_PATH_STROKE_DP.dp.toPx(),
+                    cap = StrokeCap.Round,
+                    join = StrokeJoin.Round
+                )
+            )
+            val markerRadius = PREVIEW_MARKER_RADIUS_DP.dp.toPx()
+            drawCircle(color = TTColor.StartPoint, radius = markerRadius, center = startPt)
+            drawCircle(color = TTColor.ApexPoint, radius = markerRadius, center = apexPt)
+            drawCircle(color = TTColor.EndPoint, radius = markerRadius, center = endPt)
         }
     }
 }
@@ -1066,5 +1260,98 @@ fun EditWorkoutClusterDialog(
             Spacer(Modifier.height(8.dp))
         }
     }
+}
+
+@Composable
+private fun ClusterItemPreviewShell(darkTheme: Boolean) {
+    ATrainingTrackerTheme(darkTheme = darkTheme) {
+        Surface(color = MaterialTheme.colorScheme.background) {
+            MappableListItem(onClick = {}) {
+                Column(modifier = Modifier.fillMaxWidth().padding(THUMBNAIL_CORNER_RADIUS_DP.dp)) {
+                    ClusterPreviewHeaderRow()
+                    Spacer(modifier = Modifier.height(8.dp))
+                    ClusterPreviewBodyRow()
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ClusterPreviewHeaderRow() {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(THUMBNAIL_SPACER_DP.dp)
+    ) {
+        Icon(
+            painter = painterResource(id = BSportType.BIKE.iconResId),
+            contentDescription = null,
+            modifier = Modifier.size(32.dp),
+            tint = Color.Unspecified
+        )
+        Text(
+            text = "Isar Loop #12",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+@Composable
+private fun ClusterPreviewBodyRow() {
+    Row(
+        modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
+        verticalAlignment = Alignment.Bottom
+    ) {
+        Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
+            MetricItem(
+                iconRes = R.drawable.ic_distance,
+                value = "42.5 km",
+                isPrimary = false,
+                valueColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                iconColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium)
+            )
+            Text(
+                text = "Road Bike",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.weight(1f))
+            Text(
+                text = "12 Recordings",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+        Spacer(modifier = Modifier.width(THUMBNAIL_SPACER_DP.dp))
+        ClusterMapPreviewThumbnail(
+            widthDp = THUMBNAIL_WIDTH_DP,
+            bounds = null,
+            previewPolylines = emptyList(),
+            authoritativePolyline = "sample",
+            start = null,
+            end = null,
+            apex = null,
+            testTag = CLUSTER_THUMBNAIL_TEST_TAG,
+            onClick = {},
+            onLongClick = null
+        )
+    }
+}
+
+@Preview(showBackground = true, widthDp = 411)
+@Composable
+private fun ClusterItemLightPreview() {
+    ClusterItemPreviewShell(darkTheme = false)
+}
+
+@Preview(showBackground = true, widthDp = 411)
+@Composable
+private fun ClusterItemDarkPreview() {
+    ClusterItemPreviewShell(darkTheme = true)
 }
 

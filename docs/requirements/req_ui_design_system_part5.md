@@ -1,7 +1,7 @@
 # Living Requirements: UI Components & Design System (Part 5 of 5)
 
 **Document ID**: `DOC-REQ-UI-P5`  
-**Version**: 1.0.4  
+**Version**: 1.0.6  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -208,12 +208,13 @@
 **Invariants**: Equipment and sensor database schemas remain unchanged; Bluetooth/ANT+ background connectivity pipelines remain unaffected; 9-language localization parity across EN, DE, ES, FR, IT, JA, NL, PL, PT; 100% test pass rate.
 
 ### REQ-UI-493: ClusterItem & Filter (Lieblingsstrecken): Hit Count Display Healing, Bidirectional Location Context, Landscape Thumbnail & Filter Sheet Reset Action [Verified]
+- **Target Release**: `V5.0.0`
 - **Tests**: `TST-UI-493`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
 - **Implementation**: `WorkoutClusterComponents.kt`, `WorkoutClustersViewModel.kt`, `WorkoutClusterRepository.kt`, `FilterBottomSheetScaffold.kt`, `strings.xml` (all 9 locales)
-- **Rationale**: In `Lieblingsstrecken` cluster management (`WorkoutClusterComponents.kt`, `WorkoutClusterRepository.kt`, and `FilterBottomSheetScaffold.kt`), UI audits revealed four presentation and telemetry defects: (1) cluster cards display `0 Aufzeichnungen` when `RouteClusters.hitCount` is desynchronized from `WorkoutSummaries`; (2) cluster cards only display start locations and fail to resolve destination coordinates (`endLat`, `endLng`); (3) square 100x100dp map thumbnails force excessive vertical whitespace beside metadata, and multi-gear equipment lists wrap unbounded; and (4) the filter bottom sheet reset button label ("Alle zurücksetzen") wraps onto two lines in the 50% split button row.
+- **Rationale**: In `Lieblingsstrecken` cluster management (`WorkoutClusterComponents.kt`, `WorkoutClusterRepository.kt`, and `FilterBottomSheetScaffold.kt`), UI audits revealed four presentation and telemetry defects: (1) cluster cards display `0 Aufzeichnungen` when `RouteClusters.hitCount` is desynchronized from `WorkoutSummaries`; (2) cluster cards only display start locations and fail to resolve destination coordinates (`endLat`, `endLng`); (3) `110.dp × 75.dp` map thumbnails with `newLatLngBounds(..., 40)` leave unused horizontal whitespace beside `~117.dp`-tall metadata on `411.dp` phones while `Google` watermark and Start/End/Apex markers obscure the polyline; and (4) the filter bottom sheet reset button label ("Alle zurücksetzen") wraps onto two lines in the 50% split button row.
 - **Description**:
 1. *Hit Count Display Healing & Repository Reconciliation (`REQ-UI-493.1`)*:
    • In `WorkoutClusterComponents.kt` (`WorkoutClusterMetadataBlock`), the displayed recordings count SHALL be calculated from `maxOf(cluster.hitCount, stats?.workoutCount ?: 0)` (falling back to `cluster.hitCount`), guaranteeing that cluster cards display the accurate number of recorded workouts even if the cached `hitCount` in SQLite is zero.
@@ -224,17 +225,20 @@
    • If start and destination resolve to the same known location, the UI SHALL display `Start & Ziel: [Location]` (`R.string.workout_start_and_destination`).
    • If start and destination resolve to different known locations, the UI SHALL display `[Start] → [Ziel]`.
    • If only one endpoint resolves to a known location, the UI SHALL display `Start: [Start]` (`R.string.cluster_start_location`) or `Ziel: [Ziel]` (`R.string.workout_destination_location`).
-3. *Landscape Map Thumbnail & Equipment Text Constraining (`REQ-UI-493.3`)*:
-   • In `WorkoutClusterComponents.kt` (`ClusterItem`), the route preview map thumbnail SHALL use a 3:2 landscape geometry of `width = 110.dp, height = 75.dp` with rounded corners (12dp), eliminating vertical whitespace next to metadata while preserving `liteMode(true)` and `DarkMapAntiFlashOverlay`.
-   • In `WorkoutClusterMetadataBlock`, the linked equipment string SHALL enforce `maxLines = 1` and `overflow = TextOverflow.Ellipsis`.
+3. *Landscape Map Thumbnail, Camera Framing & Equipment Text Constraining (`REQ-UI-493.3`)*:
+   • In `WorkoutClusterComponents.kt`, both `ClusterItem` and `UnclusteredWorkoutItem` SHALL render the right-hand route preview map `Surface` at `175.dp × 120.dp` (`Modifier.size(width = 175.dp, height = 120.dp)` with `12.dp` rounded corners on standard `>= 387.dp` screens), paired with a `12.dp` horizontal `Spacer` separating `WorkoutClusterMetadataBlock` / workout metadata from the map thumbnail, while preserving `GoogleMapOptions().liteMode(true)`, `DarkMapStyle.resolveMapProperties`, and `DarkMapAntiFlashOverlay`.
+   • On narrow screens (e.g., `360.dp` viewport / `< 387.dp` screen width), the thumbnail width MUST clamp responsively so the left metadata column retains at least `160.dp` width; this width calculation MUST NOT place `BoxWithConstraints` (`SubcomposeLayout`) inside `Row(Modifier.height(IntrinsicSize.Min))` (derive width from `LocalConfiguration.current.screenWidthDp` or measure outside the `IntrinsicSize.Min` `Row`).
+   • `CameraUpdateFactory.newLatLngBounds(bounds, ...)` SHALL use a named `16–20 px` padding constant (e.g., `THUMBNAIL_BOUNDS_PADDING_PX` in `16..20`, replacing literal `40` and removing the corresponding `MagicNumber` entry from `app/detekt-baseline.xml`), wrapped in a `try/catch` guard against unlaid-out / zero-size map layout exceptions (`IllegalStateException`), and `rememberCameraPositionState` SHALL optionally seed its initial `CameraPosition` to `bounds.center` when `bounds` is non-null to suppress world-zoom `(0, 0)` flash prior to `onMapLoaded`.
+   • In `WorkoutClusterMetadataBlock` and `UnclusteredWorkoutItem`, the linked equipment string SHALL enforce `maxLines = 1` and `overflow = TextOverflow.Ellipsis`.
+   • **Localization Parity**: `N/A - no UI strings` (zero `values*/strings*.xml` edits for the `ATT-8748` thumbnail enlargement; `REQ-UI-493.4` 9-locale `filter_reset` parity remains intact).
 4. *Single-Line Filter Sheet Reset Button Action (`REQ-UI-493.4`)*:
    • In `FilterBottomSheetScaffold.kt`, the reset action button SHALL use the concise localized resource `R.string.filter_reset` ("Zurücksetzen" / "Reset") with `maxLines = 1` across all 9 supported locales (EN, DE, ES, FR, IT, JA, NL, PL, PT), guaranteeing a uniform single-line height matching the adjacent "OK" button in 50% split button rows.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Net-new requirement `REQ-UI-493`, refining `REQ-SET-067` (*Auto-Naming & Hit Counting*), `REQ-UI-186` (*Recognized Start Location Badges*), `REQ-UI-244` (*Cluster Map Thumbnails*), and `REQ-UI-149` (*Filter Bottom Sheets*).
-2. *Historical Origin & Commit Trace*: Introduced in `ATT-714`, `ATT-1402`, and `ATT-2276`.
-3. *Root Reason for Existing Formulation*: Initial cluster items only anticipated start locations; square 100dp maps were adapted from route cards before 3:2 aspect ratios; and filter sheets used horizontal chip copy `filter_clear_all` ("Alle zurücksetzen") without considering narrow 50% button widths.
-4. *Preservation of Core Invariants*: `GoogleMapOptions().liteMode(true)`, `DarkMapAntiFlashOverlay`, horizontal filter chips `filter_clear_all` contract, zero-touch auto-naming counter integrity, and 9-locale parity without emojis (`ATT-5400`) MUST NOT be compromised.
+1. *Original Requirement ID & Target*: Refines `REQ-UI-493.3` (`ATT-5846`, commit `c3c957e2`) alongside `REQ-SET-067` (*Auto-Naming & Hit Counting*), `REQ-UI-186` (*Recognized Start Location Badges*), `REQ-UI-244` (*Cluster Map Thumbnails*), and `REQ-UI-149` (*Filter Bottom Sheets*).
+2. *Historical Origin & Commit Trace*: Introduced in `ATT-714`, `ATT-1402`, `ATT-2276`, and refined in `c3c957e2` (`ATT-5846`, which replaced `100.dp × 100.dp` thumbnails with `110.dp × 75.dp`).
+3. *Root Reason for Existing Formulation*: `110.dp × 75.dp` (`ATT-5846`) preserved the prior `~100.dp` horizontal footprint, leaving `~65.dp` unused horizontal whitespace beside `~117.dp`-tall metadata on `411.dp` phones while `newLatLngBounds(..., 40)` compressed route polylines under the Google watermark and Start/End/Apex markers.
+4. *Preservation of Core Invariants*: `GoogleMapOptions().liteMode(true)`, `DarkMapAntiFlashOverlay`, `DarkMapStyle.resolveMapProperties`, TopStart Merge/Delete `DropdownMenu`, `IntrinsicSize.Min` bottom alignment (zero `BoxWithConstraints` inside `IntrinsicSize.Min`), `maxLines = 1` equipment ellipsis, `filter_clear_all` / `filter_reset` 9-locale parity, zero-touch auto-naming counter integrity, and `KnownLocationsScreen.kt` (*Lieblingsorte*, `ATT-8749`) isolation MUST NOT be compromised.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* a cluster with `hitCount = 0` but having matching workouts in `WorkoutSummaries`,
@@ -246,14 +250,17 @@
 • *Given* a cluster where start coordinates resolve to "Home" and destination coordinates resolve to "Work",
 • *When* rendered in `WorkoutClusterMetadataBlock`,
 • *Then* the location badge reads "Home → Work".
-• *Given* a cluster item rendered in `WorkoutClustersScreen`,
-• *When* the map preview is displayed,
-• *Then* its dimensions are 110.dp width by 75.dp height, and multi-gear equipment strings are truncated with an ellipsis on a single line.
+• *Given* `ClusterItem` or `UnclusteredWorkoutItem` rendered on a standard `411.dp` phone viewport,
+• *When* the card layout composes,
+• *Then* the map preview `Surface` measures `175.dp` width by `120.dp` height with a `12.dp` horizontal spacer, multi-gear equipment strings truncate with an ellipsis on a single line, and `newLatLngBounds` frames the route using the named `16–20 px` padding constant with bounds-center camera seeding and `try/catch` safety.
+• *Given* `ClusterItem` or `UnclusteredWorkoutItem` rendered on a narrow `360.dp` phone viewport,
+• *When* the card layout composes,
+• *Then* the thumbnail width clamps so the left metadata column retains at least `160.dp` width without throwing any `IntrinsicSize.Min` / `SubcomposeLayout` exception.
 • *Given* `FilterBottomSheetScaffold` displayed in German locale,
 • *When* inspecting the bottom action bar,
 • *Then* the reset button displays "Zurücksetzen" on a single line with uniform height matching the "OK" button.
 
-**Invariants**: MapView liteMode and dark map styling preserved; auto-naming counter integrity preserved; 9-language localization parity across EN, DE, ES, FR, IT, JA, NL, PL, PT without emojis; 100% test pass rate.
+**Invariants**: MapView `liteMode(true)` and dark map anti-flash styling preserved; TopStart Merge/Delete `DropdownMenu` preserved; `IntrinsicSize.Min` bottom alignment preserved without `BoxWithConstraints` inside `Row`; auto-naming counter integrity preserved; 9-language localization parity across EN, DE, ES, FR, IT, JA, NL, PL, PT without emojis (`Localization Parity: N/A - no UI strings` for `ATT-8748`); 100% test pass rate.
 
 ### REQ-UI-494: ElevationProfile Y-Axis Grid Clearance & Zero-Altitude Profile Suppression in RouteItem [Verified]
 - **Tests**: `TST-UI-494`
@@ -1779,3 +1786,4 @@
 | `1.0.2` | 2026-11-18 | AI Agent (`ATT-8712`) | `ATT-8712` | Aligned `REQ-UI-2783.3` with `REQ-TRK-046.4` and `REQ-TRK-087` cleanly post-split (`ATT-8206`). |
 | `1.0.3` | 2026-11-18 | AI Agent (`ATT-8749`) | `ATT-8749` | Added `REQ-UI-2785` (`[Planned]`) for enlarged `175x120 dp` Lieblingsorte preview map, `120.0 dp` zoom calibration, and `360dp` overflow protection. |
 | `1.0.4` | 2026-11-18 | AI Agent (`ATT-8749`) | `ATT-8749` | Promoted `REQ-UI-2785` to `[Verified]` after Stage 4/5 verification (`89/89` tests, `Rule 8.5` PNG audit). |
+| `1.0.6` | 2026-11-18 | AI Agent (`ATT-8748`) | `ATT-8748` | Refined `REQ-UI-493` to `[Verified]` (`175.dp x 120.dp` thumbnail, `12.dp` spacing, `resolveClusterThumbnailWidthDp`, `THUMBNAIL_BOUNDS_PADDING_PX = 18`, `151/151` PASS, `Rule 8.5` PNG). |

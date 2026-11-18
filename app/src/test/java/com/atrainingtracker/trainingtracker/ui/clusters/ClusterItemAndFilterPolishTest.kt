@@ -136,13 +136,17 @@ class ClusterItemAndFilterPolishTest {
 
     @Test
     fun clusterComponents_rendersLandscapeThumbnailAndConstrainedEquipment() {
-        // TST-UI-493.3: Verify 110x75dp landscape thumbnail and maxLines = 1 for equipment
+        // TST-UI-493.3: Verify 175x120dp landscape thumbnail constants and maxLines = 1 for equipment
         val componentsFile = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/WorkoutClusterComponents.kt")
         val content = componentsFile.readText()
 
         assertTrue(
-            "ClusterItem should use 110.dp x 75.dp landscape map thumbnail",
-            content.contains("Modifier.size(width = 110.dp, height = 75.dp)")
+            "ClusterItem and UnclusteredWorkoutItem should define 175.dp x 120.dp landscape map thumbnail constants",
+            content.contains("THUMBNAIL_WIDTH_DP = 175") && content.contains("THUMBNAIL_HEIGHT_DP = 120")
+        )
+        assertTrue(
+            "Thumbnail bounds padding should use named 16-20 px constant",
+            content.contains("THUMBNAIL_BOUNDS_PADDING_PX = 18")
         )
         assertTrue(
             "WorkoutClusterMetadataBlock should constrain equipment with maxLines = 1",

@@ -1,0 +1,37 @@
+# Stage 1 Analysis: ATT-8748 - Enlarge Lieblingsstrecken Card Preview Map to 175x120 dp
+
+**DOC-ID**: `DOC-ANA-ATT-8748` | **Ticket**: [ATT-8748](https://rainerblind.atlassian.net/browse/ATT-8748)  
+**Parent Epic**: [ATT-176](https://rainerblind.atlassian.net/browse/ATT-176) (*Lieblingsstrecken / Route Clusters & Auto-Naming*) | **Target Release**: `V5.0.0`  
+**Sprint**: `sprint/2026-11-18_01_Früh` | **Branch**: `feature/ATT-8748` | **Author**: `--as agent1`
+
+---
+
+## 1. Problem Statement & Motivation
+In *Lieblingsstrecken* (`WorkoutClusterComponents.kt`), both `ClusterItem` (`L296`) and `UnclusteredWorkoutItem` (`L536`) render the right-hand `GoogleMap` preview `Surface` at `110.dp × 75.dp` (`8,250 dp²`) with `CameraUpdateFactory.newLatLngBounds(bounds, 40)` (`L327`, `L563`) and unseeded `rememberCameraPositionState()` (`L322`, `L558`). On `411 dp` phones, `Google` watermark + Start/End/Apex markers obscure most of the route polyline while leaving unused horizontal whitespace beside `WorkoutClusterMetadataBlock` (`~117 dp` tall). Enlarging the thumbnail to `175.dp × 120.dp` (`21,000 dp²`, ~`2.55×` area) with `16–20 px` padding improves route legibility without inflating card height.
+
+## 2. Independent Peer Review & Verification
+Audited `WorkoutClusterComponents.kt`, `WorkoutClustersList.kt`, `MappableListItem.kt`, `PathPreviewMap.kt`, `ClusterItemAndFilterPolishTest.kt`, `app/detekt-baseline.xml`, `req_ui_design_system_part1..5.md`, and `tst_ui_design_system_part1..3.md` on `1e7a2f0b`:
+* **Callers & Layout Math**: `ClusterItem` and `UnclusteredWorkoutItem` are called exclusively by `WorkoutClustersList.kt:80,136`. `WorkoutClusterIdentityRow` and `WorkoutClusterMetadataBlock` are also reused by `MapScreenWithTrack.kt:816,822` and `WorkoutClusterHeatmapScreen.kt:720` (unaffected). Outer `LazyColumn` padding (`8.dp × 2 = 16.dp`) + inner card `Column` padding (`12.dp × 2 = 24.dp`) leave `371.dp` on a `411.dp` viewport: `175.dp` map + `12.dp` spacer leaves `184.dp` for metadata. On narrow `360.dp` viewports (`320.dp` row width), fixed `175.dp + 12.dp` leaves `133.dp`; a responsive guard (`minMetadata = 160.dp`, e.g., capping thumbnail width on `< 347.dp` row / `< 387.dp` screen) prevents metadata crushing.
+* **`IntrinsicSize.Min` Compose Trap**: Both `ClusterItem:280` and `UnclusteredWorkoutItem:496` use `Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min))` to bottom-align the hit count / date. **Do NOT place `BoxWithConstraints` (`SubcomposeLayout`) inside that `Row`**, as Compose throws `IllegalArgumentException` on intrinsic queries of `SubcomposeLayout`; read `LocalConfiguration.current.screenWidthDp` or place `BoxWithConstraints` outside the `IntrinsicSize.Min` `Row`.
+* **Camera Seeding & Bounds Guard**: Both `L322`/`L558` use unseeded `rememberCameraPositionState()`, flashing world zoom `(0, 0)` before `onMapLoaded`. Seeding initial `CameraPosition.fromLatLngZoom(bounds.center, ...)` and wrapping `cameraPositionState.move(CameraUpdateFactory.newLatLngBounds(bounds, 16..20))` in `try/catch` (matching `PathPreviewMap.kt:179`) prevents flashes and zero-size/degenerate bounds exceptions.
+* **Living-Doc Shard Headroom & Test Naming**: `req_ui_design_system_part1..4` (`3963, 3960, 3993, 3966` lines) and `tst_ui_design_system_part1..2` (`3984, 3977` lines) are near the `4000`-line cap, whereas target shards `docs/requirements/req_ui_design_system_part5.md` (`1749` lines; `REQ-UI-493` at `L210–256`) and `docs/tests/tst_ui_design_system_part3.md` (`762` lines; `TST-UI-493` at `L15–35`) have ample headroom (`2251` and `3238` lines). `tst_ui_design_system_part3.md:17–28` currently cites `WorkoutClusterItemPolishContractTest.kt`, whereas the live file is `ClusterItemAndFilterPolishTest.kt` (`L145` asserts `Modifier.size(width = 110.dp, height = 75.dp)`).
+* **Detekt & Localization**: `app/detekt-baseline.xml:2404` tracks `MagicNumber:WorkoutClusterComponents.kt$40`; replacing `40` with a named constant (`THUMBNAIL_BOUNDS_PADDING_PX = 18`) keeps Detekt clean. **Localization Parity**: `N/A - no UI strings` (zero `values*/strings*.xml` edits).
+
+## 3. User Scope Grounding (ATT-1250)
+* **In-Scope (`1 SP`)**: Enlarge thumbnail `Surface` in `ClusterItem` and `UnclusteredWorkoutItem` (`WorkoutClusterComponents.kt`) to `175.dp × 120.dp` (with `12.dp` spacer and narrow-screen `>= 160.dp` metadata width guard); tighten `newLatLngBounds` padding (`40` -> `16..20` px) and seed `rememberCameraPositionState`; update `ClusterItemAndFilterPolishTest.kt` (`TST-UI-493.3`) and `REQ-UI-493.3` / `TST-UI-493.3`.
+* **Out-of-Scope**: `KnownLocationsScreen.kt` (*Lieblingsorte*, covered by `ATT-8749`), `WorkoutClusterMetadataBlock` metric layout changes, marker icon redesign, or `ClusterOnMapSheet`.
+
+## 4. Chesterton's Fence Audit (REQ-PRO-022)
+* **Original Requirement ID & Target**: `REQ-UI-493.3` (`docs/requirements/req_ui_design_system_part5.md:227–229`, `TST-UI-493.3` in `docs/tests/tst_ui_design_system_part3.md:27–29`), refining `REQ-UI-244`.
+* **Historical Origin & Commit Trace**: `c3c957e2` (`ATT-5846`) replaced earlier `100.dp × 100.dp` square cluster thumbnails with `110.dp × 75.dp` (`3:2` landscape) to eliminate vertical whitespace alongside metadata.
+* **Root Reason for Existing Formulation**: `110.dp × 75.dp` matched the prior `~100.dp` footprint horizontally while reducing height, leaving ~`65 dp` of empty horizontal space on `411 dp` phones and crowding markers + Google watermark inside `newLatLngBounds(..., 40)`.
+* **Preservation of Core Invariants**: Preserve `GoogleMapOptions().liteMode(true)` (`MapPreviewLiteModeTest`), `DarkMapAntiFlashOverlay` (`DarkMapAntiFlashOverlayTest`), `DarkMapStyle.resolveMapProperties` (`DarkMapStyleResolutionTest`), TopStart Merge/Delete `DropdownMenu` (`GlobalDeleteContextMenuAuditTest`, `WorkoutClusterSplitMapPreviewTest`), `WorkoutClusterMetadataBlock` single-line equipment ellipsis, and `IntrinsicSize.Min` bottom alignment.
+
+## Change Impact Analysis
+* **Affected Requirements**: Refines `REQ-UI-493.3` (`docs/requirements/req_ui_design_system_part5.md`, 1749/4000 lines) and `TST-UI-493.3` (`docs/tests/tst_ui_design_system_part3.md`, 762/4000 lines).
+* **Affected Architecture Elements**: `WorkoutClusterComponents.kt` (`ClusterItem`, `UnclusteredWorkoutItem`, optional shared thumbnail helper). Zero ViewModel, Repository, DB schema, DataStore, or localization XML changes.
+* **Verification Impact & Test Surface**: Update `ClusterItemAndFilterPolishTest.kt` (`TST-UI-493.3`) and run Tier 1 targeted cluster/map contract tests (`ui.clusters.*`, `MapPreviewLiteModeTest`, `DarkMapAntiFlashOverlayTest`, `DarkMapStyleResolutionTest`) plus Stage 5 `emulator-5554` visual screenshot check.
+* **Risk Assessment & Invariants**: **LOW** — 1-SP isolated Compose layout geometry & camera bounds polish in a single UI file; `liteMode(true)`, dark map anti-flash, and context menu invariants remain intact.
+
+## 5. High-Level Solution
+Extract or unify the `175.dp × 120.dp` landscape map thumbnail composable (keeping `width` clamped on `< 360.dp` viewports so metadata retains `>= 160.dp` without placing `BoxWithConstraints` inside `IntrinsicSize.Min`), reduce `Spacer` to `12.dp`, seed `rememberCameraPositionState` to `bounds.center`, tighten `newLatLngBounds` padding to `16–20 px` (`try/catch` guarded), and update `ClusterItemAndFilterPolishTest.kt` (`TST-UI-493.3`) and `REQ-UI-493.3` / `TST-UI-493.3`.

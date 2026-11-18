@@ -1,7 +1,7 @@
 # Living Test Specification: UI Components & Design System (Part 3 of 3)
 
 **Document ID**: `DOC-TST-UI-P3`  
-**Version**: 1.0.4  
+**Version**: 1.0.6  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -13,25 +13,28 @@
 ---
 
 ### TST-UI-493: **ClusterItem & Filter (Lieblingsstrecken) Presentation Polish Verification Suite** [Verified]
-- **Requirement(s)**: `REQ-UI-493`
-- **Component**: `WorkoutClusterComponents.kt`, `WorkoutClustersViewModel.kt`, `WorkoutClusterRepository.kt`, `FilterBottomSheetScaffold.kt`, `WorkoutClusterItemPolishContractTest.kt`, `WorkoutClusterRepositoryTest.kt`
-- **Jira**: `ATT-5846`
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-UI-493` (`REQ-UI-493.1`–`REQ-UI-493.4`)
+- **Component**: `WorkoutClusterComponents.kt`, `WorkoutClustersViewModel.kt`, `WorkoutClusterRepository.kt`, `FilterBottomSheetScaffold.kt`, `ClusterItemAndFilterPolishTest.kt`, `ClusterItemThumbnailComposeTest.kt`, `WorkoutClusterRepositoryTest.kt`
+- **Jira**: `ATT-5846`, `ATT-8748`
 - **Test Description**:
-  1. *Hit Count Display Healing & Reconciliation Contract Tests (`TST-UI-493.1`, `WorkoutClusterItemPolishContractTest.kt`, `WorkoutClusterRepositoryTest.kt`)*:
+  1. *Hit Count Display Healing & Reconciliation Contract Tests (`TST-UI-493.1`, `ClusterItemAndFilterPolishTest.kt`, `WorkoutClusterRepositoryTest.kt`)*:
   • Verify `effectiveWorkoutCount` resolves `maxOf(cluster.hitCount, stats?.workoutCount ?: 0)` so clusters with `hitCount = 0` but `workoutCount = 3` display 3 recordings.
   • Verify `WorkoutClusterRepository.loadAllClustersLightweight()` heals `hitCount` from summary stats when cluster has 0.
-  2. *Bidirectional Location Resolution Contract Tests (`TST-UI-493.2`, `WorkoutClusterItemPolishContractTest.kt`)*:
+  2. *Bidirectional Location Resolution Contract Tests (`TST-UI-493.2`, `ClusterItemAndFilterPolishTest.kt`)*:
   • Verify identical start and destination location displays `"Start & Ziel: [Location]"`.
   • Verify distinct start and destination locations display `"[Start] → [Ziel]"`.
   • Verify single start or destination falls back to `"Start: ..."` or `"Ziel: ..."`.
-  3. *Landscape Map Thumbnail & Equipment Ellipsis Contract Tests (`TST-UI-493.3`, `WorkoutClusterItemPolishContractTest.kt`)*:
-  • Verify map thumbnail dimensions are 110.dp width and 75.dp height.
-  • Verify equipment text has `maxLines = 1` and `TextOverflow.Ellipsis`.
-  4. *Filter Sheet Reset Button Single-Line & 9-Locale Parity Tests (`TST-UI-493.4`, `TranslationParityTest.kt`)*:
+  3. *Landscape Map Thumbnail, Narrow-Screen Guard, Camera Framing & Equipment Ellipsis Tests (`TST-UI-493.3`, `ClusterItemThumbnailComposeTest.kt`, `ClusterItemAndFilterPolishTest.kt`)*:
+  • **Behavioral Compose UI Tests (`createComposeRule()`, ZERO `src/main` reads per `REQ-PRO-049.1`, `ClusterItemThumbnailComposeTest.kt`)**: Render `ClusterItem` and `UnclusteredWorkoutItem` at `411.dp` and `360.dp` widths; assert the preview thumbnail renders at `175.dp × 120.dp` with `12.dp` horizontal spacing on `411.dp`, clamps width cleanly on `360.dp` so metadata retains `>= 160.dp` without throwing `IntrinsicSize.Min` / `SubcomposeLayout` exceptions, preserves `maxLines = 1` / `TextOverflow.Ellipsis` equipment truncation, uses the named `16–20 px` bounds padding constant (`THUMBNAIL_BOUNDS_PADDING_PX`), and safely handles camera bounds framing (`try/catch` + optional bounds-center seeding).
+  • **Legacy Baseline Alignment (`ClusterItemAndFilterPolishTest.kt`)**: Update `clusterComponents_rendersLandscapeThumbnailAndConstrainedEquipment` thumbnail size expectation to `175.dp × 120.dp` while preserving `app/source-reading-baseline.txt` (`SourceTextReadingAuditContractTest` ceiling `105`).
+  • **Rule 8.5 Light/Dark `@Preview` Visual Evidence**: Capture combined Light & Dark `@Preview` screenshot `docs/engineering/walkthroughs/img/ATT-8748_lieblingsstrecken_preview.png` and inspect via `read_file` against the 4-point checklist.
+  4. *Filter Sheet Reset Button Single-Line & 9-Locale Parity Tests (`TST-UI-493.4`, `ClusterItemAndFilterPolishTest.kt`, `TranslationParityTest.kt`)*:
   • Verify `R.string.filter_reset` exists across all 9 locales (EN, DE, ES, FR, IT, JA, NL, PL, PT) with zero inline emojis (`ATT-5400`).
   • Verify `FilterBottomSheetScaffold` binds `filter_reset` with `maxLines = 1`.
+  • **Localization Parity (`ATT-8748`)**: `N/A - no UI strings` (zero `values*/strings*.xml` modifications).
   5. *Tier 1 Targeted Unit Test Regression (`TST-UI-493.5`)*:
-  • Execute targeted test suite (`ui.clusters.*`, `database.*Cluster*`, `ui.common.filters.*`, `localization.*`, `build.*`) asserting 100% pass rate.
+  • Execute targeted test suite (`ui.clusters.*`, `MapPreviewLiteModeTest`, `DarkMapAntiFlashOverlayTest`, `DarkMapStyleResolutionTest`, `GlobalDeleteContextMenuAuditTest`, `SourceTextReadingAuditContractTest`) asserting 100% pass rate.
 
 ### TST-UI-494: **ElevationProfile Y-Axis Grid Clearance & Zero-Altitude Profile Suppression Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-494`
@@ -778,3 +781,4 @@
 | `1.0.2` | 2026-11-18 | AI Agent (`ATT-8712`) | `ATT-8712` | Aligned `TST-UI-2783.1` (`HrvDfaA1SettingsContractTest` <-> `REQ-TRK-087`) cleanly post-split (`ATT-8206`). |
 | `1.0.3` | 2026-11-18 | AI Agent (`ATT-8749`) | `ATT-8749` | Added `TST-UI-2785` (`[Planned]`) for `175x120 dp` preview map, `120.0 dp` zoom calibration, and `360dp` behavioral Compose UI verification. |
 | `1.0.4` | 2026-11-18 | AI Agent (`ATT-8749`) | `ATT-8749` | Promoted `TST-UI-2785` to `[Verified]` after `89/89` unit/UI tests and `Rule 8.5` PNG inspection. |
+| `1.0.6` | 2026-11-18 | AI Agent (`ATT-8748`) | `ATT-8748` | Updated `TST-UI-493` to `[Verified]` (`ClusterItemThumbnailComposeTest.kt`, `ClusterItemAndFilterPolishTest.kt`, `151/151` Tier 1 XML tests, `Rule 8.5` PNG). |
