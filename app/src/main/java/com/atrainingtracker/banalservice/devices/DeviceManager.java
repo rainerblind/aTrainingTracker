@@ -468,6 +468,7 @@ public class DeviceManager {
     private final List<RrBeatListener> mRrBeatListeners = new CopyOnWriteArrayList<>();
     private final Object mRrArbitrationLock = new Object();
     private final Map<RrBeatSource, RrBeatListener> mRrSourceRelayListeners = new ConcurrentHashMap<>();
+    private final Map<RrBeatSource, Integer> mRrSourcePriorityCache = new ConcurrentHashMap<>();
     private RrBeatSource mActivePrimaryRrSource = null;
     private long mLastPrimaryRrBeatWallMs = 0L;
     private long mLastForwardedRrTimestampMs = 0L;
@@ -519,6 +520,16 @@ public class DeviceManager {
         return RR_PRIORITY_OTHER;
     }
 
+    private int getCachedRrSourcePriority(@Nonnull RrBeatSource source) {
+        Integer cached = mRrSourcePriorityCache.get(source);
+        if (cached != null) {
+            return cached;
+        }
+        int resolved = getRrSourcePriority(source);
+        mRrSourcePriorityCache.put(source, resolved);
+        return resolved;
+    }
+
     private void attachIfRrBeatSource(@Nullable Object candidate) {
         if (!(candidate instanceof RrBeatSource)) {
             return;
@@ -539,6 +550,7 @@ public class DeviceManager {
             return;
         }
         RrBeatSource source = (RrBeatSource) candidate;
+        mRrSourcePriorityCache.remove(source);
         RrBeatListener relay = mRrSourceRelayListeners.remove(source);
         if (relay != null) {
             source.removeRrBeatListener(relay);
@@ -558,14 +570,18 @@ public class DeviceManager {
                 return;
             }
             long nowMs = mRrClockMs.getAsLong();
+            boolean isPrimary = source == mActivePrimaryRrSource;
             boolean noPrimary = mActivePrimaryRrSource == null
                     || !mRrSourceRelayListeners.containsKey(mActivePrimaryRrSource);
-            boolean primaryStale = !noPrimary
+            boolean primaryStale = !isPrimary
+                    && !noPrimary
                     && (nowMs - mLastPrimaryRrBeatWallMs) > RR_SOURCE_STALE_TIMEOUT_MS;
-            boolean higherPriority = !noPrimary
-                    && getRrSourcePriority(source) < getRrSourcePriority(mActivePrimaryRrSource);
+            boolean higherPriority = !isPrimary
+                    && !noPrimary
+                    && !primaryStale
+                    && getCachedRrSourcePriority(source) < getCachedRrSourcePriority(mActivePrimaryRrSource);
 
-            if (source == mActivePrimaryRrSource || noPrimary || primaryStale || higherPriority) {
+            if (isPrimary || noPrimary || primaryStale || higherPriority) {
                 mActivePrimaryRrSource = source;
                 mLastPrimaryRrBeatWallMs = nowMs;
                 long monotonicTs = Math.max(event.getBeatTimestampMs(), mLastForwardedRrTimestampMs);
@@ -730,6 +746,7 @@ public class DeviceManager {
             detachIfRrBeatSource(source);
         }
         synchronized (mRrArbitrationLock) {
+            mRrSourcePriorityCache.clear();
             mActivePrimaryRrSource = null;
             mLastPrimaryRrBeatWallMs = 0L;
             mLastForwardedRrTimestampMs = 0L;

@@ -405,7 +405,7 @@ class HRVMetricsDeviceTest {
         val device = TestableHRVMetricsDevice(context, sensorManager, { currentTime }, artifactGateThresholdPercent = 5.0)
 
         // Construct a clean physiological harmonic series whose chronological order yields alpha1 ~ 1.78,
-        // but deliver even indices BEFORE odd indices (non-monotonic timestamps: 206_400 -> 100_800).
+        // but deliver the second half [68..134] BEFORE the first half [0..67] (non-monotonic boundary: 207_200 -> 100_000).
         // Without RrBeatNormalization.sortAndNormalizeChronologically, the half-way jump creates a huge
         // dRR discontinuity and out-of-order window slicing.
         val count = 135

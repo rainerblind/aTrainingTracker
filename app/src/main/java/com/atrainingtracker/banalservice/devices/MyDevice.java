@@ -54,6 +54,7 @@ public abstract class MyDevice {
 
     protected final DevicesDatabaseManager mDevicesDatabaseManager;
     private volatile String mCachedDeviceName = null;
+    private volatile String mCachedManufacturerName = null;
     protected long mDeviceId = -1;  // the id of the device within the database
     protected volatile int mBatteryPercentage = -1;
 
@@ -124,11 +125,20 @@ public abstract class MyDevice {
 
     @Nullable
     public String getManufacturerName() {
-        return mDevicesDatabaseManager.getManufacturerName(mDeviceId);
+        String cached = mCachedManufacturerName;
+        if (cached != null) {
+            return cached;
+        }
+        String manufacturer = mDevicesDatabaseManager.getManufacturerName(mDeviceId);
+        if (manufacturer != null) {
+            mCachedManufacturerName = manufacturer;
+        }
+        return manufacturer;
     }
 
     protected void setManufacturerName(String name) {
         if (DEBUG) Log.i(TAG, "woho, we have a manufacturer: " + name);
+        mCachedManufacturerName = name;
         mDevicesDatabaseManager.setManufacturerName(mDeviceId, name);
     }
 

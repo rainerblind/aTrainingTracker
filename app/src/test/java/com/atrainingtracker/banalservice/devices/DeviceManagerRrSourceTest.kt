@@ -37,6 +37,7 @@ import io.mockk.mockk
 import io.mockk.mockkConstructor
 import io.mockk.mockkStatic
 import io.mockk.unmockkAll
+import io.mockk.verify
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
@@ -236,5 +237,30 @@ class DeviceManagerRrSourceTest {
         wallClock.addAndGet(200L)
         verityBtleDelegate.emit(RrBeatEvent(300_400L, 910.0, 3, ProtocolType.BLE))
         assertEquals(listOf(900.0, 800.0), forwarded.map { it.rrMs })
+    }
+
+    @Test
+    fun testSteadyStatePrimaryBeats_neverInvokeGetManufacturerNamePerBeat() {
+        val wallClock = AtomicLong(40_000L)
+        deviceManager.setRrClockForTesting { wallClock.get() }
+
+        val (h10Btle, h10Delegate) = mockSource(BTLEHeartRateDevice::class.java)
+        val btleH10 = h10Btle as BTLEHeartRateDevice
+        every { btleH10.name } returns "Polar H10 12345678"
+        every { btleH10.getManufacturerName() } returns "Polar Electro Oy"
+        every { btleH10.getAddress() } returns "AA:BB:CC:DD:EE:01"
+
+        val forwarded = mutableListOf<RrBeatEvent>()
+        deviceManager.addRrBeatListener { forwarded.add(it) }
+        deviceManager.registerRrBeatSourceForTesting(h10Btle)
+
+        // Emit initial beat + 20 steady-state beats from the active primary source
+        for (i in 0..20) {
+            wallClock.addAndGet(800L)
+            h10Delegate.emit(RrBeatEvent(400_000L + i * 800L, 800.0 + (i % 3) * 5.0, i, ProtocolType.BLE))
+        }
+
+        assertEquals(21, forwarded.size)
+        verify(exactly = 0) { btleH10.getManufacturerName() }
     }
 }

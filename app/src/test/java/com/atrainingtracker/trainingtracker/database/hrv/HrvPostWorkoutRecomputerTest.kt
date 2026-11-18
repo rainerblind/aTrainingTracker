@@ -410,26 +410,43 @@ class HrvPostWorkoutRecomputerTest {
 
         val rrList = mutableListOf<WorkoutRrInterval>()
         var idx = 0
-        // Segment A: clean harmonic beats with pairs persisted out of chronological order (ts+400 before ts)
-        // plus one minor backward jump at beat 50 (-430 ms), keeping artifact rate <= 5% so DFA is computed.
+        // Segment A: smooth physiological transition from ~650 ms (beats 0..95) -> ramp (96..115) -> ~1050 ms (116..209),
+        // with small physiological variation so DfaCalculator produces finite positive DFA a1 (~1.0+).
+        // Include a genuine -430 ms backward timestamp jump relative to previous beat (ts[49] - 430 ms) at beat 50.
+        // In persisted beat_index order, interleave 15 beats from the ~1050 ms tail (150..164) every 6th beat inside 0..89:
+        // - Sorted before filtering: smooth transitions, <= 1% artifacts -> nonNullDfaCount > 0 (positive finite HRV_DFA_A1).
+        // - Unsorted (if sortAndNormalizeChronologically at L99 were omitted): 15 isolated +400 ms jumps inside 650 ms baseline
+        //   trigger > 14% artifact rate -> artifact gate suppresses EVERY window (nonNullDfaCount == 0).
         var beatTimeMs = startTs - 5_000L
         val segmentABeats = mutableListOf<Pair<Long, Float>>()
+        var prevTs = beatTimeMs
         for (i in 0 until 210) {
-            val rr = (800.0 + 40.0 * Math.sin(2.0 * Math.PI * i / 16.0) + 20.0 * Math.sin(2.0 * Math.PI * i / 64.0)).toFloat()
-            val ts = if (i == 50) beatTimeMs - 430L else beatTimeMs
+            val baseRr = when {
+                i < 96 -> 650.0
+                i < 116 -> 650.0 + (i - 95) * 20.0
+                else -> 1050.0
+            }
+            val rr = (baseRr + (i % 3 - 1) * 4.0).toFloat()
+            val ts = if (i == 50) prevTs - 430L else beatTimeMs
             segmentABeats.add(ts to rr)
+            prevTs = beatTimeMs
             beatTimeMs += rr.toLong()
         }
-        var p = 0
-        while (p + 1 < segmentABeats.size) {
-            val second = segmentABeats[p + 1]
-            val first = segmentABeats[p]
-            rrList.add(WorkoutRrInterval(workoutId = workoutId, beatIndex = idx++, beatTimestampMs = second.first, rrMs = second.second, artifactFlag = 0, gapBeats = 0))
-            rrList.add(WorkoutRrInterval(workoutId = workoutId, beatIndex = idx++, beatTimestampMs = first.first, rrMs = first.second, artifactFlag = 0, gapBeats = 0))
-            p += 2
+        val interleavedTailIndices = (150 until 165).toList()
+        val interleavedSet = interleavedTailIndices.toSet()
+        var tailCursor = 0
+        for (i in 0 until segmentABeats.size) {
+            if (i in interleavedSet) continue
+            val b = segmentABeats[i]
+            rrList.add(WorkoutRrInterval(workoutId = workoutId, beatIndex = idx++, beatTimestampMs = b.first, rrMs = b.second, artifactFlag = 0, gapBeats = 0))
+            if (i < 90 && (i + 1) % 6 == 0 && tailCursor < interleavedTailIndices.size) {
+                val tailBeat = segmentABeats[interleavedTailIndices[tailCursor++]]
+                rrList.add(WorkoutRrInterval(workoutId = workoutId, beatIndex = idx++, beatTimestampMs = tailBeat.first, rrMs = tailBeat.second, artifactFlag = 0, gapBeats = 0))
+            }
         }
-        if (p < segmentABeats.size) {
-            rrList.add(WorkoutRrInterval(workoutId = workoutId, beatIndex = idx++, beatTimestampMs = segmentABeats[p].first, rrMs = segmentABeats[p].second, artifactFlag = 0, gapBeats = 0))
+        while (tailCursor < interleavedTailIndices.size) {
+            val tailBeat = segmentABeats[interleavedTailIndices[tailCursor++]]
+            rrList.add(WorkoutRrInterval(workoutId = workoutId, beatIndex = idx++, beatTimestampMs = tailBeat.first, rrMs = tailBeat.second, artifactFlag = 0, gapBeats = 0))
         }
 
         // Segment B: unflagged multi-second gaps in tail [170s..259s]
