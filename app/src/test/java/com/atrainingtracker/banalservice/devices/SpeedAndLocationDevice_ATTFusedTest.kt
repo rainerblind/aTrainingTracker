@@ -621,4 +621,64 @@ class SpeedAndLocationDevice_ATTFusedTest {
             1e-6
         )
     }
+
+    // TST-FIL-027.2: 50-Hz cyclic thigh-pedaling yaw oscillations average out over rolling 1.0-s window
+    @Test
+    fun testCyclicPedalingYawRate_averagesOverOneSecondWindowAndPreservesSteadyTurn_tstFil027_2() {
+        val rotationVector = floatArrayOf(0f, 0f, 0f, 1f)
+        val dtSec = 0.02 // 50 Hz
+        val steadyTurnRadPerSec = 0.25
+
+        // 1. 1.0 Hz cyclic pedaling (full cycle inside 1.0-s window) cancels to steady turn rate
+        val device1Hz = SpeedAndLocationDevice_ATTFused(mockContext, mockSensorManager)
+        for (i in 1..100) {
+            val tSec = i * dtSec
+            val cyclicPedalAlias = 2.5 * kotlin.math.sin(2.0 * kotlin.math.PI * 1.0 * tSec)
+            val gyroValues = floatArrayOf(0f, 0f, (steadyTurnRadPerSec + cyclicPedalAlias).toFloat())
+            device1Hz.ingestImuMeasurement(rotationVector, gyroValues, dtSec = dtSec, timestampMs = i * 20L)
+        }
+        val published1Hz = device1Hz.mWorldYawRateSensor?.value ?: Double.NaN
+        assertTrue(
+            "Rolling 1.0-s mean must cancel 1.0 Hz 2.5 rad/s pedaling alias near 0.25 rad/s (was $published1Hz)",
+            kotlin.math.abs(published1Hz - steadyTurnRadPerSec) < 0.08
+        )
+
+        // 2. 1.5 Hz worst-case half-cycle alias still attenuates >75% vs +-2.5 rad/s peak
+        val device15Hz = SpeedAndLocationDevice_ATTFused(mockContext, mockSensorManager)
+        for (i in 1..100) {
+            val tSec = i * dtSec
+            val cyclicPedalAlias = 2.5 * kotlin.math.sin(2.0 * kotlin.math.PI * 1.5 * tSec)
+            val gyroValues = floatArrayOf(0f, 0f, (steadyTurnRadPerSec + cyclicPedalAlias).toFloat())
+            device15Hz.ingestImuMeasurement(rotationVector, gyroValues, dtSec = dtSec, timestampMs = i * 20L)
+        }
+        val published15Hz = device15Hz.mWorldYawRateSensor?.value ?: Double.NaN
+        assertTrue(
+            "Rolling 1.0-s mean must strongly attenuate 1.5 Hz 2.5 rad/s alias (was $published15Hz)",
+            kotlin.math.abs(published15Hz - steadyTurnRadPerSec) < 0.6
+        )
+    }
+
+    // TST-FIL-027.2: resetOriginAndEkf() and shutDown() clear gyro yaw-rate window cleanly
+    @Test
+    fun testResetAndShutDown_clearGyroYawRateWindow_tstFil027_2() {
+        val device = object : SpeedAndLocationDevice_ATTFused(mockContext, mockSensorManager) {
+            fun callAccumulatorsReset() = onAccumulatorsReset()
+        }
+        val rotationVector = floatArrayOf(0f, 0f, 0f, 1f)
+
+        // Seed window with large 4.0 rad/s spike
+        device.ingestImuMeasurement(rotationVector, floatArrayOf(0f, 0f, 4.0f), dtSec = 0.5, timestampMs = 1000L)
+        assertEquals(1, device.yawRateWindowSizeForTest())
+        device.callAccumulatorsReset()
+        assertEquals(0, device.yawRateWindowSizeForTest())
+
+        // After reset, first 0.1 rad/s sample must publish immediately without prior 4.0 rad/s bleed
+        device.ingestImuMeasurement(rotationVector, floatArrayOf(0f, 0f, 0.1f), dtSec = 0.1, timestampMs = 2000L)
+        assertEquals(0.1, device.mWorldYawRateSensor?.value ?: Double.NaN, 1e-4)
+
+        device.ingestImuMeasurement(rotationVector, floatArrayOf(0f, 0f, 4.0f), dtSec = 0.5, timestampMs = 3000L)
+        assertEquals(2, device.yawRateWindowSizeForTest())
+        device.shutDown()
+        assertEquals(0, device.yawRateWindowSizeForTest())
+    }
 }

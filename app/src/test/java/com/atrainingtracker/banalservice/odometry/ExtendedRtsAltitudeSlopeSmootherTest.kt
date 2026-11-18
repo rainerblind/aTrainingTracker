@@ -112,4 +112,38 @@ class ExtendedRtsAltitudeSlopeSmootherTest {
             assertEquals("Slope non-zero during standstill: ${pt.slopePercent}%", 0.0, pt.slopePercent, 0.01)
         }
     }
+
+    // TST-FIL-027.5: 2.0 m anchor hysteresis rejects moving micro-ripples while preserving genuine climbs
+    @Test
+    fun testHysteresisDeadband_rejectsMicroRipplesWhilePreservingRealClimb_tstFil027_5() {
+        // 1. Flat moving ride (5.0 m/s) with +-0.6 m elevation ripples (< 2.0 m hysteresis) -> 0.0 m ascent/descent
+        val flatSamples = (0 until 120).map { sec ->
+            val ripple = if (sec % 4 < 2) 0.6 else -0.6
+            RawAltitudeSample(
+                timestampMs = 1_000_000L + sec * 1000L,
+                rawAltitudeM = 438.0 + ripple,
+                referenceAltitudeM = 438.0 + ripple,
+                smoothedSpeedMps = 5.0
+            )
+        }
+        val flatSmoothed = ExtendedRtsAltitudeSlopeSmoother.smooth(flatSamples)
+        assertEquals("Flat micro-ripples must accumulate 0.0 m ascent", 0.0, flatSmoothed.last().ascentM, 1e-6)
+        assertEquals("Flat micro-ripples must accumulate 0.0 m descent", 0.0, flatSmoothed.last().descentM, 1e-6)
+
+        // 2. Genuine +20.0 m climb over 80s (0..80) at 5.0 m/s -> accumulates >= 17.0 m
+        val climbSamples = (0..80).map { sec ->
+            val alt = 438.0 + sec * 0.25
+            RawAltitudeSample(
+                timestampMs = 2_000_000L + sec * 1000L,
+                rawAltitudeM = alt,
+                referenceAltitudeM = alt,
+                smoothedSpeedMps = 5.0
+            )
+        }
+        val climbSmoothed = ExtendedRtsAltitudeSlopeSmoother.smooth(climbSamples)
+        assertTrue(
+            "Genuine +20 m climb must accumulate >= 17.0 m ascent (was ${climbSmoothed.last().ascentM})",
+            climbSmoothed.last().ascentM >= 17.0
+        )
+    }
 }

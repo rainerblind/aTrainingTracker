@@ -1,14 +1,14 @@
 # Living Requirements: Tracking & Live Sensor Cockpit (Part 2 of 2)
 
 **Document ID**: `DOC-REQ-TRK-P2`  
-**Version**: 1.0.16  
+**Version**: 1.0.21  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit_part2`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Requirements**: 66
+**Total Requirements**: 67
 
 ---
 
@@ -3118,6 +3118,47 @@
 
 **Invariants**: Zero `.clickable`/`.pointerInput`/`.pointerInteropFilter` on full-screen markers/guides (`REQ-TRK-062.3`); `RadarStatusBadgePill` absent when clear (`ATT-8679`); `rememberInfiniteTransition` gated strictly on `FAST_APPROACHING`; `LEFT`/`RIGHT` `RadarVerticalRail` untouched (`REQ-TRK-073.2`); `Color(0x...)` strictly confined to `Color.kt`; `private` `@Preview` visibility only; `0` `src/main` reads in `RadarEdgeOverlayTest.kt`; `Localization Parity: PASS - 9/9 existing strings_radar.xml keys reused, zero new keys needed`.
 
+### REQ-FIL-027: Post-Workout ERTS Monotonic Timing, Stationary Indoor Pinning, Jeans-Pocket Gyro/Baro Filtering, Lap Distance Sync & Stream Subsampling [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-FIL-027`
+- **System Requirement(s)**: `SYSREQ-TRK-003`, `SYSREQ-TRK-004`, `SYSREQ-TRK-005`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `app/src/main/java/com/atrainingtracker/trainingtracker/database/ErtsPostWorkoutRecomputer.kt`, `app/src/main/java/com/atrainingtracker/banalservice/devices/SpeedAndLocationDevice_ATTFused.kt`, `app/src/main/java/com/atrainingtracker/banalservice/odometry/ExtendedRtsOdometrySmoother.kt`, `app/src/main/java/com/atrainingtracker/banalservice/odometry/UnicycleOdometryEkf.kt`, `app/src/main/java/com/atrainingtracker/banalservice/odometry/ExtendedRtsAltitudeSlopeSmoother.kt`
+- **Rationale**: Pixel 10 cycling telemetry (`Zum Bäcker #57`, phone in front jeans pocket) exposed 5 compounding defects across live yaw-rate publishing and post-workout ERTS recomputation: (1) SQLite `time` (`DEFAULT CURRENT_TIMESTAMP`) batch-flush `dt = 0 s / 2 s` quantization stalls EKF prediction, drops `VERTICAL_SPEED` to `0 m/h`, and bypasses `useAntiAliasedYaw`; (2) `SpeedAndLocationDevice_ATTFused` overwrites `mWorldYawRateSensor` with the last 20-ms gyro sample, logging `1.2–1.5 Hz` thigh-pedaling aliases; (3) indoor stops (`speed <= 0.05 m/s`, `acc = 50 m`) omit ZUPT and stationary cross-covariance decoupling, letting backward RTS pull post-stop departure backwards into the stop; (4) `ALLOWED_CANONICAL_COLUMNS` omits `DISTANCE_m_LAP` and `updateWorkoutSummaries()` skips `PolyUtil.simplify(..., 10.0)` and `WorkoutSummaries.ENCODING_STEP_SIZE` (`20`) subsampling; and (5) `ExtendedRtsAltitudeSlopeSmoother` lacks `2.0 m` ascent/descent hysteresis (`REQ-FIL-020.2`) while `ErtsPostWorkoutRecomputer` ingests filtered `ALTITUDE` instead of pre-filtering 9-locale raw barometer columns through `BarometricAltitudeFilter.filterSlewOnly()` (`ATT-8880`, refining `REQ-FIL-017.1`–`.4`, `REQ-FIL-019.3`, `REQ-FIL-020.2`, `REQ-FIL-025.2`/`.4`, `REQ-SEN-028.3`, and `REQ-TRK-075`).
+- **Description**:
+  1. *Monotonic `timestampMs` Reconstruction (`REQ-FIL-027.1`)*:
+     - `ErtsPostWorkoutRecomputer.readWorkoutSamples()` SHALL reconstruct monotonic `timestampMs` from `SensorType.TIME_TOTAL` anchored to the first valid `time` epoch, falling back to `parseTimestampMs(timeStr)` with strictly monotonic `max(parsedTs, prevTs + 1000L)` when `TIME_TOTAL` is absent/null/non-increasing (preserving pause gaps and schemas without `TIME_TOTAL`), BEFORE invoking `BarometricAltitudeFilter.filterSlewOnly()` or ERTS smoothing, eliminating `dt = 0 s / 2 s` quantization, `0 m/h` `VERTICAL_SPEED` sawtooth drops, and `useAntiAliasedYaw` bypasses.
+  2. *Rolling 1.0-s Time-Weighted Mean `WORLD_YAW_RATE_radps` (`REQ-FIL-027.2`)*:
+     - `SpeedAndLocationDevice_ATTFused` SHALL maintain a rolling `1.0 s` time-weighted mean window ($\sum \omega_i \Delta t_i / \sum \Delta t_i$, retaining at least the latest sample) for `mWorldYawRateSensor` across `onSensorChanged()` and `ingestImuMeasurement()`, MUST preserve immediate single-sample emission on sample 1 (`SpeedAndLocationDevice_ATTFusedTest:126-139`), and MUST reset the accumulator alongside `mLastGyroTimestampNs = 0L` in `resetOriginAndEkf()` and `shutDown()`.
+  3. *Stationary Indoor-Stop Pinning & Cross-Covariance Decoupling (`REQ-FIL-027.3`)*:
+     - `ExtendedRtsOdometrySmoother.smoothSamples()` SHALL classify stationary epochs strictly as `speedMps != null && speedMps <= 0.05 && (wheelSpeedMps == null || wheelSpeedMps <= 0.05)`, invoke `ekf.applyZeroVelocityUpdate()`, pass `isStationary = true` to `ekf.updateGnssPosition()`, decouple stationary velocity/position transition-Jacobian and covariance coupling in `snapshots` / `smoothSnapshots()` backward RTS recursion, and clamp `smoothedStates[k][2] = 0.0` on stationary epochs.
+     - `UnicycleOdometryEkf.ZUPT_SPEED_VARIANCE = 2.0`, `MIN_DOPPLER_SPEED_MPS = 3.0`, live `UnicycleOdometryEkf` contracts, and canopy Doppler-dropout tests (`wheelSpeedMps = 10.0`, `ExtendedRtsOdometrySmootherTest:140`) MUST remain intact.
+  4. *`DISTANCE_m_LAP` Sync & Summary Stream Subsampling Parity (`REQ-FIL-027.4`)*:
+     - `ErtsPostWorkoutRecomputer.ALLOWED_CANONICAL_COLUMNS` and `updateSamplesDatabase()` SHALL include `SensorType.DISTANCE_m_LAP.name`, resetting per-lap cumulative distance to `0.0` on `LAP_NR` transitions before adding `odom.deltaDistanceMeters` in parity with `Laps.db` (`LapsDatabaseManager.syncLapDistancesAndSpeeds()`).
+     - `ErtsPostWorkoutRecomputer.updateWorkoutSummaries()` SHALL simplify valid fixes via `PolyUtil.simplify(validLatLngs, 10.0)` (`TrackerService.finalizeLiveSession()` parity; collinear straight-line routes simplify to `2` endpoints, refining `TST-FIL-017.3` & `TST-FIL-019.3`) and subsample `distanceStream` / `altitudeStream` at `WorkoutSummaries.ENCODING_STEP_SIZE` (`20`) parity (retaining start/end points for `< 20`-sample workouts).
+  5. *9-Locale Raw Barometer Pre-Filtering & `2.0 m` Elevation Hysteresis (`REQ-FIL-027.5`)*:
+     - `ErtsPostWorkoutRecomputer.readWorkoutSamples()` SHALL select raw barometer altitude columns across all 9 locales matching `WorkoutSamplesDatabaseManager.resolveBarometricDeviceNames()` prefixes (plus legacy names, excluding DEM/GPS), pre-filter non-null values through `BarometricAltitudeFilter.filterSlewOnly()` using reconstructed monotonic `timestampMs`, and fall back to canonical `ALTITUDE` only when absent/null.
+     - `ExtendedRtsAltitudeSlopeSmoother.smooth()` SHALL apply `ASCENT_DESCENT_HYSTERESIS_METERS = 2.0` (`REQ-FIL-020.2`) anchor-based hysteresis when accumulating `ascentM` and `descentM`.
+     - Raw device-attributed columns in `WorkoutSamples.db` (`REQ-FIL-017.3`), `KEY_POST_WORKOUT_ERTS_SMOOTHING = false` (`REQ-FIL-017.5`), and `WorkoutRepository.kt` (`<= 5,117` LoC) MUST remain untouched (`Localization Parity: N/A - no UI strings`; `0` new `src/main` reads per `REQ-PRO-049.1`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new `REQ-FIL-027` refining `REQ-FIL-017.1`–`.4`, `REQ-FIL-019.3`, `REQ-FIL-020.2`, `REQ-FIL-025.2`/`.4`, `REQ-SEN-028.3`, and `REQ-TRK-075`. Targets `ErtsPostWorkoutRecomputer.kt`, `SpeedAndLocationDevice_ATTFused.kt`, `ExtendedRtsOdometrySmoother.kt`, `UnicycleOdometryEkf.kt`, and `ExtendedRtsAltitudeSlopeSmoother.kt`.
+2. *Historical Origin & Commit Trace*: `7d2836ef` (`ATT-7751`), `ed6acfee` (`ATT-7750`), `ed972bad` (`ATT-8337`), `8b0eba41` (`ATT-8081`), `eba66320`/`f6715226` (`ATT-8576`), `d96fd52f` (`ATT-8705`).
+3. *Root Reason for Existing Formulation*: `ATT-7750` assumed `time` was 1-Hz monotonic, `ALTITUDE` was usable as raw altitude, and RTS transitions were always moving; `ATT-8705` synced `Laps.db` without `DISTANCE_m_LAP` or indoor-stop ZUPT decoupling.
+4. *Preservation of Core Invariants*: Preserves raw device columns byte-for-byte (`REQ-FIL-017.3`), `KEY_POST_WORKOUT_ERTS_SMOOTHING = false` (`REQ-FIL-017.5`), `UnicycleOdometryEkf.ZUPT_SPEED_VARIANCE = 2.0` & `MIN_DOPPLER_SPEED_MPS = 3.0`, immediate sample-1 `mWorldYawRateSensor` emission, Null-Island `NULL` preservation (`REQ-FIL-019`), `Laps.db` parity (`REQ-FIL-025.4`), `WorkoutRepository.kt <= 5,117` LoC untouched, `REQ-PRO-049.1`, and `N/A - no UI strings`.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `WorkoutSamples.db` with duplicate batch-flush `time` (`dt = 0 s / 2 s`), monotonic `TIME_TOTAL`, 9-locale barometer altitude with pocket spikes, `LAP_NR` segments, and an indoor stop (`speed <= 0.05`, `acc = 50 m`),
+• *When* `ErtsPostWorkoutRecomputer.recomputeWorkout()` runs,
+• *Then* monotonic `timestampMs` reconstructs `1-Hz` `dtSec` (`0` `0 m/h` `VERTICAL_SPEED` drops), raw barometer pre-filters via `filterSlewOnly()` + `2.0 m` hysteresis, stationary stop clamps to `0.0 m/s` without pre-stop collapse, `DISTANCE_m_LAP` matches per-lap totals, `mapPolyline` uses `PolyUtil.simplify(..., 10.0)` (`2` points on collinear tracks), and streams subsample at `ENCODING_STEP_SIZE` (`20`).
+• *Given* `SpeedAndLocationDevice_ATTFused` receiving a single gyro sample (`0.1 rad/s`) vs. `50-Hz` cyclic pedaling oscillations (`1.2–1.5 Hz`),
+• *When* `ingestImuMeasurement()` / `onSensorChanged()`, `resetOriginAndEkf()`, and `shutDown()` execute,
+• *Then* sample 1 emits `0.1 rad/s` immediately, `50-Hz` cyclic oscillations average out over a rolling `1.0 s` window, and reset/shutdown clear all gyro-window state cleanly.
+
+**Invariants**: Monotonic `timestampMs` before `filterSlewOnly()`/ERTS; immediate 1st-sample `mWorldYawRateSensor` + rolling `1.0 s` mean + clean reset; stationary ZUPT + RTS decoupling without altering `UnicycleOdometryEkf.ZUPT_SPEED_VARIANCE = 2.0` / `MIN_DOPPLER_SPEED_MPS = 3.0` / `ExtendedRtsOdometrySmootherTest:140`; `DISTANCE_m_LAP` + `PolyUtil.simplify(..., 10.0)` + `ENCODING_STEP_SIZE (20)`; 9-locale barometer `filterSlewOnly()` + `2.0 m` hysteresis; raw device columns & `WorkoutRepository.kt <= 5,117` LoC untouched; `0` new `src/main` reads; `N/A - no UI strings`.
+
 ---
 
 ## Change History
@@ -3139,3 +3180,8 @@
 | `1.0.13` | 2026-11-18 | AI Agent (`ATT-8881`) | `ATT-8881` | Added `REQ-FIL-026` `[Verified]` for 1-Hz barometric ingestion rate-matching and adaptive cyclic pocket-jitter `varBaro` scaling in `AltitudeAndSlopeDevice_ATTFused` and `KinematicAltitudeSlopeEkf` (`67/67` PASS across `8` XMLs). |
 | `1.0.14` | 2026-11-18 | AI Agent (`ATT-8733`) | `ATT-8733` | Added `REQ-TRK-089` `[Verified]` (`RadarFullScreenThreatOverlay` non-clipping content-sized markers, touch-transparent `Box` + single-pass `.layout`, `TwoWheeler`/`DirectionsCar`/`LocalShipping`, `Color.kt` contrast & map-backdrop tokens, `9/9` locales, `76/76` scoped PASS, `:app:lintDebug` `0` errors, `Rule 8.5` PNG). |
 | `1.0.16` | 2026-11-18 | AI Agent (`ATT-8201`) | `ATT-8201` | Linked refined `REQ-*` entries in-place to net-new `SYSREQ-TRK-007..013` and `SYSREQ-DEX-007..008`. |
+| `1.0.17` | 2026-11-18 | AI Agent (`ATT-8880`) | `ATT-8880` | Added `REQ-FIL-027` `[Planned]` for ERTS monotonic `TIME_TOTAL` timestamp reconstruction, rolling 1.0-s gyro averaging, stationary indoor ZUPT/RTS decoupling, `DISTANCE_m_LAP` & `ENCODING_STEP_SIZE` / `PolyUtil.simplify(..., 10.0)` parity, and 9-locale `filterSlewOnly()` + `2.0 m` hysteresis. |
+| `1.0.18` | 2026-11-18 | AI Agent (`ATT-8880`) | `ATT-8880` | Promoted `REQ-FIL-027` to `[Implemented]` following Stage 4 construction (`SpeedAndLocationDevice_ATTFused.kt`, `ExtendedRtsOdometrySmoother.kt`, `ExtendedRtsAltitudeSlopeSmoother.kt`, `ErtsPostWorkoutRecomputer.kt`). |
+| `1.0.19` | 2026-11-18 | AI Agent (`ATT-8880`) | `ATT-8880` | Promoted `REQ-FIL-027` to `[Verified]` in Stage 5 following Tier 1 targeted verification (`54/54` PASS across 6 JUnit XMLs) and `verify_requirement_governance.py` (`exit 0`). |
+| `1.0.20` | 2026-11-18 | AI Agent (`ATT-8880`) | `ATT-8880` | Stage 4 Bounce 1/3 heal: restricted wheel-speed column detection to `SPEED_mps (` (excluding `RADAR`/`YAW`/`CADENCE`/`ATT`/`GPS`/`Google`), added `.isFinite()` sanitization across `ErtsPostWorkoutRecomputer`/`ExtendedRtsOdometrySmoother`/`UnicycleOdometryEkf`, re-anchored `baseEpochMs`/`firstTimeTotalSec` on leading null `TIME_TOTAL` & `wallJumpPastTimeTotal` vs reconstructed time, and set `[Implemented]` pending Stage 5 re-verification. |
+| `1.0.21` | 2026-11-18 | AI Agent (`ATT-8880`) | `ATT-8880` | Promoted `REQ-FIL-027` to `[Verified]` in Stage 5 (Bounce 1/3) on `8a976a35` (`58/58` Author Tier 1 + `62/62` Gate 4 Bounce 1 PASS, `verify_requirement_governance.py` `exit 0`). |

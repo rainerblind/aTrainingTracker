@@ -24,6 +24,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.atrainingtracker.banalservice.odometry.SmoothedAltitudeSlopePoint
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
+import com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.PolyUtil
 import kotlinx.coroutines.runBlocking
@@ -216,10 +217,12 @@ class ErtsPostWorkoutRecomputerTest {
             assertNotNull("Polyline should be populated", polyline)
             assertTrue("Polyline not empty", polyline.isNotEmpty())
             val decodedPoints = PolyUtil.decode(polyline)
-            assertEquals("Polyline has 30 points", 30, decodedPoints.size)
+            assertEquals("Collinear polyline simplifies via PolyUtil.simplify(..., 10.0) to 2 endpoints", 2, decodedPoints.size)
 
             assertNotNull("Altitude stream populated", altStream)
             assertNotNull("Distance stream populated", distStream)
+            assertEquals(3, NumericalEncodingUtils.decodeDoubles(altStream).size)
+            assertEquals(3, NumericalEncodingUtils.decodeDoubles(distStream).size)
             assertTrue("Total distance > 0", totalDist > 0.0)
         }
     }
@@ -324,10 +327,9 @@ class ErtsPostWorkoutRecomputerTest {
             val polyline = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.MAP_POLYLINE))
             assertNotNull("Polyline must exist", polyline)
             val decodedPoints = PolyUtil.decode(polyline)
-            assertEquals(
-                "Polyline must contain exactly 25 valid fix points (5 no-fix rows excluded)",
-                25,
-                decodedPoints.size
+            assertTrue(
+                "25-fix polyline must exclude 5 no-fix rows and simplify via PolyUtil.simplify(..., 10.0) to <= 3 points (was ${decodedPoints.size})",
+                decodedPoints.size in 2..3
             )
             for (pt in decodedPoints) {
                 assertTrue(
@@ -743,5 +745,531 @@ class ErtsPostWorkoutRecomputerTest {
         lapsDbManager.syncLapDistancesAndSpeeds(workoutId, emptyMap(), 200.0)
         val fallbackLaps = lapsDbManager.getLaps(workoutId)
         assertEquals(200.0, fallbackLaps.sumOf { it.distanceTotalM }, 1e-3)
+    }
+
+    // TST-FIL-027.1: TIME_TOTAL monotonic timestamp reconstruction eliminates dt=0/2s quantization & 0 m/h VAM drops
+    @Test
+    fun testTimeTotalReconstructsMonotonicTimestamps_andEliminatesZeroVamDrops_tstFil027_1() = runBlocking {
+        val baseFileName = "2026-11-18_002000"
+        val workoutId = createWorkout(baseFileName)
+
+        val samplesDb = samplesDbManager.database
+        val tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
+        samplesDbManager.createNewTable(
+            baseFileName,
+            listOf(
+                SensorType.TIME_TOTAL,
+                SensorType.LATITUDE,
+                SensorType.LONGITUDE,
+                SensorType.SPEED_mps,
+                SensorType.PACE_spm,
+                SensorType.DISTANCE_m,
+                SensorType.BEARING,
+                SensorType.ALTITUDE,
+                SensorType.SLOPE,
+                SensorType.VERTICAL_SPEED,
+                SensorType.ASCENT,
+                SensorType.DESCENT
+            )
+        )
+
+        val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).apply {
+            timeZone = TimeZone.getTimeZone("UTC")
+        }
+        val startTs = 1_700_000_500_000L
+        val originLat = 48.6567
+        val originLon = 9.0545
+        val speed = 6.0
+        val lonStepDeg = Math.toDegrees(speed / (6371000.0 * kotlin.math.cos(Math.toRadians(originLat))))
+
+        samplesDb.beginTransaction()
+        try {
+            for (sec in 0 until 40) {
+                // Inject dt=0s / dt=2s batch-flush alternation on even/odd pairs while TIME_TOTAL is monotonic
+                val quantizedSec = if (sec % 2 == 1) sec - 1 else sec
+                val cv = ContentValues().apply {
+                    put("time", sdf.format(Date(startTs + quantizedSec * 1000L)))
+                    put(SensorType.TIME_TOTAL.name, sec.toLong())
+                    put(SensorType.LATITUDE.name, originLat)
+                    put(SensorType.LONGITUDE.name, originLon + sec * lonStepDeg)
+                    put(SensorType.SPEED_mps.name, speed)
+                    put(SensorType.PACE_spm.name, 1.0 / speed)
+                    put(SensorType.DISTANCE_m.name, sec * speed)
+                    put(SensorType.BEARING.name, 90.0)
+                    put(SensorType.ALTITUDE.name, 450.0 + sec * 0.3)
+                    put(SensorType.SLOPE.name, 5.0)
+                    put(SensorType.VERTICAL_SPEED.name, 0)
+                    put(SensorType.ASCENT.name, sec * 0.3)
+                    put(SensorType.DESCENT.name, 0.0)
+                }
+                samplesDb.insert(tableName, null, cv)
+            }
+            samplesDb.setTransactionSuccessful()
+        } finally {
+            samplesDb.endTransaction()
+        }
+
+        val success = ErtsPostWorkoutRecomputer.recomputeWorkout(context, workoutId)
+        assertTrue("Recomputation must succeed with TIME_TOTAL reconstruction", success)
+
+        samplesDb.query(tableName, null, null, null, null, null, "_id ASC").use { cursor ->
+            val distIdx = cursor.getColumnIndexOrThrow(SensorType.DISTANCE_m.name)
+            val vamIdx = cursor.getColumnIndexOrThrow(SensorType.VERTICAL_SPEED.name)
+            var rowIdx = 0
+            var prevDist = -1.0
+            while (cursor.moveToNext()) {
+                val dist = cursor.getDouble(distIdx)
+                val vam = cursor.getLong(vamIdx)
+                if (rowIdx > 0) {
+                    assertTrue("DISTANCE_m froze at row $rowIdx ($prevDist -> $dist)", dist > prevDist + 1.0)
+                }
+                if (rowIdx in 5 until 38) {
+                    assertTrue("VERTICAL_SPEED dropped to 0 m/h at row $rowIdx (was $vam)", vam > 500L)
+                }
+                prevDist = dist
+                rowIdx++
+            }
+            assertEquals(40, rowIdx)
+        }
+    }
+
+    // TST-FIL-027.4: DISTANCE_m_LAP sync with LAP_NR transitions & ENCODING_STEP_SIZE stream subsampling
+    @Test
+    fun testDistanceMLapSyncAndStreamSubsamplingParity_tstFil027_4() = runBlocking {
+        val baseFileName = "2026-11-18_003000"
+        val workoutId = createWorkout(baseFileName)
+
+        val samplesDb = samplesDbManager.database
+        val tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
+        samplesDbManager.createNewTable(
+            baseFileName,
+            listOf(
+                SensorType.TIME_TOTAL,
+                SensorType.LATITUDE,
+                SensorType.LONGITUDE,
+                SensorType.SPEED_mps,
+                SensorType.PACE_spm,
+                SensorType.DISTANCE_m,
+                SensorType.DISTANCE_m_LAP,
+                SensorType.BEARING,
+                SensorType.ALTITUDE,
+                SensorType.SLOPE,
+                SensorType.VERTICAL_SPEED,
+                SensorType.ASCENT,
+                SensorType.DESCENT,
+                SensorType.LAP_NR
+            )
+        )
+
+        val lapsDbManager = LapsDatabaseManager.getInstance(context)
+        lapsDbManager.saveLap(workoutId, 1L, "2026-11-18 00:30:00", 30, 100.0, 3.3, "Lap 1", "")
+        lapsDbManager.saveLap(workoutId, 2L, "2026-11-18 00:30:30", 30, 100.0, 3.3, "Lap 2", "")
+
+        val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).apply {
+            timeZone = TimeZone.getTimeZone("UTC")
+        }
+        val startTs = 1_700_000_600_000L
+        val originLat = 48.6567
+        val originLon = 9.0545
+        val speed = 5.0
+        val latStepDeg = Math.toDegrees(speed / 6371000.0)
+
+        samplesDb.beginTransaction()
+        try {
+            for (sec in 0 until 60) {
+                val lapNr = if (sec < 30) 1L else 2L
+                val cv = ContentValues().apply {
+                    put("time", sdf.format(Date(startTs + sec * 1000L)))
+                    put(SensorType.TIME_TOTAL.name, sec.toLong())
+                    put(SensorType.LATITUDE.name, originLat + sec * latStepDeg)
+                    put(SensorType.LONGITUDE.name, originLon)
+                    put(SensorType.SPEED_mps.name, speed)
+                    put(SensorType.PACE_spm.name, 1.0 / speed)
+                    put(SensorType.DISTANCE_m.name, sec * speed)
+                    put(SensorType.DISTANCE_m_LAP.name, 0.0)
+                    put(SensorType.BEARING.name, 0.0)
+                    put(SensorType.ALTITUDE.name, 440.0 + sec * 0.2)
+                    put(SensorType.SLOPE.name, 4.0)
+                    put(SensorType.VERTICAL_SPEED.name, 720)
+                    put(SensorType.ASCENT.name, sec * 0.2)
+                    put(SensorType.DESCENT.name, 0.0)
+                    put(SensorType.LAP_NR.name, lapNr)
+                }
+                samplesDb.insert(tableName, null, cv)
+            }
+            samplesDb.setTransactionSuccessful()
+        } finally {
+            samplesDb.endTransaction()
+        }
+
+        val success = ErtsPostWorkoutRecomputer.recomputeWorkout(context, workoutId)
+        assertTrue(success)
+
+        val laps = lapsDbManager.getLaps(workoutId)
+        assertEquals(2, laps.size)
+
+        var lap1LastDist = 0.0
+        var lap2FirstDist = -1.0
+        var lap2LastDist = 0.0
+        samplesDb.query(tableName, arrayOf(SensorType.LAP_NR.name, SensorType.DISTANCE_m_LAP.name), null, null, null, null, "_id ASC").use { cursor ->
+            var rowIdx = 0
+            while (cursor.moveToNext()) {
+                val lapNr = cursor.getLong(0)
+                val lapDist = cursor.getDouble(1)
+                if (lapNr == 1L) lap1LastDist = lapDist
+                if (rowIdx == 30) lap2FirstDist = lapDist
+                if (lapNr == 2L) lap2LastDist = lapDist
+                rowIdx++
+            }
+        }
+        assertTrue("DISTANCE_m_LAP must reset at Lap 2 boundary (was $lap2FirstDist vs lap1End $lap1LastDist)", lap2FirstDist < 10.0)
+        assertEquals("Lap 1 final DISTANCE_m_LAP must match Laps.db", laps[0].distanceTotalM, lap1LastDist, 1e-3)
+        assertEquals("Lap 2 final DISTANCE_m_LAP must match Laps.db", laps[1].distanceTotalM, lap2LastDist, 1e-3)
+
+        summariesDbManager.database.query(
+            WorkoutSummaries.TABLE,
+            arrayOf(WorkoutSummaries.MAP_POLYLINE, WorkoutSummaries.DISTANCE_STREAM, WorkoutSummaries.ALTITUDE_STREAM),
+            "${WorkoutSummaries.C_ID} = ?",
+            arrayOf(workoutId.toString()),
+            null,
+            null,
+            null
+        ).use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            val polylinePoints = PolyUtil.decode(cursor.getString(0))
+            assertEquals("60-sample collinear route simplifies via PolyUtil.simplify(..., 10.0) to 2 endpoints", 2, polylinePoints.size)
+            val distPoints = NumericalEncodingUtils.decodeDoubles(cursor.getString(1))
+            val altPoints = NumericalEncodingUtils.decodeDoubles(cursor.getString(2))
+            assertEquals("60-sample stream subsampled by ENCODING_STEP_SIZE=20 yields 4 points (0,20,40,59)", 4, distPoints.size)
+            assertEquals(4, altPoints.size)
+        }
+
+        // Verify <20-sample subsampling retains [first, last] and 1-sample retains [0]
+        val shortList = (0 until 10).map { it.toDouble() }
+        assertEquals(listOf(0.0, 9.0), ErtsPostWorkoutRecomputer.subsampleStream(shortList))
+        assertEquals(listOf(42.0), ErtsPostWorkoutRecomputer.subsampleStream(listOf(42.0)))
+    }
+
+    // TST-FIL-027.5: 9-locale raw barometer column pre-filtered via BarometricAltitudeFilter.filterSlewOnly()
+    @Test
+    fun testNineLocaleBarometerPreFilteredViaSlewOnly_andRawPreserved_tstFil027_5() = runBlocking {
+        val baseFileName = "2026-11-18_004000"
+        val workoutId = createWorkout(baseFileName)
+
+        val samplesDb = samplesDbManager.database
+        val tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
+        samplesDbManager.createNewTable(
+            baseFileName,
+            listOf(
+                SensorType.TIME_TOTAL,
+                SensorType.LATITUDE,
+                SensorType.LONGITUDE,
+                SensorType.SPEED_mps,
+                SensorType.PACE_spm,
+                SensorType.DISTANCE_m,
+                SensorType.BEARING,
+                SensorType.ALTITUDE,
+                SensorType.SLOPE,
+                SensorType.VERTICAL_SPEED,
+                SensorType.ASCENT,
+                SensorType.DESCENT
+            )
+        )
+        // Add English-locale barometer column + DEM reference column
+        val baroCol = "ALTITUDE (Altitude from Pressure)"
+        val demCol = "ALTITUDE (Topografische Höhe (DEM))"
+        samplesDb.execSQL("ALTER TABLE $tableName ADD COLUMN \"$baroCol\" REAL")
+        samplesDb.execSQL("ALTER TABLE $tableName ADD COLUMN \"$demCol\" REAL")
+
+        val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).apply {
+            timeZone = TimeZone.getTimeZone("UTC")
+        }
+        val startTs = 1_700_000_700_000L
+        val rawBaroExpected = mutableListOf<Double>()
+
+        samplesDb.beginTransaction()
+        try {
+            for (sec in 0 until 60) {
+                // Flat 438.0 m ride with jeans-pocket compression spike (-8.05 m / +6.87 m)
+                val baroVal = when (sec) {
+                    20 -> 438.0 - 8.05
+                    21 -> 438.0 + 6.87
+                    40 -> 438.0 - 7.50
+                    else -> 438.0
+                }
+                rawBaroExpected.add(baroVal)
+                val cv = ContentValues().apply {
+                    put("time", sdf.format(Date(startTs + sec * 1000L)))
+                    put(SensorType.TIME_TOTAL.name, sec.toLong())
+                    put(SensorType.LATITUDE.name, 48.6567 + sec * 0.00005)
+                    put(SensorType.LONGITUDE.name, 9.0545)
+                    put(SensorType.SPEED_mps.name, 5.5)
+                    put(SensorType.PACE_spm.name, 1.0 / 5.5)
+                    put(SensorType.DISTANCE_m.name, sec * 5.5)
+                    put(SensorType.BEARING.name, 0.0)
+                    put(SensorType.ALTITUDE.name, 438.0)
+                    put(SensorType.SLOPE.name, 0.0)
+                    put(SensorType.VERTICAL_SPEED.name, 0)
+                    put(SensorType.ASCENT.name, 0.0)
+                    put(SensorType.DESCENT.name, 0.0)
+                    put("\"$baroCol\"", baroVal)
+                    put("\"$demCol\"", 438.0)
+                }
+                samplesDb.insert(tableName, null, cv)
+            }
+            samplesDb.setTransactionSuccessful()
+        } finally {
+            samplesDb.endTransaction()
+        }
+
+        val success = ErtsPostWorkoutRecomputer.recomputeWorkout(context, workoutId)
+        assertTrue(success)
+
+        samplesDb.query(tableName, arrayOf("\"$baroCol\"", SensorType.ASCENT.name, SensorType.DESCENT.name), null, null, null, null, "_id ASC").use { cursor ->
+            var rowIdx = 0
+            var lastAscent = 0.0
+            var lastDescent = 0.0
+            while (cursor.moveToNext()) {
+                assertEquals("Raw 9-locale baro column untouched at $rowIdx", rawBaroExpected[rowIdx], cursor.getDouble(0), 1e-9)
+                lastAscent = cursor.getDouble(1)
+                lastDescent = cursor.getDouble(2)
+                rowIdx++
+            }
+            assertEquals("Flat ride with pocket spikes must yield 0.0 m ascent", 0.0, lastAscent, 0.01)
+            assertEquals("Flat ride with pocket spikes must yield 0.0 m descent", 0.0, lastDescent, 0.01)
+        }
+    }
+
+    // TST-FIL-027.3 (Bounce 1/3): RADAR_THREAT_COUNT / WORLD_YAW_RATE_radps must NOT match wheel speed, and NaN wheelSpeed must NOT bypass ZUPT or poison EKF
+    @Test
+    fun testRadarAndYawColumnsNotMatchedAsWheelSpeed_andNaNSanitized_tstFil027_3() = runBlocking {
+        val baseFileName = "2026-11-18_005000"
+        val workoutId = createWorkout(baseFileName)
+
+        val samplesDb = samplesDbManager.database
+        val tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
+        samplesDbManager.createNewTable(
+            baseFileName,
+            listOf(
+                SensorType.TIME_TOTAL,
+                SensorType.LATITUDE,
+                SensorType.LONGITUDE,
+                SensorType.SPEED_mps,
+                SensorType.PACE_spm,
+                SensorType.DISTANCE_m,
+                SensorType.BEARING,
+                SensorType.ALTITUDE,
+                SensorType.SLOPE,
+                SensorType.VERTICAL_SPEED,
+                SensorType.ASCENT,
+                SensorType.DESCENT,
+                SensorType.WORLD_YAW_RATE_radps,
+                SensorType.RADAR_THREAT_COUNT
+            )
+        )
+        val wheelCol = "SPEED_mps (Wheel Sensor)"
+        samplesDb.execSQL("ALTER TABLE $tableName ADD COLUMN \"$wheelCol\" REAL")
+
+        val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).apply {
+            timeZone = TimeZone.getTimeZone("UTC")
+        }
+        val startTs = 1_700_000_800_000L
+        var lat = 48.6567
+        val lon = 9.0545
+        val latStepDeg = Math.toDegrees(6.0 / 6371000.0)
+
+        samplesDb.beginTransaction()
+        try {
+            for (sec in 0 until 60) {
+                val isStop = sec in 20..39
+                if (!isStop && sec > 0) {
+                    lat += latStepDeg
+                }
+                val speed = if (isStop) 0.0 else 6.0
+                val acc = if (isStop) 50.0 else 3.0
+                val cv = ContentValues().apply {
+                    put("time", sdf.format(Date(startTs + sec * 1000L)))
+                    put(SensorType.TIME_TOTAL.name, sec.toLong())
+                    put(SensorType.LATITUDE.name, lat)
+                    put(SensorType.LONGITUDE.name, lon)
+                    put(SensorType.SPEED_mps.name, speed)
+                    put(SensorType.PACE_spm.name, if (speed > 0.0) 1.0 / speed else 0.0)
+                    put(SensorType.DISTANCE_m.name, 0.0)
+                    put(SensorType.BEARING.name, 0.0)
+                    put(SensorType.ALTITUDE.name, 438.0)
+                    put(SensorType.SLOPE.name, 0.0)
+                    put(SensorType.VERTICAL_SPEED.name, 0)
+                    put(SensorType.ASCENT.name, 0.0)
+                    put(SensorType.DESCENT.name, 0.0)
+                    // Non-speed columns containing "Rad"/"rad" tokens that must never match as wheelSpeed
+                    put(SensorType.WORLD_YAW_RATE_radps.name, 1.5)
+                    put(SensorType.RADAR_THREAT_COUNT.name, 3)
+                    // Actual wheel speed column with NaN during stop must not bypass ZUPT or poison EKF
+                    if (isStop) {
+                        put("\"$wheelCol\"", Double.NaN)
+                    } else {
+                        putNull("\"$wheelCol\"")
+                    }
+                }
+                samplesDb.insert(tableName, null, cv)
+            }
+            samplesDb.setTransactionSuccessful()
+        } finally {
+            samplesDb.endTransaction()
+        }
+
+        assertTrue(ErtsPostWorkoutRecomputer.recomputeWorkout(context, workoutId))
+
+        samplesDb.query(
+            tableName,
+            arrayOf(SensorType.SPEED_mps.name, SensorType.DISTANCE_m.name),
+            null, null, null, null, "_id ASC"
+        ).use { cursor ->
+            var rowIdx = 0
+            while (cursor.moveToNext()) {
+                val spd = cursor.getDouble(0)
+                val dist = cursor.getDouble(1)
+                assertTrue("Speed must remain finite at row $rowIdx", spd.isFinite())
+                assertTrue("Distance must remain finite at row $rowIdx", dist.isFinite())
+                if (rowIdx in 20..39) {
+                    assertEquals("Indoor stop with RADAR/YAW columns & NaN wheelSpeed must pin speed to 0.0 at $rowIdx", 0.0, spd, 1e-9)
+                }
+                rowIdx++
+            }
+            assertEquals(60, rowIdx)
+        }
+    }
+
+    // TST-FIL-027.1 (Bounce 1/3): Leading null TIME_TOTAL + >=6s SQLite batch-flush stall + genuine repeated wall-clock pauses
+    @Test
+    fun testLeadingNullTimeTotal_batchFlushStall6s_andDoubleWallClockPause_tstFil027_1() = runBlocking {
+        val baseFileName = "2026-11-18_005500"
+        val workoutId = createWorkout(baseFileName)
+
+        val samplesDb = samplesDbManager.database
+        val tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
+        samplesDbManager.createNewTable(
+            baseFileName,
+            listOf(
+                SensorType.TIME_TOTAL,
+                SensorType.LATITUDE,
+                SensorType.LONGITUDE,
+                SensorType.SPEED_mps,
+                SensorType.PACE_spm,
+                SensorType.DISTANCE_m,
+                SensorType.BEARING,
+                SensorType.ALTITUDE,
+                SensorType.SLOPE,
+                SensorType.VERTICAL_SPEED,
+                SensorType.ASCENT,
+                SensorType.DESCENT
+            )
+        )
+        val baroCol = "ALTITUDE (Altitude from Pressure)"
+        samplesDb.execSQL("ALTER TABLE $tableName ADD COLUMN \"$baroCol\" REAL")
+
+        val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).apply {
+            timeZone = TimeZone.getTimeZone("UTC")
+        }
+        val startTs = 1_700_000_900_000L
+        val latStepDeg = Math.toDegrees(6.0 / 6371000.0)
+        var lat = 48.6567
+
+        // Timeline (32 rows):
+        // 0..2: leading NULL TIME_TOTAL (1s wall-clock steps)
+        // 3..9: valid TIME_TOTAL = 1..7 (1s steps)
+        // 10..16: >=6s SQLite batch-flush stall (wall-clock frozen at T0+9s for 10..15, then +8s flush catch-up to T0+17s at row 16 while TIME_TOTAL = 8..14 advances 1s/row)
+        // 17..20: normal 1s progression (isolates row 16 flush catch-up from pause boundary)
+        // 21..25: genuine 30s wall-clock pause before row 21 (wall jumps +31s while TIME_TOTAL advances +1s to 19..23)
+        // 26..31: genuine 25s second wall-clock pause before row 26 (wall jumps +26s while TIME_TOTAL advances +1s to 24..29)
+        samplesDb.beginTransaction()
+        try {
+            for (i in 0 until 32) {
+                val wallOffsetSec = when {
+                    i <= 9 -> i
+                    i in 10..15 -> 9 // frozen SQLite flush timestamp across 6 rows
+                    i == 16 -> 17 // +8s flush catch-up (old parsedTs-prevParsedTs check falsely tripped >6s!)
+                    i in 17..20 -> i // normal 1s steps (17..20)
+                    i in 21..25 -> 51 + (i - 21) // +30s genuine pause
+                    else -> 82 + (i - 26) // +25s second genuine pause
+                }
+                val stepCount = when (i) {
+                    0 -> 0
+                    21 -> 31
+                    26 -> 26
+                    else -> 1
+                }
+                lat += stepCount * latStepDeg
+                val alt = 400.0 + (wallOffsetSec.coerceAtLeast(i)) * 0.5 // consistent 0.5 m/s climb across pauses
+                val cv = ContentValues().apply {
+                    put("time", sdf.format(Date(startTs + wallOffsetSec * 1000L)))
+                    if (i < 3) {
+                        putNull(SensorType.TIME_TOTAL.name)
+                    } else {
+                        put(SensorType.TIME_TOTAL.name, (i - 2).toLong())
+                    }
+                    put(SensorType.LATITUDE.name, lat)
+                    put(SensorType.LONGITUDE.name, 9.0545)
+                    put(SensorType.SPEED_mps.name, 6.0)
+                    put(SensorType.PACE_spm.name, 1.0 / 6.0)
+                    put(SensorType.DISTANCE_m.name, i * 6.0)
+                    put(SensorType.BEARING.name, 0.0)
+                    put(SensorType.ALTITUDE.name, alt)
+                    put(SensorType.SLOPE.name, 8.3)
+                    put(SensorType.VERTICAL_SPEED.name, 1800)
+                    put(SensorType.ASCENT.name, 0.0)
+                    put(SensorType.DESCENT.name, 0.0)
+                    put("\"$baroCol\"", alt)
+                }
+                samplesDb.insert(tableName, null, cv)
+            }
+            samplesDb.setTransactionSuccessful()
+        } finally {
+            samplesDb.endTransaction()
+        }
+
+        assertTrue(ErtsPostWorkoutRecomputer.recomputeWorkout(context, workoutId))
+
+        samplesDb.query(
+            tableName,
+            arrayOf(SensorType.VERTICAL_SPEED.name, SensorType.SPEED_mps.name, SensorType.DISTANCE_m.name),
+            null, null, null, null, "_id ASC"
+        ).use { cursor ->
+            val vams = mutableListOf<Double>()
+            val speeds = mutableListOf<Double>()
+            val dists = mutableListOf<Double>()
+            while (cursor.moveToNext()) {
+                vams.add(cursor.getDouble(0))
+                speeds.add(cursor.getDouble(1))
+                dists.add(cursor.getDouble(2))
+            }
+            assertEquals(32, vams.size)
+            // Leading null TIME_TOTAL (0..2), normal (3..9), and 6s batch-flush stall + catch-up (10..16):
+            // dt must stay 1.0 s everywhere (deltaDist ~ 6.0 m, speed ~ 6.0 m/s, VAM > 1000 m/h)
+            for (i in 1..20) {
+                val deltaDist = dists[i] - dists[i - 1]
+                assertTrue("Row $i must maintain ~1s dt (deltaDist=$deltaDist)", deltaDist in 4.0..8.5)
+                if (i >= 5) {
+                    assertTrue("Row $i VAM must stay > 1000 m/h (was ${vams[i]})", vams[i] > 1000.0)
+                }
+                assertTrue("Row $i speed must stay near 6.0 m/s (was ${speeds[i]})", speeds[i] > 4.5)
+            }
+            // Row 21 (genuine 30s pause) must preserve ~31s dt (deltaDist > 100 m),
+            // and rows 22..25 must re-anchor and resume 1s dt (~6.0 m/row)
+            assertTrue("Row 21 genuine 30s pause must yield > 100 m deltaDist (was ${dists[21] - dists[20]})", (dists[21] - dists[20]) > 100.0)
+            for (i in 22..25) {
+                val deltaDist = dists[i] - dists[i - 1]
+                assertTrue("Post-pause-1 row $i must resume ~1s dt (deltaDist=$deltaDist)", deltaDist in 4.0..8.5)
+                assertTrue("Post-pause-1 row $i VAM must stay > 1000 m/h (was ${vams[i]})", vams[i] > 1000.0)
+            }
+            // Row 26 (second genuine 25s pause) must preserve ~26s dt (deltaDist > 100 m),
+            // and rows 27..31 must re-anchor cleanly again and resume 1s dt
+            assertTrue("Row 26 genuine 25s pause must yield > 100 m deltaDist (was ${dists[26] - dists[25]})", (dists[26] - dists[25]) > 100.0)
+            for (i in 27..31) {
+                val deltaDist = dists[i] - dists[i - 1]
+                assertTrue("Post-pause-2 row $i must resume ~1s dt (deltaDist=$deltaDist)", deltaDist in 4.0..8.5)
+                assertTrue("Post-pause-2 row $i VAM must stay > 500 m/h (was ${vams[i]})", vams[i] > 500.0)
+            }
+        }
     }
 }

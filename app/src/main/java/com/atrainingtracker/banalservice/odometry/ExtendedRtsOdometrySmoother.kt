@@ -93,6 +93,34 @@ object ExtendedRtsOdometrySmoother {
     private const val OFFLINE_ONE_HZ_GYRO_NOISE_SCALE = 25.0
     private const val YAW_RATE_WINDOW_HALF_WIDTH = 2
     private const val YAW_RATE_WINDOW_MAX_GAP_MS = 3_000L
+    private const val STATIONARY_SPEED_THRESHOLD_MPS = 0.05
+
+    private fun isStationarySample(sample: RawOdometrySample): Boolean {
+        val speed = sample.speedMps?.takeIf { it.isFinite() } ?: return false
+        val wheelSpeed = sample.wheelSpeedMps?.takeIf { it.isFinite() }
+        return speed <= STATIONARY_SPEED_THRESHOLD_MPS &&
+            (wheelSpeed == null || wheelSpeed <= STATIONARY_SPEED_THRESHOLD_MPS)
+    }
+
+    private fun sanitizeNonNegativeFinite(value: Double): Double {
+        return if (value.isFinite()) max(0.0, value) else 0.0
+    }
+
+    private fun copyAndDecoupleVelocityPosition(
+        src: Array<DoubleArray>,
+        dst: Array<DoubleArray>,
+        symmetric: Boolean
+    ) {
+        for (i in 0 until STATE_DIM) {
+            System.arraycopy(src[i], 0, dst[i], 0, STATE_DIM)
+        }
+        dst[0][2] = 0.0
+        dst[1][2] = 0.0
+        if (symmetric) {
+            dst[2][0] = 0.0
+            dst[2][1] = 0.0
+        }
+    }
 
     /**
      * Checks whether the given coordinates represent a physically valid GNSS fix (REQ-FIL-019.2).
@@ -117,10 +145,12 @@ object ExtendedRtsOdometrySmoother {
      * $$P_{k|N} = P_{k|k} + C_k (P_{k+1|N} - P_{k+1|k}) C_k^T$$
      * with heading difference $\psi_{k+1|N} - \psi_{k+1|k}$ wrapped to $[-\pi, \pi)$.
      */
+    @JvmOverloads
     fun smoothSnapshots(
         snapshots: List<OdometrySnapshot>,
         refLat: Double,
-        refLon: Double
+        refLon: Double,
+        stationaryMask: BooleanArray? = null
     ): List<SmoothedOdometryPoint> {
         val n = snapshots.size
         if (n == 0) return emptyList()
@@ -128,12 +158,13 @@ object ExtendedRtsOdometrySmoother {
             val s0 = snapshots[0]
             val x0 = s0.statePosterior
             val (lat, lon) = enuToLatLng(x0[0], x0[1], refLat, refLon)
+            val speed0 = if (stationaryMask?.getOrNull(0) == true) 0.0 else sanitizeNonNegativeFinite(x0[2])
             return listOf(
                 SmoothedOdometryPoint(
                     timestampMs = s0.timestampMs,
                     eastMeters = x0[0],
                     northMeters = x0[1],
-                    speedMps = max(0.0, x0[2]),
+                    speedMps = speed0,
                     headingRad = x0[3],
                     gyroBiasRadPerSec = x0[4],
                     latitude = lat,
@@ -156,10 +187,15 @@ object ExtendedRtsOdometrySmoother {
                 smoothedCovs[lastIdx][i][j] = snapshots[lastIdx].covariancePosterior[i][j]
             }
         }
+        if (stationaryMask?.getOrNull(lastIdx) == true) {
+            smoothedStates[lastIdx][2] = 0.0
+        }
 
         // Pre-allocate scratch buffers to guarantee zero heap allocations in backward pass
         val aug = Array(STATE_DIM) { DoubleArray(2 * STATE_DIM) }
         val invPNextPrior = Array(STATE_DIM) { DoubleArray(STATE_DIM) }
+        val fNextWork = Array(STATE_DIM) { DoubleArray(STATE_DIM) }
+        val pNextPriorWork = Array(STATE_DIM) { DoubleArray(STATE_DIM) }
         val fNextTransposed = Array(STATE_DIM) { DoubleArray(STATE_DIM) }
         val pFt = Array(STATE_DIM) { DoubleArray(STATE_DIM) }
         val ck = Array(STATE_DIM) { DoubleArray(STATE_DIM) }
@@ -174,10 +210,23 @@ object ExtendedRtsOdometrySmoother {
         for (k in n - 2 downTo 0) {
             val curr = snapshots[k]
             val next = snapshots[k + 1]
+            val currStationary = stationaryMask != null && k < stationaryMask.size && stationaryMask[k]
+            val nextStationary = stationaryMask != null && (k + 1) < stationaryMask.size && stationaryMask[k + 1]
+            val isStationaryBoundary = currStationary || nextStationary
 
             val pCurrPost = curr.covariancePosterior
-            val fNext = next.transitionJacobian
-            val pNextPrior = next.covariancePrior
+            val fNext = if (isStationaryBoundary) {
+                copyAndDecoupleVelocityPosition(next.transitionJacobian, fNextWork, symmetric = false)
+                fNextWork
+            } else {
+                next.transitionJacobian
+            }
+            val pNextPrior = if (isStationaryBoundary) {
+                copyAndDecoupleVelocityPosition(next.covariancePrior, pNextPriorWork, symmetric = true)
+                pNextPriorWork
+            } else {
+                next.covariancePrior
+            }
 
             // Invert P_{k+1|k} into scratch buffer
             invert5x5(pNextPrior, invPNextPrior, aug)
@@ -200,7 +249,7 @@ object ExtendedRtsOdometrySmoother {
                 smoothedStates[k][i] = curr.statePosterior[i] + cDeltaX[i]
             }
             smoothedStates[k][3] = UnicycleOdometryEkf.normalizeAngle(smoothedStates[k][3])
-            smoothedStates[k][2] = max(0.0, smoothedStates[k][2]) // Speed non-negative
+            smoothedStates[k][2] = if (currStationary) 0.0 else sanitizeNonNegativeFinite(smoothedStates[k][2]) // Pin stationary speed
 
             // P^s_k = P_{k|k} + C_k * (P^s_{k+1} - P_{k+1|k}) * C_k^T
             matSub5x5(smoothedCovs[k + 1], pNextPrior, deltaCov)
@@ -227,7 +276,7 @@ object ExtendedRtsOdometrySmoother {
                 0.0
             } else {
                 val dt = (snapshots[k].timestampMs - snapshots[k - 1].timestampMs) / 1000.0
-                if (dt > 0.0) max(0.0, xk[2] * dt) else 0.0
+                if (dt > 0.0) sanitizeNonNegativeFinite(xk[2] * dt) else 0.0
             }
 
             result.add(
@@ -278,15 +327,17 @@ object ExtendedRtsOdometrySmoother {
         )
         val filteredYawRates = computeFilteredYawRates(samples)
 
-        // Initialize forward EKF
+        // Initialize forward EKF (disable internal snapshotList copies since smoothSamples records its own)
         val ekf = UnicycleOdometryEkf(
             initialEast = 0.0,
             initialNorth = 0.0,
-            initialSpeed = max(0.0, samples.first().speedMps ?: 0.0),
-            initialHeadingRad = resolvedInitialHeading
+            initialSpeed = sanitizeNonNegativeFinite(samples.first().speedMps ?: 0.0),
+            initialHeadingRad = resolvedInitialHeading,
+            recordSnapshots = false
         )
 
         val snapshots = ArrayList<OdometrySnapshot>(samples.size)
+        val stationaryMask = BooleanArray(samples.size)
 
         var lastTimeMs = samples.first().timestampMs
         var hasChordAnchor = false
@@ -298,12 +349,16 @@ object ExtendedRtsOdometrySmoother {
             val sample = samples[i]
             val dtSec = if (i == 0) 1.0 else max(0.001, (sample.timestampMs - lastTimeMs) / 1000.0)
             lastTimeMs = sample.timestampMs
+            val isStationary = isStationarySample(sample)
+            stationaryMask[i] = isStationary
 
             // 1. Predict step with 1-Hz snapshot yaw-rate anti-aliasing (REQ-FIL-025.2)
-            val useAntiAliasedYaw = dtSec >= ONE_HZ_REPLAY_MIN_DT_SEC && sample.wheelSpeedMps == null
+            val validWheelSpeed = sample.wheelSpeedMps?.takeIf { it.isFinite() }
+            val validSpeed = sample.speedMps?.takeIf { it.isFinite() }
+            val useAntiAliasedYaw = dtSec >= ONE_HZ_REPLAY_MIN_DT_SEC && validWheelSpeed == null
             val rawYawRate = sample.worldYawRateRadPerSec?.takeIf { it.isFinite() } ?: 0.0
             val yawRate = if (useAntiAliasedYaw) filteredYawRates[i] else rawYawRate
-            val acc = sample.accuracyMeters ?: 10.0
+            val acc = sample.accuracyMeters?.takeIf { it.isFinite() } ?: 10.0
             val hasTrustedGnss = sample.hasValidGnssFix() && acc <= UnicycleOdometryEkf.MAX_GNSS_ACCURACY_METERS
             val gyroNoiseScale = if (useAntiAliasedYaw && hasTrustedGnss) OFFLINE_ONE_HZ_GYRO_NOISE_SCALE else 1.0
 
@@ -321,6 +376,14 @@ object ExtendedRtsOdometrySmoother {
             }
             val priorCov = ekf.getCovarianceCopy()
             val transJac = ekf.getTransitionJacobianCopy()
+            if (isStationary) {
+                transJac[0][2] = 0.0
+                transJac[1][2] = 0.0
+                priorCov[0][2] = 0.0
+                priorCov[2][0] = 0.0
+                priorCov[1][2] = 0.0
+                priorCov[2][1] = 0.0
+            }
 
             // 2. Anchor heading from GNSS displacement chord before position update so position
             //    cross-covariance never drives speed x[2] negative (REQ-FIL-025.1, REQ-FIL-025.2)
@@ -329,7 +392,7 @@ object ExtendedRtsOdometrySmoother {
             } else {
                 null
             }
-            if (enuCoords != null && acc <= UnicycleOdometryEkf.MAX_GNSS_ACCURACY_METERS) {
+            if (!isStationary && enuCoords != null && acc <= UnicycleOdometryEkf.MAX_GNSS_ACCURACY_METERS) {
                 val (eastM, northM) = enuCoords
                 if (!hasChordAnchor) {
                     hasChordAnchor = true
@@ -356,27 +419,37 @@ object ExtendedRtsOdometrySmoother {
                 }
             }
 
-            // 3. Ingest GNSS position & speed measurements (REQ-FIL-019.2)
+            // 3. Stationary ZUPT / GNSS position & speed measurements (REQ-FIL-019.2, REQ-FIL-027.3)
+            if (isStationary) {
+                ekf.applyZeroVelocityUpdate(sample.timestampMs)
+            }
             if (enuCoords != null) {
-                ekf.updateGnssPosition(enuCoords.first, enuCoords.second, acc, sample.timestampMs)
+                ekf.updateGnssPosition(
+                    eastMeters = enuCoords.first,
+                    northMeters = enuCoords.second,
+                    accuracyMeters = acc,
+                    timestampMs = sample.timestampMs,
+                    isStationary = isStationary
+                )
             }
+            if (!isStationary) {
+                validWheelSpeed?.let { ws ->
+                    ekf.updateSpeed(ws, 0.5, sample.timestampMs)
+                } ?: validSpeed?.let { s ->
+                    val sVar = max(0.5, (acc * 0.25) * (acc * 0.25))
+                    ekf.updateSpeed(s, sVar, sample.timestampMs)
+                }
 
-            sample.wheelSpeedMps?.let { ws ->
-                ekf.updateSpeed(ws, 0.5, sample.timestampMs)
-            } ?: sample.speedMps?.let { s ->
-                val sVar = max(0.5, (acc * 0.25) * (acc * 0.25))
-                ekf.updateSpeed(s, sVar, sample.timestampMs)
-            }
-
-            // 4. Doppler / running-pace GNSS bearing heading update
-            if (sample.speedMps != null && sample.bearingDeg != null && sample.bearingDeg.isFinite()) {
-                val enuHeadingRad = UnicycleOdometryEkf.normalizeAngle(Math.toRadians(90.0 - sample.bearingDeg))
-                if (sample.speedMps > UnicycleOdometryEkf.MIN_DOPPLER_SPEED_MPS) {
-                    ekf.updateDopplerHeading(enuHeadingRad, Math.toRadians(5.0) * Math.toRadians(5.0), sample.timestampMs)
-                } else if (sample.speedMps >= MIN_BEARING_HEADING_SPEED_MPS && hasTrustedGnss) {
-                    val speedRatio = UnicycleOdometryEkf.MIN_DOPPLER_SPEED_MPS / sample.speedMps
-                    val bearingVar = (0.04 * speedRatio * speedRatio).coerceIn(0.04, 0.40)
-                    ekf.updateOfflineHeading(enuHeadingRad, bearingVar, sample.timestampMs)
+                // 4. Doppler / running-pace GNSS bearing heading update
+                if (validSpeed != null && sample.bearingDeg != null && sample.bearingDeg.isFinite()) {
+                    val enuHeadingRad = UnicycleOdometryEkf.normalizeAngle(Math.toRadians(90.0 - sample.bearingDeg))
+                    if (validSpeed > UnicycleOdometryEkf.MIN_DOPPLER_SPEED_MPS) {
+                        ekf.updateDopplerHeading(enuHeadingRad, Math.toRadians(5.0) * Math.toRadians(5.0), sample.timestampMs)
+                    } else if (validSpeed >= MIN_BEARING_HEADING_SPEED_MPS && hasTrustedGnss) {
+                        val speedRatio = UnicycleOdometryEkf.MIN_DOPPLER_SPEED_MPS / validSpeed
+                        val bearingVar = (0.04 * speedRatio * speedRatio).coerceIn(0.04, 0.40)
+                        ekf.updateOfflineHeading(enuHeadingRad, bearingVar, sample.timestampMs)
+                    }
                 }
             }
 
@@ -405,7 +478,7 @@ object ExtendedRtsOdometrySmoother {
             )
         }
 
-        return smoothSnapshots(snapshots, refLat, refLon)
+        return smoothSnapshots(snapshots, refLat, refLon, stationaryMask)
     }
 
     private fun resolveInitialHeadingRad(

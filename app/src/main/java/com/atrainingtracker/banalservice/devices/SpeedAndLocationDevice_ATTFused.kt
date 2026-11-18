@@ -68,7 +68,10 @@ open class SpeedAndLocationDevice_ATTFused(
         private const val TAG = "SpeedAndLocationDev_ATT"
         private val DEBUG = BANALService.getDebug(false)
         private const val EARTH_RADIUS_METERS = 6371000.0
+        private const val YAW_RATE_WINDOW_SEC = 1.0
     }
+
+    private data class YawRateSample(val yawRateRadPerSec: Double, val dtSec: Double)
 
     val ekf = UnicycleOdometryEkf()
     val gyroProjector = QuaternionGyroProjector()
@@ -86,6 +89,10 @@ open class SpeedAndLocationDevice_ATTFused(
     private val mRotationVector = FloatArray(4)
     private var mHasRotationVector = false
     private var mLastGyroTimestampNs: Long = 0L
+    private val mYawRateLock = Any()
+    private val mYawRateWindow = java.util.ArrayDeque<YawRateSample>()
+    private var mYawRateWindowDurationSec: Double = 0.0
+    private var mYawRateWeightedSum: Double = 0.0
 
     // Tangent plane reference coordinates
     var refLat: Double? = null
@@ -227,7 +234,7 @@ open class SpeedAndLocationDevice_ATTFused(
                     synchronized(ekf) {
                         ekf.predict(dtSec, worldYawRate, timestampMs)
                     }
-                    mWorldYawRateSensor?.newValue(worldYawRate)
+                    recordWorldYawRate(worldYawRate, dtSec)
                     setLastActive()
                 }
             }
@@ -450,6 +457,37 @@ open class SpeedAndLocationDevice_ATTFused(
         )
     }
 
+    /**
+     * Publishes a rolling 1.0-second time-weighted mean ENU yaw rate to [mWorldYawRateSensor]
+     * (REQ-FIL-027.2), preserving immediate single-sample emission while canceling cyclic pedaling oscillations.
+     */
+    private fun recordWorldYawRate(worldYawRate: Double, dtSec: Double) {
+        if (!worldYawRate.isFinite() || !dtSec.isFinite() || dtSec <= 0.0) return
+        val averagedYawRate = synchronized(mYawRateLock) {
+            mYawRateWindow.addLast(YawRateSample(worldYawRate, dtSec))
+            mYawRateWindowDurationSec += dtSec
+            mYawRateWeightedSum += worldYawRate * dtSec
+            while (mYawRateWindow.size > 1 && mYawRateWindowDurationSec > YAW_RATE_WINDOW_SEC) {
+                val oldest = mYawRateWindow.removeFirst()
+                mYawRateWindowDurationSec -= oldest.dtSec
+                mYawRateWeightedSum -= oldest.yawRateRadPerSec * oldest.dtSec
+            }
+            if (mYawRateWindowDurationSec > 0.0) mYawRateWeightedSum / mYawRateWindowDurationSec else worldYawRate
+        }
+        mWorldYawRateSensor?.newValue(averagedYawRate)
+    }
+
+    private fun clearYawRateWindow() {
+        synchronized(mYawRateLock) {
+            mYawRateWindow.clear()
+            mYawRateWindowDurationSec = 0.0
+            mYawRateWeightedSum = 0.0
+        }
+    }
+
+    @VisibleForTesting
+    internal fun yawRateWindowSizeForTest(): Int = synchronized(mYawRateLock) { mYawRateWindow.size }
+
     @VisibleForTesting
     fun ingestImuMeasurement(
         gameRotationVector: FloatArray,
@@ -461,7 +499,7 @@ open class SpeedAndLocationDevice_ATTFused(
         synchronized(ekf) {
             ekf.predict(dtSec, worldYawRate, timestampMs)
         }
-        mWorldYawRateSensor?.newValue(worldYawRate)
+        recordWorldYawRate(worldYawRate, dtSec)
         setLastActive()
     }
 
@@ -476,6 +514,9 @@ open class SpeedAndLocationDevice_ATTFused(
         refLat = null
         refLon = null
         hasValidGnssAnchor = false
+        mHasRotationVector = false
+        mLastGyroTimestampNs = 0L
+        clearYawRateWindow()
         mLastWheelMeasurementMs = 0L
         mLastWheelSpeedMps = 0.0
         mLastCalibLat = null

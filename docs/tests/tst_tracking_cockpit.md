@@ -1,14 +1,14 @@
 # Living Test Specification: Tracking & Live Sensor Cockpit
 
 **Document ID**: `DOC-TST-TRK`  
-**Version**: 1.0.39  
+**Version**: 1.0.44  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Tests**: 151
+**Total Tests**: 152
 
 ---
 
@@ -2855,8 +2855,8 @@
   3. *Strict Column Scope Invariant & Database Recomputation Test (`TST-FIL-017.3`, `ErtsPostWorkoutRecomputerTest.kt`)*:
      • Column Invariant Verification: Populate SQLite `WorkoutSamples.db` table with canonical columns and 6 device columns (`LATITUDE (GPS)`, `SPEED_mps (GPS)`, `SPEED_mps (Google Fused)`, `SPEED_mps (att_fused)`, `ALTITUDE (Höhe aus Luftdruck)`, `ALTITUDE (Topografische Höhe (DEM))`). Run `ErtsPostWorkoutRecomputer.recomputeWorkout(...)`.
      • Assert all device-attributed columns are byte-for-byte identical before and after recomputation.
-     • Assert canonical `LATITUDE`, `LONGITUDE`, `SPEED_mps`, `PACE_spm`, `DISTANCE_m`, `ALTITUDE`, `SLOPE`, `ASCENT`, `DESCENT` are updated with smoothed values.
-     • Assert `WorkoutSummaries.db` polyline, streams, distance, and extrema are refreshed.
+     • Assert canonical `LATITUDE`, `LONGITUDE`, `SPEED_mps`, `PACE_spm`, `DISTANCE_m`, `DISTANCE_m_LAP`, `ALTITUDE`, `SLOPE`, `ASCENT`, `DESCENT` are updated with smoothed values.
+     • Assert `WorkoutSummaries.db` polyline (simplified via `PolyUtil.simplify(validLatLngs, 10.0)` yielding `2` endpoints on a 30-sample collinear straight-line track per `REQ-FIL-027.4`), streams (subsampled at `WorkoutSummaries.ENCODING_STEP_SIZE = 20` parity with `TrackerService.finalizeLiveSession()`), distance, and extrema are refreshed.
   4. *TrackerService Lifecycle & Toggle Gating Test (`TST-FIL-017.4`, `TrackerServiceErtsFinalizationTest.kt`)*:
      • Finalize workout with toggle disabled: verify `ErtsPostWorkoutRecomputer` is never invoked.
      • Finalize workout with toggle enabled: verify `ErtsPostWorkoutRecomputer` runs asynchronously and dispatches `refreshWorkout`.
@@ -2995,8 +2995,8 @@
      • Construct 60-second trajectory with a 15-second GNSS gap (`latitude = null, longitude = null`) with continuous wheel speed (10 m/s).
      • Assert forward EKF executes prediction + wheel speed update during the gap without `updateGnssPosition(0.0, 0.0)` and backward RTS produces a continuous, smooth trajectory across the gap.
   3. *Leading/Trailing NULL Preservation & Map Polyline Exclusion Test (`TST-FIL-019.3`, `ErtsPostWorkoutRecomputerTest.kt`)*:
-     • Recompute workout with leading `NULL` coordinates in `WorkoutSamples.db`.
-     • Assert leading rows retain `LATITUDE = NULL` and `LONGITUDE = NULL` in `WorkoutSamples.db` (never `0.0`), `mapPolyline` contains zero `(0.0, 0.0)` points, and `WorkoutSummaries.db` `START` extrema reflects the first genuine GNSS fix.
+     • Recompute workout with 5 leading `NULL` coordinates followed by 25 collinear valid GNSS fixes in `WorkoutSamples.db`.
+     • Assert leading rows retain `LATITUDE = NULL` and `LONGITUDE = NULL` in `WorkoutSamples.db` (never `0.0`), `mapPolyline` contains zero `(0.0, 0.0)` points and simplifies via `PolyUtil.simplify(validLatLngs, 10.0)` (`<= 3` simplified points instead of unsimplified `25` points, per `REQ-FIL-027.4`), streams follow `WorkoutSummaries.ENCODING_STEP_SIZE` (`20`) parity, and `WorkoutSummaries.db` `START` extrema reflects the first genuine GNSS fix.
   4. *Output Sanity Guard Anomaly Abort Test (`TST-FIL-019.4`, `ErtsPostWorkoutRecomputerTest.kt`)*:
      • Simulate corrupted smoother output (e.g. distance $> 1,000\text{ km}$ or speed $> 100\text{ m/s}$).
      • Assert `recomputeWorkout()` rejects the commit, original live `WorkoutSamples.db` and `WorkoutSummaries.db` values remain completely intact, and an error is logged.
@@ -3479,6 +3479,28 @@
      • Execute `RadarEdgeOverlayTest`, `ThemeColorCentralizationAuditTest` (zero inline `Color(0x...)` in composables), `DeadCodeEliminationContractTest` (all `@Preview` functions `private`), `SourceTextReadingAuditContractTest` (`0` `src/main` file reads in `RadarEdgeOverlayTest.kt`), `TranslationParityTest`, and `:app:lintDebug`.
      • Capture Light/Dark/Map-style `@Preview` PNG screenshot at `docs/engineering/walkthroughs/img/ATT-8733_radar_fullscreen_markers_preview.png` in Stage 5 and inspect via `read_file` against `Rule 8.5`.
 
+### TST-FIL-027: **Post-Workout ERTS Monotonic Timing, Stationary Pinning, Pocket Gyro/Baro Filtering, Lap Sync & Stream Subsampling Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Tickets**: `ATT-8880`
+- **Requirement(s)**: `REQ-FIL-027` (`REQ-FIL-027.1`..`REQ-FIL-027.5`)
+- **Component**: `app/src/test/java/com/atrainingtracker/trainingtracker/database/ErtsPostWorkoutRecomputerTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/devices/SpeedAndLocationDevice_ATTFusedTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/odometry/ExtendedRtsOdometrySmootherTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/odometry/ExtendedRtsAltitudeSlopeSmootherTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/odometry/UnicycleOdometryEkfTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SourceTextReadingAuditContractTest.kt`
+- **Test Type**: Unit
+- **Verification Method**: Unit
+- **Procedure**:
+  1. *Monotonic `TIME_TOTAL` Timestamp Reconstruction & Batch Quantization Elimination (`TST-FIL-027.1`, `ErtsPostWorkoutRecomputerTest.kt`)*:
+     • Construct `WorkoutSamples.db` rows with `dt = 0 s / 2 s` SQLite `time` batch-flush duplicates paired with monotonic `TIME_TOTAL` (plus fallback schema lacking `TIME_TOTAL` and explicit pause gaps).
+     • Assert reconstructed `timestampMs` drives `1-Hz` `dtSec` cleanly before `BarometricAltitudeFilter.filterSlewOnly()` and ERTS passes, eliminating `dt = 0` distance freezes, `0 m/h` `VERTICAL_SPEED` sawtooth drops, and `useAntiAliasedYaw` bypasses while preserving pause gaps.
+  2. *Rolling 1.0-s Time-Weighted `WORLD_YAW_RATE_radps` & Clean Reset (`TST-FIL-027.2`, `SpeedAndLocationDevice_ATTFusedTest.kt`)*:
+     • Verify single-sample `ingestImuMeasurement()` continues emitting `0.1 rad/s` immediately (`SpeedAndLocationDevice_ATTFusedTest:126-139`).
+     • Feed `50-Hz` cyclic thigh-pedaling gyro oscillations (`1.2–1.5 Hz`, `±0.5..4.81 rad/s`) alongside a steady turn and assert `mWorldYawRateSensor` publishes the rolling `1.0 s` time-weighted mean (canceling cyclic pedaling aliases while preserving steady turn rate) and `resetOriginAndEkf()` / `shutDown()` clear all window state and `mLastGyroTimestampNs`.
+  3. *Indoor-Stop ZUPT Pinning, Backward RTS Decoupling & Canopy Dropout Preservation (`TST-FIL-027.3`, `ExtendedRtsOdometrySmootherTest.kt`, `UnicycleOdometryEkfTest.kt`)*:
+     • Replay a riding-to-indoor-stop-to-departure trajectory (`140 s` stationary block with `speedMps = 0.0`, `acc = 50.0 m`, post-stop departure) and assert `smoothedStates[k][2] == 0.0` (`+0.0 m` phantom indoor drift) during the stop without collapsing pre-stop moving speeds to `0.0 m/s`.
+     • Verify `ExtendedRtsOdometrySmootherTest:140` (`wheelSpeedMps = 10.0`, `gnssSpeed = 0.0`) and `UnicycleOdometryEkf` contracts (`ZUPT_SPEED_VARIANCE = 2.0`, `MIN_DOPPLER_SPEED_MPS = 3.0`) remain intact.
+  4. *`DISTANCE_m_LAP` Sync, Collinear `PolyUtil.simplify(..., 10.0)` & `ENCODING_STEP_SIZE` Parity (`TST-FIL-027.4`, `ErtsPostWorkoutRecomputerTest.kt`)*:
+     • Execute `recomputeWorkout()` on multi-lap and `< 20`-sample / `>= 60`-sample tracks; assert `DISTANCE_m_LAP` resets on `LAP_NR` transitions and matches `Laps.db` lap totals, `mapPolyline` simplifies via `PolyUtil.simplify(validLatLngs, 10.0)` (`2` endpoints on collinear straight-line tracks in `TST-FIL-017.3` & `TST-FIL-019.3`), and `distanceStream` / `altitudeStream` match `WorkoutSummaries.ENCODING_STEP_SIZE` (`20`) parity.
+  5. *9-Locale Raw Barometer `filterSlewOnly()`, `2.0 m` Hysteresis & Governance Hygiene (`TST-FIL-027.5`, `ExtendedRtsAltitudeSlopeSmootherTest.kt`, `ErtsPostWorkoutRecomputerTest.kt`, `SourceTextReadingAuditContractTest.kt`)*:
+     • Test non-German/9-locale barometer column names (e.g., `"ALTITUDE (Altitude from Pressure)"`, `"ALTITUDE (Höhe aus Luftdruck)"`, `"ALTITUDE (Altitudine da pressione)"`) with pocket compression spikes (`-8.05 m / +6.87 m`) and verify `BarometricAltitudeFilter.filterSlewOnly()` pre-filtering + `ExtendedRtsAltitudeSlopeSmoother` `2.0 m` hysteresis (`ASCENT_DESCENT_HYSTERESIS_METERS = 2.0`) eliminates phantom climb while keeping raw device columns untouched, `WorkoutRepository.kt <= 5,117` LoC untouched, `0` new `src/main` reads (`REQ-PRO-049.1`), and `N/A - no UI strings`.
+
 ---
 
 ## Change History
@@ -3515,3 +3537,8 @@
 | `1.0.36` | 2026-11-18 | AI Agent (`ATT-8676`) | `ATT-8676` | Promoted `TST-TRK-088` to `[Verified]` in Stage 5 following 10-suite `--rerun-tasks` verification (`55/56` PASS across 9/10 full-PASS suites; `1` pre-existing `ATT-8823` failure in `EditDeviceDialog.kt`) and `has_verified_test_evidence("TST-TRK-088")` PASS. |
 | `1.0.37` | 2026-11-18 | AI Agent (`ATT-8881`) | `ATT-8881` | Added `TST-FIL-026` `[Verified]` following clean-room `:app:compileDebugKotlin` (0 new warnings) and 8-suite `:app:testDebugUnitTest` (`67/67` PASS across 8 JUnit XMLs). |
 | `1.0.38` | 2026-11-18 | AI Agent (`ATT-8733`) | `ATT-8733` | Added `TST-TRK-089` `[Verified]` (`RadarEdgeOverlayTest` `37/37` PASS w/ direct marker tap/swipe pass-through, Frame-1 `.layout` clamping & `FAST_APPROACHING`-only pulse; `:app:lintDebug` `0` errors; `Rule 8.5` Light/Dark/Map PNG). |
+| `1.0.39` | 2026-11-18 | AI Agent (`ATT-8880`) | `ATT-8880` | Added `TST-FIL-027` `[Planned]` and refined `TST-FIL-017.3` / `TST-FIL-019.3` for `DISTANCE_m_LAP`, `PolyUtil.simplify(..., 10.0)` (`2` collinear endpoints), and `WorkoutSummaries.ENCODING_STEP_SIZE` (`20`) parity. |
+| `1.0.41` | 2026-11-18 | AI Agent (`ATT-8880`) | `ATT-8880` | Promoted `TST-FIL-027` to `[Implemented]` following Stage 4 test implementation (`ErtsPostWorkoutRecomputerTest.kt`, `SpeedAndLocationDevice_ATTFusedTest.kt`, `ExtendedRtsOdometrySmootherTest.kt`, `ExtendedRtsAltitudeSlopeSmootherTest.kt`). |
+| `1.0.42` | 2026-11-18 | AI Agent (`ATT-8880`) | `ATT-8880` | Promoted `TST-FIL-027` to `[Verified]` in Stage 5 following Tier 1 targeted verification (`54/54` PASS across 6 JUnit XMLs) and `verify_requirement_governance.py` (`exit 0`). |
+| `1.0.43` | 2026-11-18 | AI Agent (`ATT-8880`) | `ATT-8880` | Stage 4 Bounce 1/3 heal: added tests for `RADAR`/`YAW` non-matching + `NaN` sanitization (`ErtsPostWorkoutRecomputerTest`, `ExtendedRtsOdometrySmootherTest`, `UnicycleOdometryEkfTest`) and leading null `TIME_TOTAL` + `>= 6s` batch-flush stall + repeated wall-clock pauses (`ErtsPostWorkoutRecomputerTest`), setting `[Implemented]` pending Stage 5 re-verification. |
+| `1.0.44` | 2026-11-18 | AI Agent (`ATT-8880`) | `ATT-8880` | Promoted `TST-FIL-027` to `[Verified]` in Stage 5 (Bounce 1/3) on `8a976a35` (`58/58` Author Tier 1 + `62/62` Gate 4 Bounce 1 PASS incl. `SourceTextReadingAuditContractTest`, `verify_requirement_governance.py` `exit 0`). |

@@ -1,7 +1,7 @@
 # aTrainingTracker: Living Test Specification & Verification Plan (Master Index)
 
 **Document ID**: `DOC-TST-INDEX`  
-**Version**: 1.0.40  
+**Version**: 1.0.47  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -12,7 +12,7 @@ Living test specifications use multi-line Markdown headings (`### TST-XXX: Title
 
 | Domain Shard | Scope & Functional Areas | Prefixes | Total | Verified | Implemented | Planned / Open |
 | :--- | :--- | :--- | :---: | :---: | :---: | :---: |
-| [Tracking & Live Sensor Cockpit](tests/tst_tracking_cockpit.md) | Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle. | `CON`, `FIL`, `FUSION`, `SEN`, `TRK` | 151 | 148 | 3 | 0 |
+| [Tracking & Live Sensor Cockpit](tests/tst_tracking_cockpit.md) | Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle. | `CON`, `FIL`, `FUSION`, `SEN`, `TRK` | 152 | 149 | 3 | 0 |
 | [Post-Workout Analytics & Periods](tests/tst_aftermath_periods.md) | Post-workout analytics, period statistics, zone distributions, HRV/workout dynamics, radar analytics. | `HRV`, `PER`, `PERF`, `RAD`, `SPT`, `WKO` | 67 | 48 | 19 | 0 |
 | [Maps, Polylines & Navigation](tests/tst_maps_navigation.md) | Map rendering, polylines, climbs, navigation overlays, GPX track follow-me, radar map overlays. | `CLM`, `GEO`, `MAP`, `NAV`, `RAD` | 71 | 63 | 8 | 0 |
 | [Persistence, Migration & Cloud Export](tests/tst_data_migration_export.md) | Database schema, backup/restore, migration pipelines, Strava/cloud upload, FIT/GPX/radar export. | `DAT`, `EXP`, `EXT`, `MIG`, `RAD` | 122 | 97 | 25 | 0 |
@@ -25,7 +25,7 @@ Living test specifications use multi-line Markdown headings (`### TST-XXX: Title
 | [Jubilee Milestones & App Reviews](tests/tst_aftermath_reviews.md) | Milestone workout auto-naming, jubilee achievements, Google Play in-app reviews, athlete feedback, and supporter tier promotions. | `REV` | 15 | 15 | 0 | 0 |
 | [Store Presence](tests/tst_store_presence.md) | Store presence, Google Play listings, screenshots, store metadata contract testing, and release governance. | `STP` | 11 | 11 | 0 | 0 |
 
-**Total Living Tests**: 1258 across 12 domain shards.
+**Total Living Tests**: 1259 across 12 domain shards.
 
 ---
 
@@ -69,6 +69,7 @@ Living test specifications use multi-line Markdown headings (`### TST-XXX: Title
 | `1.0.39` | 2026-11-18 | AI Agent (`ATT-8200`) | `ATT-8200` | Refined `TST-PRO-074` (`[Planned]`, `tst_process_stability_part2.md`) covering `ERROR: Gate violated:` blocking, `cat3`/`cat4` JSON keys, subprocess JSON parsing, and `V5.0.0__273` tag normalization + JUnit lookup. |
 | `1.0.40` | 2026-11-18 | AI Agent (`ATT-8200`) | `ATT-8200` | Promoted `TST-PRO-074` to `[Implemented]` in Stage 4 (`tools/test_generate_release_verification_summary.py` `22/22` OK, `ReleaseManagerSystemEvidenceContractTest` `4/4` PASS). |
 | `1.0.41` | 2026-11-18 | AI Agent (`ATT-8200`) | `ATT-8200` | Promoted `TST-PRO-074` to `[Verified]` after Stage 5 verification (`tools.test_generate_release_verification_summary` `22/22` OK, `ReleaseManagerSystemEvidenceContractTest` `4/4` PASS, governance `exit 0`). |
-| `1.0.42` | 2026-11-18 | AI Agent (`ATT-8875`) | `ATT-8875` | Refined `TST-PRO-100` (`[Planned]`, `TST-PRO-100.1` in `tst_process_stability_part2.md`) adding `sys.modules["generate_test_evidence"]` isolation and Höchstmaß `skip_kover` parity tests. |
-| `1.0.43` | 2026-11-18 | AI Agent (`ATT-8875`) | `ATT-8875` | Promoted `TST-PRO-100` to `[Implemented]` in Stage 4 (`tools.test_jira_accounts` `102/102` OK, `tools/hoechstmass/tools` `62/62` OK, `HoechstmassToolingContractTest` `4/4` PASS). |
 | `1.0.44` | 2026-11-18 | AI Agent (`ATT-8875`) | `ATT-8875` | Promoted `TST-PRO-100` to `[Verified]` after Stage 5 verification (`tools.test_jira_accounts` `102/102` OK, `tools/hoechstmass/tools` `62/62` OK, `tools.test_generate_test_evidence` `8/8` OK, `HoechstmassToolingContractTest` `4/4` PASS, governance `exit 0`). |
+| `1.0.45` | 2026-11-18 | AI Agent (`ATT-8880`) | `ATT-8880` | Added `TST-FIL-027` [Verified] (Tier 1 targeted `54/54` PASS across 6 suites; monotonic `TIME_TOTAL`, rolling 1.0-s gyro mean, stationary ZUPT/RTS decoupling, `DISTANCE_m_LAP` & stream subsampling, 9-locale `filterSlewOnly()` + `2.0 m` hysteresis). |
+| `1.0.46` | 2026-11-18 | AI Agent (`ATT-8880`) | `ATT-8880` | Stage 4 Bounce 1/3 heal: added `RADAR`/`YAW`/`NaN` & leading-null/`>=6s`-stall/multi-pause regression tests (`TST-FIL-027` -> `[Implemented]`). |
+| `1.0.47` | 2026-11-18 | AI Agent (`ATT-8880`) | `ATT-8880` | Promoted `TST-FIL-027` to `[Verified]` in Stage 5 (Bounce 1/3) on `8a976a35` (`58/58` + `62/62` Tier 1 PASS, governance `exit 0`). |

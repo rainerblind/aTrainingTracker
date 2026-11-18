@@ -65,6 +65,7 @@ data class RawAltitudeSample(
 object ExtendedRtsAltitudeSlopeSmoother {
 
     const val STATE_DIM = 3 // [h, g, b_baro]
+    const val ASCENT_DESCENT_HYSTERESIS_METERS = 2.0
 
     private const val DEFAULT_QH = 0.005       // Elevation random walk m^2 / s
     private const val DEFAULT_QG = 1e-4        // Spatial slope grade curvature per meter
@@ -286,6 +287,7 @@ object ExtendedRtsAltitudeSlopeSmoother {
         var cumulativeAscent = 0.0
         var cumulativeDescent = 0.0
         var previousAlt = Double.NaN
+        var anchorAlt = Double.NaN
 
         for (k in 0 until n) {
             val state = smoothedStates[k]
@@ -308,12 +310,16 @@ object ExtendedRtsAltitudeSlopeSmoother {
                 }
             }
 
-            if (!previousAlt.isNaN() && !isStandstill) {
-                val deltaAlt = alt - previousAlt
-                if (deltaAlt > 0.0) {
-                    cumulativeAscent += deltaAlt
-                } else if (deltaAlt < 0.0) {
-                    cumulativeDescent += -deltaAlt
+            if (isStandstill || anchorAlt.isNaN()) {
+                anchorAlt = alt
+            } else {
+                val deltaFromAnchor = alt - anchorAlt
+                if (deltaFromAnchor >= ASCENT_DESCENT_HYSTERESIS_METERS) {
+                    cumulativeAscent += deltaFromAnchor
+                    anchorAlt = alt
+                } else if (deltaFromAnchor <= -ASCENT_DESCENT_HYSTERESIS_METERS) {
+                    cumulativeDescent += -deltaFromAnchor
+                    anchorAlt = alt
                 }
             }
             previousAlt = alt
