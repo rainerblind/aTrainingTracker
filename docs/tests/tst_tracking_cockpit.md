@@ -1,7 +1,7 @@
 # Living Test Specification: Tracking & Live Sensor Cockpit
 
 **Document ID**: `DOC-TST-TRK`  
-**Version**: 1.0.25  
+**Version**: 1.0.28  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -1988,7 +1988,7 @@
 ### TST-TRK-062: **Live Rearview Radar Vertical Edge Overlay & Gesture Pass-Through Test Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-062` (`REQ-TRK-062.1`..`REQ-TRK-062.6`)
 - **Component**: `RadarEdgeOverlay.kt`, `TrackingTabsScreen.kt`, `BTLERadarDevice.java`, `TuningPreferencesDataStore.kt`, `RadarSettingsSection.kt`, `AdvancedTuningAccordion.kt`, `strings_radar.xml`
-- **Jira**: `ATT-5085`, `ATT-6703`, `ATT-7537`, `ATT-7744`
+- **Jira**: `ATT-5085`, `ATT-6703`, `ATT-7537`, `ATT-7744`, `ATT-8679`
 - **Test Description**:
   1. *Radar Edge Rail & Full-Screen Kinematics Unit Tests (`TST-TRK-062.1`, `RadarEdgeOverlayTest.kt`)*:
   • Verify target range normalization ($140\text{ m} \to 1.0\text{ (bottom)}$, $70\text{ m} \to 0.5\text{ (mid)}$, $0\text{ m} \to 0.0\text{ (top/cyclist)}$) and multi-target coordinate resolution, asserting vehicles approach upward from bottom to top in both edge rail and `FULL_SCREEN` mode.
@@ -1997,23 +1997,26 @@
   2. *Semantic Threat Color & Conditional Pulsing Alert Tests (`TST-TRK-062.2`, `RadarEdgeOverlayTest.kt`)*:
   • Verify color mapping (Green = `NONE`, Amber = `APPROACHING`, Red = `FAST_APPROACHING`).
   • Verify pulsing red alert animation is evaluated strictly when `overallThreatLevel == ThreatLevel.FAST_APPROACHING`, yielding constant 1.0f alpha during clear and standard approach.
-  3. *Fail-Safe Disconnect Warning, Error State & Reconnect Action Tests (`TST-TRK-062.3`, `RadarEdgeOverlayTest.kt`)*:
-  • Verify `DISCONNECTED_ERROR` and `DISCONNECTED` render warning indicator with `ic_device_not_available` and strictly prohibit green clear state across all overlay modes.
-  • Verify tapping status badge in `DISCONNECTED_ERROR` triggers `REQUEST_START_SEARCH_FOR_PAIRED_DEVICES` broadcast instead of opening light switch sheet.
-  4. *Clear State & Touch Pass-Through Tests (`TST-TRK-062.4`, `RadarEdgeOverlayTest.kt`)*:
-  • Verify `FULL_SCREEN` mode renders zero background track rail when road is clear, keeping only `RadarStatusBadgePill` visible and clickable.
-  • Verify `AUTO_HIDE_3S` auto-hides only the vertical rail after 3 seconds of all-clear road, while `RadarStatusBadgePill` remains visible, clickable, and accessible with zero ghost click traps.
+  3. *Fail-Safe Disconnect Warning, Error State & Active-Threat Badge Action Tests (`TST-TRK-062.3`, `RadarEdgeOverlayTest.kt`)*:
+  • Verify `DISCONNECTED_ERROR` and `DISCONNECTED` render warning indicator (`RadarStatusBadge` with `ic_device_not_available`) and strictly prohibit green clear state across all overlay modes (`LEFT`, `RIGHT`, `FULL_SCREEN`).
+  • Verify tapping `RadarStatusBadge` in `DISCONNECTED_ERROR` invokes `onReconnectClick` (`REQUEST_START_SEARCH_FOR_PAIRED_DEVICES`), and tapping `RadarStatusBadge` during active threats (`APPROACHING` / `FAST_APPROACHING`, with or without audio snooze) invokes `onBadgeClick` (`RadarLightQuickSwitchSheet`).
+  4. *Clear-State Badge Suppression, Rail Alignment & Touch Pass-Through Compose UI Tests (`TST-TRK-062.4`, `RadarEdgeOverlayTest.kt`)*:
+  • Using Robolectric Compose `createComposeRule()` with ZERO `app/src/main/` file reads (`REQ-PRO-049.1`), verify `CONNECTED` + clear road (`targets.isEmpty()`, `ThreatLevel.NONE`, both unsnoozed and `audioSnoozeState.isSnoozed == true`) renders ZERO `RadarStatusBadge` (`assertDoesNotExist()`) across `RadarEdgeSide.LEFT`, `RadarEdgeSide.RIGHT`, and `RadarEdgeSide.FULL_SCREEN` (covering Start tab `page == 0` and live tracking tabs `page > 0`).
+  • Verify in `LEFT`/`RIGHT` clear-road mode (`SLIM_RAIL`) that guarding the top `8.dp` + `6.dp` `Spacer`s on badge visibility aligns `RadarVerticalRail` at `y = 0` without a `14.dp` downward shift.
+  • Verify `FULL_SCREEN` clear mode renders neither background track rail nor `RadarStatusBadge` (zero touch-intercepting nodes), and `AUTO_HIDE_3S` fades out the vertical rail after 3s with zero clear-state badge rendered and zero ghost click traps.
   5. *TuningPreferencesDataStore Edge Side, Clear Mode & Accordion Subtitle Tests (`TST-TRK-062.5`, `TuningPreferencesDataStoreTest.kt`, `RadarAccordionSectionTest.kt`, `RadarSettingsSectionTest.kt`)*:
   • Verify default values (`RIGHT`, `SLIM_RAIL`) and persistence of custom 3-way `RadarEdgeSide` (`LEFT`, `FULL_SCREEN`, `RIGHT`) with backward-compatible decode.
   • Verify settings UI displays 3-way segmented button (`Links | Vollbild | Rechts`) and conditionally hides `RadarClearMode` selector when `FULL_SCREEN` is active.
   • Verify `AdvancedTuningAccordion.formatCyclingRadarSubtitle` formats `RadarEdgeSide.FULL_SCREEN` correctly.
-  6. *9-Language Localization Parity & Vector Icon Parity Test (`TST-TRK-062.6`, `TranslationParityTest.kt`)*:
-  • Verify 100% key and format parity across `strings_radar.xml` in all 9 supported locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`) for all overlay strings (`radar_overlay_*`, including `radar_overlay_mode_fullscreen`).
+  6. *9-Language Localization Parity & Unused Resource Cleanup Test (`TST-TRK-062.6`, `TranslationParityTest.kt`)*:
+  • Verify 100% key and format parity across `strings_radar.xml` in all 9 supported locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`) for all active overlay strings (`radar_overlay_*`, including `radar_overlay_mode_fullscreen`, `radar_overlay_threats*`, `radar_overlay_disconnected`) after cleanly removing orphaned `radar_overlay_clear` and `radar_overlay_connecting` across all 9 locales and orphaned `ic_device_available.xml` (`:app:lintDebug` `UnusedResources` compliance).
   7. *Clean-Room Targeted Test Suite Execution (`TST-TRK-062.7`)*:
-  • Execute targeted package tests (`com.atrainingtracker.trainingtracker.ui.tracking.radar.*`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
+  • Execute targeted package tests (`com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarEdgeOverlayTest`, `com.atrainingtracker.trainingtracker.localization.TranslationParityTest`, `com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.*`) asserting 100% pass rate.
   8. *Cockpit Overlay Search Suppression & Reconnect Error Retention Tests (`TST-TRK-062.8`, `TrackingTabsScreenTest.kt`, `BTLERadarDeviceTest.kt`)*:
   • Verify `TrackingTabsScreen` suppresses `RadarEdgeOverlay` when `radarState.connectionState == RadarConnectionState.CONNECTING` or initial `DISCONNECTED`, and displays it strictly when `CONNECTED`, `DISCONNECTED_ERROR`, or `isSimulating`.
   • Verify `BTLERadarDevice.startSearching()` preserves `DISCONNECTED_ERROR` when already in error state during reconnect attempts.
+  9. *Visual Self-Inspection `@Preview` Screenshot (`TST-TRK-062.9`, `Rule 8.5`)*:
+  • Capture Light/Dark `@Preview` screenshot PNG at `docs/engineering/walkthroughs/img/ATT-8679_radar_edge_overlay_preview.png` covering `ClearLight` (zero green badge), `ApproachingDark`, `FastThreatAmoled`, and `Disconnected` states, and inspect via `read_file` by both `agent1` and `agent2`.
 
 ### TST-TRK-063: **Radar Audio Chime and Haptic Alert Engine Test Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-063` (`REQ-TRK-063.1`..`REQ-TRK-063.7`)
@@ -2457,14 +2460,14 @@
 ### TST-TRK-064: **1-Tap Radar Audio Snooze, Peloton Sync & Urban Suppression Test Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-064` (`REQ-TRK-064.1`..`REQ-TRK-064.7`)
 - **Component**: `RadarSnoozeController.kt`, `RadarAlertManager.kt`, `RadarEdgeOverlay.kt`, `RadarLightQuickSwitchSheet.kt`, `RadarState.kt`, `RadarStateRepository.kt`, `BTLERadarDevice.java`, `TuningPreferencesDataStore.kt`, `RadarSettingsSection.kt`, `strings_radar.xml`
-- **Jira**: `ATT-5119`, `ATT-6708`
+- **Jira**: `ATT-5119`, `ATT-6708`, `ATT-8679`
 - **Test Description**:
   1. *Lifecycle-Decoupled Audio Snooze & Resilient Reconnect Tests (`TST-TRK-064.1`, `RadarSnoozeControllerTest.kt`, `RadarAlertManagerTest.kt`)*:
   • Verify audio snooze triggers (15m, 30m, Fast Only, Rest of Ride), countdown decrementing, automatic restoration upon timer expiry, and manual resume across READY, PAUSED, and TRACKING modes.
   • Verify snooze state is preserved across transient BLE drops (`disconnectFromGatt`) and reset cleanly upon explicit workout finish.
   • Verify monotonic time source resilience for snooze duration and expiration against wall-clock jumps (`ATT-7580`).
   2. *Muted Badge Countdown Indicator, Muted-Bell Icon & Approaching Vehicle Count Tests (`TST-TRK-064.2`, `RadarEdgeOverlayTest.kt`)*:
-  • Verify top badge pill displays muted-bell vector icon and localized countdown indicator alongside (never replacing) approaching vehicle count (`targets.size`).
+  • Verify top `RadarStatusBadgePill` displays muted-bell vector icon and localized countdown indicator alongside (never replacing) approaching vehicle count (`targets.size`) during active threats, while clear-state (`snoozeState.isSnoozed && isClear`) renders zero green badge per `TST-TRK-062.4`.
   • Verify all threat badge accessibility descriptions format cleanly using localized string resources.
   3. *Acoustic Chime Gating, Haptics Preservation & Manual Resume Override Tests (`TST-TRK-064.3`, `RadarAlertManagerTest.kt`)*:
   • Verify `vibrate()` fires on threat transitions even when audio snooze, Peloton sync, or Urban mute is active.
@@ -3446,3 +3449,6 @@
 | `1.0.19` | 2026-11-18 | AI Agent (`ATT-8717`) | `ATT-8717` | Added and verified `TST-CON-049` [Verified] across 34 unit/Robolectric suites (166/166 PASS) including CardioSense DIS rejection, pre-CCCD DIS read order, 8-hex ID preservation, and IMU stream rejection. |
 | `1.0.20` | 2026-11-18 | AI Agent (`ATT-8717` / `ATT-8712`) | `ATT-8717`, `ATT-8712` | Added `TST-CON-049` [Verified] and `TST-TRK-087` [Verified] cleanly post-`ATT-8206` rebase. |
 | `1.0.25` | 2026-11-18 | AI Agent (`ATT-8714`) | `ATT-8714` | Added and verified `TST-CON-050` [Verified] post-Bounce 1/3 heal (`064edfd3`, `23` suites, `154/154` PASS incl. `SourceTextReadingAuditContractTest` 4/4 & `DetailedDesignParityContractTest` 3/3; `Rule 7.6` offline boundary). |
+| `1.0.26` | 2026-11-18 | AI Agent (`ATT-8679`) | `ATT-8679` | Updated `TST-TRK-062` [Planned] (`createComposeRule()` clear-badge suppression + `14.dp` rail spacer guard with zero `src/main` reads per `REQ-PRO-049.1`, `TranslationParityTest` for 9-locale `radar_overlay_clear` cleanup, and `Rule 8.5` PNG preview) and reconciled `TST-TRK-064` [Planned]. |
+| `1.0.27` | 2026-11-18 | AI Agent (`ATT-8679`) | `ATT-8679` | Promoted `TST-TRK-062` & `TST-TRK-064` to `[Implemented]` following `RadarEdgeOverlayTest` (`30/30`), 10-suite verification (`126/126`), `:app:lintDebug` (`0` errors), and `Rule 8.5` PNG capture. |
+| `1.0.28` | 2026-11-18 | AI Agent (`ATT-8679`) | `ATT-8679` | Promoted `TST-TRK-062` & `TST-TRK-064` to `[Verified]` in Stage 5 following governance checks, `has_verified_test_evidence` verification, and `Rule 8.5` PNG audit. |

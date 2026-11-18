@@ -47,7 +47,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -234,7 +233,10 @@ object RadarOverlayMath {
  * Invariants:
  * - Touch pass-through: The outer container and vertical rail do NOT attach click or pointer listeners,
  *   allowing unhindered HorizontalPager paging, Live Map pan/zoom, and system edge back gestures (REQ-TRK-062.3).
- * - Only the top compact status badge pill consumes tap events for reconnect/settings (REQ-TRK-062.3).
+ * - Only the top compact status badge pill (rendered strictly for [RadarConnectionState.DISCONNECTED_ERROR]
+ *   or active threats) consumes tap events for reconnect/settings (REQ-TRK-062.3).
+ * - Clear-road status suppresses [RadarStatusBadgePill] completely (including snoozed clear) and guards
+ *   top vertical spacers on badge visibility so [RadarVerticalRail] does not shift downward (REQ-TRK-062.3).
  * - Fail-safe disconnect: Displays an amber hazard badge and NEVER displays green "All Clear" when
  *   in [RadarConnectionState.DISCONNECTED_ERROR] (REQ-TRK-062.4).
  */
@@ -253,6 +255,7 @@ fun RadarEdgeOverlay(
     val isConnected = radarState.connectionState == RadarConnectionState.CONNECTED
     val isClear = isConnected && !hasActiveThreats
     val isDisconnectError = RadarOverlayMath.isFailSafeDisconnect(radarState.connectionState)
+    val showStatusBadge = isDisconnectError || hasActiveThreats
     val has2DData = radarState.targets.any {
         it.lateralOffsetMeters != null || it.vehicleSizeCategory != VehicleSizeCategory.UNKNOWN_OR_LIGHT
     }
@@ -311,23 +314,24 @@ fun RadarEdgeOverlay(
                 )
             }
 
-            // Top Status Badge Pill (only clickable element in full-screen overlay)
-            RadarStatusBadgePill(
-                radarState = radarState,
-                isClear = isClear,
-                isDisconnectError = isDisconnectError,
-                pulseAlpha = pulseAlpha,
-                onClick = {
-                    if (isDisconnectError && onReconnectClick != null) {
-                        onReconnectClick()
-                    } else {
-                        onBadgeClick()
-                    }
-                },
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(top = 8.dp, end = 8.dp)
-            )
+            if (showStatusBadge) {
+                // Top Status Badge Pill (only clickable element in full-screen overlay)
+                RadarStatusBadgePill(
+                    radarState = radarState,
+                    isDisconnectError = isDisconnectError,
+                    pulseAlpha = pulseAlpha,
+                    onClick = {
+                        if (isDisconnectError && onReconnectClick != null) {
+                            onReconnectClick()
+                        } else {
+                            onBadgeClick()
+                        }
+                    },
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(top = 8.dp, end = 8.dp)
+                )
+            }
         }
     } else {
         // Edge Rail Mode (LEFT or RIGHT)
@@ -341,24 +345,25 @@ fun RadarEdgeOverlay(
                 .testTag("RadarEdgeOverlay"),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(8.dp))
+            if (showStatusBadge) {
+                Spacer(modifier = Modifier.height(8.dp))
 
-            // Top Status Badge Pill (only clickable element in the overlay, permanently visible)
-            RadarStatusBadgePill(
-                radarState = radarState,
-                isClear = isClear,
-                isDisconnectError = isDisconnectError,
-                pulseAlpha = pulseAlpha,
-                onClick = {
-                    if (isDisconnectError && onReconnectClick != null) {
-                        onReconnectClick()
-                    } else {
-                        onBadgeClick()
+                // Top Status Badge Pill (only clickable element in the overlay)
+                RadarStatusBadgePill(
+                    radarState = radarState,
+                    isDisconnectError = isDisconnectError,
+                    pulseAlpha = pulseAlpha,
+                    onClick = {
+                        if (isDisconnectError && onReconnectClick != null) {
+                            onReconnectClick()
+                        } else {
+                            onBadgeClick()
+                        }
                     }
-                }
-            )
+                )
 
-            Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(6.dp))
+            }
 
             // Vertical Target Rail
             val showRail = when {
@@ -475,12 +480,26 @@ private fun RadarFullScreenThreatOverlay(
 }
 
 /**
- * Top compact clickable status badge pill (REQ-TRK-062.3).
+ * Resolves localized snooze label for threat badge accessibility descriptions (REQ-TRK-064.2).
+ */
+@Composable
+private fun resolveSnoozeLabel(
+    snoozeState: RadarAudioSnoozeState,
+    snoozeBadgeText: String?
+): String = when {
+    snoozeState.mode == RadarAudioSnoozeMode.FAST_ONLY -> stringResource(R.string.radar_snooze_fast_only)
+    snoozeState.isPelotonSyncActive -> stringResource(R.string.radar_light_mode_peloton)
+    snoozeState.isUrbanMuteActive -> stringResource(R.string.radar_smart_urban_mute_title)
+    snoozeBadgeText != null -> snoozeBadgeText
+    else -> stringResource(R.string.radar_snooze_title)
+}
+
+/**
+ * Top compact clickable status badge pill for disconnect error and active threats (REQ-TRK-062.3/.4).
  */
 @Composable
 private fun RadarStatusBadgePill(
     radarState: RadarState,
-    isClear: Boolean,
     isDisconnectError: Boolean,
     pulseAlpha: Float,
     onClick: () -> Unit,
@@ -499,41 +518,10 @@ private fun RadarStatusBadgePill(
             badgeColor = TTColor.RadarDisconnectedAmber
             badgeTextColor = Color.White
         }
-        radarState.connectionState == RadarConnectionState.CONNECTING -> {
-            description = stringResource(R.string.radar_overlay_connecting)
-            badgeColor = MaterialTheme.colorScheme.primaryContainer
-            badgeTextColor = MaterialTheme.colorScheme.onPrimaryContainer
-        }
-        snoozeState.isSnoozed && isClear -> {
-            val snoozeLabel = when {
-                snoozeState.mode == RadarAudioSnoozeMode.FAST_ONLY -> stringResource(R.string.radar_snooze_fast_only)
-                snoozeState.isPelotonSyncActive -> stringResource(R.string.radar_light_mode_peloton)
-                snoozeState.isUrbanMuteActive -> stringResource(R.string.radar_smart_urban_mute_title)
-                snoozeBadgeText != null -> snoozeBadgeText
-                else -> stringResource(R.string.radar_snooze_title)
-            }
-            description = stringResource(R.string.radar_snooze_active_format, snoozeLabel)
-            badgeColor = TTColor.RadarClearGreen
-            badgeTextColor = Color.White
-        }
-        isClear -> {
-            description = stringResource(R.string.radar_overlay_clear)
-            badgeColor = TTColor.RadarClearGreen
-            badgeTextColor = Color.White
-        }
         radarState.overallThreatLevel == ThreatLevel.FAST_APPROACHING -> {
             val baseDesc = stringResource(R.string.radar_overlay_threats_fast_format, radarState.targets.size)
             description = if (snoozeState.isSnoozed) {
-                val snoozeLabel = when {
-                    snoozeState.mode == RadarAudioSnoozeMode.FAST_ONLY ->
-                        stringResource(R.string.radar_snooze_fast_only)
-                    snoozeState.isPelotonSyncActive ->
-                        stringResource(R.string.radar_light_mode_peloton)
-                    snoozeState.isUrbanMuteActive ->
-                        stringResource(R.string.radar_smart_urban_mute_title)
-                    snoozeBadgeText != null -> snoozeBadgeText
-                    else -> stringResource(R.string.radar_snooze_title)
-                }
+                val snoozeLabel = resolveSnoozeLabel(snoozeState, snoozeBadgeText)
                 "$baseDesc, " + stringResource(R.string.radar_snooze_active_format, snoozeLabel)
             } else {
                 baseDesc
@@ -544,16 +532,7 @@ private fun RadarStatusBadgePill(
         else -> {
             val baseDesc = stringResource(R.string.radar_overlay_threats_format, radarState.targets.size)
             description = if (snoozeState.isSnoozed) {
-                val snoozeLabel = when {
-                    snoozeState.mode == RadarAudioSnoozeMode.FAST_ONLY ->
-                        stringResource(R.string.radar_snooze_fast_only)
-                    snoozeState.isPelotonSyncActive ->
-                        stringResource(R.string.radar_light_mode_peloton)
-                    snoozeState.isUrbanMuteActive ->
-                        stringResource(R.string.radar_smart_urban_mute_title)
-                    snoozeBadgeText != null -> snoozeBadgeText
-                    else -> stringResource(R.string.radar_snooze_title)
-                }
+                val snoozeLabel = resolveSnoozeLabel(snoozeState, snoozeBadgeText)
                 "$baseDesc, " + stringResource(R.string.radar_snooze_active_format, snoozeLabel)
             } else {
                 baseDesc
@@ -629,36 +608,6 @@ private fun RadarStatusBadgePill(
                     )
                 }
             }
-            snoozeState.isSnoozed && isClear -> {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_radar_bell_muted),
-                        contentDescription = null,
-                        modifier = Modifier.size(9.dp),
-                        tint = badgeTextColor
-                    )
-                    if (snoozeBadgeText != null) {
-                        Spacer(modifier = Modifier.width(1.dp))
-                        Text(
-                            text = snoozeBadgeText,
-                            color = badgeTextColor,
-                            fontSize = if (snoozeBadgeText.length > 2) 7.sp else 8.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-            }
-            isClear -> {
-                Icon(
-                    painter = painterResource(R.drawable.ic_device_available),
-                    contentDescription = stringResource(R.string.radar_overlay_clear),
-                    modifier = Modifier.size(14.dp),
-                    tint = Color.White
-                )
-            }
             else -> {
                 Text(
                     text = "${radarState.targets.size}",
@@ -713,7 +662,7 @@ private fun RadarVerticalRail(
     }
 
     Box(
-        modifier = modifier,
+        modifier = modifier.testTag("RadarVerticalRail"),
         contentAlignment = Alignment.TopCenter
     ) {
         // Track background
