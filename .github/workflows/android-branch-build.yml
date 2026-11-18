@@ -144,6 +144,7 @@ jobs:
       - name: Verify ASPICE requirement governance
         run: |
           python3 tools/verify_requirement_governance.py
+          python3 tools/shard_living_docs.py --check-size --strict
           python3 tools/verify_requirement_governance.py --check-conflict-markers
           python3 tools/verify_requirement_governance.py --check-commit-hygiene --base-ref "${{ github.base_ref || 'develop' }}"
 

@@ -1,7 +1,7 @@
 # Living Test Specification: Post-Workout Analytics & Periods
 
 **Document ID**: `DOC-TST-PERIODS`  
-**Version**: 1.0.0  
+**Version**: 1.0.1  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -31,7 +31,7 @@
 - **Test Description**: 1. Clear application cache or significantly modify history. 2. Navigate to 'My Locations'.
 
 ### TST-PERF-004: **Incremental Period Visibility** [Implemented]
-- **Requirement(s)**: `REQ-PER-001`
+- **Requirement(s)**: `REQ-PER-001`, `REQ-DAT-003`
 - **Component**: **Incremental Period Visibility**
 - **Jira**: ``ATT-374``
 - **Test Description**: 1. Trigger a full hierarchical Periods sync. 2. Observe the list as the "Syncing [Month]..." progress updates.

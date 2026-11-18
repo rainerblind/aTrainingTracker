@@ -199,7 +199,7 @@ class TestShardLivingDocs(unittest.TestCase):
             self.assertNotIn("already a Master Index", proc_force.stderr)
 
     def test_verify_only_mode(self):
-        """Verifies that --verify-only succeeds on the real repository."""
+        """Verifies that --verify-only succeeds on the real repository across split shards."""
         repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
         script_path = os.path.join(repo_root, "tools", "shard_living_docs.py")
         proc = subprocess.run(
@@ -208,7 +208,7 @@ class TestShardLivingDocs(unittest.TestCase):
             text=True,
         )
         self.assertEqual(proc.returncode, 0, f"--verify-only failed: {proc.stderr}")
-        self.assertIn("PASS: All 18 domain shards exist.", proc.stdout)
+        self.assertIn("living documentation shards exist across 9 domains.", proc.stdout)
 
     def test_check_shard_sizes_within_limits(self):
         """TST-PRO-090.1: check_shard_sizes passes when all shards are within max_lines."""
@@ -314,38 +314,92 @@ class TestShardLivingDocs(unittest.TestCase):
             self.assertEqual(total_req_count_in_headers, 15)
 
     def test_cli_check_size_flag(self):
-        """TST-PRO-090.3: CLI --check-size reports status and flags oversized shards."""
+        """TST-PRO-090.3 / TST-PRO-127.3: CLI --check-size passes on live repo and --strict flags oversized temp shards."""
         repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
         script_path = os.path.join(repo_root, "tools", "shard_living_docs.py")
 
-        # 1. With high max-lines: passes cleanly
+        # 1. Live repo passes --check-size --strict with <= 4,000 lines per shard
         proc_pass = subprocess.run(
-            [sys.executable, script_path, "--repo-root", repo_root, "--check-size", "--max-lines", "50000"],
-            capture_output=True,
-            text=True,
-        )
-        self.assertEqual(proc_pass.returncode, 0)
-        self.assertIn("PASS: All 18 domain shards are within line limits", proc_pass.stdout)
-
-        # 2. Default limit flags real oversized shards
-        proc_flag = subprocess.run(
-            [sys.executable, script_path, "--repo-root", repo_root, "--check-size"],
-            capture_output=True,
-            text=True,
-        )
-        self.assertEqual(proc_flag.returncode, 0)
-        self.assertIn("FLAGGED:", proc_flag.stdout)
-        self.assertIn("OVERSIZED:", proc_flag.stdout)
-        self.assertIn("req_ui_design_system.md", proc_flag.stdout)
-
-        # 3. With --strict: exits with code 1
-        proc_strict = subprocess.run(
             [sys.executable, script_path, "--repo-root", repo_root, "--check-size", "--strict"],
             capture_output=True,
             text=True,
         )
-        self.assertEqual(proc_strict.returncode, 1)
-        self.assertIn("FLAGGED:", proc_strict.stdout)
+        self.assertEqual(proc_pass.returncode, 0, f"stderr={proc_pass.stderr}\nstdout={proc_pass.stdout}")
+        self.assertIn("domain shards are within line limits", proc_pass.stdout)
+
+        # 2. Isolated temp repo with oversized *_part1.md sub-shard fails --strict
+        with tempfile.TemporaryDirectory() as temp_dir:
+            docs_req = os.path.join(temp_dir, "docs", "requirements")
+            os.makedirs(docs_req, exist_ok=True)
+            with open(os.path.join(docs_req, "req_demo_part1.md"), "w", encoding="utf-8") as f:
+                f.write("\n".join(f"Line {i}" for i in range(1, 61)) + "\n")
+
+            proc_flag = subprocess.run(
+                [sys.executable, script_path, "--repo-root", temp_dir, "--check-size", "--max-lines", "40"],
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(proc_flag.returncode, 0)
+            self.assertIn("FLAGGED:", proc_flag.stdout)
+            self.assertIn("req_demo_part1.md", proc_flag.stdout)
+
+            proc_strict = subprocess.run(
+                [sys.executable, script_path, "--repo-root", temp_dir, "--check-size", "--max-lines", "40", "--strict"],
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(proc_strict.returncode, 1)
+            self.assertIn("OVERSIZED:", proc_strict.stdout)
+
+    def test_split_oversized_shard_generates_unique_doc_ids_and_change_history(self):
+        """TST-PRO-127.3: split_oversized_shard emits unique DOC-*-P{n} headers and Change History on every sub-shard."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            shard_path = os.path.join(temp_dir, "req_sample_governed.md")
+            header = (
+                "# Living Requirements: Sample Governed\n\n"
+                "**Document ID**: `DOC-REQ-SMP`  \n"
+                "**Version**: 1.0.5  \n"
+                "**Status**: Reviewed  \n"
+                "**Approver**: Pending PO Sign-Off  \n\n"
+                "**Domain**: `sample_governed`  \n"
+                "**Prefixes**: `SMP`  \n"
+                "**Total Requirements**: 10\n\n"
+                "---\n\n"
+            )
+            sections = [
+                (
+                    f"### REQ-SMP-{i:03d}: Sample Requirement {i} [Verified]\n"
+                    f"- **Tests**: `TST-SMP-{i:03d}`\n"
+                    f"- **Priority**: High\n"
+                    f"- **Type**: Functional\n"
+                    f"- **Verification Method**: Unit\n"
+                    f"- **Description**: Body line 1 for {i}.\n  Body line 2 for {i}.\n"
+                )
+                for i in range(1, 11)
+            ]
+            history = (
+                "\n---\n\n## Change History\n\n"
+                "| Version | Date | Author | Ticket | Summary of Changes |\n"
+                "| :--- | :--- | :--- | :--- | :--- |\n"
+                "| `1.0.0` | 2026-11-17 | AI | `ATT-1` | Init. |\n"
+            )
+            with open(shard_path, "w", encoding="utf-8") as f:
+                f.write(header + "\n".join(sections) + history)
+
+            sub_shards = split_oversized_shard(shard_path, max_lines=55)
+            self.assertGreater(len(sub_shards), 1)
+            doc_ids = set()
+            for part_file in sub_shards:
+                with open(part_file, "r", encoding="utf-8") as pf:
+                    content = pf.read()
+                self.assertLessEqual(len(content.splitlines()), 55)
+                doc_m = re.search(r"\*\*Document ID\*\*:\s*`(DOC-[A-Z0-9-]+)`", content)
+                self.assertIsNotNone(doc_m)
+                doc_ids.add(doc_m.group(1))
+                self.assertIn("**Version**: 1.0.0", content)
+                self.assertIn("**Status**: Reviewed", content)
+                self.assertIn("## Change History", content)
+            self.assertEqual(len(doc_ids), len(sub_shards))
 
 
 

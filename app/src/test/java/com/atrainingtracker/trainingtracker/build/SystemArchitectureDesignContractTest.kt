@@ -258,13 +258,22 @@ class SystemArchitectureDesignContractTest {
         }
     }
 
+    private fun loadShardContent(dirRel: String, stem: String): String {
+        val dir = findRepoRootFile(dirRel)
+        val files = dir.listFiles { _, name ->
+            name == "$stem.md" || (name.startsWith("${stem}_part") && name.endsWith(".md"))
+        }?.sortedBy { it.name }.orEmpty()
+        assertTrue("Expected living-doc shard(s) for $dirRel/$stem*.md", files.isNotEmpty())
+        return files.joinToString("\n\n") { it.readText() }
+    }
+
     /**
      * Asserts living documentation traceability to REQ-PRO-056 and TST-PRO-056.
      */
     @Test
     fun testSystemArchitecture_tracesToLivingRequirements() {
-        val reqContent = findRepoRootFile("docs/requirements/req_process_stability.md").readText()
-        val tstContent = findRepoRootFile("docs/tests/tst_process_stability.md").readText()
+        val reqContent = loadShardContent("docs/requirements", "req_process_stability")
+        val tstContent = loadShardContent("docs/tests", "tst_process_stability")
 
         assertTrue("Living docs must define REQ-PRO-056", reqContent.contains("REQ-PRO-056"))
         assertTrue("REQ-PRO-056 must cite system_architecture.md", reqContent.contains("system_architecture.md"))

@@ -86,6 +86,7 @@ from tools.verify_requirement_governance import (
     find_code_traceability_orphans,
     verify_code_traceability_orphans,
     verify_shard_header_counts,
+    verify_shard_sizes,
     LEGACY_MISSING_DESCRIPTION_REQS,
     verify_req_descriptions,
     calculate_req_field_coverage,
@@ -1874,13 +1875,17 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
     def test_scenario_47_req_pro_077_living_doc_attribute_presence(self):
         """TST-PRO-077.4: Verify REQ-PRO-077 defines Priority, Type, and Verification Method in living documentation."""
         repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-        ps_path = os.path.join(repo_root, "docs", "requirements", "req_process_stability.md")
-        self.assertTrue(os.path.exists(ps_path))
+        req_dir = os.path.join(repo_root, "docs", "requirements")
+        ps_files = sorted(
+            fn for fn in os.listdir(req_dir)
+            if fn == "req_process_stability.md" or (fn.startswith("req_process_stability_part") and fn.endswith(".md"))
+        )
+        self.assertTrue(len(ps_files) > 0, "Expected req_process_stability*.md shard(s)")
 
-        with open(ps_path, "r", encoding="utf-8") as f:
-            lines = f.readlines()
-
-        shards = {"docs/requirements/req_process_stability.md": lines}
+        shards = {}
+        for fn in ps_files:
+            with open(os.path.join(req_dir, fn), "r", encoding="utf-8") as f:
+                shards[f"docs/requirements/{fn}"] = f.readlines()
         defective = find_missing_requirement_attributes(req_shards=shards)
 
         # Filter defective items to check if REQ-PRO-077 is among them
@@ -3651,6 +3656,89 @@ public enum SensorType {
                 governance_cli_main(["--check-sensor-javadocs"])
         self.assertEqual(cm.exception.code, 0, f"stderr={buf_err.getvalue()}")
         self.assertIn("67 SensorType constant(s)", buf_out.getvalue())
+
+
+class TestSymmetricTraceabilityAndScannerAudit(unittest.TestCase):
+    """TST-PRO-127.1, TST-PRO-127.2, TST-PRO-127.4: Symmetric REQ<->TST parity, tag scanner & --check-size."""
+
+    def test_symmetric_edge_parity_rejects_asymmetric_req_to_tst_and_tst_to_req(self):
+        """TST-PRO-127.1: Asymmetric REQ->TST and TST->REQ links outside baseline fail deterministically."""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            req_dir = os.path.join(tmp_dir, "docs", "requirements")
+            tst_dir = os.path.join(tmp_dir, "docs", "tests")
+            tools_dir = os.path.join(tmp_dir, "tools")
+            os.makedirs(req_dir)
+            os.makedirs(tst_dir)
+            os.makedirs(tools_dir)
+
+            with open(os.path.join(req_dir, "req_dom.md"), "w", encoding="utf-8") as f:
+                f.write(
+                    "# Shard\n"
+                    "### REQ-DOM-001: Req One [Verified]\n- **Tests**: `TST-DOM-001`, `TST-DOM-002`\n\n"
+                    "### REQ-DOM-002: Req Two [Verified]\n- **Tests**: `TST-DOM-002`\n\n"
+                    "### REQ-DOM-003: Baselined Legacy [Verified]\n- **Tests**: `TST-DOM-001`\n"
+                )
+            with open(os.path.join(tst_dir, "tst_dom.md"), "w", encoding="utf-8") as f:
+                f.write(
+                    "# Test Shard\n"
+                    "### TST-DOM-001: Test One [Verified]\n- **Verifies**: `REQ-DOM-001`\n\n"
+                    "### TST-DOM-002: Test Two [Verified]\n- **Verifies**: `REQ-DOM-002`\n\n"
+                    "### TST-DOM-003: Test Three [Verified]\n- **Verifies**: `REQ-DOM-001`\n"
+                )
+            baseline_path = os.path.join(tools_dir, "traceability_baseline.json")
+            with open(baseline_path, "w", encoding="utf-8") as f:
+                json.dump({"orphan_requirements": ["REQ-DOM-003"]}, f)
+
+            ok, diag, report = verify_traceability_orphans(
+                repo_root=tmp_dir,
+                baseline_path=baseline_path,
+                fail_on_orphans=True,
+            )
+            self.assertFalse(ok)
+            self.assertEqual(report["asymmetric_req_to_tst"], [("REQ-DOM-001", "TST-DOM-002")])
+            self.assertEqual(report["asymmetric_tst_to_req"], [("TST-DOM-003", "REQ-DOM-001")])
+            joined = "\n".join(diag)
+            self.assertIn("Criterion 4 Symmetric REQ->TST", joined)
+            self.assertIn("Criterion 4 Symmetric TST->REQ", joined)
+
+    def test_extract_test_code_tags_scans_android_test_and_tools_test_py(self):
+        """TST-PRO-127.2: extract_test_code_tags discovers tags across app/src/{test,androidTest} and tools/test_*.py."""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            unit_dir = os.path.join(tmp_dir, "app", "src", "test", "java")
+            inst_dir = os.path.join(tmp_dir, "app", "src", "androidTest", "java")
+            tools_dir = os.path.join(tmp_dir, "tools")
+            os.makedirs(unit_dir)
+            os.makedirs(inst_dir)
+            os.makedirs(tools_dir)
+
+            with open(os.path.join(unit_dir, "UnitSampleTest.kt"), "w", encoding="utf-8") as f:
+                f.write("// Traces to TST-TRK-001\n")
+            with open(os.path.join(inst_dir, "SmokeAndroidTest.kt"), "w", encoding="utf-8") as f:
+                f.write("// Verifies TST-UI-101.1\n")
+            with open(os.path.join(tools_dir, "test_sample_tool.py"), "w", encoding="utf-8") as f:
+                f.write("# TST-TOOL-001 and ignored TST-UI-999\n")
+
+            tags = extract_test_code_tags(repo_root=tmp_dir)
+            self.assertIn("TST-TRK-001", tags)
+            self.assertIn("TST-UI-101", tags)
+            self.assertIn("TST-TOOL-001", tags)
+            self.assertNotIn("TST-UI-999", tags)
+
+    def test_cli_check_size_and_live_symmetric_coverage(self):
+        """TST-PRO-127.1 / TST-PRO-127.4: Live repo passes --check-size and achieves 0 Cat-4 gaps."""
+        ok_size, diag_size = verify_shard_sizes(max_lines=4000)
+        self.assertTrue(ok_size, f"Expected all live shards <= 4000 lines: {diag_size}")
+
+        buf_out = io.StringIO()
+        buf_err = io.StringIO()
+        with contextlib.redirect_stdout(buf_out), contextlib.redirect_stderr(buf_err):
+            with self.assertRaises(SystemExit) as cm:
+                governance_cli_main(["--check-size"])
+        self.assertEqual(cm.exception.code, 0, f"stderr={buf_err.getvalue()}")
+        self.assertIn("within line limits", buf_out.getvalue())
+
+        cov = calculate_traceability_coverage()
+        self.assertEqual(cov.cat4.gap_count, 0, f"Expected 0 Cat-4 gaps, got: {cov.cat4.details}")
 
 
 if __name__ == "__main__":

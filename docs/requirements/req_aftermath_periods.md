@@ -1,7 +1,7 @@
 # Living Requirements: Post-Workout Analytics & Periods
 
 **Document ID**: `DOC-REQ-PERIODS`  
-**Version**: 1.0.0  
+**Version**: 1.0.1  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -21,7 +21,7 @@
 - **Rationale**: The system SHALL ensure that all workouts belonging to a specific period are correctly and reactively associated when viewing period details (Map or List). The visualization SHALL automatically update as workout data is loaded or modified in the background, ensuring no sessions are omitted due to partial loading states.
 
 ### REQ-PER-008: Precise Period Filtering [Implemented]
-- **Tests**: `TST-PER-009`
+- **Tests**: `TST-PER-009`, `TST-UNT-012`, `TST-UNT-013`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit, Integration
@@ -96,7 +96,7 @@
 **Invariants**: SQLite schema for `PeriodSummaries.db` MUST NOT be altered; single-region periods MUST maintain 100% camera and visual parity; vector track limit ($\le 30$) and heatmap rendering per `REQ-PER-012` MUST NOT be regressed; all user-facing chip strings MUST maintain 9-language localization parity.
 
 ### REQ-PER-001: The system SHALL load and display the detailed visualization (Heatmap and List) [Implemented]
-- **Tests**: `TST-PERF-002`, `TST-PERF-004`
+- **Tests**: `TST-PERF-002`, `TST-PERF-004`, `TST-BUG-002`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit, Integration
@@ -1041,7 +1041,7 @@
 **Invariants**: Zero schema changes to `PeriodSummaries.db` or `HrvReadiness.db`, strict posture segregation in baseline math, 100% clean-room test pass rate.
 
 ### REQ-PER-034: Lossless WorkoutRrIntervals Persistence, Centered Recompute & Garmin FIT HrvMesg [Verified]
-- **Tests**: `TST-PER-042`
+- **Tests**: `TST-PER-042`, `TST-TRK-085`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit

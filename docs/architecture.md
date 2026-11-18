@@ -1,7 +1,7 @@
 # Software Architecture: aTrainingTracker (ASPICE 4.0 SWE.2)
 
 **Document ID**: `DOC-ARC-MAIN`  
-**Version**: 1.0.0  
+**Version**: 1.0.1  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -86,7 +86,7 @@ graph TD
 
 ## 2. Requirement Allocation to Architecture (SWE.2.BP1, BP4)
 
-All system requirements across the 9 living domain shards are allocated directly to corresponding architectural subsystems:
+All system requirements across the 9 living domains (sharded `<= 4,000` lines per `REQ-PRO-093.3`, `REQ-PRO-127.3`) are allocated directly to corresponding architectural subsystems:
 
 | Domain Shard | Requirement Prefix Families | Allocated Architectural Components | Primary Responsibilities |
 | :--- | :--- | :--- | :--- |
@@ -409,3 +409,4 @@ In accordance with **ASPICE SUP.8 (Configuration and Release Management)**, **SW
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
 | `1.0.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Added standardized `DOC-ARC-MAIN` work-product control header and Change History. |
+| `1.0.1` | 2026-11-18 | AI Agent (`ATT-8206`) | `ATT-8206` | Aligned Section 2 domain-shard wording with `<= 4,000`-line sub-shard splitting (`REQ-PRO-093.3`, `REQ-PRO-127.3`). |

@@ -126,12 +126,21 @@ class SystemRequirementsSpecificationContractTest {
         assertTrue("Referenced files must exist on disk: $missingFiles", missingFiles.isEmpty())
     }
 
+    private fun loadShardContent(dirRel: String, stem: String): String {
+        val dir = findRepoRootFile(dirRel)
+        val files = dir.listFiles { _, name ->
+            name == "$stem.md" || (name.startsWith("${stem}_part") && name.endsWith(".md"))
+        }?.sortedBy { it.name }.orEmpty()
+        assertTrue("Expected living-doc shard(s) for $dirRel/$stem*.md", files.isNotEmpty())
+        return files.joinToString("\n\n") { it.readText() }
+    }
+
     /**
-     * Asserts living requirement REQ-PRO-055 maps to SYSREQ-DEX in docs/requirements/req_process_stability.md.
+     * Asserts living requirement REQ-PRO-055 maps to SYSREQ-DEX in docs/requirements/req_process_stability*.md.
      */
     @Test
     fun testSystemRequirements_tracesToLivingRequirements() {
-        val reqContent = findRepoRootFile("docs/requirements/req_process_stability.md").readText()
+        val reqContent = loadShardContent("docs/requirements", "req_process_stability")
 
         assertTrue("Living docs must define REQ-PRO-055", reqContent.contains("REQ-PRO-055"))
         assertTrue("REQ-PRO-055 must trace to sysreq_data_exchange.md", reqContent.contains("sysreq_data_exchange.md"))

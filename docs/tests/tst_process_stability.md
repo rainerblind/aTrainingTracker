@@ -1,14 +1,14 @@
 # Living Test Specification: Engineering Process, Stability & Architecture
 
 **Document ID**: `DOC-TST-PRO`  
-**Version**: 1.0.22  
+**Version**: 1.0.24  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Tests**: 230
+**Total Tests**: 231
 
 ---
 
@@ -64,7 +64,7 @@
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Integration
-- **Requirement(s)**: `REQ-UI-110`
+- **Requirement(s)**: `REQ-UI-110`, `REQ-UI-009`
 - **Component**: **UI/Logic**
 - **Test Description**: In Tracking Tab Configuration, toggle "Show Elevation Profile".
 
@@ -354,7 +354,7 @@
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
-- **Requirement(s)**: `REQ-UI-110`
+- **Requirement(s)**: `REQ-UI-110`, `REQ-UI-009`
 - **Component**: **Data Integrity**
 - **Test Description**:
   1. Static analysis of `onUpgrade` (v9->v10).
@@ -420,7 +420,7 @@
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
-- **Requirement(s)**: `REQ-UI-113`
+- **Requirement(s)**: `REQ-UI-113`, `REQ-UI-106`
 - **Component**: **String Resource Integrity Check**
 - **Jira**: ``ATT-251``
 - **Test Description**: 1. Audit all `values-*/strings.xml` files. 2. Compare the set of keys in each file with the keys in `values/strings.xml`. 3. Identify keys present in translations but missing in default. 4. Verify that after implementation, no such discrepancies exist.
@@ -447,7 +447,7 @@
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
-- **Requirement(s)**: `REQ-UI-122`
+- **Requirement(s)**: `REQ-UI-122`, `REQ-UI-106`
 - **Component**: **Global Format String Audit**
 - **Jira**: ``ATT-523``
 - **Test Description**: 1. Execute a comprehensive search across all `strings.xml` files in all locales (DE, ES, FR, IT, JA, NL, PL, PT) for positional format specifiers that are incomplete (e.g., `%1` without `$s`, `$d`, or `$f`). 2. Correct any identified issues. 3. Verify that the final resource set contains only syntactically valid `java.util.Formatter` specifiers.
@@ -465,7 +465,7 @@
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
-- **Requirement(s)**: `REQ-PER-001`
+- **Requirement(s)**: `REQ-PER-001`, `REQ-DAT-003`
 - **Component**: **Aggregation Gap Stability**
 - **Jira**: ``ATT-372``
 - **Test Description**: 1. Import training history with temporal gaps (e.g. skip a week/month). 2. Trigger a full hierarchical sync.
@@ -3906,6 +3906,25 @@
 
 ---
 
+### TST-PRO-127: **Symmetric REQ-TST Edge Parity, Tag Scanner Audit & Oversized Shard Splitting Suite (ATT-8206)** [Verified]
+- **Requirement(s)**: `REQ-PRO-127`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Component**: `tools/verify_requirement_governance.py`, `tools/shard_living_docs.py`, `tools/test_verify_requirement_governance.py`, `tools/test_shard_living_docs.py`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/AspiceSweAuditContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/NonFunctionalRequirementsContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SystemRequirementsSpecificationContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SystemArchitectureDesignContractTest.kt`
+- **Jira**: `ATT-8206`
+- **Test Description**:
+  1. *Symmetric `REQ <-> TST` Edge Parity & Baseline Ratchet (`TST-PRO-127.1`, `tools/test_verify_requirement_governance.py`)*:
+     • *Given* `tempfile` shard fixtures with symmetric `REQ<->TST` citations vs asymmetric `REQ->TST` or `TST->REQ` links outside `traceability_baseline.json`, *When* `find_traceability_orphans()` / `verify_traceability_orphans()` execute, *Then* symmetric fixtures pass (`15` baseline orphans tolerated without regression) and asymmetric fixtures fail with deterministic mismatch diagnostics; live `--coverage` reports `0` Cat-4 gaps.
+  2. *`androidTest/` & `tools/test_*.py` Tag Scanner Verification (`TST-PRO-127.2`, `tools/test_verify_requirement_governance.py`)*:
+     • *Given* `tempfile` test trees under `app/src/androidTest/` and `tools/test_*.py`, *When* `extract_test_code_tags()` runs, *Then* valid `TST-*` tags across all 3 test roots are extracted under `L2954-2957` allowlist rules and `5` Cat-3 tags are audited cleanly.
+  3. *Oversized Shard Split, Header Parity & Kotlin Contract Suite (`TST-PRO-127.3`, `tools/test_shard_living_docs.py` & Gradle contract tests)*:
+     • *Given* all `5` split living-doc shards (`<= 4,000` lines each), synced `docs/requirements.md` / `docs/tests.md` (`RAD`, `HRV`, `WKO`, `CLM` prefixes), and updated `*_process_stability*.md` lookups, *When* `python3 -m unittest tools/test_shard_living_docs.py`, `python3 tools/shard_living_docs.py --check-size --strict`, and `./gradlew :app:testDebugUnitTest --tests ...AspiceSweAuditContractTest --tests ...NonFunctionalRequirementsContractTest --tests ...SystemRequirementsSpecificationContractTest --tests ...SystemArchitectureDesignContractTest` run, *Then* every test passes `100%` (`0` lost IDs, valid `DOC-*` + `Change History` on every sub-shard).
+  4. *CI Workflow `--check-size --strict` & Governance Gate (`TST-PRO-127.4`, `tools/verify_requirement_governance.py` & `.github/workflows/`)*:
+     • *Given* `.github/workflows/android-branch-build.yml` and `android-release.yml` wiring `shard_living_docs.py --check-size --strict` and `verify_requirement_governance.py --check-size`, *When* `ReleaseCiAndLintConfigContractTest` and `verify_requirement_governance.py` execute, *Then* all governance and CI config checks exit `0` (`Localization Parity: N/A - no UI strings`).
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -3933,3 +3952,5 @@
 | `1.0.20` | 2026-11-18 | AI Agent (`ATT-8207`) | `ATT-8207` | Stage 6 Pro Bounce 3/3 remediation (`[Implemented]`): added `'stage 1'..'stage 5'` and `bounce_target="stage 4"` scope assertions in `tools/test_jira_accounts.py` and `tools/hoechstmass/tools/test_hoechstmass_tools.py`. |
 | `1.0.21` | 2026-11-18 | AI Agent (`ATT-8207`) | `ATT-8207` | Promoted `TST-PRO-125` to `[Verified]` after Stage 5 Bounce 3/3 verification (`48/48` targeted Python tests, `23/24` Gradle contracts with 1 pre-existing `.env.jira` worktree failure, governance `exit 0`). |
 | `1.0.22` | 2026-11-18 | AI Agent (`ATT-8631`) | `ATT-8631` | Added and verified `TST-PRO-126` [Verified] (`SourceTextReadingAuditContractTest` `4/4`, `SensorTypeUnitsContractTest` `2/2`, `TestSensorTypeJavadocVerification` in `tools/test_verify_requirement_governance.py`, `67/67` SensorType Javadocs; `97/97` Python suite, `21/21` Tier-1 Gradle tests, governance `exit 0`). |
+| `1.0.23` | 2026-11-18 | AI Agent (`ATT-8206`) | `ATT-8206` | Added `[Planned]` `TST-PRO-127` test specifications (symmetric `REQ<->TST` edge parity & `15`-orphan baseline ratchet, `androidTest`/`tools/test_*.py` tag scanner unit tests, `<= 4000`-line shard splitting & Kotlin contract test suite, CI `--check-size --strict` gate). |
+| `1.0.24` | 2026-11-18 | AI Agent (`ATT-8206`) | `ATT-8206` | Promoted `TST-PRO-127` to `[Verified]` after Stage 5 verification (`490/490` `tools/` + `56/56` Hoechstmass Python tests, `113/113` Gradle contract tests across 16 suites, `27/27` shards `<= 4,000` lines, `--coverage` Cat 4 `1244/1244` `100%`, governance `exit 0`). |

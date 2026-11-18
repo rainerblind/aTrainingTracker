@@ -1,7 +1,7 @@
 # Living Requirements: Maps, Polylines & Navigation
 
 **Document ID**: `DOC-REQ-MAPS`  
-**Version**: 1.0.0  
+**Version**: 1.0.1  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -815,7 +815,7 @@
 **Invariants**: Pure geodesic calculations without android framework dependencies for unit testability, 100% offline local database operation, and 100% full-suite test pass rate MUST NOT be broken.
 
 ### REQ-MAP-032: Domain-Agnostic Scrubber Marker Synchronization & Telemetry Graph Auto-Centering [Verified]
-- **Tests**: `TST-MAP-034`
+- **Tests**: `TST-MAP-034`, `TST-UI-392`
 - **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: Medium
 - **Type**: Functional

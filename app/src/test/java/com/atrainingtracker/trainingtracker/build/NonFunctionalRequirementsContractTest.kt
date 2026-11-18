@@ -59,6 +59,15 @@ class NonFunctionalRequirementsContractTest {
             ?: error("Could not locate $relativePath in ${File(".").absolutePath}")
     }
 
+    private fun loadShardContent(dirRel: String, stem: String): String {
+        val dir = findRepoRootFile(dirRel)
+        val files = dir.listFiles { _, name ->
+            name == "$stem.md" || (name.startsWith("${stem}_part") && name.endsWith(".md"))
+        }?.sortedBy { it.name }.orEmpty()
+        assertTrue("Expected living-doc shard(s) for $dirRel/$stem*.md", files.isNotEmpty())
+        return files.joinToString("\n\n") { it.readText() }
+    }
+
     private fun extractSection(content: String, headingPrefix: String): String {
         val idx = content.indexOf(headingPrefix)
         assertTrue("Missing section starting with '$headingPrefix'", idx >= 0)
@@ -72,8 +81,8 @@ class NonFunctionalRequirementsContractTest {
             "app/src/test/java/com/atrainingtracker/trainingtracker/build/MeasuredNfrBenchmarkTest.kt"
         )
         val benchmarkSource = benchmarkFile.readText()
-        val reqContent = findRepoRootFile("docs/requirements/req_process_stability.md").readText()
-        val tstContent = findRepoRootFile("docs/tests/tst_process_stability.md").readText()
+        val reqContent = loadShardContent("docs/requirements", "req_process_stability")
+        val tstContent = loadShardContent("docs/tests", "tst_process_stability")
 
         for (id in GROUP_A_MEASURABLE_IDS) {
             val reqId = String.format(Locale.US, "REQ-NFR-%03d", id)
@@ -160,8 +169,8 @@ class NonFunctionalRequirementsContractTest {
 
     @Test
     fun testGroupB_manualHardwareNfrsEnforceOnDeviceManualHonestyAndProtocolTemplate() {
-        val reqContent = findRepoRootFile("docs/requirements/req_process_stability.md").readText()
-        val tstContent = findRepoRootFile("docs/tests/tst_process_stability.md").readText()
+        val reqContent = loadShardContent("docs/requirements", "req_process_stability")
+        val tstContent = loadShardContent("docs/tests", "tst_process_stability")
         val benchmarkSource = findRepoRootFile(
             "app/src/test/java/com/atrainingtracker/trainingtracker/build/MeasuredNfrBenchmarkTest.kt"
         ).readText()
@@ -224,11 +233,11 @@ class NonFunctionalRequirementsContractTest {
             assertTrue("Architecture Section 4.9 must trace to $reqId", archContent.contains(reqId))
         }
 
-        val reqContent = findRepoRootFile("docs/requirements/req_process_stability.md").readText()
-        val tstContent = findRepoRootFile("docs/tests/tst_process_stability.md").readText()
+        val reqContent = loadShardContent("docs/requirements", "req_process_stability")
+        val tstContent = loadShardContent("docs/tests", "tst_process_stability")
         assertEquals(11, GROUP_A_MEASURABLE_IDS.size)
         assertEquals(7, GROUP_B_MANUAL_IDS.size)
-        assertTrue("req_process_stability.md must define REQ-PRO-113", reqContent.contains("### REQ-PRO-113:"))
-        assertTrue("tst_process_stability.md must define TST-PRO-113:", tstContent.contains("### TST-PRO-113:"))
+        assertTrue("req_process_stability*.md must define REQ-PRO-113", reqContent.contains("### REQ-PRO-113:"))
+        assertTrue("tst_process_stability*.md must define TST-PRO-113:", tstContent.contains("### TST-PRO-113:"))
     }
 }

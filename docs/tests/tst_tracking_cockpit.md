@@ -1,7 +1,7 @@
 # Living Test Specification: Tracking & Live Sensor Cockpit
 
 **Document ID**: `DOC-TST-TRK`  
-**Version**: 1.0.20  
+**Version**: 1.0.21  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -62,7 +62,7 @@
 3. Workouts with $N$ manual laps contain exactly $N+1$ laps.
 4. `LapsDatabaseManager` rejects zero-duration writes and filters legacy zero-duration rows.
 5. 100% of unit tests pass with zero regressions.]
-- **Requirement(s)**: `REQ-TRK-002`
+- **Requirement(s)**: `REQ-TRK-002`, `REQ-TRK-009`
 - **Component**: **Workout Lap Lifecycle, Pause Neutrality & Zero-Duration Phantom Prevention**
 - **Jira**: ``ATT-896``
 - **Test Description**:
@@ -218,7 +218,7 @@
   • Execute `./gradlew testDebugUnitTest` verifying 100% test pass rate with zero regressions.
 
 ### TST-CON-003: **BLE GATT Lifecycle, Thread-Safe Concurrency & Null-Safety Unit Tests** [Verified]
-- **Requirement(s)**: `REQ-CON-012`
+- **Requirement(s)**: `REQ-CON-012`, `REQ-CON-005`
 - **Component**: **BLE GATT Lifecycle, Thread-Safe Concurrency & Null-Safety Unit Tests**
 - **Jira**: ``ATT-1348``
 - **Test Description**:
@@ -242,7 +242,7 @@
   7. *Regression Suite*: Execute full test suite (`./gradlew testDebugUnitTest`) to ensure zero regressions across all modules.
 
 ### TST-CON-005: **BLE GATT Measurement Packet Parsing Resilience & Null-Safe Telemetry Test** [Verified]
-- **Requirement(s)**: `REQ-CON-014`
+- **Requirement(s)**: `REQ-CON-014`, `REQ-CON-005`
 - **Component**: **BLE GATT Measurement Packet Parsing Resilience & Null-Safe Telemetry Test**
 - **Jira**: ``ATT-1485``
 - **Test Description**:
@@ -365,7 +365,7 @@
   • Execute `./gradlew testDebugUnitTest` to guarantee 0 regressions across all test suites.
 
 ### TST-CON-010: **Continuous Sensor Battery State Persistence, Live Battery Display in Sensors List & Post-Workout Alerting Verification** [Verified]
-- **Requirement(s)**: `REQ-CON-007`
+- **Requirement(s)**: `REQ-CON-007`, `REQ-CON-010`
 - **Component**: **Continuous Sensor Battery State Persistence, Live Battery Display in Sensors List & Post-Workout Alerting Verification**
 - **Jira**: ``ATT-2192` / `ATT-3312``
 - **Test Description**:
@@ -414,7 +414,7 @@
   • Execute `./gradlew testDebugUnitTest` across all modules verifying 100% pass rate with zero regressions.
 
 ### TST-FIL-004: **Stabilized VAM (Vertical Speed) Metric, Location Accuracy Gating & Indoor Drift Suppression Verification** [Verified]
-- **Requirement(s)**: `REQ-FIL-012`
+- **Requirement(s)**: `REQ-FIL-012`, `REQ-FIL-001`, `REQ-FIL-003`
 - **Component**: **Stabilized VAM (Vertical Speed) Metric, Location Accuracy Gating & Indoor Drift Suppression Verification**
 - **Jira**: `ATT-1621`, `ATT-1738`, `ATT-5373`
 - **Test Description**:
@@ -457,7 +457,7 @@
   • Execute `./gradlew testDebugUnitTest` verifying 100% test pass rate with zero regressions.
 
 ### TST-FIL-005: **Continuous Rolling Smoothing Telemetry, Session Reset Isolation & Live Pre-Start Metric Verification** [Verified]
-- **Requirement(s)**: `REQ-FIL-013`
+- **Requirement(s)**: `REQ-FIL-013`, `REQ-FIL-001`, `REQ-FIL-002`
 - **Component**: **Continuous Rolling Smoothing Telemetry, Session Reset Isolation & Live Pre-Start Metric Verification**
 - **Jira**: ``ATT-3222``
 - **Test Description**:
@@ -689,7 +689,7 @@
   • Execute `python3 -m unittest tools/test_replay_workout.py` and `./gradlew testDebugUnitTest` asserting 100% pass rate.
 
 ### TST-TRK-018: **Resumed Workout Sample Table Resolution, Asynchronous BANAL Binding Barrier & Sample Write Error Surfacing Verification Suite** [Verified]
-- **Requirement(s)**: `REQ-TRK-026`
+- **Requirement(s)**: `REQ-TRK-026`, `REQ-TRK-005`
 - **Component**: **Resumed Workout Sample Table Resolution, Asynchronous BANAL Binding Barrier & Sample Write Error Surfacing Verification Suite**
 - **Jira**: ``ATT-3980, ATT-5827``
 - **Test Description**:
@@ -704,7 +704,7 @@
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
 ### TST-TRK-019: **Fault-Tolerant 1 Hz Sampling Loop, Clock Timer Exception Guard & Volatile mBanalService Snapshot Concurrency Verification Suite** [Verified]
-- **Requirement(s)**: `REQ-TRK-027`
+- **Requirement(s)**: `REQ-TRK-027`, `REQ-TRK-007`
 - **Component**: **Fault-Tolerant 1 Hz Sampling Loop, Clock Timer Exception Guard & Volatile `mBanalService` Snapshot Concurrency Verification Suite**
 - **Jira**: ``ATT-3981``
 - **Test Description**:
@@ -755,7 +755,7 @@
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
 ### TST-TRK-022: **Fault-Isolated Workout Finalization, Dedicated FINISHED=1 Commit, Defensive AccumulatedSensorTypeSet Copy & Zero-Duration Average Speed Verification Suite** [Verified]
-- **Requirement(s)**: `REQ-TRK-030`
+- **Requirement(s)**: `REQ-TRK-030`, `REQ-TRK-008`
 - **Component**: **Fault-Isolated Workout Finalization, Dedicated `FINISHED=1` Commit, Defensive `AccumulatedSensorTypeSet` Copy & Zero-Duration Average Speed Verification Suite**
 - **Jira**: ``ATT-3986``
 - **Test Description**:
@@ -769,7 +769,7 @@
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
 ### TST-TRK-023: **LiveWorkoutSession Stream & Extrema Rehydration on Workout Resume, Sample Count Persistence & finalizeLiveSession() Continuity Verification Suite** [Verified]
-- **Requirement(s)**: `REQ-TRK-031`
+- **Requirement(s)**: `REQ-TRK-031`, `REQ-TRK-005`
 - **Component**: **`LiveWorkoutSession` Stream & Extrema Rehydration on Workout Resume, Sample Count Persistence & `finalizeLiveSession()` Continuity Verification Suite**
 - **Jira**: ``ATT-3987``
 - **Test Description**:
@@ -807,7 +807,7 @@
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
 ### TST-TRK-025: **Non-Blocking TrackerService.onDestroy() Finalization on mDbExecutor, Deterministic mScheduler Shutdown & Async Init Failure Recovery Verification Suite** [Verified]
-- **Requirement(s)**: `REQ-TRK-033`, `REQ-TRK-015`, `REQ-TRK-030`
+- **Requirement(s)**: `REQ-TRK-033`, `REQ-TRK-015`, `REQ-TRK-030`, `REQ-TRK-003`
 - **Component**: **Non-Blocking `TrackerService.onDestroy()` Finalization on `mDbExecutor`, Deterministic `mScheduler` Shutdown & Async Init Failure Recovery Verification Suite**
 - **Jira**: ``ATT-4006``
 - **Test Description**:
@@ -861,7 +861,7 @@
   • Assert that none of the values begin with `'+'`, enforcing Rule 49 and Design Guidelines Section 5.5 to eliminate duplicate `+ +` action iconography.
 
 ### TST-TRK-026: **Foreground-Protected Asynchronous Workout Finalization and Stop Lifecycle Isolation Verification Suite** [Verified]
-- **Requirement(s)**: `REQ-TRK-034`, `REQ-TRK-015`, `REQ-TRK-030`, `REQ-TRK-033`
+- **Requirement(s)**: `REQ-TRK-034`, `REQ-TRK-015`, `REQ-TRK-030`, `REQ-TRK-033`, `REQ-TRK-003`
 - **Component**: **Foreground-Protected Asynchronous Workout Finalization and Stop Lifecycle Isolation Verification Suite**
 - **Jira**: ``ATT-4098``
 - **Test Description**:
@@ -1045,7 +1045,7 @@
   • Evaluate with points having valid `power > 0` and `wPrimeBalKj >= 0.0`: assert returns `true`.
 
 ### TST-FIL-014: **Backend Filter Key Normalization, Runtime 'Best Sensor' Field Registration & Post-Trim Rolling Filter NaN Guard Verification Suite** [Verified]
-- **Requirement(s)**: `REQ-FIL-014`, `REQ-FIL-011`
+- **Requirement(s)**: `REQ-FIL-014`, `REQ-FIL-011`, `REQ-FIL-001`
 - **Component**: **Backend Filter Key Normalization, Runtime 'Best Sensor' Field Registration & Post-Trim Rolling Filter NaN Guard Verification Suite**
 - **Jira**: ``ATT-4282``
 - **Test Description**:
@@ -1130,7 +1130,7 @@
   • Execute `./gradlew testDebugUnitTest` verifying 100% pass rate with zero regressions across the full test suite.
 
 ### TST-CON-022: **Automated BLE/ANT+ Pedal Power Balance Reference Normalization & Obsolete UI Checkbox Deprecation Verification Suite** [Verified]
-- **Requirement(s)**: `REQ-CON-022`
+- **Requirement(s)**: `REQ-CON-022`, `REQ-UI-377`
 - **Component**: **Automated BLE/ANT+ Pedal Power Balance Reference Normalization & Obsolete UI Checkbox Deprecation Verification Suite**
 - **Jira**: ``ATT-4554``
 - **Test Description**:
@@ -1787,7 +1787,7 @@
   • Verify BANALServiceRepository.registerSparklineBuffer preserves existing buffer samples and span when re-registering an identical sensor configuration with a modified time horizon.
 
 ### TST-FIL-015: **Filter Initialization State Tracking, Alpha Validation & Zero-Bias Verification Suite** [Verified]
-- **Requirement(s)**: `REQ-FIL-015`, `REQ-FIL-011`, `REQ-FIL-012`, `REQ-FIL-013`
+- **Requirement(s)**: `REQ-FIL-015`, `REQ-FIL-011`, `REQ-FIL-012`, `REQ-FIL-013`, `REQ-FIL-002`
 - **Component**: **Filter Initialization State Tracking, Alpha Validation & Zero-Bias Verification Suite**
 - **Jira**: `ATT-6382`
 - **Test Description**:
@@ -1902,7 +1902,7 @@
   • Verify backward-compatibility of `ZoneGaugeState` and `ZoneGaugeBar` when `zoneLabels == null` (HR 5-zone `"Z1"`..`"Z5"`, Power 7-zone `"Z1"`..`"Z7"`).
   4. *Training Zones 4th Tab & Invariant Tests (`TST-TRK-061.4`, `HrvDfaA1SettingsContractTest.kt`, `TuningPreferencesDataStoreDfaA1Test.kt`, `TrackingViewsDatabaseManagerTest.java`)*:
   • Verify `ZoneSettingsScreen` renders 4th tab `R.string.tab_hrv_dfa_a1` with unified 3-zone colored dual-thumb `RangeSlider` (`0.30..1.20`) with Green (Zone 2) on the left, Orange (Zone 3) in the middle, and Red (Zone 4) on the right, directly in `RangeSlider`'s `track` slot (zero duplicate track container and zero M3 end-dots), fine-tuning $0.01$ step steppers, non-clipping Reset to Defaults action ($0.75 / 0.50$), and interactive `SensorFieldView` preview pills (`ATT-7741`).
-  • Verify `HrvDfaA1SettingsContent` renders the 4 standard `ZoneDisplayOptionsToggleList(..., showGaugeToggle = false)` toggles without `zone_display_gauge`, keeping `previewFieldState.showBar = true` (`TST-TRK-087`, `ATT-8712`).
+  • Verify `HrvDfaA1SettingsContent` exposes `zone_display_gauge` row toggling `ZoneDisplayOptions.showGauge`.
   • Verify `TrackingViewsDatabaseManager.isBarSupported(SensorType.HRV_DFA_A1, sport)` and `isBarSupportedSensorType(SensorType.HRV_DFA_A1)` return `true` for all sports.
   • Verify `strings_hrv.xml` zone labels across all 9 locales do not contain `(Zone 2)`, `(Zone 3)`, `(Zone 4)`.
   • Verify default values $\alpha_{1,\text{T1}} = 0.75f$ and $\alpha_{1,\text{T2}} = 0.50f$.
@@ -2732,7 +2732,7 @@
 
 
 ### TST-TRK-075: **Core Tracking Pipeline Integration Verification Suite** [Verified]
-- **Requirement(s)**: `REQ-TRK-075` (`REQ-TRK-075.1`..`REQ-TRK-075.5`)
+- **Requirement(s)**: `REQ-TRK-075` (`REQ-TRK-075.1`..`REQ-TRK-075.5`), `REQ-TRK-001`
 - **Component**: `TrackerService.java`, `WorkoutRepository.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/integration/TrackerServiceIntegrationTest.kt`
 - **Jira**: `ATT-6185`
 - **Test Description**:
@@ -3366,6 +3366,8 @@
      • Execute `./gradlew :app:testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.zones.HrvDfaA1RangeSliderGestureTest" --tests "com.atrainingtracker.trainingtracker.zones.HrvDfaA1SettingsContractTest"` confirming 100% pass (`Localization parity: N/A - no UI strings added or modified`).
      • Capture Light/Dark screenshot PNG at `docs/engineering/walkthroughs/img/ATT-8105_hrv_slider_zones.png` and inspect via `read_file` against the 4-point `Rule 8.5` checklist.
 
+
+
 ### TST-CON-049: **Hardware-Grounded Polar Detection (PMD/PFTP UUIDs & DIS 0x2A24/0x2A25) and Pre-Connect Alias Seeding Suite** [Verified]
 - **Target Release**: `V5.0.0`
 - **Tickets**: `ATT-8717`
@@ -3401,7 +3403,6 @@
      • Update `HrvDfaA1SettingsContractTest.testHrvSettings_gaugeToggleAndPreviewBarContracts` to assert absence of `R.string.zone_display_gauge` / `displayOptions.showGauge` and `showBar = true` in `HrvDfaA1SettingsContent` (preserving `app/source-reading-baseline.txt` debt boundary).
      • Execute `./gradlew :app:testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.zones.HrvDfaA1RangeSliderGestureTest" --tests "com.atrainingtracker.trainingtracker.zones.HrvDfaA1SettingsContractTest" --tests "com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.EditSensorFieldZoneDisplayTest" --tests "com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingTabConfigZoneDisplayTest"` asserting 100% pass (`Localization Parity: N/A - no UI strings added, modified, or removed; R.string.zone_display_gauge remains active in ZoneDisplayOptionsControls.kt:230 across all 9 locales`).
 
-
 ---
 
 ## Change History
@@ -3422,7 +3423,4 @@
 | `1.0.11` | 2026-11-18 | AI Agent (`ATT-8706`) | `ATT-8706` | Added and verified `TST-TRK-085` [Verified] for RR source isolation, monotonic clamping, physiological gap flagging, pre-filter sort, and DFA α1 validity gate (502/502 tests across 88 suites). |
 | `1.0.17` | 2026-11-18 | AI Agent (`ATT-8706`) | `ATT-8706` | Promoted `TST-TRK-085` to `[Verified]` in Stage 5 following Bounce 3/3 heal verification (`449/449` tests across `83` suites). |
 | `1.0.18` | 2026-11-18 | AI Agent (`ATT-8105`) | `ATT-8105` | Added and verified `TST-TRK-086` [Verified] (`HrvDfaA1RangeSliderGestureTest.kt` Robolectric `createComposeRule()` gesture isolation `5/5`, `Rule 8.5` Light/Dark PNG audit, and Tier-1 regression `31/31` across 7 suites). |
-| `1.0.19` | 2026-11-18 | AI Agent (`ATT-8717`) | `ATT-8717` | Added and verified `TST-CON-049` [Verified] across 34 unit/Robolectric suites (166/166 PASS) including CardioSense DIS rejection, pre-CCCD DIS read order, 8-hex ID preservation, and IMU stream rejection. |
-| `1.0.20` | 2026-11-18 | AI Agent (`ATT-8712`) | `ATT-8712` | Added `TST-TRK-087` [Planned] (`createComposeRule()` behavioral verification per `REQ-PRO-049.1`, contract & tile/tab config parity regression) and aligned `TST-TRK-061.4`. |
-| `1.0.20` | 2026-11-18 | AI Agent (`ATT-8712`) | `ATT-8712` | Promoted `TST-TRK-087` to `[Implemented]` following Stage 4 Compose UI test, `Rule 8.5` screenshot (`ATT-8712_hrv_zone_display.png`), and contract test updates. |
-| `1.0.21` | 2026-11-18 | AI Agent (`ATT-8712`) | `ATT-8712` | Promoted `TST-TRK-087` to `[Verified]` in Stage 5 following verified Tier-1 tests (`32/32` across 5 suites) and `Rule 8.5` Light/Dark PNG verification. |
+| `1.0.20` | 2026-11-18 | AI Agent (`ATT-8717` / `ATT-8712`) | `ATT-8717`, `ATT-8712` | Added `TST-CON-049` [Verified] and `TST-TRK-087` [Verified] cleanly post-`ATT-8206` rebase. |
