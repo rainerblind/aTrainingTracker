@@ -1,7 +1,7 @@
 # Living Requirements: Tracking & Live Sensor Cockpit (Part 2 of 2)
 
 **Document ID**: `DOC-REQ-TRK-P2`  
-**Version**: 1.0.6  
+**Version**: 1.0.9  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -1017,48 +1017,49 @@
 
 **Invariants**: `REQ-CON-041` priority (`BLE > ANT_PLUS > SIMULATOR`), `REQ-CON-042.3` `lightMode`/`audioSnoozeState` preservation, `SmartRadarLightEngine` override gating, zero SQLite schema changes, zero localization changes.
 
-### REQ-CON-047: Compact Quick-Switch Sheet Layout, Button-Matching Icons & Ascending Mode Order [Verified]
+### REQ-CON-047: Compact Quick-Switch Sheet & Shared 2-Column RadarLightModeGrid, Button-Matching Icons & Ascending Mode Order [Verified]
 - **Target Release**: `V5.0.0`
-- **Tests**: `TST-CON-047`
+- **Tests**: `TST-CON-047`, `TST-CON-048`
 - **System Requirement(s)**: `SYSREQ-TRK-002`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
-- **Implementation**: `RadarLightQuickSwitchSheet.kt`, `RadarLightButton.kt`, `RadarLightMode.kt`, `RadarLightController.kt`, `EditDeviceDialog.kt`
-- **Rationale**: PO review on Pixel 10 (`ATT-7972`) observed `RadarLightQuickSwitchSheet` overflowing vertically past the 4th audio snooze option due to 10 tall full-width `RadioButton` rows, using generic `10.dp` colored dots instead of the semantic vector icons from `RadarLightButton`, and presenting a different mode sequence than `RadarLightController.cycleNextMode()` (`ATT-8456`, refining `REQ-CON-031.3` and `REQ-CON-031.8`):
+- **Implementation**: `RadarLightModeGrid.kt`, `RadarLightQuickSwitchSheet.kt`, `RadarLightButton.kt`, `RadarLightMode.kt`, `RadarLightController.kt`, `EditDeviceDialog.kt`
+- **Rationale**: PO review on Pixel 10 (`ATT-7972`) observed `RadarLightQuickSwitchSheet` overflowing vertically past the 4th audio snooze option due to 10 tall full-width `RadioButton` rows, using generic `10.dp` colored dots instead of semantic vector icons from `RadarLightButton`, and presenting a different mode sequence than `RadarLightController.cycleNextMode()` (`ATT-8456`, refining `REQ-CON-031.3` and `REQ-CON-031.8`). Subsequently, `EditDeviceDialog.kt` (`RadarLightControlSectionContent`) retained legacy `SingleChoiceSegmentedButtonRow` (StVZO) and `10.dp` `CircleShape` dot + `RadioButton` rows; `ATT-8678` consolidates both surfaces onto a single shared stateless `RadarLightModeGrid` composable with zero duplicated mode-grid UI:
 - **Description**:
   1. *Compact Non-Scrolling Quick-Switch Layout (`REQ-CON-047.1`)*:
-     - `RadarLightQuickSwitchSheet` / `RadarLightQuickSwitchSheetContent` SHALL arrange all light modes (including `Automatik`) and all 4 audio snooze options (`SNOOZE_15M`, `SNOOZE_30M`, `FAST_ONLY`, `REST_OF_RIDE`, plus `Resume Audio` when snoozed) in a compact layout that fits completely within standard smartphone viewports (e.g. Pixel 10) without vertical scroll clipping, while retaining all `RadarLightMode_*` and `RadarSnooze_*` testTags and Light/Dark/StVZO `@Preview`s.
-  2. *Shared Semantic Mode Vector Icons (`REQ-CON-047.2`)*:
-     - `RadarLightQuickSwitchSheet` SHALL display the same semantic vector icons and mode colors (`resolveLightVisuals` in `RadarLightButton.kt`: `FlashlightOff`, `Groups`, `FlashlightOn`, `NightlightRound`, `WbSunny`) instead of `10.dp` `CircleShape` dots, using `MaterialTheme.colorScheme.outline` / shared contrast tokens cleanly across Light and Dark themes.
+     - `RadarLightQuickSwitchSheet` / `RadarLightQuickSwitchSheetContent` SHALL arrange all light modes (including `Automatik`) and all 4 audio snooze options (`SNOOZE_15M`, `SNOOZE_30M`, `FAST_ONLY`, `REST_OF_RIDE`, plus `Resume Audio` when snoozed) in a compact layout that fits completely within standard smartphone viewports (e.g. Pixel 10) without vertical scroll clipping, while retaining all `RadarLightMode_*` and `RadarSnooze_*` testTags and Light/Dark/StVZO `private` `@Preview`s (`DeadCodeEliminationContractTest`).
+  2. *Shared Stateless `RadarLightModeGrid` & Semantic Vector Icons (`REQ-CON-047.2`)*:
+     - A single shared, stateless composable `RadarLightModeGrid` alongside `resolveLightVisuals` SHALL reside in `com.atrainingtracker.trainingtracker.ui.components.radar` (`RadarLightModeGrid.kt`) and be invoked identically by BOTH `RadarLightQuickSwitchSheetContent` (keeping Audio Snooze local) and `EditDeviceDialog`'s `RadarLightControlSection` / `RadarLightControlSectionContent` (`0` duplicated dot/segmented-row UI), using semantic vector icons and mode colors (`FlashlightOff`, `Groups`, `FlashlightOn`, `NightlightRound`, `WbSunny` via `TTColor.RadarLightContainer`) and Light/Dark `MaterialTheme.colorScheme` tokens.
+     - `RadarLightModeGrid` SHALL render the StVZO notice banner (`testTag("RadarLightStvzoNotice")`) when `isStvzo == true`, `Automatik` tile (`testTag("RadarLightMode_AUTO")`) with active-mode subtitle gated by `showActiveModeSubtitle: Boolean` (`true` in `RadarLightQuickSwitchSheetContent`; `!isOffline` in `EditDeviceDialog`), and 2-column even/odd chunked physical mode tiles (`testTag("RadarLightMode_${mode.name}")`, `Role.RadioButton`, merged selection semantics), while preserving `RadarLightQuickSwitchSheet*` and `RadarLightButton` (`resolveLightVisuals` delegation) reflection/IF-SWE signatures and adding zero new `internal`/`public` `@Preview`s.
   3. *Unified Ascending-Intensity Mode Order (`REQ-CON-047.3`)*:
-     - `RadarLightMode.getAvailableModes()`, `RadarLightController.cycleNextMode()`, `RadarLightQuickSwitchSheet`, and `EditDeviceDialog` SHALL share the identical ascending-intensity order:
+     - `RadarLightMode.getAvailableModes()`, `RadarLightController.cycleNextMode()`, `RadarLightQuickSwitchSheet` (via `RadarLightModeGrid`), and `EditDeviceDialog` (via `RadarLightModeGrid`) SHALL share the identical ascending-intensity order:
        - Non-StVZO: `Automatik` -> `OFF` (0 lm) -> `PELOTON` (~8 lm) -> `SOLID` (~25 lm) -> `NIGHT_FLASH` (~40 lm) -> `DAY_FLASH` (100 lm) (-> `Automatik`).
        - StVZO (`isStvzo == true`): `Automatik` -> `OFF` -> `SOLID` (-> `Automatik`).
   4. *Localization & Persistence Preservation (`REQ-CON-047.4`)*:
-     - All UI labels SHALL reuse existing 9-locale string resources in `strings_radar.xml` (zero hardcoded English/German literals), and `TuningPreferencesDataStore` `.name` persistence + `RadarLightMode.commandByte` wire bytes SHALL remain unchanged.
+     - All UI labels SHALL reuse existing 9-locale string resources in `strings_radar.xml` (zero hardcoded literals; `Localization Parity: N/A - no UI strings` added/modified), and `TuningPreferencesDataStore` `.name` persistence + `RadarLightMode.commandByte` wire bytes + Workout Auto-Switch behavior SHALL remain unchanged.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Net-new `REQ-CON-047` refining `REQ-CON-031.3` and `REQ-CON-031.8`; targets `RadarLightQuickSwitchSheet.kt`, `RadarLightButton.kt`, `RadarLightMode.kt`, `RadarLightController.kt`, and `EditDeviceDialog.kt`.
-2. *Historical Origin & Commit Trace*: `ATT-5102` (`c1d27049`) introduced `RadarLightMode` enum order; `ATT-7991` (`c422e1b6`) added `Automatik` and `cycleNextMode()`.
-3. *Root Reason for Existing Formulation*: Mode ordering in `RadarLightMode` and `cycleNextMode()` diverged across tickets, and vertical `RadioButton` rows exceeded viewport height once `Automatik` and 4 snooze options coexisted.
-4. *Preservation of Core Invariants*: `Automatik` remains first; StVZO pruning excludes flashing modes; `TuningPreferencesDataStore` persists `.name` (never `.ordinal`); ~400 ms `cycleNextMode()` debounce and `commandByte` payloads remain intact.
+1. *Original Requirement ID & Target*: Refines `REQ-CON-047` (`.2`/`.3`), `REQ-CON-031.3`, and `REQ-CON-031.8`; targets `RadarLightModeGrid.kt`, `RadarLightQuickSwitchSheet.kt`, `RadarLightButton.kt`, `RadarLightMode.kt`, `RadarLightController.kt`, and `EditDeviceDialog.kt`.
+2. *Historical Origin & Commit Trace*: `ATT-5102` (`c1d27049`) introduced `RadarLightMode` enum order; `ATT-7991` (`c422e1b6`) added `Automatik` and `cycleNextMode()`; `ATT-8456` introduced the 2-column tile grid in `RadarLightQuickSwitchSheet.kt`; `ATT-8450` added offline `EditDeviceDialog` light controls using legacy rows.
+3. *Root Reason for Existing Formulation*: `ATT-8456` and `ATT-8450` evolved in parallel on separate UI widgets before consolidating the shared selector grid under `ui/components/radar/`.
+4. *Preservation of Core Invariants*: `Automatik` remains first; StVZO pruning excludes flashing modes; `TuningPreferencesDataStore` persists `.name` (never `.ordinal`); ~400 ms `cycleNextMode()` debounce, Workout Auto-Switch, `RadarLightQuickSwitchSheet*`/`RadarLightButton` IF-SWE/reflection signatures, and 9-locale `strings_radar.xml` parity remain intact.
 
 **Acceptance Criteria (Given-When-Then)**:
-• *Criterion 1 (Compact Non-Scrolling Layout & Semantic Icons)*:
-  - *Given* `RadarLightQuickSwitchSheetContent` is rendered with `isLightControlSupported = true` and `isStvzo = false` (and snooze active/inactive),
-  - *When* inspected in Compose UI tests and Light/Dark `@Preview` / emulator screenshots,
-  - *Then* `RadarLightMode_AUTO`, all 5 `RadarLightMode_*` options, and all 4 `RadarSnooze_*` options are visible without vertical clipping, and each light mode displays its `resolveLightVisuals` icon matching `RadarLightButton`.
+• *Criterion 1 (Shared 2-Column Layout & Semantic Icons)*:
+  - *Given* `RadarLightQuickSwitchSheetContent` or `RadarLightControlSectionContent` is rendered with `isLightControlSupported = true` and `isStvzo = false` (or `isStvzo = true`),
+  - *When* inspected in Compose UI tests and Light/Dark `@Preview` PNG captures,
+  - *Then* both surfaces delegate to the identical `RadarLightModeGrid` 2-column row-major layout (`[AUTO, OFF]`, `[PELOTON, SOLID]`, `[NIGHT_FLASH, DAY_FLASH]` for non-StVZO; `AUTO` full-width row 1 + `[OFF, SOLID]` row 2 + `RadarLightStvzoNotice` for StVZO), matching `resolveLightVisuals` semantic icons and Light/Dark M3 tokens with zero duplicated dot/segmented-row UI.
 • *Criterion 2 (Unified Ascending Mode Order Across UI & Tap Cycling)*:
   - *Given* non-StVZO or StVZO hardware,
-  - *When* querying `RadarLightMode.getAvailableModes()`, `RadarLightController.getAvailableModes()`, `EditDeviceDialog` options, `RadarLightQuickSwitchSheet` options, and stepping through `RadarLightController.cycleNextMode()`,
+  - *When* querying `RadarLightMode.getAvailableModes()`, `RadarLightController.getAvailableModes()`, `EditDeviceDialog`, `RadarLightQuickSwitchSheet`, and stepping through `RadarLightController.cycleNextMode()`,
   - *Then* all 4 surfaces follow the exact ascending order `Automatik -> OFF -> PELOTON -> SOLID -> NIGHT_FLASH -> DAY_FLASH` (StVZO: `Automatik -> OFF -> SOLID`).
-• *Criterion 3 (Zero Hardcoded Strings)*:
-  - *Given* `RadarLightQuickSwitchSheet.kt`,
-  - *When* rendered in any supported locale,
-  - *Then* all labels resolve exclusively via `stringResource(R.string.*)` in `strings_radar.xml`.
+• *Criterion 3 (Contract Guards & Zero New Strings)*:
+  - *Given* `RadarLightModeGrid.kt`, `RadarLightQuickSwitchSheet.kt`, and `EditDeviceDialog.kt`,
+  - *When* audited by contract tests (`ArchitectureConformanceContractTest`, `InterfaceSignatureDriftContractTest`, `DeadCodeEliminationContractTest`),
+  - *Then* zero layering/signature violations and zero new `internal`/`public` `@Preview`s exist, and all labels resolve exclusively via existing `strings_radar.xml` resources (`Localization Parity: N/A - no UI strings`).
 
-**Invariants**: `Automatik` always first; StVZO pruning excludes `PELOTON`/`NIGHT_FLASH`/`DAY_FLASH`; `RadarLightMode.commandByte` unchanged; `TuningPreferencesDataStore` `.name` persistence unchanged; ~400 ms debounce unchanged; zero SQLite changes.
+**Invariants**: Single shared `RadarLightModeGrid` in `ui/components/radar/`; `Automatik` always first; StVZO pruning excludes `PELOTON`/`NIGHT_FLASH`/`DAY_FLASH`; `RadarLightQuickSwitchSheet*` & `RadarLightButton` signatures preserved; Workout Auto-Switch & ~400 ms debounce unchanged; `RadarLightMode.commandByte` & `TuningPreferencesDataStore` `.name` persistence unchanged; zero SQLite changes; `Localization Parity: N/A - no UI strings`.
 
 ### REQ-TRK-064: 1-Tap Radar Audio Snooze, Peloton-Mode Audio Sync & Smart Urban Alert Suppression [Verified]
 - **Tests**: `TST-TRK-064`
@@ -2652,43 +2653,46 @@
 
 **Invariants**: `SpeedAndLocationDevice.java` `REQ-TRK-056` untouched; `REQ-FIL-009` tunnel exit preserved; `REQ-FIL-020` & `REQ-FIL-022` preserved; `@Synchronized` thread safety; `REQ-PRO-049.1` behavioral tests; `N/A - no UI strings`.
 
-### REQ-CON-048: Offline EditDeviceDialog Radar Tail Light Configuration, Cold-Start Hydration & StVZO/Radar-Only Handling [Verified]
+### REQ-CON-048: Offline & Unified EditDeviceDialog Radar Tail Light Configuration, Cold-Start Hydration & StVZO/Radar-Only Handling [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-CON-048`
 - **System Requirement(s)**: `SYSREQ-TRK-002`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
-- **Implementation**: `EditDeviceDialog.kt`, `RadarLightController.kt`, `strings_radar.xml`
-- **Rationale**: Following `ATT-7991` retiring tail light mode selectors from `RadarSettingsSection.kt` (`REQ-CON-031.5`), `EditDeviceDialog.kt:1119` still aborted `RadarLightControlSection` whenever `!isSimulating && (!isConnected || !isLightControlAvailable)`, leaving users with zero offline UI to configure `Automatik` or a preferred default light mode for disconnected radars (e.g. Garmin `RearVue8` in `ATT-8450`). Offline UI must also hydrate persisted preferences on cold start, reflect selected offline modes accurately instead of highlighting `OFF`, hide known radar-only units (`RVR315`), reset stale `_isStvzo` on disconnect, and display an unambiguous apply-on-next-connect hint without spurious StVZO errors (`ATT-8450`, refining `REQ-CON-031.5`, `REQ-CON-031.7`, and `REQ-CON-047.3`):
+- **Implementation**: `EditDeviceDialog.kt`, `RadarLightModeGrid.kt`, `RadarLightController.kt`, `strings_radar.xml`
+- **Rationale**: Following `ATT-7991` retiring tail light mode selectors from `RadarSettingsSection.kt` (`REQ-CON-031.5`), `ATT-8450` enabled offline `EditDeviceDialog` radar light configuration using legacy `SingleChoiceSegmentedButtonRow` (StVZO) and `10.dp` colored `CircleShape` dot + `RadioButton` rows. `ATT-8678` replaces that legacy selector UI in `EditDeviceDialog.kt` (`RadarLightControlSectionContent`) with the shared stateless `RadarLightModeGrid` (`ui/components/radar/`), achieving 1:1 visual/structural parity with `RadarLightQuickSwitchSheet` while preserving offline hydration, `showActiveModeSubtitle = !isOffline` accuracy, `RVR315` exclusion, direct `RadarLightController` wiring (decoupled from `EditDeviceViewModel` draft state), and Workout Auto-Switch (`ATT-8450`, `ATT-8678`, refining `REQ-CON-031.5`, `REQ-CON-031.7`, and `REQ-CON-047.2`/`.3`):
 - **Description**:
   1. *Offline Visibility & Radar-Only Exclusion (`REQ-CON-048.1`)*:
      - `EditDeviceDialog.kt` (`RadarLightControlSection`) SHALL remain visible and interactive for `DeviceType.BIKE_RADAR` even when `!isConnected && !isSimulating`, unless the device is live-connected without light support (`isConnected && !isLightControlAvailable && !isSimulating`) or identifiable as a radar-only model without tail light (e.g. `RVR315` / `RVR 315` in `deviceName`).
-  2. *Cold-Start DataStore Hydration, Offline Selection Persistence & StVZO Disconnect Reset (`REQ-CON-048.2`)*:
+  2. *Cold-Start DataStore Hydration, Offline Selection Persistence & Direct Controller Wiring (`REQ-CON-048.2`)*:
      - `RadarLightController` SHALL hydrate `isAutoMode` and `preferredMode` (`radarLightDefaultMode`) from `TuningPreferencesDataStore` prior to workout start / upon dialog initialization, expose the effective selected mode so offline manual selection persists and highlights the chosen mode (never falling back to `OFF` because live GATT dispatch returned `false`), and reset `_isStvzo` to `false` in `unregisterRadarDevice()`.
-  3. *Offline Apply-on-Connect Hint & Unknown StVZO Handling (`REQ-CON-048.3`)*:
-     - When `!isConnected && !isSimulating`, `RadarLightControlSection` SHALL display an unambiguous localized hint indicating that the selected mode will be applied on the next radar connection, and MUST NOT display a spurious StVZO notice/error while StVZO capability is unknown (`isStvzo == false`), while still applying StVZO pruning (`Automatik`, `OFF`, `SOLID`) whenever `isStvzo == true` and clamping non-StVZO defaults on connection/workout start.
-  4. *9-Language Localization Parity, Previews & Behavioral UI Tests (`REQ-CON-048.4`)*:
-     - All new and existing `strings_radar.xml` resources SHALL maintain 100% key and format parity across EN, DE, ES, FR, IT, JA, NL, PL, PT, accompanied by Light/Dark `@Preview` composables and Robolectric `createComposeRule()` UI tests (covering offline Multi-Mode, offline StVZO, `RVR315` exclusion, and `Rule 8.5` PNG capture) with zero `app/src/main` source-reading calls (`REQ-PRO-049.1`).
+     - `RadarLightControlSection` MUST wire selections directly to `RadarLightController.setAutoMode()` and `RadarLightController.setManualLightMode(mode)` without mutating `EditDeviceViewModel` draft state, and MUST preserve Workout Auto-Switch lifecycle behavior (`RadarLightController`).
+  3. *Shared `RadarLightModeGrid`, Offline `showActiveModeSubtitle` Gate & Unknown StVZO Handling (`REQ-CON-048.3`)*:
+     - `RadarLightControlSectionContent` SHALL invoke the single shared stateless `RadarLightModeGrid` (`com.atrainingtracker.trainingtracker.ui.components.radar`) with `showActiveModeSubtitle = !isOffline`, completely eliminating duplicated `SingleChoiceSegmentedButtonRow` and `10.dp` dot/`RadioButton` rows while retaining `RadarLightMode_AUTO`, `RadarLightMode_<MODE>`, and `RadarLightStvzoNotice` semantic testTags.
+     - When `!isConnected && !isSimulating`, `RadarLightControlSection` SHALL display `RadarLightOfflineHint` (`radar_light_offline_hint`) indicating selection applies on next connection, suppress `radar_light_active_mode_format` (`showActiveModeSubtitle == false` because offline `effectiveMode` is `preferredMode`, not live hardware state), and MUST NOT display `RadarLightStvzoNotice` while `isStvzo == false`, while still pruning to `Automatik`, `OFF`, `SOLID` whenever `isStvzo == true` and clamping non-StVZO defaults on connection/workout start.
+  4. *Localization Parity, Preview Hygiene & Behavioral UI Tests (`REQ-CON-048.4`)*:
+     - `Localization Parity: N/A - no UI strings` (`strings_radar.xml` untouched; existing 9-locale parity preserved across EN, DE, ES, FR, IT, JA, NL, PL, PT).
+     - Zero new `internal`/`public` `@Preview`s SHALL be added (`DeadCodeEliminationContractTest`; pre-existing `EditDeviceDialog.kt` previews tracked under `ATT-8823`), and parity SHALL be verified via Robolectric `createComposeRule()` UI tests (row-major 2-column geometry, Light/Dark, StVZO/non-StVZO, online/offline, zero `app/src/main` source-reading calls per `REQ-PRO-049.1`) plus `Rule 8.5` PNG capture `docs/engineering/walkthroughs/img/ATT-8678_radar_light_grid_preview.png`.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Net-new `REQ-CON-048` refining `REQ-CON-031.5` and `REQ-CON-031.7` (preserving `REQ-CON-047.3` ascending mode order); targets `EditDeviceDialog.kt`, `RadarLightController.kt`, and `strings_radar.xml`.
-2. *Historical Origin & Commit Trace*: `ATT-7540` introduced `RadarLightControlSection` gated on `isConnected && isLightControlAvailable`; `ATT-7991` (`c422e1b6`, `6e9b3c06`, `533d88b1`) retired Expert Settings mode controls and added `isSimulating`; `ATT-8456` unified ascending mode order (`REQ-CON-047.3`).
-3. *Root Reason for Existing Formulation*: `ATT-7540` hid `RadarLightControlSection` when disconnected or unsupported because Expert Settings (`RadarSettingsSection.kt`) still held the offline mode configuration; after `ATT-7991` retired Expert Settings mode controls, the offline gate blocked all pre-ride configuration.
-4. *Preservation of Core Invariants*: Connected radar-only (`isConnected && !isLightControlAvailable`) and `RVR315` remain hidden; `EditDeviceViewModel` draft state remains decoupled (`saveChanges()` untouched); StVZO pruning & on-connect clamping remain enforced; `RadarLightMode` ascending order (`REQ-CON-047.3`) and 9-locale parity (`REQ-CON-031.7`) remain intact.
+1. *Original Requirement ID & Target*: Refines `REQ-CON-048`, `REQ-CON-031.5`, and `REQ-CON-031.7` (aligning with `REQ-CON-047.2`/`.3`); targets `EditDeviceDialog.kt`, `RadarLightModeGrid.kt`, and `RadarLightController.kt`.
+2. *Historical Origin & Commit Trace*: `ATT-7540` introduced `RadarLightControlSection` gated on `isConnected && isLightControlAvailable`; `ATT-7991` (`c422e1b6`, `6e9b3c06`, `533d88b1`) retired Expert Settings mode controls and added `isSimulating`; `ATT-8456` unified ascending mode order (`REQ-CON-047.3`) in `RadarLightQuickSwitchSheet.kt`; `ATT-8450` enabled offline `EditDeviceDialog` mode config on legacy segmented/radio UI.
+3. *Root Reason for Existing Formulation*: `ATT-8450` enabled offline configuration on the pre-existing `EditDeviceDialog` widgets while `ATT-8456` built the 2-column grid separately in `RadarLightQuickSwitchSheet.kt`.
+4. *Preservation of Core Invariants*: Connected radar-only (`isConnected && !isLightControlAvailable`) and `RVR315` remain hidden; `EditDeviceViewModel` draft state remains decoupled (`saveChanges()` untouched); direct `RadarLightController.setAutoMode()` / `setManualLightMode(mode)` wiring and Workout Auto-Switch remain intact; offline `showActiveModeSubtitle = !isOffline` suppression prevents misleading live-state claims; StVZO pruning & on-connect clamping, `REQ-CON-047.3` ascending order, and 9-locale `strings_radar.xml` parity remain intact.
 
 **Acceptance Criteria (Given-When-Then)**:
-• *Given* a paired, disconnected `RearVue8` (`DeviceType.BIKE_RADAR`, `isConnected = false`, `isSimulating = false`, `isStvzo = false`),
-• *When* the user opens `EditDeviceDialog` and selects `SOLID` or `Automatik`,
-• *Then* `RadarLightControlSection` renders with the offline apply-on-next-connect hint (zero StVZO notice), highlights `SOLID` (not `OFF`) / `Automatik` immediately, and retains the selection after cold restart.
-• *Given* a radar-only unit (`deviceName` containing `RVR315`) or a live-connected radar with `isLightControlAvailable = false` (not simulating),
-• *When* `EditDeviceDialog` renders,
-• *Then* `RadarLightControlSection` is omitted completely.
-• *Given* an active StVZO state (`isStvzo = true`) offline or online,
-• *When* `RadarLightControlSection` renders and then the StVZO radar disconnects (`unregisterRadarDevice()`),
-• *Then* StVZO mode shows only `Automatik`, `OFF`, `SOLID` with the StVZO notice, and `unregisterRadarDevice()` resets `_isStvzo` to `false`.
+• *Given* a paired, disconnected `RearVue8` (`DeviceType.BIKE_RADAR`, `isOffline = true`, `isStvzo = false`),
+• *When* `RadarLightControlSectionContent` renders and the user selects `SOLID` or `Automatik`,
+• *Then* `RadarLightModeGrid` renders the 2-column row-major tile grid (`[AUTO, OFF]`, `[PELOTON, SOLID]`, `[NIGHT_FLASH, DAY_FLASH]`) with `RadarLightOfflineHint` (zero `RadarLightStvzoNotice`, zero `radar_light_active_mode_format` subtitle when `isOffline = true`), highlights `SOLID` / `Automatik`, and invokes `onSelectMode(SOLID)` / `onSelectAuto()`.
+• *Given* `RadarLightControlSectionContent` online (`isOffline = false`, `isAutoMode = true`),
+• *When* rendered in Light/Dark mode (non-StVZO or StVZO),
+• *Then* `showActiveModeSubtitle = true` displays `radar_light_active_mode_format` on `RadarLightMode_AUTO`, and StVZO renders `RadarLightStvzoNotice` + full-width `AUTO` row 1 + `[OFF, SOLID]` row 2 while pruning flashing modes.
+• *Given* a radar-only unit (`RVR315`) or live-connected radar with `isLightControlAvailable = false` (not simulating),
+• *When* `shouldShowRadarLightControlSection` evaluates,
+• *Then* `RadarLightControlSection` is omitted completely, and `unregisterRadarDevice()` resets `_isStvzo` to `false`.
 
-**Invariants**: Connected `!isLightControlAvailable` & `RVR315` hidden; `EditDeviceViewModel` draft state decoupled; StVZO pruning & on-connect clamping preserved; `REQ-CON-047.3` ascending order preserved; zero SQLite schema changes; 9-locale `strings_radar.xml` parity; zero `src/main` reads in tests (`REQ-PRO-049.1`).
+**Invariants**: Single shared `RadarLightModeGrid` (`0` duplicated dot/segmented-row UI); `showActiveModeSubtitle = !isOffline`; connected `!isLightControlAvailable` & `RVR315` hidden; `EditDeviceViewModel` draft state decoupled; direct `RadarLightController.setAutoMode()`/`setManualLightMode(mode)` wiring & Workout Auto-Switch preserved; StVZO pruning & on-connect clamping preserved; `REQ-CON-047.3` ascending order preserved; zero new `internal`/`public` `@Preview`s; zero SQLite schema changes; `Localization Parity: N/A - no UI strings`; zero `src/main` reads in new/modified tests (`REQ-PRO-049.1`).
 
 ### REQ-FIL-024: Barometric Broadcast Source Guard, Synchronized Workout-Start Reset & Same-Device Step Re-Seeding in VerticalSpeedAndSlopeDevice [Verified]
 - **Target Release**: `V5.0.0`
@@ -3011,3 +3015,6 @@
 | `1.0.4` | 2026-11-18 | AI Agent (`ATT-8679`) | `ATT-8679` | Refined `REQ-TRK-062` [Planned] to suppress green connected `RadarStatusBadgePill` when clear (incl. snoozed clear) with `14.dp` top spacer guard & resource cleanup, and reconciled `REQ-TRK-064` [Planned]. |
 | `1.0.5` | 2026-11-18 | AI Agent (`ATT-8679`) | `ATT-8679` | Promoted `REQ-TRK-062` & `REQ-TRK-064` to `[Implemented]` following Stage 4 construction (`RadarEdgeOverlay.kt`, `ic_device_available.xml` & 9-locale `radar_overlay_clear`/`radar_overlay_connecting` removal, `RadarEdgeOverlayTest.kt`). |
 | `1.0.6` | 2026-11-18 | AI Agent (`ATT-8679`) | `ATT-8679` | Promoted `REQ-TRK-062` & `REQ-TRK-064` to `[Verified]` in Stage 5 following 10-suite verification (`126/126`), `:app:lintDebug` (`0` errors), and `Rule 8.5` PNG audit. |
+| `1.0.7` | 2026-11-18 | AI Agent (`ATT-8678`) | `ATT-8678` | Refined `REQ-CON-047` (`.2`/`.3`) & `REQ-CON-048` to `[Planned]` to extract single shared stateless `RadarLightModeGrid` + `resolveLightVisuals` under `ui/components/radar/` for both `RadarLightQuickSwitchSheetContent` and `EditDeviceDialog` (`showActiveModeSubtitle = !isOffline`, zero duplicated dot/segmented-row UI, `N/A - no UI strings`). |
+| `1.0.8` | 2026-11-18 | AI Agent (`ATT-8678`) | `ATT-8678` | Promoted `REQ-CON-047` & `REQ-CON-048` to `[Implemented]` following Stage 4 extraction of `RadarLightModeGrid.kt`, refactoring of `RadarLightQuickSwitchSheet.kt` / `RadarLightButton.kt` / `EditDeviceDialog.kt` (`1843` LoC), `109/109` targeted tests across `14` suites, and `Rule 8.5` PNG verification. |
+| `1.0.9` | 2026-11-18 | AI Agent (`ATT-8678`) | `ATT-8678` | Promoted `REQ-CON-047` & `REQ-CON-048` to `[Verified]` in Stage 5 following governance checks, `has_verified_test_evidence` verification, and `Rule 8.5` PNG audit. |

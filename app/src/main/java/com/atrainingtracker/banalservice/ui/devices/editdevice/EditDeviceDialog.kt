@@ -23,7 +23,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -42,7 +41,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -67,6 +65,7 @@ import com.atrainingtracker.banalservice.ui.devices.devicedata.isWheelSpeedSenso
 import com.atrainingtracker.trainingtracker.database.WheelPosition
 import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
 import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
+import com.atrainingtracker.trainingtracker.ui.components.radar.RadarLightModeGrid
 import com.atrainingtracker.trainingtracker.ui.equipment.WheelPositionSelectionDialog
 import com.atrainingtracker.trainingtracker.ui.equipment.WheelSensorGuidanceDialog
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
@@ -1368,11 +1367,9 @@ private fun RadarLightControlSection(
 }
 
 /**
- * Stateless UI content for [RadarLightControlSection] (`REQ-CON-048`, `ATT-8450`).
+ * Stateless UI content for [RadarLightControlSection] (`REQ-CON-048`, `REQ-CON-047.2`, `ATT-8450`, `ATT-8678`).
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-@Suppress("LongMethod", "CyclomaticComplexMethod")
 internal fun RadarLightControlSectionContent(
     isOffline: Boolean,
     isAutoMode: Boolean,
@@ -1423,173 +1420,15 @@ internal fun RadarLightControlSectionContent(
             }
         }
 
-        if (isStvzo) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(TTColor.RadarDisconnectedAmber.copy(alpha = 0.15f))
-                    .padding(horizontal = 12.dp, vertical = 8.dp)
-                    .testTag("RadarLightStvzoNotice")
-            ) {
-                Text(
-                    text = stringResource(R.string.radar_light_stvzo_notice),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    fontWeight = FontWeight.Medium
-                )
-            }
-
-            SingleChoiceSegmentedButtonRow(
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                val totalCount = 1 + availableModes.size
-                SegmentedButton(
-                    selected = isAutoMode,
-                    onClick = onSelectAuto,
-                    shape = SegmentedButtonDefaults.itemShape(index = 0, count = totalCount),
-                    icon = {},
-                    modifier = Modifier.testTag("RadarLightMode_AUTO")
-                ) {
-                    Text(
-                        text = stringResource(R.string.radar_light_control_mode_smart),
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = if (isAutoMode) FontWeight.Bold else FontWeight.Medium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-
-                availableModes.forEachIndexed { index, mode ->
-                    val isSelected = !isAutoMode && mode == effectiveMode
-                    SegmentedButton(
-                        selected = isSelected,
-                        onClick = { onSelectMode(mode) },
-                        shape = SegmentedButtonDefaults.itemShape(index = index + 1, count = totalCount),
-                        icon = {},
-                        modifier = Modifier.testTag("RadarLightMode_${mode.name}")
-                    ) {
-                        Text(
-                            text = stringResource(mode.titleResId),
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                }
-            }
-
-            if (isAutoMode && !isOffline) {
-                Text(
-                    text = stringResource(
-                        R.string.radar_light_active_mode_format,
-                        stringResource(effectiveMode.titleResId)
-                    ),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(start = 4.dp)
-                )
-            }
-        } else {
-            // Automatik Option (REQ-CON-031.3, REQ-CON-031.5)
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .selectable(
-                        selected = isAutoMode,
-                        role = Role.RadioButton,
-                        onClick = onSelectAuto
-                    )
-                    .padding(horizontal = 12.dp, vertical = 8.dp)
-                    .testTag("RadarLightMode_AUTO"),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(10.dp)
-                        .clip(CircleShape)
-                        .background(TTColor.RadarClearGreen)
-                )
-
-                Spacer(modifier = Modifier.width(12.dp))
-
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = stringResource(R.string.radar_light_control_mode_smart),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        fontWeight = if (isAutoMode) FontWeight.Bold else FontWeight.Normal,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    if (isAutoMode && !isOffline) {
-                        Text(
-                            text = stringResource(
-                                R.string.radar_light_active_mode_format,
-                                stringResource(effectiveMode.titleResId)
-                            ),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-
-                RadioButton(
-                    selected = isAutoMode,
-                    onClick = null
-                )
-            }
-
-            availableModes.forEach { mode ->
-                val isSelected = !isAutoMode && mode == effectiveMode
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .selectable(
-                            selected = isSelected,
-                            role = Role.RadioButton,
-                            onClick = { onSelectMode(mode) }
-                        )
-                        .padding(horizontal = 12.dp, vertical = 8.dp)
-                        .testTag("RadarLightMode_${mode.name}"),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    val dotColor = when (mode) {
-                        RadarLightMode.OFF -> MaterialTheme.colorScheme.outline
-                        RadarLightMode.SOLID -> TTColor.RadarThreatRed
-                        RadarLightMode.DAY_FLASH -> TTColor.RadarThreatAmber
-                        RadarLightMode.NIGHT_FLASH -> TTColor.RadarThreatAmber.copy(alpha = 0.7f)
-                        RadarLightMode.PELOTON -> TTColor.RadarThreatRed.copy(alpha = 0.5f)
-                    }
-                    Box(
-                        modifier = Modifier
-                            .size(10.dp)
-                            .clip(CircleShape)
-                            .background(dotColor)
-                    )
-
-                    Spacer(modifier = Modifier.width(12.dp))
-
-                    Text(
-                        text = stringResource(mode.titleResId),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f)
-                    )
-
-                    RadioButton(
-                        selected = isSelected,
-                        onClick = null
-                    )
-                }
-            }
-        }
+        RadarLightModeGrid(
+            currentMode = effectiveMode,
+            availableModes = availableModes,
+            isStvzo = isStvzo,
+            isAutoMode = isAutoMode,
+            showActiveModeSubtitle = !isOffline,
+            onModeSelected = onSelectMode,
+            onAutoSelected = onSelectAuto
+        )
     }
 }
 

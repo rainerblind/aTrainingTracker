@@ -28,12 +28,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.FlashlightOff
-import androidx.compose.material.icons.filled.FlashlightOn
-import androidx.compose.material.icons.filled.Groups
-import androidx.compose.material.icons.filled.NightlightRound
-import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.Icon
@@ -63,6 +57,7 @@ import androidx.compose.ui.unit.sp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.devices.radar.RadarLightMode
 import com.atrainingtracker.trainingtracker.TrackingMode
+import com.atrainingtracker.trainingtracker.ui.components.radar.resolveLightVisuals as resolveSharedLightVisuals
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import kotlinx.coroutines.Job
@@ -200,15 +195,10 @@ private fun RadarLightButtonContent(
 }
 
 /**
- * Resolves the canonical semantic vector icon and contrast color for [lightMode] (REQ-CON-043.2, REQ-CON-047.2).
+ * Resolves the canonical semantic vector icon and contrast color for [lightMode] (`REQ-CON-043.2`, `REQ-CON-047.2`).
  */
-internal fun resolveLightVisuals(lightMode: RadarLightMode): Pair<ImageVector, Color> = when (lightMode) {
-    RadarLightMode.OFF -> Pair(Icons.Default.FlashlightOff, TTColor.RadarLightContentOff)
-    RadarLightMode.SOLID -> Pair(Icons.Default.FlashlightOn, TTColor.RadarLightContentSolid)
-    RadarLightMode.DAY_FLASH -> Pair(Icons.Default.WbSunny, TTColor.RadarLightContentDayFlash)
-    RadarLightMode.NIGHT_FLASH -> Pair(Icons.Default.NightlightRound, TTColor.RadarLightContentNightFlash)
-    RadarLightMode.PELOTON -> Pair(Icons.Default.Groups, TTColor.RadarLightContentPeloton)
-}
+internal fun resolveLightVisuals(lightMode: RadarLightMode): Pair<ImageVector, Color> =
+    resolveSharedLightVisuals(lightMode)
 
 @Preview(showBackground = true, name = "Radar Light Button States")
 @Composable

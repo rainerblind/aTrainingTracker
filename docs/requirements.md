@@ -1,7 +1,7 @@
 # aTrainingTracker: Living Requirements Specification (Master Index)
 
 **Document ID**: `DOC-REQ-INDEX`  
-**Version**: 1.0.31  
+**Version**: 1.0.32  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -66,3 +66,4 @@ Living requirements use multi-line Markdown headings (`### REQ-XXX: Title [Statu
 | `1.0.28` | 2026-11-18 | AI Agent (`ATT-8679`) | `ATT-8679` | Updated `REQ-TRK-062` & `REQ-TRK-064` [Verified] (remove green `RadarStatusBadgePill` clear-state circle permanently). |
 | `1.0.29` | 2026-11-18 | AI Agent (`ATT-8748`) | `ATT-8748` | Refined `REQ-UI-493` [Verified] (`175x120 dp` Lieblingsstrecken thumbnail + `360.dp` guard + bounds seeding). |
 | `1.0.31` | 2026-11-18 | AI Agent (`ATT-8203`) | `ATT-8203` | Added `REQ-PRO-129` [Verified] (ADR-001 reconciliation, 16-file God-class ratchet, `workout_repository.md`, layout guard, `tst_process_stability_part{1,2}.md`). |
+| `1.0.32` | 2026-11-18 | AI Agent (`ATT-8678`) | `ATT-8678` | Updated `REQ-CON-047` & `REQ-CON-048` [Verified] (shared `RadarLightModeGrid` extracted across `RadarLightQuickSwitchSheet` & `EditDeviceDialog`). |

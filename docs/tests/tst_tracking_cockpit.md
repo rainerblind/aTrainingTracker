@@ -1,7 +1,7 @@
 # Living Test Specification: Tracking & Live Sensor Cockpit
 
 **Document ID**: `DOC-TST-TRK`  
-**Version**: 1.0.28  
+**Version**: 1.0.33  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -2438,24 +2438,23 @@
      • Given `setManualLightMode()` or `cycleNextMode()` followed by incoming telemetry updates,
      • Assert `RadarLightController.isAutoMode.value == false`, `RadarStateRepository.getState().isAutoMode == false`, and `SmartRadarLightEngine` automation remains suspended until `setAutoMode()` restores `true`.
 
-### TST-CON-047: **Compact Quick-Switch Sheet, Button-Matching Icons & Ascending Mode Order Test Suite** [Verified]
+### TST-CON-047: **Compact Quick-Switch Sheet & Shared RadarLightModeGrid Parity, Button-Matching Icons & Ascending Mode Order Test Suite** [Verified]
 - **Target Release**: `V5.0.0`
 - **Requirement(s)**: `REQ-CON-047` (`REQ-CON-047.1`..`REQ-CON-047.4`), `REQ-CON-031` (`REQ-CON-031.3`, `REQ-CON-031.8`)
-- **Component**: `RadarLightQuickSwitchSheet.kt`, `RadarLightButton.kt`, `RadarLightMode.kt`, `RadarLightController.kt`, `EditDeviceDialog.kt`
-- **Jira**: `ATT-8456`
+- **Component**: `RadarLightModeGrid.kt`, `RadarLightQuickSwitchSheet.kt`, `RadarLightButton.kt`, `RadarLightMode.kt`, `RadarLightController.kt`, `EditDeviceDialog.kt`, `RadarLightQuickSwitchSheetTest.kt`, `EditDeviceDialogRadarLightTest.kt`, `RadarLightButtonContractTest.kt`, `ArchitectureConformanceContractTest.kt`, `InterfaceSignatureDriftContractTest.kt`, `DeadCodeEliminationContractTest.kt`
+- **Jira**: `ATT-8456`, `ATT-8678`
 - **Test Type**: Unit & UI (Compose/Robolectric + Emulator Visual)
 - **Verification Method**: Unit
 - **Procedure**:
-  1. *Compact Quick-Switch Sheet & Semantic Icon Parity (`TST-CON-047.1`, `RadarLightQuickSwitchSheetTest.kt`)*:
-     • Given `RadarLightQuickSwitchSheetContent` rendered in Robolectric (`isLightControlSupported = true`, `isStvzo = false`, and constrained smartphone height),
-     • Assert `RadarLightMode_AUTO`, all 5 `RadarLightMode_*` tags, and all 4 `RadarSnooze_*` tags are displayed without clipping, and light mode items render semantic vector icons matching `resolveLightVisuals` in `RadarLightButton.kt`.
-  2. *Unified Ascending Mode Order Across `RadarLightMode`, `cycleNextMode()`, Sheet & Dialog (`TST-CON-047.2`, `RadarLightControllerTest.kt`, `RadarLightQuickSwitchSheetTest.kt`)*:
-     • Assert `RadarLightMode.getAvailableModes(false)` returns `[OFF, PELOTON, SOLID, NIGHT_FLASH, DAY_FLASH]` and `getAvailableModes(true)` returns `[OFF, SOLID]`.
-     • Assert `RadarLightController.cycleNextMode()` steps through `AUTO -> OFF -> PELOTON -> SOLID -> NIGHT_FLASH -> DAY_FLASH -> AUTO` (non-StVZO) and `AUTO -> OFF -> SOLID -> AUTO` (StVZO), and `RadarLightQuickSwitchSheet` / `EditDeviceDialog` consume the identical sequence.
-  3. *9-Locale String Resource & Zero-Hardcoded-String Verification (`TST-CON-047.3`, `RadarLightQuickSwitchSheetTest.kt`, `TranslationParityTest.kt`)*:
-     • Verify all labels in `RadarLightQuickSwitchSheet.kt` use existing `strings_radar.xml` resources with zero hardcoded display text and 100% 9-locale parity.
-  4. *Light & Dark Theme Visual Inspection (`TST-CON-047.4`, Stage 5 Emulator / Preview)*:
-     • Capture Light and Dark screenshots of `RadarLightQuickSwitchSheet` on emulator / Compose preview and verify zero clipping, crisp vector icon contrast, and balanced compact spacing.
+  1. *Shared `RadarLightModeGrid` & Row-Major 2-Column Compose UI Parity (`TST-CON-047.1`, `RadarLightQuickSwitchSheetTest.kt`, `EditDeviceDialogRadarLightTest.kt`)*:
+     • Given `RadarLightQuickSwitchSheetContent` and `RadarLightControlSectionContent` rendered in Robolectric `createComposeRule()` across Light/Dark themes, StVZO/non-StVZO, and online/offline states (with `0` new `src/main` reads per `REQ-PRO-049.1`),
+     • Assert both surfaces render the identical 2-column row-major `RadarLightModeGrid` (`[AUTO, OFF]`, `[PELOTON, SOLID]`, `[NIGHT_FLASH, DAY_FLASH]` when non-StVZO; `RadarLightStvzoNotice` + full-width `AUTO` row 1 + `[OFF, SOLID]` row 2 when StVZO), `showActiveModeSubtitle = true` vs `!isOffline` active-mode subtitle gating, `RadarLightMode_AUTO`/`RadarLightMode_<MODE>` tags, semantic `resolveLightVisuals` vector icons, and zero vertical clipping in `RadarLightQuickSwitchSheetContent`.
+  2. *Unified Ascending Mode Order & Architectural Contract Guards (`TST-CON-047.2`, `RadarLightControllerTest.kt`, `RadarLightQuickSwitchSheetTest.kt`, `RadarLightButtonContractTest.kt`, `ArchitectureConformanceContractTest.kt`, `InterfaceSignatureDriftContractTest.kt`, `DeadCodeEliminationContractTest.kt`)*:
+     • Assert `RadarLightMode.getAvailableModes(false)` returns `[OFF, PELOTON, SOLID, NIGHT_FLASH, DAY_FLASH]`, `getAvailableModes(true)` returns `[OFF, SOLID]`, `RadarLightController.cycleNextMode()` steps identically, `RadarLightQuickSwitchSheet*` and `RadarLightButton` (`resolveLightVisuals`) reflection/IF-SWE signatures remain intact, `ArchitectureConformanceContractTest` and `InterfaceSignatureDriftContractTest` pass, and `DeadCodeEliminationContractTest` reports `0` new violations (`RadarLightModeGrid.kt` uses `private` previews; `4/5 PASS` with `1` pre-existing unrelated `ATT-8823` failure in `EditDeviceDialog.kt`).
+  3. *Localization Preservation (`TST-CON-047.3`)*:
+     • Confirm `Localization Parity: N/A - no UI strings` (`strings_radar.xml` unchanged; all UI labels reuse existing 9-locale string resources with zero hardcoded literals).
+  4. *`Rule 8.5` Light & Dark Theme Visual Inspection (`TST-CON-047.4`)*:
+     • Capture Light/Dark `@Preview` comparison PNG `docs/engineering/walkthroughs/img/ATT-8678_radar_light_grid_preview.png` covering `RadarLightQuickSwitchSheetContent` & `RadarLightControlSectionContent` (StVZO/non-StVZO, online/offline) and verify via `read_file` (zero clipping, crisp `resolveLightVisuals` icon contrast, balanced compact spacing).
 
 ### TST-TRK-064: **1-Tap Radar Audio Snooze, Peloton Sync & Urban Suppression Test Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-064` (`REQ-TRK-064.1`..`REQ-TRK-064.7`)
@@ -3248,24 +3247,23 @@
   4. *Tier 1 Targeted Regression Execution (`TST-FIL-023.4`)*:
      • Execute `./gradlew :app:testDebugUnitTest --tests "com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFusedTest" --tests "com.atrainingtracker.banalservice.odometry.UnicycleOdometryEkfTest" --tests "com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest" --tests "com.atrainingtracker.banalservice.odometry.KinematicAltitudeSlopeEkfTest" --tests "com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceStationaryJitterTest" --tests "com.atrainingtracker.banalservice.odometry.OdometrySimulationTest"` asserting 100% pass rate with zero `src/main` source-reading calls (`REQ-PRO-049.1`; `Localization parity: N/A - no UI strings`).
 
-### TST-CON-048: **Offline EditDeviceDialog Radar Tail Light Config, Hydration & StVZO Verification Suite** [Verified]
+### TST-CON-048: **Offline & Unified EditDeviceDialog Radar Tail Light Grid, Hydration, Wiring & StVZO Verification Suite** [Verified]
 - **Target Release**: `V5.0.0`
-- **Tickets**: `ATT-8450`
-- **Requirement(s)**: `REQ-CON-048` (`REQ-CON-048.1`..`REQ-CON-048.4`)
-- **Component**: `EditDeviceDialog.kt`, `RadarLightController.kt`, `strings_radar.xml`, `RadarLightControllerTest.kt`, `EditDeviceDialogRadarLightTest.kt`, `TranslationParityTest.kt`
+- **Tickets**: `ATT-8450`, `ATT-8678`
+- **Requirement(s)**: `REQ-CON-048` (`REQ-CON-048.1`..`REQ-CON-048.4`), `REQ-CON-047` (`REQ-CON-047.2`, `REQ-CON-047.3`)
+- **Component**: `EditDeviceDialog.kt`, `RadarLightModeGrid.kt`, `RadarLightController.kt`, `strings_radar.xml`, `RadarLightControllerTest.kt`, `EditDeviceDialogRadarLightTest.kt`, `RadarLightQuickSwitchSheetTest.kt`, `EditDeviceViewModelTest.kt`, `ArchitectureConformanceContractTest.kt`, `InterfaceSignatureDriftContractTest.kt`, `DeadCodeEliminationContractTest.kt`
 - **Test Type**: Unit
 - **Verification Method**: Unit
 - **Procedure**:
-  1. *Offline Visibility, Radar-Only Exclusion & Apply-on-Connect Hint Tests (`TST-CON-048.1`, `EditDeviceDialogRadarLightTest.kt`)*:
-     • Render `EditDeviceDialog` / `RadarLightControlSection` via Robolectric `createComposeRule()` for `DeviceType.BIKE_RADAR` (`RearVue8`) with `isConnected = false`, `isSimulating = false`, `isStvzo = false`; assert `Automatik` and all 5 ascending modes (`OFF`, `PELOTON`, `SOLID`, `NIGHT_FLASH`, `DAY_FLASH`) plus the localized offline hint are displayed, and zero StVZO notice is shown.
-     • Assert section is hidden when `deviceName` identifies `RVR315` offline and when `isConnected = true`, `isLightControlAvailable = false`, `isSimulating = false`.
-  2. *Offline Mode Persistence, Cold-Start Hydration & StVZO Disconnect Reset Tests (`TST-CON-048.2`, `RadarLightControllerTest.kt`)*:
-     • Verify offline `setManualLightMode(SOLID)` / `setAutoMode()` updates effective UI selection (`preferredMode` / `isAutoMode`) and persists to `TuningPreferencesDataStore` without highlighting `OFF`.
-     • Verify cold-start DataStore hydration restores persisted `isAutoMode` and `preferredMode` prior to any workout start, and verify `unregisterRadarDevice()` resets `_isStvzo` to `false`.
-  3. *Offline StVZO Multi-Mode, Light/Dark `@Preview` & `Rule 8.5` PNG Tests (`TST-CON-048.3`, `EditDeviceDialogRadarLightTest.kt`)*:
-     • Verify offline StVZO state (`isConnected = false`, `isStvzo = true`) renders `Automatik`, `OFF`, `SOLID` with StVZO notice while pruning flashing modes, and verify offline Multi-Mode rendering, Light/Dark `@Preview` composables, and `Rule 8.5` PNG capture inspection with zero `app/src/main` source reads (`REQ-PRO-049.1`).
-  4. *9-Language Localization Parity & Targeted Regression (`TST-CON-048.4`, `TranslationParityTest.kt`)*:
-     • Verify 100% key and format parity across all 9 `strings_radar.xml` locales (`values`, `de`, `es`, `fr`, `it`, `ja`, `nl`, `pl`, `pt`), and execute targeted Gradle unit and Compose UI tests asserting 100% pass rate.
+  1. *Behavioral `RadarLightModeGrid` Parity, Visibility, Row-Major Bounds & Direct Controller Wiring (`TST-CON-048.1`, `EditDeviceDialogRadarLightTest.kt`, `EditDeviceViewModelTest.kt`)*:
+     • Render `RadarLightControlSectionContent` via Robolectric `createComposeRule()` (`0` new `src/main` reads per `REQ-PRO-049.1`) across online/offline (`showActiveModeSubtitle = !isOffline`), StVZO/non-StVZO (`RadarLightStvzoNotice`), and Light/Dark themes.
+     • Assert row-major 2-column grid bounds (`[AUTO, OFF]`, `[PELOTON, SOLID]`, `[NIGHT_FLASH, DAY_FLASH]` non-StVZO; `AUTO` full-width row 1 + `[OFF, SOLID]` row 2 StVZO) replacing legacy vertical monotonicity, `RadarLightOfflineHint` visible only when `isOffline`, `radar_light_active_mode_format` hidden when `isOffline && isAutoMode` and shown when `!isOffline && isAutoMode`, `RVR315` & connected `!isLightControlAvailable` hidden, and direct `RadarLightController.setAutoMode()` / `setManualLightMode(mode)` wiring without mutating `EditDeviceViewModel` draft state.
+  2. *Offline Mode Persistence, Cold-Start Hydration, StVZO Reset & Workout Auto-Switch (`TST-CON-048.2`, `RadarLightControllerTest.kt`)*:
+     • Verify offline `setManualLightMode(SOLID)` / `setAutoMode()` updates effective UI selection (`preferredMode` / `isAutoMode`) and persists to `TuningPreferencesDataStore` without highlighting `OFF`, cold-start DataStore hydration restores persisted state, `unregisterRadarDevice()` resets `_isStvzo` to `false`, and Workout Auto-Switch lifecycle transitions remain intact.
+  3. *Contract Guards, Light/Dark `@Preview` Hygiene & `Rule 8.5` PNG Inspection (`TST-CON-048.3`, `EditDeviceDialogRadarLightTest.kt`, `ArchitectureConformanceContractTest.kt`, `InterfaceSignatureDriftContractTest.kt`, `DeadCodeEliminationContractTest.kt`)*:
+     • Verify `ArchitectureConformanceContractTest` and `InterfaceSignatureDriftContractTest` pass, and `DeadCodeEliminationContractTest` reports `0` new violations (`RadarLightModeGrid.kt` uses `private` previews; `4/5 PASS` with `1` pre-existing unrelated `ATT-8823` failure in `EditDeviceDialog.kt`) alongside Light/Dark/StVZO/online/offline Robolectric tests and **`Rule 8.5` Light/Dark `@Preview` PNG `docs/engineering/walkthroughs/img/ATT-8678_radar_light_grid_preview.png`** inspection via `read_file`.
+  4. *Localization Parity & Targeted Regression (`TST-CON-048.4`)*:
+     • Confirm `Localization Parity: N/A - no UI strings` (`strings_radar.xml` untouched; existing 9-locale parity preserved), and execute targeted Gradle unit and Robolectric Compose UI tests asserting 100% pass rate.
 
 ### TST-FIL-024: **VerticalSpeedAndSlopeDevice Baro Source Guard, Accumulator Reset & Same-Device Step Re-Seeding Suite** [Verified]
 - **Target Release**: `V5.0.0`
@@ -3452,3 +3450,8 @@
 | `1.0.26` | 2026-11-18 | AI Agent (`ATT-8679`) | `ATT-8679` | Updated `TST-TRK-062` [Planned] (`createComposeRule()` clear-badge suppression + `14.dp` rail spacer guard with zero `src/main` reads per `REQ-PRO-049.1`, `TranslationParityTest` for 9-locale `radar_overlay_clear` cleanup, and `Rule 8.5` PNG preview) and reconciled `TST-TRK-064` [Planned]. |
 | `1.0.27` | 2026-11-18 | AI Agent (`ATT-8679`) | `ATT-8679` | Promoted `TST-TRK-062` & `TST-TRK-064` to `[Implemented]` following `RadarEdgeOverlayTest` (`30/30`), 10-suite verification (`126/126`), `:app:lintDebug` (`0` errors), and `Rule 8.5` PNG capture. |
 | `1.0.28` | 2026-11-18 | AI Agent (`ATT-8679`) | `ATT-8679` | Promoted `TST-TRK-062` & `TST-TRK-064` to `[Verified]` in Stage 5 following governance checks, `has_verified_test_evidence` verification, and `Rule 8.5` PNG audit. |
+| `1.0.29` | 2026-11-18 | AI Agent (`ATT-8678`) | `ATT-8678` | Refined `TST-CON-047` & `TST-CON-048` to `[Planned]` mandating behavioral Robolectric Compose UI parity tests across `RadarLightQuickSwitchSheetTest` & `EditDeviceDialogRadarLightTest` (row-major 2-col grid, Light/Dark, StVZO/non-StVZO, online/offline `showActiveModeSubtitle`, `0` new `src/main` reads), contract guards (`ArchitectureConformanceContractTest`, `InterfaceSignatureDriftContractTest`, `DeadCodeEliminationContractTest` noting `ATT-8823`), and `Rule 8.5` PNG `docs/engineering/walkthroughs/img/ATT-8678_radar_light_grid_preview.png`. |
+| `1.0.30` | 2026-11-18 | AI Agent (`ATT-8678`) | `ATT-8678` | Promoted `TST-CON-047` & `TST-CON-048` to `[Implemented]` following `RadarLightModeGridTest` (`3/3`), `EditDeviceDialogRadarLightTest` (`5/5`), `RadarLightQuickSwitchSheetTest` (`9/9`), and `14`-suite Stage 4 run (`109/109` PASS) + `Rule 8.5` PNG inspection. |
+| `1.0.31` | 2026-11-18 | AI Agent (`ATT-8678`) | `ATT-8678` | Promoted `TST-CON-047` & `TST-CON-048` to `[Verified]` in Stage 5 following governance checks (`--sync-indexes`), `has_verified_test_evidence` verification, and `Rule 8.5` PNG audit. |
+| `1.0.32` | 2026-11-18 | AI Agent (`ATT-8678`) | `ATT-8678` | Stage 4 Bounce 1/3 heal: clarified `DeadCodeEliminationContractTest` (`0` new violations; `4/5 PASS` with `1` pre-existing unrelated `ATT-8823` failure in `EditDeviceDialog.kt:1435..1501`) and set `TST-CON-047` & `TST-CON-048` -> `[Implemented]` pending Stage 5 re-verification. |
+| `1.0.33` | 2026-11-18 | AI Agent (`ATT-8678`) | `ATT-8678` | Promoted `TST-CON-047` & `TST-CON-048` to `[Verified]` in Stage 5 (Bounce 1/3) backed by `14` JUnit XMLs (`109/109 PASS`) on `66f707f9`, governance checks (`exit 0`), and `Rule 8.5` PNG audit. |

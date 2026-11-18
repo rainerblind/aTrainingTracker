@@ -1,7 +1,7 @@
 # aTrainingTracker: Living Test Specification & Verification Plan (Master Index)
 
 **Document ID**: `DOC-TST-INDEX`  
-**Version**: 1.0.31  
+**Version**: 1.0.32  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -59,3 +59,4 @@ Living test specifications use multi-line Markdown headings (`### TST-XXX: Title
 | `1.0.28` | 2026-11-18 | AI Agent (`ATT-8679`) | `ATT-8679` | Updated `TST-TRK-062` & `TST-TRK-064` [Verified] (`126/126` unit/Compose UI PASS, `:app:lintDebug` `0` errors, `Rule 8.5` PNG). |
 | `1.0.29` | 2026-11-18 | AI Agent (`ATT-8748`) | `ATT-8748` | Updated `TST-UI-493` [Verified] (`ClusterItemThumbnailComposeTest` + `151/151` PASS + `Rule 8.5` PNG). |
 | `1.0.31` | 2026-11-18 | AI Agent (`ATT-8203`) | `ATT-8203` | Added `TST-PRO-129` [Verified] (`35/35` Kotlin contract suites + `TestLivingDocDirectoryLayout` `4/4` + `28/28 <= 4000`). |
+| `1.0.32` | 2026-11-18 | AI Agent (`ATT-8678`) | `ATT-8678` | Updated `TST-CON-047` & `TST-CON-048` [Verified] (`14` suites / `109/109` PASS, `EditDeviceDialog` `2004->1843` LoC, `Rule 8.5` PNGs). |
