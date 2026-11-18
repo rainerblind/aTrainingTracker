@@ -147,9 +147,13 @@ public class MyHelper {
         return context.getString(getDistanceUnitNameId());
     }
 
+    /**
+     * Resolves the full display unit string resource ID for the given {@link SensorType}
+     * according to the active {@link MyUnits} system (REQ-TRK-088).
+     */
     public static int getUnitsId(@NonNull SensorType sensorType) {
         return switch (sensorType) {
-            case SPEED_mps -> getSpeedUnitNameId();
+            case SPEED_mps, RADAR_APPROACH_SPEED_mps -> getSpeedUnitNameId();
             case PACE_spm -> getPaceUnitNameId();
             case DISTANCE_m, DISTANCE_m_LAP, LINE_DISTANCE_m -> getDistanceUnitNameId();
             case ALTITUDE, ASCENT, DESCENT -> getAltitudeUnitNameId();
@@ -157,9 +161,13 @@ public class MyHelper {
         };
     }
 
+    /**
+     * Resolves the compact display unit string resource ID for the given {@link SensorType}
+     * according to the active {@link MyUnits} system (REQ-TRK-088).
+     */
     public static int getShortUnitsId(@NonNull SensorType sensorType) {
         return switch (sensorType) {
-            case SPEED_mps -> getShortSpeedUnitNameId();
+            case SPEED_mps, RADAR_APPROACH_SPEED_mps -> getShortSpeedUnitNameId();
             case PACE_spm -> getShortPaceUnitNameId();
             case DISTANCE_m, DISTANCE_m_LAP, LINE_DISTANCE_m ->
                     getDistanceUnitNameId();  // TODO: also short version?

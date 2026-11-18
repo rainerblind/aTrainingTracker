@@ -1,7 +1,7 @@
 # aTrainingTracker: Living Requirements Specification (Master Index)
 
 **Document ID**: `DOC-REQ-INDEX`  
-**Version**: 1.0.33  
+**Version**: 1.0.34  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -13,7 +13,7 @@ Living requirements use multi-line Markdown headings (`### REQ-XXX: Title [Statu
 | Domain Shard | Scope & Functional Areas | Prefixes | Total | Verified | Implemented | Planned / Open |
 | :--- | :--- | :--- | :---: | :---: | :---: | :---: |
 | [Tracking & Live Sensor Cockpit (Part 1)](requirements/req_tracking_cockpit_part1.md) | Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle. | `CON`, `FIL`, `SEN`, `TRK`, `WEA` | 109 | 95 | 14 | 0 |
-| [Tracking & Live Sensor Cockpit (Part 2)](requirements/req_tracking_cockpit_part2.md) | Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle. | `CON`, `FIL`, `SEN`, `TRK` | 63 | 63 | 0 | 0 |
+| [Tracking & Live Sensor Cockpit (Part 2)](requirements/req_tracking_cockpit_part2.md) | Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle. | `CON`, `FIL`, `SEN`, `TRK` | 64 | 64 | 0 | 0 |
 | [Post-Workout Analytics & Periods](requirements/req_aftermath_periods.md) | Post-workout analytics, period statistics, zone distributions, HRV/workout dynamics, radar analytics. | `HRV`, `PER`, `RAD`, `SPT`, `WKO` | 61 | 39 | 22 | 0 |
 | [Maps, Polylines & Navigation](requirements/req_maps_navigation.md) | Map rendering, polylines, climbs, navigation overlays, GPX track follow-me, radar map overlays. | `CLM`, `GEO`, `MAP`, `NAV`, `RAD` | 75 | 57 | 18 | 0 |
 | [Persistence, Migration & Cloud Export (Part 1)](requirements/req_data_migration_export_part1.md) | Database schema, backup/restore, migration pipelines, Strava/cloud upload, FIT/GPX/radar export. | `DAT`, `EXP`, `EXT`, `MIG`, `RAD` | 133 | 93 | 40 | 0 |
@@ -29,7 +29,7 @@ Living requirements use multi-line Markdown headings (`### REQ-XXX: Title [Statu
 | [Jubilee Milestones & App Reviews](requirements/req_aftermath_reviews.md) | Milestone workout auto-naming, jubilee achievements, Google Play in-app reviews, athlete feedback, and supporter tier promotions. | `REV` | 14 | 14 | 0 | 0 |
 | [Store Presence](requirements/req_store_presence.md) | Store presence, Google Play listings, screenshots, store metadata contract testing, and release governance. | `STP` | 11 | 11 | 0 | 0 |
 
-**Total Living Requirements**: 1245 across 16 domain shards.
+**Total Living Requirements**: 1246 across 16 domain shards.
 
 ---
 
@@ -68,3 +68,4 @@ Living requirements use multi-line Markdown headings (`### REQ-XXX: Title [Statu
 | `1.0.31` | 2026-11-18 | AI Agent (`ATT-8203`) | `ATT-8203` | Added `REQ-PRO-129` [Verified] (ADR-001 reconciliation, 16-file God-class ratchet, `workout_repository.md`, layout guard, `tst_process_stability_part{1,2}.md`). |
 | `1.0.32` | 2026-11-18 | AI Agent (`ATT-8678`) | `ATT-8678` | Updated `REQ-CON-047` & `REQ-CON-048` [Verified] (shared `RadarLightModeGrid` extracted across `RadarLightQuickSwitchSheet` & `EditDeviceDialog`). |
 | `1.0.33` | 2026-11-18 | AI Agent (`ATT-8097`) | `ATT-8097` | Added `REQ-UI-2786` [Verified] (uniform `32.dp` primary header actions, `[Tune]` pill + divider, universal `⇄` cluster switcher, 9-locale tooltips). |
+| `1.0.34` | 2026-11-18 | AI Agent (`ATT-8676`) | `ATT-8676` | Added `REQ-TRK-088` [Verified] (`MyHelper.getUnitsId`/`getShortUnitsId` `RADAR_APPROACH_SPEED_mps` unit mapping, `SensorType.java` & `sensor_units.md` sync). |

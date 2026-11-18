@@ -1,14 +1,14 @@
 # Living Requirements: Tracking & Live Sensor Cockpit (Part 2 of 2)
 
 **Document ID**: `DOC-REQ-TRK-P2`  
-**Version**: 1.0.9  
+**Version**: 1.0.12  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit_part2`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Requirements**: 63
+**Total Requirements**: 64
 
 ---
 
@@ -3003,6 +3003,45 @@
 
 **Invariants**: `< API 33` fallback preserved; `ProxySensor` & `RrBeatSource` continuity preserved; single-GATT ref-counting (`REQ-SET-118.3`) & `ACC` mutex (`REQ-SET-112.3`) preserved; `PolarRawTelemetryRecorder` `rowCount == 0` cleanup preserved; `Devices.db` v14 untouched; `N/A - no UI strings`; `Rule 7.6` offline verification boundary respected.
 
+### REQ-TRK-088: Radar Approach Speed Display Units in MyHelper & Sensor Unit Dictionary Sync [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-TRK-088`
+- **System Requirement(s)**: `SYSREQ-TRK-001`, `SYSREQ-TRK-003`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `app/src/main/java/com/atrainingtracker/trainingtracker/MyHelper.java`, `app/src/main/java/com/atrainingtracker/banalservice/sensor/SensorType.java`, `docs/architecture/sensor_units.md`
+- **Rationale**: During on-device review alongside `ATT-8440`, radar speed units displayed `m/s` instead of `km/h` (Metric) / `mile/h` (Imperial) when resolved via `MyHelper`. While `RadarTrafficSummaryCard.kt` formats via `SpeedFormatter.format_with_units()`, `MyHelper.getUnitsId(SensorType)` (`L152`) and `MyHelper.getShortUnitsId(SensorType)` (`L162`) omit `SensorType.RADAR_APPROACH_SPEED_mps` from the `SPEED_mps` switch arm and fall through to `sensorType.getUnitId()` = `R.string.units_speed_basic` (`"m/s"`), diverging from `SpeedFormatter` across `TrackingViewModel`, `EditSensorFieldDialog`, `SensorSourceDialog`, `GetMergedDevicesUseCase`, `PebbleService`, `WorkoutDataMapper`, and `WorkoutRepository.kt:3128` (`ATT-8676`, Epic `ATT-1286`, refining `REQ-TRK-083.1` and `REQ-CON-028`):
+- **Description**:
+  1. *`MyHelper` Radar Speed Unit Mapping (`REQ-TRK-088.1`)*:
+     - `MyHelper.getUnitsId(SensorType)` SHALL map `SensorType.RADAR_APPROACH_SPEED_mps` alongside `SensorType.SPEED_mps` to `getSpeedUnitNameId()`, returning `R.string.units_speed_metric` (`"km/h"`) under `MyUnits.METRIC` and `R.string.units_speed_imperial` (`"mile/h"`) under `MyUnits.IMPERIAL` — never falling through to `R.string.units_speed_basic` (`"m/s"`).
+     - `MyHelper.getShortUnitsId(SensorType)` SHALL map `SensorType.RADAR_APPROACH_SPEED_mps` alongside `SensorType.SPEED_mps` to `getShortSpeedUnitNameId()`, returning `R.string.units_speed_short_metric` (`"km/h"`) under `MyUnits.METRIC` and `R.string.units_speed_short_imperial` (`"mi/h"`) under `MyUnits.IMPERIAL` — never falling through to `R.string.units_speed_basic` (`"m/s"`).
+  2. *Unit Dictionary & `SensorType` Javadoc Synchronization (`REQ-TRK-088.2`)*:
+     - `docs/architecture/sensor_units.md` (§1 line 76 `RADAR_APPROACH_SPEED_mps` row and §2 item 3) and `SensorType.java` (`RADAR_APPROACH_SPEED_mps` Javadoc, line 440) SHALL be updated to document `MyHelper.getUnitsId` / `MyHelper.getShortUnitsId` resolving `RADAR_APPROACH_SPEED_mps` to `km/h` / `mile/h` (`mi/h` short), while preserving `"Internal unit: {@code m/s}"` Javadoc (`verify_sensor_type_javadocs()`) and the `"MyHelper.getUnitsId"` contract token (`SensorTypeUnitsContractTest`).
+  3. *Storage, Export, Scope & Localization Invariants (`REQ-TRK-088.3`)*:
+     - `SensorType.RADAR_APPROACH_SPEED_mps` MUST preserve `internalUnit = "m/s"`, `ordinal()`, `name()`, and `@Deprecated getUnitId() == R.string.units_speed_basic`; SQLite storage and FIT/CSV raw `m/s` exports (`FitFileWriter.kt`, `CSVFileWriter.java`) MUST remain unchanged.
+     - `RADAR_CLOSEST_DISTANCE_m`, `RADAR_PASSING_DISTANCE_m`, and `W_PRIME_BAL` (`docs/architecture/sensor_units.md` §1 & §2) MUST remain untouched; `WorkoutRepository.kt` (`<= 5,117` LoC) MUST remain untouched.
+     - `Localization Parity: N/A - no UI strings` (`app/src/main/res/values*/strings_radar.xml` and `strings.xml` untouched).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new `REQ-TRK-088`, refining `REQ-TRK-083.1` (`req_tracking_cockpit_part2.md:2467-2474`) and `REQ-CON-028` (`req_tracking_cockpit_part2.md:15-55`). Targets `MyHelper.java`, `SensorType.java`, and `docs/architecture/sensor_units.md`.
+2. *Historical Origin & Commit Trace*: `ATT-5083` (`REQ-CON-028`) introduced `RADAR_APPROACH_SPEED_mps` with `SpeedFormatter` and `R.string.units_speed_basic`; `ATT-8579` (`367a412f`, `a3508e6b`, `f55c9fee`) created `REQ-TRK-083`, `sensor_units.md`, and `SensorTypeUnitsContractTest`; `ATT-8440` (`e3c278bb`) fixed `RadarTrafficSummaryCard.kt` via `SpeedFormatter.format_with_units()`.
+3. *Root Reason for Existing Formulation*: `REQ-TRK-083.1` intentionally froze existing runtime behavior during documentation (`ATT-8579`) rather than altering `MyHelper.getUnitsId()`, explicitly noting the radar fallback discrepancy.
+4. *Preservation of Core Invariants*: Preserves `RADAR_APPROACH_SPEED_mps.internalUnit = "m/s"`, `@Deprecated getUnitId() = R.string.units_speed_basic`, `ordinal()`/`name()`, SQLite & FIT/CSV raw `m/s` exports, `"MyHelper.getUnitsId"` contract token, `RADAR_CLOSEST_DISTANCE_m`/`RADAR_PASSING_DISTANCE_m`/`W_PRIME_BAL` untouched, `WorkoutRepository.kt` (`<= 5,117` LoC) untouched, and `Localization Parity: N/A - no UI strings`.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `TrainingApplication.getUnit() == MyUnits.METRIC`,
+• *When* `MyHelper.getUnitsId(SensorType.RADAR_APPROACH_SPEED_mps)` and `MyHelper.getShortUnitsId(SensorType.RADAR_APPROACH_SPEED_mps)` are invoked (including via `WorkoutDataMapper`, `WorkoutRepository`, or `TrackingViewModel`),
+• *Then* `getUnitsId` returns `R.string.units_speed_metric` (`"km/h"`) and `getShortUnitsId` returns `R.string.units_speed_short_metric` (`"km/h"`), never `R.string.units_speed_basic` (`"m/s"`).
+• *Given* `TrainingApplication.getUnit() == MyUnits.IMPERIAL`,
+• *When* `MyHelper.getUnitsId(SensorType.RADAR_APPROACH_SPEED_mps)` and `MyHelper.getShortUnitsId(SensorType.RADAR_APPROACH_SPEED_mps)` are invoked,
+• *Then* `getUnitsId` returns `R.string.units_speed_imperial` (`"mile/h"`) and `getShortUnitsId` returns `R.string.units_speed_short_imperial` (`"mi/h"`), never `R.string.units_speed_basic` (`"m/s"`).
+• *Given* `SensorTypeUnitsContractTest`, `SystemArchitectureDesignContractTest`, `SourceTextReadingAuditContractTest`, and `verify_requirement_governance.py`,
+• *When* executed after updating `MyHelper.java`, `SensorType.java`, and `docs/architecture/sensor_units.md`,
+• *Then* all contract and governance checks pass with `0` new `app/src/main/` source-text reads (`REQ-PRO-049.1`).
+
+**Invariants**: `internalUnit = "m/s"`, `ordinal()`, `name()`, and `@Deprecated getUnitId() = R.string.units_speed_basic` unchanged; FIT/CSV raw `m/s` exports unchanged; `RADAR_CLOSEST_DISTANCE_m`/`RADAR_PASSING_DISTANCE_m`/`W_PRIME_BAL` unchanged; `WorkoutRepository.kt` untouched (`<= 5,117` LoC); `Localization Parity: N/A - no UI strings`; `0` new `src/main` test reads (`REQ-PRO-049.1`).
+
 ---
 
 ## Change History
@@ -3018,3 +3057,6 @@
 | `1.0.7` | 2026-11-18 | AI Agent (`ATT-8678`) | `ATT-8678` | Refined `REQ-CON-047` (`.2`/`.3`) & `REQ-CON-048` to `[Planned]` to extract single shared stateless `RadarLightModeGrid` + `resolveLightVisuals` under `ui/components/radar/` for both `RadarLightQuickSwitchSheetContent` and `EditDeviceDialog` (`showActiveModeSubtitle = !isOffline`, zero duplicated dot/segmented-row UI, `N/A - no UI strings`). |
 | `1.0.8` | 2026-11-18 | AI Agent (`ATT-8678`) | `ATT-8678` | Promoted `REQ-CON-047` & `REQ-CON-048` to `[Implemented]` following Stage 4 extraction of `RadarLightModeGrid.kt`, refactoring of `RadarLightQuickSwitchSheet.kt` / `RadarLightButton.kt` / `EditDeviceDialog.kt` (`1843` LoC), `109/109` targeted tests across `14` suites, and `Rule 8.5` PNG verification. |
 | `1.0.9` | 2026-11-18 | AI Agent (`ATT-8678`) | `ATT-8678` | Promoted `REQ-CON-047` & `REQ-CON-048` to `[Verified]` in Stage 5 following governance checks, `has_verified_test_evidence` verification, and `Rule 8.5` PNG audit. |
+| `1.0.10` | 2026-11-18 | AI Agent (`ATT-8676`) | `ATT-8676` | Added `REQ-TRK-088` [Planned] for `MyHelper.getUnitsId`/`getShortUnitsId` `RADAR_APPROACH_SPEED_mps` unit mapping and `sensor_units.md`/`SensorType.java` synchronization (`N/A - no UI strings`). |
+| `1.0.11` | 2026-11-18 | AI Agent (`ATT-8676`) | `ATT-8676` | Promoted `REQ-TRK-088` to `[Implemented]` following Stage 4 changes in `MyHelper.java`, `SensorType.java`, `docs/architecture/sensor_units.md`, and `MyHelperRadarUnitsTest.kt`. |
+| `1.0.12` | 2026-11-18 | AI Agent (`ATT-8676`) | `ATT-8676` | Promoted `REQ-TRK-088` to `[Verified]` in Stage 5 following clean-room 10-suite verification (`55/56` PASS across 9/10 full-PASS suites; `1` pre-existing `ATT-8823` failure in `EditDeviceDialog.kt`) and `has_verified_test_evidence("TST-TRK-088")` PASS. |

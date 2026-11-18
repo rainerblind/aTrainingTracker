@@ -1,14 +1,14 @@
 # Living Test Specification: Tracking & Live Sensor Cockpit
 
 **Document ID**: `DOC-TST-TRK`  
-**Version**: 1.0.33  
+**Version**: 1.0.36  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Tests**: 148
+**Total Tests**: 149
 
 ---
 
@@ -3424,6 +3424,23 @@
      • Update `HrvDfaA1SettingsContractTest.testHrvSettings_gaugeToggleAndPreviewBarContracts` to assert absence of `R.string.zone_display_gauge` / `displayOptions.showGauge` and `showBar = true` in `HrvDfaA1SettingsContent` (preserving `app/source-reading-baseline.txt` debt boundary).
      • Execute `./gradlew :app:testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.zones.HrvDfaA1RangeSliderGestureTest" --tests "com.atrainingtracker.trainingtracker.zones.HrvDfaA1SettingsContractTest" --tests "com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.EditSensorFieldZoneDisplayTest" --tests "com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingTabConfigZoneDisplayTest"` asserting 100% pass (`Localization Parity: N/A - no UI strings added, modified, or removed; R.string.zone_display_gauge remains active in ZoneDisplayOptionsControls.kt:230 across all 9 locales`).
 
+### TST-TRK-088: **Radar Approach Speed Display Unit Mapping (`MyHelper.getUnitsId`/`getShortUnitsId`) & Contract Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Tickets**: `ATT-8676`
+- **Requirement(s)**: `REQ-TRK-088` (`REQ-TRK-088.1`..`REQ-TRK-088.3`)
+- **Component**: `MyHelperRadarUnitsTest.kt` (new), `SensorTypeUnitsContractTest.kt`, `SystemArchitectureDesignContractTest.kt`, `SourceTextReadingAuditContractTest.kt`, `RadarTrafficSummaryCardTest.kt`, caller unit tests (`WorkoutDataMapper`, `WorkoutRepository`, `TrackingViewModel`)
+- **Test Type**: Unit
+- **Verification Method**: Unit
+- **Procedure**:
+  1. *`MyHelper` Metric & Imperial Unit ID/String Resolution (`TST-TRK-088.1`, `MyHelperRadarUnitsTest.kt`)*:
+     • Under `MyUnits.METRIC` and `MyUnits.IMPERIAL`, assert `MyHelper.getUnitsId(SensorType.RADAR_APPROACH_SPEED_mps)` returns `R.string.units_speed_metric` (`"km/h"`) / `R.string.units_speed_imperial` (`"mile/h"`) matching `SPEED_mps` and never `R.string.units_speed_basic` (`"m/s"`).
+     • Under `MyUnits.METRIC` and `MyUnits.IMPERIAL`, assert `MyHelper.getShortUnitsId(SensorType.RADAR_APPROACH_SPEED_mps)` returns `R.string.units_speed_short_metric` (`"km/h"`) / `R.string.units_speed_short_imperial` (`"mi/h"`) matching `SPEED_mps` and never `R.string.units_speed_basic` (`"m/s"`).
+     • Verify preserved invariants: `SensorType.RADAR_APPROACH_SPEED_mps.internalUnit == "m/s"`, `getUnitId() == R.string.units_speed_basic`, and `RADAR_CLOSEST_DISTANCE_m` / `RADAR_PASSING_DISTANCE_m` still resolve to `R.string.units_distance_basic`.
+  2. *Caller Unit Integration (`TST-TRK-088.2`, `WorkoutDataMapper` / `WorkoutRepository` / `TrackingViewModel` & `RadarTrafficSummaryCardTest`)*:
+     • Verify caller unit resolution across `WorkoutDataMapper` (`getUnitsId`), `WorkoutRepository` (`getShortUnitsId` extrema marker path), `TrackingViewModel` (`getShortUnitsId` cockpit tile path), and `RadarTrafficSummaryCardTest` (`SpeedFormatter`) emits Metric `"km/h"` and Imperial `"mile/h"` (`"mi/h"` short), never `"m/s"`.
+  3. *Contract, Source-Read Hygiene & Governance Verification (`TST-TRK-088.3`)*:
+     • Execute `SensorTypeUnitsContractTest`, `SystemArchitectureDesignContractTest`, and `SourceTextReadingAuditContractTest` asserting `0` new `app/src/main/` reads (`REQ-PRO-049.1`), `"MyHelper.getUnitsId"` token preserved in `docs/architecture/sensor_units.md`, and `python3 tools/verify_requirement_governance.py --repo-root .` exits `0` (`verify_sensor_type_javadocs()` passing; `Localization Parity: N/A - no UI strings`).
+
 ---
 
 ## Change History
@@ -3455,3 +3472,6 @@
 | `1.0.31` | 2026-11-18 | AI Agent (`ATT-8678`) | `ATT-8678` | Promoted `TST-CON-047` & `TST-CON-048` to `[Verified]` in Stage 5 following governance checks (`--sync-indexes`), `has_verified_test_evidence` verification, and `Rule 8.5` PNG audit. |
 | `1.0.32` | 2026-11-18 | AI Agent (`ATT-8678`) | `ATT-8678` | Stage 4 Bounce 1/3 heal: clarified `DeadCodeEliminationContractTest` (`0` new violations; `4/5 PASS` with `1` pre-existing unrelated `ATT-8823` failure in `EditDeviceDialog.kt:1435..1501`) and set `TST-CON-047` & `TST-CON-048` -> `[Implemented]` pending Stage 5 re-verification. |
 | `1.0.33` | 2026-11-18 | AI Agent (`ATT-8678`) | `ATT-8678` | Promoted `TST-CON-047` & `TST-CON-048` to `[Verified]` in Stage 5 (Bounce 1/3) backed by `14` JUnit XMLs (`109/109 PASS`) on `66f707f9`, governance checks (`exit 0`), and `Rule 8.5` PNG audit. |
+| `1.0.34` | 2026-11-18 | AI Agent (`ATT-8676`) | `ATT-8676` | Added `TST-TRK-088` [Planned] for `MyHelper` `RADAR_APPROACH_SPEED_mps` unit mapping, caller integration, `SensorTypeUnitsContractTest`, `SystemArchitectureDesignContractTest`, and `SourceTextReadingAuditContractTest` (`0` new `src/main` reads). |
+| `1.0.35` | 2026-11-18 | AI Agent (`ATT-8676`) | `ATT-8676` | Promoted `TST-TRK-088` to `[Implemented]` following Stage 4 construction of `MyHelperRadarUnitsTest.kt` and consolidated unit/contract test run. |
+| `1.0.36` | 2026-11-18 | AI Agent (`ATT-8676`) | `ATT-8676` | Promoted `TST-TRK-088` to `[Verified]` in Stage 5 following 10-suite `--rerun-tasks` verification (`55/56` PASS across 9/10 full-PASS suites; `1` pre-existing `ATT-8823` failure in `EditDeviceDialog.kt`) and `has_verified_test_evidence("TST-TRK-088")` PASS. |
