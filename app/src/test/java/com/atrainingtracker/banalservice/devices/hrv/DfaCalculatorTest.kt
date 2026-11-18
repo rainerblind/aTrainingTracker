@@ -68,4 +68,14 @@ class DfaCalculatorTest {
         // With zero fluctuations across all boxes, slope is either NaN or 0.0, but must not crash
         assertTrue(alpha1.isNaN() || alpha1 == 0.0)
     }
+
+    @Test
+    fun testNegativeSlopeInput_returnsNaN() {
+        // Localized spike pair in integrated profile causes F(4) > F(16) (OLS slope ~ -0.31 < 0.0)
+        val negativeSlopeSeries = DoubleArray(128) { 800.0 }
+        negativeSlopeSeries[64] = 1400.0
+        negativeSlopeSeries[65] = 200.0
+        val alpha1 = DfaCalculator.computeDfaAlpha1(negativeSlopeSeries)
+        assertTrue("Non-physical negative/zero DFA alpha1 must be gated to Double.NaN (was $alpha1)", alpha1.isNaN())
+    }
 }

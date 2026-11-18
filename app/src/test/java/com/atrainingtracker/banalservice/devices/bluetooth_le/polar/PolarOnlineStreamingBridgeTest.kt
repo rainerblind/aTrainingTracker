@@ -845,4 +845,60 @@ class PolarOnlineStreamingBridgeTest {
         verify(exactly = 0) { sharedMockApi.cleanup() }
         verify(exactly = 1) { sharedMockApi.shutDown() }
     }
+
+    @Test
+    fun testProcessHrData_driftReAnchorClampsMonotonicAndFlagsMultiSecondGap() {
+        // TST-TRK-085.1, TST-TRK-085.2
+        val db = DevicesDatabaseManager.getInstance(context)
+        val h10Id = db.insertNewBluetoothDeviceIntoDB(
+            DeviceType.HRM,
+            "AA:BB:CC:DD:EE:99",
+            "Polar H10 99001122",
+            "Polar Electro",
+            95,
+            true
+        )
+        val bridge = PolarOnlineStreamingBridge(
+            context = context,
+            mySensorManager = sensorManager,
+            deviceId = h10Id,
+            macAddress = "AA:BB:CC:DD:EE:99",
+            dispatcher = Dispatchers.Unconfined,
+            sdkIntProvider = { 34 },
+            sportTypeProvider = { BSportType.RUN }
+        )
+        val events = mutableListOf<RrBeatEvent>()
+        bridge.addRrBeatListener(RrBeatListener { events.add(it) })
+
+        bridge.processHrData(
+            PolarHrData(listOf(PolarHrData.PolarHrSample(75, 75, 0, listOf(800), listOf(800), true, true, true))),
+            packetArrivalMs = 100_000L
+        )
+        // Bundle with 4x800ms arriving at 100_500L (drift = 2700 ms > 2000 ms) must clamp >= 100_000L
+        bridge.processHrData(
+            PolarHrData(listOf(PolarHrData.PolarHrSample(75, 75, 0, listOf(800, 800, 800, 800), listOf(800, 800, 800, 800), true, true, true))),
+            packetArrivalMs = 100_500L
+        )
+        // Multi-second 5196 ms RR arriving on time (0 drift) + sub-minimum 180 ms RR
+        bridge.processHrData(
+            PolarHrData(listOf(PolarHrData.PolarHrSample(75, 75, 0, listOf(5196), listOf(5196), true, true, true))),
+            packetArrivalMs = 105_696L
+        )
+        bridge.processHrData(
+            PolarHrData(listOf(PolarHrData.PolarHrSample(75, 75, 0, listOf(180), listOf(180), true, true, true))),
+            packetArrivalMs = 105_876L
+        )
+
+        var prevTs = 0L
+        for (event in events) {
+            assertTrue("Timestamp ${event.beatTimestampMs} must be >= $prevTs", event.beatTimestampMs >= prevTs)
+            prevTs = event.beatTimestampMs
+        }
+        val multiSecEvent = events[events.size - 2]
+        assertEquals(RrBeatEvent.ARTIFACT_GAP, multiSecEvent.artifactFlag)
+        assertTrue("Expected gapBeats > 0 for 5196ms RR", multiSecEvent.gapBeats > 0)
+        assertEquals(RrBeatEvent.ARTIFACT_GAP, events.last().artifactFlag)
+
+        bridge.shutDown()
+    }
 }

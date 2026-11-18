@@ -84,6 +84,7 @@ import com.atrainingtracker.trainingtracker.database.hrv.HrvPostWorkoutRecompute
 import com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrInterval;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils;
 import com.atrainingtracker.banalservice.devices.radar.RadarLightController;
 import com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineController;
@@ -276,16 +277,21 @@ public class TrackerService extends Service {
     private volatile Future<?> mPendingRrFlushFuture = null;
     private final ConcurrentLinkedQueue<WorkoutRrInterval> mLiveRrQueue = new ConcurrentLinkedQueue<>();
     private final AtomicInteger mRrBeatIndexCounter = new AtomicInteger(0);
+    private final AtomicLong mLastRrBeatTimestampMs = new AtomicLong(0L);
     private final RrBeatListener mRrBeatListener = new RrBeatListener() {
         @Override
         public void onRrBeat(@NonNull RrBeatEvent event) {
             if (mAutoPauseManager.getCurrentState() == AutoPauseState.TRACKING && mWorkoutID > 0) {
                 int idx = mRrBeatIndexCounter.getAndIncrement();
+                long monotonicTimestampMs = mLastRrBeatTimestampMs.accumulateAndGet(
+                        event.getBeatTimestampMs(),
+                        Math::max
+                );
                 mLiveRrQueue.add(new WorkoutRrInterval(
                         null,
                         mWorkoutID,
                         idx,
-                        event.getBeatTimestampMs(),
+                        monotonicTimestampMs,
                         (float) event.getRrMs(),
                         event.getArtifactFlag(),
                         event.getGapBeats()
@@ -1237,6 +1243,7 @@ public class TrackerService extends Service {
                 mDiagnosticCollector.clear();
                 mLiveRrQueue.clear();
                 mRrBeatIndexCounter.set(0);
+                mLastRrBeatTimestampMs.set(0L);
                 if (TrainingApplication.isAutoPaused()) {
                     mAutoPauseManager.setState(AutoPauseState.AUTO_PAUSED);
                     mAutoPauseManager.resetDebounceCounter();

@@ -46,6 +46,7 @@ import com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEBikeCadenceDev
 import com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEBikePowerDevice;
 import com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEBikeSpeedAndCadenceDevice;
 import com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEBikeSpeedDevice;
+import com.atrainingtracker.banalservice.devices.RrBeatEvent;
 import com.atrainingtracker.banalservice.devices.RrBeatListener;
 import com.atrainingtracker.banalservice.devices.RrBeatSource;
 import com.atrainingtracker.banalservice.devices.hrv.HRVMetricsDevice;
@@ -77,9 +78,11 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.LongSupplier;
 
 import static com.atrainingtracker.banalservice.BSportType.UNKNOWN;
 
+import androidx.annotation.VisibleForTesting;
 import androidx.core.content.ContextCompat;
 
 import javax.annotation.Nonnull;
@@ -145,6 +148,7 @@ public class DeviceManager {
                         if (tries == null || tries <= 1) {  // no longer try to search for this device
                             if (DEBUG)
                                 Log.i(TAG, "max number of tries <= 1 -> give up searching for this device");
+                            detachIfRrBeatSource(current);
                             current.shutDown();                // so we shut it down
                             mMyRemoteDevices.remove(deviceID);                              // and remove it
                         } else {  // continue searching
@@ -454,24 +458,32 @@ public class DeviceManager {
         return mCyclingPowerMetricsDevice;
     }
 
+    private static final long RR_SOURCE_STALE_TIMEOUT_MS = 5000L;
+    private static final int RR_PRIORITY_ECG = 0;
+    private static final int RR_PRIORITY_ANT = 1;
+    private static final int RR_PRIORITY_PPG = 2;
+    private static final int RR_PRIORITY_OTHER = 3;
+
+    private final List<RrBeatListener> mRrBeatListeners = new CopyOnWriteArrayList<>();
+    private final Object mRrArbitrationLock = new Object();
+    private final Map<RrBeatSource, RrBeatListener> mRrSourceRelayListeners = new ConcurrentHashMap<>();
+    private RrBeatSource mActivePrimaryRrSource = null;
+    private long mLastPrimaryRrBeatWallMs = 0L;
+    private long mLastForwardedRrTimestampMs = 0L;
+    private LongSupplier mRrClockMs = System::currentTimeMillis;
+
     public void createHrvMetricsDevice() {
         mHrvMetricsDevice = new HRVMetricsDevice(mContext, mSensorManager);
         for (MyRemoteDevice remote : mMyRemoteDevices.values()) {
-            if (remote instanceof RrBeatSource) {
-                ((RrBeatSource) remote).addRrBeatListener(mHrvMetricsDevice);
-            }
+            attachIfRrBeatSource(remote);
         }
     }
-
-    private final List<RrBeatListener> mRrBeatListeners = new CopyOnWriteArrayList<>();
 
     public void addRrBeatListener(RrBeatListener listener) {
         if (listener != null && !mRrBeatListeners.contains(listener)) {
             mRrBeatListeners.add(listener);
             for (MyRemoteDevice remote : mMyRemoteDevices.values()) {
-                if (remote instanceof RrBeatSource) {
-                    ((RrBeatSource) remote).addRrBeatListener(listener);
-                }
+                attachIfRrBeatSource(remote);
             }
         }
     }
@@ -479,11 +491,124 @@ public class DeviceManager {
     public void removeRrBeatListener(RrBeatListener listener) {
         if (listener != null) {
             mRrBeatListeners.remove(listener);
-            for (MyRemoteDevice remote : mMyRemoteDevices.values()) {
-                if (remote instanceof RrBeatSource) {
-                    ((RrBeatSource) remote).removeRrBeatListener(listener);
+        }
+    }
+
+    private int getRrSourcePriority(@Nonnull RrBeatSource source) {
+        if (source instanceof BTLEHeartRateDevice) {
+            return RR_PRIORITY_ECG;
+        }
+        if (source instanceof PolarOnlineStreamingBridge) {
+            return ((PolarOnlineStreamingBridge) source).isVeritySense()
+                    ? RR_PRIORITY_PPG
+                    : RR_PRIORITY_ECG;
+        }
+        if (source instanceof ANTHeartRateDevice) {
+            return RR_PRIORITY_ANT;
+        }
+        return RR_PRIORITY_OTHER;
+    }
+
+    private void attachIfRrBeatSource(@Nullable Object candidate) {
+        if (!(candidate instanceof RrBeatSource)) {
+            return;
+        }
+        RrBeatSource source = (RrBeatSource) candidate;
+        RrBeatListener relay = mRrSourceRelayListeners.computeIfAbsent(source, s -> {
+            RrBeatListener created = event -> onArbitratedRrBeat(s, event);
+            s.addRrBeatListener(created);
+            return created;
+        });
+        if (relay == null) {
+            return;
+        }
+    }
+
+    private void detachIfRrBeatSource(@Nullable Object candidate) {
+        if (!(candidate instanceof RrBeatSource)) {
+            return;
+        }
+        RrBeatSource source = (RrBeatSource) candidate;
+        RrBeatListener relay = mRrSourceRelayListeners.remove(source);
+        if (relay != null) {
+            source.removeRrBeatListener(relay);
+        }
+        synchronized (mRrArbitrationLock) {
+            if (mActivePrimaryRrSource == source) {
+                mActivePrimaryRrSource = null;
+                mLastPrimaryRrBeatWallMs = 0L;
+            }
+        }
+    }
+
+    private void onArbitratedRrBeat(@Nonnull RrBeatSource source, @Nonnull RrBeatEvent event) {
+        RrBeatEvent eventToForward = null;
+        synchronized (mRrArbitrationLock) {
+            if (!mRrSourceRelayListeners.containsKey(source)) {
+                return;
+            }
+            long nowMs = mRrClockMs.getAsLong();
+            boolean noPrimary = mActivePrimaryRrSource == null
+                    || !mRrSourceRelayListeners.containsKey(mActivePrimaryRrSource);
+            boolean primaryStale = !noPrimary
+                    && (nowMs - mLastPrimaryRrBeatWallMs) > RR_SOURCE_STALE_TIMEOUT_MS;
+            boolean higherPriority = !noPrimary
+                    && getRrSourcePriority(source) < getRrSourcePriority(mActivePrimaryRrSource);
+
+            if (source == mActivePrimaryRrSource || noPrimary || primaryStale || higherPriority) {
+                mActivePrimaryRrSource = source;
+                mLastPrimaryRrBeatWallMs = nowMs;
+                long monotonicTs = Math.max(event.getBeatTimestampMs(), mLastForwardedRrTimestampMs);
+                mLastForwardedRrTimestampMs = monotonicTs;
+                eventToForward = (monotonicTs == event.getBeatTimestampMs())
+                        ? event
+                        : event.copy(
+                                monotonicTs,
+                                event.getRrMs(),
+                                event.getRawCounter(),
+                                event.getProtocol(),
+                                event.getGapBeats(),
+                                event.getArtifactFlag()
+                        );
+            }
+        }
+        if (eventToForward != null) {
+            HRVMetricsDevice hrvDevice = mHrvMetricsDevice;
+            if (hrvDevice != null) {
+                hrvDevice.onRrBeat(eventToForward);
+            }
+            for (RrBeatListener listener : mRrBeatListeners) {
+                try {
+                    listener.onRrBeat(eventToForward);
+                } catch (Exception e) {
+                    Log.e(TAG, "Error forwarding arbitrated RrBeatEvent", e);
                 }
             }
+        }
+    }
+
+    @VisibleForTesting
+    public void registerRrBeatSourceForTesting(@Nonnull RrBeatSource source) {
+        attachIfRrBeatSource(source);
+    }
+
+    @VisibleForTesting
+    public void unregisterRrBeatSourceForTesting(@Nonnull RrBeatSource source) {
+        detachIfRrBeatSource(source);
+    }
+
+    @VisibleForTesting
+    public void setRrClockForTesting(@Nonnull LongSupplier clockMs) {
+        synchronized (mRrArbitrationLock) {
+            mRrClockMs = clockMs;
+        }
+    }
+
+    @VisibleForTesting
+    @Nullable
+    public RrBeatSource getActivePrimaryRrSourceForTesting() {
+        synchronized (mRrArbitrationLock) {
+            return mActivePrimaryRrSource;
         }
     }
 
@@ -591,6 +716,14 @@ public class DeviceManager {
         }
 
         cMyRemoteDeviceCurrentlySearchingFor = null;
+        for (RrBeatSource source : new ArrayList<>(mRrSourceRelayListeners.keySet())) {
+            detachIfRrBeatSource(source);
+        }
+        synchronized (mRrArbitrationLock) {
+            mActivePrimaryRrSource = null;
+            mLastPrimaryRrBeatWallMs = 0L;
+            mLastForwardedRrTimestampMs = 0L;
+        }
         mMyRemoteDevices.clear();
         mSearchQueue.clear();
         mMyRemoteDeviceTries.clear();
@@ -1137,6 +1270,7 @@ public class DeviceManager {
 
         MyRemoteDevice myRemoteDevice = mMyRemoteDevices.remove(deviceId);
         if (myRemoteDevice != null) {
+            detachIfRrBeatSource(myRemoteDevice);
             mSearchQueue.remove(myRemoteDevice);
             if (cMyRemoteDeviceCurrentlySearchingFor == myRemoteDevice) {
                 searchForNextRemoteDevice();
@@ -1199,19 +1333,12 @@ public class DeviceManager {
 
         MyRemoteDevice deviceToRegister = myANTDevice != null ? myANTDevice : myRemoteDevice;
         if (deviceToRegister != null) {
-            if (deviceToRegister instanceof RrBeatSource) {
-                if (mHrvMetricsDevice != null) {
-                    ((RrBeatSource) deviceToRegister).addRrBeatListener(mHrvMetricsDevice);
-                }
-                for (RrBeatListener listener : mRrBeatListeners) {
-                    ((RrBeatSource) deviceToRegister).addRrBeatListener(listener);
-                }
-            }
             MyRemoteDevice existing = mMyRemoteDevices.putIfAbsent(deviceID, deviceToRegister);
             if (existing != null) {
                 deviceToRegister.shutDown();
                 return null;
             }
+            attachIfRrBeatSource(deviceToRegister);
             mSearchQueue.addFirst(deviceToRegister);
         }
 
@@ -1276,19 +1403,12 @@ public class DeviceManager {
 
         MyRemoteDevice deviceToRegister = polarBridgeDevice != null ? polarBridgeDevice : myBTLEDevice;
         if (deviceToRegister != null) {
-            if (deviceToRegister instanceof RrBeatSource) {
-                if (mHrvMetricsDevice != null) {
-                    ((RrBeatSource) deviceToRegister).addRrBeatListener(mHrvMetricsDevice);
-                }
-                for (RrBeatListener listener : mRrBeatListeners) {
-                    ((RrBeatSource) deviceToRegister).addRrBeatListener(listener);
-                }
-            }
             MyRemoteDevice existing = mMyRemoteDevices.putIfAbsent(deviceID, deviceToRegister);
             if (existing != null) {
                 deviceToRegister.shutDown();
                 return null;
             }
+            attachIfRrBeatSource(deviceToRegister);
             mSearchQueue.addFirst(deviceToRegister);
         }
 

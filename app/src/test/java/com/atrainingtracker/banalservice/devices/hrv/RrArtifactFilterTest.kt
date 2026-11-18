@@ -191,4 +191,32 @@ class RrArtifactFilterTest {
         assertTrue(result.beats[0].isArtifact)
         assertTrue(result.beats[1].isArtifact)
     }
+
+    @Test
+    fun testUnflaggedMultiSecondAndSubMinimumRr_defensivelyFlaggedAndExpandedAsArtifactGap() {
+        val baseTs = 1_000_000L
+        val beats = MutableList(30) { i ->
+            val rr = when (i) {
+                12 -> 5196.29 // unflagged multi-second RR (> 2500 ms)
+                20 -> 180.0   // unflagged sub-minimum RR (< 250 ms)
+                else -> 800.0
+            }
+            RrBeatEvent(
+                beatTimestampMs = baseTs + i * 800L,
+                rrMs = rr,
+                rawCounter = i,
+                protocol = ProtocolType.BLE,
+                gapBeats = 0,
+                artifactFlag = RrBeatEvent.ARTIFACT_NORMAL
+            )
+        }
+
+        val bidirectional = filter.filterBidirectionalBeats(beats)
+        val gapBeatsBi = bidirectional.beats.filter { it.artifactFlag == RrBeatEvent.ARTIFACT_GAP }
+        assertTrue("Multi-second and <250ms RRs must be flagged ARTIFACT_GAP", gapBeatsBi.size >= 7)
+
+        val causal = filter.filterLiveCausal(beats)
+        val gapBeatsCausal = causal.beats.filter { it.artifactFlag == RrBeatEvent.ARTIFACT_GAP }
+        assertTrue("Live causal filter must also flag unflagged extreme RRs", gapBeatsCausal.size >= 7)
+    }
 }

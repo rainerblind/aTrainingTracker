@@ -38,6 +38,7 @@ import com.atrainingtracker.banalservice.devices.MyRemoteDevice
 import com.atrainingtracker.banalservice.devices.ProtocolType
 import com.atrainingtracker.banalservice.devices.RrBeatEvent
 import com.atrainingtracker.banalservice.devices.RrBeatListener
+import com.atrainingtracker.banalservice.devices.RrBeatNormalization
 import com.atrainingtracker.banalservice.devices.RrBeatSource
 import com.atrainingtracker.banalservice.sensor.MyIntegerAccumulatorSensor
 import com.atrainingtracker.banalservice.sensor.MySensor
@@ -66,7 +67,6 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicBoolean
-import kotlin.math.abs
 
 /**
  * Persistent single-GATT bridge for Polar H10 (`ACC`) and Verity Sense (`ACC` + `GYRO`) live
@@ -101,7 +101,6 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
 
     companion object {
         private const val TAG = "PolarOnlineImuBridge"
-        private const val DRIFT_THRESHOLD_MS = 2000.0
         private const val NS_PER_MS = 1_000_000L
         private const val H10_DEFAULT_ACC_HZ = 100
         private const val H10_FALLBACK_ACC_HZ = 50
@@ -162,6 +161,7 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
     var highRateRunningDynamicsActive: Boolean = false
 
     private var lastBeatTimestampMs = 0.0
+    private var lastNormalRrMs = RrBeatNormalization.DEFAULT_REFERENCE_RR_MS
     private var packetCounter = 0
 
     private val cadenceEstimatorLock = Any()
@@ -506,67 +506,22 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
             addAndRegisterSensor(rrSensor)
         }
         packetCounter++
-        val count = rrListMs.size
-        if (count == 0) return
+        if (rrListMs.isEmpty()) return
 
-        val totalDurationMs = rrListMs.sumOf { it.toDouble() }
-        val isInitialOrDrifted = lastBeatTimestampMs == 0.0 ||
-            abs(packetArrivalMs - (lastBeatTimestampMs + totalDurationMs)) > DRIFT_THRESHOLD_MS
-
-        if (isInitialOrDrifted) {
-            val gapBeats = computeGapBeats(totalDurationMs, count, packetArrivalMs)
-            val timestamps = DoubleArray(count)
-            timestamps[count - 1] = packetArrivalMs.toDouble()
-            for (i in count - 2 downTo 0) {
-                timestamps[i] = timestamps[i + 1] - rrListMs[i + 1].toDouble()
-            }
-            for (i in 0 until count) {
-                val rrMs = rrListMs[i].toDouble()
-                mRrIntervalSensor?.newValue(rrListMs[i])
-                val beatGap = if (i == 0 && lastBeatTimestampMs != 0.0) gapBeats else 0
-                val artifact = if (beatGap > 0) RrBeatEvent.ARTIFACT_GAP else RrBeatEvent.ARTIFACT_NORMAL
-                dispatchRrBeat(
-                    RrBeatEvent(
-                        Math.round(timestamps[i]),
-                        rrMs,
-                        packetCounter,
-                        ProtocolType.BLE,
-                        beatGap,
-                        artifact
-                    )
-                )
-            }
-            lastBeatTimestampMs = timestamps[count - 1]
-        } else {
-            var currentTs = lastBeatTimestampMs
-            for (rr in rrListMs) {
-                val rrMs = rr.toDouble()
-                currentTs += rrMs
-                mRrIntervalSensor?.newValue(rr)
-                dispatchRrBeat(
-                    RrBeatEvent(
-                        Math.round(currentTs),
-                        rrMs,
-                        packetCounter,
-                        ProtocolType.BLE,
-                        0,
-                        RrBeatEvent.ARTIFACT_NORMAL
-                    )
-                )
-            }
-            lastBeatTimestampMs = currentTs
+        val bundle = RrBeatNormalization.reconstructBundle(
+            rrListMs = rrListMs.map { it.toDouble() },
+            packetArrivalMs = packetArrivalMs,
+            previousBeatTimestampMs = lastBeatTimestampMs,
+            previousNormalRrMs = lastNormalRrMs,
+            packetCounter = packetCounter,
+            protocol = ProtocolType.BLE
+        )
+        for (event in bundle.events) {
+            mRrIntervalSensor?.newValue(Math.round(event.rrMs).toInt())
+            dispatchRrBeat(event)
         }
-    }
-
-    private fun computeGapBeats(totalDurationMs: Double, count: Int, packetArrivalMs: Long): Int {
-        if (lastBeatTimestampMs == 0.0) return 0
-        val elapsed = packetArrivalMs - lastBeatTimestampMs
-        val avgRr = totalDurationMs / count
-        return if (avgRr > 0.0 && elapsed > avgRr) {
-            maxOf(0L, Math.round(elapsed / avgRr) - count).toInt()
-        } else {
-            0
-        }
+        lastBeatTimestampMs = bundle.lastBeatTimestampMs
+        lastNormalRrMs = bundle.lastNormalRrMs
     }
 
     /**
@@ -742,6 +697,7 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
         }
         super.unregisterSensors()
         lastBeatTimestampMs = 0.0
+        lastNormalRrMs = RrBeatNormalization.DEFAULT_REFERENCE_RR_MS
         packetCounter = 0
     }
 

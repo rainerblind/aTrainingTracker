@@ -1,14 +1,14 @@
 # Living Requirements: Tracking & Live Sensor Cockpit
 
 **Document ID**: `DOC-REQ-TRK`  
-**Version**: 1.0.10  
+**Version**: 1.0.11  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Requirements**: 166
+**Total Requirements**: 167
 
 ---
 
@@ -6692,6 +6692,46 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 **Invariants**: Live `UnicycleOdometryEkf.MIN_DOPPLER_SPEED_MPS = 3.0` & `ATT-8576` stationary/ZUPT gating unchanged; `ExtendedRtsAltitudeSlopeSmoother` `STANDSTILL_SPEED_THRESHOLD_MPS = 0.3` preserved; `REQ-FIL-017.3` raw device-column immutability & `KEY_POST_WORKOUT_ERTS_SMOOTHING = false` preserved; zero DB schema version bumps; `REQ-PRO-049.1` offline tests with zero `src/main` reads; `N/A - no UI strings`.
 
 
+### REQ-TRK-085: HRV/RR Ingestion Monotonicity, Physiological Gap Flagging, Pre-Filter Timestamp Sorting & DFA α1 Validity Gate [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-TRK-085`
+- **System Requirement(s)**: `SYSREQ-TRK-001`, `SYSREQ-TRK-006`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `DeviceManager.java`, `TrackerService.java`, `BTLEHeartRateDevice.java`, `PolarOnlineStreamingBridge.kt`, `RrBeatTimestampReconstructor.kt`, `RrArtifactFilter.kt`, `HrvPostWorkoutRecomputer.kt`, `DfaCalculator.kt`, `HRVMetricsDevice.kt`
+- **Rationale**: Dual simultaneous HRMs (`BTLEHeartRateDevice` + `PolarOnlineStreamingBridge`) multiplexed into one `TrackerService.mRrBeatListener`/`mRrBeatIndexCounter`, unclamped drift re-anchoring produced negative `beat_timestamp_ms` jumps (`-430 ms`), drift-only gap detection left multi-second RR intervals (`5,196–6,378 ms`) unflagged (`artifact_flag = 0`), `HrvPostWorkoutRecomputer` filtered before sorting by `beatTimestampMs`, and `DfaCalculator` permitted non-physical negative slopes (`HRV_DFA_A1 = -1.0684`). Enforcing single-primary-source RR routing, monotonic clamping, physiological RR bounds, pre-filter chronological sorting, and positive finite DFA $\alpha_1$ gating eliminates corrupted RR persistence and negative $\alpha_1$ artifacts (`ATT-8706`, refining `REQ-CON-027.3`, `REQ-TRK-060.2`/`.4`, and `REQ-PER-034.2`/`.3`).
+- **Description**:
+  1. *Single-Primary-Source RR Routing & Monotonic Timestamp Enforcement (`REQ-TRK-085.1`)*:
+     - `DeviceManager` / `TrackerService` SHALL route live RR beats to `TrackerService.mRrBeatListener` and `HRVMetricsDevice` from at most one active primary `RrBeatSource` at a time (preventing concurrent dual-HRM interleaving into `mRrBeatIndexCounter` and live HRV windows).
+     - `BTLEHeartRateDevice`, `PolarOnlineStreamingBridge`, and `RrBeatTimestampReconstructor` MUST enforce monotonic non-decreasing `beatTimestampMs >= lastBeatTimestampMs` across bundle back-calculation and drift re-anchoring (`drift > 2000 ms`).
+  2. *Physiological RR Gap Flagging at Ingestion & Filter (`REQ-TRK-085.2`)*:
+     - `BTLEHeartRateDevice`, `PolarOnlineStreamingBridge`, and `RrBeatTimestampReconstructor` at ingestion—and `RrArtifactFilter` (`filterBidirectionalBeats`, `filterLiveCausal`) defensively—SHALL flag implausible physiological RR intervals (`rrMs > 2500.0` ms or `rrMs < 250.0` ms) with `RrBeatEvent.ARTIFACT_GAP` (`5`) and positive estimated `gapBeats` even when wall-clock drift is `<= 2000 ms` or `k = 1`.
+  3. *Pre-Filter Chronological Sorting in `HrvPostWorkoutRecomputer` (`REQ-TRK-085.3`)*:
+     - `HrvPostWorkoutRecomputer` SHALL sort `beats` chronologically by `beatTimestampMs` (with deterministic tie-break on `rawCounter` and monotonic normalization of any residual backward timestamps) BEFORE invoking `RrArtifactFilter.filterBidirectionalBeats()`, preventing interleaved intervals from distorting 91-beat quartile thresholds (`th1`/`th2`).
+  4. *DFA $\alpha_1$ Positive Finite Validity Gate (`REQ-TRK-085.4`)*:
+     - `DfaCalculator.computeDfaAlpha1()`, `HrvPostWorkoutRecomputer`, and `HRVMetricsDevice` SHALL reject non-finite or non-positive DFA $\alpha_1$ values (`!alpha1.isFinite() || alpha1 <= 0.0`) cleanly as `Double.NaN` / `null` (never persisting negative `HRV_DFA_A1`), while preserving `DfaCalculatorTest.testConstantSignalDoesNotCrash` and NeuroKit2 0.2.10 golden parity (`|Δα1| <= 0.02` pre-corrected / `<= 0.03` end-to-end, `|ΔrMSSD| <= 0.5 ms`; `Localization Parity: N/A - no UI strings`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new `REQ-TRK-085` refining `REQ-CON-027.3`, `REQ-TRK-060.2`/`.4`, and `REQ-PER-034.2`/`.3`. Targets `DeviceManager.java`, `TrackerService.java`, `BTLEHeartRateDevice.java`, `PolarOnlineStreamingBridge.kt`, `RrBeatTimestampReconstructor.kt`, `RrArtifactFilter.kt`, `HrvPostWorkoutRecomputer.kt`, `DfaCalculator.kt`, and `HRVMetricsDevice.kt`.
+2. *Historical Origin & Commit Trace*: `8b2196d9` (`ATT-6714`, split/merge & `overlap=True`), `50ffedc6` (`ATT-4970`, durability), `c54768d2` (`ATT-7530`), `42d1e4c9` (`ATT-8578`).
+3. *Root Reason for Existing Formulation*: `REQ-CON-027.3` & `REQ-PER-034.2` detected gaps solely via wall-clock drift (`> 2000 ms`) assuming one continuous sensor stream, and `HrvPostWorkoutRecomputer` trusted `WorkoutRrDatabaseManager` `beat_index ASC` ordering before `filterBidirectionalBeats()`.
+4. *Preservation of Core Invariants*: Preserves `HrvGoldenOracleTest` NeuroKit2 0.2.10 tolerances (`|Δα1| <= 0.02`/`0.03`, `|ΔrMSSD| <= 0.5 ms`), `DfaCalculatorTest.testConstantSignalDoesNotCrash` (`NaN || 0.0`), `RrArtifactFilterTest` split/merge semantics, `REQ-TRK-084.4` conditional `AccumulatedSensors` upsert, zero `WorkoutRr.db` schema migration, and `N/A - no UI strings`.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* two concurrent `RrBeatSource` HRMs (e.g., Polar H10 + Verity Sense) or a drift re-anchor with back-calculated bundle beats,
+• *When* RR beats arrive at `DeviceManager`/`TrackerService` or `BTLEHeartRateDevice`/`PolarOnlineStreamingBridge`/`RrBeatTimestampReconstructor`,
+• *Then* only the active primary `RrBeatSource` feeds `mRrBeatListener`/`mHrvMetricsDevice` and `beatTimestampMs` never decreases (`beatTimestampMs >= lastBeatTimestampMs`).
+• *Given* an RR interval `rrMs > 2500.0 ms` (e.g. `5196.29 ms`) or `< 250.0 ms` arriving with `drift <= 2000 ms`,
+• *When* processed by ingestion or `RrArtifactFilter`,
+• *Then* the beat is flagged `ARTIFACT_GAP` (`5`) with non-zero `gapBeats` and counted toward artifact rate.
+• *Given* persisted `WorkoutRr.db` beats containing interleaved/out-of-order `beat_timestamp_ms` and multi-second gaps,
+• *When* `HrvPostWorkoutRecomputer` evaluates the workout,
+• *Then* beats are sorted by `beatTimestampMs` before `filterBidirectionalBeats()`, `HRV_DFA_A1` never persists negative values (`<= 0.0` gated to `null`/`Double.NaN`), and NeuroKit2 golden parity remains within tolerance.
+
+**Invariants**: NeuroKit2 0.2.10 golden parity (`|ΔrMSSD| <= 0.5 ms`, `|Δα1| <= 0.02`/`0.03`); `DfaCalculatorTest.testConstantSignalDoesNotCrash`; `REQ-TRK-084.4` conditional upsert; zero `WorkoutRr.db` schema bump; `@Synchronized` thread safety; `N/A - no UI strings`.
+
+
 ---
 
 ## Change History
@@ -6709,3 +6749,4 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 | `1.0.8` | 2026-11-18 | AI Agent (`ATT-8705`) | `ATT-8705` | Added `REQ-FIL-025` [Planned] for post-workout ERTS running-pace heading anchoring, 1-Hz yaw-rate anti-aliasing, symmetric sanity bounds, and `Laps.db` synchronization. |
 | `1.0.9` | 2026-11-18 | AI Agent (`ATT-8705`) | `ATT-8705` | Promoted `REQ-FIL-025` to `[Implemented]` following Stage 4 implementation. |
 | `1.0.10` | 2026-11-18 | AI Agent (`ATT-8705`) | `ATT-8705` | Promoted `REQ-FIL-025` to `[Verified]` in Stage 5 following Tier-1 targeted unit/Robolectric regression verification. |
+| `1.0.11` | 2026-11-18 | AI Agent (`ATT-8706`) | `ATT-8706` | Added and verified `REQ-TRK-085` [Verified] (`RrBeatNormalization`, `DeviceManager`, `TrackerService`, `HrvPostWorkoutRecomputer`, `RrArtifactFilter`, `DfaCalculator`, `HRVMetricsDevice`) for single-primary RR routing, monotonic clamping, physiological gap flagging, pre-filter sort, and positive finite DFA α1 gate (502/502 tests across 88 suites). |

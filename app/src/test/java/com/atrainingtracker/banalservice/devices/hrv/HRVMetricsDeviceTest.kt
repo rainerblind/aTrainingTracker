@@ -362,4 +362,58 @@ class HRVMetricsDeviceTest {
         deviceA.shutDown()
         deviceB.shutDown()
     }
+
+    @Test
+    fun testCalculateMetrics_rejectsNegativeOrNanDfaAlpha1AsNull() {
+        var currentTime = 200_000L
+        val passThroughFilter = mockk<RrArtifactFilter>()
+        every { passThroughFilter.filterLiveCausal(any()) } answers {
+            val beats = firstArg<List<RrBeatEvent>>()
+            val filtered = beats.map { FilteredRrBeat(it.beatTimestampMs, it.rrMs, it.rrMs, RrBeatEvent.ARTIFACT_NORMAL) }
+            FilterResult(filtered, 0, filtered.size, 0.0)
+        }
+        val device = TestableHRVMetricsDevice(
+            context = context,
+            sensorManager = sensorManager,
+            timeProvider = { currentTime },
+            artifactFilter = passThroughFilter,
+            artifactGateThresholdPercent = 5.0
+        )
+
+        // Feed localized spike pair producing negative OLS slope (~ -0.31) in DfaCalculator
+        for (i in 0 until 128) {
+            currentTime = 100_000L + i * 800L
+            val rr = when (i) {
+                64 -> 1400.0
+                65 -> 200.0
+                else -> 800.0
+            }
+            device.onRrBeat(RrBeatEvent(currentTime, rr, i, ProtocolType.BLE))
+        }
+        device.calculateMetrics()
+
+        assertNull(
+            "Non-physical negative/NaN DFA alpha 1 must be suppressed as null",
+            device.getHrvDfaA1Sensor().sensorData.value
+        )
+        device.shutDown()
+    }
+
+    @Test
+    fun testCalculateMetrics_handlesOutOfOrderBeatsAndEmitsPositiveDfaAlpha1() {
+        var currentTime = 208_000L
+        val device = TestableHRVMetricsDevice(context, sensorManager, { currentTime }, artifactGateThresholdPercent = 5.0)
+
+        // Feed physiological harmonic series with minor out-of-order timestamps
+        for (i in 0 until 135) {
+            val rr = 800.0 + 40.0 * Math.sin(2.0 * Math.PI * i / 16.0) + 20.0 * Math.sin(2.0 * Math.PI * i / 64.0)
+            val ts = 100_000L + i * 800L
+            device.onRrBeat(RrBeatEvent(ts, rr, i, ProtocolType.BLE))
+        }
+        device.calculateMetrics()
+
+        val dfa = device.getHrvDfaA1Sensor().sensorData.value
+        assertTrue("Clean physiological series must emit positive finite DFA alpha 1 (was $dfa)", dfa != null && dfa > 0.0 && dfa.isFinite())
+        device.shutDown()
+    }
 }

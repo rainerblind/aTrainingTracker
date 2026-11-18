@@ -29,6 +29,7 @@ import com.atrainingtracker.banalservice.devices.DeviceType;
 import com.atrainingtracker.banalservice.devices.ProtocolType;
 import com.atrainingtracker.banalservice.devices.RrBeatEvent;
 import com.atrainingtracker.banalservice.devices.RrBeatListener;
+import com.atrainingtracker.banalservice.devices.RrBeatNormalization;
 import com.atrainingtracker.banalservice.devices.RrBeatSource;
 import com.atrainingtracker.banalservice.sensor.MySensor;
 import com.atrainingtracker.banalservice.sensor.MySensorManager;
@@ -61,6 +62,7 @@ public class ANTHeartRateDevice extends MyANTDevice implements RrBeatSource {
     private long mPrevHeartBeatCount = -1L;
     private BigDecimal mPrevHeartBeatEventTime = null;
     private double mLastBeatTimestampMs = 0.0;
+    private double mLastNormalRrMs = RrBeatNormalization.DEFAULT_REFERENCE_RR_MS;
 
     /**
      * Constructor
@@ -243,12 +245,22 @@ public class ANTHeartRateDevice extends MyANTDevice implements RrBeatSource {
             double candidateTimestampMs = mLastBeatTimestampMs + rrMs;
             double drift = Math.abs(packetArrivalUtcMs - candidateTimestampMs);
             long beatTimestampMs;
-            if (drift > 2000.0) {
-                beatTimestampMs = packetArrivalUtcMs;
-                mLastBeatTimestampMs = packetArrivalUtcMs;
+            if (drift > RrBeatNormalization.DRIFT_THRESHOLD_MS) {
+                beatTimestampMs = Math.max(packetArrivalUtcMs, Math.round(mLastBeatTimestampMs));
+                mLastBeatTimestampMs = beatTimestampMs;
             } else {
-                beatTimestampMs = Math.round(candidateTimestampMs);
-                mLastBeatTimestampMs = candidateTimestampMs;
+                double monotonicTs = Math.max(candidateTimestampMs, mLastBeatTimestampMs);
+                beatTimestampMs = Math.round(monotonicTs);
+                mLastBeatTimestampMs = monotonicTs;
+            }
+
+            int gapBeats = 0;
+            int artifactFlag = RrBeatEvent.ARTIFACT_NORMAL;
+            if (RrBeatNormalization.isOutOfPhysiologicalRange(rrMs)) {
+                artifactFlag = RrBeatEvent.ARTIFACT_GAP;
+                gapBeats = RrBeatNormalization.estimatePhysiologicalGapBeats(rrMs, mLastNormalRrMs);
+            } else {
+                mLastNormalRrMs = rrMs;
             }
 
             dispatchRrBeat(new RrBeatEvent(
@@ -256,16 +268,16 @@ public class ANTHeartRateDevice extends MyANTDevice implements RrBeatSource {
                     rrMs,
                     (int) (heartBeatCount & 0xFF),
                     ProtocolType.ANT_PLUS,
-                    0,
-                    RrBeatEvent.ARTIFACT_NORMAL
+                    gapBeats,
+                    artifactFlag
             ));
         } else {
             // deltaC >= 2: Multi-beat RF packet loss
             int gapBeats = (int) (deltaC - 1);
             double avgRrMs = (totalDeltaMs > 0 && deltaC > 0) ? (totalDeltaMs / deltaC) : 1000.0;
 
-            long beatTimestampMs = packetArrivalUtcMs;
-            mLastBeatTimestampMs = packetArrivalUtcMs;
+            long beatTimestampMs = Math.max(packetArrivalUtcMs, Math.round(mLastBeatTimestampMs));
+            mLastBeatTimestampMs = beatTimestampMs;
 
             // Do NOT emit summed delta to mRrIntervalSensor (prevents false bradycardia spike)
             dispatchRrBeat(new RrBeatEvent(
@@ -297,6 +309,7 @@ public class ANTHeartRateDevice extends MyANTDevice implements RrBeatSource {
         mPrevHeartBeatCount = -1L;
         mPrevHeartBeatEventTime = null;
         mLastBeatTimestampMs = 0.0;
+        mLastNormalRrMs = RrBeatNormalization.DEFAULT_REFERENCE_RR_MS;
     }
 
     @Override
@@ -312,6 +325,7 @@ public class ANTHeartRateDevice extends MyANTDevice implements RrBeatSource {
         mPrevHeartBeatCount = -1L;
         mPrevHeartBeatEventTime = null;
         mLastBeatTimestampMs = 0.0;
+        mLastNormalRrMs = RrBeatNormalization.DEFAULT_REFERENCE_RR_MS;
         mRrBeatListeners.clear();
     }
 }

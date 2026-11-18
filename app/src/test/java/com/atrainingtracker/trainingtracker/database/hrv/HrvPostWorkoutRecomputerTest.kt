@@ -378,4 +378,60 @@ class HrvPostWorkoutRecomputerTest {
         val accumulated = summariesDbManager.getAccumulatedSensorTypes(workoutId)
         assertEquals(setOf(SensorType.HRV_ARTIFACT_RATE), accumulated)
     }
+
+    @Test
+    fun recomputeWorkout_sortsInterleavedBeatsBeforeFilteringAndRejectsNegativeDfaAlpha1() = runBlocking {
+        // TST-TRK-085.3, TST-TRK-085.4: Pixel 10 dual-HRM interleaved timestamps + unflagged multi-second RR gaps
+        val baseFileName = "2026-11-18_hrv_interleaved"
+        val workoutId = createWorkout(baseFileName)
+        samplesDbManager.createNewTable(baseFileName, java.util.Arrays.asList(*SensorType.values()))
+
+        val startTs = 1_700_000_000_000L
+        val samplesDb = samplesDbManager.database
+        val tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
+        val sdf = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US).apply {
+            timeZone = java.util.TimeZone.getTimeZone("UTC")
+        }
+        samplesDb.beginTransaction()
+        try {
+            for (sec in 0 until 140) {
+                val cv = ContentValues().apply {
+                    put("time", sdf.format(java.util.Date(startTs + sec * 1000L)))
+                    put(SensorType.HR.name, 75.0)
+                }
+                samplesDb.insert(tableName, null, cv)
+            }
+            samplesDb.setTransactionSuccessful()
+        } finally {
+            samplesDb.endTransaction()
+        }
+
+        // Persist out-of-order / interleaved beats across two streams + unflagged multi-second gaps
+        val rrList = mutableListOf<WorkoutRrInterval>()
+        var idx = 0
+        for (sec in 0 until 135) {
+            val h10Ts = startTs + sec * 1000L
+            val verityTs = h10Ts + 300L
+            // Interleave out-of-order beat timestamps and backward jump at sec == 50
+            val tsA = if (sec == 50) h10Ts - 430L else h10Ts
+            val rrA = if (sec in listOf(20, 60, 100)) 5196.29f else 800f
+            val rrB = if (sec == 80) 6377.93f else 820f
+            rrList.add(WorkoutRrInterval(workoutId = workoutId, beatIndex = idx++, beatTimestampMs = verityTs, rrMs = rrB, artifactFlag = 0, gapBeats = 0))
+            rrList.add(WorkoutRrInterval(workoutId = workoutId, beatIndex = idx++, beatTimestampMs = tsA, rrMs = rrA, artifactFlag = 0, gapBeats = 0))
+        }
+        WorkoutRrRepository.getInstance(context).insertIntervals(rrList)
+
+        val success = HrvPostWorkoutRecomputer.recomputeWorkout(context, workoutId)
+        assertTrue("Recomputation must succeed cleanly on interleaved/gapped streams", success)
+
+        // Assert zero negative HRV_DFA_A1 rows persisted in WorkoutSamples.db
+        samplesDb.query(tableName, arrayOf(SensorType.HRV_DFA_A1.name), null, null, null, null, null).use { cursor ->
+            while (cursor.moveToNext()) {
+                if (!cursor.isNull(0)) {
+                    val dfa = cursor.getDouble(0)
+                    assertTrue("HRV_DFA_A1 must never be <= 0.0 (was $dfa)", dfa > 0.0 && dfa.isFinite())
+                }
+            }
+        }
+    }
 }

@@ -1,14 +1,14 @@
 # Living Test Specification: Tracking & Live Sensor Cockpit
 
 **Document ID**: `DOC-TST-TRK`  
-**Version**: 1.0.10  
+**Version**: 1.0.11  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Tests**: 142
+**Total Tests**: 143
 
 ---
 
@@ -3305,6 +3305,27 @@
      • Execute `./gradlew :app:testDebugUnitTest --tests "com.atrainingtracker.banalservice.odometry.*" --tests "com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFusedTest" --tests "com.atrainingtracker.trainingtracker.database.ErtsPostWorkoutRecomputerTest"` (strictly offline JUnit/Robolectric/MockK with zero `src/main` reads per `REQ-PRO-049.1`; `Localization parity: N/A - no UI strings`).
 
 
+### TST-TRK-085: **HRV/RR Ingestion Monotonicity, Physiological Gap Flagging, Pre-Filter Sorting & DFA α1 Gate Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Tickets**: `ATT-8706`
+- **Requirement(s)**: `REQ-TRK-085` (`REQ-TRK-085.1`..`REQ-TRK-085.4`), `REQ-CON-027`, `REQ-TRK-060`, `REQ-PER-034`
+- **Component**: `BTLEHeartRateDeviceTest.kt`, `PolarOnlineStreamingBridgeTest.kt`, `RrBeatTimestampReconstructionTest.kt`, `TrackerServiceRrFlushTest.kt`, `DeviceManagerRrSourceTest.kt`, `RrArtifactFilterTest.kt`, `HrvPostWorkoutRecomputerTest.kt`, `DfaCalculatorTest.kt`, `HRVMetricsDeviceTest.kt`, `HrvGoldenOracleTest.kt`
+- **Test Type**: Unit
+- **Verification Method**: Unit
+- **Procedure**:
+  1. *Single-Primary-Source RR Routing & Monotonic Clamping Test (`TST-TRK-085.1`)*:
+     • Register two concurrent `RrBeatSource` HRMs (e.g., `BTLEHeartRateDevice` + `PolarOnlineStreamingBridge`) in `DeviceManager` / `TrackerService` and assert only one active primary source feeds `TrackerService.mRrBeatListener` and `HRVMetricsDevice` without timestamp/index interleaving.
+     • Trigger drift re-anchoring (`drift > 2000 ms`) with multi-beat bundles in `BTLEHeartRateDevice`, `PolarOnlineStreamingBridge`, and `RrBeatTimestampReconstructor`; assert `beatTimestampMs >= lastBeatTimestampMs` strictly holds across all emitted beats.
+  2. *Physiological RR Gap Flagging Test (`TST-TRK-085.2`)*:
+     • Inject multi-second (`5196.29 ms`, `6377.93 ms`, `> 2500.0 ms`) and sub-minimum (`< 250.0 ms`) RR intervals arriving with `drift <= 2000 ms` (and `k = 1`) into `BTLEHeartRateDevice`, `PolarOnlineStreamingBridge`, `RrBeatTimestampReconstructor`, and `RrArtifactFilter`.
+     • Assert `artifactFlag == RrBeatEvent.ARTIFACT_GAP` (`5`) and `gapBeats > 0`, while normal physiological intervals (`250..2500 ms`) remain `ARTIFACT_NORMAL`.
+  3. *Pre-Filter Chronological Sorting Test (`TST-TRK-085.3`, `HrvPostWorkoutRecomputerTest.kt`)*:
+     • Seed `WorkoutRr.db` with out-of-order / interleaved `beat_timestamp_ms` rows and unflagged multi-second RR gaps matching the Pixel 10 `ATT-8706` failure profile.
+     • Execute `HrvPostWorkoutRecomputer.recomputeWorkout()`; assert beats are sorted by `beatTimestampMs` before `RrArtifactFilter.filterBidirectionalBeats()` runs, multi-second gaps are excluded/flagged, and persisted `HRV_DFA_A1` contains zero negative values.
+  4. *DFA $\alpha_1$ Validity Gate & NeuroKit2 Golden Parity Test (`TST-TRK-085.4`, `DfaCalculatorTest.kt`, `HRVMetricsDeviceTest.kt`, `HrvGoldenOracleTest.kt`)*:
+     • Feed synthetic inputs producing negative OLS log-log slope into `DfaCalculator.computeDfaAlpha1()`, `HrvPostWorkoutRecomputer`, and `HRVMetricsDevice`; assert `Double.NaN` / `null` (never negative values), `DfaCalculatorTest.testConstantSignalDoesNotCrash` passes, and `HrvGoldenOracleTest` maintains `|Δα1| <= 0.02` (`<= 0.03` end-to-end) and `|ΔrMSSD| <= 0.5 ms` offline (`REQ-PRO-049.1` zero `src/main` reads; `Localization parity: N/A - no UI strings`).
+
+
 ---
 
 ## Change History
@@ -3322,3 +3343,4 @@
 | `1.0.8` | 2026-11-18 | AI Agent (`ATT-8705`) | `ATT-8705` | Added `TST-FIL-025` [Proposed] for post-workout ERTS running-pace heading anchoring, yaw-rate anti-aliasing, symmetric sanity bounds, and `Laps.db` synchronization. |
 | `1.0.9` | 2026-11-18 | AI Agent (`ATT-8705`) | `ATT-8705` | Promoted `TST-FIL-025` to `[Implemented]` following Stage 4 unit & Robolectric test construction. |
 | `1.0.10` | 2026-11-18 | AI Agent (`ATT-8705`) | `ATT-8705` | Promoted `TST-FIL-025` to `[Verified]` in Stage 5 following Tier-1 targeted unit/Robolectric regression verification. |
+| `1.0.11` | 2026-11-18 | AI Agent (`ATT-8706`) | `ATT-8706` | Added and verified `TST-TRK-085` [Verified] for RR source isolation, monotonic clamping, physiological gap flagging, pre-filter sort, and DFA α1 validity gate (502/502 tests across 88 suites). |

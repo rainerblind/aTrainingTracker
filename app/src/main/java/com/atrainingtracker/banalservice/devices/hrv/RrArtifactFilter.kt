@@ -20,6 +20,7 @@ package com.atrainingtracker.banalservice.devices.hrv
 
 import com.atrainingtracker.banalservice.devices.ProtocolType
 import com.atrainingtracker.banalservice.devices.RrBeatEvent
+import com.atrainingtracker.banalservice.devices.RrBeatNormalization
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
@@ -105,7 +106,7 @@ class RrArtifactFilter(
 
         for (i in 0 until n) {
             val event = beats[i]
-            if (event.artifactFlag == RrBeatEvent.ARTIFACT_GAP) {
+            if (isGapOrOutOfPhysiologicalRange(event)) {
                 classifications[i] = RrBeatEvent.ARTIFACT_GAP
                 continue
             }
@@ -154,7 +155,7 @@ class RrArtifactFilter(
 
         for (i in 0 until evaluateUntil) {
             val event = buffer[i]
-            if (event.artifactFlag == RrBeatEvent.ARTIFACT_GAP) {
+            if (isGapOrOutOfPhysiologicalRange(event)) {
                 classifications[i] = RrBeatEvent.ARTIFACT_GAP
                 continue
             }
@@ -200,13 +201,24 @@ class RrArtifactFilter(
 
         while (i < limit) {
             val event = beats[i]
-            if (event.artifactFlag == RrBeatEvent.ARTIFACT_GAP) {
-                val med = computeLocalMedianCentered(rawRrs, i)
-                val gapCount = max(1, event.gapBeats + 1)
+            if (classifications[i] == RrBeatEvent.ARTIFACT_GAP || isGapOrOutOfPhysiologicalRange(event)) {
+                val rawMed = computeLocalMedianCentered(rawRrs, i)
+                val safeMed = if (rawMed.isFinite() &&
+                    rawMed in RrBeatNormalization.MIN_RR_MS..RrBeatNormalization.MAX_RR_MS
+                ) {
+                    rawMed
+                } else {
+                    RrBeatNormalization.DEFAULT_REFERENCE_RR_MS
+                }
+                val gapCount = when {
+                    event.gapBeats > 0 -> event.gapBeats + 1
+                    event.rrMs > RrBeatNormalization.MAX_RR_MS -> max(2, (event.rrMs / safeMed).roundToInt())
+                    else -> 1
+                }
                 val splitRaw = event.rrMs / gapCount
                 for (k in 0 until gapCount) {
-                    val beatTime = event.beatTimestampMs - ((gapCount - 1 - k) * med).toLong()
-                    filteredList.add(FilteredRrBeat(beatTime, splitRaw, med, RrBeatEvent.ARTIFACT_GAP))
+                    val beatTime = event.beatTimestampMs - ((gapCount - 1 - k) * safeMed).toLong()
+                    filteredList.add(FilteredRrBeat(beatTime, splitRaw, safeMed, RrBeatEvent.ARTIFACT_GAP))
                     artifactCount++
                 }
                 i++
@@ -269,6 +281,11 @@ class RrArtifactFilter(
         val total = filteredList.size
         val rate = if (total > 0) (artifactCount.toDouble() / total.toDouble()) * 100.0 else 0.0
         return FilterResult(filteredList, artifactCount, total, rate)
+    }
+
+    private fun isGapOrOutOfPhysiologicalRange(event: RrBeatEvent): Boolean {
+        return event.artifactFlag == RrBeatEvent.ARTIFACT_GAP ||
+            RrBeatNormalization.isOutOfPhysiologicalRange(event.rrMs)
     }
 
     private fun classifyBeat(

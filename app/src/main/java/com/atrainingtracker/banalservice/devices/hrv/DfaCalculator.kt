@@ -104,7 +104,9 @@ object DfaCalculator {
         }
 
         // 3. Ordinary least-squares regression of log10(F(n)) vs log10(n)
-        return computeLinearSlope(logN, logF)
+        // Reject non-finite or non-positive physiological slopes cleanly (REQ-TRK-085.4).
+        val slope = computeLinearSlope(logN, logF)
+        return if (slope.isFinite() && slope > 0.0) slope else Double.NaN
     }
 
     private fun computeSegmentSquaredResiduals(
