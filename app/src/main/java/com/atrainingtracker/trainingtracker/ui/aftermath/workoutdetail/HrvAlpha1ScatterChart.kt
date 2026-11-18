@@ -381,7 +381,7 @@ fun HrvAlpha1ScatterChart(
             for (p in scatterPoints) {
                 val px = intensityToX(p.intensity)
                 val py = alpha1ToY(p.alpha1)
-                val dotColor = HrvZoneIndicator.calculateZoneColor(p.alpha1)
+                val dotColor = HrvZoneIndicator.calculateZoneColor(p.alpha1, t1 = t1, t2 = t2)
 
                 drawCircle(
                     color = dotColor.copy(alpha = 0.65f),

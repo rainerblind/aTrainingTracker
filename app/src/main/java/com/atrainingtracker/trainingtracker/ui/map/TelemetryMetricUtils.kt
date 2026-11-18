@@ -270,7 +270,9 @@ object TelemetryMetricUtils {
         speedFormatter: SpeedFormatter,
         paceFormatter: PaceFormatter,
         hrZoneThresholds: HeartRateZoneThresholds? = null,
-        powerZoneThresholds: PowerZoneThresholds? = null
+        powerZoneThresholds: PowerZoneThresholds? = null,
+        dfaA1ThresholdT1: Float? = null,
+        dfaA1ThresholdT2: Float? = null
     ): String {
         if (value == null) return "--"
         return when (metricType) {
@@ -312,7 +314,13 @@ object TelemetryMetricUtils {
                 String.format(Locale.US, "%.1f kJ", value)
             }
             TelemetryMetricType.HRV_DFA_A1 -> {
-                String.format(Locale.US, "%.2f", value)
+                val base = String.format(Locale.US, "%.2f", value)
+                if (dfaA1ThresholdT1 != null && dfaA1ThresholdT2 != null) {
+                    val zone = TelemetryZoneMath.determineHrvDfaA1Zone(value, dfaA1ThresholdT1, dfaA1ThresholdT2)
+                    "$base • Z$zone"
+                } else {
+                    base
+                }
             }
             TelemetryMetricType.HRV_RMSSD -> {
                 String.format(Locale.US, "%.1f ms", value)
