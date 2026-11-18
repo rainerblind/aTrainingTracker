@@ -1,7 +1,7 @@
 # Living Requirements: Settings, Profiles & Localization
 
 **Document ID**: `DOC-REQ-SET`  
-**Version**: 1.0.4  
+**Version**: 1.0.5  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -2554,7 +2554,7 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 ---
 
 ### REQ-SET-112: Polar Live IMU Streaming Bridge, Session Arbitration & Cadence Priority (`ATT-8016`) [Verified]
-- **Tests**: `TST-SET-114`, `TST-CON-049`
+- **Tests**: `TST-SET-114`, `TST-CON-049`, `TST-CON-050`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit / Integration / On-Device Manual
@@ -2792,3 +2792,4 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 | `1.0.1` | 2026-11-17 | AI Agent (`ATT-8690`) | `ATT-8690` | Added `REQ-SET-118` (process-wide ref-counted `PolarBleApi` singleton, multiplexed callbacks, MAC/8-hex matching, unworn-sensor gating). |
 | `1.0.2` | 2026-11-17 | AI Agent (`ATT-8690`) | `ATT-8690` | Promoted `REQ-SET-118` to `[Implemented]` following Stage 4 construction. |
 | `1.0.3` | 2026-11-17 | AI Agent (`ATT-8690`) | `ATT-8690` | Promoted `REQ-SET-118` to `[Verified]` following Stage 5 unit verification. |
+| `1.0.5` | 2026-11-18 | AI Agent (`ATT-8714`) | `ATT-8714` | Added symmetric `TST-CON-050` link on `REQ-SET-112` (`REQ-PRO-127` parity). |

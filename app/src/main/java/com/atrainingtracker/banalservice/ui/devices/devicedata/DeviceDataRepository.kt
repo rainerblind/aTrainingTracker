@@ -430,6 +430,9 @@ class DeviceDataRepository @androidx.annotation.VisibleForTesting internal const
             if (originalState.isPaired != finalState.isPaired) {
                 sendPairingChangedBroadcast(finalState.id, finalState.isPaired)
             }
+            if (originalState.polarLiveImuEnabled != finalState.polarLiveImuEnabled) {
+                sendPolarLiveImuChangedBroadcast(finalState.id, finalState.polarLiveImuEnabled)
+            }
         }
     }
 
@@ -560,6 +563,18 @@ class DeviceDataRepository @androidx.annotation.VisibleForTesting internal const
                 .setPackage(application.getPackageName())
             application.sendBroadcast(intent)
         }
+    }
+
+    /**
+     * Notifies [DeviceManager] that [DeviceUiData.polarLiveImuEnabled] changed so an active
+     * Polar HRM session can perform an ordered live handoff (`REQ-CON-050.1`).
+     */
+    fun sendPolarLiveImuChangedBroadcast(deviceId: Long, enabled: Boolean) {
+        val intent = Intent(BANALService.POLAR_LIVE_IMU_CHANGED)
+            .putExtra(BANALService.DEVICE_ID, deviceId)
+            .putExtra(BANALService.POLAR_LIVE_IMU_ENABLED, enabled)
+            .setPackage(application.getPackageName())
+        application.sendBroadcast(intent)
     }
 
     fun getActiveDeviceIdsForWorkout(workoutId: Long): List<Long> {

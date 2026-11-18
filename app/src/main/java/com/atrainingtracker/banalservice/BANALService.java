@@ -112,6 +112,8 @@ public class BANALService
 
     public static final String PAIRING_CHANGED = "com.atrainingtracker.banalservice.PAIRING_CHANGED";
     public static final String PAIRED = "com.atrainingtracker.banalservice.PAIRED";
+    public static final String POLAR_LIVE_IMU_CHANGED = "com.atrainingtracker.banalservice.POLAR_LIVE_IMU_CHANGED";
+    public static final String POLAR_LIVE_IMU_ENABLED = "com.atrainingtracker.banalservice.POLAR_LIVE_IMU_ENABLED";
 
     public static final String SENSORS_CHANGED = "com.atrainingtracker.banalservice.SENSORS_CHANGED";
 

@@ -19,7 +19,9 @@
 package com.atrainingtracker.banalservice.devices.bluetooth_le.polar
 
 import android.app.Application
+import android.bluetooth.BluetoothGatt
 import android.content.Context
+import android.content.Intent
 import android.os.Looper
 import androidx.test.core.app.ApplicationProvider
 import com.atrainingtracker.banalservice.BANALService
@@ -45,11 +47,14 @@ import com.polar.sdk.api.model.PolarGyroData
 import com.polar.sdk.api.model.PolarHrData
 import com.polar.sdk.api.model.PolarSensorSetting
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.spyk
 import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
@@ -70,6 +75,7 @@ import org.junit.runner.RunWith
 import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Unit tests for [PolarOnlineStreamingBridge] single-GATT PMD streaming, `HR`/`RR` forwarding,
@@ -1034,5 +1040,320 @@ class PolarOnlineStreamingBridgeTest {
         assertEquals(null, PolarOfflineGattCoordinator.getAccChannelOwner("0A1B2C3D"))
 
         bridge.shutDown()
+    }
+
+    @Test
+    fun testConnectPersistentSession_whenSessionAlreadyOpenAndFeaturesReady_syncsConnectedAndStartsStreams() {
+        // TST-CON-050.2
+        val mac = "24:AC:AC:24:82:56"
+        val db = DevicesDatabaseManager.getInstance(context)
+        val devId = db.insertNewBluetoothDeviceIntoDB(DeviceType.HRM, mac, "Polar Sense CAFE1234", "Polar Electro", 95, true)
+
+        val mockApi = mockk<PolarBleApi>(relaxed = true)
+        val accSetting = PolarSensorSetting(mapOf(PolarSensorSetting.SettingType.SAMPLE_RATE to 52))
+        val gyroSetting = PolarSensorSetting(mapOf(PolarSensorSetting.SettingType.SAMPLE_RATE to 52))
+        every { mockApi.isFeatureReady("CAFE1234", PolarBleApi.PolarBleSdkFeature.FEATURE_HR) } returns true
+        every { mockApi.isFeatureReady("CAFE1234", PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_ONLINE_STREAMING) } returns true
+        every { mockApi.isFeatureReady("CAFE1234", PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_OFFLINE_RECORDING) } returns true
+        every { mockApi.startHrStreaming("CAFE1234") } returns flowOf(
+            PolarHrData(listOf(PolarHrData.PolarHrSample(132, 132, 0, listOf(455), listOf(455), true, true, true)))
+        )
+        coEvery { mockApi.requestStreamSettings("CAFE1234", PolarBleApi.PolarDeviceDataType.ACC) } returns accSetting
+        coEvery { mockApi.requestStreamSettings("CAFE1234", PolarBleApi.PolarDeviceDataType.GYRO) } returns gyroSetting
+        every { mockApi.startAccStreaming("CAFE1234", any()) } returns flowOf(
+            PolarAccelerometerData(listOf(PolarAccelerometerData.PolarAccelerometerDataSample(1000L, 1, 2, 1000)))
+        )
+        every { mockApi.startGyroStreaming("CAFE1234", any()) } returns flowOf(
+            PolarGyroData(listOf(PolarGyroData.PolarGyroDataSample(1000L, 0.1f, 0.2f, 0.3f)))
+        )
+
+        val bridge = PolarOnlineStreamingBridge(
+            context = context,
+            mySensorManager = sensorManager,
+            deviceId = devId,
+            macAddress = mac,
+            dispatcher = Dispatchers.Unconfined,
+            sdkIntProvider = { 34 },
+            apiFactory = { _, _ -> mockApi }
+        )
+
+        // Start searching without emitting deviceConnected or bleSdkFeatureReady -> SESSION_OPEN sync must recover
+        bridge.startSearching()
+
+        assertTrue("Bridge must sync isReceivingData on already-open session", bridge.isReceivingData())
+        assertTrue(PolarOnlineStreamingBridge.getActiveBridgesForTesting().contains(bridge))
+        verify(exactly = 1) { mockApi.startHrStreaming("CAFE1234") }
+        verify(exactly = 1) { mockApi.startAccStreaming("CAFE1234", any()) }
+        verify(exactly = 1) { mockApi.startGyroStreaming("CAFE1234", any()) }
+        assertEquals(132, bridge.getSensor(SensorType.HR).value)
+        assertEquals(132, sensorManager.getSensor(SensorType.HR)?.value)
+
+        bridge.shutDown()
+    }
+
+    @Test
+    fun testPolarBleSessionId_remainsConsistentAcrossMidSessionMacTo8HexFlip() {
+        // TST-CON-050.3
+        val mac = "AA:BB:CC:DD:EE:70"
+        val db = DevicesDatabaseManager.getInstance(context)
+        val devId = db.insertNewBluetoothDeviceIntoDB(DeviceType.HRM, mac, "Armband", "", 95, true)
+
+        val mockApi = mockk<PolarBleApi>(relaxed = true)
+        val accSetting = PolarSensorSetting(mapOf(PolarSensorSetting.SettingType.SAMPLE_RATE to 52))
+        every { mockApi.startHrStreaming(mac) } returns flowOf(
+            PolarHrData(listOf(PolarHrData.PolarHrSample(141, 141, 0, listOf(425), listOf(425), true, true, true)))
+        )
+        coEvery { mockApi.requestStreamSettings(mac, PolarBleApi.PolarDeviceDataType.ACC) } returns accSetting
+        every { mockApi.startAccStreaming(mac, any()) } returns flowOf(
+            PolarAccelerometerData(listOf(PolarAccelerometerData.PolarAccelerometerDataSample(1000L, 1, 2, 1000)))
+        )
+
+        val bridge = PolarOnlineStreamingBridge(
+            context = context,
+            mySensorManager = sensorManager,
+            deviceId = devId,
+            macAddress = mac,
+            dispatcher = Dispatchers.Unconfined,
+            sdkIntProvider = { 34 },
+            apiFactory = { _, _ -> mockApi }
+        )
+        bridge.startSearching()
+        assertEquals(mac, bridge.getPolarBleSessionIdForTesting())
+
+        val mux = PolarOfflineGattCoordinator.getMultiplexerCallbackForTesting()
+        mux.deviceConnected(PolarDeviceInfo("CAFE9999", mac, -55, "Armband", true))
+        // Display/canonical polarId updated to 8-hex, but active SDK session stays locked to mac
+        assertEquals("CAFE9999", bridge.polarId)
+        assertEquals(mac, bridge.getPolarBleSessionIdForTesting())
+
+        mux.bleSdkFeatureReady("CAFE9999", PolarBleApi.PolarBleSdkFeature.FEATURE_HR)
+        mux.bleSdkFeatureReady("CAFE9999", PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_ONLINE_STREAMING)
+
+        verify(exactly = 1) { mockApi.connectToDevice(mac) }
+        verify(exactly = 1) { mockApi.startHrStreaming(mac) }
+        coVerify(exactly = 1) { mockApi.requestStreamSettings(mac, PolarBleApi.PolarDeviceDataType.ACC) }
+        verify(exactly = 1) { mockApi.startAccStreaming(mac, any()) }
+        verify(exactly = 0) { mockApi.startHrStreaming("CAFE9999") }
+
+        bridge.shutDown()
+        verify(exactly = 1) { mockApi.disconnectFromDevice(mac) }
+    }
+
+    @Test
+    fun testDeviceDisconnected_cancelsStaleHrAccGyroJobs() {
+        // TST-CON-050.3
+        val mac = "AA:BB:CC:DD:EE:71"
+        val db = DevicesDatabaseManager.getInstance(context)
+        val devId = db.insertNewBluetoothDeviceIntoDB(DeviceType.HRM, mac, "Polar Sense DEAD7171", "Polar Electro", 95, true)
+
+        val mockApi = mockk<PolarBleApi>(relaxed = true)
+        val accSetting = PolarSensorSetting(mapOf(PolarSensorSetting.SettingType.SAMPLE_RATE to 52))
+        val gyroSetting = PolarSensorSetting(mapOf(PolarSensorSetting.SettingType.SAMPLE_RATE to 52))
+        every { mockApi.startHrStreaming("DEAD7171") } returns flow { awaitCancellation() }
+        coEvery { mockApi.requestStreamSettings("DEAD7171", PolarBleApi.PolarDeviceDataType.ACC) } returns accSetting
+        coEvery { mockApi.requestStreamSettings("DEAD7171", PolarBleApi.PolarDeviceDataType.GYRO) } returns gyroSetting
+        every { mockApi.startAccStreaming("DEAD7171", any()) } returns flow { awaitCancellation() }
+        every { mockApi.startGyroStreaming("DEAD7171", any()) } returns flow { awaitCancellation() }
+
+        val bridge = PolarOnlineStreamingBridge(
+            context = context,
+            mySensorManager = sensorManager,
+            deviceId = devId,
+            macAddress = mac,
+            dispatcher = Dispatchers.Unconfined,
+            sdkIntProvider = { 34 },
+            apiFactory = { _, _ -> mockApi }
+        )
+        bridge.startSearching()
+        val mux = PolarOfflineGattCoordinator.getMultiplexerCallbackForTesting()
+        val info = PolarDeviceInfo("DEAD7171", mac, -55, "Polar Sense DEAD7171", true)
+        mux.deviceConnected(info)
+        mux.bleSdkFeatureReady("DEAD7171", PolarBleApi.PolarBleSdkFeature.FEATURE_HR)
+        mux.bleSdkFeatureReady("DEAD7171", PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_ONLINE_STREAMING)
+
+        assertTrue(bridge.isHrJobActiveForTesting())
+        assertTrue(bridge.isAccJobActiveForTesting())
+        assertTrue(bridge.isGyroJobActiveForTesting())
+
+        mux.deviceDisconnected(info)
+
+        assertFalse(bridge.isReceivingData())
+        assertFalse(bridge.isHrJobActiveForTesting())
+        assertFalse(bridge.isAccJobActiveForTesting())
+        assertFalse(bridge.isGyroJobActiveForTesting())
+        assertFalse(bridge.isAccStreamingForTesting())
+        assertFalse(bridge.isGyroStreamingForTesting())
+
+        bridge.shutDown()
+    }
+
+    @Test
+    fun testConnectPersistentSession_whenSessionOpenWithDeferredFeatureReady_marksConnectedOnFirstFeature() {
+        // TST-CON-050.2 (Bounce 1/3 heal): SESSION_OPEN where isFeatureReady is initially false across all features
+        val mac = "24:AC:AC:24:82:58"
+        val db = DevicesDatabaseManager.getInstance(context)
+        val devId = db.insertNewBluetoothDeviceIntoDB(DeviceType.HRM, mac, "Polar Sense CAFE5858", "Polar Electro", 95, true)
+
+        val mockApi = mockk<PolarBleApi>(relaxed = true)
+        every { mockApi.isFeatureReady(any(), any()) } returns false
+        every { mockApi.startHrStreaming(any()) } returns flowOf(
+            PolarHrData(listOf(PolarHrData.PolarHrSample(128, 128, 0, listOf(468), listOf(468), true, true, true)))
+        )
+
+        val bridge = PolarOnlineStreamingBridge(
+            context = context,
+            mySensorManager = sensorManager,
+            deviceId = devId,
+            macAddress = mac,
+            dispatcher = Dispatchers.Unconfined,
+            sdkIntProvider = { 34 },
+            apiFactory = { _, _ -> mockApi }
+        )
+        bridge.startSearching()
+        assertFalse(bridge.isReceivingData())
+
+        // Deferred feature callback arrives without re-emitting deviceConnected
+        val mux = PolarOfflineGattCoordinator.getMultiplexerCallbackForTesting()
+        mux.bleSdkFeatureReady("CAFE5858", PolarBleApi.PolarBleSdkFeature.FEATURE_HR)
+
+        assertTrue("First bleSdkFeatureReady on SESSION_OPEN must mark bridge connected", bridge.isReceivingData())
+        assertTrue(PolarOnlineStreamingBridge.getActiveBridgesForTesting().contains(bridge))
+        assertEquals(128, bridge.getSensor(SensorType.HR).value)
+        assertFalse("Search timeout watchdog must be cancelled", bridge.getSearchTimeoutJobForTesting()?.isActive == true)
+
+        bridge.shutDown()
+    }
+
+    @Test
+    fun testShutDown_whenActiveSdkStreamIdDiffersFromCoordinatorSessionKey_cleansUpCoordinatorSession() {
+        // TST-CON-050.2 / .3 (Bounce 1/3 heal): coordinatorSessionKey preserved for releasePersistentSession
+        val mac = "24:AC:AC:24:82:59"
+        val db = DevicesDatabaseManager.getInstance(context)
+        val devId = db.insertNewBluetoothDeviceIntoDB(DeviceType.HRM, mac, "Armband", "", 95, true)
+        PolarOfflineCapabilityStore.recordDisMetadata(context, mac, modelNumber = "Verity Sense", serialNumber = "CAFE5959")
+
+        val mockApi = mockk<PolarBleApi>(relaxed = true)
+        val accSetting = PolarSensorSetting(mapOf(PolarSensorSetting.SettingType.SAMPLE_RATE to 52))
+        every { mockApi.isFeatureReady(mac, PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_ONLINE_STREAMING) } returns true
+        coEvery { mockApi.requestStreamSettings(mac, PolarBleApi.PolarDeviceDataType.ACC) } returns accSetting
+        every { mockApi.startAccStreaming(mac, any()) } returns flowOf()
+
+        val bridge = PolarOnlineStreamingBridge(
+            context = context,
+            mySensorManager = sensorManager,
+            deviceId = devId,
+            macAddress = mac,
+            dispatcher = Dispatchers.Unconfined,
+            sdkIntProvider = { 34 },
+            apiFactory = { _, _ -> mockApi }
+        )
+        bridge.startSearching()
+
+        assertEquals("CAFE5959", bridge.getCoordinatorSessionKeyForTesting())
+        assertEquals(mac, bridge.getPolarBleSessionIdForTesting())
+        assertSame(mockApi, PolarOfflineGattCoordinator.getActiveSession("CAFE5959"))
+
+        bridge.shutDown()
+
+        assertNull(PolarOfflineGattCoordinator.getActiveSession("CAFE5959"))
+        assertNull(PolarOfflineGattCoordinator.getActiveSession(mac))
+        assertEquals(0, PolarOfflineGattCoordinator.getActiveLeaseCountForTesting())
+    }
+
+    @Test
+    fun testRealBtleHeartRateShutDownWithCallback_runsSubclassCleanupAndGattCloseBeforeCallback() {
+        // TST-CON-050.1 (Bounce 1/3 heal): Real MyBTLEDevice.shutDown(Runnable) -> BTLEHeartRateDevice.shutDown()
+        val mac = "AA:BB:CC:DD:EE:80"
+        val db = DevicesDatabaseManager.getInstance(context)
+        val devId = db.insertNewBluetoothDeviceIntoDB(DeviceType.HRM, mac, "Polar H10 8080ABCD", "Polar Electro", 95, true)
+
+        val btleDevice = BTLEHeartRateDevice(context, sensorManager, devId, mac)
+        val rrReceived = mutableListOf<RrBeatEvent>()
+        val rrListener = RrBeatListener { rrReceived.add(it) }
+        btleDevice.addRrBeatListener(rrListener)
+
+        // Emit one RR beat so mRrIntervalSensor and RR state exist, then attach mocked BluetoothGatt
+        btleDevice.parseHeartRateMeasurement(byteArrayOf(0x10, 72, 0x00, 0x04), 1000L)
+        assertEquals(1, rrReceived.size)
+
+        val events = mutableListOf<String>()
+        Shadows.shadowOf(context.applicationContext as Application).grantPermissions(android.Manifest.permission.BLUETOOTH_CONNECT)
+        val mockGatt = mockk<BluetoothGatt>(relaxed = true)
+        every { mockGatt.disconnect() } answers { events.add("gatt_disconnect") }
+        every { mockGatt.close() } answers { events.add("gatt_close") }
+        btleDevice.setBluetoothGattForTesting(mockGatt)
+
+        val callbackRan = AtomicBoolean(false)
+        btleDevice.shutDown {
+            events.add("callback")
+            callbackRan.set(true)
+        }
+
+        // Subclass BTLEHeartRateDevice.shutDown() cleared RR sensor & listeners immediately, while callback awaits mHandler GATT close
+        assertNull("RR sensor must be cleared on shutDown", btleDevice.rrIntervalSensor)
+        btleDevice.parseHeartRateMeasurement(byteArrayOf(0x10, 74, 0x00, 0x04), 2000L)
+        assertEquals("BTLEHeartRateDevice.shutDown() must clear mRrBeatListeners", 1, rrReceived.size)
+        assertFalse("Completion callback must wait for mHandler GATT close", callbackRan.get())
+
+        Shadows.shadowOf(Looper.getMainLooper()).idle()
+        assertTrue(callbackRan.get())
+        assertEquals(listOf("gatt_disconnect", "gatt_close", "callback"), events)
+    }
+
+    @Test
+    fun testReverseHandoff_polarBridgeToBtleHeartRateDevice_preservesProxySensorAndRrArbitration() = kotlinx.coroutines.runBlocking {
+        // TST-CON-050.1 / .4 (Bounce 1/3 heal): Real DeviceManager reverse handoff Bridge -> BTLEHeartRateDevice
+        val mac = "AA:BB:CC:DD:EE:81"
+        val db = DevicesDatabaseManager.getInstance(context)
+        val devId = db.insertNewBluetoothDeviceIntoDB(DeviceType.HRM, mac, "Polar H10 8181ABCD", "Polar Electro", 95, true)
+        db.setPolarLiveImuEnabled(devId, true)
+
+        val repo = DeviceDataRepository(context.applicationContext as Application, Dispatchers.Unconfined, Dispatchers.Unconfined)
+        DeviceDataRepository.resetForTesting(repo)
+
+        val mockApi = mockk<PolarBleApi>(relaxed = true)
+        PolarOfflineGattCoordinator.apiFactoryForTesting = { _, _ -> mockApi }
+
+        val service = Robolectric.setupService(BANALService::class.java)
+        val deviceManager = DeviceManager(service, sensorManager, repo)
+        val forwardedRr = mutableListOf<RrBeatEvent>()
+        deviceManager.addRrBeatListener { forwardedRr.add(it) }
+
+        deviceManager.createPairedRemoteDevices(com.atrainingtracker.banalservice.Protocol.BLUETOOTH_LE)
+        val bridge = deviceManager.remoteDeviceList.single { it.deviceId == devId } as PolarOnlineStreamingBridge
+        bridge.startSearching()
+        PolarOfflineGattCoordinator.getMultiplexerCallbackForTesting().deviceConnected(
+            PolarDeviceInfo("8181ABCD", mac, -55, "Polar H10 8181ABCD", true)
+        )
+
+        // Deliver HR + RR via bridge -> ProxySensor and DeviceManager RR arbitration receive them
+        bridge.processHrData(
+            PolarHrData(listOf(PolarHrData.PolarHrSample(135, 135, 0, listOf(444), listOf(444), true, true, true))),
+            packetArrivalMs = 1000L
+        )
+        assertEquals(135, sensorManager.getSensor(SensorType.HR)?.value)
+        assertEquals(1, forwardedRr.size)
+
+        // Toggle polarLiveImuEnabled = false via repo.updateDevice() and dispatch POLAR_LIVE_IMU_CHANGED
+        repo.updateDevice(repo.getDeviceSnapshotById(devId)!!.copy(polarLiveImuEnabled = false))
+        val toggleIntent = Intent(BANALService.POLAR_LIVE_IMU_CHANGED)
+            .putExtra(BANALService.DEVICE_ID, devId)
+            .putExtra(BANALService.POLAR_LIVE_IMU_ENABLED, false)
+        deviceManager.polarLiveImuChangedReceiverForTesting.onReceive(context, toggleIntent)
+        Shadows.shadowOf(Looper.getMainLooper()).idle()
+
+        val replacement = deviceManager.remoteDeviceList.single { it.deviceId == devId }
+        assertTrue("Reverse toggle must replace bridge with BTLEHeartRateDevice", replacement is BTLEHeartRateDevice)
+        val btleDevice = replacement as BTLEHeartRateDevice
+        // Simulate GATT service connection registering replacement HR sensor into MySensorManager
+        sensorManager.registerSensor(btleDevice.heartRateSensor)
+
+        // Replacement BTLEHeartRateDevice continues delivering HR and RR through retained ProxySensor & DeviceManager
+        btleDevice.parseHeartRateMeasurement(byteArrayOf(0x10, 142.toByte(), 0x00, 0x04), 2000L)
+        assertEquals(142, sensorManager.getSensor(SensorType.HR)?.value)
+        assertEquals(2, forwardedRr.size)
+        assertSame(btleDevice, deviceManager.activePrimaryRrSourceForTesting)
+
+        deviceManager.shutDown()
     }
 }

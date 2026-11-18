@@ -1,7 +1,7 @@
 # Detailed Design: MyBTLEDevice (ASPICE SWE.3)
 
 **Document ID**: `DOC-ARC-DD-BTLE`  
-**Version**: 1.0.0  
+**Version**: 1.0.2  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -68,7 +68,7 @@ stateDiagram-v2
 | `onCharacteristicChanged` / `onCharacteristicRead` | `!mIsShutDown` | Clone bytes via `obtainSnapshotCharacteristic` (`REQ-CON-020.1`); dispatch `measurementCharacteristicUpdate` on `mHandler` when `mState == CONNECTED_WITH_SERVICE && gatt == mBluetoothGatt` | `CONNECTED_WITH_SERVICE` |
 | `mGattCallback.onConnectionStateChange` | `newState == STATE_DISCONNECTED` or `(newState == STATE_CONNECTED && status != GATT_SUCCESS)` | `mState = DISCONNECTED`; `unregisterSensors()`; `disconnectFromGatt()`; if `!mIsShutDown` schedule `mReconnectRunnable` with exponential backoff (`1s..16s`) | `DISCONNECTED` |
 | `pauseGattOperations()` / `resumeGattOperations()` | External GATT arbitration (`PolarOfflineGattCoordinator`) | `pauseGattOperations()` sets `mIsGattPaused = true`, `stopScanAssistance()`, cancels `mSearchTimeoutRunnable` & `mReconnectRunnable` without changing `mState` or closing GATT; `resumeGattOperations()` clears `mIsGattPaused = false` and calls `startSearching()` if `mState == DISCONNECTED && !mIsShutDown` | `mState` preserved on pause; `DISCONNECTED` -> `SEARCHING` on resume |
-| `shutDown()` | Any state | Set `mIsShutDown = true`, `mHasConnectedInSession = false`; `stopScanAssistance()`; clear `mHandler` callbacks; `disconnectFromGatt()`; `super.shutDown()` | `DISCONNECTED` |
+| `shutDown()` / `shutDown(onTeardownComplete)` | Any state | Store `mPendingTeardownCallback` and dispatch polymorphically through `shutDown()` (preserving subclass overrides like `BTLEHeartRateDevice.shutDown()`), then `performShutDown`: set `mIsShutDown = true`, `mHasConnectedInSession = false`; `stopScanAssistance()`; clear `mHandler` callbacks; `disconnectFromGatt(onTeardownComplete)` (`gattToClose.disconnect(); gattToClose.close()` on `mHandler` before callback); `super.shutDown()` | `DISCONNECTED` |
 
 ---
 
@@ -109,3 +109,5 @@ stateDiagram-v2
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
 | `1.0.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Added standardized `DOC-ARC-DD-BTLE` work-product control header and Change History. |
+| `1.0.1` | 2026-11-18 | AI Agent (`ATT-8714`) | `ATT-8714` | Documented `shutDown(onTeardownComplete)` / `disconnectFromGatt(onGattClosed)` post-close completion callback for ordered live Polar IMU handoff (`REQ-CON-050.1`). |
+| `1.0.2` | 2026-11-18 | AI Agent (`ATT-8714`) | `ATT-8714` | Bounce 1/3 heal: routed `shutDown(onTeardownComplete)` via `mPendingTeardownCallback` + `shutDown()` -> `performShutDown` so subclass overrides (`BTLEHeartRateDevice`) never get bypassed. |

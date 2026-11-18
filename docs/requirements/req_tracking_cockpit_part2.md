@@ -1,14 +1,14 @@
 # Living Requirements: Tracking & Live Sensor Cockpit (Part 2 of 2)
 
 **Document ID**: `DOC-REQ-TRK-P2`  
-**Version**: 1.0.1  
+**Version**: 1.0.3  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit_part2`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Requirements**: 62
+**Total Requirements**: 63
 
 ---
 
@@ -923,7 +923,7 @@
 
 ### REQ-CON-045: Polar Live IMU Streaming Bridge Search Timeout & GATT Contention Recovery [Verified]
 - **Target Release**: `V5.0.0`
-- **Tests**: `TST-CON-045`
+- **Tests**: `TST-CON-045`, `TST-CON-050`
 - **System Requirement(s)**: `SYSREQ-TRK-001`, `SYSREQ-TRK-002`
 - **Priority**: High
 - **Type**: Functional
@@ -2874,7 +2874,7 @@
 
 ### REQ-CON-049: Hardware-Grounded Polar Detection & Canonical ID via BLE Service UUIDs (PMD/PFTP) and DIS (0x2A24/0x2A25) [Verified]
 - **Target Release**: `V5.0.0`
-- **Tests**: `TST-CON-049`
+- **Tests**: `TST-CON-049`, `TST-CON-050`
 - **System Requirement(s)**: `SYSREQ-TRK-001`, `SYSREQ-TRK-002`
 - **Priority**: Medium
 - **Type**: Functional
@@ -2949,6 +2949,49 @@
 
 **Invariants**: 4-toggle `ZoneDisplayOptionsToggleList` across all 4 tabs; `previewFieldState.showBar = true`; `ZoneDisplayConfigSection` & `HRV_DFA_A1_ZONE_SHOW_GAUGE` untouched; `ATT-8105` slider gesture isolation & $T_1 \ge T_2 + 0.05f$ intact; `REQ-PRO-049.1` zero `src/main` reads in new/modified Compose UI tests; `Localization Parity: N/A - no UI strings`.
 
+### REQ-CON-050: Live Polar-IMU Toggle Handoff, Shared-Session Recovery & Continuous HR/Raw-Telemetry Delivery [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-CON-050`
+- **System Requirement(s)**: `SYSREQ-TRK-001`, `SYSREQ-TRK-002`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `BANALService.java`, `DeviceDataRepository.kt`, `DeviceManager.java`, `MyBTLEDevice.java`, `PolarOnlineStreamingBridge.kt`, `PolarOfflineGattCoordinator.kt`, `PolarRawTelemetryRecorder.kt`
+- **Rationale**: Toggling `polarLiveImuEnabled` while a Polar H10 or Verity Sense is already connected leaves `DeviceManager` retaining the old HRM device because `DeviceDataRepository.updateDevice()` emits no Live-IMU change broadcast and `createNewBluetoothLEDevice()`/`createPairedRemoteDevices()` skip existing `mMyRemoteDevices` keys. Furthermore, async GATT close (`MyBTLEDevice.disconnectFromGatt()` / `PolarOnlineStreamingBridge.shutDown()`) races replacement connection startup, `PolarOnlineStreamingBridge.connectPersistentSession()` misses `SESSION_OPEN` / already-ready features on the shared `PolarBleApi` singleton, dynamic `polarId` flipping mid-session (`macAddress` -> 8-hex) breaks `startHrStreaming`/`requestStreamSettings`, and `deviceDisconnected` leaves stale `hrJob`/`accJob`/`gyroJob` running—collectively dropping `HR`/`RR_INTERVAL` and leaving `files/raw_sensor/` empty (`ATT-8714`, refining `REQ-SET-112.1/.2`, `REQ-CON-045.2`, and `REQ-CON-049.4`):
+- **Description**:
+  1. *Live `polarLiveImuEnabled` Toggle Broadcast & Ordered Handoff (`REQ-CON-050.1`)*:
+     - `DeviceDataRepository.updateDevice()` SHALL emit a dedicated broadcast (`BANALService` action with `deviceId` and `polarLiveImuEnabled` extras) whenever `polarLiveImuEnabled` changes, both when a workout is idle and when a workout is active.
+     - Upon receiving the Live-IMU toggle signal (for paired BLE HRM devices at `API >= 33`), `DeviceManager` SHALL detach `RrBeatSource`, remove and cleanly stop the active HRM instance (`BTLEHeartRateDevice` or `PolarOnlineStreamingBridge`), wait/yield until the prior GATT link or Polar SDK session release completes before activating the replacement Polar device via `createRemoteDevice()`, re-attach `RrBeatSource` / `FilterManager` / search queue, and trigger connection/search.
+  2. *Shared `PolarBleApi` `SESSION_OPEN` & Already-Ready Feature Synchronization (`REQ-CON-050.2`)*:
+     - When `PolarOnlineStreamingBridge.connectPersistentSession()` connects on the shared `PolarOfflineGattCoordinator` / `PolarBleApi` singleton and `connectToDevice(...)` attaches to an already-open (`SESSION_OPEN`) session where `deviceConnected` or `bleSdkFeatureReady` is not re-emitted, the bridge SHALL synchronize connected state (`isConnectedFlag`, `registerSensors()`, `activeBridges`, `PolarRawTelemetryRecorder` attachment, `notifyStopSearching(true)`) and check/start already-ready `FEATURE_HR` and `FEATURE_POLAR_ONLINE_STREAMING` streams.
+  3. *Consistent `polarBleSessionId` & Disconnect Job Hygiene (`REQ-CON-050.3`)*:
+     - `PolarOnlineStreamingBridge` MUST retain the exact `polarBleSessionId` used to open `connectToDevice(...)` for all in-session SDK calls (`startHrStreaming`, `requestStreamSettings`, `startAccStreaming`, `startGyroStreaming`, `stopStreaming`, `disconnectFromDevice`), preventing mid-session `macAddress`-to-8-hex `polarId` flips from breaking Polar SDK session lookup.
+     - `PolarOnlineStreamingBridge.sdkCallback.deviceDisconnected()` MUST cancel stale `hrJob`, `accJob`, and `gyroJob` coroutines and reset streaming flags before automatic reconnection re-establishes them.
+  4. *Continuous `HR`/`RR_INTERVAL` & `PolarRawTelemetryRecorder` Sidecar Capture (`REQ-CON-050.4`)*:
+     - Across both `polarLiveImuEnabled` enable and disable transitions, `ProxySensor` / `FilterManager` / `RrBeatSource` arbitration SHALL continue delivering `HR` and `RR_INTERVAL`, and an active `PolarRawTelemetryRecorder` session (`TrackerService` `files/raw_sensor/*.polar_raw.csv.gz`) SHALL attach on bridge readiness and persist streamed frames (`rowCount > 0`).
+  5. *Localization & Hardware Verification Boundary (`REQ-CON-050.5`)*:
+     - `Localization Parity: N/A - no UI strings` (`values*/strings*.xml` untouched).
+     - Phase 2 verification SHALL execute via offline unit/Robolectric tests (`Rule 7.6`, `REQ-PRO-049.1`); physical Pixel 10 + Polar Verity Sense / H10 field verification remains PO-executed/optional and SHALL NOT be synthesized.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Refines `REQ-SET-112.1`, `REQ-SET-112.2`, `REQ-CON-045.2`, and `REQ-CON-049.4`. Targets `BANALService.java`, `DeviceDataRepository.kt`, `DeviceManager.java`, `MyBTLEDevice.java`, `PolarOnlineStreamingBridge.kt`, `PolarOfflineGattCoordinator.kt`, and `PolarRawTelemetryRecorder.kt`.
+2. *Historical Origin & Commit Trace*: `f4bef44c` (`ATT-8016`), `34b78941` (`ATT-8690`), `9f9e5967` (`ATT-8717`).
+3. *Root Reason for Existing Formulation*: `ATT-8016` assumed `polarLiveImuEnabled` is configured before connecting; `ATT-8690` / `ATT-8717` assumed `connectToDevice` starts from `SESSION_CLOSED` and emits fresh `deviceConnected` / `bleSdkFeatureReady` events with a static `polarId`.
+4. *Preservation of Core Invariants*: Preserves `< API 33` `BTLEHeartRateDevice` fallback, `ProxySensor` continuity (`REQ-TRK-055.1`), single-GATT ref-counting (`REQ-SET-118.3`), `ACC` channel mutual exclusion (`REQ-SET-112.3`), `RR_PRIORITY_ECG` / `RR_PRIORITY_PPG` arbitration (`REQ-TRK-085`), and `PolarRawTelemetryRecorder` empty-file deletion (`rowCount == 0`).
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a connected Polar H10 or Verity Sense running on `BTLEHeartRateDevice` (idle or during an active workout),
+• *When* `DeviceDataRepository.updateDevice()` persists `polarLiveImuEnabled = true`,
+• *Then* `DeviceManager` receives the Live-IMU change broadcast, completes `BTLEHeartRateDevice` GATT close before opening `PolarOnlineStreamingBridge`, preserves `HR`/`RR_INTERVAL` delivery via `ProxySensor`/`RrBeatSource`, and records frames into `PolarRawTelemetryRecorder`.
+• *Given* an already-open (`SESSION_OPEN`) shared `PolarBleApi` session opened by `macAddress` with `FEATURE_HR` and `FEATURE_POLAR_ONLINE_STREAMING` ready,
+• *When* `PolarOnlineStreamingBridge.connectPersistentSession()` runs and later receives `deviceConnected` (with 8-hex `deviceId`) or `deviceDisconnected`,
+• *Then* the bridge immediately syncs connected state and starts HR/IMU streams using the consistent `polarBleSessionId`, and cancels `hrJob`/`accJob`/`gyroJob` cleanly on disconnect.
+• *Given* an active `PolarOnlineStreamingBridge` when `polarLiveImuEnabled` is toggled to `false`,
+• *When* `DeviceManager` performs the reverse handoff,
+• *Then* `PolarOnlineStreamingBridge` shuts down cleanly before `BTLEHeartRateDevice` connects and resumes `HR`/`RR_INTERVAL` delivery.
+
+**Invariants**: `< API 33` fallback preserved; `ProxySensor` & `RrBeatSource` continuity preserved; single-GATT ref-counting (`REQ-SET-118.3`) & `ACC` mutex (`REQ-SET-112.3`) preserved; `PolarRawTelemetryRecorder` `rowCount == 0` cleanup preserved; `Devices.db` v14 untouched; `N/A - no UI strings`; `Rule 7.6` offline verification boundary respected.
+
 ---
 
 ## Change History
@@ -2957,3 +3000,4 @@
 | :--- | :--- | :--- | :--- | :--- |
 | `1.0.0` | 2026-11-18 | AI Agent (`ATT-8206`) | `ATT-8206` | Split oversized shard into compliant sub-shard (<= 4,000 lines, `REQ-PRO-093.4`, `REQ-PRO-127.3`). |
 | `1.0.2` | 2026-11-18 | AI Agent (`ATT-8717` / `ATT-8712`) | `ATT-8717`, `ATT-8712` | Added `REQ-CON-049` [Verified] and `REQ-TRK-087` [Verified] cleanly post-split (`ATT-8206`). |
+| `1.0.3` | 2026-11-18 | AI Agent (`ATT-8714`) | `ATT-8714` | Added `REQ-CON-050` [Verified] post-Bounce 1/3 heal (`ATT-8714` migrated onto `part2` post-`ATT-8206` shard split). |

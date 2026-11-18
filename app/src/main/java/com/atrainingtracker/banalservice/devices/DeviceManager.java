@@ -19,6 +19,7 @@
 package com.atrainingtracker.banalservice.devices;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -76,9 +77,11 @@ import java.util.Deque;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.LongSupplier;
 
 import static com.atrainingtracker.banalservice.BSportType.UNKNOWN;
@@ -108,6 +111,7 @@ public class DeviceManager {
     protected volatile HRVMetricsDevice mHrvMetricsDevice;
     protected boolean mHavePressureSensor = false;
     protected IntentFilter mPairingChangedFilter = new IntentFilter(BANALService.PAIRING_CHANGED);
+    protected IntentFilter mPolarLiveImuChangedFilter = new IntentFilter(BANALService.POLAR_LIVE_IMU_CHANGED);
     // protected IntentFilter mRemoveDeviceFilter            = new IntentFilter(BANALService.REMOVE_DEVICE);
     // protected IntentFilter mCreateNewDeviceFilter    = new IntentFilter(BANALService.CREATE_NEW_DEVICE);
     protected IntentFilter mSearchingStoppedForOneFilter = new IntentFilter(BANALService.SEARCHING_STOPPED_FOR_ONE_INTENT);
@@ -122,6 +126,10 @@ public class DeviceManager {
     protected volatile BTSearchForNewDevicesEngine mBTSearchForNewDevicesEngine = null;
     private final DeviceDataRepository mDeviceDataRepository;
     private final Object mDeviceDbLock = new Object();
+    private final Map<Long, AtomicLong> mLiveImuHandoffGenerations = new ConcurrentHashMap<>();
+    private final Set<Long> mPendingTeardownDeviceIds = ConcurrentHashMap.newKeySet();
+    private volatile boolean mIsShutDown = false;
+    private int mSdkInt = Build.VERSION.SDK_INT;
     private final BroadcastReceiver mStopSearchingForNewDevicesReceiver = new BroadcastReceiver() {
         public void onReceive(Context context, Intent intent) {
             if (DEBUG) Log.d(TAG, "Received StopSearchingForNewDevices Broadcast");
@@ -190,6 +198,27 @@ public class DeviceManager {
             pairingChanged(deviceId, paired);
         }
     };
+    private final BroadcastReceiver mPolarLiveImuChangedReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (!intent.hasExtra(BANALService.DEVICE_ID)) {
+                return;
+            }
+            long deviceId = intent.getLongExtra(BANALService.DEVICE_ID, -1);
+            boolean enabled = intent.getBooleanExtra(BANALService.POLAR_LIVE_IMU_ENABLED, false);
+            polarLiveImuChanged(deviceId, enabled);
+        }
+    };
+
+    @VisibleForTesting
+    public BroadcastReceiver getPolarLiveImuChangedReceiverForTesting() {
+        return mPolarLiveImuChangedReceiver;
+    }
+
+    @VisibleForTesting
+    public void setSdkIntForTesting(int sdkInt) {
+        mSdkInt = sdkInt;
+    }
     protected IntentFilter mTrackingStateChangedFilter = new IntentFilter(TrainingApplication.TRACKING_STATE_CHANGED);
 
     private final BroadcastReceiver mTrackingStateChangedReceiver = new BroadcastReceiver() {
@@ -441,6 +470,7 @@ public class DeviceManager {
         }
 
         ContextCompat.registerReceiver(mContext, mPairingChangedReceiver, mPairingChangedFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(mContext, mPolarLiveImuChangedReceiver, mPolarLiveImuChangedFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
         ContextCompat.registerReceiver(mContext, mSearchingStoppedForOneReceiver, mSearchingStoppedForOneFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
         ContextCompat.registerReceiver(mContext, mStartSearchingForNewDevicesReceiver, mStartSearchingForNewDevicesFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
         ContextCompat.registerReceiver(mContext, mStopSearchingForNewDevicesReceiver, mStopSearchingForNewDevicesFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
@@ -734,6 +764,9 @@ public class DeviceManager {
 
     public void shutDown() {
         if (DEBUG) Log.d(TAG, "shutDown()");
+        mIsShutDown = true;
+        mLiveImuHandoffGenerations.clear();
+        mPendingTeardownDeviceIds.clear();
 
         stopSearchForNewRemoteDevices();
 
@@ -769,6 +802,7 @@ public class DeviceManager {
         mHrvMetricsDevice = null;
 
         LifecycleUtils.safeUnregisterReceiver(mContext, mPairingChangedReceiver, TAG);
+        LifecycleUtils.safeUnregisterReceiver(mContext, mPolarLiveImuChangedReceiver, TAG);
         LifecycleUtils.safeUnregisterReceiver(mContext, mSearchingStoppedForOneReceiver, TAG);
         // mContext.unregisterReceiver(mStartSearchingReceiver);
         LifecycleUtils.safeUnregisterReceiver(mContext, mStartSearchingForNewDevicesReceiver, TAG);
@@ -1292,17 +1326,92 @@ public class DeviceManager {
         return myAccumulatorSensorList;
     }
 
+    /**
+     * Handles live {@code polarLiveImuEnabled} toggles by cleanly tearing down the active Polar HRM
+     * instance before creating and searching for its replacement ({@code REQ-CON-050.1}).
+     */
+    private void polarLiveImuChanged(final long deviceId, final boolean enabled) {
+        if (mIsShutDown || deviceId <= 0) {
+            return;
+        }
+        if (!mDeviceDataRepository.isPaired(deviceId)) {
+            return;
+        }
+        Protocol protocol = mDeviceDataRepository.getProtocol(deviceId);
+        DeviceType deviceType = mDeviceDataRepository.getDeviceType(deviceId);
+        if (protocol != Protocol.BLUETOOTH_LE || deviceType != DeviceType.HRM) {
+            return;
+        }
+
+        String address = mDeviceDataRepository.getBluetoothMACAddress(deviceId);
+        boolean wantsBridge = mSdkInt >= Build.VERSION_CODES.TIRAMISU
+                && enabled
+                && mDeviceDataRepository.isPolarLiveImuBridgeEligible(deviceId, address);
+
+        MyRemoteDevice current = mMyRemoteDevices.get(deviceId);
+        if (current != null && !mPendingTeardownDeviceIds.contains(deviceId)) {
+            boolean alreadyMatching = wantsBridge
+                    ? (current instanceof PolarOnlineStreamingBridge)
+                    : (current instanceof BTLEHeartRateDevice);
+            if (alreadyMatching) {
+                return;
+            }
+        }
+
+        mLiveImuHandoffGenerations
+                .computeIfAbsent(deviceId, id -> new AtomicLong(0L))
+                .incrementAndGet();
+
+        if (!mPendingTeardownDeviceIds.add(deviceId)) {
+            // An async GATT/bridge teardown is already in flight for deviceId; its completion
+            // callback will evaluate the latest persisted state once teardown finishes.
+            return;
+        }
+
+        if (current != null) {
+            removeAndStopRemoteDevice(deviceId, () -> onLiveImuTeardownComplete(deviceId));
+        } else {
+            onLiveImuTeardownComplete(deviceId);
+        }
+    }
+
+    private void onLiveImuTeardownComplete(long deviceId) {
+        mPendingTeardownDeviceIds.remove(deviceId);
+        if (mIsShutDown || !mDeviceDataRepository.isPaired(deviceId) || mMyRemoteDevices.containsKey(deviceId)) {
+            return;
+        }
+        MyRemoteDevice replacement = createRemoteDevice(deviceId);
+        if (replacement != null) {
+            mMyRemoteDeviceTries.put(replacement, Math.max(1, TrainingApplication.getNumberOfSearchTries()));
+            synchronized (mSearchQueue) {
+                if (!isSearchingForARemoteDevice()) {
+                    searchForNextRemoteDevice();
+                }
+            }
+        }
+    }
+
     protected void removeAndStopRemoteDevice(long deviceId) {
+        removeAndStopRemoteDevice(deviceId, null);
+    }
+
+    protected void removeAndStopRemoteDevice(long deviceId, @Nullable Runnable onTeardownComplete) {
         if (DEBUG) Log.d(TAG, "removeAndStopRemoteDevice(" + deviceId + ")");
 
         MyRemoteDevice myRemoteDevice = mMyRemoteDevices.remove(deviceId);
         if (myRemoteDevice != null) {
             detachIfRrBeatSource(myRemoteDevice);
-            mSearchQueue.remove(myRemoteDevice);
-            if (cMyRemoteDeviceCurrentlySearchingFor == myRemoteDevice) {
-                searchForNextRemoteDevice();
+            synchronized (mSearchQueue) {
+                mSearchQueue.remove(myRemoteDevice);
+                if (cMyRemoteDeviceCurrentlySearchingFor == myRemoteDevice) {
+                    cMyRemoteDeviceCurrentlySearchingFor = null;
+                    searchForNextRemoteDevice();
+                }
             }
-            myRemoteDevice.shutDown();
+            mMyRemoteDeviceTries.remove(myRemoteDevice);
+            myRemoteDevice.shutDown(onTeardownComplete);
+        } else if (onTeardownComplete != null) {
+            onTeardownComplete.run();
         }
     }
 
@@ -1372,6 +1481,7 @@ public class DeviceManager {
         return deviceToRegister;
     }
 
+    @SuppressLint("NewApi")
     public MyRemoteDevice createNewBluetoothLEDevice(long deviceID, DeviceType deviceType, String address) {
         if (DEBUG) Log.d(TAG, "createNewBluetoothDevice: " + deviceType.name());
 
@@ -1386,7 +1496,7 @@ public class DeviceManager {
         switch (deviceType) {
             case HRM:
                 if (DEBUG) Log.d(TAG, "create new HR device");
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+                if (mSdkInt >= Build.VERSION_CODES.TIRAMISU
                         && mDeviceDataRepository.isPolarLiveImuBridgeEligible(deviceID, address)) {
                     polarBridgeDevice = new PolarOnlineStreamingBridge(mContext, mSensorManager, deviceID, address);
                 } else {

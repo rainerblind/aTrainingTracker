@@ -99,6 +99,7 @@ object PolarOfflineGattCoordinator {
     private val activeSessionCallbacks = ConcurrentHashMap<String, PolarBleApiCallbackProvider>()
     private val callbackListeners = CopyOnWriteArraySet<CallbackRegistration>()
     private val deviceAliases = ConcurrentHashMap<String, MutableSet<String>>()
+    private val connectedDeviceIds = ConcurrentHashMap.newKeySet<String>()
     private val activeAccOwners = ConcurrentHashMap<String, String>()
 
     private fun normalizeId(polarId: String): String = polarId.trim().uppercase(Locale.ROOT)
@@ -170,6 +171,9 @@ object PolarOfflineGattCoordinator {
 
     private val multiplexerCallback = object : NoOpPolarCallback() {
         override fun blePowerStateChanged(powered: Boolean) {
+            if (!powered) {
+                connectedDeviceIds.clear()
+            }
             for (entry in callbackListeners) {
                 entry.callback.blePowerStateChanged(powered)
             }
@@ -186,6 +190,8 @@ object PolarOfflineGattCoordinator {
 
         override fun deviceConnected(polarDeviceInfo: PolarDeviceInfo) {
             registerDeviceAliases(polarDeviceInfo.deviceId, polarDeviceInfo.address)
+            polarDeviceInfo.deviceId.takeIf { it.isNotBlank() }?.let { connectedDeviceIds.add(normalizeId(it)) }
+            polarDeviceInfo.address.takeIf { it.isNotBlank() }?.let { connectedDeviceIds.add(normalizeId(it)) }
             for (entry in callbackListeners) {
                 if (entry.matchesInfo(polarDeviceInfo)) {
                     entry.callback.deviceConnected(polarDeviceInfo)
@@ -195,6 +201,16 @@ object PolarOfflineGattCoordinator {
 
         override fun deviceDisconnected(polarDeviceInfo: PolarDeviceInfo) {
             registerDeviceAliases(polarDeviceInfo.deviceId, polarDeviceInfo.address)
+            polarDeviceInfo.deviceId.takeIf { it.isNotBlank() }?.let { id ->
+                val norm = normalizeId(id)
+                connectedDeviceIds.remove(norm)
+                deviceAliases[norm]?.forEach { connectedDeviceIds.remove(it) }
+            }
+            polarDeviceInfo.address.takeIf { it.isNotBlank() }?.let { addr ->
+                val norm = normalizeId(addr)
+                connectedDeviceIds.remove(norm)
+                deviceAliases[norm]?.forEach { connectedDeviceIds.remove(it) }
+            }
             for (entry in callbackListeners) {
                 if (entry.matchesInfo(polarDeviceInfo)) {
                     entry.callback.deviceDisconnected(polarDeviceInfo)
@@ -413,7 +429,28 @@ object PolarOfflineGattCoordinator {
                 activeSessions.remove(macKey, api)
                 activeSessionCallbacks.remove(macKey)
             }
+            deviceAliases[key]?.forEach { alias ->
+                if (activeSessions.remove(alias, api)) {
+                    activeSessionCallbacks.remove(alias)
+                }
+            }
+            macKey?.let { deviceAliases[it] }?.forEach { alias ->
+                if (activeSessions.remove(alias, api)) {
+                    activeSessionCallbacks.remove(alias)
+                }
+            }
         }
+    }
+
+    /**
+     * Returns true if the shared [PolarBleApi] multiplexer has observed an active connection
+     * (`SESSION_OPEN`) for [polarId] or any of its registered MAC/8-hex aliases (`REQ-CON-050.2`).
+     */
+    @JvmStatic
+    fun isDeviceConnected(polarId: String?): Boolean {
+        val key = polarId?.let(::normalizeId)?.takeIf { it.isNotEmpty() } ?: return false
+        if (connectedDeviceIds.contains(key)) return true
+        return deviceAliases[key]?.any { connectedDeviceIds.contains(it) } == true
     }
 
     /**
@@ -476,6 +513,7 @@ object PolarOfflineGattCoordinator {
         activeSessionCallbacks.clear()
         callbackListeners.clear()
         deviceAliases.clear()
+        connectedDeviceIds.clear()
         activeAccOwners.clear()
     }
 

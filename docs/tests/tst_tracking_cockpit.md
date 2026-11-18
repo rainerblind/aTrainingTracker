@@ -1,14 +1,14 @@
 # Living Test Specification: Tracking & Live Sensor Cockpit
 
 **Document ID**: `DOC-TST-TRK`  
-**Version**: 1.0.21  
+**Version**: 1.0.25  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Tests**: 147
+**Total Tests**: 148
 
 ---
 
@@ -3386,6 +3386,26 @@
   4. *Renamed-Sensor Controller, `syncPendingWorkout`, Repository & EditDevice Verification (`TST-CON-049.4`, Offline Mocked `Rule 5` & `REQ-PRO-049.1`)*:
      • Verify renamed H10 (`"Chest Strap"`) and renamed Verity Sense/OH1 (`"Armband"`) route deterministically across `PolarH10OfflineController` (incl. `syncPendingWorkout`), `PolarVeritySenseOfflineController`, `DeviceDataRepository.isPolarLiveImuBridgeEligible`, `EditDevicePolarBackupTest`, and `EditDevicePolarLiveImuTest` with `0` `src/main` source reads (`REQ-PRO-049.1`; `Localization parity: N/A - no UI strings`).
 
+### TST-CON-050: **Live Polar-IMU Toggle Handoff, Shared-Session Recovery & Continuous HR/Raw-Telemetry Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Tickets**: `ATT-8714`
+- **Requirement(s)**: `REQ-CON-050` (`REQ-CON-050.1`..`REQ-CON-050.5`), `REQ-SET-112.1`, `REQ-SET-112.2`, `REQ-CON-045.2`, `REQ-CON-049.4`
+- **Component**: `app/src/test/java/com/atrainingtracker/banalservice/ui/devices/editdevice/EditDevicePolarLiveImuTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/devices/DeviceManagerTeardownTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/devices/bluetooth_le/polar/PolarOnlineStreamingBridgeTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/devices/bluetooth_le/polar/PolarRawTelemetryRecorderTest.kt`
+- **Test Type**: Unit
+- **Verification Method**: Unit
+- **Procedure**:
+  1. *Live `polarLiveImuEnabled` Broadcast & Ordered GATT Handoff Test (`TST-CON-050.1`, `EditDevicePolarLiveImuTest.kt`, `DeviceManagerTeardownTest.kt`)*:
+     • Update `polarLiveImuEnabled` (`false -> true` and `true -> false`) via `DeviceDataRepository.updateDevice()` during both idle and active workout states; assert the Live-IMU change broadcast fires with `deviceId` and new boolean flag (while non-IMU edits do not fire it).
+     • Verify `DeviceManager` detaches old `RrBeatSource`, completes `MyBTLEDevice` GATT close (or `PolarOnlineStreamingBridge.shutDown()`) strictly before activating the replacement Polar device, preserves `ProxySensor` / `RrBeatSource` continuity, and preserves `< API 33` `BTLEHeartRateDevice` fallback.
+  2. *Shared `PolarBleApi` `SESSION_OPEN` & Already-Ready Feature Recovery Test (`TST-CON-050.2`, `PolarOnlineStreamingBridgeTest.kt`)*:
+     • Mock `PolarBleApi` where `connectToDevice()` attaches to an already-open session (`isFeatureReady` returning `true` for `FEATURE_HR` and `FEATURE_POLAR_ONLINE_STREAMING` without re-emitting `deviceConnected`/`bleSdkFeatureReady`); assert `isConnectedFlag`, `registerSensors()`, `activeBridges`, `PolarRawTelemetryRecorder` attachment, HR streaming, and ACC/GYRO streaming activate cleanly.
+  3. *Consistent `polarBleSessionId` & Disconnect Job Hygiene Test (`TST-CON-050.3`, `PolarOnlineStreamingBridgeTest.kt`)*:
+     • Connect by `macAddress` (empty `POLAR_DEVICE_ID` initially), then emit `deviceConnected` carrying an 8-hex `deviceId`; assert `startHrStreaming`, `requestStreamSettings`, `startAccStreaming`, and `startGyroStreaming` continue using the exact `polarBleSessionId` opened with `connectToDevice` (never breaking on mid-session MAC-to-8-hex flip).
+     • Emit `deviceDisconnected` and assert `hrJob`, `accJob`, and `gyroJob` are cancelled and streaming flags reset before reconnect.
+  4. *Continuous HR/RR Delivery, `PolarRawTelemetryRecorder` Capture & Hardware Boundary (`TST-CON-050.4`, `PolarRawTelemetryRecorderTest.kt`, `Rule 7.6`)*:
+     • Verify active `PolarRawTelemetryRecorder` attaches on bridge readiness during a workout and persists non-zero `.polar_raw.csv.gz` frames (`rowCount > 0`) to `files/raw_sensor/` across Live-IMU enable handoff (`N/A - no UI strings`, `0` `src/main` reads per `REQ-PRO-049.1`).
+     • Physical Pixel 10 + Polar Verity Sense / H10 live BLE verification is explicitly deferred to optional PO-executed hardware testing per `Rule 7.6` (never synthesized in Phase 2).
+
 
 ### TST-TRK-087: **ZonesSettingsActivity HRV Tab Gauge Toggle Removal & Behavioral Compose Verification Suite** [Verified]
 - **Target Release**: `V5.0.0`
@@ -3423,4 +3443,6 @@
 | `1.0.11` | 2026-11-18 | AI Agent (`ATT-8706`) | `ATT-8706` | Added and verified `TST-TRK-085` [Verified] for RR source isolation, monotonic clamping, physiological gap flagging, pre-filter sort, and DFA α1 validity gate (502/502 tests across 88 suites). |
 | `1.0.17` | 2026-11-18 | AI Agent (`ATT-8706`) | `ATT-8706` | Promoted `TST-TRK-085` to `[Verified]` in Stage 5 following Bounce 3/3 heal verification (`449/449` tests across `83` suites). |
 | `1.0.18` | 2026-11-18 | AI Agent (`ATT-8105`) | `ATT-8105` | Added and verified `TST-TRK-086` [Verified] (`HrvDfaA1RangeSliderGestureTest.kt` Robolectric `createComposeRule()` gesture isolation `5/5`, `Rule 8.5` Light/Dark PNG audit, and Tier-1 regression `31/31` across 7 suites). |
+| `1.0.19` | 2026-11-18 | AI Agent (`ATT-8717`) | `ATT-8717` | Added and verified `TST-CON-049` [Verified] across 34 unit/Robolectric suites (166/166 PASS) including CardioSense DIS rejection, pre-CCCD DIS read order, 8-hex ID preservation, and IMU stream rejection. |
 | `1.0.20` | 2026-11-18 | AI Agent (`ATT-8717` / `ATT-8712`) | `ATT-8717`, `ATT-8712` | Added `TST-CON-049` [Verified] and `TST-TRK-087` [Verified] cleanly post-`ATT-8206` rebase. |
+| `1.0.25` | 2026-11-18 | AI Agent (`ATT-8714`) | `ATT-8714` | Added and verified `TST-CON-050` [Verified] post-Bounce 1/3 heal (`064edfd3`, `23` suites, `154/154` PASS incl. `SourceTextReadingAuditContractTest` 4/4 & `DetailedDesignParityContractTest` 3/3; `Rule 7.6` offline boundary). |

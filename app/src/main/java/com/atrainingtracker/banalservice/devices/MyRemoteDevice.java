@@ -25,6 +25,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.util.Log;
 
+import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
 import com.atrainingtracker.util.LifecycleUtils;
 
@@ -111,6 +112,17 @@ public abstract class MyRemoteDevice extends MyDevice {
 
         LifecycleUtils.safeUnregisterReceiver(mContext, mCalibrationFactorChangedReceiver, TAG);
         super.shutDown();
+    }
+
+    /**
+     * Shuts down this device and invokes {@code onTeardownComplete} once any asynchronous hardware
+     * teardown (such as Bluetooth GATT disconnect/close) has finished ({@code REQ-CON-050.1}).
+     */
+    public void shutDown(@Nullable Runnable onTeardownComplete) {
+        shutDown();
+        if (onTeardownComplete != null) {
+            onTeardownComplete.run();
+        }
     }
 
     abstract public boolean isReceivingData();
