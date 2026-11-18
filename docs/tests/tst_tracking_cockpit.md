@@ -1,14 +1,14 @@
 # Living Test Specification: Tracking & Live Sensor Cockpit
 
 **Document ID**: `DOC-TST-TRK`  
-**Version**: 1.0.7  
+**Version**: 1.0.10  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Tests**: 141
+**Total Tests**: 142
 
 ---
 
@@ -3284,6 +3284,26 @@
   4. *Targeted Tier-1 Unit Regression (`TST-FIL-024.4`)*:
      • Execute `./gradlew :app:testDebugUnitTest --tests "com.atrainingtracker.banalservice.devices.VerticalSpeedAndSlopeDeviceTest" --tests "com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest"` asserting 100% pass rate with zero `src/main` reads (`REQ-PRO-049.1`; `Localization parity: N/A - no UI strings`).
 
+### TST-FIL-025: **Post-Workout ERTS Running-Pace Heading, Yaw-Rate Anti-Aliasing, Sanity Bounds & Laps.db Sync Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Tickets**: `ATT-8705`
+- **Requirement(s)**: `REQ-FIL-025` (`REQ-FIL-025.1`..`REQ-FIL-025.4`), `REQ-FIL-007`, `REQ-FIL-017`, `REQ-FIL-019.4`, `REQ-FIL-023.1`
+- **Component**: `app/src/test/java/com/atrainingtracker/banalservice/odometry/ExtendedRtsOdometrySmootherTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/odometry/UnicycleOdometryEkfTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/database/ErtsPostWorkoutRecomputerTest.kt`
+- **Test Type**: Unit
+- **Verification Method**: Unit
+- **Procedure**:
+  1. *Offline Heading Initialization & Running-Pace Displacement/Bearing Anchoring Test (`TST-FIL-025.1`, `ExtendedRtsOdometrySmootherTest.kt` & `UnicycleOdometryEkfTest.kt`)*:
+     • Given a simulated running track moving South/West (`~2.0 m/s`, not North `PI / 2.0`), execute `ExtendedRtsOdometrySmoother.smoothSamples()`. Assert initial heading aligns with the first valid GNSS movement chord, running-pace GNSS displacement/bearing updates keep heading aligned within tolerance, and cumulative smoothed distance matches ground truth without 18% loss.
+     • Verify `UnicycleOdometryEkf.updateDopplerHeading()` at `<= 3.0 m/s` (`MIN_DOPPLER_SPEED_MPS = 3.0`) remains strictly gated for live callers (`ATT-8576` / `REQ-FIL-023.1`).
+  2. *1-Hz Yaw-Rate Anti-Aliasing, Non-Negative Speed & Altitude Standstill Coupling Test (`TST-FIL-025.2`, `ExtendedRtsOdometrySmootherTest.kt`)*:
+     • Inject oscillatory 1-Hz `WORLD_YAW_RATE_radps` arm-swing snapshots during straight/curved `~2.2 m/s` running. Assert heading does not invert backwards, smoothed `speedMps` never collapses negative or clamps falsely to `0.0 m/s`, and passing smoothed speeds into `ExtendedRtsAltitudeSlopeSmoother.smooth()` preserves genuine standstill clamping (`speed < 0.3 m/s`) without false ascent/descent inflation.
+  3. *Symmetric ERTS Sanity Bounds & Live `att_fused` Preservation Test (`TST-FIL-025.3`, `ErtsPostWorkoutRecomputerTest.kt`)*:
+     • Verify `ErtsPostWorkoutRecomputer.isOdometrySane()` rejects collapsed smoothed distance (below lower divergence bound) as well as `> 3.0x` runaway distance, while accepting legitimate paused workouts; when rejected, assert `WorkoutSamples.db` live `att_fused` canonical columns, `WorkoutSummaries.db`, and `Laps.db` remain unmodified.
+  4. *`Laps.db` Post-Workout Synchronization Test (`TST-FIL-025.4`, `ErtsPostWorkoutRecomputerTest.kt`)*:
+     • Execute `ErtsPostWorkoutRecomputer.recomputeWorkoutBlocking()` on a multi-lap Robolectric workout DB (`WorkoutSamples.db` with `LAP_NR` segments, `WorkoutSummaries.db`, `Laps.db`). Assert `Laps.TABLE` `DISTANCE_TOTAL_m` and `SPEED_AVERAGE_mps` match smoothed per-lap totals and sum cleanly to `WorkoutSummaries.DISTANCE_TOTAL_m`.
+  5. *Targeted Tier-1 Offline Unit Regression (`TST-FIL-025.5`)*:
+     • Execute `./gradlew :app:testDebugUnitTest --tests "com.atrainingtracker.banalservice.odometry.*" --tests "com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFusedTest" --tests "com.atrainingtracker.trainingtracker.database.ErtsPostWorkoutRecomputerTest"` (strictly offline JUnit/Robolectric/MockK with zero `src/main` reads per `REQ-PRO-049.1`; `Localization parity: N/A - no UI strings`).
+
 
 ---
 
@@ -3299,3 +3319,6 @@
 | `1.0.5` | 2026-11-17 | AI Agent (`ATT-8707`) | `ATT-8707` | Promoted `TST-FIL-024` to `[Implemented]` following Stage 4 unit test implementation. |
 | `1.0.6` | 2026-11-17 | AI Agent (`ATT-8707`) | `ATT-8707` | Promoted `TST-FIL-024` to `[Verified]` in Stage 5 following targeted unit regression verification. |
 | `1.0.7` | 2026-11-17 | AI Agent (`ATT-8707`) | `ATT-8707` | Stage 6 Bounce 1/3 heal: added active-baro no-double-shift regression (`TST-FIL-024.1c`) and `Double.isFinite` rejection test (`TST-FIL-024.3c`). |
+| `1.0.8` | 2026-11-18 | AI Agent (`ATT-8705`) | `ATT-8705` | Added `TST-FIL-025` [Proposed] for post-workout ERTS running-pace heading anchoring, yaw-rate anti-aliasing, symmetric sanity bounds, and `Laps.db` synchronization. |
+| `1.0.9` | 2026-11-18 | AI Agent (`ATT-8705`) | `ATT-8705` | Promoted `TST-FIL-025` to `[Implemented]` following Stage 4 unit & Robolectric test construction. |
+| `1.0.10` | 2026-11-18 | AI Agent (`ATT-8705`) | `ATT-8705` | Promoted `TST-FIL-025` to `[Verified]` in Stage 5 following Tier-1 targeted unit/Robolectric regression verification. |

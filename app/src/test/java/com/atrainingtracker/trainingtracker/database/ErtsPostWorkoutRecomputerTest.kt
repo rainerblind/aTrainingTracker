@@ -53,8 +53,15 @@ class ErtsPostWorkoutRecomputerTest {
     fun setUp() {
         context = ApplicationProvider.getApplicationContext()
         WorkoutSamplesDatabaseManager.resetForTesting(null)
+        LapsDatabaseManager.resetForTesting(null)
         samplesDbManager = WorkoutSamplesDatabaseManager.getInstance(context)
         summariesDbManager = WorkoutSummariesDatabaseManager.getInstance(context)
+    }
+
+    @org.junit.After
+    fun tearDown() {
+        LapsDatabaseManager.resetForTesting(null)
+        WorkoutSamplesDatabaseManager.resetForTesting(null)
     }
 
     private fun createWorkout(baseFileName: String): Long {
@@ -561,5 +568,180 @@ class ErtsPostWorkoutRecomputerTest {
             }
             assertEquals(cases.size, idx)
         }
+    }
+
+    // TST-FIL-025.3: Symmetric lower/upper distance divergence bounds & pause-aware sanity check
+    @Test
+    fun testSymmetricSanityBounds_rejectsCollapsedOutputAndAllowsPausedWorkout_tstFil025_3() {
+        // Build 500s of raw motion at 2.0 m/s (= 1,000 m raw distance) with a 600s timestamp pause in the middle
+        val rawRows = mutableListOf<ErtsPostWorkoutRecomputer.RawSampleRow>()
+        var ts = 1_700_000_000_000L
+        var rawDist = 0.0
+        for (i in 0 until 500) {
+            if (i == 250) {
+                ts += 600_000L // 10-minute pause gap
+            }
+            rawRows.add(
+                ErtsPostWorkoutRecomputer.RawSampleRow(
+                    rowId = i.toLong() + 1L,
+                    timestampMs = ts,
+                    latitude = 48.1370,
+                    longitude = 11.5760,
+                    speedMps = 2.0,
+                    bearingDeg = 180.0,
+                    accuracyM = 4.0,
+                    yawRateRadPerSec = 0.0,
+                    rawAltitude = 500.0,
+                    referenceAltitude = 500.0,
+                    wheelSpeedMps = null,
+                    rawDistanceM = rawDist,
+                    lapNr = 1L
+                )
+            )
+            ts += 1000L
+            rawDist += 2.0
+        }
+
+        // Collapsed ERTS output (800 m vs 998 m raw -> ~0.80x < 0.85x) MUST be rejected
+        val collapsedOdom = rawRows.mapIndexed { idx, row ->
+            com.atrainingtracker.banalservice.odometry.SmoothedOdometryPoint(
+                timestampMs = row.timestampMs,
+                eastMeters = 0.0,
+                northMeters = -idx * 1.6,
+                speedMps = 1.6,
+                headingRad = -kotlin.math.PI / 2.0,
+                gyroBiasRadPerSec = 0.0,
+                latitude = 48.1370,
+                longitude = 11.5760,
+                bearingDeg = 180.0,
+                deltaDistanceMeters = if (idx == 0) 0.0 else 1.6
+            )
+        }
+        org.junit.Assert.assertFalse(
+            "Sanity guard must reject collapsed distance (< 0.85x)",
+            ErtsPostWorkoutRecomputer.isSmoothedOutputSane(rawRows, collapsedOdom, null)
+        )
+
+        // Paused workout matching ~1,000 m raw distance MUST be accepted despite 600s pause
+        val validPausedOdom = rawRows.mapIndexed { idx, row ->
+            com.atrainingtracker.banalservice.odometry.SmoothedOdometryPoint(
+                timestampMs = row.timestampMs,
+                eastMeters = 0.0,
+                northMeters = -idx * 2.0,
+                speedMps = 2.0,
+                headingRad = -kotlin.math.PI / 2.0,
+                gyroBiasRadPerSec = 0.0,
+                latitude = 48.1370,
+                longitude = 11.5760,
+                bearingDeg = 180.0,
+                deltaDistanceMeters = if (idx == 0) 0.0 else 2.0
+            )
+        }
+        assertTrue(
+            "Pause-aware sanity guard must allow valid paused workout",
+            ErtsPostWorkoutRecomputer.isSmoothedOutputSane(rawRows, validPausedOdom, null)
+        )
+    }
+
+    // TST-FIL-025.4: Multi-lap ERTS recomputation synchronizes Laps.db with WorkoutSummaries.db
+    @Test
+    fun testRecomputeWorkout_synchronizesLapsDbWithSmoothedLapSegments_tstFil025_4() = runBlocking {
+        val baseFileName = "2026-11-18_001000"
+        val workoutId = createWorkout(baseFileName)
+
+        val samplesDb = samplesDbManager.database
+        val tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
+        samplesDbManager.createNewTable(
+            baseFileName,
+            listOf(
+                SensorType.LATITUDE,
+                SensorType.LONGITUDE,
+                SensorType.SPEED_mps,
+                SensorType.PACE_spm,
+                SensorType.DISTANCE_m,
+                SensorType.BEARING,
+                SensorType.ALTITUDE,
+                SensorType.SLOPE,
+                SensorType.VERTICAL_SPEED,
+                SensorType.ASCENT,
+                SensorType.DESCENT,
+                SensorType.LAP_NR
+            )
+        )
+
+        val lapsDbManager = LapsDatabaseManager.getInstance(context)
+        lapsDbManager.saveLap(workoutId, 1L, "2026-11-18 00:10:00", 30, 999.0, 33.3, "Lap One", "Warmup")
+        lapsDbManager.saveLap(workoutId, 2L, "2026-11-18 00:10:30", 30, 888.0, 29.6, "Lap Two", "Tempo")
+
+        val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).apply {
+            timeZone = TimeZone.getTimeZone("UTC")
+        }
+        val startTs = 1_700_000_300_000L
+        val originLat = 48.137154
+        val originLon = 11.576124
+        val speed = 2.2
+        val latStepDeg = Math.toDegrees(-speed / 6371000.0) // Moving South
+
+        samplesDb.beginTransaction()
+        try {
+            for (sec in 0 until 60) {
+                val lapNr = if (sec < 30) 1L else 2L
+                val cv = ContentValues().apply {
+                    put("time", sdf.format(Date(startTs + sec * 1000L)))
+                    put(SensorType.LATITUDE.name, originLat + sec * latStepDeg)
+                    put(SensorType.LONGITUDE.name, originLon)
+                    put(SensorType.SPEED_mps.name, speed)
+                    put(SensorType.PACE_spm.name, 1.0 / speed)
+                    put(SensorType.DISTANCE_m.name, sec * speed)
+                    put(SensorType.BEARING.name, 180.0)
+                    put(SensorType.ALTITUDE.name, 500.0)
+                    put(SensorType.SLOPE.name, 0.0)
+                    put(SensorType.VERTICAL_SPEED.name, 0)
+                    put(SensorType.ASCENT.name, 0.0)
+                    put(SensorType.DESCENT.name, 0.0)
+                    put(SensorType.LAP_NR.name, lapNr)
+                }
+                samplesDb.insert(tableName, null, cv)
+            }
+            samplesDb.setTransactionSuccessful()
+        } finally {
+            samplesDb.endTransaction()
+        }
+
+        val success = ErtsPostWorkoutRecomputer.recomputeWorkout(context, workoutId)
+        assertTrue("Recomputation must succeed", success)
+
+        var summaryTotalDist = 0.0
+        summariesDbManager.database.query(
+            WorkoutSummaries.TABLE,
+            arrayOf(WorkoutSummaries.DISTANCE_TOTAL_m),
+            "${WorkoutSummaries.C_ID} = ?",
+            arrayOf(workoutId.toString()),
+            null,
+            null,
+            null
+        ).use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            summaryTotalDist = cursor.getDouble(0)
+        }
+
+        val syncedLaps = lapsDbManager.getLaps(workoutId)
+        assertEquals(2, syncedLaps.size)
+        val lapSumDist = syncedLaps.sumOf { it.distanceTotalM }
+        assertEquals(
+            "Sum of Laps.db distances must match WorkoutSummaries.DISTANCE_TOTAL_m",
+            summaryTotalDist,
+            lapSumDist,
+            1e-3
+        )
+        assertEquals("Lap 1 name must be preserved", "Lap One", syncedLaps[0].name)
+        assertEquals("Lap 2 description must be preserved", "Tempo", syncedLaps[1].description)
+        assertEquals(syncedLaps[0].distanceTotalM / 30.0, syncedLaps[0].speedAverageMps, 1e-6)
+        assertEquals(syncedLaps[1].distanceTotalM / 30.0, syncedLaps[1].speedAverageMps, 1e-6)
+
+        // Verify proportional fallback when smoothedLapDistancesM is empty
+        lapsDbManager.syncLapDistancesAndSpeeds(workoutId, emptyMap(), 200.0)
+        val fallbackLaps = lapsDbManager.getLaps(workoutId)
+        assertEquals(200.0, fallbackLaps.sumOf { it.distanceTotalM }, 1e-3)
     }
 }

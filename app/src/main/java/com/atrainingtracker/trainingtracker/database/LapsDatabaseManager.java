@@ -69,6 +69,24 @@ public class LapsDatabaseManager {
     }
 
     /**
+     * Resets the singleton instance for Robolectric/unit tests so each test uses a fresh SQLite DB.
+     */
+    @androidx.annotation.VisibleForTesting
+    public static synchronized void resetForTesting(@Nullable LapsDatabaseManager testInstance) {
+        if (cInstance != null && cInstance != testInstance) {
+            if (cInstance.mDatabase != null && cInstance.mDatabase.isOpen()) {
+                cInstance.mDatabase.close();
+            }
+            cInstance.mDatabase = null;
+        }
+        if (cLapsDbHelper != null && testInstance == null) {
+            cLapsDbHelper.close();
+            cLapsDbHelper = null;
+        }
+        cInstance = testInstance;
+    }
+
+    /**
      * Returns a writable database instance and ensures it remains open.
      * Re-opens if closed (e.g., by a backup process) to prevent IllegalStateException (ATT-289).
      */
@@ -403,6 +421,111 @@ public class LapsDatabaseManager {
             throw e;
         } catch (Exception e) {
             Log.e(TAG, "Transaction aborted during replaceCroppedLaps, rolling back cleanly: " + e.getMessage(), e);
+            throw e;
+        } finally {
+            db.endTransaction();
+        }
+    }
+
+    /**
+     * Synchronizes persisted lap distances and average speeds in {@link Laps#TABLE} after
+     * post-workout ERTS odometry smoothing updates {@code WorkoutSummaries.db} (REQ-FIL-025.4, ATT-8705).
+     *
+     * <p>Uses exact per-{@code LAP_NR} smoothed segment distances when available and falls back to
+     * proportional scaling across existing laps when sample lap boundaries are absent, preserving
+     * {@code TIME_TOTAL_s}, {@code TIME_START}, {@code NAME}, and {@code DESCRIPTION}.
+     *
+     * @param workoutId The workout ID whose laps should be synchronized.
+     * @param smoothedLapDistancesM Map of 1-based lap number to smoothed distance in meters.
+     * @param totalSmoothedDistanceM Total smoothed workout distance in meters.
+     */
+    public void syncLapDistancesAndSpeeds(
+            long workoutId,
+            @NonNull java.util.Map<Long, Double> smoothedLapDistancesM,
+            double totalSmoothedDistanceM) {
+        if (Double.isNaN(totalSmoothedDistanceM) || Double.isInfinite(totalSmoothedDistanceM) || totalSmoothedDistanceM < 0.0) {
+            return;
+        }
+
+        SQLiteDatabase db = getDatabase();
+        db.beginTransaction();
+        try {
+            java.util.List<long[]> lapMeta = new java.util.ArrayList<>();
+            java.util.List<Double> existingDists = new java.util.ArrayList<>();
+            try (Cursor cursor = db.query(
+                    Laps.TABLE,
+                    new String[]{Laps.C_ID, Laps.LAP_NR, Laps.TIME_TOTAL_s, Laps.DISTANCE_TOTAL_m},
+                    Laps.WORKOUT_ID + " = ?",
+                    new String[]{String.valueOf(workoutId)},
+                    null,
+                    null,
+                    Laps.LAP_NR + " ASC, " + Laps.C_ID + " ASC")) {
+                if (cursor != null) {
+                    int idIdx = cursor.getColumnIndexOrThrow(Laps.C_ID);
+                    int lapNrIdx = cursor.getColumnIndexOrThrow(Laps.LAP_NR);
+                    int timeIdx = cursor.getColumnIndexOrThrow(Laps.TIME_TOTAL_s);
+                    int distIdx = cursor.getColumnIndexOrThrow(Laps.DISTANCE_TOTAL_m);
+                    while (cursor.moveToNext()) {
+                        long rowId = cursor.getLong(idIdx);
+                        long lapNr = cursor.getLong(lapNrIdx);
+                        int timeTotalS = cursor.getInt(timeIdx);
+                        double existingDist = cursor.isNull(distIdx) ? 0.0 : cursor.getDouble(distIdx);
+                        lapMeta.add(new long[]{rowId, lapNr, timeTotalS});
+                        existingDists.add(existingDist);
+                    }
+                }
+            }
+
+            if (lapMeta.isEmpty()) {
+                db.setTransactionSuccessful();
+                return;
+            }
+
+            double matchedDistanceSum = 0.0;
+            double unmatchedExistingSum = 0.0;
+            int unmatchedCount = 0;
+            for (int i = 0; i < lapMeta.size(); i++) {
+                long lapNr = lapMeta.get(i)[1];
+                Double segDist = smoothedLapDistancesM.get(lapNr);
+                if (segDist != null && !Double.isNaN(segDist) && !Double.isInfinite(segDist) && segDist >= 0.0) {
+                    matchedDistanceSum += segDist;
+                } else {
+                    unmatchedExistingSum += Math.max(0.0, existingDists.get(i));
+                    unmatchedCount++;
+                }
+            }
+
+            double remainingTotalDist = Math.max(0.0, totalSmoothedDistanceM - matchedDistanceSum);
+            for (int i = 0; i < lapMeta.size(); i++) {
+                long rowId = lapMeta.get(i)[0];
+                long lapNr = lapMeta.get(i)[1];
+                int timeTotalS = (int) lapMeta.get(i)[2];
+
+                Double segDist = smoothedLapDistancesM.get(lapNr);
+                double newDist;
+                if (segDist != null && !Double.isNaN(segDist) && !Double.isInfinite(segDist) && segDist >= 0.0) {
+                    newDist = segDist;
+                } else if (unmatchedExistingSum > 0.0) {
+                    newDist = Math.max(0.0, existingDists.get(i)) * (remainingTotalDist / unmatchedExistingSum);
+                } else {
+                    newDist = (unmatchedCount > 0) ? (remainingTotalDist / unmatchedCount) : 0.0;
+                }
+
+                double safeDist = (Double.isNaN(newDist) || Double.isInfinite(newDist) || newDist < 0.0) ? 0.0 : newDist;
+                double newAvgSpeed = (timeTotalS > 0) ? (safeDist / timeTotalS) : 0.0;
+                if (Double.isNaN(newAvgSpeed) || Double.isInfinite(newAvgSpeed)) {
+                    newAvgSpeed = 0.0;
+                }
+
+                ContentValues cv = new ContentValues();
+                cv.put(Laps.DISTANCE_TOTAL_m, safeDist);
+                cv.put(Laps.SPEED_AVERAGE_mps, newAvgSpeed);
+                db.update(Laps.TABLE, cv, Laps.C_ID + " = ?", new String[]{String.valueOf(rowId)});
+            }
+
+            db.setTransactionSuccessful();
+        } catch (Exception e) {
+            Log.e(TAG, "Error synchronizing lap distances/speeds for workoutId=" + workoutId, e);
             throw e;
         } finally {
             db.endTransaction();

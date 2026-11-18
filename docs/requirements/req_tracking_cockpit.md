@@ -1,14 +1,14 @@
 # Living Requirements: Tracking & Live Sensor Cockpit
 
 **Document ID**: `DOC-REQ-TRK`  
-**Version**: 1.0.7  
+**Version**: 1.0.10  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Requirements**: 165
+**Total Requirements**: 166
 
 ---
 
@@ -6652,6 +6652,45 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 **Invariants**: `REQ-FIL-012` VAM `N=15` linear regression, accuracy/low-speed gating, `[-3000, 3000] m/h` clamp; `TST-FIL-004.5` active-baro shift parity; thread-safe synchronization on `VerticalSpeedAndSlopeDevice.this`; zero DB/UI changes; `N/A - no UI strings`.
 
+### REQ-FIL-025: Post-Workout ERTS Running-Pace Heading Anchoring, 1-Hz Yaw-Rate Anti-Aliasing, Symmetric Sanity Bounds & Laps.db Sync [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-FIL-025`
+- **System Requirement(s)**: `SYSREQ-TRK-003`, `SYSREQ-TRK-004`, `SYSREQ-TRK-005`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `ExtendedRtsOdometrySmoother.kt`, `UnicycleOdometryEkf.kt`, `ErtsPostWorkoutRecomputer.kt`, `LapsDatabaseManager.java`
+- **Rationale**: During running workouts (`~2.0–2.2 m/s`, below `UnicycleOdometryEkf.MIN_DOPPLER_SPEED_MPS = 3.0`), `ExtendedRtsOdometrySmoother` hardcoded `initialHeadingRad = PI / 2.0`, suppressed all heading updates, and multiplied 1-Hz instantaneous `WORLD_YAW_RATE_radps` snapshots by `dtSec ~ 1.0 s`, driving heading backwards, collapsing `x[2]` negative and clamping speed to `0.0 m/s` (-18.4% distance loss, false altitude standstill clamping). Additionally, `ErtsPostWorkoutRecomputer.isOdometrySane()` checked only upper `> 3.0x` divergence, and `updateWorkoutSummaries()` left `Laps.db` desynced (`ATT-8705`, refining `REQ-FIL-007`, `REQ-FIL-017`, `REQ-FIL-019.4`, and preserving `REQ-FIL-023.1`):
+- **Description**:
+  1. *Offline ERTS Heading Initialization & Running-Pace Displacement/Bearing Anchoring (`REQ-FIL-025.1`)*:
+     - `ExtendedRtsOdometrySmoother.smoothSamples()` SHALL initialize `initialHeadingRad` from the first valid GNSS movement chord (or valid moving GNSS bearing) rather than hardcoding `PI / 2.0` whenever non-stationary motion is present (`PI / 2.0` fallback only if no valid GNSS chord exists).
+     - During offline ERTS replay at running paces (e.g., `~2.0 m/s`, `>= 0.8 m/s` confirmed by GNSS displacement/speed), `ExtendedRtsOdometrySmoother` SHALL anchor heading using GNSS displacement-chord bearing and/or offline Doppler heading updates, while `UnicycleOdometryEkf.MIN_DOPPLER_SPEED_MPS` (`3.0 m/s`) MUST remain intact for live `updateDopplerHeading()` stationary/low-speed protection (`ATT-8576`, `REQ-FIL-023.1`).
+  2. *1-Hz Yaw-Rate Snapshot Anti-Aliasing & Non-Negative Velocity Protection (`REQ-FIL-025.2`)*:
+     - `ExtendedRtsOdometrySmoother` SHALL mitigate 1-Hz instantaneous `WORLD_YAW_RATE_radps` snapshot aliasing in offline RTS replay (attenuating/bounding high-frequency swing aliasing and increasing gyro/heading uncertainty when relying on 1-Hz snapshots) and MUST prevent non-physical negative velocity state collapse (`x[2] < 0`) and false `0.0 m/s` clamping during active motion, preserving `ExtendedRtsAltitudeSlopeSmoother` standstill gating (`STANDSTILL_SPEED_THRESHOLD_MPS = 0.3 m/s`) accuracy (`REQ-FIL-017.2`).
+  3. *Symmetric ERTS Odometry Sanity Bounds & Live `att_fused` Preservation (`REQ-FIL-025.3`)*:
+     - `ErtsPostWorkoutRecomputer.isOdometrySane()` SHALL enforce symmetric lower and upper distance divergence bounds (accounting for pauses so paused stops do not trigger false lower-bound rejections) against raw reference distance, rejecting collapsed or runaway smoothed trajectories and cleanly preserving live `att_fused` canonical columns and summaries (`REQ-FIL-017.3`, `REQ-FIL-019.4`).
+  4. *Post-Workout `Laps.db` Synchronization (`REQ-FIL-025.4`)*:
+     - Whenever `ErtsPostWorkoutRecomputer` commits updated smoothed odometry totals to `WorkoutSummaries.db`, it SHALL synchronize `Laps.db` (`LapsDatabaseManager` / `Laps.TABLE`) lap distances and average speeds for the workout using smoothed `WorkoutSamples.db` `LAP_NR` segments (with deterministic proportional fallback when per-lap sample boundaries are unavailable), keeping `Laps.db` consistent with `WorkoutSummaries.db` (`Localization Parity: N/A - no UI strings`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new `REQ-FIL-025` refining `REQ-FIL-007`, `REQ-FIL-017`, and `REQ-FIL-019.4`, while preserving `REQ-FIL-023.1` (`ATT-8576`). Targets `ExtendedRtsOdometrySmoother.kt`, `UnicycleOdometryEkf.kt`, `ErtsPostWorkoutRecomputer.kt`, and `LapsDatabaseManager.java`.
+2. *Historical Origin & Commit Trace*: `bc4a4109` (`ATT-131` cycling Doppler gate `> 3.0 m/s`), `d56b001a` (`ATT-7750` offline ERTS replay), `ed972bad` (`ATT-8337` one-sided `> 3.0x` Null-Island sanity guard), `eba66320`/`f6715226` (`ATT-8576` live stationary/low-speed ZUPT protection).
+3. *Root Reason for Existing Formulation*: `MIN_DOPPLER_SPEED_MPS = 3.0` prevented noisy GNSS Doppler bearings from spinning live stationary/walking headings; `isOdometrySane()` was scoped only to `> 3x` Null-Island explosions.
+4. *Preservation of Core Invariants*: Preserves live `UnicycleOdometryEkf.MIN_DOPPLER_SPEED_MPS = 3.0` & `ATT-8576` stationary/ZUPT gating, `REQ-FIL-009` tunnel dead reckoning, `REQ-FIL-017.3` raw device-column immutability, `KEY_POST_WORKOUT_ERTS_SMOOTHING = false` default, and `ExtendedRtsAltitudeSlopeSmoother` standstill gating accuracy.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a running workout at `~2.0 m/s` starting South/West/East (not North) with 1-Hz `WORLD_YAW_RATE_radps` swing noise,
+• *When* `ExtendedRtsOdometrySmoother.smoothSamples()` runs,
+• *Then* `initialHeadingRad` initializes from the first valid GNSS movement chord, running-pace displacement/bearing updates keep heading aligned, `x[2]` never collapses negative or clamps falsely to `0.0 m/s`, cumulative distance stays accurate, and `UnicycleOdometryEkf.MIN_DOPPLER_SPEED_MPS = 3.0` remains enforced for live `updateDopplerHeading()`.
+• *Given* an offline smoothed trajectory whose distance collapses below the lower divergence bound (while accounting for pauses) or exceeds the upper `3.0x` bound,
+• *When* `ErtsPostWorkoutRecomputer.isOdometrySane()` validates the output,
+• *Then* sanity validation returns `false`, preserving live `att_fused` canonical columns, summaries, and `Laps.db` intact.
+• *Given* a multi-lap workout where `ErtsPostWorkoutRecomputer` accepts and commits smoothed totals to `WorkoutSummaries.db`,
+• *When* `updateWorkoutSummaries()` finishes,
+• *Then* `Laps.db` lap distances and average speeds are updated to match the smoothed `WorkoutSamples.db` `LAP_NR` segments and sum consistently with `WorkoutSummaries.DISTANCE_TOTAL_m`.
+
+**Invariants**: Live `UnicycleOdometryEkf.MIN_DOPPLER_SPEED_MPS = 3.0` & `ATT-8576` stationary/ZUPT gating unchanged; `ExtendedRtsAltitudeSlopeSmoother` `STANDSTILL_SPEED_THRESHOLD_MPS = 0.3` preserved; `REQ-FIL-017.3` raw device-column immutability & `KEY_POST_WORKOUT_ERTS_SMOOTHING = false` preserved; zero DB schema version bumps; `REQ-PRO-049.1` offline tests with zero `src/main` reads; `N/A - no UI strings`.
+
 
 ---
 
@@ -6667,3 +6706,6 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 | `1.0.5` | 2026-11-17 | AI Agent (`ATT-8707`) | `ATT-8707` | Promoted `REQ-FIL-024` to `[Implemented]` following Stage 4 implementation. |
 | `1.0.6` | 2026-11-17 | AI Agent (`ATT-8707`) | `ATT-8707` | Promoted `REQ-FIL-024` to `[Verified]` in Stage 5 following targeted unit regression verification. |
 | `1.0.7` | 2026-11-17 | AI Agent (`ATT-8707`) | `ATT-8707` | Stage 6 Bounce 1/3 heal: excluded `ALTITUDE_FROM_PRESSURE` from same-device step reseeding and enforced `Double.isFinite` guards in `REQ-FIL-024.3`. |
+| `1.0.8` | 2026-11-18 | AI Agent (`ATT-8705`) | `ATT-8705` | Added `REQ-FIL-025` [Planned] for post-workout ERTS running-pace heading anchoring, 1-Hz yaw-rate anti-aliasing, symmetric sanity bounds, and `Laps.db` synchronization. |
+| `1.0.9` | 2026-11-18 | AI Agent (`ATT-8705`) | `ATT-8705` | Promoted `REQ-FIL-025` to `[Implemented]` following Stage 4 implementation. |
+| `1.0.10` | 2026-11-18 | AI Agent (`ATT-8705`) | `ATT-8705` | Promoted `REQ-FIL-025` to `[Verified]` in Stage 5 following Tier-1 targeted unit/Robolectric regression verification. |

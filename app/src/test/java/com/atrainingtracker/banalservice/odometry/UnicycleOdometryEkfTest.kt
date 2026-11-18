@@ -367,4 +367,32 @@ class UnicycleOdometryEkfTest {
         assertTrue(ekf.updateGnssPosition(180.0, 0.0, accuracyMeters = 3.0, timestampMs = 13_000L, isStationary = false))
         assertTrue("Single moving outlier after stationary snap must be Huber-damped (east=${ekf.eastMeters})", ekf.eastMeters < 60.0)
     }
+
+    // TST-FIL-025.1: Offline heading anchoring at running pace preserves live MIN_DOPPLER_SPEED_MPS = 3.0 gate
+    @Test
+    fun testOfflineHeading_updatesAtRunningPaceWhileLiveDopplerRemainsGated_tstFil025_1() {
+        ekf.reset(east = 0.0, north = 0.0, speed = 2.0, headingRad = PI / 2.0)
+
+        // Live Doppler gate (ATT-8576 / REQ-FIL-023.1) must still reject <= 3.0 m/s
+        assertFalse(
+            "Live updateDopplerHeading must stay gated at <= 3.0 m/s",
+            ekf.updateDopplerHeading(headingRad = -PI / 2.0, varianceRad = 0.05, timestampMs = 1000L)
+        )
+        assertEquals(PI / 2.0, ekf.headingRad, 1e-6)
+
+        // Offline ERTS heading anchoring must update heading at running pace (~2.0 m/s)
+        assertTrue(
+            "Offline heading update must succeed at running pace",
+            ekf.updateOfflineHeading(headingRad = 0.0, varianceRad = 0.05, timestampMs = 2000L)
+        )
+        assertTrue(
+            "Heading must pull from PI/2 toward 0.0 (was ${ekf.headingRad})",
+            ekf.headingRad < PI / 2.0 - 0.1
+        )
+
+        // Opposing GNSS position update must never drive forward speed x[2] negative
+        ekf.predict(dtSec = 1.0, gyroYawRateRadPerSec = 0.0, timestampMs = 3000L)
+        ekf.updateGnssPosition(eastMeters = -50.0, northMeters = 0.0, accuracyMeters = 3.0, timestampMs = 3000L, isStationary = false)
+        assertTrue("Forward speed x[2] must never collapse negative (was ${ekf.speedMps})", ekf.speedMps >= 0.0)
+    }
 }
