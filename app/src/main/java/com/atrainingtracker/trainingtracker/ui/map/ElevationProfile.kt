@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Terrain
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -42,6 +43,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -272,6 +274,9 @@ fun ElevationProfile(
     fixedHeight: androidx.compose.ui.unit.Dp? = null,
     showEmptyState: Boolean = false,
     alignWithTelemetryCharts: Boolean = false,
+    overlaySeries: List<TelemetrySourceSeries> = emptyList(),
+    enabledOverlayIds: Set<String> = emptySet(),
+    onToggleOverlay: ((String) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val decodedData = remember(encodedAltitudes, encodedDistances) {
@@ -305,6 +310,9 @@ fun ElevationProfile(
         fixedHeight = fixedHeight,
         showEmptyState = showEmptyState,
         alignWithTelemetryCharts = alignWithTelemetryCharts,
+        overlaySeries = overlaySeries,
+        enabledOverlayIds = enabledOverlayIds,
+        onToggleOverlay = onToggleOverlay,
         modifier = modifier
     )
 }
@@ -335,7 +343,10 @@ fun ElevationProfile(
     segmentColorProvider: ((Double) -> Color)? = null,
     fixedHeight: androidx.compose.ui.unit.Dp? = null,
     showEmptyState: Boolean = false,
-    alignWithTelemetryCharts: Boolean = false
+    alignWithTelemetryCharts: Boolean = false,
+    overlaySeries: List<TelemetrySourceSeries> = emptyList(),
+    enabledOverlayIds: Set<String> = emptySet(),
+    onToggleOverlay: ((String) -> Unit)? = null
 ) {
     if (pathPoints.size < 2 && showEmptyState) {
         ElevationProfileEmptyState(
@@ -354,6 +365,17 @@ fun ElevationProfile(
     val tuningConfig by tuningDataStore.tuningConfigFlow.collectAsState(initial = TuningConfig())
     val effectiveSigma = smoothingSigma ?: tuningConfig.elevationSmoothingSigmaMeters.toDouble()
     var showLegend by remember { mutableStateOf(false) }
+    var localEnabledOverlayIds by rememberSaveable(overlaySeries.map { it.columnName }) {
+        mutableStateOf(enabledOverlayIds)
+    }
+    val effectiveEnabledOverlayIds = if (onToggleOverlay != null) enabledOverlayIds else localEnabledOverlayIds
+    val handleToggleOverlay: (String) -> Unit = onToggleOverlay ?: { col ->
+        localEnabledOverlayIds = if (col in localEnabledOverlayIds) localEnabledOverlayIds - col else localEnabledOverlayIds + col
+    }
+    val hasMultiSourceOverlays = overlaySeries.size >= 2
+    val activeOverlaySeries = remember(overlaySeries, effectiveEnabledOverlayIds, hasMultiSourceOverlays) {
+        if (hasMultiSourceOverlays) overlaySeries.filter { it.columnName in effectiveEnabledOverlayIds } else emptyList()
+    }
 
     val pathStartDist = pathPoints.firstOrNull()?.distance ?: 0.0
     var internalZoomScale by remember(pathPoints) { mutableFloatStateOf(1.0f) }
@@ -380,7 +402,7 @@ fun ElevationProfile(
 
     var lastTapTime by remember { mutableLongStateOf(0L) }
 
-    val cachedData = remember(pathPoints, unit, minAltitudeOverride, maxAltitudeOverride, effectiveSigma, climbGradientShading, segmentColorProvider) {
+    val cachedData = remember(pathPoints, unit, minAltitudeOverride, maxAltitudeOverride, effectiveSigma, climbGradientShading, segmentColorProvider, activeOverlaySeries) {
         val maxPoints = 500
         val pathPointsDownsampled = if (pathPoints.size > maxPoints) {
             val step = pathPoints.size / maxPoints
@@ -395,10 +417,11 @@ fun ElevationProfile(
 
         val smoothedAltitudes = ElevationSmoothingMath.smoothAltitudes(pathPointsDownsampled, sigma = effectiveSigma)
 
-        val bounds = calculateElevationBounds(
+        val bounds = calculateElevationBoundsWithOverlays(
             pathPoints = pathPointsDownsampled,
             minAltitudeOverride = minAltitudeOverride,
-            maxAltitudeOverride = maxAltitudeOverride
+            maxAltitudeOverride = maxAltitudeOverride,
+            activeOverlaySeries = activeOverlaySeries
         )
         val min = bounds.min
         val max = bounds.max
@@ -523,7 +546,19 @@ fun ElevationProfile(
         }
     }.mapValues { (_, stringRes) -> stringResource(stringRes) }
 
-    Box(modifier = modifier.fillMaxWidth()) {
+    Column(modifier = modifier.fillMaxWidth()) {
+        if (hasMultiSourceOverlays) {
+            MultiSensorOverlayControls(
+                metricType = TelemetryMetricType.ALTITUDE,
+                overlaySeries = overlaySeries,
+                enabledOverlayIds = effectiveEnabledOverlayIds,
+                activeOverlaySeries = activeOverlaySeries,
+                onToggleOverlay = handleToggleOverlay,
+                isLandscape = isLandscape,
+                unit = unit
+            )
+        }
+        Box(modifier = if (fillParentHeight) Modifier.fillMaxWidth().weight(1f) else Modifier.fillMaxWidth()) {
         val baseCanvasModifier = if (fillParentHeight) {
             Modifier
                 .fillMaxWidth()
@@ -949,6 +984,19 @@ fun ElevationProfile(
                         }
                     }
                 }
+                if (activeOverlaySeries.isNotEmpty()) {
+                    drawElevationOverlayCurves(
+                        activeOverlaySeries = activeOverlaySeries,
+                        allOverlaySeries = overlaySeries,
+                        isTimeDomain = isTimeDomain,
+                        currentStartDist = currentStartDist,
+                        visibleSpan = visibleSpan,
+                        minAlt = cachedData.minAlt,
+                        altRange = cachedData.altRange,
+                        width = width,
+                        height = height
+                    )
+                }
             }
 
             currentDistance?.let { dist ->
@@ -990,6 +1038,18 @@ fun ElevationProfile(
                     }
                     drawCircle(colorScheme.onSurface, 5.dp.toPx(), Offset(markerX, markerY))
                     drawCircle(colorScheme.primary, 3.dp.toPx(), Offset(markerX, markerY))
+                    if (activeOverlaySeries.isNotEmpty()) {
+                        drawElevationOverlayScrubDots(
+                            activeOverlaySeries = activeOverlaySeries,
+                            allOverlaySeries = overlaySeries,
+                            targetValue = markerVal,
+                            isTimeDomain = isTimeDomain,
+                            markerX = markerX,
+                            minAlt = cachedData.minAlt,
+                            altRange = cachedData.altRange,
+                            height = height
+                        )
+                    }
                 }
             }
         }
@@ -1089,6 +1149,14 @@ fun ElevationProfile(
                     pLeft.altitude ?: pRight?.altitude
                 }
 
+                val overlayReadout = formatElevationOverlayScrubSummary(
+                    activeOverlaySeries = activeOverlaySeries,
+                    targetValue = if (isTimeDomain) activePoint.timeSec.toDouble() else currentDistance,
+                    isTimeDomain = isTimeDomain,
+                    unit = unit,
+                    altitudeFormatter = altitudeFormatter,
+                    locale = currentLocale
+                )
                 ScrubbingTelemetryBadge(
                     point = activePoint,
                     bSportType = bSportType,
@@ -1099,7 +1167,8 @@ fun ElevationProfile(
                         .align(Alignment.TopCenter)
                         .padding(top = 4.dp),
                     hrZoneThresholds = hrZoneThresholds,
-                    powerZoneThresholds = powerZoneThresholds
+                    powerZoneThresholds = powerZoneThresholds,
+                    overlayReadoutText = overlayReadout
                 )
             }
         }
@@ -1115,6 +1184,7 @@ fun ElevationProfile(
             if (showLegend) {
                 GradeLegend(modifier = Modifier.align(Alignment.TopEnd).padding(top = 28.dp, end = 4.dp))
             }
+        }
         }
     }
 }
@@ -1133,7 +1203,8 @@ fun ScrubbingTelemetryBadge(
     xAxisDomain: ProfileXAxisDomain,
     modifier: Modifier = Modifier,
     hrZoneThresholds: HeartRateZoneThresholds? = null,
-    powerZoneThresholds: PowerZoneThresholds? = null
+    powerZoneThresholds: PowerZoneThresholds? = null,
+    overlayReadoutText: String? = null
 ) {
     val context = LocalContext.current
     val currentLocale = LocalConfiguration.current.locales[0]
@@ -1157,7 +1228,9 @@ fun ScrubbingTelemetryBadge(
         shadowElevation = 3.dp,
         tonalElevation = 2.dp,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)),
-        modifier = modifier.padding(horizontal = 4.dp)
+        modifier = modifier
+            .padding(horizontal = 4.dp)
+            .testTag("scrubbing_telemetry_badge")
     ) {
         Column(
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
@@ -1282,54 +1355,16 @@ fun ScrubbingTelemetryBadge(
                     }
                 }
             }
+            if (!overlayReadoutText.isNullOrEmpty()) {
+                Text(
+                    text = overlayReadoutText,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
         }
-    }
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun GradeLegend(modifier: Modifier = Modifier) {
-    Surface(
-        modifier = modifier.widthIn(max = 300.dp),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
-        shape = RoundedCornerShape(8.dp),
-        shadowElevation = 4.dp
-    ) {
-        FlowRow(
-            modifier = Modifier.padding(12.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            GradeLegendItem(TTColor.Zone1, stringResource(R.string.grade_legend_under_2))
-            GradeLegendItem(TTColor.Zone2, stringResource(R.string.grade_legend_2_to_5))
-            GradeLegendItem(TTColor.Zone3, stringResource(R.string.grade_legend_5_to_10))
-            GradeLegendItem(TTColor.Zone4, stringResource(R.string.grade_legend_10_to_15))
-            GradeLegendItem(TTColor.Zone5, stringResource(R.string.grade_legend_15_to_20))
-            GradeLegendItem(TTColor.Zone6, stringResource(R.string.grade_legend_20_to_25))
-            GradeLegendItem(TTColor.Zone7, stringResource(R.string.grade_legend_over_25))
-        }
-    }
-}
-
-@Composable
-private fun GradeLegendItem(
-    color: Color,
-    label: String,
-    hasOutline: Boolean = color == TTColor.Zone6 || color == TTColor.Zone7
-) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        Surface(
-            modifier = Modifier.size(12.dp),
-            color = color,
-            shape = RoundedCornerShape(2.dp),
-            border = if (hasOutline) BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant) else null
-        ) {}
-        Text(
-            text = label, 
-            style = MaterialTheme.typography.labelSmall, 
-            color = MaterialTheme.colorScheme.onSurface,
-            softWrap = false
-        )
     }
 }
 

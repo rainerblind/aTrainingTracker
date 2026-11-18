@@ -28,6 +28,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.util.Locale
 import kotlin.math.abs
 
 /**
@@ -271,5 +272,83 @@ class TelemetryMetricUtilsTest {
 
         assertEquals(148.0, TelemetryMetricUtils.findNearestSourceValue(points, 115.0, isTimeDomain = false)!!, 1e-6)
         assertEquals(162.0, TelemetryMetricUtils.findNearestSourceValue(points, 45.0, isTimeDomain = true)!!, 1e-6)
+    }
+
+    @Test
+    fun testSlopeDetectionExtractionFormatting_supportsNegativeZeroAndPositiveGrades() {
+        // TST-PER-052.3
+        assertFalse(TelemetryMetricUtils.hasSlopeData(null))
+        assertFalse(TelemetryMetricUtils.hasSlopeData(listOf(createPoint(10.0, 10L))))
+        assertFalse(
+            TelemetryMetricUtils.hasSlopeData(
+                listOf(PathPoint(10.0, LatLng(48.0, 11.0), timeSec = 10L, slope = Double.NaN))
+            )
+        )
+
+        val descentPoint = PathPoint(100.0, LatLng(48.0, 11.0), timeSec = 25L, slope = -6.5)
+        val flatPoint = PathPoint(200.0, LatLng(48.0, 11.0), timeSec = 50L, slope = 0.0)
+        assertTrue(TelemetryMetricUtils.hasSlopeData(listOf(descentPoint)))
+        assertTrue(TelemetryMetricUtils.hasSlopeData(listOf(flatPoint)))
+
+        assertEquals(
+            -6.5,
+            TelemetryMetricUtils.extractMetricValue(descentPoint, TelemetryMetricType.SLOPE, MyUnits.METRIC)!!,
+            1e-6
+        )
+        assertEquals(
+            "-6.5%",
+            TelemetryMetricUtils.formatValue(
+                value = -6.5,
+                metricType = TelemetryMetricType.SLOPE,
+                unit = MyUnits.METRIC,
+                speedFormatter = SpeedFormatter(),
+                paceFormatter = PaceFormatter(),
+                locale = Locale.US
+            )
+        )
+    }
+
+    @Test
+    fun testConvertSpeedMpsToPaceMinutes_handlesMetricImperialAndStandstill() {
+        // TST-PER-052.3
+        assertNull(TelemetryMetricUtils.convertSpeedMpsToPaceMinutes(0.2, MyUnits.METRIC))
+        assertNull(TelemetryMetricUtils.convertSpeedMpsToPaceMinutes(Double.NaN, MyUnits.METRIC))
+
+        // 1000 m in 300 s = 3.3333 m/s -> 5.0 min/km
+        val paceMetric = TelemetryMetricUtils.convertSpeedMpsToPaceMinutes(1000.0 / 300.0, MyUnits.METRIC)!!
+        assertEquals(5.0, paceMetric, 0.01)
+
+        val paceImperial = TelemetryMetricUtils.convertSpeedMpsToPaceMinutes(1000.0 / 300.0, MyUnits.IMPERIAL)!!
+        assertEquals(8.0467, paceImperial, 0.02)
+    }
+
+    @Test
+    fun testFormatValue_respectsExplicitLocaleForSlopes() {
+        // TST-PER-052.3 (ATT-8080 Bounce 1 Fix 2)
+        val speedFormatter = SpeedFormatter()
+        val paceFormatter = PaceFormatter()
+
+        assertEquals(
+            "-6,5%",
+            TelemetryMetricUtils.formatValue(
+                value = -6.5,
+                metricType = TelemetryMetricType.SLOPE,
+                unit = MyUnits.METRIC,
+                speedFormatter = speedFormatter,
+                paceFormatter = paceFormatter,
+                locale = Locale.GERMANY
+            )
+        )
+        assertEquals(
+            "-6.5%",
+            TelemetryMetricUtils.formatValue(
+                value = -6.5,
+                metricType = TelemetryMetricType.SLOPE,
+                unit = MyUnits.METRIC,
+                speedFormatter = speedFormatter,
+                paceFormatter = paceFormatter,
+                locale = Locale.US
+            )
+        )
     }
 }

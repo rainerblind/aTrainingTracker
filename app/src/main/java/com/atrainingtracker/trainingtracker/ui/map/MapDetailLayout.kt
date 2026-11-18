@@ -48,6 +48,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.banalservice.sensor.formater.AltitudeFormatter
 import com.atrainingtracker.trainingtracker.climbs.Climb
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.settings.ProfileXAxisDomain
@@ -85,6 +86,7 @@ import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.Locale
 
 private fun Modifier.chartInteractiveTouchDetector(
     density: Density,
@@ -157,7 +159,9 @@ fun MapDetailLayout(
     onInteractiveCanvasTouch: ((Boolean) -> Unit)? = null,
     externalSnapshotTrigger: Boolean = false,
     onSnapshotComplete: (() -> Unit)? = null,
-    multiSensorOverlays: Map<TelemetryMetricType, List<TelemetrySourceSeries>> = emptyMap()
+    multiSensorOverlays: Map<TelemetryMetricType, List<TelemetrySourceSeries>> = emptyMap(),
+    hiddenCharts: Set<TelemetryChartKind> = emptySet(),
+    onToggleChartVisibility: ((TelemetryChartKind) -> Unit)? = null
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -213,11 +217,9 @@ fun MapDetailLayout(
     val telemetryTotalSpan = ProfileDomainMath.calculateTotalSpan(tuningConfig.telemetryXAxisDomain, activeScrubPath)
     val totalSpan = if (showElevationProfile) elevationTotalSpan else telemetryTotalSpan
 
-    val hasTelemetryGraphs = showZoomControls && showTelemetryCharts && activeScrubPath != null && (
-        TelemetryMetricUtils.hasHeartRateData(activeScrubPath) ||
-        TelemetryMetricUtils.hasSpeedData(activeScrubPath) ||
-        TelemetryMetricUtils.hasPowerData(activeScrubPath) ||
-        (tuningConfig.enableCriticalPowerModel && TelemetryMetricUtils.hasWPrimeBalData(activeScrubPath))
+    val hasTelemetryGraphs = showZoomControls && showTelemetryCharts && hasAnyTelemetryChartSeries(
+        path = activeScrubPath,
+        enableCriticalPowerModel = tuningConfig.enableCriticalPowerModel
     )
     val hasZoomToolbar = showZoomControls && (showElevationProfile || hasTelemetryGraphs) && !activeScrubPath.isNullOrEmpty()
     val hasScrollableContent = metadataContent != null || analyticsContent != null || hasTelemetryGraphs
@@ -225,8 +227,23 @@ fun MapDetailLayout(
 
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val currentLocale = remember(configuration) {
+        configuration.locales.let { if (it.isEmpty) Locale.getDefault() else it[0] }
+    }
 
     val unit = remember { TrainingApplication.getUnit() }
+    val altitudeFormatter = remember(unit) { AltitudeFormatter() }
+    val altitudeOverlays = multiSensorOverlays[TelemetryMetricType.ALTITUDE].orEmpty()
+    var enabledAltitudeOverlayIds by rememberSaveable(altitudeOverlays.map { it.columnName }) {
+        mutableStateOf(emptySet<String>())
+    }
+    val activeAltitudeOverlays = remember(altitudeOverlays, enabledAltitudeOverlayIds) {
+        if (altitudeOverlays.size >= 2) {
+            altitudeOverlays.filter { it.columnName in enabledAltitudeOverlayIds }
+        } else {
+            emptyList()
+        }
+    }
     val connection = remember { CollapsingAppBarNestedScrollConnection(0) }
     var headerHeightPx by remember { mutableIntStateOf(0) }
 
@@ -296,6 +313,18 @@ fun MapDetailLayout(
                         )
                     }
                 }
+                val elevationOverlayReadout = if (showElevationProfile && activeAltitudeOverlays.isNotEmpty()) {
+                    formatElevationOverlayScrubSummary(
+                        activeOverlaySeries = activeAltitudeOverlays,
+                        targetValue = if (isElevationTimeDomain) activeScrubPoint.timeSec.toDouble() else selectedDistance!!,
+                        isTimeDomain = isElevationTimeDomain,
+                        unit = unit,
+                        altitudeFormatter = altitudeFormatter,
+                        locale = currentLocale
+                    )
+                } else {
+                    null
+                }
                 ScrubbingTelemetryBadge(
                     point = activeScrubPoint,
                     bSportType = bSportType,
@@ -307,7 +336,8 @@ fun MapDetailLayout(
                         if (isTelemetryTimeDomain) ProfileXAxisDomain.TIME else ProfileXAxisDomain.DISTANCE
                     },
                     hrZoneThresholds = hrThresholds,
-                    powerZoneThresholds = powerThresholds
+                    powerZoneThresholds = powerThresholds,
+                    overlayReadoutText = elevationOverlayReadout
                 )
             }
         }
@@ -504,6 +534,15 @@ fun MapDetailLayout(
                                         powerZoneThresholds = powerThresholds,
                                         climbs = climbs,
                                         alignWithTelemetryCharts = showElevationHistogram,
+                                        overlaySeries = altitudeOverlays,
+                                        enabledOverlayIds = enabledAltitudeOverlayIds,
+                                        onToggleOverlay = { col ->
+                                            enabledAltitudeOverlayIds = if (col in enabledAltitudeOverlayIds) {
+                                                enabledAltitudeOverlayIds - col
+                                            } else {
+                                                enabledAltitudeOverlayIds + col
+                                            }
+                                        },
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .chartInteractiveTouchDetector(
@@ -517,288 +556,45 @@ fun MapDetailLayout(
 
                                 // Telemetry Metric Graphs in detailed inspection view
                                 if (showZoomControls && showTelemetryCharts) {
-                                    // Speed / Pace Graph
-                                    if (TelemetryMetricUtils.hasSpeedData(path)) {
-                                        Spacer(modifier = Modifier.height(8.dp))
-                                        val isRunning = bSportType == BSportType.RUN
-                                        Text(
-                                            text = stringResource(if (isRunning) R.string.graph_heading_pace else R.string.graph_heading_speed),
-                                            style = MaterialTheme.typography.titleSmall,
-                                            fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
-                                            color = MaterialTheme.colorScheme.onSurface,
-                                            modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 4.dp)
-                                        )
-                                        TelemetryMetricGraph(
-                                            pathPoints = path,
-                                            metricType = if (isRunning) TelemetryMetricType.PACE else TelemetryMetricType.SPEED,
-                                            currentDistance = selectedDistance,
-                                            onDistanceSelected = { selectedDistance = it },
-                                            xAxisDomain = activeTelemetryDomain,
-                                            bSportType = bSportType,
-                                            zoomScale = profileZoomScale,
-                                            startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, telemetryTotalSpan, profileZoomScale),
-                                            isPanMode = isPanMode,
-                                            onZoomChanged = { z, s ->
-                                                profileZoomScale = z
-                                                viewportStartFraction = MapDetailViewportMath.domainToFraction(s, telemetryTotalSpan, z)
-                                            },
-                                            paceCeilingMinKm = tuningConfig.paceCeilingMinKm,
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .chartInteractiveTouchDetector(
-                                                    density = density,
-                                                    isLandscape = isLandscape,
-                                                    alignWithHistogram = true,
-                                                    onInteractiveCanvasTouch = onInteractiveCanvasTouch
-                                                )
-                                        )
-                                    }
-
-                                    // HR Graph (with optional >= 2 multi-sensor overlays, REQ-PER-042)
-                                    if (TelemetryMetricUtils.hasHeartRateData(path)) {
-                                        OverlayTelemetryChartSection(
-                                            path = path,
-                                            metricType = TelemetryMetricType.HEART_RATE,
-                                            headingRes = R.string.graph_heading_heart_rate,
-                                            selectedDistance = selectedDistance,
-                                            onDistanceSelected = { selectedDistance = it },
-                                            activeTelemetryDomain = activeTelemetryDomain,
-                                            isTrackless = isTrackless,
-                                            bSportType = bSportType,
-                                            zoomScale = profileZoomScale,
-                                            startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, telemetryTotalSpan, profileZoomScale),
-                                            isPanMode = isPanMode,
-                                            onZoomChanged = { z, s ->
-                                                profileZoomScale = z
-                                                viewportStartFraction = MapDetailViewportMath.domainToFraction(s, telemetryTotalSpan, z)
-                                            },
-                                            hrZoneThresholds = hrThresholds,
-                                            zoneDistribution = hrZoneDistribution,
-                                            zoneDisplayMode = hrZoneDisplayMode,
-                                            cardioPowerDynamics = workoutData?.cardioPowerDynamics,
-                                            enableCardioPowerDynamics = tuningConfig.enableCardioPowerDynamics,
-                                            overlaySeries = multiSensorOverlays[
-                                                TelemetryMetricType.HEART_RATE
-                                            ].orEmpty(),
-                                            chartModifier = Modifier
-                                                .fillMaxWidth()
-                                                .chartInteractiveTouchDetector(
-                                                    density = density,
-                                                    isLandscape = isLandscape,
-                                                    alignWithHistogram = true,
-                                                    onInteractiveCanvasTouch = onInteractiveCanvasTouch
-                                                )
-                                        )
-                                    }
-
-                                    // Power Graph (with optional >= 2 multi-sensor overlays, REQ-PER-042)
-                                    if (TelemetryMetricUtils.hasPowerData(path)) {
-                                        OverlayTelemetryChartSection(
-                                            path = path,
-                                            metricType = TelemetryMetricType.POWER,
-                                            headingRes = R.string.graph_heading_power,
-                                            selectedDistance = selectedDistance,
-                                            onDistanceSelected = { selectedDistance = it },
-                                            activeTelemetryDomain = activeTelemetryDomain,
-                                            isTrackless = isTrackless,
-                                            bSportType = bSportType,
-                                            zoomScale = profileZoomScale,
-                                            startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, telemetryTotalSpan, profileZoomScale),
-                                            isPanMode = isPanMode,
-                                            onZoomChanged = { z, s ->
-                                                profileZoomScale = z
-                                                viewportStartFraction = MapDetailViewportMath.domainToFraction(s, telemetryTotalSpan, z)
-                                            },
-                                            powerZoneThresholds = powerThresholds,
-                                            zoneDistribution = powerZoneDistribution,
-                                            zoneDisplayMode = powerZoneDisplayMode,
-                                            overlaySeries = multiSensorOverlays[TelemetryMetricType.POWER].orEmpty(),
-                                            chartModifier = Modifier
-                                                .fillMaxWidth()
-                                                .chartInteractiveTouchDetector(
-                                                    density = density,
-                                                    isLandscape = isLandscape,
-                                                    alignWithHistogram = true,
-                                                    onInteractiveCanvasTouch = onInteractiveCanvasTouch
-                                                )
-                                        )
-                                    }
-
-                                    // Cadence Graph (REQ-PER-042.2 / .3)
-                                    if (TelemetryMetricUtils.hasCadenceData(path)) {
-                                        OverlayTelemetryChartSection(
-                                            path = path,
-                                            metricType = TelemetryMetricType.CADENCE,
-                                            headingRes = R.string.graph_heading_cadence,
-                                            selectedDistance = selectedDistance,
-                                            onDistanceSelected = { selectedDistance = it },
-                                            activeTelemetryDomain = activeTelemetryDomain,
-                                            isTrackless = isTrackless,
-                                            bSportType = bSportType,
-                                            zoomScale = profileZoomScale,
-                                            startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, telemetryTotalSpan, profileZoomScale),
-                                            isPanMode = isPanMode,
-                                            onZoomChanged = { z, s ->
-                                                profileZoomScale = z
-                                                viewportStartFraction = MapDetailViewportMath.domainToFraction(s, telemetryTotalSpan, z)
-                                            },
-                                            overlaySeries = multiSensorOverlays[TelemetryMetricType.CADENCE].orEmpty(),
-                                            chartModifier = Modifier
-                                                .fillMaxWidth()
-                                                .chartInteractiveTouchDetector(
-                                                    density = density,
-                                                    isLandscape = isLandscape,
-                                                    alignWithHistogram = true,
-                                                    onInteractiveCanvasTouch = onInteractiveCanvasTouch
-                                                )
-                                        )
-                                    }
-
-                                    // W'bal Graph (REQ-UI-399.3 / REQ-UI-403)
-                                    if (tuningConfig.enableCriticalPowerModel && TelemetryMetricUtils.hasWPrimeBalData(path)) {
-                                        Spacer(modifier = Modifier.height(8.dp))
-                                        val activeWPrimePoint = if (selectedDistance != null) {
-                                            TelemetryMetricUtils.findNearestPoint(
-                                                points = path,
-                                                targetValue = selectedDistance!!,
-                                                isTimeDomain = isTrackless
-                                            )
-                                        } else null
-                                        val activeWPrimeKj = activeWPrimePoint?.wPrimeBalKj
-                                        val wPrimeHeaderText = if (activeWPrimeKj != null) {
-                                            String.format(java.util.Locale.US, "%s: %.1f kJ", stringResource(R.string.w_prime_bal), activeWPrimeKj)
+                                    TelemetryChartStack(
+                                        path = path,
+                                        bSportType = bSportType,
+                                        tuningConfig = tuningConfig,
+                                        selectedDistance = selectedDistance,
+                                        onDistanceSelected = { selectedDistance = it },
+                                        activeTelemetryDomain = activeTelemetryDomain,
+                                        isTrackless = isTrackless,
+                                        zoomScale = profileZoomScale,
+                                        startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, telemetryTotalSpan, profileZoomScale),
+                                        isPanMode = isPanMode,
+                                        onZoomChanged = { z, s ->
+                                            profileZoomScale = z
+                                            viewportStartFraction = MapDetailViewportMath.domainToFraction(s, telemetryTotalSpan, z)
+                                        },
+                                        modifier = if (hasZoomToolbar && isLandscape && !showElevationProfile) {
+                                            Modifier.padding(top = GlobalTelemetryZoomToolbarDefaults.TOOLBAR_HEIGHT)
                                         } else {
-                                            stringResource(R.string.w_prime_bal)
-                                        }
-                                        Text(
-                                            text = wPrimeHeaderText,
-                                            style = MaterialTheme.typography.titleSmall,
-                                            fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
-                                            color = MaterialTheme.colorScheme.onSurface,
-                                            modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 4.dp)
-                                        )
-                                        TelemetryMetricGraph(
-                                            pathPoints = path,
-                                            metricType = TelemetryMetricType.W_PRIME_BAL,
-                                            currentDistance = selectedDistance,
-                                            onDistanceSelected = { selectedDistance = it },
-                                            xAxisDomain = activeTelemetryDomain,
-                                            bSportType = bSportType,
-                                            zoomScale = profileZoomScale,
-                                            startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, telemetryTotalSpan, profileZoomScale),
-                                            isPanMode = isPanMode,
-                                            onZoomChanged = { z, s ->
-                                                profileZoomScale = z
-                                                viewportStartFraction = MapDetailViewportMath.domainToFraction(s, telemetryTotalSpan, z)
-                                            },
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .chartInteractiveTouchDetector(
-                                                    density = density,
-                                                    isLandscape = isLandscape,
-                                                    alignWithHistogram = true,
-                                                    onInteractiveCanvasTouch = onInteractiveCanvasTouch
-                                                )
-                                        )
-                                    }
-
-                                    // DFA a1 Graph (REQ-PER-035.1)
-                                    if (TelemetryMetricUtils.hasHrvDfaA1Data(path)) {
-                                        Spacer(modifier = Modifier.height(8.dp))
-                                        val activePoint = if (selectedDistance != null) {
-                                            TelemetryMetricUtils.findNearestPoint(
-                                                points = path,
-                                                targetValue = selectedDistance!!,
-                                                isTimeDomain = (activeTelemetryDomain == ProfileXAxisDomain.TIME)
-                                            )
-                                        } else null
-                                        val activeA1 = activePoint?.hrvDfaA1
-                                        val a1HeaderText = if (activeA1 != null) {
-                                            "${stringResource(R.string.hrv_dfa_a1)}: ${String.format(java.util.Locale.US, "%.2f", activeA1)}"
-                                        } else {
-                                            stringResource(R.string.hrv_dfa_a1)
-                                        }
-                                        Text(
-                                            text = a1HeaderText,
-                                            style = MaterialTheme.typography.titleSmall,
-                                            fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
-                                            color = MaterialTheme.colorScheme.onSurface,
-                                            modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 4.dp)
-                                        )
-                                        TelemetryMetricGraph(
-                                            pathPoints = path,
-                                            metricType = TelemetryMetricType.HRV_DFA_A1,
-                                            currentDistance = selectedDistance,
-                                            onDistanceSelected = { selectedDistance = it },
-                                            xAxisDomain = activeTelemetryDomain,
-                                            bSportType = bSportType,
-                                            dfaA1ThresholdT1 = tuningConfig.dfaA1ThresholdT1,
-                                            dfaA1ThresholdT2 = tuningConfig.dfaA1ThresholdT2,
-                                            zoomScale = profileZoomScale,
-                                            startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, telemetryTotalSpan, profileZoomScale),
-                                            isPanMode = isPanMode,
-                                            onZoomChanged = { z, s ->
-                                                profileZoomScale = z
-                                                viewportStartFraction = MapDetailViewportMath.domainToFraction(s, telemetryTotalSpan, z)
-                                            },
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .chartInteractiveTouchDetector(
-                                                    density = density,
-                                                    isLandscape = isLandscape,
-                                                    alignWithHistogram = true,
-                                                    onInteractiveCanvasTouch = onInteractiveCanvasTouch
-                                                )
-                                        )
-                                    }
-
-                                    // rMSSD Graph (REQ-PER-035.1)
-                                    if (TelemetryMetricUtils.hasHrvRmssdData(path)) {
-                                        Spacer(modifier = Modifier.height(8.dp))
-                                        val activePoint = if (selectedDistance != null) {
-                                            TelemetryMetricUtils.findNearestPoint(
-                                                points = path,
-                                                targetValue = selectedDistance!!,
-                                                isTimeDomain = (activeTelemetryDomain == ProfileXAxisDomain.TIME)
-                                            )
-                                        } else null
-                                        val activeRmssd = activePoint?.hrvRmssd
-                                        val rmssdHeaderText = if (activeRmssd != null) {
-                                            "${stringResource(R.string.hrv_rmssd)}: ${String.format(java.util.Locale.US, "%.1f ms", activeRmssd)}"
-                                        } else {
-                                            stringResource(R.string.hrv_rmssd)
-                                        }
-                                        Text(
-                                            text = rmssdHeaderText,
-                                            style = MaterialTheme.typography.titleSmall,
-                                            fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
-                                            color = MaterialTheme.colorScheme.onSurface,
-                                            modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 4.dp)
-                                        )
-                                        TelemetryMetricGraph(
-                                            pathPoints = path,
-                                            metricType = TelemetryMetricType.HRV_RMSSD,
-                                            currentDistance = selectedDistance,
-                                            onDistanceSelected = { selectedDistance = it },
-                                            xAxisDomain = activeTelemetryDomain,
-                                            bSportType = bSportType,
-                                            zoomScale = profileZoomScale,
-                                            startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, telemetryTotalSpan, profileZoomScale),
-                                            isPanMode = isPanMode,
-                                            onZoomChanged = { z, s ->
-                                                profileZoomScale = z
-                                                viewportStartFraction = MapDetailViewportMath.domainToFraction(s, telemetryTotalSpan, z)
-                                            },
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .chartInteractiveTouchDetector(
-                                                    density = density,
-                                                    isLandscape = isLandscape,
-                                                    alignWithHistogram = true,
-                                                    onInteractiveCanvasTouch = onInteractiveCanvasTouch
-                                                )
-                                        )
-                                    }
+                                            Modifier
+                                        },
+                                        chartModifier = Modifier
+                                            .fillMaxWidth()
+                                            .chartInteractiveTouchDetector(
+                                                density = density,
+                                                isLandscape = isLandscape,
+                                                alignWithHistogram = true,
+                                                onInteractiveCanvasTouch = onInteractiveCanvasTouch
+                                            ),
+                                        hiddenCharts = hiddenCharts,
+                                        onToggleChartVisibility = onToggleChartVisibility,
+                                        hrThresholds = hrThresholds,
+                                        powerThresholds = powerThresholds,
+                                        hrZoneDistribution = hrZoneDistribution,
+                                        powerZoneDistribution = powerZoneDistribution,
+                                        hrZoneDisplayMode = hrZoneDisplayMode,
+                                        powerZoneDisplayMode = powerZoneDisplayMode,
+                                        cardioPowerDynamics = workoutData?.cardioPowerDynamics,
+                                        multiSensorOverlays = multiSensorOverlays
+                                    )
                                 }
                             }
                         }
@@ -1263,163 +1059,4 @@ internal suspend fun executeSnapshotCaptureAndShare(
     } finally {
         onFinally()
     }
-}
-
-/**
- * Resolves the active scrubbing domain coordinate for multi-source overlays across GPS
- * (`DISTANCE`/`TIME`) and trackless (`TIME`) workouts (REQ-PER-042.3).
- */
-internal fun resolveOverlayScrubTarget(
-    pathPoints: List<PathPoint>,
-    selectedDistance: Double?,
-    isTimeDomain: Boolean,
-    isTrackless: Boolean
-): Double? = when {
-    selectedDistance == null -> null
-    !isTimeDomain || isTrackless -> selectedDistance
-    else -> TelemetryMetricUtils.findNearestPoint(
-        points = pathPoints,
-        targetValue = selectedDistance,
-        isTimeDomain = false
-    )?.timeSec?.toDouble()
-}
-
-internal fun formatTelemetryHeaderWithOverlays(
-    baseHeading: String,
-    activePrimaryText: String?,
-    metricType: TelemetryMetricType,
-    activeOverlays: List<TelemetrySourceSeries>,
-    overlayScrubTarget: Double?,
-    isTimeDomain: Boolean
-): String {
-    if (activePrimaryText == null && (overlayScrubTarget == null || activeOverlays.isEmpty())) {
-        return baseHeading
-    }
-    val unitSuffix = when (metricType) {
-        TelemetryMetricType.HEART_RATE -> "bpm"
-        TelemetryMetricType.POWER -> "W"
-        TelemetryMetricType.CADENCE -> "rpm"
-        else -> ""
-    }
-    val parts = mutableListOf<String>()
-    if (activePrimaryText != null) {
-        parts.add("$baseHeading: $activePrimaryText")
-    } else {
-        parts.add(baseHeading)
-    }
-    if (overlayScrubTarget != null && activeOverlays.isNotEmpty()) {
-        for (series in activeOverlays) {
-            val v = TelemetryMetricUtils.findNearestSourceValue(
-                points = series.points,
-                targetValue = overlayScrubTarget,
-                isTimeDomain = isTimeDomain
-            )
-            if (v != null) {
-                parts.add("${series.sourceName}: ${v.toInt()} $unitSuffix")
-            }
-        }
-    }
-    return parts.joinToString(" • ")
-}
-
-private fun formatPrimaryActiveValueText(
-    activePoint: PathPoint?,
-    metricType: TelemetryMetricType,
-    hrZoneThresholds: HeartRateZoneThresholds?,
-    powerZoneThresholds: PowerZoneThresholds?
-): String? = when (metricType) {
-    TelemetryMetricType.HEART_RATE -> activePoint?.hr?.let { hr ->
-        val zone = hrZoneThresholds?.let {
-            " • Z${TelemetryZoneMath.determineHeartRateZone(hr.toDouble(), it)}"
-        }.orEmpty()
-        "$hr bpm$zone"
-    }
-    TelemetryMetricType.POWER -> activePoint?.power?.let { pwr ->
-        val zone = powerZoneThresholds?.let {
-            " • Z${TelemetryZoneMath.determinePowerZone(pwr.toDouble(), it)}"
-        }.orEmpty()
-        "$pwr W$zone"
-    }
-    TelemetryMetricType.CADENCE -> activePoint?.cadence?.let { "$it rpm" }
-    else -> null
-}
-
-@Composable
-private fun OverlayTelemetryChartSection(
-    path: List<PathPoint>,
-    metricType: TelemetryMetricType,
-    headingRes: Int,
-    selectedDistance: Double?,
-    onDistanceSelected: (Double?) -> Unit,
-    activeTelemetryDomain: ProfileXAxisDomain,
-    isTrackless: Boolean,
-    bSportType: BSportType,
-    zoomScale: Float,
-    startDist: Double,
-    isPanMode: Boolean,
-    onZoomChanged: (Float, Double) -> Unit,
-    overlaySeries: List<TelemetrySourceSeries>,
-    chartModifier: Modifier,
-    hrZoneThresholds: HeartRateZoneThresholds? = null,
-    powerZoneThresholds: PowerZoneThresholds? = null,
-    zoneDistribution: ZoneDistributionData? = null,
-    zoneDisplayMode: ZoneCardDisplayMode = ZoneCardDisplayMode.FIVE_ZONES,
-    cardioPowerDynamics: com.atrainingtracker.trainingtracker.database.CardioPowerDynamicsRecord? = null,
-    enableCardioPowerDynamics: Boolean = true
-) {
-    Spacer(modifier = Modifier.height(8.dp))
-    var enabledOverlayIds by rememberSaveable(metricType.name, overlaySeries.map { it.columnName }) {
-        mutableStateOf(emptySet<String>())
-    }
-    val isTimeDomain = isTrackless || activeTelemetryDomain == ProfileXAxisDomain.TIME
-    val activePoint = selectedDistance?.let {
-        TelemetryMetricUtils.findNearestPoint(path, it, isTimeDomain = isTrackless)
-    }
-    val activePrimaryText = formatPrimaryActiveValueText(
-        activePoint, metricType, hrZoneThresholds, powerZoneThresholds
-    )
-    val activeOverlays = if (overlaySeries.size >= 2) {
-        overlaySeries.filter { it.columnName in enabledOverlayIds }
-    } else {
-        emptyList()
-    }
-    val headerText = formatTelemetryHeaderWithOverlays(
-        baseHeading = stringResource(headingRes),
-        activePrimaryText = activePrimaryText,
-        metricType = metricType,
-        activeOverlays = activeOverlays,
-        overlayScrubTarget = resolveOverlayScrubTarget(path, selectedDistance, isTimeDomain, isTrackless),
-        isTimeDomain = isTimeDomain
-    )
-    Text(
-        text = headerText,
-        style = MaterialTheme.typography.titleSmall,
-        fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
-        color = MaterialTheme.colorScheme.onSurface,
-        modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 4.dp)
-    )
-    TelemetryMetricGraph(
-        pathPoints = path,
-        metricType = metricType,
-        currentDistance = selectedDistance,
-        onDistanceSelected = onDistanceSelected,
-        xAxisDomain = activeTelemetryDomain,
-        bSportType = bSportType,
-        zoomScale = zoomScale,
-        startDist = startDist,
-        isPanMode = isPanMode,
-        onZoomChanged = onZoomChanged,
-        hrZoneThresholds = hrZoneThresholds,
-        powerZoneThresholds = powerZoneThresholds,
-        zoneDistribution = zoneDistribution,
-        zoneDisplayMode = zoneDisplayMode,
-        cardioPowerDynamics = cardioPowerDynamics,
-        enableCardioPowerDynamics = enableCardioPowerDynamics,
-        overlaySeries = overlaySeries,
-        enabledOverlayIds = enabledOverlayIds,
-        onToggleOverlay = { col ->
-            enabledOverlayIds = if (col in enabledOverlayIds) enabledOverlayIds - col else enabledOverlayIds + col
-        },
-        modifier = chartModifier
-    )
 }

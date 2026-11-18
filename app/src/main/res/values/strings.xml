@@ -1277,7 +1277,6 @@
     <string name="track_type_best">Tracked</string>
     <string name="track_type_gps">GPS</string>
     <string name="track_type_fused">Google Fused</string>
-    <string name="track_type_network">Network</string>
     <string name="legend">Legend</string>
 
     <string name="cluster_statistics_title">Workout Statistics</string>

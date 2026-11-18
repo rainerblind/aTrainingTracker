@@ -1,14 +1,14 @@
 # Living Test Specification: Post-Workout Analytics & Periods
 
 **Document ID**: `DOC-TST-PERIODS`  
-**Version**: 1.0.2  
+**Version**: 1.0.3  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `aftermath_periods`  
 **Prefixes**: `PER`, `PERF`, `RAD`, `SPT`  
 **Scope**: Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers.  
-**Total Tests**: 67
+**Total Tests**: 68
 
 ---
 
@@ -1139,6 +1139,28 @@
 
 ---
 
+### TST-PER-052: **Multi-Source Track Layers, Elevation/Speed/Slope Overlays & Per-Chart Visibility Verification Suite** (`ATT-8080`) [Verified]
+- **Requirement(s)**: `REQ-PER-044` (`REQ-PER-044.1`..`REQ-PER-044.5`), `REQ-MAP-011`, `REQ-MAP-012`
+- **Component**: `MapModels.kt`, `WorkoutMultiSourceSampleDiscovery.kt`, `WorkoutRepository.kt`, `MyPreferenceManager.kt`, `TelemetryGraphColorPreferences.kt`, `TelemetryMetricUtils.kt`, `TelemetryOverlayComponents.kt`, `TelemetryMetricGraph.kt`, `ElevationProfileOverlayComponents.kt`, `ElevationProfile.kt`, `TelemetryChartStack.kt`, `MapDetailLayout.kt`, `TrackOnMapScreen.kt`, `WorkoutRepositoryProjectionTest.kt`, `WorkoutRepositoryTelemetryTest.kt`, `TelemetryMetricUtilsTest.kt`, `TelemetryGraphColorPreferencesTest.kt`, `ElevationProfileOverlayTest.kt`, `TelemetryMetricGraphOverlayTest.kt`, `MapDetailLayoutScrubSynchronizationTest.kt`, `TelemetryChartStackVisibilityTest.kt`, `TranslationParityTest.kt`, `ArchitectureConformanceContractTest.kt`, `DetailedDesignParityContractTest.kt`
+- **Jira**: `ATT-8080`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Test Description**:
+  1. *`TrackType.ATT_FUSED`, Alias Resolution & `NETWORK` Removal (`TST-PER-052.1`, `WorkoutRepositoryProjectionTest.kt`, `WorkoutRepositoryTelemetryTest.kt`, `TelemetryChartStackVisibilityTest.kt`)*:
+     • Verify `TrackType.entries` contains `BEST`, `GPS`, `FUSED`, `ATT_FUSED` (no `NETWORK`), `ATT_FUSED` extracts `LATITUDE_att_fused`/`LONGITUDE_att_fused`, `GPS`/`FUSED` resolve both `"LATITUDE (GPS)"` / `"LATITUDE (Google Fused)"`, underscore `_gps`/`_google_fused`, and localized device column names (`"Phone GPS (Satellite)"`, `"Smartphone GPS (Satellit)"`), legacy `"NETWORK"` entries in DataStore `enabled_track_types` are ignored safely, and `PeriodMapScreen`/`WorkoutClusterHeatmapScreen`/`WorkoutClustersScreen` wire `showTechnicalTracks = true` and `multiSensorOverlays`.
+  2. *Generic Column Discovery & Negative/Zero Value Retention (`TST-PER-052.2`, `WorkoutRepositoryTelemetryTest.kt`)*:
+     • Verify `discoverNamedSourceColumns` / `discoverMultiSourceOverlayColumns` resolve `<SENSOR> (<name>)` (including `"ALTITUDE (att_fused_altitude_slope)"` and `"ALTITUDE (Topografische Höhe (DEM))"`) and `_(gps|google_fused|att_fused)` (`SPEED_mps_att_fused`, `ALTITUDE_att_fused`) while excluding `_network` and preserving `ATT-8096` `HR`/`POWER`/`CADENCE` behavior (`>= 2` sources).
+     • Verify `OverlaySeriesAccumulator` retains negative `SLOPE` (`-8.0%`), `0.0%` flat, and `<= 0.0 m` sea-level `ALTITUDE` samples across GPS and trackless workouts while maintaining `> 0` gating for `HR`/`CADENCE` and `>= 0` for `POWER`/`SPEED_mps`.
+  3. *`ElevationProfile` Overlays, `SPEED`/`PACE` Unit Conversion & `SLOPE` Graph (`TST-PER-052.3`, `TelemetryMetricUtilsTest.kt`, `TelemetryGraphColorPreferencesTest.kt`, `ElevationProfileOverlayTest.kt`, `TelemetryMetricGraphOverlayTest.kt`, `MapDetailLayoutScrubSynchronizationTest.kt`, `TelemetryChartStackVisibilityTest.kt`)*:
+     • Verify `TelemetryMetricType.SLOPE` (`%` formatting, `telemetry_graph_color_SENSOR_SLOPE` key), `SPEED`/`PACE` m/s -> user-unit (`km/h`/`mi/h`) and inverted-pace (`min/km`/`min/mi`) overlay conversion, `ElevationProfile` `Layers` toggle (`<= 1` hidden, `>= 2` shows curves + `Ø` mean legend), and synchronized `DISTANCE`/`TIME` scrubbing across `ElevationProfile`, `SPEED`/`PACE`, `SLOPE`, `HR`, `POWER`, and `CADENCE`.
+  4. *Persisted Per-Chart Visibility Toggles & `Rule 64` Alignment (`TST-PER-052.4`, `TelemetryChartStackVisibilityTest.kt`)*:
+     • Verify DataStore `hidden_telemetry_charts` defaults to all charts enabled, toggling individual charts (e.g. showing `Slope`/`Cadence` and hiding `W'bal`) updates `CHARTS` immediately and persists across sessions, filter trigger remains accessible when all charts are hidden, and `Rule 64` horizontal plot alignment holds.
+  5. *9-Locale Parity, LoC Ceilings & `Rule 8.5` PNG (`TST-PER-052.5`, `TranslationParityTest.kt`, `ArchitectureConformanceContractTest.kt`, `DetailedDesignParityContractTest.kt`, `TelemetryChartStackVisibilityTest.kt`)*:
+     • Verify 100% 9-locale parity (`track_type_att_fused`, `graph_heading_slope`, visibility/overlay strings, zero `track_type_network`, zero emojis), pass `ArchitectureConformanceContractTest` (`WorkoutRepository.kt <= 5,117`, `TelemetryMetricGraph.kt <= 1,965`, `MapDetailLayout.kt <= 1,500`, `ElevationProfile.kt <= 1,500`) and `DetailedDesignParityContractTest`, and inspect `docs/engineering/walkthroughs/img/ATT-8080_multisource_charts_visibility.png` (Light & Dark) via `read_file`.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -1146,3 +1168,4 @@
 | `1.0.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Added standardized `DOC-TST-PERIODS` work-product control header and Change History. |
 | `1.0.1` | 2026-11-18 | AI Agent (`ATT-8710`) | `ATT-8710` | Added `TST-HRV-044` [Planned] covering DFA alpha 1 zone math, Compose UI rendering, Rule 8.5 Light/Dark PNGs, and scatter threshold parity. |
 | `1.0.2` | 2026-11-18 | AI Agent (`ATT-8710`) | `ATT-8710` | Integrated `TST-HRV-044` [Verified] post-`ATT-8206` (`v1.0.1`) shard reconciliation. |
+| `1.0.3` | 2026-11-18 | AI Agent (`ATT-8080`) | `ATT-8080` | Added and verified (`[Verified]`) `TST-PER-052` for `ATT-8080` multi-source tracks, elevation/speed/slope overlays, and per-chart visibility toggles. |

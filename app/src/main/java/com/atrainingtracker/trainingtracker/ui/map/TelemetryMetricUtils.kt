@@ -164,6 +164,38 @@ object TelemetryMetricUtils {
     }
 
     /**
+     * Checks whether valid slope/grade samples (including 0% and negative descents) exist in [path] (`REQ-PER-044.3`).
+     */
+    fun hasSlopeData(path: List<PathPoint>?): Boolean {
+        if (path.isNullOrEmpty()) return false
+        return path.any { it.slope != null && it.slope.isFinite() }
+    }
+
+    /**
+     * Converts raw speed in m/s to user display pace in decimal minutes (min/km or min/mi) clamped to
+     * `[paceCeilingMinKm, 20.0]`, returning null for standstill/invalid samples (`< 0.55 m/s`).
+     */
+    fun convertSpeedMpsToPaceMinutes(
+        speedMps: Double,
+        unit: MyUnits,
+        paceCeilingMinKm: Float = TuningPreferencesDefaults.DEFAULT_PACE_CEILING_MIN_KM
+    ): Double? {
+        if (!speedMps.isFinite() || speedMps < 0.55) return null
+        val secPerKm = 1000.0 / speedMps
+        val secPerUnit = if (unit == MyUnits.METRIC) {
+            secPerKm
+        } else {
+            secPerKm * (BANALService.METER_PER_MILE / 1000.0)
+        }
+        val effectiveCeiling = if (unit == MyUnits.METRIC) {
+            paceCeilingMinKm.toDouble()
+        } else {
+            paceCeilingMinKm.toDouble() * (BANALService.METER_PER_MILE / 1000.0)
+        }
+        return (secPerUnit / 60.0).coerceIn(effectiveCeiling, 20.0)
+    }
+
+    /**
      * Checks whether valid Skiba W'bal samples exist in [path] (`REQ-UI-399.3`).
      * Strictly gated on [hasPowerData] to suppress phantom flat-line W'-Bilanz charts on workouts lacking power telemetry.
      */
@@ -216,19 +248,8 @@ object TelemetryMetricUtils {
                 }
             }
             TelemetryMetricType.PACE -> {
-                point.speedMps?.takeIf { it >= 0.55 }?.let { mps ->
-                    val secPerKm = 1000.0 / mps
-                    val secPerUnit = if (unit == MyUnits.METRIC) {
-                        secPerKm
-                    } else {
-                        secPerKm * (BANALService.METER_PER_MILE / 1000.0)
-                    }
-                    val effectiveCeiling = if (unit == MyUnits.METRIC) {
-                        paceCeilingMinKm.toDouble()
-                    } else {
-                        paceCeilingMinKm.toDouble() * (BANALService.METER_PER_MILE / 1000.0)
-                    }
-                    (secPerUnit / 60.0).coerceIn(effectiveCeiling, 20.0)
+                point.speedMps?.let { mps ->
+                    convertSpeedMpsToPaceMinutes(mps, unit, paceCeilingMinKm)
                 }
             }
             TelemetryMetricType.POWER -> {
@@ -236,6 +257,12 @@ object TelemetryMetricUtils {
             }
             TelemetryMetricType.CADENCE -> {
                 point.cadence?.takeIf { it > 0 }?.toDouble()
+            }
+            TelemetryMetricType.SLOPE -> {
+                point.slope?.takeIf { it.isFinite() }
+            }
+            TelemetryMetricType.ALTITUDE -> {
+                point.altitude?.takeIf { it.isFinite() }
             }
             TelemetryMetricType.W_PRIME_BAL -> {
                 point.wPrimeBalKj?.takeIf { it >= 0.0 }
@@ -272,7 +299,8 @@ object TelemetryMetricUtils {
         hrZoneThresholds: HeartRateZoneThresholds? = null,
         powerZoneThresholds: PowerZoneThresholds? = null,
         dfaA1ThresholdT1: Float? = null,
-        dfaA1ThresholdT2: Float? = null
+        dfaA1ThresholdT2: Float? = null,
+        locale: Locale = Locale.getDefault()
     ): String {
         if (value == null) return "--"
         return when (metricType) {
@@ -309,6 +337,14 @@ object TelemetryMetricUtils {
             }
             TelemetryMetricType.CADENCE -> {
                 "${value.toInt()} rpm"
+            }
+            TelemetryMetricType.SLOPE -> {
+                String.format(locale, "%.1f%%", value)
+            }
+            TelemetryMetricType.ALTITUDE -> {
+                val displayVal = if (unit == MyUnits.IMPERIAL) value / BANALService.METER_PER_FOOT else value
+                val unitLabel = if (unit == MyUnits.IMPERIAL) "ft" else "m"
+                "${kotlin.math.round(displayVal).toInt()} $unitLabel"
             }
             TelemetryMetricType.W_PRIME_BAL -> {
                 String.format(Locale.US, "%.1f kJ", value)

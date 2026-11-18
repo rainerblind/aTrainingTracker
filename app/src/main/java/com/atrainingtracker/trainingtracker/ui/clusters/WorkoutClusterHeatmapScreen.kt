@@ -79,11 +79,21 @@ fun WorkoutClusterHeatmapScreen(
     viewModel: WorkoutClustersViewModel,
     onBack: () -> Unit,
     onHitCountClick: (WorkoutCluster) -> Unit,
-    onEditWorkout: ((Long) -> Unit)? = null
+    onEditWorkout: ((Long) -> Unit)? = null,
+    trackOnMapViewModel: TrackOnMapAftermathViewModel? = null
 ) {
     val context = LocalContext.current
     val linkedRoute by viewModel.linkedRoute.collectAsState()
     val peekedWorkoutDataWithTrack by viewModel.peekedWorkoutDataWithTrack.collectAsState()
+    val aftermathUIState = trackOnMapViewModel?.uiState?.collectAsState()?.value
+    val enabledTrackTypes = trackOnMapViewModel?.enabledTrackTypes?.collectAsState()?.value ?: setOf(TrackType.BEST)
+
+    val peekedWorkout = peekedWorkoutDataWithTrack?.workoutData
+    LaunchedEffect(peekedWorkout?.id, trackOnMapViewModel) {
+        if (peekedWorkout != null) {
+            trackOnMapViewModel?.loadAftermathData(peekedWorkout)
+        }
+    }
     val mapState by viewModel.mapState.collectAsState()
     val enabledMarkerTypes by viewModel.enabledMarkerTypes.collectAsState()
     val isSplitPreviewActive by viewModel.isSplitPreviewActive.collectAsState()
@@ -386,14 +396,36 @@ fun WorkoutClusterHeatmapScreen(
                 if (peekedWorkoutDataWithTrack != null) {
                     Box(modifier = Modifier.fillMaxWidth().height(maxSheetHeight)) {
                         peekedWorkoutDataWithTrack?.workoutData?.let { workoutData ->
+                            val fallbackTracks = listOf(
+                                MapTrack(workoutData.id, TrackType.BEST, workoutData.bSportType, peekedWorkoutDataWithTrack!!.trackPoints)
+                            )
+                            val activeAftermathState = aftermathUIState?.takeIf { it.loadedWorkoutId == workoutData.id }
                             TrackOnMapScreen(
                                 workoutData = workoutData,
-                                tracks = listOf(MapTrack(workoutData.id, TrackType.BEST, workoutData.bSportType, peekedWorkoutDataWithTrack!!.trackPoints)),
-                                markers = peekedWorkoutDataWithTrack!!.markers,
+                                tracks = activeAftermathState?.tracks?.ifEmpty { fallbackTracks } ?: fallbackTracks,
+                                availableTrackTypes = activeAftermathState?.availableTrackTypes ?: setOf(TrackType.BEST),
+                                segments = activeAftermathState?.segments ?: emptyList(),
+                                routes = activeAftermathState?.routes ?: emptyList(),
+                                markers = activeAftermathState?.markers?.ifEmpty { peekedWorkoutDataWithTrack!!.markers }
+                                    ?: peekedWorkoutDataWithTrack!!.markers,
+                                enabledTrackTypes = enabledTrackTypes,
+                                onToggleTrackType = { trackOnMapViewModel?.toggleTrackTypeEnabled(it) },
+                                showTechnicalTracks = true,
                                 modifier = Modifier.fillMaxSize(),
                                 useStatusBarsPadding = false,
                                 onChangeCluster = { workoutToMove = workoutData },
-                                onEditWorkout = onEditWorkout
+                                onEditWorkout = onEditWorkout,
+                                hrZoneDistribution = activeAftermathState?.hrZoneDistribution,
+                                powerZoneDistribution = activeAftermathState?.powerZoneDistribution,
+                                gradeZoneDistribution = activeAftermathState?.gradeZoneDistribution,
+                                hrZoneThresholds = activeAftermathState?.hrThresholds,
+                                powerZoneThresholds = activeAftermathState?.powerThresholds,
+                                recentSessions = activeAftermathState?.recentSessions ?: emptyList(),
+                                isSmoothedStream = activeAftermathState?.isSmoothedHrvStream ?: false,
+                                onUpdateFtp = trackOnMapViewModel?.let { vm -> { vm.updateFtp(it) } },
+                                onUpdateHrZones = trackOnMapViewModel?.let { vm -> { t1, t2 -> vm.updateHrZones(t1, t2) } },
+                                telemetryPath = activeAftermathState?.telemetryPath ?: emptyList(),
+                                multiSensorOverlays = activeAftermathState?.multiSensorOverlays ?: emptyMap()
                             )
                         }
                     }

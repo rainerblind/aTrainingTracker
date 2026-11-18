@@ -121,8 +121,8 @@ class WorkoutRepositoryProjectionTest {
                 "LONGITUDE (GPS)" REAL,
                 "LATITUDE (Google Fused)" REAL,
                 "LONGITUDE (Google Fused)" REAL,
-                "LATITUDE (Network)" REAL,
-                "LONGITUDE (Network)" REAL
+                LATITUDE_att_fused REAL,
+                LONGITUDE_att_fused REAL
             );
             """.trimIndent()
         )
@@ -134,7 +134,7 @@ class WorkoutRepositoryProjectionTest {
                 LATITUDE, LONGITUDE,
                 "LATITUDE (GPS)", "LONGITUDE (GPS)",
                 "LATITUDE (Google Fused)", "LONGITUDE (Google Fused)",
-                "LATITUDE (Network)", "LONGITUDE (Network)"
+                LATITUDE_att_fused, LONGITUDE_att_fused
             ) VALUES (
                 '2026-10-16 05:57:00', 0, 0, 0.0, 520.0, 140, 200, 5.0, 0.0,
                 48.137, 11.575,
@@ -152,7 +152,7 @@ class WorkoutRepositoryProjectionTest {
                 LATITUDE, LONGITUDE,
                 "LATITUDE (GPS)", "LONGITUDE (GPS)",
                 "LATITUDE (Google Fused)", "LONGITUDE (Google Fused)",
-                "LATITUDE (Network)", "LONGITUDE (Network)"
+                LATITUDE_att_fused, LONGITUDE_att_fused
             ) VALUES (
                 '2026-10-16 05:57:10', 10, 10, 50.0, 525.0, 155, 230, 5.5, 1.2,
                 48.138, 11.576,
@@ -185,19 +185,20 @@ class WorkoutRepositoryProjectionTest {
         assertEquals("\"LATITUDE\"", WorkoutRepository.quoteSqlIdentifier("LATITUDE"))
         assertEquals("\"LATITUDE (Google Fused)\"", WorkoutRepository.quoteSqlIdentifier("LATITUDE (Google Fused)"))
         assertEquals("\"LATITUDE (GPS)\"", WorkoutRepository.quoteSqlIdentifier("LATITUDE (GPS)"))
-        assertEquals("\"LATITUDE (Network)\"", WorkoutRepository.quoteSqlIdentifier("LATITUDE (Network)"))
+        assertEquals("\"LATITUDE_att_fused\"", WorkoutRepository.quoteSqlIdentifier("LATITUDE_att_fused"))
         assertEquals("\"column\"\"name\"", WorkoutRepository.quoteSqlIdentifier("column\"name"))
     }
 
     @Test
     fun testLoadWorkoutDetailTelemetry_withSourceQualifiedLocationColumns_executesWithoutException() = runBlocking {
+        // TST-PER-052.1, TST-UI-055
         val telemetry = repository.loadWorkoutDetailTelemetry(testWorkoutId, BSportType.BIKE)
 
         assertEquals(4, telemetry.tracks.size)
         assertTrue(telemetry.tracks.containsKey(TrackType.BEST))
         assertTrue(telemetry.tracks.containsKey(TrackType.GPS))
         assertTrue(telemetry.tracks.containsKey(TrackType.FUSED))
-        assertTrue(telemetry.tracks.containsKey(TrackType.NETWORK))
+        assertTrue(telemetry.tracks.containsKey(TrackType.ATT_FUSED))
 
         val fusedPoints = telemetry.tracks[TrackType.FUSED]!!
         assertEquals(2, fusedPoints.size)
@@ -211,10 +212,10 @@ class WorkoutRepositoryProjectionTest {
         assertEquals(48.1371, gpsPoints[0].latLng.latitude, 0.0001)
         assertEquals(11.5751, gpsPoints[0].latLng.longitude, 0.0001)
 
-        val networkPoints = telemetry.tracks[TrackType.NETWORK]!!
-        assertEquals(2, networkPoints.size)
-        assertEquals(48.1373, networkPoints[0].latLng.latitude, 0.0001)
-        assertEquals(11.5753, networkPoints[0].latLng.longitude, 0.0001)
+        val attFusedPoints = telemetry.tracks[TrackType.ATT_FUSED]!!
+        assertEquals(2, attFusedPoints.size)
+        assertEquals(48.1373, attFusedPoints[0].latLng.latitude, 0.0001)
+        assertEquals(11.5753, attFusedPoints[0].latLng.longitude, 0.0001)
 
         val bestPoints = telemetry.tracks[TrackType.BEST]!!
         assertEquals(2, bestPoints.size)
@@ -227,6 +228,7 @@ class WorkoutRepositoryProjectionTest {
 
     @Test
     fun testGetWorkoutTrackPoints_forAllTrackTypes_executesWithoutException() = runBlocking {
+        // TST-PER-052.1
         for (trackType in TrackType.entries) {
             val points = repository.getWorkoutTrackPoints(testWorkoutId, trackType)
             assertEquals("Failed to extract track points for $trackType", 2, points.size)
@@ -243,7 +245,7 @@ class WorkoutRepositoryProjectionTest {
                     assertEquals(48.1372, points[0].latLng.latitude, 0.0001)
                     assertEquals(11.5752, points[0].latLng.longitude, 0.0001)
                 }
-                TrackType.NETWORK -> {
+                TrackType.ATT_FUSED -> {
                     assertEquals(48.1373, points[0].latLng.latitude, 0.0001)
                     assertEquals(11.5753, points[0].latLng.longitude, 0.0001)
                 }

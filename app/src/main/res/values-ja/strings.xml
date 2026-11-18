@@ -1033,7 +1033,6 @@
     <string name="track_type_best">記録済み</string>
     <string name="track_type_gps">GPS</string>
     <string name="track_type_fused">Google Fused</string>
-    <string name="track_type_network">ネットワーク</string>
     <string name="legend">凡例</string>
     <string name="cluster_statistics_title">ワークアウト統計</string>
     <string name="cluster_tab_statistics">統計</string>

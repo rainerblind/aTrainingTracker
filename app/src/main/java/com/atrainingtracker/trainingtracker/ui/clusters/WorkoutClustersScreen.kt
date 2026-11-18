@@ -189,7 +189,12 @@ fun WorkoutClustersScreen(
                 gradeZoneDistribution = aftermathUIState.gradeZoneDistribution,
                 hrZoneThresholds = aftermathUIState.hrThresholds,
                 powerZoneThresholds = aftermathUIState.powerThresholds,
-                telemetryPath = aftermathUIState.telemetryPath
+                recentSessions = aftermathUIState.recentSessions,
+                isSmoothedStream = aftermathUIState.isSmoothedHrvStream,
+                onUpdateFtp = { trackOnMapViewModel.updateFtp(it) },
+                onUpdateHrZones = { t1, t2 -> trackOnMapViewModel.updateHrZones(t1, t2) },
+                telemetryPath = aftermathUIState.telemetryPath,
+                multiSensorOverlays = aftermathUIState.multiSensorOverlays
             )
 
             if (workoutToCluster != null) {
@@ -312,7 +317,8 @@ fun WorkoutClustersScreen(
                     }
                 },
                 onHitCountClick = { viewingWorkoutsForCluster = it },
-                onEditWorkout = { id -> editedWorkoutId = id }
+                onEditWorkout = { id -> editedWorkoutId = id },
+                trackOnMapViewModel = trackOnMapViewModel
             )
         }
         else -> {

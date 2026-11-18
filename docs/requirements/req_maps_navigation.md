@@ -1,7 +1,7 @@
 # Living Requirements: Maps, Polylines & Navigation
 
 **Document ID**: `DOC-REQ-MAPS`  
-**Version**: 1.0.4  
+**Version**: 1.0.5  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -184,25 +184,35 @@
 - **Implementation**: `MapUtils.kt`, `PeriodMapUtils.kt`
 - **Rationale**: The system SHALL adapt heatmap point density based on the temporal scale (Period Type) to prevent memory exhaustion (OOM). Coarser resolutions (e.g., 50m+) SHALL be used for large periods (Month/Year) where sub-meter precision is not visible on a summary map.
 
-### REQ-MAP-011: Multi-Track Selection (Workout Details) [Implemented]
-- **Tests**: `TST-UI-055`
+### REQ-MAP-011: Multi-Track Selection (Workout Details) [Verified]
+- **Tests**: `TST-UI-055`, `TST-PER-052`
 - **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: Medium
 - **Type**: Functional
-- **Verification Method**: Review
-- **Implementation**: `TrackOnMapScreen.kt`, `WorkoutRepository.kt`
-- **Rationale**: The Workout Details map SHALL support displaying multiple location tracks (GPS, Fused, Network) alongside the primary "Tracked" path to allow for technical data quality comparison. This feature SHALL NOT be available in workout summaries or periods to maintain visual simplicity.
-- **Description**: Multi-Track Selection (Workout Details).
+- **Verification Method**: Unit, Integration
+- **Implementation**: `MapModels.kt`, `WorkoutRepository.kt`, `TrackOnMapScreen.kt`, `PeriodMapScreen.kt`, `WorkoutClusterHeatmapScreen.kt`, `WorkoutClustersScreen.kt`
+- **Rationale**: The Workout Details map SHALL support displaying multiple recorded location tracks (`GPS`, `Google Fused`, `ATT Fused`) alongside the primary `"Tracked"` (`BEST`) path to allow for technical sensor-fusion quality comparison (`ATT-8080`, retiring obsolete `Network` excised in `ATT-5492` / `REQ-SEN-027.2`). Single-workout detail bottom sheets (`PeriodMapScreen`, `WorkoutClusterHeatmapScreen`) SHALL also expose `showTechnicalTracks = true`, while multi-workout overview maps (Workout Summary list cards and Period/Cluster overview canvases) SHALL NOT display technical tracks to preserve visual simplicity.
+- **Description**: `TrackType` (`MapModels.kt`) SHALL define `BEST`, `GPS`, `FUSED`, and `ATT_FUSED` (resolving `LATITUDE_att_fused` / `LONGITUDE_att_fused` and fallback `ATT` column names) and remove `TrackType.NETWORK`. `GPS` and `FUSED` SHALL resolve both legacy/qualified columns (`"LATITUDE (GPS)"`, `"LATITUDE (Google Fused)"`, `"LATITUDE_gps"`, `"LATITUDE_google_fused"`) and localized `DevicesDatabaseManager` names (e.g., `"LATITUDE (Phone GPS (Satellite))"` / `"LATITUDE (Smartphone GPS (Satellit))"` / `"LATITUDE (Google Location (Fused))"`).
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: `REQ-MAP-011` (`Multi-Track Selection`), `REQ-SEN-027.2` (`ATT-5492`), targeting `MapModels.kt`, `WorkoutRepository.kt`, `TrackOnMapScreen.kt`, `PeriodMapScreen.kt`, and `WorkoutClusterHeatmapScreen.kt`.
+  2. *Historical Origin & Commit Trace*: `REQ-MAP-011` predated `ATT-5492` (`DevicesDatabaseManager` v10 excision of `SPEED_AND_LOCATION_NETWORK`) and `ATT-7751` (`SpeedAndLocationDevice_ATTFused`).
+  3. *Root Reason for Existing Formulation*: Early Android builds offered `GPS`, `FUSED`, and `NETWORK` providers before `NETWORK` was retired and `ATT_FUSED` was introduced, and bottom-sheet Workout Details omitted `showTechnicalTracks = true`.
+  4. *Preservation of Core Invariants*: Primary `TrackType.BEST` remains default enabled; multi-workout summary/overview maps remain uncluttered; `safeEnumValueOfOrNull<TrackType>` ignores stale `"NETWORK"` entries in DataStore `enabled_track_types`.
 
-### REQ-MAP-012: Track Selection Menu [Implemented]
-- **Tests**: `TST-UI-055`
+### REQ-MAP-012: Track Selection Menu [Verified]
+- **Tests**: `TST-UI-055`, `TST-PER-052`
 - **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: Medium
 - **Type**: Functional
-- **Verification Method**: Review
-- **Implementation**: `TrackOnMapScreen.kt`
-- **Rationale**: The Workout Details map SHALL provide a floating action button that opens a selection menu to individually toggle the visibility of Tracked, GPS, Fused, and Network tracks. The selection menu SHALL include a color legend for each track provider.
-- **Description**: Track Selection Menu.
+- **Verification Method**: Unit, Integration
+- **Implementation**: `TrackOnMapScreen.kt`, `MapModels.kt`, `res/values*/strings.xml`
+- **Rationale**: The Workout Details map SHALL provide a floating `Layers` action button that opens a `DropdownMenu` to individually toggle the visibility of `Tracked` (`BEST`), `GPS`, `Google Fused`, and `ATT Fused` tracks (`ATT-8080`, retiring obsolete `Network` per `ATT-5492`). The selection menu SHALL include a color swatch and localized label (`9` locales) for each track provider, disabling unavailable providers.
+- **Description**: `TrackOnMapScreen` SHALL render `TrackType.entries` (`BEST`, `GPS`, `FUSED`, `ATT_FUSED`) inside the `Icons.Default.Layers` menu across all single-workout detail hosts (`WorkoutSummariesListFragment`, `WorkoutSummariesTabbedScreen`, `WorkoutClustersScreen`, `PeriodMapScreen`, `WorkoutClusterHeatmapScreen`) using localized `track_type_att_fused` and removing `track_type_network` across all 9 locales.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: `REQ-MAP-012` (`Track Selection Menu`), targeting `TrackOnMapScreen.kt` and `values*/strings.xml`.
+  2. *Historical Origin & Commit Trace*: Paired with `REQ-MAP-011` and `ATT-5492` (`SPEED_AND_LOCATION_NETWORK` excision).
+  3. *Root Reason for Existing Formulation*: Menu previously listed `Network` because `TrackType.NETWORK` existed prior to `ATT-5492`.
+  4. *Preservation of Core Invariants*: Existing `Icons.Default.Layers` circular surface, checkbox + color swatch row layout, and `enabledTrackTypes` persistence (`REQ-MAP-013`) remain intact with 100% 9-locale parity (`ATT-5400`).
 
 ### REQ-MAP-013: Persistent Map Selection [Implemented]
 - **Tests**: `TST-UI-056`
@@ -2846,3 +2856,4 @@
 | `1.0.2` | 2026-11-18 | AI Agent (`ATT-8201`) | `ATT-8201` | Linked refined `REQ-*` entries in-place to net-new `SYSREQ-TRK-007..013` and `SYSREQ-DEX-007..008`. |
 | `1.0.3` | 2026-11-18 | AI Agent (`ATT-8736`) | `ATT-8736` | Added `REQ-MAP-068` (`[Planned]` $\rightarrow$ `[Implemented]` in Stage 4: `PathPreviewMap.kt`, `WorkoutSummary.kt`). |
 | `1.0.4` | 2026-11-18 | AI Agent (`ATT-8736`) | `ATT-8736` | Promoted `REQ-MAP-068` to `[Verified]` in Stage 5 (`PathPreviewMapBoundsTest`, `WorkoutSummaryMapMemoizationTest`, emulator UI check). |
+| `1.0.5` | 2026-11-18 | AI Agent (`ATT-8080`) | `ATT-8080` | Refined and verified (`[Verified]`) `REQ-MAP-011` and `REQ-MAP-012` for `TrackType.ATT_FUSED`, alias-aware GPS/Fused lookup, `TrackType.NETWORK` removal, and peek bottom-sheet `Layers` wiring. |

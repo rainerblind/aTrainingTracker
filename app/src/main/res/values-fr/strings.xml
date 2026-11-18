@@ -1053,7 +1053,6 @@
     <string name="track_type_best">Enregistré</string>
     <string name="track_type_gps">GPS</string>
     <string name="track_type_fused">Google Fused</string>
-    <string name="track_type_network">Réseau</string>
     <string name="legend">Légende</string>
     <string name="cluster_statistics_title">Statistiques de l’itinéraire</string>
     <string name="cluster_tab_statistics">Statistiques</string>

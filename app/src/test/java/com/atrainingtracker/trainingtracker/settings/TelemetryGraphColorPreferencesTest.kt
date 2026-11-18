@@ -199,4 +199,31 @@ class TelemetryGraphColorPreferencesTest {
             TelemetryGraphColorPreferences.getGraphColor(context, TelemetryMetricType.CADENCE)
         )
     }
+
+    @Test
+    fun slopeAndAltitudeMetricTypes_mapToSensorColorKeysAndThemeDefault() {
+        // TST-PER-052.3
+        assertEquals(
+            TelemetryGraphColorPreferences.preferenceKey(SensorType.SLOPE),
+            TelemetryGraphColorPreferences.preferenceKey(TelemetryMetricType.SLOPE)
+        )
+        assertEquals(
+            TelemetryGraphColor.THEME_DEFAULT,
+            TelemetryGraphColorPreferences.getGraphColor(context, TelemetryMetricType.SLOPE)
+        )
+        assertEquals(
+            TelemetryGraphColorPreferences.preferenceKey(SensorType.ALTITUDE),
+            TelemetryGraphColorPreferences.preferenceKey(TelemetryMetricType.ALTITUDE)
+        )
+        assertEquals(
+            TelemetryGraphColor.THEME_DEFAULT,
+            TelemetryGraphColorPreferences.getGraphColor(context, TelemetryMetricType.ALTITUDE)
+        )
+
+        TelemetryGraphColorPreferences.setGraphColor(context, SensorType.SLOPE, TelemetryGraphColor.CORAL)
+        assertEquals(
+            TelemetryGraphColor.CORAL,
+            TelemetryGraphColorPreferences.getGraphColor(context, TelemetryMetricType.SLOPE)
+        )
+    }
 }

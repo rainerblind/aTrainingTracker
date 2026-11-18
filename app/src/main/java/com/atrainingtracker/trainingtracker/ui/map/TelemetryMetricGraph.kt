@@ -23,14 +23,11 @@ import android.content.res.Configuration
 import android.graphics.Paint
 import android.graphics.Typeface
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -38,15 +35,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Layers
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -80,7 +69,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -121,6 +109,8 @@ enum class TelemetryMetricType {
     PACE,
     POWER,
     CADENCE,
+    SLOPE,
+    ALTITUDE,
     W_PRIME_BAL,
     HRV_DFA_A1,
     HRV_RMSSD
@@ -170,8 +160,8 @@ fun TelemetryMetricGraph(
     var localShowFreshModel by rememberSaveable { mutableStateOf(false) }
     val effectiveShowFreshModel = showFreshModelOverlay ?: localShowFreshModel
 
-    var localEnabledOverlayIds by rememberSaveable(metricType, overlaySeries.map { it.columnName }) {
-        mutableStateOf(emptySet<String>())
+    var localEnabledOverlayIds by rememberSaveable(metricType, overlaySeries.map { it.columnName }, enabledOverlayIds) {
+        mutableStateOf(enabledOverlayIds)
     }
     val effectiveEnabledOverlayIds = if (onToggleOverlay != null) enabledOverlayIds else localEnabledOverlayIds
     val handleToggleOverlay: (String) -> Unit = onToggleOverlay ?: { colName ->
@@ -309,7 +299,11 @@ fun TelemetryMetricGraph(
             validValues
         }
         val effectiveValues = if (activeOverlaySeries.isNotEmpty()) {
-            baseValues + activeOverlaySeries.flatMap { series -> series.points.map { it.value } }
+            baseValues + activeOverlaySeries.flatMap { series ->
+                series.points.mapNotNull { pt ->
+                    resolveOverlayValueForChart(pt.value, metricType, unit, paceCeilingMinKm)
+                }
+            }
         } else {
             baseValues
         }
@@ -321,6 +315,22 @@ fun TelemetryMetricGraph(
             }
             TelemetryMetricType.CADENCE -> {
                 0.0 to (max * 1.15).coerceAtLeast(100.0)
+            }
+            TelemetryMetricType.SLOPE -> {
+                val span = (max - min).coerceAtLeast(2.0)
+                val pad = span * 0.1
+                val boundMin = if (min >= 0.0) 0.0 else (min - pad)
+                val boundMax = if (max <= 0.0) 0.0 else (max + pad)
+                if (boundMax - boundMin < 2.0) {
+                    (boundMin - 1.0) to (boundMax + 1.0)
+                } else {
+                    boundMin to boundMax
+                }
+            }
+            TelemetryMetricType.ALTITUDE -> {
+                val span = (max - min).coerceAtLeast(10.0)
+                val pad = span * 0.05
+                (min - pad) to (max + pad)
             }
             TelemetryMetricType.W_PRIME_BAL -> {
                 0.0 to (max * 1.1).coerceAtLeast(10.0)
@@ -447,6 +457,9 @@ fun TelemetryMetricGraph(
 
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val currentLocale = remember(configuration) {
+        configuration.locales.let { if (it.isEmpty) Locale.getDefault() else it[0] }
+    }
 
     val baseCanvasModifier = Modifier
         .fillMaxWidth()
@@ -771,7 +784,7 @@ fun TelemetryMetricGraph(
                 }
             }
 
-            // 2. Draw horizontal threshold boundary guidelines (REQ-UI-230 / ATT-1839)
+            // 2. Draw horizontal threshold / zero-reference boundary guidelines (REQ-UI-230 / ATT-1839)
             if (thresholdDashes.isNotEmpty()) {
                 val dashEffect = PathEffect.dashPathEffect(floatArrayOf(6.dp.toPx(), 6.dp.toPx()), 0f)
                 for (dashVal in thresholdDashes) {
@@ -784,17 +797,28 @@ fun TelemetryMetricGraph(
                         pathEffect = dashEffect
                     )
                 }
+            } else if (metricType == TelemetryMetricType.SLOPE && dataMin < 0.0 && dataMax > 0.0) {
+                val zeroY = valueToY(0.0)
+                drawLine(
+                    color = colorScheme.outlineVariant.copy(alpha = 0.5f),
+                    start = Offset(startPaddingPx, zeroY),
+                    end = Offset(startPaddingPx + chartWidthPx, zeroY),
+                    strokeWidth = 1f,
+                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(6.dp.toPx(), 6.dp.toPx()), 0f)
+                )
             }
 
             // Draw Y-axis labels (min and max)
             val maxLabel = when (metricType) {
                 TelemetryMetricType.PACE -> TelemetryMetricUtils.formatPaceMinutes(dataMin)
-                TelemetryMetricType.HRV_DFA_A1 -> String.format(Locale.US, "%.2f", dataMax)
+                TelemetryMetricType.HRV_DFA_A1 -> String.format(currentLocale, "%.2f", dataMax)
+                TelemetryMetricType.SLOPE -> "${kotlin.math.round(dataMax).toInt()}%"
                 else -> "${dataMax.toInt()}"
             }
             val minLabel = when (metricType) {
                 TelemetryMetricType.PACE -> TelemetryMetricUtils.formatPaceMinutes(dataMax)
-                TelemetryMetricType.HRV_DFA_A1 -> String.format(Locale.US, "%.2f", dataMin)
+                TelemetryMetricType.HRV_DFA_A1 -> String.format(currentLocale, "%.2f", dataMin)
+                TelemetryMetricType.SLOPE -> "${kotlin.math.round(dataMin).toInt()}%"
                 else -> "${dataMin.toInt()}"
             }
 
@@ -805,7 +829,7 @@ fun TelemetryMetricGraph(
             if (metricType == TelemetryMetricType.HRV_DFA_A1) {
                 for (thresholdVal in thresholdDashes) {
                     val yThreshold = valueToY(thresholdVal)
-                    nativeCanvas.drawText(String.format(Locale.US, "%.2f", thresholdVal), 6.dp.toPx(), yThreshold + 10f, axisTextPaint)
+                    nativeCanvas.drawText(String.format(currentLocale, "%.2f", thresholdVal), 6.dp.toPx(), yThreshold + 10f, axisTextPaint)
                 }
             }
 
@@ -1045,10 +1069,15 @@ fun TelemetryMetricGraph(
                     }
                     val strokePath = Path()
                     val fillPath = Path()
+                    val fillBaselineY = if (metricType == TelemetryMetricType.SLOPE && 0.0 in dataMin..dataMax) {
+                        valueToY(0.0)
+                    } else {
+                        baselineY
+                    }
 
                     val firstPt = seg.first().offset
                     strokePath.moveTo(firstPt.x, firstPt.y)
-                    fillPath.moveTo(firstPt.x, baselineY)
+                    fillPath.moveTo(firstPt.x, fillBaselineY)
                     fillPath.lineTo(firstPt.x, firstPt.y)
 
                     for (j in 1 until seg.size) {
@@ -1058,7 +1087,7 @@ fun TelemetryMetricGraph(
                     }
 
                     val lastPt = seg.last().offset
-                    fillPath.lineTo(lastPt.x, baselineY)
+                    fillPath.lineTo(lastPt.x, fillBaselineY)
                     fillPath.close()
 
                     // Fill subtle gradient area under curve
@@ -1217,7 +1246,7 @@ fun TelemetryMetricGraph(
                     }
                 }
 
-                // Multi-Sensor Source Overlay Curves (REQ-PER-042.3)
+                // Multi-Sensor Source Overlay Curves (REQ-PER-042.3, REQ-PER-044.3)
                 if (activeOverlaySeries.isNotEmpty()) {
                     drawMultiSensorOverlayCurves(
                         overlaySeries = activeOverlaySeries,
@@ -1229,6 +1258,9 @@ fun TelemetryMetricGraph(
                             startPaddingPx = startPaddingPx,
                             chartWidthPx = chartWidthPx
                         ),
+                        metricType = metricType,
+                        unit = unit,
+                        paceCeilingMinKm = paceCeilingMinKm,
                         valueToY = ::valueToY
                     )
                 }
@@ -1271,7 +1303,7 @@ fun TelemetryMetricGraph(
                         isTimeDomain = isTrackless && isTimeDomain
                     )
                     if (nearestPoint != null) {
-                        val metricVal = TelemetryMetricUtils.extractMetricValue(nearestPoint, metricType, unit)
+                        val metricVal = TelemetryMetricUtils.extractMetricValue(nearestPoint, metricType, unit, paceCeilingMinKm)
                         if (metricVal != null) {
                             val cursorY = valueToY(metricVal)
                             val cursorColor = if (metricType == TelemetryMetricType.HRV_DFA_A1) {
@@ -1306,6 +1338,9 @@ fun TelemetryMetricGraph(
                             targetValue = cursorDistSpan,
                             isTimeDomain = isTimeDomain,
                             cursorX = cursorX,
+                            metricType = metricType,
+                            unit = unit,
+                            paceCeilingMinKm = paceCeilingMinKm,
                             valueToY = ::valueToY
                         )
                     }
@@ -1351,7 +1386,9 @@ fun TelemetryMetricGraph(
                 enabledOverlayIds = effectiveEnabledOverlayIds,
                 activeOverlaySeries = activeOverlaySeries,
                 onToggleOverlay = handleToggleOverlay,
-                isLandscape = isLandscape
+                isLandscape = isLandscape,
+                unit = unit,
+                paceCeilingMinKm = paceCeilingMinKm
             )
         }
     }
@@ -1399,229 +1436,6 @@ fun TelemetryMetricGraph(
             Box(modifier = Modifier.fillMaxWidth()) {
                 chartCanvas()
             }
-        }
-    }
-}
-
-internal fun overlayStrokeColor(index: Int): Color = when (index % 4) {
-    0 -> TTColor.Zone2
-    1 -> TTColor.Zone4
-    2 -> TTColor.Zone5
-    else -> TTColor.Zone3
-}
-
-private data class OverlayXViewport(
-    val isTimeDomain: Boolean,
-    val startDist: Double,
-    val visibleSpan: Double,
-    val startPaddingPx: Float,
-    val chartWidthPx: Float
-)
-
-private fun DrawScope.drawMultiSensorOverlayCurves(
-    overlaySeries: List<TelemetrySourceSeries>,
-    allOverlaySeries: List<TelemetrySourceSeries>,
-    viewport: OverlayXViewport,
-    valueToY: (Double) -> Float
-) {
-    for (series in overlaySeries) {
-        val colorIdx = allOverlaySeries.indexOfFirst { it.columnName == series.columnName }.coerceAtLeast(0)
-        val color = overlayStrokeColor(colorIdx)
-        val dashLength = if (colorIdx % 2 == 0) 6.dp.toPx() else 3.dp.toPx()
-        val gapLength = 3.dp.toPx()
-        val path = Path()
-        var started = false
-        for (pt in series.points) {
-            val xSpan = if (viewport.isTimeDomain) pt.timeSec.toDouble() else pt.distance
-            val x = viewport.startPaddingPx + ElevationProfileZoomMath.distanceToCanvasX(
-                xSpan,
-                viewport.startDist,
-                viewport.visibleSpan,
-                viewport.chartWidthPx
-            )
-            val y = valueToY(pt.value)
-            if (!started) {
-                path.moveTo(x, y)
-                started = true
-            } else {
-                path.lineTo(x, y)
-            }
-        }
-        if (started) {
-            drawPath(
-                path = path,
-                color = color,
-                style = Stroke(
-                    width = 1.8.dp.toPx(),
-                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(dashLength, gapLength), 0f),
-                    cap = StrokeCap.Round
-                )
-            )
-        }
-    }
-}
-
-private fun DrawScope.drawMultiSensorOverlayScrubDots(
-    overlaySeries: List<TelemetrySourceSeries>,
-    allOverlaySeries: List<TelemetrySourceSeries>,
-    targetValue: Double,
-    isTimeDomain: Boolean,
-    cursorX: Float,
-    valueToY: (Double) -> Float
-) {
-    for (series in overlaySeries) {
-        val sampleVal = TelemetryMetricUtils.findNearestSourceValue(series.points, targetValue, isTimeDomain)
-            ?: continue
-        val colorIdx = allOverlaySeries.indexOfFirst { it.columnName == series.columnName }.coerceAtLeast(0)
-        val color = overlayStrokeColor(colorIdx)
-        drawCircle(
-            color = color,
-            radius = 3.dp.toPx(),
-            center = Offset(cursorX, valueToY(sampleVal))
-        )
-    }
-}
-
-@Composable
-internal fun formatMeanForMetric(metricType: TelemetryMetricType, meanValue: Double): String {
-    val rounded = kotlin.math.round(meanValue).toInt()
-    return when (metricType) {
-        TelemetryMetricType.HEART_RATE -> stringResource(R.string.chart_overlay_mean_bpm, rounded)
-        TelemetryMetricType.POWER -> stringResource(R.string.chart_overlay_mean_watt, rounded)
-        TelemetryMetricType.CADENCE -> stringResource(R.string.chart_overlay_mean_rpm, rounded)
-        else -> "Ø $rounded"
-    }
-}
-
-@Composable
-private fun MultiSensorOverlayControls(
-    metricType: TelemetryMetricType,
-    overlaySeries: List<TelemetrySourceSeries>,
-    enabledOverlayIds: Set<String>,
-    activeOverlaySeries: List<TelemetrySourceSeries>,
-    onToggleOverlay: (String) -> Unit,
-    isLandscape: Boolean
-) {
-    var menuExpanded by remember { mutableStateOf(false) }
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(start = 16.dp, end = if (isLandscape) 4.dp else 16.dp, bottom = 2.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        if (activeOverlaySeries.isNotEmpty()) {
-            MultiSensorMeanLegendRow(
-                metricType = metricType,
-                overlaySeries = overlaySeries,
-                activeOverlaySeries = activeOverlaySeries,
-                modifier = Modifier.weight(1f)
-            )
-        } else {
-            Spacer(modifier = Modifier.weight(1f))
-        }
-
-        Box {
-            IconButton(
-                onClick = { menuExpanded = true },
-                modifier = Modifier
-                    .size(32.dp)
-                    .testTag("multi_source_layers_button_${metricType.name}")
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Layers,
-                    contentDescription = stringResource(R.string.chart_overlay_layers_cd),
-                    tint = if (activeOverlaySeries.isNotEmpty()) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    },
-                    modifier = Modifier.size(18.dp)
-                )
-            }
-            MultiSensorOverlayDropdownMenu(
-                expanded = menuExpanded,
-                onDismissRequest = { menuExpanded = false },
-                metricType = metricType,
-                overlaySeries = overlaySeries,
-                enabledOverlayIds = enabledOverlayIds,
-                onToggleOverlay = onToggleOverlay
-            )
-        }
-    }
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun MultiSensorMeanLegendRow(
-    metricType: TelemetryMetricType,
-    overlaySeries: List<TelemetrySourceSeries>,
-    activeOverlaySeries: List<TelemetrySourceSeries>,
-    modifier: Modifier = Modifier
-) {
-    FlowRow(
-        modifier = modifier.testTag("multi_source_mean_legend_${metricType.name}"),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        verticalArrangement = Arrangement.spacedBy(2.dp)
-    ) {
-        for (series in activeOverlaySeries) {
-            val colorIdx = overlaySeries.indexOfFirst { it.columnName == series.columnName }.coerceAtLeast(0)
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(8.dp)
-                        .background(overlayStrokeColor(colorIdx), CircleShape)
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                    text = "${series.sourceName}: ${formatMeanForMetric(metricType, series.meanValue)}",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun MultiSensorOverlayDropdownMenu(
-    expanded: Boolean,
-    onDismissRequest: () -> Unit,
-    metricType: TelemetryMetricType,
-    overlaySeries: List<TelemetrySourceSeries>,
-    enabledOverlayIds: Set<String>,
-    onToggleOverlay: (String) -> Unit
-) {
-    DropdownMenu(
-        expanded = expanded,
-        onDismissRequest = onDismissRequest
-    ) {
-        overlaySeries.forEachIndexed { idx, series ->
-            val checked = series.columnName in enabledOverlayIds
-            val meanLabel = formatMeanForMetric(metricType, series.meanValue)
-            DropdownMenuItem(
-                text = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Checkbox(checked = checked, onCheckedChange = null)
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Box(
-                            modifier = Modifier
-                                .size(8.dp)
-                                .background(overlayStrokeColor(idx), CircleShape)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "${series.sourceName} ($meanLabel)",
-                            style = MaterialTheme.typography.bodySmall,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                },
-                onClick = { onToggleOverlay(series.columnName) }
-            )
         }
     }
 }

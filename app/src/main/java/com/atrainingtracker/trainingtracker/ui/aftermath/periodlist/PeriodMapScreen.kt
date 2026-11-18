@@ -63,6 +63,7 @@ import com.atrainingtracker.trainingtracker.ui.components.core.BottomSheetDesign
 import androidx.compose.material3.rememberStandardBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -96,6 +97,7 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataWithTrack
 import com.atrainingtracker.trainingtracker.ui.map.MapTrack
 import com.atrainingtracker.trainingtracker.ui.map.MapZoomFocus
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
+import com.atrainingtracker.trainingtracker.ui.map.TrackOnMapAftermathViewModel
 import com.atrainingtracker.trainingtracker.ui.map.TrackType
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import kotlinx.coroutines.Dispatchers
@@ -114,8 +116,17 @@ fun PeriodMapScreen(
     clearPeekSelection: () -> Unit,
     onBack: () -> Unit,
     onEditWorkout: ((Long) -> Unit)? = null,
-    onSelectRegion: ((String?) -> Unit)? = null
+    onSelectRegion: ((String?) -> Unit)? = null,
+    trackOnMapViewModel: TrackOnMapAftermathViewModel? = null
 ) {
+    val aftermathUIState = trackOnMapViewModel?.uiState?.collectAsState()?.value
+    val enabledTrackTypes = trackOnMapViewModel?.enabledTrackTypes?.collectAsState()?.value ?: setOf(TrackType.BEST)
+    val peekedWorkout = peekedWorkoutDataWithTrack?.workoutData
+    LaunchedEffect(peekedWorkout?.id, trackOnMapViewModel) {
+        if (peekedWorkout != null) {
+            trackOnMapViewModel?.loadAftermathData(peekedWorkout)
+        }
+    }
     val df = DistanceFormatter()
     val tf = TimeFormatter()
     val af = AltitudeFormatter()
@@ -234,16 +245,34 @@ fun PeriodMapScreen(
                 if (peekedWorkoutDataWithTrack != null) {
                     Box(modifier = Modifier.fillMaxWidth().height(maxSheetHeight)) {
                         peekedWorkoutDataWithTrack.workoutData?.let { workoutData ->
-                            // Here we show the TrackOnMapScreen for the specific workout
+                            val activeAftermathState = aftermathUIState?.takeIf { it.loadedWorkoutId == workoutData.id }
                             TrackOnMapScreen(
                                 workoutData = workoutData,
-                                tracks = peekedTracks,
+                                tracks = activeAftermathState?.tracks?.ifEmpty { peekedTracks } ?: peekedTracks,
+                                availableTrackTypes = activeAftermathState?.availableTrackTypes ?: setOf(TrackType.BEST),
+                                segments = activeAftermathState?.segments ?: emptyList(),
+                                routes = activeAftermathState?.routes ?: emptyList(),
+                                markers = activeAftermathState?.markers ?: emptyList(),
+                                enabledTrackTypes = enabledTrackTypes,
+                                onToggleTrackType = { trackOnMapViewModel?.toggleTrackTypeEnabled(it) },
+                                showTechnicalTracks = true,
                                 modifier = Modifier.fillMaxSize(),
                                 useStatusBarsPadding = false,
                                 onClusterClick = { clusterId ->
                                     WorkoutNavigationEvents.triggerCluster(clusterId)
                                 },
-                                onEditWorkout = onEditWorkout
+                                onEditWorkout = onEditWorkout,
+                                hrZoneDistribution = activeAftermathState?.hrZoneDistribution,
+                                powerZoneDistribution = activeAftermathState?.powerZoneDistribution,
+                                gradeZoneDistribution = activeAftermathState?.gradeZoneDistribution,
+                                hrZoneThresholds = activeAftermathState?.hrThresholds,
+                                powerZoneThresholds = activeAftermathState?.powerThresholds,
+                                recentSessions = activeAftermathState?.recentSessions ?: emptyList(),
+                                isSmoothedStream = activeAftermathState?.isSmoothedHrvStream ?: false,
+                                onUpdateFtp = trackOnMapViewModel?.let { vm -> { vm.updateFtp(it) } },
+                                onUpdateHrZones = trackOnMapViewModel?.let { vm -> { t1, t2 -> vm.updateHrZones(t1, t2) } },
+                                telemetryPath = activeAftermathState?.telemetryPath ?: emptyList(),
+                                multiSensorOverlays = activeAftermathState?.multiSensorOverlays ?: emptyMap()
                             )
                         }
                     }

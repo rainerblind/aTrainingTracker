@@ -829,7 +829,6 @@
     <string name="track_type_best">Zarejestrowany</string>
     <string name="track_type_gps">GPS</string>
     <string name="track_type_fused">Google Fused</string>
-    <string name="track_type_network">Sieć</string>
     <string name="legend">Legenda</string>
     <string name="cluster_statistics_title">Statystyki treningu</string>
     <string name="cluster_tab_statistics">Statystyki</string>

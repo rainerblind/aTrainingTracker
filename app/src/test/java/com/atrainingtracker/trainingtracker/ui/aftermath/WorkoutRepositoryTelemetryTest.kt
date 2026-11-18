@@ -564,4 +564,158 @@ class WorkoutRepositoryTelemetryTest {
             telemetry.multiSensorOverlays.containsKey(TelemetryMetricType.POWER)
         )
     }
+
+    @Test
+    fun testResolveTrackColumns_supportsAttFusedLocalizedAliasesAndIgnoresNetwork() {
+        // TST-PER-052.1
+        val localizedCols = listOf(
+            "LATITUDE", "LONGITUDE",
+            "LATITUDE (Smartphone GPS (Satellit))", "LONGITUDE (Smartphone GPS (Satellit))",
+            "LATITUDE (Google Location (Fused))", "LONGITUDE (Google Location (Fused))",
+            "LATITUDE_att_fused", "LONGITUDE_att_fused",
+            "LATITUDE_network", "LONGITUDE_network"
+        )
+        assertEquals("LATITUDE" to "LONGITUDE", WorkoutMultiSourceSampleDiscovery.resolveTrackColumns(localizedCols, TrackType.BEST))
+        assertEquals(
+            "LATITUDE (Smartphone GPS (Satellit))" to "LONGITUDE (Smartphone GPS (Satellit))",
+            WorkoutMultiSourceSampleDiscovery.resolveTrackColumns(localizedCols, TrackType.GPS)
+        )
+        assertEquals(
+            "LATITUDE (Google Location (Fused))" to "LONGITUDE (Google Location (Fused))",
+            WorkoutMultiSourceSampleDiscovery.resolveTrackColumns(localizedCols, TrackType.FUSED)
+        )
+        assertEquals(
+            "LATITUDE_att_fused" to "LONGITUDE_att_fused",
+            WorkoutMultiSourceSampleDiscovery.resolveTrackColumns(localizedCols, TrackType.ATT_FUSED)
+        )
+    }
+
+    @Test
+    fun testDiscoverMultiSourceOverlayColumns_handlesAltitudeSpeedSlopeUnderscoreAndNestedParens() {
+        // TST-PER-052.2
+        val cols = listOf(
+            "ALTITUDE",
+            "ALTITUDE_gps",
+            "ALTITUDE (att_fused_altitude_slope)",
+            "ALTITUDE (Topografische Höhe (DEM))",
+            "SPEED_mps",
+            "SPEED_mps_gps",
+            "SPEED_mps_att_fused",
+            "SPEED_mps_network",
+            "SLOPE",
+            "SLOPE (att_fused_altitude_slope)",
+            "SLOPE (Barometer)"
+        )
+        val discovered = WorkoutRepository.discoverMultiSourceOverlayColumns(cols)
+
+        val altSources = discovered[TelemetryMetricType.ALTITUDE].orEmpty()
+        assertEquals(3, altSources.size)
+        assertEquals(
+            listOf("ATT Fused (Alt/Slope)", "GPS", "Topografische Höhe (DEM)"),
+            altSources.map { it.first }
+        )
+
+        val speedSources = discovered[TelemetryMetricType.SPEED].orEmpty()
+        assertEquals(listOf("ATT Fused" to "SPEED_mps_att_fused", "GPS" to "SPEED_mps_gps"), speedSources)
+
+        val slopeSources = discovered[TelemetryMetricType.SLOPE].orEmpty()
+        assertEquals(
+            listOf("ATT Fused (Alt/Slope)" to "SLOPE (att_fused_altitude_slope)", "Barometer" to "SLOPE (Barometer)"),
+            slopeSources
+        )
+    }
+
+    @Test
+    fun testLoadWorkoutDetailTelemetry_retainsNegativeSlopeAndCoastalAltitudeInOverlaysAndTrackless() = runBlocking {
+        // TST-PER-052.2
+        val baseFileName = "2026-11-18-09-00-00"
+        val tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
+        every { mockSummariesDb.getBaseFileName(903L) } returns baseFileName
+        every { mockSamplesDb.existsTable(baseFileName) } returns true
+
+        val cols = listOf(
+            TrackType.BEST.latitudeColumn,
+            TrackType.BEST.longitudeColumn,
+            TrackType.ATT_FUSED.latitudeColumn,
+            TrackType.ATT_FUSED.longitudeColumn,
+            SensorType.DISTANCE_m.name,
+            SensorType.TIME_ACTIVE.name,
+            SensorType.ALTITUDE.name,
+            "${SensorType.ALTITUDE.name}_gps",
+            "${SensorType.ALTITUDE.name} (att_fused_altitude_slope)",
+            SensorType.SPEED_mps.name,
+            "${SensorType.SPEED_mps.name}_gps",
+            "${SensorType.SPEED_mps.name}_att_fused",
+            SensorType.SLOPE.name,
+            "${SensorType.SLOPE.name} (att_fused_altitude_slope)",
+            "${SensorType.SLOPE.name} (Barometer)"
+        )
+        val pragmaCursor = MockCursorFactory.create(listOf("name"), cols.map { listOf(it) })
+        every { mockSqliteDb.rawQuery(match { it.contains("PRAGMA table_info") }, null) } returns pragmaCursor
+
+        val dataCursor = MockCursorFactory.create(
+            cols,
+            listOf(
+                listOf(48.10, 11.50, 48.1001, 11.5001, 0.0, 0L, -10.0, -12.0, -10.0, 0.0, 0.0, 0.5, -8.0, -8.0, -7.0),
+                listOf(48.11, 11.51, 48.1101, 11.5101, 100.0, 10L, 0.0, 2.0, 0.0, 6.0, 6.0, 5.5, 0.0, 0.0, 1.0),
+                listOf(48.12, 11.52, 48.1201, 11.5201, 200.0, 20L, 10.0, 10.0, 10.0, 6.0, 6.0, 6.0, 5.0, 5.0, 3.0)
+            )
+        )
+        every { mockSqliteDb.query(tableName, any(), null, null, null, null, null) } returns dataCursor
+
+        val telemetry = repository.loadWorkoutDetailTelemetry(903L, com.atrainingtracker.banalservice.BSportType.BIKE)
+        assertTrue(telemetry.tracks.containsKey(TrackType.ATT_FUSED))
+
+        val altOverlays = telemetry.multiSensorOverlays[TelemetryMetricType.ALTITUDE].orEmpty()
+        assertEquals(2, altOverlays.size)
+        val gpsAlt = altOverlays.first { it.sourceName == "GPS" }
+        assertEquals(listOf(-12.0, 2.0, 10.0), gpsAlt.points.map { it.value })
+        assertEquals(0.0, gpsAlt.meanValue, 1e-6)
+
+        val speedOverlays = telemetry.multiSensorOverlays[TelemetryMetricType.SPEED].orEmpty()
+        assertEquals(2, speedOverlays.size)
+        val gpsSpeed = speedOverlays.first { it.sourceName == "GPS" }
+        assertEquals(listOf(0.0, 6.0, 6.0), gpsSpeed.points.map { it.value })
+        assertEquals(4.0, gpsSpeed.meanValue, 1e-6)
+
+        val slopeOverlays = telemetry.multiSensorOverlays[TelemetryMetricType.SLOPE].orEmpty()
+        assertEquals(2, slopeOverlays.size)
+        val attSlope = slopeOverlays.first { it.sourceName == "ATT Fused (Alt/Slope)" }
+        assertEquals(listOf(-8.0, 0.0, 5.0), attSlope.points.map { it.value })
+        assertEquals(-1.0, attSlope.meanValue, 1e-6)
+    }
+
+    @Test
+    fun testLoadTracklessWorkoutTelemetry_extractsSlopeAndNegativeSlopeOverlays() = runBlocking {
+        // TST-PER-052.2
+        val baseFileName = "2026-11-18-09-30-00"
+        val tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
+        every { mockSummariesDb.getBaseFileName(904L) } returns baseFileName
+        every { mockSamplesDb.existsTable(baseFileName) } returns true
+
+        val cols = listOf(
+            SensorType.DISTANCE_m.name,
+            SensorType.TIME_ACTIVE.name,
+            SensorType.SLOPE.name,
+            "${SensorType.SLOPE.name} (att_fused_altitude_slope)",
+            "${SensorType.SLOPE.name} (Trainer)"
+        )
+        val dataCursor = MockCursorFactory.create(
+            cols,
+            listOf(
+                listOf(0.0, 0L, -4.5, -4.5, -4.0),
+                listOf(100.0, 10L, 6.5, 6.5, 6.0)
+            )
+        )
+        every { mockSqliteDb.query(tableName, any(), null, null, null, null, null) } returns dataCursor
+
+        val (points, overlays) = repository.loadTracklessWorkoutTelemetry(904L)
+        assertEquals(2, points.size)
+        assertEquals(-4.5, points[0].slope!!, 1e-6)
+        assertEquals(6.5, points[1].slope!!, 1e-6)
+
+        val slopeOverlays = overlays[TelemetryMetricType.SLOPE].orEmpty()
+        assertEquals(2, slopeOverlays.size)
+        assertEquals(1.0, slopeOverlays.first { it.sourceName == "ATT Fused (Alt/Slope)" }.meanValue, 1e-6)
+    }
 }

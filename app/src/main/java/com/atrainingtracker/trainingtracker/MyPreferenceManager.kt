@@ -36,8 +36,10 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDetailTabConfig
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutSectionType
 import com.atrainingtracker.trainingtracker.ui.aftermath.photos.PhotoThumbnailSize
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneCardDisplayMode
+import com.atrainingtracker.trainingtracker.ui.map.TelemetryChartKind
 import com.atrainingtracker.trainingtracker.ui.routes.RouteFilterCriteria
 import com.atrainingtracker.trainingtracker.ui.segments.segmentlist.SegmentFilterCriteria
+import com.atrainingtracker.util.safeEnumValueOfOrNull
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -145,7 +147,7 @@ data class EditWorkoutFieldPreferences(
 )
 
 class MyPreferenceManager(context: Context) {
-    private val dataStore = resolveUserPreferencesDataStore(context)
+    internal val dataStore = resolveUserPreferencesDataStore(context)
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     companion object {
@@ -153,6 +155,7 @@ class MyPreferenceManager(context: Context) {
         val ENABLED_PERIOD_MARKER_TYPES = stringSetPreferencesKey("enabled_period_marker_types")
         val ENABLED_CLUSTER_MARKER_TYPES = stringSetPreferencesKey("enabled_cluster_marker_types")
         val ENABLED_TRACK_TYPES = stringSetPreferencesKey("enabled_track_types")
+        val HIDDEN_TELEMETRY_CHARTS = stringSetPreferencesKey("hidden_telemetry_charts")
         val WORKOUT_FILTER_CRITERIA_JSON = stringPreferencesKey("workout_filter_criteria_json")
         val ROUTE_FILTER_CRITERIA_JSON = stringPreferencesKey("route_filter_criteria_json")
         val SEGMENT_FILTER_CRITERIA_JSON = stringPreferencesKey("segment_filter_criteria_json")
@@ -435,6 +438,34 @@ class MyPreferenceManager(context: Context) {
             val current = preferences[ENABLED_TRACK_TYPES] ?: setOf(com.atrainingtracker.trainingtracker.ui.map.TrackType.BEST.name)
             val updated = if (enabled) current + type else current - type
             preferences[ENABLED_TRACK_TYPES] = updated
+        }
+    }
+
+    /**
+     * Persisted set of individually hidden [TelemetryChartKind]s in Workout Details `CHARTS`
+     * (`REQ-PER-044.4`). Defaults to empty so all available charts are visible by default.
+     */
+    val hiddenTelemetryChartsFlow: Flow<Set<TelemetryChartKind>> = dataStore.data.map { preferences ->
+        val raw = preferences[HIDDEN_TELEMETRY_CHARTS].orEmpty()
+        raw.mapNotNull { token -> safeEnumValueOfOrNull<TelemetryChartKind>(token) }.toSet()
+    }
+
+    /**
+     * Reactive set of enabled [TelemetryChartKind]s (`TelemetryChartKind.entries - hidden`).
+     */
+    val visibleTelemetryChartsFlow: Flow<Set<TelemetryChartKind>> = hiddenTelemetryChartsFlow.map { hidden ->
+        TelemetryChartKind.entries.toSet() - hidden
+    }
+
+    /**
+     * Persists individual chart visibility (`visible == true` clears from [HIDDEN_TELEMETRY_CHARTS];
+     * `false` adds it). Unknown enum names from future builds are safely preserved or ignored cleanly.
+     */
+    suspend fun setTelemetryChartVisible(chartKind: TelemetryChartKind, visible: Boolean) {
+        dataStore.edit { preferences ->
+            val current = preferences[HIDDEN_TELEMETRY_CHARTS].orEmpty()
+            val updated = if (visible) current - chartKind.name else current + chartKind.name
+            preferences[HIDDEN_TELEMETRY_CHARTS] = updated
         }
     }
 

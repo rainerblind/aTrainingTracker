@@ -44,29 +44,31 @@ enum class TrackType(
     val zIndex: Float,
     val sourceSuffix: String?
 ) {
-    BEST(Color.Blue, 2f,null),
+    BEST(Color.Blue, 2f, null),
     GPS(Color.Green, 5f, "GPS"),
     FUSED(Color.Yellow, 4f, "Google Fused"),
-    NETWORK(Color.Magenta, 3f, "Network");
+    ATT_FUSED(Color.Magenta, 3f, "ATT Fused");
 
     /**
-     * Returns the database column name for Latitude for this specific source.
+     * Returns the canonical database column name for Latitude for this specific source
+     * (`REQ-MAP-011`, `TrackerService.java:2740`).
      */
     val latitudeColumn: String
-        get() = if (sourceSuffix != null) {
-            "${SensorType.LATITUDE.name} ($sourceSuffix)"
-        } else {
-            SensorType.LATITUDE.name
+        get() = when {
+            this == ATT_FUSED -> "${SensorType.LATITUDE.name}_att_fused"
+            sourceSuffix != null -> "${SensorType.LATITUDE.name} ($sourceSuffix)"
+            else -> SensorType.LATITUDE.name
         }
 
     /**
-     * Returns the database column name for Longitude for this specific source.
+     * Returns the canonical database column name for Longitude for this specific source
+     * (`REQ-MAP-011`, `TrackerService.java:2740`).
      */
     val longitudeColumn: String
-        get() = if (sourceSuffix != null) {
-            "${SensorType.LONGITUDE.name} ($sourceSuffix)"
-        } else {
-            SensorType.LONGITUDE.name
+        get() = when {
+            this == ATT_FUSED -> "${SensorType.LONGITUDE.name}_att_fused"
+            sourceSuffix != null -> "${SensorType.LONGITUDE.name} ($sourceSuffix)"
+            else -> SensorType.LONGITUDE.name
         }
 }
 
@@ -187,6 +189,22 @@ data class PathPoint @JvmOverloads constructor(
     val hrvArtifactRate: Double? = null,
     val cadence: Int? = null
 )
+
+/**
+ * Individual telemetry charts eligible for persisted per-chart visibility toggles inside the
+ * Workout Details `CHARTS` section (`REQ-PER-044.4`). Stored in DataStore as a negative-set
+ * (`hidden_telemetry_charts`), keeping all charts visible by default on upgrade.
+ */
+enum class TelemetryChartKind {
+    SPEED_PACE,
+    SLOPE,
+    HEART_RATE,
+    POWER,
+    CADENCE,
+    W_PRIME_BAL,
+    HRV_DFA_A1,
+    HRV_RMSSD
+}
 
 /**
  * Single telemetry sample for a named per-device source stream (REQ-PER-042.1).
