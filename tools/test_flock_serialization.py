@@ -335,6 +335,154 @@ class TestFlockSerialization(unittest.TestCase):
         self.assertTrue(is_valid)
         self.assertEqual(missing, [])
 
+    def test_merge_ticket_cross_worktree_post_stage6_and_dirty_guard(self):
+        """
+        TST-PRO-125.1: Verifies --merge-ticket invoked post-Stage-6 from a separate worktree
+        fails fast if that worktree is dirty, and succeeds cleanly when clean without blind git add -A.
+        """
+        main_repo = self._init_git_repo()
+        wt_feat = os.path.join(self.temp_dir.name, "wt_feat")
+        wt_cold = os.path.join(self.temp_dir.name, "wt_cold")
+        subprocess.run(
+            ["git", "worktree", "add", "-b", "feature/ATT-8207-X", wt_feat, "sprint/2026-46.3"],
+            cwd=main_repo,
+            check=True,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "worktree", "add", "--detach", wt_cold, "sprint/2026-46.3"],
+            cwd=main_repo,
+            check=True,
+            capture_output=True,
+        )
+
+        with open(os.path.join(wt_feat, "stage6_ok.txt"), "w") as f:
+            f.write("Verified feature branch change\n")
+        subprocess.run(["git", "add", "stage6_ok.txt"], cwd=wt_feat, check=True)
+        subprocess.run(["git", "commit", "-m", "ATT-8207-X: Stage 5 verified"], cwd=wt_feat, check=True, capture_output=True)
+
+        # Dirty unrelated worktree must fail fast (never blindly staged)
+        dirty_file = os.path.join(wt_cold, "stray_untracked.txt")
+        with open(dirty_file, "w") as f:
+            f.write("unrelated\n")
+        with self.assertRaises(RuntimeError):
+            run_merge_ticket(
+                ticket_key="ATT-8207-X",
+                sprint="sprint/2026-46.3",
+                summary="ATT-8207-X: Post-Stage-6 squash",
+                cwd=wt_cold,
+                lock_path=self.lock_file,
+            )
+        os.remove(dirty_file)
+
+        # Clean cross-worktree post-PASS merge succeeds and deletes feature branch
+        ret = run_merge_ticket(
+            ticket_key="ATT-8207-X",
+            sprint="sprint/2026-46.3",
+            summary="ATT-8207-X: Post-Stage-6 squash",
+            cwd=wt_cold,
+            lock_path=self.lock_file,
+        )
+        self.assertEqual(ret, 0)
+        self.assertTrue(os.path.exists(os.path.join(main_repo, "stage6_ok.txt")))
+        ref_check = subprocess.run(
+            ["git", "show-ref", "--verify", "refs/heads/feature/ATT-8207-X"],
+            cwd=main_repo,
+            capture_output=True,
+        )
+        self.assertNotEqual(ref_check.returncode, 0)
+
+    def test_merge_ticket_resolves_master_index_rebase_conflicts_and_runs_sync_indexes(self):
+        """
+        TST-PRO-125.1/.2: Verifies that when sprint/<SPRINT> advances docs/requirements.md and
+        docs/tests.md while a feature branch awaits Stage 6, --merge-ticket auto-resolves
+        index conflicts, runs --sync-indexes, and aborts on non-index conflicts.
+        """
+        main_repo = self._init_git_repo()
+        os.makedirs(os.path.join(main_repo, "docs"), exist_ok=True)
+        os.makedirs(os.path.join(main_repo, "tools"), exist_ok=True)
+        with open(os.path.join(main_repo, "docs", "requirements.md"), "w") as f:
+            f.write("**Total Living Requirements**: 10 across 9 domain shards.\n")
+        with open(os.path.join(main_repo, "docs", "tests.md"), "w") as f:
+            f.write("**Total Living Tests**: 10 across 9 domain shards.\n")
+        with open(os.path.join(main_repo, "shared.txt"), "w") as f:
+            f.write("base\n")
+        with open(os.path.join(main_repo, "tools", "verify_requirement_governance.py"), "w") as f:
+            f.write(
+                "import sys\n"
+                "if '--sync-indexes' in sys.argv:\n"
+                "    open('docs/requirements.md', 'w').write('**Total Living Requirements**: 12 across 9 domain shards.\\n')\n"
+                "    open('docs/tests.md', 'w').write('**Total Living Tests**: 12 across 9 domain shards.\\n')\n"
+            )
+        subprocess.run(["git", "add", "."], cwd=main_repo, check=True)
+        subprocess.run(["git", "commit", "-m", "Add index baseline"], cwd=main_repo, check=True, capture_output=True)
+
+        wt_feat = os.path.join(self.temp_dir.name, "wt_idx")
+        subprocess.run(
+            ["git", "worktree", "add", "-b", "feature/ATT-IDX", wt_feat, "sprint/2026-46.3"],
+            cwd=main_repo,
+            check=True,
+            capture_output=True,
+        )
+
+        # Sibling merges on sprint/2026-46.3 updating master indexes
+        with open(os.path.join(main_repo, "docs", "requirements.md"), "w") as f:
+            f.write("**Total Living Requirements**: 11 across 9 domain shards.\n")
+        with open(os.path.join(main_repo, "docs", "tests.md"), "w") as f:
+            f.write("**Total Living Tests**: 11 across 9 domain shards.\n")
+        subprocess.run(["git", "add", "docs/requirements.md", "docs/tests.md"], cwd=main_repo, check=True)
+        subprocess.run(["git", "commit", "-m", "ATT-SIB: Sibling index update"], cwd=main_repo, check=True, capture_output=True)
+
+        # Feature branch modifies same index lines + feature file
+        with open(os.path.join(wt_feat, "docs", "requirements.md"), "w") as f:
+            f.write("**Total Living Requirements**: 11-feature across 9 domain shards.\n")
+        with open(os.path.join(wt_feat, "docs", "tests.md"), "w") as f:
+            f.write("**Total Living Tests**: 11-feature across 9 domain shards.\n")
+        with open(os.path.join(wt_feat, "feature_idx.txt"), "w") as f:
+            f.write("idx feature\n")
+        subprocess.run(["git", "add", "."], cwd=wt_feat, check=True)
+        subprocess.run(["git", "commit", "-m", "ATT-IDX: Stage 5 verified"], cwd=wt_feat, check=True, capture_output=True)
+
+        ret = run_merge_ticket(
+            ticket_key="ATT-IDX",
+            sprint="sprint/2026-46.3",
+            summary="ATT-IDX: Index conflict safe merge",
+            cwd=wt_feat,
+            lock_path=self.lock_file,
+        )
+        self.assertEqual(ret, 0)
+        self.assertTrue(os.path.exists(os.path.join(main_repo, "feature_idx.txt")))
+        with open(os.path.join(main_repo, "docs", "requirements.md")) as f:
+            self.assertIn("12 across 9", f.read())
+
+        # Non-index conflict must abort rebase cleanly and raise RuntimeError
+        wt_bad = os.path.join(self.temp_dir.name, "wt_bad")
+        subprocess.run(
+            ["git", "worktree", "add", "-b", "feature/ATT-BAD", wt_bad, "sprint/2026-46.3"],
+            cwd=main_repo,
+            check=True,
+            capture_output=True,
+        )
+        with open(os.path.join(main_repo, "shared.txt"), "w") as f:
+            f.write("sprint side\n")
+        subprocess.run(["git", "add", "shared.txt"], cwd=main_repo, check=True)
+        subprocess.run(["git", "commit", "-m", "ATT-SIB2: edit shared"], cwd=main_repo, check=True, capture_output=True)
+
+        with open(os.path.join(wt_bad, "shared.txt"), "w") as f:
+            f.write("feature side\n")
+        subprocess.run(["git", "add", "shared.txt"], cwd=wt_bad, check=True)
+        subprocess.run(["git", "commit", "-m", "ATT-BAD: edit shared"], cwd=wt_bad, check=True, capture_output=True)
+
+        with self.assertRaises(RuntimeError):
+            run_merge_ticket(
+                ticket_key="ATT-BAD",
+                sprint="sprint/2026-46.3",
+                summary="ATT-BAD: Should abort",
+                cwd=wt_bad,
+                lock_path=self.lock_file,
+            )
+        self.assertFalse(os.path.exists(os.path.join(wt_bad, ".git", "rebase-merge")))
+
 
 if __name__ == "__main__":
     unittest.main()

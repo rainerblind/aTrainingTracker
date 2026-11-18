@@ -1,14 +1,14 @@
 # Living Requirements: Engineering Process, Stability & Architecture
 
 **Document ID**: `DOC-REQ-PRO`  
-**Version**: 1.0.12  
+**Version**: 1.0.21  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Requirements**: 189
+**Total Requirements**: 190
 
 ---
 
@@ -6186,6 +6186,32 @@ The workflow SHALL mandate that:
 
 ---
 
+### REQ-PRO-125: Single-Atomic-Commit Sprint Integration Post-Stage-6 & Subtask Reuse on Bounce (ATT-8207) [Verified]
+- **Tests**: `TST-PRO-125`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `.agents/rules/aspice_governance.md`, `.agents/skills/stage5-verification/SKILL.md`, `.agents/skills/stage6-final-review/SKILL.md`, `.agents/skills/sprint-planner/SKILL.md`, `docs/management/cm_plan.md`, `tools/jira_util.py`, `tools/parallel_sprint_lock.py`, `tools/locked_build_merge.py`, `tools/sprint_metrics.py`, `tools/hoechstmass/tools/jira_util.py`, `tools/hoechstmass/tools/parallel_sprint_lock.py`, `tools/hoechstmass/tools/sprint_metrics.py`, `tools/hoechstmass/.agents/`
+- **Rationale**: Squashing `feature/<KEY>` onto `sprint/<SPRINT_NAME>` and deleting `feature/<KEY>` at Gate 5 `PASS` *before* Stage 6 Cold Review (`Rule 3.3`) pollutes `sprint/<SPRINT_NAME>` with multiple unverified commits whenever Stage 6 bounces (`ATT-7991`, `ATT-7902`), interleaves behind sibling lane commits, breaks `tools/sprint_bisect.py`, and leaves `[Implementation]`/`[Test]` subtasks `Erledigt` so healing creates duplicate subtask pairs (`ATT-8207`, ASPICE `SUP.8 BP4/BP5`, `SUP.1 BP3`).
+- **Description**:
+  1. *Deferred Post-Stage-6 Atomic Sprint Integration (`REQ-PRO-125.1`)*: Gate 5 `PASS` SHALL keep `feature/<KEY>` intact without executing `--merge-ticket` or `git merge --squash` onto `sprint/<SPRINT_NAME>`, and SHALL transition the parent ticket to `Final Review (Agent)`. `tools/parallel_sprint_lock.py --merge-ticket` (and `tools/locked_build_merge.py`) SHALL squash-merge `feature/<KEY>` onto `sprint/<SPRINT_NAME>` as strictly one atomic commit (preserving `REQ-PRO-108.3` trailers and `--sync-indexes` recalculation) and delete `feature/<KEY>` ONLY after Stage 6 `final-review-verdict PASS`, guaranteeing zero unapproved intermediate commits on `sprint/<SPRINT_NAME>` across `BOUNCE` loops and `Schicht` rollovers (`Rule 2.2`, `Rule 8.2`).
+  2. *Zero-Build / Zero-Lock Stage 6 Branch-Diff Audit (`REQ-PRO-125.2`, Rule 3.3)*: During Stage 6 (`Final Review (Agent)`), the Cold Reviewer (`stage6-final-review/SKILL.md`) SHALL audit the candidate ticket strictly read-only via `git diff sprint/<SPRINT_NAME>...feature/<KEY>` (and full surrounding source files in the ticket worktree) with **zero `./gradlew` invocations and zero `/tmp/att_build_merge.lock` acquisitions** during the review itself. Post-`PASS` `--merge-ticket` under POSIX `flock` SHALL cleanly rebase `feature/<KEY>` onto current `sprint/<SPRINT_NAME>` (auto-recovering conflicts strictly on `docs/requirements.md` / `docs/tests.md`, failing fast on dirty unrelated worktrees) and recalculate shared master indexes via `--sync-indexes` if `sprint/<SPRINT_NAME>` advanced while waiting in Stage 6.
+  3. *Subtask Reuse & Locked-`Erledigt` Bounce Fallback (`REQ-PRO-125.3`)*: When `tools/jira_util.py final-review-verdict <PARENT_KEY> BOUNCE ...` returns a parent ticket to `Implementation` (or `Analysis` / `Zu erledigen` with `bounce_count <= 3`), it SHALL reopen existing `Erledigt`/`Done` stage subtasks matching the target and downstream stages (e.g. `[Implementation]` and `[Test]` for `implementation`) when Jira exposes outgoing reopen transitions, and skip gracefully when `Erledigt` has `transitions: []`. `submit-stage` SHALL reuse active or reopenable subtasks without duplication, or create a clearly labeled `[<Prefix> - Bounce N]` subtask when `Erledigt` exposes `transitions: []` (with `STAGE_SPECS`, `resolve_desired_parent_stage_for_subtask`, `gate_verdict`, `create_subtask`, and `sprint_metrics.identify_gate_number` matching bounce suffixes and `REQ-PRO-107.1` inspecting the active/latest preceding subtask).
+  4. *`tools/hoechstmass/` Mirror Parity & Governance Alignment (`REQ-PRO-125.4`)*: `tools/hoechstmass/tools/{jira_util.py,parallel_sprint_lock.py,sprint_metrics.py}` and `tools/hoechstmass/.agents/{rules,skills}/` SHALL mirror post-Stage-6 atomic integration and `BOUNCE` subtask reuse/fallback without hardcoding `ATT` or proprietary IDs (`HoechstmassToolingContractTest`), and `.agents/rules/aspice_governance.md`, `.agents/skills/{stage5-verification,stage6-final-review,sprint-planner}/SKILL.md`, and `docs/management/cm_plan.md` SHALL reflect the unified workflow.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new `REQ-PRO-125` (`REQ-PRO-125.1`–`REQ-PRO-125.4`), refining integration timing in `REQ-PRO-058` (`REQ-PRO-058.1`–`.3`) and `REQ-PRO-041` (`.2`, `.4`) while preserving `REQ-PRO-109` (`.2`, `.5`).
+  2. *Historical Origin & Commit Trace*: `REQ-PRO-058` (`ATT-7101`), `REQ-PRO-041` (`ATT-7025` `49936dce`), `ATT-8030` (Zero-Build/Zero-Lock Stage 6), `REQ-PRO-109` (`ATT-8154`), and `ATT-8163` (`cm_plan.md`).
+  3. *Root Reason for Existing Formulation*: Stage 6 was appended after an existing Gate 5 squash-merge pipeline, leaving `sprint/<SPRINT_NAME>` exposed to post-merge bounce commits and duplicate subtasks.
+  4. *Preservation of Core Invariants*: Preserves `Rule 3.1` (human-only `Erledigt`), `Rule 3.3` (zero `./gradlew` and zero `flock` during Stage 6 audit), `Rule 8.2` (one atomic squashed commit with `REQ-PRO-108.3` trailers), `Rule 9.1`–`9.5` (disjoint worktrees and `--sync-indexes`), `REQ-PRO-107.1` authorship separation, and `HoechstmassToolingContractTest` / `AspiceSweAuditContractTest` contracts.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* a ticket passing Gate 5 (`gate-verdict <TEST_SUBTASK> PASS`), *When* it enters `Final Review (Agent)`, *Then* `feature/<KEY>` remains intact, `sprint/<SPRINT_NAME>` has zero commits for `<KEY>`, and Stage 6 audits `git diff sprint/<SPRINT_NAME>...feature/<KEY>` strictly read-only without `./gradlew` or `flock`.
+  • *Given* a ticket in `Final Review (Agent)` that triggers `final-review-verdict <KEY> BOUNCE` (1–3 times), *When* healing re-runs Stage 4/5 and Stage 6 subsequently passes (`PASS`) and runs `--merge-ticket`, *Then* existing `[Implementation]`/`[Test]` subtasks were reused without duplication and `git log sprint/<SPRINT_NAME>` contains strictly one squashed atomic commit for `<KEY>`.
+  • *Given* `sprint/<SPRINT_NAME>` advanced with sibling ticket index updates while `feature/<KEY>` waited in Stage 6, *When* post-`PASS` `--merge-ticket` runs under `flock`, *Then* `feature/<KEY>` rebases cleanly, `--sync-indexes` reconciles `docs/requirements.md` and `docs/tests.md`, and `feature/<KEY>` is deleted.
+  • *Given* `tools/hoechstmass/` mirrors and governance docs/skills, *When* offline Python tests and governance/contract checks execute, *Then* mirror parity, project-agnostic decoupling, and governance checks pass `0`.
+- **Invariants**: Zero `app/src/main/` edits; `ANT-Android-SDKs` untouched; `tools/sprint_bisect.py` algorithm unchanged; `Localization Parity: N/A - no UI strings`; `Rule 5` zero live API calls in tests; `REQ-PRO-049.1` zero `app/src/main/` reads in tests.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -6203,3 +6229,12 @@ The workflow SHALL mandate that:
 | `1.0.10` | 2026-11-18 | AI Agent (`ATT-8170`) | `ATT-8170` | Added `[Planned]` `REQ-PRO-124` (local `0600` credential permissions, `.jira_audit.log` gitignore, `ATT-4004_walkthrough.md` leak redaction + PO rotation notice, offline CI secret-pattern scan). |
 | `1.0.11` | 2026-11-18 | AI Agent (`ATT-8170`) | `ATT-8170` | Promoted `REQ-PRO-124` to `[Implemented]` in Stage 4 (`tools/check_secrets_hygiene.py`, `.gitignore`, `docs/ci-secrets.md`, `ATT-4004_walkthrough.md` redaction, CI workflows, `0600` permissions). |
 | `1.0.12` | 2026-11-18 | AI Agent (`ATT-8170`) | `ATT-8170` | Promoted `REQ-PRO-124` to `[Verified]` after Stage 5 verification (`8,479` tracked files scan, `9/9` local `0600`, `476/476` Python tests, `46/46` Gradle contract tests). |
+| `1.0.13` | 2026-11-18 | AI Agent (`ATT-8207`) | `ATT-8207` | Added `[Planned]` `REQ-PRO-125` (deferred post-Stage-6 atomic `--merge-ticket`, zero-build/zero-lock Stage 6 branch-diff audit, `BOUNCE` subtask reuse, `tools/hoechstmass/` mirror & doc parity). |
+| `1.0.14` | 2026-11-18 | AI Agent (`ATT-8207`) | `ATT-8207` | Promoted `REQ-PRO-125` to `[Implemented]` in Stage 4 (`parallel_sprint_lock.py`, `jira_util.py`, `sprint_metrics.py`, `tools/hoechstmass/` mirrors, skills/rules/`cm_plan.md`). |
+| `1.0.15` | 2026-11-18 | AI Agent (`ATT-8207`) | `ATT-8207` | Promoted `REQ-PRO-125` to `[Verified]` after Stage 5 verification (`37/37` targeted Python tests, `4/4` Hoechstmass parity tests, `29/30` Gradle contract tests with 1 pre-existing `.env.jira` worktree failure, governance `exit 0`). |
+| `1.0.16` | 2026-11-18 | AI Agent (`ATT-8207`) | `ATT-8207` | Stage 6 Bounce 1/3 remediation (`[Implemented]`): fixed `tools/hoechstmass/tools/jira_util.py` `[Analysis - Bounce N]` Gate 1 regex and expanded `_resolve_bounce_stage_ids` / `_resolve_bounce_stage_names` / `transition_issue` aliases (`impl-plan`, `test-spec`, `req-test-spec`, `spec`, `revision`, `rework`, `verification`). |
+| `1.0.17` | 2026-11-18 | AI Agent (`ATT-8207`) | `ATT-8207` | Promoted `REQ-PRO-125` to `[Verified]` after Stage 6 Bounce 1/3 remediation (`37/37` + `4/4` Python, `23/24` Gradle contracts with 1 pre-existing `.env.jira` worktree failure, governance `exit 0`). |
+| `1.0.18` | 2026-11-18 | AI Agent (`ATT-8207`) | `ATT-8207` | Stage 6 Pro Bounce 2/3 remediation (`[Implemented]`): updated `check_gate` to accept `[Impl-Plan - Bounce N]` via `STAGE_SPECS["3"]["pattern"]`, added `'1'..'5'`/`'stage1'..'stage5'` parent `aliases` in `transition_issue`, and handled `('1', 'stage1', 'analysis')` two-step bounce path in `final_review_verdict`. |
+| `1.0.19` | 2026-11-18 | AI Agent (`ATT-8207`) | `ATT-8207` | Promoted `REQ-PRO-125` to `[Verified]` after Stage 6 Pro Bounce 2/3 remediation (`44/44` + `4/4` Python, `23/24` Gradle contracts with 1 pre-existing `.env.jira` worktree failure, governance `exit 0`). |
+| `1.0.20` | 2026-11-18 | AI Agent (`ATT-8207`) | `ATT-8207` | Stage 6 Pro Bounce 3/3 remediation (`[Implemented]`): added space-separated `'stage 1'..'stage 5'` aliases to `STAGE_ALIASES`, `_resolve_bounce_stage_ids`, and `tools/hoechstmass/tools/jira_util.py` `_resolve_bounce_stage_names`. |
+| `1.0.21` | 2026-11-18 | AI Agent (`ATT-8207`) | `ATT-8207` | Promoted `REQ-PRO-125` to `[Verified]` after Stage 5 Bounce 3/3 verification (`48/48` targeted Python tests, `23/24` Gradle contracts with 1 pre-existing `.env.jira` worktree failure, governance `exit 0`). |

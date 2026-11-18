@@ -1,14 +1,14 @@
 # Living Test Specification: Engineering Process, Stability & Architecture
 
 **Document ID**: `DOC-TST-PRO`  
-**Version**: 1.0.12  
+**Version**: 1.0.21  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Tests**: 228
+**Total Tests**: 229
 
 ---
 
@@ -3868,6 +3868,25 @@
 
 ---
 
+### TST-PRO-125: **Post-Stage-6 Atomic Sprint Integration, Branch-Diff Audit & BOUNCE Subtask Reuse Suite (ATT-8207)** [Verified]
+- **Requirement(s)**: `REQ-PRO-125`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Component**: `tools/jira_util.py`, `tools/parallel_sprint_lock.py`, `tools/locked_build_merge.py`, `tools/test_jira_accounts.py`, `tools/test_flock_serialization.py`, `tools/hoechstmass/tools/jira_util.py`, `tools/hoechstmass/tools/parallel_sprint_lock.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`, `.agents/rules/aspice_governance.md`, `.agents/skills/{stage5-verification,stage6-final-review,sprint-planner}/SKILL.md`, `docs/management/cm_plan.md`
+- **Jira**: `ATT-8207`
+- **Test Description**:
+  1. *Post-Stage-6 Atomic Squash-Merge & Rebase Under `flock` (`TST-PRO-125.1`, tools/test_flock_serialization.py)*:
+     • *Given* an isolated temporary multi-worktree Git repository with `sprint/<SPRINT>` and `feature/<KEY>` (including concurrent sibling commits + `docs/requirements.md` / `docs/tests.md` index updates landed on `sprint/<SPRINT>` while `<KEY>` waited in Stage 6), *When* `parallel_sprint_lock.py --merge-ticket <KEY>` executes post-`PASS`, *Then* `feature/<KEY>` rebases cleanly without conflict, `--sync-indexes` reconciles counters, `sprint/<SPRINT>` receives strictly one squashed atomic commit with `REQ-PRO-108.3` trailers, and `feature/<KEY>` is deleted.
+  2. *Zero-Build / Zero-Lock Stage 6 Branch-Diff Audit (`TST-PRO-125.2`, skills/rules/cm_plan review & grep)*:
+     • *Given* updated `.agents/rules/aspice_governance.md` (`Rule 3.3`, `Rule 8.2`), `.agents/skills/{stage5-verification,stage6-final-review,sprint-planner}/SKILL.md`, and `docs/management/cm_plan.md`, *When* reviewed, *Then* Gate 5 `PASS` keeps `feature/<KEY>` intact, Stage 6 audits `git diff sprint/<SPRINT_NAME>...feature/<KEY>` strictly read-only (zero `./gradlew` and zero `/tmp/att_build_merge.lock` calls during review), and `--merge-ticket` triggers strictly post-`PASS`.
+  3. *Subtask Reuse & Reopening on `final-review-verdict BOUNCE` (`TST-PRO-125.3`, tools/test_jira_accounts.py)*:
+     • *Given* mocked Jira REST state (`Rule 5`: zero live API calls) for a parent ticket in `Final Review (Agent)` with `Erledigt` `[Implementation]` and `[Test]` subtasks, *When* `final_review_verdict(..., "BOUNCE", ...)` executes across 1–2 bounces followed by `submit_stage(..., 4)` and `submit_stage(..., 5)`, *Then* existing `[Implementation]` and `[Test]` subtasks are reopened and reused with zero duplicate subtask creation, and `REQ-PRO-107.1` separated-authorship validation continues to hold across healing cycles.
+  4. *`tools/hoechstmass/` Mirror Parity & Governance Verification (`TST-PRO-125.4`, tools/hoechstmass/tools/test_hoechstmass_tools.py & verify_requirement_governance.py)*:
+     • *Given* updated `tools/hoechstmass/` tooling and skill mirrors, *When* `python3 -m unittest discover -s tools -p "test_*.py"`, `python3 -m unittest discover -s tools/hoechstmass/tools -p "test_*.py"`, and `python3 tools/verify_requirement_governance.py` execute, *Then* all unit tests, `HoechstmassToolingContractTest` decoupling invariants, and governance checks exit `0`. (`Localization Parity: N/A - no UI strings`).
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -3885,3 +3904,12 @@
 | `1.0.10` | 2026-11-18 | AI Agent (`ATT-8170`) | `ATT-8170` | Added `[Planned]` `TST-PRO-124` test specifications (`0600` credential permissions, `.jira_audit.log` gitignore, `ATT-4004_walkthrough.md` redaction + PO rotation notice, offline CI secret-pattern scan & contract tests). |
 | `1.0.11` | 2026-11-18 | AI Agent (`ATT-8170`) | `ATT-8170` | Promoted `TST-PRO-124` to `[Implemented]` in Stage 4 (`tools/test_check_secrets_hygiene.py`, `ReleaseCiAndLintConfigContractTest`, `0600` local verification). |
 | `1.0.12` | 2026-11-18 | AI Agent (`ATT-8170`) | `ATT-8170` | Promoted `TST-PRO-124` to `[Verified]` after Stage 5 verification (`6/6` `test_check_secrets_hygiene.py`, `476/476` Python suite, `46/46` Gradle contract tests, governance `exit 0`). |
+| `1.0.13` | 2026-11-18 | AI Agent (`ATT-8207`) | `ATT-8207` | Added `[Planned]` `TST-PRO-125` test specifications (post-Stage-6 atomic `--merge-ticket`, zero-build/zero-lock Stage 6 branch-diff audit, `BOUNCE` subtask reuse, `tools/hoechstmass/` mirror parity & governance). |
+| `1.0.14` | 2026-11-18 | AI Agent (`ATT-8207`) | `ATT-8207` | Promoted `TST-PRO-125` to `[Implemented]` in Stage 4 (`test_flock_serialization.py`, `test_jira_accounts.py`, `test_hoechstmass_tools.py`). |
+| `1.0.15` | 2026-11-18 | AI Agent (`ATT-8207`) | `ATT-8207` | Promoted `TST-PRO-125` to `[Verified]` after Stage 5 verification (`37/37` targeted Python tests, `4/4` Hoechstmass parity tests, `29/30` Gradle contract tests with 1 pre-existing `.env.jira` worktree failure, governance `exit 0`). |
+| `1.0.16` | 2026-11-18 | AI Agent (`ATT-8207`) | `ATT-8207` | Stage 6 Bounce 1/3 remediation (`[Implemented]`): added `[Analysis - Bounce 1]` Gate 1 mirror enforcement and bounce target alias coverage tests (`test_jira_accounts.py`, `test_hoechstmass_tools.py`). |
+| `1.0.17` | 2026-11-18 | AI Agent (`ATT-8207`) | `ATT-8207` | Promoted `TST-PRO-125` to `[Verified]` after Stage 6 Bounce 1/3 remediation (`37/37` + `4/4` Python, `23/24` Gradle contracts with 1 pre-existing `.env.jira` worktree failure, governance `exit 0`). |
+| `1.0.18` | 2026-11-18 | AI Agent (`ATT-8207`) | `ATT-8207` | Stage 6 Pro Bounce 2/3 remediation (`[Implemented]`): added `check_gate` `[Impl-Plan - Bounce 1]` and `'1'..'5'`/`'stage1'..'stage5'` bounce-target coverage in `tools/test_jira_accounts.py`. |
+| `1.0.19` | 2026-11-18 | AI Agent (`ATT-8207`) | `ATT-8207` | Promoted `TST-PRO-125` to `[Verified]` after Stage 6 Pro Bounce 2/3 remediation (`44/44` + `4/4` Python, `23/24` Gradle contracts with 1 pre-existing `.env.jira` worktree failure, governance `exit 0`). |
+| `1.0.20` | 2026-11-18 | AI Agent (`ATT-8207`) | `ATT-8207` | Stage 6 Pro Bounce 3/3 remediation (`[Implemented]`): added `'stage 1'..'stage 5'` and `bounce_target="stage 4"` scope assertions in `tools/test_jira_accounts.py` and `tools/hoechstmass/tools/test_hoechstmass_tools.py`. |
+| `1.0.21` | 2026-11-18 | AI Agent (`ATT-8207`) | `ATT-8207` | Promoted `TST-PRO-125` to `[Verified]` after Stage 5 Bounce 3/3 verification (`48/48` targeted Python tests, `23/24` Gradle contracts with 1 pre-existing `.env.jira` worktree failure, governance `exit 0`). |

@@ -62,11 +62,13 @@ ACTIVE_PROCESS_VERSION = "2.0"
 
 
 def identify_gate_number(summary):
-    """Determines Gate number (1..5) from subtask summary prefix."""
-    s_lower = summary.lower()
+    """Determines Gate number (1..5) from subtask summary prefix (including numbered bounce suffixes)."""
+    s_lower = (summary or "").lower()
     for g in range(1, 6):
         data = STAGE_MAP[g]
-        if data["prefix"] in s_lower:
+        prefix = data["prefix"]
+        stem = prefix[:-1]
+        if prefix in s_lower or re.search(rf"{re.escape(stem)}\s*-\s*bounce\s*\d+\]", s_lower):
             return g
     return None
 

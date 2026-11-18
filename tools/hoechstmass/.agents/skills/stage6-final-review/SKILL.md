@@ -1,6 +1,6 @@
 ---
 name: stage6-final-review
-description: Executes Stage 6 ('Final Review (Agent)') of the agile ASPICE lifecycle. Conducts an independent, zero-context, adversarial Cold Final Review (Model 'flash' for low-risk/1-2 SP/doc/tooling/single-component fixes; Model 'pro' for high-risk/architectural/complex UI/concurrency/bounce escalations) of the squashed commit on the sprint branch, enforces up to 3 autonomous healing bounces back to the implementing pair, and posts a structured Executive Review Summary before advancing the ticket to 'Final Review (Human)'.
+description: Executes Stage 6 ('Final Review (Agent)') of the agile ASPICE lifecycle. Conducts an independent, zero-context, adversarial Cold Final Review (Model 'flash' for low-risk/1-2 SP/doc/tooling/single-component fixes; Model 'pro' for high-risk/architectural/complex UI/concurrency/bounce escalations) of git diff sprint/<SPRINT_NAME>...feature/<KEY>, enforces up to 3 autonomous healing bounces on feature/<KEY>, and triggers atomic --merge-ticket squash onto sprint/<SPRINT_NAME> strictly post-PASS before advancing to 'Final Review (Human)'.
 ---
 
 # Skill: stage6-final-review
@@ -8,7 +8,7 @@ description: Executes Stage 6 ('Final Review (Agent)') of the agile ASPICE lifec
 ## Overview
 This skill guides the agent through **Stage 6 (`Final Review (Agent)` / Gate 6)**. While Stages 1–5 (`Analysis` $\rightarrow$ `Test Spec` $\rightarrow$ `Implementation Plan` $\rightarrow$ `Implementation` $\rightarrow$ `Test`) are executed by a persistent Epic-scoped `pro`/`flash` subagent pair (`Rules 60–63`), **Stage 6 (`Final Review (Agent)`)** introduces an orthogonal Swiss Cheese defensive barrier ($p_6$).
 
-A freshly spawned **Cold Reviewer** (`Model: "flash"` for Low-Risk / `1–2 SP` / tooling / doc / single-component fixes; `Model: "pro"` reserved for High-Risk / multi-component architectural, complex UI, concurrency/DB/sensor-protocol, or Bounce 2–3 escalations per `Rule 7.2`) — with **zero shared conversational history** from Stages 1–5 — acts as a **skeptical, adversarial Principal Engineer** auditing the integrated commit on `sprint/<SPRINT_NAME>` to uncover subtle runtime bugs, math/unit errors, lifecycle leaks, incomplete UI/protocol wiring, and test blind spots *before* the ticket reaches the human Product Owner (`Final Review (Human)`).
+A freshly spawned **Cold Reviewer** (`Model: "flash"` for Low-Risk / `1–2 SP` / tooling / doc / single-component fixes; `Model: "pro"` reserved for High-Risk / multi-component architectural, complex UI, concurrency/DB/sensor-protocol, or Bounce 2–3 escalations per `Rule 7.2`) — with **zero shared conversational history** from Stages 1–5 — acts as a **skeptical, adversarial Principal Engineer** auditing the ticket branch diff (`git diff sprint/<SPRINT_NAME>...feature/<KEY>`) *before* atomic squash integration onto `sprint/<SPRINT_NAME>` and *before* the ticket reaches the human Product Owner (`Final Review (Human)`).
 
 ---
 
@@ -21,10 +21,11 @@ A freshly spawned **Cold Reviewer** (`Model: "flash"` for Low-Risk / `1–2 SP` 
    - The Cold Reviewer MUST **NOT** read the implementing agent's `walkthrough.md`, `plan.md`, or `analysis.md` before auditing the code. Reading the author's self-justification anchors the reviewer and hides blind spots.
    - Start strictly from:
      1. The original Jira ticket requirements (`python3 tools/jira_util.py show <TICKET_KEY>`),
-     2. The full production & test diff (`git show <COMMIT_HASH>`), and
-     3. The **full surrounding production source files** (`read_file` on the modified classes and their callers/callees).
-3. **Full Production Code Diff Inspection is Mandatory**:
-   - Running only `git show --stat` is a **severe governance violation**. You MUST read every line of production code in `git show <COMMIT_HASH>` plus the surrounding methods/classes in the working tree.
+     2. The full production & test diff (`git diff sprint/<SPRINT_NAME>...feature/<KEY>`), and
+     3. The **full surrounding production source files** (`read_file` on the modified classes and their callers/callees in the `feature/<KEY>` worktree).
+3. **Full Production Code Diff Inspection is Mandatory (Strictly Read-Only — ZERO Build / Lock Calls During Audit)**:
+   - Running only `git diff --stat` / `git show --stat` is a **severe governance violation**. You MUST read every line of production code in `git diff sprint/<SPRINT_NAME>...feature/<KEY>` plus the surrounding methods/classes in the `feature/<KEY>` working tree.
+   - **Zero-Build / Zero-Lock Invariant**: Stage 6 audits already-verified Stage 5 `feature/<KEY>` branches and MUST remain **100% read-only during review** (zero build or merge-lock calls during audit; `--merge-ticket` acquires the lock strictly *after* `final-review-verdict PASS`).
 4. **Adversarial Bug-Hunter Mindset**:
    - Do **not** look for excuses to pass a ticket. Assume the implementing pair missed at least one subtle edge case, lifecycle race, sibling screen/protocol, or unit mismatch, and actively hunt for it. If you find *any* genuine defect, incomplete wiring, compiler warning, broken edge case, or governance discrepancy, you **MUST** execute `BOUNCE` (never excuse or rationalize it in `<thinking>`).
 5. **Mandatory `Pros` vs. `Cons / Defects Identified` & *"Would You Recommend Its Approval?"* Gate (`Rule 63` — `ATT-4670`)**:
@@ -71,13 +72,14 @@ python3 tools/jira_util.py --as agent2 final-review-verdict <TICKET_KEY> BOUNCE 
 * *Verification*: <Exact test command that must pass>" --bounce-target=implementation
 ```
 
-### Case B — `PASS` (`I.O.` $\rightarrow$ `Final Review (Human)`)
-Only when all 6 adversarial audit dimensions are verified clean (or after all bounced defects have been healed and re-verified), record the `PASS` verdict:
+### Case B — `PASS` (`I.O.` $\rightarrow$ Atomic Sprint Merge & `Final Review (Human)`)
+Only when all 6 adversarial audit dimensions are verified clean (or after all bounced defects have been healed and re-verified on `feature/<KEY>`), record the `PASS` verdict and then execute the single atomic `--merge-ticket` squash onto `sprint/<SPRINT_NAME>`:
 ```bash
 python3 tools/jira_util.py --as agent2 final-review-verdict <TICKET_KEY> PASS "h3. Cold Final Review (Agent) — Executive Summary
-* *Commit*: <COMMIT_HASH>
+* *Commit*: <FEATURE_HEAD_SHA>
 * *What Changed*: <1-2 concise bullets summarizing the production change>
 * *Adversarial Audit Checks*: <Specific callers, lifecycle paths, math boundaries, and counterpart classes inspected>
 * *Requirements & Tests Verified*: <REQ-XXX / TST-XXX> (<TestClassName> — 100% pass)
 * *Residual Risk / Human Focus*: <Low/Medium — specific area for PO spot-check if applicable>"
+python3 tools/parallel_sprint_lock.py --merge-ticket <TICKET_KEY> --sprint sprint/<SPRINT_NAME> --summary "<TICKET_KEY>: <Concise Ticket Summary>"
 ```
