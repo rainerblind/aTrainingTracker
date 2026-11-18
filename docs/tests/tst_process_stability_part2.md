@@ -1,7 +1,7 @@
 # Living Test Specification: Engineering Process, Stability & Architecture (Part 2 of 2)
 
 **Document ID**: `DOC-TST-PRO-P2`  
-**Version**: 1.0.9  
+**Version**: 1.0.12  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -467,19 +467,19 @@
 - **Type**: Non-Functional
 - **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-PRO-074`
-- **Component**: `tools/generate_release_verification_summary.py`, `tools/test_generate_release_verification_summary.py`, `.agents/skills/release-manager/SKILL.md`, `docs/releases/README.md`
-- **Jira**: `ATT-6138`, `ATT-8157`
+- **Component**: `tools/generate_release_verification_summary.py`, `tools/test_generate_release_verification_summary.py`, `.agents/skills/release-manager/SKILL.md`, `docs/releases/README.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ReleaseManagerSystemEvidenceContractTest.kt`
+- **Jira**: `ATT-6138`, `ATT-8157`, `ATT-8200`
 - **Test Description**:
-  1. *CLI Argument Parsing & Default Output Path Test (`TST-PRO-074.1`, test_generate_release_verification_summary.py)*:
-  • Verify CLI accepts `--tag`, `--commit`, `--out`, and coverage threshold flags, correctly defaulting output to `docs/releases/<tag>/verification_summary.md`.
-  2. *Unit Test Report Parsing & Archival Link Test (`TST-PRO-074.2`, test_generate_release_verification_summary.py)*:
-  • Verify parsing of JUnit XML reports and versioned archive reference `build-evidence/junit-test-results-<tag>.zip`.
-  3. *Coverage JSON Integration & Threshold Verification Test (`TST-PRO-074.3`, test_generate_release_verification_summary.py)*:
-  • Verify extraction of bidirectional REQ-TST and TST-Code metrics from `--coverage-json` output and threshold breach detection.
-  4. *SYS.5 Gate & Non-Blocking Legacy Simulator Summary Test (`TST-PRO-074.4`, test_generate_release_verification_summary.py)*:
-  • Verify parsing of `sys_verification_record.md` flags missing/unsigned SYS.5 protocols under deviations requiring human approval, while missing `system_integration_results.json` raises zero blocking deviations and legacy files render honestly as non-blocking simulator/informational telemetry.
-  5. *End-to-End Markdown Summary Generation & Governance Parity Test (`TST-PRO-074.5`, test_generate_release_verification_summary.py & tools/verify_requirement_governance.py)*:
-  • Verify end-to-end generation of `verification_summary.md` and confirm 100% living documentation parity.
+  1. *CLI Argument Parsing, Tag Normalization & Default Output Path Test (`TST-PRO-074.1` [Verified (ATT-8200)], test_generate_release_verification_summary.py)*:
+  • Verify CLI accepts `--tag`, `--commit`, `--out`, and coverage threshold flags, normalizing canonical `V<versionName>__<versionCode>` tags (e.g. `V5.0.0__273`) to dossier directory `docs/releases/V5.0.0/` (unless `docs/releases/<raw_tag>/` explicitly exists) while recording raw tag, `versionCode`, and dossier path in the generated summary header.
+  2. *Unit Test Report Parsing & Raw/Normalized Archival Link Test (`TST-PRO-074.2` [Verified (ATT-8200)], test_generate_release_verification_summary.py)*:
+  • Verify parsing of JUnit XML reports and versioned archive lookup checking raw-tag `build-evidence/junit-test-results-<raw_tag>.zip` first with fallback to `build-evidence/junit-test-results-<dossier_tag>.zip`.
+  3. *Coverage JSON Key Parity, `ERROR:`/`FAIL:` Gate Detection & Subprocess Fallback Test (`TST-PRO-074.3` [Verified (ATT-8200)], test_generate_release_verification_summary.py)*:
+  • Verify `collect_coverage_summary()` catches `"ERROR: Gate violated: ..."` diagnostics (and non-empty fallback when `gate_ok=False`), parses `stdout` JSON even on non-zero subprocess exit, extracts exact non-zero `category_3_code_tags_without_spec` and `category_4_tsts_not_cited_back` dicts, renders `[ FAIL ]` / `BLOCKED`, and returns exit code `1` under `--fail-on-deviations`.
+  4. *SYS.5 Normalized Dossier Gate & Non-Blocking Legacy Simulator Summary Test (`TST-PRO-074.4` [Verified (ATT-8200)], test_generate_release_verification_summary.py)*:
+  • Verify `collect_sys5_summary()` and `collect_sys4_summary()` resolve `docs/releases/V5.0.0/` cleanly when invoked with `--tag V5.0.0__273`, while missing/legacy `system_integration_results.json` raises zero blocking deviations.
+  5. *End-to-End Markdown Summary Generation, Contract & Governance Parity Test (`TST-PRO-074.5` [Verified (ATT-8200)], test_generate_release_verification_summary.py, ReleaseManagerSystemEvidenceContractTest.kt & tools/verify_requirement_governance.py)*:
+  • Verify end-to-end generation of `verification_summary.md` under normalized tag, `ReleaseManagerSystemEvidenceContractTest` (`README.md` / `TEMPLATE.md` invariants), and 100% living documentation governance parity (`Localization Parity: N/A - no UI strings`).
 
 ### TST-PRO-075: **Requirement Tests Field Format & Traceability Governance Verifier Test Suite** [Verified]
 - **Priority**: High
@@ -1509,3 +1509,6 @@
 | `1.0.7` | 2026-11-18 | AI Agent (`ATT-8201`) | `ATT-8201` | Added `[Planned]` `TST-PRO-131` test specifications (`ATT-8201_test_spec.md`: `21` `SYSREQ-*` & `100%` `SYSREQ->REQ` traceability, `SYS.3` & `system_context.md` sync, Varia UUID & battery reconciliation, `GRANDFATHERED_SYSREQS` removal, Stage 1/2 `SYS.2/SYS.3` skill impact gate). |
 | `1.0.8` | 2026-11-18 | AI Agent (`ATT-8201`) | `ATT-8201` | Promoted `TST-PRO-131` to `[Implemented]` in Stage 4 (`tools/test_verify_requirement_governance.py` `TestGrandfatheredSysreqsRemoved`, `SystemContextContractTest`, `SystemArchitectureDesignContractTest`, `SystemLiveTrackingRequirementsContractTest`, `SystemDataExchangeRequirementsContractTest`, `SystemRequirementsSpecificationContractTest`, `SystemVerificationProtocolContractTest`). |
 | `1.0.9` | 2026-11-18 | AI Agent (`ATT-8201`) | `ATT-8201` | Promoted `TST-PRO-131` to `[Verified]` after Stage 5 verification (`13/13` Gradle contract suites `79/79` PASS, `test_hoechstmass_tools.py` `37/37` OK, `TST-PRO-131` verified evidence `True`, `28/28` shards `<= 4,000` lines, governance `exit 0`). |
+| `1.0.10` | 2026-11-18 | AI Agent (`ATT-8200`) | `ATT-8200` | Refined `TST-PRO-074` (`[Planned]`, `TST-PRO-074.1`–`.5`) covering `ERROR: Gate violated:` blocking, `category_3_code_tags_without_spec` / `category_4_tsts_not_cited_back` keys, subprocess non-zero JSON parsing, and `V5.0.0__273` tag normalization + JUnit archive lookup. |
+| `1.0.11` | 2026-11-18 | AI Agent (`ATT-8200`) | `ATT-8200` | Promoted `TST-PRO-074` to `[Implemented]` in Stage 4 (`tools/test_generate_release_verification_summary.py` `22/22` OK, `ReleaseManagerSystemEvidenceContractTest` `4/4` PASS). |
+| `1.0.12` | 2026-11-18 | AI Agent (`ATT-8200`) | `ATT-8200` | Promoted `TST-PRO-074` to `[Verified]` after Stage 5 verification (`tools.test_generate_release_verification_summary` `22/22` OK, `ReleaseManagerSystemEvidenceContractTest` `4/4` PASS, governance `exit 0`). |

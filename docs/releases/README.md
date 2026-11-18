@@ -45,11 +45,12 @@ docs/releases/<tag>/
 
 ### 3. SWE.6 BP5 Release Verification Summary per Tag
 * **File**: `docs/releases/<tag>/verification_summary.md`
-* **Governing Specification**: `REQ-PRO-074` / `TST-PRO-074` (Finding A-11, updated per `ATT-8157`)
+* **Governing Specification**: `REQ-PRO-074` / `TST-PRO-074` (Finding A-11, updated per `ATT-8157` and `ATT-8200`)
 * **Generation Command**:
   ```bash
   python3 tools/generate_release_verification_summary.py --tag <tag>
   ```
+  *(Canonical CI tags `V<versionName>__<versionCode>`, e.g. `V5.0.0__273` per `docs/management/cm_plan.md`, automatically resolve to dossier folder `docs/releases/V<versionName>/` while checking raw-tag `build-evidence/junit-test-results-<raw_tag>.zip` first and recording the full tag + `versionCode` in the summary header.)*
 * **Required Pass/Fail Criteria**:
   - `Overall Verification Status`: `PASS (READY FOR RELEASE)`
   - Zero open deviations listed under `Deviations Requiring Human Approval`

@@ -1,7 +1,7 @@
 # Living Requirements: Engineering Process, Stability & Architecture (Part 2 of 2)
 
 **Document ID**: `DOC-REQ-PRO-P2`  
-**Version**: 1.0.16  
+**Version**: 1.0.19  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -464,33 +464,34 @@
 - **Type**: Non-Functional
 - **Verification Method**: Unit / Review
 - **Implementation**: `tools/generate_release_verification_summary.py`, `tools/test_generate_release_verification_summary.py`, `.agents/skills/release-manager/SKILL.md`, `docs/releases/README.md`
-- **Rationale**: Under ASPICE SWE.6 BP5 (Finding A-11, updated for `ATT-8157` release gate honesty), release decisions must be based on recorded, baseline-controlled verification evidence. A standalone generator script SHALL consolidate unit/integration test counts/results, bidirectional requirement-to-test traceability matrices, optional informational simulator records (when present), and hardware-in-the-loop system verification protocol sign-off records (SYS.5) into an authoritative Markdown summary per release tag (`docs/releases/<tag>/verification_summary.md`), explicitly highlighting all deviations requiring human approval:
-  1. *Automated Release Verification Summary CLI (`REQ-PRO-074.1`, tools/generate_release_verification_summary.py)*:
-     • `tools/generate_release_verification_summary.py` SHALL provide a command-line interface accepting `--tag <TAG>` (e.g. `V5.0.0__2026111201`), optional `--commit <SHA>` (defaulting to current HEAD), optional `--out <PATH>` (defaulting to `docs/releases/<tag>/verification_summary.md`), and optional threshold parameters (`--min-req-tst-coverage`, `--min-tst-code-coverage`, `--min-bidirectional-coverage`).
+- **Rationale**: Under ASPICE SWE.6 BP5 (Finding A-11, updated for `ATT-8157` release gate honesty and `ATT-8200` gate/key/tag-path remediation), release decisions must be based on recorded, baseline-controlled verification evidence. A standalone generator script SHALL consolidate unit/integration test counts/results, bidirectional requirement-to-test traceability matrices, optional informational simulator records (when present), and hardware-in-the-loop system verification protocol sign-off records (SYS.5) into an authoritative Markdown summary per release dossier (`docs/releases/<dossier_tag>/verification_summary.md`), explicitly highlighting all deviations requiring human approval:
+  1. *Automated Release Verification Summary CLI & Tag Normalization (`REQ-PRO-074.1` [Verified (ATT-8200)], tools/generate_release_verification_summary.py)*:
+     • `tools/generate_release_verification_summary.py` SHALL provide a command-line interface accepting `--tag <TAG>` (either `V<versionName>` or canonical CI tag `V<versionName>__<versionCode>`, e.g. `V5.0.0__273`), optional `--commit <SHA>` (defaulting to current HEAD), optional `--out <PATH>` (defaulting to `docs/releases/<dossier_tag>/verification_summary.md`), and optional threshold parameters (`--min-req-tst-coverage`, `--min-tst-code-coverage`, `--min-bidirectional-coverage`, `--max-code-without-spec`).
+     • When `--tag` follows `V<versionName>__<versionCode>`, the generator SHALL normalize the dossier folder to `V<versionName>` (`docs/releases/V<versionName>/`, unless `docs/releases/<raw_tag>/` explicitly exists) while recording the full raw release tag, extracted `versionCode`, and resolved dossier folder in the summary header.
   2. *Unit & Regression Test Evidence Aggregation (`REQ-PRO-074.2`, tools/generate_release_verification_summary.py)*:
-     • The generator SHALL aggregate total unit/integration test count, passed, failed, and skipped tests from `app/build/test-results/testDebugUnitTest/` or test archive files, and reference the versioned JUnit test archive artifact (`build-evidence/junit-test-results-<tag>.zip` per ATT-6137).
-  3. *Bidirectional REQ-TST Traceability Matrix Aggregation (`REQ-PRO-074.3`, tools/generate_release_verification_summary.py)*:
-     • The generator SHALL query and embed bidirectional requirement-to-test coverage data via `tools/verify_requirement_governance.py --coverage-json` (per ATT-6122), presenting REQ-to-TST coverage %, TST-to-code coverage %, and bidirectional coverage metrics.
-  4. *System Verification Status & Non-Blocking Legacy Simulator Summary (`REQ-PRO-074.4`, tools/generate_release_verification_summary.py)*:
-     • The generator SHALL parse and gate on SYS.5 System Verification Protocol sign-off records (`docs/releases/<tag>/sys_verification_record.md` per `ATT-6167`). `collect_sys4_summary()` SHALL treat `docs/releases/<tag>/system_integration_results.json` as **optional non-blocking simulator/legacy telemetry** (raising zero missing-file deviation and never gating or falsely certifying Android app SYS.4 pass status if absent or legacy).
-  5. *Open Deviations & Human Approval Gating (`REQ-PRO-074.5`, tools/generate_release_verification_summary.py)*:
-     • The generator SHALL evaluate whether any unit/integration test failure, missing SYS.5 evidence, or coverage below configured thresholds exists, and enumerate them under an explicit `Deviations Requiring Human Approval` section, assigning an overall status of `PASS (READY FOR RELEASE)` or `BLOCKED / REQUIRES HUMAN APPROVAL`.
+     • The generator SHALL aggregate total unit/integration test count, passed, failed, and skipped tests from `app/build/test-results/testDebugUnitTest/` or test archive files, checking raw-tag `build-evidence/junit-test-results-<raw_tag>.zip` first (matching CI workflow artifact naming) with fallback to `build-evidence/junit-test-results-<dossier_tag>.zip` (per ATT-6137).
+  3. *Bidirectional REQ-TST Traceability Matrix Aggregation (`REQ-PRO-074.3` [Verified (ATT-8200)], tools/generate_release_verification_summary.py)*:
+     • The generator SHALL query and embed bidirectional requirement-to-test coverage data via `tools/verify_requirement_governance.py --coverage-json` (per ATT-6122), reading exact `TraceabilityCoverageReport.to_dict()` keys (`category_1_reqs_without_tst`, `category_2_tsts_without_code`, `category_3_code_tags_without_spec`, `category_4_tsts_not_cited_back`) and parsing `stdout` JSON cleanly even when subprocess fallback exits `1` on a threshold failure.
+  4. *System Verification Status & Non-Blocking Legacy Simulator Summary (`REQ-PRO-074.4` [Verified (ATT-8200)], tools/generate_release_verification_summary.py)*:
+     • The generator SHALL parse and gate on SYS.5 System Verification Protocol sign-off records (`docs/releases/<dossier_tag>/sys_verification_record.md` per `ATT-6167`, resolved via normalized dossier tag). `collect_sys4_summary()` SHALL treat `docs/releases/<dossier_tag>/system_integration_results.json` as **optional non-blocking simulator/legacy telemetry** (raising zero missing-file deviation and never gating or falsely certifying Android app SYS.4 pass status if absent or legacy).
+  5. *Open Deviations & Human Approval Gating (`REQ-PRO-074.5` [Verified (ATT-8200)], tools/generate_release_verification_summary.py)*:
+     • The generator SHALL evaluate whether any unit/integration test failure, missing/incomplete SYS.5 evidence, or coverage gate failure exists—capturing **both** `"ERROR:"` (e.g. `"ERROR: Gate violated: ..."`) and `"FAIL:"` diagnostics from `verify_coverage_thresholds()` plus a fallback deviation whenever `gate_ok` is `False`—enumerate all violations under `Deviations Requiring Human Approval`, assign `BLOCKED / REQUIRES HUMAN APPROVAL` (or `PASS (READY FOR RELEASE)` when empty), and exit non-zero under `--fail-on-deviations`.
 - **Requirement Archaeology & Chesterton's Fence Audit**:
   1. *Original Requirement ID & Target*: `REQ-PRO-074` (`REQ-PRO-074.1`–`REQ-PRO-074.5`). Targets `tools/generate_release_verification_summary.py`, `tools/test_generate_release_verification_summary.py`, `.agents/skills/release-manager/SKILL.md`, and `docs/releases/README.md`.
-  2. *Historical Origin & Commit Trace*: Sprint 2026-46.4 via `ATT-6138` (`ATT-6119`), building on `ATT-6137`, `ATT-6122`, `ATT-6166`, `ATT-6167`, `ATT-6169`; `REQ-PRO-074.4` updated in Sprint `2026-11-17_01_Früh` via `ATT-8157` (`REQ-PRO-112`).
-  3. *Root Reason for Existing Formulation*: `collect_sys4_summary()` previously flagged absent `system_integration_results.json` as a blocking release deviation and rendered simulator self-tests as `[ PASS ]` SYS.4 evidence.
-  4. *Preservation of Core Invariants*: Preserves unit test, traceability coverage, and SYS.5 sign-off blocking gates, pure Python 3 stdlib CLI, and zero `app/src/main/` runtime changes.
+  2. *Historical Origin & Commit Trace*: Sprint 2026-46.4 via `ATT-6138` (`dc7b3d61`), building on `ATT-6137`, `ATT-6122`, `ATT-6166`, `ATT-6167`, `ATT-6169`; `REQ-PRO-074.4` updated in Sprint `2026-11-17_01_Früh` via `ATT-8157` (`1750ab64`, `REQ-PRO-112`); sharded in `ATT-8206` (`f55c9fee`); refined in `ATT-8200`.
+  3. *Root Reason for Existing Formulation*: `collect_coverage_summary()` originally filtered only `FAIL:` prefixes and queried stale `category_3_code_without_spec`/`category_4_tst_without_req_citation` keys, while tag lookup assumed `docs/releases/<tag>/` matched raw Git tags rather than `V<versionName>`.
+  4. *Preservation of Core Invariants*: Preserves unit test, traceability coverage, and SYS.5 sign-off blocking gates, `REQ-PRO-112` non-gating simulator rules, raw-tag `junit-test-results-<raw_tag>.zip` CI compatibility, `ReleaseManagerSystemEvidenceContractTest.kt` constraints, pure Python 3 stdlib CLI, and zero `app/src/main/` runtime changes.
 - **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `verify_coverage_thresholds()` emitting `"ERROR: Gate violated: ..."` or non-zero `category_3_code_tags_without_spec` / `category_4_tsts_not_cited_back` counts,
+  • *When* `tools/generate_release_verification_summary.py --fail-on-deviations` executes (direct or subprocess fallback),
+  • *Then* `overall_status` is `BLOCKED / REQUIRES HUMAN APPROVAL`, the script exits non-zero, and exact `cat3`/`cat4` gap data is preserved.
+  • *Given* canonical Git tag `V5.0.0__273` and dossier directory `docs/releases/V5.0.0/`,
+  • *When* `tools/generate_release_verification_summary.py --tag V5.0.0__273` executes,
+  • *Then* it reads `docs/releases/V5.0.0/sys_verification_record.md`, writes `docs/releases/V5.0.0/verification_summary.md` with full tag + `versionCode` metadata, and finds `junit-test-results-V5.0.0__273.zip` when present.
   • *Given* valid unit test evidence, traceability coverage, and signed `sys_verification_record.md` without `system_integration_results.json`,
   • *When* `tools/generate_release_verification_summary.py --tag <TAG>` executes,
-  • *Then* `docs/releases/<tag>/verification_summary.md` reports `PASS (READY FOR RELEASE)` with zero missing-SYS.4 deviations.
-  • *Given* any failing unit/integration test, missing/incomplete `sys_verification_record.md`, or coverage below threshold,
-  • *When* the summary is generated,
-  • *Then* it is explicitly listed under `Deviations Requiring Human Approval` with overall status `BLOCKED / REQUIRES HUMAN APPROVAL`.
-  • *Given* `tools/test_generate_release_verification_summary.py`,
-  • *When* executed via `unittest`,
-  • *Then* 100% of unit tests pass.
-- **Invariants**: Zero Android production runtime code changes in `app/src/main/`.
+  • *Then* `docs/releases/<dossier_tag>/verification_summary.md` reports `PASS (READY FOR RELEASE)` with zero missing-SYS.4 deviations, and `tools/test_generate_release_verification_summary.py` passes 100%.
+- **Invariants**: Zero Android production runtime code changes in `app/src/main/`; `Localization Parity: N/A - no UI strings`.
 
 ### REQ-PRO-075: Requirement Shards Tests Field Format & Machine-Readable Traceability Integrity [Verified]
 - **Tests**: `TST-PRO-075`
@@ -2395,3 +2396,6 @@
 | `1.0.14` | 2026-11-18 | AI Agent (`ATT-8201`) | `ATT-8201` | Added `[Planned]` `REQ-PRO-131` (`REQ-PRO-131.1`–`REQ-PRO-131.5`: `9` net-new `SYSREQ-*` capabilities `SYSREQ-TRK-*` `007`–`013` & `SYSREQ-DEX-*` `007`–`008`, `SYS.3` & `system_context.md` sync, Varia UUID & battery budget reconciliation, `GRANDFATHERED_SYSREQS` removal, Stage 1/2 `SYS.2/SYS.3` skill impact gate). |
 | `1.0.15` | 2026-11-18 | AI Agent (`ATT-8201`) | `ATT-8201` | Promoted `REQ-PRO-131` to `[Implemented]` in Stage 4 (`sysreq_live_tracking.md` `SYSREQ-TRK-007..013`, `sysreq_data_exchange.md` `SYSREQ-DEX-007..008`, `docs/system_requirements.md`, `system_context.md`, `system_architecture.md` `v1.2.0`, `sys_verification_protocol.md` `v1.2.0`, `system_software_traceability.md` `v1.2.0`, `verify_requirement_governance.py`, Stage 1/2 `SKILL.md`s, and 6 `System*ContractTest.kt` suites). |
 | `1.0.16` | 2026-11-18 | AI Agent (`ATT-8201`) | `ATT-8201` | Promoted `REQ-PRO-131` to `[Verified]` after Stage 5 verification (`13/13` Gradle contract suites `79/79` PASS, `test_hoechstmass_tools.py` `37/37` OK, `test_verify_requirement_governance.py` `104/105` with `TestGrandfatheredSysreqsRemoved` PASS & pre-existing `TST-TRK-087` fail, `21/21` `SYSREQ`s `100%` covered, `28/28` shards `<= 4,000` lines, governance `exit 0`). |
+| `1.0.17` | 2026-11-18 | AI Agent (`ATT-8200`) | `ATT-8200` | Refined `REQ-PRO-074` (`[Planned]`, `REQ-PRO-074.1`/`.3`/`.4`/`.5`) for `ERROR:`/`FAIL:` threshold gating, `category_3_code_tags_without_spec`/`category_4_tsts_not_cited_back` JSON keys, subprocess non-zero JSON parsing, and `V<ver>__<code>` dossier normalization. |
+| `1.0.18` | 2026-11-18 | AI Agent (`ATT-8200`) | `ATT-8200` | Promoted `REQ-PRO-074` to `[Implemented]` in Stage 4 (`tools/generate_release_verification_summary.py`, `docs/releases/README.md`, `tools/test_generate_release_verification_summary.py`). |
+| `1.0.19` | 2026-11-18 | AI Agent (`ATT-8200`) | `ATT-8200` | Promoted `REQ-PRO-074` to `[Verified]` after Stage 5 verification (`test_generate_release_verification_summary.py` `22/22` OK, `ReleaseManagerSystemEvidenceContractTest` `4/4` PASS, governance `exit 0`). |

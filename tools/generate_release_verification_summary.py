@@ -62,21 +62,59 @@ def get_git_commit(repo_root: str) -> str:
         return "UNKNOWN_COMMIT"
 
 
+def normalize_release_tag(
+    tag: str,
+    repo_root: Optional[str] = None,
+) -> Tuple[str, str, Optional[str]]:
+    """
+    Normalizes canonical Git release tags (e.g. 'V5.0.0__273' -> 'V5.0.0') for
+    docs/releases/<dossier_tag>/ resolution per cm_plan.md, preferring an existing
+    docs/releases/<raw_tag>/ directory if present.
+    Returns (raw_tag, dossier_tag, version_code).
+    """
+    raw_tag = tag.strip()
+    match = re.match(r"^(.+?)__(\d+)$", raw_tag)
+    if match:
+        base_tag, version_code = match.group(1), match.group(2)
+    else:
+        base_tag, version_code = raw_tag, None
+
+    if repo_root and os.path.isdir(os.path.join(repo_root, "docs", "releases", raw_tag)):
+        dossier_tag = raw_tag
+    else:
+        dossier_tag = base_tag
+
+    return raw_tag, dossier_tag, version_code
+
+
 def collect_unit_test_summary(
     repo_root: str,
     tag: str,
     results_dir: Optional[str] = None,
     archive_path: Optional[str] = None,
+    dossier_tag: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Parses JUnit XML files or versioned zip archive to extract unit test metrics.
+    Checks raw-tag archive (junit-test-results-<tag>.zip) first with fallback to
+    normalized dossier_tag archive when provided.
     """
     effective_results_dir = results_dir or os.path.join(
         repo_root, "app", "build", "test-results", "testDebugUnitTest"
     )
-    effective_archive = archive_path or os.path.join(
-        repo_root, "build-evidence", f"junit-test-results-{tag}.zip"
-    )
+    if archive_path:
+        effective_archive = archive_path
+    else:
+        raw_archive = os.path.join(
+            repo_root, "build-evidence", f"junit-test-results-{tag}.zip"
+        )
+        effective_archive = raw_archive
+        if dossier_tag and dossier_tag != tag and not os.path.isfile(raw_archive):
+            fallback_archive = os.path.join(
+                repo_root, "build-evidence", f"junit-test-results-{dossier_tag}.zip"
+            )
+            if os.path.isfile(fallback_archive):
+                effective_archive = fallback_archive
 
     total_tests = 0
     failures = 0
@@ -228,10 +266,21 @@ def collect_coverage_summary(
             if max_code_without_spec is not None:
                 cmd.extend(["--max-code-without-spec", str(max_code_without_spec)])
 
-            proc = subprocess.run(cmd, cwd=repo_root, capture_output=True, text=True, check=True)
-            report = json.loads(proc.stdout)
-            gate_ok = report.get("gate_result", {}).get("passed", True)
+            proc = subprocess.run(cmd, cwd=repo_root, capture_output=True, text=True, check=False)
+            stdout_text = (proc.stdout or "").strip()
+            if not stdout_text:
+                stderr_msg = (proc.stderr or "").strip()
+                raise RuntimeError(
+                    f"Command exited with status {proc.returncode} and empty stdout"
+                    + (f": {stderr_msg}" if stderr_msg else "")
+                )
+            report = json.loads(stdout_text)
+            rc = getattr(proc, "returncode", 0)
+            is_nonzero_int = isinstance(rc, int) and rc != 0
+            gate_ok = report.get("gate_result", {}).get("passed", not is_nonzero_int)
             diag = report.get("gate_result", {}).get("diagnostics", [])
+            if is_nonzero_int and gate_ok:
+                gate_ok = False
         except Exception as sub_err:
             return {
                 "available": False,
@@ -242,8 +291,11 @@ def collect_coverage_summary(
     deviations: List[str] = []
     if not gate_ok:
         for d in diag:
-            if d.startswith("FAIL:"):
+            if d.startswith(("FAIL:", "ERROR:")):
                 deviations.append(f"Traceability threshold violation: {d}")
+        if not deviations:
+            detail = "; ".join(diag) if diag else "coverage gate returned failed status without diagnostics"
+            deviations.append(f"Traceability threshold violation: {detail}")
 
     summary = report.get("summary", {})
     return {
@@ -252,8 +304,8 @@ def collect_coverage_summary(
         "categories": {
             "cat1": report.get("category_1_reqs_without_tst", {}),
             "cat2": report.get("category_2_tsts_without_code", {}),
-            "cat3": report.get("category_3_code_without_spec", {}),
-            "cat4": report.get("category_4_tst_without_req_citation", {}),
+            "cat3": report.get("category_3_code_tags_without_spec", {}),
+            "cat4": report.get("category_4_tsts_not_cited_back", {}),
         },
         "gate_passed": gate_ok,
         "diagnostics": diag,
@@ -263,10 +315,11 @@ def collect_coverage_summary(
 
 def collect_sys4_summary(repo_root: str, tag: str) -> Dict[str, Any]:
     """
-    Optionally reads docs/releases/<tag>/system_integration_results.json as informational
+    Optionally reads docs/releases/<dossier_tag>/system_integration_results.json as informational
     legacy simulator telemetry ONLY (non-blocking release gate per REQ-PRO-112 / ATT-8157).
     """
-    sys4_rel_path = os.path.join("docs", "releases", tag, "system_integration_results.json")
+    _, dossier_tag, _ = normalize_release_tag(tag, repo_root=repo_root)
+    sys4_rel_path = os.path.join("docs", "releases", dossier_tag, "system_integration_results.json")
     sys4_path = os.path.join(repo_root, sys4_rel_path)
 
     if not os.path.isfile(sys4_path):
@@ -323,9 +376,10 @@ def collect_sys4_summary(repo_root: str, tag: str) -> Dict[str, Any]:
 
 def collect_sys5_summary(repo_root: str, tag: str) -> Dict[str, Any]:
     """
-    Parses docs/releases/<tag>/sys_verification_record.md (ASPICE SYS.5).
+    Parses docs/releases/<dossier_tag>/sys_verification_record.md (ASPICE SYS.5).
     """
-    sys5_rel_path = os.path.join("docs", "releases", tag, "sys_verification_record.md")
+    _, dossier_tag, _ = normalize_release_tag(tag, repo_root=repo_root)
+    sys5_rel_path = os.path.join("docs", "releases", dossier_tag, "sys_verification_record.md")
     sys5_path = os.path.join(repo_root, sys5_rel_path)
 
     if not os.path.isfile(sys5_path):
@@ -493,11 +547,16 @@ def render_markdown_summary(
     sys5_summary: Dict[str, Any],
     deviations: List[str],
     overall_status: str,
+    dossier_tag: Optional[str] = None,
+    version_code: Optional[str] = None,
 ) -> str:
     """
     Renders the consolidated Markdown verification summary document.
     """
     now_str = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+    raw_tag, inferred_dossier, inferred_code = normalize_release_tag(tag)
+    effective_dossier = dossier_tag or inferred_dossier
+    effective_code = version_code if version_code is not None else inferred_code
 
     # Determine gate badges
     unit_gate = "PASS" if not unit_summary.get("deviations") and unit_summary.get("available") else "FAIL"
@@ -512,9 +571,14 @@ def render_markdown_summary(
     bidi_pct = cov_stats.get("bidirectional_coverage_pct", 0.0)
 
     lines = [
-        f"# Release Verification Summary: Release {tag} (ASPICE SWE.6 BP5, SUP.8)",
+        f"# Release Verification Summary: Release {raw_tag} (ASPICE SWE.6 BP5, SUP.8)",
         "",
-        f"**Release Tag**: `{tag}`  ",
+        f"**Release Tag**: `{raw_tag}`  ",
+    ]
+    if effective_code:
+        lines.append(f"**Version Code**: `{effective_code}`  ")
+    lines.extend([
+        f"**Release Dossier**: `docs/releases/{effective_dossier}/`  ",
         f"**Baseline Commit**: `{commit_sha}`  ",
         f"**Generation Timestamp**: `{now_str}`  ",
         f"**Overall Verification Status**: **{overall_status}**  ",
@@ -527,16 +591,16 @@ def render_markdown_summary(
         "",
         "| Verification Dimension | Governed Standard | Evidence Artifact / Source | Status / Metric | Gating Verdict |",
         "| :--- | :--- | :--- | :--- | :--- |",
-        f"| **Unit & Regression Tests** | ASPICE SWE.6 BP3, BP4 | `{unit_summary.get('archive_path', 'build-evidence/junit-test-results-' + tag + '.zip')}` | {unit_summary.get('passed_tests', 0)}/{unit_summary.get('total_tests', 0)} passed ({unit_summary.get('failed_tests', 0)} failed) | [ {unit_gate} ] |",
+        f"| **Unit & Regression Tests** | ASPICE SWE.6 BP3, BP4 | `{unit_summary.get('archive_path', 'build-evidence/junit-test-results-' + raw_tag + '.zip')}` | {unit_summary.get('passed_tests', 0)}/{unit_summary.get('total_tests', 0)} passed ({unit_summary.get('failed_tests', 0)} failed) | [ {unit_gate} ] |",
         f"| **Traceability Coverage** | ASPICE SWE.1, SWE.6 | `tools/verify_requirement_governance.py` | REQ-TST: {req_tst_pct:.1f}%, TST-Code: {tst_code_pct:.1f}% | [ {cov_gate} ] |",
         f"| **Legacy Simulator Record (Non-Gating)** | Developer Simulators (Informational) | `{sys4_summary.get('path') if sys4_summary.get('available') else 'N/A (Not Required)'}` | {str(sys4_summary.get('passed_cases', 0)) + '/' + str(sys4_summary.get('total_cases', 0)) + ' simulator checks (non-gating)' if sys4_summary.get('available') else 'App integration via INT-SWE-01..08 & AppSmokeAndroidTest'} | [ {sys4_gate} ] |",
-        f"| **System Protocol (SYS.5)** | ASPICE SYS.5 BP5, BP6 | `{sys5_summary.get('path', 'docs/releases/' + tag + '/sys_verification_record.md')}` | Verdict: {sys5_summary.get('overall_verdict', 'UNKNOWN')}, Sign-off: {'Signed' if (sys5_summary.get('has_signoff') and sys5_summary.get('has_po_attestation')) else 'Incomplete'} | [ {sys5_gate} ] |",
+        f"| **System Protocol (SYS.5)** | ASPICE SYS.5 BP5, BP6 | `{sys5_summary.get('path', 'docs/releases/' + effective_dossier + '/sys_verification_record.md')}` | Verdict: {sys5_summary.get('overall_verdict', 'UNKNOWN')}, Sign-off: {'Signed' if (sys5_summary.get('has_signoff') and sys5_summary.get('has_po_attestation')) else 'Incomplete'} | [ {sys5_gate} ] |",
         "",
         "---",
         "",
         "## 2. Unit & Regression Testing Evidence (SWE.6 BP3, BP4 / ATT-6137)",
         "",
-    ]
+    ])
 
     if unit_summary.get("available"):
         lines.extend([
@@ -684,10 +748,11 @@ def generate_release_verification_summary(
     """
     root = repo_root or os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
     commit = commit_sha or get_git_commit(root)
-    target_out = out_path or os.path.join(root, "docs", "releases", tag, "verification_summary.md")
+    raw_tag, dossier_tag, version_code = normalize_release_tag(tag, repo_root=root)
+    target_out = out_path or os.path.join(root, "docs", "releases", dossier_tag, "verification_summary.md")
 
     unit_summary = collect_unit_test_summary(
-        root, tag, results_dir=test_results_dir, archive_path=junit_archive
+        root, raw_tag, results_dir=test_results_dir, archive_path=junit_archive, dossier_tag=dossier_tag
     )
     cov_summary = collect_coverage_summary(
         root,
@@ -696,15 +761,15 @@ def generate_release_verification_summary(
         min_bidirectional_coverage=min_bidirectional_coverage,
         max_code_without_spec=max_code_without_spec,
     )
-    sys4_summary = collect_sys4_summary(root, tag)
-    sys5_summary = collect_sys5_summary(root, tag)
+    sys4_summary = collect_sys4_summary(root, dossier_tag)
+    sys5_summary = collect_sys5_summary(root, dossier_tag)
 
     deviations, overall_status = compile_deviations(
         unit_summary, cov_summary, sys4_summary, sys5_summary
     )
 
     md_content = render_markdown_summary(
-        tag,
+        raw_tag,
         commit,
         unit_summary,
         cov_summary,
@@ -712,6 +777,8 @@ def generate_release_verification_summary(
         sys5_summary,
         deviations,
         overall_status,
+        dossier_tag=dossier_tag,
+        version_code=version_code,
     )
 
     os.makedirs(os.path.dirname(os.path.abspath(target_out)), exist_ok=True)

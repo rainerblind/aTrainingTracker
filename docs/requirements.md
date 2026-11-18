@@ -1,7 +1,7 @@
 # aTrainingTracker: Living Requirements Specification (Master Index)
 
 **Document ID**: `DOC-REQ-INDEX`  
-**Version**: 1.0.38  
+**Version**: 1.0.39  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -73,3 +73,6 @@ Living requirements use multi-line Markdown headings (`### REQ-XXX: Title [Statu
 | `1.0.36` | 2026-11-18 | AI Agent (`ATT-8881`) | `ATT-8881` | Added `REQ-FIL-026` [Verified] (1-Hz barometric ingestion rate-matching & adaptive cyclic pocket-jitter `varBaro` scaling in `AltitudeAndSlopeDevice_ATTFused` & `KinematicAltitudeSlopeEkf`). |
 | `1.0.37` | 2026-11-18 | AI Agent (`ATT-8733`) | `ATT-8733` | Added `REQ-TRK-089` [Verified] (`RadarFullScreenThreatOverlay` non-clipping V2 markers, touch-transparent `Box`, `.layout` clamping, `Color.kt` map-backdrop tokens, `Rule 8.5` PNG). |
 | `1.0.38` | 2026-11-18 | AI Agent (`ATT-8201`) | `ATT-8201` | Added `REQ-PRO-131` [Verified] (`21/21` `SYSREQ-*` covering Polar `8.6.0`/DEM/Maps/IMU/Radar/Swim/HRV/Recovery, `SYS.3` v1.2.1 sync, `GRANDFATHERED_SYSREQS` removed, Stage 1/2 `SYS.2/SYS.3` impact gate). |
+| `1.0.39` | 2026-11-18 | AI Agent (`ATT-8200`) | `ATT-8200` | Refined `REQ-PRO-074` (`[Planned]`, `req_process_stability_part2.md`) for `ERROR:`/`FAIL:` threshold gating, `category_3_code_tags_without_spec`/`category_4_tsts_not_cited_back` keys, subprocess JSON parsing, and `V<ver>__<code>` dossier normalization. |
+| `1.0.40` | 2026-11-18 | AI Agent (`ATT-8200`) | `ATT-8200` | Promoted `REQ-PRO-074` to `[Implemented]` in Stage 4 (`tools/generate_release_verification_summary.py`, `docs/releases/README.md`, `tools/test_generate_release_verification_summary.py`). |
+| `1.0.41` | 2026-11-18 | AI Agent (`ATT-8200`) | `ATT-8200` | Promoted `REQ-PRO-074` to `[Verified]` after Stage 5 verification (`tools.test_generate_release_verification_summary` `22/22` OK, `ReleaseManagerSystemEvidenceContractTest` `4/4` PASS, governance `exit 0`). |

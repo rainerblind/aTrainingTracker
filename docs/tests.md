@@ -1,7 +1,7 @@
 # aTrainingTracker: Living Test Specification & Verification Plan (Master Index)
 
 **Document ID**: `DOC-TST-INDEX`  
-**Version**: 1.0.38  
+**Version**: 1.0.39  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -66,3 +66,6 @@ Living test specifications use multi-line Markdown headings (`### TST-XXX: Title
 | `1.0.36` | 2026-11-18 | AI Agent (`ATT-8881`) | `ATT-8881` | Added `TST-FIL-026` [Verified] (clean-room `:app:compileDebugKotlin` `0` new warnings & `8/8` XML suites / `67/67` PASS incl. synthetic `Zum Bäcker #57` 5-Hz replay). |
 | `1.0.37` | 2026-11-18 | AI Agent (`ATT-8733`) | `ATT-8733` | Added `TST-TRK-089` [Verified] (`RadarEdgeOverlayTest` `37/37` PASS w/ direct pointer pass-through & Frame-1 `.layout`, `:app:lintDebug` `0` errors, `Rule 8.5` Light/Dark/Map PNG). |
 | `1.0.38` | 2026-11-18 | AI Agent (`ATT-8201`) | `ATT-8201` | Added `TST-PRO-131` [Verified] (`13/13` contract suites / `79/79` PASS, `37/37` `hoechstmass` PASS, `TestGrandfatheredSysreqsRemoved` PASS, `21/21` `SYSREQ` parity). |
+| `1.0.39` | 2026-11-18 | AI Agent (`ATT-8200`) | `ATT-8200` | Refined `TST-PRO-074` (`[Planned]`, `tst_process_stability_part2.md`) covering `ERROR: Gate violated:` blocking, `cat3`/`cat4` JSON keys, subprocess JSON parsing, and `V5.0.0__273` tag normalization + JUnit lookup. |
+| `1.0.40` | 2026-11-18 | AI Agent (`ATT-8200`) | `ATT-8200` | Promoted `TST-PRO-074` to `[Implemented]` in Stage 4 (`tools/test_generate_release_verification_summary.py` `22/22` OK, `ReleaseManagerSystemEvidenceContractTest` `4/4` PASS). |
+| `1.0.41` | 2026-11-18 | AI Agent (`ATT-8200`) | `ATT-8200` | Promoted `TST-PRO-074` to `[Verified]` after Stage 5 verification (`tools.test_generate_release_verification_summary` `22/22` OK, `ReleaseManagerSystemEvidenceContractTest` `4/4` PASS, governance `exit 0`). |
