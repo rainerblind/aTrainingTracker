@@ -892,6 +892,17 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
             self.assertTrue(ok_any, f"Expected pass, got: {msgs_any}")
             self.assertTrue(any("Verified 1 independent review record(s)" in m for m in msgs_any))
 
+            # 8. Layer 4 Human Sprint Review record with named human reviewer passes
+            layer4_file = os.path.join(reviews_dir, "sprint_2026-46.4.md")
+            with open(layer4_file, "w", encoding="utf-8") as f:
+                f.write(
+                    valid_content
+                    .replace("Human Process Owner", "Rainer Blind")
+                    .replace("Human Sprint Review (Ceremony 2)", "Human Sprint Review (Layer 4)")
+                )
+            ok_l4, msgs_l4 = verify_independent_reviews(sprint_name="2026-46.4", repo_root=tmpdir)
+            self.assertTrue(ok_l4, f"Expected Layer 4 pass, got: {msgs_l4}")
+
     def test_scenario_18_impact_analysis_section_validation(self):
         """TST-PRO-064.1: Verify validate_impact_analysis_section validation across valid, missing, and placeholder cases."""
         # 1. Valid Impact Analysis section with all 4 dimensions

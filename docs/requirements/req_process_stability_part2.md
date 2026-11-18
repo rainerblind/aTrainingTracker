@@ -1,7 +1,7 @@
 # Living Requirements: Engineering Process, Stability & Architecture (Part 2 of 2)
 
 **Document ID**: `DOC-REQ-PRO-P2`  
-**Version**: 1.0.4  
+**Version**: 1.0.7  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -51,13 +51,15 @@
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit / Review
-- **Implementation**: Automated `record-review` CLI command in `tools/jira_util.py` and `tools/hoechstmass/tools/jira_util.py`, structured markdown reporting in `docs/engineering/reviews/<review_file>.md`, canonical directory registration, and `--check-reviews` validation in `tools/verify_requirement_governance.py`.
-- **Rationale**: Under ASPICE SUP.1 (Quality Assurance), QA evidence must demonstrate independence from the work product author (Pre-Assessment Finding B-10, Remediation Finding K2). While in-sprint agents operate on the same vendor framework, independent reviews conducted by the Human (during Ceremony 2 Sprint Review before `Erledigt`) and cross-vendor AI models (Layer 5) previously lacked persistent repository records or permitted deceptive default positive findings. This requirement establishes a structured review evidence format and CLI tooling:
+- **Implementation**: Automated `record-review` CLI command (`--review-type=human|cross-vendor-ai`) in `tools/jira_util.py` and `tools/hoechstmass/tools/jira_util.py`, structured markdown reporting in `docs/engineering/reviews/<review_file>.md`, canonical directory registration, and `--check-reviews` validation in `tools/verify_requirement_governance.py`.
+- **Rationale**: Under ASPICE SUP.1 (Quality Assurance, BP5) and GP 2.2.4, QA evidence must demonstrate independence and accurate attribution (Pre-Assessment Finding B-10, Remediation Finding K2, Audit Gap #7 `ATT-8204`). Previously, `record_review()` classified a reviewer as human only when `reviewer.lower() in ("human", "user")`, mislabeling named human reviewers (e.g., `"Rainer Blind"`) as `Cross-Vendor AI Review (Layer 5)` with `Vendor: Rainer Blind` and `Model & Version: External AI Model (vN/A)` in `sprint_2026-46.4.md` and `sprint_2026-47.1.md`:
   1. *Review Record Schema (`REQ-PRO-062.1`, docs/engineering/reviews/<sprint_or_review>.md)*:
-     • Review deliverables SHALL record traceable metadata: Reviewer (`Human` or external AI vendor), Model/Version (if AI), Date/Timestamp, Reviewed Ticket(s) or Commit(s), Scope, and Findings / Verdict (`PASS`, `FAIL`, `SKIPPED`, `NOT PERFORMED`, `PARTIAL`).
-     • Review records for skipped or unexecuted ceremonies SHALL explicitly record verdict `SKIPPED` or `NOT PERFORMED` with mandatory justification and process deviation citation (Rule 1.3), prohibiting false success claims. Historical inaccurate records (specifically `docs/engineering/reviews/sprint_2026-46.6.md`) SHALL be corrected to `SKIPPED` with an auditable correction note.
+     • Review deliverables SHALL record traceable metadata: Reviewer (`Human` / named human reviewer or external AI vendor), Review Type (`Human Sprint Review (Layer 4)` or `Cross-Vendor AI Review (Layer 5)`), Vendor (`Human` or AI vendor), Model/Version (`Human Process Owner (vN/A)` or AI model), Date/Timestamp, Reviewed Ticket(s) or Commit(s), Scope, and Findings / Verdict (`PASS`, `FAIL`, `SKIPPED`, `NOT PERFORMED`, `PARTIAL`).
+     • Review records for skipped or unexecuted ceremonies SHALL explicitly record verdict `SKIPPED` or `NOT PERFORMED` with mandatory justification and process deviation citation (Rule 1.3), prohibiting false success claims. Historical inaccurate records (`docs/engineering/reviews/sprint_2026-46.6.md` corrected to `SKIPPED`; `docs/engineering/reviews/sprint_2026-46.4.md` and `docs/engineering/reviews/sprint_2026-47.1.md` corrected to `Human Sprint Review (Layer 4)`, `Vendor: Human`, `Model & Version: Human Process Owner (vN/A)` for `Reviewer: Rainer Blind`) SHALL carry auditable correction notes preserving original timestamps, ticket lists, and verdicts.
   2. *Independent Review CLI Helper (`REQ-PRO-062.2`, tools/jira_util.py & tools/hoechstmass/tools/jira_util.py)*:
-     • Tooling SHALL implement `record-review` command supporting both Human Sprint Reviews (Ceremony 2) and Cross-Vendor AI Reviews (Layer 5) with parameters `--sprint`, `--ticket`, `--reviewer`, `--vendor`, `--model`, `--version`, `--scope`, `--verdict`, and `--findings`.
+     • Tooling SHALL implement `record-review` (`record_review()`) supporting both Human Sprint Reviews (Layer 4) and Cross-Vendor AI Reviews (Layer 5) with parameters `--sprint`, `--ticket`, `--reviewer`, `--review-type=human|cross-vendor-ai`, `--vendor`, `--model`, `--version`, `--scope`, `--verdict`, and `--findings`.
+     • When `--review-type=human` is selected, `--vendor` is `"human"` (case-insensitive), or AI `--vendor`/`--model` are omitted without `--review-type=cross-vendor-ai`, `record_review()` SHALL classify ANY reviewer name (including named humans such as `"Rainer Blind"`) as `Human Sprint Review (Layer 4)` with `Vendor: Human` and `Model & Version: Human Process Owner (vN/A)`, and MUST NOT emit `Cross-Vendor AI Review (Layer 5)` or `External AI Model`.
+     • When `--review-type=cross-vendor-ai` is selected, non-empty non-human `--vendor` and `--model` SHALL be mandatory (failing with `ValueError` / exit code `1` if omitted). When `--review-type` is omitted and non-human `--vendor` or `--model` is provided, `record_review()` SHALL infer `cross-vendor-ai` (`Cross-Vendor AI Review (Layer 5)`) for backward compatibility. `verify_independent_reviews` SHALL continue accepting legacy `Human Sprint Review (Ceremony 2)` records.
      • `record-review` SHALL NOT default verdict or findings to positive success claims. Invoking `record-review` with `--verdict PASS` or `FAIL` without `--findings` SHALL fail with a usage error. Setting `--verdict SKIPPED` or `NOT PERFORMED` SHALL require `--findings` containing the rationale and document a process deviation. Allowed verdicts SHALL be strictly validated (`PASS`, `FAIL`, `SKIPPED`, `NOT PERFORMED`, `PARTIAL`).
   3. *Directory Governance (`REQ-PRO-062.3`, ALLOWED_ENGINEERING_ENTRIES & hoechstmass_config.json)*:
      • `ALLOWED_ENGINEERING_ENTRIES` in `tools/verify_requirement_governance.py` and `hoechstmass_config.json` SHALL register `"reviews"`.
@@ -68,24 +70,24 @@
   6. *Ceremony 2 Review Mandate (`REQ-PRO-062.6`, .agents/skills/sprint-planner/SKILL.md)*:
      • `sprint-planner/SKILL.md` Ceremony 2 SHALL document recording human review acceptance into `docs/engineering/reviews/` prior to sprint closure.
 - **Requirement Archaeology & Chesterton's Fence Audit**:
-  1. *Original Requirement ID & Target*: Modified requirement `REQ-PRO-062` (`REQ-PRO-062.1`, `REQ-PRO-062.2`, `REQ-PRO-062.4`). Targets `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `docs/engineering/reviews/`, and `tools/hoechstmass/`.
-  2. *Historical Origin & Commit Trace*: Introduced in Sprint 2026-46.3 via ATT-6155 under Epic ATT-6141; amended in Sprint 2026-46.8 via ATT-8142 (Finding K2) under Epic ATT-8138.
-  3. *Root Reason for Existing Formulation*: Originally lacked explicit non-defaulting validation, allowing missing findings/verdict to default to PASS with a generic "Zero deviations" text string.
-  4. *Preservation of Core Invariants*: Truth-in-evidence enforced: review records must honestly represent actual human/AI execution without artificial success defaults; zero Android runtime code changes; Rule 3 Human Gate intact.
+  1. *Original Requirement ID & Target*: Modified requirement `REQ-PRO-062` (`REQ-PRO-062.1`, `REQ-PRO-062.2`). Targets `tools/jira_util.py`, `tools/hoechstmass/tools/jira_util.py`, `docs/engineering/reviews/sprint_2026-46.4.md`, and `docs/engineering/reviews/sprint_2026-47.1.md`.
+  2. *Historical Origin & Commit Trace*: Introduced in Sprint 2026-46.3 via `ATT-6155` (`2d2f9663`); amended in Sprint 2026-46.8 via `ATT-8142` (`7ccac4fc`, Finding K2); refined in `ATT-8204` (Audit Gap #7).
+  3. *Root Reason for Existing Formulation*: `ATT-6155` assumed human Ceremony 2 calls would pass `--reviewer "Human"` (`reviewer.lower() in ("human", "user")`), and `test_jira_accounts.py:992` relies on omitting `--review-type` when AI `--vendor` + `--model` are supplied.
+  4. *Preservation of Core Invariants*: Preserves mandatory `--verdict` + `--findings` validation (`ATT-8142`), `[PROCESS DEVIATION — Rule 1.3]` headers, backward compatibility when `--vendor`/`--model` are supplied without `--review-type`, legacy `Human Sprint Review (Ceremony 2)` compatibility in `verify_independent_reviews()`, zero `app/src/main/` edits, and Rule 3 Human Gate.
 - **Acceptance Criteria (Given-When-Then)**:
-  • *Given* a skipped Ceremony 2 sprint review,
-  • *When* `record-review` is executed with `--verdict SKIPPED` and `--findings "<rationale>"`,
-  • *Then* it generates a review record showing `SKIPPED`, containing no success claims, and noting a Rule 1.3 process deviation.
-  • *Given* `record-review` invoked with `--verdict PASS` or `FAIL` without `--findings`,
-  • *When* the command runs,
-  • *Then* it fails with an exit code 1 error requiring findings.
-  • *Given* `docs/engineering/reviews/sprint_2026-46.6.md`,
+  • *Given* `record-review --reviewer "Rainer Blind"` without AI `--vendor`/`--model` (or with `--review-type human` / `--vendor human`),
+  • *When* the review markdown is generated in root or Höchstmaß `record_review()`,
+  • *Then* `Review Type` is `Human Sprint Review (Layer 4)`, `Vendor` is `Human`, `Model & Version` is `Human Process Owner (vN/A)`, and `External AI Model` / `Cross-Vendor AI Review (Layer 5)` does not appear.
+  • *Given* `record-review --review-type cross-vendor-ai` missing `--vendor` or `--model` vs with explicit AI `--vendor` and `--model`,
+  • *When* `record_review()` executes,
+  • *Then* missing AI metadata raises `ValueError`/exit code `1` while complete AI metadata emits `Cross-Vendor AI Review (Layer 5)`.
+  • *Given* `docs/engineering/reviews/sprint_2026-46.4.md` (`PASS`) and `docs/engineering/reviews/sprint_2026-47.1.md` (`NOT PERFORMED`),
   • *When* inspected,
-  • *Then* its verdict is `SKIPPED` with an auditable correction note addressing Finding K2.
-  • *Given* a review file in `docs/engineering/reviews/` with verdict `SKIPPED`, `NOT PERFORMED`, or `PARTIAL`,
-  • *When* `verify_requirement_governance.py --check-reviews` runs,
-  • *Then* it verifies successfully.
-- **Invariants**: Zero modifications to Android production runtime code in `app/src/main/`; pure Python standard library retained; Rule 3 (`Erledigt` human-only gate) preserved.
+  • *Then* both record `Reviewer: Rainer Blind`, `Review Type: Human Sprint Review (Layer 4)`, `Vendor: Human`, and an auditable `ATT-8204` correction note without altering original timestamps, ticket lists, or verdicts.
+  • *Given* a skipped Ceremony 2 sprint review or `record-review` invoked with `--verdict PASS`/`FAIL` without `--findings`,
+  • *When* `record-review` executes,
+  • *Then* missing `--findings` fails with exit code `1`, `SKIPPED`/`NOT PERFORMED` records the Rule 1.3 deviation, and `verify_requirement_governance.py --check-reviews` passes.
+- **Invariants**: Zero modifications to Android production runtime code in `app/src/main/`; pure Python standard library retained; `Localization Parity: N/A - no UI strings`; Rule 3 (`Erledigt` human-only gate) preserved.
 
 ### REQ-PRO-063: Problem Severity Classification & Defect Trend Metrics [Verified]
 - **Tests**: `TST-PRO-063`
@@ -2306,3 +2308,6 @@
 | `1.0.2` | 2026-11-18 | AI Agent (`ATT-8205`) | `ATT-8205` | Added `[Planned]` `REQ-PRO-128` (`REQ-PRO-128.1`–`REQ-PRO-128.5`: extended verdict keywords & ADF/`unverified` parity, additive `end_to_end_ftpr_percent`, multi-signal `risk_distribution`, extended German/English bug statuses + Höchstmaß parity, zero-comment stage subtask closure guard). |
 | `1.0.3` | 2026-11-18 | AI Agent (`ATT-8205`) | `ATT-8205` | Promoted `REQ-PRO-128` to `[Implemented]` in Stage 4 (`tools/sprint_metrics.py`, `tools/jira_util.py`, `tools/hoechstmass/tools/sprint_metrics.py`). |
 | `1.0.4` | 2026-11-18 | AI Agent (`ATT-8205`) | `ATT-8205` | Promoted `REQ-PRO-128` to `[Verified]` after Stage 5 verification (`test_sprint_metrics.py` `23/23`, `hoechstmass/test_sprint_metrics.py` `18/18`, `test_jira_accounts.py` `TST-PRO-128` PASS, governance `exit 0`). |
+| `1.0.5` | 2026-11-18 | AI Agent (`ATT-8204`) | `ATT-8204` | Refined `REQ-PRO-062` (`[Planned]`) for explicit `--review-type=human|cross-vendor-ai` classification of named human reviewers (root + Höchstmaß) and correction of `sprint_2026-46.4.md` & `sprint_2026-47.1.md`. |
+| `1.0.6` | 2026-11-18 | AI Agent (`ATT-8204`) | `ATT-8204` | Promoted `REQ-PRO-062` to `[Implemented]` in Stage 4 (`tools/jira_util.py`, `tools/hoechstmass/tools/jira_util.py`, `sprint_2026-46.4.md`, `sprint_2026-47.1.md`). |
+| `1.0.7` | 2026-11-18 | AI Agent (`ATT-8204`) | `ATT-8204` | Promoted `REQ-PRO-062` to `[Verified]` after Stage 5 verification (`4/4` ATT-8204 tests PASS, `--check-reviews` `13/13`, governance `exit 0`). |

@@ -2251,6 +2251,70 @@ def format_review_markdown(
 
 
 ALLOWED_REVIEW_VERDICTS = {"PASS", "FAIL", "SKIPPED", "NOT PERFORMED", "PARTIAL"}
+_HUMAN_REVIEW_TOKENS = frozenset({"human", "user", "human process owner"})
+_AI_PLACEHOLDER_TOKENS = frozenset(
+    {"human", "user", "human process owner", "external ai model", "n/a", "none", "unknown"}
+)
+
+
+def _classify_review_actor(review_type=None, vendor=None, model=None, version=None, scope=None):
+    """Resolve Human (Layer 4) vs Cross-Vendor AI (Layer 5) review metadata without name-guessing."""
+    if review_type is not None:
+        rt_clean = str(review_type).strip().lower()
+        if rt_clean not in ("human", "cross-vendor-ai"):
+            raise ValueError(
+                f"Invalid review_type '{review_type}'. Allowed values: human, cross-vendor-ai."
+            )
+    else:
+        rt_clean = None
+
+    vendor_clean = str(vendor).strip() if vendor is not None and str(vendor).strip() else None
+    model_clean = str(model).strip() if model is not None and str(model).strip() else None
+    version_clean = str(version).strip() if version is not None and str(version).strip() else None
+    scope_clean = str(scope).strip() if scope is not None and str(scope).strip() else None
+
+    vendor_is_human = bool(vendor_clean and vendor_clean.lower() in _HUMAN_REVIEW_TOKENS)
+    model_is_human = bool(model_clean and model_clean.lower() in _HUMAN_REVIEW_TOKENS)
+    has_non_human_vendor = bool(vendor_clean and not vendor_is_human)
+    has_non_human_model = bool(model_clean and not model_is_human)
+
+    if rt_clean == "human":
+        if has_non_human_vendor or has_non_human_model:
+            raise ValueError(
+                "Conflicting flags: --review-type=human cannot be combined with non-human AI --vendor or --model."
+            )
+        effective_type = "human"
+    elif rt_clean == "cross-vendor-ai":
+        effective_type = "cross-vendor-ai"
+    elif has_non_human_vendor or has_non_human_model:
+        effective_type = "cross-vendor-ai"
+    else:
+        effective_type = "human"
+
+    if effective_type == "human":
+        return (
+            "Human",
+            "Human Process Owner",
+            version_clean or "N/A",
+            "Human Sprint Review (Layer 4)",
+            scope_clean or "Ceremony 2 Sprint Review",
+        )
+
+    if not vendor_clean or vendor_clean.lower() in _AI_PLACEHOLDER_TOKENS:
+        raise ValueError(
+            "Cross-Vendor AI review requires an explicit non-human --vendor (e.g. 'Anthropic', 'OpenAI')."
+        )
+    if not model_clean or model_clean.lower() in _AI_PLACEHOLDER_TOKENS:
+        raise ValueError(
+            "Cross-Vendor AI review requires an explicit --model (e.g. 'claude-3-7-sonnet', 'gpt-4o')."
+        )
+    return (
+        vendor_clean,
+        model_clean,
+        version_clean or "N/A",
+        "Cross-Vendor AI Review (Layer 5)",
+        scope_clean or "Layer 5 Cross-Vendor Review",
+    )
 
 
 def record_review(
@@ -2269,6 +2333,7 @@ def record_review(
     config=None,
     h_config=None,
     repo_root=None,
+    review_type=None,
 ):
     """
     REQ-PRO-062.1 / REQ-PRO-062.2:
@@ -2309,6 +2374,15 @@ def record_review(
                 "Provide --findings with assessment details."
             )
 
+    reviewer = (str(reviewer).strip() if reviewer is not None else "") or "Human"
+    vendor, model, version, review_type, scope = _classify_review_actor(
+        review_type=review_type,
+        vendor=vendor,
+        model=model,
+        version=version,
+        scope=scope,
+    )
+
     if config is None:
         config = load_env_config()
     if h_config is None:
@@ -2328,22 +2402,6 @@ def record_review(
                 s_name = target_sprint["name"].strip()
     except Exception:
         pass
-
-    if not reviewer:
-        reviewer = "Human"
-
-    if reviewer.lower() in ("human", "user"):
-        vendor = vendor or "Human"
-        model = model or "Human Process Owner"
-        version = version or "N/A"
-        review_type = "Human Sprint Review (Ceremony 2)"
-        scope = scope or "Ceremony 2 Sprint Review"
-    else:
-        vendor = vendor or reviewer
-        model = model or "External AI Model"
-        version = version or "N/A"
-        review_type = "Cross-Vendor AI Review (Layer 5)"
-        scope = scope or "Layer 5 Cross-Vendor Review"
 
     verdict_clean = verdict.upper().strip() if verdict else "PASS"
     date_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -2599,6 +2657,7 @@ def main():
         sprint_arg = None
         ticket_arg = None
         reviewer_arg = None
+        review_type_arg = None
         vendor_arg = None
         model_arg = None
         version_arg = None
@@ -2623,6 +2682,11 @@ def main():
                 reviewer_arg = a.split("=", 1)[1]
             elif a == "--reviewer" and idx + 1 < len(args):
                 reviewer_arg = args[idx + 1]
+                idx += 1
+            elif a.startswith("--review-type="):
+                review_type_arg = a.split("=", 1)[1]
+            elif a == "--review-type" and idx + 1 < len(args):
+                review_type_arg = args[idx + 1]
                 idx += 1
             elif a.startswith("--vendor="):
                 vendor_arg = a.split("=", 1)[1]
@@ -2665,6 +2729,7 @@ def main():
                 sprint_arg=sprint_arg,
                 ticket_key=ticket_arg,
                 reviewer=reviewer_arg,
+                review_type=review_type_arg,
                 vendor=vendor_arg,
                 model=model_arg,
                 version=version_arg,

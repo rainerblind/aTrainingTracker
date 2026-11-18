@@ -1,7 +1,7 @@
 # Living Test Specification: Engineering Process, Stability & Architecture
 
 **Document ID**: `DOC-TST-PRO`  
-**Version**: 1.0.27  
+**Version**: 1.0.30  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -2489,21 +2489,17 @@
 - **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-PRO-062`
 - **Component**: `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `tools/hoechstmass/tools/jira_util.py`, `tools/hoechstmass/tools/verify_requirement_governance.py`, `tools/test_jira_accounts.py`, `tools/test_verify_requirement_governance.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`
-- **Jira**: `ATT-6155`, `ATT-8142`
+- **Jira**: `ATT-6155`, `ATT-8142`, `ATT-8204`
 - **Test Description**:
-  1. *`record-review` CLI Command & Report Generation (`TST-PRO-062.1`, tools/test_jira_accounts.py & tools/hoechstmass/tools/test_hoechstmass_tools.py)*:
-  • Execute `record-review` for Human Ceremony 2 review and Cross-Vendor AI review; verify structured markdown output and metadata serialization.
-  • Test that `record-review` with `--verdict PASS` or `FAIL` without `--findings` fails with usage error.
-  • Test that `record-review` with `--verdict SKIPPED` or `NOT PERFORMED` generates truthful record without default success text and includes Rule 1.3 deviation header.
-  • Test invalid verdict string is rejected.
+  1. *`record-review` CLI Command, Classification & Report Generation (`TST-PRO-062.1`, tools/test_jira_accounts.py & tools/hoechstmass/tools/test_hoechstmass_tools.py; note `tools/test_review_tool.py` tests `tools/review_tool.py`)*:
+  • Execute `record-review` for Human (`--reviewer "Human"`, `"Rainer Blind"`, `--review-type=human`, `--vendor human`) vs Cross-Vendor AI (`--review-type=cross-vendor-ai` or AI `--vendor`/`--model`); verify named human reviewers emit `Human Sprint Review (Layer 4)` / `Vendor: Human` / `Model & Version: Human Process Owner (vN/A)` without `External AI Model`, while AI reviews emit `Cross-Vendor AI Review (Layer 5)`.
+  • Test `--review-type=cross-vendor-ai` missing `--vendor` or `--model` fails (`ValueError`/exit `1`), `--verdict PASS`/`FAIL` without `--findings` fails, `SKIPPED`/`NOT PERFORMED` omits default success text with Rule 1.3 deviation header, and invalid verdicts fail.
   2. *Independent Review Governance Verification (`TST-PRO-062.2`, tools/test_verify_requirement_governance.py)*:
-  • Run `verify_independent_reviews` against valid vs missing and malformed review records, including `PASS`, `FAIL`, `SKIPPED`, `NOT PERFORMED`, and `PARTIAL`; assert pass/fail status and schema diagnostics.
-  3. *Review File Correction & Evidence Integrity (`TST-PRO-062.3`, docs/engineering/reviews/sprint_2026-46.6.md)*:
-  • Verify `docs/engineering/reviews/sprint_2026-46.6.md` contains verdict `SKIPPED` and correction note referencing Finding K2.
-  4. *Counterpart Parity & Tooling Integration (`TST-PRO-062.4`, tools/hoechstmass/tools/test_hoechstmass_tools.py)*:
-  • Assert `record-review` and `verify_independent_reviews` in Höchstmaß mirror match root tooling behavior.
-  5. *Canonical Directory Registration (`TST-PRO-062.5`, tools/test_verify_requirement_governance.py)*:
-  • Assert `"reviews"` exists in `ALLOWED_ENGINEERING_ENTRIES` and `hoechstmass_config.json`.
+  • Run `verify_independent_reviews` against valid (both `Layer 4` and legacy `Ceremony 2`), missing, and malformed review records (`PASS`, `FAIL`, `SKIPPED`, `NOT PERFORMED`, `PARTIAL`); assert pass/fail diagnostics.
+  3. *Review File Correction & Evidence Integrity (`TST-PRO-062.3`, docs/engineering/reviews/sprint_2026-46.4.md, sprint_2026-46.6.md & sprint_2026-47.1.md)*:
+  • Verify `sprint_2026-46.6.md` records `SKIPPED` (Finding K2) and both `sprint_2026-46.4.md` (`PASS`) and `sprint_2026-47.1.md` (`NOT PERFORMED`) record `Reviewer: Rainer Blind`, `Human Sprint Review (Layer 4)`, `Vendor: Human`, and `ATT-8204` correction notes without `External AI Model`.
+  4. *Counterpart Parity & Canonical Directory (`TST-PRO-062.4`, TST-PRO-062.5, tools/hoechstmass/tools/test_hoechstmass_tools.py & tools/test_verify_requirement_governance.py)*:
+  • Assert Höchstmaß `record_review()` / `verify_independent_reviews()` parity (named human vs AI `--vendor`/`--model` classification & `cross-vendor-ai` validation) and `"reviews"` in `ALLOWED_ENGINEERING_ENTRIES` + `hoechstmass_config.json` (`Localization Parity: N/A - no UI strings`).
 
 ### TST-PRO-063: **Problem Severity Classification & Defect Trend Metrics Suite** [Verified]
 - **Priority**: High
@@ -3978,3 +3974,6 @@
 | `1.0.25` | 2026-11-18 | AI Agent (`ATT-8205`) | `ATT-8205` | Added `[Planned]` `TST-PRO-128` test specifications (`ATT-8205_test_spec.md`). |
 | `1.0.26` | 2026-11-18 | AI Agent (`ATT-8205`) | `ATT-8205` | Promoted `TST-PRO-128` to `[Implemented]` in Stage 4 (`tools/test_sprint_metrics.py`, `tools/test_jira_accounts.py`, `tools/hoechstmass/tools/test_sprint_metrics.py`). |
 | `1.0.27` | 2026-11-18 | AI Agent (`ATT-8205`) | `ATT-8205` | Promoted `TST-PRO-128` to `[Verified]` after Stage 5 verification (`23/23` + `18/18` sprint_metrics, `TST-PRO-128` verified evidence `True`, governance `exit 0`). |
+| `1.0.28` | 2026-11-18 | AI Agent (`ATT-8204`) | `ATT-8204` | Refined `TST-PRO-062` (`[Planned]`) for named human vs AI `record_review()` classification, `--review-type`, Höchstmaß parity, and `sprint_2026-46.4.md`/`sprint_2026-47.1.md` correction checks. |
+| `1.0.29` | 2026-11-18 | AI Agent (`ATT-8204`) | `ATT-8204` | Promoted `TST-PRO-062` to `[Implemented]` in Stage 4 (`tools/test_jira_accounts.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`, `tools/test_verify_requirement_governance.py`). |
+| `1.0.30` | 2026-11-18 | AI Agent (`ATT-8204`) | `ATT-8204` | Promoted `TST-PRO-062` to `[Verified]` after Stage 5 verification (`4/4` ATT-8204 tests PASS, `TST-PRO-062` evidence `True`, `3979/4000` lines, governance `exit 0`). |

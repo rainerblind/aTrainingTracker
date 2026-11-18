@@ -972,14 +972,14 @@ class TestJiraCliTooling(unittest.TestCase):
             self.assertEqual(path1, out_human)
             self.assertTrue(os.path.exists(out_human))
             self.assertEqual(meta1["reviewer"], "Human")
-            self.assertEqual(meta1["review_type"], "Human Sprint Review (Ceremony 2)")
+            self.assertEqual(meta1["review_type"], "Human Sprint Review (Layer 4)")
 
             with open(out_human, "r", encoding="utf-8") as f:
                 content_h = f.read()
 
             self.assertIn("# Independent QA Review Record: Sprint 2026-46.3", content_h)
             self.assertIn("**Reviewer**: Human", content_h)
-            self.assertIn("**Review Type**: Human Sprint Review (Ceremony 2)", content_h)
+            self.assertIn("**Review Type**: Human Sprint Review (Layer 4)", content_h)
             self.assertIn("**Vendor**: Human", content_h)
             self.assertIn("**Scope**: Ceremony 2 Sprint Review", content_h)
             self.assertIn("**Verdict**: **PASS**", content_h)
@@ -1085,6 +1085,121 @@ class TestJiraCliTooling(unittest.TestCase):
                 content_p = f.read()
             self.assertIn("**Verdict**: **PARTIAL**", content_p)
             self.assertIn("Partial review conducted for high-risk items only.", content_p)
+
+    @patch("jira_util.get_config", return_value={"JIRA_URL": "https://example.atlassian.net"})
+    @patch("jira_util.jira_request")
+    def test_record_review_named_human_vs_cross_vendor_ai_classification(self, mock_request, _mock_cfg):
+        """TST-PRO-062.1: Named human reviewers classify as Layer 4 Human without External AI Model; cross-vendor-ai requires vendor+model."""
+        mock_request.return_value = {}
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # 1. Named human reviewer without vendor/model defaults to Layer 4 Human
+            out_named = os.path.join(tmpdir, "docs", "engineering", "reviews", "named_human.md")
+            _, meta_named = jira_util.record_review(
+                sprint_arg="2026-46.4",
+                ticket_key="ATT-6155",
+                reviewer="Rainer Blind",
+                verdict="PASS",
+                findings="Sprint deliverables accepted by PO.",
+                out_path=out_named,
+                repo_root=tmpdir,
+            )
+            self.assertEqual(meta_named["reviewer"], "Rainer Blind")
+            self.assertEqual(meta_named["review_type"], "Human Sprint Review (Layer 4)")
+            self.assertEqual(meta_named["vendor"], "Human")
+            self.assertEqual(meta_named["model"], "Human Process Owner")
+            with open(out_named, "r", encoding="utf-8") as f:
+                content_named = f.read()
+            self.assertIn("**Reviewer**: Rainer Blind", content_named)
+            self.assertIn("**Review Type**: Human Sprint Review (Layer 4)", content_named)
+            self.assertIn("**Vendor**: Human", content_named)
+            self.assertIn("**Model & Version**: Human Process Owner (vN/A)", content_named)
+            self.assertNotIn("External AI Model", content_named)
+            self.assertNotIn("Cross-Vendor AI Review (Layer 5)", content_named)
+
+            # 2. Explicit review_type="human" and case-insensitive vendor="HUMAN"
+            for extra_kw in (
+                {"review_type": "human"},
+                {"vendor": "HUMAN"},
+                {"review_type": "HUMAN", "vendor": "Human", "model": "Human Process Owner"},
+            ):
+                out_exp = os.path.join(tmpdir, "docs", "engineering", "reviews", "explicit_human.md")
+                _, meta_exp = jira_util.record_review(
+                    sprint_arg="2026-47.1",
+                    ticket_key="ATT-8145",
+                    reviewer="Rainer Blind",
+                    verdict="NOT PERFORMED",
+                    findings="Autonomous close pending PO verification.",
+                    out_path=out_exp,
+                    repo_root=tmpdir,
+                    **extra_kw,
+                )
+                self.assertEqual(meta_exp["review_type"], "Human Sprint Review (Layer 4)")
+                self.assertEqual(meta_exp["vendor"], "Human")
+                with open(out_exp, "r", encoding="utf-8") as f:
+                    txt_exp = f.read()
+                self.assertNotIn("External AI Model", txt_exp)
+                self.assertIn("[PROCESS DEVIATION — Rule 1.3]", txt_exp)
+
+            # 3. Explicit review_type="cross-vendor-ai" with real vendor+model succeeds
+            out_ai = os.path.join(tmpdir, "docs", "engineering", "reviews", "explicit_ai.md")
+            _, meta_ai = jira_util.record_review(
+                sprint_arg="2026-47.1",
+                ticket_key="ATT-8204",
+                reviewer="Claude Reviewer",
+                review_type="cross-vendor-ai",
+                vendor="Anthropic",
+                model="claude-sonnet-4",
+                version="20260101",
+                verdict="PASS",
+                findings="Cross-vendor audit passed.",
+                out_path=out_ai,
+                repo_root=tmpdir,
+            )
+            self.assertEqual(meta_ai["review_type"], "Cross-Vendor AI Review (Layer 5)")
+            self.assertEqual(meta_ai["vendor"], "Anthropic")
+            self.assertEqual(meta_ai["model"], "claude-sonnet-4")
+
+            # 4. Missing, spoofed, or conflicting AI metadata fails with ValueError
+            for bad_kwargs in (
+                {"review_type": "cross-vendor-ai", "vendor": None, "model": "gpt-4o"},
+                {"review_type": "cross-vendor-ai", "vendor": "OpenAI", "model": None},
+                {"review_type": "cross-vendor-ai", "vendor": "Human", "model": "gpt-4o"},
+                {"review_type": "cross-vendor-ai", "vendor": "OpenAI", "model": "External AI Model"},
+                {"vendor": "OpenAI", "model": None},
+                {"vendor": None, "model": "gpt-4o"},
+                {"review_type": "human", "vendor": "Anthropic", "model": "claude-3-7-sonnet"},
+                {"review_type": "invalid-mode"},
+            ):
+                with self.assertRaises(ValueError):
+                    jira_util.record_review(
+                        sprint_arg="2026-47.1",
+                        reviewer="Rainer Blind",
+                        verdict="PASS",
+                        findings="Validation test.",
+                        repo_root=tmpdir,
+                        **bad_kwargs,
+                    )
+
+    def test_record_review_historical_records_repaired(self):
+        """TST-PRO-062.3: Verify sprint_2026-46.4.md and sprint_2026-47.1.md attribute Rainer Blind to Layer 4 Human."""
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+        expected = [
+            ("sprint_2026-46.4.md", "**Verdict**: **PASS**"),
+            ("sprint_2026-47.1.md", "**Verdict**: **NOT PERFORMED**"),
+        ]
+        for fname, expected_verdict in expected:
+            fpath = os.path.join(repo_root, "docs", "engineering", "reviews", fname)
+            with open(fpath, "r", encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("* **Reviewer**: Rainer Blind", content)
+            self.assertIn("* **Review Type**: Human Sprint Review (Layer 4)", content)
+            self.assertIn("* **Vendor**: Human", content)
+            self.assertIn("* **Model & Version**: Human Process Owner (vN/A)", content)
+            self.assertIn(expected_verdict, content)
+            self.assertIn("ATT-8204", content)
+            self.assertNotIn("* **Model & Version**: External AI Model (vN/A)", content)
+            self.assertNotIn("* **Vendor**: Rainer Blind", content)
+            self.assertNotIn("* **Review Type**: Cross-Vendor AI Review (Layer 5)", content)
 
     @patch("jira_util.rank_at_top_of_backlog")
     @patch("jira_util.jira_request")
