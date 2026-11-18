@@ -196,4 +196,17 @@
     <string name="raw_telemetry_retention_keep_all">Guardar tudo</string>
     <string name="raw_telemetry_retention_7_days">7 dias</string>
     <string name="raw_telemetry_retention_off">Desativado</string>
+    <!-- Phone Carriage & Activity Mode Classifier (ATT-8890, REQ-FIL-028) -->
+    <string name="activity_and_carriage_mode">Atividade e modo de transporte</string>
+    <string name="activity_and_carriage_mode_short">Transporte</string>
+    <string name="carriage_mode_unknown">Desconhecido</string>
+    <string name="carriage_mode_stationary">Parado</string>
+    <string name="carriage_mode_walking_transition">Caminhada / Transição</string>
+    <string name="carriage_mode_bike_handlebar">Ciclismo (Guiador)</string>
+    <string name="carriage_mode_bike_jersey_back">Ciclismo (Bolso camisa)</string>
+    <string name="carriage_mode_bike_front_pocket">Ciclismo (Bolso calça)</string>
+    <string name="carriage_mode_run_waist_hip">Corrida (Cintura)</string>
+    <string name="carriage_mode_run_bicep_arm">Corrida (Braçadeira)</string>
+    <string name="carriage_mode_run_handheld">Corrida (Na mão)</string>
+
 </resources>

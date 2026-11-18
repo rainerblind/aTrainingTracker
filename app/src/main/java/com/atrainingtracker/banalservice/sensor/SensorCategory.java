@@ -28,7 +28,7 @@ import com.atrainingtracker.R;
 
 /**
  * Authoritative top-level domain categorization for {@link SensorType} telemetry metrics (ATT-3852, ATT-6726, REQ-TRK-070.1).
- * Groups all 63 {@link SensorType} values into 6 semantic training categories for structured
+ * Groups all 68 {@link SensorType} values into 6 semantic training categories for structured
  * selection and filtering in {@code EditSensorFieldDialog}.
  */
 public enum SensorCategory {

@@ -1,16 +1,16 @@
 # Canonical SensorType Internal Storage, Display & Export Unit Data Dictionary (REQ-TRK-083)
 
 **Document ID**: `DOC-ARC-UNITS`  
-**Version**: 1.0.1  
+**Version**: 1.0.2  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
-This document defines the canonical unit contract for all **67** enum constants in [`SensorType.java`](../../app/src/main/java/com/atrainingtracker/banalservice/sensor/SensorType.java).
+This document defines the canonical unit contract for all **68** enum constants in [`SensorType.java`](../../app/src/main/java/com/atrainingtracker/banalservice/sensor/SensorType.java).
 It separates **internal SQLite / sensor-bus storage units** (`SensorType.getInternalUnit()`, SQLite columns named `sensorType.name()` via `WorkoutSamplesDatabaseManager.makeColumns`) from **UI display formatting** (`MyFormatter`, `SensorType.getUnitId()`, `MyHelper.getUnitsId()`) and **file export conversions** (`FitFileWriter.kt`, `TCXFileWriter.kt`, `GPXFileWriter.java`, `CSVFileWriter.java`, `GCFileWriter.java`).
 
 ---
 
-## 1. Canonical 67-Sensor Data Dictionary
+## 1. Canonical 68-Sensor Data Dictionary
 
 | SensorType | SensorCategory | SensorSubCategory | Internal Unit | SensorValueType | Range & Sentinels | UI Formatter & Display Unit | Export Units (FIT / TCX / GPX / CSV / GC) |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -81,6 +81,7 @@ It separates **internal SQLite / sensor-bus storage units** (`SensorType.getInte
 | `WORLD_YAW_RATE_radps` | `SYSTEM_ENVIRONMENT_AND_DIAGNOSTICS` | `null` | `rad/s` | `DOUBLE` | Signed vertical-axis yaw rate; `null` -> `"--"` | `DefaultNumberFormatter` (`%.1f`, `units_rad_per_sec` = `rad/s`) | FIT: — / TCX: — / GPX: — / CSV: raw `rad/s` / GC: — |
 | `VERTICAL_OSCILLATION` | `SPEED_PACE_AND_DISTANCE` | `null` | `cm` | `DOUBLE` | FIT export range `[1.0, 25.0]`; `null` -> `"--"` | `DefaultNumberFormatter` (`%.1f`, `units_cm` = `cm`) | FIT: `mm` (`voCm * CM_TO_MM`, `RecordMesg`/`LapMesg`/`SessionMesg`) / TCX: — / GPX: — / CSV: raw `cm` / GC: — |
 | `GROUND_CONTACT_TIME` | `SPEED_PACE_AND_DISTANCE` | `null` | `ms` | `DOUBLE` | FIT export range `[50.0, 1000.0]`; `null` -> `"--"` | `IntegerFormatter` (`units_time_ms` = `ms`) | FIT: `ms` (`stanceTime`, `RecordMesg`/`LapMesg`/`SessionMesg`) / TCX: — / GPX: — / CSV: raw `ms` / GC: — |
+| `ACTIVITY_AND_CARRIAGE_MODE` | `SYSTEM_ENVIRONMENT_AND_DIAGNOSTICS` | `null` | `dimensionless` | `INTEGER` | `UNKNOWN(-1)` + active modes `0..7` (`STATIONARY`..`RUN_HANDHELD`); `null` / `NaN` / `Infinite` -> `"--"` | `PhoneCarriageModeFormatter` (localized carriage labels, `units_none`) | FIT: — / TCX: — / GPX: — / CSV: raw integer code / GC: — |
 
 ---
 
@@ -102,3 +103,4 @@ It separates **internal SQLite / sensor-bus storage units** (`SensorType.getInte
 | :--- | :--- | :--- | :--- | :--- |
 | `1.0.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Added standardized `DOC-ARC-UNITS` work-product control header and Change History. |
 | `1.0.1` | 2026-11-18 | AI Agent (`ATT-8676`) | `ATT-8676` | Updated `RADAR_APPROACH_SPEED_mps` display unit documentation (`MyHelper.getUnitsId` -> `km/h`/`mile/h`, `getShortUnitsId` -> `km/h`/`mi/h`) per `REQ-TRK-088`. |
+| `1.0.2` | 2026-11-18 | AI Agent (`ATT-8890`, `--as agent1`) | `ATT-8890` | Added `ACTIVITY_AND_CARRIAGE_MODE` (`ordinal 67`, `INTEGER`, `dimensionless`, `PhoneCarriageModeFormatter`, `filteringPossible = false`), bumping dictionary to `68` constants per `REQ-FIL-028.2`. |

@@ -51,7 +51,8 @@ data class RawAltitudeSample(
     val rawAltitudeM: Double,
     val referenceAltitudeM: Double? = null,
     val smoothedSpeedMps: Double = 0.0,
-    val isStandstill: Boolean = smoothedSpeedMps < 0.3
+    val isStandstill: Boolean = smoothedSpeedMps < 0.3,
+    val carriageMode: PhoneCarriageMode = PhoneCarriageMode.UNKNOWN
 )
 
 /**
@@ -128,7 +129,9 @@ object ExtendedRtsAltitudeSlopeSmoother {
             val dtSec = if (k == 0) 1.0 else max(0.001, (sample.timestampMs - lastTimeMs) / 1000.0)
             lastTimeMs = sample.timestampMs
 
-            val isStandstill = sample.isStandstill || sample.smoothedSpeedMps < STANDSTILL_SPEED_THRESHOLD_MPS
+            val isStandstill = sample.isStandstill ||
+                sample.smoothedSpeedMps < STANDSTILL_SPEED_THRESHOLD_MPS ||
+                (sample.carriageMode == PhoneCarriageMode.STATIONARY && sample.smoothedSpeedMps < 0.35)
             val deltaDist = if (isStandstill) 0.0 else max(0.0, sample.smoothedSpeedMps * dtSec)
 
             // 1. Predict
@@ -166,18 +169,19 @@ object ExtendedRtsAltitudeSlopeSmoother {
             priorCovs.add(Array(STATE_DIM) { i -> p[i].clone() })
             jacobians.add(fMat)
 
-            // 2. Ingest Barometer
+            // 2. Ingest Barometer (with carriage-mode-scaled variance)
             if (!sample.rawAltitudeM.isNaN()) {
                 val zBaro = sample.rawAltitudeM
                 val y = zBaro - (x[0] + x[2])
+                val varBaro = sample.carriageMode.profile.ertsBaroVarianceM2
 
                 if (isStandstill) {
-                    val sBias = p[2][2] + DEFAULT_VAR_BARO
+                    val sBias = p[2][2] + varBaro
                     val kBias = p[2][2] / sBias
                     x[2] += kBias * applyHuber(y, sBias)
                     p[2][2] = max(1e-6, (1.0 - kBias) * p[2][2])
                 } else {
-                    val s = p[0][0] + 2.0 * p[0][2] + p[2][2] + DEFAULT_VAR_BARO
+                    val s = p[0][0] + 2.0 * p[0][2] + p[2][2] + varBaro
                     val yH = applyHuber(y, s)
                     val k0 = (p[0][0] + p[0][2]) / s
                     val k1 = (p[1][0] + p[1][2]) / s
@@ -294,7 +298,9 @@ object ExtendedRtsAltitudeSlopeSmoother {
             val alt = state[0]
             val grade = state[1]
             val sample = samples[k]
-            val isStandstill = sample.isStandstill || sample.smoothedSpeedMps < STANDSTILL_SPEED_THRESHOLD_MPS
+            val isStandstill = sample.isStandstill ||
+                sample.smoothedSpeedMps < STANDSTILL_SPEED_THRESHOLD_MPS ||
+                (sample.carriageMode == PhoneCarriageMode.STATIONARY && sample.smoothedSpeedMps < 0.35)
 
             val slopePct = if (isStandstill) 0.0 else grade * 100.0
 

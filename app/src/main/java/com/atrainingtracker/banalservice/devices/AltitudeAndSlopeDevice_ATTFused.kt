@@ -31,6 +31,7 @@ import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
 import com.atrainingtracker.banalservice.odometry.KinematicAltitudeSlopeEkf
+import com.atrainingtracker.banalservice.odometry.PhoneCarriageMode
 import com.atrainingtracker.banalservice.sensor.MyDoubleAccumulatorSensor
 import com.atrainingtracker.banalservice.sensor.MySensor
 import com.atrainingtracker.banalservice.sensor.MySensorManager
@@ -40,6 +41,7 @@ import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
+import kotlin.math.abs
 import kotlin.math.max
 
 /**
@@ -100,6 +102,8 @@ open class AltitudeAndSlopeDevice_ATTFused @JvmOverloads constructor(
     private val mBaroBucketAltitudes: MutableList<Double> = mutableListOf()
     private var mLastBaroEmitTimestampMs: Long = -1L
     private var mLastBaroBucketTimestampMs: Long = -1L
+    private var mEffectiveRBaro: Double = KinematicAltitudeSlopeEkf.DEFAULT_VAR_BARO
+    private var mLastObservedCarriageMode: PhoneCarriageMode = PhoneCarriageMode.UNKNOWN
 
     @Volatile
     var isEffectiveBarometer: Boolean = true
@@ -204,6 +208,8 @@ open class AltitudeAndSlopeDevice_ATTFused @JvmOverloads constructor(
         mBaroBucketAltitudes.clear()
         mLastBaroEmitTimestampMs = -1L
         mLastBaroBucketTimestampMs = -1L
+        mEffectiveRBaro = KinematicAltitudeSlopeEkf.DEFAULT_VAR_BARO
+        mLastObservedCarriageMode = PhoneCarriageMode.UNKNOWN
     }
 
     @Synchronized
@@ -293,13 +299,47 @@ open class AltitudeAndSlopeDevice_ATTFused @JvmOverloads constructor(
         }
     }
 
+    private fun resolveCurrentCarriageMode(): PhoneCarriageMode {
+        val modeSensor = try {
+            mMySensorManager.getSensorForDeviceType(
+                SensorType.ACTIVITY_AND_CARRIAGE_MODE,
+                DeviceType.SPEED_AND_LOCATION_ATT_FUSED
+            ) ?: mMySensorManager.getSensor(SensorType.ACTIVITY_AND_CARRIAGE_MODE)
+        } catch (_: Throwable) {
+            null
+        }
+        val code = (modeSensor?.value as? Number)?.toInt() ?: return PhoneCarriageMode.UNKNOWN
+        return PhoneCarriageMode.fromCode(code)
+    }
+
+    private fun syncAdaptiveCarriageParameters(): PhoneCarriageMode {
+        val mode = resolveCurrentCarriageMode()
+        val profile = mode.profile
+        mLastObservedCarriageMode = mode
+        val alpha = 0.35
+        mEffectiveRBaro += alpha * (profile.rBaroM2 - mEffectiveRBaro)
+        if (abs(profile.rBaroM2 - mEffectiveRBaro) < 0.01) {
+            mEffectiveRBaro = profile.rBaroM2
+        }
+        mEffectiveRBaro = max(0.1, mEffectiveRBaro)
+        baroFilter.setFilterParameters(profile.baroMaxSlewRateMps, profile.baroMedianWindowSize)
+        return mode
+    }
+
+    @VisibleForTesting
+    internal fun effectiveRBaroForTest(): Double = mEffectiveRBaro
+
+    @VisibleForTesting
+    internal fun resolvedCarriageModeForTest(): PhoneCarriageMode = mLastObservedCarriageMode
+
     private fun ingestFilteredBaroAltitude(rawAltM: Double, timestampMs: Long) {
+        val mode = syncAdaptiveCarriageParameters()
         val slewAlt = baroFilter.filterSlewOnly(rawAltM, timestampMs)
         val speed = getCurrentSpeed()
-        val isStandstill = speed < ekf.standstillSpeedThresholdMps
+        val isStandstill = mode.profile.forceStationaryPinning || speed < ekf.standstillSpeedThresholdMps
 
         ekf.setMode(isEffectiveDem || isEffectiveGps)
-        ekf.updateBarometer(slewAlt, isStandstill = isStandstill, speedMps = speed)
+        ekf.updateBarometer(slewAlt, varBaro = mEffectiveRBaro, isStandstill = isStandstill, speedMps = speed)
         publishAltitudeAndMetrics(speed, timestampMs)
     }
 
@@ -354,7 +394,8 @@ open class AltitudeAndSlopeDevice_ATTFused @JvmOverloads constructor(
             ingestFilteredBaroAltitude(medianAlt, flushTimestampMs)
         }
 
-        val speed = getCurrentSpeed()
+        val mode = syncAdaptiveCarriageParameters()
+        val speed = if (mode.profile.forceStationaryPinning) 0.0 else getCurrentSpeed()
         checkReferenceAltitudeFromSensors(nowMs)
 
         ekf.predict(dtSec, speed)

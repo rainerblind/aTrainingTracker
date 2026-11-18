@@ -146,4 +146,31 @@ class ExtendedRtsAltitudeSlopeSmootherTest {
             climbSmoothed.last().ascentM >= 17.0
         )
     }
+
+    // TST-FIL-028.4: Carriage-aware baro noise scaling dampens pocket pulses vs handlebar fidelity
+    @Test
+    fun testCarriageModeBaroVarianceScaling_dampensPocketJitterVsHandlebar_tstFil028_4() {
+        val baseSamples = (0 until 30).map { sec ->
+            val pulse = if (sec in 10..12) 4.0 else 0.0
+            RawAltitudeSample(
+                timestampMs = 3_000_000L + sec * 1000L,
+                rawAltitudeM = 400.0 + pulse,
+                referenceAltitudeM = null,
+                smoothedSpeedMps = 6.0
+            )
+        }
+        val handlebarSmoothed = ExtendedRtsAltitudeSlopeSmoother.smooth(
+            baseSamples.map { it.copy(carriageMode = PhoneCarriageMode.BIKE_HANDLEBAR) }
+        )
+        val pocketSmoothed = ExtendedRtsAltitudeSlopeSmoother.smooth(
+            baseSamples.map { it.copy(carriageMode = PhoneCarriageMode.BIKE_FRONT_POCKET) }
+        )
+
+        val handlebarPeakDeviation = handlebarSmoothed.maxOf { abs(it.altitudeM - 400.0) }
+        val pocketPeakDeviation = pocketSmoothed.maxOf { abs(it.altitudeM - 400.0) }
+        assertTrue(
+            "Pocket mode (rBaro=2.0) must attenuate transient pressure pulse stronger than handlebar (pocket=$pocketPeakDeviation, handlebar=$handlebarPeakDeviation)",
+            pocketPeakDeviation < handlebarPeakDeviation
+        )
+    }
 }

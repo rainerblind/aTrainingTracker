@@ -21,6 +21,7 @@ package com.atrainingtracker.trainingtracker.database
 import android.content.ContentValues
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import com.atrainingtracker.banalservice.odometry.PhoneCarriageMode
 import com.atrainingtracker.banalservice.odometry.SmoothedAltitudeSlopePoint
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
@@ -1271,5 +1272,225 @@ class ErtsPostWorkoutRecomputerTest {
                 assertTrue("Post-pause-2 row $i VAM must stay > 500 m/h (was ${vams[i]})", vams[i] > 500.0)
             }
         }
+    }
+
+    // TST-FIL-028.2 & TST-FIL-028.4: 1-Hz ACTIVITY_AND_CARRIAGE_MODE persistence, ERTS ingestion & preservation
+    @Test
+    fun testRecomputeWorkout_ingestsAndPreserves1HzActivityAndCarriageMode_tstFil028_2_4() = runBlocking {
+        assertTrue(ErtsPostWorkoutRecomputer.ALLOWED_CANONICAL_COLUMNS.contains(SensorType.ACTIVITY_AND_CARRIAGE_MODE.name))
+
+        val baseFileName = "2026-11-18_093000"
+        val workoutId = createWorkout(baseFileName)
+        val samplesDb = samplesDbManager.database
+        val tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
+
+        samplesDbManager.createNewTable(
+            baseFileName,
+            listOf(
+                SensorType.TIME_TOTAL,
+                SensorType.LATITUDE,
+                SensorType.LONGITUDE,
+                SensorType.SPEED_mps,
+                SensorType.PACE_spm,
+                SensorType.DISTANCE_m,
+                SensorType.BEARING,
+                SensorType.ALTITUDE,
+                SensorType.SLOPE,
+                SensorType.VERTICAL_SPEED,
+                SensorType.ASCENT,
+                SensorType.DESCENT,
+                SensorType.ACTIVITY_AND_CARRIAGE_MODE
+            )
+        )
+        val baroCol = "ALTITUDE (Altitude from Pressure)"
+        samplesDb.execSQL("ALTER TABLE $tableName ADD COLUMN \"$baroCol\" REAL")
+
+        val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).apply {
+            timeZone = TimeZone.getTimeZone("UTC")
+        }
+        val startTs = 1_700_002_000_000L
+        var lat = 48.6500
+        val expectedModes = mutableListOf<Int>()
+
+        samplesDb.beginTransaction()
+        try {
+            for (sec in 0 until 60) {
+                val mode = when {
+                    sec < 20 -> PhoneCarriageMode.BIKE_FRONT_POCKET
+                    sec < 30 -> PhoneCarriageMode.WALKING_TRANSITION
+                    sec < 45 -> PhoneCarriageMode.STATIONARY
+                    else -> PhoneCarriageMode.BIKE_HANDLEBAR
+                }
+                expectedModes.add(mode.code)
+                val speed = when (mode) {
+                    PhoneCarriageMode.BIKE_FRONT_POCKET -> 6.0
+                    PhoneCarriageMode.WALKING_TRANSITION -> 1.2
+                    PhoneCarriageMode.STATIONARY -> 0.16 // GPS jitter above 0.05 but pinned via explicit STATIONARY
+                    PhoneCarriageMode.BIKE_HANDLEBAR -> 7.0
+                    else -> 0.0
+                }
+                if (mode != PhoneCarriageMode.STATIONARY) {
+                    lat += Math.toDegrees(speed / 6371000.0)
+                }
+                val pocketPulse = if (mode == PhoneCarriageMode.BIKE_FRONT_POCKET && sec == 10) -8.0 else 0.0
+                val baroAlt = 400.0 + pocketPulse + if (mode == PhoneCarriageMode.BIKE_HANDLEBAR) (sec - 45) * 0.4 else 0.0
+
+                val cv = ContentValues().apply {
+                    put("time", sdf.format(Date(startTs + sec * 1000L)))
+                    put(SensorType.TIME_TOTAL.name, sec + 1L)
+                    put(SensorType.LATITUDE.name, lat)
+                    put(SensorType.LONGITUDE.name, 9.0545)
+                    put(SensorType.SPEED_mps.name, speed)
+                    put(SensorType.PACE_spm.name, if (speed > 0.1) 1.0 / speed else 0.0)
+                    put(SensorType.DISTANCE_m.name, sec * 4.0)
+                    put(SensorType.BEARING.name, 0.0)
+                    put(SensorType.ALTITUDE.name, baroAlt)
+                    put(SensorType.SLOPE.name, 0.0)
+                    put(SensorType.VERTICAL_SPEED.name, 0)
+                    put(SensorType.ASCENT.name, 0.0)
+                    put(SensorType.DESCENT.name, 0.0)
+                    put(SensorType.ACTIVITY_AND_CARRIAGE_MODE.name, mode.code)
+                    put("\"$baroCol\"", baroAlt)
+                }
+                samplesDb.insert(tableName, null, cv)
+            }
+            samplesDb.setTransactionSuccessful()
+        } finally {
+            samplesDb.endTransaction()
+        }
+
+        assertTrue(ErtsPostWorkoutRecomputer.recomputeWorkout(context, workoutId))
+
+        samplesDb.query(
+            tableName,
+            arrayOf(
+                SensorType.SPEED_mps.name,
+                SensorType.ACTIVITY_AND_CARRIAGE_MODE.name,
+                SensorType.ALTITUDE.name
+            ),
+            null, null, null, null, "_id ASC"
+        ).use { cursor ->
+            var rowIdx = 0
+            while (cursor.moveToNext()) {
+                val spd = cursor.getDouble(0)
+                val persistedMode = cursor.getInt(1)
+                val alt = cursor.getDouble(2)
+                assertEquals("Recorded mode must stay preserved at row $rowIdx", expectedModes[rowIdx], persistedMode)
+                if (rowIdx in 30 until 45) {
+                    assertEquals("STATIONARY dismount mode must pin 0.16 m/s jitter to 0.0 at row $rowIdx", 0.0, spd, 1e-9)
+                }
+                if (rowIdx in 8..13) {
+                    assertTrue("Front-pocket -8m compression spike must be attenuated near 400m at $rowIdx (was $alt)", alt > 397.5)
+                }
+                rowIdx++
+            }
+            assertEquals(60, rowIdx)
+        }
+    }
+
+    // TST-FIL-028.4: Legacy DB without ACTIVITY_AND_CARRIAGE_MODE falls back to deterministic 1-Hz kinematic inference
+    @Test
+    fun testLegacyTableWithoutCarriageModeColumn_infers1HzKinematicFallback_tstFil028_4() = runBlocking {
+        val baseFileName = "2026-11-18_094500"
+        val workoutId = createWorkout(baseFileName)
+        val samplesDb = samplesDbManager.database
+        val tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
+
+        samplesDbManager.createNewTable(
+            baseFileName,
+            listOf(
+                SensorType.TIME_TOTAL,
+                SensorType.LATITUDE,
+                SensorType.LONGITUDE,
+                SensorType.SPEED_mps,
+                SensorType.PACE_spm,
+                SensorType.DISTANCE_m,
+                SensorType.BEARING,
+                SensorType.ALTITUDE,
+                SensorType.SLOPE,
+                SensorType.VERTICAL_SPEED,
+                SensorType.ASCENT,
+                SensorType.DESCENT,
+                SensorType.WORLD_YAW_RATE_radps
+            )
+        )
+
+        val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).apply {
+            timeZone = TimeZone.getTimeZone("UTC")
+        }
+        val startTs = 1_700_003_000_000L
+        var lat = 48.6600
+        samplesDb.beginTransaction()
+        try {
+            for (sec in 0 until 45) {
+                val speed = when {
+                    sec < 15 -> 6.5
+                    sec < 25 -> 1.1
+                    sec < 35 -> 0.0
+                    else -> 7.0
+                }
+                val yaw = when {
+                    sec < 15 -> if (sec % 2 == 0) 0.55 else -0.55 // Thigh pocket alias
+                    sec < 25 -> 0.16 // Dismount walk
+                    sec < 35 -> 0.0
+                    else -> 0.01 // Smooth handlebar
+                }
+                lat += Math.toDegrees(speed / 6371000.0)
+                val cv = ContentValues().apply {
+                    put("time", sdf.format(Date(startTs + sec * 1000L)))
+                    put(SensorType.TIME_TOTAL.name, sec + 1L)
+                    put(SensorType.LATITUDE.name, lat)
+                    put(SensorType.LONGITUDE.name, 9.0545)
+                    put(SensorType.SPEED_mps.name, speed)
+                    put(SensorType.PACE_spm.name, if (speed > 0.1) 1.0 / speed else 0.0)
+                    put(SensorType.DISTANCE_m.name, sec * 4.0)
+                    put(SensorType.BEARING.name, 0.0)
+                    put(SensorType.ALTITUDE.name, 410.0)
+                    put(SensorType.SLOPE.name, 0.0)
+                    put(SensorType.VERTICAL_SPEED.name, 0)
+                    put(SensorType.ASCENT.name, 0.0)
+                    put(SensorType.DESCENT.name, 0.0)
+                    put(SensorType.WORLD_YAW_RATE_radps.name, yaw)
+                }
+                samplesDb.insert(tableName, null, cv)
+            }
+            samplesDb.setTransactionSuccessful()
+        } finally {
+            samplesDb.endTransaction()
+        }
+
+        // Verify deterministic legacy fallback classification before running full recomputeWorkout()
+        val syntheticRows = (0 until 45).map { sec ->
+            ErtsPostWorkoutRecomputer.RawSampleRow(
+                rowId = sec + 1L,
+                timestampMs = startTs + sec * 1000L,
+                latitude = 48.66 + sec * 0.00004,
+                longitude = 9.0545,
+                speedMps = when {
+                    sec < 15 -> 6.5
+                    sec < 25 -> 1.1
+                    sec < 35 -> 0.0
+                    else -> 7.0
+                },
+                bearingDeg = 0.0,
+                accuracyM = 3.0,
+                yawRateRadPerSec = when {
+                    sec < 15 -> if (sec % 2 == 0) 0.55 else -0.55
+                    sec < 25 -> 0.16
+                    sec < 35 -> 0.0
+                    else -> 0.01
+                },
+                rawAltitude = 410.0,
+                referenceAltitude = null,
+                wheelSpeedMps = null
+            )
+        }
+        val resolved = ErtsPostWorkoutRecomputer.resolveCarriageModesAndFilterBaro(syntheticRows)
+        assertEquals(PhoneCarriageMode.BIKE_FRONT_POCKET, resolved[7].effectiveCarriageMode)
+        assertEquals(PhoneCarriageMode.WALKING_TRANSITION, resolved[20].effectiveCarriageMode)
+        assertEquals(PhoneCarriageMode.STATIONARY, resolved[30].effectiveCarriageMode)
+        assertEquals(PhoneCarriageMode.BIKE_HANDLEBAR, resolved[40].effectiveCarriageMode)
+
+        assertTrue(ErtsPostWorkoutRecomputer.recomputeWorkout(context, workoutId))
     }
 }

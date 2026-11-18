@@ -27,8 +27,11 @@ import android.location.LocationManager
 import android.util.Log
 import androidx.core.content.ContextCompat
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
+import com.atrainingtracker.banalservice.odometry.PhoneCarriageMode
+import com.atrainingtracker.banalservice.odometry.SportContextHint
 import com.atrainingtracker.banalservice.sensor.MySensorManager
 import com.atrainingtracker.banalservice.sensor.SensorType
+import io.mockk.verify
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper
 import io.mockk.every
 import io.mockk.mockk
@@ -680,5 +683,454 @@ class SpeedAndLocationDevice_ATTFusedTest {
         assertEquals(2, device.yawRateWindowSizeForTest())
         device.shutDown()
         assertEquals(0, device.yawRateWindowSizeForTest())
+    }
+
+    // TST-FIL-028.1 & TST-FIL-028.3: Activity & Carriage Mode live classification, smooth filter adaptation, and clean reset
+    @Test
+    fun testActivityAndCarriageModeSensor_adaptsSmoothlyAndResets_tstFil028_1_3() {
+        val device = object : SpeedAndLocationDevice_ATTFused(mockContext, mockSensorManager) {
+            fun callAccumulatorsReset() = onAccumulatorsReset()
+        }
+        device.setSportContextHintForTesting(SportContextHint.CYCLING)
+        assertEquals(PhoneCarriageMode.UNKNOWN.code, device.mActivityAndCarriageModeSensor?.value)
+        assertEquals(1.0, device.effectiveGyroNoiseScaleForTest(), 1e-6)
+        assertEquals(1.0, device.effectiveYawWindowSecForTest(), 1e-6)
+
+        // Feed 50-Hz front pocket pedaling motion over 5s
+        device.onWheelMeasurement(speedMps = 7.0, variance = 0.05, timestampMs = 1000L)
+        for (step in 0..250) {
+            val tMs = 1000L + step * 20L
+            val phase = 2.0 * PI * 1.35 * (step * 0.02)
+            val pitchRad = Math.toRadians(60.0 + 20.0 * kotlin.math.sin(phase))
+            val half = pitchRad * 0.5
+            val rotVec = floatArrayOf(kotlin.math.sin(half).toFloat(), 0f, 0f, kotlin.math.cos(half).toFloat())
+            val yawRate = (0.78 * kotlin.math.sin(phase)).toFloat()
+            if (step % 10 == 0) {
+                device.ingestBarometerAltitudeForTesting(300.0 + 0.55 * kotlin.math.sin(PI * step * 0.02), tMs)
+            }
+            if (step % 50 == 0) {
+                device.onWheelMeasurement(speedMps = 7.0, variance = 0.05, timestampMs = tMs)
+            }
+            device.ingestImuMeasurement(rotVec, floatArrayOf(0f, 0f, yawRate), dtSec = 0.02, timestampMs = tMs)
+        }
+
+        assertEquals(PhoneCarriageMode.BIKE_FRONT_POCKET.code, device.mActivityAndCarriageModeSensor?.value)
+        assertTrue(
+            "Q_GYRO noise scale must increase smoothly for BIKE_FRONT_POCKET (was ${device.effectiveGyroNoiseScaleForTest()})",
+            device.effectiveGyroNoiseScaleForTest() > 15.0
+        )
+        assertTrue(
+            "Yaw window must widen smoothly toward 1.75 s for BIKE_FRONT_POCKET (was ${device.effectiveYawWindowSecForTest()})",
+            device.effectiveYawWindowSecForTest() > 1.4
+        )
+
+        device.callAccumulatorsReset()
+        assertEquals(PhoneCarriageMode.UNKNOWN.code, device.mActivityAndCarriageModeSensor?.value)
+        assertEquals(1.0, device.effectiveGyroNoiseScaleForTest(), 1e-6)
+        assertEquals(1.0, device.effectiveYawWindowSecForTest(), 1e-6)
+    }
+
+    // TST-FIL-028.1: TYPE_STEP_DETECTOR permission gating, SecurityException guard & plain-JVM safety
+    @Test
+    fun testStepDetectorDefensiveGating_handlesDeniedNullAndSecurityException_tstFil028_1() {
+        val mockStepSensor = mockk<Sensor>(relaxed = true) {
+            every { type } returns Sensor.TYPE_STEP_DETECTOR
+        }
+
+        // 1. Default plain-JVM path (SDK_INT == 0) safely skips STEP_DETECTOR registration without crash
+        every { mockHardwareSensorManager.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR) } returns mockStepSensor
+        val deviceDefaultJvm = SpeedAndLocationDevice_ATTFused(mockContext, mockSensorManager)
+        assertNotNull(deviceDefaultJvm.mActivityAndCarriageModeSensor)
+        verify(exactly = 0) { mockHardwareSensorManager.registerListener(any(), mockStepSensor, any()) }
+
+        // 2. When permission granted AND hardware registerListener throws SecurityException, device survives cleanly
+        every {
+            mockHardwareSensorManager.registerListener(any(), mockStepSensor, any())
+        } throws SecurityException("Mock denied")
+        val devicePermittedThrows = object : SpeedAndLocationDevice_ATTFused(mockContext, mockSensorManager) {
+            override fun hasActivityRecognitionPermission(): Boolean = true
+        }
+        assertNotNull(devicePermittedThrows.mActivityAndCarriageModeSensor)
+    }
+
+    private fun createMutableLocation(
+        lat: Double,
+        lon: Double,
+        acc: Float,
+        timeMs: Long,
+        hasSpeedFlag: Boolean,
+        speedMps: Float = 0.0f,
+        hasBearingFlag: Boolean = false,
+        bearingDeg: Float = 0.0f
+    ): Location {
+        var curLat = lat
+        var curLon = lon
+        var curAcc = acc
+        var curSpeed = speedMps
+        var curBearing = bearingDeg
+        return mockk(relaxed = true) {
+            every { latitude } answers { curLat }
+            every { latitude = any() } answers { curLat = firstArg() }
+            every { longitude } answers { curLon }
+            every { longitude = any() } answers { curLon = firstArg() }
+            every { hasAccuracy() } returns true
+            every { accuracy } answers { curAcc }
+            every { accuracy = any() } answers { curAcc = firstArg() }
+            every { hasSpeed() } returns hasSpeedFlag
+            every { speed } answers { curSpeed }
+            every { speed = any() } answers { curSpeed = firstArg() }
+            every { hasBearing() } returns hasBearingFlag
+            every { bearing } answers { curBearing }
+            every { bearing = any() } answers { curBearing = firstArg() }
+            every { time } returns timeMs
+            every { distanceTo(any()) } answers {
+                val other = firstArg<Location>()
+                val dLatM = Math.toRadians(other.latitude - curLat) * 6371000.0
+                val dLonM = Math.toRadians(other.longitude - curLon) * 6371000.0 *
+                    kotlin.math.cos(Math.toRadians((curLat + other.latitude) * 0.5))
+                kotlin.math.hypot(dLatM, dLonM).toFloat()
+            }
+        }
+    }
+
+    private fun angularDiffDeg(a: Double, b: Double): Double {
+        var d = ((a - b) % 360.0 + 360.0) % 360.0
+        if (d > 180.0) d = 360.0 - d
+        return d
+    }
+
+    // TST-FIL-028.3: Handheld glance spike gating + live chord heading + Doppler/stationary re-anchoring
+    @Test
+    fun testHandheldGlanceGatingAndRunningChordHeading_tstFil028_3() {
+        val device = SpeedAndLocationDevice_ATTFused(mockContext, mockSensorManager)
+        device.setSportContextHintForTesting(SportContextHint.RUNNING)
+
+        // 1. Build RUN_HANDHELD classification with step cadence + forearm yaw + glance baseline hold
+        for (step in 0..160) {
+            val tMs = 1000L + step * 20L
+            val phase = 2.0 * PI * 1.45 * (step * 0.02)
+            val pitchDeg = if (step >= 115) 18.0 else 70.0 + 22.0 * kotlin.math.sin(phase)
+            val half = Math.toRadians(pitchDeg) * 0.5
+            val rotVec = floatArrayOf(kotlin.math.sin(half).toFloat(), 0f, 0f, kotlin.math.cos(half).toFloat())
+            if (step % 17 == 0) device.ingestStepEventForTesting(tMs)
+            if (step % 10 == 0) device.ingestBarometerAltitudeForTesting(300.0 + 0.45 * kotlin.math.sin(PI * step * 0.02), tMs)
+            device.ingestImuMeasurement(rotVec, floatArrayOf(0f, 0f, (0.85 * kotlin.math.sin(phase)).toFloat()), dtSec = 0.02, timestampMs = tMs)
+        }
+        val yawBeforeSpike = device.mWorldYawRateSensor?.value ?: 0.0
+        val glanceHalf = Math.toRadians(18.0) * 0.5
+        device.ingestImuMeasurement(
+            floatArrayOf(kotlin.math.sin(glanceHalf).toFloat(), 0f, 0f, kotlin.math.cos(glanceHalf).toFloat()),
+            floatArrayOf(0f, 0f, 3.2f),
+            dtSec = 0.02,
+            timestampMs = 4250L
+        )
+        val yawAfterSpike = device.mWorldYawRateSensor?.value ?: 0.0
+        assertEquals("Glance gyro transient must be gated from WORLD_YAW_RATE window", yawBeforeSpike, yawAfterSpike, 1e-6)
+        assertEquals(3.0, com.atrainingtracker.banalservice.odometry.UnicycleOdometryEkf.MIN_DOPPLER_SPEED_MPS, 1e-9)
+
+        val degPerMeterLat = 1.0 / (Math.toRadians(1.0) * 6371000.0)
+        val degPerMeterLon = degPerMeterLat / kotlin.math.cos(Math.toRadians(48.0))
+        var lat = 48.0
+        var lon = 11.0
+
+        // 2. Establish East (90 deg) track via Doppler (> MIN_DOPPLER_SPEED_MPS = 3.0) which also keeps chord anchor fresh
+        for (sec in 5L..7L) {
+            val tMs = sec * 1000L
+            for (sub in 1..50) {
+                val subMs = (sec - 1L) * 1000L + sub * 20L
+                val phase = 2.0 * PI * 1.45 * (sub * 0.02)
+                val half = Math.toRadians(70.0 + 22.0 * kotlin.math.sin(phase)) * 0.5
+                if (sub % 17 == 0) device.ingestStepEventForTesting(subMs)
+                device.ingestImuMeasurement(
+                    floatArrayOf(kotlin.math.sin(half).toFloat(), 0f, 0f, kotlin.math.cos(half).toFloat()),
+                    floatArrayOf(0f, 0f, 0f),
+                    dtSec = 0.02,
+                    timestampMs = subMs
+                )
+            }
+            lon += 4.0 * degPerMeterLon
+            device.onLocationChanged(
+                createMutableLocation(lat, lon, acc = 4.0f, timeMs = tMs, hasSpeedFlag = true, speedMps = 4.0f, hasBearingFlag = true, bearingDeg = 90.0f)
+            )
+        }
+        assertEquals(PhoneCarriageMode.RUN_HANDHELD.code, device.mActivityAndCarriageModeSensor?.value)
+        assertTrue("Doppler fixes must orient EKF East (~90 deg, was ${device.ekf.bearingDeg})", angularDiffDeg(device.ekf.bearingDeg, 90.0) < 15.0)
+
+        // 3. Turn 90 deg North (0 deg) at slow jog 1.8 m/s without Location.hasBearing() -> chord heading must pull heading North
+        for (sec in 8L..18L) {
+            val tMs = sec * 1000L
+            for (sub in 1..50) {
+                val subMs = (sec - 1L) * 1000L + sub * 20L
+                val phase = 2.0 * PI * 1.45 * (sub * 0.02)
+                val half = Math.toRadians(70.0 + 22.0 * kotlin.math.sin(phase)) * 0.5
+                if (sub % 17 == 0) device.ingestStepEventForTesting(subMs)
+                device.ingestImuMeasurement(
+                    floatArrayOf(kotlin.math.sin(half).toFloat(), 0f, 0f, kotlin.math.cos(half).toFloat()),
+                    floatArrayOf(0f, 0f, 0f),
+                    dtSec = 0.02,
+                    timestampMs = subMs
+                )
+            }
+            lat += 1.8 * degPerMeterLat
+            device.onLocationChanged(
+                createMutableLocation(lat, lon, acc = 4.0f, timeMs = tMs, hasSpeedFlag = true, speedMps = 1.8f, hasBearingFlag = false)
+            )
+        }
+        assertTrue(
+            "Slow 1.8 m/s North leg without Doppler bearing must update chord heading toward North (~0 deg, was ${device.ekf.bearingDeg})",
+            angularDiffDeg(device.ekf.bearingDeg, 0.0) < 35.0
+        )
+
+        // 4. Stop stationary for 25 s -> clears chord anchor so prolonged stop cannot lock out post-stop chord heading
+        val flatRotVec = floatArrayOf(0f, 0f, 0f, 1f)
+        for (sec in 19L..43L) {
+            val tMs = sec * 1000L
+            for (sub in 1..5) {
+                device.ingestImuMeasurement(flatRotVec, floatArrayOf(0f, 0f, 0f), dtSec = 0.2, timestampMs = tMs - 1000L + sub * 200L)
+            }
+            device.onLocationChanged(
+                createMutableLocation(lat, lon, acc = 4.0f, timeMs = tMs, hasSpeedFlag = true, speedMps = 0.0f, hasBearingFlag = false)
+            )
+        }
+        assertEquals(PhoneCarriageMode.STATIONARY.code, device.mActivityAndCarriageModeSensor?.value)
+
+        // 5. Depart West (270 deg) at 1.8 m/s without bearing -> must re-anchor cleanly and turn bearing West (~270 deg)
+        for (sec in 44L..58L) {
+            val tMs = sec * 1000L
+            for (sub in 1..50) {
+                val subMs = (sec - 1L) * 1000L + sub * 20L
+                val phase = 2.0 * PI * 1.45 * (sub * 0.02)
+                val half = Math.toRadians(70.0 + 22.0 * kotlin.math.sin(phase)) * 0.5
+                if (sub % 17 == 0) device.ingestStepEventForTesting(subMs)
+                device.ingestImuMeasurement(
+                    floatArrayOf(kotlin.math.sin(half).toFloat(), 0f, 0f, kotlin.math.cos(half).toFloat()),
+                    floatArrayOf(0f, 0f, 0f),
+                    dtSec = 0.02,
+                    timestampMs = subMs
+                )
+            }
+            lon -= 1.8 * degPerMeterLon
+            device.onLocationChanged(
+                createMutableLocation(lat, lon, acc = 4.0f, timeMs = tMs, hasSpeedFlag = true, speedMps = 1.8f, hasBearingFlag = false)
+            )
+        }
+        assertTrue(
+            "Post-stop Westward 1.8 m/s departure must not suffer stale-anchor lockout and must steer heading West (~270 deg, was ${device.ekf.bearingDeg})",
+            angularDiffDeg(device.ekf.bearingDeg, 270.0) < 35.0
+        )
+    }
+
+    // TST-FIL-028.3 (Gate 4 Rev 1): Displacement without Location.hasSpeed(), wheel, or step detector breaks STATIONARY
+    @Test
+    fun testMovementWithoutLocationHasSpeed_breaksStationaryAndAdvancesEkf_tstFil028_3() {
+        val device = SpeedAndLocationDevice_ATTFused(mockContext, mockSensorManager)
+        val speedSensor = device.sensors.first { it.sensorType == SensorType.SPEED_mps }
+        val degPerMeterLat = 1.0 / (Math.toRadians(1.0) * 6371000.0)
+        var lat = 48.0
+        val lon = 11.0
+        val flatRotVec = floatArrayOf(0f, 0f, 0f, 1f)
+
+        // 1. Stationary baseline without Location.hasSpeed(), wheel sensor, or step detector
+        for (sec in 1L..5L) {
+            val tMs = sec * 1000L
+            for (sub in 1..10) {
+                device.ingestImuMeasurement(flatRotVec, floatArrayOf(0f, 0f, 0f), dtSec = 0.1, timestampMs = tMs - 1000L + sub * 100L)
+            }
+            device.onLocationChanged(
+                createMutableLocation(lat, lon, acc = 4.0f, timeMs = tMs, hasSpeedFlag = false, hasBearingFlag = false)
+            )
+        }
+        assertEquals(PhoneCarriageMode.STATIONARY.code, device.mActivityAndCarriageModeSensor?.value)
+        assertEquals(0.0, device.ekf.speedMps, 1e-6)
+        assertTrue(device.isStationaryPinned)
+
+        // 2. Genuine movement North at 2.2 m/s WITHOUT Location.hasSpeed(), wheel sensor, or step detector
+        for (sec in 6L..15L) {
+            val tMs = sec * 1000L
+            for (sub in 1..25) {
+                val subMs = (sec - 1L) * 1000L + sub * 40L
+                val phase = 2.0 * PI * 0.85 * (sub * 0.04)
+                val half = Math.toRadians(65.0 + 18.0 * kotlin.math.sin(phase)) * 0.5
+                device.ingestImuMeasurement(
+                    floatArrayOf(kotlin.math.sin(half).toFloat(), 0f, 0f, kotlin.math.cos(half).toFloat()),
+                    floatArrayOf(0f, 0f, (0.35 * kotlin.math.sin(phase)).toFloat()),
+                    dtSec = 0.04,
+                    timestampMs = subMs
+                )
+            }
+            lat += 2.2 * degPerMeterLat
+            device.onLocationChanged(
+                createMutableLocation(lat, lon, acc = 4.0f, timeMs = tMs, hasSpeedFlag = false, hasBearingFlag = false)
+            )
+        }
+
+        val finalMode = PhoneCarriageMode.fromCode(device.mActivityAndCarriageModeSensor?.value)
+        assertTrue(
+            "Genuine coordinate displacement without Location.hasSpeed() must break STATIONARY (mode=$finalMode)",
+            finalMode != PhoneCarriageMode.STATIONARY && finalMode != PhoneCarriageMode.UNKNOWN
+        )
+        assertTrue("EKF speed must rise above 0 without Doppler speed (was ${device.ekf.speedMps})", device.ekf.speedMps > 1.0)
+        assertTrue("EKF North displacement must track genuine motion (was ${device.ekf.northMeters})", device.ekf.northMeters > 10.0)
+        assertTrue("Base stationary pinning must release", !device.isStationaryPinned)
+        val emittedSpeedMps = (speedSensor.value as? Number)?.toDouble() ?: 0.0
+        assertTrue("Published SPEED_mps sensor must reflect movement (was $emittedSpeedMps)", emittedSpeedMps > 1.0)
+    }
+
+    // TST-FIL-028.3 (Stage 6 Bounce 1): Moving -> Stationary without Location.hasSpeed() drops 15-s ghost tail and pins ZUPT
+    @Test
+    fun testMovingToStationaryWithoutLocationHasSpeed_stopsGhostTailAndPinsZupt_tstFil028_3() {
+        val device = SpeedAndLocationDevice_ATTFused(mockContext, mockSensorManager)
+        val speedSensor = device.sensors.first { it.sensorType == SensorType.SPEED_mps }
+        val degPerMeterLat = 1.0 / (Math.toRadians(1.0) * 6371000.0)
+        var lat = 48.0
+        val lon = 11.0
+        val flatRotVec = floatArrayOf(0f, 0f, 0f, 1f)
+
+        // 1. Run North at 3.2 m/s for 10 s WITHOUT Location.hasSpeed(), wheel sensor, or step detector
+        for (sec in 1L..10L) {
+            val tMs = sec * 1000L
+            for (sub in 1..25) {
+                val subMs = (sec - 1L) * 1000L + sub * 40L
+                val phase = 2.0 * PI * 1.45 * (sub * 0.04)
+                val half = Math.toRadians(70.0 + 18.0 * kotlin.math.sin(phase)) * 0.5
+                device.ingestImuMeasurement(
+                    floatArrayOf(kotlin.math.sin(half).toFloat(), 0f, 0f, kotlin.math.cos(half).toFloat()),
+                    floatArrayOf(0f, 0f, (0.45 * kotlin.math.sin(phase)).toFloat()),
+                    dtSec = 0.04,
+                    timestampMs = subMs
+                )
+            }
+            lat += 3.2 * degPerMeterLat
+            device.onLocationChanged(
+                createMutableLocation(lat, lon, acc = 4.0f, timeMs = tMs, hasSpeedFlag = false, hasBearingFlag = false)
+            )
+        }
+        assertTrue("Device must reflect moving EKF speed before stop (was ${device.ekf.speedMps})", device.ekf.speedMps > 1.5)
+
+        // 2. Stop completely at final coordinate for 6 s (while pre-stop track is still within 15 s lookback!)
+        for (sec in 11L..16L) {
+            val tMs = sec * 1000L
+            for (sub in 1..10) {
+                device.ingestImuMeasurement(
+                    flatRotVec,
+                    floatArrayOf(0f, 0f, 0f),
+                    dtSec = 0.1,
+                    timestampMs = tMs - 1000L + sub * 100L
+                )
+            }
+            device.onLocationChanged(
+                createMutableLocation(lat, lon, acc = 4.0f, timeMs = tMs, hasSpeedFlag = false, hasBearingFlag = false)
+            )
+        }
+
+        assertEquals(
+            "Confirmed >= 3 s standstill without Doppler must commit STATIONARY despite pre-stop fixes in 15 s lookback",
+            PhoneCarriageMode.STATIONARY.code,
+            device.mActivityAndCarriageModeSensor?.value
+        )
+        assertEquals("ZUPT must pin EKF speed to 0.0 m/s", 0.0, device.ekf.speedMps, 1e-6)
+        assertEquals("Published SPEED_mps sensor must clamp to 0.0 m/s", 0.0, (speedSensor.value as? Number)?.toDouble() ?: -1.0, 1e-6)
+    }
+
+    // TST-FIL-028.3 (Stage 6 Bounce 1): 50-Hz gyro classify throttle, ~1-Hz sensor emission cadence & dt-invariant smoothing
+    @Test
+    fun testGyroClassificationThrottle_andDtInvariantProfileSmoothing_tstFil028_3() {
+        // Part A: Verify 50-Hz gyro stream throttles classify() evaluations and mode emissions
+        val throttledDevice = SpeedAndLocationDevice_ATTFused(mockContext, mockSensorManager)
+        throttledDevice.setSportContextHintForTesting(SportContextHint.CYCLING)
+        throttledDevice.onWheelMeasurement(speedMps = 7.0, variance = 0.05, timestampMs = 1000L)
+        for (step in 0..250) {
+            val tMs = 1000L + step * 20L
+            val phase = 2.0 * PI * 1.35 * (step * 0.02)
+            val half = Math.toRadians(60.0 + 20.0 * kotlin.math.sin(phase)) * 0.5
+            if (step % 10 == 0) {
+                throttledDevice.ingestBarometerAltitudeForTesting(300.0 + 0.55 * kotlin.math.sin(PI * step * 0.02), tMs)
+            }
+            if (step == 150) {
+                throttledDevice.onWheelMeasurement(speedMps = 7.0, variance = 0.05, timestampMs = tMs)
+            }
+            throttledDevice.ingestImuMeasurement(
+                floatArrayOf(kotlin.math.sin(half).toFloat(), 0f, 0f, kotlin.math.cos(half).toFloat()),
+                floatArrayOf(0f, 0f, (0.78 * kotlin.math.sin(phase)).toFloat()),
+                dtSec = 0.02,
+                timestampMs = tMs
+            )
+        }
+        assertEquals(PhoneCarriageMode.BIKE_FRONT_POCKET.code, throttledDevice.mActivityAndCarriageModeSensor?.value)
+        assertTrue(
+            "50-Hz gyro loop must throttle classify() calls (>= 250 ms), saw ${throttledDevice.classifyEvaluationCountForTest()}",
+            throttledDevice.classifyEvaluationCountForTest() in 5..25
+        )
+        assertTrue(
+            "Mode sensor emissions over 5 s must stay <= 10 (transition + ~1 Hz), saw ${throttledDevice.modeEmissionCountForTest()}",
+            throttledDevice.modeEmissionCountForTest() in 2..10
+        )
+
+        // Part B: Verify 50-Hz gyro callbacks and 1-Hz GNSS callbacks follow identical dt-exponential convergence
+        val device50Hz = SpeedAndLocationDevice_ATTFused(mockContext, mockSensorManager)
+        val device1Hz = SpeedAndLocationDevice_ATTFused(mockContext, mockSensorManager)
+        device50Hz.setSportContextHintForTesting(SportContextHint.CYCLING)
+        device1Hz.setSportContextHintForTesting(SportContextHint.CYCLING)
+
+        fun seedPocketEvidence(c: com.atrainingtracker.banalservice.odometry.PhoneCarriageClassifier, tMs: Long, sec: Double) {
+            val phase = 2.0 * PI * 1.35 * sec
+            val half = Math.toRadians(60.0 + 20.0 * kotlin.math.sin(phase)) * 0.5
+            c.ingestRotationVector(floatArrayOf(kotlin.math.sin(half).toFloat(), 0f, 0f, kotlin.math.cos(half).toFloat()), tMs)
+            c.ingestGyro(0.78 * kotlin.math.sin(phase), kotlin.math.abs(0.78 * kotlin.math.sin(phase)), tMs)
+            if (tMs % 200L == 0L) c.ingestBarometerAltitude(300.0 + 0.55 * kotlin.math.sin(PI * sec), tMs)
+            if (tMs % 1000L == 0L) {
+                c.ingestGnssSpeed(7.0, 90.0, 4.0, tMs)
+                c.ingestWheelSpeed(7.0, tMs)
+            }
+        }
+
+        // Seed up to t = 3000 ms so both devices establish BIKE_FRONT_POCKET baseline at t = 3000 ms
+        for (step in 0..99) {
+            val tMs = 1000L + step * 20L
+            seedPocketEvidence(device50Hz.carriageClassifier, tMs, step * 0.02)
+            seedPocketEvidence(device1Hz.carriageClassifier, tMs, step * 0.02)
+        }
+        val anchorLoc = createMutableLocation(48.0, 11.0, acc = 4.0f, timeMs = 3000L, hasSpeedFlag = true, speedMps = 7.0f, hasBearingFlag = true, bearingDeg = 90.0f)
+        seedPocketEvidence(device50Hz.carriageClassifier, 3000L, 2.0)
+        seedPocketEvidence(device1Hz.carriageClassifier, 3000L, 2.0)
+        device50Hz.onLocationChanged(anchorLoc)
+        device1Hz.onLocationChanged(
+            createMutableLocation(48.0, 11.0, acc = 4.0f, timeMs = 3000L, hasSpeedFlag = true, speedMps = 7.0f, hasBearingFlag = true, bearingDeg = 90.0f)
+        )
+        assertEquals(PhoneCarriageMode.BIKE_FRONT_POCKET.code, device50Hz.mActivityAndCarriageModeSensor?.value)
+        assertEquals(PhoneCarriageMode.BIKE_FRONT_POCKET.code, device1Hz.mActivityAndCarriageModeSensor?.value)
+
+        // Advance both from t = 3000 -> 4000 ms (1.0 s): device50Hz at 50 Hz IMU, device1Hz with 1 Hz GNSS fix only
+        for (step in 1..50) {
+            val tMs = 3000L + step * 20L
+            val sec = 2.0 + step * 0.02
+            val phase = 2.0 * PI * 1.35 * sec
+            val half = Math.toRadians(60.0 + 20.0 * kotlin.math.sin(phase)) * 0.5
+            val rotVec = floatArrayOf(kotlin.math.sin(half).toFloat(), 0f, 0f, kotlin.math.cos(half).toFloat())
+            if (tMs % 200L == 0L) {
+                device50Hz.ingestBarometerAltitudeForTesting(300.0 + 0.55 * kotlin.math.sin(PI * sec), tMs)
+                device1Hz.ingestBarometerAltitudeForTesting(300.0 + 0.55 * kotlin.math.sin(PI * sec), tMs)
+            }
+            device50Hz.ingestImuMeasurement(rotVec, floatArrayOf(0f, 0f, (0.78 * kotlin.math.sin(phase)).toFloat()), dtSec = 0.02, timestampMs = tMs)
+            // Keep device1Hz classifier fed with identical cues while callbacks arrive only at 1 Hz
+            seedPocketEvidence(device1Hz.carriageClassifier, tMs, sec)
+        }
+        val degPerMeterLon = 1.0 / (Math.toRadians(1.0) * 6371000.0 * kotlin.math.cos(Math.toRadians(48.0)))
+        device1Hz.onLocationChanged(
+            createMutableLocation(48.0, 11.0 + 7.0 * degPerMeterLon, acc = 4.0f, timeMs = 4000L, hasSpeedFlag = true, speedMps = 7.0f, hasBearingFlag = true, bearingDeg = 90.0f)
+        )
+
+        assertEquals(
+            "50-Hz and 1-Hz callback cadences must produce identical dt-exponential gyro noise scale",
+            device1Hz.effectiveGyroNoiseScaleForTest(),
+            device50Hz.effectiveGyroNoiseScaleForTest(),
+            0.05
+        )
+        assertEquals(
+            "50-Hz and 1-Hz callback cadences must produce identical dt-exponential yaw window duration",
+            device1Hz.effectiveYawWindowSecForTest(),
+            device50Hz.effectiveYawWindowSecForTest(),
+            0.02
+        )
     }
 }

@@ -567,4 +567,77 @@ class ExtendedRtsOdometrySmootherTest {
             }
         }
     }
+
+    // TST-FIL-028.4: Carriage-aware ERTS stationary pinning (tolerates 0.18 m/s GPS jitter) & handlebar vs pocket scaling
+    @Test
+    fun testCarriageModeAwareErtsReplay_pinsStationaryJitterAndAdaptsGyroScaling_tstFil028_4() {
+        val samples = mutableListOf<RawOdometrySample>()
+        var tMs = 5_000_000L
+        var east = 0.0
+
+        // 0..19: Bike Front Pocket riding East at 6 m/s with strong thigh yaw alias
+        for (i in 0 until 20) {
+            val (lat, lon) = ExtendedRtsOdometrySmoother.enuToLatLng(east, 0.0, originLat, originLon)
+            val yaw = 0.65 * kotlin.math.sin(2.0 * PI * 0.25 * i)
+            samples.add(
+                RawOdometrySample(
+                    timestampMs = tMs,
+                    latitude = lat,
+                    longitude = lon,
+                    speedMps = 6.0,
+                    bearingDeg = 90.0,
+                    accuracyMeters = 4.0,
+                    worldYawRateRadPerSec = yaw,
+                    carriageMode = PhoneCarriageMode.BIKE_FRONT_POCKET
+                )
+            )
+            tMs += 1000L
+            east += 6.0
+        }
+
+        // 20..34: Stationary bakery counter with 0.18 m/s GPS drift jitter (above 0.05 raw threshold, below 0.25!)
+        val (stopLat, stopLon) = ExtendedRtsOdometrySmoother.enuToLatLng(east, 0.0, originLat, originLon)
+        for (i in 20 until 35) {
+            samples.add(
+                RawOdometrySample(
+                    timestampMs = tMs,
+                    latitude = stopLat,
+                    longitude = stopLon,
+                    speedMps = 0.18,
+                    bearingDeg = null,
+                    accuracyMeters = 18.0,
+                    worldYawRateRadPerSec = 0.0,
+                    carriageMode = PhoneCarriageMode.STATIONARY
+                )
+            )
+            tMs += 1000L
+        }
+
+        // 35..54: Remount cycling in Bike Handlebar mode
+        for (i in 35 until 55) {
+            val (lat, lon) = ExtendedRtsOdometrySmoother.enuToLatLng(east, 0.0, originLat, originLon)
+            samples.add(
+                RawOdometrySample(
+                    timestampMs = tMs,
+                    latitude = lat,
+                    longitude = lon,
+                    speedMps = 7.0,
+                    bearingDeg = 90.0,
+                    accuracyMeters = 3.0,
+                    worldYawRateRadPerSec = 0.0,
+                    carriageMode = PhoneCarriageMode.BIKE_HANDLEBAR
+                )
+            )
+            tMs += 1000L
+            east += 7.0
+        }
+
+        val smoothed = ExtendedRtsOdometrySmoother.smoothSamples(samples, initialHeadingRad = 0.0)
+        assertEquals(55, smoothed.size)
+        for (i in 20 until 35) {
+            assertEquals("Explicit STATIONARY mode must pin 0.18 m/s GPS jitter at $i", 0.0, smoothed[i].speedMps, 1e-9)
+            assertEquals("Explicit STATIONARY stop deltaDistance must be 0.0 at $i", 0.0, smoothed[i].deltaDistanceMeters, 1e-9)
+        }
+        assertTrue("Handlebar post-stop riding speed must recover cleanly", smoothed[50].speedMps > 5.0)
+    }
 }

@@ -156,6 +156,7 @@ public enum DeviceType {
                 break;
 
             case WORLD_YAW_RATE_radps:
+            case ACTIVITY_AND_CARRIAGE_MODE:
                 deviceTypes.add(DeviceType.SPEED_AND_LOCATION_ATT_FUSED);
                 break;
 

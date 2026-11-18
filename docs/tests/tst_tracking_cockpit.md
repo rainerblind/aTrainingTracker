@@ -1,14 +1,14 @@
 # Living Test Specification: Tracking & Live Sensor Cockpit
 
 **Document ID**: `DOC-TST-TRK`  
-**Version**: 1.0.44  
+**Version**: 1.0.49  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Tests**: 152
+**Total Tests**: 153
 
 ---
 
@@ -3501,6 +3501,27 @@
   5. *9-Locale Raw Barometer `filterSlewOnly()`, `2.0 m` Hysteresis & Governance Hygiene (`TST-FIL-027.5`, `ExtendedRtsAltitudeSlopeSmootherTest.kt`, `ErtsPostWorkoutRecomputerTest.kt`, `SourceTextReadingAuditContractTest.kt`)*:
      • Test non-German/9-locale barometer column names (e.g., `"ALTITUDE (Altitude from Pressure)"`, `"ALTITUDE (Höhe aus Luftdruck)"`, `"ALTITUDE (Altitudine da pressione)"`) with pocket compression spikes (`-8.05 m / +6.87 m`) and verify `BarometricAltitudeFilter.filterSlewOnly()` pre-filtering + `ExtendedRtsAltitudeSlopeSmoother` `2.0 m` hysteresis (`ASCENT_DESCENT_HYSTERESIS_METERS = 2.0`) eliminates phantom climb while keeping raw device columns untouched, `WorkoutRepository.kt <= 5,117` LoC untouched, `0` new `src/main` reads (`REQ-PRO-049.1`), and `N/A - no UI strings`.
 
+### TST-FIL-028: **Activity & Phone Carriage Mode Classification, 1-Hz Persistence & Adaptive EKF/ERTS Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Tickets**: `ATT-8890`
+- **Requirement(s)**: `REQ-FIL-028` (`REQ-FIL-028.1`..`REQ-FIL-028.5`)
+- **Component**: `app/src/test/java/com/atrainingtracker/banalservice/odometry/PhoneCarriageClassifierTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/sensor/formater/PhoneCarriageModeFormatterTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/devices/SpeedAndLocationDevice_ATTFusedTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/devices/AltitudeAndSlopeDevice_ATTFusedTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/odometry/UnicycleOdometryEkfTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/odometry/KinematicAltitudeSlopeEkfTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/odometry/ExtendedRtsOdometrySmootherTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/odometry/ExtendedRtsAltitudeSlopeSmootherTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/database/ErtsPostWorkoutRecomputerTest.kt`, `SensorCategoryAndSelectorContractTest.kt`, `SensorTypeUnitsContractTest.kt`, `SensorFilterDefaultsTest.kt`, `TranslationParityTest.kt`, `MergedManifestFgsAuditTest.kt`, `PermissionOnboardingSheetContractTest.kt`, `SourceTextReadingAuditContractTest.kt`
+- **Test Type**: Unit
+- **Verification Method**: Unit
+- **Procedure**:
+  1. *All-9-Mode `PhoneCarriageClassifier` Hysteresis, `Zum Bäcker` Dismount & Missing-Sensor Graceful Fallback (`TST-FIL-028.1`, `PhoneCarriageClassifierTest.kt`, `SpeedAndLocationDevice_ATTFusedTest.kt`)*:
+     • Feed synthetic 50-Hz IMU/rotation-vector/barometer/step/speed/cadence profiles covering all 9 `PhoneCarriageMode` states (`UNKNOWN(-1)`, `STATIONARY(0)`, `WALKING_TRANSITION(1)`, `BIKE_HANDLEBAR(2)`, `BIKE_JERSEY_BACK(3)`, `BIKE_FRONT_POCKET(4)`, `RUN_WAIST_HIP(5)`, `RUN_BICEP_ARM(6)`, `RUN_HANDHELD(7)`) plus a `Zum Bäcker` `Ride -> Walk -> Stationary -> Walk -> Ride` transition timeline; assert mode classification accuracy, dwell hysteresis stability against transient bumps, and fast dismount/remount responsiveness.
+     • Simulate `ACTIVITY_RECOGNITION` denied, `Sensor.TYPE_STEP_DETECTOR == null`, `TYPE_ROTATION_VECTOR == null`, `TYPE_PRESSURE == null`, and plain-JVM `SDK_INT == 0`; assert zero `SecurityException`/NPE crashes and deterministic fallback mode classification.
+  2. *1-Hz `SensorType.ACTIVITY_AND_CARRIAGE_MODE` Persistence, CSV Export, Formatter & Reachability Contracts (`TST-FIL-028.2`, `SensorCategoryAndSelectorContractTest.kt`, `SensorTypeUnitsContractTest.kt`, `SensorFilterDefaultsTest.kt`, `ErtsPostWorkoutRecomputerTest.kt`)*:
+     • Verify `SensorType.ACTIVITY_AND_CARRIAGE_MODE` sits at ordinal `67` (`0..66` unchanged), carries `SensorValueType.INTEGER`, `filteringPossible = false`, `internalUnit = "dimensionless"`, is reachable from `ActivityType.getSensorTypeArray()` / `DeviceType.getDeviceTypeList()` (`Rule 81`), and formats discrete codes via `PhoneCarriageModeFormatter` without breaking `SensorFilterDefaultsTest` or `SensorCategoryAndSelectorContractTest` (`68` total).
+     • Verify `WorkoutSamples.db` schema auto-creation (`WorkoutSamplesDatabaseManager`) and `CSVFileWriter` 1-Hz integer column persistence + formatting without increasing `TrackerService.java`, `DeviceManager.java`, `WorkoutSamplesDatabaseManager.java`, or `WorkoutRepository.kt` line counts.
+  3. *Smooth Live EKF/Filter Adaptation Across Modes Without State Discontinuities (`TST-FIL-028.3`, `SpeedAndLocationDevice_ATTFusedTest.kt`, `AltitudeAndSlopeDevice_ATTFusedTest.kt`, `UnicycleOdometryEkfTest.kt`, `KinematicAltitudeSlopeEkfTest.kt`)*:
+     • Switch between `BIKE_HANDLEBAR`, `BIKE_FRONT_POCKET`, `RUN_BICEP_ARM`, `RUN_HANDHELD`, `WALKING_TRANSITION`, and `STATIONARY` mid-session; assert smooth transitions of `Q_GYRO`, yaw windowing + cyclist rear-glance rejection, barometer median window + slew, and `rBaro` without EKF position/heading/altitude discontinuities, preserving immediate sample-1 `0.1 rad/s` `WORLD_YAW_RATE_radps` emission, `MIN_DOPPLER_SPEED_MPS = 3.0`, `ZUPT_SPEED_VARIANCE = 2.0`, and `DEFAULT_VAR_BARO = 0.25`.
+  4. *1-Hz ERTS Carriage Ingestion & Legacy Kinematic Fallback Replay (`TST-FIL-028.4`, `ErtsPostWorkoutRecomputerTest.kt`, `ExtendedRtsOdometrySmootherTest.kt`, `ExtendedRtsAltitudeSlopeSmootherTest.kt`)*:
+     • Run `ErtsPostWorkoutRecomputer.recomputeWorkout()` on: (a) `WorkoutSamples.db` containing persisted `ACTIVITY_AND_CARRIAGE_MODE` (`BIKE_FRONT_POCKET -> WALKING_TRANSITION -> STATIONARY`), asserting indoor-stop pinning, pocket-spike attenuation, handlebar climb fidelity, and preserved `ACTIVITY_AND_CARRIAGE_MODE` values post-ERTS; and (b) legacy `WorkoutSamples.db` lacking `ACTIVITY_AND_CARRIAGE_MODE`, asserting kinematic fallback sequence reconstruction while keeping `ExtendedRtsOdometrySmootherTest:140` canopy Doppler-dropout green.
+  5. *9-Locale Localization Parity, Platform Permission Audits & Architecture/System Sync (`TST-FIL-028.5`, `TranslationParityTest.kt`, `MergedManifestFgsAuditTest.kt`, `PermissionOnboardingSheetContractTest.kt`, `ArchitectureConformanceContractTest.kt`, `SystemArchitectureDesignContractTest.kt`, `SystemLiveTrackingRequirementsContractTest.kt`, `SourceTextReadingAuditContractTest.kt`)*:
+     • Verify all 9 `values*/strings_devices.xml` locales (`EN, DE, ES, FR, IT, JA, NL, PL, PT`) pass `TranslationParityTest` (zero `&#10;`, exact placeholder/newline parity), manifest/onboarding contracts preserve 4 steps (`PermissionOnboardingSheetContractTest`), `docs/architecture.md`/`sensor_units.md`/`docs/system/` (`SYS.2`/`SYS.3`) pass contract suites after Stage 3–5 implementation, and `SourceTextReadingAuditContractTest` reports `0` `src/main` file reads in new/modified tests.
+
 ---
 
 ## Change History
@@ -3542,3 +3563,8 @@
 | `1.0.42` | 2026-11-18 | AI Agent (`ATT-8880`) | `ATT-8880` | Promoted `TST-FIL-027` to `[Verified]` in Stage 5 following Tier 1 targeted verification (`54/54` PASS across 6 JUnit XMLs) and `verify_requirement_governance.py` (`exit 0`). |
 | `1.0.43` | 2026-11-18 | AI Agent (`ATT-8880`) | `ATT-8880` | Stage 4 Bounce 1/3 heal: added tests for `RADAR`/`YAW` non-matching + `NaN` sanitization (`ErtsPostWorkoutRecomputerTest`, `ExtendedRtsOdometrySmootherTest`, `UnicycleOdometryEkfTest`) and leading null `TIME_TOTAL` + `>= 6s` batch-flush stall + repeated wall-clock pauses (`ErtsPostWorkoutRecomputerTest`), setting `[Implemented]` pending Stage 5 re-verification. |
 | `1.0.44` | 2026-11-18 | AI Agent (`ATT-8880`) | `ATT-8880` | Promoted `TST-FIL-027` to `[Verified]` in Stage 5 (Bounce 1/3) on `8a976a35` (`58/58` Author Tier 1 + `62/62` Gate 4 Bounce 1 PASS incl. `SourceTextReadingAuditContractTest`, `verify_requirement_governance.py` `exit 0`). |
+| `1.0.45` | 2026-11-18 | AI Agent (`ATT-8890`, `--as agent1`) | `ATT-8890` | Added `TST-FIL-028` (`[Planned]`, `TST-FIL-028.1`–`.5`) covering all 9 `PhoneCarriageMode` states, `Zum Bäcker` timeline, missing-sensor/denied-permission fallback, `SensorType.ACTIVITY_AND_CARRIAGE_MODE` DB/CSV/contract guards, smooth live EKF adaptation, 1-Hz ERTS ingestion + legacy fallback, and 9-locale/`SYS.2`/`SYS.3`/`SWE.2` parity. |
+| `1.0.46` | 2026-11-18 | AI Agent (`ATT-8890`, `--as agent1`) | `ATT-8890` | Promoted `TST-FIL-028` to `[Implemented]` following Stage 4 implementation and 23-suite unit/contract validation. |
+| `1.0.47` | 2026-11-18 | AI Agent (`ATT-8890`, `--as agent1`) | `ATT-8890` | Promoted `TST-FIL-028` to `[Verified]` in Stage 5 following Gate 4 Pass (`195/195` across 24 suites + Rev-1 `89/89` `--rerun-tasks` across 9 suites, `0` failures/`0` skipped) and `verify_requirement_governance.py` (`exit 0`). |
+| `1.0.48` | 2026-11-18 | AI Agent (`ATT-8890`, `--as agent1`) | `ATT-8890` | Stage 4 Bounce 1/3 heal: added regression tests for no-Doppler `Moving -> Stationary` ghost-tail elimination, 50-Hz classify/emission throttle & `dt`-invariant smoothing, and expired GNSS bearing-gap `estimatedGnssYawRateRadPerSec` reset; set `[Implemented]` pending Stage 5 re-verification. |
+| `1.0.49` | 2026-11-18 | AI Agent (`ATT-8890`, `--as agent1`) | `ATT-8890` | Promoted `TST-FIL-028` to `[Verified]` in Stage 5 (Bounce 1/3) following Gate 4 Pass (`92/92` `--rerun-tasks` across 9 post-heal suites + unchanged `195/195` baseline across 24 suites, `0` failed/`0` skipped, `verify_requirement_governance.py` `exit 0`). |

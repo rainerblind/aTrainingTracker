@@ -25,6 +25,9 @@ import android.hardware.SensorManager
 import android.util.Log
 import androidx.core.content.ContextCompat
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
+import com.atrainingtracker.banalservice.odometry.KinematicAltitudeSlopeEkf
+import com.atrainingtracker.banalservice.odometry.PhoneCarriageMode
+import com.atrainingtracker.banalservice.sensor.MySensor
 import com.atrainingtracker.banalservice.sensor.MySensorManager
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.TrainingApplication
@@ -809,5 +812,48 @@ class AltitudeAndSlopeDevice_ATTFusedTest {
         assertTrue(device.ekf.isInitialized)
         assertEquals(400.0, device.ekf.altitude, 1.0)
         assertEquals(400.0, device.baroFilter.getSlewAltitude(), 1.0)
+    }
+
+    // TST-FIL-028.3: Carriage mode observation adapts baro window/slew & rBaro smoothly via MySensorManager
+    @Test
+    fun testAdaptiveBaroWindowAndRBaro_respondsSmoothlyToCarriageModeAndFallsBackUnknown_tstFil028_3() {
+        val realSensorManager = MySensorManager(mockContext)
+        val mockFusedSpeedDevice = io.mockk.mockk<MyDevice>(relaxed = true) {
+            every { deviceType } returns DeviceType.SPEED_AND_LOCATION_ATT_FUSED
+        }
+        val carriageSensor = MySensor<Int>(mockFusedSpeedDevice, SensorType.ACTIVITY_AND_CARRIAGE_MODE)
+
+        // When ACTIVITY_AND_CARRIAGE_MODE is absent, device cleanly uses UNKNOWN defaults (rBaro=0.25, win=7, slew=1.2)
+        val device = AltitudeAndSlopeDevice_ATTFused(mockContext, realSensorManager, autoStartScheduler = false)
+        val p400 = SensorManager.PRESSURE_STANDARD_ATMOSPHERE * Math.pow(1.0 - 400.0 / 44330.0, 5.255).toFloat()
+        device.handlePressureMeasurement(p400, 1000L)
+        assertEquals(PhoneCarriageMode.UNKNOWN, device.resolvedCarriageModeForTest())
+        assertEquals(KinematicAltitudeSlopeEkf.DEFAULT_VAR_BARO, device.effectiveRBaroForTest(), 1e-6)
+        assertEquals(7, device.baroFilter.medianWindowSize)
+
+        // Register live carriage sensor and transition Handlebar -> Front Pocket -> Stationary
+        realSensorManager.registerSensor(carriageSensor)
+        carriageSensor.newValue(PhoneCarriageMode.BIKE_HANDLEBAR.code)
+        device.handlePressureMeasurement(p400, 2000L)
+        assertEquals(PhoneCarriageMode.BIKE_HANDLEBAR, device.resolvedCarriageModeForTest())
+        assertEquals(3, device.baroFilter.medianWindowSize)
+        assertEquals(1.2, device.baroFilter.maxSlewRateMps, 1e-6)
+
+        carriageSensor.newValue(PhoneCarriageMode.BIKE_FRONT_POCKET.code)
+        var tMs = 3000L
+        repeat(6) {
+            device.handlePressureMeasurement(p400, tMs)
+            tMs += 1000L
+        }
+        assertEquals(PhoneCarriageMode.BIKE_FRONT_POCKET, device.resolvedCarriageModeForTest())
+        assertEquals(9, device.baroFilter.medianWindowSize)
+        assertEquals(0.7, device.baroFilter.maxSlewRateMps, 1e-6)
+        assertTrue(
+            "Effective rBaro must rise smoothly toward 2.0 m^2 in front pocket (was ${device.effectiveRBaroForTest()})",
+            device.effectiveRBaroForTest() > 1.7
+        )
+
+        device.shutDown()
+        assertEquals(KinematicAltitudeSlopeEkf.DEFAULT_VAR_BARO, device.effectiveRBaroForTest(), 1e-6)
     }
 }

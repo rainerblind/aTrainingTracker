@@ -65,7 +65,8 @@ data class RawOdometrySample(
     val bearingDeg: Double? = null,
     val accuracyMeters: Double? = null,
     val worldYawRateRadPerSec: Double? = null,
-    val wheelSpeedMps: Double? = null
+    val wheelSpeedMps: Double? = null,
+    val carriageMode: PhoneCarriageMode = PhoneCarriageMode.UNKNOWN
 ) {
     /**
      * Checks whether this sample contains a physically valid, non-Null-Island GNSS position fix (REQ-FIL-019.1).
@@ -96,10 +97,15 @@ object ExtendedRtsOdometrySmoother {
     private const val STATIONARY_SPEED_THRESHOLD_MPS = 0.05
 
     private fun isStationarySample(sample: RawOdometrySample): Boolean {
-        val speed = sample.speedMps?.takeIf { it.isFinite() } ?: return false
+        val speed = sample.speedMps?.takeIf { it.isFinite() }
         val wheelSpeed = sample.wheelSpeedMps?.takeIf { it.isFinite() }
-        return speed <= STATIONARY_SPEED_THRESHOLD_MPS &&
-            (wheelSpeed == null || wheelSpeed <= STATIONARY_SPEED_THRESHOLD_MPS)
+        if (wheelSpeed != null && wheelSpeed > STATIONARY_SPEED_THRESHOLD_MPS) {
+            return false
+        }
+        if (sample.carriageMode == PhoneCarriageMode.STATIONARY && (speed == null || speed <= 0.25)) {
+            return true
+        }
+        return speed != null && speed <= STATIONARY_SPEED_THRESHOLD_MPS
     }
 
     private fun sanitizeNonNegativeFinite(value: Double): Double {
@@ -360,7 +366,8 @@ object ExtendedRtsOdometrySmoother {
             val yawRate = if (useAntiAliasedYaw) filteredYawRates[i] else rawYawRate
             val acc = sample.accuracyMeters?.takeIf { it.isFinite() } ?: 10.0
             val hasTrustedGnss = sample.hasValidGnssFix() && acc <= UnicycleOdometryEkf.MAX_GNSS_ACCURACY_METERS
-            val gyroNoiseScale = if (useAntiAliasedYaw && hasTrustedGnss) OFFLINE_ONE_HZ_GYRO_NOISE_SCALE else 1.0
+            val modeProfile = sample.carriageMode.profile
+            val gyroNoiseScale = if (useAntiAliasedYaw && hasTrustedGnss) modeProfile.ertsGyroNoiseScale else 1.0
 
             ekf.predict(dtSec, yawRate, sample.timestampMs, gyroNoiseScale)
 
@@ -521,11 +528,13 @@ object ExtendedRtsOdometrySmoother {
         val n = samples.size
         val filtered = DoubleArray(n)
         for (i in 0 until n) {
-            val centerTs = samples[i].timestampMs
+            val sample = samples[i]
+            val halfWidth = sample.carriageMode.profile.ertsYawHalfWidthSamples.coerceIn(0, 3)
+            val centerTs = sample.timestampMs
             var sum = 0.0
             var count = 0
-            val lo = max(0, i - YAW_RATE_WINDOW_HALF_WIDTH)
-            val hi = min(n - 1, i + YAW_RATE_WINDOW_HALF_WIDTH)
+            val lo = max(0, i - halfWidth)
+            val hi = min(n - 1, i + halfWidth)
             for (j in lo..hi) {
                 val yr = samples[j].worldYawRateRadPerSec ?: continue
                 if (!yr.isFinite()) continue
@@ -535,7 +544,8 @@ object ExtendedRtsOdometrySmoother {
                 }
             }
             val meanRate = if (count > 0) sum / count else 0.0
-            filtered[i] = meanRate.coerceIn(-MAX_ONE_HZ_YAW_RATE_RADPS, MAX_ONE_HZ_YAW_RATE_RADPS)
+            val yawCap = if (sample.carriageMode == PhoneCarriageMode.BIKE_HANDLEBAR) 1.5 else MAX_ONE_HZ_YAW_RATE_RADPS
+            filtered[i] = meanRate.coerceIn(-yawCap, yawCap)
         }
         return filtered
     }
