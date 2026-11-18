@@ -350,6 +350,56 @@ class AdvancedTuningAccordionTest {
     }
 
     @Test
+    fun `TST-UI-2787_4 testWorkoutMatrixSubtitle_withDetailTabsUsesTabAndSectionCounts`() {
+        val mockContext = mockk<Context>()
+        every {
+            mockContext.getString(
+                R.string.tuning_summary_matrix_tabs_format,
+                any(),
+                any(),
+                any(),
+                any(),
+                any()
+            )
+        } answers {
+            val formatArgs = args[1] as Array<*>
+            "${formatArgs[0]}/${formatArgs[1]} List, ${formatArgs[2]} Tabs (${formatArgs[3]}/${formatArgs[4]})"
+        }
+
+        val cardPrefs = WorkoutCardSectionPreferences(
+            showRpeAndFeel = false,
+            showDetails = true,
+            showDescription = true,
+            showExtrema = true,
+            showLaps = false,
+            showStrava = true,
+            showMapPreview = true,
+            showElevationProfile = false,
+            showTelemetryCharts = false,
+            showZoneAnalysis = true,
+            showGradeDistribution = false,
+            showHrv = false,
+            showExportStatus = true,
+            showPhotos = true
+        ) // 8 active out of 14
+
+        val defaultSubtitle = TuningSubtitleFormatter.formatWorkoutMatrixSubtitle(
+            cardPrefs,
+            com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDetailTabConfig.DEFAULT_TABS,
+            mockContext
+        )
+        assertEquals("8/14 List, 5 Tabs (14/14)", defaultSubtitle)
+
+        val editedTabs = com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDetailTabConfig.DEFAULT_TABS.dropLast(1)
+        val editedSubtitle = TuningSubtitleFormatter.formatWorkoutMatrixSubtitle(
+            cardPrefs,
+            editedTabs,
+            mockContext
+        )
+        assertEquals("8/14 List, 4 Tabs (12/14)", editedSubtitle)
+    }
+
+    @Test
     fun testNavigationSubtitle_reflectsTransparencyDismissDurationAndRadius() {
         val defaultLocale = Locale.getDefault()
         try {

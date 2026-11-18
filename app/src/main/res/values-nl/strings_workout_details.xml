@@ -29,4 +29,5 @@
     <string name="chart_overlay_source_att_fused">ATT Fused</string>
     <string name="chart_overlay_source_att_fused_alt_slope">ATT Fused (Hoogte/Helling)</string>
     <string name="chart_overlay_mean_value">Ø %1$s</string>
+    <string name="tuning_summary_matrix_tabs_format">%1$d/%2$d in lijst, %3$d tabbladen (%4$d/%5$d)</string>
 </resources>

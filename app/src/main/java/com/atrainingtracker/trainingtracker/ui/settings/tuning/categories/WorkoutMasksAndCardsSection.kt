@@ -44,6 +44,7 @@ import com.atrainingtracker.trainingtracker.MyPreferenceManager
 import com.atrainingtracker.trainingtracker.WorkoutCardSectionPreferences
 import com.atrainingtracker.trainingtracker.WorkoutDetailPreferences
 import com.atrainingtracker.trainingtracker.ui.aftermath.ReorderDragHandle
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDetailTabConfig
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDetailTabsConfigSheet
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutSectionType
 import com.atrainingtracker.trainingtracker.ui.aftermath.rememberReorderDragState
@@ -91,25 +92,30 @@ private fun ZoneDisplayModeSelector(
         ZoneCardDisplayMode.COLUMNS to R.string.zone_mode_columns,
         ZoneCardDisplayMode.HISTOGRAM to R.string.zone_mode_histogram
     )
-    Text(text = label, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-        zoneModes.forEachIndexed { index, (mode, labelRes) ->
-            val selected = selectedMode == mode
-            SegmentedButton(
-                selected = selected,
-                onClick = { onModeSelected(mode) },
-                shape = SegmentedButtonDefaults.itemShape(index = index, count = zoneModes.size),
-                icon = {},
-                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp)
-            ) {
-                Text(
-                    stringResource(labelRes),
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                    maxLines = 1,
-                    softWrap = false,
-                    overflow = TextOverflow.Ellipsis
-                )
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Text(text = label, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+            zoneModes.forEachIndexed { index, (mode, labelRes) ->
+                val selected = selectedMode == mode
+                SegmentedButton(
+                    selected = selected,
+                    onClick = { onModeSelected(mode) },
+                    shape = SegmentedButtonDefaults.itemShape(index = index, count = zoneModes.size),
+                    icon = {},
+                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp)
+                ) {
+                    Text(
+                        stringResource(labelRes),
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                        maxLines = 1,
+                        softWrap = false,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
         }
     }
@@ -127,7 +133,8 @@ fun WorkoutMasksAndCardsSection(
     workoutDetailPrefs: WorkoutDetailPreferences = WorkoutDetailPreferences(),
     onWorkoutDetailPrefsChange: (WorkoutDetailPreferences) -> Unit = {},
     workoutSectionsOrder: List<WorkoutSectionType> = WorkoutSectionType.DEFAULT_ORDER,
-    onWorkoutSectionsOrderChange: (List<WorkoutSectionType>) -> Unit = {}
+    onWorkoutSectionsOrderChange: (List<WorkoutSectionType>) -> Unit = {},
+    detailTabs: List<WorkoutDetailTabConfig>? = null
 ) {
     val resolvedOrder = remember(workoutSectionsOrder) {
         val present = workoutSectionsOrder.distinct()
@@ -311,16 +318,11 @@ fun WorkoutMasksAndCardsSection(
 
         // Summary Zone Card Display Mode Sub-Setting Section (REQ-UI-414.4)
         if (workoutCardPrefs.showZoneAnalysis) {
-            Column(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                ZoneDisplayModeSelector(
-                    label = stringResource(R.string.settings_zone_card_display_mode_title),
-                    selectedMode = workoutCardPrefs.zoneCardDisplayMode,
-                    onModeSelected = { mode -> onWorkoutCardPrefsChange(workoutCardPrefs.copy(zoneCardDisplayMode = mode)) }
-                )
-            }
+            ZoneDisplayModeSelector(
+                label = stringResource(R.string.settings_zone_card_display_mode_title),
+                selectedMode = workoutCardPrefs.zoneCardDisplayMode,
+                onModeSelected = { mode -> onWorkoutCardPrefsChange(workoutCardPrefs.copy(zoneCardDisplayMode = mode)) }
+            )
         }
 
         // Summary Photo Sub-Settings Section (REQ-UI-414.6 / ATT-5474)
@@ -345,7 +347,7 @@ fun WorkoutMasksAndCardsSection(
         val context = LocalContext.current
         val scope = rememberCoroutineScope()
         val prefMgr = remember(context) { MyPreferenceManager(context) }
-        val detailTabs by prefMgr.workoutDetailTabsOrderFlow.collectAsState(initial = remember(prefMgr) { prefMgr.getWorkoutDetailTabs() })
+        val resolvedDetailTabs = detailTabs ?: prefMgr.workoutDetailTabsOrderFlow.collectAsState(initial = remember(prefMgr) { prefMgr.getWorkoutDetailTabs() }).value
         var showTabsConfigSheet by remember { mutableStateOf(false) }
 
         OutlinedButton(
@@ -359,25 +361,20 @@ fun WorkoutMasksAndCardsSection(
 
         if (showTabsConfigSheet) {
             WorkoutDetailTabsConfigSheet(
-                tabs = detailTabs,
+                tabs = resolvedDetailTabs,
                 onTabsChange = { updated -> scope.launch { prefMgr.setWorkoutDetailTabs(updated) } },
                 onResetDefaults = { scope.launch { prefMgr.resetWorkoutDetailTabs() } },
                 onDismiss = { showTabsConfigSheet = false }
             )
         }
 
-        // Details Zone Card Display Mode Sub-Setting Section (REQ-UI-414.4)
-        if (workoutDetailPrefs.showZoneAnalysis) {
-            Column(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                ZoneDisplayModeSelector(
-                    label = stringResource(R.string.settings_zone_card_display_mode_title),
-                    selectedMode = workoutDetailPrefs.zoneCardDisplayMode,
-                    onModeSelected = { mode -> onWorkoutDetailPrefsChange(workoutDetailPrefs.copy(zoneCardDisplayMode = mode)) }
-                )
-            }
+        // Details Zone Card Display Mode Sub-Setting Section (REQ-UI-414.4 / REQ-UI-2787.4)
+        if (WorkoutDetailTabConfig.hasAnyZoneOrGradeSection(resolvedDetailTabs)) {
+            ZoneDisplayModeSelector(
+                label = stringResource(R.string.settings_zone_card_display_mode_title),
+                selectedMode = workoutDetailPrefs.zoneCardDisplayMode,
+                onModeSelected = { mode -> onWorkoutDetailPrefsChange(workoutDetailPrefs.copy(zoneCardDisplayMode = mode)) }
+            )
         }
 
         // Details Photo Sub-Settings Section (REQ-UI-414.6 / ATT-5474)

@@ -54,6 +54,9 @@ import com.atrainingtracker.trainingtracker.settings.RadarAudioAlertMode
 import com.atrainingtracker.trainingtracker.settings.RadarEdgeSide
 import com.atrainingtracker.trainingtracker.settings.TuningConfig
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDetailSectionType
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDetailTabConfig
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutSectionType
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldVariant
 import com.atrainingtracker.trainingtracker.ui.tracking.typography.CockpitFontFamily
 import com.atrainingtracker.trainingtracker.ui.tracking.typography.CockpitFontWeight
@@ -182,6 +185,35 @@ object TuningSubtitleFormatter {
         val listCount = listOf(cardPrefs.showDescription, cardPrefs.showExtrema, cardPrefs.showLaps, cardPrefs.showStrava, cardPrefs.showMapPreview, cardPrefs.showElevationProfile, cardPrefs.showTelemetryCharts, cardPrefs.showZoneAnalysis, cardPrefs.showRpeAndFeel).count { it }
         val detailCount = listOf(detailPrefs.showDescription, detailPrefs.showExtrema, detailPrefs.showLaps, detailPrefs.showStrava, detailPrefs.showMap, detailPrefs.showElevationProfile, detailPrefs.showTelemetryCharts, detailPrefs.showZoneAnalysis).count { it }
         return context.getString(R.string.tuning_summary_matrix_format, listCount, detailCount)
+    }
+
+    /**
+     * Formats the Workout Cards & Details accordion subtitle using authoritative [detailTabs] (`REQ-UI-2787.4`).
+     */
+    fun formatWorkoutMatrixSubtitle(
+        cardPrefs: WorkoutCardSectionPreferences,
+        detailTabs: List<WorkoutDetailTabConfig>,
+        context: Context
+    ): String {
+        val listCount = listOf(
+            cardPrefs.showRpeAndFeel, cardPrefs.showDetails, cardPrefs.showDescription,
+            cardPrefs.showExtrema, cardPrefs.showLaps, cardPrefs.showStrava,
+            cardPrefs.showMapPreview, cardPrefs.showElevationProfile, cardPrefs.showTelemetryCharts,
+            cardPrefs.showZoneAnalysis, cardPrefs.showGradeDistribution, cardPrefs.showHrv,
+            cardPrefs.showExportStatus, cardPrefs.showPhotos
+        ).count { it }
+        val listTotal = WorkoutSectionType.entries.size
+        val tabCount = detailTabs.size
+        val detailSectionCount = WorkoutDetailTabConfig.countDistinctSections(detailTabs)
+        val detailTotal = WorkoutDetailSectionType.entries.size
+        return context.getString(
+            R.string.tuning_summary_matrix_tabs_format,
+            listCount,
+            listTotal,
+            tabCount,
+            detailSectionCount,
+            detailTotal
+        )
     }
 
     fun formatWorkoutMasksSubtitle(cardPrefs: WorkoutCardSectionPreferences, context: Context): String {

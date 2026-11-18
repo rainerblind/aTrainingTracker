@@ -29,4 +29,5 @@
     <string name="chart_overlay_source_att_fused">ATT Fused</string>
     <string name="chart_overlay_source_att_fused_alt_slope">ATT Fused (Alt./Pente)</string>
     <string name="chart_overlay_mean_value">Ø %1$s</string>
+    <string name="tuning_summary_matrix_tabs_format">%1$d/%2$d en liste, %3$d onglets (%4$d/%5$d)</string>
 </resources>
