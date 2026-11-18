@@ -1,7 +1,7 @@
 # Living Test Specification: Engineering Process, Stability & Architecture (Part 2 of 2)
 
 **Document ID**: `DOC-TST-PRO-P2`  
-**Version**: 1.0.15  
+**Version**: 1.0.18  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -1036,20 +1036,21 @@
 
 ---
 
-### TST-PRO-108: **Technical Role Separation for Agent Credentials & Git Commit Identity Suite (ATT-8151)** [Verified]
+### TST-PRO-108: **Technical Role Separation for Agent Credentials & Git Commit Identity Suite (ATT-8151, ATT-8876)** [Verified]
 - **Requirement(s)**: `REQ-PRO-108`
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit / Review
-- **Component**: `tools/jira_util.py`, `tools/parallel_sprint_lock.py`, `tools/test_jira_accounts.py`
-- **Jira**: `ATT-8151`
+- **Component**: `tools/jira_util.py`, `tools/parallel_sprint_lock.py`, `tools/hoechstmass/tools/parallel_sprint_lock.py`, `tools/test_jira_accounts.py`, `tools/test_flock_serialization.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`
+- **Jira**: `ATT-8151`, `ATT-8876`
 - **Test Description**:
   1. *Subagent Identity & Role Binding Enforcement Test (`TST-PRO-108.1`, tools/test_jira_accounts.py)*:
   • Verify that when `JIRA_ACTOR` is set in the environment (e.g. `agent1`), passing a mismatched `--as` flag (e.g. `--as agent2`) raises a SystemExit role mismatch error. Verify that matching `--as agent1` succeeds, and verify that when `JIRA_ACTOR` is unset, `--as coordinator` and manual role invocations continue to succeed without rejection.
   2. *Dedicated QA Role Credential Mapping & Account Independence Test (`TST-PRO-108.2`, tools/test_jira_accounts.py)*:
   • Verify that `resolve_account("qa")` resolves `JIRA_QA_USER` and `JIRA_QA_TOKEN`, verify that `get_config(role="qa")` isolates QA credentials, and verify validation rejects configurations where `agent2` and `qa` share identical account IDs.
-  3. *Producing Agent Identity & Reviewer Git Commit Trailers Test (`TST-PRO-108.3`, tools/test_jira_accounts.py)*:
-  • Verify that `_merge_ticket_impl` formats squash commit messages with standard git trailers (`Agent-Role:`, `Agent-Model:`, `Reviewed-by:`), correctly reading from environment or arguments and passing automated trailer validation.
+  3. *Producing Agent Identity, Reviewer Git Commit Trailers & Cross-Directory Isolation Test (`TST-PRO-108.3`, tools/test_jira_accounts.py, tools/test_flock_serialization.py & tools/hoechstmass/tools/test_hoechstmass_tools.py)*:
+  • Verify that both `tools/parallel_sprint_lock.py` and `tools/hoechstmass/tools/parallel_sprint_lock.py` (`format_commit_with_trailers`, `validate_commit_trailers`, `_merge_ticket_impl`) format and validate standard git trailers (`Agent-Role:`, `Agent-Model:`, `Reviewed-by:`) using project-agnostic defaults preserving `HoechstmassToolingContractTest`.
+  • Verify via explicit `sys.modules["parallel_sprint_lock"]` poisoning / `sys.path` shadowing tests that `test_tst_pro_108_3_git_commit_trailers_formatting` and `tools/test_flock_serialization.py` deterministically resolve sibling `tools/parallel_sprint_lock.py` without raising `AttributeError`.
   4. *Single-OS User Residual Risk Review Test (`TST-PRO-108.4`, docs/management/risk_register.md)*:
   • Verify that `docs/management/risk_register.md` contains an approved entry documenting the residual risk and defense-in-depth controls for co-located subagent execution under a single OS account.
 
@@ -1517,3 +1518,6 @@
 | `1.0.13` | 2026-11-18 | AI Agent (`ATT-8875`) | `ATT-8875` | Refined `TST-PRO-100` (`[Planned]`, `TST-PRO-100.1`) adding `sys.modules["generate_test_evidence"]` collision isolation test and Höchstmaß `skip_kover` / `--no-kover` mirror parity test. |
 | `1.0.14` | 2026-11-18 | AI Agent (`ATT-8875`) | `ATT-8875` | Promoted `TST-PRO-100` to `[Implemented]` in Stage 4 (`tools.test_jira_accounts` `exit 0`, `tools/hoechstmass/tools` `62/62` OK, `HoechstmassToolingContractTest` PASS). |
 | `1.0.15` | 2026-11-18 | AI Agent (`ATT-8875`) | `ATT-8875` | Promoted `TST-PRO-100` to `[Verified]` after Stage 5 verification (`tools.test_jira_accounts` `102/102` OK, `tools/hoechstmass/tools` `62/62` OK, `tools.test_generate_test_evidence` `8/8` OK, `HoechstmassToolingContractTest` `4/4` PASS, governance `exit 0`). |
+| `1.0.16` | 2026-11-18 | AI Agent (`ATT-8876`) | `ATT-8876` | Refined `TST-PRO-108` (`[Planned]`, `TST-PRO-108.3`) adding cross-directory `sys.modules["parallel_sprint_lock"]` poisoning isolation test and Höchstmaß `parallel_sprint_lock.py` trailer parity test. |
+| `1.0.17` | 2026-11-18 | AI Agent (`ATT-8876`) | `ATT-8876` | Promoted `TST-PRO-108` to `[Implemented]` in Stage 4 (`tools.test_jira_accounts`, `tools.test_flock_serialization`, `tools.test_jira_datacenter`, `tools/hoechstmass/tools`, `HoechstmassToolingContractTest`). |
+| `1.0.18` | 2026-11-18 | AI Agent (`ATT-8876`) | `ATT-8876` | Promoted `TST-PRO-108` to `[Verified]` after Stage 5 verification (`136/136` root suites OK, `63/63` Hoechstmass OK, `78/78` poisoned-cache cross-dir OK, `HoechstmassToolingContractTest` `4/4` PASS, governance `exit 0`). |

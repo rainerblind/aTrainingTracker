@@ -58,9 +58,11 @@ from tools.hoechstmass.tools.verify_requirement_governance import (
     triage_unbacked_verified_tsts,
 )
 from tools.hoechstmass.tools.parallel_sprint_lock import (
+    format_commit_with_trailers,
     sprint_lock,
     is_lock_busy,
     run_locked,
+    validate_commit_trailers,
 )
 
 
@@ -995,6 +997,21 @@ class TestHoechstmassFlock(unittest.TestCase):
         with sprint_lock(lock_path=self.lock_file):
             with self.assertRaises(TimeoutError):
                 run_locked([sys.executable, "-c", "pass"], lock_path=self.lock_file, timeout_sec=0.3)
+
+    def test_hoechstmass_parallel_sprint_lock_commit_trailers(self):
+        """TST-PRO-108.3 / ATT-8876: Hoechstmass parallel_sprint_lock formats and validates trailers."""
+        msg = format_commit_with_trailers(
+            "PROJ-108: Mirror commit",
+            agent_role="agent1",
+            agent_model="flash",
+            reviewed_by="Agent 2 (Reviewer)",
+        )
+        self.assertIn("Agent-Role: agent1", msg)
+        self.assertIn("Agent-Model: flash", msg)
+        self.assertIn("Reviewed-by: Agent 2 (Reviewer)", msg)
+        valid, missing = validate_commit_trailers(msg)
+        self.assertTrue(valid)
+        self.assertEqual(missing, [])
 
 
 class TestHoechstmassSprintMetricsParity(unittest.TestCase):

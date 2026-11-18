@@ -25,11 +25,16 @@ if TOOLS_DIR not in sys.path:
 
 import jira_util as root_jira
 
-# Load hoechstmass jira_util under distinct module name
+# Load hoechstmass jira_util under distinct module name without leaking sys.path
 hm_path = os.path.join(TOOLS_DIR, "hoechstmass", "tools", "jira_util.py")
+hm_tools_dir = os.path.dirname(hm_path)
+_hm_was_in_path = hm_tools_dir in sys.path
 spec = importlib.util.spec_from_file_location("hm_jira_util", hm_path)
 hm_jira = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(hm_jira)
+if not _hm_was_in_path:
+    while hm_tools_dir in sys.path:
+        sys.path.remove(hm_tools_dir)
 
 
 class TestJiraDataCenterConfig(unittest.TestCase):

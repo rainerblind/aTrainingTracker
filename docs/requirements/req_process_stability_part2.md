@@ -1,7 +1,7 @@
 # Living Requirements: Engineering Process, Stability & Architecture (Part 2 of 2)
 
 **Document ID**: `DOC-REQ-PRO-P2`  
-**Version**: 1.0.22  
+**Version**: 1.0.25  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -1704,23 +1704,23 @@
 
 ---
 
-### REQ-PRO-108: Technical Role Separation for Agent Credentials & Git Commit Identity (ATT-8151) [Verified]
+### REQ-PRO-108: Technical Role Separation for Agent Credentials & Git Commit Identity (ATT-8151, ATT-8876) [Verified]
 - **Tests**: `TST-PRO-108`
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit / Review
-- **Implementation**: `tools/jira_util.py`, `tools/parallel_sprint_lock.py`, `tools/locked_build_merge.py`, `tools/test_jira_accounts.py`, `docs/management/risk_register.md`
-- **Rationale**: ASPICE 4.0 Finding M4 (SUP.1 Quality Assurance, GP 2.1.4, SUP.8 Configuration Management, BP4) identified that role separation between implementer and reviewer existed only at the prompt level. Any agent could assume any role via `--as`, `qa` had no credential mapping, and all commits were authored under a single human identity without agent or model provenance. Binding role selection to subagent identity, mapping dedicated QA credentials, appending verifiable commit trailers, and documenting residual single-OS user risks establishes technical and auditable role independence.
+- **Implementation**: `tools/jira_util.py`, `tools/parallel_sprint_lock.py`, `tools/hoechstmass/tools/parallel_sprint_lock.py`, `tools/locked_build_merge.py`, `tools/test_jira_accounts.py`, `tools/test_flock_serialization.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`, `docs/management/risk_register.md`
+- **Rationale**: ASPICE 4.0 Finding M4 (SUP.1 Quality Assurance, GP 2.1.4, SUP.8 Configuration Management, BP4) identified that role separation between implementer and reviewer existed only at the prompt level. Any agent could assume any role via `--as`, `qa` had no credential mapping, and all commits were authored under a single human identity without agent or model provenance. Binding role selection to subagent identity, mapping dedicated QA credentials, appending verifiable commit trailers across both root and Höchstmaß mirrors, isolating cross-directory module imports, and documenting residual single-OS user risks establishes technical and auditable role independence.
 - **Description**:
   1. *Subagent Identity & Role Binding (`REQ-PRO-108.1`)*: When the `JIRA_ACTOR` environment variable is defined in the subagent environment, `tools/jira_util.py` SHALL strictly reject any mismatched CLI `--as <role>` override with a role mismatch error. When `JIRA_ACTOR` is unset (manual developer CLI or coordinator invocation), `--as coordinator` and manual `--as <role>` calls SHALL continue to operate without rejection.
   2. *Dedicated QA Role Credential Mapping & Account Independence (`REQ-PRO-108.2`)*: `tools/jira_util.py` SHALL map role `qa` to dedicated credentials (`JIRA_QA_USER`, `JIRA_QA_TOKEN`), support `.env.jira.qa`, include `qa` in `get_config` role credential filtering, and enforce that `agent2` and `qa` operate under distinct Jira user accounts (different account IDs or usernames).
-  3. *Producing Agent Identity & Reviewer Git Commit Trailers (`REQ-PRO-108.3`)*: `tools/parallel_sprint_lock.py` (`_merge_ticket_impl` / `--merge-ticket`) SHALL append standard git trailers (`Agent-Role:`, `Agent-Model:`, `Reviewed-by:`) to atomic squash merge commits, auto-detecting values from environment variables (`AGENT_ROLE`, `AGENT_MODEL`, `REVIEWED_BY`, `JIRA_ACTOR`) or CLI arguments, verifiable by automated unit checks.
+  3. *Producing Agent Identity & Reviewer Git Commit Trailers + Cross-Directory Isolation (`REQ-PRO-108.3`)*: Both `tools/parallel_sprint_lock.py` and its project-agnostic Höchstmaß mirror `tools/hoechstmass/tools/parallel_sprint_lock.py` SHALL implement `format_commit_with_trailers()`, `validate_commit_trailers()`, and `_merge_ticket_impl()` / `run_merge_ticket()` / CLI `--agent-role`, `--agent-model`, `--reviewed-by` trailer options using generic defaults (`"agent1"`, `"flash"`, `"Agent 2 (Reviewer)"`) so atomic squash merge commits append `Agent-Role:`, `Agent-Model:`, and `Reviewed-by:` without breaking `HoechstmassToolingContractTest`. Root test callers (`tools/test_jira_accounts.py` and `tools/test_flock_serialization.py`) MUST resolve sibling `tools/parallel_sprint_lock.py` deterministically even when `sys.modules["parallel_sprint_lock"]` or `sys.path` is pre-populated by `tools/hoechstmass/tools/`.
   4. *Single-OS User Residual Risk Documentation (`REQ-PRO-108.4`)*: `docs/management/risk_register.md` SHALL formally register the residual risk of local subagent process co-location under a single operating system user account and document the layered mitigations (token isolation, role binding, commit trailers, CI gating).
 - **Requirement Archaeology & Chesterton's Fence Audit**:
-  1. *Original Requirement ID & Target*: Extends `REQ-PRO-060` (Composite CLI role operations) and `REQ-PRO-041` (Parallel sprint lock & atomic commit merging) via net-new `REQ-PRO-108`. Targets `tools/jira_util.py`, `tools/parallel_sprint_lock.py`, and `docs/management/risk_register.md`.
-  2. *Historical Origin & Commit Trace*: `ATT-4290` (`REQ-PRO-060`), `ATT-7025` (`REQ-PRO-041`), `ATT-8150` (`REQ-PRO-107`), `ATT-8151`.
-  3. *Root Reason for Existing Formulation*: Permissive `--as` and uniform commit authorship were established for single-developer convenience prior to multi-agent role separation.
-  4. *Preservation of Core Invariants*: Standalone manual CLI usage when `JIRA_ACTOR` is unset remains fully functional; POSIX flock locking and `ANT-Android-SDKs` submodule integrity (`160000 commit 0e8cea714a231fb9565170d4ed01eafa868f9798`) are preserved.
+  1. *Original Requirement ID & Target*: Extends `REQ-PRO-060` (Composite CLI role operations) and `REQ-PRO-041` (Parallel sprint lock & atomic commit merging) via `REQ-PRO-108` (`REQ-PRO-108.3`). Targets `tools/jira_util.py`, `tools/parallel_sprint_lock.py`, `tools/hoechstmass/tools/parallel_sprint_lock.py`, `tools/test_jira_accounts.py`, `tools/test_flock_serialization.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`, and `docs/management/risk_register.md`.
+  2. *Historical Origin & Commit Trace*: `ATT-4290` (`REQ-PRO-060`), `ATT-7025` (`REQ-PRO-041`), `ATT-8150` (`REQ-PRO-107`), `ATT-8151` (`f0dfe76d`), `ATT-8207` (`3b390f63`); cross-directory `sys.modules` shadowing pattern matches `ATT-8875` (`bc1a50c7`), refined under `ATT-8876`.
+  3. *Root Reason for Existing Formulation*: `ATT-8151` added trailer helpers only to root `tools/parallel_sprint_lock.py`, and root tests relied on bare `import parallel_sprint_lock` assuming unshadowed `sys.path` / `sys.modules`.
+  4. *Preservation of Core Invariants*: Standalone manual CLI usage when `JIRA_ACTOR` is unset remains functional; `HoechstmassToolingContractTest.kt` project-agnostic checks (zero `ATT-`/proprietary IDs, stdlib-only), POSIX flock locking, and `ANT-Android-SDKs` submodule (`160000 commit 0e8cea714a231fb9565170d4ed01eafa868f9798`) are preserved.
 - **Acceptance Criteria (Given-When-Then)**:
   • *Given* a subagent process launched with `JIRA_ACTOR=agent1`,
   • *When* it calls `tools/jira_util.py --as agent2 gate-verdict ...`,
@@ -1731,10 +1731,13 @@
   • *Given* configured `agent2` and `qa` credentials,
   • *When* `tools/jira_util.py` resolves accounts,
   • *Then* `qa` resolves to dedicated credentials and accounts are verified distinct.
-  • *Given* a completed ticket being merged onto the sprint branch via `--merge-ticket`,
-  • *When* the atomic squash commit is created,
-  • *Then* the commit message contains valid `Agent-Role:`, `Agent-Model:`, and `Reviewed-by:` git trailers.
-- **Invariants**: Zero Android production code impact (`app/src/main/`); `ANT-Android-SDKs` untouched at `160000`; existing test fixtures and POSIX flock semantics preserved.
+  • *Given* `sys.modules["parallel_sprint_lock"]` pre-populated by an unrelated directory or `tools/hoechstmass/tools` on `sys.path[0]`,
+  • *When* `test_tst_pro_108_3_git_commit_trailers_formatting` (and `test_flock_serialization.py`) executes,
+  • *Then* it resolves sibling `tools/parallel_sprint_lock.py` cleanly without raising `AttributeError`.
+  • *Given* `tools/hoechstmass/tools/parallel_sprint_lock.py`,
+  • *When* `format_commit_with_trailers`, `validate_commit_trailers`, or `--merge-ticket` is executed,
+  • *Then* valid `Agent-Role:`, `Agent-Model:`, and `Reviewed-by:` trailers are appended and validated while `HoechstmassToolingContractTest` passes with zero proprietary strings.
+- **Invariants**: Zero Android production code impact (`app/src/main/`); `ANT-Android-SDKs` untouched at `160000`; `HoechstmassToolingContractTest.kt` invariants preserved; existing test fixtures and POSIX flock semantics preserved; `Localization Parity: N/A - no UI strings`.
 
 ---
 
@@ -2404,3 +2407,6 @@
 | `1.0.20` | 2026-11-18 | AI Agent (`ATT-8875`) | `ATT-8875` | Refined `REQ-PRO-100` (`[Planned]`, `REQ-PRO-100.4`) for sibling-scoped `generate_test_evidence` import isolation and `skip_kover`/`--no-kover` Höchstmaß mirror parity. |
 | `1.0.21` | 2026-11-18 | AI Agent (`ATT-8875`) | `ATT-8875` | Promoted `REQ-PRO-100` to `[Implemented]` in Stage 4 (`tools/jira_util.py`, `tools/hoechstmass/tools/jira_util.py`, `tools/hoechstmass/tools/generate_test_evidence.py`, `tools/test_jira_accounts.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`). |
 | `1.0.22` | 2026-11-18 | AI Agent (`ATT-8875`) | `ATT-8875` | Promoted `REQ-PRO-100` to `[Verified]` after Stage 5 verification (`tools.test_jira_accounts` `102/102` OK, `tools/hoechstmass/tools` `62/62` OK, `tools.test_generate_test_evidence` `8/8` OK, `HoechstmassToolingContractTest` `4/4` PASS, governance `exit 0`). |
+| `1.0.23` | 2026-11-18 | AI Agent (`ATT-8876`) | `ATT-8876` | Refined `REQ-PRO-108` (`[Planned]`, `REQ-PRO-108.3`) for sibling-scoped `parallel_sprint_lock` import isolation against cross-directory `sys.modules` shadowing and Höchstmaß `parallel_sprint_lock.py` commit trailer parity. |
+| `1.0.24` | 2026-11-18 | AI Agent (`ATT-8876`) | `ATT-8876` | Promoted `REQ-PRO-108` to `[Implemented]` in Stage 4 (`tools/hoechstmass/tools/parallel_sprint_lock.py`, `tools/test_jira_accounts.py`, `tools/test_flock_serialization.py`, `tools/test_jira_datacenter.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`). |
+| `1.0.25` | 2026-11-18 | AI Agent (`ATT-8876`) | `ATT-8876` | Promoted `REQ-PRO-108` to `[Verified]` after Stage 5 verification (`tools.test_jira_accounts` + `tools.test_flock_serialization` + `tools.test_jira_datacenter` `136/136` OK, `tools/hoechstmass/tools` `63/63` OK, poisoned-cache cross-dir `78/78` OK, `HoechstmassToolingContractTest` `4/4` PASS, governance `exit 0`). |
