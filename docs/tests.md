@@ -1,7 +1,7 @@
 # aTrainingTracker: Living Test Specification & Verification Plan (Master Index)
 
 **Document ID**: `DOC-TST-INDEX`  
-**Version**: 1.0.32  
+**Version**: 1.0.33  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -19,13 +19,13 @@ Living test specifications use multi-line Markdown headings (`### TST-XXX: Title
 | [Settings, Profiles & Localization](tests/tst_settings_profiles.md) | Athlete settings, bike/sensor profiles, privacy zones, data stores, monetization, and 9-locale parity. | `LOC`, `PRI`, `SET` | 106 | 63 | 43 | 0 |
 | [UI Components & Design System (Part 1)](tests/tst_ui_design_system_part1.md) | Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts. | `UI`, `UNT` | 249 | 182 | 67 | 0 |
 | [UI Components & Design System (Part 2)](tests/tst_ui_design_system_part2.md) | Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts. | `UI` | 192 | 192 | 0 | 0 |
-| [UI Components & Design System (Part 3)](tests/tst_ui_design_system_part3.md) | Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts. | `UI` | 38 | 38 | 0 | 0 |
+| [UI Components & Design System (Part 3)](tests/tst_ui_design_system_part3.md) | Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts. | `UI` | 39 | 39 | 0 | 0 |
 | [Engineering Process, Stability & Architecture (Part 1)](tests/tst_process_stability_part1.md) | ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools. | `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST` | 148 | 99 | 49 | 0 |
 | [Engineering Process, Stability & Architecture (Part 2)](tests/tst_process_stability_part2.md) | ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools. | `PRO` | 85 | 77 | 0 | 8 |
 | [Jubilee Milestones & App Reviews](tests/tst_aftermath_reviews.md) | Milestone workout auto-naming, jubilee achievements, Google Play in-app reviews, athlete feedback, and supporter tier promotions. | `REV` | 15 | 15 | 0 | 0 |
 | [Store Presence](tests/tst_store_presence.md) | Store presence, Google Play listings, screenshots, store metadata contract testing, and release governance. | `STP` | 11 | 11 | 0 | 0 |
 
-**Total Living Tests**: 1251 across 12 domain shards.
+**Total Living Tests**: 1252 across 12 domain shards.
 
 ---
 
@@ -60,3 +60,4 @@ Living test specifications use multi-line Markdown headings (`### TST-XXX: Title
 | `1.0.29` | 2026-11-18 | AI Agent (`ATT-8748`) | `ATT-8748` | Updated `TST-UI-493` [Verified] (`ClusterItemThumbnailComposeTest` + `151/151` PASS + `Rule 8.5` PNG). |
 | `1.0.31` | 2026-11-18 | AI Agent (`ATT-8203`) | `ATT-8203` | Added `TST-PRO-129` [Verified] (`35/35` Kotlin contract suites + `TestLivingDocDirectoryLayout` `4/4` + `28/28 <= 4000`). |
 | `1.0.32` | 2026-11-18 | AI Agent (`ATT-8678`) | `ATT-8678` | Updated `TST-CON-047` & `TST-CON-048` [Verified] (`14` suites / `109/109` PASS, `EditDeviceDialog` `2004->1843` LoC, `Rule 8.5` PNGs). |
+| `1.0.33` | 2026-11-18 | AI Agent (`ATT-8097`) | `ATT-8097` | Added `TST-UI-2786` [Verified] (`19` XML suites / `90/90` PASS, 9-locale `strings_workout_header.xml`, `Rule 8.5` PNG). |

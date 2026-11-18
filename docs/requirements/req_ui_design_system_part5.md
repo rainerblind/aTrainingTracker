@@ -1,14 +1,14 @@
 # Living Requirements: UI Components & Design System (Part 5 of 5)
 
 **Document ID**: `DOC-REQ-UI-P5`  
-**Version**: 1.0.6  
+**Version**: 1.0.9  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `ui_design_system_part5`  
 **Prefixes**: `UI`, `UNT`  
 **Scope**: Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts.  
-**Total Requirements**: 43
+**Total Requirements**: 44
 
 ---
 
@@ -1776,6 +1776,43 @@
 
 **Invariants**: `WorkoutClusterComponents.kt` (`110×75 dp`), `EditKnownLocationDialog.kt`, `MIN_ZOOM`/`MAX_ZOOM`, and geofence marker geometry remain unchanged; zero `strings*.xml` edits; zero new `src/main` test reads (`REQ-PRO-049.1`).
 
+### REQ-UI-2786: Workout Detail Header Action Icon Uniformity, Global-vs-Unit Grouping & Universal Cluster Swap Visibility [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-UI-2786`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, On-Device Manual
+- **Implementation**: `WorkoutHeader.kt`, `WorkoutDetailTabbedContent.kt`, `TrackOnMapScreen.kt`, `TrackOnMapAftermathViewModel.kt`, `WorkoutClusterRepository.kt`, `WorkoutClustersScreen.kt`, `WorkoutClusterHeatmapScreen.kt`, `values*/strings_workout_header.xml`
+- **Rationale**: On-device Sprint Review of `ATT-7754` revealed three Workout Detail top-right header defects (`ATT-8097`, refining `REQ-UI-408.5`, `REQ-UI-447`, and `REQ-SET-059.4`): (1) `SwapHoriz` (`⇄`) in `WorkoutClustersScreen.kt:186-193` rendered black (`LocalContentColor.current`) at `48.dp` instead of `MaterialTheme.colorScheme.primary` at `32.dp`; (2) `[⇄][Tune][Edit][Share]` placed global tab-layout config (`Tune`) inside per-workout actions without visual or tooltip distinction; and (3) omitting `headerActions` in `WorkoutSummariesTabbedScreen`, `WorkoutSummariesListFragment`, and `PeriodMapScreen` hid `⇄` outside Lieblingsstrecken, while indoor/non-GPS workouts lacked a `startLatLng == null` fallback.
+- **Description**:
+  1. *Uniform Action Icon Tint & Sizing (`REQ-UI-2786.1`)*:
+     - All Workout Detail header action icons (`Tune`, `SwapHoriz`, `Edit`, `Share`) SHALL render with `tint = MaterialTheme.colorScheme.primary` and `Modifier.size(32.dp)` inside `WorkoutHeader.kt` (retaining `MaterialTheme.colorScheme.error` at `32.dp` for diagnostic `WarningAmber`).
+  2. *Global-vs-Per-Workout Ordering, Visual Grouping, Tooltips & `actionSpacerWidth` (`REQ-UI-2786.2`)*:
+     - `WorkoutHeader` SHALL expose optional `onOpenTabsConfig: (() -> Unit)? = null` and `onChangeCluster: (() -> Unit)? = null` slots rendered left-to-right as `[Tune]` (Global/Persistent Display Configuration) before `[⇄] [Edit] [Share]` (Per-Workout Actions, with `WarningAmber` if present).
+     - `[Tune]` SHALL be visually distinguished from the per-workout action group via a subtle tonal pill container (`MaterialTheme.colorScheme.primary.copy(alpha = TTAlpha.Faint)`, `RoundedCornerShape(8.dp)`) and a `16.dp` `VerticalDivider` (`outlineVariant`) before `[⇄] [Edit] [Share]`, keeping compact `360–411 dp` width without horizontal text labels.
+     - Each action button SHALL wrap `TooltipBox` + `PlainTooltip` with localized 9-language strings (`values*/strings_workout_header.xml`: `workout_header_tabs_config_tooltip`, `workout_header_change_cluster_tooltip`, `workout_header_edit_tooltip`, `workout_header_share_tooltip`) clarifying global display layout vs. single-workout scope, alongside descriptive TalkBack `contentDescription`s.
+     - `WorkoutHeader` `actionSpacerWidth` MUST sum every rendered header action (`onOpenTabsConfig` including pill/divider clearance, `onChangeCluster`, `WarningAmber`, `menuEnabled`, `onEditWorkout`, `onShareWorkout`) so long titles never collide with the action strip on `360–411 dp` screens.
+  3. *Universal `⇄` Cluster-Change Visibility & Non-GPS Fallback (`REQ-UI-2786.3`)*:
+     - `TrackOnMapScreen.kt` SHALL centrally wire `onChangeCluster` into `WorkoutDetailTabbedContent` -> `WorkoutHeader` across all 5 callers (`WorkoutSummariesTabbedScreen`, `WorkoutSummariesListFragment`, `PeriodMapScreen`, `WorkoutClustersScreen`, `WorkoutClusterHeatmapScreen`), defaulting to a built-in `WorkoutClusterSelectionDialog` backed by `TrackOnMapAftermathViewModel` / `WorkoutClusterRepository` when no caller override is supplied (and migrating `WorkoutClustersScreen` & `WorkoutClusterHeatmapScreen` from ad-hoc `headerActions` to `onChangeCluster`).
+     - For non-GPS/indoor workouts (`startLatLng == null || endLatLng == null || maxDisplacementLatLng == null`), candidate scoring SHALL fall back to all clusters from `WorkoutClusterRepository`, selecting a cluster SHALL route via `assignClusterToWorkout` (`forceIdentity = true`, avoiding `moveWorkoutToCluster`'s early return), `onCreateNew` MUST be hidden (`null`), and `onUnassign` SHALL remain available whenever `clusterId > 0`.
+  4. *Architectural & Test Invariants (`REQ-UI-2786.4`)*:
+     - `WorkoutRepository.kt` MUST remain untouched (`<= 5,117` LoC God-class safety); new cluster selection/assignment orchestration belongs in `WorkoutClusterRepository.kt` / `TrackOnMapAftermathViewModel.kt`, keeping `ArchitectureConformanceContractTest` (`IF-SWE`) clean (zero `*DatabaseManager`/`*DbHelper` in UI).
+     - `WorkoutSummary` list cards (`menuEnabled = true`, `onOpenTabsConfig = null`, `onChangeCluster = null`), `snapshotHeader` (`MapDetailLayout`), `WorkoutDetailHeaderClickContractTest` (`onClicked = null`), `WorkoutHeaderLandscapeTest` (`REQ-UI-433.2`), and `WorkoutClusterSelectionDialog`'s public signature remain preserved.
+     - New Robolectric `createComposeRule()` UI tests MUST read `0` `src/main` files (`REQ-PRO-049.1`), and Stage 5 SHALL capture and inspect Light/Dark `@Preview` PNG `docs/engineering/walkthroughs/img/ATT-8097_header_actions_preview.png` (`Rule 8.5`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Refines `REQ-UI-408.5` (`WorkoutDetailTabbedContent.kt`), `REQ-UI-447` (`WorkoutHeader.kt`), and `REQ-SET-059.4` (`WorkoutClustersScreen.kt` / `WorkoutClusterHeatmapScreen.kt`) via net-new `REQ-UI-2786`.
+2. *Historical Origin & Commit Trace*: `ea5fa705` (`ATT-3920`, `Tune` in `WorkoutDetailTabbedContent`), `ab9bebee` (`ATT-5809`, `Share` & `actionSpacerWidth` in `WorkoutHeader`), and `949078cd` (`ATT-7754`, `onUnassign` & peek refresh).
+3. *Root Reason for Existing Formulation*: `headerActions` was used as an ad-hoc slot for cluster screens while `WorkoutHeader` decoupled `Edit`/`Share`, unintentionally omitting `⇄` on `Trainingsliste` and `Perioden`, rendering `Tune` after `headerActions`, and leaving `WorkoutClustersScreen`'s icon untinted.
+4. *Preservation of Core Invariants*: Preserves `WorkoutSummary` overflow menu, clean `snapshotHeader`, `WorkoutDetailHeaderClickContractTest`, `WorkoutHeaderLandscapeTest` (`REQ-UI-433.2`), `WorkoutClusterSelectionDialog` binary compatibility, and `WorkoutRepository.kt` untouched (`5,117` LoC).
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `TrackOnMapScreen` opened from any of the 5 entry points (`WorkoutSummariesTabbedScreen`, `WorkoutSummariesListFragment`, `PeriodMapScreen`, `WorkoutClustersScreen`, `WorkoutClusterHeatmapScreen`), *When* `WorkoutHeader` renders in Light or Dark theme, *Then* all action icons (`Tune`, `⇄`, `Edit`, `Share`) use `MaterialTheme.colorScheme.primary` at `32.dp`, ordered `[Tune]` (tonal pill + `VerticalDivider`) before `[⇄] [Edit] [Share]`, with `actionSpacerWidth` preventing title overlap at `360–411 dp`.
+• *Given* an indoor/non-GPS workout (`startLatLng == null`), *When* the athlete taps `⇄`, *Then* `WorkoutClusterSelectionDialog` lists available clusters with `onCreateNew` hidden (`null`) and selecting a cluster invokes `assignClusterToWorkout` cleanly without early return.
+• *Given* all 9 locale `strings_workout_header.xml` files, *When* `TranslationParityTest` and `SourceTextReadingAuditContractTest` run, *Then* 100% 9-locale parity and `0` new `src/main` test reads pass.
+
+**Invariants**: `WorkoutRepository.kt` untouched (`<= 5,117` LoC); `IF-SWE` / `ArchitectureConformanceContractTest` clean; `WorkoutSummary` & `snapshotHeader` free of `Tune`/`⇄`; `WarningAmber` retains `error` tint; `REQ-UI-433.2` landscape single-row layout preserved; 9-locale parity; `0` new `src/main` test reads.
+
 ---
 
 ## Change History
@@ -1787,3 +1824,6 @@
 | `1.0.3` | 2026-11-18 | AI Agent (`ATT-8749`) | `ATT-8749` | Added `REQ-UI-2785` (`[Planned]`) for enlarged `175x120 dp` Lieblingsorte preview map, `120.0 dp` zoom calibration, and `360dp` overflow protection. |
 | `1.0.4` | 2026-11-18 | AI Agent (`ATT-8749`) | `ATT-8749` | Promoted `REQ-UI-2785` to `[Verified]` after Stage 4/5 verification (`89/89` tests, `Rule 8.5` PNG audit). |
 | `1.0.6` | 2026-11-18 | AI Agent (`ATT-8748`) | `ATT-8748` | Refined `REQ-UI-493` to `[Verified]` (`175.dp x 120.dp` thumbnail, `12.dp` spacing, `resolveClusterThumbnailWidthDp`, `THUMBNAIL_BOUNDS_PADDING_PX = 18`, `151/151` PASS, `Rule 8.5` PNG). |
+| `1.0.7` | 2026-11-18 | AI Agent (`ATT-8097`) | `ATT-8097` | Added `REQ-UI-2786` (`[Planned]`) unifying Workout Detail header action icons, global-vs-unit grouping, tooltips, universal `⇄` visibility, and non-GPS fallback. |
+| `1.0.8` | 2026-11-18 | AI Agent (`ATT-8097`) | `ATT-8097` | Promoted `REQ-UI-2786` to `[Implemented]` after Stage 4 implementation (`90/90` targeted tests PASS, `Rule 8.5` PNG inspected). |
+| `1.0.9` | 2026-11-18 | AI Agent (`ATT-8097`) | `ATT-8097` | Promoted `REQ-UI-2786` to `[Verified]` after Stage 5 verification (`90/90` XML tests PASS, governance `exit 0`, `Rule 8.5` PNG). |

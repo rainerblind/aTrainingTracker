@@ -62,7 +62,11 @@ import android.app.Application
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import com.atrainingtracker.trainingtracker.database.AthleteMetricType
+import com.atrainingtracker.trainingtracker.database.WorkoutCluster
+import com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository
+import com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterSelectionDialog
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteMetricsRepository
 import com.atrainingtracker.trainingtracker.zones.HrvSessionThreshold
@@ -93,6 +97,7 @@ fun TrackOnMapScreen(
     showMap: Boolean = true,
     onClusterClick: ((Long) -> Unit)? = null,
     onEditWorkout: ((Long) -> Unit)? = null,
+    onChangeCluster: (() -> Unit)? = null,
     headerActions: @Composable RowScope.() -> Unit = {},
     hrZoneDistribution: ZoneDistributionData? = null,
     powerZoneDistribution: ZoneDistributionData? = null,
@@ -128,7 +133,27 @@ fun TrackOnMapScreen(
     val persistedTabsConfig by preferenceManager.workoutDetailTabsOrderFlow.collectAsState(initial = WorkoutDetailTabConfig.DEFAULT_TABS)
     val activeTabsConfig = tabsConfig ?: persistedTabsConfig
     var showTabsConfigSheet by rememberSaveable { mutableStateOf(false) }
+    var showClusterSelectionDialog by rememberSaveable { mutableStateOf(false) }
+    var clusterCandidates by remember { mutableStateOf<List<Pair<WorkoutCluster, Double>>>(emptyList()) }
+    var clusterOverride by remember(workoutData.id, workoutData.clusterId, workoutData.clusterName) {
+        mutableStateOf<Pair<Long, String?>?>(null)
+    }
+    val effectiveWorkoutData = remember(workoutData, clusterOverride) {
+        clusterOverride?.let { (cid, cname) ->
+            workoutData.copy(clusterId = cid, clusterName = cname)
+        } ?: workoutData
+    }
     val repository = remember(context) { WorkoutRepository.getInstance(context.applicationContext as Application) }
+    val clusterRepository = remember(context) { WorkoutClusterRepository.getInstance(context.applicationContext) }
+    val effectiveOnChangeCluster: () -> Unit = onChangeCluster ?: { showClusterSelectionDialog = true }
+
+    LaunchedEffect(showClusterSelectionDialog, effectiveWorkoutData) {
+        if (showClusterSelectionDialog) {
+            clusterCandidates = withContext(Dispatchers.IO) {
+                clusterRepository.getCandidateClustersForWorkout(effectiveWorkoutData)
+            }
+        }
+    }
     var showCreateLapSheet by rememberSaveable { mutableStateOf(false) }
     var showMoveBoundarySheet by rememberSaveable { mutableStateOf(false) }
     var moveBoundaryLapNr by rememberSaveable { mutableLongStateOf(1L) }
@@ -348,7 +373,7 @@ fun TrackOnMapScreen(
 
     if (useTabbedLayout && metadataContent == null && analyticsContent == null) {
         WorkoutDetailTabbedContent(
-            workoutData = workoutData,
+            workoutData = effectiveWorkoutData,
             tabs = visibleTabs,
             availability = sectionAvailability,
             detailPreferences = activeDetailPrefs,
@@ -377,6 +402,7 @@ fun TrackOnMapScreen(
             useStatusBarsPadding = useStatusBarsPadding,
             onClusterClick = onClusterClick,
             onEditWorkout = onEditWorkout,
+            onChangeCluster = effectiveOnChangeCluster,
             headerActions = headerActions,
             onOpenTabsConfig = { showTabsConfigSheet = true },
             initialAutoShareSnapshot = initialAutoShareSnapshot,
@@ -504,18 +530,18 @@ fun TrackOnMapScreen(
             Column(modifier = Modifier.fillMaxWidth()) {
                 WorkoutHeader(
                     modifier = Modifier.fillMaxWidth(),
-                    data = workoutData.headerData,
+                    data = effectiveWorkoutData.headerData,
                     menuEnabled = false,
                     canDelete = false,
-                    onClicked = onEditWorkout?.let { edit -> { edit(workoutData.id) } },
+                    onClicked = onEditWorkout?.let { edit -> { edit(effectiveWorkoutData.id) } },
                     onExport = { },
                     onSaveAsRoute = { },
                     onDeleteRequest = { },
                     onClusterClick = onClusterClick,
-                    onEditWorkout = onEditWorkout?.let { edit -> { edit(workoutData.id) } },
-                    actions = {
-                        headerActions()
-                    }
+                    onEditWorkout = onEditWorkout?.let { edit -> { edit(effectiveWorkoutData.id) } },
+                    onOpenTabsConfig = { showTabsConfigSheet = true },
+                    onChangeCluster = effectiveOnChangeCluster,
+                    actions = headerActions
                 )
                 if (workoutData.polarSyncPending) {
                     PolarPendingRetrySyncSection(
@@ -954,6 +980,45 @@ fun TrackOnMapScreen(
             }
         }
     )
+    }
+
+    if (showClusterSelectionDialog) {
+        val targetWorkout = effectiveWorkoutData
+        val canCreateNewCluster = clusterRepository.hasSpatialFingerprint(targetWorkout)
+        WorkoutClusterSelectionDialog(
+            title = stringResource(R.string.cluster_move_workout_title),
+            candidates = clusterCandidates,
+            onSelect = { target ->
+                showClusterSelectionDialog = false
+                clusterOverride = target.id to target.name
+                coroutineScope.launch {
+                    clusterRepository.moveOrAssignWorkoutToCluster(targetWorkout, target.id)
+                }
+            },
+            onDismiss = { showClusterSelectionDialog = false },
+            sportNameResolver = { clusterRepository.getSportName(it) },
+            bSportTypeResolver = { clusterRepository.getBSportType(it) },
+            onCreateNew = if (canCreateNewCluster) {
+                {
+                    showClusterSelectionDialog = false
+                    coroutineScope.launch {
+                        val (newId, newName) = clusterRepository.createNewClusterFromWorkout(targetWorkout)
+                        if (newId > 0L) {
+                            clusterOverride = newId to newName
+                        }
+                    }
+                }
+            } else null,
+            onUnassign = if (targetWorkout.clusterId > 0) {
+                {
+                    showClusterSelectionDialog = false
+                    clusterOverride = -1L to null
+                    coroutineScope.launch {
+                        clusterRepository.unassignWorkoutFromCluster(targetWorkout.id)
+                    }
+                }
+            } else null
+        )
     }
 
     if (showCreateLapSheet) {

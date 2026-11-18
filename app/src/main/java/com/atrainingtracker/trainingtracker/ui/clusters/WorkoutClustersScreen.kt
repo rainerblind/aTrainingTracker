@@ -27,7 +27,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -183,14 +182,7 @@ fun WorkoutClustersScreen(
                     viewModel.selectClusterById(clusterId)
                     inspectedWorkout = null
                 },
-                headerActions = {
-                    IconButton(onClick = { workoutToCluster = workout }) {
-                        Icon(
-                            imageVector = Icons.Default.SwapHoriz,
-                            contentDescription = stringResource(R.string.cluster_move_workout_title)
-                        )
-                    }
-                },
+                onChangeCluster = { workoutToCluster = workout },
                 onEditWorkout = { id -> editedWorkoutId = id },
                 hrZoneDistribution = aftermathUIState.hrZoneDistribution,
                 powerZoneDistribution = aftermathUIState.powerZoneDistribution,
@@ -214,12 +206,14 @@ fun WorkoutClustersScreen(
                     onDismiss = { workoutToCluster = null },
                     sportNameResolver = { viewModel.getSportName(it) },
                     bSportTypeResolver = { viewModel.getBSportType(it) },
-                    onCreateNew = {
-                        viewModel.createNewClusterFromWorkout(workoutToCluster!!)
-                        workoutToCluster = null
-                        inspectedWorkout = null
-                        viewModel.clearPeekSelection()
-                    },
+                    onCreateNew = if (workoutToCluster!!.startLatLng != null && workoutToCluster!!.endLatLng != null) {
+                        {
+                            viewModel.createNewClusterFromWorkout(workoutToCluster!!)
+                            workoutToCluster = null
+                            inspectedWorkout = null
+                            viewModel.clearPeekSelection()
+                        }
+                    } else null,
                     onUnassign = if (workoutToCluster!!.clusterId > 0) {
                         {
                             viewModel.unassignWorkout(workoutToCluster!!)
@@ -428,10 +422,12 @@ fun WorkoutClustersScreen(
                     onDismiss = { workoutToCluster = null },
                     sportNameResolver = { viewModel.getSportName(it) },
                     bSportTypeResolver = { viewModel.getBSportType(it) },
-                    onCreateNew = {
-                        viewModel.createNewClusterFromWorkout(workoutToCluster!!)
-                        workoutToCluster = null
-                    },
+                    onCreateNew = if (workoutToCluster!!.startLatLng != null && workoutToCluster!!.endLatLng != null) {
+                        {
+                            viewModel.createNewClusterFromWorkout(workoutToCluster!!)
+                            workoutToCluster = null
+                        }
+                    } else null,
                     onUnassign = if (workoutToCluster!!.clusterId > 0) {
                         {
                             viewModel.unassignWorkout(workoutToCluster!!)

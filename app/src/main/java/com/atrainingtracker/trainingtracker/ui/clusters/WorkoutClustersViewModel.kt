@@ -620,12 +620,7 @@ class WorkoutClustersViewModel @JvmOverloads constructor(
     }
 
     fun getCandidateClustersForWorkout(workout: WorkoutData): List<Pair<WorkoutCluster, Double>> {
-        val start = workout.startLatLng ?: return emptyList()
-        val end = workout.endLatLng ?: return emptyList()
-        val apex = workout.maxDisplacementLatLng ?: return emptyList()
-        
-        return WorkoutClusterEngine.getInstance(getApplication())
-            .getClusterScores(start, end, apex, workout.totalDistance, workout.workoutName, workout.bSportType)
+        return repository.getCandidateClustersForWorkout(workout)
     }
 
     fun moveWorkout(workout: WorkoutData, newClusterId: Long) {
@@ -633,8 +628,12 @@ class WorkoutClustersViewModel @JvmOverloads constructor(
         if (currentClusterId == newClusterId) return
 
         viewModelScope.launch(Dispatchers.IO) {
-            WorkoutClusterEngine.getInstance(getApplication())
-                .moveWorkoutToCluster(getApplication(), workout.id, currentClusterId, newClusterId)
+            val engine = WorkoutClusterEngine.getInstance(getApplication())
+            if (repository.hasSpatialFingerprint(workout)) {
+                engine.moveWorkoutToCluster(getApplication(), workout.id, currentClusterId, newClusterId)
+            } else {
+                engine.assignClusterToWorkout(getApplication(), workout.id, newClusterId, forceIdentity = true)
+            }
             
             // Refresh state
             repository.refreshClusters()

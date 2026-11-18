@@ -32,8 +32,11 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.SwapHoriz
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.WarningAmber
 import androidx.compose.material3.*
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -63,6 +66,18 @@ import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 
 /**
+ * Test tags for [WorkoutHeader] action buttons and global-vs-unit visual grouping (`REQ-UI-2786`).
+ */
+object WorkoutHeaderTestTags {
+    const val GLOBAL_TABS_PILL = "workout_header_global_tabs_pill"
+    const val TABS_CONFIG_BUTTON = "workout_header_tabs_config_button"
+    const val ACTIONS_DIVIDER = "workout_header_actions_divider"
+    const val CHANGE_CLUSTER_BUTTON = "workout_header_change_cluster_button"
+    const val EDIT_BUTTON = "workout_header_edit_button"
+    const val SHARE_BUTTON = "workout_header_share_button"
+}
+
+/**
  * Reusable header component for workout summaries and map detail views (ATT-503).
  *
  * Displays the sport icon, workout title, date/time, and an interactive cluster navigation
@@ -79,8 +94,11 @@ import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
  * @param onClusterClick Optional callback invoked when the user clicks the cluster navigation button.
  * @param onEditWorkout Optional callback invoked when the user clicks the dedicated edit workout action.
  * @param onShareWorkout Optional callback invoked when the user clicks the dedicated share workout action (ATT-5809).
+ * @param onOpenTabsConfig Optional callback invoked when the user clicks the global display/tabs configuration button (`REQ-UI-2786`).
+ * @param onChangeCluster Optional callback invoked when the user clicks the per-workout cluster swap button (`REQ-UI-2786`).
  * @param actions Optional slot for trailing action buttons.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WorkoutHeader(
     data: WorkoutHeaderData,
@@ -97,6 +115,8 @@ fun WorkoutHeader(
     onShareWorkout: (() -> Unit)? = null,
     onClearRecordingErrors: (() -> Unit)? = null,
     onSyncHealthConnect: (() -> Unit)? = null,
+    onOpenTabsConfig: (() -> Unit)? = null,
+    onChangeCluster: (() -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {}
 ) {
     // State to control menu visibility
@@ -127,8 +147,52 @@ fun WorkoutHeader(
             Row(
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Custom actions provided by caller
-                actions()
+                val hasPerWorkoutActions = onChangeCluster != null ||
+                    !data.recordingErrors.isNullOrBlank() ||
+                    onEditWorkout != null ||
+                    onShareWorkout != null ||
+                    menuEnabled
+
+                // Global/Persistent Display Configuration (distinct from per-workout actions)
+                if (onOpenTabsConfig != null) {
+                    Surface(
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = TTAlpha.Faint),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.testTag(WorkoutHeaderTestTags.GLOBAL_TABS_PILL)
+                    ) {
+                        Box(modifier = Modifier.padding(2.dp)) {
+                            HeaderActionTooltipButton(
+                                onClick = onOpenTabsConfig,
+                                icon = Icons.Default.Tune,
+                                contentDescription = stringResource(R.string.workout_header_tabs_config_tooltip),
+                                tooltipText = stringResource(R.string.workout_header_tabs_config_tooltip),
+                                buttonTag = WorkoutHeaderTestTags.TABS_CONFIG_BUTTON
+                            )
+                        }
+                    }
+                    if (hasPerWorkoutActions) {
+                        Spacer(modifier = Modifier.width(6.dp))
+                        VerticalDivider(
+                            modifier = Modifier
+                                .height(16.dp)
+                                .testTag(WorkoutHeaderTestTags.ACTIONS_DIVIDER),
+                            thickness = 1.dp,
+                            color = MaterialTheme.colorScheme.outlineVariant
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                    }
+                }
+
+                // Per-Workout Actions: [⇄ Cluster Swap] [Diagnostic] [Edit] [Share] [Menu]
+                if (onChangeCluster != null) {
+                    HeaderActionTooltipButton(
+                        onClick = onChangeCluster,
+                        icon = Icons.Default.SwapHoriz,
+                        contentDescription = stringResource(R.string.workout_header_change_cluster_tooltip),
+                        tooltipText = stringResource(R.string.workout_header_change_cluster_tooltip),
+                        buttonTag = WorkoutHeaderTestTags.CHANGE_CLUSTER_BUTTON
+                    )
+                }
 
                 if (!data.recordingErrors.isNullOrBlank()) {
                     IconButton(
@@ -146,30 +210,27 @@ fun WorkoutHeader(
                 }
 
                 if (onEditWorkout != null) {
-                    IconButton(
+                    HeaderActionTooltipButton(
                         onClick = onEditWorkout,
-                        modifier = Modifier.size(32.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Edit,
-                            contentDescription = stringResource(R.string.edit_workout),
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
+                        icon = Icons.Default.Edit,
+                        contentDescription = stringResource(R.string.workout_header_edit_tooltip),
+                        tooltipText = stringResource(R.string.workout_header_edit_tooltip),
+                        buttonTag = WorkoutHeaderTestTags.EDIT_BUTTON
+                    )
                 }
 
                 if (onShareWorkout != null) {
-                    IconButton(
+                    HeaderActionTooltipButton(
                         onClick = onShareWorkout,
-                        modifier = Modifier.size(32.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Share,
-                            contentDescription = stringResource(R.string.share),
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
+                        icon = Icons.Default.Share,
+                        contentDescription = stringResource(R.string.workout_header_share_tooltip),
+                        tooltipText = stringResource(R.string.workout_header_share_tooltip),
+                        buttonTag = WorkoutHeaderTestTags.SHARE_BUTTON
+                    )
                 }
+
+                // Custom actions provided by caller
+                actions()
 
                 if (menuEnabled) {
                     Box {
@@ -420,10 +481,20 @@ fun WorkoutHeader(
                             modifier = Modifier.weight(1f)
                         )
 
-                        // Dynamic Spacer for the Action / Menu Button area to prevent title overlap (ATT-5809)
-                        val actionSpacerWidth = (if (menuEnabled) 36.dp else 0.dp) +
-                            (if (onEditWorkout != null) 36.dp else 0.dp) +
-                            (if (onShareWorkout != null) 36.dp else 0.dp)
+                        // Dynamic Spacer for the Action / Menu Button area to prevent title overlap (ATT-5809 / ATT-8097)
+                        val hasPerWorkoutSpacer = onChangeCluster != null ||
+                            !data.recordingErrors.isNullOrBlank() ||
+                            onEditWorkout != null ||
+                            onShareWorkout != null ||
+                            menuEnabled
+                        val actionSpacerWidth = (if (onOpenTabsConfig != null) {
+                            36.dp + if (hasPerWorkoutSpacer) 17.dp else 4.dp
+                        } else 0.dp) +
+                            (if (onChangeCluster != null) 32.dp else 0.dp) +
+                            (if (!data.recordingErrors.isNullOrBlank()) 32.dp else 0.dp) +
+                            (if (menuEnabled) 32.dp else 0.dp) +
+                            (if (onEditWorkout != null) 32.dp else 0.dp) +
+                            (if (onShareWorkout != null) 32.dp else 0.dp)
                         if (actionSpacerWidth > 0.dp) {
                             Spacer(modifier = Modifier.width(actionSpacerWidth.coerceAtLeast(40.dp)))
                         }
@@ -825,6 +896,79 @@ private fun PreviewCommuteHeader() {
             onSaveAsRoute = {},
             onDeleteRequest = {}
         )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun HeaderActionTooltipButton(
+    onClick: () -> Unit,
+    icon: ImageVector,
+    contentDescription: String,
+    tooltipText: String,
+    buttonTag: String,
+    tint: Color = MaterialTheme.colorScheme.primary
+) {
+    TooltipBox(
+        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(),
+        tooltip = {
+            PlainTooltip {
+                Text(tooltipText)
+            }
+        },
+        state = rememberTooltipState()
+    ) {
+        IconButton(
+            onClick = onClick,
+            modifier = Modifier
+                .size(32.dp)
+                .testTag(buttonTag)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = contentDescription,
+                tint = tint
+            )
+        }
+    }
+}
+
+@Preview(name = "Detail Actions Unified - Light", showBackground = true, widthDp = 411)
+@Preview(name = "Detail Actions Unified - Dark", showBackground = true, widthDp = 411, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Preview(name = "Detail Actions Narrow 360dp - Light", showBackground = true, widthDp = 360)
+@Composable
+private fun PreviewWorkoutHeaderDetailActionsUnified() {
+    ATrainingTrackerTheme {
+        Surface(color = MaterialTheme.colorScheme.background) {
+            WorkoutHeader(
+                data = WorkoutHeaderData(
+                    workoutName = "Morning Tempo Ride Along Isar Valley",
+                    formattedDate = "Today",
+                    formattedTime = "07:30",
+                    sportName = "Cycling",
+                    bSportType = BSportType.BIKE,
+                    clusterId = 1L,
+                    clusterName = "Isar Valley Loop",
+                    finished = true,
+                    commute = false,
+                    trainer = false,
+                    startTimeS = 0,
+                    equipmentName = "Gravel Bike",
+                    uploadToStrava = 1,
+                    stravaSportName = "Ride"
+                ),
+                menuEnabled = false,
+                canDelete = false,
+                onClicked = null,
+                onExport = {},
+                onSaveAsRoute = {},
+                onDeleteRequest = {},
+                onOpenTabsConfig = {},
+                onChangeCluster = {},
+                onEditWorkout = {},
+                onShareWorkout = {}
+            )
+        }
     }
 }
 

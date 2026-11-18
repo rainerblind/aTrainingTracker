@@ -726,6 +726,87 @@ class WorkoutClusterRepository internal constructor(
         return SportTypesRepository.getInstance(context).getBSportType(sportId)
     }
 
+    /**
+     * Returns whether [workout] has the spatial fingerprint endpoints required for
+     * GPS similarity scoring and new-cluster creation (`REQ-UI-2786.3`).
+     */
+    fun hasSpatialFingerprint(workout: WorkoutData): Boolean =
+        workout.startLatLng != null && workout.endLatLng != null && workout.maxDisplacementLatLng != null
+
+    /**
+     * Returns candidate route clusters for [workout], scoring by spatial similarity when GPS
+     * extrema are present and falling back to all known clusters with [Double.NaN] scores
+     * for indoor/non-GPS workouts (`REQ-UI-2786.3`).
+     */
+    fun getCandidateClustersForWorkout(workout: WorkoutData): List<Pair<WorkoutCluster, Double>> {
+        val start = workout.startLatLng
+        val end = workout.endLatLng
+        val apex = workout.maxDisplacementLatLng
+        if (start != null && end != null && apex != null) {
+            return WorkoutClusterEngine.getInstance(context)
+                .getClusterScores(start, end, apex, workout.totalDistance, workout.workoutName, workout.bSportType)
+        }
+        return getAllClustersSync()
+            .sortedWith(
+                compareByDescending<WorkoutCluster> { it.bSportType == workout.bSportType }
+                    .thenBy { it.name.lowercase() }
+            )
+            .map { it to Double.NaN }
+    }
+
+    /**
+     * Moves a GPS workout or assigns an indoor/non-GPS workout to [targetClusterId],
+     * refreshing cluster state and reloading workout metadata without modifying `WorkoutRepository.kt` (`REQ-UI-2786.3`).
+     */
+    suspend fun moveOrAssignWorkoutToCluster(workout: WorkoutData, targetClusterId: Long): String? =
+        withContext(Dispatchers.IO) {
+            if (workout.clusterId == targetClusterId) return@withContext getClusterNameById(targetClusterId)
+            val engine = WorkoutClusterEngine.getInstance(context)
+            if (hasSpatialFingerprint(workout)) {
+                engine.moveWorkoutToCluster(context, workout.id, workout.clusterId, targetClusterId)
+            } else {
+                engine.assignClusterToWorkout(context, workout.id, targetClusterId, forceIdentity = true)
+            }
+            refreshClusters()
+            notifyWorkoutRepository { repo ->
+                repo.reloadWorkoutData(workout.id)
+                repo.loadWorkout(workout.id)
+            }
+            getClusterNameById(targetClusterId)
+        }
+
+    /**
+     * Creates a new favorite route cluster from [workout]'s spatial fingerprint and refreshes state (`REQ-UI-2786.3`).
+     */
+    suspend fun createNewClusterFromWorkout(workout: WorkoutData): Pair<Long, String?> =
+        withContext(Dispatchers.IO) {
+            val newClusterId = WorkoutClusterEngine.getInstance(context)
+                .createNewClusterFromWorkout(context, workout)
+            if (newClusterId > 0L) {
+                refreshClusters()
+                notifyWorkoutRepository { repo ->
+                    repo.reloadWorkoutData(workout.id)
+                    repo.loadWorkout(workout.id)
+                }
+                newClusterId to getClusterNameById(newClusterId)
+            } else {
+                -1L to null
+            }
+        }
+
+    /**
+     * Unassigns [workoutId] from its current favorite route cluster and refreshes state (`REQ-UI-2786.3`).
+     */
+    suspend fun unassignWorkoutFromCluster(workoutId: Long) = withContext(Dispatchers.IO) {
+        WorkoutClusterEngine.getInstance(context)
+            .unassignClusterFromWorkout(context, workoutId)
+        refreshClusters()
+        notifyWorkoutRepository { repo ->
+            repo.reloadWorkoutData(workoutId)
+            repo.loadWorkout(workoutId)
+        }
+    }
+
     private val databaseManager: WorkoutClusterDatabaseManager get() = clusterDb
     fun getAllClustersSync(): List<WorkoutCluster> = clusterDb.getAllClusters()
     fun getClusterByIdSync(id: Long): WorkoutCluster? = clusterDb.getClusterById(id)

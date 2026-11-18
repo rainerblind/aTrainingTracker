@@ -42,6 +42,8 @@ import com.atrainingtracker.trainingtracker.zones.ZoneCalculationMath
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteMetricsRepository
 import com.atrainingtracker.trainingtracker.database.AthleteMetricType
+import com.atrainingtracker.trainingtracker.database.WorkoutCluster
+import com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -87,7 +89,12 @@ class TrackOnMapAftermathViewModel @JvmOverloads constructor(
     private val workoutRepository = WorkoutRepository.getInstance(application)
     private val segmentsRepository = SegmentsRepository.getInstance(application)
     private val routesRepository = RoutesRepository.getInstance(application)
+    private val clusterRepository by lazy { WorkoutClusterRepository.getInstance(application) }
     private val prefManager = com.atrainingtracker.trainingtracker.MyPreferenceManager(application)
+
+    private val _clusterCandidates = MutableStateFlow<List<Pair<WorkoutCluster, Double>>>(emptyList())
+    /** Candidate route clusters for the active cluster-change dialog (`REQ-UI-2786.3`). */
+    val clusterCandidates: StateFlow<List<Pair<WorkoutCluster, Double>>> = _clusterCandidates.asStateFlow()
 
 
     val enabledTrackTypes: StateFlow<Set<TrackType>> = prefManager.enabledTrackTypesFlow
@@ -383,5 +390,47 @@ class TrackOnMapAftermathViewModel @JvmOverloads constructor(
             }
         }
     }
+
+    /**
+     * Loads candidate route clusters for [workout] on [ioDispatcher], including non-GPS fallback (`REQ-UI-2786.3`).
+     */
+    fun loadCandidateClustersForWorkout(workout: WorkoutData) {
+        viewModelScope.launch(ioDispatcher) {
+            _clusterCandidates.value = clusterRepository.getCandidateClustersForWorkout(workout)
+        }
+    }
+
+    /**
+     * Moves or assigns [workout] to [targetClusterId] and updates repository state (`REQ-UI-2786.3`).
+     */
+    fun moveOrAssignWorkoutToCluster(workout: WorkoutData, targetClusterId: Long) {
+        viewModelScope.launch(ioDispatcher) {
+            clusterRepository.moveOrAssignWorkoutToCluster(workout, targetClusterId)
+        }
+    }
+
+    /**
+     * Creates a new favorite route cluster from [workout]'s spatial fingerprint (`REQ-UI-2786.3`).
+     */
+    fun createNewClusterFromWorkout(workout: WorkoutData) {
+        viewModelScope.launch(ioDispatcher) {
+            clusterRepository.createNewClusterFromWorkout(workout)
+        }
+    }
+
+    /**
+     * Unassigns [workoutId] from its current favorite route cluster (`REQ-UI-2786.3`).
+     */
+    fun unassignWorkoutFromCluster(workoutId: Long) {
+        viewModelScope.launch(ioDispatcher) {
+            clusterRepository.unassignWorkoutFromCluster(workoutId)
+        }
+    }
+
+    /** Resolves localized sport display name for [sportId] (`REQ-UI-2786.3`). */
+    fun getSportName(sportId: Long): String = clusterRepository.getSportName(sportId)
+
+    /** Resolves [BSportType] for [sportId] (`REQ-UI-2786.3`). */
+    fun getBSportType(sportId: Long): BSportType = clusterRepository.getBSportType(sportId)
 
 }

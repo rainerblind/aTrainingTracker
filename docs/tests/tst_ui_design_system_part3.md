@@ -1,14 +1,14 @@
 # Living Test Specification: UI Components & Design System (Part 3 of 3)
 
 **Document ID**: `DOC-TST-UI-P3`  
-**Version**: 1.0.6  
+**Version**: 1.0.9  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `ui_design_system_part3`  
 **Prefixes**: `UI`, `UNT`  
 **Scope**: Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts.  
-**Total Tests**: 38
+**Total Tests**: 39
 
 ---
 
@@ -771,6 +771,25 @@
   4. *Localization & Targeted Regression (`TST-UI-2785.4`)*:
      - `Localization Parity: N/A - no UI strings` (`values*/strings*.xml` untouched); execute `KnownLocationZoomMathTest`, `KnownLocationCardLayoutTest`, and `KnownLocationCardComposeUiTest` asserting 100% pass rate.
 
+### TST-UI-2786: Workout Detail Header Action Uniformity, Global-vs-Unit Grouping & Universal Cluster Swap Verification [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-UI-2786` (`REQ-UI-2786.1`, `REQ-UI-2786.2`, `REQ-UI-2786.3`, `REQ-UI-2786.4`)
+- **Component**: `WorkoutHeader.kt`, `WorkoutDetailTabbedContent.kt`, `TrackOnMapScreen.kt`, `TrackOnMapAftermathViewModel.kt`, `WorkoutClusterRepository.kt`, `WorkoutClustersScreen.kt`, `WorkoutClusterHeatmapScreen.kt`, `WorkoutDetailHeaderActionsComposeTest.kt`, `TrackOnMapClusterActionViewModelTest.kt`
+- **Jira**: `ATT-8097`
+- **Test Description**:
+  1. *Robolectric Compose UI Action Uniformity, Ordering, Grouping & `actionSpacerWidth` Tests (`TST-UI-2786.1`, `WorkoutDetailHeaderActionsComposeTest.kt`)*:
+     - Render `WorkoutHeader` and `WorkoutDetailTabbedContent` via Robolectric `createComposeRule()` with `0` `src/main` file reads (`REQ-PRO-049.1`) and explicit `TST-UI-2786` KDoc tag.
+     - Assert left-to-right `boundsInRoot().left` ordering `[Tune] < [⇄] < [Edit] < [Share]` (with `Tune` in its global tonal pill + `VerticalDivider` before `[⇄][Edit][Share]`), `32.dp × 32.dp` icon-button bounds, `MaterialTheme.colorScheme.primary` tint on all 4 action icons (and `error` tint retained on `WarningAmber`), non-overlapping title bounds on `360.dp` and `411.dp` viewports (`actionSpacerWidth`), and `TooltipBox`/`PlainTooltip` semantics distinguishing global display layout from single-workout actions.
+     - Verify `WorkoutSummary` / `snapshotHeader` defaults (`onOpenTabsConfig = null`, `onChangeCluster = null`) omit `Tune` and `⇄`.
+  2. *Universal `⇄` Entry Points & Non-GPS/Indoor Cluster Fallback Tests (`TST-UI-2786.2`, `TrackOnMapClusterActionViewModelTest.kt`)*:
+     - Verify `TrackOnMapScreen` renders `⇄` uniformly across all 5 callers (`WorkoutSummariesTabbedScreen`, `WorkoutSummariesListFragment`, `PeriodMapScreen`, `WorkoutClustersScreen`, `WorkoutClusterHeatmapScreen`) via built-in `TrackOnMapAftermathViewModel` / `WorkoutClusterRepository` orchestration when `onChangeCluster` is not overridden.
+     - Verify for indoor/non-GPS workouts (`startLatLng == null || endLatLng == null`): candidate list falls back to `WorkoutClusterRepository.getAllClustersSync()`, selecting a cluster invokes `assignClusterToWorkout` (`forceIdentity = true`, bypassing `moveWorkoutToCluster` early return), `onCreateNew` is hidden (`null`), and `onUnassign` stays enabled when `clusterId > 0`.
+  3. *9-Locale Tooltip Parity & Architectural Invariants (`TST-UI-2786.3`, `TranslationParityTest.kt`, `ArchitectureConformanceContractTest.kt`)*:
+     - Verify `values*/strings_workout_header.xml` defines all 4 tooltip/accessibility keys across all 9 locales (EN, DE, ES, FR, IT, JA, NL, PL, PT) via `TranslationParityTest`.
+     - Verify `WorkoutRepository.kt` remains untouched (`<= 5,117` LoC), `ArchitectureConformanceContractTest` (`IF-SWE`), `SourceTextReadingAuditContractTest`, `WorkoutDetailHeaderClickContractTest`, `WorkoutHeaderLandscapeTest`, and `WorkoutClusterSelectionDialogTest` pass 100%.
+  4. *Rule 8.5 Light/Dark `@Preview` & On-Device Verification (`TST-UI-2786.4`)*:
+     - Capture Light/Dark `@Preview` screenshot `docs/engineering/walkthroughs/img/ATT-8097_header_actions_preview.png`, inspect via `read_file` against the 4-point checklist (`Rule 8.5`), and verify on `emulator-5554`.
+
 ---
 
 ## Change History
@@ -782,3 +801,6 @@
 | `1.0.3` | 2026-11-18 | AI Agent (`ATT-8749`) | `ATT-8749` | Added `TST-UI-2785` (`[Planned]`) for `175x120 dp` preview map, `120.0 dp` zoom calibration, and `360dp` behavioral Compose UI verification. |
 | `1.0.4` | 2026-11-18 | AI Agent (`ATT-8749`) | `ATT-8749` | Promoted `TST-UI-2785` to `[Verified]` after `89/89` unit/UI tests and `Rule 8.5` PNG inspection. |
 | `1.0.6` | 2026-11-18 | AI Agent (`ATT-8748`) | `ATT-8748` | Updated `TST-UI-493` to `[Verified]` (`ClusterItemThumbnailComposeTest.kt`, `ClusterItemAndFilterPolishTest.kt`, `151/151` Tier 1 XML tests, `Rule 8.5` PNG). |
+| `1.0.7` | 2026-11-18 | AI Agent (`ATT-8097`) | `ATT-8097` | Added `TST-UI-2786` (`[Planned]`) for Workout Detail header action uniformity, `[Tune] \| [⇄][Edit][Share]` grouping, universal `⇄` / non-GPS fallback, 9-locale tooltips, and `Rule 8.5` Light/Dark preview. |
+| `1.0.8` | 2026-11-18 | AI Agent (`ATT-8097`) | `ATT-8097` | Promoted `TST-UI-2786` to `[Implemented]` (`WorkoutDetailHeaderActionsComposeTest` + `TrackOnMapClusterActionViewModelTest` + `90/90` targeted tests PASS, `Rule 8.5` PNG). |
+| `1.0.9` | 2026-11-18 | AI Agent (`ATT-8097`) | `ATT-8097` | Promoted `TST-UI-2786` to `[Verified]` after Stage 5 verification (`90/90` XML tests PASS, `has_verified_test_evidence` `True`, `Rule 8.5` PNG). |
