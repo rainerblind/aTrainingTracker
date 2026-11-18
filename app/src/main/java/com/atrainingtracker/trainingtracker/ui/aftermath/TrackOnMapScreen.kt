@@ -118,7 +118,8 @@ fun TrackOnMapScreen(
     useTabbedLayout: Boolean = true,
     initialAutoShareSnapshot: Boolean = false,
     onSnapshotComplete: (() -> Unit)? = null,
-    multiSensorOverlays: Map<TelemetryMetricType, List<TelemetrySourceSeries>> = emptyMap()
+    multiSensorOverlays: Map<TelemetryMetricType, List<TelemetrySourceSeries>> = emptyMap(),
+    activityCarriageTimeline: ActivityCarriageTimeline? = null
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -398,6 +399,7 @@ fun TrackOnMapScreen(
             recentSessions = recentSessions,
             isSmoothedStream = isSmoothedStream,
             multiSensorOverlays = multiSensorOverlays,
+            activityCarriageTimeline = activityCarriageTimeline,
             hiddenCharts = persistedHiddenCharts,
             onToggleChartVisibility = handleToggleChartVisibility,
             onUpdateFtp = effectiveOnUpdateFtp,

@@ -27,6 +27,7 @@ import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.database.ExtremaType
 import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.atrainingtracker.trainingtracker.segments.SegmentsRepository
+import com.atrainingtracker.trainingtracker.ui.aftermath.ActivityCarriageTimeline
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.util.safeEnumValueOfOrNull
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
@@ -73,7 +74,8 @@ data class AftermathMapUIState(
     val powerThresholds: PowerZoneThresholds? = null,
     val recentSessions: List<HrvSessionThreshold> = emptyList(),
     val isSmoothedHrvStream: Boolean = false,
-    val loadedWorkoutId: Long? = null
+    val loadedWorkoutId: Long? = null,
+    val activityCarriageTimeline: ActivityCarriageTimeline? = null
 )
 
 class TrackOnMapAftermathViewModel @JvmOverloads constructor(
@@ -253,7 +255,8 @@ class TrackOnMapAftermathViewModel @JvmOverloads constructor(
                     _uiState.value = _uiState.value.copy(
                         tracks = tracksToSet,
                         availableTrackTypes = fullTracks.map { it.type }.toSet(),
-                        multiSensorOverlays = telemetry?.multiSensorOverlays ?: emptyMap()
+                        multiSensorOverlays = telemetry?.multiSensorOverlays ?: emptyMap(),
+                        activityCarriageTimeline = telemetry?.activityCarriageTimeline
                     )
                 }
             } else {
@@ -265,7 +268,8 @@ class TrackOnMapAftermathViewModel @JvmOverloads constructor(
                 withContext(Dispatchers.Main) {
                     _uiState.value = _uiState.value.copy(
                         telemetryPath = telemetryPoints,
-                        multiSensorOverlays = tracklessOverlays
+                        multiSensorOverlays = tracklessOverlays,
+                        activityCarriageTimeline = telemetry?.activityCarriageTimeline
                     )
                 }
             }

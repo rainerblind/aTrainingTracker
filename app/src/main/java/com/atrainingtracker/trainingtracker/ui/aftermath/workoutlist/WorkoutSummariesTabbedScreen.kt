@@ -333,6 +333,7 @@ fun WorkoutSummariesTabbedScreen(
                     onUpdateHrZones = { t1, t2 -> trackOnMapViewModel.updateHrZones(t1, t2) },
                     telemetryPath = aftermathUIState.telemetryPath,
                     multiSensorOverlays = aftermathUIState.multiSensorOverlays,
+                    activityCarriageTimeline = aftermathUIState.activityCarriageTimeline,
                     initialAutoShareSnapshot = autoShareSnapshotOnOpen,
                     onSnapshotComplete = {
                         if (autoShareSnapshotOnOpen) {

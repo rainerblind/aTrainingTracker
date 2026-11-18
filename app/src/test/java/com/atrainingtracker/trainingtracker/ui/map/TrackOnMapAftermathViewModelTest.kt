@@ -287,4 +287,80 @@ class TrackOnMapAftermathViewModelTest {
 
         assertTrue("isSmoothedHrvStream must be populated from repository", viewModel.uiState.value.isSmoothedHrvStream)
     }
+
+    @Test
+    fun loadAftermathData_populatesActivityCarriageTimelineForTracklessAndResetsOnSwitch() = runTest(testDispatcher) {
+        // TST-PER-053.3: Verify trackless workout propagation + stale timeline clearing on workout switch + GPS branch
+        val expectedTimeline = com.atrainingtracker.trainingtracker.ui.aftermath.ActivityCarriageTimeline(
+            segments = listOf(
+                com.atrainingtracker.trainingtracker.ui.aftermath.ActivityCarriageSegment(
+                    mode = com.atrainingtracker.banalservice.odometry.PhoneCarriageMode.RUN_WAIST_HIP,
+                    startSec = 0L,
+                    endSec = 60L,
+                    durationSeconds = 60L,
+                    distanceMeters = 0.0,
+                    durationPercentage = 100f,
+                    distancePercentage = 0f
+                )
+            ),
+            modeSummaries = listOf(
+                com.atrainingtracker.trainingtracker.ui.aftermath.ActivityCarriageModeSummary(
+                    mode = com.atrainingtracker.banalservice.odometry.PhoneCarriageMode.RUN_WAIST_HIP,
+                    durationSeconds = 60L,
+                    distanceMeters = 0.0,
+                    durationPercentage = 100f,
+                    distancePercentage = 0f,
+                    segmentCount = 1
+                )
+            ),
+            totalDurationSeconds = 60L,
+            totalDistanceMeters = 0.0,
+            startSec = 0L,
+            endSec = 60L
+        )
+        coEvery { mockWorkoutRepo.loadWorkoutDetailTelemetry(201L, any()) } returns WorkoutRepository.WorkoutDetailTelemetry(
+            tracks = emptyMap(),
+            hrZoneDistribution = null,
+            powerZoneDistribution = null,
+            activityCarriageTimeline = expectedTimeline
+        )
+        coEvery { mockWorkoutRepo.loadWorkoutDetailTelemetry(202L, any()) } returns WorkoutRepository.WorkoutDetailTelemetry(
+            tracks = mapOf(
+                TrackType.BEST to listOf(
+                    PathPoint(0.0, com.google.android.gms.maps.model.LatLng(48.1, 11.5)),
+                    PathPoint(100.0, com.google.android.gms.maps.model.LatLng(48.101, 11.501))
+                )
+            ),
+            hrZoneDistribution = null,
+            powerZoneDistribution = null,
+            activityCarriageTimeline = null
+        )
+
+        val viewModel = TrackOnMapAftermathViewModel(mockApplication, ioDispatcher = testDispatcher)
+        viewModel.loadAftermathData(createWorkout(201L).copy(trainer = true))
+        advanceUntilIdle()
+
+        assertEquals(expectedTimeline, viewModel.uiState.value.activityCarriageTimeline)
+
+        // Switching to GPS workout without carriage data clears stale timeline
+        viewModel.loadAftermathData(createWorkout(202L))
+        advanceUntilIdle()
+        assertEquals(null, viewModel.uiState.value.activityCarriageTimeline)
+
+        // GPS workout with carriage data propagates via tracks branch (L253-257)
+        coEvery { mockWorkoutRepo.loadWorkoutDetailTelemetry(203L, any()) } returns WorkoutRepository.WorkoutDetailTelemetry(
+            tracks = mapOf(
+                TrackType.BEST to listOf(
+                    PathPoint(0.0, com.google.android.gms.maps.model.LatLng(48.2, 11.6)),
+                    PathPoint(150.0, com.google.android.gms.maps.model.LatLng(48.202, 11.602))
+                )
+            ),
+            hrZoneDistribution = null,
+            powerZoneDistribution = null,
+            activityCarriageTimeline = expectedTimeline
+        )
+        viewModel.loadAftermathData(createWorkout(203L))
+        advanceUntilIdle()
+        assertEquals(expectedTimeline, viewModel.uiState.value.activityCarriageTimeline)
+    }
 }

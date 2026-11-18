@@ -30,4 +30,12 @@
     <string name="chart_overlay_source_att_fused_alt_slope">ATT Fused (Alt/Slope)</string>
     <string name="chart_overlay_mean_value">Ø %1$s</string>
     <string name="tuning_summary_matrix_tabs_format">%1$d/%2$d List, %3$d Tabs (%4$d/%5$d)</string>
+    <string name="carriage_timeline_card_title">Activity &amp; Phone Carriage</string>
+    <string name="carriage_timeline_phase_count">Phases: %1$d</string>
+    <string name="carriage_timeline_breakdown_title">Phase Breakdown</string>
+    <string name="carriage_timeline_show_phases">Show</string>
+    <string name="carriage_timeline_hide_phases">Hide</string>
+    <string name="carriage_timeline_time_range">%1$s – %2$s</string>
+    <string name="carriage_timeline_duration_percent">%1$s (%2$d%%)</string>
+    <string name="carriage_timeline_segment_repeats">%1$dx</string>
 </resources>

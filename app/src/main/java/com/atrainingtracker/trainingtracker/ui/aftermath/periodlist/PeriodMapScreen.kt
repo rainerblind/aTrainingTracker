@@ -272,7 +272,8 @@ fun PeriodMapScreen(
                                 onUpdateFtp = trackOnMapViewModel?.let { vm -> { vm.updateFtp(it) } },
                                 onUpdateHrZones = trackOnMapViewModel?.let { vm -> { t1, t2 -> vm.updateHrZones(t1, t2) } },
                                 telemetryPath = activeAftermathState?.telemetryPath ?: emptyList(),
-                                multiSensorOverlays = activeAftermathState?.multiSensorOverlays ?: emptyMap()
+                                multiSensorOverlays = activeAftermathState?.multiSensorOverlays ?: emptyMap(),
+                                activityCarriageTimeline = activeAftermathState?.activityCarriageTimeline
                             )
                         }
                     }

@@ -1,14 +1,14 @@
 # Living Test Specification: Post-Workout Analytics & Periods
 
 **Document ID**: `DOC-TST-PERIODS`  
-**Version**: 1.0.3  
+**Version**: 1.0.6  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `aftermath_periods`  
 **Prefixes**: `PER`, `PERF`, `RAD`, `SPT`  
 **Scope**: Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers.  
-**Total Tests**: 68
+**Total Tests**: 69
 
 ---
 
@@ -1161,6 +1161,29 @@
 
 ---
 
+### TST-PER-053: **Activity & Phone Carriage Mode Timeline Coalescing, ViewModel Propagation & Behavioral Compose UI Suite** (`ATT-8916`) [Verified]
+- **Requirement(s)**: `REQ-PER-045` (`REQ-PER-045.1`..`REQ-PER-045.5`)
+- **Component**: `ActivityCarriageTimeline.kt`, `ActivityCarriageTimelineCalculator.kt`, `ActivityCarriageTimelineCard.kt`, `Color.kt`, `WorkoutRepository.kt`, `TrackOnMapAftermathViewModel.kt`, `TrackOnMapScreen.kt`, `WorkoutDetailTabbedContent.kt`, `ActivityCarriageTimelineCalculatorTest.kt`, `WorkoutRepositoryTelemetryTest.kt`, `TrackOnMapAftermathViewModelTest.kt`, `ActivityCarriageTimelineCardTest.kt`, `ThemeColorCentralizationAuditTest.kt`, `TranslationParityTest.kt`, `UiReflectionOnlyTestAuditContractTest.kt`, `SourceTextReadingAuditContractTest.kt`, `ArchitectureConformanceContractTest.kt`
+- **Jira**: `ATT-8916`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Test Description**:
+  1. *Pure-JVM Coalescing, Sliver Absorption & Edge Math (`TST-PER-053.1`, `ActivityCarriageTimelineCalculatorTest.kt`)*:
+     • Verify bakery-tour sequence (`UNKNOWN(2s)` warmup -> `BIKE_FRONT_POCKET` -> `WALKING_TRANSITION` -> `STATIONARY` -> `WALKING_TRANSITION` -> `BIKE_FRONT_POCKET`) absorbs `<= 5s` `UNKNOWN` into adjacent active span, preserves all 5 chronological segments (`startTimeSec`, `endTimeSec`, `durationSec`, `distanceMeters`), and aggregates per-mode summaries (`durationPercentage` sums to `100%`).
+     • Verify genuine `1–5s` active transitions (`0..7`) are NEVER debounced away, `> 5s` `UNKNOWN(-1)` gaps are retained as distinct `UNKNOWN` segments included in `totalDurationSec`, pause gaps (`dt > 5s`) clamp `dt <= 5s`, and zero-distance indoor/stationary workouts produce `totalDistanceMeters == 0.0`, `distancePercentage == 0f` (no `NaN`), and strictly positive duration weights.
+  2. *Repository Pre-Decimation Extraction & Legacy/All-`UNKNOWN` Omission (`TST-PER-053.2`, `WorkoutRepositoryTelemetryTest.kt`)*:
+     • Verify `WorkoutRepository.loadWorkoutDetailTelemetry` returns `activityCarriageTimeline = null` for legacy tables without `ACTIVITY_AND_CARRIAGE_MODE` AND for tables containing exclusively `NULL`/`UNKNOWN(-1)` rows.
+     • Verify `> 800`-row GPS and trackless (`hasCarriageMode`-only or scalar+carriage) workouts preserve brief mid-workout `WALKING_TRANSITION` / `STATIONARY` segments without decimation loss.
+  3. *ViewModel Reset, Dual GPS/Trackless Forwarding & All-5-Host Wiring (`TST-PER-053.3`, `TrackOnMapAftermathViewModelTest.kt`)*:
+     • Verify `TrackOnMapAftermathViewModel.loadAftermathData` resets `activityCarriageTimeline = null` when switching workouts (`!isSameWorkout`), and propagates `telemetry.activityCarriageTimeline` in both the GPS `fullTracks.isNotEmpty()` path AND the trackless `else` fallback path.
+  4. *Behavioral Compose UI (`createComposeRule()`), Graceful Omission & `Rule 8.5` Light/Dark PNG (`TST-PER-053.4`, `ActivityCarriageTimelineCardTest.kt`)*:
+     • Using `createComposeRule()` with strictly `0` `src/main` file reads (`SourceTextReadingAuditContractTest`, `UiReflectionOnlyTestAuditContractTest`), verify `ActivityCarriageTimelineCard` (standalone and inside `WorkoutDetailTabbedContent` `DETAILS` section): renders proportional timeline bar + summary mode labels (`PhoneCarriageMode.labelResId`), handles zero-distance stationary/indoor timelines without `Modifier.weight(<= 0f)` crashes, toggles expandable chronological phase breakdown rows on tap, and renders nothing when `timeline == null` or empty. Capture and visually inspect Light & Dark PNG (`docs/engineering/walkthroughs/img/ATT-8916_carriage_timeline.png`) via `read_file`.
+  5. *9-Locale Parity, Theme Color & Build Contracts (`TST-PER-053.5`, `TranslationParityTest.kt`, `ThemeColorCentralizationAuditTest.kt`, `WorkoutDetailTabsTest.kt`, `ArchitectureConformanceContractTest.kt`)*:
+     • Verify 100% 9-locale parity in `values*/strings_workout_details.xml` (zero emojis), `0` `Color(0x...)` outside `Color.kt`, `"v3|"` & `14`-entry `WorkoutDetailSectionType` intact, `WorkoutSamplesDatabaseManager.java == 1,533` LoC, and `WorkoutRepository.kt <= 5,117` LoC.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -1169,3 +1192,6 @@
 | `1.0.1` | 2026-11-18 | AI Agent (`ATT-8710`) | `ATT-8710` | Added `TST-HRV-044` [Planned] covering DFA alpha 1 zone math, Compose UI rendering, Rule 8.5 Light/Dark PNGs, and scatter threshold parity. |
 | `1.0.2` | 2026-11-18 | AI Agent (`ATT-8710`) | `ATT-8710` | Integrated `TST-HRV-044` [Verified] post-`ATT-8206` (`v1.0.1`) shard reconciliation. |
 | `1.0.3` | 2026-11-18 | AI Agent (`ATT-8080`) | `ATT-8080` | Added and verified (`[Verified]`) `TST-PER-052` for `ATT-8080` multi-source tracks, elevation/speed/slope overlays, and per-chart visibility toggles. |
+| `1.0.4` | 2026-11-18 | AI Agent (`ATT-8916`, `--as agent1`) | `ATT-8916` | Added `TST-PER-053` (`[Planned]`, `.1`–`.5`) covering pure-JVM coalescing, pre-decimation DB extraction, dual ViewModel propagation, behavioral `createComposeRule()` UI, and contract parity. |
+| `1.0.5` | 2026-11-18 | AI Agent (`ATT-8916`, `--as agent1`) | `ATT-8916` | Promoted `TST-PER-053` to `[Implemented]` with all 5 verification tiers green (`102/102` tests) and `Rule 8.5` PNG (`ATT-8916_carriage_timeline.png`) verified. |
+| `1.0.6` | 2026-11-18 | AI Agent (`ATT-8916`, `--as agent1`) | `ATT-8916` | Promoted `TST-PER-053` to `[Verified]` following Stage 5 targeted unit/contract/Compose verification, `emulator-5554` smoke launch, and governance parity check. |

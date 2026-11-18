@@ -194,7 +194,8 @@ fun WorkoutClustersScreen(
                 onUpdateFtp = { trackOnMapViewModel.updateFtp(it) },
                 onUpdateHrZones = { t1, t2 -> trackOnMapViewModel.updateHrZones(t1, t2) },
                 telemetryPath = aftermathUIState.telemetryPath,
-                multiSensorOverlays = aftermathUIState.multiSensorOverlays
+                multiSensorOverlays = aftermathUIState.multiSensorOverlays,
+                activityCarriageTimeline = aftermathUIState.activityCarriageTimeline
             )
 
             if (workoutToCluster != null) {

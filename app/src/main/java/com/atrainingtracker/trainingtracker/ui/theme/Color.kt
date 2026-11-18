@@ -452,6 +452,31 @@ object TTColor {
     val VaultExplorerEmeraldContainer = Color(0x2610B981)
     val VaultPassportBgStart = Color(0xFF0F172A)
     val VaultPassportBgEnd = Color(0xFF1E293B)
+
+    // Phone Carriage & Activity Timeline Palette (ATT-8916, L in [0.196, 0.233] -> >=3.2:1 UI contrast on Light/Dark/AMOLED)
+    val CarriageBikeHandlebar = Color(0xFF0284C7)
+    val CarriageBikeJerseyBack = Color(0xFF6B6FF5)
+    val CarriageBikeFrontPocket = Color(0xFF0D9488)
+    val CarriageRunWaistHip = Color(0xFFC96A05)
+    val CarriageRunBicepArm = Color(0xFFEC3B5B)
+    val CarriageRunHandheld = Color(0xFFA855F7)
+    val CarriageWalkingTransition = Color(0xFF159947)
+    val CarriageStationary = Color(0xFF6B7C93)
+    val CarriageUnknown = Color(0xFF827B75)
+
+    fun getCarriageModeColor(
+        mode: com.atrainingtracker.banalservice.odometry.PhoneCarriageMode
+    ): Color = when (mode) {
+        com.atrainingtracker.banalservice.odometry.PhoneCarriageMode.BIKE_HANDLEBAR -> CarriageBikeHandlebar
+        com.atrainingtracker.banalservice.odometry.PhoneCarriageMode.BIKE_JERSEY_BACK -> CarriageBikeJerseyBack
+        com.atrainingtracker.banalservice.odometry.PhoneCarriageMode.BIKE_FRONT_POCKET -> CarriageBikeFrontPocket
+        com.atrainingtracker.banalservice.odometry.PhoneCarriageMode.RUN_WAIST_HIP -> CarriageRunWaistHip
+        com.atrainingtracker.banalservice.odometry.PhoneCarriageMode.RUN_BICEP_ARM -> CarriageRunBicepArm
+        com.atrainingtracker.banalservice.odometry.PhoneCarriageMode.RUN_HANDHELD -> CarriageRunHandheld
+        com.atrainingtracker.banalservice.odometry.PhoneCarriageMode.WALKING_TRANSITION -> CarriageWalkingTransition
+        com.atrainingtracker.banalservice.odometry.PhoneCarriageMode.STATIONARY -> CarriageStationary
+        com.atrainingtracker.banalservice.odometry.PhoneCarriageMode.UNKNOWN -> CarriageUnknown
+    }
 }
 
 /**
