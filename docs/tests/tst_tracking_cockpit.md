@@ -1,14 +1,14 @@
 # Living Test Specification: Tracking & Live Sensor Cockpit
 
 **Document ID**: `DOC-TST-TRK`  
-**Version**: 1.0.19  
+**Version**: 1.0.20  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Tests**: 146
+**Total Tests**: 147
 
 ---
 
@@ -1902,7 +1902,7 @@
   • Verify backward-compatibility of `ZoneGaugeState` and `ZoneGaugeBar` when `zoneLabels == null` (HR 5-zone `"Z1"`..`"Z5"`, Power 7-zone `"Z1"`..`"Z7"`).
   4. *Training Zones 4th Tab & Invariant Tests (`TST-TRK-061.4`, `HrvDfaA1SettingsContractTest.kt`, `TuningPreferencesDataStoreDfaA1Test.kt`, `TrackingViewsDatabaseManagerTest.java`)*:
   • Verify `ZoneSettingsScreen` renders 4th tab `R.string.tab_hrv_dfa_a1` with unified 3-zone colored dual-thumb `RangeSlider` (`0.30..1.20`) with Green (Zone 2) on the left, Orange (Zone 3) in the middle, and Red (Zone 4) on the right, directly in `RangeSlider`'s `track` slot (zero duplicate track container and zero M3 end-dots), fine-tuning $0.01$ step steppers, non-clipping Reset to Defaults action ($0.75 / 0.50$), and interactive `SensorFieldView` preview pills (`ATT-7741`).
-  • Verify `HrvDfaA1SettingsContent` exposes `zone_display_gauge` row toggling `ZoneDisplayOptions.showGauge`.
+  • Verify `HrvDfaA1SettingsContent` renders the 4 standard `ZoneDisplayOptionsToggleList(..., showGaugeToggle = false)` toggles without `zone_display_gauge`, keeping `previewFieldState.showBar = true` (`TST-TRK-087`, `ATT-8712`).
   • Verify `TrackingViewsDatabaseManager.isBarSupported(SensorType.HRV_DFA_A1, sport)` and `isBarSupportedSensorType(SensorType.HRV_DFA_A1)` return `true` for all sports.
   • Verify `strings_hrv.xml` zone labels across all 9 locales do not contain `(Zone 2)`, `(Zone 3)`, `(Zone 4)`.
   • Verify default values $\alpha_{1,\text{T1}} = 0.75f$ and $\alpha_{1,\text{T2}} = 0.50f$.
@@ -3385,6 +3385,23 @@
      • Verify renamed H10 (`"Chest Strap"`) and renamed Verity Sense/OH1 (`"Armband"`) route deterministically across `PolarH10OfflineController` (incl. `syncPendingWorkout`), `PolarVeritySenseOfflineController`, `DeviceDataRepository.isPolarLiveImuBridgeEligible`, `EditDevicePolarBackupTest`, and `EditDevicePolarLiveImuTest` with `0` `src/main` source reads (`REQ-PRO-049.1`; `Localization parity: N/A - no UI strings`).
 
 
+### TST-TRK-087: **ZonesSettingsActivity HRV Tab Gauge Toggle Removal & Behavioral Compose Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Tickets**: `ATT-8712`
+- **Requirement(s)**: `REQ-TRK-087` (`REQ-TRK-087.1`, `REQ-TRK-087.2`), `REQ-TRK-061.4`, `REQ-TRK-046.4`, `REQ-UI-2783.3`
+- **Component**: `HrvDfaA1RangeSliderGestureTest.kt`, `HrvDfaA1SettingsContractTest.kt`, `EditSensorFieldZoneDisplayTest.kt`, `TrackingTabConfigZoneDisplayTest.kt`
+- **Test Type**: Unit
+- **Verification Method**: Unit
+- **Procedure**:
+  1. *Behavioral Compose UI Verification (`TST-TRK-087.1`, `createComposeRule()`, zero `src/main` reads per `REQ-PRO-049.1`)*:
+     • Render `HrvDfaA1SettingsContent` (and/or `ZoneSettingsScreen` on `page == 3`) via Robolectric Compose `createComposeRule()` with `displayOptions = ZoneDisplayOptions(showGauge = false)`.
+     • Assert `R.string.zone_display_title` and the 4 `ZoneDisplayOptionsToggleList` labels (`zone_display_background`, `zone_display_left_bar`, `zone_display_right_bar`, `zone_display_text_color`) are displayed, `R.string.zone_display_gauge` (*Zonen-Balken*) does NOT exist (`assertDoesNotExist()`), and the live `SensorFieldView` preview renders the active 3-segment gauge bar (`showBar = true`) even when `displayOptions.showGauge == false`.
+     • Capture Light/Dark PNG screenshot via `captureToImage()` and inspect via `read_file` per `Rule 8.5`.
+  2. *Contract & Tile/Tab Config Regression (`TST-TRK-087.2`, `HrvDfaA1SettingsContractTest.kt`, `EditSensorFieldZoneDisplayTest.kt`, `TrackingTabConfigZoneDisplayTest.kt`)*:
+     • Update `HrvDfaA1SettingsContractTest.testHrvSettings_gaugeToggleAndPreviewBarContracts` to assert absence of `R.string.zone_display_gauge` / `displayOptions.showGauge` and `showBar = true` in `HrvDfaA1SettingsContent` (preserving `app/source-reading-baseline.txt` debt boundary).
+     • Execute `./gradlew :app:testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.zones.HrvDfaA1RangeSliderGestureTest" --tests "com.atrainingtracker.trainingtracker.zones.HrvDfaA1SettingsContractTest" --tests "com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.EditSensorFieldZoneDisplayTest" --tests "com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingTabConfigZoneDisplayTest"` asserting 100% pass (`Localization Parity: N/A - no UI strings added, modified, or removed; R.string.zone_display_gauge remains active in ZoneDisplayOptionsControls.kt:230 across all 9 locales`).
+
+
 ---
 
 ## Change History
@@ -3406,3 +3423,6 @@
 | `1.0.17` | 2026-11-18 | AI Agent (`ATT-8706`) | `ATT-8706` | Promoted `TST-TRK-085` to `[Verified]` in Stage 5 following Bounce 3/3 heal verification (`449/449` tests across `83` suites). |
 | `1.0.18` | 2026-11-18 | AI Agent (`ATT-8105`) | `ATT-8105` | Added and verified `TST-TRK-086` [Verified] (`HrvDfaA1RangeSliderGestureTest.kt` Robolectric `createComposeRule()` gesture isolation `5/5`, `Rule 8.5` Light/Dark PNG audit, and Tier-1 regression `31/31` across 7 suites). |
 | `1.0.19` | 2026-11-18 | AI Agent (`ATT-8717`) | `ATT-8717` | Added and verified `TST-CON-049` [Verified] across 34 unit/Robolectric suites (166/166 PASS) including CardioSense DIS rejection, pre-CCCD DIS read order, 8-hex ID preservation, and IMU stream rejection. |
+| `1.0.20` | 2026-11-18 | AI Agent (`ATT-8712`) | `ATT-8712` | Added `TST-TRK-087` [Planned] (`createComposeRule()` behavioral verification per `REQ-PRO-049.1`, contract & tile/tab config parity regression) and aligned `TST-TRK-061.4`. |
+| `1.0.20` | 2026-11-18 | AI Agent (`ATT-8712`) | `ATT-8712` | Promoted `TST-TRK-087` to `[Implemented]` following Stage 4 Compose UI test, `Rule 8.5` screenshot (`ATT-8712_hrv_zone_display.png`), and contract test updates. |
+| `1.0.21` | 2026-11-18 | AI Agent (`ATT-8712`) | `ATT-8712` | Promoted `TST-TRK-087` to `[Verified]` in Stage 5 following verified Tier-1 tests (`32/32` across 5 suites) and `Rule 8.5` Light/Dark PNG verification. |

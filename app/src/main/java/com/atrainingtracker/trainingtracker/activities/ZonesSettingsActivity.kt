@@ -1298,16 +1298,6 @@ fun HrvDfaA1SettingsContent(
                         onCheckedChange = onCheckedChange
                     )
                 }
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-
-                ZoneDisplayToggleRow(
-                    label = stringResource(R.string.zone_display_gauge),
-                    checked = displayOptions.showGauge,
-                    onCheckedChange = {
-                        val updated = displayOptions.copy(showGauge = it)
-                        scope.launch { appSettingsDataStore.saveHrvZoneDisplayOptions(updated) }
-                    }
-                )
             }
         }
 
@@ -1386,7 +1376,7 @@ fun HrvDfaA1SettingsContent(
             zoneDisplayOptions = displayOptions,
             zoneGaugeState = previewGaugeState,
             showValue = true,
-            showBar = displayOptions.showGauge
+            showBar = true
         )
 
         val isSystemDark = isSystemInDarkTheme()

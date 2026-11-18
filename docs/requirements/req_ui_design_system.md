@@ -1,7 +1,7 @@
 # Living Requirements: UI Components & Design System
 
 **Document ID**: `DOC-REQ-UI`  
-**Version**: 1.0.0  
+**Version**: 1.0.1  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -17545,7 +17545,7 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 3. *Tracking Tabs Configuration Placement & Shared Invariants (`REQ-UI-2783.3`)*:
 • Within `ScreenMode.CONFIGURATION` (`TrackingTabsScreen` / `SensorGridScreen`), athletes SHALL have access to profile-scoped `ZoneDisplayOptions` controls (`SingleChoiceSegmentedButtonRow` across `HR_RUN`, `HR_BIKE`, `PWR_BIKE`, `HRV_DFA_A1` pre-selected from `ActivityType`, `ZoneDisplayOptionsToggleList`, and `zone_display_apply_all`), persisting immediately to `SettingsDataStore` (matching `SpatialCockpitToggleCard` semantics).
-• Shared `ZoneDisplayOptionsControls` in `ui/settings/` SHALL serve `ZonesSettingsActivity`, `EditSensorFieldDialog`, and `SensorGridScreen` cleanly while preserving `ZonesSettingsActivity` (`R.string.zone_display_gauge`, `displayOptions.showGauge`, `showBar = displayOptions.showGauge` for `HrvDfaA1SettingsContractTest`), zone thresholds, and 100% 9-locale parity (`values`..`values-pt`) across existing `zone_display_*` (`zone_display_title`, `zone_display_background`, `zone_display_left_bar`, `zone_display_right_bar`, `zone_display_text_color`, `zone_display_gauge`, `zone_display_apply_all`) and profile labels (`tab_hr_run`, `tab_hr_bike`, `tab_pwr_bike`, `tab_hrv_dfa_a1`) with zero new untranslated string keys.
+• Shared `ZoneDisplayOptionsControls` in `ui/settings/` SHALL serve `ZonesSettingsActivity`, `EditSensorFieldDialog`, and `SensorGridScreen` cleanly while preserving `ZonesSettingsActivity` 4-toggle `ZoneDisplayOptionsToggleList(showGaugeToggle = false)` parity (`REQ-TRK-046.4`, `REQ-TRK-087` — removing the duplicate `zone_display_gauge` row and setting `previewFieldState.showBar = true` in `HrvDfaA1SettingsContent`), zone thresholds, and 100% 9-locale parity (`values`..`values-pt`) across existing `zone_display_*` (`zone_display_title`, `zone_display_background`, `zone_display_left_bar`, `zone_display_right_bar`, `zone_display_text_color`, `zone_display_gauge`, `zone_display_apply_all`) and profile labels (`tab_hr_run`, `tab_hr_bike`, `tab_pwr_bike`, `tab_hrv_dfa_a1`) with zero new untranslated string keys.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
 1. *Original Requirement ID & Target*: `REQ-UI-2783` (originally `ATT-8498` Expert Settings integration), refining `REQ-UI-172` (*Zone Display Options*), `REQ-UI-262.5`, `REQ-UI-277.3`, `REQ-UI-376`, `REQ-TRK-061.4`, and `REQ-PRO-049.1`.
@@ -17597,3 +17597,4 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
 | `1.0.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Added standardized `DOC-REQ-UI` work-product control header and Change History. |
+| `1.0.1` | 2026-11-18 | AI Agent (`ATT-8712`) | `ATT-8712` | Aligned `REQ-UI-2783.3` with `REQ-TRK-046.4` and `REQ-TRK-087` (removing `zone_display_gauge` expectation from `ZonesSettingsActivity` HRV tab while preserving tile/tab `showGauge`). |

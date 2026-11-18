@@ -293,20 +293,23 @@ class HrvDfaA1SettingsContractTest {
         val activityFile = resolveActivityFile()
         assertTrue("ZonesSettingsActivity.kt must exist", activityFile.exists())
         val content = activityFile.readText()
+        val hrvContentCode = content
+            .substringAfter("fun HrvDfaA1SettingsContent(")
+            .substringBefore("fun HrvZoneBandCard(")
 
-        assertTrue(
-            "HrvDfaA1SettingsContent must provide zone_display_gauge toggle (REQ-TRK-061.4 / ATT-7742)",
-            content.contains("R.string.zone_display_gauge") && content.contains("displayOptions.showGauge")
+        assertFalse(
+            "HrvDfaA1SettingsContent must NOT expose redundant zone_display_gauge toggle (REQ-TRK-087.1 / REQ-TRK-046.4)",
+            hrvContentCode.contains("R.string.zone_display_gauge") || hrvContentCode.contains("displayOptions.showGauge")
         )
         assertTrue(
-            "HrvDfaA1SettingsContent previewFieldState must bind showBar to displayOptions.showGauge (ATT-7742)",
-            content.contains("showBar = displayOptions.showGauge")
+            "HrvDfaA1SettingsContent previewFieldState must unconditionally bind showBar = true (REQ-TRK-087.1)",
+            hrvContentCode.contains("showBar = true")
         )
         assertTrue(
             "HrvDfaA1SettingsContent preview gauge must pass localized labels (ATT-7742)",
-            content.contains("R.string.hrv_preview_pill_aerobic") &&
-                content.contains("R.string.hrv_preview_pill_transition") &&
-                content.contains("R.string.hrv_preview_pill_anaerobic")
+            hrvContentCode.contains("R.string.hrv_preview_pill_aerobic") &&
+                hrvContentCode.contains("R.string.hrv_preview_pill_transition") &&
+                hrvContentCode.contains("R.string.hrv_preview_pill_anaerobic")
         )
     }
 }

@@ -1,14 +1,14 @@
 # Living Requirements: Tracking & Live Sensor Cockpit
 
 **Document ID**: `DOC-REQ-TRK`  
-**Version**: 1.0.19  
+**Version**: 1.0.20  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Requirements**: 170
+**Total Requirements**: 171
 
 ---
 
@@ -3880,7 +3880,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 4. *User-Configurable Individual Threshold Overrides, Display Options & Gauge Support (`REQ-TRK-061.4`)*:
 • `TuningPreferencesDataStore.kt` SHALL support athlete-customizable threshold boundaries (`dfaA1ThresholdT1` default `0.75f`, `dfaA1ThresholdT2` default `0.50f`) with mandatory invariant enforcement $\alpha_{1,\text{T1}} \ge \alpha_{1,\text{T2}} + 0.05f$ and bounds $[0.20, 1.50]$.
 • The system SHALL promote $T_1$ and $T_2$ threshold controls into a dedicated 4th tab `R.string.tab_hrv_dfa_a1` (`HRV (DFA α1)`) in `ZoneSettingsScreen` (`ZonesSettingsActivity.kt`) featuring a unified 3-zone colored dual-thumb `RangeSlider` spanning a single continuous domain `0.30f..1.20f` with $T_1$ (left thumb) and $T_2$ (right thumb) thumbs enforcing invariant $\alpha_{1,\text{T1}} \ge \alpha_{1,\text{T2}} + 0.05f$. In visual orientation, track segments SHALL be styled using semantic tokens from left to right: `TTColor.Zone2` (Green, $> T_1$, Aerobic Base), `TTColor.Zone3` (Orange, $T_2..T_1$, Threshold Transition), and `TTColor.Zone4` (Red, $< T_2$, High Intensity / Anaerobic), aligning with Preview buttons and gauge bar. The 3-zone colored bar SHALL be rendered directly in `RangeSlider`'s `track` slot lambda, eliminating redundant external track containers and Material 3 orange stop-indicator dots (`ATT-7741`).
-• In `HrvDfaA1SettingsContent`, the Zone Display Options card SHALL expose the gauge toggle `zone_display_gauge` (`showGauge`), persisted to `appSettingsDataStore.saveHrvZoneDisplayOptions(updated)` and bound to `previewFieldState.showBar = displayOptions.showGauge` (`ATT-7742`).
+• In `HrvDfaA1SettingsContent` (`ZonesSettingsActivity.kt`), the Zone Display Options card SHALL render only the 4 standard toggles via `ZoneDisplayOptionsToggleList(..., showGaugeToggle = false)` (omitting `zone_display_gauge` per `REQ-TRK-046.4` and `REQ-TRK-087`), with `previewFieldState.showBar = true` matching `SettingsScreenContent`; per-tile and tab configuration (`EditSensorFieldDialog`, `SensorGridScreen` via `ZoneDisplayConfigSection`) remain the single source of truth for `SettingsDataStore.HRV_DFA_A1_ZONE_SHOW_GAUGE` (`ATT-8712`).
 • In `TrackingViewsDatabaseManager.java`, `isBarSupported()` and `isBarSupportedSensorType()` SHALL support `SensorType.HRV_DFA_A1` for all sports (`RUN`, `BIKE`, and others), allowing athletes to enable the gauge bar on HRV DFA $\alpha_1$ telemetry tiles (`ATT-7742`).
 • Fine-tuning stepper rows (`-` / `+` with `0.01` step precision) SHALL be provided for both $T_1$ and $T_2$ via backward-compatible `HrvThresholdControlRow`.
 • Reset to Defaults action (`0.75 / 0.50`) SHALL be positioned in the threshold controls header row alongside `title_edit_zones`, allowing graceful multi-line wrapping (`maxLines = 2, softWrap = true, overflow = TextOverflow.Ellipsis`) and compact button padding to prevent glyph clipping (`zurücl`) in German and other long locales (`ATT-7741`).
@@ -6847,6 +6847,39 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 **Invariants**: `Devices.db` `DB_VERSION = 14` untouched; `PolarOfflineCapabilityStore` synchronous & schema-free; `ATT-8690` ref-counted singleton & multiplexing preserved; `RR_PRIORITY_ECG` vs. `RR_PRIORITY_PPG` parity preserved; legacy pre-reconnect fallback preserved; `N/A - no UI strings`; `REQ-PRO-049.1` offline tests with zero `src/main` reads.
 
 
+### REQ-TRK-087: Remove Redundant Zonen-Balken (`showGauge`) Switch from HRV Tab in ZonesSettingsActivity [Verified]
+- **Tests**: `TST-TRK-087`
+- **System Requirement(s)**: `SYSREQ-TRK-006`
+- **Priority**: Low
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `ZonesSettingsActivity.kt`
+- **Rationale**: After `ATT-8498` (`REQ-UI-2783`) placed `ZoneDisplayOptions` (including `R.string.zone_display_gauge` for `HRV_DFA_A1`) inside `EditSensorFieldDialog` and `SensorGridScreen` via `ZoneDisplayConfigSection` (`SettingsDataStore.HRV_DFA_A1_ZONE_SHOW_GAUGE`), `HrvDfaA1SettingsContent` (tab 3 in `ZonesSettingsActivity.kt`) still rendered an extra `ZoneDisplayToggleRow(R.string.zone_display_gauge)` switch below `ZoneDisplayOptionsToggleList`, creating a duplicate global toggle inconsistent with tabs 0–2 (`HR_RUN`, `HR_BIKE`, `PWR_BIKE`, deprecated under `REQ-TRK-046.4`) and misleading because live cockpit gauge bars are gated per tile (`config.showBar`, `ATT-8712`, refining `REQ-TRK-061.4` and `REQ-UI-2783.3`).
+- **Description**:
+  1. *HRV Tab Display Options Parity (`REQ-TRK-087.1`)*:
+     - `HrvDfaA1SettingsContent` (`ZonesSettingsActivity.kt`) SHALL remove the `HorizontalDivider` and `ZoneDisplayToggleRow(label = stringResource(R.string.zone_display_gauge), ...)` below `ZoneDisplayOptionsToggleList(..., showGaugeToggle = false)`, rendering strictly the 4 standard display toggles (`showBackground`, `showLeftBar`, `showRightBar`, `showTextColor`) in 1:1 parity with `SettingsScreenContent` (tabs 0–2) and `REQ-TRK-046.4`.
+     - `HrvDfaA1SettingsContent` SHALL set `previewFieldState.showBar = true` unconditionally (matching `SettingsScreenContent`), keeping the 3-segment live `SensorFieldView` gauge preview visible while editing thresholds.
+  2. *Preservation of Tile/Tab Config, DataStore & Behavioral Compose Verification (`REQ-TRK-087.2`)*:
+     - `ZoneDisplayConfigSection` (`ZoneDisplayOptionsControls.kt`, used by `EditSensorFieldDialog` and `SensorGridScreen`) SHALL retain `showGaugeToggle = (selectedProfile == ZoneProfileTarget.HRV_DFA_A1)`, `SettingsDataStore.HRV_DFA_A1_ZONE_SHOW_GAUGE`, and `R.string.zone_display_gauge` across all 9 locales (`Localization Parity: N/A - no UI strings added, modified, or removed`).
+     - Parity and preview rendering SHALL be verified via behavioral Robolectric Compose `createComposeRule()` UI tests with zero `app/src/main/` file reads (`REQ-PRO-049.1`) alongside updated `HrvDfaA1SettingsContractTest`, `EditSensorFieldZoneDisplayTest`, `TrackingTabConfigZoneDisplayTest`, and `Rule 8.5` Light/Dark PNG inspection.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new `REQ-TRK-087` refining `REQ-TRK-061.4` and `REQ-UI-2783.3`, reconciling with `REQ-TRK-046.4` (`ZonesSettingsActivity.kt`).
+2. *Historical Origin & Commit Trace*: `ATT-4841`/`ATT-4927` (`REQ-TRK-046.4`) deprecated the global `showGauge` toggle in `ZonesSettingsActivity`; `ATT-7742` (`5e30863e`) re-added `zone_display_gauge` to `HrvDfaA1SettingsContent`; `ATT-8498` (`d7dec447`) moved `ZoneDisplayOptions` (including `HRV_DFA_A1` `showGauge`) into `EditSensorFieldDialog` & `SensorGridScreen` while keeping `ZonesSettingsActivity` lines solely for `HrvDfaA1SettingsContractTest`.
+3. *Root Reason for Existing Formulation*: Interim HRV preview toggle (`ATT-7742`) prior to `ATT-8498` placing `ZoneDisplayOptions` in `EditSensorFieldDialog` & `SensorGridScreen`.
+4. *Preservation of Core Invariants*: Preserves 4-toggle `ZoneDisplayOptionsToggleList` + live `SensorFieldView` preview (`showBar = true`) across all 4 `ZonesSettingsActivity` tabs, `EditSensorFieldDialog`/`SensorGridScreen` `showGauge` toggle & `SettingsDataStore.HRV_DFA_A1_ZONE_SHOW_GAUGE`, `ATT-8105` slider gesture isolation, $T_1 \ge T_2 + 0.05f$, and 9-locale `strings*.xml` parity.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `ZoneSettingsScreen` on tab 3 (`HRV (DFA α1)`),
+• *When* `HrvDfaA1SettingsContent` renders,
+• *Then* the 4 `ZoneDisplayOptionsToggleList` toggles (`showBackground`, `showLeftBar`, `showRightBar`, `showTextColor`) are displayed, `R.string.zone_display_gauge` (*Zonen-Balken*) is absent, and `SensorFieldView` preview renders with `showBar = true` regardless of `displayOptions.showGauge`.
+• *Given* `EditSensorFieldDialog` or `SensorGridScreen` (`ScreenMode.CONFIGURATION`) with `HRV_DFA_A1`,
+• *When* rendered,
+• *Then* `R.string.zone_display_gauge` remains displayed and persists to `SettingsDataStore.HRV_DFA_A1_ZONE_SHOW_GAUGE`.
+
+**Invariants**: 4-toggle `ZoneDisplayOptionsToggleList` across all 4 tabs; `previewFieldState.showBar = true`; `ZoneDisplayConfigSection` & `HRV_DFA_A1_ZONE_SHOW_GAUGE` untouched; `ATT-8105` slider gesture isolation & $T_1 \ge T_2 + 0.05f$ intact; `REQ-PRO-049.1` zero `src/main` reads in new/modified Compose UI tests; `Localization Parity: N/A - no UI strings`.
+
+
 ---
 
 ## Change History
@@ -6868,3 +6901,6 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 | `1.0.17` | 2026-11-18 | AI Agent (`ATT-8706`) | `ATT-8706` | Promoted `REQ-TRK-085` to `[Verified]` in Stage 5 following Bounce 3/3 heal verification (`449/449` tests across `83` suites). |
 | `1.0.18` | 2026-11-18 | AI Agent (`ATT-8105`) | `ATT-8105` | Added and verified `REQ-TRK-086` [Verified] (`ZonesSettingsActivity.kt` `rememberSliderGestureIsolationModifier`, local drag buffering, and lifted `isSliderGestureActive` on `HorizontalPager`) following Tier-1 targeted tests (`31/31` across 7 suites) and `Rule 8.5` PNG inspection (`ATT-8105_hrv_slider_zones.png`). |
 | `1.0.19` | 2026-11-18 | AI Agent (`ATT-8717`) | `ATT-8717` | Added and verified `REQ-CON-049` [Verified] for hardware-grounded Polar detection (PMD/PFTP UUIDs + DIS `0x2A24`/`0x2A25`, strict 8-hex ID validation, HR CCCD ordering, and IMU error handling) across 34 suites / 166 tests. |
+| `1.0.20` | 2026-11-18 | AI Agent (`ATT-8712`) | `ATT-8712` | Added `REQ-TRK-087` [Planned] and aligned `REQ-TRK-061.4` to remove the redundant `zone_display_gauge` switch from `HrvDfaA1SettingsContent` (`ZonesSettingsActivity.kt`) and bind `previewFieldState.showBar = true` per `REQ-TRK-046.4`. |
+| `1.0.20` | 2026-11-18 | AI Agent (`ATT-8712`) | `ATT-8712` | Promoted `REQ-TRK-087` to `[Implemented]` following Stage 4 removal of `zone_display_gauge` from `HrvDfaA1SettingsContent` and Compose UI / contract test updates. |
+| `1.0.21` | 2026-11-18 | AI Agent (`ATT-8712`) | `ATT-8712` | Promoted `REQ-TRK-087` to `[Verified]` in Stage 5 following verified Tier-1 tests (`32/32` across 5 suites) and `Rule 8.5` Light/Dark PNG verification. |

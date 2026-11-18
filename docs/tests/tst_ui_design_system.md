@@ -1,7 +1,7 @@
 # Living Test Specification: UI Components & Design System
 
 **Document ID**: `DOC-TST-UI`  
-**Version**: 1.0.0  
+**Version**: 1.0.1  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -8683,7 +8683,7 @@
 - **Test Description**:
   1. *Expert Settings Removal & Contract Guards (`TST-UI-2783.1`)*:
      - Verify `AdvancedTuningScreen`, `AdvancedTuningDialog`, and `CockpitTypographySection` no longer render `zone_display_title` / `zone_display_apply_all` (`AdvancedTuningScreenTest` / Compose test).
-     - Verify `CockpitPreviewTileContractTest`, `AdvancedTuningModularityTest`, `TuningDesignGuidelinesContractTest`, `HrvDfaA1SettingsContractTest`, and `SourceTextReadingAuditContractTest` (zero `src/main` file reads in new/modified tests) pass 100%.
+     - Verify `CockpitPreviewTileContractTest`, `AdvancedTuningModularityTest`, `TuningDesignGuidelinesContractTest`, `HrvDfaA1SettingsContractTest` (aligned with `REQ-TRK-087` / `TST-TRK-087` for `ZonesSettingsActivity` 4-toggle parity), and `SourceTextReadingAuditContractTest` (zero `src/main` file reads in new/modified tests) pass 100%.
   2. *Tile Long-Press `EditSensorFieldDialog` & ViewModel Verification (`TST-UI-2783.2`, `EditSensorFieldZoneDisplayTest.kt`)*:
      - Verify profile mapping matches `TrackingViewModel.resolveDisplayOptions`: `(HR, RUN) -> HR_RUN`, `(HR, BIKE) -> HR_BIKE`, `(POWER, BIKE) -> PWR_BIKE`, `(HRV_DFA_A1, *) -> HRV_DFA_A1`, and non-zone / unmapped metrics (`SPEED`, `HR` in `UNKNOWN`, `POWER` in `RUN`) hide the Zone Display section.
      - Verify `zone_display_gauge` is shown strictly for `HRV_DFA_A1`, `zone_display_apply_all` preserves `HRV.showGauge`, **Cancel** discards changes, and **Save** (`saveChanges()`) persists to `SettingsDataStore` without altering zone thresholds.
@@ -8719,3 +8719,4 @@
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
 | `1.0.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Added standardized `DOC-TST-UI` work-product control header and Change History. |
+| `1.0.1` | 2026-11-18 | AI Agent (`ATT-8712`) | `ATT-8712` | Cross-referenced `REQ-TRK-087` / `TST-TRK-087` in `TST-UI-2783.1` for `ZonesSettingsActivity` HRV tab parity. |
