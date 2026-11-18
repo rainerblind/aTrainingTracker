@@ -28,6 +28,7 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMapper
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 import com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
+import com.atrainingtracker.trainingtracker.ui.aftermath.toClusterWorkoutSnapshot
 import com.atrainingtracker.trainingtracker.ui.util.MigrationStatus
 import com.atrainingtracker.trainingtracker.ui.util.ProgressPhase
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
@@ -804,7 +805,7 @@ class WorkoutClusterRepository internal constructor(
     suspend fun createNewClusterFromWorkout(workout: WorkoutData): Pair<Long, String?> =
         withContext(Dispatchers.IO) {
             val newClusterId = WorkoutClusterEngine.getInstance(context)
-                .createNewClusterFromWorkout(context, workout)
+                .createNewClusterFromWorkout(context, workout.toClusterWorkoutSnapshot())
             if (newClusterId > 0L) {
                 refreshClusters()
                 notifyWorkoutRepository { repo ->
