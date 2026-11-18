@@ -1,14 +1,14 @@
 # Living Requirements: Tracking & Live Sensor Cockpit (Part 2 of 2)
 
 **Document ID**: `DOC-REQ-TRK-P2`  
-**Version**: 1.0.12  
+**Version**: 1.0.13  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit_part2`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Requirements**: 64
+**Total Requirements**: 65
 
 ---
 
@@ -3042,6 +3042,42 @@
 
 **Invariants**: `internalUnit = "m/s"`, `ordinal()`, `name()`, and `@Deprecated getUnitId() = R.string.units_speed_basic` unchanged; FIT/CSV raw `m/s` exports unchanged; `RADAR_CLOSEST_DISTANCE_m`/`RADAR_PASSING_DISTANCE_m`/`W_PRIME_BAL` unchanged; `WorkoutRepository.kt` untouched (`<= 5,117` LoC); `Localization Parity: N/A - no UI strings`; `0` new `src/main` test reads (`REQ-PRO-049.1`).
 
+### REQ-FIL-026: 1-Hz Barometric Ingestion Rate-Matching & Adaptive Cyclic Jitter Variance Scaling in ATT Fused Altitude/Slope [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-FIL-026`
+- **System Requirement(s)**: `SYSREQ-TRK-003`, `SYSREQ-TRK-004`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `app/src/main/java/com/atrainingtracker/banalservice/devices/AltitudeAndSlopeDevice_ATTFused.kt`, `app/src/main/java/com/atrainingtracker/banalservice/devices/BarometricAltitudeFilter.kt`, `app/src/main/java/com/atrainingtracker/banalservice/odometry/KinematicAltitudeSlopeEkf.kt`
+- **Rationale**: Hardware `Sensor.TYPE_PRESSURE` registered with `SensorManager.SENSOR_DELAY_NORMAL` dispatches `handlePressureMeasurement()` at `~5 Hz` (`~200 ms`), shrinking `BarometricAltitudeFilter.medianWindowSize = 7` from `7 s` to `~1.4 s` and executing `ekf.updateBarometer()` `5x` per `1-Hz` `ekf.predict()` with static `DEFAULT_VAR_BARO = 0.25` (effective 1-s variance `0.05 m^2`). On jeans-pocket cycling rides (`Zum Bäcker #57`), `1.0–1.5 Hz` pedaling pressure oscillations (`±0.8..1.2 m`) and `1–2 s` compression pulses (`±8 m`) couple into `±10–12%` flat-road `SLOPE` swings and `+26.89 m` ascent inflation. Rate-matching live barometric ingestion to `1 Hz` and scaling effective `varBaro` during cyclic sign-reversing jitter eliminates pocket-induced oscillations while preserving steady climbs (`ATT-8881`, refining `REQ-FIL-016.2`, `REQ-FIL-020.2`, `REQ-FIL-023.3`, and `REQ-TRK-057.1`):
+- **Description**:
+  1. *1-Hz Barometric Rate-Matching, First-Sample Init & Deterministic Flushing (`REQ-FIL-026.1`)*:
+     - `AltitudeAndSlopeDevice_ATTFused` SHALL aggregate `handlePressureMeasurement(pressureHpa, timestampMs)` samples into `1-Hz` (`1,000 ms` bucket/window) representative altitude observations before feeding `BarometricAltitudeFilter.filterSlewOnly()` (preserving `medianWindowSize = 7` true `~7 s` span and zero double-EMA lag per `REQ-FIL-016.2`), `ekf.updateBarometer()`, and `publishAltitudeAndMetrics()` in lockstep with `1-Hz` `calculateMetrics()` / `ekf.predict()`.
+     - On the very first `handlePressureMeasurement()` call (`!ekf.isInitialized`), `AltitudeAndSlopeDevice_ATTFused` MUST initialize `ekf` and publish `mAltitudeSensor` immediately using that sample, using deterministic `timestampMs` arguments (never wall-clock time) for bucket/window boundaries.
+     - `calculateMetrics(nowMs)` SHALL coordinate cleanly with any pending sub-second barometric buffer, and `shutDown()` MUST clear all sub-second aggregator state alongside `baroFilter.reset()` and `ekf.reset()`.
+  2. *Adaptive Cyclic Pocket-Jitter Variance Scaling & `DEFAULT_VAR_BARO` Guard (`REQ-FIL-026.2`)*:
+     - `KinematicAltitudeSlopeEkf` MUST preserve `DEFAULT_VAR_BARO = 0.25` (`(0.5 m)^2`) and 2-state initialization `p00 = varBaro` (`KinematicAltitudeSlopeEkfTest:264`).
+     - During active barometric updates, `KinematicAltitudeSlopeEkf` SHALL detect short-term oscillatory/sign-reversing residual jitter and adaptively inflate effective `varBaro` so `±0.8..1.2 m` cyclic pocket-compression ripples at cycling speeds (`5–6 m/s`) keep flat-road `slopePercent` within `±2%` and prevent false `2.0 m` `ASCENT`/`DESCENT` hysteresis steps (`REQ-FIL-020.2`), without attenuating genuine monotonic climbs (`0.4–0.84 m/s`).
+  3. *Sibling Isolation, Localization & Test Hygiene (`REQ-FIL-026.3`)*:
+     - `AltitudeFromPressureDevice.java`, `ExtendedRtsAltitudeSlopeSmoother.kt`, `SpeedAndLocationDevice_ATTFused.kt`, and `WorkoutRepository.kt` (`<= 5,117` LoC) MUST remain untouched (`Localization Parity: N/A - no UI strings`), and all new/modified unit tests SHALL pass offline with `0` `app/src/main` source-text reads (`REQ-PRO-049.1`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new `REQ-FIL-026` refining `REQ-FIL-016.2`, `REQ-FIL-020.2`, `REQ-FIL-023.3`, and `REQ-TRK-057.1` (linking `SYSREQ-TRK-003`, `SYSREQ-TRK-004`). Targets `AltitudeAndSlopeDevice_ATTFused.kt`, `BarometricAltitudeFilter.kt`, and `KinematicAltitudeSlopeEkf.kt`.
+2. *Historical Origin & Commit Trace*: `e079f7a9` (`ATT-6265`, 7-sample median + `1.2 m/s` slew), `75c1497e` / `33e60295` (`ATT-6279`, `ATTFused` + `filterSlewOnly()`), `8b0eba41` (`ATT-8081`, `2.0 m` hysteresis), `23317f58` / `e9766625` (`ATT-8575`, 3-state `baroBias` & 2-state `p00 = DEFAULT_VAR_BARO`), `eba66320` / `f6715226` (`ATT-8576`, standstill clearing & `< 1.2 m/s` slope damping).
+3. *Root Reason for Existing Formulation*: `ATT-6265` calibrated `medianWindowSize = 7` assuming `1-Hz` sampling; `ATT-6279` added `filterSlewOnly()` without rate-matching `SENSOR_DELAY_NORMAL`; `ATT-8576` damped low-speed (`< 1.2 m/s`) slope coupling while leaving `5–6 m/s` cruising speeds exposed to 5-Hz pocket compression.
+4. *Preservation of Core Invariants*: Preserves `filterSlewOnly()` zero double-EMA lag (`REQ-FIL-016.2`), `BarometricAltitudeFilter.medianWindowSize = 7`, `DEFAULT_VAR_BARO = 0.25` & 2-state `p00 = varBaro` (`KinematicAltitudeSlopeEkfTest:264`), immediate first-sample `ekf.isInitialized`, clean `shutDown()` reset, `2.0 m` hysteresis (`REQ-FIL-020.2`), 3-state `baroBias` (`REQ-FIL-022`), `@Synchronized` thread safety, and `AltitudeFromPressureDevice.java` / `ExtendedRtsAltitudeSlopeSmoother.kt` / `WorkoutRepository.kt` untouched.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `AltitudeAndSlopeDevice_ATTFused` receiving `5-Hz` (`200 ms` `timestampMs`) `TYPE_PRESSURE` events with `±1.2 m` cyclic pedaling oscillations and `±8 m` compression pulses over `60 s` on flat terrain (`DEM = 438.0 m`, `speed = 6.0 m/s`),
+• *When* `handlePressureMeasurement()` and `1-Hz` `calculateMetrics()` process the stream (and a synthetic `2 km` `Zum Bäcker #57` `435..446 m` profile),
+• *Then* barometric EKF ingestion is rate-matched to `1 Hz`, flat-road `slopePercent` stays within `±2%`, flat `ASCENT`/`DESCENT` stay `0.0 m`, and `2 km` total ascent/descent stay within `10–16 m`.
+• *Given* `AltitudeAndSlopeDevice_ATTFused` receiving a single `handlePressureMeasurement(1013.25f, 1000L)` call or steady `+0.83..0.84 m/s` climbs (`tstFil020_3`, `tstFil022_3`, `tstFil023_3`),
+• *When* initialized or climbing,
+• *Then* the first sample initializes `ekf` and `mAltitudeSensor` immediately, `shutDown()` clears all aggregator state, `DEFAULT_VAR_BARO = 0.25` / 2-state `p00` remain intact, and real climbs accumulate full `22..27 m` ascent without lag (`Localization Parity: N/A - no UI strings`).
+
+**Invariants**: `REQ-FIL-016.2` `filterSlewOnly()` zero double-EMA lag; `medianWindowSize = 7`; `DEFAULT_VAR_BARO = 0.25` & 2-state `p00 = varBaro`; immediate first-sample init; clean `shutDown()` reset; `REQ-FIL-020.2` `2.0 m` hysteresis; `REQ-FIL-022` `baroBias`; `AltitudeFromPressureDevice.java`, `ExtendedRtsAltitudeSlopeSmoother.kt`, `WorkoutRepository.kt` (`<= 5,117` LoC) untouched; `@Synchronized` thread safety; `REQ-PRO-049.1` (`0` `src/main` reads); `N/A - no UI strings`.
+
 ---
 
 ## Change History
@@ -3060,3 +3096,4 @@
 | `1.0.10` | 2026-11-18 | AI Agent (`ATT-8676`) | `ATT-8676` | Added `REQ-TRK-088` [Planned] for `MyHelper.getUnitsId`/`getShortUnitsId` `RADAR_APPROACH_SPEED_mps` unit mapping and `sensor_units.md`/`SensorType.java` synchronization (`N/A - no UI strings`). |
 | `1.0.11` | 2026-11-18 | AI Agent (`ATT-8676`) | `ATT-8676` | Promoted `REQ-TRK-088` to `[Implemented]` following Stage 4 changes in `MyHelper.java`, `SensorType.java`, `docs/architecture/sensor_units.md`, and `MyHelperRadarUnitsTest.kt`. |
 | `1.0.12` | 2026-11-18 | AI Agent (`ATT-8676`) | `ATT-8676` | Promoted `REQ-TRK-088` to `[Verified]` in Stage 5 following clean-room 10-suite verification (`55/56` PASS across 9/10 full-PASS suites; `1` pre-existing `ATT-8823` failure in `EditDeviceDialog.kt`) and `has_verified_test_evidence("TST-TRK-088")` PASS. |
+| `1.0.13` | 2026-11-18 | AI Agent (`ATT-8881`) | `ATT-8881` | Added `REQ-FIL-026` `[Verified]` for 1-Hz barometric ingestion rate-matching and adaptive cyclic pocket-jitter `varBaro` scaling in `AltitudeAndSlopeDevice_ATTFused` and `KinematicAltitudeSlopeEkf` (`67/67` PASS across `8` XMLs). |

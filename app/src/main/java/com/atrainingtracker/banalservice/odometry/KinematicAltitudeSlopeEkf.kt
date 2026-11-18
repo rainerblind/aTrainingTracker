@@ -65,6 +65,11 @@ class KinematicAltitudeSlopeEkf(
         const val STANDSTILL_SLOPE_GRACE_SEC = 2.0
         const val STANDSTILL_SLOPE_DECAY_TAU_SEC = 2.5
         const val MAX_DT_SEC = 5.0 // Maximum allowable delta-time propagation step
+        const val MAX_ADAPTIVE_VAR_BARO = 25.0 // Ceiling for cyclic pocket-jitter variance scaling (REQ-FIL-026.2)
+        private const val JITTER_D2_THRESHOLD_M = 0.20
+        private const val JITTER_RESIDUAL_NOISE_FLOOR_M = 0.15
+        private const val JITTER_ATTACK_ALPHA = 0.35
+        private const val JITTER_DECAY_ALPHA = 0.10
     }
 
     @Volatile
@@ -99,7 +104,16 @@ class KinematicAltitudeSlopeEkf(
         private set
 
     @Volatile
+    var adaptiveBaroJitterVar: Double = 0.0
+        private set
+
+    @Volatile
     private var lastSpeedMps: Double = 0.0
+
+    private var lastMovingBaroAltM: Double = Double.NaN
+    private var lastBaroDeltaM: Double = 0.0
+    private var hasPrevBaroDelta: Boolean = false
+    private var lastBaroResidualM: Double = Double.NaN
 
     // Covariance elements
     @Volatile var p00: Double = 1.0 // var(h)
@@ -130,6 +144,11 @@ class KinematicAltitudeSlopeEkf(
         hasBarometerSample = false
         standstillDurationSec = 0.0
         lastSpeedMps = 0.0
+        adaptiveBaroJitterVar = 0.0
+        lastMovingBaroAltM = Double.NaN
+        lastBaroDeltaM = 0.0
+        hasPrevBaroDelta = false
+        lastBaroResidualM = Double.NaN
         isInitialized = false
     }
 
@@ -138,6 +157,9 @@ class KinematicAltitudeSlopeEkf(
         if (is3StateMode == threeState) return
         is3StateMode = threeState
         hasReferenceAnchor = false
+        adaptiveBaroJitterVar = 0.0
+        hasPrevBaroDelta = false
+        lastBaroResidualM = Double.NaN
         if (threeState) {
             baroBias = 0.0
             if (isInitialized) {
@@ -252,6 +274,7 @@ class KinematicAltitudeSlopeEkf(
             p22 = 100.0
             hasBarometerSample = true
             isInitialized = true
+            resetJitterTracker(baroAltM)
             return
         }
 
@@ -259,6 +282,7 @@ class KinematicAltitudeSlopeEkf(
             // Ref-before-Baro: absorb initial weather-pressure offset into baroBias without pulling altitude
             baroBias = baroAltM - altitude
             hasBarometerSample = true
+            resetJitterTracker(baroAltM)
             return
         }
         hasBarometerSample = true
@@ -275,15 +299,20 @@ class KinematicAltitudeSlopeEkf(
                 baroBias += kBias * yH
                 p22 = max(1e-6, max(p00, (1.0 - kBias) * p22))
             }
+            lastMovingBaroAltM = baroAltM
+            hasPrevBaroDelta = false
+            lastBaroResidualM = Double.NaN
             return
         }
 
         val gainScale = lowSpeedSlopeGainFactor(max(0.0, speedMps))
+        val rawResidual = if (!is3StateMode) baroAltM - altitude else baroAltM - (altitude + baroBias)
+        val effectiveVarBaro = varBaro + updateAdaptiveJitterVariance(baroAltM, rawResidual)
 
         if (!is3StateMode) {
             // 2-State update: z = h
-            val y = baroAltM - altitude
-            val s = p00 + varBaro
+            val y = rawResidual
+            val s = p00 + effectiveVarBaro
             val yH = applyHuber(y, s)
             val k0 = p00 / s
             val k1Eff = (p10 / s) * gainScale
@@ -297,8 +326,8 @@ class KinematicAltitudeSlopeEkf(
             p11 = max(1e-8, p11 - k1Eff * p01)
         } else {
             // 3-State update: z = h + b_baro
-            val y = baroAltM - (altitude + baroBias)
-            val s = p00 + 2.0 * p02 + p22 + varBaro
+            val y = rawResidual
+            val s = p00 + 2.0 * p02 + p22 + effectiveVarBaro
             val yH = applyHuber(y, s)
 
             val k0 = (p00 + p02) / s
@@ -323,6 +352,45 @@ class KinematicAltitudeSlopeEkf(
             p21 = p12
             p22 = max(1e-6, p22 - k2 * v2)
         }
+    }
+
+    private fun resetJitterTracker(baroAltM: Double) {
+        lastMovingBaroAltM = baroAltM
+        lastBaroDeltaM = 0.0
+        hasPrevBaroDelta = false
+        lastBaroResidualM = 0.0
+        adaptiveBaroJitterVar = 0.0
+    }
+
+    /**
+     * Detects cyclic sign-reversing barometric oscillations (second difference & residual reversals)
+     * and scales adaptive jitter variance with fast attack / slow decay (REQ-FIL-026.2).
+     */
+    private fun updateAdaptiveJitterVariance(baroAltM: Double, residual: Double): Double {
+        if (!lastMovingBaroAltM.isNaN()) {
+            val deltaZ = baroAltM - lastMovingBaroAltM
+            if (hasPrevBaroDelta) {
+                val d2 = deltaZ - lastBaroDeltaM
+                val stepReversed = deltaZ * lastBaroDeltaM < 0.0 && abs(d2) > JITTER_D2_THRESHOLD_M
+                val residualReversed = !lastBaroResidualM.isNaN() &&
+                    residual * lastBaroResidualM < 0.0 &&
+                    abs(residual - lastBaroResidualM) > JITTER_RESIDUAL_NOISE_FLOOR_M &&
+                    abs(d2) > JITTER_D2_THRESHOLD_M
+                if (stepReversed || residualReversed) {
+                    val amp = max(abs(d2) * 0.5, abs(residual))
+                    val targetVar = min(MAX_ADAPTIVE_VAR_BARO, max(8.0, 20.0 * amp * amp))
+                    adaptiveBaroJitterVar += JITTER_ATTACK_ALPHA * (targetVar - adaptiveBaroJitterVar)
+                } else {
+                    adaptiveBaroJitterVar *= (1.0 - JITTER_DECAY_ALPHA)
+                    if (adaptiveBaroJitterVar < 1e-4) adaptiveBaroJitterVar = 0.0
+                }
+            }
+            lastBaroDeltaM = deltaZ
+            hasPrevBaroDelta = true
+        }
+        lastMovingBaroAltM = baroAltM
+        lastBaroResidualM = residual
+        return adaptiveBaroJitterVar
     }
 
     /**

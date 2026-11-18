@@ -1,14 +1,14 @@
 # Living Test Specification: Tracking & Live Sensor Cockpit
 
 **Document ID**: `DOC-TST-TRK`  
-**Version**: 1.0.36  
+**Version**: 1.0.37  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Tests**: 149
+**Total Tests**: 150
 
 ---
 
@@ -3441,6 +3441,26 @@
   3. *Contract, Source-Read Hygiene & Governance Verification (`TST-TRK-088.3`)*:
      • Execute `SensorTypeUnitsContractTest`, `SystemArchitectureDesignContractTest`, and `SourceTextReadingAuditContractTest` asserting `0` new `app/src/main/` reads (`REQ-PRO-049.1`), `"MyHelper.getUnitsId"` token preserved in `docs/architecture/sensor_units.md`, and `python3 tools/verify_requirement_governance.py --repo-root .` exits `0` (`verify_sensor_type_javadocs()` passing; `Localization Parity: N/A - no UI strings`).
 
+### TST-FIL-026: **5-Hz Jeans-Pocket Barometric Rate-Matching, Adaptive Jitter Variance & Real Climb Preservation Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Tickets**: `ATT-8881`
+- **Requirement(s)**: `REQ-FIL-026` (`REQ-FIL-026.1`..`REQ-FIL-026.3`)
+- **Component**: `app/src/test/java/com/atrainingtracker/banalservice/devices/AltitudeAndSlopeDevice_ATTFusedTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/devices/BarometricAltitudeFilterTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/odometry/KinematicAltitudeSlopeEkfTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SourceTextReadingAuditContractTest.kt`
+- **Test Type**: Unit
+- **Verification Method**: Unit
+- **Procedure**:
+  1. *5-Hz Jeans-Pocket Pedaling Oscillation & Synthetic `Zum Bäcker #57` Replay Test (`TST-FIL-026.1`, `AltitudeAndSlopeDevice_ATTFusedTest.kt`)*:
+     • Feed `5-Hz` (`200 ms` synthetic `timestampMs`) pressure readings with cyclic `±1.2 m` (`1.0–1.5 Hz`) pedaling compression oscillations and `±8 m` pocket pulses over `60 s` on flat `DEM = 438.0 m` (`speed = 6.0 m/s`), synchronized with `1-Hz` `calculateMetrics(nowMs)`.
+     • Assert barometric EKF ingestion is rate-matched to `1 Hz` (`~7 s` effective `BarometricAltitudeFilter` median span), flat-road `mSlopeSensor` / `ekf.slopePercent` stays within `±2%` (zero `±10–12%` swings), and `ASCENT` / `DESCENT` remain `0.0 m`.
+     • Replay a full `2 km` synthetic `Zum Bäcker #57` elevation profile (`435..446 m` envelope with `±1.2 m` pocket ripples and `±8 m` compression pulses) and assert total cumulative ascent and descent stay within `10–16 m` without `+26.89 m` inflation.
+  2. *Adaptive Cyclic Jitter Variance Scaling & 2-State `p00` Preservation Test (`TST-FIL-026.2`, `KinematicAltitudeSlopeEkfTest.kt`)*:
+     • Verify 2-state `p00 == DEFAULT_VAR_BARO` (`0.25`) remains intact (`testThreeStateRefBeforeBaro_andTwoStateGuard_preservesP00AndClearsFlags`).
+     • Inject cyclic sign-reversing `±1.2 m` barometric residual oscillations at `5–6 m/s` and assert effective `varBaro` scales upward adaptively to bound `|slopePercent| <= 2%`, while steady monotonic climbs (`+0.83..0.84 m/s`) avoid over-damping and converge accurately.
+  3. *First-Sample Immediate Init, `shutDown()` Aggregator Reset & Real Climb Preservation Test (`TST-FIL-026.3`, `AltitudeAndSlopeDevice_ATTFusedTest.kt`, `BarometricAltitudeFilterTest.kt`)*:
+     • Verify a single `handlePressureMeasurement(1013.25f, 1000L)` call immediately initializes `ekf.isInitialized == true` and populates `mAltitudeSensor`, `shutDown()` clears all sub-second aggregator state cleanly across restarts, and steady-climb / calibration / standstill / filter tests (`tstFil020_3`, `tstFil022_3`, `tstFil023_2`, `tstFil023_3`, `BarometricAltitudeFilterTest` with `medianWindowSize = 7` and `filterSlewOnly()`) continue passing.
+  4. *Tier-1 Targeted Regression & Source-Text Audit (`TST-FIL-026.4`, `SourceTextReadingAuditContractTest.kt`)*:
+     • Execute `./gradlew :app:testDebugUnitTest --tests "com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest" --tests "com.atrainingtracker.banalservice.devices.BarometricAltitudeFilterTest" --tests "com.atrainingtracker.banalservice.odometry.KinematicAltitudeSlopeEkfTest" --tests "com.atrainingtracker.trainingtracker.build.SourceTextReadingAuditContractTest"` asserting 100% pass rate with `0` new `src/main` source-text reads (`REQ-PRO-049.1`; `Localization parity: N/A - no UI strings`).
+
 ---
 
 ## Change History
@@ -3475,3 +3495,4 @@
 | `1.0.34` | 2026-11-18 | AI Agent (`ATT-8676`) | `ATT-8676` | Added `TST-TRK-088` [Planned] for `MyHelper` `RADAR_APPROACH_SPEED_mps` unit mapping, caller integration, `SensorTypeUnitsContractTest`, `SystemArchitectureDesignContractTest`, and `SourceTextReadingAuditContractTest` (`0` new `src/main` reads). |
 | `1.0.35` | 2026-11-18 | AI Agent (`ATT-8676`) | `ATT-8676` | Promoted `TST-TRK-088` to `[Implemented]` following Stage 4 construction of `MyHelperRadarUnitsTest.kt` and consolidated unit/contract test run. |
 | `1.0.36` | 2026-11-18 | AI Agent (`ATT-8676`) | `ATT-8676` | Promoted `TST-TRK-088` to `[Verified]` in Stage 5 following 10-suite `--rerun-tasks` verification (`55/56` PASS across 9/10 full-PASS suites; `1` pre-existing `ATT-8823` failure in `EditDeviceDialog.kt`) and `has_verified_test_evidence("TST-TRK-088")` PASS. |
+| `1.0.37` | 2026-11-18 | AI Agent (`ATT-8881`) | `ATT-8881` | Added `TST-FIL-026` `[Verified]` following clean-room `:app:compileDebugKotlin` (0 new warnings) and 8-suite `:app:testDebugUnitTest` (`67/67` PASS across 8 JUnit XMLs). |
