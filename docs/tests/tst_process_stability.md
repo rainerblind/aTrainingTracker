@@ -1,14 +1,14 @@
 # Living Test Specification: Engineering Process, Stability & Architecture
 
 **Document ID**: `DOC-TST-PRO`  
-**Version**: 1.0.21  
+**Version**: 1.0.22  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Tests**: 229
+**Total Tests**: 230
 
 ---
 
@@ -3887,6 +3887,25 @@
 
 ---
 
+### TST-PRO-126: **SensorTypeUnitsContractTest Source-Reading Elimination & Governance Javadoc Verification Suite (ATT-8631)** [Verified]
+- **Requirement(s)**: `REQ-PRO-126`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Component**: `app/src/test/java/com/atrainingtracker/banalservice/sensor/SensorTypeUnitsContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SourceTextReadingAuditContractTest.kt`, `tools/verify_requirement_governance.py`, `tools/test_verify_requirement_governance.py`
+- **Jira**: `ATT-8631`
+- **Test Description**:
+  1. *`SourceTextReadingAuditContractTest` `4/4` & `LEGITIMATE_GOVERNANCE_GUARDS` Integrity (`TST-PRO-126.1`, SourceTextReadingAuditContractTest.kt)*:
+     • *Given* updated `SensorTypeUnitsContractTest.kt` containing zero `app/src/main/` references and zero read invocations (`readText`/`readLines`/`readString`/`useLines`/`bufferedReader`), *When* `./gradlew :app:testDebugUnitTest --tests com.atrainingtracker.trainingtracker.build.SourceTextReadingAuditContractTest` executes, *Then* all `4/4` tests pass (`0` unallowlisted readers, `LEGITIMATE_GOVERNANCE_GUARDS.size == 22`, `baseline.size == 105`, `0` stale entries).
+  2. *`SensorTypeUnitsContractTest` JVM Reflection & Architecture Parity (`TST-PRO-126.2`, SensorTypeUnitsContractTest.kt)*:
+     • *Given* `SensorType.values()` via JVM reflection, `docs/architecture/sensor_units.md`, and `docs/architecture.md`, *When* `./gradlew :app:testDebugUnitTest --tests com.atrainingtracker.banalservice.sensor.SensorTypeUnitsContractTest` executes, *Then* `allSensorTypes_haveValidInternalUnit()` and `sensorUnitsDoc_matchesAllSensorTypesBidirectionally_andArchitectureLinksIt()` pass `2/2` (`0` failures, `0` skipped).
+  3. *Offline `verify_sensor_type_javadocs()` Python Unit Tests (`TST-PRO-126.3`, tools/test_verify_requirement_governance.py)*:
+     • *Given* isolated `tempfile` fixtures containing synthetic `SensorType.java` enums (valid Javadoc + `"Internal unit:"` + matching unit, missing Javadoc block, missing `"Internal unit:"`, and mismatched unit vs constructor literal/`sensor_units.md`), *When* `python3 -m unittest tools/test_verify_requirement_governance.py` runs, *Then* all positive and negative unit tests pass offline (`Rule 5`).
+  4. *Full Governance Gate Verification (`TST-PRO-126.4`, tools/verify_requirement_governance.py)*:
+     • *Given* synchronized living documentation shards, master indexes, and live `SensorType.java`, *When* `python3 tools/verify_requirement_governance.py` and `--check-doc-headers --check-commit-hygiene --check-conflict-markers` execute, *Then* all governance checks including `verify_sensor_type_javadocs()` exit `0`. (`Localization Parity: N/A - no UI strings`).
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -3913,3 +3932,4 @@
 | `1.0.19` | 2026-11-18 | AI Agent (`ATT-8207`) | `ATT-8207` | Promoted `TST-PRO-125` to `[Verified]` after Stage 6 Pro Bounce 2/3 remediation (`44/44` + `4/4` Python, `23/24` Gradle contracts with 1 pre-existing `.env.jira` worktree failure, governance `exit 0`). |
 | `1.0.20` | 2026-11-18 | AI Agent (`ATT-8207`) | `ATT-8207` | Stage 6 Pro Bounce 3/3 remediation (`[Implemented]`): added `'stage 1'..'stage 5'` and `bounce_target="stage 4"` scope assertions in `tools/test_jira_accounts.py` and `tools/hoechstmass/tools/test_hoechstmass_tools.py`. |
 | `1.0.21` | 2026-11-18 | AI Agent (`ATT-8207`) | `ATT-8207` | Promoted `TST-PRO-125` to `[Verified]` after Stage 5 Bounce 3/3 verification (`48/48` targeted Python tests, `23/24` Gradle contracts with 1 pre-existing `.env.jira` worktree failure, governance `exit 0`). |
+| `1.0.22` | 2026-11-18 | AI Agent (`ATT-8631`) | `ATT-8631` | Added and verified `TST-PRO-126` [Verified] (`SourceTextReadingAuditContractTest` `4/4`, `SensorTypeUnitsContractTest` `2/2`, `TestSensorTypeJavadocVerification` in `tools/test_verify_requirement_governance.py`, `67/67` SensorType Javadocs; `97/97` Python suite, `21/21` Tier-1 Gradle tests, governance `exit 0`). |

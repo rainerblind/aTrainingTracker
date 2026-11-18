@@ -1,14 +1,14 @@
 # Living Requirements: Engineering Process, Stability & Architecture
 
 **Document ID**: `DOC-REQ-PRO`  
-**Version**: 1.0.21  
+**Version**: 1.0.22  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Requirements**: 190
+**Total Requirements**: 191
 
 ---
 
@@ -6212,6 +6212,30 @@ The workflow SHALL mandate that:
 
 ---
 
+### REQ-PRO-126: Source-Text Reading Elimination in SensorTypeUnitsContractTest & Governance Javadoc Enforcement (ATT-8631) [Verified]
+- **Tests**: `TST-PRO-126`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `app/src/test/java/com/atrainingtracker/banalservice/sensor/SensorTypeUnitsContractTest.kt`, `tools/verify_requirement_governance.py`, `tools/test_verify_requirement_governance.py`
+- **Rationale**: `SourceTextReadingAuditContractTest.testSourceReadingAudit_noUnallowlistedSourceReaders` (`REQ-PRO-049.1`) failed on `SensorTypeUnitsContractTest.kt` (`:50, 138, 140` reading `SensorType.java` for per-constant Javadoc checks per `REQ-TRK-083.2`/`REQ-TRK-083.3`), while `AdvancedTuningZoneDisplayTest.kt` (`:310`) had already been deleted upstream in `ATT-8498` (`d7dec447`). Migrating static `SensorType.java` Javadoc enforcement into `tools/verify_requirement_governance.py` (`verify_sensor_type_javadocs()`) eliminates the sole remaining unallowlisted `app/src/main/` test reader without expanding `LEGITIMATE_GOVERNANCE_GUARDS` (`22`) or `app/source-reading-baseline.txt` (`105`) (`ATT-8631`, Epic `ATT-8138`).
+- **Description**:
+  1. *Zero `app/src/main/` Source Reads in `SensorTypeUnitsContractTest.kt` (`REQ-PRO-126.1`)*: `SensorTypeUnitsContractTest.kt` SHALL NOT reference `app/src/main/` paths or invoke source-reading APIs (`.readText()`, `readLines()`, `readString()`, `useLines()`, `bufferedReader()`), while preserving JVM reflection verification of all `SensorType.values()` (`getInternalUnit()`, `SensorCategory`, `SensorSubCategory`, `SensorValueType`) and bidirectional parity with `docs/architecture/sensor_units.md` and `docs/architecture.md` (`REQ-TRK-083.1`, `REQ-TRK-083.3`).
+  2. *Static `SensorType.java` Javadoc Enforcement in Governance Tooling (`REQ-PRO-126.2`)*: `tools/verify_requirement_governance.py` SHALL implement `verify_sensor_type_javadocs()` (executed by `verify_governance()`) to parse `app/src/main/java/com/atrainingtracker/banalservice/sensor/SensorType.java` and fail non-zero if any enum constant lacks a preceding `/** ... */` Javadoc block documenting `"Internal unit:"` and its declared `internalUnit` literal (cross-checked against `docs/architecture/sensor_units.md`), migrating static source Javadoc verification out of JUnit (`REQ-TRK-083.3`, `TST-TRK-083.1`).
+  3. *Preservation of `REQ-PRO-049` Guard & Baseline Ratchets (`REQ-PRO-126.3`)*: `SourceTextReadingAuditContractTest.LEGITIMATE_GOVERNANCE_GUARDS` MUST remain strictly capped at `22` (`REQ-PRO-049.2`) and `app/source-reading-baseline.txt` at `105` with `0` stale entries (`REQ-PRO-049.3`), passing `4/4` tests in `SourceTextReadingAuditContractTest`.
+  4. *Offline Governance Unit Testing (`REQ-PRO-126.4`)*: `tools/test_verify_requirement_governance.py` SHALL verify `verify_sensor_type_javadocs()` offline using isolated `tempfile` fixtures covering pass cases, missing Javadoc blocks, missing `"Internal unit:"` or mismatched `internalUnit` tokens, and live repository verification (`Rule 5`).
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new `REQ-PRO-126` (`REQ-PRO-126.1`–`REQ-PRO-126.4`), refining `REQ-PRO-049` (`ATT-6186`, `ATT-6731`, `ATT-7525`) and migrating static `SensorType.java` Javadoc verification from `REQ-TRK-083.3` / `TST-TRK-083.1` (`ATT-8579`) across `SensorTypeUnitsContractTest.kt`, `tools/verify_requirement_governance.py`, and `tools/test_verify_requirement_governance.py`.
+  2. *Historical Origin & Commit Trace*: `REQ-PRO-049` (`c91e62b6`, `6ec52d7b`, `97133154`) banned unallowlisted `src/main` test reads; `ATT-8498` (`d7dec447`) deleted `AdvancedTuningZoneDisplayTest.kt`; `ATT-8579` (`367a412f`) added `SensorTypeUnitsContractTest.kt` reading `SensorType.java`.
+  3. *Root Reason for Existing Formulation*: `ATT-8579` co-located static `SensorType.java` Javadoc regex parsing inside the JUnit reflection test `SensorTypeUnitsContractTest.kt` without registering it in `LEGITIMATE_GOVERNANCE_GUARDS` (`22`).
+  4. *Preservation of Core Invariants*: Preserves `REQ-PRO-049.2` (`22` guards), `REQ-PRO-049.3` (`105` baseline, `0` stale), `SensorType.java` `ordinal()`/`name()`/`getInternalUnit()` runtime behavior, `docs/architecture/sensor_units.md` bidirectional parity, and continuous per-constant Javadoc verification inside `verify_requirement_governance.py`.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `SensorTypeUnitsContractTest.kt` and `app/src/test/java/`, *When* `./gradlew :app:testDebugUnitTest --tests com.atrainingtracker.trainingtracker.build.SourceTextReadingAuditContractTest --tests com.atrainingtracker.banalservice.sensor.SensorTypeUnitsContractTest` runs, *Then* `SourceTextReadingAuditContractTest` passes `4/4` (`22` guards, `105` baseline, `0` unallowlisted) and `SensorTypeUnitsContractTest` passes `2/2` via JVM reflection and `docs/architecture/`.
+  • *Given* synthetic `SensorType.java` `tempfile` fixtures (valid, missing Javadoc, or missing/mismatched `"Internal unit:"`) and the live repository, *When* `verify_sensor_type_javadocs()` and `python3 tools/verify_requirement_governance.py` execute, *Then* invalid fixtures fail deterministically and live repository checks exit `0`.
+- **Invariants**: Zero `app/src/main/` production edits; `SensorType.java` `ordinal()`/`name()`/`getInternalUnit()` unchanged; `LEGITIMATE_GOVERNANCE_GUARDS` == `22`; `app/source-reading-baseline.txt` == `105`; `Localization Parity: N/A - no UI strings`; zero live network/Jira calls in unit tests (`Rule 5`).
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -6238,3 +6262,4 @@ The workflow SHALL mandate that:
 | `1.0.19` | 2026-11-18 | AI Agent (`ATT-8207`) | `ATT-8207` | Promoted `REQ-PRO-125` to `[Verified]` after Stage 6 Pro Bounce 2/3 remediation (`44/44` + `4/4` Python, `23/24` Gradle contracts with 1 pre-existing `.env.jira` worktree failure, governance `exit 0`). |
 | `1.0.20` | 2026-11-18 | AI Agent (`ATT-8207`) | `ATT-8207` | Stage 6 Pro Bounce 3/3 remediation (`[Implemented]`): added space-separated `'stage 1'..'stage 5'` aliases to `STAGE_ALIASES`, `_resolve_bounce_stage_ids`, and `tools/hoechstmass/tools/jira_util.py` `_resolve_bounce_stage_names`. |
 | `1.0.21` | 2026-11-18 | AI Agent (`ATT-8207`) | `ATT-8207` | Promoted `REQ-PRO-125` to `[Verified]` after Stage 5 Bounce 3/3 verification (`48/48` targeted Python tests, `23/24` Gradle contracts with 1 pre-existing `.env.jira` worktree failure, governance `exit 0`). |
+| `1.0.22` | 2026-11-18 | AI Agent (`ATT-8631`) | `ATT-8631` | Added and verified `REQ-PRO-126` [Verified] (`SensorTypeUnitsContractTest.kt` zero `src/main` reads, `verify_sensor_type_javadocs()` in `tools/verify_requirement_governance.py`, `TestSensorTypeJavadocVerification`, preserving `22` guards & `105` baseline; `97/97` Python suite, `21/21` Tier-1 Gradle tests incl. `SourceTextReadingAuditContractTest` `4/4` & `SensorTypeUnitsContractTest` `2/2`, governance `exit 0`). |
