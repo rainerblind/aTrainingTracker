@@ -1,7 +1,7 @@
 # Living Requirements: Tracking & Live Sensor Cockpit (Part 2 of 2)
 
 **Document ID**: `DOC-REQ-TRK-P2`  
-**Version**: 1.0.13  
+**Version**: 1.0.14  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -3078,6 +3078,46 @@
 
 **Invariants**: `REQ-FIL-016.2` `filterSlewOnly()` zero double-EMA lag; `medianWindowSize = 7`; `DEFAULT_VAR_BARO = 0.25` & 2-state `p00 = varBaro`; immediate first-sample init; clean `shutDown()` reset; `REQ-FIL-020.2` `2.0 m` hysteresis; `REQ-FIL-022` `baroBias`; `AltitudeFromPressureDevice.java`, `ExtendedRtsAltitudeSlopeSmoother.kt`, `WorkoutRepository.kt` (`<= 5,117` LoC) untouched; `@Synchronized` thread safety; `REQ-PRO-049.1` (`0` `src/main` reads); `N/A - no UI strings`.
 
+### REQ-TRK-089: Full-Screen Radar Vehicle Markers with Non-Clipping Badges, V2 Size Icons & High-Contrast Framing [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-TRK-089`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `RadarEdgeOverlay.kt`, `Color.kt`, `strings_radar.xml`
+- **Rationale**: In `RadarEdgeSide.FULL_SCREEN` mode, `RadarFullScreenThreatOverlay` currently renders fixed `28×20.dp` / `32×22.dp` / `36×26.dp` text-only boxes with `9.sp` range labels and a `1.5.dp` white border, causing 3-digit distances (`128m`, `160m`) to clip against the pill edges, badges to wash out against light cockpit cards and map tiles, V2 `VehicleSizeCategory` variants to lack distinct vehicle icons, and `UNKNOWN_OR_LIGHT` targets to fall back to an untranslated `"Target"` accessibility prefix (`ATT-8733`, Parent Epic `ATT-1286`, refining `REQ-TRK-062.1`, `REQ-TRK-062.2`, `REQ-TRK-062.3`, `REQ-TRK-062.6`, and complementing `REQ-TRK-073.2`):
+- **Description**:
+  1. *Non-Clipping Content-Sized Markers & Edge Clamping (`REQ-TRK-089.1`)*:
+     - `RadarFullScreenThreatOverlay` SHALL replace fixed `28×20` / `32×22` / `36×26.dp` boxes with content-sized pill/capsule markers (`widthIn(min = ...)` / `wrapContentWidth()`) and generous padding, rendering bold tabular-numeral (`fontFeatureSettings = "tnum"`) distance text at `11–13.sp` so 2- and 3-digit distances (`15m`, `128m`, `160m`) never clip or wrap.
+     - Marker positioning SHALL incorporate measured marker dimensions (or equivalent layout clamping/anchoring) so content-sized markers near horizontal (`0.15f`–`0.85f`) and vertical (`0.0f`–`1.0f`) extremes remain fully within `RadarFullScreenThreatOverlay` bounds without clipping or overflow, while preserving upward kinematics ($140\text{ m} / 175\text{ m} \to 0\text{ m}$) and optional subtle proximity perspective scaling / non-intrusive lane guides.
+  2. *Distinct High-Contrast V2 Vehicle Icons, Theme Tokens & 9-Locale Accessibility (`REQ-TRK-089.2`)*:
+     - Each full-screen marker SHALL render a distinct vector icon mapped to `VehicleSizeCategory`: `CAR` (passenger car icon, e.g., `Icons.Default.DirectionsCar`), `TRUCK_OR_BUS` (heavy-vehicle icon, e.g., `Icons.Default.LocalShipping` with larger marker scale), and `UNKNOWN_OR_LIGHT` (light/two-wheel/directional vehicle icon).
+     - Markers SHALL apply subtle elevation (`shadowElevation` / `Surface`), dark scrim/outer contrast, and border framing legible across both Light/Dark themes and Map tiles, sourcing any new color tokens strictly from `Color.kt` (`TTColor`, zero inline `Color(0x...)` literals in composables per `ThemeColorCentralizationAuditTest`).
+     - Accessibility `contentDescription` SHALL map `UNKNOWN_OR_LIGHT` to `R.string.radar_vehicle_size_light`, `CAR` to `R.string.radar_vehicle_size_car`, and `TRUCK_OR_BUS` to `R.string.radar_vehicle_size_truck`, eliminating the hardcoded `"Target"` fallback (`Localization Parity: PASS - 9/9 existing strings_radar.xml keys reused, zero new keys needed`).
+  3. *Preserved Overlay & Contract Invariants (`REQ-TRK-089.3`)*:
+     - Full-screen markers, lane guides, and container MUST attach zero `.clickable`, `.pointerInput`, or `.pointerInteropFilter` modifiers (`REQ-TRK-062.3` 100% touch pass-through for `HorizontalPager`, `GoogleMap`, and edge back gestures).
+     - `RadarStatusBadgePill` SHALL remain absent during clear road (`ATT-8679`), `rememberInfiniteTransition` SHALL remain gated strictly on `overallThreatLevel == ThreatLevel.FAST_APPROACHING`, `LEFT`/`RIGHT` `RadarVerticalRail` dot geometry (`REQ-TRK-073.2`) MUST remain untouched, all `@Preview` functions MUST be declared `private` (`DeadCodeEliminationContractTest`), `RadarEdgeOverlayTest.kt` MUST perform `0` `app/src/main/` file reads (`SourceTextReadingAuditContractTest`), and Stage 5 verification MUST include `Rule 8.5` Light/Dark PNG capture.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new `REQ-TRK-089`, refining `REQ-TRK-062` (`REQ-TRK-062.1`, `REQ-TRK-062.2`, `REQ-TRK-062.3`, `REQ-TRK-062.6`) in `docs/requirements/req_tracking_cockpit_part2.md:138–198`, targeting `RadarEdgeOverlay.kt` (`RadarFullScreenThreatOverlay`), `Color.kt`, and `RadarEdgeOverlayTest.kt` while keeping `REQ-TRK-073.2` untouched.
+2. *Historical Origin & Commit Trace*: `2a3baf12` (`ATT-5085`, initial edge overlay), `f2c2e15e` (`ATT-5096`, `VehicleSizeCategory` & `REQ-TRK-073`), `3206a504` (`ATT-7537`, introduced `RadarFullScreenThreatOverlay` & `RadarEdgeSide.FULL_SCREEN`), `49deebfb` (`ATT-8679`, removed clear-state green `RadarStatusBadgePill` and refined `REQ-TRK-062`).
+3. *Root Reason for Existing Formulation*: `ATT-7537` reused compact rail-sized (`28–36.dp`) text-only boxes with `9.sp` font and `85%` opacity to avoid occluding underlying cockpit metrics before on-device screenshot inspection revealed 3-digit text clipping (`128m`), low white-border contrast over light cards/maps, missing V2 icons, and an untranslated `"Target"` string fallback.
+4. *Preservation of Core Invariants*: Preserves 100% gesture pass-through (zero clickable/pointer modifiers on full-screen overlay/markers/guides), upward kinematics ($140\text{ m}/175\text{ m} \to 0\text{ m}$), RHT/LHT lateral mapping (`RadarOverlayMath.calculateFullScreenHorizontalFraction`), conditional `FAST_APPROACHING` pulsing animation, `ATT-8679` clear-badge suppression, `LEFT`/`RIGHT` `RadarVerticalRail` geometry (`REQ-TRK-073.2`), centralized `Color.kt` tokens, `private` `@Preview` visibility, and 9-language parity.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `RadarEdgeSide.FULL_SCREEN` with targets at `160m`, `128m`, and `15m` near lateral (`0.15f`/`0.85f`) or range (`0.0f`/`1.0f`) boundaries,
+• *When* `RadarFullScreenThreatOverlay` composes,
+• *Then* content-sized (`widthIn`/`wrapContentWidth`) markers render tabular `11–13.sp` bold distance labels without text clipping or container-bounds overflow.
+• *Given* active V2 targets of categories `CAR`, `TRUCK_OR_BUS`, and `UNKNOWN_OR_LIGHT`,
+• *When* `RadarFullScreenThreatOverlay` renders over Light, Dark, and Map-style backgrounds,
+• *Then* distinct vehicle icons, elevated scrim/border contrast (sourced from `Color.kt`), and localized `radar_vehicle_size_car` / `_truck` / `_light` accessibility descriptions appear with zero `"Target"` fallback and zero inline `Color(0x...)` literals.
+• *Given* `RadarFullScreenThreatOverlay` active with clear road vs. `APPROACHING` vs. `FAST_APPROACHING`,
+• *When* inspected for gestures, animations, and rail geometry,
+• *Then* full-screen markers/guides consume zero touch events, `RadarStatusBadgePill` stays absent when clear (`ATT-8679`), `rememberInfiniteTransition` composes strictly for `FAST_APPROACHING`, and `LEFT`/`RIGHT` `RadarVerticalRail` remains unchanged.
+
+**Invariants**: Zero `.clickable`/`.pointerInput`/`.pointerInteropFilter` on full-screen markers/guides (`REQ-TRK-062.3`); `RadarStatusBadgePill` absent when clear (`ATT-8679`); `rememberInfiniteTransition` gated strictly on `FAST_APPROACHING`; `LEFT`/`RIGHT` `RadarVerticalRail` untouched (`REQ-TRK-073.2`); `Color(0x...)` strictly confined to `Color.kt`; `private` `@Preview` visibility only; `0` `src/main` reads in `RadarEdgeOverlayTest.kt`; `Localization Parity: PASS - 9/9 existing strings_radar.xml keys reused, zero new keys needed`.
+
 ---
 
 ## Change History
@@ -3097,3 +3137,4 @@
 | `1.0.11` | 2026-11-18 | AI Agent (`ATT-8676`) | `ATT-8676` | Promoted `REQ-TRK-088` to `[Implemented]` following Stage 4 changes in `MyHelper.java`, `SensorType.java`, `docs/architecture/sensor_units.md`, and `MyHelperRadarUnitsTest.kt`. |
 | `1.0.12` | 2026-11-18 | AI Agent (`ATT-8676`) | `ATT-8676` | Promoted `REQ-TRK-088` to `[Verified]` in Stage 5 following clean-room 10-suite verification (`55/56` PASS across 9/10 full-PASS suites; `1` pre-existing `ATT-8823` failure in `EditDeviceDialog.kt`) and `has_verified_test_evidence("TST-TRK-088")` PASS. |
 | `1.0.13` | 2026-11-18 | AI Agent (`ATT-8881`) | `ATT-8881` | Added `REQ-FIL-026` `[Verified]` for 1-Hz barometric ingestion rate-matching and adaptive cyclic pocket-jitter `varBaro` scaling in `AltitudeAndSlopeDevice_ATTFused` and `KinematicAltitudeSlopeEkf` (`67/67` PASS across `8` XMLs). |
+| `1.0.14` | 2026-11-18 | AI Agent (`ATT-8733`) | `ATT-8733` | Added `REQ-TRK-089` `[Verified]` (`RadarFullScreenThreatOverlay` non-clipping content-sized markers, touch-transparent `Box` + single-pass `.layout`, `TwoWheeler`/`DirectionsCar`/`LocalShipping`, `Color.kt` contrast & map-backdrop tokens, `9/9` locales, `76/76` scoped PASS, `:app:lintDebug` `0` errors, `Rule 8.5` PNG). |

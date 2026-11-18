@@ -1,7 +1,7 @@
 # Living Test Specification: Tracking & Live Sensor Cockpit
 
 **Document ID**: `DOC-TST-TRK`  
-**Version**: 1.0.37  
+**Version**: 1.0.38  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -3461,6 +3461,24 @@
   4. *Tier-1 Targeted Regression & Source-Text Audit (`TST-FIL-026.4`, `SourceTextReadingAuditContractTest.kt`)*:
      • Execute `./gradlew :app:testDebugUnitTest --tests "com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest" --tests "com.atrainingtracker.banalservice.devices.BarometricAltitudeFilterTest" --tests "com.atrainingtracker.banalservice.odometry.KinematicAltitudeSlopeEkfTest" --tests "com.atrainingtracker.trainingtracker.build.SourceTextReadingAuditContractTest"` asserting 100% pass rate with `0` new `src/main` source-text reads (`REQ-PRO-049.1`; `Localization parity: N/A - no UI strings`).
 
+### TST-TRK-089: **Full-Screen Radar Vehicle Markers, V2 Icons & Contrast Framing Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Tickets**: `ATT-8733`
+- **Requirement(s)**: `REQ-TRK-089` (`REQ-TRK-089.1`..`REQ-TRK-089.3`)
+- **Component**: `app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/radar/RadarEdgeOverlay.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/theme/Color.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/ui/tracking/radar/RadarEdgeOverlayTest.kt`, `ThemeColorCentralizationAuditTest.kt`, `DeadCodeEliminationContractTest.kt`, `SourceTextReadingAuditContractTest.kt`, `TranslationParityTest.kt`
+- **Test Type**: Unit
+- **Verification Method**: Unit
+- **Procedure**:
+  1. *Non-Clipping Content-Sized Markers & Edge Clamping (`TST-TRK-089.1`, `RadarEdgeOverlayTest.kt`, `createComposeRule()`)*:
+     • Render `RadarEdgeOverlay` in `RadarEdgeSide.FULL_SCREEN` with 2- and 3-digit targets (`15m`, `128m`, `160m`) placed at central and extreme lateral/vertical positions (`0.15f` / `0.85f` horizontal, `0.0f` / `1.0f` range).
+     • Assert each distance label (`15m`, `128m`, `160m`) is displayed unclipped (`getUnclippedBoundsInRoot()`), marker bounds remain strictly inside the `RadarEdgeOverlay` container bounds, and `TRUCK_OR_BUS` marker dimensions exceed `CAR` / `UNKNOWN_OR_LIGHT`.
+  2. *Distinct V2 Icons, 9-Locale Accessibility & Invariant Preservation (`TST-TRK-089.2`, `RadarEdgeOverlayTest.kt`, `TranslationParityTest.kt`)*:
+     • Render mixed V2 targets (`CAR`, `TRUCK_OR_BUS`, `UNKNOWN_OR_LIGHT`) in `FULL_SCREEN` mode; assert distinct localized accessibility descriptions using existing `radar_vehicle_size_car`, `radar_vehicle_size_truck`, and `radar_vehicle_size_light` (zero `"Target"` fallback) and `0` missing keys across all 9 `values*/strings_radar.xml` locales (`Localization Parity: PASS - 9/9 existing strings_radar.xml keys reused, zero new keys needed`).
+     • Assert full-screen markers/guides expose zero clickable/pointer actions (`assertHasNoClickAction()`), `RadarStatusBadgePill` remains absent when road is clear (`ATT-8679`), `FAST_APPROACHING` pulse activates only for `ThreatLevel.FAST_APPROACHING`, and `LEFT`/`RIGHT` `RadarVerticalRail` bounds/sizes remain unchanged (`REQ-TRK-073.2`).
+  3. *Contract Hygiene & Rule 8.5 Visual Inspection (`TST-TRK-089.3`, `ThemeColorCentralizationAuditTest`, `DeadCodeEliminationContractTest`, `SourceTextReadingAuditContractTest`, `Rule 8.5`)*:
+     • Execute `RadarEdgeOverlayTest`, `ThemeColorCentralizationAuditTest` (zero inline `Color(0x...)` in composables), `DeadCodeEliminationContractTest` (all `@Preview` functions `private`), `SourceTextReadingAuditContractTest` (`0` `src/main` file reads in `RadarEdgeOverlayTest.kt`), `TranslationParityTest`, and `:app:lintDebug`.
+     • Capture Light/Dark/Map-style `@Preview` PNG screenshot at `docs/engineering/walkthroughs/img/ATT-8733_radar_fullscreen_markers_preview.png` in Stage 5 and inspect via `read_file` against `Rule 8.5`.
+
 ---
 
 ## Change History
@@ -3496,3 +3514,4 @@
 | `1.0.35` | 2026-11-18 | AI Agent (`ATT-8676`) | `ATT-8676` | Promoted `TST-TRK-088` to `[Implemented]` following Stage 4 construction of `MyHelperRadarUnitsTest.kt` and consolidated unit/contract test run. |
 | `1.0.36` | 2026-11-18 | AI Agent (`ATT-8676`) | `ATT-8676` | Promoted `TST-TRK-088` to `[Verified]` in Stage 5 following 10-suite `--rerun-tasks` verification (`55/56` PASS across 9/10 full-PASS suites; `1` pre-existing `ATT-8823` failure in `EditDeviceDialog.kt`) and `has_verified_test_evidence("TST-TRK-088")` PASS. |
 | `1.0.37` | 2026-11-18 | AI Agent (`ATT-8881`) | `ATT-8881` | Added `TST-FIL-026` `[Verified]` following clean-room `:app:compileDebugKotlin` (0 new warnings) and 8-suite `:app:testDebugUnitTest` (`67/67` PASS across 8 JUnit XMLs). |
+| `1.0.38` | 2026-11-18 | AI Agent (`ATT-8733`) | `ATT-8733` | Added `TST-TRK-089` `[Verified]` (`RadarEdgeOverlayTest` `37/37` PASS w/ direct marker tap/swipe pass-through, Frame-1 `.layout` clamping & `FAST_APPROACHING`-only pulse; `:app:lintDebug` `0` errors; `Rule 8.5` Light/Dark/Map PNG). |
