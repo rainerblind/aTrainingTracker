@@ -1,14 +1,14 @@
 # Living Test Specification: UI Components & Design System (Part 3 of 3)
 
 **Document ID**: `DOC-TST-UI-P3`  
-**Version**: 1.0.0  
+**Version**: 1.0.4  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `ui_design_system_part3`  
 **Prefixes**: `UI`, `UNT`  
 **Scope**: Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts.  
-**Total Tests**: 37
+**Total Tests**: 38
 
 ---
 
@@ -752,6 +752,22 @@
   4. *Targeted Regression Suite (`TST-UI-2784.4`)*:
      - Execute `RadarTrafficSummaryCardTest`, `RadarTrafficSummaryTest`, `RadarTrafficSummaryFormatterTest`, and `SpeedFormatterTest` asserting 100% pass rate.
 
+### TST-UI-2785: Enlarged Lieblingsorte Card Preview Map (175x120 dp), Zoom Calibration & Narrow Viewport Verification [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-UI-2785` (`REQ-UI-2785.1`, `REQ-UI-2785.2`, `REQ-UI-2785.3`, `REQ-UI-2785.4`)
+- **Component**: `KnownLocationsScreen.kt`, `KnownLocationZoomMath.kt`, `KnownLocationCardLayoutTest.kt`, `KnownLocationZoomMathTest.kt`, `KnownLocationCardComposeUiTest.kt`
+- **Jira**: `ATT-8749`
+- **Test Description**:
+  1. *Zoom Calibration Unit Tests (`TST-UI-2785.1`, `KnownLocationZoomMathTest.kt`)*:
+     - Verify `DEFAULT_THUMBNAIL_HEIGHT_DP == 120.0` and `calculateThumbnailZoom` produces calibrated `+0.585` zoom levels at `lat = 48.137` (`500m -> 11.7f`, `1000m -> ~11.10f`, `1500m -> ~10.51f`, `2000m -> ~10.10f`, `>= 2700m -> 9.7f`) while preserving `MIN_ZOOM = 9.7f` and `MAX_ZOOM = 11.7f`.
+  2. *Legacy Layout Baseline Update (`TST-UI-2785.2`, `KnownLocationCardLayoutTest.kt`)*:
+     - Update `KnownLocationCardLayoutTest.kt:297` in-place to assert `.size(width = 175.dp, height = 120.dp)` without adding any new `src/main` reads (`app/source-reading-baseline.txt:75` count `105` preserved).
+  3. *Behavioral Compose UI & `360.dp` Overflow Tests (`TST-UI-2785.3`, `KnownLocationCardComposeUiTest.kt`)*:
+     - Render `KnownLocationCard` via Robolectric `createComposeRule()` with `0` `src/main` file reads (`REQ-PRO-049.1`) and explicit `TST-UI-2785` KDoc tag (`--check-verified-evidence`).
+     - Assert `location_map_preview_<id>` bounds measure `175.dp × 120.dp`, verify `360.dp` viewport width with 3 multi-digit `SportStartsItem` counts (`130%` font scale) and long altitude text renders without clipping/overlap (`Altitude` single-line ellipsis + `SportStartsItem` wrapping/spacing guard), and verify `Rule 8.5` Light/Dark PNG (`docs/engineering/walkthroughs/img/ATT-8749_lieblingsorte_preview.png`) plus `emulator-5554` inspection.
+  4. *Localization & Targeted Regression (`TST-UI-2785.4`)*:
+     - `Localization Parity: N/A - no UI strings` (`values*/strings*.xml` untouched); execute `KnownLocationZoomMathTest`, `KnownLocationCardLayoutTest`, and `KnownLocationCardComposeUiTest` asserting 100% pass rate.
+
 ---
 
 ## Change History
@@ -760,3 +776,5 @@
 | :--- | :--- | :--- | :--- | :--- |
 | `1.0.0` | 2026-11-18 | AI Agent (`ATT-8206`) | `ATT-8206` | Split oversized shard into compliant sub-shard (<= 4,000 lines, `REQ-PRO-093.4`, `REQ-PRO-127.3`). |
 | `1.0.2` | 2026-11-18 | AI Agent (`ATT-8712`) | `ATT-8712` | Aligned `TST-UI-2783.1` (`HrvDfaA1SettingsContractTest` <-> `REQ-TRK-087`) cleanly post-split (`ATT-8206`). |
+| `1.0.3` | 2026-11-18 | AI Agent (`ATT-8749`) | `ATT-8749` | Added `TST-UI-2785` (`[Planned]`) for `175x120 dp` preview map, `120.0 dp` zoom calibration, and `360dp` behavioral Compose UI verification. |
+| `1.0.4` | 2026-11-18 | AI Agent (`ATT-8749`) | `ATT-8749` | Promoted `TST-UI-2785` to `[Verified]` after `89/89` unit/UI tests and `Rule 8.5` PNG inspection. |

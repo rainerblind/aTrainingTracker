@@ -1,14 +1,14 @@
 # Living Requirements: UI Components & Design System (Part 5 of 5)
 
 **Document ID**: `DOC-REQ-UI-P5`  
-**Version**: 1.0.0  
+**Version**: 1.0.4  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `ui_design_system_part5`  
 **Prefixes**: `UI`, `UNT`  
 **Scope**: Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts.  
-**Total Requirements**: 42
+**Total Requirements**: 43
 
 ---
 
@@ -1739,6 +1739,36 @@
 
 **Invariants**: Zero SQLite/DTO changes; `TrainingApplication.setUnitForTesting(null)` cleanup in tests; Light/Dark theme readability preserved; `ANT-Android-SDKs` untouched.
 
+### REQ-UI-2785: Enlarged Lieblingsorte Card Preview Map (175x120 dp), Zoom Calibration & 360dp Overflow Protection [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-UI-2785`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, On-Device Manual
+- **Implementation**: `KnownLocationsScreen.kt`, `KnownLocationZoomMath.kt`
+- **Rationale**: In `KnownLocationsScreen.kt`, `KnownLocationThumbnailMap` rendered at `116.dp × 80.dp` (`L673`), leaving excess whitespace beside the metadata column while cramping the centered heart marker, geofence circle, and Google watermark. Enlarging the preview to `175.dp × 120.dp` and calibrating `KnownLocationZoomMath.calculateThumbnailZoom` to `120.0 dp` improves neighborhood & geofence legibility while protecting the `109.dp` metadata column on `360.dp` viewports (`ATT-8749`).
+- **Description**:
+  1. *Enlarged Preview Map & Spacer (`REQ-UI-2785.1`)*:
+     - `KnownLocationThumbnailMap` (`KnownLocationsScreen.kt`) SHALL render at `Modifier.size(width = 175.dp, height = 120.dp)` with KDoc updated accordingly, and the `Spacer` separating the left metadata `Column` from `KnownLocationThumbnailMap` SHALL be reduced from `16.dp` to `12.dp` (preserving `RoundedCornerShape(12.dp)`, `liteMode(true)`, `location_map_preview_${item.id}` testTag, `createCenteredHeartGlyphMarker`, `LocalInspectionMode` canvas `size.minDimension * 0.35f`, `IntrinsicSize.Min` bottom alignment, and click/long-press callbacks).
+  2. *Calibrated Zoom Math (`REQ-UI-2785.2`)*:
+     - `KnownLocationZoomMath` SHALL define `const val DEFAULT_THUMBNAIL_HEIGHT_DP: Double = 120.0` and expose `thumbnailHeightDp: Double = DEFAULT_THUMBNAIL_HEIGHT_DP` on `calculateThumbnailZoom(radiusMeters, latitude, thumbnailHeightDp)` (`+log2(1.5) ≈ +0.585` zoom levels over `80.0 dp`, keeping `MIN_ZOOM = 9.7f` and `MAX_ZOOM = 11.7f` without introducing a Detekt `MagicNumber`).
+  3. *Narrow `360.dp` Column Overflow Protection (`REQ-UI-2785.3`)*:
+     - Inside the `296.dp` card inner width on `360.dp` screens (`109.dp` left `weight(1f)` metadata `Column` beside `175.dp` map + `12.dp` `Spacer`), Altitude `Text` MUST set `maxLines = 1` and `overflow = TextOverflow.Ellipsis`, and the `SportStartsItem` row MUST guard against horizontal crowding/clipping (via wrapping `FlowRow` or compact spacing) even with 3 multi-digit sport counts at `130%` font scale.
+  4. *Localization & Test Hygiene (`REQ-UI-2785.4`)*:
+     - `Localization Parity: N/A - no UI strings` (`values*/strings*.xml` untouched); new behavioral `createComposeRule()` UI tests MUST execute with `0` new `src/main` file reads (`REQ-PRO-049.1`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Refines `REQ-UI-217`, `REQ-UI-224`, `REQ-UI-244`, `REQ-UI-465.3`, `REQ-UI-469.4`, and `REQ-UI-470.1` on `KnownLocationsScreen.kt` and `KnownLocationZoomMath.kt`.
+2. *Historical Origin & Commit Trace*: `b24a3c20` (`ATT-1813`, `80dp`), `d7b00bf8` (`ATT-1878`, `80.0`), `e29c614b` (`ATT-2051`, `100dp`), `4c095473` (`ATT-5825`, `116x80 dp`), and `ce73d561` (`ATT-5884`, `9.7f..11.7f`).
+3. *Root Reason for Existing Formulation*: `116×80 dp` minimized card height when badges wrapped; `80.0` in `KnownLocationZoomMath` matched the `80 dp` map height prior to enlargement.
+4. *Preservation of Core Invariants*: `RoundedCornerShape(12.dp)`, `liteMode(true)`, `createCenteredHeartGlyphMarker` (`anchor = Offset(0.5f, 0.5f)`), `LocalInspectionMode` canvas, `IntrinsicSize.Min` alignment, `MIN_ZOOM = 9.7f`/`MAX_ZOOM = 11.7f`, test tags, and 1-tap drill-down/edit/long-press callbacks remain intact.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `KnownLocationCard` rendered at `360.dp` viewport width with 3 multi-digit `SportStartsItem` counts and long altitude text at 130% font scale, *When* composed in Light/Dark theme, *Then* `location_map_preview_<id>` measures `175.dp × 120.dp` and left-column metadata renders without horizontal clipping or overlap.
+• *Given* `KnownLocationZoomMath.calculateThumbnailZoom(radiusMeters, 48.137)`, *When* called with default `DEFAULT_THUMBNAIL_HEIGHT_DP = 120.0`, *Then* `500m` clamps to `11.7f`, `1000m` evaluates `~11.10f`, `1500m` evaluates `~10.51f`, and `2000m` evaluates `~10.10f` within `[9.7f, 11.7f]`.
+
+**Invariants**: `WorkoutClusterComponents.kt` (`110×75 dp`), `EditKnownLocationDialog.kt`, `MIN_ZOOM`/`MAX_ZOOM`, and geofence marker geometry remain unchanged; zero `strings*.xml` edits; zero new `src/main` test reads (`REQ-PRO-049.1`).
+
 ---
 
 ## Change History
@@ -1747,3 +1777,5 @@
 | :--- | :--- | :--- | :--- | :--- |
 | `1.0.0` | 2026-11-18 | AI Agent (`ATT-8206`) | `ATT-8206` | Split oversized shard into compliant sub-shard (<= 4,000 lines, `REQ-PRO-093.4`, `REQ-PRO-127.3`). |
 | `1.0.2` | 2026-11-18 | AI Agent (`ATT-8712`) | `ATT-8712` | Aligned `REQ-UI-2783.3` with `REQ-TRK-046.4` and `REQ-TRK-087` cleanly post-split (`ATT-8206`). |
+| `1.0.3` | 2026-11-18 | AI Agent (`ATT-8749`) | `ATT-8749` | Added `REQ-UI-2785` (`[Planned]`) for enlarged `175x120 dp` Lieblingsorte preview map, `120.0 dp` zoom calibration, and `360dp` overflow protection. |
+| `1.0.4` | 2026-11-18 | AI Agent (`ATT-8749`) | `ATT-8749` | Promoted `REQ-UI-2785` to `[Verified]` after Stage 4/5 verification (`89/89` tests, `Rule 8.5` PNG audit). |
