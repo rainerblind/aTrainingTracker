@@ -53,7 +53,17 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsDraggedAsState
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChange
+import androidx.compose.ui.platform.testTag
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import kotlin.math.abs
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
@@ -188,6 +198,13 @@ fun ZoneSettingsScreen(
     var showHistoryDialog by rememberSaveable { mutableStateOf(false) }
     val zoneHistoryMap by viewModel.zoneHistoryFlow.collectAsState()
     var bannerVisible by rememberSaveable { mutableStateOf(promptReason != null) }
+    var isSliderGestureActive by remember { mutableStateOf(false) }
+
+    LaunchedEffect(pagerState.currentPage) {
+        if (pagerState.currentPage != 3 && isSliderGestureActive) {
+            isSliderGestureActive = false
+        }
+    }
 
     Surface(modifier = Modifier.fillMaxSize()) {
         Column {
@@ -303,12 +320,16 @@ fun ZoneSettingsScreen(
             else {
                 HorizontalPager(
                     state = pagerState,
-                    modifier = Modifier.fillMaxSize(),
+                    userScrollEnabled = !isSliderGestureActive,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .testTag("ZoneSettingsHorizontalPager"),
                     beyondViewportPageCount = 1
                 ) { page ->
                     if (page == 3) {
                         HrvDfaA1SettingsContent(
-                            onOpenHrvTest = onNavigateToHrvTest
+                            onOpenHrvTest = onNavigateToHrvTest,
+                            onSliderGestureActiveChange = { active -> isSliderGestureActive = active }
                         )
                     } else {
                         // Get the specific state for this page
@@ -1055,6 +1076,7 @@ fun HrvDfaA1SettingsContent(
     tuningPreferencesDataStore: TuningPreferencesDataStore? = null,
     settingsDataStore: SettingsDataStore? = null,
     onOpenHrvTest: (() -> Unit)? = null,
+    onSliderGestureActiveChange: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -1080,6 +1102,7 @@ fun HrvDfaA1SettingsContent(
     Column(
         modifier = modifier
             .fillMaxSize()
+            .testTag("HrvDfaA1SettingsScrollColumn")
             .padding(16.dp)
             .verticalScroll(scrollState),
         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -1191,7 +1214,8 @@ fun HrvDfaA1SettingsContent(
                 scope.launch {
                     dataStore.setDfaA1Thresholds(newT1, newT2)
                 }
-            }
+            },
+            onSliderGestureActiveChange = onSliderGestureActiveChange
         )
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -1214,7 +1238,8 @@ fun HrvDfaA1SettingsContent(
             minAllowed = t2 + TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD_GAP,
             maxAllowed = 1.20f,
             helperText = stringResource(R.string.hrv_t1_aerobic_threshold_desc),
-            showSlider = false
+            showSlider = false,
+            onSliderGestureActiveChange = onSliderGestureActiveChange
         )
 
         Spacer(modifier = Modifier.height(4.dp))
@@ -1236,7 +1261,8 @@ fun HrvDfaA1SettingsContent(
             minAllowed = 0.30f,
             maxAllowed = t1 - TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD_GAP,
             helperText = stringResource(R.string.hrv_t2_anaerobic_threshold_desc),
-            showSlider = false
+            showSlider = false,
+            onSliderGestureActiveChange = onSliderGestureActiveChange
         )
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -1489,8 +1515,77 @@ fun HrvZoneBandCard(
 }
 
 /**
+ * Creates a gesture-isolation [Modifier] that disables ancestor `HorizontalPager` horizontal
+ * scrolling (`userScrollEnabled = false`) immediately on `PointerEventPass.Initial` pointer down,
+ * tracks M3 [MutableInteractionSource] press/drag states, consumes residual horizontal-dominant
+ * deltas on `PointerEventPass.Main` (while leaving vertical movement for `verticalScroll`), and
+ * resets cleanly on release, cancel, or disposal (`REQ-TRK-086.1`).
+ */
+@Composable
+private fun rememberSliderGestureIsolationModifier(
+    vararg interactionSources: MutableInteractionSource,
+    onGestureActiveChange: (Boolean) -> Unit
+): Modifier {
+    val currentOnGestureActiveChange by rememberUpdatedState(onGestureActiveChange)
+    var isPointerActive by remember { mutableStateOf(false) }
+
+    val interactionActiveStates = interactionSources.map { source ->
+        val isPressed by source.collectIsPressedAsState()
+        val isDragged by source.collectIsDraggedAsState()
+        isPressed || isDragged
+    }
+    val isAnyInteractionActive = interactionActiveStates.any { it }
+    val currentAnyInteractionActive by rememberUpdatedState(isAnyInteractionActive)
+    val isGestureActive = isPointerActive || isAnyInteractionActive
+
+    var lastReportedActive by remember { mutableStateOf<Boolean?>(null) }
+    val reportGestureActive: (Boolean) -> Unit = { active ->
+        if (lastReportedActive != active) {
+            lastReportedActive = active
+            currentOnGestureActiveChange(active)
+        }
+    }
+
+    LaunchedEffect(isGestureActive) {
+        reportGestureActive(isGestureActive)
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            isPointerActive = false
+            reportGestureActive(false)
+        }
+    }
+
+    return Modifier.pointerInput(Unit) {
+        awaitEachGesture {
+            awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+            isPointerActive = true
+            reportGestureActive(true)
+            try {
+                while (true) {
+                    val initialEvent = awaitPointerEvent(PointerEventPass.Initial)
+                    if (initialEvent.changes.none { it.pressed }) break
+                    val mainEvent = awaitPointerEvent(PointerEventPass.Main)
+                    mainEvent.changes.forEach { change ->
+                        val delta = change.positionChange()
+                        if (!change.isConsumed && abs(delta.x) > abs(delta.y) && delta.x != 0f) {
+                            change.consume()
+                        }
+                    }
+                    if (mainEvent.changes.none { it.pressed }) break
+                }
+            } finally {
+                isPointerActive = false
+                reportGestureActive(currentAnyInteractionActive)
+            }
+        }
+    }
+}
+
+/**
  * Unified 3-zone colored dual-thumb range slider for DFA α1 thresholds (T1 and T2)
- * across continuous domain 0.30..1.20 with semantic track colors (REQ-TRK-061.4a, REQ-TRK-061.4b).
+ * across continuous domain 0.30..1.20 with semantic track colors (REQ-TRK-061.4a, REQ-TRK-061.4b, REQ-TRK-086).
  * Inverted orientation renders Zone 2 (Green) on left and Zone 4 (Red) on right.
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -1499,19 +1594,72 @@ fun HrvDfaA1RangeSlider(
     t1: Float,
     t2: Float,
     onThresholdsChange: (t1: Float, t2: Float) -> Unit,
+    onSliderGestureActiveChange: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val domainStart = 0.30f
     val domainEnd = 1.20f
     val gap = TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD_GAP
 
+    val startInteractionSource = remember { MutableInteractionSource() }
+    val endInteractionSource = remember { MutableInteractionSource() }
+    val isolationModifier = rememberSliderGestureIsolationModifier(
+        startInteractionSource,
+        endInteractionSource,
+        onGestureActiveChange = onSliderGestureActiveChange
+    )
+
+    var isDragging by remember { mutableStateOf(false) }
+    var awaitSyncAfterDrag by remember { mutableStateOf(false) }
+    var dragT1 by remember { mutableFloatStateOf(t1) }
+    var dragT2 by remember { mutableFloatStateOf(t2) }
+    var lastEmittedT1 by remember { mutableFloatStateOf(t1) }
+    var lastEmittedT2 by remember { mutableFloatStateOf(t2) }
+
+    LaunchedEffect(t1, t2, isDragging) {
+        if (!isDragging) {
+            if (awaitSyncAfterDrag) {
+                val synced = abs(t1 - lastEmittedT1) < 0.001f && abs(t2 - lastEmittedT2) < 0.001f
+                if (synced) {
+                    awaitSyncAfterDrag = false
+                    dragT1 = t1
+                    dragT2 = t2
+                }
+            } else {
+                dragT1 = t1
+                dragT2 = t2
+                lastEmittedT1 = t1
+                lastEmittedT2 = t2
+            }
+        }
+    }
+
+    LaunchedEffect(awaitSyncAfterDrag) {
+        if (awaitSyncAfterDrag) {
+            kotlinx.coroutines.delay(300L)
+            awaitSyncAfterDrag = false
+            dragT1 = t1
+            dragT2 = t2
+            lastEmittedT1 = t1
+            lastEmittedT2 = t2
+        }
+    }
+
+    val effectiveT1 = if (isDragging || awaitSyncAfterDrag) dragT1 else t1
+    val effectiveT2 = if (isDragging || awaitSyncAfterDrag) dragT2 else t2
+    val displayT1 = Math.round(effectiveT1 * 100f) / 100f
+    val displayT2 = Math.round(effectiveT2 * 100f) / 100f
+
     // Inverted coordinate transform: s = domainEnd + domainStart - alpha1 (1.50f - alpha1)
     // Left thumb (sliderStart) maps to T1 (Green, Zone 2); Right thumb (sliderEnd) maps to T2 (Red, Zone 4)
-    val sliderStart = domainEnd + domainStart - t1
-    val sliderEnd = domainEnd + domainStart - t2
+    val sliderStart = domainEnd + domainStart - effectiveT1
+    val sliderEnd = domainEnd + domainStart - effectiveT2
 
     Card(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .testTag("HrvDfaA1RangeSliderCard")
+            .then(isolationModifier),
         shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
@@ -1527,7 +1675,7 @@ fun HrvDfaA1RangeSlider(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = String.format(Locale.US, "T1: %.2f", t1),
+                    text = String.format(Locale.US, "T1: %.2f", displayT1),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
                     color = TTColor.Zone2
@@ -1538,7 +1686,7 @@ fun HrvDfaA1RangeSlider(
                     color = TTColor.Zone3
                 )
                 Text(
-                    text = String.format(Locale.US, "T2: %.2f", t2),
+                    text = String.format(Locale.US, "T2: %.2f", displayT2),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
                     color = TTColor.Zone4
@@ -1550,26 +1698,56 @@ fun HrvDfaA1RangeSlider(
             RangeSlider(
                 value = sliderStart..sliderEnd,
                 onValueChange = { range ->
+                    isDragging = true
+                    awaitSyncAfterDrag = false
                     val newT1Raw = domainEnd + domainStart - range.start
                     val newT2Raw = domainEnd + domainStart - range.endInclusive
-                    val roundedT1 = Math.round(newT1Raw * 100f) / 100f
-                    val roundedT2 = Math.round(newT2Raw * 100f) / 100f
 
-                    if (roundedT1 != t1) {
-                        // T1 (left thumb) moved: clamp T1 >= t2 + gap
-                        val clampedT1 = roundedT1.coerceIn(t2 + gap, domainEnd)
-                        onThresholdsChange(clampedT1, t2)
-                    } else if (roundedT2 != t2) {
-                        // T2 (right thumb) moved: clamp T2 <= t1 - gap
-                        val clampedT2 = roundedT2.coerceIn(domainStart, t1 - gap)
-                        onThresholdsChange(t1, clampedT2)
+                    val prevRoundedT1 = Math.round(dragT1 * 100f) / 100f
+                    val prevRoundedT2 = Math.round(dragT2 * 100f) / 100f
+                    val rawMovedT1 = abs(newT1Raw - dragT1) >= abs(newT2Raw - dragT2)
+
+                    val (clampedRawT1, clampedRawT2) = if (rawMovedT1 && abs(newT1Raw - dragT1) > 0.0001f) {
+                        val cT1 = newT1Raw.coerceIn(dragT2 + gap, domainEnd)
+                        cT1 to dragT2.coerceIn(domainStart, cT1 - gap)
+                    } else if (abs(newT2Raw - dragT2) > 0.0001f) {
+                        val cT2 = newT2Raw.coerceIn(domainStart, dragT1 - gap)
+                        dragT1.coerceIn(cT2 + gap, domainEnd) to cT2
                     } else {
-                        val clampedT1 = roundedT1.coerceIn(domainStart + gap, domainEnd)
-                        val clampedT2 = roundedT2.coerceIn(domainStart, clampedT1 - gap)
-                        onThresholdsChange(clampedT1, clampedT2)
+                        val cT1 = newT1Raw.coerceIn(domainStart + gap, domainEnd)
+                        val cT2 = newT2Raw.coerceIn(domainStart, cT1 - gap)
+                        cT1 to cT2
+                    }
+
+                    dragT1 = clampedRawT1
+                    dragT2 = clampedRawT2
+
+                    val roundedT1 = (Math.round(clampedRawT1 * 100f) / 100f).coerceIn(domainStart + gap, domainEnd)
+                    val roundedT2 = (Math.round(clampedRawT2 * 100f) / 100f).coerceIn(domainStart, roundedT1 - gap)
+                    if (roundedT1 != prevRoundedT1 || roundedT2 != prevRoundedT2 ||
+                        roundedT1 != lastEmittedT1 || roundedT2 != lastEmittedT2
+                    ) {
+                        lastEmittedT1 = roundedT1
+                        lastEmittedT2 = roundedT2
+                        onThresholdsChange(roundedT1, roundedT2)
                     }
                 },
+                onValueChangeFinished = {
+                    val finalT1 = (Math.round(dragT1 * 100f) / 100f).coerceIn(domainStart + gap, domainEnd)
+                    val finalT2 = (Math.round(dragT2 * 100f) / 100f).coerceIn(domainStart, finalT1 - gap)
+                    dragT1 = finalT1
+                    dragT2 = finalT2
+                    if (finalT1 != lastEmittedT1 || finalT2 != lastEmittedT2) {
+                        lastEmittedT1 = finalT1
+                        lastEmittedT2 = finalT2
+                        onThresholdsChange(finalT1, finalT2)
+                    }
+                    isDragging = false
+                    awaitSyncAfterDrag = true
+                },
                 valueRange = 0.30f..1.20f,
+                startInteractionSource = startInteractionSource,
+                endInteractionSource = endInteractionSource,
                 colors = SliderDefaults.colors(
                     thumbColor = MaterialTheme.colorScheme.primary,
                     activeTrackColor = TTColor.Zone3,
@@ -1615,14 +1793,16 @@ fun HrvDfaA1RangeSlider(
                         )
                     }
                 },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("HrvDfaA1RangeSlider")
             )
         }
     }
 }
 
 /**
- * Renders a fine 0.01-step threshold control row with stepper buttons and an optional continuous slider (REQ-TRK-061.4).
+ * Renders a fine 0.01-step threshold control row with stepper buttons and an optional continuous slider (REQ-TRK-061.4, REQ-TRK-086).
  */
 @Composable
 fun HrvThresholdControlRow(
@@ -1634,8 +1814,19 @@ fun HrvThresholdControlRow(
     maxAllowed: Float,
     helperText: String,
     showSlider: Boolean = true,
+    onSliderGestureActiveChange: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    val sliderInteractionSource = remember { MutableInteractionSource() }
+    val sliderIsolationModifier = if (showSlider) {
+        rememberSliderGestureIsolationModifier(
+            sliderInteractionSource,
+            onGestureActiveChange = onSliderGestureActiveChange
+        )
+    } else {
+        Modifier
+    }
+
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
@@ -1705,7 +1896,11 @@ fun HrvThresholdControlRow(
                         onValueChange(clamped)
                     },
                     valueRange = valueRange,
-                    modifier = Modifier.fillMaxWidth()
+                    interactionSource = sliderInteractionSource,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("HrvThresholdControlSlider")
+                        .then(sliderIsolationModifier)
                 )
             }
         }

@@ -75,12 +75,14 @@ public final class BuildConfig {
   public static final String BUILD_TYPE = "release";
   public static final int VERSION_CODE = 271;
   public static final String VERSION_NAME = "4.9.40-dev";
-  public static final String DROPBOX_APP_KEY = "iknmdmr31sf64r0";
-  public static final String MAPS_API_KEY = "AIzaSyBVPLxC7EDQXCKTS0Mu6Xzdf7LtS9nQGvQ";
-  public static final String STRAVA_CLIENT_ID = "344";
-  public static final String STRAVA_CLIENT_SECRET = "272b5ca4ba09a932e73ef2574162f04d7f41a643";
+  public static final String DROPBOX_APP_KEY = "[REDACTED — rotate key]";
+  public static final String MAPS_API_KEY = "[REDACTED — rotate key]";
+  public static final String STRAVA_CLIENT_ID = "[REDACTED — rotate key]";
+  public static final String STRAVA_CLIENT_SECRET = "[REDACTED — rotate key]";
 }
 ```
+> **Security Note (`ATT-8170`)**: Previously recorded `BuildConfig.java` credential literals above were redacted on 2026-11-18 and flagged for PO key rotation.
+
 Result: Zero keystore credentials and zero dead secrets compiled into bytecode.
 
 ---

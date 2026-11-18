@@ -4,6 +4,7 @@ secrets.properties
 .env*
 .env.jira*
 !tools/hoechstmass/.env.jira.example
+.jira_audit.log
 
 # Release signing property file
 release.properties

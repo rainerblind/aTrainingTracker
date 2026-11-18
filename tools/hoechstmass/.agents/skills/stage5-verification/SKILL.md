@@ -11,7 +11,7 @@ This skill guides the agent through **Stage 5 (Verification & Release Quality Ga
 ## Subagent Model Pairing ("Zipper Principle" & Epic-Scoped Persistent Ping-Pong — Core Rule 7)
 Reuse the Epic-scoped (or standalone ticket) persistent `TypeName: "self"` subagents via `send_message`:
 - **Doing (`--as agent1`)**: **`subagent_flash`** (`send_message` to the `flash` subagent) — Running Tier 1 targeted unit tests, updating `docs/requirements.md` & `docs/tests.md` to `Verified`, authoring `walkthrough.md`, and submitting Stage 5 via `submit-stage` are deterministic procedural steps.
-- **Gate 5 Review (`--as agent2`)**: **`subagent_pro`** (`send_message` to the `pro` subagent) — Audits Stage 5 verification evidence, executes `python3 tools/jira_util.py --as agent2 gate-verdict <SUBTASK_KEY> PASS ...` (which advances the parent ticket to `Final Review (Agent)` and injects `stage6-final-review/SKILL.md`), and squashes `feature/<KEY>` onto `sprint/<SPRINT_NAME>` (via `python3 tools/parallel_sprint_lock.py --merge-ticket ...` under flock). Keep the persistent `subagent_pro` + `subagent_flash` pair alive until the independent Cold `Gemini 4 Carbon` (`Model: "pro"`) reviewer completes **Stage 6 (`Final Review (Agent)`)** and advances the parent ticket to `Final Review (Human)`, so any Stage 6 bounce (`1/3..3/3`) can be healed immediately. Terminate standalone ticket subagents or rotate Epic-scoped subagent pairs after 3 completed tickets (`Rule 62`) once Stage 6 passes.
+- **Gate 5 Review (`--as agent2`)**: **`subagent_pro`** (`send_message` to the `pro` subagent) — Audits Stage 5 verification evidence, confirms all ticket changes are committed cleanly on `feature/<KEY>` (leaving `feature/<KEY>` **intact** and `sprint/<SPRINT_NAME>` untouched until Stage 6 `PASS`), and executes `python3 tools/jira_util.py --as agent2 gate-verdict <SUBTASK_KEY> PASS ...` (which advances the parent ticket to `Final Review (Agent)` and injects `stage6-final-review/SKILL.md`). Keep the persistent `subagent_pro` + `subagent_flash` pair alive until the independent Cold reviewer completes **Stage 6 (`Final Review (Agent)`)**, integrates via `--merge-ticket`, and advances the parent ticket to `Final Review (Human)`, so any Stage 6 bounce (`1/3..3/3`) can be healed cleanly on `feature/<KEY>`. Terminate standalone ticket subagents or rotate Epic-scoped subagent pairs after 3 completed tickets (`Rule 62`) once Stage 6 passes.
 
 ## Key Responsibilities (`subagent_flash` as `agent1` — `flash`)
 1. **Two-Tier Unit Test Execution Strategy (Rule 60 — `ATT-4465`)**:
@@ -63,22 +63,15 @@ Message the ticket's persistent `subagent_pro` (`send_message`) to audit the Sta
      ```bash
      python3 tools/jira_util.py --as agent2 gate-verdict <TEST_SUBTASK_KEY> PASS "<Audit Report>"
      ```
-   - After squashing the ticket commit onto `sprint/<SPRINT_NAME>` (Step 6 below), the Coordinator invokes a freshly spawned **Cold `Gemini 4 Carbon` (`Model: "pro"`)** reviewer (following `stage6-final-review/SKILL.md`) to audit the squashed commit and execute `python3 tools/jira_util.py --as agent2 final-review-verdict <TICKET_KEY> PASS|BOUNCE ...` to advance the parent ticket to `Final Review (Human)`.
+   - Keep `feature/<KEY>` intact (do **NOT** merge onto `sprint/<SPRINT_NAME>` at Gate 5!). After Gate 5 `PASS`, the Coordinator invokes a freshly spawned **Cold Reviewer** (following `stage6-final-review/SKILL.md`) to audit `git diff sprint/<SPRINT_NAME>...feature/<KEY>` strictly read-only and execute `python3 tools/jira_util.py --as agent2 final-review-verdict <TICKET_KEY> PASS|BOUNCE ...`. Atomic `--merge-ticket` onto `sprint/<SPRINT_NAME>` runs **strictly after** Stage 6 `PASS`.
    - Note: AI agents are strictly forbidden from transitioning parent tickets to `Erledigt`.
-6. **Single Atomic Commit per Ticket & Continuous Sprint Branch Integration (Core Rule 8 & Rule 9 — `REQ-PRO-041`)**:
-   - Each ticket MUST result in **strictly one atomic commit** on `sprint/<SPRINT_NAME>` containing the complete Stage 1–5 deliverables (`analysis`, `test_spec`, `plan`, `walkthrough`), living documentation (`docs/requirements.md`, `docs/tests.md`), production code, and unit tests:
+6. **Commit onto `feature/<KEY>` (Preserve Single Atomic Commit Invariant on `sprint/<SPRINT_NAME>`, Core Rule 8)**:
+   - Ensure all Stage 1–5 deliverables (`analysis`, `test_spec`, `plan`, `walkthrough`), living documentation (`docs/requirements.md`, `docs/tests.md`), production code, and unit tests are committed cleanly on `feature/<KEY>` (never prematurely squashed onto `sprint/<SPRINT_NAME>` before Stage 6 `PASS`):
      ```bash
-     git add -A
+     git add <ticket-files>
      git commit -m "<KEY>: <Concise Ticket Summary>"
-     git checkout sprint/<SPRINT_NAME>
-     git merge --squash feature/<KEY>
-     git commit -m "<KEY>: <Concise Ticket Summary>"
-     git branch -D feature/<KEY>
      ```
-   - **Parallel Sprint Execution Merge Protocol (`REQ-PRO-041.2`, `REQ-PRO-041.4`)**: When parallel sprint execution is active across multiple worktrees, execute the deterministic `--merge-ticket` subcommand under POSIX `flock` (`/tmp/att_build_merge.lock`), which automatically guards submodule symlinks, rebases against the local `sprint/<SPRINT_NAME>` branch, recalculates living doc master indexes (`--sync-indexes`), fast-forwards the main repository without branch checkout collisions, and deletes the feature branch:
-     ```bash
-     python3 tools/parallel_sprint_lock.py --merge-ticket <KEY> --sprint sprint/<SPRINT_NAME> --summary "<KEY>: <Concise Ticket Summary>"
-     ```
+   - **Deferred Post-Stage-6 Merge Protocol (`REQ-PRO-041.2`, `REQ-PRO-041.4`)**: Do **NOT** invoke `parallel_sprint_lock.py --merge-ticket` at Gate 5. `feature/<KEY>` remains intact so any Stage 6 `BOUNCE` heals cleanly on `feature/<KEY>`, and `parallel_sprint_lock.py --merge-ticket <KEY> --sprint sprint/<SPRINT_NAME> --summary "<KEY>: <Concise Ticket Summary>"` runs strictly after `final-review-verdict <KEY> PASS`.
 
 ## Deliverable Template
 Use the standardized markdown template located at:

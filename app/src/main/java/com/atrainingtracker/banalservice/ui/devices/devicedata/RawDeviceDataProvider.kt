@@ -25,6 +25,7 @@ import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.util.safeEnumValueOf
 import com.atrainingtracker.trainingtracker.database.EquipmentAndSportTypeDiscoveryManager
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
+import com.atrainingtracker.trainingtracker.database.WheelPosition
 
 class RawDeviceDataProvider(
     val devicesDatabaseManager: DevicesDatabaseManager,
@@ -77,6 +78,12 @@ class RawDeviceDataProvider(
         // Predict linked sport types based on equipment mapping
         val linkedSportTypes = discoveryManager.getLinkedSportTypeNames(setOf(id)).toList()
 
+        val (linkedWheelPositions, wheelPositionConflicts) = if (isWheelSpeedSensor(deviceType)) {
+            hydrateWheelPositionsAndConflicts(id, linkedEquipment, availableEquipment)
+        } else {
+            emptyMap<String, WheelPosition>() to emptyMap<String, Map<WheelPosition, String>>()
+        }
+
         return DeviceRawData(
             id = id,
             protocol = protocol,
@@ -93,8 +100,51 @@ class RawDeviceDataProvider(
             linkedSportTypes = linkedSportTypes,
             baselineCircumference = baselineCircumference,
             polarH10OfflineRecording = polarH10OfflineRecording,
-            polarLiveImuEnabled = polarLiveImuEnabled
+            polarLiveImuEnabled = polarLiveImuEnabled,
+            linkedWheelPositions = linkedWheelPositions,
+            wheelPositionConflicts = wheelPositionConflicts
         )
+    }
+
+    /**
+     * Resolves per-bike [WheelPosition] assignments for this sensor and any conflicting FRONT/REAR
+     * assignments held by other sensors on each bike (`REQ-SEN-031.1`).
+     */
+    private fun hydrateWheelPositionsAndConflicts(
+        sensorId: Long,
+        linkedEquipment: List<String>,
+        availableEquipment: List<String>
+    ): Pair<Map<String, WheelPosition>, Map<String, Map<WheelPosition, String>>> {
+        val positions = linkedEquipment.associateWith { eqName ->
+            val eqId = runCatching { equipmentDbHelper.getEquipmentId(eqName) }.getOrDefault(-1L)
+            if (eqId > 0L) {
+                runCatching { equipmentDbHelper.getWheelPosition(eqId, sensorId) }
+                    .getOrNull() ?: WheelPosition.UNSPECIFIED
+            } else {
+                WheelPosition.UNSPECIFIED
+            }
+        }
+        val conflicts = mutableMapOf<String, Map<WheelPosition, String>>()
+        for (eqName in (linkedEquipment + availableEquipment).distinct()) {
+            val eqId = runCatching { equipmentDbHelper.getEquipmentId(eqName) }.getOrDefault(-1L)
+            if (eqId <= 0L) continue
+            val bikePositions = runCatching {
+                equipmentDbHelper.getDeviceWheelPositionsForEquipment(eqId)
+            }.getOrDefault(emptyMap())
+            val occupiedByOthers = mutableMapOf<WheelPosition, String>()
+            for ((otherSensorId, pos) in bikePositions) {
+                if (otherSensorId != sensorId && (pos == WheelPosition.FRONT || pos == WheelPosition.REAR)) {
+                    val otherName = runCatching {
+                        devicesDatabaseManager.getDeviceName(otherSensorId)
+                    }.getOrNull()?.takeIf { it.isNotBlank() } ?: "#$otherSensorId"
+                    occupiedByOthers[pos] = otherName
+                }
+            }
+            if (occupiedByOthers.isNotEmpty()) {
+                conflicts[eqName] = occupiedByOthers
+            }
+        }
+        return positions to conflicts
     }
 
     private fun getSafeString(cursor: Cursor, columnName: String): String {

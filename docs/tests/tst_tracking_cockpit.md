@@ -1,14 +1,14 @@
 # Living Test Specification: Tracking & Live Sensor Cockpit
 
 **Document ID**: `DOC-TST-TRK`  
-**Version**: 1.0.3  
+**Version**: 1.0.18  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Tests**: 140
+**Total Tests**: 145
 
 ---
 
@@ -3264,6 +3264,108 @@
   4. *9-Language Localization Parity & Targeted Regression (`TST-CON-048.4`, `TranslationParityTest.kt`)*:
      • Verify 100% key and format parity across all 9 `strings_radar.xml` locales (`values`, `de`, `es`, `fr`, `it`, `ja`, `nl`, `pl`, `pt`), and execute targeted Gradle unit and Compose UI tests asserting 100% pass rate.
 
+### TST-FIL-024: **VerticalSpeedAndSlopeDevice Baro Source Guard, Accumulator Reset & Same-Device Step Re-Seeding Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Tickets**: `ATT-8707`
+- **Requirement(s)**: `REQ-FIL-024` (`REQ-FIL-024.1`..`REQ-FIL-024.4`), `REQ-FIL-012`
+- **Component**: `app/src/main/java/com/atrainingtracker/banalservice/devices/VerticalSpeedAndSlopeDevice.java`, `app/src/test/java/com/atrainingtracker/banalservice/devices/VerticalSpeedAndSlopeDeviceTest.kt`
+- **Test Type**: Unit
+- **Verification Method**: Unit
+- **Procedure**:
+  1. *Non-Baro Canonical `ALTITUDE_CORRECTION_INTENT` Guard & Active-Baro Parity Test (`TST-FIL-024.1`, `VerticalSpeedAndSlopeDeviceTest.kt`)*:
+     • Configure `SensorType.ALTITUDE` backed by `DeviceType.ALTITUDE_AND_SLOPE_ATT_FUSED` (or `ALTITUDE_FROM_POSITION`) via `ProxySensor.bestSensor` and invoke `mAltitudeCorrectionReceiver.onReceive(...)` with `delta = +100.0 m`. Assert `mLastAltitudeSuperFiltered` remains unchanged and `FilterManager.shiftFilter` is NOT invoked (`verify(exactly = 0)`).
+     • Configure `SensorType.ALTITUDE` backed by `DeviceType.ALTITUDE_FROM_PRESSURE` and invoke `mAltitudeCorrectionReceiver.onReceive(...)` with `delta = +25.0 m`. Assert `mLastAltitudeSuperFiltered` shifts by `+25.0 m` and `shiftFilter` is invoked for both `21.0s` and `300.0s` filters (`TST-FIL-004.5` parity); verify active-baro calibration `>= 15.0 m` followed by `calculateMetrics()` before `ALTITUDE_CORRECTION_INTENT` delivery neither triggers premature `reseedFilter` nor double-shifts filters (`TST-FIL-024.1c`).
+  2. *Synchronized `onAccumulatorsReset()` State Clearing Test (`TST-FIL-024.2`, `VerticalSpeedAndSlopeDeviceTest.kt`)*:
+     • Populate `VerticalSpeedAndSlopeDevice` with pre-start altitude samples (`mLastAltitudeSuperFiltered`, `mAltitudeHistory`, `mLastAltitudeSourceDevice`), then invoke `onAccumulatorsReset()`.
+     • Assert `mLastAltitudeSuperFiltered == null`, `mLastAltitude == null`, `mLastAltitudeSourceDevice == null`, and `mAltitudeHistoryCount == 0` / `mAltitudeHistoryHead == 0`, so subsequent startup ticks emit `0.0 m` `DESCENT` / `ASCENT`.
+  3. *Same-Device Step / EKF Re-Anchor Re-Seeding & Steady-State Preservation Test (`TST-FIL-024.3`, `VerticalSpeedAndSlopeDeviceTest.kt`)*:
+     • Keep `SensorType.ALTITUDE` on the same `ALTITUDE_AND_SLOPE_ATT_FUSED` device; stream initial uncalibrated `538.0 m` samples, then inject an abrupt same-device snap to `438.0 m` (`-100.0 m` DEM/GPS re-anchor) during `calculateMetrics()`. Assert `reseedAltitudeFilters(438.0)` triggers, `DESCENT`/`ASCENT` remain `0.0 m`, and `SLOPE` records zero `-203%` spike.
+     • Follow with a genuine steady climb and steady descent (`0.5 m/s` / `-0.5 m/s` at `5.0 m/s` horizontal speed) and verify `ASCENT`, `DESCENT`, `VERTICAL_SPEED`, and `SLOPE` integrate accurately; verify non-finite `NaN` / `±Infinity` `delta` and `rawAlt` inputs are rejected cleanly (`TST-FIL-024.3c`).
+  4. *Targeted Tier-1 Unit Regression (`TST-FIL-024.4`)*:
+     • Execute `./gradlew :app:testDebugUnitTest --tests "com.atrainingtracker.banalservice.devices.VerticalSpeedAndSlopeDeviceTest" --tests "com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest"` asserting 100% pass rate with zero `src/main` reads (`REQ-PRO-049.1`; `Localization parity: N/A - no UI strings`).
+
+### TST-FIL-025: **Post-Workout ERTS Running-Pace Heading, Yaw-Rate Anti-Aliasing, Sanity Bounds & Laps.db Sync Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Tickets**: `ATT-8705`
+- **Requirement(s)**: `REQ-FIL-025` (`REQ-FIL-025.1`..`REQ-FIL-025.4`), `REQ-FIL-007`, `REQ-FIL-017`, `REQ-FIL-019.4`, `REQ-FIL-023.1`
+- **Component**: `app/src/test/java/com/atrainingtracker/banalservice/odometry/ExtendedRtsOdometrySmootherTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/odometry/UnicycleOdometryEkfTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/database/ErtsPostWorkoutRecomputerTest.kt`
+- **Test Type**: Unit
+- **Verification Method**: Unit
+- **Procedure**:
+  1. *Offline Heading Initialization & Running-Pace Displacement/Bearing Anchoring Test (`TST-FIL-025.1`, `ExtendedRtsOdometrySmootherTest.kt` & `UnicycleOdometryEkfTest.kt`)*:
+     • Given a simulated running track moving South/West (`~2.0 m/s`, not North `PI / 2.0`), execute `ExtendedRtsOdometrySmoother.smoothSamples()`. Assert initial heading aligns with the first valid GNSS movement chord, running-pace GNSS displacement/bearing updates keep heading aligned within tolerance, and cumulative smoothed distance matches ground truth without 18% loss.
+     • Verify `UnicycleOdometryEkf.updateDopplerHeading()` at `<= 3.0 m/s` (`MIN_DOPPLER_SPEED_MPS = 3.0`) remains strictly gated for live callers (`ATT-8576` / `REQ-FIL-023.1`).
+  2. *1-Hz Yaw-Rate Anti-Aliasing, Non-Negative Speed & Altitude Standstill Coupling Test (`TST-FIL-025.2`, `ExtendedRtsOdometrySmootherTest.kt`)*:
+     • Inject oscillatory 1-Hz `WORLD_YAW_RATE_radps` arm-swing snapshots during straight/curved `~2.2 m/s` running. Assert heading does not invert backwards, smoothed `speedMps` never collapses negative or clamps falsely to `0.0 m/s`, and passing smoothed speeds into `ExtendedRtsAltitudeSlopeSmoother.smooth()` preserves genuine standstill clamping (`speed < 0.3 m/s`) without false ascent/descent inflation.
+  3. *Symmetric ERTS Sanity Bounds & Live `att_fused` Preservation Test (`TST-FIL-025.3`, `ErtsPostWorkoutRecomputerTest.kt`)*:
+     • Verify `ErtsPostWorkoutRecomputer.isOdometrySane()` rejects collapsed smoothed distance (below lower divergence bound) as well as `> 3.0x` runaway distance, while accepting legitimate paused workouts; when rejected, assert `WorkoutSamples.db` live `att_fused` canonical columns, `WorkoutSummaries.db`, and `Laps.db` remain unmodified.
+  4. *`Laps.db` Post-Workout Synchronization Test (`TST-FIL-025.4`, `ErtsPostWorkoutRecomputerTest.kt`)*:
+     • Execute `ErtsPostWorkoutRecomputer.recomputeWorkoutBlocking()` on a multi-lap Robolectric workout DB (`WorkoutSamples.db` with `LAP_NR` segments, `WorkoutSummaries.db`, `Laps.db`). Assert `Laps.TABLE` `DISTANCE_TOTAL_m` and `SPEED_AVERAGE_mps` match smoothed per-lap totals and sum cleanly to `WorkoutSummaries.DISTANCE_TOTAL_m`.
+  5. *Targeted Tier-1 Offline Unit Regression (`TST-FIL-025.5`)*:
+     • Execute `./gradlew :app:testDebugUnitTest --tests "com.atrainingtracker.banalservice.odometry.*" --tests "com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFusedTest" --tests "com.atrainingtracker.trainingtracker.database.ErtsPostWorkoutRecomputerTest"` (strictly offline JUnit/Robolectric/MockK with zero `src/main` reads per `REQ-PRO-049.1`; `Localization parity: N/A - no UI strings`).
+
+
+### TST-TRK-085: **HRV/RR Ingestion Monotonicity, Physiological Gap Flagging, Pre-Filter Sorting & DFA α1 Gate Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Tickets**: `ATT-8706`
+- **Requirement(s)**: `REQ-TRK-085` (`REQ-TRK-085.1`..`REQ-TRK-085.4`), `REQ-CON-027`, `REQ-TRK-060`, `REQ-PER-034`
+- **Component**: `BTLEHeartRateDeviceTest.kt`, `PolarOnlineStreamingBridgeTest.kt`, `RrBeatTimestampReconstructionTest.kt`, `TrackerServiceRrFlushTest.kt`, `DeviceManagerRrSourceTest.kt`, `RrArtifactFilterTest.kt`, `HrvPostWorkoutRecomputerTest.kt`, `DfaCalculatorTest.kt`, `HRVMetricsDeviceTest.kt`, `HrvGoldenOracleTest.kt`
+- **Test Type**: Unit
+- **Verification Method**: Unit
+- **Procedure**:
+  1. *Single-Primary-Source RR Routing & Monotonic Clamping Test (`TST-TRK-085.1`)*:
+     • Register two concurrent `RrBeatSource` HRMs (e.g., `BTLEHeartRateDevice` + `PolarOnlineStreamingBridge`) in `DeviceManager` / `TrackerService` and assert only one active primary source feeds `TrackerService.mRrBeatListener` and `HRVMetricsDevice` without timestamp/index interleaving.
+     • Trigger drift re-anchoring (`drift > 2000 ms`) with multi-beat bundles in `BTLEHeartRateDevice`, `PolarOnlineStreamingBridge`, and `RrBeatTimestampReconstructor`; assert `beatTimestampMs >= lastBeatTimestampMs` strictly holds across all emitted beats.
+  2. *Physiological RR Gap Flagging Test (`TST-TRK-085.2`)*:
+     • Inject multi-second (`5196.29 ms`, `6377.93 ms`, `> 2500.0 ms`) and sub-minimum (`< 250.0 ms`) RR intervals arriving with `drift <= 2000 ms` (and `k = 1`) into `BTLEHeartRateDevice`, `PolarOnlineStreamingBridge`, `RrBeatTimestampReconstructor`, and `RrArtifactFilter`.
+     • Assert `artifactFlag == RrBeatEvent.ARTIFACT_GAP` (`5`) and `gapBeats > 0`, while normal physiological intervals (`250..2500 ms`) remain `ARTIFACT_NORMAL`.
+  3. *Pre-Filter Chronological Sorting Test (`TST-TRK-085.3`, `HrvPostWorkoutRecomputerTest.kt`)*:
+     • Seed `WorkoutRr.db` with out-of-order / interleaved `beat_timestamp_ms` rows and unflagged multi-second RR gaps matching the Pixel 10 `ATT-8706` failure profile.
+     • Execute `HrvPostWorkoutRecomputer.recomputeWorkout()`; assert beats are sorted by `beatTimestampMs` before `RrArtifactFilter.filterBidirectionalBeats()` runs, multi-second gaps are excluded/flagged, and persisted `HRV_DFA_A1` contains zero negative values.
+  4. *DFA $\alpha_1$ Validity Gate & NeuroKit2 Golden Parity Test (`TST-TRK-085.4`, `DfaCalculatorTest.kt`, `HRVMetricsDeviceTest.kt`, `HrvGoldenOracleTest.kt`)*:
+     • Feed synthetic inputs producing negative OLS log-log slope into `DfaCalculator.computeDfaAlpha1()`, `HrvPostWorkoutRecomputer`, and `HRVMetricsDevice`; assert `Double.NaN` / `null` (never negative values), `DfaCalculatorTest.testConstantSignalDoesNotCrash` passes, and `HrvGoldenOracleTest` maintains `|Δα1| <= 0.02` (`<= 0.03` end-to-end) and `|ΔrMSSD| <= 0.5 ms` offline (`REQ-PRO-049.1` zero `src/main` reads; `Localization parity: N/A - no UI strings`).
+
+### TST-SEN-031: **EditDeviceDialog Wheel Mounting Position Display, Draft State & Conflict Swap Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Tickets**: `ATT-8719`
+- **Requirement(s)**: `REQ-SEN-031` (`REQ-SEN-031.1`..`REQ-SEN-031.4`), `REQ-SEN-029`, `REQ-UI-149`
+- **Component**: `app/src/test/java/com/atrainingtracker/banalservice/ui/devices/editdevice/EditDeviceEquipmentWheelPositionTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/ui/devices/editdevice/EditDeviceViewModelTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/ui/devices/devicedata/DeviceDataRepositoryEquipmentSyncTest.kt`, `TranslationParityTest.kt`
+- **Test Type**: Unit & UI
+- **Verification Method**: Unit
+- **Procedure**:
+  1. *ViewModel Draft Staging & `Cancel`-vs-`Save` Isolation Test (`TST-SEN-031.1`, `EditDeviceViewModelTest.kt` & `DeviceDataRepositoryEquipmentSyncTest.kt`)*:
+     • Update `linkedEquipment` and `linkedWheelPositions` in `EditDeviceViewModel`; verify `_deviceSnapshot` holds draft positions with zero calls to `DeviceDataRepository.updateDevice()` or `EquipmentRepository.setWheelSensorLink()` until `saveChanges()`.
+     • Verify `DeviceDataRepository.updateDevice()` commits position-only changes (unchanged bike list, changed `WheelPosition`) via `EquipmentRepository.setWheelSensorLink(..., swapConflict = true)`, unlinks removed bikes cleanly, and refreshes `wheelPositionConflicts` across sibling unswapped wheel speed sensors in `allDevices`.
+  2. *Compose `EquipmentSection` Display, Reused `WheelPositionSelectionDialog` & Conflict Preview Test (`TST-SEN-031.2`, `EditDeviceEquipmentWheelPositionTest.kt`)*:
+     • Strictly offline Robolectric `createComposeRule()` (zero `src/main` reads per `REQ-PRO-049.1`): render `EditDeviceDialog` / `EquipmentSection` for `BIKE_SPEED` and `BIKE_SPEED_AND_CADENCE`.
+     • Assert localized `Front` / `Rear` / `Unspecified` labels appear in the summary field and bike-linking sheet; tap a bike row, assert `WheelPositionSelectionDialog` opens with conflict/swap preview when another sensor already occupies the target position, select `REAR`, confirm sheet `OK` / `Cancel` draft behavior.
+  3. *Non-Wheel Sensor Isolation Test (`TST-SEN-031.3`, `EditDeviceEquipmentWheelPositionTest.kt`)*:
+     • Render `EquipmentSection` sheet for `HRM`, `BIKE_POWER`, `BIKE_RADAR`, `BIKE_CADENCE`, and `RUN_SPEED`; verify standard simple checkbox toggling without opening `WheelPositionSelectionDialog` or rendering wheel-position labels.
+  4. *9-Locale Parity, Light/Dark `@Preview` PNG Verification & Targeted Regression (`TST-SEN-031.4`, `EditDeviceEquipmentWheelPositionTest.kt` & `TranslationParityTest.kt`)*:
+     • Render Light & Dark `@Preview`s of `EditDeviceDialog` `EquipmentSection` / bike sheet for wheel speed sensors and visually inspect captured PNGs (`Rule 8.5`).
+     • Verify 100% 9-locale parity for `strings_equipment.xml` (`values`, `de`, `es`, `fr`, `it`, `ja`, `nl`, `pl`, `pt`) and execute targeted offline Gradle unit + Compose UI tests asserting 100% pass rate.
+
+
+### TST-TRK-086: **HrvDfaA1RangeSlider HorizontalPager Gesture Isolation & Local Drag State Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Tickets**: `ATT-8105`
+- **Requirement(s)**: `REQ-TRK-086` (`REQ-TRK-086.1`..`REQ-TRK-086.3`), `REQ-TRK-061.4`
+- **Component**: `HrvDfaA1RangeSliderGestureTest.kt`, `HrvDfaA1SettingsContractTest.kt`
+- **Test Type**: Unit
+- **Verification Method**: Unit
+- **Procedure**:
+  1. *Bidirectional Slider Drag Isolation & Local Drag Buffering (`TST-TRK-086.1`, `HrvDfaA1RangeSliderGestureTest.kt`)*:
+     • Render `ZoneSettingsScreen` (or `HorizontalPager` tab host matching `ZoneSettingsScreen` with `HrvDfaA1SettingsContent` on `page == 3`) via Robolectric Compose `createComposeRule()` with zero `app/src/main/` file reads (`REQ-PRO-049.1` / `ATT-8198`).
+     • Execute `performTouchInput` rightward (`T2` right drag and `T1` right drag) AND leftward (`T1` left drag and `T2` left drag) drags across `HrvDfaA1RangeSlider` thumbs and starting inside the slider `Card` padding.
+     • Assert `pagerState.currentPage` remains `3` throughout and after drags (no switch back to `PWR_BIKE` page 2), `T1`/`T2` update smoothly within `0.30f..1.20f` enforcing $T_1 \ge T_2 + 0.05f$ even under delayed DataStore updates (no snap-back), and `userScrollEnabled` re-enables on pointer release.
+  2. *Non-Slider Tab Swipe, Vertical Scroll & Optional Row Slider Isolation (`TST-TRK-086.2`, `HrvDfaA1RangeSliderGestureTest.kt`)*:
+     • On `page == 3` with the slider idle, perform horizontal `swipeRight` outside the slider `Card` (e.g., over the header/zone card) and assert `HorizontalPager` transitions smoothly to `page == 2`.
+     • Perform vertical `swipeUp` / `swipeDown` across `HrvDfaA1SettingsContent` and assert `scrollState.value` scrolls cleanly.
+     • Exercise `HrvThresholdControlRow` with `showSlider = true` and assert `onSliderGestureActiveChange(true)` / `(false)` triggers on slider press/release.
+  3. *Contract Regression & Rule 8.5 Visual Inspection (`TST-TRK-086.3`, `HrvDfaA1SettingsContractTest.kt`, `Rule 8.5`)*:
+     • Execute `./gradlew :app:testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.zones.HrvDfaA1RangeSliderGestureTest" --tests "com.atrainingtracker.trainingtracker.zones.HrvDfaA1SettingsContractTest"` confirming 100% pass (`Localization parity: N/A - no UI strings added or modified`).
+     • Capture Light/Dark screenshot PNG at `docs/engineering/walkthroughs/img/ATT-8105_hrv_slider_zones.png` and inspect via `read_file` against the 4-point `Rule 8.5` checklist.
+
 
 ---
 
@@ -3275,3 +3377,13 @@
 | `1.0.1` | 2026-11-17 | AI Agent (`ATT-8450`) | `ATT-8450` | Added `TST-CON-048` [Planned] and cross-referenced `TST-CON-031.5` for offline `EditDeviceDialog` radar light config. |
 | `1.0.2` | 2026-11-17 | AI Agent (`ATT-8450`) | `ATT-8450` | Promoted `TST-CON-048` to `[Implemented]` following Stage 4 unit & Compose UI test construction. |
 | `1.0.3` | 2026-11-17 | AI Agent (`ATT-8450`) | `ATT-8450` | Promoted `TST-CON-048` to `[Verified]` in Stage 5 following post-rebase verification. |
+| `1.0.4` | 2026-11-17 | AI Agent (`ATT-8707`) | `ATT-8707` | Added `TST-FIL-024` [Proposed] for `VerticalSpeedAndSlopeDevice` baro broadcast guard, `onAccumulatorsReset()`, and same-device step re-seeding. |
+| `1.0.5` | 2026-11-17 | AI Agent (`ATT-8707`) | `ATT-8707` | Promoted `TST-FIL-024` to `[Implemented]` following Stage 4 unit test implementation. |
+| `1.0.6` | 2026-11-17 | AI Agent (`ATT-8707`) | `ATT-8707` | Promoted `TST-FIL-024` to `[Verified]` in Stage 5 following targeted unit regression verification. |
+| `1.0.7` | 2026-11-17 | AI Agent (`ATT-8707`) | `ATT-8707` | Stage 6 Bounce 1/3 heal: added active-baro no-double-shift regression (`TST-FIL-024.1c`) and `Double.isFinite` rejection test (`TST-FIL-024.3c`). |
+| `1.0.8` | 2026-11-18 | AI Agent (`ATT-8705`) | `ATT-8705` | Added `TST-FIL-025` [Proposed] for post-workout ERTS running-pace heading anchoring, yaw-rate anti-aliasing, symmetric sanity bounds, and `Laps.db` synchronization. |
+| `1.0.9` | 2026-11-18 | AI Agent (`ATT-8705`) | `ATT-8705` | Promoted `TST-FIL-025` to `[Implemented]` following Stage 4 unit & Robolectric test construction. |
+| `1.0.10` | 2026-11-18 | AI Agent (`ATT-8705`) | `ATT-8705` | Promoted `TST-FIL-025` to `[Verified]` in Stage 5 following Tier-1 targeted unit/Robolectric regression verification. |
+| `1.0.11` | 2026-11-18 | AI Agent (`ATT-8706`) | `ATT-8706` | Added and verified `TST-TRK-085` [Verified] for RR source isolation, monotonic clamping, physiological gap flagging, pre-filter sort, and DFA α1 validity gate (502/502 tests across 88 suites). |
+| `1.0.17` | 2026-11-18 | AI Agent (`ATT-8706`) | `ATT-8706` | Promoted `TST-TRK-085` to `[Verified]` in Stage 5 following Bounce 3/3 heal verification (`449/449` tests across `83` suites). |
+| `1.0.18` | 2026-11-18 | AI Agent (`ATT-8105`) | `ATT-8105` | Added and verified `TST-TRK-086` [Verified] (`HrvDfaA1RangeSliderGestureTest.kt` Robolectric `createComposeRule()` gesture isolation `5/5`, `Rule 8.5` Light/Dark PNG audit, and Tier-1 regression `31/31` across 7 suites). |

@@ -2825,6 +2825,17 @@ class TestGateBypassPrevention(unittest.TestCase):
         result = jira_util.check_gate("ATT-303", role="agent1")
         self.assertTrue(result)
 
+        # 5. Accepts numbered bounce [Impl-Plan - Bounce 1] subtask in Erledigt status (REQ-PRO-125.3)
+        mock_request.return_value = {
+            "key": "ATT-304",
+            "fields": {
+                "issuetype": {"name": "Sub-task", "subtask": True},
+                "summary": "[Impl-Plan - Bounce 1] Atomic Implementation Steps",
+                "status": {"name": "Erledigt"},
+            },
+        }
+        self.assertTrue(jira_util.check_gate("ATT-304", role="agent1"))
+
     def test_tst_pro_109_4_stage6_structured_pros_cons_validation(self):
         """TST-PRO-109.4: validate_stage6_review_structure enforces Pros/Cons/Recommendation structure."""
         # 1. Valid bold bullets format
@@ -3091,6 +3102,276 @@ class TestSup9ProblemResolution(unittest.TestCase):
                 "ATT-921", "REVISION", "Still missing edge case", role="agent2", file_escape_bug=True, escape_severity="critical"
             )
             self.assertEqual(len(stored_issues), 2)
+
+    @patch("jira_util.get_config", return_value={"JIRA_URL": "https://example.atlassian.net"})
+    @patch("jira_util.assign_issue")
+    @patch("jira_util.add_comment")
+    @patch("jira_util.transition_issue")
+    @patch("jira_util.update_issue_description")
+    @patch("jira_util.create_subtask")
+    @patch("jira_util.jira_request")
+    def test_bounce_reopens_reopenable_subtasks_and_reuses_without_duplication(
+        self,
+        mock_request,
+        mock_create_subtask,
+        mock_update_desc,
+        mock_transition,
+        mock_add_comment,
+        mock_assign,
+        mock_config,
+    ):
+        """TST-PRO-125.3: When Jira exposes reopen transitions, BOUNCE reopens and submit_stage reuses existing subtasks."""
+        state = {
+            "parent_status": "Final Review (Agent)",
+            "subtasks": [
+                {"key": "ATT-903", "fields": {"summary": "[Impl-Plan] Fix", "status": {"name": "Erledigt"}, "assignee": {"name": "agent2"}}},
+                {"key": "ATT-904", "fields": {"summary": "[Implementation] Fix", "status": {"name": "Erledigt"}, "assignee": {"name": "agent2"}}},
+                {"key": "ATT-905", "fields": {"summary": "[Test] Fix", "status": {"name": "Erledigt"}, "assignee": {"name": "agent2"}}},
+            ],
+            "comments": [],
+        }
+
+        def fake_request(url, method="GET", payload=None, role="agent1"):
+            if "/rest/api/2/issue/ATT-900?" in url:
+                return {
+                    "fields": {
+                        "issuetype": {"subtask": False},
+                        "summary": "Fix",
+                        "status": {"name": state["parent_status"]},
+                        "subtasks": state["subtasks"],
+                        "comment": {"comments": state["comments"]},
+                    }
+                }
+            if "/rest/api/3/issue/ATT-904/transitions" in url:
+                if method == "GET":
+                    return {"transitions": [{"id": "21", "name": "Reopen", "to": {"name": "In Bearbeitung"}}]}
+                state["subtasks"][1]["fields"]["status"]["name"] = "In Bearbeitung"
+                return {}
+            if "/rest/api/3/issue/ATT-905/transitions" in url:
+                if method == "GET":
+                    return {"transitions": [{"id": "21", "name": "Reopen", "to": {"name": "In Bearbeitung"}}]}
+                state["subtasks"][2]["fields"]["status"]["name"] = "In Bearbeitung"
+                return {}
+            return {}
+
+        mock_request.side_effect = fake_request
+
+        res = jira_util.final_review_verdict("ATT-900", "BOUNCE", "Defect found", bounce_target="implementation", role="agent2")
+        self.assertEqual(res, "BOUNCE_1")
+        self.assertEqual(state["subtasks"][1]["fields"]["status"]["name"], "In Bearbeitung")
+        self.assertEqual(state["subtasks"][2]["fields"]["status"]["name"], "In Bearbeitung")
+        self.assertEqual(state["subtasks"][0]["fields"]["status"]["name"], "Erledigt")
+
+        state["parent_status"] = "Implementation"
+        st_impl = jira_util.submit_stage("ATT-900", "4", "Healed implementation", role="agent1")
+        self.assertEqual(st_impl, "ATT-904")
+        mock_create_subtask.assert_not_called()
+        mock_update_desc.assert_called_once_with("ATT-904", "Healed implementation", role="agent1")
+
+    @patch("jira_util.get_config", return_value={"JIRA_URL": "https://example.atlassian.net"})
+    @patch("jira_util.auto_verify_living_docs_on_stage5")
+    @patch("jira_util.assign_issue")
+    @patch("jira_util.add_comment")
+    @patch("jira_util.transition_issue")
+    @patch("jira_util.update_issue_description")
+    @patch("jira_util.create_subtask")
+    @patch("jira_util.jira_request")
+    def test_locked_erledigt_bounce_fallback_and_latest_authorship_lookup(
+        self,
+        mock_request,
+        mock_create_subtask,
+        mock_update_desc,
+        mock_transition,
+        mock_add_comment,
+        mock_assign,
+        mock_auto_verify,
+        mock_config,
+    ):
+        """
+        TST-PRO-125.3: When Erledigt exposes transitions:[], BOUNCE skips cleanly without crash,
+        submit_stage creates '[<Prefix> - Bounce 1]' subtask, reuses it idempotently, and checks
+        REQ-PRO-107.1 against the active/latest preceding subtask rather than historical closed ones.
+        """
+        import sprint_metrics
+
+        state = {
+            "parent_status": "Final Review (Agent)",
+            "subtasks": [
+                {"key": "ATT-913", "fields": {"summary": "[Impl-Plan] Fix", "status": {"name": "Erledigt"}, "assignee": {"name": "agent2"}}},
+                {"key": "ATT-914", "fields": {"summary": "[Implementation] Fix", "status": {"name": "Erledigt"}, "assignee": {"name": "agent1"}}},
+                {"key": "ATT-915", "fields": {"summary": "[Test] Fix", "status": {"name": "Erledigt"}, "assignee": {"name": "agent2"}}},
+            ],
+            "comments": [],
+        }
+
+        def fake_request(url, method="GET", payload=None, role="agent1"):
+            if "/rest/api/2/issue/ATT-910?" in url:
+                return {
+                    "fields": {
+                        "issuetype": {"subtask": False},
+                        "summary": "Fix",
+                        "status": {"name": state["parent_status"]},
+                        "subtasks": state["subtasks"],
+                        "comment": {"comments": state["comments"]},
+                    }
+                }
+            if "/transitions" in url and method == "GET":
+                return {"transitions": []}
+            return {}
+
+        mock_request.side_effect = fake_request
+        mock_create_subtask.side_effect = ["ATT-916", "ATT-917"]
+
+        res = jira_util.final_review_verdict("ATT-910", "BOUNCE", "Bounce defect", bounce_target="implementation", role="agent2")
+        self.assertEqual(res, "BOUNCE_1")
+        state["comments"].append({"body": "[FINAL REVIEW (AGENT) — BOUNCE 1/3]\n\nBounce defect"})
+
+        # Stage 4 healing creates [Implementation - Bounce 1] (cannot reopen locked Erledigt ATT-914)
+        state["parent_status"] = "Implementation"
+        sub4 = jira_util.submit_stage("ATT-910", "4", "Bounce 1 impl", role="agent1")
+        self.assertEqual(sub4, "ATT-916")
+        created_summary_4 = mock_create_subtask.call_args_list[0][0][1]
+        self.assertEqual(created_summary_4, "[Implementation - Bounce 1] Fix")
+
+        # Add Bounce 1 impl subtask reviewed by agent1 -> submitting Stage 5 as agent1 must fail REQ-PRO-107.1
+        # (even though pass-1 ATT-914 was closed, active ATT-916 governs)
+        state["subtasks"].append({
+            "key": "ATT-916",
+            "fields": {"summary": "[Implementation - Bounce 1] Fix", "status": {"name": "Erledigt"}, "assignee": {"name": "agent1"}},
+        })
+        state["parent_status"] = "Test"
+        with self.assertRaises(SystemExit) as cm:
+            jira_util.submit_stage("ATT-910", "5", "Walkthrough", role="agent1")
+        self.assertEqual(cm.exception.code, 1)
+
+        # When ATT-916 was reviewed by agent2, Stage 5 succeeds and creates [Test - Bounce 1]
+        state["subtasks"][-1]["fields"]["assignee"]["name"] = "agent2"
+        sub5 = jira_util.submit_stage("ATT-910", "5", "Walkthrough", role="agent1")
+        self.assertEqual(sub5, "ATT-917")
+        created_summary_5 = mock_create_subtask.call_args_list[1][0][1]
+        self.assertEqual(created_summary_5, "[Test - Bounce 1] Fix")
+
+        # Verify stage resolution & metrics gate identification support numbered bounce suffixes
+        self.assertEqual(jira_util.resolve_desired_parent_stage_for_subtask("[Implementation - Bounce 1] Fix", True), "test")
+        self.assertEqual(jira_util.resolve_desired_parent_stage_for_subtask("[Test - Bounce 1] Fix", True), "final review (agent)")
+        self.assertEqual(sprint_metrics.identify_gate_number("[Implementation - Bounce 1] Fix"), 4)
+        self.assertEqual(sprint_metrics.identify_gate_number("[Test - Bounce 1] Fix"), 5)
+
+        # Verify bounce target alias coverage across STAGE_ALIASES & transition_issue bounce targets
+        self.assertEqual(jira_util._resolve_bounce_stage_ids("impl-plan"), ("3", "4", "5"))
+        self.assertEqual(jira_util._resolve_bounce_stage_ids("impl_plan"), ("3", "4", "5"))
+        self.assertEqual(jira_util._resolve_bounce_stage_ids("test-spec"), ("2", "3", "4", "5"))
+        self.assertEqual(jira_util._resolve_bounce_stage_ids("req-test-spec"), ("2", "3", "4", "5"))
+        self.assertEqual(jira_util._resolve_bounce_stage_ids("spec"), ("2", "3", "4", "5"))
+        self.assertEqual(jira_util._resolve_bounce_stage_ids("revision"), ("4", "5"))
+        self.assertEqual(jira_util._resolve_bounce_stage_ids("rework"), ("4", "5"))
+        self.assertEqual(jira_util._resolve_bounce_stage_ids("verification"), ("5",))
+        self.assertEqual(jira_util._resolve_bounce_stage_ids("analysis"), ("1", "2", "3", "4", "5"))
+
+    @patch("jira_util.get_config", return_value={"JIRA_URL": "https://example.atlassian.net"})
+    @patch("jira_util.assign_issue")
+    @patch("jira_util.add_comment")
+    @patch("jira_util.transition_issue")
+    @patch("jira_util.jira_request")
+    def test_bounce_target_stage_number_and_stage_aliases_transition_parent_and_subtasks(
+        self,
+        mock_request,
+        mock_transition,
+        mock_add_comment,
+        mock_assign,
+        mock_config,
+    ):
+        """TST-PRO-125.3: final_review_verdict and transition_issue support '1'..'5' and 'stage1'..'stage5' bounce targets."""
+        def make_issue(subtasks):
+            return {
+                "fields": {
+                    "issuetype": {"subtask": False},
+                    "summary": "Bounce alias target",
+                    "status": {"name": "Final Review (Agent)"},
+                    "subtasks": subtasks,
+                    "comment": {"comments": []},
+                }
+            }
+
+        # 1. --bounce-target=stage4 reopens [Implementation] & [Test] and transitions parent to implementation
+        reopened = []
+        subtasks_s4 = [
+            {"key": "ATT-921", "fields": {"summary": "[Impl-Plan] X", "status": {"name": "Erledigt"}}},
+            {"key": "ATT-922", "fields": {"summary": "[Implementation] X", "status": {"name": "Erledigt"}}},
+            {"key": "ATT-923", "fields": {"summary": "[Test] X", "status": {"name": "Erledigt"}}},
+        ]
+
+        def fake_req_s4(url, method="GET", payload=None, role="agent2"):
+            if "/rest/api/2/issue/ATT-920?" in url:
+                return make_issue(subtasks_s4)
+            if "/transitions" in url and method == "GET":
+                return {"transitions": [{"id": "21", "name": "Reopen", "to": {"name": "In Bearbeitung"}}]}
+            if "/transitions" in url and method == "POST":
+                reopened.append(url.split("/")[-2])
+                return {}
+            return {}
+
+        mock_request.side_effect = fake_req_s4
+        for s4_target in ("stage4", "stage 4"):
+            reopened.clear()
+            mock_transition.reset_mock()
+            res4 = jira_util.final_review_verdict("ATT-920", "BOUNCE", "Fix", bounce_target=s4_target, role="agent2")
+            self.assertEqual(res4, "BOUNCE_1")
+            mock_transition.assert_called_with("ATT-920", "implementation", role="agent2", inject_context=False)
+            self.assertEqual(reopened, ["ATT-922", "ATT-923"])
+
+        # Space-separated 'stage 1'..'stage 5' coverage in _resolve_bounce_stage_ids and STAGE_ALIASES
+        self.assertEqual(jira_util._resolve_bounce_stage_ids("stage 1"), ("1", "2", "3", "4", "5"))
+        self.assertEqual(jira_util._resolve_bounce_stage_ids("stage 2"), ("2", "3", "4", "5"))
+        self.assertEqual(jira_util._resolve_bounce_stage_ids("stage 3"), ("3", "4", "5"))
+        self.assertEqual(jira_util._resolve_bounce_stage_ids("stage 4"), ("4", "5"))
+        self.assertEqual(jira_util._resolve_bounce_stage_ids("stage 5"), ("5",))
+        for i in range(1, 6):
+            self.assertEqual(jira_util.STAGE_ALIASES[f"stage {i}"], str(i))
+
+        # 2. --bounce-target=1 / stage1 triggers two-step 'zu erledigen' -> 'analysis' and checks all 5 stages
+        for target_alias in ("1", "stage1"):
+            mock_transition.reset_mock()
+            res1 = jira_util.final_review_verdict("ATT-920", "BOUNCE", "Re-analyze", bounce_target=target_alias, role="agent2")
+            self.assertEqual(res1, "BOUNCE_1")
+            self.assertEqual(
+                [c[0] for c in mock_transition.call_args_list],
+                [("ATT-920", "zu erledigen"), ("ATT-920", "analysis")],
+            )
+
+    @patch("jira_util.get_config", return_value={"JIRA_URL": "https://example.atlassian.net"})
+    @patch("jira_util.assign_issue")
+    @patch("jira_util.jira_request")
+    def test_transition_issue_parent_stage_number_and_stage_aliases(
+        self,
+        mock_request,
+        mock_assign,
+        mock_config,
+    ):
+        """TST-PRO-125.3: transition_issue resolves '1'..'5' and 'stage1'..'stage5' parent aliases."""
+        alias_expectations = [
+            ("1", "Analysis"), ("stage1", "Analysis"),
+            ("2", "Test Spec"), ("stage2", "Test Spec"),
+            ("3", "Implementation Plan"), ("stage3", "Implementation Plan"),
+            ("4", "Implementation"), ("stage4", "Implementation"),
+            ("5", "Test"), ("stage5", "Test"),
+        ]
+        for alias, target_status in alias_expectations:
+            posted_transitions = []
+
+            def fake_parent_trans(url, method="GET", payload=None, role="agent2"):
+                if "/rest/api/2/issue/ATT-920?" in url:
+                    return {"fields": {"issuetype": {"name": "Verbesserung", "subtask": False}, "status": {"name": "Final Review (Agent)"}, "summary": "X"}}
+                if "/transitions" in url and method == "GET":
+                    return {"transitions": [{"id": "99", "name": f"Go {target_status}", "to": {"name": target_status}}]}
+                if "/transitions" in url and method == "POST":
+                    posted_transitions.append(payload["transition"]["id"])
+                    return {}
+                return {}
+
+            mock_request.side_effect = fake_parent_trans
+            jira_util.transition_issue("ATT-920", alias, role="agent2", inject_context=False)
+            self.assertEqual(posted_transitions, ["99"], f"Alias {alias} failed to resolve to {target_status}")
 
 
 if __name__ == "__main__":

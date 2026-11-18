@@ -324,4 +324,119 @@ class ExtendedRtsOdometrySmootherTest {
             )
         }
     }
+
+    // TST-FIL-025.1: South-West running-pace track resolves initial heading from first GNSS chord & preserves distance
+    @Test
+    fun testRunningPaceSouthWestTrack_resolvesInitialHeadingAndPreservesDistance_tstFil025_1() {
+        val samples = mutableListOf<RawOdometrySample>()
+        var tMs = 7000000L
+        val speed = 2.0
+        val headingRad = -3.0 * PI / 4.0 // South-West (-135 deg ENU -> 225 deg bearing)
+        val bearingDeg = 225.0
+        var east = 0.0
+        var north = 0.0
+
+        for (i in 0 until 120) {
+            val (lat, lon) = ExtendedRtsOdometrySmoother.enuToLatLng(east, north, originLat, originLon)
+            samples.add(
+                RawOdometrySample(
+                    timestampMs = tMs,
+                    latitude = lat,
+                    longitude = lon,
+                    speedMps = speed,
+                    bearingDeg = bearingDeg,
+                    accuracyMeters = 4.0,
+                    worldYawRateRadPerSec = 0.0,
+                    wheelSpeedMps = null
+                )
+            )
+            tMs += 1000L
+            east += speed * kotlin.math.cos(headingRad)
+            north += speed * kotlin.math.sin(headingRad)
+        }
+
+        // Default initialHeadingRad (no explicit argument) must NOT assume North (PI/2)
+        val smoothed = ExtendedRtsOdometrySmoother.smoothSamples(samples)
+        assertEquals(120, smoothed.size)
+
+        val initHeadingErr = abs(UnicycleOdometryEkf.normalizeAngle(smoothed.first().headingRad - headingRad))
+        assertTrue(
+            "Initial heading must align with South-West chord (-3*PI/4), error=$initHeadingErr rad",
+            initHeadingErr < 0.35
+        )
+        for (i in 5 until smoothed.size) {
+            assertTrue("Speed at $i must stay near 2.0 m/s (was ${smoothed[i].speedMps})", smoothed[i].speedMps in 1.5..2.5)
+        }
+        val totalDist = smoothed.sumOf { it.deltaDistanceMeters }
+        val expectedDist = 119.0 * speed
+        assertTrue("Total distance ($totalDist m) must match expected ($expectedDist m) within 5%", abs(totalDist - expectedDist) / expectedDist < 0.05)
+    }
+
+    // TST-FIL-025.2: 1-Hz yaw-rate swing aliasing & genuine standstill altitude gating
+    @Test
+    fun testRunningPaceWith1HzYawRateAliasingAndStandstill_preservesSpeedAndAltitudeStandstill_tstFil025_2() {
+        val samples = mutableListOf<RawOdometrySample>()
+        var tMs = 8000000L
+        val speed = 2.2
+        val headingRad = -PI / 2.0 // Moving South (180 deg bearing)
+        var east = 0.0
+        var north = 0.0
+
+        // 90s running South with +/- 1.2 rad/s 1-Hz arm-swing aliasing, then 15s genuine standstill, then 60s running South
+        for (i in 0 until 165) {
+            val isStandstill = i in 90 until 105
+            val currSpeed = if (isStandstill) 0.0 else speed
+            val yawAlias = if (isStandstill) 0.0 else if (i % 2 == 0) 1.2 else -1.2
+            val (lat, lon) = ExtendedRtsOdometrySmoother.enuToLatLng(east, north, originLat, originLon)
+            samples.add(
+                RawOdometrySample(
+                    timestampMs = tMs,
+                    latitude = lat,
+                    longitude = lon,
+                    speedMps = currSpeed,
+                    bearingDeg = if (isStandstill) null else 180.0,
+                    accuracyMeters = 4.0,
+                    worldYawRateRadPerSec = yawAlias,
+                    wheelSpeedMps = null
+                )
+            )
+            tMs += 1000L
+            north += currSpeed * kotlin.math.sin(headingRad)
+        }
+
+        val smoothed = ExtendedRtsOdometrySmoother.smoothSamples(samples)
+        assertEquals(165, smoothed.size)
+
+        // Running segments must never collapse to 0.0 m/s or flip backwards
+        for (i in 5 until 88) {
+            assertTrue("Running speed collapsed at $i: ${smoothed[i].speedMps}", smoothed[i].speedMps > 1.5)
+            val hErr = abs(UnicycleOdometryEkf.normalizeAngle(smoothed[i].headingRad - headingRad))
+            assertTrue("Heading diverged at $i: err=$hErr rad", hErr < 0.6)
+        }
+        for (i in 110 until 165) {
+            assertTrue("Post-stop running speed collapsed at $i: ${smoothed[i].speedMps}", smoothed[i].speedMps > 1.5)
+        }
+
+        // Genuine standstill segment settles below standstill threshold so altitude gating remains accurate
+        val midStopSpeed = smoothed[98].speedMps
+        assertTrue("Genuine standstill speed must drop below 0.6 m/s (was $midStopSpeed)", midStopSpeed < 0.6)
+
+        val totalDist = smoothed.sumOf { it.deltaDistanceMeters }
+        val expectedDist = 149.0 * speed
+        assertTrue("Total smoothed distance ($totalDist m) must match expected ($expectedDist m) within 8%", abs(totalDist - expectedDist) / expectedDist < 0.08)
+
+        // Feed smoothed speeds into ExtendedRtsAltitudeSlopeSmoother over flat terrain
+        val altSamples = smoothed.mapIndexed { idx, pt ->
+            val altNoise = if (idx % 2 == 0) 0.1 else -0.1
+            RawAltitudeSample(
+                timestampMs = pt.timestampMs,
+                rawAltitudeM = 500.0 + altNoise,
+                referenceAltitudeM = 500.0,
+                smoothedSpeedMps = pt.speedMps
+            )
+        }
+        val smoothedAlt = ExtendedRtsAltitudeSlopeSmoother.smooth(altSamples)
+        assertEquals(165, smoothedAlt.size)
+        assertTrue("Flat track ascent must remain low (< 5 m, was ${smoothedAlt.last().ascentM})", smoothedAlt.last().ascentM < 5.0)
+    }
 }

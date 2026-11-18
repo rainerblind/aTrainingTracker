@@ -5164,6 +5164,284 @@ def verify_commit_hygiene(
     ]
 
 
+_SENSOR_TYPE_REL_PATH = os.path.join(
+    "app", "src", "main", "java", "com", "atrainingtracker", "banalservice", "sensor", "SensorType.java"
+)
+_SENSOR_UNITS_DOC_REL_PATH = os.path.join("docs", "architecture", "sensor_units.md")
+_SENSOR_PLACEHOLDER_UNITS = {"", "todo", "tbd", "n/a", "unknown", "none"}
+_SENSOR_CONST_START_RE = re.compile(r"^\s*([A-Z][A-Z0-9_a-z]*)\s*\(")
+_SENSOR_ENUM_DECL_RE = re.compile(r"\benum\s+SensorType\b")
+
+
+def _strip_java_line_comment(line):
+    """Strip trailing // comment outside string literals."""
+    in_str = False
+    escaped = False
+    for idx, ch in enumerate(line):
+        if escaped:
+            escaped = False
+            continue
+        if ch == "\\" and in_str:
+            escaped = True
+            continue
+        if ch == '"':
+            in_str = not in_str
+            continue
+        if not in_str and ch == "/" and idx + 1 < len(line) and line[idx + 1] == "/":
+            return line[:idx]
+    return line
+
+
+def _parse_sensor_type_constants(source_text):
+    """
+    Parse enum constants in SensorType.java with their preceding Javadoc block and
+    declared internalUnit string literal (REQ-TRK-083.2, REQ-PRO-126.2).
+    Returns list of dicts: {"name": str, "javadoc": str|None, "internal_unit": str|None}.
+    """
+    lines = source_text.splitlines()
+    in_enum_decl = False
+    in_enum_body = False
+    in_javadoc = False
+    in_block_comment = False
+    javadoc_buf = []
+    last_javadoc = None
+
+    collecting_const = False
+    const_name = None
+    const_buf = []
+    paren_depth = 0
+    results = []
+
+    def _finish_const(buf_text, c_name, doc):
+        literals = re.findall(r'"((?:\\.|[^"\\])*)"', buf_text)
+        internal_unit = literals[-1] if literals else None
+        results.append({
+            "name": c_name,
+            "javadoc": doc,
+            "internal_unit": internal_unit,
+        })
+
+    for raw_line in lines:
+        trimmed = raw_line.strip()
+
+        if not in_enum_body:
+            if not in_enum_decl and _SENSOR_ENUM_DECL_RE.search(_strip_java_line_comment(raw_line)):
+                in_enum_decl = True
+            if in_enum_decl and "{" in _strip_java_line_comment(raw_line):
+                in_enum_body = True
+            continue
+
+        if collecting_const:
+            code_part = _strip_java_line_comment(raw_line)
+            const_buf.append(code_part)
+            in_str = False
+            escaped = False
+            ended_enum = False
+            closed_const = False
+            for ch in code_part:
+                if escaped:
+                    escaped = False
+                    continue
+                if ch == "\\" and in_str:
+                    escaped = True
+                    continue
+                if ch == '"':
+                    in_str = not in_str
+                    continue
+                if in_str:
+                    continue
+                if ch == "(":
+                    paren_depth += 1
+                elif ch == ")":
+                    paren_depth -= 1
+                elif paren_depth == 0 and ch in (",", ";"):
+                    closed_const = True
+                    if ch == ";":
+                        ended_enum = True
+                    break
+            if closed_const:
+                _finish_const("\n".join(const_buf), const_name, last_javadoc)
+                last_javadoc = None
+                collecting_const = False
+                const_name = None
+                const_buf = []
+                if ended_enum:
+                    break
+            continue
+
+        if in_javadoc:
+            javadoc_buf.append(trimmed)
+            if "*/" in trimmed:
+                in_javadoc = False
+                last_javadoc = "\n".join(javadoc_buf)
+                javadoc_buf = []
+            continue
+
+        if in_block_comment:
+            if "*/" in trimmed:
+                in_block_comment = False
+            continue
+
+        if trimmed.startswith("/**"):
+            javadoc_buf = [trimmed]
+            if "*/" in trimmed[3:]:
+                last_javadoc = trimmed
+                javadoc_buf = []
+            else:
+                in_javadoc = True
+            continue
+
+        if trimmed.startswith("/*"):
+            last_javadoc = None
+            if "*/" not in trimmed[2:]:
+                in_block_comment = True
+            continue
+
+        if not trimmed or trimmed.startswith("//") or trimmed.startswith("@"):
+            continue
+
+        m_const = _SENSOR_CONST_START_RE.match(raw_line)
+        if m_const:
+            const_name = m_const.group(1)
+            code_part = _strip_java_line_comment(raw_line)
+            const_buf = [code_part]
+            paren_depth = 0
+            in_str = False
+            escaped = False
+            ended_enum = False
+            closed_const = False
+            for ch in code_part[m_const.end() - 1 :]:
+                if escaped:
+                    escaped = False
+                    continue
+                if ch == "\\" and in_str:
+                    escaped = True
+                    continue
+                if ch == '"':
+                    in_str = not in_str
+                    continue
+                if in_str:
+                    continue
+                if ch == "(":
+                    paren_depth += 1
+                elif ch == ")":
+                    paren_depth -= 1
+                elif paren_depth == 0 and ch in (",", ";"):
+                    closed_const = True
+                    if ch == ";":
+                        ended_enum = True
+                    break
+            if closed_const:
+                _finish_const("\n".join(const_buf), const_name, last_javadoc)
+                last_javadoc = None
+                const_name = None
+                const_buf = []
+                if ended_enum:
+                    break
+            else:
+                collecting_const = True
+            continue
+
+        if trimmed.startswith(";"):
+            break
+
+        last_javadoc = None
+
+    return results
+
+
+def _parse_sensor_units_doc_table(doc_text):
+    """Parse 8-column SensorType unit rows from docs/architecture/sensor_units.md."""
+    rows = {}
+    for line in doc_text.splitlines():
+        trimmed = line.strip()
+        if not trimmed.startswith("|"):
+            continue
+        cols = [c.strip() for c in trimmed.split("|")[1:-1]]
+        if len(cols) != 8:
+            continue
+        name = cols[0].strip("`").strip()
+        if name == "SensorType" or name.startswith(":---") or name.startswith("---"):
+            continue
+        rows[name] = cols[3].strip("`").strip()
+    return rows
+
+
+def verify_sensor_type_javadocs(repo_root=None, require_file=False):
+    """
+    REQ-TRK-083.2 / REQ-PRO-126.2:
+    Statically verifies every SensorType.java enum constant has a preceding /** ... */
+    Javadoc block documenting 'Internal unit:' and its declared internalUnit literal,
+    and cross-checks docs/architecture/sensor_units.md when present.
+    """
+    if repo_root is None:
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+    sensor_type_fp = os.path.join(repo_root, _SENSOR_TYPE_REL_PATH)
+    if not os.path.isfile(sensor_type_fp):
+        if require_file:
+            return False, [f"ERROR: Missing SensorType.java at {_SENSOR_TYPE_REL_PATH.replace(os.sep, '/')}."]
+        return True, ["SKIP: SensorType.java not present; skipping SensorType Javadoc verification."]
+
+    with open(sensor_type_fp, "r", encoding="utf-8") as f:
+        source_text = f.read()
+
+    constants = _parse_sensor_type_constants(source_text)
+    if not constants:
+        return False, ["ERROR: Failed to parse any enum constants from SensorType.java (REQ-PRO-126.2)."]
+
+    errors = []
+    code_units = {}
+    for entry in constants:
+        name = entry["name"]
+        doc = entry["javadoc"]
+        unit = entry["internal_unit"]
+        code_units[name] = unit
+
+        if unit is None or unit.strip().lower() in _SENSOR_PLACEHOLDER_UNITS:
+            errors.append(
+                f"ERROR: SensorType.{name} has missing or placeholder internalUnit literal '{unit}' (REQ-TRK-083.2)."
+            )
+            continue
+
+        if not doc:
+            errors.append(
+                f"ERROR: SensorType.{name} must have a preceding /** ... */ Javadoc block in SensorType.java (REQ-TRK-083.2, REQ-PRO-126.2)."
+            )
+            continue
+
+        if "Internal unit:" not in doc or unit not in doc:
+            errors.append(
+                f"ERROR: SensorType.{name} Javadoc must document 'Internal unit:' and declared unit '{unit}' (REQ-TRK-083.2, REQ-PRO-126.2)."
+            )
+
+    doc_fp = os.path.join(repo_root, _SENSOR_UNITS_DOC_REL_PATH)
+    if os.path.isfile(doc_fp):
+        with open(doc_fp, "r", encoding="utf-8") as f:
+            doc_units = _parse_sensor_units_doc_table(f.read())
+        missing_in_doc = sorted(set(code_units.keys()) - set(doc_units.keys()))
+        extra_in_doc = sorted(set(doc_units.keys()) - set(code_units.keys()))
+        if missing_in_doc:
+            errors.append(
+                f"ERROR: SensorType constant(s) missing from docs/architecture/sensor_units.md: {', '.join(missing_in_doc)}."
+            )
+        if extra_in_doc:
+            errors.append(
+                f"ERROR: Extra constant(s) in docs/architecture/sensor_units.md not in SensorType.java: {', '.join(extra_in_doc)}."
+            )
+        for name, code_unit in code_units.items():
+            if name in doc_units and code_unit is not None and doc_units[name] != code_unit:
+                errors.append(
+                    f"ERROR: SensorType.{name} internalUnit '{code_unit}' mismatches sensor_units.md '{doc_units[name]}'."
+                )
+
+    if errors:
+        return False, errors
+    return True, [
+        f"PASS: Verified per-constant Javadoc and 'Internal unit:' parity across {len(constants)} SensorType constant(s) (REQ-TRK-083.2, REQ-PRO-126.2)."
+    ]
+
+
 def verify_governance(
     deliverable_text=None,
     diff_text=None,
@@ -5339,6 +5617,12 @@ def verify_governance(
             return False, diagnostics
         diagnostics.extend(ch_diag)
 
+        st_ok, st_diag = verify_sensor_type_javadocs(repo_root=repo_root, require_file=False)
+        if not st_ok:
+            diagnostics.extend(st_diag)
+            return False, diagnostics
+        diagnostics.extend(st_diag)
+
     if diff_text is None:
         diff_text = get_git_diff(base_ref=base_ref)
 
@@ -5446,6 +5730,11 @@ def main(argv=None):
         "--check-commit-hygiene",
         action="store_true",
         help="Verify post-cutoff commits reference a Jira ATT-\\d+ ticket key (REQ-PRO-121.3).",
+    )
+    parser.add_argument(
+        "--check-sensor-javadocs",
+        action="store_true",
+        help="Verify every SensorType.java enum constant has a preceding Javadoc with 'Internal unit:' metadata (REQ-PRO-126.2).",
     )
     parser.add_argument(
         "--skip-tripwires",
@@ -5925,6 +6214,10 @@ def main(argv=None):
         ok, diag = verify_commit_hygiene(repo_root=args.repo_root, base_ref=args.base_ref)
         _record_check(ok, diag)
 
+    if args.check_sensor_javadocs:
+        ok, diag = verify_sensor_type_javadocs(repo_root=args.repo_root, require_file=True)
+        _record_check(ok, diag)
+
     if ran_checks and not args.check_text_only:
         sys.exit(0 if all_ok else 1)
 
@@ -5998,6 +6291,7 @@ def main(argv=None):
         min_bidirectional_coverage=args.min_bidirectional_coverage,
         baseline_path=args.traceability_baseline,
         fail_on_orphans=args.fail_on_orphans,
+        repo_root=args.repo_root,
     )
 
     for msg in diagnostics:

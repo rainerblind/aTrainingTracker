@@ -160,6 +160,18 @@ jobs:
           TAG_NAME="${GITHUB_REF_NAME:-release}"
           python3 tools/generate_release_verification_summary.py --tag "${TAG_NAME}" --fail-on-deviations
 
+      - name: Run custom safety linters
+        run: |
+          python3 tools/lint_cursor_safety.py
+          python3 tools/lint_lifecycle_safety.py
+          python3 tools/lint_safe_enum.py
+
+      - name: Verify static analysis baseline ratchet
+        run: python3 tools/check_static_analysis_baselines.py
+
+      - name: Verify repository secret hygiene
+        run: python3 tools/check_secrets_hygiene.py
+
       - name: Build release APK and AAB
         env:
           RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}

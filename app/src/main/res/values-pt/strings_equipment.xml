@@ -7,6 +7,7 @@
     <string name="equipment_wheel_position_unlink">Desvincular sensor</string>
     <string name="equipment_wheel_position_front_badge">D</string>
     <string name="equipment_wheel_position_rear_badge">T</string>
+    <string name="equipment_wheel_position_conflict_swap">Atualmente atribuído a %1$s — selecionar esta opção trocará as posições.</string>
     <string name="equipment_guidance_title">Por que sensores de roda junto ao GPS?</string>
     <string name="equipment_guidance_subtitle">Vantagens físicas dos sensores de velocidade da roda em relação ao GPS do smartphone</string>
     <string name="equipment_guidance_1_sensor_title">1 sensor de roda + GPS</string>

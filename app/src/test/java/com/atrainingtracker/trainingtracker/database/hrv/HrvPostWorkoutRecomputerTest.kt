@@ -378,4 +378,131 @@ class HrvPostWorkoutRecomputerTest {
         val accumulated = summariesDbManager.getAccumulatedSensorTypes(workoutId)
         assertEquals(setOf(SensorType.HRV_ARTIFACT_RATE), accumulated)
     }
+
+    @Test
+    fun recomputeWorkout_sortsInterleavedBeatsBeforeFilteringAndRejectsNegativeDfaAlpha1() = runBlocking {
+        // TST-TRK-085.3, TST-TRK-085.4:
+        // Segment A (0..159s): interleaved out-of-order timestamps with <= 5% artifacts so DfaCalculator IS invoked and yields positive DFA a1.
+        // Segment B (160..259s): heavy unflagged multi-second RR gaps (5196.29 ms, 6377.93 ms) gated to NULL.
+        val baseFileName = "2026-11-18_hrv_interleaved"
+        val workoutId = createWorkout(baseFileName)
+        samplesDbManager.createNewTable(baseFileName, java.util.Arrays.asList(*SensorType.values()))
+
+        val startTs = 1_700_000_000_000L
+        val samplesDb = samplesDbManager.database
+        val tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
+        val sdf = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US).apply {
+            timeZone = java.util.TimeZone.getTimeZone("UTC")
+        }
+        samplesDb.beginTransaction()
+        try {
+            for (sec in 0 until 260) {
+                val cv = ContentValues().apply {
+                    put("time", sdf.format(java.util.Date(startTs + sec * 1000L)))
+                    put(SensorType.HR.name, 75.0)
+                }
+                samplesDb.insert(tableName, null, cv)
+            }
+            samplesDb.setTransactionSuccessful()
+        } finally {
+            samplesDb.endTransaction()
+        }
+
+        val rrList = mutableListOf<WorkoutRrInterval>()
+        var idx = 0
+        // Segment A: smooth physiological transition from ~650 ms (beats 0..95) -> ramp (96..115) -> ~1050 ms (116..209),
+        // with small physiological variation so DfaCalculator produces finite positive DFA a1 (~1.0+).
+        // Include a genuine -430 ms backward timestamp jump relative to previous beat (ts[49] - 430 ms) at beat 50.
+        // Bidirectional interleaving in persisted beat_index order:
+        // - Interleave 15 late ~1050 ms beats (150..164, t~110..125s) into early [0..89] (every 5th non-extracted beat), AND
+        // - Interleave 15 early ~650 ms beats (15..29, t~5..14s) into late [116..205] (every 5th non-extracted beat).
+        // When sorted at HrvPostWorkoutRecomputer.kt:99: smooth transitions, <= 5% artifacts across all windows in 0..159s -> nonNullDfaCount >= 120.
+        // If L99 sort were omitted: early 650 ms beats flagged at t~5..14s poison sec=0..74 (>18% art) and late 1050 ms beats flagged at t~110..125s poison sec=50..185 (>20% art) -> nonNullDfaCount == 0.
+        var beatTimeMs = startTs - 5_000L
+        val segmentABeats = mutableListOf<Pair<Long, Float>>()
+        var prevTs = beatTimeMs
+        for (i in 0 until 210) {
+            val baseRr = when {
+                i < 96 -> 650.0
+                i < 116 -> 650.0 + (i - 95) * 20.0
+                else -> 1050.0
+            }
+            val rr = (baseRr + (i % 3 - 1) * 4.0).toFloat()
+            val ts = if (i == 50) prevTs - 430L else beatTimeMs
+            segmentABeats.add(ts to rr)
+            prevTs = beatTimeMs
+            beatTimeMs += rr.toLong()
+        }
+        val earlyExtracted = (15 until 30).toList()
+        val lateExtracted = (150 until 165).toList()
+        val extractedSet = (earlyExtracted + lateExtracted).toSet()
+        var earlyCursor = 0
+        var lateCursor = 0
+        var earlySlotCounter = 0
+        var lateSlotCounter = 0
+        for (i in 0 until segmentABeats.size) {
+            if (i in extractedSet) continue
+            val b = segmentABeats[i]
+            rrList.add(WorkoutRrInterval(workoutId = workoutId, beatIndex = idx++, beatTimestampMs = b.first, rrMs = b.second, artifactFlag = 0, gapBeats = 0))
+            if (i < 90) {
+                earlySlotCounter++
+                if (earlySlotCounter % 5 == 0 && lateCursor < lateExtracted.size) {
+                    val lateBeat = segmentABeats[lateExtracted[lateCursor++]]
+                    rrList.add(WorkoutRrInterval(workoutId = workoutId, beatIndex = idx++, beatTimestampMs = lateBeat.first, rrMs = lateBeat.second, artifactFlag = 0, gapBeats = 0))
+                }
+            } else if (i in 116..205) {
+                lateSlotCounter++
+                if (lateSlotCounter % 5 == 0 && earlyCursor < earlyExtracted.size) {
+                    val earlyBeat = segmentABeats[earlyExtracted[earlyCursor++]]
+                    rrList.add(WorkoutRrInterval(workoutId = workoutId, beatIndex = idx++, beatTimestampMs = earlyBeat.first, rrMs = earlyBeat.second, artifactFlag = 0, gapBeats = 0))
+                }
+            }
+        }
+        while (lateCursor < lateExtracted.size) {
+            val lateBeat = segmentABeats[lateExtracted[lateCursor++]]
+            rrList.add(WorkoutRrInterval(workoutId = workoutId, beatIndex = idx++, beatTimestampMs = lateBeat.first, rrMs = lateBeat.second, artifactFlag = 0, gapBeats = 0))
+        }
+        while (earlyCursor < earlyExtracted.size) {
+            val earlyBeat = segmentABeats[earlyExtracted[earlyCursor++]]
+            rrList.add(WorkoutRrInterval(workoutId = workoutId, beatIndex = idx++, beatTimestampMs = earlyBeat.first, rrMs = earlyBeat.second, artifactFlag = 0, gapBeats = 0))
+        }
+
+        // Segment B: unflagged multi-second gaps in tail [195s..259s] (keeping sec=0..134 centered windows clean)
+        for (sec in 195 until 260) {
+            val ts = startTs + sec * 1000L
+            val rr = when (sec) {
+                200, 220, 240 -> 5196.29f
+                230 -> 6377.93f
+                else -> 800f
+            }
+            rrList.add(WorkoutRrInterval(workoutId = workoutId, beatIndex = idx++, beatTimestampMs = ts, rrMs = rr, artifactFlag = 0, gapBeats = 0))
+        }
+        WorkoutRrRepository.getInstance(context).insertIntervals(rrList)
+
+        val success = HrvPostWorkoutRecomputer.recomputeWorkout(context, workoutId)
+        assertTrue("Recomputation must succeed cleanly on interleaved/gapped streams", success)
+
+        var nonNullDfaCount = 0
+        var nullDfaCount = 0
+        var midWindowValidCount = 0
+        var rowIndex = 0
+        samplesDb.query(tableName, arrayOf(SensorType.HRV_DFA_A1.name), null, null, null, null, "${WorkoutSamplesDatabaseManager.WorkoutSamplesDbHelper.C_ID} ASC").use { cursor ->
+            while (cursor.moveToNext()) {
+                if (cursor.isNull(0)) {
+                    nullDfaCount++
+                } else {
+                    nonNullDfaCount++
+                    val dfa = cursor.getDouble(0)
+                    assertTrue("HRV_DFA_A1 must never be <= 0.0 (was $dfa)", dfa > 0.0 && dfa.isFinite())
+                    if (rowIndex in 60..125) {
+                        midWindowValidCount++
+                    }
+                }
+                rowIndex++
+            }
+        }
+        assertTrue("Pre-sorted bidirectional interleaved Segment A must compute >= 120 valid positive HRV_DFA_A1 rows (was $nonNullDfaCount)", nonNullDfaCount >= 120)
+        assertTrue("Centered window sec 60..125 must contain valid positive HRV_DFA_A1 rows (was $midWindowValidCount)", midWindowValidCount > 0)
+        assertTrue("Heavy unflagged gap tail must suppress HRV_DFA_A1 to NULL (was $nullDfaCount)", nullDfaCount > 0)
+    }
 }

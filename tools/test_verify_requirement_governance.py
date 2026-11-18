@@ -47,6 +47,7 @@ from tools.verify_requirement_governance import (
     verify_retro_write_allowlist,
     verify_sprint_metrics,
     verify_independent_reviews,
+    verify_sensor_type_javadocs,
     verify_unique_ids,
     validate_impact_analysis_section,
     verify_stage1_impact_analysis,
@@ -3557,6 +3558,99 @@ class TestConflictMarkersAndCommitHygiene(unittest.TestCase):
             self.assertEqual(code_other, 1)
             self.assertIn("Work-product headers", out_other)
             self.assertIn("failed validation", err_other)
+
+
+class TestSensorTypeJavadocVerification(unittest.TestCase):
+    """TST-PRO-126.3: Offline unit tests for verify_sensor_type_javadocs() (REQ-PRO-126.2, REQ-PRO-126.4)."""
+
+    def _write_fixture(self, tmpdir, java_source, sensor_units_md=None):
+        java_fp = os.path.join(
+            tmpdir,
+            "app", "src", "main", "java", "com", "atrainingtracker", "banalservice", "sensor", "SensorType.java",
+        )
+        os.makedirs(os.path.dirname(java_fp), exist_ok=True)
+        with open(java_fp, "w", encoding="utf-8") as f:
+            f.write(java_source)
+        if sensor_units_md is not None:
+            doc_fp = os.path.join(tmpdir, "docs", "architecture", "sensor_units.md")
+            os.makedirs(os.path.dirname(doc_fp), exist_ok=True)
+            with open(doc_fp, "w", encoding="utf-8") as f:
+                f.write(sensor_units_md)
+
+    def test_valid_constants_and_doc_parity_pass(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            self._write_fixture(
+                tmpdir,
+                """package com.atrainingtracker.banalservice.sensor;
+public enum SensorType {
+    /**
+     * Horizontal speed.
+     * Internal unit: {@code m/s} ({@code DOUBLE}).
+     */
+    SPEED_mps(SensorCategory.SPEED_PACE_AND_DISTANCE, 1, 2, 3, SensorValueType.DOUBLE, null, true, "m/s"),
+    // SPEED_mps_gps(1, 2, 3, SensorValueType.DOUBLE, null),
+    /**
+     * Instantaneous heart rate.
+     * Internal unit: {@code bpm} ({@code INTEGER}).
+     */
+    HR(SensorCategory.HEART_RATE_AND_ENERGY, 1, 2, 3, SensorValueType.INTEGER, null, true, "bpm");
+}
+""",
+                """| SensorType | Category | SubCategory | Internal Unit | ValueType | Range & Sentinels | UI Formatter & Display Unit | Export Units |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `SPEED_mps` | `SPEED_PACE_AND_DISTANCE` | `null` | `m/s` | `DOUBLE` | `>= 0` | `SpeedFormatter` | `m/s` |
+| `HR` | `HEART_RATE_AND_ENERGY` | `null` | `bpm` | `INTEGER` | `[1, 299]` | `IntegerFormatter` | `bpm` |
+""",
+            )
+            ok, diag = verify_sensor_type_javadocs(repo_root=tmpdir, require_file=True)
+            self.assertTrue(ok, f"Expected pass, got: {diag}")
+            self.assertIn("2 SensorType constant(s)", "\n".join(diag))
+
+    def test_missing_javadoc_fails(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            self._write_fixture(
+                tmpdir,
+                """public enum SensorType {
+    // Only a line comment, no Javadoc block
+    HR(SensorCategory.HEART_RATE_AND_ENERGY, 1, 2, 3, SensorValueType.INTEGER, null, true, "bpm");
+}
+""",
+            )
+            ok, diag = verify_sensor_type_javadocs(repo_root=tmpdir, require_file=True)
+            self.assertFalse(ok)
+            self.assertIn("SensorType.HR must have a preceding /** ... */ Javadoc block", "\n".join(diag))
+
+    def test_missing_internal_unit_tag_or_mismatch_fails(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            self._write_fixture(
+                tmpdir,
+                """public enum SensorType {
+    /**
+     * Heart rate without internal unit tag.
+     */
+    HR(SensorCategory.HEART_RATE_AND_ENERGY, 1, 2, 3, SensorValueType.INTEGER, null, true, "bpm"),
+    /**
+     * Speed with wrong unit in Javadoc.
+     * Internal unit: {@code km/h}.
+     */
+    SPEED_mps(SensorCategory.SPEED_PACE_AND_DISTANCE, 1, 2, 3, SensorValueType.DOUBLE, null, true, "m/s");
+}
+""",
+            )
+            ok, diag = verify_sensor_type_javadocs(repo_root=tmpdir, require_file=True)
+            self.assertFalse(ok)
+            joined = "\n".join(diag)
+            self.assertIn("SensorType.HR Javadoc must document 'Internal unit:'", joined)
+            self.assertIn("SensorType.SPEED_mps Javadoc must document 'Internal unit:'", joined)
+
+    def test_live_cli_check_sensor_javadocs_passes(self):
+        buf_out = io.StringIO()
+        buf_err = io.StringIO()
+        with contextlib.redirect_stdout(buf_out), contextlib.redirect_stderr(buf_err):
+            with self.assertRaises(SystemExit) as cm:
+                governance_cli_main(["--check-sensor-javadocs"])
+        self.assertEqual(cm.exception.code, 0, f"stderr={buf_err.getvalue()}")
+        self.assertIn("67 SensorType constant(s)", buf_out.getvalue())
 
 
 if __name__ == "__main__":

@@ -19,35 +19,38 @@
 package com.atrainingtracker.trainingtracker.database.hrv
 
 import com.atrainingtracker.banalservice.devices.RrBeatEvent
+import com.atrainingtracker.banalservice.devices.RrBeatNormalization
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.roundToLong
 
 /**
- * Monotonic beat-to-beat timestamp reconstructor with wall-clock drift resynchronization (REQ-PER-034.2).
+ * Monotonic beat-to-beat timestamp reconstructor with wall-clock drift resynchronization (REQ-PER-034.2, REQ-TRK-085).
  *
  * Implements:
- * - Cumulative timestamp accumulation: t_k = t_{k-1} + round(rr_ms_k).
+ * - Cumulative timestamp accumulation: t_k = t_{k-1} + round(rr_ms_k), clamped non-decreasing.
  * - Drift resynchronization when |t_pkt - t_beat| > 2000 ms.
- * - Gap beat estimation across RF dropouts.
+ * - Gap beat estimation across RF dropouts and physiological RR bounds `[250, 2500] ms`.
  */
 class RrBeatTimestampReconstructor(
     private var initialAnchorMs: Long = 0L,
     private val driftThresholdMs: Long = DEFAULT_DRIFT_THRESHOLD_MS
 ) {
     companion object {
-        const val DEFAULT_DRIFT_THRESHOLD_MS = 2000L
+        const val DEFAULT_DRIFT_THRESHOLD_MS = RrBeatNormalization.DRIFT_THRESHOLD_MS.toLong()
     }
 
     private var lastBeatTimestampMs: Long = initialAnchorMs
+    private var lastNormalRrMs: Double = RrBeatNormalization.DEFAULT_REFERENCE_RR_MS
 
     @Synchronized
     fun reset(anchorMs: Long = 0L) {
         lastBeatTimestampMs = anchorMs
+        lastNormalRrMs = RrBeatNormalization.DEFAULT_REFERENCE_RR_MS
     }
 
     /**
-     * Reconstructs an exact monotonic UTC epoch timestamp for a beat interval [rrMs].
+     * Reconstructs a monotonic non-decreasing UTC epoch timestamp for a beat interval [rrMs].
      *
      * @param packetArrivalMs Wall-clock packet arrival timestamp or session reference time.
      * @param rrMs Beat-to-beat RR interval duration in milliseconds.
@@ -55,16 +58,15 @@ class RrBeatTimestampReconstructor(
      */
     @Synchronized
     fun reconstruct(packetArrivalMs: Long, rrMs: Double): ReconstructedBeat {
-        val roundedRrMs = rrMs.roundToLong()
+        val roundedRrMs = if (rrMs.isFinite()) rrMs.roundToLong() else 0L
         val beatTimestampMs: Long
         var gapBeats = 0
         var artifactFlag = RrBeatEvent.ARTIFACT_NORMAL
 
         if (lastBeatTimestampMs == 0L) {
             beatTimestampMs = packetArrivalMs
-            lastBeatTimestampMs = beatTimestampMs
         } else {
-            val candidateTimestampMs = lastBeatTimestampMs + roundedRrMs
+            val candidateTimestampMs = max(lastBeatTimestampMs, lastBeatTimestampMs + roundedRrMs)
             val drift = abs(packetArrivalMs - candidateTimestampMs)
 
             if (drift > driftThresholdMs) {
@@ -72,16 +74,23 @@ class RrBeatTimestampReconstructor(
                 if (roundedRrMs > 0 && elapsedSinceLast > roundedRrMs) {
                     gapBeats = max(0, (elapsedSinceLast.toDouble() / rrMs).roundToLong().toInt() - 1)
                 }
-                beatTimestampMs = packetArrivalMs
-                lastBeatTimestampMs = beatTimestampMs
+                beatTimestampMs = max(lastBeatTimestampMs, packetArrivalMs)
                 if (gapBeats > 0) {
                     artifactFlag = RrBeatEvent.ARTIFACT_GAP
                 }
             } else {
                 beatTimestampMs = candidateTimestampMs
-                lastBeatTimestampMs = beatTimestampMs
             }
         }
+
+        if (RrBeatNormalization.isOutOfPhysiologicalRange(rrMs)) {
+            artifactFlag = RrBeatEvent.ARTIFACT_GAP
+            gapBeats = max(gapBeats, RrBeatNormalization.estimatePhysiologicalGapBeats(rrMs, lastNormalRrMs))
+        } else {
+            lastNormalRrMs = rrMs
+        }
+
+        lastBeatTimestampMs = beatTimestampMs
 
         return ReconstructedBeat(
             beatTimestampMs = beatTimestampMs,

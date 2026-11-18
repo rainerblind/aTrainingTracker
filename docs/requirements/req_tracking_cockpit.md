@@ -1,14 +1,14 @@
 # Living Requirements: Tracking & Live Sensor Cockpit
 
 **Document ID**: `DOC-REQ-TRK`  
-**Version**: 1.0.3  
+**Version**: 1.0.18  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Requirements**: 164
+**Total Requirements**: 169
 
 ---
 
@@ -6612,6 +6612,196 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 **Invariants**: Connected `!isLightControlAvailable` & `RVR315` hidden; `EditDeviceViewModel` draft state decoupled; StVZO pruning & on-connect clamping preserved; `REQ-CON-047.3` ascending order preserved; zero SQLite schema changes; 9-locale `strings_radar.xml` parity; zero `src/main` reads in tests (`REQ-PRO-049.1`).
 
+### REQ-FIL-024: Barometric Broadcast Source Guard, Synchronized Workout-Start Reset & Same-Device Step Re-Seeding in VerticalSpeedAndSlopeDevice [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-FIL-024`
+- **System Requirement(s)**: `SYSREQ-TRK-003`, `SYSREQ-TRK-004`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `VerticalSpeedAndSlopeDevice.java`, `VerticalSpeedAndSlopeDeviceTest.kt`
+- **Rationale**: When `AltitudeAndSlopeDevice_ATTFused` (Rank 0) or `AltitudeFromPositionDevice` (Rank 1) outranks `AltitudeFromPressureDevice` (Rank 2) in `MySensorManager.ALTITUDE_PRIORITY`, background barometric calibration broadcasts (`ALTITUDE_CORRECTION_INTENT`) unconditionally shifted `VerticalSpeedAndSlopeDevice` filters (`REQ-FIL-012.6`), producing `+96.4 m` phantom `DESCENT` and `-203%` `SLOPE` spikes during workout startup. Additionally, `VerticalSpeedAndSlopeDevice` lacked an `onAccumulatorsReset()` override, synchronization between `calculateMetrics()` and `mAltitudeCorrectionReceiver`, and same-device altitude step re-seeding (`ATT-8707`, refining `REQ-FIL-012.5`, `REQ-FIL-012.6`, and aligning with `REQ-FIL-018.2`):
+- **Description**:
+  1. *Barometric Broadcast Source Guard (`REQ-FIL-024.1`)*:
+     - `VerticalSpeedAndSlopeDevice.mAltitudeCorrectionReceiver` SHALL unwrap `mMySensorManager.getSensor(SensorType.ALTITUDE)` (`ProxySensor.getBestSensor()`) and apply `ALTITUDE_CORRECTION_INTENT` `delta` shifts (`mLastAltitudeSuperFiltered`, `mLastAltitude`, `mAltitudeHistory`, `cAltitudeFilter`, `cAltitudeSuperFilter`) ONLY when the active `SensorType.ALTITUDE` source device has `DeviceType.ALTITUDE_FROM_PRESSURE`. When a non-barometric source (e.g., `ALTITUDE_AND_SLOPE_ATT_FUSED` or `ALTITUDE_FROM_POSITION`) is active, `mAltitudeCorrectionReceiver` SHALL ignore the broadcast without shifting filters or baselines.
+  2. *Synchronized Workout-Start Reset (`REQ-FIL-024.2`)*:
+     - `VerticalSpeedAndSlopeDevice` SHALL override `onAccumulatorsReset()` (`synchronized` on `VerticalSpeedAndSlopeDevice.this`) to clear `mLastAltitudeSuperFiltered`, `mLastAltitude`, `mLastAltitudeSourceDevice`, and `mAltitudeHistoryHead`/`mAltitudeHistoryCount` (`mAltitudeHistory` zeroed) upon `RESET_ACCUMULATORS_INTENT`.
+     - `VerticalSpeedAndSlopeDevice.calculateMetrics()` MUST synchronize on `VerticalSpeedAndSlopeDevice.this` consistently with `mAltitudeCorrectionReceiver` and `reseedAltitudeFilters()`.
+  3. *Same-Device Altitude Step / EKF Re-Anchor Re-Seeding & Finite Guards (`REQ-FIL-024.3`)*:
+     - `VerticalSpeedAndSlopeDevice` SHALL detect non-physical same-device step discontinuities ($\ge 15.0\text{ m}$) in raw `SensorType.ALTITUDE` on non-barometric sources (e.g., `AltitudeAndSlopeDevice_ATTFused` initial Baro-to-DEM/GPS anchor snap while `currentDevice == mLastAltitudeSourceDevice`) relative to `mLastAltitude` and immediately reseed via `reseedAltitudeFilters(rawAlt)` instead of integrating phantom `ASCENT`, `DESCENT`, or extreme `SLOPE`. `DeviceType.ALTITUDE_FROM_PRESSURE` SHALL be excluded from same-device step reseeding so barometric calibration shifts are applied solely via `ALTITUDE_CORRECTION_INTENT` without double-shift races.
+     - Both `mAltitudeCorrectionReceiver` (`delta`) and `checkAltitudeSourceTransition()` / `calculateMetrics()` (`rawAlt` and filtered altitudes) MUST enforce `Double.isFinite(...)` so `NaN` and `±Infinity` are rejected deterministically.
+  4. *Steady-State & Barometric Parity Preservation (`REQ-FIL-024.4`)*:
+     - Genuine steady-state ascent/descent/slope integration, `N=15` linear regression VAM, accuracy/low-speed gating, `[-3000, 3000] m/h` clamping, and barometric calibration filter shifting when `DeviceType.ALTITUDE_FROM_PRESSURE` is the active `SensorType.ALTITUDE` source (`TST-FIL-004.5`) SHALL remain intact (`Localization Parity: N/A - no UI strings`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new `REQ-FIL-024` refining `REQ-FIL-012` (`REQ-FIL-012.5`, `REQ-FIL-012.6`) and aligning with `REQ-FIL-018.2`. Targets `VerticalSpeedAndSlopeDevice.java`.
+2. *Historical Origin & Commit Trace*: `31553134` (`ATT-4845`, `mAltitudeCorrectionReceiver`), `8d45376e` (`ATT-5373`, `checkAltitudeSourceTransition` + `shiftFilter`), `75c1497e` (`ATT-6279`, added `ATTFused` at `ALTITUDE_PRIORITY` Rank 0).
+3. *Root Reason for Existing Formulation*: `ATT-5373` assumed `ALTITUDE_CORRECTION_INTENT` always applied to the active `ALTITUDE` filter and that large altitude jumps only occurred across `MyDevice` pointer switches before `ATTFused` existed.
+4. *Preservation of Core Invariants*: Preserves `TST-FIL-004.1-.5` (including baro shift parity when `ALTITUDE_FROM_PRESSURE` is active), `REQ-FIL-012` VAM `N=15` regression and deadbands, `REQ-FIL-018` `TrackerService` handling, and zero DB/UI/submodule changes.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `SensorType.ALTITUDE` is backed by `DeviceType.ALTITUDE_AND_SLOPE_ATT_FUSED` (or `ALTITUDE_FROM_POSITION`),
+• *When* `ALTITUDE_CORRECTION_INTENT` broadcasts `delta = +100.0 m`,
+• *Then* `mLastAltitudeSuperFiltered`, `mAltitudeHistory`, `cAltitudeFilter`, and `cAltitudeSuperFilter` remain unshifted, and `DESCENT`/`SLOPE` remain `0.0 m` / `0%`.
+• *Given* `VerticalSpeedAndSlopeDevice` holds pre-workout `mLastAltitudeSuperFiltered` and `mAltitudeHistory` state,
+• *When* `onAccumulatorsReset()` runs on `RESET_ACCUMULATORS_INTENT`,
+• *Then* `mLastAltitudeSuperFiltered`, `mLastAltitude`, `mLastAltitudeSourceDevice`, and `mAltitudeHistoryCount`/`Head` are cleared cleanly under `VerticalSpeedAndSlopeDevice.this` synchronization.
+• *Given* `SensorType.ALTITUDE` stays on the same `ATTFused` device and snaps by a large calibration step (e.g., `-54 m` or `+100 m` on first DEM/GPS anchor),
+• *When* `calculateMetrics()` executes,
+• *Then* `reseedAltitudeFilters(rawAlt)` reseeds filters and baseline so `DESCENT`, `ASCENT`, and `SLOPE` record zero phantom spikes, while steady climbs/descents and active-baro `ALTITUDE_CORRECTION_INTENT` shifts work as before.
+
+**Invariants**: `REQ-FIL-012` VAM `N=15` linear regression, accuracy/low-speed gating, `[-3000, 3000] m/h` clamp; `TST-FIL-004.5` active-baro shift parity; thread-safe synchronization on `VerticalSpeedAndSlopeDevice.this`; zero DB/UI changes; `N/A - no UI strings`.
+
+### REQ-FIL-025: Post-Workout ERTS Running-Pace Heading Anchoring, 1-Hz Yaw-Rate Anti-Aliasing, Symmetric Sanity Bounds & Laps.db Sync [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-FIL-025`
+- **System Requirement(s)**: `SYSREQ-TRK-003`, `SYSREQ-TRK-004`, `SYSREQ-TRK-005`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `ExtendedRtsOdometrySmoother.kt`, `UnicycleOdometryEkf.kt`, `ErtsPostWorkoutRecomputer.kt`, `LapsDatabaseManager.java`
+- **Rationale**: During running workouts (`~2.0–2.2 m/s`, below `UnicycleOdometryEkf.MIN_DOPPLER_SPEED_MPS = 3.0`), `ExtendedRtsOdometrySmoother` hardcoded `initialHeadingRad = PI / 2.0`, suppressed all heading updates, and multiplied 1-Hz instantaneous `WORLD_YAW_RATE_radps` snapshots by `dtSec ~ 1.0 s`, driving heading backwards, collapsing `x[2]` negative and clamping speed to `0.0 m/s` (-18.4% distance loss, false altitude standstill clamping). Additionally, `ErtsPostWorkoutRecomputer.isOdometrySane()` checked only upper `> 3.0x` divergence, and `updateWorkoutSummaries()` left `Laps.db` desynced (`ATT-8705`, refining `REQ-FIL-007`, `REQ-FIL-017`, `REQ-FIL-019.4`, and preserving `REQ-FIL-023.1`):
+- **Description**:
+  1. *Offline ERTS Heading Initialization & Running-Pace Displacement/Bearing Anchoring (`REQ-FIL-025.1`)*:
+     - `ExtendedRtsOdometrySmoother.smoothSamples()` SHALL initialize `initialHeadingRad` from the first valid GNSS movement chord (or valid moving GNSS bearing) rather than hardcoding `PI / 2.0` whenever non-stationary motion is present (`PI / 2.0` fallback only if no valid GNSS chord exists).
+     - During offline ERTS replay at running paces (e.g., `~2.0 m/s`, `>= 0.8 m/s` confirmed by GNSS displacement/speed), `ExtendedRtsOdometrySmoother` SHALL anchor heading using GNSS displacement-chord bearing and/or offline Doppler heading updates, while `UnicycleOdometryEkf.MIN_DOPPLER_SPEED_MPS` (`3.0 m/s`) MUST remain intact for live `updateDopplerHeading()` stationary/low-speed protection (`ATT-8576`, `REQ-FIL-023.1`).
+  2. *1-Hz Yaw-Rate Snapshot Anti-Aliasing & Non-Negative Velocity Protection (`REQ-FIL-025.2`)*:
+     - `ExtendedRtsOdometrySmoother` SHALL mitigate 1-Hz instantaneous `WORLD_YAW_RATE_radps` snapshot aliasing in offline RTS replay (attenuating/bounding high-frequency swing aliasing and increasing gyro/heading uncertainty when relying on 1-Hz snapshots) and MUST prevent non-physical negative velocity state collapse (`x[2] < 0`) and false `0.0 m/s` clamping during active motion, preserving `ExtendedRtsAltitudeSlopeSmoother` standstill gating (`STANDSTILL_SPEED_THRESHOLD_MPS = 0.3 m/s`) accuracy (`REQ-FIL-017.2`).
+  3. *Symmetric ERTS Odometry Sanity Bounds & Live `att_fused` Preservation (`REQ-FIL-025.3`)*:
+     - `ErtsPostWorkoutRecomputer.isOdometrySane()` SHALL enforce symmetric lower and upper distance divergence bounds (accounting for pauses so paused stops do not trigger false lower-bound rejections) against raw reference distance, rejecting collapsed or runaway smoothed trajectories and cleanly preserving live `att_fused` canonical columns and summaries (`REQ-FIL-017.3`, `REQ-FIL-019.4`).
+  4. *Post-Workout `Laps.db` Synchronization (`REQ-FIL-025.4`)*:
+     - Whenever `ErtsPostWorkoutRecomputer` commits updated smoothed odometry totals to `WorkoutSummaries.db`, it SHALL synchronize `Laps.db` (`LapsDatabaseManager` / `Laps.TABLE`) lap distances and average speeds for the workout using smoothed `WorkoutSamples.db` `LAP_NR` segments (with deterministic proportional fallback when per-lap sample boundaries are unavailable), keeping `Laps.db` consistent with `WorkoutSummaries.db` (`Localization Parity: N/A - no UI strings`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new `REQ-FIL-025` refining `REQ-FIL-007`, `REQ-FIL-017`, and `REQ-FIL-019.4`, while preserving `REQ-FIL-023.1` (`ATT-8576`). Targets `ExtendedRtsOdometrySmoother.kt`, `UnicycleOdometryEkf.kt`, `ErtsPostWorkoutRecomputer.kt`, and `LapsDatabaseManager.java`.
+2. *Historical Origin & Commit Trace*: `bc4a4109` (`ATT-131` cycling Doppler gate `> 3.0 m/s`), `d56b001a` (`ATT-7750` offline ERTS replay), `ed972bad` (`ATT-8337` one-sided `> 3.0x` Null-Island sanity guard), `eba66320`/`f6715226` (`ATT-8576` live stationary/low-speed ZUPT protection).
+3. *Root Reason for Existing Formulation*: `MIN_DOPPLER_SPEED_MPS = 3.0` prevented noisy GNSS Doppler bearings from spinning live stationary/walking headings; `isOdometrySane()` was scoped only to `> 3x` Null-Island explosions.
+4. *Preservation of Core Invariants*: Preserves live `UnicycleOdometryEkf.MIN_DOPPLER_SPEED_MPS = 3.0` & `ATT-8576` stationary/ZUPT gating, `REQ-FIL-009` tunnel dead reckoning, `REQ-FIL-017.3` raw device-column immutability, `KEY_POST_WORKOUT_ERTS_SMOOTHING = false` default, and `ExtendedRtsAltitudeSlopeSmoother` standstill gating accuracy.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a running workout at `~2.0 m/s` starting South/West/East (not North) with 1-Hz `WORLD_YAW_RATE_radps` swing noise,
+• *When* `ExtendedRtsOdometrySmoother.smoothSamples()` runs,
+• *Then* `initialHeadingRad` initializes from the first valid GNSS movement chord, running-pace displacement/bearing updates keep heading aligned, `x[2]` never collapses negative or clamps falsely to `0.0 m/s`, cumulative distance stays accurate, and `UnicycleOdometryEkf.MIN_DOPPLER_SPEED_MPS = 3.0` remains enforced for live `updateDopplerHeading()`.
+• *Given* an offline smoothed trajectory whose distance collapses below the lower divergence bound (while accounting for pauses) or exceeds the upper `3.0x` bound,
+• *When* `ErtsPostWorkoutRecomputer.isOdometrySane()` validates the output,
+• *Then* sanity validation returns `false`, preserving live `att_fused` canonical columns, summaries, and `Laps.db` intact.
+• *Given* a multi-lap workout where `ErtsPostWorkoutRecomputer` accepts and commits smoothed totals to `WorkoutSummaries.db`,
+• *When* `updateWorkoutSummaries()` finishes,
+• *Then* `Laps.db` lap distances and average speeds are updated to match the smoothed `WorkoutSamples.db` `LAP_NR` segments and sum consistently with `WorkoutSummaries.DISTANCE_TOTAL_m`.
+
+**Invariants**: Live `UnicycleOdometryEkf.MIN_DOPPLER_SPEED_MPS = 3.0` & `ATT-8576` stationary/ZUPT gating unchanged; `ExtendedRtsAltitudeSlopeSmoother` `STANDSTILL_SPEED_THRESHOLD_MPS = 0.3` preserved; `REQ-FIL-017.3` raw device-column immutability & `KEY_POST_WORKOUT_ERTS_SMOOTHING = false` preserved; zero DB schema version bumps; `REQ-PRO-049.1` offline tests with zero `src/main` reads; `N/A - no UI strings`.
+
+### REQ-SEN-031: EditDeviceDialog Wheel Speed Sensor Mounting Position Display, Draft Selection & Conflict Swap [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-SEN-031`
+- **System Requirement(s)**: `SYSREQ-TRK-001`, `SYSREQ-TRK-003`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `DeviceData.kt`, `RawDeviceDataProvider.kt`, `DeviceDataRepository.kt`, `EditDeviceViewModel.kt`, `EditDeviceDialog.kt`, `WheelPositionSelectionDialog.kt`, `EquipmentRepository.kt`, `EquipmentDbHelper.java`, `strings_equipment.xml`
+- **Rationale**: `REQ-SEN-029` (`ATT-7752`) introduced `WheelPosition` (`FRONT`, `REAR`, `UNSPECIFIED`) in `Equipment.db` and `EquipmentSensorMatrixScreen.kt`, but `EditDeviceDialog.kt` (`EquipmentSection`) continued displaying plain bike names and binary checkboxes without showing or prompting for mounting position (`ATT-8719`, refining `REQ-SEN-029` and `REQ-UI-149`):
+- **Description**:
+  1. *Per-Bike `WheelPosition` Hydration & Summary/Sheet Display (`REQ-SEN-031.1`)*:
+     - `DeviceRawData` and `DeviceUiData` SHALL expose `linkedWheelPositions: Map<String, WheelPosition> = emptyMap()` (defaulting to `emptyMap()` for source compatibility) hydrated by `RawDeviceDataProvider` from `EquipmentDbHelper`.
+     - For `DeviceType.BIKE_SPEED` and `DeviceType.BIKE_SPEED_AND_CADENCE`, `EditDeviceDialog.kt` (`EquipmentSection`) SHALL display each linked bike's localized `WheelPosition` (`equipment_wheel_position_front` / `_rear` / `_unspecified`) in both the read-only summary field and the bike-linking bottom sheet rows.
+  2. *Stateless `WheelPositionSelectionDialog` Reuse, Conflict Preview & Strict Draft Semantics (`REQ-SEN-031.2`)*:
+     - Tapping a bike row in the `EquipmentSection` sheet for a wheel speed sensor SHALL open the reused stateless `WheelPositionSelectionDialog` to stage draft `WheelPosition` (`FRONT`, `REAR`, `UNSPECIFIED`) or unlink, surfacing a conflict indicator/swap preview when another wheel sensor on that bike already occupies `FRONT` or `REAR`.
+     - Staging changes in `WheelPositionSelectionDialog`, the Equipment sheet (`OK`/`Cancel`), or `EditDeviceDialog` (`SaveCancel`) MUST remain strictly in `EditDeviceViewModel` draft memory; tapping `Cancel` on either sheet or dialog MUST discard all draft link/position edits with zero `Equipment.db` mutations.
+  3. *Atomic `Save` Commit & `swapConflict = true` Parity (`REQ-SEN-031.3`)*:
+     - On `Save`, `DeviceDataRepository.updateDevice()` SHALL detect changes to either `linkedEquipment` or `linkedWheelPositions` (compared against `originalState`), update `_allDevices` before dispatching bulk link notifications, unlink removed bikes, commit linked wheel sensors via `EquipmentRepository.setWheelSensorLink(equipmentId, sensorId, position, swapConflict = true)`, and trigger `EquipmentRepository.notifyEquipmentLinksChanged(null)` so sibling unswapped wheel sensors refresh `wheelPositionConflicts`.
+  4. *Non-Wheel Sensor Isolation & 9-Locale Parity (`REQ-SEN-031.4`)*:
+     - Non-wheel sensors (`HRM`, `BIKE_POWER`, `BIKE_RADAR`, `BIKE_CADENCE`, `RUN_SPEED`, smartphone sensors) MUST strictly retain the existing simple checkbox selection UI with zero wheel-position prompts.
+     - UI labels SHALL reuse existing 9-locale `strings_equipment.xml` resources (`equipment_wheel_position_*`), and any newly added conflict/swap hint key MUST achieve 100% parity across all 9 locales (`values`, `de`, `es`, `fr`, `it`, `ja`, `nl`, `pl`, `pt`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Refines `REQ-SEN-029` (*Front/Rear Wheel Speed Sensor Mounting Position Tracking*, `ATT-7752`) and `REQ-UI-149` (*Modal Bottom Sheet Dialogs*). Targets `DeviceData.kt`, `RawDeviceDataProvider.kt`, `DeviceDataRepository.kt`, `EditDeviceViewModel.kt`, `EditDeviceDialog.kt`, `WheelPositionSelectionDialog.kt`.
+2. *Historical Origin & Commit Trace*: `4edcda86` (`ATT-7752` added `WheelPosition` in `EquipmentSensorMatrixScreen.kt` and `setEquipmentLinks()` preservation in `EquipmentDbHelper.java:839-876`).
+3. *Root Reason for Existing Formulation*: `ATT-7752` deferred `EditDeviceDialog.kt` `EquipmentSection` wheel-position UI and `DeviceDataRepository.updateDevice()` wheel-position commit parity.
+4. *Preservation of Core Invariants*: Preserves `AppDialogActions.SaveCancel` draft isolation (`Rule 68`), `EquipmentRepository.setWheelSensorLink(..., swapConflict = true)` single-`FRONT`/single-`REAR` per-bike guardrail, `equipmentLinksChanged` reactive sync, and simple checkbox UI for non-wheel sensors.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a `BIKE_SPEED` or `BIKE_SPEED_AND_CADENCE` sensor linked to Bike A (`FRONT`), *When* `EditDeviceDialog` opens, *Then* `EquipmentSection` summary and bike-linking sheet display Bike A with its localized `Front` mounting position.
+• *Given* the bike-linking sheet for a wheel speed sensor where Bike B already has another sensor at `REAR`, *When* the user taps Bike B and selects `REAR` (seeing the conflict/swap preview) and confirms sheet `OK` + dialog `Save`, *Then* `EquipmentRepository.setWheelSensorLink(..., swapConflict = true)` swaps Bike B's conflicting sensor and persists `REAR`; *When* the user taps `Cancel` on the sheet or dialog instead, *Then* zero DB mutations occur and draft changes are discarded.
+• *Given* a non-wheel sensor (`HRM`, `BIKE_POWER`, `BIKE_RADAR`, `BIKE_CADENCE`, `RUN_SPEED`), *When* `EquipmentSection` sheet opens, *Then* simple checkboxes render without `WheelPositionSelectionDialog`.
+
+**Invariants**: `SaveCancel` draft isolation (`Cancel` = zero DB writes); `EquipmentDbHelper` schema v4 unchanged; `swapConflict = true` bike guardrail; non-wheel simple checkbox UI untouched; 9-locale `strings_equipment.xml` parity; `REQ-PRO-049.1` offline tests with zero `src/main` reads.
+
+
+### REQ-TRK-085: HRV/RR Ingestion Monotonicity, Physiological Gap Flagging, Pre-Filter Timestamp Sorting & DFA α1 Validity Gate [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-TRK-085`
+- **System Requirement(s)**: `SYSREQ-TRK-001`, `SYSREQ-TRK-006`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `DeviceManager.java`, `TrackerService.java`, `BTLEHeartRateDevice.java`, `PolarOnlineStreamingBridge.kt`, `RrBeatTimestampReconstructor.kt`, `RrArtifactFilter.kt`, `HrvPostWorkoutRecomputer.kt`, `DfaCalculator.kt`, `HRVMetricsDevice.kt`
+- **Rationale**: Dual simultaneous HRMs (`BTLEHeartRateDevice` + `PolarOnlineStreamingBridge`) multiplexed into one `TrackerService.mRrBeatListener`/`mRrBeatIndexCounter`, unclamped drift re-anchoring produced negative `beat_timestamp_ms` jumps (`-430 ms`), drift-only gap detection left multi-second RR intervals (`5,196–6,378 ms`) unflagged (`artifact_flag = 0`), `HrvPostWorkoutRecomputer` filtered before sorting by `beatTimestampMs`, and `DfaCalculator` permitted non-physical negative slopes (`HRV_DFA_A1 = -1.0684`). Enforcing single-primary-source RR routing, monotonic clamping, physiological RR bounds, pre-filter chronological sorting, and positive finite DFA $\alpha_1$ gating eliminates corrupted RR persistence and negative $\alpha_1$ artifacts (`ATT-8706`, refining `REQ-CON-027.3`, `REQ-TRK-060.2`/`.4`, and `REQ-PER-034.2`/`.3`).
+- **Description**:
+  1. *Single-Primary-Source RR Routing & Monotonic Timestamp Enforcement (`REQ-TRK-085.1`)*:
+     - `DeviceManager` / `TrackerService` SHALL route live RR beats to `TrackerService.mRrBeatListener` and `HRVMetricsDevice` from at most one active primary `RrBeatSource` at a time (preventing concurrent dual-HRM interleaving into `mRrBeatIndexCounter` and live HRV windows).
+     - `BTLEHeartRateDevice`, `PolarOnlineStreamingBridge`, and `RrBeatTimestampReconstructor` MUST enforce monotonic non-decreasing `beatTimestampMs >= lastBeatTimestampMs` across bundle back-calculation and drift re-anchoring (`drift > 2000 ms`).
+  2. *Physiological RR Gap Flagging at Ingestion & Filter (`REQ-TRK-085.2`)*:
+     - `BTLEHeartRateDevice`, `PolarOnlineStreamingBridge`, and `RrBeatTimestampReconstructor` at ingestion—and `RrArtifactFilter` (`filterBidirectionalBeats`, `filterLiveCausal`) defensively—SHALL flag implausible physiological RR intervals (`rrMs > 2500.0` ms or `rrMs < 250.0` ms) with `RrBeatEvent.ARTIFACT_GAP` (`5`) and positive estimated `gapBeats` even when wall-clock drift is `<= 2000 ms` or `k = 1`.
+  3. *Pre-Filter Chronological Sorting in `HrvPostWorkoutRecomputer` (`REQ-TRK-085.3`)*:
+     - `HrvPostWorkoutRecomputer` SHALL sort `beats` chronologically by `beatTimestampMs` (with deterministic tie-break on `rawCounter` and monotonic normalization of any residual backward timestamps) BEFORE invoking `RrArtifactFilter.filterBidirectionalBeats()`, preventing interleaved intervals from distorting 91-beat quartile thresholds (`th1`/`th2`).
+  4. *DFA $\alpha_1$ Positive Finite Validity Gate (`REQ-TRK-085.4`)*:
+     - `DfaCalculator.computeDfaAlpha1()`, `HrvPostWorkoutRecomputer`, and `HRVMetricsDevice` SHALL reject non-finite or non-positive DFA $\alpha_1$ values (`!alpha1.isFinite() || alpha1 <= 0.0`) cleanly as `Double.NaN` / `null` (never persisting negative `HRV_DFA_A1`), while preserving `DfaCalculatorTest.testConstantSignalDoesNotCrash` and NeuroKit2 0.2.10 golden parity (`|Δα1| <= 0.02` pre-corrected / `<= 0.03` end-to-end, `|ΔrMSSD| <= 0.5 ms`; `Localization Parity: N/A - no UI strings`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new `REQ-TRK-085` refining `REQ-CON-027.3`, `REQ-TRK-060.2`/`.4`, and `REQ-PER-034.2`/`.3`. Targets `DeviceManager.java`, `TrackerService.java`, `BTLEHeartRateDevice.java`, `PolarOnlineStreamingBridge.kt`, `RrBeatTimestampReconstructor.kt`, `RrArtifactFilter.kt`, `HrvPostWorkoutRecomputer.kt`, `DfaCalculator.kt`, and `HRVMetricsDevice.kt`.
+2. *Historical Origin & Commit Trace*: `8b2196d9` (`ATT-6714`, split/merge & `overlap=True`), `50ffedc6` (`ATT-4970`, durability), `c54768d2` (`ATT-7530`), `42d1e4c9` (`ATT-8578`).
+3. *Root Reason for Existing Formulation*: `REQ-CON-027.3` & `REQ-PER-034.2` detected gaps solely via wall-clock drift (`> 2000 ms`) assuming one continuous sensor stream, and `HrvPostWorkoutRecomputer` trusted `WorkoutRrDatabaseManager` `beat_index ASC` ordering before `filterBidirectionalBeats()`.
+4. *Preservation of Core Invariants*: Preserves `HrvGoldenOracleTest` NeuroKit2 0.2.10 tolerances (`|Δα1| <= 0.02`/`0.03`, `|ΔrMSSD| <= 0.5 ms`), `DfaCalculatorTest.testConstantSignalDoesNotCrash` (`NaN || 0.0`), `RrArtifactFilterTest` split/merge semantics, `REQ-TRK-084.4` conditional `AccumulatedSensors` upsert, zero `WorkoutRr.db` schema migration, and `N/A - no UI strings`.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* two concurrent `RrBeatSource` HRMs (e.g., Polar H10 + Verity Sense) or a drift re-anchor with back-calculated bundle beats,
+• *When* RR beats arrive at `DeviceManager`/`TrackerService` or `BTLEHeartRateDevice`/`PolarOnlineStreamingBridge`/`RrBeatTimestampReconstructor`,
+• *Then* only the active primary `RrBeatSource` feeds `mRrBeatListener`/`mHrvMetricsDevice` and `beatTimestampMs` never decreases (`beatTimestampMs >= lastBeatTimestampMs`).
+• *Given* an RR interval `rrMs > 2500.0 ms` (e.g. `5196.29 ms`) or `< 250.0 ms` arriving with `drift <= 2000 ms`,
+• *When* processed by ingestion or `RrArtifactFilter`,
+• *Then* the beat is flagged `ARTIFACT_GAP` (`5`) with non-zero `gapBeats` and counted toward artifact rate.
+• *Given* persisted `WorkoutRr.db` beats containing interleaved/out-of-order `beat_timestamp_ms` and multi-second gaps,
+• *When* `HrvPostWorkoutRecomputer` evaluates the workout,
+• *Then* beats are sorted by `beatTimestampMs` before `filterBidirectionalBeats()`, `HRV_DFA_A1` never persists negative values (`<= 0.0` gated to `null`/`Double.NaN`), and NeuroKit2 golden parity remains within tolerance.
+
+**Invariants**: NeuroKit2 0.2.10 golden parity (`|ΔrMSSD| <= 0.5 ms`, `|Δα1| <= 0.02`/`0.03`); `DfaCalculatorTest.testConstantSignalDoesNotCrash`; `REQ-TRK-084.4` conditional upsert; zero `WorkoutRr.db` schema bump; `@Synchronized` thread safety; `N/A - no UI strings`.
+
+
+### REQ-TRK-086: Gesture-Isolated HrvDfaA1RangeSlider Dragging in ZonesSettingsActivity HorizontalPager [Verified]
+- **Tests**: `TST-TRK-086`
+- **System Requirement(s)**: `SYSREQ-TRK-006`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `ZonesSettingsActivity.kt`
+- **Rationale**: On tab 3 (`HRV (DFA α1)`, `page == 3`) of `ZoneSettingsScreen` (`ZonesSettingsActivity.kt`), `HorizontalPager` previously omitted `userScrollEnabled`, causing rightward drags on `HrvDfaA1RangeSlider` thumbs (especially right thumb `T2`) or touches inside the slider `Card` padding to lose the touch-slop race and switch back to `PWR_BIKE` (`page == 2`), while unbuffered async `TuningPreferencesDataStore` writes risked mid-drag thumb snap-back (`ATT-8105`, refining `REQ-TRK-061.4`).
+- **Description**:
+  1. *HorizontalPager Gesture Isolation via `PointerEventPass.Initial` & `MutableInteractionSource` (`REQ-TRK-086.1`)*:
+     - `ZoneSettingsScreen` (`ZonesSettingsActivity.kt`) SHALL hold lifted `isSliderGestureActive` state controlling `HorizontalPager(userScrollEnabled = !isSliderGestureActive)` and pass a defaulted `onSliderGestureActiveChange: (Boolean) -> Unit = {}` callback through `HrvDfaA1SettingsContent` to `HrvDfaA1RangeSlider` and `HrvThresholdControlRow`.
+     - `HrvDfaA1RangeSlider` (and `HrvThresholdControlRow` when `showSlider == true`) MUST combine `PointerEventPass.Initial` press/release detection on its slider container with M3 `MutableInteractionSource` (`startInteractionSource` / `endInteractionSource` press & drag tracking) so `isSliderGestureActive` becomes `true` immediately on initial pointer down (zero slop-race window) and resets cleanly to `false` on pointer release, cancel, or composable disposal (`DisposableEffect`).
+     - The slider `Card`/container MUST consume residual horizontal-dominant pointer deltas in `PointerEventPass.Main` so unconsumed horizontal movement inside `12.dp` padding cannot trigger `HorizontalPager` tab switches, while preserving `verticalScroll` and normal horizontal tab swipes outside the slider region.
+  2. *Bidirectional Thumb Tracking & Local Drag State (`REQ-TRK-086.2`)*:
+     - Both rightward (`T2` / `T1` moved right on `page == 3`) AND leftward (`T1` / `T2` moved left) thumb drags on `HrvDfaA1RangeSlider` SHALL adjust thresholds smoothly without triggering tab switches or pager overscroll.
+     - `HrvDfaA1RangeSlider` MUST maintain local drag state synchronized with `t1`/`t2` only while idle (`!isDragging`), preventing asynchronous `TuningPreferencesDataStore` latency or repeated clamped updates from snapping thumbs backward mid-drag while strictly enforcing domain `0.30f..1.20f` and $\alpha_{1,\text{T1}} \ge \alpha_{1,\text{T2}} + 0.05f$.
+  3. *Behavioral Compose UI Gesture Verification & Visual Evidence (`REQ-TRK-086.3`)*:
+     - Gesture isolation, bidirectional `T1`/`T2` dragging, non-slider tab switching, and vertical scroll preservation SHALL be verified via behavioral Robolectric Compose `createComposeRule()` (`performTouchInput`) tests with zero `app/src/main/` file reads (`REQ-PRO-049.1` / `ATT-8198`), plus Light/Dark screenshot PNG verification at `docs/engineering/walkthroughs/img/ATT-8105_hrv_slider_zones.png` (`Rule 8.5`; `Localization Parity: N/A - no UI strings added or modified`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new `REQ-TRK-086` refining `REQ-TRK-061.4` (`ZonesSettingsActivity.kt`).
+2. *Historical Origin & Commit Trace*: `ATT-3542` (`14292b35`) $\rightarrow$ `ATT-7317` $\rightarrow$ `ATT-7519` (`467f7663`) $\rightarrow$ `ATT-7741` (`5fa1e164`) $\rightarrow$ `ATT-8498` (`81af2506`).
+3. *Root Reason for Existing Formulation*: `REQ-TRK-061.4` introduced the unified inverted 3-zone M3 `RangeSlider` inside `HorizontalPager` tab 3 without `userScrollEnabled` gesture arbitration or local drag buffering.
+4. *Preservation of Core Invariants*: Inverted left-green/right-red `RangeSlider` `track` slot (`TTColor.Zone2/3/4`), `0.30f..1.20f` domain, $T_1 \ge T_2 + 0.05f$ gap, public composable names (defaulted optional callback), vertical scrolling, non-slider tab swiping, `HrvDfaA1SettingsContractTest`, and 9-locale `strings_hrv.xml` parity remain 100% preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `ZoneSettingsScreen` on tab 3 (`HRV (DFA α1)`, `page == 3`),
+• *When* the user drags `HrvDfaA1RangeSlider` thumb `T2` or `T1` rightward OR leftward (including starting inside slider `Card` padding),
+• *Then* `HorizontalPager` stays on `page == 3` (`userScrollEnabled == false` during the gesture), thresholds update smoothly within `0.30f..1.20f` enforcing $T_1 \ge T_2 + 0.05f$ without snap-back, and `userScrollEnabled` restores to `true` on release.
+• *Given* `ZoneSettingsScreen` on tab 3 with the slider idle,
+• *When* the user swipes horizontally outside the slider `Card` OR scrolls vertically across `HrvDfaA1SettingsContent`,
+• *Then* horizontal swipe switches cleanly to `page == 2` (`PWR_BIKE`) and vertical scroll advances `scrollState` without interference.
+
+**Invariants**: Inverted 3-zone `RangeSlider` track (`TTColor.Zone2/3/4`); `0.30f..1.20f` bounds & $T_1 \ge T_2 + 0.05f$; backward-compatible public composable signatures; `verticalScroll` & non-slider tab swiping intact; `HrvDfaA1SettingsContractTest` intact; `REQ-PRO-049.1` zero `src/main` reads in new/modified tests; `Localization Parity: N/A - no UI strings`.
+
 
 ---
 
@@ -6623,3 +6813,13 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 | `1.0.1` | 2026-11-17 | AI Agent (`ATT-8450`) | `ATT-8450` | Added `REQ-CON-048` [Planned] for offline `EditDeviceDialog` radar tail light configuration, cold-start hydration, and StVZO/radar-only handling. |
 | `1.0.2` | 2026-11-17 | AI Agent (`ATT-8450`) | `ATT-8450` | Promoted `REQ-CON-048` to `[Implemented]` following Stage 4 implementation. |
 | `1.0.3` | 2026-11-17 | AI Agent (`ATT-8450`) | `ATT-8450` | Promoted `REQ-CON-048` to `[Verified]` in Stage 5 following post-rebase test verification. |
+| `1.0.4` | 2026-11-17 | AI Agent (`ATT-8707`) | `ATT-8707` | Added `REQ-FIL-024` [Planned] for `VerticalSpeedAndSlopeDevice` baro broadcast source guard, synchronized `onAccumulatorsReset()`, and same-device step re-seeding. |
+| `1.0.5` | 2026-11-17 | AI Agent (`ATT-8707`) | `ATT-8707` | Promoted `REQ-FIL-024` to `[Implemented]` following Stage 4 implementation. |
+| `1.0.6` | 2026-11-17 | AI Agent (`ATT-8707`) | `ATT-8707` | Promoted `REQ-FIL-024` to `[Verified]` in Stage 5 following targeted unit regression verification. |
+| `1.0.7` | 2026-11-17 | AI Agent (`ATT-8707`) | `ATT-8707` | Stage 6 Bounce 1/3 heal: excluded `ALTITUDE_FROM_PRESSURE` from same-device step reseeding and enforced `Double.isFinite` guards in `REQ-FIL-024.3`. |
+| `1.0.8` | 2026-11-18 | AI Agent (`ATT-8705`) | `ATT-8705` | Added `REQ-FIL-025` [Planned] for post-workout ERTS running-pace heading anchoring, 1-Hz yaw-rate anti-aliasing, symmetric sanity bounds, and `Laps.db` synchronization. |
+| `1.0.9` | 2026-11-18 | AI Agent (`ATT-8705`) | `ATT-8705` | Promoted `REQ-FIL-025` to `[Implemented]` following Stage 4 implementation. |
+| `1.0.10` | 2026-11-18 | AI Agent (`ATT-8705`) | `ATT-8705` | Promoted `REQ-FIL-025` to `[Verified]` in Stage 5 following Tier-1 targeted unit/Robolectric regression verification. |
+| `1.0.11` | 2026-11-18 | AI Agent (`ATT-8706`) | `ATT-8706` | Added and verified `REQ-TRK-085` [Verified] (`RrBeatNormalization`, `DeviceManager`, `TrackerService`, `HrvPostWorkoutRecomputer`, `RrArtifactFilter`, `DfaCalculator`, `HRVMetricsDevice`) for single-primary RR routing, monotonic clamping, physiological gap flagging, pre-filter sort, and positive finite DFA α1 gate (502/502 tests across 88 suites). |
+| `1.0.17` | 2026-11-18 | AI Agent (`ATT-8706`) | `ATT-8706` | Promoted `REQ-TRK-085` to `[Verified]` in Stage 5 following Bounce 3/3 heal verification (`449/449` tests across `83` suites). |
+| `1.0.18` | 2026-11-18 | AI Agent (`ATT-8105`) | `ATT-8105` | Added and verified `REQ-TRK-086` [Verified] (`ZonesSettingsActivity.kt` `rememberSliderGestureIsolationModifier`, local drag buffering, and lifted `isSliderGestureActive` on `HorizontalPager`) following Tier-1 targeted tests (`31/31` across 7 suites) and `Rule 8.5` PNG inspection (`ATT-8105_hrv_slider_zones.png`). |

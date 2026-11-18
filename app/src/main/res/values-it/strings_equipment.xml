@@ -7,6 +7,7 @@
     <string name="equipment_wheel_position_unlink">Scollega sensore</string>
     <string name="equipment_wheel_position_front_badge">A</string>
     <string name="equipment_wheel_position_rear_badge">P</string>
+    <string name="equipment_wheel_position_conflict_swap">Attualmente assegnato a %1$s: selezionando questa opzione le posizioni verranno scambiate.</string>
     <string name="equipment_guidance_title">Perché i sensori ruota insieme al GPS?</string>
     <string name="equipment_guidance_subtitle">Vantaggi fisici dei sensori di velocità ruota rispetto al GPS dello smartphone</string>
     <string name="equipment_guidance_1_sensor_title">1 sensore ruota + GPS</string>

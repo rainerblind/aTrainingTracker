@@ -23,6 +23,7 @@ import android.database.Cursor
 import android.util.Log
 import com.atrainingtracker.banalservice.devices.ProtocolType
 import com.atrainingtracker.banalservice.devices.RrBeatEvent
+import com.atrainingtracker.banalservice.devices.RrBeatNormalization
 import com.atrainingtracker.banalservice.devices.hrv.DfaCalculator
 import com.atrainingtracker.banalservice.devices.hrv.FilteredRrBeat
 import com.atrainingtracker.banalservice.devices.hrv.HrvSignalQualityAnalyzer
@@ -94,9 +95,12 @@ object HrvPostWorkoutRecomputer {
                 )
             }
 
+            // Normalize chronological timestamp order before running centered artifact filter (REQ-TRK-085.3)
+            val orderedBeats = RrBeatNormalization.sortAndNormalizeChronologically(beats)
+
             // Run post-hoc bidirectional centered artifact filter
             val artifactFilter = RrArtifactFilter()
-            val filterResult = artifactFilter.filterBidirectionalBeats(beats)
+            val filterResult = artifactFilter.filterBidirectionalBeats(orderedBeats)
             val filteredBeats = filterResult.beats
             val sortedBeats = filteredBeats.sortedBy { it.beatTimestampMs }
             val totalBeats = sortedBeats.size
@@ -192,7 +196,7 @@ object HrvPostWorkoutRecomputer {
                         cachedDfaAlpha1 = if (cachedArtifactRate <= ARTIFACT_GATE_THRESHOLD_PERCENT && dfaBeats.size >= MIN_DFA_BEATS) {
                             val nnIntervals = dfaBeats.map { it.correctedRrMs }.toDoubleArray()
                             val calculated = DfaCalculator.computeDfaAlpha1(nnIntervals)
-                            if (calculated.isFinite() && !calculated.isNaN()) calculated else null
+                            if (calculated.isFinite() && calculated > 0.0) calculated else null
                         } else null
 
                         // 2. Bias-free rMSSD in centered window [t - 30s, t + 30s]

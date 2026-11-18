@@ -23,6 +23,7 @@ import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.devices.MyDevice
 import com.atrainingtracker.banalservice.devices.RrBeatEvent
 import com.atrainingtracker.banalservice.devices.RrBeatListener
+import com.atrainingtracker.banalservice.devices.RrBeatNormalization
 import com.atrainingtracker.banalservice.sensor.MySensor
 import com.atrainingtracker.banalservice.sensor.MySensorManager
 import com.atrainingtracker.banalservice.sensor.SensorType
@@ -134,8 +135,11 @@ open class HRVMetricsDevice @JvmOverloads constructor(
     @Synchronized
     private fun pruneOldBeats(currentTimestampMs: Long) {
         val cutoff = currentTimestampMs - WINDOW_DFA_MS
-        while (!mBeatQueue.isEmpty() && mBeatQueue.first.beatTimestampMs < cutoff) {
-            mBeatQueue.removeFirst()
+        val iterator = mBeatQueue.iterator()
+        while (iterator.hasNext()) {
+            if (iterator.next().beatTimestampMs < cutoff) {
+                iterator.remove()
+            }
         }
     }
 
@@ -162,7 +166,7 @@ open class HRVMetricsDevice @JvmOverloads constructor(
             return
         }
 
-        val allBeats = mBeatQueue.toList()
+        val allBeats = RrBeatNormalization.sortAndNormalizeChronologically(mBeatQueue.toList())
         val filterResult = artifactFilter.filterLiveCausal(allBeats)
         val filteredBeats = filterResult.beats
 
@@ -186,7 +190,7 @@ open class HRVMetricsDevice @JvmOverloads constructor(
         } else {
             val nnIntervals = filteredBeats.map { it.correctedRrMs }.toDoubleArray()
             val alpha1 = DfaCalculator.computeDfaAlpha1(nnIntervals)
-            if (alpha1.isFinite() && !alpha1.isNaN()) {
+            if (alpha1.isFinite() && alpha1 > 0.0) {
                 mHrvDfaA1Sensor.newValue(alpha1)
                 alpha1Value = alpha1
             } else {

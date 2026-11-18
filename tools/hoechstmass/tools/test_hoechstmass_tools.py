@@ -851,5 +851,174 @@ class TestHoechstmassFlock(unittest.TestCase):
                 run_locked([sys.executable, "-c", "pass"], lock_path=self.lock_file, timeout_sec=0.3)
 
 
+class TestHoechstmassSprintMetricsParity(unittest.TestCase):
+    """TST-PRO-122.5: Verify tools/hoechstmass/tools/sprint_metrics.py parity."""
+
+    def test_hoechstmass_sprint_metrics_spc_bounds_and_acceptance(self):
+        from tools.hoechstmass.tools import sprint_metrics as hm_sm
+
+        hist = [
+            {"process_version": "1.0", "quality_gates": {"overall_ftpr_percent": 65.0, "human_acceptance_rate_percent": 40.0, "total_subtasks_evaluated": 40}, "throughput": {"total_tickets": 20, "completed_tickets": 8, "completed_story_points": 16.0}},
+            {"process_version": "1.0", "quality_gates": {"overall_ftpr_percent": 100.0, "human_acceptance_rate_percent": 100.0, "total_subtasks_evaluated": 40}, "throughput": {"total_tickets": 20, "completed_tickets": 20, "completed_story_points": 40.0}},
+        ]
+        spc = hm_sm.calculate_spc_limits(hist)
+        self.assertLessEqual(spc["limits"]["overall_ftpr"]["ucl"], 100.0)
+        self.assertLessEqual(spc["limits"]["human_acceptance"]["ucl"], 100.0)
+        reset = hm_sm.calculate_spc_limits(hist, current_metrics={"process_version": "2.0"})
+        self.assertTrue(reset.get("baseline_reset"))
+
+    def test_hoechstmass_sprint_metrics_static_analysis_baselines(self):
+        """TST-PRO-123.2: Verify tools/hoechstmass/tools/sprint_metrics.py static_analysis reporting."""
+        import tempfile
+        from pathlib import Path
+        from tools.hoechstmass.tools import sprint_metrics as hm_sm
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo_root = Path(tmpdir)
+            (repo_root / "app").mkdir(parents=True)
+            (repo_root / "app" / "detekt-baseline.xml").write_text("<ID>a</ID>\n", encoding="utf-8")
+            (repo_root / "app" / "lint-baseline.xml").write_text('<issue id="x"/>\n', encoding="utf-8")
+            metrics = hm_sm.parse_sprint_gate_metrics(
+                [], {"id": 12, "name": "Mirror-SA"},
+                history=[{"static_analysis": {"detekt_baseline_count": 3, "lint_baseline_count": 2}}],
+                repo_root=repo_root,
+            )
+            self.assertEqual(metrics["static_analysis"]["detekt_delta"], -2)
+            self.assertEqual(metrics["static_analysis"]["lint_delta"], -1)
+
+
+class TestHoechstmassPostStage6MergeAndBounceParity(unittest.TestCase):
+    """TST-PRO-125.4: Verify tools/hoechstmass post-Stage-6 merge, bounce subtask reuse & skill parity."""
+
+    def test_hoechstmass_bounce_subtask_reuse_and_locked_erledigt_fallback(self):
+        from unittest.mock import patch
+        from tools.hoechstmass.tools import jira_util as hm_ju
+        from tools.hoechstmass.tools import sprint_metrics as hm_sm
+
+        state = {
+            "subtasks": [
+                {"key": "PROJ-11", "fields": {"summary": "[Implementation] Feature", "status": {"name": "Erledigt"}}},
+                {"key": "PROJ-12", "fields": {"summary": "[Test] Feature", "status": {"name": "Erledigt"}}},
+            ],
+            "comments": [],
+            "transitions_mode": "reopenable",
+        }
+
+        def fake_request(url, method="GET", payload=None, role="agent1", config=None, h_config=None):
+            if "/rest/api/2/issue/PROJ-10?" in url:
+                return {
+                    "fields": {
+                        "issuetype": {"subtask": False},
+                        "summary": "Feature",
+                        "status": {"name": "Final Review (Agent)"},
+                        "subtasks": state["subtasks"],
+                        "comment": {"comments": state["comments"]},
+                    }
+                }
+            if "/transitions" in url and method == "GET":
+                if state["transitions_mode"] == "reopenable":
+                    return {"transitions": [{"id": "21", "name": "Reopen", "to": {"name": "In Progress"}}]}
+                return {"transitions": []}
+            if "/rest/api/3/issue/PROJ-11/transitions" in url and method == "POST":
+                state["subtasks"][0]["fields"]["status"]["name"] = "In Progress"
+                return {}
+            if "/rest/api/3/issue/PROJ-12/transitions" in url and method == "POST":
+                state["subtasks"][1]["fields"]["status"]["name"] = "In Progress"
+                return {}
+            if url.endswith("/rest/api/2/issue") and method == "POST":
+                return {"key": "PROJ-13"}
+            return {}
+
+        with patch.object(hm_ju, "jira_request", side_effect=fake_request), \
+             patch.object(hm_ju, "assign_issue"), \
+             patch.object(hm_ju, "add_comment"), \
+             patch.object(hm_ju, "transition_issue"):
+            res = hm_ju.final_review_verdict("PROJ-10", "BOUNCE", "Fix defect", bounce_target="implementation", as_role="agent2")
+            self.assertEqual(res, "BOUNCE_1")
+            self.assertEqual(state["subtasks"][0]["fields"]["status"]["name"], "In Progress")
+
+            sub_reused = hm_ju.submit_stage("PROJ-10", 4, "Healed", as_role="agent1")
+            self.assertEqual(sub_reused, "PROJ-11")
+
+            # Locked Erledigt fallback creates [Implementation - Bounce 1]
+            state["subtasks"][0]["fields"]["status"]["name"] = "Erledigt"
+            state["transitions_mode"] = "locked"
+            state["comments"].append({"body": "[FINAL REVIEW (AGENT) — BOUNCE 1/3]\n\nFix defect"})
+            sub_bounce = hm_ju.submit_stage("PROJ-10", 4, "Healed 2", as_role="agent1")
+            self.assertEqual(sub_bounce, "PROJ-13")
+
+        self.assertEqual(hm_ju.resolve_desired_parent_stage_for_subtask("[Implementation - Bounce 1] Feature", True), "test")
+        self.assertEqual(hm_sm.identify_gate_number("[Implementation - Bounce 1] Feature"), 4)
+        self.assertEqual(hm_sm.identify_gate_number("[Test - Bounce 1] Feature"), 5)
+
+        # Verify bounce target alias coverage in hoechstmass mirror
+        self.assertEqual(hm_ju._resolve_bounce_stage_names("impl-plan"), ("Impl-Plan", "Implementation", "Test"))
+        self.assertEqual(hm_ju._resolve_bounce_stage_names("impl_plan"), ("Impl-Plan", "Implementation", "Test"))
+        self.assertEqual(hm_ju._resolve_bounce_stage_names("test-spec"), ("Req & Test Spec", "Impl-Plan", "Implementation", "Test"))
+        self.assertEqual(hm_ju._resolve_bounce_stage_names("req-test-spec"), ("Req & Test Spec", "Impl-Plan", "Implementation", "Test"))
+        self.assertEqual(hm_ju._resolve_bounce_stage_names("spec"), ("Req & Test Spec", "Impl-Plan", "Implementation", "Test"))
+        self.assertEqual(hm_ju._resolve_bounce_stage_names("revision"), ("Implementation", "Test"))
+        self.assertEqual(hm_ju._resolve_bounce_stage_names("rework"), ("Implementation", "Test"))
+        self.assertEqual(hm_ju._resolve_bounce_stage_names("verification"), ("Test",))
+        self.assertEqual(hm_ju._resolve_bounce_stage_names("analysis"), ("Analysis", "Req & Test Spec", "Impl-Plan", "Implementation", "Test"))
+        self.assertEqual(hm_ju._resolve_bounce_stage_names("stage 1"), ("Analysis", "Req & Test Spec", "Impl-Plan", "Implementation", "Test"))
+        self.assertEqual(hm_ju._resolve_bounce_stage_names("stage 2"), ("Req & Test Spec", "Impl-Plan", "Implementation", "Test"))
+        self.assertEqual(hm_ju._resolve_bounce_stage_names("stage 3"), ("Impl-Plan", "Implementation", "Test"))
+        self.assertEqual(hm_ju._resolve_bounce_stage_names("stage 4"), ("Implementation", "Test"))
+        self.assertEqual(hm_ju._resolve_bounce_stage_names("stage 5"), ("Test",))
+
+        # Verify bounce_target="stage 4" reopens ONLY [Implementation] & [Test], never [Impl-Plan]
+        reopened_hm = []
+        subtasks_hm = [
+            {"key": "PROJ-10", "fields": {"summary": "[Impl-Plan] Feature", "status": {"name": "Erledigt"}}},
+            {"key": "PROJ-11", "fields": {"summary": "[Implementation] Feature", "status": {"name": "Erledigt"}}},
+            {"key": "PROJ-12", "fields": {"summary": "[Test] Feature", "status": {"name": "Erledigt"}}},
+        ]
+
+        def fake_hm_s4(url, method="GET", payload=None, role="agent2", config=None, h_config=None):
+            if "/rest/api/2/issue/PROJ-20?" in url:
+                return {
+                    "fields": {
+                        "issuetype": {"subtask": False},
+                        "summary": "Feature",
+                        "status": {"name": "Final Review (Agent)"},
+                        "subtasks": subtasks_hm,
+                        "comment": {"comments": []},
+                    }
+                }
+            if "/transitions" in url and method == "GET":
+                return {"transitions": [{"id": "21", "name": "Reopen", "to": {"name": "In Progress"}}]}
+            if "/transitions" in url and method == "POST":
+                reopened_hm.append(url.split("/")[-2])
+                return {}
+            return {}
+
+        with patch.object(hm_ju, "load_env_config", return_value={"JIRA_URL": "https://jira.test"}), \
+             patch.object(hm_ju, "jira_request", side_effect=fake_hm_s4), \
+             patch.object(hm_ju, "assign_issue"), \
+             patch.object(hm_ju, "add_comment"), \
+             patch.object(hm_ju, "transition_issue"):
+            res_s4 = hm_ju.final_review_verdict("PROJ-20", "BOUNCE", "Fix", bounce_target="stage 4", as_role="agent2")
+            self.assertEqual(res_s4, "BOUNCE_1")
+            self.assertEqual(reopened_hm, ["PROJ-11", "PROJ-12"])
+
+        # Verify Gate 1 Impact Analysis check triggers on [Analysis - Bounce 1] in hoechstmass mirror
+        with patch.object(hm_ju, "load_env_config", return_value={"JIRA_URL": "https://jira.test"}), \
+             patch.object(hm_ju, "get_subtask_summary_and_desc", return_value=("[Analysis - Bounce 1] Feature", "No impact section", "PROJ-999")):
+            with self.assertRaises(SystemExit) as cm:
+                hm_ju.gate_verdict("PROJ-14", "PASS", "LGTM", as_role="agent2")
+            self.assertEqual(cm.exception.code, 1)
+
+    def test_hoechstmass_skill_mirrors_defer_merge_until_stage6_pass(self):
+        root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        with open(os.path.join(root, ".agents", "skills", "stage5-verification", "SKILL.md"), encoding="utf-8") as f:
+            stage5 = f.read()
+        with open(os.path.join(root, ".agents", "skills", "stage6-final-review", "SKILL.md"), encoding="utf-8") as f:
+            stage6 = f.read()
+        self.assertIn("Do **NOT** invoke `parallel_sprint_lock.py --merge-ticket` at Gate 5", stage5)
+        self.assertIn("git diff sprint/<SPRINT_NAME>...feature/<KEY>", stage6)
+        self.assertIn("strictly *after* `final-review-verdict PASS`", stage6)
+
+
 if __name__ == "__main__":
     unittest.main()

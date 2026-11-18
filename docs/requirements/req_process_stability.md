@@ -1,14 +1,14 @@
 # Living Requirements: Engineering Process, Stability & Architecture
 
 **Document ID**: `DOC-REQ-PRO`  
-**Version**: 1.0.3  
+**Version**: 1.0.22  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Requirements**: 186
+**Total Requirements**: 191
 
 ---
 
@@ -6112,6 +6112,130 @@ The workflow SHALL mandate that:
 
 ---
 
+### REQ-PRO-122: Quantitative Sprint Metrics Statistical Correctness & Capability Level Claim Suspension (ATT-8168) [Verified]
+- **Tests**: `TST-PRO-122`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `tools/sprint_metrics.py`, `tools/hoechstmass/tools/sprint_metrics.py`, `docs/project_protocol.md`, `tools/hoechstmass/docs/project_protocol.md`, `tools/hoechstmass/README.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/HoechstmassCoreFrameworkContractTest.kt`
+- **Rationale**: ASPICE 4.0 Audit Finding `Observation (PA 4.x)` (`ATT-8168`) identified unbounded `UCL > 100%` SPC calculations (`115.86%`/`117.93%` on `n=19`), unpartitioned mixed-era history, `human_acceptance_rate_percent` conflated with `completion_rate_percent`, synthetic `p = 0.02` escape probability substitution (`2.37e-08`), Gate 1–5 plausibility warnings masked by Gate 6 bounces, and premature CL3/CL4/CL5 operational claims before CL2 attainment.
+- **Description**:
+  1. *Bounded SPC Limits & `process_version` Baseline Resets (`REQ-PRO-122.1`)*: `calculate_spc_limits()` in `tools/sprint_metrics.py` SHALL compute binomial p-chart control limits (or sample-bounded `[0.0, 100.0]` limits when denominators are absent) for percentage metrics (`overall_ftpr`, `human_acceptance`) strictly clamped to `[0.0, 100.0]`, and MUST partition `process_metrics.jsonl` history by `process_version` so baseline changes reset control bands without mixing incompatible eras.
+  2. *Truthful Human Acceptance vs. Completion Separation (`REQ-PRO-122.2`)*: `parse_sprint_gate_metrics()` SHALL decouple `human_acceptance_rate_percent` from `completion_rate_percent`, counting only terminal human-accepted statuses (`Erledigt`, `Done`, `Closed`) and never counting `Final Review (Human)` or `Final Review (Agent)` as human-accepted.
+  3. *Removal of Fabricated `p = 0.02` Escape Floor (`REQ-PRO-122.3`)*: `parse_sprint_gate_metrics()` MUST NOT substitute nominal `p = 0.02` when gate escape rate is zero, reporting strictly empirical escape metrics without fabricated `10^-8`–`10^-11` products.
+  4. *Unmasked Gate 1–5 FTPR Plausibility Warning (`REQ-PRO-122.4`)*: `parse_sprint_gate_metrics()` SHALL evaluate `total_revisions_all` strictly over Gates 1–5 (excluding `rev6` and `bounces6`) so 100.0% Gate 1–5 FTPR across $\ge 20$ evaluated subtasks emits `PA 4.1 Plausibility Warning` even when Gate 6 records bounces or revisions.
+  5. *Höchstmaß Mirror Parity (`REQ-PRO-122.5`)*: `tools/hoechstmass/tools/sprint_metrics.py` SHALL implement full statistical and plausibility parity with `tools/sprint_metrics.py`.
+  6. *Suspension of Unsupported CL3/CL4/CL5 Claims (`REQ-PRO-122.6`)*: `docs/project_protocol.md`, `tools/hoechstmass/docs/project_protocol.md`, `tools/hoechstmass/README.md`, and `sprint_metrics.py` docstrings SHALL mark Capability Level 3, 4, and 5 entries as `[Target / Not Yet Claimed]` pending verified CL2 attainment while preserving exact `"Level 1: Performed"`..`"Level 5: Innovating"` and `"PA 1.1"`..`"PA 5.2"` strings required by `HoechstmassCoreFrameworkContractTest.kt`.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Refines `REQ-PRO-038` (`ATT-5765`) and `REQ-PRO-092` (`ATT-7559`) across `tools/sprint_metrics.py`, `tools/hoechstmass/tools/sprint_metrics.py`, `docs/project_protocol.md`, `tools/hoechstmass/docs/project_protocol.md`, and `tools/hoechstmass/README.md`.
+  2. *Historical Origin & Commit Trace*: `REQ-PRO-038` established rapid normal $\mu \pm 2\sigma$ SPC and PA 1.1–5.2 matrices; `REQ-PRO-092` added plausibility warnings and Swiss Cheese escape tracking (`2de2a41c` added `REQ-PRO-120` headers).
+  3. *Root Reason for Existing Formulation*: Early SPC used unclamped normal approximation, `0.02` avoided zero-product collapse, and PA 3.x–5.x rows used operational wording to describe roadmap capabilities.
+  4. *Preservation of Core Invariants*: Preserves `process_metrics.jsonl` schema compatibility (`verify_sprint_metrics()`), `TST-PRO-107.3` rubber-stamping alert, `HoechstmassCoreFrameworkContractTest` / `AspiceSweAuditContractTest` matrix keys, and `REQ-PRO-120` header/version governance.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `process_metrics.jsonl` history spanning multiple `process_version` eras and high FTPR variance, *When* `calculate_spc_limits()` runs, *Then* percentage `lcl`/`ucl` remain within `[0.0, 100.0]` and limits compute only within the active `process_version` baseline.
+  • *Given* sprint tickets in `Final Review (Human)` and `Final Review (Agent)` alongside `Erledigt` tickets, *When* `parse_sprint_gate_metrics()` runs, *Then* `human_acceptance_rate_percent` reflects only terminal human-accepted tickets while `completion_rate_percent` remains independent.
+  • *Given* zero Gate 1–5 revisions across $\ge 20$ subtasks with Gate 6 bounces and `p_g == 0`, *When* `parse_sprint_gate_metrics()` runs, *Then* no `0.02` floor is injected and `plausibility_warnings` is non-empty.
+  • *Given* `docs/project_protocol.md`, `tools/hoechstmass/docs/project_protocol.md`, and `tools/hoechstmass/README.md`, *When* `HoechstmassCoreFrameworkContractTest` runs, *Then* CL3–CL5 claims are explicitly `[Target / Not Yet Claimed]` and all contract tests pass.
+- **Invariants**: Zero `app/src/main/` edits; `ANT-Android-SDKs` untouched; `Localization Parity: N/A - no UI strings`; backward-compatible JSONL schema; zero live Jira API calls in unit tests (`Rule 5`).
+
+---
+
+### REQ-PRO-123: CI Custom Safety Guard Gating, Baseline Ratcheting & Java Static Analysis Evaluation (ATT-8169) [Verified]
+- **Tests**: `TST-PRO-123`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `.github/workflows/android-branch-build.yml`, `.github/workflows/android-release.yml`, `tools/lint_cursor_safety.py`, `tools/lint_lifecycle_safety.py`, `tools/lint_safe_enum.py`, `tools/check_static_analysis_baselines.py`, `tools/sprint_metrics.py`, `tools/hoechstmass/tools/sprint_metrics.py`, `docs/management/qa_plan.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ReleaseCiAndLintConfigContractTest.kt`
+- **Rationale**: ASPICE 4.0 Audit Finding `Minor (SWE.4)` (`SWE.4 BP1/BP3`) identified orphaned custom Python safety linters in `tools/`, static baseline ceilings (`<= 9550` Detekt vs 9,516 actual; `<= 239` Lint vs 238 actual) without base-ref ratcheting or sprint metrics reporting, and missing static-analysis tooling evaluation for the 120 retained Java files referenced in `ADR-001`.
+- **Description**:
+  1. *CI Custom Safety Guard Gating (`REQ-PRO-123.1`)*: `.github/workflows/android-branch-build.yml` (with `.github/workflows/android-release.yml` parity) SHALL invoke `tools/lint_cursor_safety.py`, `tools/lint_lifecycle_safety.py`, and `tools/lint_safe_enum.py` prior to `:app:assembleDebug` / `:app:assembleRelease` and MUST fail the build on any non-zero exit code (any new violation).
+  2. *Base-Ref Baseline Ratcheting & Sprint Metrics Reporting (`REQ-PRO-123.2`)*: A deterministic baseline ratchet helper in `tools/` invoked in CI SHALL parse `<ID>` entries in `app/detekt-baseline.xml` (`9,516`) and `<issue>` entries in `app/lint-baseline.xml` (`238`), MUST fail the build if either count increases above its base-ref count or ratcheted ceiling (`9516` / `238`), and `tools/sprint_metrics.py` + `tools/hoechstmass/tools/sprint_metrics.py` SHALL report current Detekt/Lint baseline counts and base-ref/sprint deltas.
+  3. *CI & Lint Contract Preservation (`REQ-PRO-123.3`)*: Existing assertions in `ReleaseCiAndLintConfigContractTest.kt` (`./gradlew :app:lintDebug`, `./gradlew :app:detekt`, `verify_requirement_governance.py` before `:app:assembleDebug`, baseline bounds) SHALL remain intact alongside new contract assertions for CI safety-guard and ratchet steps plus offline Python unit tests.
+  4. *Java Static Analysis Evaluation & Burn-Down Plan (`REQ-PRO-123.4`)*: Engineering documentation outside architecture lock (referencing `ADR-001` / `REQ-ARC-005`) SHALL evaluate **PMD vs. SpotBugs vs. Error Prone** for the remaining `120` `.java` files on Gradle `9.6.0` / AGP `9.4.0` / JDK `21` (Java `17` target) and define an incremental Detekt/Lint baseline burn-down schedule.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `.github/workflows/android-branch-build.yml` and `android-release.yml`, *When* `tools/lint_cursor_safety.py`, `tools/lint_lifecycle_safety.py`, and `tools/lint_safe_enum.py` execute, *Then* clean `HEAD` exits `0` and any violation fails CI prior to assembly.
+  • *Given* `app/detekt-baseline.xml` (`9,516`) and `app/lint-baseline.xml` (`238`), *When* a change increases baseline entry counts vs base ref or ceiling, *Then* the ratchet fails CI while equal or reduced counts pass and `sprint_metrics.py` + mirror report exact counts and deltas.
+  • *Given* `ReleaseCiAndLintConfigContractTest.kt` and `verify_requirement_governance.py`, *When* executed, *Then* preserved pins plus new CI safety-linter/ratchet assertions pass and governance exits `0`.
+  • *Given* the Java tooling evaluation referencing `ADR-001`, *When* reviewed, *Then* PMD, SpotBugs, and Error Prone trade-offs on AGP 9.4 / JDK 21 and the Detekt/Lint burn-down schedule are documented.
+- **Invariants**: Zero `app/src/main/` edits; `ANT-Android-SDKs` untouched; `Localization Parity: N/A - no UI strings`; existing `ReleaseCiAndLintConfigContractTest` pins preserved.
+
+---
+
+### REQ-PRO-124: Secret Hygiene, Local Credential File Permissions & CI Secret-Pattern Scanning (ATT-8170) [Verified]
+- **Tests**: `TST-PRO-124`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `tools/check_secrets_hygiene.py`, `.gitignore`, `docs/ci-secrets.md`, `docs/engineering/walkthroughs/ATT-4004_walkthrough.md`, `.github/workflows/android-branch-build.yml`, `.github/workflows/android-release.yml`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ReleaseCiAndLintConfigContractTest.kt`
+- **Rationale**: ASPICE 4.0 Audit Finding `Minor (SUP.8)` (`SUP.8 BP2/BP3`, `ATT-8170`) identified overly permissive local Unix file modes (`0644`/`0664` instead of `0600`) on credential/signing files, missing `.jira_audit.log` entry in `.gitignore`, absence of an automated CI secret-pattern scan on tracked files, and concrete `BuildConfig.java` credentials leaked in `docs/engineering/walkthroughs/ATT-4004_walkthrough.md:L78-L81`.
+- **Description**:
+  1. *Local Credential File Permission Hygiene (`REQ-PRO-124.1`)*: Local untracked credential and signing files (`.env.claude`, `.env.gemini`, `secrets.properties`, `release.properties`, `.env.jira*`) MUST be restricted to owner-only `0600` mode on developer workstations, verified deterministically via `tools/check_secrets_hygiene.py --check-local-perms` (with `--fix-local-perms` remediation helper) and documented in `docs/ci-secrets.md` (preserving `REQ-PRO-120` header governance where applicable).
+  2. *Git Ignore & Tracked Leak Redaction (`REQ-PRO-124.2`)*: `.gitignore` SHALL exclude `.jira_audit.log`. Exposed `BuildConfig.java` credentials in `docs/engineering/walkthroughs/ATT-4004_walkthrough.md` (`L78-L81`) SHALL be redacted to non-sensitive placeholders with an explicit PO key-rotation notice for the exposed Google Maps, Strava, and Dropbox keys.
+  3. *Deterministic Offline CI Secret-Pattern Scanning (`REQ-PRO-124.3`)*: `tools/check_secrets_hygiene.py` SHALL execute an offline stdlib Python secret-pattern scan across tracked files (`git ls-files`), wired into `.github/workflows/android-branch-build.yml` and `.github/workflows/android-release.yml` prior to assembly, failing non-zero on real API keys/tokens/private keys while explicitly allowlisting documented build placeholders (`secrets.defaults.properties`, `app/build.gradle`, `docs/engineering/plans/ATT-4004_plan.md`) and explicit unit test fixtures (`StravaHelperTest.kt`, `tools/test_jira_accounts.py`).
+  4. *Offline Unit & CI Contract Verification (`REQ-PRO-124.4`)*: Offline Python unit tests (`tools/test_check_secrets_hygiene.py`, `Rule 5`) and `ReleaseCiAndLintConfigContractTest` (`REQ-PRO-049.1`: zero `app/src/main/` reads) SHALL verify secret-pattern detection, allowlist precision, `0600` permission checking/remediation, and CI workflow wiring alongside preserved `REQ-SEC-042`, `REQ-STP-008`, and `REQ-PRO-123` assertions.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new `REQ-PRO-124` (`REQ-PRO-124.1`–`REQ-PRO-124.4`), extending `REQ-SEC-042` (`secrets.defaults.properties` placeholders), `REQ-STP-008` (`release.properties` signing hygiene), and `REQ-PRO-123` (CI Python safety guards).
+  2. *Historical Origin & Commit Trace*: `REQ-SEC-042` (`ATT-4004`), `REQ-STP-008` (`ATT-6148`), and `REQ-PRO-123` (`ATT-8169`).
+  3. *Root Reason for Existing Formulation*: Existing controls secured `BuildConfig` defaults and signing password resolution, but did not enforce `0600` local file permissions, ignore `.jira_audit.log`, or scan tracked repo files in CI (allowing `ATT-4004_walkthrough.md:L78-L81` to persist unnoticed).
+  4. *Preservation of Core Invariants*: Preserves `secrets.defaults.properties` (`REQ-SEC-042`), `BuildConfigSecretsContractTest`, `ReleaseCiAndLintConfigContractTest` pins, and `REQ-PRO-049.1`.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* local credential files (`.env.claude`, `.env.gemini`, `secrets.properties`, `release.properties`, `.env.jira*`) with group/world permissions (`0644`/`0664`), *When* `tools/check_secrets_hygiene.py --check-local-perms` runs, *Then* it exits non-zero reporting each file, and after `--fix-local-perms` all files have `0600` and `--check-local-perms` exits `0`.
+  • *Given* tracked files including `secrets.defaults.properties`, `app/build.gradle`, `StravaHelperTest.kt`, `tools/test_jira_accounts.py`, and redacted `ATT-4004_walkthrough.md`, *When* `tools/check_secrets_hygiene.py` executes in CI, *Then* clean tracked files exit `0` while any unallowlisted API key/token/private key fails CI with exit code `1`.
+  • *Given* `.gitignore`, `docs/ci-secrets.md`, CI workflows, and `ReleaseCiAndLintConfigContractTest`, *When* `ReleaseCiAndLintConfigContractTest` and `verify_requirement_governance.py` execute, *Then* `.jira_audit.log` is ignored, CI invokes `check_secrets_hygiene.py` before assembly, and all contract/governance checks exit `0`.
+- **Invariants**: Zero `app/src/main/` edits; `ANT-Android-SDKs` untouched; `secrets.defaults.properties` untouched (`REQ-SEC-042`); `Localization Parity: N/A - no UI strings`; `Rule 5` zero live API calls in tests; `REQ-PRO-049.1` zero `app/src/main/` reads in tests.
+
+---
+
+### REQ-PRO-125: Single-Atomic-Commit Sprint Integration Post-Stage-6 & Subtask Reuse on Bounce (ATT-8207) [Verified]
+- **Tests**: `TST-PRO-125`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `.agents/rules/aspice_governance.md`, `.agents/skills/stage5-verification/SKILL.md`, `.agents/skills/stage6-final-review/SKILL.md`, `.agents/skills/sprint-planner/SKILL.md`, `docs/management/cm_plan.md`, `tools/jira_util.py`, `tools/parallel_sprint_lock.py`, `tools/locked_build_merge.py`, `tools/sprint_metrics.py`, `tools/hoechstmass/tools/jira_util.py`, `tools/hoechstmass/tools/parallel_sprint_lock.py`, `tools/hoechstmass/tools/sprint_metrics.py`, `tools/hoechstmass/.agents/`
+- **Rationale**: Squashing `feature/<KEY>` onto `sprint/<SPRINT_NAME>` and deleting `feature/<KEY>` at Gate 5 `PASS` *before* Stage 6 Cold Review (`Rule 3.3`) pollutes `sprint/<SPRINT_NAME>` with multiple unverified commits whenever Stage 6 bounces (`ATT-7991`, `ATT-7902`), interleaves behind sibling lane commits, breaks `tools/sprint_bisect.py`, and leaves `[Implementation]`/`[Test]` subtasks `Erledigt` so healing creates duplicate subtask pairs (`ATT-8207`, ASPICE `SUP.8 BP4/BP5`, `SUP.1 BP3`).
+- **Description**:
+  1. *Deferred Post-Stage-6 Atomic Sprint Integration (`REQ-PRO-125.1`)*: Gate 5 `PASS` SHALL keep `feature/<KEY>` intact without executing `--merge-ticket` or `git merge --squash` onto `sprint/<SPRINT_NAME>`, and SHALL transition the parent ticket to `Final Review (Agent)`. `tools/parallel_sprint_lock.py --merge-ticket` (and `tools/locked_build_merge.py`) SHALL squash-merge `feature/<KEY>` onto `sprint/<SPRINT_NAME>` as strictly one atomic commit (preserving `REQ-PRO-108.3` trailers and `--sync-indexes` recalculation) and delete `feature/<KEY>` ONLY after Stage 6 `final-review-verdict PASS`, guaranteeing zero unapproved intermediate commits on `sprint/<SPRINT_NAME>` across `BOUNCE` loops and `Schicht` rollovers (`Rule 2.2`, `Rule 8.2`).
+  2. *Zero-Build / Zero-Lock Stage 6 Branch-Diff Audit (`REQ-PRO-125.2`, Rule 3.3)*: During Stage 6 (`Final Review (Agent)`), the Cold Reviewer (`stage6-final-review/SKILL.md`) SHALL audit the candidate ticket strictly read-only via `git diff sprint/<SPRINT_NAME>...feature/<KEY>` (and full surrounding source files in the ticket worktree) with **zero `./gradlew` invocations and zero `/tmp/att_build_merge.lock` acquisitions** during the review itself. Post-`PASS` `--merge-ticket` under POSIX `flock` SHALL cleanly rebase `feature/<KEY>` onto current `sprint/<SPRINT_NAME>` (auto-recovering conflicts strictly on `docs/requirements.md` / `docs/tests.md`, failing fast on dirty unrelated worktrees) and recalculate shared master indexes via `--sync-indexes` if `sprint/<SPRINT_NAME>` advanced while waiting in Stage 6.
+  3. *Subtask Reuse & Locked-`Erledigt` Bounce Fallback (`REQ-PRO-125.3`)*: When `tools/jira_util.py final-review-verdict <PARENT_KEY> BOUNCE ...` returns a parent ticket to `Implementation` (or `Analysis` / `Zu erledigen` with `bounce_count <= 3`), it SHALL reopen existing `Erledigt`/`Done` stage subtasks matching the target and downstream stages (e.g. `[Implementation]` and `[Test]` for `implementation`) when Jira exposes outgoing reopen transitions, and skip gracefully when `Erledigt` has `transitions: []`. `submit-stage` SHALL reuse active or reopenable subtasks without duplication, or create a clearly labeled `[<Prefix> - Bounce N]` subtask when `Erledigt` exposes `transitions: []` (with `STAGE_SPECS`, `resolve_desired_parent_stage_for_subtask`, `gate_verdict`, `create_subtask`, and `sprint_metrics.identify_gate_number` matching bounce suffixes and `REQ-PRO-107.1` inspecting the active/latest preceding subtask).
+  4. *`tools/hoechstmass/` Mirror Parity & Governance Alignment (`REQ-PRO-125.4`)*: `tools/hoechstmass/tools/{jira_util.py,parallel_sprint_lock.py,sprint_metrics.py}` and `tools/hoechstmass/.agents/{rules,skills}/` SHALL mirror post-Stage-6 atomic integration and `BOUNCE` subtask reuse/fallback without hardcoding `ATT` or proprietary IDs (`HoechstmassToolingContractTest`), and `.agents/rules/aspice_governance.md`, `.agents/skills/{stage5-verification,stage6-final-review,sprint-planner}/SKILL.md`, and `docs/management/cm_plan.md` SHALL reflect the unified workflow.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new `REQ-PRO-125` (`REQ-PRO-125.1`–`REQ-PRO-125.4`), refining integration timing in `REQ-PRO-058` (`REQ-PRO-058.1`–`.3`) and `REQ-PRO-041` (`.2`, `.4`) while preserving `REQ-PRO-109` (`.2`, `.5`).
+  2. *Historical Origin & Commit Trace*: `REQ-PRO-058` (`ATT-7101`), `REQ-PRO-041` (`ATT-7025` `49936dce`), `ATT-8030` (Zero-Build/Zero-Lock Stage 6), `REQ-PRO-109` (`ATT-8154`), and `ATT-8163` (`cm_plan.md`).
+  3. *Root Reason for Existing Formulation*: Stage 6 was appended after an existing Gate 5 squash-merge pipeline, leaving `sprint/<SPRINT_NAME>` exposed to post-merge bounce commits and duplicate subtasks.
+  4. *Preservation of Core Invariants*: Preserves `Rule 3.1` (human-only `Erledigt`), `Rule 3.3` (zero `./gradlew` and zero `flock` during Stage 6 audit), `Rule 8.2` (one atomic squashed commit with `REQ-PRO-108.3` trailers), `Rule 9.1`–`9.5` (disjoint worktrees and `--sync-indexes`), `REQ-PRO-107.1` authorship separation, and `HoechstmassToolingContractTest` / `AspiceSweAuditContractTest` contracts.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* a ticket passing Gate 5 (`gate-verdict <TEST_SUBTASK> PASS`), *When* it enters `Final Review (Agent)`, *Then* `feature/<KEY>` remains intact, `sprint/<SPRINT_NAME>` has zero commits for `<KEY>`, and Stage 6 audits `git diff sprint/<SPRINT_NAME>...feature/<KEY>` strictly read-only without `./gradlew` or `flock`.
+  • *Given* a ticket in `Final Review (Agent)` that triggers `final-review-verdict <KEY> BOUNCE` (1–3 times), *When* healing re-runs Stage 4/5 and Stage 6 subsequently passes (`PASS`) and runs `--merge-ticket`, *Then* existing `[Implementation]`/`[Test]` subtasks were reused without duplication and `git log sprint/<SPRINT_NAME>` contains strictly one squashed atomic commit for `<KEY>`.
+  • *Given* `sprint/<SPRINT_NAME>` advanced with sibling ticket index updates while `feature/<KEY>` waited in Stage 6, *When* post-`PASS` `--merge-ticket` runs under `flock`, *Then* `feature/<KEY>` rebases cleanly, `--sync-indexes` reconciles `docs/requirements.md` and `docs/tests.md`, and `feature/<KEY>` is deleted.
+  • *Given* `tools/hoechstmass/` mirrors and governance docs/skills, *When* offline Python tests and governance/contract checks execute, *Then* mirror parity, project-agnostic decoupling, and governance checks pass `0`.
+- **Invariants**: Zero `app/src/main/` edits; `ANT-Android-SDKs` untouched; `tools/sprint_bisect.py` algorithm unchanged; `Localization Parity: N/A - no UI strings`; `Rule 5` zero live API calls in tests; `REQ-PRO-049.1` zero `app/src/main/` reads in tests.
+
+---
+
+### REQ-PRO-126: Source-Text Reading Elimination in SensorTypeUnitsContractTest & Governance Javadoc Enforcement (ATT-8631) [Verified]
+- **Tests**: `TST-PRO-126`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `app/src/test/java/com/atrainingtracker/banalservice/sensor/SensorTypeUnitsContractTest.kt`, `tools/verify_requirement_governance.py`, `tools/test_verify_requirement_governance.py`
+- **Rationale**: `SourceTextReadingAuditContractTest.testSourceReadingAudit_noUnallowlistedSourceReaders` (`REQ-PRO-049.1`) failed on `SensorTypeUnitsContractTest.kt` (`:50, 138, 140` reading `SensorType.java` for per-constant Javadoc checks per `REQ-TRK-083.2`/`REQ-TRK-083.3`), while `AdvancedTuningZoneDisplayTest.kt` (`:310`) had already been deleted upstream in `ATT-8498` (`d7dec447`). Migrating static `SensorType.java` Javadoc enforcement into `tools/verify_requirement_governance.py` (`verify_sensor_type_javadocs()`) eliminates the sole remaining unallowlisted `app/src/main/` test reader without expanding `LEGITIMATE_GOVERNANCE_GUARDS` (`22`) or `app/source-reading-baseline.txt` (`105`) (`ATT-8631`, Epic `ATT-8138`).
+- **Description**:
+  1. *Zero `app/src/main/` Source Reads in `SensorTypeUnitsContractTest.kt` (`REQ-PRO-126.1`)*: `SensorTypeUnitsContractTest.kt` SHALL NOT reference `app/src/main/` paths or invoke source-reading APIs (`.readText()`, `readLines()`, `readString()`, `useLines()`, `bufferedReader()`), while preserving JVM reflection verification of all `SensorType.values()` (`getInternalUnit()`, `SensorCategory`, `SensorSubCategory`, `SensorValueType`) and bidirectional parity with `docs/architecture/sensor_units.md` and `docs/architecture.md` (`REQ-TRK-083.1`, `REQ-TRK-083.3`).
+  2. *Static `SensorType.java` Javadoc Enforcement in Governance Tooling (`REQ-PRO-126.2`)*: `tools/verify_requirement_governance.py` SHALL implement `verify_sensor_type_javadocs()` (executed by `verify_governance()`) to parse `app/src/main/java/com/atrainingtracker/banalservice/sensor/SensorType.java` and fail non-zero if any enum constant lacks a preceding `/** ... */` Javadoc block documenting `"Internal unit:"` and its declared `internalUnit` literal (cross-checked against `docs/architecture/sensor_units.md`), migrating static source Javadoc verification out of JUnit (`REQ-TRK-083.3`, `TST-TRK-083.1`).
+  3. *Preservation of `REQ-PRO-049` Guard & Baseline Ratchets (`REQ-PRO-126.3`)*: `SourceTextReadingAuditContractTest.LEGITIMATE_GOVERNANCE_GUARDS` MUST remain strictly capped at `22` (`REQ-PRO-049.2`) and `app/source-reading-baseline.txt` at `105` with `0` stale entries (`REQ-PRO-049.3`), passing `4/4` tests in `SourceTextReadingAuditContractTest`.
+  4. *Offline Governance Unit Testing (`REQ-PRO-126.4`)*: `tools/test_verify_requirement_governance.py` SHALL verify `verify_sensor_type_javadocs()` offline using isolated `tempfile` fixtures covering pass cases, missing Javadoc blocks, missing `"Internal unit:"` or mismatched `internalUnit` tokens, and live repository verification (`Rule 5`).
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new `REQ-PRO-126` (`REQ-PRO-126.1`–`REQ-PRO-126.4`), refining `REQ-PRO-049` (`ATT-6186`, `ATT-6731`, `ATT-7525`) and migrating static `SensorType.java` Javadoc verification from `REQ-TRK-083.3` / `TST-TRK-083.1` (`ATT-8579`) across `SensorTypeUnitsContractTest.kt`, `tools/verify_requirement_governance.py`, and `tools/test_verify_requirement_governance.py`.
+  2. *Historical Origin & Commit Trace*: `REQ-PRO-049` (`c91e62b6`, `6ec52d7b`, `97133154`) banned unallowlisted `src/main` test reads; `ATT-8498` (`d7dec447`) deleted `AdvancedTuningZoneDisplayTest.kt`; `ATT-8579` (`367a412f`) added `SensorTypeUnitsContractTest.kt` reading `SensorType.java`.
+  3. *Root Reason for Existing Formulation*: `ATT-8579` co-located static `SensorType.java` Javadoc regex parsing inside the JUnit reflection test `SensorTypeUnitsContractTest.kt` without registering it in `LEGITIMATE_GOVERNANCE_GUARDS` (`22`).
+  4. *Preservation of Core Invariants*: Preserves `REQ-PRO-049.2` (`22` guards), `REQ-PRO-049.3` (`105` baseline, `0` stale), `SensorType.java` `ordinal()`/`name()`/`getInternalUnit()` runtime behavior, `docs/architecture/sensor_units.md` bidirectional parity, and continuous per-constant Javadoc verification inside `verify_requirement_governance.py`.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `SensorTypeUnitsContractTest.kt` and `app/src/test/java/`, *When* `./gradlew :app:testDebugUnitTest --tests com.atrainingtracker.trainingtracker.build.SourceTextReadingAuditContractTest --tests com.atrainingtracker.banalservice.sensor.SensorTypeUnitsContractTest` runs, *Then* `SourceTextReadingAuditContractTest` passes `4/4` (`22` guards, `105` baseline, `0` unallowlisted) and `SensorTypeUnitsContractTest` passes `2/2` via JVM reflection and `docs/architecture/`.
+  • *Given* synthetic `SensorType.java` `tempfile` fixtures (valid, missing Javadoc, or missing/mismatched `"Internal unit:"`) and the live repository, *When* `verify_sensor_type_javadocs()` and `python3 tools/verify_requirement_governance.py` execute, *Then* invalid fixtures fail deterministically and live repository checks exit `0`.
+- **Invariants**: Zero `app/src/main/` production edits; `SensorType.java` `ordinal()`/`name()`/`getInternalUnit()` unchanged; `LEGITIMATE_GOVERNANCE_GUARDS` == `22`; `app/source-reading-baseline.txt` == `105`; `Localization Parity: N/A - no UI strings`; zero live network/Jira calls in unit tests (`Rule 5`).
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -6120,3 +6244,22 @@ The workflow SHALL mandate that:
 | `1.0.1` | 2026-11-17 | AI Agent (`ATT-8165`) | `ATT-8165` | Added `[Planned]` `REQ-PRO-121` (`SUP.9` bug trend/age, resolution states, fix verification, commit/conflict guards, `process-escape` bugs). |
 | `1.0.2` | 2026-11-17 | AI Agent (`ATT-8165`) | `ATT-8165` | Promoted `REQ-PRO-121` to `[Implemented]` in Stage 4. |
 | `1.0.3` | 2026-11-17 | AI Agent (`ATT-8165`) | `ATT-8165` | Promoted `REQ-PRO-121` to `[Verified]` after Stage 5 verification. |
+| `1.0.4` | 2026-11-17 | AI Agent (`ATT-8168`) | `ATT-8168` | Added `[Planned]` `REQ-PRO-122` (bounded SPC/p-chart, `process_version` reset, truthful human acceptance, empirical escape rates, unmasked plausibility warning, CL3–CL5 suspension). |
+| `1.0.5` | 2026-11-17 | AI Agent (`ATT-8168`) | `ATT-8168` | Promoted `REQ-PRO-122` to `[Implemented]` in Stage 4. |
+| `1.0.6` | 2026-11-17 | AI Agent (`ATT-8168`) | `ATT-8168` | Promoted `REQ-PRO-122` to `[Verified]` after Stage 5 verification. |
+| `1.0.7` | 2026-11-17 | AI Agent (`ATT-8169`) | `ATT-8169` | Added `[Planned]` `REQ-PRO-123` (CI custom safety guards, Detekt/Lint base-ref ratcheting + sprint metrics tracking, contract preservation, Java static-analysis evaluation referencing `ADR-001`). |
+| `1.0.8` | 2026-11-17 | AI Agent (`ATT-8169`) | `ATT-8169` | Promoted `REQ-PRO-123` to `[Implemented]` in Stage 4 (`tools/check_static_analysis_baselines.py`, CI wiring, `qa_plan.md` Section 8). |
+| `1.0.9` | 2026-11-18 | AI Agent (`ATT-8169`) | `ATT-8169` | Promoted `REQ-PRO-123` to `[Verified]` after Stage 5 verification. |
+| `1.0.10` | 2026-11-18 | AI Agent (`ATT-8170`) | `ATT-8170` | Added `[Planned]` `REQ-PRO-124` (local `0600` credential permissions, `.jira_audit.log` gitignore, `ATT-4004_walkthrough.md` leak redaction + PO rotation notice, offline CI secret-pattern scan). |
+| `1.0.11` | 2026-11-18 | AI Agent (`ATT-8170`) | `ATT-8170` | Promoted `REQ-PRO-124` to `[Implemented]` in Stage 4 (`tools/check_secrets_hygiene.py`, `.gitignore`, `docs/ci-secrets.md`, `ATT-4004_walkthrough.md` redaction, CI workflows, `0600` permissions). |
+| `1.0.12` | 2026-11-18 | AI Agent (`ATT-8170`) | `ATT-8170` | Promoted `REQ-PRO-124` to `[Verified]` after Stage 5 verification (`8,479` tracked files scan, `9/9` local `0600`, `476/476` Python tests, `46/46` Gradle contract tests). |
+| `1.0.13` | 2026-11-18 | AI Agent (`ATT-8207`) | `ATT-8207` | Added `[Planned]` `REQ-PRO-125` (deferred post-Stage-6 atomic `--merge-ticket`, zero-build/zero-lock Stage 6 branch-diff audit, `BOUNCE` subtask reuse, `tools/hoechstmass/` mirror & doc parity). |
+| `1.0.14` | 2026-11-18 | AI Agent (`ATT-8207`) | `ATT-8207` | Promoted `REQ-PRO-125` to `[Implemented]` in Stage 4 (`parallel_sprint_lock.py`, `jira_util.py`, `sprint_metrics.py`, `tools/hoechstmass/` mirrors, skills/rules/`cm_plan.md`). |
+| `1.0.15` | 2026-11-18 | AI Agent (`ATT-8207`) | `ATT-8207` | Promoted `REQ-PRO-125` to `[Verified]` after Stage 5 verification (`37/37` targeted Python tests, `4/4` Hoechstmass parity tests, `29/30` Gradle contract tests with 1 pre-existing `.env.jira` worktree failure, governance `exit 0`). |
+| `1.0.16` | 2026-11-18 | AI Agent (`ATT-8207`) | `ATT-8207` | Stage 6 Bounce 1/3 remediation (`[Implemented]`): fixed `tools/hoechstmass/tools/jira_util.py` `[Analysis - Bounce N]` Gate 1 regex and expanded `_resolve_bounce_stage_ids` / `_resolve_bounce_stage_names` / `transition_issue` aliases (`impl-plan`, `test-spec`, `req-test-spec`, `spec`, `revision`, `rework`, `verification`). |
+| `1.0.17` | 2026-11-18 | AI Agent (`ATT-8207`) | `ATT-8207` | Promoted `REQ-PRO-125` to `[Verified]` after Stage 6 Bounce 1/3 remediation (`37/37` + `4/4` Python, `23/24` Gradle contracts with 1 pre-existing `.env.jira` worktree failure, governance `exit 0`). |
+| `1.0.18` | 2026-11-18 | AI Agent (`ATT-8207`) | `ATT-8207` | Stage 6 Pro Bounce 2/3 remediation (`[Implemented]`): updated `check_gate` to accept `[Impl-Plan - Bounce N]` via `STAGE_SPECS["3"]["pattern"]`, added `'1'..'5'`/`'stage1'..'stage5'` parent `aliases` in `transition_issue`, and handled `('1', 'stage1', 'analysis')` two-step bounce path in `final_review_verdict`. |
+| `1.0.19` | 2026-11-18 | AI Agent (`ATT-8207`) | `ATT-8207` | Promoted `REQ-PRO-125` to `[Verified]` after Stage 6 Pro Bounce 2/3 remediation (`44/44` + `4/4` Python, `23/24` Gradle contracts with 1 pre-existing `.env.jira` worktree failure, governance `exit 0`). |
+| `1.0.20` | 2026-11-18 | AI Agent (`ATT-8207`) | `ATT-8207` | Stage 6 Pro Bounce 3/3 remediation (`[Implemented]`): added space-separated `'stage 1'..'stage 5'` aliases to `STAGE_ALIASES`, `_resolve_bounce_stage_ids`, and `tools/hoechstmass/tools/jira_util.py` `_resolve_bounce_stage_names`. |
+| `1.0.21` | 2026-11-18 | AI Agent (`ATT-8207`) | `ATT-8207` | Promoted `REQ-PRO-125` to `[Verified]` after Stage 5 Bounce 3/3 verification (`48/48` targeted Python tests, `23/24` Gradle contracts with 1 pre-existing `.env.jira` worktree failure, governance `exit 0`). |
+| `1.0.22` | 2026-11-18 | AI Agent (`ATT-8631`) | `ATT-8631` | Added and verified `REQ-PRO-126` [Verified] (`SensorTypeUnitsContractTest.kt` zero `src/main` reads, `verify_sensor_type_javadocs()` in `tools/verify_requirement_governance.py`, `TestSensorTypeJavadocVerification`, preserving `22` guards & `105` baseline; `97/97` Python suite, `21/21` Tier-1 Gradle tests incl. `SourceTextReadingAuditContractTest` `4/4` & `SensorTypeUnitsContractTest` `2/2`, governance `exit 0`). |

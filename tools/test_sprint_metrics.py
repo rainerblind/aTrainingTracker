@@ -626,6 +626,121 @@ class TestSprintMetrics(unittest.TestCase):
         self.assertIn("2026-46.6", md)
         self.assertIn("2026-11-17_02_Spät", md)
 
+    def test_spc_percentage_bounds_and_process_version_reset(self):
+        """TST-PRO-122.1: Percentage SPC limits stay in [0, 100] and reset on process_version change."""
+        # High variance history that previously yielded UCL > 100% (e.g. 116.58%)
+        legacy_history = [
+            {
+                "process_version": "1.0",
+                "quality_gates": {"overall_ftpr_percent": 68.0, "human_acceptance_rate_percent": 40.0, "total_subtasks_evaluated": 50},
+                "throughput": {"total_tickets": 20, "completed_tickets": 8, "completed_story_points": 16.0},
+            },
+            {
+                "process_version": "1.0",
+                "quality_gates": {"overall_ftpr_percent": 100.0, "human_acceptance_rate_percent": 100.0, "total_subtasks_evaluated": 50},
+                "throughput": {"total_tickets": 20, "completed_tickets": 20, "completed_story_points": 40.0},
+            },
+            {
+                "process_version": "1.0",
+                "quality_gates": {"overall_ftpr_percent": 100.0, "human_acceptance_rate_percent": 95.0, "total_subtasks_evaluated": 50},
+                "throughput": {"total_tickets": 20, "completed_tickets": 19, "completed_story_points": 38.0},
+            },
+        ]
+        spc_v1 = calculate_spc_limits(legacy_history)
+        self.assertTrue(spc_v1["has_history"])
+        for metric_key in ("overall_ftpr", "human_acceptance"):
+            lim = spc_v1["limits"][metric_key]
+            self.assertGreaterEqual(lim["lcl"], 0.0)
+            self.assertLessEqual(lim["ucl"], 100.0)
+            self.assertEqual(lim["method"], "p_chart")
+
+        # Also test clamped_normal fallback when denominators are missing
+        no_denom_hist = [
+            {"quality_gates": {"overall_ftpr_percent": 60.0, "human_acceptance_rate_percent": 40.0}, "throughput": {"completed_tickets": 5, "completed_story_points": 10.0}},
+            {"quality_gates": {"overall_ftpr_percent": 100.0, "human_acceptance_rate_percent": 100.0}, "throughput": {"completed_tickets": 15, "completed_story_points": 30.0}},
+        ]
+        spc_nod = calculate_spc_limits(no_denom_hist)
+        self.assertLessEqual(spc_nod["limits"]["overall_ftpr"]["ucl"], 100.0)
+        self.assertLessEqual(spc_nod["limits"]["human_acceptance"]["ucl"], 100.0)
+        self.assertEqual(spc_nod["limits"]["overall_ftpr"]["method"], "clamped_normal")
+
+        # Baseline reset when current_metrics introduces a new process_version
+        curr_v2 = {
+            "process_version": "2.0",
+            "quality_gates": {"overall_ftpr_percent": 80.0, "human_acceptance_rate_percent": 50.0, "total_subtasks_evaluated": 25},
+            "throughput": {"total_tickets": 10, "completed_tickets": 5, "completed_story_points": 10.0},
+        }
+        spc_reset = calculate_spc_limits(legacy_history, current_metrics=curr_v2)
+        self.assertFalse(spc_reset["has_history"])
+        self.assertTrue(spc_reset.get("baseline_reset"))
+        self.assertEqual(spc_reset["sample_size"], 0)
+        self.assertEqual(spc_reset["limits"], {})
+
+    def test_human_acceptance_rate_separated_from_completion_rate(self):
+        """TST-PRO-122.2: human_acceptance_rate_percent counts terminal Erledigt/Done/Closed only."""
+        parent_issues = [
+            {"key": "ATT-1", "fields": {"summary": "Accepted", "status": {"name": "Erledigt"}, "priority": {"name": "Medium"}, "customfield_10016": 2.0, "subtasks": []}},
+            {"key": "ATT-2", "fields": {"summary": "Awaiting Human", "status": {"name": "Final Review (Human)"}, "priority": {"name": "Medium"}, "customfield_10016": 2.0, "subtasks": []}},
+            {"key": "ATT-3", "fields": {"summary": "Awaiting Agent", "status": {"name": "Final Review (Agent)"}, "priority": {"name": "Medium"}, "customfield_10016": 2.0, "subtasks": []}},
+            {"key": "ATT-4", "fields": {"summary": "In Work", "status": {"name": "In Bearbeitung"}, "priority": {"name": "Medium"}, "customfield_10016": 2.0, "subtasks": []}},
+        ]
+        metrics = parse_sprint_gate_metrics(parent_issues, {"id": 458, "name": "Sprint 2026-11-17_03_Nacht"})
+        self.assertEqual(metrics["throughput"]["completed_tickets"], 3)
+        self.assertEqual(metrics["throughput"]["completion_rate_percent"], 75.0)
+        self.assertEqual(metrics["quality_gates"]["human_accepted_tickets"], 1)
+        self.assertEqual(metrics["quality_gates"]["human_acceptance_rate_percent"], 25.0)
+        self.assertEqual(metrics["process_version"], "2.0")
+
+    def test_zero_revision_gates_no_synthetic_002_floor_and_unmasked_plausibility(self):
+        """TST-PRO-122.3 & TST-PRO-122.4: No p=0.02 floor and Gate 6 bounces never mask Gate 1-5 plausibility."""
+        subtasks = []
+        for i in range(20):
+            g = (i % 5) + 1
+            stage_name = ["Analysis", "Req & Test Spec", "Impl-Plan", "Implementation", "Test"][g - 1]
+            subtasks.append({
+                "fields": {"summary": f"[{stage_name}] S{i}", "status": {"name": "Erledigt"}},
+                "comments": [{"author": {"displayName": "Agent 2"}, "body": f"[ROLE: agent2] Gate {g} PASS"}],
+            })
+        parent_issues = [
+            {
+                "key": "ATT-801",
+                "fields": {
+                    "summary": "Ticket with 100% Gate 1-5 FTPR but Gate 6 bounce",
+                    "status": {"name": "Final Review (Human)"},
+                    "priority": {"name": "Medium"},
+                    "customfield_10016": 3.0,
+                    "comment": {"comments": [{"author": {"displayName": "Agent 2"}, "body": "[ROLE: agent2] Stage 6 Final Review (Agent) BOUNCE (1/3): Missed bug."}]},
+                    "subtasks": subtasks,
+                },
+            }
+        ]
+        metrics = parse_sprint_gate_metrics(parent_issues, {"id": 459, "name": "Sprint 2026-Test-Blindspot"})
+        sc = metrics["quality_gates"]["swiss_cheese"]
+        self.assertEqual(sc["p1_analysis_escape"], 0.0)
+        self.assertEqual(sc["p2_req_test_spec_escape"], 0.0)
+        self.assertEqual(sc["theoretical_cumulative_escape_prob"], 0.0)
+        warnings = metrics.get("plausibility_warnings", [])
+        self.assertTrue(any("PA 4.1 Plausibility Warning" in w for w in warnings), f"Expected unmasked warning, got {warnings}")
+
+    def test_static_analysis_baseline_metrics_and_markdown(self):
+        """TST-PRO-123.2: Verify sprint_metrics captures Detekt/Lint baseline counts, deltas, and markdown."""
+        repo_root = Path(self.test_dir) / "repo"
+        (repo_root / "app").mkdir(parents=True)
+        (repo_root / "app" / "detekt-baseline.xml").write_text("<ID>a</ID>\n<ID>b</ID>\n", encoding="utf-8")
+        (repo_root / "app" / "lint-baseline.xml").write_text('<issue id="x"/>\n', encoding="utf-8")
+        history = [{"static_analysis": {"detekt_baseline_count": 5, "lint_baseline_count": 3}}]
+        metrics = parse_sprint_gate_metrics([], {"id": 460, "name": "Sprint 2026-SA"}, history=history, repo_root=repo_root)
+        sa = metrics.get("static_analysis")
+        self.assertIsNotNone(sa)
+        self.assertEqual(sa["detekt_baseline_count"], 2)
+        self.assertEqual(sa["lint_baseline_count"], 1)
+        self.assertEqual(sa["detekt_delta"], -3)
+        self.assertEqual(sa["lint_delta"], -2)
+        md = format_metrics_markdown(metrics, history=history)
+        self.assertIn("Static Analysis Baseline Ratchet", md)
+        self.assertIn("-3", md)
+        self.assertIn("-2", md)
+
 
 if __name__ == "__main__":
     unittest.main()

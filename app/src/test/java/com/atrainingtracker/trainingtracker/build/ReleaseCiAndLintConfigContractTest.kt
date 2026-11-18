@@ -1138,4 +1138,78 @@ class ReleaseCiAndLintConfigContractTest {
         assertTrue("release-manager/SKILL.md must invoke baseline_manager.py tag (REQ-PRO-119.1)", releaseSkill.contains("baseline_manager.py tag"))
         assertTrue("release-manager/SKILL.md must invoke baseline_manager.py manifest (REQ-PRO-119.2)", releaseSkill.contains("baseline_manager.py manifest"))
     }
+
+    /**
+     * Asserts that CI branch and release workflows execute custom Python safety linters and
+     * the Detekt/Lint baseline ratchet before assembly, and that docs/management/qa_plan.md
+     * documents the Java static analysis evaluation referencing ADR-001 (REQ-PRO-123, TST-PRO-123, ATT-8169).
+     */
+    // Traces to: REQ-PRO-123, TST-PRO-123
+    @Test
+    fun testCiSafetyLintersBaselineRatchetAndJavaEvaluation_contract() {
+        val requiredSteps = listOf(
+            "python3 tools/lint_cursor_safety.py",
+            "python3 tools/lint_lifecycle_safety.py",
+            "python3 tools/lint_safe_enum.py",
+            "python3 tools/check_static_analysis_baselines.py"
+        )
+
+        val branchContent = findCiWorkflowFile().readText()
+        val branchAssembleIdx = branchContent.indexOf("./gradlew :app:assembleDebug")
+        assertTrue("Branch workflow must contain assembleDebug", branchAssembleIdx != -1)
+        for (step in requiredSteps) {
+            val idx = branchContent.indexOf(step)
+            assertTrue("Branch workflow must run '$step' (REQ-PRO-123.1, REQ-PRO-123.2)", idx != -1)
+            assertTrue("'$step' must precede assembleDebug in branch workflow", idx < branchAssembleIdx)
+        }
+
+        val releaseContent = findReleaseWorkflowFile().readText()
+        val releaseAssembleIdx = releaseContent.indexOf("./gradlew :app:assembleRelease :app:bundleRelease")
+        assertTrue("Release workflow must contain assembleRelease", releaseAssembleIdx != -1)
+        for (step in requiredSteps) {
+            val idx = releaseContent.indexOf(step)
+            assertTrue("Release workflow must run '$step' (REQ-PRO-123.1, REQ-PRO-123.2)", idx != -1)
+            assertTrue("'$step' must precede assembleRelease in release workflow", idx < releaseAssembleIdx)
+        }
+
+        val qaPlanContent = findRepoRootFile("docs/management/qa_plan.md", "../docs/management/qa_plan.md").readText()
+        for (token in listOf("PMD", "SpotBugs", "Error Prone", "ADR-001", "9,516", "238")) {
+            assertTrue("QA plan must document '$token' (REQ-PRO-123.4)", qaPlanContent.contains(token))
+        }
+    }
+
+    /**
+     * Asserts that CI branch and release workflows execute tools/check_secrets_hygiene.py
+     * prior to assembly, .gitignore ignores .jira_audit.log, and docs/ci-secrets.md documents
+     * 0600 credential file hygiene (REQ-PRO-124, TST-PRO-124, ATT-8170).
+     */
+    // Traces to: REQ-PRO-124, TST-PRO-124
+    @Test
+    fun testSecretsHygieneCiGateGitignoreAndDocs_contract() {
+        val secretStep = "python3 tools/check_secrets_hygiene.py"
+
+        val branchContent = findCiWorkflowFile().readText()
+        val branchAssembleIdx = branchContent.indexOf("./gradlew :app:assembleDebug")
+        val branchSecretIdx = branchContent.indexOf(secretStep)
+        assertTrue("Branch workflow must contain assembleDebug", branchAssembleIdx != -1)
+        assertTrue("Branch workflow must run '$secretStep' (REQ-PRO-124.3)", branchSecretIdx != -1)
+        assertTrue("'$secretStep' must precede assembleDebug in branch workflow", branchSecretIdx < branchAssembleIdx)
+
+        val releaseContent = findReleaseWorkflowFile().readText()
+        val releaseAssembleIdx = releaseContent.indexOf("./gradlew :app:assembleRelease :app:bundleRelease")
+        val releaseSecretIdx = releaseContent.indexOf(secretStep)
+        assertTrue("Release workflow must contain assembleRelease", releaseAssembleIdx != -1)
+        assertTrue("Release workflow must run '$secretStep' (REQ-PRO-124.3)", releaseSecretIdx != -1)
+        assertTrue("'$secretStep' must precede assembleRelease in release workflow", releaseSecretIdx < releaseAssembleIdx)
+
+        val gitignoreContent = findRepoRootFile(".gitignore", "../.gitignore").readText()
+        assertTrue(".gitignore must ignore .jira_audit.log (REQ-PRO-124.2)", gitignoreContent.contains(".jira_audit.log"))
+
+        val ciSecretsContent = findRepoRootFile("docs/ci-secrets.md", "../docs/ci-secrets.md").readText()
+        assertTrue("docs/ci-secrets.md must document 0600 permissions (REQ-PRO-124.1)", ciSecretsContent.contains("0600"))
+        assertTrue(
+            "docs/ci-secrets.md must document check_secrets_hygiene.py (REQ-PRO-124.1)",
+            ciSecretsContent.contains("check_secrets_hygiene.py")
+        )
+    }
 }

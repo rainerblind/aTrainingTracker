@@ -111,15 +111,15 @@ VALID_ROLES = ["agent1", "agent2", "coordinator", "qa"]
 
 def resolve_desired_parent_stage_for_subtask(subtask_summary, subtask_done=True):
     s = (subtask_summary or "").strip().lower()
-    if re.match(r'^\[analysis\]', s):
+    if re.match(r'^\[analysis(?:\s*-\s*bounce\s*\d+)?\]', s):
         return "test spec" if subtask_done else "analysis"
-    if re.match(r'^\[(req\s*&\s*test\s*spec|req/test\s*spec|test-spec|test\s*spec|specification|spec)\]', s):
+    if re.match(r'^\[(req\s*&\s*test\s*spec|req/test\s*spec|test-spec|test\s*spec|specification|spec)(?:\s*-\s*bounce\s*\d+)?\]', s):
         return "implementation plan" if subtask_done else "test spec"
-    if re.match(r'^\[(impl-plan|impl\s*plan|implementation\s*plan|design|plan)\]', s):
+    if re.match(r'^\[(impl-plan|impl\s*plan|implementation\s*plan|design|plan)(?:\s*-\s*bounce\s*\d+)?\]', s):
         return "implementation" if subtask_done else "implementation plan"
-    if re.match(r'^\[(implementation|impl)\]', s):
+    if re.match(r'^\[(implementation|impl)(?:\s*-\s*bounce\s*\d+)?\]', s):
         return "test" if subtask_done else "implementation"
-    if re.match(r'^\[(test|verification)\]', s):
+    if re.match(r'^\[(test|verification)(?:\s*-\s*bounce\s*\d+)?\]', s):
         return "final review (agent)" if subtask_done else "test"
     return None
 
@@ -1003,10 +1003,45 @@ def auto_verify_living_docs_on_stage5(parent_key, repo_root=None):
     return total_updated
 
 
+CLOSED_SUBTASK_STATUSES = ("erledigt", "done", "closed", "resolved")
+REOPEN_TARGET_STATUSES = ("in bearbeitung", "in progress", "zu erledigen", "to do", "open", "reopened")
+
+
+def _find_subtask_transition(subtask_key, target_statuses, config, role="agent1"):
+    """Queries /rest/api/3/issue/{key}/transitions and returns first transition matching target_statuses, or None."""
+    try:
+        t_url = f"{config.get('JIRA_URL', '')}/rest/api/3/issue/{subtask_key}/transitions"
+        data = jira_request(t_url, role=role, config=config)
+        for t in (data or {}).get("transitions", []):
+            to_name = ((t.get("to") or {}).get("name") or "").strip().lower()
+            t_name = (t.get("name") or "").strip().lower()
+            if to_name in target_statuses or t_name in ("reopen", "wiedereröffnen"):
+                return t
+    except Exception:
+        pass
+    return None
+
+
+def _resolve_bounce_stage_names(norm_bounce_target):
+    """Returns ordered stage names that should be reopened when bouncing to norm_bounce_target."""
+    target = (norm_bounce_target or "implementation").strip().lower()
+    if target in ("5", "stage5", "stage 5", "test", "testing", "verification"):
+        return ("Test",)
+    if target in ("4", "stage4", "stage 4", "impl", "implementation", "zurück zur implementierung", "revision", "rework"):
+        return ("Implementation", "Test")
+    if target in ("3", "stage3", "stage 3", "plan", "impl-plan", "impl_plan", "implementation plan", "implementation_plan"):
+        return ("Impl-Plan", "Implementation", "Test")
+    if target in ("2", "stage2", "stage 2", "test spec", "test_spec", "test-spec", "req-test-spec", "spec"):
+        return ("Req & Test Spec", "Impl-Plan", "Implementation", "Test")
+    return ("Analysis", "Req & Test Spec", "Impl-Plan", "Implementation", "Test")
+
+
 def submit_stage(parent_key, stage_int, content_arg, as_role="agent1"):
     """
     Submits a stage deliverable as agent1:
-    Ensures subtask for stage, updates description, moves to in_review, and assigns to agent2.
+    Reuses existing active or reopenable subtask for stage (creating a numbered bounce
+    subtask if closed subtask has transitions:[]), updates description, moves to in_review,
+    and assigns to agent2.
     """
     if stage_int == 5:
         auto_verify_living_docs_on_stage5(parent_key)
@@ -1017,21 +1052,45 @@ def submit_stage(parent_key, stage_int, content_arg, as_role="agent1"):
     content = read_text_or_file(content_arg)
 
     # 1. Find or create subtask for this stage
-    url = f"{config.get('JIRA_URL', '')}/rest/api/2/issue/{parent_key}?fields=subtasks,summary"
+    url = f"{config.get('JIRA_URL', '')}/rest/api/2/issue/{parent_key}?fields=subtasks,summary,comment"
     parent_data = jira_request(url, role=as_role, config=config)
-    subtasks = parent_data.get("fields", {}).get("subtasks", [])
+    parent_fields = parent_data.get("fields", {})
+    subtasks = parent_fields.get("subtasks", [])
+
+    stage_pattern = re.compile(rf"^\[{re.escape(stage_name)}(?:\s*-\s*bounce\s*\d+)?\]", re.IGNORECASE)
+    non_closed_matches = []
+    closed_matches = []
+    for st in subtasks:
+        st_sum = (st.get("fields", {}).get("summary", "") or "").strip()
+        st_stat = ((st.get("fields", {}).get("status") or {}).get("name") or "").strip().lower()
+        if stage_pattern.search(st_sum):
+            if st_stat not in CLOSED_SUBTASK_STATUSES:
+                non_closed_matches.append((st.get("key"), st_stat))
+            else:
+                closed_matches.append((st.get("key"), st_stat))
 
     target_subtask = None
     subtask_prefix = f"[{stage_name}]"
-    for st in subtasks:
-        if st.get("fields", {}).get("summary", "").startswith(subtask_prefix):
-            target_subtask = st.get("key")
-            break
+    if non_closed_matches:
+        target_subtask = non_closed_matches[-1][0]
+    elif closed_matches:
+        cand_key, cand_stat = closed_matches[-1]
+        reopen_t = _find_subtask_transition(
+            cand_key, REOPEN_TARGET_STATUSES + ("in überprüfung", "in review"), config, role=as_role
+        )
+        if reopen_t:
+            t_reopen_url = f"{config.get('JIRA_URL', '')}/rest/api/3/issue/{cand_key}/transitions"
+            jira_request(t_reopen_url, method="POST", payload={"transition": {"id": reopen_t["id"]}}, role=as_role, config=config)
+            target_subtask = cand_key
 
     if not target_subtask:
-        # Create subtask
+        # Create subtask (numbered bounce suffix if closed subtask had transitions:[])
         create_url = f"{config.get('JIRA_URL', '')}/rest/api/2/issue"
-        summary = f"{subtask_prefix} {parent_data.get('fields', {}).get('summary', '')}"
+        if closed_matches:
+            comments = (parent_fields.get("comment") or {}).get("comments", [])
+            bounce_num = max(count_final_review_bounces(comments), len(closed_matches), 1)
+            subtask_prefix = f"[{stage_name} - Bounce {bounce_num}]"
+        summary = f"{subtask_prefix} {parent_fields.get('summary', '')}"
         payload = {
             "fields": {
                 "project": {"key": h_config.get("project_key", "PROJ")},
@@ -1090,7 +1149,7 @@ def gate_verdict(subtask_key, verdict, report_arg, as_role="agent2"):
     if verdict.upper() == "PASS":
         # ATT-6157 / REQ-PRO-064.3: Validate Impact Analysis on [Analysis] subtasks before approval
         summary, desc, parent_key = get_subtask_summary_and_desc(subtask_key, as_role=as_role, config=config)
-        if summary and re.search(r"\[analysis\]", summary, re.IGNORECASE):
+        if summary and re.search(r"\[analysis(?:\s*-\s*bounce\s*\d+)?\]", summary, re.IGNORECASE):
             eval_text = desc or ""
             if parent_key:
                 cand = os.path.join("docs", "engineering", "analysis", f"{parent_key}_analysis.md")
@@ -1184,7 +1243,7 @@ def final_review_verdict(parent_key, verdict_arg, text_or_file, bounce_target="i
     if h_config is None:
         h_config = load_hoechstmass_config()
 
-    issue_url = f"{config.get('JIRA_URL', '')}/rest/api/2/issue/{parent_key}?fields=issuetype,status,summary,comment"
+    issue_url = f"{config.get('JIRA_URL', '')}/rest/api/2/issue/{parent_key}?fields=issuetype,status,summary,comment,subtasks"
     issue_info = jira_request(issue_url, role=auditor_role, config=config, h_config=h_config)
     fields_data = issue_info.get("fields", {})
     if fields_data.get("issuetype", {}).get("subtask", False):
@@ -1211,6 +1270,29 @@ def final_review_verdict(parent_key, verdict_arg, text_or_file, bounce_target="i
         add_comment(parent_key, comment_body, as_role=auditor_role)
         norm_bounce_target = (bounce_target or "implementation").strip().lower()
         transition_issue(parent_key, norm_bounce_target, as_role=auditor_role, config=config, h_config=h_config)
+        # Reopen target + downstream stage subtasks if Jira exposes outgoing reopen transitions (REQ-PRO-125.3)
+        bounce_names = _resolve_bounce_stage_names(norm_bounce_target)
+        for st in (fields_data.get("subtasks") or []):
+            st_key = st.get("key")
+            st_fields = st.get("fields") or {}
+            st_sum = (st_fields.get("summary") or "").strip()
+            st_stat = ((st_fields.get("status") or {}).get("name") or "").strip().lower()
+            if not st_key or st_stat not in CLOSED_SUBTASK_STATUSES:
+                continue
+            matched = any(
+                re.search(rf"^\[{re.escape(sname)}(?:\s*-\s*bounce\s*\d+)?\]", st_sum, re.IGNORECASE)
+                for sname in bounce_names
+            )
+            if not matched:
+                continue
+            reopen_t = _find_subtask_transition(st_key, REOPEN_TARGET_STATUSES, config, role=auditor_role)
+            if reopen_t:
+                try:
+                    t_url = f"{config.get('JIRA_URL', '')}/rest/api/3/issue/{st_key}/transitions"
+                    jira_request(t_url, method="POST", payload={"transition": {"id": reopen_t["id"]}}, role=auditor_role, config=config)
+                    assign_issue(st_key, "agent1", as_role=auditor_role)
+                except Exception as e:
+                    print(f"[BOUNCE] Notice: Could not reopen subtask {st_key}: {e}", file=sys.stderr)
         assign_issue(parent_key, "agent1", as_role=auditor_role)
         print(f"FINAL_REVIEW_VERDICT: BOUNCE {next_bounce}/3 recorded on {parent_key} by {auditor_role} (returned to {bounce_target}, assigned to agent1).")
         return f"BOUNCE_{next_bounce}"

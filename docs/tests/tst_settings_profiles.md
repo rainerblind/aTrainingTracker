@@ -1,14 +1,14 @@
 # Living Test Specification: Settings, Profiles & Localization
 
 **Document ID**: `DOC-TST-SET`  
-**Version**: 1.0.0  
+**Version**: 1.0.3  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `settings_profiles`  
 **Prefixes**: `LOC`, `MON`, `PRI`, `SET`  
 **Scope**: Athlete settings, bike/sensor profiles, privacy zones, data stores, monetization, and 9-locale parity.  
-**Total Tests**: 105
+**Total Tests**: 106
 
 ---
 
@@ -1480,8 +1480,28 @@
 
 ---
 
+### TST-SET-120: **Process-Wide Ref-Counted `PolarBleApi` Singleton, Callback Multiplexing & Unworn-Sensor Gating Suite (`ATT-8690`)** [Verified]
+- **Requirement(s)**: `REQ-SET-118` (`REQ-SET-118.1`..`REQ-SET-118.4`)
+- **Component**: `PolarOfflineGattCoordinator.kt`, `PolarOnlineStreamingBridge.kt`, `PolarH10OfflineController.kt`, `PolarVeritySenseOfflineController.kt`, `PolarOfflineGattCoordinatorCoexistenceTest.kt`, `PolarOnlineStreamingBridgeTest.kt`, `PolarH10OfflineControllerTest.kt`, `PolarVeritySenseOfflineControllerTest.kt`
+- **Jira**: `ATT-8690`
+- **Status**: Verified
+- **Test Description**:
+  1. *8-Feature Superset Singleton Reuse (`TST-SET-120.1`, `PolarOfflineGattCoordinatorCoexistenceTest.kt`, `PolarH10OfflineControllerTest.kt`, `PolarVeritySenseOfflineControllerTest.kt`)*:
+  • Verify with mocked `PolarBleApi` factory (`Rule 5`, offline) that `PolarOfflineGattCoordinator` initializes the shared `PolarBleApi` once with all 8 superset features and that `PolarOnlineStreamingBridge`, `PolarH10OfflineController` (`stopAndBackfillWorkout` & `syncPendingWorkout`), and `PolarVeritySenseOfflineController` reuse it without duplicate/subset `defaultImplementation()` calls.
+  2. *Callback Multiplexing & Bidirectional MAC/8-Hex ID Filtering (`TST-SET-120.2`, `PolarOfflineGattCoordinatorCoexistenceTest.kt`, `PolarOnlineStreamingBridgeTest.kt`)*:
+  • Verify concurrent `awaitFeaturesReady` callers and sibling `PolarOnlineStreamingBridge` callbacks register with the central multiplexer without overwriting `api.setApiCallback`, match `MAC` <-> `8-hex Polar ID` bidirectionally, and filter `deviceConnected`/`deviceDisconnected` events by target device.
+  3. *Ref-Counted Lifecycle & Non-Destructive Release (`TST-SET-120.3`, `PolarOfflineGattCoordinatorCoexistenceTest.kt`, `PolarOnlineStreamingBridgeTest.kt`)*:
+  • Verify `api.cleanup()` and `api.shutDown()` are never invoked while sibling controllers or bridges hold active references (`refCount > 0`), and `getActiveSession(polarId)` returns non-null while connected and `null` post-`shutDown()`.
+  4. *Active-Device / Unworn-Sensor Gating & Relaxed-Mock Compatibility (`TST-SET-120.4`, `PolarOfflineGattCoordinatorCoexistenceTest.kt`, `PolarH10OfflineControllerTest.kt`, `PolarVeritySenseOfflineControllerTest.kt`)*:
+  • Verify `findEnabledPolarDevice()` skips unworn/disconnected Polar devices when another Polar HRM is actively receiving data in `DeviceManager`, while preserving existing test resolution under `null` `DeviceManager` or relaxed DB mocks.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
 | `1.0.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Added standardized `DOC-TST-SET` work-product control header and Change History. |
+| `1.0.1` | 2026-11-17 | AI Agent (`ATT-8690`) | `ATT-8690` | Added `TST-SET-120` (offline mocked verification suite for `REQ-SET-118`). |
+| `1.0.2` | 2026-11-17 | AI Agent (`ATT-8690`) | `ATT-8690` | Promoted `TST-SET-120` to `[Implemented]` following Stage 4 test implementation. |
+| `1.0.3` | 2026-11-17 | AI Agent (`ATT-8690`) | `ATT-8690` | Promoted `TST-SET-120` to `[Verified]` following Stage 5 unit verification. |

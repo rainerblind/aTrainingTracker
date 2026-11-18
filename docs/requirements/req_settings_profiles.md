@@ -1,14 +1,14 @@
 # Living Requirements: Settings, Profiles & Localization
 
 **Document ID**: `DOC-REQ-SET`  
-**Version**: 1.0.0  
+**Version**: 1.0.3  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `settings_profiles`  
 **Prefixes**: `LOC`, `MON`, `PRI`, `SET`  
 **Scope**: Athlete settings, bike/sensor profiles, privacy zones, data stores, monetization, and 9-locale parity.  
-**Total Requirements**: 116
+**Total Requirements**: 117
 
 ---
 
@@ -2755,8 +2755,40 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 
 ---
 
+### REQ-SET-118: Process-Wide Ref-Counted `PolarBleApi` Singleton, Multiplexed Callbacks & Unworn-Sensor Gating (`ATT-8690`) [Verified]
+- **Tests**: `TST-SET-120`
+- **Priority**: Critical
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `PolarOfflineGattCoordinator.kt`, `PolarOnlineStreamingBridge.kt`, `PolarH10OfflineController.kt`, `PolarVeritySenseOfflineController.kt`
+- **Rationale**: `polar-ble-sdk` enforces a strict exact-feature-set process-wide singleton in `BDBleApiImpl$Companion.getInstance()` (`PolarBleSdkInstanceException` on mismatched subsets) and clears all active sessions inside `api.cleanup()`. Centralizing a single 8-feature superset `PolarBleApi` with ref-counted lifecycle, normalized MAC/8-hex callback multiplexing, and active-HRM unworn-sensor gating prevents singleton collisions, callback clobbering, and sibling teardown (`ATT-8690`, refining `REQ-SET-104.4`, `REQ-SET-108.2`, `REQ-SET-109.1`, `REQ-SET-110.1`, `REQ-SET-112.2`/`.3`, `REQ-CON-045.2`/`.4`).
+- **Description**:
+  1. *Process-Wide 8-Feature Superset Singleton (`REQ-SET-118.1`)*:
+     - `PolarOfflineGattCoordinator` SHALL manage one process-wide `PolarBleApi` singleton initialized once with the 8-feature superset (`FEATURE_HR`, `FEATURE_POLAR_ONLINE_STREAMING`, `FEATURE_BATTERY_INFO`, `FEATURE_DEVICE_INFO`, `FEATURE_POLAR_DEVICE_TIME_SETUP`, `FEATURE_POLAR_H10_EXERCISE_RECORDING`, `FEATURE_POLAR_OFFLINE_RECORDING`, `FEATURE_POLAR_TRAINING_DATA`).
+     - `PolarOnlineStreamingBridge`, `PolarH10OfflineController` (including `stopAndBackfillWorkout` and `syncPendingWorkout`), and `PolarVeritySenseOfflineController` MUST acquire the shared `PolarBleApi` via `PolarOfflineGattCoordinator` with zero duplicate or subset `PolarBleApiDefaultImpl.defaultImplementation(...)` calls in production code, while preserving `apiOverride`/`apiFactory` test seams.
+  2. *Multiplexed Callbacks & Bidirectional MAC/8-Hex ID Matching (`REQ-SET-118.2`)*:
+     - `PolarOfflineGattCoordinator` SHALL install a single multiplexed `PolarBleApiCallbackProvider` on the shared `PolarBleApi` and route events (`deviceConnected`, `deviceConnecting`, `deviceDisconnected`, `bleSdkFeatureReady`, `batteryLevelReceived`, `hrNotificationReceived`, `disInformationReceived`, `blePowerStateChanged`) to registered listeners matching either the normalized MAC address or normalized 8-hex Polar ID bidirectionally, eliminating `api.setApiCallback(...)` clobbering across bridges and concurrent `awaitFeaturesReady` callers.
+     - `PolarOnlineStreamingBridge.sdkCallback` MUST filter `deviceConnected` and `deviceDisconnected` callbacks by its target device (`MAC` / `8-hex Polar ID`) so sibling Polar device events do not mutate unrelated bridge state.
+  3. *Ref-Counted Lifecycle & Non-Destructive Release (`REQ-SET-118.3`)*:
+     - `PolarOfflineGattCoordinator` SHALL reference-count active holders (live bridges and offline operations) and MUST NOT invoke `api.cleanup()` or `api.shutDown()` while sibling controllers or bridges hold active references (`refCount > 0`), preserving `getActiveSession(polarId)` non-null while connected and `null` post-`shutDown()`.
+  4. *Active-Device / Unworn-Sensor Gating (`REQ-SET-118.4`)*:
+     - `findEnabledPolarDevice()` SHALL skip unworn/disconnected Polar offline arming when another Polar HRM is actively receiving data (`DeviceManager`), while preserving compatibility with unit tests using relaxed `DevicesDatabaseManager` / `DeviceManager` mocks (including `null` `DeviceManager`).
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* both a paired Polar H10 and Polar Verity Sense, *When* live streaming and offline arming/backfill/sync execute concurrently or sequentially across `PolarOnlineStreamingBridge`, `PolarH10OfflineController`, and `PolarVeritySenseOfflineController`, *Then* only one 8-feature superset `PolarBleApi` is created with zero `PolarBleSdkInstanceException` and zero subset `defaultImplementation` calls.
+• *Given* two registered listeners (`MAC` vs `8-hex Polar ID`) or concurrent `awaitFeaturesReady` callers on the shared `PolarBleApi`, *When* SDK callbacks fire for one device, *Then* only matching listeners receive `deviceConnected`/`deviceDisconnected`/`bleSdkFeatureReady` without clobbering sibling callbacks.
+• *Given* an active `PolarOnlineStreamingBridge` and an offline controller holding shared references, *When* one holder releases or completes an offline operation, *Then* `api.cleanup()`/`shutDown()` is NOT invoked while `refCount > 0`.
+• *Given* an active receiving Polar HRM in `DeviceManager`, *When* `findEnabledPolarDevice()` evaluates an unworn secondary Polar sensor, *Then* offline arming skips the unworn sensor; *Given* `DeviceManager == null` or relaxed DB mocks in unit tests, *Then* `findEnabledPolarDevice()` preserves existing test resolution.
+
+**Invariants**: `getActiveSession(polarId)` non-null while bridge connected and `null` post-`shutDown()`; `withGattYieldAndPolarApi` never tears down active bridge sessions; Verity Sense `ACC` mutual exclusion (`REQ-SET-112.3`) and `BTLEHeartRateDevice` `< API 33` fallback preserved; `apiOverride`/`apiFactory` seams preserved; zero UI strings or DB schema bumps.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
 | `1.0.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Added standardized `DOC-REQ-SET` work-product control header and Change History. |
+| `1.0.1` | 2026-11-17 | AI Agent (`ATT-8690`) | `ATT-8690` | Added `REQ-SET-118` (process-wide ref-counted `PolarBleApi` singleton, multiplexed callbacks, MAC/8-hex matching, unworn-sensor gating). |
+| `1.0.2` | 2026-11-17 | AI Agent (`ATT-8690`) | `ATT-8690` | Promoted `REQ-SET-118` to `[Implemented]` following Stage 4 construction. |
+| `1.0.3` | 2026-11-17 | AI Agent (`ATT-8690`) | `ATT-8690` | Promoted `REQ-SET-118` to `[Verified]` following Stage 5 unit verification. |

@@ -1,14 +1,14 @@
 # Living Test Specification: Engineering Process, Stability & Architecture
 
 **Document ID**: `DOC-TST-PRO`  
-**Version**: 1.0.3  
+**Version**: 1.0.22  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Tests**: 225
+**Total Tests**: 230
 
 ---
 
@@ -3807,6 +3807,105 @@
 
 ---
 
+### TST-PRO-122: **Sprint Metrics Statistical Correctness, Mirror Parity & CL3–CL5 Claim Suspension Suite (ATT-8168)** [Verified]
+- **Requirement(s)**: `REQ-PRO-122`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Component**: `tools/sprint_metrics.py`, `tools/test_sprint_metrics.py`, `tools/hoechstmass/tools/sprint_metrics.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`, `docs/project_protocol.md`, `tools/hoechstmass/docs/project_protocol.md`, `tools/hoechstmass/README.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/HoechstmassCoreFrameworkContractTest.kt`
+- **Jira**: `ATT-8168`
+- **Test Description**:
+  1. *SPC Percentage Bounds & `process_version` Reset (`TST-PRO-122.1`, tools/test_sprint_metrics.py)*:
+     • *Given* `process_metrics.jsonl`-shaped histories with high percentage variance and mixed `process_version` eras, *When* `calculate_spc_limits()` runs, *Then* percentage `lcl`/`ucl` satisfy `0.0 <= lcl <= ucl <= 100.0` (binomial p-chart / clamped bounds) and limits reflect only records matching the active `process_version`.
+  2. *Truthful Human Acceptance vs. Completion (`TST-PRO-122.2`, tools/test_sprint_metrics.py)*:
+     • *Given* mocked sprint issues in `Erledigt`, `Final Review (Human)`, `Final Review (Agent)`, and `In Progress`, *When* `parse_sprint_gate_metrics()` executes, *Then* `human_acceptance_rate_percent` counts only terminal human-accepted tickets (`Erledigt`/`Done`/`Closed`) and differs from `completion_rate_percent` when tickets await final review.
+  3. *No Fabricated `p = 0.02` Escape Floor (`TST-PRO-122.3`, tools/test_sprint_metrics.py)*:
+     • *Given* sprint gates with `0` upstream revisions, *When* `parse_sprint_gate_metrics()` computes Swiss Cheese escape fields, *Then* no `0.02` synthetic floor is substituted and `theoretical_cumulative_escape_prob` does not report fabricated `10^-8`–`10^-11` probabilities.
+  4. *Unmasked Gate 1–5 Plausibility Warning (`TST-PRO-122.4`, tools/test_sprint_metrics.py)*:
+     • *Given* $\ge 20$ Gate 1–5 subtasks with `100.0%` Gate 1–5 FTPR (`0` Gate 1–5 revisions) alongside non-zero Gate 6 `revisions` and `bounces`, *When* `parse_sprint_gate_metrics()` runs, *Then* `plausibility_warnings` contains the `PA 4.1 Plausibility Warning`.
+  5. *Höchstmaß Mirror Parity (`TST-PRO-122.5`, tools/hoechstmass/tools/test_hoechstmass_tools.py)*:
+     • *Given* equivalent test fixtures run against `tools/hoechstmass/tools/sprint_metrics.py`, *When* `calculate_spc_limits()` and `parse_sprint_gate_metrics()` execute, *Then* all `[0, 100]` SPC bounds, `process_version` resets, acceptance separation, zero-floor removal, and Gate 1–5 plausibility warnings match `tools/sprint_metrics.py`.
+  6. *CL3–CL5 Suspension & Matrix Contract Regression (`TST-PRO-122.6`, HoechstmassCoreFrameworkContractTest.kt & verify_requirement_governance.py)*:
+     • *Given* updated `docs/project_protocol.md`, `tools/hoechstmass/docs/project_protocol.md`, `tools/hoechstmass/README.md`, and `sprint_metrics.py` docstrings, *When* `HoechstmassCoreFrameworkContractTest` and `python3 tools/verify_requirement_governance.py` execute, *Then* CL3–CL5 claims are explicitly `[Target / Not Yet Claimed]`, all `"Level 1..5"` / `"PA 1.1..5.2"` contract assertions pass, and governance exits `0`. (`Localization Parity: N/A - no UI strings`).
+
+---
+
+### TST-PRO-123: **CI Custom Safety Guards, Baseline Ratcheting & Java Analysis Evaluation Suite (ATT-8169)** [Verified]
+- **Requirement(s)**: `REQ-PRO-123`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Component**: `.github/workflows/android-branch-build.yml`, `.github/workflows/android-release.yml`, `tools/lint_cursor_safety.py`, `tools/lint_lifecycle_safety.py`, `tools/lint_safe_enum.py`, `tools/check_static_analysis_baselines.py`, `tools/test_check_static_analysis_baselines.py`, `tools/sprint_metrics.py`, `tools/hoechstmass/tools/sprint_metrics.py`, `docs/management/qa_plan.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ReleaseCiAndLintConfigContractTest.kt`
+- **Jira**: `ATT-8169`
+- **Test Description**:
+  1. *Custom Python Safety Guards Execution & CI Wiring (`TST-PRO-123.1`, tools/lint_*.py & workflows)*:
+     • *Given* `tools/lint_cursor_safety.py`, `tools/lint_lifecycle_safety.py`, and `tools/lint_safe_enum.py`, *When* executed on `HEAD` and inspected in `.github/workflows/android-branch-build.yml` + `android-release.yml`, *Then* all three exit `0` on `HEAD`, run prior to `:app:assembleDebug` / `:app:assembleRelease`, and fail CI on any non-zero violation exit.
+  2. *Base-Ref Baseline Ratcheting & Sprint Metrics Parity (`TST-PRO-123.2`, tools/test_*.py, tools/test_sprint_metrics.py & test_hoechstmass_tools.py)*:
+     • *Given* Detekt (`9,516` `<ID>`) and Lint (`238` `<issue>`) baseline XML fixtures compared against base ref / ceilings, *When* the ratchet helper and `sprint_metrics.py` (+ mirror) execute, *Then* equal or reduced baselines pass, any increase fails non-zero, and `sprint_metrics.py` + `tools/hoechstmass/tools/sprint_metrics.py` report current baseline counts and deltas.
+  3. *CI & Lint Contract Test Regression (`TST-PRO-123.3`, ReleaseCiAndLintConfigContractTest.kt)*:
+     • *Given* `.github/workflows/android-branch-build.yml`, `.github/workflows/android-release.yml`, `app/detekt-baseline.xml`, and `app/lint-baseline.xml`, *When* `./gradlew testDebugUnitTest --tests "*ReleaseCiAndLintConfigContractTest*"` executes, *Then* all existing pinned assertions plus new CI safety-linter and ratchet step assertions pass.
+  4. *Java Static Analysis Evaluation & Governance Parity (`TST-PRO-123.4`, verify_requirement_governance.py)*:
+     • *Given* the documented PMD vs. SpotBugs vs. Error Prone evaluation (referencing `ADR-001` for `120` `.java` files on Gradle `9.6.0` / AGP `9.4.0` / JDK `21`) and Detekt/Lint burn-down schedule, *When* `python3 tools/verify_requirement_governance.py` runs, *Then* all governance checks (headers, attributes, traceability, architecture lock) exit `0`. (`Localization Parity: N/A - no UI strings`).
+
+---
+
+### TST-PRO-124: **Secret Hygiene, Local Credential Permissions & CI Secret-Pattern Scan Suite (ATT-8170)** [Verified]
+- **Requirement(s)**: `REQ-PRO-124`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Component**: `tools/check_secrets_hygiene.py`, `tools/test_check_secrets_hygiene.py`, `.gitignore`, `docs/ci-secrets.md`, `docs/engineering/walkthroughs/ATT-4004_walkthrough.md`, `.github/workflows/android-branch-build.yml`, `.github/workflows/android-release.yml`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ReleaseCiAndLintConfigContractTest.kt`
+- **Jira**: `ATT-8170`
+- **Test Description**:
+  1. *Local Credential File `0600` Permission Enforcement (`TST-PRO-124.1`, tools/test_check_secrets_hygiene.py & local workspace)*:
+     • *Given* isolated temporary credential fixtures (`.env.claude`, `.env.gemini`, `secrets.properties`, `release.properties`, `.env.jira*`) with `0644`/`0664` modes and live workstation credential files, *When* `tools/check_secrets_hygiene.py --check-local-perms` and `--fix-local-perms` execute, *Then* permissive files fail with non-zero exit code prior to remediation and exit `0` once tightened to `0600`, matching `docs/ci-secrets.md`.
+  2. *Git Ignore & Tracked Leak Redaction (`TST-PRO-124.2`, .gitignore & ATT-4004_walkthrough.md)*:
+     • *Given* updated `.gitignore` and `docs/engineering/walkthroughs/ATT-4004_walkthrough.md`, *When* inspected via `git check-ignore .jira_audit.log` and `tools/check_secrets_hygiene.py`, *Then* `.jira_audit.log` is ignored, `ATT-4004_walkthrough.md:L78-L81` contains redacted placeholders instead of real `BuildConfig.java` credentials, and an explicit PO key-rotation notice is logged.
+  3. *Deterministic Offline Secret-Pattern CI Scan & Allowlist (`TST-PRO-124.3`, tools/test_check_secrets_hygiene.py)*:
+     • *Given* offline `tempfile` fixtures containing synthetic real-looking credentials (`AIza...`, `AKIA...`, `ghp_...`, `ATATT3x...`, PEM private keys, non-placeholder `STRAVA_CLIENT_SECRET`) vs. allowlisted fixtures (`secrets.defaults.properties`, `app/build.gradle`, `ATT-4004_plan.md`, `StravaHelperTest.kt`, `tools/test_jira_accounts.py`), *When* `tools/check_secrets_hygiene.py` runs across both fixtures and live `git ls-files`, *Then* synthetic real secrets fail with exit code `1` while allowlisted placeholders/test fixtures and clean tracked files exit `0` (`Rule 5`: zero live API calls).
+  4. *CI Workflow Contract & Governance Regression (`TST-PRO-124.4`, ReleaseCiAndLintConfigContractTest.kt & verify_requirement_governance.py)*:
+     • *Given* `.github/workflows/android-branch-build.yml` and `.github/workflows/android-release.yml`, *When* `./gradlew testDebugUnitTest --tests "*ReleaseCiAndLintConfigContractTest*"` (`REQ-PRO-049.1`: zero `app/src/main/` reads) and `python3 tools/verify_requirement_governance.py` execute, *Then* `check_secrets_hygiene.py` precedes assembly in both workflows, preserved pins (`REQ-SEC-042`, `REQ-STP-008`, `REQ-PRO-123`) pass, and governance exits `0`. (`Localization Parity: N/A - no UI strings`).
+
+---
+
+### TST-PRO-125: **Post-Stage-6 Atomic Sprint Integration, Branch-Diff Audit & BOUNCE Subtask Reuse Suite (ATT-8207)** [Verified]
+- **Requirement(s)**: `REQ-PRO-125`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Component**: `tools/jira_util.py`, `tools/parallel_sprint_lock.py`, `tools/locked_build_merge.py`, `tools/test_jira_accounts.py`, `tools/test_flock_serialization.py`, `tools/hoechstmass/tools/jira_util.py`, `tools/hoechstmass/tools/parallel_sprint_lock.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`, `.agents/rules/aspice_governance.md`, `.agents/skills/{stage5-verification,stage6-final-review,sprint-planner}/SKILL.md`, `docs/management/cm_plan.md`
+- **Jira**: `ATT-8207`
+- **Test Description**:
+  1. *Post-Stage-6 Atomic Squash-Merge & Rebase Under `flock` (`TST-PRO-125.1`, tools/test_flock_serialization.py)*:
+     • *Given* an isolated temporary multi-worktree Git repository with `sprint/<SPRINT>` and `feature/<KEY>` (including concurrent sibling commits + `docs/requirements.md` / `docs/tests.md` index updates landed on `sprint/<SPRINT>` while `<KEY>` waited in Stage 6), *When* `parallel_sprint_lock.py --merge-ticket <KEY>` executes post-`PASS`, *Then* `feature/<KEY>` rebases cleanly without conflict, `--sync-indexes` reconciles counters, `sprint/<SPRINT>` receives strictly one squashed atomic commit with `REQ-PRO-108.3` trailers, and `feature/<KEY>` is deleted.
+  2. *Zero-Build / Zero-Lock Stage 6 Branch-Diff Audit (`TST-PRO-125.2`, skills/rules/cm_plan review & grep)*:
+     • *Given* updated `.agents/rules/aspice_governance.md` (`Rule 3.3`, `Rule 8.2`), `.agents/skills/{stage5-verification,stage6-final-review,sprint-planner}/SKILL.md`, and `docs/management/cm_plan.md`, *When* reviewed, *Then* Gate 5 `PASS` keeps `feature/<KEY>` intact, Stage 6 audits `git diff sprint/<SPRINT_NAME>...feature/<KEY>` strictly read-only (zero `./gradlew` and zero `/tmp/att_build_merge.lock` calls during review), and `--merge-ticket` triggers strictly post-`PASS`.
+  3. *Subtask Reuse & Reopening on `final-review-verdict BOUNCE` (`TST-PRO-125.3`, tools/test_jira_accounts.py)*:
+     • *Given* mocked Jira REST state (`Rule 5`: zero live API calls) for a parent ticket in `Final Review (Agent)` with `Erledigt` `[Implementation]` and `[Test]` subtasks, *When* `final_review_verdict(..., "BOUNCE", ...)` executes across 1–2 bounces followed by `submit_stage(..., 4)` and `submit_stage(..., 5)`, *Then* existing `[Implementation]` and `[Test]` subtasks are reopened and reused with zero duplicate subtask creation, and `REQ-PRO-107.1` separated-authorship validation continues to hold across healing cycles.
+  4. *`tools/hoechstmass/` Mirror Parity & Governance Verification (`TST-PRO-125.4`, tools/hoechstmass/tools/test_hoechstmass_tools.py & verify_requirement_governance.py)*:
+     • *Given* updated `tools/hoechstmass/` tooling and skill mirrors, *When* `python3 -m unittest discover -s tools -p "test_*.py"`, `python3 -m unittest discover -s tools/hoechstmass/tools -p "test_*.py"`, and `python3 tools/verify_requirement_governance.py` execute, *Then* all unit tests, `HoechstmassToolingContractTest` decoupling invariants, and governance checks exit `0`. (`Localization Parity: N/A - no UI strings`).
+
+---
+
+### TST-PRO-126: **SensorTypeUnitsContractTest Source-Reading Elimination & Governance Javadoc Verification Suite (ATT-8631)** [Verified]
+- **Requirement(s)**: `REQ-PRO-126`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Component**: `app/src/test/java/com/atrainingtracker/banalservice/sensor/SensorTypeUnitsContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SourceTextReadingAuditContractTest.kt`, `tools/verify_requirement_governance.py`, `tools/test_verify_requirement_governance.py`
+- **Jira**: `ATT-8631`
+- **Test Description**:
+  1. *`SourceTextReadingAuditContractTest` `4/4` & `LEGITIMATE_GOVERNANCE_GUARDS` Integrity (`TST-PRO-126.1`, SourceTextReadingAuditContractTest.kt)*:
+     • *Given* updated `SensorTypeUnitsContractTest.kt` containing zero `app/src/main/` references and zero read invocations (`readText`/`readLines`/`readString`/`useLines`/`bufferedReader`), *When* `./gradlew :app:testDebugUnitTest --tests com.atrainingtracker.trainingtracker.build.SourceTextReadingAuditContractTest` executes, *Then* all `4/4` tests pass (`0` unallowlisted readers, `LEGITIMATE_GOVERNANCE_GUARDS.size == 22`, `baseline.size == 105`, `0` stale entries).
+  2. *`SensorTypeUnitsContractTest` JVM Reflection & Architecture Parity (`TST-PRO-126.2`, SensorTypeUnitsContractTest.kt)*:
+     • *Given* `SensorType.values()` via JVM reflection, `docs/architecture/sensor_units.md`, and `docs/architecture.md`, *When* `./gradlew :app:testDebugUnitTest --tests com.atrainingtracker.banalservice.sensor.SensorTypeUnitsContractTest` executes, *Then* `allSensorTypes_haveValidInternalUnit()` and `sensorUnitsDoc_matchesAllSensorTypesBidirectionally_andArchitectureLinksIt()` pass `2/2` (`0` failures, `0` skipped).
+  3. *Offline `verify_sensor_type_javadocs()` Python Unit Tests (`TST-PRO-126.3`, tools/test_verify_requirement_governance.py)*:
+     • *Given* isolated `tempfile` fixtures containing synthetic `SensorType.java` enums (valid Javadoc + `"Internal unit:"` + matching unit, missing Javadoc block, missing `"Internal unit:"`, and mismatched unit vs constructor literal/`sensor_units.md`), *When* `python3 -m unittest tools/test_verify_requirement_governance.py` runs, *Then* all positive and negative unit tests pass offline (`Rule 5`).
+  4. *Full Governance Gate Verification (`TST-PRO-126.4`, tools/verify_requirement_governance.py)*:
+     • *Given* synchronized living documentation shards, master indexes, and live `SensorType.java`, *When* `python3 tools/verify_requirement_governance.py` and `--check-doc-headers --check-commit-hygiene --check-conflict-markers` execute, *Then* all governance checks including `verify_sensor_type_javadocs()` exit `0`. (`Localization Parity: N/A - no UI strings`).
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -3815,3 +3914,22 @@
 | `1.0.1` | 2026-11-17 | AI Agent (`ATT-8165`) | `ATT-8165` | Added `[Planned]` `TST-PRO-121` test specifications (`SUP.9` bug trends, resolutions, commit/conflict guards, `process-escape`). |
 | `1.0.2` | 2026-11-17 | AI Agent (`ATT-8165`) | `ATT-8165` | Promoted `TST-PRO-121` to `[Implemented]` in Stage 4. |
 | `1.0.3` | 2026-11-17 | AI Agent (`ATT-8165`) | `ATT-8165` | Promoted `TST-PRO-121` to `[Verified]` after Stage 5 verification. |
+| `1.0.4` | 2026-11-17 | AI Agent (`ATT-8168`) | `ATT-8168` | Added `[Planned]` `TST-PRO-122` test specifications (bounded SPC, `process_version` reset, acceptance separation, no `0.02` floor, unmasked plausibility warning, mirror parity, CL3–CL5 suspension). |
+| `1.0.5` | 2026-11-17 | AI Agent (`ATT-8168`) | `ATT-8168` | Promoted `TST-PRO-122` to `[Implemented]` in Stage 4. |
+| `1.0.6` | 2026-11-17 | AI Agent (`ATT-8168`) | `ATT-8168` | Promoted `TST-PRO-122` to `[Verified]` after Stage 5 verification. |
+| `1.0.7` | 2026-11-17 | AI Agent (`ATT-8169`) | `ATT-8169` | Added `[Planned]` `TST-PRO-123` test specifications (CI custom safety guards, Detekt/Lint base-ref ratcheting + sprint metrics parity, `ReleaseCiAndLintConfigContractTest` preservation, Java static-analysis evaluation). |
+| `1.0.8` | 2026-11-17 | AI Agent (`ATT-8169`) | `ATT-8169` | Promoted `TST-PRO-123` to `[Implemented]` in Stage 4 (`test_check_static_analysis_baselines.py`, `sprint_metrics` tests, `ReleaseCiAndLintConfigContractTest`). |
+| `1.0.9` | 2026-11-18 | AI Agent (`ATT-8169`) | `ATT-8169` | Promoted `TST-PRO-123` to `[Verified]` after Stage 5 verification. |
+| `1.0.10` | 2026-11-18 | AI Agent (`ATT-8170`) | `ATT-8170` | Added `[Planned]` `TST-PRO-124` test specifications (`0600` credential permissions, `.jira_audit.log` gitignore, `ATT-4004_walkthrough.md` redaction + PO rotation notice, offline CI secret-pattern scan & contract tests). |
+| `1.0.11` | 2026-11-18 | AI Agent (`ATT-8170`) | `ATT-8170` | Promoted `TST-PRO-124` to `[Implemented]` in Stage 4 (`tools/test_check_secrets_hygiene.py`, `ReleaseCiAndLintConfigContractTest`, `0600` local verification). |
+| `1.0.12` | 2026-11-18 | AI Agent (`ATT-8170`) | `ATT-8170` | Promoted `TST-PRO-124` to `[Verified]` after Stage 5 verification (`6/6` `test_check_secrets_hygiene.py`, `476/476` Python suite, `46/46` Gradle contract tests, governance `exit 0`). |
+| `1.0.13` | 2026-11-18 | AI Agent (`ATT-8207`) | `ATT-8207` | Added `[Planned]` `TST-PRO-125` test specifications (post-Stage-6 atomic `--merge-ticket`, zero-build/zero-lock Stage 6 branch-diff audit, `BOUNCE` subtask reuse, `tools/hoechstmass/` mirror parity & governance). |
+| `1.0.14` | 2026-11-18 | AI Agent (`ATT-8207`) | `ATT-8207` | Promoted `TST-PRO-125` to `[Implemented]` in Stage 4 (`test_flock_serialization.py`, `test_jira_accounts.py`, `test_hoechstmass_tools.py`). |
+| `1.0.15` | 2026-11-18 | AI Agent (`ATT-8207`) | `ATT-8207` | Promoted `TST-PRO-125` to `[Verified]` after Stage 5 verification (`37/37` targeted Python tests, `4/4` Hoechstmass parity tests, `29/30` Gradle contract tests with 1 pre-existing `.env.jira` worktree failure, governance `exit 0`). |
+| `1.0.16` | 2026-11-18 | AI Agent (`ATT-8207`) | `ATT-8207` | Stage 6 Bounce 1/3 remediation (`[Implemented]`): added `[Analysis - Bounce 1]` Gate 1 mirror enforcement and bounce target alias coverage tests (`test_jira_accounts.py`, `test_hoechstmass_tools.py`). |
+| `1.0.17` | 2026-11-18 | AI Agent (`ATT-8207`) | `ATT-8207` | Promoted `TST-PRO-125` to `[Verified]` after Stage 6 Bounce 1/3 remediation (`37/37` + `4/4` Python, `23/24` Gradle contracts with 1 pre-existing `.env.jira` worktree failure, governance `exit 0`). |
+| `1.0.18` | 2026-11-18 | AI Agent (`ATT-8207`) | `ATT-8207` | Stage 6 Pro Bounce 2/3 remediation (`[Implemented]`): added `check_gate` `[Impl-Plan - Bounce 1]` and `'1'..'5'`/`'stage1'..'stage5'` bounce-target coverage in `tools/test_jira_accounts.py`. |
+| `1.0.19` | 2026-11-18 | AI Agent (`ATT-8207`) | `ATT-8207` | Promoted `TST-PRO-125` to `[Verified]` after Stage 6 Pro Bounce 2/3 remediation (`44/44` + `4/4` Python, `23/24` Gradle contracts with 1 pre-existing `.env.jira` worktree failure, governance `exit 0`). |
+| `1.0.20` | 2026-11-18 | AI Agent (`ATT-8207`) | `ATT-8207` | Stage 6 Pro Bounce 3/3 remediation (`[Implemented]`): added `'stage 1'..'stage 5'` and `bounce_target="stage 4"` scope assertions in `tools/test_jira_accounts.py` and `tools/hoechstmass/tools/test_hoechstmass_tools.py`. |
+| `1.0.21` | 2026-11-18 | AI Agent (`ATT-8207`) | `ATT-8207` | Promoted `TST-PRO-125` to `[Verified]` after Stage 5 Bounce 3/3 verification (`48/48` targeted Python tests, `23/24` Gradle contracts with 1 pre-existing `.env.jira` worktree failure, governance `exit 0`). |
+| `1.0.22` | 2026-11-18 | AI Agent (`ATT-8631`) | `ATT-8631` | Added and verified `TST-PRO-126` [Verified] (`SourceTextReadingAuditContractTest` `4/4`, `SensorTypeUnitsContractTest` `2/2`, `TestSensorTypeJavadocVerification` in `tools/test_verify_requirement_governance.py`, `67/67` SensorType Javadocs; `97/97` Python suite, `21/21` Tier-1 Gradle tests, governance `exit 0`). |

@@ -362,4 +362,111 @@ class HRVMetricsDeviceTest {
         deviceA.shutDown()
         deviceB.shutDown()
     }
+
+    @Test
+    fun testCalculateMetrics_rejectsNegativeOrNanDfaAlpha1AsNull() {
+        var currentTime = 200_000L
+        val passThroughFilter = mockk<RrArtifactFilter>()
+        every { passThroughFilter.filterLiveCausal(any()) } answers {
+            val beats = firstArg<List<RrBeatEvent>>()
+            val filtered = beats.map { FilteredRrBeat(it.beatTimestampMs, it.rrMs, it.rrMs, RrBeatEvent.ARTIFACT_NORMAL) }
+            FilterResult(filtered, 0, filtered.size, 0.0)
+        }
+        val device = TestableHRVMetricsDevice(
+            context = context,
+            sensorManager = sensorManager,
+            timeProvider = { currentTime },
+            artifactFilter = passThroughFilter,
+            artifactGateThresholdPercent = 5.0
+        )
+
+        // Feed localized spike pair producing negative OLS slope (~ -0.31) in DfaCalculator
+        for (i in 0 until 128) {
+            currentTime = 100_000L + i * 800L
+            val rr = when (i) {
+                64 -> 1400.0
+                65 -> 200.0
+                else -> 800.0
+            }
+            device.onRrBeat(RrBeatEvent(currentTime, rr, i, ProtocolType.BLE))
+        }
+        device.calculateMetrics()
+
+        assertNull(
+            "Non-physical negative/NaN DFA alpha 1 must be suppressed as null",
+            device.getHrvDfaA1Sensor().sensorData.value
+        )
+        device.shutDown()
+    }
+
+    @Test
+    fun testCalculateMetrics_handlesOutOfOrderBeatsAndEmitsPositiveDfaAlpha1() {
+        var currentTime = 208_000L
+        val device = TestableHRVMetricsDevice(context, sensorManager, { currentTime }, artifactGateThresholdPercent = 5.0)
+
+        // Construct a clean physiological harmonic series whose chronological order yields alpha1 ~ 1.78,
+        // but deliver the second half [68..134] BEFORE the first half [0..67] (non-monotonic boundary: 207_200 -> 100_000).
+        // Without RrBeatNormalization.sortAndNormalizeChronologically, the half-way jump creates a huge
+        // dRR discontinuity and out-of-order window slicing.
+        val count = 135
+        val chronologicalBeats = List(count) { i ->
+            val rr = 800.0 + 40.0 * Math.sin(2.0 * Math.PI * i / 16.0) + 20.0 * Math.sin(2.0 * Math.PI * i / 64.0)
+            RrBeatEvent(100_000L + i * 800L, rr, i, ProtocolType.BLE)
+        }
+        val expectedAlpha1 = DfaCalculator.computeDfaAlpha1(
+            chronologicalBeats.dropLast(RrArtifactFilter.LOOKAHEAD_BEATS).map { it.rrMs }.toDoubleArray()
+        )
+        // Feed second half first, then first half (strictly non-monotonic arrival at boundary)
+        for (i in 68 until count) {
+            device.onRrBeat(chronologicalBeats[i])
+        }
+        for (i in 0 until 68) {
+            device.onRrBeat(chronologicalBeats[i])
+        }
+        device.calculateMetrics()
+
+        val dfa = device.getHrvDfaA1Sensor().sensorData.value
+        assertTrue("Sorted out-of-order series must emit positive finite DFA alpha 1 (was $dfa)", dfa != null && dfa > 0.0 && dfa.isFinite())
+        assertEquals("Sorted DFA alpha 1 must match chronological sequence", expectedAlpha1, dfa!!, 0.02)
+        device.shutDown()
+    }
+
+    @Test
+    fun testPruneOldBeats_evictsOutOfOrderStaleBeatsBehindNewerBeats() {
+        var currentTime = 250_000L
+        val device = TestableHRVMetricsDevice(context, sensorManager, { currentTime }, artifactGateThresholdPercent = 5.0)
+
+        // First push a newer beat inside [130_000L .. 250_000L] so it sits at mBeatQueue.first
+        device.onRrBeat(RrBeatEvent(200_000L, 800.0, 0, ProtocolType.BLE))
+
+        // Then push 15 stale out-of-order ARTIFACT_GAP beats behind it (< cutoff 130_000L)
+        for (k in 0 until 15) {
+            device.onRrBeat(
+                RrBeatEvent(
+                    beatTimestampMs = 50_000L + k * 800L,
+                    rrMs = 5000.0,
+                    rawCounter = k + 1,
+                    protocol = ProtocolType.BLE,
+                    gapBeats = 5,
+                    artifactFlag = RrBeatEvent.ARTIFACT_GAP
+                )
+            )
+        }
+
+        // Fill remaining clean window beats in [130_000L .. 250_000L]
+        for (i in 1 until 100) {
+            val ts = 140_000L + i * 800L
+            val rr = 800.0 + 30.0 * Math.sin(2.0 * Math.PI * i / 16.0)
+            device.onRrBeat(RrBeatEvent(ts, rr, i + 20, ProtocolType.BLE))
+        }
+
+        device.calculateMetrics()
+
+        val artifactRate = device.getHrvArtifactRateSensor().sensorData.value
+        val dfa = device.getHrvDfaA1Sensor().sensorData.value
+        org.junit.Assert.assertNotNull("Artifact rate must be computed", artifactRate)
+        assertEquals("Stale out-of-order ARTIFACT_GAP beats behind head must be pruned", 0.0, artifactRate!!, 0.001)
+        assertTrue("Clean active window must emit valid DFA alpha 1 after pruning stale out-of-order beats (was $dfa)", dfa != null && dfa > 0.0)
+        device.shutDown()
+    }
 }

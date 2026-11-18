@@ -30,6 +30,7 @@ import com.atrainingtracker.banalservice.devices.DeviceType;
 import com.atrainingtracker.banalservice.devices.ProtocolType;
 import com.atrainingtracker.banalservice.devices.RrBeatEvent;
 import com.atrainingtracker.banalservice.devices.RrBeatListener;
+import com.atrainingtracker.banalservice.devices.RrBeatNormalization;
 import com.atrainingtracker.banalservice.devices.RrBeatSource;
 import com.atrainingtracker.banalservice.sensor.MySensor;
 import com.atrainingtracker.banalservice.sensor.MySensorManager;
@@ -46,13 +47,13 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public class BTLEHeartRateDevice extends MyBTLEDevice implements RrBeatSource {
     private static final boolean DEBUG = BANALService.getDebug(false);
     private static final String TAG = "BTLEHeartRateDevice";
-    private static final long DRIFT_THRESHOLD_MS = 2000L;
 
     protected MySensor<Integer> mHeartRateSensor;
     protected MySensor<Integer> mRrIntervalSensor = null;
 
     private final List<RrBeatListener> mRrBeatListeners = new CopyOnWriteArrayList<>();
     private double mLastBeatTimestampMs = 0.0;
+    private double mLastNormalRrMs = RrBeatNormalization.DEFAULT_REFERENCE_RR_MS;
     private int mPacketCounter = 0;
 
     /**
@@ -178,101 +179,24 @@ public class BTLEHeartRateDevice extends MyBTLEDevice implements RrBeatSource {
                     rrList.add(rrMs);
                 }
 
-                int k = rrList.size();
-                if (k > 0) {
-                    if (mLastBeatTimestampMs == 0.0) {
-                        // Initial packet: newest beat (k-1) is anchored to packetArrivalMs,
-                        // and prior beats in the bundle are back-calculated (REQ-TRK-069.3)
-                        double[] timestamps = new double[k];
-                        timestamps[k - 1] = packetArrivalMs;
-                        for (int i = k - 2; i >= 0; i--) {
-                            timestamps[i] = timestamps[i + 1] - rrList.get(i + 1);
+                if (!rrList.isEmpty()) {
+                    RrBeatNormalization.NormalizedBundle bundle = RrBeatNormalization.reconstructBundle(
+                            rrList,
+                            packetArrivalMs,
+                            mLastBeatTimestampMs,
+                            mLastNormalRrMs,
+                            mPacketCounter,
+                            ProtocolType.BLE
+                    );
+                    for (RrBeatEvent event : bundle.getEvents()) {
+                        long roundedRrMs = Math.round(event.getRrMs());
+                        if (mRrIntervalSensor != null) {
+                            mRrIntervalSensor.newValue((int) roundedRrMs);
                         }
-
-                        for (int i = 0; i < k; i++) {
-                            double rrMs = rrList.get(i);
-                            long roundedRrMs = Math.round(rrMs);
-                            if (mRrIntervalSensor != null) {
-                                mRrIntervalSensor.newValue((int) roundedRrMs);
-                            }
-                            long beatTimestampMs = Math.round(timestamps[i]);
-                            dispatchRrBeat(new RrBeatEvent(
-                                    beatTimestampMs,
-                                    rrMs,
-                                    mPacketCounter,
-                                    ProtocolType.BLE,
-                                    0,
-                                    RrBeatEvent.ARTIFACT_NORMAL
-                            ));
-                        }
-                        mLastBeatTimestampMs = timestamps[k - 1];
-                    } else {
-                        double totalBundleDurationMs = 0.0;
-                        for (double rr : rrList) {
-                            totalBundleDurationMs += rr;
-                        }
-
-                        double candidateFinalMs = mLastBeatTimestampMs + totalBundleDurationMs;
-                        double drift = Math.abs(packetArrivalMs - candidateFinalMs);
-
-                        if (drift > DRIFT_THRESHOLD_MS) {
-                            // Wall-clock drift or dropout > 2000 ms: re-anchor newest beat to packetArrivalMs
-                            double elapsedSinceLast = packetArrivalMs - mLastBeatTimestampMs;
-                            int gapBeats = 0;
-                            double avgRrMs = totalBundleDurationMs / k;
-                            if (avgRrMs > 0 && elapsedSinceLast > avgRrMs) {
-                                gapBeats = (int) Math.max(0, Math.round(elapsedSinceLast / avgRrMs) - k);
-                            }
-
-                            double[] timestamps = new double[k];
-                            timestamps[k - 1] = packetArrivalMs;
-                            for (int i = k - 2; i >= 0; i--) {
-                                timestamps[i] = timestamps[i + 1] - rrList.get(i + 1);
-                            }
-
-                            for (int i = 0; i < k; i++) {
-                                double rrMs = rrList.get(i);
-                                long roundedRrMs = Math.round(rrMs);
-                                if (mRrIntervalSensor != null) {
-                                    mRrIntervalSensor.newValue((int) roundedRrMs);
-                                }
-                                long beatTimestampMs = Math.round(timestamps[i]);
-                                int beatGapBeats = (i == 0) ? gapBeats : 0;
-                                int artifactFlag = (beatGapBeats > 0) ? RrBeatEvent.ARTIFACT_GAP : RrBeatEvent.ARTIFACT_NORMAL;
-
-                                dispatchRrBeat(new RrBeatEvent(
-                                        beatTimestampMs,
-                                        rrMs,
-                                        mPacketCounter,
-                                        ProtocolType.BLE,
-                                        beatGapBeats,
-                                        artifactFlag
-                                ));
-                            }
-                            mLastBeatTimestampMs = timestamps[k - 1];
-                        } else {
-                            // Continuous tracking with double precision accumulator
-                            double currentTimestamp = mLastBeatTimestampMs;
-                            for (int i = 0; i < k; i++) {
-                                double rrMs = rrList.get(i);
-                                currentTimestamp += rrMs;
-                                long roundedRrMs = Math.round(rrMs);
-                                if (mRrIntervalSensor != null) {
-                                    mRrIntervalSensor.newValue((int) roundedRrMs);
-                                }
-                                long beatTimestampMs = Math.round(currentTimestamp);
-                                dispatchRrBeat(new RrBeatEvent(
-                                        beatTimestampMs,
-                                        rrMs,
-                                        mPacketCounter,
-                                        ProtocolType.BLE,
-                                        0,
-                                        RrBeatEvent.ARTIFACT_NORMAL
-                                ));
-                            }
-                            mLastBeatTimestampMs = currentTimestamp;
-                        }
+                        dispatchRrBeat(event);
                     }
+                    mLastBeatTimestampMs = bundle.getLastBeatTimestampMs();
+                    mLastNormalRrMs = bundle.getLastNormalRrMs();
                 }
             }
         } catch (Exception e) {
@@ -291,6 +215,7 @@ public class BTLEHeartRateDevice extends MyBTLEDevice implements RrBeatSource {
         }
         super.unregisterSensors();
         mLastBeatTimestampMs = 0.0;
+        mLastNormalRrMs = RrBeatNormalization.DEFAULT_REFERENCE_RR_MS;
         mPacketCounter = 0;
     }
 
@@ -305,6 +230,7 @@ public class BTLEHeartRateDevice extends MyBTLEDevice implements RrBeatSource {
         }
         super.shutDown();
         mLastBeatTimestampMs = 0.0;
+        mLastNormalRrMs = RrBeatNormalization.DEFAULT_REFERENCE_RR_MS;
         mPacketCounter = 0;
         mRrBeatListeners.clear();
     }

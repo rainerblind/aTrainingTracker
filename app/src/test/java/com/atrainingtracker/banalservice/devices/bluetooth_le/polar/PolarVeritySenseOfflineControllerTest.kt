@@ -169,6 +169,7 @@ class PolarVeritySenseOfflineControllerTest {
         every { mockApi.getTrainingSessionReferences(any(), null, null) } returns flowOf()
         coEvery { mockApi.deleteTrainingSession(any(), any()) } just Runs
 
+        PolarOfflineGattCoordinator.resetForTesting()
         PolarOfflineCapabilityStore.resetForTesting()
         PolarVeritySenseOfflineController.resetForTesting()
         PolarVeritySenseOfflineController.dispatcher = Dispatchers.Unconfined
@@ -176,6 +177,7 @@ class PolarVeritySenseOfflineControllerTest {
 
     @After
     fun tearDown() {
+        PolarOfflineGattCoordinator.resetForTesting()
         PolarVeritySenseOfflineController.resetForTesting()
         PolarOfflineCapabilityStore.resetForTesting()
         WorkoutRrRepository.resetForTesting(null)
@@ -1148,5 +1150,75 @@ class PolarVeritySenseOfflineControllerTest {
         verify(exactly = 1) {
             mockWorkoutRepo.addAccumulatedSensorTypes(workoutId, setOf(SensorType.HR))
         }
+    }
+
+    @Test
+    fun testExecuteArming_reusesSharedCoordinatorSingletonAndMultiplexerWithoutClobbering() = runBlocking {
+        // TST-SET-120.1, TST-SET-120.2
+        PolarVeritySenseOfflineController.sdkIntOverride = 33
+        PolarVeritySenseOfflineController.apiOverride = null
+
+        val sharedMockApi = mockk<PolarBleApi>(relaxed = true)
+        var factoryCalls = 0
+        PolarOfflineGattCoordinator.apiFactoryForTesting = { _, features ->
+            factoryCalls++
+            assertEquals(PolarOfflineGattCoordinator.ALL_POLAR_FEATURES, features)
+            sharedMockApi
+        }
+        every { sharedMockApi.isFeatureReady(verityPolarId, any()) } returns true
+        coEvery { sharedMockApi.connectToDevice(verityPolarId) } just Runs
+        coEvery { sharedMockApi.waitForConnection(verityPolarId) } just Runs
+        coEvery { sharedMockApi.setLocalTime(verityPolarId, any()) } just Runs
+        coEvery { sharedMockApi.getOfflineRecordingStatus(verityPolarId) } returns emptyList()
+        coEvery {
+            sharedMockApi.startOfflineRecording(verityPolarId, PolarBleApi.PolarDeviceDataType.HR, null, null)
+        } just Runs
+        coEvery { sharedMockApi.disconnectFromDevice(verityPolarId) } just Runs
+
+        val bridgeCallback = mockk<com.polar.sdk.api.PolarBleApiCallback>(relaxed = true)
+        PolarOfflineGattCoordinator.acquirePersistentSession(
+            context = context,
+            polarId = "1C3B2421",
+            macAddress = "24:AC:AC:25:0F:A6",
+            callback = bridgeCallback
+        )
+
+        val armed = PolarVeritySenseOfflineController.executeArming(context, verityMac, verityPolarId)
+
+        assertTrue(armed)
+        assertEquals(1, factoryCalls)
+        // setApiCallback called strictly once for multiplexer; never clobbered by offline arming
+        verify(exactly = 1) { sharedMockApi.setApiCallback(any()) }
+        verify(exactly = 0) { sharedMockApi.cleanup() }
+        verify(exactly = 0) { sharedMockApi.shutDown() }
+        assertEquals(1, PolarOfflineGattCoordinator.getActiveLeaseCountForTesting())
+    }
+
+    @Test
+    fun testArmForActiveWorkout_skipsUnwornVeritySenseWhenActiveH10Receives() = runBlocking {
+        // TST-SET-120.4
+        PolarVeritySenseOfflineController.sdkIntOverride = 33
+        PolarVeritySenseOfflineController.apiOverride = mockApi
+
+        val verityDev = DevicesDatabaseManager.RemoteDeviceUIDataCacheItem(
+            2L,
+            "Polar Verity Sense $verityPolarId",
+            DeviceType.HRM,
+            com.atrainingtracker.banalservice.Protocol.BLUETOOTH_LE
+        )
+        every { mockDb.allDevicesForCache } returns listOf(verityDev)
+        every { mockDb.getBluetoothMACAddress(2L) } returns verityMac
+        every { mockDb.isPolarH10OfflineRecordingEnabled(2L) } returns true
+
+        val activeH10 = mockk<com.atrainingtracker.banalservice.devices.MyRemoteDevice>(relaxed = true)
+        every { activeH10.deviceType } returns DeviceType.HRM
+        every { activeH10.isReceivingData } returns true
+        every { activeH10.deviceId } returns 1L
+        every { mockDeviceManager.remoteDeviceList } returns java.util.LinkedList(listOf(activeH10))
+
+        val armed = PolarVeritySenseOfflineController.armForActiveWorkout(context)
+
+        assertFalse(armed)
+        coVerify(exactly = 0) { mockApi.connectToDevice(any()) }
     }
 }

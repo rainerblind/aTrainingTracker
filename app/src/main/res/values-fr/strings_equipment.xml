@@ -7,6 +7,7 @@
     <string name="equipment_wheel_position_unlink">Dissocier le capteur</string>
     <string name="equipment_wheel_position_front_badge">Av</string>
     <string name="equipment_wheel_position_rear_badge">Ar</string>
+    <string name="equipment_wheel_position_conflict_swap">Actuellement attribué à %1$s — ce choix échangera les positions.</string>
     <string name="equipment_guidance_title">Pourquoi des capteurs de roue avec le GPS ?</string>
     <string name="equipment_guidance_subtitle">Avantages physiques des capteurs de vitesse de roue par rapport au GPS du smartphone</string>
     <string name="equipment_guidance_1_sensor_title">1 capteur de roue + GPS</string>

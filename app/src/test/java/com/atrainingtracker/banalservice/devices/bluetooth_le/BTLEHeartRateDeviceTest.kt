@@ -392,4 +392,71 @@ class BTLEHeartRateDeviceTest {
         org.junit.Assert.assertNotSame("Reconnected sensor must be a fresh instance", firstSensor, secondSensor)
         assertEquals(1000, secondSensor?.value)
     }
+
+    /**
+     * TST-TRK-085.1: Drift re-anchoring must clamp bundled beat timestamps monotonically (>= lastBeatTimestampMs).
+     */
+    @Test
+    fun testDriftReAnchor_clampsBackwardBundleTimestampsMonotonically() {
+        val device = createDevice()
+        val receivedEvents = mutableListOf<RrBeatEvent>()
+        device.addRrBeatListener { receivedEvents.add(it) }
+
+        // Anchor at 100_000L with 1000 ms beat
+        val p1 = byteArrayOf(0x10.toByte(), 60.toByte(), 0x00.toByte(), 0x04.toByte())
+        device.parseHeartRateMeasurement(p1, 100_000L)
+
+        // Arrival at 101_000L with 4 x 1000 ms bundled beats -> candidate = 104_000L, drift = 3000ms > 2000ms!
+        // Unclamped back-calculation would emit 98_000, 99_000, 100_000, 101_000 (-2000 ms jump).
+        receivedEvents.clear()
+        val p2 = byteArrayOf(
+            0x10.toByte(), 60.toByte(),
+            0x00.toByte(), 0x04.toByte(),
+            0x00.toByte(), 0x04.toByte(),
+            0x00.toByte(), 0x04.toByte(),
+            0x00.toByte(), 0x04.toByte()
+        )
+        device.parseHeartRateMeasurement(p2, 101_000L)
+
+        assertEquals(4, receivedEvents.size)
+        var prevTs = 100_000L
+        for (event in receivedEvents) {
+            assertTrue(
+                "Beat timestamp ${event.beatTimestampMs} must be >= $prevTs",
+                event.beatTimestampMs >= prevTs
+            )
+            prevTs = event.beatTimestampMs
+        }
+    }
+
+    /**
+     * TST-TRK-085.2: Physiological RR bounds (> 2500 ms or < 250 ms) flagged as ARTIFACT_GAP even at 0 drift.
+     */
+    @Test
+    fun testMultiSecondAndSubMinimumRrIntervals_atLowDriftFlaggedAsArtifactGap() {
+        val device = createDevice()
+        val receivedEvents = mutableListOf<RrBeatEvent>()
+        device.addRrBeatListener { receivedEvents.add(it) }
+
+        // Initial normal 800 ms beat (819 / 1024 * 1000 = 799.8 ms) at 100_000L
+        val normalRaw = 819
+        val p1 = byteArrayOf(0x10.toByte(), 75.toByte(), (normalRaw and 0xFF).toByte(), (normalRaw shr 8).toByte())
+        device.parseHeartRateMeasurement(p1, 100_000L)
+
+        // Multi-second 5196.29 ms RR (5321 raw ticks) arriving right on time (drift = 0 ms <= 2000 ms)
+        val gapRaw = 5321
+        val pGap = byteArrayOf(0x10.toByte(), 75.toByte(), (gapRaw and 0xFF).toByte(), (gapRaw shr 8).toByte())
+        device.parseHeartRateMeasurement(pGap, 105_196L)
+
+        // Sub-minimum 195.31 ms RR (200 raw ticks) arriving on time
+        val shortRaw = 200
+        val pShort = byteArrayOf(0x10.toByte(), 75.toByte(), (shortRaw and 0xFF).toByte(), (shortRaw shr 8).toByte())
+        device.parseHeartRateMeasurement(pShort, 105_391L)
+
+        assertEquals(3, receivedEvents.size)
+        assertEquals(RrBeatEvent.ARTIFACT_NORMAL, receivedEvents[0].artifactFlag)
+        assertEquals(RrBeatEvent.ARTIFACT_GAP, receivedEvents[1].artifactFlag)
+        assertTrue("Multi-second gap must estimate gapBeats > 0", receivedEvents[1].gapBeats > 0)
+        assertEquals(RrBeatEvent.ARTIFACT_GAP, receivedEvents[2].artifactFlag)
+    }
 }

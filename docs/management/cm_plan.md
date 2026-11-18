@@ -3,8 +3,8 @@
 **Document ID**: `DOC-MGT-CM`  
 **Document Identifier**: `CM-PLAN-ATT`  
 **Standard**: ASPICE 4.0 `SUP.8` (Configuration Management)  
-**Target Release**: `V5.0.0` | **Version**: 1.2.0  
-**Status**: Reviewed | **Approver**: Pending PO Sign-Off | **Date**: 2026-11-17  
+**Target Release**: `V5.0.0` | **Version**: 1.2.1  
+**Status**: Reviewed | **Approver**: Pending PO Sign-Off | **Date**: 2026-11-18  
 **Governing Ticket**: [ATT-6152](https://rainerblind.atlassian.net/browse/ATT-6152), [ATT-6733](https://rainerblind.atlassian.net/browse/ATT-6733), [ATT-8163](https://rainerblind.atlassian.net/browse/ATT-8163), [ATT-8164](https://rainerblind.atlassian.net/browse/ATT-8164) | **Requirement**: `REQ-STP-009`, `REQ-PRO-057`, `REQ-PRO-119`, `REQ-PRO-120`  
 
 ---
@@ -56,7 +56,7 @@ All work products subject to formal configuration control are classified as Conf
 1. **`master`**: Production release baseline (`origin/master`). Integrated via `--no-ff` merge commits from `git flow release finish` or hotfix branches. Every release commit on `master` is tagged with immutable annotated tags.
 2. **`develop`**: Active development integration baseline. Contains all merged sprint increments integrated via `--no-ff` merge commits from `sprint/<SPRINT_NAME>` at Ceremony 2 close (and `--no-ff` back-merges from `release/<VERSION>`).
 3. **`sprint/<SPRINT_NAME>`** (e.g. `sprint/2026-46.1`): Active sprint baseline branched from `develop` at Sprint-Start (Ceremony 1). All sprint tickets merge into this branch.
-4. **`feature/<KEY>` / `bugfix/<KEY>`**: Isolated ticket branches. Merged into `sprint/<SPRINT_NAME>` as **strictly one squashed atomic commit** (`git merge --squash feature/<KEY>`) upon Stage 5 Gate approval.
+4. **`feature/<KEY>` / `bugfix/<KEY>`**: Isolated ticket branches. Retained intact through Stage 5 verification and Stage 6 Cold Review (`git diff sprint/<SPRINT_NAME>...feature/<KEY>`), then merged into `sprint/<SPRINT_NAME>` as **strictly one squashed atomic commit** (`--merge-ticket` / `git merge --squash feature/<KEY>`) ONLY upon Stage 6 `PASS` approval (`REQ-PRO-125`).
 5. **`release/<VERSION>`**: Release stabilization branch for version bumping, signed APK generation, and Store deployment.
 
 ### Parallel Worktree Isolation & POSIX Concurrency (`REQ-PRO-041`)
@@ -86,12 +86,13 @@ Every formal production release baseline on `master` comprises the following aud
 ## 4. Baseline Management & Audit Integrity (SUP.8.BP4, BP5 - Baselines & Integrity)
 
 ### Agile ASPICE Lifecycle Gates (AAA)
-Changes must traverse 5 sequential verification gates before baseline integration:
+Changes must traverse 5 sequential verification gates plus independent Stage 6 Cold Review before sprint-branch baseline integration:
 1. **Gate 1 (Analysis)**: Forensic investigation, scope grounding (`ATT-1250`), invariant definition.
 2. **Gate 2 (Test Spec)**: Formal `REQ-XXX` and `TST-XXX` specification, 9-locale localization parity.
 3. **Gate 3 (Plan)**: Architecture decomposition, atomic sequence, rollback plan. Code Lock enforced (`check-gate`).
 4. **Gate 4 (Implementation)**: Verification of git diff against plan, KDoc compliance, zero `app/src/main/` test-grep violations.
-5. **Gate 5 (Verification)**: Clean test execution, walkthrough documentation, living docs update to `[Verified]`.
+5. **Gate 5 (Verification)**: Clean test execution, walkthrough documentation, living docs update to `[Verified]` while retaining `feature/<KEY>` intact for Stage 6.
+6. **Stage 6 (Cold Final Review)**: Read-only audit of `git diff sprint/<SPRINT_NAME>...feature/<KEY>`; single atomic `--merge-ticket` squash onto `sprint/<SPRINT_NAME>` strictly post-`PASS` (`REQ-PRO-125`).
 
 ### Mathematical Parity & Verification Tooling
 * `tools/verify_requirement_governance.py` enforces 100% mathematical parity between master index tables and individual domain shards in `docs/requirements/` and `docs/tests/`.
@@ -136,3 +137,4 @@ Changes must traverse 5 sequential verification gates before baseline integratio
 | `1.0.0` | 2026-11-11 | AI Agent / PO | `ATT-6152`, `ATT-6733` | Initial ASPICE `SUP.8` CM Plan, CI inventory, `master` grounding, and submodule pinning. |
 | `1.1.0` | 2026-11-17 | AI Agent (`ATT-8163`) | `ATT-8163` | Aligned `--no-ff` sprint/release merge policy, added `gates/`/`qa_audits/`/`reviews/`/`docs/releases/` CIs, enforced immutable annotated tags (`baseline_manager.py`, zero `git tag -f`), added `SUP.8.BP7` Configuration Status Accounting (`manifest.md`), and defined dry-run/PO-gated branch & tag hygiene policy. |
 | `1.2.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Standardized `DOC-MGT-CM` work-product header, reset self-declared `Approved` to `Reviewed` (`Pending PO Sign-Off`), and codified human-only approval governance (`REQ-PRO-120`). |
+| `1.2.1` | 2026-11-18 | AI Agent (`ATT-8207`) | `ATT-8207` | Deferred atomic `--merge-ticket` squash onto `sprint/<SPRINT_NAME>` until post-Stage-6 `PASS` (`REQ-PRO-125`), keeping `feature/<KEY>` intact across Stage 6 bounces. |

@@ -27,8 +27,12 @@ import java.io.File
 
 /**
  * Automated contract test enforcing 100% coverage and bidirectional parity between
- * [SensorType], its Javadoc & `internalUnit` metadata, `docs/architecture/sensor_units.md`,
- * and `docs/architecture.md` ({@code REQ-TRK-083}, {@code TST-TRK-083}).
+ * [SensorType] `internalUnit` metadata (via JVM reflection), `docs/architecture/sensor_units.md`,
+ * and `docs/architecture.md` ({@code REQ-TRK-083}, {@code TST-TRK-083}, {@code REQ-PRO-126}).
+ *
+ * <p>Static per-constant Javadoc checks on {@code SensorType.java} are enforced offline by
+ * {@code tools/verify_requirement_governance.py} ({@code verify_sensor_type_javadocs()})
+ * so this test performs zero production source-text reads ({@code REQ-PRO-049.1}).
  */
 class SensorTypeUnitsContractTest {
 
@@ -47,7 +51,7 @@ class SensorTypeUnitsContractTest {
         var dir: File? = File(".").canonicalFile
         while (dir != null) {
             if (File(dir, "docs/architecture/sensor_units.md").isFile &&
-                File(dir, "app/src/main/java/com/atrainingtracker/banalservice/sensor/SensorType.java").isFile
+                File(dir, "docs/architecture.md").isFile
             ) {
                 return dir
             }
@@ -84,60 +88,8 @@ class SensorTypeUnitsContractTest {
         return rows
     }
 
-    private fun parsePrecedingJavadocs(sensorTypeSource: String): Map<String, String> {
-        val lines = sensorTypeSource.lines()
-        val result = mutableMapOf<String, String>()
-        var inJavadoc = false
-        val currentJavadoc = StringBuilder()
-        var lastJavadoc: String? = null
-
-        val constRegex = Regex("""^\s*([A-Z][A-Z0-9_a-z]*)\s*\(SensorCategory\.""")
-
-        for (line in lines) {
-            val trimmed = line.trim()
-            if (trimmed.startsWith("/**")) {
-                inJavadoc = true
-                currentJavadoc.clear()
-                currentJavadoc.append(trimmed).append('\n')
-                if (trimmed.endsWith("*/") && trimmed.length > 5) {
-                    inJavadoc = false
-                    lastJavadoc = currentJavadoc.toString()
-                }
-                continue
-            }
-            if (inJavadoc) {
-                currentJavadoc.append(trimmed).append('\n')
-                if (trimmed.endsWith("*/")) {
-                    inJavadoc = false
-                    lastJavadoc = currentJavadoc.toString()
-                }
-                continue
-            }
-            if (trimmed.isEmpty() || trimmed.startsWith("//")) {
-                continue
-            }
-            val match = constRegex.find(line)
-            if (match != null) {
-                val constName = match.groupValues[1]
-                if (lastJavadoc != null) {
-                    result[constName] = lastJavadoc
-                }
-                lastJavadoc = null
-            } else {
-                lastJavadoc = null
-            }
-        }
-        return result
-    }
-
     @Test
-    fun allSensorTypes_haveValidInternalUnitAndPrecedingJavadoc() {
-        val repoRoot = findRepoRoot()
-        val sensorTypeFile = File(
-            repoRoot,
-            "app/src/main/java/com/atrainingtracker/banalservice/sensor/SensorType.java"
-        )
-        val javadocs = parsePrecedingJavadocs(sensorTypeFile.readText())
+    fun allSensorTypes_haveValidInternalUnit() {
         val placeholders = setOf("todo", "tbd", "n/a", "unknown", "none", "")
 
         for (sensor in SensorType.values()) {
@@ -147,13 +99,6 @@ class SensorTypeUnitsContractTest {
             assertFalse(
                 "${sensor.name}.internalUnit must not be placeholder '$internalUnit'",
                 placeholders.contains(internalUnit.trim().lowercase())
-            )
-
-            val doc = javadocs[sensor.name]
-            assertNotNull("${sensor.name} must have a preceding /** ... */ Javadoc block in SensorType.java", doc)
-            assertTrue(
-                "${sensor.name} Javadoc must document internal unit '${internalUnit}'",
-                doc!!.contains("Internal unit:") && doc.contains(internalUnit)
             )
         }
     }

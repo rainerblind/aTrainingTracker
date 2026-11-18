@@ -7,6 +7,7 @@
     <string name="equipment_wheel_position_unlink">センサーのリンクを解除</string>
     <string name="equipment_wheel_position_front_badge">前</string>
     <string name="equipment_wheel_position_rear_badge">後</string>
+    <string name="equipment_wheel_position_conflict_swap">現在 %1$s に割り当てられています。選択すると位置が入れ替わります。</string>
     <string name="equipment_guidance_title">GPSに加えてホイールセンサーを使用する理由</string>
     <string name="equipment_guidance_subtitle">スマートフォンGPSに対するホイールスピードセンサーの物理的利点</string>
     <string name="equipment_guidance_1_sensor_title">ホイールセンサー1基 + GPS</string>

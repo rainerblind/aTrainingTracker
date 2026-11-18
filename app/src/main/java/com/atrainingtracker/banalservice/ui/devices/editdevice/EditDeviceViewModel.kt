@@ -28,7 +28,9 @@ import com.atrainingtracker.banalservice.ui.devices.devicedata.BikePowerFeatures
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
 import com.atrainingtracker.banalservice.ui.devices.devicedata.PowerFeatureDisplay
+import com.atrainingtracker.banalservice.ui.devices.devicedata.isWheelSpeedSensor
 import com.atrainingtracker.trainingtracker.database.EquipmentAndSportTypeDiscoveryManager
+import com.atrainingtracker.trainingtracker.database.WheelPosition
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -280,12 +282,27 @@ class EditDeviceViewModel(private val application: Application) : AndroidViewMod
         updateState { it.copy(deviceName = newName) }
     }
 
-    fun onEquipmentChanged(newEquipment: List<String>) {
-        updateState { 
-            it.copy(
+    /**
+     * Updates the in-memory draft equipment links and per-bike [WheelPosition] assignments
+     * without mutating SQLite until [saveChanges] is called (`REQ-SEN-031.2`).
+     */
+    fun onEquipmentChanged(
+        newEquipment: List<String>,
+        newWheelPositions: Map<String, WheelPosition> = _deviceSnapshot.value?.linkedWheelPositions.orEmpty()
+    ) {
+        updateState { current ->
+            val prunedPositions = if (isWheelSpeedSensor(current.deviceType)) {
+                newEquipment.associateWith { eqName ->
+                    newWheelPositions[eqName] ?: current.linkedWheelPositions[eqName] ?: WheelPosition.UNSPECIFIED
+                }
+            } else {
+                emptyMap()
+            }
+            current.copy(
                 linkedEquipment = newEquipment,
+                linkedWheelPositions = prunedPositions,
                 linkedSportTypes = discoveryManager.getSportNamesForEquipmentList(newEquipment)
-            ) 
+            )
         }
     }
 

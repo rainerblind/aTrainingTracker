@@ -758,4 +758,147 @@ class PolarOnlineStreamingBridgeTest {
         assertFalse(job.isActive)
         assertTrue(job.isCancelled)
     }
+
+    @Test
+    fun testTwoBridges_shareSinglePolarBleApi_multiplexCallbacksAndFilterForeignDevices() = runTest {
+        // TST-SET-120.1, TST-SET-120.2, TST-SET-120.3
+        val db = DevicesDatabaseManager.getInstance(context)
+        val h10Id = db.insertNewBluetoothDeviceIntoDB(
+            DeviceType.HRM,
+            "24:AC:AC:25:0F:A6",
+            "Polar H10",
+            "Polar Electro",
+            95,
+            true
+        )
+        val verityId = db.insertNewBluetoothDeviceIntoDB(
+            DeviceType.HRM,
+            "24:AC:AC:24:82:56",
+            "Polar Verity Sense A1B2C3D4",
+            "Polar Electro",
+            95,
+            true
+        )
+
+        val sharedMockApi = mockk<PolarBleApi>(relaxed = true)
+        var factoryCalls = 0
+        var capturedFeatures: Set<PolarBleApi.PolarBleSdkFeature>? = null
+        val sharedFactory: (Context, Set<PolarBleApi.PolarBleSdkFeature>) -> PolarBleApi = { _, features ->
+            factoryCalls++
+            capturedFeatures = features
+            sharedMockApi
+        }
+        val testDispatcher = StandardTestDispatcher(testScheduler)
+
+        val h10Bridge = PolarOnlineStreamingBridge(
+            context = context,
+            mySensorManager = sensorManager,
+            deviceId = h10Id,
+            macAddress = "24:AC:AC:25:0F:A6",
+            dispatcher = testDispatcher,
+            sdkIntProvider = { 34 },
+            sportTypeProvider = { BSportType.RUN },
+            apiFactory = sharedFactory,
+            searchTimeoutMsProvider = { 5000L }
+        )
+        val verityBridge = PolarOnlineStreamingBridge(
+            context = context,
+            mySensorManager = sensorManager,
+            deviceId = verityId,
+            macAddress = "24:AC:AC:24:82:56",
+            dispatcher = testDispatcher,
+            sdkIntProvider = { 34 },
+            sportTypeProvider = { BSportType.RUN },
+            apiFactory = sharedFactory,
+            searchTimeoutMsProvider = { 5000L }
+        )
+
+        h10Bridge.startSearching()
+        verityBridge.startSearching()
+
+        assertEquals(1, factoryCalls)
+        assertEquals(PolarOfflineGattCoordinator.ALL_POLAR_FEATURES, capturedFeatures)
+        verify(exactly = 1) { sharedMockApi.setApiCallback(any()) }
+
+        // Foreign deviceConnected on h10Bridge callback must be ignored; matching MAC connects H10 only
+        val verityInfo = PolarDeviceInfo("A1B2C3D4", "24:AC:AC:24:82:56", -55, "Polar Verity Sense", true)
+        h10Bridge.getSdkCallbackForTesting().deviceConnected(verityInfo)
+        assertFalse(h10Bridge.isReceivingData())
+
+        val h10Info = PolarDeviceInfo("1C3B2421", "24:AC:AC:25:0F:A6", -48, "Polar H10", true)
+        val mux = PolarOfflineGattCoordinator.getMultiplexerCallbackForTesting()
+        mux.deviceConnected(h10Info)
+        assertTrue(h10Bridge.isReceivingData())
+        assertFalse(verityBridge.isReceivingData())
+
+        // Foreign deviceDisconnected must not disconnect H10
+        h10Bridge.getSdkCallbackForTesting().deviceDisconnected(verityInfo)
+        assertTrue(h10Bridge.isReceivingData())
+
+        // Shutting down H10 bridge keeps Verity's shared singleton alive
+        h10Bridge.shutDown()
+        verify(exactly = 0) { sharedMockApi.cleanup() }
+        verify(exactly = 0) { sharedMockApi.shutDown() }
+
+        // Shutting down Verity bridge releases the final reference and shuts down singleton cleanly
+        verityBridge.shutDown()
+        verify(exactly = 0) { sharedMockApi.cleanup() }
+        verify(exactly = 1) { sharedMockApi.shutDown() }
+    }
+
+    @Test
+    fun testProcessHrData_driftReAnchorClampsMonotonicAndFlagsMultiSecondGap() {
+        // TST-TRK-085.1, TST-TRK-085.2
+        val db = DevicesDatabaseManager.getInstance(context)
+        val h10Id = db.insertNewBluetoothDeviceIntoDB(
+            DeviceType.HRM,
+            "AA:BB:CC:DD:EE:99",
+            "Polar H10 99001122",
+            "Polar Electro",
+            95,
+            true
+        )
+        val bridge = PolarOnlineStreamingBridge(
+            context = context,
+            mySensorManager = sensorManager,
+            deviceId = h10Id,
+            macAddress = "AA:BB:CC:DD:EE:99",
+            dispatcher = Dispatchers.Unconfined,
+            sdkIntProvider = { 34 },
+            sportTypeProvider = { BSportType.RUN }
+        )
+        val events = mutableListOf<RrBeatEvent>()
+        bridge.addRrBeatListener(RrBeatListener { events.add(it) })
+
+        bridge.processHrData(
+            PolarHrData(listOf(PolarHrData.PolarHrSample(75, 75, 0, listOf(800), listOf(800), true, true, true))),
+            packetArrivalMs = 100_000L
+        )
+        // Bundle with 4x800ms arriving at 100_500L (drift = 2700 ms > 2000 ms) must clamp >= 100_000L
+        bridge.processHrData(
+            PolarHrData(listOf(PolarHrData.PolarHrSample(75, 75, 0, listOf(800, 800, 800, 800), listOf(800, 800, 800, 800), true, true, true))),
+            packetArrivalMs = 100_500L
+        )
+        // Multi-second 5196 ms RR arriving on time (0 drift) + sub-minimum 180 ms RR
+        bridge.processHrData(
+            PolarHrData(listOf(PolarHrData.PolarHrSample(75, 75, 0, listOf(5196), listOf(5196), true, true, true))),
+            packetArrivalMs = 105_696L
+        )
+        bridge.processHrData(
+            PolarHrData(listOf(PolarHrData.PolarHrSample(75, 75, 0, listOf(180), listOf(180), true, true, true))),
+            packetArrivalMs = 105_876L
+        )
+
+        var prevTs = 0L
+        for (event in events) {
+            assertTrue("Timestamp ${event.beatTimestampMs} must be >= $prevTs", event.beatTimestampMs >= prevTs)
+            prevTs = event.beatTimestampMs
+        }
+        val multiSecEvent = events[events.size - 2]
+        assertEquals(RrBeatEvent.ARTIFACT_GAP, multiSecEvent.artifactFlag)
+        assertTrue("Expected gapBeats > 0 for 5196ms RR", multiSecEvent.gapBeats > 0)
+        assertEquals(RrBeatEvent.ARTIFACT_GAP, events.last().artifactFlag)
+
+        bridge.shutDown()
+    }
 }

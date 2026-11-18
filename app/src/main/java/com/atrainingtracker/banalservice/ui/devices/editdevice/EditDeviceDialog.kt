@@ -63,8 +63,11 @@ import com.atrainingtracker.banalservice.devices.radar.RadarLightMode
 import com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulator
 import com.atrainingtracker.banalservice.ui.devices.DeviceStatusRow
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
+import com.atrainingtracker.banalservice.ui.devices.devicedata.isWheelSpeedSensor
+import com.atrainingtracker.trainingtracker.database.WheelPosition
 import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
 import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
+import com.atrainingtracker.trainingtracker.ui.equipment.WheelPositionSelectionDialog
 import com.atrainingtracker.trainingtracker.ui.equipment.WheelSensorGuidanceDialog
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 
@@ -246,21 +249,76 @@ private fun ReadOnlyField(label: String, value: String) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun EquipmentSection(data: DeviceUiData, viewModel: EditDeviceViewModel) {
-    var showDialog by remember { mutableStateOf(false) }
+    EquipmentSectionContent(
+        data = data,
+        onEquipmentChanged = viewModel::onEquipmentChanged
+    )
+}
+
+/**
+ * Formats the equipment summary field text, appending localized [WheelPosition] labels
+ * for wheel speed sensors (`REQ-SEN-031.1`) while preserving plain names for other sensors.
+ */
+internal fun formatEquipmentSummaryText(
+    linkedEquipment: List<String>,
+    linkedWheelPositions: Map<String, WheelPosition>,
+    isWheelSensor: Boolean,
+    frontLabel: String,
+    rearLabel: String,
+    unspecifiedLabel: String,
+    noneLabel: String
+): String {
+    if (linkedEquipment.isEmpty()) return noneLabel
+    if (!isWheelSensor) return linkedEquipment.joinToString(", ")
+    return linkedEquipment.joinToString(", ") { bike ->
+        val label = when (linkedWheelPositions[bike] ?: WheelPosition.UNSPECIFIED) {
+            WheelPosition.FRONT -> frontLabel
+            WheelPosition.REAR -> rearLabel
+            WheelPosition.UNSPECIFIED -> unspecifiedLabel
+        }
+        "$bike ($label)"
+    }
+}
+
+@Composable
+private fun wheelPositionLabel(position: WheelPosition): String = when (position) {
+    WheelPosition.FRONT -> stringResource(R.string.equipment_wheel_position_front)
+    WheelPosition.REAR -> stringResource(R.string.equipment_wheel_position_rear)
+    WheelPosition.UNSPECIFIED -> stringResource(R.string.equipment_wheel_position_unspecified)
+}
+
+/**
+ * Stateless Compose section for equipment summary and bike-linking bottom sheet (`REQ-SEN-031`).
+ * For [DeviceType.BIKE_SPEED] and [DeviceType.BIKE_SPEED_AND_CADENCE], displays per-bike
+ * [WheelPosition] and opens [WheelPositionSelectionDialog] to stage draft positions until Save.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun EquipmentSectionContent(
+    data: DeviceUiData,
+    onEquipmentChanged: (List<String>, Map<String, WheelPosition>) -> Unit,
+    initialShowSheet: Boolean = false
+) {
+    var showDialog by remember(initialShowSheet) { mutableStateOf(initialShowSheet) }
+    val isWheelSensor = isWheelSpeedSensor(data.deviceType)
 
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        val displayText = if (data.linkedEquipment.isEmpty()) {
-            stringResource(R.string.devices_equipment_none)
-        } else {
-            data.linkedEquipment.joinToString(", ")
-        }
+        val displayText = formatEquipmentSummaryText(
+            linkedEquipment = data.linkedEquipment,
+            linkedWheelPositions = data.linkedWheelPositions,
+            isWheelSensor = isWheelSensor,
+            frontLabel = stringResource(R.string.equipment_wheel_position_front),
+            rearLabel = stringResource(R.string.equipment_wheel_position_rear),
+            unspecifiedLabel = stringResource(R.string.equipment_wheel_position_unspecified),
+            noneLabel = stringResource(R.string.devices_equipment_none)
+        )
 
         Box(
             modifier = Modifier
                 .fillMaxWidth()
+                .testTag("equipment_summary_trigger")
                 .clickable { showDialog = true }
         ) {
             OutlinedTextField(
@@ -281,7 +339,9 @@ private fun EquipmentSection(data: DeviceUiData, viewModel: EditDeviceViewModel)
                     disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
                     disabledTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant
                 ),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("equipment_summary_field")
             )
         }
 
@@ -297,53 +357,185 @@ private fun EquipmentSection(data: DeviceUiData, viewModel: EditDeviceViewModel)
     }
 
     if (showDialog) {
-        val selectedItems = remember { data.linkedEquipment.toMutableStateList() }
+        val selectedItems = remember(showDialog) { data.linkedEquipment.toMutableStateList() }
+        val draftPositions = remember(showDialog) {
+            mutableStateMapOf<String, WheelPosition>().apply {
+                putAll(data.linkedWheelPositions)
+            }
+        }
+        var wheelDialogBike by remember { mutableStateOf<String?>(null) }
+
         AppModalBottomSheet(
-            onDismissRequest = { showDialog = false },
+            onDismissRequest = {
+                wheelDialogBike = null
+                showDialog = false
+            },
             title = stringResource(data.onEquipmentResId),
             actions = {
                 Spacer(modifier = Modifier.weight(1f))
-                TextButton(onClick = { showDialog = false }) {
+                TextButton(
+                    onClick = {
+                        wheelDialogBike = null
+                        showDialog = false
+                    },
+                    modifier = Modifier.testTag("equipment_sheet_cancel")
+                ) {
                     Text(stringResource(R.string.cancel))
                 }
-                Button(onClick = {
-                    viewModel.onEquipmentChanged(selectedItems.toList())
-                    showDialog = false
-                }) {
+                Button(
+                    onClick = {
+                        onEquipmentChanged(selectedItems.toList(), draftPositions.toMap())
+                        wheelDialogBike = null
+                        showDialog = false
+                    },
+                    modifier = Modifier.testTag("equipment_sheet_ok")
+                ) {
                     Text(stringResource(R.string.OK))
                 }
             }
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                data.availableEquipment.filter { it.isNotBlank() }.forEach { equipment ->
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
+            EquipmentSheetListContent(
+                availableEquipment = data.availableEquipment,
+                selectedItems = selectedItems,
+                draftPositions = draftPositions,
+                isWheelSensor = isWheelSensor,
+                onSimpleToggle = { equipment ->
+                    if (selectedItems.contains(equipment)) selectedItems.remove(equipment)
+                    else selectedItems.add(equipment)
+                },
+                onWheelBikeClick = { equipment ->
+                    wheelDialogBike = equipment
+                }
+            )
+        }
+
+        wheelDialogBike?.let { bike ->
+            WheelPositionSelectionDialog(
+                equipmentName = bike,
+                sensorName = data.deviceName,
+                currentPosition = draftPositions[bike] ?: WheelPosition.UNSPECIFIED,
+                isLinked = selectedItems.contains(bike),
+                conflictHints = data.wheelPositionConflicts[bike].orEmpty(),
+                onSelectPosition = { position ->
+                    if (!selectedItems.contains(bike)) {
+                        selectedItems.add(bike)
+                    }
+                    draftPositions[bike] = position
+                    wheelDialogBike = null
+                },
+                onUnlink = {
+                    selectedItems.remove(bike)
+                    draftPositions.remove(bike)
+                    wheelDialogBike = null
+                },
+                onDismiss = {
+                    wheelDialogBike = null
+                }
+            )
+        }
+    }
+}
+
+/**
+ * Renders the selectable equipment rows inside the Equipment bottom sheet (`REQ-SEN-031`).
+ * Wheel speed sensors display mounting position and prompt via [WheelPositionSelectionDialog];
+ * non-wheel sensors preserve simple checkbox toggling.
+ */
+@Composable
+internal fun EquipmentSheetListContent(
+    availableEquipment: List<String>,
+    selectedItems: List<String>,
+    draftPositions: Map<String, WheelPosition>,
+    isWheelSensor: Boolean,
+    onSimpleToggle: (String) -> Unit,
+    onWheelBikeClick: (String) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        availableEquipment.filter { it.isNotBlank() }.forEach { equipment ->
+            val isLinked = selectedItems.contains(equipment)
+            if (isWheelSensor) {
+                val position = draftPositions[equipment] ?: WheelPosition.UNSPECIFIED
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("equipment_sheet_row_$equipment")
+                        .clickable { onWheelBikeClick(equipment) }
+                        .padding(vertical = 4.dp)
+                ) {
+                    Checkbox(
+                        checked = isLinked,
+                        onCheckedChange = null
+                    )
+                    Column(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                if (selectedItems.contains(equipment)) selectedItems.remove(equipment)
-                                else selectedItems.add(equipment)
-                            }
+                            .weight(1f)
+                            .padding(start = 8.dp, end = 8.dp)
                     ) {
-                        Checkbox(
-                            checked = selectedItems.contains(equipment),
-                            onCheckedChange = null
-                        )
                         Text(
                             text = equipment,
                             style = MaterialTheme.typography.bodyLarge,
-                            modifier = Modifier.padding(start = 8.dp)
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
                         )
+                        if (isLinked) {
+                            Text(
+                                text = wheelPositionLabel(position),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (position == WheelPosition.UNSPECIFIED) {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                } else {
+                                    MaterialTheme.colorScheme.primary
+                                }
+                            )
+                        }
+                    }
+                    if (isLinked && (position == WheelPosition.FRONT || position == WheelPosition.REAR)) {
+                        val badgeRes = if (position == WheelPosition.FRONT) {
+                            R.string.equipment_wheel_position_front_badge
+                        } else {
+                            R.string.equipment_wheel_position_rear_badge
+                        }
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = MaterialTheme.colorScheme.primaryContainer
+                        ) {
+                            Text(
+                                text = stringResource(badgeRes),
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                            )
+                        }
                     }
                 }
-                Spacer(Modifier.height(8.dp))
+            } else {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("equipment_sheet_row_$equipment")
+                        .clickable { onSimpleToggle(equipment) }
+                ) {
+                    Checkbox(
+                        checked = isLinked,
+                        onCheckedChange = null
+                    )
+                    Text(
+                        text = equipment,
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier.padding(start = 8.dp)
+                    )
+                }
             }
         }
+        Spacer(Modifier.height(8.dp))
     }
 }
 
@@ -1721,5 +1913,79 @@ private fun PolarFeatureToggleCard(
         }
     }
 }
+
+@Preview(name = "Wheel Position Equipment Light", showBackground = true)
+@Composable
+private fun WheelPositionEquipmentLightPreview() {
+    ATrainingTrackerTheme(darkTheme = false) {
+        WheelPositionEquipmentPreviewContent()
+    }
+}
+
+@Preview(
+    name = "Wheel Position Equipment Dark",
+    uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES,
+    showBackground = true
+)
+@Composable
+private fun WheelPositionEquipmentDarkPreview() {
+    ATrainingTrackerTheme(darkTheme = true) {
+        WheelPositionEquipmentPreviewContent()
+    }
+}
+
+@Composable
+private fun WheelPositionEquipmentPreviewContent() {
+    Surface {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            EquipmentSectionContent(
+                data = previewWheelSensorUiData(),
+                onEquipmentChanged = { _, _ -> }
+            )
+            EquipmentSheetListContent(
+                availableEquipment = listOf("Gravel Bike", "Road Bike", "Winter Bike"),
+                selectedItems = listOf("Gravel Bike", "Road Bike"),
+                draftPositions = mapOf(
+                    "Gravel Bike" to WheelPosition.FRONT,
+                    "Road Bike" to WheelPosition.REAR
+                ),
+                isWheelSensor = true,
+                onSimpleToggle = {},
+                onWheelBikeClick = {}
+            )
+        }
+    }
+}
+
+private fun previewWheelSensorUiData(): DeviceUiData = DeviceUiData(
+    id = 42L,
+    protocol = Protocol.BLUETOOTH_LE,
+    deviceType = DeviceType.BIKE_SPEED,
+    lastSeen = "Now",
+    manufacturer = "Garmin",
+    deviceName = "Speed Sensor 2",
+    isPaired = true,
+    linkedEquipment = listOf("Gravel Bike", "Road Bike"),
+    availableEquipment = listOf("Gravel Bike", "Road Bike", "Winter Bike"),
+    powerFeaturesFlags = null,
+    batteryPercentage = 95,
+    linkedSportTypes = listOf("Cycling"),
+    deviceTypeIconRes = R.drawable.bt_bike_spd,
+    batteryStatusIconRes = R.drawable.ic_battery_full,
+    onEquipmentResId = R.string.devices_on_bikes_text,
+    wheelCircumference = 2105,
+    calibrationFactor = null,
+    powerFeatures = null,
+    isConnected = false,
+    mainValue = null,
+    allValues = null,
+    linkedWheelPositions = mapOf(
+        "Gravel Bike" to WheelPosition.FRONT,
+        "Road Bike" to WheelPosition.REAR
+    )
+)
 
 

@@ -7,6 +7,7 @@
     <string name="equipment_wheel_position_unlink">Sensor ontkoppelen</string>
     <string name="equipment_wheel_position_front_badge">V</string>
     <string name="equipment_wheel_position_rear_badge">A</string>
+    <string name="equipment_wheel_position_conflict_swap">Momenteel toegewezen aan %1$s — deze keuze wisselt de posities om.</string>
     <string name="equipment_guidance_title">Waarom wielsensoren naast GPS?</string>
     <string name="equipment_guidance_subtitle">Fysieke voordelen van wielsnelheidssensoren ten opzichte van smartphone-GPS</string>
     <string name="equipment_guidance_1_sensor_title">1 wielsensor + GPS</string>

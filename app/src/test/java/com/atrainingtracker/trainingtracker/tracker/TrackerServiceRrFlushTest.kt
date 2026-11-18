@@ -201,4 +201,35 @@ class TrackerServiceRrFlushTest {
         assertEquals(10, insertedBatches[0][0].beatIndex)
         assertEquals(11, insertedBatches[0][1].beatIndex)
     }
+
+    @Test
+    fun testRrBeatListener_enforcesMonotonicBeatTimestampFloor() {
+        val listenerField = TrackerService::class.java.getDeclaredField("mRrBeatListener")
+        listenerField.isAccessible = true
+        val listener = listenerField.get(trackerService) as com.atrainingtracker.banalservice.devices.RrBeatListener
+
+        listener.onRrBeat(
+            com.atrainingtracker.banalservice.devices.RrBeatEvent(
+                beatTimestampMs = 100_000L,
+                rrMs = 800.0,
+                rawCounter = 1,
+                protocol = com.atrainingtracker.banalservice.devices.ProtocolType.BLE
+            )
+        )
+        // Simulate backward -430 ms jump
+        listener.onRrBeat(
+            com.atrainingtracker.banalservice.devices.RrBeatEvent(
+                beatTimestampMs = 99_570L,
+                rrMs = 810.0,
+                rawCounter = 2,
+                protocol = com.atrainingtracker.banalservice.devices.ProtocolType.BLE
+            )
+        )
+
+        trackerService.flushLiveRrQueueSync(42L)
+        val inserted = insertedBatches.flatten()
+        assertEquals(2, inserted.size)
+        assertEquals(100_000L, inserted[0].beatTimestampMs)
+        assertEquals(100_000L, inserted[1].beatTimestampMs)
+    }
 }

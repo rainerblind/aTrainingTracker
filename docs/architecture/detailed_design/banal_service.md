@@ -1,7 +1,7 @@
 # Detailed Design: BANALService & DeviceManager (ASPICE SWE.3)
 
 **Document ID**: `DOC-ARC-DD-BANAL`  
-**Version**: 1.0.0  
+**Version**: 1.0.1  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -71,13 +71,14 @@ stateDiagram-v2
 | Interface | Direction | Contract / Symbols |
 | :--- | :--- | :--- |
 | `IF-SWE-03` | `BANALServiceComm` -> `TrackerService` / Repo | Local `Binder` exposing `getBestSensorData(SensorType)`, `getAllSensorData()`, `getAllButBestSensorData()`, `getAvailableSensorTypeSet()`, `getAccumulatedSensorTypeSet()`, `getFilteredSensorData(FilterData)`, `getSourceDeviceId(SensorType)`, `getBSportType()`, `getSportTypeId()`, `getActivityType()`, `setIndoorMode(boolean)`, `addRrBeatListener(RrBeatListener)` |
-| `IF-SWE-04` | Hardware HAL -> `DeviceManager` / `MySensorManager` | `MyRemoteDevice` subclasses (`MyBTLEDevice`, ANT+ devices) & location/pressure devices register `MySensor` instances into `MySensorManager`, which arbitrates priority via `ProxySensor` (`SPEED_PRIORITY`, `ALTITUDE_PRIORITY`, `LOCATION_PRIORITY`, `CADENCE_PRIORITY`) |
+| `IF-SWE-04` | Hardware HAL -> `DeviceManager` / `MySensorManager` | `MyRemoteDevice` subclasses (`MyBTLEDevice`, ANT+ devices) & location/pressure devices register `MySensor` instances into `MySensorManager`, which arbitrates priority via `ProxySensor` (`SPEED_PRIORITY`, `ALTITUDE_PRIORITY`, `LOCATION_PRIORITY`, `CADENCE_PRIORITY`); `DeviceManager` arbitrates single-primary `RrBeatSource` forwarding (`ECG` > `ANT+` > `PPG`, `5000 ms` stale fallback) |
 | Broadcasts | `BANALService` <-> `TrackerService` / UI | Emits `SEARCHING_STARTED_FOR_ALL_INTENT`, `SEARCHING_STARTED_FOR_ONE_INTENT`, `SEARCHING_STOPPED_FOR_ONE_INTENT`, `SEARCHING_FINISHED_FOR_ALL_INTENT`, `LAP_SUMMARY`, `SPORT_TYPE_CHANGED_BY_USER_INTENT`; receives `REQUEST_START_SEARCH_FOR_PAIRED_DEVICES`, `REQUEST_NEW_LAP` |
 
 ### 4.2 Threading & Synchronization
 * **Main Looper / Binder Pool**: `onCreate`, `onBind`, `onDestroy`, `BroadcastReceiver` callbacks, and `BANALServiceComm` synchronous read queries.
 * **`DeviceManager` Queue Lock (`synchronized (mSearchQueue)`)**: Protects `mSearchQueue`, `cMyRemoteDeviceCurrentlySearchingFor`, and `mMyRemoteDeviceTries` against concurrent search-completion broadcasts and `pairingChanged` mutations.
 * **Volatile Static & Sensor State**: `cServiceContext`, `cDeviceManager`, `cSensorManager`, `cFilterManager`, `mIsIndoorMode`, `mHaveUserSelectedSportType`, and `MyRemoteDevice.mSearching` are `volatile` for safe cross-thread reads.
+* **RR Arbitration Lock (`synchronized (mRrArbitrationLock)`)**: Arbitrates a single active primary `RrBeatSource` (`BTLEHeartRateDevice` / H10 ECG > `ANTHeartRateDevice` > `PolarOnlineStreamingBridge.isVeritySense` PPG) with `RR_SOURCE_STALE_TIMEOUT_MS` (`5000 ms`) / disconnect fallback and monotonic `mLastForwardedRrTimestampMs` clamping before forwarding to `mHrvMetricsDevice` and `mRrBeatListeners` (`REQ-TRK-085.1`).
 
 ### 4.3 Error Handling & Fault Recovery
 * **Null-Safe Static & Binder Access**: `getSensorData`, `getBestSensorData`, `getAvailableSensorTypeSet`, and `BANALServiceComm` methods guard against null `cDeviceManager` / `cSensorManager` / `cFilterManager` after `onDestroy()`, and exclude unbound `ProxySensor` instances (`getSourceSensor() == null`) per `REQ-TRK-055.1`.
@@ -93,6 +94,7 @@ stateDiagram-v2
 | `BANALServiceArbitrationCharacterisationTest` | `SPEED_PRIORITY` (`ATT_FUSED > BIKE_SPEED > GPS`) & dynamic fallback, `ALTITUDE_PRIORITY` (`ATT_FUSED > POSITION > PRESSURE`), `ProxySensor` transparent listener migration on source switch, `WheelMeasurementListener` dispatch, `shutDown()` unbound proxy cleanup (`TST-ARC-008.3`) |
 | `BANALServiceLifecycleTest` | `onDestroy()` nullifies `BANALService.getDeviceManager()` & `getSensorData()`, unbound `ProxySensor` exclusion from available set, `DeviceManager.shutDown()` nullifies internal devices (`TST-TRK-055.4`) |
 | `HardwareHalIngestionIntegrationTest` | HAL -> `BANALService` / `MySensorManager` integration verification (`INT-SWE-04`, `TST-INT-012`) |
+| `DeviceManagerRrSourceTest` | Single-primary `RrBeatSource` arbitration (`ECG` > `ANT+` > `PPG`), `5000 ms` stale/disconnect fallback & monotonic timestamp clamping (`TST-TRK-085.1`) |
 
 ---
 
@@ -101,3 +103,4 @@ stateDiagram-v2
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
 | `1.0.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Added standardized `DOC-ARC-DD-BANAL` work-product control header and Change History. |
+| `1.0.1` | 2026-11-18 | AI Agent (`ATT-8706`) | `ATT-8706` | Documented single-primary `RrBeatSource` arbitration (`mRrArbitrationLock`, `RR_SOURCE_STALE_TIMEOUT_MS`), monotonic forwarding, and `DeviceManagerRrSourceTest` parity (`REQ-PRO-114`, `REQ-TRK-085.1`). |

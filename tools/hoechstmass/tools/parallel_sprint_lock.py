@@ -4,7 +4,7 @@ tools/hoechstmass/tools/parallel_sprint_lock.py
 
 Provides POSIX flock-based mutual exclusion (REQ-PRO-041.2, TST-PRO-041.2) for concurrent
 sprint operations across disjoint domain Epics.
-Serializes resource-heavy Gradle test runs and Stage 5 git squash-merges onto sprint/<SPRINT_NAME>.
+Serializes resource-heavy Gradle test runs and post-Stage-6 git squash-merges onto sprint/<SPRINT_NAME>.
 Provides the deterministic --merge-ticket subcommand for collision-free multi-worktree merges.
 
 Default lock path: /tmp/att_build_merge.lock
@@ -181,6 +181,79 @@ def guard_submodules_staged(cwd):
                 break
 
 
+GOVERNED_INDEX_FILES = ("docs/requirements.md", "docs/tests.md")
+
+
+def _is_worktree_dirty(wt_path):
+    """Returns True if wt_path has staged, unstaged, or untracked changes."""
+    res = git_cmd(["status", "--porcelain"], cwd=wt_path, check=True)
+    return bool(res.stdout.strip())
+
+
+def _stage_living_doc_updates(cwd):
+    """Explicitly stages governed living-doc index/shard updates produced by --sync-indexes."""
+    candidates = list(GOVERNED_INDEX_FILES) + ["docs/requirements", "docs/tests"]
+    existing = [p for p in candidates if os.path.exists(os.path.join(cwd, p))]
+    if not existing:
+        return
+    res = git_cmd(["status", "--porcelain", "--"] + existing, cwd=cwd, check=False)
+    if res.returncode == 0 and res.stdout.strip():
+        git_cmd(["add", "--"] + existing, cwd=cwd)
+
+
+def _rebase_onto_sprint_with_index_recovery(current_wt, sprint_ref):
+    """
+    Rebases HEAD onto sprint_ref, auto-resolving conflicts strictly limited to
+    generated master indexes (docs/requirements.md, docs/tests.md) so --sync-indexes
+    can deterministically recalculate them. Aborts on any other conflict.
+    """
+    res = subprocess.run(["git", "rebase", sprint_ref], cwd=current_wt, capture_output=True, text=True)
+    if res.returncode == 0:
+        return
+
+    env = os.environ.copy()
+    env["GIT_EDITOR"] = "true"
+    allowed = set(GOVERNED_INDEX_FILES)
+
+    for _ in range(30):
+        unmerged_res = git_cmd(["diff", "--name-only", "--diff-filter=U"], cwd=current_wt, check=False)
+        conflicted = [line.strip() for line in unmerged_res.stdout.splitlines() if line.strip()]
+        if not conflicted or not set(conflicted).issubset(allowed):
+            err_msg = res.stderr.strip() or res.stdout.strip() or f"conflicted files: {conflicted}"
+            subprocess.run(["git", "rebase", "--abort"], cwd=current_wt, check=False)
+            raise RuntimeError(f"Rebase onto {sprint_ref} failed with non-index conflicts: {err_msg}")
+
+        git_cmd(["checkout", "--ours", "--"] + conflicted, cwd=current_wt)
+        git_cmd(["add", "--"] + conflicted, cwd=current_wt)
+        cont = subprocess.run(
+            ["git", "rebase", "--continue"],
+            cwd=current_wt,
+            capture_output=True,
+            text=True,
+            env=env,
+        )
+        if cont.returncode == 0:
+            return
+        diff_cached = git_cmd(["diff", "--cached", "--quiet"], cwd=current_wt, check=False)
+        still_unmerged = git_cmd(["diff", "--name-only", "--diff-filter=U"], cwd=current_wt, check=False)
+        if diff_cached.returncode == 0 and not still_unmerged.stdout.strip():
+            skip = subprocess.run(
+                ["git", "rebase", "--skip"],
+                cwd=current_wt,
+                capture_output=True,
+                text=True,
+                env=env,
+            )
+            if skip.returncode == 0:
+                return
+            res = skip
+        else:
+            res = cont
+
+    subprocess.run(["git", "rebase", "--abort"], cwd=current_wt, check=False)
+    raise RuntimeError(f"Rebase onto {sprint_ref} exceeded max index conflict resolution iterations.")
+
+
 def _merge_ticket_impl(ticket_key, sprint=None, summary=None, cwd=None):
     """
     Internal execution logic for --merge-ticket.
@@ -234,23 +307,49 @@ def _merge_ticket_impl(ticket_key, sprint=None, summary=None, cwd=None):
     # 1. Guard against submodule symlink corruption
     guard_submodules(current_wt)
 
-    # 2. Detach HEAD first so uncommitted wip commit does not advance sprint_ref if already on it
-    git_cmd(["checkout", "--detach", "HEAD"], cwd=current_wt)
+    # Locate an existing feature branch if present (supports post-Stage-6 invocation from another worktree)
+    existing_fb = None
+    if git_cmd(["show-ref", "--verify", f"refs/heads/{feature_branch}"], cwd=current_wt, check=False).returncode == 0:
+        existing_fb = feature_branch
 
-    # 3. Stage and commit uncommitted changes in current worktree
-    git_cmd(["add", "-A"], cwd=current_wt)
-    guard_submodules_staged(current_wt)
-    diff_cached = git_cmd(["diff", "--cached", "--quiet"], cwd=current_wt, check=False)
-    if diff_cached.returncode != 0:
-        git_cmd(["commit", "-m", f"wip({clean_key})"], cwd=current_wt)
+    current_branch = git_cmd(["rev-parse", "--abbrev-ref", "HEAD"], cwd=current_wt).stdout.strip()
+    current_head_sha = git_cmd(["rev-parse", "HEAD"], cwd=current_wt).stdout.strip()
+    in_feature_wt = True
+    if existing_fb:
+        feature_sha = git_cmd(["rev-parse", f"refs/heads/{existing_fb}"], cwd=current_wt).stdout.strip()
+        in_feature_wt = (current_branch == existing_fb) or (
+            current_branch == "HEAD" and current_head_sha == feature_sha
+        )
 
-    # 4. Rebase onto local sprint branch
-    try:
-        git_cmd(["rebase", sprint_ref], cwd=current_wt)
-    except Exception as exc:
-        print(f"[merge-ticket] Rebase failed, aborting rebase: {exc}", file=sys.stderr)
-        subprocess.run(["git", "rebase", "--abort"], cwd=current_wt, check=False)
-        raise
+    if existing_fb and not in_feature_wt:
+        if _is_worktree_dirty(current_wt):
+            raise RuntimeError(
+                f"Current worktree '{current_wt}' has uncommitted changes; refusing cross-worktree --merge-ticket for '{clean_key}'."
+            )
+        feature_full_ref = f"refs/heads/{existing_fb}"
+        for wt in worktrees:
+            if wt.get("branch") == feature_full_ref:
+                feat_wt = wt["path"]
+                guard_submodules(feat_wt)
+                if _is_worktree_dirty(feat_wt):
+                    raise RuntimeError(
+                        f"Feature worktree '{feat_wt}' on '{existing_fb}' has uncommitted changes; commit before post-Stage-6 merge."
+                    )
+                git_cmd(["-C", feat_wt, "checkout", "--detach", feature_full_ref], cwd=current_wt)
+        git_cmd(["checkout", "--detach", feature_full_ref], cwd=current_wt)
+    else:
+        # 2. Detach HEAD first so uncommitted wip commit does not advance sprint_ref if already on it
+        git_cmd(["checkout", "--detach", "HEAD"], cwd=current_wt)
+
+        # 3. Stage and commit uncommitted changes in ticket's own worktree
+        git_cmd(["add", "-A"], cwd=current_wt)
+        guard_submodules_staged(current_wt)
+        diff_cached = git_cmd(["diff", "--cached", "--quiet"], cwd=current_wt, check=False)
+        if diff_cached.returncode != 0:
+            git_cmd(["commit", "-m", f"wip({clean_key})"], cwd=current_wt)
+
+    # 4. Rebase onto local sprint branch (auto-recovering conflicts strictly on governed index files)
+    _rebase_onto_sprint_with_index_recovery(current_wt, sprint_ref)
 
     # Soft-reset onto sprint_ref to collapse all ticket changes onto a single commit
     git_cmd(["reset", "--soft", sprint_ref], cwd=current_wt)
@@ -264,9 +363,9 @@ def _merge_ticket_impl(ticket_key, sprint=None, summary=None, cwd=None):
         print("[merge-ticket] Recalculating living documentation master indexes...", file=sys.stderr)
         subprocess.run([sys.executable, gov_tool, "--sync-indexes"], cwd=current_wt, check=False)
 
-    # Stage any index updates
+    # Explicitly stage updated living-doc indexes/shards only (no blind git add -A)
     guard_submodules(current_wt)
-    git_cmd(["add", "-A"], cwd=current_wt)
+    _stage_living_doc_updates(current_wt)
     guard_submodules_staged(current_wt)
 
     # Create the single atomic commit if there are changes

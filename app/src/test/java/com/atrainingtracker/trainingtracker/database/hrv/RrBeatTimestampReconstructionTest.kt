@@ -93,4 +93,29 @@ class RrBeatTimestampReconstructionTest {
             prevTs = beat.beatTimestampMs
         }
     }
+
+    @Test
+    fun reconstruct_driftReAnchor_clampsBackwardTimestampMonotonically() {
+        val b1 = reconstructor.reconstruct(100_000L, 800.0)
+        // Delayed/early wall-clock jump causing drift > 2000ms with packetArrivalMs < lastBeatTimestampMs
+        val b2 = reconstructor.reconstruct(97_000L, 800.0)
+
+        assertEquals(100_000L, b1.beatTimestampMs)
+        assertTrue(
+            "Re-anchored timestamp ${b2.beatTimestampMs} must remain >= ${b1.beatTimestampMs}",
+            b2.beatTimestampMs >= b1.beatTimestampMs
+        )
+    }
+
+    @Test
+    fun reconstruct_multiSecondAndSubMinimumRrAtZeroDrift_flagsArtifactGap() {
+        reconstructor.reconstruct(100_000L, 800.0)
+
+        val longBeat = reconstructor.reconstruct(105_196L, 5196.29)
+        assertEquals(RrBeatEvent.ARTIFACT_GAP, longBeat.artifactFlag)
+        assertTrue("Expected gapBeats > 0 for 5196.29ms RR", longBeat.gapBeats > 0)
+
+        val shortBeat = reconstructor.reconstruct(105_396L, 200.0)
+        assertEquals(RrBeatEvent.ARTIFACT_GAP, shortBeat.artifactFlag)
+    }
 }

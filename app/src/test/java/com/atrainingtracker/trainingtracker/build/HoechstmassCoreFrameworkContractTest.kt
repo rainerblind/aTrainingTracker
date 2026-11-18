@@ -250,6 +250,10 @@ class HoechstmassCoreFrameworkContractTest {
             for (lvl in expectedLevels) {
                 assertTrue("$targetRel must contain $lvl", text.contains(lvl))
             }
+            assertTrue(
+                "$targetRel must suspend unsupported CL3–CL5 claims as [Target / Not Yet Claimed] (REQ-PRO-122.6)",
+                text.contains("[Target / Not Yet Claimed]")
+            )
         }
     }
 

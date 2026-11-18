@@ -78,6 +78,9 @@ object ErtsPostWorkoutRecomputer {
     const val MAX_PLAUSIBLE_SPEED_MPS = 100.0 // 360 km/h
     const val MAX_PLAUSIBLE_WORKOUT_DISTANCE_M = 1_000_000.0 // 1,000 km
     const val MAX_DISTANCE_DIVERGENCE_FACTOR = 3.0
+    const val MIN_DISTANCE_DIVERGENCE_FACTOR = 0.85
+    const val MIN_RAW_DISTANCE_FOR_DIVERGENCE_CHECK_M = 500.0
+    private const val MAX_ACTIVE_SAMPLE_GAP_SEC = 5.0
     const val MIN_PLAUSIBLE_ALTITUDE_M = -1000.0
     const val MAX_PLAUSIBLE_ALTITUDE_M = 9000.0
     const val MAX_PLAUSIBLE_ASCENT_M = 20_000.0
@@ -175,6 +178,8 @@ object ErtsPostWorkoutRecomputer {
             val accIdx = cursor.getColumnIndex(SensorType.ACCURACY.name)
             val yawRateIdx = cursor.getColumnIndex(SensorType.WORLD_YAW_RATE_radps.name)
             val altIdx = cursor.getColumnIndex(SensorType.ALTITUDE.name)
+            val distIdx = cursor.getColumnIndex(SensorType.DISTANCE_m.name)
+            val lapNrIdx = cursor.getColumnIndex(SensorType.LAP_NR.name)
 
             // Look for reference altitude (DEM / GPS altitude device column)
             val demColName = colNames.firstOrNull { it.contains("DEM", ignoreCase = true) || it.contains("Topografische", ignoreCase = true) }
@@ -201,6 +206,8 @@ object ErtsPostWorkoutRecomputer {
                 val acc = if (accIdx >= 0 && !cursor.isNull(accIdx)) cursor.getDouble(accIdx) else null
                 val yawRate = if (yawRateIdx >= 0 && !cursor.isNull(yawRateIdx)) cursor.getDouble(yawRateIdx) else null
                 val rawAlt = if (altIdx >= 0 && !cursor.isNull(altIdx)) cursor.getDouble(altIdx) else null
+                val rawDist = if (distIdx >= 0 && !cursor.isNull(distIdx)) cursor.getDouble(distIdx) else null
+                val lapNr = if (lapNrIdx >= 0 && !cursor.isNull(lapNrIdx)) cursor.getLong(lapNrIdx) else null
 
                 val refAlt = when {
                     demIdx >= 0 && !cursor.isNull(demIdx) -> cursor.getDouble(demIdx)
@@ -222,7 +229,9 @@ object ErtsPostWorkoutRecomputer {
                         yawRateRadPerSec = yawRate,
                         rawAltitude = rawAlt,
                         referenceAltitude = refAlt,
-                        wheelSpeedMps = wheelSpeed
+                        wheelSpeedMps = wheelSpeed,
+                        rawDistanceM = rawDist,
+                        lapNr = lapNr
                     )
                 )
             }
@@ -463,6 +472,23 @@ object ErtsPostWorkoutRecomputer {
 
         // Update extrema values
         updateExtrema(summariesDbManager, summariesDb, workoutId, rawRows, smoothedOdometry, smoothedAltitude)
+
+        // REQ-FIL-025.4: Keep Laps.db synchronized with smoothed WorkoutSummaries.db totals
+        if (smoothedOdometry != null && smoothedOdometry.isNotEmpty()) {
+            val smoothedLapDistances = mutableMapOf<Long, Double>()
+            for (i in rawRows.indices) {
+                val lapNr = rawRows[i].lapNr
+                val pt = smoothedOdometry.getOrNull(i)
+                if (lapNr != null && lapNr > 0L && pt != null) {
+                    smoothedLapDistances[lapNr] = (smoothedLapDistances[lapNr] ?: 0.0) + pt.deltaDistanceMeters
+                }
+            }
+            LapsDatabaseManager.getInstance(context).syncLapDistancesAndSpeeds(
+                workoutId,
+                smoothedLapDistances,
+                totalDistance
+            )
+        }
     }
 
     private fun updateExtrema(
@@ -571,22 +597,57 @@ object ErtsPostWorkoutRecomputer {
             return false
         }
 
-        val rawSpeeds = rawRows.mapNotNull { it.speedMps }
-        if (rawSpeeds.isNotEmpty()) {
-            val rawAvgSpeed = rawSpeeds.average()
-            val durationSec = (rawRows.last().timestampMs - rawRows.first().timestampMs) / 1000.0
-            if (durationSec > 0.0 && rawAvgSpeed > 0.5) {
-                val approxRawDist = rawAvgSpeed * durationSec
-                if (approxRawDist > 1000.0 && cumulativeDist > approxRawDist * MAX_DISTANCE_DIVERGENCE_FACTOR) {
-                    Log.w(
-                        TAG,
-                        "Sanity check failed: Smoothed distance ($cumulativeDist m) diverges > 3x from raw estimate"
-                    )
-                    return false
-                }
+        val rawRefDist = estimateRawReferenceDistanceMeters(rawRows)
+        if (rawRefDist != null && rawRefDist >= MIN_RAW_DISTANCE_FOR_DIVERGENCE_CHECK_M) {
+            if (cumulativeDist > rawRefDist * MAX_DISTANCE_DIVERGENCE_FACTOR) {
+                Log.w(
+                    TAG,
+                    "Sanity check failed: Smoothed distance ($cumulativeDist m) diverges > ${MAX_DISTANCE_DIVERGENCE_FACTOR}x from raw estimate ($rawRefDist m)"
+                )
+                return false
+            }
+            if (cumulativeDist < rawRefDist * MIN_DISTANCE_DIVERGENCE_FACTOR) {
+                Log.w(
+                    TAG,
+                    "Sanity check failed: Smoothed distance ($cumulativeDist m) collapsed < ${MIN_DISTANCE_DIVERGENCE_FACTOR}x of raw estimate ($rawRefDist m)"
+                )
+                return false
             }
         }
         return true
+    }
+
+    /**
+     * Estimates raw reference distance in meters from `DISTANCE_m` delta when populated, or via
+     * pause-aware step-by-step speed integration over active gaps (`<= 5 s`) so pauses do not
+     * inflate expected distance (REQ-FIL-025.3, ATT-8705).
+     */
+    private fun estimateRawReferenceDistanceMeters(rawRows: List<RawSampleRow>): Double? {
+        if (rawRows.size < 2) return null
+
+        val validDistances = rawRows.mapNotNull { row ->
+            row.rawDistanceM?.takeIf { it.isFinite() && it >= 0.0 }
+        }
+        if (validDistances.size >= 2) {
+            val deltaDist = validDistances.last() - validDistances.first()
+            if (deltaDist > 0.0) {
+                return deltaDist
+            }
+        }
+
+        var integratedDist = 0.0
+        var hasValidSpeed = false
+        for (i in 1 until rawRows.size) {
+            val dtSec = (rawRows[i].timestampMs - rawRows[i - 1].timestampMs) / 1000.0
+            if (dtSec > 0.0 && dtSec <= MAX_ACTIVE_SAMPLE_GAP_SEC) {
+                val speed = rawRows[i].speedMps ?: rawRows[i - 1].speedMps
+                if (speed != null && speed.isFinite() && speed > 0.0) {
+                    integratedDist += speed * dtSec
+                    hasValidSpeed = true
+                }
+            }
+        }
+        return if (hasValidSpeed && integratedDist > 0.0) integratedDist else null
     }
 
     private fun isAltitudeSane(smoothedAltitude: List<SmoothedAltitudeSlopePoint>): Boolean {
@@ -642,6 +703,8 @@ object ErtsPostWorkoutRecomputer {
         val yawRateRadPerSec: Double?,
         val rawAltitude: Double?,
         val referenceAltitude: Double?,
-        val wheelSpeedMps: Double?
+        val wheelSpeedMps: Double?,
+        val rawDistanceM: Double? = null,
+        val lapNr: Long? = null
     )
 }

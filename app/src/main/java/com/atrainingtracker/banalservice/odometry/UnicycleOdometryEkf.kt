@@ -167,8 +167,15 @@ class UnicycleOdometryEkf(
      * @param dtSec Time delta in seconds.
      * @param gyroYawRateRadPerSec Quaternion-projected ENU yaw-rate \omega_{ENU,z} (rad/s).
      * @param timestampMs Epoch timestamp of this prediction step.
+     * @param gyroNoiseScale Optional multiplier on gyro process noise [Q_GYRO] (e.g., > 1.0 for 1-Hz offline replay).
      */
-    fun predict(dtSec: Double, gyroYawRateRadPerSec: Double, timestampMs: Long = currentTimestampMs) {
+    @JvmOverloads
+    fun predict(
+        dtSec: Double,
+        gyroYawRateRadPerSec: Double,
+        timestampMs: Long = currentTimestampMs,
+        gyroNoiseScale: Double = 1.0
+    ) {
         if (dtSec <= 0.0) return
         currentTimestampMs = timestampMs
         lastDtSec = dtSec
@@ -237,10 +244,11 @@ class UnicycleOdometryEkf(
         }
 
         // Add process noise Q * dt
+        val effectiveGyroNoiseScale = if (gyroNoiseScale.isFinite() && gyroNoiseScale > 0.0) gyroNoiseScale else 1.0
         p[0][0] += Q_POS * dtSec
         p[1][1] += Q_POS * dtSec
         p[2][2] += Q_ACC * dtSec
-        p[3][3] += Q_GYRO * dtSec
+        p[3][3] += Q_GYRO * effectiveGyroNoiseScale * dtSec
         p[4][4] += Q_BIAS * dtSec
 
         symmetrizeCovariance()
@@ -290,6 +298,9 @@ class UnicycleOdometryEkf(
         // State update
         for (i in 0 until STATE_DIM) {
             x[i] += k[i] * innovation
+        }
+        if (x[2] < 0.0) {
+            x[2] = 0.0
         }
         x[3] = normalizeAngle(x[3])
 
@@ -572,7 +583,7 @@ class UnicycleOdometryEkf(
         for (i in 0 until STATE_DIM) {
             x[i] += k[i][0] * y0 + k[i][1] * y1
         }
-        if (isStationary) {
+        if (isStationary || x[2] < 0.0) {
             x[2] = 0.0
         }
         x[3] = normalizeAngle(x[3])
@@ -617,6 +628,33 @@ class UnicycleOdometryEkf(
         if (x[2] <= MIN_DOPPLER_SPEED_MPS || varianceRad <= 0.0) {
             return false
         }
+        return applyHeadingMeasurement(headingRad, varianceRad, timestampMs)
+    }
+
+    /**
+     * Anchors the unicycle heading \psi during offline post-workout ERTS replay using
+     * verified GNSS displacement-chord or moving bearing measurements (REQ-FIL-025.1, ATT-8705).
+     *
+     * Unlike [updateDopplerHeading], this helper does not enforce [MIN_DOPPLER_SPEED_MPS] (3.0 m/s)
+     * so running-pace ERTS replay (~2.0 m/s) can anchor heading without weakening live
+     * stationary/low-speed protection (REQ-FIL-023.1, ATT-8576).
+     */
+    fun updateOfflineHeading(
+        headingRad: Double,
+        varianceRad: Double = 0.08,
+        timestampMs: Long = currentTimestampMs
+    ): Boolean {
+        return applyHeadingMeasurement(headingRad, varianceRad, timestampMs)
+    }
+
+    private fun applyHeadingMeasurement(
+        headingRad: Double,
+        varianceRad: Double,
+        timestampMs: Long
+    ): Boolean {
+        if (!headingRad.isFinite() || varianceRad <= 0.0 || !varianceRad.isFinite()) {
+            return false
+        }
         currentTimestampMs = timestampMs
 
         val innovation = normalizeAngle(headingRad - x[3])
@@ -632,6 +670,9 @@ class UnicycleOdometryEkf(
         // State update
         for (i in 0 until STATE_DIM) {
             x[i] += k[i] * innovation
+        }
+        if (x[2] < 0.0) {
+            x[2] = 0.0
         }
         x[3] = normalizeAngle(x[3])
 
