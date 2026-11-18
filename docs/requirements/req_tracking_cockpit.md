@@ -1,7 +1,7 @@
 # Living Requirements: Tracking & Live Sensor Cockpit
 
 **Document ID**: `DOC-REQ-TRK`  
-**Version**: 1.0.13  
+**Version**: 1.0.14  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -6702,13 +6702,13 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 - **Rationale**: `REQ-SEN-029` (`ATT-7752`) introduced `WheelPosition` (`FRONT`, `REAR`, `UNSPECIFIED`) in `Equipment.db` and `EquipmentSensorMatrixScreen.kt`, but `EditDeviceDialog.kt` (`EquipmentSection`) continued displaying plain bike names and binary checkboxes without showing or prompting for mounting position (`ATT-8719`, refining `REQ-SEN-029` and `REQ-UI-149`):
 - **Description**:
   1. *Per-Bike `WheelPosition` Hydration & Summary/Sheet Display (`REQ-SEN-031.1`)*:
-     - `DeviceRawData` and `DeviceUiData` SHALL expose `linkedEquipmentWheelPositions: Map<String, WheelPosition> = emptyMap()` (defaulting to `emptyMap()` for source compatibility) hydrated by `RawDeviceDataProvider` from `EquipmentDbHelper`.
+     - `DeviceRawData` and `DeviceUiData` SHALL expose `linkedWheelPositions: Map<String, WheelPosition> = emptyMap()` (defaulting to `emptyMap()` for source compatibility) hydrated by `RawDeviceDataProvider` from `EquipmentDbHelper`.
      - For `DeviceType.BIKE_SPEED` and `DeviceType.BIKE_SPEED_AND_CADENCE`, `EditDeviceDialog.kt` (`EquipmentSection`) SHALL display each linked bike's localized `WheelPosition` (`equipment_wheel_position_front` / `_rear` / `_unspecified`) in both the read-only summary field and the bike-linking bottom sheet rows.
   2. *Stateless `WheelPositionSelectionDialog` Reuse, Conflict Preview & Strict Draft Semantics (`REQ-SEN-031.2`)*:
      - Tapping a bike row in the `EquipmentSection` sheet for a wheel speed sensor SHALL open the reused stateless `WheelPositionSelectionDialog` to stage draft `WheelPosition` (`FRONT`, `REAR`, `UNSPECIFIED`) or unlink, surfacing a conflict indicator/swap preview when another wheel sensor on that bike already occupies `FRONT` or `REAR`.
      - Staging changes in `WheelPositionSelectionDialog`, the Equipment sheet (`OK`/`Cancel`), or `EditDeviceDialog` (`SaveCancel`) MUST remain strictly in `EditDeviceViewModel` draft memory; tapping `Cancel` on either sheet or dialog MUST discard all draft link/position edits with zero `Equipment.db` mutations.
   3. *Atomic `Save` Commit & `swapConflict = true` Parity (`REQ-SEN-031.3`)*:
-     - On `Save`, `DeviceDataRepository.updateDevice()` SHALL detect changes to either `linkedEquipment` or `linkedEquipmentWheelPositions` (compared against `originalState`), unlink removed bikes, and commit linked wheel sensors via `EquipmentRepository.setWheelSensorLink(equipmentId, sensorId, position, swapConflict = true)` (emitting `equipmentLinksChanged`).
+     - On `Save`, `DeviceDataRepository.updateDevice()` SHALL detect changes to either `linkedEquipment` or `linkedWheelPositions` (compared against `originalState`), update `_allDevices` before dispatching bulk link notifications, unlink removed bikes, commit linked wheel sensors via `EquipmentRepository.setWheelSensorLink(equipmentId, sensorId, position, swapConflict = true)`, and trigger `EquipmentRepository.notifyEquipmentLinksChanged(null)` so sibling unswapped wheel sensors refresh `wheelPositionConflicts`.
   4. *Non-Wheel Sensor Isolation & 9-Locale Parity (`REQ-SEN-031.4`)*:
      - Non-wheel sensors (`HRM`, `BIKE_POWER`, `BIKE_RADAR`, `BIKE_CADENCE`, `RUN_SPEED`, smartphone sensors) MUST strictly retain the existing simple checkbox selection UI with zero wheel-position prompts.
      - UI labels SHALL reuse existing 9-locale `strings_equipment.xml` resources (`equipment_wheel_position_*`), and any newly added conflict/swap hint key MUST achieve 100% parity across all 9 locales (`values`, `de`, `es`, `fr`, `it`, `ja`, `nl`, `pl`, `pt`).
@@ -6787,3 +6787,4 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 | `1.0.11` | 2026-11-18 | AI Agent (`ATT-8706`) | `ATT-8706` | Added and verified `REQ-TRK-085` [Verified] (`RrBeatNormalization`, `DeviceManager`, `TrackerService`, `HrvPostWorkoutRecomputer`, `RrArtifactFilter`, `DfaCalculator`, `HRVMetricsDevice`) for single-primary RR routing, monotonic clamping, physiological gap flagging, pre-filter sort, and positive finite DFA α1 gate (502/502 tests across 88 suites). |
 | `1.0.12` | 2026-11-18 | AI Agent (`ATT-8719`) | `ATT-8719` | Added and verified `REQ-SEN-031` [Verified] for `EditDeviceDialog` wheel speed sensor `WheelPosition` display, draft selection via `WheelPositionSelectionDialog`, conflict preview, and `Save`-time `swapConflict` commit. |
 | `1.0.13` | 2026-11-18 | AI Agent (`ATT-8706`) | `ATT-8706` | Stage 6 Bounce 1/3 heal (`[Verified]`): fixed `HRVMetricsDevice.pruneOldBeats` out-of-order queue eviction and `DeviceManager.getRrSourcePriority` optical `BTLEHeartRateDevice` Verity Sense demotion (`RR_PRIORITY_PPG`) (`448/448` tests across `83` suites). |
+| `1.0.14` | 2026-11-18 | AI Agent (`ATT-8719`) | `ATT-8719` | Stage 6 Bounce 1/3 heal (`[Verified]`): grounded `linkedWheelPositions` symbol name and added `_allDevices` update ordering + `notifyEquipmentLinksChanged(null)` cross-sensor conflict refresh in `REQ-SEN-031.3` (`174/174` `--rerun-tasks` across `41` classes). |

@@ -368,4 +368,109 @@ class DeviceDataRepositoryEquipmentSyncTest {
         verify(exactly = 1) { mockEquipmentRepo.setDeviceLink(10L, 55L, false) }
         verify(exactly = 1) { mockEquipmentRepo.setWheelSensorLink(20L, 55L, WheelPosition.FRONT, true) }
     }
+
+    /**
+     * TST-SEN-031.1 / REQ-SEN-031.3 (Stage 6 Bounce 1 heal): Updating a wheel sensor's position
+     * (FRONT -> REAR) emits a bulk refresh AFTER updating _allDevices so other unswapped wheel
+     * speed sensors in allDevices immediately refresh their wheelPositionConflicts maps.
+     */
+    @Test
+    fun testUpdateDevice_wheelPositionChange_refreshesUnswappedSiblingSensorConflictsInAllDevices() = kotlinx.coroutines.test.runTest(testDispatcher) {
+        mockkConstructor(ContentValues::class)
+        every { anyConstructed<ContentValues>().size() } returns 0
+        val mockEquipmentRepo = mockk<EquipmentRepository>(relaxed = true)
+        EquipmentRepository.resetForTesting(mockEquipmentRepo)
+
+        val mockEqDb = mockk<EquipmentDbHelper>(relaxed = true)
+        mockkStatic(EquipmentDbHelper::class)
+        every { EquipmentDbHelper.getInstance(any()) } returns mockEqDb
+        every { mockEqDb.getEquipmentId("Gravel Bike") } returns 10L
+
+        val sensorAInitial = DeviceRawData(
+            id = 42L,
+            protocol = Protocol.BLUETOOTH_LE,
+            deviceType = DeviceType.BIKE_SPEED,
+            lastSeen = "Now",
+            batteryPercentage = 95,
+            manufacturer = "Garmin",
+            deviceName = "Front Speed",
+            isPaired = true,
+            calibrationValue = 2.105,
+            linkedEquipment = listOf("Gravel Bike"),
+            availableEquipment = listOf("Gravel Bike"),
+            powerFeaturesFlags = null,
+            linkedSportTypes = listOf("Cycling"),
+            linkedWheelPositions = mapOf("Gravel Bike" to WheelPosition.FRONT)
+        )
+        val sensorBInitial = DeviceRawData(
+            id = 99L,
+            protocol = Protocol.BLUETOOTH_LE,
+            deviceType = DeviceType.BIKE_SPEED,
+            lastSeen = "Now",
+            batteryPercentage = 80,
+            manufacturer = "Wahoo",
+            deviceName = "Spare Speed",
+            isPaired = true,
+            calibrationValue = 2.105,
+            linkedEquipment = emptyList(),
+            availableEquipment = listOf("Gravel Bike"),
+            powerFeaturesFlags = null,
+            linkedSportTypes = emptyList(),
+            linkedWheelPositions = emptyMap(),
+            wheelPositionConflicts = mapOf("Gravel Bike" to mapOf(WheelPosition.FRONT to "Front Speed"))
+        )
+
+        val sensorAAfter = sensorAInitial.copy(
+            linkedWheelPositions = mapOf("Gravel Bike" to WheelPosition.REAR)
+        )
+        val sensorBAfter = sensorBInitial.copy(
+            wheelPositionConflicts = mapOf("Gravel Bike" to mapOf(WheelPosition.REAR to "Front Speed"))
+        )
+
+        var phaseAfterMove = false
+        val mockCursor = mockk<Cursor>(relaxed = true)
+        var cursorIdx = -1
+        every { mockCursor.moveToFirst() } answers {
+            cursorIdx = 0
+            true
+        }
+        every { mockCursor.moveToNext() } answers {
+            cursorIdx++
+            cursorIdx < 2
+        }
+        every { mockDevicesDb.getCursorForAllDevices() } returns mockCursor
+        every { anyConstructed<RawDeviceDataProvider>().getDeviceData(mockCursor) } answers {
+            when (cursorIdx) {
+                0 -> if (phaseAfterMove) sensorAAfter else sensorAInitial
+                else -> if (phaseAfterMove) sensorBAfter else sensorBInitial
+            }
+        }
+
+        val repository = DeviceDataRepository(mockApplication, testDispatcher)
+        DeviceDataRepository.resetForTesting(repository)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(
+            mapOf("Gravel Bike" to mapOf(WheelPosition.FRONT to "Front Speed")),
+            repository.getDeviceById(99L)?.wheelPositionConflicts
+        )
+
+        // Move Sensor A from FRONT to REAR; Sensor B is unlinked/unswapped
+        phaseAfterMove = true
+        val sensorAUi = repository.getDeviceSnapshotById(42L)!!
+        repository.updateDevice(
+            sensorAUi.copy(linkedWheelPositions = mapOf("Gravel Bike" to WheelPosition.REAR))
+        )
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Unswapped Sensor B in allDevices must now see REAR conflict instead of stale FRONT
+        assertEquals(
+            mapOf("Gravel Bike" to mapOf(WheelPosition.REAR to "Front Speed")),
+            repository.getDeviceById(99L)?.wheelPositionConflicts
+        )
+        assertEquals(
+            mapOf("Gravel Bike" to WheelPosition.REAR),
+            repository.getDeviceById(42L)?.linkedWheelPositions
+        )
+    }
 }

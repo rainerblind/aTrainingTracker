@@ -1,7 +1,7 @@
 # Living Test Specification: Tracking & Live Sensor Cockpit
 
 **Document ID**: `DOC-TST-TRK`  
-**Version**: 1.0.13  
+**Version**: 1.0.14  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -3334,8 +3334,8 @@
 - **Verification Method**: Unit
 - **Procedure**:
   1. *ViewModel Draft Staging & `Cancel`-vs-`Save` Isolation Test (`TST-SEN-031.1`, `EditDeviceViewModelTest.kt` & `DeviceDataRepositoryEquipmentSyncTest.kt`)*:
-     • Update `linkedEquipment` and `linkedEquipmentWheelPositions` in `EditDeviceViewModel`; verify `_deviceSnapshot` holds draft positions with zero calls to `DeviceDataRepository.updateDevice()` or `EquipmentRepository.setWheelSensorLink()` until `saveChanges()`.
-     • Verify `DeviceDataRepository.updateDevice()` commits position-only changes (unchanged bike list, changed `WheelPosition`) via `EquipmentRepository.setWheelSensorLink(..., swapConflict = true)` and unlinks removed bikes cleanly.
+     • Update `linkedEquipment` and `linkedWheelPositions` in `EditDeviceViewModel`; verify `_deviceSnapshot` holds draft positions with zero calls to `DeviceDataRepository.updateDevice()` or `EquipmentRepository.setWheelSensorLink()` until `saveChanges()`.
+     • Verify `DeviceDataRepository.updateDevice()` commits position-only changes (unchanged bike list, changed `WheelPosition`) via `EquipmentRepository.setWheelSensorLink(..., swapConflict = true)`, unlinks removed bikes cleanly, and refreshes `wheelPositionConflicts` across sibling unswapped wheel speed sensors in `allDevices`.
   2. *Compose `EquipmentSection` Display, Reused `WheelPositionSelectionDialog` & Conflict Preview Test (`TST-SEN-031.2`, `EditDeviceEquipmentWheelPositionTest.kt`)*:
      • Strictly offline Robolectric `createComposeRule()` (zero `src/main` reads per `REQ-PRO-049.1`): render `EditDeviceDialog` / `EquipmentSection` for `BIKE_SPEED` and `BIKE_SPEED_AND_CADENCE`.
      • Assert localized `Front` / `Rear` / `Unspecified` labels appear in the summary field and bike-linking sheet; tap a bike row, assert `WheelPositionSelectionDialog` opens with conflict/swap preview when another sensor already occupies the target position, select `REAR`, confirm sheet `OK` / `Cancel` draft behavior.
@@ -3366,3 +3366,4 @@
 | `1.0.11` | 2026-11-18 | AI Agent (`ATT-8706`) | `ATT-8706` | Added and verified `TST-TRK-085` [Verified] for RR source isolation, monotonic clamping, physiological gap flagging, pre-filter sort, and DFA α1 validity gate (502/502 tests across 88 suites). |
 | `1.0.12` | 2026-11-18 | AI Agent (`ATT-8719`) | `ATT-8719` | Added and verified `TST-SEN-031` [Verified] for `EditDeviceDialog` wheel mounting position display, draft isolation (`SaveCancel`), conflict swap, non-wheel isolation, and Light/Dark `@Preview` PNG verification. |
 | `1.0.13` | 2026-11-18 | AI Agent (`ATT-8706`) | `ATT-8706` | Stage 6 Bounce 1/3 heal (`[Verified]`): strengthened out-of-order & stale-eviction tests (`HRVMetricsDeviceTest`), positive DFA window assertion (`HrvPostWorkoutRecomputerTest`), `ANTHeartRateDeviceTest` `deltaC==1`/`>=2` monotonic & gap tests, and `DeviceManagerRrSourceTest` optical BTLE Verity Sense demotion test (`448/448` tests across `83` suites). |
+| `1.0.14` | 2026-11-18 | AI Agent (`ATT-8719`) | `ATT-8719` | Stage 6 Bounce 1/3 heal (`[Verified]`): grounded `linkedWheelPositions` symbol name and added cross-sensor `wheelPositionConflicts` refresh test in `DeviceDataRepositoryEquipmentSyncTest.kt` (`174/174` `--rerun-tasks` across `41` classes). |

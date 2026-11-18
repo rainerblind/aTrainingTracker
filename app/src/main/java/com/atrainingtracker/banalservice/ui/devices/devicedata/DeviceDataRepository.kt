@@ -56,6 +56,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -377,6 +378,12 @@ class DeviceDataRepository @androidx.annotation.VisibleForTesting internal const
                 )
             }
 
+            // Update the local StateFlow immediately before dispatching link-change notifications
+            // so async DB refreshes (refreshDeviceFromDb / loadAllDevices) are never overwritten.
+            _allDevices.update { currentList ->
+                currentList.map { if (it.id == finalState.id) finalState else it }
+            }
+
             // update linked equipment and wheel positions when necessary (REQ-SEN-031.3)
             val equipmentLinksModified = originalState.linkedEquipment != finalState.linkedEquipment
             val wheelPositionsModified = isWheelSpeedSensor(finalState.deviceType) &&
@@ -403,7 +410,8 @@ class DeviceDataRepository @androidx.annotation.VisibleForTesting internal const
                             )
                         }
                     }
-                    EquipmentRepository.notifyEquipmentLinksChanged(finalState.id)
+                    // Reload all devices so unswapped wheel sensors also refresh wheelPositionConflicts
+                    EquipmentRepository.notifyEquipmentLinksChanged(null)
                 } else if (equipmentLinksModified) {
                     equipmentDbHelper.setEquipmentLinks(
                         finalState.id.toInt(),
@@ -411,11 +419,6 @@ class DeviceDataRepository @androidx.annotation.VisibleForTesting internal const
                     )
                 }
             }
-
-            // Update the local LiveData to immediately reflect the change in the UI
-            val currentList = _allDevices.value
-            val updatedList = currentList.map { if (it.id == finalState.id) finalState else it }
-            _allDevices.value = updatedList
 
             // send broadcasts
             if (originalState.wheelCircumference != finalState.wheelCircumference) {
