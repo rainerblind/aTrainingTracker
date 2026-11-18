@@ -23,9 +23,25 @@ A freshly spawned **Cold Reviewer** (`Model: "flash"` for routine / Low-Risk / `
      1. The original Jira ticket requirements (`python3 tools/jira_util.py show <TICKET_KEY>`),
      2. The full production & test diff (`git diff sprint/<SPRINT_NAME>...feature/<KEY> -- app/src/main/ app/src/test/ tools/`), and
      3. The **full surrounding production source files** (`read_file` on the modified classes and their callers/callees in the `feature/<KEY>` worktree).
-3. **Full Production Code Diff Inspection is Mandatory (Strictly Read-Only — ZERO `./gradlew` / Lock Calls During Audit, `Rule 3.3`, `Rule 85`)**:
+3. **Full Production Code Diff Inspection + Mandatory Live Emulator/Simulator Verification (`emulator-5554`) & Visual `read_file` Critique (`Rule 3.3`, ASPICE `SWE.6` / `SYS.5`)**:
    - Running only `git diff --stat` / `git show --stat` is a **severe governance violation**. You MUST read every line of production code in `git diff sprint/<SPRINT_NAME>...feature/<KEY>` plus the surrounding methods/classes in the `feature/<KEY>` working tree.
-   - **Zero-Build / Zero-Lock Invariant (`ATT-8030`, `REQ-PRO-125`)**: Stage 6 audits already-verified Stage 5 `feature/<KEY>` branches and MUST remain **100% read-only during review**. Do **NOT** invoke `./gradlew` or acquire `/tmp/att_build_merge.lock` during Stage 6 review (`PASS` is certified from the Stage 5 verification evidence + diff/code forensics; fixes happen on `feature/<KEY>` in the bounced implementation lane, and `--merge-ticket` acquires the lock strictly *after* `final-review-verdict PASS`).
+   - **Live Target Verification on `emulator-5554` & Simulators (All App / UI / Sensor / Service / DB Tickets)**:
+     1. Ensure the agent emulator is booted and seeded (`python3 tools/agent_emulator.py ensure`), then install the `feature/<KEY>` build (`ANDROID_SERIAL=emulator-5554 ./gradlew installDebug`).
+     2. Launch `com.atrainingtracker.debug` (`adb -s emulator-5554 shell am start -n com.atrainingtracker.debug/com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation`), navigate to the modified screen(s)/dialog(s), resolve tap coordinates deterministically via `uiautomator dump` before `adb -s emulator-5554 shell input tap`, and exercise the real interactive flow (including sensor simulators such as `tools/ble_radar_simulator.py`, mock streams, or seeded SQLite workouts).
+     3. Inspect `adb -s emulator-5554 logcat -d` to verify zero crashes, zero self-cancelling coroutine exceptions (`ForgottenCoroutineScopeException`), zero ANRs, and zero multi-second UI stalls when a sensor is disconnected.
+     4. Capture a live verification screenshot (`adb -s emulator-5554 exec-out screencap -p > /tmp/stage6_<KEY>_verify.png`) and inspect it with `read_file`.
+     *(Note: Pure Python/markdown governance tickets without app runtime impact may skip APK installation while still auditing all diffed files and images; `--merge-ticket` acquires the merge lock strictly *after* `final-review-verdict PASS`).*
+   - **Mandatory `read_file` Visual Critique of All Screenshots & Images (`Rule 8.5`)**:
+     - Call `read_file` on **every** `.png`/`.jpg` asset created, modified, or referenced by the ticket (`docs/engineering/walkthroughs/img/*.png`, `docs/guide/img/*.png`, `docs/store_presence/screenshots/*.png`, and `/tmp/stage6_<KEY>_verify.png`).
+     - Execute `BOUNCE` immediately if:
+       * Any screenshot does not match its caption/section heading (swapped images or legacy V4 XML views).
+       * Any screenshot shows an idle/unstarted workout (`"Nicht gestartet"`, `0,0 km/h`, `-- bpm`), a zoomed-out world map (zoom level 0), or scrolled content overlapping the Android status bar.
+       * Badges, icons, or text are illegible at phone scale, or chart axes violate domain/physiological semantics (e.g., inverted effort direction).
+   - **4-Point Real-Device Failure-Mode Audit**:
+     1. *Self-Cancelling Composable Scopes*: Never launch an async action on a `rememberCoroutineScope()` inside a conditional Composable (`if (showBanner)`) that disappears when clicked (must use `viewModelScope` or screen-level scope).
+     2. *Existing SQLite / SharedPreferences Upgrade Path*: New columns/fields (e.g., `disModelNumber`) must handle already-paired devices in an existing user database where the field is initially `null` or empty.
+     3. *Sensor Threshold Hysteresis*: Warning colors or UI state transitions driven by live sensor streams must include hysteresis/deadbands so boundary values (e.g., `50.0 km/h`) do not oscillate at 1–5 Hz.
+     4. *Disconnected Sensor Fast-Fail*: Stop-time / sync hooks must check connectivity/advertising state before blocking UI transitions for 15–45 seconds.
 4. **Adversarial Bug-Hunter Mindset**:
    - Do **not** look for excuses to pass a ticket. Assume the implementing pair missed at least one subtle edge case, lifecycle race, sibling screen/protocol, or unit mismatch, and actively hunt for it. If you find *any* genuine defect, incomplete wiring, compiler warning, broken edge case, or governance discrepancy, you **MUST** execute `BOUNCE` (never excuse or rationalize it in `<thinking>`).
 5. **Mandatory `Pros` vs. `Cons / Defects Identified` & *"Would You Recommend Its Approval?"* Gate (`Rule 63` — `ATT-4670`)**:
