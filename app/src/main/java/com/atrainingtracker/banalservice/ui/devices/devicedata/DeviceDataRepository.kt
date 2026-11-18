@@ -42,6 +42,7 @@ import com.atrainingtracker.util.EnumUtils
 import com.atrainingtracker.trainingtracker.MyHelper
 import com.atrainingtracker.trainingtracker.database.EquipmentAndSportTypeDiscoveryManager
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
+import com.atrainingtracker.trainingtracker.database.WheelPosition
 import com.atrainingtracker.trainingtracker.repositories.EquipmentRepository
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineExceptionHandler
@@ -177,6 +178,7 @@ class DeviceDataRepository @androidx.annotation.VisibleForTesting internal const
     // access to the databases
     private val devicesDatabaseManager by lazy { DevicesDatabaseManager.getInstance(application) }
     private val equipmentDbHelper by lazy { EquipmentDbHelper.getInstance(application) }
+    private val equipmentRepository by lazy { EquipmentRepository.getInstance(application) }
     private val discoveryManager by lazy { EquipmentAndSportTypeDiscoveryManager.getInstance(application) }
     private val mapper by lazy { RawDeviceDataProvider(devicesDatabaseManager, equipmentDbHelper, discoveryManager) }
 
@@ -375,12 +377,39 @@ class DeviceDataRepository @androidx.annotation.VisibleForTesting internal const
                 )
             }
 
-            // update linked equipment when necessary
-            if (originalState.linkedEquipment != finalState.linkedEquipment) {
-                equipmentDbHelper.setEquipmentLinks(
-                    finalState.id.toInt(),
-                    finalState.linkedEquipment
-                )
+            // update linked equipment and wheel positions when necessary (REQ-SEN-031.3)
+            val equipmentLinksModified = originalState.linkedEquipment != finalState.linkedEquipment
+            val wheelPositionsModified = isWheelSpeedSensor(finalState.deviceType) &&
+                originalState.linkedWheelPositions != finalState.linkedWheelPositions
+
+            if (equipmentLinksModified || wheelPositionsModified) {
+                if (isWheelSpeedSensor(finalState.deviceType)) {
+                    val removedEquipment = originalState.linkedEquipment.filter { it !in finalState.linkedEquipment }
+                    for (eqName in removedEquipment) {
+                        val eqId = equipmentDbHelper.getEquipmentId(eqName)
+                        if (eqId > 0L) {
+                            equipmentRepository.setDeviceLink(eqId, finalState.id, false)
+                        }
+                    }
+                    for (eqName in finalState.linkedEquipment) {
+                        val eqId = equipmentDbHelper.getEquipmentId(eqName)
+                        if (eqId > 0L) {
+                            val targetPos = finalState.linkedWheelPositions[eqName] ?: WheelPosition.UNSPECIFIED
+                            equipmentRepository.setWheelSensorLink(
+                                equipmentId = eqId,
+                                sensorId = finalState.id,
+                                wheelPosition = targetPos,
+                                swapConflict = true
+                            )
+                        }
+                    }
+                    EquipmentRepository.notifyEquipmentLinksChanged(finalState.id)
+                } else if (equipmentLinksModified) {
+                    equipmentDbHelper.setEquipmentLinks(
+                        finalState.id.toInt(),
+                        finalState.linkedEquipment
+                    )
+                }
             }
 
             // Update the local LiveData to immediately reflect the change in the UI

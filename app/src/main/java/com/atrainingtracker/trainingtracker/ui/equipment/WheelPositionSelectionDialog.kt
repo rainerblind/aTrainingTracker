@@ -55,7 +55,8 @@ fun WheelPositionSelectionDialog(
     onSelectPosition: (WheelPosition) -> Unit,
     onUnlink: () -> Unit,
     onDismiss: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    conflictHints: Map<WheelPosition, String> = emptyMap()
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -87,6 +88,7 @@ fun WheelPositionSelectionDialog(
 
                 options.forEach { (pos, labelRes, tag) ->
                     val isSelected = isLinked && currentPosition == pos
+                    val conflictingSensor = conflictHints[pos]
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -110,10 +112,23 @@ fun WheelPositionSelectionDialog(
                             }
                         )
                         Spacer(modifier = Modifier.width(12.dp))
-                        Text(
-                            text = stringResource(labelRes),
-                            style = MaterialTheme.typography.bodyLarge
-                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = stringResource(labelRes),
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                            if (!conflictingSensor.isNullOrBlank()) {
+                                Text(
+                                    text = stringResource(
+                                        R.string.equipment_wheel_position_conflict_swap,
+                                        conflictingSensor
+                                    ),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.tertiary,
+                                    modifier = Modifier.testTag("${tag}_conflict")
+                                )
+                            }
+                        }
                     }
                 }
             }

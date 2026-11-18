@@ -26,7 +26,15 @@ import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.devices.BikePowerSensorsHelper
 import com.atrainingtracker.banalservice.devices.DeviceType
+import com.atrainingtracker.trainingtracker.database.WheelPosition
 import java.util.Locale
+
+/**
+ * Returns true if [deviceType] represents a physical bike wheel speed sensor
+ * supporting Front/Rear mounting position tracking (`REQ-SEN-029`, `REQ-SEN-031`).
+ */
+fun isWheelSpeedSensor(deviceType: DeviceType): Boolean =
+    deviceType == DeviceType.BIKE_SPEED || deviceType == DeviceType.BIKE_SPEED_AND_CADENCE
 
 
 /**
@@ -48,7 +56,9 @@ data class DeviceRawData(
     val linkedSportTypes: List<String> = emptyList(),
     val baselineCircumference: Double? = null,
     val polarH10OfflineRecording: Boolean = true,
-    val polarLiveImuEnabled: Boolean = false
+    val polarLiveImuEnabled: Boolean = false,
+    val linkedWheelPositions: Map<String, WheelPosition> = emptyMap(),
+    val wheelPositionConflicts: Map<String, Map<WheelPosition, String>> = emptyMap()
 )
 
 /**
@@ -86,7 +96,9 @@ data class DeviceUiData(
     val mainValue: String?,
     val allValues: List<String>?,
     val isNewlyDiscovered: Boolean = false,
-    val polarLiveImuEnabled: Boolean = false
+    val polarLiveImuEnabled: Boolean = false,
+    val linkedWheelPositions: Map<String, WheelPosition> = emptyMap(),
+    val wheelPositionConflicts: Map<String, Map<WheelPosition, String>> = emptyMap()
 )
 
 // --- THE NEW, SIMPLIFIED FACTORY ---
@@ -152,7 +164,9 @@ fun raw2UiDeviceData(rawData: DeviceRawData, context: Context): DeviceUiData {
         mainValue = null,
         allValues = null,
         linkedSportTypes = rawData.linkedSportTypes,
-        polarLiveImuEnabled = rawData.polarLiveImuEnabled
+        polarLiveImuEnabled = rawData.polarLiveImuEnabled,
+        linkedWheelPositions = rawData.linkedWheelPositions,
+        wheelPositionConflicts = rawData.wheelPositionConflicts
         )
 }
 

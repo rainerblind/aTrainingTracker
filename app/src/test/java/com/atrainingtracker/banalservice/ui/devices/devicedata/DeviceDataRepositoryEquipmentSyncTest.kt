@@ -19,6 +19,7 @@
 package com.atrainingtracker.banalservice.ui.devices.devicedata
 
 import android.app.Application
+import android.content.ContentValues
 import android.content.Intent
 import android.database.Cursor
 import android.util.Log
@@ -28,6 +29,7 @@ import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceViewModel
 import com.atrainingtracker.trainingtracker.database.EquipmentAndSportTypeDiscoveryManager
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
+import com.atrainingtracker.trainingtracker.database.WheelPosition
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.repositories.DeviceTelemetry
 import com.atrainingtracker.trainingtracker.repositories.EquipmentRepository
@@ -250,5 +252,120 @@ class DeviceDataRepositoryEquipmentSyncTest {
         // Assert: deviceNotFound is true and snapshot is null
         assertEquals(true, viewModel.deviceNotFound.value)
         assertEquals(null, viewModel.deviceSnapshot.value)
+    }
+
+    /**
+     * TST-SEN-031.1 / REQ-SEN-031.3: When only WheelPosition changes on a BIKE_SPEED sensor
+     * (linkedEquipment names unchanged), updateDevice() persists via EquipmentRepository.setWheelSensorLink(..., swapConflict = true).
+     */
+    @Test
+    fun testUpdateDevice_wheelPositionOnlyChange_commitsViaSetWheelSensorLinkWithSwap() = kotlinx.coroutines.test.runTest(testDispatcher) {
+        mockkConstructor(ContentValues::class)
+        every { anyConstructed<ContentValues>().size() } returns 0
+        val mockEquipmentRepo = mockk<EquipmentRepository>(relaxed = true)
+        EquipmentRepository.resetForTesting(mockEquipmentRepo)
+
+        val mockCursor = mockk<Cursor>(relaxed = true)
+        every { mockCursor.moveToFirst() } returns true
+        every { mockDevicesDb.getCursorForAllDevices() } returns mockCursor
+        every { mockDevicesDb.getDeviceCursor(42L) } returns mockCursor
+
+        val initialRaw = DeviceRawData(
+            id = 42L,
+            protocol = Protocol.BLUETOOTH_LE,
+            deviceType = DeviceType.BIKE_SPEED,
+            lastSeen = "Now",
+            batteryPercentage = 95,
+            manufacturer = "Garmin",
+            deviceName = "Speed 2",
+            isPaired = true,
+            calibrationValue = 2.105,
+            linkedEquipment = listOf("Gravel Bike"),
+            availableEquipment = listOf("Gravel Bike", "Road Bike"),
+            powerFeaturesFlags = null,
+            linkedSportTypes = listOf("Cycling"),
+            linkedWheelPositions = mapOf("Gravel Bike" to WheelPosition.FRONT)
+        )
+        val mockEqDb = mockk<EquipmentDbHelper>(relaxed = true)
+        mockkStatic(EquipmentDbHelper::class)
+        every { EquipmentDbHelper.getInstance(any()) } returns mockEqDb
+        every { mockEqDb.getEquipmentId("Gravel Bike") } returns 10L
+        every { mockEqDb.getEquipmentId("Road Bike") } returns 20L
+        every { anyConstructed<RawDeviceDataProvider>().getDeviceData(mockCursor) } returns initialRaw
+
+        val repository = DeviceDataRepository(mockApplication, testDispatcher)
+        DeviceDataRepository.resetForTesting(repository)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val initialUi = repository.getDeviceSnapshotById(42L)!!
+        // Change ONLY WheelPosition (FRONT -> REAR), keeping linkedEquipment identical
+        val updatedPositionOnly = initialUi.copy(
+            linkedWheelPositions = mapOf("Gravel Bike" to WheelPosition.REAR)
+        )
+
+        repository.updateDevice(updatedPositionOnly)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        verify(exactly = 1) {
+            mockEquipmentRepo.setWheelSensorLink(10L, 42L, WheelPosition.REAR, true)
+        }
+        verify(exactly = 0) {
+            anyConstructed<EquipmentDbHelper>().setEquipmentLinks(any(), any())
+        }
+    }
+
+    /**
+     * TST-SEN-031.1 / REQ-SEN-031.3: Unlinking a bike and linking a new bike as FRONT on a BIKE_SPEED_AND_CADENCE
+     * sensor calls setDeviceLink(..., false) for removed bikes and setWheelSensorLink(..., swapConflict = true) for active bikes.
+     */
+    @Test
+    fun testUpdateDevice_wheelSpeedAndCadence_unlinksRemovedAndSetsNewPosition() = kotlinx.coroutines.test.runTest(testDispatcher) {
+        mockkConstructor(ContentValues::class)
+        every { anyConstructed<ContentValues>().size() } returns 0
+        val mockEquipmentRepo = mockk<EquipmentRepository>(relaxed = true)
+        EquipmentRepository.resetForTesting(mockEquipmentRepo)
+
+        val mockCursor = mockk<Cursor>(relaxed = true)
+        every { mockCursor.moveToFirst() } returns true
+        every { mockDevicesDb.getCursorForAllDevices() } returns mockCursor
+
+        val initialRaw = DeviceRawData(
+            id = 55L,
+            protocol = Protocol.ANT_PLUS,
+            deviceType = DeviceType.BIKE_SPEED_AND_CADENCE,
+            lastSeen = "Now",
+            batteryPercentage = 88,
+            manufacturer = "Wahoo",
+            deviceName = "Blue SC",
+            isPaired = true,
+            calibrationValue = 2.110,
+            linkedEquipment = listOf("Gravel Bike"),
+            availableEquipment = listOf("Gravel Bike", "Road Bike"),
+            powerFeaturesFlags = null,
+            linkedSportTypes = listOf("Cycling"),
+            linkedWheelPositions = mapOf("Gravel Bike" to WheelPosition.REAR)
+        )
+        val mockEqDb = mockk<EquipmentDbHelper>(relaxed = true)
+        mockkStatic(EquipmentDbHelper::class)
+        every { EquipmentDbHelper.getInstance(any()) } returns mockEqDb
+        every { mockEqDb.getEquipmentId("Gravel Bike") } returns 10L
+        every { mockEqDb.getEquipmentId("Road Bike") } returns 20L
+        every { anyConstructed<RawDeviceDataProvider>().getDeviceData(mockCursor) } returns initialRaw
+
+        val repository = DeviceDataRepository(mockApplication, testDispatcher)
+        DeviceDataRepository.resetForTesting(repository)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val initialUi = repository.getDeviceSnapshotById(55L)!!
+        val updated = initialUi.copy(
+            linkedEquipment = listOf("Road Bike"),
+            linkedWheelPositions = mapOf("Road Bike" to WheelPosition.FRONT)
+        )
+
+        repository.updateDevice(updated)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        verify(exactly = 1) { mockEquipmentRepo.setDeviceLink(10L, 55L, false) }
+        verify(exactly = 1) { mockEquipmentRepo.setWheelSensorLink(20L, 55L, WheelPosition.FRONT, true) }
     }
 }

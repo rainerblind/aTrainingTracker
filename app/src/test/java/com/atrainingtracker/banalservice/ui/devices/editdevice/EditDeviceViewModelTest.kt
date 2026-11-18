@@ -20,10 +20,27 @@ package com.atrainingtracker.banalservice.ui.devices.editdevice
 
 import android.app.Application
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.devices.BikePowerSensorsHelper
+import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.ui.devices.devicedata.BikePowerFeatures
+import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
+import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
+import com.atrainingtracker.trainingtracker.database.EquipmentAndSportTypeDiscoveryManager
+import com.atrainingtracker.trainingtracker.database.WheelPosition
+import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkObject
+import io.mockk.unmockkAll
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.setMain
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -44,6 +61,95 @@ class EditDeviceViewModelTest {
         every { mockApplication.getString(R.string.bike_power__pedal_power_balance) } returns "Pedal Power Balance"
         every { mockApplication.getString(R.string.bike_power__crank_revolution_data) } returns "Cadence"
         every { mockApplication.getString(R.string.bike_power__torque_effectiveness) } returns "Torque Effectiveness"
+    }
+
+    @After
+    fun tearDown() {
+        DeviceDataRepository.resetForTesting(null)
+        EquipmentAndSportTypeDiscoveryManager.resetForTesting(null)
+        Dispatchers.resetMain()
+        unmockkAll()
+    }
+
+    /**
+     * TST-SEN-031.1 / REQ-SEN-031.2: Verify EditDeviceViewModel stages wheel mounting positions
+     * strictly in draft _deviceSnapshot (zero DB/repository calls until saveChanges()) and prunes unlinked bikes.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @Test
+    fun testOnEquipmentChanged_stagesWheelPositionsInDraftOnly_untilSaveChanges() {
+        val testDispatcher = StandardTestDispatcher()
+        Dispatchers.setMain(testDispatcher)
+
+        val mockRepo = mockk<DeviceDataRepository>(relaxed = true)
+        DeviceDataRepository.resetForTesting(mockRepo)
+
+        val mockBanalRepo = mockk<BANALServiceRepository>(relaxed = true)
+        mockkObject(BANALServiceRepository.Companion)
+        every { BANALServiceRepository.getInstance(any()) } returns mockBanalRepo
+        every { mockBanalRepo.allActiveDevicesTelemetry } returns MutableStateFlow(emptyList())
+        every { mockBanalRepo.newlyFoundDevicesIds } returns MutableStateFlow(emptyList())
+        every { mockRepo.allDevices } returns MutableStateFlow(emptyList())
+
+        val mockDiscovery = mockk<EquipmentAndSportTypeDiscoveryManager>(relaxed = true)
+        EquipmentAndSportTypeDiscoveryManager.resetForTesting(mockDiscovery)
+        every { mockDiscovery.getSportNamesForEquipmentList(any()) } returns listOf("Cycling")
+
+        val initial = DeviceUiData(
+            id = 77L,
+            protocol = Protocol.BLUETOOTH_LE,
+            deviceType = DeviceType.BIKE_SPEED,
+            lastSeen = "Now",
+            manufacturer = "Garmin",
+            deviceName = "Speed 2",
+            isPaired = true,
+            linkedEquipment = listOf("Gravel Bike"),
+            availableEquipment = listOf("Gravel Bike", "Road Bike"),
+            powerFeaturesFlags = null,
+            batteryPercentage = 90,
+            linkedSportTypes = listOf("Cycling"),
+            deviceTypeIconRes = 0,
+            batteryStatusIconRes = 0,
+            onEquipmentResId = 0,
+            wheelCircumference = 2105,
+            calibrationFactor = null,
+            powerFeatures = null,
+            isConnected = false,
+            mainValue = null,
+            allValues = null,
+            linkedWheelPositions = mapOf("Gravel Bike" to WheelPosition.FRONT)
+        )
+        every { mockRepo.getDeviceSnapshotById(77L) } returns initial
+
+        val viewModel = EditDeviceViewModel(mockApplication)
+        viewModel.loadInitialDeviceData(77L)
+
+        // Stage draft link + position update (Gravel removed, Road added as REAR)
+        viewModel.onEquipmentChanged(
+            newEquipment = listOf("Road Bike"),
+            newWheelPositions = mapOf(
+                "Gravel Bike" to WheelPosition.FRONT,
+                "Road Bike" to WheelPosition.REAR
+            )
+        )
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val draft = viewModel.deviceSnapshot.value!!
+        assertEquals(listOf("Road Bike"), draft.linkedEquipment)
+        assertEquals(mapOf("Road Bike" to WheelPosition.REAR), draft.linkedWheelPositions)
+        // Strict Cancel/Draft invariant: updateDevice MUST NOT have been called yet
+        coVerify(exactly = 0) { mockRepo.updateDevice(any()) }
+
+        // Save commits the draft state
+        viewModel.saveChanges()
+        testDispatcher.scheduler.advanceUntilIdle()
+        coVerify(exactly = 1) {
+            mockRepo.updateDevice(match {
+                it.id == 77L &&
+                    it.linkedEquipment == listOf("Road Bike") &&
+                    it.linkedWheelPositions == mapOf("Road Bike" to WheelPosition.REAR)
+            })
+        }
     }
 
     /**

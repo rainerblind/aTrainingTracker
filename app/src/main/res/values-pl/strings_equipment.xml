@@ -7,6 +7,7 @@
     <string name="equipment_wheel_position_unlink">Odłącz czujnik</string>
     <string name="equipment_wheel_position_front_badge">P</string>
     <string name="equipment_wheel_position_rear_badge">T</string>
+    <string name="equipment_wheel_position_conflict_swap">Obecnie przypisane do: %1$s — wybór zamieni pozycje.</string>
     <string name="equipment_guidance_title">Dlaczego czujniki koła obok GPS?</string>
     <string name="equipment_guidance_subtitle">Fizyczne zalety czujników prędkości koła w porównaniu z GPS smartfona</string>
     <string name="equipment_guidance_1_sensor_title">1 czujnik koła + GPS</string>

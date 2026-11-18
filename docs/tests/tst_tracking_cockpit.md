@@ -1,14 +1,14 @@
 # Living Test Specification: Tracking & Live Sensor Cockpit
 
 **Document ID**: `DOC-TST-TRK`  
-**Version**: 1.0.11  
+**Version**: 1.0.12  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Tests**: 143
+**Total Tests**: 144
 
 ---
 
@@ -3325,6 +3325,26 @@
   4. *DFA $\alpha_1$ Validity Gate & NeuroKit2 Golden Parity Test (`TST-TRK-085.4`, `DfaCalculatorTest.kt`, `HRVMetricsDeviceTest.kt`, `HrvGoldenOracleTest.kt`)*:
      • Feed synthetic inputs producing negative OLS log-log slope into `DfaCalculator.computeDfaAlpha1()`, `HrvPostWorkoutRecomputer`, and `HRVMetricsDevice`; assert `Double.NaN` / `null` (never negative values), `DfaCalculatorTest.testConstantSignalDoesNotCrash` passes, and `HrvGoldenOracleTest` maintains `|Δα1| <= 0.02` (`<= 0.03` end-to-end) and `|ΔrMSSD| <= 0.5 ms` offline (`REQ-PRO-049.1` zero `src/main` reads; `Localization parity: N/A - no UI strings`).
 
+### TST-SEN-031: **EditDeviceDialog Wheel Mounting Position Display, Draft State & Conflict Swap Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Tickets**: `ATT-8719`
+- **Requirement(s)**: `REQ-SEN-031` (`REQ-SEN-031.1`..`REQ-SEN-031.4`), `REQ-SEN-029`, `REQ-UI-149`
+- **Component**: `app/src/test/java/com/atrainingtracker/banalservice/ui/devices/editdevice/EditDeviceEquipmentWheelPositionTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/ui/devices/editdevice/EditDeviceViewModelTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/ui/devices/devicedata/DeviceDataRepositoryEquipmentSyncTest.kt`, `TranslationParityTest.kt`
+- **Test Type**: Unit & UI
+- **Verification Method**: Unit
+- **Procedure**:
+  1. *ViewModel Draft Staging & `Cancel`-vs-`Save` Isolation Test (`TST-SEN-031.1`, `EditDeviceViewModelTest.kt` & `DeviceDataRepositoryEquipmentSyncTest.kt`)*:
+     • Update `linkedEquipment` and `linkedEquipmentWheelPositions` in `EditDeviceViewModel`; verify `_deviceSnapshot` holds draft positions with zero calls to `DeviceDataRepository.updateDevice()` or `EquipmentRepository.setWheelSensorLink()` until `saveChanges()`.
+     • Verify `DeviceDataRepository.updateDevice()` commits position-only changes (unchanged bike list, changed `WheelPosition`) via `EquipmentRepository.setWheelSensorLink(..., swapConflict = true)` and unlinks removed bikes cleanly.
+  2. *Compose `EquipmentSection` Display, Reused `WheelPositionSelectionDialog` & Conflict Preview Test (`TST-SEN-031.2`, `EditDeviceEquipmentWheelPositionTest.kt`)*:
+     • Strictly offline Robolectric `createComposeRule()` (zero `src/main` reads per `REQ-PRO-049.1`): render `EditDeviceDialog` / `EquipmentSection` for `BIKE_SPEED` and `BIKE_SPEED_AND_CADENCE`.
+     • Assert localized `Front` / `Rear` / `Unspecified` labels appear in the summary field and bike-linking sheet; tap a bike row, assert `WheelPositionSelectionDialog` opens with conflict/swap preview when another sensor already occupies the target position, select `REAR`, confirm sheet `OK` / `Cancel` draft behavior.
+  3. *Non-Wheel Sensor Isolation Test (`TST-SEN-031.3`, `EditDeviceEquipmentWheelPositionTest.kt`)*:
+     • Render `EquipmentSection` sheet for `HRM`, `BIKE_POWER`, `BIKE_RADAR`, `BIKE_CADENCE`, and `RUN_SPEED`; verify standard simple checkbox toggling without opening `WheelPositionSelectionDialog` or rendering wheel-position labels.
+  4. *9-Locale Parity, Light/Dark `@Preview` PNG Verification & Targeted Regression (`TST-SEN-031.4`, `EditDeviceEquipmentWheelPositionTest.kt` & `TranslationParityTest.kt`)*:
+     • Render Light & Dark `@Preview`s of `EditDeviceDialog` `EquipmentSection` / bike sheet for wheel speed sensors and visually inspect captured PNGs (`Rule 8.5`).
+     • Verify 100% 9-locale parity for `strings_equipment.xml` (`values`, `de`, `es`, `fr`, `it`, `ja`, `nl`, `pl`, `pt`) and execute targeted offline Gradle unit + Compose UI tests asserting 100% pass rate.
+
 
 ---
 
@@ -3344,3 +3364,4 @@
 | `1.0.9` | 2026-11-18 | AI Agent (`ATT-8705`) | `ATT-8705` | Promoted `TST-FIL-025` to `[Implemented]` following Stage 4 unit & Robolectric test construction. |
 | `1.0.10` | 2026-11-18 | AI Agent (`ATT-8705`) | `ATT-8705` | Promoted `TST-FIL-025` to `[Verified]` in Stage 5 following Tier-1 targeted unit/Robolectric regression verification. |
 | `1.0.11` | 2026-11-18 | AI Agent (`ATT-8706`) | `ATT-8706` | Added and verified `TST-TRK-085` [Verified] for RR source isolation, monotonic clamping, physiological gap flagging, pre-filter sort, and DFA α1 validity gate (502/502 tests across 88 suites). |
+| `1.0.12` | 2026-11-18 | AI Agent (`ATT-8719`) | `ATT-8719` | Added and verified `TST-SEN-031` [Verified] for `EditDeviceDialog` wheel mounting position display, draft isolation (`SaveCancel`), conflict swap, non-wheel isolation, and Light/Dark `@Preview` PNG verification. |

@@ -7,6 +7,7 @@
     <string name="equipment_wheel_position_unlink">Unlink Sensor</string>
     <string name="equipment_wheel_position_front_badge">F</string>
     <string name="equipment_wheel_position_rear_badge">R</string>
+    <string name="equipment_wheel_position_conflict_swap">Currently assigned to %1$s — selecting this will swap positions.</string>
     <string name="equipment_guidance_title">Why Wheel Sensors Alongside GPS?</string>
     <string name="equipment_guidance_subtitle">Physical advantages of wheel speed sensors vs. smartphone GPS</string>
     <string name="equipment_guidance_1_sensor_title">1 Wheel Sensor + GPS</string>

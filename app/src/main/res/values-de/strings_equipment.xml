@@ -7,6 +7,7 @@
     <string name="equipment_wheel_position_unlink">Sensor trennen</string>
     <string name="equipment_wheel_position_front_badge">V</string>
     <string name="equipment_wheel_position_rear_badge">H</string>
+    <string name="equipment_wheel_position_conflict_swap">Aktuell belegt durch %1$s – Auswahl tauscht die Positionen.</string>
     <string name="equipment_guidance_title">Warum Laufradsensoren neben GPS?</string>
     <string name="equipment_guidance_subtitle">Physikalische Vorteile von Laufrad-Geschwindigkeitssensoren gegenüber Smartphone-GPS</string>
     <string name="equipment_guidance_1_sensor_title">1 Laufradsensor + GPS</string>
