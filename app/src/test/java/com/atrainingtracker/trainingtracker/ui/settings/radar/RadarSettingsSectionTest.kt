@@ -10,122 +10,266 @@
 
 package com.atrainingtracker.trainingtracker.ui.settings.radar
 
+import android.content.Context
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Surface
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.test.SemanticsNodeInteraction
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsOff
+import androidx.compose.ui.test.assertIsOn
+import androidx.compose.ui.test.getBoundsInRoot
+import androidx.compose.ui.test.isToggleable
+import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
+import androidx.test.core.app.ApplicationProvider
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.devices.radar.RadarScenario
+import com.atrainingtracker.banalservice.devices.radar.RadarState
+import com.atrainingtracker.banalservice.devices.radar.RadarStateRepository
+import com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulator
+import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.audio.radar.RadarAlertManager
 import com.atrainingtracker.trainingtracker.settings.RadarEdgeSide
-import com.atrainingtracker.trainingtracker.settings.RadarLightControlMode
 import com.atrainingtracker.trainingtracker.settings.TuningConfig
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
+import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
+import io.mockk.Runs
+import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.every
+import io.mockk.just
+import io.mockk.mockk
+import io.mockk.mockkObject
+import io.mockk.mockkStatic
+import io.mockk.unmockkAll
+import io.mockk.verify
+import kotlinx.coroutines.flow.MutableStateFlow
+import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 import java.io.File
 import javax.xml.parsers.DocumentBuilderFactory
 
 /**
- * Unit tests verifying UI configuration contracts and conditional gating for Radar Tail Light
- * and Radar Overlay settings section (REQ-CON-031.5c, REQ-CON-031.5d, REQ-TRK-062.5b / TST-TRK-062.4).
+ * Behavioral Robolectric Compose UI tests and resource contract checks for [RadarSettingsSection]
+ * (REQ-PRO-132.4, TST-PRO-132.4, REQ-CON-031.5, TST-CON-031.5b, REQ-TRK-062.5b, TST-TRK-062.5).
  */
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34], qualifiers = "w412dp-h2200dp-xhdpi")
 class RadarSettingsSectionTest {
 
-    @Test
-    fun testStringResource_fullscreenOverlayModeStringExists() {
-        assertNotEquals(0, R.string.radar_overlay_mode_fullscreen)
+    @get:Rule
+    val composeTestRule = createComposeRule()
+
+    private lateinit var context: Context
+    private lateinit var configFlow: MutableStateFlow<TuningConfig>
+    private lateinit var radarStateFlow: MutableStateFlow<RadarState>
+    private lateinit var simulatingFlow: MutableStateFlow<Boolean>
+    private lateinit var mockDataStore: TuningPreferencesDataStore
+
+    @Before
+    fun setUp() {
+        context = ApplicationProvider.getApplicationContext()
+        configFlow = MutableStateFlow(TuningConfig())
+        radarStateFlow = MutableStateFlow(RadarState())
+        simulatingFlow = MutableStateFlow(false)
+
+        mockDataStore = mockk(relaxed = true)
+        every { mockDataStore.tuningConfigFlow } returns configFlow
+        every { mockDataStore.getTuningConfig() } answers { configFlow.value }
+        coEvery { mockDataStore.updateRadarEdgeSide(any()) } coAnswers {
+            configFlow.value = configFlow.value.copy(radarEdgeSide = firstArg())
+        }
+        coEvery { mockDataStore.updateRadarSpatialAudioEnabled(any()) } coAnswers {
+            configFlow.value = configFlow.value.copy(radarSpatialAudioEnabled = firstArg())
+        }
+        coEvery { mockDataStore.updateRadarBrakeLightEnabled(any()) } coAnswers {
+            configFlow.value = configFlow.value.copy(radarBrakeLightEnabled = firstArg())
+        }
+
+        mockkObject(RadarStateRepository)
+        every { RadarStateRepository.radarState } returns radarStateFlow
+
+        mockkObject(RadarTrafficSimulator)
+        every { RadarTrafficSimulator.isSimulatingFlow } returns simulatingFlow
+        every { RadarTrafficSimulator.start(any()) } just Runs
+        every { RadarTrafficSimulator.stop() } just Runs
+
+        mockkObject(RadarAlertManager.Companion)
+        every { RadarAlertManager.releasePreviewSynthesizer() } just Runs
+
+        mockkStatic(TrainingApplication::class)
+        every { TrainingApplication.uploadStravaRadarSummary() } returns false
+        every { TrainingApplication.setUploadStravaRadarSummary(any()) } just Runs
     }
 
-    @Test
-    fun testRadarClearMode_conditionalVisibilityInvariant() {
-        // Clear mode selector must be HIDDEN when FULL_SCREEN is active (REQ-TRK-062.5b)
-        val fullScreenConfig = TuningConfig(radarEdgeSide = RadarEdgeSide.FULL_SCREEN)
-        assertFalse(
-            "Clear state selector must be hidden when FULL_SCREEN is active",
-            fullScreenConfig.radarEdgeSide != RadarEdgeSide.FULL_SCREEN
-        )
+    @After
+    fun tearDown() {
+        unmockkAll()
+    }
 
-        val rightConfig = TuningConfig(radarEdgeSide = RadarEdgeSide.RIGHT)
+    private fun renderSection(
+        initialConfig: TuningConfig = TuningConfig(),
+        onSimulationToggled: ((Boolean) -> Unit)? = null
+    ) {
+        configFlow.value = initialConfig
+        composeTestRule.setContent {
+            ATrainingTrackerTheme(darkTheme = false) {
+                Surface {
+                    Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                        RadarSettingsSection(
+                            tuningDataStore = mockDataStore,
+                            onSimulationToggled = onSimulationToggled
+                        )
+                    }
+                }
+            }
+        }
+        composeTestRule.waitForIdle()
+    }
+
+    private fun toggleSwitchForTitle(titleResId: Int): SemanticsNodeInteraction {
+        val titleNode = composeTestRule.onNodeWithText(context.getString(titleResId))
+        titleNode.performScrollTo()
+        val titleBounds = titleNode.getBoundsInRoot()
+        val titleCenterY = (titleBounds.top.value + titleBounds.bottom.value) / 2f
+
+        val switches = composeTestRule.onAllNodes(isToggleable())
+        val count = switches.fetchSemanticsNodes().size
+        var bestIndex = -1
+        var bestDelta = Float.MAX_VALUE
+        for (i in 0 until count) {
+            val switchBounds = switches[i].getBoundsInRoot()
+            val switchCenterY = (switchBounds.top.value + switchBounds.bottom.value) / 2f
+            val delta = kotlin.math.abs(switchCenterY - titleCenterY)
+            if (delta < bestDelta) {
+                bestDelta = delta
+                bestIndex = i
+            }
+        }
         assertTrue(
-            "Clear state selector must be visible when RIGHT edge is active",
-            rightConfig.radarEdgeSide != RadarEdgeSide.FULL_SCREEN
+            "Expected a toggleable Switch vertically aligned with title $titleResId (bestDelta=${bestDelta}dp)",
+            bestIndex >= 0 && bestDelta < 48f
         )
-
-        val leftConfig = TuningConfig(radarEdgeSide = RadarEdgeSide.LEFT)
-        assertTrue(
-            "Clear state selector must be visible when LEFT edge is active",
-            leftConfig.radarEdgeSide != RadarEdgeSide.FULL_SCREEN
-        )
-    }
-
-    @Test
-    fun testStringResources_3WayControlModeSelectorStringsExist() {
-        assertNotEquals(0, R.string.radar_light_control_mode_title)
-        assertNotEquals(0, R.string.radar_light_control_mode_manual)
-        assertNotEquals(0, R.string.radar_light_control_mode_manual_desc)
-        assertNotEquals(0, R.string.radar_light_control_mode_fixed)
-        assertNotEquals(0, R.string.radar_light_control_mode_fixed_desc)
-        assertNotEquals(0, R.string.radar_light_control_mode_smart)
-        assertNotEquals(0, R.string.radar_light_control_mode_smart_desc)
-    }
-
-    @Test
-    fun testDefaultLightModeDropdown_conditionalVisibilityInvariant() {
-        // Dropdown must ONLY be rendered when mode == FIXED_WORKOUT_MODE (REQ-CON-031.5d)
-        val fixedConfig = TuningConfig(radarLightControlMode = RadarLightControlMode.FIXED_WORKOUT_MODE)
-        assertTrue(
-            "Default light mode dropdown must be visible when FIXED_WORKOUT_MODE is active",
-            fixedConfig.radarLightControlMode == RadarLightControlMode.FIXED_WORKOUT_MODE
-        )
-
-        val manualConfig = TuningConfig(radarLightControlMode = RadarLightControlMode.MANUAL)
-        assertFalse(
-            "Default light mode dropdown must be hidden when MANUAL is active",
-            manualConfig.radarLightControlMode == RadarLightControlMode.FIXED_WORKOUT_MODE
-        )
-
-        val smartConfig = TuningConfig(radarLightControlMode = RadarLightControlMode.SMART_AUTOMATION)
-        assertFalse(
-            "Default light mode dropdown must be hidden when SMART_AUTOMATION is active",
-            smartConfig.radarLightControlMode == RadarLightControlMode.FIXED_WORKOUT_MODE
-        )
-    }
-
-    @Test
-    fun testTuningConfig_controlModePermutations_preserveBrakeLightIndependence() {
-        // Deceleration brake light must remain fully independent of control mode (REQ-CON-035.6)
-        val cfgManualBrakeOn = TuningConfig(
-            radarLightControlMode = RadarLightControlMode.MANUAL,
-            radarBrakeLightEnabled = true
-        )
-        assertTrue(cfgManualBrakeOn.radarBrakeLightEnabled)
-        assertEquals(RadarLightControlMode.MANUAL, cfgManualBrakeOn.radarLightControlMode)
-
-        val cfgSmartBrakeOff = TuningConfig(
-            radarLightControlMode = RadarLightControlMode.SMART_AUTOMATION,
-            radarBrakeLightEnabled = false
-        )
-        assertFalse(cfgSmartBrakeOff.radarBrakeLightEnabled)
-        assertEquals(RadarLightControlMode.SMART_AUTOMATION, cfgSmartBrakeOff.radarLightControlMode)
+        return switches[bestIndex]
     }
 
     /**
-     * TST-CON-031.5b / REQ-CON-031.5: Brake light toggle must be independent and retained in settings
-     * when mode selection is unified.
+     * TST-PRO-132.4 / TST-TRK-062.5: Verifies clear-state selector visibility is bound to
+     * radarEdgeSide != FULL_SCREEN and clicking Full Screen updates DataStore and hides it.
      */
     @Test
-    fun testRadarSettingsSection_retiresModeControls_retainsBrakeLight() {
-        val autoConfig = TuningConfig(
-            radarLightAutoMode = true,
-            radarBrakeLightEnabled = true
-        )
-        assertTrue("Brake light toggle must remain configurable", autoConfig.radarBrakeLightEnabled)
-        assertTrue("Unified auto mode must be configurable", autoConfig.radarLightAutoMode)
+    fun testRadarClearMode_conditionalVisibility_andEdgeSideClickUpdatesDataStore() {
+        renderSection(TuningConfig(radarEdgeSide = RadarEdgeSide.RIGHT))
 
-        val manualConfig = TuningConfig(
-            radarLightAutoMode = false,
-            radarBrakeLightEnabled = false
-        )
-        assertFalse(manualConfig.radarBrakeLightEnabled)
-        assertFalse(manualConfig.radarLightAutoMode)
+        val clearModeTitle = context.getString(R.string.radar_overlay_clear_mode)
+        composeTestRule.onNodeWithText(clearModeTitle)
+            .performScrollTo()
+            .assertIsDisplayed()
+
+        composeTestRule.onNodeWithText(context.getString(R.string.radar_overlay_mode_fullscreen))
+            .performScrollTo()
+            .performClick()
+        composeTestRule.waitForIdle()
+
+        coVerify { mockDataStore.updateRadarEdgeSide(RadarEdgeSide.FULL_SCREEN) }
+        composeTestRule.onNodeWithText(clearModeTitle).assertDoesNotExist()
+    }
+
+    /**
+     * TST-PRO-132.4: Verifies spatial audio sub-controls appear only when radarSpatialAudioEnabled
+     * is true and toggling the switch persists the updated state.
+     */
+    @Test
+    fun testSpatialAudio_conditionalSubControls_andToggleCallback() {
+        renderSection(TuningConfig(radarSpatialAudioEnabled = false))
+
+        val orientationTitle = context.getString(R.string.radar_traffic_orientation_title)
+        val laneChangeTitle = context.getString(R.string.radar_lane_change_tick_title)
+        composeTestRule.onNodeWithText(orientationTitle).assertDoesNotExist()
+        composeTestRule.onNodeWithText(laneChangeTitle).assertDoesNotExist()
+
+        toggleSwitchForTitle(R.string.radar_spatial_audio_title)
+            .assertIsOff()
+            .performScrollTo()
+            .performClick()
+        composeTestRule.waitForIdle()
+
+        coVerify { mockDataStore.updateRadarSpatialAudioEnabled(true) }
+        composeTestRule.onNodeWithText(orientationTitle)
+            .performScrollTo()
+            .assertIsDisplayed()
+        composeTestRule.onNodeWithText(laneChangeTitle)
+            .performScrollTo()
+            .assertIsDisplayed()
+    }
+
+    /**
+     * TST-PRO-132.4 / TST-CON-031.5b: Verifies retired 3-way RadarLightControlMode selectors are
+     * absent from RadarSettingsSection while the brake-light toggle remains visible and interactive.
+     */
+    @Test
+    fun testRadarSettingsSection_retires3WayControlMode_retainsInteractiveBrakeLight() {
+        renderSection(TuningConfig(radarBrakeLightEnabled = true))
+
+        composeTestRule.onNodeWithText(context.getString(R.string.radar_light_control_mode_title)).assertDoesNotExist()
+        composeTestRule.onNodeWithText(context.getString(R.string.radar_light_control_mode_manual)).assertDoesNotExist()
+        composeTestRule.onNodeWithText(context.getString(R.string.radar_light_control_mode_fixed)).assertDoesNotExist()
+        composeTestRule.onNodeWithText(context.getString(R.string.radar_light_control_mode_smart)).assertDoesNotExist()
+
+        composeTestRule.onNodeWithText(context.getString(R.string.radar_light_settings_title))
+            .performScrollTo()
+            .assertIsDisplayed()
+
+        toggleSwitchForTitle(R.string.radar_brake_light_title)
+            .assertIsOn()
+            .performScrollTo()
+            .performClick()
+        composeTestRule.waitForIdle()
+
+        coVerify { mockDataStore.updateRadarBrakeLightEnabled(false) }
+    }
+
+    /**
+     * TST-PRO-132.4: Verifies Traffic Simulator Start/Stop buttons dispatch simulator actions
+     * and invoke onSimulationToggled with the exact boolean transition.
+     */
+    @Test
+    fun testTrafficSimulator_startAndStop_invokesSimulatorAndCallback() {
+        val callbackEvents = mutableListOf<Boolean>()
+        renderSection(onSimulationToggled = { callbackEvents.add(it) })
+
+        composeTestRule.onNodeWithText(context.getString(R.string.radar_simulator_start))
+            .performScrollTo()
+            .performClick()
+        composeTestRule.waitForIdle()
+
+        verify { RadarTrafficSimulator.start(RadarScenario.SINGLE_CAR) }
+        assertEquals(listOf(true), callbackEvents)
+
+        simulatingFlow.value = true
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText(context.getString(R.string.radar_simulator_stop))
+            .performScrollTo()
+            .performClick()
+        composeTestRule.waitForIdle()
+
+        verify { RadarTrafficSimulator.stop() }
+        assertEquals(listOf(true, false), callbackEvents)
     }
 
     private fun getXmlString(file: File, stringName: String): String? {

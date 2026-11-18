@@ -1,14 +1,14 @@
 # Living Test Specification: Engineering Process, Stability & Architecture (Part 2 of 2)
 
 **Document ID**: `DOC-TST-PRO-P2`  
-**Version**: 1.0.18  
+**Version**: 1.0.21  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `process_stability_part2`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Tests**: 87
+**Total Tests**: 88
 
 ---
 
@@ -1498,6 +1498,25 @@
 
 ---
 
+### TST-PRO-132: **Behavioral Compose UI Testing Mandate, Reflection-Only UI Test Ratchet & `RadarSettingsSectionTest` Remediation Suite (ATT-8198)** [Verified]
+- **Requirement(s)**: `REQ-PRO-132`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Component**: `app/src/test/java/com/atrainingtracker/trainingtracker/build/UiReflectionOnlyTestAuditContractTest.kt`, `app/ui-reflection-baseline.txt`, `app/src/test/java/com/atrainingtracker/trainingtracker/ui/settings/radar/RadarSettingsSectionTest.kt`, `docs/coding_standards.md`, `.agents/skills/stage4-implementation/SKILL.md`, `.agents/skills/stage5-verification/SKILL.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SourceTextReadingAuditContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/AspiceSweAuditContractTest.kt`
+- **Jira**: `ATT-8198`
+- **Test Description**:
+  1. *Reflection-Only UI Test Ratchet & Baseline Enforcement (`TST-PRO-132.1`, `UiReflectionOnlyTestAuditContractTest.kt`)*:
+     • *Given* `app/src/test/java/` scanned across `(?:^|/)ui/` (`com/atrainingtracker/trainingtracker/ui/` [`178`] and `com/atrainingtracker/banalservice/ui/` [`11`]) and `app/ui-reflection-baseline.txt` (`189` entries ceiling), *When* `UiReflectionOnlyTestAuditContractTest` executes against the live repository and synthetic tripwire fixtures (unallowlisted `Class.forName("...Kt")` without `createComposeRule()`, stale baseline entry), *Then* `0` unallowlisted reflection-only UI tests exist, `0` stale baseline entries exist, `baseline.size <= 189`, and the synthetic tripwire fails deterministically. Tag tests with `TST-PRO-132.1`.
+  2. *Legitimate Reflection Guard Preservation (`TST-PRO-132.2`, `UiReflectionOnlyTestAuditContractTest.kt`, `AndroidViewModelReflectionContractTest.kt`, `InterfaceSignatureDriftContractTest.kt`, `AdrCompletenessContractTest.kt`)*:
+     • *Given* `build/` reflection contract tests, non-`*Kt` classpath/decoupling checks (`CoreDependencyAlignmentTest`, `WorkoutRepositoryDeleteTest`), and `createComposeRule()` + signature tests (`RadarLightQuickSwitchSheetTest`, `SensorSourceDialogContractTest`), *When* `UiReflectionOnlyTestAuditContractTest` and the `build/` suites run, *Then* all pass with `0` false positives and `SourceTextReadingAuditContractTest` (`22` guards, `105` baseline) passes `4/4`. Tag tests with `TST-PRO-132.2`.
+  3. *Coding Standard & Stage 4/5 Behavioral Compose Mandate Parity (`TST-PRO-132.3`, `AspiceSweAuditContractTest.kt` & `UiReflectionOnlyTestAuditContractTest.kt`)*:
+     • *Given* `docs/coding_standards.md` §5.4, `.agents/skills/stage4-implementation/SKILL.md`, and `.agents/skills/stage5-verification/SKILL.md` updated with the mandatory `createComposeRule()` rule while preserving existing governance markers, *When* `AspiceSweAuditContractTest` and governance marker assertions execute, *Then* all assertions pass `100%` (`Localization Parity: N/A - no UI strings`). Tag tests with `TST-PRO-132.3`.
+  4. *`RadarSettingsSectionTest` Robolectric Compose Remediation (`TST-PRO-132.4`, `RadarSettingsSectionTest.kt`, strengthening `TST-CON-031.5b` & `TST-TRK-062.5`)*:
+     • *Given* `RadarSettingsSection` composed via `@RunWith(RobolectricTestRunner::class)` + `createComposeRule()` with isolated `TuningPreferencesDataStore` / mocked `TrainingApplication` & `RadarTrafficSimulator` and stale `RadarLightControlMode` tautologies retired, *When* `./gradlew :app:testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.settings.radar.RadarSettingsSectionTest"` runs, *Then* `FULL_SCREEN` hides `radar_overlay_clear_mode` (`assertDoesNotExist()`), `RIGHT` displays it, `radarSpatialAudioEnabled` toggles `radar_traffic_orientation_title` / `radar_lane_change_tick_title`, retired `RadarLightControlMode` controls remain absent while `radar_brake_light_title` is displayed and interactive, `onSimulationToggled` / DataStore callbacks fire on click, and all preserved 9-locale XML checks (`:131-226`) pass with `0` `src/main/` reads. Tag tests with `TST-PRO-132.4`.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -1521,3 +1540,6 @@
 | `1.0.16` | 2026-11-18 | AI Agent (`ATT-8876`) | `ATT-8876` | Refined `TST-PRO-108` (`[Planned]`, `TST-PRO-108.3`) adding cross-directory `sys.modules["parallel_sprint_lock"]` poisoning isolation test and Höchstmaß `parallel_sprint_lock.py` trailer parity test. |
 | `1.0.17` | 2026-11-18 | AI Agent (`ATT-8876`) | `ATT-8876` | Promoted `TST-PRO-108` to `[Implemented]` in Stage 4 (`tools.test_jira_accounts`, `tools.test_flock_serialization`, `tools.test_jira_datacenter`, `tools/hoechstmass/tools`, `HoechstmassToolingContractTest`). |
 | `1.0.18` | 2026-11-18 | AI Agent (`ATT-8876`) | `ATT-8876` | Promoted `TST-PRO-108` to `[Verified]` after Stage 5 verification (`136/136` root suites OK, `63/63` Hoechstmass OK, `78/78` poisoned-cache cross-dir OK, `HoechstmassToolingContractTest` `4/4` PASS, governance `exit 0`). |
+| `1.0.19` | 2026-11-18 | AI Agent (`ATT-8198`) | `ATT-8198` | Added `[Planned]` `TST-PRO-132` test specifications (`ATT-8198_test_spec.md`: `189`-entry `(?:^\|/)ui/` `*Kt` reflection ratchet across `trainingtracker/ui/` + `banalservice/ui/`, `build/` & non-`*Kt` reflection guard preservation, `docs/coding_standards.md` §5.4 + Stage 4/5 skill parity, and `RadarSettingsSectionTest` Robolectric `createComposeRule()` remediation). |
+| `1.0.20` | 2026-11-18 | AI Agent (`ATT-8198`) | `ATT-8198` | Promoted `TST-PRO-132` to `[Implemented]` in Stage 4 (`UiReflectionOnlyTestAuditContractTest.kt`, `app/ui-reflection-baseline.txt`, `docs/coding_standards.md` v`1.0.1`, Stage 4/5 `SKILL.md`s, `RadarSettingsSectionTest.kt`). |
+| `1.0.21` | 2026-11-18 | AI Agent (`ATT-8198`) | `ATT-8198` | Promoted `TST-PRO-132` to `[Verified]` after Stage 5 verification (`UiReflectionOnlyTestAuditContractTest` `4/4`, `SourceTextReadingAuditContractTest` `4/4`, `AspiceSweAuditContractTest` `13/13`, `AndroidViewModelReflectionContractTest` `2/2`, `RadarSettingsSectionTest` `8/8`, governance `exit 0`). |

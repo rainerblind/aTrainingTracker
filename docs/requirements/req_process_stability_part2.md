@@ -1,14 +1,14 @@
 # Living Requirements: Engineering Process, Stability & Architecture (Part 2 of 2)
 
 **Document ID**: `DOC-REQ-PRO-P2`  
-**Version**: 1.0.25  
+**Version**: 1.0.28  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `process_stability_part2`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Requirements**: 71
+**Total Requirements**: 72
 
 ---
 
@@ -2380,6 +2380,31 @@
 
 ---
 
+### REQ-PRO-132: Behavioral Compose UI Testing Mandate & Reflection-Only UI Test Ratchet (`SWE.4` `CL 2`) (ATT-8198) [Verified]
+- **Tests**: `TST-PRO-132`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `app/src/test/java/com/atrainingtracker/trainingtracker/build/UiReflectionOnlyTestAuditContractTest.kt`, `app/ui-reflection-baseline.txt`, `app/src/test/java/com/atrainingtracker/trainingtracker/ui/settings/radar/RadarSettingsSectionTest.kt`, `docs/coding_standards.md`, `.agents/skills/stage4-implementation/SKILL.md`, `.agents/skills/stage5-verification/SKILL.md`
+- **Rationale**: Following `REQ-TST-002` (`ATT-4028`) and `REQ-PRO-049` (`ATT-6564`–`ATT-6569`), `189` test files across `trainingtracker/ui/` (`178`) and `banalservice/ui/` (`11`) rely on `Class.forName("...Kt")` JVM reflection without `createComposeRule()`, and `RadarSettingsSectionTest.kt` uses tautological `TuningConfig` assertions (including retired `RadarLightControlMode` controls) while claimed as a Compose UI test (`ATT-7991_walkthrough.md:29`). Enforcing behavioral `createComposeRule()` verification and ratcheting out new reflection-only UI tests closes ASPICE 4.0 Gap #1 (`SWE.4 BP1/BP2/BP3`, `SUP.1 BP3`, `ATT-8198`, refining `REQ-TST-002` and `REQ-PRO-049` under Epic `ATT-8138`):
+- **Description**:
+  1. *Reflection-Only UI Test Ratchet & Baseline (`REQ-PRO-132.1`, refining `REQ-PRO-049`)*: `UiReflectionOnlyTestAuditContractTest.kt` SHALL scan all `.kt`/`.java` files under `app/src/test/java/` whose relative path matches `(?:^|/)ui/` (explicitly covering both `com/atrainingtracker/trainingtracker/ui/` [`178`] and `com/atrainingtracker/banalservice/ui/` [`11`]) and flag any file invoking multiline-aware `Class.forName("...Kt")` without `createComposeRule`. Existing legacy entries SHALL be isolated in `app/ui-reflection-baseline.txt` (`189` entries ceiling), enforcing `(detected - baseline).isEmpty()` and `(baseline - detected).isEmpty()` (zero stale entries), while scanning zero `app/src/main/` files (`REQ-PRO-049.1` preserved: `22` guards, `105` source-reading baseline).
+  2. *Protection of Legitimate Architectural & Excision Reflection Guards (`REQ-PRO-132.2`, refining `REQ-TST-002`)*: The ratchet SHALL NOT flag `build/` contract suites (`AndroidViewModelReflectionContractTest`, `InterfaceSignatureDriftContractTest`, `AdrCompletenessContractTest`), non-`*Kt` classpath/decoupling checks (`CoreDependencyAlignmentTest`, `WorkoutRepositoryDeleteTest`), or tests that execute `createComposeRule()` alongside signature checks (`RadarLightQuickSwitchSheetTest`, `SensorSourceDialogContractTest`).
+  3. *Coding Standard & Stage 4/5 Behavioral Compose Mandate (`REQ-PRO-132.3`)*: `docs/coding_standards.md` §5.4, `.agents/skills/stage4-implementation/SKILL.md`, and `.agents/skills/stage5-verification/SKILL.md` SHALL explicitly distinguish legitimate excision/ABI reflection (`build/` & non-`*Kt`) from prohibited reflection-only UI tests and mandate Robolectric/instrumented `createComposeRule()` behavioral assertions (semantics, conditional visibility, user callbacks) whenever `@Composable` screens/dialogs/sheets are created or modified.
+  4. *`RadarSettingsSectionTest` Behavioral Remediation (`REQ-PRO-132.4`, strengthening `TST-CON-031.5b` & `TST-TRK-062.5`)*: `RadarSettingsSectionTest.kt` SHALL retire stale `RadarLightControlMode` / `TuningConfig` tautologies (`:38-129`) and compose `RadarSettingsSection` via `@RunWith(RobolectricTestRunner::class)` + `createComposeRule()`, asserting conditional visibility (`FULL_SCREEN` hides `radar_overlay_clear_mode`; `radarSpatialAudioEnabled` reveals spatial sub-controls), retired-control absence, and interactive callback/DataStore dispatches, while preserving existing 9-locale XML budget/disambiguation tests (`:131-226`) with `0` `src/main/` reads.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new `REQ-PRO-132` (`REQ-PRO-132.1`–`REQ-PRO-132.4`), refining `REQ-TST-002` (`docs/coding_standards.md` §5.4) and `REQ-PRO-049` (`SourceTextReadingAuditContractTest.kt`), and remediating `TST-CON-031.5b` / `TST-TRK-062.5` (`RadarSettingsSectionTest.kt`).
+  2. *Historical Origin & Commit Trace*: `REQ-TST-002` (`ATT-4028`) prescribed `Class.forName`/`declaredMethods` to replace UI `File.readText()` greps; `REQ-PRO-049` (`ATT-6186`, `c91e62b6`) & `ATT-6564`–`ATT-6569` (`12f5f47c`, `1298a643`, `ef50449a`, `3b5a5b41`) eliminated `src/main` reads but normalized `*Kt` reflection stubs in `ui/`.
+  3. *Root Reason for Existing Formulation*: Robolectric Compose `createComposeRule()` was not yet standardized across `ui/` at `ATT-4028`, while reflection protected architectural excision/decoupling invariants.
+  4. *Preservation of Core Invariants*: Preserves all `build/` & non-`*Kt` excision/ABI reflection tests, preserves `SourceTextReadingAuditContractTest` (`22` guards, `105` baseline, `0` new `src/main/` reads), preserves `RadarSettingsSectionTest` XML locale checks (`:131-226`), and makes zero edits to `app/src/main/` or `values*/strings*.xml`.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* a new test under `trainingtracker/ui/` or `banalservice/ui/` calling `Class.forName("...Kt")` without `createComposeRule()`, *When* `UiReflectionOnlyTestAuditContractTest` runs, *Then* the audit fails unless the file is on the `189`-entry `app/ui-reflection-baseline.txt` (and fails on stale baseline entries or synthetic tripwires).
+  • *Given* `AndroidViewModelReflectionContractTest`, `InterfaceSignatureDriftContractTest`, `AdrCompletenessContractTest`, `CoreDependencyAlignmentTest`, and `RadarLightQuickSwitchSheetTest`, *When* `UiReflectionOnlyTestAuditContractTest` executes, *Then* all pass with `0` false positives.
+  • *Given* `RadarSettingsSectionTest.kt`, *When* `:app:testDebugUnitTest --tests "*.RadarSettingsSectionTest"` executes, *Then* `RadarSettingsSection` renders via `createComposeRule()`, verifies conditional visibility, retired-control absence, interactive callbacks, and all preserved 9-locale XML checks with `0` `src/main/` reads.
+- **Invariants**: Zero `app/src/main/` edits; `ANT-Android-SDKs` untouched; `SourceTextReadingAuditContractTest` (`22` guards, `105` baseline) preserved; `LEGITIMATE_GOVERNANCE_GUARDS == 22`; `docs/coding_standards.md` §1.1–§1.5 & `AspiceSweAuditContractTest` skill markers preserved; `Localization Parity: N/A - no UI strings`.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -2410,3 +2435,6 @@
 | `1.0.23` | 2026-11-18 | AI Agent (`ATT-8876`) | `ATT-8876` | Refined `REQ-PRO-108` (`[Planned]`, `REQ-PRO-108.3`) for sibling-scoped `parallel_sprint_lock` import isolation against cross-directory `sys.modules` shadowing and Höchstmaß `parallel_sprint_lock.py` commit trailer parity. |
 | `1.0.24` | 2026-11-18 | AI Agent (`ATT-8876`) | `ATT-8876` | Promoted `REQ-PRO-108` to `[Implemented]` in Stage 4 (`tools/hoechstmass/tools/parallel_sprint_lock.py`, `tools/test_jira_accounts.py`, `tools/test_flock_serialization.py`, `tools/test_jira_datacenter.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`). |
 | `1.0.25` | 2026-11-18 | AI Agent (`ATT-8876`) | `ATT-8876` | Promoted `REQ-PRO-108` to `[Verified]` after Stage 5 verification (`tools.test_jira_accounts` + `tools.test_flock_serialization` + `tools.test_jira_datacenter` `136/136` OK, `tools/hoechstmass/tools` `63/63` OK, poisoned-cache cross-dir `78/78` OK, `HoechstmassToolingContractTest` `4/4` PASS, governance `exit 0`). |
+| `1.0.26` | 2026-11-18 | AI Agent (`ATT-8198`) | `ATT-8198` | Added `[Planned]` `REQ-PRO-132` (`REQ-PRO-132.1`–`REQ-PRO-132.4`: behavioral `createComposeRule()` UI test mandate, `189`-entry `(?:^\|/)ui/` `*Kt` reflection ratchet across `trainingtracker/ui/` + `banalservice/ui/`, `docs/coding_standards.md` §5.4 + Stage 4/5 skills update, and `RadarSettingsSectionTest` Compose remediation). |
+| `1.0.27` | 2026-11-18 | AI Agent (`ATT-8198`) | `ATT-8198` | Promoted `REQ-PRO-132` to `[Implemented]` in Stage 4 (`UiReflectionOnlyTestAuditContractTest.kt`, `app/ui-reflection-baseline.txt`, `docs/coding_standards.md` v`1.0.1` §5.4, Stage 4/5 `SKILL.md`s, `RadarSettingsSectionTest.kt`). |
+| `1.0.28` | 2026-11-18 | AI Agent (`ATT-8198`) | `ATT-8198` | Promoted `REQ-PRO-132` to `[Verified]` after Stage 5 verification (`31/31` targeted Gradle tests PASS across 5 suites, `189`-entry `(?:^\|/)ui/` baseline locked, `SourceTextReadingAuditContractTest` `4/4` PASS, governance `exit 0`). |
