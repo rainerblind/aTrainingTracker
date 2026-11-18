@@ -232,7 +232,6 @@
     <ID>CyclomaticComplexMethod:MorningHrvCheckScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun MorningHrvCheckScreen( viewModel: MorningHrvCheckViewModel = viewModel(), onNavigateBack: () -&gt; Unit, modifier: Modifier = Modifier )</ID>
     <ID>CyclomaticComplexMethod:MoveLapBoundaryOnMapSheet.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun MoveLapBoundaryOnMapSheet( workoutId: Long, boundaryLapNr: Long = 1L, bSportType: BSportType = BSportType.UNKNOWN, onDismiss: () -&gt; Unit, onBoundaryMoved: (boundaryLapNr: Long, newBoundarySampleIndex: Int) -&gt; Unit, repository: WorkoutRepository? = null, providedSamples: List&lt;CropSamplePoint&gt;? = null, existingLaps: List&lt;LapData&gt; = emptyList(), modifier: Modifier = Modifier )</ID>
     <ID>CyclomaticComplexMethod:OrphanDataDiagnosticHelper.kt$OrphanDataDiagnosticHelper$fun scanForOrphans(context: Context): OrphanReport</ID>
-    <ID>CyclomaticComplexMethod:PathPreviewMap.kt$@Composable fun PathPreviewMap( path: MappablePath? = null, paths: List&lt;MappablePath&gt; = emptyList(), modifier: Modifier = Modifier, start: LatLng? = null, end: LatLng? = null, apex: LatLng? = null, startTitle: String? = null, endTitle: String? = null, apexTitle: String? = null, apexIconRes: Int = R.drawable.ic_distance, apexColor: Color = TTColor.ApexPoint, targetBounds: LatLngBounds? = null, onMapClick: () -&gt; Unit = {} )</ID>
     <ID>CyclomaticComplexMethod:PeriodBarGraph.kt$@Composable fun PeriodBarGraph( periods: List&lt;PeriodSummary&gt;, currentScrollState: LazyListState, onBarClick: (Int) -&gt; Unit, modifier: Modifier = Modifier, selectedMetric: PeriodBarMetric? = null, onMetricSelect: ((PeriodBarMetric) -&gt; Unit)? = null )</ID>
     <ID>CyclomaticComplexMethod:PeriodMapScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun PeriodMapScreen( summary: PeriodSummary, mapState: PeriodMapState, // ATT-440: Adoption of discrete MapState enabledMarkerTypes: Set&lt;PeriodMarkerType&gt;, onToggleMarkerType: (PeriodMarkerType) -&gt; Unit, onWorkoutClick: (Long) -&gt; Unit, peekedWorkoutDataWithTrack: WorkoutDataWithTrack?, clearPeekSelection: () -&gt; Unit, onBack: () -&gt; Unit, onEditWorkout: ((Long) -&gt; Unit)? = null, onSelectRegion: ((String?) -&gt; Unit)? = null )</ID>
     <ID>CyclomaticComplexMethod:PeriodMapUtils.kt$fun prepareCardMapPreviewSync( summary: PeriodSummary, context: Context? = null ): PeriodCardMapState</ID>
@@ -682,7 +681,6 @@
     <ID>LongMethod:NavigationSection.kt$@Composable fun NavigationSection( routeSelectionRadiusKm: Float, onRadiusChange: (Float) -&gt; Unit, navigationCueDismissDurationSec: Int = TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC, onDismissDurationChange: (Int) -&gt; Unit = {}, autoFollowUniqueRouteEnabled: Boolean = TuningPreferencesDefaults.DEFAULT_AUTO_FOLLOW_UNIQUE_ROUTE_ENABLED, onAutoFollowUniqueRouteEnabledChange: (Boolean) -&gt; Unit = {}, turnCueCountdownDistanceMeters: Float = TuningPreferencesDefaults.TURN_CUE_COUNTDOWN_DISTANCE_METERS, onTurnCueCountdownDistanceChange: (Float) -&gt; Unit = {} )</ID>
     <ID>LongMethod:NumericIntervalFilterSection.kt$@OptIn(ExperimentalLayoutApi::class) @Composable fun NumericIntervalFilterSection( title: String, unit: String, presets: List&lt;Triple&lt;String, Double?, Double?&gt;&gt;, minMeters: Double?, maxMeters: Double?, minText: String, maxText: String, multiplier: Double, onBoundsChange: (minMeters: Double?, maxMeters: Double?, minText: String, maxText: String) -&gt; Unit, formatInputValue: (Double?, Double) -&gt; String, modifier: Modifier = Modifier, keyboardType: KeyboardType = KeyboardType.Decimal )</ID>
     <ID>LongMethod:OrphanDataDiagnosticHelper.kt$OrphanDataDiagnosticHelper$fun scanForOrphans(context: Context): OrphanReport</ID>
-    <ID>LongMethod:PathPreviewMap.kt$@Composable fun PathPreviewMap( path: MappablePath? = null, paths: List&lt;MappablePath&gt; = emptyList(), modifier: Modifier = Modifier, start: LatLng? = null, end: LatLng? = null, apex: LatLng? = null, startTitle: String? = null, endTitle: String? = null, apexTitle: String? = null, apexIconRes: Int = R.drawable.ic_distance, apexColor: Color = TTColor.ApexPoint, targetBounds: LatLngBounds? = null, onMapClick: () -&gt; Unit = {} )</ID>
     <ID>LongMethod:PedalPowerBalanceBar.kt$@Composable fun PedalPowerBalanceBar( state: PedalBalanceState, modifier: Modifier = Modifier, trackHeight: Dp = 8.dp )</ID>
     <ID>LongMethod:PeriodBarGraph.kt$@Composable fun PeriodBarGraph( periods: List&lt;PeriodSummary&gt;, currentScrollState: LazyListState, onBarClick: (Int) -&gt; Unit, modifier: Modifier = Modifier, selectedMetric: PeriodBarMetric? = null, onMetricSelect: ((PeriodBarMetric) -&gt; Unit)? = null )</ID>
     <ID>LongMethod:PeriodMapScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun PeriodMapScreen( summary: PeriodSummary, mapState: PeriodMapState, // ATT-440: Adoption of discrete MapState enabledMarkerTypes: Set&lt;PeriodMarkerType&gt;, onToggleMarkerType: (PeriodMarkerType) -&gt; Unit, onWorkoutClick: (Long) -&gt; Unit, peekedWorkoutDataWithTrack: WorkoutDataWithTrack?, clearPeekSelection: () -&gt; Unit, onBack: () -&gt; Unit, onEditWorkout: ((Long) -&gt; Unit)? = null, onSelectRegion: ((String?) -&gt; Unit)? = null )</ID>
@@ -1778,8 +1776,6 @@
     <ID>MagicNumber:NavigationAudioAlertManager.kt$NavigationAudioAlertManager$250</ID>
     <ID>MagicNumber:NavigationAudioAlertManager.kt$NavigationAudioAlertManager$300</ID>
     <ID>MagicNumber:NavigationSection.kt$1000f</ID>
-    <ID>MagicNumber:PathPreviewMap.kt$0.5f</ID>
-    <ID>MagicNumber:PathPreviewMap.kt$20</ID>
     <ID>MagicNumber:PedalPowerBalanceBar.kt$0.35f</ID>
     <ID>MagicNumber:PedalPowerBalanceBar.kt$50</ID>
     <ID>MagicNumber:PedalPowerBalanceBar.kt$54</ID>
@@ -8475,7 +8471,6 @@
     <ID>SwallowedException:MapScreenWithTrack.kt$e: Exception</ID>
     <ID>SwallowedException:MapUtils.kt$e: Exception</ID>
     <ID>SwallowedException:MilestoneAutoNamingManager.kt$MilestoneAutoNamingManager$e: Exception</ID>
-    <ID>SwallowedException:PathPreviewMap.kt$e: Exception</ID>
     <ID>SwallowedException:PeriodMapUtils.kt$e: Exception</ID>
     <ID>SwallowedException:PeriodSummariesDatabaseManager.kt$PeriodSummariesDatabaseManager$e: Exception</ID>
     <ID>SwallowedException:PeriodSummaryCard.kt$e: Exception</ID>
@@ -8599,7 +8594,6 @@
     <ID>TooGenericExceptionCaught:MilestoneAutoNamingManager.kt$MilestoneAutoNamingManager$e: Exception</ID>
     <ID>TooGenericExceptionCaught:MilestoneAutoNamingManager.kt$MilestoneAutoNamingManager$t: Throwable</ID>
     <ID>TooGenericExceptionCaught:NavigationAudioAlertManager.kt$NavigationAudioAlertManager$e: Exception</ID>
-    <ID>TooGenericExceptionCaught:PathPreviewMap.kt$e: Exception</ID>
     <ID>TooGenericExceptionCaught:PeriodMapUtils.kt$e: Exception</ID>
     <ID>TooGenericExceptionCaught:PeriodSummariesDatabaseManager.kt$PeriodSummariesDatabaseManager$e: Exception</ID>
     <ID>TooGenericExceptionCaught:PeriodSummaryCard.kt$e: Exception</ID>

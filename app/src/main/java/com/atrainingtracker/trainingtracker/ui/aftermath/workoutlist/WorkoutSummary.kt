@@ -77,11 +77,13 @@ import com.atrainingtracker.trainingtracker.ui.components.workoutlaps.MoveLapBou
 import com.atrainingtracker.trainingtracker.ui.components.workoutlaps.WorkoutLaps
 import com.atrainingtracker.trainingtracker.ui.components.strava.StravaActivitySection
 import com.atrainingtracker.trainingtracker.ui.map.ElevationProfile
+import com.atrainingtracker.trainingtracker.ui.map.MapTrack
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import com.atrainingtracker.trainingtracker.ui.map.PathPreviewMap
 import com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraph
 import com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricType
 import com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricUtils
+import com.atrainingtracker.trainingtracker.ui.map.buildValidatedBounds
 import com.atrainingtracker.trainingtracker.ui.map.toMapTrack
 import com.atrainingtracker.trainingtracker.ui.map.TrackType
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.GradeZoneDistributionCard
@@ -364,16 +366,13 @@ fun WorkoutSummary(
                             "${stringResource(R.string.Stop)}: ${workoutData.endLocationName}"
                         } else null
 
-                        PathPreviewMap(
-                            path = workoutData.toMapTrack(),
+                        WorkoutPathPreviewMap(
+                            workoutData = workoutData,
+                            startTitle = startTitle,
+                            endTitle = endTitle,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(200.dp),
-                            start = workoutData.startLatLng,
-                            end = workoutData.endLatLng,
-                            apex = workoutData.maxDisplacementLatLng,
-                            startTitle = startTitle,
-                            endTitle = endTitle,
                             onMapClick = { onMapClick() }
                         )
                         renderedAnySection = true
@@ -729,6 +728,59 @@ fun WorkoutSummary(
 }
 
 /**
+ * Shared map preview wrapper that memoizes [WorkoutData.toMapTrack] across all 9 fields read
+ * during track decoding and forwards validated persisted [LatLngBounds] as `targetBounds`.
+ */
+@Composable
+internal fun WorkoutPathPreviewMap(
+    workoutData: WorkoutData,
+    startTitle: String?,
+    endTitle: String?,
+    modifier: Modifier = Modifier,
+    onMapClick: () -> Unit,
+    trackDecoder: (WorkoutData) -> MapTrack = { it.toMapTrack() }
+) {
+    val mapTrack = remember(
+        workoutData.id,
+        workoutData.bSportType,
+        workoutData.mapPolyline,
+        workoutData.encodedAltitudes,
+        workoutData.encodedDistances,
+        workoutData.minLat,
+        workoutData.minLng,
+        workoutData.maxLat,
+        workoutData.maxLng
+    ) {
+        trackDecoder(workoutData)
+    }
+    val targetBounds = remember(
+        workoutData.minLat,
+        workoutData.minLng,
+        workoutData.maxLat,
+        workoutData.maxLng
+    ) {
+        buildValidatedBounds(
+            minLat = workoutData.minLat,
+            minLng = workoutData.minLng,
+            maxLat = workoutData.maxLat,
+            maxLng = workoutData.maxLng
+        )
+    }
+
+    PathPreviewMap(
+        path = mapTrack,
+        modifier = modifier,
+        start = workoutData.startLatLng,
+        end = workoutData.endLatLng,
+        apex = workoutData.maxDisplacementLatLng,
+        startTitle = startTitle,
+        endTitle = endTitle,
+        targetBounds = targetBounds,
+        onMapClick = onMapClick
+    )
+}
+
+/**
  * Replicates the logic from SummaryViewHolder.kt init block:
  * A Map with an Elevation Profile overlaid at the bottom.
  */
@@ -750,16 +802,13 @@ private fun WorkoutMediaSection(
         } else null
 
         // 1. The Map (Weight 1 lets it take remaining space above profile)
-        PathPreviewMap(
-            path = workoutData.toMapTrack(),
+        WorkoutPathPreviewMap(
+            workoutData = workoutData,
+            startTitle = startTitle,
+            endTitle = endTitle,
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth(),
-            start = workoutData.startLatLng,
-            end = workoutData.endLatLng,
-            apex = workoutData.maxDisplacementLatLng,
-            startTitle = startTitle,
-            endTitle = endTitle,
             onMapClick = { onMapClick() }
         )
 

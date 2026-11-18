@@ -1,14 +1,14 @@
 # Living Test Specification: Maps, Polylines & Navigation
 
 **Document ID**: `DOC-TST-MAPS`  
-**Version**: 1.0.0  
+**Version**: 1.0.3  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `maps_navigation`  
 **Prefixes**: `GEO`, `MAP`, `NAV`, `ROU`  
 **Scope**: Map rendering, polylines, navigation overlays, GPX track follow-me, and routing.  
-**Total Tests**: 70
+**Total Tests**: 71
 
 ---
 
@@ -1285,6 +1285,23 @@
   • Verify that geographic bounding box pre-filtering discards non-overlapping climb pairs in $O(1)$ without evaluating heading or segment cross-track distance.
   • Verify that deduplicating a dense synthetic list of 300 climbs completes in $\le 100\text{ ms}$ on JVM without blocking or thread starvation.
 
+### TST-MAP-071: **PathPreviewMap Immediate Bounds Camera Seeding, Layout Retry & WorkoutSummary Memoization Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-MAP-068` (`REQ-MAP-068.1`..`REQ-MAP-068.4`)
+- **Component**: `PathPreviewMap.kt`, `WorkoutSummary.kt`, `PathPreviewMapBoundsTest.kt`, `WorkoutSummaryMapMemoizationTest.kt`, `MapPreviewLiteModeTest.kt`
+- **Jira**: `ATT-8736` | **Target Release**: `V5.0.0`
+- **Test Description**:
+  1. *Synchronous Bounds Resolution & Edge-Case Validation Test (`TST-MAP-071.1`, `PathPreviewMapBoundsTest.kt`)*:
+  • Verify priority order (`targetBounds` -> valid `MappablePath` bounds -> composite `allPaths`/`start`/`end`/`apex`) and strict rejection of `null`, `NaN`/`Infinity`, out-of-range lat/lng (`[-90, 90]` / `[-180, 180]`), and `minLat > maxLat` bounds.
+  • Verify antimeridian wrap (`sw.longitude > ne.longitude`) center/span calculation and single-point zero-span (`ln(0)` guarded) safe default zoom (`15f`).
+  2. *Web Mercator Camera Seeding & Lite Mode Options Parity Test (`TST-MAP-071.2`, `PathPreviewMapBoundsTest.kt`)*:
+  • Verify aspect-aware Web Mercator zoom clamps to `[1f, 17f]`, avoids `(0.0, 0.0), zoom = 0f`, and preserves `GoogleMapOptions().liteMode(true)` alongside `.camera(...)`.
+  3. *Immediate `MapEffect` Framing, `onSizeChanged` & Retry Test (`TST-MAP-071.3`, `PathPreviewMapBoundsTest.kt`)*:
+  • Verify `Modifier.onSizeChanged` tracks non-zero container dimensions (no `BoxWithConstraints`/`SubcomposeLayout`), triggers `newLatLngBounds(bounds, 20)` via `MapEffect`, retries boundedly after transient zero-size `IllegalStateException`, and re-frames on dynamic `bounds` updates.
+  4. *`WorkoutSummary` 9-Key `toMapTrack()` Memoization & `targetBounds` Wiring Test (`TST-MAP-071.4`, `WorkoutSummaryMapMemoizationTest.kt`)*:
+  • Verify `WorkoutSectionType.MAP` and `WorkoutMediaSection` memoize `toMapTrack()` across unrelated recompositions, invalidate when any of the 9 keys (`id`, `bSportType`, `mapPolyline`, `encodedAltitudes`, `encodedDistances`, `minLat`, `minLng`, `maxLat`, `maxLng`) change, and pass validated `targetBounds` (`0` new `src/main` reads; `Localization Parity: N/A - no UI strings`).
+  5. *Contract, Static Audit & `Rule 8.5` Visual Verification (`TST-MAP-071.5`)*:
+  • Run `WorkoutClusterSplitMapPreviewTest`, `WorkoutLapsIconContractTest`, `DarkMapAntiFlashOverlayTest`, `DarkMapStyleResolutionTest`, `MapPreviewLiteModeTest`, `RouteItemWaypointContractTest`, `ThemeColorCentralizationAuditTest`, `DeadCodeEliminationContractTest`, `SourceTextReadingAuditContractTest`, and `ArchitectureConformanceContractTest` asserting 100% pass, plus Stage 5 `Rule 8.5` Light/Dark `@Preview` PNG check.
+
 ---
 
 ## Change History
@@ -1292,3 +1309,6 @@
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
 | `1.0.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Added standardized `DOC-TST-MAPS` work-product control header and Change History. |
+| `1.0.1` | 2026-11-18 | AI Agent (`ATT-8736`) | `ATT-8736` | Added `TST-MAP-071` (`[Planned]`) verifying `REQ-MAP-068` immediate bounds camera seeding, layout retry, and `WorkoutSummary` memoization. |
+| `1.0.2` | 2026-11-18 | AI Agent (`ATT-8736`) | `ATT-8736` | Promoted `TST-MAP-071` to `[Implemented]` in Stage 4 (`PathPreviewMapBoundsTest.kt`, `WorkoutSummaryMapMemoizationTest.kt`). |
+| `1.0.3` | 2026-11-18 | AI Agent (`ATT-8736`) | `ATT-8736` | Promoted `TST-MAP-071` to `[Verified]` in Stage 5 (`PathPreviewMapBoundsTest`, `WorkoutSummaryMapMemoizationTest`, emulator UI check). |
