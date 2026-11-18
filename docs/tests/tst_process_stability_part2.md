@@ -1,7 +1,7 @@
 # Living Test Specification: Engineering Process, Stability & Architecture (Part 2 of 2)
 
 **Document ID**: `DOC-TST-PRO-P2`  
-**Version**: 1.0.12  
+**Version**: 1.0.15  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -884,14 +884,16 @@
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit / Review
-- **Component**: `tools/generate_test_evidence.py`, `tools/test_generate_test_evidence.py`, `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `tools/test_verify_requirement_governance.py`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ReleaseCiAndLintConfigContractTest.kt`, `docs/management/cm_plan.md`, `.agents/rules/aspice_governance.md`
-- **Jira**: `ATT-8144`
+- **Component**: `tools/generate_test_evidence.py`, `tools/test_generate_test_evidence.py`, `tools/jira_util.py`, `tools/test_jira_accounts.py`, `tools/hoechstmass/tools/generate_test_evidence.py`, `tools/hoechstmass/tools/jira_util.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`, `tools/verify_requirement_governance.py`, `tools/test_verify_requirement_governance.py`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ReleaseCiAndLintConfigContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/HoechstmassToolingContractTest.kt`, `docs/management/cm_plan.md`, `.agents/rules/aspice_governance.md`
+- **Jira**: `ATT-8144`, `ATT-8875`
 - **Test Description**:
-  1. *Test Evidence Generator Unit Suite (`TST-PRO-100.1`, tools/test_generate_test_evidence.py)*:
+  1. *Test Evidence Generator, Cross-Tool Import Isolation & Mirror Parity Suite (`TST-PRO-100.1` [Verified (ATT-8875)], tools/test_generate_test_evidence.py, tools/test_jira_accounts.py & tools/hoechstmass/tools/test_hoechstmass_tools.py)*:
   • Assert parser extracts JUnit XML test results and calculates total, passed, failed, error, and skipped counts.
   • Assert parser correlates test cases to `TST-XXX` IDs and produces structured pass/fail mapping.
   • Assert parser parses Kover XML report and extracts global and per-package line and branch coverage percentages.
   • Assert generator produces valid, readable `docs/engineering/test_evidence/<target>.md` and `.json` files.
+  • Assert `tools/jira_util.py export_test_evidence()` resolves sibling `tools/generate_test_evidence.py` even when `sys.modules["generate_test_evidence"]` is pre-populated by `tools/hoechstmass/tools/generate_test_evidence.py` (or a function lacking `skip_kover`), without raising `TypeError`.
+  • Assert `tools/hoechstmass/tools/jira_util.py export_test_evidence(..., skip_kover=True)` and `tools/hoechstmass/tools/generate_test_evidence.py` support `skip_kover` / `--no-kover` cleanly and pass `HoechstmassToolingContractTest`.
   2. *Governance Gating & Directory Structure Test (`TST-PRO-100.2`, tools/test_verify_requirement_governance.py)*:
   • Assert `verify_engineering_directory_structure()` allows `docs/engineering/test_evidence/` and rejects `docs/engineering/test_results` symlink.
   • Assert `verify_requirement_governance.py --check-test-evidence` validates presence, format, and non-empty status of sprint and release evidence files.
@@ -1512,3 +1514,6 @@
 | `1.0.10` | 2026-11-18 | AI Agent (`ATT-8200`) | `ATT-8200` | Refined `TST-PRO-074` (`[Planned]`, `TST-PRO-074.1`–`.5`) covering `ERROR: Gate violated:` blocking, `category_3_code_tags_without_spec` / `category_4_tsts_not_cited_back` keys, subprocess non-zero JSON parsing, and `V5.0.0__273` tag normalization + JUnit archive lookup. |
 | `1.0.11` | 2026-11-18 | AI Agent (`ATT-8200`) | `ATT-8200` | Promoted `TST-PRO-074` to `[Implemented]` in Stage 4 (`tools/test_generate_release_verification_summary.py` `22/22` OK, `ReleaseManagerSystemEvidenceContractTest` `4/4` PASS). |
 | `1.0.12` | 2026-11-18 | AI Agent (`ATT-8200`) | `ATT-8200` | Promoted `TST-PRO-074` to `[Verified]` after Stage 5 verification (`tools.test_generate_release_verification_summary` `22/22` OK, `ReleaseManagerSystemEvidenceContractTest` `4/4` PASS, governance `exit 0`). |
+| `1.0.13` | 2026-11-18 | AI Agent (`ATT-8875`) | `ATT-8875` | Refined `TST-PRO-100` (`[Planned]`, `TST-PRO-100.1`) adding `sys.modules["generate_test_evidence"]` collision isolation test and Höchstmaß `skip_kover` / `--no-kover` mirror parity test. |
+| `1.0.14` | 2026-11-18 | AI Agent (`ATT-8875`) | `ATT-8875` | Promoted `TST-PRO-100` to `[Implemented]` in Stage 4 (`tools.test_jira_accounts` `exit 0`, `tools/hoechstmass/tools` `62/62` OK, `HoechstmassToolingContractTest` PASS). |
+| `1.0.15` | 2026-11-18 | AI Agent (`ATT-8875`) | `ATT-8875` | Promoted `TST-PRO-100` to `[Verified]` after Stage 5 verification (`tools.test_jira_accounts` `102/102` OK, `tools/hoechstmass/tools` `62/62` OK, `tools.test_generate_test_evidence` `8/8` OK, `HoechstmassToolingContractTest` `4/4` PASS, governance `exit 0`). |

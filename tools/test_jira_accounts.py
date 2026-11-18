@@ -690,6 +690,56 @@ class TestJiraCliTooling(unittest.TestCase):
             self.assertEqual(payload["target"], "sprint_2026-46.3")
             self.assertEqual(payload["unit_tests"]["total"], 1)
 
+    @patch("jira_util.jira_request")
+    @patch("jira_util.get_config")
+    def test_export_test_evidence_isolates_cross_directory_sys_modules_cache(self, mock_config, mock_request):
+        """TST-PRO-100.1 / ATT-8875: Ignore unrelated cached sys.modules['generate_test_evidence'] lacking skip_kover."""
+        import tempfile
+        import types
+
+        mock_config.return_value = {
+            "JIRA_URL": "https://example.atlassian.net",
+            "JIRA_USER": "test@example.com",
+            "JIRA_API_TOKEN": "token",
+        }
+        mock_request.return_value = {"values": []}
+
+        fake_mod = types.ModuleType("generate_test_evidence")
+        fake_mod.__file__ = "/tmp/unrelated_mirror/generate_test_evidence.py"
+
+        def _legacy_no_skip_kover(
+            target_id, target_type="sprint", repo_root=None,
+            results_dir=None, archive_path=None, kover_xml_path=None, out_dir=None,
+        ):
+            raise AssertionError("Should not invoke cross-directory cached generate_test_evidence")
+
+        fake_mod.generate_test_evidence = _legacy_no_skip_kover
+
+        orig_mod = sys.modules.get("generate_test_evidence")
+        sys.modules["generate_test_evidence"] = fake_mod
+        try:
+            with tempfile.TemporaryDirectory() as tmp_root:
+                out_dir = os.path.join(tmp_root, "test_evidence")
+                results_dir = os.path.join(tmp_root, "test-results")
+                os.makedirs(results_dir, exist_ok=True)
+                with open(os.path.join(results_dir, "TEST-Sample.xml"), "w", encoding="utf-8") as f:
+                    f.write('<?xml version="1.0"?><testsuite tests="1" failures="0" errors="0" skipped="0" time="0.1"><testcase name="testA_TST_PRO_100" classname="Sample"/></testsuite>')
+
+                md_path, json_path, payload = jira_util.export_test_evidence(
+                    sprint_arg="2026-46.3",
+                    out_dir=out_dir,
+                    test_results_dir=results_dir,
+                    skip_kover=True,
+                )
+                self.assertTrue(os.path.isfile(md_path))
+                self.assertTrue(os.path.isfile(json_path))
+                self.assertFalse(payload["coverage"]["measured"])
+        finally:
+            if orig_mod is None:
+                sys.modules.pop("generate_test_evidence", None)
+            else:
+                sys.modules["generate_test_evidence"] = orig_mod
+
     @patch("jira_util.get_config", return_value={"JIRA_URL": "https://atrainingtracker.atlassian.net"})
     @patch("jira_util.jira_request")
     def test_qa_audit_command_generates_markdown(self, mock_request, _mock_cfg):

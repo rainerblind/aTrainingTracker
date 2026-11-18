@@ -472,6 +472,44 @@ class TestEpicCommands(unittest.TestCase):
             self.assertEqual(payload["target"], "sprint_100")
             self.assertEqual(payload["unit_tests"]["total"], 1)
 
+    def test_export_test_evidence_hoechstmass_skip_kover_and_module_isolation(self):
+        """TST-PRO-100.1 / ATT-8875: export_test_evidence supports skip_kover and ignores unrelated sys.modules cache."""
+        import tempfile
+        import types
+
+        fake_mod = types.ModuleType("generate_test_evidence")
+        fake_mod.__file__ = "/tmp/unrelated_root/generate_test_evidence.py"
+
+        def _unrelated_fn(*args, **kwargs):
+            raise AssertionError("Should not invoke unrelated cached generate_test_evidence")
+
+        fake_mod.generate_test_evidence = _unrelated_fn
+        orig_mod = sys.modules.get("generate_test_evidence")
+        sys.modules["generate_test_evidence"] = fake_mod
+        try:
+            with tempfile.TemporaryDirectory() as tmpdir:
+                out_dir = os.path.join(tmpdir, "test_evidence")
+                res_dir = os.path.join(tmpdir, "test-results")
+                os.makedirs(res_dir, exist_ok=True)
+                with open(os.path.join(res_dir, "TEST-Sample.xml"), "w", encoding="utf-8") as f:
+                    f.write('<?xml version="1.0"?><testsuite tests="1" failures="0" errors="0" skipped="0" time="0.1"><testcase name="testA_TST_PRO_100" classname="Sample"/></testsuite>')
+
+                md_path, json_path, payload = export_test_evidence(
+                    sprint_arg="sprint_100",
+                    out_dir=out_dir,
+                    test_results_dir=res_dir,
+                    skip_kover=True,
+                    as_role="coordinator",
+                )
+                self.assertTrue(os.path.isfile(md_path))
+                self.assertTrue(os.path.isfile(json_path))
+                self.assertFalse(payload["coverage"]["measured"])
+        finally:
+            if orig_mod is None:
+                sys.modules.pop("generate_test_evidence", None)
+            else:
+                sys.modules["generate_test_evidence"] = orig_mod
+
     def test_verify_sprint_metrics_hoechstmass(self):
         """TST-PRO-060.2 / TST-PRO-060.3: verify_sprint_metrics in hoechstmass."""
         import tempfile

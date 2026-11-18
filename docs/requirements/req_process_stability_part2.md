@@ -1,7 +1,7 @@
 # Living Requirements: Engineering Process, Stability & Architecture (Part 2 of 2)
 
 **Document ID**: `DOC-REQ-PRO-P2`  
-**Version**: 1.0.19  
+**Version**: 1.0.22  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -1442,7 +1442,7 @@
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit / Review
-- **Implementation**: `tools/generate_test_evidence.py`, `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ReleaseCiAndLintConfigContractTest.kt`, `docs/management/cm_plan.md`, `.agents/rules/aspice_governance.md`
+- **Implementation**: `tools/generate_test_evidence.py`, `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `tools/hoechstmass/tools/generate_test_evidence.py`, `tools/hoechstmass/tools/jira_util.py`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ReleaseCiAndLintConfigContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/HoechstmassToolingContractTest.kt`, `docs/management/cm_plan.md`, `.agents/rules/aspice_governance.md`
 - **Rationale**: Under ASPICE 4.0 Major Finding M7 (SWE.4 BP5, SWE.5 BP7, SWE.6 BP5, GP 2.2.3), test execution results must be baseline-controlled, immutable, and versioned in git rather than pointing to ephemeral local build directories via a symlink (`docs/engineering/test_results`). Furthermore, while Kover enforces coverage floors in Gradle, measured coverage percentages (lines and branches) across project and critical packages must be committed and baselined alongside test totals, failures, and per-TST pass/fail results.
 - **Description**:
   1. *Canonical Test Evidence Store & Layout (`REQ-PRO-100.1`)*:
@@ -1457,26 +1457,28 @@
        - Critical Tracking subsystem (`com.atrainingtracker.trainingtracker.tracking`).
        - Critical Filters subsystem (`com.atrainingtracker.trainingtracker.filters`).
        - Critical Sensors subsystem (`com.atrainingtracker.trainingtracker.sensors`).
-  4. *Tooling Automation & Governance Gating (`REQ-PRO-100.4`)*:
-     • `tools/jira_util.py export-test-evidence [--sprint <ID>] [--release <TAG>]` SHALL automate generating and committing evidence records during Ceremony 2 (Sprint Review) and release pipelines.
+  4. *Tooling Automation, Sibling-Scoped Import & Mirror Parity (`REQ-PRO-100.4` [Verified (ATT-8875)])*:
+     • `tools/jira_util.py export-test-evidence [--sprint <ID>] [--release <TAG>] [--out-dir <DIR>] [--no-kover]` (and its Höchstmaß mirror `tools/hoechstmass/tools/jira_util.py`) SHALL automate generating and committing evidence records during Ceremony 2 (Sprint Review) and release pipelines.
+     • Both `tools/jira_util.py` and `tools/hoechstmass/tools/jira_util.py` `export_test_evidence()` SHALL resolve `generate_test_evidence` strictly from their own sibling directory (`os.path.dirname(os.path.abspath(__file__))`, verifying any cached `sys.modules["generate_test_evidence"]` path matches before use and loading via `importlib.util` if mismatched), preventing cross-directory `sys.modules` cache collisions.
+     • `tools/hoechstmass/tools/generate_test_evidence.py` and `tools/hoechstmass/tools/jira_util.py` SHALL support `skip_kover: bool = False` / `--no-kover` in parity with root `tools/` (`aec078bc`) while preserving `HoechstmassToolingContractTest.kt` project-agnostic invariants.
      • `tools/verify_requirement_governance.py --check-test-evidence` SHALL verify that evidence records exist, are non-empty, and match the active sprint/release without missing data or unresolved test failures.
      • `ReleaseCiAndLintConfigContractTest.kt` SHALL assert that `docs/engineering/test_results` symlink is retired and `docs/engineering/test_evidence/` is present and tracked.
 - **Requirement Archaeology & Chesterton's Fence Audit**:
-  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-100`. Targets `tools/generate_test_evidence.py`, `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `ReleaseCiAndLintConfigContractTest.kt`, `cm_plan.md`, and `.agents/rules/aspice_governance.md`.
-  2. *Historical Origin & Commit Trace*: Sprint 2026-46.8 via ticket `ATT-8144` under Epic `ATT-8138` (ASPICE 4.0 Audit Remediation Finding M7).
-  3. *Root Reason for Existing Formulation*: Prior `test_results` build symlink was unversioned, ephemeral, and absent from git configuration management (SUP.8).
-  4. *Preservation of Core Invariants*: Replaces ephemeral build symlink with persistent, baseline-controlled markdown and JSON evidence in `docs/engineering/test_evidence/`; zero Android runtime code modifications; Rule 3 Human Gate intact.
+  1. *Original Requirement ID & Target*: `REQ-PRO-100` (`REQ-PRO-100.4`). Targets `tools/jira_util.py`, `tools/hoechstmass/tools/jira_util.py`, `tools/hoechstmass/tools/generate_test_evidence.py`, `tools/test_jira_accounts.py`, and `tools/hoechstmass/tools/test_hoechstmass_tools.py`.
+  2. *Historical Origin & Commit Trace*: Introduced in Sprint 2026-46.8 via `ATT-8144` (`6bd56da5`) under Epic `ATT-8138`; `aec078bc` added `skip_kover` to root `tools/` without updating `tools/hoechstmass/tools/` or guarding `sys.modules["generate_test_evidence"]`; remediated in `ATT-8875`.
+  3. *Root Reason for Existing Formulation*: Bare `from generate_test_evidence import ...` supported both direct CLI (`python3 tools/jira_util.py`) and package imports, but shared an un-namespaced `sys.modules` key between `tools/` and `tools/hoechstmass/tools/`.
+  4. *Preservation of Core Invariants*: Preserves CLI and package import modes, `HoechstmassToolingContractTest.kt` project-agnostic rules, `ReleaseCiAndLintConfigContractTest.kt`, zero `app/src/main/` edits, and Rule 3 Human Gate.
 - **Acceptance Criteria (Given-When-Then)**:
-  • *Given* the repository tree,
-  • *When* `docs/engineering/test_results` is inspected,
-  • *Then* it is no longer a symbolic link to ephemeral build outputs, and `docs/engineering/test_evidence/` exists as a canonical tracked directory.
+  • *Given* `sys.modules["generate_test_evidence"]` pre-populated by `tools/hoechstmass/tools/generate_test_evidence.py` (or a module lacking `skip_kover`),
+  • *When* `tools/jira_util.py export_test_evidence(...)` executes in `tools/test_jira_accounts.py`,
+  • *Then* it resolves sibling `tools/generate_test_evidence.py` cleanly without raising `TypeError` on `skip_kover`.
+  • *Given* `tools/hoechstmass/tools/jira_util.py export_test_evidence(..., skip_kover=True)` and `tools/hoechstmass/tools/generate_test_evidence.py --no-kover`,
+  • *When* executed in isolation or via `HoechstmassToolingContractTest`,
+  • *Then* `coverage_summary["measured"]` is `False`, all Höchstmaß tests pass, and zero ATT-proprietary constants appear in `tools/hoechstmass/tools/`.
   • *Given* a sprint completion or release candidate build,
   • *When* `tools/generate_test_evidence.py` or `tools/jira_util.py export-test-evidence` is executed,
-  • *Then* `docs/engineering/test_evidence/<target>.md` and `.json` are generated containing commit SHA, timestamp, test metrics, per-TST status, and Kover line/branch coverage per critical package.
-  • *Given* generated test evidence files,
-  • *When* `tools/verify_requirement_governance.py --check-test-evidence` executes,
-  • *Then* it validates evidence integrity and reports PASS if complete or fails with exit code 1 if missing or failing.
-- **Invariants**: Zero Android runtime bytecode changes; Gradle Kover verification thresholds in `app/build.gradle` remain unchanged; POSIX flock mutual exclusion and Rule 3 human gates preserved.
+  • *Then* `docs/engineering/test_evidence/<target>.md` and `.json` are generated and `verify_requirement_governance.py --check-test-evidence` passes.
+- **Invariants**: Zero Android runtime bytecode changes; `HoechstmassToolingContractTest.kt` project-agnostic invariants preserved; `Localization Parity: N/A - no UI strings`.
 
 ---
 
@@ -2399,3 +2401,6 @@
 | `1.0.17` | 2026-11-18 | AI Agent (`ATT-8200`) | `ATT-8200` | Refined `REQ-PRO-074` (`[Planned]`, `REQ-PRO-074.1`/`.3`/`.4`/`.5`) for `ERROR:`/`FAIL:` threshold gating, `category_3_code_tags_without_spec`/`category_4_tsts_not_cited_back` JSON keys, subprocess non-zero JSON parsing, and `V<ver>__<code>` dossier normalization. |
 | `1.0.18` | 2026-11-18 | AI Agent (`ATT-8200`) | `ATT-8200` | Promoted `REQ-PRO-074` to `[Implemented]` in Stage 4 (`tools/generate_release_verification_summary.py`, `docs/releases/README.md`, `tools/test_generate_release_verification_summary.py`). |
 | `1.0.19` | 2026-11-18 | AI Agent (`ATT-8200`) | `ATT-8200` | Promoted `REQ-PRO-074` to `[Verified]` after Stage 5 verification (`test_generate_release_verification_summary.py` `22/22` OK, `ReleaseManagerSystemEvidenceContractTest` `4/4` PASS, governance `exit 0`). |
+| `1.0.20` | 2026-11-18 | AI Agent (`ATT-8875`) | `ATT-8875` | Refined `REQ-PRO-100` (`[Planned]`, `REQ-PRO-100.4`) for sibling-scoped `generate_test_evidence` import isolation and `skip_kover`/`--no-kover` Höchstmaß mirror parity. |
+| `1.0.21` | 2026-11-18 | AI Agent (`ATT-8875`) | `ATT-8875` | Promoted `REQ-PRO-100` to `[Implemented]` in Stage 4 (`tools/jira_util.py`, `tools/hoechstmass/tools/jira_util.py`, `tools/hoechstmass/tools/generate_test_evidence.py`, `tools/test_jira_accounts.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`). |
+| `1.0.22` | 2026-11-18 | AI Agent (`ATT-8875`) | `ATT-8875` | Promoted `REQ-PRO-100` to `[Verified]` after Stage 5 verification (`tools.test_jira_accounts` `102/102` OK, `tools/hoechstmass/tools` `62/62` OK, `tools.test_generate_test_evidence` `8/8` OK, `HoechstmassToolingContractTest` `4/4` PASS, governance `exit 0`). |
