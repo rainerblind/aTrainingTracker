@@ -381,7 +381,9 @@ class HrvPostWorkoutRecomputerTest {
 
     @Test
     fun recomputeWorkout_sortsInterleavedBeatsBeforeFilteringAndRejectsNegativeDfaAlpha1() = runBlocking {
-        // TST-TRK-085.3, TST-TRK-085.4: Pixel 10 dual-HRM interleaved timestamps + unflagged multi-second RR gaps
+        // TST-TRK-085.3, TST-TRK-085.4:
+        // Segment A (0..159s): interleaved out-of-order timestamps with <= 5% artifacts so DfaCalculator IS invoked and yields positive DFA a1.
+        // Segment B (160..259s): heavy unflagged multi-second RR gaps (5196.29 ms, 6377.93 ms) gated to NULL.
         val baseFileName = "2026-11-18_hrv_interleaved"
         val workoutId = createWorkout(baseFileName)
         samplesDbManager.createNewTable(baseFileName, java.util.Arrays.asList(*SensorType.values()))
@@ -394,7 +396,7 @@ class HrvPostWorkoutRecomputerTest {
         }
         samplesDb.beginTransaction()
         try {
-            for (sec in 0 until 140) {
+            for (sec in 0 until 260) {
                 val cv = ContentValues().apply {
                     put("time", sdf.format(java.util.Date(startTs + sec * 1000L)))
                     put(SensorType.HR.name, 75.0)
@@ -406,32 +408,59 @@ class HrvPostWorkoutRecomputerTest {
             samplesDb.endTransaction()
         }
 
-        // Persist out-of-order / interleaved beats across two streams + unflagged multi-second gaps
         val rrList = mutableListOf<WorkoutRrInterval>()
         var idx = 0
-        for (sec in 0 until 135) {
-            val h10Ts = startTs + sec * 1000L
-            val verityTs = h10Ts + 300L
-            // Interleave out-of-order beat timestamps and backward jump at sec == 50
-            val tsA = if (sec == 50) h10Ts - 430L else h10Ts
-            val rrA = if (sec in listOf(20, 60, 100)) 5196.29f else 800f
-            val rrB = if (sec == 80) 6377.93f else 820f
-            rrList.add(WorkoutRrInterval(workoutId = workoutId, beatIndex = idx++, beatTimestampMs = verityTs, rrMs = rrB, artifactFlag = 0, gapBeats = 0))
-            rrList.add(WorkoutRrInterval(workoutId = workoutId, beatIndex = idx++, beatTimestampMs = tsA, rrMs = rrA, artifactFlag = 0, gapBeats = 0))
+        // Segment A: clean harmonic beats with pairs persisted out of chronological order (ts+400 before ts)
+        // plus one minor backward jump at beat 50 (-430 ms), keeping artifact rate <= 5% so DFA is computed.
+        var beatTimeMs = startTs - 5_000L
+        val segmentABeats = mutableListOf<Pair<Long, Float>>()
+        for (i in 0 until 210) {
+            val rr = (800.0 + 40.0 * Math.sin(2.0 * Math.PI * i / 16.0) + 20.0 * Math.sin(2.0 * Math.PI * i / 64.0)).toFloat()
+            val ts = if (i == 50) beatTimeMs - 430L else beatTimeMs
+            segmentABeats.add(ts to rr)
+            beatTimeMs += rr.toLong()
+        }
+        var p = 0
+        while (p + 1 < segmentABeats.size) {
+            val second = segmentABeats[p + 1]
+            val first = segmentABeats[p]
+            rrList.add(WorkoutRrInterval(workoutId = workoutId, beatIndex = idx++, beatTimestampMs = second.first, rrMs = second.second, artifactFlag = 0, gapBeats = 0))
+            rrList.add(WorkoutRrInterval(workoutId = workoutId, beatIndex = idx++, beatTimestampMs = first.first, rrMs = first.second, artifactFlag = 0, gapBeats = 0))
+            p += 2
+        }
+        if (p < segmentABeats.size) {
+            rrList.add(WorkoutRrInterval(workoutId = workoutId, beatIndex = idx++, beatTimestampMs = segmentABeats[p].first, rrMs = segmentABeats[p].second, artifactFlag = 0, gapBeats = 0))
+        }
+
+        // Segment B: unflagged multi-second gaps in tail [170s..259s]
+        for (sec in 170 until 260) {
+            val ts = startTs + sec * 1000L
+            val rr = when (sec) {
+                190, 210, 230 -> 5196.29f
+                220 -> 6377.93f
+                else -> 800f
+            }
+            rrList.add(WorkoutRrInterval(workoutId = workoutId, beatIndex = idx++, beatTimestampMs = ts, rrMs = rr, artifactFlag = 0, gapBeats = 0))
         }
         WorkoutRrRepository.getInstance(context).insertIntervals(rrList)
 
         val success = HrvPostWorkoutRecomputer.recomputeWorkout(context, workoutId)
         assertTrue("Recomputation must succeed cleanly on interleaved/gapped streams", success)
 
-        // Assert zero negative HRV_DFA_A1 rows persisted in WorkoutSamples.db
-        samplesDb.query(tableName, arrayOf(SensorType.HRV_DFA_A1.name), null, null, null, null, null).use { cursor ->
+        var nonNullDfaCount = 0
+        var nullDfaCount = 0
+        samplesDb.query(tableName, arrayOf(SensorType.HRV_DFA_A1.name), null, null, null, null, "${WorkoutSamplesDatabaseManager.WorkoutSamplesDbHelper.C_ID} ASC").use { cursor ->
             while (cursor.moveToNext()) {
-                if (!cursor.isNull(0)) {
+                if (cursor.isNull(0)) {
+                    nullDfaCount++
+                } else {
+                    nonNullDfaCount++
                     val dfa = cursor.getDouble(0)
                     assertTrue("HRV_DFA_A1 must never be <= 0.0 (was $dfa)", dfa > 0.0 && dfa.isFinite())
                 }
             }
         }
+        assertTrue("Clean pre-sorted interleaved segment must compute valid positive HRV_DFA_A1 rows (was $nonNullDfaCount)", nonNullDfaCount > 0)
+        assertTrue("Heavy unflagged gap tail must suppress HRV_DFA_A1 to NULL (was $nullDfaCount)", nullDfaCount > 0)
     }
 }

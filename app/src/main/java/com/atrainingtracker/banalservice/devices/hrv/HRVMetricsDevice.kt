@@ -135,8 +135,11 @@ open class HRVMetricsDevice @JvmOverloads constructor(
     @Synchronized
     private fun pruneOldBeats(currentTimestampMs: Long) {
         val cutoff = currentTimestampMs - WINDOW_DFA_MS
-        while (!mBeatQueue.isEmpty() && mBeatQueue.first.beatTimestampMs < cutoff) {
-            mBeatQueue.removeFirst()
+        val iterator = mBeatQueue.iterator()
+        while (iterator.hasNext()) {
+            if (iterator.next().beatTimestampMs < cutoff) {
+                iterator.remove()
+            }
         }
     }
 

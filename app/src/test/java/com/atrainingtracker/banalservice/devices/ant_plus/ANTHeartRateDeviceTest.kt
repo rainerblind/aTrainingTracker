@@ -309,4 +309,49 @@ class ANTHeartRateDeviceTest {
         org.junit.Assert.assertNotSame("Reconnected sensor must be a fresh instance", firstSensor, secondSensor)
         assertEquals(750, secondSensor?.value)
     }
+
+    /**
+     * TST-TRK-085.1, TST-TRK-085.2: deltaC == 1 monotonic drift clamping (> 2000 ms),
+     * physiological [250, 2500] ms gap flagging, and deltaC >= 2 monotonic packet-loss reconstruction.
+     */
+    @Test
+    fun testMonotonicDriftClamping_andPhysiologicalGapFlagging() {
+        val device = createDevice()
+        val receivedEvents = mutableListOf<RrBeatEvent>()
+        device.addRrBeatListener { receivedEvents.add(it) }
+
+        // Baseline at estTimestamp = 100_000L, beat 10, eventTime = 1.000s
+        device.parseHeartRateData(100_000L, 75, 10L, BigDecimal("1.000"), DataState.LIVE_DATA)
+        // Beat 11 at estTimestamp = 100_800L, eventTime = 1.800s (normal 800 ms)
+        device.parseHeartRateData(100_800L, 75, 11L, BigDecimal("1.800"), DataState.LIVE_DATA)
+        assertEquals(1, receivedEvents.size)
+        val firstBeatTs = receivedEvents[0].beatTimestampMs
+        assertEquals(RrBeatEvent.ARTIFACT_NORMAL, receivedEvents[0].artifactFlag)
+        assertEquals(0, receivedEvents[0].gapBeats)
+
+        // Beat 12 (deltaC == 1): estTimestamp jumps backwards by 4000 ms (> 2000 ms drift) -> must clamp >= firstBeatTs
+        device.parseHeartRateData(96_800L, 75, 12L, BigDecimal("2.600"), DataState.LIVE_DATA)
+        assertEquals(2, receivedEvents.size)
+        val clampedBeatTs = receivedEvents[1].beatTimestampMs
+        assertTrue("deltaC == 1 drift re-anchor must stay monotonic >= previous beat ($clampedBeatTs vs $firstBeatTs)", clampedBeatTs >= firstBeatTs)
+
+        // Beat 13 (deltaC == 1): physiological > 2500 ms interval (3200 ms) arriving near wall clock -> ARTIFACT_GAP
+        device.parseHeartRateData(104_000L, 60, 13L, BigDecimal("5.800"), DataState.LIVE_DATA)
+        assertEquals(3, receivedEvents.size)
+        assertEquals(RrBeatEvent.ARTIFACT_GAP, receivedEvents[2].artifactFlag)
+        assertTrue("Implausible >2500ms interval must set gapBeats > 0", receivedEvents[2].gapBeats > 0)
+
+        // Beat 14 (deltaC == 1): physiological < 250 ms interval (180 ms) -> ARTIFACT_GAP
+        device.parseHeartRateData(104_180L, 60, 14L, BigDecimal("5.980"), DataState.LIVE_DATA)
+        assertEquals(4, receivedEvents.size)
+        assertEquals(RrBeatEvent.ARTIFACT_GAP, receivedEvents[3].artifactFlag)
+
+        // Beat 17 (deltaC == 3): multi-beat packet loss where estTimestamp arrives earlier than last beat -> monotonic >= prev
+        val preLossTs = receivedEvents[3].beatTimestampMs
+        device.parseHeartRateData(90_000L, 60, 17L, BigDecimal("8.380"), DataState.LIVE_DATA)
+        assertEquals(5, receivedEvents.size)
+        assertEquals(RrBeatEvent.ARTIFACT_GAP, receivedEvents[4].artifactFlag)
+        assertEquals(2, receivedEvents[4].gapBeats)
+        assertTrue("deltaC >= 2 reconstruction must clamp monotonic >= previous beat", receivedEvents[4].beatTimestampMs >= preLossTs)
+    }
 }

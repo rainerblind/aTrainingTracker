@@ -204,4 +204,37 @@ class DeviceManagerRrSourceTest {
         assertSame(verityPpg, deviceManager.activePrimaryRrSourceForTesting)
         assertEquals(3, forwarded.size)
     }
+
+    @Test
+    fun testBtleVeritySenseFallback_isDemotedBelowEcgAndAntPlus() {
+        val wallClock = AtomicLong(30_000L)
+        deviceManager.setRrClockForTesting { wallClock.get() }
+
+        val (verityBtle, verityBtleDelegate) = mockSource(BTLEHeartRateDevice::class.java)
+        val btleVerity = verityBtle as BTLEHeartRateDevice
+        every { btleVerity.name } returns "Polar Verity Sense 12345678"
+        every { btleVerity.getManufacturerName() } returns "Polar Electro Oy"
+        every { btleVerity.getAddress() } returns "AA:BB:CC:DD:EE:99"
+
+        val (antHr, antDelegate) = mockSource(ANTHeartRateDevice::class.java)
+
+        val forwarded = mutableListOf<RrBeatEvent>()
+        deviceManager.addRrBeatListener { forwarded.add(it) }
+        deviceManager.registerRrBeatSourceForTesting(verityBtle)
+        deviceManager.registerRrBeatSourceForTesting(antHr)
+
+        // BTLE Verity Sense emits first -> temporarily active while higher-priority sources are quiet
+        verityBtleDelegate.emit(RrBeatEvent(300_000L, 900.0, 1, ProtocolType.BLE))
+        assertSame(verityBtle, deviceManager.activePrimaryRrSourceForTesting)
+
+        // ANT+ HR (priority 1) preempts BTLE Verity Sense optical PPG (priority 2)
+        wallClock.addAndGet(200L)
+        antDelegate.emit(RrBeatEvent(300_200L, 800.0, 2, ProtocolType.ANT_PLUS))
+        assertSame(antHr, deviceManager.activePrimaryRrSourceForTesting)
+
+        // Interleaved BTLE Verity Sense beat within 5s must be suppressed
+        wallClock.addAndGet(200L)
+        verityBtleDelegate.emit(RrBeatEvent(300_400L, 910.0, 3, ProtocolType.BLE))
+        assertEquals(listOf(900.0, 800.0), forwarded.map { it.rrMs })
+    }
 }

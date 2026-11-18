@@ -1,7 +1,7 @@
 # Living Requirements: Tracking & Live Sensor Cockpit
 
 **Document ID**: `DOC-REQ-TRK`  
-**Version**: 1.0.12  
+**Version**: 1.0.13  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -6786,3 +6786,4 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 | `1.0.10` | 2026-11-18 | AI Agent (`ATT-8705`) | `ATT-8705` | Promoted `REQ-FIL-025` to `[Verified]` in Stage 5 following Tier-1 targeted unit/Robolectric regression verification. |
 | `1.0.11` | 2026-11-18 | AI Agent (`ATT-8706`) | `ATT-8706` | Added and verified `REQ-TRK-085` [Verified] (`RrBeatNormalization`, `DeviceManager`, `TrackerService`, `HrvPostWorkoutRecomputer`, `RrArtifactFilter`, `DfaCalculator`, `HRVMetricsDevice`) for single-primary RR routing, monotonic clamping, physiological gap flagging, pre-filter sort, and positive finite DFA α1 gate (502/502 tests across 88 suites). |
 | `1.0.12` | 2026-11-18 | AI Agent (`ATT-8719`) | `ATT-8719` | Added and verified `REQ-SEN-031` [Verified] for `EditDeviceDialog` wheel speed sensor `WheelPosition` display, draft selection via `WheelPositionSelectionDialog`, conflict preview, and `Save`-time `swapConflict` commit. |
+| `1.0.13` | 2026-11-18 | AI Agent (`ATT-8706`) | `ATT-8706` | Stage 6 Bounce 1/3 heal (`[Verified]`): fixed `HRVMetricsDevice.pruneOldBeats` out-of-order queue eviction and `DeviceManager.getRrSourcePriority` optical `BTLEHeartRateDevice` Verity Sense demotion (`RR_PRIORITY_PPG`) (`448/448` tests across `83` suites). |

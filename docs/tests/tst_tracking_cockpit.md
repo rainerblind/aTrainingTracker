@@ -1,7 +1,7 @@
 # Living Test Specification: Tracking & Live Sensor Cockpit
 
 **Document ID**: `DOC-TST-TRK`  
-**Version**: 1.0.12  
+**Version**: 1.0.13  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -3365,3 +3365,4 @@
 | `1.0.10` | 2026-11-18 | AI Agent (`ATT-8705`) | `ATT-8705` | Promoted `TST-FIL-025` to `[Verified]` in Stage 5 following Tier-1 targeted unit/Robolectric regression verification. |
 | `1.0.11` | 2026-11-18 | AI Agent (`ATT-8706`) | `ATT-8706` | Added and verified `TST-TRK-085` [Verified] for RR source isolation, monotonic clamping, physiological gap flagging, pre-filter sort, and DFA α1 validity gate (502/502 tests across 88 suites). |
 | `1.0.12` | 2026-11-18 | AI Agent (`ATT-8719`) | `ATT-8719` | Added and verified `TST-SEN-031` [Verified] for `EditDeviceDialog` wheel mounting position display, draft isolation (`SaveCancel`), conflict swap, non-wheel isolation, and Light/Dark `@Preview` PNG verification. |
+| `1.0.13` | 2026-11-18 | AI Agent (`ATT-8706`) | `ATT-8706` | Stage 6 Bounce 1/3 heal (`[Verified]`): strengthened out-of-order & stale-eviction tests (`HRVMetricsDeviceTest`), positive DFA window assertion (`HrvPostWorkoutRecomputerTest`), `ANTHeartRateDeviceTest` `deltaC==1`/`>=2` monotonic & gap tests, and `DeviceManagerRrSourceTest` optical BTLE Verity Sense demotion test (`448/448` tests across `83` suites). |

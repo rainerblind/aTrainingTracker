@@ -53,6 +53,7 @@ import com.atrainingtracker.banalservice.devices.hrv.HRVMetricsDevice;
 import com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEHeartRateDevice;
 import com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERunSpeedDevice;
 import com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDevice;
+import com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineGattCoordinator;
 import com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOnlineStreamingBridge;
 import com.atrainingtracker.banalservice.devices.bluetooth_le.search_new.BTSearchForNewDevicesEngine;
 import com.atrainingtracker.banalservice.devices.bluetooth_le.search_new.BTSearchForNewDevicesEngine.IBTSearchForNewDevicesEngineInterface;
@@ -496,7 +497,16 @@ public class DeviceManager {
 
     private int getRrSourcePriority(@Nonnull RrBeatSource source) {
         if (source instanceof BTLEHeartRateDevice) {
-            return RR_PRIORITY_ECG;
+            BTLEHeartRateDevice btleDevice = (BTLEHeartRateDevice) source;
+            String name = btleDevice.getName();
+            String manufacturer = btleDevice.getManufacturerName();
+            boolean isOpticalPolar = PolarOfflineGattCoordinator.isPolarVeritySenseDevice(
+                    mContext,
+                    name != null ? name : "",
+                    manufacturer != null ? manufacturer : "",
+                    btleDevice.getAddress()
+            );
+            return isOpticalPolar ? RR_PRIORITY_PPG : RR_PRIORITY_ECG;
         }
         if (source instanceof PolarOnlineStreamingBridge) {
             return ((PolarOnlineStreamingBridge) source).isVeritySense()
