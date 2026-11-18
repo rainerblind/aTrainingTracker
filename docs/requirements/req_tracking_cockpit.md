@@ -1,14 +1,14 @@
 # Living Requirements: Tracking & Live Sensor Cockpit
 
 **Document ID**: `DOC-REQ-TRK`  
-**Version**: 1.0.17  
+**Version**: 1.0.18  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Requirements**: 168
+**Total Requirements**: 169
 
 ---
 
@@ -6767,6 +6767,42 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 **Invariants**: NeuroKit2 0.2.10 golden parity (`|ΔrMSSD| <= 0.5 ms`, `|Δα1| <= 0.02`/`0.03`); `DfaCalculatorTest.testConstantSignalDoesNotCrash`; `REQ-TRK-084.4` conditional upsert; zero `WorkoutRr.db` schema bump; `@Synchronized` thread safety; `N/A - no UI strings`.
 
 
+### REQ-TRK-086: Gesture-Isolated HrvDfaA1RangeSlider Dragging in ZonesSettingsActivity HorizontalPager [Verified]
+- **Tests**: `TST-TRK-086`
+- **System Requirement(s)**: `SYSREQ-TRK-006`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `ZonesSettingsActivity.kt`
+- **Rationale**: On tab 3 (`HRV (DFA α1)`, `page == 3`) of `ZoneSettingsScreen` (`ZonesSettingsActivity.kt`), `HorizontalPager` previously omitted `userScrollEnabled`, causing rightward drags on `HrvDfaA1RangeSlider` thumbs (especially right thumb `T2`) or touches inside the slider `Card` padding to lose the touch-slop race and switch back to `PWR_BIKE` (`page == 2`), while unbuffered async `TuningPreferencesDataStore` writes risked mid-drag thumb snap-back (`ATT-8105`, refining `REQ-TRK-061.4`).
+- **Description**:
+  1. *HorizontalPager Gesture Isolation via `PointerEventPass.Initial` & `MutableInteractionSource` (`REQ-TRK-086.1`)*:
+     - `ZoneSettingsScreen` (`ZonesSettingsActivity.kt`) SHALL hold lifted `isSliderGestureActive` state controlling `HorizontalPager(userScrollEnabled = !isSliderGestureActive)` and pass a defaulted `onSliderGestureActiveChange: (Boolean) -> Unit = {}` callback through `HrvDfaA1SettingsContent` to `HrvDfaA1RangeSlider` and `HrvThresholdControlRow`.
+     - `HrvDfaA1RangeSlider` (and `HrvThresholdControlRow` when `showSlider == true`) MUST combine `PointerEventPass.Initial` press/release detection on its slider container with M3 `MutableInteractionSource` (`startInteractionSource` / `endInteractionSource` press & drag tracking) so `isSliderGestureActive` becomes `true` immediately on initial pointer down (zero slop-race window) and resets cleanly to `false` on pointer release, cancel, or composable disposal (`DisposableEffect`).
+     - The slider `Card`/container MUST consume residual horizontal-dominant pointer deltas in `PointerEventPass.Main` so unconsumed horizontal movement inside `12.dp` padding cannot trigger `HorizontalPager` tab switches, while preserving `verticalScroll` and normal horizontal tab swipes outside the slider region.
+  2. *Bidirectional Thumb Tracking & Local Drag State (`REQ-TRK-086.2`)*:
+     - Both rightward (`T2` / `T1` moved right on `page == 3`) AND leftward (`T1` / `T2` moved left) thumb drags on `HrvDfaA1RangeSlider` SHALL adjust thresholds smoothly without triggering tab switches or pager overscroll.
+     - `HrvDfaA1RangeSlider` MUST maintain local drag state synchronized with `t1`/`t2` only while idle (`!isDragging`), preventing asynchronous `TuningPreferencesDataStore` latency or repeated clamped updates from snapping thumbs backward mid-drag while strictly enforcing domain `0.30f..1.20f` and $\alpha_{1,\text{T1}} \ge \alpha_{1,\text{T2}} + 0.05f$.
+  3. *Behavioral Compose UI Gesture Verification & Visual Evidence (`REQ-TRK-086.3`)*:
+     - Gesture isolation, bidirectional `T1`/`T2` dragging, non-slider tab switching, and vertical scroll preservation SHALL be verified via behavioral Robolectric Compose `createComposeRule()` (`performTouchInput`) tests with zero `app/src/main/` file reads (`REQ-PRO-049.1` / `ATT-8198`), plus Light/Dark screenshot PNG verification at `docs/engineering/walkthroughs/img/ATT-8105_hrv_slider_zones.png` (`Rule 8.5`; `Localization Parity: N/A - no UI strings added or modified`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new `REQ-TRK-086` refining `REQ-TRK-061.4` (`ZonesSettingsActivity.kt`).
+2. *Historical Origin & Commit Trace*: `ATT-3542` (`14292b35`) $\rightarrow$ `ATT-7317` $\rightarrow$ `ATT-7519` (`467f7663`) $\rightarrow$ `ATT-7741` (`5fa1e164`) $\rightarrow$ `ATT-8498` (`81af2506`).
+3. *Root Reason for Existing Formulation*: `REQ-TRK-061.4` introduced the unified inverted 3-zone M3 `RangeSlider` inside `HorizontalPager` tab 3 without `userScrollEnabled` gesture arbitration or local drag buffering.
+4. *Preservation of Core Invariants*: Inverted left-green/right-red `RangeSlider` `track` slot (`TTColor.Zone2/3/4`), `0.30f..1.20f` domain, $T_1 \ge T_2 + 0.05f$ gap, public composable names (defaulted optional callback), vertical scrolling, non-slider tab swiping, `HrvDfaA1SettingsContractTest`, and 9-locale `strings_hrv.xml` parity remain 100% preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `ZoneSettingsScreen` on tab 3 (`HRV (DFA α1)`, `page == 3`),
+• *When* the user drags `HrvDfaA1RangeSlider` thumb `T2` or `T1` rightward OR leftward (including starting inside slider `Card` padding),
+• *Then* `HorizontalPager` stays on `page == 3` (`userScrollEnabled == false` during the gesture), thresholds update smoothly within `0.30f..1.20f` enforcing $T_1 \ge T_2 + 0.05f$ without snap-back, and `userScrollEnabled` restores to `true` on release.
+• *Given* `ZoneSettingsScreen` on tab 3 with the slider idle,
+• *When* the user swipes horizontally outside the slider `Card` OR scrolls vertically across `HrvDfaA1SettingsContent`,
+• *Then* horizontal swipe switches cleanly to `page == 2` (`PWR_BIKE`) and vertical scroll advances `scrollState` without interference.
+
+**Invariants**: Inverted 3-zone `RangeSlider` track (`TTColor.Zone2/3/4`); `0.30f..1.20f` bounds & $T_1 \ge T_2 + 0.05f$; backward-compatible public composable signatures; `verticalScroll` & non-slider tab swiping intact; `HrvDfaA1SettingsContractTest` intact; `REQ-PRO-049.1` zero `src/main` reads in new/modified tests; `Localization Parity: N/A - no UI strings`.
+
+
 ---
 
 ## Change History
@@ -6785,9 +6821,5 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 | `1.0.9` | 2026-11-18 | AI Agent (`ATT-8705`) | `ATT-8705` | Promoted `REQ-FIL-025` to `[Implemented]` following Stage 4 implementation. |
 | `1.0.10` | 2026-11-18 | AI Agent (`ATT-8705`) | `ATT-8705` | Promoted `REQ-FIL-025` to `[Verified]` in Stage 5 following Tier-1 targeted unit/Robolectric regression verification. |
 | `1.0.11` | 2026-11-18 | AI Agent (`ATT-8706`) | `ATT-8706` | Added and verified `REQ-TRK-085` [Verified] (`RrBeatNormalization`, `DeviceManager`, `TrackerService`, `HrvPostWorkoutRecomputer`, `RrArtifactFilter`, `DfaCalculator`, `HRVMetricsDevice`) for single-primary RR routing, monotonic clamping, physiological gap flagging, pre-filter sort, and positive finite DFA α1 gate (502/502 tests across 88 suites). |
-| `1.0.12` | 2026-11-18 | AI Agent (`ATT-8719`) | `ATT-8719` | Added and verified `REQ-SEN-031` [Verified] for `EditDeviceDialog` wheel speed sensor `WheelPosition` display, draft selection via `WheelPositionSelectionDialog`, conflict preview, and `Save`-time `swapConflict` commit. |
-| `1.0.13` | 2026-11-18 | AI Agent (`ATT-8706`) | `ATT-8706` | Stage 6 Bounce 1/3 heal (`[Verified]`): fixed `HRVMetricsDevice.pruneOldBeats` out-of-order queue eviction and `DeviceManager.getRrSourcePriority` optical `BTLEHeartRateDevice` Verity Sense demotion (`RR_PRIORITY_PPG`) (`448/448` tests across `83` suites). |
-| `1.0.14` | 2026-11-18 | AI Agent (`ATT-8719`) | `ATT-8719` | Stage 6 Bounce 1/3 heal (`[Verified]`): grounded `linkedWheelPositions` symbol name and added `_allDevices` update ordering + `notifyEquipmentLinksChanged(null)` cross-sensor conflict refresh in `REQ-SEN-031.3` (`174/174` `--rerun-tasks` across `41` classes). |
-| `1.0.15` | 2026-11-18 | AI Agent (`ATT-8706`) | `ATT-8706` | Stage 6 Bounce 2/3 heal (`[Verified]`): cached `MyDevice.mCachedManufacturerName`, short-circuited & cached `DeviceManager.getCachedRrSourcePriority` off steady-state RR beats, and strengthened genuine pre-filter sort failure assertion in `HrvPostWorkoutRecomputerTest` (`449/449` tests across `83` suites). |
-| `1.0.16` | 2026-11-18 | AI Agent (`ATT-8706`) | `ATT-8706` | Stage 6 Bounce 3/3 heal (`[Implemented]`): moved `mRrSourcePriorityCache.remove(source)` inside `synchronized (mRrArbitrationLock)` in `DeviceManager.detachIfRrBeatSource` and enforced bidirectional interleaving (`nonNullDfaCount >= 120` + `sec 60..125`) in `HrvPostWorkoutRecomputerTest`. |
 | `1.0.17` | 2026-11-18 | AI Agent (`ATT-8706`) | `ATT-8706` | Promoted `REQ-TRK-085` to `[Verified]` in Stage 5 following Bounce 3/3 heal verification (`449/449` tests across `83` suites). |
+| `1.0.18` | 2026-11-18 | AI Agent (`ATT-8105`) | `ATT-8105` | Added and verified `REQ-TRK-086` [Verified] (`ZonesSettingsActivity.kt` `rememberSliderGestureIsolationModifier`, local drag buffering, and lifted `isSliderGestureActive` on `HorizontalPager`) following Tier-1 targeted tests (`31/31` across 7 suites) and `Rule 8.5` PNG inspection (`ATT-8105_hrv_slider_zones.png`). |

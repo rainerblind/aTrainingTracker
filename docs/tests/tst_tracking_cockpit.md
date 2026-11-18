@@ -1,14 +1,14 @@
 # Living Test Specification: Tracking & Live Sensor Cockpit
 
 **Document ID**: `DOC-TST-TRK`  
-**Version**: 1.0.17  
+**Version**: 1.0.18  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Tests**: 144
+**Total Tests**: 145
 
 ---
 
@@ -3346,6 +3346,27 @@
      • Verify 100% 9-locale parity for `strings_equipment.xml` (`values`, `de`, `es`, `fr`, `it`, `ja`, `nl`, `pl`, `pt`) and execute targeted offline Gradle unit + Compose UI tests asserting 100% pass rate.
 
 
+### TST-TRK-086: **HrvDfaA1RangeSlider HorizontalPager Gesture Isolation & Local Drag State Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Tickets**: `ATT-8105`
+- **Requirement(s)**: `REQ-TRK-086` (`REQ-TRK-086.1`..`REQ-TRK-086.3`), `REQ-TRK-061.4`
+- **Component**: `HrvDfaA1RangeSliderGestureTest.kt`, `HrvDfaA1SettingsContractTest.kt`
+- **Test Type**: Unit
+- **Verification Method**: Unit
+- **Procedure**:
+  1. *Bidirectional Slider Drag Isolation & Local Drag Buffering (`TST-TRK-086.1`, `HrvDfaA1RangeSliderGestureTest.kt`)*:
+     • Render `ZoneSettingsScreen` (or `HorizontalPager` tab host matching `ZoneSettingsScreen` with `HrvDfaA1SettingsContent` on `page == 3`) via Robolectric Compose `createComposeRule()` with zero `app/src/main/` file reads (`REQ-PRO-049.1` / `ATT-8198`).
+     • Execute `performTouchInput` rightward (`T2` right drag and `T1` right drag) AND leftward (`T1` left drag and `T2` left drag) drags across `HrvDfaA1RangeSlider` thumbs and starting inside the slider `Card` padding.
+     • Assert `pagerState.currentPage` remains `3` throughout and after drags (no switch back to `PWR_BIKE` page 2), `T1`/`T2` update smoothly within `0.30f..1.20f` enforcing $T_1 \ge T_2 + 0.05f$ even under delayed DataStore updates (no snap-back), and `userScrollEnabled` re-enables on pointer release.
+  2. *Non-Slider Tab Swipe, Vertical Scroll & Optional Row Slider Isolation (`TST-TRK-086.2`, `HrvDfaA1RangeSliderGestureTest.kt`)*:
+     • On `page == 3` with the slider idle, perform horizontal `swipeRight` outside the slider `Card` (e.g., over the header/zone card) and assert `HorizontalPager` transitions smoothly to `page == 2`.
+     • Perform vertical `swipeUp` / `swipeDown` across `HrvDfaA1SettingsContent` and assert `scrollState.value` scrolls cleanly.
+     • Exercise `HrvThresholdControlRow` with `showSlider = true` and assert `onSliderGestureActiveChange(true)` / `(false)` triggers on slider press/release.
+  3. *Contract Regression & Rule 8.5 Visual Inspection (`TST-TRK-086.3`, `HrvDfaA1SettingsContractTest.kt`, `Rule 8.5`)*:
+     • Execute `./gradlew :app:testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.zones.HrvDfaA1RangeSliderGestureTest" --tests "com.atrainingtracker.trainingtracker.zones.HrvDfaA1SettingsContractTest"` confirming 100% pass (`Localization parity: N/A - no UI strings added or modified`).
+     • Capture Light/Dark screenshot PNG at `docs/engineering/walkthroughs/img/ATT-8105_hrv_slider_zones.png` and inspect via `read_file` against the 4-point `Rule 8.5` checklist.
+
+
 ---
 
 ## Change History
@@ -3364,9 +3385,5 @@
 | `1.0.9` | 2026-11-18 | AI Agent (`ATT-8705`) | `ATT-8705` | Promoted `TST-FIL-025` to `[Implemented]` following Stage 4 unit & Robolectric test construction. |
 | `1.0.10` | 2026-11-18 | AI Agent (`ATT-8705`) | `ATT-8705` | Promoted `TST-FIL-025` to `[Verified]` in Stage 5 following Tier-1 targeted unit/Robolectric regression verification. |
 | `1.0.11` | 2026-11-18 | AI Agent (`ATT-8706`) | `ATT-8706` | Added and verified `TST-TRK-085` [Verified] for RR source isolation, monotonic clamping, physiological gap flagging, pre-filter sort, and DFA α1 validity gate (502/502 tests across 88 suites). |
-| `1.0.12` | 2026-11-18 | AI Agent (`ATT-8719`) | `ATT-8719` | Added and verified `TST-SEN-031` [Verified] for `EditDeviceDialog` wheel mounting position display, draft isolation (`SaveCancel`), conflict swap, non-wheel isolation, and Light/Dark `@Preview` PNG verification. |
-| `1.0.13` | 2026-11-18 | AI Agent (`ATT-8706`) | `ATT-8706` | Stage 6 Bounce 1/3 heal (`[Verified]`): strengthened out-of-order & stale-eviction tests (`HRVMetricsDeviceTest`), positive DFA window assertion (`HrvPostWorkoutRecomputerTest`), `ANTHeartRateDeviceTest` `deltaC==1`/`>=2` monotonic & gap tests, and `DeviceManagerRrSourceTest` optical BTLE Verity Sense demotion test (`448/448` tests across `83` suites). |
-| `1.0.14` | 2026-11-18 | AI Agent (`ATT-8719`) | `ATT-8719` | Stage 6 Bounce 1/3 heal (`[Verified]`): grounded `linkedWheelPositions` symbol name and added cross-sensor `wheelPositionConflicts` refresh test in `DeviceDataRepositoryEquipmentSyncTest.kt` (`174/174` `--rerun-tasks` across `41` classes). |
-| `1.0.15` | 2026-11-18 | AI Agent (`ATT-8706`) | `ATT-8706` | Stage 6 Bounce 2/3 heal (`[Verified]`): added `DeviceManagerRrSourceTest.testSteadyStatePrimaryBeats_neverInvokeGetManufacturerNamePerBeat` and strengthened `HrvPostWorkoutRecomputerTest` interleaved pre-filter sort & relative `-430 ms` jump test (`449/449` tests across `83` suites). |
-| `1.0.16` | 2026-11-18 | AI Agent (`ATT-8706`) | `ATT-8706` | Stage 6 Bounce 3/3 heal (`[Implemented]`): strengthened `HrvPostWorkoutRecomputerTest` with bidirectional early/late interleaving (`nonNullDfaCount >= 120`, `sec 60..125` positive DFA assertion). |
 | `1.0.17` | 2026-11-18 | AI Agent (`ATT-8706`) | `ATT-8706` | Promoted `TST-TRK-085` to `[Verified]` in Stage 5 following Bounce 3/3 heal verification (`449/449` tests across `83` suites). |
+| `1.0.18` | 2026-11-18 | AI Agent (`ATT-8105`) | `ATT-8105` | Added and verified `TST-TRK-086` [Verified] (`HrvDfaA1RangeSliderGestureTest.kt` Robolectric `createComposeRule()` gesture isolation `5/5`, `Rule 8.5` Light/Dark PNG audit, and Tier-1 regression `31/31` across 7 suites). |
