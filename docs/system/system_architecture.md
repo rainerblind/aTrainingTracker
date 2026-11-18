@@ -1,7 +1,7 @@
 # System Architectural Design Specification (ASPICE SYS.3)
 
 **Document ID**: `DOC-SYS-ARC`  
-**Version**: 1.2.1  
+**Version**: 1.2.2  
 **ASPICE Process Areas**: SYS.3 (System Architectural Design, BP1–BP6)  
 **Parent Epic**: [ATT-6142](https://rainerblind.atlassian.net/browse/ATT-6142) / [ATT-8138](https://rainerblind.atlassian.net/browse/ATT-8138) (*ASPICE CL2 – System Level & Remediation*)  
 **Requirement Reference**: `REQ-PRO-056` (`REQ-PRO-056.1`, `REQ-PRO-056.2`)  
@@ -96,7 +96,7 @@ graph LR
 * **Transport / Protocol**: Android System Services (`PowerManager`, `NotificationManager`, `AudioManager`, `SensorManager`, `Service`), Google Maps SDK v2 (`play-services-maps`), and PebbleKit (`pebblekit:4.0.1`).
 * **Payload Schema**:
   - Power & FGS: `PARTIAL_WAKE_LOCK` tokens; `ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`; `Notification` parcel with `FOREGROUND_SERVICE_TYPE_LOCATION`, `FOREGROUND_SERVICE_TYPE_HEALTH`.
-  - Onboard Sensors: Barometer (`Sensor.TYPE_PRESSURE`), Proximity (`Sensor.TYPE_PROXIMITY`), Ambient Light (`Sensor.TYPE_LIGHT`), and 6-channel Smartphone IMU (`Sensor.TYPE_ACCELEROMETER`, `Sensor.TYPE_GYROSCOPE`, `Sensor.TYPE_LINEAR_ACCELERATION`, `Sensor.TYPE_GRAVITY`, `Sensor.TYPE_ROTATION_VECTOR`, `Sensor.TYPE_GAME_ROTATION_VECTOR`).
+  - Onboard Sensors: Barometer (`Sensor.TYPE_PRESSURE`), Proximity (`Sensor.TYPE_PROXIMITY`), Ambient Light (`Sensor.TYPE_LIGHT`), Smartphone IMU (`Sensor.TYPE_ACCELEROMETER`, `Sensor.TYPE_GYROSCOPE`, `Sensor.TYPE_LINEAR_ACCELERATION`, `Sensor.TYPE_GRAVITY`, `Sensor.TYPE_ROTATION_VECTOR`, `Sensor.TYPE_GAME_ROTATION_VECTOR`), and opportunistically permission-gated Step Detector (`Sensor.TYPE_STEP_DETECTOR`).
   - Maps, Audio & Watch: Vector/lite-mode map polylines (`ATrainingTrackerMap.kt`), `AudioAttributes.USAGE_ALARM`/`USAGE_MEDIA`, and Pebble dictionary telemetry.
 * **Timing & Rate Bounds**: WakeLock held during ACTIVE tracking; notification at 1-Hz tick; acoustic safety alert latency < 100 ms.
 
@@ -201,7 +201,7 @@ Every system requirement across both functional domains is allocated to designat
 | **`SYSREQ-TRK-007`** | Bidirectional Radar & Light Actuation | `SYS-EL-01`, `SYS-EL-02`, `SYS-EL-03`, `SYS-EL-04` | `SYS-IF-01`, `SYS-IF-02`, `SYS-IF-04` | `RadarLightController.kt`, `RadarLightDeviceClient.kt`, `SmartRadarLightEngine.kt`, `SmartBrakeLightDetector.kt`, `ANTBikeRadarDevice.kt`, `ANTBikeLightDevice.kt` | Test / `SystemLiveTrackingRequirementsContractTest` |
 | **`SYSREQ-TRK-008`** | Barometer, EKF & Climb/Segment Fusion | `SYS-EL-01`, `SYS-EL-04` | `SYS-IF-03`, `SYS-IF-04`, `SYS-IF-06` | `AltitudeFromPressureDevice.java`, `KinematicAltitudeSlopeEkf.kt`, `ClimbDetector.kt`, `LiveClimbsRepository.kt`, `LiveClimbSheet.kt`, `LiveSegmentsRepository.kt` | Test / `SystemLiveTrackingRequirementsContractTest` |
 | **`SYSREQ-TRK-009`** | GPX Follow-Me & Turn Audio Navigation | `SYS-EL-01`, `SYS-EL-04` | `SYS-IF-03`, `SYS-IF-04` | `GpxRouteImporter.kt`, `TurnByTurnNavigationEngine.kt`, `RouteDivergenceDetector.kt`, `NavigationAudioAlertManager.kt`, `ATrainingTrackerMap.kt` | Test / `SystemLiveTrackingRequirementsContractTest` |
-| **`SYSREQ-TRK-010`** | Smartphone IMU Kinematics & iTPMS | `SYS-EL-01`, `SYS-EL-04` | `SYS-IF-04` | `SpeedAndLocationDevice_ATTFused.kt`, `QuaternionGyroProjector.kt`, `SpeedAndLocationDevice.java`, `IndirectTpmsEstimator.kt`, `DualWheelTpmsEstimator.kt` | Test / `SystemLiveTrackingRequirementsContractTest` |
+| **`SYSREQ-TRK-010`** | Smartphone IMU Kinematics, Carriage Classification & iTPMS | `SYS-EL-01`, `SYS-EL-04` | `SYS-IF-04`, `SYS-IF-06` | `SpeedAndLocationDevice_ATTFused.kt`, `PhoneCarriageMode.kt`, `PhoneCarriageClassifier.kt`, `QuaternionGyroProjector.kt`, `AltitudeAndSlopeDevice_ATTFused.kt`, `BarometricAltitudeFilter.kt`, `ErtsPostWorkoutRecomputer.kt`, `SpeedAndLocationDevice.java`, `IndirectTpmsEstimator.kt`, `DualWheelTpmsEstimator.kt` | Test / `SystemLiveTrackingRequirementsContractTest` |
 | **`SYSREQ-TRK-011`** | Swimming Telemetry & Lap Adjustment | `SYS-EL-01`, `SYS-EL-02` | `SYS-IF-01`, `SYS-IF-06` | `SwimWorkoutAdjustCard.kt`, `SwimmingSection.kt`, `PolarVeritySenseOfflineController.kt`, `FitFileWriter.kt` | Test / `SystemLiveTrackingRequirementsContractTest` |
 | **`SYSREQ-TRK-012`** | Live HRV & DFA Alpha-1 Thresholds | `SYS-EL-01`, `SYS-EL-02` | `SYS-IF-01`, `SYS-IF-04`, `SYS-IF-06` | `DfaCalculator.kt`, `HRVMetricsDevice.kt`, `HrvSignalQualityAnalyzer.kt`, `HrvRampTestScreen.kt`, `HrvThresholdEstimator.kt`, `HrvPostWorkoutRecomputer.kt` | Test / `SystemLiveTrackingRequirementsContractTest` |
 | **`SYSREQ-TRK-013`** | Process-Death Session Recovery | `SYS-EL-01`, `SYS-EL-04` | `SYS-IF-04`, `SYS-IF-06` | `TrackerService.java`, `StartOrResumeDialog.kt`, `StartOrResumeInterface.java`, `WorkoutSamplesDatabaseManager.java` | Test / `SystemLiveTrackingRequirementsContractTest` |
@@ -244,3 +244,4 @@ Every system requirement across both functional domains is allocated to designat
 | `1.1.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Standardized `DOC-SYS-ARC` header, bumped version, reset status to `Reviewed` (`Pending PO Sign-Off`). |
 | `1.2.0` | 2026-11-18 | AI Agent (`ATT-8201`) | `ATT-8201` | Synchronized `SYS-EL-01..05` and `SYS-IF-01/02/04/05` with `system_context.md` (IMU, Polar PFTP/PMD, Varia RearVue/Light Control, ANT+ `0x28`/`0x23`, Open-Meteo, Maps v2, Firebase, Play Auth/Review, PebbleKit), modeled synchronous Polar backfill in §4.2, and allocated all `21` `SYSREQ-*` items in §5. |
 | `1.2.1` | 2026-11-18 | AI Agent (`ATT-8201`) | `ATT-8201` | Cold Stage 6 heal: added `Sensor.TYPE_LIGHT`, distinguished H10 `30_000L` vs. Verity Sense `45_000L` `BACKFILL_TIMEOUT_MS`, aligned §4.2 `endWorkout()` sequence (`FINISHED=1` before Polar backfill, then HRV/ERTS recompute & `ExportManager.workoutFinished()`), and removed nonexistent `autoExport()`. |
+| `1.2.2` | 2026-11-18 | AI Agent (`ATT-8890`, `--as agent1`) | `ATT-8890` | Added optional `Sensor.TYPE_STEP_DETECTOR` in `SYS-IF-04` and allocated `PhoneCarriageMode.kt`, `PhoneCarriageClassifier.kt`, `BarometricAltitudeFilter.kt`, `AltitudeAndSlopeDevice_ATTFused.kt`, and `ErtsPostWorkoutRecomputer.kt` under `SYSREQ-TRK-010` (`REQ-FIL-028`). |

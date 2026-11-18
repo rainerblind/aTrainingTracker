@@ -1057,7 +1057,6 @@
     <string name="track_type_best">Registrado</string>
     <string name="track_type_gps">GPS</string>
     <string name="track_type_fused">Google Fused</string>
-    <string name="track_type_network">Red</string>
     <string name="legend">Leyenda</string>
     <string name="cluster_statistics_title">Estadísticas de la ruta</string>
     <string name="cluster_tab_statistics">Estadísticas</string>

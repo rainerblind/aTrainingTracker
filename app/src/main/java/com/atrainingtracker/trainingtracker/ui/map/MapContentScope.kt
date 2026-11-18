@@ -15,6 +15,7 @@
 
 package com.atrainingtracker.trainingtracker.ui.map
 
+import androidx.annotation.VisibleForTesting
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -150,6 +151,52 @@ interface MapContentScope {
 }
 
 /**
+ * Zoom-adaptive layer styling parameters resolved from discrete map zoom levels (REQ-MAP-016).
+ */
+internal data class ZoomAdaptiveStyling(
+    val trackAlpha: Float,
+    val markerAlphaMult: Float,
+    val heatmapWeight: Double,
+    val heatmapStartIntensity: Float,
+    val heatmapMaxIntensity: Double? = null
+)
+
+/**
+ * Resolves deterministic zoom-adaptive styling weights and marker culling multipliers
+ * for [MapContentScopeImpl.Render] (REQ-MAP-016, TST-MAP-010).
+ */
+@VisibleForTesting
+internal fun resolveZoomAdaptiveStyling(currentZoom: Float): ZoomAdaptiveStyling {
+    val steppedZoom = currentZoom.toInt().toFloat()
+    return when {
+        steppedZoom < 10 -> ZoomAdaptiveStyling(
+            trackAlpha = 0.4f,
+            markerAlphaMult = 0.0f,
+            heatmapWeight = 0.15,
+            heatmapStartIntensity = 0.2f
+        )
+        steppedZoom < 13 -> ZoomAdaptiveStyling(
+            trackAlpha = 0.6f,
+            markerAlphaMult = 0.0f,
+            heatmapWeight = 0.3,
+            heatmapStartIntensity = 0.2f
+        )
+        steppedZoom <= 15 -> ZoomAdaptiveStyling(
+            trackAlpha = 0.8f,
+            markerAlphaMult = 0.2f,
+            heatmapWeight = 0.6,
+            heatmapStartIntensity = 0.2f
+        )
+        else -> ZoomAdaptiveStyling(
+            trackAlpha = 1.0f,
+            markerAlphaMult = 1.0f,
+            heatmapWeight = 0.8,
+            heatmapStartIntensity = 0.2f
+        )
+    }
+}
+
+/**
  * Concrete implementation of the map content orchestration logic.
  *
  * This class handles the complex blending schedule that makes the map "zoom-adaptive":
@@ -181,7 +228,7 @@ internal class MapContentScopeImpl(
     val markers = mutableStateListOf<LocationMarker>()
     val currentTracks = mutableStateListOf<List<LatLng>>()
 
-    private data class HeatmapData(
+    internal data class HeatmapData(
         val allPaths: List<List<LatLng>>, 
         val opacity: Double, 
         val radius: Int?,
@@ -193,7 +240,7 @@ internal class MapContentScopeImpl(
         val normalizeCorridors: Boolean = false,
         val useClassicStepIntensity: Boolean = false
     )
-    private val heatmaps = mutableStateListOf<HeatmapData>()
+    internal val heatmaps = mutableStateListOf<HeatmapData>()
 
     private data class ContextualPathData(val path: MappablePath, val alpha: Float)
     private val contextualPaths = mutableStateListOf<ContextualPathData>()
@@ -236,29 +283,9 @@ internal class MapContentScopeImpl(
         // ATT-500 Refinement: Calibrated zoom-dependent weights and intervals.
         // At low zoom (zoomed out), low weights (0.15-0.3) prevent the Gaussian blur from bloating sideways,
         // keeping the heatmap line tight, narrow, and crisp over the routes.
-        val trackAlpha: Float
-        val markerAlphaMult: Float
-        val heatmapWeight: Double
-        val heatmapStartIntensity: Float
-        val heatmapMaxIntensity: Double?
-
-        when {
-            steppedZoom < 10 -> {
-                // Zoomed far out (country/region): Low weight keeps heatmap narrow and tight
-                trackAlpha = 0.4f; markerAlphaMult = 0.0f; heatmapWeight = 0.15; heatmapStartIntensity = 0.2f; heatmapMaxIntensity = null
-            }
-            steppedZoom < 13 -> {
-                // Zoomed moderately out (city level): Crisp, narrow thread over route lines
-                trackAlpha = 0.6f; markerAlphaMult = 0.0f; heatmapWeight = 0.3; heatmapStartIntensity = 0.2f; heatmapMaxIntensity = null
-            }
-            steppedZoom <= 15 -> {
-                // Detailed zoom (district level): Clear, light density overlay
-                trackAlpha = 0.8f; markerAlphaMult = 0.2f; heatmapWeight = 0.6; heatmapStartIntensity = 0.2f; heatmapMaxIntensity = null
-            }
-            else -> {
-                trackAlpha = 1.0f; markerAlphaMult = 1.0f; heatmapWeight = 0.8; heatmapStartIntensity = 0.2f; heatmapMaxIntensity = null
-            }
-        }
+        val zoomStyling = remember(steppedZoom) { resolveZoomAdaptiveStyling(steppedZoom) }
+        val trackAlpha = zoomStyling.trackAlpha
+        val markerAlphaMult = zoomStyling.markerAlphaMult
 
         var anyHeatmapLoading = false
         val providers = heatmaps.map { data ->

@@ -197,4 +197,17 @@
     <string name="raw_telemetry_retention_7_days">7 dagen</string>
     <string name="raw_telemetry_retention_off">Uit</string>
 
+    <!-- Phone Carriage & Activity Mode Classifier (ATT-8890, REQ-FIL-028) -->
+    <string name="activity_and_carriage_mode">Activiteit &amp; draagwijze</string>
+    <string name="activity_and_carriage_mode_short">Draagwijze</string>
+    <string name="carriage_mode_unknown">Onbekend</string>
+    <string name="carriage_mode_stationary">Stilstaand</string>
+    <string name="carriage_mode_walking_transition">Wandelen / Transitie</string>
+    <string name="carriage_mode_bike_handlebar">Fiets (Stuur)</string>
+    <string name="carriage_mode_bike_jersey_back">Fiets (Achterzak)</string>
+    <string name="carriage_mode_bike_front_pocket">Fiets (Broekzak)</string>
+    <string name="carriage_mode_run_waist_hip">Hardlopen (Heupriem)</string>
+    <string name="carriage_mode_run_bicep_arm">Hardlopen (Armband)</string>
+    <string name="carriage_mode_run_handheld">Hardlopen (In hand)</string>
+
 </resources>

@@ -1744,7 +1744,7 @@ def export_gates(sprint_arg=None, out_path=None, as_role="coordinator", role=Non
 
 def export_test_evidence(sprint_arg=None, release_arg=None, target_arg=None, out_dir=None,
                          test_results_dir=None, archive_path=None, kover_xml_path=None,
-                         as_role="coordinator", role=None, config=None, h_config=None):
+                         skip_kover=False, as_role="coordinator", role=None, config=None, h_config=None):
     """
     REQ-PRO-100.4 / TST-PRO-100.1:
     Exports persistent, version-controlled test and coverage evidence to
@@ -1795,20 +1795,26 @@ def export_test_evidence(sprint_arg=None, release_arg=None, target_arg=None, out
     if target_type == "sprint" and not target_id.startswith("sprint_"):
         target_id = f"sprint_{target_id}"
 
-    try:
-        from generate_test_evidence import generate_test_evidence as gen_fn
-    except ImportError:
+    cand1 = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "generate_test_evidence.py"))
+    cand2 = os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "tools", "generate_test_evidence.py"))
+    sibling_path = cand1 if os.path.exists(cand1) else cand2
+    gen_fn = None
+    cached_mod = sys.modules.get("generate_test_evidence")
+    if cached_mod is not None and os.path.abspath(getattr(cached_mod, "__file__", "") or "") == sibling_path:
+        gen_fn = cached_mod.generate_test_evidence
+    if gen_fn is None:
         try:
-            from tools.generate_test_evidence import generate_test_evidence as gen_fn
+            from tools.hoechstmass.tools import generate_test_evidence as _hm_gte
+            if os.path.abspath(getattr(_hm_gte, "__file__", "") or "") == sibling_path:
+                gen_fn = _hm_gte.generate_test_evidence
         except ImportError:
-            import importlib.util
-            cand1 = os.path.join(os.path.dirname(__file__), "generate_test_evidence.py")
-            cand2 = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "tools", "generate_test_evidence.py")
-            path = cand1 if os.path.exists(cand1) else cand2
-            spec = importlib.util.spec_from_file_location("generate_test_evidence", path)
-            mod = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(mod)
-            gen_fn = mod.generate_test_evidence
+            pass
+    if gen_fn is None:
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("_hm_sibling_generate_test_evidence", sibling_path)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        gen_fn = mod.generate_test_evidence
 
     repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 
@@ -1820,6 +1826,7 @@ def export_test_evidence(sprint_arg=None, release_arg=None, target_arg=None, out
         archive_path=archive_path,
         kover_xml_path=kover_xml_path,
         out_dir=out_dir,
+        skip_kover=skip_kover,
     )
     return md_path, json_path, payload
 
@@ -2605,6 +2612,7 @@ def main():
         sprint_arg = None
         release_arg = None
         out_arg = None
+        no_kover_arg = False
         idx = 1
         while idx < len(args):
             a = args[idx]
@@ -2623,10 +2631,12 @@ def main():
             elif a == "--out-dir" and idx + 1 < len(args):
                 out_arg = args[idx + 1]
                 idx += 1
+            elif a == "--no-kover":
+                no_kover_arg = True
             elif not a.startswith("--") and not sprint_arg and not release_arg:
                 sprint_arg = a
             idx += 1
-        export_test_evidence(sprint_arg=sprint_arg, release_arg=release_arg, out_dir=out_arg, as_role=as_role)
+        export_test_evidence(sprint_arg=sprint_arg, release_arg=release_arg, out_dir=out_arg, skip_kover=no_kover_arg, as_role=as_role)
     elif cmd in ("qa-audit", "qa_audit"):
         sprint_arg = None
         sample_arg = 2

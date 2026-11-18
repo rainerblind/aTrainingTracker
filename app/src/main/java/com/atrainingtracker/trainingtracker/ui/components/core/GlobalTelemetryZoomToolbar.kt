@@ -44,6 +44,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -97,7 +98,7 @@ fun GlobalTelemetryZoomToolbar(
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     Surface(
-        modifier = if (isLandscape) {
+        modifier = (if (isLandscape) {
             modifier
                 .wrapContentSize()
                 .height(28.dp)
@@ -105,7 +106,7 @@ fun GlobalTelemetryZoomToolbar(
             modifier
                 .fillMaxWidth()
                 .height(GlobalTelemetryZoomToolbarDefaults.TOOLBAR_HEIGHT)
-        },
+        }).testTag("global_telemetry_zoom_toolbar"),
         shape = if (isLandscape) RoundedCornerShape(14.dp) else RectangleShape,
         color = if (isLandscape) colorScheme.surface.copy(alpha = TTAlpha.Overlay) else colorScheme.surfaceVariant.copy(alpha = 0.25f),
         tonalElevation = if (isLandscape) 2.dp else 0.dp,

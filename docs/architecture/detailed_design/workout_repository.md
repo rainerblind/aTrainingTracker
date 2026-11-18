@@ -1,12 +1,12 @@
 # Detailed Design: WorkoutRepository (ASPICE SWE.3)
 
 **Document ID**: `DOC-ARC-DD-WKO`  
-**Version**: 1.0.0  
+**Version**: 1.0.1  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
-**Unit**: `WorkoutRepository` (`app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/WorkoutRepository.kt`, 5,117 LOC)  
-**Collaborators**: `WorkoutSummariesDatabaseManager`, `WorkoutSamplesDatabaseManager`, `LapsDatabaseManager`, `WorkoutDeletionHelper`, `WorkoutRrRepository`, `WorkoutClusterRepository`, `ExportManager`, `StravaUploadDbHelper`, `CropCoordinator`  
+**Unit**: `WorkoutRepository` (`app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/WorkoutRepository.kt`, 4,966 LOC)  
+**Collaborators**: `WorkoutSummariesDatabaseManager`, `WorkoutSamplesDatabaseManager`, `LapsDatabaseManager`, `WorkoutDeletionHelper`, `WorkoutRrRepository`, `WorkoutClusterRepository`, `ExportManager`, `StravaUploadDbHelper`, `CropCoordinator`, `WorkoutMultiSourceSampleDiscovery`  
 **SWE.2 Alignment**: `docs/architecture.md` §1, §3.3, §4.1, §5.1 (`IF-SWE-02`, `IF-SWE-05`, `IF-SWE-06`, `IF-SWE-07`)  
 **Requirement Trace**: `REQ-ARC-009`, `REQ-PRO-114`, `REQ-PRO-129.2`, `REQ-DAT-042`, `REQ-WKO-016`
 
@@ -63,7 +63,7 @@ stateDiagram-v2
 | Interface | Direction | Contract / Symbols |
 | :--- | :--- | :--- |
 | `IF-SWE-02` | ViewModels <-> `WorkoutRepository` | Exposes `allWorkouts`, `getWorkoutById`, `getWorkoutDataDirect`, `initialWorkoutLoaded`, `deletionProgress`, `saveFinishedEvent`, `loadAllWorkouts`, `refreshWorkout`, `cropWorkout`, `deleteWorkout` |
-| `IF-SWE-05` | `WorkoutRepository` -> Domain | Invokes `ZoneDistributionCalculator`, `PowerHrDynamicsCalculator`, `ClimbDetector`, `WorkoutClusterEngine` (`discoverNamedSourceColumns`, `discoverMultiSourceOverlayColumns`) |
+| `IF-SWE-05` | `WorkoutRepository` -> Domain | Invokes `ZoneDistributionCalculator`, `PowerHrDynamicsCalculator`, `ClimbDetector`, `WorkoutClusterEngine`, `WorkoutMultiSourceSampleDiscovery` (`discoverNamedSourceColumns`, `discoverMultiSourceOverlayColumns`) |
 | `IF-SWE-06` | `TrackerService` / Repo -> SQLite | Executes `recordLiveSample`, `handleMissingColumns`, `getResumedWorkoutState`, `markWorkoutFinishedBlocking`, `getLaps`, `deleteWorkoutCascade` against `WorkoutSummariesDatabaseManager`, `WorkoutSamplesDatabaseManager`, `LapsDatabaseManager` |
 | `IF-SWE-07` | `WorkoutRepository` -> Exporters | Coordinates `ExportManager` and `StravaUploadDbHelper` post-finalization |
 
@@ -96,3 +96,4 @@ stateDiagram-v2
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
 | `1.0.0` | 2026-11-18 | AI Agent (`ATT-8203`) | `ATT-8203` | Initial SWE.3 living detailed design specification for `WorkoutRepository` (`REQ-PRO-129.2`). |
+| `1.0.1` | 2026-11-18 | AI Agent (`ATT-8080`) | `ATT-8080` | Delegated track alias & multi-source sample discovery (`ATT_FUSED`, `ALTITUDE`, `SPEED_mps`, `SLOPE`) to `WorkoutMultiSourceSampleDiscovery` while retaining `WorkoutRepository` companion delegates (`REQ-PER-044.2`). |

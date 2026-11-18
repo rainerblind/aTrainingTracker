@@ -256,7 +256,8 @@ class SystemContextContractTest {
             "TYPE_LINEAR_ACCELERATION",
             "TYPE_GRAVITY",
             "TYPE_ROTATION_VECTOR",
-            "TYPE_GAME_ROTATION_VECTOR"
+            "TYPE_GAME_ROTATION_VECTOR",
+            "TYPE_STEP_DETECTOR"
         )
         val unexpectedSensors = foundSensors - allowedSensors
         assertTrue(

@@ -7,6 +7,7 @@ Validates exclusive POSIX flock serialization, timeout handling, exit code propa
 automatic cleanup on normal and exceptional terminations, and deterministic multi-worktree --merge-ticket execution.
 """
 
+import importlib.util
 import os
 import subprocess
 import sys
@@ -14,9 +15,25 @@ import tempfile
 import time
 import unittest
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+_TOOLS_DIR = os.path.dirname(os.path.abspath(__file__))
+if _TOOLS_DIR not in sys.path:
+    sys.path.insert(0, _TOOLS_DIR)
 
-from parallel_sprint_lock import is_lock_busy, run_locked, run_merge_ticket, sprint_lock
+_SIBLING_PSL_PATH = os.path.abspath(os.path.join(_TOOLS_DIR, "parallel_sprint_lock.py"))
+_cached_psl = sys.modules.get("parallel_sprint_lock")
+if _cached_psl is not None and os.path.abspath(getattr(_cached_psl, "__file__", "") or "") == _SIBLING_PSL_PATH:
+    _psl_mod = _cached_psl
+else:
+    _psl_spec = importlib.util.spec_from_file_location("_att_sibling_parallel_sprint_lock", _SIBLING_PSL_PATH)
+    _psl_mod = importlib.util.module_from_spec(_psl_spec)
+    _psl_spec.loader.exec_module(_psl_mod)
+
+format_commit_with_trailers = _psl_mod.format_commit_with_trailers
+is_lock_busy = _psl_mod.is_lock_busy
+run_locked = _psl_mod.run_locked
+run_merge_ticket = _psl_mod.run_merge_ticket
+sprint_lock = _psl_mod.sprint_lock
+validate_commit_trailers = _psl_mod.validate_commit_trailers
 
 
 class TestFlockSerialization(unittest.TestCase):
@@ -320,7 +337,6 @@ class TestFlockSerialization(unittest.TestCase):
 
     def test_merge_ticket_with_agent_trailers(self):
         """Verifies that format_commit_with_trailers properly appends mandatory commit trailers (REQ-PRO-108.3)."""
-        from parallel_sprint_lock import format_commit_with_trailers, validate_commit_trailers
         msg = format_commit_with_trailers(
             "ATT-8151: Fix role separation",
             agent_role="agent1",

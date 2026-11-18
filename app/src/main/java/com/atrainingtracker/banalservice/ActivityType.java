@@ -220,10 +220,11 @@ public enum ActivityType {
             hasHrCapability = true;
         }
 
-        sensors = Arrays.copyOf(sensors, sensors.length + 3);
-        sensors[sensors.length - 3] = SensorType.PHONE_BATTERY;
-        sensors[sensors.length - 2] = SensorType.BATTERY_REMAINING_TIME;
-        sensors[sensors.length - 1] = SensorType.WORLD_YAW_RATE_radps;
+        sensors = Arrays.copyOf(sensors, sensors.length + 4);
+        sensors[sensors.length - 4] = SensorType.PHONE_BATTERY;
+        sensors[sensors.length - 3] = SensorType.BATTERY_REMAINING_TIME;
+        sensors[sensors.length - 2] = SensorType.WORLD_YAW_RATE_radps;
+        sensors[sensors.length - 1] = SensorType.ACTIVITY_AND_CARRIAGE_MODE;
 
         if (hasHrCapability) {
             sensors = Arrays.copyOf(sensors, sensors.length + 5);

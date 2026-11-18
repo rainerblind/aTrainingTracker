@@ -1,7 +1,7 @@
 # System Context and External System Elements Specification
 
 **Document ID**: `DOC-SYS-CTX`  
-**Version**: 1.3.1  
+**Version**: 1.3.2  
 **ASPICE Process Areas**: SYS.2 (System Requirements Analysis, BP1), SYS.3 (System Architectural Design)  
 **Requirement Reference**: `REQ-PRO-053` (`REQ-PRO-053.1`, `REQ-PRO-053.2`)  
 **Test Reference**: `TST-PRO-053` (`TST-PRO-053.1`–`TST-PRO-053.4`)  
@@ -115,7 +115,7 @@ The application interfaces with wireless sports sensors and onboard hardware com
    - *Barometer* (`Sensor.TYPE_PRESSURE`): Atmospheric pressure measurements for high-resolution altitude and grade calculation (`AltitudeFromPressureDevice.java`, `HavePressureSensor.java`).
    - *Proximity* (`Sensor.TYPE_PROXIMITY`): Detection of user proximity and pocket state for screen dimming and power conservation during active tracking (`BatterySaverController.kt`, `SmartRadarLightEngine.kt`).
    - *Ambient Light* (`Sensor.TYPE_LIGHT`): Ambient lux measurement for daylight/night automatic radar tail-light mode switching (`SmartRadarLightEngine.kt`).
-   - *Smartphone IMU Kinematics* (`Sensor.TYPE_ACCELEROMETER`, `Sensor.TYPE_GYROSCOPE`, `Sensor.TYPE_LINEAR_ACCELERATION`, `Sensor.TYPE_GRAVITY`, `Sensor.TYPE_ROTATION_VECTOR`, `Sensor.TYPE_GAME_ROTATION_VECTOR`): Inertial attitude, rest-variance stationary pinning, fused odometry, and deceleration brake-light triggers (`SpeedAndLocationDevice_ATTFused.kt`, `QuaternionGyroProjector.kt`, `SmartBrakeLightDetector.kt`, `SpeedAndLocationDevice.java`).
+   - *Smartphone IMU Kinematics & Carriage Detection* (`Sensor.TYPE_ACCELEROMETER`, `Sensor.TYPE_GYROSCOPE`, `Sensor.TYPE_LINEAR_ACCELERATION`, `Sensor.TYPE_GRAVITY`, `Sensor.TYPE_ROTATION_VECTOR`, `Sensor.TYPE_GAME_ROTATION_VECTOR`, and opportunistically permission-gated `Sensor.TYPE_STEP_DETECTOR`): Inertial attitude, rest-variance stationary pinning, activity & phone carriage mode classification (`PhoneCarriageMode.kt`, `PhoneCarriageClassifier.kt`), fused odometry, and deceleration brake-light triggers (`SpeedAndLocationDevice_ATTFused.kt`, `QuaternionGyroProjector.kt`, `SmartBrakeLightDetector.kt`, `SpeedAndLocationDevice.java`).
 
 ### 3.2 Domain 2: Platform Frameworks & Operating System
 The application operates within the Android application sandboxing model:
@@ -197,3 +197,4 @@ The application operates within the Android application sandboxing model:
 | `1.2.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Standardized `DOC-SYS-CTX` header, bumped version, reset status to `Reviewed` (`Pending PO Sign-Off`). |
 | `1.3.0` | 2026-11-18 | AI Agent (`ATT-8201`) | `ATT-8201` | Added Smartphone IMU (`6` `Sensor.TYPE_*` channels), Polar BLE SDK `8.6.0` PFTP/PMD, Garmin Varia RearVue `6a4e2f00`, ANT+ `0x28`/`0x23`, and bidirectional sensor control edges. |
 | `1.3.1` | 2026-11-18 | AI Agent (`ATT-8201`) | `ATT-8201` | Cold Stage 6 heal: added `Sensor.TYPE_LIGHT` (`SmartRadarLightEngine.kt`) and distinguished Polar H10 `30s` (`30_000L`) vs. Verity Sense `45s` (`45_000L`) `BACKFILL_TIMEOUT_MS`. |
+| `1.3.2` | 2026-11-18 | AI Agent (`ATT-8890`, `--as agent1`) | `ATT-8890` | Added opportunistically gated `Sensor.TYPE_STEP_DETECTOR` plus `PhoneCarriageMode.kt` and `PhoneCarriageClassifier.kt` (`ACTIVITY_AND_CARRIAGE_MODE` 1-Hz telemetry) under Domain 1 §3.1.3 (`REQ-FIL-028`). |

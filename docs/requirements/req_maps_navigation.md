@@ -1,14 +1,14 @@
 # Living Requirements: Maps, Polylines & Navigation
 
 **Document ID**: `DOC-REQ-MAPS`  
-**Version**: 1.0.2  
+**Version**: 1.0.5  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `maps_navigation`  
 **Prefixes**: `GEO`, `MAP`, `NAV`, `ROU`  
 **Scope**: Map rendering, polylines, navigation overlays, GPX track follow-me, and routing.  
-**Total Requirements**: 75
+**Total Requirements**: 76
 
 ---
 
@@ -184,25 +184,35 @@
 - **Implementation**: `MapUtils.kt`, `PeriodMapUtils.kt`
 - **Rationale**: The system SHALL adapt heatmap point density based on the temporal scale (Period Type) to prevent memory exhaustion (OOM). Coarser resolutions (e.g., 50m+) SHALL be used for large periods (Month/Year) where sub-meter precision is not visible on a summary map.
 
-### REQ-MAP-011: Multi-Track Selection (Workout Details) [Implemented]
-- **Tests**: `TST-UI-055`
+### REQ-MAP-011: Multi-Track Selection (Workout Details) [Verified]
+- **Tests**: `TST-UI-055`, `TST-PER-052`
 - **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: Medium
 - **Type**: Functional
-- **Verification Method**: Review
-- **Implementation**: `TrackOnMapScreen.kt`, `WorkoutRepository.kt`
-- **Rationale**: The Workout Details map SHALL support displaying multiple location tracks (GPS, Fused, Network) alongside the primary "Tracked" path to allow for technical data quality comparison. This feature SHALL NOT be available in workout summaries or periods to maintain visual simplicity.
-- **Description**: Multi-Track Selection (Workout Details).
+- **Verification Method**: Unit, Integration
+- **Implementation**: `MapModels.kt`, `WorkoutRepository.kt`, `TrackOnMapScreen.kt`, `PeriodMapScreen.kt`, `WorkoutClusterHeatmapScreen.kt`, `WorkoutClustersScreen.kt`
+- **Rationale**: The Workout Details map SHALL support displaying multiple recorded location tracks (`GPS`, `Google Fused`, `ATT Fused`) alongside the primary `"Tracked"` (`BEST`) path to allow for technical sensor-fusion quality comparison (`ATT-8080`, retiring obsolete `Network` excised in `ATT-5492` / `REQ-SEN-027.2`). Single-workout detail bottom sheets (`PeriodMapScreen`, `WorkoutClusterHeatmapScreen`) SHALL also expose `showTechnicalTracks = true`, while multi-workout overview maps (Workout Summary list cards and Period/Cluster overview canvases) SHALL NOT display technical tracks to preserve visual simplicity.
+- **Description**: `TrackType` (`MapModels.kt`) SHALL define `BEST`, `GPS`, `FUSED`, and `ATT_FUSED` (resolving `LATITUDE_att_fused` / `LONGITUDE_att_fused` and fallback `ATT` column names) and remove `TrackType.NETWORK`. `GPS` and `FUSED` SHALL resolve both legacy/qualified columns (`"LATITUDE (GPS)"`, `"LATITUDE (Google Fused)"`, `"LATITUDE_gps"`, `"LATITUDE_google_fused"`) and localized `DevicesDatabaseManager` names (e.g., `"LATITUDE (Phone GPS (Satellite))"` / `"LATITUDE (Smartphone GPS (Satellit))"` / `"LATITUDE (Google Location (Fused))"`).
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: `REQ-MAP-011` (`Multi-Track Selection`), `REQ-SEN-027.2` (`ATT-5492`), targeting `MapModels.kt`, `WorkoutRepository.kt`, `TrackOnMapScreen.kt`, `PeriodMapScreen.kt`, and `WorkoutClusterHeatmapScreen.kt`.
+  2. *Historical Origin & Commit Trace*: `REQ-MAP-011` predated `ATT-5492` (`DevicesDatabaseManager` v10 excision of `SPEED_AND_LOCATION_NETWORK`) and `ATT-7751` (`SpeedAndLocationDevice_ATTFused`).
+  3. *Root Reason for Existing Formulation*: Early Android builds offered `GPS`, `FUSED`, and `NETWORK` providers before `NETWORK` was retired and `ATT_FUSED` was introduced, and bottom-sheet Workout Details omitted `showTechnicalTracks = true`.
+  4. *Preservation of Core Invariants*: Primary `TrackType.BEST` remains default enabled; multi-workout summary/overview maps remain uncluttered; `safeEnumValueOfOrNull<TrackType>` ignores stale `"NETWORK"` entries in DataStore `enabled_track_types`.
 
-### REQ-MAP-012: Track Selection Menu [Implemented]
-- **Tests**: `TST-UI-055`
+### REQ-MAP-012: Track Selection Menu [Verified]
+- **Tests**: `TST-UI-055`, `TST-PER-052`
 - **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: Medium
 - **Type**: Functional
-- **Verification Method**: Review
-- **Implementation**: `TrackOnMapScreen.kt`
-- **Rationale**: The Workout Details map SHALL provide a floating action button that opens a selection menu to individually toggle the visibility of Tracked, GPS, Fused, and Network tracks. The selection menu SHALL include a color legend for each track provider.
-- **Description**: Track Selection Menu.
+- **Verification Method**: Unit, Integration
+- **Implementation**: `TrackOnMapScreen.kt`, `MapModels.kt`, `res/values*/strings.xml`
+- **Rationale**: The Workout Details map SHALL provide a floating `Layers` action button that opens a `DropdownMenu` to individually toggle the visibility of `Tracked` (`BEST`), `GPS`, `Google Fused`, and `ATT Fused` tracks (`ATT-8080`, retiring obsolete `Network` per `ATT-5492`). The selection menu SHALL include a color swatch and localized label (`9` locales) for each track provider, disabling unavailable providers.
+- **Description**: `TrackOnMapScreen` SHALL render `TrackType.entries` (`BEST`, `GPS`, `FUSED`, `ATT_FUSED`) inside the `Icons.Default.Layers` menu across all single-workout detail hosts (`WorkoutSummariesListFragment`, `WorkoutSummariesTabbedScreen`, `WorkoutClustersScreen`, `PeriodMapScreen`, `WorkoutClusterHeatmapScreen`) using localized `track_type_att_fused` and removing `track_type_network` across all 9 locales.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: `REQ-MAP-012` (`Track Selection Menu`), targeting `TrackOnMapScreen.kt` and `values*/strings.xml`.
+  2. *Historical Origin & Commit Trace*: Paired with `REQ-MAP-011` and `ATT-5492` (`SPEED_AND_LOCATION_NETWORK` excision).
+  3. *Root Reason for Existing Formulation*: Menu previously listed `Network` because `TrackType.NETWORK` existed prior to `ATT-5492`.
+  4. *Preservation of Core Invariants*: Existing `Icons.Default.Layers` circular surface, checkbox + color swatch row layout, and `enabledTrackTypes` persistence (`REQ-MAP-013`) remain intact with 100% 9-locale parity (`ATT-5400`).
 
 ### REQ-MAP-013: Persistent Map Selection [Implemented]
 - **Tests**: `TST-UI-056`
@@ -2793,6 +2803,49 @@
 
 **Invariants**: `Climbs.db` SQLite schema v1 integrity; zero modification to detection math or scoring formulas; route association (`routeId`) preserved; 100% test pass rate.
 
+### REQ-MAP-068: PathPreviewMap Immediate Bounds Camera Seeding, Layout Retry & WorkoutSummary Track Memoization [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-MAP-071`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit, Integration, On-Device Manual
+- **Implementation**: `PathPreviewMap.kt`, `WorkoutSummary.kt`
+- **Localization Parity**: `N/A - no UI strings` (`values*/strings*.xml` untouched)
+- **Rationale**: In `Einheiten` (`WorkoutSummary.kt`), `PathPreviewMap` currently initializes `rememberCameraPositionState()` at `(0.0, 0.0), zoom = 0f`, omits `.camera(...)` on `GoogleMapOptions().liteMode(true)`, gates `CameraUpdateFactory.newLatLngBounds(bounds, 20)` behind `isMapLoaded` in `LaunchedEffect`, silently swallows zero-size `IllegalStateException` without retry, and calls `workoutData.toMapTrack()` un-memoized in composition without passing persisted `targetBounds`.
+- **Description**: The system SHALL seed `PathPreviewMap` synchronously with validated bounds and aspect-aware Web Mercator camera position, frame deterministically via `Modifier.onSizeChanged` and `MapEffect` with bounded retry, and memoize `WorkoutSummary` track decoding and bounds:
+1. *Synchronous Bounds Resolution & Initial Camera Seeding (`REQ-MAP-068.1`)*:
+• `PathPreviewMap` SHALL synchronously resolve `LatLngBounds` prior to `GoogleMap` instantiation in priority order: validated `targetBounds`, valid `MappablePath` bounds (`minLat`/`minLng`/`maxLat`/`maxLng`), or composite coordinates across `allPaths`, `start`, `end`, and `apex`.
+• Bounds validation MUST reject `null`, non-finite (`!Double.isFinite`), out-of-range latitude (`!in -90.0..90.0`), out-of-range longitude (`!in -180.0..180.0`), and `minLat > maxLat`, and SHALL handle antimeridian longitude wrap (`sw.longitude > ne.longitude`).
+• A pure aspect-aware Web Mercator estimator (`256 dp` world tile base) SHALL compute center and clamped zoom (`[1f, 17f]`, using safe default zoom `15f` for zero-span single-point bounds to avoid `ln(0)` / `-Infinity`) to seed BOTH `GoogleMapOptions().liteMode(true).camera(...)` and `rememberCameraPositionState`, preventing the `(0.0, 0.0), zoom = 0f` flash.
+2. *Immediate `MapEffect` Framing & `onSizeChanged` Layout Retry (`REQ-MAP-068.2`)*:
+• `PathPreviewMap` SHALL track non-zero container dimensions via `Modifier.onSizeChanged` (strictly avoiding `BoxWithConstraints` / `SubcomposeLayout` for `IntrinsicSize.Min` safety per `ATT-8748`).
+• `PathPreviewMap` SHALL replace the `isMapLoaded`-gated `LaunchedEffect` with `MapEffect(bounds, containerSize, isMapLoaded, retryTrigger)` applying `CameraUpdateFactory.newLatLngBounds(bounds, 20)` immediately once `GoogleMap` and non-zero container size exist, re-framing when `bounds` updates dynamically, and performing a bounded retry on transient zero-size `IllegalStateException`.
+3. *`WorkoutSummary` Key-Complete Memoization & Validated `targetBounds` (`REQ-MAP-068.3`)*:
+• Both `WorkoutSectionType.MAP` and `WorkoutMediaSection` in `WorkoutSummary.kt` SHALL memoize `workoutData.toMapTrack()` via `remember(...)` keyed on all 9 fields read by `toMapTrack()` (`id`, `bSportType`, `mapPolyline`, `encodedAltitudes`, `encodedDistances`, `minLat`, `minLng`, `maxLat`, `maxLng`) and pass validated persisted `targetBounds` into `PathPreviewMap`.
+4. *Preserved Contracts, Callers & Architectural Guardrails (`REQ-MAP-068.4`)*:
+• Preserve `GoogleMapOptions().liteMode(true)` (`REQ-STB-010`, `REQ-PRO-130.1`, `MapPreviewLiteModeTest`), `DarkMapStyle.resolveMapProperties` & `DarkMapAntiFlashOverlay` (`DarkMapStyleResolutionTest`, `DarkMapAntiFlashOverlayTest`), `MapUiSettings` non-interactive flags, `20 px` `newLatLngBounds` padding, `RouteWaypointsLayer` (`RouteItemWaypointContractTest`), `RouteItem.kt` (`targetBounds = null`), `WorkoutClusterSplitMapPreviewTest` source tokens (`paths: List<MappablePath> = emptyList()`, `path: MappablePath? = null`, `allPaths`, `allPaths.forEach`, `boundsBuilder.include(it)`), and `WorkoutLapsIconContractTest` source tokens (`apexIconRes: Int = R.drawable.ic_distance`, `createSensorMarker(context, apexIconRes, apexColor)`).
+• `WorkoutRepository.kt` (`<= 5,117` LoC ceiling) MUST remain untouched; maintain `0` inline `Color(0x...)` in composables (`ThemeColorCentralizationAuditTest`), `private` `@Preview`s only (`DeadCodeEliminationContractTest`), `0` new `src/main` reads in tests (`SourceTextReadingAuditContractTest`), and Stage 5 `Rule 8.5` Light/Dark `@Preview` PNG check.
+
+### Requirement Archaeology & Chesterton's Fence Audit
+1. *Original Requirement ID & Target*: Refines `REQ-STB-010.4` (`PathPreviewMap.kt`), `REQ-MAP-023` (`DarkMapAntiFlashOverlay`), `REQ-UI-505` (`PathPreviewMap` multi-path/bounds), `REQ-UI-210` (`WorkoutSummary.kt`), and `REQ-PRO-130.1` (`Lite Mode`).
+2. *Historical Origin & Commit Trace*: `d81115f4` renamed `TrackOrSegmentOnMap` to `PathPreviewMap`; `8369dd5a` (`ATT-1246`/`ATT-1271`) added `liteMode(true)`; `ea954e51` (`ATT-6318`) added `paths`/`targetBounds`; `bcfed94d` (`ATT-5480`) added `apexIconRes`.
+3. *Root Reason for Existing Formulation*: `LaunchedEffect(..., isMapLoaded)` + `try/catch` guarded against `newLatLngBounds` throwing `IllegalStateException` before `MapView` layout settled, while `liteMode(true)` prevented `GLSurfaceView` contention in `LazyColumn`. Neither seeded initial `CameraPosition` nor retried after zero-size layout.
+4. *Preservation of Core Invariants*: All Lite Mode flags, dark-map styling/anti-flash overlay, `20 px` padding, `RouteItem.kt` `targetBounds = null`, `WorkoutClusterSplitMapPreviewTest`/`WorkoutLapsIconContractTest`/`RouteItemWaypointContractTest` contracts, and `WorkoutRepository.kt` LoC stay intact.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a workout with valid `mapPolyline` and bounds (or single-point / antimeridian bounds),
+• *When* `PathPreviewMap` composes before `onMapLoaded`,
+• *Then* `GoogleMapOptions().liteMode(true).camera(...)` and `rememberCameraPositionState` are seeded to the computed center and clamped zoom `[1f, 17f]` (never `(0.0, 0.0), zoom = 0f`).
+• *Given* `PathPreviewMap` receives a transient zero-size layout before settling to non-zero `onSizeChanged` dimensions,
+• *When* `MapEffect` executes and retries,
+• *Then* `newLatLngBounds(bounds, 20)` frames the track without leaving zoom stuck at `0`.
+• *Given* `WorkoutSummary` / `WorkoutMediaSection` recomposes on unrelated state while the 9 `toMapTrack()` key fields are unchanged (and invalidates when any key field changes),
+• *When* composition runs,
+• *Then* `toMapTrack()` is memoized and validated `targetBounds` is passed to `PathPreviewMap`.
+
+**Invariants**: `liteMode(true)` enforced; `DarkMapStyle` / `DarkMapAntiFlashOverlay` preserved; `RouteItem.kt` `targetBounds = null`; `WorkoutClusterSplitMapPreviewTest` & `WorkoutLapsIconContractTest` tokens intact; `WorkoutRepository.kt <= 5,117` LoC untouched; `0` inline `Color(0x...)`; `private` `@Preview`s only; `0` new `src/main` test reads; `N/A - no UI strings`.
+
 ---
 
 ## Change History
@@ -2801,3 +2854,6 @@
 | :--- | :--- | :--- | :--- | :--- |
 | `1.0.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Added standardized `DOC-REQ-MAPS` work-product control header and Change History. |
 | `1.0.2` | 2026-11-18 | AI Agent (`ATT-8201`) | `ATT-8201` | Linked refined `REQ-*` entries in-place to net-new `SYSREQ-TRK-007..013` and `SYSREQ-DEX-007..008`. |
+| `1.0.3` | 2026-11-18 | AI Agent (`ATT-8736`) | `ATT-8736` | Added `REQ-MAP-068` (`[Planned]` $\rightarrow$ `[Implemented]` in Stage 4: `PathPreviewMap.kt`, `WorkoutSummary.kt`). |
+| `1.0.4` | 2026-11-18 | AI Agent (`ATT-8736`) | `ATT-8736` | Promoted `REQ-MAP-068` to `[Verified]` in Stage 5 (`PathPreviewMapBoundsTest`, `WorkoutSummaryMapMemoizationTest`, emulator UI check). |
+| `1.0.5` | 2026-11-18 | AI Agent (`ATT-8080`) | `ATT-8080` | Refined and verified (`[Verified]`) `REQ-MAP-011` and `REQ-MAP-012` for `TrackType.ATT_FUSED`, alias-aware GPS/Fused lookup, `TrackType.NETWORK` removal, and peek bottom-sheet `Layers` wiring. |

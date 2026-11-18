@@ -1,14 +1,14 @@
 # Living Test Specification: Engineering Process, Stability & Architecture (Part 2 of 2)
 
 **Document ID**: `DOC-TST-PRO-P2`  
-**Version**: 1.0.9  
+**Version**: 1.0.21  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `process_stability_part2`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Tests**: 87
+**Total Tests**: 88
 
 ---
 
@@ -467,19 +467,19 @@
 - **Type**: Non-Functional
 - **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-PRO-074`
-- **Component**: `tools/generate_release_verification_summary.py`, `tools/test_generate_release_verification_summary.py`, `.agents/skills/release-manager/SKILL.md`, `docs/releases/README.md`
-- **Jira**: `ATT-6138`, `ATT-8157`
+- **Component**: `tools/generate_release_verification_summary.py`, `tools/test_generate_release_verification_summary.py`, `.agents/skills/release-manager/SKILL.md`, `docs/releases/README.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ReleaseManagerSystemEvidenceContractTest.kt`
+- **Jira**: `ATT-6138`, `ATT-8157`, `ATT-8200`
 - **Test Description**:
-  1. *CLI Argument Parsing & Default Output Path Test (`TST-PRO-074.1`, test_generate_release_verification_summary.py)*:
-  • Verify CLI accepts `--tag`, `--commit`, `--out`, and coverage threshold flags, correctly defaulting output to `docs/releases/<tag>/verification_summary.md`.
-  2. *Unit Test Report Parsing & Archival Link Test (`TST-PRO-074.2`, test_generate_release_verification_summary.py)*:
-  • Verify parsing of JUnit XML reports and versioned archive reference `build-evidence/junit-test-results-<tag>.zip`.
-  3. *Coverage JSON Integration & Threshold Verification Test (`TST-PRO-074.3`, test_generate_release_verification_summary.py)*:
-  • Verify extraction of bidirectional REQ-TST and TST-Code metrics from `--coverage-json` output and threshold breach detection.
-  4. *SYS.5 Gate & Non-Blocking Legacy Simulator Summary Test (`TST-PRO-074.4`, test_generate_release_verification_summary.py)*:
-  • Verify parsing of `sys_verification_record.md` flags missing/unsigned SYS.5 protocols under deviations requiring human approval, while missing `system_integration_results.json` raises zero blocking deviations and legacy files render honestly as non-blocking simulator/informational telemetry.
-  5. *End-to-End Markdown Summary Generation & Governance Parity Test (`TST-PRO-074.5`, test_generate_release_verification_summary.py & tools/verify_requirement_governance.py)*:
-  • Verify end-to-end generation of `verification_summary.md` and confirm 100% living documentation parity.
+  1. *CLI Argument Parsing, Tag Normalization & Default Output Path Test (`TST-PRO-074.1` [Verified (ATT-8200)], test_generate_release_verification_summary.py)*:
+  • Verify CLI accepts `--tag`, `--commit`, `--out`, and coverage threshold flags, normalizing canonical `V<versionName>__<versionCode>` tags (e.g. `V5.0.0__273`) to dossier directory `docs/releases/V5.0.0/` (unless `docs/releases/<raw_tag>/` explicitly exists) while recording raw tag, `versionCode`, and dossier path in the generated summary header.
+  2. *Unit Test Report Parsing & Raw/Normalized Archival Link Test (`TST-PRO-074.2` [Verified (ATT-8200)], test_generate_release_verification_summary.py)*:
+  • Verify parsing of JUnit XML reports and versioned archive lookup checking raw-tag `build-evidence/junit-test-results-<raw_tag>.zip` first with fallback to `build-evidence/junit-test-results-<dossier_tag>.zip`.
+  3. *Coverage JSON Key Parity, `ERROR:`/`FAIL:` Gate Detection & Subprocess Fallback Test (`TST-PRO-074.3` [Verified (ATT-8200)], test_generate_release_verification_summary.py)*:
+  • Verify `collect_coverage_summary()` catches `"ERROR: Gate violated: ..."` diagnostics (and non-empty fallback when `gate_ok=False`), parses `stdout` JSON even on non-zero subprocess exit, extracts exact non-zero `category_3_code_tags_without_spec` and `category_4_tsts_not_cited_back` dicts, renders `[ FAIL ]` / `BLOCKED`, and returns exit code `1` under `--fail-on-deviations`.
+  4. *SYS.5 Normalized Dossier Gate & Non-Blocking Legacy Simulator Summary Test (`TST-PRO-074.4` [Verified (ATT-8200)], test_generate_release_verification_summary.py)*:
+  • Verify `collect_sys5_summary()` and `collect_sys4_summary()` resolve `docs/releases/V5.0.0/` cleanly when invoked with `--tag V5.0.0__273`, while missing/legacy `system_integration_results.json` raises zero blocking deviations.
+  5. *End-to-End Markdown Summary Generation, Contract & Governance Parity Test (`TST-PRO-074.5` [Verified (ATT-8200)], test_generate_release_verification_summary.py, ReleaseManagerSystemEvidenceContractTest.kt & tools/verify_requirement_governance.py)*:
+  • Verify end-to-end generation of `verification_summary.md` under normalized tag, `ReleaseManagerSystemEvidenceContractTest` (`README.md` / `TEMPLATE.md` invariants), and 100% living documentation governance parity (`Localization Parity: N/A - no UI strings`).
 
 ### TST-PRO-075: **Requirement Tests Field Format & Traceability Governance Verifier Test Suite** [Verified]
 - **Priority**: High
@@ -884,14 +884,16 @@
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit / Review
-- **Component**: `tools/generate_test_evidence.py`, `tools/test_generate_test_evidence.py`, `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `tools/test_verify_requirement_governance.py`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ReleaseCiAndLintConfigContractTest.kt`, `docs/management/cm_plan.md`, `.agents/rules/aspice_governance.md`
-- **Jira**: `ATT-8144`
+- **Component**: `tools/generate_test_evidence.py`, `tools/test_generate_test_evidence.py`, `tools/jira_util.py`, `tools/test_jira_accounts.py`, `tools/hoechstmass/tools/generate_test_evidence.py`, `tools/hoechstmass/tools/jira_util.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`, `tools/verify_requirement_governance.py`, `tools/test_verify_requirement_governance.py`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ReleaseCiAndLintConfigContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/HoechstmassToolingContractTest.kt`, `docs/management/cm_plan.md`, `.agents/rules/aspice_governance.md`
+- **Jira**: `ATT-8144`, `ATT-8875`
 - **Test Description**:
-  1. *Test Evidence Generator Unit Suite (`TST-PRO-100.1`, tools/test_generate_test_evidence.py)*:
+  1. *Test Evidence Generator, Cross-Tool Import Isolation & Mirror Parity Suite (`TST-PRO-100.1` [Verified (ATT-8875)], tools/test_generate_test_evidence.py, tools/test_jira_accounts.py & tools/hoechstmass/tools/test_hoechstmass_tools.py)*:
   • Assert parser extracts JUnit XML test results and calculates total, passed, failed, error, and skipped counts.
   • Assert parser correlates test cases to `TST-XXX` IDs and produces structured pass/fail mapping.
   • Assert parser parses Kover XML report and extracts global and per-package line and branch coverage percentages.
   • Assert generator produces valid, readable `docs/engineering/test_evidence/<target>.md` and `.json` files.
+  • Assert `tools/jira_util.py export_test_evidence()` resolves sibling `tools/generate_test_evidence.py` even when `sys.modules["generate_test_evidence"]` is pre-populated by `tools/hoechstmass/tools/generate_test_evidence.py` (or a function lacking `skip_kover`), without raising `TypeError`.
+  • Assert `tools/hoechstmass/tools/jira_util.py export_test_evidence(..., skip_kover=True)` and `tools/hoechstmass/tools/generate_test_evidence.py` support `skip_kover` / `--no-kover` cleanly and pass `HoechstmassToolingContractTest`.
   2. *Governance Gating & Directory Structure Test (`TST-PRO-100.2`, tools/test_verify_requirement_governance.py)*:
   • Assert `verify_engineering_directory_structure()` allows `docs/engineering/test_evidence/` and rejects `docs/engineering/test_results` symlink.
   • Assert `verify_requirement_governance.py --check-test-evidence` validates presence, format, and non-empty status of sprint and release evidence files.
@@ -1034,20 +1036,21 @@
 
 ---
 
-### TST-PRO-108: **Technical Role Separation for Agent Credentials & Git Commit Identity Suite (ATT-8151)** [Verified]
+### TST-PRO-108: **Technical Role Separation for Agent Credentials & Git Commit Identity Suite (ATT-8151, ATT-8876)** [Verified]
 - **Requirement(s)**: `REQ-PRO-108`
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit / Review
-- **Component**: `tools/jira_util.py`, `tools/parallel_sprint_lock.py`, `tools/test_jira_accounts.py`
-- **Jira**: `ATT-8151`
+- **Component**: `tools/jira_util.py`, `tools/parallel_sprint_lock.py`, `tools/hoechstmass/tools/parallel_sprint_lock.py`, `tools/test_jira_accounts.py`, `tools/test_flock_serialization.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`
+- **Jira**: `ATT-8151`, `ATT-8876`
 - **Test Description**:
   1. *Subagent Identity & Role Binding Enforcement Test (`TST-PRO-108.1`, tools/test_jira_accounts.py)*:
   • Verify that when `JIRA_ACTOR` is set in the environment (e.g. `agent1`), passing a mismatched `--as` flag (e.g. `--as agent2`) raises a SystemExit role mismatch error. Verify that matching `--as agent1` succeeds, and verify that when `JIRA_ACTOR` is unset, `--as coordinator` and manual role invocations continue to succeed without rejection.
   2. *Dedicated QA Role Credential Mapping & Account Independence Test (`TST-PRO-108.2`, tools/test_jira_accounts.py)*:
   • Verify that `resolve_account("qa")` resolves `JIRA_QA_USER` and `JIRA_QA_TOKEN`, verify that `get_config(role="qa")` isolates QA credentials, and verify validation rejects configurations where `agent2` and `qa` share identical account IDs.
-  3. *Producing Agent Identity & Reviewer Git Commit Trailers Test (`TST-PRO-108.3`, tools/test_jira_accounts.py)*:
-  • Verify that `_merge_ticket_impl` formats squash commit messages with standard git trailers (`Agent-Role:`, `Agent-Model:`, `Reviewed-by:`), correctly reading from environment or arguments and passing automated trailer validation.
+  3. *Producing Agent Identity, Reviewer Git Commit Trailers & Cross-Directory Isolation Test (`TST-PRO-108.3`, tools/test_jira_accounts.py, tools/test_flock_serialization.py & tools/hoechstmass/tools/test_hoechstmass_tools.py)*:
+  • Verify that both `tools/parallel_sprint_lock.py` and `tools/hoechstmass/tools/parallel_sprint_lock.py` (`format_commit_with_trailers`, `validate_commit_trailers`, `_merge_ticket_impl`) format and validate standard git trailers (`Agent-Role:`, `Agent-Model:`, `Reviewed-by:`) using project-agnostic defaults preserving `HoechstmassToolingContractTest`.
+  • Verify via explicit `sys.modules["parallel_sprint_lock"]` poisoning / `sys.path` shadowing tests that `test_tst_pro_108_3_git_commit_trailers_formatting` and `tools/test_flock_serialization.py` deterministically resolve sibling `tools/parallel_sprint_lock.py` without raising `AttributeError`.
   4. *Single-OS User Residual Risk Review Test (`TST-PRO-108.4`, docs/management/risk_register.md)*:
   • Verify that `docs/management/risk_register.md` contains an approved entry documenting the residual risk and defense-in-depth controls for co-located subagent execution under a single OS account.
 
@@ -1495,6 +1498,25 @@
 
 ---
 
+### TST-PRO-132: **Behavioral Compose UI Testing Mandate, Reflection-Only UI Test Ratchet & `RadarSettingsSectionTest` Remediation Suite (ATT-8198)** [Verified]
+- **Requirement(s)**: `REQ-PRO-132`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Component**: `app/src/test/java/com/atrainingtracker/trainingtracker/build/UiReflectionOnlyTestAuditContractTest.kt`, `app/ui-reflection-baseline.txt`, `app/src/test/java/com/atrainingtracker/trainingtracker/ui/settings/radar/RadarSettingsSectionTest.kt`, `docs/coding_standards.md`, `.agents/skills/stage4-implementation/SKILL.md`, `.agents/skills/stage5-verification/SKILL.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SourceTextReadingAuditContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/AspiceSweAuditContractTest.kt`
+- **Jira**: `ATT-8198`
+- **Test Description**:
+  1. *Reflection-Only UI Test Ratchet & Baseline Enforcement (`TST-PRO-132.1`, `UiReflectionOnlyTestAuditContractTest.kt`)*:
+     • *Given* `app/src/test/java/` scanned across `(?:^|/)ui/` (`com/atrainingtracker/trainingtracker/ui/` [`178`] and `com/atrainingtracker/banalservice/ui/` [`11`]) and `app/ui-reflection-baseline.txt` (`189` entries ceiling), *When* `UiReflectionOnlyTestAuditContractTest` executes against the live repository and synthetic tripwire fixtures (unallowlisted `Class.forName("...Kt")` without `createComposeRule()`, stale baseline entry), *Then* `0` unallowlisted reflection-only UI tests exist, `0` stale baseline entries exist, `baseline.size <= 189`, and the synthetic tripwire fails deterministically. Tag tests with `TST-PRO-132.1`.
+  2. *Legitimate Reflection Guard Preservation (`TST-PRO-132.2`, `UiReflectionOnlyTestAuditContractTest.kt`, `AndroidViewModelReflectionContractTest.kt`, `InterfaceSignatureDriftContractTest.kt`, `AdrCompletenessContractTest.kt`)*:
+     • *Given* `build/` reflection contract tests, non-`*Kt` classpath/decoupling checks (`CoreDependencyAlignmentTest`, `WorkoutRepositoryDeleteTest`), and `createComposeRule()` + signature tests (`RadarLightQuickSwitchSheetTest`, `SensorSourceDialogContractTest`), *When* `UiReflectionOnlyTestAuditContractTest` and the `build/` suites run, *Then* all pass with `0` false positives and `SourceTextReadingAuditContractTest` (`22` guards, `105` baseline) passes `4/4`. Tag tests with `TST-PRO-132.2`.
+  3. *Coding Standard & Stage 4/5 Behavioral Compose Mandate Parity (`TST-PRO-132.3`, `AspiceSweAuditContractTest.kt` & `UiReflectionOnlyTestAuditContractTest.kt`)*:
+     • *Given* `docs/coding_standards.md` §5.4, `.agents/skills/stage4-implementation/SKILL.md`, and `.agents/skills/stage5-verification/SKILL.md` updated with the mandatory `createComposeRule()` rule while preserving existing governance markers, *When* `AspiceSweAuditContractTest` and governance marker assertions execute, *Then* all assertions pass `100%` (`Localization Parity: N/A - no UI strings`). Tag tests with `TST-PRO-132.3`.
+  4. *`RadarSettingsSectionTest` Robolectric Compose Remediation (`TST-PRO-132.4`, `RadarSettingsSectionTest.kt`, strengthening `TST-CON-031.5b` & `TST-TRK-062.5`)*:
+     • *Given* `RadarSettingsSection` composed via `@RunWith(RobolectricTestRunner::class)` + `createComposeRule()` with isolated `TuningPreferencesDataStore` / mocked `TrainingApplication` & `RadarTrafficSimulator` and stale `RadarLightControlMode` tautologies retired, *When* `./gradlew :app:testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.settings.radar.RadarSettingsSectionTest"` runs, *Then* `FULL_SCREEN` hides `radar_overlay_clear_mode` (`assertDoesNotExist()`), `RIGHT` displays it, `radarSpatialAudioEnabled` toggles `radar_traffic_orientation_title` / `radar_lane_change_tick_title`, retired `RadarLightControlMode` controls remain absent while `radar_brake_light_title` is displayed and interactive, `onSimulationToggled` / DataStore callbacks fire on click, and all preserved 9-locale XML checks (`:131-226`) pass with `0` `src/main/` reads. Tag tests with `TST-PRO-132.4`.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -1509,3 +1531,15 @@
 | `1.0.7` | 2026-11-18 | AI Agent (`ATT-8201`) | `ATT-8201` | Added `[Planned]` `TST-PRO-131` test specifications (`ATT-8201_test_spec.md`: `21` `SYSREQ-*` & `100%` `SYSREQ->REQ` traceability, `SYS.3` & `system_context.md` sync, Varia UUID & battery reconciliation, `GRANDFATHERED_SYSREQS` removal, Stage 1/2 `SYS.2/SYS.3` skill impact gate). |
 | `1.0.8` | 2026-11-18 | AI Agent (`ATT-8201`) | `ATT-8201` | Promoted `TST-PRO-131` to `[Implemented]` in Stage 4 (`tools/test_verify_requirement_governance.py` `TestGrandfatheredSysreqsRemoved`, `SystemContextContractTest`, `SystemArchitectureDesignContractTest`, `SystemLiveTrackingRequirementsContractTest`, `SystemDataExchangeRequirementsContractTest`, `SystemRequirementsSpecificationContractTest`, `SystemVerificationProtocolContractTest`). |
 | `1.0.9` | 2026-11-18 | AI Agent (`ATT-8201`) | `ATT-8201` | Promoted `TST-PRO-131` to `[Verified]` after Stage 5 verification (`13/13` Gradle contract suites `79/79` PASS, `test_hoechstmass_tools.py` `37/37` OK, `TST-PRO-131` verified evidence `True`, `28/28` shards `<= 4,000` lines, governance `exit 0`). |
+| `1.0.10` | 2026-11-18 | AI Agent (`ATT-8200`) | `ATT-8200` | Refined `TST-PRO-074` (`[Planned]`, `TST-PRO-074.1`–`.5`) covering `ERROR: Gate violated:` blocking, `category_3_code_tags_without_spec` / `category_4_tsts_not_cited_back` keys, subprocess non-zero JSON parsing, and `V5.0.0__273` tag normalization + JUnit archive lookup. |
+| `1.0.11` | 2026-11-18 | AI Agent (`ATT-8200`) | `ATT-8200` | Promoted `TST-PRO-074` to `[Implemented]` in Stage 4 (`tools/test_generate_release_verification_summary.py` `22/22` OK, `ReleaseManagerSystemEvidenceContractTest` `4/4` PASS). |
+| `1.0.12` | 2026-11-18 | AI Agent (`ATT-8200`) | `ATT-8200` | Promoted `TST-PRO-074` to `[Verified]` after Stage 5 verification (`tools.test_generate_release_verification_summary` `22/22` OK, `ReleaseManagerSystemEvidenceContractTest` `4/4` PASS, governance `exit 0`). |
+| `1.0.13` | 2026-11-18 | AI Agent (`ATT-8875`) | `ATT-8875` | Refined `TST-PRO-100` (`[Planned]`, `TST-PRO-100.1`) adding `sys.modules["generate_test_evidence"]` collision isolation test and Höchstmaß `skip_kover` / `--no-kover` mirror parity test. |
+| `1.0.14` | 2026-11-18 | AI Agent (`ATT-8875`) | `ATT-8875` | Promoted `TST-PRO-100` to `[Implemented]` in Stage 4 (`tools.test_jira_accounts` `exit 0`, `tools/hoechstmass/tools` `62/62` OK, `HoechstmassToolingContractTest` PASS). |
+| `1.0.15` | 2026-11-18 | AI Agent (`ATT-8875`) | `ATT-8875` | Promoted `TST-PRO-100` to `[Verified]` after Stage 5 verification (`tools.test_jira_accounts` `102/102` OK, `tools/hoechstmass/tools` `62/62` OK, `tools.test_generate_test_evidence` `8/8` OK, `HoechstmassToolingContractTest` `4/4` PASS, governance `exit 0`). |
+| `1.0.16` | 2026-11-18 | AI Agent (`ATT-8876`) | `ATT-8876` | Refined `TST-PRO-108` (`[Planned]`, `TST-PRO-108.3`) adding cross-directory `sys.modules["parallel_sprint_lock"]` poisoning isolation test and Höchstmaß `parallel_sprint_lock.py` trailer parity test. |
+| `1.0.17` | 2026-11-18 | AI Agent (`ATT-8876`) | `ATT-8876` | Promoted `TST-PRO-108` to `[Implemented]` in Stage 4 (`tools.test_jira_accounts`, `tools.test_flock_serialization`, `tools.test_jira_datacenter`, `tools/hoechstmass/tools`, `HoechstmassToolingContractTest`). |
+| `1.0.18` | 2026-11-18 | AI Agent (`ATT-8876`) | `ATT-8876` | Promoted `TST-PRO-108` to `[Verified]` after Stage 5 verification (`136/136` root suites OK, `63/63` Hoechstmass OK, `78/78` poisoned-cache cross-dir OK, `HoechstmassToolingContractTest` `4/4` PASS, governance `exit 0`). |
+| `1.0.19` | 2026-11-18 | AI Agent (`ATT-8198`) | `ATT-8198` | Added `[Planned]` `TST-PRO-132` test specifications (`ATT-8198_test_spec.md`: `189`-entry `(?:^\|/)ui/` `*Kt` reflection ratchet across `trainingtracker/ui/` + `banalservice/ui/`, `build/` & non-`*Kt` reflection guard preservation, `docs/coding_standards.md` §5.4 + Stage 4/5 skill parity, and `RadarSettingsSectionTest` Robolectric `createComposeRule()` remediation). |
+| `1.0.20` | 2026-11-18 | AI Agent (`ATT-8198`) | `ATT-8198` | Promoted `TST-PRO-132` to `[Implemented]` in Stage 4 (`UiReflectionOnlyTestAuditContractTest.kt`, `app/ui-reflection-baseline.txt`, `docs/coding_standards.md` v`1.0.1`, Stage 4/5 `SKILL.md`s, `RadarSettingsSectionTest.kt`). |
+| `1.0.21` | 2026-11-18 | AI Agent (`ATT-8198`) | `ATT-8198` | Promoted `TST-PRO-132` to `[Verified]` after Stage 5 verification (`UiReflectionOnlyTestAuditContractTest` `4/4`, `SourceTextReadingAuditContractTest` `4/4`, `AspiceSweAuditContractTest` `13/13`, `AndroidViewModelReflectionContractTest` `2/2`, `RadarSettingsSectionTest` `8/8`, governance `exit 0`). |

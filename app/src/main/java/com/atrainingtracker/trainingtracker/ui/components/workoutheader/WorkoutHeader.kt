@@ -39,12 +39,15 @@ import androidx.compose.material3.*
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
@@ -142,6 +145,7 @@ fun WorkoutHeader(
     ) {
         val configuration = androidx.compose.ui.platform.LocalConfiguration.current
         val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+        var measuredActionsWidthPx by remember { mutableIntStateOf(0) }
 
         val actionButtonsContent: @Composable () -> Unit = {
             Row(
@@ -495,8 +499,10 @@ fun WorkoutHeader(
                             (if (menuEnabled) 32.dp else 0.dp) +
                             (if (onEditWorkout != null) 32.dp else 0.dp) +
                             (if (onShareWorkout != null) 32.dp else 0.dp)
-                        if (actionSpacerWidth > 0.dp) {
-                            Spacer(modifier = Modifier.width(actionSpacerWidth.coerceAtLeast(40.dp)))
+                        val measuredActionsDp = with(LocalDensity.current) { measuredActionsWidthPx.toDp() }
+                        val effectiveActionSpacerWidth = maxOf(actionSpacerWidth, measuredActionsDp)
+                        if (effectiveActionSpacerWidth > 0.dp) {
+                            Spacer(modifier = Modifier.width(effectiveActionSpacerWidth.coerceAtLeast(40.dp)))
                         }
                     }
 
@@ -702,7 +708,8 @@ fun WorkoutHeader(
                 Row(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
-                        .padding(top = 4.dp, end = 4.dp),
+                        .padding(top = 4.dp, end = 4.dp)
+                        .onSizeChanged { measuredActionsWidthPx = it.width },
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     actionButtonsContent()

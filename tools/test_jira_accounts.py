@@ -28,6 +28,20 @@ import jira_util
 import review_agent
 
 
+def _load_sibling_parallel_sprint_lock():
+    """Loads sibling tools/parallel_sprint_lock.py even when sys.modules/sys.path is shadowed."""
+    import importlib.util
+
+    sibling_path = os.path.abspath(os.path.join(TOOLS_DIR, "parallel_sprint_lock.py"))
+    cached = sys.modules.get("parallel_sprint_lock")
+    if cached is not None and os.path.abspath(getattr(cached, "__file__", "") or "") == sibling_path:
+        return cached
+    spec = importlib.util.spec_from_file_location("_att_sibling_parallel_sprint_lock", sibling_path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
 class TestJiraAccountResolution(unittest.TestCase):
     """Verifies REQ-PRO-019 / TST-PRO-012: Multi-Account Jira Authentication, Atomic Resolution & Terminal Error Handling."""
 
@@ -689,6 +703,56 @@ class TestJiraCliTooling(unittest.TestCase):
             self.assertTrue(os.path.isfile(json_path))
             self.assertEqual(payload["target"], "sprint_2026-46.3")
             self.assertEqual(payload["unit_tests"]["total"], 1)
+
+    @patch("jira_util.jira_request")
+    @patch("jira_util.get_config")
+    def test_export_test_evidence_isolates_cross_directory_sys_modules_cache(self, mock_config, mock_request):
+        """TST-PRO-100.1 / ATT-8875: Ignore unrelated cached sys.modules['generate_test_evidence'] lacking skip_kover."""
+        import tempfile
+        import types
+
+        mock_config.return_value = {
+            "JIRA_URL": "https://example.atlassian.net",
+            "JIRA_USER": "test@example.com",
+            "JIRA_API_TOKEN": "token",
+        }
+        mock_request.return_value = {"values": []}
+
+        fake_mod = types.ModuleType("generate_test_evidence")
+        fake_mod.__file__ = "/tmp/unrelated_mirror/generate_test_evidence.py"
+
+        def _legacy_no_skip_kover(
+            target_id, target_type="sprint", repo_root=None,
+            results_dir=None, archive_path=None, kover_xml_path=None, out_dir=None,
+        ):
+            raise AssertionError("Should not invoke cross-directory cached generate_test_evidence")
+
+        fake_mod.generate_test_evidence = _legacy_no_skip_kover
+
+        orig_mod = sys.modules.get("generate_test_evidence")
+        sys.modules["generate_test_evidence"] = fake_mod
+        try:
+            with tempfile.TemporaryDirectory() as tmp_root:
+                out_dir = os.path.join(tmp_root, "test_evidence")
+                results_dir = os.path.join(tmp_root, "test-results")
+                os.makedirs(results_dir, exist_ok=True)
+                with open(os.path.join(results_dir, "TEST-Sample.xml"), "w", encoding="utf-8") as f:
+                    f.write('<?xml version="1.0"?><testsuite tests="1" failures="0" errors="0" skipped="0" time="0.1"><testcase name="testA_TST_PRO_100" classname="Sample"/></testsuite>')
+
+                md_path, json_path, payload = jira_util.export_test_evidence(
+                    sprint_arg="2026-46.3",
+                    out_dir=out_dir,
+                    test_results_dir=results_dir,
+                    skip_kover=True,
+                )
+                self.assertTrue(os.path.isfile(md_path))
+                self.assertTrue(os.path.isfile(json_path))
+                self.assertFalse(payload["coverage"]["measured"])
+        finally:
+            if orig_mod is None:
+                sys.modules.pop("generate_test_evidence", None)
+            else:
+                sys.modules["generate_test_evidence"] = orig_mod
 
     @patch("jira_util.get_config", return_value={"JIRA_URL": "https://atrainingtracker.atlassian.net"})
     @patch("jira_util.jira_request")
@@ -2161,7 +2225,7 @@ Verdict: PASS."""
 
     def test_tst_pro_108_3_git_commit_trailers_formatting(self):
         # TST-PRO-108.3: Producing Agent Identity & Reviewer Git Commit Trailers Test
-        import parallel_sprint_lock
+        parallel_sprint_lock = _load_sibling_parallel_sprint_lock()
         msg = parallel_sprint_lock.format_commit_with_trailers(
             "ATT-8151: Test commit",
             agent_role="agent1",
@@ -2175,6 +2239,25 @@ Verdict: PASS."""
         valid, missing = parallel_sprint_lock.validate_commit_trailers(msg)
         self.assertTrue(valid)
         self.assertEqual(missing, [])
+
+    def test_tst_pro_108_3_isolates_cross_directory_sys_modules_cache(self):
+        """TST-PRO-108.3 / ATT-8876: Ignore poisoned sys.modules['parallel_sprint_lock'] and shadowed sys.path."""
+        import types
+
+        fake_mod = types.ModuleType("parallel_sprint_lock")
+        fake_mod.__file__ = "/tmp/unrelated_mirror/parallel_sprint_lock.py"
+        orig_mod = sys.modules.get("parallel_sprint_lock")
+        orig_path = list(sys.path)
+        try:
+            sys.modules["parallel_sprint_lock"] = fake_mod
+            sys.path.insert(0, os.path.join(TOOLS_DIR, "hoechstmass", "tools"))
+            self.test_tst_pro_108_3_git_commit_trailers_formatting()
+        finally:
+            sys.path[:] = orig_path
+            if orig_mod is None:
+                sys.modules.pop("parallel_sprint_lock", None)
+            else:
+                sys.modules["parallel_sprint_lock"] = orig_mod
 
     def test_tst_pro_108_4_risk_register_single_os_user_residual_risk(self):
         # TST-PRO-108.4: Single-OS User Residual Risk Review Test

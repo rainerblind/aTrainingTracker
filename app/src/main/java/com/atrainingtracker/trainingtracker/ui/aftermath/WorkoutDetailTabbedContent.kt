@@ -145,6 +145,8 @@ fun WorkoutDetailTabbedContent(
     initialAutoShareSnapshot: Boolean = false,
     onSnapshotComplete: (() -> Unit)? = null,
     multiSensorOverlays: Map<TelemetryMetricType, List<TelemetrySourceSeries>> = emptyMap(),
+    hiddenCharts: Set<TelemetryChartKind> = emptySet(),
+    onToggleChartVisibility: ((TelemetryChartKind) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val visibleTabs = remember(tabs, availability, detailPreferences) {
@@ -385,6 +387,8 @@ fun WorkoutDetailTabbedContent(
                             externalSnapshotTrigger = (pageIndex == mapTabIndex) && triggerMapSnapshot,
                             onSnapshotComplete = { handleSnapshotComplete() },
                             multiSensorOverlays = multiSensorOverlays,
+                            hiddenCharts = hiddenCharts,
+                            onToggleChartVisibility = onToggleChartVisibility,
                             mapContent = mapContent,
                             overlay = mapOverlay,
                             topEndActions = mapTopEndActions,
@@ -481,6 +485,8 @@ fun WorkoutDetailTabbedContent(
                                 externalSnapshotTrigger = (pageIndex == mapTabIndex) && triggerMapSnapshot,
                                 onSnapshotComplete = { handleSnapshotComplete() },
                                 multiSensorOverlays = multiSensorOverlays,
+                                hiddenCharts = hiddenCharts,
+                                onToggleChartVisibility = onToggleChartVisibility,
                                 metadataContent = null,
                                 analyticsContent = if (nonMapNonGraphSections.isNotEmpty()) {
                                     {
@@ -868,11 +874,11 @@ private fun RenderWorkoutDetailCardSections(
                 WorkoutDetails(
                     data = workoutData.detailsData,
                     enableCogganPowerMetrics = tuningConfig.enableCogganPowerMetrics,
-                    showCogganPowerInWorkoutSummary = tuningConfig.showCogganPowerInWorkoutSummary,
+                    showCogganPowerInWorkoutSummary = true,
                     enableAerobicEfficiencyModel = tuningConfig.enableAerobicEfficiencyModel,
-                    showAerobicEfficiencyInWorkoutSummary = tuningConfig.showAerobicEfficiencyInWorkoutSummary,
+                    showAerobicEfficiencyInWorkoutSummary = true,
                     enableCriticalPowerModel = tuningConfig.enableCriticalPowerModel,
-                    showCriticalPowerInWorkoutSummary = tuningConfig.showCriticalPowerInWorkoutSummary,
+                    showCriticalPowerInWorkoutSummary = true,
                     enableCardioPowerDynamics = tuningConfig.enableCardioPowerDynamics,
                     showCardioPowerInWorkoutSummary = false,
                     modifier = Modifier.fillMaxWidth()

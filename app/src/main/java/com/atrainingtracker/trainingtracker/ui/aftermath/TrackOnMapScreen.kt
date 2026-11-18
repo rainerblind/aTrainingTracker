@@ -132,6 +132,13 @@ fun TrackOnMapScreen(
     val activeSectionsOrder = sectionsOrder ?: persistedSectionsOrder
     val persistedTabsConfig by preferenceManager.workoutDetailTabsOrderFlow.collectAsState(initial = WorkoutDetailTabConfig.DEFAULT_TABS)
     val activeTabsConfig = tabsConfig ?: persistedTabsConfig
+    val persistedHiddenCharts by preferenceManager.hiddenTelemetryChartsFlow.collectAsState(initial = emptySet())
+    val handleToggleChartVisibility: (TelemetryChartKind) -> Unit = { chartKind ->
+        val nextVisible = chartKind in persistedHiddenCharts
+        coroutineScope.launch {
+            preferenceManager.setTelemetryChartVisible(chartKind, nextVisible)
+        }
+    }
     var showTabsConfigSheet by rememberSaveable { mutableStateOf(false) }
     var showClusterSelectionDialog by rememberSaveable { mutableStateOf(false) }
     var clusterCandidates by remember { mutableStateOf<List<Pair<WorkoutCluster, Double>>>(emptyList()) }
@@ -245,13 +252,7 @@ fun TrackOnMapScreen(
 
     val enableCpModel = tuningConfig.enableCriticalPowerModel
     val hasTelemetrySeries = remember(activeScrubPath, enableCpModel) {
-        !activeScrubPath.isNullOrEmpty() && (
-            TelemetryMetricUtils.hasSpeedData(activeScrubPath) ||
-                TelemetryMetricUtils.hasHeartRateData(activeScrubPath) ||
-                TelemetryMetricUtils.hasPowerData(activeScrubPath) ||
-                TelemetryMetricUtils.hasCadenceData(activeScrubPath) ||
-                (enableCpModel && TelemetryMetricUtils.hasWPrimeBalData(activeScrubPath))
-            )
+        hasAnyTelemetryChartSeries(activeScrubPath, enableCpModel)
     }
 
     val hasZonesData = hrZoneDistribution != null || powerZoneDistribution != null
@@ -397,6 +398,8 @@ fun TrackOnMapScreen(
             recentSessions = recentSessions,
             isSmoothedStream = isSmoothedStream,
             multiSensorOverlays = multiSensorOverlays,
+            hiddenCharts = persistedHiddenCharts,
+            onToggleChartVisibility = handleToggleChartVisibility,
             onUpdateFtp = effectiveOnUpdateFtp,
             onUpdateHrZones = effectiveOnUpdateHrZones,
             useStatusBarsPadding = useStatusBarsPadding,
@@ -522,6 +525,8 @@ fun TrackOnMapScreen(
         powerZoneThresholds = powerZoneThresholds,
         workoutData = workoutData,
         multiSensorOverlays = multiSensorOverlays,
+        hiddenCharts = persistedHiddenCharts,
+        onToggleChartVisibility = handleToggleChartVisibility,
         onCreateLapClick = { scrubDist ->
             candidateSplitIndex = activeScrubPath?.indexOfFirst { it.distance >= scrubDist }?.takeIf { it >= 0 }
             showCreateLapSheet = true
@@ -720,113 +725,44 @@ fun TrackOnMapScreen(
                                     showZoomControls = false,
                                     bSportType = workoutData.bSportType,
                                     alignWithTelemetryCharts = activeDetailPrefs.showTelemetryCharts,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(120.dp)
+                                    fixedHeight = 120.dp,
+                                    overlaySeries = multiSensorOverlays[TelemetryMetricType.ALTITUDE].orEmpty(),
+                                    modifier = Modifier.fillMaxWidth()
                                 )
                             }
                         }
                         WorkoutSectionType.CHARTS -> {
                             if (activeDetailPrefs.showTelemetryCharts && !activeScrubPath.isNullOrEmpty()) {
-                                if (TelemetryMetricUtils.hasSpeedData(activeScrubPath)) {
-                                    val isRunning = workoutData.bSportType == BSportType.RUN
-                                    Text(
-                                        text = stringResource(if (isRunning) R.string.graph_heading_pace else R.string.graph_heading_speed),
-                                        style = MaterialTheme.typography.titleSmall,
-                                        fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                        modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 4.dp)
-                                    )
-                                    TelemetryMetricGraph(
-                                        pathPoints = activeScrubPath,
-                                        metricType = if (isRunning) TelemetryMetricType.PACE else TelemetryMetricType.SPEED,
-                                        currentDistance = null,
-                                        onDistanceSelected = {},
-                                        bSportType = workoutData.bSportType,
-                                        enableGestures = false,
-                                        modifier = Modifier.fillMaxWidth()
-                                    )
+                                val fallbackDomain = if (ProfileDomainMath.isTracklessWorkout(activeScrubPath)) {
+                                    com.atrainingtracker.trainingtracker.settings.ProfileXAxisDomain.TIME
+                                } else {
+                                    tuningConfig.telemetryXAxisDomain
                                 }
-                                if (TelemetryMetricUtils.hasHeartRateData(activeScrubPath)) {
-                                    Text(
-                                        text = stringResource(R.string.graph_heading_heart_rate),
-                                        style = MaterialTheme.typography.titleSmall,
-                                        fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                        modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 4.dp)
-                                    )
-                                    TelemetryMetricGraph(
-                                        pathPoints = activeScrubPath,
-                                        metricType = TelemetryMetricType.HEART_RATE,
-                                        currentDistance = null,
-                                        onDistanceSelected = {},
-                                        bSportType = workoutData.bSportType,
-                                        enableGestures = false,
-                                        zoneDistribution = hrZoneDistribution,
-                                        zoneDisplayMode = effectiveHrZoneDisplayMode,
-                                        hrZoneThresholds = hrZoneThresholds,
-                                        modifier = Modifier.fillMaxWidth()
-                                    )
-                                }
-                                if (TelemetryMetricUtils.hasPowerData(activeScrubPath)) {
-                                    Text(
-                                        text = stringResource(R.string.graph_heading_power),
-                                        style = MaterialTheme.typography.titleSmall,
-                                        fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                        modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 4.dp)
-                                    )
-                                    TelemetryMetricGraph(
-                                        pathPoints = activeScrubPath,
-                                        metricType = TelemetryMetricType.POWER,
-                                        currentDistance = null,
-                                        onDistanceSelected = {},
-                                        bSportType = workoutData.bSportType,
-                                        enableGestures = false,
-                                        zoneDistribution = powerZoneDistribution,
-                                        zoneDisplayMode = effectivePowerZoneDisplayMode,
-                                        powerZoneThresholds = powerZoneThresholds,
-                                        overlaySeries = multiSensorOverlays[TelemetryMetricType.POWER].orEmpty(),
-                                        modifier = Modifier.fillMaxWidth()
-                                    )
-                                }
-                                if (TelemetryMetricUtils.hasCadenceData(activeScrubPath)) {
-                                    Text(
-                                        text = stringResource(R.string.graph_heading_cadence),
-                                        style = MaterialTheme.typography.titleSmall,
-                                        fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                        modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 4.dp)
-                                    )
-                                    TelemetryMetricGraph(
-                                        pathPoints = activeScrubPath,
-                                        metricType = TelemetryMetricType.CADENCE,
-                                        currentDistance = null,
-                                        onDistanceSelected = {},
-                                        bSportType = workoutData.bSportType,
-                                        enableGestures = false,
-                                        overlaySeries = multiSensorOverlays[TelemetryMetricType.CADENCE].orEmpty(),
-                                        modifier = Modifier.fillMaxWidth()
-                                    )
-                                }
-                                if (tuningConfig.enableCriticalPowerModel && TelemetryMetricUtils.hasWPrimeBalData(activeScrubPath)) {
-                                    Text(
-                                        text = stringResource(R.string.w_prime_bal),
-                                        style = MaterialTheme.typography.titleSmall,
-                                        fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                        modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 4.dp)
-                                    )
-                                    TelemetryMetricGraph(
-                                        pathPoints = activeScrubPath,
-                                        metricType = TelemetryMetricType.W_PRIME_BAL,
-                                        currentDistance = null,
-                                        onDistanceSelected = {},
-                                        bSportType = workoutData.bSportType,
-                                        enableGestures = false,
-                                        modifier = Modifier.fillMaxWidth()
-                                    )
-                                }
+                                TelemetryChartStack(
+                                    path = activeScrubPath,
+                                    bSportType = workoutData.bSportType,
+                                    tuningConfig = tuningConfig,
+                                    selectedDistance = null,
+                                    onDistanceSelected = {},
+                                    activeTelemetryDomain = fallbackDomain,
+                                    isTrackless = ProfileDomainMath.isTracklessWorkout(activeScrubPath),
+                                    zoomScale = 1.0f,
+                                    startDist = 0.0,
+                                    isPanMode = false,
+                                    onZoomChanged = { _, _ -> },
+                                    chartModifier = Modifier.fillMaxWidth(),
+                                    enableGestures = false,
+                                    hiddenCharts = persistedHiddenCharts,
+                                    onToggleChartVisibility = handleToggleChartVisibility,
+                                    hrThresholds = hrZoneThresholds,
+                                    powerThresholds = powerZoneThresholds,
+                                    hrZoneDistribution = hrZoneDistribution,
+                                    powerZoneDistribution = powerZoneDistribution,
+                                    hrZoneDisplayMode = effectiveHrZoneDisplayMode,
+                                    powerZoneDisplayMode = effectivePowerZoneDisplayMode,
+                                    cardioPowerDynamics = workoutData.cardioPowerDynamics,
+                                    multiSensorOverlays = multiSensorOverlays
+                                )
                             }
                         }
                         WorkoutSectionType.ZONES -> {
@@ -1087,6 +1023,6 @@ private fun getTrackTypeName(type: TrackType): String {
         TrackType.BEST -> stringResource(R.string.track_type_best)
         TrackType.GPS -> stringResource(R.string.track_type_gps)
         TrackType.FUSED -> stringResource(R.string.track_type_fused)
-        TrackType.NETWORK -> stringResource(R.string.track_type_network)
+        TrackType.ATT_FUSED -> stringResource(R.string.track_type_att_fused)
     }
 }

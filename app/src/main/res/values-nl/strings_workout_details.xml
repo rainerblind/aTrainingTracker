@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ aTrainingTracker (ANT+ BTLE)
+  ~ Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
+  -->
+
+<resources>
+    <string name="track_type_att_fused">ATT Fused</string>
+    <string name="graph_heading_slope">Helling</string>
+    <string name="charts_visibility_button">Zichtbare grafieken</string>
+    <string name="charts_visibility_summary">Zichtbare grafieken (%1$d/%2$d)</string>
+    <string name="charts_visibility_cd">Zichtbare grafieken selecteren</string>
+    <string name="charts_visibility_none_selected_hint">Alle grafieken zijn verborgen. Gebruik het filter hierboven om ze weer weer te geven.</string>
+    <string name="chart_overlay_source_gps">GPS</string>
+    <string name="chart_overlay_source_google_fused">Google Fused</string>
+    <string name="chart_overlay_source_att_fused">ATT Fused</string>
+    <string name="chart_overlay_source_att_fused_alt_slope">ATT Fused (Hoogte/Helling)</string>
+    <string name="chart_overlay_mean_value">Ø %1$s</string>
+    <string name="tuning_summary_matrix_tabs_format">%1$d/%2$d in lijst, %3$d tabbladen (%4$d/%5$d)</string>
+</resources>

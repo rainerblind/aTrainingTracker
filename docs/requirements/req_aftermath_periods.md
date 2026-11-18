@@ -1,14 +1,14 @@
 # Living Requirements: Post-Workout Analytics & Periods
 
 **Document ID**: `DOC-REQ-PERIODS`  
-**Version**: 1.0.3  
+**Version**: 1.0.4  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `aftermath_periods`  
 **Prefixes**: `PER`, `PERF`, `RAD`, `SPT`  
 **Scope**: Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers.  
-**Total Requirements**: 61
+**Total Requirements**: 62
 
 ---
 
@@ -1808,6 +1808,47 @@
 
 ---
 
+### REQ-PER-044: Multi-Source Track Layers, Elevation/Speed/Slope Overlays & Per-Chart Visibility in Workout Details (`ATT-8080`) [Verified]
+- **System Requirement(s)**: Derived (SW-only) — Post-workout multi-source track/elevation/telemetry overlays and per-chart visibility selection in Workout Details
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-PER-052`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Implementation**: `MapModels.kt`, `WorkoutMultiSourceSampleDiscovery.kt`, `WorkoutRepository.kt`, `MyPreferenceManager.kt`, `TelemetryGraphColorPreferences.kt`, `TelemetryMetricUtils.kt`, `TelemetryOverlayComponents.kt`, `TelemetryMetricGraph.kt`, `ElevationProfileOverlayComponents.kt`, `ElevationProfile.kt`, `TelemetryChartStack.kt`, `MapDetailLayout.kt`, `TrackOnMapScreen.kt`, `TrackOnMapAftermathViewModel.kt`, `PeriodMapScreen.kt`, `PeriodsViewModel.kt`, `WorkoutClusterHeatmapScreen.kt`, `WorkoutClustersViewModel.kt`, `WorkoutClustersScreen.kt`, `res/values*/strings*.xml`
+- **Rationale**: Alongside `ATT-8096` (`HR`/`POWER`/`CADENCE`), `WorkoutSamples.db` persists parallel location, speed, altitude, and slope streams (`ATT Odometrie-Fusion`, `ATT Fused (Höhe und Steigung)`, `GPS`, `Google Fused`, `Barometer`, `DEM`), yet Workout Details lacks `ATT_FUSED` map track selection (and consistent `showTechnicalTracks = true` on bottom-sheet hosts), lacks multi-source overlays on `ElevationProfile`, `SPEED`/`PACE`, and `SLOPE`, and provides no persisted per-chart visibility filter inside `CHARTS` (`ATT-8080`).
+- **Description**:
+  1. *`TrackType.ATT_FUSED`, Localized Alias Resolution & Bottom-Sheet Wiring (`REQ-PER-044.1`)*:
+     - Extending `REQ-MAP-011` / `REQ-MAP-012`, `MapModels.kt` SHALL add `TrackType.ATT_FUSED` (`LATITUDE_att_fused` / `LONGITUDE_att_fused`), remove `TrackType.NETWORK`, and resolve underscore/localized column aliases for `GPS` and `FUSED`. `PeriodMapScreen.kt`, `WorkoutClusterHeatmapScreen.kt`, and `WorkoutClustersScreen.kt` SHALL wire `showTechnicalTracks = true`, `availableTrackTypes`, `enabledTrackTypes`, `onToggleTrackType`, and `multiSensorOverlays`.
+  2. *Generic Multi-Source Discovery, Metric-Aware Accumulation & Helper Extraction (`REQ-PER-044.2`)*:
+     - Multi-source column discovery and overlay accumulation SHALL be extracted to `WorkoutMultiSourceSampleDiscovery.kt` (retaining `WorkoutRepository$Companion` delegating methods for `DetailedDesignParityContractTest` and keeping `WorkoutRepository.kt <= 5,117` LoC).
+     - `discoverNamedSourceColumns` SHALL match both `"^${Regex.escape(sensorType.name)} \\((.+)\\)$"` (including `"att_fused_altitude_slope"` and nested parentheses like `"Topografische Höhe (DEM)"`) and `"^${Regex.escape(sensorType.name)}_(gps|google_fused|att_fused)$"` (matching `CSVFileWriter.java:87`, excluding `_network`), mapping technical identifiers (`att_fused`, `att_fused_altitude_slope`, `gps`, `google_fused`) to clean display labels while preserving `ATT-8096` `HR`/`POWER`/`CADENCE` behavior (`>= 2` named sources).
+     - `discoverMultiSourceOverlayColumns` SHALL discover `ALTITUDE`, `SPEED_mps`, and `SLOPE` alongside `HR`, `POWER`, and `CADENCE` across both `loadWorkoutDetailTelemetry` (GPS) and `loadTracklessWorkoutTelemetry` (trackless). `OverlaySeriesAccumulator` SHALL validate samples per metric: `isFinite()` for `ALTITUDE` and `SLOPE` (retaining `<= 0.0` descents, `0%` flats, and `<= 0 m` coastal elevations), `>= 0.0` for `SPEED_mps` and `POWER`, and `> 0.0` for `HR` and `CADENCE`.
+  3. *Multi-Source `ElevationProfile`, `SPEED`/`PACE` Unit Conversion & `TelemetryMetricType.SLOPE` (`REQ-PER-044.3`)*:
+     - `TelemetryMetricType` SHALL add `SLOPE` (`%` formatting, `TelemetryGraphColorPreferences` key `telemetry_graph_color_SENSOR_SLOPE` matching `SensorType.SLOPE` with `THEME_DEFAULT` default).
+     - `ElevationProfile.kt` (with extracted `ElevationProfileOverlayComponents.kt`, `<= 1,500` LoC) SHALL accept `overlaySeries: List<TelemetrySourceSeries>` and, strictly when `>= 2` `ALTITUDE` sources exist, expose a compact `Layers` selector, render distinct secondary curves within shared bounds, display a compact `Ø` mean comparison legend, and update readouts during synchronized `DISTANCE`/`TIME` scrubbing.
+     - `TelemetryMetricGraph.kt` (with extracted `TelemetryOverlayComponents.kt`, `<= 1,965` LoC) SHALL render multi-source overlays for `SPEED` (`MyHelper.mps2userUnit`), `PACE` (user pace min/km or min/mi with inverted Y-axis clamping), and `SLOPE` (`%`) with synchronized scrubbing and `Rule 64` plot bounds.
+  4. *Persisted Per-Chart Visibility Selection in Workout Details (`REQ-PER-044.4`)*:
+     - `MyPreferenceManager` SHALL persist per-chart visibility (`hidden_telemetry_charts` DataStore `stringSetPreferencesKey`, default empty = all charts visible on upgrade) across `SPEED_PACE`, `SLOPE`, `HEART_RATE`, `POWER`, `CADENCE`, `W_PRIME_BAL`, `HRV_DFA_A1`, `HRV_RMSSD`.
+     - Shared `TelemetryChartStack.kt` (reused by `MapDetailLayout.kt <= 1,500` LoC and `TrackOnMapScreen.kt`) SHALL expose a Material 3 `DropdownMenu` chart-visibility selector (`design_guidelines.md §1`) that stays accessible even when charts are hidden, preserves `Rule 64` horizontal plot alignment and `Rule 48` axis labels, and gates `hasTelemetrySeries` / `hasTelemetryGraphs` across `SLOPE` and `CADENCE` as well.
+  5. *9-Locale Parity & Rule 8.5 Visual Compose Verification (`REQ-PER-044.5`)*:
+     - All new strings (`track_type_att_fused`, `graph_heading_slope`, chart-visibility filter labels, source display labels, and `Ø` mean strings with indexed positional specifiers `%1$s`/`%1$d`) SHALL achieve 100% 9-locale parity (`EN/DE/ES/FR/IT/JA/NL/PL/PT`) with zero inline emojis (`ATT-5400`), and `track_type_network` SHALL be removed cleanly. Stage 4 SHALL render and inspect `docs/engineering/walkthroughs/img/ATT-8080_multisource_charts_visibility.png` (Light & Dark) via `read_file` (`Rule 8.5`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Extends `REQ-PER-042.1` (`WorkoutRepository.kt` regex), `REQ-MAP-011`, `REQ-MAP-012`, `REQ-SEN-027.2` (`ATT-5492`), `REQ-UI-206`, `REQ-UI-260`, `REQ-DAT-033`, `REQ-UI-408`, and `REQ-UI-530`.
+2. *Historical Origin & Commit Trace*: `ATT-5492` excised `SPEED_AND_LOCATION_NETWORK`; `71fdb559` (`ATT-8096`) added `REQ-PER-042` multi-sensor discovery (`(<deviceName>)`) and overlays for `HR`/`POWER`/`CADENCE`.
+3. *Root Reason for Existing Formulation*: `ATT-8096` limited regex discovery to `(<deviceName>)` and `> 0.0` samples because BLE/ANT+ HR/Power/Cadence sensors never use underscore suffixes or negative values.
+4. *Preservation of Core Invariants*: Single-source (`<= 1` named source) `ElevationProfile` and `TelemetryMetricGraph` render zero `Layers` clutter; `ATT-8096` `HR`/`POWER`/`CADENCE` behavior and `telemetry_graph_color_SENSOR_CADENCE` preserved; all charts remain enabled by default for existing users; `Rule 64` & `Rule 48` alignment and all 4 file LoC ceilings preserved (`WorkoutRepository.kt <= 5,117`, `TelemetryMetricGraph.kt <= 1,965`, `MapDetailLayout.kt <= 1,500`, `ElevationProfile.kt <= 1,500`).
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a workout recorded with `SPEED_AND_LOCATION_ATT_FUSED`, `GPS`, and `Google Fused`, *When* opening the Map `Layers` menu in Workout Details (including peek bottom sheets in Period Map and Cluster Heatmap), *Then* `Best`, `GPS`, `Google Fused`, and `ATT Fused` are selectable with distinct colors and `Network` is absent.
+• *Given* a `WorkoutSamples.db` table with `>= 2` `ALTITUDE*`, `SPEED_mps*`, or `SLOPE*` columns (including `SPEED_mps_att_fused`, `ALTITUDE_att_fused`, `"ALTITUDE (att_fused_altitude_slope)"`, `"SLOPE (att_fused_altitude_slope)"` with negative descents), *When* toggling `Layers` on `ElevationProfile` or `SPEED`/`PACE`/`SLOPE` charts, *Then* secondary curves render with `Ø` mean comparison and synchronized `DISTANCE`/`TIME` scrubbing.
+• *Given* the `CHARTS` section in Workout Details, *When* toggling individual charts off/on (e.g., showing `Slope` and hiding `W'bal`), *Then* visibility updates immediately, persists across workouts, preserves `Rule 64` alignment, and leaves the filter menu accessible.
+
+**Invariants**: `<= 1` source shows zero overlay controls; `ATT-8096` `HR`/`POWER`/`CADENCE` & `WorkoutSummary.kt` unaffected; `Rule 64` & `Rule 48` preserved; zero `WorkoutSamples.db` schema bumps; 100% 9-locale parity; all LoC baselines respected.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -1816,3 +1857,4 @@
 | `1.0.1` | 2026-11-18 | AI Agent (`ATT-8710`) | `ATT-8710` | Added `REQ-HRV-044` [Planned] for DFA alpha 1 3-zone graph coloring, 52.dp margin coordination, dash filtering, and scatter threshold parity. |
 | `1.0.2` | 2026-11-18 | AI Agent (`ATT-8710`) | `ATT-8710` | Integrated `REQ-HRV-044` [Verified] post-`ATT-8206` (`v1.0.1`) shard reconciliation. |
 | `1.0.3` | 2026-11-18 | AI Agent (`ATT-8201`) | `ATT-8201` | Linked refined `REQ-*` entries in-place to net-new `SYSREQ-TRK-007..013` and `SYSREQ-DEX-007..008`. |
+| `1.0.4` | 2026-11-18 | AI Agent (`ATT-8080`) | `ATT-8080` | Added and verified (`[Verified]`) `REQ-PER-044` for `ATT_FUSED` track layers, multi-source `ALTITUDE`/`SPEED`/`SLOPE` overlays, and persisted per-chart visibility toggles. |

@@ -1054,7 +1054,6 @@
     <string name="track_type_best">Geregistreerd</string>
     <string name="track_type_gps">GPS</string>
     <string name="track_type_fused">Google Fused</string>
-    <string name="track_type_network">Netwerk</string>
     <string name="legend">Legenda</string>
     <string name="cluster_statistics_title">Workout-statistieken</string>
     <string name="cluster_tab_statistics">Statistieken</string>

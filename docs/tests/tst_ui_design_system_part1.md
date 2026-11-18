@@ -1,7 +1,7 @@
 # Living Test Specification: UI Components & Design System (Part 1 of 3)
 
 **Document ID**: `DOC-TST-UI-P1`  
-**Version**: 1.0.0  
+**Version**: 1.0.1  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -351,10 +351,10 @@
 - **Component**: **Location Audit Metric**
 - **Test Description**: 1. Start a tracking session with a location provider active. 2. Tap the location icon in the `SensorStatus` header.
 
-### TST-UI-055: **Multi-Track Visibility Audit** [Implemented]
+### TST-UI-055: **Multi-Track Visibility Audit** [Verified]
 - **Requirement(s)**: `REQ-MAP-011`, `REQ-MAP-012`
 - **Component**: **Multi-Track Visibility Audit**
-- **Test Description**: 1. Open the Workout Details screen for a recorded activity. 2. Tap the "Layers" FAB. 3. Toggle different track types (GPS, Fused, Network).
+- **Test Description**: 1. Open the Workout Details screen (including Period Map / Cluster Heatmap peek sheets) for a recorded activity. 2. Tap the "Layers" FAB. 3. Toggle different track types (GPS, Google Fused, ATT Fused; confirming Network is absent).
 
 ### TST-UI-056: **Map Preference Persistence** [Implemented]
 - **Requirement(s)**: `REQ-MAP-013`
@@ -3982,3 +3982,4 @@
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
 | `1.0.0` | 2026-11-18 | AI Agent (`ATT-8206`) | `ATT-8206` | Split oversized shard into compliant sub-shard (<= 4,000 lines, `REQ-PRO-093.4`, `REQ-PRO-127.3`). |
+| `1.0.1` | 2026-11-18 | AI Agent (`ATT-8080`) | `ATT-8080` | Updated and verified (`[Verified]`) `TST-UI-055` for `ATT Fused` replacement of `Network` and bottom-sheet `Layers` wiring. |

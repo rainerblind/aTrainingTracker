@@ -32,10 +32,15 @@ import java.util.ArrayDeque
  * Invariant: Genuine mountain climbs up to 3,000 m/h (0.83 m/s) pass with zero gradient attenuation.
  */
 class BarometricAltitudeFilter @JvmOverloads constructor(
-    val maxSlewRateMps: Double = DEFAULT_MAX_SLEW_RATE_MPS,
-    val medianWindowSize: Int = DEFAULT_MEDIAN_WINDOW_SIZE,
+    maxSlewRateMps: Double = DEFAULT_MAX_SLEW_RATE_MPS,
+    medianWindowSize: Int = DEFAULT_MEDIAN_WINDOW_SIZE,
     val emaAlpha: Double = DEFAULT_EMA_ALPHA
 ) {
+    var maxSlewRateMps: Double = if (maxSlewRateMps.isFinite() && maxSlewRateMps > 0.0) maxSlewRateMps else DEFAULT_MAX_SLEW_RATE_MPS
+        private set
+
+    var medianWindowSize: Int = medianWindowSize.coerceAtLeast(1)
+        private set
 
     companion object {
         const val DEFAULT_MAX_SLEW_RATE_MPS = 1.2
@@ -44,7 +49,23 @@ class BarometricAltitudeFilter @JvmOverloads constructor(
         private const val MAX_TIME_GAP_SEC = 10.0
     }
 
-    private val window: ArrayDeque<Double> = ArrayDeque(medianWindowSize)
+    private val window: ArrayDeque<Double> = ArrayDeque(this.medianWindowSize)
+
+    /**
+     * Smoothly updates median window length and slew limit without resetting active buffer or
+     * [lastSlewAltitude], preventing altitude step discontinuities on carriage transitions (REQ-FIL-028.3).
+     */
+    @Synchronized
+    fun setFilterParameters(newMaxSlewRateMps: Double, newMedianWindowSize: Int) {
+        if (newMaxSlewRateMps.isFinite() && newMaxSlewRateMps > 0.0) {
+            maxSlewRateMps = newMaxSlewRateMps
+        }
+        val clampedWindow = newMedianWindowSize.coerceIn(1, 21)
+        medianWindowSize = clampedWindow
+        while (window.size > clampedWindow) {
+            window.removeFirst()
+        }
+    }
     private var lastSlewAltitude: Double = Double.NaN
     private var lastFilteredAltitude: Double = Double.NaN
     private var lastTimestampMs: Long = -1L

@@ -197,4 +197,17 @@
     <string name="raw_telemetry_retention_7_days">7日</string>
     <string name="raw_telemetry_retention_off">オフ</string>
 
+    <!-- Phone Carriage & Activity Mode Classifier (ATT-8890, REQ-FIL-028) -->
+    <string name="activity_and_carriage_mode">アクティビティと携帯位置</string>
+    <string name="activity_and_carriage_mode_short">携帯位置</string>
+    <string name="carriage_mode_unknown">不明</string>
+    <string name="carriage_mode_stationary">静止</string>
+    <string name="carriage_mode_walking_transition">歩行 / トランジション</string>
+    <string name="carriage_mode_bike_handlebar">自転車 (ハンドルバー)</string>
+    <string name="carriage_mode_bike_jersey_back">自転車 (背面ポケット)</string>
+    <string name="carriage_mode_bike_front_pocket">自転車 (前ポケット)</string>
+    <string name="carriage_mode_run_waist_hip">ラン (ウエストベルト)</string>
+    <string name="carriage_mode_run_bicep_arm">ラン (アームバンド)</string>
+    <string name="carriage_mode_run_handheld">ラン (手持ち)</string>
+
 </resources>

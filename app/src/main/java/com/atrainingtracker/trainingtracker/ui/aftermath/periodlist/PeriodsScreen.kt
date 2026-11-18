@@ -41,6 +41,7 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkout
 import com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutViewModel
 import com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutViewModelFactory
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesListFragment
+import com.atrainingtracker.trainingtracker.ui.map.TrackOnMapAftermathViewModel
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
 
@@ -52,7 +53,8 @@ fun PeriodsScreen(
     viewModel: PeriodsViewModel = viewModel(),
     onStartWorkoutList: ((PeriodSummary, BSportType?, Long?) -> Unit)? = null,
     onMenuClick: (() -> Unit)? = null,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    trackOnMapViewModel: TrackOnMapAftermathViewModel = viewModel()
 ) {
     val context = LocalContext.current
     val appContext = context.applicationContext
@@ -159,7 +161,8 @@ fun PeriodsScreen(
                 clearPeekSelection = { viewModel.clearPeekSelection() },
                 onBack = { viewModel.dismissPeriodMap() },
                 onEditWorkout = { id -> editedWorkoutId = id },
-                onSelectRegion = { regionId -> viewModel.selectRegion(regionId) }
+                onSelectRegion = { regionId -> viewModel.selectRegion(regionId) },
+                trackOnMapViewModel = trackOnMapViewModel
             )
         } else {
             PeriodsTabsScreen(

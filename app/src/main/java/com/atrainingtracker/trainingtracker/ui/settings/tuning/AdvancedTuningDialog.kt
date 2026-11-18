@@ -90,6 +90,7 @@ fun AdvancedTuningDialog(
     val persistedWorkoutCardPrefs by preferenceManager.workoutCardPreferencesFlow.collectAsState(initial = null)
     val persistedWorkoutDetailPrefs by preferenceManager.workoutDetailPreferencesFlow.collectAsState(initial = null)
     val persistedWorkoutSectionsOrder by preferenceManager.workoutSectionsOrderFlow.collectAsState(initial = null)
+    val persistedDetailTabs by preferenceManager.workoutDetailTabsOrderFlow.collectAsState(initial = remember(preferenceManager) { preferenceManager.getWorkoutDetailTabs() })
 
     var elevationXAxisDomain by remember { mutableStateOf(TuningPreferencesDefaults.ELEVATION_X_AXIS_DOMAIN) }; var telemetryXAxisDomain by remember { mutableStateOf(TuningPreferencesDefaults.TELEMETRY_X_AXIS_DOMAIN) }
     var fullDimFactor by remember { mutableFloatStateOf(TuningPreferencesDefaults.FULL_DIM_FACTOR) }; var mediumDimFactor by remember { mutableFloatStateOf(TuningPreferencesDefaults.MEDIUM_DIM_FACTOR) }
@@ -356,13 +357,14 @@ fun AdvancedTuningDialog(
             // Section 6: Workout-Masken & Detailkarten
             TuningAccordionSection(
                 icon = Icons.AutoMirrored.Filled.ViewList, title = stringResource(R.string.tuning_cat_workout_masks_cards),
-                subtitle = TuningSubtitleFormatter.formatWorkoutMatrixSubtitle(workoutCardPrefs, workoutDetailPrefs, context),
+                subtitle = TuningSubtitleFormatter.formatWorkoutMatrixSubtitle(workoutCardPrefs, persistedDetailTabs, context),
                 isExpanded = isSectionExpanded(TuningSection.WORKOUT_MASKS_CARDS), onToggle = { toggleSection(TuningSection.WORKOUT_MASKS_CARDS) }
             ) {
                 WorkoutMasksAndCardsSection(
                     workoutCardPrefs = workoutCardPrefs, onWorkoutCardPrefsChange = { workoutCardPrefs = it },
                     workoutDetailPrefs = workoutDetailPrefs, onWorkoutDetailPrefsChange = { workoutDetailPrefs = it },
-                    workoutSectionsOrder = workoutSectionsOrder, onWorkoutSectionsOrderChange = { workoutSectionsOrder = it }
+                    workoutSectionsOrder = workoutSectionsOrder, onWorkoutSectionsOrderChange = { workoutSectionsOrder = it },
+                    detailTabs = persistedDetailTabs
                 )
             }
 

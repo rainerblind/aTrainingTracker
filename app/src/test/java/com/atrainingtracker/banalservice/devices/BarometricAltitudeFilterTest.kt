@@ -139,4 +139,29 @@ class BarometricAltitudeFilterTest {
         filter.reset()
         assertFalse(filter.isInitialized())
     }
+
+    // TST-FIL-028.3: Dynamic buffer-preserving window/slew adaptation across carriage transitions
+    @Test
+    fun testSetFilterParameters_resizesWindowAndSlewSmoothlyWithoutResettingState_tstFil028_3() {
+        for (sec in 0..8) {
+            filter.filterSlewOnly(420.0 + sec * 0.1, 1000L + sec * 1000L)
+        }
+        val altBeforeSwitch = filter.getSlewAltitude()
+
+        // Switch from 7s/1.2 m/s -> Handlebar crisp 3s/1.2 m/s without continuity break
+        filter.setFilterParameters(newMaxSlewRateMps = 1.2, newMedianWindowSize = 3)
+        assertEquals(3, filter.medianWindowSize)
+        assertEquals(1.2, filter.maxSlewRateMps, 1e-9)
+        assertTrue(filter.isInitialized())
+
+        val afterHandlebar = filter.filterSlewOnly(altBeforeSwitch + 0.1, 10_000L)
+        assertTrue("Shrink window must keep continuous altitude (diff=${kotlin.math.abs(afterHandlebar - altBeforeSwitch)})", kotlin.math.abs(afterHandlebar - altBeforeSwitch) < 0.5)
+
+        // Switch to Front Pocket 9s/0.7 m/s and feed +12m compression spike: spike rejected cleanly
+        filter.setFilterParameters(newMaxSlewRateMps = 0.7, newMedianWindowSize = 9)
+        assertEquals(9, filter.medianWindowSize)
+        assertEquals(0.7, filter.maxSlewRateMps, 1e-9)
+        val spikeOut = filter.filterSlewOnly(afterHandlebar + 12.0, 11_000L)
+        assertTrue("Pocket mode slew/median must clamp +12m spike (out=$spikeOut, baseline=$afterHandlebar)", spikeOut - afterHandlebar <= 0.71)
+    }
 }

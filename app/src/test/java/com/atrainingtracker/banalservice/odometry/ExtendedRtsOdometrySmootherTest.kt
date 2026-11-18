@@ -439,4 +439,205 @@ class ExtendedRtsOdometrySmootherTest {
         assertEquals(165, smoothedAlt.size)
         assertTrue("Flat track ascent must remain low (< 5 m, was ${smoothedAlt.last().ascentM})", smoothedAlt.last().ascentM < 5.0)
     }
+
+    // TST-FIL-027.3: 140s indoor stop ZUPT pinning + RTS cross-covariance decoupling preserves pre-stop speed
+    @Test
+    fun testIndoorStopZuptPinning_eliminatesPhantomDriftWithoutCollapsingPreStopSpeed_tstFil027_3() {
+        val samples = mutableListOf<RawOdometrySample>()
+        var tMs = 3_000_000L
+        var east = 0.0
+        val rideSpeed = 6.0
+
+        // 0..39: Ride East at 6.0 m/s
+        for (i in 0 until 40) {
+            val (lat, lon) = ExtendedRtsOdometrySmoother.enuToLatLng(east, 0.0, originLat, originLon)
+            samples.add(
+                RawOdometrySample(
+                    timestampMs = tMs,
+                    latitude = lat,
+                    longitude = lon,
+                    speedMps = rideSpeed,
+                    bearingDeg = 90.0,
+                    accuracyMeters = 3.0,
+                    worldYawRateRadPerSec = 0.0,
+                    wheelSpeedMps = null
+                )
+            )
+            tMs += 1000L
+            east += rideSpeed
+        }
+
+        // 40..179: 140s indoor bakery stop (speed = 0.0, acc = 50.0 m)
+        val stopEast = east
+        val (stopLat, stopLon) = ExtendedRtsOdometrySmoother.enuToLatLng(stopEast, 0.0, originLat, originLon)
+        for (i in 40 until 180) {
+            samples.add(
+                RawOdometrySample(
+                    timestampMs = tMs,
+                    latitude = stopLat,
+                    longitude = stopLon,
+                    speedMps = 0.0,
+                    bearingDeg = null,
+                    accuracyMeters = 50.0,
+                    worldYawRateRadPerSec = 0.0,
+                    wheelSpeedMps = null
+                )
+            )
+            tMs += 1000L
+        }
+
+        // 180..219: Departure East (+30 m initial GNSS jump + 6.0 m/s riding)
+        east = stopEast + 30.0
+        for (i in 180 until 220) {
+            val (lat, lon) = ExtendedRtsOdometrySmoother.enuToLatLng(east, 0.0, originLat, originLon)
+            samples.add(
+                RawOdometrySample(
+                    timestampMs = tMs,
+                    latitude = lat,
+                    longitude = lon,
+                    speedMps = rideSpeed,
+                    bearingDeg = 90.0,
+                    accuracyMeters = 3.0,
+                    worldYawRateRadPerSec = 0.0,
+                    wheelSpeedMps = null
+                )
+            )
+            tMs += 1000L
+            east += rideSpeed
+        }
+
+        val smoothed = ExtendedRtsOdometrySmoother.smoothSamples(samples, initialHeadingRad = 0.0)
+        assertEquals(220, smoothed.size)
+
+        // Indoor stop must stay pinned at 0.0 m/s with +0.0 m phantom distance
+        for (i in 40 until 180) {
+            assertEquals("Indoor stop speed must be 0.0 m/s at $i", 0.0, smoothed[i].speedMps, 1e-9)
+            assertEquals("Indoor stop deltaDistanceMeters must be 0.0 m at $i", 0.0, smoothed[i].deltaDistanceMeters, 1e-9)
+        }
+
+        // Pre-stop and post-stop moving speeds must NOT collapse to 0.0 m/s
+        for (i in 5 until 36) {
+            assertTrue("Pre-stop moving speed collapsed at $i: ${smoothed[i].speedMps}", smoothed[i].speedMps > 4.0)
+        }
+        for (i in 185 until 215) {
+            assertTrue("Post-stop moving speed collapsed at $i: ${smoothed[i].speedMps}", smoothed[i].speedMps > 4.0)
+        }
+    }
+
+    // TST-FIL-027.3 (Bounce 1/3): NaN speedMps / wheelSpeedMps must not bypass ZUPT or poison EKF
+    @Test
+    fun testNonFiniteSpeedAndWheelSpeed_doesNotBypassZuptOrPoisonEkf_tstFil027_3() {
+        val samples = mutableListOf<RawOdometrySample>()
+        var tMs = 4_000_000L
+        var east = 0.0
+        for (i in 0 until 15) {
+            val (lat, lon) = ExtendedRtsOdometrySmoother.enuToLatLng(east, 0.0, originLat, originLon)
+            val isStop = i in 5..9
+            samples.add(
+                RawOdometrySample(
+                    timestampMs = tMs,
+                    latitude = lat,
+                    longitude = lon,
+                    speedMps = when {
+                        i == 0 -> Double.NaN
+                        isStop -> 0.0
+                        else -> 5.0
+                    },
+                    bearingDeg = 90.0,
+                    accuracyMeters = if (isStop) 50.0 else 3.0,
+                    worldYawRateRadPerSec = 0.0,
+                    wheelSpeedMps = if (isStop || i == 12) Double.NaN else null
+                )
+            )
+            tMs += 1000L
+            if (!isStop) east += 5.0
+        }
+
+        val smoothed = ExtendedRtsOdometrySmoother.smoothSamples(samples, initialHeadingRad = 0.0)
+        assertEquals(15, smoothed.size)
+        for (i in smoothed.indices) {
+            val p = smoothed[i]
+            assertTrue("Speed finite at $i", p.speedMps.isFinite())
+            assertTrue("Lat finite at $i", p.latitude.isFinite())
+            assertTrue("Lon finite at $i", p.longitude.isFinite())
+            assertTrue("DeltaDist finite at $i", p.deltaDistanceMeters.isFinite())
+            if (i in 5..9) {
+                assertEquals("NaN wheelSpeedMps must not bypass ZUPT at $i", 0.0, p.speedMps, 1e-9)
+                assertEquals("NaN wheelSpeedMps stop deltaDistance must be 0.0 at $i", 0.0, p.deltaDistanceMeters, 1e-9)
+            }
+        }
+    }
+
+    // TST-FIL-028.4: Carriage-aware ERTS stationary pinning (tolerates 0.18 m/s GPS jitter) & handlebar vs pocket scaling
+    @Test
+    fun testCarriageModeAwareErtsReplay_pinsStationaryJitterAndAdaptsGyroScaling_tstFil028_4() {
+        val samples = mutableListOf<RawOdometrySample>()
+        var tMs = 5_000_000L
+        var east = 0.0
+
+        // 0..19: Bike Front Pocket riding East at 6 m/s with strong thigh yaw alias
+        for (i in 0 until 20) {
+            val (lat, lon) = ExtendedRtsOdometrySmoother.enuToLatLng(east, 0.0, originLat, originLon)
+            val yaw = 0.65 * kotlin.math.sin(2.0 * PI * 0.25 * i)
+            samples.add(
+                RawOdometrySample(
+                    timestampMs = tMs,
+                    latitude = lat,
+                    longitude = lon,
+                    speedMps = 6.0,
+                    bearingDeg = 90.0,
+                    accuracyMeters = 4.0,
+                    worldYawRateRadPerSec = yaw,
+                    carriageMode = PhoneCarriageMode.BIKE_FRONT_POCKET
+                )
+            )
+            tMs += 1000L
+            east += 6.0
+        }
+
+        // 20..34: Stationary bakery counter with 0.18 m/s GPS drift jitter (above 0.05 raw threshold, below 0.25!)
+        val (stopLat, stopLon) = ExtendedRtsOdometrySmoother.enuToLatLng(east, 0.0, originLat, originLon)
+        for (i in 20 until 35) {
+            samples.add(
+                RawOdometrySample(
+                    timestampMs = tMs,
+                    latitude = stopLat,
+                    longitude = stopLon,
+                    speedMps = 0.18,
+                    bearingDeg = null,
+                    accuracyMeters = 18.0,
+                    worldYawRateRadPerSec = 0.0,
+                    carriageMode = PhoneCarriageMode.STATIONARY
+                )
+            )
+            tMs += 1000L
+        }
+
+        // 35..54: Remount cycling in Bike Handlebar mode
+        for (i in 35 until 55) {
+            val (lat, lon) = ExtendedRtsOdometrySmoother.enuToLatLng(east, 0.0, originLat, originLon)
+            samples.add(
+                RawOdometrySample(
+                    timestampMs = tMs,
+                    latitude = lat,
+                    longitude = lon,
+                    speedMps = 7.0,
+                    bearingDeg = 90.0,
+                    accuracyMeters = 3.0,
+                    worldYawRateRadPerSec = 0.0,
+                    carriageMode = PhoneCarriageMode.BIKE_HANDLEBAR
+                )
+            )
+            tMs += 1000L
+            east += 7.0
+        }
+
+        val smoothed = ExtendedRtsOdometrySmoother.smoothSamples(samples, initialHeadingRad = 0.0)
+        assertEquals(55, smoothed.size)
+        for (i in 20 until 35) {
+            assertEquals("Explicit STATIONARY mode must pin 0.18 m/s GPS jitter at $i", 0.0, smoothed[i].speedMps, 1e-9)
+            assertEquals("Explicit STATIONARY stop deltaDistance must be 0.0 at $i", 0.0, smoothed[i].deltaDistanceMeters, 1e-9)
+        }
+        assertTrue("Handlebar post-stop riding speed must recover cleanly", smoothed[50].speedMps > 5.0)
+    }
 }

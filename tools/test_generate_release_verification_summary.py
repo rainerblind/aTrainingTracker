@@ -23,6 +23,8 @@ from generate_release_verification_summary import (
     collect_unit_test_summary,
     compile_deviations,
     generate_release_verification_summary,
+    main,
+    normalize_release_tag,
     parse_args,
     render_markdown_summary,
 )
@@ -468,6 +470,178 @@ class TestGenerateReleaseVerificationSummary(unittest.TestCase):
         self.assertIn("[ INFO / NON-GATING ]", content)
         self.assertIn("System Verification Protocol Sign-Off Summary", content)
         self.assertIn("Deviations Requiring Human Approval", content)
+
+    def test_normalize_release_tag_canonical_and_existing_override(self):
+        """TST-PRO-074.1: Normalize V<ver>__<code> tags while respecting explicit existing raw dossier dirs."""
+        self.assertEqual(
+            normalize_release_tag("V5.0.0__273", repo_root=self.test_dir),
+            ("V5.0.0__273", "V5.0.0", "273"),
+        )
+        self.assertEqual(
+            normalize_release_tag("V5.0.0", repo_root=self.test_dir),
+            ("V5.0.0", "V5.0.0", None),
+        )
+        raw_dir = os.path.join(self.test_dir, "docs", "releases", "V5.0.0__273")
+        os.makedirs(raw_dir, exist_ok=True)
+        self.assertEqual(
+            normalize_release_tag("V5.0.0__273", repo_root=self.test_dir),
+            ("V5.0.0__273", "V5.0.0__273", "273"),
+        )
+
+    def test_collect_unit_test_summary_raw_tag_zip_priority_and_fallback(self):
+        """TST-PRO-074.2: Check raw-tag JUnit archive first, then fall back to dossier-tag archive."""
+        evidence_dir = os.path.join(self.test_dir, "build-evidence")
+        os.makedirs(evidence_dir, exist_ok=True)
+        missing_dir = os.path.join(self.test_dir, "nonexistent")
+
+        fallback_zip = os.path.join(evidence_dir, "junit-test-results-V5.0.0.zip")
+        with zipfile.ZipFile(fallback_zip, "w") as z:
+            z.writestr("TEST-Fallback.xml", '<testsuite name="F" tests="2" failures="0" errors="0" skipped="0" time="0.2"/>')
+
+        res_fallback = collect_unit_test_summary(
+            self.test_dir, "V5.0.0__273", results_dir=missing_dir, dossier_tag="V5.0.0"
+        )
+        self.assertTrue(res_fallback["available"])
+        self.assertEqual(res_fallback["total_tests"], 2)
+
+        raw_zip = os.path.join(evidence_dir, "junit-test-results-V5.0.0__273.zip")
+        with zipfile.ZipFile(raw_zip, "w") as z:
+            z.writestr("TEST-Raw.xml", '<testsuite name="R" tests="4" failures="0" errors="0" skipped="0" time="0.4"/>')
+
+        res_raw = collect_unit_test_summary(
+            self.test_dir, "V5.0.0__273", results_dir=missing_dir, dossier_tag="V5.0.0"
+        )
+        self.assertTrue(res_raw["available"])
+        self.assertEqual(res_raw["total_tests"], 4)
+
+    def test_collect_coverage_summary_error_prefix_and_cat3_cat4_keys(self):
+        """TST-PRO-074.3: Catch ERROR: Gate violated: diagnostics, fallback on gate_ok=False, and read exact cat3/cat4 keys."""
+        mock_report = {
+            "summary": {
+                "total_reqs": 100,
+                "reqs_with_tst": 80,
+                "req_tst_coverage_pct": 80.0,
+                "total_tsts": 100,
+                "tsts_with_code": 70,
+                "tst_code_coverage_pct": 70.0,
+                "total_code_tsts": 75,
+                "code_tags_with_spec": 70,
+                "code_tags_without_spec": 5,
+                "code_spec_match_pct": 93.33,
+                "tsts_cited_back": 88,
+                "bidirectional_coverage_pct": 88.0,
+            },
+            "category_1_reqs_without_tst": {"gap_count": 20, "gap_items": ["REQ-X"]},
+            "category_2_tsts_without_code": {"gap_count": 30, "gap_items": ["TST-X"]},
+            "category_3_code_tags_without_spec": {"gap_count": 5, "gap_items": ["TST-ORPHAN"]},
+            "category_4_tsts_not_cited_back": {"gap_count": 12, "gap_items": ["TST-UNBACKED"]},
+        }
+        error_diag = ["ERROR: Gate violated: REQ-TST coverage 80.00% is below threshold 90.00%."]
+
+        with patch("generate_release_verification_summary.calculate_traceability_coverage", return_value=mock_report), \
+             patch("generate_release_verification_summary.verify_coverage_thresholds", return_value=(False, error_diag)):
+            cov = collect_coverage_summary(self.test_dir, min_req_tst_coverage=90.0)
+            self.assertTrue(cov["available"])
+            self.assertFalse(cov["gate_passed"])
+            self.assertEqual(cov["categories"]["cat3"]["gap_count"], 5)
+            self.assertEqual(cov["categories"]["cat4"]["gap_count"], 12)
+            self.assertTrue(any("ERROR: Gate violated:" in d for d in cov["deviations"]))
+
+        # Even if verify_coverage_thresholds returns empty/unprefixed diagnostics with gate_ok=False, never pass silently
+        with patch("generate_release_verification_summary.calculate_traceability_coverage", return_value=mock_report), \
+             patch("generate_release_verification_summary.verify_coverage_thresholds", return_value=(False, [])):
+            cov_fallback = collect_coverage_summary(self.test_dir, min_req_tst_coverage=90.0)
+            self.assertFalse(cov_fallback["gate_passed"])
+            self.assertEqual(len(cov_fallback["deviations"]), 1)
+
+    def test_collect_coverage_summary_subprocess_nonzero_json(self):
+        """TST-PRO-074.3: Subprocess fallback parses stdout JSON even when exit code is 1 on threshold breach."""
+        mock_report = {
+            "summary": {
+                "total_reqs": 50,
+                "reqs_with_tst": 20,
+                "req_tst_coverage_pct": 40.0,
+                "total_tsts": 50,
+                "tsts_with_code": 25,
+                "tst_code_coverage_pct": 50.0,
+                "code_tags_without_spec": 3,
+                "bidirectional_coverage_pct": 40.0,
+            },
+            "category_3_code_tags_without_spec": {"gap_count": 3, "gap_items": ["TST-999"]},
+            "category_4_tsts_not_cited_back": {"gap_count": 7, "gap_items": ["TST-888"]},
+            "gate_result": {
+                "passed": False,
+                "diagnostics": ["ERROR: Gate violated: REQ-TST coverage 40.00% is below threshold 50.00%."],
+            },
+        }
+        with patch("generate_release_verification_summary.calculate_traceability_coverage", None), \
+             patch("generate_release_verification_summary.subprocess.run") as mock_run:
+            mock_run.return_value.returncode = 1
+            mock_run.return_value.stdout = json.dumps(mock_report)
+            mock_run.return_value.stderr = ""
+            cov = collect_coverage_summary(self.test_dir, min_req_tst_coverage=50.0)
+            self.assertTrue(cov["available"])
+            self.assertFalse(cov["gate_passed"])
+            self.assertEqual(cov["categories"]["cat3"]["gap_count"], 3)
+            self.assertEqual(cov["categories"]["cat4"]["gap_count"], 7)
+            self.assertTrue(any("ERROR: Gate violated:" in d for d in cov["deviations"]))
+
+    def test_end_to_end_canonical_tag_and_error_gate_exit_code(self):
+        """TST-PRO-074.1 / TST-PRO-074.4 / TST-PRO-074.5: Canonical V5.0.0__273 resolves V5.0.0 dossier and blocks on ERROR gate."""
+        rel_dir = os.path.join(self.test_dir, "docs", "releases", "V5.0.0")
+        os.makedirs(rel_dir, exist_ok=True)
+        with open(os.path.join(rel_dir, "sys_verification_record.md"), "w") as f:
+            f.write("""# Record
+**Overall Verdict**: **PASS**
+| `SYS-VRF-001` | T1 | R1 | Env | PASS | Notes |
+| `SYS-VRF-002` | T2 | R2 | Env | PASS | Notes |
+| `SYS-VRF-003` | T3 | R3 | Env | PASS | Notes |
+| `SYS-VRF-004` | T4 | R4 | Env | PASS | Notes |
+| `SYS-VRF-005` | T5 | R5 | Env | PASS | Notes |
+| `SYS-VRF-006` | T6 | R6 | Env | PASS | Notes |
+| `SYS-VRF-007` | T7 | R7 | Env | PASS | Notes |
+| `SYS-VRF-008` | T8 | R8 | Env | PASS | Notes |
+* **Product Owner Physical Field Attestation**: PO Lead Date: 2026-11-12
+* **System Verification Engineer**: QA Lead Date: 2026-11-12
+* **Process Owner / Quality Gatekeeper**: Lead Date: 2026-11-12
+""")
+
+        evidence_dir = os.path.join(self.test_dir, "build-evidence")
+        os.makedirs(evidence_dir, exist_ok=True)
+        with zipfile.ZipFile(os.path.join(evidence_dir, "junit-test-results-V5.0.0__273.zip"), "w") as z:
+            z.writestr("TEST-A.xml", '<testsuite name="A" tests="10" failures="0" errors="0" skipped="0" time="1.0"/>')
+
+        passing_report = {
+            "summary": {"req_tst_coverage_pct": 100.0, "tst_code_coverage_pct": 100.0, "code_tags_without_spec": 0, "bidirectional_coverage_pct": 100.0},
+            "category_1_reqs_without_tst": {"gap_count": 0},
+            "category_2_tsts_without_code": {"gap_count": 0},
+            "category_3_code_tags_without_spec": {"gap_count": 0},
+            "category_4_tsts_not_cited_back": {"gap_count": 0},
+        }
+        with patch("generate_release_verification_summary.calculate_traceability_coverage", return_value=passing_report), \
+             patch("generate_release_verification_summary.verify_coverage_thresholds", return_value=(True, ["PASS: OK"])):
+            rc = main(["--tag", "V5.0.0__273", "--commit", "deadbeef", "--repo-root", self.test_dir, "--fail-on-deviations"])
+            self.assertEqual(rc, 0)
+
+        out_file = os.path.join(rel_dir, "verification_summary.md")
+        self.assertTrue(os.path.isfile(out_file))
+        self.assertFalse(os.path.exists(os.path.join(self.test_dir, "docs", "releases", "V5.0.0__273")))
+        with open(out_file, "r") as f:
+            content = f.read()
+        self.assertIn("**Release Tag**: `V5.0.0__273`", content)
+        self.assertIn("**Version Code**: `273`", content)
+        self.assertIn("**Release Dossier**: `docs/releases/V5.0.0/`", content)
+        self.assertIn("PASS (READY FOR RELEASE)", content)
+
+        # Now simulate ERROR: Gate violated: and verify non-zero exit + BLOCKED
+        with patch("generate_release_verification_summary.calculate_traceability_coverage", return_value=passing_report), \
+             patch("generate_release_verification_summary.verify_coverage_thresholds", return_value=(False, ["ERROR: Gate violated: below threshold"])):
+            rc_fail = main(["--tag", "V5.0.0__273", "--commit", "deadbeef", "--repo-root", self.test_dir, "--fail-on-deviations"])
+            self.assertEqual(rc_fail, 1)
+        with open(out_file, "r") as f:
+            blocked_content = f.read()
+        self.assertIn("BLOCKED / REQUIRES HUMAN APPROVAL", blocked_content)
+        self.assertIn("ERROR: Gate violated: below threshold", blocked_content)
 
 
 if __name__ == "__main__":

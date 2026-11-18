@@ -47,6 +47,7 @@ class ActivityTypeTest {
             assertTrue("${activity.name} must contain HRV_SDNN", sensors.contains(SensorType.HRV_SDNN))
             assertTrue("${activity.name} must contain PHONE_BATTERY", sensors.contains(SensorType.PHONE_BATTERY))
             assertTrue("${activity.name} must contain BATTERY_REMAINING_TIME", sensors.contains(SensorType.BATTERY_REMAINING_TIME))
+            assertTrue("${activity.name} must contain ACTIVITY_AND_CARRIAGE_MODE", sensors.contains(SensorType.ACTIVITY_AND_CARRIAGE_MODE))
         }
     }
 

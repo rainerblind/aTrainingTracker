@@ -1,14 +1,14 @@
 # Living Requirements: Engineering Process, Stability & Architecture (Part 2 of 2)
 
 **Document ID**: `DOC-REQ-PRO-P2`  
-**Version**: 1.0.16  
+**Version**: 1.0.28  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `process_stability_part2`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Requirements**: 71
+**Total Requirements**: 72
 
 ---
 
@@ -464,33 +464,34 @@
 - **Type**: Non-Functional
 - **Verification Method**: Unit / Review
 - **Implementation**: `tools/generate_release_verification_summary.py`, `tools/test_generate_release_verification_summary.py`, `.agents/skills/release-manager/SKILL.md`, `docs/releases/README.md`
-- **Rationale**: Under ASPICE SWE.6 BP5 (Finding A-11, updated for `ATT-8157` release gate honesty), release decisions must be based on recorded, baseline-controlled verification evidence. A standalone generator script SHALL consolidate unit/integration test counts/results, bidirectional requirement-to-test traceability matrices, optional informational simulator records (when present), and hardware-in-the-loop system verification protocol sign-off records (SYS.5) into an authoritative Markdown summary per release tag (`docs/releases/<tag>/verification_summary.md`), explicitly highlighting all deviations requiring human approval:
-  1. *Automated Release Verification Summary CLI (`REQ-PRO-074.1`, tools/generate_release_verification_summary.py)*:
-     • `tools/generate_release_verification_summary.py` SHALL provide a command-line interface accepting `--tag <TAG>` (e.g. `V5.0.0__2026111201`), optional `--commit <SHA>` (defaulting to current HEAD), optional `--out <PATH>` (defaulting to `docs/releases/<tag>/verification_summary.md`), and optional threshold parameters (`--min-req-tst-coverage`, `--min-tst-code-coverage`, `--min-bidirectional-coverage`).
+- **Rationale**: Under ASPICE SWE.6 BP5 (Finding A-11, updated for `ATT-8157` release gate honesty and `ATT-8200` gate/key/tag-path remediation), release decisions must be based on recorded, baseline-controlled verification evidence. A standalone generator script SHALL consolidate unit/integration test counts/results, bidirectional requirement-to-test traceability matrices, optional informational simulator records (when present), and hardware-in-the-loop system verification protocol sign-off records (SYS.5) into an authoritative Markdown summary per release dossier (`docs/releases/<dossier_tag>/verification_summary.md`), explicitly highlighting all deviations requiring human approval:
+  1. *Automated Release Verification Summary CLI & Tag Normalization (`REQ-PRO-074.1` [Verified (ATT-8200)], tools/generate_release_verification_summary.py)*:
+     • `tools/generate_release_verification_summary.py` SHALL provide a command-line interface accepting `--tag <TAG>` (either `V<versionName>` or canonical CI tag `V<versionName>__<versionCode>`, e.g. `V5.0.0__273`), optional `--commit <SHA>` (defaulting to current HEAD), optional `--out <PATH>` (defaulting to `docs/releases/<dossier_tag>/verification_summary.md`), and optional threshold parameters (`--min-req-tst-coverage`, `--min-tst-code-coverage`, `--min-bidirectional-coverage`, `--max-code-without-spec`).
+     • When `--tag` follows `V<versionName>__<versionCode>`, the generator SHALL normalize the dossier folder to `V<versionName>` (`docs/releases/V<versionName>/`, unless `docs/releases/<raw_tag>/` explicitly exists) while recording the full raw release tag, extracted `versionCode`, and resolved dossier folder in the summary header.
   2. *Unit & Regression Test Evidence Aggregation (`REQ-PRO-074.2`, tools/generate_release_verification_summary.py)*:
-     • The generator SHALL aggregate total unit/integration test count, passed, failed, and skipped tests from `app/build/test-results/testDebugUnitTest/` or test archive files, and reference the versioned JUnit test archive artifact (`build-evidence/junit-test-results-<tag>.zip` per ATT-6137).
-  3. *Bidirectional REQ-TST Traceability Matrix Aggregation (`REQ-PRO-074.3`, tools/generate_release_verification_summary.py)*:
-     • The generator SHALL query and embed bidirectional requirement-to-test coverage data via `tools/verify_requirement_governance.py --coverage-json` (per ATT-6122), presenting REQ-to-TST coverage %, TST-to-code coverage %, and bidirectional coverage metrics.
-  4. *System Verification Status & Non-Blocking Legacy Simulator Summary (`REQ-PRO-074.4`, tools/generate_release_verification_summary.py)*:
-     • The generator SHALL parse and gate on SYS.5 System Verification Protocol sign-off records (`docs/releases/<tag>/sys_verification_record.md` per `ATT-6167`). `collect_sys4_summary()` SHALL treat `docs/releases/<tag>/system_integration_results.json` as **optional non-blocking simulator/legacy telemetry** (raising zero missing-file deviation and never gating or falsely certifying Android app SYS.4 pass status if absent or legacy).
-  5. *Open Deviations & Human Approval Gating (`REQ-PRO-074.5`, tools/generate_release_verification_summary.py)*:
-     • The generator SHALL evaluate whether any unit/integration test failure, missing SYS.5 evidence, or coverage below configured thresholds exists, and enumerate them under an explicit `Deviations Requiring Human Approval` section, assigning an overall status of `PASS (READY FOR RELEASE)` or `BLOCKED / REQUIRES HUMAN APPROVAL`.
+     • The generator SHALL aggregate total unit/integration test count, passed, failed, and skipped tests from `app/build/test-results/testDebugUnitTest/` or test archive files, checking raw-tag `build-evidence/junit-test-results-<raw_tag>.zip` first (matching CI workflow artifact naming) with fallback to `build-evidence/junit-test-results-<dossier_tag>.zip` (per ATT-6137).
+  3. *Bidirectional REQ-TST Traceability Matrix Aggregation (`REQ-PRO-074.3` [Verified (ATT-8200)], tools/generate_release_verification_summary.py)*:
+     • The generator SHALL query and embed bidirectional requirement-to-test coverage data via `tools/verify_requirement_governance.py --coverage-json` (per ATT-6122), reading exact `TraceabilityCoverageReport.to_dict()` keys (`category_1_reqs_without_tst`, `category_2_tsts_without_code`, `category_3_code_tags_without_spec`, `category_4_tsts_not_cited_back`) and parsing `stdout` JSON cleanly even when subprocess fallback exits `1` on a threshold failure.
+  4. *System Verification Status & Non-Blocking Legacy Simulator Summary (`REQ-PRO-074.4` [Verified (ATT-8200)], tools/generate_release_verification_summary.py)*:
+     • The generator SHALL parse and gate on SYS.5 System Verification Protocol sign-off records (`docs/releases/<dossier_tag>/sys_verification_record.md` per `ATT-6167`, resolved via normalized dossier tag). `collect_sys4_summary()` SHALL treat `docs/releases/<dossier_tag>/system_integration_results.json` as **optional non-blocking simulator/legacy telemetry** (raising zero missing-file deviation and never gating or falsely certifying Android app SYS.4 pass status if absent or legacy).
+  5. *Open Deviations & Human Approval Gating (`REQ-PRO-074.5` [Verified (ATT-8200)], tools/generate_release_verification_summary.py)*:
+     • The generator SHALL evaluate whether any unit/integration test failure, missing/incomplete SYS.5 evidence, or coverage gate failure exists—capturing **both** `"ERROR:"` (e.g. `"ERROR: Gate violated: ..."`) and `"FAIL:"` diagnostics from `verify_coverage_thresholds()` plus a fallback deviation whenever `gate_ok` is `False`—enumerate all violations under `Deviations Requiring Human Approval`, assign `BLOCKED / REQUIRES HUMAN APPROVAL` (or `PASS (READY FOR RELEASE)` when empty), and exit non-zero under `--fail-on-deviations`.
 - **Requirement Archaeology & Chesterton's Fence Audit**:
   1. *Original Requirement ID & Target*: `REQ-PRO-074` (`REQ-PRO-074.1`–`REQ-PRO-074.5`). Targets `tools/generate_release_verification_summary.py`, `tools/test_generate_release_verification_summary.py`, `.agents/skills/release-manager/SKILL.md`, and `docs/releases/README.md`.
-  2. *Historical Origin & Commit Trace*: Sprint 2026-46.4 via `ATT-6138` (`ATT-6119`), building on `ATT-6137`, `ATT-6122`, `ATT-6166`, `ATT-6167`, `ATT-6169`; `REQ-PRO-074.4` updated in Sprint `2026-11-17_01_Früh` via `ATT-8157` (`REQ-PRO-112`).
-  3. *Root Reason for Existing Formulation*: `collect_sys4_summary()` previously flagged absent `system_integration_results.json` as a blocking release deviation and rendered simulator self-tests as `[ PASS ]` SYS.4 evidence.
-  4. *Preservation of Core Invariants*: Preserves unit test, traceability coverage, and SYS.5 sign-off blocking gates, pure Python 3 stdlib CLI, and zero `app/src/main/` runtime changes.
+  2. *Historical Origin & Commit Trace*: Sprint 2026-46.4 via `ATT-6138` (`dc7b3d61`), building on `ATT-6137`, `ATT-6122`, `ATT-6166`, `ATT-6167`, `ATT-6169`; `REQ-PRO-074.4` updated in Sprint `2026-11-17_01_Früh` via `ATT-8157` (`1750ab64`, `REQ-PRO-112`); sharded in `ATT-8206` (`f55c9fee`); refined in `ATT-8200`.
+  3. *Root Reason for Existing Formulation*: `collect_coverage_summary()` originally filtered only `FAIL:` prefixes and queried stale `category_3_code_without_spec`/`category_4_tst_without_req_citation` keys, while tag lookup assumed `docs/releases/<tag>/` matched raw Git tags rather than `V<versionName>`.
+  4. *Preservation of Core Invariants*: Preserves unit test, traceability coverage, and SYS.5 sign-off blocking gates, `REQ-PRO-112` non-gating simulator rules, raw-tag `junit-test-results-<raw_tag>.zip` CI compatibility, `ReleaseManagerSystemEvidenceContractTest.kt` constraints, pure Python 3 stdlib CLI, and zero `app/src/main/` runtime changes.
 - **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `verify_coverage_thresholds()` emitting `"ERROR: Gate violated: ..."` or non-zero `category_3_code_tags_without_spec` / `category_4_tsts_not_cited_back` counts,
+  • *When* `tools/generate_release_verification_summary.py --fail-on-deviations` executes (direct or subprocess fallback),
+  • *Then* `overall_status` is `BLOCKED / REQUIRES HUMAN APPROVAL`, the script exits non-zero, and exact `cat3`/`cat4` gap data is preserved.
+  • *Given* canonical Git tag `V5.0.0__273` and dossier directory `docs/releases/V5.0.0/`,
+  • *When* `tools/generate_release_verification_summary.py --tag V5.0.0__273` executes,
+  • *Then* it reads `docs/releases/V5.0.0/sys_verification_record.md`, writes `docs/releases/V5.0.0/verification_summary.md` with full tag + `versionCode` metadata, and finds `junit-test-results-V5.0.0__273.zip` when present.
   • *Given* valid unit test evidence, traceability coverage, and signed `sys_verification_record.md` without `system_integration_results.json`,
   • *When* `tools/generate_release_verification_summary.py --tag <TAG>` executes,
-  • *Then* `docs/releases/<tag>/verification_summary.md` reports `PASS (READY FOR RELEASE)` with zero missing-SYS.4 deviations.
-  • *Given* any failing unit/integration test, missing/incomplete `sys_verification_record.md`, or coverage below threshold,
-  • *When* the summary is generated,
-  • *Then* it is explicitly listed under `Deviations Requiring Human Approval` with overall status `BLOCKED / REQUIRES HUMAN APPROVAL`.
-  • *Given* `tools/test_generate_release_verification_summary.py`,
-  • *When* executed via `unittest`,
-  • *Then* 100% of unit tests pass.
-- **Invariants**: Zero Android production runtime code changes in `app/src/main/`.
+  • *Then* `docs/releases/<dossier_tag>/verification_summary.md` reports `PASS (READY FOR RELEASE)` with zero missing-SYS.4 deviations, and `tools/test_generate_release_verification_summary.py` passes 100%.
+- **Invariants**: Zero Android production runtime code changes in `app/src/main/`; `Localization Parity: N/A - no UI strings`.
 
 ### REQ-PRO-075: Requirement Shards Tests Field Format & Machine-Readable Traceability Integrity [Verified]
 - **Tests**: `TST-PRO-075`
@@ -1441,7 +1442,7 @@
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit / Review
-- **Implementation**: `tools/generate_test_evidence.py`, `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ReleaseCiAndLintConfigContractTest.kt`, `docs/management/cm_plan.md`, `.agents/rules/aspice_governance.md`
+- **Implementation**: `tools/generate_test_evidence.py`, `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `tools/hoechstmass/tools/generate_test_evidence.py`, `tools/hoechstmass/tools/jira_util.py`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ReleaseCiAndLintConfigContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/HoechstmassToolingContractTest.kt`, `docs/management/cm_plan.md`, `.agents/rules/aspice_governance.md`
 - **Rationale**: Under ASPICE 4.0 Major Finding M7 (SWE.4 BP5, SWE.5 BP7, SWE.6 BP5, GP 2.2.3), test execution results must be baseline-controlled, immutable, and versioned in git rather than pointing to ephemeral local build directories via a symlink (`docs/engineering/test_results`). Furthermore, while Kover enforces coverage floors in Gradle, measured coverage percentages (lines and branches) across project and critical packages must be committed and baselined alongside test totals, failures, and per-TST pass/fail results.
 - **Description**:
   1. *Canonical Test Evidence Store & Layout (`REQ-PRO-100.1`)*:
@@ -1456,26 +1457,28 @@
        - Critical Tracking subsystem (`com.atrainingtracker.trainingtracker.tracking`).
        - Critical Filters subsystem (`com.atrainingtracker.trainingtracker.filters`).
        - Critical Sensors subsystem (`com.atrainingtracker.trainingtracker.sensors`).
-  4. *Tooling Automation & Governance Gating (`REQ-PRO-100.4`)*:
-     • `tools/jira_util.py export-test-evidence [--sprint <ID>] [--release <TAG>]` SHALL automate generating and committing evidence records during Ceremony 2 (Sprint Review) and release pipelines.
+  4. *Tooling Automation, Sibling-Scoped Import & Mirror Parity (`REQ-PRO-100.4` [Verified (ATT-8875)])*:
+     • `tools/jira_util.py export-test-evidence [--sprint <ID>] [--release <TAG>] [--out-dir <DIR>] [--no-kover]` (and its Höchstmaß mirror `tools/hoechstmass/tools/jira_util.py`) SHALL automate generating and committing evidence records during Ceremony 2 (Sprint Review) and release pipelines.
+     • Both `tools/jira_util.py` and `tools/hoechstmass/tools/jira_util.py` `export_test_evidence()` SHALL resolve `generate_test_evidence` strictly from their own sibling directory (`os.path.dirname(os.path.abspath(__file__))`, verifying any cached `sys.modules["generate_test_evidence"]` path matches before use and loading via `importlib.util` if mismatched), preventing cross-directory `sys.modules` cache collisions.
+     • `tools/hoechstmass/tools/generate_test_evidence.py` and `tools/hoechstmass/tools/jira_util.py` SHALL support `skip_kover: bool = False` / `--no-kover` in parity with root `tools/` (`aec078bc`) while preserving `HoechstmassToolingContractTest.kt` project-agnostic invariants.
      • `tools/verify_requirement_governance.py --check-test-evidence` SHALL verify that evidence records exist, are non-empty, and match the active sprint/release without missing data or unresolved test failures.
      • `ReleaseCiAndLintConfigContractTest.kt` SHALL assert that `docs/engineering/test_results` symlink is retired and `docs/engineering/test_evidence/` is present and tracked.
 - **Requirement Archaeology & Chesterton's Fence Audit**:
-  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-100`. Targets `tools/generate_test_evidence.py`, `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `ReleaseCiAndLintConfigContractTest.kt`, `cm_plan.md`, and `.agents/rules/aspice_governance.md`.
-  2. *Historical Origin & Commit Trace*: Sprint 2026-46.8 via ticket `ATT-8144` under Epic `ATT-8138` (ASPICE 4.0 Audit Remediation Finding M7).
-  3. *Root Reason for Existing Formulation*: Prior `test_results` build symlink was unversioned, ephemeral, and absent from git configuration management (SUP.8).
-  4. *Preservation of Core Invariants*: Replaces ephemeral build symlink with persistent, baseline-controlled markdown and JSON evidence in `docs/engineering/test_evidence/`; zero Android runtime code modifications; Rule 3 Human Gate intact.
+  1. *Original Requirement ID & Target*: `REQ-PRO-100` (`REQ-PRO-100.4`). Targets `tools/jira_util.py`, `tools/hoechstmass/tools/jira_util.py`, `tools/hoechstmass/tools/generate_test_evidence.py`, `tools/test_jira_accounts.py`, and `tools/hoechstmass/tools/test_hoechstmass_tools.py`.
+  2. *Historical Origin & Commit Trace*: Introduced in Sprint 2026-46.8 via `ATT-8144` (`6bd56da5`) under Epic `ATT-8138`; `aec078bc` added `skip_kover` to root `tools/` without updating `tools/hoechstmass/tools/` or guarding `sys.modules["generate_test_evidence"]`; remediated in `ATT-8875`.
+  3. *Root Reason for Existing Formulation*: Bare `from generate_test_evidence import ...` supported both direct CLI (`python3 tools/jira_util.py`) and package imports, but shared an un-namespaced `sys.modules` key between `tools/` and `tools/hoechstmass/tools/`.
+  4. *Preservation of Core Invariants*: Preserves CLI and package import modes, `HoechstmassToolingContractTest.kt` project-agnostic rules, `ReleaseCiAndLintConfigContractTest.kt`, zero `app/src/main/` edits, and Rule 3 Human Gate.
 - **Acceptance Criteria (Given-When-Then)**:
-  • *Given* the repository tree,
-  • *When* `docs/engineering/test_results` is inspected,
-  • *Then* it is no longer a symbolic link to ephemeral build outputs, and `docs/engineering/test_evidence/` exists as a canonical tracked directory.
+  • *Given* `sys.modules["generate_test_evidence"]` pre-populated by `tools/hoechstmass/tools/generate_test_evidence.py` (or a module lacking `skip_kover`),
+  • *When* `tools/jira_util.py export_test_evidence(...)` executes in `tools/test_jira_accounts.py`,
+  • *Then* it resolves sibling `tools/generate_test_evidence.py` cleanly without raising `TypeError` on `skip_kover`.
+  • *Given* `tools/hoechstmass/tools/jira_util.py export_test_evidence(..., skip_kover=True)` and `tools/hoechstmass/tools/generate_test_evidence.py --no-kover`,
+  • *When* executed in isolation or via `HoechstmassToolingContractTest`,
+  • *Then* `coverage_summary["measured"]` is `False`, all Höchstmaß tests pass, and zero ATT-proprietary constants appear in `tools/hoechstmass/tools/`.
   • *Given* a sprint completion or release candidate build,
   • *When* `tools/generate_test_evidence.py` or `tools/jira_util.py export-test-evidence` is executed,
-  • *Then* `docs/engineering/test_evidence/<target>.md` and `.json` are generated containing commit SHA, timestamp, test metrics, per-TST status, and Kover line/branch coverage per critical package.
-  • *Given* generated test evidence files,
-  • *When* `tools/verify_requirement_governance.py --check-test-evidence` executes,
-  • *Then* it validates evidence integrity and reports PASS if complete or fails with exit code 1 if missing or failing.
-- **Invariants**: Zero Android runtime bytecode changes; Gradle Kover verification thresholds in `app/build.gradle` remain unchanged; POSIX flock mutual exclusion and Rule 3 human gates preserved.
+  • *Then* `docs/engineering/test_evidence/<target>.md` and `.json` are generated and `verify_requirement_governance.py --check-test-evidence` passes.
+- **Invariants**: Zero Android runtime bytecode changes; `HoechstmassToolingContractTest.kt` project-agnostic invariants preserved; `Localization Parity: N/A - no UI strings`.
 
 ---
 
@@ -1701,23 +1704,23 @@
 
 ---
 
-### REQ-PRO-108: Technical Role Separation for Agent Credentials & Git Commit Identity (ATT-8151) [Verified]
+### REQ-PRO-108: Technical Role Separation for Agent Credentials & Git Commit Identity (ATT-8151, ATT-8876) [Verified]
 - **Tests**: `TST-PRO-108`
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit / Review
-- **Implementation**: `tools/jira_util.py`, `tools/parallel_sprint_lock.py`, `tools/locked_build_merge.py`, `tools/test_jira_accounts.py`, `docs/management/risk_register.md`
-- **Rationale**: ASPICE 4.0 Finding M4 (SUP.1 Quality Assurance, GP 2.1.4, SUP.8 Configuration Management, BP4) identified that role separation between implementer and reviewer existed only at the prompt level. Any agent could assume any role via `--as`, `qa` had no credential mapping, and all commits were authored under a single human identity without agent or model provenance. Binding role selection to subagent identity, mapping dedicated QA credentials, appending verifiable commit trailers, and documenting residual single-OS user risks establishes technical and auditable role independence.
+- **Implementation**: `tools/jira_util.py`, `tools/parallel_sprint_lock.py`, `tools/hoechstmass/tools/parallel_sprint_lock.py`, `tools/locked_build_merge.py`, `tools/test_jira_accounts.py`, `tools/test_flock_serialization.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`, `docs/management/risk_register.md`
+- **Rationale**: ASPICE 4.0 Finding M4 (SUP.1 Quality Assurance, GP 2.1.4, SUP.8 Configuration Management, BP4) identified that role separation between implementer and reviewer existed only at the prompt level. Any agent could assume any role via `--as`, `qa` had no credential mapping, and all commits were authored under a single human identity without agent or model provenance. Binding role selection to subagent identity, mapping dedicated QA credentials, appending verifiable commit trailers across both root and Höchstmaß mirrors, isolating cross-directory module imports, and documenting residual single-OS user risks establishes technical and auditable role independence.
 - **Description**:
   1. *Subagent Identity & Role Binding (`REQ-PRO-108.1`)*: When the `JIRA_ACTOR` environment variable is defined in the subagent environment, `tools/jira_util.py` SHALL strictly reject any mismatched CLI `--as <role>` override with a role mismatch error. When `JIRA_ACTOR` is unset (manual developer CLI or coordinator invocation), `--as coordinator` and manual `--as <role>` calls SHALL continue to operate without rejection.
   2. *Dedicated QA Role Credential Mapping & Account Independence (`REQ-PRO-108.2`)*: `tools/jira_util.py` SHALL map role `qa` to dedicated credentials (`JIRA_QA_USER`, `JIRA_QA_TOKEN`), support `.env.jira.qa`, include `qa` in `get_config` role credential filtering, and enforce that `agent2` and `qa` operate under distinct Jira user accounts (different account IDs or usernames).
-  3. *Producing Agent Identity & Reviewer Git Commit Trailers (`REQ-PRO-108.3`)*: `tools/parallel_sprint_lock.py` (`_merge_ticket_impl` / `--merge-ticket`) SHALL append standard git trailers (`Agent-Role:`, `Agent-Model:`, `Reviewed-by:`) to atomic squash merge commits, auto-detecting values from environment variables (`AGENT_ROLE`, `AGENT_MODEL`, `REVIEWED_BY`, `JIRA_ACTOR`) or CLI arguments, verifiable by automated unit checks.
+  3. *Producing Agent Identity & Reviewer Git Commit Trailers + Cross-Directory Isolation (`REQ-PRO-108.3`)*: Both `tools/parallel_sprint_lock.py` and its project-agnostic Höchstmaß mirror `tools/hoechstmass/tools/parallel_sprint_lock.py` SHALL implement `format_commit_with_trailers()`, `validate_commit_trailers()`, and `_merge_ticket_impl()` / `run_merge_ticket()` / CLI `--agent-role`, `--agent-model`, `--reviewed-by` trailer options using generic defaults (`"agent1"`, `"flash"`, `"Agent 2 (Reviewer)"`) so atomic squash merge commits append `Agent-Role:`, `Agent-Model:`, and `Reviewed-by:` without breaking `HoechstmassToolingContractTest`. Root test callers (`tools/test_jira_accounts.py` and `tools/test_flock_serialization.py`) MUST resolve sibling `tools/parallel_sprint_lock.py` deterministically even when `sys.modules["parallel_sprint_lock"]` or `sys.path` is pre-populated by `tools/hoechstmass/tools/`.
   4. *Single-OS User Residual Risk Documentation (`REQ-PRO-108.4`)*: `docs/management/risk_register.md` SHALL formally register the residual risk of local subagent process co-location under a single operating system user account and document the layered mitigations (token isolation, role binding, commit trailers, CI gating).
 - **Requirement Archaeology & Chesterton's Fence Audit**:
-  1. *Original Requirement ID & Target*: Extends `REQ-PRO-060` (Composite CLI role operations) and `REQ-PRO-041` (Parallel sprint lock & atomic commit merging) via net-new `REQ-PRO-108`. Targets `tools/jira_util.py`, `tools/parallel_sprint_lock.py`, and `docs/management/risk_register.md`.
-  2. *Historical Origin & Commit Trace*: `ATT-4290` (`REQ-PRO-060`), `ATT-7025` (`REQ-PRO-041`), `ATT-8150` (`REQ-PRO-107`), `ATT-8151`.
-  3. *Root Reason for Existing Formulation*: Permissive `--as` and uniform commit authorship were established for single-developer convenience prior to multi-agent role separation.
-  4. *Preservation of Core Invariants*: Standalone manual CLI usage when `JIRA_ACTOR` is unset remains fully functional; POSIX flock locking and `ANT-Android-SDKs` submodule integrity (`160000 commit 0e8cea714a231fb9565170d4ed01eafa868f9798`) are preserved.
+  1. *Original Requirement ID & Target*: Extends `REQ-PRO-060` (Composite CLI role operations) and `REQ-PRO-041` (Parallel sprint lock & atomic commit merging) via `REQ-PRO-108` (`REQ-PRO-108.3`). Targets `tools/jira_util.py`, `tools/parallel_sprint_lock.py`, `tools/hoechstmass/tools/parallel_sprint_lock.py`, `tools/test_jira_accounts.py`, `tools/test_flock_serialization.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`, and `docs/management/risk_register.md`.
+  2. *Historical Origin & Commit Trace*: `ATT-4290` (`REQ-PRO-060`), `ATT-7025` (`REQ-PRO-041`), `ATT-8150` (`REQ-PRO-107`), `ATT-8151` (`f0dfe76d`), `ATT-8207` (`3b390f63`); cross-directory `sys.modules` shadowing pattern matches `ATT-8875` (`bc1a50c7`), refined under `ATT-8876`.
+  3. *Root Reason for Existing Formulation*: `ATT-8151` added trailer helpers only to root `tools/parallel_sprint_lock.py`, and root tests relied on bare `import parallel_sprint_lock` assuming unshadowed `sys.path` / `sys.modules`.
+  4. *Preservation of Core Invariants*: Standalone manual CLI usage when `JIRA_ACTOR` is unset remains functional; `HoechstmassToolingContractTest.kt` project-agnostic checks (zero `ATT-`/proprietary IDs, stdlib-only), POSIX flock locking, and `ANT-Android-SDKs` submodule (`160000 commit 0e8cea714a231fb9565170d4ed01eafa868f9798`) are preserved.
 - **Acceptance Criteria (Given-When-Then)**:
   • *Given* a subagent process launched with `JIRA_ACTOR=agent1`,
   • *When* it calls `tools/jira_util.py --as agent2 gate-verdict ...`,
@@ -1728,10 +1731,13 @@
   • *Given* configured `agent2` and `qa` credentials,
   • *When* `tools/jira_util.py` resolves accounts,
   • *Then* `qa` resolves to dedicated credentials and accounts are verified distinct.
-  • *Given* a completed ticket being merged onto the sprint branch via `--merge-ticket`,
-  • *When* the atomic squash commit is created,
-  • *Then* the commit message contains valid `Agent-Role:`, `Agent-Model:`, and `Reviewed-by:` git trailers.
-- **Invariants**: Zero Android production code impact (`app/src/main/`); `ANT-Android-SDKs` untouched at `160000`; existing test fixtures and POSIX flock semantics preserved.
+  • *Given* `sys.modules["parallel_sprint_lock"]` pre-populated by an unrelated directory or `tools/hoechstmass/tools` on `sys.path[0]`,
+  • *When* `test_tst_pro_108_3_git_commit_trailers_formatting` (and `test_flock_serialization.py`) executes,
+  • *Then* it resolves sibling `tools/parallel_sprint_lock.py` cleanly without raising `AttributeError`.
+  • *Given* `tools/hoechstmass/tools/parallel_sprint_lock.py`,
+  • *When* `format_commit_with_trailers`, `validate_commit_trailers`, or `--merge-ticket` is executed,
+  • *Then* valid `Agent-Role:`, `Agent-Model:`, and `Reviewed-by:` trailers are appended and validated while `HoechstmassToolingContractTest` passes with zero proprietary strings.
+- **Invariants**: Zero Android production code impact (`app/src/main/`); `ANT-Android-SDKs` untouched at `160000`; `HoechstmassToolingContractTest.kt` invariants preserved; existing test fixtures and POSIX flock semantics preserved; `Localization Parity: N/A - no UI strings`.
 
 ---
 
@@ -2374,6 +2380,31 @@
 
 ---
 
+### REQ-PRO-132: Behavioral Compose UI Testing Mandate & Reflection-Only UI Test Ratchet (`SWE.4` `CL 2`) (ATT-8198) [Verified]
+- **Tests**: `TST-PRO-132`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `app/src/test/java/com/atrainingtracker/trainingtracker/build/UiReflectionOnlyTestAuditContractTest.kt`, `app/ui-reflection-baseline.txt`, `app/src/test/java/com/atrainingtracker/trainingtracker/ui/settings/radar/RadarSettingsSectionTest.kt`, `docs/coding_standards.md`, `.agents/skills/stage4-implementation/SKILL.md`, `.agents/skills/stage5-verification/SKILL.md`
+- **Rationale**: Following `REQ-TST-002` (`ATT-4028`) and `REQ-PRO-049` (`ATT-6564`–`ATT-6569`), `189` test files across `trainingtracker/ui/` (`178`) and `banalservice/ui/` (`11`) rely on `Class.forName("...Kt")` JVM reflection without `createComposeRule()`, and `RadarSettingsSectionTest.kt` uses tautological `TuningConfig` assertions (including retired `RadarLightControlMode` controls) while claimed as a Compose UI test (`ATT-7991_walkthrough.md:29`). Enforcing behavioral `createComposeRule()` verification and ratcheting out new reflection-only UI tests closes ASPICE 4.0 Gap #1 (`SWE.4 BP1/BP2/BP3`, `SUP.1 BP3`, `ATT-8198`, refining `REQ-TST-002` and `REQ-PRO-049` under Epic `ATT-8138`):
+- **Description**:
+  1. *Reflection-Only UI Test Ratchet & Baseline (`REQ-PRO-132.1`, refining `REQ-PRO-049`)*: `UiReflectionOnlyTestAuditContractTest.kt` SHALL scan all `.kt`/`.java` files under `app/src/test/java/` whose relative path matches `(?:^|/)ui/` (explicitly covering both `com/atrainingtracker/trainingtracker/ui/` [`178`] and `com/atrainingtracker/banalservice/ui/` [`11`]) and flag any file invoking multiline-aware `Class.forName("...Kt")` without `createComposeRule`. Existing legacy entries SHALL be isolated in `app/ui-reflection-baseline.txt` (`189` entries ceiling), enforcing `(detected - baseline).isEmpty()` and `(baseline - detected).isEmpty()` (zero stale entries), while scanning zero `app/src/main/` files (`REQ-PRO-049.1` preserved: `22` guards, `105` source-reading baseline).
+  2. *Protection of Legitimate Architectural & Excision Reflection Guards (`REQ-PRO-132.2`, refining `REQ-TST-002`)*: The ratchet SHALL NOT flag `build/` contract suites (`AndroidViewModelReflectionContractTest`, `InterfaceSignatureDriftContractTest`, `AdrCompletenessContractTest`), non-`*Kt` classpath/decoupling checks (`CoreDependencyAlignmentTest`, `WorkoutRepositoryDeleteTest`), or tests that execute `createComposeRule()` alongside signature checks (`RadarLightQuickSwitchSheetTest`, `SensorSourceDialogContractTest`).
+  3. *Coding Standard & Stage 4/5 Behavioral Compose Mandate (`REQ-PRO-132.3`)*: `docs/coding_standards.md` §5.4, `.agents/skills/stage4-implementation/SKILL.md`, and `.agents/skills/stage5-verification/SKILL.md` SHALL explicitly distinguish legitimate excision/ABI reflection (`build/` & non-`*Kt`) from prohibited reflection-only UI tests and mandate Robolectric/instrumented `createComposeRule()` behavioral assertions (semantics, conditional visibility, user callbacks) whenever `@Composable` screens/dialogs/sheets are created or modified.
+  4. *`RadarSettingsSectionTest` Behavioral Remediation (`REQ-PRO-132.4`, strengthening `TST-CON-031.5b` & `TST-TRK-062.5`)*: `RadarSettingsSectionTest.kt` SHALL retire stale `RadarLightControlMode` / `TuningConfig` tautologies (`:38-129`) and compose `RadarSettingsSection` via `@RunWith(RobolectricTestRunner::class)` + `createComposeRule()`, asserting conditional visibility (`FULL_SCREEN` hides `radar_overlay_clear_mode`; `radarSpatialAudioEnabled` reveals spatial sub-controls), retired-control absence, and interactive callback/DataStore dispatches, while preserving existing 9-locale XML budget/disambiguation tests (`:131-226`) with `0` `src/main/` reads.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new `REQ-PRO-132` (`REQ-PRO-132.1`–`REQ-PRO-132.4`), refining `REQ-TST-002` (`docs/coding_standards.md` §5.4) and `REQ-PRO-049` (`SourceTextReadingAuditContractTest.kt`), and remediating `TST-CON-031.5b` / `TST-TRK-062.5` (`RadarSettingsSectionTest.kt`).
+  2. *Historical Origin & Commit Trace*: `REQ-TST-002` (`ATT-4028`) prescribed `Class.forName`/`declaredMethods` to replace UI `File.readText()` greps; `REQ-PRO-049` (`ATT-6186`, `c91e62b6`) & `ATT-6564`–`ATT-6569` (`12f5f47c`, `1298a643`, `ef50449a`, `3b5a5b41`) eliminated `src/main` reads but normalized `*Kt` reflection stubs in `ui/`.
+  3. *Root Reason for Existing Formulation*: Robolectric Compose `createComposeRule()` was not yet standardized across `ui/` at `ATT-4028`, while reflection protected architectural excision/decoupling invariants.
+  4. *Preservation of Core Invariants*: Preserves all `build/` & non-`*Kt` excision/ABI reflection tests, preserves `SourceTextReadingAuditContractTest` (`22` guards, `105` baseline, `0` new `src/main/` reads), preserves `RadarSettingsSectionTest` XML locale checks (`:131-226`), and makes zero edits to `app/src/main/` or `values*/strings*.xml`.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* a new test under `trainingtracker/ui/` or `banalservice/ui/` calling `Class.forName("...Kt")` without `createComposeRule()`, *When* `UiReflectionOnlyTestAuditContractTest` runs, *Then* the audit fails unless the file is on the `189`-entry `app/ui-reflection-baseline.txt` (and fails on stale baseline entries or synthetic tripwires).
+  • *Given* `AndroidViewModelReflectionContractTest`, `InterfaceSignatureDriftContractTest`, `AdrCompletenessContractTest`, `CoreDependencyAlignmentTest`, and `RadarLightQuickSwitchSheetTest`, *When* `UiReflectionOnlyTestAuditContractTest` executes, *Then* all pass with `0` false positives.
+  • *Given* `RadarSettingsSectionTest.kt`, *When* `:app:testDebugUnitTest --tests "*.RadarSettingsSectionTest"` executes, *Then* `RadarSettingsSection` renders via `createComposeRule()`, verifies conditional visibility, retired-control absence, interactive callbacks, and all preserved 9-locale XML checks with `0` `src/main/` reads.
+- **Invariants**: Zero `app/src/main/` edits; `ANT-Android-SDKs` untouched; `SourceTextReadingAuditContractTest` (`22` guards, `105` baseline) preserved; `LEGITIMATE_GOVERNANCE_GUARDS == 22`; `docs/coding_standards.md` §1.1–§1.5 & `AspiceSweAuditContractTest` skill markers preserved; `Localization Parity: N/A - no UI strings`.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -2395,3 +2426,15 @@
 | `1.0.14` | 2026-11-18 | AI Agent (`ATT-8201`) | `ATT-8201` | Added `[Planned]` `REQ-PRO-131` (`REQ-PRO-131.1`–`REQ-PRO-131.5`: `9` net-new `SYSREQ-*` capabilities `SYSREQ-TRK-*` `007`–`013` & `SYSREQ-DEX-*` `007`–`008`, `SYS.3` & `system_context.md` sync, Varia UUID & battery budget reconciliation, `GRANDFATHERED_SYSREQS` removal, Stage 1/2 `SYS.2/SYS.3` skill impact gate). |
 | `1.0.15` | 2026-11-18 | AI Agent (`ATT-8201`) | `ATT-8201` | Promoted `REQ-PRO-131` to `[Implemented]` in Stage 4 (`sysreq_live_tracking.md` `SYSREQ-TRK-007..013`, `sysreq_data_exchange.md` `SYSREQ-DEX-007..008`, `docs/system_requirements.md`, `system_context.md`, `system_architecture.md` `v1.2.0`, `sys_verification_protocol.md` `v1.2.0`, `system_software_traceability.md` `v1.2.0`, `verify_requirement_governance.py`, Stage 1/2 `SKILL.md`s, and 6 `System*ContractTest.kt` suites). |
 | `1.0.16` | 2026-11-18 | AI Agent (`ATT-8201`) | `ATT-8201` | Promoted `REQ-PRO-131` to `[Verified]` after Stage 5 verification (`13/13` Gradle contract suites `79/79` PASS, `test_hoechstmass_tools.py` `37/37` OK, `test_verify_requirement_governance.py` `104/105` with `TestGrandfatheredSysreqsRemoved` PASS & pre-existing `TST-TRK-087` fail, `21/21` `SYSREQ`s `100%` covered, `28/28` shards `<= 4,000` lines, governance `exit 0`). |
+| `1.0.17` | 2026-11-18 | AI Agent (`ATT-8200`) | `ATT-8200` | Refined `REQ-PRO-074` (`[Planned]`, `REQ-PRO-074.1`/`.3`/`.4`/`.5`) for `ERROR:`/`FAIL:` threshold gating, `category_3_code_tags_without_spec`/`category_4_tsts_not_cited_back` JSON keys, subprocess non-zero JSON parsing, and `V<ver>__<code>` dossier normalization. |
+| `1.0.18` | 2026-11-18 | AI Agent (`ATT-8200`) | `ATT-8200` | Promoted `REQ-PRO-074` to `[Implemented]` in Stage 4 (`tools/generate_release_verification_summary.py`, `docs/releases/README.md`, `tools/test_generate_release_verification_summary.py`). |
+| `1.0.19` | 2026-11-18 | AI Agent (`ATT-8200`) | `ATT-8200` | Promoted `REQ-PRO-074` to `[Verified]` after Stage 5 verification (`test_generate_release_verification_summary.py` `22/22` OK, `ReleaseManagerSystemEvidenceContractTest` `4/4` PASS, governance `exit 0`). |
+| `1.0.20` | 2026-11-18 | AI Agent (`ATT-8875`) | `ATT-8875` | Refined `REQ-PRO-100` (`[Planned]`, `REQ-PRO-100.4`) for sibling-scoped `generate_test_evidence` import isolation and `skip_kover`/`--no-kover` Höchstmaß mirror parity. |
+| `1.0.21` | 2026-11-18 | AI Agent (`ATT-8875`) | `ATT-8875` | Promoted `REQ-PRO-100` to `[Implemented]` in Stage 4 (`tools/jira_util.py`, `tools/hoechstmass/tools/jira_util.py`, `tools/hoechstmass/tools/generate_test_evidence.py`, `tools/test_jira_accounts.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`). |
+| `1.0.22` | 2026-11-18 | AI Agent (`ATT-8875`) | `ATT-8875` | Promoted `REQ-PRO-100` to `[Verified]` after Stage 5 verification (`tools.test_jira_accounts` `102/102` OK, `tools/hoechstmass/tools` `62/62` OK, `tools.test_generate_test_evidence` `8/8` OK, `HoechstmassToolingContractTest` `4/4` PASS, governance `exit 0`). |
+| `1.0.23` | 2026-11-18 | AI Agent (`ATT-8876`) | `ATT-8876` | Refined `REQ-PRO-108` (`[Planned]`, `REQ-PRO-108.3`) for sibling-scoped `parallel_sprint_lock` import isolation against cross-directory `sys.modules` shadowing and Höchstmaß `parallel_sprint_lock.py` commit trailer parity. |
+| `1.0.24` | 2026-11-18 | AI Agent (`ATT-8876`) | `ATT-8876` | Promoted `REQ-PRO-108` to `[Implemented]` in Stage 4 (`tools/hoechstmass/tools/parallel_sprint_lock.py`, `tools/test_jira_accounts.py`, `tools/test_flock_serialization.py`, `tools/test_jira_datacenter.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`). |
+| `1.0.25` | 2026-11-18 | AI Agent (`ATT-8876`) | `ATT-8876` | Promoted `REQ-PRO-108` to `[Verified]` after Stage 5 verification (`tools.test_jira_accounts` + `tools.test_flock_serialization` + `tools.test_jira_datacenter` `136/136` OK, `tools/hoechstmass/tools` `63/63` OK, poisoned-cache cross-dir `78/78` OK, `HoechstmassToolingContractTest` `4/4` PASS, governance `exit 0`). |
+| `1.0.26` | 2026-11-18 | AI Agent (`ATT-8198`) | `ATT-8198` | Added `[Planned]` `REQ-PRO-132` (`REQ-PRO-132.1`–`REQ-PRO-132.4`: behavioral `createComposeRule()` UI test mandate, `189`-entry `(?:^\|/)ui/` `*Kt` reflection ratchet across `trainingtracker/ui/` + `banalservice/ui/`, `docs/coding_standards.md` §5.4 + Stage 4/5 skills update, and `RadarSettingsSectionTest` Compose remediation). |
+| `1.0.27` | 2026-11-18 | AI Agent (`ATT-8198`) | `ATT-8198` | Promoted `REQ-PRO-132` to `[Implemented]` in Stage 4 (`UiReflectionOnlyTestAuditContractTest.kt`, `app/ui-reflection-baseline.txt`, `docs/coding_standards.md` v`1.0.1` §5.4, Stage 4/5 `SKILL.md`s, `RadarSettingsSectionTest.kt`). |
+| `1.0.28` | 2026-11-18 | AI Agent (`ATT-8198`) | `ATT-8198` | Promoted `REQ-PRO-132` to `[Verified]` after Stage 5 verification (`31/31` targeted Gradle tests PASS across 5 suites, `189`-entry `(?:^\|/)ui/` baseline locked, `SourceTextReadingAuditContractTest` `4/4` PASS, governance `exit 0`). |

@@ -293,6 +293,20 @@ def render_markdown_evidence(
     return "\n".join(md)
 
 
+def should_skip_kover(
+    target_id: str,
+    target_type: str = "sprint",
+    kover_xml_path: Optional[str] = None,
+    skip_kover: bool = False,
+) -> bool:
+    """Skip Kover XML parsing when explicitly requested via skip_kover/--no-kover."""
+    if skip_kover:
+        return True
+    if kover_xml_path:
+        return False
+    return False
+
+
 def generate_test_evidence(
     target_id: str,
     target_type: str = "sprint",
@@ -303,6 +317,7 @@ def generate_test_evidence(
     out_dir: Optional[str] = None,
     commit_sha: Optional[str] = None,
     timestamp: Optional[str] = None,
+    skip_kover: bool = False,
 ) -> Tuple[str, str, Dict[str, Any]]:
     """
     Main test evidence generator function (REQ-PRO-100).
@@ -336,9 +351,17 @@ def generate_test_evidence(
     })
     tst_results = parsed_junit.get("by_tst", {})
 
-    # 2. Parse Kover XML Report
-    effective_kover_xml = kover_xml_path or os.path.join(root, "app", "build", "reports", "kover", "reportDebug.xml")
-    coverage_summary = parse_kover_xml_report(effective_kover_xml)
+    # 2. Parse Kover XML Report (unless skipped via skip_kover/--no-kover)
+    if should_skip_kover(target_id=target_id, target_type=target_type, kover_xml_path=kover_xml_path, skip_kover=skip_kover):
+        coverage_summary = {
+            "measured": False,
+            "reason": "Kover skipped (--no-kover / skip_kover=True)",
+            "global": {"line_percent": None, "branch_percent": None},
+            "critical_packages": {},
+        }
+    else:
+        effective_kover_xml = kover_xml_path or os.path.join(root, "app", "build", "reports", "kover", "reportDebug.xml")
+        coverage_summary = parse_kover_xml_report(effective_kover_xml)
 
     # 3. Assemble JSON Payload
     tst_clean_results: Dict[str, Any] = {}
@@ -439,6 +462,11 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
         help="Path to Kover XML report (default: app/build/reports/kover/reportDebug.xml).",
     )
     parser.add_argument(
+        "--no-kover",
+        action="store_true",
+        help="Skip reading Kover XML coverage.",
+    )
+    parser.add_argument(
         "--out-dir",
         type=str,
         default=None,
@@ -474,6 +502,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         kover_xml_path=args.kover_xml,
         out_dir=args.out_dir,
         commit_sha=args.commit,
+        skip_kover=args.no_kover,
     )
     return 0
 

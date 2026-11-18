@@ -81,8 +81,8 @@ class WorkoutDetailHeaderActionsComposeTest {
         const val WIDTH_360_DP = 360
         const val ICON_SIZE_DP = 32f
         const val DP_TOLERANCE = 1.5f
-        const val PREVIEW_HOST_TAG = "att_8097_header_actions_preview"
-        const val PREVIEW_PNG_REL_PATH = "docs/engineering/walkthroughs/img/ATT-8097_header_actions_preview.png"
+        const val PREVIEW_HOST_TAG = "att_8079_header_actions_preview"
+        const val PREVIEW_PNG_REL_PATH = "docs/engineering/walkthroughs/img/ATT-8079_header_actions_preview.png"
         const val PNG_QUALITY = 100
         const val PREVIEW_PADDING_DP = 12
         const val PREVIEW_GAP_DP = 12
@@ -262,6 +262,45 @@ class WorkoutDetailHeaderActionsComposeTest {
     }
 
     @Test
+    fun workoutHeader_nonOverlapReservationOn360dp_withCustomActions() {
+        val longTitle = "Long Alpine Ridge Climb With Custom Header Actions Slot"
+        val customActionTag = "custom_header_action_pill"
+        composeTestRule.setContent {
+            ATrainingTrackerTheme(darkTheme = false) {
+                WithScreenWidth(WIDTH_360_DP) {
+                    WorkoutHeader(
+                        data = sampleHeaderData(name = longTitle),
+                        menuEnabled = false,
+                        canDelete = false,
+                        onClicked = null,
+                        onExport = {},
+                        onSaveAsRoute = {},
+                        onDeleteRequest = {},
+                        onOpenTabsConfig = {},
+                        onEditWorkout = {},
+                        actions = {
+                            Surface(modifier = Modifier.testTag(customActionTag)) {
+                                Text("EXT-1", modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
+                            }
+                        }
+                    )
+                }
+            }
+        }
+
+        composeTestRule.waitForIdle()
+        val titleBounds = composeTestRule.onNodeWithText(longTitle).getBoundsInRoot()
+        val pillBounds = composeTestRule.onNodeWithTag(WorkoutHeaderTestTags.GLOBAL_TABS_PILL, useUnmergedTree = true).getBoundsInRoot()
+        val customBounds = composeTestRule.onNodeWithTag(customActionTag, useUnmergedTree = true).getBoundsInRoot()
+
+        assertTrue(
+            "Title right (${titleBounds.right.value}) must not overlap global pill left (${pillBounds.left.value}) when custom actions() are present",
+            titleBounds.right.value <= pillBounds.left.value + DP_TOLERANCE
+        )
+        assertTrue("Custom action must stay within 360dp width", customBounds.right.value <= WIDTH_360_DP.toFloat())
+    }
+
+    @Test
     fun workoutClusterSelectionItem_hidesScoreBracketsWhenNaN() {
         val cluster = WorkoutCluster(
             id = 9L,
@@ -340,6 +379,30 @@ class WorkoutDetailHeaderActionsComposeTest {
                             onChangeCluster = {},
                             onEditWorkout = {},
                             onShareWorkout = {}
+                        )
+                    }
+                    WithScreenWidth(WIDTH_360_DP) {
+                        WorkoutHeader(
+                            data = sampleHeaderData(
+                                name = "Long Alpine Ridge Climb With Custom Header Actions Slot"
+                            ),
+                            menuEnabled = false,
+                            canDelete = false,
+                            onClicked = null,
+                            onExport = {},
+                            onSaveAsRoute = {},
+                            onDeleteRequest = {},
+                            onOpenTabsConfig = {},
+                            onEditWorkout = {},
+                            actions = {
+                                Surface(color = MaterialTheme.colorScheme.secondaryContainer) {
+                                    Text(
+                                        text = "EXT-1",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                    )
+                                }
+                            }
                         )
                     }
                 }

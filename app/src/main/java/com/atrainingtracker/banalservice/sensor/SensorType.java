@@ -37,6 +37,7 @@ import com.atrainingtracker.banalservice.sensor.formater.IntegerFormatter;
 import com.atrainingtracker.banalservice.sensor.formater.IntensityFactorFormatter;
 import com.atrainingtracker.banalservice.sensor.formater.MyFormatter;
 import com.atrainingtracker.banalservice.sensor.formater.PaceFormatter;
+import com.atrainingtracker.banalservice.sensor.formater.PhoneCarriageModeFormatter;
 import com.atrainingtracker.banalservice.sensor.formater.PowerToWeightFormatter;
 import com.atrainingtracker.banalservice.sensor.formater.SignedIntegerFormatter;
 import com.atrainingtracker.banalservice.sensor.formater.SpeedFormatter;
@@ -483,7 +484,13 @@ public enum SensorType
      * Internal unit: {@code ms} ({@code DOUBLE}, FIT export bounds {@code [50.0, 1000.0]}); sentinel: {@code null} -> {@code "--"};
      * display: {@link IntegerFormatter} ({@code ms}); export: FIT {@code stanceTime} ({@code ms}), CSV raw {@code ms}.
      */
-    GROUND_CONTACT_TIME(SensorCategory.SPEED_PACE_AND_DISTANCE, R.string.ground_contact_time, R.string.ground_contact_time_short, R.string.units_time_ms, SensorValueType.DOUBLE, new IntegerFormatter(), true, "ms");
+    GROUND_CONTACT_TIME(SensorCategory.SPEED_PACE_AND_DISTANCE, R.string.ground_contact_time, R.string.ground_contact_time_short, R.string.units_time_ms, SensorValueType.DOUBLE, new IntegerFormatter(), true, "ms"),
+    /**
+     * Activity and smartphone carriage regime classified by IMU, orientation, barometer, and speed fusion.
+     * Internal unit: {@code dimensionless} ({@code INTEGER}, {@code -1..7}: {@code UNKNOWN(-1)}, {@code STATIONARY(0)}, {@code WALKING_TRANSITION(1)}, {@code BIKE_HANDLEBAR(2)}, {@code BIKE_JERSEY_BACK(3)}, {@code BIKE_FRONT_POCKET(4)}, {@code RUN_WAIST_HIP(5)}, {@code RUN_BICEP_ARM(6)}, {@code RUN_HANDHELD(7)}); sentinel: {@code null}/{@code NaN} -> {@code "--"};
+     * display: {@link PhoneCarriageModeFormatter} (localized label); export: CSV raw integer code.
+     */
+    ACTIVITY_AND_CARRIAGE_MODE(SensorCategory.SYSTEM_ENVIRONMENT_AND_DIAGNOSTICS, null, R.string.activity_and_carriage_mode, R.string.activity_and_carriage_mode_short, R.string.units_none, SensorValueType.INTEGER, new PhoneCarriageModeFormatter(), false, "dimensionless");
 
     // max bit = 118
 
@@ -553,7 +560,7 @@ public enum SensorType
             case ACCURACY, LONGITUDE, LATITUDE -> R.drawable.ic_location;
             case ALTITUDE -> R.drawable.ic_altitude;
             case DISTANCE_m -> R.drawable.ic_distance;
-            case SPEED_mps -> R.drawable.ic_speed;
+            case SPEED_mps, ACTIVITY_AND_CARRIAGE_MODE -> R.drawable.ic_speed;
             case CADENCE, VERTICAL_OSCILLATION, GROUND_CONTACT_TIME -> R.drawable.ic_cadence;
             case HR, RR_INTERVAL, HRV_RMSSD, HRV_DFA_A1, HRV_ARTIFACT_RATE, HRV_SDNN, LIVE_HR_DRIFT -> R.drawable.ic_heart_rate;
             case POWER, POWER_TO_WEIGHT, NORMALIZED_POWER, INTENSITY_FACTOR, WORK_KJ, TSS, W_PRIME_BAL,

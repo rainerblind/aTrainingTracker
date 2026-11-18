@@ -4642,20 +4642,29 @@ def export_test_evidence(sprint_arg=None, release_arg=None, target_arg=None, out
     if target_type == "sprint" and not target_id.startswith("sprint_"):
         target_id = f"sprint_{target_id}"
 
-    try:
-        from generate_test_evidence import generate_test_evidence as gen_fn
-    except ImportError:
+    sibling_path = os.path.abspath(
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "generate_test_evidence.py")
+    )
+    gen_fn = None
+    cached_mod = sys.modules.get("generate_test_evidence")
+    if cached_mod is not None and os.path.abspath(getattr(cached_mod, "__file__", "") or "") == sibling_path:
+        gen_fn = cached_mod.generate_test_evidence
+    if gen_fn is None:
         try:
-            from tools.generate_test_evidence import generate_test_evidence as gen_fn
+            from tools import generate_test_evidence as _pkg_gte
+            if os.path.abspath(getattr(_pkg_gte, "__file__", "") or "") == sibling_path:
+                gen_fn = _pkg_gte.generate_test_evidence
         except ImportError:
-            import importlib.util
-            spec = importlib.util.spec_from_file_location(
-                "generate_test_evidence",
-                os.path.join(os.path.dirname(__file__), "generate_test_evidence.py"),
-            )
-            mod = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(mod)
-            gen_fn = mod.generate_test_evidence
+            pass
+    if gen_fn is None:
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(
+            "_att_sibling_generate_test_evidence",
+            sibling_path,
+        )
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        gen_fn = mod.generate_test_evidence
 
     repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
     if os.path.basename(os.path.dirname(__file__)) == "tools" and os.path.basename(os.path.dirname(os.path.dirname(__file__))) == "hoechstmass":

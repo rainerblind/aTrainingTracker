@@ -24,13 +24,18 @@ import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteStatement
 import android.util.Log
+import com.atrainingtracker.banalservice.devices.BarometricAltitudeFilter
 import com.atrainingtracker.banalservice.odometry.ExtendedRtsAltitudeSlopeSmoother
 import com.atrainingtracker.banalservice.odometry.ExtendedRtsOdometrySmoother
+import com.atrainingtracker.banalservice.odometry.PhoneCarriageMode
 import com.atrainingtracker.banalservice.odometry.RawAltitudeSample
 import com.atrainingtracker.banalservice.odometry.RawOdometrySample
 import com.atrainingtracker.banalservice.odometry.SmoothedAltitudeSlopePoint
 import com.atrainingtracker.banalservice.odometry.SmoothedOdometryPoint
 import com.atrainingtracker.banalservice.sensor.SensorType
+import kotlin.math.abs
+import kotlin.math.min
+import kotlin.math.sqrt
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager.WorkoutSamplesDbHelper
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
 import com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils
@@ -67,13 +72,61 @@ object ErtsPostWorkoutRecomputer {
         SensorType.SPEED_mps.name,
         SensorType.PACE_spm.name,
         SensorType.DISTANCE_m.name,
+        SensorType.DISTANCE_m_LAP.name,
         SensorType.BEARING.name,
         SensorType.ALTITUDE.name,
         SensorType.SLOPE.name,
         SensorType.VERTICAL_SPEED.name,
         SensorType.ASCENT.name,
-        SensorType.DESCENT.name
+        SensorType.DESCENT.name,
+        SensorType.ACTIVITY_AND_CARRIAGE_MODE.name
     )
+
+    private const val POLYLINE_SIMPLIFY_TOLERANCE_M = 10.0
+
+    // 9-locale defaults for R.string.devices_altitude_from_pressure + ATT-5073 legacy names
+    // (mirrors WorkoutSamplesDatabaseManager.resolveBarometricDeviceNames).
+    private val BARO_DEVICE_NAME_TOKENS = listOf(
+        "Altitude from Pressure", "Höhe aus Luftdruck", "Altitud por presión",
+        "Altitude par pression", "Altitudine da pressione", "気圧からの高度",
+        "Hoogte uit luchtdruk", "Wysokość z ciśnienia", "Altitude por pressão",
+        "Barometer",
+        "Air Pressure", "Luftdruck", "Presión Aire", "Pression Air",
+        "Pressione Aria", "気圧", "Luchtdruk", "Ciśnienie pow.", "Pressão do Ar"
+    )
+
+    private fun isBarometricAltitudeColumn(colName: String): Boolean {
+        if (!colName.startsWith("ALTITUDE (", ignoreCase = true)) return false
+        if (colName.contains("DEM", ignoreCase = true) ||
+            colName.contains("Topografische", ignoreCase = true) ||
+            colName.contains("GPS", ignoreCase = true) ||
+            colName.contains("Google Fused", ignoreCase = true) ||
+            colName.contains("att_fused", ignoreCase = true)
+        ) {
+            return false
+        }
+        return BARO_DEVICE_NAME_TOKENS.any { token -> colName.contains(token, ignoreCase = true) }
+    }
+
+    private fun isWheelSpeedColumn(colName: String): Boolean {
+        if (!colName.startsWith("${SensorType.SPEED_mps.name} (", ignoreCase = true)) return false
+        if (colName.contains("RADAR", ignoreCase = true) ||
+            colName.contains("YAW", ignoreCase = true) ||
+            colName.contains("CADENCE", ignoreCase = true) ||
+            colName.contains("ATT", ignoreCase = true) ||
+            colName.contains("GPS", ignoreCase = true) ||
+            colName.contains("Google", ignoreCase = true)
+        ) {
+            return false
+        }
+        return colName.contains("Rad", ignoreCase = true) ||
+            colName.contains("Wheel", ignoreCase = true)
+    }
+
+    internal fun subsampleStream(values: List<Double>, stepSize: Int = WorkoutSummaries.ENCODING_STEP_SIZE): List<Double> {
+        if (values.size <= 1 || stepSize <= 1) return values
+        return values.filterIndexed { index, _ -> index % stepSize == 0 || index == values.lastIndex }
+    }
 
     const val MAX_PLAUSIBLE_SPEED_MPS = 100.0 // 360 km/h
     const val MAX_PLAUSIBLE_WORKOUT_DISTANCE_M = 1_000_000.0 // 1,000 km
@@ -177,9 +230,15 @@ object ErtsPostWorkoutRecomputer {
             val bearingIdx = cursor.getColumnIndex(SensorType.BEARING.name)
             val accIdx = cursor.getColumnIndex(SensorType.ACCURACY.name)
             val yawRateIdx = cursor.getColumnIndex(SensorType.WORLD_YAW_RATE_radps.name)
+            val carriageModeIdx = cursor.getColumnIndex(SensorType.ACTIVITY_AND_CARRIAGE_MODE.name)
             val altIdx = cursor.getColumnIndex(SensorType.ALTITUDE.name)
             val distIdx = cursor.getColumnIndex(SensorType.DISTANCE_m.name)
             val lapNrIdx = cursor.getColumnIndex(SensorType.LAP_NR.name)
+            val timeTotalIdx = cursor.getColumnIndex(SensorType.TIME_TOTAL.name)
+
+            // Look for raw 9-locale barometer altitude column for slew/median pre-filtering (REQ-FIL-027.5)
+            val baroAltColName = colNames.firstOrNull { isBarometricAltitudeColumn(it) }
+            val baroAltIdx = if (baroAltColName != null) cursor.getColumnIndex(baroAltColName) else -1
 
             // Look for reference altitude (DEM / GPS altitude device column)
             val demColName = colNames.firstOrNull { it.contains("DEM", ignoreCase = true) || it.contains("Topografische", ignoreCase = true) }
@@ -188,34 +247,94 @@ object ErtsPostWorkoutRecomputer {
             val gpsAltColName = colNames.firstOrNull { it.startsWith("ALTITUDE (GPS", ignoreCase = true) }
             val gpsAltIdx = if (gpsAltColName != null) cursor.getColumnIndex(gpsAltColName) else -1
 
-            // Look for wheel speed
-            val wheelSpeedCol = colNames.firstOrNull { it.contains("Rad", ignoreCase = true) || it.contains("Wheel", ignoreCase = true) }
+            // Look for wheel speed (strictly SPEED_mps device columns, never RADAR_THREAT_COUNT / WORLD_YAW_RATE_radps)
+            val wheelSpeedCol = colNames.firstOrNull { isWheelSpeedColumn(it) }
             val wheelSpeedIdx = if (wheelSpeedCol != null) cursor.getColumnIndex(wheelSpeedCol) else -1
 
+            var baseEpochMs: Long? = null
+            var firstTimeTotalSec: Long? = null
+            var prevTimeTotalSec: Long? = null
             var prevTs = 0L
             while (cursor.moveToNext()) {
                 val rowId = cursor.getLong(idIdx)
                 val timeStr = cursor.getString(timeIdx)
-                val ts = parseTimestampMs(timeStr) ?: (if (prevTs > 0L) prevTs + 1000L else System.currentTimeMillis())
-                prevTs = ts
+                val parsedTs = parseTimestampMs(timeStr)
+                val timeTotalSec = if (timeTotalIdx >= 0 && !cursor.isNull(timeTotalIdx)) {
+                    cursor.getLong(timeTotalIdx)
+                } else {
+                    null
+                }
 
-                val lat = if (latIdx >= 0 && !cursor.isNull(latIdx)) cursor.getDouble(latIdx) else null
-                val lon = if (lonIdx >= 0 && !cursor.isNull(lonIdx)) cursor.getDouble(lonIdx) else null
-                val speed = if (speedIdx >= 0 && !cursor.isNull(speedIdx)) cursor.getDouble(speedIdx) else null
-                val bearing = if (bearingIdx >= 0 && !cursor.isNull(bearingIdx)) cursor.getDouble(bearingIdx) else null
-                val acc = if (accIdx >= 0 && !cursor.isNull(accIdx)) cursor.getDouble(accIdx) else null
-                val yawRate = if (yawRateIdx >= 0 && !cursor.isNull(yawRateIdx)) cursor.getDouble(yawRateIdx) else null
-                val rawAlt = if (altIdx >= 0 && !cursor.isNull(altIdx)) cursor.getDouble(altIdx) else null
-                val rawDist = if (distIdx >= 0 && !cursor.isNull(distIdx)) cursor.getDouble(distIdx) else null
+                // Reconstruct monotonic timestampMs from TIME_TOTAL BEFORE barometer/ERTS filtering (REQ-FIL-027.1),
+                // re-anchoring on leading null TIME_TOTAL transitions and genuine wall-clock pause jumps while
+                // comparing parsedTs against reconstructed time so >= 6s SQLite batch-flush stalls do not falsely trip.
+                val ts = if (timeTotalSec != null) {
+                    if (firstTimeTotalSec == null) {
+                        val anchorCandidate = parsedTs ?: (if (prevTs > 0L) prevTs + 1000L else System.currentTimeMillis())
+                        val anchoredTs = if (prevTs > 0L) max(anchorCandidate, prevTs + 1000L) else anchorCandidate
+                        baseEpochMs = anchoredTs
+                        firstTimeTotalSec = timeTotalSec
+                        anchoredTs
+                    } else if (prevTimeTotalSec != null && timeTotalSec > prevTimeTotalSec && baseEpochMs != null) {
+                        val candidateReconstructed = baseEpochMs + (timeTotalSec - firstTimeTotalSec) * 1000L
+                        val effectiveReconstructed = if (prevTs > 0L) max(candidateReconstructed, prevTs + 1000L) else candidateReconstructed
+                        val wallJumpPastTimeTotal = parsedTs != null && (parsedTs - effectiveReconstructed) > 5_000L
+                        if (wallJumpPastTimeTotal) {
+                            val pausedTs = if (prevTs > 0L) max(parsedTs!!, prevTs + 1000L) else parsedTs!!
+                            baseEpochMs = pausedTs
+                            firstTimeTotalSec = timeTotalSec
+                            pausedTs
+                        } else {
+                            if (effectiveReconstructed > candidateReconstructed) {
+                                baseEpochMs = effectiveReconstructed
+                                firstTimeTotalSec = timeTotalSec
+                            }
+                            effectiveReconstructed
+                        }
+                    } else {
+                        val candidate = parsedTs ?: (if (prevTs > 0L) prevTs + 1000L else System.currentTimeMillis())
+                        if (prevTs > 0L) max(candidate, prevTs + 1000L) else candidate
+                    }
+                } else {
+                    val candidate = parsedTs ?: (if (prevTs > 0L) prevTs + 1000L else System.currentTimeMillis())
+                    if (prevTs > 0L) max(candidate, prevTs + 1000L) else candidate
+                }
+                prevTs = ts
+                if (timeTotalSec != null) {
+                    prevTimeTotalSec = timeTotalSec
+                }
+
+                val lat = if (latIdx >= 0 && !cursor.isNull(latIdx)) cursor.getDouble(latIdx).takeIf { it.isFinite() } else null
+                val lon = if (lonIdx >= 0 && !cursor.isNull(lonIdx)) cursor.getDouble(lonIdx).takeIf { it.isFinite() } else null
+                val speed = if (speedIdx >= 0 && !cursor.isNull(speedIdx)) cursor.getDouble(speedIdx).takeIf { it.isFinite() } else null
+                val bearing = if (bearingIdx >= 0 && !cursor.isNull(bearingIdx)) cursor.getDouble(bearingIdx).takeIf { it.isFinite() } else null
+                val acc = if (accIdx >= 0 && !cursor.isNull(accIdx)) cursor.getDouble(accIdx).takeIf { it.isFinite() } else null
+                val yawRate = if (yawRateIdx >= 0 && !cursor.isNull(yawRateIdx)) cursor.getDouble(yawRateIdx).takeIf { it.isFinite() } else null
+                val recordedCarriageMode = if (carriageModeIdx >= 0 && !cursor.isNull(carriageModeIdx)) {
+                    PhoneCarriageMode.fromCode(cursor.getInt(carriageModeIdx))
+                } else {
+                    null
+                }
+                val rawBaroAlt = if (baroAltIdx >= 0 && !cursor.isNull(baroAltIdx)) {
+                    cursor.getDouble(baroAltIdx).takeIf { it.isFinite() }
+                } else {
+                    null
+                }
+                val canonicalAlt = if (altIdx >= 0 && !cursor.isNull(altIdx)) {
+                    cursor.getDouble(altIdx).takeIf { it.isFinite() }
+                } else {
+                    null
+                }
+                val rawDist = if (distIdx >= 0 && !cursor.isNull(distIdx)) cursor.getDouble(distIdx).takeIf { it.isFinite() } else null
                 val lapNr = if (lapNrIdx >= 0 && !cursor.isNull(lapNrIdx)) cursor.getLong(lapNrIdx) else null
 
                 val refAlt = when {
-                    demIdx >= 0 && !cursor.isNull(demIdx) -> cursor.getDouble(demIdx)
-                    gpsAltIdx >= 0 && !cursor.isNull(gpsAltIdx) -> cursor.getDouble(gpsAltIdx)
+                    demIdx >= 0 && !cursor.isNull(demIdx) -> cursor.getDouble(demIdx).takeIf { it.isFinite() }
+                    gpsAltIdx >= 0 && !cursor.isNull(gpsAltIdx) -> cursor.getDouble(gpsAltIdx).takeIf { it.isFinite() }
                     else -> null
                 }
 
-                val wheelSpeed = if (wheelSpeedIdx >= 0 && !cursor.isNull(wheelSpeedIdx)) cursor.getDouble(wheelSpeedIdx) else null
+                val wheelSpeed = if (wheelSpeedIdx >= 0 && !cursor.isNull(wheelSpeedIdx)) cursor.getDouble(wheelSpeedIdx).takeIf { it.isFinite() } else null
 
                 result.add(
                     RawSampleRow(
@@ -227,16 +346,112 @@ object ErtsPostWorkoutRecomputer {
                         bearingDeg = bearing,
                         accuracyM = acc,
                         yawRateRadPerSec = yawRate,
-                        rawAltitude = rawAlt,
+                        rawAltitude = canonicalAlt,
                         referenceAltitude = refAlt,
                         wheelSpeedMps = wheelSpeed,
                         rawDistanceM = rawDist,
-                        lapNr = lapNr
+                        lapNr = lapNr,
+                        recordedCarriageMode = recordedCarriageMode,
+                        rawBaroAltitude = rawBaroAlt
                     )
                 )
             }
         }
-        return result
+        return resolveCarriageModesAndFilterBaro(result)
+    }
+
+    /**
+     * Resolves recorded 1-Hz [PhoneCarriageMode] entries (falling back to deterministic 1-Hz kinematic
+     * and barometric-jitter inference on legacy DBs) and pre-filters raw barometer columns using
+     * each epoch's adaptive median/slew parameters (REQ-FIL-028.4).
+     */
+    internal fun resolveCarriageModesAndFilterBaro(rows: List<RawSampleRow>): List<RawSampleRow> {
+        if (rows.isEmpty()) return rows
+        val baroFilter = BarometricAltitudeFilter()
+        val n = rows.size
+        val resolved = ArrayList<RawSampleRow>(n)
+        for (i in 0 until n) {
+            val row = rows[i]
+            val mode = row.recordedCarriageMode?.takeIf { it != PhoneCarriageMode.UNKNOWN }
+                ?: inferLegacyCarriageModeAt(rows, i)
+            val filteredAlt = when {
+                row.rawBaroAltitude != null -> {
+                    baroFilter.setFilterParameters(mode.profile.baroMaxSlewRateMps, mode.profile.baroMedianWindowSize)
+                    baroFilter.filterSlewOnly(row.rawBaroAltitude, row.timestampMs).takeIf { it.isFinite() }
+                }
+                else -> row.rawAltitude
+            }
+            resolved.add(
+                row.copy(
+                    rawAltitude = filteredAlt,
+                    effectiveCarriageMode = mode
+                )
+            )
+        }
+        return resolved
+    }
+
+    internal fun inferLegacyCarriageModeAt(rows: List<RawSampleRow>, idx: Int): PhoneCarriageMode {
+        val row = rows[idx]
+        val speed = row.speedMps?.takeIf { it.isFinite() }
+        val wheel = row.wheelSpeedMps?.takeIf { it.isFinite() }
+
+        if (speed != null && speed <= 0.05 && (wheel == null || wheel <= 0.05)) {
+            return PhoneCarriageMode.STATIONARY
+        }
+
+        val lo = max(0, idx - 3)
+        val hi = min(rows.size - 1, idx + 3)
+        var yawSumSq = 0.0
+        var yawCount = 0
+        val baros = mutableListOf<Pair<Long, Double>>()
+        for (j in lo..hi) {
+            if (abs(rows[j].timestampMs - row.timestampMs) > 4_000L) continue
+            val y = rows[j].yawRateRadPerSec
+            if (y != null && y.isFinite()) {
+                yawSumSq += y * y
+                yawCount++
+            }
+            val b = rows[j].rawBaroAltitude ?: rows[j].rawAltitude
+            if (b != null && b.isFinite()) {
+                baros.add(rows[j].timestampMs to b)
+            }
+        }
+        val yawRms = if (yawCount > 0) sqrt(yawSumSq / yawCount) else null
+        var baroSecondDiffSq = 0.0
+        var baroDiffCount = 0
+        for (k in 2 until baros.size) {
+            val dt1 = (baros[k - 1].first - baros[k - 2].first) / 1000.0
+            val dt2 = (baros[k].first - baros[k - 1].first) / 1000.0
+            if (dt1 in 0.5..3.0 && dt2 in 0.5..3.0) {
+                val vz1 = (baros[k - 1].second - baros[k - 2].second) / dt1
+                val vz2 = (baros[k].second - baros[k - 1].second) / dt2
+                val d2 = vz2 - vz1
+                baroSecondDiffSq += d2 * d2
+                baroDiffCount++
+            }
+        }
+        val baroJitterRms = if (baroDiffCount > 0) sqrt(baroSecondDiffSq / baroDiffCount) else null
+
+        if (wheel == null && speed != null && speed in 0.35..2.05 &&
+            (yawRms == null || yawRms in 0.08..0.45) && (baroJitterRms == null || baroJitterRms < 0.65)
+        ) {
+            return PhoneCarriageMode.WALKING_TRANSITION
+        }
+
+        val isMovingCycling = (wheel != null && wheel > 0.5) || (speed != null && speed > 2.2)
+        if (isMovingCycling) {
+            if ((yawRms != null && yawRms >= 0.35) || (baroJitterRms != null && baroJitterRms >= 0.65)) {
+                return PhoneCarriageMode.BIKE_FRONT_POCKET
+            }
+            if ((yawRms != null && yawRms in 0.08..0.28) || (baroJitterRms != null && baroJitterRms in 0.22..0.50)) {
+                return PhoneCarriageMode.BIKE_JERSEY_BACK
+            }
+            if (yawRms != null && yawRms < 0.06 && (baroJitterRms == null || baroJitterRms < 0.16)) {
+                return PhoneCarriageMode.BIKE_HANDLEBAR
+            }
+        }
+        return PhoneCarriageMode.UNKNOWN
     }
 
     private fun runOdometrySmoothing(rawRows: List<RawSampleRow>): List<SmoothedOdometryPoint> {
@@ -249,7 +464,8 @@ object ErtsPostWorkoutRecomputer {
                 bearingDeg = row.bearingDeg,
                 accuracyMeters = row.accuracyM,
                 worldYawRateRadPerSec = row.yawRateRadPerSec,
-                wheelSpeedMps = row.wheelSpeedMps
+                wheelSpeedMps = row.wheelSpeedMps,
+                carriageMode = row.effectiveCarriageMode
             )
         }
         return ExtendedRtsOdometrySmoother.smoothSamples(rawSamples)
@@ -265,7 +481,8 @@ object ErtsPostWorkoutRecomputer {
                 timestampMs = row.timestampMs,
                 rawAltitudeM = row.rawAltitude ?: 0.0,
                 referenceAltitudeM = row.referenceAltitude,
-                smoothedSpeedMps = speed
+                smoothedSpeedMps = speed,
+                carriageMode = row.effectiveCarriageMode
             )
         }
         return ExtendedRtsAltitudeSlopeSmoother.smooth(rawAltSamples)
@@ -290,6 +507,7 @@ object ErtsPostWorkoutRecomputer {
             if (existingColumns.contains(SensorType.SPEED_mps.name)) colsToUpdate.add(SensorType.SPEED_mps.name)
             if (existingColumns.contains(SensorType.PACE_spm.name)) colsToUpdate.add(SensorType.PACE_spm.name)
             if (existingColumns.contains(SensorType.DISTANCE_m.name)) colsToUpdate.add(SensorType.DISTANCE_m.name)
+            if (existingColumns.contains(SensorType.DISTANCE_m_LAP.name)) colsToUpdate.add(SensorType.DISTANCE_m_LAP.name)
             if (existingColumns.contains(SensorType.BEARING.name)) colsToUpdate.add(SensorType.BEARING.name)
         }
         if (smoothedAltitude != null) {
@@ -298,6 +516,11 @@ object ErtsPostWorkoutRecomputer {
             if (existingColumns.contains(SensorType.VERTICAL_SPEED.name)) colsToUpdate.add(SensorType.VERTICAL_SPEED.name)
             if (existingColumns.contains(SensorType.ASCENT.name)) colsToUpdate.add(SensorType.ASCENT.name)
             if (existingColumns.contains(SensorType.DESCENT.name)) colsToUpdate.add(SensorType.DESCENT.name)
+        }
+        if ((smoothedOdometry != null || smoothedAltitude != null) &&
+            existingColumns.contains(SensorType.ACTIVITY_AND_CARRIAGE_MODE.name)
+        ) {
+            colsToUpdate.add(SensorType.ACTIVITY_AND_CARRIAGE_MODE.name)
         }
 
         // Enforce strict canonical invariant: every column must be in whitelist and MUST NOT contain " ("
@@ -315,6 +538,8 @@ object ErtsPostWorkoutRecomputer {
             " WHERE ${WorkoutSamplesDbHelper.C_ID} = ?"
 
         var cumulativeDist = 0.0
+        var lapCumulativeDist = 0.0
+        var currentLapNr: Long? = null
 
         db.beginTransaction()
         try {
@@ -324,13 +549,21 @@ object ErtsPostWorkoutRecomputer {
                 val odom = smoothedOdometry?.getOrNull(i)
                 val alt = smoothedAltitude?.getOrNull(i)
 
+                if (row.lapNr != null) {
+                    if (currentLapNr != null && row.lapNr != currentLapNr) {
+                        lapCumulativeDist = 0.0
+                    }
+                    currentLapNr = row.lapNr
+                }
+
                 if (odom != null) {
                     cumulativeDist += odom.deltaDistanceMeters
+                    lapCumulativeDist += odom.deltaDistanceMeters
                 }
 
                 var bindIdx = 1
                 for (col in colsToUpdate) {
-                    bindColumnValue(stmt, bindIdx++, col, odom, alt, cumulativeDist, row)
+                    bindColumnValue(stmt, bindIdx++, col, odom, alt, cumulativeDist, row, lapCumulativeDist)
                 }
                 stmt.bindLong(bindIdx, row.rowId)
                 stmt.executeUpdateDelete()
@@ -349,7 +582,8 @@ object ErtsPostWorkoutRecomputer {
         odom: SmoothedOdometryPoint?,
         alt: SmoothedAltitudeSlopePoint?,
         cumulativeDist: Double,
-        row: RawSampleRow
+        row: RawSampleRow,
+        lapCumulativeDist: Double = cumulativeDist
     ) {
         val hasRawFix = ExtendedRtsOdometrySmoother.hasValidGnssFix(row.latitude, row.longitude)
         when (columnName) {
@@ -373,6 +607,9 @@ object ErtsPostWorkoutRecomputer {
             SensorType.DISTANCE_m.name -> {
                 stmt.bindDouble(bindIdx, cumulativeDist)
             }
+            SensorType.DISTANCE_m_LAP.name -> {
+                stmt.bindDouble(bindIdx, lapCumulativeDist)
+            }
             SensorType.BEARING.name -> {
                 if (odom != null && hasRawFix) stmt.bindDouble(bindIdx, odom.bearingDeg) else stmt.bindNull(bindIdx)
             }
@@ -395,6 +632,12 @@ object ErtsPostWorkoutRecomputer {
             }
             SensorType.DESCENT.name -> {
                 if (alt != null) stmt.bindDouble(bindIdx, alt.descentM) else stmt.bindNull(bindIdx)
+            }
+            SensorType.ACTIVITY_AND_CARRIAGE_MODE.name -> {
+                val persistedMode = row.recordedCarriageMode
+                    ?.takeIf { it != PhoneCarriageMode.UNKNOWN }
+                    ?: row.effectiveCarriageMode
+                stmt.bindLong(bindIdx, persistedMode.code.toLong())
             }
             else -> {
                 stmt.bindNull(bindIdx)
@@ -427,7 +670,7 @@ object ErtsPostWorkoutRecomputer {
                 } else null
             }
             if (validLatLngs.isNotEmpty()) {
-                polyline = PolyUtil.encode(validLatLngs)
+                polyline = PolyUtil.encode(PolyUtil.simplify(validLatLngs, POLYLINE_SIMPLIFY_TOLERANCE_M))
             }
 
             var cumDist = 0.0
@@ -435,7 +678,7 @@ object ErtsPostWorkoutRecomputer {
                 cumDist += pt.deltaDistanceMeters
                 cumDist
             }
-            distanceStream = NumericalEncodingUtils.encodeDoubles(distances)
+            distanceStream = NumericalEncodingUtils.encodeDoubles(subsampleStream(distances))
             totalDistance = cumDist
         }
 
@@ -446,7 +689,7 @@ object ErtsPostWorkoutRecomputer {
 
         if (smoothedAltitude != null && smoothedAltitude.isNotEmpty()) {
             val altitudes = smoothedAltitude.map { it.altitudeM }
-            altitudeStream = NumericalEncodingUtils.encodeDoubles(altitudes)
+            altitudeStream = NumericalEncodingUtils.encodeDoubles(subsampleStream(altitudes))
             totalAscent = smoothedAltitude.last().ascentM
             totalDescent = smoothedAltitude.last().descentM
         }
@@ -705,6 +948,9 @@ object ErtsPostWorkoutRecomputer {
         val referenceAltitude: Double?,
         val wheelSpeedMps: Double?,
         val rawDistanceM: Double? = null,
-        val lapNr: Long? = null
+        val lapNr: Long? = null,
+        val recordedCarriageMode: PhoneCarriageMode? = null,
+        val effectiveCarriageMode: PhoneCarriageMode = PhoneCarriageMode.UNKNOWN,
+        val rawBaroAltitude: Double? = null
     )
 }

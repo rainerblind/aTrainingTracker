@@ -46,7 +46,7 @@ import kotlin.math.sqrt
  * 5. Doppler course-over-ground heading anchoring gated by speed > 3.0 m/s.
  * 6. Forward step snapshot exposure for post-workout Rauch-Tung-Striebel (RTS) backward smoothing (ATT-7750).
  */
-class UnicycleOdometryEkf(
+class UnicycleOdometryEkf @JvmOverloads constructor(
     initialEast: Double = 0.0,
     initialNorth: Double = 0.0,
     initialSpeed: Double = 0.0,
@@ -55,7 +55,8 @@ class UnicycleOdometryEkf(
     initialPositionStdDev: Double = 5.0,
     initialSpeedStdDev: Double = 2.0,
     initialHeadingStdDev: Double = 0.5,
-    initialGyroBiasStdDev: Double = 0.03
+    initialGyroBiasStdDev: Double = 0.03,
+    private val recordSnapshots: Boolean = true
 ) {
     companion object {
         const val STATE_DIM = 5
@@ -89,7 +90,7 @@ class UnicycleOdometryEkf(
     private val x = DoubleArray(STATE_DIM).apply {
         this[0] = initialEast
         this[1] = initialNorth
-        this[2] = initialSpeed
+        this[2] = if (initialSpeed.isFinite()) max(0.0, initialSpeed) else 0.0
         this[3] = normalizeAngle(initialHeadingRad)
         this[4] = initialGyroBias
     }
@@ -271,7 +272,7 @@ class UnicycleOdometryEkf(
      * Scalar speed update with Huber innovation down-weighting.
      */
     fun updateSpeed(speedMps: Double, variance: Double, timestampMs: Long = currentTimestampMs): Boolean {
-        if (variance <= 0.0) return false
+        if (!speedMps.isFinite() || !variance.isFinite() || variance <= 0.0) return false
         currentTimestampMs = timestampMs
 
         val innovation = speedMps - x[2]
@@ -764,7 +765,7 @@ class UnicycleOdometryEkf(
     }
 
     private fun commitSnapshot() {
-        if (lastDtSec <= 0.0) return
+        if (!recordSnapshots || lastDtSec <= 0.0) return
         val priorStateCopy = priorState.clone()
         val priorCovCopy = Array(STATE_DIM) { i -> priorCovariance[i].clone() }
         val transJacCopy = Array(STATE_DIM) { i -> transitionJacobian[i].clone() }

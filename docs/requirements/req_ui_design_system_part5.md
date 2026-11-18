@@ -1,14 +1,14 @@
 # Living Requirements: UI Components & Design System (Part 5 of 5)
 
 **Document ID**: `DOC-REQ-UI-P5`  
-**Version**: 1.0.9  
+**Version**: 1.0.12  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `ui_design_system_part5`  
 **Prefixes**: `UI`, `UNT`  
 **Scope**: Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts.  
-**Total Requirements**: 44
+**Total Requirements**: 45
 
 ---
 
@@ -1813,6 +1813,28 @@
 
 **Invariants**: `WorkoutRepository.kt` untouched (`<= 5,117` LoC); `IF-SWE` / `ArchitectureConformanceContractTest` clean; `WorkoutSummary` & `snapshotHeader` free of `Tune`/`⇄`; `WarningAmber` retains `error` tint; `REQ-UI-433.2` landscape single-row layout preserved; 9-locale parity; `0` new `src/main` test reads.
 
+### REQ-UI-2787: Persist Unchecked Workout Details Sections (v3 Schema), Decouple Summary Toggles, Reserve Custom Header Actions & Tab-Driven Settings [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-UI-2787`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `WorkoutDetailTabConfig.kt`, `WorkoutDetailTabbedContent.kt`, `WorkoutHeader.kt`, `WorkoutMasksAndCardsSection.kt`, `AdvancedTuningAccordion.kt`, `AdvancedTuningScreen.kt`, `AdvancedTuningDialog.kt`
+- **Localization Parity**: `tuning_summary_matrix_tabs_format` across all 9 locales (`values*/strings_workout_details.xml`)
+- **Rationale**: In `WorkoutDetailTabConfig.deserializeTabs` (`ATT-5654`, `ATT-7320`, `ATT-7756`), `GRADE_DISTRIBUTION`, `RPE_AND_FEEL`, and `HRV` auto-migrations run unconditionally even on `"v2|"` payloads, reverting user removals; `WorkoutDetailTabbedContent` forwards summary-card `show*InWorkoutSummary` flags into full Workout Details (`ATT-4369`); `WorkoutHeader.actionSpacerWidth` omits custom `actions()` width; and `AdvancedTuningAccordion` / `WorkoutMasksAndCardsSection` read ignored `WorkoutDetailPreferences` booleans instead of `detailTabs` (`ATT-4043`, `REQ-UI-414`).
+- **Description**: The system SHALL persist removed Workout Details sections/tabs, isolate summary toggles to summary list cards, dynamically reserve header action width, and drive settings subtitles/selectors from configured detail tabs:
+  1. *`v3|` Schema Persistence & Pre-`v3` Legacy Migration (`REQ-UI-2787.1`)*: `WorkoutDetailTabConfig` SHALL bump `SCHEMA_PREFIX` from `"v2|"` to `"v3|"` and gate legacy auto-migrations (`GRADE_DISTRIBUTION`, `RPE_AND_FEEL`, `HRV`) strictly on `!raw.startsWith("v3|")` (alongside `isV1` for `PHOTOS`) so unchecked sections (`RPE_AND_FEEL`, `GRADE_DISTRIBUTION`, `PHOTOS`) and deleted `tab_hrv` remain absent after `serializeTabs` $\rightarrow$ `deserializeTabs`, while all `"v1|"` and `"v2|"` upgrade migrations remain intact (`WorkoutDetailTabsTest`).
+  2. *Workout Details Decoupling from Summary Card Toggles (`REQ-UI-2787.2`)*: `WorkoutDetailTabbedContent` (`RenderWorkoutDetailCardSections`) SHALL pass `true` for `showCogganPowerInWorkoutSummary`, `showAerobicEfficiencyInWorkoutSummary`, and `showCriticalPowerInWorkoutSummary` into `WorkoutDetails(...)` (matching `CardioPowerDynamicsCard` decoupling), keeping Coggan NP/IF/TSS, Aerobic Efficiency/Decoupling, and Critical Power/W'bal visible in Workout Details whenever their `enable*` toggles are active, while `WorkoutSummary.kt` retains `show*InWorkoutSummary` gating for compact list cards.
+  3. *Dynamic `WorkoutHeader` Custom `actions()` Width Reservation (`REQ-UI-2787.3`)*: `WorkoutHeader` SHALL preserve Frame-0 `actionSpacerWidth` (`ATT-8097`) AND dynamically measure `actionButtonsContent()` width via `Modifier.onSizeChanged` (`maxOf` reservation) so custom `actions()` content and scaled icons never collide with 2-line portrait titles.
+  4. *Tab-Driven Settings Subtitle, Zone Selector Gating & `< 400` LoC Ceiling (`REQ-UI-2787.4`)*: `WorkoutMasksAndCardsSection` SHALL gate Details `ZoneDisplayModeSelector` on `detailTabs.any { tab -> tab.sections.any { it == WorkoutDetailSectionType.ZONES || it == WorkoutDetailSectionType.GRADE_DISTRIBUTION } }` rather than stale `workoutDetailPrefs.showZoneAnalysis`, while staying strictly `< 400` lines (`REQ-UI-414.5`, extracting a helper composable if needed). `TuningSubtitleFormatter.formatWorkoutMatrixSubtitle` SHALL retain its 3-arg `(cardPrefs, detailPrefs, context)` signature for `AdvancedTuningAccordionTest` / `AdvancedTuningAftermathContractTest` compatibility and support `detailTabs` (`AdvancedTuningScreen`, `AdvancedTuningDialog`) using 9-locale `tuning_summary_matrix_tabs_format`.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* default `v3` Workout Detail tabs, *When* the athlete unchecks `RPE_AND_FEEL` or `GRADE_DISTRIBUTION` or deletes `tab_hrv` in `WorkoutDetailTabsConfigSheet` and reopens Workout Details, *Then* the unchecked sections and deleted tab remain absent after `serializeTabs` $\rightarrow$ `deserializeTabs`, while `"v1|"` / `"v2|"` legacy migrations continue adding them once.
+• *Given* `showCogganPowerInWorkoutSummary = false`, `showAerobicEfficiencyInWorkoutSummary = false`, and `showCriticalPowerInWorkoutSummary = false` with `enable* = true`, *When* viewing a workout with power/HR telemetry in Workout Details (`DETAILS`), *Then* Coggan, Aerobic Efficiency, and W'bal metrics remain visible in Workout Details while remaining hidden on compact `WorkoutSummary` list cards.
+• *Given* a 2-line portrait title in `WorkoutHeader` with `onOpenTabsConfig` and/or custom `actions()` content, and modified `detailTabs` in Expert Settings, *When* `WorkoutHeader`, `WorkoutMasksAndCardsSection`, and `AdvancedTuningAccordion` render, *Then* the title never overlaps the action buttons, the accordion subtitle reflects active configured `detailTabs`, `ZoneDisplayModeSelector` tracks `ZONES`/`GRADE_DISTRIBUTION` tab presence, and `WorkoutMasksAndCardsSection.kt` stays `< 400` LoC.
+
+**Invariants**: Legacy `"v1|"` / `"v2|"` migration tests pass; `WorkoutSummary` list card summary toggles remain functional; `WorkoutHeader` Frame-0 bounds (`ATT-8097`) preserved; `WorkoutMasksAndCardsSection.kt < 400` LoC; `formatWorkoutMatrixSubtitle` 3-arg contract preserved; `WorkoutRepository.kt` untouched; 9-locale parity; `0` new `src/main` reads in tests; Compose UI tests use `createComposeRule()`.
+
 ---
 
 ## Change History
@@ -1827,3 +1849,6 @@
 | `1.0.7` | 2026-11-18 | AI Agent (`ATT-8097`) | `ATT-8097` | Added `REQ-UI-2786` (`[Planned]`) unifying Workout Detail header action icons, global-vs-unit grouping, tooltips, universal `⇄` visibility, and non-GPS fallback. |
 | `1.0.8` | 2026-11-18 | AI Agent (`ATT-8097`) | `ATT-8097` | Promoted `REQ-UI-2786` to `[Implemented]` after Stage 4 implementation (`90/90` targeted tests PASS, `Rule 8.5` PNG inspected). |
 | `1.0.9` | 2026-11-18 | AI Agent (`ATT-8097`) | `ATT-8097` | Promoted `REQ-UI-2786` to `[Verified]` after Stage 5 verification (`90/90` XML tests PASS, governance `exit 0`, `Rule 8.5` PNG). |
+| `1.0.10` | 2026-11-18 | AI Agent (`ATT-8079`) | `ATT-8079` | Added `REQ-UI-2787` (`[Planned]`) for `v3|` tab persistence, Workout Details summary-toggle decoupling, dynamic header action reservation, and tab-driven settings/subtitle. |
+| `1.0.11` | 2026-11-18 | AI Agent (`ATT-8079`) | `ATT-8079` | Promoted `REQ-UI-2787` to `[Implemented]` in Stage 4 (`WorkoutDetailTabConfig`, `WorkoutDetailTabbedContent`, `WorkoutHeader`, `WorkoutMasksAndCardsSection`, `AdvancedTuning*`, 9-locale `strings_workout_details.xml`). |
+| `1.0.12` | 2026-11-18 | AI Agent (`ATT-8079`) | `ATT-8079` | Promoted `REQ-UI-2787` to `[Verified]` in Stage 5 (`94/94` Tier 1 JUnit XMLs PASS, `Rule 8.5` PNG inspected). |

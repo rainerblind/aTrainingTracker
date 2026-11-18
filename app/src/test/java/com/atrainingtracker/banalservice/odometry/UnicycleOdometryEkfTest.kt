@@ -395,4 +395,22 @@ class UnicycleOdometryEkfTest {
         ekf.updateGnssPosition(eastMeters = -50.0, northMeters = 0.0, accuracyMeters = 3.0, timestampMs = 3000L, isStationary = false)
         assertTrue("Forward speed x[2] must never collapse negative (was ${ekf.speedMps})", ekf.speedMps >= 0.0)
     }
+
+    // TST-FIL-027.3 (Bounce 1/3): updateSpeed and constructor sanitize non-finite inputs
+    @Test
+    fun testUpdateSpeed_rejectsNonFiniteInputsWithoutPoisoningState_tstFil027_3() {
+        val nanInitEkf = UnicycleOdometryEkf(initialSpeed = Double.NaN)
+        assertEquals(0.0, nanInitEkf.speedMps, 1e-9)
+
+        ekf.reset(east = 10.0, north = 20.0, speed = 5.0, headingRad = 0.0)
+        assertFalse(ekf.updateSpeed(Double.NaN, 0.5, timestampMs = 1000L))
+        assertFalse(ekf.updateSpeed(Double.POSITIVE_INFINITY, 0.5, timestampMs = 1000L))
+        assertFalse(ekf.updateSpeed(4.0, Double.NaN, timestampMs = 1000L))
+        assertFalse(ekf.updateSpeed(4.0, Double.POSITIVE_INFINITY, timestampMs = 1000L))
+
+        assertEquals(5.0, ekf.speedMps, 1e-9)
+        assertEquals(10.0, ekf.eastMeters, 1e-9)
+        assertEquals(20.0, ekf.northMeters, 1e-9)
+        assertTrue(ekf.speedVariance.isFinite())
+    }
 }

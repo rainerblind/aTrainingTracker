@@ -67,7 +67,7 @@ class SensorCategoryAndSelectorContractTest {
         }
 
         val allSensors = SensorType.values().toList()
-        assertEquals("SensorType must contain 67 constants", 67, allSensors.size)
+        assertEquals("SensorType must contain 68 constants", 68, allSensors.size)
         allSensors.forEach { sensorType ->
             assertNotNull("SensorType.${sensorType.name} must have a non-null category", sensorType.category)
         }
@@ -150,7 +150,8 @@ class SensorCategoryAndSelectorContractTest {
                 SensorType.RADAR_VEHICLE_COUNT,
                 SensorType.RADAR_PASSING_DISTANCE_m,
                 SensorType.RADAR_LARGE_VEHICLE_COUNT,
-                SensorType.WORLD_YAW_RATE_radps
+                SensorType.WORLD_YAW_RATE_radps,
+                SensorType.ACTIVITY_AND_CARRIAGE_MODE
             )
         )
 
@@ -253,7 +254,8 @@ class SensorCategoryAndSelectorContractTest {
             SensorType.LONGITUDE,
             SensorType.SENSORS,
             SensorType.ACCUMULATED_SENSORS,
-            SensorType.ACCURACY
+            SensorType.ACCURACY,
+            SensorType.ACTIVITY_AND_CARRIAGE_MODE
         )
 
         directMetrics.forEach { sensorType ->
@@ -393,7 +395,18 @@ class SensorCategoryAndSelectorContractTest {
             "sensor_capability_bar",
             "sensor_capability_graph",
             "sensor_type_search_hint",
-            "sensor_type_no_matches"
+            "sensor_type_no_matches",
+            "activity_and_carriage_mode",
+            "activity_and_carriage_mode_short",
+            "carriage_mode_unknown",
+            "carriage_mode_stationary",
+            "carriage_mode_walking_transition",
+            "carriage_mode_bike_handlebar",
+            "carriage_mode_bike_jersey_back",
+            "carriage_mode_bike_front_pocket",
+            "carriage_mode_run_waist_hip",
+            "carriage_mode_run_bicep_arm",
+            "carriage_mode_run_handheld"
         )
 
         val dbf = DocumentBuilderFactory.newInstance()

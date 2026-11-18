@@ -1124,7 +1124,6 @@
     <string name="track_type_best">Aufgezeichnet</string>
     <string name="track_type_gps">GPS</string>
     <string name="track_type_fused">Google Fused</string>
-    <string name="track_type_network">Netzwerk</string>
     <string name="legend">Legende</string>
 
     <string name="cluster_statistics_title">Einheitenstatistik</string>

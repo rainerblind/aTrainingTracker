@@ -1,14 +1,14 @@
 # Living Test Specification: UI Components & Design System (Part 3 of 3)
 
 **Document ID**: `DOC-TST-UI-P3`  
-**Version**: 1.0.9  
+**Version**: 1.0.12  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `ui_design_system_part3`  
 **Prefixes**: `UI`, `UNT`  
 **Scope**: Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts.  
-**Total Tests**: 39
+**Total Tests**: 40
 
 ---
 
@@ -790,6 +790,20 @@
   4. *Rule 8.5 Light/Dark `@Preview` & On-Device Verification (`TST-UI-2786.4`)*:
      - Capture Light/Dark `@Preview` screenshot `docs/engineering/walkthroughs/img/ATT-8097_header_actions_preview.png`, inspect via `read_file` against the 4-point checklist (`Rule 8.5`), and verify on `emulator-5554`.
 
+### TST-UI-2787: **Workout Details v3 Persistence, Summary Toggle Decoupling, Header Action Reservation & Tab-Driven Settings Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-2787` (`REQ-UI-2787.1`..`REQ-UI-2787.4`)
+- **Component**: `WorkoutDetailTabConfig.kt`, `WorkoutDetailTabbedContent.kt`, `WorkoutHeader.kt`, `WorkoutMasksAndCardsSection.kt`, `AdvancedTuningAccordion.kt`, `WorkoutDetailTabsTest.kt`, `WorkoutDetailHeaderActionsComposeTest.kt`, `AdvancedTuningAccordionTest.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-8079` | **Target Release**: `V5.0.0`
+- **Test Description**:
+  1. *`v3|` Serialization & Persistent Section/Tab Removal (`TST-UI-2787.1`, `WorkoutDetailTabsTest.kt`)*:
+     - Verify `serializeTabs` emits `"v3|"` prefix, unchecking `RPE_AND_FEEL`, `GRADE_DISTRIBUTION`, or `PHOTOS`, or deleting `tab_hrv`, persists cleanly across `serializeTabs` $\rightarrow$ `deserializeTabs`, and all legacy `"v1|"` / `"v2|"` auto-migration tests (`TST-UI-371.2b`, `TST-UI-453.4b`, `TST-UI-453.4c`, `TST-UI-527.2`) pass unchanged.
+  2. *Summary Toggle Decoupling Behavioral Compose UI Test (`TST-UI-2787.2`, `WorkoutDetailSummaryDecouplingTest.kt`)*:
+     - Using Robolectric `createComposeRule()` (`0` `src/main` reads per `SourceTextReadingAuditContractTest` & `UiReflectionOnlyTestAuditContractTest`), render `WorkoutDetailTabbedContent` (`DETAILS`) with `showCogganPowerInWorkoutSummary = false`, `showAerobicEfficiencyInWorkoutSummary = false`, `showCriticalPowerInWorkoutSummary = false` (`enable* = true`) verifying Coggan NP/IF/TSS, Aerobic Efficiency, and W'bal remain visible in Workout Details while `WorkoutSummary` hides them when those flags are `false`.
+  3. *Dynamic `WorkoutHeader` Custom `actions()` Width Reservation (`TST-UI-2787.3`, `WorkoutDetailHeaderActionsComposeTest.kt`)*:
+     - Using `createComposeRule()` at `360dp`, render `WorkoutHeader` with a 2-line portrait title and custom `actions = { ... }` content verifying `titleBounds.right <= actionsBounds.left` without overlap while preserving existing `ATT-8097` Frame-0 bounds assertions and `Rule 8.5` PNG check.
+  4. *Tab-Driven Details Zone Selector, Subtitle, `< 400` LoC & 9-Locale Parity (`TST-UI-2787.4`, `WorkoutMasksAndCardsLayoutTest.kt`, `AdvancedTuningAccordionTest.kt`, `TranslationParityTest.kt`)*:
+     - Using `createComposeRule()`, verify `WorkoutMasksAndCardsSection` shows/hides `ZoneDisplayModeSelector` based on `detailTabs` (`ZONES` / `GRADE_DISTRIBUTION`) regardless of `workoutDetailPrefs.showZoneAnalysis`, verify `WorkoutMasksAndCardsSection.kt` `< 400` LoC, verify `TuningSubtitleFormatter.formatWorkoutMatrixSubtitle` (`detailTabs` overload + preserved 3-arg compatibility), and verify `tuning_summary_matrix_tabs_format` across all 9 locales via `TranslationParityTest`.
+
 ---
 
 ## Change History
@@ -804,3 +818,6 @@
 | `1.0.7` | 2026-11-18 | AI Agent (`ATT-8097`) | `ATT-8097` | Added `TST-UI-2786` (`[Planned]`) for Workout Detail header action uniformity, `[Tune] \| [⇄][Edit][Share]` grouping, universal `⇄` / non-GPS fallback, 9-locale tooltips, and `Rule 8.5` Light/Dark preview. |
 | `1.0.8` | 2026-11-18 | AI Agent (`ATT-8097`) | `ATT-8097` | Promoted `TST-UI-2786` to `[Implemented]` (`WorkoutDetailHeaderActionsComposeTest` + `TrackOnMapClusterActionViewModelTest` + `90/90` targeted tests PASS, `Rule 8.5` PNG). |
 | `1.0.9` | 2026-11-18 | AI Agent (`ATT-8097`) | `ATT-8097` | Promoted `TST-UI-2786` to `[Verified]` after Stage 5 verification (`90/90` XML tests PASS, `has_verified_test_evidence` `True`, `Rule 8.5` PNG). |
+| `1.0.10` | 2026-11-18 | AI Agent (`ATT-8079`) | `ATT-8079` | Added `TST-UI-2787` (`[Planned]`) verifying `REQ-UI-2787` `v3|` persistence, summary toggle decoupling, dynamic header action reservation, and tab-driven settings/subtitle. |
+| `1.0.11` | 2026-11-18 | AI Agent (`ATT-8079`) | `ATT-8079` | Promoted `TST-UI-2787` to `[Implemented]` in Stage 4 (`WorkoutDetailTabsTest`, `WorkoutDetailSummaryDecouplingTest`, `WorkoutDetailHeaderActionsComposeTest`, `WorkoutMasksAndCardsBehaviorTest`, `AdvancedTuningAccordionTest`). |
+| `1.0.12` | 2026-11-18 | AI Agent (`ATT-8079`) | `ATT-8079` | Promoted `TST-UI-2787` to `[Verified]` in Stage 5 (`94/94` Tier 1 JUnit XMLs PASS, `Rule 8.5` PNG inspected). |

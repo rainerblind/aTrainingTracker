@@ -239,4 +239,17 @@
     <string name="raw_telemetry_retention_7_days">7 days</string>
     <string name="raw_telemetry_retention_off">Off</string>
 
+    <!-- Phone Carriage & Activity Mode Classifier (ATT-8890, REQ-FIL-028) -->
+    <string name="activity_and_carriage_mode">Activity &amp; Carriage Mode</string>
+    <string name="activity_and_carriage_mode_short">Carriage</string>
+    <string name="carriage_mode_unknown">Unknown</string>
+    <string name="carriage_mode_stationary">Stationary</string>
+    <string name="carriage_mode_walking_transition">Walking / Transition</string>
+    <string name="carriage_mode_bike_handlebar">Bike Handlebar</string>
+    <string name="carriage_mode_bike_jersey_back">Bike Jersey Pocket</string>
+    <string name="carriage_mode_bike_front_pocket">Bike Trouser Pocket</string>
+    <string name="carriage_mode_run_waist_hip">Run Waist / Hip</string>
+    <string name="carriage_mode_run_bicep_arm">Run Armband</string>
+    <string name="carriage_mode_run_handheld">Run Handheld</string>
+
 </resources>

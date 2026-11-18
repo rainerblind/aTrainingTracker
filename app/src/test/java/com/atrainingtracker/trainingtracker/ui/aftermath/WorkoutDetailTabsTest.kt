@@ -144,8 +144,8 @@ class WorkoutDetailTabsTest {
 
         val serialized = WorkoutDetailTabConfig.serializeTabs(customTabs)
         assertTrue(
-            "Serialized payload must start with version prefix v2|",
-            serialized.startsWith("v2|")
+            "Serialized payload must start with version prefix v3|",
+            serialized.startsWith("v3|")
         )
 
         val deserialized = WorkoutDetailTabConfig.deserializeTabs(serialized)
@@ -754,5 +754,59 @@ class WorkoutDetailTabsTest {
         val hrvIndex = visibleWithHrv.indexOfFirst { it.id == "tab_hrv" }
         val zonesIndex = visibleWithHrv.indexOfFirst { it.id == "tab_zones" }
         assertTrue("tab_hrv must be positioned after tab_zones", hrvIndex > zonesIndex)
+    }
+
+    /**
+     * TST-UI-2787.1: v3| wire serialization preserves user removals of RPE_AND_FEEL,
+     * GRADE_DISTRIBUTION, PHOTOS, and tab_hrv without re-injecting them on deserializeTabs (REQ-UI-2787.1).
+     */
+    @Test
+    fun `TST-UI-2787_1 v3 serialization persists unchecked sections and deleted hrv tab`() {
+        var edited = WorkoutDetailTabConfig.DEFAULT_TABS
+        // Uncheck RPE_AND_FEEL and PHOTOS from tab_overview (index 0)
+        edited = WorkoutDetailTabConfig.toggleSectionInTab(edited, 0, WorkoutDetailSectionType.RPE_AND_FEEL)
+        edited = WorkoutDetailTabConfig.toggleSectionInTab(edited, 0, WorkoutDetailSectionType.PHOTOS)
+        // Uncheck GRADE_DISTRIBUTION from tab_zones (index 2)
+        edited = WorkoutDetailTabConfig.toggleSectionInTab(edited, 2, WorkoutDetailSectionType.GRADE_DISTRIBUTION)
+        // Delete tab_hrv (index 3)
+        val hrvIdx = edited.indexOfFirst { it.id == "tab_hrv" }
+        assertTrue("tab_hrv must exist in defaults", hrvIdx >= 0)
+        edited = WorkoutDetailTabConfig.deleteTab(edited, hrvIdx)
+
+        val serialized = WorkoutDetailTabConfig.serializeTabs(edited)
+        assertTrue("Serialized payload must use v3| prefix", serialized.startsWith("v3|"))
+
+        val roundTripped = WorkoutDetailTabConfig.deserializeTabs(serialized)
+        assertEquals(4, roundTripped.size)
+        assertFalse(
+            "Unchecked RPE_AND_FEEL must stay absent after v3 deserialize",
+            roundTripped.any { WorkoutDetailSectionType.RPE_AND_FEEL in it.sections }
+        )
+        assertFalse(
+            "Unchecked PHOTOS must stay absent after v3 deserialize",
+            roundTripped.any { WorkoutDetailSectionType.PHOTOS in it.sections }
+        )
+        assertFalse(
+            "Unchecked GRADE_DISTRIBUTION must stay absent after v3 deserialize",
+            roundTripped.any { WorkoutDetailSectionType.GRADE_DISTRIBUTION in it.sections }
+        )
+        assertFalse(
+            "Deleted HRV tab/section must stay absent after v3 deserialize",
+            roundTripped.any { it.id == "tab_hrv" || WorkoutDetailSectionType.HRV in it.sections }
+        )
+        assertTrue(
+            "hasAnyZoneOrGradeSection remains true while ZONES is present",
+            WorkoutDetailTabConfig.hasAnyZoneOrGradeSection(roundTripped)
+        )
+
+        // Removing ZONES as well makes hasAnyZoneOrGradeSection false
+        val withoutZones = WorkoutDetailTabConfig.deleteTab(
+            roundTripped,
+            roundTripped.indexOfFirst { it.id == "tab_zones" }
+        )
+        assertFalse(
+            "hasAnyZoneOrGradeSection must be false when neither ZONES nor GRADE_DISTRIBUTION is configured",
+            WorkoutDetailTabConfig.hasAnyZoneOrGradeSection(withoutZones)
+        )
     }
 }

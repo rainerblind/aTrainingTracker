@@ -1,7 +1,7 @@
 # aTrainingTracker: Technical Architecture & Coding Standards
 
 **Document ID**: `DOC-STD-CODING`  
-**Version**: 1.0.0  
+**Version**: 1.0.1  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -239,11 +239,13 @@ This document serves as the authoritative living source of truth for software en
 * **Connected User Device Data Protection (`adb uninstall` / `pm clear` Prohibition)**:
   * Agents **MUST NEVER** run `adb uninstall` or `adb shell pm clear` on `com.atrainingtracker` or `com.atrainingtracker.debug` on a connected user device without explicit human confirmation naming the exact package and first pulling a verified `.attbackup` archive to the host machine.
 
-### 5.4 Contract Test Standards & Prohibition of UI Literal Source-Grep (ATT-4028 / REQ-TST-002)
+### 5.4 Contract Test Standards, Behavioral Compose UI Testing & Prohibition of UI Literal Source-Grep (ATT-4028 / ATT-8198 / REQ-TST-002 / REQ-PRO-132)
 * **Prohibition of Source-Text UI Grep**:
   * Unit and contract tests **MUST NOT** read source code files (`File.readText()`) to assert on Compose design tokens (e.g. `RoundedCornerShape(12.dp)`, `TTColor.RouteSelected`), raw string/emoji literals, internal call parameters, or raw SVG path commands (`V20`, `h-2`).
   * Text-grep assertions freeze non-functional formatting, whitespace, and private implementation details, triggering false-positive test failures during innocent refactors while verifying zero runtime behavior.
-  * UI contracts must be verified via semantic state models, Compose semantics/UI testing, or behavioral formatters. Vector drawables must be verified via XML DOM parsing and geometric vertex milestone evaluation. Excision/decoupling must be verified via programmatic reflection (`Class.forName`, `declaredFields`, `declaredMethods`) and file existence checks.
+  * UI contracts must be verified via semantic state models, Compose semantics/UI testing (`createComposeRule()`), or behavioral formatters. Vector drawables must be verified via XML DOM parsing and geometric vertex milestone evaluation. Excision/decoupling and ABI/classpath contracts must be verified via programmatic reflection (`Class.forName`, `declaredFields`, `declaredMethods` in `build/` or non-`*Kt` guards) and file existence checks.
+* **Mandatory Behavioral Compose UI Testing & Reflection-Only UI Test Ratchet (`REQ-PRO-132` / `ATT-8198`)**:
+  * Whenever `@Composable` screens, sections, dialogs, or sheets are created or modified, UI tests under `ui/` **MUST** render the actual composable tree via Robolectric or instrumented `createComposeRule()` and assert rendered semantics, conditional visibility, and interactive callbacks—never reflection-only `Class.forName("...Kt")` / `declaredMethods` existence stubs or tautological state-holder assertions (`UiReflectionOnlyTestAuditContractTest`).
 * **Preservation of System Architectural Governance Guards**:
   * System policy and governance guards (such as `TryWithResourcesCursorAuditTest` for leak prevention, `ManifestSecurityContractTest` for Android security boundaries, `TranslationParityTest` for 9-language localization, and Rule 34 empty callback guards) enforce essential repository-wide invariants and **MUST NOT** be confused with prohibited UI source-grep tests.
 
@@ -335,3 +337,4 @@ This document serves as the authoritative living source of truth for software en
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
 | `1.0.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Added standardized work-product control header specification (§5.13) and Change History. |
+| `1.0.1` | 2026-11-18 | AI Agent (`ATT-8198`) | `ATT-8198` | Clarified §5.4 to mandate `createComposeRule()` behavioral UI tests for `@Composable`s and distinguish legitimate excision/ABI reflection from banned reflection-only `*Kt` UI tests (`REQ-PRO-132`). |

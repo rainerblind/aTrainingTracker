@@ -287,8 +287,26 @@ data class WorkoutDetailTabConfig(
     }
 
     companion object {
-        private const val SCHEMA_PREFIX = "v2|"
+        private const val SCHEMA_PREFIX = "v3|"
+        private const val SCHEMA_PREFIX_V2 = "v2|"
         private const val SCHEMA_PREFIX_V1 = "v1|"
+
+        /**
+         * Returns `true` if any tab in [tabs] contains [WorkoutDetailSectionType.ZONES]
+         * or [WorkoutDetailSectionType.GRADE_DISTRIBUTION] (`REQ-UI-2787.4`).
+         */
+        fun hasAnyZoneOrGradeSection(tabs: List<WorkoutDetailTabConfig>): Boolean =
+            tabs.any { tab ->
+                tab.normalizedSections.any {
+                    it == WorkoutDetailSectionType.ZONES || it == WorkoutDetailSectionType.GRADE_DISTRIBUTION
+                }
+            }
+
+        /**
+         * Returns the number of distinct [WorkoutDetailSectionType]s configured across [tabs] (`REQ-UI-2787.4`).
+         */
+        fun countDistinctSections(tabs: List<WorkoutDetailTabConfig>): Int =
+            tabs.flatMap { it.normalizedSections }.distinct().size
 
         /**
          * Canonical 5-tab default configuration (`REQ-UI-408.1` / `ATT-5655` / `REQ-UI-527.1` / `ATT-7756`):
@@ -429,9 +447,12 @@ data class WorkoutDetailTabConfig(
         fun deserializeTabs(raw: String?): List<WorkoutDetailTabConfig> {
             if (raw.isNullOrBlank()) return DEFAULT_TABS
             return runCatching {
-                val isV1 = raw.startsWith(SCHEMA_PREFIX_V1) || (!raw.startsWith(SCHEMA_PREFIX) && !raw.startsWith(SCHEMA_PREFIX_V1))
+                val isV1 = raw.startsWith(SCHEMA_PREFIX_V1) ||
+                    (!raw.startsWith(SCHEMA_PREFIX) && !raw.startsWith(SCHEMA_PREFIX_V2) && !raw.startsWith(SCHEMA_PREFIX_V1))
+                val isLegacyPreV3 = !raw.startsWith(SCHEMA_PREFIX)
                 val payload = when {
                     raw.startsWith(SCHEMA_PREFIX) -> raw.removePrefix(SCHEMA_PREFIX)
+                    raw.startsWith(SCHEMA_PREFIX_V2) -> raw.removePrefix(SCHEMA_PREFIX_V2)
                     raw.startsWith(SCHEMA_PREFIX_V1) -> raw.removePrefix(SCHEMA_PREFIX_V1)
                     else -> raw
                 }
@@ -488,9 +509,9 @@ data class WorkoutDetailTabConfig(
                     validTabs
                 }
 
-                // ATT-5654: If GRADE_DISTRIBUTION is not present in ANY tab,
+                // ATT-5654 / REQ-UI-2787.1: For legacy pre-v3 payloads only, if GRADE_DISTRIBUTION is missing,
                 // auto-migrate GRADE_DISTRIBUTION into tab_zones directly after ZONES.
-                val withGrade = if (withPhotos.none { tab -> WorkoutDetailSectionType.GRADE_DISTRIBUTION in tab.sections }) {
+                val withGrade = if (isLegacyPreV3 && withPhotos.none { tab -> WorkoutDetailSectionType.GRADE_DISTRIBUTION in tab.sections }) {
                     withPhotos.map { tab ->
                         if (tab.id == "tab_zones" || tab.preset == WorkoutDetailTabPreset.ZONES) {
                             val currentSections = tab.sections.toMutableList()
@@ -509,9 +530,9 @@ data class WorkoutDetailTabConfig(
                     withPhotos
                 }
 
-                // ATT-7320: If RPE_AND_FEEL is not present in ANY tab,
+                // ATT-7320 / REQ-UI-2787.1: For legacy pre-v3 payloads only, if RPE_AND_FEEL is missing,
                 // auto-migrate RPE_AND_FEEL into tab_overview at index 0.
-                val withRpe = if (withGrade.none { tab -> WorkoutDetailSectionType.RPE_AND_FEEL in tab.sections }) {
+                val withRpe = if (isLegacyPreV3 && withGrade.none { tab -> WorkoutDetailSectionType.RPE_AND_FEEL in tab.sections }) {
                     withGrade.map { tab ->
                         if (tab.id == "tab_overview" || tab.preset == WorkoutDetailTabPreset.OVERVIEW) {
                             val currentSections = tab.sections.toMutableList()
@@ -525,9 +546,9 @@ data class WorkoutDetailTabConfig(
                     withGrade
                 }
 
-                // ATT-7756 / REQ-UI-527.2: If HRV is not present in ANY tab,
+                // ATT-7756 / REQ-UI-527.2 / REQ-UI-2787.1: For legacy pre-v3 payloads only, if HRV is missing,
                 // auto-migrate tab_hrv directly after tab_zones (or before tab_laps_segments).
-                val withHrv = if (withRpe.none { tab -> WorkoutDetailSectionType.HRV in tab.sections }) {
+                val withHrv = if (isLegacyPreV3 && withRpe.none { tab -> WorkoutDetailSectionType.HRV in tab.sections }) {
                     val mutable = withRpe.toMutableList()
                     val zonesIndex = mutable.indexOfFirst { it.id == "tab_zones" || it.preset == WorkoutDetailTabPreset.ZONES }
                     val newTab = WorkoutDetailTabConfig(
