@@ -1,7 +1,7 @@
 # Living Requirements: Tracking & Live Sensor Cockpit (Part 1 of 2)
 
 **Document ID**: `DOC-REQ-TRK-P1`  
-**Version**: 1.0.0  
+**Version**: 1.0.21  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -328,7 +328,7 @@
 
 ### REQ-TRK-005: Implement session recovery ("Resume from Crash") [Verified]
 - **Tests**: `TST-TRK-018`, `TST-TRK-023`, `TST-STR-001`
-- **System Requirement(s)**: `SYSREQ-TRK-005`
+- **System Requirement(s)**: `SYSREQ-TRK-005`, `SYSREQ-TRK-013`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Integration
@@ -836,7 +836,7 @@
 
 ### REQ-CON-017: Barometric Altimeter Idempotent Calibration, Delta Shift Dispatch, Physical Sanity Limiting & Historical Workout Data Sanitization [Verified]
 - **Tests**: `TST-CON-008`
-- **System Requirement(s)**: `SYSREQ-TRK-001`
+- **System Requirement(s)**: `SYSREQ-TRK-001`, `SYSREQ-TRK-008`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1093,7 +1093,7 @@
 
 ### REQ-TRK-018: Sport-Specific Auto-Pause Engine with Anti-Chatter Hysteresis, Mutex Precedence, Sensor Dropout Guard, Synchronous Ingestion Gating, and Sport-Decoupled Thresholds [Verified]
 - **Tests**: `TST-TRK-010`, `TST-TRK-020`
-- **System Requirement(s)**: `SYSREQ-TRK-006`
+- **System Requirement(s)**: `SYSREQ-TRK-006`, `SYSREQ-TRK-013`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1430,7 +1430,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-024: Google Fused & Topographic DEM Priority Ordering in `MySensorManager`, Enum Declaration Alignment & `LINE_DISTANCE_m` Priority [Verified]
 - **Tests**: `TST-TRK-016`
-- **System Requirement(s)**: `SYSREQ-TRK-004`
+- **System Requirement(s)**: `SYSREQ-TRK-004`, `SYSREQ-DEX-008`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1518,7 +1518,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-026: Resumed Workout Sample Table Resolution, Asynchronous BANAL Binding Barrier, and Sample Write Error Surfacing in `TrackerService` [Verified]
 - **Tests**: `TST-TRK-018`
-- **System Requirement(s)**: `SYSREQ-TRK-004`
+- **System Requirement(s)**: `SYSREQ-TRK-004`, `SYSREQ-TRK-013`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Integration
@@ -1676,7 +1676,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-031: LiveWorkoutSession Instantiation & State Rehydration on Workout Resume (`RESUME_BY_USER` & `RESUME_SERVICE_RECREATION`) [Verified]
 - **Tests**: `TST-TRK-023`, `TST-TRK-029`
-- **System Requirement(s)**: `SYSREQ-TRK-004`
+- **System Requirement(s)**: `SYSREQ-TRK-004`, `SYSREQ-TRK-013`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Integration
@@ -1748,7 +1748,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-033: Non-Blocking `TrackerService.onDestroy()` Finalization on `mDbExecutor`, Deterministic `mScheduler` Thread Teardown, and `TrainingApplication` State Recovery on Async Init Failure [Verified]
 - **Tests**: `TST-TRK-025`, `TST-TRK-026`
-- **System Requirement(s)**: `SYSREQ-TRK-005`
+- **System Requirement(s)**: `SYSREQ-TRK-005`, `SYSREQ-TRK-013`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1975,7 +1975,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-036: In-Memory `LiveWorkoutSession` Reuse on User Resume and Safe Publication after Rehydration [Verified]
 - **Tests**: `TST-TRK-029`
-- **System Requirement(s)**: `SYSREQ-TRK-004`
+- **System Requirement(s)**: `SYSREQ-TRK-004`, `SYSREQ-TRK-013`
 - **Priority**: Medium
 - **Type**: Non-Functional
 - **Verification Method**: Unit
@@ -2730,7 +2730,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-SEN-025: Pairable Position-Based Elevation Sensor & Dedicated Spatial DEM Cache [Verified]
 - **Tests**: `TST-SEN-025`
-- **System Requirement(s)**: `SYSREQ-TRK-001`, `SYSREQ-TRK-003`
+- **System Requirement(s)**: `SYSREQ-TRK-001`, `SYSREQ-TRK-003`, `SYSREQ-TRK-008`, `SYSREQ-DEX-008`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -2881,7 +2881,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-050: Indirect Tire Pressure Monitoring (iTPMS) via GPS vs. Wheel Circumference Drift [Verified]
 - **Tests**: `TST-TRK-050`
-- **System Requirement(s)**: `SYSREQ-TRK-004`
+- **System Requirement(s)**: `SYSREQ-TRK-004`, `SYSREQ-TRK-010`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -2925,7 +2925,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-SEN-026: Specialized Altitude Devices: Barometric Altimeter Naming Parity, Idempotent SQLite Migration & Educational Operation Details [Verified]
 - **Tests**: `TST-SEN-026`
-- **System Requirement(s)**: `SYSREQ-TRK-001`
+- **System Requirement(s)**: `SYSREQ-TRK-001`, `SYSREQ-TRK-008`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -3765,7 +3765,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-060: Lipponen & Tarvainen RR Artifact Correction, Real-Time HRV Engine & NeuroKit2 Golden Parity [Verified]
 - **Tests**: `TST-TRK-060`, `TST-TRK-085`
-- **System Requirement(s)**: `SYSREQ-TRK-006`
+- **System Requirement(s)**: `SYSREQ-TRK-006`, `SYSREQ-TRK-012`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -3833,7 +3833,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-061: Live HRV Metrics and Aerobic Threshold Zone Indicators in Tracking Cockpit [Verified]
 - **Tests**: `TST-TRK-061`, `TST-TRK-086`, `TST-TRK-087`
-- **System Requirement(s)**: `SYSREQ-TRK-006`
+- **System Requirement(s)**: `SYSREQ-TRK-006`, `SYSREQ-TRK-012`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -3922,3 +3922,4 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 | :--- | :--- | :--- | :--- | :--- |
 | `1.0.0` | 2026-11-18 | AI Agent (`ATT-8206`) | `ATT-8206` | Split oversized shard into compliant sub-shard (<= 4,000 lines, `REQ-PRO-093.4`, `REQ-PRO-127.3`). |
 | `1.0.20` | 2026-11-18 | AI Agent (`ATT-8712`) | `ATT-8712` | Aligned `REQ-TRK-061.4` with `REQ-TRK-046.4` and `REQ-TRK-087` (`ZonesSettingsActivity` HRV tab parity). |
+| `1.0.21` | 2026-11-18 | AI Agent (`ATT-8201`) | `ATT-8201` | Linked refined `REQ-*` entries in-place to net-new `SYSREQ-TRK-007..013` and `SYSREQ-DEX-007..008`. |

@@ -1,7 +1,7 @@
 # System Requirements Specification: Data Exchange and Cloud Integration
 
 **Document ID**: `DOC-SYS-DEX`  
-**Version**: 1.1.0  
+**Version**: 1.2.1  
 **ASPICE Process Areas**: SYS.2 (System Requirements Analysis, BP1–BP3)  
 **Requirement Reference**: `REQ-PRO-055` (`REQ-PRO-055.1`, `REQ-PRO-055.2`)  
 **Test Reference**: `TST-PRO-055` (`TST-PRO-055.1`–`TST-PRO-055.3`)  
@@ -13,7 +13,7 @@
 
 ## 1. Scope & Operational Context
 
-This document establishes the formal, black-box system requirements (`SYSREQ-DEX-001` through `SYSREQ-DEX-006`) for data exchange, telemetry export/import, cloud services integration, and disaster recovery in **aTrainingTracker**.
+This document establishes the formal, black-box system requirements (`SYSREQ-DEX-001` through `SYSREQ-DEX-008`) for data exchange, telemetry export/import, Polar BLE PFTP/PMD offline backfill, external DEM elevation queries, cloud services integration, and disaster recovery in **aTrainingTracker**.
 
 These requirements satisfy ASPICE 4.0 **SYS.2 (System Requirements Analysis)** Base Practices:
 * **SYS.2 BP1**: *Specify system requirements* – Define functional, non-functional, security, and interface data requirements.
@@ -98,6 +98,26 @@ These requirements satisfy ASPICE 4.0 **SYS.2 (System Requirements Analysis)** B
 * **Verification Method**: Static Audit & Test (`SystemDataExchangeRequirementsContractTest`, `BackupManagerCredentialExclusionTest`, `BackupRulesXmlValidationTest`)
 * **Traced Software Components**: `AuthCredentialsStore.kt`, `full_backup_content.xml`, `data_extraction_rules.xml`, `HealthConnectManager.kt`, `HealthConnectHrvImporter.kt`, `WorkoutSummariesDatabaseManager.java`
 
+### SYSREQ-DEX-007: Polar BLE PFTP/PMD Offline Recording, Clock Sync & Post-Workout Backfill
+* **Title**: Polar BLE PFTP/PMD Offline Recording, Clock Sync & Post-Workout Backfill
+* **Statement**: The system SHALL manage Polar BLE SDK `8.6.0` (`com.github.polarofficial:polar-ble-sdk:8.6.0`) offline flash recording and post-workout telemetry backfill over Polar File Transfer Protocol (`0000feee-0000-1000-8000-00805f9b34fb`, `SERVICE_POLAR_PFTP`) and Polar Measurement Data (`fb005c80-02e7-f387-1cad-8acd2d8df0c8`, `SERVICE_POLAR_PMD`):
+  1. Synchronize sensor device clocks, arbitrate GATT connections (`PolarOfflineGattCoordinator.kt`), and arm/stop internal flash recording on Polar H10 and Verity Sense sensors (`PolarH10OfflineController.kt`, `PolarVeritySenseOfflineController.kt`, `PolarOnlineStreamingBridge.kt`).
+  2. Execute synchronous post-workout stop and PFTP backfill bounded by `BACKFILL_TIMEOUT_MS = 30_000L` (`30s`) for Polar H10 and `BACKFILL_TIMEOUT_MS = 45_000L` (`45s`, `FETCH_TIMEOUT_MS = 30_000L`) for Polar Verity Sense on `TrackerService.java`'s `mDbExecutor` prior to `ExportManager` export generation (`REQ-TRK-084`), persisting raw telemetry diagnostic sidecars (`PolarRawTelemetryRecorder.kt`, `REQ-EXP-044`).
+* **Rationale**: Athletes lose RF connectivity during swimming or gym sessions; offline sensor flash recording and deterministic `30s` (H10) / `45s` (Verity Sense) post-workout backfill guarantee gap-free FIT/TCX/Strava exports.
+* **Priority**: High
+* **Verification Method**: Test & Analysis (`SystemDataExchangeRequirementsContractTest`, `PolarH10OfflineController.kt`, `PolarVeritySenseOfflineController.kt`, `TrackerService.java`)
+* **Traced Software Components**: `PolarH10OfflineController.kt`, `PolarVeritySenseOfflineController.kt`, `PolarOfflineGattCoordinator.kt`, `PolarOnlineStreamingBridge.kt`, `PolarOfflineCapabilityStore.kt`, `PolarRawTelemetryRecorder.kt`, `TrackerService.java`, `BluetoothConstants.java`
+
+### SYSREQ-DEX-008: External Elevation Model (Open-Meteo DEM) & Cloud Telemetry Enrichment
+* **Title**: External Elevation Model (Open-Meteo DEM) & Cloud Telemetry Enrichment
+* **Statement**: The system SHALL query external Digital Elevation Model (DEM) reference altitudes and enrich local terrain caches with graceful offline fallback:
+  1. Retrieve reference terrain elevation profiles via HTTPS GET from Open-Meteo (`https://api.open-meteo.com/v1/elevation`, `ElevationService.kt`) and persist spatial lookup caches in SQLite (`ElevationCacheDatabaseManager.kt`).
+  2. Calibrate barometric/GNSS altitude profiles and heal corrupted historical elevation tracks (`REQ-DAT-014`, `REQ-CLM-009`) without blocking live 1-Hz tracking when network connectivity is unavailable.
+* **Rationale**: Smartphone barometers require sea-level reference calibration and historical GPS tracks benefit from authoritative DEM elevation healing.
+* **Priority**: Medium
+* **Verification Method**: Test (`SystemDataExchangeRequirementsContractTest`, `ElevationService.kt`, `ElevationCacheDatabaseManager.kt`)
+* **Traced Software Components**: `ElevationService.kt`, `ElevationCacheDatabaseManager.kt`, `ElevationResult.kt`
+
 ---
 
 ## 3. System Requirements & Software Code Grounding Matrix
@@ -110,12 +130,14 @@ These requirements satisfy ASPICE 4.0 **SYS.2 (System Requirements Analysis)** B
 | `SYSREQ-DEX-004` | Dropbox & Google Drive cloud backup & workout sync | `REQ-DAT-020`, `REQ-DAT-022`, `REQ-DAT-024`, `REQ-DAT-029`, `REQ-EXP-018`, `REQ-EXP-044`, `REQ-MIG-002`, `REQ-MIG-003`, `REQ-MIG-007`, `REQ-MIG-008`, `REQ-MIG-009`, `REQ-MIG-010`, `REQ-MIG-019`, `REQ-MIG-028`, `REQ-MIG-030`, `REQ-MIG-031`, `REQ-MIG-034`, `REQ-MIG-035`, `REQ-MIG-036`, `REQ-MIG-038`, `REQ-MIG-040`, `REQ-MIG-049`, `REQ-MIG-050`, `REQ-MIG-052` | `/Backups/`, `aTrainingTracker/Backups/`, `dropbox-core-sdk:8.0.2` |
 | `SYSREQ-DEX-005` | Full state `.attbackup` atomic archiving & Zip Slip defense | `REQ-DAT-004`, `REQ-DAT-005`, `REQ-DAT-006`, `REQ-DAT-007`, `REQ-DAT-008`, `REQ-DAT-009`, `REQ-DAT-011`, `REQ-DAT-015`, `REQ-DAT-016`, `REQ-DAT-020`, `REQ-DAT-026`, `REQ-DAT-033`, `REQ-DAT-035`, `REQ-DAT-036`, `REQ-DAT-044`, `REQ-MIG-001`, `REQ-MIG-004`, `REQ-MIG-005`, `REQ-MIG-006`, `REQ-MIG-011`, `REQ-MIG-012`, `REQ-MIG-013`, `REQ-MIG-014`, `REQ-MIG-015`, `REQ-MIG-016`, `REQ-MIG-017`, `REQ-MIG-020`, `REQ-MIG-021`, `REQ-MIG-023`, `REQ-MIG-025`, `REQ-MIG-026`, `REQ-MIG-027`, `REQ-MIG-029`, `REQ-MIG-032`, `REQ-MIG-041`, `REQ-MIG-042`, `REQ-MIG-043`, `REQ-MIG-044`, `REQ-MIG-045`, `REQ-MIG-047`, `REQ-MIG-048` | `BACKUP_FILENAME = "aTrainingTracker_backup.attbackup"`, 1.5x space check, WAL flush |
 | `SYSREQ-DEX-006` | Credential exclusion, Health Connect, decommissioned services | `REQ-DAT-024`, `REQ-EXP-020`, `REQ-EXT-009`, `REQ-EXT-011`, `REQ-EXT-012` | Exclusion of `auth_credentials_prefs.xml`, Health Connect HRV consent, Runkeeper & TrainingPeaks inert demarcation |
+| `SYSREQ-DEX-007` | Polar BLE PFTP/PMD offline recording & 30s/45s backfill | `REQ-CON-045`, `REQ-CON-049`, `REQ-CON-050`, `REQ-TRK-084`, `REQ-EXP-044` | `0000feee-...` (`SERVICE_POLAR_PFTP`), `fb005c80-...` (`SERVICE_POLAR_PMD`), H10 `30_000L` / Verity Sense `45_000L` |
+| `SYSREQ-DEX-008` | Open-Meteo DEM elevation & spatial cache healing | `REQ-DAT-014`, `REQ-TRK-024`, `REQ-SEN-025`, `REQ-CLM-009` | `https://api.open-meteo.com/v1/elevation`, `ElevationCacheDatabaseManager.kt` |
 
 ---
 
 ## 4. System-to-Software Requirement Traceability Matrix (SYS.2 BP5 -> SWE.1 BP5)
 
-The following matrix establishes bidirectional traceability between system data exchange requirements and concrete refining software requirements in `docs/requirements/req_data_migration_export.md`:
+The following matrix establishes bidirectional traceability between system data exchange requirements and concrete refining software requirements in `docs/requirements/req_data_migration_export_part1.md` and `docs/requirements/req_data_migration_export_part2.md`:
 
 | System Requirement | System Title | Refining Software Requirements (`REQ-*`) | Grounded Classes & Verification Test |
 | :--- | :--- | :--- | :--- |
@@ -125,6 +147,8 @@ The following matrix establishes bidirectional traceability between system data 
 | `SYSREQ-DEX-004` | Cloud Storage Sync (Dropbox & GDrive) | `REQ-DAT-020`, `REQ-DAT-022`, `REQ-DAT-024`, `REQ-DAT-029`, `REQ-EXP-018`, `REQ-EXP-044`, `REQ-MIG-002`, `REQ-MIG-003`, `REQ-MIG-007`, `REQ-MIG-008`, `REQ-MIG-009`, `REQ-MIG-010`, `REQ-MIG-019`, `REQ-MIG-028`, `REQ-MIG-030`, `REQ-MIG-031`, `REQ-MIG-034`, `REQ-MIG-035`, `REQ-MIG-036`, `REQ-MIG-038`, `REQ-MIG-040`, `REQ-MIG-049`, `REQ-MIG-050`, `REQ-MIG-052` | `DropboxBackupManager.kt`, `GoogleDriveBackupManager.kt`, `GoogleDriveUploader.kt`, `BackupWorker.kt`, `SystemDataExchangeRequirementsContractTest.kt` |
 | `SYSREQ-DEX-005` | Full State Backup & Atomic Recovery | `REQ-DAT-004`, `REQ-DAT-005`, `REQ-DAT-006`, `REQ-DAT-007`, `REQ-DAT-008`, `REQ-DAT-009`, `REQ-DAT-011`, `REQ-DAT-015`, `REQ-DAT-016`, `REQ-DAT-020`, `REQ-DAT-026`, `REQ-DAT-033`, `REQ-DAT-035`, `REQ-DAT-036`, `REQ-DAT-044`, `REQ-MIG-001`, `REQ-MIG-004`, `REQ-MIG-005`, `REQ-MIG-006`, `REQ-MIG-011`, `REQ-MIG-012`, `REQ-MIG-013`, `REQ-MIG-014`, `REQ-MIG-015`, `REQ-MIG-016`, `REQ-MIG-017`, `REQ-MIG-020`, `REQ-MIG-021`, `REQ-MIG-023`, `REQ-MIG-025`, `REQ-MIG-026`, `REQ-MIG-027`, `REQ-MIG-029`, `REQ-MIG-032`, `REQ-MIG-041`, `REQ-MIG-042`, `REQ-MIG-043`, `REQ-MIG-044`, `REQ-MIG-045`, `REQ-MIG-047`, `REQ-MIG-048` | `BackupManager.kt`, `SecureZipExtractor.kt`, `BackupRestoreViewModel.kt`, `DatabaseConnectionManager.kt`, `SystemDataExchangeRequirementsContractTest.kt` |
 | `SYSREQ-DEX-006` | Security Isolation & Credentials Shield | `REQ-DAT-024`, `REQ-EXP-020`, `REQ-EXT-009`, `REQ-EXT-011`, `REQ-EXT-012` | `AuthCredentialsStore.kt`, `full_backup_content.xml`, `data_extraction_rules.xml`, `HealthConnectHrvImporter.kt`, `SystemDataExchangeRequirementsContractTest.kt` |
+| `SYSREQ-DEX-007` | Polar BLE PFTP/PMD Offline Backfill (30s/45s) | `REQ-CON-045`, `REQ-CON-049`, `REQ-CON-050`, `REQ-TRK-084`, `REQ-EXP-044` | `PolarH10OfflineController.kt`, `PolarVeritySenseOfflineController.kt`, `TrackerService.java`, `SystemDataExchangeRequirementsContractTest.kt` |
+| `SYSREQ-DEX-008` | External Elevation Model (Open-Meteo DEM) | `REQ-DAT-014`, `REQ-TRK-024`, `REQ-SEN-025`, `REQ-CLM-009` | `ElevationService.kt`, `ElevationCacheDatabaseManager.kt`, `ElevationResult.kt`, `SystemDataExchangeRequirementsContractTest.kt` |
 
 ---
 
@@ -134,3 +158,5 @@ The following matrix establishes bidirectional traceability between system data 
 | :--- | :--- | :--- | :--- | :--- |
 | `1.0.0` | 2026-11-16 | AI Agent | `ATT-6142` | Prior system specification baseline. |
 | `1.1.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Standardized `DOC-SYS-DEX` header, bumped version, reset status to `Reviewed` (`Pending PO Sign-Off`). |
+| `1.2.0` | 2026-11-18 | AI Agent (`ATT-8201`) | `ATT-8201` | Added `SYSREQ-DEX-007` (Polar BLE PFTP/PMD offline recording & 30s backfill) and `SYSREQ-DEX-008` (Open-Meteo DEM elevation & spatial cache healing) and updated matrices. |
+| `1.2.1` | 2026-11-18 | AI Agent (`ATT-8201`) | `ATT-8201` | Cold Stage 6 heal: distinguished Polar H10 `30_000L` (`30s`) vs. Verity Sense `45_000L` (`45s`) `BACKFILL_TIMEOUT_MS` in `SYSREQ-DEX-007` and updated pre-split shard references to `req_data_migration_export_part1/2.md`. |

@@ -1,7 +1,7 @@
 # Living Requirements: Persistence, Migration & Cloud Export (Part 1 of 2)
 
 **Document ID**: `DOC-REQ-MIG-P1`  
-**Version**: 1.0.0  
+**Version**: 1.0.1  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -1029,7 +1029,7 @@
 
 ### REQ-DAT-014: Internet Digital Elevation Model (DEM) Reference Altitude Retrieval, Spatial Caching & Legacy Location Healing [Verified]
 - **Tests**: `TST-DAT-008`
-- **System Requirement(s)**: `SYSREQ-DEX-002`
+- **System Requirement(s)**: `SYSREQ-DEX-002`, `SYSREQ-DEX-008`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1152,7 +1152,7 @@
 
 ### REQ-DAT-017: Workout Origin Source Provenance Attribute [Verified]
 - **Tests**: `TST-DAT-012`
-- **System Requirement(s)**: `SYSREQ-DEX-001`
+- **System Requirement(s)**: `SYSREQ-DEX-001`, `SYSREQ-TRK-011`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -3989,3 +3989,4 @@
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
 | `1.0.0` | 2026-11-18 | AI Agent (`ATT-8206`) | `ATT-8206` | Split oversized shard into compliant sub-shard (<= 4,000 lines, `REQ-PRO-093.4`, `REQ-PRO-127.3`). |
+| `1.0.1` | 2026-11-18 | AI Agent (`ATT-8201`) | `ATT-8201` | Linked refined `REQ-*` entries in-place to net-new `SYSREQ-TRK-007..013` and `SYSREQ-DEX-007..008`. |

@@ -136,11 +136,13 @@ class SystemArchitectureDesignContractTest {
         assertTrue("Sequence must model backup creation", content.contains(".attbackup"))
         assertTrue("Sequence must model ControlTrackingScreen", content.contains("ControlTrackingScreen"))
         assertTrue("Sequence must model TrackerService on mDbExecutor for finalization", content.contains("TrackerService (mDbExecutor)") || (content.contains("TrackerService") && content.contains("mDbExecutor")))
+        assertTrue("Sequence must model synchronous Polar stopAndBackfillWorkoutBlocking (TST-PRO-131.2)", content.contains("stopAndBackfillWorkoutBlocking"))
         assertTrue("Sequence must model ExportManager auto-export", content.contains("ExportManager"))
+        assertTrue("System interfaces must model bidirectional SYS-IF-01 and SYS-IF-02", content.contains("SYS_EL_02 <-->") && content.contains("SYS_EL_03 <-->"))
     }
 
     /**
-     * Asserts 100% allocation of all 12 system requirements across both domains (TST-PRO-056.3).
+     * Asserts 100% allocation of all 21 system requirements across both domains (TST-PRO-056.3, TST-PRO-131.2).
      */
     @Test
     fun testSystemArchitecture_100PercentSysreqAllocationMatrix() {
@@ -148,14 +150,14 @@ class SystemArchitectureDesignContractTest {
 
         assertTrue("Must declare Section 5 Allocation Matrix", content.contains("## 5. System Requirements Allocation Matrix"))
 
-        // 1. Domain 1: Tracking (SYSREQ-TRK-001..006)
-        for (i in 1..6) {
+        // 1. Domain 1: Tracking (SYSREQ-TRK-001..013)
+        for (i in 1..13) {
             val trkId = "SYSREQ-TRK-%03d".format(i)
             assertTrue("Allocation matrix must include $trkId", content.contains(trkId))
         }
 
-        // 2. Domain 2: Data Exchange (SYSREQ-DEX-001..006)
-        for (i in 1..6) {
+        // 2. Domain 2: Data Exchange (SYSREQ-DEX-001..008)
+        for (i in 1..8) {
             val dexId = "SYSREQ-DEX-%03d".format(i)
             assertTrue("Allocation matrix must include $dexId", content.contains(dexId))
         }
@@ -163,7 +165,7 @@ class SystemArchitectureDesignContractTest {
 
     /**
      * Asserts exact bidirectional parity: every SYSREQ in docs/system_requirements.md is 100% allocated,
-     * and every allocated SYSREQ in docs/system/system_architecture.md exists in SYS.2 (zero orphan IDs) (TST-PRO-056.3).
+     * and every allocated SYSREQ in docs/system/system_architecture.md exists in SYS.2 (zero orphan IDs) (TST-PRO-056.3, TST-PRO-131.2).
      */
     @Test
     fun testSystemArchitecture_crossChecksSystemRequirementsSpec() {
@@ -174,7 +176,7 @@ class SystemArchitectureDesignContractTest {
         val regex = Regex("SYSREQ-[A-Z]+-\\d{3}")
         val declaredSysreqs = regex.findAll(sysreqContent).map { it.value }.toSet()
 
-        assertEquals("Must declare exactly 12 requirements in docs/system_requirements.md", 12, declaredSysreqs.size)
+        assertEquals("Must declare exactly 21 requirements in docs/system_requirements.md", 21, declaredSysreqs.size)
 
         // Extract all SYSREQ-* allocated in Section 5 of docs/system/system_architecture.md
         val section5Start = archContent.indexOf("## 5. System Requirements Allocation Matrix")
@@ -251,7 +253,7 @@ class SystemArchitectureDesignContractTest {
         val dexContent = findRepoRootFile("docs/system/sysreq_data_exchange.md").readText()
         val archContent = findRepoRootFile("docs/system/system_architecture.md").readText()
 
-        for (i in 1..6) {
+        for (i in 1..8) {
             val dexId = "SYSREQ-DEX-%03d".format(i)
             assertTrue("sysreq_data_exchange.md must define $dexId", dexContent.contains(dexId))
             assertTrue("system_architecture.md must allocate $dexId", archContent.contains(dexId))

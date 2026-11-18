@@ -1,7 +1,7 @@
 # Living Requirements: Persistence, Migration & Cloud Export (Part 2 of 2)
 
 **Document ID**: `DOC-REQ-MIG-P2`  
-**Version**: 1.0.0  
+**Version**: 1.0.1  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -48,7 +48,7 @@
 
 ### REQ-EXP-044: Polar Raw Sensor Telemetry Sidecar Export & Aftermath Diagnostic ZIP Bundle Sharing (`ATT-8020`) [Verified]
 - **Tests**: `TST-EXP-044`
-- **System Requirement(s)**: `SYSREQ-DEX-001`, `SYSREQ-DEX-004`
+- **System Requirement(s)**: `SYSREQ-DEX-001`, `SYSREQ-DEX-004`, `SYSREQ-DEX-007`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit / Integration
@@ -96,3 +96,4 @@
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
 | `1.0.0` | 2026-11-18 | AI Agent (`ATT-8206`) | `ATT-8206` | Split oversized shard into compliant sub-shard (<= 4,000 lines, `REQ-PRO-093.4`, `REQ-PRO-127.3`). |
+| `1.0.1` | 2026-11-18 | AI Agent (`ATT-8201`) | `ATT-8201` | Linked refined `REQ-*` entries in-place to net-new `SYSREQ-TRK-007..013` and `SYSREQ-DEX-007..008`. |

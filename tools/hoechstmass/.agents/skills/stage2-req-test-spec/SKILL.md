@@ -21,6 +21,7 @@ Reuse the persistent subagent pair via messages:
 1. **Requirement Formulation (`REQ-XXX`)**:
    - Write clear `SHALL` (functional behavior) and `MUST` (technical constraints) clauses, structured architectural invariants, and Given-When-Then acceptance criteria.
    - Insert new requirement rows into living specifications under `docs/requirements/` using multi-line section format.
+   - **`SYS.2` / `SYS.3` System Traceability & Impact Check**: For system-refining software requirements, link the parent `SYSREQ-*` (or document `Derived (SW-only)` rationale) and specify any required `SYS.2`/`SYS.3` system specification or architecture updates when external boundaries change.
    - Validate requirement governance tooling.
 2. **Test Specification (`TST-XXX`)**:
    - Specify deterministic unit, repository, service, database, and integration test cases.

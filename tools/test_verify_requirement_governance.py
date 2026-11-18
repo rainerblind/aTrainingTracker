@@ -1741,8 +1741,8 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
         ok, diag, report = verify_system_software_traceability()
         self.assertTrue(ok, f"Expected live repository traceability to pass, got: {diag}")
         self.assertEqual(report["coverage_pct"], 100.0)
-        self.assertEqual(report["covered_count"], 12)
-        self.assertEqual(report["sysreq_count"], 12)
+        self.assertEqual(report["covered_count"], 21)
+        self.assertEqual(report["sysreq_count"], 21)
         self.assertEqual(len(report["dangling_sysreq_citations"]), 0)
         self.assertEqual(len(report["uncovered_sysreqs"]), 0)
 
@@ -2656,7 +2656,7 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
         ok, diag, report = verify_system_software_traceability()
         self.assertTrue(ok, f"Expected live --verify-sys-trace pass, got: {diag}")
         self.assertEqual(report["covered_count"], report["sysreq_count"])
-        self.assertEqual(report["sysreq_count"], 12)
+        self.assertEqual(report["sysreq_count"], 21)
         all_mapped_reqs = {r for reqs in report["sys_to_swe_map"].values() for r in reqs}
         self.assertFalse(any(r.startswith("REQ-DEX-") for r in all_mapped_reqs))
         self.assertFalse(any(r.startswith("REQ-PRO-") for r in all_mapped_reqs))
@@ -3807,6 +3807,46 @@ class TestLivingDocDirectoryLayout(unittest.TestCase):
         repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
         ok, diag = verify_living_doc_directory_layout(repo_root=repo_root)
         self.assertTrue(ok, f"Live repository layout failed: {diag}")
+
+
+class TestGrandfatheredSysreqsRemoved(unittest.TestCase):
+    """TST-PRO-131.4: Verify GRANDFATHERED_SYSREQS is removed and obsolete SYSREQ-PER/ACQ/ENV-* fail closed."""
+
+    def test_obsolete_grandfathered_sysreqs_rejected_as_dangling(self):
+        """TST-PRO-131.4: Obsolete SYSREQ-PER-001/SYSREQ-ACQ-001/SYSREQ-ENV-001 fail closed."""
+        import tools.verify_requirement_governance as vrg
+
+        self.assertFalse(hasattr(vrg, "GRANDFATHERED_SYSREQS"))
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            sys_dir = os.path.join(tmpdir, "docs", "system")
+            req_dir = os.path.join(tmpdir, "docs", "requirements")
+            os.makedirs(sys_dir)
+            os.makedirs(req_dir)
+
+            with open(os.path.join(sys_dir, "sysreq_live_tracking.md"), "w", encoding="utf-8") as f:
+                f.write("### SYSREQ-TRK-001: Sensors\n")
+            with open(os.path.join(sys_dir, "system_architecture.md"), "w", encoding="utf-8") as f:
+                f.write("Allocated: SYSREQ-TRK-001, SYSREQ-PER-001\n")
+            with open(os.path.join(req_dir, "req_tracking_cockpit_part1.md"), "w", encoding="utf-8") as f:
+                f.write(
+                    "### REQ-TRK-001: Sensors [Verified]\n"
+                    "- **System Requirement(s)**: `SYSREQ-TRK-001`, `SYSREQ-ACQ-001`, `SYSREQ-ENV-001`\n"
+                )
+
+            ok_trace, diag_trace, _ = verify_system_software_traceability(repo_root=tmpdir)
+            self.assertFalse(ok_trace)
+            joined_trace = "\n".join(diag_trace)
+            self.assertIn("SYSREQ-PER-001", joined_trace)
+            self.assertIn("SYSREQ-ACQ-001", joined_trace)
+            self.assertIn("SYSREQ-ENV-001", joined_trace)
+
+            ok_arch, diag_arch = vrg.verify_architecture_and_system_specs(
+                repo_root=tmpdir,
+                diff_text="+++ b/docs/system/system_architecture.md\n+Allocated: SYSREQ-TRK-001, SYSREQ-PER-001\n",
+            )
+            self.assertFalse(ok_arch)
+            self.assertTrue(any("SYSREQ-PER-001" in d for d in diag_arch), diag_arch)
 
 
 if __name__ == "__main__":

@@ -1,7 +1,7 @@
 # Living Requirements: Post-Workout Analytics & Periods
 
 **Document ID**: `DOC-REQ-PERIODS`  
-**Version**: 1.0.2  
+**Version**: 1.0.3  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -1136,7 +1136,7 @@
 
 ### REQ-RAD-005: Workout Traffic Persistence, Session Totals & Aftermath Summary Card [Verified]
 - **Tests**: `TST-RAD-005`
-- **System Requirement(s)**: `SYSREQ-TRK-006`
+- **System Requirement(s)**: `SYSREQ-TRK-006`, `SYSREQ-TRK-007`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit, Integration
@@ -1815,3 +1815,4 @@
 | `1.0.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Added standardized `DOC-REQ-PERIODS` work-product control header and Change History. |
 | `1.0.1` | 2026-11-18 | AI Agent (`ATT-8710`) | `ATT-8710` | Added `REQ-HRV-044` [Planned] for DFA alpha 1 3-zone graph coloring, 52.dp margin coordination, dash filtering, and scatter threshold parity. |
 | `1.0.2` | 2026-11-18 | AI Agent (`ATT-8710`) | `ATT-8710` | Integrated `REQ-HRV-044` [Verified] post-`ATT-8206` (`v1.0.1`) shard reconciliation. |
+| `1.0.3` | 2026-11-18 | AI Agent (`ATT-8201`) | `ATT-8201` | Linked refined `REQ-*` entries in-place to net-new `SYSREQ-TRK-007..013` and `SYSREQ-DEX-007..008`. |

@@ -62,14 +62,7 @@ class SystemLiveTrackingRequirementsContractTest {
         assertTrue("docs/system/sysreq_live_tracking.md must not be empty", content.isNotBlank())
         assertTrue("Must declare ASPICE SYS.2 BP1-BP3 process scope", content.contains("SYS.2"))
 
-        val expectedRequirements = listOf(
-            "SYSREQ-TRK-001",
-            "SYSREQ-TRK-002",
-            "SYSREQ-TRK-003",
-            "SYSREQ-TRK-004",
-            "SYSREQ-TRK-005",
-            "SYSREQ-TRK-006"
-        )
+        val expectedRequirements = (1..13).map { "SYSREQ-TRK-%03d".format(it) }
 
         for (req in expectedRequirements) {
             assertTrue("Document must contain requirement $req", content.contains("### $req:"))
@@ -77,20 +70,13 @@ class SystemLiveTrackingRequirementsContractTest {
     }
 
     /**
-     * Asserts that all requirements specify mandatory attributes per ASPICE SYS.2 BP1-BP3 (TST-PRO-054.1).
+     * Asserts that all requirements specify mandatory attributes per ASPICE SYS.2 BP1-BP3 (TST-PRO-054.1, TST-PRO-131.1).
      */
     @Test
     fun testSysreqLiveTracking_allRequirementsHaveMandatorySections() {
         val content = findRepoRootFile("docs/system/sysreq_live_tracking.md").readText()
 
-        val expectedRequirements = listOf(
-            "SYSREQ-TRK-001",
-            "SYSREQ-TRK-002",
-            "SYSREQ-TRK-003",
-            "SYSREQ-TRK-004",
-            "SYSREQ-TRK-005",
-            "SYSREQ-TRK-006"
-        )
+        val expectedRequirements = (1..13).map { "SYSREQ-TRK-%03d".format(it) }
 
         for (req in expectedRequirements) {
             val sectionStart = content.indexOf("### $req:")
@@ -163,6 +149,8 @@ class SystemLiveTrackingRequirementsContractTest {
             "6a4e3200-667b-11e3-949a-0800200c9a66",
             BluetoothConstants.SERVICE_RADAR
         )
+        assertTrue("Must document Garmin Varia Light Control UUID", content.contains(BluetoothConstants.CHARACTERISTIC_RADAR_LIGHT_CONTROL))
+        assertTrue("Must document Garmin Varia RearVue Control UUID", content.contains(BluetoothConstants.SERVICE_RADAR_CONTROL))
 
         // 2. Exponential Backoff Reconnection grounding (via reflection on MyBTLEDevice)
         val initialDelayField = MyBTLEDevice::class.java.getDeclaredField("INITIAL_RECONNECT_DELAY_MS").apply {

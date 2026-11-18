@@ -1,7 +1,7 @@
 # Software Architecture: aTrainingTracker (ASPICE 4.0 SWE.2)
 
 **Document ID**: `DOC-ARC-MAIN`  
-**Version**: 1.0.3  
+**Version**: 1.0.4  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -308,7 +308,7 @@ In accordance with **ASPICE 4.0 SWE.2 Base Practice 3 (Analyze software architec
 | **Tracking Core** | `TrackerService` | Periodic Tick Execution Latency | < 50 ms | `REQ-NFR-003`: 1000 ms periodic cycle (`scheduleAtFixedRate`) on background thread; guarantees 950 ms idle headroom. |
 | **Tracking Core** | `TrackerService` | CPU Consumption | < 5% single-core | `REQ-NFR-004`: Mid-tier reference device; prevents CPU throttle and heat buildup. |
 | **Tracking Core** | `TrackerService` | Dedicated Heap Footprint | < 40 MB | `REQ-NFR-005`: Prevents GC churn and OutOfMemoryError during 12+ hour recordings. |
-| **Tracking Core** | `TrackerService` | Battery Consumption | < 5%/h | `REQ-NFR-006`: Background recording with screen off, active GPS, and BLE/ANT+ sensors. |
+| **Tracking Core** | `TrackerService` | Battery Consumption | < 5%/h (screen-off) / <= 8.0%/h (mixed) / <= 12.0%/h (screen-on) | `REQ-NFR-006`: Background recording with screen off, active GPS, and BLE/ANT+ sensors (`< 5.0%/h`), mixed endurance `E5` (`<= 8.0%/h` per `sys_verification_protocol.md`), and continuous screen-on cockpit (`<= 12.0%/h`). |
 | **Sensor Layer** | `BANALService` / `ProxySensor` | Sensor Dispatch Latency | < 25 ms | `REQ-NFR-007`: Time from hardware event ingestion to listener notification across registered sensors. |
 | **Sensor Layer** | `BANALService` / `ProxySensor` | Connection Failover Window | 3.5 s | `REQ-NFR-008`: Maximum timeout before initiating automatic failover or sensor reconnection. |
 | **Tracking Core** | `TrackerService` | Power Management (WakeLock) | Bound to Tracking | `REQ-NFR-009`, `REQ-TRK-003`: `PARTIAL_WAKE_LOCK` (`aTrainingTracker:TrackingLock`) strictly acquired only during `TRACKING` via `TrackerService#acquireWakeLock` and released immediately on `STOP` via `TrackerService#releaseWakeLock`. |
@@ -400,7 +400,7 @@ External hardware interfaces (`SYS-IF-01` BLE GATT `0x180D` / `0x1818` / `6a4e32
 In accordance with **ASPICE SYS.5 (System Verification)**, end-to-end qualification of integrated software releases against system requirements (`SYSREQ-TRK-*`, `SYSREQ-DEX-*`) on physical hardware in target operational endurance environments is formally specified in [`docs/system/sys_verification_protocol.md`](system/sys_verification_protocol.md):
 * **Hardware Reference Matrix**: Google Pixel reference devices (Android 14/15), BLE Heart Rate monitors (Polar H10, Garmin HRM-Pro), BLE/ANT+ cycling power meters (Favero Assioma Duo, Stages, Wahoo KICKR), Garmin Varia cycling radar (RTL515), and barometric/GNSS hardware.
 * **Environmental Operating Conditions**: 5 quantified operational endurance environments: (E1) Urban Canyon, (E2) Rural Road / High Speed, (E3) Alpine Climb & Barometric Variation, (E4) Indoor Smart Trainer, and (E5) Extended Endurance Battery Longevity.
-* **Release Qualification**: Formal test cases (`SYS-VRF-001` through `SYS-VRF-008`), objective pass/fail criteria (sample loss $\le 1\%$, battery drain $\le 8\%$/hr, RF reconnection within backoff window, FIT/TCX schema validity), and release sign-off record generation under `docs/releases/<tag>/sys_verification_record.md`.
+* **Release Qualification**: Formal test cases (`SYS-VRF-001` through `SYS-VRF-010`), objective pass/fail criteria (sample loss $\le 1\%$, mixed endurance battery drain $\le 8\%$/hr reconciled with `< 5.0%/h` screen-off and `<= 12.0%/h` screen-on in `REQ-NFR-006`, RF reconnection within backoff window, FIT/TCX schema validity), and release sign-off record generation under `docs/releases/<tag>/sys_verification_record.md`.
 
 ### 6.4 Release Process Gating & System Verification Evidence (ASPICE SUP.8, SWE.6, SYS.5, `REQ-PRO-072`, `TST-PRO-072`, `REQ-PRO-112`)
 
@@ -418,3 +418,4 @@ In accordance with **ASPICE SUP.8 (Configuration and Release Management)**, **SW
 | `1.0.1` | 2026-11-18 | AI Agent (`ATT-8206`) | `ATT-8206` | Aligned Section 2 domain-shard wording with `<= 4,000`-line sub-shard splitting (`REQ-PRO-093.3`, `REQ-PRO-127.3`). |
 | `1.0.2` | 2026-11-18 | AI Agent (`ATT-8203`) | `ATT-8203` | Registered `docs/architecture/detailed_design/workout_repository.md` in §3.5 (`4` SWE.3 units), reconciled §5.3 (`120` remaining `.java` + `29` migrated `.kt`), and aligned §5.5 `ADR-001` status (`Reviewed (Pending PO Sign-Off)`) (`REQ-PRO-129.1`, `REQ-PRO-129.2`). |
 | `1.0.3` | 2026-11-18 | AI Agent (`ATT-8202`) | `ATT-8202` | Quantified §4.9 repository/cache/vertex/`GoogleMap` budgets (`WorkoutRepository`, `PeriodsRepository`, `PeriodMapUtils`, `RadarStateRepository`, `WorkoutClusterRepository`), added Swim/RadarLight/TPMS/Polar PFTP & `ClusterWorkoutDataPort` in §2, and aligned `IF-SWE-03`..`05` in §5.1 (`REQ-PRO-130.1`, `REQ-PRO-130.2`). |
+| `1.0.4` | 2026-11-18 | AI Agent (`ATT-8201`) | `ATT-8201` | Reconciled §4.9 `REQ-NFR-006` battery budgets (`< 5%/h` screen-off / `<= 8.0%/h` mixed / `<= 12.0%/h` screen-on) and §6.3 `SYS-VRF-001`..`010` with `docs/system/sys_verification_protocol.md` (`REQ-PRO-131.3`). |

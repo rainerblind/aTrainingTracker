@@ -119,12 +119,22 @@ class SystemContextContractTest {
             "6a4e3202-667b-11e3-949a-0800200c9a66",
             BluetoothConstants.CHARACTERISTIC_RADAR_LIGHT_CONTROL
         )
+        assertTrue("Must specify Garmin Varia RearVue control service UUID", content.contains(BluetoothConstants.SERVICE_RADAR_CONTROL))
+        assertTrue("Must specify Polar BLE PFTP service UUID", content.contains(BluetoothConstants.SERVICE_POLAR_PFTP))
+        assertTrue("Must specify Polar BLE PMD service UUID", content.contains(BluetoothConstants.SERVICE_POLAR_PMD))
+        assertTrue("Must specify Polar BLE SDK 8.6.0", content.contains("polar-ble-sdk:8.6.0"))
 
-        // 2. Hardware Sensors grounding (Barometer + Proximity only; zero step counter/accelerometer)
+        // 2. Hardware Sensors grounding (Barometer, Proximity, Ambient Light & authentic 6-channel Smartphone IMU; zero step counter)
         assertTrue("Must specify Barometer Sensor.TYPE_PRESSURE", content.contains("Sensor.TYPE_PRESSURE"))
         assertTrue("Must specify Proximity Sensor.TYPE_PROXIMITY", content.contains("Sensor.TYPE_PROXIMITY"))
+        assertTrue("Must specify Ambient Light Sensor.TYPE_LIGHT", content.contains("Sensor.TYPE_LIGHT"))
+        assertTrue("Must specify IMU Sensor.TYPE_ACCELEROMETER", content.contains("Sensor.TYPE_ACCELEROMETER"))
+        assertTrue("Must specify IMU Sensor.TYPE_GYROSCOPE", content.contains("Sensor.TYPE_GYROSCOPE"))
+        assertTrue("Must specify IMU Sensor.TYPE_LINEAR_ACCELERATION", content.contains("Sensor.TYPE_LINEAR_ACCELERATION"))
+        assertTrue("Must specify IMU Sensor.TYPE_GRAVITY", content.contains("Sensor.TYPE_GRAVITY"))
+        assertTrue("Must specify IMU Sensor.TYPE_ROTATION_VECTOR", content.contains("Sensor.TYPE_ROTATION_VECTOR"))
+        assertTrue("Must specify IMU Sensor.TYPE_GAME_ROTATION_VECTOR", content.contains("Sensor.TYPE_GAME_ROTATION_VECTOR"))
         assertFalse("Must NOT cite hallucinated Sensor.TYPE_STEP_COUNTER", content.contains("Sensor.TYPE_STEP_COUNTER"))
-        assertFalse("Must NOT cite hallucinated Sensor.TYPE_ACCELEROMETER", content.contains("Sensor.TYPE_ACCELEROMETER"))
 
         // 3. ANT+ IPC Services grounding
         assertTrue("Must specify ANT+ Plugins service package", content.contains("com.dsi.ant.plugins.antplus"))
@@ -237,16 +247,26 @@ class SystemContextContractTest {
             .map { it.groupValues[1] }
             .toSet()
 
-        val allowedSensors = setOf("TYPE_PRESSURE", "TYPE_PROXIMITY")
+        val allowedSensors = setOf(
+            "TYPE_PRESSURE",
+            "TYPE_PROXIMITY",
+            "TYPE_LIGHT",
+            "TYPE_ACCELEROMETER",
+            "TYPE_GYROSCOPE",
+            "TYPE_LINEAR_ACCELERATION",
+            "TYPE_GRAVITY",
+            "TYPE_ROTATION_VECTOR",
+            "TYPE_GAME_ROTATION_VECTOR"
+        )
         val unexpectedSensors = foundSensors - allowedSensors
         assertTrue(
             "Found unexpected or hallucinated sensor constants in system_context.md: $unexpectedSensors (allowed: $allowedSensors)",
             unexpectedSensors.isEmpty()
         )
-        assertTrue("Must include TYPE_PRESSURE", foundSensors.contains("TYPE_PRESSURE"))
-        assertTrue("Must include TYPE_PROXIMITY", foundSensors.contains("TYPE_PROXIMITY"))
+        for (expected in allowedSensors) {
+            assertTrue("Must include $expected", foundSensors.contains(expected))
+        }
         assertFalse("Must NOT include TYPE_STEP_COUNTER", foundSensors.contains("TYPE_STEP_COUNTER"))
-        assertFalse("Must NOT include TYPE_ACCELEROMETER", foundSensors.contains("TYPE_ACCELEROMETER"))
 
         // 2. Verify FOREGROUND_SERVICE_TYPE_* symbols
         val fgsPattern = Regex("FOREGROUND_SERVICE_TYPE_[A-Z0-9_]+")

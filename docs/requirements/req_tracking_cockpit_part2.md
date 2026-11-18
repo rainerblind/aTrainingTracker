@@ -1,7 +1,7 @@
 # Living Requirements: Tracking & Live Sensor Cockpit (Part 2 of 2)
 
 **Document ID**: `DOC-REQ-TRK-P2`  
-**Version**: 1.0.15  
+**Version**: 1.0.16  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -505,7 +505,7 @@
 
 ### REQ-CON-035: Smartphone IMU/GPS Deceleration Brake-Light Trigger for BLE & ANT+ (0x23) Radar Tail Lights [Verified]
 - **Tests**: `TST-CON-035`
-- **System Requirement(s)**: `SYSREQ-TRK-002`
+- **System Requirement(s)**: `SYSREQ-TRK-002`, `SYSREQ-TRK-007`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -841,7 +841,7 @@
 
 ### REQ-CON-043: Cockpit Radar Tail Light Button, Live Auto Status & Canonical Action Row [Verified]
 - **Tests**: `TST-CON-043`
-- **System Requirement(s)**: `SYSREQ-TRK-002`
+- **System Requirement(s)**: `SYSREQ-TRK-002`, `SYSREQ-TRK-007`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -931,7 +931,7 @@
 ### REQ-CON-045: Polar Live IMU Streaming Bridge Search Timeout & GATT Contention Recovery [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-CON-045`, `TST-CON-050`
-- **System Requirement(s)**: `SYSREQ-TRK-001`, `SYSREQ-TRK-002`
+- **System Requirement(s)**: `SYSREQ-TRK-001`, `SYSREQ-TRK-002`, `SYSREQ-DEX-007`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -981,7 +981,7 @@
 ### REQ-CON-046: Radar `isAutoMode` Preservation Across Telemetry Frames, Simulator & Source Arbitration [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-CON-046`
-- **System Requirement(s)**: `SYSREQ-TRK-002`
+- **System Requirement(s)**: `SYSREQ-TRK-002`, `SYSREQ-TRK-007`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1020,7 +1020,7 @@
 ### REQ-CON-047: Compact Quick-Switch Sheet & Shared 2-Column RadarLightModeGrid, Button-Matching Icons & Ascending Mode Order [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-CON-047`, `TST-CON-048`
-- **System Requirement(s)**: `SYSREQ-TRK-002`
+- **System Requirement(s)**: `SYSREQ-TRK-002`, `SYSREQ-TRK-007`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1063,7 +1063,7 @@
 
 ### REQ-TRK-064: 1-Tap Radar Audio Snooze, Peloton-Mode Audio Sync & Smart Urban Alert Suppression [Verified]
 - **Tests**: `TST-TRK-064`
-- **System Requirement(s)**: `SYSREQ-TRK-005`
+- **System Requirement(s)**: `SYSREQ-TRK-005`, `SYSREQ-TRK-007`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1199,7 +1199,7 @@
 ### REQ-TRK-067: Firmware-Smoothed & Quantized Synthetic RR Stream Detection (HrvSignalQualityAnalyzer) [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-TRK-067`
-- **System Requirement(s)**: `SYSREQ-TRK-006`
+- **System Requirement(s)**: `SYSREQ-TRK-006`, `SYSREQ-TRK-012`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1486,7 +1486,7 @@
 ### REQ-TRK-072: Guided DFA a1 Step & Ramp Test Protocol Screen [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-TRK-072`
-- **System Requirement(s)**: `SYSREQ-TRK-004`
+- **System Requirement(s)**: `SYSREQ-TRK-004`, `SYSREQ-TRK-012`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1765,7 +1765,7 @@
 ### REQ-SEN-028: Pairable Virtual Sensor ATT Fused (Position und Geschwindigkeit) with Priority Routing and Input Source Guards [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-SEN-028`
-- **System Requirement(s)**: `SYSREQ-TRK-001`, `SYSREQ-TRK-003`
+- **System Requirement(s)**: `SYSREQ-TRK-001`, `SYSREQ-TRK-003`, `SYSREQ-TRK-010`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1935,7 +1935,7 @@
 ### REQ-TRK-077: Indoor GPS Suppression, External Speed Sensor Coupling & IMU Rest-Variance Stationary Pinning [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-TRK-077`
-- **System Requirement(s)**: `SYSREQ-TRK-004`
+- **System Requirement(s)**: `SYSREQ-TRK-004`, `SYSREQ-TRK-010`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1994,7 +1994,7 @@
 ### REQ-SEN-029: Front/Rear Wheel Speed Sensor Mounting Position Tracking, Selection Dialog & Dual-Sensor Guidance [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-SEN-029`, `TST-SEN-031`
-- **System Requirement(s)**: `SYSREQ-TRK-001`, `SYSREQ-TRK-003`
+- **System Requirement(s)**: `SYSREQ-TRK-001`, `SYSREQ-TRK-003`, `SYSREQ-TRK-010`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -2048,7 +2048,7 @@
 ### REQ-SEN-030: Per-Bike Front/Rear Wheel Circumference Time-Series History & GPS-Free Dual-Wheel iTPMS Puncture Detection [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-SEN-030`
-- **System Requirement(s)**: `SYSREQ-TRK-001`
+- **System Requirement(s)**: `SYSREQ-TRK-001`, `SYSREQ-TRK-010`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -2225,7 +2225,7 @@
 ### REQ-TRK-078: Mid-Workout Crash Recovery Accumulator Preservation and Baseline Seeding [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-TRK-078`
-- **System Requirement(s)**: `SYSREQ-TRK-004`
+- **System Requirement(s)**: `SYSREQ-TRK-004`, `SYSREQ-TRK-013`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -2410,7 +2410,7 @@
 ### REQ-TRK-082: Decoupled Multi-Color Dynamic Zone Sparkline Rendering for HR, Power, and HRV DFA α1 [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-TRK-082`
-- **System Requirement(s)**: `SYSREQ-TRK-006`
+- **System Requirement(s)**: `SYSREQ-TRK-006`, `SYSREQ-TRK-012`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -2493,7 +2493,7 @@
 ### REQ-TRK-084: Valid-Data `AccumulatedSensors` Persistence Filtering, Resume Rehydration & Post-Workout Backfill Upsert [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-TRK-084`
-- **System Requirement(s)**: `SYSREQ-TRK-004`, `SYSREQ-TRK-006`
+- **System Requirement(s)**: `SYSREQ-TRK-004`, `SYSREQ-TRK-006`, `SYSREQ-TRK-011`, `SYSREQ-DEX-007`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -2656,7 +2656,7 @@
 ### REQ-CON-048: Offline & Unified EditDeviceDialog Radar Tail Light Configuration, Cold-Start Hydration & StVZO/Radar-Only Handling [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-CON-048`
-- **System Requirement(s)**: `SYSREQ-TRK-002`
+- **System Requirement(s)**: `SYSREQ-TRK-002`, `SYSREQ-TRK-007`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -2776,7 +2776,7 @@
 ### REQ-SEN-031: EditDeviceDialog Wheel Speed Sensor Mounting Position Display, Draft Selection & Conflict Swap [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-SEN-031`
-- **System Requirement(s)**: `SYSREQ-TRK-001`, `SYSREQ-TRK-003`
+- **System Requirement(s)**: `SYSREQ-TRK-001`, `SYSREQ-TRK-003`, `SYSREQ-TRK-010`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -2811,7 +2811,7 @@
 ### REQ-TRK-085: HRV/RR Ingestion Monotonicity, Physiological Gap Flagging, Pre-Filter Timestamp Sorting & DFA α1 Validity Gate [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-TRK-085`
-- **System Requirement(s)**: `SYSREQ-TRK-001`, `SYSREQ-TRK-006`
+- **System Requirement(s)**: `SYSREQ-TRK-001`, `SYSREQ-TRK-006`, `SYSREQ-TRK-012`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -2886,7 +2886,7 @@
 ### REQ-CON-049: Hardware-Grounded Polar Detection & Canonical ID via BLE Service UUIDs (PMD/PFTP) and DIS (0x2A24/0x2A25) [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-CON-049`, `TST-CON-050`
-- **System Requirement(s)**: `SYSREQ-TRK-001`, `SYSREQ-TRK-002`
+- **System Requirement(s)**: `SYSREQ-TRK-001`, `SYSREQ-TRK-002`, `SYSREQ-DEX-007`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -2963,7 +2963,7 @@
 ### REQ-CON-050: Live Polar-IMU Toggle Handoff, Shared-Session Recovery & Continuous HR/Raw-Telemetry Delivery [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-CON-050`
-- **System Requirement(s)**: `SYSREQ-TRK-001`, `SYSREQ-TRK-002`
+- **System Requirement(s)**: `SYSREQ-TRK-001`, `SYSREQ-TRK-002`, `SYSREQ-DEX-007`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -3138,3 +3138,4 @@
 | `1.0.12` | 2026-11-18 | AI Agent (`ATT-8676`) | `ATT-8676` | Promoted `REQ-TRK-088` to `[Verified]` in Stage 5 following clean-room 10-suite verification (`55/56` PASS across 9/10 full-PASS suites; `1` pre-existing `ATT-8823` failure in `EditDeviceDialog.kt`) and `has_verified_test_evidence("TST-TRK-088")` PASS. |
 | `1.0.13` | 2026-11-18 | AI Agent (`ATT-8881`) | `ATT-8881` | Added `REQ-FIL-026` `[Verified]` for 1-Hz barometric ingestion rate-matching and adaptive cyclic pocket-jitter `varBaro` scaling in `AltitudeAndSlopeDevice_ATTFused` and `KinematicAltitudeSlopeEkf` (`67/67` PASS across `8` XMLs). |
 | `1.0.14` | 2026-11-18 | AI Agent (`ATT-8733`) | `ATT-8733` | Added `REQ-TRK-089` `[Verified]` (`RadarFullScreenThreatOverlay` non-clipping content-sized markers, touch-transparent `Box` + single-pass `.layout`, `TwoWheeler`/`DirectionsCar`/`LocalShipping`, `Color.kt` contrast & map-backdrop tokens, `9/9` locales, `76/76` scoped PASS, `:app:lintDebug` `0` errors, `Rule 8.5` PNG). |
+| `1.0.16` | 2026-11-18 | AI Agent (`ATT-8201`) | `ATT-8201` | Linked refined `REQ-*` entries in-place to net-new `SYSREQ-TRK-007..013` and `SYSREQ-DEX-007..008`. |

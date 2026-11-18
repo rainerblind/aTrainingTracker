@@ -1,7 +1,7 @@
 # System Context and External System Elements Specification
 
 **Document ID**: `DOC-SYS-CTX`  
-**Version**: 1.2.0  
+**Version**: 1.3.1  
 **ASPICE Process Areas**: SYS.2 (System Requirements Analysis, BP1), SYS.3 (System Architectural Design)  
 **Requirement Reference**: `REQ-PRO-053` (`REQ-PRO-053.1`, `REQ-PRO-053.2`)  
 **Test Reference**: `TST-PRO-053` (`TST-PRO-053.1`–`TST-PRO-053.4`)  
@@ -32,9 +32,9 @@ graph TD
     end
 
     subgraph SensorsDomain ["Domain 1: Sensors & Peripherals"]
-        BleSensors["Bluetooth Low Energy Peripherals<br/>(HRM 0x180D, CSC 0x1816, Power 0x1818, RSC 0x1814, Battery 0x180F, DeviceInfo 0x180A, Radar 6a4e3200)"]
-        AntSensors["ANT+ Peripherals & Radio IPC<br/>(HRM, Bike Power, Speed/Cadence)"]
-        OnboardSensors["On-Board Android Hardware Sensors<br/>(Barometer Sensor.TYPE_PRESSURE, Proximity Sensor.TYPE_PROXIMITY)"]
+        BleSensors["Bluetooth Low Energy Peripherals<br/>(HRM 0x180D, CSC 0x1816, Power 0x1818, RSC 0x1814, Battery 0x180F, DIS 0x180A, Radar 6a4e3200/2f00, Polar PFTP/PMD)"]
+        AntSensors["ANT+ Peripherals & Radio IPC<br/>(HRM, Bike Power, Speed/Cadence, Radar 0x28, Bike Lights 0x23)"]
+        OnboardSensors["On-Board Android Hardware Sensors<br/>(Barometer TYPE_PRESSURE, Proximity TYPE_PROXIMITY, Ambient Light TYPE_LIGHT, IMU: Accelerometer, Gyroscope, Linear Accel, Gravity, Rotation/Game Rotation)"]
     end
 
     subgraph PlatformDomain ["Domain 2: Platform Frameworks"]
@@ -67,8 +67,8 @@ graph TD
     Athlete -->|"Touch, Gestures, UI Configuration"| AppCore
     AppCore -->|"Visual Feedback, Alerts, Audio Cues"| Athlete
 
-    BleSensors -->|"BLE GATT Notifications (0x180D, 0x1816, 0x1818, 0x1814, 0x180F, 0x180A, Radar)"| AppCore
-    AntSensors -->|"ANT+ IPC Broadcasts & Socket API"| AppCore
+    BleSensors <-->|"BLE GATT Notifications & Control (0x180D..0x180A, Radar 6a4e3202/2f00, Polar PFTP/PMD)"| AppCore
+    AntSensors <-->|"ANT+ IPC Broadcasts, Socket API & Light/Radar Control (0x28/0x23)"| AppCore
     OnboardSensors -->|"SensorEventListener Telemetry"| AppCore
 
     AppCore -->|"WakeLock Acquisition, FGS Notification"| AndroidOS
@@ -106,13 +106,16 @@ The application interfaces with wireless sports sensors and onboard hardware com
    - *Running Speed and Cadence Service* (`0x1814`, `SERVICE_RUNNING_SPEED_AND_CADENCE`): Delivers stride rate, instantaneous speed, and cadence.
    - *Battery Service* (`0x180F`, `SERVICE_BATTERY`): Reports peripheral battery state (`0x2A19`).
    - *Device Information Service* (`0x180A`, `SERVICE_DEVICE_INFORMATION`): Provides hardware revision, manufacturer name, and model number metadata queries (`0000180a-0000-1000-8000-00805f9b34fb`).
-   - *Garmin Varia Radar Service* (`6a4e3200-667b-11e3-949a-0800200c9a66`, `SERVICE_RADAR`): Delivers multi-target vehicle approach velocities and threat levels (`6a4e3204-667b-11e3-949a-0800200c9a66`, `CHARACTERISTIC_RADAR_V2` and `6a4e3203-667b-11e3-949a-0800200c9a66`, `CHARACTERISTIC_RADAR_V1`) and bike tail light mode commands (`6a4e3202-667b-11e3-949a-0800200c9a66`, `CHARACTERISTIC_RADAR_LIGHT_CONTROL`).
+   - *Garmin Varia Radar Service* (`6a4e3200-667b-11e3-949a-0800200c9a66`, `SERVICE_RADAR`) & *RearVue Control Service* (`6a4e2f00-667b-11e3-949a-0800200c9a66`, `SERVICE_RADAR_CONTROL`): Delivers multi-target vehicle approach velocities and threat levels (`6a4e3204-667b-11e3-949a-0800200c9a66`, `CHARACTERISTIC_RADAR_V2` and `6a4e3203-667b-11e3-949a-0800200c9a66`, `CHARACTERISTIC_RADAR_V1`) and bidirectional bike tail light mode commands (`6a4e3202-667b-11e3-949a-0800200c9a66`, `CHARACTERISTIC_RADAR_LIGHT_CONTROL`; RearVue write `6a4e2f11-667b-11e3-949a-0800200c9a66`, notify `6a4e2f14-667b-11e3-949a-0800200c9a66`).
+   - *Polar BLE PFTP & PMD Services* (`0000feee-0000-1000-8000-00805f9b34fb`, `SERVICE_POLAR_PFTP`; `fb005c80-02e7-f387-1cad-8acd2d8df0c8`, `SERVICE_POLAR_PMD`): Polar BLE SDK `8.6.0` (`com.github.polarofficial:polar-ble-sdk:8.6.0`) offline flash recording, clock sync, 30s (`30_000L` ms H10) / 45s (`45_000L` ms Verity Sense) post-workout backfill, and live IMU/PPG streaming (`PolarH10OfflineController.kt`, `PolarVeritySenseOfflineController.kt`, `PolarOfflineGattCoordinator.kt`, `PolarOnlineStreamingBridge.kt`).
 2. **ANT+ IPC Services & Radio Socket**:
-   - Communicates with ANT+ plugins through external Android packages (`com.dsi.ant.plugins.antplus`, `com.dsi.ant.service.socket`, `com.dsi.ant.usbservice`).
+   - Communicates with ANT+ plugins through external Android packages (`com.dsi.ant.plugins.antplus`, `com.dsi.ant.service.socket`, `com.dsi.ant.usbservice`), including ANT+ Bike Radar (`0x28`, `ANTBikeRadarDevice.kt`) and bidirectional ANT+ Bike Lights control (`0x23`, `ANTBikeLightDevice.kt`).
    - Grounded in permissions: `com.dsi.ant.permission.ANT` and `com.dsi.ant.permission.ANT_ADMIN`.
 3. **On-Board Android Hardware Sensors**:
    - *Barometer* (`Sensor.TYPE_PRESSURE`): Atmospheric pressure measurements for high-resolution altitude and grade calculation (`AltitudeFromPressureDevice.java`, `HavePressureSensor.java`).
-   - *Proximity* (`Sensor.TYPE_PROXIMITY`): Detection of user proximity and pocket state for screen dimming and power conservation during active tracking (`BatterySaverController.kt`).
+   - *Proximity* (`Sensor.TYPE_PROXIMITY`): Detection of user proximity and pocket state for screen dimming and power conservation during active tracking (`BatterySaverController.kt`, `SmartRadarLightEngine.kt`).
+   - *Ambient Light* (`Sensor.TYPE_LIGHT`): Ambient lux measurement for daylight/night automatic radar tail-light mode switching (`SmartRadarLightEngine.kt`).
+   - *Smartphone IMU Kinematics* (`Sensor.TYPE_ACCELEROMETER`, `Sensor.TYPE_GYROSCOPE`, `Sensor.TYPE_LINEAR_ACCELERATION`, `Sensor.TYPE_GRAVITY`, `Sensor.TYPE_ROTATION_VECTOR`, `Sensor.TYPE_GAME_ROTATION_VECTOR`): Inertial attitude, rest-variance stationary pinning, fused odometry, and deceleration brake-light triggers (`SpeedAndLocationDevice_ATTFused.kt`, `QuaternionGyroProjector.kt`, `SmartBrakeLightDetector.kt`, `SpeedAndLocationDevice.java`).
 
 ### 3.2 Domain 2: Platform Frameworks & Operating System
 The application operates within the Android application sandboxing model:
@@ -192,3 +195,5 @@ The application operates within the Android application sandboxing model:
 | :--- | :--- | :--- | :--- | :--- |
 | `1.1.0` | 2026-11-16 | AI Agent | `ATT-6142` | Prior system specification baseline. |
 | `1.2.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Standardized `DOC-SYS-CTX` header, bumped version, reset status to `Reviewed` (`Pending PO Sign-Off`). |
+| `1.3.0` | 2026-11-18 | AI Agent (`ATT-8201`) | `ATT-8201` | Added Smartphone IMU (`6` `Sensor.TYPE_*` channels), Polar BLE SDK `8.6.0` PFTP/PMD, Garmin Varia RearVue `6a4e2f00`, ANT+ `0x28`/`0x23`, and bidirectional sensor control edges. |
+| `1.3.1` | 2026-11-18 | AI Agent (`ATT-8201`) | `ATT-8201` | Cold Stage 6 heal: added `Sensor.TYPE_LIGHT` (`SmartRadarLightEngine.kt`) and distinguished Polar H10 `30s` (`30_000L`) vs. Verity Sense `45s` (`45_000L`) `BACKFILL_TIMEOUT_MS`. |

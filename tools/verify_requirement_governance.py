@@ -4156,22 +4156,6 @@ GRANDFATHERED_UNGROUNDED_SYMBOLS = {
     "DatabaseHelper.java",
 }
 
-GRANDFATHERED_SYSREQS = {
-    "SYSREQ-PER-001",
-    "SYSREQ-PER-002",
-    "SYSREQ-PER-003",
-    "SYSREQ-PER-004",
-    "SYSREQ-PER-005",
-    "SYSREQ-ACQ-001",
-    "SYSREQ-ACQ-002",
-    "SYSREQ-ACQ-003",
-    "SYSREQ-ACQ-004",
-    "SYSREQ-ACQ-005",
-    "SYSREQ-ENV-001",
-    "SYSREQ-ENV-002",
-    "SYSREQ-ENV-003",
-}
-
 
 def find_composable_callers(func_name, search_dir, exclude_file=None):
     """
@@ -4468,7 +4452,7 @@ def verify_architecture_and_system_specs(diff_text=None, repo_root=None, base_re
                         allocated_ids.add(clean_id)
 
         missing_allocation = declared_ids - allocated_ids
-        missing_declaration = (allocated_ids - declared_ids) - GRANDFATHERED_SYSREQS
+        missing_declaration = allocated_ids - declared_ids
 
         if missing_allocation:
             errors.append(
@@ -5039,7 +5023,7 @@ def verify_system_software_traceability(
                         if raw_sys in declared_sysreqs:
                             if is_sys_refined:
                                 sys_to_swe[raw_sys].add(current_req)
-                        elif raw_sys not in GRANDFATHERED_SYSREQS:
+                        else:
                             dangling_sysreq_citations.append(
                                 f"{fn} [{current_req}] cites undeclared system requirement {raw_sys}"
                             )
@@ -5067,7 +5051,7 @@ def verify_system_software_traceability(
                                 continue
                             if not re.match(r"^SYSREQ-[A-Z]+-\d+$", raw_sys):
                                 continue
-                            if raw_sys not in declared_sysreqs and raw_sys not in GRANDFATHERED_SYSREQS:
+                            if raw_sys not in declared_sysreqs:
                                 dangling_sysreq_citations.append(
                                     f"docs/system/{fn}:{line_no} cites undeclared system requirement {raw_sys}"
                                 )

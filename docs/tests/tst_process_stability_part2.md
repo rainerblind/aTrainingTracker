@@ -1,14 +1,14 @@
 # Living Test Specification: Engineering Process, Stability & Architecture (Part 2 of 2)
 
 **Document ID**: `DOC-TST-PRO-P2`  
-**Version**: 1.0.6  
+**Version**: 1.0.9  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `process_stability_part2`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Tests**: 86
+**Total Tests**: 87
 
 ---
 
@@ -1474,6 +1474,27 @@
 
 ---
 
+### TST-PRO-131: **SYS.2/SYS.3 Capability Synchronization, Protocol Reconciliation, `GRANDFATHERED_SYSREQS` Removal & Skill Impact Gate Suite (ATT-8201)** [Verified]
+- **Requirement(s)**: `REQ-PRO-131`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Component**: `docs/system/sysreq_live_tracking.md`, `docs/system/sysreq_data_exchange.md`, `docs/system_requirements.md`, `docs/system/system_context.md`, `docs/system/system_architecture.md`, `docs/system/sys_verification_protocol.md`, `docs/system/system_software_traceability.md`, `tools/verify_requirement_governance.py`, `tools/test_verify_requirement_governance.py`, `.agents/skills/stage1-analysis/SKILL.md`, `.agents/skills/stage2-req-test-spec/SKILL.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SystemContextContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SystemArchitectureDesignContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SystemLiveTrackingRequirementsContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SystemDataExchangeRequirementsContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SystemRequirementsSpecificationContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SystemVerificationProtocolContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/AspiceSweAuditContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/HoechstmassCoreFrameworkContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/NonFunctionalRequirementsContractTest.kt`
+- **Jira**: `ATT-8201`
+- **Test Description**:
+  1. *Net-New `SYSREQ-*` Specifications & Traceability Parity (`TST-PRO-131.1`, `SystemLiveTrackingRequirementsContractTest.kt`, `SystemDataExchangeRequirementsContractTest.kt`, `SystemRequirementsSpecificationContractTest.kt`)*:
+     • *Given* `SYSREQ-TRK-007..013` in `docs/system/sysreq_live_tracking.md`, `SYSREQ-DEX-007..008` in `docs/system/sysreq_data_exchange.md`, updated `docs/system_requirements.md`, and `docs/system/system_software_traceability.md`, *When* the `SYS.2` contract suites and `verify_requirement_governance.py` execute, *Then* all `21` `SYSREQ-*` requirements define mandatory attributes, reference authentic files on disk, and achieve `100%` `SYSREQ->REQ` coverage (`0` dangling IDs). Tag tests with `TST-PRO-131.1`.
+  2. *`SYS.3` & `system_context.md` Synchronization (`TST-PRO-131.2`, `SystemContextContractTest.kt` & `SystemArchitectureDesignContractTest.kt`)*:
+     • *Given* synchronized `docs/system/system_context.md` and `docs/system/system_architecture.md` (`v1.2.0`) covering Smartphone IMU sensors, all `6` context elements, bidirectional `SYS-IF-01`/`SYS-IF-02`, §4.2 30s Polar PFTP backfill on `mDbExecutor`, and `100%` allocation of all `21` `SYSREQ-*` IDs, *When* `SystemContextContractTest` and `SystemArchitectureDesignContractTest` execute, *Then* `declaredSysreqs == allocatedSysreqs == 21` and all code/symbol grounding assertions pass `100%`. Tag tests with `TST-PRO-131.2`.
+  3. *`SYS.5` Varia UUID Fix & Battery Budget Reconciliation (`TST-PRO-131.3`, `SystemVerificationProtocolContractTest.kt` & `NonFunctionalRequirementsContractTest.kt`)*:
+     • *Given* `docs/system/sys_verification_protocol.md` citing `6a4e3200-667b-11e3-949a-0800200c9a66` at `:66` and reconciled battery budgets (`< 5.0%/h` screen-off per `REQ-NFR-006`, `<= 8.0%/h` mixed `E5`, `<= 12.0%/h` screen-on), *When* `SystemVerificationProtocolContractTest` and `NonFunctionalRequirementsContractTest` execute, *Then* both pass while `REQ-NFR-006` remains `On-Device Manual` `[Implemented]`. Tag tests with `TST-PRO-131.3`.
+  4. *`GRANDFATHERED_SYSREQS` Purge & Governance Check (`TST-PRO-131.4`, `tools/test_verify_requirement_governance.py` & `tools/verify_requirement_governance.py`)*:
+     • *Given* emptied/removed `GRANDFATHERED_SYSREQS` in `tools/verify_requirement_governance.py` and offline `tempfile` fixtures citing obsolete `SYSREQ-PER/ACQ/ENV-*` IDs, *When* `python3 -m unittest tools/test_verify_requirement_governance.py` and `python3 tools/verify_requirement_governance.py --repo-root .` execute, *Then* phantom citations fail closed in fixtures and live governance + `--check-size --strict` (`<= 4,000` lines on every shard) exit `0`. Tag test docstrings with `TST-PRO-131.4`.
+  5. *`SYS.2`/`SYS.3` Skill Impact Gate & Parity (`TST-PRO-131.5`, `AspiceSweAuditContractTest.kt` & `HoechstmassCoreFrameworkContractTest.kt`)*:
+     • *Given* `.agents/skills/stage1-analysis/SKILL.md` and `.agents/skills/stage2-req-test-spec/SKILL.md` updated with the `SYS.2/SYS.3` impact check while preserving `"Documentation Code-Grounding"`, *When* `AspiceSweAuditContractTest` and `HoechstmassCoreFrameworkContractTest` execute, *Then* all assertions pass `100%` (`Localization Parity: N/A - no UI strings`). Tag tests with `TST-PRO-131.5`.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -1485,3 +1506,6 @@
 | `1.0.4` | 2026-11-18 | AI Agent (`ATT-8202`) | `ATT-8202` | Added `[Planned]` `TST-PRO-130` test specifications (`ATT-8202_test_spec.md`: SWE.2 heap/cache/map budgets & bounded `recentHrvThresholdsCache`, Swim/RadarLight/TPMS/Polar PFTP & `IF-SWE-05` parity, full `.ui.*` upward-import ratchet, monolith & governance invariants). |
 | `1.0.5` | 2026-11-18 | AI Agent (`ATT-8202`) | `ATT-8202` | Promoted `TST-PRO-130` to `[Implemented]` in Stage 4 (`WorkoutRepositoryHrvConsensusTest.kt`, `ArchitectureConformanceContractTest.kt`, `InterfaceSignatureDriftContractTest.kt`, `WorkoutCluster*Test`). |
 | `1.0.6` | 2026-11-18 | AI Agent (`ATT-8202`) | `ATT-8202` | Promoted `TST-PRO-130` to `[Verified]` after Stage 5 verification (`47/47` targeted contract & component XML suites `242/242` PASS; `DeadCodeEliminationContractTest` `4/5` with pre-existing `EditDeviceDialog.kt` `internal @Preview`; `:app:lintDebug` `0` errors). |
+| `1.0.7` | 2026-11-18 | AI Agent (`ATT-8201`) | `ATT-8201` | Added `[Planned]` `TST-PRO-131` test specifications (`ATT-8201_test_spec.md`: `21` `SYSREQ-*` & `100%` `SYSREQ->REQ` traceability, `SYS.3` & `system_context.md` sync, Varia UUID & battery reconciliation, `GRANDFATHERED_SYSREQS` removal, Stage 1/2 `SYS.2/SYS.3` skill impact gate). |
+| `1.0.8` | 2026-11-18 | AI Agent (`ATT-8201`) | `ATT-8201` | Promoted `TST-PRO-131` to `[Implemented]` in Stage 4 (`tools/test_verify_requirement_governance.py` `TestGrandfatheredSysreqsRemoved`, `SystemContextContractTest`, `SystemArchitectureDesignContractTest`, `SystemLiveTrackingRequirementsContractTest`, `SystemDataExchangeRequirementsContractTest`, `SystemRequirementsSpecificationContractTest`, `SystemVerificationProtocolContractTest`). |
+| `1.0.9` | 2026-11-18 | AI Agent (`ATT-8201`) | `ATT-8201` | Promoted `TST-PRO-131` to `[Verified]` after Stage 5 verification (`13/13` Gradle contract suites `79/79` PASS, `test_hoechstmass_tools.py` `37/37` OK, `TST-PRO-131` verified evidence `True`, `28/28` shards `<= 4,000` lines, governance `exit 0`). |
