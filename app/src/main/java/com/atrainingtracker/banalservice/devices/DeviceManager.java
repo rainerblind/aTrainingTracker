@@ -550,12 +550,12 @@ public class DeviceManager {
             return;
         }
         RrBeatSource source = (RrBeatSource) candidate;
-        mRrSourcePriorityCache.remove(source);
         RrBeatListener relay = mRrSourceRelayListeners.remove(source);
         if (relay != null) {
             source.removeRrBeatListener(relay);
         }
         synchronized (mRrArbitrationLock) {
+            mRrSourcePriorityCache.remove(source);
             if (mActivePrimaryRrSource == source) {
                 mActivePrimaryRrSource = null;
                 mLastPrimaryRrBeatWallMs = 0L;

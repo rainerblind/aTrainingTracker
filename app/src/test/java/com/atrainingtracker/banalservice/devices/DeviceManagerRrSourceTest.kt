@@ -32,7 +32,9 @@ import com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOnlineS
 import com.atrainingtracker.banalservice.helpers.HavePressureSensor
 import com.atrainingtracker.banalservice.sensor.MySensorManager
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import io.mockk.Runs
 import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
 import io.mockk.mockkConstructor
 import io.mockk.mockkStatic
@@ -112,6 +114,7 @@ class DeviceManagerRrSourceTest {
         every { mockBanalService.userSelectedBSportType } returns null
 
         mockkConstructor(ClockDevice::class)
+        every { anyConstructed<ClockDevice>().startTimer() } just Runs
         mockkConstructor(BatteryDevice::class)
 
         deviceManager = DeviceManager(mockBanalService, mockSensorManager)

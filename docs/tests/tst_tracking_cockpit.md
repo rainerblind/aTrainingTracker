@@ -1,7 +1,7 @@
 # Living Test Specification: Tracking & Live Sensor Cockpit
 
 **Document ID**: `DOC-TST-TRK`  
-**Version**: 1.0.15  
+**Version**: 1.0.17  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -3368,3 +3368,5 @@
 | `1.0.13` | 2026-11-18 | AI Agent (`ATT-8706`) | `ATT-8706` | Stage 6 Bounce 1/3 heal (`[Verified]`): strengthened out-of-order & stale-eviction tests (`HRVMetricsDeviceTest`), positive DFA window assertion (`HrvPostWorkoutRecomputerTest`), `ANTHeartRateDeviceTest` `deltaC==1`/`>=2` monotonic & gap tests, and `DeviceManagerRrSourceTest` optical BTLE Verity Sense demotion test (`448/448` tests across `83` suites). |
 | `1.0.14` | 2026-11-18 | AI Agent (`ATT-8719`) | `ATT-8719` | Stage 6 Bounce 1/3 heal (`[Verified]`): grounded `linkedWheelPositions` symbol name and added cross-sensor `wheelPositionConflicts` refresh test in `DeviceDataRepositoryEquipmentSyncTest.kt` (`174/174` `--rerun-tasks` across `41` classes). |
 | `1.0.15` | 2026-11-18 | AI Agent (`ATT-8706`) | `ATT-8706` | Stage 6 Bounce 2/3 heal (`[Verified]`): added `DeviceManagerRrSourceTest.testSteadyStatePrimaryBeats_neverInvokeGetManufacturerNamePerBeat` and strengthened `HrvPostWorkoutRecomputerTest` interleaved pre-filter sort & relative `-430 ms` jump test (`449/449` tests across `83` suites). |
+| `1.0.16` | 2026-11-18 | AI Agent (`ATT-8706`) | `ATT-8706` | Stage 6 Bounce 3/3 heal (`[Implemented]`): strengthened `HrvPostWorkoutRecomputerTest` with bidirectional early/late interleaving (`nonNullDfaCount >= 120`, `sec 60..125` positive DFA assertion). |
+| `1.0.17` | 2026-11-18 | AI Agent (`ATT-8706`) | `ATT-8706` | Promoted `TST-TRK-085` to `[Verified]` in Stage 5 following Bounce 3/3 heal verification (`449/449` tests across `83` suites). |

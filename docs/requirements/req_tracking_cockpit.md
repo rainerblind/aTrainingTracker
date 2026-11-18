@@ -1,7 +1,7 @@
 # Living Requirements: Tracking & Live Sensor Cockpit
 
 **Document ID**: `DOC-REQ-TRK`  
-**Version**: 1.0.15  
+**Version**: 1.0.17  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -6789,3 +6789,5 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 | `1.0.13` | 2026-11-18 | AI Agent (`ATT-8706`) | `ATT-8706` | Stage 6 Bounce 1/3 heal (`[Verified]`): fixed `HRVMetricsDevice.pruneOldBeats` out-of-order queue eviction and `DeviceManager.getRrSourcePriority` optical `BTLEHeartRateDevice` Verity Sense demotion (`RR_PRIORITY_PPG`) (`448/448` tests across `83` suites). |
 | `1.0.14` | 2026-11-18 | AI Agent (`ATT-8719`) | `ATT-8719` | Stage 6 Bounce 1/3 heal (`[Verified]`): grounded `linkedWheelPositions` symbol name and added `_allDevices` update ordering + `notifyEquipmentLinksChanged(null)` cross-sensor conflict refresh in `REQ-SEN-031.3` (`174/174` `--rerun-tasks` across `41` classes). |
 | `1.0.15` | 2026-11-18 | AI Agent (`ATT-8706`) | `ATT-8706` | Stage 6 Bounce 2/3 heal (`[Verified]`): cached `MyDevice.mCachedManufacturerName`, short-circuited & cached `DeviceManager.getCachedRrSourcePriority` off steady-state RR beats, and strengthened genuine pre-filter sort failure assertion in `HrvPostWorkoutRecomputerTest` (`449/449` tests across `83` suites). |
+| `1.0.16` | 2026-11-18 | AI Agent (`ATT-8706`) | `ATT-8706` | Stage 6 Bounce 3/3 heal (`[Implemented]`): moved `mRrSourcePriorityCache.remove(source)` inside `synchronized (mRrArbitrationLock)` in `DeviceManager.detachIfRrBeatSource` and enforced bidirectional interleaving (`nonNullDfaCount >= 120` + `sec 60..125`) in `HrvPostWorkoutRecomputerTest`. |
+| `1.0.17` | 2026-11-18 | AI Agent (`ATT-8706`) | `ATT-8706` | Promoted `REQ-TRK-085` to `[Verified]` in Stage 5 following Bounce 3/3 heal verification (`449/449` tests across `83` suites). |
