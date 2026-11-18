@@ -1,14 +1,14 @@
 # Living Requirements: Engineering Process, Stability & Architecture (Part 2 of 2)
 
 **Document ID**: `DOC-REQ-PRO-P2`  
-**Version**: 1.0.1  
+**Version**: 1.0.4  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `process_stability_part2`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Requirements**: 67
+**Total Requirements**: 68
 
 ---
 
@@ -2270,9 +2270,39 @@
 
 ---
 
+### REQ-PRO-128: Credible Verdict Parsing, Additive End-to-End FTPR, Risk & Bug Status Parity, and Gate Subtask Closure Guard (ATT-8205) [Verified]
+- **Tests**: `TST-PRO-128`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `tools/sprint_metrics.py`, `tools/jira_util.py`, `tools/hoechstmass/tools/sprint_metrics.py`
+- **Rationale**: ASPICE 4.0 Gap #8 (`SUP.1 BP3/BP4`, `SUP.9 BP7`, `PA 4.1`) identified 5 parser and workflow-guard distortions across `tools/sprint_metrics.py`, `tools/jira_util.py`, and `tools/hoechstmass/tools/sprint_metrics.py`: missing verdict synonyms (`APPROVED`/`FREIGABE`/`REWORK`/`FAIL`), `extract_sprint_gate_records()` lacking ADF extraction and fabricating `PASS` on zero-comment subtasks, Gate 6 excluded from an end-to-end FTPR view, `risk_distribution` flattened to `100% Medium`, missing German/English terminal bug statuses (`abgelehnt`/`rejected`/`geschlossen`/`resolved`) + Höchstmaß bug-status parity, and silent zero-comment stage subtask closure via `jira_util.py move` (`ATT-8205`, Epic `ATT-8138`).
+- **Description**:
+  1. *Extended Verdict Keywords, ADF Extraction & Zero-Comment `unverified` Parity (`REQ-PRO-128.1`)*: `parse_verdicts_from_comments()` (`tools/sprint_metrics.py`) and `extract_sprint_gate_records()` (`tools/jira_util.py`) SHALL parse both `PASS`/`APPROVED`/`FREIGABE` (pass) and `REVISION`/`REWORK`/`FAIL` (revision) across plain-text and Jira Cloud v3 ADF comment bodies (`extract_text_from_comment_body()`), SHALL NOT default untagged comments from non-reviewer authors to `agent2`, and SHALL segregate zero-comment closed stage subtasks (`Erledigt`/`Closed`/`Done`) as `unverified` (`REQ-PRO-092.2/.3`) rather than fabricating `passed_first_time += 1` or synthetic `PASS` records.
+  2. *Additive End-to-End FTPR Preserving Gate 1–5 `overall_ftpr_percent` (`REQ-PRO-128.2`)*: `parse_sprint_gate_metrics()` (`tools/sprint_metrics.py`) SHALL expose an additive `end_to_end_ftpr_percent` field in `quality_gates` (and `format_metrics_markdown()`) computed across Gates 1–6 (`sum(pft[1..6]) / sum(total[1..6]) * 100.0`), while strictly preserving `overall_ftpr_percent` over Gates 1–5 (`range(1, 6)`) so `plausibility_warnings` (`REQ-PRO-122.4`) and multi-sprint rubber-stamping alerts (`REQ-PRO-107.3`) remain unmasked by Gate 6 bounces.
+  3. *Multi-Signal Risk Distribution Classification (`REQ-PRO-128.3`)*: `parse_sprint_gate_metrics()` SHALL derive `risk_distribution` (`Low`/`Medium`/`High`/`Highest`) from `severity-*` labels (`severity-critical`→`Highest`, `severity-major`→`High`, `severity-minor`→`Medium`, `severity-cosmetic`→`Low`), summary tags (`[Highest]`, `[High]`, `[Low]`), and Stage 1 `**Risk Rating**` / `Risk Rating:` metadata in description/analysis artifacts before falling back to `fields.priority.name`.
+  4. *Extended Bug & Terminal Status Mapping + Höchstmaß Parity (`REQ-PRO-128.4`)*: `parse_sprint_gate_metrics()` in `tools/sprint_metrics.py` and `tools/hoechstmass/tools/sprint_metrics.py` SHALL recognize German/English terminal statuses (`erledigt`, `closed`, `done`, `abgelehnt`, `rejected`, `geschlossen`, `resolved`) alongside `fixed_awaiting_human` (`Final Review (Human)` / `Final Review`) and `resolution_rate_percent` parity (`REQ-PRO-121.1`).
+  5. *Zero-Comment Stage Subtask Closure Guard (`REQ-PRO-128.5`)*: `transition_issue()` (`tools/jira_util.py`, invoked by `move`) SHALL block transitions of stage subtasks (`identify_gate_number(issue_summary) is not None`) to `freigabe`/`Erledigt`/`done` unless an `agent2` `PASS` verdict comment exists on the subtask, while preserving transitions on summary-less or non-stage subtasks (`tools/test_jira_accounts.py:312`).
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new `REQ-PRO-128` (`REQ-PRO-128.1`–`REQ-PRO-128.5`), refining `REQ-PRO-059.2` (`ATT-6149`), `REQ-PRO-092.2/.3` (`ATT-7559`), `REQ-PRO-107.3` (`ATT-8164`), `REQ-PRO-121.1` (`ATT-8165`), and `REQ-PRO-122.4` (`ATT-8168`).
+  2. *Historical Origin & Commit Trace*: `ATT-7559` (`sprint_metrics.py` `unverified`), `ATT-6149` (`extract_sprint_gate_records()` fallback), `c50cbf25` (`ATT-8165` `fixed_awaiting_human`), and `459f5eb5` (`ATT-8168` Gate 1–5 plausibility lock).
+  3. *Root Reason for Existing Formulation*: `REQ-PRO-122.4` and `REQ-PRO-107.3` isolated Gates 1–5 FTPR from Gate 6 so Stage 6 bounces cannot mask upstream blind spots; `test_subtask_freigabe_transitions_to_erledigt` (`test_jira_accounts.py:312`) mocks a summary-less subtask (`ATT-9999`).
+  4. *Preservation of Core Invariants*: Preserves Gate 1–5 `overall_ftpr_percent` for `plausibility_warnings` and M3 rubber-stamping alarms, preserves `gate_verdict()` `assign`+`add_comment` ordering before `transition_issue()`, preserves summary-less non-stage subtask transitions, and keeps `process_metrics.jsonl` schema backward-compatible.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* stage subtask comments with `APPROVED`/`FREIGABE` or `REWORK`/`FAIL` in plain text or Jira v3 ADF dicts and zero-comment `Erledigt` subtasks, *When* `parse_verdicts_from_comments()` and `extract_sprint_gate_records()` execute, *Then* all synonym verdicts are extracted without error and zero-comment subtasks are counted as `unverified` with zero fabricated `PASS` entries.
+  • *Given* sprint issues with Gate 1–5 subtasks and Gate 6 reviews, *When* `parse_sprint_gate_metrics()` runs, *Then* `overall_ftpr_percent` reflects Gates 1–5 (preserving `plausibility_warnings`), while `end_to_end_ftpr_percent` reports Gates 1–6 combined.
+  • *Given* issues carrying `severity-*` labels, `[Highest]`/`[High]`/`[Low]` summary tags, Stage 1 `Risk Rating`, or German/English bug statuses (`abgelehnt`/`rejected`/`geschlossen`/`resolved`), *When* `parse_sprint_gate_metrics()` executes in root and `tools/hoechstmass/tools/sprint_metrics.py`, *Then* `risk_distribution` and `problem_trends` classify risks and terminal/awaiting-human bug counts consistently.
+  • *Given* a `[Analysis]`..`[Test]` subtask without an `agent2` `PASS` comment vs a summary-less subtask (`ATT-9999`), *When* `transition_issue(..., "freigabe")` runs, *Then* the stage subtask transition exits non-zero while the summary-less subtask succeeds.
+- **Invariants**: Zero `app/src/main/` edits; `ANT-Android-SDKs` untouched; `process_metrics.jsonl` backward-compatible; `Localization Parity: N/A - no UI strings`; `Rule 5` offline mocked unit tests only.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
 | `1.0.0` | 2026-11-18 | AI Agent (`ATT-8206`) | `ATT-8206` | Split oversized shard into compliant sub-shard (<= 4,000 lines, `REQ-PRO-093.4`, `REQ-PRO-127.3`). |
 | `1.0.1` | 2026-11-18 | AI Agent (`ATT-8206`) | `ATT-8206` | Promoted `REQ-PRO-127` to `[Verified]` after Stage 5 verification (`490/490` `tools/` + `56/56` Hoechstmass Python tests, `113/113` Gradle contract tests across 16 suites, `27/27` shards `<= 4,000` lines, `--coverage` Cat 4 `1244/1244` `100%`, governance `exit 0`). |
+| `1.0.2` | 2026-11-18 | AI Agent (`ATT-8205`) | `ATT-8205` | Added `[Planned]` `REQ-PRO-128` (`REQ-PRO-128.1`–`REQ-PRO-128.5`: extended verdict keywords & ADF/`unverified` parity, additive `end_to_end_ftpr_percent`, multi-signal `risk_distribution`, extended German/English bug statuses + Höchstmaß parity, zero-comment stage subtask closure guard). |
+| `1.0.3` | 2026-11-18 | AI Agent (`ATT-8205`) | `ATT-8205` | Promoted `REQ-PRO-128` to `[Implemented]` in Stage 4 (`tools/sprint_metrics.py`, `tools/jira_util.py`, `tools/hoechstmass/tools/sprint_metrics.py`). |
+| `1.0.4` | 2026-11-18 | AI Agent (`ATT-8205`) | `ATT-8205` | Promoted `REQ-PRO-128` to `[Verified]` after Stage 5 verification (`test_sprint_metrics.py` `23/23`, `hoechstmass/test_sprint_metrics.py` `18/18`, `test_jira_accounts.py` `TST-PRO-128` PASS, governance `exit 0`). |

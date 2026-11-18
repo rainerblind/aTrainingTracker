@@ -1,14 +1,14 @@
 # Living Test Specification: Engineering Process, Stability & Architecture
 
 **Document ID**: `DOC-TST-PRO`  
-**Version**: 1.0.24  
+**Version**: 1.0.27  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Tests**: 231
+**Total Tests**: 232
 
 ---
 
@@ -3925,6 +3925,27 @@
 
 ---
 
+### TST-PRO-128: **Verdict Parsing, End-to-End FTPR, Risk & Bug Status Parity, and Stage Subtask Closure Guard Suite (ATT-8205)** [Verified]
+- **Requirement(s)**: `REQ-PRO-128`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Component**: `tools/sprint_metrics.py`, `tools/jira_util.py`, `tools/hoechstmass/tools/sprint_metrics.py`, `tools/test_sprint_metrics.py`, `tools/test_jira_accounts.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`
+- **Jira**: `ATT-8205`
+- **Test Description**:
+  1. *Extended Verdict Synonyms, ADF Extraction & Zero-Comment `unverified` Parity (`TST-PRO-128.1`, `tools/test_sprint_metrics.py` & `tools/test_jira_accounts.py`)*:
+     • *Given* plain-text and Jira v3 ADF subtask comments containing `APPROVED`/`FREIGABE`/`REWORK`/`FAIL` plus zero-comment `Erledigt` subtasks and untagged comments, *When* `parse_verdicts_from_comments()` and `extract_sprint_gate_records()` execute, *Then* synonym verdicts map to `PASS`/`REVISION`, untagged non-reviewer comments are not defaulted to `agent2`, and zero-comment subtasks record `unverified` without fabricated `PASS` entries. Tag test docstrings with `TST-PRO-128` / `TST-PRO-128.1` for `verify_requirement_governance.py --check-verified-evidence`.
+  2. *Additive `end_to_end_ftpr_percent` & Gate 1–5 `overall_ftpr_percent` Preservation (`TST-PRO-128.2`, `tools/test_sprint_metrics.py`)*:
+     • *Given* sprint fixtures with `>= 20` 100%-FTPR Gate 1–5 subtasks and Stage 6 bounces/revisions, *When* `parse_sprint_gate_metrics()` and `format_metrics_markdown()` execute, *Then* `overall_ftpr_percent` remains 100.0% (emitting `PA 4.1 Plausibility Warning`) while `end_to_end_ftpr_percent` includes Gate 6 (`< 100.0%`). Tag tests with `TST-PRO-128.2`.
+  3. *Multi-Signal Risk Distribution (`TST-PRO-128.3`, `tools/test_sprint_metrics.py`)*:
+     • *Given* issues with `severity-*` labels, `[Highest]`/`[High]`/`[Low]` summary tags, Stage 1 `Risk Rating`, and `Medium` priority fallback, *When* `parse_sprint_gate_metrics()` runs, *Then* `risk_distribution` classifies each bucket accurately instead of flattening to `100% Medium`. Tag tests with `TST-PRO-128.3`.
+  4. *Extended German/English Bug Statuses & Höchstmaß Parity (`TST-PRO-128.4`, `tools/test_sprint_metrics.py` & `tools/hoechstmass/tools/test_hoechstmass_tools.py`)*:
+     • *Given* bugs in `abgelehnt`, `rejected`, `geschlossen`, `resolved`, and `Final Review (Human)` statuses, *When* `parse_sprint_gate_metrics()` runs in root and `tools/hoechstmass/tools/sprint_metrics.py`, *Then* `closed_bugs`, `fixed_awaiting_human`, and `resolution_rate_percent` match symmetrically. Tag tests with `TST-PRO-128.4`.
+  5. *Zero-Comment Stage Subtask Closure Guard (`TST-PRO-128.5`, `tools/test_jira_accounts.py`)*:
+     • *Given* mocked `transition_issue(..., "freigabe")` calls (`Rule 5`) for a `[Analysis]`..`[Test]` subtask without an `agent2` `PASS` comment vs a summary-less subtask (`ATT-9999` at `:312`), *When* executed, *Then* stage subtasks exit non-zero while summary-less subtasks succeed (`Localization Parity: N/A - no UI strings`). Tag tests with `TST-PRO-128.5`.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -3954,3 +3975,6 @@
 | `1.0.22` | 2026-11-18 | AI Agent (`ATT-8631`) | `ATT-8631` | Added and verified `TST-PRO-126` [Verified] (`SourceTextReadingAuditContractTest` `4/4`, `SensorTypeUnitsContractTest` `2/2`, `TestSensorTypeJavadocVerification` in `tools/test_verify_requirement_governance.py`, `67/67` SensorType Javadocs; `97/97` Python suite, `21/21` Tier-1 Gradle tests, governance `exit 0`). |
 | `1.0.23` | 2026-11-18 | AI Agent (`ATT-8206`) | `ATT-8206` | Added `[Planned]` `TST-PRO-127` test specifications (symmetric `REQ<->TST` edge parity & `15`-orphan baseline ratchet, `androidTest`/`tools/test_*.py` tag scanner unit tests, `<= 4000`-line shard splitting & Kotlin contract test suite, CI `--check-size --strict` gate). |
 | `1.0.24` | 2026-11-18 | AI Agent (`ATT-8206`) | `ATT-8206` | Promoted `TST-PRO-127` to `[Verified]` after Stage 5 verification (`490/490` `tools/` + `56/56` Hoechstmass Python tests, `113/113` Gradle contract tests across 16 suites, `27/27` shards `<= 4,000` lines, `--coverage` Cat 4 `1244/1244` `100%`, governance `exit 0`). |
+| `1.0.25` | 2026-11-18 | AI Agent (`ATT-8205`) | `ATT-8205` | Added `[Planned]` `TST-PRO-128` test specifications (`ATT-8205_test_spec.md`). |
+| `1.0.26` | 2026-11-18 | AI Agent (`ATT-8205`) | `ATT-8205` | Promoted `TST-PRO-128` to `[Implemented]` in Stage 4 (`tools/test_sprint_metrics.py`, `tools/test_jira_accounts.py`, `tools/hoechstmass/tools/test_sprint_metrics.py`). |
+| `1.0.27` | 2026-11-18 | AI Agent (`ATT-8205`) | `ATT-8205` | Promoted `TST-PRO-128` to `[Verified]` after Stage 5 verification (`23/23` + `18/18` sprint_metrics, `TST-PRO-128` verified evidence `True`, governance `exit 0`). |

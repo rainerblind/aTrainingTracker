@@ -424,6 +424,33 @@ class TestEpicCommands(unittest.TestCase):
                 self.assertIn("# Sprint Quality Gate Records: Sprint 100", content)
                 self.assertIn("| PROJ-101 | PROJ-102 | Gate 1 | Analysis (Gate 1) | PASS | agent2 | Agent 2 |", content)
 
+    def test_extract_sprint_gate_records_hoechstmass_stage6_adf_dict(self):
+        """TST-PRO-128.1: Hoechstmass extract_sprint_gate_records handles ADF dict Stage 6 parent comments without TypeError."""
+        from tools.hoechstmass.tools.jira_util import extract_sprint_gate_records
+
+        adf_fr_pass = {
+            "type": "doc",
+            "version": 1,
+            "content": [{"type": "paragraph", "content": [{"type": "text", "text": "[FINAL REVIEW (AGENT) — PASS] Clean."}]}],
+        }
+        records, gate_stats = extract_sprint_gate_records(
+            [
+                {
+                    "key": "PROJ-200",
+                    "fields": {
+                        "summary": "ADF Stage 6 parent",
+                        "comment": {"comments": [{"author": {"displayName": "Agent 2"}, "body": adf_fr_pass, "created": "2026-11-18T06:00:00Z"}]},
+                        "subtasks": [],
+                    },
+                }
+            ],
+            {"id": 100, "name": "Sprint 100"},
+        )
+        self.assertEqual(len(records), 1)
+        self.assertEqual(records[0]["gate"], 6)
+        self.assertEqual(records[0]["verdict"], "PASS")
+        self.assertEqual(gate_stats[6]["passed_first_time"], 1)
+
     def test_export_test_evidence_hoechstmass(self):
         """TST-PRO-100.1 / TST-PRO-100.4: export_test_evidence command in hoechstmass."""
         import tempfile

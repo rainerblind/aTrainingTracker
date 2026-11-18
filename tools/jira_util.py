@@ -22,11 +22,15 @@ from sprint_metrics import (
     FINAL_REVIEW_ESCALATED_RE,
     FINAL_REVIEW_PASS_RE,
     STAGE_MAP,
+    TERMINAL_CLOSED_STATUSES,
     calculate_spc_limits,
+    classify_comment_actor_role,
+    extract_text_from_comment_body,
     format_metrics_markdown,
     identify_gate_number,
     load_historical_metrics,
     parse_sprint_gate_metrics,
+    parse_subtask_verdict_from_text,
     record_sprint_metrics,
 )
 
@@ -1023,10 +1027,43 @@ def sync_parent_stage_on_subtask_done(parent_key, subtask_summary, role="agent1"
     except Exception as e:
         print(f"Warning: Could not auto-advance parent {parent_key} to '{desired_stage}': {e}", file=sys.stderr)
 
+def _verify_stage_subtask_has_agent2_pass(issue_key, issue_summary, fields_data, role="agent1"):
+    """
+    REQ-PRO-128.5: Blocks closure of stage subtasks ([Analysis]..[Test]) without an agent2 PASS verdict comment.
+    Preserves summary-less / non-stage subtasks where identify_gate_number(issue_summary) is None.
+    """
+    if identify_gate_number(issue_summary) is None:
+        return
+    comments = None
+    comment_obj = fields_data.get("comment")
+    if isinstance(comment_obj, dict) and "comments" in comment_obj:
+        comments = comment_obj.get("comments") or []
+    else:
+        config = get_config()
+        c_url = f"{config['JIRA_URL']}/rest/api/2/issue/{issue_key}/comment"
+        c_data = jira_request(c_url, role=role) or {}
+        comments = c_data.get("comments", []) if isinstance(c_data, dict) else []
+    agent2_verdicts = []
+    for c in comments:
+        body = extract_text_from_comment_body(c.get("body", ""))
+        if classify_comment_actor_role(c, body_text=body) == "agent2":
+            verdict = parse_subtask_verdict_from_text(body)
+            if verdict:
+                agent2_verdicts.append(verdict)
+    if agent2_verdicts and agent2_verdicts[-1] == "PASS":
+        return
+    print(
+        f"ERROR: Cannot close stage subtask '{issue_key}' ({issue_summary}) without an agent2 PASS verdict comment (REQ-PRO-128.5).\n"
+        f"Use 'jira_util.py --as agent2 gate-verdict {issue_key} PASS \"...\"' instead of raw 'move'.",
+        file=sys.stderr,
+    )
+    sys.exit(1)
+
+
 def transition_issue(issue_key, status_name, role="agent1", inject_context=True, allow_epic_close=False):
     config = get_config()
     # Check if issue is a subtask, its current status, summary, and parent
-    issue_info_url = f"{config['JIRA_URL']}/rest/api/2/issue/{issue_key}?fields=issuetype,status,summary,parent,{STORY_POINTS_FIELD}"
+    issue_info_url = f"{config['JIRA_URL']}/rest/api/2/issue/{issue_key}?fields=issuetype,status,summary,parent,comment,{STORY_POINTS_FIELD}"
     issue_info = jira_request(issue_info_url, role=role)
     fields_data = issue_info.get("fields", {})
     is_subtask = fields_data.get("issuetype", {}).get("subtask", False)
@@ -1150,6 +1187,7 @@ def transition_issue(issue_key, status_name, role="agent1", inject_context=True,
         elif current_status_lower == "final review (agent)" and not is_subtask:
             assign_issue(issue_key, "agent2", role=role)
         if is_subtask and (normalized_target == "freigabe" or current_status_lower == "erledigt"):
+            _verify_stage_subtask_has_agent2_pass(issue_key, issue_summary, fields_data, role=role)
             sync_parent_stage_on_subtask_done(parent_key, issue_summary, role=role, inject_context=inject_context)
         return
 
@@ -1206,6 +1244,9 @@ def transition_issue(issue_key, status_name, role="agent1", inject_context=True,
 
     if not is_subtask and target_name == "final review (human)" and _is_bug_issue(fields_data):
         _verify_bug_ready_for_human_review(issue_key, role=role)
+
+    if is_subtask and (target_name in ("erledigt", "done", "closed") or trans_name == "freigabe" or normalized_target == "freigabe"):
+        _verify_stage_subtask_has_agent2_pass(issue_key, issue_summary, fields_data, role=role)
 
     trans_id = chosen_trans["id"]
     jira_request(url, method="POST", payload={"transition": {"id": trans_id}}, role=role)
@@ -2274,7 +2315,7 @@ def count_final_review_bounces(comments):
     max_bounce = 0
     count = 0
     for c in (comments or []):
-        body = c.get("body", "")
+        body = extract_text_from_comment_body(c.get("body", ""))
         m = FINAL_REVIEW_BOUNCE_RE.search(body)
         if m:
             count += 1
@@ -4142,7 +4183,8 @@ def collect_sprint_metrics_for_id(sprint_id, sprint_name, board_id, role="coordi
                         st["comments"] = []
 
     sprint_info = {"id": sprint_id, "name": sprint_name}
-    return parse_sprint_gate_metrics(parent_issues, sprint_info, history=history)
+    repo_root = os.path.abspath(os.path.join(_tools_dir, ".."))
+    return parse_sprint_gate_metrics(parent_issues, sprint_info, history=history, repo_root=repo_root)
 
 
 def cmd_sprint_metrics(sprint_arg=None, record=False, post_to_retro=False, backfill=None, role="coordinator"):
@@ -4294,7 +4336,7 @@ def extract_sprint_gate_records(parent_issues, sprint_info):
     """
     records = []
     gate_stats = {
-        g: {"total": 0, "passed_first_time": 0, "revisions": 0, "bounces": 0}
+        g: {"total": 0, "passed_first_time": 0, "revisions": 0, "bounces": 0, "unverified": 0}
         for g in range(1, 7)
     }
 
@@ -4330,32 +4372,13 @@ def extract_sprint_gate_records(parent_issues, sprint_info):
 
             subtask_verdicts = []
             for c in st_comments:
-                body = c.get("body", "")
-                author = c.get("author", {})
+                body = extract_text_from_comment_body(c.get("body", ""))
+                author = c.get("author", {}) or {}
                 actor_name = author.get("displayName") or author.get("name") or author.get("accountId") or "Unknown"
                 created_ts = c.get("created", "")
 
-                if "[ROLE: agent2]" in body or "[Automated comment by AI Agent 2" in body or "agent2" in actor_name.lower() or "reviewer" in actor_name.lower() or "auditor" in actor_name.lower():
-                    role = "agent2"
-                elif "[ROLE: coordinator]" in body or "[Automated comment by AI Coordinator" in body or "coordinator" in actor_name.lower():
-                    role = "coordinator"
-                elif "[ROLE: agent1]" in body or "[Automated comment by AI Agent 1" in body or "agent1" in actor_name.lower():
-                    role = "agent1"
-                elif "[ROLE: human]" in body or "human" in actor_name.lower():
-                    role = "human"
-                else:
-                    role = "agent2"
-
-                verdict = None
-                body_upper = body.upper()
-                if "GATE_VERDICT: PASS" in body_upper or "GATE_VERDICT PASS" in body_upper:
-                    verdict = "PASS"
-                elif "GATE_VERDICT: REVISION" in body_upper or "GATE_VERDICT REVISION" in body_upper:
-                    verdict = "REVISION"
-                elif role in ("agent2", "human") and ("PASS" in body_upper or "APPROVED" in body_upper or "FREIGABE" in body_upper):
-                    verdict = "PASS"
-                elif role in ("agent2", "human") and ("REVISION" in body_upper or "REWORK" in body_upper or "FAIL" in body_upper):
-                    verdict = "REVISION"
+                role = classify_comment_actor_role(c, body_text=body)
+                verdict = parse_subtask_verdict_from_text(body) if role in ("agent2", "human") else None
 
                 if verdict:
                     subtask_verdicts.append((verdict, role, actor_name, created_ts, clean_text(body)))
@@ -4382,32 +4405,21 @@ def extract_sprint_gate_records(parent_issues, sprint_info):
                         "timestamp": ts,
                         "summary": excerpt,
                     })
-            elif st_status in ("erledigt", "closed", "done"):
-                gate_stats[g_num]["total"] += 1
-                gate_stats[g_num]["passed_first_time"] += 1
-                records.append({
-                    "parent_key": p_key,
-                    "subtask_key": st_key,
-                    "gate": g_num,
-                    "stage_name": stage_name,
-                    "verdict": "PASS",
-                    "evaluator_role": "agent2",
-                    "actor": st_fields.get("assignee", {}).get("displayName") or "agent2",
-                    "timestamp": st_fields.get("updated") or st_fields.get("created") or "",
-                    "summary": f"Subtask closed to {st_status.capitalize()}",
-                })
+            elif st_status in TERMINAL_CLOSED_STATUSES:
+                # REQ-PRO-092.3 / REQ-PRO-128.1: zero-comment closed gate subtasks are tracked as unverified (never fabricated PASS).
+                gate_stats[g_num]["unverified"] += 1
 
         # 2. Check Parent Comments for Stage 6 ('Final Review (Agent)')
         parent_fr_verdicts = []
         for c in p_comments:
-            body = c.get("body", "")
-            author = c.get("author", {})
+            body = extract_text_from_comment_body(c.get("body", ""))
+            author = c.get("author", {}) or {}
             actor_name = author.get("displayName") or author.get("name") or author.get("accountId") or "Unknown"
             created_ts = c.get("created", "")
 
-            role = "agent2"
-            if "[ROLE: human]" in body or "human" in actor_name.lower():
-                role = "human"
+            role = classify_comment_actor_role(c, body_text=body)
+            if role == "unknown":
+                role = "agent2"
 
             verdict = None
             if FINAL_REVIEW_BOUNCE_RE.search(body):
@@ -5081,7 +5093,7 @@ def qa_audit(sprint_arg=None, sample_size=None, out_path=None, role="qa", as_rol
                 if st_st not in ("erledigt", "done", "closed", "geschlossen", "resolved"):
                     all_stages_good = False
                     break
-                has_pass = any("PASS" in c.get("body", "").upper() for c in st_comms)
+                has_pass = any("PASS" in extract_text_from_comment_body(c.get("body", "")).upper() for c in st_comms)
                 if not has_pass:
                     all_stages_good = False
                     break
@@ -5092,7 +5104,7 @@ def qa_audit(sprint_arg=None, sample_size=None, out_path=None, role="qa", as_rol
                 for st in subtasks
             )
             all_st_pass = all(
-                any("PASS" in c.get("body", "").upper() for c in (st.get("comments", []) or st.get("fields", {}).get("comment", {}).get("comments", [])))
+                any("PASS" in extract_text_from_comment_body(c.get("body", "")).upper() for c in (st.get("comments", []) or st.get("fields", {}).get("comment", {}).get("comments", [])))
                 for st in subtasks
             )
             gate_pass = all_st_erledigt and all_st_pass
@@ -5109,7 +5121,7 @@ def qa_audit(sprint_arg=None, sample_size=None, out_path=None, role="qa", as_rol
         for st in subtasks:
             st_comments = st.get("comments", []) or st.get("fields", {}).get("comment", {}).get("comments", [])
             for c in st_comments:
-                body = c.get("body", "")
+                body = extract_text_from_comment_body(c.get("body", ""))
                 author = c.get("author", {})
                 author_acc_id = author.get("accountId") or ""
                 author_name = author.get("displayName") or author.get("name") or author_acc_id

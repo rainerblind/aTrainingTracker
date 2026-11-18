@@ -27,11 +27,15 @@ from sprint_metrics import (
     FINAL_REVIEW_ESCALATED_RE,
     FINAL_REVIEW_PASS_RE,
     STAGE_MAP,
+    TERMINAL_CLOSED_STATUSES,
     calculate_spc_limits,
+    classify_comment_actor_role,
+    extract_text_from_comment_body,
     format_metrics_markdown,
     identify_gate_number,
     load_historical_metrics,
     parse_sprint_gate_metrics,
+    parse_subtask_verdict_from_text,
     record_sprint_metrics,
 )
 
@@ -1208,7 +1212,7 @@ def count_final_review_bounces(comments):
     max_bounce = 0
     count = 0
     for c in (comments or []):
-        body = c.get("body", "")
+        body = extract_text_from_comment_body(c.get("body", ""))
         m = FINAL_REVIEW_BOUNCE_RE.search(body)
         if m:
             count += 1
@@ -1340,7 +1344,8 @@ def collect_sprint_metrics_for_id(sprint_id, sprint_name, board_id, as_role="coo
                         st["comments"] = []
 
     sprint_info = {"id": sprint_id, "name": sprint_name}
-    return parse_sprint_gate_metrics(parent_issues, sprint_info)
+    repo_root = os.path.abspath(os.path.join(_tools_dir, ".."))
+    return parse_sprint_gate_metrics(parent_issues, sprint_info, repo_root=repo_root)
 
 
 def cmd_sprint_metrics(sprint_arg=None, record=False, post_to_retro=False, backfill=None, as_role="coordinator"):
@@ -1492,7 +1497,7 @@ def resolve_sprint_object(base, board_id, sprint_arg=None, as_role="coordinator"
 def extract_sprint_gate_records(parent_issues, sprint_info):
     records = []
     gate_stats = {
-        g: {"total": 0, "passed_first_time": 0, "revisions": 0, "bounces": 0}
+        g: {"total": 0, "passed_first_time": 0, "revisions": 0, "bounces": 0, "unverified": 0}
         for g in range(1, 7)
     }
 
@@ -1527,32 +1532,13 @@ def extract_sprint_gate_records(parent_issues, sprint_info):
 
             subtask_verdicts = []
             for c in st_comments:
-                body = c.get("body", "")
-                author = c.get("author", {})
+                body = extract_text_from_comment_body(c.get("body", ""))
+                author = c.get("author", {}) or {}
                 actor_name = author.get("displayName") or author.get("name") or author.get("accountId") or "Unknown"
                 created_ts = c.get("created", "")
 
-                if "[ROLE: agent2]" in body or "[Automated comment by AI Agent 2" in body or "agent2" in actor_name.lower() or "reviewer" in actor_name.lower() or "auditor" in actor_name.lower():
-                    role = "agent2"
-                elif "[ROLE: coordinator]" in body or "[Automated comment by AI Coordinator" in body or "coordinator" in actor_name.lower():
-                    role = "coordinator"
-                elif "[ROLE: agent1]" in body or "[Automated comment by AI Agent 1" in body or "agent1" in actor_name.lower():
-                    role = "agent1"
-                elif "[ROLE: human]" in body or "human" in actor_name.lower():
-                    role = "human"
-                else:
-                    role = "agent2"
-
-                verdict = None
-                body_upper = body.upper()
-                if "GATE_VERDICT: PASS" in body_upper or "GATE_VERDICT PASS" in body_upper:
-                    verdict = "PASS"
-                elif "GATE_VERDICT: REVISION" in body_upper or "GATE_VERDICT REVISION" in body_upper:
-                    verdict = "REVISION"
-                elif role in ("agent2", "human") and ("PASS" in body_upper or "APPROVED" in body_upper or "FREIGABE" in body_upper):
-                    verdict = "PASS"
-                elif role in ("agent2", "human") and ("REVISION" in body_upper or "REWORK" in body_upper or "FAIL" in body_upper):
-                    verdict = "REVISION"
+                role = classify_comment_actor_role(c, body_text=body)
+                verdict = parse_subtask_verdict_from_text(body) if role in ("agent2", "human") else None
 
                 if verdict:
                     subtask_verdicts.append((verdict, role, actor_name, created_ts, clean_text(body)))
@@ -1579,31 +1565,19 @@ def extract_sprint_gate_records(parent_issues, sprint_info):
                         "timestamp": ts,
                         "summary": excerpt,
                     })
-            elif st_status in ("erledigt", "closed", "done"):
-                gate_stats[g_num]["total"] += 1
-                gate_stats[g_num]["passed_first_time"] += 1
-                records.append({
-                    "parent_key": p_key,
-                    "subtask_key": st_key,
-                    "gate": g_num,
-                    "stage_name": stage_name,
-                    "verdict": "PASS",
-                    "evaluator_role": "agent2",
-                    "actor": st_fields.get("assignee", {}).get("displayName") or "agent2",
-                    "timestamp": st_fields.get("updated") or st_fields.get("created") or "",
-                    "summary": f"Subtask closed to {st_status.capitalize()}",
-                })
+            elif st_status in TERMINAL_CLOSED_STATUSES:
+                gate_stats[g_num]["unverified"] += 1
 
         parent_fr_verdicts = []
         for c in p_comments:
-            body = c.get("body", "")
-            author = c.get("author", {})
+            body = extract_text_from_comment_body(c.get("body", ""))
+            author = c.get("author", {}) or {}
             actor_name = author.get("displayName") or author.get("name") or author.get("accountId") or "Unknown"
             created_ts = c.get("created", "")
 
-            role = "agent2"
-            if "[ROLE: human]" in body or "human" in actor_name.lower():
-                role = "human"
+            role = classify_comment_actor_role(c, body_text=body)
+            if role == "unknown":
+                role = "agent2"
 
             verdict = None
             if FINAL_REVIEW_BOUNCE_RE.search(body):
@@ -2084,7 +2058,7 @@ def qa_audit(sprint_arg=None, sample_size=None, out_path=None, as_role="qa", rol
                 if st_st not in ("erledigt", "done", "closed", "geschlossen", "resolved"):
                     all_stages_good = False
                     break
-                has_pass = any("PASS" in c.get("body", "").upper() for c in st_comms)
+                has_pass = any("PASS" in extract_text_from_comment_body(c.get("body", "")).upper() for c in st_comms)
                 if not has_pass:
                     all_stages_good = False
                     break
@@ -2095,7 +2069,7 @@ def qa_audit(sprint_arg=None, sample_size=None, out_path=None, as_role="qa", rol
                 for st in subtasks
             )
             all_st_pass = all(
-                any("PASS" in c.get("body", "").upper() for c in (st.get("comments", []) or st.get("fields", {}).get("comment", {}).get("comments", [])))
+                any("PASS" in extract_text_from_comment_body(c.get("body", "")).upper() for c in (st.get("comments", []) or st.get("fields", {}).get("comment", {}).get("comments", [])))
                 for st in subtasks
             )
             gate_pass = all_st_erledigt and all_st_pass
@@ -2108,7 +2082,7 @@ def qa_audit(sprint_arg=None, sample_size=None, out_path=None, as_role="qa", rol
         for st in subtasks:
             st_comments = st.get("comments", []) or st.get("fields", {}).get("comment", {}).get("comments", [])
             for c in st_comments:
-                body = c.get("body", "")
+                body = extract_text_from_comment_body(c.get("body", ""))
                 author = c.get("author", {})
                 author_name = author.get("displayName") or author.get("name") or author.get("accountId") or ""
 
