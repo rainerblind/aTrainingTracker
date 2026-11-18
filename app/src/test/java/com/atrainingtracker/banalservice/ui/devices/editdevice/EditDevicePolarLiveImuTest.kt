@@ -43,6 +43,8 @@ import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
 import com.atrainingtracker.banalservice.devices.DeviceType
+import com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineCapabilityStore
+import com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineGattCoordinator
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
 import com.atrainingtracker.banalservice.ui.devices.devicedata.raw2UiDeviceData
@@ -78,12 +80,18 @@ class EditDevicePolarLiveImuTest {
     @Before
     fun setUp() {
         context = ApplicationProvider.getApplicationContext()
+        DevicesDatabaseManager.resetForTesting()
         DeviceDataRepository.resetForTesting()
+        PolarOfflineCapabilityStore.resetForTesting()
+        PolarOfflineGattCoordinator.resetForTesting()
     }
 
     @After
     fun tearDown() {
+        PolarOfflineCapabilityStore.resetForTesting()
+        PolarOfflineGattCoordinator.resetForTesting()
         DeviceDataRepository.resetForTesting()
+        DevicesDatabaseManager.resetForTesting()
     }
 
     @Test
@@ -115,6 +123,28 @@ class EditDevicePolarLiveImuTest {
 
         assertTrue("Polar H10 opted-in must be eligible", repo.isPolarLiveImuBridgeEligible(h10Id, "AA:BB:CC:DD:EE:01"))
         assertFalse("Non-Polar HRM must never route to Polar bridge", repo.isPolarLiveImuBridgeEligible(garminId, "AA:BB:CC:DD:EE:02"))
+    }
+
+    @Test
+    fun testPolarLiveImuRepositoryEligibility_forRenamedPolarSensorsWithDisMetadata() {
+        // TST-CON-049.4
+        val db = DevicesDatabaseManager.getInstance(context)
+        val renamedH10Mac = "AA:BB:CC:DD:EE:03"
+        val renamedVerityMac = "AA:BB:CC:DD:EE:04"
+        val renamedH10Id = db.insertNewBluetoothDeviceIntoDB(DeviceType.HRM, renamedH10Mac, "Chest Strap", "", 95, true)
+        val renamedVerityId = db.insertNewBluetoothDeviceIntoDB(DeviceType.HRM, renamedVerityMac, "Armband", "", 95, true)
+        db.setPolarLiveImuEnabled(renamedH10Id, true)
+        db.setPolarLiveImuEnabled(renamedVerityId, true)
+
+        val repo = DeviceDataRepository(context, Dispatchers.Unconfined, Dispatchers.Unconfined)
+        assertFalse(repo.isPolarLiveImuBridgeEligible(renamedH10Id, renamedH10Mac))
+        assertFalse(repo.isPolarLiveImuBridgeEligible(renamedVerityId, renamedVerityMac))
+
+        PolarOfflineCapabilityStore.recordDisMetadata(context, renamedH10Mac, modelNumber = "H10", serialNumber = "AA11BB22")
+        PolarOfflineCapabilityStore.recordDisMetadata(context, renamedVerityMac, modelNumber = "Verity Sense", serialNumber = "CC33DD44")
+
+        assertTrue(repo.isPolarLiveImuBridgeEligible(renamedH10Id, renamedH10Mac))
+        assertTrue(repo.isPolarLiveImuBridgeEligible(renamedVerityId, renamedVerityMac))
     }
 
     @Test

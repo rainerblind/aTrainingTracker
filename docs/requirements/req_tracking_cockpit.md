@@ -1,14 +1,14 @@
 # Living Requirements: Tracking & Live Sensor Cockpit
 
 **Document ID**: `DOC-REQ-TRK`  
-**Version**: 1.0.18  
+**Version**: 1.0.19  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Requirements**: 169
+**Total Requirements**: 170
 
 ---
 
@@ -6802,6 +6802,50 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 **Invariants**: Inverted 3-zone `RangeSlider` track (`TTColor.Zone2/3/4`); `0.30f..1.20f` bounds & $T_1 \ge T_2 + 0.05f$; backward-compatible public composable signatures; `verticalScroll` & non-slider tab swiping intact; `HrvDfaA1SettingsContractTest` intact; `REQ-PRO-049.1` zero `src/main` reads in new/modified tests; `Localization Parity: N/A - no UI strings`.
 
+### REQ-CON-049: Hardware-Grounded Polar Detection & Canonical ID via BLE Service UUIDs (PMD/PFTP) and DIS (0x2A24/0x2A25) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-CON-049`
+- **System Requirement(s)**: `SYSREQ-TRK-001`, `SYSREQ-TRK-002`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `BluetoothConstants.java`, `PolarOfflineCapabilityStore.kt`, `PolarOfflineGattCoordinator.kt`, `BTSearchForNewDevicesEngine.java`, `MyBTLEDevice.java`, `BTLEHeartRateDevice.java`, `PolarOnlineStreamingBridge.kt`, `PolarH10OfflineController.kt`, `PolarVeritySenseOfflineController.kt`, `DeviceDataRepository.kt`, `EditDeviceDialog.kt`
+- **Rationale**: `PolarOfflineGattCoordinator` and downstream callers (`PolarOnlineStreamingBridge`, `PolarH10OfflineController`, `PolarVeritySenseOfflineController`, `DeviceDataRepository`, `EditDeviceDialog`) currently classify Polar H10 vs. Verity Sense/OH1 and extract the 8-hex Polar ID via user-editable display-name regex/substring checks (`isPolarH10Name`, `isPolarVeritySenseName`, `POLAR_ID_REGEX`). Because `BTSearchForNewDevicesEngine` marks `UUID_SERVICE_POLAR_PFTP` for H10 as well as Verity Sense, renaming an H10 causes it to fail `!isPolarH10Name` and misclassify as Verity Sense (routing to the wrong offline API, `VERITY_SENSE_ARM` IMU mode, and `RR_PRIORITY_PPG`), while renaming a Verity Sense falls back to MAC instead of the canonical 8-hex Polar ID (`ATT-8717`, refining `REQ-SET-104.3`, `REQ-SET-108.1`, `REQ-SET-112.1/.2`, and `REQ-SET-118.2`):
+- **Description**:
+  1. *BLE GATT Service UUID Capability Separation (`REQ-CON-049.1`)*:
+     - `PolarOfflineCapabilityStore` SHALL store `hasPmdService` (`UUID_SERVICE_POLAR_PMD`, `fb005c80-02e7-f387-1cad-8acd2d8df0c8`) and `hasPftpService` (`UUID_SERVICE_POLAR_PFTP`, `0000feee-0000-1000-8000-00805f9b34fb`) independently from generic `offline_rec_<MAC>` per normalized MAC address, ensuring PFTP capability on a Polar H10 never triggers Verity Sense classification.
+  2. *DIS (`0x180A`) Hardware Metadata Persistence Without `Devices.db` Migration (`REQ-CON-049.2`)*:
+     - `BluetoothConstants` SHALL define `UUID_CHARACTERISTIC_SERIAL_NUMBER` (`00002a25-0000-1000-8000-00805f9b34fb`) alongside `UUID_CHARACTERISTIC_MODEL_NUMBER` (`00002a24-0000-1000-8000-00805f9b34fb`).
+     - `PolarOfflineCapabilityStore` SHALL persist hardware `modelNumber` (`0x2A24`), canonical `polarDeviceId` (`0x2A25` / `PolarDeviceInfo.deviceId`), and derived `PolarDeviceType` (`H10`, `VERITY_SENSE`, `UNKNOWN`) in `SharedPreferences` + `ConcurrentHashMap` keyed by normalized MAC address, keeping `DevicesDatabaseManager.DB_VERSION` unchanged at `14`.
+  3. *Three-Path DIS & Capability Hydration (`REQ-CON-049.3`)*:
+     - The system SHALL capture and persist PMD/PFTP service UUIDs and DIS `0x2A24`/`0x2A25` metadata during: (a) pairing in `BTSearchForNewDevicesEngine`, (b) standard BLE HRM connect/reconnect in `MyBTLEDevice` / `BTLEHeartRateDevice`, and (c) Polar SDK sessions in `PolarOnlineStreamingBridge.sdkCallback` (`disInformationReceived`, `deviceConnected`, and `bleSdkFeatureReady` for `FEATURE_POLAR_H10_EXERCISE_RECORDING` vs. `FEATURE_POLAR_OFFLINE_RECORDING`).
+  4. *Deterministic Classification, Pre-Connect Alias Seeding & Legacy Un-Reconnected Fallback (`REQ-CON-049.4`)*:
+     - `PolarOfflineGattCoordinator` SHALL classify Polar models by persisted `PolarDeviceType` / DIS `0x2A24` (`"H10"` vs. `"Verity Sense"`/`"Sense"`/`"OH1"`) / SDK feature precedence first (independent of user display name), and resolve canonical `polarDeviceId` (`0x2A25` / `PolarDeviceInfo.deviceId` -> `POLAR_ID_REGEX` -> `macAddress`).
+     - `PolarOnlineStreamingBridge`, `PolarH10OfflineController` (including `syncPendingWorkout`), `PolarVeritySenseOfflineController`, `DeviceDataRepository`, and `EditDeviceDialog` MUST classify and match via `PolarOfflineGattCoordinator` hardware-backed helpers and seed `registerDeviceAliases(polarDeviceId, mac)` BEFORE `deviceConnected` (`ATT-8690` multiplexing & `ATT-8706` `RR_PRIORITY_PPG` vs. `RR_PRIORITY_ECG` parity).
+     - Legacy name/regex fallback SHALL execute strictly when `PolarDeviceType == UNKNOWN` (un-reconnected paired rows) and yield automatically upon first reconnect once hardware metadata is persisted.
+  5. *Localization Parity & Offline Test Hygiene (`REQ-CON-049.5`)*:
+     - `Localization Parity: N/A - no UI strings` (`values*/strings*.xml` untouched).
+     - All verification suites MUST execute offline (`Rule 5`) with `0` `app/src/main` source-text reads (`REQ-PRO-049.1`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Refines `REQ-SET-104.3`, `REQ-SET-108.1`, `REQ-SET-112.1/.2`, and `REQ-SET-118.2`. Targets `BluetoothConstants.java`, `PolarOfflineCapabilityStore.kt`, `PolarOfflineGattCoordinator.kt`, `BTSearchForNewDevicesEngine.java`, `MyBTLEDevice.java`, `BTLEHeartRateDevice.java`, `PolarOnlineStreamingBridge.kt`, `PolarH10OfflineController.kt`, `PolarVeritySenseOfflineController.kt`, `DeviceDataRepository.kt`, `EditDeviceDialog.kt`.
+2. *Historical Origin & Commit Trace*: `53b53e87` (`ATT-7762`), `e7201bdb` (`ATT-7923`), `f4bef44c` (`ATT-8016`), `34b78941` (`ATT-8690`).
+3. *Root Reason for Existing Formulation*: `ATT-7762` matched `"Polar H10"` by name; `ATT-7923` introduced `PolarOfflineCapabilityStore` (`offline_rec_` boolean) without a SQLite schema bump and relied on `!isPolarH10Name` to exclude H10; `ATT-8690` added dynamic MAC <-> 8-hex alias multiplexing at connect time.
+4. *Preservation of Core Invariants*: Preserves legacy name/regex fallback strictly for un-reconnected rows until first reconnect; preserves synchronous schema-free `PolarOfflineCapabilityStore`, `Devices.db` v14 (`DevicesDatabaseManagerMigrationV14Test`), `ATT-8690` singleton & callback multiplexing, `RR_PRIORITY_ECG` vs. `RR_PRIORITY_PPG` (`DeviceManager.java`), and `EditDevicePolarBackupTest` / `EditDevicePolarLiveImuTest`.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a Polar H10 renamed `"Chest Strap"` with persisted PMD+PFTP UUIDs and DIS `0x2A24="H10"` + `0x2A25="0A1B2C3D"`,
+• *When* inspected across `PolarOfflineGattCoordinator`, `PolarH10OfflineController`, `PolarVeritySenseOfflineController`, `PolarOnlineStreamingBridge`, `DeviceDataRepository`, and `EditDeviceDialog`,
+• *Then* it classifies deterministically as `H10` (never Verity Sense), uses `0A1B2C3D` with pre-connect alias seeding, and retains `RR_PRIORITY_ECG`.
+• *Given* a Polar Verity Sense or OH1 renamed `"Armband"` with persisted DIS `0x2A24` or `FEATURE_POLAR_OFFLINE_RECORDING`,
+• *When* `PolarOnlineStreamingBridge` initializes prior to `deviceConnected`,
+• *Then* `isVeritySense == true` (`RR_PRIORITY_PPG`), `registerDeviceAliases(polarDeviceId, mac)` is already registered pre-connect, and offline/IMU routing succeeds.
+• *Given* a legacy paired row with `PolarDeviceType == UNKNOWN`,
+• *When* evaluated prior to first reconnect,
+• *Then* legacy name/regex fallback preserves existing behavior until first reconnect persists DIS/UUID metadata.
+
+**Invariants**: `Devices.db` `DB_VERSION = 14` untouched; `PolarOfflineCapabilityStore` synchronous & schema-free; `ATT-8690` ref-counted singleton & multiplexing preserved; `RR_PRIORITY_ECG` vs. `RR_PRIORITY_PPG` parity preserved; legacy pre-reconnect fallback preserved; `N/A - no UI strings`; `REQ-PRO-049.1` offline tests with zero `src/main` reads.
+
 
 ---
 
@@ -6823,3 +6867,4 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 | `1.0.11` | 2026-11-18 | AI Agent (`ATT-8706`) | `ATT-8706` | Added and verified `REQ-TRK-085` [Verified] (`RrBeatNormalization`, `DeviceManager`, `TrackerService`, `HrvPostWorkoutRecomputer`, `RrArtifactFilter`, `DfaCalculator`, `HRVMetricsDevice`) for single-primary RR routing, monotonic clamping, physiological gap flagging, pre-filter sort, and positive finite DFA α1 gate (502/502 tests across 88 suites). |
 | `1.0.17` | 2026-11-18 | AI Agent (`ATT-8706`) | `ATT-8706` | Promoted `REQ-TRK-085` to `[Verified]` in Stage 5 following Bounce 3/3 heal verification (`449/449` tests across `83` suites). |
 | `1.0.18` | 2026-11-18 | AI Agent (`ATT-8105`) | `ATT-8105` | Added and verified `REQ-TRK-086` [Verified] (`ZonesSettingsActivity.kt` `rememberSliderGestureIsolationModifier`, local drag buffering, and lifted `isSliderGestureActive` on `HorizontalPager`) following Tier-1 targeted tests (`31/31` across 7 suites) and `Rule 8.5` PNG inspection (`ATT-8105_hrv_slider_zones.png`). |
+| `1.0.19` | 2026-11-18 | AI Agent (`ATT-8717`) | `ATT-8717` | Added and verified `REQ-CON-049` [Verified] for hardware-grounded Polar detection (PMD/PFTP UUIDs + DIS `0x2A24`/`0x2A25`, strict 8-hex ID validation, HR CCCD ordering, and IMU error handling) across 34 suites / 166 tests. |

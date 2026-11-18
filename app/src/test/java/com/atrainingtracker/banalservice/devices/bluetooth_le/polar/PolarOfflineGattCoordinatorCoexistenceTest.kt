@@ -62,12 +62,16 @@ class PolarOfflineGattCoordinatorCoexistenceTest {
     @Before
     fun setUp() {
         context = ApplicationProvider.getApplicationContext()
+        DevicesDatabaseManager.resetForTesting()
+        PolarOfflineCapabilityStore.resetForTesting()
         PolarOfflineGattCoordinator.resetForTesting()
     }
 
     @After
     fun tearDown() {
         PolarOfflineGattCoordinator.resetForTesting()
+        PolarOfflineCapabilityStore.resetForTesting()
+        DevicesDatabaseManager.resetForTesting()
     }
 
     @Test

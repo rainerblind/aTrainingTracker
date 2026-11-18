@@ -1735,14 +1735,27 @@ fun shouldShowWheelSensorGuidance(deviceType: DeviceType): Boolean =
     deviceType == DeviceType.BIKE_SPEED_AND_CADENCE ||
     deviceType == DeviceType.SPEED_AND_LOCATION_ATT_FUSED
 
-fun isPolarH10Device(data: DeviceUiData): Boolean {
-    return PolarOfflineGattCoordinator.isPolarH10Name(data.deviceName, data.manufacturer) ||
-        (data.deviceType == DeviceType.HRM && data.deviceName.startsWith("polar h10", ignoreCase = true))
+/**
+ * Returns true if [data] identifies a Polar H10 chest strap via hardware DIS/SDK metadata or legacy name fallback (`REQ-CON-049.4`).
+ */
+@JvmOverloads
+fun isPolarH10Device(
+    data: DeviceUiData,
+    context: android.content.Context? = null,
+    macAddress: String? = null
+): Boolean {
+    return PolarOfflineGattCoordinator.isPolarH10Device(
+        context = context,
+        name = data.deviceName,
+        manufacturer = data.manufacturer,
+        macAddress = macAddress
+    )
 }
 
 /**
- * Returns true if [data] identifies a Polar Verity Sense / compatible optical Polar offline HR sensor (ATT-7923).
+ * Returns true if [data] identifies a Polar Verity Sense / compatible optical Polar offline HR sensor (ATT-7923, `REQ-CON-049.4`).
  */
+@JvmOverloads
 fun isPolarVeritySenseDevice(
     data: DeviceUiData,
     context: android.content.Context? = null,
@@ -1759,8 +1772,7 @@ fun isPolarVeritySenseDevice(
 @Composable
 private fun PolarOfflineDeviceSection(data: DeviceUiData, viewModel: EditDeviceViewModel) {
     val dialogContext = LocalContext.current
-    val isH10 = isPolarH10Device(data)
-    val polarMac = if (!isH10 && data.protocol == Protocol.BLUETOOTH_LE) {
+    val polarMac = if (data.protocol == Protocol.BLUETOOTH_LE) {
         remember(data.id) {
             try {
                 viewModel.getBluetoothMacAddress(data.id)
@@ -1771,6 +1783,7 @@ private fun PolarOfflineDeviceSection(data: DeviceUiData, viewModel: EditDeviceV
     } else {
         null
     }
+    val isH10 = isPolarH10Device(data, dialogContext, polarMac)
     val isVeritySense = !isH10 && isPolarVeritySenseDevice(data, dialogContext, polarMac)
     if (isH10 || isVeritySense) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {

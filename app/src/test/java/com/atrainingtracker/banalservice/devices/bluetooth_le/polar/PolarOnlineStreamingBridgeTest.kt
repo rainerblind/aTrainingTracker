@@ -29,12 +29,15 @@ import com.atrainingtracker.banalservice.devices.DeviceManager
 import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.devices.RrBeatEvent
 import com.atrainingtracker.banalservice.devices.RrBeatListener
+import com.atrainingtracker.banalservice.devices.RrBeatNormalization
+import com.atrainingtracker.banalservice.devices.bluetooth_le.BluetoothConstants
 import com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEHeartRateDevice
 import com.atrainingtracker.banalservice.sensor.MySensorManager
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
 import com.atrainingtracker.trainingtracker.TrackingMode
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.polar.androidcommunications.api.ble.model.DisInfo
 import com.polar.sdk.api.PolarBleApi
 import com.polar.sdk.api.model.PolarAccelerometerData
 import com.polar.sdk.api.model.PolarDeviceInfo
@@ -82,7 +85,9 @@ class PolarOnlineStreamingBridgeTest {
     @Before
     fun setUp() {
         context = ApplicationProvider.getApplicationContext()
+        DevicesDatabaseManager.resetForTesting()
         DeviceDataRepository.resetForTesting()
+        PolarOfflineCapabilityStore.resetForTesting()
         PolarOfflineGattCoordinator.resetForTesting()
         sensorManager = MySensorManager(context)
     }
@@ -90,9 +95,11 @@ class PolarOnlineStreamingBridgeTest {
     @After
     fun tearDown() {
         TrainingApplication.setTrackingModeForTesting(TrackingMode.READY)
+        PolarOfflineCapabilityStore.resetForTesting()
         PolarOfflineGattCoordinator.resetForTesting()
         sensorManager.shutDown()
         DeviceDataRepository.resetForTesting()
+        DevicesDatabaseManager.resetForTesting()
     }
 
     @Test
@@ -898,6 +905,133 @@ class PolarOnlineStreamingBridgeTest {
         assertEquals(RrBeatEvent.ARTIFACT_GAP, multiSecEvent.artifactFlag)
         assertTrue("Expected gapBeats > 0 for 5196ms RR", multiSecEvent.gapBeats > 0)
         assertEquals(RrBeatEvent.ARTIFACT_GAP, events.last().artifactFlag)
+
+        bridge.shutDown()
+    }
+
+    @Test
+    fun testRenamedVeritySense_seedsAliasesPreConnectAndHydratesViaDisCallbacks() {
+        // TST-CON-049.3
+        val mac = "AA:BB:CC:DD:EE:61"
+        PolarOfflineCapabilityStore.recordDisMetadata(context, mac, modelNumber = "Verity Sense", serialNumber = "CAFE5678")
+
+        val db = DevicesDatabaseManager.getInstance(context)
+        val verityId = db.insertNewBluetoothDeviceIntoDB(
+            DeviceType.HRM,
+            mac,
+            "Armband",
+            "Polar Electro",
+            95,
+            true
+        )
+
+        val mockApi = mockk<PolarBleApi>(relaxed = true)
+        val bridge = PolarOnlineStreamingBridge(
+            context = context,
+            mySensorManager = sensorManager,
+            deviceId = verityId,
+            macAddress = mac,
+            dispatcher = Dispatchers.Unconfined,
+            sdkIntProvider = { 34 },
+            sportTypeProvider = { BSportType.RUN },
+            apiFactory = { _, _ -> mockApi }
+        )
+
+        // Pre-connect verification: polarId, alias seeding, and isVeritySense (RR_PRIORITY_PPG parity) BEFORE deviceConnected
+        assertEquals("CAFE5678", bridge.polarId)
+        assertTrue(PolarOfflineGattCoordinator.matchesDeviceIdentifier("CAFE5678", mac))
+        assertTrue(bridge.isVeritySense)
+
+        bridge.shutDown()
+    }
+
+    @Test
+    fun testSdkDisInformationReceived_hydratesRenamedSensorAndPreemptsLegacyOfflineRec() {
+        // TST-CON-049.3
+        val verityMac = "AA:BB:CC:DD:EE:62"
+        val h10Mac = "AA:BB:CC:DD:EE:63"
+        val db = DevicesDatabaseManager.getInstance(context)
+        val verityId = db.insertNewBluetoothDeviceIntoDB(DeviceType.HRM, verityMac, "Armband", "", 95, true)
+        val h10Id = db.insertNewBluetoothDeviceIntoDB(DeviceType.HRM, h10Mac, "Chest Strap", "", 95, true)
+        // Legacy PFTP mark on H10 must be overridden once DIS/SDK reports H10
+        PolarOfflineCapabilityStore.markOfflineRecordingCapable(context, h10Mac)
+
+        val mockApi = mockk<PolarBleApi>(relaxed = true)
+        val verityBridge = PolarOnlineStreamingBridge(
+            context = context,
+            mySensorManager = sensorManager,
+            deviceId = verityId,
+            macAddress = verityMac,
+            dispatcher = Dispatchers.Unconfined,
+            sdkIntProvider = { 34 },
+            apiFactory = { _, _ -> mockApi }
+        )
+        verityBridge.startSearching()
+        val multiplexer = PolarOfflineGattCoordinator.getMultiplexerCallbackForTesting()
+        multiplexer.disInformationReceived(verityMac, BluetoothConstants.UUID_CHARACTERISTIC_MODEL_NUMBER, "Verity Sense")
+        multiplexer.disInformationReceived(verityMac, DisInfo(BluetoothConstants.UUID_CHARACTERISTIC_SERIAL_NUMBER.toString(), "DEAD0001"))
+
+        assertTrue(verityBridge.isVeritySense)
+        assertEquals("DEAD0001", verityBridge.polarId)
+        assertTrue(PolarOfflineGattCoordinator.matchesDeviceIdentifier("DEAD0001", verityMac))
+
+        val h10Bridge = PolarOnlineStreamingBridge(
+            context = context,
+            mySensorManager = sensorManager,
+            deviceId = h10Id,
+            macAddress = h10Mac,
+            dispatcher = Dispatchers.Unconfined,
+            sdkIntProvider = { 34 },
+            apiFactory = { _, _ -> mockApi }
+        )
+        h10Bridge.startSearching()
+        multiplexer.disInformationReceived(h10Mac, BluetoothConstants.UUID_CHARACTERISTIC_MODEL_NUMBER, "H10")
+        multiplexer.bleSdkFeatureReady(h10Mac, PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_H10_EXERCISE_RECORDING)
+
+        assertFalse("Renamed H10 with DIS H10 must never classify as Verity Sense", h10Bridge.isVeritySense)
+
+        verityBridge.shutDown()
+        h10Bridge.shutDown()
+    }
+
+    @Test
+    fun testStreamSettingsFailure_isCaughtGracefullyAndNonHexDisSerialPreservesCanonical8HexId() {
+        // Stage 6 Bounce 1/3 heal: GYRO stream settings rejection never crashes Dispatchers.IO,
+        // and non-8-hex DIS serial never overwrites canonical 8-hex PolarDeviceInfo.deviceId.
+        val mac = "AA:BB:CC:DD:EE:64"
+        val db = DevicesDatabaseManager.getInstance(context)
+        val devId = db.insertNewBluetoothDeviceIntoDB(DeviceType.HRM, mac, "Chest Strap", "", 95, true)
+
+        val mockApi = mockk<PolarBleApi>(relaxed = true)
+        coEvery {
+            mockApi.requestStreamSettings(any(), PolarBleApi.PolarDeviceDataType.ACC)
+        } throws IllegalStateException("Simulated ACC setting rejection")
+        coEvery {
+            mockApi.requestStreamSettings(any(), PolarBleApi.PolarDeviceDataType.GYRO)
+        } throws UnsupportedOperationException("H10 does not support GYRO")
+
+        val bridge = PolarOnlineStreamingBridge(
+            context = context,
+            mySensorManager = sensorManager,
+            deviceId = devId,
+            macAddress = mac,
+            dispatcher = Dispatchers.Unconfined,
+            sdkIntProvider = { 34 },
+            apiFactory = { _, _ -> mockApi }
+        )
+        bridge.startSearching()
+        val mux = PolarOfflineGattCoordinator.getMultiplexerCallbackForTesting()
+        mux.deviceConnected(PolarDeviceInfo("0A1B2C3D", mac, -55, "Chest Strap", true))
+        mux.disInformationReceived(mac, BluetoothConstants.UUID_CHARACTERISTIC_SERIAL_NUMBER, "1234567890123")
+        assertEquals("0A1B2C3D", bridge.polarId)
+
+        // Trigger online streaming readiness as Verity Sense temporarily so both ACC and GYRO launch
+        mux.disInformationReceived(mac, BluetoothConstants.UUID_CHARACTERISTIC_MODEL_NUMBER, "Verity Sense")
+        mux.bleSdkFeatureReady("0A1B2C3D", PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_ONLINE_STREAMING)
+
+        assertFalse(bridge.isAccStreamingForTesting())
+        assertFalse(bridge.isGyroStreamingForTesting())
+        assertEquals(null, PolarOfflineGattCoordinator.getAccChannelOwner("0A1B2C3D"))
 
         bridge.shutDown()
     }

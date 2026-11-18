@@ -659,9 +659,7 @@ class DeviceDataRepository @androidx.annotation.VisibleForTesting internal const
         val name = devicesDatabaseManager.getDeviceName(deviceId) ?: ""
         val manufacturer = devicesDatabaseManager.getManufacturerName(deviceId) ?: ""
         return com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineGattCoordinator
-            .isPolarH10Name(name, manufacturer) ||
-            com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineGattCoordinator
-                .isPolarVeritySenseDevice(application, name, manufacturer, btAddress)
+            .isPolarOfflineCapableDevice(application, name, manufacturer, btAddress)
     }
 
     fun getPairedRemoteDevices(protocol: Protocol): List<PairedRemoteDeviceDto> {

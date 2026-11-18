@@ -36,6 +36,7 @@ import android.bluetooth.le.ScanSettings;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineCapabilityStore;
+import com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineGattCoordinator;
 import android.os.Build;
 import android.os.Handler;
 import android.os.ParcelUuid;
@@ -134,6 +135,17 @@ public class BTSearchForNewDevicesEngine
                             gatt.getService(BluetoothConstants.UUID_SERVICE_DEVICE_INFORMATION),
                             BluetoothConstants.UUID_CHARACTERISTIC_MANUFACTURER_NAME);
 
+                    if (mDeviceType == DeviceType.HRM) {
+                        boolean hasPmd = gatt.getService(BluetoothConstants.UUID_SERVICE_POLAR_PMD) != null;
+                        boolean hasPftp = gatt.getService(BluetoothConstants.UUID_SERVICE_POLAR_PFTP) != null;
+                        if (hasPmd || hasPftp) {
+                            PolarOfflineCapabilityStore.recordGattServiceCapabilities(mContext, address, hasPmd, hasPftp);
+                            BluetoothGattService disService = gatt.getService(BluetoothConstants.UUID_SERVICE_DEVICE_INFORMATION);
+                            enqueueCharacteristicIfPresent(address, disService, BluetoothConstants.UUID_CHARACTERISTIC_MODEL_NUMBER);
+                            enqueueCharacteristicIfPresent(address, disService, BluetoothConstants.UUID_CHARACTERISTIC_SERIAL_NUMBER);
+                        }
+                    }
+
                     enqueueCharacteristicIfPresent(address,
                             gatt.getService(BluetoothConstants.UUID_SERVICE_BATTERY),
                             BluetoothConstants.UUID_CHARACTERISTIC_BATTERY_LEVEL);
@@ -175,6 +187,20 @@ public class BTSearchForNewDevicesEngine
                             String manufacturerName = characteristic.getStringValue(0);
                             if (DEBUG) Log.d(TAG, "got manufacturer: " + manufacturerName);
                             mManufacturerMap.put(address, manufacturerName);
+                        } else if (BluetoothConstants.UUID_CHARACTERISTIC_MODEL_NUMBER.equals(characteristic.getUuid())) {
+                            String modelNumber = characteristic.getStringValue(0);
+                            if (DEBUG) Log.d(TAG, "got model number: " + modelNumber);
+                            if (PolarOfflineCapabilityStore.hasPolarServiceCapability(mContext, address)) {
+                                PolarOfflineCapabilityStore.recordDisMetadata(mContext, address, modelNumber, null);
+                            }
+                        } else if (BluetoothConstants.UUID_CHARACTERISTIC_SERIAL_NUMBER.equals(characteristic.getUuid())) {
+                            String serialNumber = characteristic.getStringValue(0);
+                            if (DEBUG) Log.d(TAG, "got serial number: " + serialNumber);
+                            if (PolarOfflineCapabilityStore.hasPolarServiceCapability(mContext, address)
+                                    && PolarOfflineCapabilityStore.isValidCanonicalPolarId(serialNumber)) {
+                                PolarOfflineCapabilityStore.recordDisMetadata(mContext, address, null, serialNumber);
+                                PolarOfflineGattCoordinator.registerDeviceAliases(serialNumber, address);
+                            }
                         } else if (BluetoothConstants.UUID_CHARACTERISTIC_CYCLING_SPEED_AND_CADENCE_FEATURE.equals(characteristic.getUuid())) {
                             if (DEBUG) Log.i(TAG, "Received cycling speed and cadence feature");
 
@@ -500,9 +526,12 @@ public class BTSearchForNewDevicesEngine
                 }
             }
         } else {
-            if (mDeviceType == DeviceType.HRM && gatt != null
-                    && gatt.getService(BluetoothConstants.UUID_SERVICE_POLAR_PFTP) != null) {
-                PolarOfflineCapabilityStore.markOfflineRecordingCapable(mContext, address);
+            if (mDeviceType == DeviceType.HRM && gatt != null) {
+                boolean hasPmd = gatt.getService(BluetoothConstants.UUID_SERVICE_POLAR_PMD) != null;
+                boolean hasPftp = gatt.getService(BluetoothConstants.UUID_SERVICE_POLAR_PFTP) != null;
+                if (hasPmd || hasPftp) {
+                    PolarOfflineCapabilityStore.recordGattServiceCapabilities(mContext, address, hasPmd, hasPftp);
+                }
             }
             newDeviceFound(address);
         }

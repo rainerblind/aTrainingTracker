@@ -1,14 +1,14 @@
 # Living Test Specification: Tracking & Live Sensor Cockpit
 
 **Document ID**: `DOC-TST-TRK`  
-**Version**: 1.0.18  
+**Version**: 1.0.19  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Tests**: 145
+**Total Tests**: 146
 
 ---
 
@@ -3366,6 +3366,24 @@
      • Execute `./gradlew :app:testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.zones.HrvDfaA1RangeSliderGestureTest" --tests "com.atrainingtracker.trainingtracker.zones.HrvDfaA1SettingsContractTest"` confirming 100% pass (`Localization parity: N/A - no UI strings added or modified`).
      • Capture Light/Dark screenshot PNG at `docs/engineering/walkthroughs/img/ATT-8105_hrv_slider_zones.png` and inspect via `read_file` against the 4-point `Rule 8.5` checklist.
 
+### TST-CON-049: **Hardware-Grounded Polar Detection (PMD/PFTP UUIDs & DIS 0x2A24/0x2A25) and Pre-Connect Alias Seeding Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Tickets**: `ATT-8717`
+- **Requirement(s)**: `REQ-CON-049` (`REQ-CON-049.1`..`REQ-CON-049.5`), `REQ-SET-104.3`, `REQ-SET-108.1`, `REQ-SET-112.1`, `REQ-SET-112.2`, `REQ-SET-118.2`
+- **Component**: `app/src/test/java/com/atrainingtracker/banalservice/devices/bluetooth_le/polar/PolarOfflineGattCoordinatorCoexistenceTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/devices/bluetooth_le/polar/PolarOnlineStreamingBridgeTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/devices/bluetooth_le/polar/PolarH10OfflineControllerTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/devices/bluetooth_le/polar/PolarVeritySenseOfflineControllerTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/devices/bluetooth_le/search_new/BTSearchForNewDevicesEngineTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/devices/bluetooth_le/BTLEHeartRateDeviceTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/ui/devices/editdevice/EditDevicePolarBackupTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/ui/devices/editdevice/EditDevicePolarLiveImuTest.kt`
+- **Test Type**: Unit
+- **Verification Method**: Unit
+- **Procedure**:
+  1. *Capability Store, Service UUID Separation & Precedence Test (`TST-CON-049.1`, `PolarOfflineGattCoordinatorCoexistenceTest.kt`)*:
+     • Verify `PolarOfflineCapabilityStore` persists `hasPmdService`, `hasPftpService`, `modelNumber` (`0x2A24`), `polarDeviceId` (`0x2A25` / `PolarDeviceInfo.deviceId`), and derived `PolarDeviceType` (`H10`, `VERITY_SENSE`, `UNKNOWN`) per normalized MAC independently of legacy `offline_rec_`.
+     • Assert renamed Polar H10 (`"Chest Strap"`) with both PMD+PFTP UUIDs and `modelNumber="H10"` classifies as H10 (never Verity Sense), while `PolarDeviceType == UNKNOWN` preserves legacy un-reconnected fallback until hardware metadata is persisted.
+  2. *Pairing & Standard HRM Reconnect DIS + UUID Hydration Test (`TST-CON-049.2`, `BTSearchForNewDevicesEngineTest.kt` & `BTLEHeartRateDeviceTest.kt`)*:
+     • Mock `BluetoothGatt` with `UUID_SERVICE_DEVICE_INFORMATION` (`0x2A24`, `0x2A25`), `UUID_SERVICE_POLAR_PMD`, and `UUID_SERVICE_POLAR_PFTP` during pairing and `BTLEHeartRateDevice` / `MyBTLEDevice` reconnect; assert DIS characteristics are read and persisted alongside service UUIDs into `PolarOfflineCapabilityStore` without blocking non-Polar HRMs.
+  3. *SDK Bridge DIS Hydration, Pre-Connect Alias Seeding & `RR_PRIORITY_PPG` Parity Test (`TST-CON-049.3`, `PolarOnlineStreamingBridgeTest.kt`)*:
+     • Trigger `sdkCallback.disInformationReceived` (`UUID`/`String` and `DisInfo`) and `bleSdkFeatureReady` (`FEATURE_POLAR_H10_EXERCISE_RECORDING` / `FEATURE_POLAR_OFFLINE_RECORDING`); assert store hydration, canonical `polarId` from `0x2A25`, `registerDeviceAliases(polarDeviceId, mac)` registered BEFORE `deviceConnected`, and renamed Verity Sense `isVeritySense == true` (`RR_PRIORITY_PPG`).
+  4. *Renamed-Sensor Controller, `syncPendingWorkout`, Repository & EditDevice Verification (`TST-CON-049.4`, Offline Mocked `Rule 5` & `REQ-PRO-049.1`)*:
+     • Verify renamed H10 (`"Chest Strap"`) and renamed Verity Sense/OH1 (`"Armband"`) route deterministically across `PolarH10OfflineController` (incl. `syncPendingWorkout`), `PolarVeritySenseOfflineController`, `DeviceDataRepository.isPolarLiveImuBridgeEligible`, `EditDevicePolarBackupTest`, and `EditDevicePolarLiveImuTest` with `0` `src/main` source reads (`REQ-PRO-049.1`; `Localization parity: N/A - no UI strings`).
+
 
 ---
 
@@ -3387,3 +3405,4 @@
 | `1.0.11` | 2026-11-18 | AI Agent (`ATT-8706`) | `ATT-8706` | Added and verified `TST-TRK-085` [Verified] for RR source isolation, monotonic clamping, physiological gap flagging, pre-filter sort, and DFA α1 validity gate (502/502 tests across 88 suites). |
 | `1.0.17` | 2026-11-18 | AI Agent (`ATT-8706`) | `ATT-8706` | Promoted `TST-TRK-085` to `[Verified]` in Stage 5 following Bounce 3/3 heal verification (`449/449` tests across `83` suites). |
 | `1.0.18` | 2026-11-18 | AI Agent (`ATT-8105`) | `ATT-8105` | Added and verified `TST-TRK-086` [Verified] (`HrvDfaA1RangeSliderGestureTest.kt` Robolectric `createComposeRule()` gesture isolation `5/5`, `Rule 8.5` Light/Dark PNG audit, and Tier-1 regression `31/31` across 7 suites). |
+| `1.0.19` | 2026-11-18 | AI Agent (`ATT-8717`) | `ATT-8717` | Added and verified `TST-CON-049` [Verified] across 34 unit/Robolectric suites (166/166 PASS) including CardioSense DIS rejection, pre-CCCD DIS read order, 8-hex ID preservation, and IMU stream rejection. |

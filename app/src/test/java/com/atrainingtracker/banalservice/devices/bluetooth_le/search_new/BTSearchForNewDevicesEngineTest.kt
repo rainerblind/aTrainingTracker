@@ -40,6 +40,8 @@ import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.atrainingtracker.banalservice.devices.bluetooth_le.BluetoothConstants
+import com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineCapabilityStore
+import com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineGattCoordinator
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
 import com.atrainingtracker.banalservice.devices.DeviceType
 import io.mockk.every
@@ -53,6 +55,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -693,6 +696,123 @@ class BTSearchForNewDevicesEngineTest {
                 any(),
                 any()
             )
+        }
+    }
+
+    /**
+     * REQ-CON-049.1/.2/.3 / TST-CON-049.2: Pairing an HRM with Polar PMD+PFTP UUIDs and DIS 0x2A24/0x2A25
+     * persists hardware capabilities and aliases without falsely marking H10 as legacy offline_rec.
+     */
+    @Test
+    fun testOnServicesDiscovered_hrm_persistsDisModelSerialAndPolarServiceUuids() {
+        PolarOfflineCapabilityStore.resetForTesting()
+        PolarOfflineGattCoordinator.resetForTesting()
+        try {
+            val engine = TestSearchEngine(mockContext, DeviceType.HRM, mockCallback)
+            val testAddress = "AA:BB:CC:DD:EE:44"
+
+            val mockGatt = mockk<BluetoothGatt>(relaxed = true)
+            val mockDevice = mockk<BluetoothDevice>(relaxed = true)
+            every { mockGatt.device } returns mockDevice
+            every { mockDevice.address } returns testAddress
+            every { mockDevice.name } returns "Chest Strap"
+
+            val mockDisService = mockk<BluetoothGattService>(relaxed = true)
+            val mockModelChar = mockk<BluetoothGattCharacteristic>(relaxed = true)
+            val mockSerialChar = mockk<BluetoothGattCharacteristic>(relaxed = true)
+            every { mockModelChar.uuid } returns BluetoothConstants.UUID_CHARACTERISTIC_MODEL_NUMBER
+            every { mockModelChar.getStringValue(0) } returns "H10"
+            every { mockSerialChar.uuid } returns BluetoothConstants.UUID_CHARACTERISTIC_SERIAL_NUMBER
+            every { mockSerialChar.getStringValue(0) } returns "1A2B3C4D"
+
+            every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_DEVICE_INFORMATION) } returns mockDisService
+            every { mockDisService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_MODEL_NUMBER) } returns mockModelChar
+            every { mockDisService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_SERIAL_NUMBER) } returns mockSerialChar
+            every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_POLAR_PMD) } returns mockk(relaxed = true)
+            every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_POLAR_PFTP) } returns mockk(relaxed = true)
+            every { mockGatt.readCharacteristic(any()) } returns true
+
+            engine.getGattsMap()[testAddress] = mockGatt
+            engine.getGattCallback().onServicesDiscovered(mockGatt, BluetoothGatt.GATT_SUCCESS)
+            drainPostedRunnables()
+
+            val queue = engine.getQueueMap()[testAddress]!!
+            assertTrue(queue.any { it.uuid == BluetoothConstants.UUID_CHARACTERISTIC_MODEL_NUMBER })
+            assertTrue(queue.any { it.uuid == BluetoothConstants.UUID_CHARACTERISTIC_SERIAL_NUMBER })
+
+            queue.clear()
+            engine.getGattCallback().onCharacteristicRead(mockGatt, mockModelChar, BluetoothGatt.GATT_SUCCESS)
+            engine.getGattCallback().onCharacteristicRead(mockGatt, mockSerialChar, BluetoothGatt.GATT_SUCCESS)
+            drainPostedRunnables()
+
+            assertTrue(PolarOfflineCapabilityStore.hasPmdService(mockContext, testAddress))
+            assertTrue(PolarOfflineCapabilityStore.hasPftpService(mockContext, testAddress))
+            assertFalse(PolarOfflineCapabilityStore.hasOfflineRecordingCapability(mockContext, testAddress))
+            assertEquals("H10", PolarOfflineCapabilityStore.getModelNumber(mockContext, testAddress))
+            assertEquals("1A2B3C4D", PolarOfflineCapabilityStore.getPolarDeviceId(mockContext, testAddress))
+            assertEquals(
+                PolarOfflineCapabilityStore.PolarDeviceType.H10,
+                PolarOfflineCapabilityStore.getDeviceType(mockContext, testAddress)
+            )
+            assertTrue(PolarOfflineGattCoordinator.matchesDeviceIdentifier("1A2B3C4D", testAddress))
+        } finally {
+            PolarOfflineCapabilityStore.resetForTesting()
+            PolarOfflineGattCoordinator.resetForTesting()
+        }
+    }
+
+    /**
+     * REQ-CON-049.3 / TST-CON-049.2: Non-Polar BLE HRM leaves Polar capability store untouched.
+     */
+    @Test
+    fun testOnServicesDiscovered_nonPolarHrm_doesNotPopulatePolarStore() {
+        PolarOfflineCapabilityStore.resetForTesting()
+        try {
+            val engine = TestSearchEngine(mockContext, DeviceType.HRM, mockCallback)
+            val testAddress = "AA:BB:CC:DD:EE:45"
+
+            val mockGatt = mockk<BluetoothGatt>(relaxed = true)
+            val mockDevice = mockk<BluetoothDevice>(relaxed = true)
+            val mockDisService = mockk<BluetoothGattService>(relaxed = true)
+            val mockModelChar = mockk<BluetoothGattCharacteristic>(relaxed = true)
+            val mockSerialChar = mockk<BluetoothGattCharacteristic>(relaxed = true)
+            every { mockGatt.device } returns mockDevice
+            every { mockDevice.address } returns testAddress
+            every { mockDevice.name } returns "CardioSense HRM"
+            every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_POLAR_PMD) } returns null
+            every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_POLAR_PFTP) } returns null
+            every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_DEVICE_INFORMATION) } returns mockDisService
+            every { mockDisService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_MODEL_NUMBER) } returns mockModelChar
+            every { mockDisService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_SERIAL_NUMBER) } returns mockSerialChar
+            every { mockModelChar.uuid } returns BluetoothConstants.UUID_CHARACTERISTIC_MODEL_NUMBER
+            every { mockModelChar.getStringValue(0) } returns "CardioSense"
+            every { mockSerialChar.uuid } returns BluetoothConstants.UUID_CHARACTERISTIC_SERIAL_NUMBER
+            every { mockSerialChar.getStringValue(0) } returns "1234567890123"
+
+            engine.getGattsMap()[testAddress] = mockGatt
+            engine.getGattCallback().onServicesDiscovered(mockGatt, BluetoothGatt.GATT_SUCCESS)
+            drainPostedRunnables()
+            val queue = engine.getQueueMap()[testAddress]!!
+            assertFalse(queue.any { it.uuid == BluetoothConstants.UUID_CHARACTERISTIC_MODEL_NUMBER })
+            assertFalse(queue.any { it.uuid == BluetoothConstants.UUID_CHARACTERISTIC_SERIAL_NUMBER })
+            queue.clear()
+            engine.readNextCharacteristic(testAddress)
+            drainPostedRunnables()
+
+            assertFalse(PolarOfflineCapabilityStore.hasPmdService(mockContext, testAddress))
+            assertFalse(PolarOfflineCapabilityStore.hasPftpService(mockContext, testAddress))
+            assertNull(PolarOfflineCapabilityStore.getModelNumber(mockContext, testAddress))
+            assertNull(PolarOfflineCapabilityStore.getPolarDeviceId(mockContext, testAddress))
+            assertEquals(
+                PolarOfflineCapabilityStore.PolarDeviceType.UNKNOWN,
+                PolarOfflineCapabilityStore.getDeviceType(mockContext, testAddress)
+            )
+            assertFalse(PolarOfflineGattCoordinator.isPolarVeritySenseDevice(mockContext, "CardioSense HRM", "", testAddress))
+            verify(exactly = 1) {
+                mockCallback.onNewDeviceFound(DeviceType.HRM, testAddress, any(), any(), any())
+            }
+        } finally {
+            PolarOfflineCapabilityStore.resetForTesting()
         }
     }
 }

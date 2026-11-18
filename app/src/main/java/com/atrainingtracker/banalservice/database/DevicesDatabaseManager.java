@@ -86,6 +86,22 @@ public class DevicesDatabaseManager {
         return cInstance;
     }
 
+    @androidx.annotation.VisibleForTesting
+    public static void resetForTesting() {
+        synchronized (DevicesDatabaseManager.class) {
+            if (cInstance != null) {
+                try {
+                    if (cInstance.mDatabase != null && cInstance.mDatabase.isOpen()) {
+                        cInstance.mDatabase.close();
+                    }
+                    cInstance.cDevicesDbHelper.close();
+                } catch (Throwable ignored) {
+                }
+                cInstance = null;
+            }
+        }
+    }
+
     /**
      * Returns a writable database instance and ensures it remains open.
      * Re-opens if closed (e.g., by a backup process) to prevent IllegalStateException (ATT-289).

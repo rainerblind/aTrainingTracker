@@ -20,6 +20,7 @@ package com.atrainingtracker.banalservice.devices.bluetooth_le;
 
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCharacteristic;
+import android.bluetooth.BluetoothGattService;
 import android.content.Context;
 import android.util.Log;
 
@@ -32,12 +33,15 @@ import com.atrainingtracker.banalservice.devices.RrBeatEvent;
 import com.atrainingtracker.banalservice.devices.RrBeatListener;
 import com.atrainingtracker.banalservice.devices.RrBeatNormalization;
 import com.atrainingtracker.banalservice.devices.RrBeatSource;
+import com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineCapabilityStore;
+import com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineGattCoordinator;
 import com.atrainingtracker.banalservice.sensor.MySensor;
 import com.atrainingtracker.banalservice.sensor.MySensorManager;
 import com.atrainingtracker.banalservice.sensor.SensorType;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
@@ -101,6 +105,49 @@ public class BTLEHeartRateDevice extends MyBTLEDevice implements RrBeatSource {
                 listener.onRrBeat(event);
             } catch (Exception e) {
                 Log.e(TAG, "Error in RrBeatListener callback", e);
+            }
+        }
+    }
+
+    @Override
+    protected void configureServices(BluetoothGatt gatt) {
+        if (gatt != null) {
+            boolean hasPmd = gatt.getService(BluetoothConstants.UUID_SERVICE_POLAR_PMD) != null;
+            boolean hasPftp = gatt.getService(BluetoothConstants.UUID_SERVICE_POLAR_PFTP) != null;
+            if (hasPmd || hasPftp) {
+                PolarOfflineCapabilityStore.recordGattServiceCapabilities(mContext, getAddress(), hasPmd, hasPftp);
+                BluetoothGattService disService = gatt.getService(BluetoothConstants.UUID_SERVICE_DEVICE_INFORMATION);
+                if (disService != null) {
+                    BluetoothGattCharacteristic modelChar =
+                            disService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_MODEL_NUMBER);
+                    if (modelChar != null) {
+                        enqueueReadCharacteristic(modelChar);
+                    }
+                    BluetoothGattCharacteristic serialChar =
+                            disService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_SERIAL_NUMBER);
+                    if (serialChar != null) {
+                        enqueueReadCharacteristic(serialChar);
+                    }
+                }
+            }
+        }
+        super.configureServices(gatt);
+    }
+
+    @Override
+    protected void onOtherCharacteristicUpdate(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
+        if (characteristic == null || !PolarOfflineCapabilityStore.hasPolarServiceCapability(mContext, getAddress())) {
+            return;
+        }
+        UUID uuid = characteristic.getUuid();
+        if (BluetoothConstants.UUID_CHARACTERISTIC_MODEL_NUMBER.equals(uuid)) {
+            String modelNumber = characteristic.getStringValue(0);
+            PolarOfflineCapabilityStore.recordDisMetadata(mContext, getAddress(), modelNumber, null);
+        } else if (BluetoothConstants.UUID_CHARACTERISTIC_SERIAL_NUMBER.equals(uuid)) {
+            String serialNumber = characteristic.getStringValue(0);
+            if (PolarOfflineCapabilityStore.isValidCanonicalPolarId(serialNumber)) {
+                PolarOfflineCapabilityStore.recordDisMetadata(mContext, getAddress(), null, serialNumber);
+                PolarOfflineGattCoordinator.registerDeviceAliases(serialNumber, getAddress());
             }
         }
     }

@@ -102,6 +102,17 @@ class EditDevicePolarBackupTest {
     }
 
     @Test
+    fun testRenamedH10WithDisMetadata_routesToH10NotVeritySenseEvenWithLegacyOfflineRec() {
+        val mac = "AA:BB:CC:DD:EE:02"
+        val renamedH10 = createHrmUiData("Chest Strap", manufacturer = "")
+        PolarOfflineCapabilityStore.markOfflineRecordingCapable(null, mac)
+        PolarOfflineCapabilityStore.recordDisMetadata(null, mac, modelNumber = "H10", serialNumber = "1C3B2421")
+
+        assertTrue(isPolarH10Device(renamedH10, macAddress = mac))
+        assertFalse(isPolarVeritySenseDevice(renamedH10, macAddress = mac))
+    }
+
+    @Test
     fun testPolarBackupRecordingCard_andStringsContractExist() {
         val clazz = Class.forName("com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialogKt")
         val cardMethod = clazz.declaredMethods.firstOrNull { it.name.startsWith("PolarBackupRecordingCard") }
