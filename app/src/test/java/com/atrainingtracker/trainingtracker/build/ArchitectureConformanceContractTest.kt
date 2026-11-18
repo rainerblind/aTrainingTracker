@@ -85,6 +85,32 @@ class ArchitectureConformanceContractTest {
             "com/atrainingtracker/trainingtracker/ui/tracking/editsensorfield/EditSensorFieldViewModel.kt"
         )
 
+        /**
+         * Downward-ratcheting LoC ceiling baseline for existing > 1,500 LoC production files
+         * (REQ-PRO-129.2, TST-PRO-129.2, ATT-8203).
+         * Net-new files > 1,500 LoC and upward LoC growth beyond baseline fail immediately.
+         * When a file is refactored below 1,501 LoC, remove it from this map to ratchet down.
+         */
+        const val MAX_MONOLITH_LOC_THRESHOLD = 1500
+        val MAX_MONOLITH_FILE_LOC_BASELINE: Map<String, Int> = mapOf(
+            "com/atrainingtracker/trainingtracker/ui/aftermath/WorkoutRepository.kt" to 5117,
+            "com/atrainingtracker/trainingtracker/tracker/TrackerService.java" to 3559,
+            "com/atrainingtracker/trainingtracker/database/WorkoutSummariesDatabaseManager.java" to 3148,
+            "com/atrainingtracker/trainingtracker/database/TrackingViewsDatabaseManager.java" to 2631,
+            "com/atrainingtracker/trainingtracker/settings/TuningPreferencesDataStore.kt" to 2410,
+            "com/atrainingtracker/trainingtracker/TrainingApplication.java" to 2135,
+            "com/atrainingtracker/banalservice/ui/devices/editdevice/EditDeviceDialog.kt" to 2004,
+            "com/atrainingtracker/trainingtracker/ui/athleteprofile/AthleteProfileScreen.kt" to 1975,
+            "com/atrainingtracker/trainingtracker/ui/map/TelemetryMetricGraph.kt" to 1965,
+            "com/atrainingtracker/trainingtracker/ui/tracking/tracking/SensorGridScreen.kt" to 1953,
+            "com/atrainingtracker/trainingtracker/activities/ZonesSettingsActivity.kt" to 1898,
+            "com/atrainingtracker/banalservice/devices/DeviceManager.java" to 1708,
+            "com/atrainingtracker/banalservice/database/DevicesDatabaseManager.java" to 1671,
+            "com/atrainingtracker/trainingtracker/database/WorkoutClusterEngine.kt" to 1635,
+            "com/atrainingtracker/trainingtracker/database/WorkoutSamplesDatabaseManager.java" to 1533,
+            "com/atrainingtracker/trainingtracker/migration/ImportBackupTabsScreen.kt" to 1513
+        )
+
         fun stripComments(content: String): String {
             return content.replace(BLOCK_COMMENT_PATTERN, "").replace(LINE_COMMENT_PATTERN, "")
         }
@@ -366,5 +392,64 @@ class ArchitectureConformanceContractTest {
             val nfrId = String.format("REQ-NFR-%03d", i)
             assertTrue("Section 4.9 must explicitly link to $nfrId (ATT-6735)", content.contains(nfrId))
         }
+    }
+
+    /**
+     * Enforces monotonic downward-ratcheting LoC ceiling across all Kotlin/Java files > 1,500 LoC
+     * in app/src/main/java (REQ-PRO-129.2, TST-PRO-129.2, ATT-8203).
+     */
+    // Linked test specs: TST-PRO-129.2
+    @Test
+    fun testMonolithLocRatchet_noNewOrGrowingGodClasses() {
+        val mainDir = findMainSourceDir()
+        val actualLocByPath = mutableMapOf<String, Int>()
+
+        mainDir.walkTopDown().forEach { file ->
+            if (file.isFile && (file.name.endsWith(".kt") || file.name.endsWith(".java"))) {
+                val relPath = normalizePath(file, mainDir)
+                actualLocByPath[relPath] = file.readLines().size
+            }
+        }
+
+        val netNewGodClasses = actualLocByPath
+            .filter { (path, loc) -> loc > MAX_MONOLITH_LOC_THRESHOLD && path !in MAX_MONOLITH_FILE_LOC_BASELINE }
+            .map { (path, loc) -> "$path ($loc LoC > $MAX_MONOLITH_LOC_THRESHOLD)" }
+        assertTrue(
+            "Detected net-new God classes > $MAX_MONOLITH_LOC_THRESHOLD LoC (REQ-PRO-129.2):\n  " +
+                netNewGodClasses.joinToString("\n  "),
+            netNewGodClasses.isEmpty()
+        )
+
+        val growthViolations = mutableListOf<String>()
+        val staleEntries = mutableListOf<String>()
+        MAX_MONOLITH_FILE_LOC_BASELINE.forEach { (path, maxAllowedLoc) ->
+            val actualLoc = actualLocByPath[path]
+            if (actualLoc == null) {
+                staleEntries.add("$path (missing on disk)")
+            } else if (actualLoc > maxAllowedLoc) {
+                growthViolations.add("$path grew from $maxAllowedLoc to $actualLoc LoC")
+            } else if (actualLoc <= MAX_MONOLITH_LOC_THRESHOLD) {
+                staleEntries.add("$path shrunk to $actualLoc <= $MAX_MONOLITH_LOC_THRESHOLD LoC; remove from baseline")
+            }
+        }
+
+        assertTrue(
+            "Existing God classes exceeded ratcheted LoC ceilings (REQ-PRO-129.2):\n  " +
+                growthViolations.joinToString("\n  "),
+            growthViolations.isEmpty()
+        )
+        assertTrue(
+            "Ratcheted monolith baseline contains stale entries that should be removed to lock in improvements:\n  " +
+                staleEntries.joinToString("\n  "),
+            staleEntries.isEmpty()
+        )
+    }
+
+    @Test
+    fun testMonolithLocBaseline_containsExpectedCeilingCount() {
+        assertTrue(
+            "Monolith baseline size (${MAX_MONOLITH_FILE_LOC_BASELINE.size}) must stay <= 16 (REQ-PRO-129.2)",
+            MAX_MONOLITH_FILE_LOC_BASELINE.size <= 16
+        )
     }
 }

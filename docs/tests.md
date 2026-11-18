@@ -1,11 +1,11 @@
 # aTrainingTracker: Living Test Specification & Verification Plan (Master Index)
 
 **Document ID**: `DOC-TST-INDEX`  
-**Version**: 1.0.29  
+**Version**: 1.0.31  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
-This master index links to the 11 domain-sharded test specification files under `docs/tests/`.
+This master index links to the 12 domain-sharded test specification files under `docs/tests/`.
 Living test specifications use multi-line Markdown headings (`### TST-XXX: Title [Status]`) (ATT-4594, `REQ-PRO-028`) and adhere to the `<= 4,000`-line shard cap (`REQ-PRO-093.3`, `REQ-PRO-127.3`).
 
 ## Domain Test Shards
@@ -20,11 +20,12 @@ Living test specifications use multi-line Markdown headings (`### TST-XXX: Title
 | [UI Components & Design System (Part 1)](tests/tst_ui_design_system_part1.md) | Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts. | `UI`, `UNT` | 249 | 182 | 67 | 0 |
 | [UI Components & Design System (Part 2)](tests/tst_ui_design_system_part2.md) | Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts. | `UI` | 192 | 192 | 0 | 0 |
 | [UI Components & Design System (Part 3)](tests/tst_ui_design_system_part3.md) | Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts. | `UI` | 38 | 38 | 0 | 0 |
-| [Engineering Process, Stability & Architecture](tests/tst_process_stability.md) | ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools. | `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST` | 232 | 175 | 49 | 8 |
+| [Engineering Process, Stability & Architecture (Part 1)](tests/tst_process_stability_part1.md) | ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools. | `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST` | 148 | 99 | 49 | 0 |
+| [Engineering Process, Stability & Architecture (Part 2)](tests/tst_process_stability_part2.md) | ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools. | `PRO` | 85 | 77 | 0 | 8 |
 | [Jubilee Milestones & App Reviews](tests/tst_aftermath_reviews.md) | Milestone workout auto-naming, jubilee achievements, Google Play in-app reviews, athlete feedback, and supporter tier promotions. | `REV` | 15 | 15 | 0 | 0 |
 | [Store Presence](tests/tst_store_presence.md) | Store presence, Google Play listings, screenshots, store metadata contract testing, and release governance. | `STP` | 11 | 11 | 0 | 0 |
 
-**Total Living Tests**: 1250 across 11 domain shards.
+**Total Living Tests**: 1251 across 12 domain shards.
 
 ---
 
@@ -57,3 +58,4 @@ Living test specifications use multi-line Markdown headings (`### TST-XXX: Title
 | `1.0.27` | 2026-11-18 | AI Agent (`ATT-8204`) | `ATT-8204` | Promoted `TST-PRO-062` to `[Verified]` after Stage 5 verification (`4/4` ATT-8204 tests PASS, `TST-PRO-062` evidence `True`, `3979/4000` lines, governance `exit 0`). |
 | `1.0.28` | 2026-11-18 | AI Agent (`ATT-8679`) | `ATT-8679` | Updated `TST-TRK-062` & `TST-TRK-064` [Verified] (`126/126` unit/Compose UI PASS, `:app:lintDebug` `0` errors, `Rule 8.5` PNG). |
 | `1.0.29` | 2026-11-18 | AI Agent (`ATT-8748`) | `ATT-8748` | Updated `TST-UI-493` [Verified] (`ClusterItemThumbnailComposeTest` + `151/151` PASS + `Rule 8.5` PNG). |
+| `1.0.31` | 2026-11-18 | AI Agent (`ATT-8203`) | `ATT-8203` | Added `TST-PRO-129` [Verified] (`35/35` Kotlin contract suites + `TestLivingDocDirectoryLayout` `4/4` + `28/28 <= 4000`). |

@@ -32,8 +32,9 @@ import java.io.File
  * 2. Class inventory & decision coverage across all 149 Java classes and top 10 anchors (TST-ARC-005.2, REQ-ARC-005.2).
  * 3. Atomic child ticket sizing (1..3 SP) and Epic ATT-431 traceability (TST-ARC-005.3, REQ-ARC-005.5).
  * 4. System architecture document integration in docs/architecture.md (TST-ARC-005.4, REQ-ARC-005.6).
+ * 5. Keep-vs-Migrate consistency & live 120 .java / 29 .kt reconciliation (TST-PRO-129.1, REQ-PRO-129.1).
  */
-// Linked test specs: TST-ARC-006
+// Linked test specs: TST-ARC-006, TST-PRO-129
 class JavaCoreMigrationStrategyContractTest {
 
     companion object {
@@ -260,6 +261,70 @@ class JavaCoreMigrationStrategyContractTest {
         assertTrue(
             "docs/architecture.md §5.3 must reference ADR-001",
             content.contains("ADR-001")
+        )
+    }
+
+    /**
+     * TST-PRO-129.1 / REQ-PRO-129.1: Enforces Keep-vs-Migrate decision consistency across
+     * ADR-001 §§1-8, live 120 .java / 29 .kt reconciliation, Completed child tickets, V5.0.0 release,
+     * and docs/architecture.md §5.3 / §5.5 parity.
+     */
+    // Linked test specs: TST-PRO-129.1
+    @Test
+    fun testKeepVsMigrateConsistencyAndJavaCountReconciliation_TST_PRO_129_1() {
+        val adrContent = findRepoRootFile(ADR_RELATIVE_PATH).readText()
+        val archContent = findRepoRootFile(ARCHITECTURE_DOC_PATH).readText()
+        val mainDir = findMainSourceDir()
+
+        // 1. Metadata & Release alignment
+        assertTrue("ADR-001 Target Release must be V5.0.0", adrContent.contains("**Target Release**: `V5.0.0`"))
+        assertTrue("ADR-001 must retain Status: Reviewed pending PO sign-off", adrContent.contains("**Status**: Reviewed"))
+        assertTrue("ADR-001 Approver must remain Pending PO Sign-Off", adrContent.contains("**Approver**: Pending PO Sign-Off"))
+
+        // 2. Live .java file count reconciliation (120 <= 149)
+        val javaFiles = mainDir.walkTopDown().filter { it.isFile && it.name.endsWith(".java") }.toList()
+        assertTrue(
+            "Expected <= 120 remaining Java classes post-Tier 1/2 migrations (found ${javaFiles.size})",
+            javaFiles.size <= 120
+        )
+        assertTrue("ADR-001 must reconcile 120 remaining .java classes", adrContent.contains("120 remaining"))
+        assertTrue("ADR-001 must account for 29 migrated .kt classes", adrContent.contains("29 migrated"))
+
+        // 3. Keep-vs-Migrate consistency across §§2-8 (no stale core-service StateFlow migration claims)
+        org.junit.Assert.assertFalse(
+            "ADR-001 must not claim background services are transitioning to StateFlow (§2/§8 contradiction)",
+            adrContent.contains("modernizing background services with coroutine `StateFlow`") ||
+                adrContent.contains("transition of background services from thread synchronization to coroutine `StateFlow`")
+        )
+        assertTrue("ADR-001 §5 Mermaid must mark Tier 3 as Keep / Frozen in Java", adrContent.contains("Tier 3: Peripheral BLE & ANT+ Drivers (Keep / Frozen in Java)"))
+        assertTrue("ADR-001 §5 Mermaid must mark Tier 5 as Keep / Frozen in Java", adrContent.contains("Tier 5: Core Services - TrackerService, BANALService (Keep / Frozen in Java)"))
+
+        // 4. Child ticket table parity (all 3 bounded migration tickets Completed, none Planned)
+        val tier1FormatterRow = adrContent.lines().firstOrNull { it.contains("| **[ATT-7903]") && it.contains("Tier 1") }
+            ?: error("Missing ATT-7903 row in ADR-001 §7")
+        assertTrue("ATT-7903 must be marked Completed in ADR-001 §7", tier1FormatterRow.contains("| Completed |"))
+        REGISTERED_CHILD_TICKETS.forEach { ticket ->
+            val row = adrContent.lines().firstOrNull { it.contains("| **[${ticket.key}]") && it.contains("Tier ${ticket.tier}") }
+                ?: error("Missing ${ticket.key} row in ADR-001 §7")
+            assertTrue("${ticket.key} must be marked Completed in ADR-001 §7", row.contains("| Completed |"))
+        }
+
+        // 5. Migrated .kt files in §4 inventory exist as .kt on disk (not stale .java)
+        val migratedKtPaths = Regex("""`(com/[^`]+\.kt)`""").findAll(adrContent).map { it.groupValues[1] }.toSet()
+        assertEquals("ADR-001 §4 must record the 29 migrated .kt paths", 29, migratedKtPaths.size)
+        migratedKtPaths.forEach { relKt ->
+            val ktFile = File(mainDir, relKt)
+            assertTrue("Migrated Kotlin file listed in ADR-001 must exist on disk: $relKt", ktFile.exists() && ktFile.isFile)
+            val staleJava = File(mainDir, relKt.removeSuffix(".kt") + ".java")
+            org.junit.Assert.assertFalse("Migrated file must no longer exist as .java: ${staleJava.name}", staleJava.exists())
+        }
+
+        // 6. docs/architecture.md §5.3 & §5.5 parity
+        assertTrue("docs/architecture.md §5.3 must reconcile 120 remaining .java classes", archContent.contains("120 remaining `.java`"))
+        assertTrue("docs/architecture.md §5.3 must reconcile 29 migrated .kt classes", archContent.contains("29 migrated `.kt`"))
+        assertTrue(
+            "docs/architecture.md §5.5 must reflect ADR-001 status as Reviewed (Pending PO Sign-Off)",
+            archContent.contains("| `ADR-001` | Java Core Services Prioritized Migration Strategy | Reviewed (Pending PO Sign-Off) |")
         )
     }
 }

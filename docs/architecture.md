@@ -1,7 +1,7 @@
 # Software Architecture: aTrainingTracker (ASPICE 4.0 SWE.2)
 
 **Document ID**: `DOC-ARC-MAIN`  
-**Version**: 1.0.1  
+**Version**: 1.0.2  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -246,10 +246,11 @@ To support forensic telemetry diagnostics without impacting standard workout exp
 4. **Secure Sharing & Localization Parity**: The bundle is shared via `Intent.ACTION_SEND` using Android `FileProvider` (`<cache-path name="diagnostics" path="diagnostics/" />`). All user-facing strings across all 9 supported locales are verified in `strings_export.xml` without emojis (`REQ-EXP-044.4`, `Rule 38`).
 
 ### 3.5 Unit-Level Living Detailed Design & State Machine Models (ASPICE SWE.3, `REQ-PRO-114`)
-Unit-level dynamic state machine models, event/guard/transition tables, `IF-SWE-*` interface mappings, threading contracts, error-handling mechanisms, and `ATT-7902` characterisation-test traceability for the three core service/peripheral units are maintained under `docs/architecture/detailed_design/`:
+Unit-level dynamic state machine models, event/guard/transition tables, `IF-SWE-*` interface mappings, threading contracts, error-handling mechanisms, and `ATT-7902` characterisation-test traceability for the four core service, peripheral, and repository units are maintained under `docs/architecture/detailed_design/`:
 - **Tracking Foreground Service**: [`docs/architecture/detailed_design/tracker_service.md`](architecture/detailed_design/tracker_service.md) (`TrackerService`, `TrackingMode`, `AutoPauseState`, `StartType`, `mScheduler`, `mDbExecutor`, `mRrFlushExecutor`)
 - **Sensor Ingestion & Search Orchestration**: [`docs/architecture/detailed_design/banal_service.md`](architecture/detailed_design/banal_service.md) (`BANALService`, `DeviceManager`, `MyRemoteDevice`, `MySensorManager`, `ProxySensor`)
 - **Bluetooth LE Peripheral State Machine & GATT Queue**: [`docs/architecture/detailed_design/my_btle_device.md`](architecture/detailed_design/my_btle_device.md) (`MyBTLEDevice`, `MyBTLEDevice.State`, `mGattQueue`, `mGattLock`)
+- **Workout Repository & Reactive History Store**: [`docs/architecture/detailed_design/workout_repository.md`](architecture/detailed_design/workout_repository.md) (`WorkoutRepository`, `allWorkouts`, `isListLoading`, `activeReloadWorkoutIds`, `dirtyReloadWorkoutIds`, `deletedDuringLoadIds`, `cropMutex`)
 
 Code-to-documentation parity is continuously enforced by [`DetailedDesignParityContractTest`](../app/src/test/java/com/atrainingtracker/trainingtracker/build/DetailedDesignParityContractTest.kt).
 
@@ -342,7 +343,7 @@ For comprehensive operation signatures, payload schemas, concurrency rules, and 
 To mitigate ASPICE evaluation finding F9, boundaries between legacy Java core services and Kotlin presentation/domain layers are fortified against platform type (`T!`) nullability hazards. All public Java methods consumed by Kotlin callers enforce explicit `@NonNull` / `@Nullable` annotations (`androidx.annotation.*`), and all Java callers consuming Kotlin declarations interface via `@JvmStatic` / `@JvmOverloads` conventions.
 
 ### 5.3 Java Core Services Migration Strategy (ADR-001)
-In accordance with **ADR-001** ([`docs/architecture/adr_001_java_core_services_migration.md`](architecture/adr_001_java_core_services_migration.md)), the 149 Java classes (45,174 LOC) across 12 architectural subsystems are governed by a prioritized migration strategy under Epic `ATT-431` (*Clean Code*). Per Product Owner architecture decision (2026-11-14, ATT-8115), active Kotlin migration is strictly bounded to leaf sensor formatters (`ATT-7903`), pure signal filters (`ATT-7905`), and streaming file writers (`ATT-7906`). Remaining subsystems (`TrackerService`, `BANALService`, BLE/ANT+ peripheral drivers, SQLite database managers, legacy Pebble) deliberately remain in Java (`Keep`) or encapsulated behind clean Kotlin repositories (`WorkoutRepository`, `REQ-ARC-004`/`REQ-ARC-009`) to safeguard runtime telemetry and endurance tracking stability. Migration is bounded by mandatory quality safeguards: pre-existing characterisation test harnesses, strict refactoring invariance (zero functional changes), nullability shielding, and atomic child tickets ($\le 3$ Story Points).
+In accordance with **ADR-001** ([`docs/architecture/adr_001_java_core_services_migration.md`](architecture/adr_001_java_core_services_migration.md)), the 149-class baseline across 12 architectural subsystems (**120 remaining `.java` classes + 29 migrated `.kt` classes**) is governed by a bounded migration strategy under Epic `ATT-431` (*Clean Code*). Per Product Owner architecture decision (2026-11-14, ATT-8115), active Kotlin migration was strictly bounded to and completed across leaf sensor formatters (`ATT-7903`, 15 classes), pure signal filters (`ATT-7905`, 11 classes), and streaming file writers (`ATT-7906`, 3 classes: `FitFileWriter.kt`, `TCXFileWriter.kt`, `BaseFileWriter.kt`). Remaining subsystems (`TrackerService`, `BANALService`, BLE/ANT+ peripheral drivers, SQLite database managers, legacy Pebble) deliberately remain in Java (`Keep`) or encapsulated behind clean Kotlin repositories (`WorkoutRepository`, `REQ-ARC-004`/`REQ-ARC-009`) to safeguard runtime telemetry and endurance tracking stability. Migration is bounded by mandatory quality safeguards: pre-existing characterisation test harnesses, strict refactoring invariance (zero functional changes), nullability shielding, and atomic child tickets ($\le 3$ Story Points).
 
 ### 5.4 Canonical SensorType Storage, Display & Export Unit Data Dictionary (`REQ-TRK-083`)
 All 67 telemetry metrics declared in `SensorType` (`SensorType.java`) follow a strict separation between internal SQLite/sensor-bus storage units (`SensorType.getInternalUnit()`), UI display formatting (`MyFormatter`, `MyHelper.getUnitsId()`), and file export conversions (`FitFileWriter`, `TCXFileWriter`, `GPXFileWriter`, `CSVFileWriter`, `GCFileWriter`). The authoritative 67-entry unit, sentinel, and export data dictionary is maintained in [`docs/architecture/sensor_units.md`](architecture/sensor_units.md) and enforced by JVM contract test `SensorTypeUnitsContractTest`.
@@ -352,7 +353,7 @@ Foundational architectural choices, evaluated alternatives, and Chesterton's Fen
 
 | ADR ID | Decision Title | Status | Document |
 | :--- | :--- | :--- | :--- |
-| `ADR-001` | Java Core Services Prioritized Migration Strategy | Approved | [`adr_001_java_core_services_migration.md`](architecture/adr_001_java_core_services_migration.md) |
+| `ADR-001` | Java Core Services Prioritized Migration Strategy | Reviewed (Pending PO Sign-Off) | [`adr_001_java_core_services_migration.md`](architecture/adr_001_java_core_services_migration.md) |
 | `ADR-002` | Foreground Tracking Service Architecture (`TrackerService`) | Retrospective (Pending PO Sign-Off) | [`adr_002_foreground_tracking_service.md`](architecture/adr_002_foreground_tracking_service.md) |
 | `ADR-003` | Sensor Ingestion Bus (`BANALService` & `BANALServiceRepository`) | Retrospective (Pending PO Sign-Off) | [`adr_003_banal_sensor_bus.md`](architecture/adr_003_banal_sensor_bus.md) |
 | `ADR-004` | SQLite Database Managers vs Room ORM | Retrospective (Pending PO Sign-Off) | [`adr_004_sqlite_managers_vs_room.md`](architecture/adr_004_sqlite_managers_vs_room.md) |
@@ -410,3 +411,4 @@ In accordance with **ASPICE SUP.8 (Configuration and Release Management)**, **SW
 | :--- | :--- | :--- | :--- | :--- |
 | `1.0.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Added standardized `DOC-ARC-MAIN` work-product control header and Change History. |
 | `1.0.1` | 2026-11-18 | AI Agent (`ATT-8206`) | `ATT-8206` | Aligned Section 2 domain-shard wording with `<= 4,000`-line sub-shard splitting (`REQ-PRO-093.3`, `REQ-PRO-127.3`). |
+| `1.0.2` | 2026-11-18 | AI Agent (`ATT-8203`) | `ATT-8203` | Registered `docs/architecture/detailed_design/workout_repository.md` in §3.5 (`4` SWE.3 units), reconciled §5.3 (`120` remaining `.java` + `29` migrated `.kt`), and aligned §5.5 `ADR-001` status (`Reviewed (Pending PO Sign-Off)`) (`REQ-PRO-129.1`, `REQ-PRO-129.2`). |

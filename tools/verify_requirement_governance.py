@@ -1262,6 +1262,41 @@ def verify_engineering_directory_structure(eng_dir="docs/engineering"):
     return True, []
 
 
+def verify_living_doc_directory_layout(repo_root=None):
+    """
+    Fail-closed enforcement of canonical living documentation directory layout (REQ-PRO-129.3).
+    - docs/requirements/ MUST contain strictly regular files matching req_*.md (no SCRUM-*_plan.md or stray entries).
+    - docs/tests/ MUST contain strictly regular files matching tst_*.md.
+    """
+    if repo_root is None:
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+    layout_rules = [
+        ("docs/requirements", "req_"),
+        ("docs/tests", "tst_"),
+    ]
+    errors = []
+    for rel_dir, required_prefix in layout_rules:
+        abs_dir = os.path.join(repo_root, rel_dir)
+        if not os.path.isdir(abs_dir):
+            continue
+        for entry in sorted(os.listdir(abs_dir)):
+            abs_entry = os.path.join(abs_dir, entry)
+            if (
+                os.path.islink(abs_entry)
+                or not os.path.isfile(abs_entry)
+                or not entry.startswith(required_prefix)
+                or not entry.endswith(".md")
+            ):
+                errors.append(
+                    f"ERROR: Non-canonical entry '{entry}' in {rel_dir}/ "
+                    f"(expected regular '{required_prefix}*.md' shard only, REQ-PRO-129.3)."
+                )
+    if errors:
+        return False, errors
+    return True, ["PASS: Living documentation directories contain only canonical req_*.md and tst_*.md shards."]
+
+
 def verify_master_table_parity(repo_root=None):
     """
     Verifies that the summary tables in docs/requirements.md and docs/tests.md have 100% mathematical
@@ -5578,6 +5613,12 @@ def verify_governance(
         diagnostics.extend(dir_errors)
         return False, diagnostics
 
+    layout_ok, layout_diag = verify_living_doc_directory_layout(repo_root=repo_root)
+    if not layout_ok:
+        diagnostics.extend(layout_diag)
+        return False, diagnostics
+    diagnostics.extend(layout_diag)
+
     parity_ok, parity_errors = verify_master_table_parity()
     if not parity_ok:
         diagnostics.extend([f"ERROR: {e}" for e in parity_errors])
@@ -5830,6 +5871,11 @@ def main(argv=None):
         "--check-doc-headers",
         action="store_true",
         help="Verify standardized work-product headers, version bumps, and human-only Approved enforcement (REQ-PRO-120).",
+    )
+    parser.add_argument(
+        "--check-living-doc-layout",
+        action="store_true",
+        help="Verify docs/requirements/ contains only req_*.md and docs/tests/ contains only tst_*.md (REQ-PRO-129.3).",
     )
     parser.add_argument(
         "--check-conflict-markers",
@@ -6329,6 +6375,10 @@ def main(argv=None):
 
     if args.check_doc_headers:
         ok, diag = verify_work_product_headers(repo_root=args.repo_root, base_ref=args.base_ref, check_diff=True)
+        _record_check(ok, diag)
+
+    if args.check_living_doc_layout:
+        ok, diag = verify_living_doc_directory_layout(repo_root=args.repo_root)
         _record_check(ok, diag)
 
     if args.check_conflict_markers:

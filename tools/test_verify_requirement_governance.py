@@ -39,6 +39,7 @@ from tools.verify_requirement_governance import (
     verify_architecture_and_system_specs,
     verify_composable_islands,
     verify_engineering_directory_structure,
+    verify_living_doc_directory_layout,
     verify_gate_records,
     verify_governance,
     verify_master_table_parity,
@@ -3750,6 +3751,62 @@ class TestSymmetricTraceabilityAndScannerAudit(unittest.TestCase):
 
         cov = calculate_traceability_coverage()
         self.assertEqual(cov.cat4.gap_count, 0, f"Expected 0 Cat-4 gaps, got: {cov.cat4.details}")
+
+
+class TestLivingDocDirectoryLayout(unittest.TestCase):
+    """TST-PRO-129.3: Fail-closed directory layout enforcement for docs/requirements/ and docs/tests/."""
+
+    def test_valid_req_and_tst_shards_pass(self):
+        """TST-PRO-129.3: Canonical req_*.md and tst_*.md files pass directory layout check."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            req_dir = os.path.join(tmpdir, "docs", "requirements")
+            tst_dir = os.path.join(tmpdir, "docs", "tests")
+            os.makedirs(req_dir)
+            os.makedirs(tst_dir)
+            with open(os.path.join(req_dir, "req_process_stability_part1.md"), "w", encoding="utf-8") as f:
+                f.write("# Reqs\n")
+            with open(os.path.join(tst_dir, "tst_process_stability_part1.md"), "w", encoding="utf-8") as f:
+                f.write("# Tests\n")
+
+            ok, diag = verify_living_doc_directory_layout(repo_root=tmpdir)
+            self.assertTrue(ok, f"Expected valid layout to pass: {diag}")
+
+    def test_misplaced_scrum_plan_in_requirements_fails_closed(self):
+        """TST-PRO-129.3: Reject non-req_*.md files (e.g. SCRUM-*_plan.md) in docs/requirements/."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            req_dir = os.path.join(tmpdir, "docs", "requirements")
+            tst_dir = os.path.join(tmpdir, "docs", "tests")
+            os.makedirs(req_dir)
+            os.makedirs(tst_dir)
+            with open(os.path.join(req_dir, "req_process_stability_part1.md"), "w", encoding="utf-8") as f:
+                f.write("# Reqs\n")
+            with open(os.path.join(req_dir, "SCRUM-123_plan.md"), "w", encoding="utf-8") as f:
+                f.write("# Misplaced plan\n")
+
+            ok, diag = verify_living_doc_directory_layout(repo_root=tmpdir)
+            self.assertFalse(ok)
+            self.assertTrue(any("SCRUM-123_plan.md" in d and "req_*.md" in d for d in diag), diag)
+
+    def test_misplaced_non_tst_file_in_tests_fails_closed(self):
+        """TST-PRO-129.3: Reject non-tst_*.md files and stray subdirs in docs/tests/."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            req_dir = os.path.join(tmpdir, "docs", "requirements")
+            tst_dir = os.path.join(tmpdir, "docs", "tests")
+            os.makedirs(req_dir)
+            os.makedirs(os.path.join(tst_dir, "stray_subdir"))
+            with open(os.path.join(tst_dir, "notes.md"), "w", encoding="utf-8") as f:
+                f.write("# Stray\n")
+
+            ok, diag = verify_living_doc_directory_layout(repo_root=tmpdir)
+            self.assertFalse(ok)
+            self.assertTrue(any("notes.md" in d and "tst_*.md" in d for d in diag), diag)
+            self.assertTrue(any("stray_subdir" in d and "tst_*.md" in d for d in diag), diag)
+
+    def test_live_repository_living_doc_layout_clean(self):
+        """TST-PRO-129.3: Live repository docs/requirements/ and docs/tests/ pass layout enforcement."""
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+        ok, diag = verify_living_doc_directory_layout(repo_root=repo_root)
+        self.assertTrue(ok, f"Live repository layout failed: {diag}")
 
 
 if __name__ == "__main__":

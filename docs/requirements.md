@@ -1,7 +1,7 @@
 # aTrainingTracker: Living Requirements Specification (Master Index)
 
 **Document ID**: `DOC-REQ-INDEX`  
-**Version**: 1.0.29  
+**Version**: 1.0.31  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -25,11 +25,11 @@ Living requirements use multi-line Markdown headings (`### REQ-XXX: Title [Statu
 | [UI Components & Design System (Part 4)](requirements/req_ui_design_system_part4.md) | Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts. | `UI` | 91 | 91 | 0 | 0 |
 | [UI Components & Design System (Part 5)](requirements/req_ui_design_system_part5.md) | Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts. | `UI` | 43 | 43 | 0 | 0 |
 | [Engineering Process, Stability & Architecture (Part 1)](requirements/req_process_stability_part1.md) | ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools. | `ARC`, `BLD`, `LIV`, `NFR`, `PRO`, `SEC`, `STB`, `TOOL`, `TST` | 125 | 96 | 29 | 0 |
-| [Engineering Process, Stability & Architecture (Part 2)](requirements/req_process_stability_part2.md) | ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools. | `PRO` | 68 | 67 | 0 | 1 |
+| [Engineering Process, Stability & Architecture (Part 2)](requirements/req_process_stability_part2.md) | ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools. | `PRO` | 69 | 68 | 0 | 1 |
 | [Jubilee Milestones & App Reviews](requirements/req_aftermath_reviews.md) | Milestone workout auto-naming, jubilee achievements, Google Play in-app reviews, athlete feedback, and supporter tier promotions. | `REV` | 14 | 14 | 0 | 0 |
 | [Store Presence](requirements/req_store_presence.md) | Store presence, Google Play listings, screenshots, store metadata contract testing, and release governance. | `STP` | 11 | 11 | 0 | 0 |
 
-**Total Living Requirements**: 1243 across 16 domain shards.
+**Total Living Requirements**: 1244 across 16 domain shards.
 
 ---
 
@@ -65,3 +65,4 @@ Living requirements use multi-line Markdown headings (`### REQ-XXX: Title [Statu
 | `1.0.27` | 2026-11-18 | AI Agent (`ATT-8204`) | `ATT-8204` | Promoted `REQ-PRO-062` to `[Verified]` after Stage 5 verification (`4/4` ATT-8204 tests PASS, `--check-reviews` `13/13`, governance `exit 0`). |
 | `1.0.28` | 2026-11-18 | AI Agent (`ATT-8679`) | `ATT-8679` | Updated `REQ-TRK-062` & `REQ-TRK-064` [Verified] (remove green `RadarStatusBadgePill` clear-state circle permanently). |
 | `1.0.29` | 2026-11-18 | AI Agent (`ATT-8748`) | `ATT-8748` | Refined `REQ-UI-493` [Verified] (`175x120 dp` Lieblingsstrecken thumbnail + `360.dp` guard + bounds seeding). |
+| `1.0.31` | 2026-11-18 | AI Agent (`ATT-8203`) | `ATT-8203` | Added `REQ-PRO-129` [Verified] (ADR-001 reconciliation, 16-file God-class ratchet, `workout_repository.md`, layout guard, `tst_process_stability_part{1,2}.md`). |

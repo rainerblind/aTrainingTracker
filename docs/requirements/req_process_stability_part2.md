@@ -1,14 +1,14 @@
 # Living Requirements: Engineering Process, Stability & Architecture (Part 2 of 2)
 
 **Document ID**: `DOC-REQ-PRO-P2`  
-**Version**: 1.0.7  
+**Version**: 1.0.10  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `process_stability_part2`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Requirements**: 68
+**Total Requirements**: 69
 
 ---
 
@@ -2299,6 +2299,31 @@
 
 ---
 
+### REQ-PRO-129: ADR-001 Keep-vs-Migrate Reconciliation, God-Class LoC Ratchet, WorkoutRepository SWE.3 Design & Living-Doc Layout Enforcement (ATT-8203) [Verified]
+- **Tests**: `TST-PRO-129`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `docs/architecture/adr_001_java_core_services_migration.md`, `docs/architecture.md`, `docs/architecture/detailed_design/workout_repository.md`, `app/src/test/java/com/atrainingtracker/architecture/JavaCoreMigrationStrategyContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ArchitectureConformanceContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/DetailedDesignParityContractTest.kt`, `tools/verify_requirement_governance.py`, `tools/test_verify_requirement_governance.py`, `docs/tests/tst_process_stability_part1.md`, `docs/tests/tst_process_stability_part2.md`
+- **Rationale**: ASPICE 4.0 Gap #6 (`SWE.2 BP5`, `SWE.3 BP1/BP3`, `SUP.8 BP1`) identified three architectural and directory-hygiene gaps: (1) residual `Keep`-vs-`Migrate` contradictions in `docs/architecture/adr_001_java_core_services_migration.md` (§2 Alt 2/3, §5 Mermaid, §8, stale `149` vs `120` `.java` count, `ATT-7903` marked `Planned`) and `docs/architecture.md` §5.3/§5.5 without automated decision-consistency assertions in `JavaCoreMigrationStrategyContractTest.kt`; (2) `16` production files in `app/src/main/` exceeding `1,500` LoC (`WorkoutRepository.kt` at `5,117` LoC .. `ImportBackupTabsScreen.kt` at `1,513` LoC) lacking a downward-ratcheting LoC ceiling test and an SWE.3 detailed design document for `WorkoutRepository`; and (3) `tools/verify_requirement_governance.py` silently ignoring non-`req_*.md` / non-`tst_*.md` files in `docs/requirements/` and `docs/tests/` instead of failing closed (`ATT-8203`, Epic `ATT-8138`).
+- **Description**:
+  1. *ADR-001 `Keep`-vs-`Migrate` & Java Count Reconciliation (`REQ-PRO-129.1`, refining `REQ-ARC-005`)*: `docs/architecture/adr_001_java_core_services_migration.md` (§§1–8) and `docs/architecture.md` (§5.3, §5.5) SHALL consistently reflect the PO-frozen `Keep` decision (`ATT-8115`) for core tracking/BLE/ANT+/SQLite services alongside the `29` completed Tier 1–2 Kotlin migrations (`ATT-7903` status `Completed`, `ATT-7905`, `ATT-7906`), reconcile active `.java` inventory to `120` remaining `.java` files (`<= 149` ceiling), update `Target Release` to `V5.0.0`, preserve `Status: Reviewed` (`Pending PO Sign-Off`), and `JavaCoreMigrationStrategyContractTest.kt` SHALL enforce `Keep`-vs-`Migrate` consistency and `120 <= 149` count reconciliation (`Risk: MEDIUM`).
+  2. *God-Class LoC Ratchet & `WorkoutRepository` SWE.3 Detailed Design (`REQ-PRO-129.2`, refining `REQ-PRO-050`, `REQ-PRO-114`)*: `ArchitectureConformanceContractTest.kt` (already listed in the `22` `SourceTextReadingAuditContractTest.LEGITIMATE_GOVERNANCE_GUARDS`) SHALL enforce a monotonic downward-ratcheting LoC ceiling across all `16` `> 1,500` LoC `.kt`/`.java` files in `app/src/main/` (`WorkoutRepository.kt` `5,117` .. `ImportBackupTabsScreen.kt` `1,513`), failing on any net-new `> 1,500` LoC file, upward LoC growth beyond baseline, or stale lowered entries; `docs/architecture/detailed_design/workout_repository.md` SHALL document `WorkoutRepository` state/threading/error-handling/interfaces (`DOC-ARC-DD-WKO`, `Status: Reviewed`); `docs/architecture.md` §3.5 SHALL link `workout_repository.md` (expanding SWE.3 detailed design docs from `3` to `4`); and `DetailedDesignParityContractTest.kt` SHALL verify `workout_repository.md` structural/Mermaid/reflection parity alongside the existing `3` docs.
+  3. *Fail-Closed Requirements/Tests Directory Layout Enforcement (`REQ-PRO-129.3`, refining `REQ-PRO-093`)*: `tools/verify_requirement_governance.py` SHALL reject any non-`req_*.md` file or unexpected entry in `docs/requirements/` (including legacy `SCRUM-*_plan.md`) and any non-`tst_*.md` file or unexpected entry in `docs/tests/`, backed by offline `tempfile` unit tests in `tools/test_verify_requirement_governance.py` (`Rule 5`).
+  4. *Living Doc Shard Split & Invariant Preservation (`REQ-PRO-129.4`, refining `REQ-PRO-093.3/.4`, `REQ-PRO-127.3`)*: `docs/tests/tst_process_stability.md` SHALL be split via `tools/shard_living_docs.py` into `docs/tests/tst_process_stability_part1.md` and `docs/tests/tst_process_stability_part2.md` (every living shard `<= 4,000` lines under `--check-size --strict`), with `docs/requirements.md` and `docs/tests.md` synchronized (`--sync-indexes`), zero `app/src/main/` edits, `LEGITIMATE_GOVERNANCE_GUARDS == 22`, `app/source-reading-baseline.txt == 105`, and `Localization Parity: N/A - no UI strings`.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new `REQ-PRO-129` (`REQ-PRO-129.1`–`REQ-PRO-129.4`), refining `REQ-ARC-005` (`ADR-001` & `JavaCoreMigrationStrategyContractTest.kt`), `REQ-PRO-050` (`ArchitectureConformanceContractTest.kt`), `REQ-PRO-114` (`DetailedDesignParityContractTest.kt` & `docs/architecture/detailed_design/`), and `REQ-PRO-093` (`tools/shard_living_docs.py` & `docs/requirements/` / `docs/tests/` layout).
+  2. *Historical Origin & Commit Trace*: `1e95d2c3` (`ATT-7566`), `195a9f1f` (`ATT-8115` PO `Keep` pivot), `2de2a41c` (`ATT-8164` `DOC-ARC-ADR001` header), `ATT-8159` (`REQ-PRO-114`), and `ATT-8206` (`REQ-PRO-127` shard splitting).
+  3. *Root Reason for Existing Formulation*: `REQ-ARC-005` locked `<= 149` Java classes and 3 child tickets (`ATT-7903`/`7905`/`7906`); `REQ-PRO-049.2` locked `22` `LEGITIMATE_GOVERNANCE_GUARDS`; `verify_requirement_governance.py` ignored non-`req_*.md` files during legacy sharding transition.
+  4. *Preservation of Core Invariants*: Preserves `<= 149` bound, `3` registered child tickets (`ATT-7903`/`7905`/`7906`), `22` `LEGITIMATE_GOVERNANCE_GUARDS`, `105` `app/source-reading-baseline.txt`, `<= 4,000`-line shard cap, and zero `app/src/main/` edits.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `docs/architecture/adr_001_java_core_services_migration.md` and `docs/architecture.md`, *When* `JavaCoreMigrationStrategyContractTest` executes, *Then* all sections reflect PO-frozen `Keep` alignment, `120` remaining `.java` files (`<= 149`), `29` migrated `.kt` (`ATT-7903`/`7905`/`7906` `Completed`), and `V5.0.0`, while contradictory `Migrate` claims fail deterministically.
+  • *Given* `app/src/main/` (`16` files `> 1,500` LoC) and `docs/architecture/detailed_design/workout_repository.md`, *When* `ArchitectureConformanceContractTest`, `DetailedDesignParityContractTest`, and `SourceTextReadingAuditContractTest` run, *Then* LoC growth above baseline or net-new `> 1,500` LoC files fail, `WorkoutRepository` SWE.3 parity passes across all `4` detailed-design docs, and `LEGITIMATE_GOVERNANCE_GUARDS` remains `22`.
+  • *Given* `docs/requirements/` and `docs/tests/` (live clean tree vs synthetic `non-req_*.md` / `non-tst_*.md` `tempfile` fixtures) and split `tst_process_stability_part{1,2}.md`, *When* `python3 tools/verify_requirement_governance.py`, `python3 tools/shard_living_docs.py --check-size --strict`, and `python3 -m unittest tools/test_verify_requirement_governance.py` run, *Then* misplaced files fail closed in fixtures while live governance and shard-size checks exit `0` (`<= 4,000` lines on every shard).
+- **Invariants**: Zero `app/src/main/` edits; `ANT-Android-SDKs` untouched; `LEGITIMATE_GOVERNANCE_GUARDS == 22`; `app/source-reading-baseline.txt == 105`; `ADR-001` & `workout_repository.md` retain `Status: Reviewed` (`Pending PO Sign-Off`); `Localization Parity: N/A - no UI strings`.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -2311,3 +2336,6 @@
 | `1.0.5` | 2026-11-18 | AI Agent (`ATT-8204`) | `ATT-8204` | Refined `REQ-PRO-062` (`[Planned]`) for explicit `--review-type=human|cross-vendor-ai` classification of named human reviewers (root + Höchstmaß) and correction of `sprint_2026-46.4.md` & `sprint_2026-47.1.md`. |
 | `1.0.6` | 2026-11-18 | AI Agent (`ATT-8204`) | `ATT-8204` | Promoted `REQ-PRO-062` to `[Implemented]` in Stage 4 (`tools/jira_util.py`, `tools/hoechstmass/tools/jira_util.py`, `sprint_2026-46.4.md`, `sprint_2026-47.1.md`). |
 | `1.0.7` | 2026-11-18 | AI Agent (`ATT-8204`) | `ATT-8204` | Promoted `REQ-PRO-062` to `[Verified]` after Stage 5 verification (`4/4` ATT-8204 tests PASS, `--check-reviews` `13/13`, governance `exit 0`). |
+| `1.0.8` | 2026-11-18 | AI Agent (`ATT-8203`) | `ATT-8203` | Added `[Planned]` `REQ-PRO-129` (`REQ-PRO-129.1`–`REQ-PRO-129.4`: ADR-001 `Keep`-vs-`Migrate` & `120` `.java` reconciliation, `16`-file `> 1,500` LoC ratchet + `workout_repository.md` SWE.3 design, fail-closed `docs/requirements/` & `docs/tests/` layout enforcement, `tst_process_stability_part{1,2}.md` split). |
+| `1.0.9` | 2026-11-18 | AI Agent (`ATT-8203`) | `ATT-8203` | Promoted `REQ-PRO-129` to `[Implemented]` in Stage 4 (`adr_001_java_core_services_migration.md`, `docs/architecture.md`, `workout_repository.md`, `JavaCoreMigrationStrategyContractTest.kt`, `ArchitectureConformanceContractTest.kt`, `DetailedDesignParityContractTest.kt`, `tools/verify_requirement_governance.py`). |
+| `1.0.10` | 2026-11-18 | AI Agent (`ATT-8203`) | `ATT-8203` | Promoted `REQ-PRO-129` to `[Verified]` after Stage 5 verification (`35/35` Gradle contract tests across 6 suites, `TestLivingDocDirectoryLayout` `4/4` PASS, `28/28` shards `<= 4,000` lines, `TST-PRO-129` verified evidence `True`, governance `exit 0`). |
