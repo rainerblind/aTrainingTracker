@@ -22,8 +22,10 @@ import android.content.Context
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneThresholds
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.PowerZoneThresholds
+import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
@@ -300,5 +302,122 @@ class TelemetryZoneMathTest {
         every { SettingsDataStoreJavaHelper.getZoneMax(context, SettingsDataStore.ZoneType.PWR_BIKE, 6) } returns 450
 
         assertNull(TelemetryZoneMath.loadPowerThresholds(context))
+    }
+
+    @Test
+    fun testDetermineHrvDfaA1ZoneAndColor_preservesPolarityAndCustomThresholds() {
+        // Default T1 = 0.75, T2 = 0.50 (REQ-HRV-044.1 / TrackingHrvZoneIndicatorTest parity)
+        assertEquals(1, TelemetryZoneMath.determineHrvDfaA1Zone(0.751))
+        assertEquals(TTColor.Zone2, TelemetryZoneMath.resolveHrvDfaA1ZoneColor(0.751))
+
+        assertEquals(2, TelemetryZoneMath.determineHrvDfaA1Zone(0.75))
+        assertEquals(TTColor.Zone3, TelemetryZoneMath.resolveHrvDfaA1ZoneColor(0.75))
+        assertEquals(2, TelemetryZoneMath.determineHrvDfaA1Zone(0.50))
+        assertEquals(TTColor.Zone3, TelemetryZoneMath.resolveHrvDfaA1ZoneColor(0.50))
+
+        assertEquals(3, TelemetryZoneMath.determineHrvDfaA1Zone(0.499))
+        assertEquals(TTColor.Zone4, TelemetryZoneMath.resolveHrvDfaA1ZoneColor(0.499))
+
+        // Custom thresholds T1 = 0.90, T2 = 0.65
+        assertEquals(1, TelemetryZoneMath.determineHrvDfaA1Zone(0.95, t1 = 0.90f, t2 = 0.65f))
+        assertEquals(2, TelemetryZoneMath.determineHrvDfaA1Zone(0.80, t1 = 0.90f, t2 = 0.65f))
+        assertEquals(3, TelemetryZoneMath.determineHrvDfaA1Zone(0.60, t1 = 0.90f, t2 = 0.65f))
+    }
+
+    @Test
+    fun testCalculateHrvDfaA1ZoneBands_defaultAndOutOfRangeClamping() {
+        val defaultBands = TelemetryZoneMath.calculateHrvDfaA1ZoneBands(
+            t1 = TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T1,
+            t2 = TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T2,
+            dataMin = 0.2,
+            dataMax = 1.4
+        )
+        assertEquals(3, defaultBands.size)
+        // Anaerob (Z3): 0.2..0.50 -> Zone4
+        assertEquals(3, defaultBands[0].zoneIndex)
+        assertEquals(0.2, defaultBands[0].minVal, 1e-4)
+        assertEquals(0.50, defaultBands[0].maxVal, 1e-4)
+        assertEquals(TTColor.Zone4, defaultBands[0].color)
+        assertEquals("Z3", defaultBands[0].label)
+
+        // Schwelle (Z2): 0.50..0.75 -> Zone3
+        assertEquals(2, defaultBands[1].zoneIndex)
+        assertEquals(0.50, defaultBands[1].minVal, 1e-4)
+        assertEquals(0.75, defaultBands[1].maxVal, 1e-4)
+        assertEquals(TTColor.Zone3, defaultBands[1].color)
+        assertEquals("Z2", defaultBands[1].label)
+
+        // Aerob (Z1): 0.75..1.4 -> Zone2
+        assertEquals(1, defaultBands[2].zoneIndex)
+        assertEquals(0.75, defaultBands[2].minVal, 1e-4)
+        assertEquals(1.4, defaultBands[2].maxVal, 1e-4)
+        assertEquals(TTColor.Zone2, defaultBands[2].color)
+        assertEquals("Z1", defaultBands[2].label)
+
+        // Out-of-range T1 = MAX_DFA_A1_THRESHOLD (1.50f > 1.4) and T2 = 0.15f (< 0.2)
+        val clampedBands = TelemetryZoneMath.calculateHrvDfaA1ZoneBands(
+            t1 = TuningPreferencesDefaults.MAX_DFA_A1_THRESHOLD,
+            t2 = 0.15f,
+            dataMin = 0.2,
+            dataMax = 1.4
+        )
+        assertEquals(1, clampedBands.size)
+        assertEquals(2, clampedBands[0].zoneIndex)
+        assertEquals(0.2, clampedBands[0].minVal, 1e-4)
+        assertEquals(1.4, clampedBands[0].maxVal, 1e-4)
+        assertEquals(TTColor.Zone3, clampedBands[0].color)
+
+        assertTrue(TelemetryZoneMath.calculateHrvDfaA1ZoneBands(0.75f, 0.50f, 1.4, 1.4).isEmpty())
+    }
+
+    @Test
+    fun testCalculateHrvDfaA1ThresholdDashes_filtersOutOfRangeThresholds() {
+        val defaultDashes = TelemetryZoneMath.calculateHrvDfaA1ThresholdDashes(0.75f, 0.50f, 0.2, 1.4)
+        assertEquals(listOf(0.50, 0.75), defaultDashes)
+
+        val maxT1Filtered = TelemetryZoneMath.calculateHrvDfaA1ThresholdDashes(
+            t1 = TuningPreferencesDefaults.MAX_DFA_A1_THRESHOLD,
+            t2 = 0.50f,
+            dataMin = 0.2,
+            dataMax = 1.4
+        )
+        assertEquals(listOf(0.50), maxT1Filtered)
+
+        val allExcluded = TelemetryZoneMath.calculateHrvDfaA1ThresholdDashes(1.50f, 0.20f, 0.2, 1.4)
+        assertTrue(allExcluded.isEmpty())
+
+        val exactBoundsExcluded = TelemetryZoneMath.calculateHrvDfaA1ThresholdDashes(1.40f, 0.20f, 0.2, 1.4)
+        assertTrue(exactBoundsExcluded.isEmpty())
+    }
+
+    @Test
+    fun testBuildHrvDfaA1VerticalGradientStops_monotonicAndBoundarySafe() {
+        val stops = TelemetryZoneMath.buildHrvDfaA1VerticalGradientStops(
+            t1 = 0.75f,
+            t2 = 0.50f,
+            dataMin = 0.2,
+            dataMax = 1.4
+        )
+        assertTrue(stops.size >= 4)
+        assertEquals(0f, stops.first().first, 1e-5f)
+        assertEquals(TTColor.Zone2, stops.first().second)
+        assertEquals(1f, stops.last().first, 1e-5f)
+        assertEquals(TTColor.Zone4, stops.last().second)
+        for (i in 1 until stops.size) {
+            assertTrue("Stops must be monotonically non-decreasing", stops[i].first >= stops[i - 1].first)
+            assertTrue(stops[i].first in 0f..1f)
+        }
+
+        // Degenerate equal thresholds (t1 == t2) and out-of-range t1 = 1.50f
+        val equalStops = TelemetryZoneMath.buildHrvDfaA1VerticalGradientStops(0.70f, 0.70f, 0.2, 1.4)
+        assertEquals(TTColor.Zone2, equalStops.first().second)
+        assertEquals(TTColor.Zone4, equalStops.last().second)
+        for (i in 1 until equalStops.size) {
+            assertTrue(equalStops[i].first >= equalStops[i - 1].first)
+        }
+
+        val outOfRangeStops = TelemetryZoneMath.buildHrvDfaA1VerticalGradientStops(1.50f, 0.50f, 0.2, 1.4)
+        assertEquals(TTColor.Zone3, outOfRangeStops.first().second)
+        assertEquals(TTColor.Zone4, outOfRangeStops.last().second)
     }
 }

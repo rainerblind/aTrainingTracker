@@ -34,6 +34,7 @@ import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepository
 import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
+import com.atrainingtracker.trainingtracker.ui.aftermath.toClusterWorkoutSnapshot
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.atrainingtracker.trainingtracker.ui.map.LocationMarker
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
@@ -476,7 +477,8 @@ class WorkoutClustersViewModelTest {
     @Test
     fun testWorkoutClustersViewModel_createNewClusterFromWorkout_delegatesToEngineAndRefreshes() = runTest(testDispatcher) {
         val workout = createWorkout(101L, -1L)
-        every { mockClusterEngine.createNewClusterFromWorkout(any(), workout) } returns 15L
+        val snapshot = workout.toClusterWorkoutSnapshot()
+        every { mockClusterEngine.createNewClusterFromWorkout(any(), snapshot) } returns 15L
         coEvery { mockClusterRepo.getUnclusteredWorkouts() } returns emptyList()
 
         val viewModel = WorkoutClustersViewModel(mockApplication, testDispatcher)
@@ -486,7 +488,7 @@ class WorkoutClustersViewModelTest {
         viewModel.createNewClusterFromWorkout(workout)
         advanceUntilIdle()
 
-        verify { mockClusterEngine.createNewClusterFromWorkout(mockApplication, workout) }
+        verify { mockClusterEngine.createNewClusterFromWorkout(mockApplication, snapshot) }
         coVerify { mockClusterRepo.refreshClusters() }
         coVerify { mockWorkoutRepo.reloadWorkoutData(101L) }
     }

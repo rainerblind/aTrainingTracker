@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.banalservice.ui.devices.editdevice
 
+import android.app.Application
 import android.content.Context
 import android.graphics.Bitmap
 import androidx.compose.foundation.layout.Arrangement
@@ -43,12 +44,16 @@ import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
 import com.atrainingtracker.banalservice.devices.DeviceType
+import com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineCapabilityStore
+import com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineGattCoordinator
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
 import com.atrainingtracker.banalservice.ui.devices.devicedata.raw2UiDeviceData
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -56,6 +61,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import java.io.File
@@ -78,12 +84,18 @@ class EditDevicePolarLiveImuTest {
     @Before
     fun setUp() {
         context = ApplicationProvider.getApplicationContext()
+        DevicesDatabaseManager.resetForTesting()
         DeviceDataRepository.resetForTesting()
+        PolarOfflineCapabilityStore.resetForTesting()
+        PolarOfflineGattCoordinator.resetForTesting()
     }
 
     @After
     fun tearDown() {
+        PolarOfflineCapabilityStore.resetForTesting()
+        PolarOfflineGattCoordinator.resetForTesting()
         DeviceDataRepository.resetForTesting()
+        DevicesDatabaseManager.resetForTesting()
     }
 
     @Test
@@ -115,6 +127,73 @@ class EditDevicePolarLiveImuTest {
 
         assertTrue("Polar H10 opted-in must be eligible", repo.isPolarLiveImuBridgeEligible(h10Id, "AA:BB:CC:DD:EE:01"))
         assertFalse("Non-Polar HRM must never route to Polar bridge", repo.isPolarLiveImuBridgeEligible(garminId, "AA:BB:CC:DD:EE:02"))
+    }
+
+    @Test
+    fun testPolarLiveImuRepositoryEligibility_forRenamedPolarSensorsWithDisMetadata() {
+        // TST-CON-049.4
+        val db = DevicesDatabaseManager.getInstance(context)
+        val renamedH10Mac = "AA:BB:CC:DD:EE:03"
+        val renamedVerityMac = "AA:BB:CC:DD:EE:04"
+        val renamedH10Id = db.insertNewBluetoothDeviceIntoDB(DeviceType.HRM, renamedH10Mac, "Chest Strap", "", 95, true)
+        val renamedVerityId = db.insertNewBluetoothDeviceIntoDB(DeviceType.HRM, renamedVerityMac, "Armband", "", 95, true)
+        db.setPolarLiveImuEnabled(renamedH10Id, true)
+        db.setPolarLiveImuEnabled(renamedVerityId, true)
+
+        val repo = DeviceDataRepository(context, Dispatchers.Unconfined, Dispatchers.Unconfined)
+        assertFalse(repo.isPolarLiveImuBridgeEligible(renamedH10Id, renamedH10Mac))
+        assertFalse(repo.isPolarLiveImuBridgeEligible(renamedVerityId, renamedVerityMac))
+
+        PolarOfflineCapabilityStore.recordDisMetadata(context, renamedH10Mac, modelNumber = "H10", serialNumber = "AA11BB22")
+        PolarOfflineCapabilityStore.recordDisMetadata(context, renamedVerityMac, modelNumber = "Verity Sense", serialNumber = "CC33DD44")
+
+        assertTrue(repo.isPolarLiveImuBridgeEligible(renamedH10Id, renamedH10Mac))
+        assertTrue(repo.isPolarLiveImuBridgeEligible(renamedVerityId, renamedVerityMac))
+    }
+
+    @Test
+    fun testUpdateDevice_polarLiveImuToggleEmitsBroadcast_whileNonImuEditDoesNot() = runBlocking {
+        // TST-CON-050.1
+        val db = DevicesDatabaseManager.getInstance(context)
+        val h10Id = db.insertNewBluetoothDeviceIntoDB(
+            DeviceType.HRM,
+            "AA:BB:CC:DD:EE:05",
+            "Polar H10 CAFE1234",
+            "Polar Electro",
+            95,
+            true
+        )
+        val app = context.applicationContext as Application
+        val shadowApp = Shadows.shadowOf(app)
+        val repo = DeviceDataRepository(app, Dispatchers.Unconfined, Dispatchers.Unconfined)
+        val initial = repo.getDeviceSnapshotById(h10Id)!!
+
+        shadowApp.clearBroadcastIntents()
+        repo.updateDevice(initial.copy(deviceName = "Chest Strap Renamed"))
+        assertTrue(
+            "Non-IMU device edit must not emit POLAR_LIVE_IMU_CHANGED",
+            shadowApp.broadcastIntents.none {
+                it.action == com.atrainingtracker.banalservice.BANALService.POLAR_LIVE_IMU_CHANGED
+            }
+        )
+
+        shadowApp.clearBroadcastIntents()
+        val afterRename = repo.getDeviceSnapshotById(h10Id)!!
+        repo.updateDevice(afterRename.copy(polarLiveImuEnabled = true))
+        val enableBroadcast = shadowApp.broadcastIntents.single {
+            it.action == com.atrainingtracker.banalservice.BANALService.POLAR_LIVE_IMU_CHANGED
+        }
+        assertEquals(h10Id, enableBroadcast.getLongExtra(com.atrainingtracker.banalservice.BANALService.DEVICE_ID, -1L))
+        assertTrue(enableBroadcast.getBooleanExtra(com.atrainingtracker.banalservice.BANALService.POLAR_LIVE_IMU_ENABLED, false))
+
+        shadowApp.clearBroadcastIntents()
+        val afterEnable = repo.getDeviceSnapshotById(h10Id)!!
+        repo.updateDevice(afterEnable.copy(polarLiveImuEnabled = false))
+        val disableBroadcast = shadowApp.broadcastIntents.single {
+            it.action == com.atrainingtracker.banalservice.BANALService.POLAR_LIVE_IMU_CHANGED
+        }
+        assertEquals(h10Id, disableBroadcast.getLongExtra(com.atrainingtracker.banalservice.BANALService.DEVICE_ID, -1L))
+        assertFalse(disableBroadcast.getBooleanExtra(com.atrainingtracker.banalservice.BANALService.POLAR_LIVE_IMU_ENABLED, true))
     }
 
     @Test

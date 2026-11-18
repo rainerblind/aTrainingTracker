@@ -1,7 +1,7 @@
 # Living Requirements: Maps, Polylines & Navigation
 
 **Document ID**: `DOC-REQ-MAPS`  
-**Version**: 1.0.0  
+**Version**: 1.0.2  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -34,7 +34,7 @@
 
 ### REQ-MAP-003: Low-pass filtered map camera bearing [Implemented]
 - **Tests**: `TST-REG-001`
-- **System Requirement(s)**: `SYSREQ-TRK-004`
+- **System Requirement(s)**: `SYSREQ-TRK-004`, `SYSREQ-TRK-009`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -815,7 +815,7 @@
 **Invariants**: Pure geodesic calculations without android framework dependencies for unit testability, 100% offline local database operation, and 100% full-suite test pass rate MUST NOT be broken.
 
 ### REQ-MAP-032: Domain-Agnostic Scrubber Marker Synchronization & Telemetry Graph Auto-Centering [Verified]
-- **Tests**: `TST-MAP-034`
+- **Tests**: `TST-MAP-034`, `TST-UI-392`
 - **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: Medium
 - **Type**: Functional
@@ -1326,7 +1326,7 @@
 
 ### REQ-NAV-043: In-Ride Fork Decision Alert Direction-Diversity Gating & False-Positive Suppression [Verified]
 - **Tests**: `TST-NAV-045`
-- **System Requirement(s)**: `SYSREQ-TRK-004`, `SYSREQ-TRK-006`
+- **System Requirement(s)**: `SYSREQ-TRK-004`, `SYSREQ-TRK-006`, `SYSREQ-TRK-009`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1598,7 +1598,7 @@
 
 ### REQ-GEO-001: Unified Polyline Progress Tracking Engine with Directional Virtual Gates and Orthogonal Segment Projection [Verified]
 - **Tests**: `TST-GEO-001`
-- **System Requirement(s)**: `SYSREQ-TRK-004`, `SYSREQ-TRK-006`
+- **System Requirement(s)**: `SYSREQ-TRK-004`, `SYSREQ-TRK-006`, `SYSREQ-TRK-009`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1929,7 +1929,7 @@
 
 ### REQ-GEO-002: Equirectangular Scaled Polyline Projection, Orthogonal Virtual Gates & Windowed Out-and-Back Route Progress Tracking [Verified]
 - **Tests**: `TST-GEO-002`, `TST-NAV-056`
-- **System Requirement(s)**: `SYSREQ-TRK-004`, `SYSREQ-TRK-006`
+- **System Requirement(s)**: `SYSREQ-TRK-004`, `SYSREQ-TRK-006`, `SYSREQ-TRK-009`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1978,7 +1978,7 @@
 
 ### REQ-NAV-056: Stateful Polyline Progress Tracking Continuity, lastSegmentIndex Propagation & Reset Lifecycle Invariants across Production Callers [Verified]
 - **Tests**: `TST-NAV-056`
-- **System Requirement(s)**: `SYSREQ-TRK-004`, `SYSREQ-TRK-006`
+- **System Requirement(s)**: `SYSREQ-TRK-004`, `SYSREQ-TRK-006`, `SYSREQ-TRK-009`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -2628,7 +2628,7 @@
 ### REQ-CLM-008: Live Climb Detection Movement-Bearing Gating & Cache Reconciliation [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-CLM-008`
-- **System Requirement(s)**: `SYSREQ-TRK-004`
+- **System Requirement(s)**: `SYSREQ-TRK-004`, `SYSREQ-TRK-008`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -2667,7 +2667,7 @@
 ### REQ-CLM-009: Climb Detection Spike Guards, DEM Ground-Truth Cross-Validation & Corrupted Climbs Self-Healing [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-CLM-009`
-- **System Requirement(s)**: `SYSREQ-TRK-004`
+- **System Requirement(s)**: `SYSREQ-TRK-004`, `SYSREQ-TRK-008`, `SYSREQ-DEX-008`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Integration
@@ -2708,7 +2708,7 @@
 ### REQ-CLM-010: Configurable FIETS Index & Strava/Garmin Climb Categorization [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-CLM-010`
-- **System Requirement(s)**: `SYSREQ-TRK-004`
+- **System Requirement(s)**: `SYSREQ-TRK-004`, `SYSREQ-TRK-008`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -2746,7 +2746,7 @@
 ### REQ-CLM-011: Deduplicate Overlapping Climbs in Climbs.db & Map Layer [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-CLM-011`
-- **System Requirement(s)**: `SYSREQ-TRK-004`
+- **System Requirement(s)**: `SYSREQ-TRK-004`, `SYSREQ-TRK-008`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -2800,3 +2800,4 @@
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
 | `1.0.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Added standardized `DOC-REQ-MAPS` work-product control header and Change History. |
+| `1.0.2` | 2026-11-18 | AI Agent (`ATT-8201`) | `ATT-8201` | Linked refined `REQ-*` entries in-place to net-new `SYSREQ-TRK-007..013` and `SYSREQ-DEX-007..008`. |

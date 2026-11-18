@@ -661,4 +661,153 @@ class AltitudeAndSlopeDevice_ATTFusedTest {
         assertTrue("Real +8% climb must accumulate ~24 m ascent (was $ascentAfterClimb)", ascentAfterClimb in 21.0..27.0)
         assertTrue("Real +8% climb must report positive slope 5..11% (was $slopeOnClimb%)", slopeOnClimb in 5..11)
     }
+
+    // TST-FIL-026.1: 5-Hz jeans-pocket pedaling oscillations (±1.2 m) + ±8 m pulses on flat 438 m DEM keep slope within ±2% and ascent/descent 0.0 m
+    @Test
+    fun testFiveHzJeansPocketPedalingOscillations_rateMatchedAndSlopeBounded_tstFil026_1() {
+        every { AttFusedAltitudePreferences.isEffectiveDemActive(any()) } returns true
+        every { AttFusedAltitudePreferences.isEffectiveGpsActive(any()) } returns false
+
+        val speedSensor = mockk<com.atrainingtracker.banalservice.sensor.MySensor<Number>>(relaxed = true)
+        every { speedSensor.value } returns 6.0
+        every { mockSensorManager.getSensor(SensorType.SPEED_mps) } returns speedSensor
+
+        val demSensor = mockk<com.atrainingtracker.banalservice.sensor.MySensor<Number>>(relaxed = true)
+        val flatDemAlt = 438.0
+        every { demSensor.value } returns flatDemAlt
+        var demTs = 1000L
+        every { demSensor.lastUpdateTimestamp } answers { demTs }
+        every {
+            mockSensorManager.getSensorForDeviceType(SensorType.ALTITUDE, DeviceType.ALTITUDE_FROM_POSITION)
+        } returns demSensor
+
+        val device = AltitudeAndSlopeDevice_ATTFused(mockContext, mockSensorManager, autoStartScheduler = false)
+        device.refreshCachedPreferences()
+        device.calculateMetrics(1000L)
+
+        var maxAbsSlopeAfterWarmup = 0
+        var tMs = 2000L
+        for (sec in 0 until 60) {
+            for (sub in 0 until 5) {
+                val tSec = sec + sub * 0.2
+                val pedalingRipple = 1.2 * kotlin.math.sin(2.0 * Math.PI * 1.25 * tSec)
+                val pulse = when (sec) {
+                    20 -> -8.05
+                    21 -> 6.87
+                    40 -> 4.11
+                    41 -> -4.84
+                    else -> 0.0
+                }
+                val baroAlt = flatDemAlt + pedalingRipple + pulse
+                val p = SensorManager.PRESSURE_STANDARD_ATMOSPHERE *
+                    Math.pow(1.0 - baroAlt / 44330.0, 5.255).toFloat()
+                device.handlePressureMeasurement(p, tMs + sub * 200L)
+            }
+            demTs = tMs
+            device.calculateMetrics(tMs)
+            if (sec >= 5) {
+                maxAbsSlopeAfterWarmup = maxOf(maxAbsSlopeAfterWarmup, kotlin.math.abs(device.mSlopeSensor?.value ?: 0))
+            }
+            tMs += 1000L
+        }
+
+        val ascent = (device.mAscentSensor?.value as? Number)?.toDouble() ?: 0.0
+        val descent = (device.mDescentSensor?.value as? Number)?.toDouble() ?: 0.0
+        assertTrue("Flat-road slope under 5-Hz pocket jitter must stay within ±2% (max was $maxAbsSlopeAfterWarmup%)", maxAbsSlopeAfterWarmup <= 2)
+        assertEquals("Flat-road ascent must remain 0.0 m (was $ascent)", 0.0, ascent, 1e-6)
+        assertEquals("Flat-road descent must remain 0.0 m (was $descent)", 0.0, descent, 1e-6)
+        assertEquals("Fused altitude must stay anchored near 438.0 m", flatDemAlt, device.ekf.altitude, 1.5)
+    }
+
+    // TST-FIL-026.1: Synthetic 2 km Zum Bäcker #57 replay (435..446 m envelope, 5-Hz ±1.2 m jitter & ±8 m pulses) keeps totals in 10..16 m
+    @Test
+    fun testSyntheticZumBaecker57Replay_preventsAscentInflation_tstFil026_1() {
+        every { AttFusedAltitudePreferences.isEffectiveDemActive(any()) } returns true
+        every { AttFusedAltitudePreferences.isEffectiveGpsActive(any()) } returns false
+
+        val speedSensor = mockk<com.atrainingtracker.banalservice.sensor.MySensor<Number>>(relaxed = true)
+        every { speedSensor.value } returns 6.0
+        every { mockSensorManager.getSensor(SensorType.SPEED_mps) } returns speedSensor
+
+        val demSensor = mockk<com.atrainingtracker.banalservice.sensor.MySensor<Number>>(relaxed = true)
+        var demAlt = 438.0
+        every { demSensor.value } answers { demAlt }
+        var demTs = 1000L
+        every { demSensor.lastUpdateTimestamp } answers { demTs }
+        every {
+            mockSensorManager.getSensorForDeviceType(SensorType.ALTITUDE, DeviceType.ALTITUDE_FROM_POSITION)
+        } returns demSensor
+
+        val device = AltitudeAndSlopeDevice_ATTFused(mockContext, mockSensorManager, autoStartScheduler = false)
+        device.refreshCachedPreferences()
+        device.calculateMetrics(1000L)
+
+        var maxFlatSlopePct = 0
+        var tMs = 2000L
+        // 334 s at 6.0 m/s ≈ 2,004 m loop within 435..446 m DEM envelope (+17 m / -17 m terrain -> 10..16 m post-hysteresis)
+        for (sec in 0 until 334) {
+            demAlt = when {
+                sec < 85 -> 438.0
+                sec < 140 -> 438.0 + 8.0 * ((sec - 85) / 55.0) // +8 m -> 446 m
+                sec < 210 -> 446.0 - 11.0 * ((sec - 140) / 70.0) // -11 m -> 435 m
+                sec < 275 -> 435.0 + 9.0 * ((sec - 210) / 65.0) // +9 m -> 444 m
+                else -> 444.0 - 6.0 * ((sec - 275) / 59.0) // -6 m -> 438 m
+            }
+            for (sub in 0 until 5) {
+                val tSec = sec + sub * 0.2
+                val pedalingRipple = 1.2 * kotlin.math.sin(2.0 * Math.PI * 1.25 * tSec) +
+                    0.35 * kotlin.math.sin(2.0 * Math.PI * 0.35 * tSec)
+                val pulse = when (sec) {
+                    50 -> -8.05
+                    51 -> 6.87
+                    185 -> 4.11
+                    186 -> -4.84
+                    255 -> -6.5
+                    else -> 0.0
+                }
+                val baroAlt = demAlt + 130.4 + pedalingRipple + pulse
+                val p = SensorManager.PRESSURE_STANDARD_ATMOSPHERE *
+                    Math.pow(1.0 - baroAlt / 44330.0, 5.255).toFloat()
+                device.handlePressureMeasurement(p, tMs + sub * 200L)
+            }
+            demTs = tMs
+            device.calculateMetrics(tMs)
+            if (sec in 31..84) {
+                maxFlatSlopePct = maxOf(maxFlatSlopePct, kotlin.math.abs(device.mSlopeSensor?.value ?: 0))
+            }
+            tMs += 1000L
+        }
+
+        val totalAscent = (device.mAscentSensor?.value as? Number)?.toDouble() ?: 0.0
+        val totalDescent = (device.mDescentSensor?.value as? Number)?.toDouble() ?: 0.0
+        assertTrue("Flat segment (t=31..85s) slope must stay within ±2% (max was $maxFlatSlopePct%)", maxFlatSlopePct <= 2)
+        assertTrue("2 km replay ascent must stay within 10..16 m (was $totalAscent m)", totalAscent in 10.0..16.0)
+        assertTrue("2 km replay descent must stay within 10..16 m (was $totalDescent m)", totalDescent in 10.0..16.0)
+    }
+
+    // TST-FIL-026.3: shutDown() clears pending sub-second aggregator buffer cleanly across restarts
+    @Test
+    fun testShutDown_clearsSubSecondBaroBucket_acrossRestart_tstFil026_3() {
+        val device = AltitudeAndSlopeDevice_ATTFused(mockContext, mockSensorManager, autoStartScheduler = false)
+
+        val p500 = SensorManager.PRESSURE_STANDARD_ATMOSPHERE * Math.pow(1.0 - 500.0 / 44330.0, 5.255).toFloat()
+        val p520 = SensorManager.PRESSURE_STANDARD_ATMOSPHERE * Math.pow(1.0 - 520.0 / 44330.0, 5.255).toFloat()
+        val p400 = SensorManager.PRESSURE_STANDARD_ATMOSPHERE * Math.pow(1.0 - 400.0 / 44330.0, 5.255).toFloat()
+
+        device.handlePressureMeasurement(p500, 1000L)
+        assertTrue(device.ekf.isInitialized)
+        // Buffer 4 sub-second samples at 520 m without flushing
+        repeat(4) { idx ->
+            device.handlePressureMeasurement(p520, 1200L + idx * 200L)
+        }
+
+        device.shutDown()
+        assertFalse("shutDown must reset EKF", device.ekf.isInitialized)
+
+        // Restart at 400 m: immediate 1st-sample init with zero leakage from pre-shutdown 520 m bucket
+        device.handlePressureMeasurement(p400, 2000L)
+        assertTrue(device.ekf.isInitialized)
+        assertEquals(400.0, device.ekf.altitude, 1.0)
+        assertEquals(400.0, device.baroFilter.getSlewAltitude(), 1.0)
+    }
 }

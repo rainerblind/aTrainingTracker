@@ -30,26 +30,32 @@ import kotlin.math.ln
  */
 object KnownLocationZoomMath {
     const val DEFAULT_THUMBNAIL_ZOOM: Float = 11.2f
+    const val DEFAULT_THUMBNAIL_HEIGHT_DP: Double = 120.0
     const val MIN_ZOOM: Float = 9.7f
     const val MAX_ZOOM: Float = 11.7f
     const val TARGET_GEOFENCE_DIAMETER_RATIO: Float = 0.35f
 
     /**
-     * Calculates the optimal camera zoom level for an 80dp square map preview thumbnail.
+     * Calculates the optimal camera zoom level for a 175x120dp map preview thumbnail (REQ-UI-2785.2).
      *
      * @param radiusMeters The geofence radius in meters (typically 50m - 1000m).
      * @param latitude The geodetic latitude in degrees (used to scale Web Mercator resolution).
+     * @param thumbnailHeightDp The preview map height in dp (defaults to [DEFAULT_THUMBNAIL_HEIGHT_DP]).
      * @return The clamped camera zoom level strictly within [MIN_ZOOM, MAX_ZOOM].
      */
-    fun calculateThumbnailZoom(radiusMeters: Int, latitude: Double = 0.0): Float {
+    fun calculateThumbnailZoom(
+        radiusMeters: Int,
+        latitude: Double = 0.0,
+        thumbnailHeightDp: Double = DEFAULT_THUMBNAIL_HEIGHT_DP
+    ): Float {
         val safeRadius = radiusMeters.coerceAtLeast(10)
         val latRad = Math.toRadians(latitude.coerceIn(-85.0, 85.0))
         val cosLat = cos(latRad).coerceAtLeast(0.01)
 
-        // Web Mercator circumference constant at zoom 0 across 80dp:
-        // 80dp * 156543.03392 m/dp = 12,523,442.7136 m
+        // Web Mercator circumference constant at zoom 0 across thumbnailHeightDp (default 120dp):
+        // 120dp * 156543.03392 m/dp = 18,785,164.0704 m
         val targetSpanMeters = (2.0 * safeRadius) / TARGET_GEOFENCE_DIAMETER_RATIO
-        val numerator = 80.0 * 156543.03392 * cosLat
+        val numerator = thumbnailHeightDp * 156543.03392 * cosLat
         val rawZoom = (ln(numerator / targetSpanMeters) / ln(2.0)).toFloat()
 
         return rawZoom.coerceIn(MIN_ZOOM, MAX_ZOOM)

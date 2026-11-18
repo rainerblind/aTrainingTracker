@@ -25,9 +25,16 @@ import androidx.test.core.app.ApplicationProvider
 import com.atrainingtracker.banalservice.devices.ProtocolType
 import com.atrainingtracker.banalservice.devices.RrBeatEvent
 import com.atrainingtracker.banalservice.sensor.MySensorManager
+import com.polar.sdk.api.PolarBleApi
 import com.polar.sdk.api.model.PolarAccelerometerData
 import com.polar.sdk.api.model.PolarDeviceInfo
 import com.polar.sdk.api.model.PolarHrData
+import com.polar.sdk.api.model.PolarSensorSetting
+import io.mockk.coEvery
+import io.mockk.every
+import io.mockk.mockk
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.flowOf
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -275,5 +282,59 @@ class PolarRawTelemetryRecorderTest {
         assertEquals(5, session.rows.size)
         assertEquals(750.0, session.rows[0].rrMs!!, 0.1)
         assertEquals(80, session.rows[0].hrBpm) // 60,000 / 750 = 80 bpm
+    }
+
+    // TST-CON-050.4
+    @Test
+    fun activeWorkoutRecorder_attachesWhenReplacementBridgeConnectsViaSessionOpen_andPersistsSidecar() {
+        PolarOfflineCapabilityStore.resetForTesting()
+        PolarOfflineGattCoordinator.resetForTesting()
+        val startTime = System.currentTimeMillis()
+        val recorder = PolarRawTelemetryRecorder.startActiveSession(
+            context = context,
+            fileBaseName = testBaseFileName,
+            startTimeMs = startTime,
+            sportId = 1
+        )
+        assertNotNull(recorder)
+
+        val mac = "24:AC:AC:24:82:56"
+        val mockApi = mockk<PolarBleApi>(relaxed = true)
+        val accSetting = PolarSensorSetting(mapOf(PolarSensorSetting.SettingType.SAMPLE_RATE to 52))
+        every { mockApi.isFeatureReady(mac, PolarBleApi.PolarBleSdkFeature.FEATURE_HR) } returns true
+        every { mockApi.isFeatureReady(mac, PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_ONLINE_STREAMING) } returns true
+        every { mockApi.startHrStreaming(mac) } returns flowOf(
+            PolarHrData(listOf(PolarHrData.PolarHrSample(138, 138, 0, listOf(435), listOf(435), true, true, true)))
+        )
+        coEvery { mockApi.requestStreamSettings(mac, PolarBleApi.PolarDeviceDataType.ACC) } returns accSetting
+        every { mockApi.startAccStreaming(mac, any()) } returns flowOf(
+            PolarAccelerometerData(
+                listOf(PolarAccelerometerData.PolarAccelerometerDataSample(50_000_000_000L, 15, -25, 990))
+            )
+        )
+
+        val sensorManager = MySensorManager(context)
+        val bridge = PolarOnlineStreamingBridge(
+            context = context,
+            mySensorManager = sensorManager,
+            deviceId = 42L,
+            macAddress = mac,
+            dispatcher = Dispatchers.Unconfined,
+            sdkIntProvider = { 34 },
+            apiFactory = { _, _ -> mockApi }
+        )
+        bridge.startSearching()
+
+        PolarRawTelemetryRecorder.stopActiveSession()
+        bridge.shutDown()
+        sensorManager.shutDown()
+        PolarOfflineGattCoordinator.resetForTesting()
+        PolarOfflineCapabilityStore.resetForTesting()
+
+        val sidecar = PolarRawTelemetryRecorder.getSidecarFile(context, testBaseFileName)
+        assertTrue("Sidecar file must exist in files/raw_sensor/ after mid-workout bridge handoff", sidecar.exists())
+        val session = PolarRawTelemetryReader.readFile(sidecar)
+        assertTrue("Sidecar must contain HR/RR frames", session.rows.any { it.channel == RawTelemetryChannel.HR || it.channel == RawTelemetryChannel.RR })
+        assertTrue("Sidecar must contain ACC frames", session.rows.any { it.channel == RawTelemetryChannel.ACC })
     }
 }

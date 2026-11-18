@@ -429,4 +429,41 @@ class KinematicAltitudeSlopeEkfTest {
             kotlin.math.abs(ekf.p12) < kotlin.math.abs(p12BeforeStop) * 0.1
         )
     }
+
+    // TST-FIL-026.2: Cyclic sign-reversing ±1.2 m jitter inflates adaptive varBaro to damp slope <= ±2%, while steady +0.83 m/s climbs stay unattenuated
+    @Test
+    fun testAdaptiveJitterVariance_dampsCyclicOscillationsAndPreservesSteadyClimb_tstFil026_2() {
+        assertEquals(0.25, KinematicAltitudeSlopeEkf.DEFAULT_VAR_BARO, 1e-9)
+
+        // 1. Cyclic sign-reversing ±1.2 m oscillations at 6.0 m/s (2-State mode)
+        ekf.setMode(false)
+        ekf.updateBarometer(438.0, isStandstill = false, speedMps = 6.0)
+        assertEquals(0.25, ekf.p00, 1e-6)
+
+        var maxAbsSlopeAfterAttack = 0.0
+        for (i in 1..40) {
+            ekf.predict(1.0, 6.0)
+            val sign = if (i % 2 == 0) 1.0 else -1.0
+            ekf.updateBarometer(438.0 + 1.2 * sign, isStandstill = false, speedMps = 6.0)
+            if (i >= 10) {
+                maxAbsSlopeAfterAttack = maxOf(maxAbsSlopeAfterAttack, kotlin.math.abs(ekf.slopePercent))
+            }
+        }
+        assertTrue("Adaptive jitter variance must scale up under cyclic reversals (was ${ekf.adaptiveBaroJitterVar})", ekf.adaptiveBaroJitterVar > 5.0)
+        assertTrue("Post-attack slope under ±1.2 m oscillations must stay <= 2% (max was $maxAbsSlopeAfterAttack%)", maxAbsSlopeAfterAttack <= 2.0)
+
+        // 2. Steady monotonic +0.83 m/s climb at 5.0 m/s must NOT trigger jitter inflation
+        ekf.reset()
+        ekf.setMode(false)
+        var alt = 438.0
+        ekf.updateBarometer(alt, isStandstill = false, speedMps = 5.0)
+        repeat(30) {
+            alt += 0.83
+            ekf.predict(1.0, 5.0)
+            ekf.updateBarometer(alt, isStandstill = false, speedMps = 5.0)
+        }
+        assertEquals("Steady monotonic climb must keep adaptiveBaroJitterVar at 0.0", 0.0, ekf.adaptiveBaroJitterVar, 1e-6)
+        assertEquals("Steady climb altitude must converge without lag", 438.0 + 30 * 0.83, ekf.altitude, 1.5)
+        assertTrue("Steady +16.6% climb slope must converge accurately (was ${ekf.slopePercent}%)", ekf.slopePercent in 13.5..19.5)
+    }
 }

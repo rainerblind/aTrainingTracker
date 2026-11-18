@@ -368,7 +368,7 @@ fun TelemetryMetricGraph(
         }
     }
 
-    val zoneBands = remember(metricType, effectiveHrThresholds, effectivePowerThresholds, dataMin, dataMax) {
+    val zoneBands = remember(metricType, effectiveHrThresholds, effectivePowerThresholds, dfaA1ThresholdT1, dfaA1ThresholdT2, dataMin, dataMax) {
         when (metricType) {
             TelemetryMetricType.HEART_RATE -> effectiveHrThresholds?.let {
                 TelemetryZoneMath.calculateHeartRateZoneBands(it, dataMin, dataMax)
@@ -376,8 +376,40 @@ fun TelemetryMetricGraph(
             TelemetryMetricType.POWER -> effectivePowerThresholds?.let {
                 TelemetryZoneMath.calculatePowerZoneBands(it, dataMin, dataMax)
             } ?: emptyList()
+            TelemetryMetricType.HRV_DFA_A1 -> TelemetryZoneMath.calculateHrvDfaA1ZoneBands(
+                t1 = dfaA1ThresholdT1,
+                t2 = dfaA1ThresholdT2,
+                dataMin = dataMin,
+                dataMax = dataMax
+            )
             else -> emptyList()
         }
+    }
+
+    val hrvStrokeStops = remember(metricType, dfaA1ThresholdT1, dfaA1ThresholdT2, dataMin, dataMax) {
+        if (metricType == TelemetryMetricType.HRV_DFA_A1) {
+            TelemetryZoneMath.buildHrvDfaA1VerticalGradientStops(
+                t1 = dfaA1ThresholdT1,
+                t2 = dfaA1ThresholdT2,
+                dataMin = dataMin,
+                dataMax = dataMax,
+                topAlpha = 1f,
+                bottomAlpha = 1f
+            )
+        } else emptyList()
+    }
+
+    val hrvFillStops = remember(metricType, dfaA1ThresholdT1, dfaA1ThresholdT2, dataMin, dataMax) {
+        if (metricType == TelemetryMetricType.HRV_DFA_A1) {
+            TelemetryZoneMath.buildHrvDfaA1VerticalGradientStops(
+                t1 = dfaA1ThresholdT1,
+                t2 = dfaA1ThresholdT2,
+                dataMin = dataMin,
+                dataMax = dataMax,
+                topAlpha = 0.22f,
+                bottomAlpha = 0.04f
+            )
+        } else emptyList()
     }
 
     val thresholdDashes = remember(metricType, effectiveHrThresholds, effectivePowerThresholds, dfaA1ThresholdT1, dfaA1ThresholdT2, dataMin, dataMax) {
@@ -388,7 +420,12 @@ fun TelemetryMetricGraph(
             TelemetryMetricType.POWER -> effectivePowerThresholds?.let {
                 TelemetryZoneMath.calculatePowerThresholdDashes(it, dataMin, dataMax)
             } ?: emptyList()
-            TelemetryMetricType.HRV_DFA_A1 -> listOf(dfaA1ThresholdT2.toDouble(), dfaA1ThresholdT1.toDouble())
+            TelemetryMetricType.HRV_DFA_A1 -> TelemetryZoneMath.calculateHrvDfaA1ThresholdDashes(
+                t1 = dfaA1ThresholdT1,
+                t2 = dfaA1ThresholdT2,
+                dataMin = dataMin,
+                dataMax = dataMax
+            )
             else -> emptyList()
         }
     }
@@ -538,12 +575,12 @@ fun TelemetryMetricGraph(
             baseCanvasModifier
         }
 
-    val nonZonedHistogram = remember(rawValues, pathPoints, dataMin, dataMax, accentColor, zoneDistribution) {
+    val nonZonedHistogram = remember(rawValues, pathPoints, dataMin, dataMax, accentColor, zoneDistribution, metricType, dfaA1ThresholdT1, dfaA1ThresholdT2) {
         if (zoneDistribution != null || validValues.isEmpty() || dataMax <= dataMin) {
             emptyList()
         } else {
             val timestamps = pathPoints.map { it.timeSec }
-            TelemetryHistogramCalculator.computeLinearMarginalHistogram(
+            val rawBins = TelemetryHistogramCalculator.computeLinearMarginalHistogram(
                 values = rawValues,
                 timestamps = timestamps,
                 dataMin = dataMin,
@@ -551,6 +588,20 @@ fun TelemetryMetricGraph(
                 numBins = 20,
                 color = accentColor
             )
+            if (metricType == TelemetryMetricType.HRV_DFA_A1) {
+                rawBins.map { bin ->
+                    val midAlpha1 = (bin.rangeMin + bin.rangeMax) / 2.0
+                    bin.copy(
+                        color = TelemetryZoneMath.resolveHrvDfaA1ZoneColor(
+                            alpha1 = midAlpha1,
+                            t1 = dfaA1ThresholdT1,
+                            t2 = dfaA1ThresholdT2
+                        )
+                    )
+                }
+            } else {
+                rawBins
+            }
         }
     }
 
@@ -597,8 +648,8 @@ fun TelemetryMetricGraph(
                         size = androidx.compose.ui.geometry.Size(chartWidthPx, rectHeight)
                     )
 
-                    // Draw right-hand secondary zone axis label (Z1-Z5) only if marginal bars are not rendered
-                    if (zoneDistribution == null && !isLandscape) {
+                    // Draw right-hand secondary zone axis label (Z1-Z5) only if marginal bars/histograms are not rendered
+                    if (zoneDistribution == null && nonZonedHistogram.isEmpty() && !isLandscape) {
                         if (TelemetryZoneMath.shouldRenderZoneLabel(rectHeight, 12.dp.toPx())) {
                             val yCenter = rectTop + (rectHeight / 2f)
                             val textBaseline = yCenter - ((zoneLabelPaint.descent() + zoneLabelPaint.ascent()) / 2f)
@@ -750,12 +801,12 @@ fun TelemetryMetricGraph(
             nativeCanvas.drawText(maxLabel, 6.dp.toPx(), topPaddingPx + 10f, axisTextPaint)
             nativeCanvas.drawText(minLabel, 6.dp.toPx(), topPaddingPx + chartHeightPx, axisTextPaint)
 
-            // Draw threshold guide indicators for DFA a1
+            // Draw threshold guide indicators for DFA a1 strictly within (dataMin, dataMax)
             if (metricType == TelemetryMetricType.HRV_DFA_A1) {
-                val yT1 = valueToY(dfaA1ThresholdT1.toDouble())
-                val yT2 = valueToY(dfaA1ThresholdT2.toDouble())
-                nativeCanvas.drawText(String.format(Locale.US, "%.2f", dfaA1ThresholdT1), 6.dp.toPx(), yT1 + 10f, axisTextPaint)
-                nativeCanvas.drawText(String.format(Locale.US, "%.2f", dfaA1ThresholdT2), 6.dp.toPx(), yT2 + 10f, axisTextPaint)
+                for (thresholdVal in thresholdDashes) {
+                    val yThreshold = valueToY(thresholdVal)
+                    nativeCanvas.drawText(String.format(Locale.US, "%.2f", thresholdVal), 6.dp.toPx(), yThreshold + 10f, axisTextPaint)
+                }
             }
 
             // Draw horizontal boundary grid lines
@@ -895,8 +946,9 @@ fun TelemetryMetricGraph(
                 val baselineY = topPaddingPx + chartHeightPx
 
                 // Collect contiguous valid segments and gap intervals
-                val segments = mutableListOf<MutableList<Offset>>()
-                var currentSegment = mutableListOf<Offset>()
+                data class PlotPoint(val offset: Offset, val value: Double)
+                val segments = mutableListOf<MutableList<PlotPoint>>()
+                var currentSegment = mutableListOf<PlotPoint>()
 
                 data class GapInterval(val startX: Float, val endX: Float)
                 val gapIntervals = mutableListOf<GapInterval>()
@@ -919,10 +971,10 @@ fun TelemetryMetricGraph(
                             gapIntervals.add(GapInterval(gapStartX, x))
                             inGap = false
                         }
-                        currentSegment.add(Offset(x, y))
+                        currentSegment.add(PlotPoint(Offset(x, y), v))
                     } else {
                         if (!inGap) {
-                            gapStartX = currentSegment.lastOrNull()?.x ?: x
+                            gapStartX = currentSegment.lastOrNull()?.offset?.x ?: x
                             inGap = true
                         }
                         if (currentSegment.isNotEmpty()) {
@@ -968,57 +1020,92 @@ fun TelemetryMetricGraph(
                 }
 
                 // 2. Render valid continuous segments (with polyline break across gaps)
+                val useHrvZoneGradient = metricType == TelemetryMetricType.HRV_DFA_A1 &&
+                    hrvFillStops.size >= 2 &&
+                    hrvStrokeStops.size >= 2
                 for (seg in segments) {
                     if (seg.isEmpty()) continue
                     if (seg.size == 1) {
                         // Single point: draw circle dot
+                        val singleDotColor = if (metricType == TelemetryMetricType.HRV_DFA_A1) {
+                            TelemetryZoneMath.resolveHrvDfaA1ZoneColor(
+                                alpha1 = seg[0].value,
+                                t1 = dfaA1ThresholdT1,
+                                t2 = dfaA1ThresholdT2
+                            )
+                        } else {
+                            accentColor
+                        }
                         drawCircle(
-                            color = accentColor,
+                            color = singleDotColor,
                             radius = 2.5.dp.toPx(),
-                            center = seg[0]
+                            center = seg[0].offset
                         )
                         continue
                     }
                     val strokePath = Path()
                     val fillPath = Path()
 
-                    val firstPt = seg.first()
+                    val firstPt = seg.first().offset
                     strokePath.moveTo(firstPt.x, firstPt.y)
                     fillPath.moveTo(firstPt.x, baselineY)
                     fillPath.lineTo(firstPt.x, firstPt.y)
 
                     for (j in 1 until seg.size) {
-                        val pt = seg[j]
+                        val pt = seg[j].offset
                         strokePath.lineTo(pt.x, pt.y)
                         fillPath.lineTo(pt.x, pt.y)
                     }
 
-                    val lastPt = seg.last()
+                    val lastPt = seg.last().offset
                     fillPath.lineTo(lastPt.x, baselineY)
                     fillPath.close()
 
                     // Fill subtle gradient area under curve
-                    drawPath(
-                        path = fillPath,
-                        brush = Brush.verticalGradient(
-                            colors = listOf(
-                                accentColor.copy(alpha = 0.20f),
-                                accentColor.copy(alpha = 0.02f)
+                    if (useHrvZoneGradient) {
+                        drawPath(
+                            path = fillPath,
+                            brush = Brush.verticalGradient(
+                                colorStops = hrvFillStops.toTypedArray(),
+                                startY = topPaddingPx,
+                                endY = baselineY
+                            )
+                        )
+                        drawPath(
+                            path = strokePath,
+                            brush = Brush.verticalGradient(
+                                colorStops = hrvStrokeStops.toTypedArray(),
+                                startY = topPaddingPx,
+                                endY = baselineY
                             ),
-                            startY = topPaddingPx,
-                            endY = baselineY
+                            style = Stroke(
+                                width = 2.dp.toPx(),
+                                cap = StrokeCap.Round
+                            )
                         )
-                    )
+                    } else {
+                        drawPath(
+                            path = fillPath,
+                            brush = Brush.verticalGradient(
+                                colors = listOf(
+                                    accentColor.copy(alpha = 0.20f),
+                                    accentColor.copy(alpha = 0.02f)
+                                ),
+                                startY = topPaddingPx,
+                                endY = baselineY
+                            )
+                        )
 
-                    // Draw stroke line
-                    drawPath(
-                        path = strokePath,
-                        color = accentColor,
-                        style = Stroke(
-                            width = 2.dp.toPx(),
-                            cap = StrokeCap.Round
+                        // Draw stroke line
+                        drawPath(
+                            path = strokePath,
+                            color = accentColor,
+                            style = Stroke(
+                                width = 2.dp.toPx(),
+                                cap = StrokeCap.Round
+                            )
                         )
-                    )
+                    }
                 }
 
                 // Fresh Model HR Overlay & Cardiac Drift Gap Shading (REQ-REV-010 / ATT-3905)
@@ -1187,16 +1274,25 @@ fun TelemetryMetricGraph(
                         val metricVal = TelemetryMetricUtils.extractMetricValue(nearestPoint, metricType, unit)
                         if (metricVal != null) {
                             val cursorY = valueToY(metricVal)
+                            val cursorColor = if (metricType == TelemetryMetricType.HRV_DFA_A1) {
+                                TelemetryZoneMath.resolveHrvDfaA1ZoneColor(
+                                    alpha1 = metricVal,
+                                    t1 = dfaA1ThresholdT1,
+                                    t2 = dfaA1ThresholdT2
+                                )
+                            } else {
+                                accentColor
+                            }
 
                             // Outer halo
                             drawCircle(
-                                color = accentColor.copy(alpha = 0.35f),
+                                color = cursorColor.copy(alpha = 0.35f),
                                 radius = 6.dp.toPx(),
                                 center = Offset(cursorX, cursorY)
                             )
                             // Inner dot
                             drawCircle(
-                                color = accentColor,
+                                color = cursorColor,
                                 radius = 3.5.dp.toPx(),
                                 center = Offset(cursorX, cursorY)
                             )

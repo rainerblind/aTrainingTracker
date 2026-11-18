@@ -68,6 +68,8 @@ open class AltitudeAndSlopeDevice_ATTFused @JvmOverloads constructor(
         const val ASCENT_DESCENT_HYSTERESIS_METERS = 2.0
         const val DEM_STALENESS_THRESHOLD_MS = 15_000L
         const val STANDSTILL_SLOPE_CLEAR_DELAY_MS = 10_000L
+        /** 1-Hz rate-matching window (tolerates ~200 ms hardware sensor jitter while flushing 1-Hz ticks). */
+        const val BARO_AGGREGATION_WINDOW_MS = 950L
     }
 
     val ekf = KinematicAltitudeSlopeEkf()
@@ -95,6 +97,9 @@ open class AltitudeAndSlopeDevice_ATTFused @JvmOverloads constructor(
     private var mStandstillStartTimestampMs: Long = 0L
     private var mLastDemUpdateTimestampMs: Long = 0L
     private var mLastGpsUpdateTimestampMs: Long = 0L
+    private val mBaroBucketAltitudes: MutableList<Double> = mutableListOf()
+    private var mLastBaroEmitTimestampMs: Long = -1L
+    private var mLastBaroBucketTimestampMs: Long = -1L
 
     @Volatile
     var isEffectiveBarometer: Boolean = true
@@ -196,6 +201,9 @@ open class AltitudeAndSlopeDevice_ATTFused @JvmOverloads constructor(
         mStandstillStartTimestampMs = 0L
         mLastDemUpdateTimestampMs = 0L
         mLastGpsUpdateTimestampMs = 0L
+        mBaroBucketAltitudes.clear()
+        mLastBaroEmitTimestampMs = -1L
+        mLastBaroBucketTimestampMs = -1L
     }
 
     @Synchronized
@@ -255,17 +263,50 @@ open class AltitudeAndSlopeDevice_ATTFused @JvmOverloads constructor(
         handlePressureMeasurement(event.values[0], System.currentTimeMillis())
     }
 
+    /**
+     * Ingests a raw barometric pressure sample (REQ-FIL-026.1).
+     * Immediately initializes EKF on the first sample, then aggregates sub-second (~5 Hz) events
+     * into 1-Hz median buckets using deterministic [timestampMs] before invoking [BarometricAltitudeFilter.filterSlewOnly]
+     * and [KinematicAltitudeSlopeEkf.updateBarometer] in lockstep with 1-Hz [calculateMetrics].
+     */
     @Synchronized
     @VisibleForTesting
     fun handlePressureMeasurement(pressureHpa: Float, timestampMs: Long = System.currentTimeMillis()) {
         val rawAlt = SensorManager.getAltitude(SensorManager.PRESSURE_STANDARD_ATMOSPHERE, pressureHpa).toDouble()
-        val slewAlt = baroFilter.filterSlewOnly(rawAlt, timestampMs)
+        if (!rawAlt.isFinite()) return
+
+        if (mLastBaroEmitTimestampMs < 0L || !ekf.isInitialized || timestampMs < mLastBaroEmitTimestampMs) {
+            mBaroBucketAltitudes.clear()
+            mLastBaroEmitTimestampMs = timestampMs
+            mLastBaroBucketTimestampMs = timestampMs
+            ingestFilteredBaroAltitude(rawAlt, timestampMs)
+            return
+        }
+
+        mBaroBucketAltitudes.add(rawAlt)
+        mLastBaroBucketTimestampMs = timestampMs
+        if (timestampMs - mLastBaroEmitTimestampMs >= BARO_AGGREGATION_WINDOW_MS) {
+            val medianAlt = computeBucketMedian(mBaroBucketAltitudes)
+            mBaroBucketAltitudes.clear()
+            mLastBaroEmitTimestampMs = timestampMs
+            ingestFilteredBaroAltitude(medianAlt, timestampMs)
+        }
+    }
+
+    private fun ingestFilteredBaroAltitude(rawAltM: Double, timestampMs: Long) {
+        val slewAlt = baroFilter.filterSlewOnly(rawAltM, timestampMs)
         val speed = getCurrentSpeed()
         val isStandstill = speed < ekf.standstillSpeedThresholdMps
 
         ekf.setMode(isEffectiveDem || isEffectiveGps)
         ekf.updateBarometer(slewAlt, isStandstill = isStandstill, speedMps = speed)
         publishAltitudeAndMetrics(speed, timestampMs)
+    }
+
+    private fun computeBucketMedian(values: List<Double>): Double {
+        val sorted = values.sorted()
+        val mid = sorted.size / 2
+        return if (sorted.size % 2 == 1) sorted[mid] else 0.5 * (sorted[mid - 1] + sorted[mid])
     }
 
     @Synchronized
@@ -301,6 +342,17 @@ open class AltitudeAndSlopeDevice_ATTFused @JvmOverloads constructor(
 
         // Background refresh of preferences and pairings from SQLite (1-Hz background thread, NOT UI thread)
         refreshCachedPreferences()
+
+        if (mBaroBucketAltitudes.isNotEmpty() &&
+            mLastBaroEmitTimestampMs >= 0L &&
+            nowMs - mLastBaroEmitTimestampMs >= BARO_AGGREGATION_WINDOW_MS
+        ) {
+            val medianAlt = computeBucketMedian(mBaroBucketAltitudes)
+            val flushTimestampMs = mLastBaroBucketTimestampMs
+            mBaroBucketAltitudes.clear()
+            mLastBaroEmitTimestampMs = nowMs
+            ingestFilteredBaroAltitude(medianAlt, flushTimestampMs)
+        }
 
         val speed = getCurrentSpeed()
         checkReferenceAltitudeFromSensors(nowMs)

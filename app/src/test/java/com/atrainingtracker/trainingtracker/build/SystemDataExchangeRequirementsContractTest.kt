@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.build
 
+import com.atrainingtracker.banalservice.devices.bluetooth_le.BluetoothConstants
 import com.atrainingtracker.trainingtracker.exporter.FileFormat
 import com.atrainingtracker.trainingtracker.migration.BackupManager
 import org.junit.Assert.assertEquals
@@ -59,14 +60,7 @@ class SystemDataExchangeRequirementsContractTest {
         assertTrue("docs/system/sysreq_data_exchange.md must not be empty", content.isNotBlank())
         assertTrue("Must declare ASPICE SYS.2 BP1-BP3 process scope", content.contains("SYS.2"))
 
-        val expectedRequirements = listOf(
-            "SYSREQ-DEX-001",
-            "SYSREQ-DEX-002",
-            "SYSREQ-DEX-003",
-            "SYSREQ-DEX-004",
-            "SYSREQ-DEX-005",
-            "SYSREQ-DEX-006"
-        )
+        val expectedRequirements = (1..8).map { "SYSREQ-DEX-%03d".format(it) }
 
         for (req in expectedRequirements) {
             assertTrue("Document must contain requirement $req", content.contains("### $req:"))
@@ -74,20 +68,13 @@ class SystemDataExchangeRequirementsContractTest {
     }
 
     /**
-     * Asserts that all requirements specify mandatory attributes per ASPICE SYS.2 BP1-BP3 (TST-PRO-055.1).
+     * Asserts that all requirements specify mandatory attributes per ASPICE SYS.2 BP1-BP3 (TST-PRO-055.1, TST-PRO-131.1).
      */
     @Test
     fun testSysreqDataExchange_allRequirementsHaveMandatorySections() {
         val content = findRepoRootFile("docs/system/sysreq_data_exchange.md").readText()
 
-        val expectedRequirements = listOf(
-            "SYSREQ-DEX-001",
-            "SYSREQ-DEX-002",
-            "SYSREQ-DEX-003",
-            "SYSREQ-DEX-004",
-            "SYSREQ-DEX-005",
-            "SYSREQ-DEX-006"
-        )
+        val expectedRequirements = (1..8).map { "SYSREQ-DEX-%03d".format(it) }
 
         for (req in expectedRequirements) {
             val sectionStart = content.indexOf("### $req:")
@@ -147,6 +134,11 @@ class SystemDataExchangeRequirementsContractTest {
         assertTrue("Must document Health Connect consent", content.contains("Health Connect"))
         assertTrue("Must document Runkeeper as decommissioned", content.contains("Runkeeper"))
         assertTrue("Must document TrainingPeaks as decommissioned", content.contains("TrainingPeaks"))
+
+        // 5. Polar PFTP/PMD offline backfill & Open-Meteo DEM enrichment (TST-PRO-131.1)
+        assertTrue("Must document Polar PFTP service UUID", content.contains(BluetoothConstants.SERVICE_POLAR_PFTP))
+        assertTrue("Must document Polar PMD service UUID", content.contains(BluetoothConstants.SERVICE_POLAR_PMD))
+        assertTrue("Must document Open-Meteo elevation API", content.contains("api.open-meteo.com/v1/elevation"))
     }
 
     /**

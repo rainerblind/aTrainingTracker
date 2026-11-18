@@ -1,14 +1,14 @@
 # Living Test Specification: Post-Workout Analytics & Periods
 
 **Document ID**: `DOC-TST-PERIODS`  
-**Version**: 1.0.0  
+**Version**: 1.0.2  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `aftermath_periods`  
 **Prefixes**: `PER`, `PERF`, `RAD`, `SPT`  
 **Scope**: Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers.  
-**Total Tests**: 66
+**Total Tests**: 67
 
 ---
 
@@ -31,7 +31,7 @@
 - **Test Description**: 1. Clear application cache or significantly modify history. 2. Navigate to 'My Locations'.
 
 ### TST-PERF-004: **Incremental Period Visibility** [Implemented]
-- **Requirement(s)**: `REQ-PER-001`
+- **Requirement(s)**: `REQ-PER-001`, `REQ-DAT-003`
 - **Component**: **Incremental Period Visibility**
 - **Jira**: ``ATT-374``
 - **Test Description**: 1. Trigger a full hierarchical Periods sync. 2. Observe the list as the "Syncing [Month]..." progress updates.
@@ -1118,6 +1118,25 @@
   5. *Tier 1 Targeted Regression Suite (`TST-HRV-043.5`)*:
      • Run `./gradlew :app:testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.hrv.MorningHrvCheckViewModelTest" --tests "com.atrainingtracker.trainingtracker.ui.hrv.MorningHrvCheckScreenTest" --tests "com.atrainingtracker.trainingtracker.localization.TranslationParityTest" --tests "com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest"`.
 
+### TST-HRV-044: **DFA alpha 1 Zone Graph, Margin Coordination & Scatter Parity Verification Suite** (`ATT-8710`) [Verified]
+- **Requirement(s)**: `REQ-HRV-044` (`REQ-HRV-044.1`..`REQ-HRV-044.5`)
+- **Component**: `TelemetryZoneMath.kt`, `TelemetryMetricGraph.kt`, `TelemetryMetricUtils.kt`, `HrvAlpha1ScatterChart.kt`, `TelemetryZoneMathTest.kt`, `TelemetryMetricGraphHrvTest.kt`, `HrvAlpha1ScatterChartTest.kt`
+- **Jira**: `ATT-8710`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Localization Parity**: `N/A - no UI strings`
+- **Test Description**:
+  1. *Inverted 3-Zone Math & Threshold Dash Filtering (`TST-HRV-044.1`, `TelemetryZoneMathTest.kt`)*:
+     • Verify `calculateHrvDfaA1ZoneBands` clamps `[dataMin, dataMax]` (`[0.2, 1.4]`) into Aerob (`Zone2`, top `[T1, dataMax]`), Schwelle (`Zone3`, middle `[T2, T1]`), and Anaerob (`Zone4`, bottom `[dataMin, T2]`) across default (`0.75`/`0.50`) and custom (`T1 = 1.50f` `MAX_DFA_A1_THRESHOLD`, `T2 = 0.15f`) inputs.
+     • Verify `determineHrvDfaA1Zone` preserves `α1 > T1 -> Zone2`, `T2 <= α1 <= T1 -> Zone3` (`α1 == T1 -> Zone3`), `α1 < T2 -> Zone4`; verify `calculateHrvDfaA1ThresholdDashes` excludes out-of-range thresholds (`>= dataMax` or `<= dataMin`).
+  2. *Scatter Dot Dynamic Threshold Parity (`TST-HRV-044.2`, `HrvAlpha1ScatterChartTest.kt`)*:
+     • Render/evaluate `HrvAlpha1ScatterChart` with custom `t1`/`t2` (e.g., `t1 = 0.85f`, `t2 = 0.60f`) and assert scatter point colors match `HrvZoneIndicator.calculateZoneColor(p.alpha1, t1, t2)` rather than hardcoded defaults.
+  3. *Compose UI Render, Margin Disjointness & Rule 8.5 Light/Dark PNGs (`TST-HRV-044.3`, `TelemetryMetricGraphHrvTest.kt`)*:
+     • Using `createComposeRule()` (Robolectric, zero `src/main` file reads per `REQ-PRO-049.1`), render `TelemetryMetricGraph` (`HRV_DFA_A1`) with artifact gap (`> 5.0%`), scrubbing `currentDistance`, custom `T1`/`T2`, and `nonZonedHistogram` in Light & Dark themes; assert pixel colors reflect `Zone2`/`Zone3`/`Zone4` bands/curve/cursor, right-margin labels do not collide with `nonZonedHistogram`, `HEART_RATE` regression remains solid `accentColor`, and inspect captured Light/Dark PNGs via `read_file`.
+  4. *Tier 1 Targeted Regression (`TST-HRV-044.4`)*:
+     • Run `./gradlew :app:testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.map.TelemetryZoneMathTest" --tests "com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphHrvTest" --tests "com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphZoneTest" --tests "com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphColorTest" --tests "com.atrainingtracker.trainingtracker.ui.aftermath.workoutdetail.HrvAlpha1ScatterChartTest" --tests "com.atrainingtracker.trainingtracker.ui.tracking.TrackingHrvZoneIndicatorTest"`.
+
 ---
 
 ## Change History
@@ -1125,3 +1144,5 @@
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
 | `1.0.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Added standardized `DOC-TST-PERIODS` work-product control header and Change History. |
+| `1.0.1` | 2026-11-18 | AI Agent (`ATT-8710`) | `ATT-8710` | Added `TST-HRV-044` [Planned] covering DFA alpha 1 zone math, Compose UI rendering, Rule 8.5 Light/Dark PNGs, and scatter threshold parity. |
+| `1.0.2` | 2026-11-18 | AI Agent (`ATT-8710`) | `ATT-8710` | Integrated `TST-HRV-044` [Verified] post-`ATT-8206` (`v1.0.1`) shard reconciliation. |

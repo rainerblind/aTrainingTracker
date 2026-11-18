@@ -424,6 +424,33 @@ class TestEpicCommands(unittest.TestCase):
                 self.assertIn("# Sprint Quality Gate Records: Sprint 100", content)
                 self.assertIn("| PROJ-101 | PROJ-102 | Gate 1 | Analysis (Gate 1) | PASS | agent2 | Agent 2 |", content)
 
+    def test_extract_sprint_gate_records_hoechstmass_stage6_adf_dict(self):
+        """TST-PRO-128.1: Hoechstmass extract_sprint_gate_records handles ADF dict Stage 6 parent comments without TypeError."""
+        from tools.hoechstmass.tools.jira_util import extract_sprint_gate_records
+
+        adf_fr_pass = {
+            "type": "doc",
+            "version": 1,
+            "content": [{"type": "paragraph", "content": [{"type": "text", "text": "[FINAL REVIEW (AGENT) — PASS] Clean."}]}],
+        }
+        records, gate_stats = extract_sprint_gate_records(
+            [
+                {
+                    "key": "PROJ-200",
+                    "fields": {
+                        "summary": "ADF Stage 6 parent",
+                        "comment": {"comments": [{"author": {"displayName": "Agent 2"}, "body": adf_fr_pass, "created": "2026-11-18T06:00:00Z"}]},
+                        "subtasks": [],
+                    },
+                }
+            ],
+            {"id": 100, "name": "Sprint 100"},
+        )
+        self.assertEqual(len(records), 1)
+        self.assertEqual(records[0]["gate"], 6)
+        self.assertEqual(records[0]["verdict"], "PASS")
+        self.assertEqual(gate_stats[6]["passed_first_time"], 1)
+
     def test_export_test_evidence_hoechstmass(self):
         """TST-PRO-100.1 / TST-PRO-100.4: export_test_evidence command in hoechstmass."""
         import tempfile
@@ -677,8 +704,89 @@ class TestEpicCommands(unittest.TestCase):
 
                 self.assertIn("# Independent QA Review Record: Sprint 2026-46.3", content)
                 self.assertIn("**Reviewer**: Human", content)
+                self.assertIn("**Review Type**: Human Sprint Review (Layer 4)", content)
                 self.assertIn("**Verdict**: **PASS**", content)
                 self.assertIn("ATT-6150", content)
+
+    def test_hoechstmass_record_review_named_human_vs_ai_classification(self):
+        """TST-PRO-062.4: Named human reviewer classifies as Layer 4 Human without External AI Model; cross-vendor-ai requires vendor+model."""
+        from unittest.mock import patch
+        import tempfile
+
+        mock_cfg = {"JIRA_URL": "https://example.atlassian.net"}
+        mock_h_cfg = {}
+
+        with patch("tools.hoechstmass.tools.jira_util.jira_request", return_value={}):
+            with tempfile.TemporaryDirectory() as tmpdir:
+                named_file = os.path.join(tmpdir, "docs", "engineering", "reviews", "named_human.md")
+                _, meta_named = record_review(
+                    sprint_arg="2026-46.4",
+                    ticket_key="ATT-6155",
+                    reviewer="Rainer Blind",
+                    verdict="PASS",
+                    findings="PO review passed.",
+                    out_path=named_file,
+                    config=mock_cfg,
+                    h_config=mock_h_cfg,
+                    repo_root=tmpdir,
+                )
+                self.assertEqual(meta_named["review_type"], "Human Sprint Review (Layer 4)")
+                self.assertEqual(meta_named["vendor"], "Human")
+                self.assertEqual(meta_named["model"], "Human Process Owner")
+                with open(named_file, "r", encoding="utf-8") as f:
+                    named_content = f.read()
+                self.assertNotIn("External AI Model", named_content)
+
+                exp_file = os.path.join(tmpdir, "docs", "engineering", "reviews", "exp_human.md")
+                _, meta_exp = record_review(
+                    sprint_arg="2026-47.1",
+                    ticket_key="ATT-8145",
+                    reviewer="Rainer Blind",
+                    vendor="human",
+                    verdict="NOT PERFORMED",
+                    findings="Pending PO verification.",
+                    out_path=exp_file,
+                    config=mock_cfg,
+                    h_config=mock_h_cfg,
+                    repo_root=tmpdir,
+                )
+                self.assertEqual(meta_exp["review_type"], "Human Sprint Review (Layer 4)")
+                self.assertEqual(meta_exp["vendor"], "Human")
+
+                ai_file = os.path.join(tmpdir, "docs", "engineering", "reviews", "ai_review.md")
+                _, meta_ai = record_review(
+                    sprint_arg="2026-46.4",
+                    ticket_key="ATT-8204",
+                    reviewer="Anthropic Claude",
+                    review_type="cross-vendor-ai",
+                    vendor="Anthropic",
+                    model="claude-3-7-sonnet",
+                    verdict="PASS",
+                    findings="AI audit passed.",
+                    out_path=ai_file,
+                    config=mock_cfg,
+                    h_config=mock_h_cfg,
+                    repo_root=tmpdir,
+                )
+                self.assertEqual(meta_ai["review_type"], "Cross-Vendor AI Review (Layer 5)")
+                self.assertEqual(meta_ai["vendor"], "Anthropic")
+
+                for bad_kw in (
+                    {"review_type": "cross-vendor-ai", "vendor": None, "model": "gpt-4o"},
+                    {"review_type": "cross-vendor-ai", "vendor": "Human", "model": "gpt-4o"},
+                    {"review_type": "human", "vendor": "Anthropic", "model": "claude-3-7-sonnet"},
+                ):
+                    with self.assertRaises(ValueError):
+                        record_review(
+                            sprint_arg="2026-46.4",
+                            reviewer="Rainer Blind",
+                            verdict="PASS",
+                            findings="Validation check.",
+                            config=mock_cfg,
+                            h_config=mock_h_cfg,
+                            repo_root=tmpdir,
+                            **bad_kw,
+                        )
 
     def test_verify_independent_reviews_hoechstmass(self):
         import tempfile

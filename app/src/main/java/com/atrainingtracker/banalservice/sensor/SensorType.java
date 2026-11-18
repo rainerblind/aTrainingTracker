@@ -437,7 +437,7 @@ public enum SensorType
     /**
      * Relative closing speed of the closest approaching radar target.
      * Internal unit: {@code m/s} ({@code DOUBLE}, {@code >= 0}, FIT {@code EventMesg} clamped {@code [0.0, 25.4]}); sentinel: {@code null} -> {@code "--"};
-     * display: {@link SpeedFormatter} ({@code km/h}/{@code mile/h}; {@code MyHelper.getUnitsId} falls back to {@code units_speed_basic});
+     * display: {@link SpeedFormatter} ({@code km/h}/{@code mile/h}; {@code MyHelper.getUnitsId} -> {@code km/h}/{@code mile/h}, {@code getShortUnitsId} -> {@code km/h}/{@code mi/h});
      * export: FIT {@code EventMesg} + DevFields ({@code m/s}), CSV raw {@code m/s}.
      */
     RADAR_APPROACH_SPEED_mps(SensorCategory.SYSTEM_ENVIRONMENT_AND_DIAGNOSTICS, SensorSubCategory.RADAR_SAFETY, R.string.radar_approach_speed, R.string.radar_approach_speed_short, R.string.units_speed_basic, SensorValueType.DOUBLE, new SpeedFormatter(), false, "m/s"),

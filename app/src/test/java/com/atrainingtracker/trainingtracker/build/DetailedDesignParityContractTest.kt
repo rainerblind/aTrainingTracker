@@ -27,9 +27,9 @@ import java.io.File
  * Contract test enforcing ASPICE SWE.3 living detailed-design completeness,
  * JVM-reflection code-to-documentation parity (zero production source-text reading),
  * SWE.2 cross-referencing, and Stage 3 governance
- * (REQ-PRO-114, TST-PRO-114, ATT-8159).
+ * (REQ-PRO-114, TST-PRO-114, REQ-PRO-129.2, TST-PRO-129.2, ATT-8159, ATT-8203).
  */
-// Linked test specs: TST-PRO-114
+// Linked test specs: TST-PRO-114, TST-PRO-129
 class DetailedDesignParityContractTest {
 
     private fun findRepoRootFile(relativePath: String): File {
@@ -63,22 +63,27 @@ class DetailedDesignParityContractTest {
             val clazz = loadProductionClass(fqcn)
             members.add(clazz.simpleName)
             clazz.declaredFields.forEach { members.add(it.name) }
-            clazz.declaredMethods.forEach { members.add(it.name) }
+            clazz.declaredMethods.forEach {
+                members.add(it.name)
+                val demangled = it.name.substringBefore('$').substringBefore('-')
+                members.add(demangled)
+            }
             clazz.declaredClasses.forEach { members.add(it.simpleName) }
         }
         return members
     }
 
     /**
-     * TST-PRO-114.1: Verifies structural completeness and valid Mermaid state diagrams
-     * across all three living detailed-design documents.
+     * TST-PRO-114.1 / TST-PRO-129.2: Verifies structural completeness and valid Mermaid state diagrams
+     * across all four living detailed-design documents.
      */
     @Test
     fun testDetailedDesignDocs_structuralAndMermaidCompleteness() {
         val docPaths = listOf(
             "docs/architecture/detailed_design/tracker_service.md",
             "docs/architecture/detailed_design/banal_service.md",
-            "docs/architecture/detailed_design/my_btle_device.md"
+            "docs/architecture/detailed_design/my_btle_device.md",
+            "docs/architecture/detailed_design/workout_repository.md"
         )
         val requiredSections = listOf(
             "stateDiagram-v2",
@@ -118,6 +123,7 @@ class DetailedDesignParityContractTest {
         val trackerDesign = findRepoRootFile("docs/architecture/detailed_design/tracker_service.md").readText()
         val banalDesign = findRepoRootFile("docs/architecture/detailed_design/banal_service.md").readText()
         val btleDesign = findRepoRootFile("docs/architecture/detailed_design/my_btle_device.md").readText()
+        val workoutDesign = findRepoRootFile("docs/architecture/detailed_design/workout_repository.md").readText()
 
         // 1. Enum constants from compiled production classes must all appear in detailed-design docs
         for (mode in enumConstantNames("com.atrainingtracker.trainingtracker.TrackingMode")) {
@@ -193,7 +199,23 @@ class DetailedDesignParityContractTest {
         )
         assertSymbolsInDesignAndMembers("my_btle_device.md", btleDesign, btleSymbols, btleMembers)
 
-        // 3. Every cited test class in the three detailed-design docs must exist under app/src/test
+        val workoutMembers = collectDeclaredMembers(
+            "com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository",
+            "com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository\$Companion"
+        )
+        val workoutSymbols = listOf(
+            "INSTANCE", "getInstance", "resetForTesting", "discoverNamedSourceColumns",
+            "discoverMultiSourceOverlayColumns", "parseTimestampOffset", "quoteSqlIdentifier",
+            "getSamplesTableName", "job", "_allWorkouts", "allWorkouts", "getWorkoutById",
+            "getWorkoutDataDirect", "initialWorkoutLoaded", "deletionProgress", "saveFinishedEvent",
+            "activeReloadWorkoutIds", "dirtyReloadWorkoutIds", "isListLoading", "deletedDuringLoadIds",
+            "loadAllWorkouts", "refreshWorkout", "cropWorkout", "deleteWorkout", "deleteWorkoutCascade",
+            "recordLiveSample", "handleMissingColumns", "getResumedWorkoutState",
+            "markWorkoutFinishedBlocking", "getLaps"
+        )
+        assertSymbolsInDesignAndMembers("workout_repository.md", workoutDesign, workoutSymbols, workoutMembers)
+
+        // 3. Every cited test class in the four detailed-design docs must exist under app/src/test
         val testSrcDir = findRepoRootFile("app/src/test")
         val testClassNames = testSrcDir.walkTopDown()
             .filter { it.isFile && (it.extension == "kt" || it.extension == "java") }
@@ -201,7 +223,7 @@ class DetailedDesignParityContractTest {
             .toSet()
 
         val citedTests = Regex("""`([A-Za-z0-9_]+Test)`""")
-            .findAll(trackerDesign + "\n" + banalDesign + "\n" + btleDesign)
+            .findAll(trackerDesign + "\n" + banalDesign + "\n" + btleDesign + "\n" + workoutDesign)
             .map { it.groupValues[1] }
             .toSet()
         assertTrue("Detailed design docs must cite unit/characterisation tests", citedTests.size >= 10)
@@ -233,6 +255,7 @@ class DetailedDesignParityContractTest {
         assertTrue("docs/architecture.md must link tracker_service.md", archText.contains("detailed_design/tracker_service.md"))
         assertTrue("docs/architecture.md must link banal_service.md", archText.contains("detailed_design/banal_service.md"))
         assertTrue("docs/architecture.md must link my_btle_device.md", archText.contains("detailed_design/my_btle_device.md"))
+        assertTrue("docs/architecture.md must link workout_repository.md", archText.contains("detailed_design/workout_repository.md"))
         assertTrue("docs/architecture.md must reference DetailedDesignParityContractTest", archText.contains("DetailedDesignParityContractTest"))
 
         val stage3Skill = findRepoRootFile(".agents/skills/stage3-impl-plan/SKILL.md").readText()

@@ -59,6 +59,45 @@ FINAL_REVIEW_ESCALATED_RE = re.compile(
 
 DEFAULT_METRICS_PATH = "docs/engineering/metrics/process_metrics.jsonl"
 ACTIVE_PROCESS_VERSION = "2.0"
+SEVERITY_LEVELS = ("Critical", "Major", "Minor", "Cosmetic")
+NON_FIX_RESOLUTION_LABELS = {
+    "resolution-rejected": "Rejected",
+    "resolution-duplicate": "Duplicate",
+    "resolution-cannot-reproduce": "Cannot Reproduce",
+}
+TERMINAL_CLOSED_STATUSES = (
+    "erledigt",
+    "closed",
+    "done",
+    "abgelehnt",
+    "rejected",
+    "geschlossen",
+    "resolved",
+)
+_EXPLICIT_GATE_VERDICT_PASS_RE = re.compile(
+    r"(?<![A-Za-z0-9_-])\bGATE_VERDICT\s*:?\s*(?:PASS|APPROVED|FREIGABE)\b", re.IGNORECASE
+)
+_EXPLICIT_GATE_VERDICT_REV_RE = re.compile(
+    r"(?<![A-Za-z0-9_-])\bGATE_VERDICT\s*:?\s*(?:REVISION(?:\s+REQUIRED)?|REWORK|FAIL(?:ED|ING|S)?)\b", re.IGNORECASE
+)
+_LEAD_VERDICT_LINE_RE = re.compile(
+    r"^(?:[#*\s])*(?:(?:Final\s+)?Verdict\b[^:\n]*:\s*|Gate\s+\d+(?:\s*\([^)]*\))?(?:\s+[A-Za-z0-9&/() -]{0,40}?)?(?::\s*|\s+[-—]?\s*))(PASS|APPROVED|FREIGABE|REVISION(?:\s+REQUIRED)?|REWORK|FAIL(?:ED|ING|S)?)\b",
+    re.IGNORECASE,
+)
+_NEGATED_PASS_RE = re.compile(
+    r"(?:\b(?:not|never|no|without|did\s+not|didn't|is\s+not|are\s+not|was\s+not|were\s+not|will\s+not|won't|would\s+not|cannot|can't|keine[nr]?|nicht)\s+(?:be\s+)?(?:pass(?:ed)?|approved|freigabe|freigegeben|genehmigt|bestanden)\b|\bnon[-_](?:pass(?:ed)?|approved|freigabe)\b)",
+    re.IGNORECASE,
+)
+_SUBTASK_VERDICT_REV_RE = re.compile(
+    r"(?<![A-Za-z0-9_-])\b(?:REVISION(?:\s+REQUIRED)?|REWORK|FAIL(?:ED|ING|S)?)\b", re.IGNORECASE
+)
+_SUBTASK_VERDICT_PASS_RE = re.compile(
+    r"(?<![A-Za-z0-9_-])\b(?:PASS|APPROVED|FREIGABE)\b", re.IGNORECASE
+)
+_RISK_RATING_RE = re.compile(
+    r"(?:\*\*Risk\s*Rating\*\*|Risk\s*Rating)\s*:?\s*[\*`\[\s]*(Highest|Critical|High|Major|Medium|Minor|Low|Cosmetic)\b",
+    re.IGNORECASE,
+)
 
 
 def identify_gate_number(summary):
@@ -117,33 +156,170 @@ def parse_final_review_agent_verdicts_from_comments(comments):
     return verdicts
 
 
+def classify_comment_actor_role(comment, body_text=None):
+    """Classifies comment evaluator role ('agent2', 'coordinator', 'agent1', 'human', or 'unknown')."""
+    body = extract_text_from_comment_body(comment.get("body", "")) if body_text is None else body_text
+    author = comment.get("author") or {}
+    actor_name = (author.get("displayName") or author.get("name") or author.get("accountId") or "").lower()
+    if "[Automated comment by AI Agent 1" in body or "agent1" in actor_name or "agent 1" in actor_name:
+        return "agent1"
+    if "[Automated comment by AI Coordinator" in body or "coordinator" in actor_name:
+        return "coordinator"
+    if (
+        "[Automated comment by AI Agent 2" in body
+        or "agent2" in actor_name
+        or "agent 2" in actor_name
+        or "reviewer" in actor_name
+        or "auditor" in actor_name
+    ):
+        return "agent2"
+    if "human" in actor_name:
+        return "human"
+    m_role = re.search(r"\[ROLE:\s*(agent1|coordinator|agent2|human)\]", body, re.IGNORECASE)
+    if m_role:
+        return m_role.group(1).lower()
+    return "unknown"
+
+
+def _strip_md_wrappers(s):
+    """Strips lightweight Markdown emphasis/code wrappers (*, edge _, `) while preserving internal underscores (GATE_VERDICT, non_PASS)."""
+    return re.sub(r"[*`]+|(?<![A-Za-z0-9])_+|_+(?![A-Za-z0-9])", "", s or "").strip()
+
+
+def parse_subtask_verdict_from_text(body_text):
+    """Parses Gate 1-5 subtask verdict ('PASS' or 'REVISION') from extracted comment text."""
+    text = extract_text_from_comment_body(body_text) if not isinstance(body_text, str) else body_text
+    if not text:
+        return None
+
+    cleaned_lines = []
+    for raw_line in text.splitlines():
+        ln = re.sub(r"^\s*\[Automated comment by [^\]]+\]\s*", "", raw_line)
+        ln = re.sub(r"^\s*\[ROLE:\s*[^\]]+\]\s*", "", ln, flags=re.IGNORECASE).strip()
+        if ln:
+            cleaned_lines.append(ln)
+    if not cleaned_lines:
+        return None
+
+    cleaned_text = "\n".join(cleaned_lines)
+    cleaned_no_neg = _NEGATED_PASS_RE.sub(" __NEGATED_PASS__ ", _strip_md_wrappers(cleaned_text))
+
+    if _EXPLICIT_GATE_VERDICT_PASS_RE.search(cleaned_no_neg):
+        return "PASS"
+    if _EXPLICIT_GATE_VERDICT_REV_RE.search(cleaned_no_neg):
+        return "REVISION"
+
+    lead0 = _strip_md_wrappers(cleaned_lines[0])
+    lead_candidates = []
+    if len(cleaned_lines) >= 2 and lead0.endswith((":", "—", "-")):
+        lead_candidates.append(f"{lead0} {_strip_md_wrappers(cleaned_lines[1])}")
+    lead_candidates.append(lead0)
+
+    for cand in lead_candidates:
+        cand_no_neg = _NEGATED_PASS_RE.sub(" __NEGATED_PASS__ ", cand)
+        m_start = re.match(
+            r"^(?:[#*\s])*(PASS|APPROVED|FREIGABE|REVISION(?:\s+REQUIRED)?|REWORK|FAIL(?:ED|ING|S)?)\b",
+            cand_no_neg,
+            re.IGNORECASE,
+        )
+        if m_start:
+            tok = m_start.group(1).upper()
+            return "PASS" if tok in ("PASS", "APPROVED", "FREIGABE") else "REVISION"
+
+        m_lead = _LEAD_VERDICT_LINE_RE.match(cand_no_neg)
+        if m_lead:
+            prefix_before_verdict = cand_no_neg[:m_lead.start(1)]
+            if "__NEGATED_PASS__" not in prefix_before_verdict and not _SUBTASK_VERDICT_REV_RE.search(prefix_before_verdict):
+                tok = m_lead.group(1).upper()
+                return "PASS" if tok in ("PASS", "APPROVED", "FREIGABE") else "REVISION"
+
+        if "__NEGATED_PASS__" in cand_no_neg or _SUBTASK_VERDICT_REV_RE.search(cand_no_neg):
+            return "REVISION"
+
+    if _SUBTASK_VERDICT_REV_RE.search(cleaned_no_neg):
+        return "REVISION"
+    if "__NEGATED_PASS__" in cleaned_no_neg:
+        return "REVISION"
+    if _SUBTASK_VERDICT_PASS_RE.search(cleaned_no_neg):
+        return "PASS"
+    return None
+
+
+def _map_risk_token(token):
+    t = (token or "").strip().lower()
+    return {
+        "critical": "Highest",
+        "highest": "Highest",
+        "high": "High",
+        "major": "High",
+        "medium": "Medium",
+        "minor": "Medium",
+        "low": "Low",
+        "cosmetic": "Low",
+    }.get(t)
+
+
+def _classify_issue_risk(issue, fields, repo_root=None):
+    """
+    Classifies risk bucket ('Low', 'Medium', 'High', 'Highest') from
+    severity-* labels, [Highest]/[High]/[Low] summary tags, and Stage 1 Risk Rating before priority fallback.
+    """
+    for l in (fields.get("labels", []) or []):
+        ll = str(l).strip().lower()
+        if ll.startswith("severity-"):
+            mapped = _map_risk_token(ll[len("severity-"):])
+            if mapped:
+                return mapped
+
+    summary = fields.get("summary", "") or ""
+    m_sum = re.search(r"\[(Highest|Critical|High|Major|Medium|Minor|Low|Cosmetic)\]", summary, re.IGNORECASE)
+    if m_sum:
+        mapped = _map_risk_token(m_sum.group(1))
+        if mapped:
+            return mapped
+
+    raw_desc = fields.get("description", "")
+    desc = extract_text_from_comment_body(raw_desc) if raw_desc else ""
+    if desc:
+        m_desc = _RISK_RATING_RE.search(desc)
+        if m_desc:
+            mapped = _map_risk_token(m_desc.group(1))
+            if mapped:
+                return mapped
+
+    issue_key = issue.get("key", "")
+    if repo_root and issue_key:
+        analysis_path = Path(repo_root) / "docs" / "engineering" / "analysis" / f"{issue_key}_analysis.md"
+        if analysis_path.is_file():
+            try:
+                m_ana = _RISK_RATING_RE.search(analysis_path.read_text(encoding="utf-8", errors="ignore"))
+                if m_ana:
+                    mapped = _map_risk_token(m_ana.group(1))
+                    if mapped:
+                        return mapped
+            except OSError:
+                pass
+
+    priority_name = (fields.get("priority") or {}).get("name", "Medium")
+    mapped = _map_risk_token(priority_name)
+    return mapped if mapped else "Medium"
+
+
 def parse_verdicts_from_comments(comments):
     """
     Parses Gate review verdicts from subtask comments.
-    Identifies agent2 review comments and determines if they are PASS or REVISION.
+    Identifies reviewer comments (agent2 / human) and determines PASS or REVISION.
     Returns list of verdict strings: ['PASS'], ['REVISION', 'PASS'], etc.
     """
     verdicts = []
-    for c in comments:
+    for c in (comments or []):
         body = extract_text_from_comment_body(c.get("body", ""))
-        author_name = c.get("author", {}).get("displayName", "")
-        # Reviewer comment identification: role tag or display name
-        is_agent2 = (
-            "[ROLE: agent2]" in body
-            or "[Automated comment by AI Agent 2" in body
-            or "agent2" in author_name.lower()
-            or "reviewer" in author_name.lower()
-            or "auditor" in author_name.lower()
-        )
-        if not is_agent2:
+        role = classify_comment_actor_role(c, body_text=body)
+        if role not in ("agent2", "human"):
             continue
-
-        body_upper = body.upper()
-        # Check verdict
-        if "REVISION" in body_upper or "REVISION REQUIRED" in body_upper:
-            verdicts.append("REVISION")
-        elif "PASS" in body_upper:
-            verdicts.append("PASS")
+        verdict = parse_subtask_verdict_from_text(body)
+        if verdict:
+            verdicts.append(verdict)
 
     return verdicts
 
@@ -169,9 +345,11 @@ def parse_sprint_gate_metrics(parent_issues, sprint_info, history=None, repo_roo
     total_bugs = 0
     open_bugs = 0
     closed_bugs = 0
-    by_severity = {"Critical": 0, "Major": 0, "Minor": 0, "Cosmetic": 0}
-    open_by_severity = {"Critical": 0, "Major": 0, "Minor": 0, "Cosmetic": 0}
-    closed_by_severity = {"Critical": 0, "Major": 0, "Minor": 0, "Cosmetic": 0}
+    fixed_awaiting_human = 0
+    by_severity = {s: 0 for s in SEVERITY_LEVELS}
+    open_by_severity = {s: 0 for s in SEVERITY_LEVELS}
+    closed_by_severity = {s: 0 for s in SEVERITY_LEVELS}
+    awaiting_human_by_severity = {s: 0 for s in SEVERITY_LEVELS}
 
     # Gate statistics containers
     gate_data = {
@@ -182,7 +360,7 @@ def parse_sprint_gate_metrics(parent_issues, sprint_info, history=None, repo_roo
     for issue in parent_issues:
         fields = issue.get("fields", {})
         status_name = fields.get("status", {}).get("name", "").lower()
-        is_human_accepted = status_name in ("erledigt", "closed", "done")
+        is_human_accepted = status_name in TERMINAL_CLOSED_STATUSES
         is_completed = is_human_accepted or status_name in ("final review (human)", "final review (agent)", "final review")
 
         if is_completed:
@@ -200,12 +378,10 @@ def parse_sprint_gate_metrics(parent_issues, sprint_info, history=None, repo_roo
         except (ValueError, TypeError):
             pass
 
-        # Risk distribution from Priority
-        priority_name = fields.get("priority", {}).get("name", "Medium")
-        if priority_name in risk_counts:
-            risk_counts[priority_name] += 1
-        else:
-            risk_counts["Medium"] += 1
+        # Multi-signal risk distribution
+        priority_name = (fields.get("priority") or {}).get("name", "Medium")
+        risk_bucket = _classify_issue_risk(issue, fields, repo_root=repo_root)
+        risk_counts[risk_bucket] += 1
 
         # Problem resolution tracking (REQ-PRO-063)
         itype = fields.get("issuetype", {})
@@ -214,14 +390,38 @@ def parse_sprint_gate_metrics(parent_issues, sprint_info, history=None, repo_roo
         is_bug = itype_id == "10006" or itype_name in ("bug", "fehler")
         if is_bug:
             total_bugs += 1
-            is_bug_closed = status_name in ("erledigt", "closed", "done")
+            labels = fields.get("labels", []) or []
+            norm_labels = [str(l).strip().lower() for l in labels]
+            res_field = fields.get("resolution")
+            jira_res_name = ""
+            if isinstance(res_field, dict):
+                jira_res_name = str(res_field.get("name", "") or "").strip()
+            elif isinstance(res_field, str):
+                jira_res_name = res_field.strip()
+            label_res_name = None
+            for nl in norm_labels:
+                if nl in NON_FIX_RESOLUTION_LABELS:
+                    label_res_name = NON_FIX_RESOLUTION_LABELS[nl]
+                    break
+                if nl == "resolution-fixed":
+                    label_res_name = "Fixed"
+                    break
+
+            is_terminal_status = status_name in TERMINAL_CLOSED_STATUSES
+            is_awaiting_human_status = status_name in ("final review (human)", "final review")
+            is_bug_closed = is_terminal_status or (label_res_name in ("Rejected", "Duplicate", "Cannot Reproduce")) or (
+                bool(jira_res_name) and not is_awaiting_human_status and status_name not in ("zu erledigen", "analysis", "test spec", "implementation plan", "implementation", "test", "in bearbeitung")
+            )
+            is_bug_awaiting_human = (not is_bug_closed) and is_awaiting_human_status
+
             if is_bug_closed:
                 closed_bugs += 1
+            elif is_bug_awaiting_human:
+                fixed_awaiting_human += 1
             else:
                 open_bugs += 1
 
             detected_sev = None
-            labels = fields.get("labels", [])
             for l in labels:
                 ll = str(l).strip().lower()
                 if ll.startswith("severity-"):
@@ -249,6 +449,8 @@ def parse_sprint_gate_metrics(parent_issues, sprint_info, history=None, repo_roo
             by_severity[detected_sev] += 1
             if is_bug_closed:
                 closed_by_severity[detected_sev] += 1
+            elif is_bug_awaiting_human:
+                awaiting_human_by_severity[detected_sev] += 1
             else:
                 open_by_severity[detected_sev] += 1
 
@@ -279,7 +481,7 @@ def parse_sprint_gate_metrics(parent_issues, sprint_info, history=None, repo_roo
                 # If subtask is marked Erledigt with no explicit revision comments:
                 # REQ-PRO-092.3: do NOT count as passed_first_time. Track as unverified!
                 st_status = st.get("fields", {}).get("status", {}).get("name", "").lower()
-                if st_status in ("erledigt", "done", "closed"):
+                if st_status in TERMINAL_CLOSED_STATUSES:
                     gate_data[g_num]["unverified"] += 1
                 continue
 
@@ -297,6 +499,13 @@ def parse_sprint_gate_metrics(parent_issues, sprint_info, history=None, repo_roo
     overall_ftpr = (
         round((total_passed_first_time / total_evaluated_subtasks) * 100.0, 1)
         if total_evaluated_subtasks > 0 else 100.0
+    )
+
+    total_evaluated_e2e = sum(gate_data[g]["total"] for g in range(1, 7))
+    total_passed_first_time_e2e = sum(gate_data[g]["passed_first_time"] for g in range(1, 7))
+    end_to_end_ftpr = (
+        round((total_passed_first_time_e2e / total_evaluated_e2e) * 100.0, 1)
+        if total_evaluated_e2e > 0 else 100.0
     )
 
     # Gate 6: Stage 6 ('Final Review (Agent)') Cold Carbon Review
@@ -373,8 +582,9 @@ def parse_sprint_gate_metrics(parent_issues, sprint_info, history=None, repo_roo
         if total_tickets > 0 else 0.0
     )
 
+    resolved_bug_count = closed_bugs + fixed_awaiting_human
     resolution_rate = (
-        round((closed_bugs / total_bugs) * 100.0, 1)
+        round((resolved_bug_count / total_bugs) * 100.0, 1)
         if total_bugs > 0 else 100.0
     )
 
@@ -407,13 +617,16 @@ def parse_sprint_gate_metrics(parent_issues, sprint_info, history=None, repo_roo
             "total_bugs": total_bugs,
             "open_bugs": open_bugs,
             "closed_bugs": closed_bugs,
+            "fixed_awaiting_human": fixed_awaiting_human,
             "resolution_rate_percent": resolution_rate,
             "by_severity": by_severity,
             "open_by_severity": open_by_severity,
             "closed_by_severity": closed_by_severity,
+            "awaiting_human_by_severity": awaiting_human_by_severity,
         },
         "quality_gates": {
             "overall_ftpr_percent": overall_ftpr,
+            "end_to_end_ftpr_percent": end_to_end_ftpr,
             "total_subtasks_evaluated": total_evaluated_subtasks,
             "total_unverified_subtasks": total_unverified_subtasks,
             "gates": gates_summary,
@@ -675,6 +888,10 @@ def format_metrics_markdown(metrics, spc=None):
         "h3. 1. Throughput & Quality Gate First-Time-Pass-Rates (FTPR)",
         f"* *Ticket Throughput*: {tp.get('completed_tickets')}/{tp.get('total_tickets')} tickets ({tp.get('completion_rate_percent')}%) | *Velocity*: {tp.get('completed_story_points')} SP",
         f"* *Overall Gate FTPR*: *{qg.get('overall_ftpr_percent')}%* (evaluated across {qg.get('total_subtasks_evaluated')} sub-tasks)",
+        *(
+            [f"* *End-to-End Gate FTPR (Gates 1–6)*: *{qg.get('end_to_end_ftpr_percent')}%*"]
+            if "end_to_end_ftpr_percent" in qg else []
+        ),
         f"* *Human Acceptance Rate*: *{qg.get('human_acceptance_rate_percent')}%*{accepted_suffix}",
         "",
         "|| Gate / Stage || Sub-tasks || 1st-Time Pass || Revisions || FTPR % || Defect Escape Rate (p) ||",
@@ -701,21 +918,24 @@ def format_metrics_markdown(metrics, spc=None):
 
     pt = metrics.get("problem_trends", {})
     if pt:
+        awaiting_cnt = pt.get("fixed_awaiting_human", 0)
         lines.extend([
             "",
             "h3. 3. Problem Trends & Defect Severity (ASPICE SUP.9)",
-            f"* *Total Bugs*: {pt.get('total_bugs', 0)} (Open: {pt.get('open_bugs', 0)}, Closed: {pt.get('closed_bugs', 0)}) | *Resolution Rate*: *{pt.get('resolution_rate_percent', 100.0)}%*",
+            f"* *Total Bugs*: {pt.get('total_bugs', 0)} (Open: {pt.get('open_bugs', 0)}, Awaiting Human: {awaiting_cnt}, Closed: {pt.get('closed_bugs', 0)}) | *Resolution Rate*: *{pt.get('resolution_rate_percent', 100.0)}%*",
             "",
-            "|| Severity || Total || Open || Closed ||",
+            "|| Severity || Total || Open || Awaiting Human || Closed ||",
         ])
         by_sev = pt.get("by_severity", {})
         open_by_sev = pt.get("open_by_severity", {})
+        awaiting_by_sev = pt.get("awaiting_human_by_severity", {})
         closed_by_sev = pt.get("closed_by_severity", {})
-        for sev in ("Critical", "Major", "Minor", "Cosmetic"):
+        for sev in SEVERITY_LEVELS:
             tot = by_sev.get(sev, 0)
             op = open_by_sev.get(sev, 0)
+            aw = awaiting_by_sev.get(sev, 0)
             cl = closed_by_sev.get(sev, 0)
-            lines.append(f"| {sev} | {tot} | {op} | {cl} |")
+            lines.append(f"| {sev} | {tot} | {op} | {aw} | {cl} |")
 
     if spc and spc.get("has_history"):
         spc_num = "4" if pt else "3"

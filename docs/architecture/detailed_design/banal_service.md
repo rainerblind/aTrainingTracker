@@ -1,7 +1,7 @@
 # Detailed Design: BANALService & DeviceManager (ASPICE SWE.3)
 
 **Document ID**: `DOC-ARC-DD-BANAL`  
-**Version**: 1.0.1  
+**Version**: 1.0.3  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -61,6 +61,7 @@ stateDiagram-v2
 | `mSearchingStoppedForOneReceiver.onReceive` | `current != null && current.getDeviceId() == deviceID` | Clear `cMyRemoteDeviceCurrentlySearchingFor = null`; if `!success && tries <= 1` call `current.shutDown()` & remove from `mMyRemoteDevices`; if `!success && tries > 1` decrement tries & `mSearchQueue.addLast(current)`; call `searchForNextRemoteDevice()` | `SEARCH_QUEUE_ACTIVE` |
 | `mNewLapReceiver.onReceive` (`REQUEST_NEW_LAP`) | Active service | Read `LAP_NR`, `TIME_LAP`, `DISTANCE_m_LAP`, compute `lapSpeed`, forward `deviceManager.newLap()`, broadcast `LAP_SUMMARY` (optionally trigger `REQUEST_START_SEARCH_FOR_PAIRED_DEVICES`) | Unchanged |
 | `setUserSelectedSportTypeId(sportTypeId)` | `BANALServiceComm` call | Set `mHaveUserSelectedSportType = true`; `updateIndoorModeForSportType`; broadcast `SPORT_TYPE_CHANGED_BY_USER_INTENT` | Unchanged |
+| `mPolarLiveImuChangedReceiver.onReceive` (`POLAR_LIVE_IMU_CHANGED`) | Paired BLE HRM (`deviceId > 0`, `!mIsShutDown`) | Detach `RrBeatSource`, remove from `mMyRemoteDevices`/`mSearchQueue`, track `mPendingTeardownDeviceIds` (so rapid repeat toggles wait for active teardown), call `shutDown(onTeardownComplete)` on active Polar HRM, and only in `onLiveImuTeardownComplete` invoke `createRemoteDevice(deviceId)` + `searchForNextRemoteDevice()` (`mSdkInt >= TIRAMISU`) | `SEARCH_QUEUE_ACTIVE` |
 | `onDestroy()` | Service tearing down | `deviceManager.stopSearchForNewRemoteDevices()`, `deviceManager.shutDown()`, `sensorManager.shutDown()`, `filterManager.shutDown()`; nullify `cDeviceManager`, `cSensorManager`, `cFilterManager`, `cServiceContext`; `LifecycleUtils.safeUnregisterReceiver` | `DESTROYED` |
 
 ---
@@ -95,6 +96,7 @@ stateDiagram-v2
 | `BANALServiceLifecycleTest` | `onDestroy()` nullifies `BANALService.getDeviceManager()` & `getSensorData()`, unbound `ProxySensor` exclusion from available set, `DeviceManager.shutDown()` nullifies internal devices (`TST-TRK-055.4`) |
 | `HardwareHalIngestionIntegrationTest` | HAL -> `BANALService` / `MySensorManager` integration verification (`INT-SWE-04`, `TST-INT-012`) |
 | `DeviceManagerRrSourceTest` | Single-primary `RrBeatSource` arbitration (`ECG` > `ANT+` > `PPG`), `5000 ms` stale/disconnect fallback & monotonic timestamp clamping (`TST-TRK-085.1`) |
+| `DeviceManagerTeardownTest` | Defensive `removeAndStopRemoteDevice`, `POLAR_LIVE_IMU_CHANGED` ordered GATT/bridge teardown-before-connect handoff, `< API 33` fallback & `RrBeatSource` continuity (`TST-CON-050.1`) |
 
 ---
 
@@ -104,3 +106,5 @@ stateDiagram-v2
 | :--- | :--- | :--- | :--- | :--- |
 | `1.0.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Added standardized `DOC-ARC-DD-BANAL` work-product control header and Change History. |
 | `1.0.1` | 2026-11-18 | AI Agent (`ATT-8706`) | `ATT-8706` | Documented single-primary `RrBeatSource` arbitration (`mRrArbitrationLock`, `RR_SOURCE_STALE_TIMEOUT_MS`), monotonic forwarding, and `DeviceManagerRrSourceTest` parity (`REQ-PRO-114`, `REQ-TRK-085.1`). |
+| `1.0.2` | 2026-11-18 | AI Agent (`ATT-8714`) | `ATT-8714` | Documented `POLAR_LIVE_IMU_CHANGED` receiver, `mLiveImuHandoffGenerations`, ordered `shutDown(onTeardownComplete)` handoff, and `DeviceManagerTeardownTest` (`REQ-CON-050.1`). |
+| `1.0.3` | 2026-11-18 | AI Agent (`ATT-8714`) | `ATT-8714` | Bounce 1/3 heal: added `mPendingTeardownDeviceIds` + `onLiveImuTeardownComplete` to serialize rapid repeat Live-IMU toggles against active GATT teardown. |

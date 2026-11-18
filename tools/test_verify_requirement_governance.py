@@ -39,6 +39,7 @@ from tools.verify_requirement_governance import (
     verify_architecture_and_system_specs,
     verify_composable_islands,
     verify_engineering_directory_structure,
+    verify_living_doc_directory_layout,
     verify_gate_records,
     verify_governance,
     verify_master_table_parity,
@@ -86,6 +87,7 @@ from tools.verify_requirement_governance import (
     find_code_traceability_orphans,
     verify_code_traceability_orphans,
     verify_shard_header_counts,
+    verify_shard_sizes,
     LEGACY_MISSING_DESCRIPTION_REQS,
     verify_req_descriptions,
     calculate_req_field_coverage,
@@ -890,6 +892,17 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
             ok_any, msgs_any = verify_independent_reviews(sprint_name=None, repo_root=tmpdir)
             self.assertTrue(ok_any, f"Expected pass, got: {msgs_any}")
             self.assertTrue(any("Verified 1 independent review record(s)" in m for m in msgs_any))
+
+            # 8. Layer 4 Human Sprint Review record with named human reviewer passes
+            layer4_file = os.path.join(reviews_dir, "sprint_2026-46.4.md")
+            with open(layer4_file, "w", encoding="utf-8") as f:
+                f.write(
+                    valid_content
+                    .replace("Human Process Owner", "Rainer Blind")
+                    .replace("Human Sprint Review (Ceremony 2)", "Human Sprint Review (Layer 4)")
+                )
+            ok_l4, msgs_l4 = verify_independent_reviews(sprint_name="2026-46.4", repo_root=tmpdir)
+            self.assertTrue(ok_l4, f"Expected Layer 4 pass, got: {msgs_l4}")
 
     def test_scenario_18_impact_analysis_section_validation(self):
         """TST-PRO-064.1: Verify validate_impact_analysis_section validation across valid, missing, and placeholder cases."""
@@ -1728,8 +1741,8 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
         ok, diag, report = verify_system_software_traceability()
         self.assertTrue(ok, f"Expected live repository traceability to pass, got: {diag}")
         self.assertEqual(report["coverage_pct"], 100.0)
-        self.assertEqual(report["covered_count"], 12)
-        self.assertEqual(report["sysreq_count"], 12)
+        self.assertEqual(report["covered_count"], 21)
+        self.assertEqual(report["sysreq_count"], 21)
         self.assertEqual(len(report["dangling_sysreq_citations"]), 0)
         self.assertEqual(len(report["uncovered_sysreqs"]), 0)
 
@@ -1874,13 +1887,17 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
     def test_scenario_47_req_pro_077_living_doc_attribute_presence(self):
         """TST-PRO-077.4: Verify REQ-PRO-077 defines Priority, Type, and Verification Method in living documentation."""
         repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-        ps_path = os.path.join(repo_root, "docs", "requirements", "req_process_stability.md")
-        self.assertTrue(os.path.exists(ps_path))
+        req_dir = os.path.join(repo_root, "docs", "requirements")
+        ps_files = sorted(
+            fn for fn in os.listdir(req_dir)
+            if fn == "req_process_stability.md" or (fn.startswith("req_process_stability_part") and fn.endswith(".md"))
+        )
+        self.assertTrue(len(ps_files) > 0, "Expected req_process_stability*.md shard(s)")
 
-        with open(ps_path, "r", encoding="utf-8") as f:
-            lines = f.readlines()
-
-        shards = {"docs/requirements/req_process_stability.md": lines}
+        shards = {}
+        for fn in ps_files:
+            with open(os.path.join(req_dir, fn), "r", encoding="utf-8") as f:
+                shards[f"docs/requirements/{fn}"] = f.readlines()
         defective = find_missing_requirement_attributes(req_shards=shards)
 
         # Filter defective items to check if REQ-PRO-077 is among them
@@ -2639,7 +2656,7 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
         ok, diag, report = verify_system_software_traceability()
         self.assertTrue(ok, f"Expected live --verify-sys-trace pass, got: {diag}")
         self.assertEqual(report["covered_count"], report["sysreq_count"])
-        self.assertEqual(report["sysreq_count"], 12)
+        self.assertEqual(report["sysreq_count"], 21)
         all_mapped_reqs = {r for reqs in report["sys_to_swe_map"].values() for r in reqs}
         self.assertFalse(any(r.startswith("REQ-DEX-") for r in all_mapped_reqs))
         self.assertFalse(any(r.startswith("REQ-PRO-") for r in all_mapped_reqs))
@@ -3651,6 +3668,185 @@ public enum SensorType {
                 governance_cli_main(["--check-sensor-javadocs"])
         self.assertEqual(cm.exception.code, 0, f"stderr={buf_err.getvalue()}")
         self.assertIn("67 SensorType constant(s)", buf_out.getvalue())
+
+
+class TestSymmetricTraceabilityAndScannerAudit(unittest.TestCase):
+    """TST-PRO-127.1, TST-PRO-127.2, TST-PRO-127.4: Symmetric REQ<->TST parity, tag scanner & --check-size."""
+
+    def test_symmetric_edge_parity_rejects_asymmetric_req_to_tst_and_tst_to_req(self):
+        """TST-PRO-127.1: Asymmetric REQ->TST and TST->REQ links outside baseline fail deterministically."""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            req_dir = os.path.join(tmp_dir, "docs", "requirements")
+            tst_dir = os.path.join(tmp_dir, "docs", "tests")
+            tools_dir = os.path.join(tmp_dir, "tools")
+            os.makedirs(req_dir)
+            os.makedirs(tst_dir)
+            os.makedirs(tools_dir)
+
+            with open(os.path.join(req_dir, "req_dom.md"), "w", encoding="utf-8") as f:
+                f.write(
+                    "# Shard\n"
+                    "### REQ-DOM-001: Req One [Verified]\n- **Tests**: `TST-DOM-001`, `TST-DOM-002`\n\n"
+                    "### REQ-DOM-002: Req Two [Verified]\n- **Tests**: `TST-DOM-002`\n\n"
+                    "### REQ-DOM-003: Baselined Legacy [Verified]\n- **Tests**: `TST-DOM-001`\n"
+                )
+            with open(os.path.join(tst_dir, "tst_dom.md"), "w", encoding="utf-8") as f:
+                f.write(
+                    "# Test Shard\n"
+                    "### TST-DOM-001: Test One [Verified]\n- **Verifies**: `REQ-DOM-001`\n\n"
+                    "### TST-DOM-002: Test Two [Verified]\n- **Verifies**: `REQ-DOM-002`\n\n"
+                    "### TST-DOM-003: Test Three [Verified]\n- **Verifies**: `REQ-DOM-001`\n"
+                )
+            baseline_path = os.path.join(tools_dir, "traceability_baseline.json")
+            with open(baseline_path, "w", encoding="utf-8") as f:
+                json.dump({"orphan_requirements": ["REQ-DOM-003"]}, f)
+
+            ok, diag, report = verify_traceability_orphans(
+                repo_root=tmp_dir,
+                baseline_path=baseline_path,
+                fail_on_orphans=True,
+            )
+            self.assertFalse(ok)
+            self.assertEqual(report["asymmetric_req_to_tst"], [("REQ-DOM-001", "TST-DOM-002")])
+            self.assertEqual(report["asymmetric_tst_to_req"], [("TST-DOM-003", "REQ-DOM-001")])
+            joined = "\n".join(diag)
+            self.assertIn("Criterion 4 Symmetric REQ->TST", joined)
+            self.assertIn("Criterion 4 Symmetric TST->REQ", joined)
+
+    def test_extract_test_code_tags_scans_android_test_and_tools_test_py(self):
+        """TST-PRO-127.2: extract_test_code_tags discovers tags across app/src/{test,androidTest} and tools/test_*.py."""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            unit_dir = os.path.join(tmp_dir, "app", "src", "test", "java")
+            inst_dir = os.path.join(tmp_dir, "app", "src", "androidTest", "java")
+            tools_dir = os.path.join(tmp_dir, "tools")
+            os.makedirs(unit_dir)
+            os.makedirs(inst_dir)
+            os.makedirs(tools_dir)
+
+            with open(os.path.join(unit_dir, "UnitSampleTest.kt"), "w", encoding="utf-8") as f:
+                f.write("// Traces to TST-TRK-001\n")
+            with open(os.path.join(inst_dir, "SmokeAndroidTest.kt"), "w", encoding="utf-8") as f:
+                f.write("// Verifies TST-UI-101.1\n")
+            with open(os.path.join(tools_dir, "test_sample_tool.py"), "w", encoding="utf-8") as f:
+                f.write("# TST-TOOL-001 and ignored TST-UI-999\n")
+
+            tags = extract_test_code_tags(repo_root=tmp_dir)
+            self.assertIn("TST-TRK-001", tags)
+            self.assertIn("TST-UI-101", tags)
+            self.assertIn("TST-TOOL-001", tags)
+            self.assertNotIn("TST-UI-999", tags)
+
+    def test_cli_check_size_and_live_symmetric_coverage(self):
+        """TST-PRO-127.1 / TST-PRO-127.4: Live repo passes --check-size and achieves 0 Cat-4 gaps."""
+        ok_size, diag_size = verify_shard_sizes(max_lines=4000)
+        self.assertTrue(ok_size, f"Expected all live shards <= 4000 lines: {diag_size}")
+
+        buf_out = io.StringIO()
+        buf_err = io.StringIO()
+        with contextlib.redirect_stdout(buf_out), contextlib.redirect_stderr(buf_err):
+            with self.assertRaises(SystemExit) as cm:
+                governance_cli_main(["--check-size"])
+        self.assertEqual(cm.exception.code, 0, f"stderr={buf_err.getvalue()}")
+        self.assertIn("within line limits", buf_out.getvalue())
+
+        cov = calculate_traceability_coverage()
+        self.assertEqual(cov.cat4.gap_count, 0, f"Expected 0 Cat-4 gaps, got: {cov.cat4.details}")
+
+
+class TestLivingDocDirectoryLayout(unittest.TestCase):
+    """TST-PRO-129.3: Fail-closed directory layout enforcement for docs/requirements/ and docs/tests/."""
+
+    def test_valid_req_and_tst_shards_pass(self):
+        """TST-PRO-129.3: Canonical req_*.md and tst_*.md files pass directory layout check."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            req_dir = os.path.join(tmpdir, "docs", "requirements")
+            tst_dir = os.path.join(tmpdir, "docs", "tests")
+            os.makedirs(req_dir)
+            os.makedirs(tst_dir)
+            with open(os.path.join(req_dir, "req_process_stability_part1.md"), "w", encoding="utf-8") as f:
+                f.write("# Reqs\n")
+            with open(os.path.join(tst_dir, "tst_process_stability_part1.md"), "w", encoding="utf-8") as f:
+                f.write("# Tests\n")
+
+            ok, diag = verify_living_doc_directory_layout(repo_root=tmpdir)
+            self.assertTrue(ok, f"Expected valid layout to pass: {diag}")
+
+    def test_misplaced_scrum_plan_in_requirements_fails_closed(self):
+        """TST-PRO-129.3: Reject non-req_*.md files (e.g. SCRUM-*_plan.md) in docs/requirements/."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            req_dir = os.path.join(tmpdir, "docs", "requirements")
+            tst_dir = os.path.join(tmpdir, "docs", "tests")
+            os.makedirs(req_dir)
+            os.makedirs(tst_dir)
+            with open(os.path.join(req_dir, "req_process_stability_part1.md"), "w", encoding="utf-8") as f:
+                f.write("# Reqs\n")
+            with open(os.path.join(req_dir, "SCRUM-123_plan.md"), "w", encoding="utf-8") as f:
+                f.write("# Misplaced plan\n")
+
+            ok, diag = verify_living_doc_directory_layout(repo_root=tmpdir)
+            self.assertFalse(ok)
+            self.assertTrue(any("SCRUM-123_plan.md" in d and "req_*.md" in d for d in diag), diag)
+
+    def test_misplaced_non_tst_file_in_tests_fails_closed(self):
+        """TST-PRO-129.3: Reject non-tst_*.md files and stray subdirs in docs/tests/."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            req_dir = os.path.join(tmpdir, "docs", "requirements")
+            tst_dir = os.path.join(tmpdir, "docs", "tests")
+            os.makedirs(req_dir)
+            os.makedirs(os.path.join(tst_dir, "stray_subdir"))
+            with open(os.path.join(tst_dir, "notes.md"), "w", encoding="utf-8") as f:
+                f.write("# Stray\n")
+
+            ok, diag = verify_living_doc_directory_layout(repo_root=tmpdir)
+            self.assertFalse(ok)
+            self.assertTrue(any("notes.md" in d and "tst_*.md" in d for d in diag), diag)
+            self.assertTrue(any("stray_subdir" in d and "tst_*.md" in d for d in diag), diag)
+
+    def test_live_repository_living_doc_layout_clean(self):
+        """TST-PRO-129.3: Live repository docs/requirements/ and docs/tests/ pass layout enforcement."""
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+        ok, diag = verify_living_doc_directory_layout(repo_root=repo_root)
+        self.assertTrue(ok, f"Live repository layout failed: {diag}")
+
+
+class TestGrandfatheredSysreqsRemoved(unittest.TestCase):
+    """TST-PRO-131.4: Verify GRANDFATHERED_SYSREQS is removed and obsolete SYSREQ-PER/ACQ/ENV-* fail closed."""
+
+    def test_obsolete_grandfathered_sysreqs_rejected_as_dangling(self):
+        """TST-PRO-131.4: Obsolete SYSREQ-PER-001/SYSREQ-ACQ-001/SYSREQ-ENV-001 fail closed."""
+        import tools.verify_requirement_governance as vrg
+
+        self.assertFalse(hasattr(vrg, "GRANDFATHERED_SYSREQS"))
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            sys_dir = os.path.join(tmpdir, "docs", "system")
+            req_dir = os.path.join(tmpdir, "docs", "requirements")
+            os.makedirs(sys_dir)
+            os.makedirs(req_dir)
+
+            with open(os.path.join(sys_dir, "sysreq_live_tracking.md"), "w", encoding="utf-8") as f:
+                f.write("### SYSREQ-TRK-001: Sensors\n")
+            with open(os.path.join(sys_dir, "system_architecture.md"), "w", encoding="utf-8") as f:
+                f.write("Allocated: SYSREQ-TRK-001, SYSREQ-PER-001\n")
+            with open(os.path.join(req_dir, "req_tracking_cockpit_part1.md"), "w", encoding="utf-8") as f:
+                f.write(
+                    "### REQ-TRK-001: Sensors [Verified]\n"
+                    "- **System Requirement(s)**: `SYSREQ-TRK-001`, `SYSREQ-ACQ-001`, `SYSREQ-ENV-001`\n"
+                )
+
+            ok_trace, diag_trace, _ = verify_system_software_traceability(repo_root=tmpdir)
+            self.assertFalse(ok_trace)
+            joined_trace = "\n".join(diag_trace)
+            self.assertIn("SYSREQ-PER-001", joined_trace)
+            self.assertIn("SYSREQ-ACQ-001", joined_trace)
+            self.assertIn("SYSREQ-ENV-001", joined_trace)
+
+            ok_arch, diag_arch = vrg.verify_architecture_and_system_specs(
+                repo_root=tmpdir,
+                diff_text="+++ b/docs/system/system_architecture.md\n+Allocated: SYSREQ-TRK-001, SYSREQ-PER-001\n",
+            )
+            self.assertFalse(ok_arch)
+            self.assertTrue(any("SYSREQ-PER-001" in d for d in diag_arch), diag_arch)
 
 
 if __name__ == "__main__":

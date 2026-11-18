@@ -139,6 +139,17 @@ class TelemetryMetricGraphHrvTest {
             PathPoint(distance = 120.0, latLng = LatLng(0.0, 0.0), timeSec = 20L, hrvDfaA1 = 0.70)
         )
 
+        val formattedDfaWithThresholds = TelemetryMetricUtils.formatValue(
+            value = 0.75,
+            metricType = TelemetryMetricType.HRV_DFA_A1,
+            unit = MyUnits.METRIC,
+            speedFormatter = speedFormatter,
+            paceFormatter = paceFormatter,
+            dfaA1ThresholdT1 = 0.75f,
+            dfaA1ThresholdT2 = 0.50f
+        )
+        assertEquals("0.75 • Z2", formattedDfaWithThresholds)
+
         // When scrubbing in time domain with targetValue = 10.0 (seconds)
         val nearestTime = TelemetryMetricUtils.findNearestPoint(gpsPoints, 10.0, isTimeDomain = true)
         assertEquals(10L, nearestTime?.timeSec)

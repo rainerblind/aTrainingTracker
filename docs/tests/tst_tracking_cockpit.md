@@ -1,14 +1,14 @@
 # Living Test Specification: Tracking & Live Sensor Cockpit
 
 **Document ID**: `DOC-TST-TRK`  
-**Version**: 1.0.18  
+**Version**: 1.0.39  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Tests**: 145
+**Total Tests**: 151
 
 ---
 
@@ -62,7 +62,7 @@
 3. Workouts with $N$ manual laps contain exactly $N+1$ laps.
 4. `LapsDatabaseManager` rejects zero-duration writes and filters legacy zero-duration rows.
 5. 100% of unit tests pass with zero regressions.]
-- **Requirement(s)**: `REQ-TRK-002`
+- **Requirement(s)**: `REQ-TRK-002`, `REQ-TRK-009`
 - **Component**: **Workout Lap Lifecycle, Pause Neutrality & Zero-Duration Phantom Prevention**
 - **Jira**: ``ATT-896``
 - **Test Description**:
@@ -218,7 +218,7 @@
   • Execute `./gradlew testDebugUnitTest` verifying 100% test pass rate with zero regressions.
 
 ### TST-CON-003: **BLE GATT Lifecycle, Thread-Safe Concurrency & Null-Safety Unit Tests** [Verified]
-- **Requirement(s)**: `REQ-CON-012`
+- **Requirement(s)**: `REQ-CON-012`, `REQ-CON-005`
 - **Component**: **BLE GATT Lifecycle, Thread-Safe Concurrency & Null-Safety Unit Tests**
 - **Jira**: ``ATT-1348``
 - **Test Description**:
@@ -242,7 +242,7 @@
   7. *Regression Suite*: Execute full test suite (`./gradlew testDebugUnitTest`) to ensure zero regressions across all modules.
 
 ### TST-CON-005: **BLE GATT Measurement Packet Parsing Resilience & Null-Safe Telemetry Test** [Verified]
-- **Requirement(s)**: `REQ-CON-014`
+- **Requirement(s)**: `REQ-CON-014`, `REQ-CON-005`
 - **Component**: **BLE GATT Measurement Packet Parsing Resilience & Null-Safe Telemetry Test**
 - **Jira**: ``ATT-1485``
 - **Test Description**:
@@ -365,7 +365,7 @@
   • Execute `./gradlew testDebugUnitTest` to guarantee 0 regressions across all test suites.
 
 ### TST-CON-010: **Continuous Sensor Battery State Persistence, Live Battery Display in Sensors List & Post-Workout Alerting Verification** [Verified]
-- **Requirement(s)**: `REQ-CON-007`
+- **Requirement(s)**: `REQ-CON-007`, `REQ-CON-010`
 - **Component**: **Continuous Sensor Battery State Persistence, Live Battery Display in Sensors List & Post-Workout Alerting Verification**
 - **Jira**: ``ATT-2192` / `ATT-3312``
 - **Test Description**:
@@ -414,7 +414,7 @@
   • Execute `./gradlew testDebugUnitTest` across all modules verifying 100% pass rate with zero regressions.
 
 ### TST-FIL-004: **Stabilized VAM (Vertical Speed) Metric, Location Accuracy Gating & Indoor Drift Suppression Verification** [Verified]
-- **Requirement(s)**: `REQ-FIL-012`
+- **Requirement(s)**: `REQ-FIL-012`, `REQ-FIL-001`, `REQ-FIL-003`
 - **Component**: **Stabilized VAM (Vertical Speed) Metric, Location Accuracy Gating & Indoor Drift Suppression Verification**
 - **Jira**: `ATT-1621`, `ATT-1738`, `ATT-5373`
 - **Test Description**:
@@ -457,7 +457,7 @@
   • Execute `./gradlew testDebugUnitTest` verifying 100% test pass rate with zero regressions.
 
 ### TST-FIL-005: **Continuous Rolling Smoothing Telemetry, Session Reset Isolation & Live Pre-Start Metric Verification** [Verified]
-- **Requirement(s)**: `REQ-FIL-013`
+- **Requirement(s)**: `REQ-FIL-013`, `REQ-FIL-001`, `REQ-FIL-002`
 - **Component**: **Continuous Rolling Smoothing Telemetry, Session Reset Isolation & Live Pre-Start Metric Verification**
 - **Jira**: ``ATT-3222``
 - **Test Description**:
@@ -689,7 +689,7 @@
   • Execute `python3 -m unittest tools/test_replay_workout.py` and `./gradlew testDebugUnitTest` asserting 100% pass rate.
 
 ### TST-TRK-018: **Resumed Workout Sample Table Resolution, Asynchronous BANAL Binding Barrier & Sample Write Error Surfacing Verification Suite** [Verified]
-- **Requirement(s)**: `REQ-TRK-026`
+- **Requirement(s)**: `REQ-TRK-026`, `REQ-TRK-005`
 - **Component**: **Resumed Workout Sample Table Resolution, Asynchronous BANAL Binding Barrier & Sample Write Error Surfacing Verification Suite**
 - **Jira**: ``ATT-3980, ATT-5827``
 - **Test Description**:
@@ -704,7 +704,7 @@
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
 ### TST-TRK-019: **Fault-Tolerant 1 Hz Sampling Loop, Clock Timer Exception Guard & Volatile mBanalService Snapshot Concurrency Verification Suite** [Verified]
-- **Requirement(s)**: `REQ-TRK-027`
+- **Requirement(s)**: `REQ-TRK-027`, `REQ-TRK-007`
 - **Component**: **Fault-Tolerant 1 Hz Sampling Loop, Clock Timer Exception Guard & Volatile `mBanalService` Snapshot Concurrency Verification Suite**
 - **Jira**: ``ATT-3981``
 - **Test Description**:
@@ -755,7 +755,7 @@
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
 ### TST-TRK-022: **Fault-Isolated Workout Finalization, Dedicated FINISHED=1 Commit, Defensive AccumulatedSensorTypeSet Copy & Zero-Duration Average Speed Verification Suite** [Verified]
-- **Requirement(s)**: `REQ-TRK-030`
+- **Requirement(s)**: `REQ-TRK-030`, `REQ-TRK-008`
 - **Component**: **Fault-Isolated Workout Finalization, Dedicated `FINISHED=1` Commit, Defensive `AccumulatedSensorTypeSet` Copy & Zero-Duration Average Speed Verification Suite**
 - **Jira**: ``ATT-3986``
 - **Test Description**:
@@ -769,7 +769,7 @@
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
 ### TST-TRK-023: **LiveWorkoutSession Stream & Extrema Rehydration on Workout Resume, Sample Count Persistence & finalizeLiveSession() Continuity Verification Suite** [Verified]
-- **Requirement(s)**: `REQ-TRK-031`
+- **Requirement(s)**: `REQ-TRK-031`, `REQ-TRK-005`
 - **Component**: **`LiveWorkoutSession` Stream & Extrema Rehydration on Workout Resume, Sample Count Persistence & `finalizeLiveSession()` Continuity Verification Suite**
 - **Jira**: ``ATT-3987``
 - **Test Description**:
@@ -807,7 +807,7 @@
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
 ### TST-TRK-025: **Non-Blocking TrackerService.onDestroy() Finalization on mDbExecutor, Deterministic mScheduler Shutdown & Async Init Failure Recovery Verification Suite** [Verified]
-- **Requirement(s)**: `REQ-TRK-033`, `REQ-TRK-015`, `REQ-TRK-030`
+- **Requirement(s)**: `REQ-TRK-033`, `REQ-TRK-015`, `REQ-TRK-030`, `REQ-TRK-003`
 - **Component**: **Non-Blocking `TrackerService.onDestroy()` Finalization on `mDbExecutor`, Deterministic `mScheduler` Shutdown & Async Init Failure Recovery Verification Suite**
 - **Jira**: ``ATT-4006``
 - **Test Description**:
@@ -861,7 +861,7 @@
   • Assert that none of the values begin with `'+'`, enforcing Rule 49 and Design Guidelines Section 5.5 to eliminate duplicate `+ +` action iconography.
 
 ### TST-TRK-026: **Foreground-Protected Asynchronous Workout Finalization and Stop Lifecycle Isolation Verification Suite** [Verified]
-- **Requirement(s)**: `REQ-TRK-034`, `REQ-TRK-015`, `REQ-TRK-030`, `REQ-TRK-033`
+- **Requirement(s)**: `REQ-TRK-034`, `REQ-TRK-015`, `REQ-TRK-030`, `REQ-TRK-033`, `REQ-TRK-003`
 - **Component**: **Foreground-Protected Asynchronous Workout Finalization and Stop Lifecycle Isolation Verification Suite**
 - **Jira**: ``ATT-4098``
 - **Test Description**:
@@ -1045,7 +1045,7 @@
   • Evaluate with points having valid `power > 0` and `wPrimeBalKj >= 0.0`: assert returns `true`.
 
 ### TST-FIL-014: **Backend Filter Key Normalization, Runtime 'Best Sensor' Field Registration & Post-Trim Rolling Filter NaN Guard Verification Suite** [Verified]
-- **Requirement(s)**: `REQ-FIL-014`, `REQ-FIL-011`
+- **Requirement(s)**: `REQ-FIL-014`, `REQ-FIL-011`, `REQ-FIL-001`
 - **Component**: **Backend Filter Key Normalization, Runtime 'Best Sensor' Field Registration & Post-Trim Rolling Filter NaN Guard Verification Suite**
 - **Jira**: ``ATT-4282``
 - **Test Description**:
@@ -1130,7 +1130,7 @@
   • Execute `./gradlew testDebugUnitTest` verifying 100% pass rate with zero regressions across the full test suite.
 
 ### TST-CON-022: **Automated BLE/ANT+ Pedal Power Balance Reference Normalization & Obsolete UI Checkbox Deprecation Verification Suite** [Verified]
-- **Requirement(s)**: `REQ-CON-022`
+- **Requirement(s)**: `REQ-CON-022`, `REQ-UI-377`
 - **Component**: **Automated BLE/ANT+ Pedal Power Balance Reference Normalization & Obsolete UI Checkbox Deprecation Verification Suite**
 - **Jira**: ``ATT-4554``
 - **Test Description**:
@@ -1787,7 +1787,7 @@
   • Verify BANALServiceRepository.registerSparklineBuffer preserves existing buffer samples and span when re-registering an identical sensor configuration with a modified time horizon.
 
 ### TST-FIL-015: **Filter Initialization State Tracking, Alpha Validation & Zero-Bias Verification Suite** [Verified]
-- **Requirement(s)**: `REQ-FIL-015`, `REQ-FIL-011`, `REQ-FIL-012`, `REQ-FIL-013`
+- **Requirement(s)**: `REQ-FIL-015`, `REQ-FIL-011`, `REQ-FIL-012`, `REQ-FIL-013`, `REQ-FIL-002`
 - **Component**: **Filter Initialization State Tracking, Alpha Validation & Zero-Bias Verification Suite**
 - **Jira**: `ATT-6382`
 - **Test Description**:
@@ -1988,7 +1988,7 @@
 ### TST-TRK-062: **Live Rearview Radar Vertical Edge Overlay & Gesture Pass-Through Test Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-062` (`REQ-TRK-062.1`..`REQ-TRK-062.6`)
 - **Component**: `RadarEdgeOverlay.kt`, `TrackingTabsScreen.kt`, `BTLERadarDevice.java`, `TuningPreferencesDataStore.kt`, `RadarSettingsSection.kt`, `AdvancedTuningAccordion.kt`, `strings_radar.xml`
-- **Jira**: `ATT-5085`, `ATT-6703`, `ATT-7537`, `ATT-7744`
+- **Jira**: `ATT-5085`, `ATT-6703`, `ATT-7537`, `ATT-7744`, `ATT-8679`
 - **Test Description**:
   1. *Radar Edge Rail & Full-Screen Kinematics Unit Tests (`TST-TRK-062.1`, `RadarEdgeOverlayTest.kt`)*:
   • Verify target range normalization ($140\text{ m} \to 1.0\text{ (bottom)}$, $70\text{ m} \to 0.5\text{ (mid)}$, $0\text{ m} \to 0.0\text{ (top/cyclist)}$) and multi-target coordinate resolution, asserting vehicles approach upward from bottom to top in both edge rail and `FULL_SCREEN` mode.
@@ -1997,23 +1997,26 @@
   2. *Semantic Threat Color & Conditional Pulsing Alert Tests (`TST-TRK-062.2`, `RadarEdgeOverlayTest.kt`)*:
   • Verify color mapping (Green = `NONE`, Amber = `APPROACHING`, Red = `FAST_APPROACHING`).
   • Verify pulsing red alert animation is evaluated strictly when `overallThreatLevel == ThreatLevel.FAST_APPROACHING`, yielding constant 1.0f alpha during clear and standard approach.
-  3. *Fail-Safe Disconnect Warning, Error State & Reconnect Action Tests (`TST-TRK-062.3`, `RadarEdgeOverlayTest.kt`)*:
-  • Verify `DISCONNECTED_ERROR` and `DISCONNECTED` render warning indicator with `ic_device_not_available` and strictly prohibit green clear state across all overlay modes.
-  • Verify tapping status badge in `DISCONNECTED_ERROR` triggers `REQUEST_START_SEARCH_FOR_PAIRED_DEVICES` broadcast instead of opening light switch sheet.
-  4. *Clear State & Touch Pass-Through Tests (`TST-TRK-062.4`, `RadarEdgeOverlayTest.kt`)*:
-  • Verify `FULL_SCREEN` mode renders zero background track rail when road is clear, keeping only `RadarStatusBadgePill` visible and clickable.
-  • Verify `AUTO_HIDE_3S` auto-hides only the vertical rail after 3 seconds of all-clear road, while `RadarStatusBadgePill` remains visible, clickable, and accessible with zero ghost click traps.
+  3. *Fail-Safe Disconnect Warning, Error State & Active-Threat Badge Action Tests (`TST-TRK-062.3`, `RadarEdgeOverlayTest.kt`)*:
+  • Verify `DISCONNECTED_ERROR` and `DISCONNECTED` render warning indicator (`RadarStatusBadge` with `ic_device_not_available`) and strictly prohibit green clear state across all overlay modes (`LEFT`, `RIGHT`, `FULL_SCREEN`).
+  • Verify tapping `RadarStatusBadge` in `DISCONNECTED_ERROR` invokes `onReconnectClick` (`REQUEST_START_SEARCH_FOR_PAIRED_DEVICES`), and tapping `RadarStatusBadge` during active threats (`APPROACHING` / `FAST_APPROACHING`, with or without audio snooze) invokes `onBadgeClick` (`RadarLightQuickSwitchSheet`).
+  4. *Clear-State Badge Suppression, Rail Alignment & Touch Pass-Through Compose UI Tests (`TST-TRK-062.4`, `RadarEdgeOverlayTest.kt`)*:
+  • Using Robolectric Compose `createComposeRule()` with ZERO `app/src/main/` file reads (`REQ-PRO-049.1`), verify `CONNECTED` + clear road (`targets.isEmpty()`, `ThreatLevel.NONE`, both unsnoozed and `audioSnoozeState.isSnoozed == true`) renders ZERO `RadarStatusBadge` (`assertDoesNotExist()`) across `RadarEdgeSide.LEFT`, `RadarEdgeSide.RIGHT`, and `RadarEdgeSide.FULL_SCREEN` (covering Start tab `page == 0` and live tracking tabs `page > 0`).
+  • Verify in `LEFT`/`RIGHT` clear-road mode (`SLIM_RAIL`) that guarding the top `8.dp` + `6.dp` `Spacer`s on badge visibility aligns `RadarVerticalRail` at `y = 0` without a `14.dp` downward shift.
+  • Verify `FULL_SCREEN` clear mode renders neither background track rail nor `RadarStatusBadge` (zero touch-intercepting nodes), and `AUTO_HIDE_3S` fades out the vertical rail after 3s with zero clear-state badge rendered and zero ghost click traps.
   5. *TuningPreferencesDataStore Edge Side, Clear Mode & Accordion Subtitle Tests (`TST-TRK-062.5`, `TuningPreferencesDataStoreTest.kt`, `RadarAccordionSectionTest.kt`, `RadarSettingsSectionTest.kt`)*:
   • Verify default values (`RIGHT`, `SLIM_RAIL`) and persistence of custom 3-way `RadarEdgeSide` (`LEFT`, `FULL_SCREEN`, `RIGHT`) with backward-compatible decode.
   • Verify settings UI displays 3-way segmented button (`Links | Vollbild | Rechts`) and conditionally hides `RadarClearMode` selector when `FULL_SCREEN` is active.
   • Verify `AdvancedTuningAccordion.formatCyclingRadarSubtitle` formats `RadarEdgeSide.FULL_SCREEN` correctly.
-  6. *9-Language Localization Parity & Vector Icon Parity Test (`TST-TRK-062.6`, `TranslationParityTest.kt`)*:
-  • Verify 100% key and format parity across `strings_radar.xml` in all 9 supported locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`) for all overlay strings (`radar_overlay_*`, including `radar_overlay_mode_fullscreen`).
+  6. *9-Language Localization Parity & Unused Resource Cleanup Test (`TST-TRK-062.6`, `TranslationParityTest.kt`)*:
+  • Verify 100% key and format parity across `strings_radar.xml` in all 9 supported locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`) for all active overlay strings (`radar_overlay_*`, including `radar_overlay_mode_fullscreen`, `radar_overlay_threats*`, `radar_overlay_disconnected`) after cleanly removing orphaned `radar_overlay_clear` and `radar_overlay_connecting` across all 9 locales and orphaned `ic_device_available.xml` (`:app:lintDebug` `UnusedResources` compliance).
   7. *Clean-Room Targeted Test Suite Execution (`TST-TRK-062.7`)*:
-  • Execute targeted package tests (`com.atrainingtracker.trainingtracker.ui.tracking.radar.*`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
+  • Execute targeted package tests (`com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarEdgeOverlayTest`, `com.atrainingtracker.trainingtracker.localization.TranslationParityTest`, `com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.*`) asserting 100% pass rate.
   8. *Cockpit Overlay Search Suppression & Reconnect Error Retention Tests (`TST-TRK-062.8`, `TrackingTabsScreenTest.kt`, `BTLERadarDeviceTest.kt`)*:
   • Verify `TrackingTabsScreen` suppresses `RadarEdgeOverlay` when `radarState.connectionState == RadarConnectionState.CONNECTING` or initial `DISCONNECTED`, and displays it strictly when `CONNECTED`, `DISCONNECTED_ERROR`, or `isSimulating`.
   • Verify `BTLERadarDevice.startSearching()` preserves `DISCONNECTED_ERROR` when already in error state during reconnect attempts.
+  9. *Visual Self-Inspection `@Preview` Screenshot (`TST-TRK-062.9`, `Rule 8.5`)*:
+  • Capture Light/Dark `@Preview` screenshot PNG at `docs/engineering/walkthroughs/img/ATT-8679_radar_edge_overlay_preview.png` covering `ClearLight` (zero green badge), `ApproachingDark`, `FastThreatAmoled`, and `Disconnected` states, and inspect via `read_file` by both `agent1` and `agent2`.
 
 ### TST-TRK-063: **Radar Audio Chime and Haptic Alert Engine Test Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-063` (`REQ-TRK-063.1`..`REQ-TRK-063.7`)
@@ -2435,36 +2438,35 @@
      • Given `setManualLightMode()` or `cycleNextMode()` followed by incoming telemetry updates,
      • Assert `RadarLightController.isAutoMode.value == false`, `RadarStateRepository.getState().isAutoMode == false`, and `SmartRadarLightEngine` automation remains suspended until `setAutoMode()` restores `true`.
 
-### TST-CON-047: **Compact Quick-Switch Sheet, Button-Matching Icons & Ascending Mode Order Test Suite** [Verified]
+### TST-CON-047: **Compact Quick-Switch Sheet & Shared RadarLightModeGrid Parity, Button-Matching Icons & Ascending Mode Order Test Suite** [Verified]
 - **Target Release**: `V5.0.0`
 - **Requirement(s)**: `REQ-CON-047` (`REQ-CON-047.1`..`REQ-CON-047.4`), `REQ-CON-031` (`REQ-CON-031.3`, `REQ-CON-031.8`)
-- **Component**: `RadarLightQuickSwitchSheet.kt`, `RadarLightButton.kt`, `RadarLightMode.kt`, `RadarLightController.kt`, `EditDeviceDialog.kt`
-- **Jira**: `ATT-8456`
+- **Component**: `RadarLightModeGrid.kt`, `RadarLightQuickSwitchSheet.kt`, `RadarLightButton.kt`, `RadarLightMode.kt`, `RadarLightController.kt`, `EditDeviceDialog.kt`, `RadarLightQuickSwitchSheetTest.kt`, `EditDeviceDialogRadarLightTest.kt`, `RadarLightButtonContractTest.kt`, `ArchitectureConformanceContractTest.kt`, `InterfaceSignatureDriftContractTest.kt`, `DeadCodeEliminationContractTest.kt`
+- **Jira**: `ATT-8456`, `ATT-8678`
 - **Test Type**: Unit & UI (Compose/Robolectric + Emulator Visual)
 - **Verification Method**: Unit
 - **Procedure**:
-  1. *Compact Quick-Switch Sheet & Semantic Icon Parity (`TST-CON-047.1`, `RadarLightQuickSwitchSheetTest.kt`)*:
-     • Given `RadarLightQuickSwitchSheetContent` rendered in Robolectric (`isLightControlSupported = true`, `isStvzo = false`, and constrained smartphone height),
-     • Assert `RadarLightMode_AUTO`, all 5 `RadarLightMode_*` tags, and all 4 `RadarSnooze_*` tags are displayed without clipping, and light mode items render semantic vector icons matching `resolveLightVisuals` in `RadarLightButton.kt`.
-  2. *Unified Ascending Mode Order Across `RadarLightMode`, `cycleNextMode()`, Sheet & Dialog (`TST-CON-047.2`, `RadarLightControllerTest.kt`, `RadarLightQuickSwitchSheetTest.kt`)*:
-     • Assert `RadarLightMode.getAvailableModes(false)` returns `[OFF, PELOTON, SOLID, NIGHT_FLASH, DAY_FLASH]` and `getAvailableModes(true)` returns `[OFF, SOLID]`.
-     • Assert `RadarLightController.cycleNextMode()` steps through `AUTO -> OFF -> PELOTON -> SOLID -> NIGHT_FLASH -> DAY_FLASH -> AUTO` (non-StVZO) and `AUTO -> OFF -> SOLID -> AUTO` (StVZO), and `RadarLightQuickSwitchSheet` / `EditDeviceDialog` consume the identical sequence.
-  3. *9-Locale String Resource & Zero-Hardcoded-String Verification (`TST-CON-047.3`, `RadarLightQuickSwitchSheetTest.kt`, `TranslationParityTest.kt`)*:
-     • Verify all labels in `RadarLightQuickSwitchSheet.kt` use existing `strings_radar.xml` resources with zero hardcoded display text and 100% 9-locale parity.
-  4. *Light & Dark Theme Visual Inspection (`TST-CON-047.4`, Stage 5 Emulator / Preview)*:
-     • Capture Light and Dark screenshots of `RadarLightQuickSwitchSheet` on emulator / Compose preview and verify zero clipping, crisp vector icon contrast, and balanced compact spacing.
+  1. *Shared `RadarLightModeGrid` & Row-Major 2-Column Compose UI Parity (`TST-CON-047.1`, `RadarLightQuickSwitchSheetTest.kt`, `EditDeviceDialogRadarLightTest.kt`)*:
+     • Given `RadarLightQuickSwitchSheetContent` and `RadarLightControlSectionContent` rendered in Robolectric `createComposeRule()` across Light/Dark themes, StVZO/non-StVZO, and online/offline states (with `0` new `src/main` reads per `REQ-PRO-049.1`),
+     • Assert both surfaces render the identical 2-column row-major `RadarLightModeGrid` (`[AUTO, OFF]`, `[PELOTON, SOLID]`, `[NIGHT_FLASH, DAY_FLASH]` when non-StVZO; `RadarLightStvzoNotice` + full-width `AUTO` row 1 + `[OFF, SOLID]` row 2 when StVZO), `showActiveModeSubtitle = true` vs `!isOffline` active-mode subtitle gating, `RadarLightMode_AUTO`/`RadarLightMode_<MODE>` tags, semantic `resolveLightVisuals` vector icons, and zero vertical clipping in `RadarLightQuickSwitchSheetContent`.
+  2. *Unified Ascending Mode Order & Architectural Contract Guards (`TST-CON-047.2`, `RadarLightControllerTest.kt`, `RadarLightQuickSwitchSheetTest.kt`, `RadarLightButtonContractTest.kt`, `ArchitectureConformanceContractTest.kt`, `InterfaceSignatureDriftContractTest.kt`, `DeadCodeEliminationContractTest.kt`)*:
+     • Assert `RadarLightMode.getAvailableModes(false)` returns `[OFF, PELOTON, SOLID, NIGHT_FLASH, DAY_FLASH]`, `getAvailableModes(true)` returns `[OFF, SOLID]`, `RadarLightController.cycleNextMode()` steps identically, `RadarLightQuickSwitchSheet*` and `RadarLightButton` (`resolveLightVisuals`) reflection/IF-SWE signatures remain intact, `ArchitectureConformanceContractTest` and `InterfaceSignatureDriftContractTest` pass, and `DeadCodeEliminationContractTest` reports `0` new violations (`RadarLightModeGrid.kt` uses `private` previews; `4/5 PASS` with `1` pre-existing unrelated `ATT-8823` failure in `EditDeviceDialog.kt`).
+  3. *Localization Preservation (`TST-CON-047.3`)*:
+     • Confirm `Localization Parity: N/A - no UI strings` (`strings_radar.xml` unchanged; all UI labels reuse existing 9-locale string resources with zero hardcoded literals).
+  4. *`Rule 8.5` Light & Dark Theme Visual Inspection (`TST-CON-047.4`)*:
+     • Capture Light/Dark `@Preview` comparison PNG `docs/engineering/walkthroughs/img/ATT-8678_radar_light_grid_preview.png` covering `RadarLightQuickSwitchSheetContent` & `RadarLightControlSectionContent` (StVZO/non-StVZO, online/offline) and verify via `read_file` (zero clipping, crisp `resolveLightVisuals` icon contrast, balanced compact spacing).
 
 ### TST-TRK-064: **1-Tap Radar Audio Snooze, Peloton Sync & Urban Suppression Test Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-064` (`REQ-TRK-064.1`..`REQ-TRK-064.7`)
 - **Component**: `RadarSnoozeController.kt`, `RadarAlertManager.kt`, `RadarEdgeOverlay.kt`, `RadarLightQuickSwitchSheet.kt`, `RadarState.kt`, `RadarStateRepository.kt`, `BTLERadarDevice.java`, `TuningPreferencesDataStore.kt`, `RadarSettingsSection.kt`, `strings_radar.xml`
-- **Jira**: `ATT-5119`, `ATT-6708`
+- **Jira**: `ATT-5119`, `ATT-6708`, `ATT-8679`
 - **Test Description**:
   1. *Lifecycle-Decoupled Audio Snooze & Resilient Reconnect Tests (`TST-TRK-064.1`, `RadarSnoozeControllerTest.kt`, `RadarAlertManagerTest.kt`)*:
   • Verify audio snooze triggers (15m, 30m, Fast Only, Rest of Ride), countdown decrementing, automatic restoration upon timer expiry, and manual resume across READY, PAUSED, and TRACKING modes.
   • Verify snooze state is preserved across transient BLE drops (`disconnectFromGatt`) and reset cleanly upon explicit workout finish.
   • Verify monotonic time source resilience for snooze duration and expiration against wall-clock jumps (`ATT-7580`).
   2. *Muted Badge Countdown Indicator, Muted-Bell Icon & Approaching Vehicle Count Tests (`TST-TRK-064.2`, `RadarEdgeOverlayTest.kt`)*:
-  • Verify top badge pill displays muted-bell vector icon and localized countdown indicator alongside (never replacing) approaching vehicle count (`targets.size`).
+  • Verify top `RadarStatusBadgePill` displays muted-bell vector icon and localized countdown indicator alongside (never replacing) approaching vehicle count (`targets.size`) during active threats, while clear-state (`snoozeState.isSnoozed && isClear`) renders zero green badge per `TST-TRK-062.4`.
   • Verify all threat badge accessibility descriptions format cleanly using localized string resources.
   3. *Acoustic Chime Gating, Haptics Preservation & Manual Resume Override Tests (`TST-TRK-064.3`, `RadarAlertManagerTest.kt`)*:
   • Verify `vibrate()` fires on threat transitions even when audio snooze, Peloton sync, or Urban mute is active.
@@ -2732,7 +2734,7 @@
 
 
 ### TST-TRK-075: **Core Tracking Pipeline Integration Verification Suite** [Verified]
-- **Requirement(s)**: `REQ-TRK-075` (`REQ-TRK-075.1`..`REQ-TRK-075.5`)
+- **Requirement(s)**: `REQ-TRK-075` (`REQ-TRK-075.1`..`REQ-TRK-075.5`), `REQ-TRK-001`
 - **Component**: `TrackerService.java`, `WorkoutRepository.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/integration/TrackerServiceIntegrationTest.kt`
 - **Jira**: `ATT-6185`
 - **Test Description**:
@@ -3245,24 +3247,23 @@
   4. *Tier 1 Targeted Regression Execution (`TST-FIL-023.4`)*:
      • Execute `./gradlew :app:testDebugUnitTest --tests "com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFusedTest" --tests "com.atrainingtracker.banalservice.odometry.UnicycleOdometryEkfTest" --tests "com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest" --tests "com.atrainingtracker.banalservice.odometry.KinematicAltitudeSlopeEkfTest" --tests "com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceStationaryJitterTest" --tests "com.atrainingtracker.banalservice.odometry.OdometrySimulationTest"` asserting 100% pass rate with zero `src/main` source-reading calls (`REQ-PRO-049.1`; `Localization parity: N/A - no UI strings`).
 
-### TST-CON-048: **Offline EditDeviceDialog Radar Tail Light Config, Hydration & StVZO Verification Suite** [Verified]
+### TST-CON-048: **Offline & Unified EditDeviceDialog Radar Tail Light Grid, Hydration, Wiring & StVZO Verification Suite** [Verified]
 - **Target Release**: `V5.0.0`
-- **Tickets**: `ATT-8450`
-- **Requirement(s)**: `REQ-CON-048` (`REQ-CON-048.1`..`REQ-CON-048.4`)
-- **Component**: `EditDeviceDialog.kt`, `RadarLightController.kt`, `strings_radar.xml`, `RadarLightControllerTest.kt`, `EditDeviceDialogRadarLightTest.kt`, `TranslationParityTest.kt`
+- **Tickets**: `ATT-8450`, `ATT-8678`
+- **Requirement(s)**: `REQ-CON-048` (`REQ-CON-048.1`..`REQ-CON-048.4`), `REQ-CON-047` (`REQ-CON-047.2`, `REQ-CON-047.3`)
+- **Component**: `EditDeviceDialog.kt`, `RadarLightModeGrid.kt`, `RadarLightController.kt`, `strings_radar.xml`, `RadarLightControllerTest.kt`, `EditDeviceDialogRadarLightTest.kt`, `RadarLightQuickSwitchSheetTest.kt`, `EditDeviceViewModelTest.kt`, `ArchitectureConformanceContractTest.kt`, `InterfaceSignatureDriftContractTest.kt`, `DeadCodeEliminationContractTest.kt`
 - **Test Type**: Unit
 - **Verification Method**: Unit
 - **Procedure**:
-  1. *Offline Visibility, Radar-Only Exclusion & Apply-on-Connect Hint Tests (`TST-CON-048.1`, `EditDeviceDialogRadarLightTest.kt`)*:
-     • Render `EditDeviceDialog` / `RadarLightControlSection` via Robolectric `createComposeRule()` for `DeviceType.BIKE_RADAR` (`RearVue8`) with `isConnected = false`, `isSimulating = false`, `isStvzo = false`; assert `Automatik` and all 5 ascending modes (`OFF`, `PELOTON`, `SOLID`, `NIGHT_FLASH`, `DAY_FLASH`) plus the localized offline hint are displayed, and zero StVZO notice is shown.
-     • Assert section is hidden when `deviceName` identifies `RVR315` offline and when `isConnected = true`, `isLightControlAvailable = false`, `isSimulating = false`.
-  2. *Offline Mode Persistence, Cold-Start Hydration & StVZO Disconnect Reset Tests (`TST-CON-048.2`, `RadarLightControllerTest.kt`)*:
-     • Verify offline `setManualLightMode(SOLID)` / `setAutoMode()` updates effective UI selection (`preferredMode` / `isAutoMode`) and persists to `TuningPreferencesDataStore` without highlighting `OFF`.
-     • Verify cold-start DataStore hydration restores persisted `isAutoMode` and `preferredMode` prior to any workout start, and verify `unregisterRadarDevice()` resets `_isStvzo` to `false`.
-  3. *Offline StVZO Multi-Mode, Light/Dark `@Preview` & `Rule 8.5` PNG Tests (`TST-CON-048.3`, `EditDeviceDialogRadarLightTest.kt`)*:
-     • Verify offline StVZO state (`isConnected = false`, `isStvzo = true`) renders `Automatik`, `OFF`, `SOLID` with StVZO notice while pruning flashing modes, and verify offline Multi-Mode rendering, Light/Dark `@Preview` composables, and `Rule 8.5` PNG capture inspection with zero `app/src/main` source reads (`REQ-PRO-049.1`).
-  4. *9-Language Localization Parity & Targeted Regression (`TST-CON-048.4`, `TranslationParityTest.kt`)*:
-     • Verify 100% key and format parity across all 9 `strings_radar.xml` locales (`values`, `de`, `es`, `fr`, `it`, `ja`, `nl`, `pl`, `pt`), and execute targeted Gradle unit and Compose UI tests asserting 100% pass rate.
+  1. *Behavioral `RadarLightModeGrid` Parity, Visibility, Row-Major Bounds & Direct Controller Wiring (`TST-CON-048.1`, `EditDeviceDialogRadarLightTest.kt`, `EditDeviceViewModelTest.kt`)*:
+     • Render `RadarLightControlSectionContent` via Robolectric `createComposeRule()` (`0` new `src/main` reads per `REQ-PRO-049.1`) across online/offline (`showActiveModeSubtitle = !isOffline`), StVZO/non-StVZO (`RadarLightStvzoNotice`), and Light/Dark themes.
+     • Assert row-major 2-column grid bounds (`[AUTO, OFF]`, `[PELOTON, SOLID]`, `[NIGHT_FLASH, DAY_FLASH]` non-StVZO; `AUTO` full-width row 1 + `[OFF, SOLID]` row 2 StVZO) replacing legacy vertical monotonicity, `RadarLightOfflineHint` visible only when `isOffline`, `radar_light_active_mode_format` hidden when `isOffline && isAutoMode` and shown when `!isOffline && isAutoMode`, `RVR315` & connected `!isLightControlAvailable` hidden, and direct `RadarLightController.setAutoMode()` / `setManualLightMode(mode)` wiring without mutating `EditDeviceViewModel` draft state.
+  2. *Offline Mode Persistence, Cold-Start Hydration, StVZO Reset & Workout Auto-Switch (`TST-CON-048.2`, `RadarLightControllerTest.kt`)*:
+     • Verify offline `setManualLightMode(SOLID)` / `setAutoMode()` updates effective UI selection (`preferredMode` / `isAutoMode`) and persists to `TuningPreferencesDataStore` without highlighting `OFF`, cold-start DataStore hydration restores persisted state, `unregisterRadarDevice()` resets `_isStvzo` to `false`, and Workout Auto-Switch lifecycle transitions remain intact.
+  3. *Contract Guards, Light/Dark `@Preview` Hygiene & `Rule 8.5` PNG Inspection (`TST-CON-048.3`, `EditDeviceDialogRadarLightTest.kt`, `ArchitectureConformanceContractTest.kt`, `InterfaceSignatureDriftContractTest.kt`, `DeadCodeEliminationContractTest.kt`)*:
+     • Verify `ArchitectureConformanceContractTest` and `InterfaceSignatureDriftContractTest` pass, and `DeadCodeEliminationContractTest` reports `0` new violations (`RadarLightModeGrid.kt` uses `private` previews; `4/5 PASS` with `1` pre-existing unrelated `ATT-8823` failure in `EditDeviceDialog.kt`) alongside Light/Dark/StVZO/online/offline Robolectric tests and **`Rule 8.5` Light/Dark `@Preview` PNG `docs/engineering/walkthroughs/img/ATT-8678_radar_light_grid_preview.png`** inspection via `read_file`.
+  4. *Localization Parity & Targeted Regression (`TST-CON-048.4`)*:
+     • Confirm `Localization Parity: N/A - no UI strings` (`strings_radar.xml` untouched; existing 9-locale parity preserved), and execute targeted Gradle unit and Robolectric Compose UI tests asserting 100% pass rate.
 
 ### TST-FIL-024: **VerticalSpeedAndSlopeDevice Baro Source Guard, Accumulator Reset & Same-Device Step Re-Seeding Suite** [Verified]
 - **Target Release**: `V5.0.0`
@@ -3367,6 +3368,117 @@
      • Capture Light/Dark screenshot PNG at `docs/engineering/walkthroughs/img/ATT-8105_hrv_slider_zones.png` and inspect via `read_file` against the 4-point `Rule 8.5` checklist.
 
 
+
+### TST-CON-049: **Hardware-Grounded Polar Detection (PMD/PFTP UUIDs & DIS 0x2A24/0x2A25) and Pre-Connect Alias Seeding Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Tickets**: `ATT-8717`
+- **Requirement(s)**: `REQ-CON-049` (`REQ-CON-049.1`..`REQ-CON-049.5`), `REQ-SET-104.3`, `REQ-SET-108.1`, `REQ-SET-112.1`, `REQ-SET-112.2`, `REQ-SET-118.2`
+- **Component**: `app/src/test/java/com/atrainingtracker/banalservice/devices/bluetooth_le/polar/PolarOfflineGattCoordinatorCoexistenceTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/devices/bluetooth_le/polar/PolarOnlineStreamingBridgeTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/devices/bluetooth_le/polar/PolarH10OfflineControllerTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/devices/bluetooth_le/polar/PolarVeritySenseOfflineControllerTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/devices/bluetooth_le/search_new/BTSearchForNewDevicesEngineTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/devices/bluetooth_le/BTLEHeartRateDeviceTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/ui/devices/editdevice/EditDevicePolarBackupTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/ui/devices/editdevice/EditDevicePolarLiveImuTest.kt`
+- **Test Type**: Unit
+- **Verification Method**: Unit
+- **Procedure**:
+  1. *Capability Store, Service UUID Separation & Precedence Test (`TST-CON-049.1`, `PolarOfflineGattCoordinatorCoexistenceTest.kt`)*:
+     • Verify `PolarOfflineCapabilityStore` persists `hasPmdService`, `hasPftpService`, `modelNumber` (`0x2A24`), `polarDeviceId` (`0x2A25` / `PolarDeviceInfo.deviceId`), and derived `PolarDeviceType` (`H10`, `VERITY_SENSE`, `UNKNOWN`) per normalized MAC independently of legacy `offline_rec_`.
+     • Assert renamed Polar H10 (`"Chest Strap"`) with both PMD+PFTP UUIDs and `modelNumber="H10"` classifies as H10 (never Verity Sense), while `PolarDeviceType == UNKNOWN` preserves legacy un-reconnected fallback until hardware metadata is persisted.
+  2. *Pairing & Standard HRM Reconnect DIS + UUID Hydration Test (`TST-CON-049.2`, `BTSearchForNewDevicesEngineTest.kt` & `BTLEHeartRateDeviceTest.kt`)*:
+     • Mock `BluetoothGatt` with `UUID_SERVICE_DEVICE_INFORMATION` (`0x2A24`, `0x2A25`), `UUID_SERVICE_POLAR_PMD`, and `UUID_SERVICE_POLAR_PFTP` during pairing and `BTLEHeartRateDevice` / `MyBTLEDevice` reconnect; assert DIS characteristics are read and persisted alongside service UUIDs into `PolarOfflineCapabilityStore` without blocking non-Polar HRMs.
+  3. *SDK Bridge DIS Hydration, Pre-Connect Alias Seeding & `RR_PRIORITY_PPG` Parity Test (`TST-CON-049.3`, `PolarOnlineStreamingBridgeTest.kt`)*:
+     • Trigger `sdkCallback.disInformationReceived` (`UUID`/`String` and `DisInfo`) and `bleSdkFeatureReady` (`FEATURE_POLAR_H10_EXERCISE_RECORDING` / `FEATURE_POLAR_OFFLINE_RECORDING`); assert store hydration, canonical `polarId` from `0x2A25`, `registerDeviceAliases(polarDeviceId, mac)` registered BEFORE `deviceConnected`, and renamed Verity Sense `isVeritySense == true` (`RR_PRIORITY_PPG`).
+  4. *Renamed-Sensor Controller, `syncPendingWorkout`, Repository & EditDevice Verification (`TST-CON-049.4`, Offline Mocked `Rule 5` & `REQ-PRO-049.1`)*:
+     • Verify renamed H10 (`"Chest Strap"`) and renamed Verity Sense/OH1 (`"Armband"`) route deterministically across `PolarH10OfflineController` (incl. `syncPendingWorkout`), `PolarVeritySenseOfflineController`, `DeviceDataRepository.isPolarLiveImuBridgeEligible`, `EditDevicePolarBackupTest`, and `EditDevicePolarLiveImuTest` with `0` `src/main` source reads (`REQ-PRO-049.1`; `Localization parity: N/A - no UI strings`).
+
+### TST-CON-050: **Live Polar-IMU Toggle Handoff, Shared-Session Recovery & Continuous HR/Raw-Telemetry Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Tickets**: `ATT-8714`
+- **Requirement(s)**: `REQ-CON-050` (`REQ-CON-050.1`..`REQ-CON-050.5`), `REQ-SET-112.1`, `REQ-SET-112.2`, `REQ-CON-045.2`, `REQ-CON-049.4`
+- **Component**: `app/src/test/java/com/atrainingtracker/banalservice/ui/devices/editdevice/EditDevicePolarLiveImuTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/devices/DeviceManagerTeardownTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/devices/bluetooth_le/polar/PolarOnlineStreamingBridgeTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/devices/bluetooth_le/polar/PolarRawTelemetryRecorderTest.kt`
+- **Test Type**: Unit
+- **Verification Method**: Unit
+- **Procedure**:
+  1. *Live `polarLiveImuEnabled` Broadcast & Ordered GATT Handoff Test (`TST-CON-050.1`, `EditDevicePolarLiveImuTest.kt`, `DeviceManagerTeardownTest.kt`)*:
+     • Update `polarLiveImuEnabled` (`false -> true` and `true -> false`) via `DeviceDataRepository.updateDevice()` during both idle and active workout states; assert the Live-IMU change broadcast fires with `deviceId` and new boolean flag (while non-IMU edits do not fire it).
+     • Verify `DeviceManager` detaches old `RrBeatSource`, completes `MyBTLEDevice` GATT close (or `PolarOnlineStreamingBridge.shutDown()`) strictly before activating the replacement Polar device, preserves `ProxySensor` / `RrBeatSource` continuity, and preserves `< API 33` `BTLEHeartRateDevice` fallback.
+  2. *Shared `PolarBleApi` `SESSION_OPEN` & Already-Ready Feature Recovery Test (`TST-CON-050.2`, `PolarOnlineStreamingBridgeTest.kt`)*:
+     • Mock `PolarBleApi` where `connectToDevice()` attaches to an already-open session (`isFeatureReady` returning `true` for `FEATURE_HR` and `FEATURE_POLAR_ONLINE_STREAMING` without re-emitting `deviceConnected`/`bleSdkFeatureReady`); assert `isConnectedFlag`, `registerSensors()`, `activeBridges`, `PolarRawTelemetryRecorder` attachment, HR streaming, and ACC/GYRO streaming activate cleanly.
+  3. *Consistent `polarBleSessionId` & Disconnect Job Hygiene Test (`TST-CON-050.3`, `PolarOnlineStreamingBridgeTest.kt`)*:
+     • Connect by `macAddress` (empty `POLAR_DEVICE_ID` initially), then emit `deviceConnected` carrying an 8-hex `deviceId`; assert `startHrStreaming`, `requestStreamSettings`, `startAccStreaming`, and `startGyroStreaming` continue using the exact `polarBleSessionId` opened with `connectToDevice` (never breaking on mid-session MAC-to-8-hex flip).
+     • Emit `deviceDisconnected` and assert `hrJob`, `accJob`, and `gyroJob` are cancelled and streaming flags reset before reconnect.
+  4. *Continuous HR/RR Delivery, `PolarRawTelemetryRecorder` Capture & Hardware Boundary (`TST-CON-050.4`, `PolarRawTelemetryRecorderTest.kt`, `Rule 7.6`)*:
+     • Verify active `PolarRawTelemetryRecorder` attaches on bridge readiness during a workout and persists non-zero `.polar_raw.csv.gz` frames (`rowCount > 0`) to `files/raw_sensor/` across Live-IMU enable handoff (`N/A - no UI strings`, `0` `src/main` reads per `REQ-PRO-049.1`).
+     • Physical Pixel 10 + Polar Verity Sense / H10 live BLE verification is explicitly deferred to optional PO-executed hardware testing per `Rule 7.6` (never synthesized in Phase 2).
+
+
+### TST-TRK-087: **ZonesSettingsActivity HRV Tab Gauge Toggle Removal & Behavioral Compose Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Tickets**: `ATT-8712`
+- **Requirement(s)**: `REQ-TRK-087` (`REQ-TRK-087.1`, `REQ-TRK-087.2`), `REQ-TRK-061.4`, `REQ-TRK-046.4`, `REQ-UI-2783.3`
+- **Component**: `HrvDfaA1RangeSliderGestureTest.kt`, `HrvDfaA1SettingsContractTest.kt`, `EditSensorFieldZoneDisplayTest.kt`, `TrackingTabConfigZoneDisplayTest.kt`
+- **Test Type**: Unit
+- **Verification Method**: Unit
+- **Procedure**:
+  1. *Behavioral Compose UI Verification (`TST-TRK-087.1`, `createComposeRule()`, zero `src/main` reads per `REQ-PRO-049.1`)*:
+     • Render `HrvDfaA1SettingsContent` (and/or `ZoneSettingsScreen` on `page == 3`) via Robolectric Compose `createComposeRule()` with `displayOptions = ZoneDisplayOptions(showGauge = false)`.
+     • Assert `R.string.zone_display_title` and the 4 `ZoneDisplayOptionsToggleList` labels (`zone_display_background`, `zone_display_left_bar`, `zone_display_right_bar`, `zone_display_text_color`) are displayed, `R.string.zone_display_gauge` (*Zonen-Balken*) does NOT exist (`assertDoesNotExist()`), and the live `SensorFieldView` preview renders the active 3-segment gauge bar (`showBar = true`) even when `displayOptions.showGauge == false`.
+     • Capture Light/Dark PNG screenshot via `captureToImage()` and inspect via `read_file` per `Rule 8.5`.
+  2. *Contract & Tile/Tab Config Regression (`TST-TRK-087.2`, `HrvDfaA1SettingsContractTest.kt`, `EditSensorFieldZoneDisplayTest.kt`, `TrackingTabConfigZoneDisplayTest.kt`)*:
+     • Update `HrvDfaA1SettingsContractTest.testHrvSettings_gaugeToggleAndPreviewBarContracts` to assert absence of `R.string.zone_display_gauge` / `displayOptions.showGauge` and `showBar = true` in `HrvDfaA1SettingsContent` (preserving `app/source-reading-baseline.txt` debt boundary).
+     • Execute `./gradlew :app:testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.zones.HrvDfaA1RangeSliderGestureTest" --tests "com.atrainingtracker.trainingtracker.zones.HrvDfaA1SettingsContractTest" --tests "com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.EditSensorFieldZoneDisplayTest" --tests "com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingTabConfigZoneDisplayTest"` asserting 100% pass (`Localization Parity: N/A - no UI strings added, modified, or removed; R.string.zone_display_gauge remains active in ZoneDisplayOptionsControls.kt:230 across all 9 locales`).
+
+### TST-TRK-088: **Radar Approach Speed Display Unit Mapping (`MyHelper.getUnitsId`/`getShortUnitsId`) & Contract Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Tickets**: `ATT-8676`
+- **Requirement(s)**: `REQ-TRK-088` (`REQ-TRK-088.1`..`REQ-TRK-088.3`)
+- **Component**: `MyHelperRadarUnitsTest.kt` (new), `SensorTypeUnitsContractTest.kt`, `SystemArchitectureDesignContractTest.kt`, `SourceTextReadingAuditContractTest.kt`, `RadarTrafficSummaryCardTest.kt`, caller unit tests (`WorkoutDataMapper`, `WorkoutRepository`, `TrackingViewModel`)
+- **Test Type**: Unit
+- **Verification Method**: Unit
+- **Procedure**:
+  1. *`MyHelper` Metric & Imperial Unit ID/String Resolution (`TST-TRK-088.1`, `MyHelperRadarUnitsTest.kt`)*:
+     • Under `MyUnits.METRIC` and `MyUnits.IMPERIAL`, assert `MyHelper.getUnitsId(SensorType.RADAR_APPROACH_SPEED_mps)` returns `R.string.units_speed_metric` (`"km/h"`) / `R.string.units_speed_imperial` (`"mile/h"`) matching `SPEED_mps` and never `R.string.units_speed_basic` (`"m/s"`).
+     • Under `MyUnits.METRIC` and `MyUnits.IMPERIAL`, assert `MyHelper.getShortUnitsId(SensorType.RADAR_APPROACH_SPEED_mps)` returns `R.string.units_speed_short_metric` (`"km/h"`) / `R.string.units_speed_short_imperial` (`"mi/h"`) matching `SPEED_mps` and never `R.string.units_speed_basic` (`"m/s"`).
+     • Verify preserved invariants: `SensorType.RADAR_APPROACH_SPEED_mps.internalUnit == "m/s"`, `getUnitId() == R.string.units_speed_basic`, and `RADAR_CLOSEST_DISTANCE_m` / `RADAR_PASSING_DISTANCE_m` still resolve to `R.string.units_distance_basic`.
+  2. *Caller Unit Integration (`TST-TRK-088.2`, `WorkoutDataMapper` / `WorkoutRepository` / `TrackingViewModel` & `RadarTrafficSummaryCardTest`)*:
+     • Verify caller unit resolution across `WorkoutDataMapper` (`getUnitsId`), `WorkoutRepository` (`getShortUnitsId` extrema marker path), `TrackingViewModel` (`getShortUnitsId` cockpit tile path), and `RadarTrafficSummaryCardTest` (`SpeedFormatter`) emits Metric `"km/h"` and Imperial `"mile/h"` (`"mi/h"` short), never `"m/s"`.
+  3. *Contract, Source-Read Hygiene & Governance Verification (`TST-TRK-088.3`)*:
+     • Execute `SensorTypeUnitsContractTest`, `SystemArchitectureDesignContractTest`, and `SourceTextReadingAuditContractTest` asserting `0` new `app/src/main/` reads (`REQ-PRO-049.1`), `"MyHelper.getUnitsId"` token preserved in `docs/architecture/sensor_units.md`, and `python3 tools/verify_requirement_governance.py --repo-root .` exits `0` (`verify_sensor_type_javadocs()` passing; `Localization Parity: N/A - no UI strings`).
+
+### TST-FIL-026: **5-Hz Jeans-Pocket Barometric Rate-Matching, Adaptive Jitter Variance & Real Climb Preservation Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Tickets**: `ATT-8881`
+- **Requirement(s)**: `REQ-FIL-026` (`REQ-FIL-026.1`..`REQ-FIL-026.3`)
+- **Component**: `app/src/test/java/com/atrainingtracker/banalservice/devices/AltitudeAndSlopeDevice_ATTFusedTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/devices/BarometricAltitudeFilterTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/odometry/KinematicAltitudeSlopeEkfTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SourceTextReadingAuditContractTest.kt`
+- **Test Type**: Unit
+- **Verification Method**: Unit
+- **Procedure**:
+  1. *5-Hz Jeans-Pocket Pedaling Oscillation & Synthetic `Zum Bäcker #57` Replay Test (`TST-FIL-026.1`, `AltitudeAndSlopeDevice_ATTFusedTest.kt`)*:
+     • Feed `5-Hz` (`200 ms` synthetic `timestampMs`) pressure readings with cyclic `±1.2 m` (`1.0–1.5 Hz`) pedaling compression oscillations and `±8 m` pocket pulses over `60 s` on flat `DEM = 438.0 m` (`speed = 6.0 m/s`), synchronized with `1-Hz` `calculateMetrics(nowMs)`.
+     • Assert barometric EKF ingestion is rate-matched to `1 Hz` (`~7 s` effective `BarometricAltitudeFilter` median span), flat-road `mSlopeSensor` / `ekf.slopePercent` stays within `±2%` (zero `±10–12%` swings), and `ASCENT` / `DESCENT` remain `0.0 m`.
+     • Replay a full `2 km` synthetic `Zum Bäcker #57` elevation profile (`435..446 m` envelope with `±1.2 m` pocket ripples and `±8 m` compression pulses) and assert total cumulative ascent and descent stay within `10–16 m` without `+26.89 m` inflation.
+  2. *Adaptive Cyclic Jitter Variance Scaling & 2-State `p00` Preservation Test (`TST-FIL-026.2`, `KinematicAltitudeSlopeEkfTest.kt`)*:
+     • Verify 2-state `p00 == DEFAULT_VAR_BARO` (`0.25`) remains intact (`testThreeStateRefBeforeBaro_andTwoStateGuard_preservesP00AndClearsFlags`).
+     • Inject cyclic sign-reversing `±1.2 m` barometric residual oscillations at `5–6 m/s` and assert effective `varBaro` scales upward adaptively to bound `|slopePercent| <= 2%`, while steady monotonic climbs (`+0.83..0.84 m/s`) avoid over-damping and converge accurately.
+  3. *First-Sample Immediate Init, `shutDown()` Aggregator Reset & Real Climb Preservation Test (`TST-FIL-026.3`, `AltitudeAndSlopeDevice_ATTFusedTest.kt`, `BarometricAltitudeFilterTest.kt`)*:
+     • Verify a single `handlePressureMeasurement(1013.25f, 1000L)` call immediately initializes `ekf.isInitialized == true` and populates `mAltitudeSensor`, `shutDown()` clears all sub-second aggregator state cleanly across restarts, and steady-climb / calibration / standstill / filter tests (`tstFil020_3`, `tstFil022_3`, `tstFil023_2`, `tstFil023_3`, `BarometricAltitudeFilterTest` with `medianWindowSize = 7` and `filterSlewOnly()`) continue passing.
+  4. *Tier-1 Targeted Regression & Source-Text Audit (`TST-FIL-026.4`, `SourceTextReadingAuditContractTest.kt`)*:
+     • Execute `./gradlew :app:testDebugUnitTest --tests "com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest" --tests "com.atrainingtracker.banalservice.devices.BarometricAltitudeFilterTest" --tests "com.atrainingtracker.banalservice.odometry.KinematicAltitudeSlopeEkfTest" --tests "com.atrainingtracker.trainingtracker.build.SourceTextReadingAuditContractTest"` asserting 100% pass rate with `0` new `src/main` source-text reads (`REQ-PRO-049.1`; `Localization parity: N/A - no UI strings`).
+
+### TST-TRK-089: **Full-Screen Radar Vehicle Markers, V2 Icons & Contrast Framing Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Tickets**: `ATT-8733`
+- **Requirement(s)**: `REQ-TRK-089` (`REQ-TRK-089.1`..`REQ-TRK-089.3`)
+- **Component**: `app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/radar/RadarEdgeOverlay.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/theme/Color.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/ui/tracking/radar/RadarEdgeOverlayTest.kt`, `ThemeColorCentralizationAuditTest.kt`, `DeadCodeEliminationContractTest.kt`, `SourceTextReadingAuditContractTest.kt`, `TranslationParityTest.kt`
+- **Test Type**: Unit
+- **Verification Method**: Unit
+- **Procedure**:
+  1. *Non-Clipping Content-Sized Markers & Edge Clamping (`TST-TRK-089.1`, `RadarEdgeOverlayTest.kt`, `createComposeRule()`)*:
+     • Render `RadarEdgeOverlay` in `RadarEdgeSide.FULL_SCREEN` with 2- and 3-digit targets (`15m`, `128m`, `160m`) placed at central and extreme lateral/vertical positions (`0.15f` / `0.85f` horizontal, `0.0f` / `1.0f` range).
+     • Assert each distance label (`15m`, `128m`, `160m`) is displayed unclipped (`getUnclippedBoundsInRoot()`), marker bounds remain strictly inside the `RadarEdgeOverlay` container bounds, and `TRUCK_OR_BUS` marker dimensions exceed `CAR` / `UNKNOWN_OR_LIGHT`.
+  2. *Distinct V2 Icons, 9-Locale Accessibility & Invariant Preservation (`TST-TRK-089.2`, `RadarEdgeOverlayTest.kt`, `TranslationParityTest.kt`)*:
+     • Render mixed V2 targets (`CAR`, `TRUCK_OR_BUS`, `UNKNOWN_OR_LIGHT`) in `FULL_SCREEN` mode; assert distinct localized accessibility descriptions using existing `radar_vehicle_size_car`, `radar_vehicle_size_truck`, and `radar_vehicle_size_light` (zero `"Target"` fallback) and `0` missing keys across all 9 `values*/strings_radar.xml` locales (`Localization Parity: PASS - 9/9 existing strings_radar.xml keys reused, zero new keys needed`).
+     • Assert full-screen markers/guides expose zero clickable/pointer actions (`assertHasNoClickAction()`), `RadarStatusBadgePill` remains absent when road is clear (`ATT-8679`), `FAST_APPROACHING` pulse activates only for `ThreatLevel.FAST_APPROACHING`, and `LEFT`/`RIGHT` `RadarVerticalRail` bounds/sizes remain unchanged (`REQ-TRK-073.2`).
+  3. *Contract Hygiene & Rule 8.5 Visual Inspection (`TST-TRK-089.3`, `ThemeColorCentralizationAuditTest`, `DeadCodeEliminationContractTest`, `SourceTextReadingAuditContractTest`, `Rule 8.5`)*:
+     • Execute `RadarEdgeOverlayTest`, `ThemeColorCentralizationAuditTest` (zero inline `Color(0x...)` in composables), `DeadCodeEliminationContractTest` (all `@Preview` functions `private`), `SourceTextReadingAuditContractTest` (`0` `src/main` file reads in `RadarEdgeOverlayTest.kt`), `TranslationParityTest`, and `:app:lintDebug`.
+     • Capture Light/Dark/Map-style `@Preview` PNG screenshot at `docs/engineering/walkthroughs/img/ATT-8733_radar_fullscreen_markers_preview.png` in Stage 5 and inspect via `read_file` against `Rule 8.5`.
+
 ---
 
 ## Change History
@@ -3387,3 +3499,19 @@
 | `1.0.11` | 2026-11-18 | AI Agent (`ATT-8706`) | `ATT-8706` | Added and verified `TST-TRK-085` [Verified] for RR source isolation, monotonic clamping, physiological gap flagging, pre-filter sort, and DFA α1 validity gate (502/502 tests across 88 suites). |
 | `1.0.17` | 2026-11-18 | AI Agent (`ATT-8706`) | `ATT-8706` | Promoted `TST-TRK-085` to `[Verified]` in Stage 5 following Bounce 3/3 heal verification (`449/449` tests across `83` suites). |
 | `1.0.18` | 2026-11-18 | AI Agent (`ATT-8105`) | `ATT-8105` | Added and verified `TST-TRK-086` [Verified] (`HrvDfaA1RangeSliderGestureTest.kt` Robolectric `createComposeRule()` gesture isolation `5/5`, `Rule 8.5` Light/Dark PNG audit, and Tier-1 regression `31/31` across 7 suites). |
+| `1.0.19` | 2026-11-18 | AI Agent (`ATT-8717`) | `ATT-8717` | Added and verified `TST-CON-049` [Verified] across 34 unit/Robolectric suites (166/166 PASS) including CardioSense DIS rejection, pre-CCCD DIS read order, 8-hex ID preservation, and IMU stream rejection. |
+| `1.0.20` | 2026-11-18 | AI Agent (`ATT-8717` / `ATT-8712`) | `ATT-8717`, `ATT-8712` | Added `TST-CON-049` [Verified] and `TST-TRK-087` [Verified] cleanly post-`ATT-8206` rebase. |
+| `1.0.25` | 2026-11-18 | AI Agent (`ATT-8714`) | `ATT-8714` | Added and verified `TST-CON-050` [Verified] post-Bounce 1/3 heal (`064edfd3`, `23` suites, `154/154` PASS incl. `SourceTextReadingAuditContractTest` 4/4 & `DetailedDesignParityContractTest` 3/3; `Rule 7.6` offline boundary). |
+| `1.0.26` | 2026-11-18 | AI Agent (`ATT-8679`) | `ATT-8679` | Updated `TST-TRK-062` [Planned] (`createComposeRule()` clear-badge suppression + `14.dp` rail spacer guard with zero `src/main` reads per `REQ-PRO-049.1`, `TranslationParityTest` for 9-locale `radar_overlay_clear` cleanup, and `Rule 8.5` PNG preview) and reconciled `TST-TRK-064` [Planned]. |
+| `1.0.27` | 2026-11-18 | AI Agent (`ATT-8679`) | `ATT-8679` | Promoted `TST-TRK-062` & `TST-TRK-064` to `[Implemented]` following `RadarEdgeOverlayTest` (`30/30`), 10-suite verification (`126/126`), `:app:lintDebug` (`0` errors), and `Rule 8.5` PNG capture. |
+| `1.0.28` | 2026-11-18 | AI Agent (`ATT-8679`) | `ATT-8679` | Promoted `TST-TRK-062` & `TST-TRK-064` to `[Verified]` in Stage 5 following governance checks, `has_verified_test_evidence` verification, and `Rule 8.5` PNG audit. |
+| `1.0.29` | 2026-11-18 | AI Agent (`ATT-8678`) | `ATT-8678` | Refined `TST-CON-047` & `TST-CON-048` to `[Planned]` mandating behavioral Robolectric Compose UI parity tests across `RadarLightQuickSwitchSheetTest` & `EditDeviceDialogRadarLightTest` (row-major 2-col grid, Light/Dark, StVZO/non-StVZO, online/offline `showActiveModeSubtitle`, `0` new `src/main` reads), contract guards (`ArchitectureConformanceContractTest`, `InterfaceSignatureDriftContractTest`, `DeadCodeEliminationContractTest` noting `ATT-8823`), and `Rule 8.5` PNG `docs/engineering/walkthroughs/img/ATT-8678_radar_light_grid_preview.png`. |
+| `1.0.30` | 2026-11-18 | AI Agent (`ATT-8678`) | `ATT-8678` | Promoted `TST-CON-047` & `TST-CON-048` to `[Implemented]` following `RadarLightModeGridTest` (`3/3`), `EditDeviceDialogRadarLightTest` (`5/5`), `RadarLightQuickSwitchSheetTest` (`9/9`), and `14`-suite Stage 4 run (`109/109` PASS) + `Rule 8.5` PNG inspection. |
+| `1.0.31` | 2026-11-18 | AI Agent (`ATT-8678`) | `ATT-8678` | Promoted `TST-CON-047` & `TST-CON-048` to `[Verified]` in Stage 5 following governance checks (`--sync-indexes`), `has_verified_test_evidence` verification, and `Rule 8.5` PNG audit. |
+| `1.0.32` | 2026-11-18 | AI Agent (`ATT-8678`) | `ATT-8678` | Stage 4 Bounce 1/3 heal: clarified `DeadCodeEliminationContractTest` (`0` new violations; `4/5 PASS` with `1` pre-existing unrelated `ATT-8823` failure in `EditDeviceDialog.kt:1435..1501`) and set `TST-CON-047` & `TST-CON-048` -> `[Implemented]` pending Stage 5 re-verification. |
+| `1.0.33` | 2026-11-18 | AI Agent (`ATT-8678`) | `ATT-8678` | Promoted `TST-CON-047` & `TST-CON-048` to `[Verified]` in Stage 5 (Bounce 1/3) backed by `14` JUnit XMLs (`109/109 PASS`) on `66f707f9`, governance checks (`exit 0`), and `Rule 8.5` PNG audit. |
+| `1.0.34` | 2026-11-18 | AI Agent (`ATT-8676`) | `ATT-8676` | Added `TST-TRK-088` [Planned] for `MyHelper` `RADAR_APPROACH_SPEED_mps` unit mapping, caller integration, `SensorTypeUnitsContractTest`, `SystemArchitectureDesignContractTest`, and `SourceTextReadingAuditContractTest` (`0` new `src/main` reads). |
+| `1.0.35` | 2026-11-18 | AI Agent (`ATT-8676`) | `ATT-8676` | Promoted `TST-TRK-088` to `[Implemented]` following Stage 4 construction of `MyHelperRadarUnitsTest.kt` and consolidated unit/contract test run. |
+| `1.0.36` | 2026-11-18 | AI Agent (`ATT-8676`) | `ATT-8676` | Promoted `TST-TRK-088` to `[Verified]` in Stage 5 following 10-suite `--rerun-tasks` verification (`55/56` PASS across 9/10 full-PASS suites; `1` pre-existing `ATT-8823` failure in `EditDeviceDialog.kt`) and `has_verified_test_evidence("TST-TRK-088")` PASS. |
+| `1.0.37` | 2026-11-18 | AI Agent (`ATT-8881`) | `ATT-8881` | Added `TST-FIL-026` `[Verified]` following clean-room `:app:compileDebugKotlin` (0 new warnings) and 8-suite `:app:testDebugUnitTest` (`67/67` PASS across 8 JUnit XMLs). |
+| `1.0.38` | 2026-11-18 | AI Agent (`ATT-8733`) | `ATT-8733` | Added `TST-TRK-089` `[Verified]` (`RadarEdgeOverlayTest` `37/37` PASS w/ direct marker tap/swipe pass-through, Frame-1 `.layout` clamping & `FAST_APPROACHING`-only pulse; `:app:lintDebug` `0` errors; `Rule 8.5` Light/Dark/Map PNG). |

@@ -17,6 +17,7 @@ Reuse the ticket's two persistent `TypeName: "self"` subagents via `send_message
 1. **Requirement Formulation (`REQ-XXX`)**:
    - Write clear SHALL/MUST clauses, structured architectural constraints, and Given-When-Then acceptance criteria.
    - Insert new requirement rows into the appropriate domain shard under `docs/requirements/` (`docs/requirements.md` master index) using the multi-line section format:
+   - **`SYS.2` / `SYS.3` System Traceability & Impact Check (`REQ-PRO-131.4`, `ATT-8201`)**: For any `SYSTEM_REFINED_PREFIXES` requirement (`CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`, `DAT`, `EXP`, `EXT`, `MIG`, `GEO`, `MAP`, `NAV`, `ROU`, `CLM`, `RAD`), populate `- **System Requirement(s)**:` with an authentic `SYSREQ-*` parent (or `Derived (SW-only)` rationale) and specify any required `SYS.2` (`docs/system/sysreq_*.md`) or `SYS.3` (`docs/system/system_architecture.md`, `system_context.md`) updates when external sensors, RF protocols, platform HALs, or cloud APIs change.
      ```markdown
      ### REQ-DOM-NNN: Formal Title [Planned]
      - **Tests**: `TST-DOM-NNN`

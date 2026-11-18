@@ -23,6 +23,7 @@ import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
+import com.atrainingtracker.trainingtracker.ui.aftermath.toClusterWorkoutSnapshot
 import com.google.android.gms.maps.model.LatLng
 import io.mockk.*
 import org.junit.After
@@ -165,7 +166,7 @@ class WorkoutClusterImportIntegrityTest {
         )
 
         // WHEN onWorkoutFinished is invoked on the cluster engine
-        clusterEngine.onWorkoutFinished(mockContext, unclusteredWorkout)
+        clusterEngine.onWorkoutFinished(mockContext, unclusteredWorkout.toClusterWorkoutSnapshot())
 
         // THEN it MUST NOT insert a new cluster, update existing clusters, or update SQLite
         verify(exactly = 0) { mockClusterDb.insertCluster(any()) }
@@ -209,7 +210,7 @@ class WorkoutClusterImportIntegrityTest {
         )
 
         // WHEN onWorkoutFinished is invoked for a clustered workout
-        clusterEngine.onWorkoutFinished(mockContext, clusteredWorkout)
+        clusterEngine.onWorkoutFinished(mockContext, clusteredWorkout.toClusterWorkoutSnapshot())
 
         // THEN it updates the existing cluster's moving averages and bounds, and does NOT insert a new cluster
         verify(exactly = 0) { mockClusterDb.insertCluster(any()) }
@@ -228,7 +229,7 @@ class WorkoutClusterImportIntegrityTest {
         val newWorkout = oldWorkout.copy(bSportType = BSportType.BIKE, sportId = 2L)
 
         // WHEN onWorkoutSportChanged is called
-        clusterEngine.onWorkoutSportChanged(newWorkout, oldWorkout)
+        clusterEngine.onWorkoutSportChanged(newWorkout.toClusterWorkoutSnapshot(), oldWorkout.toClusterWorkoutSnapshot())
 
         // THEN it MUST NOT create or assign any cluster
         verify(exactly = 0) { mockClusterDb.insertCluster(any()) }

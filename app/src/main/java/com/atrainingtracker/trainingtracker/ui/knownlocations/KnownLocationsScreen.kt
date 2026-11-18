@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.ui.knownlocations
 
 import androidx.annotation.DrawableRes
+import androidx.annotation.VisibleForTesting
 import com.atrainingtracker.banalservice.BSportType
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -26,6 +27,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -380,8 +383,9 @@ fun KnownLocationsScreen(
 /**
  * List Perspective: High-density location cards or empty state.
  */
+@VisibleForTesting
 @Composable
-private fun KnownLocationsListContent(
+internal fun KnownLocationsListContent(
     uiState: KnownLocationsUiState,
     onEdit: (KnownLocationItem) -> Unit,
     onShowOnMap: (KnownLocationItem) -> Unit,
@@ -658,8 +662,8 @@ fun KnownLocationMergeConfirmationDialog(
 }
 
 /**
- * Compact map preview thumbnail for [KnownLocationCard] (REQ-UI-217, REQ-UI-244).
- * Displays a 100dp square map in lite mode, centered at the location coordinates with a heart pin marker
+ * Compact map preview thumbnail for [KnownLocationCard] (REQ-UI-217, REQ-UI-244, REQ-UI-2785.1).
+ * Displays a 175x120dp landscape map in lite mode, centered at the location coordinates with a heart pin marker
  * and geofence circle, styled for dark/light themes with an anti-flash overlay and offline preview fallback.
  */
 @Composable
@@ -670,7 +674,7 @@ private fun KnownLocationThumbnailMap(
 ) {
     Surface(
         modifier = modifier
-            .size(width = 116.dp, height = 80.dp)
+            .size(width = 175.dp, height = 120.dp)
             .testTag("location_map_preview_${item.id}"),
         shape = RoundedCornerShape(12.dp),
         color = MaterialTheme.colorScheme.surfaceContainerHigh
@@ -910,7 +914,9 @@ private fun KnownLocationCard(
                                 text = KnownLocationsUnitConversions.formatAltitude(item.altitude, isMetric),
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Medium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
 
@@ -942,15 +948,17 @@ private fun KnownLocationCard(
 
                         Spacer(modifier = Modifier.weight(1f))
 
-                        // Number of Starts (Unboxed Bottom-Anchored Primary Count & Sport Breakdown, REQ-UI-195, REQ-UI-469.2, REQ-UI-470.6)
-                        Row(
-                            modifier = Modifier
-                                .clickable(onClick = onShowWorkouts)
-                                .testTag("location_starts_badge_${item.id}"),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(if (sportStarts.total > 0) 8.dp else 4.dp)
-                        ) {
-                            if (sportStarts.total > 0) {
+                        // Number of Starts (Unboxed Bottom-Anchored Primary Count & Sport Breakdown, REQ-UI-195, REQ-UI-469.2, REQ-UI-470.6, REQ-UI-2785.3)
+                        if (sportStarts.total > 0) {
+                            @OptIn(ExperimentalLayoutApi::class)
+                            FlowRow(
+                                modifier = Modifier
+                                    .clickable(onClick = onShowWorkouts)
+                                    .testTag("location_starts_badge_${item.id}"),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp),
+                                itemVerticalAlignment = Alignment.CenterVertically
+                            ) {
                                 if (sportStarts.bike > 0) {
                                     SportStartsItem(
                                         iconResId = R.drawable.bsport_bike,
@@ -975,7 +983,15 @@ private fun KnownLocationCard(
                                         onClick = { onShowWorkoutsForSport(item, BSportType.UNKNOWN) }
                                     )
                                 }
-                            } else {
+                            }
+                        } else {
+                            Row(
+                                modifier = Modifier
+                                    .clickable(onClick = onShowWorkouts)
+                                    .testTag("location_starts_badge_${item.id}"),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.DirectionsRun,
                                     contentDescription = stringResource(R.string.known_locations_view_workouts),
@@ -994,9 +1010,9 @@ private fun KnownLocationCard(
                         }
                     }
 
-                    Spacer(modifier = Modifier.width(16.dp))
+                    Spacer(modifier = Modifier.width(12.dp))
 
-                    // Map Preview Thumbnail (right side, REQ-UI-217, REQ-UI-244, REQ-UI-465.3)
+                    // Map Preview Thumbnail (right side, REQ-UI-217, REQ-UI-244, REQ-UI-465.3, REQ-UI-2785.1)
                     KnownLocationThumbnailMap(
                         item = item,
                         onShowOnMap = onShowOnMap

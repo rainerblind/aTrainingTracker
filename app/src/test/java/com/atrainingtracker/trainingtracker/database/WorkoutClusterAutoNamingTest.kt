@@ -329,15 +329,15 @@ class WorkoutClusterAutoNamingTest {
                 hitCount = 1, bSportType = BSportType.BIKE
             )
             every { mockClusterDb.getClusterById(77L) } returns cluster77
-            val splitWorkout = mockk<WorkoutData>(relaxed = true) {
-                every { id } returns 501L
-                every { startLatLng } returns pos
-                every { endLatLng } returns pos
-                every { maxDisplacementLatLng } returns pos
-                every { totalDistance } returns 5000.0
-                every { sportId } returns 1L
-                every { startTimeS } returns 1000L
-            }
+            val splitWorkout = ClusterWorkoutSnapshot(
+                id = 501L,
+                startLatLng = pos,
+                endLatLng = pos,
+                maxDisplacementLatLng = pos,
+                totalDistance = 5000.0,
+                sportId = 1L,
+                startTimeS = 1000L
+            )
             every { mockWorkoutRepo.runInTransaction(any<() -> Any?>()) } answers {
                 firstArg<() -> Any?>().invoke()
             }

@@ -30,7 +30,7 @@ DOMAINS = [
         "title": "Post-Workout Analytics & Periods",
         "req_file": "docs/requirements/req_aftermath_periods.md",
         "tst_file": "docs/tests/tst_aftermath_periods.md",
-        "prefixes": {"PER", "PERF"},
+        "prefixes": {"HRV", "PER", "PERF", "RAD", "SPT", "WKO"},
         "desc": "Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers.",
     },
     {
@@ -38,7 +38,7 @@ DOMAINS = [
         "title": "Maps, Polylines & Navigation",
         "req_file": "docs/requirements/req_maps_navigation.md",
         "tst_file": "docs/tests/tst_maps_navigation.md",
-        "prefixes": {"MAP", "NAV", "GEO", "ROU"},
+        "prefixes": {"CLM", "GEO", "MAP", "NAV", "RAD", "ROU"},
         "desc": "Map rendering, polylines, navigation overlays, GPX track follow-me, and routing.",
     },
     {
@@ -46,7 +46,7 @@ DOMAINS = [
         "title": "Persistence, Migration & Cloud Export",
         "req_file": "docs/requirements/req_data_migration_export.md",
         "tst_file": "docs/tests/tst_data_migration_export.md",
-        "prefixes": {"DAT", "MIG", "EXP", "EXT"},
+        "prefixes": {"DAT", "MIG", "EXP", "EXT", "RAD"},
         "desc": "Database schema, backup/restore, migration pipelines, Strava/cloud upload, FIT/GPX export.",
     },
     {
@@ -548,7 +548,8 @@ def verify_sharding_parity(reqs, tests, repo_root):
 
 def check_shard_sizes(repo_root=None, max_lines=DEFAULT_MAX_SHARD_LINES):
     """
-    Audits all living documentation requirement and test domain shards against max_lines (REQ-PRO-090).
+    Audits all living documentation requirement and test shards (including split *_partN.md
+    sub-shards) under docs/requirements/ and docs/tests/ against max_lines (REQ-PRO-090, REQ-PRO-127.3).
     Returns:
         dict with:
             'passed': bool (True if zero shards exceed max_lines)
@@ -562,33 +563,32 @@ def check_shard_sizes(repo_root=None, max_lines=DEFAULT_MAX_SHARD_LINES):
     shards = {}
     oversized = []
 
-    for dom in DOMAINS:
-        req_rel = dom["req_file"]
-        req_abs = os.path.join(repo_root, req_rel)
-        if os.path.exists(req_abs):
-            with open(req_abs, "r", encoding="utf-8") as f:
+    dirs = [
+        ("docs/requirements", "requirement"),
+        ("docs/tests", "test"),
+    ]
+    for dir_rel, shard_type in dirs:
+        dir_abs = os.path.join(repo_root, dir_rel)
+        if not os.path.isdir(dir_abs):
+            continue
+        for fn in sorted(os.listdir(dir_abs)):
+            if not fn.endswith(".md"):
+                continue
+            rel_path = f"{dir_rel}/{fn}"
+            abs_path = os.path.join(dir_abs, fn)
+            if not os.path.isfile(abs_path):
+                continue
+            with open(abs_path, "r", encoding="utf-8") as f:
                 lines = sum(1 for _ in f)
-            shards[req_rel] = lines
+            shards[rel_path] = lines
+            dom_key = re.sub(r"^(?:req|tst)_", "", os.path.splitext(fn)[0])
+            dom_key = re.sub(r"_part\d+$", "", dom_key)
             if lines > max_lines:
                 oversized.append({
-                    "path": req_rel,
+                    "path": rel_path,
                     "lines": lines,
-                    "type": "requirement",
-                    "domain": dom["key"],
-                })
-
-        tst_rel = dom["tst_file"]
-        tst_abs = os.path.join(repo_root, tst_rel)
-        if os.path.exists(tst_abs):
-            with open(tst_abs, "r", encoding="utf-8") as f:
-                lines = sum(1 for _ in f)
-            shards[tst_rel] = lines
-            if lines > max_lines:
-                oversized.append({
-                    "path": tst_rel,
-                    "lines": lines,
-                    "type": "test",
-                    "domain": dom["key"],
+                    "type": shard_type,
+                    "domain": dom_key,
                 })
 
     return {
@@ -618,24 +618,41 @@ def split_oversized_shard(shard_path, max_lines=DEFAULT_MAX_SHARD_LINES, output_
     if len(lines) <= max_lines:
         return [shard_path]
 
+    # Strip trailing Change History / Revision History from body so it isn't swallowed into the last section
+    history_match = re.search(r"(?m)^(?:---\s*\n+)?##\s+(?:\d+\.\s+)?(?:Change|Revision)\s+History\b", content)
+    body_end = history_match.start() if history_match else len(content)
+    body_content = content[:body_end].rstrip()
+
     # Sections begin with '### REQ-' or '### TST-'
     section_pattern = re.compile(r"^(###\s+(?:REQ|TST)-[A-Z0-9_-]+:.*)", re.MULTILINE)
-    matches = list(section_pattern.finditer(content))
+    matches = list(section_pattern.finditer(body_content))
 
     if not matches:
         return [shard_path]
 
-    header_text = content[:matches[0].start()].strip()
+    header_text = body_content[:matches[0].start()].strip()
+    # Remove trailing '---' from header_text if present so we don't duplicate separators
+    header_text = re.sub(r"\n+---\s*$", "", header_text).strip()
+
+    has_doc_header = bool(re.search(r"\*\*Document ID\*\*:\s*`?DOC-[A-Z0-9-]+`?", header_text))
+    footer_template = (
+        "\n\n---\n\n"
+        "## Change History\n\n"
+        "| Version | Date | Author | Ticket | Summary of Changes |\n"
+        "| :--- | :--- | :--- | :--- | :--- |\n"
+        "| `1.0.0` | 2026-11-18 | AI Agent (`ATT-8206`) | `ATT-8206` | Split oversized shard into compliant sub-shard (<= 4,000 lines, `REQ-PRO-093.4`, `REQ-PRO-127.3`). |\n"
+    )
+    footer_lines_count = len(footer_template.splitlines()) if (has_doc_header or history_match) else 1
 
     # Extract individual sections
     sections = []
     for i, m in enumerate(matches):
         start = m.start()
-        end = matches[i + 1].start() if i + 1 < len(matches) else len(content)
-        sections.append(content[start:end].strip())
+        end = matches[i + 1].start() if i + 1 < len(matches) else len(body_content)
+        sections.append(body_content[start:end].strip())
 
     header_lines_count = len(header_text.splitlines()) + 4
-    effective_max_lines = max(50, max_lines - header_lines_count)
+    effective_max_lines = max(1, max_lines - header_lines_count - footer_lines_count)
 
     chunks = []
     current_chunk = []
@@ -673,11 +690,22 @@ def split_oversized_shard(shard_path, max_lines=DEFAULT_MAX_SHARD_LINES, output_
 
         part_header = header_text
         part_header = re.sub(
-            r"^(#\s+Living\s+(?:Requirements|Test\s+Specification):\s+.*?)(?:\s+\(Part\s+\d+\))?$",
+            r"^(#\s+Living\s+(?:Requirements|Test\s+Specification):\s+.*?)(?:\s+\(Part\s+\d+(?:\s+of\s+\d+)?\))?$",
             rf"\1 (Part {idx} of {total_parts})",
             part_header,
             flags=re.MULTILINE,
         )
+        part_header = re.sub(
+            r"(\*\*Document ID\*\*:\s*`?DOC-[A-Z0-9-]+?)(?:-P\d+)?(`?(?:\s|$))",
+            rf"\1-P{idx}\2",
+            part_header,
+        )
+        if has_doc_header:
+            part_header = re.sub(
+                r"\*\*Version\*\*:\s*`?\d+\.\d+\.\d+`?",
+                "**Version**: 1.0.0",
+                part_header,
+            )
         part_header = re.sub(
             r"\*\*(?:Total Requirements|Total Tests)\*\*:\s*\d+",
             f"**Total {'Requirements' if 'req' in name_root else 'Tests'}**: {len(chunk)}",
@@ -689,7 +717,11 @@ def split_oversized_shard(shard_path, max_lines=DEFAULT_MAX_SHARD_LINES, output_
             part_header,
         )
 
-        part_content = part_header + "\n\n---\n\n" + "\n\n".join(chunk) + "\n"
+        part_content = part_header + "\n\n---\n\n" + "\n\n".join(chunk)
+        if has_doc_header or history_match:
+            part_content += footer_template
+        else:
+            part_content += "\n"
 
         with open(part_path, "w", encoding="utf-8") as f:
             f.write(part_content)
@@ -737,13 +769,33 @@ def main():
         sys.exit(0)
 
     if args.verify_only:
-        # Check that shards and master indices exist
-        all_shards = [dom["req_file"] for dom in DOMAINS] + [dom["tst_file"] for dom in DOMAINS]
-        missing = [f for f in all_shards if not os.path.exists(os.path.join(repo_root, f))]
+        # Check that every domain has either its monolithic shard or >= 1 split *_partN.md sub-shard
+        missing = []
+        discovered = set()
+        for dom in DOMAINS:
+            for field in ("req_file", "tst_file"):
+                rel = dom[field]
+                abs_p = os.path.join(repo_root, rel)
+                if os.path.exists(abs_p):
+                    discovered.add(rel)
+                    continue
+                parent_dir = os.path.dirname(abs_p)
+                stem = os.path.splitext(os.path.basename(rel))[0]
+                parts = []
+                if os.path.isdir(parent_dir):
+                    parts = [
+                        f"{os.path.dirname(rel)}/{fn}"
+                        for fn in sorted(os.listdir(parent_dir))
+                        if fn.startswith(f"{stem}_part") and fn.endswith(".md")
+                    ]
+                if parts:
+                    discovered.update(parts)
+                else:
+                    missing.append(rel)
         if missing:
             print(f"FAIL: Missing shards: {missing}", file=sys.stderr)
             sys.exit(1)
-        print(f"PASS: All {len(all_shards)} domain shards exist.")
+        print(f"PASS: All {len(discovered)} living documentation shards exist across {len(DOMAINS)} domains.")
         sys.exit(0)
 
     # Safety Guard: Check if requirements.md or tests.md is already a Master Index

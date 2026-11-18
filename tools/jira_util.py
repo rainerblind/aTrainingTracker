@@ -22,11 +22,15 @@ from sprint_metrics import (
     FINAL_REVIEW_ESCALATED_RE,
     FINAL_REVIEW_PASS_RE,
     STAGE_MAP,
+    TERMINAL_CLOSED_STATUSES,
     calculate_spc_limits,
+    classify_comment_actor_role,
+    extract_text_from_comment_body,
     format_metrics_markdown,
     identify_gate_number,
     load_historical_metrics,
     parse_sprint_gate_metrics,
+    parse_subtask_verdict_from_text,
     record_sprint_metrics,
 )
 
@@ -1023,10 +1027,43 @@ def sync_parent_stage_on_subtask_done(parent_key, subtask_summary, role="agent1"
     except Exception as e:
         print(f"Warning: Could not auto-advance parent {parent_key} to '{desired_stage}': {e}", file=sys.stderr)
 
+def _verify_stage_subtask_has_agent2_pass(issue_key, issue_summary, fields_data, role="agent1"):
+    """
+    REQ-PRO-128.5: Blocks closure of stage subtasks ([Analysis]..[Test]) without an agent2 PASS verdict comment.
+    Preserves summary-less / non-stage subtasks where identify_gate_number(issue_summary) is None.
+    """
+    if identify_gate_number(issue_summary) is None:
+        return
+    comments = None
+    comment_obj = fields_data.get("comment")
+    if isinstance(comment_obj, dict) and "comments" in comment_obj:
+        comments = comment_obj.get("comments") or []
+    else:
+        config = get_config()
+        c_url = f"{config['JIRA_URL']}/rest/api/2/issue/{issue_key}/comment"
+        c_data = jira_request(c_url, role=role) or {}
+        comments = c_data.get("comments", []) if isinstance(c_data, dict) else []
+    agent2_verdicts = []
+    for c in comments:
+        body = extract_text_from_comment_body(c.get("body", ""))
+        if classify_comment_actor_role(c, body_text=body) == "agent2":
+            verdict = parse_subtask_verdict_from_text(body)
+            if verdict:
+                agent2_verdicts.append(verdict)
+    if agent2_verdicts and agent2_verdicts[-1] == "PASS":
+        return
+    print(
+        f"ERROR: Cannot close stage subtask '{issue_key}' ({issue_summary}) without an agent2 PASS verdict comment (REQ-PRO-128.5).\n"
+        f"Use 'jira_util.py --as agent2 gate-verdict {issue_key} PASS \"...\"' instead of raw 'move'.",
+        file=sys.stderr,
+    )
+    sys.exit(1)
+
+
 def transition_issue(issue_key, status_name, role="agent1", inject_context=True, allow_epic_close=False):
     config = get_config()
     # Check if issue is a subtask, its current status, summary, and parent
-    issue_info_url = f"{config['JIRA_URL']}/rest/api/2/issue/{issue_key}?fields=issuetype,status,summary,parent,{STORY_POINTS_FIELD}"
+    issue_info_url = f"{config['JIRA_URL']}/rest/api/2/issue/{issue_key}?fields=issuetype,status,summary,parent,comment,{STORY_POINTS_FIELD}"
     issue_info = jira_request(issue_info_url, role=role)
     fields_data = issue_info.get("fields", {})
     is_subtask = fields_data.get("issuetype", {}).get("subtask", False)
@@ -1150,6 +1187,7 @@ def transition_issue(issue_key, status_name, role="agent1", inject_context=True,
         elif current_status_lower == "final review (agent)" and not is_subtask:
             assign_issue(issue_key, "agent2", role=role)
         if is_subtask and (normalized_target == "freigabe" or current_status_lower == "erledigt"):
+            _verify_stage_subtask_has_agent2_pass(issue_key, issue_summary, fields_data, role=role)
             sync_parent_stage_on_subtask_done(parent_key, issue_summary, role=role, inject_context=inject_context)
         return
 
@@ -1206,6 +1244,9 @@ def transition_issue(issue_key, status_name, role="agent1", inject_context=True,
 
     if not is_subtask and target_name == "final review (human)" and _is_bug_issue(fields_data):
         _verify_bug_ready_for_human_review(issue_key, role=role)
+
+    if is_subtask and (target_name in ("erledigt", "done", "closed") or trans_name == "freigabe" or normalized_target == "freigabe"):
+        _verify_stage_subtask_has_agent2_pass(issue_key, issue_summary, fields_data, role=role)
 
     trans_id = chosen_trans["id"]
     jira_request(url, method="POST", payload={"transition": {"id": trans_id}}, role=role)
@@ -2274,7 +2315,7 @@ def count_final_review_bounces(comments):
     max_bounce = 0
     count = 0
     for c in (comments or []):
-        body = c.get("body", "")
+        body = extract_text_from_comment_body(c.get("body", ""))
         m = FINAL_REVIEW_BOUNCE_RE.search(body)
         if m:
             count += 1
@@ -4142,7 +4183,8 @@ def collect_sprint_metrics_for_id(sprint_id, sprint_name, board_id, role="coordi
                         st["comments"] = []
 
     sprint_info = {"id": sprint_id, "name": sprint_name}
-    return parse_sprint_gate_metrics(parent_issues, sprint_info, history=history)
+    repo_root = os.path.abspath(os.path.join(_tools_dir, ".."))
+    return parse_sprint_gate_metrics(parent_issues, sprint_info, history=history, repo_root=repo_root)
 
 
 def cmd_sprint_metrics(sprint_arg=None, record=False, post_to_retro=False, backfill=None, role="coordinator"):
@@ -4294,7 +4336,7 @@ def extract_sprint_gate_records(parent_issues, sprint_info):
     """
     records = []
     gate_stats = {
-        g: {"total": 0, "passed_first_time": 0, "revisions": 0, "bounces": 0}
+        g: {"total": 0, "passed_first_time": 0, "revisions": 0, "bounces": 0, "unverified": 0}
         for g in range(1, 7)
     }
 
@@ -4330,32 +4372,13 @@ def extract_sprint_gate_records(parent_issues, sprint_info):
 
             subtask_verdicts = []
             for c in st_comments:
-                body = c.get("body", "")
-                author = c.get("author", {})
+                body = extract_text_from_comment_body(c.get("body", ""))
+                author = c.get("author", {}) or {}
                 actor_name = author.get("displayName") or author.get("name") or author.get("accountId") or "Unknown"
                 created_ts = c.get("created", "")
 
-                if "[ROLE: agent2]" in body or "[Automated comment by AI Agent 2" in body or "agent2" in actor_name.lower() or "reviewer" in actor_name.lower() or "auditor" in actor_name.lower():
-                    role = "agent2"
-                elif "[ROLE: coordinator]" in body or "[Automated comment by AI Coordinator" in body or "coordinator" in actor_name.lower():
-                    role = "coordinator"
-                elif "[ROLE: agent1]" in body or "[Automated comment by AI Agent 1" in body or "agent1" in actor_name.lower():
-                    role = "agent1"
-                elif "[ROLE: human]" in body or "human" in actor_name.lower():
-                    role = "human"
-                else:
-                    role = "agent2"
-
-                verdict = None
-                body_upper = body.upper()
-                if "GATE_VERDICT: PASS" in body_upper or "GATE_VERDICT PASS" in body_upper:
-                    verdict = "PASS"
-                elif "GATE_VERDICT: REVISION" in body_upper or "GATE_VERDICT REVISION" in body_upper:
-                    verdict = "REVISION"
-                elif role in ("agent2", "human") and ("PASS" in body_upper or "APPROVED" in body_upper or "FREIGABE" in body_upper):
-                    verdict = "PASS"
-                elif role in ("agent2", "human") and ("REVISION" in body_upper or "REWORK" in body_upper or "FAIL" in body_upper):
-                    verdict = "REVISION"
+                role = classify_comment_actor_role(c, body_text=body)
+                verdict = parse_subtask_verdict_from_text(body) if role in ("agent2", "human") else None
 
                 if verdict:
                     subtask_verdicts.append((verdict, role, actor_name, created_ts, clean_text(body)))
@@ -4382,32 +4405,21 @@ def extract_sprint_gate_records(parent_issues, sprint_info):
                         "timestamp": ts,
                         "summary": excerpt,
                     })
-            elif st_status in ("erledigt", "closed", "done"):
-                gate_stats[g_num]["total"] += 1
-                gate_stats[g_num]["passed_first_time"] += 1
-                records.append({
-                    "parent_key": p_key,
-                    "subtask_key": st_key,
-                    "gate": g_num,
-                    "stage_name": stage_name,
-                    "verdict": "PASS",
-                    "evaluator_role": "agent2",
-                    "actor": st_fields.get("assignee", {}).get("displayName") or "agent2",
-                    "timestamp": st_fields.get("updated") or st_fields.get("created") or "",
-                    "summary": f"Subtask closed to {st_status.capitalize()}",
-                })
+            elif st_status in TERMINAL_CLOSED_STATUSES:
+                # REQ-PRO-092.3 / REQ-PRO-128.1: zero-comment closed gate subtasks are tracked as unverified (never fabricated PASS).
+                gate_stats[g_num]["unverified"] += 1
 
         # 2. Check Parent Comments for Stage 6 ('Final Review (Agent)')
         parent_fr_verdicts = []
         for c in p_comments:
-            body = c.get("body", "")
-            author = c.get("author", {})
+            body = extract_text_from_comment_body(c.get("body", ""))
+            author = c.get("author", {}) or {}
             actor_name = author.get("displayName") or author.get("name") or author.get("accountId") or "Unknown"
             created_ts = c.get("created", "")
 
-            role = "agent2"
-            if "[ROLE: human]" in body or "human" in actor_name.lower():
-                role = "human"
+            role = classify_comment_actor_role(c, body_text=body)
+            if role == "unknown":
+                role = "agent2"
 
             verdict = None
             if FINAL_REVIEW_BOUNCE_RE.search(body):
@@ -5081,7 +5093,7 @@ def qa_audit(sprint_arg=None, sample_size=None, out_path=None, role="qa", as_rol
                 if st_st not in ("erledigt", "done", "closed", "geschlossen", "resolved"):
                     all_stages_good = False
                     break
-                has_pass = any("PASS" in c.get("body", "").upper() for c in st_comms)
+                has_pass = any("PASS" in extract_text_from_comment_body(c.get("body", "")).upper() for c in st_comms)
                 if not has_pass:
                     all_stages_good = False
                     break
@@ -5092,7 +5104,7 @@ def qa_audit(sprint_arg=None, sample_size=None, out_path=None, role="qa", as_rol
                 for st in subtasks
             )
             all_st_pass = all(
-                any("PASS" in c.get("body", "").upper() for c in (st.get("comments", []) or st.get("fields", {}).get("comment", {}).get("comments", [])))
+                any("PASS" in extract_text_from_comment_body(c.get("body", "")).upper() for c in (st.get("comments", []) or st.get("fields", {}).get("comment", {}).get("comments", [])))
                 for st in subtasks
             )
             gate_pass = all_st_erledigt and all_st_pass
@@ -5109,7 +5121,7 @@ def qa_audit(sprint_arg=None, sample_size=None, out_path=None, role="qa", as_rol
         for st in subtasks:
             st_comments = st.get("comments", []) or st.get("fields", {}).get("comment", {}).get("comments", [])
             for c in st_comments:
-                body = c.get("body", "")
+                body = extract_text_from_comment_body(c.get("body", ""))
                 author = c.get("author", {})
                 author_acc_id = author.get("accountId") or ""
                 author_name = author.get("displayName") or author.get("name") or author_acc_id
@@ -5384,6 +5396,70 @@ def format_review_markdown(
 
 
 ALLOWED_REVIEW_VERDICTS = {"PASS", "FAIL", "SKIPPED", "NOT PERFORMED", "PARTIAL"}
+_HUMAN_REVIEW_TOKENS = frozenset({"human", "user", "human process owner"})
+_AI_PLACEHOLDER_TOKENS = frozenset(
+    {"human", "user", "human process owner", "external ai model", "n/a", "none", "unknown"}
+)
+
+
+def _classify_review_actor(review_type=None, vendor=None, model=None, version=None, scope=None):
+    """Resolve Human (Layer 4) vs Cross-Vendor AI (Layer 5) review metadata without name-guessing."""
+    if review_type is not None:
+        rt_clean = str(review_type).strip().lower()
+        if rt_clean not in ("human", "cross-vendor-ai"):
+            raise ValueError(
+                f"Invalid review_type '{review_type}'. Allowed values: human, cross-vendor-ai."
+            )
+    else:
+        rt_clean = None
+
+    vendor_clean = str(vendor).strip() if vendor is not None and str(vendor).strip() else None
+    model_clean = str(model).strip() if model is not None and str(model).strip() else None
+    version_clean = str(version).strip() if version is not None and str(version).strip() else None
+    scope_clean = str(scope).strip() if scope is not None and str(scope).strip() else None
+
+    vendor_is_human = bool(vendor_clean and vendor_clean.lower() in _HUMAN_REVIEW_TOKENS)
+    model_is_human = bool(model_clean and model_clean.lower() in _HUMAN_REVIEW_TOKENS)
+    has_non_human_vendor = bool(vendor_clean and not vendor_is_human)
+    has_non_human_model = bool(model_clean and not model_is_human)
+
+    if rt_clean == "human":
+        if has_non_human_vendor or has_non_human_model:
+            raise ValueError(
+                "Conflicting flags: --review-type=human cannot be combined with non-human AI --vendor or --model."
+            )
+        effective_type = "human"
+    elif rt_clean == "cross-vendor-ai":
+        effective_type = "cross-vendor-ai"
+    elif has_non_human_vendor or has_non_human_model:
+        effective_type = "cross-vendor-ai"
+    else:
+        effective_type = "human"
+
+    if effective_type == "human":
+        return (
+            "Human",
+            "Human Process Owner",
+            version_clean or "N/A",
+            "Human Sprint Review (Layer 4)",
+            scope_clean or "Ceremony 2 Sprint Review",
+        )
+
+    if not vendor_clean or vendor_clean.lower() in _AI_PLACEHOLDER_TOKENS:
+        raise ValueError(
+            "Cross-Vendor AI review requires an explicit non-human --vendor (e.g. 'Anthropic', 'OpenAI')."
+        )
+    if not model_clean or model_clean.lower() in _AI_PLACEHOLDER_TOKENS:
+        raise ValueError(
+            "Cross-Vendor AI review requires an explicit --model (e.g. 'claude-3-7-sonnet', 'gpt-4o')."
+        )
+    return (
+        vendor_clean,
+        model_clean,
+        version_clean or "N/A",
+        "Cross-Vendor AI Review (Layer 5)",
+        scope_clean or "Layer 5 Cross-Vendor Review",
+    )
 
 
 def record_review(
@@ -5400,6 +5476,7 @@ def record_review(
     role="coordinator",
     as_role=None,
     repo_root=None,
+    review_type=None,
 ):
     """
     REQ-PRO-062.1 / REQ-PRO-062.2:
@@ -5440,6 +5517,15 @@ def record_review(
                 "Provide --findings with assessment details."
             )
 
+    reviewer = (str(reviewer).strip() if reviewer is not None else "") or "Human"
+    vendor, model, version, review_type, scope = _classify_review_actor(
+        review_type=review_type,
+        vendor=vendor,
+        model=model,
+        version=version,
+        scope=scope,
+    )
+
     config = get_config()
     base = config['JIRA_URL'].rstrip('/')
 
@@ -5455,22 +5541,6 @@ def record_review(
                 s_name = target_sprint["name"].strip()
     except Exception:
         pass
-
-    if not reviewer:
-        reviewer = "Human"
-
-    if reviewer.lower() in ("human", "user"):
-        vendor = vendor or "Human"
-        model = model or "Human Process Owner"
-        version = version or "N/A"
-        review_type = "Human Sprint Review (Ceremony 2)"
-        scope = scope or "Ceremony 2 Sprint Review"
-    else:
-        vendor = vendor or reviewer
-        model = model or "External AI Model"
-        version = version or "N/A"
-        review_type = "Cross-Vendor AI Review (Layer 5)"
-        scope = scope or "Layer 5 Cross-Vendor Review"
 
     verdict_clean = verdict.upper().strip() if verdict else "PASS"
     date_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -5599,7 +5669,7 @@ USAGE_TEXT = (
     "                                                        Release active ID reservation(s) for a ticket\n"
     "  list-reservations [--domain DOMAIN] [--ticket TICKET] [--ledger-dir DIR] [--json]\n"
     "                                                        List active ID reservations from the shared ledger\n"
-    "  record-review [--sprint <ID|NAME>] [--ticket KEY] [--reviewer NAME] [--vendor VENDOR] [--model MODEL] [--version VER] [--scope SCOPE] [--verdict PASS|FAIL|NOT PERFORMED|SKIPPED|PARTIAL] [--findings FINDINGS] [--out FILE]\n"
+    "  record-review [--sprint <ID|NAME>] [--ticket KEY] [--reviewer NAME] [--review-type human|cross-vendor-ai] [--vendor VENDOR] [--model MODEL] [--version VER] [--scope SCOPE] [--verdict PASS|FAIL|NOT PERFORMED|SKIPPED|PARTIAL] [--findings FINDINGS] [--out FILE]\n"
     "                                                        Record Human Sprint Review or Cross-Vendor AI Review in docs/engineering/reviews/\n"
     "  create-issue SUMMARY DESC [TYPE_ID|Bug|Feature|Verbesserung] [PARENT_KEY] [--type=...] [--parent=...] [--bottom] [--points=N] [--severity=critical|major|minor|cosmetic]"
 )
@@ -6036,6 +6106,7 @@ if __name__ == "__main__":
         sprint_arg = None
         ticket_arg = None
         reviewer_arg = None
+        review_type_arg = None
         vendor_arg = None
         model_arg = None
         version_arg = None
@@ -6060,6 +6131,11 @@ if __name__ == "__main__":
                 reviewer_arg = a.split("=", 1)[1]
             elif a == "--reviewer" and idx + 1 < len(remaining_argv):
                 reviewer_arg = remaining_argv[idx + 1]
+                idx += 1
+            elif a.startswith("--review-type="):
+                review_type_arg = a.split("=", 1)[1]
+            elif a == "--review-type" and idx + 1 < len(remaining_argv):
+                review_type_arg = remaining_argv[idx + 1]
                 idx += 1
             elif a.startswith("--vendor="):
                 vendor_arg = a.split("=", 1)[1]
@@ -6102,6 +6178,7 @@ if __name__ == "__main__":
                 sprint_arg=sprint_arg,
                 ticket_key=ticket_arg,
                 reviewer=reviewer_arg,
+                review_type=review_type_arg,
                 vendor=vendor_arg,
                 model=model_arg,
                 version=version_arg,

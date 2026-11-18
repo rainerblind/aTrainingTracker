@@ -23,6 +23,7 @@ import androidx.compose.ui.graphics.Color
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneThresholds
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.PowerZoneThresholds
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
@@ -274,5 +275,166 @@ object TelemetryZoneMath {
                 PowerZoneThresholds(z1, z2, z3, z4, z5, z6)
             } else null
         }.getOrNull()
+    }
+
+    /**
+     * Maps an instantaneous DFA alpha 1 value to an inverted 3-zone index (1..3) matching
+     * [com.atrainingtracker.trainingtracker.ui.tracking.HrvZoneIndicator.calculateZoneColor]:
+     * - Zone 1 (Aerob, `alpha1 > t1`): [TTColor.Zone2]
+     * - Zone 2 (Schwelle, `t2 <= alpha1 <= t1`): [TTColor.Zone3] (preserves `alpha1 == t1 -> Zone3`)
+     * - Zone 3 (Anaerob, `alpha1 < t2`): [TTColor.Zone4]
+     * (REQ-HRV-044.1 / ATT-8710)
+     */
+    fun determineHrvDfaA1Zone(
+        alpha1: Double,
+        t1: Float = TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T1,
+        t2: Float = TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T2
+    ): Int {
+        val effT2 = minOf(t1, t2)
+        val effT1 = maxOf(t1, t2)
+        return when {
+            !alpha1.isFinite() -> 2
+            alpha1 > effT1 -> 1
+            alpha1 >= effT2 -> 2
+            else -> 3
+        }
+    }
+
+    /**
+     * Resolves the semantic [TTColor] token for a DFA alpha 1 value against thresholds [t1] and [t2].
+     * (REQ-HRV-044.1 / ATT-8710)
+     */
+    fun resolveHrvDfaA1ZoneColor(
+        alpha1: Double,
+        t1: Float = TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T1,
+        t2: Float = TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T2
+    ): Color {
+        return when (determineHrvDfaA1Zone(alpha1, t1, t2)) {
+            1 -> TTColor.Zone2
+            2 -> TTColor.Zone3
+            else -> TTColor.Zone4
+        }
+    }
+
+    /**
+     * Calculates up to 3 horizontal inverted DFA alpha 1 zone bands clamped to [dataMin, dataMax]:
+     * - Anaerob (`[dataMin, t2]`, [TTColor.Zone4], `"Z3"`)
+     * - Schwelle (`[t2, t1]`, [TTColor.Zone3], `"Z2"`)
+     * - Aerob (`[t1, dataMax]`, [TTColor.Zone2], `"Z1"`)
+     * (REQ-HRV-044.1 / ATT-8710)
+     */
+    fun calculateHrvDfaA1ZoneBands(
+        t1: Float,
+        t2: Float,
+        dataMin: Double,
+        dataMax: Double
+    ): List<TelemetryZoneBand> {
+        if (!dataMin.isFinite() || !dataMax.isFinite() || dataMax <= dataMin || !t1.isFinite() || !t2.isFinite()) {
+            return emptyList()
+        }
+        val effT2 = minOf(t1, t2).toDouble()
+        val effT1 = maxOf(t1, t2).toDouble()
+        val rawBands = listOf(
+            Triple(3, dataMin to effT2, TTColor.Zone4),
+            Triple(2, effT2 to effT1, TTColor.Zone3),
+            Triple(1, effT1 to dataMax, TTColor.Zone2)
+        )
+        return rawBands.mapNotNull { (zoneIndex, bounds, color) ->
+            val clampedMin = maxOf(dataMin, bounds.first)
+            val clampedMax = minOf(dataMax, bounds.second)
+            if (clampedMin < clampedMax) {
+                TelemetryZoneBand(
+                    zoneIndex = zoneIndex,
+                    minVal = clampedMin,
+                    maxVal = clampedMax,
+                    color = color,
+                    label = "Z$zoneIndex"
+                )
+            } else {
+                null
+            }
+        }
+    }
+
+    /**
+     * Returns valid DFA alpha 1 threshold boundary guidelines ([t2], [t1]) that fall strictly
+     * within the visible data range `(dataMin < threshold < dataMax)`.
+     * (REQ-HRV-044.4 / ATT-8710)
+     */
+    fun calculateHrvDfaA1ThresholdDashes(
+        t1: Float,
+        t2: Float,
+        dataMin: Double,
+        dataMax: Double
+    ): List<Double> {
+        if (!dataMin.isFinite() || !dataMax.isFinite() || dataMax <= dataMin) {
+            return emptyList()
+        }
+        val boundaryEps = 1e-5
+        return listOf(t2.toDouble(), t1.toDouble())
+            .filter { it.isFinite() && it > dataMin + boundaryEps && it < dataMax - boundaryEps }
+            .distinct()
+    }
+
+    /**
+     * Builds monotonically non-decreasing `[0f, 1f]` vertical gradient color stops spanning
+     * `[dataMin, dataMax]` where `0f` maps to `dataMax` (top) and `1f` maps to `dataMin` (bottom).
+     * (REQ-HRV-044.1 / ATT-8710)
+     */
+    fun buildHrvDfaA1VerticalGradientStops(
+        t1: Float,
+        t2: Float,
+        dataMin: Double,
+        dataMax: Double,
+        topAlpha: Float = 1f,
+        bottomAlpha: Float = 1f
+    ): List<Pair<Float, Color>> {
+        if (!dataMin.isFinite() || !dataMax.isFinite() || dataMax <= dataMin || !t1.isFinite() || !t2.isFinite()) {
+            return emptyList()
+        }
+        val effT2 = minOf(t1, t2).toDouble()
+        val effT1 = maxOf(t1, t2).toDouble()
+        val range = dataMax - dataMin
+        val eps = 0.001f
+
+        fun alphaAt(fraction: Float): Float {
+            return (topAlpha + (bottomAlpha - topAlpha) * fraction).coerceIn(0f, 1f)
+        }
+
+        val topBaseColor = when {
+            dataMax > effT1 -> TTColor.Zone2
+            dataMax > effT2 -> TTColor.Zone3
+            else -> TTColor.Zone4
+        }
+        val bottomBaseColor = when {
+            dataMin >= effT1 -> TTColor.Zone2
+            dataMin >= effT2 -> TTColor.Zone3
+            else -> TTColor.Zone4
+        }
+
+        val stops = mutableListOf<Pair<Float, Color>>()
+        stops.add(0f to topBaseColor.copy(alpha = alphaAt(0f)))
+        var lastStop = 0f
+
+        if (effT1 > dataMin && effT1 < dataMax) {
+            val frac = ((dataMax - effT1) / range).toFloat().coerceIn(0f, 1f)
+            val upperStop = (frac - eps).coerceIn(lastStop, 1f)
+            val lowerStop = (frac + eps).coerceIn(upperStop, 1f)
+            val belowColor = if (effT1 > effT2) TTColor.Zone3 else TTColor.Zone4
+            stops.add(upperStop to TTColor.Zone2.copy(alpha = alphaAt(upperStop)))
+            stops.add(lowerStop to belowColor.copy(alpha = alphaAt(lowerStop)))
+            lastStop = lowerStop
+        }
+
+        if (effT2 > dataMin && effT2 < dataMax && effT2 < effT1) {
+            val frac = ((dataMax - effT2) / range).toFloat().coerceIn(0f, 1f)
+            val upperStop = (frac - eps).coerceIn(lastStop, 1f)
+            val lowerStop = (frac + eps).coerceIn(upperStop, 1f)
+            stops.add(upperStop to TTColor.Zone3.copy(alpha = alphaAt(upperStop)))
+            stops.add(lowerStop to TTColor.Zone4.copy(alpha = alphaAt(lowerStop)))
+        }
+
+        stops.add(1f to bottomBaseColor.copy(alpha = alphaAt(1f)))
+        return stops
     }
 }

@@ -45,6 +45,7 @@ import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataWithTrack
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
+import com.atrainingtracker.trainingtracker.ui.aftermath.toClusterWorkoutSnapshot
 import com.atrainingtracker.trainingtracker.ui.map.*
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.PolyUtil
@@ -620,12 +621,7 @@ class WorkoutClustersViewModel @JvmOverloads constructor(
     }
 
     fun getCandidateClustersForWorkout(workout: WorkoutData): List<Pair<WorkoutCluster, Double>> {
-        val start = workout.startLatLng ?: return emptyList()
-        val end = workout.endLatLng ?: return emptyList()
-        val apex = workout.maxDisplacementLatLng ?: return emptyList()
-        
-        return WorkoutClusterEngine.getInstance(getApplication())
-            .getClusterScores(start, end, apex, workout.totalDistance, workout.workoutName, workout.bSportType)
+        return repository.getCandidateClustersForWorkout(workout)
     }
 
     fun moveWorkout(workout: WorkoutData, newClusterId: Long) {
@@ -633,8 +629,12 @@ class WorkoutClustersViewModel @JvmOverloads constructor(
         if (currentClusterId == newClusterId) return
 
         viewModelScope.launch(Dispatchers.IO) {
-            WorkoutClusterEngine.getInstance(getApplication())
-                .moveWorkoutToCluster(getApplication(), workout.id, currentClusterId, newClusterId)
+            val engine = WorkoutClusterEngine.getInstance(getApplication())
+            if (repository.hasSpatialFingerprint(workout)) {
+                engine.moveWorkoutToCluster(getApplication(), workout.id, currentClusterId, newClusterId)
+            } else {
+                engine.assignClusterToWorkout(getApplication(), workout.id, newClusterId, forceIdentity = true)
+            }
             
             // Refresh state
             repository.refreshClusters()
@@ -676,7 +676,7 @@ class WorkoutClustersViewModel @JvmOverloads constructor(
     fun createNewClusterFromWorkout(workout: WorkoutData) {
         viewModelScope.launch(Dispatchers.IO) {
             WorkoutClusterEngine.getInstance(getApplication())
-                .createNewClusterFromWorkout(getApplication(), workout)
+                .createNewClusterFromWorkout(getApplication(), workout.toClusterWorkoutSnapshot())
             repository.refreshClusters()
             _selectedCluster.value?.let { current ->
                 _clusterWorkouts.value = repository.getWorkoutsForCluster(current.id)

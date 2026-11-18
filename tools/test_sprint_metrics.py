@@ -20,12 +20,14 @@ sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
 from sprint_metrics import (
     calculate_spc_limits,
+    classify_comment_actor_role,
     extract_text_from_comment_body,
     format_metrics_markdown,
     identify_gate_number,
     load_historical_metrics,
     parse_final_review_agent_verdicts_from_comments,
     parse_sprint_gate_metrics,
+    parse_subtask_verdict_from_text,
     parse_verdicts_from_comments,
     record_sprint_metrics,
 )
@@ -740,6 +742,162 @@ class TestSprintMetrics(unittest.TestCase):
         self.assertIn("Static Analysis Baseline Ratchet", md)
         self.assertIn("-3", md)
         self.assertIn("-2", md)
+
+    def test_extended_verdict_synonyms_adf_and_role_filtering(self):
+        """TST-PRO-128.1: Parse APPROVED/FREIGABE/REWORK/FAIL in plain text & ADF while ignoring non-reviewer authors."""
+        adf_rework = {
+            "type": "doc",
+            "version": 1,
+            "content": [{"type": "paragraph", "content": [{"type": "text", "text": "[ROLE: agent2] REWORK needed."}]}],
+        }
+        adf_freigabe = {
+            "type": "doc",
+            "version": 1,
+            "content": [{"type": "paragraph", "content": [{"type": "text", "text": "[ROLE: agent2] Freigabe erteilt."}]}],
+        }
+        comments = [
+            {"author": {"displayName": "Some Dev"}, "body": "Approved by peer, please pass."},
+            {"author": {"displayName": "Agent 2"}, "body": "Approved: Gate 1 clean."},
+            {"author": {"displayName": "Agent 2"}, "body": adf_rework},
+            {"author": {"displayName": "Agent 2"}, "body": "Gate FAIL due to missing test."},
+            {"author": {"displayName": "Agent 2"}, "body": adf_freigabe},
+        ]
+        self.assertEqual(parse_verdicts_from_comments(comments), ["PASS", "REVISION", "REVISION", "PASS"])
+
+    def test_end_to_end_ftpr_additive_preserves_gates_1_to_5_overall_ftpr(self):
+        """TST-PRO-128.2: Additive end_to_end_ftpr_percent (Gates 1-6) preserves Gate 1-5 overall_ftpr_percent and plausibility warnings."""
+        subtasks = []
+        for i in range(20):
+            g = (i % 5) + 1
+            stage_name = ["Analysis", "Req & Test Spec", "Impl-Plan", "Implementation", "Test"][g - 1]
+            subtasks.append({
+                "fields": {"summary": f"[{stage_name}] Sub {i}", "status": {"name": "Erledigt"}},
+                "comments": [{"author": {"displayName": "Agent 2"}, "body": "[ROLE: agent2] APPROVED"}],
+            })
+        parent_issues = [
+            {
+                "key": "ATT-950",
+                "fields": {
+                    "summary": "Gate 1-5 100% but Gate 6 bounced",
+                    "status": {"name": "Final Review (Human)"},
+                    "priority": {"name": "Medium"},
+                    "customfield_10016": 2.0,
+                    "comment": {"comments": [{"author": {"displayName": "Agent 2"}, "body": "[ROLE: agent2] Stage 6 Final Review (Agent) BOUNCE (1/3): Miss."}]},
+                    "subtasks": subtasks,
+                },
+            }
+        ]
+        metrics = parse_sprint_gate_metrics(parent_issues, {"id": 470, "name": "Sprint 2026-E2E"})
+        qg = metrics["quality_gates"]
+        self.assertEqual(qg["overall_ftpr_percent"], 100.0)
+        self.assertEqual(qg["end_to_end_ftpr_percent"], round((20 / 21) * 100.0, 1))
+        self.assertTrue(any("PA 4.1 Plausibility Warning" in w for w in metrics["plausibility_warnings"]))
+        md = format_metrics_markdown(metrics)
+        self.assertIn("End-to-End Gate FTPR (Gates 1–6)", md)
+
+    def test_multi_signal_risk_distribution_classification(self):
+        """TST-PRO-128.3: Derive risk_distribution from severity-* labels, summary tags, and Stage 1 Risk Rating before priority fallback."""
+        repo_root = Path(self.test_dir) / "risk_repo"
+        ana_dir = repo_root / "docs" / "engineering" / "analysis"
+        ana_dir.mkdir(parents=True)
+        (ana_dir / "ATT-963_analysis.md").write_text("**Risk Rating**: **Low** (1 SP)\n", encoding="utf-8")
+
+        parent_issues = [
+            {"key": "ATT-961", "fields": {"summary": "Bug A", "status": {"name": "Erledigt"}, "priority": {"name": "Medium"}, "labels": ["severity-critical"], "subtasks": []}},
+            {"key": "ATT-962", "fields": {"summary": "[High] Feature B", "status": {"name": "Erledigt"}, "priority": {"name": "Medium"}, "labels": [], "subtasks": []}},
+            {"key": "ATT-963", "fields": {"summary": "Doc tweak C", "status": {"name": "Erledigt"}, "priority": {"name": "Medium"}, "labels": [], "subtasks": []}},
+            {"key": "ATT-964", "fields": {"summary": "Standard D", "status": {"name": "Erledigt"}, "priority": {"name": "Medium"}, "labels": [], "subtasks": []}},
+        ]
+        metrics = parse_sprint_gate_metrics(parent_issues, {"id": 471, "name": "Sprint 2026-Risk"}, repo_root=repo_root)
+        self.assertEqual(metrics["risk_distribution"], {"Low": 1, "Medium": 1, "High": 1, "Highest": 1})
+
+    def test_extended_german_english_bug_and_terminal_statuses(self):
+        """TST-PRO-128.4: Recognize abgelehnt, rejected, geschlossen, resolved as terminal closed statuses."""
+        parent_issues = [
+            {"key": "ATT-971", "fields": {"summary": "Bug 1", "status": {"name": "Abgelehnt"}, "priority": {"name": "High"}, "issuetype": {"id": "10006", "name": "Bug"}, "labels": ["severity-major"], "subtasks": []}},
+            {"key": "ATT-972", "fields": {"summary": "Bug 2", "status": {"name": "Rejected"}, "priority": {"name": "Medium"}, "issuetype": {"id": "10006", "name": "Bug"}, "labels": ["severity-minor"], "subtasks": []}},
+            {"key": "ATT-973", "fields": {"summary": "Bug 3", "status": {"name": "Geschlossen"}, "priority": {"name": "Low"}, "issuetype": {"id": "10006", "name": "Bug"}, "labels": ["severity-cosmetic"], "subtasks": []}},
+            {"key": "ATT-974", "fields": {"summary": "Bug 4", "status": {"name": "Resolved"}, "priority": {"name": "Medium"}, "issuetype": {"id": "10006", "name": "Bug"}, "labels": ["severity-minor"], "subtasks": []}},
+        ]
+        metrics = parse_sprint_gate_metrics(parent_issues, {"id": 472, "name": "Sprint 2026-Status"})
+        pt = metrics["problem_trends"]
+        self.assertEqual(pt["total_bugs"], 4)
+        self.assertEqual(pt["closed_bugs"], 4)
+        self.assertEqual(pt["open_bugs"], 0)
+        self.assertEqual(pt["resolution_rate_percent"], 100.0)
+        self.assertEqual(metrics["quality_gates"]["human_accepted_tickets"], 4)
+
+    def test_verdict_negation_rubric_precedence_role_precedence_and_backtick_risk(self):
+        """TST-PRO-128.1 / TST-PRO-128.3 / TST-PRO-128.4: Negated PASS, ATT-8856 rubric PASS, agent1 role precedence, TERMINAL_CLOSED_STATUSES unverified, and backticked Risk Rating."""
+        self.assertEqual(parse_subtask_verdict_from_text("not approved"), "REVISION")
+        self.assertEqual(parse_subtask_verdict_from_text("non-PASS"), "REVISION")
+        self.assertEqual(parse_subtask_verdict_from_text("non-approved"), "REVISION")
+        self.assertEqual(parse_subtask_verdict_from_text("did not pass"), "REVISION")
+        self.assertEqual(parse_subtask_verdict_from_text("failed to pass"), "REVISION")
+        self.assertEqual(parse_subtask_verdict_from_text("keine freigabe"), "REVISION")
+        self.assertEqual(parse_subtask_verdict_from_text("nicht freigegeben"), "REVISION")
+        att8856_comment = (
+            "Gate 4 Independent Code Review PASS (ATT-8856, diff d518a72c..c588c61c):\n"
+            "- [x] Extended Verdict Parsing (PASS/APPROVED/FREIGABE vs REVISION/REWORK/FAIL): Verified."
+        )
+        self.assertEqual(parse_subtask_verdict_from_text(att8856_comment), "PASS")
+
+        quoted_agent1 = {
+            "author": {"displayName": "Agent 1 (Implementer)"},
+            "body": "[Automated comment by AI Agent 1 (Implementer)]\n\nAddressing [ROLE: agent2] feedback: GATE_VERDICT: PASS",
+        }
+        self.assertEqual(classify_comment_actor_role(quoted_agent1), "agent1")
+        self.assertEqual(parse_verdicts_from_comments([quoted_agent1]), [])
+
+        repo_root = Path(self.test_dir) / "backtick_risk_repo"
+        ana_dir = repo_root / "docs" / "engineering" / "analysis"
+        ana_dir.mkdir(parents=True)
+        (ana_dir / "ATT-985_analysis.md").write_text("* **Risk Rating**: `LOW` (1 SP)\n", encoding="utf-8")
+        issues = [
+            {
+                "key": "ATT-985",
+                "fields": {
+                    "summary": "Backtick risk and abgelehnt unverified subtask",
+                    "status": {"name": "Erledigt"},
+                    "priority": {"name": "Medium"},
+                    "subtasks": [
+                        {"fields": {"summary": "[Analysis] Zero comment", "status": {"name": "Abgelehnt"}}, "comments": []}
+                    ],
+                },
+            }
+        ]
+        m = parse_sprint_gate_metrics(issues, {"id": 473, "name": "Sprint 2026-Bounce1"}, repo_root=repo_root)
+        self.assertEqual(m["risk_distribution"], {"Low": 1, "Medium": 0, "High": 0, "Highest": 0})
+        self.assertEqual(m["quality_gates"]["gates"]["gate_1"]["unverified"], 1)
+
+    def test_r2_lead_line_negation_markdown_wrappers_and_multiline_verdict(self):
+        """TST-PRO-128.1: R2 lead-line negation guard, markdown wrappers, multiline header, and body negation after explicit lead approval."""
+        self.assertEqual(parse_subtask_verdict_from_text("Gate 4 not approved"), "REVISION")
+        self.assertEqual(parse_subtask_verdict_from_text("[Automated comment by AI Agent 2 (Auditor)]\n\nGate 4 - Not approved"), "REVISION")
+        self.assertEqual(parse_subtask_verdict_from_text("Gate 4 is not approved"), "REVISION")
+        self.assertEqual(parse_subtask_verdict_from_text("Gate 4 will not pass"), "REVISION")
+        self.assertEqual(parse_subtask_verdict_from_text("Gate 4 (Impl) - Rejected / Not Approved"), "REVISION")
+        self.assertEqual(
+            parse_subtask_verdict_from_text(
+                "[Automated comment by AI Agent 2 (Auditor)]\n\nApproved: fixed issue where tests did not pass previously."
+            ),
+            "PASS",
+        )
+        self.assertEqual(parse_subtask_verdict_from_text("Gate 4: **PASS**"), "PASS")
+        self.assertEqual(parse_subtask_verdict_from_text("**Verdict**: **PASS**"), "PASS")
+        self.assertEqual(
+            parse_subtask_verdict_from_text("Gate 4 Audit (ATT-8856):\nPASS\nDetails: checked PASS vs REVISION/REWORK/FAIL."),
+            "PASS",
+        )
+        self.assertEqual(parse_subtask_verdict_from_text("Tests failed, did not pass checks."), "REVISION")
+        self.assertEqual(parse_subtask_verdict_from_text("GATE_VERDICT: PASS (fixed prior REVISION)"), "PASS")
+        self.assertEqual(
+            parse_subtask_verdict_from_text("Review note\nGATE_VERDICT: PASS\nChecked REVISION/REWORK/FAIL"),
+            "PASS",
+        )
+        self.assertEqual(parse_subtask_verdict_from_text("non_PASS"), "REVISION")
+        self.assertEqual(parse_subtask_verdict_from_text("Gate 4: __PASS__"), "PASS")
+        self.assertEqual(parse_subtask_verdict_from_text("_APPROVED_"), "PASS")
 
 
 if __name__ == "__main__":

@@ -33,6 +33,7 @@ Maintain an asymmetric pair of persistent subagents across the sprint:
      - `Root Reason for Existing Formulation`
      - `Preservation of Core Invariants`
    - Trace all callers, decorators, and shared state flows to audit cross-cutting blast radius.
+   - **`SYS.2` / `SYS.3` System-Level Impact Check**: Evaluate whether the change introduces or alters external sensors, wireless protocols, platform HALs, or external APIs; if impacted, document affected system requirements (`SYS.2`) and system architecture elements/interfaces (`SYS.3`) in the Change Impact Analysis section.
 4. **Scope Grounding & Complexity Split Guardrail**:
    - Explicitly delineate in-scope objectives from out-of-scope adjacent refactorings to prevent scope creep.
    - Audit ticket complexity against the 1/2/3/5+ Story Point scale. If true complexity exceeds 3 SP ($\ge 5\text{ SP}$ due to cross-system coupling), immediately flag the ticket for splitting before proceeding to Stage 2.

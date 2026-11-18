@@ -73,8 +73,6 @@
     <string name="radar_overlay_clear_mode_badge">Badge seul</string>
     <string name="radar_overlay_clear_mode_autohide">Masquage auto (3s)</string>
     <string name="radar_overlay_disconnected">Radar déconnecté</string>
-    <string name="radar_overlay_connecting">Connexion au radar</string>
-    <string name="radar_overlay_clear">Voie libre</string>
     <string name="radar_overlay_threats_format">%1$d menaces</string>
     <string name="radar_overlay_threats_fast_format">%1$d menaces (grande vitesse)</string>
 

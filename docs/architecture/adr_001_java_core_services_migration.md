@@ -1,27 +1,27 @@
 # ADR-001: Java Core Services Architecture Decision Record & Prioritized Migration Strategy
 
 - **Document ID**: `DOC-ARC-ADR001`
-- **Version**: 1.1.0
+- **Version**: 1.2.0
 - **Status**: Reviewed
 - **Approver**: Pending PO Sign-Off
 - **Deciders**: Architecture Board, Dual-Agent Pair (Implementer / Reviewer)
-- **Date**: 2026-11-14
-- **Target Release**: `5.1.0` (Active Sprint: `2026-46.6`)
+- **Date**: 2026-11-18
+- **Target Release**: `V5.0.0` (Active Sprint: `2026-11-18_01_Früh`)
 - **Parent Epic**: [ATT-431](https://issue-tracker/ATT-431) (*Clean Code*)
 - **Ticket**: [ATT-7566](https://issue-tracker/ATT-7566)
-- **Requirement Mapping**: `REQ-ARC-005` (`REQ-ARC-005.1` - `REQ-ARC-005.6`)
-- **Test Mapping**: `TST-ARC-005` (`TST-ARC-005.1` - `TST-ARC-005.4`)
+- **Requirement Mapping**: `REQ-ARC-005` (`REQ-ARC-005.1` - `REQ-ARC-005.6`), `REQ-PRO-129.1`
+- **Test Mapping**: `TST-ARC-005` (`TST-ARC-005.1` - `TST-ARC-005.4`), `TST-PRO-129.1`
 
 ---
 
 ## 1. Context & Problem Statement
 
-ASPICE evaluation finding F9 highlighted that while the application presentation, view models, mathematical domain models, and repositories have transitioned 100% to idiomatic Kotlin (654 Kotlin files in `app/src/main/java`), the safety- and robustness-critical core of `aTrainingTracker` remains implemented in legacy Java (149 files, 45,174 LOC). This core encompasses:
+ASPICE evaluation finding F9 highlighted that while the application presentation, view models, mathematical domain models, and repositories transitioned to idiomatic Kotlin, a substantial portion of the safety- and robustness-critical core of `aTrainingTracker` remains implemented in legacy Java (**120 remaining `.java` files** out of the initial 149-class baseline after migrating **29 leaf/serializer classes** to Kotlin under `ATT-7903`, `ATT-7905`, and `ATT-7906`). This Java core encompasses:
 - Background tracking services and session state machines (`TrackerService.java`, `TrainingApplication.java`).
 - ANT+ and Bluetooth Low Energy sensor ingestion and protocol arbitration (`BANALService.java`, `DeviceManager.java`).
-- High-frequency sensor formatters, digital filters, and hardware device decoders (`BTLERadarDevice.java`, `CyclingPowerMetricsDevice.java`).
+- Hardware device decoders and virtual sensors (`BTLERadarDevice.java`, `CyclingPowerMetricsDevice.java`).
 - Multi-layer SQLite database managers and persistence helpers (`WorkoutSummariesDatabaseManager.java`, `WorkoutSamplesDatabaseManager.java`, `DevicesDatabaseManager.java`).
-- Binary and XML workout file exporters (`FitFileWriter.java`, `TCXFileWriter.java`).
+- Remaining legacy file exporters and upload orchestrators (`ExportManager.java`, `GPXFileWriter.java`, `GCFileWriter.java`, `CSVFileWriter.java`), alongside the migrated Kotlin streaming writers (`FitFileWriter.kt`, `TCXFileWriter.kt`, `BaseFileWriter.kt`).
 
 ### 1.1 Technical Liabilities of Mixed Java/Kotlin Architecture
 1. **Platform Types (`T!`) & Nullability Hazards (SWE.3)**:
@@ -37,26 +37,26 @@ ASPICE evaluation finding F9 highlighted that while the application presentation
 
 ## 2. Decision Drivers & Evaluated Alternatives
 
-The Architecture Board evaluated three potential strategies:
+The Architecture Board evaluated three potential strategies, reconciled with the authoritative Product Owner architecture decision (`2026-11-14`, `ATT-8115`):
 
 ### Alternative 1: Big-Bang Complete Core Rewrite
-- **Description**: Migrate all 149 Java classes (45,174 LOC) simultaneously in a single monolithic effort.
+- **Description**: Migrate all 149 baseline Java classes simultaneously in a single monolithic effort.
 - **Evaluation**: **Rejected**. A big-bang rewrite carries prohibitive risk. `TrackerService` and `BANALService` contain years of subtle timing workarounds, hardware quirk mitigations, and GPS edge cases. Rewriting the entire core at once would violate Chesterton's Fence, halt active sprint delivery, and induce catastrophic telemetry regressions.
 
-### Alternative 2: Permanent Status Quo (Never Migrate Java Core)
-- **Description**: Keep the Java core permanently frozen in Java and only write new features in Kotlin.
-- **Evaluation**: **Rejected**. Leaving 45,174 LOC in Java permanently exposes the codebase to platform type nullability bugs, prevents modernizing background services with coroutine `StateFlow` primitives, and incurs lasting maintenance debt.
+### Alternative 2: Permanent Status Quo (Never Migrate Any Leaf Utilities)
+- **Description**: Leave all 149 baseline Java classes untouched, including pure leaf formatters, mathematical filters, and file writers.
+- **Evaluation**: **Rejected**. Leaving zero-dependency pure leaf utilities and streaming serializers in Java unnecessarily preserves platform-type (`T!`) exposure at UI/domain boundaries where Golden Master tests make Kotlin conversion low-risk. Conversely, **retaining** the complex core services, RF peripheral drivers, and SQLite managers in Java (`Keep`) eliminates endurance tracking and RF protocol regression risks (`ATT-8115`).
 
-### Alternative 3: Phased, Risk-Tiered Bottom-Up Migration with Mandatory Characterisation Gates (Selected)
-- **Description**: Adopt an incremental, bottom-up 7-tier migration strategy (Tiers 0–6). Migrate leaf utilities and pure formatters first, followed by file exporters and device drivers, and finally encapsulate database managers and background services. Enforce mandatory Golden Master characterisation tests before touching any core service.
-- **Evaluation**: **Selected**. Provides zero runtime disruption, maintains a 100% clean-room test pass rate at every stage, keeps ticket sizes bounded between 1 and 3 Story Points, and systematically eliminates platform types.
+### Alternative 3: Phased, Risk-Tiered Bottom-Up Migration (Bounded Leaf Tiers 1–2, Core Services Kept in Java) (Selected)
+- **Description**: Execute incremental, Golden-Master-gated Kotlin migration strictly for low-risk leaf tiers — Tier 1 (15 leaf sensor formatters via `ATT-7903` and 11 pure mathematical signal filters via `ATT-7905`) and Tier 2 (3 streaming file writers `FitFileWriter.kt`, `TCXFileWriter.kt`, `BaseFileWriter.kt` via `ATT-7906`) — while **retaining (`Keep`)** Tiers 3–6 (`TrackerService`, `BANALService`, `TrainingApplication`, BLE/ANT+ drivers, legacy Pebble, and SQLite database managers encapsulated behind Kotlin repositories such as `WorkoutRepository`) in Java per Product Owner decision (`ATT-8115`).
+- **Evaluation**: **Selected**. Eliminates platform types at high-fanout leaf boundaries (`29` migrated classes, all `Completed`) while preserving zero runtime disruption in endurance tracking and RF sensor ingestion (`120` `.java` classes retained under `Keep` and guarded by Tier 0 characterisation tests).
 
 ---
 
 ## 3. Decision Outcome & Strategy Matrix
 
 ### 3.1 Subsystem Decision Matrix
-The 149 Java classes across 12 architectural subsystems are categorized with clear determinations aligned with the Product Owner decision (2026-11-14, ATT-8115):
+The 149 baseline classes across 12 architectural subsystems (**120 remaining `.java` classes + 29 migrated `.kt` classes**) are categorized with unambiguous determinations aligned with the Product Owner decision (2026-11-14, `ATT-8115`):
 
 | Subsystem Domain | Total Classes | Total LOC | Strategy Decision | Rationale |
 | :--- | :--- | :--- | :--- | :--- |
@@ -65,16 +65,16 @@ The 149 Java classes across 12 architectural subsystems are categorized with cle
 | **3. BLE Peripheral Drivers** | 11 | 4,414 | **Keep** | Bluetooth Low Energy device decoders (`BTLEBikePowerDevice`, `BTLERadarDevice`, `MyBTLEDevice`). Retained in Java per PO decision (`ATT-7908` cancelled). |
 | **4. ANT+ Peripheral Drivers & Search** | 17 | 2,803 | **Keep** | ANT+ device decoders (`ANTBikeCadenceDevice`, `ANTHeartRateDevice`). Retained in Java per PO decision (`ATT-7907` cancelled). |
 | **5. Common Peripheral Devices & Virtual Sensors** | 16 | 6,209 | **Keep** | Virtual sensors and device wrappers (`CyclingPowerMetricsDevice`, `HRVMetricsDevice`). Retained in Java per PO decision. |
-| **6. Leaf Sensor Formatters** | 15 | 777 | **Migrate** | Pure leaf mappers (`FormaterAltitude`, `FormaterPower`). Pure functional logic with zero dependencies; prime early migration candidate (`ATT-7903`). |
-| **7. Pure Mathematical Signal Filters** | 11 | 1,049 | **Migrate** | Pure mathematical algorithms (`AlphaFilter`, `MovingAverageFilter`). Migrate to pure Kotlin JVM models (`ATT-7905`). |
-| **8. SQLite Database Managers & Persistence** | 12 | 8,899 | **Keep / Modernize via Repository** | Complex SQLite database managers (`WorkoutSummariesDatabaseManager`, `WorkoutSamplesDatabaseManager`). Retain underlying SQLite schema; modernize and encapsulate behind clean Kotlin repository interfaces (`WorkoutRepository`, `ATT-7909` / `REQ-ARC-009`). |
-| **9. File Exporters & Serializers** | 16 | 4,470 | **Migrate** | Binary FIT and XML writers (`FitFileWriter`, `TCXFileWriter`). Migrate to Kotlin `.use {}` resource management and streaming I/O (`ATT-7906`). |
-| **10. Segments & Live Navigation** | 2 | 868 | **Keep** | Live segment matching logic (`SegmentMatcher`). Retained in Java per PO decision. |
-| **11. Legacy UI Views, Fragments & Dialogs** | 7 | 1,120 | **Keep / Modernize** | Legacy XML-bound views and dialogs. Retained in Java or replaced with modern Jetpack Compose equivalents. |
-| **12. Obsolete Smartwatch & 3rd-Party Subsystems** | 10 | 2,232 | **Keep / Sunset** | Pebble smartwatch integration (7 classes, 1,739 LOC) retained for potential revival (`ATT-40`, `ATT-7910` cancelled). Embedded `au.com.bytecode.opencsv` (3 classes, 493 LOC) to be replaced by standard libraries. |
+| **6. Leaf Sensor Formatters** | 15 | 777 | **Migrate (Completed)** | Pure leaf mappers (`AltitudeFormatter`, `DistanceFormatter`). Migrated 15/15 to Kotlin (`ATT-7903`, `Completed`). |
+| **7. Pure Mathematical Signal Filters** | 11 | 1,049 | **Migrate (Completed)** | Pure mathematical algorithms (`ExponentialSmoothingFilter`, `MovingAverageFilter`). Migrated 11/11 to pure Kotlin JVM models (`ATT-7905`, `Completed`). |
+| **8. SQLite Database Managers & Persistence** | 12 | 8,899 | **Keep / Modernize via Repository** | Complex SQLite database managers (`WorkoutSummariesDatabaseManager`, `WorkoutSamplesDatabaseManager`). Retain underlying SQLite schema and Java managers (`Keep`); modernize and encapsulate behind clean Kotlin repository interfaces (`WorkoutRepository`, `ATT-7909` / `REQ-ARC-009`). |
+| **9. File Exporters & Serializers** | 16 | 4,470 | **Migrate (Partial — Writers Completed) / Keep** | Streaming binary FIT and TCX writers (`FitFileWriter.kt`, `TCXFileWriter.kt`, `BaseFileWriter.kt`) migrated to Kotlin (`ATT-7906`, `Completed`); remaining legacy exporters and uploaders (`ExportManager`, `ExportStatusDatabaseManager`, `GPXFileWriter`, `GCFileWriter`, `CSVFileWriter`) retained in Java (`Keep`). |
+| **10. Segments & Live Navigation** | 2 | 868 | **Keep** | Live segment matching logic (`SegmentsDatabaseManager`, `SegmentHelper`). Retained in Java per PO decision. |
+| **11. Legacy UI Views, Fragments & Dialogs** | 7 | 1,120 | **Keep / Modernize** | Legacy XML-bound views and dialogs. Retained in Java or superseded by modern Jetpack Compose equivalents. |
+| **12. Obsolete Smartwatch & 3rd-Party Subsystems** | 10 | 2,232 | **Keep / Sunset** | Pebble smartwatch integration (7 classes, 1,739 LOC) retained for potential revival (`ATT-40`, `ATT-7910` cancelled). Embedded `au.com.bytecode.opencsv` (3 classes, 493 LOC) retained in Java (`Keep`). |
 
 ### 3.2 Top 10 Java Anchors Decision Table
-The top 10 largest and most churned Java classes in the codebase are accounted for below:
+The top 10 largest and most churned baseline Java classes in the codebase are accounted for below:
 
 | Class Name | Subsystem | LOC | Commits | Decision | Technical Rationale |
 | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -87,13 +87,13 @@ The top 10 largest and most churned Java classes in the codebase are accounted f
 | `BTLERadarDevice` | BLE Peripheral Drivers | 1,224 | 20 | **Keep** | Garmin Varia radar parser; high safety impact, retained in Java per PO decision. |
 | `MyBTLEDevice` | BLE Peripheral Drivers | 1,130 | 24 | **Keep** | Base Bluetooth LE GATT wrapper; retained in Java per PO decision. |
 | `WorkoutSamplesDatabaseManager` | SQLite Database Managers | 954 | 31 | **Keep / Modernize via Repository** | 1-Hz high-frequency time-series persistence; modernize with batch insertion mappers. |
-| `FitFileWriter` | File Exporters & Serializers | 822 | 22 | **Migrate** | Binary Garmin FIT serializer; migrated to Kotlin (`ATT-7906`) with byte-for-byte regression fixtures. |
+| `FitFileWriter` | File Exporters & Serializers | 822 | 22 | **Migrated (Completed)** | Binary Garmin FIT serializer; migrated to Kotlin (`FitFileWriter.kt`, `ATT-7906`) with byte-for-byte regression fixtures. |
 
 ---
 
-## 4. Quantitative Java Inventory (Complete 149 Classes Across 12 Subsystems)
+## 4. Quantitative Java Inventory (120 Remaining Java Classes + 29 Migrated Kotlin Classes Across 12 Subsystems)
 
-The table below catalogs every single Java class currently residing in `app/src/main/java`:
+The table below catalogs the 149-class baseline in `app/src/main/java` (`120` currently remaining `.java` classes + `29` completed Kotlin migrations under `ATT-7903`, `ATT-7905`, and `ATT-7906`):
 
 | Class Name | Subsystem | File Path | LOC | Churn | Test Status | Decision |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -192,32 +192,32 @@ The table below catalogs every single Java class currently residing in `app/src/
 | `BikePowerSensorsHelper` | 5. Common Peripheral Devices & Virtual Sensors | `com/atrainingtracker/banalservice/devices/BikePowerSensorsHelper.java` | 153 | 3 | Untested | Keep |
 | `MyRemoteDevice` | 5. Common Peripheral Devices & Virtual Sensors | `com/atrainingtracker/banalservice/devices/MyRemoteDevice.java` | 139 | 15 | Untested | Keep |
 | `SearchForNewDevicesInterface` | 5. Common Peripheral Devices & Virtual Sensors | `com/atrainingtracker/banalservice/devices/SearchForNewDevicesInterface.java` | 26 | 2 | Untested | Keep |
-| `DistanceFormatter` | 6. Leaf Sensor Formatters | `com/atrainingtracker/banalservice/sensor/formater/DistanceFormatter.java` | 104 | 6 | Untested | Migrate |
-| `AltitudeFormatter` | 6. Leaf Sensor Formatters | `com/atrainingtracker/banalservice/sensor/formater/AltitudeFormatter.java` | 88 | 3 | Untested | Migrate |
-| `PaceFormatter` | 6. Leaf Sensor Formatters | `com/atrainingtracker/banalservice/sensor/formater/PaceFormatter.java` | 67 | 3 | Untested | Migrate |
-| `BatteryRemainingTimeFormatter` | 6. Leaf Sensor Formatters | `com/atrainingtracker/banalservice/sensor/formater/BatteryRemainingTimeFormatter.java` | 62 | 1 | Tested | Migrate |
-| `TimeFormatter` | 6. Leaf Sensor Formatters | `com/atrainingtracker/banalservice/sensor/formater/TimeFormatter.java` | 62 | 6 | Tested | Migrate |
-| `SpeedFormatter` | 6. Leaf Sensor Formatters | `com/atrainingtracker/banalservice/sensor/formater/SpeedFormatter.java` | 53 | 5 | Untested | Migrate |
-| `DfaA1Formatter` | 6. Leaf Sensor Formatters | `com/atrainingtracker/banalservice/sensor/formater/DfaA1Formatter.java` | 49 | 1 | Tested | Migrate |
-| `PowerToWeightFormatter` | 6. Leaf Sensor Formatters | `com/atrainingtracker/banalservice/sensor/formater/PowerToWeightFormatter.java` | 47 | 1 | Tested | Migrate |
-| `IntensityFactorFormatter` | 6. Leaf Sensor Formatters | `com/atrainingtracker/banalservice/sensor/formater/IntensityFactorFormatter.java` | 44 | 1 | Tested | Migrate |
-| `SignedIntegerFormatter` | 6. Leaf Sensor Formatters | `com/atrainingtracker/banalservice/sensor/formater/SignedIntegerFormatter.java` | 44 | 1 | Tested | Migrate |
-| `DefaultNumberFormatter` | 6. Leaf Sensor Formatters | `com/atrainingtracker/banalservice/sensor/formater/DefaultNumberFormatter.java` | 39 | 2 | Untested | Migrate |
-| `IntegerFormatter` | 6. Leaf Sensor Formatters | `com/atrainingtracker/banalservice/sensor/formater/IntegerFormatter.java` | 34 | 3 | Tested | Migrate |
-| `DefaultStringFormatter` | 6. Leaf Sensor Formatters | `com/atrainingtracker/banalservice/sensor/formater/DefaultStringFormatter.java` | 29 | 3 | Untested | Migrate |
-| `CadenceFormatter` | 6. Leaf Sensor Formatters | `com/atrainingtracker/banalservice/sensor/formater/CadenceFormatter.java` | 28 | 3 | Tested | Migrate |
-| `MyFormatter` | 6. Leaf Sensor Formatters | `com/atrainingtracker/banalservice/sensor/formater/MyFormatter.java` | 27 | 3 | Untested | Migrate |
-| `FilterManager` | 7. Pure Mathematical Signal Filters | `com/atrainingtracker/banalservice/filters/FilterManager.java` | 319 | 19 | Untested | Migrate |
-| `TimedMovingAverageFilter` | 7. Pure Mathematical Signal Filters | `com/atrainingtracker/banalservice/filters/TimedMovingAverageFilter.java` | 170 | 11 | Untested | Migrate |
-| `NumberedMovingAverageFilter` | 7. Pure Mathematical Signal Filters | `com/atrainingtracker/banalservice/filters/NumberedMovingAverageFilter.java` | 86 | 8 | Untested | Migrate |
-| `ExponentialSmoothingFilter` | 7. Pure Mathematical Signal Filters | `com/atrainingtracker/banalservice/filters/ExponentialSmoothingFilter.java` | 83 | 9 | Untested | Migrate |
-| `MaxValueFilter` | 7. Pure Mathematical Signal Filters | `com/atrainingtracker/banalservice/filters/MaxValueFilter.java` | 78 | 7 | Untested | Migrate |
-| `MyFilter` | 7. Pure Mathematical Signal Filters | `com/atrainingtracker/banalservice/filters/MyFilter.java` | 78 | 6 | Untested | Migrate |
-| `AverageFilter` | 7. Pure Mathematical Signal Filters | `com/atrainingtracker/banalservice/filters/AverageFilter.java` | 64 | 7 | Untested | Migrate |
-| `InstantaneousFilter` | 7. Pure Mathematical Signal Filters | `com/atrainingtracker/banalservice/filters/InstantaneousFilter.java` | 54 | 5 | Untested | Migrate |
-| `FilteredSensorData` | 7. Pure Mathematical Signal Filters | `com/atrainingtracker/banalservice/filters/FilteredSensorData.java` | 48 | 4 | Untested | Migrate |
-| `FilterData` | 7. Pure Mathematical Signal Filters | `com/atrainingtracker/banalservice/filters/FilterData.java` | 40 | 4 | Untested | Migrate |
-| `MovingAverageFilter` | 7. Pure Mathematical Signal Filters | `com/atrainingtracker/banalservice/filters/MovingAverageFilter.java` | 29 | 4 | Untested | Migrate |
+| `DistanceFormatter` | 6. Leaf Sensor Formatters | `com/atrainingtracker/banalservice/sensor/formater/DistanceFormatter.kt` | 104 | 6 | Tested | Migrated (ATT-7903) |
+| `AltitudeFormatter` | 6. Leaf Sensor Formatters | `com/atrainingtracker/banalservice/sensor/formater/AltitudeFormatter.kt` | 88 | 3 | Tested | Migrated (ATT-7903) |
+| `PaceFormatter` | 6. Leaf Sensor Formatters | `com/atrainingtracker/banalservice/sensor/formater/PaceFormatter.kt` | 67 | 3 | Tested | Migrated (ATT-7903) |
+| `BatteryRemainingTimeFormatter` | 6. Leaf Sensor Formatters | `com/atrainingtracker/banalservice/sensor/formater/BatteryRemainingTimeFormatter.kt` | 62 | 1 | Tested | Migrated (ATT-7903) |
+| `TimeFormatter` | 6. Leaf Sensor Formatters | `com/atrainingtracker/banalservice/sensor/formater/TimeFormatter.kt` | 62 | 6 | Tested | Migrated (ATT-7903) |
+| `SpeedFormatter` | 6. Leaf Sensor Formatters | `com/atrainingtracker/banalservice/sensor/formater/SpeedFormatter.kt` | 53 | 5 | Tested | Migrated (ATT-7903) |
+| `DfaA1Formatter` | 6. Leaf Sensor Formatters | `com/atrainingtracker/banalservice/sensor/formater/DfaA1Formatter.kt` | 49 | 1 | Tested | Migrated (ATT-7903) |
+| `PowerToWeightFormatter` | 6. Leaf Sensor Formatters | `com/atrainingtracker/banalservice/sensor/formater/PowerToWeightFormatter.kt` | 47 | 1 | Tested | Migrated (ATT-7903) |
+| `IntensityFactorFormatter` | 6. Leaf Sensor Formatters | `com/atrainingtracker/banalservice/sensor/formater/IntensityFactorFormatter.kt` | 44 | 1 | Tested | Migrated (ATT-7903) |
+| `SignedIntegerFormatter` | 6. Leaf Sensor Formatters | `com/atrainingtracker/banalservice/sensor/formater/SignedIntegerFormatter.kt` | 44 | 1 | Tested | Migrated (ATT-7903) |
+| `DefaultNumberFormatter` | 6. Leaf Sensor Formatters | `com/atrainingtracker/banalservice/sensor/formater/DefaultNumberFormatter.kt` | 39 | 2 | Tested | Migrated (ATT-7903) |
+| `IntegerFormatter` | 6. Leaf Sensor Formatters | `com/atrainingtracker/banalservice/sensor/formater/IntegerFormatter.kt` | 34 | 3 | Tested | Migrated (ATT-7903) |
+| `DefaultStringFormatter` | 6. Leaf Sensor Formatters | `com/atrainingtracker/banalservice/sensor/formater/DefaultStringFormatter.kt` | 29 | 3 | Tested | Migrated (ATT-7903) |
+| `CadenceFormatter` | 6. Leaf Sensor Formatters | `com/atrainingtracker/banalservice/sensor/formater/CadenceFormatter.kt` | 28 | 3 | Tested | Migrated (ATT-7903) |
+| `MyFormatter` | 6. Leaf Sensor Formatters | `com/atrainingtracker/banalservice/sensor/formater/MyFormatter.kt` | 27 | 3 | Tested | Migrated (ATT-7903) |
+| `FilterManager` | 7. Pure Mathematical Signal Filters | `com/atrainingtracker/banalservice/filters/FilterManager.kt` | 319 | 19 | Tested | Migrated (ATT-7905) |
+| `TimedMovingAverageFilter` | 7. Pure Mathematical Signal Filters | `com/atrainingtracker/banalservice/filters/TimedMovingAverageFilter.kt` | 170 | 11 | Tested | Migrated (ATT-7905) |
+| `NumberedMovingAverageFilter` | 7. Pure Mathematical Signal Filters | `com/atrainingtracker/banalservice/filters/NumberedMovingAverageFilter.kt` | 86 | 8 | Tested | Migrated (ATT-7905) |
+| `ExponentialSmoothingFilter` | 7. Pure Mathematical Signal Filters | `com/atrainingtracker/banalservice/filters/ExponentialSmoothingFilter.kt` | 83 | 9 | Tested | Migrated (ATT-7905) |
+| `MaxValueFilter` | 7. Pure Mathematical Signal Filters | `com/atrainingtracker/banalservice/filters/MaxValueFilter.kt` | 78 | 7 | Tested | Migrated (ATT-7905) |
+| `MyFilter` | 7. Pure Mathematical Signal Filters | `com/atrainingtracker/banalservice/filters/MyFilter.kt` | 78 | 6 | Tested | Migrated (ATT-7905) |
+| `AverageFilter` | 7. Pure Mathematical Signal Filters | `com/atrainingtracker/banalservice/filters/AverageFilter.kt` | 64 | 7 | Tested | Migrated (ATT-7905) |
+| `InstantaneousFilter` | 7. Pure Mathematical Signal Filters | `com/atrainingtracker/banalservice/filters/InstantaneousFilter.kt` | 54 | 5 | Tested | Migrated (ATT-7905) |
+| `FilteredSensorData` | 7. Pure Mathematical Signal Filters | `com/atrainingtracker/banalservice/filters/FilteredSensorData.kt` | 48 | 4 | Tested | Migrated (ATT-7905) |
+| `FilterData` | 7. Pure Mathematical Signal Filters | `com/atrainingtracker/banalservice/filters/FilterData.kt` | 40 | 4 | Tested | Migrated (ATT-7905) |
+| `MovingAverageFilter` | 7. Pure Mathematical Signal Filters | `com/atrainingtracker/banalservice/filters/MovingAverageFilter.kt` | 29 | 4 | Tested | Migrated (ATT-7905) |
 | `WorkoutSummariesDatabaseManager` | 8. SQLite Database Managers & Persistence | `com/atrainingtracker/trainingtracker/database/WorkoutSummariesDatabaseManager.java` | 2945 | 108 | Tested | Keep / Modernize via Repository |
 | `TrackingViewsDatabaseManager` | 8. SQLite Database Managers & Persistence | `com/atrainingtracker/trainingtracker/database/TrackingViewsDatabaseManager.java` | 2421 | 67 | Tested | Keep / Modernize via Repository |
 | `WorkoutSamplesDatabaseManager` | 8. SQLite Database Managers & Persistence | `com/atrainingtracker/trainingtracker/database/WorkoutSamplesDatabaseManager.java` | 954 | 31 | Tested | Keep / Modernize via Repository |
@@ -230,16 +230,16 @@ The table below catalogs every single Java class currently residing in `app/src/
 | `SuppressCursorAudit` | 8. SQLite Database Managers & Persistence | `com/atrainingtracker/database/SuppressCursorAudit.java` | 34 | 1 | Untested | Keep / Modernize via Repository |
 | `CursorProvider` | 8. SQLite Database Managers & Persistence | `com/atrainingtracker/database/CursorProvider.java` | 27 | 1 | Untested | Keep / Modernize via Repository |
 | `DatabaseConstants` | 8. SQLite Database Managers & Persistence | `com/atrainingtracker/database/DatabaseConstants.java` | 17 | 1 | Untested | Keep / Modernize via Repository |
-| `FitFileWriter` | 9. File Exporters & Serializers | `com/atrainingtracker/trainingtracker/exporter/writer/FitFileWriter.java` | 843 | 12 | Tested | Migrate |
+| `FitFileWriter` | 9. File Exporters & Serializers | `com/atrainingtracker/trainingtracker/exporter/writer/FitFileWriter.kt` | 843 | 12 | Tested | Migrated (ATT-7906) |
 | `ExportStatusDatabaseManager` | 9. File Exporters & Serializers | `com/atrainingtracker/trainingtracker/exporter/db/ExportStatusDatabaseManager.java` | 793 | 11 | Tested | Keep |
 | `ExportManager` | 9. File Exporters & Serializers | `com/atrainingtracker/trainingtracker/exporter/ExportManager.java` | 509 | 50 | Tested | Keep |
-| `TCXFileWriter` | 9. File Exporters & Serializers | `com/atrainingtracker/trainingtracker/exporter/writer/TCXFileWriter.java` | 436 | 15 | Untested | Migrate |
+| `TCXFileWriter` | 9. File Exporters & Serializers | `com/atrainingtracker/trainingtracker/exporter/writer/TCXFileWriter.kt` | 436 | 15 | Tested | Migrated (ATT-7906) |
 | `StravaUploadDbHelper` | 9. File Exporters & Serializers | `com/atrainingtracker/trainingtracker/exporter/db/StravaUploadDbHelper.java` | 365 | 12 | Tested | Keep |
 | `BaseExporter` | 9. File Exporters & Serializers | `com/atrainingtracker/trainingtracker/exporter/BaseExporter.java` | 357 | 27 | Tested | Keep |
-| `GCFileWriter` | 9. File Exporters & Serializers | `com/atrainingtracker/trainingtracker/exporter/writer/GCFileWriter.java` | 279 | 8 | Tested | Migrate |
-| `GPXFileWriter` | 9. File Exporters & Serializers | `com/atrainingtracker/trainingtracker/exporter/writer/GPXFileWriter.java` | 215 | 9 | Tested | Migrate |
-| `CSVFileWriter` | 9. File Exporters & Serializers | `com/atrainingtracker/trainingtracker/exporter/writer/CSVFileWriter.java` | 168 | 6 | Tested | Migrate |
-| `BaseFileWriter` | 9. File Exporters & Serializers | `com/atrainingtracker/trainingtracker/exporter/writer/BaseFileWriter.java` | 148 | 13 | Untested | Migrate |
+| `GCFileWriter` | 9. File Exporters & Serializers | `com/atrainingtracker/trainingtracker/exporter/writer/GCFileWriter.java` | 279 | 8 | Tested | Keep |
+| `GPXFileWriter` | 9. File Exporters & Serializers | `com/atrainingtracker/trainingtracker/exporter/writer/GPXFileWriter.java` | 215 | 9 | Tested | Keep |
+| `CSVFileWriter` | 9. File Exporters & Serializers | `com/atrainingtracker/trainingtracker/exporter/writer/CSVFileWriter.java` | 168 | 6 | Tested | Keep |
+| `BaseFileWriter` | 9. File Exporters & Serializers | `com/atrainingtracker/trainingtracker/exporter/writer/BaseFileWriter.kt` | 148 | 13 | Tested | Migrated (ATT-7906) |
 | `FileFormat` | 9. File Exporters & Serializers | `com/atrainingtracker/trainingtracker/exporter/FileFormat.java` | 92 | 11 | Untested | Keep |
 | `DropboxUploader` | 9. File Exporters & Serializers | `com/atrainingtracker/trainingtracker/exporter/uploader/DropboxUploader.java` | 90 | 5 | Tested | Keep |
 | `ExportType` | 9. File Exporters & Serializers | `com/atrainingtracker/trainingtracker/exporter/ExportType.java` | 56 | 15 | Untested | Keep |
@@ -255,26 +255,25 @@ Migration proceeds bottom-up along ASPICE SWE.5 integration seams to guarantee t
 
 ```mermaid
 flowchart TD
-    Tier0["Tier 0: Characterisation Test Baseline & Scaffolding"] --> Tier1["Tier 1: Leaf Sensor Formatters & Pure Signal Filters"]
-    Tier1 --> Tier2["Tier 2: File Exporters & Serializers (FIT, TCX, GPX)"]
-    Tier2 --> Tier3["Tier 3: Peripheral BLE & ANT+ Leaf Device Drivers"]
-    Tier3 --> Tier4["Tier 4: SQLite Database Managers & Repository Encapsulation"]
-    Tier4 --> Tier5["Tier 5: Core Services & Session State Machines (TrackerService, BANALService)"]
-    Tier5 --> Tier6["Tier 6: Legacy Subsystem Deprecation & Sunsetting (Pebble, OpenCSV)"]
+    Tier0["Tier 0: Characterisation Test Baseline (Completed)"] --> Tier1["Tier 1: Leaf Sensor Formatters & Pure Signal Filters (Completed)"]
+    Tier1 --> Tier2["Tier 2: Streaming File Writers - FitFileWriter, TCXFileWriter, BaseFileWriter (Completed)"]
+    Tier2 --> Tier3["Tier 3: Peripheral BLE & ANT+ Drivers (Keep / Frozen in Java)"]
+    Tier3 --> Tier4["Tier 4: SQLite Managers (Keep) + Kotlin Repository Encapsulation (Completed)"]
+    Tier4 --> Tier5["Tier 5: Core Services - TrackerService, BANALService (Keep / Frozen in Java)"]
+    Tier5 --> Tier6["Tier 6: Legacy Pebble & OpenCSV Subsystems (Keep / Frozen in Java)"]
 ```
 
 ### Tier 0: Characterisation Test Baseline & Harness Scaffolding
 - **Objective**: Establish automated Golden Master regression harnesses for `TrackerService` and `BANALService` state transitions and telemetry dispatching.
-- **Safety Gate**: Zero code migration in subsequent tiers may begin until Tier 0 characterisation tests pass with 100% coverage of existing public methods.
+- **Status (Completed, `ATT-7902`)**: Automated characterisation suites guard core service state transitions and telemetry dispatching.
 
 ### Tier 1: Leaf Sensor Formatters & Pure Signal Filters
 - **Scope**: `banalservice/sensor/formater/` (15 classes, 777 LOC) and `banalservice/filters/` (11 classes, 1,049 LOC).
-- **Objective**: Pure JVM mathematical models and string formatters with zero Android UI/Service dependencies.
-- **Benefit**: Immediate elimination of platform types (`T!`) across UI metric display and smoothing filters.
+- **Status (Completed, `ATT-7903`, `ATT-7905`)**: All 26 classes migrated to pure JVM Kotlin models and string formatters, eliminating platform types (`T!`) across UI metric displays and smoothing filters.
 
 ### Tier 2: File Exporters & Serializers
-- **Scope**: `trainingtracker/exporter/writer/` (`FitFileWriter`, `TCXFileWriter`, `GPXFileWriter`, `GCFileWriter`, 2,089 LOC).
-- **Objective**: Stream serialization with Kotlin `.use {}` resource management, binary FIT byte validation, and XML schema validation.
+- **Scope**: `trainingtracker/exporter/writer/` (`FitFileWriter.kt`, `TCXFileWriter.kt`, `BaseFileWriter.kt` migrated; `GPXFileWriter.java`, `GCFileWriter.java`, `CSVFileWriter.java` retained as `Keep`).
+- **Status (Completed, `ATT-7906`)**: Streaming FIT and TCX writers migrated to Kotlin `.use {}` resource management with byte-for-byte regression fixtures.
 
 ### Tier 3: Peripheral BLE & ANT+ Leaf Device Drivers
 - **Scope**: `banalservice/devices/bluetooth_le/` and `banalservice/devices/ant_plus/` (28 classes, 7,217 LOC).
@@ -285,12 +284,12 @@ flowchart TD
 - **Status (PO Decision 2026-11-14, ATT-8115)**: Modernized via clean Kotlin repositories (`WorkoutRepository`, `DeviceDataRepository`, `REQ-ARC-009` / `ATT-7909`) while retaining underlying SQLite database manager implementations in Java (`Keep`).
 
 ### Tier 5: Background Core Services & Session State Machines
-- **Scope**: `TrackerService.java` (3,307 LOC), `BANALService.java` (864 LOC), and `TrainingApplication.java` (2,125 LOC).
+- **Scope**: `TrackerService.java`, `BANALService.java`, and `TrainingApplication.java`.
 - **Status (PO Decision 2026-11-14, ATT-8115)**: Retained in Java (`Keep`) with Tier 0 characterisation test harnesses (`ATT-7902`) to safeguard endurance tracking stability and eliminate lifecycle regression risks.
 
 ### Tier 6: Legacy Subsystem Deprecation & Sunsetting
 - **Scope**: `trainingtracker/smartwatch/pebble/` (7 classes, 1,739 LOC) and `au/com/bytecode/opencsv/` (3 classes, 493 LOC).
-- **Status (PO Decision 2026-11-14, ATT-8115)**: Pebble smartwatch integration retained for future revival (`ATT-40`, `ATT-7910` cancelled); embedded OpenCSV to be replaced by standard Android or Kotlin parsing utilities.
+- **Status (PO Decision 2026-11-14, ATT-8115)**: Retained in Java (`Keep`); Pebble smartwatch integration preserved for future revival (`ATT-40`, `ATT-7910` cancelled).
 
 ---
 
@@ -313,16 +312,16 @@ Every future child ticket executing a migration step SHALL adhere to the followi
 
 ## 7. Atomic Backlog Child Tickets (Registered Under Epic ATT-431)
 
-In compliance with `REQ-ARC-005.5`, ASPICE SWE.1 / SWE.2 decomposition, and the authoritative Product Owner decision (2026-11-14, ATT-8115), active Java Core Services Kotlin migration under Epic [ATT-431](https://issue-tracker/ATT-431) (*Clean Code*) is strictly bounded to 3 atomic backlog child tickets sized between 2 and 3 Story Points:
+In compliance with `REQ-ARC-005.5`, ASPICE SWE.1 / SWE.2 decomposition, and the authoritative Product Owner decision (2026-11-14, ATT-8115), active Java Core Services Kotlin migration under Epic [ATT-431](https://issue-tracker/ATT-431) (*Clean Code*) is strictly bounded to 3 atomic backlog child tickets sized between 2 and 3 Story Points (`29` migrated classes total):
 
 | Jira Key | Summary | Story Points | Migration Tier | Target Subsystem | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **[ATT-7903](https://issue-tracker/ATT-7903)** | Java Core Migration: Migrate leaf sensor formatters to Kotlin | 2 SP | Tier 1 | Leaf Sensor Formatters | Planned |
-| **[ATT-7905](https://issue-tracker/ATT-7905)** | Java Core Migration: Migrate pure signal filters to Kotlin | 2 SP | Tier 1 | Pure Mathematical Signal Filters | Completed |
-| **[ATT-7906](https://issue-tracker/ATT-7906)** | Java Core Migration: Migrate streaming file writers (FitFileWriter, TCXFileWriter) to Kotlin | 3 SP | Tier 2 | File Exporters & Serializers | Completed |
+| **[ATT-7903](https://issue-tracker/ATT-7903)** | Java Core Migration: Migrate leaf sensor formatters to Kotlin | 2 SP | Tier 1 | Leaf Sensor Formatters (15 classes) | Completed |
+| **[ATT-7905](https://issue-tracker/ATT-7905)** | Java Core Migration: Migrate pure signal filters to Kotlin | 2 SP | Tier 1 | Pure Mathematical Signal Filters (11 classes) | Completed |
+| **[ATT-7906](https://issue-tracker/ATT-7906)** | Java Core Migration: Migrate streaming file writers (FitFileWriter, TCXFileWriter) to Kotlin | 3 SP | Tier 2 | File Exporters & Serializers (3 writer classes) | Completed |
 
 ### 7.1 Status of Remaining Child Tickets (PO Decision 2026-11-14)
-Per Product Owner decision recorded on 2026-11-14 (see comments in `ATT-7566`, `ATT-7907`, `ATT-7908`, `ATT-7910` and retrospective `ATT-7749`), all remaining subsystems deliberately remain in Java (`Keep`) to safeguard runtime endurance stability and eliminate regression risks in high-frequency sensor ingestion:
+Per Product Owner decision recorded on 2026-11-14 (see comments in `ATT-7566`, `ATT-7907`, `ATT-7908`, `ATT-7910` and retrospective `ATT-7749`), all remaining subsystems (`120` `.java` classes) deliberately remain in Java (`Keep`) to safeguard runtime endurance stability and eliminate regression risks in high-frequency sensor ingestion:
 - **`ATT-7902`** (3 SP, Tier 0): Characterisation test scaffolding completed (zero production code changes; establishes automated safety harnesses).
 - **`ATT-7907`** (2 SP, Tier 3 - ANT+ Drivers): Cancelled / Obsolete ("Wird nicht umgesetzt").
 - **`ATT-7908`** (3 SP, Tier 3 - BLE Drivers): Cancelled / Obsolete ("Wird nicht umgesetzt").
@@ -334,14 +333,14 @@ Per Product Owner decision recorded on 2026-11-14 (see comments in `ATT-7566`, `
 ## 8. Architectural Consequences & Trade-offs
 
 ### Positive Consequences
-- **Total Compile-Time Null Safety**: Progressive elimination of platform types (`T!`) removes the primary vector for runtime `NullPointerException`s during endurance tracking.
-- **Modern Concurrency**: Enables smooth transition of background services from thread synchronization to coroutine `StateFlow` streams.
-- **Unified Tooling**: Standardizes codebase under Detekt and KtLint static analysis.
-- **Zero Disruption**: Phased bottom-up sequencing ensures the application remains stable and deployable after every atomic ticket.
+- **Compile-Time Null Safety at Leaf & Repository Boundaries**: Eliminating platform types (`T!`) in the 29 migrated Kotlin leaf/writer classes plus `@NonNull`/`@Nullable` contracts on remaining Java core interfaces reduces runtime `NullPointerException` risk.
+- **Repository-Isolated Reactive Concurrency**: Presentation and ViewModel layers consume Kotlin Coroutines and `StateFlow` streams from repositories (`WorkoutRepository`, `BANALServiceRepository`) while background Java services (`TrackerService`, `BANALService`) remain undisturbed (`Keep`) behind `IF-SWE-03` and Tier 0 characterisation suites.
+- **Unified Static Analysis on Migrated & Kotlin Code**: Migrated Kotlin files are checked by Detekt/KtLint while Java core services are guarded by Golden Master regression suites.
+- **Zero Disruption**: Phased bottom-up sequencing with bounded `<= 3 SP` tickets kept the application stable and deployable at every step.
 
 ### Negative / Mitigated Consequences
-- **Transient Interoperability Overhead**: Temporary maintenance of `@JvmStatic` / `@JvmOverloads` annotations while Java callers remain. Mitigated by bottom-up tier ordering.
-- **Migration Effort**: Requires disciplined test characterisation before code conversion. Mitigated by limiting ticket sizes to <= 3 SP.
+- **Permanent Mixed-Language Interoperability**: Keeping `120` core `.java` classes requires ongoing `@NonNull` / `@Nullable` and `@JvmStatic` / `@JvmOverloads` boundary discipline, mitigated by `JavaCoreMigrationStrategyContractTest` and `ArchitectureConformanceContractTest`.
+- **Migration Effort**: Disciplined characterisation test authoring before leaf conversions, mitigated by bounding migration tickets to 1–3 SP and freezing core services as `Keep`.
 
 ---
 
@@ -351,3 +350,4 @@ Per Product Owner decision recorded on 2026-11-14 (see comments in `ATT-7566`, `
 | :--- | :--- | :--- | :--- | :--- |
 | `1.0.0` | 2026-11-14 | AI Agent (`ATT-7566`) | `ATT-7566`, `ATT-8115` | Initial Java core services migration strategy ADR. |
 | `1.1.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Added `DOC-ARC-ADR001` header, reset self-declared `Approved` to `Reviewed` (`Pending PO Sign-Off`), and added Change History. |
+| `1.2.0` | 2026-11-18 | AI Agent (`ATT-8203`) | `ATT-8203` | Reconciled residual `Keep`-vs-`Migrate` contradictions (§§1–8, Alt 2/3, Mermaid, §8 consequences), updated live Java inventory (`120` remaining `.java` + `29` migrated `.kt`), marked `ATT-7903` `Completed`, and set `Target Release` to `V5.0.0` (`REQ-PRO-129.1`). |

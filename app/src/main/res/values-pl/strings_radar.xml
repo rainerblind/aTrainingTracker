@@ -73,8 +73,6 @@
     <string name="radar_overlay_clear_mode_badge">Tylko plakietka</string>
     <string name="radar_overlay_clear_mode_autohide">Autoukrywanie (3s)</string>
     <string name="radar_overlay_disconnected">Radar rozłączony</string>
-    <string name="radar_overlay_connecting">Łączenie radaru</string>
-    <string name="radar_overlay_clear">Droga wolna</string>
     <string name="radar_overlay_threats_format">%1$d zagrożeń</string>
     <string name="radar_overlay_threats_fast_format">%1$d zagrożeń (wysoka prędkość)</string>
 

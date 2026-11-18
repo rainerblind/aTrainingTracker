@@ -50,9 +50,11 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipe
 import androidx.compose.ui.test.swipeLeft
@@ -65,7 +67,10 @@ import com.atrainingtracker.trainingtracker.activities.HrvDfaA1RangeSlider
 import com.atrainingtracker.trainingtracker.activities.HrvDfaA1SettingsContent
 import com.atrainingtracker.trainingtracker.activities.HrvThresholdControlRow
 import com.atrainingtracker.trainingtracker.activities.ZoneSettingsScreen
+import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
+import com.atrainingtracker.trainingtracker.settings.ZoneDisplayOptions
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -490,6 +495,120 @@ class HrvDfaA1RangeSliderGestureTest {
 
         val repoRoot = if (File("..", "docs/engineering/walkthroughs/img").exists()) File("..") else File(".")
         val outFile = File(repoRoot, "docs/engineering/walkthroughs/img/ATT-8105_hrv_slider_zones.png")
+        outFile.parentFile?.mkdirs()
+        FileOutputStream(outFile).use { out ->
+            bmp.compress(Bitmap.CompressFormat.PNG, 100, out)
+        }
+
+        assertTrue("Screenshot PNG must exist and be non-empty", outFile.exists() && outFile.length() > 0L)
+    }
+
+    @Test
+    fun testHrvDfaA1SettingsContent_omitsGaugeToggleAndRendersPreviewBar() {
+        val settingsDataStore = SettingsDataStore.getInstance(context)
+        runBlocking {
+            settingsDataStore.saveHrvZoneDisplayOptions(
+                ZoneDisplayOptions(
+                    showBackground = true,
+                    showLeftBar = true,
+                    showRightBar = false,
+                    showTextColor = true,
+                    showGauge = false
+                )
+            )
+        }
+
+        composeTestRule.setContent {
+            ATrainingTrackerTheme(darkTheme = false) {
+                Box(modifier = Modifier.width(412.dp).height(900.dp)) {
+                    HrvDfaA1SettingsContent(settingsDataStore = settingsDataStore)
+                }
+            }
+        }
+
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText(context.getString(R.string.zone_display_title))
+            .performScrollTo()
+            .assertIsDisplayed()
+        composeTestRule.onNodeWithText(context.getString(R.string.zone_display_background))
+            .performScrollTo()
+            .assertIsDisplayed()
+        composeTestRule.onNodeWithText(context.getString(R.string.zone_display_left_bar))
+            .performScrollTo()
+            .assertIsDisplayed()
+        composeTestRule.onNodeWithText(context.getString(R.string.zone_display_right_bar))
+            .performScrollTo()
+            .assertIsDisplayed()
+        composeTestRule.onNodeWithText(context.getString(R.string.zone_display_text_color))
+            .performScrollTo()
+            .assertIsDisplayed()
+
+        composeTestRule.onNodeWithText(context.getString(R.string.zone_display_gauge))
+            .assertDoesNotExist()
+        composeTestRule.onNodeWithText("Zonen-Balken")
+            .assertDoesNotExist()
+
+        composeTestRule.onNodeWithTag("zone_gauge_bar_container", useUnmergedTree = true)
+            .performScrollTo()
+            .assertIsDisplayed()
+    }
+
+    @Test
+    fun testCaptureLightAndDarkHrvZoneDisplayScreenshot_rule85() {
+        val settingsDataStore = SettingsDataStore.getInstance(context)
+        runBlocking {
+            settingsDataStore.saveHrvZoneDisplayOptions(
+                ZoneDisplayOptions(
+                    showBackground = true,
+                    showLeftBar = true,
+                    showRightBar = false,
+                    showTextColor = true,
+                    showGauge = false
+                )
+            )
+        }
+
+        composeTestRule.setContent {
+            Column(
+                modifier = Modifier
+                    .width(412.dp)
+                    .background(Color(0xFF78909C))
+                    .padding(12.dp)
+                    .testTag("HrvZoneDisplayLightDarkPreviewRoot"),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                ATrainingTrackerTheme(darkTheme = false) {
+                    Surface(
+                        color = MaterialTheme.colorScheme.surface,
+                        shape = MaterialTheme.shapes.medium,
+                        modifier = Modifier.fillMaxWidth().height(480.dp)
+                    ) {
+                        HrvDfaA1SettingsContent(settingsDataStore = settingsDataStore)
+                    }
+                }
+                ATrainingTrackerTheme(darkTheme = true) {
+                    Surface(
+                        color = MaterialTheme.colorScheme.surface,
+                        shape = MaterialTheme.shapes.medium,
+                        modifier = Modifier.fillMaxWidth().height(480.dp)
+                    ) {
+                        HrvDfaA1SettingsContent(settingsDataStore = settingsDataStore)
+                    }
+                }
+            }
+        }
+
+        composeTestRule.waitForIdle()
+        composeTestRule.onAllNodesWithTag("zone_gauge_bar_container", useUnmergedTree = true)[0].performScrollTo()
+        composeTestRule.onAllNodesWithTag("zone_gauge_bar_container", useUnmergedTree = true)[1].performScrollTo()
+        composeTestRule.waitForIdle()
+
+        val bmp = composeTestRule.onNodeWithTag("HrvZoneDisplayLightDarkPreviewRoot")
+            .captureToImage()
+            .asAndroidBitmap()
+
+        val repoRoot = if (File("..", "docs/engineering/walkthroughs/img").exists()) File("..") else File(".")
+        val outFile = File(repoRoot, "docs/engineering/walkthroughs/img/ATT-8712_hrv_zone_display.png")
         outFile.parentFile?.mkdirs()
         FileOutputStream(outFile).use { out ->
             bmp.compress(Bitmap.CompressFormat.PNG, 100, out)

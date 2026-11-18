@@ -1,0 +1,46 @@
+# Stage 1 Analysis: ATT-8097 - Unify Workout Detail Header Action Icons
+
+**DOC-ID**: `DOC-ANA-ATT-8097` | **Ticket**: [ATT-8097](https://atrainingtracker.atlassian.net/browse/ATT-8097)  
+**Parent Epic**: [ATT-176](https://atrainingtracker.atlassian.net/browse/ATT-176) (*Lieblingsstrecken / Route Clusters & Auto-Naming*) | **Target Release**: `V5.0.0`  
+**Active Sprint**: `sprint/2026-11-18_01_Früh` | **Branch**: `feature/ATT-8097` | **Author**: `--as agent1`  
+**Date**: 2026-11-18
+
+---
+
+## 1. Problem Statement & Motivation
+On-device Sprint Review of `ATT-7754` (`att7754_review_screenshot.png`) revealed three UX/consistency defects in the Workout Detail top-right header (`TrackOnMapScreen` / `WorkoutDetailTabbedContent` / `WorkoutHeader`):
+1. **Inconsistent Icon Color**: `Tune` (`sliders`), `Edit`, and `Share` render in `MaterialTheme.colorScheme.primary` (blue), whereas the cluster-change icon (`SwapHoriz` / `⇄`) renders black (`LocalContentColor.current`) and at `48.dp` instead of `32.dp` when opened from `WorkoutClustersScreen`.
+2. **Confusing Order & Scope Ambiguity**: Current order `[⇄] [Tune] [Edit] [Share]` interleaves global/persistent tab-layout config (`Tune`) inside per-workout actions (`⇄`, `Edit`, `Share`), with no visual boundary distinguishing per-workout actions from global display settings.
+3. **Inconsistent `⇄` Visibility**: `⇄` appears only when opening Workout Details from Lieblingsstrecken (`WorkoutClustersScreen`, `WorkoutClusterHeatmapScreen`) and disappears when opened from Trainingsliste (`WorkoutSummariesTabbedScreen`, `WorkoutSummariesListFragment`) or Perioden (`PeriodMapScreen`).
+
+## 2. Independent Peer Review & Verification (4-Augen-Prinzip)
+Audited all 5 `TrackOnMapScreen` callers, `WorkoutHeader.kt`, `WorkoutDetailTabbedContent.kt`, `WorkoutClusterComponents.kt`, `WorkoutClusterEngine.kt`, `WorkoutRepository.kt`, and `WorkoutClustersViewModel.kt` against `att7754_review_screenshot.png`:
+* **Color & Size Root Cause**: `WorkoutClustersScreen.kt:186-193` passes `Icon(Icons.Default.SwapHoriz, ...)` inside `headerActions` without `tint = MaterialTheme.colorScheme.primary` or `Modifier.size(32.dp)`, unlike `WorkoutClusterHeatmapScreen.kt:394-405` (blue, `32.dp`), `WorkoutDetailTabbedContent.kt:658-667` (`Tune`, blue, `32.dp`), and `WorkoutHeader.kt:148-172` (`Edit`/`Share`, blue, `32.dp`). `WarningAmber` (`L133-146`) intentionally uses semantic `MaterialTheme.colorScheme.error` (Design Guidelines §5.4).
+* **Ordering & Overlap Guard**: `WorkoutDetailTabbedContent.kt:656-668` injects `headerActions()` *before* `Tune`, and `WorkoutHeader.kt:127-173` places `actions()` before `Edit`/`Share`, producing `[⇄][Tune][Edit][Share]`. Moreover, `WorkoutHeader.kt:424-429` computes `actionSpacerWidth` only from `menuEnabled`, `onEditWorkout`, and `onShareWorkout`—omitting `Tune`, `⇄`, and `WarningAmber`—risking title-text collision on `360–411 dp` viewports.
+* **Visibility & Non-GPS Edge Cases (`Rule 7`)**: `TrackOnMapScreen.kt:96` delegates `⇄` to optional `headerActions`; `WorkoutSummariesTabbedScreen.kt:313-344`, `WorkoutSummariesListFragment.kt:188-219`, and `PeriodMapScreen.kt:238-247` omit `headerActions`, hiding `⇄`. Additionally, for indoor/manual workouts (`startLatLng == null || endLatLng == null`), `WorkoutClustersViewModel.getCandidateClustersForWorkout` (`L622-629`) returns `emptyList()`, `WorkoutClusterEngine.moveWorkoutToCluster` (`L1266`) silently returns early, and `createNewClusterFromWorkout` (`L951-952`) returns `-1L`, whereas `WorkoutRepository.assignClusterToWorkout` (`L4964`) and `unassignClusterFromWorkout` (`L4978`) still work cleanly.
+* **Living Docs & Test Hygiene**: `req_ui_design_system_part4.md` (`3966` lines) and `tst_ui_design_system_part2.md` (`3977` lines) are near the `4000`-line shard cap; place new/refined specs in `req_ui_design_system_part5.md` (`1789` lines) and `tst_ui_design_system_part3.md` (`784` lines). New tests MUST maintain `0` `src/main` reads (`SourceTextReadingAuditContractTest`).
+
+## 3. User Scope Grounding (ATT-1250)
+* **In-Scope (`2 SP`)**: (1) Uniform `MaterialTheme.colorScheme.primary` tint and `32.dp` sizing for all top-right Workout Detail action icons (`Tune`, `⇄`, `Edit`, `Share`); (2) Swap `Tune` before `⇄` (`[Tune] | [⇄][Edit][Share]`) with clear visual/tooltip separation between global display config and per-workout actions within `411 dp`; (3) Consistent `⇄` visibility and functional cluster assignment/unassignment across all `TrackOnMapScreen` entry points (including unclustered/indoor/manual edge cases); (4) 9-locale parity if any new strings/tooltips are added.
+* **Out-of-Scope**: Adding `Tune` or `⇄` to `WorkoutSummary` list cards or `snapshotHeader`, or modifying cluster spatial-scoring math.
+
+## 4. Requirement Archaeology & Chesterton's Fence Audit (REQ-PRO-022)
+* **Original Requirement ID & Target**: `REQ-UI-408.5` (`req_ui_design_system_part4.md:734`, `WorkoutDetailTabbedContent.kt`), `REQ-UI-447` (`ATT-5809`, `WorkoutHeader.kt`), and `REQ-SET-059.4` (`req_settings_profiles.md:487`, `WorkoutClustersScreen.kt` / `WorkoutClusterHeatmapScreen.kt`).
+* **Historical Origin & Commit Trace**: `ea5fa705` (`ATT-3920`) added `Tune` in `WorkoutDetailTabbedContent`; `ab9bebee` (`ATT-5809`) moved `Share` to `WorkoutHeader` and added `actionSpacerWidth`; `949078cd` (`ATT-7754`) added `onUnassign` and reactive peek refresh.
+* **Root Reason for Existing Formulation**: `headerActions` was used as an ad-hoc slot for cluster screens while `WorkoutHeader` kept `Edit`/`Share` decoupled, unintentionally leaving `Trainingsliste` and `Perioden` without `⇄` and placing `Tune` after `headerActions`.
+* **Preservation of Core Invariants**: Preserve `WorkoutSummary` list-card overflow menu (`menuEnabled = true`), clean `snapshotHeader` (no interactive icons), `WorkoutDetailHeaderClickContractTest` (`onClicked = null`), `WorkoutClusterSelectionDialog` public signature (`WorkoutClusterSelectionDialogTest`), and `REQ-UI-433` landscape single-row compaction.
+
+## 5. Change-Request Impact Analysis (SUP.10 / REQ-PRO-064)
+* **Affected Requirements**: Refines `REQ-UI-408.5`, `REQ-UI-447`, and `REQ-SET-059.4` via net-new `REQ-UI-*` in `docs/requirements/req_ui_design_system_part5.md`.
+* **Affected Architecture Elements**: `WorkoutHeader.kt`, `WorkoutDetailTabbedContent.kt`, `TrackOnMapScreen.kt`, `TrackOnMapAftermathViewModel.kt` / `WorkoutRepository.kt`, `WorkoutClusterComponents.kt`, `WorkoutClustersScreen.kt`, `WorkoutClusterHeatmapScreen.kt`, and `values*/strings.xml` (9 locales if new tooltips/strings added).
+* **Verification Impact & Test Surface**: Net-new `TST-UI-*` in `docs/tests/tst_ui_design_system_part3.md`, `WorkoutDetailTabbedContentTest`, `WorkoutHeaderLandscapeTest`, `WorkoutClusterSelectionDialogTest`, new Compose UI tests (0 `src/main` reads), `TranslationParityTest` (if strings change), and Stage 5 `emulator-5554` Light/Dark/411dp screenshot audit (`Rule 8.5`).
+* **Risk Assessment & Invariants**: **MEDIUM** — touches shared `WorkoutHeader` used across `WorkoutSummary`, `TrackOnMapScreen`, landscape mode, and snapshot capture, plus ViewModel/repository cluster state sync across 5 entry points. Mitigated via preserving `WorkoutSummary`/`snapshotHeader` defaults, updating `actionSpacerWidth`, and keeping `WorkoutClusterSelectionDialog` signature compatible.
+
+## 6. Architectural Strategy & High-Level Solution
+1. **First-Class Header Slots in `WorkoutHeader`**: Add optional `onOpenTabsConfig: (() -> Unit)? = null` and `onChangeCluster: (() -> Unit)? = null` (or explicit global-vs-unit groups) in `WorkoutHeader.kt` so **all** action icons (`Tune`, `SwapHoriz`, `Edit`, `Share`) share `Modifier.size(32.dp)` and `tint = MaterialTheme.colorScheme.primary`, and `actionSpacerWidth` accounts for every rendered icon.
+2. **Global vs. Per-Workout Visual Grouping**: Render `[Tune]` (inside a subtle `primary.copy(alpha = TTAlpha.Faint)` pill or separated by a `16.dp` `VerticalDivider`) *to the left of* the contiguous per-workout group `[⇄] [Edit] [Share]` (plus `PlainTooltip` / localized `contentDescription` clearly distinguishing global display settings from per-workout actions, without horizontal label bloat on `411 dp`).
+3. **Unified Cluster-Change Handling in `TrackOnMapScreen`**: Provide default built-in `WorkoutClusterSelectionDialog` handling inside `TrackOnMapScreen` / `TrackOnMapAftermathViewModel` (routing through `WorkoutRepository` / `WorkoutClusterRepository`) whenever a caller does not override `onChangeCluster`, making `⇄` consistently available from `WorkoutSummariesTabbedScreen`, `WorkoutSummariesListFragment`, `PeriodMapScreen`, `WorkoutClustersScreen`, and `WorkoutClusterHeatmapScreen` (with `assignClusterToWorkout` fallback and hidden `onCreateNew` when `startLatLng == null || endLatLng == null`).
+
+## 7. System Invariants & Risk Assessment
+* **Core Invariants**: `WorkoutSummary` cards & `snapshotHeader` remain free of `Tune`/`⇄`; `WarningAmber` retains semantic `error` tint; `WorkoutClusterSelectionDialog` binary signature & `REQ-UI-433` landscape layout remain intact; `0` `src/main` test reads; 9-locale parity preserved.
+* **Risk Rating**: **MEDIUM** (multi-caller Workout Detail header layout + `WorkoutHeader` shared across Summary/Detail/Snapshot + ViewModel/Cluster state synchronization).

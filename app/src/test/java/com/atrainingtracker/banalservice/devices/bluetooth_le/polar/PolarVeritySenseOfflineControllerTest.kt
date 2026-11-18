@@ -1221,4 +1221,37 @@ class PolarVeritySenseOfflineControllerTest {
         assertFalse(armed)
         coVerify(exactly = 0) { mockApi.connectToDevice(any()) }
     }
+
+    @Test
+    fun testRenamedVeritySense_armsViaDisHardwareMetadataAndSerialId() = runBlocking {
+        // TST-CON-049.4
+        PolarVeritySenseOfflineController.sdkIntOverride = 33
+        PolarVeritySenseOfflineController.apiOverride = mockApi
+
+        val renamedMac = "AA:BB:CC:DD:EE:52"
+        PolarOfflineCapabilityStore.recordDisMetadata(context, renamedMac, modelNumber = "OH1", serialNumber = "0123CAFE")
+
+        val renamedDev = DevicesDatabaseManager.RemoteDeviceUIDataCacheItem(
+            12L,
+            "Swim Band",
+            DeviceType.HRM,
+            com.atrainingtracker.banalservice.Protocol.BLUETOOTH_LE
+        )
+        every { mockDb.allDevicesForCache } returns listOf(renamedDev)
+        every { mockDb.getBluetoothMACAddress(12L) } returns renamedMac
+        every { mockDb.isPolarH10OfflineRecordingEnabled(12L) } returns true
+
+        coEvery { mockApi.connectToDevice(any()) } just Runs
+        coEvery { mockApi.waitForConnection(any()) } just Runs
+        every { mockApi.isFeatureReady(any(), any()) } returns true
+        coEvery { mockApi.doFirstTimeUse(any(), any()) } just Runs
+        coEvery { mockApi.setLocalTime(any(), any()) } just Runs
+        coEvery { mockApi.listOfflineRecordings(any()) } returns flowOf()
+        coEvery { mockApi.startOfflineRecording(any(), any()) } just Runs
+        coEvery { mockApi.disconnectFromDevice(any()) } just Runs
+
+        val armed = PolarVeritySenseOfflineController.armForActiveWorkout(context)
+        assertTrue(armed)
+        coVerify(exactly = 1) { mockApi.connectToDevice("0123CAFE") }
+    }
 }

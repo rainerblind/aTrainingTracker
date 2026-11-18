@@ -40,6 +40,7 @@ import android.os.Handler;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -79,6 +80,7 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
     Handler mHandler;
     protected volatile BluetoothGattCharacteristic mBatteryCharacteristic;
     protected volatile boolean mIsShutDown = false;
+    private volatile Runnable mPendingTeardownCallback = null;
     private volatile boolean mIsGattPaused = false;
     private volatile long mCurrentReconnectDelayMs = INITIAL_RECONNECT_DELAY_MS;
     private volatile boolean mIsScanning = false;
@@ -805,6 +807,14 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
     }
 
     protected void disconnectFromGatt() {
+        disconnectFromGatt(null);
+    }
+
+    /**
+     * Clears pending GATT queues, disconnects/closes any active {@link BluetoothGatt} on
+     * {@code mHandler}, and invokes {@code onGattClosed} strictly after close completes ({@code REQ-CON-050.1}).
+     */
+    protected void disconnectFromGatt(@Nullable final Runnable onGattClosed) {
         if (DEBUG) Log.i(TAG, "disconnectFromGatt()");
 
         stopScanAssistance();
@@ -826,7 +836,7 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
         }
 
         if (gattToClose != null) {
-            mHandler.post(new Runnable() {
+            boolean posted = mHandler.post(new Runnable() {
                 @Override
                 public void run() {
                     try {
@@ -836,9 +846,20 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
                         }
                     } catch (Exception e) {
                         Log.w(TAG, "Error closing GATT", e);
+                    } finally {
+                        if (onGattClosed != null) {
+                            onGattClosed.run();
+                        }
                     }
                 }
             });
+            if (!posted && onGattClosed != null) {
+                onGattClosed.run();
+            }
+        } else if (onGattClosed != null) {
+            if (!mHandler.post(onGattClosed)) {
+                onGattClosed.run();
+            }
         }
     }
 
@@ -849,6 +870,23 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
 
     @Override
     public void shutDown() {
+        Runnable onTeardownComplete = mPendingTeardownCallback;
+        mPendingTeardownCallback = null;
+        performShutDown(onTeardownComplete);
+    }
+
+    /**
+     * Routes teardown completion through {@link #shutDown()} so subclass overrides such as
+     * {@link BTLEHeartRateDevice#shutDown()} always execute their cleanup before GATT close
+     * invokes {@code onTeardownComplete} ({@code REQ-CON-050.1}).
+     */
+    @Override
+    public void shutDown(@Nullable Runnable onTeardownComplete) {
+        mPendingTeardownCallback = onTeardownComplete;
+        shutDown();
+    }
+
+    private void performShutDown(@Nullable Runnable onTeardownComplete) {
         mIsShutDown = true;
         mHasConnectedInSession = false;
         if (DEBUG) Log.i(TAG, "shutDown()");
@@ -864,7 +902,7 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
             mHandler.removeCallbacksAndMessages(null);
         }
 
-        disconnectFromGatt();
+        disconnectFromGatt(onTeardownComplete);
 
         super.shutDown();
     }

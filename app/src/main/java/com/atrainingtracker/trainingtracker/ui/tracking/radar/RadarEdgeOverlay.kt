@@ -26,6 +26,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -39,21 +40,30 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DirectionsCar
+import androidx.compose.material.icons.filled.LocalShipping
+import androidx.compose.material.icons.filled.TwoWheeler
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -61,18 +71,34 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlin.math.ceil
+import kotlin.math.floor
+import kotlin.math.roundToInt
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.devices.radar.LaneState
 import com.atrainingtracker.banalservice.devices.radar.RadarAudioSnoozeMode
@@ -88,7 +114,6 @@ import com.atrainingtracker.trainingtracker.settings.RadarTrafficOrientation
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import kotlinx.coroutines.delay
-import kotlin.math.roundToInt
 
 /**
  * Pure helper and kinematics functions for cycling radar edge overlay (REQ-TRK-062).
@@ -234,7 +259,10 @@ object RadarOverlayMath {
  * Invariants:
  * - Touch pass-through: The outer container and vertical rail do NOT attach click or pointer listeners,
  *   allowing unhindered HorizontalPager paging, Live Map pan/zoom, and system edge back gestures (REQ-TRK-062.3).
- * - Only the top compact status badge pill consumes tap events for reconnect/settings (REQ-TRK-062.3).
+ * - Only the top compact status badge pill (rendered strictly for [RadarConnectionState.DISCONNECTED_ERROR]
+ *   or active threats) consumes tap events for reconnect/settings (REQ-TRK-062.3).
+ * - Clear-road status suppresses [RadarStatusBadgePill] completely (including snoozed clear) and guards
+ *   top vertical spacers on badge visibility so [RadarVerticalRail] does not shift downward (REQ-TRK-062.3).
  * - Fail-safe disconnect: Displays an amber hazard badge and NEVER displays green "All Clear" when
  *   in [RadarConnectionState.DISCONNECTED_ERROR] (REQ-TRK-062.4).
  */
@@ -253,6 +281,7 @@ fun RadarEdgeOverlay(
     val isConnected = radarState.connectionState == RadarConnectionState.CONNECTED
     val isClear = isConnected && !hasActiveThreats
     val isDisconnectError = RadarOverlayMath.isFailSafeDisconnect(radarState.connectionState)
+    val showStatusBadge = isDisconnectError || hasActiveThreats
     val has2DData = radarState.targets.any {
         it.lateralOffsetMeters != null || it.vehicleSizeCategory != VehicleSizeCategory.UNKNOWN_OR_LIGHT
     }
@@ -275,9 +304,9 @@ fun RadarEdgeOverlay(
     )
 
     // Pulsing animation for FAST_APPROACHING red alert (only composed when fast threats active)
-    val pulseAlpha = if (radarState.overallThreatLevel == ThreatLevel.FAST_APPROACHING) {
+    val pulseAlphaState: State<Float> = if (radarState.overallThreatLevel == ThreatLevel.FAST_APPROACHING) {
         val infiniteTransition = rememberInfiniteTransition(label = "pulse")
-        val alpha by infiniteTransition.animateFloat(
+        infiniteTransition.animateFloat(
             initialValue = 0.4f,
             targetValue = 0.95f,
             animationSpec = infiniteRepeatable(
@@ -286,9 +315,8 @@ fun RadarEdgeOverlay(
             ),
             label = "fastApproachingPulse"
         )
-        alpha
     } else {
-        1.0f
+        remember { mutableFloatStateOf(1.0f) }
     }
 
     if (edgeSide == RadarEdgeSide.FULL_SCREEN) {
@@ -303,7 +331,7 @@ fun RadarEdgeOverlay(
             if (hasActiveThreats) {
                 RadarFullScreenThreatOverlay(
                     radarState = radarState,
-                    pulseAlpha = pulseAlpha,
+                    pulseAlphaProvider = { pulseAlphaState.value },
                     trafficOrientation = trafficOrientation,
                     modifier = Modifier
                         .fillMaxSize()
@@ -311,23 +339,24 @@ fun RadarEdgeOverlay(
                 )
             }
 
-            // Top Status Badge Pill (only clickable element in full-screen overlay)
-            RadarStatusBadgePill(
-                radarState = radarState,
-                isClear = isClear,
-                isDisconnectError = isDisconnectError,
-                pulseAlpha = pulseAlpha,
-                onClick = {
-                    if (isDisconnectError && onReconnectClick != null) {
-                        onReconnectClick()
-                    } else {
-                        onBadgeClick()
-                    }
-                },
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(top = 8.dp, end = 8.dp)
-            )
+            if (showStatusBadge) {
+                // Top Status Badge Pill (only clickable element in full-screen overlay)
+                RadarStatusBadgePill(
+                    radarState = radarState,
+                    isDisconnectError = isDisconnectError,
+                    pulseAlphaProvider = { pulseAlphaState.value },
+                    onClick = {
+                        if (isDisconnectError && onReconnectClick != null) {
+                            onReconnectClick()
+                        } else {
+                            onBadgeClick()
+                        }
+                    },
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(top = 8.dp, end = 8.dp)
+                )
+            }
         }
     } else {
         // Edge Rail Mode (LEFT or RIGHT)
@@ -341,24 +370,25 @@ fun RadarEdgeOverlay(
                 .testTag("RadarEdgeOverlay"),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(8.dp))
+            if (showStatusBadge) {
+                Spacer(modifier = Modifier.height(8.dp))
 
-            // Top Status Badge Pill (only clickable element in the overlay, permanently visible)
-            RadarStatusBadgePill(
-                radarState = radarState,
-                isClear = isClear,
-                isDisconnectError = isDisconnectError,
-                pulseAlpha = pulseAlpha,
-                onClick = {
-                    if (isDisconnectError && onReconnectClick != null) {
-                        onReconnectClick()
-                    } else {
-                        onBadgeClick()
+                // Top Status Badge Pill (only clickable element in the overlay)
+                RadarStatusBadgePill(
+                    radarState = radarState,
+                    isDisconnectError = isDisconnectError,
+                    pulseAlphaProvider = { pulseAlphaState.value },
+                    onClick = {
+                        if (isDisconnectError && onReconnectClick != null) {
+                            onReconnectClick()
+                        } else {
+                            onBadgeClick()
+                        }
                     }
-                }
-            )
+                )
 
-            Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(6.dp))
+            }
 
             // Vertical Target Rail
             val showRail = when {
@@ -375,7 +405,7 @@ fun RadarEdgeOverlay(
                     isClear = isClear,
                     isDisconnectError = isDisconnectError,
                     clearMode = clearMode,
-                    pulseAlpha = pulseAlpha,
+                    pulseAlpha = pulseAlphaState.value,
                     edgeSide = edgeSide,
                     trafficOrientation = trafficOrientation,
                     modifier = Modifier
@@ -391,98 +421,258 @@ fun RadarEdgeOverlay(
     }
 }
 
+private data class FullScreenVehicleVisualSpec(
+    val icon: ImageVector,
+    val iconSize: Dp,
+    val minWidth: Dp,
+    val minHeight: Dp,
+    val fontSize: TextUnit,
+    val descriptionRes: Int
+)
+
+private fun resolveFullScreenVehicleVisualSpec(
+    category: VehicleSizeCategory
+): FullScreenVehicleVisualSpec = when (category) {
+    VehicleSizeCategory.UNKNOWN_OR_LIGHT -> FullScreenVehicleVisualSpec(
+        icon = Icons.Filled.TwoWheeler,
+        iconSize = 15.dp,
+        minWidth = 54.dp,
+        minHeight = 26.dp,
+        fontSize = 11.sp,
+        descriptionRes = R.string.radar_vehicle_size_light
+    )
+    VehicleSizeCategory.CAR -> FullScreenVehicleVisualSpec(
+        icon = Icons.Filled.DirectionsCar,
+        iconSize = 16.dp,
+        minWidth = 60.dp,
+        minHeight = 28.dp,
+        fontSize = 12.sp,
+        descriptionRes = R.string.radar_vehicle_size_car
+    )
+    VehicleSizeCategory.TRUCK_OR_BUS -> FullScreenVehicleVisualSpec(
+        icon = Icons.Filled.LocalShipping,
+        iconSize = 18.dp,
+        minWidth = 70.dp,
+        minHeight = 32.dp,
+        fontSize = 13.sp,
+        descriptionRes = R.string.radar_vehicle_size_truck
+    )
+}
+
+/**
+ * Subtle non-interactive road-lane framing guides rendered solely while active threats exist
+ * in FULL_SCREEN mode (REQ-TRK-089.1/.3).
+ */
+@Composable
+private fun RadarFullScreenLaneGuides(
+    guideColor: Color,
+    modifier: Modifier = Modifier
+) {
+    Canvas(modifier = modifier.fillMaxSize()) {
+        val dash = PathEffect.dashPathEffect(floatArrayOf(10f, 14f), 0f)
+        val strokePx = 1.dp.toPx()
+        for (fraction in listOf(0.30f, 0.50f, 0.70f)) {
+            val x = size.width * fraction
+            drawLine(
+                color = guideColor,
+                start = Offset(x, 0f),
+                end = Offset(x, size.height),
+                strokeWidth = strokePx,
+                pathEffect = dash
+            )
+        }
+    }
+}
+
 /**
  * Full-screen vehicle threat overlay rendering approaching vehicles directly on top
- * of the Tracking Screen with 100% touch pass-through (REQ-TRK-062.1a, REQ-TRK-062.3a).
+ * of the Tracking Screen with 100% touch pass-through (REQ-TRK-062.1/.3, REQ-TRK-089).
  */
 @Composable
 private fun RadarFullScreenThreatOverlay(
     radarState: RadarState,
-    pulseAlpha: Float,
+    pulseAlphaProvider: () -> Float,
     trafficOrientation: RadarTrafficOrientation,
     modifier: Modifier = Modifier
 ) {
     val maxRangeMeters = RadarOverlayMath.resolveRailMaxRange(radarState)
+    val isDarkSurface = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val guideColor = if (isDarkSurface) {
+        TTColor.RadarFullScreenLaneGuideDark
+    } else {
+        TTColor.RadarFullScreenLaneGuideLight
+    }
 
     BoxWithConstraints(
-        modifier = modifier.fillMaxSize()
+        modifier = modifier
+            .fillMaxSize()
+            .testTag("RadarFullScreenThreatOverlay")
     ) {
         val usableHeightPx = constraints.maxHeight.toFloat()
         val usableWidthPx = constraints.maxWidth.toFloat()
 
+        RadarFullScreenLaneGuides(guideColor = guideColor)
+
         radarState.targets.forEach { target ->
             key(target.targetId) {
-                val (targetWidthDp, targetHeightDp, targetShape) = when (target.vehicleSizeCategory) {
-                    VehicleSizeCategory.UNKNOWN_OR_LIGHT -> Triple(28.dp, 20.dp, RoundedCornerShape(6.dp))
-                    VehicleSizeCategory.CAR -> Triple(32.dp, 22.dp, RoundedCornerShape(6.dp))
-                    VehicleSizeCategory.TRUCK_OR_BUS -> Triple(36.dp, 26.dp, RoundedCornerShape(6.dp))
-                }
-
-                val targetHeightPx = with(LocalDensity.current) { targetHeightDp.toPx() }
-                val targetWidthPx = with(LocalDensity.current) { targetWidthDp.toPx() }
-                val travelHeightPx = (usableHeightPx - targetHeightPx).coerceAtLeast(0f)
-                val travelWidthPx = (usableWidthPx - targetWidthPx).coerceAtLeast(0f)
-
-                val normalizedY = RadarOverlayMath.normalizeRadarRange(target.rangeMeters, maxRangeMeters)
-                val animatedFraction by animateFloatAsState(
-                    targetValue = normalizedY,
-                    animationSpec = tween(durationMillis = 150, easing = LinearEasing),
-                    label = "fullScreenTarget_${target.targetId}_pos"
+                RadarFullScreenVehicleMarker(
+                    target = target,
+                    maxRangeMeters = maxRangeMeters,
+                    pulseAlphaProvider = pulseAlphaProvider,
+                    trafficOrientation = trafficOrientation,
+                    usableWidthPx = usableWidthPx,
+                    usableHeightPx = usableHeightPx
                 )
-
-                val yOffsetPx = (animatedFraction * travelHeightPx).roundToInt()
-                val horizontalFraction = RadarOverlayMath.calculateFullScreenHorizontalFraction(target, trafficOrientation)
-                val xOffsetPx = (horizontalFraction * travelWidthPx).roundToInt()
-
-                val baseThreatColor = RadarOverlayMath.resolveThreatColor(target.threatLevel)
-                val badgeColor = if (target.threatLevel == ThreatLevel.FAST_APPROACHING) {
-                    baseThreatColor.copy(alpha = 0.85f * pulseAlpha)
-                } else {
-                    baseThreatColor.copy(alpha = 0.85f)
-                }
-                val badgeTextColor = if (target.threatLevel == ThreatLevel.APPROACHING) Color.Black else Color.White
-
-                val vehicleDesc = when (target.vehicleSizeCategory) {
-                    VehicleSizeCategory.TRUCK_OR_BUS -> stringResource(R.string.radar_vehicle_size_truck)
-                    VehicleSizeCategory.CAR -> stringResource(R.string.radar_vehicle_size_car)
-                    VehicleSizeCategory.UNKNOWN_OR_LIGHT -> null
-                }
-
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .offset { IntOffset(x = xOffsetPx, y = yOffsetPx) }
-                        .size(width = targetWidthDp, height = targetHeightDp)
-                        .clip(targetShape)
-                        .background(badgeColor)
-                        .border(1.5.dp, Color.White, targetShape)
-                        .semantics {
-                            val prefix = vehicleDesc ?: "Target"
-                            contentDescription = "$prefix, ${target.rangeMeters.roundToInt()}m"
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "${target.rangeMeters.roundToInt()}m",
-                        color = badgeTextColor,
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
             }
         }
     }
 }
 
 /**
- * Top compact clickable status badge pill (REQ-TRK-062.3).
+ * Touch-transparent, elevated, content-sized capsule marker for a single approaching radar vehicle
+ * in FULL_SCREEN mode with V2 size iconography, tabular distance readout, high-contrast dual-rim
+ * framing, and single-pass `.layout` bounds clamping (REQ-TRK-089.1/.2/.3).
+ */
+@Composable
+private fun RadarFullScreenVehicleMarker(
+    target: RadarTarget,
+    maxRangeMeters: Float,
+    pulseAlphaProvider: () -> Float,
+    trafficOrientation: RadarTrafficOrientation,
+    usableWidthPx: Float,
+    usableHeightPx: Float
+) {
+    val spec = resolveFullScreenVehicleVisualSpec(target.vehicleSizeCategory)
+    val vehicleDesc = stringResource(spec.descriptionRes)
+    val distanceMeters = target.rangeMeters.roundToInt()
+
+    val normalizedY = RadarOverlayMath.normalizeRadarRange(target.rangeMeters, maxRangeMeters)
+    val animatedFractionState = animateFloatAsState(
+        targetValue = normalizedY,
+        animationSpec = tween(durationMillis = 150, easing = LinearEasing),
+        label = "fullScreenTarget_${target.targetId}_pos"
+    )
+    val horizontalFraction = RadarOverlayMath.calculateFullScreenHorizontalFraction(target, trafficOrientation)
+
+    val isFastApproaching = target.threatLevel == ThreatLevel.FAST_APPROACHING
+    val baseThreatColor = RadarOverlayMath.resolveThreatColor(target.threatLevel)
+    val contentColor = if (target.threatLevel == ThreatLevel.APPROACHING) {
+        TTColor.RadarFullScreenApproachingContent
+    } else {
+        TTColor.RadarFullScreenFastContent
+    }
+
+    val outerShape = RoundedCornerShape(15.dp)
+    val innerShape = RoundedCornerShape(13.5.dp)
+
+    Box(
+        modifier = Modifier
+            .layout { measurable, constraints ->
+                val placeable = measurable.measure(constraints.copy(minWidth = 0, minHeight = 0))
+                val fraction = animatedFractionState.value
+                val perspectiveScale = 0.94f + (1.0f - fraction) * 0.12f
+                val scaleOverhangX = (perspectiveScale - 1f).coerceAtLeast(0f) * placeable.width * 0.5f
+                val scaleOverhangY = (perspectiveScale - 1f).coerceAtLeast(0f) * placeable.height * 0.5f
+
+                val minX = ceil(scaleOverhangX).toInt()
+                val maxX = floor(usableWidthPx - placeable.width - scaleOverhangX).toInt().coerceAtLeast(minX)
+                val desiredCenterX = horizontalFraction * usableWidthPx
+                val xOffsetPx = (desiredCenterX - placeable.width / 2f).roundToInt().coerceIn(minX, maxX)
+
+                val minY = ceil(scaleOverhangY).toInt()
+                val maxY = floor(usableHeightPx - placeable.height - scaleOverhangY).toInt().coerceAtLeast(minY)
+                val travelHeightPx = (maxY - minY).toFloat().coerceAtLeast(0f)
+                val yOffsetPx = (minY + fraction * travelHeightPx).roundToInt().coerceIn(minY, maxY)
+
+                layout(placeable.width, placeable.height) {
+                    placeable.placeRelative(xOffsetPx, yOffsetPx)
+                }
+            }
+            .graphicsLayer {
+                val perspectiveScale = 0.94f + (1.0f - animatedFractionState.value) * 0.12f
+                scaleX = perspectiveScale
+                scaleY = perspectiveScale
+            }
+            .background(TTColor.RadarFullScreenMarkerScrim, outerShape)
+            .padding(1.5.dp)
+            .semantics(mergeDescendants = true) {
+                contentDescription = "$vehicleDesc, ${distanceMeters}m"
+            }
+            .testTag("RadarFullScreenMarker_${target.targetId}")
+    ) {
+        Box(
+            modifier = Modifier
+                .widthIn(min = spec.minWidth)
+                .heightIn(min = spec.minHeight)
+                .wrapContentWidth()
+                .shadow(elevation = 6.dp, shape = innerShape, clip = false)
+                .drawBehind {
+                    val alpha = if (isFastApproaching) {
+                        (0.65f + 0.35f * pulseAlphaProvider()).coerceIn(0f, 1f)
+                    } else {
+                        0.95f
+                    }
+                    val cornerPx = 13.5.dp.toPx()
+                    drawRoundRect(
+                        color = baseThreatColor.copy(alpha = alpha),
+                        cornerRadius = CornerRadius(cornerPx, cornerPx)
+                    )
+                }
+                .border(
+                    width = 1.25.dp,
+                    color = TTColor.RadarFullScreenMarkerInnerBorder,
+                    shape = innerShape
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterHorizontally)
+            ) {
+                Icon(
+                    imageVector = spec.icon,
+                    contentDescription = null,
+                    tint = contentColor,
+                    modifier = Modifier.size(spec.iconSize)
+                )
+                Text(
+                    text = "${distanceMeters}m",
+                    color = contentColor,
+                    fontSize = spec.fontSize,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    softWrap = false,
+                    style = TextStyle(fontFeatureSettings = "tnum")
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Resolves localized snooze label for threat badge accessibility descriptions (REQ-TRK-064.2).
+ */
+@Composable
+private fun resolveSnoozeLabel(
+    snoozeState: RadarAudioSnoozeState,
+    snoozeBadgeText: String?
+): String = when {
+    snoozeState.mode == RadarAudioSnoozeMode.FAST_ONLY -> stringResource(R.string.radar_snooze_fast_only)
+    snoozeState.isPelotonSyncActive -> stringResource(R.string.radar_light_mode_peloton)
+    snoozeState.isUrbanMuteActive -> stringResource(R.string.radar_smart_urban_mute_title)
+    snoozeBadgeText != null -> snoozeBadgeText
+    else -> stringResource(R.string.radar_snooze_title)
+}
+
+/**
+ * Top compact clickable status badge pill for disconnect error and active threats (REQ-TRK-062.3/.4).
  */
 @Composable
 private fun RadarStatusBadgePill(
     radarState: RadarState,
-    isClear: Boolean,
     isDisconnectError: Boolean,
-    pulseAlpha: Float,
+    pulseAlphaProvider: () -> Float,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -492,6 +682,7 @@ private fun RadarStatusBadgePill(
 
     val snoozeState = radarState.audioSnoozeState
     val snoozeBadgeText = RadarOverlayMath.formatSnoozeBadgeText(snoozeState)
+    val isFastApproaching = !isDisconnectError && radarState.overallThreatLevel == ThreatLevel.FAST_APPROACHING
 
     when {
         isDisconnectError -> {
@@ -499,61 +690,21 @@ private fun RadarStatusBadgePill(
             badgeColor = TTColor.RadarDisconnectedAmber
             badgeTextColor = Color.White
         }
-        radarState.connectionState == RadarConnectionState.CONNECTING -> {
-            description = stringResource(R.string.radar_overlay_connecting)
-            badgeColor = MaterialTheme.colorScheme.primaryContainer
-            badgeTextColor = MaterialTheme.colorScheme.onPrimaryContainer
-        }
-        snoozeState.isSnoozed && isClear -> {
-            val snoozeLabel = when {
-                snoozeState.mode == RadarAudioSnoozeMode.FAST_ONLY -> stringResource(R.string.radar_snooze_fast_only)
-                snoozeState.isPelotonSyncActive -> stringResource(R.string.radar_light_mode_peloton)
-                snoozeState.isUrbanMuteActive -> stringResource(R.string.radar_smart_urban_mute_title)
-                snoozeBadgeText != null -> snoozeBadgeText
-                else -> stringResource(R.string.radar_snooze_title)
-            }
-            description = stringResource(R.string.radar_snooze_active_format, snoozeLabel)
-            badgeColor = TTColor.RadarClearGreen
-            badgeTextColor = Color.White
-        }
-        isClear -> {
-            description = stringResource(R.string.radar_overlay_clear)
-            badgeColor = TTColor.RadarClearGreen
-            badgeTextColor = Color.White
-        }
-        radarState.overallThreatLevel == ThreatLevel.FAST_APPROACHING -> {
+        isFastApproaching -> {
             val baseDesc = stringResource(R.string.radar_overlay_threats_fast_format, radarState.targets.size)
             description = if (snoozeState.isSnoozed) {
-                val snoozeLabel = when {
-                    snoozeState.mode == RadarAudioSnoozeMode.FAST_ONLY ->
-                        stringResource(R.string.radar_snooze_fast_only)
-                    snoozeState.isPelotonSyncActive ->
-                        stringResource(R.string.radar_light_mode_peloton)
-                    snoozeState.isUrbanMuteActive ->
-                        stringResource(R.string.radar_smart_urban_mute_title)
-                    snoozeBadgeText != null -> snoozeBadgeText
-                    else -> stringResource(R.string.radar_snooze_title)
-                }
+                val snoozeLabel = resolveSnoozeLabel(snoozeState, snoozeBadgeText)
                 "$baseDesc, " + stringResource(R.string.radar_snooze_active_format, snoozeLabel)
             } else {
                 baseDesc
             }
-            badgeColor = TTColor.RadarThreatRed.copy(alpha = pulseAlpha)
+            badgeColor = TTColor.RadarThreatRed
             badgeTextColor = Color.White
         }
         else -> {
             val baseDesc = stringResource(R.string.radar_overlay_threats_format, radarState.targets.size)
             description = if (snoozeState.isSnoozed) {
-                val snoozeLabel = when {
-                    snoozeState.mode == RadarAudioSnoozeMode.FAST_ONLY ->
-                        stringResource(R.string.radar_snooze_fast_only)
-                    snoozeState.isPelotonSyncActive ->
-                        stringResource(R.string.radar_light_mode_peloton)
-                    snoozeState.isUrbanMuteActive ->
-                        stringResource(R.string.radar_smart_urban_mute_title)
-                    snoozeBadgeText != null -> snoozeBadgeText
-                    else -> stringResource(R.string.radar_snooze_title)
-                }
+                val snoozeLabel = resolveSnoozeLabel(snoozeState, snoozeBadgeText)
                 "$baseDesc, " + stringResource(R.string.radar_snooze_active_format, snoozeLabel)
             } else {
                 baseDesc
@@ -565,24 +716,21 @@ private fun RadarStatusBadgePill(
 
     val hasThreats = radarState.targets.isNotEmpty() || radarState.overallThreatLevel != ThreatLevel.NONE
     val isSnoozedWithThreats = snoozeState.isSnoozed && hasThreats && !isDisconnectError
-    val badgeModifier = if (isSnoozedWithThreats) {
-        modifier
-            .width(24.dp)
-            .height(34.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(badgeColor)
-            .clickable(onClick = onClick)
-            .semantics { this.contentDescription = description }
-            .testTag("RadarStatusBadge")
+    val badgeShape = if (isSnoozedWithThreats) RoundedCornerShape(12.dp) else CircleShape
+    val sizedModifier = if (isSnoozedWithThreats) {
+        modifier.width(24.dp).height(34.dp)
     } else {
-        modifier
-            .size(24.dp)
-            .clip(CircleShape)
-            .background(badgeColor)
-            .clickable(onClick = onClick)
-            .semantics { this.contentDescription = description }
-            .testTag("RadarStatusBadge")
+        modifier.size(24.dp)
     }
+    val badgeModifier = sizedModifier
+        .clip(badgeShape)
+        .drawBehind {
+            val alpha = if (isFastApproaching) pulseAlphaProvider() else 1.0f
+            drawRect(color = badgeColor.copy(alpha = alpha))
+        }
+        .clickable(onClick = onClick)
+        .semantics { this.contentDescription = description }
+        .testTag("RadarStatusBadge")
 
     Box(
         modifier = badgeModifier,
@@ -628,36 +776,6 @@ private fun RadarStatusBadgePill(
                         fontWeight = FontWeight.Bold
                     )
                 }
-            }
-            snoozeState.isSnoozed && isClear -> {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_radar_bell_muted),
-                        contentDescription = null,
-                        modifier = Modifier.size(9.dp),
-                        tint = badgeTextColor
-                    )
-                    if (snoozeBadgeText != null) {
-                        Spacer(modifier = Modifier.width(1.dp))
-                        Text(
-                            text = snoozeBadgeText,
-                            color = badgeTextColor,
-                            fontSize = if (snoozeBadgeText.length > 2) 7.sp else 8.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-            }
-            isClear -> {
-                Icon(
-                    painter = painterResource(R.drawable.ic_device_available),
-                    contentDescription = stringResource(R.string.radar_overlay_clear),
-                    modifier = Modifier.size(14.dp),
-                    tint = Color.White
-                )
             }
             else -> {
                 Text(
@@ -713,7 +831,7 @@ private fun RadarVerticalRail(
     }
 
     Box(
-        modifier = modifier,
+        modifier = modifier.testTag("RadarVerticalRail"),
         contentAlignment = Alignment.TopCenter
     ) {
         // Track background
@@ -893,6 +1011,147 @@ private fun PreviewRadarEdgeOverlayDisconnected() {
                 clearMode = RadarClearMode.SLIM_RAIL,
                 modifier = Modifier.height(400.dp)
             )
+        }
+    }
+}
+
+@Preview(name = "Radar FullScreen - Mixed V2 Light", showBackground = true)
+@Composable
+private fun PreviewRadarFullScreenOverlayLight() {
+    ATrainingTrackerTheme(darkTheme = false) {
+        Surface(modifier = Modifier.width(320.dp).height(420.dp)) {
+            RadarEdgeOverlay(
+                radarState = RadarState(
+                    connectionState = RadarConnectionState.CONNECTED,
+                    overallThreatLevel = ThreatLevel.FAST_APPROACHING,
+                    targets = listOf(
+                        RadarTarget(
+                            targetId = 1,
+                            rangeMeters = 15f,
+                            approachSpeedMps = 22f,
+                            threatLevel = ThreatLevel.FAST_APPROACHING,
+                            laneState = LaneState.PASSING_LANE,
+                            vehicleSizeCategory = VehicleSizeCategory.CAR
+                        ),
+                        RadarTarget(
+                            targetId = 2,
+                            rangeMeters = 128f,
+                            approachSpeedMps = 12f,
+                            threatLevel = ThreatLevel.APPROACHING,
+                            laneState = LaneState.IN_RIDER_LANE,
+                            vehicleSizeCategory = VehicleSizeCategory.TRUCK_OR_BUS
+                        ),
+                        RadarTarget(
+                            targetId = 3,
+                            rangeMeters = 160f,
+                            approachSpeedMps = 9f,
+                            threatLevel = ThreatLevel.APPROACHING,
+                            laneState = LaneState.CHANGING_LANE,
+                            vehicleSizeCategory = VehicleSizeCategory.UNKNOWN_OR_LIGHT
+                        )
+                    )
+                ),
+                edgeSide = RadarEdgeSide.FULL_SCREEN,
+                modifier = Modifier.fillMaxSize()
+            )
+        }
+    }
+}
+
+@Preview(
+    name = "Radar FullScreen - Mixed V2 Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES,
+    showBackground = true
+)
+@Composable
+private fun PreviewRadarFullScreenOverlayDark() {
+    ATrainingTrackerTheme(darkTheme = true) {
+        Surface(color = Color.Black, modifier = Modifier.width(320.dp).height(420.dp)) {
+            RadarEdgeOverlay(
+                radarState = RadarState(
+                    connectionState = RadarConnectionState.CONNECTED,
+                    overallThreatLevel = ThreatLevel.FAST_APPROACHING,
+                    targets = listOf(
+                        RadarTarget(
+                            targetId = 1,
+                            rangeMeters = 24f,
+                            approachSpeedMps = 24f,
+                            threatLevel = ThreatLevel.FAST_APPROACHING,
+                            laneState = LaneState.PASSING_LANE,
+                            vehicleSizeCategory = VehicleSizeCategory.TRUCK_OR_BUS
+                        ),
+                        RadarTarget(
+                            targetId = 2,
+                            rangeMeters = 110f,
+                            approachSpeedMps = 11f,
+                            threatLevel = ThreatLevel.APPROACHING,
+                            laneState = LaneState.IN_RIDER_LANE,
+                            vehicleSizeCategory = VehicleSizeCategory.CAR
+                        )
+                    )
+                ),
+                edgeSide = RadarEdgeSide.FULL_SCREEN,
+                modifier = Modifier.fillMaxSize()
+            )
+        }
+    }
+}
+
+@Preview(name = "Radar FullScreen - Map Backdrop", showBackground = true)
+@Composable
+private fun PreviewRadarFullScreenOverlayMapBackdrop() {
+    ATrainingTrackerTheme(darkTheme = false) {
+        Surface(
+            color = TTColor.RadarFullScreenMapBackdrop,
+            modifier = Modifier.width(320.dp).height(420.dp)
+        ) {
+            Box(modifier = Modifier.fillMaxSize()) {
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    drawRect(
+                        color = TTColor.RadarFullScreenMapPark,
+                        topLeft = Offset(size.width * 0.08f, size.height * 0.14f),
+                        size = Size(size.width * 0.36f, size.height * 0.28f)
+                    )
+                    drawLine(
+                        color = TTColor.RadarFullScreenMapRoad,
+                        start = Offset(0f, size.height * 0.36f),
+                        end = Offset(size.width, size.height * 0.24f),
+                        strokeWidth = 10.dp.toPx()
+                    )
+                    drawLine(
+                        color = TTColor.RouteSelected,
+                        start = Offset(size.width * 0.5f, size.height),
+                        end = Offset(size.width * 0.56f, 0f),
+                        strokeWidth = 4.dp.toPx()
+                    )
+                }
+                RadarEdgeOverlay(
+                    radarState = RadarState(
+                        connectionState = RadarConnectionState.CONNECTED,
+                        overallThreatLevel = ThreatLevel.APPROACHING,
+                        targets = listOf(
+                            RadarTarget(
+                                targetId = 1,
+                                rangeMeters = 45f,
+                                approachSpeedMps = 13f,
+                                threatLevel = ThreatLevel.APPROACHING,
+                                lateralOffsetMeters = 3.0f,
+                                vehicleSizeCategory = VehicleSizeCategory.CAR
+                            ),
+                            RadarTarget(
+                                targetId = 2,
+                                rangeMeters = 148f,
+                                approachSpeedMps = 10f,
+                                threatLevel = ThreatLevel.APPROACHING,
+                                lateralOffsetMeters = -3.0f,
+                                vehicleSizeCategory = VehicleSizeCategory.UNKNOWN_OR_LIGHT
+                            )
+                        )
+                    ),
+                    edgeSide = RadarEdgeSide.FULL_SCREEN,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
         }
     }
 }

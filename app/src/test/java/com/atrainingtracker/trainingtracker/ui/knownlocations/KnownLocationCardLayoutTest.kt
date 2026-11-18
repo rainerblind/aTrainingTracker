@@ -271,8 +271,8 @@ class KnownLocationCardLayoutTest {
     }
 
     /**
-     * REQ-UI-217 / REQ-UI-244 / REQ-UI-465.3: Verify that KnownLocationCard contains a compact
-     * 116x80dp landscape map preview thumbnail in Google Maps lite mode on the right side,
+     * REQ-UI-217 / REQ-UI-244 / REQ-UI-465.3 / REQ-UI-2785.1 (TST-UI-2785.2): Verify that KnownLocationCard contains a compact
+     * 175x120dp landscape map preview thumbnail in Google Maps lite mode on the right side,
      * wired to onShowOnMap with offline inspection safety.
      */
     @Test
@@ -291,10 +291,10 @@ class KnownLocationCardLayoutTest {
             content.contains("location_map_preview_\${item.id}")
         )
 
-        // Map preview thumbnail must use 116x80dp landscape dimensions (REQ-UI-465.3)
+        // Map preview thumbnail must use 175x120dp landscape dimensions (REQ-UI-2785.1)
         assertTrue(
-            "Map preview thumbnail must be 116.dp width by 80.dp height",
-            content.contains(".size(width = 116.dp, height = 80.dp)")
+            "Map preview thumbnail must be 175.dp width by 120.dp height",
+            content.contains(".size(width = 175.dp, height = 120.dp)")
         )
 
         // Map preview thumbnail must use 12dp rounded corner shape

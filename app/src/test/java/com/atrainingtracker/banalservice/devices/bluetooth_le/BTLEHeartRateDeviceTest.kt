@@ -19,6 +19,10 @@
 package com.atrainingtracker.banalservice.devices.bluetooth_le
 
 import android.Manifest
+import android.bluetooth.BluetoothGatt
+import android.bluetooth.BluetoothGattCharacteristic
+import android.bluetooth.BluetoothGattDescriptor
+import android.bluetooth.BluetoothGattService
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -27,17 +31,23 @@ import android.os.Looper
 import android.util.Log
 import androidx.core.content.ContextCompat
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
+import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.devices.ProtocolType
 import com.atrainingtracker.banalservice.devices.RrBeatEvent
+import com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineCapabilityStore
+import com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineGattCoordinator
 import com.atrainingtracker.banalservice.sensor.MySensorManager
 import com.atrainingtracker.banalservice.sensor.SensorType
+import io.mockk.Runs
 import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
 import io.mockk.mockkConstructor
 import io.mockk.mockkStatic
 import io.mockk.unmockkAll
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -77,6 +87,12 @@ class BTLEHeartRateDeviceTest {
         mockContext = mockk(relaxed = true)
         val mockLooper = mockk<Looper>(relaxed = true)
         every { mockContext.mainLooper } returns mockLooper
+
+        mockkConstructor(Handler::class)
+        every { anyConstructed<Handler>().removeCallbacks(any()) } just Runs
+        every { anyConstructed<Handler>().postDelayed(any(), any()) } returns true
+        every { anyConstructed<Handler>().post(any()) } returns true
+
         mockSensorManager = mockk(relaxed = true)
     }
 
@@ -97,6 +113,17 @@ class BTLEHeartRateDeviceTest {
 
         public override fun unregisterSensors() {
             super.unregisterSensors()
+        }
+
+        public fun callConfigureServices(gatt: BluetoothGatt) {
+            super.configureServices(gatt)
+        }
+
+        public fun callOnOtherCharacteristicUpdate(
+            gatt: BluetoothGatt,
+            characteristic: BluetoothGattCharacteristic
+        ) {
+            super.onOtherCharacteristicUpdate(gatt, characteristic)
         }
     }
 
@@ -458,5 +485,145 @@ class BTLEHeartRateDeviceTest {
         assertEquals(RrBeatEvent.ARTIFACT_GAP, receivedEvents[1].artifactFlag)
         assertTrue("Multi-second gap must estimate gapBeats > 0", receivedEvents[1].gapBeats > 0)
         assertEquals(RrBeatEvent.ARTIFACT_GAP, receivedEvents[2].artifactFlag)
+    }
+
+    /**
+     * REQ-CON-049.3 / TST-CON-049.2: Standard BLE HRM reconnect enqueues DIS 0x2A24/0x2A25,
+     * persists Polar PMD/PFTP service UUIDs & DIS hardware metadata, and seeds aliases.
+     */
+    @Test
+    fun testConfigureServicesAndDisUpdate_hydratesPolarMetadataWithoutNonPolarRegression() {
+        PolarOfflineCapabilityStore.resetForTesting()
+        PolarOfflineGattCoordinator.resetForTesting()
+        try {
+            val device = TestBTLEHeartRateDevice(mockContext, mockSensorManager, 101L, "AA:BB:CC:DD:EE:77")
+            val mockGatt = mockk<BluetoothGatt>(relaxed = true)
+            val hrService = mockk<BluetoothGattService>(relaxed = true)
+            val hrChar = mockk<BluetoothGattCharacteristic>(relaxed = true)
+            val disService = mockk<BluetoothGattService>(relaxed = true)
+            val modelChar = mockk<BluetoothGattCharacteristic>(relaxed = true)
+            val serialChar = mockk<BluetoothGattCharacteristic>(relaxed = true)
+
+            every { mockGatt.getService(BluetoothConstants.getServiceUUID(DeviceType.HRM)) } returns hrService
+            every { hrService.getCharacteristic(BluetoothConstants.getCharacteristicUUID(DeviceType.HRM)) } returns hrChar
+            every { hrChar.getDescriptor(BluetoothConstants.UUID_CHARACTERISTIC_CLIENT_CONFIG) } returns null
+
+            every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_POLAR_PMD) } returns mockk(relaxed = true)
+            every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_POLAR_PFTP) } returns mockk(relaxed = true)
+            every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_DEVICE_INFORMATION) } returns disService
+            every { disService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_MODEL_NUMBER) } returns modelChar
+            every { disService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_SERIAL_NUMBER) } returns serialChar
+            every { modelChar.uuid } returns BluetoothConstants.UUID_CHARACTERISTIC_MODEL_NUMBER
+            every { modelChar.getStringValue(0) } returns "Verity Sense"
+            every { serialChar.uuid } returns BluetoothConstants.UUID_CHARACTERISTIC_SERIAL_NUMBER
+            every { serialChar.getStringValue(0) } returns "BEEF1234"
+
+            device.callConfigureServices(mockGatt)
+            assertTrue(device.isGattOperationPendingForTesting)
+            assertEquals(1, device.gattQueueForTesting.size)
+            val queuedOp = device.gattQueueForTesting.peek() as MyBTLEDevice.ReadCharacteristicOp
+            assertEquals(BluetoothConstants.UUID_CHARACTERISTIC_SERIAL_NUMBER, queuedOp.characteristic.uuid)
+            assertTrue(PolarOfflineCapabilityStore.hasPmdService(mockContext, "AA:BB:CC:DD:EE:77"))
+            assertTrue(PolarOfflineCapabilityStore.hasPftpService(mockContext, "AA:BB:CC:DD:EE:77"))
+
+            device.callOnOtherCharacteristicUpdate(mockGatt, modelChar)
+            device.callOnOtherCharacteristicUpdate(mockGatt, serialChar)
+
+            assertEquals("Verity Sense", PolarOfflineCapabilityStore.getModelNumber(mockContext, "AA:BB:CC:DD:EE:77"))
+            assertEquals("BEEF1234", PolarOfflineCapabilityStore.getPolarDeviceId(mockContext, "AA:BB:CC:DD:EE:77"))
+            assertEquals(
+                PolarOfflineCapabilityStore.PolarDeviceType.VERITY_SENSE,
+                PolarOfflineCapabilityStore.getDeviceType(mockContext, "AA:BB:CC:DD:EE:77")
+            )
+            assertTrue(PolarOfflineGattCoordinator.matchesDeviceIdentifier("BEEF1234", "AA:BB:CC:DD:EE:77"))
+
+            // Non-Polar BLE HRM reconnect leaves store untouched
+            val nonPolar = TestBTLEHeartRateDevice(mockContext, mockSensorManager, 102L, "AA:BB:CC:DD:EE:78")
+            val nonPolarGatt = mockk<BluetoothGatt>(relaxed = true)
+            every { nonPolarGatt.getService(BluetoothConstants.getServiceUUID(DeviceType.HRM)) } returns hrService
+            every { nonPolarGatt.getService(BluetoothConstants.UUID_SERVICE_POLAR_PMD) } returns null
+            every { nonPolarGatt.getService(BluetoothConstants.UUID_SERVICE_POLAR_PFTP) } returns null
+            every { nonPolarGatt.getService(BluetoothConstants.UUID_SERVICE_DEVICE_INFORMATION) } returns null
+            nonPolar.callConfigureServices(nonPolarGatt)
+            assertFalse(PolarOfflineCapabilityStore.hasPmdService(mockContext, "AA:BB:CC:DD:EE:78"))
+            assertEquals(
+                PolarOfflineCapabilityStore.PolarDeviceType.UNKNOWN,
+                PolarOfflineCapabilityStore.getDeviceType(mockContext, "AA:BB:CC:DD:EE:78")
+            )
+        } finally {
+            PolarOfflineCapabilityStore.resetForTesting()
+            PolarOfflineGattCoordinator.resetForTesting()
+        }
+    }
+
+    @Test
+    fun testConfigureServices_enqueuesDisBeforeHrCccdAndIgnoresNonPolarCardioSense() {
+        PolarOfflineCapabilityStore.resetForTesting()
+        PolarOfflineGattCoordinator.resetForTesting()
+        try {
+            // 1. Polar sensor with HR CCCD descriptor: 0x2A24 & 0x2A25 must enqueue BEFORE HR CCCD write
+            val polarMac = "AA:BB:CC:DD:EE:79"
+            val polarDevice = TestBTLEHeartRateDevice(mockContext, mockSensorManager, 103L, polarMac)
+            val polarGatt = mockk<BluetoothGatt>(relaxed = true)
+            val hrService = mockk<BluetoothGattService>(relaxed = true)
+            val hrChar = mockk<BluetoothGattCharacteristic>(relaxed = true)
+            val hrDescriptor = mockk<BluetoothGattDescriptor>(relaxed = true)
+            val disService = mockk<BluetoothGattService>(relaxed = true)
+            val modelChar = mockk<BluetoothGattCharacteristic>(relaxed = true)
+            val serialChar = mockk<BluetoothGattCharacteristic>(relaxed = true)
+
+            every { polarGatt.getService(BluetoothConstants.getServiceUUID(DeviceType.HRM)) } returns hrService
+            every { hrService.getCharacteristic(BluetoothConstants.getCharacteristicUUID(DeviceType.HRM)) } returns hrChar
+            every { hrChar.getDescriptor(BluetoothConstants.UUID_CHARACTERISTIC_CLIENT_CONFIG) } returns hrDescriptor
+            every { polarGatt.getService(BluetoothConstants.UUID_SERVICE_POLAR_PMD) } returns mockk(relaxed = true)
+            every { polarGatt.getService(BluetoothConstants.UUID_SERVICE_POLAR_PFTP) } returns null
+            every { polarGatt.getService(BluetoothConstants.UUID_SERVICE_DEVICE_INFORMATION) } returns disService
+            every { disService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_MODEL_NUMBER) } returns modelChar
+            every { disService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_SERIAL_NUMBER) } returns serialChar
+            every { modelChar.uuid } returns BluetoothConstants.UUID_CHARACTERISTIC_MODEL_NUMBER
+            every { serialChar.uuid } returns BluetoothConstants.UUID_CHARACTERISTIC_SERIAL_NUMBER
+
+            polarDevice.callConfigureServices(polarGatt)
+            // First op (0x2A24) was popped immediately by processNextGattOperation(); remaining ops must be 0x2A25 then HR CCCD write
+            val ops = polarDevice.gattQueueForTesting.toList()
+            assertEquals(2, ops.size)
+            assertTrue(ops[0] is MyBTLEDevice.ReadCharacteristicOp)
+            assertEquals(
+                BluetoothConstants.UUID_CHARACTERISTIC_SERIAL_NUMBER,
+                (ops[0] as MyBTLEDevice.ReadCharacteristicOp).characteristic.uuid
+            )
+            assertTrue(ops[1] is MyBTLEDevice.WriteDescriptorOp)
+
+            // 2. Non-Polar HRM with DIS 0x180A ("CardioSense", 13-digit serial) must NEVER pollute store
+            val cardioMac = "AA:BB:CC:DD:EE:7A"
+            val cardioDevice = TestBTLEHeartRateDevice(mockContext, mockSensorManager, 104L, cardioMac)
+            val cardioGatt = mockk<BluetoothGatt>(relaxed = true)
+            val cardioModelChar = mockk<BluetoothGattCharacteristic>(relaxed = true)
+            val cardioSerialChar = mockk<BluetoothGattCharacteristic>(relaxed = true)
+            every { cardioGatt.getService(BluetoothConstants.getServiceUUID(DeviceType.HRM)) } returns hrService
+            every { cardioGatt.getService(BluetoothConstants.UUID_SERVICE_POLAR_PMD) } returns null
+            every { cardioGatt.getService(BluetoothConstants.UUID_SERVICE_POLAR_PFTP) } returns null
+            every { cardioGatt.getService(BluetoothConstants.UUID_SERVICE_DEVICE_INFORMATION) } returns disService
+            every { cardioModelChar.uuid } returns BluetoothConstants.UUID_CHARACTERISTIC_MODEL_NUMBER
+            every { cardioModelChar.getStringValue(0) } returns "CardioSense"
+            every { cardioSerialChar.uuid } returns BluetoothConstants.UUID_CHARACTERISTIC_SERIAL_NUMBER
+            every { cardioSerialChar.getStringValue(0) } returns "1234567890123"
+
+            cardioDevice.callConfigureServices(cardioGatt)
+            // Only HR CCCD write queued (neither 0x2A24 nor 0x2A25 read)
+            assertEquals(0, cardioDevice.gattQueueForTesting.size)
+            cardioDevice.callOnOtherCharacteristicUpdate(cardioGatt, cardioModelChar)
+            cardioDevice.callOnOtherCharacteristicUpdate(cardioGatt, cardioSerialChar)
+
+            assertFalse(PolarOfflineCapabilityStore.hasPolarServiceCapability(mockContext, cardioMac))
+            assertNull(PolarOfflineCapabilityStore.getModelNumber(mockContext, cardioMac))
+            assertNull(PolarOfflineCapabilityStore.getPolarDeviceId(mockContext, cardioMac))
+            assertFalse(PolarOfflineGattCoordinator.isPolarVeritySenseDevice(mockContext, "CardioSense", "Generic", cardioMac))
+            assertFalse(PolarOfflineGattCoordinator.isPolarH10Device(mockContext, "CardioSense", "Generic", cardioMac))
+            assertFalse(PolarOfflineGattCoordinator.isPolarOfflineCapableDevice(mockContext, "CardioSense", "Generic", cardioMac))
+        } finally {
+            PolarOfflineCapabilityStore.resetForTesting()
+            PolarOfflineGattCoordinator.resetForTesting()
+        }
     }
 }

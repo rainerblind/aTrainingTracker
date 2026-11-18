@@ -1,14 +1,14 @@
 # Living Requirements: Post-Workout Analytics & Periods
 
 **Document ID**: `DOC-REQ-PERIODS`  
-**Version**: 1.0.0  
+**Version**: 1.0.3  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `aftermath_periods`  
 **Prefixes**: `PER`, `PERF`, `RAD`, `SPT`  
 **Scope**: Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers.  
-**Total Requirements**: 60
+**Total Requirements**: 61
 
 ---
 
@@ -21,7 +21,7 @@
 - **Rationale**: The system SHALL ensure that all workouts belonging to a specific period are correctly and reactively associated when viewing period details (Map or List). The visualization SHALL automatically update as workout data is loaded or modified in the background, ensuring no sessions are omitted due to partial loading states.
 
 ### REQ-PER-008: Precise Period Filtering [Implemented]
-- **Tests**: `TST-PER-009`
+- **Tests**: `TST-PER-009`, `TST-UNT-012`, `TST-UNT-013`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit, Integration
@@ -96,7 +96,7 @@
 **Invariants**: SQLite schema for `PeriodSummaries.db` MUST NOT be altered; single-region periods MUST maintain 100% camera and visual parity; vector track limit ($\le 30$) and heatmap rendering per `REQ-PER-012` MUST NOT be regressed; all user-facing chip strings MUST maintain 9-language localization parity.
 
 ### REQ-PER-001: The system SHALL load and display the detailed visualization (Heatmap and List) [Implemented]
-- **Tests**: `TST-PERF-002`, `TST-PERF-004`
+- **Tests**: `TST-PERF-002`, `TST-PERF-004`, `TST-BUG-002`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit, Integration
@@ -1041,7 +1041,7 @@
 **Invariants**: Zero schema changes to `PeriodSummaries.db` or `HrvReadiness.db`, strict posture segregation in baseline math, 100% clean-room test pass rate.
 
 ### REQ-PER-034: Lossless WorkoutRrIntervals Persistence, Centered Recompute & Garmin FIT HrvMesg [Verified]
-- **Tests**: `TST-PER-042`
+- **Tests**: `TST-PER-042`, `TST-TRK-085`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1136,7 +1136,7 @@
 
 ### REQ-RAD-005: Workout Traffic Persistence, Session Totals & Aftermath Summary Card [Verified]
 - **Tests**: `TST-RAD-005`
-- **System Requirement(s)**: `SYSREQ-TRK-006`
+- **System Requirement(s)**: `SYSREQ-TRK-006`, `SYSREQ-TRK-007`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit, Integration
@@ -1774,6 +1774,38 @@
   • *Given* `showMorningCheckOnStartScreen = true` OR `enableMorningSleepAndWellness = false` OR `phase != MorningHrvPhase.READY`, *When* `MorningHrvCheckScreen` renders, *Then* the full HRV measurement layout and TopAppBar HRV metadata remain visible.
 - **Invariants**: Zero DB migrations, zero changes to `ControlTrackingViewModel`/`MorningCheckSection`, full HRV layout preserved when enabled or measuring, 100% 9-locale parity.
 
+### REQ-HRV-044: DFA alpha 1 Zone-Colored Graph, Dynamic Thresholds & Scatter Parity (`ATT-8710`) [Verified]
+- **System Requirement(s)**: Derived (SW-only) — Workout Details DFA $\alpha_1$ 3-zone graph coloring, margin coordination, threshold filtering, and scatter parity (refining `REQ-PER-035.1` and `REQ-PER-035.3`)
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-HRV-044`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Implementation**: `TelemetryZoneMath.kt`, `TelemetryMetricGraph.kt`, `TelemetryMetricUtils.kt`, `HrvAlpha1ScatterChart.kt`
+- **Rationale**: In Workout Details, `TelemetryMetricGraph` (`HRV_DFA_A1`) renders dashed threshold lines at `dfaA1ThresholdT2`/`dfaA1ThresholdT1` without zone bands or zone-colored curve/fill/histogram/cursor styling, does not guard the `52.dp` right margin against label-vs-histogram overlap, does not filter dashes outside `[0.2, 1.4]` (up to `MAX_DFA_A1_THRESHOLD = 1.50f`), and `HrvAlpha1ScatterChart.kt` omits `t1`/`t2` when calling `HrvZoneIndicator.calculateZoneColor`.
+- **Description**:
+  1. *Inverted 3-Zone DFA $\alpha_1$ Bands & Curve/Fill/Histogram/Cursor Coloring (`REQ-HRV-044.1`)*:
+     - `TelemetryZoneMath` SHALL partition `[dataMin, dataMax]` into up to 3 clamped inverted DFA $\alpha_1$ bands with exact `HrvZoneIndicator.calculateZoneColor` parity: Aerob (`α1 > T1`, `TTColor.Zone2`, top band `[T1, dataMax]`), Schwelle (`T2 <= α1 <= T1`, `TTColor.Zone3`, middle band `[T2, T1]`), and Anaerob (`α1 < T2`, `TTColor.Zone4`, bottom band `[dataMin, T2]`), preserving `α1 == T1 -> Zone3`.
+     - For `TelemetryMetricType.HRV_DFA_A1`, `TelemetryMetricGraph` SHALL render horizontal background bands (`ZONE_BAND_ALPHA`), zone-colored curve stroke and under-curve fill (`Brush.verticalGradient` mapped to `valueToY(T1)`/`valueToY(T2)` across `[dataMin, dataMax]` with `> 5.0%` artifact gap breaks preserved), single-point dot, interactive scrubbing cursor dot/halo, and `nonZonedHistogram` bins (if supplied) colored by zone.
+  2. *Right-Margin `52.dp` Layout Coordination (`REQ-HRV-044.2`)*:
+     - Inside the `52.dp` `endPadding` strip in portrait (`!isLandscape`), right-hand zone labels (`band.label`) and `nonZonedHistogram` bars MUST remain cleanly disjoint: right-hand zone labels SHALL render only when `zoneDistribution == null && nonZonedHistogram.isEmpty() && !isLandscape`, suppressing duplicate axis text whenever `nonZonedHistogram` occupies the strip.
+  3. *Dynamic `T1`/`T2` Propagation & Scatter Parity (`REQ-HRV-044.3`)*:
+     - `TelemetryMetricGraph`, `TelemetryZoneMath`, and `HrvAlpha1ScatterChart` (`HrvAlpha1ScatterChart.kt:384`) SHALL propagate the athlete's configured `dfaA1ThresholdT1` / `dfaA1ThresholdT2` from `TuningPreferencesDataStore` (`MapDetailLayout` / `HrvAlpha1ScatterCard`) into zone bands, gradients, cursor dots, and scatter dot colors (`HrvZoneIndicator.calculateZoneColor(p.alpha1, t1 = t1, t2 = t2)`).
+  4. *Threshold Dash Range Filtering (`REQ-HRV-044.4`)*:
+     - `TelemetryZoneMath.calculateHrvDfaA1ThresholdDashes(t1, t2, dataMin, dataMax)` SHALL filter `T1`/`T2` strictly to `(dataMin, dataMax)` (`it > dataMin && it < dataMax`), matching `calculateThresholdDashes` so out-of-range thresholds (e.g., `MAX_DFA_A1_THRESHOLD = 1.50f > 1.4`) never draw off-axis lines.
+  5. *Invariants & Localization (`REQ-HRV-044.5`)*:
+     - Existing `HEART_RATE` / `POWER` zone-graph behavior (`REQ-UI-230` solid `accentColor` stroke/fill), `startPadding = 50.dp` / `endPadding = 52.dp` alignment (`Rule 64`), and `TrackingHrvZoneIndicatorTest` boundary polarity SHALL remain intact. Localization parity: `N/A - no UI strings` (if any localized UI string is added, all 9 `values*` locales SHALL be updated).
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: `REQ-PER-035.1` / `REQ-PER-035.3`, `REQ-UI-230`, and `REQ-TRK-061.3` targeting `TelemetryZoneMath.kt`, `TelemetryMetricGraph.kt`, `TelemetryMetricUtils.kt`, and `HrvAlpha1ScatterChart.kt`.
+  2. *Historical Origin & Commit Trace*: `3db57718` (`ATT-3544`) introduced `HRV_DFA_A1` graph/scatter; `5deec7cd` (`ATT-3554`) and `ATT-6717` wired `dfaA1ThresholdT1`/`T2`.
+  3. *Root Reason for Existing Formulation*: `ATT-3544` focused on centered recompute, `[0.2, 1.4]` clamping, and artifact hatching, leaving `zoneBands` unimplemented for `HRV_DFA_A1` and `HrvAlpha1ScatterChart` on default thresholds.
+  4. *Preservation of Core Invariants*: `HR`/`Power` solid curves (`REQ-UI-230`), `[0.2, 1.4]` Y-clamping, `> 5.0%` artifact gap hatching (`REQ-PER-035.2`), `50.dp`/`52.dp` margins, and `α1 == T1 -> Zone3` (`TrackingHrvZoneIndicatorTest`) remain untouched.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* valid `HRV_DFA_A1` trackpoints and custom `T1`/`T2` within `(0.2, 1.4)`, *When* rendering `TelemetryMetricGraph`, *Then* 3 inverted zone bands (`Zone2` top, `Zone3` middle, `Zone4` bottom), matching gradient stroke/fill, filtered threshold dashes, and zone-colored cursor dot render across Light/Dark/AMOLED without margin collisions.
+  • *Given* `T1 = 1.50f` (`> 1.4`), *When* computing threshold dashes and bands for `[0.2, 1.4]`, *Then* `T1` dash is filtered out and the top band clamps cleanly to `1.4`.
+  • *Given* scatter points in `HrvAlpha1ScatterChart` with custom `t1`/`t2`, *When* rendering dots, *Then* each dot color matches `HrvZoneIndicator.calculateZoneColor(p.alpha1, t1, t2)`.
+- **Invariants**: `HR`/`Power` solid strokes preserved, `α1 == T1 -> Zone3` preserved, zero `src/main` reads in tests (`REQ-PRO-049.1`), zero DB/DataStore schema changes.
+
 ---
 
 ## Change History
@@ -1781,3 +1813,6 @@
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
 | `1.0.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Added standardized `DOC-REQ-PERIODS` work-product control header and Change History. |
+| `1.0.1` | 2026-11-18 | AI Agent (`ATT-8710`) | `ATT-8710` | Added `REQ-HRV-044` [Planned] for DFA alpha 1 3-zone graph coloring, 52.dp margin coordination, dash filtering, and scatter threshold parity. |
+| `1.0.2` | 2026-11-18 | AI Agent (`ATT-8710`) | `ATT-8710` | Integrated `REQ-HRV-044` [Verified] post-`ATT-8206` (`v1.0.1`) shard reconciliation. |
+| `1.0.3` | 2026-11-18 | AI Agent (`ATT-8201`) | `ATT-8201` | Linked refined `REQ-*` entries in-place to net-new `SYSREQ-TRK-007..013` and `SYSREQ-DEX-007..008`. |

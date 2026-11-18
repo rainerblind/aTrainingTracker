@@ -622,7 +622,12 @@ object PolarVeritySenseOfflineController {
 
         checkAndPerformFtu(api, polarId)
 
-        PolarOfflineCapabilityStore.markOfflineRecordingCapable(context, macAddress)
+        PolarOfflineCapabilityStore.recordSdkDeviceType(
+            context,
+            macAddress,
+            PolarOfflineCapabilityStore.PolarDeviceType.VERITY_SENSE,
+            polarId.takeIf { it.length == 8 }
+        )
         api.setLocalTime(polarId, LocalDateTime.now())
         stopActiveHrIfRunning(api, polarId)
         startOfflineRecordingGuarded(api, polarId, PolarBleApi.PolarDeviceDataType.HR)

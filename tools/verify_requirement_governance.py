@@ -1262,6 +1262,41 @@ def verify_engineering_directory_structure(eng_dir="docs/engineering"):
     return True, []
 
 
+def verify_living_doc_directory_layout(repo_root=None):
+    """
+    Fail-closed enforcement of canonical living documentation directory layout (REQ-PRO-129.3).
+    - docs/requirements/ MUST contain strictly regular files matching req_*.md (no SCRUM-*_plan.md or stray entries).
+    - docs/tests/ MUST contain strictly regular files matching tst_*.md.
+    """
+    if repo_root is None:
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+    layout_rules = [
+        ("docs/requirements", "req_"),
+        ("docs/tests", "tst_"),
+    ]
+    errors = []
+    for rel_dir, required_prefix in layout_rules:
+        abs_dir = os.path.join(repo_root, rel_dir)
+        if not os.path.isdir(abs_dir):
+            continue
+        for entry in sorted(os.listdir(abs_dir)):
+            abs_entry = os.path.join(abs_dir, entry)
+            if (
+                os.path.islink(abs_entry)
+                or not os.path.isfile(abs_entry)
+                or not entry.startswith(required_prefix)
+                or not entry.endswith(".md")
+            ):
+                errors.append(
+                    f"ERROR: Non-canonical entry '{entry}' in {rel_dir}/ "
+                    f"(expected regular '{required_prefix}*.md' shard only, REQ-PRO-129.3)."
+                )
+    if errors:
+        return False, errors
+    return True, ["PASS: Living documentation directories contain only canonical req_*.md and tst_*.md shards."]
+
+
 def verify_master_table_parity(repo_root=None):
     """
     Verifies that the summary tables in docs/requirements.md and docs/tests.md have 100% mathematical
@@ -1833,13 +1868,24 @@ def verify_dangling_references(
 
 
 class TraceabilityOrphansResult:
-    """Represents the outcome of bidirectional REQ-TST orphan discovery (REQ-PRO-087)."""
-    def __init__(self, declared_reqs, declared_tsts, orphan_reqs, dangling_req_cites, tsts_without_reqs):
+    """Represents the outcome of bidirectional REQ-TST orphan discovery (REQ-PRO-087, REQ-PRO-127.1)."""
+    def __init__(
+        self,
+        declared_reqs,
+        declared_tsts,
+        orphan_reqs,
+        dangling_req_cites,
+        tsts_without_reqs,
+        asymmetric_req_to_tst=None,
+        asymmetric_tst_to_req=None,
+    ):
         self.declared_reqs = set(declared_reqs)
         self.declared_tsts = set(declared_tsts)
         self.orphan_reqs = sorted(orphan_reqs)
         self.dangling_req_cites = list(dangling_req_cites)
         self.tsts_without_reqs = sorted(tsts_without_reqs)
+        self.asymmetric_req_to_tst = sorted(asymmetric_req_to_tst or [])
+        self.asymmetric_tst_to_req = sorted(asymmetric_tst_to_req or [])
 
 
 def load_traceability_baseline(baseline_path=None, repo_root=None):
@@ -1896,15 +1942,34 @@ def find_traceability_orphans(req_shards=None, tst_shards=None, repo_root=None):
     loaded_tsts = _load_shard_sources(tst_shards, "docs/tests", repo_root)
 
     known_req_ids = set()
+    req_to_tsts = {}
+    tst_citation_pattern = re.compile(
+        r"^\s*[-*]\s*\*{0,2}Tests?\*{0,2}\s*:\s*(.*)",
+        re.IGNORECASE,
+    )
     for rel_path, lines in loaded_reqs:
+        cur_req = None
         for line in lines:
             m = re.match(r"^(#{2,4})\s*(REQ-[A-Z0-9_-]+):?\s*(.*?)$", line.strip())
             if m:
                 clean_id = m.group(2).rstrip("-_")
                 if clean_id not in ("REQ-XXX", "REQ-DOM-NNN", "REQ-DOM-XXX", "REQ-NNN"):
                     known_req_ids.add(clean_id)
+                    cur_req = clean_id
+                    req_to_tsts.setdefault(cur_req, set())
+                else:
+                    cur_req = None
+                continue
+            m_t = tst_citation_pattern.match(line)
+            if m_t and cur_req:
+                t_cites = re.findall(r"(?<![A-Za-z0-9_-])TST-[A-Z0-9_-]+(?![A-Za-z0-9_-])", m_t.group(1))
+                for tc in t_cites:
+                    clean_tc = tc.rstrip("-_")
+                    if clean_tc not in ("TST-XXX", "TST-DOM-NNN"):
+                        req_to_tsts[cur_req].add(clean_tc)
 
     known_tst_ids = set()
+    tst_to_reqs = {}
     cited_req_ids = set()
     dangling_cites = []
     tsts_without_reqs = []
@@ -1926,6 +1991,9 @@ def find_traceability_orphans(req_shards=None, tst_shards=None, repo_root=None):
                 cur_tst_has_cites = False
                 if cur_tst not in ("TST-XXX", "TST-DOM-NNN"):
                     known_tst_ids.add(cur_tst)
+                    tst_to_reqs.setdefault(cur_tst, set())
+                else:
+                    cur_tst = None
             m_f = req_citation_pattern.match(line)
             if m_f and cur_tst:
                 val = m_f.group(1)
@@ -1939,6 +2007,7 @@ def find_traceability_orphans(req_shards=None, tst_shards=None, repo_root=None):
                     cur_tst_has_cites = True
                     for c in clean_cites:
                         cited_req_ids.add(c)
+                        tst_to_reqs[cur_tst].add(c)
                         if c not in known_req_ids:
                             dangling_cites.append(
                                 DanglingReference(
@@ -1954,12 +2023,26 @@ def find_traceability_orphans(req_shards=None, tst_shards=None, repo_root=None):
 
     orphan_reqs = sorted(known_req_ids - cited_req_ids)
 
+    asymmetric_req_to_tst = []
+    for req_id in sorted(req_to_tsts):
+        for tst_id in sorted(req_to_tsts[req_id]):
+            if req_id not in tst_to_reqs.get(tst_id, set()):
+                asymmetric_req_to_tst.append((req_id, tst_id))
+
+    asymmetric_tst_to_req = []
+    for tst_id in sorted(tst_to_reqs):
+        for req_id in sorted(tst_to_reqs[tst_id]):
+            if req_id in known_req_ids and tst_id not in req_to_tsts.get(req_id, set()):
+                asymmetric_tst_to_req.append((tst_id, req_id))
+
     return TraceabilityOrphansResult(
         declared_reqs=known_req_ids,
         declared_tsts=known_tst_ids,
         orphan_reqs=orphan_reqs,
         dangling_req_cites=dangling_cites,
         tsts_without_reqs=tsts_without_reqs,
+        asymmetric_req_to_tst=asymmetric_req_to_tst,
+        asymmetric_tst_to_req=asymmetric_tst_to_req,
     )
 
 
@@ -2031,6 +2114,27 @@ def verify_traceability_orphans(
             errors.append(msg)
             diagnostics.append(msg)
 
+    # 5. Check Criterion 4: Symmetric REQ <-> TST edge equality (REQ-PRO-127.1)
+    # Baselined legacy orphan REQs remain tolerated until resolved in traceability_baseline.json.
+    unbaselined_asymmetric_req_to_tst = [
+        (r, t) for (r, t) in res.asymmetric_req_to_tst if r not in baseline_orphans
+    ]
+    for req_id, tst_id in unbaselined_asymmetric_req_to_tst:
+        msg = (
+            f"ERROR (Criterion 4 Symmetric REQ->TST): Requirement {req_id} cites {tst_id} in 'Tests:', "
+            f"but {tst_id} does not cite {req_id} back."
+        )
+        errors.append(msg)
+        diagnostics.append(msg)
+
+    for tst_id, req_id in res.asymmetric_tst_to_req:
+        msg = (
+            f"ERROR (Criterion 4 Symmetric TST->REQ): Test {tst_id} cites {req_id}, "
+            f"but {req_id} does not cite {tst_id} back in 'Tests:'."
+        )
+        errors.append(msg)
+        diagnostics.append(msg)
+
     report = {
         "total_reqs": len(res.declared_reqs),
         "total_tsts": len(res.declared_tsts),
@@ -2039,6 +2143,8 @@ def verify_traceability_orphans(
         "unbaselined_orphans": unbaselined_orphans,
         "stale_orphans": stale_orphans,
         "dangling_cites": [ref.target_id for ref in res.dangling_req_cites],
+        "asymmetric_req_to_tst": unbaselined_asymmetric_req_to_tst,
+        "asymmetric_tst_to_req": list(res.asymmetric_tst_to_req),
         "baseline_count": len(baseline_orphans),
     }
 
@@ -3877,6 +3983,39 @@ def verify_shard_header_counts(repo_root=None):
     return True, [f"PASS: All {checked_shards} domain shard header counts match parsed sections with 100% parity."]
 
 
+def verify_shard_sizes(repo_root=None, max_lines=4000):
+    """
+    Verifies all living documentation shards under docs/requirements/ and docs/tests/
+    do not exceed max_lines using pure Python stdlib (REQ-PRO-093.3, REQ-PRO-127.4).
+    """
+    if repo_root is None:
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    total_shards = 0
+    errors = []
+    for rel_dir in ("docs/requirements", "docs/tests"):
+        abs_dir = os.path.join(repo_root, rel_dir)
+        if not os.path.isdir(abs_dir):
+            continue
+        for fn in sorted(os.listdir(abs_dir)):
+            if not fn.endswith(".md"):
+                continue
+            abs_fp = os.path.join(abs_dir, fn)
+            if not os.path.isfile(abs_fp):
+                continue
+            total_shards += 1
+            with open(abs_fp, "r", encoding="utf-8") as fh:
+                line_count = sum(1 for _ in fh)
+            if line_count > max_lines:
+                errors.append(
+                    f"ERROR: {rel_dir}/{fn} ({line_count} lines) exceeds {max_lines}-line shard limit (REQ-PRO-093.3)."
+                )
+    if errors:
+        return False, errors
+    return True, [
+        f"PASS: All {total_shards} domain shards are within line limits (limit: {max_lines} lines)."
+    ]
+
+
 def recalculate_master_index_tables(repo_root=None):
     """
     Recalculates summary tables ('Total', 'Verified', 'Planned / Open') and total requirement/test
@@ -4015,22 +4154,6 @@ GRANDFATHERED_UNGROUNDED_SYMBOLS = {
     "LegacyImportEngine.java",
     "StravaUploadHelper.kt",
     "DatabaseHelper.java",
-}
-
-GRANDFATHERED_SYSREQS = {
-    "SYSREQ-PER-001",
-    "SYSREQ-PER-002",
-    "SYSREQ-PER-003",
-    "SYSREQ-PER-004",
-    "SYSREQ-PER-005",
-    "SYSREQ-ACQ-001",
-    "SYSREQ-ACQ-002",
-    "SYSREQ-ACQ-003",
-    "SYSREQ-ACQ-004",
-    "SYSREQ-ACQ-005",
-    "SYSREQ-ENV-001",
-    "SYSREQ-ENV-002",
-    "SYSREQ-ENV-003",
 }
 
 
@@ -4329,7 +4452,7 @@ def verify_architecture_and_system_specs(diff_text=None, repo_root=None, base_re
                         allocated_ids.add(clean_id)
 
         missing_allocation = declared_ids - allocated_ids
-        missing_declaration = (allocated_ids - declared_ids) - GRANDFATHERED_SYSREQS
+        missing_declaration = allocated_ids - declared_ids
 
         if missing_allocation:
             errors.append(
@@ -4900,7 +5023,7 @@ def verify_system_software_traceability(
                         if raw_sys in declared_sysreqs:
                             if is_sys_refined:
                                 sys_to_swe[raw_sys].add(current_req)
-                        elif raw_sys not in GRANDFATHERED_SYSREQS:
+                        else:
                             dangling_sysreq_citations.append(
                                 f"{fn} [{current_req}] cites undeclared system requirement {raw_sys}"
                             )
@@ -4928,7 +5051,7 @@ def verify_system_software_traceability(
                                 continue
                             if not re.match(r"^SYSREQ-[A-Z]+-\d+$", raw_sys):
                                 continue
-                            if raw_sys not in declared_sysreqs and raw_sys not in GRANDFATHERED_SYSREQS:
+                            if raw_sys not in declared_sysreqs:
                                 dangling_sysreq_citations.append(
                                     f"docs/system/{fn}:{line_no} cites undeclared system requirement {raw_sys}"
                                 )
@@ -5474,6 +5597,12 @@ def verify_governance(
         diagnostics.extend(dir_errors)
         return False, diagnostics
 
+    layout_ok, layout_diag = verify_living_doc_directory_layout(repo_root=repo_root)
+    if not layout_ok:
+        diagnostics.extend(layout_diag)
+        return False, diagnostics
+    diagnostics.extend(layout_diag)
+
     parity_ok, parity_errors = verify_master_table_parity()
     if not parity_ok:
         diagnostics.extend([f"ERROR: {e}" for e in parity_errors])
@@ -5533,6 +5662,12 @@ def verify_governance(
         diagnostics.extend(headers_diag)
         return False, diagnostics
     diagnostics.extend(headers_diag)
+
+    size_ok, size_diag = verify_shard_sizes(repo_root=repo_root)
+    if not size_ok:
+        diagnostics.extend(size_diag)
+        return False, diagnostics
+    diagnostics.extend(size_diag)
 
     desc_ok, desc_diag, _ = verify_req_descriptions(repo_root=repo_root)
     if not desc_ok:
@@ -5720,6 +5855,11 @@ def main(argv=None):
         "--check-doc-headers",
         action="store_true",
         help="Verify standardized work-product headers, version bumps, and human-only Approved enforcement (REQ-PRO-120).",
+    )
+    parser.add_argument(
+        "--check-living-doc-layout",
+        action="store_true",
+        help="Verify docs/requirements/ contains only req_*.md and docs/tests/ contains only tst_*.md (REQ-PRO-129.3).",
     )
     parser.add_argument(
         "--check-conflict-markers",
@@ -5956,7 +6096,18 @@ def main(argv=None):
     parser.add_argument(
         "--check-shard-headers",
         action="store_true",
-        help="Verify that all 18 living documentation domain shard headers match parsed section counts with 100%% parity (REQ-PRO-104.2).",
+        help="Verify that all living documentation domain shard headers match parsed section counts with 100%% parity (REQ-PRO-104.2).",
+    )
+    parser.add_argument(
+        "--check-size",
+        action="store_true",
+        help="Verify all living documentation shards do not exceed max line limit (REQ-PRO-093.3, REQ-PRO-127.4).",
+    )
+    parser.add_argument(
+        "--max-lines",
+        type=int,
+        default=4000,
+        help="Maximum allowed line count per living documentation shard (default: 4000).",
     )
     parser.add_argument(
         "--check-req-description",
@@ -6043,6 +6194,10 @@ def main(argv=None):
 
     if args.check_shard_headers:
         ok, diag = verify_shard_header_counts(repo_root=args.repo_root)
+        _record_check(ok, diag, err_only_on_error=True)
+
+    if args.check_size:
+        ok, diag = verify_shard_sizes(repo_root=args.repo_root, max_lines=args.max_lines)
         _record_check(ok, diag, err_only_on_error=True)
 
     if args.check_req_description:
@@ -6204,6 +6359,10 @@ def main(argv=None):
 
     if args.check_doc_headers:
         ok, diag = verify_work_product_headers(repo_root=args.repo_root, base_ref=args.base_ref, check_diff=True)
+        _record_check(ok, diag)
+
+    if args.check_living_doc_layout:
+        ok, diag = verify_living_doc_directory_layout(repo_root=args.repo_root)
         _record_check(ok, diag)
 
     if args.check_conflict_markers:

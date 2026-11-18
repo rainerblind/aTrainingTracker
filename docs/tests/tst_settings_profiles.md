@@ -1,7 +1,7 @@
 # Living Test Specification: Settings, Profiles & Localization
 
 **Document ID**: `DOC-TST-SET`  
-**Version**: 1.0.3  
+**Version**: 1.0.4  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -939,7 +939,7 @@
 10. *Strava-Specific Dialog Copy & 9-Language Parity (`TST-SET-088.5`, `ATT-5570`)*: Verify `garage_detector_dialog_message_gold_strava` and `garage_detector_dialog_message_diamond_strava` are used when `isStravaSubscriber == true`, contain 0 emojis, retain all positional specifiers, and maintain 100% parity across all 9 locales.
 
 ### TST-LOC-001: **Monetization & Supporter 9-Language Localization Parity Verification Suite** [Verified]
-- **Requirement(s)**: `REQ-SET-083`, `REQ-SET-084`, `REQ-SET-085`, `REQ-SET-086`, `REQ-SET-087`, `REQ-SET-088`
+- **Requirement(s)**: `REQ-SET-083`, `REQ-SET-084`, `REQ-SET-085`, `REQ-SET-086`, `REQ-SET-087`, `REQ-SET-088`, `REQ-UI-445`, `REQ-UI-446`, `REQ-UI-455`, `REQ-UI-456`
 - **Component**: `res/values*/strings.xml`, `TranslationParityTest.kt`
 - **Test Description**:
 1. Run `TranslationParityTest` verifying all 9 locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`) have identical key sets and parameter specifiers for all new monetization strings.

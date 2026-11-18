@@ -34,8 +34,9 @@ import java.io.File
  *    outside the ratcheted baseline allow-list (REQ-PRO-050.1, REQ-PRO-050.3).
  * 2. Domain calculation engines remain pure JVM without Android UI or database coupling (REQ-PRO-050.2).
  * 3. Tripwires detect unallow-listed UI database references or domain UI imports (REQ-PRO-050.3).
- * 4. docs/architecture.md defines explicit resource and timing budgets (SWE.2.BP4, REQ-PRO-052).
+ * 4. docs/architecture.md defines explicit resource and timing budgets (SWE.2.BP4, REQ-PRO-052, REQ-PRO-130).
  */
+// Linked test specs: TST-PRO-050, TST-PRO-052, TST-PRO-129, TST-PRO-130
 class ArchitectureConformanceContractTest {
 
     companion object {
@@ -50,9 +51,30 @@ class ArchitectureConformanceContractTest {
             Regex("""\b[A-Za-z0-9_]*(?:DatabaseManager|DbHelper)\b""")
         )
 
+        private val DATABASE_COMPOSE_IMPORT_PATTERN = Regex("""\bandroidx\.compose\b""")
+        private val DATABASE_UPWARD_UI_IMPORT_PATTERN = Regex("""\bimport\s+(?:static\s+)?com\.atrainingtracker\..*\.ui\b""")
+
         private val FORBIDDEN_DATABASE_UPWARD_PATTERNS = listOf(
-            Regex("""\bandroidx\.compose\b"""),
-            Regex("""\bcom\.atrainingtracker\..*\.ui\..*(?:Screen|Dialog|BottomSheet|Fragment|Activity|View|Sheet)\b""")
+            DATABASE_COMPOSE_IMPORT_PATTERN,
+            DATABASE_UPWARD_UI_IMPORT_PATTERN
+        )
+
+        /**
+         * Ratcheted baseline of remaining legacy `trainingtracker/database/` files importing `com.atrainingtracker...ui.*`
+         * DTOs/repositories (REQ-PRO-050.5, REQ-PRO-130.3, ATT-8202).
+         * `WorkoutClusterEngine.kt` has been decoupled (0 `.ui.*` imports) and `banalservice/database/` stays at 0.
+         */
+        val BASELINE_ALLOWED_DATABASE_UPWARD_UI_IMPORTS: Set<String> = setOf(
+            "com/atrainingtracker/trainingtracker/database/ClimbsDatabaseManager.kt",
+            "com/atrainingtracker/trainingtracker/database/ErtsPostWorkoutRecomputer.kt",
+            "com/atrainingtracker/trainingtracker/database/RoutesDatabaseManager.kt",
+            "com/atrainingtracker/trainingtracker/database/TrackingViewsDatabaseManager.java",
+            "com/atrainingtracker/trainingtracker/database/WorkoutClusterCorridorDetector.kt",
+            "com/atrainingtracker/trainingtracker/database/WorkoutClusterRepository.kt",
+            "com/atrainingtracker/trainingtracker/database/WorkoutDeletionHelper.java",
+            "com/atrainingtracker/trainingtracker/database/WorkoutPhotoManager.kt",
+            "com/atrainingtracker/trainingtracker/database/WorkoutSummariesDatabaseManager.java",
+            "com/atrainingtracker/trainingtracker/database/hrv/HrvPostWorkoutRecomputer.kt"
         )
 
         /**
@@ -83,6 +105,32 @@ class ArchitectureConformanceContractTest {
             "com/atrainingtracker/trainingtracker/ui/sportingjourney/SportingJourneyRepository.kt",
             "com/atrainingtracker/trainingtracker/ui/tracking/TrackingViewsRepository.kt",
             "com/atrainingtracker/trainingtracker/ui/tracking/editsensorfield/EditSensorFieldViewModel.kt"
+        )
+
+        /**
+         * Downward-ratcheting LoC ceiling baseline for existing > 1,500 LoC production files
+         * (REQ-PRO-129.2, TST-PRO-129.2, ATT-8203).
+         * Net-new files > 1,500 LoC and upward LoC growth beyond baseline fail immediately.
+         * When a file is refactored below 1,501 LoC, remove it from this map to ratchet down.
+         */
+        const val MAX_MONOLITH_LOC_THRESHOLD = 1500
+        val MAX_MONOLITH_FILE_LOC_BASELINE: Map<String, Int> = mapOf(
+            "com/atrainingtracker/trainingtracker/ui/aftermath/WorkoutRepository.kt" to 5117,
+            "com/atrainingtracker/trainingtracker/tracker/TrackerService.java" to 3559,
+            "com/atrainingtracker/trainingtracker/database/WorkoutSummariesDatabaseManager.java" to 3148,
+            "com/atrainingtracker/trainingtracker/database/TrackingViewsDatabaseManager.java" to 2631,
+            "com/atrainingtracker/trainingtracker/settings/TuningPreferencesDataStore.kt" to 2410,
+            "com/atrainingtracker/trainingtracker/TrainingApplication.java" to 2135,
+            "com/atrainingtracker/banalservice/ui/devices/editdevice/EditDeviceDialog.kt" to 2004,
+            "com/atrainingtracker/trainingtracker/ui/athleteprofile/AthleteProfileScreen.kt" to 1975,
+            "com/atrainingtracker/trainingtracker/ui/map/TelemetryMetricGraph.kt" to 1965,
+            "com/atrainingtracker/trainingtracker/ui/tracking/tracking/SensorGridScreen.kt" to 1953,
+            "com/atrainingtracker/trainingtracker/activities/ZonesSettingsActivity.kt" to 1898,
+            "com/atrainingtracker/banalservice/devices/DeviceManager.java" to 1708,
+            "com/atrainingtracker/banalservice/database/DevicesDatabaseManager.java" to 1671,
+            "com/atrainingtracker/trainingtracker/database/WorkoutClusterEngine.kt" to 1635,
+            "com/atrainingtracker/trainingtracker/database/WorkoutSamplesDatabaseManager.java" to 1533,
+            "com/atrainingtracker/trainingtracker/migration/ImportBackupTabsScreen.kt" to 1513
         )
 
         fun stripComments(content: String): String {
@@ -188,6 +236,7 @@ class ArchitectureConformanceContractTest {
         )
     }
 
+    // Linked test specs: TST-PRO-130.3
     @Test
     fun testDatabaseLayer_noUpwardUiOrComposeImports() {
         val mainDir = findMainSourceDir()
@@ -199,7 +248,9 @@ class ArchitectureConformanceContractTest {
             assertTrue("Database directory must exist: ${dir.absolutePath}", dir.exists() && dir.isDirectory)
         }
 
-        val violations = mutableListOf<String>()
+        val composeViolations = mutableListOf<String>()
+        val detectedUiImporters = mutableSetOf<String>()
+        val banalUiImporters = mutableListOf<String>()
         dbDirs.forEach { dbDir ->
             dbDir.walkTopDown().forEach { file ->
                 if (file.isFile && (file.name.endsWith(".kt") || file.name.endsWith(".java"))) {
@@ -208,9 +259,13 @@ class ArchitectureConformanceContractTest {
                     lines.forEachIndexed { lineIdx, line ->
                         val trimmed = line.trim()
                         if (trimmed.startsWith("import ")) {
-                            FORBIDDEN_DATABASE_UPWARD_PATTERNS.forEach { pattern ->
-                                if (pattern.containsMatchIn(trimmed)) {
-                                    violations.add("$relPath:${lineIdx + 1}: $trimmed (matched $pattern)")
+                            if (DATABASE_COMPOSE_IMPORT_PATTERN.containsMatchIn(trimmed)) {
+                                composeViolations.add("$relPath:${lineIdx + 1}: $trimmed")
+                            }
+                            if (DATABASE_UPWARD_UI_IMPORT_PATTERN.containsMatchIn(trimmed)) {
+                                detectedUiImporters.add(relPath)
+                                if (relPath.startsWith("com/atrainingtracker/banalservice/database/")) {
+                                    banalUiImporters.add("$relPath:${lineIdx + 1}: $trimmed")
                                 }
                             }
                         }
@@ -220,9 +275,37 @@ class ArchitectureConformanceContractTest {
         }
 
         assertTrue(
-            "Database persistence layer must not import Compose or UI screen/composable classes (REQ-PRO-050.5):\n  " +
-                violations.joinToString("\n  "),
-            violations.isEmpty()
+            "Database persistence layer must never import Compose classes (REQ-PRO-050.5):\n  " +
+                composeViolations.joinToString("\n  "),
+            composeViolations.isEmpty()
+        )
+        assertTrue(
+            "banalservice/database/ must remain strictly at 0 upward .ui.* imports (REQ-PRO-130.3):\n  " +
+                banalUiImporters.joinToString("\n  "),
+            banalUiImporters.isEmpty()
+        )
+        assertFalse(
+            "WorkoutClusterEngine.kt must remain decoupled with 0 upward .ui.* imports (REQ-PRO-130.2)",
+            "com/atrainingtracker/trainingtracker/database/WorkoutClusterEngine.kt" in detectedUiImporters
+        )
+
+        val unallowlisted = detectedUiImporters - BASELINE_ALLOWED_DATABASE_UPWARD_UI_IMPORTS
+        assertTrue(
+            "Detected unallow-listed database -> ui.* upward imports (REQ-PRO-050.5, REQ-PRO-130.3):\n  " +
+                unallowlisted.joinToString("\n  "),
+            unallowlisted.isEmpty()
+        )
+
+        val staleBaseline = BASELINE_ALLOWED_DATABASE_UPWARD_UI_IMPORTS - detectedUiImporters
+        assertTrue(
+            "Database upward-import baseline contains stale entries that no longer import .ui.* (ratchet down):\n  " +
+                staleBaseline.joinToString("\n  "),
+            staleBaseline.isEmpty()
+        )
+
+        assertTrue(
+            "Database upward-import baseline (${BASELINE_ALLOWED_DATABASE_UPWARD_UI_IMPORTS.size}) must stay <= 10 (REQ-PRO-130.3)",
+            BASELINE_ALLOWED_DATABASE_UPWARD_UI_IMPORTS.size <= 10
         )
     }
 
@@ -278,10 +361,13 @@ class ArchitectureConformanceContractTest {
         )
     }
 
+    // Linked test specs: TST-PRO-130.3
     @Test
     fun testRatchetingTripwire_detectsForbiddenDatabaseUpwardImport() {
         val mockComposeImport = "import androidx.compose.ui.graphics.Color"
         val mockUiScreenImport = "import com.atrainingtracker.trainingtracker.ui.tracking.TrackingTabsScreen"
+        val mockUiAftermathRepoImport = "import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository"
+        val mockUiAftermathDtoImport = "import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData"
 
         assertTrue(
             "Tripwire must catch forbidden Compose import in database layer (REQ-PRO-050.5)",
@@ -290,6 +376,14 @@ class ArchitectureConformanceContractTest {
         assertTrue(
             "Tripwire must catch forbidden UI screen import in database layer (REQ-PRO-050.5)",
             FORBIDDEN_DATABASE_UPWARD_PATTERNS.any { it.containsMatchIn(mockUiScreenImport) }
+        )
+        assertTrue(
+            "Tripwire must catch non-UI-suffix upward ui.aftermath repository import in database layer (REQ-PRO-130.3)",
+            FORBIDDEN_DATABASE_UPWARD_PATTERNS.any { it.containsMatchIn(mockUiAftermathRepoImport) }
+        )
+        assertTrue(
+            "Tripwire must catch non-UI-suffix upward ui.aftermath DTO import in database layer (REQ-PRO-130.3)",
+            FORBIDDEN_DATABASE_UPWARD_PATTERNS.any { it.containsMatchIn(mockUiAftermathDtoImport) }
         )
     }
 
@@ -366,5 +460,83 @@ class ArchitectureConformanceContractTest {
             val nfrId = String.format("REQ-NFR-%03d", i)
             assertTrue("Section 4.9 must explicitly link to $nfrId (ATT-6735)", content.contains(nfrId))
         }
+
+        // TST-PRO-130.1: Singleton repository heap/cache/vertex & GoogleMap instance budgets in §4.9 (ATT-8202)
+        val requiredBudgetTokens = listOf(
+            "MAX_OVERLAY_POINTS = 800",
+            "recentHrvThresholdsCache",
+            "MAX_SUMMARY_THUMBNAIL_TRACKS = 8",
+            "recentlyFinishedWorkoutIds <= 50",
+            "LruCache(64)",
+            "MAX_CARD_MINI_MAP_VERTICES = 2_000",
+            "MAX_DETAILED_MAP_VERTICES = 8_000",
+            "RadarStateRepository",
+            "extraBufferCapacity = 16",
+            "liteMode(true)",
+            "beyondViewportPageCount = 0",
+            "REQ-PRO-130.1"
+        )
+        for (token in requiredBudgetTokens) {
+            assertTrue("Section 4.9 must document singleton/map budget token '$token' (REQ-PRO-130.1)", content.contains(token))
+        }
+    }
+
+    /**
+     * Enforces monotonic downward-ratcheting LoC ceiling across all Kotlin/Java files > 1,500 LoC
+     * in app/src/main/java (REQ-PRO-129.2, TST-PRO-129.2, ATT-8203).
+     */
+    // Linked test specs: TST-PRO-129.2
+    @Test
+    fun testMonolithLocRatchet_noNewOrGrowingGodClasses() {
+        val mainDir = findMainSourceDir()
+        val actualLocByPath = mutableMapOf<String, Int>()
+
+        mainDir.walkTopDown().forEach { file ->
+            if (file.isFile && (file.name.endsWith(".kt") || file.name.endsWith(".java"))) {
+                val relPath = normalizePath(file, mainDir)
+                actualLocByPath[relPath] = file.readLines().size
+            }
+        }
+
+        val netNewGodClasses = actualLocByPath
+            .filter { (path, loc) -> loc > MAX_MONOLITH_LOC_THRESHOLD && path !in MAX_MONOLITH_FILE_LOC_BASELINE }
+            .map { (path, loc) -> "$path ($loc LoC > $MAX_MONOLITH_LOC_THRESHOLD)" }
+        assertTrue(
+            "Detected net-new God classes > $MAX_MONOLITH_LOC_THRESHOLD LoC (REQ-PRO-129.2):\n  " +
+                netNewGodClasses.joinToString("\n  "),
+            netNewGodClasses.isEmpty()
+        )
+
+        val growthViolations = mutableListOf<String>()
+        val staleEntries = mutableListOf<String>()
+        MAX_MONOLITH_FILE_LOC_BASELINE.forEach { (path, maxAllowedLoc) ->
+            val actualLoc = actualLocByPath[path]
+            if (actualLoc == null) {
+                staleEntries.add("$path (missing on disk)")
+            } else if (actualLoc > maxAllowedLoc) {
+                growthViolations.add("$path grew from $maxAllowedLoc to $actualLoc LoC")
+            } else if (actualLoc <= MAX_MONOLITH_LOC_THRESHOLD) {
+                staleEntries.add("$path shrunk to $actualLoc <= $MAX_MONOLITH_LOC_THRESHOLD LoC; remove from baseline")
+            }
+        }
+
+        assertTrue(
+            "Existing God classes exceeded ratcheted LoC ceilings (REQ-PRO-129.2):\n  " +
+                growthViolations.joinToString("\n  "),
+            growthViolations.isEmpty()
+        )
+        assertTrue(
+            "Ratcheted monolith baseline contains stale entries that should be removed to lock in improvements:\n  " +
+                staleEntries.joinToString("\n  "),
+            staleEntries.isEmpty()
+        )
+    }
+
+    @Test
+    fun testMonolithLocBaseline_containsExpectedCeilingCount() {
+        assertTrue(
+            "Monolith baseline size (${MAX_MONOLITH_FILE_LOC_BASELINE.size}) must stay <= 16 (REQ-PRO-129.2)",
+            MAX_MONOLITH_FILE_LOC_BASELINE.size <= 16
+        )
     }
 }

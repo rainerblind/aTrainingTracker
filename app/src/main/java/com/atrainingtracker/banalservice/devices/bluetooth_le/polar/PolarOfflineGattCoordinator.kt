@@ -99,6 +99,7 @@ object PolarOfflineGattCoordinator {
     private val activeSessionCallbacks = ConcurrentHashMap<String, PolarBleApiCallbackProvider>()
     private val callbackListeners = CopyOnWriteArraySet<CallbackRegistration>()
     private val deviceAliases = ConcurrentHashMap<String, MutableSet<String>>()
+    private val connectedDeviceIds = ConcurrentHashMap.newKeySet<String>()
     private val activeAccOwners = ConcurrentHashMap<String, String>()
 
     private fun normalizeId(polarId: String): String = polarId.trim().uppercase(Locale.ROOT)
@@ -170,6 +171,9 @@ object PolarOfflineGattCoordinator {
 
     private val multiplexerCallback = object : NoOpPolarCallback() {
         override fun blePowerStateChanged(powered: Boolean) {
+            if (!powered) {
+                connectedDeviceIds.clear()
+            }
             for (entry in callbackListeners) {
                 entry.callback.blePowerStateChanged(powered)
             }
@@ -186,6 +190,8 @@ object PolarOfflineGattCoordinator {
 
         override fun deviceConnected(polarDeviceInfo: PolarDeviceInfo) {
             registerDeviceAliases(polarDeviceInfo.deviceId, polarDeviceInfo.address)
+            polarDeviceInfo.deviceId.takeIf { it.isNotBlank() }?.let { connectedDeviceIds.add(normalizeId(it)) }
+            polarDeviceInfo.address.takeIf { it.isNotBlank() }?.let { connectedDeviceIds.add(normalizeId(it)) }
             for (entry in callbackListeners) {
                 if (entry.matchesInfo(polarDeviceInfo)) {
                     entry.callback.deviceConnected(polarDeviceInfo)
@@ -195,6 +201,16 @@ object PolarOfflineGattCoordinator {
 
         override fun deviceDisconnected(polarDeviceInfo: PolarDeviceInfo) {
             registerDeviceAliases(polarDeviceInfo.deviceId, polarDeviceInfo.address)
+            polarDeviceInfo.deviceId.takeIf { it.isNotBlank() }?.let { id ->
+                val norm = normalizeId(id)
+                connectedDeviceIds.remove(norm)
+                deviceAliases[norm]?.forEach { connectedDeviceIds.remove(it) }
+            }
+            polarDeviceInfo.address.takeIf { it.isNotBlank() }?.let { addr ->
+                val norm = normalizeId(addr)
+                connectedDeviceIds.remove(norm)
+                deviceAliases[norm]?.forEach { connectedDeviceIds.remove(it) }
+            }
             for (entry in callbackListeners) {
                 if (entry.matchesInfo(polarDeviceInfo)) {
                     entry.callback.deviceDisconnected(polarDeviceInfo)
@@ -413,7 +429,28 @@ object PolarOfflineGattCoordinator {
                 activeSessions.remove(macKey, api)
                 activeSessionCallbacks.remove(macKey)
             }
+            deviceAliases[key]?.forEach { alias ->
+                if (activeSessions.remove(alias, api)) {
+                    activeSessionCallbacks.remove(alias)
+                }
+            }
+            macKey?.let { deviceAliases[it] }?.forEach { alias ->
+                if (activeSessions.remove(alias, api)) {
+                    activeSessionCallbacks.remove(alias)
+                }
+            }
         }
+    }
+
+    /**
+     * Returns true if the shared [PolarBleApi] multiplexer has observed an active connection
+     * (`SESSION_OPEN`) for [polarId] or any of its registered MAC/8-hex aliases (`REQ-CON-050.2`).
+     */
+    @JvmStatic
+    fun isDeviceConnected(polarId: String?): Boolean {
+        val key = polarId?.let(::normalizeId)?.takeIf { it.isNotEmpty() } ?: return false
+        if (connectedDeviceIds.contains(key)) return true
+        return deviceAliases[key]?.any { connectedDeviceIds.contains(it) } == true
     }
 
     /**
@@ -476,6 +513,7 @@ object PolarOfflineGattCoordinator {
         activeSessionCallbacks.clear()
         callbackListeners.clear()
         deviceAliases.clear()
+        connectedDeviceIds.clear()
         activeAccOwners.clear()
     }
 
@@ -494,13 +532,33 @@ object PolarOfflineGattCoordinator {
      */
     @JvmStatic
     fun extractPolarId(deviceName: String, macAddress: String): String {
-        return POLAR_ID_REGEX.find(deviceName)?.value ?: macAddress
+        return extractPolarId(null, deviceName, macAddress)
+    }
+
+    /**
+     * Resolves the canonical Polar ID from persisted DIS/SDK hardware metadata ([PolarOfflineCapabilityStore]),
+     * falling back to `POLAR_ID_REGEX` on un-reconnected rows and finally [macAddress] (`REQ-CON-049.4`).
+     */
+    @JvmStatic
+    fun extractPolarId(context: Context?, deviceName: String, macAddress: String): String {
+        val persistedId = PolarOfflineCapabilityStore.getPolarDeviceId(context, macAddress)
+        if (!persistedId.isNullOrBlank()) {
+            registerDeviceAliases(persistedId, macAddress)
+            return persistedId
+        }
+        val regexId = POLAR_ID_REGEX.find(deviceName)?.value
+        if (!regexId.isNullOrBlank()) {
+            registerDeviceAliases(regexId, macAddress)
+            return regexId
+        }
+        return macAddress
     }
 
     /**
      * Returns true if [name] / [manufacturer] identifies a Polar H10 chest strap.
      */
     @JvmStatic
+    @JvmOverloads
     fun isPolarH10Name(name: String, manufacturer: String = ""): Boolean {
         val lowerName = name.lowercase(Locale.ROOT)
         val lowerMfg = manufacturer.lowercase(Locale.ROOT)
@@ -509,9 +567,29 @@ object PolarOfflineGattCoordinator {
     }
 
     /**
+     * Returns true when persisted DIS/SDK hardware metadata identifies a Polar H10, or (strictly when
+     * hardware type is `UNKNOWN` on un-reconnected rows) legacy name heuristics match (`REQ-CON-049.4`).
+     */
+    @JvmStatic
+    @JvmOverloads
+    fun isPolarH10Device(
+        context: Context?,
+        name: String,
+        manufacturer: String = "",
+        macAddress: String? = null
+    ): Boolean {
+        return when (PolarOfflineCapabilityStore.getDeviceType(context, macAddress)) {
+            PolarOfflineCapabilityStore.PolarDeviceType.H10 -> true
+            PolarOfflineCapabilityStore.PolarDeviceType.VERITY_SENSE -> false
+            PolarOfflineCapabilityStore.PolarDeviceType.UNKNOWN -> isPolarH10Name(name, manufacturer)
+        }
+    }
+
+    /**
      * Returns true if [name] / [manufacturer] identifies a Polar optical sensor using `PolarOfflineRecordingApi`.
      */
     @JvmStatic
+    @JvmOverloads
     fun isPolarVeritySenseName(name: String, manufacturer: String = ""): Boolean {
         val lowerName = name.lowercase(Locale.ROOT)
         val lowerMfg = manufacturer.lowercase(Locale.ROOT)
@@ -522,20 +600,41 @@ object PolarOfflineGattCoordinator {
     }
 
     /**
-     * Returns true for Polar Verity Sense / OH1 sensors or other non-H10 Polar HRMs confirmed to
-     * expose `FEATURE_POLAR_OFFLINE_RECORDING` / PFTP in [PolarOfflineCapabilityStore].
+     * Returns true for Polar Verity Sense / OH1 sensors confirmed via DIS/SDK hardware metadata, or
+     * (strictly when hardware type is `UNKNOWN` on un-reconnected rows) legacy name/offline capability
+     * heuristics (`REQ-CON-049.4`).
      */
     @JvmStatic
+    @JvmOverloads
     fun isPolarVeritySenseDevice(
         context: Context?,
         name: String,
         manufacturer: String = "",
         macAddress: String? = null
     ): Boolean {
-        val isH10 = isPolarH10Name(name, manufacturer)
+        val storedType = PolarOfflineCapabilityStore.getDeviceType(context, macAddress)
+        if (storedType == PolarOfflineCapabilityStore.PolarDeviceType.VERITY_SENSE) return true
+        if (storedType == PolarOfflineCapabilityStore.PolarDeviceType.H10) return false
+        if (isPolarH10Name(name, manufacturer)) return false
         val isKnownModel = isPolarVeritySenseName(name, manufacturer)
         val hasCap = PolarOfflineCapabilityStore.hasOfflineRecordingCapability(context, macAddress)
-        return !isH10 && (isKnownModel || (hasCap && name.isNotEmpty()))
+        return isKnownModel || (hasCap && name.isNotEmpty())
+    }
+
+    /**
+     * Returns true if the device is classified as either Polar H10 or Polar Verity Sense / OH1 (`REQ-CON-049.4`).
+     */
+    @JvmStatic
+    @JvmOverloads
+    fun isPolarOfflineCapableDevice(
+        context: Context?,
+        name: String,
+        manufacturer: String = "",
+        macAddress: String? = null
+    ): Boolean {
+        return isPolarH10Device(context, name, manufacturer, macAddress) ||
+            isPolarVeritySenseDevice(context, name, manufacturer, macAddress) ||
+            PolarOfflineCapabilityStore.hasPolarServiceCapability(context, macAddress)
     }
 
     /**
@@ -561,7 +660,7 @@ object PolarOfflineGattCoordinator {
         }
         return devices.asSequence()
             .filter { it.type == DeviceType.HRM && it.protocol == Protocol.BLUETOOTH_LE }
-            .mapNotNull { dev -> buildTargetIfEnabled(db, dev.id, dev.name ?: "", namePredicate) }
+            .mapNotNull { dev -> buildTargetIfEnabled(context, db, dev.id, dev.name ?: "", namePredicate) }
             .filter { target ->
                 activeReceivingHrms.isEmpty() || activeReceivingHrms.any { active ->
                     active.deviceId == target.deviceId ||
@@ -575,7 +674,7 @@ object PolarOfflineGattCoordinator {
     }
 
     /**
-     * Resolves the paired Bluetooth MAC address for a stored Polar 8-hex [polarId] or MAC string (`ATT-7924`).
+     * Resolves the paired Bluetooth MAC address for a stored Polar 8-hex [polarId] or MAC string (`ATT-7924`, `REQ-CON-049.4`).
      */
     fun findMacAddressForPolarId(context: Context, polarId: String): String? {
         if (polarId.isBlank()) return null
@@ -586,14 +685,18 @@ object PolarOfflineGattCoordinator {
             ?.mapNotNull { dev ->
                 val mac = db.getBluetoothMACAddress(dev.id)
                 val name = dev.name ?: ""
+                val storedPolarId = PolarOfflineCapabilityStore.getPolarDeviceId(context, mac)
                 val matches = mac != null &&
-                    (mac.equals(polarId, ignoreCase = true) || name.contains(polarId, ignoreCase = true))
+                    (matchesDeviceIdentifier(mac, polarId) ||
+                        matchesDeviceIdentifier(storedPolarId, polarId) ||
+                        name.contains(polarId, ignoreCase = true))
                 if (matches) mac else null
             }
             ?.firstOrNull()
     }
 
     private fun buildTargetIfEnabled(
+        context: Context,
         db: DevicesDatabaseManager,
         deviceId: Long,
         name: String,
@@ -604,11 +707,13 @@ object PolarOfflineGattCoordinator {
             namePredicate(name, mac) &&
             db.isPolarH10OfflineRecordingEnabled(deviceId)
         return if (valid && mac != null) {
+            val resolvedPolarId = extractPolarId(context, name, mac)
+            registerDeviceAliases(resolvedPolarId, mac)
             PolarTargetDevice(
                 deviceId = deviceId,
                 name = name,
                 macAddress = mac,
-                polarId = extractPolarId(name, mac)
+                polarId = resolvedPolarId
             )
         } else {
             null

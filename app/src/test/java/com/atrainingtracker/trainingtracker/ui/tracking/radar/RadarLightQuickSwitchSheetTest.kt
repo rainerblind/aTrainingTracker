@@ -224,11 +224,20 @@ class RadarLightQuickSwitchSheetTest {
             }
         }
 
+        composeTestRule.onNodeWithTag("RadarLightStvzoNotice").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("RadarLightMode_AUTO").assertIsDisplayed()
         composeTestRule.onNodeWithTag("RadarLightMode_OFF").assertIsDisplayed()
         composeTestRule.onNodeWithTag("RadarLightMode_SOLID").assertIsDisplayed()
         composeTestRule.onNodeWithTag("RadarLightMode_DAY_FLASH").assertDoesNotExist()
         composeTestRule.onNodeWithTag("RadarLightMode_NIGHT_FLASH").assertDoesNotExist()
         composeTestRule.onNodeWithTag("RadarLightMode_PELOTON").assertDoesNotExist()
+
+        val bAuto = composeTestRule.onNodeWithTag("RadarLightMode_AUTO").getBoundsInRoot()
+        val bOff = composeTestRule.onNodeWithTag("RadarLightMode_OFF").getBoundsInRoot()
+        val bSolid = composeTestRule.onNodeWithTag("RadarLightMode_SOLID").getBoundsInRoot()
+        assertEquals("OFF and SOLID must share row 2 top", bOff.top, bSolid.top)
+        assertTrue("OFF must be below AUTO and left of SOLID", bOff.top > bAuto.top && bOff.left < bSolid.left)
+        assertTrue("AUTO must span full width across both columns", bAuto.right > bOff.right)
     }
 
     @Test

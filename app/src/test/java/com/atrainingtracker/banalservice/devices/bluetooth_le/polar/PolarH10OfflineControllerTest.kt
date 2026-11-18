@@ -123,6 +123,7 @@ class PolarH10OfflineControllerTest {
 
     @After
     fun tearDown() {
+        PolarOfflineCapabilityStore.resetForTesting()
         PolarOfflineGattCoordinator.resetForTesting()
         PolarH10OfflineController.resetForTesting()
         WorkoutRrRepository.resetForTesting(null)
@@ -566,5 +567,45 @@ class PolarH10OfflineControllerTest {
 
         assertFalse(armed)
         coVerify(exactly = 0) { mockApi.connectToDevice(any()) }
+    }
+
+    @Test
+    fun testRenamedH10_armsAndSyncsPendingWorkoutViaDisHardwareMetadata() = runBlocking {
+        // TST-CON-049.4
+        PolarH10OfflineController.sdkIntOverride = 33
+        PolarH10OfflineController.apiOverride = mockApi
+
+        val renamedMac = "AA:BB:CC:DD:EE:51"
+        PolarOfflineCapabilityStore.markOfflineRecordingCapable(context, renamedMac)
+        PolarOfflineCapabilityStore.recordDisMetadata(context, renamedMac, modelNumber = "H10", serialNumber = "FACE1234")
+
+        val renamedDev = DevicesDatabaseManager.RemoteDeviceUIDataCacheItem(
+            11L,
+            "Chest Strap",
+            DeviceType.HRM,
+            Protocol.BLUETOOTH_LE
+        )
+        every { mockDevicesDb.allDevicesForCache } returns listOf(renamedDev)
+        every { mockDevicesDb.getBluetoothMACAddress(11L) } returns renamedMac
+        every { mockDevicesDb.isPolarH10OfflineRecordingEnabled(11L) } returns true
+
+        coEvery { mockApi.connectToDevice(any()) } just Runs
+        coEvery { mockApi.waitForConnection(any()) } just Runs
+        coEvery { mockApi.setLocalTime(any(), any()) } just Runs
+        coEvery { mockApi.requestRecordingStatus(any()) } returns
+            PolarH10OfflineExerciseApi.PolarRecordingStatus(false, "", true)
+        every { mockApi.listExercises(any()) } returns emptyFlow()
+        coEvery { mockApi.startRecording(any(), any(), any(), any()) } just Runs
+        coEvery { mockApi.disconnectFromDevice(any()) } just Runs
+
+        val armed = PolarH10OfflineController.armForActiveWorkout(context)
+        assertTrue(armed)
+        coVerify(exactly = 1) { mockApi.connectToDevice("FACE1234") }
+
+        val pending = WorkoutSummariesDatabaseManager.PolarPendingSyncData("FACE1234", "ex_renamed", 1000L, 2000L, true)
+        every { mockSummariesDb.getPolarPendingSyncData(789L) } returns pending
+        val synced = PolarH10OfflineController.syncPendingWorkout(context, 789L)
+        assertFalse(synced)
+        coVerify(atLeast = 2) { mockApi.connectToDevice("FACE1234") }
     }
 }

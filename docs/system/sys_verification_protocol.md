@@ -1,7 +1,7 @@
 # System Verification Protocol: Real Devices, Physical Sensors & Operational Environments (ASPICE SYS.5)
 
 **Document ID**: `DOC-SYS-VER`  
-**Version**: 1.1.0  
+**Version**: 1.2.1  
 **ASPICE Process Areas**: SYS.5 (System Verification, BP1–BP7)  
 **Parent Epic**: [ATT-6142](https://rainerblind.atlassian.net/browse/ATT-6142) (*ASPICE CL2 – System Level, Architecture Conformance, Integration & Quality Gates*)  
 **Requirement Reference**: `REQ-PRO-069` (`REQ-PRO-069.1`–`REQ-PRO-069.4`)  
@@ -17,7 +17,7 @@ This protocol establishes the formal **System Verification (ASPICE SYS.5)** proc
 1. Defines the **System Verification Strategy** validating integrated software releases (`SYS-EL-01`) against system requirements (`SYSREQ-TRK-*`, `SYSREQ-DEX-*`) on target physical hardware in real operational endurance environments (SYS.5 BP1).
 2. Specifies the **Hardware Reference Matrix** covering primary reference smartphones, BLE Heart Rate monitors, BLE/ANT+ cycling power meters, Garmin Varia cycling radar, and barometric/GNSS hardware (SYS.5 BP2).
 3. Defines 5 quantified **Environmental Operating Conditions** (Urban Canyon, Rural High-Speed, Alpine Climb, Indoor Smart Trainer, and Extended Endurance Battery Longevity) (SYS.5 BP3).
-4. Formulates 8 structured **System Verification Test Cases** (`SYS-VRF-001` through `SYS-VRF-008`) establishing complete bidirectional traceability to all system requirements (SYS.5 BP3, BP4).
+4. Formulates 10 structured **System Verification Test Cases** (`SYS-VRF-001` through `SYS-VRF-010`) establishing complete bidirectional traceability to all system requirements (SYS.5 BP3, BP4).
 5. Specifies **Objective Pass/Fail Criteria, Data Integrity Checks, and RF Reconnection Tolerances** (SYS.5 BP5).
 6. Defines the standardized **Release Sign-Off Record Template** stored under `docs/releases/<tag>/sys_verification_record.md` for release gate governance (SYS.5 BP6, BP7).
 
@@ -25,22 +25,22 @@ This protocol establishes the formal **System Verification (ASPICE SYS.5)** proc
 graph TD
     subgraph TargetEnv ["Operational Target Environment (ASPICE SYS.5)"]
         Phone["Google Pixel Reference Device (Android 14/15)"]
-        HrSensor["Polar H10 / Garmin HRM-Pro (BLE 0x180D)"]
+        HrSensor["Polar H10 / Verity Sense / Garmin HRM-Pro (BLE 0x180D, PFTP/PMD)"]
         PwrSensor["Favero Assioma Duo / Wahoo KICKR (BLE 0x1818 / ANT+)"]
-        RdrSensor["Garmin Varia RTL515 Radar (BLE 6a4e3200)"]
-        GnssConstellation["Multi-GNSS & Barometer (GPS L1/L5, Galileo, Baro)"]
-        CloudBackend["Cloud Ecosystems (Strava OAuth2, Dropbox, Drive)"]
+        RdrSensor["Garmin Varia RTL515 Radar & Light (BLE 6a4e3200 / ANT+ 0x28, 0x23)"]
+        GnssConstellation["Multi-GNSS, Baro, 6-Ch IMU & Light (GPS L1/L5, Galileo, HAL)"]
+        CloudBackend["Cloud Ecosystems & DEM (Strava, Dropbox, Drive, Open-Meteo)"]
 
-        HrSensor -->|"BLE GATT"| Phone
+        HrSensor -->|"BLE GATT / PFTP"| Phone
         PwrSensor -->|"BLE GATT / ANT+"| Phone
-        RdrSensor -->|"Custom BLE GATT"| Phone
-        GnssConstellation -->|"Platform Location API"| Phone
-        Phone -->|"REST API / TLS"| CloudBackend
+        RdrSensor <-->|"BLE GATT / ANT+ Control"| Phone
+        GnssConstellation -->|"Platform Location & Sensor API"| Phone
+        Phone <-->|"REST API / TLS"| CloudBackend
     end
 
     subgraph VerificationCycle ["Release Verification Workflow"]
         Matrix["Hardware & Environment Matrix (Section 2 & 3)"]
-        ExecCases["Execute Test Cases SYS-VRF-001..008 (Section 4)"]
+        ExecCases["Execute Test Cases SYS-VRF-001..010 (Section 4)"]
         DataAudit["Pass/Fail & Data Integrity Audit (Section 5)"]
         SignOff["Release Sign-Off Record (Section 6)"]
 
@@ -63,8 +63,8 @@ System verification requires physical validation against standardized reference 
 | `SYS-HW-03` | Heart Rate Monitor (HRM) | **Polar H10** / **Garmin HRM-Pro** | BLE Heart Rate (`0x180D`, `0x2A37` RR Intervals), ANT+ HRM | `SYS-IF-01`, `SYS-IF-02` |
 | `SYS-HW-04` | Cycling Power Meter | **Favero Assioma Duo** / **Stages L** | BLE Cycling Power (`0x1818`, `0x2A63`), ANT+ Bike Power | `SYS-IF-01`, `SYS-IF-02` |
 | `SYS-HW-05` | Smart Trainer (Indoor) | **Wahoo KICKR** / **Tacx Neo 2T** | BLE Cycling Power (`0x1818`), BLE FTMS (`0x1826`), ANT+ FE-C | `SYS-IF-01`, `SYS-IF-02` |
-| `SYS-HW-06` | Cycling Radar & Tail Light | **Garmin Varia RTL515** | BLE Custom Radar Service (`6a4e3200-6628-eecd-2140-d68103ba32e3`), ANT+ Radar | `SYS-IF-01`, `SYS-IF-02` |
-| `SYS-HW-07` | Barometric Altimeter & GNSS | Internal Smartphone MEMS Barometer + Multi-GNSS | Android `Sensor.TYPE_PRESSURE`, `LocationManager.GPS_PROVIDER` | `SYS-IF-03`, `SYS-IF-04` |
+| `SYS-HW-06` | Cycling Radar & Tail Light | **Garmin Varia RTL515** | BLE Custom Radar Service (`6a4e3200-667b-11e3-949a-0800200c9a66`, light control `6a4e3202`, RearVue `6a4e2f00`), ANT+ Radar (`0x28`) & Bike Lights (`0x23`) | `SYS-IF-01`, `SYS-IF-02` |
+| `SYS-HW-07` | Barometric Altimeter, IMU, Light & GNSS | Internal Smartphone MEMS Barometer, 6-Ch IMU, Ambient Light + Multi-GNSS | Android `Sensor.TYPE_PRESSURE`, `Sensor.TYPE_LIGHT`, 6-ch IMU (`TYPE_ACCELEROMETER`/`GYROSCOPE`/`LINEAR_ACCELERATION`/`GRAVITY`/`ROTATION_VECTOR`/`GAME_ROTATION_VECTOR`), `LocationManager.GPS_PROVIDER` | `SYS-IF-03`, `SYS-IF-04` |
 
 ---
 
@@ -96,7 +96,7 @@ graph LR
    - Purpose: Verify cycling power, cadence, and heart rate telemetry acquisition without false GPS auto-pause triggers.
 5. **(E5) Extended Endurance & Battery Longevity**:
    - Minimum 3 hours continuous outdoor multi-sensor endurance session with mixed screen-on/screen-off usage.
-   - Purpose: Verify foreground service resilience, WakeLock conservation, memory stability (zero OOM), and battery consumption $\le 8\%\text{ per hour}$.
+   - Purpose: Verify foreground service resilience, WakeLock conservation, memory stability (zero OOM), and battery consumption $\le 8\%\text{ per hour}$ in mixed screen-on/screen-off endurance (`E5`), reconciled with `REQ-NFR-006` and `docs/architecture.md` §4.9 (`< 5.0%/h` screen-off background, `<= 12.0%/h` continuous screen-on cockpit).
 
 ---
 
@@ -192,7 +192,7 @@ graph LR
 * **Expected Telemetry & Pass Criteria**:
   - Foreground notification with live workout metrics remains visible throughout the entire test.
   - `TrackerService` runs uninterrupted; zero process terminations by OS memory killer (`ActivityManager`).
-  - Total battery consumption over 3 hours is $\le 24\%$ (average battery drain rate $\le 8\%\text{ per hour}$).
+  - Total battery consumption over 3 hours is $\le 24\%$ (average battery drain rate $\le 8\%\text{ per hour}$ mixed `E5`; `< 5.0%/h` during continuous screen-off background intervals per `REQ-NFR-006` and `docs/architecture.md` §4.9; `<= 12.0%/h` screen-on cockpit).
   - All 10,800 seconds of workout telemetry are recorded without gaps.
 
 ### SYS-VRF-006: Real-Time Sensory Alerts, Cockpit Dashboard & Radar Warnings
@@ -254,16 +254,40 @@ graph LR
   - Secure zip extraction verifies path traversal safety (Zip Slip defense).
   - Restored database maintains 100% data integrity with all historic workouts intact.
 
+### SYS-VRF-009: Bidirectional Radar/Light Actuation, IMU/Barometer Fusion, GPX Nav, Swim & HRV/Recovery
+* **Test Case ID**: `SYS-VRF-009`
+* **ASPICE Tracing**: SYS.5 BP3, BP4
+* **System Requirements**: `SYSREQ-TRK-007`, `SYSREQ-TRK-008`, `SYSREQ-TRK-009`, `SYSREQ-TRK-010`, `SYSREQ-TRK-011`, `SYSREQ-TRK-012`, `SYSREQ-TRK-013`
+* **Target Hardware**: `SYS-HW-01` (Pixel 8), `SYS-HW-03` (Polar H10 / Verity Sense), `SYS-HW-06` (Garmin Varia RTL515), `SYS-HW-07` (Barometer, IMU & GNSS)
+* **Operational Environment**: `E2` (Rural Road), `E3` (Alpine Climb), Pool / Endurance
+* **Execution Procedure**:
+  1. Exercise BLE/ANT+ tail-light mode control and deceleration brake-light triggers (`SYSREQ-TRK-007`, `SYSREQ-TRK-010`), alpine climb detection with barometric EKF fusion (`SYSREQ-TRK-008`), and GPX follow-me audio cues (`SYSREQ-TRK-009`).
+  2. Verify pool swimming lap adjustment (`SYSREQ-TRK-011`), live HRV/DFA alpha-1 zone alerts (`SYSREQ-TRK-012`), and process-death session resumption across `MANUAL_PAUSED`/`AUTO_PAUSED`/`TRACKING` (`SYSREQ-TRK-013`).
+* **Expected Telemetry & Pass Criteria**:
+  - Light mode/brake commands reflect on hardware tail light within 500 ms; climb detection, GPX turn alerts, swim lap recalculation, DFA alpha-1 streaming, and 3-tier session recovery complete without sample loss or crashes.
+
+### SYS-VRF-010: Polar BLE PFTP/PMD Backfill & Open-Meteo DEM Enrichment
+* **Test Case ID**: `SYS-VRF-010`
+* **ASPICE Tracing**: SYS.5 BP3, BP4
+* **System Requirements**: `SYSREQ-DEX-007`, `SYSREQ-DEX-008`
+* **Target Hardware**: `SYS-HW-01` (Pixel 8), `SYS-HW-03` (Polar H10 / Verity Sense)
+* **Operational Environment**: Target Device, RF Dropout / Pool & Networked / Offline DEM
+* **Execution Procedure**:
+  1. Arm Polar H10 / Verity Sense offline flash recording, record a session with intentional RF separation, and stop workout to trigger synchronous PFTP backfill on `mDbExecutor` (bounded by `30s` H10 / `45s` Verity Sense `BACKFILL_TIMEOUT_MS`).
+  2. Trigger Open-Meteo DEM elevation enrichment online and offline.
+* **Expected Telemetry & Pass Criteria**:
+  - Backfilled HR/RR/swim telemetry merges cleanly prior to FIT/TCX/Strava export within the `30s` (H10 `30_000L` ms) / `45s` (Verity Sense `45_000L` ms) `BACKFILL_TIMEOUT_MS` bound; DEM elevation caches heal terrain profiles online and degrade gracefully offline.
+
 ---
 
 ## 5. Objective Pass/Fail Criteria & Quality Gating (SYS.5 BP5)
 
 A system verification run for a release candidate SHALL only receive a **PASS** verdict when all of the following criteria are met:
 
-1. **Test Case Completion**: 100% of defined verification test cases (`SYS-VRF-001` through `SYS-VRF-008`) executed and passed.
+1. **Test Case Completion**: 100% of defined verification test cases (`SYS-VRF-001` through `SYS-VRF-010`) executed and passed.
 2. **Telemetry Completeness**: Data sample loss during active workout tracking remains $\le 1.0\%$.
 3. **RF Reconnection Latency**: Disconnected sensors reconnect automatically within $10.0\text{ s}$ of RF signal recovery.
-4. **Power Consumption**: Average battery drain during multi-sensor outdoor tracking is $\le 8.0\%\text{ per hour}$.
+4. **Power Consumption**: Average battery drain during mixed multi-sensor outdoor tracking (`E5`) is $\le 8.0\%\text{ per hour}$ (`< 5.0\%\text{ per hour}` continuous screen-off background and `<= 12.0%/h` continuous screen-on cockpit per `REQ-NFR-006` and `docs/architecture.md` §4.9).
 5. **Data File Integrity**: Exported FIT and TCX files pass 100% binary and XML structural schema validation with zero CRC errors.
 6. **Zero Critical Defects**: Zero application crashes (ANR / Crash), zero database lockups, and zero credential leakage.
 
@@ -301,6 +325,8 @@ Every release candidate verification run must be documented by copying this temp
 | `SYS-VRF-006` | Radar & Cockpit Alerts | `SYSREQ-TRK-006` | E2 | [ PASS / FAIL ] | Audible warnings OK |
 | `SYS-VRF-007` | FIT/TCX Export & Deduplication | `SYSREQ-DEX-001`, `SYSREQ-DEX-002` | Storage | [ PASS / FAIL ] | FIT CRC Valid |
 | `SYS-VRF-008` | Cloud Sync & Restore | `SYSREQ-DEX-003..006` | Cloud | [ PASS / FAIL ] | Strava sync OK |
+| `SYS-VRF-009` | Radar/Light, IMU, Nav, Swim & HRV | `SYSREQ-TRK-007..013` | E2 / E3 | [ PASS / FAIL ] | Actuation & recovery OK |
+| `SYS-VRF-010` | Polar Backfill & DEM Enrichment | `SYSREQ-DEX-007`, `SYSREQ-DEX-008` | Pool / Cloud | [ PASS / FAIL ] | 30s/45s backfill & DEM OK |
 
 ## 3. Deviations & Observations
 * `<Document any minor deviations, RF anomalies, or environment-specific observations>`
@@ -318,3 +344,5 @@ Every release candidate verification run must be documented by copying this temp
 | :--- | :--- | :--- | :--- | :--- |
 | `1.0.0` | 2026-11-16 | AI Agent | `ATT-6142` | Prior system specification baseline. |
 | `1.1.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Standardized `DOC-SYS-VER` header, bumped version, reset status to `Reviewed` (`Pending PO Sign-Off`). |
+| `1.2.0` | 2026-11-18 | AI Agent (`ATT-8201`) | `ATT-8201` | Fixed Varia BLE UUID (`6a4e3200-667b-11e3-949a-0800200c9a66`), reconciled battery budgets with `REQ-NFR-006` (`< 5.0%/h` screen-off / `<= 8.0%/h` mixed / `<= 12.0%/h` screen-on), and added `SYS-VRF-009..010` tracing `SYSREQ-TRK-007..013` & `SYSREQ-DEX-007..008`. |
+| `1.2.1` | 2026-11-18 | AI Agent (`ATT-8201`) | `ATT-8201` | Cold Stage 6 heal: updated executive summary & Mermaid diagram to `10` test cases (`SYS-VRF-001..010`) with Polar PFTP/PMD, ANT+ `0x28`/`0x23`, 6-ch IMU, `Sensor.TYPE_LIGHT`, Open-Meteo DEM, and H10 `30s` / Verity Sense `45s` `BACKFILL_TIMEOUT_MS`. |

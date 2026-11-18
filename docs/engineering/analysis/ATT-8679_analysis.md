@@ -1,0 +1,40 @@
+# Stage 1 Analysis: ATT-8679 - Remove Green Connected Status Circle/Pill (`RadarStatusBadgePill`) from `RadarEdgeOverlay`
+
+**DOC-ID**: `DOC-ANA-ATT-8679` | **Ticket**: [ATT-8679](https://atrainingtracker.atlassian.net/browse/ATT-8679)  
+**Parent Epic**: [ATT-1286](https://atrainingtracker.atlassian.net/browse/ATT-1286) (*Cycling Rearview Radar: BLE & ANT+ Acquisition, Live Edge Overlay, Audio/Haptic Alerts & Traffic Analytics*) | **Target Release**: `V5.0.0`  
+**Sprint**: `sprint/2026-11-18_01_Früh` | **Branch**: `feature/ATT-8679` | **Author**: `--as agent1`
+
+---
+
+## 1. Problem Statement & Motivation
+During Ceremony 2 on-device review of `ATT-8109` (`att_rdr_connected.png`, Pixel 10), the PO requested permanent removal of the small green connected status circle/pill (`RadarStatusBadgePill` with link icon `ic_device_available`) rendered at the top of `RadarEdgeOverlay` across both the Start tab and live tracking tabs ("Der grüne Kreis soll immer raus").
+
+## 2. Independent Peer Review & Verification
+Audited `RadarEdgeOverlay.kt`, `TrackingTabsScreen.kt`, `RadarLightButton.kt`, `RadarLightQuickSwitchSheet.kt`, `RadarSettingsSection.kt`, `RadarEdgeOverlayTest.kt`, `app/detekt-baseline.xml`, `app/lint-baseline.xml`, `app/source-reading-baseline.txt`, and `docs/requirements/req_tracking_cockpit_part2.md` / `docs/tests/tst_tracking_cockpit.md` on `cf5155bb`:
+* **`RadarStatusBadgePill` Callers & Branches (`RadarEdgeOverlay.kt:315, 347, 481–672`)**:
+  * Called in `RadarEdgeSide.FULL_SCREEN` (`L315`, `Alignment.TopEnd`, `padding(top = 8.dp, end = 8.dp)`) and in `LEFT`/`RIGHT` (`L347`, top of `Column` above `Spacer(6.dp)` and `RadarVerticalRail`).
+  * Renders 5 states (`L496–564, 591–670`): (1) `DISCONNECTED_ERROR` (`TTColor.RadarDisconnectedAmber` circle + `ic_device_not_available`, invoking `onReconnectClick`); (2) `CONNECTING` (`primaryContainer` circle — already suppressed by `isRadarOverlayVisible` unless simulating); (3) `snoozeState.isSnoozed && isClear` (green circle + `ic_radar_bell_muted` + snooze label); (4) `isClear` (green circle `TTColor.RadarClearGreen` + `ic_device_available` link icon); (5) `hasActiveThreats` (amber/pulsing-red circle or `24×34 dp` pill with `targets.size` + optional snooze bell).
+  * **Start Tab Visibility (`TrackingTabsScreen.kt:1101–1139, 1407–1417`)**: `ScreenMode.TRACKING` spans both Start (`page == 0`) and live tracking tabs (`page > 0`), explaining why the green circle appears on the Start tab whenever `CONNECTED`.
+* **Correction to Ticket Hypothesis (`RadarLightButton` & Quick-Switch Side-Effect)**:
+  * Ticket states `RadarLightButton` is in the *top status bar*; in code (`TrackingTabsScreen.kt:1170–1212`), `RadarLightButton` sits in the **bottom** floating action row (`[RadarLightButton, LapButton, BikeBellButton]`) and is gated on `radarState.isLightControlSupported`. On radars without light control (e.g., RVR315 / ANT+ `0x28`-only), `RadarStatusBadgePill` was the sole cockpit tap trigger (`onBadgeClick` -> `showRadarLightQuickSwitch = true`) for **1-tap Audio Snooze** (`REQ-TRK-064.1`).
+  * **Recommended Scope Distinction**: Suppress `RadarStatusBadgePill` whenever `!isDisconnectError && !hasActiveThreats` (or unconditionally on `isClear`, eliminating both the green link-icon circle and green clear snooze circle so zero green circles ever render, while preserving `DISCONNECTED_ERROR` amber hazard/reconnect badge per `REQ-TRK-062.4` and threat-count/snooze badge during active `APPROACHING`/`FAST_APPROACHING` threats per `REQ-TRK-064.2`). In `LEFT`/`RIGHT` `Column`, guard `Spacer(8.dp)` / `Spacer(6.dp)` on badge visibility so `RadarVerticalRail` does not sit `14.dp` lower without a badge, and note `RadarClearMode.BADGE_ONLY` renders empty when clear.
+* **Lint, Detekt, Tests & Shard Capacities**:
+  * `R.drawable.ic_device_available` is referenced **only** at `RadarEdgeOverlay.kt:656`, and `R.string.radar_overlay_clear` (`values*/strings_radar.xml:77`, all 9 locales) **only** at `L520, L657`. Removing the `isClear` branch without removing those orphaned resources (or verifying `UnusedResources` in `app/lint-baseline.xml`) would trip `:app:lintDebug`; removing `radar_overlay_clear` across all 9 `strings_radar.xml` files preserves 100% 9-language parity (`TranslationParityTest`).
+  * `RadarEdgeOverlayTest.kt` is **not** in `app/source-reading-baseline.txt`; `RadarStatusBadgePill` has 2 `detekt-baseline.xml` entries (`L264, L721`). `RadarEdgeOverlay.kt:796–898` already provides 4 `@Preview`s (`ClearLight`, `ApproachingDark`, `FastThreatAmoled`, `Disconnected`) for `Rule 8.5` screenshot verification.
+  * Living doc shards are safely below the `4000`-line cap: `req_tracking_cockpit_part2.md` (`3003` lines), `tst_tracking_cockpit.md` (`3448` lines).
+
+## 3. User Scope Grounding (ATT-1250)
+* **In-Scope (`1 SP`)**: Permanently suppress the green `CONNECTED`/`isClear` circle (`RadarStatusBadgePill` with `ic_device_available`) across `LEFT`, `RIGHT`, and `FULL_SCREEN`; preserve `DISCONNECTED_ERROR` amber warning badge & 1-tap reconnect (`REQ-TRK-062.4`); handle `Spacer` alignment when badge is absent; clean up orphaned `ic_device_available` / `radar_overlay_clear` across all 9 locales (or keep parity verified); add Compose UI test (`createComposeRule()`) + update `RadarEdgeOverlayTest`, `REQ-TRK-062`, and `TST-TRK-062`.
+* **Out-of-Scope**: Redesigning `RadarClearMode` settings options/DataStore enum, relocating `RadarLightButton`, or adding new audio-snooze entry buttons for light-less radars (note as optional follow-up if needed).
+
+## 4. Chesterton's Fence Audit (REQ-PRO-022)
+* **Original Requirement ID & Target**: `REQ-TRK-062` (`REQ-TRK-062.3`, `REQ-TRK-062.4`) in `docs/requirements/req_tracking_cockpit_part2.md:138–190`, targeting `RadarEdgeOverlay.kt`, `TrackingTabsScreen.kt`, `RadarEdgeOverlayTest.kt`, and `strings_radar.xml`.
+* **Historical Origin & Commit Trace**: `2a3baf12` (`ATT-5085`, introduced always-visible top status badge pill), `90e44df9` (`ATT-6703`, kept top pill visible during `AUTO_HIDE_3S` rail fade-out to avoid ghost clicks), `3206a504` (`ATT-7537`, added `FULL_SCREEN` top-end badge), `b7a4de7b` (`ATT-7744`, hid overlay during `CONNECTING`/idle `DISCONNECTED`, retained `DISCONNECTED_ERROR`).
+* **Root Reason for Existing Formulation**: Originally, `RadarStatusBadgePill` served as the clear-road indicator (`BADGE_ONLY` / `AUTO_HIDE_3S`) and the quick-switch sheet trigger before `ATT-7972` introduced the dedicated `RadarLightButton` in the Cockpit action row.
+* **Preservation of Core Invariants**: Preserve `DISCONNECTED_ERROR` amber fail-safe warning + 1-tap `REQUEST_START_SEARCH_FOR_PAIRED_DEVICES` reconnect (`REQ-TRK-062.4`), upward target kinematics (`140m/175m -> 0m`), 100% touch pass-through on rail/full-screen targets (`REQ-TRK-062.3`), `.navigationBarsPadding()`, and 9-language localization parity (`REQ-TRK-062.6`).
+
+## Change Impact Analysis
+* **Affected Requirements**: Refines `REQ-TRK-062` (`REQ-TRK-062.3`, `REQ-TRK-062.4`, `REQ-TRK-062.6`) in `req_tracking_cockpit_part2.md` (`3003 <= 4000` lines) and `TST-TRK-062` in `tst_tracking_cockpit.md` (`3448 <= 4000` lines).
+* **Affected Architecture Elements**: `RadarEdgeOverlay.kt` (UI-only badge visibility & layout spacing; optionally `ic_device_available.xml` & `values*/strings_radar.xml` `radar_overlay_clear` cleanup). Zero DB, Repository, Service, or `TrackingTabsScreen` signature changes.
+* **Verification Impact & Test Surface**: `RadarEdgeOverlayTest.kt` (add Robolectric `createComposeRule()` UI assertions verifying zero green clear badge across `LEFT`/`RIGHT`/`FULL_SCREEN` while retaining `DISCONNECTED_ERROR` badge), `TranslationParityTest` (if `strings_radar.xml` edited), and Stage 5 `Rule 8.5` `@Preview`/emulator visual check.
+* **Risk Assessment & Invariants**: **LOW** — single-component (`1 SP`) Compose overlay badge removal; core invariants (`DISCONNECTED_ERROR` reconnect affordance, gesture pass-through, threat rail dots, `RadarLightButton` control) remain intact.

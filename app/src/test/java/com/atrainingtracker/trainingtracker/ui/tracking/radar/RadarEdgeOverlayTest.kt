@@ -18,6 +18,51 @@
 
 package com.atrainingtracker.trainingtracker.ui.tracking.radar
 
+import android.content.Context
+import android.graphics.Bitmap
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.test.assertHasNoClickAction
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.click
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.height
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.width
+import androidx.test.core.app.ApplicationProvider
+import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.devices.radar.LaneState
 import com.atrainingtracker.banalservice.devices.radar.RadarAudioSnoozeMode
 import com.atrainingtracker.banalservice.devices.radar.RadarAudioSnoozeState
@@ -30,6 +75,7 @@ import com.atrainingtracker.trainingtracker.settings.RadarClearMode
 import com.atrainingtracker.trainingtracker.settings.RadarEdgeSide
 import com.atrainingtracker.trainingtracker.settings.RadarTrafficOrientation
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
+import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
 import com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.isRadarOverlayVisible
@@ -38,13 +84,27 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
+import java.io.File
+import java.io.FileOutputStream
 
 /**
- * Unit tests verifying live rearview radar edge overlay kinematics, threat color mapping,
- * and fail-safe disconnect invariants (REQ-TRK-062, TST-TRK-062).
+ * Unit and behavioral Compose UI tests verifying live rearview radar edge overlay kinematics,
+ * clear-state badge suppression, threat color mapping, and fail-safe disconnect invariants
+ * (REQ-TRK-062, REQ-TRK-064, REQ-TRK-089, TST-TRK-062, TST-TRK-064, TST-TRK-089, REQ-PRO-049.1, ATT-8679, ATT-8733).
  */
+@RunWith(RobolectricTestRunner::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+@Config(sdk = [34], qualifiers = "w1080dp-h2200dp-xhdpi")
 class RadarEdgeOverlayTest {
+
+    @get:Rule
+    val composeTestRule = createComposeRule()
 
     @Test
     fun normalizeRadarRange_computesAccurateNormalizedPositions() {
@@ -438,5 +498,970 @@ class RadarEdgeOverlayTest {
             "Overlay must be suppressed outside ScreenMode.TRACKING even if connected",
             isRadarOverlayVisible(ScreenMode.CONFIGURATION, RadarConnectionState.CONNECTED, isSimulating = false)
         )
+    }
+
+    /**
+     * TST-TRK-062.4 / REQ-TRK-062.3: When CONNECTED and road is clear (unsnoozed),
+     * RadarStatusBadgePill MUST NOT be rendered across LEFT and RIGHT,
+     * and RadarVerticalRail must start at top (0.dp) without a 14.dp downward spacer gap.
+     */
+    @Test
+    fun clearConnectedState_leftAndRight_suppressesStatusBadgeAndGuardsRailSpacers() {
+        val clearState = RadarState(
+            connectionState = RadarConnectionState.CONNECTED,
+            overallThreatLevel = ThreatLevel.NONE,
+            targets = emptyList()
+        )
+        var edgeSide by mutableStateOf(RadarEdgeSide.LEFT)
+
+        composeTestRule.setContent {
+            ATrainingTrackerTheme {
+                Box(modifier = Modifier.width(120.dp).height(300.dp)) {
+                    RadarEdgeOverlay(
+                        radarState = clearState,
+                        edgeSide = edgeSide,
+                        clearMode = RadarClearMode.SLIM_RAIL
+                    )
+                }
+            }
+        }
+
+        for (side in listOf(RadarEdgeSide.LEFT, RadarEdgeSide.RIGHT)) {
+            composeTestRule.runOnIdle { edgeSide = side }
+            composeTestRule.waitForIdle()
+            composeTestRule.onNodeWithTag("RadarEdgeOverlay").assertIsDisplayed()
+            composeTestRule.onNodeWithTag("RadarStatusBadge").assertDoesNotExist()
+            val railNode = composeTestRule.onNodeWithTag("RadarVerticalRail", useUnmergedTree = true)
+            railNode.assertIsDisplayed()
+            val railBounds = railNode.getUnclippedBoundsInRoot()
+            assertEquals(
+                "Clear rail on $side must align at top (0.dp) without 14.dp badge spacer shift",
+                0f,
+                railBounds.top.value,
+                0.5f
+            )
+        }
+    }
+
+    /**
+     * TST-TRK-062.4 / REQ-TRK-062.3: FULL_SCREEN clear state renders neither rail nor status badge.
+     */
+    @Test
+    fun clearConnectedState_fullScreen_suppressesStatusBadgeAndRail() {
+        val clearState = RadarState(
+            connectionState = RadarConnectionState.CONNECTED,
+            overallThreatLevel = ThreatLevel.NONE,
+            targets = emptyList()
+        )
+
+        composeTestRule.setContent {
+            ATrainingTrackerTheme {
+                Box(modifier = Modifier.width(360.dp).height(300.dp)) {
+                    RadarEdgeOverlay(
+                        radarState = clearState,
+                        edgeSide = RadarEdgeSide.FULL_SCREEN,
+                        clearMode = RadarClearMode.SLIM_RAIL
+                    )
+                }
+            }
+        }
+        composeTestRule.onNodeWithTag("RadarEdgeOverlay").assertExists()
+        composeTestRule.onNodeWithTag("RadarStatusBadge").assertDoesNotExist()
+        composeTestRule.onNodeWithTag("RadarVerticalRail").assertDoesNotExist()
+    }
+
+    /**
+     * TST-TRK-062.4 / TST-TRK-064.2 / REQ-TRK-062.3: When CONNECTED and road is clear while
+     * audio snooze is active, zero green snooze circle may render across LEFT, RIGHT, and FULL_SCREEN.
+     */
+    @Test
+    fun clearSnoozedState_suppressesStatusBadgeAcrossAllEdgeSides() {
+        val snoozedClearState = RadarState(
+            connectionState = RadarConnectionState.CONNECTED,
+            overallThreatLevel = ThreatLevel.NONE,
+            targets = emptyList(),
+            audioSnoozeState = RadarAudioSnoozeState(
+                isSnoozed = true,
+                mode = RadarAudioSnoozeMode.SNOOZE_15M,
+                remainingSeconds = 900
+            )
+        )
+        var edgeSide by mutableStateOf(RadarEdgeSide.LEFT)
+
+        composeTestRule.setContent {
+            ATrainingTrackerTheme {
+                Box(modifier = Modifier.width(360.dp).height(300.dp)) {
+                    RadarEdgeOverlay(
+                        radarState = snoozedClearState,
+                        edgeSide = edgeSide,
+                        clearMode = RadarClearMode.SLIM_RAIL
+                    )
+                }
+            }
+        }
+
+        for (side in RadarEdgeSide.values()) {
+            composeTestRule.runOnIdle { edgeSide = side }
+            composeTestRule.waitForIdle()
+            composeTestRule.onNodeWithTag("RadarStatusBadge").assertDoesNotExist()
+        }
+    }
+
+    /**
+     * TST-TRK-062.4 / REQ-TRK-062.3: Both Start tab (page 0) and Live Tracking tabs (page > 0)
+     * run under ScreenMode.TRACKING; verify clear CONNECTED overlay suppresses green circle on both,
+     * and AUTO_HIDE_3S fades out rail after 3s with zero clear badge.
+     */
+    @Test
+    fun startAndLiveTrackingTabs_clearOverlayHasZeroBadge_andAutoHideFadesRail() {
+        val clearState = RadarState(
+            connectionState = RadarConnectionState.CONNECTED,
+            overallThreatLevel = ThreatLevel.NONE,
+            targets = emptyList()
+        )
+
+        val startTabVisible = isRadarOverlayVisible(
+            screenMode = ScreenMode.TRACKING,
+            connectionState = clearState.connectionState,
+            isSimulating = false
+        )
+        val liveTabVisible = isRadarOverlayVisible(
+            screenMode = ScreenMode.TRACKING,
+            connectionState = clearState.connectionState,
+            isSimulating = false
+        )
+        assertTrue("Overlay visible on Start tab (page 0) under ScreenMode.TRACKING", startTabVisible)
+        assertTrue("Overlay visible on Live Tracking tab (page > 0) under ScreenMode.TRACKING", liveTabVisible)
+
+        composeTestRule.setContent {
+            ATrainingTrackerTheme {
+                Box(modifier = Modifier.width(120.dp).height(300.dp)) {
+                    RadarEdgeOverlay(
+                        radarState = clearState,
+                        edgeSide = RadarEdgeSide.RIGHT,
+                        clearMode = RadarClearMode.AUTO_HIDE_3S
+                    )
+                }
+            }
+        }
+        composeTestRule.onNodeWithTag("RadarStatusBadge").assertDoesNotExist()
+        composeTestRule.onNodeWithTag("RadarVerticalRail", useUnmergedTree = true).assertIsDisplayed()
+        composeTestRule.mainClock.advanceTimeBy(3500L)
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag("RadarStatusBadge").assertDoesNotExist()
+        composeTestRule.onNodeWithTag("RadarVerticalRail").assertDoesNotExist()
+    }
+
+    /**
+     * TST-TRK-062.3 / REQ-TRK-062.4: DISCONNECTED_ERROR preserves amber hazard badge across
+     * LEFT, RIGHT, FULL_SCREEN, keeps rail aligned below 8dp+24dp+6dp badge header, and routes tap to reconnect.
+     */
+    @Test
+    fun disconnectedError_displaysAmberBadge_andRoutesClickToReconnect() {
+        val errorState = RadarState(
+            connectionState = RadarConnectionState.DISCONNECTED_ERROR,
+            overallThreatLevel = ThreatLevel.NONE,
+            targets = emptyList()
+        )
+        var edgeSide by mutableStateOf(RadarEdgeSide.LEFT)
+        var reconnectCalls = 0
+        var badgeCalls = 0
+
+        composeTestRule.setContent {
+            ATrainingTrackerTheme {
+                Box(modifier = Modifier.width(360.dp).height(300.dp)) {
+                    RadarEdgeOverlay(
+                        radarState = errorState,
+                        edgeSide = edgeSide,
+                        clearMode = RadarClearMode.SLIM_RAIL,
+                        onBadgeClick = { badgeCalls++ },
+                        onReconnectClick = { reconnectCalls++ }
+                    )
+                }
+            }
+        }
+
+        for ((idx, side) in RadarEdgeSide.values().withIndex()) {
+            composeTestRule.runOnIdle { edgeSide = side }
+            composeTestRule.waitForIdle()
+            composeTestRule.onNodeWithTag("RadarStatusBadge").assertIsDisplayed().performClick()
+            assertEquals("Reconnect must be called on $side", idx + 1, reconnectCalls)
+            assertEquals("Normal badge click must not fire on $side", 0, badgeCalls)
+
+            if (side != RadarEdgeSide.FULL_SCREEN) {
+                val railBounds = composeTestRule.onNodeWithTag("RadarVerticalRail", useUnmergedTree = true)
+                    .getUnclippedBoundsInRoot()
+                assertEquals(
+                    "Error rail on $side must sit below 8dp+24dp+6dp header (38.dp)",
+                    38f,
+                    railBounds.top.value,
+                    0.5f
+                )
+            }
+        }
+    }
+
+    /**
+     * TST-TRK-062.3 / TST-TRK-064.2 / REQ-TRK-062.4 / REQ-TRK-064.2:
+     * Active threats (APPROACHING & FAST_APPROACHING, unsnoozed and snoozed) retain RadarStatusBadge
+     * with target count and snooze countdown/bell, and route taps to onBadgeClick.
+     */
+    @Test
+    fun activeThreats_unsnoozedAndSnoozed_displayBadgeAndInvokeOnBadgeClick() {
+        val snoozedThreatState = RadarState(
+            connectionState = RadarConnectionState.CONNECTED,
+            overallThreatLevel = ThreatLevel.FAST_APPROACHING,
+            targets = listOf(
+                RadarTarget(targetId = 1, rangeMeters = 60f, approachSpeedMps = 18f, threatLevel = ThreatLevel.FAST_APPROACHING),
+                RadarTarget(targetId = 2, rangeMeters = 100f, approachSpeedMps = 10f, threatLevel = ThreatLevel.APPROACHING)
+            ),
+            audioSnoozeState = RadarAudioSnoozeState(
+                isSnoozed = true,
+                mode = RadarAudioSnoozeMode.SNOOZE_15M,
+                remainingSeconds = 900
+            )
+        )
+        val unsnoozedApproachState = RadarState(
+            connectionState = RadarConnectionState.CONNECTED,
+            overallThreatLevel = ThreatLevel.APPROACHING,
+            targets = listOf(
+                RadarTarget(targetId = 1, rangeMeters = 80f, approachSpeedMps = 10f, threatLevel = ThreatLevel.APPROACHING)
+            )
+        )
+
+        var activeState by mutableStateOf(snoozedThreatState)
+        var edgeSide by mutableStateOf(RadarEdgeSide.FULL_SCREEN)
+        var badgeClicks = 0
+        var reconnectClicks = 0
+
+        composeTestRule.setContent {
+            ATrainingTrackerTheme {
+                Box(modifier = Modifier.width(360.dp).height(300.dp)) {
+                    RadarEdgeOverlay(
+                        radarState = activeState,
+                        edgeSide = edgeSide,
+                        onBadgeClick = { badgeClicks++ },
+                        onReconnectClick = { reconnectClicks++ }
+                    )
+                }
+            }
+        }
+
+        composeTestRule.onNodeWithTag("RadarStatusBadge").assertIsDisplayed().performClick()
+        composeTestRule.onNodeWithText("15m", useUnmergedTree = true).assertIsDisplayed()
+        composeTestRule.onNodeWithText("2", useUnmergedTree = true).assertIsDisplayed()
+        assertEquals(1, badgeClicks)
+        assertEquals(0, reconnectClicks)
+
+        composeTestRule.runOnIdle {
+            activeState = unsnoozedApproachState
+            edgeSide = RadarEdgeSide.RIGHT
+        }
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag("RadarStatusBadge").assertIsDisplayed().performClick()
+        composeTestRule.onNodeWithText("1", useUnmergedTree = true).assertIsDisplayed()
+        assertEquals(2, badgeClicks)
+        assertEquals(0, reconnectClicks)
+    }
+
+    /**
+     * TST-TRK-062.9 / Rule 8.5: Captures Light and Dark @Preview-equivalent PNG screenshot
+     * covering ClearLight (zero green badge), ApproachingDark, FastThreatAmoled, and Disconnected
+     * states at docs/engineering/walkthroughs/img/ATT-8679_radar_edge_overlay_preview.png.
+     */
+    @Test
+    fun captureLightAndDarkOverlayPreviewPng() {
+        val clearState = RadarState(
+            connectionState = RadarConnectionState.CONNECTED,
+            overallThreatLevel = ThreatLevel.NONE,
+            targets = emptyList()
+        )
+        val approachState = RadarState(
+            connectionState = RadarConnectionState.CONNECTED,
+            overallThreatLevel = ThreatLevel.APPROACHING,
+            targets = listOf(
+                RadarTarget(targetId = 1, rangeMeters = 80f, approachSpeedMps = 10f, threatLevel = ThreatLevel.APPROACHING),
+                RadarTarget(targetId = 2, rangeMeters = 30f, approachSpeedMps = 12f, threatLevel = ThreatLevel.APPROACHING)
+            )
+        )
+        val fastState = RadarState(
+            connectionState = RadarConnectionState.CONNECTED,
+            overallThreatLevel = ThreatLevel.FAST_APPROACHING,
+            targets = listOf(
+                RadarTarget(targetId = 1, rangeMeters = 40f, approachSpeedMps = 22f, threatLevel = ThreatLevel.FAST_APPROACHING)
+            )
+        )
+        val disconnectedState = RadarState(
+            connectionState = RadarConnectionState.DISCONNECTED_ERROR,
+            overallThreatLevel = ThreatLevel.NONE,
+            targets = emptyList()
+        )
+
+        composeTestRule.setContent {
+            Row(
+                modifier = Modifier
+                    .width(440.dp)
+                    .background(Color(0xFF78909C))
+                    .padding(12.dp)
+                    .testTag("RadarOverlayPreviewComposite"),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                ATrainingTrackerTheme(darkTheme = false) {
+                    Surface(modifier = Modifier.width(95.dp).height(260.dp)) {
+                        Column(
+                            modifier = Modifier.fillMaxSize().padding(6.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text("Clear Light", fontSize = 10.sp)
+                            Box(modifier = Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.CenterEnd) {
+                                RadarEdgeOverlay(radarState = clearState, edgeSide = RadarEdgeSide.RIGHT, clearMode = RadarClearMode.SLIM_RAIL)
+                            }
+                        }
+                    }
+                }
+                ATrainingTrackerTheme(darkTheme = true) {
+                    Surface(modifier = Modifier.width(95.dp).height(260.dp)) {
+                        Column(
+                            modifier = Modifier.fillMaxSize().padding(6.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text("Approach Dark", fontSize = 10.sp)
+                            Box(modifier = Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.CenterEnd) {
+                                RadarEdgeOverlay(radarState = approachState, edgeSide = RadarEdgeSide.RIGHT, clearMode = RadarClearMode.SLIM_RAIL)
+                            }
+                        }
+                    }
+                }
+                ATrainingTrackerTheme(darkTheme = true) {
+                    Surface(color = Color.Black, modifier = Modifier.width(95.dp).height(260.dp)) {
+                        Column(
+                            modifier = Modifier.fillMaxSize().padding(6.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text("Fast AMOLED", color = Color.White, fontSize = 10.sp)
+                            Box(modifier = Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.CenterEnd) {
+                                RadarEdgeOverlay(radarState = fastState, edgeSide = RadarEdgeSide.RIGHT, clearMode = RadarClearMode.SLIM_RAIL)
+                            }
+                        }
+                    }
+                }
+                ATrainingTrackerTheme(darkTheme = false) {
+                    Surface(modifier = Modifier.width(95.dp).height(260.dp)) {
+                        Column(
+                            modifier = Modifier.fillMaxSize().padding(6.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text("Disconnected", fontSize = 10.sp)
+                            Box(modifier = Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.CenterEnd) {
+                                RadarEdgeOverlay(radarState = disconnectedState, edgeSide = RadarEdgeSide.RIGHT, clearMode = RadarClearMode.SLIM_RAIL)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        val bmp = composeTestRule.onNodeWithTag("RadarOverlayPreviewComposite")
+            .captureToImage()
+            .asAndroidBitmap()
+
+        val repoRoot = if (File("..", "docs/engineering/walkthroughs/img").exists()) File("..") else File(".")
+        val outFile = File(repoRoot, "docs/engineering/walkthroughs/img/ATT-8679_radar_edge_overlay_preview.png")
+        outFile.parentFile?.mkdirs()
+        FileOutputStream(outFile).use { out ->
+            bmp.compress(Bitmap.CompressFormat.PNG, 100, out)
+        }
+        assertTrue("Preview PNG must exist and be non-empty", outFile.exists() && outFile.length() > 0)
+    }
+
+    /**
+     * TST-TRK-089.1 / REQ-TRK-089.1: FULL_SCREEN vehicle markers render 15m/128m/160m labels
+     * unclipped and remain strictly inside container bounds even near 0.15f/0.85f and 0.0f/1.0f extremes.
+     */
+    @Test
+    fun fullScreenMarkers_15m128m160m_renderUnclippedAndWithinContainerBounds() {
+        val state = RadarState(
+            connectionState = RadarConnectionState.CONNECTED,
+            overallThreatLevel = ThreatLevel.FAST_APPROACHING,
+            targets = listOf(
+                RadarTarget(
+                    targetId = 1,
+                    rangeMeters = 15f,
+                    approachSpeedMps = 22f,
+                    threatLevel = ThreatLevel.FAST_APPROACHING,
+                    lateralOffsetMeters = -4.0f, // clamps to 0.15f left edge
+                    vehicleSizeCategory = VehicleSizeCategory.UNKNOWN_OR_LIGHT
+                ),
+                RadarTarget(
+                    targetId = 2,
+                    rangeMeters = 128f,
+                    approachSpeedMps = 12f,
+                    threatLevel = ThreatLevel.APPROACHING,
+                    lateralOffsetMeters = 4.0f, // clamps to 0.85f right edge
+                    vehicleSizeCategory = VehicleSizeCategory.CAR
+                ),
+                RadarTarget(
+                    targetId = 3,
+                    rangeMeters = 160f,
+                    approachSpeedMps = 10f,
+                    threatLevel = ThreatLevel.APPROACHING,
+                    laneState = LaneState.IN_RIDER_LANE,
+                    vehicleSizeCategory = VehicleSizeCategory.TRUCK_OR_BUS
+                )
+            )
+        )
+
+        composeTestRule.setContent {
+            ATrainingTrackerTheme {
+                Box(modifier = Modifier.width(360.dp).height(480.dp)) {
+                    RadarEdgeOverlay(
+                        radarState = state,
+                        edgeSide = RadarEdgeSide.FULL_SCREEN,
+                        clearMode = RadarClearMode.SLIM_RAIL
+                    )
+                }
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        val overlayBounds = composeTestRule
+            .onNodeWithTag("RadarFullScreenThreatOverlay", useUnmergedTree = true)
+            .getUnclippedBoundsInRoot()
+
+        listOf(1 to "15m", 2 to "128m", 3 to "160m").forEach { (id, label) ->
+            val markerNode = composeTestRule.onNodeWithTag("RadarFullScreenMarker_$id", useUnmergedTree = true)
+            markerNode.assertIsDisplayed()
+            val markerBounds = markerNode.getUnclippedBoundsInRoot()
+
+            val textNode = composeTestRule.onNodeWithText(label, useUnmergedTree = true)
+            textNode.assertIsDisplayed()
+            val textBounds = textNode.getUnclippedBoundsInRoot()
+
+            assertTrue("Text '$label' must fit inside marker width", textBounds.width < markerBounds.width)
+            assertTrue("Text '$label' left must stay inside marker", textBounds.left.value >= markerBounds.left.value - 0.5f)
+            assertTrue("Text '$label' right must stay inside marker", textBounds.right.value <= markerBounds.right.value + 0.5f)
+            assertTrue("Marker $id left must stay inside overlay", markerBounds.left.value >= overlayBounds.left.value - 0.5f)
+            assertTrue("Marker $id right must stay inside overlay", markerBounds.right.value <= overlayBounds.right.value + 0.5f)
+            assertTrue("Marker $id top must stay inside overlay", markerBounds.top.value >= overlayBounds.top.value - 0.5f)
+            assertTrue("Marker $id bottom must stay inside overlay", markerBounds.bottom.value <= overlayBounds.bottom.value + 0.5f)
+        }
+    }
+
+    /**
+     * TST-TRK-089.2 / REQ-TRK-089.2: V2 vehicle categories (UNKNOWN_OR_LIGHT, CAR, TRUCK_OR_BUS)
+     * map to distinct marker scales and localized accessibility descriptions reusing strings_radar.xml
+     * (zero hardcoded "Target" fallback).
+     */
+    @Test
+    fun fullScreenMarkers_v2VehicleCategories_scaleDistinctlyAndUseLocalizedSemantics() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val lightDesc = context.getString(R.string.radar_vehicle_size_light)
+        val carDesc = context.getString(R.string.radar_vehicle_size_car)
+        val truckDesc = context.getString(R.string.radar_vehicle_size_truck)
+
+        val state = RadarState(
+            connectionState = RadarConnectionState.CONNECTED,
+            overallThreatLevel = ThreatLevel.APPROACHING,
+            targets = listOf(
+                RadarTarget(
+                    targetId = 1,
+                    rangeMeters = 80f,
+                    approachSpeedMps = 10f,
+                    threatLevel = ThreatLevel.APPROACHING,
+                    laneState = LaneState.PASSING_LANE,
+                    vehicleSizeCategory = VehicleSizeCategory.UNKNOWN_OR_LIGHT
+                ),
+                RadarTarget(
+                    targetId = 2,
+                    rangeMeters = 80f,
+                    approachSpeedMps = 10f,
+                    threatLevel = ThreatLevel.APPROACHING,
+                    laneState = LaneState.CHANGING_LANE,
+                    vehicleSizeCategory = VehicleSizeCategory.CAR
+                ),
+                RadarTarget(
+                    targetId = 3,
+                    rangeMeters = 80f,
+                    approachSpeedMps = 10f,
+                    threatLevel = ThreatLevel.APPROACHING,
+                    laneState = LaneState.IN_RIDER_LANE,
+                    vehicleSizeCategory = VehicleSizeCategory.TRUCK_OR_BUS
+                )
+            )
+        )
+
+        composeTestRule.setContent {
+            ATrainingTrackerTheme {
+                Box(modifier = Modifier.width(360.dp).height(480.dp)) {
+                    RadarEdgeOverlay(
+                        radarState = state,
+                        edgeSide = RadarEdgeSide.FULL_SCREEN,
+                        clearMode = RadarClearMode.SLIM_RAIL
+                    )
+                }
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithContentDescription("$lightDesc, 80m").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("$carDesc, 80m").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("$truckDesc, 80m").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("Target, 80m").assertDoesNotExist()
+
+        val lightBounds = composeTestRule.onNodeWithTag("RadarFullScreenMarker_1", useUnmergedTree = true).getUnclippedBoundsInRoot()
+        val carBounds = composeTestRule.onNodeWithTag("RadarFullScreenMarker_2", useUnmergedTree = true).getUnclippedBoundsInRoot()
+        val truckBounds = composeTestRule.onNodeWithTag("RadarFullScreenMarker_3", useUnmergedTree = true).getUnclippedBoundsInRoot()
+
+        assertTrue("CAR marker must exceed UNKNOWN_OR_LIGHT width", carBounds.width > lightBounds.width)
+        assertTrue("TRUCK_OR_BUS marker must exceed CAR width", truckBounds.width > carBounds.width)
+        assertTrue("TRUCK_OR_BUS marker must exceed CAR height", truckBounds.height > carBounds.height)
+    }
+
+    /**
+     * TST-TRK-089.2 / REQ-TRK-089.3: Full-screen markers and container expose zero click actions
+     * (100% touch pass-through), upward kinematics place 10m above 160m, and LEFT/RIGHT rail
+     * geometry remains unchanged (REQ-TRK-073.2).
+     */
+    @Test
+    fun fullScreenMarkers_preserveTouchPassThrough_upwardKinematics_andEdgeRailGeometry() {
+        val threatState = RadarState(
+            connectionState = RadarConnectionState.CONNECTED,
+            overallThreatLevel = ThreatLevel.APPROACHING,
+            targets = listOf(
+                RadarTarget(
+                    targetId = 1,
+                    rangeMeters = 10f,
+                    approachSpeedMps = 12f,
+                    threatLevel = ThreatLevel.APPROACHING,
+                    laneState = LaneState.IN_RIDER_LANE,
+                    vehicleSizeCategory = VehicleSizeCategory.CAR
+                ),
+                RadarTarget(
+                    targetId = 2,
+                    rangeMeters = 160f,
+                    approachSpeedMps = 10f,
+                    threatLevel = ThreatLevel.APPROACHING,
+                    laneState = LaneState.PASSING_LANE,
+                    vehicleSizeCategory = VehicleSizeCategory.TRUCK_OR_BUS
+                )
+            )
+        )
+        var edgeSide by mutableStateOf(RadarEdgeSide.FULL_SCREEN)
+
+        composeTestRule.setContent {
+            ATrainingTrackerTheme {
+                Box(modifier = Modifier.width(360.dp).height(480.dp)) {
+                    RadarEdgeOverlay(
+                        radarState = threatState,
+                        edgeSide = edgeSide,
+                        clearMode = RadarClearMode.SLIM_RAIL
+                    )
+                }
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithTag("RadarFullScreenThreatOverlay", useUnmergedTree = true).assertHasNoClickAction()
+        composeTestRule.onNodeWithTag("RadarFullScreenMarker_1", useUnmergedTree = true).assertHasNoClickAction()
+        composeTestRule.onNodeWithTag("RadarFullScreenMarker_2", useUnmergedTree = true).assertHasNoClickAction()
+
+        val closeBounds = composeTestRule.onNodeWithTag("RadarFullScreenMarker_1", useUnmergedTree = true).getUnclippedBoundsInRoot()
+        val farBounds = composeTestRule.onNodeWithTag("RadarFullScreenMarker_2", useUnmergedTree = true).getUnclippedBoundsInRoot()
+        assertTrue("Closer vehicle (10m) must render above farther vehicle (160m)", closeBounds.top < farBounds.top)
+
+        composeTestRule.runOnIdle { edgeSide = RadarEdgeSide.RIGHT }
+        composeTestRule.waitForIdle()
+        val railBounds = composeTestRule.onNodeWithTag("RadarVerticalRail", useUnmergedTree = true).getUnclippedBoundsInRoot()
+        assertEquals("V2 edge rail width must remain 30.dp container width", 30f, railBounds.width.value, 0.5f)
+    }
+
+    /**
+     * TST-TRK-089.1 / REQ-TRK-089.1: Single-pass `.layout` measurement clamps markers strictly
+     * inside container bounds on Frame 1 (zero IntSize.Zero jump) and across dynamic 99m -> 100m width growth.
+     */
+    @Test
+    fun fullScreenMarkers_singlePassLayout_clampsOnFirstFrameAndDynamicWidthGrowth() {
+        var range by mutableStateOf(99f)
+        composeTestRule.mainClock.autoAdvance = false
+        composeTestRule.setContent {
+            ATrainingTrackerTheme {
+                Box(modifier = Modifier.width(360.dp).height(480.dp)) {
+                    RadarEdgeOverlay(
+                        radarState = RadarState(
+                            connectionState = RadarConnectionState.CONNECTED,
+                            overallThreatLevel = ThreatLevel.APPROACHING,
+                            targets = listOf(
+                                RadarTarget(
+                                    targetId = 1,
+                                    rangeMeters = range,
+                                    approachSpeedMps = 12f,
+                                    threatLevel = ThreatLevel.APPROACHING,
+                                    lateralOffsetMeters = 4.0f, // clamps at 0.85f right edge
+                                    vehicleSizeCategory = VehicleSizeCategory.CAR
+                                ),
+                                RadarTarget(
+                                    targetId = 2,
+                                    rangeMeters = 175f,
+                                    approachSpeedMps = 10f,
+                                    threatLevel = ThreatLevel.APPROACHING,
+                                    lateralOffsetMeters = -4.0f, // clamps at 0.15f left edge
+                                    vehicleSizeCategory = VehicleSizeCategory.TRUCK_OR_BUS
+                                )
+                            )
+                        ),
+                        edgeSide = RadarEdgeSide.FULL_SCREEN,
+                        clearMode = RadarClearMode.SLIM_RAIL
+                    )
+                }
+            }
+        }
+        // Advance only 1 frame (single-pass measurement & placement, no extra onSizeChanged ticks)
+        composeTestRule.mainClock.advanceTimeByFrame()
+
+        val overlayBounds = composeTestRule
+            .onNodeWithTag("RadarFullScreenThreatOverlay", useUnmergedTree = true)
+            .getUnclippedBoundsInRoot()
+
+        val marker1Frame1 = composeTestRule.onNodeWithTag("RadarFullScreenMarker_1", useUnmergedTree = true).getUnclippedBoundsInRoot()
+        val marker2Frame1 = composeTestRule.onNodeWithTag("RadarFullScreenMarker_2", useUnmergedTree = true).getUnclippedBoundsInRoot()
+        assertTrue("Marker 1 must measure non-zero width on Frame 1", marker1Frame1.width > 0.dp)
+        assertTrue("Marker 1 right must clamp inside overlay on Frame 1", marker1Frame1.right.value <= overlayBounds.right.value + 0.5f)
+        assertTrue("Marker 2 left must clamp inside overlay on Frame 1", marker2Frame1.left.value >= overlayBounds.left.value - 0.5f)
+        assertTrue("Marker 2 bottom must clamp inside overlay on Frame 1", marker2Frame1.bottom.value <= overlayBounds.bottom.value + 0.5f)
+
+        composeTestRule.runOnUiThread { range = 100f }
+        composeTestRule.mainClock.autoAdvance = true
+        composeTestRule.waitForIdle()
+
+        val marker1Grown = composeTestRule.onNodeWithTag("RadarFullScreenMarker_1", useUnmergedTree = true).getUnclippedBoundsInRoot()
+        composeTestRule.onNodeWithText("100m", useUnmergedTree = true).assertIsDisplayed()
+        assertTrue("99m -> 100m grown marker must remain clamped inside right edge", marker1Grown.right.value <= overlayBounds.right.value + 0.5f)
+    }
+
+    /**
+     * TST-TRK-089.2 / REQ-TRK-062.3 / REQ-TRK-089.3: Real behavioral pointer pass-through test
+     * performing tap and horizontal swipe directly over RadarFullScreenMarker_1 bounds, verifying
+     * the underlying sibling receives every pointer event unhindered.
+     */
+    @Test
+    fun fullScreenMarkers_passThroughTapAndSwipeDirectlyOverMarkerBoundsToUnderlyingSibling() {
+        var receivedPressCount = 0
+        var receivedReleaseCount = 0
+        var totalHorizontalDeltaPx = 0f
+
+        composeTestRule.setContent {
+            ATrainingTrackerTheme {
+                Box(modifier = Modifier.width(360.dp).height(480.dp)) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .testTag("UnderlyingMapSurface")
+                            .pointerInput(Unit) {
+                                awaitPointerEventScope {
+                                    while (true) {
+                                        val event = awaitPointerEvent()
+                                        when (event.type) {
+                                            PointerEventType.Press -> receivedPressCount++
+                                            PointerEventType.Release -> receivedReleaseCount++
+                                            PointerEventType.Move -> {
+                                                event.changes.forEach { change ->
+                                                    totalHorizontalDeltaPx += (change.position.x - change.previousPosition.x)
+                                                }
+                                            }
+                                            else -> Unit
+                                        }
+                                    }
+                                }
+                            }
+                    )
+                    RadarEdgeOverlay(
+                        radarState = RadarState(
+                            connectionState = RadarConnectionState.CONNECTED,
+                            overallThreatLevel = ThreatLevel.APPROACHING,
+                            targets = listOf(
+                                RadarTarget(
+                                    targetId = 1,
+                                    rangeMeters = 75f,
+                                    approachSpeedMps = 12f,
+                                    threatLevel = ThreatLevel.APPROACHING,
+                                    laneState = LaneState.IN_RIDER_LANE,
+                                    vehicleSizeCategory = VehicleSizeCategory.CAR
+                                )
+                            )
+                        ),
+                        edgeSide = RadarEdgeSide.FULL_SCREEN,
+                        clearMode = RadarClearMode.SLIM_RAIL
+                    )
+                }
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        val markerBounds = composeTestRule
+            .onNodeWithTag("RadarFullScreenMarker_1", useUnmergedTree = true)
+            .getUnclippedBoundsInRoot()
+        val markerCenterPx = with(composeTestRule.density) {
+            Offset(
+                x = ((markerBounds.left + markerBounds.right) / 2f).toPx(),
+                y = ((markerBounds.top + markerBounds.bottom) / 2f).toPx()
+            )
+        }
+
+        // 1. Tap directly on marker center -> underlying sibling receives Press + Release
+        composeTestRule.onRoot().performTouchInput {
+            click(markerCenterPx)
+        }
+        composeTestRule.waitForIdle()
+        assertEquals("Underlying sibling must receive tap Press through marker", 1, receivedPressCount)
+        assertEquals("Underlying sibling must receive tap Release through marker", 1, receivedReleaseCount)
+
+        // 2. Horizontal swipe starting directly on marker center -> underlying sibling receives drag
+        composeTestRule.onRoot().performTouchInput {
+            down(markerCenterPx)
+            advanceEventTime(16L)
+            moveTo(Offset((markerCenterPx.x - 120f).coerceAtLeast(10f), markerCenterPx.y))
+            advanceEventTime(16L)
+            up()
+        }
+        composeTestRule.waitForIdle()
+        assertEquals("Underlying sibling must receive swipe Press through marker", 2, receivedPressCount)
+        assertEquals("Underlying sibling must receive swipe Release through marker", 2, receivedReleaseCount)
+        assertTrue("Underlying sibling must receive horizontal drag delta (< -50px), got $totalHorizontalDeltaPx", totalHorizontalDeltaPx < -50f)
+    }
+
+    /**
+     * TST-TRK-089.2 / REQ-TRK-062.2 / REQ-TRK-089.3: Behavioral pulse-gating verification confirming
+     * FAST_APPROACHING modulates marker pixels over time while APPROACHING remains completely static.
+     */
+    @Test
+    fun fullScreenMarkers_pulseOnlyWhenFastApproaching() {
+        var threatLevel by mutableStateOf(ThreatLevel.FAST_APPROACHING)
+        composeTestRule.mainClock.autoAdvance = false
+
+        composeTestRule.setContent {
+            ATrainingTrackerTheme {
+                Box(modifier = Modifier.width(320.dp).height(400.dp)) {
+                    RadarEdgeOverlay(
+                        radarState = RadarState(
+                            connectionState = RadarConnectionState.CONNECTED,
+                            overallThreatLevel = threatLevel,
+                            targets = listOf(
+                                RadarTarget(
+                                    targetId = 1,
+                                    rangeMeters = 60f,
+                                    approachSpeedMps = 20f,
+                                    threatLevel = threatLevel,
+                                    laneState = LaneState.IN_RIDER_LANE,
+                                    vehicleSizeCategory = VehicleSizeCategory.CAR
+                                )
+                            )
+                        ),
+                        edgeSide = RadarEdgeSide.FULL_SCREEN,
+                        clearMode = RadarClearMode.SLIM_RAIL
+                    )
+                }
+            }
+        }
+        // Settle initial position animation before comparing pulse modulation
+        composeTestRule.mainClock.advanceTimeBy(200L)
+        val fastBitmapT0 = composeTestRule.onNodeWithTag("RadarFullScreenMarker_1", useUnmergedTree = true)
+            .captureToImage()
+            .asAndroidBitmap()
+
+        composeTestRule.mainClock.advanceTimeBy(175L)
+        val fastBitmapT1 = composeTestRule.onNodeWithTag("RadarFullScreenMarker_1", useUnmergedTree = true)
+            .captureToImage()
+            .asAndroidBitmap()
+
+        assertTrue(
+            "FAST_APPROACHING marker must visually pulse between t=200ms and t=375ms",
+            bitmapsDiffer(fastBitmapT0, fastBitmapT1)
+        )
+
+        threatLevel = ThreatLevel.APPROACHING
+        composeTestRule.mainClock.advanceTimeBy(200L)
+        val approachBitmapT0 = composeTestRule.onNodeWithTag("RadarFullScreenMarker_1", useUnmergedTree = true)
+            .captureToImage()
+            .asAndroidBitmap()
+
+        composeTestRule.mainClock.advanceTimeBy(175L)
+        val approachBitmapT1 = composeTestRule.onNodeWithTag("RadarFullScreenMarker_1", useUnmergedTree = true)
+            .captureToImage()
+            .asAndroidBitmap()
+
+        assertFalse(
+            "APPROACHING marker must NOT pulse (bitmaps must remain identical)",
+            bitmapsDiffer(approachBitmapT0, approachBitmapT1)
+        )
+    }
+
+    private fun bitmapsDiffer(a: Bitmap, b: Bitmap): Boolean {
+        if (a.width != b.width || a.height != b.height) return true
+        for (y in 0 until a.height) {
+            for (x in 0 until a.width) {
+                if (a.getPixel(x, y) != b.getPixel(x, y)) return true
+            }
+        }
+        return false
+    }
+
+    /**
+     * TST-TRK-089.3 / Rule 8.5: Captures Light, Dark, and Map-backdrop FULL_SCREEN @Preview-equivalent PNG
+     * covering mixed V2 targets (15m, 128m, 160m) at
+     * docs/engineering/walkthroughs/img/ATT-8733_radar_fullscreen_markers_preview.png.
+     */
+    @Test
+    fun captureFullScreenMarkersPreviewPng() {
+        val mixedLightState = RadarState(
+            connectionState = RadarConnectionState.CONNECTED,
+            overallThreatLevel = ThreatLevel.FAST_APPROACHING,
+            targets = listOf(
+                RadarTarget(
+                    targetId = 1,
+                    rangeMeters = 15f,
+                    approachSpeedMps = 22f,
+                    threatLevel = ThreatLevel.FAST_APPROACHING,
+                    laneState = LaneState.PASSING_LANE,
+                    vehicleSizeCategory = VehicleSizeCategory.CAR
+                ),
+                RadarTarget(
+                    targetId = 2,
+                    rangeMeters = 128f,
+                    approachSpeedMps = 12f,
+                    threatLevel = ThreatLevel.APPROACHING,
+                    laneState = LaneState.IN_RIDER_LANE,
+                    vehicleSizeCategory = VehicleSizeCategory.TRUCK_OR_BUS
+                ),
+                RadarTarget(
+                    targetId = 3,
+                    rangeMeters = 160f,
+                    approachSpeedMps = 9f,
+                    threatLevel = ThreatLevel.APPROACHING,
+                    laneState = LaneState.CHANGING_LANE,
+                    vehicleSizeCategory = VehicleSizeCategory.UNKNOWN_OR_LIGHT
+                )
+            )
+        )
+        val mixedDarkState = RadarState(
+            connectionState = RadarConnectionState.CONNECTED,
+            overallThreatLevel = ThreatLevel.FAST_APPROACHING,
+            targets = listOf(
+                RadarTarget(
+                    targetId = 1,
+                    rangeMeters = 24f,
+                    approachSpeedMps = 24f,
+                    threatLevel = ThreatLevel.FAST_APPROACHING,
+                    laneState = LaneState.PASSING_LANE,
+                    vehicleSizeCategory = VehicleSizeCategory.TRUCK_OR_BUS
+                ),
+                RadarTarget(
+                    targetId = 2,
+                    rangeMeters = 110f,
+                    approachSpeedMps = 11f,
+                    threatLevel = ThreatLevel.APPROACHING,
+                    laneState = LaneState.IN_RIDER_LANE,
+                    vehicleSizeCategory = VehicleSizeCategory.CAR
+                )
+            )
+        )
+        val mapBackdropState = RadarState(
+            connectionState = RadarConnectionState.CONNECTED,
+            overallThreatLevel = ThreatLevel.APPROACHING,
+            targets = listOf(
+                RadarTarget(
+                    targetId = 1,
+                    rangeMeters = 45f,
+                    approachSpeedMps = 13f,
+                    threatLevel = ThreatLevel.APPROACHING,
+                    lateralOffsetMeters = 3.5f,
+                    vehicleSizeCategory = VehicleSizeCategory.CAR
+                ),
+                RadarTarget(
+                    targetId = 2,
+                    rangeMeters = 148f,
+                    approachSpeedMps = 10f,
+                    threatLevel = ThreatLevel.APPROACHING,
+                    lateralOffsetMeters = -3.5f,
+                    vehicleSizeCategory = VehicleSizeCategory.UNKNOWN_OR_LIGHT
+                )
+            )
+        )
+
+        composeTestRule.setContent {
+            Row(
+                modifier = Modifier
+                    .width(720.dp)
+                    .background(TTColor.RadarRailTrack)
+                    .padding(12.dp)
+                    .testTag("RadarFullScreenPreviewComposite"),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                ATrainingTrackerTheme(darkTheme = false) {
+                    Surface(modifier = Modifier.width(224.dp).height(340.dp)) {
+                        Column(modifier = Modifier.fillMaxSize().padding(6.dp)) {
+                            Text("FullScreen Light", fontSize = 11.sp)
+                            Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
+                                RadarEdgeOverlay(radarState = mixedLightState, edgeSide = RadarEdgeSide.FULL_SCREEN)
+                            }
+                        }
+                    }
+                }
+                ATrainingTrackerTheme(darkTheme = true) {
+                    Surface(color = Color.Black, modifier = Modifier.width(224.dp).height(340.dp)) {
+                        Column(modifier = Modifier.fillMaxSize().padding(6.dp)) {
+                            Text("FullScreen Dark", color = Color.White, fontSize = 11.sp)
+                            Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
+                                RadarEdgeOverlay(radarState = mixedDarkState, edgeSide = RadarEdgeSide.FULL_SCREEN)
+                            }
+                        }
+                    }
+                }
+                ATrainingTrackerTheme(darkTheme = false) {
+                    Surface(
+                        color = TTColor.RadarFullScreenMapBackdrop,
+                        modifier = Modifier.width(224.dp).height(340.dp)
+                    ) {
+                        Column(modifier = Modifier.fillMaxSize().padding(6.dp)) {
+                            Text("FullScreen Map", fontSize = 11.sp)
+                            Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
+                                Canvas(modifier = Modifier.fillMaxSize()) {
+                                    drawRect(
+                                        color = TTColor.RadarFullScreenMapPark,
+                                        topLeft = Offset(size.width * 0.08f, size.height * 0.14f),
+                                        size = Size(size.width * 0.36f, size.height * 0.28f)
+                                    )
+                                    drawLine(
+                                        color = TTColor.RadarFullScreenMapRoad,
+                                        start = Offset(0f, size.height * 0.36f),
+                                        end = Offset(size.width, size.height * 0.24f),
+                                        strokeWidth = 10.dp.toPx()
+                                    )
+                                    drawLine(
+                                        color = TTColor.RouteSelected,
+                                        start = Offset(size.width * 0.5f, size.height),
+                                        end = Offset(size.width * 0.56f, 0f),
+                                        strokeWidth = 4.dp.toPx()
+                                    )
+                                }
+                                RadarEdgeOverlay(radarState = mapBackdropState, edgeSide = RadarEdgeSide.FULL_SCREEN)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        val bmp = composeTestRule.onNodeWithTag("RadarFullScreenPreviewComposite")
+            .captureToImage()
+            .asAndroidBitmap()
+
+        val repoRoot = if (File("..", "docs/engineering/walkthroughs/img").exists()) File("..") else File(".")
+        val outFile = File(repoRoot, "docs/engineering/walkthroughs/img/ATT-8733_radar_fullscreen_markers_preview.png")
+        outFile.parentFile?.mkdirs()
+        FileOutputStream(outFile).use { out ->
+            bmp.compress(Bitmap.CompressFormat.PNG, 100, out)
+        }
+        assertTrue("Full-screen preview PNG must exist and be non-empty", outFile.exists() && outFile.length() > 0)
     }
 }

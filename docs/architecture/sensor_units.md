@@ -1,7 +1,7 @@
 # Canonical SensorType Internal Storage, Display & Export Unit Data Dictionary (REQ-TRK-083)
 
 **Document ID**: `DOC-ARC-UNITS`  
-**Version**: 1.0.0  
+**Version**: 1.0.1  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -73,7 +73,7 @@ It separates **internal SQLite / sensor-bus storage units** (`SensorType.getInte
 | `HRV_SDNN` | `HEART_RATE_AND_ENERGY` | `HRV_AND_DRIFT` | `ms` | `DOUBLE` | `>= 0.0` session post-workout SDNN; `null` -> `"--"` | `DefaultNumberFormatter` (`%.1f`, `units_time_ms` = `ms`) | FIT: — / TCX: — / GPX: — / CSV: raw `ms` / GC: — |
 | `RADAR_THREAT_COUNT` | `SYSTEM_ENVIRONMENT_AND_DIAGNOSTICS` | `RADAR_SAFETY` | `dimensionless` | `INTEGER` | `>= 0` active tracked vehicles; `null` -> `"--"` | `IntegerFormatter` (`units_none`) | FIT: `targets` (DevField `radar_current` + `EventMesg`) / TCX: — / GPX: — / CSV: raw count / GC: — |
 | `RADAR_CLOSEST_DISTANCE_m` | `SYSTEM_ENVIRONMENT_AND_DIAGNOSTICS` | `RADAR_SAFETY` | `m` | `DOUBLE` | `>= 0.0` range to closest vehicle; `null` -> `"--"` | `DistanceFormatter` (scales `km`/`mile`, but `MyHelper.getUnitsId` falls back to `units_distance_basic` = `m`) | FIT: — / TCX: — / GPX: — / CSV: raw `m` / GC: — |
-| `RADAR_APPROACH_SPEED_mps` | `SYSTEM_ENVIRONMENT_AND_DIAGNOSTICS` | `RADAR_SAFETY` | `m/s` | `DOUBLE` | `>= 0.0` relative approach speed (FIT `EventMesg` clamped `[0.0, 25.4]`); `null` -> `"--"` | `SpeedFormatter` (scales `km/h`/`mile/h`, but `MyHelper.getUnitsId` falls back to `units_speed_basic` = `m/s`) | FIT: `m/s` (`EventMesg` + DevField `passing_speed` / `passing_speed_abs`) / TCX: — / GPX: — / CSV: raw `m/s` / GC: — |
+| `RADAR_APPROACH_SPEED_mps` | `SYSTEM_ENVIRONMENT_AND_DIAGNOSTICS` | `RADAR_SAFETY` | `m/s` | `DOUBLE` | `>= 0.0` relative approach speed (FIT `EventMesg` clamped `[0.0, 25.4]`); `null` -> `"--"` | `SpeedFormatter` (Metric: `* 3.6` `km/h`; Imperial: `* 2.23693629` `mile/h`; `MyHelper.getUnitsId` -> `km/h`/`mile/h`, `getShortUnitsId` -> `km/h`/`mi/h`) | FIT: `m/s` (`EventMesg` + DevField `passing_speed` / `passing_speed_abs`) / TCX: — / GPX: — / CSV: raw `m/s` / GC: — |
 | `RADAR_VEHICLE_COUNT` | `SYSTEM_ENVIRONMENT_AND_DIAGNOSTICS` | `RADAR_SAFETY` | `dimensionless` | `INTEGER` | `>= 0` cumulative vehicle count; `null` -> `"--"` | `IntegerFormatter` (`units_none`) | FIT: `vehicles` (DevField `radar_total`) / TCX: — / GPX: — / CSV: raw count / GC: — |
 | `RADAR_PASSING_DISTANCE_m` | `SYSTEM_ENVIRONMENT_AND_DIAGNOSTICS` | `RADAR_SAFETY` | `m` | `DOUBLE` | `>= 0.0` lateral passing clearance; `null` -> `"--"` | `DistanceFormatter` (scales `km`/`mile`, `MyHelper.getUnitsId` falls back to `units_distance_basic` = `m`) | FIT: `m` (DevField `passing_distance`, scale `100`) / TCX: — / GPX: — / CSV: raw `m` / GC: — |
 | `RADAR_LARGE_VEHICLE_COUNT` | `SYSTEM_ENVIRONMENT_AND_DIAGNOSTICS` | `RADAR_SAFETY` | `dimensionless` | `INTEGER` | `>= 0` cumulative large vehicles; `null` -> `"--"` | `IntegerFormatter` (`units_none`) | FIT: `vehicles` (DevField `large_vehicle_count`) / TCX: — / GPX: — / CSV: raw count / GC: — |
@@ -88,7 +88,7 @@ It separates **internal SQLite / sensor-bus storage units** (`SensorType.getInte
 
 1. **`VERTICAL_SPEED` & `ErtsPostWorkoutRecomputer` (`ATT-8577`)**: `VerticalSpeedAndSlopeDevice.java` (`calculateVam`), `AltitudeAndSlopeDevice_ATTFused.kt`, and `ErtsPostWorkoutRecomputer.kt` (`bindColumnValue`, fixed in `ATT-8577`) all persist `VERTICAL_SPEED` in **`m/h`** integers (clamped `[-3000, 3000]`), matching `R.string.units_vertical_speed_basic` (`"m/h"`). (Historical workouts recomputed prior to `ATT-8577` retain legacy `m/s` values in `WorkoutSamples.db`.)
 2. **`W_PRIME_BAL` Formatter Mismatch**: `CyclingPowerMetricsDevice.java` emits `W_PRIME_BAL` in **`kJ`** (`mCurrentWPrimeBalJoules / 1000.0`) and `SensorType.W_PRIME_BAL` declares `unitId = R.string.units_work_kj` (`"kJ"`), yet binds `PowerToWeightFormatter` (`format_with_units` outputs `"W/kg"` and treats `< 0` as `"--"`). Documented verbatim without runtime modification.
-3. **`MyHelper.getUnitsId()` Radar Unit Fallback**: `RADAR_CLOSEST_DISTANCE_m`, `RADAR_PASSING_DISTANCE_m`, and `RADAR_APPROACH_SPEED_mps` bind `DistanceFormatter` and `SpeedFormatter` (which scale to `km`/`mile` and `km/h`/`mile/h`), whereas `MyHelper.getUnitsId(SensorType)` only remaps `SPEED_mps`, `PACE_spm`, `DISTANCE_m`, `DISTANCE_m_LAP`, `LINE_DISTANCE_m`, `ALTITUDE`, `ASCENT`, and `DESCENT`, falling back to `sensorType.getUnitId()` (`units_distance_basic` = `"m"`, `units_speed_basic` = `"m/s"`) for radar metrics.
+3. **`MyHelper.getUnitsId()` Radar Distance Unit Fallback**: `RADAR_CLOSEST_DISTANCE_m` and `RADAR_PASSING_DISTANCE_m` bind `DistanceFormatter` (which scales to `km`/`mile`), whereas `MyHelper.getUnitsId(SensorType)` only remaps `SPEED_mps`, `RADAR_APPROACH_SPEED_mps` (`ATT-8676`, `REQ-TRK-088`), `PACE_spm`, `DISTANCE_m`, `DISTANCE_m_LAP`, `LINE_DISTANCE_m`, `ALTITUDE`, `ASCENT`, and `DESCENT`, falling back to `sensorType.getUnitId()` (`units_distance_basic` = `"m"`) for radar distance metrics.
 4. **Summary of Non-Identity Export Transforms**:
    - **FIT (`FitFileWriter.kt`)**: `LATITUDE`/`LONGITUDE` `deg -> semicircles` (`* SEMICIRCLES_FACTOR`); `VERTICAL_OSCILLATION` `cm -> mm` (`* CM_TO_MM`); `WORK_KJ` `kJ -> J` (`* 1000.0`); `RR_INTERVAL` `ms -> s` (`rrMs / 1000.0f`); `PEDAL_POWER_BALANCE` bit-packed right-pedal `%`.
    - **Golden Cheetah (`GCFileWriter.java`)**: `DISTANCE_m -> km` (`/ 1000.0`, `KM`); `SPEED_mps -> km/h` (`* 3.6`, `KPH`).
@@ -101,3 +101,4 @@ It separates **internal SQLite / sensor-bus storage units** (`SensorType.getInte
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
 | `1.0.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Added standardized `DOC-ARC-UNITS` work-product control header and Change History. |
+| `1.0.1` | 2026-11-18 | AI Agent (`ATT-8676`) | `ATT-8676` | Updated `RADAR_APPROACH_SPEED_mps` display unit documentation (`MyHelper.getUnitsId` -> `km/h`/`mile/h`, `getShortUnitsId` -> `km/h`/`mi/h`) per `REQ-TRK-088`. |

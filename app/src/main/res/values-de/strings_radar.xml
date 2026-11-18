@@ -73,8 +73,6 @@
     <string name="radar_overlay_clear_mode_badge">Nur Status-Badge</string>
     <string name="radar_overlay_clear_mode_autohide">Autom. Ausblenden (3s)</string>
     <string name="radar_overlay_disconnected">Radar getrennt</string>
-    <string name="radar_overlay_connecting">Radar verbindet</string>
-    <string name="radar_overlay_clear">Straße frei</string>
     <string name="radar_overlay_threats_format">%1$d Gefahren</string>
     <string name="radar_overlay_threats_fast_format">%1$d Gefahren (hohes Tempo)</string>
 

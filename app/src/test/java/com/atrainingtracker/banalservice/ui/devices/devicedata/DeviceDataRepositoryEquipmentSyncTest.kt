@@ -473,4 +473,67 @@ class DeviceDataRepositoryEquipmentSyncTest {
             repository.getDeviceById(42L)?.linkedWheelPositions
         )
     }
+
+    /**
+     * TST-CON-050.1: Toggling polarLiveImuEnabled via updateDevice() emits POLAR_LIVE_IMU_CHANGED,
+     * while unchanged polarLiveImuEnabled does not emit it.
+     */
+    @Test
+    fun testUpdateDevice_polarLiveImuToggle_emitsPolarLiveImuChangedBroadcast() = kotlinx.coroutines.test.runTest(testDispatcher) {
+        mockkConstructor(ContentValues::class)
+        every { anyConstructed<ContentValues>().size() } returns 1
+        every { anyConstructed<ContentValues>().put(any<String>(), any<String>()) } just Runs
+        every { anyConstructed<ContentValues>().put(any<String>(), any<Int>()) } just Runs
+
+        mockkConstructor(Intent::class)
+        every { anyConstructed<Intent>().putExtra(any<String>(), any<Long>()) } answers { self as Intent }
+        every { anyConstructed<Intent>().putExtra(any<String>(), any<Boolean>()) } answers { self as Intent }
+        every { anyConstructed<Intent>().setPackage(any()) } answers { self as Intent }
+
+        val hrmInitialRaw = DeviceRawData(
+            id = 77L,
+            protocol = Protocol.BLUETOOTH_LE,
+            deviceType = DeviceType.HRM,
+            lastSeen = "Now",
+            batteryPercentage = 90,
+            manufacturer = "Polar",
+            deviceName = "Polar H10",
+            isPaired = true,
+            calibrationValue = 1.0,
+            linkedEquipment = emptyList(),
+            availableEquipment = emptyList(),
+            powerFeaturesFlags = null,
+            linkedSportTypes = emptyList(),
+            polarLiveImuEnabled = false
+        )
+        val hrmAfterEnableRaw = hrmInitialRaw.copy(polarLiveImuEnabled = true)
+
+        var enabledInDb = false
+        val mockCursor = mockk<Cursor>(relaxed = true)
+        every { mockCursor.moveToFirst() } returns true
+        every { mockCursor.moveToNext() } returns false
+        every { mockDevicesDb.getCursorForAllDevices() } returns mockCursor
+        every { mockDevicesDb.getDeviceCursor(77L) } returns mockCursor
+        every { anyConstructed<RawDeviceDataProvider>().getDeviceData(mockCursor) } answers {
+            if (enabledInDb) hrmAfterEnableRaw else hrmInitialRaw
+        }
+
+        val repository = DeviceDataRepository(mockApplication, testDispatcher)
+        DeviceDataRepository.resetForTesting(repository)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // No-op polarLiveImuEnabled edit must not emit broadcast
+        val initialUi = repository.getDeviceSnapshotById(77L)!!
+        repository.updateDevice(initialUi.copy(deviceName = "Renamed H10"))
+        testDispatcher.scheduler.advanceUntilIdle()
+        verify(exactly = 0) { mockApplication.sendBroadcast(any()) }
+
+        // Enabling polarLiveImuEnabled emits POLAR_LIVE_IMU_CHANGED
+        enabledInDb = true
+        repository.updateDevice(initialUi.copy(polarLiveImuEnabled = true))
+        testDispatcher.scheduler.advanceUntilIdle()
+        verify(exactly = 1) { mockApplication.sendBroadcast(any()) }
+        verify { anyConstructed<Intent>().putExtra(com.atrainingtracker.banalservice.BANALService.DEVICE_ID, 77L) }
+        verify { anyConstructed<Intent>().putExtra(com.atrainingtracker.banalservice.BANALService.POLAR_LIVE_IMU_ENABLED, true) }
+    }
 }

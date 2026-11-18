@@ -55,14 +55,7 @@ class SystemRequirementsSpecificationContractTest {
         val content = sysreqFile.readText()
         assertTrue("Must declare Section 3 for Data Exchange and Cloud Integration", content.contains("## 3. Data Exchange and Cloud Integration System Requirements"))
 
-        val expectedRequirements = listOf(
-            "SYSREQ-DEX-001",
-            "SYSREQ-DEX-002",
-            "SYSREQ-DEX-003",
-            "SYSREQ-DEX-004",
-            "SYSREQ-DEX-005",
-            "SYSREQ-DEX-006"
-        )
+        val expectedRequirements = (1..8).map { "SYSREQ-DEX-%03d".format(it) }
 
         for (req in expectedRequirements) {
             assertTrue("docs/system_requirements.md must include $req", content.contains(req))
@@ -70,7 +63,7 @@ class SystemRequirementsSpecificationContractTest {
     }
 
     /**
-     * Asserts that docs/system_requirements.md contains a complete traceability matrix covering all SYSREQ-TRK and SYSREQ-DEX.
+     * Asserts that docs/system_requirements.md contains a complete traceability matrix covering all SYSREQ-TRK and SYSREQ-DEX (TST-PRO-131.1).
      */
     @Test
     fun testSystemRequirements_traceabilityMatrixComplete() {
@@ -79,20 +72,20 @@ class SystemRequirementsSpecificationContractTest {
         assertTrue("Must include Section 4 Complete Traceability Matrix", content.contains("## 4. Complete System Requirements Traceability Matrix"))
 
         // Check Live Tracking (SYSREQ-TRK)
-        for (i in 1..6) {
+        for (i in 1..13) {
             val trkId = "SYSREQ-TRK-%03d".format(i)
             assertTrue("Traceability matrix must include $trkId", content.contains(trkId))
         }
 
         // Check Data Exchange (SYSREQ-DEX)
-        for (i in 1..6) {
+        for (i in 1..8) {
             val dexId = "SYSREQ-DEX-%03d".format(i)
             assertTrue("Traceability matrix must include $dexId", content.contains(dexId))
         }
     }
 
     /**
-     * Asserts docs/system_requirements.md specifies sequential section numbering 1..4 (ATT-6740).
+     * Asserts docs/system_requirements.md specifies sequential section numbering 1..4 (ATT-6740, ATT-8201).
      */
     @Test
     fun testSystemRequirements_sequentialSectionNumbering() {
@@ -100,7 +93,7 @@ class SystemRequirementsSpecificationContractTest {
 
         assertTrue("Must declare Section 1 Overview", content.contains("## 1. System Requirements Overview & Architecture"))
         assertTrue("Must declare Section 2 Live Tracking", content.contains("## 2. Live Tracking with Sensors System Requirements (Summary)"))
-        assertTrue("Must declare Section 3 Data Exchange", content.contains("## 3. Data Exchange and Cloud Integration System Requirements (SYSREQ-DEX-001..006)"))
+        assertTrue("Must declare Section 3 Data Exchange", content.contains("## 3. Data Exchange and Cloud Integration System Requirements (SYSREQ-DEX-001..008)"))
         assertTrue("Must declare Section 4 Complete Matrix", content.contains("## 4. Complete System Requirements Traceability Matrix"))
     }
 
@@ -126,12 +119,21 @@ class SystemRequirementsSpecificationContractTest {
         assertTrue("Referenced files must exist on disk: $missingFiles", missingFiles.isEmpty())
     }
 
+    private fun loadShardContent(dirRel: String, stem: String): String {
+        val dir = findRepoRootFile(dirRel)
+        val files = dir.listFiles { _, name ->
+            name == "$stem.md" || (name.startsWith("${stem}_part") && name.endsWith(".md"))
+        }?.sortedBy { it.name }.orEmpty()
+        assertTrue("Expected living-doc shard(s) for $dirRel/$stem*.md", files.isNotEmpty())
+        return files.joinToString("\n\n") { it.readText() }
+    }
+
     /**
-     * Asserts living requirement REQ-PRO-055 maps to SYSREQ-DEX in docs/requirements/req_process_stability.md.
+     * Asserts living requirement REQ-PRO-055 maps to SYSREQ-DEX in docs/requirements/req_process_stability*.md.
      */
     @Test
     fun testSystemRequirements_tracesToLivingRequirements() {
-        val reqContent = findRepoRootFile("docs/requirements/req_process_stability.md").readText()
+        val reqContent = loadShardContent("docs/requirements", "req_process_stability")
 
         assertTrue("Living docs must define REQ-PRO-055", reqContent.contains("REQ-PRO-055"))
         assertTrue("REQ-PRO-055 must trace to sysreq_data_exchange.md", reqContent.contains("sysreq_data_exchange.md"))

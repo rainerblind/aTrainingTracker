@@ -18,6 +18,8 @@
 
 package com.atrainingtracker.trainingtracker.build
 
+import com.atrainingtracker.banalservice.devices.bluetooth_le.BluetoothConstants
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
@@ -117,16 +119,7 @@ class SystemVerificationProtocolContractTest {
         val docFile = findRepoRootFile("docs/system/sys_verification_protocol.md")
         val content = docFile.readText()
 
-        val expectedTestCases = listOf(
-            "SYS-VRF-001", // Multi-Sensor Ingestion
-            "SYS-VRF-002", // RF Dropout Resilience & Reconnection Backoff
-            "SYS-VRF-003", // Deterministic 1-Hz Sampling Loop
-            "SYS-VRF-004", // Multi-Source GNSS & Barometer Fusion
-            "SYS-VRF-005", // Foreground Execution & Battery Longevity
-            "SYS-VRF-006", // Real-Time Cockpit & Radar Threat Alerts
-            "SYS-VRF-007", // Multi-Format Telemetry Export & Ingestion Deduplication
-            "SYS-VRF-008"  // Cloud Synchronization & Disaster Recovery
-        )
+        val expectedTestCases = (1..10).map { "SYS-VRF-%03d".format(it) }
 
         for (testId in expectedTestCases) {
             assertTrue("sys_verification_protocol.md must define test case $testId", content.contains(testId))
@@ -134,27 +127,15 @@ class SystemVerificationProtocolContractTest {
     }
 
     /**
-     * Asserts complete bidirectional coverage of all system requirements (SYSREQ-TRK-* and SYSREQ-DEX-*) (TST-PRO-069.3).
+     * Asserts complete bidirectional coverage of all system requirements (SYSREQ-TRK-* and SYSREQ-DEX-*) (TST-PRO-069.3, TST-PRO-131.3).
      */
     @Test
     fun testSysVerificationProtocol_tracesAllSystemRequirements() {
         val docFile = findRepoRootFile("docs/system/sys_verification_protocol.md")
         val content = docFile.readText()
 
-        val allSysreqs = listOf(
-            "SYSREQ-TRK-001", // Multi-Sensor Acquisition
-            "SYSREQ-TRK-002", // Reconnection Backoff
-            "SYSREQ-TRK-003", // 1-Hz Sampling Loop
-            "SYSREQ-TRK-004", // GNSS Positioning
-            "SYSREQ-TRK-005", // Foreground & Power Governance
-            "SYSREQ-TRK-006", // Cockpit & Radar Sensory Alerts
-            "SYSREQ-DEX-001", // Telemetry Export Interoperability
-            "SYSREQ-DEX-002", // Ingestion Deduplication
-            "SYSREQ-DEX-003", // Cloud Activity Sync
-            "SYSREQ-DEX-004", // Cloud Storage Backup
-            "SYSREQ-DEX-005", // Disaster Recovery Pipeline
-            "SYSREQ-DEX-006"  // Credential Protection & Security Boundaries
-        )
+        val allSysreqs = (1..13).map { "SYSREQ-TRK-%03d".format(it) } +
+            (1..8).map { "SYSREQ-DEX-%03d".format(it) }
 
         for (sysreq in allSysreqs) {
             assertTrue("sys_verification_protocol.md must trace to system requirement $sysreq", content.contains(sysreq))
@@ -162,16 +143,21 @@ class SystemVerificationProtocolContractTest {
     }
 
     /**
-     * Asserts objective pass/fail criteria and release sign-off record template are defined (TST-PRO-069.4).
+     * Asserts objective pass/fail criteria, authentic Varia UUID, reconciled battery thresholds,
+     * and release sign-off record template are defined (TST-PRO-069.4, TST-PRO-131.3).
      */
     @Test
     fun testSysVerificationProtocol_specifiesCriteriaAndReleaseSignOffTemplate() {
         val docFile = findRepoRootFile("docs/system/sys_verification_protocol.md")
         val content = docFile.readText()
 
+        assertTrue("Must specify authentic Garmin Varia Radar BLE UUID", content.contains(BluetoothConstants.SERVICE_RADAR))
+        assertFalse("Must NOT contain hallucinated Varia UUID", content.contains("6a4e3200-6628-eecd-2140-d68103ba32e3"))
         assertTrue("Must specify Pass / Fail Criteria", content.contains("Pass/Fail Criteria") || content.contains("Pass / Fail Criteria"))
         assertTrue("Must specify sample drop tolerance (<= 1%)", content.contains("1.0%") || content.contains("1.0\\%") || content.contains("1%") || content.contains("1\\%"))
         assertTrue("Must specify battery drain threshold (<= 8%)", content.contains("8.0%") || content.contains("8.0\\%") || content.contains("8%") || content.contains("8\\%"))
+        assertTrue("Must reconcile screen-off REQ-NFR-006 budget (< 5.0%/h)", content.contains("5.0%/h") || content.contains("5.0\\%"))
+        assertTrue("Must reconcile screen-on REQ-NFR-006 budget (<= 12.0%/h)", content.contains("12.0%/h") || content.contains("12.0\\%"))
         assertTrue("Must specify release verification record path under docs/releases/<tag>/", content.contains("docs/releases/<tag>/sys_verification_record.md"))
         assertTrue("Must provide formal sign-off section in record template", content.contains("Formal Sign-Off") || content.contains("Sign-Off Record"))
     }

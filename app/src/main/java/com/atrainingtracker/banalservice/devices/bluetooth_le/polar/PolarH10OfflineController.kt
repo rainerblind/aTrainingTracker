@@ -255,8 +255,8 @@ object PolarH10OfflineController {
         }
 
         val appContext = context.applicationContext
-        val targetDevice = PolarOfflineGattCoordinator.findEnabledPolarDevice(appContext) { name, _ ->
-            PolarOfflineGattCoordinator.isPolarH10Name(name)
+        val targetDevice = PolarOfflineGattCoordinator.findEnabledPolarDevice(appContext) { name, mac ->
+            PolarOfflineGattCoordinator.isPolarH10Device(appContext, name, macAddress = mac)
         }
         if (targetDevice == null) {
             Log.d(TAG, "No enabled Polar H10 device found for backfill.")
@@ -472,19 +472,7 @@ object PolarH10OfflineController {
             return false
         }
 
-        val devicesDb = DevicesDatabaseManager.getInstance(appContext)
-        val devices = devicesDb.allDevicesForCache
-        var targetMac: String? = null
-        for (dev in devices) {
-            if (dev.type == DeviceType.HRM && dev.protocol == Protocol.BLUETOOTH_LE) {
-                val mac = devicesDb.getBluetoothMACAddress(dev.id)
-                val name = dev.name ?: ""
-                if (mac == targetId || name.contains(targetId, ignoreCase = true)) {
-                    targetMac = mac
-                    break
-                }
-            }
-        }
+        val targetMac = PolarOfflineGattCoordinator.findMacAddressForPolarId(appContext, targetId)
         return try {
             PolarOfflineGattCoordinator.withGattYieldAndPolarApi(
                 context = appContext,
@@ -656,8 +644,9 @@ object PolarH10OfflineController {
             return true
         }
 
-        val targetDevice = PolarOfflineGattCoordinator.findEnabledPolarDevice(context) { name, _ ->
-            PolarOfflineGattCoordinator.isPolarH10Name(name)
+        val appContext = context.applicationContext
+        val targetDevice = PolarOfflineGattCoordinator.findEnabledPolarDevice(appContext) { name, mac ->
+            PolarOfflineGattCoordinator.isPolarH10Device(appContext, name, macAddress = mac)
         }
         if (targetDevice == null) {
             Log.d(TAG, "No enabled Polar H10 device found in database.")
@@ -717,6 +706,12 @@ object PolarH10OfflineController {
                     exerciseId,
                     PolarH10OfflineExerciseApi.RecordingInterval.INTERVAL_1S,
                     PolarH10OfflineExerciseApi.SampleType.RR
+                )
+                PolarOfflineCapabilityStore.recordSdkDeviceType(
+                    context,
+                    macAddress,
+                    PolarOfflineCapabilityStore.PolarDeviceType.H10,
+                    polarId.takeIf { it.length == 8 }
                 )
                 Log.i(TAG, "Successfully armed Polar H10 offline RR recording on $polarId (id: $exerciseId)")
 

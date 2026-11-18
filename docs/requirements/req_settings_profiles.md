@@ -1,7 +1,7 @@
 # Living Requirements: Settings, Profiles & Localization
 
 **Document ID**: `DOC-REQ-SET`  
-**Version**: 1.0.3  
+**Version**: 1.0.5  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -1104,7 +1104,7 @@ Normalization (`WorkoutClusterEngine.normalizeName`) and hit count stripping (`W
 3. *Root Reason for Existing Formulation*: `checkHasLocation` used `
 
 ### REQ-LOC-001: Global Translation Parity, Resource Hierarchy Alignment, and Formatter Safety [Verified]
-- **Tests**: `TST-STR-018`
+- **Tests**: `TST-STR-018`, `TST-STR-019`, `TST-UI-385`, `TST-UI-394`, `TST-UI-395`
 - **Priority**: Medium
 - **Type**: Non-Functional
 - **Verification Method**: Unit / Review
@@ -2273,7 +2273,7 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 **Invariants**: Re-sync operations must never produce duplicate entries or orphan telemetry series in Health Connect. Zero unprompted background sync operations when disabled.
 
 ### REQ-SET-104: Polar H10 Internal RR Recording & GATT Arbitration [Verified]
-- **Tests**: `TST-SET-106`
+- **Tests**: `TST-SET-106`, `TST-CON-049`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit, Integration
@@ -2431,7 +2431,7 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 ---
 
 ### REQ-SET-108: Polar Verity Sense Offline HR Recording Controller & EditDeviceDialog Support (`ATT-7923`) [Verified]
-- **Tests**: `TST-SET-110`
+- **Tests**: `TST-SET-110`, `TST-CON-049`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit / Integration
@@ -2554,7 +2554,7 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 ---
 
 ### REQ-SET-112: Polar Live IMU Streaming Bridge, Session Arbitration & Cadence Priority (`ATT-8016`) [Verified]
-- **Tests**: `TST-SET-114`
+- **Tests**: `TST-SET-114`, `TST-CON-049`, `TST-CON-050`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit / Integration / On-Device Manual
@@ -2756,7 +2756,7 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 ---
 
 ### REQ-SET-118: Process-Wide Ref-Counted `PolarBleApi` Singleton, Multiplexed Callbacks & Unworn-Sensor Gating (`ATT-8690`) [Verified]
-- **Tests**: `TST-SET-120`
+- **Tests**: `TST-SET-120`, `TST-CON-049`
 - **Priority**: Critical
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -2792,3 +2792,4 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 | `1.0.1` | 2026-11-17 | AI Agent (`ATT-8690`) | `ATT-8690` | Added `REQ-SET-118` (process-wide ref-counted `PolarBleApi` singleton, multiplexed callbacks, MAC/8-hex matching, unworn-sensor gating). |
 | `1.0.2` | 2026-11-17 | AI Agent (`ATT-8690`) | `ATT-8690` | Promoted `REQ-SET-118` to `[Implemented]` following Stage 4 construction. |
 | `1.0.3` | 2026-11-17 | AI Agent (`ATT-8690`) | `ATT-8690` | Promoted `REQ-SET-118` to `[Verified]` following Stage 5 unit verification. |
+| `1.0.5` | 2026-11-18 | AI Agent (`ATT-8714`) | `ATT-8714` | Added symmetric `TST-CON-050` link on `REQ-SET-112` (`REQ-PRO-127` parity). |

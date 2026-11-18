@@ -32,7 +32,6 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Save
-import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -329,11 +328,13 @@ fun WorkoutClusterHeatmapScreen(
             onDismiss = { workoutToMove = null },
             sportNameResolver = { viewModel.getSportName(it) },
             bSportTypeResolver = { viewModel.getBSportType(it) },
-            onCreateNew = {
-                viewModel.createNewClusterFromWorkout(workoutToMove!!)
-                workoutToMove = null
-                viewModel.clearPeekSelection()
-            },
+            onCreateNew = if (workoutToMove!!.startLatLng != null && workoutToMove!!.endLatLng != null) {
+                {
+                    viewModel.createNewClusterFromWorkout(workoutToMove!!)
+                    workoutToMove = null
+                    viewModel.clearPeekSelection()
+                }
+            } else null,
             onUnassign = if (workoutToMove!!.clusterId > 0) {
                 {
                     viewModel.unassignWorkout(workoutToMove!!)
@@ -391,18 +392,7 @@ fun WorkoutClusterHeatmapScreen(
                                 markers = peekedWorkoutDataWithTrack!!.markers,
                                 modifier = Modifier.fillMaxSize(),
                                 useStatusBarsPadding = false,
-                                headerActions = {
-                                    IconButton(
-                                        onClick = { workoutToMove = workoutData },
-                                        modifier = Modifier.size(32.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.SwapHoriz,
-                                            contentDescription = stringResource(R.string.cluster_move_content_desc),
-                                            tint = MaterialTheme.colorScheme.primary
-                                        )
-                                    }
-                                },
+                                onChangeCluster = { workoutToMove = workoutData },
                                 onEditWorkout = onEditWorkout
                             )
                         }

@@ -70,6 +70,13 @@ class InterfaceSignatureDriftContractTest {
             "PowerPhysiologyCalculator" to "com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculator",
             "PowerHrDynamicsCalculator" to "com.atrainingtracker.trainingtracker.physiology.PowerHrDynamicsCalculator",
             "WorkoutClusterEngine" to "com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine",
+            "ClusterWorkoutDataPort" to "com.atrainingtracker.trainingtracker.database.ClusterWorkoutDataPort",
+            "RadarLightController" to "com.atrainingtracker.banalservice.devices.radar.RadarLightController",
+            "IndirectTpmsEstimator" to "com.atrainingtracker.banalservice.tpms.IndirectTpmsEstimator",
+            "DualWheelTpmsEstimator" to "com.atrainingtracker.banalservice.tpms.DualWheelTpmsEstimator",
+            "PolarH10OfflineController" to "com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineController",
+            "PolarVeritySenseOfflineController" to "com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarVeritySenseOfflineController",
+            "PolarOnlineStreamingBridge" to "com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOnlineStreamingBridge",
             "ClimbDetector" to "com.atrainingtracker.trainingtracker.climbs.ClimbDetector",
             "WorkoutSamplesDatabaseManager" to "com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager",
             "WorkoutSummariesDatabaseManager" to "com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager",
@@ -121,7 +128,8 @@ class InterfaceSignatureDriftContractTest {
             "ExportInfo" to "com.atrainingtracker.trainingtracker.exporter.ExportInfo",
             "ExportResult" to "com.atrainingtracker.trainingtracker.exporter.BaseExporter\$ExportResult",
             "FileFormat" to "com.atrainingtracker.trainingtracker.exporter.FileFormat",
-            "HrvReadinessRepository" to "com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessRepository"
+            "HrvReadinessRepository" to "com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessRepository",
+            "RadarLightMode" to "com.atrainingtracker.banalservice.devices.radar.RadarLightMode"
         )
     }
 

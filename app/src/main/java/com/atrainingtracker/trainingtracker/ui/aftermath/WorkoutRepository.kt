@@ -28,6 +28,7 @@ import android.database.Cursor
 import android.net.Uri
 import android.util.Log
 import androidx.annotation.VisibleForTesting
+import androidx.collection.LruCache
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -50,6 +51,9 @@ import com.atrainingtracker.trainingtracker.climbs.ClimbDetector
 import com.atrainingtracker.trainingtracker.climbs.LiveClimbsRepository
 import com.atrainingtracker.trainingtracker.database.CardioPowerDynamicsRecord
 import com.atrainingtracker.trainingtracker.database.CardioPowerTrendSample
+import com.atrainingtracker.trainingtracker.database.ClusterWorkoutDataPort
+import com.atrainingtracker.trainingtracker.database.ClusterWorkoutDataPortRegistry
+import com.atrainingtracker.trainingtracker.database.SummariesManagerClusterWorkoutDataPort
 import com.atrainingtracker.trainingtracker.database.ElevationCacheDatabaseManager
 import com.atrainingtracker.trainingtracker.database.ClimbsDatabaseManager
 import com.atrainingtracker.trainingtracker.physiology.WorkoutTrainingLoadSample
@@ -151,7 +155,9 @@ data class WorkoutStatsSummary(
  * Architectural Role: Data access layer with state management.
  * Threading: Most operations are offloaded to [Dispatchers.IO] using a [SupervisorJob].
  */
-class WorkoutRepository private constructor(private val context: Context) : CoroutineScope {
+class WorkoutRepository private constructor(private val context: Context) : CoroutineScope, ClusterWorkoutDataPort {
+
+    init { ClusterWorkoutDataPortRegistry.registerProvider({ ctx -> getInstance(ctx) }, { resetForTesting(null) }) }
 
     private constructor(application: Application) : this(application as Context)
 
@@ -199,10 +205,13 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
 
         @androidx.annotation.VisibleForTesting
         fun resetForTesting(newInstance: WorkoutRepository? = null) {
+            INSTANCE?.recentHrvThresholdsCache?.evictAll()
             INSTANCE = newInstance
+            ClusterWorkoutDataPortRegistry.setTestOverride(newInstance)
         }
 
         private const val MAX_OVERLAY_POINTS = 800
+        internal const val HRV_THRESHOLD_CACHE_SIZE = 64
 
         /**
          * Discovers source-qualified columns strictly matching `"^${type.name} \\((.+)\\)$"`
@@ -305,10 +314,11 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
     private val exportManager get() = ExportManager(application)
     private val stravaUploadDbHelper get() = StravaUploadDbHelper.getInstance(application)
     private val lapsDatabaseManager get() = LapsDatabaseManager.getInstance(application)
+    private val clusterDataPort by lazy { SummariesManagerClusterWorkoutDataPort(application) }
 
     fun getLaps(workoutId: Long): List<LapData> = lapsDatabaseManager.getLaps(workoutId) ?: emptyList()
     fun getLap(workoutId: Long, lapNr: Long): LapData? = getLaps(workoutId).find { it.lapNr == lapNr }
-    fun getExtremaPosition(workoutId: Long, sensorType: SensorType, extremaType: ExtremaType): LatLng? =
+    override fun getExtremaPosition(workoutId: Long, sensorType: SensorType, extremaType: ExtremaType): LatLng? =
         summariesManager.getExtremaPosition(workoutId, sensorType, extremaType)
     fun getExtremaValue(workoutId: Long, sensorType: SensorType, extremaType: ExtremaType): Double? =
         summariesManager.getExtremaValue(workoutId, sensorType, extremaType)
@@ -320,10 +330,13 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
     fun getCardioPowerDynamicsFitnessTrendSamples(minR2: Double): List<CardioPowerTrendSample> =
         summariesManager.getCardioPowerDynamicsFitnessTrendSamples(minR2)
     val allWorkoutStartLocations: List<LatLng> get() = summariesManager.allWorkoutStartLocations
-    fun deleteWorkoutSummary(workoutId: Long) = summariesManager.deleteWorkout(workoutId)
+    fun deleteWorkoutSummary(workoutId: Long): Boolean {
+        recentHrvThresholdsCache.remove(workoutId)
+        return summariesManager.deleteWorkout(workoutId)
+    }
     fun deleteWorkoutLaps(workoutId: Long) = lapsDatabaseManager.deleteWorkout(workoutId)
     fun deleteWorkoutSamples(fileBaseName: String) = samplesManager.deleteWorkout(fileBaseName)
-    fun reassignClusterWorkouts(sourceId: Long, targetId: Long) = summariesManager.reassignClusterWorkouts(sourceId, targetId)
+    override fun reassignClusterWorkouts(sourceId: Long, targetId: Long) = summariesManager.reassignClusterWorkouts(sourceId, targetId)
 
     @JvmOverloads
     fun createNewTrackedWorkout(
@@ -1152,6 +1165,7 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
      * Executes cascade deletion of a workout across all persistence tables (REQ-DAT-042.5).
      */
     fun deleteWorkoutCascade(workoutId: Long): Boolean {
+        recentHrvThresholdsCache.remove(workoutId)
         val fileBaseName = summariesManager.getBaseFileName(workoutId)
 
         summariesManager.deleteWorkout(workoutId)
@@ -1385,7 +1399,7 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
         return updateWorkoutSummary(workoutId, values)
     }
 
-    fun updateWorkoutSummary(workoutId: Long, values: ContentValues): Int {
+    override fun updateWorkoutSummary(workoutId: Long, values: ContentValues): Int {
         return summariesManager.database.update(
             WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE,
             values,
@@ -1564,7 +1578,7 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
         }
     }
 
-    fun getWorkoutClusterId(workoutId: Long): Long {
+    override fun getWorkoutClusterId(workoutId: Long): Long {
         return summariesManager.getLong(workoutId, WorkoutSummariesDatabaseManager.WorkoutSummaries.CLUSTER_ID) ?: -1L
     }
 
@@ -1575,7 +1589,7 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
         updateWorkoutSummary(workoutId, values)
     }
 
-    fun getWorkoutSportId(workoutId: Long): Long {
+    override fun getWorkoutSportId(workoutId: Long): Long {
         return summariesManager.getLong(workoutId, WorkoutSummariesDatabaseManager.WorkoutSummaries.SPORT_ID) ?: -1L
     }
 
@@ -1681,14 +1695,8 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
         setWorkoutName(workoutId, name)
     }
 
-    fun getWorkoutBounds(workoutId: Long): Map<String, Double> {
-        val map = mutableMapOf<String, Double>()
-        summariesManager.getDouble(workoutId, WorkoutSummariesDatabaseManager.WorkoutSummaries.BOUND_MIN_LAT)?.let { map[WorkoutSummariesDatabaseManager.WorkoutSummaries.BOUND_MIN_LAT] = it }
-        summariesManager.getDouble(workoutId, WorkoutSummariesDatabaseManager.WorkoutSummaries.BOUND_MIN_LNG)?.let { map[WorkoutSummariesDatabaseManager.WorkoutSummaries.BOUND_MIN_LNG] = it }
-        summariesManager.getDouble(workoutId, WorkoutSummariesDatabaseManager.WorkoutSummaries.BOUND_MAX_LAT)?.let { map[WorkoutSummariesDatabaseManager.WorkoutSummaries.BOUND_MAX_LAT] = it }
-        summariesManager.getDouble(workoutId, WorkoutSummariesDatabaseManager.WorkoutSummaries.BOUND_MAX_LNG)?.let { map[WorkoutSummariesDatabaseManager.WorkoutSummaries.BOUND_MAX_LNG] = it }
-        return map
-    }
+    override fun getWorkoutBounds(workoutId: Long): Map<String, Double> =
+        clusterDataPort.getWorkoutBounds(workoutId)
 
     fun forEachWorkoutAsc(block: (ClusterWorkoutCandidateDto) -> Unit) {
         summariesManager.getCursorForAllWorkoutsAsc()?.use { cursor ->
@@ -1699,132 +1707,56 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
         }
     }
 
-    fun forEachWorkoutAscWithProgress(block: (candidate: ClusterWorkoutCandidateDto, count: Int, total: Int) -> Unit) {
-        summariesManager.getCursorForAllWorkoutsAsc()?.use { cursor ->
-            val total = cursor.count
-            var count = 0
-            while (cursor.moveToNext()) {
-                count++
-                val candidate = ClusterWorkoutCandidateDto.fromCursor(cursor)
-                block(candidate, count, total)
-            }
-        }
-    }
+    override fun forEachWorkoutAscWithProgress(block: (candidate: ClusterWorkoutCandidateDto, count: Int, total: Int) -> Unit) =
+        clusterDataPort.forEachWorkoutAscWithProgress(block)
 
-    fun getWorkoutName(workoutId: Long): String? =
+    override fun getWorkoutName(workoutId: Long): String? =
         summariesManager.getString(workoutId, WorkoutSummariesDatabaseManager.WorkoutSummaries.WORKOUT_NAME)
 
     fun getWorkoutMethod(workoutId: Long): String? =
         summariesManager.getString(workoutId, WorkoutSummariesDatabaseManager.WorkoutSummaries.METHOD)
 
-    fun getWorkoutFileBaseName(workoutId: Long): String? =
+    override fun getWorkoutFileBaseName(workoutId: Long): String? =
         summariesManager.getString(workoutId, WorkoutSummariesDatabaseManager.WorkoutSummaries.FILE_BASE_NAME)
 
-    fun getWorkoutCountForCluster(clusterId: Long): Int =
+    override fun getWorkoutCountForCluster(clusterId: Long): Int =
         summariesManager.getWorkoutCountForCluster(clusterId)
 
-    fun getWorkoutCountsForAllClusters(): Map<Long, Int> =
+    override fun getWorkoutCountsForAllClusters(): Map<Long, Int> =
         summariesManager.workoutCountsForAllClusters
 
-    fun getWorkoutPolyline(workoutId: Long): String? =
+    override fun getWorkoutPolyline(workoutId: Long): String? =
         summariesManager.getString(workoutId, WorkoutSummariesDatabaseManager.WorkoutSummaries.MAP_POLYLINE)
 
-    fun getWorkoutSportString(workoutId: Long): String? =
+    override fun getWorkoutSportString(workoutId: Long): String? =
         summariesManager.getString(workoutId, WorkoutSummariesDatabaseManager.WorkoutSummaries.B_SPORT)
 
-    fun getWorkoutAvgSpeed(workoutId: Long): Double? =
+    override fun getWorkoutAvgSpeed(workoutId: Long): Double? =
         summariesManager.getDouble(workoutId, WorkoutSummariesDatabaseManager.WorkoutSummaries.SPEED_AVERAGE_mps)
 
-    fun getWorkoutDistance(workoutId: Long): Double? =
+    override fun getWorkoutDistance(workoutId: Long): Double? =
         summariesManager.getDouble(workoutId, WorkoutSummariesDatabaseManager.WorkoutSummaries.DISTANCE_TOTAL_m)
 
-    fun applyInferredIdentity(workoutId: Long, identity: EquipmentAndSportTypeDiscoveryManager.InferredIdentity) =
+    override fun applyInferredIdentity(workoutId: Long, identity: EquipmentAndSportTypeDiscoveryManager.InferredIdentity) =
         summariesManager.applyInferredIdentity(workoutId, identity)
 
-    fun getMostFrequentSportIdForCluster(clusterId: Long): Long =
+    override fun getMostFrequentSportIdForCluster(clusterId: Long): Long =
         summariesManager.getMostFrequentSportIdForCluster(clusterId)
 
-    fun forEachWorkoutBoundsForCluster(clusterId: Long, block: (com.atrainingtracker.trainingtracker.database.WorkoutBoundsDto) -> Unit) {
-        summariesManager.database.query(
-            WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE,
-            arrayOf(
-                WorkoutSummariesDatabaseManager.WorkoutSummaries.C_ID,
-                WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_ACTIVE_s,
-                WorkoutSummariesDatabaseManager.WorkoutSummaries.BOUND_MIN_LAT,
-                WorkoutSummariesDatabaseManager.WorkoutSummaries.BOUND_MIN_LNG,
-                WorkoutSummariesDatabaseManager.WorkoutSummaries.BOUND_MAX_LAT,
-                WorkoutSummariesDatabaseManager.WorkoutSummaries.BOUND_MAX_LNG
-            ),
-            "${WorkoutSummariesDatabaseManager.WorkoutSummaries.CLUSTER_ID} = ?",
-            arrayOf(clusterId.toString()),
-            null, null, null
-        )?.use { c ->
-            while (c.moveToNext()) {
-                block(com.atrainingtracker.trainingtracker.database.WorkoutBoundsDto.fromCursor(c))
-            }
-        }
-    }
+    override fun forEachWorkoutBoundsForCluster(clusterId: Long, block: (com.atrainingtracker.trainingtracker.database.WorkoutBoundsDto) -> Unit) =
+        clusterDataPort.forEachWorkoutBoundsForCluster(clusterId, block)
 
-    fun forEachWorkoutPolylineCandidate(block: (com.atrainingtracker.trainingtracker.database.WorkoutPolylineCandidateDto) -> Unit) {
-        val selection = "${WorkoutSummariesDatabaseManager.WorkoutSummaries.MAP_POLYLINE} IS NOT NULL AND ${WorkoutSummariesDatabaseManager.WorkoutSummaries.MAP_POLYLINE} != ''"
-        val projection = arrayOf(
-            WorkoutSummariesDatabaseManager.WorkoutSummaries.C_ID,
-            WorkoutSummariesDatabaseManager.WorkoutSummaries.CLUSTER_ID,
-            WorkoutSummariesDatabaseManager.WorkoutSummaries.MAP_POLYLINE
-        )
-        summariesManager.database.query(
-            WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE,
-            projection, selection, null, null, null, null
-        )?.use { cursor ->
-            while (cursor.moveToNext()) {
-                block(com.atrainingtracker.trainingtracker.database.WorkoutPolylineCandidateDto.fromCursor(cursor))
-            }
-        }
-    }
+    override fun forEachWorkoutPolylineCandidate(block: (com.atrainingtracker.trainingtracker.database.WorkoutPolylineCandidateDto) -> Unit) =
+        clusterDataPort.forEachWorkoutPolylineCandidate(block)
 
-    fun forEachWorkoutDistanceCandidateForCluster(clusterId: Long, block: (com.atrainingtracker.trainingtracker.database.WorkoutDistanceCandidateDto) -> Unit) {
-        summariesManager.database.query(
-            WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE,
-            arrayOf(
-                WorkoutSummariesDatabaseManager.WorkoutSummaries.C_ID,
-                WorkoutSummariesDatabaseManager.WorkoutSummaries.DISTANCE_TOTAL_m
-            ),
-            "${WorkoutSummariesDatabaseManager.WorkoutSummaries.CLUSTER_ID} = ?",
-            arrayOf(clusterId.toString()),
-            null, null, null
-        )?.use { cursor ->
-            while (cursor.moveToNext()) {
-                block(com.atrainingtracker.trainingtracker.database.WorkoutDistanceCandidateDto.fromCursor(cursor))
-            }
-        }
-    }
+    override fun forEachWorkoutDistanceCandidateForCluster(clusterId: Long, block: (com.atrainingtracker.trainingtracker.database.WorkoutDistanceCandidateDto) -> Unit) =
+        clusterDataPort.forEachWorkoutDistanceCandidateForCluster(clusterId, block)
 
-    fun forEachRemainingWorkoutForClusterDesc(clusterId: Long, block: (ClusterWorkoutCandidateDto) -> Unit) {
-        summariesManager.database.query(
-            WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE,
-            null,
-            "${WorkoutSummariesDatabaseManager.WorkoutSummaries.CLUSTER_ID} = ?",
-            arrayOf(clusterId.toString()),
-            null, null,
-            "${WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_START} DESC"
-        )?.use { cursor ->
-            while (cursor.moveToNext()) {
-                block(ClusterWorkoutCandidateDto.fromCursor(cursor))
-            }
-        }
-    }
+    override fun forEachRemainingWorkoutForClusterDesc(clusterId: Long, block: (ClusterWorkoutCandidateDto) -> Unit) =
+        clusterDataPort.forEachRemainingWorkoutForClusterDesc(clusterId, block)
 
-    fun <T> runInTransaction(block: () -> T): T {
-        val db = summariesManager.database
-        db.beginTransaction()
-        return try {
-            val result = block()
-            db.setTransactionSuccessful()
-            result
-        } finally {
-            db.endTransaction()
-        }
-    }
+    override fun <T> runInTransaction(block: () -> T): T =
+        clusterDataPort.runInTransaction(block)
 
     private val mapper by lazy {
         WorkoutDataMapper(
@@ -1847,7 +1779,8 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
     private val activeReloadWorkoutIds = java.util.concurrent.ConcurrentHashMap.newKeySet<Long>()
     private val dirtyReloadWorkoutIds = java.util.concurrent.ConcurrentHashMap.newKeySet<Long>()
     internal val ineligibleCardioPowerWorkoutIds: MutableSet<Long> = java.util.concurrent.ConcurrentHashMap.newKeySet()
-    private val recentHrvThresholdsCache = java.util.concurrent.ConcurrentHashMap<Long, HrvSessionThreshold>()
+    private val recentHrvThresholdsCache = LruCache<Long, HrvSessionThreshold>(HRV_THRESHOLD_CACHE_SIZE)
+    @VisibleForTesting internal fun getHrvThresholdsCacheSize(): Int = recentHrvThresholdsCache.size()
 
     /**
      * Provides a reactive stream for a specific workout ID.
@@ -1894,8 +1827,6 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
 
     @VisibleForTesting
     var notificationManagerProvider: ((Context) -> WorkoutDeletionNotificationManager)? = null
-
-
 
     val saveFinishedEvent = SingleLiveEvent<Pair<Long, Boolean>>()
     val deleteFinishedEvent = SingleLiveEvent<Pair<Long, Boolean>>()
@@ -4097,13 +4028,12 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
     /**
      * Updates an extrema value in SQLite and in the reactive in-memory [_allWorkouts] cache.
      */
-    @JvmOverloads
-    fun updateExtremaValue(
+    override fun updateExtremaValue(
         workoutId: Long,
         sensorType: SensorType,
         extremaType: ExtremaType,
         value: Double,
-        position: LatLng? = null
+        position: LatLng?
     ) {
         summariesManager.updateExtremaValue(workoutId, sensorType, extremaType, value, position)
         updateExtremaValueInMemory(workoutId, sensorType, extremaType, value, position)
@@ -4641,7 +4571,7 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                             }
 
                             if (isLiveSessionFinish && freshWorkoutData.clusterId != -1L) {
-                                WorkoutClusterEngine.getInstance(application).onWorkoutFinished(application, freshWorkoutData)
+                                WorkoutClusterEngine.getInstance(application).onWorkoutFinished(application, freshWorkoutData.toClusterWorkoutSnapshot())
                             }
 
                             addOrUpdateWorkout(freshWorkoutData)
@@ -4800,7 +4730,7 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
             oldWorkout?.let { old ->
                 if (old.sportId != userEditedWorkout.sportId) {
                     app?.let { PeriodsRepository.getInstance(it).onWorkoutSportChanged(userEditedWorkout, old) }
-                    WorkoutClusterEngine.getInstance(application).onWorkoutSportChanged(userEditedWorkout, old)
+                    WorkoutClusterEngine.getInstance(application).onWorkoutSportChanged(userEditedWorkout.toClusterWorkoutSnapshot(), old.toClusterWorkoutSnapshot())
                 }
             }
 
@@ -4853,13 +4783,14 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                 // Perform the actual deletion in the database first
                 success = deletionHelper.deleteWorkout(id)
                 if (success) {
+                    recentHrvThresholdsCache.remove(id)
                     if (isListLoading.get()) {
                         deletedDuringLoadIds.add(id)
                     }
                     // --- SURGICAL UPDATES (ATT-346 / ATT-354) ---
                     workout?.let { 
                         app?.let { appInstance -> PeriodsRepository.getInstance(appInstance).onWorkoutDeleted(it) }
-                        WorkoutClusterEngine.getInstance(application).onWorkoutDeleted(application, it)
+                        WorkoutClusterEngine.getInstance(application).onWorkoutDeleted(application, it.toClusterWorkoutSnapshot())
                     }
 
                     // Now, update the in-memory list
@@ -4996,7 +4927,7 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
     ) {
         launch(Dispatchers.IO) {
             WorkoutClusterEngine.getInstance(application)
-                .createNewClusterFromWorkout(application, workout, customName, hasCounter, customWorkoutName)
+                .createNewClusterFromWorkout(application, workout.toClusterWorkoutSnapshot(), customName, hasCounter, customWorkoutName)
 
             reloadWorkoutData(workout.id)
             loadWorkout(workout.id)
@@ -5038,7 +4969,7 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
         }
         val results = mutableListOf<HrvSessionThreshold>()
         for (workout in candidateWorkouts) {
-            val cached = recentHrvThresholdsCache[workout.id]
+            val cached = recentHrvThresholdsCache.get(workout.id)
             if (cached != null) {
                 results.add(cached)
                 continue
@@ -5079,7 +5010,7 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                         hrvt2Bpm = hrvt2Bpm,
                         hrConfidence = hrConfidence
                     )
-                    recentHrvThresholdsCache[workout.id] = session
+                    recentHrvThresholdsCache.put(workout.id, session)
                     results.add(session)
                 }
             }

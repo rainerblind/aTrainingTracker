@@ -31,7 +31,6 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.WarningAmber
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -133,6 +132,7 @@ fun WorkoutDetailTabbedContent(
     useStatusBarsPadding: Boolean,
     onClusterClick: ((Long) -> Unit)?,
     onEditWorkout: ((Long) -> Unit)?,
+    onChangeCluster: (() -> Unit)? = null,
     headerActions: @Composable RowScope.() -> Unit,
     onOpenTabsConfig: () -> Unit,
     mapContent: MapContentScope.() -> Unit,
@@ -650,22 +650,12 @@ fun WorkoutDetailTabbedContent(
                     onClusterClick = onClusterClick,
                     onEditWorkout = onEditWorkout?.let { edit -> { edit(workoutData.id) } },
                     onShareWorkout = { showShareModeSheet = true },
+                    onOpenTabsConfig = onOpenTabsConfig,
+                    onChangeCluster = onChangeCluster,
                     onSyncHealthConnect = if (HealthConnectManager.isAvailable(context)) {
                         { HealthConnectManager.syncWorkoutAsync(context, workoutData, force = true) }
                     } else null,
-                    actions = {
-                        headerActions()
-                        IconButton(
-                            onClick = onOpenTabsConfig,
-                            modifier = Modifier.size(32.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Tune,
-                                contentDescription = stringResource(R.string.workout_detail_tabs_config_title),
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                    }
+                    actions = headerActions
                 )
 
                 // 1b. Diagnostic Warning Banner (REQ-TRK-053.4)
