@@ -1,7 +1,7 @@
 # Living Test Specification: Maps, Polylines & Navigation
 
 **Document ID**: `DOC-TST-MAPS`  
-**Version**: 1.0.3  
+**Version**: 1.0.5  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -12,23 +12,30 @@
 
 ---
 
-### TST-NAV-001: **Navigation** [Implemented]
+### TST-NAV-001: **Navigation Drawer Structure & Group Routing Verification** [Verified]
 - **Requirement(s)**: `REQ-SET-050`
-- **Component**: **Navigation**
-- **Jira**: ``ATT-239``
-- **Test Description**: 1. Open the navigation drawer and verify the new sections (Training, Spatial, My Equipment, Ecosystem, System). 2. Verify 'Sport Types' and 'Training Zones' are in 'My Equipment'. 3. Verify individual items for 'Strava' and 'Dropbox' are in 'Ecosystem'. 4. Open 'Preferences' and verify moved items are no longer present.
+- **Component**: `AppNavigationDrawer.kt`, `NavRoutes.kt`, `NavigationDrawerAndDialogContractTest.kt`
+- **Code**: `app/src/test/java/com/atrainingtracker/trainingtracker/ui/navigation/NavigationDrawerAndDialogContractTest.kt` (`testDrawerStructureAndGroupPlacement`, `testDrawerExpansionAndSelectionDispatch`)
+- **Jira**: ``ATT-239` / `ATT-8326``
+- **Test Description**:
+  1. *Drawer Structure & Group Placement (`TST-NAV-001.1`, `NavigationDrawerAndDialogContractTest.kt`)*: Verify `createDrawerGroups()` defines the 6 canonical sections (`drawer__training` "Training", `drawer__maps` "Maps", `drawer__my_stuff` "Equipment", `prefsOnlineCommunities` "Synchronization", `drawer__settings` "Settings", `drawer__info_support` "Info & Support"), placing `drawer_sport_types` ("Sport Types") and `drawer_training_zones` ("Training Zones") in `Settings`, and `drawer_strava`, `drawer_dropbox`, `drawer_export` in `Synchronization` (`REQ-UI-397`, `REQ-UI-422`, `REQ-UI-463`).
+  2. *Behavioral Compose UI Expansion & Item Dispatch (`TST-NAV-001.2`, `NavigationDrawerAndDialogContractTest.kt`)*: Render `AppNavigationDrawer` via `createComposeRule()` (Robolectric), expand collapsible sections, tap items (`drawer_sport_types`, `drawer_strava`, `drawer_export`), and assert `onItemSelected` emits matching item IDs (no `Class.forName("...Kt")` or `src/main` reads).
 
-### TST-NAV-002: **Navigation** [Implemented]
+### TST-NAV-002: **Navigation Drawer Localization Terminology Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-112`
-- **Component**: **Navigation**
-- **Jira**: ``ATT-249``
-- **Test Description**: 1. Open the navigation drawer. 2. Verify section "Equipment" (EN) / "Ausrüstung" (DE). 3. Verify section "Synchronization" (EN) / "Synchronisation" (DE). 4. Verify item "Dateiexport" (DE).
+- **Component**: `AppNavigationDrawer.kt`, `values/strings.xml`, `values-de/strings.xml`, `NavigationDrawerAndDialogContractTest.kt`
+- **Code**: `app/src/test/java/com/atrainingtracker/trainingtracker/ui/navigation/NavigationDrawerAndDialogContractTest.kt` (`testDrawerTerminologyLocalization_en`, `testDrawerTerminologyLocalization_de`)
+- **Jira**: ``ATT-249` / `ATT-8326``
+- **Test Description**:
+  1. *EN/DE Drawer Terminology Rendering (`TST-NAV-002.1`, `NavigationDrawerAndDialogContractTest.kt`)*: Render `AppNavigationDrawer` via `createComposeRule()` under `en` and `de` Robolectric qualifiers; assert section headers `"Equipment"` (EN) / `"Ausrüstung"` (DE) (`drawer__my_stuff`), `"Synchronization"` (EN) / `"Synchronisation"` (DE) (`prefsOnlineCommunities`), and expanded item `"Export"` in both EN and DE (`prefsExportTitle`, `values-de/strings.xml:308`, matching `REQ-UI-112`).
 
-### TST-NAV-003: **Direct Config Navigation** [Implemented]
+### TST-NAV-003: **Direct Config Navigation & Activity Type Selection Sheet Verification** [Verified]
 - **Requirement(s)**: `REQ-SET-051`
-- **Component**: **Direct Config Navigation**
-- **Jira**: ``ATT-258``
-- **Test Description**: 1. Open Navigation Drawer -> Settings. 2. Tap 'Tracking Tabs'.
+- **Component**: `AppNavigationDrawer.kt`, `NavRoutes.kt`, `ATrainingTrackerApp.kt`, `ActivityTypeSelectionDialog.kt`, `MainActivityWithNavigation.kt`, `NavigationDrawerAndDialogContractTest.kt`
+- **Code**: `app/src/test/java/com/atrainingtracker/trainingtracker/ui/navigation/NavigationDrawerAndDialogContractTest.kt` (`testTrackingTabsRouteAndActivityTypeSelectionDialog`)
+- **Jira**: ``ATT-258` / `ATT-8326``
+- **Test Description**:
+  1. *Drawer-to-ActivityType Sheet Dispatch (`TST-NAV-003.1`, `NavigationDrawerAndDialogContractTest.kt`)*: Assert `NavRoutes.toBottomSheetType(R.id.drawer_tracking_layouts) == SettingsBottomSheetType.ACTIVITY_TYPE` and `NavRoutes.fromDrawerItemId(R.id.drawer_tracking_layouts) == null`. Render `ActivityTypeSelectionDialog` via `createComposeRule()`, verify `ActivityType.values()` rows render, tap a sport row, and assert `onTypeSelected(type)` and `onDismiss()` fire.
 
 ### TST-NAV-004: **Direct Display Settings Dialog & State Parity Verification** [Verified]
 2. Multiple switches can be toggled without state overwrites.
@@ -45,17 +52,21 @@
   5. Toggle "force portrait" to OFF and dismiss dialog. Verify `MainActivityWithNavigation` dynamically clears orientation lock (`SCREEN_ORIENTATION_UNSPECIFIED`) and clears `FLAG_SHOW_WHEN_LOCKED`.
   6. Run automated regression suite `./gradlew testDebugUnitTest` including `DisplaySettingsTest`.
 
-### TST-NAV-005: **Direct Units Settings Dialog** [Implemented]
+### TST-NAV-005: **Direct Units Settings Dialog Verification** [Verified]
 - **Requirement(s)**: `REQ-SET-053`
-- **Component**: **Direct Units Settings Dialog**
-- **Jira**: ``ATT-262``
-- **Test Description**: 1. Open Navigation Drawer -> Settings. 2. Tap 'Units'.
+- **Component**: `AppNavigationDrawer.kt`, `NavRoutes.kt`, `ATrainingTrackerApp.kt`, `UnitsSettingsDialog.kt`, `UnitsSettingsDialogTest.kt`
+- **Code**: `app/src/test/java/com/atrainingtracker/trainingtracker/ui/settings/units/UnitsSettingsDialogTest.kt` (`testUnitsDialog_savePersistsSelection`, `testUnitsDialog_cancelDiscardsChanges`)
+- **Jira**: ``ATT-262` / `ATT-8326``
+- **Test Description**:
+  1. *Modal Units Selection & Persistence (`TST-NAV-005.1`, `UnitsSettingsDialogTest.kt`)*: Assert `NavRoutes.toBottomSheetType(R.id.drawer_units) == SettingsBottomSheetType.UNITS`. Render `UnitsSettingsDialog` via `createComposeRule()` (Robolectric), select `MyUnits.IMPERIAL`, tap Save, and assert `PreferenceManager.getDefaultSharedPreferences(context).getString(TrainingApplication.SP_UNITS, null) == MyUnits.IMPERIAL.name` and `onDismiss()` fires; verify Cancel discards unsaved changes.
 
-### TST-NAV-006: **Direct Export Settings Dialog** [Implemented]
+### TST-NAV-006: **Direct Export Settings Dialog Verification** [Verified]
 - **Requirement(s)**: `REQ-SET-054`
-- **Component**: **Direct Export Settings Dialog**
-- **Jira**: ``ATT-264``
-- **Test Description**: 1. Open Navigation Drawer -> Ecosystem. 2. Tap 'Export'.
+- **Component**: `AppNavigationDrawer.kt`, `NavRoutes.kt`, `ATrainingTrackerApp.kt`, `ExportSettingsDialog.kt`, `ExportSettingsDialogTest.kt`
+- **Code**: `app/src/test/java/com/atrainingtracker/trainingtracker/ui/settings/export/ExportSettingsDialogTest.kt` (`testExportDialog_savePersistsToggles`, `testExportDialog_cancelDiscardsChanges`)
+- **Jira**: ``ATT-264` / `ATT-8326``
+- **Test Description**:
+  1. *Modal Export Configuration & Persistence (`TST-NAV-006.1`, `ExportSettingsDialogTest.kt`)*: Assert `NavRoutes.toBottomSheetType(R.id.drawer_export) == SettingsBottomSheetType.EXPORT`. Render `ExportSettingsDialog` via `createComposeRule()` (Robolectric), verify TCX/GPX/Golden Cheetah JSON/CSV/FIT/Raw Sensor controls render, toggle formats, tap Save, and assert `TrainingApplication.exportTo*()` values persist and `onDismiss()` fires; verify Cancel discards changes.
 
 ### TST-NAV-007: **Declarative Navigation Drawer & Item Density Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-123`
@@ -100,17 +111,23 @@
   • Rotate device during active sensor telemetry and verify zero disconnect/rebind storms.
   • Test interrupted workout recovery notification intent launch.
 
-### TST-MAP-010: **Zoom-Adaptive Heatmap Styling** [Implemented]
+### TST-MAP-010: **Zoom-Adaptive Heatmap Styling** [Verified]
 - **Requirement(s)**: `REQ-MAP-016`
-- **Component**: **Zoom-Adaptive Heatmap Styling**
-- **Jira**: ``ATT-437``
-- **Test Description**: 1. Open a Workout Cluster heatmap. 2. Zoom out to level 11/12. 3. Observe line width and marker pins. 4. Zoom in to level 17+.
+- **Component**: `MapContentScope.kt`, `PolylineHeatmapTileProvider.kt`, `ThermalColorLut.kt`, `PolylineHeatmapTileProviderTest.kt`, `MapHeatmapZoomAndDetailTest.kt`
+- **Code**: `app/src/test/java/com/atrainingtracker/trainingtracker/ui/map/MapHeatmapZoomAndDetailTest.kt` (`testMapContentScopeHeatmapDslAndZoomAdaptiveStyling`), `app/src/test/java/com/atrainingtracker/trainingtracker/ui/map/PolylineHeatmapTileProviderTest.kt` (`testThermalColorLutProgression_TST_MAP_058_3`, `testDynamicZoomStrokeScaling_TST_MAP_059_1`)
+- **Jira**: ``ATT-437` / `ATT-8326``
+- **Test Description**:
+  1. *Heatmap DSL & Zoom-Adaptive Layer Styling (`TST-MAP-010.1`, `MapHeatmapZoomAndDetailTest.kt`)*: Verify `MapContentScopeImpl.collect { heatmap(...); tracks(...); markers(...) }` records heatmap, track, and marker layers, and `resolveZoomAdaptiveStyling(zoom)` transitions `trackAlpha` (`0.4f` at `<10`, `0.6f` at `<13`, `0.8f` at `<=15`, `1.0f` at `>15`) and `markerAlphaMult` (`0.0f` culled at city-scale `<13`, `0.2f` at `<=15`, `1.0f` at `>15`).
+  2. *Gradient & Stroke Width Scaling (`TST-MAP-010.2`, `PolylineHeatmapTileProviderTest.kt`)*: Verify `ThermalColorLut.BLUE_STOPS` Cyan->Blue->Indigo progression and `calculateEffectiveStrokeWidth(zoom)` scaling between zoom `11/12` and `17+`.
 
-### TST-MAP-020: **Detailed Map View Heatmap Visibility** [Implemented]
+### TST-MAP-020: **Detailed Map View Heatmap Visibility** [Verified]
 - **Requirement(s)**: `REQ-MAP-018`
-- **Component**: **Detailed Map View Heatmap Visibility**
-- **Jira**: ``ATT-538``
-- **Test Description**: 1. Open a Workout Cluster heatmap view or a Period Detail map view. 2. Zoom in to a detailed level (zoom 13 to 18) over a route area. 3. Inspect the map overlay.
+- **Component**: `WorkoutClusterHeatmapScreen.kt`, `MapScreenWithTrack.kt`, `InteractivePeriodMap.kt`, `PeriodMapUtils.kt`, `PolylineHeatmapTileProvider.kt`, `MapHeatmapZoomAndDetailTest.kt`
+- **Code**: `app/src/test/java/com/atrainingtracker/trainingtracker/ui/map/MapHeatmapZoomAndDetailTest.kt` (`testDetailedZoom13To18_clusterAndPeriodHeatmapTilesVisibleAndAlphaBounded`)
+- **Jira**: ``ATT-538` / `ATT-8326``
+- **Test Description**:
+  1. *Detailed Zoom (13..18) Tile Rasterization & Alpha Bounds (`TST-MAP-020.1`, `MapHeatmapZoomAndDetailTest.kt`)*: Execute `PolylineHeatmapTileProvider.getTile(x, y, zoom)` across zooms `13..18` for both Workout Cluster config (`ThermalColorLut.CLASSIC_BLUE`, `useClassicStepIntensity = true`, max base alpha `<= 180/255`) and Period Detail config (`ThermalColorLut.HOT`, `PeriodMapUtils.getPeriodMapVisuals(..., isInteractive = true, zoom = 16f)`), asserting non-empty decodable 256×256 PNG tiles with non-transparent pixels within terrain-preserving alpha bounds.
+  2. *Emulator GL TileOverlay Check (`TST-MAP-020.2`)*: Native Google Maps GL `TileOverlay` compositing is scoped out of JVM and verified live on `emulator-5554` (`WorkoutClusterHeatmapScreen` for `sample_workout`, `docs/engineering/walkthroughs/img/ATT-8326_cluster_heatmap.png`, zero crashes in `logcat`).
 
 ### TST-MAP-021: **Minimum Altitude Marker Spatial Positioning Verification** [Verified]
 - **Requirement(s)**: `REQ-MAP-019`
@@ -1312,3 +1329,5 @@
 | `1.0.1` | 2026-11-18 | AI Agent (`ATT-8736`) | `ATT-8736` | Added `TST-MAP-071` (`[Planned]`) verifying `REQ-MAP-068` immediate bounds camera seeding, layout retry, and `WorkoutSummary` memoization. |
 | `1.0.2` | 2026-11-18 | AI Agent (`ATT-8736`) | `ATT-8736` | Promoted `TST-MAP-071` to `[Implemented]` in Stage 4 (`PathPreviewMapBoundsTest.kt`, `WorkoutSummaryMapMemoizationTest.kt`). |
 | `1.0.3` | 2026-11-18 | AI Agent (`ATT-8736`) | `ATT-8736` | Promoted `TST-MAP-071` to `[Verified]` in Stage 5 (`PathPreviewMapBoundsTest`, `WorkoutSummaryMapMemoizationTest`, emulator UI check). |
+| `1.0.4` | 2026-11-18 | AI Agent (`ATT-8326`) | `ATT-8326` | Code-grounded `TST-NAV-001/002/003/005/006` and `TST-MAP-010/020` (`[Implemented]`) with deterministic `createComposeRule()` / Robolectric / JVM test specs and GL boundary. |
+| `1.0.5` | 2026-11-18 | AI Agent (`ATT-8326`) | `ATT-8326` | Promoted `TST-NAV-001/002/003/005/006` and `TST-MAP-010/020` to `[Verified]` with `- **Code**:` pointers and Stage 5 `emulator-5554` verification. |

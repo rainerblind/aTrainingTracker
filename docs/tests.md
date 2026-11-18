@@ -1,7 +1,7 @@
 # aTrainingTracker: Living Test Specification & Verification Plan (Master Index)
 
 **Document ID**: `DOC-TST-INDEX`  
-**Version**: 1.0.49  
+**Version**: 1.0.50  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -14,7 +14,7 @@ Living test specifications use multi-line Markdown headings (`### TST-XXX: Title
 | :--- | :--- | :--- | :---: | :---: | :---: | :---: |
 | [Tracking & Live Sensor Cockpit](tests/tst_tracking_cockpit.md) | Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle. | `CON`, `FIL`, `FUSION`, `SEN`, `TRK` | 152 | 149 | 3 | 0 |
 | [Post-Workout Analytics & Periods](tests/tst_aftermath_periods.md) | Post-workout analytics, period statistics, zone distributions, HRV/workout dynamics, radar analytics. | `HRV`, `PER`, `PERF`, `RAD`, `SPT`, `WKO` | 68 | 49 | 19 | 0 |
-| [Maps, Polylines & Navigation](tests/tst_maps_navigation.md) | Map rendering, polylines, climbs, navigation overlays, GPX track follow-me, radar map overlays. | `CLM`, `GEO`, `MAP`, `NAV`, `RAD` | 71 | 63 | 8 | 0 |
+| [Maps, Polylines & Navigation](tests/tst_maps_navigation.md) | Map rendering, polylines, climbs, navigation overlays, GPX track follow-me, radar map overlays. | `CLM`, `GEO`, `MAP`, `NAV`, `RAD` | 71 | 70 | 1 | 0 |
 | [Persistence, Migration & Cloud Export](tests/tst_data_migration_export.md) | Database schema, backup/restore, migration pipelines, Strava/cloud upload, FIT/GPX/radar export. | `DAT`, `EXP`, `EXT`, `MIG`, `RAD` | 122 | 97 | 25 | 0 |
 | [Settings, Profiles & Localization](tests/tst_settings_profiles.md) | Athlete settings, bike/sensor profiles, privacy zones, data stores, monetization, and 9-locale parity. | `LOC`, `PRI`, `SET` | 106 | 63 | 43 | 0 |
 | [UI Components & Design System (Part 1)](tests/tst_ui_design_system_part1.md) | Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts. | `UI`, `UNT` | 249 | 183 | 66 | 0 |
