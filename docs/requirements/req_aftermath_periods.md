@@ -1,7 +1,7 @@
 # Living Requirements: Post-Workout Analytics & Periods
 
 **Document ID**: `DOC-REQ-PERIODS`  
-**Version**: 1.0.7  
+**Version**: 1.0.8  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -12,7 +12,7 @@
 
 ---
 
-### REQ-PER-007: Reactive Period-Workout Association [Implemented]
+### REQ-PER-007: Reactive Period-Workout Association [Verified]
 - **Tests**: `TST-PERF-008`
 - **Priority**: Medium
 - **Type**: Functional
@@ -28,7 +28,7 @@
 - **Implementation**: `PeriodsFragment.kt`, `WorkoutSummariesViewModel.kt`
 - **Rationale**: The system SHALL correctly filter the workout list when navigating from a period summary highlight (Base Sport or Sub-Sport). This filtering MUST respect both the temporal bounds of the period and the specific sport identity selected to ensure professional analytical depth.
 
-### REQ-PER-009: Detail Map Sport Filtering [Implemented]
+### REQ-PER-009: Detail Map Sport Filtering [Verified]
 - **Tests**: `TST-PER-012`
 - **Priority**: Medium
 - **Type**: Functional
@@ -113,7 +113,7 @@
 - **Rationale**: Guarantee data consistency and prevent visual artifacts during navigation.
 - **Description**: The system SHALL ensure that only the map state (Heatmap, Tracks, and Markers) of the most recently selected Workout Cluster is displayed, preventing race conditions during rapid navigation.
 
-### REQ-PER-003: The system SHALL display a detailed progress notification (Migration Status card [Implemented]
+### REQ-PER-003: The system SHALL display a detailed progress notification (Migration Status card [Verified]
 - **Tests**: `TST-PERF-003`
 - **Priority**: Medium
 - **Type**: Functional
@@ -122,7 +122,7 @@
 - **Rationale**: Provide immediate feedback and maintain visual consistency with other progressive loading screens (e.g. Periods).
 - **Description**: The system SHALL display a detailed progress notification (Migration Status card) during the initial loading and "self-healing" phase of Workout Clusters to inform the user about the background processing state.
 
-### REQ-PER-004: The hierarchical periods aggregation SHALL utilize a 'Dual-Phase' strategy: Phas [Implemented]
+### REQ-PER-004: The hierarchical periods aggregation SHALL utilize a 'Dual-Phase' strategy: Phas [Verified]
 - **Tests**: `TST-PERF-005`
 - **Priority**: High
 - **Type**: Functional
@@ -131,7 +131,7 @@
 - **Rationale**: Eliminate database lock contention and O(N^2) re-grouping overhead to ensure sub-second startup and true real-time visibility.
 - **Description**: The hierarchical periods aggregation SHALL utilize a 'Dual-Phase' strategy: Phase 1 (O(N)) for high-speed database reading and global grouping, and Phase 2 for bucketized commits and incremental UI pumping.
 
-### REQ-PER-005: The 'Migration Status' notification SHALL provide a descriptive high-level title [Implemented]
+### REQ-PER-005: The 'Migration Status' notification SHALL provide a descriptive high-level title [Verified]
 - **Tests**: `TST-PERF-006`
 - **Priority**: Low
 - **Type**: Functional
@@ -140,7 +140,7 @@
 - **Rationale**: Enhance user transparency and professional feedback during complex background operations.
 - **Description**: The 'Migration Status' notification SHALL provide a descriptive high-level title (Introducing relational database) and explicitly label Phase 1 (Reading) and Phase 2 (Syncing) to provide clear technical context.
 
-### REQ-PER-006: The system SHALL display a detailed, multi-phase progress notification during th [Implemented]
+### REQ-PER-006: The system SHALL display a detailed, multi-phase progress notification during th [Verified]
 - **Tests**: `TST-PERF-007`, `TST-PERF-009`, `TST-PERF-010`
 - **Priority**: Medium
 - **Type**: Functional
@@ -1904,3 +1904,4 @@
 | `1.0.5` | 2026-11-18 | AI Agent (`ATT-8916`, `--as agent1`) | `ATT-8916` | Added `REQ-PER-045` (`[Planned]`, `.1`–`.5`) for segmented activity & phone carriage mode timeline bar and expandable phase breakdown in Workout Details. |
 | `1.0.6` | 2026-11-18 | AI Agent (`ATT-8916`, `--as agent1`) | `ATT-8916` | Promoted `REQ-PER-045` to `[Implemented]` following Stage 4 construction, `Rule 8.5` PNG inspection, and green contract/UI verification (`102/102` tests). |
 | `1.0.7` | 2026-11-18 | AI Agent (`ATT-8916`, `--as agent1`) | `ATT-8916` | Promoted `REQ-PER-045` to `[Verified]` after Stage 5 targeted unit/contract/UI regression, `emulator-5554` smoke verification, `Rule 8.5` PNG audit, and living-doc governance sync. |
+| `1.0.8` | 2026-11-19 | Lane A Flash (`ATT-8324`, `--as agent1`) | `ATT-8324` | Promoted `REQ-PER-003`, `REQ-PER-004`, `REQ-PER-005`, `REQ-PER-006`, `REQ-PER-007`, and `REQ-PER-009` to `[Verified]` in Stage 5 (`REQ-PER-001` retained `[Implemented]` pending `TST-BUG-002`) reusing Gate 4 `93/93 PASS` evidence (`Rule 7.5`). |

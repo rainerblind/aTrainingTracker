@@ -359,4 +359,38 @@ class WorkoutSummariesViewModelFilterTest {
         assertNull(viewModel.filterCriteria.value.clusterId)
         assertNull(viewModel.filterCriteria.value.clusterName)
     }
+
+    /**
+     * TST-PER-009 (REQ-PER-008): Precise Sport & Period Temporal Bound Filtering.
+     * Verifies getFilteredWorkouts(bSportType, startTimeS, endTimeS) excludes both non-matching
+     * sports inside the period window AND matching-sport workouts outside [startTimeS, endTimeS].
+     */
+    @Test
+    fun testGetFilteredWorkouts_enforcesTemporalPeriodBoundsAndBSportType_TST_PER_009() = runTest(testDispatcher) {
+        val windowStart = 5_000L
+        val windowEnd = 10_000L
+        // helper sets startTimeS = id * 1000L
+        val bikeBeforeWindow = createWorkout(2L, "Bike Early", 10L, "MTB", BSportType.BIKE, 2025, 10_000.0, 1800L)
+        val bikeInsideWindow = createWorkout(6L, "Bike In Period", 11L, "MTB", BSportType.BIKE, 2025, 25_000.0, 3600L)
+        val runInsideWindow = createWorkout(7L, "Run In Period", 20L, "Trail Run", BSportType.RUN, 2025, 10_000.0, 2400L)
+        val bikeAfterWindow = createWorkout(12L, "Bike Late", 10L, "MTB", BSportType.BIKE, 2025, 15_000.0, 2000L)
+
+        allWorkoutsFlow.value = listOf(bikeBeforeWindow, bikeInsideWindow, runInsideWindow, bikeAfterWindow)
+
+        val viewModel = WorkoutSummariesViewModel(mockApplication)
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.workouts.collect()
+        }
+        advanceUntilIdle()
+
+        val filtered = viewModel.getFilteredWorkouts(
+            bSportType = BSportType.BIKE,
+            startTimeS = windowStart,
+            endTimeS = windowEnd
+        ).first { it.isNotEmpty() }
+
+        assertEquals(1, filtered.size)
+        assertEquals(6L, filtered.first().id)
+        assertEquals(BSportType.BIKE, filtered.first().bSportType)
+    }
 }

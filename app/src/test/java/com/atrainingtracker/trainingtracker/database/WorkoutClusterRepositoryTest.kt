@@ -27,9 +27,14 @@ import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
+import com.atrainingtracker.trainingtracker.ui.util.MigrationStatus
 import io.mockk.*
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -488,6 +493,164 @@ class WorkoutClusterRepositoryTest {
         } finally {
             RoutesRepository.resetForTesting(null)
             WorkoutRepository.resetForTesting(null)
+        }
+    }
+
+    /**
+     * TST-PERF-003 (REQ-PER-003) / TST-PERF-007 (REQ-PER-006):
+     * Empty DB bootstrap via refreshClusters() triggers recalculateClustersWithProgress(), emitting
+     * Phase 1 (routes) -> Phase 1 (1.0f) + Phase 2 (workouts) MigrationStatus and clearing to null.
+     */
+    @Test
+    fun testRefreshClusters_emptyDbBootstrapAndRecalculate_emitsMultiPhaseProgress_TST_PERF_003_007() = runBlocking {
+        val mockEngine = mockk<WorkoutClusterEngine>(relaxed = true)
+        mockkObject(WorkoutClusterEngine.Companion)
+        every { WorkoutClusterEngine.getInstance(any()) } returns mockEngine
+
+        every { mockContext.getString(R.string.cluster_migration_processing_routes) } returns "Processing routes"
+        every { mockContext.getString(R.string.cluster_migration_processing_workouts, any(), any()) } returns "Processing workouts"
+
+        val emptyCursor = mockk<Cursor>(relaxed = true)
+        every { emptyCursor.moveToNext() } returns false
+        every { mockSummariesDb.query(any(), any(), any(), any(), any(), any(), any(), any()) } returns emptyCursor
+        every { mockSummariesDb.query(any(), any(), any(), any(), any(), any(), any()) } returns emptyCursor
+        every { mockSummariesManager.getWorkoutClusterStatsForAllClusters() } returns emptyMap()
+
+        val populatedCluster = WorkoutCluster(
+            id = 1L,
+            name = "Morning Loop",
+            probableSportId = 1L,
+            startLat = 48.0, startLng = 9.0, endLat = 48.0, endLng = 9.0,
+            maxDispLat = 48.1, maxDispLng = 9.1, refDistance = 5000.0,
+            hitCount = 3, bSportType = BSportType.RUN, previewPaths = listOf("encoded_poly")
+        )
+        var callCount = 0
+        every { mockClusterDb.getAllClusters() } answers {
+            callCount++
+            if (callCount <= 2) emptyList() else listOf(populatedCluster)
+        }
+
+        val testScope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
+        val repo = WorkoutClusterRepository(mockContext, testScope)
+        val statusLog = java.util.concurrent.CopyOnWriteArrayList<MigrationStatus?>()
+        val phase1Observed = java.util.concurrent.CountDownLatch(1)
+        val phase2Observed = java.util.concurrent.CountDownLatch(1)
+        val collectorScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+        val collector = collectorScope.async(start = CoroutineStart.UNDISPATCHED) {
+            repo.migrationStatus.collect { status ->
+                statusLog.add(status)
+                if (status != null && status.phases.size == 1 && status.phases[0].id == 1) {
+                    phase1Observed.countDown()
+                }
+                if (status != null && status.phases.size == 2 && status.phases[1].id == 2) {
+                    phase2Observed.countDown()
+                }
+            }
+        }
+
+        every { mockEngine.recalculateHistory(any(), any()) } answers {
+            val listener = secondArg<ClusterMigrationListener>()
+            listener.onPhase1Progress(1, 2)
+            assertTrue(phase1Observed.await(2, java.util.concurrent.TimeUnit.SECONDS))
+            listener.onPhase2Progress(3, 5)
+            assertTrue(phase2Observed.await(2, java.util.concurrent.TimeUnit.SECONDS))
+        }
+
+        try {
+            repo.refreshClusters()
+
+            val nonNullStatuses = statusLog.filterNotNull()
+            assertTrue(
+                "Empty DB bootstrap must emit Phase 1 and Phase 2 MigrationStatus (TST-PERF-003/007)",
+                nonNullStatuses.any { it.phases.size == 1 && it.phases[0].id == 1 }
+            )
+            assertTrue(
+                "Multi-phase recalculation must emit Phase 1 complete (1.0f) + active Phase 2",
+                nonNullStatuses.any {
+                    it.phases.size == 2 && it.phases[0].progress == 1.0f && it.phases[1].id == 2
+                }
+            )
+            assertNull("migrationStatus must clear to null after recalculation completes", repo.migrationStatus.value)
+        } finally {
+            collector.cancel()
+            collectorScope.cancel()
+            testScope.cancel()
+        }
+    }
+
+    /**
+     * TST-PERF-003 (REQ-PER-003) & TST-PERF-009 (REQ-PER-006):
+     * Initial un-enriched clusters emit loading/healing/preview progress when cache is cold;
+     * subsequent visits with persisted previewPaths are silent (migrationStatus == null) unless forced.
+     */
+    @Test
+    fun testRefreshClusters_initialEnrichmentEmitsProgress_thenSilentOnRevisit_TST_PERF_003_009() = runBlocking {
+        every { mockContext.getString(R.string.cluster_migration_loading) } returns "Loading"
+        every { mockContext.getString(R.string.cluster_migration_previews, any(), any()) } returns "Generating previews"
+
+        val polylineCursor = mockk<Cursor>(relaxed = true)
+        every { polylineCursor.moveToNext() } returnsMany listOf(true, false, true, false)
+        every { polylineCursor.getString(0) } returns "encoded_poly_1"
+
+        val countsCursor = mockk<Cursor>(relaxed = true)
+        every { countsCursor.moveToNext() } returnsMany listOf(true, false, true, false)
+        every { countsCursor.getLong(0) } returns 10L
+        every { countsCursor.getInt(1) } returns 4
+
+        every {
+            mockSummariesDb.query(any(), any(), any(), any(), any(), any(), any())
+        } returns countsCursor
+        every {
+            mockSummariesDb.query(any(), any(), any(), any(), any(), any(), any(), any())
+        } returns polylineCursor
+
+        val unenriched = WorkoutCluster(
+            id = 10L, name = "Park Loop", probableSportId = 1L,
+            startLat = 48.0, startLng = 9.0, endLat = 48.0, endLng = 9.0,
+            maxDispLat = 48.1, maxDispLng = 9.1, refDistance = 5000.0,
+            hitCount = 4, bSportType = BSportType.RUN, previewPaths = emptyList()
+        )
+        val enriched = unenriched.copy(previewPaths = listOf("encoded_poly_1"))
+
+        val testScope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
+        val repo = WorkoutClusterRepository(mockContext, testScope)
+        val statusLog = mutableListOf<MigrationStatus?>()
+        val collector = async(start = CoroutineStart.UNDISPATCHED) {
+            repo.migrationStatus.collect { statusLog.add(it) }
+        }
+
+        try {
+            // 1. Cold initial load with un-enriched cluster -> emits loading/healing/previews -> null
+            every { mockClusterDb.getAllClusters() } returns listOf(unenriched)
+            repo.refreshClusters(forceShowProgress = false)
+
+            assertTrue(
+                "Cold initial un-enriched load must emit MigrationStatus phases (TST-PERF-003)",
+                statusLog.filterNotNull().isNotEmpty()
+            )
+            assertNull(repo.migrationStatus.value)
+
+            // 2. Revisit with persisted previews -> strictly silent (0 non-null emissions)
+            statusLog.clear()
+            every { mockClusterDb.getAllClusters() } returns listOf(enriched)
+            repo.refreshClusters(forceShowProgress = false)
+
+            assertTrue(
+                "Second visit with persisted previewPaths must stay silent (TST-PERF-009)",
+                statusLog.filterNotNull().isEmpty()
+            )
+
+            // 3. Explicit forceShowProgress = true DOES emit progress
+            statusLog.clear()
+            repo.refreshClusters(forceShowProgress = true)
+            assertTrue(
+                "Forced refresh must emit progress even when previews exist (TST-PERF-009)",
+                statusLog.filterNotNull().isNotEmpty()
+            )
+            assertNull(repo.migrationStatus.value)
+        } finally {
+            collector.cancel()
+            testScope.cancel()
         }
     }
 }

@@ -488,7 +488,7 @@ class PeriodsViewModelTest {
     }
 
     /**
-     * TST-PER-032.2: PeriodMapScreen Sport-Filtered Track & Heatmap Decoupling Test (ATT-4935 / REQ-PER-024.5c).
+     * TST-PER-032.2 / TST-PER-012: PeriodMapScreen Sport-Filtered Track & Heatmap Decoupling Test (ATT-4935 / REQ-PER-024.5c / REQ-PER-009).
      * Asserts that showPeriodMap filters loaded workouts by selectedSports before populating heatmapPathMap and tracks.
      */
     @Test
@@ -735,5 +735,129 @@ class PeriodsViewModelTest {
         populatedWorkoutsFlow.value = listOf(renamedWorkout)
         assertEquals("Canal Loop", populatedViewModel.peekedWorkoutDataWithTrack.value?.workoutData?.clusterName)
         assertEquals("Evening Ride", populatedViewModel.peekedWorkoutDataWithTrack.value?.workoutData?.workoutName)
+    }
+
+    /**
+     * TST-PERF-008 (REQ-PER-007) & TST-PER-010 (REQ-UI-120):
+     * Opening a period with empty/partial pre-loaded polyline maps while background rollup is still
+     * incomplete sets isLoading = true and reactively hydrates all in-range tracks, markers, and
+     * deterministic heatmap paths directly via periodsRepo.getWorkoutsForRange(...).
+     */
+    @Test
+    fun testShowPeriodMap_partialSummaryHydratesDirectlyFromRangeAndPopulatesHeatmap_TST_PERF_008_PER_010() = runTest {
+        val poly1 = PolyUtil.encode(listOf(LatLng(48.50, 9.00), LatLng(48.51, 9.01)))
+        val poly2 = PolyUtil.encode(listOf(LatLng(48.52, 9.02), LatLng(48.53, 9.03)))
+        val w1 = mockk<WorkoutData>(relaxed = true) {
+            every { id } returns 201L
+            every { workoutName } returns "Morning Bike"
+            every { bSportType } returns BSportType.BIKE
+            every { mapPolyline } returns poly1
+            every { startLatLng } returns LatLng(48.50, 9.00)
+            every { endLatLng } returns LatLng(48.51, 9.01)
+            every { minLat } returns 48.50
+            every { maxLat } returns 48.51
+            every { minLng } returns 9.00
+            every { maxLng } returns 9.01
+        }
+        val w2 = mockk<WorkoutData>(relaxed = true) {
+            every { id } returns 202L
+            every { workoutName } returns "Evening Run"
+            every { bSportType } returns BSportType.RUN
+            every { mapPolyline } returns poly2
+            every { startLatLng } returns LatLng(48.52, 9.02)
+            every { endLatLng } returns LatLng(48.53, 9.03)
+            every { minLat } returns 48.52
+            every { maxLat } returns 48.53
+            every { minLng } returns 9.02
+            every { maxLng } returns 9.03
+        }
+        coEvery { mockPeriodsRepo.getWorkoutsForRange(any(), any()) } returns listOf(w1, w2)
+
+        val partialSummary = createPeriodSummary(
+            label = "Partial Week",
+            sportStats = mapOf(
+                BSportType.BIKE to SportStats(1, 3600L, 20_000.0, 200L, emptyMap(), null),
+                BSportType.RUN to SportStats(1, 1800L, 5_000.0, 50L, emptyMap(), null)
+            ),
+            polylines = emptyList(),
+            workoutIdToPolylineMap = emptyMap(),
+            workoutIdToAllPolylinesMap = emptyMap(),
+            workoutIdToPathMap = emptyMap(),
+            workoutIdToSportMap = emptyMap()
+        )
+
+        val viewModel = createViewModel()
+        viewModel.showPeriodMap(partialSummary)
+        assertTrue("isLoading must become true immediately before async range load finishes", viewModel.mapState.value.isLoading)
+
+        testScheduler.advanceUntilIdle()
+
+        val state = viewModel.mapState.value
+        assertFalse(state.isLoading)
+        assertEquals(setOf(201L, 202L), state.workoutIdToHeatmapPathMap.keys)
+        assertEquals(2, state.tracks.size)
+        assertTrue("memberMarkers must hydrate for mapped sessions", state.memberMarkers.isNotEmpty())
+        coVerify(exactly = 1) {
+            mockPeriodsRepo.getWorkoutsForRange(partialSummary.startTimestampS, partialSummary.endTimestampS)
+        }
+    }
+
+    /**
+     * TST-PER-012 (REQ-PER-009): Period Map Sport Filtering across Sport Switches.
+     * Toggling selectedSports cleanly switches map tracks, member markers, heatmap paths, and
+     * period extrema markers from BIKE-only to RUN-only.
+     */
+    @Test
+    fun testToggleSportFilter_switchesPeriodMapTracksMarkersAndHeatmapDeterministically_TST_PER_012() = runTest {
+        val bikeWorkout = mockk<WorkoutData>(relaxed = true) {
+            every { id } returns 301L
+            every { workoutName } returns "Road Ride"
+            every { bSportType } returns BSportType.BIKE
+            every { mapPolyline } returns PolyUtil.encode(listOf(LatLng(48.60, 9.10), LatLng(48.61, 9.11)))
+            every { startLatLng } returns LatLng(48.60, 9.10)
+            every { minLat } returns 48.60
+            every { maxLat } returns 48.61
+            every { minLng } returns 9.10
+            every { maxLng } returns 9.11
+        }
+        val runWorkout = mockk<WorkoutData>(relaxed = true) {
+            every { id } returns 302L
+            every { workoutName } returns "Track Run"
+            every { bSportType } returns BSportType.RUN
+            every { mapPolyline } returns PolyUtil.encode(listOf(LatLng(48.70, 9.20), LatLng(48.71, 9.21)))
+            every { startLatLng } returns LatLng(48.70, 9.20)
+            every { minLat } returns 48.70
+            every { maxLat } returns 48.71
+            every { minLng } returns 9.20
+            every { maxLng } returns 9.21
+        }
+        coEvery { mockPeriodsRepo.getWorkoutsForRange(any(), any()) } returns listOf(bikeWorkout, runWorkout)
+
+        val summary = createPeriodSummary(
+            label = "Mixed Week",
+            sportStats = mapOf(
+                BSportType.BIKE to SportStats(1, 3600L, 25_000.0, 200L, emptyMap(), null),
+                BSportType.RUN to SportStats(1, 1800L, 6_000.0, 50L, emptyMap(), null)
+            ),
+            workoutIdToSportMap = mapOf(301L to BSportType.BIKE, 302L to BSportType.RUN),
+            extremaMarkers = listOf(
+                PeriodPeakMarker(301L, LatLng(48.60, 9.10), 1, "Bike Start", PeriodMarkerType.START),
+                PeriodPeakMarker(302L, LatLng(48.70, 9.20), 1, "Run Start", PeriodMarkerType.START)
+            )
+        )
+
+        val viewModel = createViewModel()
+        // Switch default {BIKE, RUN} -> {RUN}
+        viewModel.toggleSportFilter(BSportType.BIKE)
+        assertEquals(setOf(BSportType.RUN), viewModel.selectedSports.value)
+
+        viewModel.showPeriodMap(summary)
+        testScheduler.advanceUntilIdle()
+
+        val state = viewModel.mapState.value
+        assertEquals(setOf(302L), state.workoutIdToHeatmapPathMap.keys)
+        assertEquals(listOf(302L), state.tracks.map { it.id })
+        assertTrue(state.memberMarkers.all { it.workoutId == 302L })
+        assertEquals(listOf(302L), viewModel.selectedPeriod.value?.extremaMarkers?.map { it.workoutId })
     }
 }

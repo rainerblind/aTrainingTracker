@@ -1,7 +1,7 @@
 # Living Requirements: Maps, Polylines & Navigation
 
 **Document ID**: `DOC-REQ-MAPS`  
-**Version**: 1.0.5  
+**Version**: 1.0.6  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -175,7 +175,7 @@
 - **Rationale**: The `PeriodMapScreen` SHALL display originally sampled (fine-granular) location tracks instead of thinned overviews to provide professional analytical depth.
 - **Description**: High-Fidelity Period Tracks.
 
-### REQ-MAP-017: Adaptive Heatmap Performance [Implemented]
+### REQ-MAP-017: Adaptive Heatmap Performance [Verified]
 - **Tests**: `TST-PERF-001`
 - **System Requirement(s)**: Derived (SW-only) — Post-workout map visualization, heatmap rendering, and UI styling
 - **Priority**: Medium
@@ -2857,3 +2857,4 @@
 | `1.0.3` | 2026-11-18 | AI Agent (`ATT-8736`) | `ATT-8736` | Added `REQ-MAP-068` (`[Planned]` $\rightarrow$ `[Implemented]` in Stage 4: `PathPreviewMap.kt`, `WorkoutSummary.kt`). |
 | `1.0.4` | 2026-11-18 | AI Agent (`ATT-8736`) | `ATT-8736` | Promoted `REQ-MAP-068` to `[Verified]` in Stage 5 (`PathPreviewMapBoundsTest`, `WorkoutSummaryMapMemoizationTest`, emulator UI check). |
 | `1.0.5` | 2026-11-18 | AI Agent (`ATT-8080`) | `ATT-8080` | Refined and verified (`[Verified]`) `REQ-MAP-011` and `REQ-MAP-012` for `TrackType.ATT_FUSED`, alias-aware GPS/Fused lookup, `TrackType.NETWORK` removal, and peek bottom-sheet `Layers` wiring. |
+| `1.0.6` | 2026-11-19 | Lane A Flash (`ATT-8324`, `--as agent1`) | `ATT-8324` | Promoted `REQ-MAP-017` to `[Verified]` in Stage 5 following `TST-PERF-001` 520-workout memory & vertex-budget verification (`PeriodsRepositoryMemoryTest`, `PeriodVertexBudgetTest`). |

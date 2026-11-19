@@ -1,7 +1,7 @@
 # Living Test Specification: Post-Workout Analytics & Periods
 
 **Document ID**: `DOC-TST-PERIODS`  
-**Version**: 1.0.6  
+**Version**: 1.0.9  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -12,83 +12,122 @@
 
 ---
 
-### TST-PERF-001: **Heatmap Memory Scalability** [Implemented]
+### TST-PERF-001: **Heatmap Memory Scalability** [Verified]
 - **Requirement(s)**: `REQ-MAP-017`
-- **Component**: **Heatmap Memory Scalability**
+- **Component**: `PeriodMapUtils.kt`, `PeriodsRepository.kt`, `PolylineHeatmapTileProvider.kt`, `PeriodVertexBudgetTest.kt`, `PeriodsRepositoryMemoryTest.kt`, `MapPolylineMemoryStabilityTest.kt`
 - **Jira**: ``ATT-319``
-- **Test Description**: 1. Import a large volume of workouts (e.g. 500+). 2. Navigate to the 'Periods' view and scroll through Yearly/Monthly summaries.
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit
+- **Test Description**: Given 500+ historical workouts with multi-vertex polylines, verify `PeriodsRepository.enrich` clears eager `workoutIdToPathMap` and caps summary thumbnails at `MAX_SUMMARY_THUMBNAIL_TRACKS` (8), `PeriodMapUtils.prepareCardMapPreview` bounds the LRU preview cache to 64 entries, and `simplifyPathMapToBudget` constrains total card (`<= 2,000`, `MAX_CARD_MINI_MAP_VERTICES`) and detail (`<= 8,000`, `MAX_DETAILED_MAP_VERTICES`) heatmap vertices.
 
-### TST-PERF-002: **Cluster Detail Loading Speed** [Implemented]
+### TST-PERF-002: **Cluster Detail Loading Speed** [Verified]
 - **Requirement(s)**: `REQ-PER-001`
-- **Component**: **Cluster Detail Loading Speed**
+- **Component**: `WorkoutClustersViewModel.kt`, `WorkoutClustersViewModelTest.kt`
 - **Jira**: ``ATT-362``
-- **Test Description**: 1. Identify a cluster with > 30 recordings. 2. Tap on the cluster to open its details. 3. Measure time from tap to full heatmap/list display.
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Test Description**: Given a cluster with > 30 recorded workouts, verify `WorkoutClustersViewModel.selectCluster(cluster)` immediately transitions `ClusterMapState.isLoading = true`, asynchronously populates `tracks`, decoded `heatmapPaths`, and `memberMarkers`, clears `isLoading = false` upon completion, and cancels superseded jobs on rapid re-selection.
 
-### TST-PERF-003: **Initial Cluster Loading Progress** [Implemented]
+### TST-PERF-003: **Initial Cluster Loading Progress** [Verified]
 - **Requirement(s)**: `REQ-PER-003`
-- **Component**: **Initial Cluster Loading Progress**
+- **Component**: `WorkoutClusterRepository.kt`, `WorkoutClustersViewModel.kt`, `WorkoutClusterRepositoryTest.kt`, `WorkoutClustersViewModelTest.kt`
 - **Jira**: ``ATT-366``
-- **Test Description**: 1. Clear application cache or significantly modify history. 2. Navigate to 'My Locations'.
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Test Description**: Given an empty or un-enriched cluster store (`previewPaths.isEmpty()`), verify `WorkoutClusterRepository.refreshClusters()` emits `MigrationStatus` loading/healing/enrichment progress updates propagated through `WorkoutClustersViewModel.migrationStatus` and resets `migrationStatus` to `null` upon completion.
 
-### TST-PERF-004: **Incremental Period Visibility** [Implemented]
+### TST-PERF-004: **Incremental Period Visibility** [Verified]
 - **Requirement(s)**: `REQ-PER-001`, `REQ-DAT-003`
-- **Component**: **Incremental Period Visibility**
+- **Component**: `PeriodsRepository.kt`, `PeriodSummariesDbTest.kt`
 - **Jira**: ``ATT-374``
-- **Test Description**: 1. Trigger a full hierarchical Periods sync. 2. Observe the list as the "Syncing [Month]..." progress updates.
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Test Description**: Given finished workouts spanning multiple months, verify `PeriodsRepository.resyncAllPeriods()` commits transactions per month bucket and emits intermediate growing `_groupedPeriods` snapshots alongside `Syncing [Month]` `MigrationStatus` updates prior to final year rollup.
 
-### TST-PERF-005: **Dual-Phase Sync Efficiency** [1. The status SHALL transition from 'Reading...' to 'Syncing...' without jumping back. 2. The period list SHALL grow visibly after each 'Syncing [Month]' update. 3. Scrolling SHALL remain smooth throughout the sync.] [Implemented]
+### TST-PERF-005: **Dual-Phase Sync Efficiency** [Verified]
 - **Requirement(s)**: `REQ-PER-004`
-- **Component**: **Dual-Phase Sync Efficiency**
+- **Component**: `PeriodsRepository.kt`, `PeriodSummariesDbTest.kt`
 - **Jira**: ``ATT-380``
-- **Test Description**: 1. Trigger a full hierarchical Periods sync. 2. Observe the status transitions and UI responsiveness.
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Test Description**: Verify `PeriodsRepository.resyncAllPeriods()` emits monotonic dual-phase `MigrationStatus` updates: Phase 1 (`Reading` progress `0..1f`) transitions strictly into Phase 2 (`phase1Finished = 1.0f` + `Syncing [Month]` -> `Finalizing 0.99f` -> `null`) without regressing to Phase 1, while `_groupedPeriods` grows after each month update.
 
-### TST-PERF-006: **Multi-Phase Progress Feedback** [Implemented]
+### TST-PERF-006: **Multi-Phase Progress Feedback** [Verified]
 - **Requirement(s)**: `REQ-PER-005`
-- **Component**: **Multi-Phase Progress Feedback**
+- **Component**: `MigrationStatus.kt`, `PeriodsTabsScreen.kt`, `PeriodsProgressAndEmptyStateUiTest.kt`
 - **Jira**: ``ATT-383``
-- **Test Description**: 1. Trigger a Periods sync. 2. Inspect the progress card UI.
+- **Priority**: Low
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Test Description**: Using `createComposeRule()` with `isPlayServiceAvailable = false` (isolated from Play Services `GoogleMap`), verify `PeriodsTabsScreen` renders the `MigrationStatus` card displaying `title`, Phase 1/2 formatted labels (`migration_phase_label`), distinct active/completed progress bar `ProgressBarRangeInfo` semantics (`1.0f` vs `0.45f`), and hides the card when `migrationStatus == null`.
 
-### TST-PERF-007: **Workout Cluster Migration Progress** [Implemented]
+### TST-PERF-007: **Workout Cluster Migration Progress** [Verified]
 - **Requirement(s)**: `REQ-PER-006`
-- **Component**: **Workout Cluster Migration Progress**
+- **Component**: `WorkoutClusterRepository.kt`, `WorkoutClustersViewModel.kt`, `WorkoutClustersTabsScreen.kt`, `WorkoutClusterRepositoryTest.kt`, `WorkoutClustersViewModelTest.kt`
 - **Jira**: ``ATT-393``
-- **Test Description**: 1. Trigger a Workout Cluster recalculation. 2. Observe the progress card.
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Test Description**: Verify `WorkoutClusterRepository.recalculateClustersWithProgress()` and `WorkoutClustersViewModel.recalculateClusters()` emit multi-phase `MigrationStatus` updates (Phase 1 route grouping -> Phase 1 `1.0f` + Phase 2 metadata enrichment -> `null`), toggle `isRecalculating`, and emit `recalculationFinished`.
 
-### TST-PERF-008: **Reactive Period Detail Verification** [Implemented]
+### TST-PERF-008: **Reactive Period Detail Verification** [Verified]
 - **Requirement(s)**: `REQ-PER-007`
-- **Component**: **Reactive Period Detail Verification**
+- **Component**: `PeriodsViewModel.kt`, `PeriodsRepository.kt`, `PeriodsViewModelTest.kt`
 - **Jira**: ``ATT-442``
-- **Test Description**: 1. Open the 'Periods' screen. 2. Tap the map icon for a period *immediately* before the background loading completes. 3. Observe the heatmap as it grows.
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Test Description**: Given a `PeriodSummary` opened via `PeriodsViewModel.showPeriodMap(summary)` while background rollup is incomplete (empty/partial `workoutIdToPolylineMap`), verify `mapState.isLoading` sets `true` and reactively hydrates all in-range `tracks` and `workoutIdToHeatmapPathMap` directly via `periodsRepo.getWorkoutsForRange(...)`.
 
-### TST-PERF-009: **Silent Cluster Refresh** [Implemented]
+### TST-PERF-009: **Silent Cluster Refresh** [Verified]
 - **Requirement(s)**: `REQ-PER-006`
-- **Component**: **Silent Cluster Refresh**
+- **Component**: `WorkoutClusterRepository.kt`, `WorkoutClusterRepositoryTest.kt`
 - **Jira**: ``ATT-441``
-- **Test Description**: 1. Navigate to My Locations. 2. Navigate away and back. 3. Verify no progress notification on 2nd visit. 4. Trigger recalculation and verify progress DOES appear.
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Test Description**: Verify `WorkoutClusterRepository.refreshClusters(forceShowProgress = false)` leaves `migrationStatus` strictly `null` when persisted `previewPaths` already exist (silent revisit), while `recalculateClustersWithProgress()` and `refreshClusters(forceShowProgress = true)` actively emit non-null `MigrationStatus`.
 
-### TST-PERF-010: **Persistent Previews Audit** [Implemented]
+### TST-PERF-010: **Persistent Previews Audit** [Verified]
 - **Requirement(s)**: `REQ-PER-006`
-- **Component**: **Persistent Previews Audit**
+- **Component**: `WorkoutClusterRepository.kt`, `WorkoutClusterDatabaseManager.kt`, `WorkoutClusterPreviewPersistenceTest.kt`
 - **Jira**: ``ATT-441``
-- **Test Description**: 1. Navigate to My Locations. 2. Wait for enrichment. 3. Kill and restart app. 4. Navigate back to My Locations.
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Test Description**: Using Robolectric real SQLite (`@Config(sdk = [34], application = Application::class)`), verify `WorkoutClusterRepository.refreshClusters()` persists enriched `previewPaths` to SQLite so a subsequent repository reload/simulated restart finds `previewPaths.isNotEmpty()` and refreshes silently (`migrationStatus == null`).
 
-### TST-PER-009: **Precise Sport Filtering** [Implemented]
+### TST-PER-009: **Precise Sport Filtering** [Verified]
 - **Requirement(s)**: `REQ-PER-008`
-- **Component**: **Precise Sport Filtering**
+- **Component**: `PeriodsFragment.kt`, `WorkoutSummariesListFragment.kt`, `WorkoutSummariesViewModel.kt`, `WorkoutSummariesViewModelFilterTest.kt`, `PeriodsNavigationFilterTest.kt`
 - **Jira**: ``ATT-459``
-- **Test Description**: 1. Open a Period Summary. 2. Click a Sub-Sport row (e.g. MTB). 3. Verify the resulting list only contains MTB workouts for that period.
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Test Description**: Verify `WorkoutSummariesViewModel.getFilteredWorkouts(bSportType, startTimeS, endTimeS)` restricts emitted workouts strictly to matching `BSportType` AND `[startTimeS, endTimeS]` temporal bounds, and verify `PeriodsFragment.startWorkoutSummaryList(periodSummary, bSportType)` attaches exact `ARG_BSPORT_TYPE`, `ARG_START_S`, `ARG_END_S` bundle arguments to `WorkoutSummariesListFragment`.
 
-### TST-PER-010: **Heatmap Toggle Removal** [Implemented]
+### TST-PER-010: **Heatmap Toggle Removal** [Verified]
 - **Requirement(s)**: `REQ-UI-120`
-- **Component**: **Heatmap Toggle Removal**
+- **Component**: `PeriodsTabsScreen.kt`, `PeriodMapScreen.kt`, `PeriodsViewModel.kt`, `PeriodsProgressAndEmptyStateUiTest.kt`, `PeriodsViewModelTest.kt`
 - **Jira**: ``ATT-460``
-- **Test Description**: 1. Open Periods screen and Period Map. 2. Verify `Whatshot` toggle is gone. 3. Verify heatmap still reacts to global settings.
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Test Description**: Verify via Robolectric Compose UI semantics (`PeriodsTabsScreen` isolated from `GoogleMap`) that no interactive `Whatshot`/heatmap toggle control exists in the header bar while only canonical sport filter icons (`BIKE`, `RUN`, `UNKNOWN`) appear, and verify `PeriodsViewModel.showPeriodMap(...)` unconditionally populates `workoutIdToHeatmapPathMap` deterministically.
 
-### TST-PER-012: **Period Map Sport Filtering** [Implemented]
+### TST-PER-012: **Period Map Sport Filtering** [Verified]
 - **Requirement(s)**: `REQ-PER-009`
-- **Component**: **Period Map Sport Filtering**
+- **Component**: `PeriodsViewModel.kt`, `PeriodMapScreen.kt`, `PeriodsViewModelTest.kt`
 - **Jira**: ``ATT-466``
-- **Test Description**: 1. Open Period Detail Map. 2. Tap a Sport Row (e.g., Bike). 3. Verify map only shows Bike tracks and markers. 4. Verify heatmap only reflects Bike activities.
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Test Description**: Verify `PeriodsViewModel.toggleSportFilter` and `filterPeriodSummary` symmetrically filter `tracks`, `workoutIdToHeatmapPathMap`, `polylines`, and `extremaMarkers` by active `BSportType` so switching between sports (`BIKE` vs `RUN`) updates both vector overlays and heatmap path sets deterministically.
 
 ### TST-PER-013: **Uniform Heatmap & Visual Transparency** [Verified]
 - **Requirement(s)**: `REQ-PER-010`
@@ -114,11 +153,14 @@
 - **Jira**: ``ATT-579``
 - **Test Description**: 1. Execute `PeriodsAggregationTest`. 2. Verify that in multi-workout periods (such as January 2015), the workout with the true maximum duration and distance (day 31) is selected as longest workout regardless of stale database IDs.
 
-### TST-PER-017: **Period Empty State Placeholder Verification** [Implemented]
+### TST-PER-017: **Period Empty State Placeholder Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-125`
-- **Component**: **Period Empty State Placeholder Verification**
+- **Component**: `PeriodList.kt`, `EmptyStatePlaceholder.kt`, `strings.xml`, `PeriodsProgressAndEmptyStateUiTest.kt`, `TranslationParityTest.kt`
 - **Jira**: ``ATT-488``
-- **Test Description**: 1. Open the application with no recorded workouts or filter a sport type with 0 workouts. 2. Navigate to the 'Periods' screen (Woche, Monat, Jahr). 3. Observe the viewport below the period tabs and header when no period summaries exist. 4. Verify that an informative `EmptyStatePlaceholder` is displayed with an appropriate calendar/history icon, clear title ("No period summaries available" / "Keine Zeiträume verfügbar"), and supportive description. 5. Verify proper layout insets (collapsible header offset and bottom navigation bar insets). 6. Verify 9-language localization parity.
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Test Description**: Using `createComposeRule()` isolated from Play Services (`isPlayServiceAvailable = false`), verify `PeriodList(periods = emptyList())` renders `EmptyStatePlaceholder` displaying `R.string.no_periods_available` and `R.string.no_periods_available_hint`, omits them when `periods` is non-empty, and `TranslationParityTest` verifies 9-locale parity for `no_periods_available` and `no_periods_available_hint`.
 
 ### TST-PER-018: **Period Map Scalability, Memory Budget & Adaptive Layering Invariant** [Verified]
 - **Requirement(s)**: `REQ-PER-012`
@@ -1195,3 +1237,6 @@
 | `1.0.4` | 2026-11-18 | AI Agent (`ATT-8916`, `--as agent1`) | `ATT-8916` | Added `TST-PER-053` (`[Planned]`, `.1`–`.5`) covering pure-JVM coalescing, pre-decimation DB extraction, dual ViewModel propagation, behavioral `createComposeRule()` UI, and contract parity. |
 | `1.0.5` | 2026-11-18 | AI Agent (`ATT-8916`, `--as agent1`) | `ATT-8916` | Promoted `TST-PER-053` to `[Implemented]` with all 5 verification tiers green (`102/102` tests) and `Rule 8.5` PNG (`ATT-8916_carriage_timeline.png`) verified. |
 | `1.0.6` | 2026-11-18 | AI Agent (`ATT-8916`, `--as agent1`) | `ATT-8916` | Promoted `TST-PER-053` to `[Verified]` following Stage 5 targeted unit/contract/Compose verification, `emulator-5554` smoke launch, and governance parity check. |
+| `1.0.7` | 2026-11-19 | Lane A Flash (`ATT-8324`, `--as agent1`) | `ATT-8324` | Updated `Component`, metadata (`Priority`/`Type`/`Verification Method`), and executable `Test Description` contracts for all 14 legacy Aftermath/Periods specs (`TST-PERF-001..010`, `TST-PER-009`, `TST-PER-010`, `TST-PER-012`, `TST-PER-017`) while keeping `[Implemented]` status pending Stage 4/5 execution. |
+| `1.0.8` | 2026-11-19 | Lane A Flash (`ATT-8324`, `--as agent1`) | `ATT-8324` | Promoted all 14 Aftermath/Periods test specs (`TST-PERF-001..010`, `TST-PER-009`, `TST-PER-010`, `TST-PER-012`, `TST-PER-017`) to `[Verified]` reusing Gate 4 verified evidence (`Rule 7.5`: `93/93 PASS` across 12 suites, `0` `app/` edits since Gate 4 `3fc8ccf6`). |
+| `1.0.9` | 2026-11-19 | Lane A Flash (`ATT-8324`, `--as agent1`) | `ATT-8324` | Stage 6 Bounce 1/3 heal: aligned `TST-PERF-001` card vertex budget to `<= 2,000` (`MAX_CARD_MINI_MAP_VERTICES`) and added `ProgressBarRangeInfo` (`1.0f` vs `0.45f`) Compose assertions in `PeriodsProgressAndEmptyStateUiTest` matching `TST-PERF-006`. |

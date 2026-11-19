@@ -1,7 +1,7 @@
 # Living Requirements: UI Components & Design System (Part 1 of 5)
 
 **Document ID**: `DOC-REQ-UI-P1`  
-**Version**: 1.0.0  
+**Version**: 1.0.1  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -632,7 +632,7 @@
 - **Implementation**: `DeviceData.kt`, `DeviceItem.kt`
 - **Rationale**: The system SHALL display descriptive technical icons for internal smartphone sensors in the sensor management list (e.g., Altitude icon for the Pressure Sensor) to ensure professional identification and visual clarity.
 
-### REQ-UI-120: Deterministic Period Visualization [Implemented]
+### REQ-UI-120: Deterministic Period Visualization [Verified]
 - **Tests**: `TST-PER-010`
 - **Priority**: Medium
 - **Type**: Functional
@@ -703,7 +703,7 @@
 5. *Back Gesture Invariant*: Back gesture when the drawer is open MUST dismiss the drawer without closing the activity.
 **Invariants**: Manifest declaration, launch mode (`singleTask`), theme (`Theme.aTrainingTracker`), and fragment state restoration contracts MUST remain identical.
 
-### REQ-UI-125: Period Summaries Empty State Presentation [Implemented]
+### REQ-UI-125: Period Summaries Empty State Presentation [Verified]
 - **Tests**: `TST-PER-017`
 - **Priority**: Medium
 - **Type**: Functional
@@ -3961,3 +3961,4 @@ Specifically:
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
 | `1.0.0` | 2026-11-18 | AI Agent (`ATT-8206`) | `ATT-8206` | Split oversized shard into compliant sub-shard (<= 4,000 lines, `REQ-PRO-093.4`, `REQ-PRO-127.3`). |
+| `1.0.1` | 2026-11-19 | Lane A Flash (`ATT-8324`, `--as agent1`) | `ATT-8324` | Promoted `REQ-UI-120` (`TST-PER-010`) and `REQ-UI-125` (`TST-PER-017`) to `[Verified]` in Stage 5 following Robolectric Compose UI, `PeriodsViewModel`, and 9-locale `TranslationParityTest` verification (`Rule 7.5`). |
