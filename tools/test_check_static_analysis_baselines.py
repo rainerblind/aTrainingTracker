@@ -23,6 +23,7 @@ from check_static_analysis_baselines import (
     collect_baseline_metrics,
     count_detekt_baseline_entries,
     count_lint_baseline_entries,
+    count_lint_recycle_entries,
     format_static_analysis_lines,
     main,
 )
@@ -67,8 +68,28 @@ class TestCheckStaticAnalysisBaselines(unittest.TestCase):
 
         passed, details, _ = check_baseline_ratchet()
         self.assertTrue(passed)
-        self.assertEqual(details["detekt_baseline_count"], DEFAULT_DETEKT_CEILING)
+        self.assertLessEqual(details["detekt_baseline_count"], DEFAULT_DETEKT_CEILING)
         self.assertEqual(details["lint_baseline_count"], DEFAULT_LINT_CEILING)
+        self.assertEqual(details["lint_recycle_count"], 0)
+        self.assertLessEqual(DEFAULT_LINT_CEILING, 216)
+
+    def test_ratchet_fails_when_recycle_issue_present(self):
+        """TST-PRO-133.4: Any Recycle suppression in app/lint-baseline.xml must fail ratchet."""
+        (self.tmpdir / "app" / "detekt-baseline.xml").write_text(_detekt_xml(10), encoding="utf-8")
+        recycle_xml = (
+            '<?xml version="1.0" encoding="UTF-8"?>\n'
+            '<issues format="6">\n'
+            '  <issue id="Recycle" message="This Cursor should be freed up after use with #close()"/>\n'
+            '</issues>\n'
+        )
+        (self.tmpdir / "app" / "lint-baseline.xml").write_text(recycle_xml, encoding="utf-8")
+        self.assertEqual(count_lint_recycle_entries(recycle_xml), 1)
+        passed, details, messages = check_baseline_ratchet(
+            repo_root=self.tmpdir, max_detekt=100, max_lint=216
+        )
+        self.assertFalse(passed)
+        self.assertEqual(details["lint_recycle_count"], 1)
+        self.assertTrue(any("Recycle" in m and "FAIL" in m for m in messages))
 
     def test_ratchet_passes_on_equal_or_reduced_vs_base_ref(self):
         self._init_git_repo(detekt_n=100, lint_n=20)

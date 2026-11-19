@@ -3,10 +3,11 @@
 tools/check_static_analysis_baselines.py
 
 Single-source XML parser and monotonic ratchet for static analysis baselines
-(REQ-PRO-123.2 / SWE.4 BP1/BP3):
+(REQ-PRO-123.2, REQ-PRO-133.4 / SWE.4 BP1/BP3):
 - Counts <ID> entries in app/detekt-baseline.xml (ceiling 9,516)
-- Counts <issue> entries in app/lint-baseline.xml (ceiling 238)
+- Counts <issue> entries in app/lint-baseline.xml (ceiling 216, zero Recycle entries)
 - Fails (exit 1) if either baseline grows relative to --base-ref or ceiling,
+  or if any <issue id="Recycle"> remains in app/lint-baseline.xml,
   with graceful fallback to ceiling when --base-ref is missing (shallow clone).
 - Exposes collect_baseline_metrics() for tools/sprint_metrics.py and its mirror.
 """
@@ -21,12 +22,13 @@ from pathlib import Path
 DETEKT_BASELINE_PATH = "app/detekt-baseline.xml"
 LINT_BASELINE_PATH = "app/lint-baseline.xml"
 DEFAULT_DETEKT_CEILING = 9516
-DEFAULT_LINT_CEILING = 238
+DEFAULT_LINT_CEILING = 216
 DEFAULT_DETEKT_BURN_DOWN_PER_SPRINT = 250
 DEFAULT_LINT_BURN_DOWN_PER_SPRINT = 20
 
 DETEKT_ID_RE = re.compile(r"<ID>")
 LINT_ISSUE_RE = re.compile(r"<issue\b")
+LINT_RECYCLE_ISSUE_RE = re.compile(r'<issue\b[^>]*\bid=["\']Recycle["\']')
 
 
 def _default_repo_root():
@@ -43,6 +45,11 @@ def count_lint_baseline_entries(xml_text):
     return len(LINT_ISSUE_RE.findall(xml_text or ""))
 
 
+def count_lint_recycle_entries(xml_text):
+    """Counts recorded Android Lint baseline <issue id=\"Recycle\"> entries."""
+    return len(LINT_RECYCLE_ISSUE_RE.findall(xml_text or ""))
+
+
 def read_baseline_counts(repo_root=None):
     """Reads current Detekt and Android Lint baseline counts from disk."""
     root = Path(repo_root) if repo_root else _default_repo_root()
@@ -52,9 +59,11 @@ def read_baseline_counts(repo_root=None):
         raise FileNotFoundError(f"Missing Detekt baseline file: {detekt_file}")
     if not lint_file.is_file():
         raise FileNotFoundError(f"Missing Android Lint baseline file: {lint_file}")
+    lint_text = lint_file.read_text(encoding="utf-8")
     return {
         "detekt_baseline_count": count_detekt_baseline_entries(detekt_file.read_text(encoding="utf-8")),
-        "lint_baseline_count": count_lint_baseline_entries(lint_file.read_text(encoding="utf-8")),
+        "lint_baseline_count": count_lint_baseline_entries(lint_text),
+        "lint_recycle_count": count_lint_recycle_entries(lint_text),
     }
 
 
@@ -118,6 +127,7 @@ def check_baseline_ratchet(
     current = read_baseline_counts(root)
     curr_detekt = current["detekt_baseline_count"]
     curr_lint = current["lint_baseline_count"]
+    curr_recycle = current["lint_recycle_count"]
 
     resolved_ref = resolve_git_base_ref(root, base_ref)
     base_counts = read_base_ref_counts(root, resolved_ref) if resolved_ref else None
@@ -162,10 +172,21 @@ def check_baseline_ratchet(
             f"(limit={lint_limit}, base={base_lint}, ceiling={max_lint})."
         )
 
+    if curr_recycle > 0:
+        passed = False
+        messages.append(
+            f"FAIL: {LINT_BASELINE_PATH} contains {curr_recycle} Recycle <issue> entries (must be 0; REQ-PRO-133.4)."
+        )
+    else:
+        messages.append(
+            f"PASS: {LINT_BASELINE_PATH} contains 0 Recycle <issue> entries (REQ-PRO-133.4)."
+        )
+
     details = {
         "passed": passed,
         "detekt_baseline_count": curr_detekt,
         "lint_baseline_count": curr_lint,
+        "lint_recycle_count": curr_recycle,
         "detekt_base_count": base_detekt,
         "lint_base_count": base_lint,
         "detekt_limit": detekt_limit,

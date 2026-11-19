@@ -1,14 +1,14 @@
 # Living Requirements: Engineering Process, Stability & Architecture (Part 2 of 2)
 
 **Document ID**: `DOC-REQ-PRO-P2`  
-**Version**: 1.0.35  
+**Version**: 1.0.38  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `process_stability_part2`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Requirements**: 74
+**Total Requirements**: 75
 
 ---
 
@@ -2469,6 +2469,38 @@
   • *Given* sustained `200+`-workout bulk imports and repeated `setLastActive()` calls under a `512 MB` heap limit, *When* processed sequentially alongside `LiveClimbsRepository` and `DevicesDatabaseManager`, *Then* Java heap remains bounded without `OutOfMemoryError`, `getLastActiveString()` reuses cached formatters, and `WorkoutRepository.kt <= 4,973` & `DevicesDatabaseManager.java <= 1,671` LoC hold.
 - **Invariants**: `Climbs.db` v1 schema unchanged; single-file `TST-MIG-023` & `TST-MAP-066.1` immediacy preserved; MockK method arities of `persistParsedWorkout`, `bulkRecoverFromDropbox`, `bulkRecoverFromGoogleDrive` preserved; `ArchitectureConformanceContractTest` layering/LoC ceilings preserved; `0` new `src/main/` test reads; `Localization Parity: N/A - no UI strings`.
 
+### REQ-PRO-133: Evasion-Resistant Source-Text Reading Audit, Bytecode Cleanliness & `Recycle` Lint Baseline Remediation (`SWE.4` `BP2`/`BP3`, `SUP.1` `BP3`) (ATT-8199) [Verified]
+- **Tests**: `TST-PRO-133`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `app/src/test/java/com/atrainingtracker/trainingtracker/build/SourceTextReadingAuditContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/ui/RepositoryServiceCleanlinessContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SystemContextContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ReleaseCiAndLintConfigContractTest.kt`, `app/lint-baseline.xml`, `app/build.gradle`, `tools/check_static_analysis_baselines.py`, `tools/test_check_static_analysis_baselines.py`
+- **Rationale**: `SourceTextReadingAuditContractTest.kt:107` gated source-text detection on literal `content.contains("src/main")`, enabling tests (`RepositoryServiceCleanlinessContractTest.kt:42`, `SystemContextContractTest.kt:94`) to evade both the scanner and the `22`-guard cap via `"src" + "/main/"` concatenation. Concurrently, `app/lint-baseline.xml` retains `238` entries including `22` `Recycle` suppressions (`Cursor` leaks) across 6 files while `app/build.gradle:111` suppresses `'Range'` (ASPICE 4.0 Audit Gap #2, `ATT-8199`, refining `REQ-PRO-049`, `REQ-TRK-066`, `REQ-PRO-046.4`, `REQ-PRO-123.2`, and `REQ-BLD-002.2`):
+- **Description**:
+  1. *Evasion-Resistant Source-Text Reading Scanner (`REQ-PRO-133.1`, refining `REQ-PRO-049.1`)*:
+     - `SourceTextReadingAuditContractTest.kt` SHALL strip comments and normalize string concatenation (`+`), Kotlin string templates (`"$dir/main"`), `listOf(...).joinToString(...)` / `arrayOf(...).joinToString(...)`, `Paths.get(...)` / `Path.of(...)` / `File(parent, child)` / `.resolve(...)`, `StringBuilder`, and raw/multiline strings (`"""..."""`), scanning for expanded read APIs (`readText`, `readLines`, `readString`, `readAllLines`, `Files.lines`, `readAllBytes`, `useLines`, `bufferedReader`, `newBufferedReader`, `FileReader`, `Scanner`, `InputStreamReader`, `FileInputStream`).
+     - The detector MUST pair read invocations with resolved target paths/helpers at statement/helper scope so files that read strictly `docs/`, `tools/`, `proguard-rules.pro`, or temp-file fixtures while separately walking/checking `src/main` existence (`JavaCoreMigrationStrategyContractTest.kt:92`, `SystemArchitectureDesignContractTest.kt:241`, and ~35 non-`src/main` I/O tests) incur `0` false positives, while preserving `LEGITIMATE_GOVERNANCE_GUARDS.size == 22` (`REQ-PRO-049.2`) and `app/source-reading-baseline.txt == 105` (`REQ-PRO-049.3`).
+  2. *Bytecode & Merged-Manifest Migration of Active Evasions (`REQ-PRO-133.2`, refining `REQ-TRK-066` & `REQ-PRO-049.1`)*:
+     - `RepositoryServiceCleanlinessContractTest.kt` SHALL eliminate `src/main` `.readText()` source reads and verify `TrackerService`, `BANALService`, and `DeviceManager` repository decoupling and zero `*DatabaseManager`/`*DbHelper`/`Cursor`/`SQLiteDatabase` references via JVM `.class` constant-pool/bytecode & reflection inspection (`ClassLoader.getResourceAsStream("...class")` / `Class.forName`) with `0` `app/src/main/` file reads.
+     - `SystemContextContractTest.kt:94-95` SHALL eliminate `"app/src/" + "main/AndroidManifest.xml"` `.readText()` reading and verify manifest FGS/permission grounding via compiled/merged manifest or `ManifestAndBuildConfigContractTest` delegation (`0` `src/main/` reads).
+  3. *`Recycle` Leak Verification, Baseline Pruning & Conditional `'Range'` Check (`REQ-PRO-133.3`, refining `REQ-PRO-046.4`, `REQ-BLD-002.2`)*:
+     - Stage 4 SHALL execute `:app:lintDebug` to verify `0` active `Recycle` leaks in production code (including `@CursorProvider` factory returns `DevicesDatabaseManager.java:885` and `PebbleDatabaseManager.java:83` and all `Cursor`/`TypedArray`/`VelocityTracker`/`Parcel` sites), fixing any active `Recycle` defect found, and prune all `22` `Recycle` entries from `app/lint-baseline.xml` (`238 -> <= 216`).
+     - Stage 4 SHALL evaluate removing `'Range'` from `app/build.gradle:111`: if `:app:lintDebug` reports `0` active `Range` errors (or only trivial in-scope fixes), `'Range'` SHALL remain enabled with `ReleaseCiAndLintConfigContractTest.kt:135,147` updated; if legacy `Range` issues exist outside 2-SP scope, `'Range'` suppression SHALL be retained with a documented burn-down ratchet comment preserving `ReleaseCiAndLintConfigContractTest.kt:135,147`.
+  4. *Monotonic Baseline Ratchet & Zero-`Recycle` Invariant (`REQ-PRO-133.4`, refining `REQ-PRO-123.2`)*:
+     - `tools/check_static_analysis_baselines.py`, `tools/test_check_static_analysis_baselines.py`, and `ReleaseCiAndLintConfigContractTest.kt:239` SHALL tighten `DEFAULT_LINT_CEILING` / baseline ceiling from `238`/`239` to `<= 216` (exact post-prune count), enforce monotonic non-increasing counts against `--base-ref` in CI, and fail if any `<issue id="Recycle">` entry exists in `app/lint-baseline.xml`.
+  5. *Scope Isolation & Governance Invariants (`REQ-PRO-133.5`)*:
+     - Zero file overlap with Lane B (`ATT-8895`) or Lane C (`ATT-8965`); zero `SYS.2`/`SYS.3` impact (`REQ-PRO-131.4`); `Localization Parity: N/A - no UI strings`; 4 user-owned dirty `tools/` files untouched.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new `REQ-PRO-133` (`REQ-PRO-133.1`–`REQ-PRO-133.5`), refining `REQ-PRO-049` (`SourceTextReadingAuditContractTest.kt`, `app/source-reading-baseline.txt`), `REQ-TRK-066` (`RepositoryServiceCleanlinessContractTest.kt`), `REQ-BLD-002.2` / `REQ-PRO-046.4` (`app/build.gradle`, `app/lint-baseline.xml`), and `REQ-PRO-123.2` (`tools/check_static_analysis_baselines.py`).
+  2. *Historical Origin & Commit Trace*: `c91e62b6` (`ATT-6186`) & `88ce1d51` (`ATT-6731`) introduced `REQ-PRO-049`; `97133154` (`ATT-7525`) updated ceiling to `105`; `670b196d` (`ATT-6427`) added `RepositoryServiceCleanlinessContractTest`; `08a744c1` (`ATT-6173`) & `ATT-8169` (`REQ-PRO-123.2`) baselined `238` Lint issues.
+  3. *Root Reason for Existing Formulation*: Literal `"src/main"` matching avoided scanning `docs/`/`createTempFile` tests; `'Range'` was suppressed for legacy calculation annotations (`REQ-BLD-002.2`); `app/lint-baseline.xml` predated `TryWithResourcesCursorAuditTest` cursor refactors.
+  4. *Preservation of Core Invariants*: Preserves `LEGITIMATE_GOVERNANCE_GUARDS == 22`, `app/source-reading-baseline.txt == 105`, zero false positives on `docs/`/`tools/`/temp-file tests, zero `Cursor` leaks, and monotonic non-increasing `lint-baseline.xml` & `detekt-baseline.xml` ceilings.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* a unit test reading production files via concatenation (`"src" + "/main/"`), string templates (`"$dir/main"`), `listOf(...).joinToString`, `Paths.get`/`Path.of`/`resolve`, multiline strings, or `StringBuilder` with any read API, *When* `SourceTextReadingAuditContractTest` executes, *Then* the evasion is detected and fails while `JavaCoreMigrationStrategyContractTest`, `SystemArchitectureDesignContractTest`, and non-`src/main` I/O tests pass with `0` false positives.
+  • *Given* `RepositoryServiceCleanlinessContractTest` and `SystemContextContractTest`, *When* executed, *Then* both pass via `.class` bytecode / merged-manifest checks with `0` reads of `app/src/main/`.
+  • *Given* `app/lint-baseline.xml`, `tools/check_static_analysis_baselines.py`, and `:app:lintDebug`, *When* executed, *Then* `0` `Recycle` suppressions remain, `lint-baseline.xml` count is `<= 216`, any increase or `Recycle` regression fails CI, and `'Range'` status is verified cleanly.
+- **Invariants**: `LEGITIMATE_GOVERNANCE_GUARDS.size == 22`; `app/source-reading-baseline.txt == 105`; `0` live `Recycle` leaks; `lint-baseline.xml <= 216` (`0` `Recycle`); `0` `SYS.2`/`SYS.3` impact; `Localization Parity: N/A - no UI strings`; 4 dirty `tools/` files untouched.
+
 ---
 
 ## Change History
@@ -2511,3 +2543,6 @@
 | `1.0.33` | 2026-11-19 | AI Agent (`ATT-9018`, `--as agent1`) | `ATT-9018` | Added `[Planned]` `REQ-STB-021` (`REQ-STB-021.1`–`REQ-STB-021.5`: zero-split lazy `Climbs.db` deduplication, `LiveClimbsRepository` list sharing, bulk import `reloadWorkoutData`/`refreshClimbs()` deferral & zero duplicate `WORKOUT_UPDATED_INTENT`, `ThreadLocal` `DateFormat`, and `WorkoutRepository <= 4,973` / `DevicesDatabaseManager <= 1,671` LoC layering). |
 | `1.0.34` | 2026-11-19 | AI Agent (`ATT-9018`, `--as agent1`) | `ATT-9018` | Promoted `REQ-STB-021` (`REQ-STB-021.1`–`REQ-STB-021.5`) to `[Implemented]` in Stage 4 (`ClimbsDatabaseManager.kt`, `ClimbDeduplicator.kt`, `ClimbDetector.kt`, `LiveClimbsRepository.kt`, `WorkoutClimbIngestionCoordinator.kt`, `WorkoutRepository.kt` `4,931` LoC, `BulkImportBatchContext.kt`, `LegacyImportEngine.kt`, `StravaBulkExportImporter.kt`, `BackupRestoreViewModel.kt`, `AutoImportManager.kt`, `LastActiveDateFormatter.kt`, `DevicesDatabaseManager.java` `1,669` LoC). |
 | `1.0.35` | 2026-11-19 | AI Agent (`ATT-9018`, `--as agent1`) | `ATT-9018` | Promoted `REQ-STB-021` (`REQ-STB-021.1`–`REQ-STB-021.5`) to `[Verified]` after Stage 4 (`105` suites / `517/517` tests) & Gate 4 (`14` suites / `110/110` tests, `0` warnings) verification (`ATT-9018_walkthrough.md`). |
+| `1.0.36` | 2026-11-19 | Lane A Flash (`ATT-8199`, `--as agent1`) | `ATT-8199` | Added `[Planned]` `REQ-PRO-133` (`REQ-PRO-133.1`–`REQ-PRO-133.5`: evasion-resistant `SourceTextReadingAuditContractTest`, `RepositoryServiceCleanlinessContractTest` bytecode migration, `SystemContextContractTest` manifest migration, `22` `Recycle` baseline pruning & ratchet). |
+| `1.0.37` | 2026-11-19 | Lane A Flash (`ATT-8199`, `--as agent1`) | `ATT-8199` | Promoted `REQ-PRO-133` to `[Implemented]` in Stage 4 (`SourceTextReadingAuditContractTest.kt`, `RepositoryServiceCleanlinessContractTest.kt`, `SystemContextContractTest.kt`, `app/lint-baseline.xml` `238 -> 216` with `0` `Recycle`, `app/build.gradle` `'Range'` `36`-issue rationale, `tools/check_static_analysis_baselines.py` `DEFAULT_LINT_CEILING=216`, `ReleaseCiAndLintConfigContractTest.kt`). |
+| `1.0.38` | 2026-11-19 | Lane A Flash (`ATT-8199`, `--as agent1`) | `ATT-8199` | Promoted `REQ-PRO-133` (`REQ-PRO-133.1`–`REQ-PRO-133.5`) to `[Verified]` in Stage 5 reusing Gate 4 verified evidence (`Rule 7.5`: `63/63` targeted Gradle contract tests, `6/6` `test_check_static_analysis_baselines.py`, `:app:lintDebug` `0` errors / `0` `Recycle` / `216` baseline, `lint_cursor_safety.py` PASS; `ATT-8199_walkthrough.md`). |

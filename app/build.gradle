@@ -107,7 +107,7 @@ android {
         // 1. DuplicatePlatformClasses: Justified due to legacy third-party library classpath overlaps (Apache HTTP/XML).
         // 2. MissingTranslation: Safely suppressed here because TranslationParityTest.kt (TST-STR-018 under REQ-LOC-001)
         //    strictly enforces complete 9-language translation coverage, format specifiers, and plural consistency in testDebugUnitTest.
-        // 3. Range: Suppressed due to historical parameter annotation warnings in legacy calculation routines; targeted for incremental burn-down.
+        // 3. Range: Suppressed due to 36 historical cursor.getColumnIndex() / parameter range warnings in legacy database/calculation routines (REQ-PRO-133.3); targeted for incremental burn-down.
         disable = ['DuplicatePlatformClasses', 'MissingTranslation', 'Range']
         showAll = true
         textReport = true
