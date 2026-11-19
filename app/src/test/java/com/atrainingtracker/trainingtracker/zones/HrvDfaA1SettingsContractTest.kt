@@ -30,7 +30,8 @@ import java.lang.reflect.Modifier
 
 /**
  * Contract test suite verifying the promotion of HRV DFA a1 thresholds into a dedicated
- * 4th tab in Training Zones (`ZoneSettingsScreen`) conforming to `REQ-TRK-061.4` and `ATT-7317`.
+ * 4th tab in Training Zones (`ZoneSettingsScreen`) conforming to `REQ-TRK-061.4`, `REQ-TRK-087`,
+ * `TST-TRK-087.2`, `ATT-7317`, `ATT-8712`, and `ATT-8848`.
  */
 class HrvDfaA1SettingsContractTest {
 
@@ -288,6 +289,11 @@ class HrvDfaA1SettingsContractTest {
         )
     }
 
+    /**
+     * `TST-TRK-087.2` (`REQ-TRK-087.1`, `REQ-TRK-087.2`, `ATT-8712`, `ATT-8848`):
+     * Verifies `HrvDfaA1SettingsContent` omits `zone_display_gauge` / `displayOptions.showGauge`
+     * and binds `showBar = true` with localized HRV preview labels.
+     */
     @Test
     fun testHrvSettings_gaugeToggleAndPreviewBarContracts() {
         val activityFile = resolveActivityFile()

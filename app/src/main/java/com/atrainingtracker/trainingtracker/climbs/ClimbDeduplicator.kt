@@ -83,6 +83,102 @@ object ClimbDeduplicator {
         return computeDistanceMeters(p.latitude, p.longitude, projLat, projLng)
     }
 
+    enum class MetadataPreFilterResult {
+        NO_MATCH,
+        ENDPOINT_MATCH,
+        NEEDS_CORRIDOR_CHECK
+    }
+
+    /**
+     * Computes a conservative axis-aligned bounding box from climb endpoints and total path length
+     * using the triangle-inequality ellipse bound so curved/switchback climbs are never falsely
+     * rejected before lazy polyline hydration (REQ-STB-021.1).
+     */
+    fun buildConservativeBoundingBox(
+        startLat: Double,
+        startLng: Double,
+        endLat: Double,
+        endLng: Double,
+        distanceMeters: Double
+    ): GeoBoundingBox {
+        val minLa = minOf(startLat, endLat)
+        val maxLa = maxOf(startLat, endLat)
+        val minLn = minOf(startLng, endLng)
+        val maxLn = maxOf(startLng, endLng)
+        val straightDist = computeDistanceMeters(startLat, startLng, endLat, endLng)
+        if (distanceMeters <= straightDist) {
+            return GeoBoundingBox(minLa, maxLa, minLn, maxLn)
+        }
+        val slackMeters = 0.5 * sqrt((distanceMeters * distanceMeters - straightDist * straightDist).coerceAtLeast(0.0))
+        val meanLat = (minLa + maxLa) / 2.0
+        val deltaLat = slackMeters / 111_000.0
+        val cosLat = cos(Math.toRadians(meanLat)).coerceAtLeast(0.01)
+        val deltaLng = slackMeters / (111_000.0 * cosLat)
+        return GeoBoundingBox(
+            minLat = minLa - deltaLat,
+            maxLat = maxLa + deltaLat,
+            minLng = minLn - deltaLng,
+            maxLng = maxLn + deltaLng
+        )
+    }
+
+    /**
+     * Evaluates Steps 0–3 of [isDuplicateOrOverlapping] using lightweight climb metadata only,
+     * allowing callers to resolve endpoint matches or reject non-candidates without loading `pathPoints`
+     * (REQ-CLM-011.1, REQ-STB-021.1).
+     */
+    fun preFilterMetadata(
+        idA: Long,
+        boxA: GeoBoundingBox,
+        startLatA: Double,
+        startLngA: Double,
+        endLatA: Double,
+        endLngA: Double,
+        gainA: Double,
+        idB: Long,
+        boxB: GeoBoundingBox,
+        startLatB: Double,
+        startLngB: Double,
+        endLatB: Double,
+        endLngB: Double,
+        gainB: Double,
+        thresholdMeters: Float = DEFAULT_ENDPOINT_THRESHOLD_METERS
+    ): MetadataPreFilterResult {
+        if (idA != 0L && idA == idB) return MetadataPreFilterResult.ENDPOINT_MATCH
+
+        val effectiveThreshold = maxOf(thresholdMeters, DEFAULT_ENDPOINT_THRESHOLD_METERS)
+
+        // 0. O(1) Fast Geographic Bounding-Box Pre-Filter (REQ-CLM-011.1)
+        if (!boxA.overlaps(boxB, effectiveThreshold.toDouble())) {
+            return MetadataPreFilterResult.NO_MATCH
+        }
+
+        val startDist = computeDistanceMeters(startLatA, startLngA, startLatB, startLngB)
+        val endDist = computeDistanceMeters(endLatA, endLngA, endLatB, endLngB)
+
+        // 1. Direct endpoint proximity match
+        if (startDist <= effectiveThreshold && endDist <= effectiveThreshold) {
+            return MetadataPreFilterResult.ENDPOINT_MATCH
+        }
+
+        // 2. Heading alignment check
+        val headingA = computeHeading(startLatA, startLngA, endLatA, endLngA)
+        val headingB = computeHeading(startLatB, startLngB, endLatB, endLngB)
+        val diff = abs(headingA - headingB)
+        val bearingDiff = minOf(diff, 360.0 - diff)
+        if (bearingDiff > MAX_HEADING_DIFFERENCE_DEGREES) {
+            return MetadataPreFilterResult.NO_MATCH
+        }
+
+        // 3. Elevation gain compatibility check
+        val maxGain = maxOf(gainA, gainB)
+        if (abs(gainA - gainB) > maxGain * 0.50 + 25.0) {
+            return MetadataPreFilterResult.NO_MATCH
+        }
+
+        return MetadataPreFilterResult.NEEDS_CORRIDOR_CHECK
+    }
+
     /**
      * Evaluates whether two climbs represent identical or heavily overlapping ascents along
      * the same road segment (REQ-CLM-011.1).
@@ -98,36 +194,28 @@ object ClimbDeduplicator {
         climbB: Climb,
         thresholdMeters: Float = DEFAULT_ENDPOINT_THRESHOLD_METERS
     ): Boolean {
-        if (climbA.id != 0L && climbA.id == climbB.id) return true
-
-        val effectiveThreshold = maxOf(thresholdMeters, DEFAULT_ENDPOINT_THRESHOLD_METERS)
-
-        // 0. O(1) Fast Geographic Bounding-Box Pre-Filter (REQ-CLM-011.1)
-        if (!climbA.boundingBox.overlaps(climbB.boundingBox, effectiveThreshold.toDouble())) {
-            return false
-        }
-
-        val startDist = computeDistanceMeters(climbA.startLat, climbA.startLng, climbB.startLat, climbB.startLng)
-        val endDist = computeDistanceMeters(climbA.endLat, climbA.endLng, climbB.endLat, climbB.endLng)
-
-        // 1. Direct endpoint proximity match
-        if (startDist <= effectiveThreshold && endDist <= effectiveThreshold) {
-            return true
-        }
-
-        // 2. Heading alignment check
-        val headingA = computeHeading(climbA.startLat, climbA.startLng, climbA.endLat, climbA.endLng)
-        val headingB = computeHeading(climbB.startLat, climbB.startLng, climbB.endLat, climbB.endLng)
-        val diff = abs(headingA - headingB)
-        val bearingDiff = minOf(diff, 360.0 - diff)
-        if (bearingDiff > MAX_HEADING_DIFFERENCE_DEGREES) {
-            return false
-        }
-
-        // 3. Elevation gain compatibility check
-        val maxGain = maxOf(climbA.elevationGainMeters, climbB.elevationGainMeters)
-        if (abs(climbA.elevationGainMeters - climbB.elevationGainMeters) > maxGain * 0.50 + 25.0) {
-            return false
+        when (
+            preFilterMetadata(
+                idA = climbA.id,
+                boxA = climbA.boundingBox,
+                startLatA = climbA.startLat,
+                startLngA = climbA.startLng,
+                endLatA = climbA.endLat,
+                endLngA = climbA.endLng,
+                gainA = climbA.elevationGainMeters,
+                idB = climbB.id,
+                boxB = climbB.boundingBox,
+                startLatB = climbB.startLat,
+                startLngB = climbB.startLng,
+                endLatB = climbB.endLat,
+                endLngB = climbB.endLng,
+                gainB = climbB.elevationGainMeters,
+                thresholdMeters = thresholdMeters
+            )
+        ) {
+            MetadataPreFilterResult.NO_MATCH -> return false
+            MetadataPreFilterResult.ENDPOINT_MATCH -> return true
+            MetadataPreFilterResult.NEEDS_CORRIDOR_CHECK -> Unit
         }
 
         // 4. Spatial corridor overlap check with segment pruning and early-exit (REQ-CLM-011.1)

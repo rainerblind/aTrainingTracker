@@ -210,4 +210,14 @@
     <string name="carriage_mode_run_bicep_arm">Hardlopen (Armband)</string>
     <string name="carriage_mode_run_handheld">Hardlopen (In hand)</string>
 
+    <!-- Extended Periodic Sensor Re-Search & Backoff (ATT-8965, REQ-CON-052.3) -->
+    <string name="prefs_periodic_research_enabled_title">Periodiek opnieuw zoeken</string>
+    <string name="prefs_periodic_research_enabled_summary">Verbroken sensoren automatisch opnieuw proberen met oplopende intervallen</string>
+    <string name="prefs_periodic_research_final_period_title">Definitief zoekinterval</string>
+    <string name="prefs_periodic_research_final_period_summary">Eindinterval na backoff-stappen (16s → 32s → 64s → 2 min)</string>
+    <string name="prefs_research_period_1m">1 min</string>
+    <string name="prefs_research_period_2m">2 min</string>
+    <string name="prefs_research_period_5m">5 min</string>
+    <string name="prefs_research_period_10m">10 min</string>
+
 </resources>

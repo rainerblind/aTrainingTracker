@@ -73,6 +73,8 @@ class SensorSearchTuningContractTest {
         assertFalse(defaults.startSearchWhenTrackingStarts)
         assertTrue(defaults.searchOnlyForSportSpecificDevices)
         assertTrue(defaults.changeSportWhenDeviceGetsLost)
+        assertTrue(defaults.periodicResearchEnabled)
+        assertEquals(300, defaults.periodicResearchFinalPeriodSec)
     }
 
     @Test
@@ -85,6 +87,10 @@ class SensorSearchTuningContractTest {
         every { mockPrefs.getBoolean("startSearchWhenTrackingStarts", false) } returns true
         every { mockPrefs.getBoolean("searchOnlyForSportSpecificDevices", true) } returns false
         every { mockPrefs.getBoolean("changeSportWhenDeviceGetsLost", true) } returns false
+        every { mockPrefs.contains(com.atrainingtracker.trainingtracker.settings.SensorSearchSettings.SP_PERIODIC_RESEARCH_ENABLED) } returns true
+        every { mockPrefs.getBoolean(com.atrainingtracker.trainingtracker.settings.SensorSearchSettings.SP_PERIODIC_RESEARCH_ENABLED, true) } returns false
+        every { mockPrefs.contains(com.atrainingtracker.trainingtracker.settings.SensorSearchSettings.SP_PERIODIC_RESEARCH_FINAL_PERIOD_SEC) } returns true
+        every { mockPrefs.getInt(com.atrainingtracker.trainingtracker.settings.SensorSearchSettings.SP_PERIODIC_RESEARCH_FINAL_PERIOD_SEC, 300) } returns 120
 
         val loaded = SensorSearchPreferences.load(mockContext)
         assertEquals(4, loaded.numberOfSearchTries)
@@ -95,6 +101,8 @@ class SensorSearchTuningContractTest {
         assertTrue(loaded.startSearchWhenTrackingStarts)
         assertFalse(loaded.searchOnlyForSportSpecificDevices)
         assertFalse(loaded.changeSportWhenDeviceGetsLost)
+        assertFalse(loaded.periodicResearchEnabled)
+        assertEquals(120, loaded.periodicResearchFinalPeriodSec)
     }
 
     @Test
@@ -118,7 +126,9 @@ class SensorSearchTuningContractTest {
             startSearchWhenUserChangesSport = false,
             startSearchWhenTrackingStarts = true,
             searchOnlyForSportSpecificDevices = false,
-            changeSportWhenDeviceGetsLost = false
+            changeSportWhenDeviceGetsLost = false,
+            periodicResearchEnabled = false,
+            periodicResearchFinalPeriodSec = 120
         )
 
         SensorSearchPreferences.save(mockContext, prefsToSave)
@@ -131,6 +141,8 @@ class SensorSearchTuningContractTest {
         verify { mockEditor.putBoolean("startSearchWhenTrackingStarts", true) }
         verify { mockEditor.putBoolean("searchOnlyForSportSpecificDevices", false) }
         verify { mockEditor.putBoolean("changeSportWhenDeviceGetsLost", false) }
+        verify { mockEditor.putBoolean(com.atrainingtracker.trainingtracker.settings.SensorSearchSettings.SP_PERIODIC_RESEARCH_ENABLED, false) }
+        verify { mockEditor.putInt(com.atrainingtracker.trainingtracker.settings.SensorSearchSettings.SP_PERIODIC_RESEARCH_FINAL_PERIOD_SEC, 120) }
         verify { mockEditor.apply() }
     }
 
@@ -146,6 +158,8 @@ class SensorSearchTuningContractTest {
         verify { mockEditor.putBoolean("startSearchWhenTrackingStarts", false) }
         verify { mockEditor.putBoolean("searchOnlyForSportSpecificDevices", true) }
         verify { mockEditor.putBoolean("changeSportWhenDeviceGetsLost", true) }
+        verify { mockEditor.putBoolean(com.atrainingtracker.trainingtracker.settings.SensorSearchSettings.SP_PERIODIC_RESEARCH_ENABLED, true) }
+        verify { mockEditor.putInt(com.atrainingtracker.trainingtracker.settings.SensorSearchSettings.SP_PERIODIC_RESEARCH_FINAL_PERIOD_SEC, 300) }
         verify { mockEditor.apply() }
     }
 

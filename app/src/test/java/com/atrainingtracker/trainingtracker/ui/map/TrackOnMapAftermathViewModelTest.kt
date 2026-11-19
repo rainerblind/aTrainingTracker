@@ -363,4 +363,54 @@ class TrackOnMapAftermathViewModelTest {
         advanceUntilIdle()
         assertEquals(expectedTimeline, viewModel.uiState.value.activityCarriageTimeline)
     }
+
+    @Test
+    fun testReloadSameWorkoutAfterDeferredSync_refreshesHrZonesAndTelemetryWithoutDroppingTracks() = runTest {
+        // TST-SET-121.3
+        val initialTracks = mapOf(
+            TrackType.BEST to listOf(
+                PathPoint(0.0, LatLng(48.1, 11.5)),
+                PathPoint(100.0, LatLng(48.101, 11.501))
+            )
+        )
+        val updatedHrZones = com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneDistributionData(
+            totalActiveTimeSec = 300L,
+            entries = listOf(
+                com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneTimeEntry(
+                    zoneIndex = 2,
+                    zoneLabelResId = com.atrainingtracker.R.string.zone_2_label,
+                    durationSec = 300L,
+                    percentage = 100f,
+                    color = androidx.compose.ui.graphics.Color.Green
+                )
+            )
+        )
+
+        coEvery { mockWorkoutRepo.loadWorkoutDetailTelemetry(301L, any()) } returnsMany listOf(
+            WorkoutRepository.WorkoutDetailTelemetry(
+                tracks = initialTracks,
+                hrZoneDistribution = null,
+                powerZoneDistribution = null
+            ),
+            WorkoutRepository.WorkoutDetailTelemetry(
+                tracks = initialTracks,
+                hrZoneDistribution = updatedHrZones,
+                powerZoneDistribution = null
+            )
+        )
+
+        val viewModel = TrackOnMapAftermathViewModel(mockApplication, ioDispatcher = testDispatcher)
+        val workout = createWorkout(301L)
+
+        viewModel.loadAftermathData(workout)
+        advanceUntilIdle()
+        assertNull(viewModel.uiState.value.hrZoneDistribution)
+        assertEquals(1, viewModel.uiState.value.tracks.size)
+
+        viewModel.loadAftermathData(workout.copy(polarSyncPending = false))
+        advanceUntilIdle()
+        assertEquals(301L, viewModel.uiState.value.loadedWorkoutId)
+        assertEquals(updatedHrZones, viewModel.uiState.value.hrZoneDistribution)
+        assertEquals(1, viewModel.uiState.value.tracks.size)
+    }
 }

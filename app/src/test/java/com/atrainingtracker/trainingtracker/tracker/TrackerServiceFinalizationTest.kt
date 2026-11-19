@@ -1448,6 +1448,98 @@ class TrackerServiceFinalizationTest {
             com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository.resetForTesting(null)
         }
     }
+
+    /**
+     * TST-FIL-030.4: Verifies multi-stop errand bike finalization passes cruising moving speed to
+     * `EquipmentAndSportTypeDiscoveryManager.resolveIdentity()` and `getCandidateBSportTypes()`
+     * (including `LiveWorkoutSession` 1-Hz GPS-only fallback) while strictly preserving session
+     * `mDistanceTotal_m / mTimeActive_s` (`1.35 m/s`) for `SensorType.SPEED_mps` `ExtremaType.AVG`
+     * (`SCRUM-108` / `REQ-TRK-030.3`), and honors explicit `WALK` pre-selection in `capture()`.
+     */
+    @Test
+    fun testFinalizeLiveSession_errandBikeUsesMovingSpeedForIdentityAndPreservesSessionSpeedExtrema_tstFil030_4() {
+        val repoMock = mockk<WorkoutRepository>(relaxed = true)
+        setField("mWorkoutRepository", repoMock)
+
+        val discoveryMock = mockk<EquipmentAndSportTypeDiscoveryManager>(relaxed = true)
+        mockkObject(EquipmentAndSportTypeDiscoveryManager.Companion)
+        every { EquipmentAndSportTypeDiscoveryManager.getInstance(any()) } returns discoveryMock
+
+        val identitySpeedSlot = slot<Double>()
+        val candidateSpeedSlot = slot<Double>()
+        val bikeIdentity = EquipmentAndSportTypeDiscoveryManager.InferredIdentity(
+            sportId = 3L,
+            bSportType = BSportType.BIKE,
+            equipmentId = 42L,
+            stravaSportName = "Ride",
+            uploadToStrava = 1,
+            isHighConfidence = false
+        )
+        every {
+            discoveryMock.resolveIdentity(any<Set<Long>>(), eq(BSportType.BIKE), capture(identitySpeedSlot))
+        } returns bikeIdentity
+        every {
+            discoveryMock.getCandidateBSportTypes(eq(BSportType.BIKE), capture(candidateSpeedSlot))
+        } returns setOf(BSportType.BIKE)
+
+        val engineMock = mockk<com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine>(relaxed = true)
+        every { engineMock.findApexFromPoints(any(), any(), any()) } returns LatLng(48.11, 11.51)
+        every {
+            engineMock.suggestCluster(
+                any(), any(), any(), any(), any(),
+                any<Set<BSportType>>(), any(), any(), any(), any(), any()
+            )
+        } returns null
+        com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine.resetForTesting(engineMock)
+        mockkObject(com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine.Companion)
+        every { com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine.getInstance(any()) } returns engineMock
+        every { repoMock.getExtremaPosition(any(), any(), any()) } returns LatLng(48.11, 11.51)
+
+        val banalRepoMock = mockk<com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository>(relaxed = true)
+        com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository.resetForTesting(banalRepoMock)
+
+        try {
+            // LiveWorkoutSession 1-Hz fallback: 10 ticks at 3.88 m/s, 10 ticks at 6.34 m/s, 40 ticks at 0.0 m/s
+            val liveSession = LiveWorkoutSession(777L, TrackerService.IMPORTANT_SENSOR_TYPES)
+            repeat(10) { liveSession.addSample(SensorType.SPEED_mps, 3.88, LatLng(48.10, 11.50)) }
+            repeat(10) { liveSession.addSample(SensorType.SPEED_mps, 6.34, LatLng(48.11, 11.51)) }
+            repeat(40) { liveSession.addSample(SensorType.SPEED_mps, 0.0, LatLng(48.11, 11.51)) }
+
+            // Snapshot with null movingSpeedSummary -> exercises LiveWorkoutSession 1-Hz fallback!
+            val snapshot = TrackerService.BanalFinalizationSnapshot(
+                1, 1800, 2430.0,
+                emptySet(), emptySet(), "TDS----AG--",
+                BSportType.BIKE, null, 3L,
+                1.35, true, 2430.0, 1800
+            )
+            service.finalizeLiveSession(snapshot, 777L, "errand_bike", liveSession)
+
+            // Identity & cluster candidates receive cruising moving speed (> 5.0 m/s), NOT 1.35 m/s!
+            assertTrue(identitySpeedSlot.isCaptured)
+            assertTrue("Expected cruising moving speed > 5.0 m/s, got ${identitySpeedSlot.captured}", identitySpeedSlot.captured > 5.0)
+            assertTrue(candidateSpeedSlot.isCaptured)
+            assertTrue("Expected cluster candidate speed > 5.0 m/s, got ${candidateSpeedSlot.captured}", candidateSpeedSlot.captured > 5.0)
+
+            // SPEED_mps ExtremaType.AVG MUST still persist authoritative session avgSpeed = 1.35 m/s!
+            verify(exactly = 1) {
+                repoMock.updateExtremaValue(777L, SensorType.SPEED_mps, ExtremaType.AVG, 1.35, null, 60)
+            }
+
+            // Also verify BanalFinalizationSnapshot.capture preserves explicit WALK (sportId=4, BSportType.UNKNOWN)
+            val walkBanal = mockk<com.atrainingtracker.banalservice.BANALService.BANALServiceComm>(relaxed = true)
+            every { walkBanal.bSportType } returns BSportType.UNKNOWN
+            every { walkBanal.userSelectedBSportType } returns BSportType.UNKNOWN
+            every { walkBanal.sportTypeId } returns 4L
+            every { walkBanal.movingSpeedSummary } returns com.atrainingtracker.banalservice.odometry.MovingSpeedSummary(4.1, 3.9, 6.3, 100, 120.0)
+            val walkSnap = TrackerService.BanalFinalizationSnapshot.capture(walkBanal, mockk(relaxed = true), 1.35, true, 2430.0, 1800)
+            assertEquals(4L, walkSnap.sportTypeId)
+            assertEquals(BSportType.UNKNOWN, walkSnap.userSelectedSportType)
+            assertEquals(100, walkSnap.movingSpeedSummary?.movingSampleCount)
+        } finally {
+            com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine.resetForTesting(null)
+            com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository.resetForTesting(null)
+        }
+    }
 }
 
 

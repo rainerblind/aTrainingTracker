@@ -186,7 +186,7 @@ object ClimbDetector {
         val dist = points[peakIdx].distance - points[startIdx].distance
         val gain = points[peakIdx].altitude!! - points[startIdx].altitude!!
         val avgGrade = if (dist > 0) (gain / dist) * 100.0 else 0.0
-        val climbPoints = points.subList(startIdx, peakIdx + 1)
+        val climbPoints = points.subList(startIdx, peakIdx + 1).toList()
         val maxGrade = calculateMaxGrade(climbPoints)
         val summitAlt = points[peakIdx].altitude
         val category = ClimbCategory.fromFietsIndex(dist, gain, summitAlt)

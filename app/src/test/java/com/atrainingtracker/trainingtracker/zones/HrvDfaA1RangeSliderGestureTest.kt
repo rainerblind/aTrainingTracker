@@ -85,10 +85,12 @@ import java.io.File
 import java.io.FileOutputStream
 
 /**
- * Behavioral Compose UI gesture test suite verifying [HrvDfaA1RangeSlider] isolation from
- * [HorizontalPager] tab swipes, bidirectional T1/T2 dragging, local drag buffering,
- * outside-slider tab switching, vertical scroll preservation, and Rule 8.5 PNG capture
- * (`REQ-TRK-086.1`..`REQ-TRK-086.3`, `TST-TRK-086.1`..`TST-TRK-086.3`, `REQ-PRO-049.1`, `ATT-8105`).
+ * Behavioral Compose UI gesture and display-options test suite verifying [HrvDfaA1RangeSlider]
+ * isolation from [HorizontalPager] tab swipes, bidirectional T1/T2 dragging, local drag buffering,
+ * outside-slider tab switching, vertical scroll preservation, HRV tab gauge toggle removal with
+ * unconditional preview bar rendering, and Rule 8.5 PNG capture
+ * (`REQ-TRK-086.1`..`REQ-TRK-086.3`, `TST-TRK-086.1`..`TST-TRK-086.3`,
+ * `REQ-TRK-087.1`, `REQ-TRK-087.2`, `TST-TRK-087.1`, `REQ-PRO-049.1`, `ATT-8105`, `ATT-8712`, `ATT-8848`).
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -503,6 +505,11 @@ class HrvDfaA1RangeSliderGestureTest {
         assertTrue("Screenshot PNG must exist and be non-empty", outFile.exists() && outFile.length() > 0L)
     }
 
+    /**
+     * `TST-TRK-087.1` (`REQ-TRK-087.1`, `REQ-TRK-087.2`, `REQ-PRO-049.1`, `ATT-8712`, `ATT-8848`):
+     * Verifies [HrvDfaA1SettingsContent] omits `zone_display_gauge`, displays the 4 standard
+     * toggles, and renders the live preview gauge bar (`showBar = true`) even when `showGauge == false`.
+     */
     @Test
     fun testHrvDfaA1SettingsContent_omitsGaugeToggleAndRendersPreviewBar() {
         val settingsDataStore = SettingsDataStore.getInstance(context)
@@ -553,6 +560,10 @@ class HrvDfaA1RangeSliderGestureTest {
             .assertIsDisplayed()
     }
 
+    /**
+     * `TST-TRK-087.1` (`REQ-TRK-087.2`, `Rule 8.5`, `ATT-8712`, `ATT-8848`):
+     * Captures Light and Dark Compose PNG screenshots of [HrvDfaA1SettingsContent] with `showGauge = false`.
+     */
     @Test
     fun testCaptureLightAndDarkHrvZoneDisplayScreenshot_rule85() {
         val settingsDataStore = SettingsDataStore.getInstance(context)

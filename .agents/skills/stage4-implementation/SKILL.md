@@ -34,12 +34,12 @@ Reuse the ticket's two persistent `TypeName: "self"` subagents via `send_message
    - **Universal `read_file` Image Inspection & Mandatory `pro` 4-Point Visual Self-Inspection (`Rules 71 & 84`, `ATT-5431`, `ATT-7525`)**: Visually inspect every created, modified, or referenced image asset (`.png`, `.jpg`, `.svg` across `docs/guide/img/*`, `docs/store_presence/*`, drawables) via `read_file`. For every Graphical/UI/Compose/Slider/Icon ticket, `subagent_pro` MUST render/capture a PNG preview or screenshot during Stage 4, inspect it with `read_file`, and verify: (1) *Orientation & Geometry*, (2) *Color Mapping & M3 Track/Stop-Dot Artifacts*, (3) *Typography & Multi-Line Wrapping / Ellipsizing*, and (4) *Touch Ergonomics & Finger Occlusion*.
    - **Documentation Code-Grounding (`ATT-5431`)**: Every statement in guides or docs must be verified against actual code (`AndroidManifest.xml`, Compose screens, Strings, Repositories).
 4. **Targeted Unit Testing (`Rule 7.5` / `Rule 85` — `ATT-8030`)**:
-   - Execute **only** `./gradlew :app:testDebugUnitTest --tests <NewOrModifiedTestClasses>` covering modified/newly added logic (`~14s` warm daemon). Wrap with `python3 tools/parallel_sprint_lock.py` (or rely on `./gradlew` POSIX `flock`) during parallel lanes:
+   - Execute **only** `./gradlew :app:testDebugUnitTest --rerun --tests <NewOrModifiedTestClasses>` covering modified/newly added logic (`~15–45s` warm daemon). **NEVER pass `--rerun-tasks`** (which wipes Gradle's incremental compile cache across the entire project). Wrap with `python3 tools/parallel_sprint_lock.py --timeout 1800` during parallel lanes:
      ```bash
-     python3 tools/parallel_sprint_lock.py ./gradlew :app:testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.knownlocations.*"
+     python3 tools/parallel_sprint_lock.py --timeout 1800 ./gradlew :app:testDebugUnitTest --rerun --tests "com.atrainingtracker.trainingtracker.ui.knownlocations.*"
      ```
    - Run `TranslationParityTest` **only** if `app/src/main/res/values*/strings*.xml` was modified; run `:app:compileDebugAndroidTestKotlin` **only** if `app/src/androidTest/` was modified.
-   - Defer `:app:lintDebug`, `:app:detekt`, and full-suite / contract scans (`ThemeColorCentralizationAuditTest`, `AspiceSweAuditContractTest`, full `testDebugUnitTest`) strictly to the Tier-2 Sprint-End Integration Gate (unless High-Risk core infrastructure explicitly touches `TrainingApplication`, `TrackerService`, `BANALService`, or SQLite migrations).
+   - Defer `:app:lintDebug`, `:app:detekt`, and full-repo contract/audit scans (`ThemeColorCentralizationAuditTest`, `AspiceSweAuditContractTest`, `MeasuredNfrBenchmarkTest`, `System*ContractTest`, full `testDebugUnitTest`) strictly to the Lean Tier-2 `Schichtwechsel` Integration Gate (unless High-Risk core infrastructure explicitly touches `TrainingApplication`, `TrackerService`, `BANALService`, or SQLite migrations).
 5. **Single-Turn Stage Submission (`submit-stage`)**:
    - Submit Stage 4 summary and targeted test results in a single composite CLI call (creates/updates `[Implementation]` sub-task and moves it to `In Überprüfung`). **Never** create markdown files or folders inside `docs/engineering/` (such as `summaries/` or `implementation/`) for Stage 4 (Rule 67 — `ATT-4936`):
      ```bash
@@ -61,11 +61,13 @@ Message the ticket's reviewing persistent subagent (`send_message` to `subagent_
    - **Compose state hygiene**: no `MutableState` writes inside `remember {}` calculations or during composition (`docs/coding_standards.md` Sec 1.10).
    - **Production Caller & Reachability `grep` Audit (`Rule 81` — `ATT-6289`)**: For every newly created `@Composable` screen/section/dialog, `SensorType` enum, or background importer/backfill class, run `grep -rn "<Symbol>" app/src/main/` and verify live production reachability (never only `@Preview` or unit tests; new `SensorType`s MUST be registered in `ActivityType.getSensorTypeArray()`). Reject (`REVISION`) any Repository exposing public/internal `get*DatabaseManager()`, `get*DbHelper()`, or `Cursor` getters (`docs/coding_standards.md` Sec 1.12 & Sec 2.5).
    - **Architecture & System Spec Code-Grounding (`Rule 81` — `ATT-6179`, `ATT-6289`)**: For documentation/architecture/system tickets (`docs/architecture*.md`, `docs/system/*.md`), programmatically verify that every backticked `.kt`/`.java`/`.xml` filename, class/DTO symbol, method signature, and manifest attribute exists in `app/src/main/` and that `SYS.2 <-> SYS.3` requirement IDs satisfy exact bidirectional set equality (`declared == allocated`).
-4. **Quality, Compliance & Universal Image Certification (`ATT-5431`)**:
+4. **Independent Incremental Test Execution (`Rule 7.5`)**:
+   - Independently execute the ticket's relevant unit/Compose tests using **incremental** `./gradlew :app:testDebugUnitTest --rerun --tests <NewOrModifiedTestClasses>` (under `python3 tools/parallel_sprint_lock.py --timeout 1800`, reusing the warm build cache — **NEVER `--rerun-tasks`**). Defer repo-wide contract/audit suites (`AspiceSweAuditContractTest`, `MeasuredNfrBenchmarkTest`, `System*ContractTest`, `TranslationParityTest` unless `strings*.xml` changed) to the Lean Tier-2 `Schichtwechsel` Gate.
+5. **Quality, Compliance & Universal Image Certification (`ATT-5431`)**:
    - Verify class/method headers comply with self-documenting standards (KDoc/JavaDoc).
    - Verify 9-language localization parity across all user-facing strings (`EN, DE, ES, FR, IT, JA, NL, PL, PT`).
    - **Universal `read_file` Image Certification**: For all created, modified, or markdown-referenced image assets (`.png`, `.jpg`, `.svg`), `agent2` MUST inspect them with `read_file` and explicitly certify in the audit report that the visual image content matches accompanying documentation and real UI 1:1.
-5. **Gate Verdict (`gate-verdict`)**:
+6. **Gate Verdict (`gate-verdict`)**:
    - Record the verdict in a single composite CLI call (which closes the sub-task to `Erledigt`, advances the parent ticket to `Test`, and automatically injects `stage5-verification/SKILL.md` into stdout):
      ```bash
      python3 tools/jira_util.py --as agent2 gate-verdict <IMPL_SUBTASK_KEY> PASS "<Audit Report>"

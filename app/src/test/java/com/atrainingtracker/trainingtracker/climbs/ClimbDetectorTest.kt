@@ -270,4 +270,33 @@ class ClimbDetectorTest {
         val snapClimbs = ClimbDetector.detectClimbs(snapPoints)
         assertTrue("Post-summit calibration snap drop > 35m within 50m must be rejected", snapClimbs.isEmpty())
     }
+
+    @Test
+    fun detectClimbs_detachesPathPointsFromInputList() {
+        // TST-STB-021.1: Climb.pathPoints must be copied out of the input point buffer via .toList()
+        // so mutating the source list or garbage-collecting the full activity track does not fail or pin memory.
+        val sourcePoints = (0..15).map { i ->
+            PathPoint(
+                distance = i * 100.0,
+                latLng = LatLng(48.0 + i * 0.0009, 11.0),
+                altitude = 100.0 + i * 7.0
+            )
+        }.toMutableList()
+
+        val climbs = ClimbDetector.detectClimbs(sourcePoints)
+        assertEquals(1, climbs.size)
+        val captured = climbs[0].pathPoints
+        assertEquals(16, captured.size)
+        assertFalse(
+            "Detected climb pathPoints must not retain a SubList view referencing the source track buffer",
+            captured.javaClass.name.contains("SubList")
+        )
+
+        val expectedEnd = captured.last()
+        sourcePoints.clear()
+        sourcePoints.add(PathPoint(distance = 0.0, latLng = LatLng(0.0, 0.0), altitude = 0.0))
+
+        assertEquals(16, captured.size)
+        assertEquals(expectedEnd, captured.last())
+    }
 }

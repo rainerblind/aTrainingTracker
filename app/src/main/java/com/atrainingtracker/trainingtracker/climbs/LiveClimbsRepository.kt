@@ -33,6 +33,8 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * Repository orchestrating real-time detection, tracking, and telemetry for climbs (REQ-MAP-027).
@@ -61,6 +63,7 @@ class LiveClimbsRepository private constructor(
     private val _allStoredClimbs = MutableStateFlow<List<Climb>>(emptyList())
     val allStoredClimbs: StateFlow<List<Climb>> = _allStoredClimbs.asStateFlow()
 
+    private val refreshMutex = Mutex()
     private var activeClimbStartTimeMs: Long = 0L
 
     init {
@@ -99,14 +102,26 @@ class LiveClimbsRepository private constructor(
     }
 
     /**
-     * Dynamically re-categorizes stored and live climbs according to [formula] (REQ-CLM-010.2).
+     * Dynamically re-categorizes stored and live climbs according to [formula] (REQ-CLM-010.2, REQ-STB-021.2).
      */
     fun applyFormula(formula: ClimbScoringFormula) {
-        _allStoredClimbs.value = _allStoredClimbs.value.map { it.copy(category = it.resolveCategory(formula)) }
-        _allClimbs.value = _allClimbs.value.map { it.copy(category = it.resolveCategory(formula)) }
+        val oldStored = _allStoredClimbs.value
+        val newStored = oldStored.withResolvedCategory(formula)
+        _allStoredClimbs.value = newStored
+
+        val oldAll = _allClimbs.value
+        _allClimbs.value = if (oldAll === oldStored) {
+            newStored
+        } else {
+            oldAll.withResolvedCategory(formula)
+        }
+
         val active = _activeLiveClimb.value
         if (active != null) {
-            _activeLiveClimb.value = active.copy(climb = active.climb.copy(category = active.climb.resolveCategory(formula)))
+            val resolved = active.climb.resolveCategory(formula)
+            if (resolved != active.climb.category) {
+                _activeLiveClimb.value = active.copy(climb = active.climb.copy(category = resolved))
+            }
         }
     }
 
@@ -117,22 +132,22 @@ class LiveClimbsRepository private constructor(
         refreshClimbs(routesRepository.activeNavigatedRouteId.value)
     }
 
-    suspend fun refreshClimbs(activeRouteId: Long?) {
+    suspend fun refreshClimbs(activeRouteId: Long?) = refreshMutex.withLock {
         val formula = try {
             tuningDataStore?.getTuningConfig()?.climbScoringFormula ?: ClimbScoringFormula.FIETS
         } catch (e: Throwable) {
             ClimbScoringFormula.FIETS
         }
 
-        val stored = climbsDb.getAllClimbs().map { it.copy(category = it.resolveCategory(formula)) }
-        _allStoredClimbs.value = ClimbDeduplicator.deduplicateForDisplay(stored)
+        val stored = climbsDb.getAllClimbs().withResolvedCategory(formula)
+        val deduplicatedStored = ClimbDeduplicator.deduplicateForDisplay(stored)
+        _allStoredClimbs.value = deduplicatedStored
 
-        val rawList = if (activeRouteId != null) {
-            climbsDb.getClimbsForRoute(activeRouteId)
+        val list = if (activeRouteId != null) {
+            climbsDb.getClimbsForRoute(activeRouteId).withResolvedCategory(formula)
         } else {
-            stored
+            deduplicatedStored
         }
-        val list = rawList.map { it.copy(category = it.resolveCategory(formula)) }
         _allClimbs.value = list
 
         val active = _activeLiveClimb.value
@@ -140,8 +155,26 @@ class LiveClimbsRepository private constructor(
             if (list.none { it.id == active.climb.id }) {
                 _activeLiveClimb.value = null
             } else {
-                _activeLiveClimb.value = active.copy(climb = active.climb.copy(category = active.climb.resolveCategory(formula)))
+                val resolved = active.climb.resolveCategory(formula)
+                if (resolved != active.climb.category) {
+                    _activeLiveClimb.value = active.copy(climb = active.climb.copy(category = resolved))
+                }
             }
+        }
+    }
+
+    private fun List<Climb>.withResolvedCategory(formula: ClimbScoringFormula): List<Climb> {
+        var needsUpdate = false
+        for (climb in this) {
+            if (climb.resolveCategory(formula) != climb.category) {
+                needsUpdate = true
+                break
+            }
+        }
+        if (!needsUpdate) return this
+        return map { climb ->
+            val resolved = climb.resolveCategory(formula)
+            if (resolved == climb.category) climb else climb.copy(category = resolved)
         }
     }
 

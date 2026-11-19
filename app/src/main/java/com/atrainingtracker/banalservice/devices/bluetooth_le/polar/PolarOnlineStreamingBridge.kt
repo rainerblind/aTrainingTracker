@@ -40,12 +40,15 @@ import com.atrainingtracker.banalservice.devices.RrBeatEvent
 import com.atrainingtracker.banalservice.devices.RrBeatListener
 import com.atrainingtracker.banalservice.devices.RrBeatNormalization
 import com.atrainingtracker.banalservice.devices.RrBeatSource
+import com.atrainingtracker.banalservice.devices.SensorReconnectBackoffPolicy
 import com.atrainingtracker.banalservice.devices.bluetooth_le.BluetoothConstants
 import com.atrainingtracker.banalservice.sensor.MyIntegerAccumulatorSensor
 import com.atrainingtracker.banalservice.sensor.MySensor
 import com.atrainingtracker.banalservice.sensor.MySensorManager
 import com.atrainingtracker.banalservice.sensor.SensorType
+import com.atrainingtracker.trainingtracker.TrackingMode
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.settings.SensorSearchSettings
 import com.atrainingtracker.util.LifecycleUtils
 import com.polar.androidcommunications.api.ble.model.DisInfo
 import com.polar.androidcommunications.api.ble.model.gatt.client.pmd.PmdMeasurementType
@@ -145,10 +148,19 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
     private val scope = CoroutineScope(dispatcher + SupervisorJob())
 
     private val isShutDown = AtomicBoolean(false)
+    private val bleEnabled = AtomicBoolean(true)
     private val isConnectedFlag = AtomicBoolean(false)
+    private val hasConnectedInSession = AtomicBoolean(false)
     private val sessionOpenPendingFeatures = AtomicBoolean(false)
     private val isAccStreamingActive = AtomicBoolean(false)
     private val isGyroStreamingActive = AtomicBoolean(false)
+    private val reconnectLock = Any()
+
+    @Volatile
+    private var currentReconnectDelayMs: Long = SensorReconnectBackoffPolicy.INITIAL_DELAY_MS
+
+    @Volatile
+    private var reconnectJob: Job? = null
 
     @Volatile
     private var polarApi: PolarBleApi? = null
@@ -258,6 +270,57 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
         searchTimeoutJob = null
     }
 
+    private fun cancelReconnectJob() {
+        synchronized(reconnectLock) {
+            reconnectJob?.cancel()
+            reconnectJob = null
+        }
+    }
+
+    private fun isMidSessionOrWorkoutActive(): Boolean {
+        val mode = TrainingApplication.getTrackingMode()
+        return hasConnectedInSession.get() ||
+            mode == TrackingMode.TRACKING ||
+            mode == TrackingMode.PAUSED
+    }
+
+    override fun shouldKeepAliveOnSearchTimeout(): Boolean =
+        !isShutDown.get() && isMidSessionOrWorkoutActive()
+
+    @SuppressLint("NewApi")
+    private fun scheduleBackoffReconnect() {
+        if (isShutDown.get() || !bleEnabled.get() || sdkIntProvider() < Build.VERSION_CODES.TIRAMISU) return
+        if (!isMidSessionOrWorkoutActive() && !SensorSearchSettings.isPeriodicResearchEnabled(mContext)) return
+        synchronized(reconnectLock) {
+            if (isShutDown.get() || !bleEnabled.get() || isReceivingData()) return
+            // Keep an already-armed reconnect timer intact (prevents double-advance on timeout disconnect echo).
+            if (reconnectJob?.isActive == true) return
+            val delayMs = SensorReconnectBackoffPolicy.effectiveDelayMs(currentReconnectDelayMs, mContext)
+            currentReconnectDelayMs = SensorReconnectBackoffPolicy.nextDelayMs(delayMs, mContext)
+            reconnectJob = scope.launch {
+                try {
+                    delay(delayMs)
+                    synchronized(reconnectLock) {
+                        if (coroutineContext[Job] === reconnectJob) {
+                            reconnectJob = null
+                        }
+                    }
+                    if (isShutDown.get() || !bleEnabled.get() || isReceivingData()) return@launch
+                    Log.i(TAG, "Polar background reconnect firing for $polarId after ${delayMs}ms backoff")
+                    PolarOfflineGattCoordinator.registerDeviceAliases(polarId, macAddress)
+                    armSearchTimeoutWatchdog()
+                    connectPersistentSession()
+                } finally {
+                    synchronized(reconnectLock) {
+                        if (coroutineContext[Job] === reconnectJob) {
+                            reconnectJob = null
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     private fun onSearchTimeout() {
         if (isShutDown.get()) return
         if (!isReceivingData()) {
@@ -268,7 +331,12 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
             } catch (t: Throwable) {
                 Log.w(TAG, "Error disconnecting Polar API on search timeout for $sessionId: ${t.message}")
             }
-            notifyStopSearching(false)
+            if (isSearching) {
+                notifyStopSearching(false)
+            }
+            if (isMidSessionOrWorkoutActive()) {
+                scheduleBackoffReconnect()
+            }
         }
     }
 
@@ -294,6 +362,9 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
     private fun markBridgeConnected(notifySearchSuccess: Boolean) {
         sessionOpenPendingFeatures.set(false)
         cancelSearchTimeoutWatchdog()
+        cancelReconnectJob()
+        hasConnectedInSession.set(true)
+        currentReconnectDelayMs = SensorReconnectBackoffPolicy.INITIAL_DELAY_MS
         val wasConnected = isConnectedFlag.getAndSet(true)
         setLastActive()
         if (!wasConnected) {
@@ -312,8 +383,11 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
 
     private val sdkCallback = object : PolarBleApiCallback() {
         override fun blePowerStateChanged(powered: Boolean) {
+            bleEnabled.set(powered)
             if (!powered) {
                 sessionOpenPendingFeatures.set(false)
+                cancelReconnectJob()
+                cancelSearchTimeoutWatchdog()
                 isConnectedFlag.set(false)
                 activeBridges.remove(this@PolarOnlineStreamingBridge)
                 isAccStreamingActive.set(false)
@@ -326,9 +400,10 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
                     removeRrBeatListener(recorder)
                 }
                 if (isSearching) {
-                    cancelSearchTimeoutWatchdog()
                     notifyStopSearching(false)
                 }
+            } else if (!isShutDown.get() && !isReceivingData() && isMidSessionOrWorkoutActive()) {
+                scheduleBackoffReconnect()
             }
         }
 
@@ -365,6 +440,9 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
             PolarRawTelemetryRecorder.getActiveRecorder()?.let { recorder ->
                 removeImuFrameListener(recorder)
                 removeRrBeatListener(recorder)
+            }
+            if (!isShutDown.get() && isMidSessionOrWorkoutActive()) {
+                scheduleBackoffReconnect()
             }
         }
 
@@ -494,6 +572,7 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
             notifyStopSearching(true)
             return
         }
+        cancelReconnectJob()
         notifyStartSearching()
         PolarOfflineGattCoordinator.registerDeviceAliases(polarId, macAddress)
         armSearchTimeoutWatchdog()
@@ -524,7 +603,12 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
             sessionOpenPendingFeatures.set(false)
             Log.w(TAG, "Failed to start persistent Polar PMD session for $polarId: ${t.message}", t)
             cancelSearchTimeoutWatchdog()
-            notifyStopSearching(false)
+            if (isSearching) {
+                notifyStopSearching(false)
+            }
+            if (!isShutDown.get() && bleEnabled.get() && isMidSessionOrWorkoutActive()) {
+                scheduleBackoffReconnect()
+            }
         }
     }
 
@@ -996,6 +1080,12 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
     fun getSearchTimeoutJobForTesting(): Job? = searchTimeoutJob
 
     @VisibleForTesting
+    fun getReconnectJobForTesting(): Job? = reconnectJob
+
+    @VisibleForTesting
+    fun getCurrentReconnectDelayMsForTesting(): Long = currentReconnectDelayMs
+
+    @VisibleForTesting
     fun getPolarBleSessionIdForTesting(): String? = activeSdkStreamId
 
     @VisibleForTesting
@@ -1033,7 +1123,9 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
             return
         }
         sessionOpenPendingFeatures.set(false)
+        hasConnectedInSession.set(false)
         cancelSearchTimeoutWatchdog()
+        cancelReconnectJob()
         isConnectedFlag.set(false)
         isAccStreamingActive.set(false)
         isGyroStreamingActive.set(false)

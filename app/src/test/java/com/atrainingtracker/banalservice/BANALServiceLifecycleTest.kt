@@ -11,6 +11,7 @@
 package com.atrainingtracker.banalservice
 
 import android.content.Context
+import android.content.Intent
 import androidx.test.core.app.ApplicationProvider
 import com.atrainingtracker.banalservice.devices.DeviceManager
 import com.atrainingtracker.banalservice.devices.DeviceType
@@ -27,6 +28,7 @@ import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.unmockkAll
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -80,15 +82,24 @@ class BANALServiceLifecycleTest {
     fun serviceLifecycle_onDestroy_nullifiesStaticManagers() {
         val controller = Robolectric.buildService(BANALService::class.java)
         val service = controller.create().get()
+        val comm = service.onBind(Intent()) as BANALService.BANALServiceComm
 
         assertNotNull(BANALService.getDeviceManager())
+        assertFalse(
+            "getServiceContext() must remain Application context rather than Service instance",
+            BANALService.getServiceContext() is BANALService
+        )
+        comm.setUserSelectedSportType(BSportType.RUN)
+        assertEquals(BSportType.RUN, BANALService.getActiveBSportType())
 
         // Destroy service
         controller.destroy()
 
-        // Static manager references must be cleanly nullified to prevent stale leak
+        // Static manager and service instance references must be cleanly nullified to prevent stale leak
         assertNull(BANALService.getDeviceManager())
+        assertNull(BANALService.getServiceContext())
         assertNull(BANALService.getSensorData(SensorType.SPEED_mps))
+        assertEquals(BSportType.UNKNOWN, BANALService.getActiveBSportType())
     }
 
     @Test

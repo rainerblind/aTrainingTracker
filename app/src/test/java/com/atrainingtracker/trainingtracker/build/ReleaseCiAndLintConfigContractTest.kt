@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.build
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -227,17 +228,23 @@ class ReleaseCiAndLintConfigContractTest {
     }
 
     /**
-     * Asserts that app/lint-baseline.xml is pruned and strictly bounded
-     * to <= 239 issues (REQ-PRO-046.4, TST-PRO-046.3, ATT-6728).
+     * Asserts that app/lint-baseline.xml is pruned, contains zero Recycle suppressions,
+     * and is strictly bounded to <= 216 issues (REQ-PRO-046.4, REQ-PRO-133.4, TST-PRO-133.4).
      */
     @Test
     fun testLintBaseline_issueCountWithinBound() {
         val content = findLintBaselineFile().readText()
         val issueCount = Regex("<issue\\b").findAll(content).count()
+        val recycleCount = Regex("""<issue\b[^>]*\bid=["']Recycle["']""").findAll(content).count()
 
         assertTrue(
-            "app/lint-baseline.xml must be bounded by <= 239 (REQ-PRO-046.4, TST-PRO-046.3). Current: $issueCount",
-            issueCount in 0..239
+            "app/lint-baseline.xml must be bounded by <= 216 (REQ-PRO-046.4, REQ-PRO-133.4). Current: $issueCount",
+            issueCount in 0..216
+        )
+        assertEquals(
+            "app/lint-baseline.xml must contain zero Recycle suppressions (REQ-PRO-133.3, TST-PRO-133.4)",
+            0,
+            recycleCount
         )
     }
 

@@ -21,8 +21,12 @@ package com.atrainingtracker.trainingtracker.database
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import androidx.test.core.app.ApplicationProvider
+import com.atrainingtracker.banalservice.sensor.SensorType
+import io.mockk.mockk
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -31,9 +35,9 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * Unit tests verifying retroactive altitude drift correction and sourced-column
- * synchronization across canonical ALTITUDE and source-attributed ALTITUDE (*) columns
- * (REQ-TRK-057.3, TST-TRK-057.4).
+ * Unit tests verifying retroactive altitude drift correction, sourced-column synchronization,
+ * and `calcExtremaValue` null-safety across `WorkoutSamplesDatabaseManager`
+ * (REQ-TRK-057.3, TST-TRK-057.4; REQ-FIL-004, TST-FIL-003; REQ-FIL-006, REQ-FIL-011, TST-FIL-002).
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
@@ -312,5 +316,54 @@ class WorkoutSamplesDatabaseManagerTest {
         // Must safely return without throwing SQLiteException when table does not exist (ATT-8001 Stage 6 Finding 3)
         dbManager.patchSwimKinematics("non_existent_swim_table", 1_700_000_000_000L, 60_000L, listOf(1_700_000_030_000L), 25.0)
         dbManager.patchSwimKinematicsUniform("non_existent_swim_table", 1_700_000_000_000L, 60_000L, 4, 25.0)
+    }
+
+    /**
+     * TST-FIL-002.1 (REQ-FIL-006, REQ-FIL-011): `calcExtremaValue` must return `null` (never `0.0`)
+     * across all 5 ExtremaType modes when a sensor column has strictly NULL values or is missing.
+     */
+    @Test
+    fun testCalcExtremaValue_allNullAndMissingColumn_returnsNullAcrossAllExtremaTypes() {
+        val baseFileName = "extrema_null_check_2026_11_19"
+        val quotedTable = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
+        assertEquals("\"$baseFileName\"", quotedTable)
+        assertTrue(quotedTable.length <= 66)
+
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS $quotedTable (" +
+                "_id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                "time DATETIME DEFAULT CURRENT_TIMESTAMP, " +
+                "HR REAL, " +
+                "ALTITUDE REAL)"
+        )
+        // Insert rows with strictly NULL HR and valid ALTITUDE
+        db.execSQL("INSERT INTO $quotedTable (time, HR, ALTITUDE) VALUES ('2026-11-19 10:00:00', NULL, 100.0)")
+        db.execSQL("INSERT INTO $quotedTable (time, HR, ALTITUDE) VALUES ('2026-11-19 10:00:10', NULL, 150.0)")
+        db.execSQL("INSERT INTO $quotedTable (time, HR, ALTITUDE) VALUES ('2026-11-19 10:00:20', NULL, 200.0)")
+
+        val mockSummariesDb = mockk<WorkoutSummariesDatabaseManager>(relaxed = true)
+
+        // 1. All-NULL sensor column must return null (not 0.0) for all 5 ExtremaType modes
+        for (type in ExtremaType.values()) {
+            assertNull(
+                "All-NULL column must return null for $type (TST-FIL-002)",
+                dbManager.calcExtremaValue(mockSummariesDb, baseFileName, type, SensorType.HR)
+            )
+        }
+
+        // 2. Missing sensor column must return null for all 5 ExtremaType modes
+        for (type in ExtremaType.values()) {
+            assertNull(
+                "Missing column must return null for $type (TST-FIL-002)",
+                dbManager.calcExtremaValue(mockSummariesDb, baseFileName, type, SensorType.CADENCE)
+            )
+        }
+
+        // 3. Populated ALTITUDE rows must compute exact extrema across all 5 ExtremaType modes
+        assertEquals(200.0, dbManager.calcExtremaValue(mockSummariesDb, baseFileName, ExtremaType.MAX, SensorType.ALTITUDE)!!, 0.001)
+        assertEquals(150.0, dbManager.calcExtremaValue(mockSummariesDb, baseFileName, ExtremaType.AVG, SensorType.ALTITUDE)!!, 0.001)
+        assertEquals(100.0, dbManager.calcExtremaValue(mockSummariesDb, baseFileName, ExtremaType.MIN, SensorType.ALTITUDE)!!, 0.001)
+        assertEquals(100.0, dbManager.calcExtremaValue(mockSummariesDb, baseFileName, ExtremaType.START, SensorType.ALTITUDE)!!, 0.001)
+        assertEquals(200.0, dbManager.calcExtremaValue(mockSummariesDb, baseFileName, ExtremaType.END, SensorType.ALTITUDE)!!, 0.001)
     }
 }

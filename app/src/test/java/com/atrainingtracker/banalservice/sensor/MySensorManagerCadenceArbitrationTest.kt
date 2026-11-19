@@ -167,10 +167,81 @@ class MySensorManagerCadenceArbitrationTest {
 
         assertEquals(
             DeviceType.HRM,
+            MySensorManager.CADENCE_PRIORITY[MySensorManager.CADENCE_PRIORITY.lastIndex - 1]
+        )
+        assertEquals(
+            DeviceType.SPEED_AND_LOCATION_ATT_FUSED,
             MySensorManager.CADENCE_PRIORITY.last()
         )
 
         bridge.shutDown()
+    }
+
+    // TST-FIL-029.4: External CADENCE/STRIDES sources strictly preempt SPEED_AND_LOCATION_ATT_FUSED
+    @Test
+    fun externalCadenceAndStridesSensorsStrictlyPreemptSmartphoneAttFused_tstFil029_4() {
+        val smartphoneDevice = mockk<MyDevice>(relaxed = true) {
+            every { deviceType } returns DeviceType.SPEED_AND_LOCATION_ATT_FUSED
+            every { name } returns "ATT Fused"
+            every { deviceId } returns 201L
+        }
+        val hrmDevice = mockk<MyDevice>(relaxed = true) {
+            every { deviceType } returns DeviceType.HRM
+            every { name } returns "Polar Verity Sense"
+            every { deviceId } returns 202L
+        }
+        val footpodDevice = mockk<MyDevice>(relaxed = true) {
+            every { deviceType } returns DeviceType.RUN_SPEED
+            every { name } returns "ANT+ Footpod"
+            every { deviceId } returns 203L
+        }
+        val bikeCadenceDevice = mockk<MyDevice>(relaxed = true) {
+            every { deviceType } returns DeviceType.BIKE_CADENCE
+            every { name } returns "BLE Bike Cadence"
+            every { deviceId } returns 204L
+        }
+
+        val attCadence = MySensor<Double>(smartphoneDevice, SensorType.CADENCE)
+        val hrmCadence = MySensor<Double>(hrmDevice, SensorType.CADENCE)
+        val bikeCadence = MySensor<Double>(bikeCadenceDevice, SensorType.CADENCE)
+        val footpodCadence = MySensor<Double>(footpodDevice, SensorType.CADENCE)
+
+        sensorManager.registerSensor(attCadence)
+        val cadenceProxy = sensorManager.getSensor(SensorType.CADENCE) as ProxySensor<*>
+        assertSame(attCadence, cadenceProxy.sourceSensor)
+
+        sensorManager.registerSensor(hrmCadence)
+        assertSame("HRM must preempt SPEED_AND_LOCATION_ATT_FUSED CADENCE", hrmCadence, cadenceProxy.sourceSensor)
+
+        sensorManager.registerSensor(bikeCadence)
+        assertSame("BIKE_CADENCE must preempt HRM and ATT_FUSED", bikeCadence, cadenceProxy.sourceSensor)
+
+        sensorManager.registerSensor(footpodCadence)
+        assertSame("RUN_SPEED must preempt BIKE_CADENCE and ATT_FUSED", footpodCadence, cadenceProxy.sourceSensor)
+
+        sensorManager.unregisterSensor(footpodCadence)
+        sensorManager.unregisterSensor(bikeCadence)
+        sensorManager.unregisterSensor(hrmCadence)
+        assertSame("Fallback to ATT_FUSED CADENCE once external sensors unregister", attCadence, cadenceProxy.sourceSensor)
+
+        val attStrides = MySensor<Int>(smartphoneDevice, SensorType.STRIDES)
+        val hrmStrides = MySensor<Int>(hrmDevice, SensorType.STRIDES)
+        val footpodStrides = MySensor<Int>(footpodDevice, SensorType.STRIDES)
+
+        sensorManager.registerSensor(attStrides)
+        val stridesProxy = sensorManager.getSensor(SensorType.STRIDES) as ProxySensor<*>
+        assertSame(attStrides, stridesProxy.sourceSensor)
+
+        sensorManager.registerSensor(hrmStrides)
+        assertSame("HRM must preempt SPEED_AND_LOCATION_ATT_FUSED STRIDES", hrmStrides, stridesProxy.sourceSensor)
+
+        sensorManager.registerSensor(footpodStrides)
+        assertSame("RUN_SPEED must preempt HRM STRIDES", footpodStrides, stridesProxy.sourceSensor)
+
+        sensorManager.unregisterSensor(footpodStrides)
+        assertSame(hrmStrides, stridesProxy.sourceSensor)
+        sensorManager.unregisterSensor(hrmStrides)
+        assertSame("Fallback to ATT_FUSED STRIDES once external sensors unregister", attStrides, stridesProxy.sourceSensor)
     }
 
     private fun syntheticStepFrame(): PolarAccelerometerData {

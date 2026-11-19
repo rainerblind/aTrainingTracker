@@ -210,4 +210,14 @@
     <string name="carriage_mode_run_bicep_arm">Bieg (Opaska na ramię)</string>
     <string name="carriage_mode_run_handheld">Bieg (W dłoni)</string>
 
+    <!-- Extended Periodic Sensor Re-Search & Backoff (ATT-8965, REQ-CON-052.3) -->
+    <string name="prefs_periodic_research_enabled_title">Okresowe ponowne wyszukiwanie</string>
+    <string name="prefs_periodic_research_enabled_summary">Automatycznie ponawiaj wyszukiwanie rozłączonych czujników w rosnących odstępach</string>
+    <string name="prefs_periodic_research_final_period_title">Docelowy interwał wyszukiwania</string>
+    <string name="prefs_periodic_research_final_period_summary">Końcowy interwał po krokach oczekiwania (16s → 32s → 64s → 2 min)</string>
+    <string name="prefs_research_period_1m">1 min</string>
+    <string name="prefs_research_period_2m">2 min</string>
+    <string name="prefs_research_period_5m">5 min</string>
+    <string name="prefs_research_period_10m">10 min</string>
+
 </resources>

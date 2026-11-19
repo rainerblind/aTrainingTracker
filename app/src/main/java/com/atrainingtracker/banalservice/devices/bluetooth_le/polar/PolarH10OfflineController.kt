@@ -47,6 +47,7 @@ import com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrRepository
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.polar.sdk.api.PolarBleApi
 import com.polar.sdk.api.PolarH10OfflineExerciseApi
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -106,6 +107,9 @@ object PolarH10OfflineController {
     @VisibleForTesting
     var sdkIntOverride: Int? = null
 
+    @VisibleForTesting
+    var stopConnectionTimeoutMs: Long = PolarOfflineGattCoordinator.STOP_CONNECTION_TIMEOUT_MS
+
     internal fun getEffectiveSdkInt(): Int = sdkIntOverride ?: Build.VERSION.SDK_INT
 
     @JvmStatic
@@ -141,6 +145,7 @@ object PolarH10OfflineController {
         isArmed.set(false)
         apiOverride = null
         sdkIntOverride = null
+        stopConnectionTimeoutMs = PolarOfflineGattCoordinator.STOP_CONNECTION_TIMEOUT_MS
         sessionStartTimeMs = 0L
         armedDeviceId = null
         armedExerciseId = null
@@ -168,6 +173,7 @@ object PolarH10OfflineController {
             try {
                 armForActiveWorkout(appContext)
             } catch (t: Throwable) {
+                if (t is CancellationException) throw t
                 Log.w(TAG, "Error arming Polar H10 offline recording: ${t.message}", t)
             }
         }
@@ -269,6 +275,15 @@ object PolarH10OfflineController {
         val needsBackfill = shouldBackfill(appContext, baseFileName, workoutId)
         Log.i(TAG, "Polar H10 stopAndBackfillWorkout: polarId=$targetId, needsBackfill=$needsBackfill")
 
+        if (apiOverride == null && PolarOfflineGattCoordinator.isTargetConfirmedDisconnected(targetId, targetMac)) {
+            Log.i(TAG, "Polar H10 $targetId confirmed disconnected at workout stop; fast-failing backfill.")
+            if (needsBackfill && workoutId > 0) {
+                recordPendingSync(appContext, workoutId, targetId, startTimeMs)
+            }
+            isArmed.set(false)
+            return false
+        }
+
         if (needsBackfill) {
             showSyncNotification(appContext)
         }
@@ -282,8 +297,10 @@ object PolarH10OfflineController {
                 timeoutMs = BACKFILL_TIMEOUT_MS,
                 apiOverride = apiOverride
             ) { api ->
-                api.connectToDevice(targetId)
-                api.waitForConnection(targetId)
+                if (!PolarOfflineGattCoordinator.connectWithinTimeout(api, targetId, stopConnectionTimeoutMs)) {
+                    Log.w(TAG, "Polar H10 stop connection timed out after $stopConnectionTimeoutMs ms for $targetId")
+                    return@withGattYieldAndPolarApi false
+                }
 
                 // 1. Stop ongoing recording on strap
                 try {
@@ -292,6 +309,7 @@ object PolarH10OfflineController {
                         api.stopRecording(targetId)
                     }
                 } catch (e: Exception) {
+                    if (e is CancellationException) throw e
                     Log.w(TAG, "Error checking/stopping recording for $targetId: ${e.message}")
                 }
 
@@ -304,6 +322,7 @@ object PolarH10OfflineController {
                             api.removeExercise(targetId, entry)
                         }
                     } catch (e: Exception) {
+                        if (e is CancellationException) throw e
                         Log.w(TAG, "Error cleaning up exercises in fast path: ${e.message}")
                     }
                     return@withGattYieldAndPolarApi true
@@ -313,6 +332,7 @@ object PolarH10OfflineController {
                 val exercises = try {
                     api.listExercises(targetId).toList()
                 } catch (e: Exception) {
+                    if (e is CancellationException) throw e
                     Log.w(TAG, "Error listing exercises for backfill on $targetId: ${e.message}")
                     emptyList()
                 }
@@ -393,6 +413,7 @@ object PolarH10OfflineController {
                             api.removeExercise(targetId, entry)
                         }
                     } catch (e: Exception) {
+                        if (e is CancellationException) throw e
                         Log.e(TAG, "Failed backfill processing for entry ${entry.path}: ${e.message}", e)
                         allPatchedSuccessfully = false
                     }
@@ -409,6 +430,7 @@ object PolarH10OfflineController {
             }
             success
         } catch (t: Throwable) {
+            if (t is CancellationException) throw t
             Log.w(TAG, "Exception during Polar H10 stopAndBackfillWorkout: ${t.message}", t)
             if (needsBackfill && workoutId > 0) {
                 recordPendingSync(appContext, workoutId, targetId, startTimeMs)
@@ -491,12 +513,14 @@ object PolarH10OfflineController {
                         api.stopRecording(targetId)
                     }
                 } catch (e: Exception) {
+                    if (e is CancellationException) throw e
                     Log.w(TAG, "Error checking/stopping recording for $targetId: ${e.message}")
                 }
 
                 val exercises = try {
                     api.listExercises(targetId).toList()
                 } catch (e: Exception) {
+                    if (e is CancellationException) throw e
                     Log.w(TAG, "Error listing exercises for pending sync on $targetId: ${e.message}")
                     emptyList()
                 }
@@ -600,6 +624,7 @@ object PolarH10OfflineController {
                 }
             } ?: false
         } catch (t: Throwable) {
+            if (t is CancellationException) throw t
             Log.e(TAG, "Exception during Polar H10 syncPendingWorkout: ${t.message}", t)
             false
         }
@@ -724,6 +749,7 @@ object PolarH10OfflineController {
                 false
             }
         } catch (t: Throwable) {
+            if (t is CancellationException) throw t
             Log.w(TAG, "Exception during Polar H10 arming: ${t.message}", t)
             false
         }

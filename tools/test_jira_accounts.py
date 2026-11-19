@@ -1430,6 +1430,79 @@ class TestJiraCliTooling(unittest.TestCase):
         self.assertEqual(key2, "ATT-9100")
         mock_create.assert_not_called()
 
+    @patch("jira_util.add_comment")
+    @patch("jira_util._weekly_rollup_already_posted", side_effect=[False, True])
+    @patch("jira_util.ensure_weekly_retro_ticket", return_value="ATT-8223")
+    def test_post_metrics_rollup_to_weekly_retro_is_idempotent(self, mock_weekly, mock_seen, mock_comment):
+        """ATT-8223: Weekly scorecard rollup posts metrics + SPC alerts once and skips duplicates."""
+        metrics = {
+            "sprint_name": "2026-11-19_01_Früh",
+            "throughput": {"completed_tickets": 5, "total_tickets": 6, "completion_rate_percent": 83.3, "completed_story_points": 12.0},
+            "quality_gates": {
+                "overall_ftpr_percent": 92.0,
+                "total_subtasks_evaluated": 25,
+                "end_to_end_ftpr_percent": 88.0,
+                "gates": {"gate_6": {"ftpr_percent": 80.0}},
+            },
+        }
+        spc = {"has_history": True, "warnings": ["FTPR below LCL"]}
+
+        k1 = jira_util.post_metrics_rollup_to_weekly_retro(metrics, spc=spc, retro_key="ATT-9055", role="coordinator")
+        self.assertEqual(k1, "ATT-8223")
+        mock_comment.assert_called_once()
+        posted_body = mock_comment.call_args[0][1]
+        self.assertIn("[Schicht-Scorecard-Rollup: 2026-11-19_01_Früh]", posted_body)
+        self.assertIn("ATT-9055", posted_body)
+        self.assertIn("12.0 SP", posted_body)
+        self.assertIn("FTPR below LCL", posted_body)
+
+        # Second invocation sees marker already posted -> no duplicate comment
+        k2 = jira_util.post_metrics_rollup_to_weekly_retro(metrics, spc=spc, retro_key="ATT-9055", role="coordinator")
+        self.assertEqual(k2, "ATT-8223")
+        mock_comment.assert_called_once()
+
+    @patch("jira_util.add_comment")
+    @patch("jira_util._weekly_rollup_already_posted", side_effect=[False, True])
+    @patch("jira_util.ensure_weekly_retro_ticket", return_value="ATT-8223")
+    @patch("jira_util.resolve_sprint_object", return_value={"id": 462, "name": "2026-11-19_01_Früh"})
+    @patch("jira_util.jira_request", return_value={"values": [{"id": 1}]})
+    @patch("jira_util.get_config", return_value={"JIRA_URL": "https://example.atlassian.net"})
+    def test_post_weekly_retro_rollup_extracts_sections_and_deduplicates(
+        self, mock_cfg, mock_req, mock_sprint, mock_weekly, mock_seen, mock_comment
+    ):
+        """ATT-8223: post-weekly-rollup extracts Retro insights, proposals & QA findings idempotently."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            retro_path = os.path.join(tmpdir, "Sprint_Review_and_Retro_ATT-9055.md")
+            with open(retro_path, "w", encoding="utf-8") as f:
+                f.write(
+                    "# Sprint Review & Retrospective: Sprint 2026-11-19_01_Früh (ATT-9055)\n\n"
+                    "## 1. Sprint Review — Delivered & Verified (3 / 3 Work Tickets = 8.0 SP)\n"
+                    "Table omitted.\n\n"
+                    "## 3. Retrospective Insights & Proposed Tooling/Governance Improvements\n"
+                    "- Auto-prepend ticket key in --merge-ticket.\n\n"
+                    "## 4. QA Findings & Corrective Actions\n"
+                    "- QA Audit: COMPLIANT (2/2).\n"
+                )
+
+            key = jira_util.post_weekly_retro_rollup(
+                sprint_arg="2026-11-19_01_Früh", retro_file=retro_path, note="PO checked", role="coordinator"
+            )
+            self.assertEqual(key, "ATT-8223")
+            mock_comment.assert_called_once()
+            body = mock_comment.call_args[0][1]
+            self.assertIn("[Schicht-Retro-Rollup: 2026-11-19_01_Früh]", body)
+            self.assertIn("Delivered & Verified (3 / 3 Work Tickets = 8.0 SP)", body)
+            self.assertIn("Auto-prepend ticket key in --merge-ticket.", body)
+            self.assertIn("QA Audit: COMPLIANT (2/2).", body)
+            self.assertIn("PO checked", body)
+
+            # Second run must not duplicate
+            key2 = jira_util.post_weekly_retro_rollup(
+                sprint_arg="2026-11-19_01_Früh", retro_file=retro_path, role="coordinator"
+            )
+            self.assertEqual(key2, "ATT-8223")
+            mock_comment.assert_called_once()
+
     def test_get_next_review_subsystem_unreviewed_and_rotation(self):
         """TST-PRO-095.2 / ATT-8426: Parsing coverage_matrix.md and rotating through UNREVIEWED and oldest AUDITED slices."""
         # Traces to: REQ-PRO-095.2, TST-PRO-095.2

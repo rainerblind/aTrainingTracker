@@ -51,9 +51,7 @@ import com.dsi.ant.plugins.antplus.pcc.defines.BatteryStatus;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesUtil;
 
-import java.text.DateFormat;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
@@ -875,7 +873,7 @@ public class DevicesDatabaseManager {
     }
 
     private static String getLastActiveString() {
-        String currentTime = DateFormat.getDateTimeInstance().format(new Date());
+        String currentTime = LastActiveDateFormatter.formatNow();
         if (DEBUG) Log.i(TAG, "currentTime=" + currentTime);
         return currentTime;
         // return (new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)).format(new Date());  // TODO: localize?

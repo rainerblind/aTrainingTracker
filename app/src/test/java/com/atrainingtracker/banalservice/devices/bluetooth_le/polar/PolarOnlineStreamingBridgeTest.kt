@@ -1356,4 +1356,161 @@ class PolarOnlineStreamingBridgeTest {
 
         deviceManager.shutDown()
     }
+
+    @Test
+    fun testMidSessionDisconnectAndTimeout_usesExtendedBackoffAndCancelsOnShutDown() = runTest {
+        // Traces to: REQ-CON-052.2, TST-CON-052.2
+        androidx.preference.PreferenceManager.getDefaultSharedPreferences(context).edit().clear().commit()
+        TrainingApplication.setTrackingModeForTesting(TrackingMode.TRACKING)
+        try {
+            val db = DevicesDatabaseManager.getInstance(context)
+            val deviceId = db.insertNewBluetoothDeviceIntoDB(
+                DeviceType.HRM,
+                "AA:BB:CC:DD:EE:77",
+                "Polar Sense 77889900",
+                "Polar Electro",
+                90,
+                true
+            )
+            val mockApi = mockk<PolarBleApi>(relaxed = true)
+            every { mockApi.startHrStreaming(any()) } returns flow { awaitCancellation() }
+
+            val testDispatcher = StandardTestDispatcher(testScheduler)
+            val bridge = PolarOnlineStreamingBridge(
+                context = context,
+                mySensorManager = sensorManager,
+                deviceId = deviceId,
+                macAddress = "AA:BB:CC:DD:EE:77",
+                dispatcher = testDispatcher,
+                sdkIntProvider = { 34 },
+                sportTypeProvider = { BSportType.RUN },
+                apiFactory = { _, _ -> mockApi },
+                searchTimeoutMsProvider = { 5000L }
+            )
+
+            try {
+                assertTrue(bridge.shouldKeepAliveOnSearchTimeout())
+                bridge.startSearching()
+                assertEquals(1_000L, bridge.getCurrentReconnectDelayMsForTesting())
+                verify(exactly = 1) { mockApi.connectToDevice("77889900") }
+
+                // Simulate mid-workout timeout chain (5s search watchdog -> 1s -> 2s -> 4s -> 8s -> 16s -> 32s...)
+                testScheduler.advanceTimeBy(5_001L)
+                testScheduler.runCurrent()
+                assertFalse("Queue must unblock on timeout even during TRACKING", bridge.isSearching)
+                assertEquals(2_000L, bridge.getCurrentReconnectDelayMsForTesting())
+                assertTrue(bridge.getReconnectJobForTesting()?.isActive == true)
+
+                val observedDelays = mutableListOf(2_000L)
+                // Fire 1s backoff -> triggers reconnect attempt -> wait 5s timeout -> advances to 4s -> repeat
+                val waitSteps = listOf(1_000L, 2_000L, 4_000L, 8_000L, 16_000L, 32_000L, 64_000L, 128_000L)
+                for (stepMs in waitSteps) {
+                    testScheduler.advanceTimeBy(stepMs + 1L)
+                    testScheduler.runCurrent()
+                    testScheduler.advanceTimeBy(5_001L)
+                    testScheduler.runCurrent()
+                    observedDelays.add(bridge.getCurrentReconnectDelayMsForTesting())
+                }
+                assertEquals(
+                    listOf(2_000L, 4_000L, 8_000L, 16_000L, 32_000L, 64_000L, 128_000L, 300_000L, 300_000L),
+                    observedDelays
+                )
+
+                // Reconnect succeeds -> delay resets to 1,000 ms
+                bridge.getSdkCallbackForTesting().deviceConnected(
+                    PolarDeviceInfo("77889900", "AA:BB:CC:DD:EE:77", -55, "Polar Sense", true)
+                )
+                assertEquals(1_000L, bridge.getCurrentReconnectDelayMsForTesting())
+                assertNull(bridge.getReconnectJobForTesting())
+
+                // When periodic research disabled mid-workout -> caps at 16,000 ms
+                com.atrainingtracker.trainingtracker.settings.SensorSearchSettings.setPeriodicResearchEnabled(context, false)
+                bridge.getSdkCallbackForTesting().deviceDisconnected(
+                    PolarDeviceInfo("77889900", "AA:BB:CC:DD:EE:77", -55, "Polar Sense", true)
+                )
+                assertEquals(2_000L, bridge.getCurrentReconnectDelayMsForTesting())
+                val countBeforeShutDown = bridge.getReconnectJobForTesting()
+                assertNotNull(countBeforeShutDown)
+                bridge.shutDown()
+                assertTrue(bridge.getReconnectJobForTesting()?.isCancelled != false)
+            } finally {
+                bridge.shutDown()
+            }
+        } finally {
+            TrainingApplication.setTrackingModeForTesting(TrackingMode.READY)
+        }
+    }
+
+    @Test
+    fun testTimeoutDisconnectEcho_doesNotDoubleAdvance_andBlePowerStateCancelsReconnect_andExceptionReschedules() = runTest {
+        // ATT-8965 Bounce 2 regression tests for Fix 4a/4b/4c
+        androidx.preference.PreferenceManager.getDefaultSharedPreferences(context).edit().clear().commit()
+        TrainingApplication.setTrackingModeForTesting(TrackingMode.TRACKING)
+        try {
+            val db = DevicesDatabaseManager.getInstance(context)
+            val deviceId = db.insertNewBluetoothDeviceIntoDB(
+                DeviceType.HRM,
+                "AA:BB:CC:DD:EE:88",
+                "Polar Sense 88990011",
+                "Polar Electro",
+                90,
+                true
+            )
+            val mockApi = mockk<PolarBleApi>(relaxed = true)
+            every { mockApi.startHrStreaming(any()) } returns flow { awaitCancellation() }
+
+            val testDispatcher = StandardTestDispatcher(testScheduler)
+            val bridge = PolarOnlineStreamingBridge(
+                context = context,
+                mySensorManager = sensorManager,
+                deviceId = deviceId,
+                macAddress = "AA:BB:CC:DD:EE:88",
+                dispatcher = testDispatcher,
+                sdkIntProvider = { 34 },
+                sportTypeProvider = { BSportType.RUN },
+                apiFactory = { _, _ -> mockApi },
+                searchTimeoutMsProvider = { 5000L }
+            )
+
+            try {
+                // 4b: Timeout arms 1s reconnect (next=2s); synchronous deviceDisconnected echo MUST NOT double-advance to 4s
+                bridge.startSearching()
+                testScheduler.advanceTimeBy(5_001L)
+                testScheduler.runCurrent()
+                assertEquals(2_000L, bridge.getCurrentReconnectDelayMsForTesting())
+                val armedJob = bridge.getReconnectJobForTesting()
+                assertTrue(armedJob?.isActive == true)
+
+                bridge.getSdkCallbackForTesting().deviceDisconnected(
+                    PolarDeviceInfo("88990011", "AA:BB:CC:DD:EE:88", -55, "Polar Sense", true)
+                )
+                assertEquals(2_000L, bridge.getCurrentReconnectDelayMsForTesting())
+                assertSame(armedJob, bridge.getReconnectJobForTesting())
+
+                // 4c: blePowerStateChanged(false) cancels pending reconnect; blePowerStateChanged(true) resumes cleanly
+                bridge.getSdkCallbackForTesting().blePowerStateChanged(false)
+                assertNull(bridge.getReconnectJobForTesting())
+                assertTrue(armedJob!!.isCancelled)
+
+                bridge.getSdkCallbackForTesting().blePowerStateChanged(true)
+                assertTrue(bridge.getReconnectJobForTesting()?.isActive == true)
+                assertEquals(4_000L, bridge.getCurrentReconnectDelayMsForTesting())
+
+                // 4a: Transient connectToDevice exception inside background reconnect reschedules rather than killing reconnect
+                every { mockApi.connectToDevice("88990011") } throws IllegalStateException("Transient BT stack error")
+                testScheduler.advanceTimeBy(2_001L)
+                testScheduler.runCurrent()
+                assertFalse(bridge.isSearching)
+                assertTrue(
+                    "Transient exception must reschedule follow-up reconnect job",
+                    bridge.getReconnectJobForTesting()?.isActive == true
+                )
+                assertEquals(8_000L, bridge.getCurrentReconnectDelayMsForTesting())
+            } finally {
+                bridge.shutDown()
+            }
+        } finally {
+            TrainingApplication.setTrackingModeForTesting(TrackingMode.READY)
+        }
+    }
 }

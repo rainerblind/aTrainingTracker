@@ -41,11 +41,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -56,9 +53,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineController
+import com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarRetrySyncCoordinator
 import com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarVeritySenseOfflineController
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
-import kotlinx.coroutines.launch
 
 /**
  * Dispatches a pending Aftermath offline sync to [PolarVeritySenseOfflineController] when
@@ -88,33 +85,30 @@ fun PolarPendingRetrySyncSection(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val coroutineScope = rememberCoroutineScope()
     val isVeritySense = PolarVeritySenseOfflineController.isVerityPendingSync(polarExerciseId)
     val isSwimBusy = PolarVeritySenseOfflineController.isVeritySwimBusy(polarExerciseId)
-    var isSyncingPolar by remember(workoutId, polarExerciseId) { mutableStateOf(false) }
-    var polarSyncError by remember(workoutId, polarExerciseId) { mutableStateOf<String?>(null) }
     val failedMsg = stringResource(
         if (isVeritySense) R.string.polar_verity_retry_sync_failed else R.string.polar_h10_retry_sync_failed
     )
+    val syncStates by PolarRetrySyncCoordinator.states.collectAsState()
+    val syncState = syncStates[workoutId] ?: PolarRetrySyncCoordinator.RetrySyncState()
 
     PolarH10RetrySyncBanner(
         onSyncNow = {
-            if (!isSyncingPolar) {
-                isSyncingPolar = true
-                polarSyncError = null
-                coroutineScope.launch {
-                    val success = syncPendingPolarWorkout(context, workoutId, polarExerciseId)
-                    isSyncingPolar = false
-                    if (!success) {
-                        polarSyncError = failedMsg
-                    }
-                }
-            }
+            PolarRetrySyncCoordinator.startSync(
+                context = context,
+                workoutId = workoutId,
+                polarExerciseId = polarExerciseId,
+                failedMessage = failedMsg
+            )
         },
-        onDismiss = onDismiss,
+        onDismiss = {
+            PolarRetrySyncCoordinator.clearState(workoutId)
+            onDismiss()
+        },
         modifier = modifier,
-        isSyncing = isSyncingPolar,
-        errorMessage = polarSyncError,
+        isSyncing = syncState.isSyncing,
+        errorMessage = syncState.errorMessage,
         isVeritySense = isVeritySense,
         isSwimBusy = isSwimBusy
     )

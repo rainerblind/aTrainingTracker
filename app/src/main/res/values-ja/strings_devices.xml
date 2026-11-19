@@ -210,4 +210,14 @@
     <string name="carriage_mode_run_bicep_arm">ラン (アームバンド)</string>
     <string name="carriage_mode_run_handheld">ラン (手持ち)</string>
 
+    <!-- Extended Periodic Sensor Re-Search & Backoff (ATT-8965, REQ-CON-052.3) -->
+    <string name="prefs_periodic_research_enabled_title">長期的な定期再検索</string>
+    <string name="prefs_periodic_research_enabled_summary">切断されたセンサーを段階的な間隔で自動的に再検索します</string>
+    <string name="prefs_periodic_research_final_period_title">定常時の再検索間隔</string>
+    <string name="prefs_periodic_research_final_period_summary">バックオフ段階後の最終間隔 (16秒 → 32秒 → 64秒 → 2分)</string>
+    <string name="prefs_research_period_1m">1分</string>
+    <string name="prefs_research_period_2m">2分</string>
+    <string name="prefs_research_period_5m">5分</string>
+    <string name="prefs_research_period_10m">10分</string>
+
 </resources>

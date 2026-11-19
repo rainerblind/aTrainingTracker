@@ -1,14 +1,14 @@
 # Living Requirements: Settings, Profiles & Localization
 
 **Document ID**: `DOC-REQ-SET`  
-**Version**: 1.0.5  
+**Version**: 1.0.8  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `settings_profiles`  
 **Prefixes**: `LOC`, `MON`, `PRI`, `SET`  
 **Scope**: Athlete settings, bike/sensor profiles, privacy zones, data stores, monetization, and 9-locale parity.  
-**Total Requirements**: 117
+**Total Requirements**: 118
 
 ---
 
@@ -2784,6 +2784,35 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 
 ---
 
+### REQ-SET-119: Polar Aftermath Retry Sync Lifecycle Safety & Disconnected Stop-Time Fast-Fail (`ATT-8969`) [Verified]
+- **Tests**: `TST-SET-121`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Implementation**: `PolarRetrySyncCoordinator.kt`, `PolarH10RetrySyncBanner.kt`, `PolarVeritySenseOfflineController.kt`, `PolarH10OfflineController.kt`, `PolarOfflineGattCoordinator.kt`, `TrackOnMapAftermathViewModel.kt`, `WorkoutSummariesTabbedScreen.kt`, `WorkoutSummariesListFragment.kt`
+- **Rationale**: Launching `syncPendingPolarWorkout()` inside Compose `rememberCoroutineScope()` with local `remember` state throws `ForgottenCoroutineScopeException` and flickers the banner when it leaves composition during recomposition or navigation, while `catch (t: Throwable)` swallows `CancellationException` and `TrackOnMapAftermathViewModel` keeps stale HR telemetry after deferred sync. Furthermore, waiting `30–45 s` in `api.waitForConnection(...)` on a disconnected sensor blocks `TrackerService.endWorkout()` and delays the Edit Workout dialog (`ATT-8969`, refining `REQ-SET-109.1`/`.3`, `REQ-SET-106.3`, `REQ-SET-105.2`).
+- **Description**:
+  1. *Non-Composition Retry Sync Scope & State Hoisting (`REQ-SET-119.1`)*:
+     - `PolarPendingRetrySyncSection` MUST NOT execute `syncPendingPolarWorkout(...)` on Compose `rememberCoroutineScope()`; tapping *Sync Now* SHALL dispatch onto a lifecycle-safe non-composition `CoroutineScope` (`Dispatchers.IO + SupervisorJob`) outside the composable tree, deduplicating concurrent sync requests per `workoutId`.
+     - Sync progress (`isSyncing`), failure copy (`errorMessage`), and completion events SHALL be observed from reactive state keyed by `workoutId` so banner disposal/re-entry never throws `ForgottenCoroutineScopeException` or flickers.
+     - `PolarVeritySenseOfflineController` and `PolarH10OfflineController` `catch (t: Throwable)` blocks inside suspend stop/sync paths MUST rethrow `CancellationException`.
+  2. *Aftermath HR Telemetry Graph Refresh on Deferred Sync (`REQ-SET-119.2`)*:
+     - Upon deferred Polar backfill completion for the active workout, `WorkoutSummariesTabbedScreen` and `WorkoutSummariesListFragment` (`TrackOnMapAftermathViewModel`) SHALL trigger a reload of detail telemetry (`telemetryPath`, `tracks`, `hrZoneDistribution`) without modifying `WorkoutRepository.kt` (Lane A isolation), updating the Workout Details HR graph cleanly.
+  3. *Disconnected Stop-Time Fast-Fail & Bounded Connection Wait (`REQ-SET-119.3`)*:
+     - During `stopAndBackfillWorkout()` in `PolarVeritySenseOfflineController` and `PolarH10OfflineController`, when `apiOverride == null` and `BANALService.getDeviceManager()` confirms the target Polar device is disconnected (`!isReceivingData()` and `!PolarOfflineGattCoordinator.isDeviceConnected(...)`), stop-time backfill SHALL fast-fail immediately without calling `api.waitForConnection(...)`, persisting `setPolarSyncPending(...)` when `needsBackfill == true`, clearing armed state, and releasing `TrackerService.endWorkout()` promptly.
+     - When a stop-time connection attempt IS executed (`apiOverride != null`, `DeviceManager == null`, or device not confirmed disconnected), `api.connectToDevice(...)` + `api.waitForConnection(...)` SHALL be bounded by `STOP_CONNECTION_TIMEOUT_MS = 5_000L` independent of `BACKFILL_TIMEOUT_MS` (`45 s` / `30 s`), preserving full PFTP transfer time once connected and preserving `apiOverride` unit-test seams.
+     - `TrackerService.java` MUST remain `<= 3,556` LoC (helper logic in Kotlin controllers/helpers); zero new UI strings are required (`res/values*/strings_devices.xml` reused across all 9 locales).
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a workout with `polarSyncPending = true` in Aftermath, *When* the user taps *Sync Now* and `PolarPendingRetrySyncSection` leaves and re-enters composition mid-sync, *Then* `syncPendingPolarWorkout` completes without `ForgottenCoroutineScopeException`, the banner does not flicker, and `TrackOnMapAftermathViewModel` reloads telemetry so the HR graph updates.
+• *Given* a suspend stop/sync call throwing `CancellationException`, *When* executed in `PolarVeritySenseOfflineController` or `PolarH10OfflineController`, *Then* `CancellationException` is rethrown rather than swallowed.
+• *Given* an armed Polar Verity Sense or H10 confirmed disconnected in `DeviceManager` (`apiOverride == null`) at workout stop, *When* `stopAndBackfillWorkout()` executes, *Then* `api.waitForConnection()` is skipped, `setPolarSyncPending()` is recorded if `needsBackfill == true`, `isRecordingArmed()` becomes `false`, and `endWorkout()` finishes without a `30–45 s` stall.
+• *Given* `api.waitForConnection()` hangs during stop-time backfill, *When* `STOP_CONNECTION_TIMEOUT_MS` (`5_000 ms`) expires, *Then* connection times out gracefully, `setPolarSyncPending()` is persisted if `needsBackfill == true`, and GATT resumes.
+
+**Invariants**: `TrackerService.java <= 3,556` LoC; `WorkoutRepository.kt` untouched (Lane A); Verity Sense never writes `WorkoutRr.db` or invokes `HrvPostWorkoutRecomputer`; post-commit single-entry flash cleanup preserved; zero new string keys or DB schema bumps; `apiOverride` unit-test seams preserved.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -2793,3 +2822,6 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 | `1.0.2` | 2026-11-17 | AI Agent (`ATT-8690`) | `ATT-8690` | Promoted `REQ-SET-118` to `[Implemented]` following Stage 4 construction. |
 | `1.0.3` | 2026-11-17 | AI Agent (`ATT-8690`) | `ATT-8690` | Promoted `REQ-SET-118` to `[Verified]` following Stage 5 unit verification. |
 | `1.0.5` | 2026-11-18 | AI Agent (`ATT-8714`) | `ATT-8714` | Added symmetric `TST-CON-050` link on `REQ-SET-112` (`REQ-PRO-127` parity). |
+| `1.0.6` | 2026-11-19 | AI Agent (`ATT-8969`) | `ATT-8969` | Added `REQ-SET-119` (lifecycle-safe Aftermath retry scope, HR graph refresh, and disconnected stop-time fast-fail / bounded connection wait). |
+| `1.0.7` | 2026-11-19 | AI Agent (`ATT-8969`) | `ATT-8969` | Promoted `REQ-SET-119` to `[Implemented]` following Stage 4 construction (`PolarRetrySyncCoordinator`, fast-fail, 5s connection bound). |
+| `1.0.8` | 2026-11-19 | AI Agent (`ATT-8969`) | `ATT-8969` | Promoted `REQ-SET-119` to `[Verified]` following Stage 5 verification (`155/155` unit/Compose/contract tests). |

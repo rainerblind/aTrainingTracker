@@ -18,25 +18,35 @@
 
 package com.atrainingtracker.trainingtracker.build
 
+import android.content.Context
+import android.content.pm.PackageManager
+import android.content.pm.ServiceInfo
+import androidx.test.core.app.ApplicationProvider
 import com.atrainingtracker.banalservice.devices.bluetooth_le.BluetoothConstants
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 import java.io.File
 
 /**
  * System Context and External System Elements Contract Test (ASPICE SYS.2 BP1, SYS.3,
- * REQ-PRO-053, TST-PRO-053, ATT-6158, ATT-6738).
+ * REQ-PRO-053, TST-PRO-053, ATT-6158, ATT-6738, REQ-PRO-133.2).
  *
  * Enforces:
  * 1. docs/system/system_context.md exists and contains a valid Mermaid system context diagram (TST-PRO-053.1).
  * 2. All 5 external interface domains are formally documented (Sensors, Platform, Location/Maps, Cloud/Health, Decommissioned).
- * 3. 100% code grounding parity against live constants, build configurations, and external SDKs (TST-PRO-053.2).
+ * 3. 100% code grounding parity against live constants, build configurations, compiled manifest via Robolectric PackageManager, and external SDKs (TST-PRO-053.2, REQ-PRO-133.2).
  * 4. Dynamic filesystem existence asserting all backticked .kt, .java, and .xml code files exist on disk (TST-PRO-053.3).
  * 5. Dynamic platform symbol grounding asserting zero hallucinated Sensor.TYPE_* or FOREGROUND_SERVICE_TYPE_* constants (TST-PRO-053.3).
  * 6. Operational assumptions (offline-first, auto-reconnect, async cloud sync) are explicitly stated.
  */
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34])
 class SystemContextContractTest {
 
     private fun findRepoRootFile(relativePath: String): File {
@@ -91,8 +101,14 @@ class SystemContextContractTest {
     fun testSystemContext_codeGroundingParity() {
         val content = findRepoRootFile("docs/system/system_context.md").readText()
         val buildGradleContent = findRepoRootFile("app/build.gradle").readText()
-        val manifestFile = findRepoRootFile("app/src/" + "main/AndroidManifest.xml")
-        val manifestContent = manifestFile.readText()
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val packageInfo = context.packageManager.getPackageInfo(
+            context.packageName,
+            PackageManager.GET_PERMISSIONS or PackageManager.GET_SERVICES
+        )
+        val requestedPermissions = packageInfo.requestedPermissions?.toSet().orEmpty()
+        val trackerServiceInfo = packageInfo.services?.firstOrNull { it.name.endsWith("TrackerService") }
+        assertNotNull("Compiled manifest must declare TrackerService", trackerServiceInfo)
 
         // 1. BLE GATT Services grounding
         assertTrue("Must specify Heart Rate BLE service 0x180D", content.contains("0x180D"))
@@ -153,7 +169,12 @@ class SystemContextContractTest {
         assertTrue("Must specify FOREGROUND_SERVICE_TYPE_LOCATION", content.contains("FOREGROUND_SERVICE_TYPE_LOCATION"))
         assertTrue("Must specify FOREGROUND_SERVICE_TYPE_HEALTH", content.contains("FOREGROUND_SERVICE_TYPE_HEALTH"))
         assertFalse("Must NOT claim non-existent FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE", content.contains("FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE"))
-        assertTrue("AndroidManifest.xml must declare location|health FGS", manifestContent.contains("android:foregroundServiceType=\"location|health\""))
+        val expectedFgsMask = ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION or ServiceInfo.FOREGROUND_SERVICE_TYPE_HEALTH
+        assertEquals(
+            "TrackerService compiled manifest must declare location|health FGS (REQ-PRO-133.2)",
+            expectedFgsMask,
+            trackerServiceInfo!!.foregroundServiceType and expectedFgsMask
+        )
 
         // 5. Location grounding (SpeedAndLocationDevice_GoogleFused uses GoogleApiClient / LocationServices.FusedLocationApi)
         assertTrue("Must ground SpeedAndLocationDevice_GoogleFused.java", content.contains("SpeedAndLocationDevice_GoogleFused.java"))
@@ -177,8 +198,14 @@ class SystemContextContractTest {
         assertTrue("build.gradle must contain Health Connect 1.1.0", buildGradleContent.contains("androidx.health.connect:connect-client:1.1.0"))
         assertTrue("Must document Health Connect READ_HEART_RATE_VARIABILITY", content.contains("READ_HEART_RATE_VARIABILITY"))
         assertTrue("Must document Health Connect READ_RESTING_HEART_RATE", content.contains("READ_RESTING_HEART_RATE"))
-        assertTrue("AndroidManifest.xml must declare READ_HEART_RATE_VARIABILITY", manifestContent.contains("android.permission.health.READ_HEART_RATE_VARIABILITY"))
-        assertTrue("AndroidManifest.xml must declare READ_RESTING_HEART_RATE", manifestContent.contains("android.permission.health.READ_RESTING_HEART_RATE"))
+        assertTrue(
+            "Compiled manifest must declare READ_HEART_RATE_VARIABILITY",
+            "android.permission.health.READ_HEART_RATE_VARIABILITY" in requestedPermissions
+        )
+        assertTrue(
+            "Compiled manifest must declare READ_RESTING_HEART_RATE",
+            "android.permission.health.READ_RESTING_HEART_RATE" in requestedPermissions
+        )
 
         // 7. Omitted External Services (Open-Meteo, Firebase, Google Play)
         assertTrue("Must ground Open-Meteo Elevation API", content.contains("Open-Meteo Elevation API") || content.contains("open-meteo.com/v1/elevation"))

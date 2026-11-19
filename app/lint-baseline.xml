@@ -77,93 +77,26 @@
         <location file="src/main/res/values/strings.xml" line="876" column="5" />
     </issue>
 
-    <issue id="Recycle" message="This `Cursor` should be freed up after use with `#close()`" errorLine1="        Cursor cursor = db.query(DevicesDbHelper.DEVICES," errorLine2="                           ~~~~~">
-        <location file="src/main/java/com/atrainingtracker/banalservice/database/DevicesDatabaseManager.java" line="206" column="28" />
-    </issue>
 
-    <issue id="Recycle" message="This `Cursor` should be freed up after use with `#close()`" errorLine1="        Cursor cursor = db.query(DevicesDbHelper.DEVICES," errorLine2="                           ~~~~~">
-        <location file="src/main/java/com/atrainingtracker/banalservice/database/DevicesDatabaseManager.java" line="573" column="28" />
-    </issue>
 
-    <issue id="Recycle" message="This `Cursor` should be freed up after use with `#close()`" errorLine1="            Cursor cursor = db.query(VIEWS_TABLE," errorLine2="                               ~~~~~">
-        <location file="src/main/java/com/atrainingtracker/trainingtracker/smartwatch/pebble/PebbleDatabaseManager.java" line="420" column="32" />
-    </issue>
 
-    <issue id="Recycle" message="This `Cursor` should be freed up after use with `#close()`" errorLine1="                    cursor = db.query(VIEWS_TABLE, null," errorLine2="                                ~~~~~">
-        <location file="src/main/java/com/atrainingtracker/trainingtracker/smartwatch/pebble/PebbleDatabaseManager.java" line="547" column="33" />
-    </issue>
 
-    <issue id="Recycle" message="This `Cursor` should be freed up after use with `#close()`" errorLine1="        Cursor cursor = db.query(SportType.TABLE," errorLine2="                           ~~~~~">
-        <location file="src/main/java/com/atrainingtracker/banalservice/database/SportTypeDatabaseManager.java" line="315" column="28" />
-    </issue>
 
-    <issue id="Recycle" message="This `Cursor` should be freed up after use with `#close()`" errorLine1="        Cursor cursor = db.query(SportType.TABLE," errorLine2="                           ~~~~~">
-        <location file="src/main/java/com/atrainingtracker/banalservice/database/SportTypeDatabaseManager.java" line="331" column="28" />
-    </issue>
 
-    <issue id="Recycle" message="This `Cursor` should be freed up after use with `#close()`" errorLine1="            cursor = db.query(SportType.TABLE," errorLine2="                        ~~~~~">
-        <location file="src/main/java/com/atrainingtracker/banalservice/database/SportTypeDatabaseManager.java" line="339" column="25" />
-    </issue>
 
-    <issue id="Recycle" message="This `Cursor` should be freed up after use with `#close()`" errorLine1="        Cursor cursor = db.query(SportType.TABLE," errorLine2="                           ~~~~~">
-        <location file="src/main/java/com/atrainingtracker/banalservice/database/SportTypeDatabaseManager.java" line="356" column="28" />
-    </issue>
 
-    <issue id="Recycle" message="This `Cursor` should be freed up after use with `#close()`" errorLine1="            cursor = db.query(SportType.TABLE," errorLine2="                        ~~~~~">
-        <location file="src/main/java/com/atrainingtracker/banalservice/database/SportTypeDatabaseManager.java" line="364" column="25" />
-    </issue>
 
-    <issue id="Recycle" message="This `Cursor` should be freed up after use with `#close()`" errorLine1="        Cursor cursor = db.query(SportType.TABLE," errorLine2="                           ~~~~~">
-        <location file="src/main/java/com/atrainingtracker/banalservice/database/SportTypeDatabaseManager.java" line="382" column="28" />
-    </issue>
 
-    <issue id="Recycle" message="This `Cursor` should be freed up after use with `#close()`" errorLine1="            Cursor cursor = samplesDb.query(mSamplesTableName, null, null, null, null, null, null, &quot;1&quot;);" errorLine2="                                      ~~~~~">
-        <location file="src/main/java/com/atrainingtracker/trainingtracker/tracker/TrackerService.java" line="639" column="39" />
-    </issue>
 
-    <issue id="Recycle" message="This `Cursor` should be freed up after use with `#close()`" errorLine1="        Cursor cursor = db.query(TrackingViewsDbHelper.ROWS_TABLE," errorLine2="                           ~~~~~">
-        <location file="src/main/java/com/atrainingtracker/trainingtracker/database/TrackingViewsDatabaseManager.java" line="404" column="28" />
-    </issue>
 
-    <issue id="Recycle" message="This `Cursor` should be freed up after use with `#close()`" errorLine1="        Cursor cursor = db.query(TrackingViewsDbHelper.ROWS_TABLE," errorLine2="                           ~~~~~">
-        <location file="src/main/java/com/atrainingtracker/trainingtracker/database/TrackingViewsDatabaseManager.java" line="436" column="28" />
-    </issue>
 
-    <issue id="Recycle" message="This `Cursor` should be freed up after use with `#close()`" errorLine1="        Cursor cursor = db.query(TrackingViewsDbHelper.ROWS_TABLE," errorLine2="                           ~~~~~">
-        <location file="src/main/java/com/atrainingtracker/trainingtracker/database/TrackingViewsDatabaseManager.java" line="595" column="28" />
-    </issue>
 
-    <issue id="Recycle" message="This `Cursor` should be freed up after use with `#close()`" errorLine1="        Cursor cursor = db.query(TrackingViewsDbHelper.ROWS_TABLE,  // get cursor with all rows.  This is necessary, because the view and sport type and ... might change" errorLine2="                           ~~~~~">
-        <location file="src/main/java/com/atrainingtracker/trainingtracker/database/TrackingViewsDatabaseManager.java" line="626" column="28" />
-    </issue>
 
-    <issue id="Recycle" message="This `Cursor` should be freed up after use with `#close()`" errorLine1="            Cursor cursor = db.query(VIEWS_TABLE," errorLine2="                               ~~~~~">
-        <location file="src/main/java/com/atrainingtracker/trainingtracker/database/TrackingViewsDatabaseManager.java" line="863" column="32" />
-    </issue>
 
-    <issue id="Recycle" message="This `Cursor` should be freed up after use with `#close()`" errorLine1="                Cursor cursor = db.query(ROWS_TABLE, null, null, null, null, null, null);" errorLine2="                                   ~~~~~">
-        <location file="src/main/java/com/atrainingtracker/trainingtracker/database/TrackingViewsDatabaseManager.java" line="935" column="36" />
-    </issue>
 
-    <issue id="Recycle" message="This `Cursor` should be freed up after use with `#close()`" errorLine1="        Cursor cursor = db.query(WorkoutSummaries.TABLE, // table" errorLine2="                           ~~~~~">
-        <location file="src/main/java/com/atrainingtracker/trainingtracker/database/WorkoutSummariesDatabaseManager.java" line="471" column="28" />
-    </issue>
 
-    <issue id="Recycle" message="This `Cursor` should be freed up after use with `#close()`" errorLine1="        Cursor cursor = db.query(WorkoutSummaries.TABLE, // table" errorLine2="                           ~~~~~">
-        <location file="src/main/java/com/atrainingtracker/trainingtracker/database/WorkoutSummariesDatabaseManager.java" line="494" column="28" />
-    </issue>
 
-    <issue id="Recycle" message="This `Cursor` should be freed up after use with `#close()`" errorLine1="        Cursor cursor = db.query(WorkoutSummaries.TABLE_WORKOUT_NAME_PATTERNS, // table" errorLine2="                           ~~~~~">
-        <location file="src/main/java/com/atrainingtracker/trainingtracker/database/WorkoutSummariesDatabaseManager.java" line="511" column="28" />
-    </issue>
 
-    <issue id="Recycle" message="This `Cursor` should be freed up after use with `#close()`" errorLine1="        Cursor cursor = db.query(WorkoutSummaries.TABLE_WORKOUT_NAME_PATTERNS," errorLine2="                           ~~~~~">
-        <location file="src/main/java/com/atrainingtracker/trainingtracker/database/WorkoutSummariesDatabaseManager.java" line="527" column="28" />
-    </issue>
-
-    <issue id="Recycle" message="This `Cursor` should be freed up after use with `#close()`" errorLine1="        Cursor cursor = db.query(WorkoutSummaries.TABLE_WORKOUT_NAME_PATTERNS," errorLine2="                           ~~~~~">
-        <location file="src/main/java/com/atrainingtracker/trainingtracker/database/WorkoutSummariesDatabaseManager.java" line="547" column="28" />
-    </issue>
 
     <issue id="StaticFieldLeak" message="Do not place Android context classes in static fields (static reference to `DeviceManager` which has field `mContext` pointing to `Context`); this is a memory leak" errorLine1="    private static DeviceManager cDeviceManager;" errorLine2="            ~~~~~~">
         <location file="src/main/java/com/atrainingtracker/banalservice/BANALService.java" line="140" column="13" />

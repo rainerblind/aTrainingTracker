@@ -209,4 +209,14 @@
     <string name="carriage_mode_run_bicep_arm">Corrida (Braçadeira)</string>
     <string name="carriage_mode_run_handheld">Corrida (Na mão)</string>
 
+    <!-- Extended Periodic Sensor Re-Search & Backoff (ATT-8965, REQ-CON-052.3) -->
+    <string name="prefs_periodic_research_enabled_title">Nova busca periódica a longo prazo</string>
+    <string name="prefs_periodic_research_enabled_summary">Tentar reconectar sensores desconectados em intervalos crescentes</string>
+    <string name="prefs_periodic_research_final_period_title">Intervalo final de busca</string>
+    <string name="prefs_periodic_research_final_period_summary">Intervalo final após etapas de espera (16s → 32s → 64s → 2 min)</string>
+    <string name="prefs_research_period_1m">1 min</string>
+    <string name="prefs_research_period_2m">2 min</string>
+    <string name="prefs_research_period_5m">5 min</string>
+    <string name="prefs_research_period_10m">10 min</string>
+
 </resources>

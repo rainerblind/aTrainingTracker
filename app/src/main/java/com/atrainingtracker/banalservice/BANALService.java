@@ -19,6 +19,7 @@
 package com.atrainingtracker.banalservice;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.app.Service;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -48,6 +49,7 @@ import com.atrainingtracker.trainingtracker.repositories.SportTypesRepository;
 import com.atrainingtracker.banalservice.filters.FilterData;
 import com.atrainingtracker.banalservice.filters.FilterManager;
 import com.atrainingtracker.banalservice.filters.FilteredSensorData;
+import com.atrainingtracker.banalservice.odometry.MovingSpeedSummary;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.dsi.ant.plugins.antplus.pccbase.AntPluginPcc;
 
@@ -151,6 +153,8 @@ public class BANALService
 
     public static final int INIT_LAP_NR = 1;
     private static volatile Context cServiceContext;
+    @SuppressLint("StaticFieldLeak") // Cleared in onDestroy(); exposes active sport context while keeping getServiceContext() leak-free.
+    private static volatile BANALService cServiceInstance;
     private static volatile DeviceManager cDeviceManager;
     private static volatile MySensorManager cSensorManager;
     private static volatile FilterManager cFilterManager;
@@ -177,6 +181,11 @@ public class BANALService
         cServiceContext = context;
     }
 
+    @VisibleForTesting
+    public static void setServiceInstanceForTesting(@Nullable BANALService service) {
+        cServiceInstance = service;
+    }
+
     /***********************************************************************************************/
 
     public static boolean getDebug(boolean defaultVal) {
@@ -195,8 +204,20 @@ public class BANALService
             newLap(intent.getBooleanExtra(IS_PAUSE, false));
         }
     };
+    protected BroadcastReceiver mResetAccumulatorsReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            clearInferredSportTelemetry();
+        }
+    };
     private volatile long mUserSelectedSportTypeId = -1;
+    @NonNull
+    private volatile BSportType mUserSelectedBSportType = BSportType.UNKNOWN;
     private volatile boolean mHaveUserSelectedSportType = false;
+    @NonNull
+    private volatile BSportType mInferredBSportType = BSportType.UNKNOWN;
+    @Nullable
+    private volatile MovingSpeedSummary mMovingSpeedSummary = null;
 
     public static long getDefaultSportTypeId() {
         return SportTypesRepository.getDefaultSportTypeId();
@@ -317,12 +338,31 @@ public class BANALService
      */
     @NonNull
     public static BSportType getActiveBSportType() {
+        BANALService instance = cServiceInstance;
+        if (instance != null) {
+            return instance.getBSportType();
+        }
         Context ctx = cServiceContext;
         if (ctx instanceof BANALService) {
             return ((BANALService) ctx).getBSportType();
         }
         DeviceManager dm = cDeviceManager;
         return dm != null ? dm.getSportType() : BSportType.UNKNOWN;
+    }
+
+    /** Tier 1/2 sport type only (excludes Tier 3 kinematic inference, REQ-FIL-030.2). */
+    @NonNull
+    public static BSportType getAuthoritativeActiveBSportType() {
+        BANALService inst = cServiceInstance != null ? cServiceInstance : (cServiceContext instanceof BANALService ? (BANALService) cServiceContext : null);
+        if (inst != null) return inst.getAuthoritativeBSportType();
+        DeviceManager dm = cDeviceManager;
+        return dm != null ? dm.getSportType() : BSportType.UNKNOWN;
+    }
+
+    /** Publishes Tier 3 inferred sport and moving-speed summary to the live instance (REQ-FIL-030.3). */
+    public static void updateActiveInferredSportTelemetry(@NonNull BSportType inferredSport, @Nullable MovingSpeedSummary summary) {
+        BANALService inst = cServiceInstance != null ? cServiceInstance : (cServiceContext instanceof BANALService ? (BANALService) cServiceContext : null);
+        if (inst != null) inst.setInferredSportTelemetry(inferredSport, summary);
     }
 
     /**
@@ -428,8 +468,19 @@ public class BANALService
     }
 
     private void setUserSelectedSportTypeId(long sportTypeId) {
-        mHaveUserSelectedSportType = true;
+        BSportType resolvedSportType = BSportType.UNKNOWN;
+        try {
+            BSportType lookedUp = getSportTypesRepository().getBSportType(sportTypeId);
+            if (lookedUp != null) {
+                resolvedSportType = lookedUp;
+            }
+        } catch (Throwable t) {
+            Log.w(TAG, "Error resolving BSportType for sport type " + sportTypeId, t);
+        }
+        // Publish ID and cached BSportType before setting mHaveUserSelectedSportType = true (JMM release).
         mUserSelectedSportTypeId = sportTypeId;
+        mUserSelectedBSportType = resolvedSportType;
+        mHaveUserSelectedSportType = true;
         updateIndoorModeForSportType(sportTypeId);
         sendBroadcast(new Intent(SPORT_TYPE_CHANGED_BY_USER_INTENT)
                 .setPackage(this.getPackageName()));
@@ -448,45 +499,49 @@ public class BANALService
     }
 
     public BSportType getUserSelectedBSportType() {
-        return mHaveUserSelectedSportType ? getSportTypesRepository().getBSportType(mUserSelectedSportTypeId) : null;
+        return mHaveUserSelectedSportType ? mUserSelectedBSportType : null;
     }
 
     private void setUserSelectedBSportType(BSportType bSportType) {
         setUserSelectedSportTypeId(SportTypesRepository.getSportTypeId(bSportType));
     }
 
+    /** Tier 1 (user selection) or Tier 2 (external hardware) sport type only (REQ-FIL-030.2). */
+    @NonNull
+    public BSportType getAuthoritativeBSportType() {
+        if (mHaveUserSelectedSportType) return mUserSelectedBSportType;
+        DeviceManager dm = cDeviceManager;
+        return dm != null ? dm.getSportType() : BSportType.UNKNOWN;
+    }
+
+    public void setInferredSportTelemetry(@NonNull BSportType inferredSport, @Nullable MovingSpeedSummary summary) {
+        mInferredBSportType = (inferredSport == BSportType.BIKE || inferredSport == BSportType.RUN) ? inferredSport : BSportType.UNKNOWN;
+        mMovingSpeedSummary = summary;
+    }
+
+    public void clearInferredSportTelemetry() {
+        mInferredBSportType = BSportType.UNKNOWN;
+        mMovingSpeedSummary = null;
+    }
+
+    @Nullable
+    public MovingSpeedSummary getMovingSpeedSummary() { return mMovingSpeedSummary; }
+
     @NonNull
     public BSportType getBSportType() {
-        if (mHaveUserSelectedSportType) {
-            return getSportTypesRepository().getBSportType(mUserSelectedSportTypeId);
-        } else {
-            DeviceManager deviceManager = cDeviceManager;
-            return deviceManager != null ? deviceManager.getSportType() : BSportType.UNKNOWN;
-        }
+        BSportType authoritative = getAuthoritativeBSportType();
+        if (mHaveUserSelectedSportType || authoritative != BSportType.UNKNOWN) return authoritative;
+        return mInferredBSportType;
     }
 
     public long getSportTypeId() {
-        if (mHaveUserSelectedSportType) {
-            return mUserSelectedSportTypeId;
-        } else {
-            DeviceManager deviceManager = cDeviceManager;
-            BSportType sportType = deviceManager != null ? deviceManager.getSportType() : BSportType.UNKNOWN;
-            return SportTypesRepository.getSportTypeId(sportType);
-        }
+        return mHaveUserSelectedSportType ? mUserSelectedSportTypeId : SportTypesRepository.getSportTypeId(getBSportType());
     }
 
     public long getSportTypeId(double avgSpd) {
-        if (mHaveUserSelectedSportType) {
-            return mUserSelectedSportTypeId;
-        } else {
-            DeviceManager deviceManager = cDeviceManager;
-            BSportType sportType = deviceManager != null ? deviceManager.getSportType() : BSportType.UNKNOWN;
-            List<Long> sportTypeIds = getSportTypesRepository().getSportTypesIdList(sportType, avgSpd);
-            if (sportTypeIds != null && !sportTypeIds.isEmpty()) {
-                return sportTypeIds.get(0);
-            }
-            return SportTypesRepository.getDefaultSportTypeId();
-        }
+        if (mHaveUserSelectedSportType) return mUserSelectedSportTypeId;
+        List<Long> ids = getSportTypesRepository().getSportTypesIdList(getBSportType(), avgSpd);
+        return (ids != null && !ids.isEmpty()) ? ids.get(0) : SportTypesRepository.getDefaultSportTypeId();
     }
 
     @Override
@@ -676,6 +731,7 @@ public class BANALService
         if (DEBUG) Log.d(TAG, "onCreate");
 
         cServiceContext = this.getApplicationContext();
+        cServiceInstance = this;
         cSensorManager = new MySensorManager(this);
         cDeviceManager = new DeviceManager(this, cSensorManager);
         if (mIsIndoorMode) {
@@ -692,6 +748,7 @@ public class BANALService
 
         ContextCompat.registerReceiver(this, mStartSearchForPairedDevices, new IntentFilter(REQUEST_START_SEARCH_FOR_PAIRED_DEVICES), ContextCompat.RECEIVER_NOT_EXPORTED);
         ContextCompat.registerReceiver(this, mNewLapReceiver, new IntentFilter(REQUEST_NEW_LAP), ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(this, mResetAccumulatorsReceiver, new IntentFilter(RESET_ACCUMULATORS_INTENT), ContextCompat.RECEIVER_NOT_EXPORTED);
     }
 
     @Override
@@ -718,8 +775,14 @@ public class BANALService
         cDeviceManager = null;
         cSensorManager = null;
         cFilterManager = null;
+        cServiceInstance = null;
         cServiceContext = null;
+        mHaveUserSelectedSportType = false;
+        mUserSelectedSportTypeId = -1;
+        mUserSelectedBSportType = BSportType.UNKNOWN;
+        clearInferredSportTelemetry();
 
+        LifecycleUtils.safeUnregisterReceiver(this, mResetAccumulatorsReceiver, TAG);
         LifecycleUtils.safeUnregisterReceiver(this, mNewLapReceiver, TAG);
         LifecycleUtils.safeUnregisterReceiver(this, mStartSearchForPairedDevices, TAG);
     }
@@ -856,6 +919,11 @@ public class BANALService
         @Nullable
         public BSportType getUserSelectedBSportType() {
             return BANALService.this.getUserSelectedBSportType();
+        }
+
+        @Nullable
+        public MovingSpeedSummary getMovingSpeedSummary() {
+            return BANALService.this.getMovingSpeedSummary();
         }
 
         public long getSportTypeId() {

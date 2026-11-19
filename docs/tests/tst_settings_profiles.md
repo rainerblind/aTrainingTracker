@@ -1,14 +1,14 @@
 # Living Test Specification: Settings, Profiles & Localization
 
 **Document ID**: `DOC-TST-SET`  
-**Version**: 1.0.4  
+**Version**: 1.0.7  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `settings_profiles`  
 **Prefixes**: `LOC`, `MON`, `PRI`, `SET`  
 **Scope**: Athlete settings, bike/sensor profiles, privacy zones, data stores, monetization, and 9-locale parity.  
-**Total Tests**: 106
+**Total Tests**: 107
 
 ---
 
@@ -1497,6 +1497,24 @@
 
 ---
 
+### TST-SET-121: **Polar Aftermath Retry Sync Lifecycle Safety & Disconnected Stop-Time Fast-Fail Suite (`ATT-8969`)** [Verified]
+- **Requirement(s)**: `REQ-SET-119` (`REQ-SET-119.1`..`REQ-SET-119.3`)
+- **Component**: `PolarRetrySyncCoordinator.kt`, `PolarH10RetrySyncBanner.kt`, `PolarVeritySenseOfflineController.kt`, `PolarH10OfflineController.kt`, `PolarOfflineGattCoordinator.kt`, `TrackOnMapAftermathViewModel.kt`, `WorkoutSummariesTabbedScreen.kt`, `WorkoutSummariesListFragment.kt`, `PolarRetrySyncCoordinatorTest.kt`, `PolarH10RetrySyncBannerTest.kt`, `PolarVeritySenseOfflineControllerTest.kt`, `PolarH10OfflineControllerTest.kt`, `TrackOnMapAftermathViewModelTest.kt`
+- **Jira**: `ATT-8969`
+- **Status**: Verified
+- **Test Description**:
+  1. *Non-Composition Retry Scope & Disposal Survival (`TST-SET-121.1`, `PolarRetrySyncCoordinatorTest.kt`, `PolarH10RetrySyncBannerTest.kt`)*:
+  • Verify triggering *Sync Now* executes `syncPendingPolarWorkout` on the non-composition scope, deduplicates concurrent taps per `workoutId`, survives simulated composition disposal/re-entry without throwing `ForgottenCoroutineScopeException` or flickering state, and exposes reactive `isSyncing`/`errorMessage`/`completion` state.
+  2. *CancellationException Propagation (`TST-SET-121.2`, `PolarVeritySenseOfflineControllerTest.kt`, `PolarH10OfflineControllerTest.kt`)*:
+  • Verify `CancellationException` thrown during `syncPendingWorkout` or `stopAndBackfillWorkout` is rethrown and never swallowed by `catch (t: Throwable)`.
+  3. *Aftermath HR Telemetry Graph Refresh (`TST-SET-121.3`, `PolarRetrySyncCoordinatorTest.kt` / `TrackOnMapAftermathViewModelTest.kt`)*:
+  • Verify completion of deferred Polar backfill emits completion / clears `polarSyncPending`, triggering `TrackOnMapAftermathViewModel.loadAftermathData(...)` to reload `telemetryPath` and `hrZoneDistribution` for the active workout.
+  4. *Disconnected Stop-Time Fast-Fail & Bounded Connection Timeout (`TST-SET-121.4`, `PolarVeritySenseOfflineControllerTest.kt`, `PolarH10OfflineControllerTest.kt`)*:
+  • Verify when `DeviceManager` confirms the target Polar sensor is disconnected (`!isReceivingData()` and `!isDeviceConnected`, `apiOverride == null` / test hook), `stopAndBackfillWorkout()` fast-fails without waiting on `api.waitForConnection()`, records `setPolarSyncPending()` when `needsBackfill == true`, and resets `isRecordingArmed()` to `false`.
+  • Verify when `api.waitForConnection()` hangs during stop-time backfill, `STOP_CONNECTION_TIMEOUT_MS` (`5_000 ms`) aborts connection wait gracefully without waiting `30–45 s`, records `setPolarSyncPending()` when `needsBackfill == true`, and resumes GATT.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -1505,3 +1523,6 @@
 | `1.0.1` | 2026-11-17 | AI Agent (`ATT-8690`) | `ATT-8690` | Added `TST-SET-120` (offline mocked verification suite for `REQ-SET-118`). |
 | `1.0.2` | 2026-11-17 | AI Agent (`ATT-8690`) | `ATT-8690` | Promoted `TST-SET-120` to `[Implemented]` following Stage 4 test implementation. |
 | `1.0.3` | 2026-11-17 | AI Agent (`ATT-8690`) | `ATT-8690` | Promoted `TST-SET-120` to `[Verified]` following Stage 5 unit verification. |
+| `1.0.4` | 2026-11-19 | AI Agent (`ATT-8969`) | `ATT-8969` | Added `TST-SET-121` (`[Planned]` verification suite for `REQ-SET-119`). |
+| `1.0.6` | 2026-11-19 | AI Agent (`ATT-8969`) | `ATT-8969` | Promoted `TST-SET-121` to `[Implemented]` following Stage 4 test implementation. |
+| `1.0.7` | 2026-11-19 | AI Agent (`ATT-8969`) | `ATT-8969` | Promoted `TST-SET-121` to `[Verified]` following Stage 5 verification. |

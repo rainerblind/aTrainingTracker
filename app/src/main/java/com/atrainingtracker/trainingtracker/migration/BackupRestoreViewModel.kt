@@ -31,9 +31,6 @@ import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.cloud.googledrive.GoogleDriveAuthManager
 import com.atrainingtracker.trainingtracker.database.WorkoutCluster
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterDatabaseManager
-import com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository
-import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
-import com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepository
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
@@ -652,7 +649,16 @@ class BackupRestoreViewModel @JvmOverloads constructor(
             _uiState.value = UiState.Loading(context.getString(R.string.import_strava_archive_progress, 0, 0))
             try {
                 val listener = createLegacyListener()
-                val result = StravaBulkExportImporter.importArchive(context, archiveUri, listener)
+                val (result, batch) = withBulkImportBatch { batch ->
+                    StravaBulkExportImporter.importArchive(context, archiveUri, listener) to batch
+                }
+                if (result.importedCount > 0) {
+                    reconcileBulkImportBatch(
+                        context = getApplication(),
+                        refreshClimbs = batch?.hasPersistedClimbs == true,
+                        logTag = "BackupRestoreVM"
+                    )
+                }
                 if (result.importedCount > 0 && result.failedCount == 0) {
                     _uiState.value = UiState.Success(
                         context.getString(R.string.import_strava_archive_summary_success, result.importedCount, result.skippedCount),
@@ -775,78 +781,77 @@ class BackupRestoreViewModel @JvmOverloads constructor(
             uris
         }
 
-        sortedUris.forEachIndexed { index, uri ->
-            val progressStepString = if (format.lowercase() == "fit") {
-                context.getString(R.string.import_fit_progress, index + 1, totalFiles)
-            } else {
-                context.getString(R.string.import_workout_files_progress, index + 1, totalFiles)
-            }
-            _uiState.value = UiState.Loading(progressStepString)
-
-            val displayName = ImportFileValidator.resolveDisplayName(context, uri)
-            val candidateBaseName = if (!displayName.isNullOrBlank() && !displayName.startsWith("legacy_import", ignoreCase = true)) {
-                displayName.substringBeforeLast(".").removeSuffix("-TMP").removeSuffix("~")
-            } else {
-                null
-            }
-
-            if (candidateBaseName != null && existingSnapshot.containsFileBaseName(candidateBaseName)) {
-                if (TrainingApplication.getDebug(true)) {
-                    Log.d("BackupRestoreVM", "Fast-forwarding duplicate workout file: $candidateBaseName")
+        withBulkImportBatch(enabled = totalFiles > 1) { batch ->
+            sortedUris.forEachIndexed { index, uri ->
+                val progressStepString = if (format.lowercase() == "fit") {
+                    context.getString(R.string.import_fit_progress, index + 1, totalFiles)
+                } else {
+                    context.getString(R.string.import_workout_files_progress, index + 1, totalFiles)
                 }
-                skippedCount++
-                return@forEachIndexed
-            }
+                _uiState.value = UiState.Loading(progressStepString)
 
-            val fileName = displayName?.takeIf { it.isNotBlank() } ?: "import_${System.currentTimeMillis()}_$index.$format"
-            val tempFile = File(context.cacheDir, fileName)
-            try {
-                context.contentResolver.openInputStream(uri)?.use { input ->
-                    tempFile.outputStream().use { output -> input.copyTo(output) }
+                val displayName = ImportFileValidator.resolveDisplayName(context, uri)
+                val candidateBaseName = if (!displayName.isNullOrBlank() && !displayName.startsWith("legacy_import", ignoreCase = true)) {
+                    displayName.substringBeforeLast(".").removeSuffix("-TMP").removeSuffix("~")
+                } else {
+                    null
                 }
 
-                val fileExt = if (fileName.contains('.')) fileName.substringAfterLast('.').lowercase() else format.lowercase()
-                val result = when (fileExt) {
-                    "tcx" -> LegacyImportEngine.importFromTcxResult(context, tempFile, createLegacyListener(), uploadToStravaOnImport)
-                    "gpx" -> LegacyImportEngine.importFromGpxResult(context, tempFile, createLegacyListener(), uploadToStravaOnImport)
-                    "fit" -> LegacyImportEngine.importFromFitResult(context, tempFile, createLegacyListener(), uploadToStravaOnImport)
-                    else -> LegacyImportEngine.ImportResult(LegacyImportEngine.ImportStatus.FAILED)
-                }
-
-                when (result.status) {
-                    LegacyImportEngine.ImportStatus.SUCCESS -> {
-                        importedCount++
-                        if (candidateBaseName != null) {
-                            existingSnapshot.register(candidateBaseName)
-                        }
-                        if (result.workoutId != null) {
-                            lastImportedWorkoutId = result.workoutId
-                        }
+                if (candidateBaseName != null && existingSnapshot.containsFileBaseName(candidateBaseName)) {
+                    if (TrainingApplication.getDebug(true)) {
+                        Log.d("BackupRestoreVM", "Fast-forwarding duplicate workout file: $candidateBaseName")
                     }
-                    LegacyImportEngine.ImportStatus.DUPLICATE_SKIPPED -> {
-                        skippedCount++
-                        if (candidateBaseName != null) {
-                            existingSnapshot.register(candidateBaseName)
-                        }
-                    }
-                    LegacyImportEngine.ImportStatus.FAILED -> failedCount++
+                    skippedCount++
+                    return@forEachIndexed
                 }
-            } catch (e: Exception) {
-                Log.e("BackupRestoreVM", "Failed to import $format URI $uri: ${e.message}", e)
-                failedCount++
-            } finally {
-                tempFile.delete()
-            }
-        }
 
-        if (importedCount > 0) {
-            try {
-                val app = getApplication<Application>()
-                WorkoutRepository.getInstance(app).loadAllWorkouts()
-                PeriodsRepository.getInstance(app).syncPeriodsIfDiscrepancy()
-                WorkoutClusterRepository.getInstance(app).refreshClusters()
-            } catch (e: Exception) {
-                Log.w("BackupRestoreVM", "Post-import reconciliation failed: ${e.message}")
+                val fileName = displayName?.takeIf { it.isNotBlank() } ?: "import_${System.currentTimeMillis()}_$index.$format"
+                val tempFile = File(context.cacheDir, fileName)
+                try {
+                    context.contentResolver.openInputStream(uri)?.use { input ->
+                        tempFile.outputStream().use { output -> input.copyTo(output) }
+                    }
+
+                    val fileExt = if (fileName.contains('.')) fileName.substringAfterLast('.').lowercase() else format.lowercase()
+                    val result = when (fileExt) {
+                        "tcx" -> LegacyImportEngine.importFromTcxResult(context, tempFile, createLegacyListener(), uploadToStravaOnImport)
+                        "gpx" -> LegacyImportEngine.importFromGpxResult(context, tempFile, createLegacyListener(), uploadToStravaOnImport)
+                        "fit" -> LegacyImportEngine.importFromFitResult(context, tempFile, createLegacyListener(), uploadToStravaOnImport)
+                        else -> LegacyImportEngine.ImportResult(LegacyImportEngine.ImportStatus.FAILED)
+                    }
+
+                    when (result.status) {
+                        LegacyImportEngine.ImportStatus.SUCCESS -> {
+                            importedCount++
+                            if (candidateBaseName != null) {
+                                existingSnapshot.register(candidateBaseName)
+                            }
+                            if (result.workoutId != null) {
+                                lastImportedWorkoutId = result.workoutId
+                            }
+                        }
+                        LegacyImportEngine.ImportStatus.DUPLICATE_SKIPPED -> {
+                            skippedCount++
+                            if (candidateBaseName != null) {
+                                existingSnapshot.register(candidateBaseName)
+                            }
+                        }
+                        LegacyImportEngine.ImportStatus.FAILED -> failedCount++
+                    }
+                } catch (e: Exception) {
+                    Log.e("BackupRestoreVM", "Failed to import $format URI $uri: ${e.message}", e)
+                    failedCount++
+                } finally {
+                    tempFile.delete()
+                }
+            }
+
+            if (importedCount > 0) {
+                reconcileBulkImportBatch(
+                    context = getApplication(),
+                    refreshClimbs = totalFiles > 1 && batch?.hasPersistedClimbs == true,
+                    logTag = "BackupRestoreVM"
+                )
             }
         }
 
@@ -887,7 +892,9 @@ class BackupRestoreViewModel @JvmOverloads constructor(
                 return@launch
             }
             _uiState.value = UiState.Loading("Initializing legacy recovery...")
-            val result = LegacyImportEngine.bulkRecoverFromDropbox(context, format, createLegacyListener(), uploadToStravaOnImport)
+            val (result, batch) = withBulkImportBatch { batch ->
+                LegacyImportEngine.bulkRecoverFromDropbox(context, format, createLegacyListener(), uploadToStravaOnImport) to batch
+            }
             val app = getApplication<Application>()
             val message = if (result.failedCount > 0) {
                 app.getString(
@@ -912,14 +919,12 @@ class BackupRestoreViewModel @JvmOverloads constructor(
                 )
             }
             if (result.importedCount > 0) {
-                // ATT-909 / REQ-MIG-026: Post-bulk recovery reactive reconciliation
-                try {
-                    WorkoutRepository.getInstance(app).loadAllWorkouts()
-                    PeriodsRepository.getInstance(app).syncPeriodsIfDiscrepancy()
-                    WorkoutClusterRepository.getInstance(app).refreshClusters()
-                } catch (e: Exception) {
-                    Log.w("BackupRestoreVM", "Post-bulk recovery reconciliation failed: ${e.message}")
-                }
+                // ATT-909 / REQ-MIG-026 / REQ-STB-021.3: Post-bulk recovery reactive reconciliation
+                reconcileBulkImportBatch(
+                    context = app,
+                    refreshClimbs = batch?.hasPersistedClimbs == true,
+                    logTag = "BackupRestoreVM"
+                )
             }
             _uiState.value = UiState.Success(message)
         }
@@ -945,7 +950,9 @@ class BackupRestoreViewModel @JvmOverloads constructor(
                 return@launch
             }
             _uiState.value = UiState.Loading("Initializing Google Drive recovery...")
-            val result = LegacyImportEngine.bulkRecoverFromGoogleDrive(context, format, createLegacyListener(), uploadToStravaOnImport)
+            val (result, batch) = withBulkImportBatch { batch ->
+                LegacyImportEngine.bulkRecoverFromGoogleDrive(context, format, createLegacyListener(), uploadToStravaOnImport) to batch
+            }
             val app = getApplication<Application>()
             val message = if (result.failedCount > 0) {
                 app.getString(
@@ -972,14 +979,12 @@ class BackupRestoreViewModel @JvmOverloads constructor(
                 )
             }
             if (result.importedCount > 0) {
-                // REQ-MIG-034: Post-recovery reactive reconciliation
-                try {
-                    WorkoutRepository.getInstance(app).loadAllWorkouts()
-                    PeriodsRepository.getInstance(app).syncPeriodsIfDiscrepancy()
-                    WorkoutClusterRepository.getInstance(app).refreshClusters()
-                } catch (e: Exception) {
-                    Log.w("BackupRestoreVM", "Post-bulk recovery reconciliation failed: ${e.message}")
-                }
+                // REQ-MIG-034 / REQ-STB-021.3: Post-recovery reactive reconciliation
+                reconcileBulkImportBatch(
+                    context = app,
+                    refreshClimbs = batch?.hasPersistedClimbs == true,
+                    logTag = "BackupRestoreVM"
+                )
             }
             _uiState.value = UiState.Success(message)
         }

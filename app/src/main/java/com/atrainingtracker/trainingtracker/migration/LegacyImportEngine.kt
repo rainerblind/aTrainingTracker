@@ -206,66 +206,68 @@ object LegacyImportEngine {
             // ATT-493 Fix: Concurrent import pipeline using coroutineScope and a worker channel.
             // Spawns 3 concurrent background workers (bounded by interactionSemaphore(3)) so that
             // file downloading and importing continues concurrently while waiting for user candidate resolution.
-            kotlinx.coroutines.coroutineScope {
-                val channel = kotlinx.coroutines.channels.Channel<Pair<Int, com.dropbox.core.v2.files.Metadata>>(kotlinx.coroutines.channels.Channel.UNLIMITED)
-                entries.forEachIndexed { index, entry -> channel.trySend(Pair(index, entry)) }
-                channel.close()
+            withBulkImportBatch {
+                kotlinx.coroutines.coroutineScope {
+                    val channel = kotlinx.coroutines.channels.Channel<Pair<Int, com.dropbox.core.v2.files.Metadata>>(kotlinx.coroutines.channels.Channel.UNLIMITED)
+                    entries.forEachIndexed { index, entry -> channel.trySend(Pair(index, entry)) }
+                    channel.close()
 
-                (1..3).map {
-                    launch(Dispatchers.IO) {
-                        for ((_, entry) in channel) {
-                            coroutineContext.ensureActive()
-                            val current = processedCount.incrementAndGet()
-                            listener?.onProgress(current, entries.size, entry.name)
+                    (1..3).map {
+                        launch(Dispatchers.IO) {
+                            for ((_, entry) in channel) {
+                                coroutineContext.ensureActive()
+                                val current = processedCount.incrementAndGet()
+                                listener?.onProgress(current, entries.size, entry.name)
 
-                            val baseFileName = entry.name.substringBeforeLast(".").removeSuffix("-TMP").removeSuffix("~")
-                            if (existingSnapshot.containsFileBaseName(baseFileName)) {
-                                if (TrainingApplication.getDebug(true)) Log.d(TAG, "Skipping $baseFileName: Workout already exists.")
-                                skippedCount.incrementAndGet()
-                                continue
-                            }
-
-                            listener?.onStatus(context.getString(R.string.legacy_import__downloading_dropbox, entry.name))
-                            val workerDir = File(tempDir, "job_$current").apply { mkdirs() }
-                            val tempFile = File(workerDir, entry.name)
-                            try {
-                                val downloaded = downloadFileWithRetry(dbxClient, entry.pathLower ?: entry.name, tempFile)
-                                if (!downloaded) {
-                                    failedCount.incrementAndGet()
+                                val baseFileName = entry.name.substringBeforeLast(".").removeSuffix("-TMP").removeSuffix("~")
+                                if (existingSnapshot.containsFileBaseName(baseFileName)) {
+                                    if (TrainingApplication.getDebug(true)) Log.d(TAG, "Skipping $baseFileName: Workout already exists.")
+                                    skippedCount.incrementAndGet()
                                     continue
                                 }
 
-                                val ext = entry.name.substringAfterLast('.').lowercase()
-                                val status = when (ext) {
-                                    "tcx" -> importFromTcxInternal(context, tempFile, listener, uploadToStrava)
-                                    "gpx" -> importFromGpxInternal(context, tempFile, listener, uploadToStrava)
-                                    "fit" -> importFromFitInternal(context, tempFile, listener, uploadToStrava)
-                                    else -> when (format.lowercase()) {
+                                listener?.onStatus(context.getString(R.string.legacy_import__downloading_dropbox, entry.name))
+                                val workerDir = File(tempDir, "job_$current").apply { mkdirs() }
+                                val tempFile = File(workerDir, entry.name)
+                                try {
+                                    val downloaded = downloadFileWithRetry(dbxClient, entry.pathLower ?: entry.name, tempFile)
+                                    if (!downloaded) {
+                                        failedCount.incrementAndGet()
+                                        continue
+                                    }
+
+                                    val ext = entry.name.substringAfterLast('.').lowercase()
+                                    val status = when (ext) {
                                         "tcx" -> importFromTcxInternal(context, tempFile, listener, uploadToStrava)
                                         "gpx" -> importFromGpxInternal(context, tempFile, listener, uploadToStrava)
                                         "fit" -> importFromFitInternal(context, tempFile, listener, uploadToStrava)
-                                        else -> ImportStatus.FAILED
+                                        else -> when (format.lowercase()) {
+                                            "tcx" -> importFromTcxInternal(context, tempFile, listener, uploadToStrava)
+                                            "gpx" -> importFromGpxInternal(context, tempFile, listener, uploadToStrava)
+                                            "fit" -> importFromFitInternal(context, tempFile, listener, uploadToStrava)
+                                            else -> ImportStatus.FAILED
+                                        }
                                     }
+                                    when (status) {
+                                        ImportStatus.SUCCESS -> {
+                                            existingSnapshot.register(baseFileName)
+                                            importedCount.incrementAndGet()
+                                        }
+                                        ImportStatus.DUPLICATE_SKIPPED -> {
+                                            existingSnapshot.register(baseFileName)
+                                            skippedCount.incrementAndGet()
+                                        }
+                                        ImportStatus.FAILED -> failedCount.incrementAndGet()
+                                    }
+                                } catch (ce: CancellationException) {
+                                    throw ce
+                                } catch (e: Exception) {
+                                    Log.e(TAG, "Failed to download/import ${entry.name}", e)
+                                    failedCount.incrementAndGet()
+                                } finally {
+                                    tempFile.delete()
+                                    workerDir.delete()
                                 }
-                                when (status) {
-                                    ImportStatus.SUCCESS -> {
-                                        existingSnapshot.register(baseFileName)
-                                        importedCount.incrementAndGet()
-                                    }
-                                    ImportStatus.DUPLICATE_SKIPPED -> {
-                                        existingSnapshot.register(baseFileName)
-                                        skippedCount.incrementAndGet()
-                                    }
-                                    ImportStatus.FAILED -> failedCount.incrementAndGet()
-                                }
-                            } catch (ce: CancellationException) {
-                                throw ce
-                            } catch (e: Exception) {
-                                Log.e(TAG, "Failed to download/import ${entry.name}", e)
-                                failedCount.incrementAndGet()
-                            } finally {
-                                tempFile.delete()
-                                workerDir.delete()
                             }
                         }
                     }
@@ -425,72 +427,74 @@ object LegacyImportEngine {
         val existingSnapshot = ExistingWorkoutsSnapshot.create(context)
 
         try {
-            kotlinx.coroutines.coroutineScope {
-                val channel = kotlinx.coroutines.channels.Channel<Pair<Int, DriveFileEntry>>(kotlinx.coroutines.channels.Channel.UNLIMITED)
-                entries.forEachIndexed { index, entry -> channel.trySend(Pair(index, entry)) }
-                channel.close()
+            withBulkImportBatch {
+                kotlinx.coroutines.coroutineScope {
+                    val channel = kotlinx.coroutines.channels.Channel<Pair<Int, DriveFileEntry>>(kotlinx.coroutines.channels.Channel.UNLIMITED)
+                    entries.forEachIndexed { index, entry -> channel.trySend(Pair(index, entry)) }
+                    channel.close()
 
-                (1..3).map {
-                    launch(Dispatchers.IO) {
-                        for ((_, entry) in channel) {
-                            coroutineContext.ensureActive()
-                            val current = processedCount.incrementAndGet()
-                            listener?.onProgress(current, entries.size, entry.name)
+                    (1..3).map {
+                        launch(Dispatchers.IO) {
+                            for ((_, entry) in channel) {
+                                coroutineContext.ensureActive()
+                                val current = processedCount.incrementAndGet()
+                                listener?.onProgress(current, entries.size, entry.name)
 
-                            val baseFileName = entry.name.substringBeforeLast(".").removeSuffix("-TMP").removeSuffix("~")
-                            if (existingSnapshot.containsFileBaseName(baseFileName)) {
-                                if (TrainingApplication.getDebug(true)) Log.d(TAG, "Skipping $baseFileName: Workout already exists.")
-                                skippedCount.incrementAndGet()
-                                continue
-                            }
-
-                            listener?.onStatus(context.getString(R.string.legacy_import__downloading_google_drive, entry.name))
-                            val workerDir = File(tempDir, "job_$current").apply { mkdirs() }
-                            val tempFile = try {
-                                SecureZipExtractor.sanitizeDriveFileName(entry.name, workerDir)
-                            } catch (e: SecurityException) {
-                                Log.e(TAG, "Security violation: Invalid remote file name: ${entry.name}", e)
-                                failedCount.incrementAndGet()
-                                continue
-                            }
-                            try {
-                                val downloaded = downloadGoogleDriveFileWithRetry(driveClient, entry.id, tempFile)
-                                if (!downloaded) {
-                                    failedCount.incrementAndGet()
+                                val baseFileName = entry.name.substringBeforeLast(".").removeSuffix("-TMP").removeSuffix("~")
+                                if (existingSnapshot.containsFileBaseName(baseFileName)) {
+                                    if (TrainingApplication.getDebug(true)) Log.d(TAG, "Skipping $baseFileName: Workout already exists.")
+                                    skippedCount.incrementAndGet()
                                     continue
                                 }
 
-                                val ext = entry.name.substringAfterLast('.').lowercase()
-                                val status = when (ext) {
-                                    "fit" -> importFromFitInternal(context, tempFile, listener, uploadToStrava)
-                                    "tcx" -> importFromTcxInternal(context, tempFile, listener, uploadToStrava)
-                                    "gpx" -> importFromGpxInternal(context, tempFile, listener, uploadToStrava)
-                                    else -> when (format.lowercase()) {
+                                listener?.onStatus(context.getString(R.string.legacy_import__downloading_google_drive, entry.name))
+                                val workerDir = File(tempDir, "job_$current").apply { mkdirs() }
+                                val tempFile = try {
+                                    SecureZipExtractor.sanitizeDriveFileName(entry.name, workerDir)
+                                } catch (e: SecurityException) {
+                                    Log.e(TAG, "Security violation: Invalid remote file name: ${entry.name}", e)
+                                    failedCount.incrementAndGet()
+                                    continue
+                                }
+                                try {
+                                    val downloaded = downloadGoogleDriveFileWithRetry(driveClient, entry.id, tempFile)
+                                    if (!downloaded) {
+                                        failedCount.incrementAndGet()
+                                        continue
+                                    }
+
+                                    val ext = entry.name.substringAfterLast('.').lowercase()
+                                    val status = when (ext) {
                                         "fit" -> importFromFitInternal(context, tempFile, listener, uploadToStrava)
                                         "tcx" -> importFromTcxInternal(context, tempFile, listener, uploadToStrava)
                                         "gpx" -> importFromGpxInternal(context, tempFile, listener, uploadToStrava)
-                                        else -> ImportStatus.FAILED
+                                        else -> when (format.lowercase()) {
+                                            "fit" -> importFromFitInternal(context, tempFile, listener, uploadToStrava)
+                                            "tcx" -> importFromTcxInternal(context, tempFile, listener, uploadToStrava)
+                                            "gpx" -> importFromGpxInternal(context, tempFile, listener, uploadToStrava)
+                                            else -> ImportStatus.FAILED
+                                        }
                                     }
+                                    when (status) {
+                                        ImportStatus.SUCCESS -> {
+                                            existingSnapshot.register(baseFileName)
+                                            importedCount.incrementAndGet()
+                                        }
+                                        ImportStatus.DUPLICATE_SKIPPED -> {
+                                            existingSnapshot.register(baseFileName)
+                                            skippedCount.incrementAndGet()
+                                        }
+                                        ImportStatus.FAILED -> failedCount.incrementAndGet()
+                                    }
+                                } catch (ce: CancellationException) {
+                                    throw ce
+                                } catch (e: Exception) {
+                                    Log.e(TAG, "Failed to download/import ${entry.name}", e)
+                                    failedCount.incrementAndGet()
+                                } finally {
+                                    tempFile.delete()
+                                    workerDir.delete()
                                 }
-                                when (status) {
-                                    ImportStatus.SUCCESS -> {
-                                        existingSnapshot.register(baseFileName)
-                                        importedCount.incrementAndGet()
-                                    }
-                                    ImportStatus.DUPLICATE_SKIPPED -> {
-                                        existingSnapshot.register(baseFileName)
-                                        skippedCount.incrementAndGet()
-                                    }
-                                    ImportStatus.FAILED -> failedCount.incrementAndGet()
-                                }
-                            } catch (ce: CancellationException) {
-                                throw ce
-                            } catch (e: Exception) {
-                                Log.e(TAG, "Failed to download/import ${entry.name}", e)
-                                failedCount.incrementAndGet()
-                            } finally {
-                                tempFile.delete()
-                                workerDir.delete()
                             }
                         }
                     }
@@ -1340,26 +1344,40 @@ object LegacyImportEngine {
             }
         }
 
-        // 6. Direct Notification Pipeline & Legacy Broadcast (ATT-909 / REQ-MIG-026)
+        // 6. Direct Notification Pipeline & Legacy Broadcast (ATT-909 / REQ-MIG-026, REQ-STB-021.3)
         // Direct invocation ensures WorkoutRepository and PeriodsRepository process the workout
         // even if WorkoutRepository was not previously instantiated in memory (unbuffered broadcast issue).
+        // Inside BulkImportBatchContext, per-workout reloads and cluster rebuilds are deferred to
+        // post-batch reconciliation; climbs are still persisted without per-workout LiveClimbsRepository refresh.
+        val batchContext = kotlin.coroutines.coroutineContext[BulkImportBatchContext]
+        var handledDirectly = false
         try {
             val app = (context.applicationContext as? Application) ?: (context as? Application)
             if (app != null) {
+                handledDirectly = true
                 val workoutRepo = WorkoutRepository.getInstance(app)
-                workoutRepo.reloadWorkoutData(workoutId)
-                WorkoutClusterRepository.getInstance(app).refreshClusters()
+                if (batchContext != null) {
+                    val persistedClimbIds = workoutRepo.extractAndPersistClimbsWithoutRefresh(workoutId)
+                    if (persistedClimbIds.isNotEmpty()) {
+                        batchContext.markClimbsPersisted()
+                    }
+                } else {
+                    workoutRepo.reloadWorkoutData(workoutId)
+                    WorkoutClusterRepository.getInstance(app).refreshClusters()
+                }
             }
         } catch (e: Exception) {
             Log.w(TAG, "Direct repository notification skipped or failed: ${e.message}")
         }
 
-        try {
-            val intent = android.content.Intent(com.atrainingtracker.trainingtracker.tracker.TrackerService.WORKOUT_UPDATED_INTENT)
-            intent.putExtra(com.atrainingtracker.trainingtracker.tracker.TrackerService.WORKOUT_ID, workoutId)
-            androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(context).sendBroadcast(intent)
-        } catch (e: Exception) {
-            Log.w(TAG, "Legacy broadcast delivery skipped or failed: ${e.message}")
+        if (!handledDirectly) {
+            try {
+                val intent = android.content.Intent(com.atrainingtracker.trainingtracker.tracker.TrackerService.WORKOUT_UPDATED_INTENT)
+                intent.putExtra(com.atrainingtracker.trainingtracker.tracker.TrackerService.WORKOUT_ID, workoutId)
+                androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(context).sendBroadcast(intent)
+            } catch (e: Exception) {
+                Log.w(TAG, "Legacy broadcast delivery skipped or failed: ${e.message}")
+            }
         }
     }
 

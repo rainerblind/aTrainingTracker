@@ -406,12 +406,33 @@ class MySensorManagerPriorityTest {
             assertEquals(2, MySensorManager.getPriorityRank(sensor, DeviceType.BIKE_POWER))
         }
 
-        // Cadence: RUN_SPEED (0) -> BIKE_CADENCE (1) -> BIKE_SPEED_AND_CADENCE (2) -> BIKE_POWER (3)
-        // Note: CADENCE_PRIORITY in MySensorManager starts with RUN_SPEED (Gate 3 advisory).
+        // Cadence: RUN_SPEED (0) -> BIKE_CADENCE (1) -> BIKE_SPEED_AND_CADENCE (2)
+        // -> BIKE_POWER (3) -> HRM (4) -> SPEED_AND_LOCATION_ATT_FUSED (5)
         assertEquals(0, MySensorManager.getPriorityRank(SensorType.CADENCE, DeviceType.RUN_SPEED))
         assertEquals(1, MySensorManager.getPriorityRank(SensorType.CADENCE, DeviceType.BIKE_CADENCE))
         assertEquals(2, MySensorManager.getPriorityRank(SensorType.CADENCE, DeviceType.BIKE_SPEED_AND_CADENCE))
         assertEquals(3, MySensorManager.getPriorityRank(SensorType.CADENCE, DeviceType.BIKE_POWER))
+        assertEquals(4, MySensorManager.getPriorityRank(SensorType.CADENCE, DeviceType.HRM))
+        assertEquals(
+            5,
+            MySensorManager.getPriorityRank(SensorType.CADENCE, DeviceType.SPEED_AND_LOCATION_ATT_FUSED)
+        )
+
+        // Strides: RUN_SPEED (0) -> HRM (1) -> SPEED_AND_LOCATION_ATT_FUSED (2)
+        assertEquals(0, MySensorManager.getPriorityRank(SensorType.STRIDES, DeviceType.RUN_SPEED))
+        assertEquals(1, MySensorManager.getPriorityRank(SensorType.STRIDES, DeviceType.HRM))
+        assertEquals(
+            2,
+            MySensorManager.getPriorityRank(SensorType.STRIDES, DeviceType.SPEED_AND_LOCATION_ATT_FUSED)
+        )
+        assertEquals(
+            listOf(DeviceType.RUN_SPEED, DeviceType.HRM, DeviceType.SPEED_AND_LOCATION_ATT_FUSED),
+            MySensorManager.getPriorityArray(SensorType.STRIDES)?.toList()
+        )
+        assertEquals(
+            listOf(DeviceType.RUN_SPEED, DeviceType.HRM, DeviceType.SPEED_AND_LOCATION_ATT_FUSED),
+            sensorManager.getPriorityList(SensorType.STRIDES)
+        )
 
         // Unmapped device: fallback to 1000 + ordinal
         assertEquals(

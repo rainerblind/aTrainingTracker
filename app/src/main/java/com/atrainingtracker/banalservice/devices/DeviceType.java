@@ -175,12 +175,17 @@ public enum DeviceType {
                 deviceTypes.add(DeviceType.BIKE_SPEED_AND_CADENCE);
                 deviceTypes.add(DeviceType.BIKE_POWER);      // but not all
                 deviceTypes.add(DeviceType.RUN_SPEED);
+                deviceTypes.add(DeviceType.SPEED_AND_LOCATION_ATT_FUSED);
                 break;
 
             // only run
             case CALORIES:                                   // TODO: but only for ant+ and when supported
+                deviceTypes.add(DeviceType.RUN_SPEED);
+                break;
+
             case STRIDES:
                 deviceTypes.add(DeviceType.RUN_SPEED);
+                deviceTypes.add(DeviceType.SPEED_AND_LOCATION_ATT_FUSED);
                 break;
 
             // all devices that support speed / distance...
