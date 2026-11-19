@@ -24,7 +24,8 @@ import org.junit.Assert.assertNotNull
 import org.junit.Test
 
 /**
- * Unit tests for [LiveWorkoutSession] retroactive altitude drift correction (REQ-TRK-047, TST-TRK-047.3, TST-TRK-047.4).
+ * Unit tests for [LiveWorkoutSession] retroactive altitude drift correction
+ * (REQ-TRK-047, TST-TRK-047.3, TST-TRK-047.4; REQ-FIL-004, TST-FIL-003.1).
  */
 class LiveWorkoutSessionAltitudeDriftTest {
 

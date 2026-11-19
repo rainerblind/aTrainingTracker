@@ -40,7 +40,7 @@ import org.junit.Test
 import java.util.Locale
 
 /**
- * Unit tests for [BatteryDevice] (REQ-CON-015, TST-CON-006, ATT-1454).
+ * Unit tests for [BatteryDevice] (REQ-CON-015, TST-CON-006, ATT-1454; REQ-CON-016, TST-CON-007, ATT-1631, ATT-8329).
  */
 class BatteryDeviceTest {
 
@@ -155,6 +155,7 @@ class BatteryDeviceTest {
         assertEquals(BatteryRemainingTimeFormatter.STABILIZING_STATUS_CODE, device.getSensor(SensorType.BATTERY_REMAINING_TIME).value)
     }
 
+    /** TST-CON-007 / REQ-CON-016: Monotonic countdown while battery percentage stays constant. */
     @Test
     fun testRemainingDuration_constantPercentage_countsDownMonotonicallyWithoutDrift() {
         val device = BatteryDevice(mockContext, mockSensorManager)
@@ -179,6 +180,7 @@ class BatteryDeviceTest {
         assertTrue((remainingSensor.value as Int) < 57540)
     }
 
+    /** TST-CON-007 / REQ-CON-016: Smooth step-drop drain rate recalibration. */
     @Test
     fun testRemainingDuration_stepDrop_recalibratesSmoothly() {
         val device = BatteryDevice(mockContext, mockSensorManager)
@@ -202,6 +204,7 @@ class BatteryDeviceTest {
         assertEquals(56850, remainingSensor.value)
     }
 
+    /** TST-CON-007 / REQ-CON-016: Lower-bound floor clamping at (P - 1) prevents premature depletion. */
     @Test
     fun testRemainingDuration_floorClamping_preventsPrematureDepletion() {
         val device = BatteryDevice(mockContext, mockSensorManager)

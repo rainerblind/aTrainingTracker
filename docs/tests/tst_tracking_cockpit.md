@@ -1,7 +1,7 @@
 # Living Test Specification: Tracking & Live Sensor Cockpit
 
 **Document ID**: `DOC-TST-TRK`  
-**Version**: 1.0.67  
+**Version**: 1.0.69  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -12,10 +12,14 @@
 
 ---
 
-### TST-FIL-002: WorkoutSamplesDb [Implemented]
+### TST-FIL-002: WorkoutSamplesDb (`calcExtremaValue` Null-Safety & Missing Column Suite) [Verified]
 - **Requirement(s)**: `REQ-FIL-006`, `REQ-FIL-011`
-- **Component**: `WorkoutSamplesDb`
-- **Test Description**: Verify that `calcExtremaValue` returns `null` (not 0.0) when querying a sensor that has only NULL values or does not exist in the table.
+- **Component**: `app/src/test/java/com/atrainingtracker/trainingtracker/database/WorkoutSamplesDatabaseManagerTest.kt`
+- **Jira**: `ATT-8329`
+- **Test Description**:
+  1. *All-`NULL` & Missing-Column Extrema Verification (`TST-FIL-002.1`, `WorkoutSamplesDatabaseManagerTest.kt`)*:
+     • Execute `WorkoutSamplesDatabaseManager.calcExtremaValue()` against real Robolectric SQLite across all 5 `ExtremaType` modes (`MAX`, `AVG`, `MIN`, `START`, `END`) for: (a) a sensor column containing strictly `NULL` values, (b) a sensor column absent from the workout samples table, and (c) populated sample rows.
+     • Assert `null` (never `0.0`) is returned for all-`NULL` and missing-column queries, and accurate values are returned for populated rows.
 
 ### TST-FIL-001: **Null-Safe Filter Verification** [Verified]
 - **Requirement(s)**: `REQ-FIL-011`
@@ -42,11 +46,15 @@
 - **Test Description**:
   1. *Auto-Calibration Convergence Test*: Feed raw wheel revolutions alongside ground-truth high-accuracy GPS fixes on straight road segments; verify the filter dynamically converges wheel circumference within < 0.3% error.
 
-### TST-FIL-003: **Atomic Altitude Correction** [Implemented]
+### TST-FIL-003: **Atomic Altitude Correction** [Verified]
 - **Requirement(s)**: `REQ-FIL-004`
-- **Component**: **Atomic Altitude Correction**
-- **Jira**: ``ATT-425``
-- **Test Description**: 1. Start a workout with barometric altitude at 100m. 2. Record data for 1 minute. 3. Trigger a correction to 200m (e.g. by nearing a known location). 4. Stop workout and inspect summary.
+- **Component**: `app/src/test/java/com/atrainingtracker/trainingtracker/tracker/LiveWorkoutSessionAltitudeDriftTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/database/WorkoutSamplesDatabaseManagerTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/database/WorkoutSummariesAltitudeShiftTest.kt`
+- **Jira**: `ATT-425`, `ATT-8329`
+- **Test Description**:
+  1. *Live Session & Samples Atomic Shift (`TST-FIL-003.1`, `LiveWorkoutSessionAltitudeDriftTest.kt`, `WorkoutSamplesDatabaseManagerTest.kt`)*:
+     • Verify `LiveWorkoutSession.applyRetroactiveAltitudeCorrection` and `WorkoutSamplesDatabaseManager.applyAltitudeDriftCorrection` atomically shift sample altitudes, `RunningStats` min/max, and recomputed `sampledAscent`/`sampledDescent`.
+  2. *Summaries Extrema, Altitude Stream & Ascent/Descent Transactional Sync (`TST-FIL-003.2`, `WorkoutSummariesAltitudeShiftTest.kt`)*:
+     • Execute `WorkoutSummariesDatabaseManager.shiftAltitudeData()` against real Robolectric SQLite for Case A (uniform shift) and Case B (piecewise-linear drift interpolation), verifying transactional updates to `TABLE_EXTREMA_VALUES`, `ALTITUDE_STREAM`, `ASCENDING`, and `DESCENDING`.
 
 ### TST-CON-002: **Barometric Cold-Start Baseline Protection Audit** [Verified]
 - **Requirement(s)**: `REQ-CON-011`
@@ -294,10 +302,10 @@
   7. *Clean-Room Regression Suite*:
   • Run `./gradlew testDebugUnitTest` to guarantee 100% pass rate.
 
-### TST-CON-007: **Battery Remaining Duration Monotonic Countdown and Step-Transition Recalibration Verification** [Implemented]
+### TST-CON-007: **Battery Remaining Duration Monotonic Countdown and Step-Transition Recalibration Verification** [Verified]
 - **Requirement(s)**: `REQ-CON-016`
-- **Component**: **Battery Remaining Duration Monotonic Countdown and Step-Transition Recalibration Verification**
-- **Jira**: ``ATT-1631``
+- **Component**: `app/src/test/java/com/atrainingtracker/banalservice/devices/BatteryDeviceTest.kt`
+- **Jira**: `ATT-1631`, `ATT-8329`
 - **Test Description**:
   1. *Monotonic Countdown Verification (`testRemainingDuration_constantPercentage_countsDownMonotonicallyWithoutDrift`)*:
   • Simulate active recording where a baseline drain rate is established (e.g. 5.0%/h at 80%).
@@ -3665,3 +3673,5 @@
 | `1.0.65` | 2026-11-19 | AI Agent (`ATT-8965`, `--as agent1`) | `ATT-8965` | Stage 6 Bounce 1/3 heal: added regression unit tests for `effectiveDelayMs` live clamping (`SensorReconnectBackoffPolicyTest`, `BLEReconnectRobustnessTest`), disable-while-pending zombie cleanup & runnable-identity cancellation race (`DeviceSearchPeriodicRetryCoordinatorTest`, `DeviceManagerSearchQueueTest`), and Polar echo double-advance / `blePowerStateChanged` / exception reschedule (`PolarOnlineStreamingBridgeTest`); set `[Implemented]` pending verification. |
 | `1.0.66` | 2026-11-19 | AI Agent (`ATT-8965`, `--as agent1`) | `ATT-8965` | Promoted `TST-CON-052` to `[Verified]` in Stage 5 (Bounce 2) reusing Gate 4 Bounce 2 Pass (`ATT-9088`: `128/128` incremental `--rerun` PASS across 16 suites, zero `app/` changes post-`587730da` per `Rule 7.5`) and `docs/engineering/walkthroughs/ATT-8965_walkthrough.md`. |
 | `1.0.67` | 2026-11-19 | AI Agent (`ATT-8891`, `--as agent1`) | `ATT-8891` | Added & verified `TST-FIL-030` (`[Verified]`, `TST-FIL-030.1`–`.5`) rebased cleanly atop `sprint/2026-11-19_01_Früh` (`6bb37af4`) reusing Gate 4 Pass (`ATT-9091`: `19` suites / `147/147` PASS, `0` failed, `0` skipped, zero `app/` diff post-`ee81c8ae` per `Rule 7.5`), static baselines (`lint = 216`, `detekt = 9509`) & safety linters PASS, and `docs/engineering/walkthroughs/ATT-8891_walkthrough.md`. |
+| `1.0.68` | 2026-11-19 | Lane A Flash (`ATT-8329`, `--as agent1`) | `ATT-8329` | Updated `Component` & `Test Description` for `TST-FIL-002` (5-mode `calcExtremaValue` Robolectric matrix), `TST-FIL-003` (dedicated `WorkoutSummariesAltitudeShiftTest.kt` + session/samples tags), and `TST-CON-007` (`BatteryDeviceTest.kt`), remaining `[Implemented]` pending Stage 4/5 execution. |
+| `1.0.69` | 2026-11-19 | Lane A Flash (`ATT-8329`, `--as agent1`) | `ATT-8329` | Promoted `TST-FIL-002`, `TST-FIL-003`, and `TST-CON-007` to `[Verified]` in Stage 5 reusing Gate 4 verified evidence (`Rule 7.5`: `33/33` PASS across 5 suites, `0` `app/` code changes since Gate 4, `ATT-8329_walkthrough.md`). |

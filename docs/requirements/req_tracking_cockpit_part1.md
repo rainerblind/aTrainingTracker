@@ -1,7 +1,7 @@
 # Living Requirements: Tracking & Live Sensor Cockpit (Part 1 of 2)
 
 **Document ID**: `DOC-REQ-TRK-P1`  
-**Version**: 1.0.21  
+**Version**: 1.0.22  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -188,7 +188,7 @@
 - **Rationale**: Provide advanced metrics for climbing and analysis.
 - **Description**: Calculate derived metrics (VAM, slope, pace).
 
-### REQ-FIL-004: Atomic Altitude Correction [Implemented]
+### REQ-FIL-004: Atomic Altitude Correction [Verified]
 - **Tests**: `TST-FIL-003`
 - **System Requirement(s)**: `SYSREQ-TRK-003`, `SYSREQ-TRK-004`
 - **Priority**: Medium
@@ -207,7 +207,7 @@
 - **Rationale**: Extensible architecture for complex multi-sensor data.
 - **Description**: Implement "Proxy Sensors" and "Accumulator Sensors".
 
-### REQ-FIL-006: Geographical rolling averages for start altitude [Implemented]
+### REQ-FIL-006: Geographical rolling averages for start altitude [Verified]
 - **Tests**: `TST-FIL-002`
 - **System Requirement(s)**: `SYSREQ-TRK-003`, `SYSREQ-TRK-004`
 - **Priority**: Medium
@@ -787,7 +787,7 @@
 
 **Invariants**: Existing sensor pipelines, peripheral sensor battery alerts (`REQ-CON-007`), cockpit rendering layouts, and 1Hz dispatch threading MUST NOT be regressed.
 
-### REQ-CON-016: Smartphone Battery Remaining Duration Continuous Countdown & Discrete Transition Drain Rate Architecture [Implemented]
+### REQ-CON-016: Smartphone Battery Remaining Duration Continuous Countdown & Discrete Transition Drain Rate Architecture [Verified]
 - **Tests**: `TST-CON-007`
 - **System Requirement(s)**: `SYSREQ-TRK-006`
 - **Priority**: High
@@ -3923,3 +3923,4 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 | `1.0.0` | 2026-11-18 | AI Agent (`ATT-8206`) | `ATT-8206` | Split oversized shard into compliant sub-shard (<= 4,000 lines, `REQ-PRO-093.4`, `REQ-PRO-127.3`). |
 | `1.0.20` | 2026-11-18 | AI Agent (`ATT-8712`) | `ATT-8712` | Aligned `REQ-TRK-061.4` with `REQ-TRK-046.4` and `REQ-TRK-087` (`ZonesSettingsActivity` HRV tab parity). |
 | `1.0.21` | 2026-11-18 | AI Agent (`ATT-8201`) | `ATT-8201` | Linked refined `REQ-*` entries in-place to net-new `SYSREQ-TRK-007..013` and `SYSREQ-DEX-007..008`. |
+| `1.0.22` | 2026-11-19 | Lane A Flash (`ATT-8329`, `--as agent1`) | `ATT-8329` | Promoted `REQ-FIL-004`, `REQ-FIL-006`, and `REQ-CON-016` from `[Implemented]` to `[Verified]` following Stage 4/Gate 4 unit & Robolectric verification (`33/33` PASS across `BatteryDeviceTest`, `LiveWorkoutSessionAltitudeDriftTest`, `WorkoutSamplesDatabaseManagerTest`, `WorkoutSummariesAltitudeShiftTest`, `SourceTextReadingAuditContractTest`; `ATT-8329_walkthrough.md`). |
