@@ -1,7 +1,7 @@
 # Living Test Specification: Tracking & Live Sensor Cockpit
 
 **Document ID**: `DOC-TST-TRK`  
-**Version**: 1.0.78  
+**Version**: 1.0.79  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -3635,7 +3635,7 @@
 ### TST-SEN-032: **WheelPositionSelectionDialog Front/Rear-Only Selection & Legacy Fallback Verification Suite** [Verified]
 - **Target Release**: `V5.0.0`
 - **Tickets**: `ATT-8859`
-- **Requirement(s)**: `REQ-SEN-032` (`REQ-SEN-032.1`..`REQ-SEN-032.3`), `REQ-SEN-029`, `REQ-SEN-031`, `REQ-ARC-003.5`
+- **Requirement(s)**: `REQ-SEN-032` (`REQ-SEN-032.1`..`REQ-SEN-032.3`)
 - **Component**: `app/src/test/java/com/atrainingtracker/trainingtracker/ui/equipment/WheelPositionSelectionDialogUiTest.kt` (new), `app/src/test/java/com/atrainingtracker/trainingtracker/ui/equipment/WheelPositionDialogsTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/ui/devices/editdevice/EditDeviceEquipmentWheelPositionTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/DeadCodeEliminationContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SourceTextReadingAuditContractTest.kt`
 - **Test Type**: Unit & UI
 - **Verification Method**: Unit
@@ -3651,7 +3651,7 @@
 ### TST-FIL-032: **Post-Workout ERTS Beat-Immune Timestamping, speedAverage_mps Parity & Stationary Indoor Pinning Suite** [Verified]
 - **Target Release**: `V5.0.0`
 - **Tickets**: `ATT-9064`
-- **Requirement(s)**: `REQ-FIL-032` (`REQ-FIL-032.1`..`REQ-FIL-032.3`), `REQ-FIL-017`, `REQ-FIL-025`, `REQ-FIL-027`, `REQ-FIL-028`, `REQ-TRK-030`
+- **Requirement(s)**: `REQ-FIL-032` (`REQ-FIL-032.1`..`REQ-FIL-032.3`)
 - **Component**: `app/src/test/java/com/atrainingtracker/trainingtracker/database/ErtsPostWorkoutRecomputerTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/odometry/ExtendedRtsOdometrySmootherTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/odometry/UnicycleOdometryEkfTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/tracker/TrackerServiceErtsFinalizationTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/database/LapsDatabaseManagerTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ArchitectureConformanceContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SystemLiveTrackingRequirementsContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SourceTextReadingAuditContractTest.kt`
 - **Test Type**: Unit
 - **Verification Method**: Unit
@@ -3741,3 +3741,4 @@
 | `1.0.76` | 2026-11-19 | AI Agent (`ATT-9064`, `--as agent1`) | `ATT-9064` | Added `TST-FIL-032` `[Planned]` (`TST-FIL-032.1`–`.3`) covering `584`-row `78`-pair `0/2` `TIME_TOTAL` beat non-stretching & pause/stall parity, `speedAverage_mps` / `Extrema(AVG)` / `Laps.db` parity + matched `activeDist / activeDt` fallback, and `UnicycleOdometryEkf.predict(isStationary = true)` + `0.00 m` indoor Haversine pinning (`N/A - no UI strings`). |
 | `1.0.77` | 2026-11-19 | AI Agent (`ATT-9064`, `--as agent1`) | `ATT-9064` | Promoted `TST-FIL-032` to `[Implemented]` following Stage 4 incremental `--rerun` verification (`84/84` PASS across 9 suites: `ErtsPostWorkoutRecomputerTest 17/17`, `ExtendedRtsOdometrySmootherTest 12/12`, `UnicycleOdometryEkfTest 17/17`, `TrackerServiceErtsFinalizationTest 2/2`, `LapsDatabaseManagerTest 10/10`, `ArchitectureConformanceContractTest 11/11`, `SystemLiveTrackingRequirementsContractTest 4/4`, `DeadCodeEliminationContractTest 5/5`, `SourceTextReadingAuditContractTest 6/6`). |
 | `1.0.78` | 2026-11-19 | AI Agent (`ATT-9064`, `--as agent1`) | `ATT-9064` | Promoted `TST-FIL-032` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9167`) `84/84` PASS evidence (`Rule 7.5`, zero `app/` diff since `75f3bff9`), 4 safety linters PASS, `verify_requirement_governance.py` `exit 0`, and `docs/engineering/walkthroughs/ATT-9064_walkthrough.md`. |
+| `1.0.79` | 2026-11-19 | AI Coordinator (`ATT-9121`) | `ATT-9121` | Cleaned Criterion 4 symmetric `Requirement(s)` scope on `TST-SEN-032` (`REQ-SEN-032` only) and `TST-FIL-032` (`REQ-FIL-032` only) for 100% full-governance parity at Sprint 463 Tier-2 closeout. |
