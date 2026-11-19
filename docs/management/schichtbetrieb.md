@@ -3,7 +3,7 @@
 **Document ID**: `DOC-MGT-SCHICHT`  
 **Document Identifier**: `SCHICHT-OPS-ATT`  
 **Standard**: ASPICE 4.0 `MAN.3` / `SUP.1` / `SUP.8` (Continuous Multi-Agent Shift Operations)  
-**Target Release**: `V5.0.0` | **Version**: 1.0.1  
+**Target Release**: `V5.0.0` | **Version**: 1.0.2  
 **Status**: Reviewed | **Approver**: Pending PO Sign-Off | **Date**: 2026-11-19  
 **Governing Rules**: [`.agents/rules/aspice_governance.md`](../.agents/rules/aspice_governance.md) (`Rule 2`, `Rule 7`, `Rule 9`) & [`.agents/skills/sprint-planner/SKILL.md`](../.agents/skills/sprint-planner/SKILL.md)  
 
@@ -40,7 +40,7 @@ Jede Schicht entspricht einem eigenen Jira-Sprint (`YYYY-MM-DD_0x_Schichtname`) 
 | **`03_Nacht`** | `22:00 – 05:00` | 7 h | `YYYY-MM-DD_03_Nacht` |
 
 * **3 parallele Lanes (`Rule 7.2`, `Rule 9.1`)**: Der Betrieb läuft standardmäßig auf **3 disjunkten Epic-Lanes** (z. B. `Lane A`: `ATT-8138` ASPICE/Tooling + `Lane B` & `Lane C`: disjunkte Produkt-Epics aus `Vom PO Freigegeben` ID `447` in strikter `ORDER BY rank ASC`-Reihenfolge).
-* **Modell-Routing (`Rule 7.2`)**: Routine-Aufgaben in Stages 1–5 sowie unkritische Stage-6-Reviews nutzen **`Flash`**. **`Pro`** wird **ausschließlich für komplexe oder grafische Aufgaben** eingesetzt (High-Risk / Multi-Component / Concurrency / DB / Sensor-Protokolle, Bounce-2–3-Eskalationen oder grafische UI/Compose/Canvas/Chart/Icon-Tickets mit `Rule 8.5`).
+* **Modell-Routing (`Rule 7.2`)**: Routine-Aufgaben in Stages 1–5 sowie unkritische Stage-6-Reviews nutzen **`Flash`** (`Model: "flash"`). **`Pro` / Gemini 4 Neon** (`Model: "inherit"` bei Neon-Koordinator, sonst `Model: "pro"`) wird **ausschließlich für komplexe oder grafische Aufgaben** eingesetzt (High-Risk / Multi-Component / Concurrency / DB / Sensor-Protokolle, Bounce-2–3-Eskalationen oder grafische UI/Compose/Canvas/Chart/Icon-Tickets mit `Rule 8.5`).
 * **Eskalation ohne Blockade (`Rule 6.1`)**: Bei echten Unklarheiten oder Human-Gates wird das Subtask mit `Question for Human: ...` an `human` zugewiesen und die Lane arbeitet sofort am nächsten Ticket weiter.
 
 ---
@@ -57,8 +57,8 @@ Jede Schicht entspricht einem eigenen Jira-Sprint (`YYYY-MM-DD_0x_Schichtname`) 
 
 ### Phase 1: Abschluss der laufenden Schicht (Wrap-up & Lean Tier-2)
 1. **Merge-Freeze**: Merges auf `sprint/<CLOSING_SCHICHT>` einfrieren. Offene `feature/<KEY>`-Branches bleiben für den nahtlosen Übertrag (`carryover-wip`) intakt.
-2. **Lean Tier-2 Integration Gate (`Rule 7.5`)**: Auf `sprint/<CLOSING_SCHICHT>` ausführen:
-   - `./gradlew :app:assembleDebug :app:compileDebugAndroidTestKotlin :app:testDebugUnitTest --tests <SprintTouchedSuites> --tests "com.atrainingtracker.trainingtracker.build.*" --tests "com.atrainingtracker.trainingtracker.integration.*" --tests "com.atrainingtracker.trainingtracker.localization.*" --max-workers=1`
+2. **Lean Tier-2 Integration Gate (`Rule 7.5`)**: Auf `sprint/<CLOSING_SCHICHT>` ausführen (inkrementell mit `--rerun`, niemals `--rerun-tasks`; Stage 4/Gate 4/Stage 6 nutzen ebenfalls ausschließlich inkrementelles `--rerun --tests <TicketSuites>`, Stage 5/Gate 5 ohne redundanten Gradle-Lauf bei unverändertem Code):
+   - `./gradlew :app:assembleDebug :app:compileDebugAndroidTestKotlin :app:testDebugUnitTest --rerun --tests <SprintTouchedSuites> --tests "com.atrainingtracker.trainingtracker.build.*" --tests "com.atrainingtracker.trainingtracker.integration.*" --tests "com.atrainingtracker.trainingtracker.localization.*" --max-workers=1`
    - `python3 tools/verify_requirement_governance.py`, Python-Tests (`tools/test_*.py`), Hoechstmass- & Safety-Linter.
    - *(Die vollständige `:app:testDebugUnitTest`-Suite sowie `:app:lintDebug`, `:app:detekt` und `:app:koverXmlReportDebug` laufen **1× wöchentlich** im Rahmen des Weekly Dual-Vendor Code Review / ASPICE Audit sowie bei Releases.)*
 3. **Best-Effort Phone Deploy (`Rule 7.6`)**: Falls ein physisches `Pixel 10` verbunden ist, `ANDROID_SERIAL=<serial> ./gradlew installDebug` ausführen (sonst ohne Blockade protokollieren und weiter).
@@ -85,3 +85,4 @@ Startet ein neuer Schichtführer in einem frischen Kontextfenster, prüft er zue
 | :--- | :--- | :--- | :--- | :--- |
 | `1.0.0` | 2026-11-18 | Sprint Coordinator (`ATT-8944`) | `Interactive-PO` | Aligned `schichtbetrieb.md` with live `05:00`/`15:00`/`22:00` `Schicht` sprints, 3 parallel lanes, `Pro` routing for complex/graphical tasks only, Lean Tier-2 at `Schichtwechsel` + weekly full suite, and direct next-`Schicht` start. |
 | `1.0.1` | 2026-11-19 | Review Coordinator (`Interactive-PO`) | `ATT-8223` | Mandated automatic per-Schicht weekly rollup into the rolling `Wochen Review & Retro` ticket (`sprint-metrics --post-to-retro` scorecard rollup + `post-weekly-rollup --retro-file ...` qualitative Retro/QA rollup) during Schichtwechsel Phase 1. |
+| `1.0.2` | 2026-11-19 | Sprint Coordinator (`Interactive-PO`) | `ATT-9055` | Aligned Option 1 Neon (`inherit`)/`flash` routing and incremental `--rerun` (never `--rerun-tasks`) Tier-1/Lean Tier-2 execution across `Rule 7.1/7.2/7.5`, Stage 4–6 skills, and `schichtbetrieb.md`. |

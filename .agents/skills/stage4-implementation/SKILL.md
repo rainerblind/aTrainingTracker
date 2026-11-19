@@ -61,11 +61,13 @@ Message the ticket's reviewing persistent subagent (`send_message` to `subagent_
    - **Compose state hygiene**: no `MutableState` writes inside `remember {}` calculations or during composition (`docs/coding_standards.md` Sec 1.10).
    - **Production Caller & Reachability `grep` Audit (`Rule 81` — `ATT-6289`)**: For every newly created `@Composable` screen/section/dialog, `SensorType` enum, or background importer/backfill class, run `grep -rn "<Symbol>" app/src/main/` and verify live production reachability (never only `@Preview` or unit tests; new `SensorType`s MUST be registered in `ActivityType.getSensorTypeArray()`). Reject (`REVISION`) any Repository exposing public/internal `get*DatabaseManager()`, `get*DbHelper()`, or `Cursor` getters (`docs/coding_standards.md` Sec 1.12 & Sec 2.5).
    - **Architecture & System Spec Code-Grounding (`Rule 81` — `ATT-6179`, `ATT-6289`)**: For documentation/architecture/system tickets (`docs/architecture*.md`, `docs/system/*.md`), programmatically verify that every backticked `.kt`/`.java`/`.xml` filename, class/DTO symbol, method signature, and manifest attribute exists in `app/src/main/` and that `SYS.2 <-> SYS.3` requirement IDs satisfy exact bidirectional set equality (`declared == allocated`).
-4. **Quality, Compliance & Universal Image Certification (`ATT-5431`)**:
+4. **Independent Incremental Test Execution (`Rule 7.5`)**:
+   - Independently execute the ticket's relevant unit/Compose tests using **incremental** `./gradlew :app:testDebugUnitTest --rerun --tests <NewOrModifiedTestClasses>` (under `python3 tools/parallel_sprint_lock.py --timeout 1800`, reusing the warm build cache — **NEVER `--rerun-tasks`**). Defer repo-wide contract/audit suites (`AspiceSweAuditContractTest`, `MeasuredNfrBenchmarkTest`, `System*ContractTest`, `TranslationParityTest` unless `strings*.xml` changed) to the Lean Tier-2 `Schichtwechsel` Gate.
+5. **Quality, Compliance & Universal Image Certification (`ATT-5431`)**:
    - Verify class/method headers comply with self-documenting standards (KDoc/JavaDoc).
    - Verify 9-language localization parity across all user-facing strings (`EN, DE, ES, FR, IT, JA, NL, PL, PT`).
    - **Universal `read_file` Image Certification**: For all created, modified, or markdown-referenced image assets (`.png`, `.jpg`, `.svg`), `agent2` MUST inspect them with `read_file` and explicitly certify in the audit report that the visual image content matches accompanying documentation and real UI 1:1.
-5. **Gate Verdict (`gate-verdict`)**:
+6. **Gate Verdict (`gate-verdict`)**:
    - Record the verdict in a single composite CLI call (which closes the sub-task to `Erledigt`, advances the parent ticket to `Test`, and automatically injects `stage5-verification/SKILL.md` into stdout):
      ```bash
      python3 tools/jira_util.py --as agent2 gate-verdict <IMPL_SUBTASK_KEY> PASS "<Audit Report>"
