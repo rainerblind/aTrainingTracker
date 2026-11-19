@@ -1,14 +1,14 @@
 # Living Requirements: Tracking & Live Sensor Cockpit (Part 2 of 2)
 
 **Document ID**: `DOC-REQ-TRK-P2`  
-**Version**: 1.0.51  
+**Version**: 1.0.54  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit_part2`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Requirements**: 73
+**Total Requirements**: 74
 
 ---
 
@@ -2014,7 +2014,7 @@
      - `EquipmentRepository` and `EquipmentViewModel` SHALL support updating wheel mounting positions and dispatching reactive notifications via `equipmentLinksChanged`.
      - *Guardrail per bike*: When a bike already links a speed sensor with position `FRONT` and the user assigns `FRONT` to a second sensor on that bike, the system SHALL offer a clean swap or reassign the existing sensor to `REAR`/`UNSPECIFIED` so two sensors on the same bike are never accidentally both marked `FRONT` (and similarly for `REAR`).
   3. *Interactive Wheel Position Selection Dialog & Badge Rendering (`REQ-SEN-029.3`)*:
-     - In `EquipmentSensorMatrixScreen.kt`, tapping a wheel speed sensor (`BIKE_SPEED`, `BIKE_SPEED_AND_CADENCE`) cell SHALL display a compact Material 3 dialog prompting for mounting position: *Vorderrad (Front)*, *Hinterrad (Rear)*, *Ohne feste Position (Unspecified)*, or *Trennen (Unlink)* if already linked.
+     - In `EquipmentSensorMatrixScreen.kt`, tapping a wheel speed sensor (`BIKE_SPEED`, `BIKE_SPEED_AND_CADENCE`) cell SHALL display a compact Material 3 dialog prompting for mounting position: *Vorderrad (Front)*, *Hinterrad (Rear)*, or *Trennen (Unlink)* if already linked (refined by `REQ-SEN-032`).
      - Tapping a non-wheel sensor (HRM, Cadence, Power, Radar) SHALL retain standard 1-tap checkbox toggling.
      - Linked wheel speed sensor cells SHALL display a localized short badge (e.g. `V` / `H` in German, `F` / `R` in English) alongside the checkmark within `SENSOR_COLUMN_WIDTH` (88 dp) without text clipping (`Rule 84`).
   4. *In-App Guidance Card & Living User Documentation (`REQ-SEN-029.4`)*:
@@ -2036,7 +2036,7 @@
 • *Then* `wheel_position` column is added non-destructively, existing links return `WheelPosition.UNSPECIFIED`, and new links with `FRONT`/`REAR` persist reliably.
 • *Given* `EquipmentSensorMatrixScreen.kt`,
 • *When* the user taps a `BIKE_SPEED` or `BIKE_SPEED_AND_CADENCE` cell for a bike,
-• *Then* an interactive dialog prompts for *Vorderrad*, *Hinterrad*, or *Unbestimmt*, and the cell renders a compact non-clipping badge (`V`/`H` or `F`/`R`) within 88 dp column width.
+• *Then* an interactive dialog prompts for *Vorderrad* or *Hinterrad*, and the cell renders a compact non-clipping badge (`V`/`H` or `F`/`R`) within 88 dp column width.
 • *Given* a bike with an existing `FRONT` wheel sensor,
 • *When* the user selects `FRONT` for a second wheel speed sensor on the same bike,
 • *Then* the system detects the conflict and offers to swap positions or reassign cleanly without leaving two `FRONT` sensors on the same bike.
@@ -2788,7 +2788,7 @@
      - `DeviceRawData` and `DeviceUiData` SHALL expose `linkedWheelPositions: Map<String, WheelPosition> = emptyMap()` (defaulting to `emptyMap()` for source compatibility) hydrated by `RawDeviceDataProvider` from `EquipmentDbHelper`.
      - For `DeviceType.BIKE_SPEED` and `DeviceType.BIKE_SPEED_AND_CADENCE`, `EditDeviceDialog.kt` (`EquipmentSection`) SHALL display each linked bike's localized `WheelPosition` (`equipment_wheel_position_front` / `_rear` / `_unspecified`) in both the read-only summary field and the bike-linking bottom sheet rows.
   2. *Stateless `WheelPositionSelectionDialog` Reuse, Conflict Preview & Strict Draft Semantics (`REQ-SEN-031.2`)*:
-     - Tapping a bike row in the `EquipmentSection` sheet for a wheel speed sensor SHALL open the reused stateless `WheelPositionSelectionDialog` to stage draft `WheelPosition` (`FRONT`, `REAR`, `UNSPECIFIED`) or unlink, surfacing a conflict indicator/swap preview when another wheel sensor on that bike already occupies `FRONT` or `REAR`.
+     - Tapping a bike row in the `EquipmentSection` sheet for a wheel speed sensor SHALL open the reused stateless `WheelPositionSelectionDialog` to stage draft `WheelPosition` (`FRONT` or `REAR`) or unlink, surfacing a conflict indicator/swap preview when another wheel sensor on that bike already occupies `FRONT` or `REAR` (refined by `REQ-SEN-032`).
      - Staging changes in `WheelPositionSelectionDialog`, the Equipment sheet (`OK`/`Cancel`), or `EditDeviceDialog` (`SaveCancel`) MUST remain strictly in `EditDeviceViewModel` draft memory; tapping `Cancel` on either sheet or dialog MUST discard all draft link/position edits with zero `Equipment.db` mutations.
   3. *Atomic `Save` Commit & `swapConflict = true` Parity (`REQ-SEN-031.3`)*:
      - On `Save`, `DeviceDataRepository.updateDevice()` SHALL detect changes to either `linkedEquipment` or `linkedWheelPositions` (compared against `originalState`), update `_allDevices` before dispatching bulk link notifications, unlink removed bikes, commit linked wheel sensors via `EquipmentRepository.setWheelSensorLink(equipmentId, sensorId, position, swapConflict = true)`, and trigger `EquipmentRepository.notifyEquipmentLinksChanged(null)` so sibling unswapped wheel sensors refresh `wheelPositionConflicts`.
@@ -3416,6 +3416,39 @@
 
 **Invariants**: `mHaveUserSelectedSportType == true` strictly blocks auto-multisport; transitions never confirm while `!isTracking`, `PAUSED`, or `AUTO_PAUSED`; same-sport stops emit `0` transitions; `MyAccumulatorSensor.resetTo()` preserves `mValue`/`mLastAbsoluteValue`, notifies outside lock, and never mutates `MySensorManager.mInitialValues`; `Laps.TIME_START` UTC `"yyyy-MM-dd HH:mm:ss"`; contiguous `1..N` `LAP_NR`; zero DB schema changes (`Laps.db` v3); `TrackerService <= 3,540` (`+0`), `DeviceManager <= 1,707` (`0` edits), `WorkoutSamplesDatabaseManager <= 1,533` (`0` edits), `WorkoutRepository <= 4,931` (`+0`), `SpeedAndLocationDevice_ATTFused <= 1,455`, `BANALService <= 1,075`; 9-locale parity (`lap_name_bike`/`transition`/`run`); `0` new `src/main` test reads (`REQ-PRO-049.1`).
 
+### REQ-SEN-032: WheelPositionSelectionDialog Front/Rear-Only Selection with Legacy UNSPECIFIED Fallback [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-SEN-032`
+- **System Requirement(s)**: `SYSREQ-TRK-001`, `SYSREQ-TRK-003`, `SYSREQ-TRK-010`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `WheelPositionSelectionDialog.kt`
+- **Rationale**: Following PO review of `ATT-8719`, offering `Unspecified` (`WheelPosition.UNSPECIFIED`) as an interactive selection in `WheelPositionSelectionDialog` encouraged ambiguous wheel-sensor links that disable Front/Rear odometry differentiation (`ATT-7752`) and dual-wheel iTPMS (`ATT-7753`). Restricting interactive choices strictly to `Front` and `Rear` while preserving `WheelPosition.UNSPECIFIED` in `WheelPosition`, `Equipment.db` v4, and `EditDeviceDialog` legacy summary display enforces clean sensor mounting intent without breaking existing rows (`ATT-8859`, refining `REQ-SEN-029.3` and `REQ-SEN-031.2`):
+- **Description**:
+  1. *Front & Rear Only Interactive Options (`REQ-SEN-032.1`)*:
+     - `WheelPositionSelectionDialog` SHALL render strictly two selectable mounting-position options: `WheelPosition.FRONT` (`R.string.equipment_wheel_position_front`, tag `wheel_position_front`) and `WheelPosition.REAR` (`R.string.equipment_wheel_position_rear`, tag `wheel_position_rear`).
+     - `WheelPositionSelectionDialog` MUST NOT render `WheelPosition.UNSPECIFIED` (`wheel_position_unspecified` / `R.string.equipment_wheel_position_unspecified`).
+  2. *Legacy `UNSPECIFIED` State, `Unlink` & `Cancel` Semantics (`REQ-SEN-032.2`)*:
+     - When `WheelPositionSelectionDialog` opens with `currentPosition == WheelPosition.UNSPECIFIED` (legacy DB link), neither `Front` nor `Rear` radio button SHALL be pre-selected (`selected == false`), `Unlink` (`wheel_position_unlink` when `isLinked == true`) and `Cancel` (`wheel_position_cancel`) SHALL remain active, and tapping `Front` or `Rear` SHALL invoke `onSelectPosition(WheelPosition.FRONT / REAR)` cleanly.
+     - Conflict/swap hints (`conflictHints`) MUST continue rendering on `Front` and `Rear` options.
+  3. *Preserved Enum, DB Schema, Legacy Display & Private `@Preview` Hygiene (`REQ-SEN-032.3`)*:
+     - `WheelPosition.UNSPECIFIED`, `EquipmentDbHelper` v4 `DEFAULT 'UNSPECIFIED'`, `RawDeviceDataProvider` / `EditDeviceViewModel` fallback, and 9-locale `R.string.equipment_wheel_position_unspecified` (actively used by `EditDeviceDialog.kt` legacy summary/sheet display) MUST remain unchanged (`Localization Parity: N/A - no UI strings`).
+     - Any Compose `@Preview` functions in `WheelPositionSelectionDialog.kt` MUST use `private fun` (`REQ-ARC-003.5`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Refines `REQ-SEN-029` (`REQ-SEN-029.3`, `ATT-7752`) and `REQ-SEN-031` (`REQ-SEN-031.2`, `ATT-8719`) targeting `WheelPositionSelectionDialog.kt`.
+2. *Historical Origin & Commit Trace*: `4edcda86` (`ATT-7752` introduced `WheelPositionSelectionDialog` with 3 options mirroring `WheelPosition` enum) and `b08c779e` (`ATT-8719` reused it in `EditDeviceDialog.kt`).
+3. *Root Reason for Existing Formulation*: `UNSPECIFIED` was exposed in the UI dialog to match the 3-value database enum and `EquipmentDbHelper` v4 migration default.
+4. *Preservation of Core Invariants*: `WheelPosition.UNSPECIFIED` enum value, `Equipment.db` schema v4 `DEFAULT 'UNSPECIFIED'`, `WheelPosition.fromString(...)` fallback, `R.string.equipment_wheel_position_unspecified` 9-locale display in `EditDeviceDialog.kt`, and `swapConflict = true` guardrail remain 100% intact.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `WheelPositionSelectionDialog` opened from `EditDeviceDialog` or `EquipmentSensorMatrixScreen`, *When* rendered, *Then* strictly `Front` (`wheel_position_front`) and `Rear` (`wheel_position_rear`) options render and `wheel_position_unspecified` does not exist.
+• *Given* a legacy linked bike with `currentPosition = WheelPosition.UNSPECIFIED` and `isLinked = true`, *When* `WheelPositionSelectionDialog` opens, *Then* neither radio button is selected, `Unlink` and `Cancel` remain functional, and selecting `Front` or `Rear` invokes `onSelectPosition(FRONT / REAR)` cleanly.
+• *Given* `EditDeviceDialog` rendering a legacy `UNSPECIFIED` bike link, *When* rendered, *Then* `EditDeviceDialog` still displays localized `equipment_wheel_position_unspecified` and `WheelPosition.values().size == 3` holds.
+
+**Invariants**: `WheelPosition.UNSPECIFIED` enum/DB/fallback untouched; `R.string.equipment_wheel_position_unspecified` retained across all 9 locales; `EditDeviceDialog.kt <= 2,004` (`0` edits); `WheelPositionSelectionDialog.kt` `@Preview`s strictly `private fun` (`REQ-ARC-003.5`); `0` `src/main` test reads (`REQ-PRO-049.1`); `Rule 8.5` Light/Dark PNG verified.
+
 ---
 
 ## Change History
@@ -3472,3 +3505,6 @@
 | `1.0.49` | 2026-11-19 | AI Agent (`ATT-8917`, `--as agent1`) | `ATT-8917` | Promoted `REQ-FIL-031` to `[Implemented]` following Stage 4 construction (`MultisportTransitionDetector.kt`, `MultisportTransitionBridge.kt`, `MultisportLapCoordinator.kt`, `MyAccumulatorSensor.resetTo`, `BANALService.java` `1,074` LoC, `SpeedAndLocationDevice_ATTFused.kt` `1,441` LoC, `TrackerService.java` `3,537` LoC [`-3`], 9-locale `strings_cockpit.xml`, and `SWE.2`/`SWE.3`/`SYS.2`/`SYS.3` sync). |
 | `1.0.50` | 2026-11-19 | AI Agent (`ATT-8917`, `--as agent1`) | `ATT-8917` | Promoted `REQ-FIL-031` to `[Verified]` in Stage 5 rebased cleanly atop `sprint/2026-11-19_01_Früh` (`50a57b3e`), reusing Gate 4 Pass (`ATT-9113`: `17` suites / `140/140` PASS, `0` warnings, `0` `app/` diff post-Gate 4 per `Rule 7.5`), static baselines & safety linters PASS, and `docs/engineering/walkthroughs/ATT-8917_walkthrough.md`. |
 | `1.0.51` | 2026-11-19 | AI Agent (`ATT-8917`, `--as agent1`) | `ATT-8917` | Stage 6 Bounce 1/3 heal verified (`ATT-9128`: `11` suites / `123/123` PASS, `TrackerService.java = 3,538 <= 3,540`): scoped branch 3 cycling override to parked bike hardware (`hw.hardwareSportType == BIKE`), moved `resetForSession` past in-memory `mLiveSession` reuse guard, and moved `mLastMultisportTickMs` reset inside `synchronized(mYawRateLock)`; rebased cleanly atop `sprint/2026-11-19_02_Spät` (`73ff0cdd`). |
+| `1.0.52` | 2026-11-19 | AI Agent (`ATT-8859`, `--as agent1`) | `ATT-8859` | Added `REQ-SEN-032` `[Planned]` (`REQ-SEN-032.1`–`.3`) and refined `REQ-SEN-029.3` / `REQ-SEN-031.2` dialog option text so `WheelPositionSelectionDialog` presents strictly `Front` and `Rear` while preserving `WheelPosition.UNSPECIFIED` enum/DB fallback and 9-locale legacy summary display (`N/A - no UI strings`). |
+| `1.0.53` | 2026-11-19 | AI Agent (`ATT-8859`, `--as agent1`) | `ATT-8859` | Promoted `REQ-SEN-032` to `[Implemented]` following Stage 4 implementation in `WheelPositionSelectionDialog.kt`, behavioral Compose UI test `WheelPositionSelectionDialogUiTest.kt` (`4/4` PASS), `Rule 8.5` Light/Dark PNG capture (`ATT-8859_wheel_position_dialog.png`), and `35/35` targeted test PASS across 6 suites post-rebase onto `6927b2f8`. |
+| `1.0.54` | 2026-11-19 | AI Agent (`ATT-8859`, `--as agent1`) | `ATT-8859` | Promoted `REQ-SEN-032` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9145`) `35/35` PASS evidence (`Rule 7.5`, zero `app/` diff since `9e265f02`), `Rule 8.5` Light/Dark PNG audit (`ATT-8859_wheel_position_dialog.png`), and `verify_requirement_governance.py` `exit 0`. |

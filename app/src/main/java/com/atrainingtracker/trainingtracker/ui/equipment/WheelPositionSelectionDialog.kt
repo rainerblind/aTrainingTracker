@@ -39,12 +39,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.database.WheelPosition
+import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 
 /**
- * Selection dialog for configuring wheel sensor mounting position (Front, Rear, Unspecified) (REQ-SEN-029).
+ * Selection dialog for configuring wheel sensor mounting position (Front, Rear) (REQ-SEN-029, REQ-SEN-031, REQ-SEN-032).
  */
 @Composable
 fun WheelPositionSelectionDialog(
@@ -82,8 +84,7 @@ fun WheelPositionSelectionDialog(
             Column(modifier = Modifier.fillMaxWidth()) {
                 val options = listOf(
                     Triple(WheelPosition.FRONT, R.string.equipment_wheel_position_front, "wheel_position_front"),
-                    Triple(WheelPosition.REAR, R.string.equipment_wheel_position_rear, "wheel_position_rear"),
-                    Triple(WheelPosition.UNSPECIFIED, R.string.equipment_wheel_position_unspecified, "wheel_position_unspecified")
+                    Triple(WheelPosition.REAR, R.string.equipment_wheel_position_rear, "wheel_position_rear")
                 )
 
                 options.forEach { (pos, labelRes, tag) ->
@@ -156,4 +157,38 @@ fun WheelPositionSelectionDialog(
             }
         } else null
     )
+}
+
+@Preview(showBackground = true, name = "Wheel Position Dialog Light")
+@Composable
+private fun WheelPositionSelectionDialogLightPreview() {
+    ATrainingTrackerTheme(darkTheme = false) {
+        WheelPositionSelectionDialog(
+            equipmentName = "Gravel Bike",
+            sensorName = "Speed Sensor 2",
+            currentPosition = WheelPosition.FRONT,
+            isLinked = true,
+            conflictHints = mapOf(WheelPosition.REAR to "Wahoo Rear"),
+            onSelectPosition = {},
+            onUnlink = {},
+            onDismiss = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "Wheel Position Dialog Dark")
+@Composable
+private fun WheelPositionSelectionDialogDarkPreview() {
+    ATrainingTrackerTheme(darkTheme = true) {
+        WheelPositionSelectionDialog(
+            equipmentName = "Gravel Bike",
+            sensorName = "Speed Sensor 2",
+            currentPosition = WheelPosition.FRONT,
+            isLinked = true,
+            conflictHints = mapOf(WheelPosition.REAR to "Wahoo Rear"),
+            onSelectPosition = {},
+            onUnlink = {},
+            onDismiss = {}
+        )
+    }
 }

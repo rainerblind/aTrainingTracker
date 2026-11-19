@@ -1,14 +1,14 @@
 # Living Test Specification: Tracking & Live Sensor Cockpit
 
 **Document ID**: `DOC-TST-TRK`  
-**Version**: 1.0.72  
+**Version**: 1.0.75  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Tests**: 158
+**Total Tests**: 159
 
 ---
 
@@ -3632,6 +3632,22 @@
   5. *Monolith LoC Ceilings & `SWE.2`/`SWE.3`/`SYS.2`/`SYS.3` Parity (`TST-FIL-031.5`, `ArchitectureConformanceContractTest.kt`, `DetailedDesignParityContractTest.kt`, `SystemLiveTrackingRequirementsContractTest.kt`, `SystemArchitectureDesignContractTest.kt`, `SourceTextReadingAuditContractTest.kt`)*:
      • Verify `TrackerService.java <= 3,540` (`3,537`, `-3`), `DeviceManager.java <= 1,707` (`0` edits), `WorkoutSamplesDatabaseManager.java <= 1,533` (`0` edits), `WorkoutRepository.kt <= 4,931` (`0` edits), `SpeedAndLocationDevice_ATTFused.kt <= 1,455` (`1,441`, `< 1,500`), `BANALService.java <= 1,075` (`1,074`), zero DB schema changes (`Laps.db` v3), `0` new `src/main` test reads (`REQ-PRO-049.1`), Stage 4–5 `docs/architecture.md`/`banal_service.md`/`tracker_service.md`/`docs/system/` parity, and `verify_requirement_governance.py` `exit 0`.
 
+### TST-SEN-032: **WheelPositionSelectionDialog Front/Rear-Only Selection & Legacy Fallback Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Tickets**: `ATT-8859`
+- **Requirement(s)**: `REQ-SEN-032` (`REQ-SEN-032.1`..`REQ-SEN-032.3`), `REQ-SEN-029`, `REQ-SEN-031`, `REQ-ARC-003.5`
+- **Component**: `app/src/test/java/com/atrainingtracker/trainingtracker/ui/equipment/WheelPositionSelectionDialogUiTest.kt` (new), `app/src/test/java/com/atrainingtracker/trainingtracker/ui/equipment/WheelPositionDialogsTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/ui/devices/editdevice/EditDeviceEquipmentWheelPositionTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/DeadCodeEliminationContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SourceTextReadingAuditContractTest.kt`
+- **Test Type**: Unit & UI
+- **Verification Method**: Unit
+- **Procedure**:
+  1. *Behavioral Compose Front/Rear-Only Dialog & Legacy `UNSPECIFIED` State Test (`TST-SEN-032.1`, `WheelPositionSelectionDialogUiTest.kt`, `createComposeRule()`, `0` `src/main` reads)*:
+     • Render `WheelPositionSelectionDialog` via Robolectric Compose `createComposeRule()`: assert strictly 2 options render (`wheel_position_front`, `wheel_position_rear`) and `wheel_position_unspecified` / `R.string.equipment_wheel_position_unspecified` do NOT exist (`assertDoesNotExist()`).
+     • Verify tapping `wheel_position_front` / `wheel_position_rear` invokes `onSelectPosition(WheelPosition.FRONT / REAR)` and `onDismiss()`.
+     • Render with `currentPosition = WheelPosition.UNSPECIFIED` and `isLinked = true`: assert neither `Front` nor `Rear` radio is selected (`assertIsNotSelected()`), `wheel_position_unlink` and `wheel_position_cancel` remain functional, tapping `Front`/`Rear` upgrades cleanly, and `conflictHints` still render on `Front`/`Rear`.
+  2. *Legacy Enum/DB/Caller Compatibility, Private `@Preview` & `Rule 8.5` PNG (`TST-SEN-032.2`, `WheelPositionDialogsTest`, `EditDeviceEquipmentWheelPositionTest`, `DeadCodeEliminationContractTest`, `SourceTextReadingAuditContractTest`)*:
+     • Capture Light & Dark PNG screenshot at `docs/engineering/walkthroughs/img/ATT-8859_wheel_position_dialog.png` and verify visually via `read_file` (`Rule 8.5`).
+     • Verify `WheelPosition.values().size == 3`, `EditDeviceEquipmentWheelPositionTest` legacy `UNSPECIFIED` summary/sheet display (`R.string.equipment_wheel_position_unspecified` preserved across all 9 locales; `Localization Parity: N/A - no UI strings`), `DeadCodeEliminationContractTest` (`private fun` `@Preview`s), and `SourceTextReadingAuditContractTest` (`0` new `src/main` reads) pass `100%`.
+
 ---
 
 ## Change History
@@ -3701,3 +3717,6 @@
 | `1.0.70` | 2026-11-19 | AI Agent (`ATT-8951`, `--as agent1`) | `ATT-8951` | Refined & verified `TST-TRK-072.9` (`[Verified]`) atop `50a57b3e` following Gate 4 `34/34` PASS (`HrvDfaA1RangeSliderGestureTest` `10/10`, `HrvDfaA1SettingsContractTest` `12/12`, `HrvRampTestScreenTest` `6/6`, `SourceTextReadingAuditContractTest` `6/6`), `Rule 8.5` PNG `img/ATT-8951_hrv_cta_above_fold.png`, and `--check-verified-evidence` `exit 0`. |
 | `1.0.71` | 2026-11-19 | AI Agent (`ATT-8917`, `--as agent1`) | `ATT-8917` | Added & verified `TST-FIL-031` (`[Verified]`, `TST-FIL-031.1`–`.5`) rebased cleanly atop `sprint/2026-11-19_01_Früh` (`50a57b3e`) reusing Gate 4 Pass (`ATT-9113`: `17` suites / `140/140` PASS, `0` warnings, `0` `app/` diff post-`7e594f8a` per `Rule 7.5`), static baselines (`lint = 216`, `detekt = 9509`) & safety linters PASS, and `docs/engineering/walkthroughs/ATT-8917_walkthrough.md`. |
 | `1.0.72` | 2026-11-19 | AI Agent (`ATT-8917`, `--as agent1`) | `ATT-8917` | Stage 6 Bounce 1/3 heal verified (`ATT-9128`: `11` suites / `123/123` PASS, `0` `app/` diff post-`fe67803b` per `Rule 7.5`): added phone-only duathlon `T1` kinematic `RUN` carryover test (`MultisportTransitionDetectorTest`, `10/10`) and in-memory pause/resume multisport leg preservation test (`TrackerServiceResumeTest`, `18/18`), rebased cleanly atop `sprint/2026-11-19_02_Spät` (`73ff0cdd`). |
+| `1.0.73` | 2026-11-19 | AI Agent (`ATT-8859`, `--as agent1`) | `ATT-8859` | Added `TST-SEN-032` `[Planned]` (`TST-SEN-032.1`, `TST-SEN-032.2`) for `WheelPositionSelectionDialog` Front/Rear-only behavioral Compose UI testing (`WheelPositionSelectionDialogUiTest`), legacy `UNSPECIFIED` fallback preservation, `DeadCodeEliminationContractTest`, `SourceTextReadingAuditContractTest`, and `Rule 8.5` Light/Dark PNG (`Localization Parity: N/A - no UI strings`). |
+| `1.0.74` | 2026-11-19 | AI Agent (`ATT-8859`, `--as agent1`) | `ATT-8859` | Promoted `TST-SEN-032` to `[Implemented]` following Stage 4 test execution (`35/35` PASS across 6 suites post-rebase onto `6927b2f8`: `WheelPositionSelectionDialogUiTest 4/4`, `WheelPositionDialogsTest 4/4`, `EditDeviceEquipmentWheelPositionTest 5/5`, `ArchitectureConformanceContractTest 11/11`, `DeadCodeEliminationContractTest 5/5`, `SourceTextReadingAuditContractTest 6/6`) and `Rule 8.5` Light/Dark PNG inspection. |
+| `1.0.75` | 2026-11-19 | AI Agent (`ATT-8859`, `--as agent1`) | `ATT-8859` | Promoted `TST-SEN-032` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9145`) `35/35` PASS evidence (`Rule 7.5`, zero `app/` diff since `9e265f02`), `Rule 8.5` Light/Dark PNG (`ATT-8859_wheel_position_dialog.png`), and `verify_requirement_governance.py` `exit 0`. |
