@@ -718,4 +718,111 @@ class WorkoutRepositoryTelemetryTest {
         assertEquals(2, slopeOverlays.size)
         assertEquals(1.0, slopeOverlays.first { it.sourceName == "ATT Fused (Alt/Slope)" }.meanValue, 1e-6)
     }
+
+    @Test
+    fun testLoadWorkoutDetailTelemetry_coalescesPreDecimationCarriageTimelineWithZeroLocationRows() = runBlocking {
+        // TST-PER-053.2: Pre-decimation >800 rows including zero-GPS stationary/walking carriage samples
+        val baseFileName = "2026-11-18-10-15-00"
+        val tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
+        every { mockSummariesDb.getBaseFileName(905L) } returns baseFileName
+        every { mockSamplesDb.existsTable(baseFileName) } returns true
+
+        val pragmaCursor = MockCursorFactory.create(
+            listOf("name"),
+            listOf(
+                listOf(TrackType.BEST.latitudeColumn),
+                listOf(TrackType.BEST.longitudeColumn),
+                listOf(SensorType.DISTANCE_m.name),
+                listOf(SensorType.TIME_ACTIVE.name),
+                listOf(SensorType.ACTIVITY_AND_CARRIAGE_MODE.name)
+            )
+        )
+        every { mockSqliteDb.rawQuery(match { it.contains("PRAGMA table_info") }, null) } returns pragmaCursor
+
+        val rows = buildList {
+            for (t in 0L..999L) {
+                add(listOf(48.13 + t * 1e-5, 11.57 + t * 1e-5, t * 5.0, t, com.atrainingtracker.banalservice.odometry.PhoneCarriageMode.BIKE_HANDLEBAR.code))
+            }
+            // Rows 1000..1099 have NULL GPS coordinates (e.g. indoor bakery stop) + WALKING / STATIONARY
+            for (t in 1000L..1049L) {
+                add(listOf(null, null, 5000.0 + (t - 1000L) * 1.2, t, com.atrainingtracker.banalservice.odometry.PhoneCarriageMode.WALKING_TRANSITION.code))
+            }
+            for (t in 1050L..1099L) {
+                add(listOf(null, null, 5060.0, t, com.atrainingtracker.banalservice.odometry.PhoneCarriageMode.STATIONARY.code))
+            }
+            for (t in 1100L..1199L) {
+                add(listOf(48.14 + (t - 1100L) * 1e-5, 11.58, 5060.0 + (t - 1100L) * 4.0, t, com.atrainingtracker.banalservice.odometry.PhoneCarriageMode.BIKE_JERSEY_BACK.code))
+            }
+        }
+        val dataCursor = MockCursorFactory.create(
+            listOf(
+                TrackType.BEST.latitudeColumn,
+                TrackType.BEST.longitudeColumn,
+                SensorType.DISTANCE_m.name,
+                SensorType.TIME_ACTIVE.name,
+                SensorType.ACTIVITY_AND_CARRIAGE_MODE.name
+            ),
+            rows
+        )
+        every { mockSqliteDb.query(tableName, any(), null, null, null, null, null) } returns dataCursor
+
+        val telemetry = repository.loadWorkoutDetailTelemetry(905L, com.atrainingtracker.banalservice.BSportType.BIKE)
+        val timeline = telemetry.activityCarriageTimeline
+        assertNotNull(timeline)
+        timeline!!
+        assertEquals(1200L, timeline.totalDurationSeconds)
+        assertEquals(4, timeline.segments.size)
+        assertEquals(com.atrainingtracker.banalservice.odometry.PhoneCarriageMode.BIKE_HANDLEBAR, timeline.segments[0].mode)
+        assertEquals(1000L, timeline.segments[0].durationSeconds)
+        assertEquals(com.atrainingtracker.banalservice.odometry.PhoneCarriageMode.WALKING_TRANSITION, timeline.segments[1].mode)
+        assertEquals(50L, timeline.segments[1].durationSeconds)
+        assertEquals(com.atrainingtracker.banalservice.odometry.PhoneCarriageMode.STATIONARY, timeline.segments[2].mode)
+        assertEquals(50L, timeline.segments[2].durationSeconds)
+        assertEquals(com.atrainingtracker.banalservice.odometry.PhoneCarriageMode.BIKE_JERSEY_BACK, timeline.segments[3].mode)
+        assertEquals(100L, timeline.segments[3].durationSeconds)
+    }
+
+    @Test
+    fun testLoadWorkoutDetailTelemetry_carriageTimelineGuardsMissingColumnAllUnknownAndCarriageOnlyIndoor() = runBlocking {
+        // TST-PER-053.2: Missing column -> null; carriage-only all UNKNOWN -> null; carriage-only active -> non-null
+        val baseFileName = "2026-11-18-10-45-00"
+        val tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
+        every { mockSummariesDb.getBaseFileName(906L) } returns baseFileName
+        every { mockSamplesDb.existsTable(baseFileName) } returns true
+
+        val noCarriagePragma = MockCursorFactory.create(
+            listOf("name"),
+            listOf(listOf(SensorType.TIME_ACTIVE.name), listOf(SensorType.HR.name))
+        )
+        every { mockSqliteDb.rawQuery(match { it.contains("PRAGMA table_info") }, null) } returns noCarriagePragma
+        every { mockSqliteDb.query(tableName, any(), null, null, null, null, null) } returns MockCursorFactory.create(
+            listOf(SensorType.TIME_ACTIVE.name, SensorType.HR.name),
+            listOf(listOf(0L, 140), listOf(1L, 142))
+        )
+        assertNull(repository.loadWorkoutDetailTelemetry(906L, com.atrainingtracker.banalservice.BSportType.RUN).activityCarriageTimeline)
+
+        // All UNKNOWN with only ACTIVITY_AND_CARRIAGE_MODE present (no GPS/scalar sensors) -> null
+        every { mockSqliteDb.rawQuery(match { it.contains("PRAGMA table_info") }, null) } returns MockCursorFactory.create(
+            listOf("name"),
+            listOf(listOf(SensorType.TIME_ACTIVE.name), listOf(SensorType.ACTIVITY_AND_CARRIAGE_MODE.name))
+        )
+        every { mockSqliteDb.query(tableName, any(), null, null, null, null, null) } returns MockCursorFactory.create(
+            listOf(SensorType.TIME_ACTIVE.name, SensorType.ACTIVITY_AND_CARRIAGE_MODE.name),
+            listOf(listOf(0L, -1), listOf(1L, null))
+        )
+        assertNull(repository.loadWorkoutDetailTelemetry(906L, com.atrainingtracker.banalservice.BSportType.RUN).activityCarriageTimeline)
+
+        // Carriage-only indoor workout with active RUN_WAIST_HIP -> early exit NOT triggered, returns non-null timeline
+        every { mockSqliteDb.rawQuery(match { it.contains("PRAGMA table_info") }, null) } returns MockCursorFactory.create(
+            listOf("name"),
+            listOf(listOf(SensorType.TIME_ACTIVE.name), listOf(SensorType.ACTIVITY_AND_CARRIAGE_MODE.name))
+        )
+        every { mockSqliteDb.query(tableName, any(), null, null, null, null, null) } returns MockCursorFactory.create(
+            listOf(SensorType.TIME_ACTIVE.name, SensorType.ACTIVITY_AND_CARRIAGE_MODE.name),
+            listOf(listOf(0L, 5), listOf(1L, 5))
+        )
+        val indoorTelemetry = repository.loadWorkoutDetailTelemetry(906L, com.atrainingtracker.banalservice.BSportType.RUN)
+        assertNotNull(indoorTelemetry.activityCarriageTimeline)
+        assertEquals(2L, indoorTelemetry.activityCarriageTimeline!!.totalDurationSeconds)
+    }
 }

@@ -41,12 +41,19 @@ import com.atrainingtracker.trainingtracker.physiology.WorkoutTrainingLoadSample
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import com.atrainingtracker.trainingtracker.settings.TuningConfig
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
+import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.banalservice.sensor.SensorType
+import com.atrainingtracker.trainingtracker.database.CardioPowerDynamicsRecord
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
+import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.ExtremaDataRow
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -393,15 +400,27 @@ class AthleteProfileViewModel @JvmOverloads constructor(
             }
         }
         viewModelScope.launch(ioDispatcher) {
-            workoutRepository.allWorkouts.collect {
-                loadCardioTrendSamples()
-                val samples = try {
-                    workoutRepository.getWorkoutTrainingLoadRecords()
-                } catch (_: Throwable) {
-                    emptyList()
+            // REQ-STB-020.4: Only finished workout changes trigger historical cardio/load SQLite queries.
+            // Tracks post-finish analytics/backfill fields (rpe, tss, normalizedPowerWatts, polarSyncPending,
+            // cardioPowerDynamics scalars, HR/POWER AVG extrema) in addition to core workout identity/totals.
+            val hrShortLabel = runCatching { SensorType.HR.getShortName(getApplication<Application>()) }.getOrNull()
+            val powerShortLabel = runCatching { SensorType.POWER.getShortName(getApplication<Application>()) }.getOrNull()
+            workoutRepository.allWorkouts
+                .map { workouts ->
+                    workouts.filter { it.finished }.map { workout ->
+                        workout.toFinishedSyncKey(hrShortLabel = hrShortLabel, powerShortLabel = powerShortLabel)
+                    }
                 }
-                _workoutLoadSamples.value = samples
-            }
+                .distinctUntilChanged()
+                .collect {
+                    loadCardioTrendSamples()
+                    val samples = try {
+                        workoutRepository.getWorkoutTrainingLoadRecords()
+                    } catch (_: Throwable) {
+                        emptyList()
+                    }
+                    _workoutLoadSamples.value = samples
+                }
         }
         viewModelScope.launch(ioDispatcher) {
             loadHrvData()
@@ -508,4 +527,81 @@ class AthleteProfileViewModel @JvmOverloads constructor(
             repository.deleteEntry(id = id, metricType = metricType)
         }
     }
+
+    private fun WorkoutData.toFinishedSyncKey(
+        hrShortLabel: String?,
+        powerShortLabel: String?
+    ): FinishedWorkoutSyncKey {
+        val cpd: CardioPowerDynamicsRecord? = cardioPowerDynamics
+        val rows: List<ExtremaDataRow> = extremaRows.orEmpty()
+        return FinishedWorkoutSyncKey(
+            id = id,
+            finished = finished,
+            startTimeS = startTimeS,
+            activeTimeSec = activeTimeSec,
+            totalTimeSec = totalTimeSec,
+            totalDistance = totalDistance,
+            sportId = sportId,
+            bSportType = bSportType,
+            rpe = rpe,
+            tss = tss,
+            normalizedPowerWatts = normalizedPowerWatts,
+            polarSyncPending = polarSyncPending,
+            cardioTauStart = cpd?.tauStart,
+            cardioHr0Start = cpd?.hr0Start,
+            cardioKStart = cpd?.kStart,
+            cardioHr200Start = cpd?.hr200Start,
+            cardioR2Start = cpd?.r2Start,
+            cardioRmseStart = cpd?.rmseStart,
+            cardioTauEnd = cpd?.tauEnd,
+            cardioHr0End = cpd?.hr0End,
+            cardioKEnd = cpd?.kEnd,
+            cardioHr200End = cpd?.hr200End,
+            cardioR2End = cpd?.r2End,
+            cardioRmseEnd = cpd?.rmseEnd,
+            hrAvg = rows.findExtremaAvg(R.drawable.ic_heart_rate, "HR", hrShortLabel),
+            powerAvg = rows.findExtremaAvg(R.drawable.ic_power, "Power", powerShortLabel)
+        )
+    }
+
+    private fun List<ExtremaDataRow>.findExtremaAvg(
+        iconResId: Int,
+        canonicalFallbackLabel: String,
+        localizedLabel: String?
+    ): String? {
+        return firstOrNull { row ->
+            row.iconResId == iconResId ||
+                row.sensorLabel.equals(canonicalFallbackLabel, ignoreCase = true) ||
+                (!localizedLabel.isNullOrEmpty() && row.sensorLabel == localizedLabel)
+        }?.avgValue
+    }
+
+    private data class FinishedWorkoutSyncKey(
+        val id: Long,
+        val finished: Boolean,
+        val startTimeS: Long,
+        val activeTimeSec: Long,
+        val totalTimeSec: Long,
+        val totalDistance: Double,
+        val sportId: Long,
+        val bSportType: BSportType,
+        val rpe: Int?,
+        val tss: Double?,
+        val normalizedPowerWatts: Double?,
+        val polarSyncPending: Boolean,
+        val cardioTauStart: Double?,
+        val cardioHr0Start: Double?,
+        val cardioKStart: Double?,
+        val cardioHr200Start: Double?,
+        val cardioR2Start: Double?,
+        val cardioRmseStart: Double?,
+        val cardioTauEnd: Double?,
+        val cardioHr0End: Double?,
+        val cardioKEnd: Double?,
+        val cardioHr200End: Double?,
+        val cardioR2End: Double?,
+        val cardioRmseEnd: Double?,
+        val hrAvg: String?,
+        val powerAvg: String?
+    )
 }

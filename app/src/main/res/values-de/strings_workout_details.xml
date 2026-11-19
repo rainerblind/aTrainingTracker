@@ -30,4 +30,12 @@
     <string name="chart_overlay_source_att_fused_alt_slope">ATT Fused (Höhe/Steigung)</string>
     <string name="chart_overlay_mean_value">Ø %1$s</string>
     <string name="tuning_summary_matrix_tabs_format">%1$d/%2$d Liste, %3$d Tabs (%4$d/%5$d)</string>
+    <string name="carriage_timeline_card_title">Aktivität &amp; Tragemodus</string>
+    <string name="carriage_timeline_phase_count">Phasen: %1$d</string>
+    <string name="carriage_timeline_breakdown_title">Phasenaufschlüsselung</string>
+    <string name="carriage_timeline_show_phases">Anzeigen</string>
+    <string name="carriage_timeline_hide_phases">Ausblenden</string>
+    <string name="carriage_timeline_time_range">%1$s – %2$s</string>
+    <string name="carriage_timeline_duration_percent">%1$s (%2$d%%)</string>
+    <string name="carriage_timeline_segment_repeats">%1$dx</string>
 </resources>

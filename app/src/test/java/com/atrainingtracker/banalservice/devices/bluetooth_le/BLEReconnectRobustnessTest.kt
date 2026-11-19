@@ -37,6 +37,7 @@ import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.sensor.MySensorManager
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.TrackingMode
+import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkConstructor
@@ -89,6 +90,8 @@ class BLEReconnectRobustnessTest {
 
         fun isScanning(): Boolean = isScanningForTesting
         fun getScanCallback(): ScanCallback? = scanCallbackForTesting
+        fun getState(): State = mState
+        fun isBackgroundReconnecting(): Boolean = isBackgroundReconnectingForTesting
     }
 
     @Before
@@ -177,8 +180,14 @@ class BLEReconnectRobustnessTest {
         unmockkAll()
     }
 
-    private fun injectTrackingHandler(device: MyBTLEDevice): Handler {
+    private fun injectTrackingHandler(device: MyBTLEDevice, runPosted: Boolean = false): Handler {
         val mockHandler = mockk<Handler>(relaxed = true)
+        if (runPosted) {
+            every { mockHandler.post(any()) } answers {
+                firstArg<Runnable>().run()
+                true
+            }
+        }
         every { mockHandler.postDelayed(any(), any()) } answers {
             val r = firstArg<Runnable>()
             val delay = secondArg<Long>()
@@ -408,5 +417,145 @@ class BLEReconnectRobustnessTest {
         scanCallback!!.onScanFailed(ScanCallback.SCAN_FAILED_APPLICATION_REGISTRATION_FAILED)
 
         assertFalse("mIsScanning must be cleared on scan failure", device.isScanning())
+    }
+
+    /**
+     * TST-CON-051.1: During TrackingMode.TRACKING or PAUSED (even with mHasConnectedInSession == false),
+     * mSearchTimeoutRunnable must transition mState out of SEARCHING, clear isSearching(), broadcast
+     * SEARCHING_STOPPED_FOR_ONE_INTENT(false), and still persist background reconnect + autoConnect=true.
+     */
+    @Test
+    fun testSearchTimeout_duringTrackingAndPaused_clearsSearchingAndReleasesQueueWhilePersistingReconnect() {
+        for (mode in listOf(TrackingMode.TRACKING, TrackingMode.PAUSED)) {
+            MyBTLEDevice.clearScanTimestampsForTesting()
+            TrainingApplication.setTrackingModeForTesting(mode)
+            postedDelayedRunnables.clear()
+
+            val device = TestReconnectBTLEDevice(mockContext, mockSensorManager, 301L, "AA:BB:CC:DD:EE:31")
+            injectTrackingHandler(device, runPosted = true)
+
+            assertFalse(device.hasConnectedInSession())
+            assertTrue(device.shouldKeepAliveOnSearchTimeout())
+
+            device.startSearching()
+            assertTrue(device.isSearching)
+            assertEquals(MyBTLEDevice.State.SEARCHING, device.getState())
+
+            // Simulate GATT was not yet created (e.g. scan-assist started first) -> timeout fires
+            val gattField = MyBTLEDevice::class.java.getDeclaredField("mBluetoothGatt")
+            gattField.isAccessible = true
+            gattField.set(device, null)
+
+            postedDelayedRunnables.clear()
+            device.searchTimeoutRunnable.run()
+
+            assertEquals("mState must leave SEARCHING on timeout ($mode)", MyBTLEDevice.State.DISCONNECTED, device.getState())
+            assertFalse("MyRemoteDevice.mSearching must be cleared on timeout ($mode)", device.isSearching)
+            assertTrue("mIsBackgroundReconnecting must arm on timeout ($mode)", device.isBackgroundReconnecting())
+            assertTrue(
+                "mReconnectRunnable must be scheduled ($mode)",
+                postedDelayedRunnables.any { it.first == device.reconnectRunnable }
+            )
+            verify { mockContext.sendBroadcast(any()) }
+            verify { mockRemoteDevice.connectGatt(mockContext, true, any(), BluetoothDevice.TRANSPORT_LE) }
+        }
+    }
+
+    /**
+     * TST-CON-051.2: After STATE_DISCONNECTED -> disconnectFromGatt() clears mIsBackgroundReconnecting,
+     * mReconnectRunnable (attemptBackgroundReconnect) re-arms mIsBackgroundReconnecting and triggers
+     * autoConnect without setting mSearching=true or State.SEARCHING.
+     */
+    @Test
+    fun testBackgroundReconnect_afterDisconnect_reArmsWithoutSettingSearchingOrStateSearching() {
+        TrainingApplication.setTrackingModeForTesting(TrackingMode.TRACKING)
+
+        val device = TestReconnectBTLEDevice(mockContext, mockSensorManager, 302L, "AA:BB:CC:DD:EE:32")
+        injectTrackingHandler(device, runPosted = true)
+        device.setHasConnectedInSession(true)
+
+        // Disconnect clears mIsBackgroundReconnecting and posts mReconnectRunnable
+        device.gattCallbackForTesting.onConnectionStateChange(
+            mockGatt,
+            8,
+            BluetoothProfile.STATE_DISCONNECTED
+        )
+        assertFalse(device.isBackgroundReconnecting())
+        val reconnectRunnable = postedDelayedRunnables.last { it.first == device.reconnectRunnable }.first
+
+        // Run background reconnect
+        postedDelayedRunnables.clear()
+        reconnectRunnable.run()
+
+        assertTrue("attemptBackgroundReconnect must re-arm mIsBackgroundReconnecting", device.isBackgroundReconnecting())
+        assertFalse("Background reconnect must NOT set MyRemoteDevice.mSearching=true", device.isSearching)
+        assertEquals("Background reconnect must NOT set State.SEARCHING", MyBTLEDevice.State.DISCONNECTED, device.getState())
+        assertTrue(postedDelayedRunnables.any { it.first == device.searchTimeoutRunnable })
+        verify { mockRemoteDevice.connectGatt(mockContext, true, any(), BluetoothDevice.TRANSPORT_LE) }
+
+        // Timeout on background reconnect must double backoff without setting mSearching
+        postedDelayedRunnables.clear()
+        device.searchTimeoutRunnable.run()
+        assertFalse(device.isSearching)
+        assertEquals(MyBTLEDevice.State.DISCONNECTED, device.getState())
+        assertTrue(postedDelayedRunnables.any { it.first == device.reconnectRunnable && it.second == 2000L })
+
+        // ShutDown cleanly clears background reconnect flag & keep-alive
+        device.shutDown()
+        assertFalse(device.isBackgroundReconnecting())
+        assertFalse(device.shouldKeepAliveOnSearchTimeout())
+    }
+
+    /**
+     * Stage 6 Bounce 1/3 heal (REQ-CON-051.1, TST-CON-051.1): When Binder onConnectionStateChange
+     * transitions mState to CONNECTED_TO_GATT before posted discoverServices/notifyStopSearching(true)
+     * runs, mSearchTimeoutRunnable must abort without arming mIsBackgroundReconnecting, scheduling
+     * mReconnectRunnable, or firing notifyStopSearching(false).
+     */
+    @Test
+    fun testSearchTimeout_whenAlreadyConnectedToGatt_abortsWithoutReconnectOrStopSearching() {
+        TrainingApplication.setTrackingModeForTesting(TrackingMode.TRACKING)
+
+        val device = TestReconnectBTLEDevice(mockContext, mockSensorManager, 303L, "AA:BB:CC:DD:EE:33")
+        val handler = injectTrackingHandler(device, runPosted = false)
+        val postedToMain = mutableListOf<Runnable>()
+        every { handler.post(any()) } answers {
+            postedToMain.add(firstArg())
+            true
+        }
+
+        device.startSearching()
+        assertTrue(device.isSearching)
+        assertEquals(MyBTLEDevice.State.SEARCHING, device.getState())
+
+        // Simulate Binder thread transitioning to CONNECTED_TO_GATT before posted discoverServices/notifyStopSearching(true) runs
+        val gattField = MyBTLEDevice::class.java.getDeclaredField("mBluetoothGatt")
+        gattField.isAccessible = true
+        gattField.set(device, mockGatt)
+        postedToMain.clear()
+        device.gattCallbackForTesting.onConnectionStateChange(
+            mockGatt,
+            BluetoothGatt.GATT_SUCCESS,
+            BluetoothProfile.STATE_CONNECTED
+        )
+        assertEquals(MyBTLEDevice.State.CONNECTED_TO_GATT, device.getState())
+        assertEquals(1, postedToMain.size)
+
+        // Fire mSearchTimeoutRunnable before posted runnable executes
+        postedDelayedRunnables.clear()
+        clearMocks(mockContext, answers = false, recordedCalls = true)
+        device.searchTimeoutRunnable.run()
+
+        assertEquals(MyBTLEDevice.State.CONNECTED_TO_GATT, device.getState())
+        assertFalse("Must not arm background reconnect when already CONNECTED_TO_GATT", device.isBackgroundReconnecting())
+        assertTrue("Must not schedule mReconnectRunnable when already CONNECTED_TO_GATT", postedDelayedRunnables.isEmpty())
+        assertTrue("Queue searching flag must remain untouched until notifyStopSearching(true) runs", device.isSearching)
+        verify(exactly = 0) { mockContext.sendBroadcast(any()) }
+
+        // Completing the posted discoverServices/notifyStopSearching(true) runnable finishes cleanly
+        postedToMain.first().run()
+        assertFalse(device.isSearching)
+        verify(exactly = 1) { mockGatt.discoverServices() }
+        verify(exactly = 1) { mockContext.sendBroadcast(any()) }
     }
 }

@@ -1,14 +1,14 @@
 # Living Requirements: Post-Workout Analytics & Periods
 
 **Document ID**: `DOC-REQ-PERIODS`  
-**Version**: 1.0.4  
+**Version**: 1.0.7  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `aftermath_periods`  
 **Prefixes**: `PER`, `PERF`, `RAD`, `SPT`  
 **Scope**: Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers.  
-**Total Requirements**: 62
+**Total Requirements**: 63
 
 ---
 
@@ -1849,6 +1849,49 @@
 
 ---
 
+### REQ-PER-045: Segmented Activity & Phone Carriage Mode Timeline Bar & Phase Breakdown in Workout Details [Verified]
+- **System Requirement(s)**: Derived (SW-only) — Post-workout timeline visualization of existing `SensorType.ACTIVITY_AND_CARRIAGE_MODE` 1-Hz telemetry (`REQ-FIL-028.2`, zero `SYS.2`/`SYS.3` external/sensor changes)
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-PER-053`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Implementation**: `ActivityCarriageTimeline.kt`, `ActivityCarriageTimelineCalculator.kt`, `ActivityCarriageTimelineCard.kt`, `Color.kt`, `WorkoutRepository.kt`, `TrackOnMapAftermathViewModel.kt`, `TrackOnMapScreen.kt`, `WorkoutDetailTabbedContent.kt`, `WorkoutSummariesTabbedScreen.kt`, `WorkoutSummariesListFragment.kt`, `WorkoutClustersScreen.kt`, `WorkoutClusterHeatmapScreen.kt`, `PeriodMapScreen.kt`, `res/values*/strings_workout_details.xml`, `docs/architecture/detailed_design/workout_repository.md`
+- **Rationale**: `ATT-8890` (`REQ-FIL-028`) records 1-Hz `SensorType.ACTIVITY_AND_CARRIAGE_MODE` states (`UNKNOWN(-1)`, `STATIONARY(0)`, `WALKING_TRANSITION(1)`, `BIKE_HANDLEBAR(2)`, `BIKE_JERSEY_BACK(3)`, `BIKE_FRONT_POCKET(4)`, `RUN_WAIST_HIP(5)`, `RUN_BICEP_ARM(6)`, `RUN_HANDHELD(7)`) into `WorkoutSamples.db`, yet Workout Details currently surfaces none of this activity/carriage phase history. Athletes reviewing multi-modal rides or brick sessions need an interactive post-workout timeline bar and phase breakdown while cleanly omitting the section on legacy or non-`ATT_FUSED` workouts (`ATT-8916`).
+- **Description**:
+  1. *Pure-JVM 1-Hz Segment Coalescing & Sliver/Pause/Zero-Distance Rules (`REQ-PER-045.1`)*:
+     - `ActivityCarriageTimelineCalculator` (pure Kotlin, JVM-testable) SHALL coalesce full-resolution 1-Hz `(timeSec, distanceMeters, rawCode)` tuples (`NULL` mapped to `PhoneCarriageMode.UNKNOWN`) into contiguous `ActivityCarriageSegment(mode, startSec, endSec, durationSeconds, distanceMeters, durationPercentage, distancePercentage)` spans and per-mode `ActivityCarriageModeSummary(mode, durationSeconds, distanceMeters, durationPercentage, distancePercentage, segmentCount)` totals.
+     - Per-row duration `dt_i` SHALL use `(t_{i+1} - t_i).coerceIn(1L, 5L)` (`1L` for trailing/single row, matching `ZoneDistributionCalculator.MAX_DELTA_T_SEC = 5L`) so Auto-Pause/manual pause wall jumps never inflate adjacent segment durations; per-row `deltaDist_i` SHALL attribute `(d_{i+1} - d_i).coerceAtLeast(0.0)` when both distances are finite (`0.0` otherwise).
+     - Warmup/transient `PhoneCarriageMode.UNKNOWN` (`-1`) slivers with `durationSec <= 5L` SHALL be absorbed into an adjacent active segment (preceding active span if present, else following active span, coalescing newly adjacent identical active modes), whereas **all** active mode (`0..7`) transitions of `>= 1s` SHALL be preserved without debouncing. Any `UNKNOWN` span with `durationSec > 5L` SHALL be retained as a visible `UNKNOWN` segment.
+     - Denominators: `totalDurationSec = segments.sumOf { it.durationSec }` (including retained `> 5s` `UNKNOWN` gaps) and `totalDistanceMeters = segments.sumOf { it.distanceMeters }`. `durationPercentage = (modeDurationSec.toFloat() / totalDurationSec) * 100f`; `distancePercentage = if (totalDistanceMeters > 0.0) (modeDistanceMeters / totalDistanceMeters).toFloat() * 100f else 0f`.
+  2. *Legacy & All-`UNKNOWN` Graceful Omission (`REQ-PER-045.2`)*:
+     - When `SensorType.ACTIVITY_AND_CARRIAGE_MODE.name` is absent from `WorkoutSamples.db` table columns (`existingColumns`) OR when zero samples decode to an active mode (`0..7`, i.e., all rows are `NULL` or `UNKNOWN(-1)`), `ActivityCarriageTimelineCalculator` / `WorkoutRepository` SHALL return `null` without executing invalid column SQL or emitting an empty placeholder.
+  3. *Pre-Decimation Single-Pass Loading & Full Caller Propagation (`REQ-PER-045.3`)*:
+     - `WorkoutRepository.loadWorkoutDetailTelemetry(workoutId, bSportType)` SHALL inspect `hasCarriageMode = SensorType.ACTIVITY_AND_CARRIAGE_MODE.name in existingColumns`, include `hasCarriageMode` in the early-exit guard (`L2472`), project `ACTIVITY_AND_CARRIAGE_MODE` in the single-pass cursor scan BEFORE track simplification (`800`-point cap) or trackless decimation (`800`-point cap), and populate `WorkoutDetailTelemetry.activityCarriageTimeline: ActivityCarriageTimeline? = null` (trailing default `= null`).
+     - `AftermathMapUIState` (`TrackOnMapAftermathViewModel.kt`), `TrackOnMapScreen`, and `WorkoutDetailTabbedContent` SHALL expose trailing `activityCarriageTimeline: ActivityCarriageTimeline? = null`. `TrackOnMapAftermathViewModel.loadAftermathData` SHALL reset `activityCarriageTimeline = null` when `!isSameWorkout`, propagate `telemetry?.activityCarriageTimeline` in **both** the GPS tracks branch (`L253-257`) AND the trackless `else` fallback branch (`L259-271`), and wire `activityCarriageTimeline` across all 5 `TrackOnMapScreen` hosts (`WorkoutSummariesTabbedScreen`, `WorkoutSummariesListFragment`, `WorkoutClustersScreen`, `WorkoutClusterHeatmapScreen`, `PeriodMapScreen`).
+     - `WorkoutSamplesDatabaseManager.java` (`1,533` LoC) MUST incur `0` LoC growth; `WorkoutRepository.kt` MUST stay `<= 5,117` LoC (and `docs/architecture/detailed_design/workout_repository.md` SHALL sync any `WorkoutRepository` telemetry signature changes in Stage 4).
+  4. *Segmented Timeline Ribbon, Phase Breakdown UI & `"v3|"` Preservation (`REQ-PER-045.4`)*:
+     - `ActivityCarriageTimelineCard` SHALL render conditionally inside `WorkoutDetailSectionType.DETAILS` (`WorkoutDetailTabbedContent.kt`, after `RadarTrafficSummaryCard`) solely when `activityCarriageTimeline != null && activityCarriageTimeline.segments.isNotEmpty()`, leaving `WorkoutDetailTabConfig` `"v3|"` schema, `14`-entry `WorkoutDetailSectionType`/`WorkoutSectionType` enums (`WorkoutDetailTabsTest`), `WorkoutMasksAndCardsSection.kt` (`< 400` LoC), and `WorkoutSummary.kt` untouched.
+     - The card SHALL render: (a) a color-coded continuous proportional timeline bar weighted strictly by **duration** (`durationSec.toFloat().coerceAtLeast(1f) / > 0f`, ensuring `STATIONARY` stops and zero-distance indoor workouts render cleanly without `Modifier.weight(<= 0f)` crashes) with `1.dp` surface dividers; (b) per-mode summary chips/rows reusing `PhoneCarriageMode.labelResId` (`9/9` `strings_devices.xml`), semantic carriage icon, duration, distance (when `totalDistanceMeters > 0.0`, or clean time/share focus when `0.0`), and duration percentage; and (c) an expandable chronological phase breakdown list (`isExpanded` toggle) displaying each contiguous segment's time span (`startTimeSec..endTimeSec`), duration, and distance.
+  5. *Color Centralization, 9-Locale Parity & Behavioral Compose Verification (`REQ-PER-045.5`)*:
+     - All carriage segment color tokens SHALL be centralized in `TTColor` (`ui/theme/Color.kt`) with WCAG 2.1 non-text contrast `>= 3.0:1` across Light/Dark/AMOLED (`ThemeColorCentralizationAuditTest`), with zero `Color(0x...)` literals outside `Color.kt`.
+     - New card/breakdown UI strings SHALL achieve 100% 9-locale parity (`EN/DE/ES/FR/IT/JA/NL/PL/PT`) in `values*/strings_workout_details.xml` with zero emojis (`ATT-5400`) and valid positional format specifiers (`%1$d`, `%1$s`). Behavioral Compose UI tests SHALL use `createComposeRule()` (`UiReflectionOnlyTestAuditContractTest`) with zero `src/main` reads (`SourceTextReadingAuditContractTest`) and Stage 4 Light/Dark PNG verification (`Rule 8.5`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new `REQ-PER-045` refining/consuming `REQ-FIL-028.2` (`PhoneCarriageMode` / `ACTIVITY_AND_CARRIAGE_MODE`), `REQ-UI-2787.1` (`WorkoutDetailTabConfig` `"v3|"`), and `REQ-PRO-129.2` (`WorkoutSamplesDatabaseManager`/`WorkoutRepository` LoC ceilings).
+2. *Historical Origin & Commit Trace*: `fee3e805` (`ATT-8890` 1-Hz carriage classification), `58982719` (`ATT-8079` `"v3|"` tab persistence), `624bea5e` / `1b33fcba` (`RadarTrafficSummaryCard` / `CardioPowerDynamicsCard` in `DETAILS`).
+3. *Root Reason for Existing Formulation*: `"v3|"` (`14` sections) preserves user section removals across reloads; conditional cards in `DETAILS` (`tab_overview`) surface sensor-conditional analytics without mutating tab schemas or breaching `WorkoutMasksAndCardsSection`'s `400`-LoC limit.
+4. *Preservation of Core Invariants*: `PhoneCarriageMode` `-1..7` & `9/9` `strings_devices.xml` keys unchanged; `"v3|"` & `14`-entry enums unchanged; `WorkoutSamplesDatabaseManager.java == 1,533` LoC; `WorkoutRepository.kt <= 5,117` LoC.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a `WorkoutSamples.db` session containing 1-Hz `ACTIVITY_AND_CARRIAGE_MODE` transitions (`UNKNOWN(2s) -> BIKE_FRONT_POCKET -> WALKING_TRANSITION(3s) -> STATIONARY -> WALKING_TRANSITION -> BIKE_FRONT_POCKET`), *When* loaded via `WorkoutRepository.loadWorkoutDetailTelemetry` (GPS or trackless), *Then* warmup `UNKNOWN(<=5s)` absorbs cleanly, all 5 active phases (`1–5s` or longer) survive pre-decimation coalescing with accurate duration/distance totals, and `ActivityCarriageTimelineCard` renders the proportional bar, summary rows, and expandable chronological phases.
+• *Given* a legacy workout lacking `ACTIVITY_AND_CARRIAGE_MODE` OR a workout with only `NULL`/`UNKNOWN(-1)` rows, *When* opening Workout Details, *Then* `activityCarriageTimeline` is `null` and `ActivityCarriageTimelineCard` is completely omitted with zero SQL exceptions or empty placeholders.
+• *Given* a zero-distance indoor/stationary workout (`totalDistanceMeters == 0.0`) or a `> 5s` `UNKNOWN` sensor gap, *When* computing summaries and rendering `ActivityCarriageTimelineCard`, *Then* `durationPercentage` sums to `100%` (including `> 5s` `UNKNOWN` spans), `distancePercentage == 0f` without `NaN`, and Compose `Modifier.weight` stays strictly `> 0f`.
+
+**Invariants**: Pre-decimation 1-Hz coalescing; `<= 5s` `UNKNOWN` sliver suppression without debouncing `1–5s` active modes (`0..7`); `<= 5s` pause `dt` clamp; dual GPS/trackless `ViewModel` forwarding & workout-switch reset; trailing `= null` constructors; `"v3|"` & `14`-entry enums preserved; `WorkoutSamplesDatabaseManager.java == 1,533` & `WorkoutRepository.kt <= 5,117`; `TTColor` centralized; `9/9` locale parity; `createComposeRule()` UI tests with `0` `src/main` reads.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -1858,3 +1901,6 @@
 | `1.0.2` | 2026-11-18 | AI Agent (`ATT-8710`) | `ATT-8710` | Integrated `REQ-HRV-044` [Verified] post-`ATT-8206` (`v1.0.1`) shard reconciliation. |
 | `1.0.3` | 2026-11-18 | AI Agent (`ATT-8201`) | `ATT-8201` | Linked refined `REQ-*` entries in-place to net-new `SYSREQ-TRK-007..013` and `SYSREQ-DEX-007..008`. |
 | `1.0.4` | 2026-11-18 | AI Agent (`ATT-8080`) | `ATT-8080` | Added and verified (`[Verified]`) `REQ-PER-044` for `ATT_FUSED` track layers, multi-source `ALTITUDE`/`SPEED`/`SLOPE` overlays, and persisted per-chart visibility toggles. |
+| `1.0.5` | 2026-11-18 | AI Agent (`ATT-8916`, `--as agent1`) | `ATT-8916` | Added `REQ-PER-045` (`[Planned]`, `.1`–`.5`) for segmented activity & phone carriage mode timeline bar and expandable phase breakdown in Workout Details. |
+| `1.0.6` | 2026-11-18 | AI Agent (`ATT-8916`, `--as agent1`) | `ATT-8916` | Promoted `REQ-PER-045` to `[Implemented]` following Stage 4 construction, `Rule 8.5` PNG inspection, and green contract/UI verification (`102/102` tests). |
+| `1.0.7` | 2026-11-18 | AI Agent (`ATT-8916`, `--as agent1`) | `ATT-8916` | Promoted `REQ-PER-045` to `[Verified]` after Stage 5 targeted unit/contract/UI regression, `emulator-5554` smoke verification, `Rule 8.5` PNG audit, and living-doc governance sync. |

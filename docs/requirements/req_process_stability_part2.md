@@ -1,14 +1,14 @@
 # Living Requirements: Engineering Process, Stability & Architecture (Part 2 of 2)
 
 **Document ID**: `DOC-REQ-PRO-P2`  
-**Version**: 1.0.28  
+**Version**: 1.0.32  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `process_stability_part2`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Requirements**: 72
+**Total Requirements**: 73
 
 ---
 
@@ -2403,6 +2403,39 @@
   • *Given* `RadarSettingsSectionTest.kt`, *When* `:app:testDebugUnitTest --tests "*.RadarSettingsSectionTest"` executes, *Then* `RadarSettingsSection` renders via `createComposeRule()`, verifies conditional visibility, retired-control absence, interactive callbacks, and all preserved 9-locale XML checks with `0` `src/main/` reads.
 - **Invariants**: Zero `app/src/main/` edits; `ANT-Android-SDKs` untouched; `SourceTextReadingAuditContractTest` (`22` guards, `105` baseline) preserved; `LEGITIMATE_GOVERNANCE_GUARDS == 22`; `docs/coding_standards.md` §1.1–§1.5 & `AspiceSweAuditContractTest` skill markers preserved; `Localization Parity: N/A - no UI strings`.
 
+### REQ-STB-020: Eliminate 1-Hz `WORKOUT_UPDATED_INTENT`, Per-Sensor `_allWorkouts` List Clones, and Unfinished-Workout Historical Re-Aggregations During Live Tracking (ATT-8999) [Verified]
+- **Tests**: `TST-STB-020`
+- **Priority**: Critical
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Integration
+- **Implementation**: `app/src/main/java/com/atrainingtracker/trainingtracker/tracker/TrackerService.java`, `app/src/main/java/com/atrainingtracker/trainingtracker/tracker/LiveWorkoutBroadcastTracker.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodsRepository.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/athleteprofile/AthleteProfileViewModel.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/knownlocations/KnownLocationsViewModel.kt`
+- **Rationale**: During active workouts with large workout histories (`2,196` workouts), `TrackerService` triggered a 3-stage 1-Hz heap churn cascade: (1) 6–12x/sec `_allWorkouts` list clones via `updateExtremaValueInMemory`, (2) 1-Hz `WORKOUT_UPDATED_INTENT` reloads on both active and paused ticks running 40+ SQLite queries + `PolyUtil.decode` in `WorkoutDataMapper.fromCursor`, and (3) 1-Hz `PeriodsRepository.loadFromDatabase` rebuilds (`precalculateGroups` + `enrich`) plus activity-scoped `AthleteProfileViewModel` SQLite trend/load queries and `KnownLocationsViewModel` $O(\text{locations} \times N)$ geofence scans, exhausting the 512 MB Java heap (`OutOfMemoryError`, `REQ-NFR-005`).
+- **Description**:
+  1. *Stop 1-Hz Extrema List Clones & Steady-State Active/Paused `WORKOUT_UPDATED_INTENT` (`REQ-STB-020.1`)*:
+     - `TrackerService.sampleAndWriteToDb()` (`:2588`) SHALL NOT call `mWorkoutRepository.updateExtremaValueInMemory(...)` on 1-Hz sensor updates and MUST NOT broadcast `WORKOUT_UPDATED_INTENT` on steady-state 1-Hz active ticks (`:2855`) or steady-state 1-Hz paused ticks (`:2620`), while preserving 1-Hz asynchronous `recordLiveSample(...)` writes (`:2835`) and 1-Hz `updateWorkoutTotalTime(...)` DB writes during pause (`:2614`, `REQ-TRK-009`).
+     - Live cockpit telemetry and notifications MUST continue sourcing strictly from `BANALServiceRepository` without reading `WorkoutRepository.allWorkouts`.
+  2. *Discrete Lifecycle Edge Broadcasts & `<= 3,559`-LoC Compliance (`REQ-STB-020.2`)*:
+     - `TrackerService` SHALL dispatch `WORKOUT_UPDATED_INTENT` via `LocalBroadcastManager` strictly on discrete lifecycle transitions: (a) initial workout start/resume DB initialization (`START_NORMAL` after `initFuture.complete` `:1292` and `applyResumedState` `:1915, :1941`), (b) pause/resume state edges (`TRACKING <-> PAUSED`) detected via tracked prior paused state, (c) lap persistence outside `endWorkout` (`mLapSummaryReceiver` `:776` / `createNewLap` when not stopping, omitting `:2379` inside `endWorkout`), (d) sport resolution/changes (`onSearchingFinished` `:2304`, `onUserSelectedSportTypeChanged` `:2334`), while preserving existing altitude calibration broadcasts (`:851`) and terminal `TRACKING_FINISHED_INTENT` dispatch (`endWorkout` `:2551`, `REQ-TRK-010`).
+     - `TrackerService.java` MUST remain `<= 3,559` LoC (`ArchitectureConformanceContractTest`); if edge-tracking helpers risk exceeding `3,559` LoC, edge coordination SHALL be extracted into a small Kotlin helper class.
+  3. *Filter Unfinished Workouts in `PeriodsRepository` (`REQ-STB-020.3`, refining `REQ-PER-016.1`)*:
+     - `PeriodsRepository` reactive collector (`:179-187`) SHALL filter `list.filter { it.finished }` prior to `map { it.toPeriodProjectionKey() }`, and `precalculateGroups()` (`:955-963`) SHALL require `it.startTimeS > 0L && it.finished`, ensuring active (`!finished`) sessions trigger zero `loadFromDatabase(forceIncremental = true)` rebuilds while keeping `PeriodProjectionKey.finished` intact (`PeriodsRepositorySyncTest.kt:282`) and preserving `PeriodsRepository.onWorkoutFinished` at workout stop (`WorkoutRepository.kt:4487`).
+  4. *Guard `AthleteProfileViewModel` & `KnownLocationsViewModel` While Preserving Consumer Scope (`REQ-STB-020.4`, refining `REQ-REV-011` & `REQ-DAT-016`)*:
+     - `AthleteProfileViewModel` (`:395-405`) SHALL filter `allWorkouts` to `it.finished` and deduplicate via `distinctUntilChanged()` on finished workout identity/metric keys before invoking `loadCardioTrendSamples()` or `getWorkoutTrainingLoadRecords()`.
+     - `KnownLocationsViewModel` (`:127, 161-189`) SHALL filter `workouts` to `it.finished` and deduplicate `allWorkouts` emissions on finished `(id, startLatLng, bSportType)` before running `groupSportStartsByLocation`.
+     - Downstream `allWorkouts` consumers (`WorkoutSummariesViewModel.kt:164-189` with `WhileSubscribed(5000)`, `PeriodsViewModel.kt:412-421` early-returning when `_peekedWorkoutDataWithTrack.value == null`, `WorkoutClustersScreen.kt:96`) MUST preserve expected behavior (`WorkoutSummary.kt:122, 227` continues displaying `!finished` active cards at `alpha = 0.5f` on discrete lifecycle transitions).
+  5. *Parallel-Lane Boundary, `SYS.2`/`SYS.3` & Governance Invariants (`REQ-STB-020.5`)*:
+     - `WorkoutRepository.kt:1970-2650` (`ATT-8916`), `req_aftermath_periods.md`, `tst_aftermath_periods.md`, `LegacyImportEngine.kt` (`ATT-9018`), and `ANT-Android-SDKs` MUST remain untouched (`0` `WorkoutRepository.kt` edits preferred); zero `SYS.2`/`SYS.3` impact (`REQ-PRO-131`); `Localization Parity: N/A - no UI strings`; `0` new `src/main/` reads in tests (`REQ-PRO-049.1`).
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new `REQ-STB-020` (`REQ-STB-020.1`–`REQ-STB-020.5`), refining `REQ-TRK-009` (`SCRUM-97`), `REQ-TRK-010` (`ATT-505`), `REQ-PER-016.1` (`ATT-4019`), `REQ-REV-011` (`ATT-6724`), and `REQ-DAT-016` (`ATT-1734`), enforcing `REQ-NFR-005` (`< 40 MB` heap) across `TrackerService.java`, `PeriodsRepository.kt`, `AthleteProfileViewModel.kt`, and `KnownLocationsViewModel.kt`.
+  2. *Historical Origin & Commit Trace*: `1e6acd7f` (`SCRUM-97`, paused 1-Hz `WORKOUT_UPDATED_INTENT` card refresh), `e21292d5` (`ATT-8158`, `updateExtremaValueInMemory`), `a7f4f22d` (`ATT-6724`), `3d818885` (`ATT-1734`).
+  3. *Root Reason for Existing Formulation*: `SCRUM-97` polled DB reloads via 1-Hz broadcasts to refresh active cards; `ATT-8158` removed synchronous SQLite extrema writes from the 1-Hz loop (`REQ-NFR-003`) while retaining per-sensor `_allWorkouts` cloning and 1-Hz `WORKOUT_UPDATED_INTENT`.
+  4. *Preservation of Core Invariants*: Preserves 1-Hz `recordLiveSample()` and paused `TIME_TOTAL_s` DB persistence (`REQ-TRK-009`), `TRACKING_FINISHED_INTENT` & `PeriodsRepository.onWorkoutFinished` (`REQ-TRK-010`, `REQ-PER-016.2`), `PeriodProjectionKey.finished` (`PeriodsRepositorySyncTest.kt:282`), active `!finished` card rendering on discrete transitions, `LegacyImportEngine` reloads, `WorkoutRepository.kt:1970-2650` untouched (`ATT-8916`), and `TrackerService.java <= 3,559` LoC.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* an active or paused workout session with `2,196` cached workouts in `WorkoutRepository._allWorkouts`, *When* `TrackerService.sampleAndWriteToDb()` executes 1-Hz ticks across changing sensor `MIN`/`MAX`/`AVG` values, *Then* `0` `updateExtremaValueInMemory` calls and `0` steady-state `WORKOUT_UPDATED_INTENT` broadcasts occur while `recordLiveSample` / `updateWorkoutTotalTime` persist normally.
+  • *Given* discrete tracking lifecycle transitions (`START_NORMAL` / resume init, `TRACKING <-> PAUSED` edge, `saveLap` outside `endWorkout`, sport changes, altitude calibration, and `endWorkout`), *When* each edge occurs, *Then* `TrackerService` dispatches `WORKOUT_UPDATED_INTENT` (or `TRACKING_FINISHED_INTENT` on stop) once per transition, refreshing active card / post-workout state cleanly.
+  • *Given* `!finished` updates in `WorkoutRepository.allWorkouts`, *When* `PeriodsRepository`, `AthleteProfileViewModel`, and `KnownLocationsViewModel` observe `allWorkouts`, *Then* `0` `loadFromDatabase` rebuilds, `0` cardio/load SQLite re-queries, and `0` `groupSportStartsByLocation` runs execute until a `finished = true` transition occurs.
+- **Invariants**: 1-Hz `recordLiveSample()` & paused `TIME_TOTAL_s` DB persistence intact; `TRACKING_FINISHED_INTENT` finalization intact; `WorkoutSummariesViewModel` retains `!finished` cards on discrete transitions; `LegacyImportEngine` untouched; `WorkoutRepository.kt:1970-2650` untouched; `TrackerService.java <= 3,559` & `WorkoutRepository.kt <= 5,117` LoC; `0` `src/main/` test reads; `Localization Parity: N/A - no UI strings`.
+
 ---
 
 ## Change History
@@ -2438,3 +2471,7 @@
 | `1.0.26` | 2026-11-18 | AI Agent (`ATT-8198`) | `ATT-8198` | Added `[Planned]` `REQ-PRO-132` (`REQ-PRO-132.1`–`REQ-PRO-132.4`: behavioral `createComposeRule()` UI test mandate, `189`-entry `(?:^\|/)ui/` `*Kt` reflection ratchet across `trainingtracker/ui/` + `banalservice/ui/`, `docs/coding_standards.md` §5.4 + Stage 4/5 skills update, and `RadarSettingsSectionTest` Compose remediation). |
 | `1.0.27` | 2026-11-18 | AI Agent (`ATT-8198`) | `ATT-8198` | Promoted `REQ-PRO-132` to `[Implemented]` in Stage 4 (`UiReflectionOnlyTestAuditContractTest.kt`, `app/ui-reflection-baseline.txt`, `docs/coding_standards.md` v`1.0.1` §5.4, Stage 4/5 `SKILL.md`s, `RadarSettingsSectionTest.kt`). |
 | `1.0.28` | 2026-11-18 | AI Agent (`ATT-8198`) | `ATT-8198` | Promoted `REQ-PRO-132` to `[Verified]` after Stage 5 verification (`31/31` targeted Gradle tests PASS across 5 suites, `189`-entry `(?:^\|/)ui/` baseline locked, `SourceTextReadingAuditContractTest` `4/4` PASS, governance `exit 0`). |
+| `1.0.29` | 2026-11-18 | AI Agent (`ATT-8999`, `--as agent1`) | `ATT-8999` | Added `[Planned]` `REQ-STB-020` (`REQ-STB-020.1`–`REQ-STB-020.5`: stop 1-Hz `WORKOUT_UPDATED_INTENT` & `_allWorkouts` cloning in `TrackerService`, discrete lifecycle edges, and `!finished` guards in `PeriodsRepository`, `AthleteProfileViewModel`, `KnownLocationsViewModel`). |
+| `1.0.30` | 2026-11-18 | AI Agent (`ATT-8999`, `--as agent1`) | `ATT-8999` | Promoted `REQ-STB-020` to `[Implemented]` in Stage 4 (`LiveWorkoutBroadcastTracker.kt`, `TrackerService.java` 3,556 LoC, `PeriodsRepository.kt`, `AthleteProfileViewModel.kt`, `KnownLocationsViewModel.kt`). |
+| `1.0.31` | 2026-11-19 | AI Agent (`ATT-8999`, `--as agent1`) | `ATT-8999` | Stage 4 Bounce 1/3 heal: replaced `@Deprecated` `SensorType.shortNameId` calls in `AthleteProfileViewModel.kt` with `SensorType.getShortName(getApplication())` for zero compiler warnings; set `REQ-STB-020` to `[Implemented]` pending Stage 5 re-verification. |
+| `1.0.32` | 2026-11-19 | AI Agent (`ATT-8999`, `--as agent1`) | `ATT-8999` | Promoted `REQ-STB-020` (`REQ-STB-020.1`–`REQ-STB-020.5`) to `[Verified]` after Stage 5 Bounce 1 verification (`470/470` `--rerun-tasks` across `74` suites, `0` compiler warnings, static baselines, live `emulator-5554` smoke; `ATT-8999_walkthrough.md`). |

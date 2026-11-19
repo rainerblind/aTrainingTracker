@@ -1970,7 +1970,8 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
         val hrThresholds: HeartRateZoneThresholds? = null,
         val powerThresholds: PowerZoneThresholds? = null,
         val gradeZoneDistribution: ZoneDistributionData? = null,
-        val multiSensorOverlays: Map<TelemetryMetricType, List<TelemetrySourceSeries>> = emptyMap()
+        val multiSensorOverlays: Map<TelemetryMetricType, List<TelemetrySourceSeries>> = emptyMap(),
+        val activityCarriageTimeline: ActivityCarriageTimeline? = null
     )
 
     private fun getExistingColumns(db: android.database.sqlite.SQLiteDatabase, tableName: String): Set<String> {
@@ -2467,9 +2468,10 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
             SensorType.SPEED_mps.name in existingColumns ||
             SensorType.SLOPE.name in existingColumns ||
             SensorType.ALTITUDE.name in existingColumns
+        val hasCarriageMode = SensorType.ACTIVITY_AND_CARRIAGE_MODE.name in existingColumns
         val overlayColumnsByMetric = discoverMultiSourceOverlayColumns(existingColumns)
 
-        if (availableTrackTypes.isEmpty() && !hasScalarSensor && overlayColumnsByMetric.isEmpty()) {
+        if (availableTrackTypes.isEmpty() && !hasScalarSensor && !hasCarriageMode && overlayColumnsByMetric.isEmpty()) {
             return@withContext WorkoutDetailTelemetry(emptyMap(), null, null)
         }
 
@@ -2516,7 +2518,8 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
             SensorType.W_PRIME_BAL.name,
             SensorType.HRV_DFA_A1.name,
             SensorType.HRV_RMSSD.name,
-            SensorType.HRV_ARTIFACT_RATE.name
+            SensorType.HRV_ARTIFACT_RATE.name,
+            SensorType.ACTIVITY_AND_CARRIAGE_MODE.name
         )
         for (col in commonCols) {
             if (col in existingColumns) projectionSet.add(col)
@@ -2531,6 +2534,7 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
         val trackPointsMap = availableTrackTypes.associateWith { ArrayList<PathPoint>() }
         val hrSamples = if (hasHr) mutableListOf<ZoneSample>() else null
         val powerSamples = if (hasPower) mutableListOf<ZoneSample>() else null
+        val carriageAccumulator = if (hasCarriageMode) ActivityCarriageTimelineCalculator.Accumulator() else null
         var overlayAccumulators: List<WorkoutMultiSourceSampleDiscovery.OverlaySeriesAccumulator> = emptyList()
 
         db.query(tableName, projection, null, null, null, null, null).use { cursor ->
@@ -2556,6 +2560,7 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
             val hrvDfaIdx = cursor.getColumnIndex(SensorType.HRV_DFA_A1.name)
             val hrvRmssdIdx = cursor.getColumnIndex(SensorType.HRV_RMSSD.name)
             val hrvArtifactIdx = cursor.getColumnIndex(SensorType.HRV_ARTIFACT_RATE.name)
+            val carriageModeIdx = if (hasCarriageMode) cursor.getColumnIndex(SensorType.ACTIVITY_AND_CARRIAGE_MODE.name) else -1
 
             var initialEpochSec: Long? = null
             var sampleIndex = 0L
@@ -2587,6 +2592,7 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                 for (acc in overlayAccumulators) {
                     acc.record(cursor, dist, timeSec)
                 }
+                carriageAccumulator?.record(timeSec, dist, cursor.optIntOrNull(carriageModeIdx))
 
                 for (type in availableTrackTypes) {
                     val (latIdx, lonIdx) = colIndices[type] ?: continue
@@ -2643,7 +2649,8 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
             hrThresholds = hrThresholds,
             powerThresholds = powerThresholds,
             gradeZoneDistribution = gradeDistribution,
-            multiSensorOverlays = WorkoutMultiSourceSampleDiscovery.finalizeOverlaySeries(overlayAccumulators)
+            multiSensorOverlays = WorkoutMultiSourceSampleDiscovery.finalizeOverlaySeries(overlayAccumulators),
+            activityCarriageTimeline = carriageAccumulator?.build()
         )
     }
 

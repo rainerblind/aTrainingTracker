@@ -40,6 +40,7 @@ import com.atrainingtracker.banalservice.sensor.SensorData
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.TrackingMode
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.database.ExtremaType
 import com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManager
 import com.atrainingtracker.trainingtracker.database.hrv.HrvPostWorkoutRecomputer
 import com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrRepository
@@ -321,12 +322,13 @@ class TrackerServiceStateMachineCharacterisationTest {
     }
 
     /**
-     * Characterisation Test 4: 1-Hz Sampling in Paused Mode
-     * Asserts that when paused, sampleAndWriteToDb captures TIME_TOTAL, updates total time in repository,
-     * and broadcasts WORKOUT_UPDATED_INTENT without logging active samples.
+     * Characterisation Test 4 (REQ-TRK-009, REQ-STB-020.1, TST-STB-020.1): 1-Hz Sampling in Paused Mode
+     * Asserts that when paused, steady-state sampleAndWriteToDb captures TIME_TOTAL and updates
+     * total time in repository without logging active samples, cloning _allWorkouts, or broadcasting
+     * steady-state 1-Hz WORKOUT_UPDATED_INTENT.
      */
     @Test
-    fun testSampleAndWriteToDb_paused_updatesTotalTimeAndBroadcasts() {
+    fun testSampleAndWriteToDb_paused_updatesTotalTimeAndSuppressesSteadyStateBroadcast_TST_STB_020_1() {
         TrainingApplication.setTrackingModeForTesting(TrackingMode.PAUSED)
 
         val totalTimeData = SensorData<Int>(SensorType.TIME_TOTAL, 300, "05:00", "clock")
@@ -346,19 +348,181 @@ class TrackerServiceStateMachineCharacterisationTest {
         try {
             val method: Method = TrackerService::class.java.getDeclaredMethod("sampleAndWriteToDb")
             method.isAccessible = true
-            method.invoke(service)
+            repeat(5) {
+                method.invoke(service)
+            }
             Shadows.shadowOf(Looper.getMainLooper()).idle()
 
-            verify(timeout = 1000) {
+            verify(timeout = 1000, atLeast = 5) {
                 mockWorkoutRepo.updateWorkoutTotalTime(TEST_WORKOUT_ID, 300)
             }
             verify(exactly = 0) {
                 mockWorkoutRepo.recordLiveSample(any(), any(), any(), any(), any(), any(), any(), any())
+                mockWorkoutRepo.updateExtremaValueInMemory(any(), any(), any(), any(), any())
             }
-            assertTrue(
-                "Expected WORKOUT_UPDATED_INTENT local broadcast",
-                receivedLocalBroadcasts.any { it.getLongExtra("WORKOUT_ID", -1L) == TEST_WORKOUT_ID }
+            assertEquals(
+                "Steady-state paused ticks must emit 0 WORKOUT_UPDATED_INTENT broadcasts",
+                0,
+                receivedLocalBroadcasts.size
             )
+        } finally {
+            localBroadcastManager.unregisterReceiver(receiver)
+        }
+    }
+
+    /**
+     * TST-STB-020.1 / REQ-STB-020.1 & REQ-STB-020.2:
+     * Verifies discrete lifecycle edges emit single WORKOUT_UPDATED_INTENT broadcasts while steady-state
+     * active & paused 1-Hz ticks emit 0 broadcasts and 0 updateExtremaValueInMemory calls.
+     */
+    @Test
+    fun testTrackerService_discreteLifecycleEdges_andZero1HzChurn_TST_STB_020_1() {
+        setServiceField(service, "mLiveSession", LiveWorkoutSession(TEST_WORKOUT_ID, TrackerService.IMPORTANT_SENSOR_TYPES))
+
+        val receivedLocalBroadcasts = mutableListOf<Intent>()
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(ctx: Context?, intent: Intent?) {
+                if (intent != null) {
+                    receivedLocalBroadcasts.add(intent)
+                }
+            }
+        }
+        val localBroadcastManager = LocalBroadcastManager.getInstance(context)
+        localBroadcastManager.registerReceiver(receiver, IntentFilter(TrackerService.WORKOUT_UPDATED_INTENT))
+
+        try {
+            // 1. Session init / resume emits exactly 1 edge broadcast.
+            TrainingApplication.setTrackingModeForTesting(TrackingMode.TRACKING)
+            service.notifyTrackingStarted(TEST_WORKOUT_ID)
+            Shadows.shadowOf(Looper.getMainLooper()).idle()
+            assertEquals(1, receivedLocalBroadcasts.size)
+
+            // 2. 60 active 1-Hz ticks with changing HR/SPEED extrema emit 0 broadcasts & 0 in-memory clones.
+            val sampleMethod = TrackerService::class.java.getDeclaredMethod("sampleAndWriteToDb")
+            sampleMethod.isAccessible = true
+            for (sec in 1..60) {
+                every { mockBanalComm.getBestSensorData(SensorType.TIME_TOTAL) } returns
+                    SensorData(SensorType.TIME_TOTAL, sec, "$sec", "clock")
+                every { mockBanalComm.getBestSensorData(SensorType.HR) } returns
+                    SensorData<Number>(SensorType.HR, 130 + (sec % 40), "hr", "hr")
+                every { mockBanalComm.getBestSensorData(SensorType.SPEED_mps) } returns
+                    SensorData<Number>(SensorType.SPEED_mps, 6.0 + (sec % 5), "spd", "gps")
+                sampleMethod.invoke(service)
+            }
+            Shadows.shadowOf(Looper.getMainLooper()).idle()
+            assertEquals(1, receivedLocalBroadcasts.size)
+            verify(exactly = 0) {
+                mockWorkoutRepo.updateExtremaValueInMemory(any(), any(), any(), any(), any())
+            }
+            verify(exactly = 60) {
+                mockWorkoutRepo.recordLiveSample(any(), eq(TEST_WORKOUT_ID), any(), any(), any(), any(), any(), any())
+            }
+
+            // 3. TRACKING -> PAUSED edge emits 1 broadcast, followed by 0 across 10 steady paused ticks.
+            TrainingApplication.setTrackingModeForTesting(TrackingMode.PAUSED)
+            sampleMethod.invoke(service)
+            repeat(10) { sampleMethod.invoke(service) }
+            Shadows.shadowOf(Looper.getMainLooper()).idle()
+            assertEquals(2, receivedLocalBroadcasts.size)
+
+            // 4. PAUSED -> TRACKING edge emits 1 broadcast, followed by 0 steady active ticks.
+            TrainingApplication.setTrackingModeForTesting(TrackingMode.TRACKING)
+            sampleMethod.invoke(service)
+            repeat(5) { sampleMethod.invoke(service) }
+            Shadows.shadowOf(Looper.getMainLooper()).idle()
+            assertEquals(3, receivedLocalBroadcasts.size)
+
+            // 5. Live saveLap outside endWorkout emits 1 broadcast; stop-lap with 5-arg saveLap emits 0.
+            service.saveLap(1L, 120, 1000.0, 8.3)
+            Shadows.shadowOf(Looper.getMainLooper()).idle()
+            assertEquals(4, receivedLocalBroadcasts.size)
+            setServiceField(service, "mIsStopping", true)
+            service.saveLap(TEST_WORKOUT_ID, 2L, 60, 500.0, 8.3)
+            Shadows.shadowOf(Looper.getMainLooper()).idle()
+            assertEquals(4, receivedLocalBroadcasts.size)
+            setServiceField(service, "mIsStopping", false)
+
+            // 6. Sport updates (searching finished & user sport change) each emit 1 edge broadcast when active;
+            // suppressed when stopping or workoutId <= 0.
+            service.onSearchingFinished()
+            val sportChangeMethod = TrackerService::class.java.getDeclaredMethod("onUserSelectedSportTypeChanged")
+            sportChangeMethod.isAccessible = true
+            sportChangeMethod.invoke(service)
+            Shadows.shadowOf(Looper.getMainLooper()).idle()
+            assertEquals(6, receivedLocalBroadcasts.size)
+
+            setServiceField(service, "mIsStopping", true)
+            service.onSearchingFinished()
+            sportChangeMethod.invoke(service)
+            Shadows.shadowOf(Looper.getMainLooper()).idle()
+            assertEquals(6, receivedLocalBroadcasts.size)
+
+            setServiceField(service, "mIsStopping", false)
+            setServiceField(service, "mWorkoutID", 0L)
+            service.onSearchingFinished()
+            sportChangeMethod.invoke(service)
+            Shadows.shadowOf(Looper.getMainLooper()).idle()
+            assertEquals(6, receivedLocalBroadcasts.size)
+        } finally {
+            localBroadcastManager.unregisterReceiver(receiver)
+        }
+    }
+
+    /**
+     * TST-STB-020.4 / REQ-STB-020.5:
+     * Sustained 3,600-tick (1-hour) 1-Hz sampling NFR stress test proving zero updateExtremaValueInMemory
+     * clones and zero steady-state WORKOUT_UPDATED_INTENT broadcasts while LiveWorkoutSession extrema remain intact.
+     */
+    @Test
+    fun testTrackerService_sustained3600Ticks_zeroExtremaClonesAndZeroReloadBroadcasts_TST_STB_020_4() {
+        val liveSession = LiveWorkoutSession(TEST_WORKOUT_ID, TrackerService.IMPORTANT_SENSOR_TYPES)
+        setServiceField(service, "mLiveSession", liveSession)
+        TrainingApplication.setTrackingModeForTesting(TrackingMode.TRACKING)
+        service.notifyTrackingStarted(TEST_WORKOUT_ID)
+        Shadows.shadowOf(Looper.getMainLooper()).idle()
+
+        val receivedLocalBroadcasts = mutableListOf<Intent>()
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(ctx: Context?, intent: Intent?) {
+                if (intent != null) {
+                    receivedLocalBroadcasts.add(intent)
+                }
+            }
+        }
+        val localBroadcastManager = LocalBroadcastManager.getInstance(context)
+        localBroadcastManager.registerReceiver(receiver, IntentFilter(TrackerService.WORKOUT_UPDATED_INTENT))
+
+        try {
+            val sampleMethod = TrackerService::class.java.getDeclaredMethod("sampleAndWriteToDb")
+            sampleMethod.isAccessible = true
+
+            var tick = 0
+            every { mockBanalComm.getBestSensorData(SensorType.TIME_TOTAL) } answers {
+                SensorData(SensorType.TIME_TOTAL, tick, "$tick", "clock")
+            }
+            every { mockBanalComm.getBestSensorData(SensorType.HR) } answers {
+                SensorData<Number>(SensorType.HR, 120 + (tick % 65), "hr", "hr")
+            }
+            every { mockBanalComm.getBestSensorData(SensorType.POWER) } answers {
+                SensorData<Number>(SensorType.POWER, 180 + (tick % 120), "w", "pwr")
+            }
+            every { mockBanalComm.getBestSensorData(SensorType.SPEED_mps) } answers {
+                SensorData<Number>(SensorType.SPEED_mps, 7.0 + (tick % 6), "m/s", "gps")
+            }
+            for (sec in 1..3600) {
+                tick = sec
+                sampleMethod.invoke(service)
+            }
+            Shadows.shadowOf(Looper.getMainLooper()).idle()
+
+            assertEquals("3,600 active 1-Hz ticks must dispatch 0 WORKOUT_UPDATED_INTENT broadcasts", 0, receivedLocalBroadcasts.size)
+            verify(exactly = 0) {
+                mockWorkoutRepo.updateExtremaValueInMemory(any(), any(), any(), any(), any())
+            }
+            val hrStats = liveSession.sensorStats[SensorType.HR]
+            assertNotNull(hrStats)
+            assertEquals(120.0, hrStats!!.min, 0.001)
+            assertEquals(184.0, hrStats.max, 0.001)
         } finally {
             localBroadcastManager.unregisterReceiver(receiver)
         }

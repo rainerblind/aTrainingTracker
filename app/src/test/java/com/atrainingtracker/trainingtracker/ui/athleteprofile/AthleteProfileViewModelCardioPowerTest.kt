@@ -16,10 +16,14 @@
 package com.atrainingtracker.trainingtracker.ui.athleteprofile
 
 import android.app.Application
+import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.database.AthleteMetricEntry
 import com.atrainingtracker.trainingtracker.database.CardioPowerDynamicsRecord
 import com.atrainingtracker.trainingtracker.database.CardioPowerTrendSample
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
+import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.ExtremaDataRow
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import com.atrainingtracker.trainingtracker.settings.TuningConfig
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
@@ -30,6 +34,7 @@ import io.mockk.mockkConstructor
 import io.mockk.mockkObject
 import io.mockk.mockkStatic
 import io.mockk.unmockkAll
+import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -262,11 +267,224 @@ class AthleteProfileViewModelCardioPowerTest {
         assertEquals(1, viewModel.uiState.value.cardioTrendPoints.size)
 
         // Trigger emission on allWorkouts flow (e.g. workout finished or imported)
-        allWorkoutsFlow.value = listOf(mockk(relaxed = true))
+        allWorkoutsFlow.value = listOf(
+            mockk(relaxed = true) {
+                every { id } returns 2L
+                every { finished } returns true
+            }
+        )
         advanceUntilIdle()
 
         // uiState reactively updates to reflect the new samples
         assertEquals(2, viewModel.uiState.value.cardioTrendPoints.size)
         assertEquals(142.0, viewModel.uiState.value.cardioTrendPoints[1].value, 0.001)
+    }
+
+    /**
+     * TST-STB-020.3 / REQ-STB-020.4: Verifies unfinished live workouts do not re-trigger SQLite
+     * cardio-power or training-load queries, while finishing a workout refreshes once.
+     */
+    @Test
+    fun testUnfinishedWorkoutChurn_triggersZeroSqlQueries_andFinishedRefreshes_TST_STB_020_3() = runTest(testDispatcher) {
+        val now = System.currentTimeMillis()
+        val sampleRecord = CardioPowerDynamicsRecord(
+            workoutId = 1L,
+            tauStart = 30.0,
+            hr0Start = 70.0,
+            kStart = 0.25,
+            hr200Start = 150.0,
+            r2Start = 0.85,
+            rmseStart = 2.5
+        )
+        val initialSamples = listOf(CardioPowerTrendSample(workoutId = 1L, timestampMs = now, record = sampleRecord))
+        val updatedSamples = listOf(
+            CardioPowerTrendSample(workoutId = 1L, timestampMs = now, record = sampleRecord),
+            CardioPowerTrendSample(workoutId = 99L, timestampMs = now + 1000L, record = sampleRecord.copy(workoutId = 99L, hr200Start = 138.0))
+        )
+
+        val finishedBase = mockk<com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData>(relaxed = true) {
+            every { id } returns 1L
+            every { finished } returns true
+            every { totalTimeSec } returns 1800L
+            every { bSportType } returns com.atrainingtracker.banalservice.BSportType.BIKE
+        }
+        val mockWorkoutRepo = mockk<com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository>(relaxed = true)
+        val allWorkoutsFlow = MutableStateFlow(listOf(finishedBase))
+        every { mockWorkoutRepo.allWorkouts } returns allWorkoutsFlow
+        every { mockWorkoutRepo.getWorkoutTrainingLoadRecords() } returns emptyList()
+        every { mockWorkoutRepo.getCardioPowerDynamicsFitnessTrendSamples(0.50) } returnsMany listOf(initialSamples, updatedSamples)
+
+        val viewModel = AthleteProfileViewModel(mockApplication, mockWorkoutRepo, ioDispatcher = testDispatcher)
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect()
+        }
+        advanceUntilIdle()
+
+        // Initial load executed once.
+        verify(exactly = 1) { mockWorkoutRepo.getCardioPowerDynamicsFitnessTrendSamples(0.50) }
+        verify(exactly = 1) { mockWorkoutRepo.getWorkoutTrainingLoadRecords() }
+
+        // Emit 120 1-Hz unfinished active updates: SQLite queries must remain at 1.
+        for (sec in 1..120) {
+            val active = mockk<com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData>(relaxed = true) {
+                every { id } returns 99L
+                every { finished } returns false
+                every { activeTimeSec } returns sec.toLong()
+                every { totalTimeSec } returns sec.toLong()
+                every { totalDistance } returns sec * 7.5
+                every { bSportType } returns com.atrainingtracker.banalservice.BSportType.BIKE
+            }
+            allWorkoutsFlow.value = listOf(active, finishedBase)
+            advanceUntilIdle()
+        }
+        verify(exactly = 1) { mockWorkoutRepo.getCardioPowerDynamicsFitnessTrendSamples(0.50) }
+        verify(exactly = 1) { mockWorkoutRepo.getWorkoutTrainingLoadRecords() }
+
+        // Transitioning active workout to finished = true triggers exactly one SQLite reload.
+        val finishedNew = mockk<com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData>(relaxed = true) {
+            every { id } returns 99L
+            every { finished } returns true
+            every { totalTimeSec } returns 120L
+            every { bSportType } returns com.atrainingtracker.banalservice.BSportType.BIKE
+        }
+        allWorkoutsFlow.value = listOf(finishedNew, finishedBase)
+        advanceUntilIdle()
+
+        verify(exactly = 2) { mockWorkoutRepo.getCardioPowerDynamicsFitnessTrendSamples(0.50) }
+        verify(exactly = 2) { mockWorkoutRepo.getWorkoutTrainingLoadRecords() }
+        assertEquals(2, viewModel.uiState.value.cardioTrendPoints.size)
+        assertEquals(138.0, viewModel.uiState.value.cardioTrendPoints[1].value, 0.001)
+    }
+
+    /**
+     * TST-STB-020.3 / REQ-STB-020.4: Verifies post-finish analytics and Polar backfill updates on an
+     * already-finished workout (cardioPowerDynamics, polarSyncPending, tss, rpe, normalizedPowerWatts,
+     * HR AVG, POWER AVG) still trigger both loadCardioTrendSamples() and getWorkoutTrainingLoadRecords()
+     * even when id/duration/distance/sport stay unchanged, while non-metric name edits remain deduplicated.
+     */
+    @Test
+    fun testPostFinishAnalyticsAndBackfillMutations_triggerCardioAndTrainingLoadReloads_TST_STB_020_3() = runTest(testDispatcher) {
+        val hrRowInitial = ExtremaDataRow(
+            sensorLabel = "HR",
+            unitLabel = "bpm",
+            minValue = "110",
+            avgValue = "140",
+            maxValue = "172",
+            iconResId = R.drawable.ic_heart_rate
+        )
+        val powerRowInitial = ExtremaDataRow(
+            sensorLabel = "Power",
+            unitLabel = "W",
+            minValue = "90",
+            avgValue = "200",
+            maxValue = "340",
+            iconResId = R.drawable.ic_power
+        )
+        val baseWorkout = WorkoutData(
+            id = 10L,
+            finished = true,
+            fileBaseName = "2026-11-18_080000",
+            workoutName = "Morning Ride",
+            sportId = 2L,
+            sportName = "Cycling",
+            bSportType = BSportType.BIKE,
+            startTimeS = 1700000000L,
+            formattedDate = "2026-11-18",
+            formattedTime = "08:00",
+            localDateTime = java.time.LocalDateTime.of(2026, 11, 18, 8, 0),
+            equipmentName = "Road Bike",
+            equipmentId = 1L,
+            commute = false,
+            trainer = false,
+            mapPolyline = "_p~iF~ps|U_ulLnnqC",
+            encodedAltitudes = "",
+            encodedDistances = "",
+            uploadToStrava = 0,
+            totalDistance = 30_000.0,
+            maxDisplacement = 5_000.0,
+            activeTimeSec = 3_600L,
+            totalTimeSec = 3_600L,
+            avgSpeedMps = 8.33,
+            ascentMeters = 200L,
+            descentMeters = 200L,
+            minAltitude = 100.0,
+            maxAltitude = 300.0,
+            description = null,
+            goal = null,
+            method = null,
+            stravaSportName = "Ride",
+            rpe = null,
+            polarSyncPending = true,
+            normalizedPowerWatts = null,
+            tss = null,
+            cardioPowerDynamics = null,
+            extremaRows = listOf(hrRowInitial, powerRowInitial)
+        )
+
+        val mockWorkoutRepo = mockk<com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository>(relaxed = true)
+        val allWorkoutsFlow = MutableStateFlow(listOf(baseWorkout))
+        every { mockWorkoutRepo.allWorkouts } returns allWorkoutsFlow
+        every { mockWorkoutRepo.getWorkoutTrainingLoadRecords() } returns emptyList()
+        every { mockWorkoutRepo.getCardioPowerDynamicsFitnessTrendSamples(0.50) } returns emptyList()
+
+        val viewModel = AthleteProfileViewModel(mockApplication, mockWorkoutRepo, ioDispatcher = testDispatcher)
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect()
+        }
+        advanceUntilIdle()
+
+        verify(exactly = 1) { mockWorkoutRepo.getCardioPowerDynamicsFitnessTrendSamples(0.50) }
+        verify(exactly = 1) { mockWorkoutRepo.getWorkoutTrainingLoadRecords() }
+
+        // Unrelated metadata rename stays deduplicated (count stays 1).
+        var current = baseWorkout.copy(workoutName = "Renamed Ride", description = "Windy")
+        allWorkoutsFlow.value = listOf(current)
+        advanceUntilIdle()
+        verify(exactly = 1) { mockWorkoutRepo.getCardioPowerDynamicsFitnessTrendSamples(0.50) }
+        verify(exactly = 1) { mockWorkoutRepo.getWorkoutTrainingLoadRecords() }
+
+        val initialDynamics = CardioPowerDynamicsRecord(
+            workoutId = 10L,
+            tauStart = 30.0,
+            hr0Start = 70.0,
+            kStart = 0.25,
+            hr200Start = 120.0,
+            r2Start = 0.85,
+            rmseStart = 2.0
+        )
+
+        val postFinishMutations = listOf(
+            current.copy(cardioPowerDynamics = initialDynamics),
+            current.copy(cardioPowerDynamics = initialDynamics.copy(hr0Start = 72.0, hr200Start = 122.0)),
+            current.copy(cardioPowerDynamics = initialDynamics.copy(hr0Start = 72.0, hr200Start = 122.0), polarSyncPending = false),
+            current.copy(cardioPowerDynamics = initialDynamics.copy(hr0Start = 72.0, hr200Start = 122.0), polarSyncPending = false, tss = 88.5),
+            current.copy(cardioPowerDynamics = initialDynamics.copy(hr0Start = 72.0, hr200Start = 122.0), polarSyncPending = false, tss = 88.5, rpe = 7),
+            current.copy(cardioPowerDynamics = initialDynamics.copy(hr0Start = 72.0, hr200Start = 122.0), polarSyncPending = false, tss = 88.5, rpe = 7, normalizedPowerWatts = 242.0),
+            current.copy(
+                cardioPowerDynamics = initialDynamics.copy(hr0Start = 72.0, hr200Start = 122.0),
+                polarSyncPending = false,
+                tss = 88.5,
+                rpe = 7,
+                normalizedPowerWatts = 242.0,
+                extremaRows = listOf(hrRowInitial.copy(avgValue = "148"), powerRowInitial)
+            ),
+            current.copy(
+                cardioPowerDynamics = initialDynamics.copy(hr0Start = 72.0, hr200Start = 122.0),
+                polarSyncPending = false,
+                tss = 88.5,
+                rpe = 7,
+                normalizedPowerWatts = 242.0,
+                extremaRows = listOf(hrRowInitial.copy(avgValue = "148"), powerRowInitial.copy(avgValue = "215"))
+            )
+        )
+
+        postFinishMutations.forEachIndexed { index, mutatedWorkout ->
+            current = mutatedWorkout
+            allWorkoutsFlow.value = listOf(current)
+            advanceUntilIdle()
+            val expectedCount = 2 + index
+            verify(exactly = expectedCount) { mockWorkoutRepo.getCardioPowerDynamicsFitnessTrendSamples(0.50) }
+            verify(exactly = expectedCount) { mockWorkoutRepo.getWorkoutTrainingLoadRecords() }
+        }
     }
 }

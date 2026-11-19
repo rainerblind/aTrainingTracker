@@ -147,7 +147,8 @@ fun WorkoutDetailTabbedContent(
     multiSensorOverlays: Map<TelemetryMetricType, List<TelemetrySourceSeries>> = emptyMap(),
     hiddenCharts: Set<TelemetryChartKind> = emptySet(),
     onToggleChartVisibility: ((TelemetryChartKind) -> Unit)? = null,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    activityCarriageTimeline: ActivityCarriageTimeline? = null
 ) {
     val visibleTabs = remember(tabs, availability, detailPreferences) {
         WorkoutDetailTabConfig.filterVisibleWorkoutDetailTabs(
@@ -436,6 +437,7 @@ fun WorkoutDetailTabbedContent(
                                             configuredHrMax = configuredHrMax,
                                             recentSessions = recentSessions,
                                             isSmoothedStream = isSmoothedStream,
+                                            activityCarriageTimeline = activityCarriageTimeline,
                                             onUpdateFtp = onUpdateFtp,
                                             onUpdateHrZones = onUpdateHrZones,
                                             onCalibrateMader = onCalibrateMader,
@@ -531,6 +533,7 @@ fun WorkoutDetailTabbedContent(
                                                 configuredHrMax = configuredHrMax,
                                                 recentSessions = recentSessions,
                                                 isSmoothedStream = isSmoothedStream,
+                                                activityCarriageTimeline = activityCarriageTimeline,
                                                 onUpdateFtp = onUpdateFtp,
                                                 onUpdateHrZones = onUpdateHrZones,
                                                 onCalibrateMader = onCalibrateMader,
@@ -596,6 +599,7 @@ fun WorkoutDetailTabbedContent(
                                     configuredHrMax = configuredHrMax,
                                     recentSessions = recentSessions,
                                     isSmoothedStream = isSmoothedStream,
+                                    activityCarriageTimeline = activityCarriageTimeline,
                                     onUpdateFtp = onUpdateFtp,
                                     onUpdateHrZones = onUpdateHrZones,
                                     onCalibrateMader = onCalibrateMader,
@@ -854,7 +858,8 @@ private fun RenderWorkoutDetailCardSections(
     onAddPhotos: ((List<android.net.Uri>) -> Unit)? = null,
     onSplitLapClick: (() -> Unit)? = null,
     onMoveBoundaryClick: ((boundaryLapNr: Long) -> Unit)? = null,
-    onLapClick: ((LapData) -> Unit)? = null
+    onLapClick: ((LapData) -> Unit)? = null,
+    activityCarriageTimeline: ActivityCarriageTimeline? = null
 ) {
     sections.forEach { section ->
         when (section) {
@@ -927,6 +932,14 @@ private fun RenderWorkoutDetailCardSections(
                 if (workoutData.radarTrafficSummary != null) {
                     RadarTrafficSummaryCard(
                         summary = workoutData.radarTrafficSummary,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 4.dp)
+                    )
+                }
+                if (activityCarriageTimeline != null && activityCarriageTimeline.segments.isNotEmpty()) {
+                    ActivityCarriageTimelineCard(
+                        timeline = activityCarriageTimeline,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 4.dp)

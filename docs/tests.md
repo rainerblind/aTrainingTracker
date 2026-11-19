@@ -1,7 +1,7 @@
 # aTrainingTracker: Living Test Specification & Verification Plan (Master Index)
 
 **Document ID**: `DOC-TST-INDEX`  
-**Version**: 1.0.51  
+**Version**: 1.0.58  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -12,8 +12,8 @@ Living test specifications use multi-line Markdown headings (`### TST-XXX: Title
 
 | Domain Shard | Scope & Functional Areas | Prefixes | Total | Verified | Implemented | Planned / Open |
 | :--- | :--- | :--- | :---: | :---: | :---: | :---: |
-| [Tracking & Live Sensor Cockpit](tests/tst_tracking_cockpit.md) | Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle. | `CON`, `FIL`, `FUSION`, `SEN`, `TRK` | 153 | 150 | 3 | 0 |
-| [Post-Workout Analytics & Periods](tests/tst_aftermath_periods.md) | Post-workout analytics, period statistics, zone distributions, HRV/workout dynamics, radar analytics. | `HRV`, `PER`, `PERF`, `RAD`, `SPT`, `WKO` | 68 | 49 | 19 | 0 |
+| [Tracking & Live Sensor Cockpit](tests/tst_tracking_cockpit.md) | Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle. | `CON`, `FIL`, `FUSION`, `SEN`, `TRK` | 154 | 151 | 3 | 0 |
+| [Post-Workout Analytics & Periods](tests/tst_aftermath_periods.md) | Post-workout analytics, period statistics, zone distributions, HRV/workout dynamics, radar analytics. | `HRV`, `PER`, `PERF`, `RAD`, `SPT`, `WKO` | 69 | 50 | 19 | 0 |
 | [Maps, Polylines & Navigation](tests/tst_maps_navigation.md) | Map rendering, polylines, climbs, navigation overlays, GPX track follow-me, radar map overlays. | `CLM`, `GEO`, `MAP`, `NAV`, `RAD` | 71 | 70 | 1 | 0 |
 | [Persistence, Migration & Cloud Export](tests/tst_data_migration_export.md) | Database schema, backup/restore, migration pipelines, Strava/cloud upload, FIT/GPX/radar export. | `DAT`, `EXP`, `EXT`, `MIG`, `RAD` | 122 | 97 | 25 | 0 |
 | [Settings, Profiles & Localization](tests/tst_settings_profiles.md) | Athlete settings, bike/sensor profiles, privacy zones, data stores, monetization, and 9-locale parity. | `LOC`, `PRI`, `SET` | 106 | 63 | 43 | 0 |
@@ -21,11 +21,11 @@ Living test specifications use multi-line Markdown headings (`### TST-XXX: Title
 | [UI Components & Design System (Part 2)](tests/tst_ui_design_system_part2.md) | Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts. | `UI` | 192 | 192 | 0 | 0 |
 | [UI Components & Design System (Part 3)](tests/tst_ui_design_system_part3.md) | Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts. | `UI` | 40 | 40 | 0 | 0 |
 | [Engineering Process, Stability & Architecture (Part 1)](tests/tst_process_stability_part1.md) | ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools. | `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST` | 148 | 99 | 49 | 0 |
-| [Engineering Process, Stability & Architecture (Part 2)](tests/tst_process_stability_part2.md) | ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools. | `PRO` | 88 | 80 | 0 | 8 |
+| [Engineering Process, Stability & Architecture (Part 2)](tests/tst_process_stability_part2.md) | ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools. | `PRO` | 89 | 81 | 0 | 8 |
 | [Jubilee Milestones & App Reviews](tests/tst_aftermath_reviews.md) | Milestone workout auto-naming, jubilee achievements, Google Play in-app reviews, athlete feedback, and supporter tier promotions. | `REV` | 15 | 15 | 0 | 0 |
 | [Store Presence](tests/tst_store_presence.md) | Store presence, Google Play listings, screenshots, store metadata contract testing, and release governance. | `STP` | 11 | 11 | 0 | 0 |
 
-**Total Living Tests**: 1263 across 12 domain shards.
+**Total Living Tests**: 1266 across 12 domain shards.
 
 ---
 
@@ -73,3 +73,7 @@ Living test specifications use multi-line Markdown headings (`### TST-XXX: Title
 | `1.0.45` | 2026-11-18 | AI Agent (`ATT-8880`) | `ATT-8880` | Added `TST-FIL-027` [Verified] (Tier 1 targeted `54/54` PASS across 6 suites; monotonic `TIME_TOTAL`, rolling 1.0-s gyro mean, stationary ZUPT/RTS decoupling, `DISTANCE_m_LAP` & stream subsampling, 9-locale `filterSlewOnly()` + `2.0 m` hysteresis). |
 | `1.0.46` | 2026-11-18 | AI Agent (`ATT-8880`) | `ATT-8880` | Stage 4 Bounce 1/3 heal: added `RADAR`/`YAW`/`NaN` & leading-null/`>=6s`-stall/multi-pause regression tests (`TST-FIL-027` -> `[Implemented]`). |
 | `1.0.47` | 2026-11-18 | AI Agent (`ATT-8880`) | `ATT-8880` | Promoted `TST-FIL-027` to `[Verified]` in Stage 5 (Bounce 1/3) on `8a976a35` (`58/58` + `62/62` Tier 1 PASS, governance `exit 0`). |
+| `1.0.48` | 2026-11-19 | AI Agent (`ATT-8998`) | `ATT-8998` | Added `TST-CON-051` [Implemented] (`DeviceManagerSearchQueueTest`, `BLEReconnectRobustnessTest`, `MyBTLEDeviceAddressAndSearchTest`, `MyBTLEDeviceLifecycleTest`). |
+| `1.0.49` | 2026-11-19 | AI Agent (`ATT-8998`) | `ATT-8998` | Promoted `TST-CON-051` to `[Verified]` in Stage 5 following targeted unit/contract verification, static baselines, and emulator check. |
+| `1.0.50` | 2026-11-19 | AI Agent (`ATT-8998`) | `ATT-8998` | Stage 6 Bounce 1/3 heal: added `testSearchTimeout_whenAlreadyConnectedToGatt_abortsWithoutReconnectOrStopSearching` (`TST-CON-051` -> `[Implemented]`). |
+| `1.0.51` | 2026-11-19 | AI Agent (`ATT-8998`) | `ATT-8998` | Promoted `TST-CON-051` to `[Verified]` in Stage 5 (Bounce 1/3) (`125/125` `--rerun-tasks` PASS, governance `exit 0`). |

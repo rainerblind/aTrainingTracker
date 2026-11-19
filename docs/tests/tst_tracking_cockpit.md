@@ -1,14 +1,14 @@
 # Living Test Specification: Tracking & Live Sensor Cockpit
 
 **Document ID**: `DOC-TST-TRK`  
-**Version**: 1.0.49  
+**Version**: 1.0.54  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Tests**: 153
+**Total Tests**: 154
 
 ---
 
@@ -3407,6 +3407,23 @@
      • Verify active `PolarRawTelemetryRecorder` attaches on bridge readiness during a workout and persists non-zero `.polar_raw.csv.gz` frames (`rowCount > 0`) to `files/raw_sensor/` across Live-IMU enable handoff (`N/A - no UI strings`, `0` `src/main` reads per `REQ-PRO-049.1`).
      • Physical Pixel 10 + Polar Verity Sense / H10 live BLE verification is explicitly deferred to optional PO-executed hardware testing per `Rule 7.6` (never synthesized in Phase 2).
 
+### TST-CON-051: **Non-Blocking BLE Search-Queue Timeout Handoff & Decoupled Mid-Session Background Reconnect Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Tickets**: `ATT-8998`
+- **Requirement(s)**: `REQ-CON-051` (`REQ-CON-051.1`..`REQ-CON-051.3`)
+- **Component**: `app/src/test/java/com/atrainingtracker/banalservice/devices/DeviceManagerSearchQueueTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/devices/bluetooth_le/BLEReconnectRobustnessTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/devices/bluetooth_le/MyBTLEDeviceAddressAndSearchTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/devices/bluetooth_le/MyBTLEDeviceLifecycleTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ArchitectureConformanceContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/DetailedDesignParityContractTest.kt`
+- **Test Type**: Unit
+- **Verification Method**: Unit
+- **Procedure**:
+  1. *Search-Queue Timeout Unblock During `TRACKING` / `PAUSED` (`TST-CON-051.1`, `BLEReconnectRobustnessTest`, `DeviceManagerSearchQueueTest`)*:
+     • Configure `TrackingMode.TRACKING` and `TrackingMode.PAUSED` with `[Offline BLE Radar, Online BLE HRM]` queued in `DeviceManager`; fire `MyBTLEDevice.mSearchTimeoutRunnable` on the offline Radar.
+     • Assert `MyBTLEDevice` clears `State.SEARCHING` / `isSearching() == false`, broadcasts `SEARCHING_STOPPED_FOR_ONE_INTENT` (`success = false`), `DeviceManager` clears `cMyRemoteDeviceCurrentlySearchingFor` and immediately invokes `startSearching()` on the second HRM, and `BANALService.isSearching()` becomes `false` once `mSearchQueue` drains.
+  2. *Decoupled Background Reconnect & `tries <= 1` Survival vs. Startup Battery Guard (`TST-CON-051.2`, `DeviceManagerSearchQueueTest`, `BLEReconnectRobustnessTest`)*:
+     • Deliver `SEARCHING_STOPPED_FOR_ONE_INTENT` (`success = false`) with `tries <= 1` for a device persisting active-workout / mid-session background reconnect; assert `DeviceManager` does NOT invoke `shutDown()` or remove the device from `mMyRemoteDevices` and keeps `mReconnectRunnable` (`2s -> 4s -> 8s -> 16s`) + `autoConnect = true` intact, while in `TrackingMode.READY` (`!hasConnectedInSession()`) `tries <= 1` STILL calls `shutDown()` and removes the offline sensor (`REQ-CON-036.1`).
+     • Verify background `mReconnectRunnable` executes `triggerGattConnect(dev, true)` / `onScanResult()` attachment without setting `MyRemoteDevice.mSearching = true` or causing a subsequent `startSearchForPairedDevices()` / `searchForNextRemoteDevice()` to stall on `next.isSearching()`.
+  3. *BLE Lifecycle, LoC Ceiling & Detailed-Design Parity (`TST-CON-051.3`, `MyBTLEDeviceAddressAndSearchTest`, `MyBTLEDeviceLifecycleTest`, `ArchitectureConformanceContractTest`, `DetailedDesignParityContractTest`)*:
+     • Execute `MyBTLEDeviceAddressAndSearchTest`, `MyBTLEDeviceLifecycleTest`, `ArchitectureConformanceContractTest` (verifying `DeviceManager.java <= 1,708` LoC), and `DetailedDesignParityContractTest` (`my_btle_device.md`, `banal_service.md`), asserting 100% pass with `0` new `src/main` test reads (`REQ-PRO-049.1`) and `Localization Parity: N/A - no UI strings`.
+
 
 ### TST-TRK-087: **ZonesSettingsActivity HRV Tab Gauge Toggle Removal & Behavioral Compose Verification Suite** [Verified]
 - **Target Release**: `V5.0.0`
@@ -3568,3 +3585,8 @@
 | `1.0.47` | 2026-11-18 | AI Agent (`ATT-8890`, `--as agent1`) | `ATT-8890` | Promoted `TST-FIL-028` to `[Verified]` in Stage 5 following Gate 4 Pass (`195/195` across 24 suites + Rev-1 `89/89` `--rerun-tasks` across 9 suites, `0` failures/`0` skipped) and `verify_requirement_governance.py` (`exit 0`). |
 | `1.0.48` | 2026-11-18 | AI Agent (`ATT-8890`, `--as agent1`) | `ATT-8890` | Stage 4 Bounce 1/3 heal: added regression tests for no-Doppler `Moving -> Stationary` ghost-tail elimination, 50-Hz classify/emission throttle & `dt`-invariant smoothing, and expired GNSS bearing-gap `estimatedGnssYawRateRadPerSec` reset; set `[Implemented]` pending Stage 5 re-verification. |
 | `1.0.49` | 2026-11-18 | AI Agent (`ATT-8890`, `--as agent1`) | `ATT-8890` | Promoted `TST-FIL-028` to `[Verified]` in Stage 5 (Bounce 1/3) following Gate 4 Pass (`92/92` `--rerun-tasks` across 9 post-heal suites + unchanged `195/195` baseline across 24 suites, `0` failed/`0` skipped, `verify_requirement_governance.py` `exit 0`). |
+| `1.0.50` | 2026-11-18 | AI Agent (`ATT-8998`, `--as agent1`) | `ATT-8998` | Added `TST-CON-051` `[Planned]` (`TST-CON-051.1`–`.3`) covering search-queue timeout release in `TRACKING`/`PAUSED`, decoupled background reconnect without `tries <= 1` teardown or `mSearching` re-entry, and `DeviceManager.java <= 1,708` LoC + detailed-design parity. |
+| `1.0.51` | 2026-11-19 | AI Agent (`ATT-8998`, `--as agent1`) | `ATT-8998` | Promoted `TST-CON-051` to `[Implemented]` following Stage 4 unit test construction across `DeviceManagerSearchQueueTest`, `BLEReconnectRobustnessTest`, `MyBTLEDeviceAddressAndSearchTest`, and `MyBTLEDeviceLifecycleTest`. |
+| `1.0.52` | 2026-11-19 | AI Agent (`ATT-8998`, `--as agent1`) | `ATT-8998` | Promoted `TST-CON-051` to `[Verified]` in Stage 5 following targeted unit/contract verification, static analysis baselines, and emulator deployment. |
+| `1.0.53` | 2026-11-19 | AI Agent (`ATT-8998`, `--as agent1`) | `ATT-8998` | Stage 6 Bounce 1/3 heal: added `BLEReconnectRobustnessTest.testSearchTimeout_whenAlreadyConnectedToGatt_abortsWithoutReconnectOrStopSearching` and set `[Implemented]` pending Stage 5 re-verification. |
+| `1.0.54` | 2026-11-19 | AI Agent (`ATT-8998`, `--as agent1`) | `ATT-8998` | Promoted `TST-CON-051` to `[Verified]` in Stage 5 (Bounce 1/3) following `--rerun-tasks` verification (`125/125` PASS across 19 suites), static baselines, emulator check, and governance `exit 0`. |
