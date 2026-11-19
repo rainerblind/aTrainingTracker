@@ -47,6 +47,7 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -60,6 +61,7 @@ import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarRetrySyncCoordinator
 import com.atrainingtracker.trainingtracker.exporter.ExportStatusChangedBroadcaster
 import com.atrainingtracker.trainingtracker.ui.WorkoutNavigationEvents
 import com.atrainingtracker.trainingtracker.ui.theme.getBatterySnackbarColors
@@ -274,6 +276,19 @@ fun WorkoutSummariesTabbedScreen(
             val alreadyLoaded = trackOnMapViewModel.uiState.value.loadedWorkoutId == selectedWorkoutIdForDetails
             if (!alreadyLoaded) {
                 trackOnMapViewModel.loadAftermathData(selectedWorkoutForDetails)
+            }
+        }
+    }
+
+    // Reload detail telemetry/HR graph when deferred Polar retry sync commits (REQ-SET-119.2)
+    val currentSelectedWorkoutForDetails by rememberUpdatedState(selectedWorkoutForDetails)
+    LaunchedEffect(selectedWorkoutIdForDetails) {
+        val activeId = selectedWorkoutIdForDetails ?: return@LaunchedEffect
+        PolarRetrySyncCoordinator.completedWorkoutEvents.collect { completedWorkoutId ->
+            if (completedWorkoutId == activeId) {
+                currentSelectedWorkoutForDetails?.let { workout ->
+                    trackOnMapViewModel.loadAftermathData(workout)
+                }
             }
         }
     }

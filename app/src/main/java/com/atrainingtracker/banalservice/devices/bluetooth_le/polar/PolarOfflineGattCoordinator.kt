@@ -26,7 +26,9 @@ import androidx.annotation.VisibleForTesting
 import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
+import com.atrainingtracker.banalservice.devices.DeviceManager
 import com.atrainingtracker.banalservice.devices.DeviceType
+import com.atrainingtracker.banalservice.devices.MyRemoteDevice
 import com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDevice
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager
@@ -56,6 +58,7 @@ object PolarOfflineGattCoordinator {
 
     private const val TAG = "PolarOfflineGattCoord"
     const val FEATURE_READY_TIMEOUT_MS = 10_000L
+    const val STOP_CONNECTION_TIMEOUT_MS = 5_000L
     const val ACC_OWNER_ONLINE = "ONLINE"
     const val ACC_OWNER_OFFLINE = "OFFLINE"
     private val POLAR_ID_REGEX = Regex("""\b([0-9A-Fa-f]{8})\b""")
@@ -94,6 +97,9 @@ object PolarOfflineGattCoordinator {
 
     @VisibleForTesting
     internal var apiFactoryForTesting: ((Context, Set<PolarBleApi.PolarBleSdkFeature>) -> PolarBleApi)? = null
+
+    @VisibleForTesting
+    internal var deviceManagerProvider: () -> DeviceManager? = { BANALService.getDeviceManager() }
 
     private val activeSessions = ConcurrentHashMap<String, PolarBleApi>()
     private val activeSessionCallbacks = ConcurrentHashMap<String, PolarBleApiCallbackProvider>()
@@ -454,6 +460,72 @@ object PolarOfflineGattCoordinator {
     }
 
     /**
+     * Returns `true` strictly when [DeviceManager] is active, tracks a matching BLE HRM for
+     * [polarId]/[macAddress], and confirms it is NOT receiving data while the shared
+     * [PolarBleApi] multiplexer also reports it disconnected (`REQ-SET-119.3`).
+     *
+     * Returns `false` when [DeviceManager] is unavailable or tracks no matching device so unit
+     * tests and unrecognized devices fall through to bounded connection attempts.
+     */
+    @JvmStatic
+    fun isTargetConfirmedDisconnected(polarId: String?, macAddress: String?): Boolean {
+        if (isDeviceConnected(polarId) || isDeviceConnected(macAddress)) {
+            return false
+        }
+        val deviceManager = try {
+            deviceManagerProvider.invoke()
+        } catch (_: Throwable) {
+            null
+        } ?: return false
+        val matchingDevices = deviceManager.remoteDeviceList.orEmpty().filter { device ->
+            device.deviceType == DeviceType.HRM &&
+                device.protocol == Protocol.BLUETOOTH_LE &&
+                matchesRemoteDevice(device, polarId, macAddress)
+        }
+        if (matchingDevices.isEmpty()) {
+            return false
+        }
+        return matchingDevices.none { it.isReceivingData }
+    }
+
+    private fun matchesRemoteDevice(
+        device: MyRemoteDevice,
+        polarId: String?,
+        macAddress: String?
+    ): Boolean {
+        return when (device) {
+            is PolarOnlineStreamingBridge -> {
+                matchesDeviceIdentifier(device.polarId, polarId) ||
+                    matchesDeviceIdentifier(device.polarId, macAddress) ||
+                    matchesDeviceIdentifier(device.getAddress(), macAddress) ||
+                    matchesDeviceIdentifier(device.getAddress(), polarId)
+            }
+            is MyBTLEDevice -> {
+                val addr = device.address
+                matchesDeviceIdentifier(addr, macAddress) || matchesDeviceIdentifier(addr, polarId)
+            }
+            else -> false
+        }
+    }
+
+    /**
+     * Connects to [polarId] and awaits GATT connection within [timeoutMs], returning `false`
+     * on timeout rather than blocking stop finalization for the full PFTP transfer window
+     * (`REQ-SET-119.3`).
+     */
+    suspend fun connectWithinTimeout(
+        api: PolarBleApi,
+        polarId: String,
+        timeoutMs: Long
+    ): Boolean {
+        return withTimeoutOrNull(timeoutMs) {
+            api.connectToDevice(polarId)
+            api.waitForConnection(polarId)
+            true
+        } ?: false
+    }
+
+    /**
      * Returns the persistent [PolarBleApi] session for [polarId] (or any registered MAC/8-hex alias),
      * or `null` if none is active.
      */
@@ -509,6 +581,7 @@ object PolarOfflineGattCoordinator {
             activeLeaseCount = 0
             apiFactoryForTesting = null
         }
+        deviceManagerProvider = { BANALService.getDeviceManager() }
         activeSessions.clear()
         activeSessionCallbacks.clear()
         callbackListeners.clear()

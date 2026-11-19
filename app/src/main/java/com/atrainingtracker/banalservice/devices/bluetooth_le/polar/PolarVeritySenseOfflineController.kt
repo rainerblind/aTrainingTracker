@@ -51,6 +51,7 @@ import com.polar.sdk.api.model.trainingsession.PolarExercise
 import com.polar.sdk.api.model.trainingsession.PolarTrainingSession
 import com.polar.sdk.api.model.trainingsession.PolarTrainingSessionReference
 import fi.polar.remote.representation.protobuf.Types
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -158,6 +159,9 @@ object PolarVeritySenseOfflineController {
     @VisibleForTesting
     var featureTimeoutMs: Long = PolarOfflineGattCoordinator.FEATURE_READY_TIMEOUT_MS
 
+    @VisibleForTesting
+    var stopConnectionTimeoutMs: Long = PolarOfflineGattCoordinator.STOP_CONNECTION_TIMEOUT_MS
+
     internal fun getEffectiveSdkInt(): Int = sdkIntOverride ?: Build.VERSION.SDK_INT
 
     @JvmStatic
@@ -203,6 +207,7 @@ object PolarVeritySenseOfflineController {
         poolLengthOverrideMeters = null
         dispatcher = Dispatchers.IO
         featureTimeoutMs = PolarOfflineGattCoordinator.FEATURE_READY_TIMEOUT_MS
+        stopConnectionTimeoutMs = PolarOfflineGattCoordinator.STOP_CONNECTION_TIMEOUT_MS
         sessionStartTimeMs = 0L
         armedDeviceId = null
         armedMacAddress = null
@@ -238,6 +243,7 @@ object PolarVeritySenseOfflineController {
                 try {
                     armForActiveWorkout(appContext)
                 } catch (t: Throwable) {
+                    if (t is CancellationException) throw t
                     recordFailure(t)
                 } finally {
                     isArmingInFlight.set(false)
@@ -342,6 +348,14 @@ object PolarVeritySenseOfflineController {
         val needsBackfill = shouldBackfill(appContext, baseFileName)
         val windowStartMs = if (startTimeMs > 0L) startTimeMs else System.currentTimeMillis()
         val windowEndMs = System.currentTimeMillis()
+        if (apiOverride == null && PolarOfflineGattCoordinator.isTargetConfirmedDisconnected(targetId, targetMac)) {
+            Log.i(TAG, "Polar Verity Sense $targetId confirmed disconnected at workout stop; fast-failing backfill.")
+            if (needsBackfill && workoutId > 0L) {
+                recordPendingSync(appContext, workoutId, targetId, null, windowStartMs, windowEndMs)
+            }
+            resetArmedState()
+            return false
+        }
         if (needsBackfill) {
             showSyncNotification(appContext)
         }
@@ -364,6 +378,7 @@ object PolarVeritySenseOfflineController {
             }
             sessionOutcome.success
         } catch (t: Throwable) {
+            if (t is CancellationException) throw t
             Log.w(TAG, "Exception during Polar Verity Sense stopAndBackfillWorkout: ${t.message}", t)
             if (needsBackfill && workoutId > 0L) {
                 val pathOrBusy = if (isSystemBusyError(t)) {
@@ -418,6 +433,7 @@ object PolarVeritySenseOfflineController {
                     macAddress = targetMac
                 )
             } catch (t: Throwable) {
+                if (t is CancellationException) throw t
                 Log.e(TAG, "Exception during Polar Verity Sense syncPendingWorkout: ${t.message}", t)
                 if (isSystemBusyError(t)) {
                     recordPendingSync(
@@ -485,6 +501,7 @@ object PolarVeritySenseOfflineController {
                 result
             }
         } catch (t: Throwable) {
+            if (t is CancellationException) throw t
             recordFailure(t)
             false
         }
@@ -555,6 +572,7 @@ object PolarVeritySenseOfflineController {
                 errorMessage = "Timed out after $FETCH_TIMEOUT_MS ms"
             )
         } catch (t: Throwable) {
+            if (t is CancellationException) throw t
             Log.w(TAG, "Failed stopAndFetchOfflineHr for $polarId: ${t.message}", t)
             VerityOfflineHrFetchResult(null, null, stoppedSuccessfully = false, errorMessage = t.message)
         }
@@ -595,6 +613,7 @@ object PolarVeritySenseOfflineController {
                 }
             } ?: false
         } catch (t: Throwable) {
+            if (t is CancellationException) throw t
             Log.w(TAG, "Failed to remove offline record ${entry.path} on $polarId: ${t.message}", t)
             false
         }
@@ -673,7 +692,7 @@ object PolarVeritySenseOfflineController {
             }
             true
         } catch (t: Throwable) {
-            if (isSystemBusyError(t)) {
+            if (t is CancellationException || isSystemBusyError(t)) {
                 throw t
             }
             Log.w(TAG, "Non-fatal error inspecting/stopping offline HR status on $polarId: ${t.message}")
@@ -701,7 +720,7 @@ object PolarVeritySenseOfflineController {
                 api.doFirstTimeUse(polarId, ftuConfig)
             }
         } catch (t: Throwable) {
-            if (isSystemBusyError(t)) throw t
+            if (t is CancellationException || isSystemBusyError(t)) throw t
             Log.w(TAG, "Non-fatal error checking or performing FTU on $polarId: ${t.message}")
         }
     }
@@ -748,7 +767,8 @@ object PolarVeritySenseOfflineController {
                 windowStartMs = backfillCtx.windowStartMs,
                 windowEndMs = backfillCtx.windowEndMs,
                 preferredPath = null,
-                toleranceMs = ENTRY_MATCH_TOLERANCE_MS
+                toleranceMs = ENTRY_MATCH_TOLERANCE_MS,
+                connectTimeoutMs = stopConnectionTimeoutMs
             )
             matchedPath = session.path
             handleStopBackfillMatch(api, appContext, backfillCtx, session)
@@ -844,10 +864,13 @@ object PolarVeritySenseOfflineController {
         windowStartMs: Long,
         windowEndMs: Long,
         preferredPath: String?,
-        toleranceMs: Long
+        toleranceMs: Long,
+        connectTimeoutMs: Long = BACKFILL_TIMEOUT_MS
     ): MatchedSession {
-        api.connectToDevice(polarId)
-        api.waitForConnection(polarId)
+        if (!PolarOfflineGattCoordinator.connectWithinTimeout(api, polarId, connectTimeoutMs)) {
+            Log.w(TAG, "Polar Verity Sense connection timed out after $connectTimeoutMs ms for $polarId")
+            return MatchedSession(ready = false)
+        }
         val ready = PolarOfflineGattCoordinator.awaitFeaturesReady(
             api, polarId, REQUIRED_OFFLINE_FEATURES, featureTimeoutMs
         )
@@ -859,7 +882,7 @@ object PolarVeritySenseOfflineController {
         val entries = try {
             api.listOfflineRecordings(polarId).toList()
         } catch (t: Throwable) {
-            if (isSystemBusyError(t)) throw t
+            if (t is CancellationException || isSystemBusyError(t)) throw t
             Log.w(TAG, "Error listing offline recordings on $polarId: ${t.message}")
             emptyList()
         }
@@ -877,7 +900,7 @@ object PolarVeritySenseOfflineController {
         val trainingRefs = try {
             api.getTrainingSessionReferences(polarId).toList()
         } catch (t: Throwable) {
-            if (isSystemBusyError(t)) throw t
+            if (t is CancellationException || isSystemBusyError(t)) throw t
             Log.w(TAG, "Error listing training session references on $polarId: ${t.message}")
             emptyList()
         }
@@ -889,7 +912,7 @@ object PolarVeritySenseOfflineController {
             val session = try {
                 api.getTrainingSession(polarId, ref)
             } catch (t: Throwable) {
-                if (isSystemBusyError(t)) throw t
+                if (t is CancellationException || isSystemBusyError(t)) throw t
                 Log.w(TAG, "Error fetching training session ${ref.path} on $polarId: ${t.message}")
                 null
             } ?: continue

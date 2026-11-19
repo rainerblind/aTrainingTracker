@@ -608,4 +608,78 @@ class PolarH10OfflineControllerTest {
         assertFalse(synced)
         coVerify(atLeast = 2) { mockApi.connectToDevice("FACE1234") }
     }
+
+    @Test
+    fun testStopAndBackfill_confirmedDisconnectedDevice_fastFailsWithoutWaitingForConnection() = runBlocking {
+        // TST-SET-121.4
+        PolarH10OfflineController.sdkIntOverride = 33
+        PolarH10OfflineController.apiOverride = null
+        PolarOfflineGattCoordinator.apiFactoryForTesting = { _, _ -> mockApi }
+        PolarH10OfflineController.setArmedForTesting(true)
+        PolarH10OfflineController.setArmedMetadataForTesting("1C3B2421", "ATT_FASTFAIL")
+
+        every { mockBtleDevice.deviceType } returns DeviceType.HRM
+        every { mockBtleDevice.protocol } returns Protocol.BLUETOOTH_LE
+        every { mockBtleDevice.address } returns "AA:BB:CC:DD:EE:FF"
+        every { mockBtleDevice.isReceivingData } returns false
+        every { mockDeviceManager.remoteDeviceList } returns java.util.LinkedList(listOf(mockBtleDevice))
+        every { mockRrRepo.getIntervalsForWorkoutBlocking(456L) } returns emptyList()
+
+        val result = PolarH10OfflineController.stopAndBackfillWorkout(context, 456L, "2026-11-19_061000", 1000L)
+
+        assertFalse(result)
+        assertFalse(PolarH10OfflineController.isRecordingArmed())
+        coVerify(exactly = 0) { mockApi.connectToDevice(any()) }
+        coVerify(exactly = 0) { mockApi.waitForConnection(any()) }
+        verify(exactly = 1) {
+            mockSummariesDb.setPolarSyncPending(456L, "1C3B2421", "ATT_FASTFAIL", 1000L, any())
+        }
+    }
+
+    @Test
+    fun testStopAndBackfill_hangingWaitForConnection_timesOutAtStopConnectionTimeoutMs() = runBlocking {
+        // TST-SET-121.4
+        PolarH10OfflineController.sdkIntOverride = 33
+        PolarH10OfflineController.apiOverride = mockApi
+        PolarH10OfflineController.stopConnectionTimeoutMs = 50L
+        PolarH10OfflineController.setArmedForTesting(true)
+        PolarH10OfflineController.setArmedMetadataForTesting("1C3B2421", "ATT_TIMEOUT")
+
+        every { mockRrRepo.getIntervalsForWorkoutBlocking(457L) } returns emptyList()
+        coEvery { mockApi.connectToDevice("1C3B2421") } just Runs
+        coEvery { mockApi.waitForConnection("1C3B2421") } coAnswers {
+            kotlinx.coroutines.delay(5_000L)
+        }
+
+        val startMs = System.currentTimeMillis()
+        val result = PolarH10OfflineController.stopAndBackfillWorkout(context, 457L, "2026-11-19_061500", 1000L)
+        val elapsedMs = System.currentTimeMillis() - startMs
+
+        assertFalse(result)
+        assertTrue("Expected bounded H10 stop connection wait (< 2000ms), took ${elapsedMs}ms", elapsedMs < 2_000L)
+        assertFalse(PolarH10OfflineController.isRecordingArmed())
+        verify(exactly = 1) {
+            mockSummariesDb.setPolarSyncPending(457L, "1C3B2421", "ATT_TIMEOUT", 1000L, any())
+        }
+        verify(atLeast = 1) { mockBtleDevice.resumeGattOperations() }
+    }
+
+    @Test
+    fun testSyncPendingWorkout_cancellationExceptionIsRethrown() = runBlocking {
+        // TST-SET-121.2
+        PolarH10OfflineController.sdkIntOverride = 33
+        PolarH10OfflineController.apiOverride = mockApi
+        every { mockSummariesDb.getPolarPendingSyncData(458L) } returns
+            WorkoutSummariesDatabaseManager.PolarPendingSyncData("1C3B2421", "ATT_CANCEL", 1000L, 2000L, true)
+        coEvery { mockApi.connectToDevice("1C3B2421") } throws
+            kotlinx.coroutines.CancellationException("rememberCoroutineScope left the composition")
+
+        var caughtCancellation: kotlinx.coroutines.CancellationException? = null
+        try {
+            PolarH10OfflineController.syncPendingWorkout(context, 458L)
+        } catch (ce: kotlinx.coroutines.CancellationException) {
+            caughtCancellation = ce
+        }
+        assertNotNull(caughtCancellation)
+    }
 }

@@ -51,6 +51,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -70,6 +71,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarRetrySyncCoordinator
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.ui.aftermath.TrackOnMapScreen
 import com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutScreen
@@ -161,6 +163,17 @@ class WorkoutSummariesListFragment : Fragment() {
 
                     val selectedWorkoutForDetailsData = selectedWorkoutForDetails?.let { id ->
                         workouts.find { it.id == id }
+                    }
+                    val currentSelectedWorkoutForDetails by rememberUpdatedState(selectedWorkoutForDetailsData)
+                    LaunchedEffect(selectedWorkoutForDetails) {
+                        val activeId = selectedWorkoutForDetails ?: return@LaunchedEffect
+                        PolarRetrySyncCoordinator.completedWorkoutEvents.collect { completedWorkoutId ->
+                            if (completedWorkoutId == activeId) {
+                                currentSelectedWorkoutForDetails?.let { workout ->
+                                    trackOnMapViewModel.loadAftermathData(workout)
+                                }
+                            }
+                        }
                     }
 
                     Scaffold(

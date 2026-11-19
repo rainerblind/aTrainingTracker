@@ -1254,4 +1254,104 @@ class PolarVeritySenseOfflineControllerTest {
         assertTrue(armed)
         coVerify(exactly = 1) { mockApi.connectToDevice("0123CAFE") }
     }
+
+    @Test
+    fun testStopAndBackfill_confirmedDisconnectedDevice_fastFailsWithoutWaitingForConnection() = runBlocking {
+        // TST-SET-121.4
+        PolarVeritySenseOfflineController.sdkIntOverride = 33
+        PolarVeritySenseOfflineController.apiOverride = null
+        PolarOfflineGattCoordinator.apiFactoryForTesting = { _, _ -> mockApi }
+        PolarVeritySenseOfflineController.setArmedForTesting(true, verityPolarId, verityMac)
+
+        every { mockBtleDevice.deviceType } returns DeviceType.HRM
+        every { mockBtleDevice.protocol } returns Protocol.BLUETOOTH_LE
+        every { mockBtleDevice.address } returns verityMac
+        every { mockBtleDevice.isReceivingData } returns false
+        every { mockDeviceManager.remoteDeviceList } returns java.util.LinkedList(listOf(mockBtleDevice))
+        every { mockSamplesDb.hasMissingHeartRateSamples("2026-11-19_060000") } returns true
+
+        val result = PolarVeritySenseOfflineController.stopAndBackfillWorkout(
+            context = context,
+            workoutId = 2195L,
+            baseFileName = "2026-11-19_060000",
+            startTimeMs = 1_700_000_000_000L
+        )
+
+        assertFalse(result)
+        assertFalse(PolarVeritySenseOfflineController.isRecordingArmed())
+        coVerify(exactly = 0) { mockApi.connectToDevice(any()) }
+        coVerify(exactly = 0) { mockApi.waitForConnection(any()) }
+        verify(exactly = 1) {
+            mockSummariesDb.setPolarSyncPending(
+                2195L,
+                verityPolarId,
+                PolarVeritySenseOfflineController.VERITY_EXERCISE_PREFIX,
+                1_700_000_000_000L,
+                any()
+            )
+        }
+    }
+
+    @Test
+    fun testStopAndBackfill_hangingWaitForConnection_timesOutAtStopConnectionTimeoutMs() = runBlocking {
+        // TST-SET-121.4
+        PolarVeritySenseOfflineController.sdkIntOverride = 33
+        PolarVeritySenseOfflineController.apiOverride = mockApi
+        PolarVeritySenseOfflineController.stopConnectionTimeoutMs = 50L
+        PolarVeritySenseOfflineController.setArmedForTesting(true, verityPolarId, verityMac)
+
+        every { mockSamplesDb.hasMissingHeartRateSamples("2026-11-19_060500") } returns true
+        coEvery { mockApi.connectToDevice(verityPolarId) } just Runs
+        coEvery { mockApi.waitForConnection(verityPolarId) } coAnswers {
+            kotlinx.coroutines.delay(5_000L)
+        }
+
+        val startMs = System.currentTimeMillis()
+        val result = PolarVeritySenseOfflineController.stopAndBackfillWorkout(
+            context = context,
+            workoutId = 2198L,
+            baseFileName = "2026-11-19_060500",
+            startTimeMs = 1_700_000_000_000L
+        )
+        val elapsedMs = System.currentTimeMillis() - startMs
+
+        assertFalse(result)
+        assertTrue("Expected bounded stop connection wait (< 2000ms), took ${elapsedMs}ms", elapsedMs < 2_000L)
+        assertFalse(PolarVeritySenseOfflineController.isRecordingArmed())
+        verify(exactly = 1) {
+            mockSummariesDb.setPolarSyncPending(
+                2198L,
+                verityPolarId,
+                PolarVeritySenseOfflineController.VERITY_EXERCISE_PREFIX,
+                1_700_000_000_000L,
+                any()
+            )
+        }
+        verify(atLeast = 1) { mockBtleDevice.resumeGattOperations() }
+    }
+
+    @Test
+    fun testSyncPendingWorkout_cancellationExceptionIsRethrown() = runBlocking {
+        // TST-SET-121.2
+        PolarVeritySenseOfflineController.sdkIntOverride = 33
+        PolarVeritySenseOfflineController.apiOverride = mockApi
+        every { mockSummariesDb.getPolarPendingSyncData(2199L) } returns
+            WorkoutSummariesDatabaseManager.PolarPendingSyncData(
+                verityPolarId,
+                "${PolarVeritySenseOfflineController.VERITY_EXERCISE_PREFIX}/U/0/HR.BPB",
+                1000L,
+                2000L,
+                true
+            )
+        coEvery { mockApi.connectToDevice(verityPolarId) } throws
+            kotlinx.coroutines.CancellationException("rememberCoroutineScope left the composition")
+
+        var caughtCancellation: kotlinx.coroutines.CancellationException? = null
+        try {
+            PolarVeritySenseOfflineController.syncPendingWorkout(context, 2199L)
+        } catch (ce: kotlinx.coroutines.CancellationException) {
+            caughtCancellation = ce
+        }
+        assertNotNull(caughtCancellation)
+    }
 }
