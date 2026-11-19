@@ -1434,7 +1434,7 @@ internal fun RadarLightControlSectionContent(
 
 @Preview(showBackground = true, name = "Offline Multi-Mode Light")
 @Composable
-internal fun RadarLightControlSectionOfflineMultiModeLightPreview() {
+private fun RadarLightControlSectionOfflineMultiModeLightPreview() {
     ATrainingTrackerTheme(darkTheme = false) {
         Surface(color = MaterialTheme.colorScheme.surface, modifier = Modifier.padding(16.dp)) {
             RadarLightControlSectionContent(
@@ -1451,7 +1451,7 @@ internal fun RadarLightControlSectionOfflineMultiModeLightPreview() {
 
 @Preview(showBackground = true, name = "Offline Multi-Mode Dark")
 @Composable
-internal fun RadarLightControlSectionOfflineMultiModeDarkPreview() {
+private fun RadarLightControlSectionOfflineMultiModeDarkPreview() {
     ATrainingTrackerTheme(darkTheme = true) {
         Surface(color = MaterialTheme.colorScheme.surface, modifier = Modifier.padding(16.dp)) {
             RadarLightControlSectionContent(
@@ -1468,7 +1468,7 @@ internal fun RadarLightControlSectionOfflineMultiModeDarkPreview() {
 
 @Preview(showBackground = true, name = "Offline StVZO Light")
 @Composable
-internal fun RadarLightControlSectionOfflineStvzoLightPreview() {
+private fun RadarLightControlSectionOfflineStvzoLightPreview() {
     ATrainingTrackerTheme(darkTheme = false) {
         Surface(color = MaterialTheme.colorScheme.surface, modifier = Modifier.padding(16.dp)) {
             RadarLightControlSectionContent(
@@ -1485,7 +1485,7 @@ internal fun RadarLightControlSectionOfflineStvzoLightPreview() {
 
 @Preview(showBackground = true, name = "Offline StVZO Dark")
 @Composable
-internal fun RadarLightControlSectionOfflineStvzoDarkPreview() {
+private fun RadarLightControlSectionOfflineStvzoDarkPreview() {
     ATrainingTrackerTheme(darkTheme = true) {
         Surface(color = MaterialTheme.colorScheme.surface, modifier = Modifier.padding(16.dp)) {
             RadarLightControlSectionContent(
