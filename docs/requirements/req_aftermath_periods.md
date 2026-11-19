@@ -1,14 +1,14 @@
 # Living Requirements: Post-Workout Analytics & Periods
 
 **Document ID**: `DOC-REQ-PERIODS`  
-**Version**: 1.0.8  
+**Version**: 1.0.11  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `aftermath_periods`  
 **Prefixes**: `PER`, `PERF`, `RAD`, `SPT`  
 **Scope**: Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers.  
-**Total Requirements**: 63
+**Total Requirements**: 64
 
 ---
 
@@ -1892,6 +1892,41 @@
 
 ---
 
+### REQ-HRV-045: Preserve Full HRV Measurement UI via Route Override from AthleteProfile HRV Tab (`ATT-8846`) [Verified]
+- **System Requirement(s)**: Derived (SW-only) — Parameterized `NavRoutes.MORNING_HRV` route override (`forceFullHrv`) preserving full HRV measurement UI when launched from `AthleteProfileScreen` HRV tab (refining `REQ-HRV-043`, `REQ-PER-032`, `REQ-HRV-040`, and `REQ-UI-525`)
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-HRV-045`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Implementation**: `NavRoutes.kt`, `ATrainingTrackerApp.kt`, `MorningHrvCheckScreen.kt`
+- **Rationale**: Following `ATT-8598` (`REQ-HRV-043`), `MorningHrvCheckScreen` enters pure wellness mode whenever `showMorningCheckOnStartScreen == false && enableMorningSleepAndWellness == true && phase == MorningHrvPhase.READY`. Because `TrackingTabsScreen` (`ATrainingTrackerApp.kt:351`) and `AthleteProfileScreen` HRV tab (`ATrainingTrackerApp.kt:633`) both navigate to the identical parameterless `NavRoutes.MORNING_HRV`, athletes who hide the Start Screen HRV prompt cannot initiate an on-demand morning HRV measurement from *Athlete Profile -> HRV* (`ATT-8846`).
+- **Description**:
+  1. *Parameterized Route & Drawer Symmetry (`REQ-HRV-045.1`)*:
+     - `NavRoutes` (`NavRoutes.kt`) SHALL define `ARG_FORCE_FULL_HRV = "forceFullHrv"`, `MORNING_HRV_PATTERN = "morning_hrv?forceFullHrv={forceFullHrv}"`, and `fun morningHrv(forceFullHrv: Boolean = false): String` returning `MORNING_HRV` (`"morning_hrv"`) when `false` and `"morning_hrv?forceFullHrv=true"` when `true`.
+     - `NavRoutes.MORNING_HRV == "morning_hrv"`, `NavRoutes.fromDrawerItemId(R.id.drawer_morning_hrv) == MORNING_HRV`, and `NavRoutes.toDrawerItemId(...)` (stripping `?` query parameters) SHALL remain strictly backward compatible.
+  2. *Entry-Source Navigation Wiring (`REQ-HRV-045.2`)*:
+     - `ATrainingTrackerApp.kt` SHALL register `composable(route = NavRoutes.MORNING_HRV_PATTERN, arguments = listOf(navArgument(NavRoutes.ARG_FORCE_FULL_HRV) { type = NavType.BoolType; defaultValue = false }))` extracting `forceFullHrv` and passing it to `MorningHrvCheckScreen`.
+     - `AthleteProfileScreen` HRV tab (`ATrainingTrackerApp.kt:633`) SHALL navigate via `NavRoutes.morningHrv(forceFullHrv = true)`; `TrackingTabsScreen` Start Screen (`ATrainingTrackerApp.kt:351`) SHALL navigate via `NavRoutes.morningHrv(forceFullHrv = false)`.
+  3. *Full HRV Override & Pure Wellness Regression Guard (`REQ-HRV-045.3`)*:
+     - `MorningHrvCheckScreen` and `MorningHrvCheckContent` (`MorningHrvCheckScreen.kt`) SHALL accept `forceFullHrv: Boolean = false` and derive `isPureWellnessMode = !forceFullHrv && !uiState.showMorningCheckOnStartScreen && uiState.enableMorningSleepAndWellness && uiState.phase == MorningHrvPhase.READY`.
+     - When `forceFullHrv == true` (regardless of `showMorningCheckOnStartScreen`), `MorningHrvCheckContent` SHALL render the complete HRV measurement UI (TopAppBar `morning_hrv_title`, `morning_hrv_subtitle`, `morning_hrv_info_button` opening `HrvInfoBottomSheet`, `WakingProtocolChecklistCard`, `PostureAndDurationCard`, `MeasurementPacingCard`, and primary `morning_hrv_start_button`). `MorningWellnessInputCard` and secondary `OutlinedButton` *Save Morning Wellness* (`morning_hrv_save_wellness_secondary_button`) SHALL render iff `enableMorningSleepAndWellness == true`.
+     - When `forceFullHrv == false` with `!showMorningCheckOnStartScreen && enableMorningSleepAndWellness && phase == MorningHrvPhase.READY` (Start Screen / Drawer entry), pure wellness mode (`REQ-HRV-043`) SHALL remain strictly preserved.
+  4. *Architecture Ceilings, Private Previews & Localization (`REQ-HRV-045.4`)*:
+     - `MorningHrvCheckScreen.kt` MUST remain `<= 1,500` LoC (`ArchitectureConformanceContractTest`), `AthleteProfileScreen.kt` MUST incur `0` edits (preserving `1,975/1,975` LoC ceiling), `MorningHrvCheckViewModel.kt` MUST remain untouched, any added `@Preview` composable MUST be `private fun` (`REQ-ARC-003.5` / `DeadCodeEliminationContractTest`), and `Localization Parity: N/A - no UI strings`.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: `REQ-HRV-043` (`REQ-HRV-043.1`, `REQ-HRV-043.3`, `ATT-8598`), `REQ-PER-032`, `REQ-HRV-040`, and `REQ-UI-525`, targeting `NavRoutes.kt`, `ATrainingTrackerApp.kt`, and `MorningHrvCheckScreen.kt`.
+  2. *Historical Origin & Commit Trace*: `REQ-HRV-043` introduced in `ATT-8598` (`596a54f3`), whose Stage 6 Cold Review explicitly noted shared parameterless `NavRoutes.MORNING_HRV` across Start Screen and `AthleteProfileScreen` as residual risk, leading to `ATT-8846`.
+  3. *Root Reason for Existing Formulation*: `ATT-8598` scoped strictly to hiding HRV cards in Start Screen pure wellness mode without introducing route arguments, relying on `!enableMorningSleepAndWellness` as the only profile fallback.
+  4. *Preservation of Core Invariants*: Adding optional `forceFullHrv: Boolean = false` preserves 100% of `REQ-HRV-043` Start Screen pure wellness mode, preserves `MorningWellnessInputCard` + secondary save button alongside HRV when `enableMorningSleepAndWellness == true`, preserves active measurement/result phase guards & `keepScreenOn`, and introduces zero DB, ViewModel, or localization changes.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `showMorningCheckOnStartScreen = false` and `enableMorningSleepAndWellness = true`, *When* opening `MorningHrvCheckScreen` from *Athlete Profile -> HRV* tab (`forceFullHrv = true`), *Then* TopAppBar HRV title/subtitle/info button (`HrvInfoBottomSheet`), HRV protocol/posture/duration/pacing cards, primary *Start Measurement* CTA, `MorningWellnessInputCard`, and secondary *Save Morning Wellness* button all render.
+  • *Given* `showMorningCheckOnStartScreen = false` and `enableMorningSleepAndWellness = false`, *When* `forceFullHrv = true`, *Then* full HRV measurement UI renders without `MorningWellnessInputCard` or wellness save CTA.
+  • *Given* `showMorningCheckOnStartScreen = false` and `enableMorningSleepAndWellness = true`, *When* opening from Start Screen or Drawer (`forceFullHrv = false`), *Then* pure wellness mode (`REQ-HRV-043`) renders unchanged.
+- **Invariants**: Start Screen pure wellness mode (`REQ-HRV-043`) preserved; `NavRoutes.MORNING_HRV` & drawer mapping backward compatible; `MorningHrvCheckScreen.kt <= 1,500` LoC; `AthleteProfileScreen.kt == 1,975` LoC (`0` edits); `MorningHrvCheckViewModel.kt` untouched; `Localization Parity: N/A - no UI strings`.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -1905,3 +1940,6 @@
 | `1.0.6` | 2026-11-18 | AI Agent (`ATT-8916`, `--as agent1`) | `ATT-8916` | Promoted `REQ-PER-045` to `[Implemented]` following Stage 4 construction, `Rule 8.5` PNG inspection, and green contract/UI verification (`102/102` tests). |
 | `1.0.7` | 2026-11-18 | AI Agent (`ATT-8916`, `--as agent1`) | `ATT-8916` | Promoted `REQ-PER-045` to `[Verified]` after Stage 5 targeted unit/contract/UI regression, `emulator-5554` smoke verification, `Rule 8.5` PNG audit, and living-doc governance sync. |
 | `1.0.8` | 2026-11-19 | Lane A Flash (`ATT-8324`, `--as agent1`) | `ATT-8324` | Promoted `REQ-PER-003`, `REQ-PER-004`, `REQ-PER-005`, `REQ-PER-006`, `REQ-PER-007`, and `REQ-PER-009` to `[Verified]` in Stage 5 (`REQ-PER-001` retained `[Implemented]` pending `TST-BUG-002`) reusing Gate 4 `93/93 PASS` evidence (`Rule 7.5`). |
+| `1.0.9` | 2026-11-19 | Lane B Author (`ATT-8846`, `--as agent1`) | `ATT-8846` | Added `REQ-HRV-045` (`[Planned]`, `.1`–`.4`) for parameterized `forceFullHrv` route override preserving full HRV measurement UI when launched from `AthleteProfileScreen` HRV tab. |
+| `1.0.10` | 2026-11-19 | Lane B Author (`ATT-8846`, `--as agent1`) | `ATT-8846` | Promoted `REQ-HRV-045` to `[Implemented]` following Stage 4 construction (`NavRoutes.kt`, `ATrainingTrackerApp.kt`, `MorningHrvCheckScreen.kt`), Rule 8.5 Light/Dark PNG verification, and green targeted/contract test suites. |
+| `1.0.11` | 2026-11-19 | Lane B Author (`ATT-8846`, `--as agent1`) | `ATT-8846` | Promoted `REQ-HRV-045` to `[Verified]` in Stage 5 reusing Gate 4 verified `43/43 PASS` evidence (`Rule 7.5`, `0` `app/` code drift since `c7c6cc76`), Rule 8.5 PNG inspection, and living-doc governance sync atop `6927b2f8`. |

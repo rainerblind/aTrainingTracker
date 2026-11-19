@@ -112,16 +112,18 @@ import kotlinx.coroutines.launch
 
 /**
  * Screen presenting guided morning resting HRV acquisition protocol (`REQ-PER-032`)
- * and subjective sleep & wellness logging (`REQ-HRV-040`, `REQ-HRV-043`).
+ * and subjective sleep & wellness logging (`REQ-HRV-040`, `REQ-HRV-043`, `REQ-HRV-045`).
  *
  * Implements waking protocol guidance, sticky posture memory, live pacing countdown,
- * amber artifact warning for rate > 5.0%, post-hoc SWC readiness evaluation, and pure
- * wellness mode when Morning HRV Check is disabled in Expert Settings.
+ * amber artifact warning for rate > 5.0%, post-hoc SWC readiness evaluation, pure
+ * wellness mode when Morning HRV Check is disabled in Expert Settings, and route-level
+ * [forceFullHrv] override when launched from Athlete Profile -> HRV tab.
  */
 @Composable
 fun MorningHrvCheckScreen(
     viewModel: MorningHrvCheckViewModel = viewModel(),
     onNavigateBack: () -> Unit,
+    forceFullHrv: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -140,6 +142,7 @@ fun MorningHrvCheckScreen(
     MorningHrvCheckContent(
         uiState = uiState,
         onNavigateBack = onNavigateBack,
+        forceFullHrv = forceFullHrv,
         onPostureSelected = viewModel::setPosture,
         onDurationSelected = viewModel::setDurationSec,
         onSleepDurationChange = viewModel::setSleepDurationMinutes,
@@ -180,13 +183,15 @@ fun MorningHrvCheckScreen(
 
 /**
  * Stateless content for [MorningHrvCheckScreen] supporting pure wellness mode (`REQ-HRV-043`),
- * full HRV + wellness mode (`REQ-PER-032`), and direct Compose previews/testing.
+ * route-forced full HRV measurement UI (`REQ-HRV-045`), full HRV + wellness mode (`REQ-PER-032`),
+ * and direct Compose previews/testing.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MorningHrvCheckContent(
     uiState: MorningHrvUiState,
     onNavigateBack: () -> Unit,
+    forceFullHrv: Boolean = false,
     onPostureSelected: (HrvPosture) -> Unit = {},
     onDurationSelected: (Int) -> Unit = {},
     onSleepDurationChange: (Int) -> Unit = {},
@@ -202,7 +207,8 @@ fun MorningHrvCheckContent(
     modifier: Modifier = Modifier
 ) {
     var showInfoSheet by remember { mutableStateOf(false) }
-    val isPureWellnessMode = !uiState.showMorningCheckOnStartScreen &&
+    val isPureWellnessMode = !forceFullHrv &&
+        !uiState.showMorningCheckOnStartScreen &&
         uiState.enableMorningSleepAndWellness &&
         uiState.phase == MorningHrvPhase.READY
 
@@ -1284,6 +1290,22 @@ private fun MorningHrvCheckFullPreviewLight() {
                 currentHeartRateBpm = 54
             ),
             onNavigateBack = {}
+        )
+    }
+}
+
+@Preview(name = "Forced Full HRV (HRV Tab Override) - Light Mode", showBackground = true)
+@Composable
+private fun MorningHrvCheckForceFullPreviewLight() {
+    ATrainingTrackerTheme(darkTheme = false) {
+        MorningHrvCheckContent(
+            uiState = MorningHrvUiState(
+                showMorningCheckOnStartScreen = false,
+                enableMorningSleepAndWellness = true,
+                currentHeartRateBpm = 54
+            ),
+            onNavigateBack = {},
+            forceFullHrv = true
         )
     }
 }

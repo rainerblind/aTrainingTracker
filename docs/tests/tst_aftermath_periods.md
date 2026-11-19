@@ -1,14 +1,14 @@
 # Living Test Specification: Post-Workout Analytics & Periods
 
 **Document ID**: `DOC-TST-PERIODS`  
-**Version**: 1.0.9  
+**Version**: 1.0.12  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `aftermath_periods`  
 **Prefixes**: `PER`, `PERF`, `RAD`, `SPT`  
 **Scope**: Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers.  
-**Total Tests**: 69
+**Total Tests**: 70
 
 ---
 
@@ -1226,6 +1226,30 @@
 
 ---
 
+### TST-HRV-045: **Full HRV Route Override (`forceFullHrv`) & Pure Wellness Regression Suite** (`ATT-8846`) [Verified]
+- **Requirement(s)**: `REQ-HRV-045` (`REQ-HRV-045.1`..`REQ-HRV-045.4`)
+- **Component**: `NavRoutes.kt`, `ATrainingTrackerApp.kt`, `MorningHrvCheckScreen.kt`, `SingleActivityNavigationTest.kt`, `MorningHrvCheckScreenTest.kt`, `ArchitectureConformanceContractTest.kt`, `SourceTextReadingAuditContractTest.kt`, `DeadCodeEliminationContractTest.kt`
+- **Jira**: `ATT-8846`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Localization Parity**: `N/A - no UI strings`
+- **Test Description**:
+  1. *Parameterized Route & Drawer Query-Stripping Runtime Unit Tests (`TST-HRV-045.1`, `SingleActivityNavigationTest.kt`)*:
+     • Strictly zero `src/main` file reads (`SourceTextReadingAuditContractTest`). Verify `NavRoutes.MORNING_HRV == "morning_hrv"`, `NavRoutes.ARG_FORCE_FULL_HRV == "forceFullHrv"`, `NavRoutes.MORNING_HRV_PATTERN == "morning_hrv?forceFullHrv={forceFullHrv}"`, `NavRoutes.morningHrv() == "morning_hrv"`, `NavRoutes.morningHrv(false) == "morning_hrv"`, `NavRoutes.morningHrv(true) == "morning_hrv?forceFullHrv=true"`, `NavRoutes.fromDrawerItemId(R.id.drawer_morning_hrv) == NavRoutes.MORNING_HRV`, and `NavRoutes.toDrawerItemId("morning_hrv?forceFullHrv=true") == R.id.drawer_morning_hrv`.
+  2. *Compose UI `forceFullHrv = true` Override Verification (`TST-HRV-045.2`, `MorningHrvCheckScreenTest.kt`)*:
+     • Using `createComposeRule()`, render `MorningHrvCheckContent` with `forceFullHrv = true`, `showMorningCheckOnStartScreen = false`, `enableMorningSleepAndWellness = true`, `phase = MorningHrvPhase.READY`: assert TopAppBar displays `morning_hrv_title`, `morning_hrv_subtitle`, and clickable `morning_hrv_info_button` opening `HrvInfoBottomSheet`; assert `morning_hrv_protocol_card`, `morning_hrv_posture_duration_card`, `morning_hrv_wellness_card`, `morning_hrv_pacing_card`, `morning_hrv_start_button`, and `morning_hrv_save_wellness_secondary_button` are displayed while `morning_hrv_save_wellness_primary_button` does not exist.
+     • Render `MorningHrvCheckContent` with `forceFullHrv = true`, `showMorningCheckOnStartScreen = false`, `enableMorningSleepAndWellness = false`, `phase = MorningHrvPhase.READY`: assert full HRV measurement UI is displayed while `morning_hrv_wellness_card` and wellness save buttons do not exist.
+  3. *Compose UI Pure Wellness Mode Regression (`TST-HRV-045.3`, `MorningHrvCheckScreenTest.kt`)*:
+     • Render `MorningHrvCheckContent` with `forceFullHrv = false` (default), `showMorningCheckOnStartScreen = false`, `enableMorningSleepAndWellness = true`, `phase = MorningHrvPhase.READY` (Start Screen / Drawer entry): assert pure wellness mode (`REQ-HRV-043`) remains strictly preserved (HRV cards, info button, and `morning_hrv_start_button` absent; `morning_hrv_save_wellness_primary_button` displayed).
+  4. *Rule 8.5 Light/Dark Compose PNG & Live `emulator-5554` E2E Verification (`TST-HRV-045.4`, `MorningHrvCheckScreenTest.kt`, `emulator-5554`)*:
+     • Capture side-by-side Light & Dark PNG (`docs/engineering/walkthroughs/img/ATT-8846_morning_hrv_force_full.png`) rendering `MorningHrvCheckContent` with `forceFullHrv = true`, `showMorningCheckOnStartScreen = false`, `enableMorningSleepAndWellness = true` and inspect via `read_file` against the 4-point Visual Self-Inspection Checklist.
+     • Deploy debug APK onto `emulator-5554` and verify with `showMorningCheckOnStartScreen = false` & `enableMorningSleepAndWellness = true` that tapping Start Screen *"Morning Check"* opens pure wellness mode while tapping *Athlete Profile -> HRV* tab *"Measure Morning HRV"* opens full HRV measurement UI with clean `logcat`.
+  5. *Tier 1 Targeted Regression & Architecture Contracts (`TST-HRV-045.5`)*:
+     • Run `./gradlew :app:testDebugUnitTest --rerun --tests "com.atrainingtracker.trainingtracker.ui.hrv.MorningHrvCheckScreenTest" --tests "com.atrainingtracker.trainingtracker.ui.navigation.SingleActivityNavigationTest" --tests "com.atrainingtracker.trainingtracker.build.ArchitectureConformanceContractTest" --tests "com.atrainingtracker.trainingtracker.build.SourceTextReadingAuditContractTest" --tests "com.atrainingtracker.trainingtracker.build.DeadCodeEliminationContractTest"` verifying `MorningHrvCheckScreen.kt <= 1,500` LoC, `AthleteProfileScreen.kt == 1,975` LoC (`0` edits), `private fun` `@Preview`s, and `0` `src/main` reads in tests.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -1240,3 +1264,6 @@
 | `1.0.7` | 2026-11-19 | Lane A Flash (`ATT-8324`, `--as agent1`) | `ATT-8324` | Updated `Component`, metadata (`Priority`/`Type`/`Verification Method`), and executable `Test Description` contracts for all 14 legacy Aftermath/Periods specs (`TST-PERF-001..010`, `TST-PER-009`, `TST-PER-010`, `TST-PER-012`, `TST-PER-017`) while keeping `[Implemented]` status pending Stage 4/5 execution. |
 | `1.0.8` | 2026-11-19 | Lane A Flash (`ATT-8324`, `--as agent1`) | `ATT-8324` | Promoted all 14 Aftermath/Periods test specs (`TST-PERF-001..010`, `TST-PER-009`, `TST-PER-010`, `TST-PER-012`, `TST-PER-017`) to `[Verified]` reusing Gate 4 verified evidence (`Rule 7.5`: `93/93 PASS` across 12 suites, `0` `app/` edits since Gate 4 `3fc8ccf6`). |
 | `1.0.9` | 2026-11-19 | Lane A Flash (`ATT-8324`, `--as agent1`) | `ATT-8324` | Stage 6 Bounce 1/3 heal: aligned `TST-PERF-001` card vertex budget to `<= 2,000` (`MAX_CARD_MINI_MAP_VERTICES`) and added `ProgressBarRangeInfo` (`1.0f` vs `0.45f`) Compose assertions in `PeriodsProgressAndEmptyStateUiTest` matching `TST-PERF-006`. |
+| `1.0.10` | 2026-11-19 | Lane B Author (`ATT-8846`, `--as agent1`) | `ATT-8846` | Added `TST-HRV-045` (`[Planned]`, `.1`–`.5`) covering parameterized `NavRoutes.morningHrv`, `MorningHrvCheckContent` `forceFullHrv` override/regression, Rule 8.5 Light/Dark PNG, `emulator-5554` verification, and architecture contracts. |
+| `1.0.11` | 2026-11-19 | Lane B Author (`ATT-8846`, `--as agent1`) | `ATT-8846` | Promoted `TST-HRV-045` to `[Implemented]` with `MorningHrvCheckScreenTest` `10/10`, `SingleActivityNavigationTest` `16/16`, `ArchitectureConformanceContractTest` `11/11`, `SourceTextReadingAuditContractTest` `6/6` PASS, and Rule 8.5 Light/Dark PNG (`ATT-8846_morning_hrv_force_full.png`) inspected. |
+| `1.0.12` | 2026-11-19 | Lane B Author (`ATT-8846`, `--as agent1`) | `ATT-8846` | Promoted `TST-HRV-045` to `[Verified]` in Stage 5 reusing Gate 4 `43/43 PASS` evidence (`Rule 7.5`, `0` `app/` code drift since `c7c6cc76`), Rule 8.5 PNG certification, and governance parity check atop `6927b2f8`. |
