@@ -67,7 +67,7 @@ import java.util.concurrent.TimeUnit
  * asynchronous BANALService deferred resume table name synchronization,
  * ordered onServiceConnected callbacks, sample write error surfacing,
  * and LiveWorkoutSession rehydration for TrackerService crash/user resumption
- * (REQ-DAT-002, TST-DAT-002, ATT-3549; REQ-TRK-026, TST-TRK-018, ATT-3980;
+ * (REQ-DAT-002, TST-DAT-002, ATT-3549; REQ-DAT-026, TST-DAT-021; REQ-TRK-026, TST-TRK-018, ATT-3980;
  * REQ-TRK-031, TST-TRK-023, ATT-3987).
  */
 class TrackerServiceResumeTest {

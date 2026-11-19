@@ -18,13 +18,16 @@
 
 package com.atrainingtracker.trainingtracker.database
 
+import android.app.Application
 import android.content.ContentValues
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import androidx.test.core.app.ApplicationProvider
 import com.atrainingtracker.testutil.RealSqliteTestHelper
+import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummariesDbHelper
+import com.atrainingtracker.trainingtracker.migration.DatabaseConnectionManager
 import com.atrainingtracker.trainingtracker.migration.DatabaseSchemaRegistry
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -35,12 +38,14 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
 /**
- * Real SQLite migration and persistence verification suite for WorkoutSummariesDbHelper (TST-MIG-042.1, REQ-MIG-045).
+ * Real SQLite migration and persistence verification suite for WorkoutSummariesDbHelper (TST-MIG-042.1, REQ-MIG-045; REQ-DAT-036, TST-DAT-032).
  * Tests authentic DDL/DML execution in SQLite backed by Robolectric instead of string-matched mocks.
  */
 @RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34], application = Application::class)
 class WorkoutSummariesRealSqliteMigrationTest {
 
     private lateinit var context: Context
@@ -107,6 +112,14 @@ class WorkoutSummariesRealSqliteMigrationTest {
     @Before
     fun setUp() {
         context = ApplicationProvider.getApplicationContext()
+        setStaticField(TrainingApplication::class.java, "cAppContext", context)
+        setStaticField(
+            TrainingApplication::class.java,
+            "cSharedPreferences",
+            androidx.preference.PreferenceManager.getDefaultSharedPreferences(context)
+        )
+        DatabaseConnectionManager.quiesceAllDatabases(context, closeConnections = true)
+        WorkoutSummariesDatabaseManager.setInstanceForTesting(null)
         context.deleteDatabase(dbName)
         db = context.openOrCreateDatabase(dbName, Context.MODE_PRIVATE, null)
         helper = WorkoutSummariesDbHelper(context)
@@ -114,7 +127,21 @@ class WorkoutSummariesRealSqliteMigrationTest {
 
     @After
     fun tearDown() {
+        runCatching { helper.close() }
         RealSqliteTestHelper.cleanupDatabase(db, dbName)
+        DatabaseConnectionManager.quiesceAllDatabases(context, closeConnections = true)
+        WorkoutSummariesDatabaseManager.setInstanceForTesting(null)
+        setStaticField(TrainingApplication::class.java, "cAppContext", null)
+        setStaticField(TrainingApplication::class.java, "cSharedPreferences", null)
+    }
+
+    private fun setStaticField(clazz: Class<*>, fieldName: String, value: Any?) {
+        try {
+            val field = clazz.getDeclaredField(fieldName)
+            field.isAccessible = true
+            field.set(null, value)
+        } catch (_: Exception) {
+        }
     }
 
     private fun scaffoldV22Schema(database: SQLiteDatabase) {

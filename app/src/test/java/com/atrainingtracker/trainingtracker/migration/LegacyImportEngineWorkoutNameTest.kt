@@ -54,7 +54,8 @@ import java.io.File
 /**
  * Unit tests verifying TCX workout name and description extraction, structured extension parsing,
  * bracket notation heuristics, Garmin training plan fallback, character unescaping,
- * and cluster overwrite immunity (REQ-DAT-013, TST-DAT-007, ATT-922, ATT-924).
+ * original filename preservation, and cluster overwrite immunity
+ * (REQ-DAT-013, TST-DAT-007, ATT-922, ATT-924; REQ-MIG-022, TST-MIG-019).
  */
 class LegacyImportEngineWorkoutNameTest {
 
@@ -532,6 +533,32 @@ class LegacyImportEngineWorkoutNameTest {
             )
         } finally {
             tempFile.delete()
+        }
+    }
+
+    @Test
+    fun testImportFromTcx_preservesOriginalFilenameWithoutCounter_TST_MIG_019() = runBlocking {
+        val tcx = generateTcx(
+            activityNotes = null,
+            activityExtensionName = null,
+            activityExtensionDesc = null
+        )
+
+        val tempDir = java.nio.file.Files.createTempDirectory("tst_mig_019").toFile()
+        val exactFile = File(tempDir, "2026-08-01_10-00-00.tcx")
+        exactFile.writeText(tcx)
+
+        try {
+            val result = LegacyImportEngine.importFromTcx(mockContext, exactFile)
+            assertTrue("Import must succeed", result)
+
+            val insertedValues = mutableListOf<ContentValues>()
+            verify { mockSqlDb.insert(WorkoutSummaries.TABLE, null, capture(insertedValues)) }
+            assertEquals(1, insertedValues.size)
+            assertEquals("2026-08-01_10-00-00", insertedValues[0].getAsString(WorkoutSummaries.FILE_BASE_NAME))
+            assertEquals("2026-08-01_10-00-00", insertedValues[0].getAsString(WorkoutSummaries.WORKOUT_NAME))
+        } finally {
+            tempDir.deleteRecursively()
         }
     }
 }

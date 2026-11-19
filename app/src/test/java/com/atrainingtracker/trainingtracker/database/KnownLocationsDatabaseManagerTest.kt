@@ -44,6 +44,7 @@ import java.lang.reflect.Field
  * - REQ-DAT-008: Atomic Database Upgrades.
  * - REQ-DAT-014: Internet Digital Elevation Model (DEM) Reference Altitude Retrieval, Spatial Caching & Legacy Location Healing.
  * - REQ-DAT-007: Automated Altitude Reference Discovery & Stable Reference Elevation Preservation.
+ * - TST-DAT-001: Automated Altitude Discovery.
  * - TST-DAT-008: Tests 2, 6, 7, 8.
  * - TST-DAT-009: Tests 1, 2, 3.
  */

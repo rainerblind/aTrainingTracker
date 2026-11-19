@@ -1,0 +1,63 @@
+# Stage 2 Requirement & Test Specification: `ATT-8325`
+
+**Ticket**: [ATT-8325](https://rainerblind.atlassian.net/browse/ATT-8325) — `[Verbesserung] Add executable/attested verification for Data Migration & Export (25 TSTs from ATT-8145)`  
+**Sub-task**: Pending `submit-stage 2` (`[Req & Test Spec]`)  
+**Parent Epic**: [ATT-8138](https://rainerblind.atlassian.net/browse/ATT-8138) (*ASPICE 4.0 Audit Remediation 2026-11*)  
+**Target Release**: `V5.0.0` | **Active Sprint**: `sprint/2026-11-19_02_Spät` | **Branch**: `feature/ATT-8325`  
+**Author**: AI Agent 1 (`agent1`) | **Date**: 2026-11-19
+
+---
+
+## 1. Requirements Reference & Governance Constraints
+No net-new `REQ-*` or `TST-*` IDs are created (`SYS.2`/`SYS.3` impact: **None**; existing `SYSREQ-DEX-001..005` links unchanged). All `25` target `TST-*` specs in `docs/tests/tst_data_migration_export.md` remain `[Implemented]` until passing JUnit XML evidence is generated in Stage 4/5 (`REQ-PRO-099`). `0` `app/src/main/` edits and `0` `src/main/` source-text reads (`SourceTextReadingAuditContractTest` / `REQ-PRO-049`) are permitted.
+
+* **Multi-TST Parent REQ Guard**:
+  * **HOLD `[Implemented]`**: `REQ-EXP-001` (blocked by unverified sibling `TST-REG-003` `[Implemented]`) and `REQ-MIG-014` (blocked by unverified sibling `TST-PRO-004` `[Implemented]`) MUST NOT be promoted to `[Verified]`.
+  * **Paired Promotion**: `REQ-MIG-016` promotes only after both `TST-MIG-012` and `TST-MIG-018` pass; `REQ-MIG-017` promotes only after both `TST-MIG-013` and `TST-MIG-017` pass.
+  * **Already `[Verified]`**: `REQ-MIG-004` (`TST-MIG-037`) and `REQ-DAT-007` (`TST-DAT-002`, `TST-DAT-009`) remain `[Verified]`.
+  * **Eligible Single-TST REQs (`20`)**: `REQ-MIG-001..003,005..011,013,015,018..022,028`, `REQ-EXT-004..005`, `REQ-DAT-026,036` promote in Stage 5 only upon passing test results.
+* **Chesterton's Fence & Spec-vs-Code Alignment (`docs/tests/tst_data_migration_export.md`)**:
+  * `TST-MIG-008` (`REQ-MIG-011`): Aligned to `ImportBackupTabsScreen.kt:117-124` `4`-tab `HorizontalPager` (`tab_import`, `tab_auto_import`, `tab_backup`, `tab_restore`), verifying Import, Backup, and Restore navigation without asserting `pageCount == 3`.
+  * `TST-MIG-013` (`REQ-MIG-017`): Aligned to `BackupRestoreViewModel.kt:95` & `LegacyImportEngine.kt:207` `Semaphore(3)` concurrency bound (queue size `<= 3`).
+  * `TST-MIG-004` / `TST-MIG-005` (`REQ-MIG-007`, `REQ-MIG-008`): Aligned to `RestoreTabContent.kt:189` (`restore_from_dropbox` -> `showDropboxRestoreConfirm` `AlertDialog`) and `BackupTabContent.kt` (`backup_now` + `REQ-MIG-036` provider-aware cloud labels + descriptive subtitles).
+  * `TST-MIG-015` (`REQ-MIG-019`): Moved inline bracketed note from heading into `Test Description` for clean heading syntax.
+  * `TST-DAT-021` (`REQ-DAT-026`): Specified strictly via behavioral/mocked `SQLiteDatabase`/`Cursor` assertions (`ORDER BY _id DESC LIMIT 1`, column projection, empty-cursor guard) with zero `src/main/` file reads.
+* **9-Locale Localization Parity**: Zero new string keys; `LocalizationTestCache` / `TranslationParityTest` verifies existing Import/Backup/Restore and `import_upload_to_strava_*` keys across all 9 locales (`values/`, `-de`, `-es`, `-fr`, `-it`, `-ja`, `-nl`, `-pl`, `-pt`, zero `&#10;`).
+
+---
+
+## 2. Bidirectional Traceability & Acceptance Criteria (`Given-When-Then`)
+
+| TST ID | Requirement(s) | Priority / Type / Method | Target Test Suite(s) (`app/src/test/`) | Given-When-Then Acceptance Contract |
+| :--- | :--- | :--- | :--- | :--- |
+| `TST-EXP-004` | `REQ-EXP-001` | Medium / Func / Unit | `TCXFileWriterSchemaComplianceTest` | **Given** BIKE (cadence+power) & RUN (cadence) samples, **When** `TCXFileWriter` exports XML, **Then** `<Cadence>`, `<Watts>`, and `<RunCadence>` text nodes parse as integers with zero decimal points. |
+| `TST-MIG-001` | `REQ-MIG-001`, `002`, `004`, `006` | High / Func / Unit | `BackupMigrationCycleTest` | **Given** populated SQLite/prefs & non-tracking vs tracking state, **When** `BackupManager.createBackup()` & `MigrationEngine` run, **Then** `.attbackup` bundles DBs+prefs, restores full state, and tracking lockdown blocks restore/backup when active. |
+| `TST-MIG-002` | `REQ-MIG-005` | Medium / Func / Unit | `LegacyImportEngineDeduplicationTest`, `BackupMigrationCycleTest` | **Given** an existing workout matching `FILE_BASE_NAME` in SQLite, **When** `LegacyImportEngine.isWorkoutExisting()` and `ImportEngine` merge run, **Then** duplicate entries are skipped without creating duplicate rows. |
+| `TST-MIG-003` | `REQ-MIG-003` | High / Func / Unit | `BackupWorkerTest`, `BackupWorkerDropboxGatingTest` | **Given** `automated_backups=true` & Dropbox credential, **When** `BackupWorker.schedule()` & `doWork()` execute, **Then** unique periodic `WorkManager` job is enqueued and `DropboxBackupManager.uploadBackup()` uploads `.attbackup`. |
+| `TST-MIG-004` | `REQ-MIG-007` | High / Func / Unit | `ImportBackupTabsUiContractTest` | **Given** `ImportBackupTabsScreen` on Restore tab with Dropbox connected, **When** tapping `restore_from_dropbox`, **Then** `restore_warning_title` confirmation `AlertDialog` opens and `restoreFromDropbox()` runs only on confirm. |
+| `TST-MIG-005` | `REQ-MIG-008` | Low / Func / Unit | `ImportBackupTabsUiContractTest` | **Given** `BackupTabContentLayout` & `RestoreTabContent`, **When** composed under `createComposeRule()`, **Then** `backup_now`, provider-aware cloud backup button, and descriptive Restore/Import descriptions render cleanly. |
+| `TST-MIG-006` | `REQ-MIG-009` | High / Func / Unit | `DropboxBackupDefaultsTest` | **Given** clean default `SharedPreferences` + `PreferenceManager.setDefaultValues` on `prefs_dropbox.xml`, **When** reading `backup_interval_days` in `BackupRestoreViewModel`/`BackupWorker`, **Then** interval defaults to `"1"` (1 day). |
+| `TST-MIG-007` | `REQ-MIG-010` | High / Func / Unit | `DropboxBackupDefaultsTest` | **Given** clean default `SharedPreferences` + `prefs_dropbox.xml` defaults, **When** reading `automated_backups` in `BackupRestoreViewModel`/`BackupWorker`, **Then** automated backups default to `true`. |
+| `TST-MIG-008` | `REQ-MIG-011` | High / Func / Unit | `ImportBackupTabsUiContractTest` | **Given** `ImportBackupTabsScreen`, **When** rendered & tab headers tapped in `HorizontalPager`, **Then** 4 tabs (`Import`, `Auto-Import`, `Backup`, `Restore`) render and navigate cleanly. |
+| `TST-MIG-010` | `REQ-MIG-013` | High / Func / Unit | `LegacyImportEngineCloudRecoveryTest` | **Given** a TCX workout already in SQLite (`isWorkoutExisting=true`), **When** `LegacyImportEngine.importFromTcxResult()` runs, **Then** status is `DUPLICATE_SKIPPED` and `onNewClusterCandidate` is invoked `0` times. |
+| `TST-MIG-011` | `REQ-MIG-015` | High / Func / Unit | `LegacyImportEngineCloudRecoveryTest` | **Given** Dropbox listing with existing & new TCX files, **When** `bulkRecoverFromDropbox()` runs, **Then** existing workouts are skipped via `ExistingWorkoutsSnapshot` BEFORE `files().download()` is called. |
+| `TST-MIG-012` | `REQ-MIG-016` | High / Func / Unit | `LegacyImportEngineCloudRecoveryTest` | **Given** Dropbox `listFolderBuilder(...).withRecursive(true)` returning `hasMore=true` then `listFolderContinue()`, **When** `bulkRecoverFromDropbox()` executes, **Then** all paginated entries across pages are collected and scanned. |
+| `TST-MIG-013` | `REQ-MIG-017` | Medium / Func / Unit | `BackupRestoreInteractionQueueTest` | **Given** `> 3` concurrent `onNewClusterCandidate` requests via `BackupRestoreViewModel`, **When** first 3 remain unresolved, **Then** `interactionSemaphore(3)` caps `_interactionQueue` size at `<= 3` and admits next item upon resolution. |
+| `TST-MIG-014` | `REQ-MIG-018` | Medium / Func / Unit | `LegacyImportEngineSparseDataTest` | **Given** a sparse TCX file containing GPS/time only (no HR/Power), **When** `LegacyImportEngine.importFromTcx()` inserts into Robolectric SQLite, **Then** absent HR/Power columns/streams are omitted and not zero-filled. |
+| `TST-MIG-015` | `REQ-MIG-019` | Medium / Func / Unit | `LegacyImportEngineCloudRecoveryTest` | **Given** Dropbox cloud scan & file download, **When** `bulkRecoverFromDropbox()` invokes `ProgressListener.onStatus`, **Then** scanning (`/TCX` path) and `Downloading <file> from Dropbox...` status messages are emitted to UI state. |
+| `TST-MIG-016` | `REQ-MIG-020` | Medium / Func / Unit | `ImportBackupTabsUiContractTest` | **Given** Import tab UI & `strings.xml` import resources across locales, **When** rendered & inspected via `LocalizationTestCache`, **Then** active import labels omit negative `"Legacy"` / `"Recovery"` wording. |
+| `TST-MIG-017` | `REQ-MIG-014`, `017` | Medium / Func / Unit | `BackupRestoreInteractionQueueTest` | **Given** multi-file `bulkRecoverFromDropbox()` where item 1 awaits `ClusterNamingDialog` resolution, **When** background workers run, **Then** workers continue downloading/parsing up to `Semaphore(3)` capacity concurrently without stalling. |
+| `TST-MIG-018` | `REQ-MIG-016`, `021` | High / Func / Unit | `LegacyImportEngineCloudRecoveryTest` | **Given** nested Dropbox paths (`/TCX/2025/`, `/apps/Workouts/TCX/`) with new+existing files, **When** `bulkRecoverFromDropbox()` & `BackupRestoreViewModel` finish, **Then** `RecoveryResult` & formatted summary report exact `imported`, `skipped`, and `totalScanned` counts. |
+| `TST-MIG-019` | `REQ-MIG-022` | Medium / Func / Unit | `LegacyImportEngineWorkoutNameTest` | **Given** TCX file `2026-08-01_10-00-00.tcx` without custom notes/name, **When** `LegacyImportEngine.importFromTcx()` runs, **Then** `WorkoutSummaries.FILE_BASE_NAME` and `WORKOUT_NAME` preserve `2026-08-01_10-00-00` without counter suffixes. |
+| `TST-MIG-025` | `REQ-MIG-028` | High / Func / Unit | `TcxImportStravaToggleTest`, `TranslationParityTest` | **Given** Strava connected vs disconnected, **When** `importFromTcx(uploadToStrava=false/true)` & `bulkRecoverFromDropbox()` & `PreImportTuningBottomSheet` run, **Then** `UPLOAD_TO_STRAVA` (`0`/`1`), `ExportManager` dispatch, switch visibility, and 9-locale `import_upload_to_strava_*` keys match. |
+| `TST-DAT-001` | `REQ-DAT-007` | Medium / Func / Unit | `KnownLocationsDatabaseManagerTest` | **Given** existing known/locked location in `StartLocation2Altitude.db`, **When** `learnLocation()` runs within `200m` with differing pressure altitude, **Then** stored `altitude` remains unchanged and `hitCount` increments atomically. |
+| `TST-EXT-001` | `REQ-EXT-004` | High / Func / Unit | `StravaAuthCustomTabsFlowTest` | **Given** an Android `Context` in Robolectric, **When** `StravaHelper.requestAccessToken(context)` executes, **Then** an `ACTION_VIEW` `CustomTabsIntent` (with `EXTRA_SESSION`, Strava OAuth URL, and saved CSRF `state`) is launched. |
+| `TST-EXT-002` | `REQ-EXT-005` | High / Func / Unit | `StravaAuthCustomTabsFlowTest`, `StravaOAuthCallbackActivityTest` | **Given** `StravaAuthViewModel` + `StravaAuthRepository` + `StravaOAuthCallbackActivity`, **When** `exchangeCode()` runs on valid vs invalid/error callback, **Then** `authState` transitions cleanly through `Loading` to `Success` or `Error`. |
+| `TST-DAT-021` | `REQ-DAT-026` | High / Func / Unit | `TrackerServiceResumeTest` | **Given** populated vs empty `WorkoutSummaries` in `SQLiteDatabase`, **When** `recreateValuesWhenResuming()` executes, **Then** query uses explicit column projection with `ORDER BY _id DESC LIMIT 1`, restores telemetry/accumulators, and empty table returns safely without `CursorIndexOutOfBoundsException`. |
+| `TST-DAT-032` | `REQ-DAT-036` | High / NFR / Unit | `*RealSqliteMigrationTest`, `SqliteSchemaParityContractTest` | **Given** all versioned SQLite helpers (`WorkoutSummariesDbHelper`, `RoutesDbHelper`, `LapsDbHelper`, `AthleteMetricsDbHelper`, `EquipmentDbHelper`, `SportTypeDbHelper`, `TrackingViewsDbHelper`, `WorkoutClusterDbHelper`), **When** upgrading incrementally vs fresh `onCreate()`, **Then** resulting table schemas, columns, and indexes match symmetrically. |
+
+---
+
+## 3. Tier 1 & Governance Verification Commands
+* **Tier 1 Targeted Tests**: `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.migration.*" --tests "com.atrainingtracker.trainingtracker.exporter.*" --tests "com.atrainingtracker.trainingtracker.database.*" --tests "com.atrainingtracker.trainingtracker.onlinecommunities.strava.*" --tests "com.atrainingtracker.trainingtracker.tracker.TrackerServiceResumeTest" --tests "com.atrainingtracker.trainingtracker.build.SourceTextReadingAuditContractTest"`
+* **Governance Verification**: `python3 tools/verify_requirement_governance.py --repo-root . --base-ref refs/heads/sprint/2026-11-19_02_Spät --check-verified-evidence`
