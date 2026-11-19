@@ -1831,6 +1831,44 @@ def export_test_evidence(sprint_arg=None, release_arg=None, target_arg=None, out
     return md_path, json_path, payload
 
 
+NON_FIX_RESOLUTION_LABELS = frozenset({
+    "resolution-rejected",
+    "resolution-duplicate",
+    "resolution-cannot-reproduce",
+})
+
+
+def _is_sup9_non_code_resolution(item):
+    """Return (is_sup9_non_code, matched_labels) if ticket carries an explicit SUP.9 non-code resolution label."""
+    fields = (item or {}).get("fields") or {}
+    raw_labels = fields.get("labels") or []
+    norm_labels = [str(l).strip().lower() for l in raw_labels if str(l).strip()]
+    matched = [lbl for lbl in norm_labels if lbl in NON_FIX_RESOLUTION_LABELS]
+    return bool(matched), matched
+
+
+def _extract_description_text(desc):
+    """Safely extracts plain text from string, Atlassian Document Format (ADF) dict, or None."""
+    if not desc:
+        return ""
+    if isinstance(desc, str):
+        return desc
+    if isinstance(desc, dict):
+        texts = []
+        def walk(node):
+            if isinstance(node, dict):
+                if node.get("type") == "text" and "text" in node:
+                    texts.append(str(node["text"]))
+                for v in node.values():
+                    walk(v)
+            elif isinstance(node, list):
+                for entry in node:
+                    walk(entry)
+        walk(desc)
+        return " ".join(texts)
+    return str(desc)
+
+
 def format_qa_audit_markdown(sprint_info, audit_results, overall_compliant, auditor_role="qa", total_tickets=None):
     import datetime
     date_str = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d")
@@ -1842,25 +1880,38 @@ def format_qa_audit_markdown(sprint_info, audit_results, overall_compliant, audi
     if total_tickets is None:
         total_tickets = total_sampled
 
+    sampled_keys = [r["key"] for r in audit_results]
+    sampled_keys_str = ", ".join(sampled_keys) if sampled_keys else "N/A (0 merged tickets in sprint)"
+    if total_tickets == 0 and total_sampled == 0:
+        sample_size_str = "0 / 0 merged tickets (N/A (0 merged tickets in sprint))"
+        compliant_summary_str = "0 / 0 (N/A)"
+    elif total_tickets < 2:
+        sample_size_str = f"{total_sampled} / {total_tickets} merged ticket (all merged tickets audited)"
+        compliant_summary_str = f"{compliant_count} / {total_sampled}"
+    else:
+        sample_size_str = f"{total_sampled} / {total_tickets} tickets (>= 10% dynamic threshold enforced)"
+        compliant_summary_str = f"{compliant_count} / {total_sampled}"
+
     lines = [
         f"# Sprint QA Process-Compliance Audit: Sprint {s_name} (ID: {s_id})",
         "",
         f"**Date**: {date_str}  ",
         f"**Auditor Role**: `{auditor_role}` (Quality Assurance Auditor, independent of Coordinator/Implementer)  ",
-        f"**Sampled Tickets**: {', '.join(r['key'] for r in audit_results)}  ",
+        f"**Sampled Tickets**: {sampled_keys_str}  ",
         f"**Overall Process Verdict**: **{verdict_str}**  ",
         "",
         "---",
         "",
         "## 1. Executive Summary",
         "",
-        f"Under ASPICE SUP.1 (Quality Assurance) and GP 2.2 (Process Evidence), this audit verifies process adherence independently of product reviews. A sample of {total_sampled} / {total_tickets} tickets (>= 10% dynamic threshold enforced) was audited across 5 core ASPICE process criteria (Lifecycle Deliverables, Stage Subtask Progression, 4-Augen Role Separation, Living Documentation Parity, and Commit Hygiene).",
+        f"Under ASPICE SUP.1 (Quality Assurance) and GP 2.2 (Process Evidence), this audit verifies process adherence independently of product reviews. A sample of {sample_size_str} was audited across 5 core ASPICE process criteria (Lifecycle Deliverables, Stage Subtask Progression, 4-Augen Role Separation, Living Documentation Parity, and Commit Hygiene).",
         "",
         "| Metric | Value |",
         "| :--- | :--- |",
         f"| **Sprint** | {s_name} (ID: {s_id}) |",
-        f"| **Sample Size** | {total_sampled} / {total_tickets} tickets (>= 10% dynamic threshold enforced) |",
-        f"| **Compliant Tickets** | {compliant_count} / {total_sampled} |",
+        f"| **Sample Size** | {sample_size_str} |",
+        f"| **Sampled Keys** | {sampled_keys_str} |",
+        f"| **Compliant Tickets** | {compliant_summary_str} |",
         f"| **Overall Process Verdict** | **{verdict_str}** |",
         "",
         "---",
@@ -1871,16 +1922,20 @@ def format_qa_audit_markdown(sprint_info, audit_results, overall_compliant, audi
         "| :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: |",
     ]
 
-    for r in audit_results:
-        k = r["key"]
-        sm = r["summary"][:40] + ("..." if len(r["summary"]) > 40 else "")
-        d = "PASS" if r["deliv_pass"] else "FAIL"
-        g = "PASS" if r["gate_pass"] else "FAIL"
-        rs = "PASS" if r["role_sep_pass"] else "FAIL"
-        ld = "PASS" if r["living_doc_pass"] else "FAIL"
-        ch = "PASS" if r["commit_pass"] else "FAIL"
-        v = "COMPLIANT" if r["compliant"] else "NON-COMPLIANT"
-        lines.append(f"| {k} | {sm} | {d} | {g} | {rs} | {ld} | {ch} | {v} |")
+    if not audit_results:
+        lines.append("| N/A | N/A (0 merged tickets in sprint) | N/A | N/A | N/A | N/A | N/A | COMPLIANT |")
+    else:
+        for r in audit_results:
+            k = r["key"]
+            sm = r["summary"][:40] + ("..." if len(r["summary"]) > 40 else "")
+            sup9 = r.get("sup9_non_code", False)
+            d = "N/A" if sup9 else ("PASS" if r["deliv_pass"] else "FAIL")
+            g = "N/A" if sup9 else ("PASS" if r["gate_pass"] else "FAIL")
+            rs = "N/A" if sup9 else ("PASS" if r["role_sep_pass"] else "FAIL")
+            ld = "N/A" if sup9 else ("PASS" if r["living_doc_pass"] else "FAIL")
+            ch = "N/A" if sup9 else ("PASS" if r["commit_pass"] else "FAIL")
+            v = "COMPLIANT" if r["compliant"] else "NON-COMPLIANT"
+            lines.append(f"| {k} | {sm} | {d} | {g} | {rs} | {ld} | {ch} | {v} |")
 
     lines.extend([
         "",
@@ -1890,20 +1945,40 @@ def format_qa_audit_markdown(sprint_info, audit_results, overall_compliant, audi
         "",
     ])
 
-    for r in audit_results:
-        k = r["key"]
-        sm = r["summary"]
-        v = "COMPLIANT" if r["compliant"] else "NON-COMPLIANT"
+    if not audit_results:
         lines.extend([
-            f"### Ticket: {k} - {sm}",
-            f"* **Process Verdict**: **{v}**",
-            f"* **1. Lifecycle Deliverables**: {'PASS (analysis, specs, plan, walkthrough in docs/engineering/)' if r['deliv_pass'] else 'FAIL (missing stage deliverables)'}",
-            f"* **2. Stage Subtask Lifecycle**: {'PASS (sequential subtask progression verified)' if r['gate_pass'] else 'FAIL (incomplete gate progression)'}",
-            f"* **3. 4-Augen-Prinzip & Role Separation**: {'PASS (distinct submitter vs auditor verified)' if r['role_sep_pass'] else 'FAIL (role separation violation)'}",
-            f"* **4. Living Documentation Parity**: {'PASS (requirements mapped & synchronized)' if r['living_doc_pass'] else 'FAIL (living doc disparity)'}",
-            f"* **5. Commit Hygiene**: {'PASS (squashed commit on sprint branch)' if r['commit_pass'] else 'FAIL (commit hygiene issue)'}",
+            "* **N/A (0 merged tickets in sprint)**: Zero post-Stage-6 merged tickets present in sprint; unmerged WIP and Final Review (Agent) tickets excluded (REQ-PRO-134).",
             "",
         ])
+    else:
+        for r in audit_results:
+            k = r["key"]
+            sm = r["summary"]
+            v = "COMPLIANT" if r["compliant"] else "NON-COMPLIANT"
+            if r.get("sup9_non_code"):
+                sup9_lbls = ", ".join(r.get("sup9_labels") or []) or "SUP.9 non-code"
+                na_txt = f"N/A (SUP.9 non-code resolution: {sup9_lbls})"
+                lines.extend([
+                    f"### Ticket: {k} - {sm}",
+                    f"* **Process Verdict**: **{v}**",
+                    f"* **1. Lifecycle Deliverables**: {na_txt}",
+                    f"* **2. Stage Subtask Lifecycle**: {na_txt}",
+                    f"* **3. 4-Augen-Prinzip & Role Separation**: {na_txt}",
+                    f"* **4. Living Documentation Parity**: {na_txt}",
+                    f"* **5. Commit Hygiene**: {na_txt}",
+                    "",
+                ])
+            else:
+                lines.extend([
+                    f"### Ticket: {k} - {sm}",
+                    f"* **Process Verdict**: **{v}**",
+                    f"* **1. Lifecycle Deliverables**: {'PASS (analysis, specs, plan, walkthrough in docs/engineering/)' if r['deliv_pass'] else 'FAIL (missing stage deliverables)'}",
+                    f"* **2. Stage Subtask Lifecycle**: {'PASS (sequential subtask progression verified)' if r['gate_pass'] else 'FAIL (incomplete gate progression)'}",
+                    f"* **3. 4-Augen-Prinzip & Role Separation**: {'PASS (distinct submitter vs auditor verified)' if r['role_sep_pass'] else 'FAIL (role separation violation)'}",
+                    f"* **4. Living Documentation Parity**: {'PASS (requirements mapped & synchronized)' if r['living_doc_pass'] else 'FAIL (living doc disparity)'}",
+                    f"* **5. Commit Hygiene**: {'PASS (squashed commit on sprint branch)' if r['commit_pass'] else 'FAIL (commit hygiene issue)'}",
+                    "",
+                ])
 
     lines.extend([
         "---",
@@ -1955,7 +2030,7 @@ def qa_audit(sprint_arg=None, sample_size=None, out_path=None, as_role="qa", rol
     print(f"Conducting QA process-compliance audit for Sprint '{s_name}' (ID: {s_id})...")
 
     sp_field = h_config.get("custom_fields", {}).get("story_points", "customfield_10016")
-    url = f"{base}/rest/agile/1.0/sprint/{s_id}/issue?fields=summary,status,issuetype,priority,subtasks,comment,{sp_field}&maxResults=100"
+    url = f"{base}/rest/agile/1.0/sprint/{s_id}/issue?fields=summary,description,status,issuetype,priority,labels,subtasks,comment,{sp_field}&maxResults=100"
     res = jira_request(url, role=as_role, config=config)
     issues = res.get("issues", [])
 
@@ -1986,17 +2061,24 @@ def qa_audit(sprint_arg=None, sample_size=None, out_path=None, as_role="qa", rol
                     except Exception:
                         st["comments"] = []
 
-    # Sampling >= max(2, ceil(len(parent_issues) * 0.10)) tickets
+    # Sampling >= max(2, ceil(len(completed_parents) * 0.10)) merged tickets (REQ-PRO-134.1/.2)
     import math
-    min_sample = max(2, math.ceil(len(parent_issues) * 0.10))
-    sample_size = min_sample if sample_size is None else max(int(sample_size), min_sample)
     completed_parents = [
         p for p in parent_issues
         if p.get("fields", {}).get("status", {}).get("name", "").lower()
-        in ("final review (human)", "final review (agent)", "final review", "erledigt", "closed", "done")
+        in ("final review (human)", "final review", "erledigt", "closed", "done")
     ]
-    pool = completed_parents if len(completed_parents) >= sample_size else parent_issues
-    sampled = pool[:sample_size] if len(pool) >= sample_size else pool
+    total_merged = len(completed_parents)
+    if total_merged == 0:
+        effective_sample_size = 0
+    elif total_merged < 2:
+        effective_sample_size = total_merged
+    else:
+        min_sample = max(2, math.ceil(total_merged * 0.10))
+        requested_sample = min_sample if sample_size is None else max(int(sample_size), min_sample)
+        effective_sample_size = min(requested_sample, total_merged)
+    pool = completed_parents
+    sampled = pool[:effective_sample_size] if effective_sample_size > 0 and len(pool) >= effective_sample_size else list(pool)
 
     audit_results = []
     overall_compliant = True
@@ -2023,6 +2105,24 @@ def qa_audit(sprint_arg=None, sample_size=None, out_path=None, as_role="qa", rol
         summary = item.get("fields", {}).get("summary", "")
         subtasks = item.get("fields", {}).get("subtasks", [])
 
+        # REQ-PRO-134.3: Exempt SUP.9 non-code resolutions (duplicate/rejected/cannot-reproduce)
+        is_sup9_non_code, sup9_labels = _is_sup9_non_code_resolution(item)
+        if is_sup9_non_code:
+            audit_results.append({
+                "key": key,
+                "summary": summary,
+                "deliv_pass": True,
+                "gate_pass": True,
+                "role_sep_pass": True,
+                "living_doc_pass": True,
+                "commit_pass": True,
+                "sup9_non_code": True,
+                "sup9_labels": sup9_labels,
+                "compliant": True,
+                "deliv_details": {},
+            })
+            continue
+
         # 1. Lifecycle Deliverables
         deliv_checks = {
             "analysis": os.path.isfile(os.path.join(repo_root, "docs", "engineering", "analysis", f"{key}_analysis.md")),
@@ -2030,7 +2130,10 @@ def qa_audit(sprint_arg=None, sample_size=None, out_path=None, as_role="qa", rol
                 os.path.isfile(os.path.join(repo_root, "docs", "engineering", "test_specs", f"{key}_test_spec.md"))
                 or os.path.isfile(os.path.join(repo_root, "docs", "engineering", "specifications", f"{key}_spec.md"))
             ),
-            "plan": os.path.isfile(os.path.join(repo_root, "docs", "engineering", "plans", f"{key}_plan.md")),
+            "plan": (
+                os.path.isfile(os.path.join(repo_root, "docs", "engineering", "plans", f"{key}_plan.md"))
+                or os.path.isfile(os.path.join(repo_root, "docs", "engineering", "plans", f"{key}_impl_plan.md"))
+            ),
             "walkthrough": os.path.isfile(os.path.join(repo_root, "docs", "engineering", "walkthroughs", f"{key}_walkthrough.md")),
         }
         deliv_pass = all(deliv_checks.values())
@@ -2105,7 +2208,7 @@ def qa_audit(sprint_arg=None, sample_size=None, out_path=None, as_role="qa", rol
 
         # 4. Living Documentation Parity
         master_req_ids = set(re.findall(r"\bREQ-[A-Z0-9_-]+\b", req_master_text))
-        desc = item.get("fields", {}).get("description", "") or ""
+        desc = _extract_description_text(item.get("fields", {}).get("description"))
         ticket_text_combined = f"{summary} {desc}"
         referenced_reqs = set(re.findall(r"\bREQ-[A-Z0-9_-]+\b", ticket_text_combined))
 
@@ -2172,7 +2275,7 @@ def qa_audit(sprint_arg=None, sample_size=None, out_path=None, as_role="qa", rol
         audit_results=audit_results,
         overall_compliant=overall_compliant,
         auditor_role=as_role,
-        total_tickets=len(parent_issues),
+        total_tickets=total_merged,
     )
 
     if not out_path:

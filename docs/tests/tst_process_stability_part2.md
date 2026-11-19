@@ -1,14 +1,14 @@
 # Living Test Specification: Engineering Process, Stability & Architecture (Part 2 of 2)
 
 **Document ID**: `DOC-TST-PRO-P2`  
-**Version**: 1.0.31  
+**Version**: 1.0.34  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `process_stability_part2`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Tests**: 91
+**Total Tests**: 92
 
 ---
 
@@ -1571,6 +1571,23 @@
   4. *Monotonic Baseline Ratchet & Zero-`Recycle` CI Enforcement (`TST-PRO-133.4`, `tools/test_check_static_analysis_baselines.py`, `ReleaseCiAndLintConfigContractTest.kt`)*:
      • *Given* tightened `DEFAULT_LINT_CEILING <= 216` and an explicit `<issue id="Recycle">` prohibition in `tools/check_static_analysis_baselines.py` + `ReleaseCiAndLintConfigContractTest.kt`, *When* `python3 -m unittest tools/test_check_static_analysis_baselines.py` and `:app:testDebugUnitTest --tests "*.ReleaseCiAndLintConfigContractTest"` execute against live and synthetic inflated/Recycle-containing baseline fixtures, *Then* live baselines pass `exit 0` and any baseline count increase or `Recycle` entry fails deterministically (`Localization Parity: N/A - no UI strings`). Tag tests with `TST-PRO-133.4`.
 
+### TST-PRO-134: **qa-audit Merged-Only Sampling, SUP.9 Non-Code Exemption, Plan Variant & Verifier Parity Suite (ATT-9071)** [Verified]
+- **Requirement(s)**: `REQ-PRO-134`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Component**: `tools/jira_util.py`, `tools/hoechstmass/tools/jira_util.py`, `tools/verify_requirement_governance.py`, `tools/hoechstmass/tools/verify_requirement_governance.py`, `tools/test_jira_accounts.py` (`TestSup9ProblemResolution.test_tst_pro_134_1_and_2_qa_audit_merged_only_and_zero_wip_fallback`, `TestSup9ProblemResolution.test_tst_pro_134_3_and_4_sup9_non_code_exemption_and_impl_plan_variant`), `tools/test_verify_requirement_governance.py` (`TestGrandfatheredSysreqsRemoved.test_scenario_88_tst_pro_134_5_qa_audit_verifier_zero_and_single_merged`), `tools/hoechstmass/tools/test_hoechstmass_tools.py` (`TestHoechstmassPostStage6MergeAndBounceParity.test_hoechstmass_qa_audit_tst_pro_134_parity_and_verifier`)
+- **Jira**: `ATT-9071`
+- **Test Description**:
+  1. *Merged-Only Sampling & Zero WIP Fallback (`TST-PRO-134.1`, `TST-PRO-134.2`, `tools/test_jira_accounts.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`)*:
+     • *Given* mocked Jira sprints mixing `Final Review (Human)` with `Final Review (Agent)` and `Implementation`/`Analysis` WIP tickets (plus `1` merged + `2` WIP and `0` merged + `2` WIP fixtures), *When* `qa_audit()` executes offline (`Rule 5`), *Then* `"final review (agent)"` and WIP tickets are excluded, `min_sample`/`total_tickets` reflect `len(completed_parents)`, and `0`-merged sprints emit a `COMPLIANT` `N/A (0 merged tickets in sprint)` report with `0` CA creations. Tag tests with `TST-PRO-134.1` and `TST-PRO-134.2`.
+  2. *SUP.9 Non-Code Resolution Exemption & `labels` Query Parity (`TST-PRO-134.3`, `tools/test_jira_accounts.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`)*:
+     • *Given* Jira issue query inspection and mocked merged tickets carrying `resolution-duplicate`, `resolution-rejected`, or `resolution-cannot-reproduce` with `0` commits/subtasks/deliverables, *When* `qa_audit()` executes, *Then* Jira queries include `labels` (and `description` in Höchstmaß), code checks record `N/A (SUP.9 non-code resolution)` with PO provenance verified, and `0` non-compliances or CA tickets are created. Tag tests with `TST-PRO-134.3`.
+  3. *Plan Filename Variant Support (`TST-PRO-134.4`, `tools/test_jira_accounts.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`)*:
+     • *Given* merged tickets with `docs/engineering/plans/<KEY>_plan.md` and `docs/engineering/plans/<KEY>_impl_plan.md`, *When* `qa_audit()` runs Lifecycle Deliverables checks, *Then* both variants pass. Tag tests with `TST-PRO-134.4`.
+  4. *Governance Verifier Compatibility (`TST-PRO-134.5`, `tools/test_verify_requirement_governance.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`)*:
+     • *Given* `N/A (0 merged tickets in sprint)` and `1 / 1` low-completion QA audit markdown fixtures alongside under-sampled `N >= 2` fixtures, *When* `_validate_single_qa_audit()` runs, *Then* valid low/zero-merged audits pass while under-sampled `N >= 2` audits still fail (`Localization Parity: N/A - Python tooling only`). Tag tests with `TST-PRO-134.5`.
+
 ---
 
 ## Change History
@@ -1609,3 +1626,6 @@
 | `1.0.29` | 2026-11-19 | Lane A Flash (`ATT-8199`, `--as agent1`) | `ATT-8199` | Added `[Planned]` `TST-PRO-133` (`TST-PRO-133.1`–`TST-PRO-133.4`: evasion-resistant scanner tripwire matrix, `RepositoryServiceCleanlinessContractTest` & `SystemContextContractTest` migration, `22` `Recycle` verification/pruning, conditional `'Range'` check, & monotonic baseline ratchet). |
 | `1.0.30` | 2026-11-19 | Lane A Flash (`ATT-8199`, `--as agent1`) | `ATT-8199` | Promoted `TST-PRO-133` to `[Implemented]` in Stage 4 (`63/63` targeted contract tests PASS, `6/6` `test_check_static_analysis_baselines.py` OK, `lint-baseline.xml` `216` / `0` `Recycle`). |
 | `1.0.31` | 2026-11-19 | Lane A Flash (`ATT-8199`, `--as agent1`) | `ATT-8199` | Promoted `TST-PRO-133` (`TST-PRO-133.1`–`TST-PRO-133.4`) to `[Verified]` in Stage 5 (`ATT-8199_walkthrough.md`, `Rule 7.5` reused Gate 4 evidence). |
+| `1.0.32` | 2026-11-19 | Lane A Flash (`ATT-9071`, `--as agent1`) | `ATT-9071` | Added `[Planned]` `TST-PRO-134` (`TST-PRO-134.1`–`TST-PRO-134.5`: merged-only sampling, zero WIP fallback & 0/1-merged handling, SUP.9 non-code exemption + `labels` fetch, `_impl_plan.md` variant, verifier parity). |
+| `1.0.33` | 2026-11-19 | Lane A Flash (`ATT-9071`, `--as agent1`) | `ATT-9071` | Promoted `TST-PRO-134` (`TST-PRO-134.1`–`TST-PRO-134.5`) to `[Implemented]` in Stage 4 (`tools/test_jira_accounts.py`, `tools/test_verify_requirement_governance.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`). |
+| `1.0.34` | 2026-11-19 | Lane A Flash (`ATT-9071`, `--as agent1`) | `ATT-9071` | Promoted `TST-PRO-134` (`TST-PRO-134.1`–`TST-PRO-134.5`) to `[Verified]` in Stage 5 with exact test class/method citations (`ATT-9071_walkthrough.md`, `Rule 7.5` reused Gate 4 evidence). |

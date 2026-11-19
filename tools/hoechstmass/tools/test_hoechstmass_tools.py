@@ -1182,6 +1182,86 @@ class TestHoechstmassPostStage6MergeAndBounceParity(unittest.TestCase):
         self.assertIn("git diff sprint/<SPRINT_NAME>...feature/<KEY>", stage6)
         self.assertIn("strictly *after* `final-review-verdict PASS`", stage6)
 
+    def test_hoechstmass_qa_audit_tst_pro_134_parity_and_verifier(self):
+        """TST-PRO-134.1, TST-PRO-134.2, TST-PRO-134.3, TST-PRO-134.4, TST-PRO-134.5: Höchstmaß qa_audit & verifier parity."""
+        from unittest.mock import patch
+        import tempfile
+        import subprocess
+
+        seen_urls = []
+        subtasks_ok = [
+            {
+                "key": f"HM-2-{i}",
+                "fields": {"summary": f"[{lbl}] Task", "status": {"name": "Erledigt"}},
+                "comments": [{"author": {"displayName": "AI Agent 2"}, "body": "[ROLE: agent2]\nGATE_VERDICT: PASS"}],
+            }
+            for i, lbl in enumerate(["Analysis", "Req & Test Spec", "Impl-Plan", "Implementation", "Test"], start=1)
+        ]
+
+        current_issues = [
+            {"key": "HM-101", "fields": {"summary": "Merged impl plan", "description": "Implements REQ-PRO-134", "status": {"name": "Final Review (Human)"}, "issuetype": {"subtask": False}, "labels": [], "subtasks": subtasks_ok}},
+            {"key": "HM-102", "fields": {"summary": "Dup bug", "description": "", "status": {"name": "Erledigt"}, "issuetype": {"subtask": False}, "labels": ["resolution-duplicate"], "subtasks": []}},
+            {"key": "HM-103", "fields": {"summary": "Unmerged Stage 6", "description": "", "status": {"name": "Final Review (Agent)"}, "issuetype": {"subtask": False}, "labels": [], "subtasks": []}},
+            {"key": "HM-104", "fields": {"summary": "WIP Impl", "description": "", "status": {"name": "Implementation"}, "issuetype": {"subtask": False}, "labels": [], "subtasks": []}},
+        ]
+
+        def mock_jira_req(url, method="GET", payload=None, role="qa", **kwargs):
+            if "/rest/agile/1.0/board" in url and "/sprint" not in url:
+                return {"values": [{"id": 1, "name": "HM Board"}]}
+            elif "/rest/agile/1.0/board/1/sprint?state=active" in url:
+                return {"values": [{"id": 464, "name": "2026-11-19_03_Nacht", "state": "active"}]}
+            elif "/rest/agile/1.0/sprint/464/issue" in url:
+                seen_urls.append(url)
+                return {"issues": current_issues, "total": len(current_issues)}
+            return {}
+
+        with patch("tools.hoechstmass.tools.jira_util.jira_request", side_effect=mock_jira_req):
+            with tempfile.TemporaryDirectory() as tmpdir:
+                subprocess.run(["git", "init"], cwd=tmpdir, check=True, stdout=subprocess.DEVNULL)
+                subprocess.run(["git", "config", "user.name", "Tester"], cwd=tmpdir, check=True)
+                subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=tmpdir, check=True)
+                subprocess.run(["git", "commit", "--allow-empty", "-m", "HM-101: Fix"], cwd=tmpdir, check=True, stdout=subprocess.DEVNULL)
+                for sub, suf in [("analysis", "_analysis.md"), ("test_specs", "_test_spec.md"), ("plans", "_impl_plan.md"), ("walkthroughs", "_walkthrough.md")]:
+                    d = os.path.join(tmpdir, "docs", "engineering", sub)
+                    os.makedirs(d, exist_ok=True)
+                    with open(os.path.join(d, f"HM-101{suf}"), "w", encoding="utf-8") as f:
+                        f.write("# HM-101\n")
+                os.makedirs(os.path.join(tmpdir, "docs"), exist_ok=True)
+                with open(os.path.join(tmpdir, "docs", "requirements.md"), "w", encoding="utf-8") as f:
+                    f.write("| REQ-PRO-134 | QA | Tool | Planned | HM-101 |\n")
+
+                out_file = os.path.join(tmpdir, "docs", "engineering", "qa_audits", "sprint_2026-11-19_03_nacht.md")
+                _, res = qa_audit(sprint_arg=None, sample_size=4, out_path=out_file, role="agent2", repo_root=tmpdir)
+                self.assertEqual({r["key"] for r in res}, {"HM-101", "HM-102"})
+                self.assertTrue(all(r["compliant"] for r in res), res)
+                self.assertTrue(any("labels" in u and "description" in u for u in seen_urls), seen_urls)
+                ok_two, msgs_two = verify_qa_audits("sprint_2026-11-19_03_nacht", repo_root=tmpdir)
+                self.assertTrue(ok_two, msgs_two)
+
+            # 0-merged sprint -> N/A (0 merged tickets in sprint) + verify_qa_audits PASS
+            current_issues = [
+                {"key": "HM-103", "fields": {"summary": "Unmerged Stage 6", "description": "", "status": {"name": "Final Review (Agent)"}, "issuetype": {"subtask": False}, "labels": [], "subtasks": []}},
+                {"key": "HM-104", "fields": {"summary": "WIP Impl", "description": "", "status": {"name": "Implementation"}, "issuetype": {"subtask": False}, "labels": [], "subtasks": []}},
+            ]
+            with tempfile.TemporaryDirectory() as tmpdir:
+                out_zero = os.path.join(tmpdir, "docs", "engineering", "qa_audits", "sprint_2026-11-19_03_nacht.md")
+                _, res_zero = qa_audit(sprint_arg=None, out_path=out_zero, role="agent2", repo_root=tmpdir)
+                self.assertEqual(res_zero, [])
+                ok_zero, msgs_zero = verify_qa_audits("sprint_2026-11-19_03_nacht", repo_root=tmpdir)
+                self.assertTrue(ok_zero, msgs_zero)
+
+            # 1-merged sprint -> 1/1 sampled without WIP fallback + verify_qa_audits PASS
+            current_issues = [
+                {"key": "HM-102", "fields": {"summary": "Dup bug", "description": "", "status": {"name": "Erledigt"}, "issuetype": {"subtask": False}, "labels": ["resolution-duplicate"], "subtasks": []}},
+                {"key": "HM-104", "fields": {"summary": "WIP Impl", "description": "", "status": {"name": "Implementation"}, "issuetype": {"subtask": False}, "labels": [], "subtasks": []}},
+            ]
+            with tempfile.TemporaryDirectory() as tmpdir:
+                out_one = os.path.join(tmpdir, "docs", "engineering", "qa_audits", "sprint_2026-11-19_03_nacht.md")
+                _, res_one = qa_audit(sprint_arg=None, out_path=out_one, role="agent2", repo_root=tmpdir)
+                self.assertEqual([r["key"] for r in res_one], ["HM-102"])
+                ok_one, msgs_one = verify_qa_audits("sprint_2026-11-19_03_nacht", repo_root=tmpdir)
+                self.assertTrue(ok_one, msgs_one)
+
 
 if __name__ == "__main__":
     unittest.main()
