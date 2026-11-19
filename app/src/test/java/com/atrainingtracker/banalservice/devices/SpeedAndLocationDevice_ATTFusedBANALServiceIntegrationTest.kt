@@ -343,6 +343,100 @@ class SpeedAndLocationDevice_ATTFusedBANALServiceIntegrationTest {
         }
     }
 
+    /**
+     * TST-FIL-030.2: End-to-end Robolectric verification on real `BANALService` +
+     * `SpeedAndLocationDevice_ATTFused` with ZERO test hints:
+     * 1. Sensorless unselected running infers `BSportType.RUN` from 50-Hz `ACC` + GNSS speed
+     *    even without `ACTIVITY_RECOGNITION` (`TYPE_STEP_DETECTOR`).
+     * 2. `BANALService.getAuthoritativeBSportType()` stays `UNKNOWN` (anti-circular isolation
+     *    for `PhoneCarriageClassifier`) while `getBSportType()` / `getActiveBSportType()` expose
+     *    `BSportType.RUN` and automatically register `SensorType.STRIDES` across `WALKING_TRANSITION`.
+     * 3. Inferred transition NEVER broadcasts `SPORT_TYPE_CHANGED_BY_USER_INTENT`.
+     * 4. `onAccumulatorsReset()` clears discriminator & `BANALService` Tier 3 inferred state.
+     */
+    @Test
+    fun sensorlessUnselectedRun_infersRunWithSplitAuthoritativeHintAndActivatesStrides_tstFil030_2() {
+        shadowOf(appContext as android.app.Application).grantPermissions(
+            android.Manifest.permission.ACCESS_FINE_LOCATION
+        )
+        val controller = Robolectric.buildService(BANALService::class.java)
+        val service = controller.create().get()
+        var fakeClockMs = 1000L
+        val sensorManager = MySensorManager(service)
+        val device = object : SpeedAndLocationDevice_ATTFused(service, sensorManager) {
+            override fun currentTimeMillis(): Long = fakeClockMs
+            override fun hasActivityRecognitionPermission(): Boolean = false
+            fun triggerResetForTest() { onAccumulatorsReset() }
+        }
+
+        val userChangedCount = java.util.concurrent.atomic.AtomicInteger(0)
+        val userChangedReceiver = object : android.content.BroadcastReceiver() {
+            override fun onReceive(context: android.content.Context?, intent: Intent?) {
+                if (intent?.action == BANALService.SPORT_TYPE_CHANGED_BY_USER_INTENT) {
+                    userChangedCount.incrementAndGet()
+                }
+            }
+        }
+        androidx.core.content.ContextCompat.registerReceiver(
+            service,
+            userChangedReceiver,
+            android.content.IntentFilter(BANALService.SPORT_TYPE_CHANGED_BY_USER_INTENT),
+            androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED
+        )
+
+        try {
+            assertEquals(BSportType.UNKNOWN, service.bSportType)
+            assertEquals(BSportType.UNKNOWN, service.authoritativeBSportType)
+
+            // Stream 15 s of sensorless 2.8 Hz running (2.5 m/s -> L_step = 0.89 m) via 50-Hz ACC + GNSS
+            for (sec in 0 until 15) {
+                for (k in 0 until 50) {
+                    fakeClockMs = 1000L + sec * 1000L + k * 20L
+                    val tSec = fakeClockMs / 1000.0
+                    val az = (9.81 + 6.5 * sin(2.0 * PI * 2.8 * tSec)).toFloat()
+                    device.onSensorChanged(
+                        createSyntheticSensorEvent(
+                            Sensor.TYPE_ACCELEROMETER,
+                            fakeClockMs * 1_000_000L,
+                            floatArrayOf(0.4f, 0.3f, az)
+                        )
+                    )
+                }
+                val loc = android.location.Location(android.location.LocationManager.GPS_PROVIDER).apply {
+                    latitude = 48.137 + sec * 0.000022
+                    longitude = 11.576
+                    accuracy = 4.0f
+                    speed = 2.5f
+                    time = fakeClockMs
+                }
+                device.onLocationChanged(loc)
+            }
+            shadowOf(Looper.getMainLooper()).idle()
+
+            assertEquals(BSportType.RUN, service.bSportType)
+            assertEquals(BSportType.RUN, BANALService.getActiveBSportType())
+            // Anti-circular split hint: authoritative sport MUST stay UNKNOWN!
+            assertEquals(BSportType.UNKNOWN, service.authoritativeBSportType)
+            assertEquals(BSportType.UNKNOWN, BANALService.getAuthoritativeActiveBSportType())
+            // Inferred sport must NEVER broadcast SPORT_TYPE_CHANGED_BY_USER_INTENT
+            assertEquals(0, userChangedCount.get())
+            assertNotNull("Inferred RUN should activate STRIDES sensor automatically", device.mStridesSensor)
+            assertNotNull("MovingSpeedSummary should be published to BANALService", service.movingSpeedSummary)
+            assertTrue(service.movingSpeedSummary!!.movingSampleCount >= 10)
+
+            // Reset clears discriminator & Tier 3 BANALService state cleanly
+            device.triggerResetForTest()
+            assertEquals(BSportType.UNKNOWN, service.bSportType)
+            assertEquals(BSportType.UNKNOWN, device.sportDiscriminator.inferredBSportType)
+            assertNull(service.movingSpeedSummary)
+        } finally {
+            try { service.unregisterReceiver(userChangedReceiver) } catch (_: Throwable) {}
+            device.shutDown()
+            sensorManager.shutDown()
+            controller.destroy()
+        }
+    }
+
     private fun createSyntheticSensorEvent(sensorType: Int, timestampNs: Long, data: FloatArray): SensorEvent {
         val mockSensor = mockk<Sensor>(relaxed = true) {
             every { type } returns sensorType

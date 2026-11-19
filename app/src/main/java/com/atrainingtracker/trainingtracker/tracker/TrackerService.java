@@ -112,6 +112,7 @@ import java.util.List;
 import java.util.HashSet;
 import java.util.Set;
 import com.atrainingtracker.banalservice.BSportType;
+import com.atrainingtracker.banalservice.odometry.MovingSpeedSummary;
 import java.util.Locale;
 import java.util.Map;
 import java.util.SortedSet;
@@ -517,36 +518,33 @@ public class TrackerService extends Service {
         public final boolean avgSpeedCalculable;
         public final double totalDistance_m;
         public final int timeActive_s;
+        @Nullable public final MovingSpeedSummary movingSpeedSummary;
 
-        public BanalFinalizationSnapshot(
-                int lapNr,
-                int lapTime_s,
-                double lapDistance_m,
-                @Nullable Set<Long> activeRemoteDeviceIds,
-                @Nullable Set<SensorType> accumulatedSensorTypes,
-                @Nullable String accumulatedGCDataString,
-                @Nullable BSportType bSportType,
-                @Nullable BSportType userSelectedSportType,
-                long sportTypeId) {
+        public BanalFinalizationSnapshot(int lapNr, int lapTime_s, double lapDistance_m,
+                @Nullable Set<Long> activeRemoteDeviceIds, @Nullable Set<SensorType> accumulatedSensorTypes,
+                @Nullable String accumulatedGCDataString, @Nullable BSportType bSportType,
+                @Nullable BSportType userSelectedSportType, long sportTypeId) {
             this(lapNr, lapTime_s, lapDistance_m, activeRemoteDeviceIds, accumulatedSensorTypes,
                     accumulatedGCDataString, bSportType, userSelectedSportType, sportTypeId,
-                    0.0, false, 0.0, 0);
+                    0.0, false, 0.0, 0, null);
         }
 
-        public BanalFinalizationSnapshot(
-                int lapNr,
-                int lapTime_s,
-                double lapDistance_m,
-                @Nullable Set<Long> activeRemoteDeviceIds,
-                @Nullable Set<SensorType> accumulatedSensorTypes,
-                @Nullable String accumulatedGCDataString,
-                @Nullable BSportType bSportType,
-                @Nullable BSportType userSelectedSportType,
-                long sportTypeId,
-                double avgSpeed,
-                boolean avgSpeedCalculable,
-                double totalDistance_m,
-                int timeActive_s) {
+        public BanalFinalizationSnapshot(int lapNr, int lapTime_s, double lapDistance_m,
+                @Nullable Set<Long> activeRemoteDeviceIds, @Nullable Set<SensorType> accumulatedSensorTypes,
+                @Nullable String accumulatedGCDataString, @Nullable BSportType bSportType,
+                @Nullable BSportType userSelectedSportType, long sportTypeId,
+                double avgSpeed, boolean avgSpeedCalculable, double totalDistance_m, int timeActive_s) {
+            this(lapNr, lapTime_s, lapDistance_m, activeRemoteDeviceIds, accumulatedSensorTypes,
+                    accumulatedGCDataString, bSportType, userSelectedSportType, sportTypeId,
+                    avgSpeed, avgSpeedCalculable, totalDistance_m, timeActive_s, null);
+        }
+
+        public BanalFinalizationSnapshot(int lapNr, int lapTime_s, double lapDistance_m,
+                @Nullable Set<Long> activeRemoteDeviceIds, @Nullable Set<SensorType> accumulatedSensorTypes,
+                @Nullable String accumulatedGCDataString, @Nullable BSportType bSportType,
+                @Nullable BSportType userSelectedSportType, long sportTypeId,
+                double avgSpeed, boolean avgSpeedCalculable, double totalDistance_m, int timeActive_s,
+                @Nullable MovingSpeedSummary movingSpeedSummary) {
             this.lapNr = lapNr;
             this.lapTime_s = lapTime_s;
             this.lapDistance_m = lapDistance_m;
@@ -564,6 +562,7 @@ public class TrackerService extends Service {
             this.avgSpeedCalculable = avgSpeedCalculable;
             this.totalDistance_m = totalDistance_m;
             this.timeActive_s = timeActive_s;
+            this.movingSpeedSummary = movingSpeedSummary;
         }
 
         @NonNull
@@ -650,37 +649,17 @@ public class TrackerService extends Service {
             }
 
             BSportType userSelectedSport = null;
-            try {
-                userSelectedSport = banalService.getUserSelectedBSportType();
-            } catch (Throwable ignored) {
-            }
+            try { userSelectedSport = banalService.getUserSelectedBSportType(); } catch (Throwable ignored) {}
+            MovingSpeedSummary movingSummary = null;
+            try { movingSummary = banalService.getMovingSpeedSummary(); } catch (Throwable ignored) {}
 
-            long sportTypeId = BANALService.getDefaultSportTypeId();
-            try {
-                EquipmentAndSportTypeDiscoveryManager discoveryManager =
-                        EquipmentAndSportTypeDiscoveryManager.getInstance(context);
-                if (avgSpeedCalculable) {
-                    sportTypeId = discoveryManager.resolveSportType(deviceIds, bSport, avgSpeed);
-                } else {
-                    sportTypeId = discoveryManager.resolveSportType(deviceIds, bSport);
-                }
-            } catch (Throwable ignored) {
-            }
+            long sportTypeId = EquipmentAndSportTypeDiscoveryManager.resolveSnapshotSportTypeId(
+                    context, banalService, deviceIds, bSport, userSelectedSport, avgSpeed, avgSpeedCalculable, movingSummary);
 
             return new BanalFinalizationSnapshot(
-                    lapNr,
-                    lapTime_s,
-                    lapDistance_m,
-                    deviceIds,
-                    accumulatedSensors,
-                    gcData,
-                    bSport,
-                    userSelectedSport,
-                    sportTypeId,
-                    avgSpeed,
-                    avgSpeedCalculable,
-                    totalDistance_m,
-                    timeActive_s);
+                    lapNr, lapTime_s, lapDistance_m, deviceIds, accumulatedSensors, gcData,
+                    bSport, userSelectedSport, sportTypeId, avgSpeed, avgSpeedCalculable,
+                    totalDistance_m, timeActive_s, movingSummary);
         }
     }
 
@@ -3393,8 +3372,13 @@ public class TrackerService extends Service {
                             ? banalService.getBSportType()
                             : BSportType.UNKNOWN);
 
+            final MovingSpeedSummary effectiveMovingSummary = (snapshot != null && snapshot.movingSpeedSummary != null)
+                    ? snapshot.movingSpeedSummary : liveSession.getMovingSpeedSummary();
+            final double identitySpeed = EquipmentAndSportTypeDiscoveryManager.resolveEffectiveSpeedForIdentity(
+                    banalSportType, effectiveAvgSpeed, effectiveMovingSummary);
+
             // Initial arbitration using currently active devices in memory (more reliable than waiting for DB sync)
-            identity = discoveryManager.resolveIdentity(activeRemoteDeviceIds, banalSportType, effectiveAvgSpeed);
+            identity = discoveryManager.resolveIdentity(activeRemoteDeviceIds, banalSportType, identitySpeed);
 
             LatLng startPosRaw = (liveSession != null) ? liveSession.getStartLatLng() : null;
             LatLng endPosRaw = (liveSession != null) ? liveSession.getLastLatLng() : null;
@@ -3416,7 +3400,7 @@ public class TrackerService extends Service {
                     candidateSports = Collections.singleton(identity.getBSportType());
                 } else {
                     // Tier 3: Speed-Based Multi-Sport Candidate Set
-                    candidateSports = discoveryManager.getCandidateBSportTypes(banalSportType, effectiveAvgSpeed);
+                    candidateSports = discoveryManager.getCandidateBSportTypes(banalSportType, identitySpeed);
                 }
 
                 LatLng minAltPos = repository.getExtremaPosition(workoutId, SensorType.ALTITUDE, ExtremaType.MIN);

@@ -40,6 +40,7 @@ import androidx.core.content.ContextCompat
 import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
+import com.atrainingtracker.banalservice.odometry.KinematicSportTypeDiscriminator
 import com.atrainingtracker.banalservice.odometry.PhoneCarriageClassifier
 import com.atrainingtracker.banalservice.odometry.PhoneCarriageMode
 import com.atrainingtracker.banalservice.odometry.QuaternionGyroProjector
@@ -106,6 +107,9 @@ open class SpeedAndLocationDevice_ATTFused(
     val gyroProjector = QuaternionGyroProjector()
     val wheelCalibrator = WheelCircumferenceCalibrator()
     val carriageClassifier = PhoneCarriageClassifier()
+    val sportDiscriminator = KinematicSportTypeDiscriminator()
+    @Volatile
+    private var mLastPublishedInferredSport: BSportType = BSportType.UNKNOWN
 
     private val mCadenceLock = Any()
     private var mPendingCadenceChanged = false
@@ -418,6 +422,12 @@ open class SpeedAndLocationDevice_ATTFused(
             Sensor.TYPE_ACCELEROMETER -> {
                 super.onSensorChanged(event)
                 if (event.values != null && event.values.size >= 3) {
+                    sportDiscriminator.onAccSample(
+                        event.values[0].toDouble(),
+                        event.values[1].toDouble(),
+                        event.values[2].toDouble(),
+                        nowMs
+                    )
                     processCadenceAccelerometerSample(event.values, nowMs)
                 }
             }
@@ -440,6 +450,7 @@ open class SpeedAndLocationDevice_ATTFused(
             }
             Sensor.TYPE_STEP_DETECTOR -> {
                 carriageClassifier.ingestStepEvent(nowMs)
+                sportDiscriminator.onStepDetected(nowMs)
                 processCadenceStepEvent(nowMs)
             }
             Sensor.TYPE_GYROSCOPE -> {
@@ -492,6 +503,7 @@ open class SpeedAndLocationDevice_ATTFused(
             else -> synchronized(ekf) { ekf.speedMps }
         }
         carriageClassifier.ingestGnssSpeed(speedForClassifier, validBearing, acc, timestampMs)
+        publishInferredSportTelemetry(sportDiscriminator.onSpeedSample(speedForClassifier, timestampMs), timestampMs)
         val activeCarriageMode = updateCarriageClassification(timestampMs, forceClassify = true)
         val activeProfile = activeCarriageMode.profile
 
@@ -699,6 +711,7 @@ open class SpeedAndLocationDevice_ATTFused(
         mLastWheelMeasurementMs = timestampMs
         mLastWheelSpeedMps = speedMps
         carriageClassifier.ingestWheelSpeed(speedMps, timestampMs)
+        publishInferredSportTelemetry(sportDiscriminator.onSpeedSample(speedMps, timestampMs), timestampMs)
         val isNowMoving = speedMps > SPEED_ZERO_THRESHOLD
         updateCarriageClassification(timestampMs, forceClassify = (isNowMoving != wasMoving))
         synchronized(ekf) {
@@ -753,6 +766,7 @@ open class SpeedAndLocationDevice_ATTFused(
         timestampMs: Long
     ) {
         carriageClassifier.ingestGyro(worldYawRate, rawGyroMagRadPerSec, timestampMs)
+        sportDiscriminator.onGyroSample(rawGyroMagRadPerSec, timestampMs)
         val mode = updateCarriageClassification(timestampMs)
         val profile = mode.profile
 
@@ -798,10 +812,11 @@ open class SpeedAndLocationDevice_ATTFused(
         val profile: com.atrainingtracker.banalservice.odometry.CarriageFilterProfile
         val targetYawWindowSec: Double
         if (shouldClassify) {
-            val hint = resolveSportContextHint()
-            carriageClassifier.setSportContext(hint)
+            carriageClassifier.setSportContext(resolveCarriageSportContextHint())
 
             mode = carriageClassifier.classify(timestampMs)
+            publishInferredSportTelemetry(sportDiscriminator.onCarriageMode(mode, timestampMs), timestampMs)
+            val hint = resolveSportContextHint()
             profile = mode.profile
             targetYawWindowSec = if (mode == PhoneCarriageMode.RUN_BICEP_ARM) {
                 val fStep = carriageClassifier.currentStepFrequencyHz(timestampMs)
@@ -1031,6 +1046,7 @@ open class SpeedAndLocationDevice_ATTFused(
     @VisibleForTesting
     internal fun ingestStepEventForTesting(timestampMs: Long) {
         carriageClassifier.ingestStepEvent(timestampMs)
+        sportDiscriminator.onStepDetected(timestampMs)
     }
 
     @VisibleForTesting
@@ -1251,6 +1267,28 @@ open class SpeedAndLocationDevice_ATTFused(
         unregisterStridesSensor()
     }
 
+    private fun resolveCarriageSportContextHint(): SportContextHint =
+        mExplicitSportHintForTest ?: try {
+            val auth = (mContext as? BANALService)?.authoritativeBSportType ?: BANALService.getAuthoritativeActiveBSportType()
+            SportContextHint.fromBSportType(auth)
+        } catch (_: Throwable) {
+            SportContextHint.UNKNOWN
+        }
+
+    private fun publishInferredSportTelemetry(inferredSport: BSportType, timestampMs: Long) {
+        val summary = sportDiscriminator.getMovingSpeedSummary()
+        try {
+            val service = mContext as? BANALService
+            if (service != null) service.setInferredSportTelemetry(inferredSport, summary)
+            else BANALService.updateActiveInferredSportTelemetry(inferredSport, summary)
+        } catch (_: Throwable) {
+        }
+        if (inferredSport != mLastPublishedInferredSport) {
+            mLastPublishedInferredSport = inferredSport
+            handleSportTypeChanged(timestampMs)
+        }
+    }
+
     private fun resolveSportContextHint(): SportContextHint =
         mExplicitSportHintForTest ?: try {
             SportContextHint.fromBSportType(resolveActiveBSportType())
@@ -1292,6 +1330,14 @@ open class SpeedAndLocationDevice_ATTFused(
         mRecentRawGnssFixes.clear()
         clearYawRateWindow()
         carriageClassifier.reset()
+        sportDiscriminator.reset()
+        mLastPublishedInferredSport = BSportType.UNKNOWN
+        try {
+            val service = mContext as? BANALService
+            if (service != null) service.clearInferredSportTelemetry()
+            else BANALService.updateActiveInferredSportTelemetry(BSportType.UNKNOWN, null)
+        } catch (_: Throwable) {
+        }
         mActivityAndCarriageModeSensor?.newValue(PhoneCarriageMode.UNKNOWN.code)
         synchronized(mCadenceLock) {
             cadenceEstimator.reset()

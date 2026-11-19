@@ -22,6 +22,8 @@ import android.util.Log;
 import androidx.annotation.Nullable;
 import androidx.annotation.VisibleForTesting;
 
+import com.atrainingtracker.banalservice.odometry.MovingSpeedHistogram;
+import com.atrainingtracker.banalservice.odometry.MovingSpeedSummary;
 import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries;
 import com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils;
@@ -45,6 +47,7 @@ public class LiveWorkoutSession {
     private final Map<SensorType, RunningStats> sensorStats = new HashMap<>();
     private final Set<SensorType> observedSensorTypes = EnumSet.noneOf(SensorType.class);
     private final Set<SensorType> sensorsForAverage;
+    private final MovingSpeedHistogram movingSpeedHistogram = new MovingSpeedHistogram();
     
     private int stepCounter = 0;
     private final List<LatLng> rawLatLngs = new ArrayList<>();
@@ -102,6 +105,10 @@ public class LiveWorkoutSession {
             }
         }
 
+        if (type == SensorType.SPEED_mps && Double.isFinite(value)) {
+            movingSpeedHistogram.recordOneHzSample(value);
+        }
+
         if (position != null) {
             if (startLatLng == null) startLatLng = position;
             lastLatLng = position;
@@ -113,6 +120,15 @@ public class LiveWorkoutSession {
             sensorStats.put(type, stats);
         }
         return stats.addValue(value, position, sensorsForAverage != null && sensorsForAverage.contains(type));
+    }
+
+    /**
+     * Returns the 1-Hz stop-filtered moving speed summary collected during this live session
+     * as a GPS-only fallback when ATT Fused telemetry is unavailable (`REQ-FIL-030.4`, `ATT-8891`).
+     */
+    @Nullable
+    public synchronized MovingSpeedSummary getMovingSpeedSummary() {
+        return movingSpeedHistogram.snapshot(0.0);
     }
 
     public synchronized LatLng getStartLatLng() {

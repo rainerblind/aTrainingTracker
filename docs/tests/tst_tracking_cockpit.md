@@ -1,14 +1,14 @@
 # Living Test Specification: Tracking & Live Sensor Cockpit
 
 **Document ID**: `DOC-TST-TRK`  
-**Version**: 1.0.66  
+**Version**: 1.0.67  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Tests**: 156
+**Total Tests**: 157
 
 ---
 
@@ -3577,6 +3577,30 @@
   5. *Monolith Ceilings, `SWE.2`/`SYS.2`/`SYS.3` Parity & Governance Hygiene (`TST-FIL-029.5`, `ArchitectureConformanceContractTest.kt`, `SystemLiveTrackingRequirementsContractTest.kt`, `SystemArchitectureDesignContractTest.kt`, `SourceTextReadingAuditContractTest.kt`)*:
      • Verify `TrackerService.java <= 3,556`, `DeviceManager.java <= 1,707`, `WorkoutSamplesDatabaseManager.java <= 1,533`, `WorkoutRepository.kt <= 4,973` (`+0` from `ATT-8895`, `<= 5,117` cap on `e62a6ba4`), zero new `src/main` test reads (`REQ-PRO-049.1`), `N/A - no UI strings`, Stage 4–5 `docs/architecture.md`/`docs/system/` sync, and `verify_requirement_governance.py` `exit 0`.
 
+### TST-FIL-030: **Kinematic `BSportType` Inference & Stop-Filtered Moving-Speed Sport Identity Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Tickets**: `ATT-8891`
+- **Requirement(s)**: `REQ-FIL-030` (`REQ-FIL-030.1`..`REQ-FIL-030.5`)
+- **Component**: `app/src/test/java/com/atrainingtracker/banalservice/odometry/KinematicSportTypeDiscriminatorTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/BANALServiceSportInferenceTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/database/EquipmentAndSportTypeDiscoveryManagerMovingSpeedTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/devices/SpeedAndLocationDevice_ATTFusedTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/devices/SpeedAndLocationDevice_ATTFusedBANALServiceIntegrationTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/BANALServiceLifecycleTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/tracker/TrackerServiceFinalizationTest.kt`, `ArchitectureConformanceContractTest.kt`, `DetailedDesignParityContractTest.kt`, `SystemLiveTrackingRequirementsContractTest.kt`, `SystemArchitectureDesignContractTest.kt`, `SourceTextReadingAuditContractTest.kt`
+- **Test Type**: Unit
+- **Verification Method**: Unit
+- **Procedure**:
+  1. *Kinematic Discrimination, Coasting, Hardware Degradation & Edge-Case Athletes (`TST-FIL-030.1`, `KinematicSportTypeDiscriminatorTest.kt`)*:
+     • Replay multi-stop errand cycling profiles (`Metzger` `1.35 m/s` session avg / `p50 = 3.88 m/s` / `p90 = 6.34 m/s` / coasting segments; `Norma #9`; `Zum Bäcker #57`), asserting `BSportType.BIKE` inference, `coastingSeconds > 0`, and accurate stop-filtered `MovingSpeedSummary` (`movingMeanMps`, `p50Mps`, `p90Mps`, `movingSampleCount`) unaffected by `15–25 min` stationary gaps.
+     • Replay `Kurze Runde #52` (`1.9–2.6 m/s`, `0 s` coasting, `2.6–3.0 Hz` steps) AND fast `5.6 m/s` interval running (`3.2 Hz` impacts, $L_{\text{step}} = 1.75\text{ m}$) under both full-sensor and degraded budget-phone configurations (`TYPE_PRESSURE == null`, `TYPE_GYROSCOPE == null`, `TYPE_ROTATION_VECTOR == null`, `ACTIVITY_RECOGNITION` denied -> permission-free 50-Hz `TYPE_ACCELEROMETER` via `ImuCadenceDsp`), asserting `BSportType.RUN` within `<= 30 s` and zero exceptions.
+     • Replay slow `2.0 m/s` steep uphill MTB cycling (no `2.4–3.6 Hz` impact periodicity, cycling carriage/crank rhythm) and a `RUN -> BIKE` mid-session transition (brief initial jog followed by `>= 3 s` coasting at `v > 3.0 m/s` and cycling carriage), asserting uphill MTB avoids false `RUN` latching and `RUN -> BIKE` transitions cleanly via bounded hysteresis.
+  2. *Split Sport Context Hint & `SpeedAndLocationDevice_ATTFused` Integration (`TST-FIL-030.2`, `SpeedAndLocationDevice_ATTFusedTest.kt`, `SpeedAndLocationDevice_ATTFusedBANALServiceIntegrationTest.kt`)*:
+     • Verify `PhoneCarriageClassifier.setSportContext(...)` receives strictly `BANALService.getAuthoritativeBSportType()` (`SportContextHint.UNKNOWN` during sensorless unselected sessions even after kinematic inference settles to `RUN`/`BIKE`), preventing circular feedback.
+     • Verify downstream `SmartphoneImuCadenceEstimator` and `applyCadenceAndStrideSensors()` observe full `BANALService.getBSportType()` so kinematically inferred `BSportType.RUN` dynamically registers `SensorType.STRIDES`, retains stride counting across `WALKING_TRANSITION` walk breaks, suppresses false cycling RPM on transient carriage flicker, never broadcasts `SPORT_TYPE_CHANGED_BY_USER_INTENT`, and resets cleanly on `onAccumulatorsReset()` / `shutDown()`.
+  3. *`BANALService` 4-Tier Precedence, Unified `getSportTypeId` & `RESET_ACCUMULATORS_INTENT` Lifecycle (`TST-FIL-030.3`, `BANALServiceSportInferenceTest.kt`, `BANALServiceLifecycleTest.kt`)*:
+     • Verify strict precedence: Tier 1 `mHaveUserSelectedSportType` (including explicit `OTHER`/`WALK`) > Tier 2 `DeviceManager.getSportType()` (`BIKE_POWER`/`BIKE_CADENCE`/`RUN_SPEED`) > Tier 3 `mInferredBSportType` > Tier 4 `UNKNOWN`, with zero SQLite queries on `getBSportType()`/`getActiveBSportType()`/`setInferredSportTelemetry()`.
+     • Verify unified `getSportTypeId()` and `getSportTypeId(avgSpd)` both route through `getBSportType()`, and verify `RESET_ACCUMULATORS_INTENT` clears `mInferredBSportType` and `mMovingSpeedSummary` while strictly preserving `mHaveUserSelectedSportType`, `mUserSelectedSportTypeId`, and `mUserSelectedBSportType` (`onDestroy()` clears all).
+  4. *Moving-Speed Discovery, Sparse-Sample Floor & Zero-Bloat Finalization (`TST-FIL-030.4`, `EquipmentAndSportTypeDiscoveryManagerMovingSpeedTest.kt`, `TrackerServiceFinalizationTest.kt`)*:
+     • Verify `EquipmentAndSportTypeDiscoveryManager` preserves existing 2/3-arg signatures, falls back strictly to `sessionAvgSpeed` when `movingSampleCount < 10` (indoor/treadmill/short walk), uses `movingMeanMps` for `UNKNOWN`/`RUN` (preventing `p90` misclassification of fast `4.3–5.6 m/s` runners into `MTB`/`BIKE`), and uses cycling cruising speed under `BSportType.BIKE` so `Metzger`/`Norma #9`/`Zum Bäcker #57` resolve to `BIKE` (`Endurance` / linked bike gear) instead of `WALK`/`RUN`.
+     • Verify `TrackerService` (`BanalFinalizationSnapshot` backward-compatible 4-arg/6-arg overloads + `finalizeLiveSession()`) and `LiveWorkoutSession` 1-Hz moving-speed fallback pass moving-speed-aware identity while preserving `WorkoutSummaries.SPEED_AVERAGE_mps` and `SensorType.SPEED_mps` `ExtremaType.AVG` as `mDistanceTotal_m / mTimeActive_s` (`SCRUM-108` / `REQ-TRK-030.3`) with zero new main-thread SQLite queries.
+  5. *Monolith Ceilings, `SWE.2`/`SWE.3`/`SYS.2`/`SYS.3` Parity & Governance Hygiene (`TST-FIL-030.5`, `ArchitectureConformanceContractTest.kt`, `DetailedDesignParityContractTest.kt`, `SystemLiveTrackingRequirementsContractTest.kt`, `SystemArchitectureDesignContractTest.kt`, `SourceTextReadingAuditContractTest.kt`)*:
+     • Verify `TrackerService.java <= 3,556` (`3,540`), `DeviceManager.java <= 1,707`, `SpeedAndLocationDevice_ATTFused.kt < 1,500` (`1,417`), `BANALService.java <= 1,035` (`1,018`), `N/A - no UI strings`, zero new `src/main` test reads (`REQ-PRO-049.1`), Stage 4–5 `docs/architecture.md`/`banal_service.md`/`docs/system/` parity, and `verify_requirement_governance.py` `exit 0`.
+
 ---
 
 ## Change History
@@ -3640,3 +3664,4 @@
 | `1.0.64` | 2026-11-19 | AI Agent (`ATT-8965`, `--as agent1`) | `ATT-8965` | Added & verified `TST-CON-052` (`[Verified]`, `TST-CON-052.1`–`.3`) following Gate 4 Pass (`ATT-9083`: `105/105` incremental `--rerun` PASS; Author Stage 4 `103/103` across 14 suites, `0` new compiler warnings) reusing Gate 4 evidence (`Rule 7.5`, zero `app/` edits post-Gate 4) and `docs/engineering/walkthroughs/ATT-8965_walkthrough.md`. |
 | `1.0.65` | 2026-11-19 | AI Agent (`ATT-8965`, `--as agent1`) | `ATT-8965` | Stage 6 Bounce 1/3 heal: added regression unit tests for `effectiveDelayMs` live clamping (`SensorReconnectBackoffPolicyTest`, `BLEReconnectRobustnessTest`), disable-while-pending zombie cleanup & runnable-identity cancellation race (`DeviceSearchPeriodicRetryCoordinatorTest`, `DeviceManagerSearchQueueTest`), and Polar echo double-advance / `blePowerStateChanged` / exception reschedule (`PolarOnlineStreamingBridgeTest`); set `[Implemented]` pending verification. |
 | `1.0.66` | 2026-11-19 | AI Agent (`ATT-8965`, `--as agent1`) | `ATT-8965` | Promoted `TST-CON-052` to `[Verified]` in Stage 5 (Bounce 2) reusing Gate 4 Bounce 2 Pass (`ATT-9088`: `128/128` incremental `--rerun` PASS across 16 suites, zero `app/` changes post-`587730da` per `Rule 7.5`) and `docs/engineering/walkthroughs/ATT-8965_walkthrough.md`. |
+| `1.0.67` | 2026-11-19 | AI Agent (`ATT-8891`, `--as agent1`) | `ATT-8891` | Added & verified `TST-FIL-030` (`[Verified]`, `TST-FIL-030.1`–`.5`) rebased cleanly atop `sprint/2026-11-19_01_Früh` (`6bb37af4`) reusing Gate 4 Pass (`ATT-9091`: `19` suites / `147/147` PASS, `0` failed, `0` skipped, zero `app/` diff post-`ee81c8ae` per `Rule 7.5`), static baselines (`lint = 216`, `detekt = 9509`) & safety linters PASS, and `docs/engineering/walkthroughs/ATT-8891_walkthrough.md`. |
