@@ -28,6 +28,7 @@ import android.provider.BaseColumns
 import com.atrainingtracker.trainingtracker.climbs.Climb
 import com.atrainingtracker.trainingtracker.climbs.ClimbCategory
 import com.atrainingtracker.trainingtracker.climbs.ClimbDeduplicator
+import com.atrainingtracker.trainingtracker.climbs.GeoBoundingBox
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.CoroutineDispatcher
@@ -107,51 +108,40 @@ class ClimbsDatabaseManager(
      */
     suspend fun insertClimb(climb: Climb): Long = withContext(dbDispatcher) {
         val db = dbHelper.writableDatabase
-        val values = ContentValues().apply {
-            put(ClimbsDbHelper.COLUMN_NAME, climb.name)
-            if (climb.routeId != null) {
-                put(ClimbsDbHelper.COLUMN_ROUTE_ID, climb.routeId)
-            } else {
-                putNull(ClimbsDbHelper.COLUMN_ROUTE_ID)
-            }
-            put(ClimbsDbHelper.COLUMN_START_LAT, climb.startLat)
-            put(ClimbsDbHelper.COLUMN_START_LNG, climb.startLng)
-            put(ClimbsDbHelper.COLUMN_END_LAT, climb.endLat)
-            put(ClimbsDbHelper.COLUMN_END_LNG, climb.endLng)
-            put(ClimbsDbHelper.COLUMN_DISTANCE_M, climb.distanceMeters)
-            put(ClimbsDbHelper.COLUMN_ELEVATION_GAIN_M, climb.elevationGainMeters)
-            put(ClimbsDbHelper.COLUMN_AVG_GRADE, climb.avgGradePercent)
-            put(ClimbsDbHelper.COLUMN_MAX_GRADE, climb.maxGradePercent)
-            put(ClimbsDbHelper.COLUMN_CATEGORY, climb.category.name)
-            put(ClimbsDbHelper.COLUMN_PATH_POLYLINE, serializePathPoints(climb.pathPoints))
-        }
-        db.insert(ClimbsDbHelper.TABLE_CLIMBS, null, values)
+        db.insert(ClimbsDbHelper.TABLE_CLIMBS, null, climbToContentValues(climb))
     }
 
     /**
-     * Inserts a climb with spatial deduplication on start and summit coordinates or corridor overlap (REQ-CLM-011.1).
+     * Inserts a climb with spatial deduplication on start and summit coordinates or corridor overlap (REQ-CLM-011.1, REQ-STB-021.1).
      * If an existing climb matches within [thresholdMeters] or shares >= 70% corridor overlap, returns existing ID.
      */
     suspend fun insertClimbWithDeduplication(
         climb: Climb,
         thresholdMeters: Float = 50.0f
     ): Long = withContext(dbDispatcher) {
-        val existingClimbs = getAllClimbsInternal()
-        for (cand in existingClimbs) {
-            if (ClimbDeduplicator.isDuplicateOrOverlapping(climb, cand, thresholdMeters)) {
-                if (climb.routeId != null && cand.routeId == null) {
-                    updateClimb(cand.copy(routeId = climb.routeId))
-                }
-                return@withContext cand.id
+        val db = dbHelper.writableDatabase
+        val existingMeta = getAllClimbsMetadataInternal(db)
+        val pathCache = HashMap<Long, List<PathPoint>>()
+        val matched = findDuplicateMatch(
+            db = db,
+            candMeta = climb.toMetadata(),
+            candidates = existingMeta,
+            thresholdMeters = thresholdMeters,
+            pathCache = pathCache
+        )
+        if (matched != null) {
+            if (climb.routeId != null && matched.routeId == null) {
+                updateClimbRouteId(db, matched.id, climb.routeId)
             }
+            return@withContext matched.id
         }
 
-        insertClimb(climb)
+        db.insert(ClimbsDbHelper.TABLE_CLIMBS, null, climbToContentValues(climb))
     }
 
     /**
-     * Inserts a collection of climbs in a single atomic SQLite transaction with spatial deduplication (REQ-MAP-027, REQ-CLM-011.1).
-     * Eliminates transaction overhead and SQLite lock contention on batch route imports and workout backfills.
+     * Inserts a collection of climbs in a single atomic SQLite transaction with spatial deduplication (REQ-MAP-027, REQ-CLM-011.1, REQ-STB-021.1).
+     * Eliminates transaction overhead, SQLite lock contention, and eager polyline deserialization on batch imports.
      */
     suspend fun insertClimbsWithDeduplicationBatch(
         climbs: List<Climb>,
@@ -159,58 +149,37 @@ class ClimbsDatabaseManager(
     ): List<Long> = withContext(dbDispatcher) {
         if (climbs.isEmpty()) return@withContext emptyList()
         val db = dbHelper.writableDatabase
-        val existingClimbs = getAllClimbsInternal().toMutableList()
+        val existingMeta = getAllClimbsMetadataInternal(db).toMutableList()
+        val pathCache = HashMap<Long, List<PathPoint>>()
         val resultIds = mutableListOf<Long>()
 
         db.beginTransaction()
         try {
             for (climb in climbs) {
-                var matchedCand: Climb? = null
-                for (cand in existingClimbs) {
-                    if (ClimbDeduplicator.isDuplicateOrOverlapping(climb, cand, thresholdMeters)) {
-                        matchedCand = cand
-                        break
-                    }
-                }
-                if (matchedCand != null) {
-                    if (climb.routeId != null && matchedCand.routeId == null) {
-                        val values = ContentValues().apply {
-                            put(ClimbsDbHelper.COLUMN_ROUTE_ID, climb.routeId)
-                        }
-                        db.update(
-                            ClimbsDbHelper.TABLE_CLIMBS,
-                            values,
-                            "${ClimbsDbHelper.COLUMN_ID} = ?",
-                            arrayOf(matchedCand.id.toString())
-                        )
-                        val idx = existingClimbs.indexOfFirst { it.id == matchedCand.id }
+                val matched = findDuplicateMatch(
+                    db = db,
+                    candMeta = climb.toMetadata(),
+                    candidates = existingMeta,
+                    thresholdMeters = thresholdMeters,
+                    pathCache = pathCache
+                )
+                if (matched != null) {
+                    if (climb.routeId != null && matched.routeId == null) {
+                        updateClimbRouteId(db, matched.id, climb.routeId)
+                        val idx = existingMeta.indexOfFirst { it.id == matched.id }
                         if (idx != -1) {
-                            existingClimbs[idx] = matchedCand.copy(routeId = climb.routeId)
+                            existingMeta[idx] = matched.copy(
+                                routeId = climb.routeId,
+                                inMemoryClimb = matched.inMemoryClimb?.copy(routeId = climb.routeId)
+                            )
                         }
                     }
-                    resultIds.add(matchedCand.id)
+                    resultIds.add(matched.id)
                 } else {
-                    val values = ContentValues().apply {
-                        put(ClimbsDbHelper.COLUMN_NAME, climb.name)
-                        if (climb.routeId != null) {
-                            put(ClimbsDbHelper.COLUMN_ROUTE_ID, climb.routeId)
-                        } else {
-                            putNull(ClimbsDbHelper.COLUMN_ROUTE_ID)
-                        }
-                        put(ClimbsDbHelper.COLUMN_START_LAT, climb.startLat)
-                        put(ClimbsDbHelper.COLUMN_START_LNG, climb.startLng)
-                        put(ClimbsDbHelper.COLUMN_END_LAT, climb.endLat)
-                        put(ClimbsDbHelper.COLUMN_END_LNG, climb.endLng)
-                        put(ClimbsDbHelper.COLUMN_DISTANCE_M, climb.distanceMeters)
-                        put(ClimbsDbHelper.COLUMN_ELEVATION_GAIN_M, climb.elevationGainMeters)
-                        put(ClimbsDbHelper.COLUMN_AVG_GRADE, climb.avgGradePercent)
-                        put(ClimbsDbHelper.COLUMN_MAX_GRADE, climb.maxGradePercent)
-                        put(ClimbsDbHelper.COLUMN_CATEGORY, climb.category.name)
-                        put(ClimbsDbHelper.COLUMN_PATH_POLYLINE, serializePathPoints(climb.pathPoints))
-                    }
-                    val newId = db.insert(ClimbsDbHelper.TABLE_CLIMBS, null, values)
+                    val newId = db.insert(ClimbsDbHelper.TABLE_CLIMBS, null, climbToContentValues(climb))
                     resultIds.add(newId)
-                    existingClimbs.add(climb.copy(id = newId))
+                    val inserted = climb.copy(id = newId)
+                    existingMeta.add(inserted.toMetadata())
                 }
             }
             db.setTransactionSuccessful()
@@ -225,73 +194,54 @@ class ClimbsDatabaseManager(
      */
     suspend fun updateClimb(climb: Climb): Int = withContext(dbDispatcher) {
         val db = dbHelper.writableDatabase
-        val values = ContentValues().apply {
-            put(ClimbsDbHelper.COLUMN_NAME, climb.name)
-            if (climb.routeId != null) {
-                put(ClimbsDbHelper.COLUMN_ROUTE_ID, climb.routeId)
-            } else {
-                putNull(ClimbsDbHelper.COLUMN_ROUTE_ID)
-            }
-            put(ClimbsDbHelper.COLUMN_START_LAT, climb.startLat)
-            put(ClimbsDbHelper.COLUMN_START_LNG, climb.startLng)
-            put(ClimbsDbHelper.COLUMN_END_LAT, climb.endLat)
-            put(ClimbsDbHelper.COLUMN_END_LNG, climb.endLng)
-            put(ClimbsDbHelper.COLUMN_DISTANCE_M, climb.distanceMeters)
-            put(ClimbsDbHelper.COLUMN_ELEVATION_GAIN_M, climb.elevationGainMeters)
-            put(ClimbsDbHelper.COLUMN_AVG_GRADE, climb.avgGradePercent)
-            put(ClimbsDbHelper.COLUMN_MAX_GRADE, climb.maxGradePercent)
-            put(ClimbsDbHelper.COLUMN_CATEGORY, climb.category.name)
-            put(ClimbsDbHelper.COLUMN_PATH_POLYLINE, serializePathPoints(climb.pathPoints))
-        }
-        db.update(ClimbsDbHelper.TABLE_CLIMBS, values, "${ClimbsDbHelper.COLUMN_ID} = ?", arrayOf(climb.id.toString()))
+        db.update(
+            ClimbsDbHelper.TABLE_CLIMBS,
+            climbToContentValues(climb),
+            "${ClimbsDbHelper.COLUMN_ID} = ?",
+            arrayOf(climb.id.toString())
+        )
     }
 
     /**
      * Scans all stored climbs in SQLite, identifies duplicate or overlapping climbs,
      * consolidates metadata (preserving route associations), and deletes redundant rows
-     * in a single atomic transaction (REQ-CLM-011.2).
+     * in a single atomic transaction (REQ-CLM-011.2, REQ-STB-021.1).
      *
      * @return Number of redundant duplicate climbs purged from the database.
      */
     suspend fun deduplicateExistingClimbs(thresholdMeters: Float = 100.0f): Int = withContext(dbDispatcher) {
-        val allClimbs = getAllClimbsInternal()
-        if (allClimbs.size < 2) return@withContext 0
-
         val db = dbHelper.writableDatabase
-        val idsToDelete = mutableSetOf<Long>()
-        val retainedClimbs = mutableListOf<Climb>()
+        val allMeta = getAllClimbsMetadataInternal(db)
+        if (allMeta.size < 2) return@withContext 0
 
-        for (cand in allClimbs) {
+        val pathCache = HashMap<Long, List<PathPoint>>()
+        val idsToDelete = mutableSetOf<Long>()
+        val retainedMeta = mutableListOf<ClimbMetadata>()
+
+        for (cand in allMeta) {
             if (cand.id in idsToDelete) continue
-            var duplicateFound: Climb? = null
-            for (retained in retainedClimbs) {
-                if (ClimbDeduplicator.isDuplicateOrOverlapping(cand, retained, thresholdMeters)) {
-                    duplicateFound = retained
-                    break
-                }
-            }
+            val duplicateFound = findDuplicateMatch(
+                db = db,
+                candMeta = cand,
+                candidates = retainedMeta,
+                thresholdMeters = thresholdMeters,
+                pathCache = pathCache
+            )
 
             if (duplicateFound != null) {
-                // If candidate has routeId and retained does not, transfer routeId
                 if (cand.routeId != null && duplicateFound.routeId == null) {
-                    val updated = duplicateFound.copy(routeId = cand.routeId)
-                    val values = ContentValues().apply {
-                        put(ClimbsDbHelper.COLUMN_ROUTE_ID, cand.routeId)
-                    }
-                    db.update(
-                        ClimbsDbHelper.TABLE_CLIMBS,
-                        values,
-                        "${ClimbsDbHelper.COLUMN_ID} = ?",
-                        arrayOf(duplicateFound.id.toString())
-                    )
-                    val idx = retainedClimbs.indexOfFirst { it.id == duplicateFound.id }
+                    updateClimbRouteId(db, duplicateFound.id, cand.routeId)
+                    val idx = retainedMeta.indexOfFirst { it.id == duplicateFound.id }
                     if (idx != -1) {
-                        retainedClimbs[idx] = updated
+                        retainedMeta[idx] = duplicateFound.copy(
+                            routeId = cand.routeId,
+                            inMemoryClimb = duplicateFound.inMemoryClimb?.copy(routeId = cand.routeId)
+                        )
                     }
                 }
                 idsToDelete.add(cand.id)
             } else {
-                retainedClimbs.add(cand)
+                retainedMeta.add(cand)
             }
         }
 
@@ -383,6 +333,212 @@ class ClimbsDatabaseManager(
         dbHelper.close()
     }
 
+    private data class ClimbMetadata(
+        val id: Long,
+        val routeId: Long?,
+        val startLat: Double,
+        val startLng: Double,
+        val endLat: Double,
+        val endLng: Double,
+        val distanceMeters: Double,
+        val elevationGainMeters: Double,
+        val conservativeBoundingBox: GeoBoundingBox,
+        val inMemoryClimb: Climb? = null
+    ) {
+        fun effectiveBoundingBox(): GeoBoundingBox = inMemoryClimb?.boundingBox ?: conservativeBoundingBox
+
+        fun toClimb(pathPoints: List<PathPoint>): Climb = inMemoryClimb ?: Climb(
+            id = id,
+            name = "",
+            routeId = routeId,
+            startLat = startLat,
+            startLng = startLng,
+            endLat = endLat,
+            endLng = endLng,
+            distanceMeters = distanceMeters,
+            elevationGainMeters = elevationGainMeters,
+            avgGradePercent = 0.0,
+            maxGradePercent = 0.0,
+            category = ClimbCategory.UNCATEGORIZED,
+            pathPoints = pathPoints
+        )
+    }
+
+    private fun Climb.toMetadata(): ClimbMetadata = ClimbMetadata(
+        id = id,
+        routeId = routeId,
+        startLat = startLat,
+        startLng = startLng,
+        endLat = endLat,
+        endLng = endLng,
+        distanceMeters = distanceMeters,
+        elevationGainMeters = elevationGainMeters,
+        conservativeBoundingBox = boundingBox,
+        inMemoryClimb = this
+    )
+
+    private fun climbToContentValues(climb: Climb): ContentValues = ContentValues().apply {
+        put(ClimbsDbHelper.COLUMN_NAME, climb.name)
+        if (climb.routeId != null) {
+            put(ClimbsDbHelper.COLUMN_ROUTE_ID, climb.routeId)
+        } else {
+            putNull(ClimbsDbHelper.COLUMN_ROUTE_ID)
+        }
+        put(ClimbsDbHelper.COLUMN_START_LAT, climb.startLat)
+        put(ClimbsDbHelper.COLUMN_START_LNG, climb.startLng)
+        put(ClimbsDbHelper.COLUMN_END_LAT, climb.endLat)
+        put(ClimbsDbHelper.COLUMN_END_LNG, climb.endLng)
+        put(ClimbsDbHelper.COLUMN_DISTANCE_M, climb.distanceMeters)
+        put(ClimbsDbHelper.COLUMN_ELEVATION_GAIN_M, climb.elevationGainMeters)
+        put(ClimbsDbHelper.COLUMN_AVG_GRADE, climb.avgGradePercent)
+        put(ClimbsDbHelper.COLUMN_MAX_GRADE, climb.maxGradePercent)
+        put(ClimbsDbHelper.COLUMN_CATEGORY, climb.category.name)
+        put(ClimbsDbHelper.COLUMN_PATH_POLYLINE, serializePathPoints(climb.pathPoints))
+    }
+
+    private fun updateClimbRouteId(db: SQLiteDatabase, climbId: Long, routeId: Long) {
+        val values = ContentValues().apply {
+            put(ClimbsDbHelper.COLUMN_ROUTE_ID, routeId)
+        }
+        db.update(
+            ClimbsDbHelper.TABLE_CLIMBS,
+            values,
+            "${ClimbsDbHelper.COLUMN_ID} = ?",
+            arrayOf(climbId.toString())
+        )
+    }
+
+    private fun findDuplicateMatch(
+        db: SQLiteDatabase,
+        candMeta: ClimbMetadata,
+        candidates: List<ClimbMetadata>,
+        thresholdMeters: Float,
+        pathCache: MutableMap<Long, List<PathPoint>>
+    ): ClimbMetadata? {
+        for (existing in candidates) {
+            when (
+                ClimbDeduplicator.preFilterMetadata(
+                    idA = candMeta.id,
+                    boxA = candMeta.effectiveBoundingBox(),
+                    startLatA = candMeta.startLat,
+                    startLngA = candMeta.startLng,
+                    endLatA = candMeta.endLat,
+                    endLngA = candMeta.endLng,
+                    gainA = candMeta.elevationGainMeters,
+                    idB = existing.id,
+                    boxB = existing.effectiveBoundingBox(),
+                    startLatB = existing.startLat,
+                    startLngB = existing.startLng,
+                    endLatB = existing.endLat,
+                    endLngB = existing.endLng,
+                    gainB = existing.elevationGainMeters,
+                    thresholdMeters = thresholdMeters
+                )
+            ) {
+                ClimbDeduplicator.MetadataPreFilterResult.NO_MATCH -> continue
+                ClimbDeduplicator.MetadataPreFilterResult.ENDPOINT_MATCH -> return existing
+                ClimbDeduplicator.MetadataPreFilterResult.NEEDS_CORRIDOR_CHECK -> {
+                    val fullA = candMeta.inMemoryClimb
+                        ?: candMeta.toClimb(getClimbPathPointsCached(db, candMeta.id, pathCache))
+                    val fullB = existing.inMemoryClimb
+                        ?: existing.toClimb(getClimbPathPointsCached(db, existing.id, pathCache))
+                    if (ClimbDeduplicator.isDuplicateOrOverlapping(fullA, fullB, thresholdMeters)) {
+                        return existing
+                    }
+                }
+            }
+        }
+        return null
+    }
+
+    private fun getAllClimbsMetadataInternal(db: SQLiteDatabase): List<ClimbMetadata> {
+        val list = mutableListOf<ClimbMetadata>()
+        val cursor = db.query(
+            ClimbsDbHelper.TABLE_CLIMBS,
+            METADATA_COLUMNS,
+            null,
+            null,
+            null,
+            null,
+            "${ClimbsDbHelper.COLUMN_ID} ASC"
+        )
+        cursor.use {
+            var indicesResolved = false
+            var idIdx = 0
+            var routeIdIdx = 0
+            var startLatIdx = 0
+            var startLngIdx = 0
+            var endLatIdx = 0
+            var endLngIdx = 0
+            var distIdx = 0
+            var gainIdx = 0
+
+            while (it.moveToNext()) {
+                if (!indicesResolved) {
+                    idIdx = it.getColumnIndexOrThrow(ClimbsDbHelper.COLUMN_ID)
+                    routeIdIdx = it.getColumnIndexOrThrow(ClimbsDbHelper.COLUMN_ROUTE_ID)
+                    startLatIdx = it.getColumnIndexOrThrow(ClimbsDbHelper.COLUMN_START_LAT)
+                    startLngIdx = it.getColumnIndexOrThrow(ClimbsDbHelper.COLUMN_START_LNG)
+                    endLatIdx = it.getColumnIndexOrThrow(ClimbsDbHelper.COLUMN_END_LAT)
+                    endLngIdx = it.getColumnIndexOrThrow(ClimbsDbHelper.COLUMN_END_LNG)
+                    distIdx = it.getColumnIndexOrThrow(ClimbsDbHelper.COLUMN_DISTANCE_M)
+                    gainIdx = it.getColumnIndexOrThrow(ClimbsDbHelper.COLUMN_ELEVATION_GAIN_M)
+                    indicesResolved = true
+                }
+                val startLat = it.getDouble(startLatIdx)
+                val startLng = it.getDouble(startLngIdx)
+                val endLat = it.getDouble(endLatIdx)
+                val endLng = it.getDouble(endLngIdx)
+                val dist = it.getDouble(distIdx)
+                list.add(
+                    ClimbMetadata(
+                        id = it.getLong(idIdx),
+                        routeId = if (it.isNull(routeIdIdx)) null else it.getLong(routeIdIdx),
+                        startLat = startLat,
+                        startLng = startLng,
+                        endLat = endLat,
+                        endLng = endLng,
+                        distanceMeters = dist,
+                        elevationGainMeters = it.getDouble(gainIdx),
+                        conservativeBoundingBox = ClimbDeduplicator.buildConservativeBoundingBox(
+                            startLat = startLat,
+                            startLng = startLng,
+                            endLat = endLat,
+                            endLng = endLng,
+                            distanceMeters = dist
+                        )
+                    )
+                )
+            }
+        }
+        return list
+    }
+
+    private fun getClimbPathPointsCached(
+        db: SQLiteDatabase,
+        climbId: Long,
+        cache: MutableMap<Long, List<PathPoint>>
+    ): List<PathPoint> {
+        cache[climbId]?.let { return it }
+        val points = db.query(
+            ClimbsDbHelper.TABLE_CLIMBS,
+            POLYLINE_ONLY_COLUMN,
+            "${ClimbsDbHelper.COLUMN_ID} = ?",
+            arrayOf(climbId.toString()),
+            null,
+            null,
+            null
+        ).use { cursor ->
+            if (cursor.moveToNext() && !cursor.isNull(0)) {
+                deserializePathPoints(cursor.getString(0))
+            } else {
+                emptyList()
+            }
+        }
+        cache[climbId] = points
+        return points
+    }
+
     private fun getAllClimbsInternal(): List<Climb> {
         val db = dbHelper.readableDatabase
         val list = mutableListOf<Climb>()
@@ -437,6 +593,23 @@ class ClimbsDatabaseManager(
     }
 
     companion object {
+        internal val METADATA_COLUMNS = arrayOf(
+            ClimbsDbHelper.COLUMN_ID,
+            ClimbsDbHelper.COLUMN_ROUTE_ID,
+            ClimbsDbHelper.COLUMN_START_LAT,
+            ClimbsDbHelper.COLUMN_START_LNG,
+            ClimbsDbHelper.COLUMN_END_LAT,
+            ClimbsDbHelper.COLUMN_END_LNG,
+            ClimbsDbHelper.COLUMN_DISTANCE_M,
+            ClimbsDbHelper.COLUMN_ELEVATION_GAIN_M
+        )
+
+        internal val POLYLINE_ONLY_COLUMN = arrayOf(ClimbsDbHelper.COLUMN_PATH_POLYLINE)
+
+        private val POW10 = doubleArrayOf(
+            1.0, 1e1, 1e2, 1e3, 1e4, 1e5, 1e6, 1e7, 1e8, 1e9, 1e10, 1e11, 1e12, 1e13, 1e14, 1e15
+        )
+
         fun serializePathPoints(points: List<PathPoint>): String {
             if (points.isEmpty()) return ""
             return points.joinToString(";") {
@@ -444,21 +617,104 @@ class ClimbsDatabaseManager(
             }
         }
 
+        /**
+         * Deserializes semicolon-delimited `lat,lng,alt,dist` tuples via zero-split index scanning (REQ-STB-021.1).
+         */
         fun deserializePathPoints(str: String): List<PathPoint> {
             if (str.isBlank()) return emptyList()
-            val items = str.split(";")
-            return items.mapNotNull { item ->
-                val tokens = item.split(",")
-                if (tokens.size >= 4) {
-                    val lat = tokens[0].toDoubleOrNull()
-                    val lng = tokens[1].toDoubleOrNull()
-                    val alt = tokens[2].toDoubleOrNull()
-                    val dist = tokens[3].toDoubleOrNull()
-                    if (lat != null && lng != null && dist != null) {
-                        PathPoint(distance = dist, latLng = LatLng(lat, lng), altitude = alt)
-                    } else null
-                } else null
+            val len = str.length
+            val estimatedCount = (len / 32).coerceAtLeast(4)
+            val result = ArrayList<PathPoint>(estimatedCount)
+            var itemStart = 0
+
+            while (itemStart < len) {
+                val semiIdx = str.indexOf(';', itemStart)
+                val itemEnd = if (semiIdx == -1) len else semiIdx
+
+                if (itemEnd > itemStart) {
+                    val c1 = str.indexOf(',', itemStart)
+                    if (c1 != -1 && c1 < itemEnd) {
+                        val c2 = str.indexOf(',', c1 + 1)
+                        if (c2 != -1 && c2 < itemEnd) {
+                            val c3 = str.indexOf(',', c2 + 1)
+                            if (c3 != -1 && c3 < itemEnd) {
+                                val nextComma = str.indexOf(',', c3 + 1)
+                                val distEnd = if (nextComma != -1 && nextComma < itemEnd) nextComma else itemEnd
+                                val lat = parseDoubleRange(str, itemStart, c1)
+                                val lng = parseDoubleRange(str, c1 + 1, c2)
+                                val alt = parseDoubleRange(str, c2 + 1, c3)
+                                val dist = parseDoubleRange(str, c3 + 1, distEnd)
+                                if (lat != null && lng != null && dist != null) {
+                                    result.add(PathPoint(distance = dist, latLng = LatLng(lat, lng), altitude = alt))
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (semiIdx == -1) break
+                itemStart = semiIdx + 1
             }
+
+            return result
+        }
+
+        private fun parseDoubleRange(str: String, start: Int, end: Int): Double? {
+            var s = start
+            var e = end
+            while (s < e && str[s] <= ' ') s++
+            while (e > s && str[e - 1] <= ' ') e--
+            if (s >= e) return null
+
+            if (e - s == 4 && str[s] == 'n' && str[s + 1] == 'u' && str[s + 2] == 'l' && str[s + 3] == 'l') {
+                return null
+            }
+
+            var negative = false
+            var idx = s
+            val first = str[idx]
+            if (first == '-') {
+                negative = true
+                idx++
+            } else if (first == '+') {
+                idx++
+            }
+            if (idx >= e) return null
+
+            var mantissa = 0L
+            var digits = 0
+            var fracDigits = 0
+            var seenDot = false
+            var seenDigit = false
+
+            while (idx < e) {
+                val ch = str[idx]
+                if (ch in '0'..'9') {
+                    seenDigit = true
+                    if (digits < 15 && fracDigits < 15) {
+                        if (digits > 0 || ch != '0') {
+                            mantissa = mantissa * 10L + (ch - '0')
+                            digits++
+                        }
+                        if (seenDot) fracDigits++
+                    } else {
+                        return str.substring(s, e).toDoubleOrNull()
+                    }
+                } else if (ch == '.' && !seenDot) {
+                    seenDot = true
+                } else {
+                    return str.substring(s, e).toDoubleOrNull()
+                }
+                idx++
+            }
+
+            if (!seenDigit) return null
+            val value = if (fracDigits == 0) {
+                mantissa.toDouble()
+            } else {
+                mantissa.toDouble() / POW10[fracDigits]
+            }
+            return if (negative) -value else value
         }
 
         @Volatile

@@ -265,4 +265,97 @@ class BackupRestoreViewModelFitTest {
         val msg = (state as BackupRestoreViewModel.UiState.Success).message
         assertTrue(msg.contains("1 duplicates skipped"))
     }
+
+    @Test
+    fun `importStravaArchive reconciles all repositories and LiveClimbsRepository once post-batch`() = runTest(testDispatcher) {
+        // TST-STB-021.3: BackupRestoreViewModel.importStravaArchive installs BulkImportBatchContext
+        // and triggers post-batch reconciliation once (including LiveClimbsRepository when climbs were persisted).
+        every { Log.w(any<String>(), any<String>(), any<Throwable>()) } returns 0
+        val mockWorkoutRepo = mockk<com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository>(relaxed = true)
+        val mockPeriodsRepo = mockk<com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepository>(relaxed = true)
+        val mockClusterRepo = mockk<com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository>(relaxed = true)
+        val mockLiveClimbsRepo = mockk<com.atrainingtracker.trainingtracker.climbs.LiveClimbsRepository>(relaxed = true)
+
+        com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository.resetForTesting(mockWorkoutRepo)
+        com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepository.setInstanceForTesting(mockPeriodsRepo)
+        com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository.resetForTesting(mockClusterRepo)
+        com.atrainingtracker.trainingtracker.climbs.LiveClimbsRepository.resetForTesting(mockLiveClimbsRepo)
+
+        try {
+            every { mockContext.getString(R.string.import_strava_archive_progress, *anyVararg()) } returns "Importing..."
+            every { mockContext.getString(R.string.import_strava_archive_summary_success, *anyVararg()) } returns "Done"
+
+            mockkObject(StravaBulkExportImporter)
+            coEvery { StravaBulkExportImporter.importArchive(any(), any<Uri>(), any()) } coAnswers {
+                val batch = kotlin.coroutines.coroutineContext[BulkImportBatchContext]
+                assertTrue("importStravaArchive must run inside BulkImportBatchContext", batch != null)
+                batch!!.markClimbsPersisted()
+                StravaImportResult(importedCount = 5, skippedCount = 1, failedCount = 0, totalScanned = 6, lastImportedWorkoutId = 500L)
+            }
+
+            val viewModel = BackupRestoreViewModel(mockApp)
+            val job = viewModel.importStravaArchive(mockContext, mockk(relaxed = true), testDispatcher)
+            job.join()
+
+            coVerify(exactly = 1) { mockWorkoutRepo.loadAllWorkouts() }
+            verify(exactly = 1) { mockPeriodsRepo.syncPeriodsIfDiscrepancy() }
+            coVerify(exactly = 1) { mockClusterRepo.refreshClusters() }
+            coVerify(exactly = 1) { mockLiveClimbsRepo.refreshClimbs() }
+            assertTrue(viewModel.uiState.value is BackupRestoreViewModel.UiState.Success)
+        } finally {
+            com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository.resetForTesting(null)
+            com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepository.setInstanceForTesting(null)
+            com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository.resetForTesting(null)
+            com.atrainingtracker.trainingtracker.climbs.LiveClimbsRepository.resetForTesting(null)
+        }
+    }
+
+    @Test
+    fun `importWorkoutFilesInternal distinguishes single-file immediacy from multi-file batch context`() = runTest(testDispatcher) {
+        // TST-STB-021.3: 1 file disables BulkImportBatchContext (preserving TST-MIG-023 immediacy),
+        // while >= 2 files installs BulkImportBatchContext and runs a single LiveClimbsRepository refresh.
+        every { Log.w(any<String>(), any<String>(), any<Throwable>()) } returns 0
+        val mockWorkoutRepo = mockk<com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository>(relaxed = true)
+        val mockPeriodsRepo = mockk<com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepository>(relaxed = true)
+        val mockClusterRepo = mockk<com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository>(relaxed = true)
+        val mockLiveClimbsRepo = mockk<com.atrainingtracker.trainingtracker.climbs.LiveClimbsRepository>(relaxed = true)
+
+        com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository.resetForTesting(mockWorkoutRepo)
+        com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepository.setInstanceForTesting(mockPeriodsRepo)
+        com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository.resetForTesting(mockClusterRepo)
+        com.atrainingtracker.trainingtracker.climbs.LiveClimbsRepository.resetForTesting(mockLiveClimbsRepo)
+
+        try {
+            val uri1 = mockk<Uri>(relaxed = true)
+            val uri2 = mockk<Uri>(relaxed = true)
+            every { mockContentResolver.openInputStream(any()) } answers { ByteArrayInputStream(byteArrayOf(1, 2, 3)) }
+
+            val seenBatchActive = mutableListOf<Boolean>()
+            mockkObject(LegacyImportEngine)
+            coEvery { LegacyImportEngine.importFromFitResult(any(), any(), any(), any()) } coAnswers {
+                val batch = kotlin.coroutines.coroutineContext[BulkImportBatchContext]
+                seenBatchActive.add(batch != null)
+                batch?.markClimbsPersisted()
+                LegacyImportEngine.ImportResult(LegacyImportEngine.ImportStatus.SUCCESS, workoutId = 42L)
+            }
+
+            val viewModel = BackupRestoreViewModel(mockApp)
+
+            // 1 file -> batch context NOT active
+            viewModel.importFitFiles(mockContext, listOf(uri1), testDispatcher).join()
+            assertEquals(listOf(false), seenBatchActive)
+            coVerify(exactly = 0) { mockLiveClimbsRepo.refreshClimbs() }
+
+            // 2 files -> batch context IS active, reconciles once including LiveClimbsRepository
+            seenBatchActive.clear()
+            viewModel.importFitFiles(mockContext, listOf(uri1, uri2), testDispatcher).join()
+            assertEquals(listOf(true, true), seenBatchActive)
+            coVerify(exactly = 1) { mockLiveClimbsRepo.refreshClimbs() }
+        } finally {
+            com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository.resetForTesting(null)
+            com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepository.setInstanceForTesting(null)
+            com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository.resetForTesting(null)
+            com.atrainingtracker.trainingtracker.climbs.LiveClimbsRepository.resetForTesting(null)
+        }
+    }
 }

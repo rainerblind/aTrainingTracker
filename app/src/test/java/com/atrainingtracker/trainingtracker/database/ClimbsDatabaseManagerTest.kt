@@ -152,7 +152,7 @@ class ClimbsDatabaseManagerTest {
         every { mockCursor.getString(11) } returns "CAT_4"
         every { mockCursor.getString(12) } returns ""
 
-        every { mockDb.query(ClimbsDbHelper.TABLE_CLIMBS, null, null, null, null, null, any()) } returns mockCursor
+        every { mockDb.query(ClimbsDbHelper.TABLE_CLIMBS, ClimbsDatabaseManager.METADATA_COLUMNS, null, null, null, null, any()) } returns mockCursor
 
         // New candidate climb starting ~13m away from existing start, ending ~13m away from existing end
         val duplicateClimb = Climb(
@@ -209,7 +209,7 @@ class ClimbsDatabaseManagerTest {
 
         val mockCursor = mockk<Cursor>(relaxed = true)
         every { mockCursor.moveToNext() } returns false
-        every { mockDb.query(ClimbsDbHelper.TABLE_CLIMBS, null, null, null, null, null, any()) } returns mockCursor
+        every { mockDb.query(ClimbsDbHelper.TABLE_CLIMBS, ClimbsDatabaseManager.METADATA_COLUMNS, null, null, null, null, any()) } returns mockCursor
         every { mockDb.insert(any(), any(), any()) } returns 101L andThen 102L
 
         val climbs = listOf(
@@ -290,7 +290,7 @@ class ClimbsDatabaseManagerTest {
         every { mockCursor.getString(11) } returns "CAT_4"
         every { mockCursor.getString(12) } returns ""
 
-        every { mockDb.query(ClimbsDbHelper.TABLE_CLIMBS, null, null, null, null, null, any()) } returns mockCursor
+        every { mockDb.query(ClimbsDbHelper.TABLE_CLIMBS, ClimbsDatabaseManager.METADATA_COLUMNS, null, null, null, null, any()) } returns mockCursor
 
         // Drift: start is ~70m away (0.0006 deg lat), end is ~60m away
         val candidateClimb = Climb(
@@ -354,11 +354,220 @@ class ClimbsDatabaseManagerTest {
         every { mockCursor.getString(11) } returns "CAT_4"
         every { mockCursor.getString(12) } returns ""
 
-        every { mockDb.query(ClimbsDbHelper.TABLE_CLIMBS, null, null, null, null, null, any()) } returns mockCursor
+        every { mockDb.query(ClimbsDbHelper.TABLE_CLIMBS, ClimbsDatabaseManager.METADATA_COLUMNS, null, null, null, null, any()) } returns mockCursor
 
         val purged = manager.deduplicateExistingClimbs(thresholdMeters = 100.0f)
         assertEquals(1, purged)
         verify { mockDb.delete(ClimbsDbHelper.TABLE_CLIMBS, "${ClimbsDbHelper.COLUMN_ID} = ?", arrayOf("101")) }
         verify { mockDb.update(ClimbsDbHelper.TABLE_CLIMBS, any(), "${ClimbsDbHelper.COLUMN_ID} = ?", arrayOf("100")) }
+    }
+
+    @Test
+    fun deserializePathPoints_handlesEdgeCasesAndLargeTrackParity() {
+        // TST-STB-021.1: Zero-split parser preserves exact values across edge cases and 2,000+ points
+        val edgeSerialized = " 48.123456 , 11.654321 , null , 0.0 ;; -45.5,-73.25,1.5e2,1250.75; bad,row; 48.0,nan,10.0,20.0; 48.9999999999999999,11.1111111111111111,500.5,3456.789;"
+        val parsed = ClimbsDatabaseManager.deserializePathPoints(edgeSerialized)
+        assertEquals(3, parsed.size)
+
+        assertEquals(48.123456, parsed[0].latLng.latitude, 1e-12)
+        assertEquals(11.654321, parsed[0].latLng.longitude, 1e-12)
+        assertNull(parsed[0].altitude)
+        assertEquals(0.0, parsed[0].distance, 1e-9)
+
+        assertEquals(-45.5, parsed[1].latLng.latitude, 1e-12)
+        assertEquals(-73.25, parsed[1].latLng.longitude, 1e-12)
+        assertEquals(150.0, parsed[1].altitude!!, 1e-9)
+        assertEquals(1250.75, parsed[1].distance, 1e-9)
+
+        assertEquals("48.9999999999999999".toDouble(), parsed[2].latLng.latitude, 1e-12)
+        assertEquals("11.1111111111111111".toDouble(), parsed[2].latLng.longitude, 1e-12)
+        assertEquals(500.5, parsed[2].altitude!!, 1e-9)
+        assertEquals(3456.789, parsed[2].distance, 1e-9)
+
+        assertTrue(ClimbsDatabaseManager.deserializePathPoints("").isEmpty())
+        assertTrue(ClimbsDatabaseManager.deserializePathPoints("   ;;; ").isEmpty())
+
+        // 2,500-point round-trip parity
+        val largeTrack = (0 until 2500).map { i ->
+            PathPoint(
+                distance = i * 5.25,
+                latLng = LatLng(47.123456 + i * 0.00003, 10.987654 - i * 0.00002),
+                altitude = if (i % 7 == 0) null else 850.0 + i * 0.35
+            )
+        }
+        val serializedLarge = ClimbsDatabaseManager.serializePathPoints(largeTrack)
+        val roundTripped = ClimbsDatabaseManager.deserializePathPoints(serializedLarge)
+        assertEquals(largeTrack.size, roundTripped.size)
+        for (i in largeTrack.indices) {
+            assertEquals(largeTrack[i].latLng.latitude, roundTripped[i].latLng.latitude, 1e-12)
+            assertEquals(largeTrack[i].latLng.longitude, roundTripped[i].latLng.longitude, 1e-12)
+            assertEquals(largeTrack[i].distance, roundTripped[i].distance, 1e-9)
+            if (largeTrack[i].altitude == null) {
+                assertNull(roundTripped[i].altitude)
+            } else {
+                assertEquals(largeTrack[i].altitude!!, roundTripped[i].altitude!!, 1e-9)
+            }
+        }
+    }
+
+    @Test
+    fun insertClimbsWithDeduplicationBatch_skipsPolylineQueriesForDistantAndEndpointMatches() = runBlocking {
+        // TST-STB-021.1: Projected METADATA_COLUMNS handles distant climbs and endpoint duplicates
+        // with ZERO POLYLINE_ONLY_COLUMN queries.
+        every { mockDb.beginTransaction() } just Runs
+        every { mockDb.setTransactionSuccessful() } just Runs
+        every { mockDb.endTransaction() } just Runs
+
+        val existingRows = listOf(
+            // Row 0: Distant climb in Munich
+            arrayOf<Any?>(10L, null, 48.0, 11.0, 48.01, 11.01, 1200.0, 80.0),
+            // Row 1: Endpoint-match climb in Innsbruck (will match candidate 1 without reading polyline)
+            arrayOf<Any?>(20L, 5L, 47.26, 11.39, 47.27, 11.40, 1400.0, 95.0)
+        )
+        val metaCursor = createMetadataCursor(existingRows)
+        every { mockDb.query(ClimbsDbHelper.TABLE_CLIMBS, ClimbsDatabaseManager.METADATA_COLUMNS, null, null, null, null, any()) } returns metaCursor
+        every { mockDb.insert(any(), any(), any()) } returns 30L
+
+        val candidates = listOf(
+            // Matches Row 1 by endpoint proximity -> no insert, no polyline read
+            Climb(
+                name = "Innsbruck Dup",
+                startLat = 47.2601,
+                startLng = 11.3901,
+                endLat = 47.2701,
+                endLng = 11.4001,
+                distanceMeters = 1410.0,
+                elevationGainMeters = 96.0,
+                avgGradePercent = 6.8,
+                maxGradePercent = 10.0,
+                category = ClimbCategory.CAT_4
+            ),
+            // Distant climb in Zurich -> inserted without any polyline read
+            Climb(
+                name = "Zurich Climb",
+                startLat = 47.37,
+                startLng = 8.54,
+                endLat = 47.38,
+                endLng = 8.55,
+                distanceMeters = 1300.0,
+                elevationGainMeters = 85.0,
+                avgGradePercent = 6.5,
+                maxGradePercent = 9.0,
+                category = ClimbCategory.CAT_4
+            )
+        )
+
+        val ids = manager.insertClimbsWithDeduplicationBatch(candidates, thresholdMeters = 50.0f)
+        assertEquals(listOf(20L, 30L), ids)
+
+        verify(exactly = 1) {
+            mockDb.query(ClimbsDbHelper.TABLE_CLIMBS, ClimbsDatabaseManager.METADATA_COLUMNS, null, null, null, null, any())
+        }
+        verify(exactly = 0) {
+            mockDb.query(ClimbsDbHelper.TABLE_CLIMBS, ClimbsDatabaseManager.POLYLINE_ONLY_COLUMN, any(), any(), any(), any(), any())
+        }
+        verify(exactly = 0) {
+            mockDb.query(ClimbsDbHelper.TABLE_CLIMBS, null, any(), any(), any(), any(), any())
+        }
+    }
+
+    @Test
+    fun deduplicateExistingClimbs_lazilyHydratesBothPolylinesOnCurvedCorridorOverlap() = runBlocking {
+        // TST-STB-021.1: Two switchback/curved climbs whose raw endpoint boxes are >300m apart laterally
+        // must pass conservativeBoundingBox ellipse slack, trigger NEEDS_CORRIDOR_CHECK, lazily hydrate
+        // POLYLINE_ONLY_COLUMN for BOTH climbs (cached once per ID), and purge the duplicate.
+        every { mockDb.beginTransaction() } just Runs
+        every { mockDb.setTransactionSuccessful() } just Runs
+        every { mockDb.endTransaction() } just Runs
+        every { mockDb.delete(ClimbsDbHelper.TABLE_CLIMBS, any(), any()) } returns 1
+
+        // Climb 1: starts (48.000, 11.000), bows east through (48.005, 11.020), ends (48.010, 11.000)
+        // Climb 2: starts (48.001, 11.005) (>350m east of Climb 1 start), follows same eastern bow, ends (48.009, 11.005)
+        val polyline1Points = listOf(
+            PathPoint(0.0, LatLng(48.000, 11.000), 500.0),
+            PathPoint(800.0, LatLng(48.003, 11.012), 540.0),
+            PathPoint(1600.0, LatLng(48.005, 11.020), 580.0),
+            PathPoint(2400.0, LatLng(48.007, 11.012), 620.0),
+            PathPoint(3200.0, LatLng(48.010, 11.000), 660.0)
+        )
+        val polyline2Points = listOf(
+            PathPoint(0.0, LatLng(48.001, 11.005), 510.0),
+            PathPoint(600.0, LatLng(48.003, 11.012), 540.0),
+            PathPoint(1400.0, LatLng(48.005, 11.020), 580.0),
+            PathPoint(2200.0, LatLng(48.007, 11.012), 620.0),
+            PathPoint(2800.0, LatLng(48.009, 11.005), 650.0)
+        )
+        val poly1Str = ClimbsDatabaseManager.serializePathPoints(polyline1Points)
+        val poly2Str = ClimbsDatabaseManager.serializePathPoints(polyline2Points)
+
+        // Row 2 (id=202) is an unrelated distant climb that must NOT load a polyline
+        val rows = listOf(
+            arrayOf<Any?>(201L, null, 48.000, 11.000, 48.010, 11.000, 3200.0, 160.0),
+            arrayOf<Any?>(202L, null, 49.500, 12.500, 49.510, 12.510, 1400.0, 90.0),
+            arrayOf<Any?>(203L, null, 48.001, 11.005, 48.009, 11.005, 2800.0, 140.0)
+        )
+        val metaCursor = createMetadataCursor(rows)
+        every { mockDb.query(ClimbsDbHelper.TABLE_CLIMBS, ClimbsDatabaseManager.METADATA_COLUMNS, null, null, null, null, any()) } returns metaCursor
+        every {
+            mockDb.query(ClimbsDbHelper.TABLE_CLIMBS, ClimbsDatabaseManager.POLYLINE_ONLY_COLUMN, "${ClimbsDbHelper.COLUMN_ID} = ?", arrayOf("201"), null, null, null)
+        } answers { createPolylineCursor(poly1Str) }
+        every {
+            mockDb.query(ClimbsDbHelper.TABLE_CLIMBS, ClimbsDatabaseManager.POLYLINE_ONLY_COLUMN, "${ClimbsDbHelper.COLUMN_ID} = ?", arrayOf("203"), null, null, null)
+        } answers { createPolylineCursor(poly2Str) }
+
+        val purged = manager.deduplicateExistingClimbs(thresholdMeters = 100.0f)
+        assertEquals(1, purged)
+        verify(exactly = 1) {
+            mockDb.query(ClimbsDbHelper.TABLE_CLIMBS, ClimbsDatabaseManager.POLYLINE_ONLY_COLUMN, "${ClimbsDbHelper.COLUMN_ID} = ?", arrayOf("201"), null, null, null)
+        }
+        verify(exactly = 1) {
+            mockDb.query(ClimbsDbHelper.TABLE_CLIMBS, ClimbsDatabaseManager.POLYLINE_ONLY_COLUMN, "${ClimbsDbHelper.COLUMN_ID} = ?", arrayOf("203"), null, null, null)
+        }
+        verify(exactly = 0) {
+            mockDb.query(ClimbsDbHelper.TABLE_CLIMBS, ClimbsDatabaseManager.POLYLINE_ONLY_COLUMN, "${ClimbsDbHelper.COLUMN_ID} = ?", arrayOf("202"), null, null, null)
+        }
+        verify(exactly = 1) { mockDb.delete(ClimbsDbHelper.TABLE_CLIMBS, "${ClimbsDbHelper.COLUMN_ID} = ?", arrayOf("203")) }
+    }
+
+    private fun createMetadataCursor(rows: List<Array<Any?>>): Cursor {
+        val cursor = mockk<Cursor>(relaxed = true)
+        var idx = -1
+        every { cursor.moveToNext() } answers {
+            idx++
+            idx < rows.size
+        }
+        every { cursor.getColumnIndexOrThrow(ClimbsDbHelper.COLUMN_ID) } returns 0
+        every { cursor.getColumnIndexOrThrow(ClimbsDbHelper.COLUMN_ROUTE_ID) } returns 1
+        every { cursor.getColumnIndexOrThrow(ClimbsDbHelper.COLUMN_START_LAT) } returns 2
+        every { cursor.getColumnIndexOrThrow(ClimbsDbHelper.COLUMN_START_LNG) } returns 3
+        every { cursor.getColumnIndexOrThrow(ClimbsDbHelper.COLUMN_END_LAT) } returns 4
+        every { cursor.getColumnIndexOrThrow(ClimbsDbHelper.COLUMN_END_LNG) } returns 5
+        every { cursor.getColumnIndexOrThrow(ClimbsDbHelper.COLUMN_DISTANCE_M) } returns 6
+        every { cursor.getColumnIndexOrThrow(ClimbsDbHelper.COLUMN_ELEVATION_GAIN_M) } returns 7
+
+        every { cursor.getLong(0) } answers { rows[idx][0] as Long }
+        every { cursor.isNull(1) } answers { rows[idx][1] == null }
+        every { cursor.getLong(1) } answers { (rows[idx][1] as? Long) ?: 0L }
+        every { cursor.getDouble(2) } answers { rows[idx][2] as Double }
+        every { cursor.getDouble(3) } answers { rows[idx][3] as Double }
+        every { cursor.getDouble(4) } answers { rows[idx][4] as Double }
+        every { cursor.getDouble(5) } answers { rows[idx][5] as Double }
+        every { cursor.getDouble(6) } answers { rows[idx][6] as Double }
+        every { cursor.getDouble(7) } answers { rows[idx][7] as Double }
+        return cursor
+    }
+
+    private fun createPolylineCursor(polyline: String): Cursor {
+        val cursor = mockk<Cursor>(relaxed = true)
+        var read = false
+        every { cursor.moveToNext() } answers {
+            if (!read) {
+                read = true
+                true
+            } else false
+        }
+        every { cursor.isNull(0) } returns false
+        every { cursor.getString(0) } returns polyline
+        return cursor
     }
 }

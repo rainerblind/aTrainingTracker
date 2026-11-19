@@ -1,14 +1,14 @@
 # Detailed Design: WorkoutRepository (ASPICE SWE.3)
 
 **Document ID**: `DOC-ARC-DD-WKO`  
-**Version**: 1.0.2  
+**Version**: 1.0.3  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
-**Unit**: `WorkoutRepository` (`app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/WorkoutRepository.kt`, 4,973 LOC)  
-**Collaborators**: `WorkoutSummariesDatabaseManager`, `WorkoutSamplesDatabaseManager`, `LapsDatabaseManager`, `WorkoutDeletionHelper`, `WorkoutRrRepository`, `WorkoutClusterRepository`, `ExportManager`, `StravaUploadDbHelper`, `CropCoordinator`, `WorkoutMultiSourceSampleDiscovery`, `ActivityCarriageTimelineCalculator`  
+**Unit**: `WorkoutRepository` (`app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/WorkoutRepository.kt`, 4,931 LOC)  
+**Collaborators**: `WorkoutSummariesDatabaseManager`, `WorkoutSamplesDatabaseManager`, `LapsDatabaseManager`, `WorkoutDeletionHelper`, `WorkoutRrRepository`, `WorkoutClusterRepository`, `ExportManager`, `StravaUploadDbHelper`, `CropCoordinator`, `WorkoutMultiSourceSampleDiscovery`, `ActivityCarriageTimelineCalculator`, `WorkoutClimbIngestionCoordinator`, `LiveClimbsRepository`  
 **SWE.2 Alignment**: `docs/architecture.md` §1, §3.3, §4.1, §5.1 (`IF-SWE-02`, `IF-SWE-05`, `IF-SWE-06`, `IF-SWE-07`)  
-**Requirement Trace**: `REQ-ARC-009`, `REQ-PRO-114`, `REQ-PRO-129.2`, `REQ-DAT-042`, `REQ-WKO-016`, `REQ-PER-045`
+**Requirement Trace**: `REQ-ARC-009`, `REQ-PRO-114`, `REQ-PRO-129.2`, `REQ-DAT-042`, `REQ-WKO-016`, `REQ-PER-045`, `REQ-STB-021.3`, `REQ-STB-021.5`
 
 ---
 
@@ -63,7 +63,7 @@ stateDiagram-v2
 | Interface | Direction | Contract / Symbols |
 | :--- | :--- | :--- |
 | `IF-SWE-02` | ViewModels <-> `WorkoutRepository` | Exposes `allWorkouts`, `getWorkoutById`, `getWorkoutDataDirect`, `initialWorkoutLoaded`, `deletionProgress`, `saveFinishedEvent`, `loadAllWorkouts`, `refreshWorkout`, `cropWorkout`, `deleteWorkout` |
-| `IF-SWE-05` | `WorkoutRepository` -> Domain | Invokes `ZoneDistributionCalculator`, `PowerHrDynamicsCalculator`, `ClimbDetector`, `WorkoutClusterEngine`, `WorkoutMultiSourceSampleDiscovery` (`discoverNamedSourceColumns`, `discoverMultiSourceOverlayColumns`), `ActivityCarriageTimelineCalculator` (`WorkoutDetailTelemetry.activityCarriageTimeline` pre-decimation 1-Hz cursor coalescing) |
+| `IF-SWE-05` | `WorkoutRepository` -> Domain | Invokes `ZoneDistributionCalculator`, `PowerHrDynamicsCalculator`, `ClimbDetector`, `WorkoutClimbIngestionCoordinator` (`extractAndPersistClimbsFromWorkout`, `extractAndPersistClimbsWithoutRefresh`, `backfillHistoricalClimbs`), `WorkoutClusterEngine`, `WorkoutMultiSourceSampleDiscovery` (`discoverNamedSourceColumns`, `discoverMultiSourceOverlayColumns`), `ActivityCarriageTimelineCalculator` (`WorkoutDetailTelemetry.activityCarriageTimeline` pre-decimation 1-Hz cursor coalescing) |
 | `IF-SWE-06` | `TrackerService` / Repo -> SQLite | Executes `recordLiveSample`, `handleMissingColumns`, `getResumedWorkoutState`, `markWorkoutFinishedBlocking`, `getLaps`, `deleteWorkoutCascade` against `WorkoutSummariesDatabaseManager`, `WorkoutSamplesDatabaseManager`, `LapsDatabaseManager` |
 | `IF-SWE-07` | `WorkoutRepository` -> Exporters | Coordinates `ExportManager` and `StravaUploadDbHelper` post-finalization |
 
@@ -87,7 +87,7 @@ stateDiagram-v2
 | `WorkoutRepositoryDeleteTest`, `WorkoutRepositoryCropTest` | Cascade deletion (`deleteWorkoutCascade`), `cropMutex` serialization, and extrema/lap consistency |
 | `WorkoutRepositoryBoundaryMoveTest`, `WorkoutRepositoryLapSplitTest`, `WorkoutRepositoryLapUpdateTest`, `WorkoutRepositoryLapDeleteTest` | Lap boundary mutations, splits, updates, and deletions |
 | `WorkoutRepositoryStreamTest`, `WorkoutRepositoryTelemetryTest`, `WorkoutRepositoryProjectionTest`, `WorkoutRepositoryTimestampFallbackTest`, `ActivityCarriageTimelineCalculatorTest` | Named source column discovery, overlay decimation (`MAX_OVERLAY_POINTS`), projection decoding, `parseTimestampOffset` fallback, and pre-decimation 1-Hz carriage-mode timeline coalescing |
-| `WorkoutRepositoryCardioPowerBackfillTest`, `WorkoutRepositoryExportStatusTest`, `WorkoutRepositoryHistoricalZoneTest`, `WorkoutRepositoryHrvConsensusTest`, `WorkoutRepositoryMapMarkerApexTest`, `WorkoutRepositoryMarkerTest`, `WorkoutRepositorySaveClusteringTest` | Backfill, export status, zone/HRV consensus, map markers, and cluster save integration |
+| `WorkoutRepositoryCardioPowerBackfillTest`, `WorkoutRepositoryExportStatusTest`, `WorkoutRepositoryHistoricalZoneTest`, `WorkoutRepositoryHrvConsensusTest`, `WorkoutRepositoryMapMarkerApexTest`, `WorkoutRepositoryMarkerTest`, `WorkoutRepositorySaveClusteringTest`, `WorkoutClimbIngestionTest`, `WorkoutHistoricalClimbBackfillTest` | Backfill, export status, zone/HRV consensus, map markers, cluster save integration, and batch-deferred historical climb extraction (`WorkoutClimbIngestionCoordinator`) |
 
 ---
 
@@ -98,3 +98,4 @@ stateDiagram-v2
 | `1.0.0` | 2026-11-18 | AI Agent (`ATT-8203`) | `ATT-8203` | Initial SWE.3 living detailed design specification for `WorkoutRepository` (`REQ-PRO-129.2`). |
 | `1.0.1` | 2026-11-18 | AI Agent (`ATT-8080`) | `ATT-8080` | Delegated track alias & multi-source sample discovery (`ATT_FUSED`, `ALTITUDE`, `SPEED_mps`, `SLOPE`) to `WorkoutMultiSourceSampleDiscovery` while retaining `WorkoutRepository` companion delegates (`REQ-PER-044.2`). |
 | `1.0.2` | 2026-11-18 | AI Agent (`ATT-8916`, `--as agent1`) | `ATT-8916` | Documented pre-decimation 1-Hz `ACTIVITY_AND_CARRIAGE_MODE` cursor coalescing via `ActivityCarriageTimelineCalculator` and trailing `WorkoutDetailTelemetry.activityCarriageTimeline` field (`REQ-PER-045`). |
+| `1.0.3` | 2026-11-19 | AI Agent (`ATT-9018`, `--as agent1`) | `ATT-9018` | Delegated climb DEM validation and `Climbs.db` persistence to `WorkoutClimbIngestionCoordinator` (`climbs/`, keeping `WorkoutRepository` at `4,931` LOC), added `extractAndPersistClimbsWithoutRefresh` for `BulkImportBatchContext` & single-refresh `backfillHistoricalClimbs`, and linked `WorkoutClimbIngestionTest` / `WorkoutHistoricalClimbBackfillTest` (`REQ-STB-021.3`, `REQ-STB-021.5`). |

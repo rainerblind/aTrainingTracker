@@ -334,4 +334,42 @@ class WorkoutHistoricalClimbBackfillTest {
         assertEquals("Should return 0 immediately", 0, purgedCount)
         coVerify(exactly = 0) { mockClimbsDb.deduplicateExistingClimbs(any()) }
     }
+
+    @Test
+    fun testBackfillHistoricalClimbs_multiWorkoutRefreshesLiveClimbsOnce() = runBlocking {
+        // TST-STB-021.3: Backfilling N historical workouts must NOT invoke LiveClimbsRepository.refreshClimbs()
+        // N times; it must defer and execute exactly 1 refreshClimbs() call at completion.
+        every { mockPrefs.getBoolean(WorkoutRepository.PREF_CLIMBS_WORKOUT_BACKFILL_V1, false) } returns false
+
+        val cursor = MatrixCursor(arrayOf(BaseColumns._ID)).apply {
+            addRow(arrayOf(101L))
+            addRow(arrayOf(102L))
+            addRow(arrayOf(103L))
+        }
+        every {
+            mockSqliteDb.query(
+                WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE,
+                arrayOf(BaseColumns._ID),
+                any(),
+                null,
+                null,
+                null,
+                "${BaseColumns._ID} ASC"
+            )
+        } returns cursor
+
+        val climbPoints = (0..20).map { i ->
+            val dist = i * 50.0
+            PathPoint(distance = dist, latLng = LatLng(47.5 + (i * 0.0005), 10.0), altitude = 200.0 + (dist * 0.08))
+        }
+        coEvery { repository.getWorkoutTrackPoints(any(), TrackType.BEST) } returns climbPoints
+        coEvery { mockClimbsDb.insertClimbsWithDeduplicationBatch(any(), thresholdMeters = 50.0f) } returns listOf(1001L)
+        coEvery { mockLiveClimbsRepo.refreshClimbs() } returns Unit
+
+        val totalPersisted = repository.backfillHistoricalClimbs()
+
+        assertEquals(3, totalPersisted)
+        coVerify(exactly = 3) { mockClimbsDb.insertClimbsWithDeduplicationBatch(any(), thresholdMeters = 50.0f) }
+        coVerify(exactly = 1) { mockLiveClimbsRepo.refreshClimbs() }
+    }
 }

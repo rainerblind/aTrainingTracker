@@ -407,4 +407,69 @@ class TcxImportPeriodAndClusterIntegrationTest {
         // Then: No discrepancy, returns false
         assertFalse("No discrepancy when finished workouts match period summaries", inSync)
     }
+
+    @Test
+    fun testTST_STB_021_3_singleFileImportSuppressesDuplicateLocalBroadcast() = runBlocking {
+        val mockLbm = mockk<androidx.localbroadcastmanager.content.LocalBroadcastManager>(relaxed = true)
+        mockkStatic(androidx.localbroadcastmanager.content.LocalBroadcastManager::class)
+        every { androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(any()) } returns mockLbm
+
+        val tcx = generateTcx(sport = "Running", workoutName = "Single Run")
+        val tempFile = File.createTempFile("test_tcx_single_no_dup_bcast_", ".tcx")
+        tempFile.writeText(tcx)
+        try {
+            val result = LegacyImportEngine.importFromTcx(mockContext, tempFile)
+            assertTrue("Single-file import must succeed", result)
+
+            coVerify(exactly = 1) { mockWorkoutRepo.reloadWorkoutData(101L) }
+            coVerify(exactly = 1) { mockClusterRepo.refreshClusters() }
+            verify(exactly = 0) { mockLbm.sendBroadcast(any()) }
+        } finally {
+            tempFile.delete()
+        }
+    }
+
+    @Test
+    fun testTST_STB_021_3_bulkImportBatchDefersReloadAndReconcilesOnce() = runBlocking {
+        val mockLiveClimbsRepo = mockk<com.atrainingtracker.trainingtracker.climbs.LiveClimbsRepository>(relaxed = true)
+        com.atrainingtracker.trainingtracker.climbs.LiveClimbsRepository.resetForTesting(mockLiveClimbsRepo)
+        val mockPeriodsRepo = mockk<PeriodsRepository>(relaxed = true)
+        PeriodsRepository.setInstanceForTesting(mockPeriodsRepo)
+        coEvery { mockWorkoutRepo.extractAndPersistClimbsWithoutRefresh(any()) } returns listOf(501L)
+
+        val tempFiles = (1..3).map { idx ->
+            File.createTempFile("test_tcx_bulk_$idx", ".tcx").apply {
+                writeText(generateTcx(sport = "Biking", workoutName = "Bulk Ride $idx"))
+            }
+        }
+        try {
+            withBulkImportBatch { batch ->
+                tempFiles.forEachIndexed { idx, file ->
+                    every { mockWorkoutRepo.getWorkoutIdByBaseFileName(any()) } returns -1L
+                    assertTrue(
+                        "Bulk workout $idx must import",
+                        LegacyImportEngine.importFromTcx(mockContext, file)
+                    )
+                }
+                reconcileBulkImportBatch(
+                    context = mockApp,
+                    refreshClimbs = batch?.hasPersistedClimbs == true
+                )
+            }
+
+            // Per-workout in-memory reloads and broadcasts are suppressed during the batch
+            coVerify(exactly = 0) { mockWorkoutRepo.reloadWorkoutData(any()) }
+            coVerify(exactly = 3) { mockWorkoutRepo.extractAndPersistClimbsWithoutRefresh(101L) }
+
+            // Single post-batch reconciliation executes exactly once across all repositories
+            coVerify(exactly = 1) { mockWorkoutRepo.loadAllWorkouts() }
+            verify(exactly = 1) { mockPeriodsRepo.syncPeriodsIfDiscrepancy() }
+            coVerify(exactly = 1) { mockClusterRepo.refreshClusters() }
+            coVerify(exactly = 1) { mockLiveClimbsRepo.refreshClimbs() }
+        } finally {
+            tempFiles.forEach { it.delete() }
+            com.atrainingtracker.trainingtracker.climbs.LiveClimbsRepository.resetForTesting(null)
+            PeriodsRepository.setInstanceForTesting(null)
+        }
+    }
 }

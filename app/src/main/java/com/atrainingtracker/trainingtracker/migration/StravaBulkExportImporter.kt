@@ -152,9 +152,10 @@ object StravaBulkExportImporter {
             val equipmentDb = EquipmentDbHelper.getInstance(context)
             val existingSnapshot = ExistingWorkoutsSnapshot.create(context)
 
-            // 3. Process each activity
-            activities.forEachIndexed { index, row ->
-                val progressName = row.activityName ?: row.filename ?: row.activityId
+            // 3. Process each activity within BulkImportBatchContext to defer per-workout reloads (REQ-STB-021.3)
+            withBulkImportBatch {
+                activities.forEachIndexed { index, row ->
+                    val progressName = row.activityName ?: row.filename ?: row.activityId
                 listener?.onProgress(index + 1, totalScanned, progressName)
 
                 val filename = row.filename
@@ -294,6 +295,7 @@ object StravaBulkExportImporter {
                     Log.e(TAG, "Error importing activity $filename", t)
                     failedCount++
                 }
+            }
             }
 
             return@withContext StravaImportResult(

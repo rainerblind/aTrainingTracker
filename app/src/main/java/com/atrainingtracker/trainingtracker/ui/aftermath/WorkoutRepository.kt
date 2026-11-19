@@ -45,10 +45,8 @@ import com.atrainingtracker.trainingtracker.tracker.TrackerService
 import com.atrainingtracker.trainingtracker.tracker.LiveWorkoutSession
 import com.atrainingtracker.trainingtracker.MyHelper
 import com.atrainingtracker.trainingtracker.TrainingApplication
-import com.atrainingtracker.trainingtracker.climbs.Climb
-import com.atrainingtracker.trainingtracker.climbs.ClimbCategory
-import com.atrainingtracker.trainingtracker.climbs.ClimbDetector
 import com.atrainingtracker.trainingtracker.climbs.LiveClimbsRepository
+import com.atrainingtracker.trainingtracker.climbs.WorkoutClimbIngestionCoordinator
 import com.atrainingtracker.trainingtracker.database.CardioPowerDynamicsRecord
 import com.atrainingtracker.trainingtracker.database.CardioPowerTrendSample
 import com.atrainingtracker.trainingtracker.database.ClusterWorkoutDataPort
@@ -3085,8 +3083,8 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
     /**
      * Executes an idempotent background backfill for historical outdoor GPS workouts (REQ-MAP-066.1 / ATT-6691).
      * Iterates finished outdoor sessions (Sport in BIKE, RUN, UNKNOWN; trainer = 0/null; non-empty polyline),
-     * extracts qualifying climbs via [ClimbDetector.detectClimbs], and persists them to Climbs.db
-     * with 50m spatial deduplication via [ClimbsDatabaseManager.insertClimbsWithDeduplicationBatch].
+     * Backfills climbs from historical outdoor GPS workouts by delegating extraction to [WorkoutClimbIngestionCoordinator]
+     * without per-workout [LiveClimbsRepository.refreshClimbs] calls, then refreshing once at completion.
      *
      * Marks [PREF_CLIMBS_WORKOUT_BACKFILL_V1] as true in SharedPreferences and refreshes [LiveClimbsRepository].
      *
@@ -3145,7 +3143,7 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
         var totalClimbsPersisted = 0
         for (workoutId in candidateIds) {
             try {
-                val persistedIds = extractAndPersistClimbsFromWorkout(workoutId)
+                val persistedIds = extractAndPersistClimbsWithoutRefresh(workoutId)
                 totalClimbsPersisted += persistedIds.size
             } catch (e: Exception) {
                 Log.w(TAG, "Error extracting climbs for historical workout $workoutId", e)
@@ -4524,59 +4522,19 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
      * and persists them to Climbs.db with 50m spatial deduplication (REQ-MAP-064.1).
      * Refreshes LiveClimbsRepository to enable free-riding live ClimbPro.
      */
-    suspend fun extractAndPersistClimbsFromWorkout(workoutId: Long): List<Long> = withContext(Dispatchers.IO) {
-        try {
-            val points = getWorkoutTrackPoints(workoutId, TrackType.BEST)
-            if (points.size >= 2) {
-                val detected = ClimbDetector.detectClimbs(points, routeId = null, context = application)
-                if (detected.isNotEmpty()) {
-                    val elevationCache = ElevationCacheDatabaseManager.getInstance(application)
-                    val validatedClimbs = mutableListOf<Climb>()
+    suspend fun extractAndPersistClimbsFromWorkout(workoutId: Long): List<Long> =
+        WorkoutClimbIngestionCoordinator.extractAndPersistClimbs(
+            context = application,
+            workoutId = workoutId,
+            refreshLiveClimbs = true
+        ) { id -> getWorkoutTrackPoints(id, TrackType.BEST) }
 
-                    for (climb in detected) {
-                        val startDem = elevationCache.getElevation(climb.startLat, climb.startLng, toleranceE5 = 20)
-                        val endDem = elevationCache.getElevation(climb.endLat, climb.endLng, toleranceE5 = 20)
-
-                        if (startDem != null && endDem != null) {
-                            val demGain = endDem.toDouble() - startDem.toDouble()
-                            val demAvgGrade = if (climb.distanceMeters > 0) (demGain / climb.distanceMeters) * 100.0 else 0.0
-
-                            // REQ-CLM-009.2: Reject if DEM gain < 75% of minGain, DEM grade < 2.2%, or barometric drift exceeds threshold
-                            if (demGain < 15.0 || demAvgGrade < 2.2 || climb.elevationGainMeters > kotlin.math.max(demGain * 1.6 + 18.0, demGain + 35.0)) {
-                                continue
-                            }
-
-                            // Calibrate gain and grade against DEM ground truth
-                            validatedClimbs.add(
-                                climb.copy(
-                                    elevationGainMeters = demGain,
-                                    avgGradePercent = demAvgGrade,
-                                    category = ClimbCategory.fromScore(climb.distanceMeters * demAvgGrade)
-                                )
-                            )
-                        } else {
-                            // DEM cache miss: retain detected climb as-is (governed by ClimbDetector's spike guards)
-                            validatedClimbs.add(climb)
-                        }
-                    }
-
-                    if (validatedClimbs.isNotEmpty()) {
-                        val ids = ClimbsDatabaseManager.getInstance(application)
-                            .insertClimbsWithDeduplicationBatch(validatedClimbs, thresholdMeters = 50.0f)
-                        try {
-                            LiveClimbsRepository.getInstance(application).refreshClimbs()
-                        } catch (e: Exception) {
-                            Log.w(TAG, "Failed to refresh LiveClimbsRepository after workout climb extraction", e)
-                        }
-                        return@withContext ids
-                    }
-                }
-            }
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to extract and persist climbs for workout $workoutId", e)
-        }
-        emptyList()
-    }
+    internal suspend fun extractAndPersistClimbsWithoutRefresh(workoutId: Long): List<Long> =
+        WorkoutClimbIngestionCoordinator.extractAndPersistClimbs(
+            context = application,
+            workoutId = workoutId,
+            refreshLiveClimbs = false
+        ) { id -> getWorkoutTrackPoints(id, TrackType.BEST) }
 
 
     /**

@@ -371,4 +371,81 @@ class StravaBulkExportImporterTest {
             tempZip.delete()
         }
     }
+
+    @Test
+    fun testImportArchive_200ActivitiesInsideBulkBatchContextWithBoundedHeap() = runBlocking {
+        // TST-STB-021.3: 200-workout bulk Strava archive executes inside BulkImportBatchContext
+        // with bounded memory retention and fast completion.
+        val tempZip = File.createTempFile("strava_bulk_200_test", ".zip")
+        try {
+            val csvBuilder = StringBuilder("Activity ID,Activity Date,Activity Name,Activity Type,Activity Description,Commute,Activity Private Note,Activity Gear,Filename\n")
+            val tcxTemplate = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <TrainingCenterDatabase xmlns="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2">
+                  <Activities>
+                    <Activity Sport="Biking">
+                      <Id>2026-10-01T08:00:00Z</Id>
+                      <Lap StartTime="2026-10-01T08:00:00Z">
+                        <TotalTimeSeconds>300</TotalTimeSeconds>
+                        <DistanceMeters>1000</DistanceMeters>
+                        <Track>
+                          <Trackpoint><Time>2026-10-01T08:00:00Z</Time><Position><LatitudeDegrees>48.0</LatitudeDegrees><LongitudeDegrees>11.0</LongitudeDegrees></Position></Trackpoint>
+                          <Trackpoint><Time>2026-10-01T08:05:00Z</Time><Position><LatitudeDegrees>48.01</LatitudeDegrees><LongitudeDegrees>11.01</LongitudeDegrees></Position></Trackpoint>
+                        </Track>
+                      </Lap>
+                    </Activity>
+                  </Activities>
+                </TrainingCenterDatabase>
+            """.trimIndent().toByteArray(Charsets.UTF_8)
+
+            ZipOutputStream(FileOutputStream(tempZip)).use { zip ->
+                for (i in 1..200) {
+                    csvBuilder.append("${10000 + i},\"01.10.2026, 08:00:00\",Ride $i,Ride,,false,,,activities/ride_$i.tcx.gz\n")
+                    zip.putNextEntry(ZipEntry("activities/ride_$i.tcx.gz"))
+                    val baos = java.io.ByteArrayOutputStream()
+                    java.util.zip.GZIPOutputStream(baos).use { it.write(tcxTemplate) }
+                    zip.write(baos.toByteArray())
+                    zip.closeEntry()
+                }
+                zip.putNextEntry(ZipEntry("activities.csv"))
+                zip.write(csvBuilder.toString().toByteArray(Charsets.UTF_8))
+                zip.closeEntry()
+            }
+
+            io.mockk.mockkConstructor(android.content.ContentValues::class)
+            io.mockk.justRun { anyConstructed<android.content.ContentValues>().put(any<String>(), any<Long>()) }
+            io.mockk.justRun { anyConstructed<android.content.ContentValues>().put(any<String>(), any<String>()) }
+            io.mockk.justRun { anyConstructed<android.content.ContentValues>().put(any<String>(), any<Double>()) }
+            every { anyConstructed<android.content.ContentValues>().containsKey(any<String>()) } answers {
+                firstArg<String>() == "time"
+            }
+
+            var batchActiveCount = 0
+            coEvery {
+                LegacyImportEngine.persistParsedWorkout(any(), any(), any(), any(), any(), any())
+            } coAnswers {
+                if (kotlin.coroutines.coroutineContext[BulkImportBatchContext] != null) {
+                    batchActiveCount++
+                }
+                LegacyImportEngine.ImportResult(LegacyImportEngine.ImportStatus.SUCCESS, workoutId = 1000L)
+            }
+
+            System.gc()
+            val usedBefore = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()
+            val result = StravaBulkExportImporter.importArchive(mockContext, tempZip, null)
+            System.gc()
+            val usedAfter = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()
+
+            assertEquals(200, result.importedCount)
+            assertEquals(0, result.skippedCount)
+            assertEquals(0, result.failedCount)
+            assertEquals(200, batchActiveCount)
+            assertTrue(
+                "Retained heap growth across 200-workout bulk import must stay bounded (< 32 MB), delta=${(usedAfter - usedBefore) / (1024 * 1024)} MB",
+                usedAfter - usedBefore < 32L * 1024L * 1024L
+            )
+        } finally {
+            tempZip.delete()
+        }
+    }
 }

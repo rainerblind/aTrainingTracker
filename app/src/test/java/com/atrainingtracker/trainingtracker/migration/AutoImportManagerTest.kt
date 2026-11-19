@@ -176,4 +176,46 @@ class AutoImportManagerTest {
 
         assertEquals(false, AutoImportManager.isSyncing())
     }
+
+    @Test
+    fun testSyncIncremental_installsBulkImportBatchContextAndRefreshesClimbsOnceWhenClimbsPersisted() = runBlocking {
+        // TST-STB-021.3: AutoImportManager.syncIncremental runs inside BulkImportBatchContext
+        // and calls LiveClimbsRepository.refreshClimbs() once post-batch when climbs were persisted.
+        val mockLiveClimbsRepo = mockk<com.atrainingtracker.trainingtracker.climbs.LiveClimbsRepository>(relaxed = true)
+        com.atrainingtracker.trainingtracker.climbs.LiveClimbsRepository.resetForTesting(mockLiveClimbsRepo)
+        try {
+            AutoImportManager.snapshotProvider = { ExistingWorkoutsSnapshot(initialBaseNames = emptySet()) }
+            AutoImportManager.dropboxLister = { _, _, _ ->
+                listOf(
+                    AutoImportManager.CloudFileItem("id1", "climb_1.fit", "/FIT/climb_1.fit"),
+                    AutoImportManager.CloudFileItem("id2", "climb_2.fit", "/FIT/climb_2.fit")
+                )
+            }
+            AutoImportManager.dropboxDownloader = { _, _, targetFile ->
+                targetFile.writeText("fit")
+                true
+            }
+
+            val batchSeen = mutableListOf<Boolean>()
+            coEvery {
+                LegacyImportEngine.importFromFitResult(any(), any(), null, false)
+            } coAnswers {
+                val batch = kotlin.coroutines.coroutineContext[BulkImportBatchContext]
+                batchSeen.add(batch != null)
+                batch?.markClimbsPersisted()
+                LegacyImportEngine.ImportResult(LegacyImportEngine.ImportStatus.SUCCESS, 1001L)
+            }
+
+            val result = AutoImportManager.syncIncremental(mockContext)
+
+            assertEquals(2, result.importedCount)
+            assertEquals(listOf(true, true), batchSeen)
+            coVerify(exactly = 1) { mockWorkoutRepo.loadAllWorkouts() }
+            verify(exactly = 1) { mockPeriodsRepo.syncPeriodsIfDiscrepancy() }
+            coVerify(exactly = 1) { mockClusterRepo.refreshClusters() }
+            coVerify(exactly = 1) { mockLiveClimbsRepo.refreshClimbs() }
+        } finally {
+            com.atrainingtracker.trainingtracker.climbs.LiveClimbsRepository.resetForTesting(null)
+        }
+    }
 }

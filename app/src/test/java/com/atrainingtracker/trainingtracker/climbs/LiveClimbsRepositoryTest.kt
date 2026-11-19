@@ -28,7 +28,9 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.SphericalUtil
 import io.mockk.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
@@ -479,5 +481,62 @@ class LiveClimbsRepositoryTest {
         repository.refreshClimbs(null)
 
         assertNull("Active live climb must be cleared when no longer present in refreshed database", repository.activeLiveClimb.value)
+    }
+
+    @Test
+    fun testRefreshClimbs_freeRideSharesStoredReferenceAndSkipsUnchangedCopies() = runTest(testDispatcher) {
+        // TST-STB-021.2: When activeRouteId is null, allClimbs and allStoredClimbs share the same
+        // pre-deduplicated List<Climb> instance, and unchanged Climb instances are not re-allocated.
+        val matchingCategoryClimb = sampleClimb.copy(
+            id = 10L,
+            category = sampleClimb.resolveCategory(ClimbScoringFormula.FIETS)
+        )
+        coEvery { mockClimbsDb.getAllClimbs() } returns listOf(matchingCategoryClimb)
+
+        repository.refreshClimbs(null)
+
+        assertTrue(
+            "Free-ride allClimbs and allStoredClimbs must share the same List instance",
+            repository.allClimbs.value === repository.allStoredClimbs.value
+        )
+        assertTrue(
+            "Unchanged Climb category must retain the original Climb instance without .copy()",
+            repository.allStoredClimbs.value.single() === matchingCategoryClimb
+        )
+
+        // applyFormula must likewise preserve shared reference when free-riding
+        repository.applyFormula(ClimbScoringFormula.STRAVA_GARMIN)
+        assertTrue(
+            "applyFormula must keep free-ride allClimbs and allStoredClimbs sharing one List reference",
+            repository.allClimbs.value === repository.allStoredClimbs.value
+        )
+    }
+
+    @Test
+    fun testRefreshClimbs_serializesConcurrentCallsWithMutex() = runTest(testDispatcher) {
+        // TST-STB-021.2: Overlapping refreshClimbs invocations must not execute DB loads concurrently.
+        val inFlight = java.util.concurrent.atomic.AtomicInteger(0)
+        val maxConcurrent = java.util.concurrent.atomic.AtomicInteger(0)
+
+        coEvery { mockClimbsDb.getAllClimbs() } coAnswers {
+            val current = inFlight.incrementAndGet()
+            maxConcurrent.updateAndGet { prev -> maxOf(prev, current) }
+            kotlinx.coroutines.yield()
+            inFlight.decrementAndGet()
+            listOf(sampleClimb)
+        }
+
+        coroutineScope {
+            val job1 = launch { repository.refreshClimbs(null) }
+            val job2 = launch { repository.refreshClimbs(null) }
+            job1.join()
+            job2.join()
+        }
+
+        assertEquals(
+            "refreshClimbs calls must be serialized cleanly via Mutex",
+            1,
+            maxConcurrent.get()
+        )
     }
 }

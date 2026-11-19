@@ -27,9 +27,6 @@ import com.atrainingtracker.trainingtracker.cloud.googledrive.DriveFileEntry
 import com.atrainingtracker.trainingtracker.cloud.googledrive.GoogleDriveAuthManager
 import com.atrainingtracker.trainingtracker.cloud.googledrive.GoogleDriveClient
 import com.atrainingtracker.trainingtracker.cloud.healthconnect.HealthConnectWorkoutSyncWorker
-import com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository
-import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
-import com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepository
 import com.dropbox.core.DbxRequestConfig
 import com.dropbox.core.v2.DbxClientV2
 import kotlinx.coroutines.CancellationException
@@ -178,108 +175,108 @@ object AutoImportManager {
         }
 
         try {
-            // 1. Process Dropbox
-            if (dropboxEnabled) {
-                onStatus?.invoke("Scanning Dropbox...")
-                val dropboxEntries = queryDropboxEntries(appContext, format)
-                for (entry in dropboxEntries) {
-                    val baseFileName = entry.name.substringBeforeLast(".").removeSuffix("-TMP").removeSuffix("~")
-                    if (existingSnapshot.containsFileBaseName(baseFileName)) {
-                        skippedCount++
-                        continue
-                    }
+            withBulkImportBatch { batch ->
+                // 1. Process Dropbox
+                if (dropboxEnabled) {
+                    onStatus?.invoke("Scanning Dropbox...")
+                    val dropboxEntries = queryDropboxEntries(appContext, format)
+                    for (entry in dropboxEntries) {
+                        val baseFileName = entry.name.substringBeforeLast(".").removeSuffix("-TMP").removeSuffix("~")
+                        if (existingSnapshot.containsFileBaseName(baseFileName)) {
+                            skippedCount++
+                            continue
+                        }
 
-                    val targetFile = File(tempDir, entry.name)
-                    val downloaded = downloadDropboxFile(appContext, entry, targetFile)
-                    if (!downloaded || !targetFile.exists()) {
-                        failedCount++
-                        continue
-                    }
+                        val targetFile = File(tempDir, entry.name)
+                        val downloaded = downloadDropboxFile(appContext, entry, targetFile)
+                        if (!downloaded || !targetFile.exists()) {
+                            failedCount++
+                            continue
+                        }
 
-                    try {
-                        val importResult = importLocalFileNonInteractively(appContext, targetFile, format, uploadToStrava)
-                        when (importResult.status) {
-                            LegacyImportEngine.ImportStatus.SUCCESS -> {
-                                existingSnapshot.register(baseFileName)
-                                importedCount++
-                                importResult.workoutId?.let { workoutId ->
-                                    if (syncHealthConnect) {
-                                        HealthConnectWorkoutSyncWorker.enqueue(appContext, workoutId)
+                        try {
+                            val importResult = importLocalFileNonInteractively(appContext, targetFile, format, uploadToStrava)
+                            when (importResult.status) {
+                                LegacyImportEngine.ImportStatus.SUCCESS -> {
+                                    existingSnapshot.register(baseFileName)
+                                    importedCount++
+                                    importResult.workoutId?.let { workoutId ->
+                                        if (syncHealthConnect) {
+                                            HealthConnectWorkoutSyncWorker.enqueue(appContext, workoutId)
+                                        }
                                     }
                                 }
+                                LegacyImportEngine.ImportStatus.DUPLICATE_SKIPPED -> {
+                                    existingSnapshot.register(baseFileName)
+                                    skippedCount++
+                                }
+                                LegacyImportEngine.ImportStatus.FAILED -> failedCount++
                             }
-                            LegacyImportEngine.ImportStatus.DUPLICATE_SKIPPED -> {
-                                existingSnapshot.register(baseFileName)
-                                skippedCount++
-                            }
-                            LegacyImportEngine.ImportStatus.FAILED -> failedCount++
+                        } catch (ce: CancellationException) {
+                            throw ce
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Error importing file ${entry.name} from Dropbox", e)
+                            failedCount++
+                        } finally {
+                            targetFile.delete()
                         }
-                    } catch (ce: CancellationException) {
-                        throw ce
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Error importing file ${entry.name} from Dropbox", e)
-                        failedCount++
-                    } finally {
-                        targetFile.delete()
                     }
                 }
-            }
 
-            // 2. Process Google Drive
-            if (googleDriveEnabled) {
-                onStatus?.invoke("Scanning Google Drive...")
-                val driveEntries = queryGoogleDriveEntries(appContext, format)
-                for (entry in driveEntries) {
-                    val baseFileName = entry.name.substringBeforeLast(".").removeSuffix("-TMP").removeSuffix("~")
-                    if (existingSnapshot.containsFileBaseName(baseFileName)) {
-                        skippedCount++
-                        continue
-                    }
+                // 2. Process Google Drive
+                if (googleDriveEnabled) {
+                    onStatus?.invoke("Scanning Google Drive...")
+                    val driveEntries = queryGoogleDriveEntries(appContext, format)
+                    for (entry in driveEntries) {
+                        val baseFileName = entry.name.substringBeforeLast(".").removeSuffix("-TMP").removeSuffix("~")
+                        if (existingSnapshot.containsFileBaseName(baseFileName)) {
+                            skippedCount++
+                            continue
+                        }
 
-                    val targetFile = File(tempDir, entry.name)
-                    val downloaded = downloadGoogleDriveFile(appContext, entry, targetFile)
-                    if (!downloaded || !targetFile.exists()) {
-                        failedCount++
-                        continue
-                    }
+                        val targetFile = File(tempDir, entry.name)
+                        val downloaded = downloadGoogleDriveFile(appContext, entry, targetFile)
+                        if (!downloaded || !targetFile.exists()) {
+                            failedCount++
+                            continue
+                        }
 
-                    try {
-                        val importResult = importLocalFileNonInteractively(appContext, targetFile, format, uploadToStrava)
-                        when (importResult.status) {
-                            LegacyImportEngine.ImportStatus.SUCCESS -> {
-                                existingSnapshot.register(baseFileName)
-                                importedCount++
-                                importResult.workoutId?.let { workoutId ->
-                                    if (syncHealthConnect) {
-                                        HealthConnectWorkoutSyncWorker.enqueue(appContext, workoutId)
+                        try {
+                            val importResult = importLocalFileNonInteractively(appContext, targetFile, format, uploadToStrava)
+                            when (importResult.status) {
+                                LegacyImportEngine.ImportStatus.SUCCESS -> {
+                                    existingSnapshot.register(baseFileName)
+                                    importedCount++
+                                    importResult.workoutId?.let { workoutId ->
+                                        if (syncHealthConnect) {
+                                            HealthConnectWorkoutSyncWorker.enqueue(appContext, workoutId)
+                                        }
                                     }
                                 }
+                                LegacyImportEngine.ImportStatus.DUPLICATE_SKIPPED -> {
+                                    existingSnapshot.register(baseFileName)
+                                    skippedCount++
+                                }
+                                LegacyImportEngine.ImportStatus.FAILED -> failedCount++
                             }
-                            LegacyImportEngine.ImportStatus.DUPLICATE_SKIPPED -> {
-                                existingSnapshot.register(baseFileName)
-                                skippedCount++
-                            }
-                            LegacyImportEngine.ImportStatus.FAILED -> failedCount++
+                        } catch (ce: CancellationException) {
+                            throw ce
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Error importing file ${entry.name} from Google Drive", e)
+                            failedCount++
+                        } finally {
+                            targetFile.delete()
                         }
-                    } catch (ce: CancellationException) {
-                        throw ce
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Error importing file ${entry.name} from Google Drive", e)
-                        failedCount++
-                    } finally {
-                        targetFile.delete()
                     }
                 }
-            }
 
-            // 3. Post-import reconciliation
-            if (importedCount > 0) {
-                try {
-                    WorkoutRepository.getInstance(appContext).loadAllWorkouts()
-                    PeriodsRepository.getInstance(appContext).syncPeriodsIfDiscrepancy()
-                    WorkoutClusterRepository.getInstance(appContext).refreshClusters()
-                } catch (e: Exception) {
-                    Log.w(TAG, "Post-import repository reconciliation failed: ${e.message}")
+                // 3. Post-import reconciliation (single pass for the whole sync batch, REQ-STB-021.3)
+                if (importedCount > 0) {
+                    reconcileBulkImportBatch(
+                        context = appContext,
+                        refreshClimbs = batch?.hasPersistedClimbs == true,
+                        logTag = TAG
+                    )
                 }
             }
 
