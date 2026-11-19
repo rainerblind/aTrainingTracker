@@ -3897,6 +3897,190 @@ def ensure_weekly_retro_ticket(role="coordinator"):
     return new_key
 
 
+def _weekly_rollup_already_posted(weekly_key, marker, role="coordinator"):
+    """Checks whether a rollup comment containing `marker` is already present on `weekly_key`."""
+    try:
+        config = get_config()
+        base = config["JIRA_URL"].rstrip("/")
+        res = jira_request(f"{base}/rest/api/3/issue/{weekly_key}/comment?maxResults=100", role=role)
+        for c in (res or {}).get("comments", []):
+            body = c.get("body", "")
+            text = adf_to_text(body) if isinstance(body, dict) else str(body)
+            if marker in text:
+                return True
+    except Exception:
+        pass
+    return False
+
+
+def format_weekly_metrics_rollup(metrics, spc=None, retro_key=None):
+    """Formats a compact Schicht scorecard rollup comment for the rolling Wochen Review & Retro ticket."""
+    s_name = metrics.get("sprint_name", "Unknown")
+    tp = metrics.get("throughput", {})
+    qg = metrics.get("quality_gates", {})
+    gates = qg.get("gates", {})
+    gate6 = gates.get("gate_6") or {}
+    marker = f"[Schicht-Scorecard-Rollup: {s_name}]"
+
+    retro_ref = f" ({retro_key})" if retro_key else ""
+    lines = [
+        f"h3. {marker}{retro_ref}",
+        f"* *Throughput*: {tp.get('completed_tickets', 0)}/{tp.get('total_tickets', 0)} tickets ({tp.get('completion_rate_percent', 0)}%) | *Velocity*: {tp.get('completed_story_points', 0)} SP",
+        f"* *Gate 1–5 FTPR*: *{qg.get('overall_ftpr_percent', 0)}%* ({qg.get('total_subtasks_evaluated', 0)} sub-tasks)"
+        + (f" | *End-to-End (1–6)*: *{qg.get('end_to_end_ftpr_percent')}%*" if "end_to_end_ftpr_percent" in qg else "")
+        + (f" | *Stage 6 FTPR*: *{gate6.get('ftpr_percent')}%*" if gate6 else ""),
+    ]
+    spc_warnings = (spc or {}).get("warnings") or []
+    if spc_warnings:
+        lines.append("* *PA 4.2 SPC Special Cause Alerts*:")
+        for w in spc_warnings:
+            lines.append(f"** {w}")
+    elif (spc or {}).get("has_history"):
+        lines.append("* *PA 4.2 SPC Status*: In Statistical Control")
+    return "\n".join(lines)
+
+
+def post_metrics_rollup_to_weekly_retro(metrics, spc=None, retro_key=None, role="coordinator"):
+    """
+    Idempotently posts a compact Schicht scorecard rollup onto the active rolling
+    'Wochen Review & Retro' ticket so metrics & SPC alerts persist even after per-Schicht
+    Review & Retro tickets are closed (Interactive-PO / ATT-8223).
+    """
+    s_name = metrics.get("sprint_name", "Unknown")
+    marker = f"[Schicht-Scorecard-Rollup: {s_name}]"
+    weekly_key = ensure_weekly_retro_ticket(role=role)
+    if not weekly_key or weekly_key == retro_key:
+        return None
+    if _weekly_rollup_already_posted(weekly_key, marker, role=role):
+        print(f"Weekly scorecard rollup for '{s_name}' already posted to {weekly_key}; skipping duplicate.")
+        return weekly_key
+    body = format_weekly_metrics_rollup(metrics, spc=spc, retro_key=retro_key)
+    add_comment(weekly_key, body, role=role)
+    print(f"Posted weekly scorecard rollup for '{s_name}' to {weekly_key}.")
+    return weekly_key
+
+
+def extract_retro_highlights_markdown(retro_file_path):
+    """
+    Extracts key qualitative findings from docs/engineering/retros/Sprint_Review_and_Retro_<KEY>.md
+    (Delivered headline, Retrospective Insights/Proposals, and QA Findings & Corrective Actions)
+    for automated rollup into the rolling Wochen Review & Retro ticket.
+    """
+    if not retro_file_path or not os.path.isfile(retro_file_path):
+        return ""
+    with open(retro_file_path, "r", encoding="utf-8") as f:
+        lines = f.read().splitlines()
+
+    title = ""
+    delivered_heading = ""
+    captured_sections = []
+    current_heading = None
+    current_body = []
+
+    def _flush():
+        nonlocal current_heading, current_body
+        if current_heading and any(ln.strip() for ln in current_body):
+            captured_sections.append((current_heading, list(current_body)))
+        current_heading = None
+        current_body = []
+
+    for line in lines:
+        stripped = line.strip()
+        if not title and stripped.startswith("# "):
+            title = stripped[2:].strip()
+            continue
+        if stripped.startswith("## "):
+            _flush()
+            heading = stripped[3:].strip()
+            low = heading.lower()
+            if "sprint review" in low or "delivered" in low:
+                delivered_heading = heading
+            elif any(tok in low for tok in ("retrospective", "insight", "proposal", "improvement", "qa findings", "corrective action", "escalation", "anomaly", "anomalies", "spot-check")):
+                current_heading = heading
+            continue
+        if current_heading is not None:
+            if stripped == "---":
+                continue
+            current_body.append(line)
+    _flush()
+
+    out = []
+    if title:
+        out.append(f"* *Source Retro*: {title} (`{os.path.relpath(retro_file_path)}`)" if os.path.isabs(retro_file_path) else f"* *Source Retro*: {title} (`{retro_file_path}`)")
+    if delivered_heading:
+        out.append(f"* *Delivery Summary*: {delivered_heading}")
+    for heading, body_lines in captured_sections:
+        out.append("")
+        out.append(f"h4. {heading}")
+        out.extend(body_lines)
+    return "\n".join(out).strip()
+
+
+def post_weekly_retro_rollup(sprint_arg=None, retro_file=None, note=None, role="coordinator"):
+    """
+    Extracts qualitative retrospective insights, tooling/governance proposals, and QA findings
+    from the closing Schicht's Sprint_Review_and_Retro_<KEY>.md deliverable and idempotently posts
+    them onto the active rolling 'Wochen Review & Retro' ticket (Interactive-PO / ATT-8223).
+    """
+    config = get_config()
+    base = config["JIRA_URL"].rstrip("/")
+    boards = jira_request(f"{base}/rest/agile/1.0/board", role=role).get("values", [])
+    if not boards:
+        print("Error: No Agile board found.", file=sys.stderr)
+        return None
+    board_id = boards[0]["id"]
+    target_sprint = resolve_sprint_object(base, board_id, sprint_arg=sprint_arg, role=role)
+    if not target_sprint:
+        print(f"Error: Sprint '{sprint_arg or 'active sprint'}' not found.", file=sys.stderr)
+        return None
+
+    s_id = target_sprint["id"]
+    s_name = target_sprint["name"].strip()
+
+    retro_key = None
+    if not retro_file:
+        sprint_issues = fetch_all_sprint_issues(base, s_id, "summary,issuetype", role=role)
+        for i in sprint_issues:
+            itype = i.get("fields", {}).get("issuetype", {}).get("name", "")
+            if itype.lower() in ("sub-task", "subtask"):
+                continue
+            summary = i.get("fields", {}).get("summary", "")
+            if re.search(r'^\s*(?:\[[^\]]+\]\s*)?(?:sprint\s+)?review\s*(?:&|and)\s*retro(?:spective)?\b', summary, re.IGNORECASE):
+                retro_key = i["key"]
+                break
+        if retro_key:
+            repo_root = os.path.abspath(os.path.join(_tools_dir, ".."))
+            candidate = os.path.join(repo_root, "docs", "engineering", "retros", f"Sprint_Review_and_Retro_{retro_key}.md")
+            if os.path.isfile(candidate):
+                retro_file = candidate
+
+    marker = f"[Schicht-Retro-Rollup: {s_name}]"
+    weekly_key = ensure_weekly_retro_ticket(role=role)
+    if not weekly_key:
+        print("Warning: Could not resolve rolling Wochen Review & Retro ticket.", file=sys.stderr)
+        return None
+    if _weekly_rollup_already_posted(weekly_key, marker, role=role):
+        print(f"Weekly retro findings rollup for '{s_name}' already posted to {weekly_key}; skipping duplicate.")
+        return weekly_key
+
+    parts = [f"h3. {marker}" + (f" ({retro_key})" if retro_key else "")]
+    if retro_file:
+        extracted = extract_retro_highlights_markdown(retro_file)
+        if extracted:
+            parts.append(extracted)
+        else:
+            parts.append(f"* *Retro File*: `{retro_file}` (no Section 3/4 highlights parsed)")
+    if note:
+        parts.append(f"\n* *Additional PO/Coordinator Note*: {note}")
+    if len(parts) == 1:
+        parts.append(f"* Schicht `{s_name}` closed; see `docs/engineering/retros/` for full details.")
+
+    comment_body = "\n".join(parts)
+    add_comment(weekly_key, comment_body, role=role)
+    print(f"Posted weekly retro findings rollup for '{s_name}' to {weekly_key}.")
+    return weekly_key
+
+
 def get_next_review_subsystem(matrix_path=None, repo_root=None):
     """
     REQ-PRO-095.2 / REQ-PRO-095.3:
@@ -4187,7 +4371,7 @@ def collect_sprint_metrics_for_id(sprint_id, sprint_name, board_id, role="coordi
     return parse_sprint_gate_metrics(parent_issues, sprint_info, history=history, repo_root=repo_root)
 
 
-def cmd_sprint_metrics(sprint_arg=None, record=False, post_to_retro=False, backfill=None, role="coordinator"):
+def cmd_sprint_metrics(sprint_arg=None, record=False, post_to_retro=False, backfill=None, role="coordinator", weekly_rollup=True):
     config = get_config()
     base = config['JIRA_URL'].rstrip('/')
     boards = jira_request(f"{base}/rest/agile/1.0/board", role=role)["values"]
@@ -4298,6 +4482,11 @@ def cmd_sprint_metrics(sprint_arg=None, record=False, post_to_retro=False, backf
             print(f"Posted quantitative sprint scorecard to {retro_key}.")
         else:
             print("Warning: No 'Review & Retro' ticket found in this sprint to post metrics to.", file=sys.stderr)
+        if weekly_rollup:
+            try:
+                post_metrics_rollup_to_weekly_retro(metrics, spc=spc, retro_key=retro_key, role=role)
+            except Exception as exc:
+                print(f"Warning: Failed to post weekly scorecard rollup: {exc}", file=sys.stderr)
 
 
 def resolve_sprint_object(base, board_id, sprint_arg=None, role="coordinator"):
@@ -5630,6 +5819,8 @@ USAGE_TEXT = (
     "  search JQL                                            Search issues using JQL\n"
     "  ensure-retro                                          Check/create 'Review & Retro' ticket in the active sprint\n"
     "  ensure-weekly-retro                                   Check/create rolling 'Wochen Review & Retro' ticket under ATT-232\n"
+    "  post-weekly-rollup [--sprint <ID|NAME>] [--retro-file <FILE>] [--note <TEXT>]\n"
+    "                                                        Idempotently post Schicht Retro insights, proposals & QA findings to rolling Wochen Review & Retro\n"
     "  ensure-weekly-reviews [--force]                       Check/create mandatory Weekly Dual-Vendor Code Review ticket\n"
     "  add-label KEY LABEL[,LABEL2]                          Append label(s) to an issue idempotently\n"
     "  pack-sprint TARGET_SPRINT_ID [--lanes N] [--max-sp-per-lane SP]\n"
@@ -5664,8 +5855,8 @@ USAGE_TEXT = (
     "  clear-fixversion KEY                                  Clear Lösungsversion on issue\n"
     "  rank-top KEY                                          Rank issue at the very top of the backlog\n"
     "  create-subtask PARENT_KEY SUMMARY DESC [--add-to-sprint]\n"
-    "  sprint-metrics [--sprint <ID|NAME>] [--record] [--post-to-retro] [--backfill=N]\n"
-    "                                                        Calculate PA 4.1 sprint metrics and PA 4.2 SPC control limits\n"
+    "  sprint-metrics [--sprint <ID|NAME>] [--record] [--post-to-retro] [--no-weekly-rollup] [--backfill=N]\n"
+    "                                                        Calculate PA 4.1 sprint metrics and PA 4.2 SPC control limits (auto-rolls up to Wochen Review & Retro with --post-to-retro)\n"
     "  export-gates [--sprint <ID|NAME>] [--out <FILE>]\n"
     "                                                        Export sprint gate records to docs/engineering/gates/<sprint>.md\n"
     "  export-test-evidence [--sprint <ID|NAME>] [--release <TAG>] [--out-dir <DIR>] [--no-kover]\n"
@@ -5704,6 +5895,32 @@ if __name__ == "__main__":
         ensure_retro_ticket(role=active_role)
     elif cmd in ("ensure-weekly-retro", "ensure_weekly_retro"):
         ensure_weekly_retro_ticket(role=active_role)
+    elif cmd in ("post-weekly-rollup", "post_weekly_rollup"):
+        sprint_arg = None
+        retro_file_arg = None
+        note_arg = None
+        idx = 1
+        while idx < len(remaining_argv):
+            a = remaining_argv[idx]
+            if a.startswith("--sprint="):
+                sprint_arg = a.split("=", 1)[1]
+            elif a == "--sprint" and idx + 1 < len(remaining_argv):
+                sprint_arg = remaining_argv[idx + 1]
+                idx += 1
+            elif a.startswith("--retro-file="):
+                retro_file_arg = a.split("=", 1)[1]
+            elif a == "--retro-file" and idx + 1 < len(remaining_argv):
+                retro_file_arg = remaining_argv[idx + 1]
+                idx += 1
+            elif a.startswith("--note="):
+                note_arg = a.split("=", 1)[1]
+            elif a == "--note" and idx + 1 < len(remaining_argv):
+                note_arg = remaining_argv[idx + 1]
+                idx += 1
+            elif not a.startswith("--") and not sprint_arg:
+                sprint_arg = a
+            idx += 1
+        post_weekly_retro_rollup(sprint_arg=sprint_arg, retro_file=retro_file_arg, note=note_arg, role=active_role)
     elif cmd in ("ensure-weekly-reviews", "ensure_weekly_reviews", "ensure-weekly-review", "ensure_weekly_review"):
         force = "--force" in remaining_argv
         ensure_weekly_reviews(role=active_role, force=force)
@@ -6004,6 +6221,7 @@ if __name__ == "__main__":
         sprint_arg = None
         record = False
         post_to_retro = False
+        weekly_rollup = True
         backfill = None
         idx = 1
         while idx < len(remaining_argv):
@@ -6012,6 +6230,8 @@ if __name__ == "__main__":
                 record = True
             elif a in ("--post-to-retro", "--retro"):
                 post_to_retro = True
+            elif a == "--no-weekly-rollup":
+                weekly_rollup = False
             elif a.startswith("--sprint="):
                 sprint_arg = a.split("=", 1)[1]
             elif a == "--sprint" and idx + 1 < len(remaining_argv):
@@ -6025,7 +6245,7 @@ if __name__ == "__main__":
             elif not a.startswith("--") and not sprint_arg:
                 sprint_arg = a
             idx += 1
-        cmd_sprint_metrics(sprint_arg=sprint_arg, record=record, post_to_retro=post_to_retro, backfill=backfill, role=active_role)
+        cmd_sprint_metrics(sprint_arg=sprint_arg, record=record, post_to_retro=post_to_retro, backfill=backfill, role=active_role, weekly_rollup=weekly_rollup)
     elif cmd in ("export-gates", "export_gates"):
         sprint_arg = None
         out_arg = None
