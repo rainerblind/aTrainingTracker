@@ -1,7 +1,7 @@
 # Living Test Specification: Tracking & Live Sensor Cockpit
 
 **Document ID**: `DOC-TST-TRK`  
-**Version**: 1.0.69  
+**Version**: 1.0.70  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -2648,8 +2648,8 @@
 
 ### TST-TRK-072: **Guided DFA a1 Step & Ramp Test Protocol Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-072` (`REQ-TRK-072.1`..`REQ-TRK-072.8`)
-- **Component**: `HrvRampTestViewModel.kt`, `HrvRampTestScreen.kt`, `HrvRampTestConfig.kt`, `HrvThresholdEstimator.kt`, `TrackerService.java`, `strings_hrv.xml`
-- **Jira**: `ATT-4969`, `ATT-7529`, `ATT-7745`
+- **Component**: `HrvRampTestViewModel.kt`, `HrvRampTestScreen.kt`, `HrvRampTestConfig.kt`, `HrvThresholdEstimator.kt`, `TrackerService.java`, `HrvDfaA1RangeSliderGestureTest.kt`, `strings_hrv.xml`
+- **Jira**: `ATT-4969`, `ATT-7529`, `ATT-7745`, `ATT-8951`
 - **Test Description**:
   1. *Protocol Configuration & Direct Start from CONFIG Phase (`TST-TRK-072.1`, `HrvRampTestViewModelTest.kt`, `HrvRampTestScreenTest.kt`)*:
      • Verify sensor telemetry is bound in `init` and continuously evaluates readiness while in `CONFIG` phase.
@@ -2675,10 +2675,11 @@
      • Verify 100% presence and argument-specifier parity for all new protocol guidance strings and natural sensor status copy across all 9 localized `strings_hrv.xml` files (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
   8. *Clean-Room Targeted Test Suite Execution (`TST-TRK-072.8`)*:
      • `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.hrv.*" --tests "com.atrainingtracker.trainingtracker.localization.TranslationParityTest"` asserting 100% pass rate.
-  9. *Consolidated Launcher Access & Ergonomic Entry Point Verification (`TST-TRK-072.9`, `HrvRampTestScreenTest.kt`)*:
+  9. *Consolidated Launcher Access & Ergonomic Entry Point Verification (`TST-TRK-072.9`, `HrvRampTestScreenTest.kt`, `HrvDfaA1RangeSliderGestureTest.kt`)*:
      • Verify `hrv_test_cockpit_launcher` is absent from `TrackingTabsScreen.kt` `bottomContent`.
      • Verify `btn_guided_hrv_test` is absent from `AthleteProfileScreen.kt` HRV tab.
      • Verify `ZonesSettingsActivity.kt` `HrvDfaA1SettingsContent` renders `Icons.AutoMirrored.Filled.TrendingUp` for `hrv_start_guided_ramp_test`.
+     • Verify via Robolectric `createComposeRule()` (passing non-null `onOpenHrvTest = {}` with `0` `src/main` reads per `REQ-PRO-049.1`) that `HrvDfaA1SettingsContent` positions the `R.string.hrv_start_guided_ramp_test` `OutlinedButton` strictly between `R.string.hrv_zones_guidance_desc` and the first zone card / threshold control (`guidanceDesc.bottom <= ctaButton.top && ctaButton.bottom <= firstZoneOrThresholdControl.top`), renders single-line in verbose German (`"Geführten Schwellentest starten"` at `360.dp`–`412.dp`), keeps `HrvDfaA1RangeSliderCard` visible inside `680.dp` (`testZoneSettingsScreen_tab3PreservesVerticalScrollAndOutsideSwipe`), invokes `onOpenHrvTest` on click, and passes `Rule 8.5` Light/Dark PNG inspection (`ATT-8951`).
      • Verify host route `NavRoutes.HRV_TEST` remains mounted in `ATrainingTrackerApp.kt` and reachable via Training Zones.
   10. *Lifecycle Automation: Lap Splits, Protocol Auto-Naming & Stop Broadcast Tests (`TST-TRK-072.10`, `HrvRampTestViewModelTest.kt`, `TrackerServiceAutoNamingTest.kt`)*:
      • Verify `REQUEST_NEW_LAP` is broadcast on `WARMUP -> TESTING` transition.
@@ -3675,3 +3676,4 @@
 | `1.0.67` | 2026-11-19 | AI Agent (`ATT-8891`, `--as agent1`) | `ATT-8891` | Added & verified `TST-FIL-030` (`[Verified]`, `TST-FIL-030.1`–`.5`) rebased cleanly atop `sprint/2026-11-19_01_Früh` (`6bb37af4`) reusing Gate 4 Pass (`ATT-9091`: `19` suites / `147/147` PASS, `0` failed, `0` skipped, zero `app/` diff post-`ee81c8ae` per `Rule 7.5`), static baselines (`lint = 216`, `detekt = 9509`) & safety linters PASS, and `docs/engineering/walkthroughs/ATT-8891_walkthrough.md`. |
 | `1.0.68` | 2026-11-19 | Lane A Flash (`ATT-8329`, `--as agent1`) | `ATT-8329` | Updated `Component` & `Test Description` for `TST-FIL-002` (5-mode `calcExtremaValue` Robolectric matrix), `TST-FIL-003` (dedicated `WorkoutSummariesAltitudeShiftTest.kt` + session/samples tags), and `TST-CON-007` (`BatteryDeviceTest.kt`), remaining `[Implemented]` pending Stage 4/5 execution. |
 | `1.0.69` | 2026-11-19 | Lane A Flash (`ATT-8329`, `--as agent1`) | `ATT-8329` | Promoted `TST-FIL-002`, `TST-FIL-003`, and `TST-CON-007` to `[Verified]` in Stage 5 reusing Gate 4 verified evidence (`Rule 7.5`: `33/33` PASS across 5 suites, `0` `app/` code changes since Gate 4, `ATT-8329_walkthrough.md`). |
+| `1.0.70` | 2026-11-19 | AI Agent (`ATT-8951`, `--as agent1`) | `ATT-8951` | Refined & verified `TST-TRK-072.9` (`[Verified]`) atop `50a57b3e` following Gate 4 `34/34` PASS (`HrvDfaA1RangeSliderGestureTest` `10/10`, `HrvDfaA1SettingsContractTest` `12/12`, `HrvRampTestScreenTest` `6/6`, `SourceTextReadingAuditContractTest` `6/6`), `Rule 8.5` PNG `img/ATT-8951_hrv_cta_above_fold.png`, and `--check-verified-evidence` `exit 0`. |

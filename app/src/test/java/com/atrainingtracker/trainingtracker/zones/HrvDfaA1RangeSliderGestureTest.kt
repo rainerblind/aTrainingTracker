@@ -46,6 +46,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.captureToImage
@@ -54,12 +55,14 @@ import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipe
 import androidx.compose.ui.test.swipeLeft
 import androidx.compose.ui.test.swipeRight
 import androidx.compose.ui.test.swipeUp
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ApplicationProvider
 import com.atrainingtracker.R
@@ -68,6 +71,8 @@ import com.atrainingtracker.trainingtracker.activities.HrvDfaA1SettingsContent
 import com.atrainingtracker.trainingtracker.activities.HrvThresholdControlRow
 import com.atrainingtracker.trainingtracker.activities.ZoneSettingsScreen
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
 import com.atrainingtracker.trainingtracker.settings.ZoneDisplayOptions
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import kotlinx.coroutines.runBlocking
@@ -88,9 +93,11 @@ import java.io.FileOutputStream
  * Behavioral Compose UI gesture and display-options test suite verifying [HrvDfaA1RangeSlider]
  * isolation from [HorizontalPager] tab swipes, bidirectional T1/T2 dragging, local drag buffering,
  * outside-slider tab switching, vertical scroll preservation, HRV tab gauge toggle removal with
- * unconditional preview bar rendering, and Rule 8.5 PNG capture
+ * unconditional preview bar rendering, guided threshold test CTA ordering above zone controls,
+ * and Rule 8.5 PNG capture
  * (`REQ-TRK-086.1`..`REQ-TRK-086.3`, `TST-TRK-086.1`..`TST-TRK-086.3`,
- * `REQ-TRK-087.1`, `REQ-TRK-087.2`, `TST-TRK-087.1`, `REQ-PRO-049.1`, `ATT-8105`, `ATT-8712`, `ATT-8848`).
+ * `REQ-TRK-087.1`, `REQ-TRK-087.2`, `TST-TRK-087.1`, `REQ-TRK-072.7`, `TST-TRK-072.9`,
+ * `REQ-PRO-049.1`, `ATT-8105`, `ATT-8712`, `ATT-8848`, `ATT-8951`).
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -620,6 +627,171 @@ class HrvDfaA1RangeSliderGestureTest {
 
         val repoRoot = if (File("..", "docs/engineering/walkthroughs/img").exists()) File("..") else File(".")
         val outFile = File(repoRoot, "docs/engineering/walkthroughs/img/ATT-8712_hrv_zone_display.png")
+        outFile.parentFile?.mkdirs()
+        FileOutputStream(outFile).use { out ->
+            bmp.compress(Bitmap.CompressFormat.PNG, 100, out)
+        }
+
+        assertTrue("Screenshot PNG must exist and be non-empty", outFile.exists() && outFile.length() > 0L)
+    }
+
+    /**
+     * `TST-TRK-072.9` (`REQ-TRK-072.7`, `REQ-PRO-049.1`, `ATT-8951`):
+     * Verifies [HrvDfaA1SettingsContent] places the Guided Threshold Test CTA strictly between
+     * `hrv_zones_guidance_desc` and the first zone card / threshold controls, and triggers `onOpenHrvTest`.
+     */
+    @Test
+    fun testHrvDfaA1SettingsContent_placesGuidedTestCtaBetweenGuidanceAndZoneControls() {
+        val settingsDataStore = SettingsDataStore.getInstance(context)
+        var clickCount = 0
+
+        composeTestRule.setContent {
+            ATrainingTrackerTheme(darkTheme = false) {
+                Box(modifier = Modifier.width(412.dp).height(900.dp)) {
+                    HrvDfaA1SettingsContent(
+                        settingsDataStore = settingsDataStore,
+                        onOpenHrvTest = { clickCount++ }
+                    )
+                }
+            }
+        }
+
+        composeTestRule.waitForIdle()
+        val guidanceNode = composeTestRule.onNodeWithText(context.getString(R.string.hrv_zones_guidance_desc))
+            .assertIsDisplayed()
+            .fetchSemanticsNode()
+        val ctaNode = composeTestRule.onNodeWithTag("HrvGuidedThresholdTestCta")
+            .assertIsDisplayed()
+            .fetchSemanticsNode()
+        val firstZoneCardNode = composeTestRule.onNodeWithText(context.getString(R.string.hrv_zone_aerobic_base_label))
+            .assertIsDisplayed()
+            .fetchSemanticsNode()
+        val sliderCardNode = composeTestRule.onNodeWithTag("HrvDfaA1RangeSliderCard")
+            .assertIsDisplayed()
+            .fetchSemanticsNode()
+
+        assertTrue(
+            "CTA top (${ctaNode.boundsInRoot.top}) must sit below guidance bottom (${guidanceNode.boundsInRoot.bottom})",
+            guidanceNode.boundsInRoot.bottom <= ctaNode.boundsInRoot.top
+        )
+        assertTrue(
+            "CTA bottom (${ctaNode.boundsInRoot.bottom}) must sit above first zone card top (${firstZoneCardNode.boundsInRoot.top})",
+            ctaNode.boundsInRoot.bottom <= firstZoneCardNode.boundsInRoot.top
+        )
+        assertTrue(
+            "CTA bottom (${ctaNode.boundsInRoot.bottom}) must sit above RangeSlider top (${sliderCardNode.boundsInRoot.top})",
+            ctaNode.boundsInRoot.bottom <= sliderCardNode.boundsInRoot.top
+        )
+
+        composeTestRule.onNodeWithTag("HrvGuidedThresholdTestCta").performClick()
+        composeTestRule.waitForIdle()
+        assertEquals(1, clickCount)
+    }
+
+    /**
+     * `TST-TRK-072.9` (`REQ-TRK-072.7`, `REQ-PRO-049.1`, `ATT-8951`):
+     * Verifies German `"Geführten Schwellentest starten"` (31 chars) renders cleanly on a single line
+     * without visual overflow at narrow `360.dp` phone width.
+     */
+    @Test
+    @Config(sdk = [34], qualifiers = "de-rDE-w360dp-h680dp-xxhdpi")
+    fun testHrvDfaA1SettingsContent_germanGuidedTestCtaRendersSingleLineAt360dp() {
+        val settingsDataStore = SettingsDataStore.getInstance(context)
+
+        composeTestRule.setContent {
+            ATrainingTrackerTheme(darkTheme = false) {
+                Box(modifier = Modifier.width(360.dp).height(680.dp)) {
+                    HrvDfaA1SettingsContent(
+                        settingsDataStore = settingsDataStore,
+                        onOpenHrvTest = {}
+                    )
+                }
+            }
+        }
+
+        composeTestRule.waitForIdle()
+        val ctaLabelNode = composeTestRule.onNodeWithText("Geführten Schwellentest starten", useUnmergedTree = true)
+            .assertIsDisplayed()
+            .fetchSemanticsNode()
+
+        val textLayoutResults = mutableListOf<TextLayoutResult>()
+        ctaLabelNode.config[SemanticsActions.GetTextLayoutResult].action?.invoke(textLayoutResults)
+        assertEquals("Expected TextLayoutResult for CTA label", 1, textLayoutResults.size)
+        val layout = textLayoutResults.first()
+        assertEquals("German CTA label must stay on 1 line at 360dp", 1, layout.lineCount)
+        assertFalse("German CTA label must not ellipsize at 360dp", layout.isLineEllipsized(0))
+        assertEquals(
+            "German CTA label must render all characters without truncation at 360dp",
+            layout.layoutInput.text.length,
+            layout.getLineEnd(0)
+        )
+        assertTrue(
+            "German CTA label right edge (${layout.getLineRight(0)}) must fit within maxWidth (${layout.layoutInput.constraints.maxWidth})",
+            layout.getLineRight(0) <= layout.layoutInput.constraints.maxWidth.toFloat()
+        )
+    }
+
+    /**
+     * `TST-TRK-072.9` (`REQ-TRK-072.7`, `Rule 8.5`, `ATT-8951`):
+     * Captures Light and Dark Compose PNG screenshots of [HrvDfaA1SettingsContent] with `onOpenHrvTest`
+     * active, proving above-the-fold CTA placement between guidance text and zone/threshold controls.
+     */
+    @Test
+    fun testCaptureLightAndDarkHrvGuidedTestCtaScreenshot_rule85() {
+        val settingsDataStore = SettingsDataStore.getInstance(context)
+        val tuningPreferencesDataStore = TuningPreferencesDataStore.getInstance(context)
+        runBlocking {
+            tuningPreferencesDataStore.setDfaA1Thresholds(
+                TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T1,
+                TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T2
+            )
+        }
+
+        composeTestRule.setContent {
+            Column(
+                modifier = Modifier
+                    .width(412.dp)
+                    .background(Color(0xFF78909C))
+                    .padding(12.dp)
+                    .testTag("HrvCtaAboveFoldLightDarkPreviewRoot"),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                ATrainingTrackerTheme(darkTheme = false) {
+                    Surface(
+                        color = MaterialTheme.colorScheme.surface,
+                        shape = MaterialTheme.shapes.medium,
+                        modifier = Modifier.fillMaxWidth().height(540.dp)
+                    ) {
+                        HrvDfaA1SettingsContent(
+                            tuningPreferencesDataStore = tuningPreferencesDataStore,
+                            settingsDataStore = settingsDataStore,
+                            onOpenHrvTest = {}
+                        )
+                    }
+                }
+                ATrainingTrackerTheme(darkTheme = true) {
+                    Surface(
+                        color = MaterialTheme.colorScheme.surface,
+                        shape = MaterialTheme.shapes.medium,
+                        modifier = Modifier.fillMaxWidth().height(540.dp)
+                    ) {
+                        HrvDfaA1SettingsContent(
+                            tuningPreferencesDataStore = tuningPreferencesDataStore,
+                            settingsDataStore = settingsDataStore,
+                            onOpenHrvTest = {}
+                        )
+                    }
+                }
+            }
+        }
+
+        composeTestRule.waitForIdle()
+        val bmp = composeTestRule.onNodeWithTag("HrvCtaAboveFoldLightDarkPreviewRoot")
+            .captureToImage()
+            .asAndroidBitmap()
+
+        val repoRoot = if (File("..", "docs/engineering/walkthroughs/img").exists()) File("..") else File(".")
+        val outFile = File(repoRoot, "docs/engineering/walkthroughs/img/ATT-8951_hrv_cta_above_fold.png")
         outFile.parentFile?.mkdirs()
         FileOutputStream(outFile).use { out ->
             bmp.compress(Bitmap.CompressFormat.PNG, 100, out)

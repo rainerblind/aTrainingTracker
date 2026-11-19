@@ -68,7 +68,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.Calculate
-import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Menu
@@ -1062,14 +1061,15 @@ fun ZoneProfileTabContent(
  * Settings content for the dedicated HRV DFA a1 physiological zones tab (REQ-TRK-061.4 / ATT-7317).
  *
  * Displays:
- * 1. 3 inverse-intensity physiological bands (Zone 2/Green > T1, Zone 3/Orange T2..T1, Zone 4/Red < T2)
+ * 1. Explanatory intro text and optional CTA to launch [onOpenHrvTest] (Guided DFA a1 threshold test)
+ *    positioned immediately above the zone cards and threshold controls (`REQ-TRK-072.7`).
+ * 2. 3 inverse-intensity physiological bands (Zone 2/Green > T1, Zone 3/Orange T2..T1, Zone 4/Red < T2)
  *    conforming to [TTColor] and Rule 71.
- * 2. Fine 0.01-step threshold controls for T1 (aerobic, default 0.75) and T2 (anaerobic, default 0.50),
+ * 3. Fine 0.01-step threshold controls for T1 (aerobic, default 0.75) and T2 (anaerobic, default 0.50),
  *    strictly enforcing T1 >= T2 + 0.05 invariant.
- * 3. Reset to Defaults (0.75 / 0.50) action.
- * 4. Info sheet action opening [HrvInfoBottomSheet] with live T1 and T2 values.
- * 5. Live theme-aware [SensorFieldView] preview with interactive pills for Aerobic, Transition, and Anaerobic.
- * 6. Optional CTA to launch [onOpenHrvTest] (Guided DFA a1 threshold test).
+ * 4. Reset to Defaults (0.75 / 0.50) action.
+ * 5. Info sheet action opening [HrvInfoBottomSheet] with live T1 and T2 values.
+ * 6. Live theme-aware [SensorFieldView] preview with interactive pills for Aerobic, Transition, and Anaerobic.
  */
 @Composable
 fun HrvDfaA1SettingsContent(
@@ -1136,7 +1136,19 @@ fun HrvDfaA1SettingsContent(
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
-        Spacer(modifier = Modifier.height(4.dp))
+        if (onOpenHrvTest != null) {
+            OutlinedButton(
+                onClick = onOpenHrvTest,
+                modifier = Modifier.fillMaxWidth().testTag("HrvGuidedThresholdTestCta"),
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
+            ) {
+                Icon(Icons.AutoMirrored.Filled.TrendingUp, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(stringResource(R.string.hrv_start_guided_ramp_test), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+        } else {
+            Spacer(modifier = Modifier.height(4.dp))
+        }
 
         // 3 Inverse-Intensity Physiological Bands
         // Zone 2: Aerobic Base (a1 > T1)
@@ -1408,22 +1420,6 @@ fun HrvDfaA1SettingsContent(
                         screenMode = ScreenMode.TRACKING
                     )
                 }
-            }
-        }
-
-        if (onOpenHrvTest != null) {
-            Spacer(modifier = Modifier.height(12.dp))
-            OutlinedButton(
-                onClick = onOpenHrvTest,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.TrendingUp,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(stringResource(R.string.hrv_start_guided_ramp_test))
             }
         }
 
