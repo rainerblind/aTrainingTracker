@@ -3,7 +3,7 @@
 **Document ID**: `DOC-MGT-RISK`  
 **Document Identifier**: `RISK-REG-ATT`  
 **Standard**: ASPICE 4.0 `MAN.5` (Risk Management — `MAN.5.BP1–BP6`, incorporating legacy ASPICE 3.1 `MAN.3.BP5` Define, monitor and adjust project risks)  
-**Target Release**: `V5.0.0` | **Version**: 1.2.9  
+**Target Release**: `V5.0.0` | **Version**: 1.2.10  
 **Status**: Reviewed | **Approver**: Pending PO Sign-Off | **Last Review Date**: 2026-11-19  
 **Governing Ticket**: [ATT-6151](https://rainerblind.atlassian.net/browse/ATT-6151), [ATT-8167](https://rainerblind.atlassian.net/browse/ATT-8167), [ATT-8164](https://rainerblind.atlassian.net/browse/ATT-8164) | **Requirement**: `REQ-STP-010`, `REQ-PRO-120` | **Test**: `TST-STP-010`  
 
@@ -144,3 +144,4 @@ The risk register is reviewed at every Sprint-Start ceremony to capture newly su
 | `1.2.7` | 2026-11-19 | Sprint Coordinator (`ATT-9055`) | `ATT-9055` | Ceremony 1 risk review for `2026-11-19_01_Früh` (`3.0 SP` Stage-6 carryover `ATT-8895` + critical `ATT-9018` OOM / `ATT-8969` Polar / `ATT-5908` queue). |
 | `1.2.8` | 2026-11-19 | Sprint Coordinator (`ATT-9055`) | `ATT-9055` | Ceremony 2 risk review for `2026-11-19_01_Früh` (`19.0 SP` delivered across 9 tickets, `6.0 SP` WIP carryover, Lean Tier-2 `687/687` PASS, lint `238 -> 216`, `1,061/1,061` verified TSTs). |
 | `1.2.9` | 2026-11-19 | Sprint Coordinator (`ATT-9121`) | `ATT-9121` | Ceremony 1 risk review for `2026-11-19_02_Spät` (`6.0 SP` WIP carryovers `ATT-8917`/`ATT-8951`/`ATT-8324` + `17.0 SP` packed across 3 lanes). |
+| `1.2.10` | 2026-11-19 | Sprint Coordinator (`ATT-9121`) | `ATT-9121` | Ceremony 2 risk review for `2026-11-19_02_Spät` (`17.0 SP` delivered across 9 tickets, `0` WIP carryover, `95.6%` Gate FTPR, `2/2` QA audit COMPLIANT, full-repo `7,096/7,102` + `27/27` isolation PASS, pre-existing `ATT-9179` filed, `1,105/1,105` verified TSTs, `Pixel 10` deployed `5.0.0-dev-47d4cebb`). |
