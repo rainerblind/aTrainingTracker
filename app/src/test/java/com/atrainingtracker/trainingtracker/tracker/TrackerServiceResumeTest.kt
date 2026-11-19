@@ -1027,4 +1027,57 @@ class TrackerServiceResumeTest {
             session.observedSensorTypes
         )
     }
+
+    @Test
+    fun testApplyResumedState_inMemoryPauseResume_preservesMultisportActiveLegAndAnchor() {
+        // TST-FIL-031.3 (REQ-FIL-031.3, ATT-8917 Bounce 1):
+        // In-memory pause/resume reusing mLiveSession must preserve ongoing multisport leg name & anchor,
+        // while cold process-death rehydration (mLiveSession == null) must re-seed currentLapStartAnchor.
+        val workoutId = 305L
+        val sessionStartMs = 1_790_841_600_000L
+        service.mMultisportLapCoordinator.resetForSession(sessionStartMs, 0, 0, 0.0)
+
+        val transitionEvent = com.atrainingtracker.banalservice.odometry.MultisportTransitionEvent(
+            fromSport = com.atrainingtracker.banalservice.BSportType.BIKE,
+            toSport = com.atrainingtracker.banalservice.BSportType.RUN,
+            exitAnchor = com.atrainingtracker.banalservice.odometry.MultisportTelemetryAnchor(sessionStartMs + 1800_000L, 1800, 1800, 14400.0),
+            enterAnchor = com.atrainingtracker.banalservice.odometry.MultisportTelemetryAnchor(sessionStartMs + 1850_000L, 1850, 1850, 14450.0),
+            confirmAnchor = com.atrainingtracker.banalservice.odometry.MultisportTelemetryAnchor(sessionStartMs + 1865_000L, 1865, 1865, 14510.0)
+        )
+        service.mMultisportLapCoordinator.planAndCommitAnchorTransition(null, transitionEvent, 1)
+        val expectedStartUtc = service.mMultisportLapCoordinator.getActiveLapStartTimeUtc()
+        assertEquals("Run", service.mMultisportLapCoordinator.getActiveLapName())
+        assertNotNull(expectedStartUtc)
+
+        // Simulate in-memory pause -> resume while service stayed alive (mLiveSession matches workoutId)
+        val liveSessionField = TrackerService::class.java.getDeclaredField("mLiveSession").apply { isAccessible = true }
+        liveSessionField.set(service, LiveWorkoutSession(workoutId, TrackerService.IMPORTANT_SENSOR_TYPES))
+
+        val resumeState = TrackerService.ResumedWorkoutState(
+            "2026-10-01_080000",
+            workoutId,
+            2000,
+            1950,
+            500,
+            3,
+            14850.0,
+            0.0,
+            0.0,
+            100,
+            400.0
+        )
+        service.applyResumedState(resumeState)
+
+        // In-memory reuse MUST preserve multisport leg name, UTC start timestamp, and lap start anchor!
+        assertEquals("Run", service.mMultisportLapCoordinator.getActiveLapName())
+        assertEquals(expectedStartUtc, service.mMultisportLapCoordinator.getActiveLapStartTimeUtc())
+        assertEquals(1850, service.mMultisportLapCoordinator.getCurrentLapStartAnchor().activeTimeS)
+
+        // Cold process-death resume (mLiveSession == null) MUST re-seed currentLapStartAnchor cleanly
+        liveSessionField.set(service, null)
+        service.applyResumedState(resumeState)
+        assertNull(service.mMultisportLapCoordinator.getActiveLapName())
+        assertEquals(1850, service.mMultisportLapCoordinator.getCurrentLapStartAnchor().activeTimeS)
+        assertEquals(14450.0, service.mMultisportLapCoordinator.getCurrentLapStartAnchor().totalDistanceM, 0.01)
+    }
 }

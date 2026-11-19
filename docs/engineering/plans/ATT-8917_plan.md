@@ -1,0 +1,63 @@
+# Stage 3: Implementation Plan - ATT-8917: Multisport Transition Detection, Retroactive Anchoring & Automatic Named Laps
+
+**Ticket**: `ATT-8917` (`3 SP`, `Feature`) | **Parent Epic**: `ATT-5908` | **Target Release**: `V5.0.0`  
+**Active Sprint**: `2026-11-19_01_Früh` (`ID 462`) | **Requirement Mapping**: `REQ-FIL-031` (`REQ-FIL-031.1`–`.5`) | **Test Mapping**: `TST-FIL-031`  
+**Branch**: `feature/ATT-8917` | **Sub-task**: `[Impl-Plan]` | **Author**: AI Agent 1 (Implementer) | **Date**: 2026-11-19
+
+---
+
+## 1. Problem Description & SWE.2 Architectural Boundaries
+* Athletes performing triathlon, duathlon, and cycling-running brick workouts need hands-free detection of `BIKE <-> TRANSITION <-> RUN` switches, retroactive dismount/mount boundary anchoring (`t_exit_sport1`, `t_enter_sport2`), automatic named laps (`Bike`, `Transition`, `Run`) in `Laps.db`, and live cockpit sport switching (`km/h` vs. `min/km`, cycling `RPM` vs. running `strides/min`) without false triggers on same-sport stops (e.g., `160 s` bakery stop).
+* **SWE.2 Threading & Layering**:
+  * Pure-JVM `MultisportTransitionDetector` (`banalservice/odometry/`) runs inside `SpeedAndLocationDevice_ATTFused` 1-Hz classification (`IF-SWE-04`) with zero Android UI/SQLite coupling.
+  * `MyAccumulatorSensor.resetTo(N)` updates `mInitialValue = sub(targetValue, mValue)` inside `synchronized (this)` (preserving `mLastAbsoluteValue`) and notifies listeners outside the lock, invoked via dedicated `BANALService` helpers (`IF-SWE-03`) without mutating `MySensorManager.mInitialValues`.
+  * `MultisportLapCoordinator` (`trainingtracker/tracker/`) handles `BANALService.MULTISPORT_TRANSITION_INTENT` and `LAP_SUMMARY` anchor sync on `TrackerService`, advancing live accumulators synchronously via `BANALService.advanceLapsForMultisport(...)` while offloading ALL `Laps.db` and `WorkoutSamples.db` writes to `mDbExecutor` chained after `mTableInitializationFuture` (zero main-thread SQLite).
+* **UI Consistency (`docs/design_guidelines.md`)**: `N/A` — zero Compose screens/dialogs/settings modified; adds 3 localized lap-name keys (`lap_name_bike`, `lap_name_transition`, `lap_name_run`) across all 9 `values*/strings_cockpit.xml` locales (`Rule 9.4`).
+* **SWE.3 Living Detailed Design (`REQ-PRO-114`)**: Step 6 updates both `docs/architecture/detailed_design/banal_service.md` and `docs/architecture/detailed_design/tracker_service.md` alongside `docs/architecture.md` (`Rule 8.8`), `docs/system/` (`REQ-PRO-131.4`), and Change History rows in `docs/requirements.md` & `docs/tests.md`.
+
+---
+
+## 2. Traceability & Requirements Mapping
+* **Requirements**: `REQ-FIL-031` (`.1` pure-Kotlin multisport transition state machine + pause gate + 50-Hz `ACC`/hardware fusion; `.2` `MyAccumulatorSensor.resetTo(N)` + `BANALService` precedence/`mActivityTypeMax` reset/`MULTISPORT_TRANSITION_INTENT`; `.3` `MultisportLapCoordinator` retroactive named laps, UTC `TIME_START`, auto-pause `T2` & manual-lap clamping, async `WorkoutSamples.db` `LAP_NR` backfill; `.4` 9-locale `strings_cockpit.xml` parity; `.5` monolith ceilings & `SWE.2`/`SWE.3`/`SYS.2`/`SYS.3` parity).
+* **Tests**: `TST-FIL-031` (`.1`–`.5`) linked to `SYSREQ-TRK-003`, `SYSREQ-TRK-006`, `SYSREQ-TRK-010`.
+
+---
+
+## 3. System Invariants & Preserved Behavior
+1. **Tier 1 Sovereignty & Pause Hygiene**: `mHaveUserSelectedSportType == true` strictly blocks auto-multisport; confirmation window (`15 s`) never advances/confirms while `!isTracking`, `PAUSED`, or `AUTO_PAUSED`; same-sport stops (`BIKE -> WALK/STAT -> BIKE`) emit `0` transitions.
+2. **Accumulator & No-Double-Persist Safety**: `MyAccumulatorSensor.resetTo(N)` leaves `mValue` & `mLastAbsoluteValue` untouched and never mutates `MySensorManager.mInitialValues`; `BANALService.advanceLapsForMultisport()` calls `deviceManager.newLap()` `lapAdvanceCount` times (`1` or `2`) + `resetAccumulatorSensorsTo(TIME_LAP|DISTANCE_m_LAP, ...)` directly — **never** `BANALService.newLap()`, preventing `LAP_SUMMARY` double-save/modal popups and keeping `DeviceManager.java` at **`0` edits** (`1,707`).
+3. **Contiguous `LAP_NR`, UTC Format & Monolith Ceilings**: Evaluate `hasLeg1` and `hasTransition` (`wallClock >= 10_000 ms` & active `REQ-TRK-002` `time > 0 || dist > 0.0`) *before* incrementing `LAP_NR`; format `Laps.TIME_START` in UTC `"yyyy-MM-dd HH:mm:ss"`; keep `TrackerService.java <= 3,540` (`+0`), `DeviceManager.java <= 1,707` (`0` edits), `WorkoutSamplesDatabaseManager.java <= 1,533` (`0` edits), `WorkoutRepository.kt <= 4,931` (`+0`), `SpeedAndLocationDevice_ATTFused.kt <= 1,455` (`< 1,500`), `BANALService.java <= 1,075`; zero DB schema migrations (`Laps.db` v3 unchanged); `0` new `src/main` test reads (`REQ-PRO-049.1`).
+
+---
+
+## 4. Proposed Architectural Changes
+* **`banalservice/sensor/MyAccumulatorSensor.java`**: Add `public final void resetTo(N targetValue)` (`synchronized (this)`: `mInitialValue = sub(targetValue, mValue)`, `mLastAbsoluteValue` preserved, notify `mSensorListeners` outside lock with `targetValue` iff `mActivated`).
+* **`banalservice/odometry/MultisportTransitionDetector.kt` (New)**:
+  * Data models: `MultisportTelemetryAnchor(timestampMs, activeTimeS, totalTimeS, totalDistanceM)`, `MultisportHardwareSignals(hasActiveBikeHardware, hasActiveRunHardware)`, `MultisportTransitionEvent(fromSport, toSport, exitAnchor, enterAnchor, confirmAnchor)`.
+  * State machine: 1-Hz bounded anchor ring buffer (`<= 600` entries), fuses `PhoneCarriageMode` + `KinematicSportTypeDiscriminator` (including permission-free 50-Hz `ACC` footstrikes countering `PhoneCarriageClassifier.kt:398` `cyclingPrior += 2.5` when parked bike sensor stays connected without `TYPE_STEP_DETECTOR`) + active non-zero hardware signals; confirms opposite sport after `15_000 ms` continuous unpaused tracking (`isTracking && !isPaused && !isAutoPaused`), resetting candidate on return to `sport1` (bakery stop immunity) or `< 15 s` blip.
+* **`BANALService.java` (`<= 1,075` LoC) & `SpeedAndLocationDevice_ATTFused.kt` (`<= 1,455` LoC)**:
+  * `BANALService`: `MULTISPORT_TRANSITION_INTENT` + extras; volatile `mMultisportBSportType` (subordinate to Tier 1 `mHaveUserSelectedSportType`, overriding Tier 2 `CONFLICT` / silent parked bike sensor); `captureMultisportSnapshot()` (lock-free sensor/hardware activity snapshot); `onConfirmedMultisportTransition(event)` (sets `mMultisportBSportType`, resets `mActivityTypeMax` to new leg `ActivityType`, broadcasts `MULTISPORT_TRANSITION_INTENT`); `advanceLapsForMultisport(lapAdvanceCount, newLegTimeLapS, newLegDistLapM)` calling `deviceManager.newLap()` `lapAdvanceCount` times + `resetAccumulatorSensorsTo(TIME_LAP|DISTANCE_m_LAP, ...)`; clears `mMultisportBSportType` in `clearInferredSportTelemetry()` (`RESET_ACCUMULATORS_INTENT`) & `onDestroy()`.
+  * `SpeedAndLocationDevice_ATTFused`: thin 1-Hz delegation from `updateCarriageClassification()` to `multisportDetector.onTick(...)` -> `BANALService.onConfirmedMultisportTransition(...)` + `handleSportTypeChanged(timestampMs)` (zero `SPORT_TYPE_CHANGED_BY_USER_INTENT`); resets `multisportDetector.reset()` in `resetOriginAndEkf()`.
+* **`trainingtracker/tracker/MultisportLapCoordinator.kt` (New) & `TrackerService.java` (`<= 3,540` LoC, `+0` net)**:
+  * `MultisportLapCoordinator`: tracks `currentLapStartAnchor`, `activeLegStartTimeUtc`, and `activeLegName`; handles `LAP_SUMMARY` (absorbing `mLapSummaryReceiver`'s 24-line validation/save body into a 4-line call in `TrackerService.java`, saving `~19` LoC to offset new receiver/init/final-leg delegation hooks for `<= 0` net LoC!); handles `MULTISPORT_TRANSITION_INTENT`: clamps `effectiveExit = max(exit, currentLapStart)` & `effectiveEnter = max(enter, effectiveExit)`, evaluates `hasLeg1` & `hasTransition` (`wallClock >= 10_000 ms` & active `REQ-TRK-002` non-empty) *before* computing `lapAdvanceCount` (`0|1|2`), calls `BANALService.advanceLapsForMultisport(...)`, and enqueues `Laps.db` saves (`WorkoutRepository.saveLap(..., utcTimeStart, ..., localizedName, null)`) + `WorkoutSamples.db` `LAP_NR` backfill on `mDbExecutor` after `mTableInitializationFuture`.
+  * `WorkoutSamples.db` backfill (`0` edits to `WorkoutSamplesDatabaseManager.java`): via `getDatabase()` + `getTableName(baseFileName)`, verify `PRAGMA table_info(table)` for `LAP_NR` (adding `INTEGER DEFAULT 1` if missing) and `TIME_TOTAL`; execute parameterized `UPDATE` with half-open `TIME_TOTAL >= ? AND TIME_TOTAL < ?` (`[exitTotalS, enterTotalS)`) for `Transition` and `TIME_TOTAL >= ? AND LAP_NR = ?` (`>= enterTotalS AND LAP_NR = oldLapNr`) for the new leg, falling back to `CAST(strftime('%s', time) AS INTEGER)` when `TIME_TOTAL` column is absent so boundary samples are never double-tagged or missed.
+  * `TrackerService.createNewLap()`: queries `mMultisportLapCoordinator.getActiveLapStartTimeUtc()` / `getActiveLapName()` and persists via `getWorkoutRepository().saveLap(workoutId, prevLapNr, startTimeUtc, lapTime_s, lapDistance, lapSpeed, name, null)` when multisport-anchored.
+* **`app/src/main/res/values*/strings_cockpit.xml` (9 locales)**: Add `lap_name_bike`, `lap_name_transition`, `lap_name_run` (`EN, DE, ES, FR, IT, JA, NL, PL, PT`).
+
+---
+
+## 5. Step-by-Step Implementation Sequence (Stage 4 Construction)
+| Step | Action & Target Files | Mapping | Verification (`./gradlew :app:testDebugUnitTest --tests ...`) |
+| :---: | :--- | :--- | :--- |
+| **1** | Implement `MyAccumulatorSensor.resetTo(N)` (`MyAccumulatorSensor.java`) and `MultisportTransitionDetector.kt` (`banalservice/odometry/`); add `MyAccumulatorSensorResetToTest.kt` & `MultisportTransitionDetectorTest.kt`. | `REQ-FIL-031.1`, `.2` / `TST-FIL-031.1`, `.2` | `*MyAccumulatorSensorResetToTest`, `*MultisportTransitionDetectorTest` |
+| **2** | Wire `BANALService.java` (`<= 1,075` LoC: `mMultisportBSportType`, `captureMultisportSnapshot()`, `onConfirmedMultisportTransition()`, `advanceLapsForMultisport()`, `resetAccumulatorSensorsTo()`, `mActivityTypeMax` reset, reset/destroy hygiene) and thin delegation in `SpeedAndLocationDevice_ATTFused.kt` (`<= 1,455` LoC); add `BANALServiceMultisportTransitionTest.kt` & extend `SpeedAndLocationDevice_ATTFusedBANALServiceIntegrationTest.kt`. | `REQ-FIL-031.2` / `TST-FIL-031.2` | `*BANALServiceMultisportTransitionTest`, `*BANALServiceSportInferenceTest`, `*SpeedAndLocationDevice_ATTFusedBANALServiceIntegrationTest` |
+| **3** | Add 9-locale `lap_name_bike`, `lap_name_transition`, `lap_name_run` in `values*/strings_cockpit.xml`. | `REQ-FIL-031.4` / `TST-FIL-031.4` | `*TranslationParityTest` |
+| **4** | Implement `MultisportLapCoordinator.kt` (`trainingtracker/tracker/`) and zero-growth wiring in `TrackerService.java` (`<= 3,540` LoC, delegating `mLapSummaryReceiver`, `mMultisportTransitionReceiver`, session start/resume reset, and `createNewLap()` anchored name/UTC `timeStart`); add `MultisportLapCoordinatorTest.kt` & extend `TrackerServiceFinalizationTest.kt`. | `REQ-FIL-031.3` / `TST-FIL-031.3` | `*MultisportLapCoordinatorTest`, `*TrackerServiceFinalizationTest` |
+| **5** | Verify monolith LoC bounds (`TrackerService <= 3,540`, `DeviceManager <= 1,707` [`0` edits], `WorkoutSamplesDatabaseManager <= 1,533` [`0` edits], `WorkoutRepository <= 4,931`, `SpeedAndLocationDevice_ATTFused <= 1,455`, `BANALService <= 1,075`) & run targeted Tier-1 regression suites under `parallel_sprint_lock.py`. | `REQ-FIL-031.5` / `TST-FIL-031.5` | All `ATT-8917` suites + `*ArchitectureConformanceContractTest` |
+| **6** | Sync `docs/architecture.md` (`Rule 8.8`), `docs/architecture/detailed_design/banal_service.md` & `tracker_service.md` (`REQ-PRO-114`), `docs/system/` (`sysreq_live_tracking.md`, `system_architecture.md`, `system_software_traceability.md` per `REQ-PRO-131.4`), living docs (`[Implemented]`, matching Change History rows in `docs/requirements.md` & `docs/tests.md`), and validate contracts + `verify_requirement_governance.py`. | `REQ-FIL-031.5` / `TST-FIL-031.5` | `*DetailedDesignParityContractTest`, `*SystemLiveTrackingRequirementsContractTest`, `*SystemArchitectureDesignContractTest`, `*SourceTextReadingAuditContractTest`, `verify_requirement_governance.py` |
+
+---
+
+## 6. Verification & Rollback Plan
+* **Verification**: Targeted Tier-1 `./gradlew :app:testDebugUnitTest --rerun --tests ...` under `python3 tools/parallel_sprint_lock.py` across all new & regression suites (`TranslationParityTest` included for 9-locale strings) + `python3 tools/verify_requirement_governance.py --base-ref refs/heads/sprint/2026-11-19_01_Früh`.
+* **Rollback**: Isolated on `feature/ATT-8917`; zero DB schema migrations (`Laps.db` v3 unchanged); clean branch revert if needed.

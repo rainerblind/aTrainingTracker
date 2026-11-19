@@ -50,6 +50,8 @@ import com.atrainingtracker.banalservice.filters.FilterData;
 import com.atrainingtracker.banalservice.filters.FilterManager;
 import com.atrainingtracker.banalservice.filters.FilteredSensorData;
 import com.atrainingtracker.banalservice.odometry.MovingSpeedSummary;
+import com.atrainingtracker.banalservice.odometry.MultisportTransitionBridge;
+import com.atrainingtracker.banalservice.odometry.MultisportTransitionEvent;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.dsi.ant.plugins.antplus.pccbase.AntPluginPcc;
 
@@ -95,6 +97,7 @@ public class BANALService
     // public static final String PAUSE_TRACKING_INTENT             = "com.atrainingtracker.banalservice.PAUSE_TRACKING_INTENT";
     // public static final String RESUME_TRACKING_INTENT            = "com.atrainingtracker.banalservice.RESUME_TRACKING_INTENT";
     public static final String SPORT_TYPE_CHANGED_BY_USER_INTENT = "com.atrainingtracker.banalservice.SPORT_TYPE_CHANGED_BY_USER_INTENT";
+    public static final String MULTISPORT_TRANSITION_INTENT = "com.atrainingtracker.banalservice.MULTISPORT_TRANSITION_INTENT";
 
     public static final String LAP_SUMMARY = "com.atrainingtracker.banalservice.LAP_SUMMARY";
     public static final String PREV_LAP_NR = "com.atrainingtracker.banalservice.PREV_LAP_NR";
@@ -216,6 +219,8 @@ public class BANALService
     private volatile boolean mHaveUserSelectedSportType = false;
     @NonNull
     private volatile BSportType mInferredBSportType = BSportType.UNKNOWN;
+    @NonNull
+    private volatile BSportType mMultisportBSportType = BSportType.UNKNOWN;
     @Nullable
     private volatile MovingSpeedSummary mMovingSpeedSummary = null;
 
@@ -350,10 +355,14 @@ public class BANALService
         return dm != null ? dm.getSportType() : BSportType.UNKNOWN;
     }
 
+    private static BANALService activeInstance() {
+        return cServiceInstance != null ? cServiceInstance : (cServiceContext instanceof BANALService ? (BANALService) cServiceContext : null);
+    }
+
     /** Tier 1/2 sport type only (excludes Tier 3 kinematic inference, REQ-FIL-030.2). */
     @NonNull
     public static BSportType getAuthoritativeActiveBSportType() {
-        BANALService inst = cServiceInstance != null ? cServiceInstance : (cServiceContext instanceof BANALService ? (BANALService) cServiceContext : null);
+        BANALService inst = activeInstance();
         if (inst != null) return inst.getAuthoritativeBSportType();
         DeviceManager dm = cDeviceManager;
         return dm != null ? dm.getSportType() : BSportType.UNKNOWN;
@@ -361,8 +370,21 @@ public class BANALService
 
     /** Publishes Tier 3 inferred sport and moving-speed summary to the live instance (REQ-FIL-030.3). */
     public static void updateActiveInferredSportTelemetry(@NonNull BSportType inferredSport, @Nullable MovingSpeedSummary summary) {
-        BANALService inst = cServiceInstance != null ? cServiceInstance : (cServiceContext instanceof BANALService ? (BANALService) cServiceContext : null);
+        BANALService inst = activeInstance();
         if (inst != null) inst.setInferredSportTelemetry(inferredSport, summary);
+    }
+
+    @Nullable
+    public static SensorData getActiveSensorData(@NonNull SensorType sensorType) { return getSensorData(sensorType); }
+
+    public static boolean isActiveUserSportLocked() {
+        BANALService inst = activeInstance();
+        return inst != null && inst.isUserSportLocked();
+    }
+
+    public static void notifyActiveMultisportTransition(@NonNull MultisportTransitionEvent event) {
+        BANALService inst = activeInstance();
+        if (inst != null) inst.onConfirmedMultisportTransition(event);
     }
 
     /**
@@ -467,6 +489,23 @@ public class BANALService
         }
     }
 
+    /** Retroactively re-anchors live integer/double accumulators without mutating MySensorManager initial values (REQ-FIL-031.2). */
+    @SuppressWarnings("unchecked")
+    public static void resetAccumulatorSensorsTo(@NonNull SensorType sensorType, @NonNull Integer targetValue) {
+        for (MyAccumulatorSensor<Integer> s : getAccumulatorSensorList(sensorType)) s.resetTo(targetValue);
+    }
+    @SuppressWarnings("unchecked")
+    public static void resetAccumulatorSensorsTo(@NonNull SensorType sensorType, @NonNull Double targetValue) {
+        for (MyAccumulatorSensor<Double> s : getAccumulatorSensorList(sensorType)) s.resetTo(targetValue);
+    }
+    /** Advances device lap accumulators directly (no LAP_SUMMARY popup) and anchors new-leg deltas (REQ-FIL-031.2). */
+    public static void advanceLapsForMultisport(int lapAdvanceCount, int newLegTimeLapS, double newLegDistLapM) {
+        DeviceManager dm = cDeviceManager;
+        if (dm != null) for (int i = 0; i < lapAdvanceCount; i++) dm.newLap();
+        resetAccumulatorSensorsTo(SensorType.TIME_LAP, Math.max(0, newLegTimeLapS));
+        resetAccumulatorSensorsTo(SensorType.DISTANCE_m_LAP, Math.max(0.0, newLegDistLapM));
+    }
+
     private void setUserSelectedSportTypeId(long sportTypeId) {
         BSportType resolvedSportType = BSportType.UNKNOWN;
         try {
@@ -514,13 +553,27 @@ public class BANALService
         return dm != null ? dm.getSportType() : BSportType.UNKNOWN;
     }
 
+    public boolean isUserSportLocked() { return mHaveUserSelectedSportType; }
+
     public void setInferredSportTelemetry(@NonNull BSportType inferredSport, @Nullable MovingSpeedSummary summary) {
         mInferredBSportType = (inferredSport == BSportType.BIKE || inferredSport == BSportType.RUN) ? inferredSport : BSportType.UNKNOWN;
         mMovingSpeedSummary = summary;
     }
 
+    /** Applies a confirmed multisport transition when Tier 1 user lock is inactive (REQ-FIL-031.2). */
+    public void onConfirmedMultisportTransition(@NonNull MultisportTransitionEvent event) {
+        if (mHaveUserSelectedSportType) return;
+        BSportType target = event.getToSport();
+        if (target != BSportType.BIKE && target != BSportType.RUN) return;
+        mMultisportBSportType = target;
+        mActivityTypeMax = ActivityType.getDefaultActivityType();
+        getActivityType();
+        sendBroadcast(MultisportTransitionBridge.toIntent(event, getPackageName()));
+    }
+
     public void clearInferredSportTelemetry() {
         mInferredBSportType = BSportType.UNKNOWN;
+        mMultisportBSportType = BSportType.UNKNOWN;
         mMovingSpeedSummary = null;
     }
 
@@ -529,8 +582,11 @@ public class BANALService
 
     @NonNull
     public BSportType getBSportType() {
+        if (mHaveUserSelectedSportType) return mUserSelectedBSportType;
+        BSportType multisport = mMultisportBSportType;
+        if (multisport == BSportType.BIKE || multisport == BSportType.RUN) return multisport;
         BSportType authoritative = getAuthoritativeBSportType();
-        if (mHaveUserSelectedSportType || authoritative != BSportType.UNKNOWN) return authoritative;
+        if (authoritative != BSportType.UNKNOWN && authoritative != BSportType.CONFLICT) return authoritative;
         return mInferredBSportType;
     }
 

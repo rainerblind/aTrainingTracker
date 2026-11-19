@@ -1,14 +1,14 @@
 # Living Test Specification: Tracking & Live Sensor Cockpit
 
 **Document ID**: `DOC-TST-TRK`  
-**Version**: 1.0.70  
+**Version**: 1.0.72  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Tests**: 157
+**Total Tests**: 158
 
 ---
 
@@ -3610,6 +3610,28 @@
   5. *Monolith Ceilings, `SWE.2`/`SWE.3`/`SYS.2`/`SYS.3` Parity & Governance Hygiene (`TST-FIL-030.5`, `ArchitectureConformanceContractTest.kt`, `DetailedDesignParityContractTest.kt`, `SystemLiveTrackingRequirementsContractTest.kt`, `SystemArchitectureDesignContractTest.kt`, `SourceTextReadingAuditContractTest.kt`)*:
      • Verify `TrackerService.java <= 3,556` (`3,540`), `DeviceManager.java <= 1,707`, `SpeedAndLocationDevice_ATTFused.kt < 1,500` (`1,417`), `BANALService.java <= 1,035` (`1,018`), `N/A - no UI strings`, zero new `src/main` test reads (`REQ-PRO-049.1`), Stage 4–5 `docs/architecture.md`/`banal_service.md`/`docs/system/` parity, and `verify_requirement_governance.py` `exit 0`.
 
+### TST-FIL-031: **Multisport Transition Detection, Retroactive Anchoring & Automatic Named Laps Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Tickets**: `ATT-8917`
+- **Requirement(s)**: `REQ-FIL-031` (`REQ-FIL-031.1`..`REQ-FIL-031.5`)
+- **Component**: `app/src/test/java/com/atrainingtracker/banalservice/odometry/MultisportTransitionDetectorTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/sensor/MyAccumulatorSensorResetToTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/BANALServiceMultisportTransitionTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/tracker/MultisportLapCoordinatorTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/tracker/TrackerServiceResumeTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/devices/SpeedAndLocationDevice_ATTFusedBANALServiceIntegrationTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/tracker/TrackerServiceFinalizationTest.kt`, `TranslationParityTest.kt`, `ArchitectureConformanceContractTest.kt`, `DetailedDesignParityContractTest.kt`, `SystemLiveTrackingRequirementsContractTest.kt`, `SystemArchitectureDesignContractTest.kt`, `SourceTextReadingAuditContractTest.kt`
+- **Test Type**: Unit
+- **Verification Method**: Unit
+- **Procedure**:
+  1. *Multisport State Machine, Pause Gating, Bakery Stop Immunity & Parked-Sensor/50-Hz `ACC` Fusion (`TST-FIL-031.1`, `MultisportTransitionDetectorTest.kt`)*:
+     • Replay `BIKE -> T2 (1800..1850 s) -> RUN (1850..1865 s)` brick and `RUN -> T1 -> BIKE -> T2 -> RUN` duathlon timelines, asserting exact confirmation at `t = 1865 s` with retroactive anchors `t_exit = 1800 s`, `t_enter = 1850 s`, and `(activeTimeS, totalTimeS, totalDistanceM)` snapshots.
+     • Replay `< 10 s` direct sport switch, `160 s` same-sport bakery stop (`BIKE -> WALK/STAT -> BIKE`), `< 15 s` opposite-sport blip, `!isTracking` / `PAUSED` / `AUTO_PAUSED` gating (confirming zero triggers during pause), parked silent `0 W` bike sensor in `T2` with `TYPE_STEP_DETECTOR` absent (fusing 50-Hz `ACC` footstrikes from `KinematicSportTypeDiscriminator`), and clean `reset()`.
+  2. *`MyAccumulatorSensor.resetTo(N)` & `BANALService` Precedence / Lifecycle (`TST-FIL-031.2`, `MyAccumulatorSensorResetToTest.kt`, `BANALServiceMultisportTransitionTest.kt`)*:
+     • Verify `resetTo(targetValue)` sets `mInitialValue = target - mValue`, emits `targetValue` to listeners outside `synchronized (this)`, preserves `mLastAbsoluteValue` across subsequent `accumulate()` ticks, and never mutates `MySensorManager.mInitialValues`.
+     • Verify Tier 1 `mHaveUserSelectedSportType == true` blocks auto-multisport, confirmed transition overrides Tier 2 `CONFLICT` / silent parked bike sensor, resets `mActivityTypeMax` even when `!changeSportWhenDeviceGetsLost()`, emits `MULTISPORT_TRANSITION_INTENT` without firing `SPORT_TYPE_CHANGED_BY_USER_INTENT` or `LAP_SUMMARY`, and clears cleanly on `RESET_ACCUMULATORS_INTENT` and `onDestroy()`.
+  3. *`MultisportLapCoordinator` Retroactive Named Laps, Auto-Pause `T2`, Manual-Lap Clamping & `WorkoutSamples.db` Sync (`TST-FIL-031.3`, `MultisportLapCoordinatorTest.kt`, `SpeedAndLocationDevice_ATTFusedBANALServiceIntegrationTest.kt`, `TrackerServiceFinalizationTest.kt`)*:
+     • Verify `Laps.db` persists `Bike` (`0..1800 s`), `Transition` (`1800..1850 s`), and final-stop `Run` (`1850..end`) with UTC `"yyyy-MM-dd HH:mm:ss"` `TIME_START` parseable by `FitFileWriter` and localized names; verify `TIME_LAP` / `DISTANCE_m_LAP` re-seed via `resetTo` to `(now - effectiveEnter)` deltas.
+     • Verify partial auto-pause inside `T2` persists active unpaused `Transition` duration, 100% auto-paused stationary `T2` (`0 s`, `0.0 m`) skips `Transition` under `REQ-TRK-002` with contiguous `LAP_NR` (`+1`, no `1 -> 3` gap), manual-lap interleaving clamps boundaries to `currentLapStartAnchor`, and async `WorkoutSamples.db` `LAP_NR` range update checks `existsColumnInTable` / `PRAGMA table_info` before updating time-bounded rows with `0` edits to `WorkoutSamplesDatabaseManager.java`.
+  4. *9-Locale Localization Parity (`TST-FIL-031.4`, `TranslationParityTest.kt`)*:
+     • Verify `lap_name_bike`, `lap_name_transition`, and `lap_name_run` exist across all 9 `values*/strings_cockpit.xml` locales (`EN, DE, ES, FR, IT, JA, NL, PL, PT`) with zero `&#10;` and exact key parity.
+  5. *Monolith LoC Ceilings & `SWE.2`/`SWE.3`/`SYS.2`/`SYS.3` Parity (`TST-FIL-031.5`, `ArchitectureConformanceContractTest.kt`, `DetailedDesignParityContractTest.kt`, `SystemLiveTrackingRequirementsContractTest.kt`, `SystemArchitectureDesignContractTest.kt`, `SourceTextReadingAuditContractTest.kt`)*:
+     • Verify `TrackerService.java <= 3,540` (`3,537`, `-3`), `DeviceManager.java <= 1,707` (`0` edits), `WorkoutSamplesDatabaseManager.java <= 1,533` (`0` edits), `WorkoutRepository.kt <= 4,931` (`0` edits), `SpeedAndLocationDevice_ATTFused.kt <= 1,455` (`1,441`, `< 1,500`), `BANALService.java <= 1,075` (`1,074`), zero DB schema changes (`Laps.db` v3), `0` new `src/main` test reads (`REQ-PRO-049.1`), Stage 4–5 `docs/architecture.md`/`banal_service.md`/`tracker_service.md`/`docs/system/` parity, and `verify_requirement_governance.py` `exit 0`.
+
 ---
 
 ## Change History
@@ -3677,3 +3699,5 @@
 | `1.0.68` | 2026-11-19 | Lane A Flash (`ATT-8329`, `--as agent1`) | `ATT-8329` | Updated `Component` & `Test Description` for `TST-FIL-002` (5-mode `calcExtremaValue` Robolectric matrix), `TST-FIL-003` (dedicated `WorkoutSummariesAltitudeShiftTest.kt` + session/samples tags), and `TST-CON-007` (`BatteryDeviceTest.kt`), remaining `[Implemented]` pending Stage 4/5 execution. |
 | `1.0.69` | 2026-11-19 | Lane A Flash (`ATT-8329`, `--as agent1`) | `ATT-8329` | Promoted `TST-FIL-002`, `TST-FIL-003`, and `TST-CON-007` to `[Verified]` in Stage 5 reusing Gate 4 verified evidence (`Rule 7.5`: `33/33` PASS across 5 suites, `0` `app/` code changes since Gate 4, `ATT-8329_walkthrough.md`). |
 | `1.0.70` | 2026-11-19 | AI Agent (`ATT-8951`, `--as agent1`) | `ATT-8951` | Refined & verified `TST-TRK-072.9` (`[Verified]`) atop `50a57b3e` following Gate 4 `34/34` PASS (`HrvDfaA1RangeSliderGestureTest` `10/10`, `HrvDfaA1SettingsContractTest` `12/12`, `HrvRampTestScreenTest` `6/6`, `SourceTextReadingAuditContractTest` `6/6`), `Rule 8.5` PNG `img/ATT-8951_hrv_cta_above_fold.png`, and `--check-verified-evidence` `exit 0`. |
+| `1.0.71` | 2026-11-19 | AI Agent (`ATT-8917`, `--as agent1`) | `ATT-8917` | Added & verified `TST-FIL-031` (`[Verified]`, `TST-FIL-031.1`–`.5`) rebased cleanly atop `sprint/2026-11-19_01_Früh` (`50a57b3e`) reusing Gate 4 Pass (`ATT-9113`: `17` suites / `140/140` PASS, `0` warnings, `0` `app/` diff post-`7e594f8a` per `Rule 7.5`), static baselines (`lint = 216`, `detekt = 9509`) & safety linters PASS, and `docs/engineering/walkthroughs/ATT-8917_walkthrough.md`. |
+| `1.0.72` | 2026-11-19 | AI Agent (`ATT-8917`, `--as agent1`) | `ATT-8917` | Stage 6 Bounce 1/3 heal verified (`ATT-9128`: `11` suites / `123/123` PASS, `0` `app/` diff post-`fe67803b` per `Rule 7.5`): added phone-only duathlon `T1` kinematic `RUN` carryover test (`MultisportTransitionDetectorTest`, `10/10`) and in-memory pause/resume multisport leg preservation test (`TrackerServiceResumeTest`, `18/18`), rebased cleanly atop `sprint/2026-11-19_02_Spät` (`73ff0cdd`). |

@@ -1,12 +1,12 @@
 # Detailed Design: BANALService & DeviceManager (ASPICE SWE.3)
 
 **Document ID**: `DOC-ARC-DD-BANAL`  
-**Version**: 1.0.8  
+**Version**: 1.0.9  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
-**Units**: `BANALService` (`app/src/main/java/com/atrainingtracker/banalservice/BANALService.java`, 1,018 LOC), `DeviceManager` (`app/src/main/java/com/atrainingtracker/banalservice/devices/DeviceManager.java`, 1,707 LOC), `MyRemoteDevice` (`MyRemoteDevice.java`, 159 LOC), `DeviceSearchPeriodicRetryCoordinator` (`DeviceSearchPeriodicRetryCoordinator.kt`)  
-**Collaborators**: `MySensorManager`, `ProxySensor`, `FilterManager`, `SportTypesRepository`, `BANALServiceComm`, `SensorReconnectBackoffPolicy`, `KinematicSportTypeDiscriminator`, `MovingSpeedSummary`  
+**Units**: `BANALService` (`app/src/main/java/com/atrainingtracker/banalservice/BANALService.java`, 1,074 LOC), `DeviceManager` (`app/src/main/java/com/atrainingtracker/banalservice/devices/DeviceManager.java`, 1,707 LOC), `MyRemoteDevice` (`MyRemoteDevice.java`, 159 LOC), `DeviceSearchPeriodicRetryCoordinator` (`DeviceSearchPeriodicRetryCoordinator.kt`)  
+**Collaborators**: `MySensorManager`, `ProxySensor`, `FilterManager`, `SportTypesRepository`, `BANALServiceComm`, `SensorReconnectBackoffPolicy`, `KinematicSportTypeDiscriminator`, `MovingSpeedSummary`, `MultisportTransitionDetector`, `MultisportTransitionBridge`  
 **SWE.2 Alignment**: `docs/architecture.md` §3.2, §4.2, §4.7, §4.8, §4.9 (`IF-SWE-03`, `IF-SWE-04`)  
 **Requirement Trace**: `REQ-PRO-114.1`, `REQ-ARC-008.2`, `REQ-SEN-021`, `REQ-TRK-024`, `REQ-TRK-055`, `REQ-TRK-077`, `REQ-CON-051`, `REQ-FIL-029`, `REQ-CON-052`, `REQ-FIL-030`
 
@@ -121,3 +121,4 @@ stateDiagram-v2
 | `1.0.6` | 2026-11-19 | AI Agent (`ATT-8895`, `--as agent1`) | `ATT-8895` | Stage 6 Bounce 3/3 heal (+ Gate 4 revision): documented `cServiceInstance` lifecycle + `getActiveBSportType()` resolution and volatile `mUserSelectedBSportType` cache in `BANALService.java` (`980 LOC`, zero per-sample SQLite lookups on 100-Hz IMU hot path, preserving leak-free `cServiceContext = getApplicationContext()`), non-`RUN` dwell stride baseline sync in `SpeedAndLocationDevice_ATTFused`, and `SpeedAndLocationDevice_ATTFusedBANALServiceIntegrationTest` parity (`REQ-FIL-029.3`, `REQ-PRO-114`). |
 | `1.0.7` | 2026-11-19 | AI Agent (`ATT-8965`, `--as agent1`) | `ATT-8965` | Delegated `tries <= 1` exhaustion & extended periodic re-search (`32s->64s->128s->finalPeriodMs`) to `DeviceSearchPeriodicRetryCoordinator` (`DeviceManager.java` `1,707` LOC, thread-safe double-checked init + disabled-mid-flight give-up cleanup, `REQ-CON-052`). |
 | `1.0.8` | 2026-11-19 | AI Agent (`ATT-8891`, `--as agent1`) | `ATT-8891` | Documented volatile Tier 3 `mInferredBSportType`/`mMovingSpeedSummary`, `getAuthoritativeBSportType()` anti-circular split hint, unified `getSportTypeId*`, `mResetAccumulatorsReceiver` (`RESET_ACCUMULATORS_INTENT` preserving user selection), updated `BANALService.java` (`1,018 LOC`), and added `BANALServiceSportInferenceTest` / `TST-FIL-030.2`–`.3` parity (`REQ-FIL-030`, `REQ-PRO-114`). |
+| `1.0.9` | 2026-11-19 | AI Agent (`ATT-8917`, `--as agent1`) | `ATT-8917` | Documented `mMultisportBSportType` precedence (subordinate to Tier 1 `mHaveUserSelectedSportType`, overriding `CONFLICT`/parked bike sensors while keeping `getAuthoritativeBSportType()` Tier 1+2), `onConfirmedMultisportTransition` (`mActivityTypeMax` reset + `MULTISPORT_TRANSITION_INTENT`), `advanceLapsForMultisport` + `MyAccumulatorSensor.resetTo(N)` (`resetAccumulatorSensorsTo`), `BANALService.java` (`1,074 LOC`), and `BANALServiceMultisportTransitionTest` / `MyAccumulatorSensorResetToTest` parity (`REQ-FIL-031`, `REQ-PRO-114`). |

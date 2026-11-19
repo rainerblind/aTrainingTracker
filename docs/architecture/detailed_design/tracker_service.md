@@ -1,12 +1,12 @@
 # Detailed Design: TrackerService (ASPICE SWE.3)
 
 **Document ID**: `DOC-ARC-DD-TRK`  
-**Version**: 1.0.1  
+**Version**: 1.0.2  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
-**Unit**: `TrackerService` (`app/src/main/java/com/atrainingtracker/trainingtracker/tracker/TrackerService.java`, 3,556 LOC)  
-**Collaborators**: `TrackingMode` (`TrackingMode.kt`), `AutoPauseManager` / `AutoPauseState` (`AutoPauseManager.kt`), `LiveWorkoutBroadcastTracker` (`LiveWorkoutBroadcastTracker.kt`), `TrainingApplication`, `BANALServiceComm`, `LiveWorkoutSession`, `WorkoutRepository`  
+**Unit**: `TrackerService` (`app/src/main/java/com/atrainingtracker/trainingtracker/tracker/TrackerService.java`, 3,538 LOC)  
+**Collaborators**: `TrackingMode` (`TrackingMode.kt`), `AutoPauseManager` / `AutoPauseState` (`AutoPauseManager.kt`), `LiveWorkoutBroadcastTracker` (`LiveWorkoutBroadcastTracker.kt`), `MultisportLapCoordinator` (`MultisportLapCoordinator.kt`), `TrainingApplication`, `BANALServiceComm`, `LiveWorkoutSession`, `WorkoutRepository`  
 **SWE.2 Alignment**: `docs/architecture.md` §3.1, §3.3, §4.2, §4.9 (`IF-SWE-03`, `IF-SWE-05`, `IF-SWE-06`)  
 **Requirement Trace**: `REQ-PRO-114.1`, `REQ-ARC-008.1`, `REQ-STB-020.1`, `REQ-STB-020.2`, `REQ-TRK-009`, `REQ-TRK-010`, `REQ-TRK-018`, `REQ-TRK-026`, `REQ-TRK-033`, `REQ-TRK-034`, `REQ-TRK-076`
 
@@ -132,3 +132,4 @@ stateDiagram-v2
 | :--- | :--- | :--- | :--- | :--- |
 | `1.0.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Added standardized `DOC-ARC-DD-TRK` work-product control header and Change History. |
 | `1.0.1` | 2026-11-18 | AI Agent (`ATT-8999`, `--as agent1`) | `ATT-8999` | Documented `LiveWorkoutBroadcastTracker` discrete-edge `WORKOUT_UPDATED_INTENT` dispatch (`START_NORMAL`/resume, `TRACKING <-> PAUSED`, live `saveLap`, sport change), removal of 1-Hz `updateExtremaValueInMemory` & steady-state active/paused broadcasts, and `<= 3,559`-LOC ceiling (`REQ-STB-020.1`, `REQ-STB-020.2`). |
+| `1.0.2` | 2026-11-19 | AI Agent (`ATT-8917`, `--as agent1`) | `ATT-8917` | Delegated `mLapSummaryReceiver`, `mMultisportTransitionReceiver` (`BANALService.MULTISPORT_TRANSITION_INTENT`), session anchor reset (placed after in-memory `mLiveSession` reuse early-return so pause/resume preserves ongoing multisport leg state), and final-leg anchored naming/UTC `TIME_START` to `MultisportLapCoordinator` (keeping `TrackerService.java` at `3,538 LOC`, `0` main-thread SQLite, `0` edits to `WorkoutSamplesDatabaseManager.java`) with `MultisportLapCoordinatorTest` & `TrackerServiceResumeTest` parity (`REQ-FIL-031.3`, `REQ-PRO-114`). |
