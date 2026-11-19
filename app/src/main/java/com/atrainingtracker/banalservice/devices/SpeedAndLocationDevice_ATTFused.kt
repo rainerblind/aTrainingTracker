@@ -20,7 +20,10 @@ package com.atrainingtracker.banalservice.devices
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.hardware.Sensor
 import android.hardware.SensorEvent
@@ -33,18 +36,23 @@ import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import androidx.annotation.VisibleForTesting
+import androidx.core.content.ContextCompat
 import com.atrainingtracker.banalservice.BANALService
+import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
 import com.atrainingtracker.banalservice.odometry.PhoneCarriageClassifier
 import com.atrainingtracker.banalservice.odometry.PhoneCarriageMode
 import com.atrainingtracker.banalservice.odometry.QuaternionGyroProjector
+import com.atrainingtracker.banalservice.odometry.SmartphoneImuCadenceEstimator
 import com.atrainingtracker.banalservice.odometry.SpeedMeasurement
 import com.atrainingtracker.banalservice.odometry.SportContextHint
 import com.atrainingtracker.banalservice.odometry.UnicycleOdometryEkf
 import com.atrainingtracker.banalservice.odometry.WheelCircumferenceCalibrator
+import com.atrainingtracker.banalservice.sensor.MyIntegerAccumulatorSensor
 import com.atrainingtracker.banalservice.sensor.MySensor
 import com.atrainingtracker.banalservice.sensor.MySensorManager
 import com.atrainingtracker.banalservice.sensor.SensorType
+import com.atrainingtracker.util.LifecycleUtils
 import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.cos
@@ -88,6 +96,7 @@ open class SpeedAndLocationDevice_ATTFused(
         private const val CLUSTER_STOP_RADIUS_METERS = 1.5
         private const val CLUSTER_STOP_MIN_SPAN_SEC = 3.0
         private const val MAX_PLAUSIBLE_GNSS_SPEED_MPS = 70.0
+        private const val MAX_CLOCK_DOMAIN_SKEW_MS = 60_000L
     }
 
     private data class YawRateSample(val yawRateRadPerSec: Double, val dtSec: Double)
@@ -98,9 +107,30 @@ open class SpeedAndLocationDevice_ATTFused(
     val wheelCalibrator = WheelCircumferenceCalibrator()
     val carriageClassifier = PhoneCarriageClassifier()
 
+    private val mCadenceLock = Any()
+    private var mPendingCadenceChanged = false
+    private var mPendingCadenceValue: Double? = null
+    private var mPendingStrideChanged = false
+    private var mPendingCumulativeStrides = 0
+
+    val cadenceEstimator = SmartphoneImuCadenceEstimator(
+        onCadence = { cadence ->
+            mPendingCadenceChanged = true
+            mPendingCadenceValue = cadence
+        },
+        onStride = { cumulativeStrides ->
+            mPendingStrideChanged = true
+            mPendingCumulativeStrides = cumulativeStrides
+        }
+    )
+
     var mWorldYawRateSensor: MySensor<Double>? = null
         protected set
     var mActivityAndCarriageModeSensor: MySensor<Int>? = null
+        protected set
+    var mCadenceSensor: MySensor<Double>? = null
+        protected set
+    var mStridesSensor: MyIntegerAccumulatorSensor? = null
         protected set
 
     protected var mLocationManager: LocationManager? = null
@@ -108,6 +138,22 @@ open class SpeedAndLocationDevice_ATTFused(
     protected var mUpdatesRegistered = false
     protected var mSensorsRegistered = false
     protected var mWheelListenerRegistered = false
+    private var mSportChangedReceiverRegistered = false
+    private var mIsShuttingDown = false
+    private var mLastEstimatorTotalStrides = 0
+    private var mPreservedStridesTotal = 0
+    private var mHasPreservedStridesTotal = false
+    private var mSensorTimestampEpochOffsetMs: Long? = null
+    private val mSensorTimestampEpochOffsetMsByType = HashMap<Int, Long>()
+    private val mLastResolvedSensorMsByType = HashMap<Int, Long>()
+
+    private val mSportChangedReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == BANALService.SPORT_TYPE_CHANGED_BY_USER_INTENT) {
+                handleSportTypeChanged(currentTimeMillis())
+            }
+        }
+    }
 
     private val mRotationVector = FloatArray(4)
     private var mHasRotationVector = false
@@ -159,6 +205,24 @@ open class SpeedAndLocationDevice_ATTFused(
         mLocationManager = mContext.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
         mHardwareSensorManager = mContext.getSystemService(Context.SENSOR_SERVICE) as? SensorManager
         registerUpdates()
+        registerSportChangedReceiver()
+    }
+
+    protected open fun currentTimeMillis(): Long = System.currentTimeMillis()
+
+    private fun registerSportChangedReceiver() {
+        if (mSportChangedReceiverRegistered) return
+        try {
+            ContextCompat.registerReceiver(
+                mContext,
+                mSportChangedReceiver,
+                IntentFilter(BANALService.SPORT_TYPE_CHANGED_BY_USER_INTENT),
+                ContextCompat.RECEIVER_NOT_EXPORTED
+            )
+            mSportChangedReceiverRegistered = true
+        } catch (_: Throwable) {
+            // Minimal test contexts may omit broadcast registration.
+        }
     }
 
     override fun addSensors() {
@@ -230,14 +294,49 @@ open class SpeedAndLocationDevice_ATTFused(
     }
 
     @Synchronized
+    override fun registerAccelerometer() {
+        // 50-Hz TYPE_ACCELEROMETER is lifecycle-managed by registerImuSensors()/shutDown().
+        if (!mSensorsRegistered) {
+            registerImuSensors()
+        }
+    }
+
+    @Synchronized
+    override fun unregisterAccelerometer() {
+        // Preserve 50-Hz accelerometer across LocationUnavailable() GPS dropouts until shutDown().
+    }
+
+    @Synchronized
+    override fun unregisterSensors() {
+        if (mIsShuttingDown) {
+            super.unregisterSensors()
+            return
+        }
+        val preservedCadence = mCadenceSensor
+        val preservedStrides = mStridesSensor
+        if (preservedCadence != null) removeSensor(SensorType.CADENCE)
+        if (preservedStrides != null) removeSensor(SensorType.STRIDES)
+        super.unregisterSensors()
+        if (preservedCadence != null) addSensor(preservedCadence)
+        if (preservedStrides != null) addSensor(preservedStrides)
+    }
+
+    @Synchronized
     fun registerImuSensors() {
         if (mSensorsRegistered) return
         val sm = mHardwareSensorManager ?: return
-        if (!AttFusedPreferences.isEffectiveGyroActive(mContext)) return
         try {
-            val gyro = sm.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
-            if (gyro != null) {
-                sm.registerListener(this, gyro, SensorManager.SENSOR_DELAY_GAME)
+            val accel = sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+            if (accel != null) {
+                mAccelerometerSensor = accel
+                sm.registerListener(this, accel, SensorManager.SENSOR_DELAY_GAME)
+                mAccelRegistered = true
+            }
+            if (AttFusedPreferences.isEffectiveGyroActive(mContext)) {
+                val gyro = sm.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
+                if (gyro != null) {
+                    sm.registerListener(this, gyro, SensorManager.SENSOR_DELAY_GAME)
+                }
             }
             val rotVector = sm.getDefaultSensor(Sensor.TYPE_GAME_ROTATION_VECTOR)
                 ?: sm.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
@@ -279,18 +378,55 @@ open class SpeedAndLocationDevice_ATTFused(
         }
     }
 
+    private fun resolveSensorEventTimestampMs(event: SensorEvent): Long {
+        val wallMs = currentTimeMillis()
+        val sensorNs = event.timestamp
+        val sensorType = event.sensor.type
+        synchronized(mCadenceLock) {
+            val candidateMs = if (sensorNs > 0L) {
+                val sensorMs = sensorNs / 1_000_000L
+                val sharedOffset = mSensorTimestampEpochOffsetMs ?: (wallMs - sensorMs).also {
+                    mSensorTimestampEpochOffsetMs = it
+                }
+                val typeOffset = mSensorTimestampEpochOffsetMsByType.getOrPut(sensorType) {
+                    val sharedAlignedMs = sensorMs + sharedOffset
+                    if (abs(wallMs - sharedAlignedMs) <= MAX_CLOCK_DOMAIN_SKEW_MS) {
+                        sharedOffset
+                    } else {
+                        wallMs - sensorMs
+                    }
+                }
+                sensorMs + typeOffset
+            } else {
+                wallMs
+            }
+            val prevResolvedMs = mLastResolvedSensorMsByType[sensorType]
+            val monotonicMs = if (prevResolvedMs != null && candidateMs < prevResolvedMs) {
+                prevResolvedMs
+            } else {
+                candidateMs
+            }
+            mLastResolvedSensorMsByType[sensorType] = monotonicMs
+            return monotonicMs
+        }
+    }
+
     override fun onSensorChanged(event: SensorEvent?) {
-        if (event == null || event.sensor == null) return
+        if (event == null || event.sensor == null || mIsShuttingDown) return
+        val nowMs = resolveSensorEventTimestampMs(event)
         when (event.sensor.type) {
             Sensor.TYPE_ACCELEROMETER -> {
                 super.onSensorChanged(event)
+                if (event.values != null && event.values.size >= 3) {
+                    processCadenceAccelerometerSample(event.values, nowMs)
+                }
             }
             Sensor.TYPE_ROTATION_VECTOR,
             Sensor.TYPE_GAME_ROTATION_VECTOR -> {
                 if (event.values != null && event.values.size >= 4) {
                     System.arraycopy(event.values, 0, mRotationVector, 0, 4)
                     mHasRotationVector = true
-                    carriageClassifier.ingestRotationVector(event.values, System.currentTimeMillis())
+                    carriageClassifier.ingestRotationVector(event.values, nowMs)
                 }
             }
             Sensor.TYPE_PRESSURE -> {
@@ -298,12 +434,13 @@ open class SpeedAndLocationDevice_ATTFused(
                     val pressureHpa = event.values[0].toDouble()
                     if (pressureHpa.isFinite() && pressureHpa > 0.0) {
                         val altM = 44330.0 * (1.0 - (pressureHpa / 1013.25).pow(0.19029495718363465))
-                        carriageClassifier.ingestBarometerAltitude(altM, System.currentTimeMillis())
+                        carriageClassifier.ingestBarometerAltitude(altM, nowMs)
                     }
                 }
             }
             Sensor.TYPE_STEP_DETECTOR -> {
-                carriageClassifier.ingestStepEvent(System.currentTimeMillis())
+                carriageClassifier.ingestStepEvent(nowMs)
+                processCadenceStepEvent(nowMs)
             }
             Sensor.TYPE_GYROSCOPE -> {
                 if (!AttFusedPreferences.isEffectiveGyroActive(mContext)) return
@@ -326,7 +463,8 @@ open class SpeedAndLocationDevice_ATTFused(
                             event.values[1].toDouble() * event.values[1].toDouble() +
                             event.values[2].toDouble() * event.values[2].toDouble()
                     )
-                    processWorldYawStep(worldYawRate, rawGyroMag, dtSec, System.currentTimeMillis())
+                    processWorldYawStep(worldYawRate, rawGyroMag, dtSec, nowMs)
+                    processCadenceGyroSample(event.values, nowMs)
                 }
             }
         }
@@ -652,19 +790,15 @@ open class SpeedAndLocationDevice_ATTFused(
         val shouldClassify = synchronized(mYawRateLock) {
             forceClassify ||
                 mLastClassifyTimestampMs == Long.MIN_VALUE ||
-                timestampMs < mLastClassifyTimestampMs ||
-                (timestampMs - mLastClassifyTimestampMs) >= CARRIAGE_CLASSIFY_INTERVAL_MS
+                (timestampMs > mLastClassifyTimestampMs &&
+                    (timestampMs - mLastClassifyTimestampMs) >= CARRIAGE_CLASSIFY_INTERVAL_MS)
         }
 
         val mode: PhoneCarriageMode
         val profile: com.atrainingtracker.banalservice.odometry.CarriageFilterProfile
         val targetYawWindowSec: Double
         if (shouldClassify) {
-            val hint = mExplicitSportHintForTest ?: try {
-                SportContextHint.fromBSportType(BANALService.getActiveBSportType())
-            } catch (_: Throwable) {
-                SportContextHint.UNKNOWN
-            }
+            val hint = resolveSportContextHint()
             carriageClassifier.setSportContext(hint)
 
             mode = carriageClassifier.classify(timestampMs)
@@ -676,24 +810,42 @@ open class SpeedAndLocationDevice_ATTFused(
                 profile.yawWindowSec
             }
 
+            var modeChanged = false
             val shouldEmitSensor = synchronized(mYawRateLock) {
+                modeChanged = mode != mCachedCarriageMode
                 mCachedCarriageMode = mode
                 mCachedTargetYawWindowSec = targetYawWindowSec
-                mLastClassifyTimestampMs = timestampMs
+                mLastClassifyTimestampMs = if (mLastClassifyTimestampMs == Long.MIN_VALUE) {
+                    timestampMs
+                } else {
+                    max(mLastClassifyTimestampMs, timestampMs)
+                }
                 mClassifyEvaluationCount++
-                val emit = mode != mLastEmittedCarriageMode ||
-                    mLastModeEmissionTimestampMs == Long.MIN_VALUE ||
-                    timestampMs < mLastModeEmissionTimestampMs ||
+                val isNewOrFirst = mode != mLastEmittedCarriageMode ||
+                    mLastModeEmissionTimestampMs == Long.MIN_VALUE
+                val intervalElapsed = mLastModeEmissionTimestampMs != Long.MIN_VALUE &&
+                    timestampMs > mLastModeEmissionTimestampMs &&
                     (timestampMs - mLastModeEmissionTimestampMs) >= MODE_SENSOR_EMISSION_INTERVAL_MS
+                val emit = isNewOrFirst || intervalElapsed
                 if (emit) {
                     mLastEmittedCarriageMode = mode
-                    mLastModeEmissionTimestampMs = timestampMs
+                    mLastModeEmissionTimestampMs = if (mLastModeEmissionTimestampMs == Long.MIN_VALUE) {
+                        timestampMs
+                    } else {
+                        max(mLastModeEmissionTimestampMs, timestampMs)
+                    }
                     mModeEmissionCount++
                 }
                 emit
             }
             if (shouldEmitSensor) {
                 mActivityAndCarriageModeSensor?.newValue(mode.code)
+            }
+            if (modeChanged) {
+                synchronized(mCadenceLock) {
+                    cadenceEstimator.onModeOrSportChanged(mode, hint, timestampMs)
+                }
+                flushCadenceAndStrideOutputs()
             }
         } else {
             synchronized(mYawRateLock) {
@@ -704,8 +856,11 @@ open class SpeedAndLocationDevice_ATTFused(
         }
 
         synchronized(mYawRateLock) {
-            val dtSec = if (mLastAdaptationTimestampMs == Long.MIN_VALUE || timestampMs <= mLastAdaptationTimestampMs) {
+            val dtSec = if (mLastAdaptationTimestampMs == Long.MIN_VALUE) {
                 mLastAdaptationTimestampMs = timestampMs
+                0.0
+            } else if (timestampMs <= mLastAdaptationTimestampMs) {
+                // Keep adaptation clock strictly monotonic across lagged cross-sensor timestamps.
                 0.0
             } else {
                 val delta = (timestampMs - mLastAdaptationTimestampMs) / 1000.0
@@ -902,6 +1057,222 @@ open class SpeedAndLocationDevice_ATTFused(
             abs(worldYawRate)
         }
         processWorldYawStep(worldYawRate, rawGyroMag, dtSec, timestampMs)
+        if (gyroValues.size >= 3) {
+            processCadenceGyroSample(gyroValues, timestampMs)
+        }
+    }
+
+    private fun processCadenceAccelerometerSample(values: FloatArray, timestampMs: Long) {
+        if (values.size < 3) return
+        val mode = updateCarriageClassification(timestampMs)
+        val sportHint = resolveSportContextHint()
+        val gyroEnabled = AttFusedPreferences.isEffectiveGyroActive(mContext)
+        val glanceActive = mode.profile.enableGlanceGating && carriageClassifier.isGlanceActive(timestampMs)
+        synchronized(mCadenceLock) {
+            cadenceEstimator.onAccSample(
+                axMps2 = values[0].toDouble(),
+                ayMps2 = values[1].toDouble(),
+                azMps2 = values[2].toDouble(),
+                timestampMs = timestampMs,
+                mode = mode,
+                sportContext = sportHint,
+                isGyroEnabled = gyroEnabled,
+                isGlanceActive = glanceActive
+            )
+        }
+        flushCadenceAndStrideOutputs()
+    }
+
+    private fun processCadenceGyroSample(values: FloatArray, timestampMs: Long) {
+        if (values.size < 3) return
+        val mode = synchronized(mYawRateLock) { mCachedCarriageMode }
+        val sportHint = resolveSportContextHint()
+        val glanceActive = mode.profile.enableGlanceGating && carriageClassifier.isGlanceActive(timestampMs)
+        synchronized(mCadenceLock) {
+            cadenceEstimator.onGyroSample(
+                gxRadPerSec = values[0].toDouble(),
+                gyRadPerSec = values[1].toDouble(),
+                gzRadPerSec = values[2].toDouble(),
+                timestampMs = timestampMs,
+                mode = mode,
+                sportContext = sportHint,
+                isGlanceActive = glanceActive
+            )
+        }
+        flushCadenceAndStrideOutputs()
+    }
+
+    private fun processCadenceStepEvent(timestampMs: Long) {
+        val mode = updateCarriageClassification(timestampMs)
+        val sportHint = resolveSportContextHint()
+        val glanceActive = mode.profile.enableGlanceGating && carriageClassifier.isGlanceActive(timestampMs)
+        synchronized(mCadenceLock) {
+            cadenceEstimator.onStepDetected(
+                timestampMs = timestampMs,
+                mode = mode,
+                sportContext = sportHint,
+                isGlanceActive = glanceActive
+            )
+        }
+        flushCadenceAndStrideOutputs()
+    }
+
+    @VisibleForTesting
+    internal fun handleSportTypeChanged(timestampMs: Long) {
+        val mode = synchronized(mYawRateLock) { mCachedCarriageMode }
+        val sportHint = resolveSportContextHint()
+        val sportType = resolveActiveBSportType()
+        if (sportType != BSportType.RUN) {
+            unregisterStridesSensor()
+        }
+        synchronized(mCadenceLock) {
+            cadenceEstimator.onModeOrSportChanged(mode, sportHint, timestampMs)
+        }
+        flushCadenceAndStrideOutputs()
+    }
+
+    private fun flushCadenceAndStrideOutputs() {
+        var hasCadence = false
+        var cadenceVal: Double? = null
+        var hasStride = false
+        var strideTotal = 0
+        synchronized(mCadenceLock) {
+            if (mPendingCadenceChanged) {
+                hasCadence = true
+                cadenceVal = mPendingCadenceValue
+                mPendingCadenceChanged = false
+            }
+            if (mPendingStrideChanged) {
+                hasStride = true
+                strideTotal = mPendingCumulativeStrides
+                mPendingStrideChanged = false
+            }
+        }
+        if (!hasCadence && !hasStride) return
+
+        applyCadenceAndStrideSensors(hasCadence, cadenceVal, hasStride, strideTotal)
+    }
+
+    @Synchronized
+    private fun applyCadenceAndStrideSensors(
+        hasCadence: Boolean,
+        cadenceVal: Double?,
+        hasStride: Boolean,
+        strideTotal: Int
+    ) {
+        if (mIsShuttingDown) {
+            unregisterCadenceAndStridesSensors()
+            return
+        }
+        val activeSport = resolveActiveBSportType()
+        if (activeSport != BSportType.RUN) {
+            unregisterStridesSensor()
+        }
+        if (hasCadence) {
+            if (cadenceVal == null) {
+                unregisterCadenceSensor()
+                unregisterStridesSensor()
+            } else {
+                val cadSensor = ensureCadenceSensorRegistered()
+                cadSensor.newValue(cadenceVal)
+                if (activeSport == BSportType.RUN) {
+                    ensureStridesSensorRegistered()
+                }
+            }
+        }
+        if (hasStride) {
+            if (activeSport == BSportType.RUN && !(hasCadence && cadenceVal == null)) {
+                val strideSensor = ensureStridesSensorRegistered()
+                if (strideTotal < mLastEstimatorTotalStrides) {
+                    mLastEstimatorTotalStrides = 0
+                    strideSensor.accumulate(0)
+                }
+                mLastEstimatorTotalStrides = strideTotal
+                strideSensor.accumulate(strideTotal)
+            } else {
+                // Keep estimator baseline in sync while non-RUN / cadence-suppressed so gated-off
+                // strides are never retroactively added when returning to BSportType.RUN.
+                mLastEstimatorTotalStrides = strideTotal
+            }
+        }
+    }
+
+    @Synchronized
+    private fun ensureCadenceSensorRegistered(): MySensor<Double> {
+        mCadenceSensor?.let { return it }
+        val sensor = MySensor<Double>(this, SensorType.CADENCE)
+        mCadenceSensor = sensor
+        addAndRegisterSensor(sensor)
+        return sensor
+    }
+
+    @Synchronized
+    private fun unregisterCadenceSensor() {
+        val sensor = mCadenceSensor ?: return
+        sensor.deactivateSensor()
+        mMySensorManager?.unregisterSensor(sensor)
+        removeSensor(SensorType.CADENCE)
+        mCadenceSensor = null
+        notifySensorsChanged()
+    }
+
+    @Synchronized
+    private fun ensureStridesSensorRegistered(): MyIntegerAccumulatorSensor {
+        mStridesSensor?.let { return it }
+        val sensor = MyIntegerAccumulatorSensor(this, SensorType.STRIDES, true)
+        if (mHasPreservedStridesTotal) {
+            sensor.setInitialValue(mPreservedStridesTotal)
+        }
+        mStridesSensor = sensor
+        addAndRegisterSensor(sensor)
+        // Seed baseline matching estimator counter so the next stride increments strictly by +1.
+        sensor.accumulate(mLastEstimatorTotalStrides)
+        return sensor
+    }
+
+    @Synchronized
+    private fun unregisterStridesSensor() {
+        val sensor = mStridesSensor ?: return
+        val currentValue = (sensor.value as? Number)?.toInt()
+        if (currentValue != null) {
+            mPreservedStridesTotal = currentValue
+            mHasPreservedStridesTotal = true
+        }
+        sensor.deactivateSensor()
+        mMySensorManager?.unregisterSensor(sensor)
+        removeSensor(SensorType.STRIDES)
+        mStridesSensor = null
+        notifySensorsChanged()
+    }
+
+    @Synchronized
+    private fun unregisterCadenceAndStridesSensors() {
+        unregisterCadenceSensor()
+        unregisterStridesSensor()
+    }
+
+    private fun resolveSportContextHint(): SportContextHint =
+        mExplicitSportHintForTest ?: try {
+            SportContextHint.fromBSportType(resolveActiveBSportType())
+        } catch (_: Throwable) {
+            SportContextHint.UNKNOWN
+        }
+
+    private fun resolveActiveBSportType(): BSportType {
+        val testHint = mExplicitSportHintForTest
+        if (testHint != null) {
+            return when (testHint) {
+                SportContextHint.RUNNING -> BSportType.RUN
+                SportContextHint.CYCLING -> BSportType.BIKE
+                SportContextHint.UNKNOWN,
+                SportContextHint.OTHER -> BSportType.UNKNOWN
+            }
+        }
+        return try {
+            (mContext as? BANALService)?.bSportType ?: BANALService.getActiveBSportType()
+        } catch (_: Throwable) {
+            BSportType.UNKNOWN
+        }
     }
 
     @Synchronized
@@ -922,6 +1293,20 @@ open class SpeedAndLocationDevice_ATTFused(
         clearYawRateWindow()
         carriageClassifier.reset()
         mActivityAndCarriageModeSensor?.newValue(PhoneCarriageMode.UNKNOWN.code)
+        synchronized(mCadenceLock) {
+            cadenceEstimator.reset()
+            mPendingCadenceChanged = false
+            mPendingCadenceValue = null
+            mPendingStrideChanged = false
+            mPendingCumulativeStrides = 0
+            mSensorTimestampEpochOffsetMs = null
+            mSensorTimestampEpochOffsetMsByType.clear()
+            mLastResolvedSensorMsByType.clear()
+        }
+        unregisterCadenceAndStridesSensors()
+        mLastEstimatorTotalStrides = 0
+        mPreservedStridesTotal = 0
+        mHasPreservedStridesTotal = false
         mLastWheelMeasurementMs = 0L
         mLastWheelSpeedMps = 0.0
         mLastCalibLat = null
@@ -935,6 +1320,13 @@ open class SpeedAndLocationDevice_ATTFused(
 
     @Synchronized
     override fun shutDown() {
+        mIsShuttingDown = true
+        unregisterCadenceAndStridesSensors()
+        if (mSportChangedReceiverRegistered) {
+            LifecycleUtils.safeUnregisterReceiver(mContext, mSportChangedReceiver, TAG)
+            mSportChangedReceiverRegistered = false
+        }
+
         if (mWheelListenerRegistered) {
             mMySensorManager?.removeWheelMeasurementListener(this)
             mWheelListenerRegistered = false
@@ -957,6 +1349,7 @@ open class SpeedAndLocationDevice_ATTFused(
             }
         }
         mSensorsRegistered = false
+        mAccelRegistered = false
         resetOriginAndEkf()
 
         super.shutDown()

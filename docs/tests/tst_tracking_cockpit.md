@@ -1,14 +1,14 @@
 # Living Test Specification: Tracking & Live Sensor Cockpit
 
 **Document ID**: `DOC-TST-TRK`  
-**Version**: 1.0.54  
+**Version**: 1.0.63  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Tests**: 154
+**Total Tests**: 155
 
 ---
 
@@ -3539,6 +3539,27 @@
   5. *9-Locale Localization Parity, Platform Permission Audits & Architecture/System Sync (`TST-FIL-028.5`, `TranslationParityTest.kt`, `MergedManifestFgsAuditTest.kt`, `PermissionOnboardingSheetContractTest.kt`, `ArchitectureConformanceContractTest.kt`, `SystemArchitectureDesignContractTest.kt`, `SystemLiveTrackingRequirementsContractTest.kt`, `SourceTextReadingAuditContractTest.kt`)*:
      • Verify all 9 `values*/strings_devices.xml` locales (`EN, DE, ES, FR, IT, JA, NL, PL, PT`) pass `TranslationParityTest` (zero `&#10;`, exact placeholder/newline parity), manifest/onboarding contracts preserve 4 steps (`PermissionOnboardingSheetContractTest`), `docs/architecture.md`/`sensor_units.md`/`docs/system/` (`SYS.2`/`SYS.3`) pass contract suites after Stage 3–5 implementation, and `SourceTextReadingAuditContractTest` reports `0` `src/main` file reads in new/modified tests.
 
+### TST-FIL-029: **Carriage-Classified Smartphone IMU Cycling & Running Cadence Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Tickets**: `ATT-8895`
+- **Requirement(s)**: `REQ-FIL-029` (`REQ-FIL-029.1`..`REQ-FIL-029.5`)
+- **Component**: `app/src/test/java/com/atrainingtracker/banalservice/odometry/SmartphoneImuCadenceEstimatorTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/devices/bluetooth_le/polar/PolarLiveRunningCadenceEstimatorTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/devices/bluetooth_le/polar/PolarOnlineStreamingBridgeTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/devices/SpeedAndLocationDevice_ATTFusedTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/devices/SpeedAndLocationDevice_ATTFusedBANALServiceIntegrationTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/BANALServiceLifecycleTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/sensor/MySensorManagerCadenceArbitrationTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/sensor/MySensorManagerPriorityTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/devices/DeviceTypeSensorMappingTest.kt`, `ArchitectureConformanceContractTest.kt`, `SystemLiveTrackingRequirementsContractTest.kt`, `SystemArchitectureDesignContractTest.kt`, `SourceTextReadingAuditContractTest.kt`
+- **Test Type**: Unit
+- **Verification Method**: Unit
+- **Procedure**:
+  1. *Shared DSP Equivalence (`TST-FIL-029.1`, `PolarLiveRunningCadenceEstimatorTest.kt`, `PolarOnlineStreamingBridgeTest.kt`)*:
+     • Execute all existing Polar H10 (`100/200 Hz`) and Verity Sense (`52 Hz`) cadence and bridge tests after extracting `ImuCadenceDsp.kt`, asserting bit-for-bit behavioral parity (`±1.0–1.5 spm`, `<= 3 s` standstill zeroing, monotonic strides).
+  2. *Cycling Pocket, Jersey Back, Coasting & Handlebar Suppression (`TST-FIL-029.2`, `SmartphoneImuCadenceEstimatorTest.kt`, `SpeedAndLocationDevice_ATTFusedTest.kt`)*:
+     • Replay `BIKE_FRONT_POCKET` (`50-Hz` `1.25 Hz` / `75 RPM` thigh oscillations -> `5 s` coasting at `v = 6.0 m/s`, thigh gyro RMS `< 0.15 rad/s`), asserting `75 ± 2 RPM` active output, drop to `0.0 RPM` within `2.0 s` (`1.5 s` coasting gate), and clean `null` suppression if quiet coasting transitions classifier state across `4.0 s` hysteresis to `BIKE_HANDLEBAR`.
+     • Replay `BIKE_JERSEY_BACK` `f` vs. `2f` harmonic and rough-road noise profiles, verifying fundamental `RPM` accuracy when $R(\tau_{\text{peak}})/R(0) \ge 0.45$ and suppression below `0.45`.
+     • Replay `BIKE_HANDLEBAR` (`5–50 Hz` road chatter), `UNKNOWN`, and `WALKING_TRANSITION` under `BSportType.BIKE`, asserting `null` output, zero `SensorType.CADENCE`/`STRIDES` registration, and zero `GCData[5]` `'C'` emission.
+  3. *Running Waist/Arm/Handheld, Screen-Glance Blanking & Dual-Rate Indoor Fallback (`TST-FIL-029.3`, `SmartphoneImuCadenceEstimatorTest.kt`, `SpeedAndLocationDevice_ATTFusedTest.kt`)*:
+     • Replay `RUN_WAIST_HIP`, `RUN_BICEP_ARM`, and `RUN_HANDHELD` at `170 steps/min` (`85 strides/min`) with `TYPE_STEP_DETECTOR`, mid-run `RUN_HANDHELD` `isGlanceActive()` wrist-glance orientation shifts, and gyro-absent `ACC + TYPE_STEP_DETECTOR` fallback (including indoor pre-GPS lock); assert `85 ± 2 strides/min` (`SensorType.CADENCE`), monotonic `SensorType.STRIDES` from `1` without glance spikes, `SENSOR_DELAY_GAME` (`50 Hz`) `TYPE_ACCELEROMETER` registration, and `LocationUnavailable()`/`onAccumulatorsReset()`/`shutDown()` safety.
+  4. *`MySensorManager` Priority Arbitration & `DeviceType` Mapping (`TST-FIL-029.4`, `MySensorManagerCadenceArbitrationTest.kt`, `MySensorManagerPriorityTest.kt`, `DeviceTypeSensorMappingTest.kt`)*:
+     • Update `MySensorManagerCadenceArbitrationTest.kt:168-171` to verify `CADENCE_PRIORITY` ends at `SPEED_AND_LOCATION_ATT_FUSED` strictly behind `HRM` (`RUN_SPEED > BIKE_CADENCE > BIKE_SPEED_AND_CADENCE > BIKE_POWER > HRM > SPEED_AND_LOCATION_ATT_FUSED`), verify explicit `STRIDES_PRIORITY` (`RUN_SPEED > HRM > SPEED_AND_LOCATION_ATT_FUSED`) arbitration across connect/disconnect cycles, and assert `DeviceType.getDeviceTypeList(CADENCE|STRIDES)` contains `SPEED_AND_LOCATION_ATT_FUSED`.
+  5. *Monolith Ceilings, `SWE.2`/`SYS.2`/`SYS.3` Parity & Governance Hygiene (`TST-FIL-029.5`, `ArchitectureConformanceContractTest.kt`, `SystemLiveTrackingRequirementsContractTest.kt`, `SystemArchitectureDesignContractTest.kt`, `SourceTextReadingAuditContractTest.kt`)*:
+     • Verify `TrackerService.java <= 3,556`, `DeviceManager.java <= 1,707`, `WorkoutSamplesDatabaseManager.java <= 1,533`, `WorkoutRepository.kt <= 4,973` (`+0` from `ATT-8895`, `<= 5,117` cap on `e62a6ba4`), zero new `src/main` test reads (`REQ-PRO-049.1`), `N/A - no UI strings`, Stage 4–5 `docs/architecture.md`/`docs/system/` sync, and `verify_requirement_governance.py` `exit 0`.
+
 ---
 
 ## Change History
@@ -3590,3 +3611,12 @@
 | `1.0.52` | 2026-11-19 | AI Agent (`ATT-8998`, `--as agent1`) | `ATT-8998` | Promoted `TST-CON-051` to `[Verified]` in Stage 5 following targeted unit/contract verification, static analysis baselines, and emulator deployment. |
 | `1.0.53` | 2026-11-19 | AI Agent (`ATT-8998`, `--as agent1`) | `ATT-8998` | Stage 6 Bounce 1/3 heal: added `BLEReconnectRobustnessTest.testSearchTimeout_whenAlreadyConnectedToGatt_abortsWithoutReconnectOrStopSearching` and set `[Implemented]` pending Stage 5 re-verification. |
 | `1.0.54` | 2026-11-19 | AI Agent (`ATT-8998`, `--as agent1`) | `ATT-8998` | Promoted `TST-CON-051` to `[Verified]` in Stage 5 (Bounce 1/3) following `--rerun-tasks` verification (`125/125` PASS across 19 suites), static baselines, emulator check, and governance `exit 0`. |
+| `1.0.55` | 2026-11-18 | AI Agent (`ATT-8895`, `--as agent1`) | `ATT-8895` | Added `TST-FIL-029` (`[Planned]`, `TST-FIL-029.1`–`.5`) covering shared DSP equivalence, `BIKE_FRONT_POCKET` coasting/`BIKE_HANDLEBAR` suppression/`BIKE_JERSEY_BACK` prominence, `RUN_*` cadence + glance blanking + gyro-absent fallback, `CADENCE_PRIORITY`/`STRIDES_PRIORITY` arbitration, monolith caps, and `SYS.2`/`SYS.3`/`SWE.2` sync. |
+| `1.0.56` | 2026-11-18 | AI Agent (`ATT-8895`, `--as agent1`) | `ATT-8895` | Promoted `TST-FIL-029` to `[Implemented]` following Stage 4 test construction (`SmartphoneImuCadenceEstimatorTest.kt`, `SpeedAndLocationDevice_ATTFusedTest.kt`, `MySensorManagerCadenceArbitrationTest.kt`, `MySensorManagerPriorityTest.kt`, `DeviceTypeSensorMappingTest.kt`) and targeted unit/contract test execution. |
+| `1.0.57` | 2026-11-19 | AI Agent (`ATT-8895`, `--as agent1`) | `ATT-8895` | Promoted `TST-FIL-029` to `[Verified]` in Stage 5 following post-rebase `--rerun` verification across 18 suites (`146/146 PASS`: 8 unit suites, 8 contract/audit suites, `MeasuredNfrBenchmarkTest`, `TranslationParityTest`), `DeadCodeEliminationContractTest` baseline confirmation (`0` `ATT-8895` findings; `4/5` with pre-existing `EditDeviceDialog.kt` failure), and live `emulator-5554` smoke run. |
+| `1.0.58` | 2026-11-19 | AI Agent (`ATT-8895`, `--as agent1`) | `ATT-8895` | Stage 6 Bounce 1/3 heal + Gate 4 revision: added CHRE delayed batch & interleaved FIFO per-sensor timestamp test, non-rewinding `updateCarriageClassification()` clock & `dt`-invariant adaptation test, mid-run `STRIDES` accumulator preservation test (`SpeedAndLocationDevice_ATTFusedTest`), gyro/step-absent `RUN_BICEP_ARM`/`RUN_HANDHELD` stride fallback test (`SmartphoneImuCadenceEstimatorTest`), aligned `WorkoutRepository.kt <= 4,973` (`+0` LoC), and set `[Implemented]` pending Stage 5 re-verification. |
+| `1.0.59` | 2026-11-19 | AI Agent (`ATT-8895`, `--as agent1`) | `ATT-8895` | Promoted `TST-FIL-029` to `[Verified]` in Stage 5 (Bounce 1/3) following Gate 4 Pass (`ATT-9044`), clean Stage 5 `--rerun` verification across all 18 targeted/contract/audit/NFR/localization suites, `DeadCodeEliminationContractTest` baseline confirmation, static baselines & linters PASS, and live `emulator-5554` smoke run. |
+| `1.0.60` | 2026-11-19 | AI Agent (`ATT-8895`, `--as agent1`) | `ATT-8895` | Stage 6 Bounce 2/3 heal: added 20s gyro-absent `RUN_BICEP_ARM` strong `armAcc` full stride count + `RUN_BICEP_ARM -> RUN_WAIST_HIP` transition regression test (`SmartphoneImuCadenceEstimatorTest`) and live `ProxySensor`/late `FilterManager` listener zero-dip mid-run `STRIDES` retention test (`SpeedAndLocationDevice_ATTFusedTest`), rebased cleanly onto `sprint/2026-11-18_03_Nacht` (`e62a6ba4`), and set `[Verified]` for Stage 5 Bounce 2 verification. |
+| `1.0.61` | 2026-11-19 | AI Agent (`ATT-8895`, `--as agent1`) | `ATT-8895` | Promoted `TST-FIL-029` to `[Verified]` in Stage 5 (Bounce 2/3) on `sprint/2026-11-18_03_Nacht` (`e62a6ba4`) following `--rerun-tasks` verification across `29` unit/NFR/contract/audit/localization suites (`201/201 PASS`, `0` fail, `0` error, `0` skipped), static analysis baselines & 4 Python safety linters PASS, and `docs/engineering/walkthroughs/ATT-8895_walkthrough.md`. |
+| `1.0.62` | 2026-11-19 | AI Agent (`ATT-8895`, `--as agent1`) | `ATT-8895` | Stage 6 Bounce 3/3 heal: added end-to-end Robolectric smartphone-only `BANALService` sport-context integration test (`SpeedAndLocationDevice_ATTFusedBANALServiceIntegrationTest`, zero test hints) proving `WALKING_TRANSITION` + running `STRIDES` registration, `BIKE` broadcast teardown, and `onDestroy()` cleanup (`BANALServiceLifecycleTest`), plus `RUN -> BIKE (transient dwell strides) -> RUN` baseline sync regression test (`SpeedAndLocationDevice_ATTFusedTest`), and set `[Implemented]` pending Stage 5 re-verification. |
+| `1.0.63` | 2026-11-19 | AI Agent (`ATT-8895`, `--as agent1`) | `ATT-8895` | Promoted `TST-FIL-029` to `[Verified]` in Stage 5 (Bounce 3/3) rebased cleanly atop `sprint/2026-11-19_01_Früh` (`8e44039d`) reusing Stage 4 Bounce 3 (`32` suites / `215/215` + `5` incremental suites / `42/42`) and Gate 4 Pass (`ATT-9068`: `23` suites / `169/169` + `5` suites / `42/42`, `0` new warnings) evidence including zero-SQLite hot-path cache verification (`Rule 7.5`). |

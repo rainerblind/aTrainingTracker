@@ -19,6 +19,7 @@
 package com.atrainingtracker.banalservice.devices
 
 import com.atrainingtracker.banalservice.sensor.SensorType
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -45,5 +46,27 @@ class DeviceTypeSensorMappingTest {
                 deviceTypes != null && deviceTypes.contains(DeviceType.BIKE_RADAR)
             )
         }
+    }
+
+    // TST-FIL-029.4: Rule 81 CADENCE/STRIDES reachability includes SPEED_AND_LOCATION_ATT_FUSED without leaking into CALORIES
+    @Test
+    fun testCadenceAndStridesMappings_includeAttFusedWithoutPollutingCalories_tstFil029_4() {
+        val cadenceDevices = DeviceType.getDeviceTypeList(SensorType.CADENCE)
+        assertTrue(
+            "CADENCE mapping must include SPEED_AND_LOCATION_ATT_FUSED",
+            cadenceDevices != null && cadenceDevices.contains(DeviceType.SPEED_AND_LOCATION_ATT_FUSED)
+        )
+
+        val stridesDevices = DeviceType.getDeviceTypeList(SensorType.STRIDES)
+        assertTrue(
+            "STRIDES mapping must include SPEED_AND_LOCATION_ATT_FUSED",
+            stridesDevices != null && stridesDevices.contains(DeviceType.SPEED_AND_LOCATION_ATT_FUSED)
+        )
+
+        val caloriesDevices = DeviceType.getDeviceTypeList(SensorType.CALORIES)
+        assertFalse(
+            "CALORIES mapping must stay isolated to RUN_SPEED",
+            caloriesDevices != null && caloriesDevices.contains(DeviceType.SPEED_AND_LOCATION_ATT_FUSED)
+        )
     }
 }

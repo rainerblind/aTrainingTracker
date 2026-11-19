@@ -18,20 +18,25 @@
 
 package com.atrainingtracker.banalservice.devices
 
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.hardware.Sensor
+import android.hardware.SensorEvent
 import android.hardware.SensorManager
 import android.location.Location
 import android.location.LocationManager
 import android.util.Log
 import androidx.core.content.ContextCompat
+import com.atrainingtracker.banalservice.BANALService
+import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
 import com.atrainingtracker.banalservice.odometry.PhoneCarriageMode
 import com.atrainingtracker.banalservice.odometry.SportContextHint
 import com.atrainingtracker.banalservice.sensor.MySensorManager
 import com.atrainingtracker.banalservice.sensor.SensorType
-import io.mockk.verify
+import com.atrainingtracker.trainingtracker.TrackingMode
+import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper
 import io.mockk.every
 import io.mockk.mockk
@@ -39,14 +44,18 @@ import io.mockk.mockkConstructor
 import io.mockk.mockkObject
 import io.mockk.mockkStatic
 import io.mockk.unmockkAll
+import io.mockk.verify
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import kotlin.math.PI
 import kotlin.math.abs
+import kotlin.math.cos
+import kotlin.math.sin
 
 /**
  * Unit tests verifying [SpeedAndLocationDevice_ATTFused] lifecycle, sensor registration,
@@ -1132,5 +1141,1101 @@ class SpeedAndLocationDevice_ATTFusedTest {
             device50Hz.effectiveYawWindowSecForTest(),
             0.02
         )
+    }
+
+    // TST-FIL-029.3: 50-Hz TYPE_ACCELEROMETER registers without GNSS/gyro and survives LocationUnavailable()
+    @Test
+    fun smartphoneImu_subscribes50HzAccelerometerIndependentlyOfGyroAndSurvivesLocationUnavailable_tstFil029_3() {
+        val mockAccSensor = mockk<Sensor>(relaxed = true) {
+            every { type } returns Sensor.TYPE_ACCELEROMETER
+        }
+        val mockGyroSensor = mockk<Sensor>(relaxed = true) {
+            every { type } returns Sensor.TYPE_GYROSCOPE
+        }
+        every { mockHardwareSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER) } returns mockAccSensor
+        every { mockHardwareSensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE) } returns mockGyroSensor
+        every { AttFusedPreferences.isEffectiveGyroActive(any()) } returns false
+        every { AttFusedPreferences.isEffectiveGnssActive(any()) } returns false
+
+        val device = object : SpeedAndLocationDevice_ATTFused(mockContext, mockSensorManager) {
+            fun triggerLocationAvailable() = LocationAvailable()
+            fun triggerLocationUnavailable() = LocationUnavailable()
+        }
+
+        // Subscribes 50-Hz accelerometer (SENSOR_DELAY_GAME) even when gyro & GNSS are off; skips gyro.
+        verify(exactly = 1) {
+            mockHardwareSensorManager.registerListener(device, mockAccSensor, SensorManager.SENSOR_DELAY_GAME)
+        }
+        verify(exactly = 0) {
+            mockHardwareSensorManager.registerListener(any(), mockGyroSensor, any())
+        }
+
+        // Triggering LocationAvailable() then LocationUnavailable() must NOT unregister 50-Hz accelerometer.
+        device.triggerLocationAvailable()
+        device.triggerLocationUnavailable()
+        verify(exactly = 0) { mockHardwareSensorManager.unregisterListener(device, mockAccSensor) }
+        verify(exactly = 0) { mockHardwareSensorManager.unregisterListener(device) }
+
+        // shutDown() tears down IMU listener cleanly.
+        device.shutDown()
+        verify(atLeast = 1) { mockHardwareSensorManager.unregisterListener(device) }
+    }
+
+    // TST-FIL-029.2: Handlebar strictly suppresses CADENCE/GCData[5]; pocket dynamically registers, coasts to 0, suppresses on remount
+    @Test
+    fun smartphoneImu_bikeHandlebarSuppressedAndPocketRegistersDynamicCadenceAndCoasts_tstFil029_2() {
+        val realSensorManager = MySensorManager(mockContext)
+        val mockAccSensor = mockk<Sensor>(relaxed = true) { every { type } returns Sensor.TYPE_ACCELEROMETER }
+        val mockGyroSensor = mockk<Sensor>(relaxed = true) { every { type } returns Sensor.TYPE_GYROSCOPE }
+        val mockRotSensor = mockk<Sensor>(relaxed = true) { every { type } returns Sensor.TYPE_GAME_ROTATION_VECTOR }
+        every { mockHardwareSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER) } returns mockAccSensor
+        every { mockHardwareSensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE) } returns mockGyroSensor
+        every { mockHardwareSensorManager.getDefaultSensor(Sensor.TYPE_GAME_ROTATION_VECTOR) } returns mockRotSensor
+
+        var fakeClockMs = 1000L
+        val device = object : SpeedAndLocationDevice_ATTFused(mockContext, realSensorManager) {
+            override fun currentTimeMillis(): Long = fakeClockMs
+        }
+        device.setSportContextHintForTesting(SportContextHint.CYCLING)
+
+        try {
+            // Phase 1: BIKE_HANDLEBAR cycling (horizontal phone + high-frequency bar vibration) -> strictly suppressed
+            device.onWheelMeasurement(speedMps = 7.5, variance = 0.05, timestampMs = fakeClockMs)
+            for (step in 0..175) { // 3.5 s at 50 Hz
+                fakeClockMs = 1000L + step * 20L
+                val tSec = fakeClockMs / 1000.0
+                device.onSensorChanged(
+                    createSyntheticSensorEvent(
+                        Sensor.TYPE_GAME_ROTATION_VECTOR,
+                        fakeClockMs * 1_000_000L,
+                        floatArrayOf(0f, 0f, 0f, 1f)
+                    )
+                )
+                device.onSensorChanged(
+                    createSyntheticSensorEvent(
+                        Sensor.TYPE_ACCELEROMETER,
+                        fakeClockMs * 1_000_000L,
+                        floatArrayOf(
+                            (4.0 * sin(2.0 * PI * 14.0 * tSec)).toFloat(),
+                            (9.81 + 3.5 * cos(2.0 * PI * 19.0 * tSec)).toFloat(),
+                            (2.5 * sin(2.0 * PI * 24.0 * tSec)).toFloat()
+                        )
+                    )
+                )
+                device.onSensorChanged(
+                    createSyntheticSensorEvent(
+                        Sensor.TYPE_GYROSCOPE,
+                        fakeClockMs * 1_000_000L,
+                        floatArrayOf(
+                            (0.08 * sin(2.0 * PI * 12.0 * tSec)).toFloat(),
+                            (0.06 * cos(2.0 * PI * 16.0 * tSec)).toFloat(),
+                            0.01f
+                        )
+                    )
+                )
+                if (step % 50 == 0) {
+                    device.onWheelMeasurement(speedMps = 7.5, variance = 0.05, timestampMs = fakeClockMs)
+                    device.onLocationChanged(
+                        createMutableLocation(48.0, 11.0 + step * 0.00001, 3.0f, fakeClockMs, true, 7.5f, true, 90.0f)
+                    )
+                }
+            }
+
+            assertEquals(PhoneCarriageMode.BIKE_HANDLEBAR.code, device.mActivityAndCarriageModeSensor?.value)
+            assertNull("BIKE_HANDLEBAR must never register CADENCE", device.mCadenceSensor)
+            assertNull("BIKE_HANDLEBAR must never register STRIDES", device.mStridesSensor)
+            assertNull(realSensorManager.getSensor(SensorType.CADENCE))
+            assertTrue(
+                "CADENCE must not enter accumulatedSensorTypeSet on BIKE_HANDLEBAR",
+                !realSensorManager.accumulatedSensorTypeSet.contains(SensorType.CADENCE)
+            )
+            val liveGcHandlebar = realSensorManager.getSensor(SensorType.SENSORS)?.value as? String
+            val accumGcHandlebar = realSensorManager.getSensor(SensorType.ACCUMULATED_SENSORS)?.value as? String
+            assertEquals("GCData[5] must stay '-' on BIKE_HANDLEBAR", '-', liveGcHandlebar?.getOrNull(5) ?: '-')
+            assertEquals("Accumulated GCData[5] must stay '-' on BIKE_HANDLEBAR", '-', accumGcHandlebar?.getOrNull(5) ?: '-')
+
+            // Phase 2: Transition into BIKE_FRONT_POCKET pedaling at 75 RPM (1.25 Hz)
+            val pocketStartMs = fakeClockMs + 20L
+            for (step in 0..500) { // 10.0 s (covers 4.0 s mount hysteresis + steady 75 RPM window)
+                fakeClockMs = pocketStartMs + step * 20L
+                val tSec = fakeClockMs / 1000.0
+                val phase = 2.0 * PI * 1.25 * tSec // 75 RPM
+                val halfPitch = (Math.toRadians(60.0 + 20.0 * sin(phase)) * 0.5).toFloat()
+                device.onSensorChanged(
+                    createSyntheticSensorEvent(
+                        Sensor.TYPE_GAME_ROTATION_VECTOR,
+                        fakeClockMs * 1_000_000L,
+                        floatArrayOf(sin(halfPitch.toDouble()).toFloat(), 0f, 0f, cos(halfPitch.toDouble()).toFloat())
+                    )
+                )
+                device.onSensorChanged(
+                    createSyntheticSensorEvent(
+                        Sensor.TYPE_ACCELEROMETER,
+                        fakeClockMs * 1_000_000L,
+                        floatArrayOf(
+                            (2.4 * sin(phase)).toFloat(),
+                            (9.81 + 1.2 * cos(2.0 * phase)).toFloat(),
+                            (1.8 * cos(phase)).toFloat()
+                        )
+                    )
+                )
+                device.onSensorChanged(
+                    createSyntheticSensorEvent(
+                        Sensor.TYPE_GYROSCOPE,
+                        fakeClockMs * 1_000_000L,
+                        floatArrayOf(
+                            (2.2 * sin(phase)).toFloat(),
+                            (0.9 * cos(phase)).toFloat(),
+                            (0.7 * sin(phase)).toFloat()
+                        )
+                    )
+                )
+                if (step % 50 == 0) {
+                    device.onWheelMeasurement(speedMps = 7.5, variance = 0.05, timestampMs = fakeClockMs)
+                }
+            }
+
+            assertEquals(PhoneCarriageMode.BIKE_FRONT_POCKET.code, device.mActivityAndCarriageModeSensor?.value)
+            assertNotNull("BIKE_FRONT_POCKET must register CADENCE dynamically", device.mCadenceSensor)
+            assertNull("Cycling must never register STRIDES", device.mStridesSensor)
+            val activeCadence = (realSensorManager.getSensor(SensorType.CADENCE)?.value as? Number)?.toDouble()
+            assertNotNull(activeCadence)
+            assertEquals(75.0, activeCadence!!, 2.5)
+            val liveGcPocket = realSensorManager.getSensor(SensorType.SENSORS).value as String
+            assertEquals("GCData[5] must reflect active CADENCE", 'C', liveGcPocket[5])
+
+            // Phase 3: Coasting drops cadence to 0.0 within 2.0 s, then settling back to BIKE_HANDLEBAR suppresses to null
+            val coastStartMs = fakeClockMs + 20L
+            for (step in 0..100) { // 2.0 s coasting
+                fakeClockMs = coastStartMs + step * 20L
+                val halfFlat = (Math.toRadians(5.0) * 0.5).toFloat()
+                device.onSensorChanged(
+                    createSyntheticSensorEvent(
+                        Sensor.TYPE_GAME_ROTATION_VECTOR,
+                        fakeClockMs * 1_000_000L,
+                        floatArrayOf(sin(halfFlat.toDouble()).toFloat(), 0f, 0f, cos(halfFlat.toDouble()).toFloat())
+                    )
+                )
+                device.onSensorChanged(
+                    createSyntheticSensorEvent(
+                        Sensor.TYPE_ACCELEROMETER,
+                        fakeClockMs * 1_000_000L,
+                        floatArrayOf(0.05f, 9.81f, 0.05f)
+                    )
+                )
+                device.onSensorChanged(
+                    createSyntheticSensorEvent(
+                        Sensor.TYPE_GYROSCOPE,
+                        fakeClockMs * 1_000_000L,
+                        floatArrayOf(0.02f, 0.01f, 0.01f)
+                    )
+                )
+                if (step % 50 == 0) {
+                    device.onWheelMeasurement(speedMps = 7.5, variance = 0.05, timestampMs = fakeClockMs)
+                }
+            }
+            val coastedCadence = (realSensorManager.getSensor(SensorType.CADENCE)?.value as? Number)?.toDouble()
+            assertEquals("Coasting in pocket must drop CADENCE to 0.0 RPM", 0.0, coastedCadence!!, 1e-6)
+
+            // Continue quiet flat cues past 6.0 s classifier window + 4.0 s mount hysteresis -> settles back into BIKE_HANDLEBAR -> unregisters CADENCE
+            val remountStartMs = fakeClockMs + 20L
+            for (step in 0..450) { // +9.0 s (+2.0 s coasting = 11.0 s >= 6.0 s window + 4.0 s mount hysteresis)
+                fakeClockMs = remountStartMs + step * 20L
+                device.onSensorChanged(
+                    createSyntheticSensorEvent(
+                        Sensor.TYPE_GAME_ROTATION_VECTOR,
+                        fakeClockMs * 1_000_000L,
+                        floatArrayOf(0f, 0f, 0f, 1f)
+                    )
+                )
+                device.onSensorChanged(
+                    createSyntheticSensorEvent(
+                        Sensor.TYPE_ACCELEROMETER,
+                        fakeClockMs * 1_000_000L,
+                        floatArrayOf(0.02f, 9.81f, 0.02f)
+                    )
+                )
+                device.onSensorChanged(
+                    createSyntheticSensorEvent(
+                        Sensor.TYPE_GYROSCOPE,
+                        fakeClockMs * 1_000_000L,
+                        floatArrayOf(0.01f, 0.01f, 0.01f)
+                    )
+                )
+                if (step % 50 == 0) {
+                    device.onWheelMeasurement(speedMps = 7.5, variance = 0.05, timestampMs = fakeClockMs)
+                }
+            }
+            assertEquals(PhoneCarriageMode.BIKE_HANDLEBAR.code, device.mActivityAndCarriageModeSensor?.value)
+            assertNull("Settling to BIKE_HANDLEBAR must unregister CADENCE sensor", device.mCadenceSensor)
+            val suppressedGc = realSensorManager.getSensor(SensorType.SENSORS).value as String
+            assertEquals("Live GCData[5] must revert to '-'", '-', suppressedGc[5])
+        } finally {
+            device.shutDown()
+            realSensorManager.shutDown()
+        }
+    }
+
+    // TST-FIL-029.3: Gyro-absent indoor running (ACC + STEP_DETECTOR), RUN-only STRIDES, SPORT_TYPE_CHANGED & clean reset
+    @Test
+    fun smartphoneImu_gyroAbsentIndoorRunGatedStridesSportChangeAndReset_tstFil029_3() {
+        val capturedReceivers = mutableListOf<BroadcastReceiver>()
+        every {
+            ContextCompat.registerReceiver(any(), capture(capturedReceivers), any(), any())
+        } returns null
+        every { AttFusedPreferences.isEffectiveGyroActive(any()) } returns false
+        every { AttFusedPreferences.isEffectiveGnssActive(any()) } returns false
+
+        val realSensorManager = MySensorManager(mockContext)
+        TrainingApplication.setTrackingModeForTesting(TrackingMode.TRACKING)
+
+        var fakeClockMs = 1000L
+        val device = object : SpeedAndLocationDevice_ATTFused(mockContext, realSensorManager) {
+            override fun currentTimeMillis(): Long = fakeClockMs
+            override fun hasActivityRecognitionPermission(): Boolean = true
+            fun callAccumulatorsReset() = onAccumulatorsReset()
+        }
+        device.setSportContextHintForTesting(SportContextHint.RUNNING)
+
+        try {
+            // Feed 8.0 s of indoor running at 170 steps/min (85 strides/min) with gyro disabled and zero GNSS fixes
+            val stepsPerMin = 170.0
+            val stepHz = stepsPerMin / 60.0 // 2.8333 Hz
+            var nextStepMs = 1353L
+            for (step in 0..400) { // 8.0 s
+                fakeClockMs = 1000L + step * 20L
+                val tSec = fakeClockMs / 1000.0
+                val halfTilt = (Math.toRadians(45.0 + 18.0 * sin(2.0 * PI * (stepHz / 2.0) * tSec)) * 0.5).toFloat()
+                device.onSensorChanged(
+                    createSyntheticSensorEvent(
+                        Sensor.TYPE_GAME_ROTATION_VECTOR,
+                        fakeClockMs * 1_000_000L,
+                        floatArrayOf(sin(halfTilt.toDouble()).toFloat(), 0f, 0f, cos(halfTilt.toDouble()).toFloat())
+                    )
+                )
+                device.onSensorChanged(
+                    createSyntheticSensorEvent(
+                        Sensor.TYPE_ACCELEROMETER,
+                        fakeClockMs * 1_000_000L,
+                        floatArrayOf(
+                            (0.9 * sin(2.0 * PI * (stepHz / 2.0) * tSec)).toFloat(),
+                            (9.81 + 3.4 * sin(2.0 * PI * stepHz * tSec)).toFloat(),
+                            (1.0 * cos(2.0 * PI * stepHz * tSec)).toFloat()
+                        )
+                    )
+                )
+                if (fakeClockMs >= nextStepMs) {
+                    device.onSensorChanged(
+                        createSyntheticSensorEvent(
+                            Sensor.TYPE_STEP_DETECTOR,
+                            fakeClockMs * 1_000_000L,
+                            floatArrayOf(1.0f)
+                        )
+                    )
+                    nextStepMs += 353L
+                }
+            }
+
+            assertNotNull("Indoor running must dynamically register CADENCE", device.mCadenceSensor)
+            assertNotNull("BSportType.RUN must dynamically register STRIDES", device.mStridesSensor)
+            val cadenceSpm = (realSensorManager.getSensor(SensorType.CADENCE)?.value as? Number)?.toDouble()
+            assertNotNull(cadenceSpm)
+            assertEquals(85.0, cadenceSpm!!, 2.0)
+            val stridesCount = (realSensorManager.getSensor(SensorType.STRIDES)?.value as? Number)?.toInt() ?: 0
+            assertTrue("STRIDES must accumulate monotonically >= 5 over 8 s (got $stridesCount)", stridesCount >= 5)
+
+            // User changes sport to BIKE via SPORT_TYPE_CHANGED_BY_USER_INTENT -> STRIDES unregisters immediately
+            device.setSportContextHintForTesting(SportContextHint.CYCLING)
+            val sportIntent = mockk<Intent>(relaxed = true) {
+                every { action } returns BANALService.SPORT_TYPE_CHANGED_BY_USER_INTENT
+            }
+            capturedReceivers.last().onReceive(mockContext, sportIntent)
+            assertNull("Switching away from BSportType.RUN must unregister STRIDES", device.mStridesSensor)
+
+            // Switch back to RUN and trigger onAccumulatorsReset() -> clean zero/unregister
+            device.setSportContextHintForTesting(SportContextHint.RUNNING)
+            device.callAccumulatorsReset()
+            assertNull("onAccumulatorsReset must clear CADENCE sensor cleanly", device.mCadenceSensor)
+            assertNull("onAccumulatorsReset must clear STRIDES sensor cleanly", device.mStridesSensor)
+            assertEquals(PhoneCarriageMode.UNKNOWN.code, device.mActivityAndCarriageModeSensor?.value)
+        } finally {
+            TrainingApplication.setTrackingModeForTesting(TrackingMode.READY)
+            device.shutDown()
+            realSensorManager.shutDown()
+        }
+    }
+
+    // TST-FIL-029.3: Delayed/out-of-order batched SensorEvent timestamps clamp monotonically without stride double-counting
+    @Test
+    fun smartphoneImu_outOfOrderBatchedStepEventsClampMonotonicallyWithoutDoubleCounting_tstFil029_3() {
+        every { AttFusedPreferences.isEffectiveGyroActive(any()) } returns false
+        every { AttFusedPreferences.isEffectiveGnssActive(any()) } returns false
+        val realSensorManager = MySensorManager(mockContext)
+        TrainingApplication.setTrackingModeForTesting(TrackingMode.TRACKING)
+
+        var fakeClockMs = 1000L
+        val device = object : SpeedAndLocationDevice_ATTFused(mockContext, realSensorManager) {
+            override fun currentTimeMillis(): Long = fakeClockMs
+            override fun hasActivityRecognitionPermission(): Boolean = true
+            fun callAccumulatorsReset() = onAccumulatorsReset()
+        }
+        device.setSportContextHintForTesting(SportContextHint.RUNNING)
+
+        try {
+            // Warm up PhoneCarriageClassifier into RUN_WAIST_HIP with continuous steps (353 ms period) over 4.0 s
+            var nextStepMs = 1353L
+            for (tick in 0..200) { // 1000..5000 ms
+                fakeClockMs = 1000L + tick * 20L
+                val tSec = fakeClockMs / 1000.0
+                val halfTilt = (Math.toRadians(45.0 + 18.0 * sin(2.0 * PI * 1.4167 * tSec)) * 0.5).toFloat()
+                device.onSensorChanged(
+                    createSyntheticSensorEvent(
+                        Sensor.TYPE_GAME_ROTATION_VECTOR,
+                        fakeClockMs * 1_000_000L,
+                        floatArrayOf(sin(halfTilt.toDouble()).toFloat(), 0f, 0f, cos(halfTilt.toDouble()).toFloat())
+                    )
+                )
+                device.onSensorChanged(
+                    createSyntheticSensorEvent(
+                        Sensor.TYPE_ACCELEROMETER,
+                        fakeClockMs * 1_000_000L,
+                        floatArrayOf(0.9f, (9.81 + 3.4 * sin(2.0 * PI * 2.8333 * tSec)).toFloat(), 1.0f)
+                    )
+                )
+                if (fakeClockMs >= nextStepMs) {
+                    device.onSensorChanged(
+                        createSyntheticSensorEvent(Sensor.TYPE_STEP_DETECTOR, fakeClockMs * 1_000_000L, floatArrayOf(1.0f))
+                    )
+                    nextStepMs += 353L
+                }
+            }
+            val stridesBeforeDelayed = (realSensorManager.getSensor(SensorType.STRIDES)?.value as? Number)?.toInt() ?: 0
+            assertTrue("Expected >= 2 strides before delayed events, got $stridesBeforeDelayed", stridesBeforeDelayed >= 2)
+
+            // Inject out-of-order delayed batched step events whose SensorEvent.timestamp is in the past
+            fakeClockMs = 5020L
+            device.onSensorChanged(
+                createSyntheticSensorEvent(Sensor.TYPE_STEP_DETECTOR, 3900L * 1_000_000L, floatArrayOf(1.0f))
+            )
+            device.onSensorChanged(
+                createSyntheticSensorEvent(Sensor.TYPE_STEP_DETECTOR, 3500L * 1_000_000L, floatArrayOf(1.0f))
+            )
+            val stridesAfterDelayed = (realSensorManager.getSensor(SensorType.STRIDES)?.value as? Number)?.toInt() ?: 0
+            assertEquals(
+                "Out-of-order batched step events must clamp monotonically without double-counting",
+                stridesBeforeDelayed,
+                stridesAfterDelayed
+            )
+
+            // Verify subsequent valid steps (modulo 2 hardware steps per stride) advance strides cleanly by +1
+            val s1Ms = maxOf(fakeClockMs + 400L, nextStepMs)
+            fakeClockMs = s1Ms
+            device.onSensorChanged(
+                createSyntheticSensorEvent(Sensor.TYPE_STEP_DETECTOR, s1Ms * 1_000_000L, floatArrayOf(1.0f))
+            )
+            val s2Ms = s1Ms + 360L
+            fakeClockMs = s2Ms
+            device.onSensorChanged(
+                createSyntheticSensorEvent(Sensor.TYPE_STEP_DETECTOR, s2Ms * 1_000_000L, floatArrayOf(1.0f))
+            )
+            val stridesAfterResume = (realSensorManager.getSensor(SensorType.STRIDES)?.value as? Number)?.toInt() ?: 0
+            assertEquals(stridesBeforeDelayed + 1, stridesAfterResume)
+        } finally {
+            TrainingApplication.setTrackingModeForTesting(TrackingMode.READY)
+            device.shutDown()
+            realSensorManager.shutDown()
+        }
+    }
+
+    // TST-FIL-029.3 (Stage 6 Bounce 1): Delayed CHRE TYPE_STEP_DETECTOR batch & interleaved ACC/GYRO FIFO clamp per sensor type
+    @Test
+    fun smartphoneImu_chreDelayedStepBatchAndInterleavedFifoMaintainPerSensorMonotonicity_tstFil029_3() {
+        every { AttFusedPreferences.isEffectiveGyroActive(any()) } returns true
+        every { AttFusedPreferences.isEffectiveGnssActive(any()) } returns true
+        val realSensorManager = MySensorManager(mockContext)
+        TrainingApplication.setTrackingModeForTesting(TrackingMode.TRACKING)
+
+        var fakeClockMs = 1000L
+        val device = object : SpeedAndLocationDevice_ATTFused(mockContext, realSensorManager) {
+            override fun currentTimeMillis(): Long = fakeClockMs
+            override fun hasActivityRecognitionPermission(): Boolean = true
+        }
+        device.setSportContextHintForTesting(SportContextHint.RUNNING)
+
+        try {
+            // Interleaved 50-Hz ACC + ROTATION_VECTOR + lagged GYRO FIFO batches with 3.2 m/s GNSS advancing ACC to 5480 ms (0 steps yet)
+            var lat = 48.0
+            for (batchStart in 1000L..5000L step 500L) {
+                if (batchStart % 1000L == 0L) {
+                    fakeClockMs = batchStart
+                    lat += 3.2 / 111195.0
+                    device.onLocationChanged(
+                        createMutableLocation(
+                            lat = lat,
+                            lon = 11.0,
+                            acc = 4.0f,
+                            timeMs = batchStart,
+                            hasSpeedFlag = true,
+                            speedMps = 3.2f,
+                            hasBearingFlag = true,
+                            bearingDeg = 0.0f
+                        )
+                    )
+                }
+                // ACC batch runs ahead to batchStart + 480 ms
+                for (offset in 0L..480L step 20L) {
+                    val tMs = batchStart + offset
+                    fakeClockMs = tMs
+                    val tSec = tMs / 1000.0
+                    val halfTilt = (Math.toRadians(45.0 + 18.0 * sin(2.0 * PI * 1.4167 * tSec)) * 0.5).toFloat()
+                    device.onSensorChanged(
+                        createSyntheticSensorEvent(
+                            Sensor.TYPE_GAME_ROTATION_VECTOR,
+                            tMs * 1_000_000L,
+                            floatArrayOf(sin(halfTilt.toDouble()).toFloat(), 0f, 0f, cos(halfTilt.toDouble()).toFloat())
+                        )
+                    )
+                    device.onSensorChanged(
+                        createSyntheticSensorEvent(
+                            Sensor.TYPE_ACCELEROMETER,
+                            tMs * 1_000_000L,
+                            floatArrayOf(0.9f, (9.81 + 3.4 * sin(2.0 * PI * 2.8333 * tSec)).toFloat(), 1.0f)
+                        )
+                    )
+                }
+                // Then GYRO FIFO batch arrives with historical timestamps starting back at batchStart..batchStart+480 ms
+                for (offset in 0L..480L step 20L) {
+                    val tMs = batchStart + offset
+                    val tSec = tMs / 1000.0
+                    device.onSensorChanged(
+                        createSyntheticSensorEvent(
+                            Sensor.TYPE_GYROSCOPE,
+                            tMs * 1_000_000L,
+                            floatArrayOf(0.2f, (0.3 * cos(2.0 * PI * 1.4167 * tSec)).toFloat(), 0.1f)
+                        )
+                    )
+                }
+            }
+            val activeMode = PhoneCarriageMode.fromCode(device.mActivityAndCarriageModeSensor?.value)
+            assertTrue(
+                "Interleaved ACC/GYRO + GNSS must commit a running mode before step batch (was $activeMode)",
+                activeMode == PhoneCarriageMode.RUN_WAIST_HIP ||
+                    activeMode == PhoneCarriageMode.RUN_BICEP_ARM ||
+                    activeMode == PhoneCarriageMode.RUN_HANDHELD
+            )
+
+            // Now ACC is at 5480 ms (capture baseline strides emitted by warmup waveform before any step event).
+            // Delayed CHRE flushes 3 historical TYPE_STEP_DETECTOR steps spaced 550 ms apart
+            // (3800 ms, 4350 ms, 4900 ms). All 3 must survive independently of ACC!
+            val stridesBeforeBatch = (realSensorManager.getSensor(SensorType.STRIDES)?.value as? Number)?.toInt() ?: 0
+            fakeClockMs = 5520L
+            for (stepMs in listOf(3800L, 4350L, 4900L)) {
+                device.onSensorChanged(
+                    createSyntheticSensorEvent(Sensor.TYPE_STEP_DETECTOR, stepMs * 1_000_000L, floatArrayOf(1.0f))
+                )
+            }
+            val stridesAfterBatch = (realSensorManager.getSensor(SensorType.STRIDES)?.value as? Number)?.toInt() ?: 0
+            assertEquals(
+                "Steps 1+2 in CHRE batch must advance STRIDES by +1 over warmup baseline ($stridesBeforeBatch)",
+                stridesBeforeBatch + 1,
+                stridesAfterBatch
+            )
+
+            // One single follow-up step at 5450 ms completes the pair with batched step 3 -> proving step 3 survived!
+            fakeClockMs = 5540L
+            device.onSensorChanged(
+                createSyntheticSensorEvent(Sensor.TYPE_STEP_DETECTOR, 5450L * 1_000_000L, floatArrayOf(1.0f))
+            )
+            val stridesAfterFourth = (realSensorManager.getSensor(SensorType.STRIDES)?.value as? Number)?.toInt() ?: 0
+            assertEquals(
+                "Step 3 of delayed CHRE batch + 1 follow-up step must advance STRIDES by +2 over baseline ($stridesBeforeBatch)",
+                stridesBeforeBatch + 2,
+                stridesAfterFourth
+            )
+
+            // Verify per-type regression guard: an out-of-order step earlier than 5450 ms still clamps & is rejected
+            device.onSensorChanged(
+                createSyntheticSensorEvent(Sensor.TYPE_STEP_DETECTOR, 4100L * 1_000_000L, floatArrayOf(1.0f))
+            )
+            val stridesAfterStale = (realSensorManager.getSensor(SensorType.STRIDES)?.value as? Number)?.toInt() ?: 0
+            assertEquals("Out-of-order step (< 5450 ms) must still be rejected", stridesBeforeBatch + 2, stridesAfterStale)
+        } finally {
+            TrainingApplication.setTrackingModeForTesting(TrackingMode.READY)
+            device.shutDown()
+            realSensorManager.shutDown()
+        }
+    }
+
+    // TST-FIL-029.3 (Stage 6 Bounce 1): Preserves mid-workout STRIDES accumulator across suppression / re-registration
+    @Test
+    fun smartphoneImu_preservesStridesAccumulatorAcrossSuppressionAndResume_tstFil029_3() {
+        every { AttFusedPreferences.isEffectiveGyroActive(any()) } returns false
+        every { AttFusedPreferences.isEffectiveGnssActive(any()) } returns false
+        val realSensorManager = MySensorManager(mockContext)
+        TrainingApplication.setTrackingModeForTesting(TrackingMode.TRACKING)
+
+        var fakeClockMs = 1000L
+        val device = object : SpeedAndLocationDevice_ATTFused(mockContext, realSensorManager) {
+            override fun currentTimeMillis(): Long = fakeClockMs
+            override fun hasActivityRecognitionPermission(): Boolean = true
+            fun callAccumulatorsReset() = onAccumulatorsReset()
+        }
+        device.setSportContextHintForTesting(SportContextHint.RUNNING)
+
+        try {
+            var nextStepMs = 1353L
+            for (tick in 0..300) { // 1000..7000 ms run
+                fakeClockMs = 1000L + tick * 20L
+                val tSec = fakeClockMs / 1000.0
+                val halfTilt = (Math.toRadians(45.0 + 18.0 * sin(2.0 * PI * 1.4167 * tSec)) * 0.5).toFloat()
+                device.onSensorChanged(
+                    createSyntheticSensorEvent(
+                        Sensor.TYPE_GAME_ROTATION_VECTOR,
+                        fakeClockMs * 1_000_000L,
+                        floatArrayOf(sin(halfTilt.toDouble()).toFloat(), 0f, 0f, cos(halfTilt.toDouble()).toFloat())
+                    )
+                )
+                device.onSensorChanged(
+                    createSyntheticSensorEvent(
+                        Sensor.TYPE_ACCELEROMETER,
+                        fakeClockMs * 1_000_000L,
+                        floatArrayOf(0.9f, (9.81 + 3.4 * sin(2.0 * PI * 2.8333 * tSec)).toFloat(), 1.0f)
+                    )
+                )
+                if (fakeClockMs >= nextStepMs) {
+                    device.onSensorChanged(
+                        createSyntheticSensorEvent(Sensor.TYPE_STEP_DETECTOR, fakeClockMs * 1_000_000L, floatArrayOf(1.0f))
+                    )
+                    nextStepMs += 353L
+                }
+            }
+            val stridesBeforeSuppress = (realSensorManager.getSensor(SensorType.STRIDES)?.value as? Number)?.toInt() ?: 0
+            assertTrue("Expected >= 5 strides before suppression, got $stridesBeforeSuppress", stridesBeforeSuppress >= 5)
+
+            // Temporarily toggle to CYCLING -> unregisters STRIDES mid-workout without accumulator reset
+            fakeClockMs += 100L
+            device.setSportContextHintForTesting(SportContextHint.CYCLING)
+            device.handleSportTypeChanged(fakeClockMs)
+            assertNull("CYCLING transition must unregister STRIDES sensor", device.mStridesSensor)
+
+            // Resume RUNNING and trigger two valid steps -> restored sensor must continue from stridesBeforeSuppress
+            device.setSportContextHintForTesting(SportContextHint.RUNNING)
+            fakeClockMs += 100L
+            device.handleSportTypeChanged(fakeClockMs)
+
+            val step1Ms = maxOf(fakeClockMs + 400L, nextStepMs)
+            val step2Ms = step1Ms + 360L
+            for (sMs in listOf(step1Ms, step2Ms)) {
+                fakeClockMs = sMs
+                device.onSensorChanged(
+                    createSyntheticSensorEvent(Sensor.TYPE_STEP_DETECTOR, sMs * 1_000_000L, floatArrayOf(1.0f))
+                )
+            }
+            val stridesAfterResume = (realSensorManager.getSensor(SensorType.STRIDES)?.value as? Number)?.toInt() ?: 0
+            assertEquals(
+                "Resumed STRIDES must retain pre-suppression total ($stridesBeforeSuppress) and advance by +1",
+                stridesBeforeSuppress + 1,
+                stridesAfterResume
+            )
+
+            // Explicit accumulator reset must still zero everything cleanly
+            device.callAccumulatorsReset()
+            assertNull("onAccumulatorsReset must clear STRIDES sensor", device.mStridesSensor)
+            // Re-establish RUN_WAIST_HIP classification post-reset (>= 4.0 s + steps for indoor step-band lock) -> must start from 1
+            var postResetStepMs = step2Ms + 400L
+            for (tick in 0..200) { // 4.0 s warm-up
+                fakeClockMs = step2Ms + 100L + tick * 20L
+                val tSec = fakeClockMs / 1000.0
+                val halfTilt = (Math.toRadians(45.0 + 18.0 * sin(2.0 * PI * 1.4167 * tSec)) * 0.5).toFloat()
+                device.onSensorChanged(
+                    createSyntheticSensorEvent(
+                        Sensor.TYPE_GAME_ROTATION_VECTOR,
+                        fakeClockMs * 1_000_000L,
+                        floatArrayOf(sin(halfTilt.toDouble()).toFloat(), 0f, 0f, cos(halfTilt.toDouble()).toFloat())
+                    )
+                )
+                device.onSensorChanged(
+                    createSyntheticSensorEvent(
+                        Sensor.TYPE_ACCELEROMETER,
+                        fakeClockMs * 1_000_000L,
+                        floatArrayOf(0.9f, (9.81 + 3.4 * sin(2.0 * PI * 2.8333 * tSec)).toFloat(), 1.0f)
+                    )
+                )
+                if (fakeClockMs >= postResetStepMs) {
+                    device.onSensorChanged(
+                        createSyntheticSensorEvent(Sensor.TYPE_STEP_DETECTOR, fakeClockMs * 1_000_000L, floatArrayOf(1.0f))
+                    )
+                    postResetStepMs += 353L
+                }
+            }
+            val stridesPostReset = (realSensorManager.getSensor(SensorType.STRIDES)?.value as? Number)?.toInt() ?: 0
+            assertTrue(
+                "Post-reset STRIDES must reset cleanly and count only post-reset strides (expected 1..4, got $stridesPostReset, pre-reset=$stridesAfterResume)",
+                stridesPostReset in 1..4 && stridesPostReset < stridesBeforeSuppress
+            )
+        } finally {
+            TrainingApplication.setTrackingModeForTesting(TrackingMode.READY)
+            device.shutDown()
+            realSensorManager.shutDown()
+        }
+    }
+
+    // TST-FIL-029.3 / REQ-FIL-028.3 (Gate 4 Bounce 1): Interleaved ACC/GYRO FIFO + delayed CHRE steps must not rewind
+    // updateCarriageClassification() clocks (mLastClassifyTimestampMs, mLastModeEmissionTimestampMs, mLastAdaptationTimestampMs).
+    @Test
+    fun smartphoneImu_interleavedFifoAndDelayedStepBatchDoNotRewindClassificationOrAdaptationClocks_tstFil029_3() {
+        every { AttFusedPreferences.isEffectiveGyroActive(any()) } returns true
+        every { AttFusedPreferences.isEffectiveGnssActive(any()) } returns true
+        val orderedManager = MySensorManager(mockContext)
+        val batchedManager = MySensorManager(mockContext)
+        TrainingApplication.setTrackingModeForTesting(TrackingMode.TRACKING)
+
+        var orderedClockMs = 1000L
+        val orderedDevice = object : SpeedAndLocationDevice_ATTFused(mockContext, orderedManager) {
+            override fun currentTimeMillis(): Long = orderedClockMs
+            override fun hasActivityRecognitionPermission(): Boolean = true
+        }
+        var batchedClockMs = 1000L
+        val batchedDevice = object : SpeedAndLocationDevice_ATTFused(mockContext, batchedManager) {
+            override fun currentTimeMillis(): Long = batchedClockMs
+            override fun hasActivityRecognitionPermission(): Boolean = true
+        }
+        orderedDevice.setSportContextHintForTesting(SportContextHint.CYCLING)
+        batchedDevice.setSportContextHintForTesting(SportContextHint.CYCLING)
+
+        fun feedLoc(dev: SpeedAndLocationDevice_ATTFused, tMs: Long, lat: Double) {
+            dev.onLocationChanged(
+                createMutableLocation(
+                    lat = lat,
+                    lon = 11.0,
+                    acc = 4.0f,
+                    timeMs = tMs,
+                    hasSpeedFlag = true,
+                    speedMps = 7.0f,
+                    hasBearingFlag = true,
+                    bearingDeg = 0.0f
+                )
+            )
+        }
+
+        fun feedRvAndAcc(dev: SpeedAndLocationDevice_ATTFused, tMs: Long) {
+            val sec = tMs / 1000.0
+            val phase = 2.0 * PI * 1.35 * sec
+            val half = Math.toRadians(60.0 + 20.0 * sin(phase)) * 0.5
+            dev.onSensorChanged(
+                createSyntheticSensorEvent(
+                    Sensor.TYPE_GAME_ROTATION_VECTOR,
+                    tMs * 1_000_000L,
+                    floatArrayOf(sin(half).toFloat(), 0f, 0f, cos(half).toFloat())
+                )
+            )
+            dev.onSensorChanged(
+                createSyntheticSensorEvent(
+                    Sensor.TYPE_ACCELEROMETER,
+                    tMs * 1_000_000L,
+                    floatArrayOf(0.4f, (9.81 + 1.5 * sin(phase)).toFloat(), 0.9f)
+                )
+            )
+        }
+
+        fun feedGyro(dev: SpeedAndLocationDevice_ATTFused, tMs: Long) {
+            val sec = tMs / 1000.0
+            val phase = 2.0 * PI * 1.35 * sec
+            dev.onSensorChanged(
+                createSyntheticSensorEvent(
+                    Sensor.TYPE_GYROSCOPE,
+                    tMs * 1_000_000L,
+                    floatArrayOf(0f, 0f, (0.78 * sin(phase)).toFloat())
+                )
+            )
+        }
+
+        try {
+            var lat = 48.0
+            var evalBeforeLag = 0
+            var emitBeforeLag = 0
+            var scaleBeforeLag = 1.0
+            var yawBeforeLag = 1.0
+
+            // Run t = 1000..4480 ms (commits BIKE_FRONT_POCKET around t = 4000 ms, while EMA scales are still actively converging)
+            for (batchStart in 1000L..4000L step 500L) {
+                if (batchStart % 1000L == 0L) {
+                    lat += 7.0 / 111195.0
+                    orderedClockMs = batchStart
+                    batchedClockMs = batchStart
+                    feedLoc(orderedDevice, batchStart, lat)
+                    feedLoc(batchedDevice, batchStart, lat)
+                }
+
+                // Ordered device receives strictly monotonic interleaved RV/ACC/GYRO
+                for (offset in 0L..480L step 20L) {
+                    val tMs = batchStart + offset
+                    orderedClockMs = tMs
+                    feedRvAndAcc(orderedDevice, tMs)
+                    feedGyro(orderedDevice, tMs)
+                }
+
+                // Batched device advances RV+ACC across the entire 500-ms batch BEFORE lagged GYRO arrives
+                for (offset in 0L..480L step 20L) {
+                    val tMs = batchStart + offset
+                    batchedClockMs = tMs
+                    feedRvAndAcc(batchedDevice, tMs)
+                }
+
+                // Snapshot right before the final lagged GYRO + delayed CHRE step batch at batchStart == 4000L (t = 4480 ms)
+                if (batchStart == 4000L) {
+                    evalBeforeLag = batchedDevice.classifyEvaluationCountForTest()
+                    emitBeforeLag = batchedDevice.modeEmissionCountForTest()
+                    scaleBeforeLag = batchedDevice.effectiveGyroNoiseScaleForTest()
+                    yawBeforeLag = batchedDevice.effectiveYawWindowSecForTest()
+                }
+
+                for (offset in 0L..480L step 20L) {
+                    val tMs = batchStart + offset
+                    feedGyro(batchedDevice, tMs)
+                }
+            }
+
+            // Inject delayed CHRE step batch (historical 3500, 3850, 4200 ms) while ACC/GYRO already reached 4480 ms
+            batchedClockMs = 4490L
+            for (stepMs in listOf(3500L, 3850L, 4200L)) {
+                batchedDevice.onSensorChanged(
+                    createSyntheticSensorEvent(Sensor.TYPE_STEP_DETECTOR, stepMs * 1_000_000L, floatArrayOf(1.0f))
+                )
+            }
+
+            // ZERO extra classifies, emissions, or EMA adaptation integration may occur during lagged GYRO + delayed CHRE steps
+            assertEquals(
+                "Lagged GYRO/CHRE timestamps must not trigger redundant classify() evaluations",
+                evalBeforeLag,
+                batchedDevice.classifyEvaluationCountForTest()
+            )
+            assertEquals(
+                "Lagged GYRO/CHRE timestamps must not trigger redundant mode sensor emissions",
+                emitBeforeLag,
+                batchedDevice.modeEmissionCountForTest()
+            )
+            assertEquals(
+                "Lagged GYRO/CHRE timestamps must not double-integrate effectiveGyroNoiseScale",
+                scaleBeforeLag,
+                batchedDevice.effectiveGyroNoiseScaleForTest(),
+                1e-12
+            )
+            assertEquals(
+                "Lagged GYRO/CHRE timestamps must not double-integrate effectiveYawWindowSec",
+                yawBeforeLag,
+                batchedDevice.effectiveYawWindowSecForTest(),
+                1e-12
+            )
+
+            // Deliver next forward sample at t = 4500 ms (dt = 20 ms from 4480 ms, NOT dt = 300 ms from rewound step 4200 ms!)
+            orderedClockMs = 4500L
+            batchedClockMs = 4500L
+            feedRvAndAcc(orderedDevice, 4500L)
+            feedGyro(orderedDevice, 4500L)
+            feedRvAndAcc(batchedDevice, 4500L)
+            feedGyro(batchedDevice, 4500L)
+
+            val alpha20ms = 1.0 - kotlin.math.exp(-0.02 / 0.75)
+            val expectedScaleAt4500 = scaleBeforeLag +
+                alpha20ms * (PhoneCarriageMode.BIKE_FRONT_POCKET.profile.gyroNoiseScale - scaleBeforeLag)
+            assertEquals(
+                "Post-batch 4500 ms adaptation must integrate single dt=20ms step, not rewound CHRE step delta",
+                expectedScaleAt4500,
+                batchedDevice.effectiveGyroNoiseScaleForTest(),
+                1e-4
+            )
+            assertEquals(
+                "Batched FIFO + CHRE device must match strictly ordered reference gyro noise scale (dt-invariant)",
+                orderedDevice.effectiveGyroNoiseScaleForTest(),
+                batchedDevice.effectiveGyroNoiseScaleForTest(),
+                0.05
+            )
+            assertEquals(
+                "Batched FIFO + CHRE device must match strictly ordered reference yaw window (dt-invariant)",
+                orderedDevice.effectiveYawWindowSecForTest(),
+                batchedDevice.effectiveYawWindowSecForTest(),
+                0.02
+            )
+            assertTrue(
+                "Classify evaluation count must stay throttled vs ordered reference (batched=${batchedDevice.classifyEvaluationCountForTest()}, ordered=${orderedDevice.classifyEvaluationCountForTest()})",
+                batchedDevice.classifyEvaluationCountForTest() <= orderedDevice.classifyEvaluationCountForTest() + 1
+            )
+            assertTrue(
+                "Mode emission count must stay throttled vs ordered reference (batched=${batchedDevice.modeEmissionCountForTest()}, ordered=${orderedDevice.modeEmissionCountForTest()})",
+                batchedDevice.modeEmissionCountForTest() <= orderedDevice.modeEmissionCountForTest() + 1
+            )
+        } finally {
+            TrainingApplication.setTrackingModeForTesting(TrackingMode.READY)
+            orderedDevice.shutDown()
+            batchedDevice.shutDown()
+            orderedManager.shutDown()
+            batchedManager.shutDown()
+        }
+    }
+
+    // TST-FIL-029.3 (Cold Final Bounce 2): Live ProxySensor / late FilterManager listeners must receive preserved
+    // STRIDES immediately upon mid-run re-registration and never emit a transient 0 reset.
+    @Test
+    fun smartphoneImu_midRunReRegistrationNotifiesLiveListenersWithPreservedStridesWithoutZeroDip_tstFil029_3() {
+        every { AttFusedPreferences.isEffectiveGyroActive(any()) } returns false
+        every { AttFusedPreferences.isEffectiveGnssActive(any()) } returns false
+        val realSensorManager = MySensorManager(mockContext)
+        TrainingApplication.setTrackingModeForTesting(TrackingMode.TRACKING)
+
+        var fakeClockMs = 1000L
+        val device = object : SpeedAndLocationDevice_ATTFused(mockContext, realSensorManager) {
+            override fun currentTimeMillis(): Long = fakeClockMs
+            override fun hasActivityRecognitionPermission(): Boolean = true
+        }
+        device.setSportContextHintForTesting(SportContextHint.RUNNING)
+
+        try {
+            var nextStepMs = 1353L
+            for (tick in 0..300) { // 6.0 s initial RUN_WAIST_HIP segment
+                fakeClockMs = 1000L + tick * 20L
+                val tSec = fakeClockMs / 1000.0
+                val halfTilt = (Math.toRadians(45.0 + 18.0 * sin(2.0 * PI * 1.4167 * tSec)) * 0.5).toFloat()
+                device.onSensorChanged(
+                    createSyntheticSensorEvent(
+                        Sensor.TYPE_GAME_ROTATION_VECTOR,
+                        fakeClockMs * 1_000_000L,
+                        floatArrayOf(sin(halfTilt.toDouble()).toFloat(), 0f, 0f, cos(halfTilt.toDouble()).toFloat())
+                    )
+                )
+                device.onSensorChanged(
+                    createSyntheticSensorEvent(
+                        Sensor.TYPE_ACCELEROMETER,
+                        fakeClockMs * 1_000_000L,
+                        floatArrayOf(0.9f, (9.81 + 3.4 * sin(2.0 * PI * 2.8333 * tSec)).toFloat(), 1.0f)
+                    )
+                )
+                if (fakeClockMs >= nextStepMs) {
+                    device.onSensorChanged(
+                        createSyntheticSensorEvent(Sensor.TYPE_STEP_DETECTOR, fakeClockMs * 1_000_000L, floatArrayOf(1.0f))
+                    )
+                    nextStepMs += 353L
+                }
+            }
+            val proxyStridesSensor = realSensorManager.getSensor(SensorType.STRIDES)
+            assertNotNull("STRIDES ProxySensor must be registered during run", proxyStridesSensor)
+            val stridesBeforeSuppress = (proxyStridesSensor!!.value as? Number)?.toInt() ?: 0
+            assertTrue("Expected >= 5 strides before suppression, got $stridesBeforeSuppress", stridesBeforeSuppress >= 5)
+
+            // Attach live listener to ProxySensor before mid-run suppression (simulating FilterManager/UI subscriber)
+            val initialAttachValues = mutableListOf<Int>()
+            val postSuppressEvents = mutableListOf<Int>()
+            var postSuppressPhase = false
+            val liveListener = com.atrainingtracker.banalservice.sensor.MySensor.SensorListener<Number> { value ->
+                val v = value?.toInt() ?: return@SensorListener
+                if (postSuppressPhase) postSuppressEvents.add(v) else initialAttachValues.add(v)
+            }
+            @Suppress("UNCHECKED_CAST")
+            (proxyStridesSensor as com.atrainingtracker.banalservice.sensor.MySensor<Any?>).addSensorListener(
+                liveListener as com.atrainingtracker.banalservice.sensor.MySensor.SensorListener<Any?>
+            )
+            assertEquals("Attaching listener before suppression must immediately report total", stridesBeforeSuppress, initialAttachValues.last())
+
+            // Mid-workout suppression -> unregister STRIDES
+            postSuppressPhase = true
+            fakeClockMs += 100L
+            device.setSportContextHintForTesting(SportContextHint.CYCLING)
+            device.handleSportTypeChanged(fakeClockMs)
+            assertNull("CYCLING transition must unregister STRIDES sensor", device.mStridesSensor)
+
+            // Resume RUNNING and trigger CADENCE re-registration WITHOUT any new hardware step yet
+            device.setSportContextHintForTesting(SportContextHint.RUNNING)
+            fakeClockMs += 100L
+            device.handleSportTypeChanged(fakeClockMs)
+            for (tick in 1..60) { // 1.2 s ACC/RV to trigger CADENCE -> ensureStridesSensorRegistered()
+                fakeClockMs += 20L
+                val tSec = fakeClockMs / 1000.0
+                val halfTilt = (Math.toRadians(45.0 + 18.0 * sin(2.0 * PI * 1.4167 * tSec)) * 0.5).toFloat()
+                device.onSensorChanged(
+                    createSyntheticSensorEvent(
+                        Sensor.TYPE_GAME_ROTATION_VECTOR,
+                        fakeClockMs * 1_000_000L,
+                        floatArrayOf(sin(halfTilt.toDouble()).toFloat(), 0f, 0f, cos(halfTilt.toDouble()).toFloat())
+                    )
+                )
+                device.onSensorChanged(
+                    createSyntheticSensorEvent(
+                        Sensor.TYPE_ACCELEROMETER,
+                        fakeClockMs * 1_000_000L,
+                        floatArrayOf(0.9f, (9.81 + 3.4 * sin(2.0 * PI * 2.8333 * tSec)).toFloat(), 1.0f)
+                    )
+                )
+            }
+            assertNotNull("STRIDES sensor must re-register upon resumed RUNNING cadence", device.mStridesSensor)
+            assertTrue(
+                "Bound live listener must receive preserved STRIDES immediately on re-registration, saw $postSuppressEvents",
+                postSuppressEvents.contains(stridesBeforeSuppress)
+            )
+            assertTrue(
+                "Bound live listener must NEVER receive a transient 0 reset upon re-registration, saw $postSuppressEvents",
+                postSuppressEvents.none { it == 0 }
+            )
+            assertEquals(stridesBeforeSuppress, postSuppressEvents.last())
+
+            // Attach a late listener after re-registration (simulating async FilterManager rebind on SENSORS_CHANGED)
+            val lateRebindValues = mutableListOf<Int>()
+            @Suppress("UNCHECKED_CAST")
+            (proxyStridesSensor as com.atrainingtracker.banalservice.sensor.MySensor<Any?>).addSensorListener(
+                com.atrainingtracker.banalservice.sensor.MySensor.SensorListener<Any?> { value ->
+                    (value as? Number)?.toInt()?.let { lateRebindValues.add(it) }
+                }
+            )
+            assertTrue(
+                "Late FilterManager rebind listener must immediately receive preserved total ($stridesBeforeSuppress), saw $lateRebindValues",
+                lateRebindValues.lastOrNull() == stridesBeforeSuppress && lateRebindValues.none { it == 0 }
+            )
+
+            // Feed two valid hardware steps -> both listeners receive stridesBeforeSuppress + 1
+            val s1 = maxOf(fakeClockMs + 360L, nextStepMs)
+            val s2 = s1 + 360L
+            for (sMs in listOf(s1, s2)) {
+                fakeClockMs = sMs
+                device.onSensorChanged(
+                    createSyntheticSensorEvent(Sensor.TYPE_STEP_DETECTOR, sMs * 1_000_000L, floatArrayOf(1.0f))
+                )
+            }
+            assertEquals(stridesBeforeSuppress + 1, postSuppressEvents.last())
+            assertEquals(stridesBeforeSuppress + 1, lateRebindValues.last())
+        } finally {
+            TrainingApplication.setTrackingModeForTesting(TrackingMode.READY)
+            device.shutDown()
+            realSensorManager.shutDown()
+        }
+    }
+
+    // TST-FIL-029.3 (Cold Final Bounce 3): Transient strides emitted by the estimator during classifier dwell
+    // while active sport is non-RUN (BIKE) must advance mLastEstimatorTotalStrides without registering STRIDES,
+    // so returning to RUN later never retroactively adds gated-off non-RUN strides.
+    @Test
+    fun smartphoneImu_gatedNonRunStridesDuringDwellAreNotRetroactivelyAddedOnReturnToRun_tstFil029_3() {
+        every { AttFusedPreferences.isEffectiveGyroActive(any()) } returns false
+        every { AttFusedPreferences.isEffectiveGnssActive(any()) } returns false
+        val realSensorManager = MySensorManager(mockContext)
+        TrainingApplication.setTrackingModeForTesting(TrackingMode.TRACKING)
+
+        var fakeClockMs = 1000L
+        val device = object : SpeedAndLocationDevice_ATTFused(mockContext, realSensorManager) {
+            override fun currentTimeMillis(): Long = fakeClockMs
+            override fun hasActivityRecognitionPermission(): Boolean = true
+        }
+        device.setSportContextHintForTesting(SportContextHint.RUNNING)
+
+        try {
+            var nextStepMs = 1353L
+            for (tick in 0..300) { // 6.0 s initial RUN_WAIST_HIP segment
+                fakeClockMs = 1000L + tick * 20L
+                val tSec = fakeClockMs / 1000.0
+                val halfTilt = (Math.toRadians(45.0 + 18.0 * sin(2.0 * PI * 1.4167 * tSec)) * 0.5).toFloat()
+                device.onSensorChanged(
+                    createSyntheticSensorEvent(
+                        Sensor.TYPE_GAME_ROTATION_VECTOR,
+                        fakeClockMs * 1_000_000L,
+                        floatArrayOf(sin(halfTilt.toDouble()).toFloat(), 0f, 0f, cos(halfTilt.toDouble()).toFloat())
+                    )
+                )
+                device.onSensorChanged(
+                    createSyntheticSensorEvent(
+                        Sensor.TYPE_ACCELEROMETER,
+                        fakeClockMs * 1_000_000L,
+                        floatArrayOf(0.9f, (9.81 + 3.4 * sin(2.0 * PI * 2.8333 * tSec)).toFloat(), 1.0f)
+                    )
+                )
+                if (fakeClockMs >= nextStepMs) {
+                    device.onSensorChanged(
+                        createSyntheticSensorEvent(Sensor.TYPE_STEP_DETECTOR, fakeClockMs * 1_000_000L, floatArrayOf(1.0f))
+                    )
+                    nextStepMs += 353L
+                }
+            }
+            val proxyStridesSensor = realSensorManager.getSensor(SensorType.STRIDES)
+            assertNotNull("STRIDES ProxySensor must be registered during initial RUN", proxyStridesSensor)
+            val stridesBeforeBike = (proxyStridesSensor!!.value as? Number)?.toInt() ?: 0
+            assertTrue("Expected >= 5 strides before switching to BIKE, got $stridesBeforeBike", stridesBeforeBike >= 5)
+
+            // Observe live STRIDES listener across RUN -> BIKE (transient dwell strides) -> RUN
+            val observedAfterSwitch = mutableListOf<Int>()
+            @Suppress("UNCHECKED_CAST")
+            (proxyStridesSensor as com.atrainingtracker.banalservice.sensor.MySensor<Any?>).addSensorListener(
+                com.atrainingtracker.banalservice.sensor.MySensor.SensorListener<Any?> { value ->
+                    (value as? Number)?.toInt()?.let { observedAfterSwitch.add(it) }
+                }
+            )
+            observedAfterSwitch.clear()
+
+            // Switch RUN -> BIKE: unregisters STRIDES while PhoneCarriageClassifier still dwells in RUN_WAIST_HIP
+            fakeClockMs += 100L
+            device.setSportContextHintForTesting(SportContextHint.CYCLING)
+            device.handleSportTypeChanged(fakeClockMs)
+            assertNull("BIKE transition must unregister STRIDES sensor", device.mStridesSensor)
+
+            // Inject 6 hardware steps (= 3 strides) during the BIKE classifier dwell window
+            val estimatorTotalBeforeBikeSteps = device.cadenceEstimator.totalStrides
+            var bikeStepMs = maxOf(fakeClockMs + 360L, nextStepMs)
+            for (i in 0 until 6) {
+                fakeClockMs = bikeStepMs
+                device.onSensorChanged(
+                    createSyntheticSensorEvent(Sensor.TYPE_STEP_DETECTOR, bikeStepMs * 1_000_000L, floatArrayOf(1.0f))
+                )
+                bikeStepMs += 360L
+            }
+            assertEquals(
+                "Estimator must have emitted 3 transient strides during BIKE dwell",
+                estimatorTotalBeforeBikeSteps + 3,
+                device.cadenceEstimator.totalStrides
+            )
+            assertNull("STRIDES sensor must remain unregistered while active sport is BIKE", device.mStridesSensor)
+            assertTrue(
+                "No STRIDES listener events may fire while active sport is BIKE, saw $observedAfterSwitch",
+                observedAfterSwitch.isEmpty()
+            )
+
+            // Switch back BIKE -> RUN and deliver exactly 2 running steps (= +1 stride)
+            fakeClockMs += 100L
+            device.setSportContextHintForTesting(SportContextHint.RUNNING)
+            device.handleSportTypeChanged(fakeClockMs)
+            var runStepMs = maxOf(fakeClockMs + 360L, bikeStepMs)
+            for (i in 0 until 2) {
+                fakeClockMs = runStepMs
+                device.onSensorChanged(
+                    createSyntheticSensorEvent(Sensor.TYPE_STEP_DETECTOR, runStepMs * 1_000_000L, floatArrayOf(1.0f))
+                )
+                runStepMs += 360L
+            }
+            val stridesAfterReturn = (proxyStridesSensor.value as? Number)?.toInt() ?: 0
+            assertEquals(
+                "Returning to RUN must advance STRIDES strictly by +1 (not retroactively adding 3 gated BIKE strides)",
+                stridesBeforeBike + 1,
+                stridesAfterReturn
+            )
+            assertEquals(
+                "Live listener must end at stridesBeforeBike + 1 without any retroactive jump, saw $observedAfterSwitch",
+                stridesBeforeBike + 1,
+                observedAfterSwitch.lastOrNull()
+            )
+            assertTrue(
+                "Live listener must never emit values > stridesBeforeBike + 1 or 0, saw $observedAfterSwitch",
+                observedAfterSwitch.all { it in stridesBeforeBike..(stridesBeforeBike + 1) }
+            )
+        } finally {
+            TrainingApplication.setTrackingModeForTesting(TrackingMode.READY)
+            device.shutDown()
+            realSensorManager.shutDown()
+        }
+    }
+
+    private fun createSyntheticSensorEvent(sensorType: Int, timestampNs: Long, data: FloatArray): SensorEvent {
+        val mockSensor = mockk<Sensor>(relaxed = true) {
+            every { type } returns sensorType
+        }
+        val event = mockk<SensorEvent>(relaxed = true)
+        event.sensor = mockSensor
+        event.timestamp = timestampNs
+        SensorEvent::class.java.getField("values").apply { isAccessible = true }.set(event, data)
+        return event
     }
 }

@@ -91,6 +91,20 @@ public abstract class MyAccumulatorSensor<N extends Number> extends MySensor<N> 
         }
     }
 
+    @Override
+    public void addSensorListener(SensorListener sensorListener) {
+        if (sensorListener == null) {
+            return;
+        }
+        mSensorListeners.addIfAbsent(sensorListener);
+        // Push composite total (mInitialValue + mValue), not raw incremental mValue, so rehydrated
+        // or re-registered accumulators never notify bound ProxySensor/FilterManager listeners with 0.
+        N currentTotal = getValue();
+        if (currentTotal != null) {
+            sensorListener.newValue(currentTotal);
+        }
+    }
+
     /**
      * @param myDevice
      * @param sensorType

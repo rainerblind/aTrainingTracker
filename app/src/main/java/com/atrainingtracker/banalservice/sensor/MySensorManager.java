@@ -71,7 +71,14 @@ public class MySensorManager extends MyDevice {
             DeviceType.BIKE_CADENCE,
             DeviceType.BIKE_SPEED_AND_CADENCE,
             DeviceType.BIKE_POWER,
-            DeviceType.HRM
+            DeviceType.HRM,
+            DeviceType.SPEED_AND_LOCATION_ATT_FUSED
+    };
+    protected static final DeviceType[] STRIDES_PRIORITY
+            = new DeviceType[]{
+            DeviceType.RUN_SPEED,
+            DeviceType.HRM,
+            DeviceType.SPEED_AND_LOCATION_ATT_FUSED
     };
     /**
      * Priority hierarchy for altitude sensors ({@link SensorType#ALTITUDE}).
@@ -128,6 +135,7 @@ public class MySensorManager extends MyDevice {
         setPriorityList(SensorType.DISTANCE_m, SPEED_PRIORITY);
         setPriorityList(SensorType.DISTANCE_m_LAP, SPEED_PRIORITY);
         setPriorityList(SensorType.CADENCE, CADENCE_PRIORITY);
+        setPriorityList(SensorType.STRIDES, STRIDES_PRIORITY);
         setPriorityList(SensorType.ALTITUDE, ALTITUDE_PRIORITY);
         setPriorityList(SensorType.SLOPE, SLOPE_AND_VERTICAL_SPEED_PRIORITY);
         setPriorityList(SensorType.VERTICAL_SPEED, SLOPE_AND_VERTICAL_SPEED_PRIORITY);
@@ -622,6 +630,8 @@ public class MySensorManager extends MyDevice {
                 return SPEED_PRIORITY;
             case CADENCE:
                 return CADENCE_PRIORITY;
+            case STRIDES:
+                return STRIDES_PRIORITY;
             case ALTITUDE:
                 return ALTITUDE_PRIORITY;
             case SLOPE:

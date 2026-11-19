@@ -19,6 +19,7 @@
 package com.atrainingtracker.banalservice;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.app.Service;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -151,6 +152,8 @@ public class BANALService
 
     public static final int INIT_LAP_NR = 1;
     private static volatile Context cServiceContext;
+    @SuppressLint("StaticFieldLeak") // Cleared in onDestroy(); exposes active sport context while keeping getServiceContext() leak-free.
+    private static volatile BANALService cServiceInstance;
     private static volatile DeviceManager cDeviceManager;
     private static volatile MySensorManager cSensorManager;
     private static volatile FilterManager cFilterManager;
@@ -177,6 +180,11 @@ public class BANALService
         cServiceContext = context;
     }
 
+    @VisibleForTesting
+    public static void setServiceInstanceForTesting(@Nullable BANALService service) {
+        cServiceInstance = service;
+    }
+
     /***********************************************************************************************/
 
     public static boolean getDebug(boolean defaultVal) {
@@ -196,6 +204,8 @@ public class BANALService
         }
     };
     private volatile long mUserSelectedSportTypeId = -1;
+    @NonNull
+    private volatile BSportType mUserSelectedBSportType = BSportType.UNKNOWN;
     private volatile boolean mHaveUserSelectedSportType = false;
 
     public static long getDefaultSportTypeId() {
@@ -317,6 +327,10 @@ public class BANALService
      */
     @NonNull
     public static BSportType getActiveBSportType() {
+        BANALService instance = cServiceInstance;
+        if (instance != null) {
+            return instance.getBSportType();
+        }
         Context ctx = cServiceContext;
         if (ctx instanceof BANALService) {
             return ((BANALService) ctx).getBSportType();
@@ -428,8 +442,19 @@ public class BANALService
     }
 
     private void setUserSelectedSportTypeId(long sportTypeId) {
-        mHaveUserSelectedSportType = true;
+        BSportType resolvedSportType = BSportType.UNKNOWN;
+        try {
+            BSportType lookedUp = getSportTypesRepository().getBSportType(sportTypeId);
+            if (lookedUp != null) {
+                resolvedSportType = lookedUp;
+            }
+        } catch (Throwable t) {
+            Log.w(TAG, "Error resolving BSportType for sport type " + sportTypeId, t);
+        }
+        // Publish ID and cached BSportType before setting mHaveUserSelectedSportType = true (JMM release).
         mUserSelectedSportTypeId = sportTypeId;
+        mUserSelectedBSportType = resolvedSportType;
+        mHaveUserSelectedSportType = true;
         updateIndoorModeForSportType(sportTypeId);
         sendBroadcast(new Intent(SPORT_TYPE_CHANGED_BY_USER_INTENT)
                 .setPackage(this.getPackageName()));
@@ -448,7 +473,7 @@ public class BANALService
     }
 
     public BSportType getUserSelectedBSportType() {
-        return mHaveUserSelectedSportType ? getSportTypesRepository().getBSportType(mUserSelectedSportTypeId) : null;
+        return mHaveUserSelectedSportType ? mUserSelectedBSportType : null;
     }
 
     private void setUserSelectedBSportType(BSportType bSportType) {
@@ -458,7 +483,7 @@ public class BANALService
     @NonNull
     public BSportType getBSportType() {
         if (mHaveUserSelectedSportType) {
-            return getSportTypesRepository().getBSportType(mUserSelectedSportTypeId);
+            return mUserSelectedBSportType;
         } else {
             DeviceManager deviceManager = cDeviceManager;
             return deviceManager != null ? deviceManager.getSportType() : BSportType.UNKNOWN;
@@ -676,6 +701,7 @@ public class BANALService
         if (DEBUG) Log.d(TAG, "onCreate");
 
         cServiceContext = this.getApplicationContext();
+        cServiceInstance = this;
         cSensorManager = new MySensorManager(this);
         cDeviceManager = new DeviceManager(this, cSensorManager);
         if (mIsIndoorMode) {
@@ -718,7 +744,11 @@ public class BANALService
         cDeviceManager = null;
         cSensorManager = null;
         cFilterManager = null;
+        cServiceInstance = null;
         cServiceContext = null;
+        mHaveUserSelectedSportType = false;
+        mUserSelectedSportTypeId = -1;
+        mUserSelectedBSportType = BSportType.UNKNOWN;
 
         LifecycleUtils.safeUnregisterReceiver(this, mNewLapReceiver, TAG);
         LifecycleUtils.safeUnregisterReceiver(this, mStartSearchForPairedDevices, TAG);
