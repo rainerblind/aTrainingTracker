@@ -1,14 +1,14 @@
 # Living Test Specification: Engineering Process, Stability & Architecture (Part 2 of 2)
 
 **Document ID**: `DOC-TST-PRO-P2`  
-**Version**: 1.0.21  
+**Version**: 1.0.25  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `process_stability_part2`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Tests**: 88
+**Total Tests**: 89
 
 ---
 
@@ -1515,6 +1515,25 @@
   4. *`RadarSettingsSectionTest` Robolectric Compose Remediation (`TST-PRO-132.4`, `RadarSettingsSectionTest.kt`, strengthening `TST-CON-031.5b` & `TST-TRK-062.5`)*:
      • *Given* `RadarSettingsSection` composed via `@RunWith(RobolectricTestRunner::class)` + `createComposeRule()` with isolated `TuningPreferencesDataStore` / mocked `TrainingApplication` & `RadarTrafficSimulator` and stale `RadarLightControlMode` tautologies retired, *When* `./gradlew :app:testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.settings.radar.RadarSettingsSectionTest"` runs, *Then* `FULL_SCREEN` hides `radar_overlay_clear_mode` (`assertDoesNotExist()`), `RIGHT` displays it, `radarSpatialAudioEnabled` toggles `radar_traffic_orientation_title` / `radar_lane_change_tick_title`, retired `RadarLightControlMode` controls remain absent while `radar_brake_light_title` is displayed and interactive, `onSimulationToggled` / DataStore callbacks fire on click, and all preserved 9-locale XML checks (`:131-226`) pass with `0` `src/main/` reads. Tag tests with `TST-PRO-132.4`.
 
+### TST-STB-020: **Live Tracking 1-Hz Heap/OOM Churn Elimination, Discrete Lifecycle Edges & Consumer Filtering Verification Suite (ATT-8999)** [Verified]
+- **Requirement(s)**: `REQ-STB-020`
+- **Priority**: Critical
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Integration
+- **Component**: `app/src/test/java/com/atrainingtracker/trainingtracker/tracker/LiveWorkoutBroadcastTrackerTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/tracker/TrackerServiceStateMachineCharacterisationTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodsRepositorySyncTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/ui/athleteprofile/AthleteProfileViewModelCardioPowerTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/ui/knownlocations/KnownLocationsViewModelTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ArchitectureConformanceContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/DetailedDesignParityContractTest.kt`
+- **Jira**: `ATT-8999`
+- **Test Description**:
+  1. *1-Hz Zero-Broadcast / Zero-Cloning & Discrete Lifecycle Edge Verification (`TST-STB-020.1`, `TrackerServiceStateMachineCharacterisationTest.kt`)*:
+     • *Given* `TrackerService` in `TRACKING` mode executing repeated 1-Hz `sampleAndWriteToDb()` ticks with changing sensor `MIN`/`MAX`/`AVG` values, *When* `60+` ticks execute, *Then* `mWorkoutRepository.updateExtremaValueInMemory` receives `0` calls, `0` steady-state `WORKOUT_UPDATED_INTENT` local broadcasts occur, and `recordLiveSample` / `LiveWorkoutSession` stats persist normally. Tag tests with `TST-STB-020.1`.
+     • *Given* `TrackerService` transitioning `TRACKING -> PAUSED` then executing steady-state `PAUSED` ticks, followed by `PAUSED -> TRACKING`, `mLapSummaryReceiver` (`saveLap`), sport change, altitude correction, and `endWorkout()`, *When* each executes, *Then* `WORKOUT_UPDATED_INTENT` fires strictly once on the initial `PAUSED` edge, `0` times on subsequent steady-state `PAUSED` ticks (while `updateWorkoutTotalTime` runs every tick), once on resume/lap/sport/altitude edges, and `endWorkout()` emits `TRACKING_FINISHED_INTENT` without duplicate `saveLap` broadcasts.
+  2. *`PeriodsRepository` Unfinished-Workout Filtering (`TST-STB-020.2`, `PeriodsRepositorySyncTest.kt`)*:
+     • *Given* `workoutRepo.allWorkouts` emitting historical finished workouts plus an active `!finished` workout incrementing `activeTimeSec`, `totalTimeSec`, `totalDistance`, and `mapPolyline`, *When* `PeriodsRepository` collects `allWorkouts`, *Then* `0` `dbManager.getPeriodsByType` / `loadFromDatabase` rebuilds execute, `precalculateGroups` excludes `!finished`, `toPeriodProjectionKey()` still differentiates `finished = false` (`:282`), and flipping `finished = true` triggers period sync cleanly. Tag tests with `TST-STB-020.2`.
+  3. *`AthleteProfileViewModel` & `KnownLocationsViewModel` `!finished` Guards (`TST-STB-020.3`, `AthleteProfileViewModelCardioPowerTest.kt`, `KnownLocationsViewModelTest.kt`)*:
+     • *Given* `AthleteProfileViewModelCardioPowerTest` (`:265` updated with `finished = true` & distinct non-default `id`) and `KnownLocationsViewModelTest` (`:228-246` lines `232-236` & `:256-305` updated with `finished = true`), *When* `!finished` workout updates emit at high frequency vs. `finished = true` additions/updates/deletions, *Then* `!finished` emissions trigger `0` redundant `getCardioPowerDynamicsFitnessTrendSamples` / `getWorkoutTrainingLoadRecords` queries and `0` redundant `groupSportStartsByLocation` runs, while `finished = true` mutations update UI state immediately. Tag tests with `TST-STB-020.3`.
+  4. *Sustained 3,600-Tick OOM-Churn & Contract Verification (`TST-STB-020.4`, `TrackerService` / `WorkoutRepository` / `PeriodsRepository` / `build/*`)*:
+     • *Given* `2,200` historical workouts in `WorkoutRepository._allWorkouts` and `3,600` simulated 1-Hz active ticks (1-hour workout replay), *When* executed with downstream `PeriodsRepository` / `AthleteProfileViewModel` / `KnownLocationsViewModel` active, *Then* steady-state ticks produce `0` `_allWorkouts` list clones, `0` `reloadWorkoutData` calls, and `0` downstream historical rebuilds (`REQ-NFR-005`).
+     • *Given* `ArchitectureConformanceContractTest`, `DetailedDesignParityContractTest`, `SourceTextReadingAuditContractTest`, and `verify_requirement_governance.py`, *When* executed, *Then* `TrackerService.java <= 3,559` LoC, `WorkoutRepository.kt <= 5,117` LoC (`:1970-2650` untouched), `0` new `src/main/` test reads, `Localization Parity: N/A - no UI strings`, and governance exits `0`. Tag tests with `TST-STB-020.4`.
+
 ---
 
 ## Change History
@@ -1543,3 +1562,7 @@
 | `1.0.19` | 2026-11-18 | AI Agent (`ATT-8198`) | `ATT-8198` | Added `[Planned]` `TST-PRO-132` test specifications (`ATT-8198_test_spec.md`: `189`-entry `(?:^\|/)ui/` `*Kt` reflection ratchet across `trainingtracker/ui/` + `banalservice/ui/`, `build/` & non-`*Kt` reflection guard preservation, `docs/coding_standards.md` §5.4 + Stage 4/5 skill parity, and `RadarSettingsSectionTest` Robolectric `createComposeRule()` remediation). |
 | `1.0.20` | 2026-11-18 | AI Agent (`ATT-8198`) | `ATT-8198` | Promoted `TST-PRO-132` to `[Implemented]` in Stage 4 (`UiReflectionOnlyTestAuditContractTest.kt`, `app/ui-reflection-baseline.txt`, `docs/coding_standards.md` v`1.0.1`, Stage 4/5 `SKILL.md`s, `RadarSettingsSectionTest.kt`). |
 | `1.0.21` | 2026-11-18 | AI Agent (`ATT-8198`) | `ATT-8198` | Promoted `TST-PRO-132` to `[Verified]` after Stage 5 verification (`UiReflectionOnlyTestAuditContractTest` `4/4`, `SourceTextReadingAuditContractTest` `4/4`, `AspiceSweAuditContractTest` `13/13`, `AndroidViewModelReflectionContractTest` `2/2`, `RadarSettingsSectionTest` `8/8`, governance `exit 0`). |
+| `1.0.22` | 2026-11-18 | AI Agent (`ATT-8999`, `--as agent1`) | `ATT-8999` | Added `[Planned]` `TST-STB-020` (`TST-STB-020.1`–`TST-STB-020.4`: 1-Hz zero-broadcast/zero-cloning + discrete edges, `PeriodsRepository` `!finished` guard, `AthleteProfileViewModel` / `KnownLocationsViewModel` filtering & relaxed-mock updates, 3,600-tick OOM-churn & LoC/contract verification). |
+| `1.0.23` | 2026-11-18 | AI Agent (`ATT-8999`, `--as agent1`) | `ATT-8999` | Promoted `TST-STB-020` to `[Implemented]` in Stage 4 (`LiveWorkoutBroadcastTrackerTest.kt`, `TrackerServiceStateMachineCharacterisationTest.kt`, `PeriodsRepositorySyncTest.kt`, `AthleteProfileViewModelCardioPowerTest.kt`, `KnownLocationsViewModelTest.kt`). |
+| `1.0.24` | 2026-11-19 | AI Agent (`ATT-8999`, `--as agent1`) | `ATT-8999` | Stage 4 Bounce 1/3 heal: updated `AthleteProfileViewModel.kt` deprecation cleanup (`getShortName`) and reset `TST-STB-020` to `[Implemented]` pending Stage 5 re-verification. |
+| `1.0.25` | 2026-11-19 | AI Agent (`ATT-8999`, `--as agent1`) | `ATT-8999` | Promoted `TST-STB-020` (`TST-STB-020.1`–`TST-STB-020.4`) to `[Verified]` after Stage 5 Bounce 1 verification (`470/470` `--rerun-tasks` across `74` suites, `0` compiler warnings, live `emulator-5554` smoke; `ATT-8999_walkthrough.md`). |

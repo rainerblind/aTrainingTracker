@@ -173,12 +173,12 @@ class PeriodsRepository @androidx.annotation.VisibleForTesting internal construc
             }
         }
 
-        // 3. Reactive Enrichment (ATT-440 Refinement / ATT-4019 / REQ-PER-016.1)
-        // Observe workout history and re-enrich periods whenever period-relevant data arrives.
-        // Projects to period-relevant fields and debounces progressive stream bursts.
+        // 3. Reactive Enrichment (ATT-440 Refinement / ATT-4019 / REQ-PER-016.1 / REQ-STB-020.3)
+        // Observe finished workout history only and re-enrich periods whenever finished period-relevant
+        // data arrives; excludes unfinished live workouts to prevent 1-Hz historical re-aggregation.
         scope.launch {
             workoutRepo.allWorkouts
-                .map { list -> list.map { it.toPeriodProjectionKey() } }
+                .map { list -> list.filter { it.finished }.map { it.toPeriodProjectionKey() } }
                 .distinctUntilChanged()
                 .debounce(200L)
                 .collectLatest {
@@ -953,7 +953,7 @@ class PeriodsRepository @androidx.annotation.VisibleForTesting internal construc
     }
 
     private fun precalculateGroups(workouts: List<WorkoutData>): WorkoutGroups {
-        val validWorkouts = workouts.filter { it.startTimeS > 0L }
+        val validWorkouts = workouts.filter { it.startTimeS > 0L && it.finished }
         return WorkoutGroups(
             days = validWorkouts.groupBy { getPeriodSortKey(it.startTimeS, PeriodType.DAY) },
             weeks = validWorkouts.groupBy { getPeriodSortKey(it.startTimeS, PeriodType.WEEK) },

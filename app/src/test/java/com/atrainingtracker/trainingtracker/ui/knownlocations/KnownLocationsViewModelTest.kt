@@ -229,11 +229,11 @@ class KnownLocationsViewModelTest {
         val loc1 = KnownLocationItem(1L, "Olympiazentrum", 515.0, 200, LatLng(48.175, 11.554), 0, true, ElevationSource.MANUAL_USER)
         val loc2 = KnownLocationItem(2L, "Englischer Garten", 505.0, 200, LatLng(48.155, 11.590), 0, false, ElevationSource.INTERNET_DEM)
 
-        val w1 = mockk<WorkoutData>(relaxed = true) { every { startLatLng } returns LatLng(48.1751, 11.5541) } // Inside loc1 (<20m)
-        val w2 = mockk<WorkoutData>(relaxed = true) { every { startLatLng } returns LatLng(48.1752, 11.5542) } // Inside loc1 (<30m)
-        val w3 = mockk<WorkoutData>(relaxed = true) { every { startLatLng } returns LatLng(48.1551, 11.5901) } // Inside loc2 (<20m)
-        val w4 = mockk<WorkoutData>(relaxed = true) { every { startLatLng } returns LatLng(48.2000, 11.6000) } // Far away
-        val w5 = mockk<WorkoutData>(relaxed = true) { every { startLatLng } returns null } // No GPS
+        val w1 = mockk<WorkoutData>(relaxed = true) { every { id } returns 1L; every { finished } returns true; every { startLatLng } returns LatLng(48.1751, 11.5541) } // Inside loc1 (<20m)
+        val w2 = mockk<WorkoutData>(relaxed = true) { every { id } returns 2L; every { finished } returns true; every { startLatLng } returns LatLng(48.1752, 11.5542) } // Inside loc1 (<30m)
+        val w3 = mockk<WorkoutData>(relaxed = true) { every { id } returns 3L; every { finished } returns true; every { startLatLng } returns LatLng(48.1551, 11.5901) } // Inside loc2 (<20m)
+        val w4 = mockk<WorkoutData>(relaxed = true) { every { id } returns 4L; every { finished } returns true; every { startLatLng } returns LatLng(48.2000, 11.6000) } // Far away
+        val w5 = mockk<WorkoutData>(relaxed = true) { every { id } returns 5L; every { finished } returns true; every { startLatLng } returns null } // No GPS
 
         fakeLocationsFlow.value = listOf(loc1, loc2)
         fakeWorkoutsFlow.value = listOf(w1, w2, w3, w4, w5)
@@ -254,18 +254,26 @@ class KnownLocationsViewModelTest {
         val loc = KnownLocationItem(1L, "Home Base", 515.0, 200, LatLng(48.175, 11.554), 0, true, ElevationSource.MANUAL_USER)
 
         val bikeWorkout1 = mockk<WorkoutData>(relaxed = true) {
+            every { id } returns 11L
+            every { finished } returns true
             every { startLatLng } returns LatLng(48.1751, 11.5541)
             every { bSportType } returns BSportType.BIKE
         }
         val bikeWorkout2 = mockk<WorkoutData>(relaxed = true) {
+            every { id } returns 12L
+            every { finished } returns true
             every { startLatLng } returns LatLng(48.1752, 11.5542)
             every { bSportType } returns BSportType.BIKE
         }
         val runWorkout = mockk<WorkoutData>(relaxed = true) {
+            every { id } returns 13L
+            every { finished } returns true
             every { startLatLng } returns LatLng(48.1753, 11.5543)
             every { bSportType } returns BSportType.RUN
         }
         val otherWorkout = mockk<WorkoutData>(relaxed = true) {
+            every { id } returns 14L
+            every { finished } returns true
             every { startLatLng } returns LatLng(48.1754, 11.5544)
             every { bSportType } returns BSportType.UNKNOWN
         }
@@ -296,12 +304,12 @@ class KnownLocationsViewModelTest {
         val activeSpot = KnownLocationItem(20L, "Active Spot", 510.0, 200, LatLng(48.155, 11.590), 1, false, ElevationSource.INTERNET_DEM)
 
         val workouts = listOf(
-            mockk<WorkoutData>(relaxed = true) { every { startLatLng } returns LatLng(48.1751, 11.5541) }, // 1 near bloatedSpot
-            mockk<WorkoutData>(relaxed = true) { every { startLatLng } returns LatLng(48.1551, 11.5901) }, // 5 near activeSpot
-            mockk<WorkoutData>(relaxed = true) { every { startLatLng } returns LatLng(48.1552, 11.5902) },
-            mockk<WorkoutData>(relaxed = true) { every { startLatLng } returns LatLng(48.1553, 11.5903) },
-            mockk<WorkoutData>(relaxed = true) { every { startLatLng } returns LatLng(48.1554, 11.5904) },
-            mockk<WorkoutData>(relaxed = true) { every { startLatLng } returns LatLng(48.1550, 11.5900) }
+            mockk<WorkoutData>(relaxed = true) { every { id } returns 21L; every { finished } returns true; every { startLatLng } returns LatLng(48.1751, 11.5541) }, // 1 near bloatedSpot
+            mockk<WorkoutData>(relaxed = true) { every { id } returns 22L; every { finished } returns true; every { startLatLng } returns LatLng(48.1551, 11.5901) }, // 5 near activeSpot
+            mockk<WorkoutData>(relaxed = true) { every { id } returns 23L; every { finished } returns true; every { startLatLng } returns LatLng(48.1552, 11.5902) },
+            mockk<WorkoutData>(relaxed = true) { every { id } returns 24L; every { finished } returns true; every { startLatLng } returns LatLng(48.1553, 11.5903) },
+            mockk<WorkoutData>(relaxed = true) { every { id } returns 25L; every { finished } returns true; every { startLatLng } returns LatLng(48.1554, 11.5904) },
+            mockk<WorkoutData>(relaxed = true) { every { id } returns 26L; every { finished } returns true; every { startLatLng } returns LatLng(48.1550, 11.5900) }
         )
 
         fakeLocationsFlow.value = listOf(bloatedSpot, activeSpot)
@@ -479,5 +487,68 @@ class KnownLocationsViewModelTest {
 
         coVerify { mockRepository.mergeLocations(source, target) }
         coVerify { mockClusterRepository.refreshClusters() }
+    }
+
+    /**
+     * TST-STB-020.3 / REQ-STB-020.4: Verifies unfinished active workouts inside a location radius
+     * are excluded from start counts and ignored across 1-Hz churn until finished = true.
+     */
+    @Test
+    fun testUnfinishedWorkoutChurn_excludedFromStartsAndDeduplicated_TST_STB_020_3() = runTest {
+        var defaultDispatches = 0
+        val countingDefaultDispatcher = object : kotlinx.coroutines.CoroutineDispatcher() {
+            override fun dispatch(context: kotlin.coroutines.CoroutineContext, block: Runnable) {
+                defaultDispatches++
+                testDispatcher.dispatch(context, block)
+            }
+        }
+        val countedVm = KnownLocationsViewModel(
+            application = mockApplication,
+            repository = mockRepository,
+            initialIsMetric = true,
+            clusterRepository = mockClusterRepository,
+            workoutRepository = mockWorkoutRepository,
+            defaultDispatcher = countingDefaultDispatcher
+        )
+
+        val loc1 = KnownLocationItem(1L, "Olympiazentrum", 515.0, 200, LatLng(48.175, 11.554), 0, true, ElevationSource.MANUAL_USER)
+        val finishedBase = mockk<WorkoutData>(relaxed = true) {
+            every { id } returns 1L
+            every { finished } returns true
+            every { startLatLng } returns LatLng(48.1751, 11.5541)
+            every { bSportType } returns BSportType.BIKE
+        }
+        fakeLocationsFlow.value = listOf(loc1)
+        fakeWorkoutsFlow.value = listOf(finishedBase)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertEquals(1, countedVm.uiState.value.startsByLocationId[1L])
+
+        // 120 unfinished live emissions inside loc1 must keep count at 1 and trigger 0 default-dispatcher re-scans.
+        defaultDispatches = 0
+        for (sec in 1..120) {
+            val active = mockk<WorkoutData>(relaxed = true) {
+                every { id } returns 99L
+                every { finished } returns false
+                every { startLatLng } returns LatLng(48.1752, 11.5542)
+                every { bSportType } returns BSportType.BIKE
+                every { activeTimeSec } returns sec.toLong()
+            }
+            fakeWorkoutsFlow.value = listOf(active, finishedBase)
+            testDispatcher.scheduler.advanceUntilIdle()
+        }
+        assertEquals(0, defaultDispatches)
+        assertEquals(1, countedVm.uiState.value.startsByLocationId[1L])
+
+        // Transitioning active workout to finished = true executes exactly 1 grouping scan and updates count to 2.
+        val finishedNew = mockk<WorkoutData>(relaxed = true) {
+            every { id } returns 99L
+            every { finished } returns true
+            every { startLatLng } returns LatLng(48.1752, 11.5542)
+            every { bSportType } returns BSportType.BIKE
+        }
+        fakeWorkoutsFlow.value = listOf(finishedNew, finishedBase)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertEquals(1, defaultDispatches)
+        assertEquals(2, countedVm.uiState.value.startsByLocationId[1L])
     }
 }

@@ -223,6 +223,14 @@ public class TrackerService extends Service {
     DeviceDataRepository mDeviceDataRepository;
     KnownLocationsRepository mKnownLocationsRepository;
     WorkoutRrRepository mWorkoutRrRepository;
+    private final LiveWorkoutBroadcastTracker mBroadcastTracker = new LiveWorkoutBroadcastTracker(workoutId -> {
+        try {
+            LocalBroadcastManager.getInstance(TrackerService.this)
+                    .sendBroadcast(new Intent(WORKOUT_UPDATED_INTENT).putExtra(WORKOUT_ID, workoutId));
+        } catch (Throwable t) {
+            Log.w(TAG, "Failed to broadcast WORKOUT_UPDATED_INTENT", t);
+        }
+    });
 
     private Context getSafeContext() {
         try {
@@ -1474,6 +1482,7 @@ public class TrackerService extends Service {
         // Complete executor shutdown is deferred strictly to onDestroy().
 
         mAutoPauseManager.release();
+        mBroadcastTracker.reset();
 
         unregisterTransientReceivers();
 
@@ -1634,6 +1643,7 @@ public class TrackerService extends Service {
         } catch (Exception e) {
             Log.w(TAG, "Failed to broadcast TRACKING_STARTED_INTENT", e);
         }
+        mBroadcastTracker.onSessionInitialized(workoutId, TrainingApplication.isPaused());
     }
 
     protected void performSuperOnDestroy() {
@@ -1672,6 +1682,7 @@ public class TrackerService extends Service {
         // Release main-thread resources immediately while keeping mBanalService and wakeLock
         // valid until the terminal finalization task on mDbExecutor completes (REQ-TRK-033.2).
         mAutoPauseManager.release();
+        mBroadcastTracker.reset();
 
         if (mRadarAlertManager != null) {
             try {
@@ -2230,6 +2241,9 @@ public class TrackerService extends Service {
 
     protected void saveLap(long lapNr, int lapTime, double lapDistance, double averageSpeed) {
         saveLap(mWorkoutID, lapNr, lapTime, lapDistance, averageSpeed);
+        if (!mIsStopping) {
+            mBroadcastTracker.onDiscreteEdge(mWorkoutID);
+        }
     }
 
     protected void saveLap(long workoutId, long lapNr, int lapTime, double lapDistance, double averageSpeed) {
@@ -2302,6 +2316,9 @@ public class TrackerService extends Service {
         mTableInitializationFuture.thenAcceptAsync(v -> {
             try {
                 getWorkoutRepository().updateWorkoutSportAndGcData(mWorkoutID, sportTypeId, bSport, gcData);
+                if (!mIsStopping && mWorkoutID > 0) {
+                    mBroadcastTracker.onDiscreteEdge(mWorkoutID);
+                }
             } catch (Exception e) {
                 Log.e(TAG, "Failed to update summaries DB on searching finished", e);
             }
@@ -2332,6 +2349,9 @@ public class TrackerService extends Service {
         mTableInitializationFuture.thenAcceptAsync(v -> {
             try {
                 getWorkoutRepository().updateWorkoutSport(mWorkoutID, sportTypeId, bSport, finalIsIndoor);
+                if (!mIsStopping && mWorkoutID > 0) {
+                    mBroadcastTracker.onDiscreteEdge(mWorkoutID);
+                }
             } catch (Exception e) {
                 Log.e(TAG, "Failed to update sport type in summaries DB", e);
             }
@@ -2615,9 +2635,7 @@ public class TrackerService extends Service {
                 } catch (Exception e) {
                     Log.e(TAG, "Error updating total time during pause", e);
                 }
-                
-                // Notify UI to refresh the card
-                LocalBroadcastManager.getInstance(TrackerService.this).sendBroadcast(new Intent(WORKOUT_UPDATED_INTENT).putExtra("WORKOUT_ID", workoutId));
+                mBroadcastTracker.onPauseStateTick(workoutId, true);
             }, mDbExecutor);
             return;
         }
@@ -2683,27 +2701,16 @@ public class TrackerService extends Service {
                     LiveWorkoutSession.RunningStats stats = mLiveSession.getSensorStats().get(sensorType);
 
                     if ((changed & LiveWorkoutSession.RunningStats.CHANGED_MIN) != 0) {
-                        if (mWorkoutRepository != null) {
-                            mWorkoutRepository.updateExtremaValueInMemory(mWorkoutID, sensorType, ExtremaType.MIN, stats.min, stats.minPos);
-                        }
                         extremaUpdates.add(new ExtremaUpdate(sensorType, ExtremaType.MIN, stats.min, stats.minPos));
                     }
                     if ((changed & LiveWorkoutSession.RunningStats.CHANGED_MAX) != 0) {
-                        if (mWorkoutRepository != null) {
-                            mWorkoutRepository.updateExtremaValueInMemory(mWorkoutID, sensorType, ExtremaType.MAX, stats.max, stats.maxPos);
-                        }
                         extremaUpdates.add(new ExtremaUpdate(sensorType, ExtremaType.MAX, stats.max, stats.maxPos));
                     }
                     if ((changed & LiveWorkoutSession.RunningStats.CHANGED_AVG) != 0) {
                         // For Speed, we defer the average update until after the loop to use the 
                         // authoritative distance/time calculation (SCRUM-108)
-                        if (sensorType != SensorType.SPEED_mps) {
-                            if (mWorkoutRepository != null) {
-                                mWorkoutRepository.updateExtremaValueInMemory(mWorkoutID, sensorType, ExtremaType.AVG, stats.getAverage(), null);
-                            }
-                            if (updateAvgInDb) {
-                                extremaUpdates.add(new ExtremaUpdate(sensorType, ExtremaType.AVG, stats.getAverage(), null, stats.getCount()));
-                            }
+                        if (sensorType != SensorType.SPEED_mps && updateAvgInDb) {
+                            extremaUpdates.add(new ExtremaUpdate(sensorType, ExtremaType.AVG, stats.getAverage(), null, stats.getCount()));
                         }
                     }
                 }
@@ -2784,15 +2791,10 @@ public class TrackerService extends Service {
 
             // Harmonize with Speed sensor average in Extrema Table (SCRUM-108)
             // We do this every sample to ensure UI consistency while tracking.
-            if (mLiveSession != null && !mIsRehydrating && mLiveSession.getSensorStats().containsKey(SensorType.SPEED_mps)) {
-                if (mWorkoutRepository != null) {
-                    mWorkoutRepository.updateExtremaValueInMemory(mWorkoutID, SensorType.SPEED_mps, ExtremaType.AVG, authoritativeAvgSpeed, null);
-                }
-                if (updateAvgInDb) {
-                    LiveWorkoutSession.RunningStats speedStats = mLiveSession.getSensorStats().get(SensorType.SPEED_mps);
-                    Integer speedCount = speedStats != null ? speedStats.getCount() : null;
-                    extremaUpdates.add(new ExtremaUpdate(SensorType.SPEED_mps, ExtremaType.AVG, authoritativeAvgSpeed, null, speedCount));
-                }
+            if (mLiveSession != null && !mIsRehydrating && mLiveSession.getSensorStats().containsKey(SensorType.SPEED_mps) && updateAvgInDb) {
+                LiveWorkoutSession.RunningStats speedStats = mLiveSession.getSensorStats().get(SensorType.SPEED_mps);
+                Integer speedCount = speedStats != null ? speedStats.getCount() : null;
+                extremaUpdates.add(new ExtremaUpdate(SensorType.SPEED_mps, ExtremaType.AVG, authoritativeAvgSpeed, null, speedCount));
             }
         }
 
@@ -2850,12 +2852,7 @@ public class TrackerService extends Service {
                 }
             }
 
-            // Notify UI
-            try {
-                LocalBroadcastManager.getInstance(TrackerService.this).sendBroadcast(new Intent(WORKOUT_UPDATED_INTENT).putExtra("WORKOUT_ID", workoutId));
-            } catch (Exception e) {
-                Log.w(TAG, "Failed to broadcast WORKOUT_UPDATED_INTENT", e);
-            }
+            mBroadcastTracker.onPauseStateTick(workoutId, false);
         }, mDbExecutor).exceptionally(ex -> {
             Log.e(TAG, "Sample write skipped due to initialization failure: " + ex.getMessage());
             return null;

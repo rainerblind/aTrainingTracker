@@ -43,6 +43,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChangedBy
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -124,7 +126,7 @@ class KnownLocationsViewModel @JvmOverloads constructor(
     init {
         viewModelScope.launch {
             repository.locationsFlow.collect { items ->
-                val currentWorkouts = workoutRepo?.allWorkouts?.value ?: emptyList()
+                val currentWorkouts = (workoutRepo?.allWorkouts?.value ?: emptyList()).filter { it.finished }
                 val currentClusters = clusterRepository.allClusters.value
                 val (sportStartsMapping, mapping) = withContext(defaultDispatcher) {
                     Pair(
@@ -160,7 +162,13 @@ class KnownLocationsViewModel @JvmOverloads constructor(
 
         workoutRepo?.allWorkouts?.let { workoutsFlow ->
             viewModelScope.launch {
-                workoutsFlow.collect { workouts ->
+                // REQ-STB-020.4: Only finished workouts participate in O(locations * N) start counting.
+                workoutsFlow
+                    .map { workouts -> workouts.filter { it.finished } }
+                    .distinctUntilChangedBy { finishedWorkouts ->
+                        finishedWorkouts.map { Triple(it.id, it.startLatLng, it.bSportType) }
+                    }
+                    .collect { workouts ->
                     val currentLocations = repository.locationsFlow.value
                     if (currentLocations.isEmpty()) {
                         _uiState.update { it.copy(startsByLocationId = emptyMap(), sportStartsByLocationId = emptyMap()) }

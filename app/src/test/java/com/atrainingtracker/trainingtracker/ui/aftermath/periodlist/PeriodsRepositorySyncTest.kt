@@ -80,6 +80,7 @@ class PeriodsRepositorySyncTest {
         PeriodSummariesDatabaseManager.setInstanceForTesting(null)
         WorkoutSummariesDatabaseManager.setInstanceForTesting(null)
         PeriodsRepository.resetInstanceForTesting()
+        Thread.sleep(50L)
         unmockkAll()
     }
 
@@ -339,11 +340,121 @@ class PeriodsRepositorySyncTest {
         PeriodSummariesDatabaseManager.setInstanceForTesting(mockDbManager)
         WorkoutSummariesDatabaseManager.setInstanceForTesting(mockSummariesManager)
         WorkoutRepository.resetForTesting(mockWorkoutRepo)
+        every { mockDbManager.isSyncFinished() } returns true
 
         val repo = PeriodsRepository.getInstance(mockApp)
 
         val mapper1 = repo.mapper
         val mapper2 = repo.mapper
         assertSame("PeriodsRepository must reuse the single shared WorkoutDataMapper instance", mapper1, mapper2)
+    }
+
+    /**
+     * TST-STB-020.2 & TST-STB-020.4 / REQ-STB-020.3:
+     * Replays 3,600 1-Hz unfinished workout updates alongside 2,200 historical finished workouts,
+     * asserting 0 incremental getPeriodsByType rebuilds and exclusion from precalculateGroups(),
+     * followed by immediate sync once the active workout flips finished = true.
+     */
+    @Test
+    fun testPeriodsRepository_unfinishedLiveWorkout3600Ticks_triggersZeroRebuilds_TST_STB_020_2_and_4() {
+        val mockApp = mockk<Application>(relaxed = true)
+        val mockDbManager = mockk<PeriodSummariesDatabaseManager>(relaxed = true)
+        val mockSummariesManager = mockk<WorkoutSummariesDatabaseManager>(relaxed = true)
+        val mockWorkoutRepo = mockk<WorkoutRepository>(relaxed = true)
+
+        val monthSortKey = PeriodsRepository.getPeriodSortKey(1700000000L, PeriodType.MONTH)
+        val baseSummary = PeriodSummary(
+            periodLabel = "November 2023",
+            periodDateRange = "Nov 1 - Nov 30",
+            periodType = PeriodType.MONTH,
+            startTimestampS = 1698796800L,
+            endTimestampS = 1701388799L,
+            totalWorkouts = 2200,
+            totalDurationSec = 7_920_000L,
+            totalDistance = 55_000_000.0,
+            sportStats = emptyMap(),
+            longestId = 1L,
+            northId = 1L,
+            southId = 1L,
+            eastId = 1L,
+            westId = 1L,
+            sortKey = monthSortKey
+        )
+
+        val finishedWorkouts = (1L..2200L).map { id ->
+            createSampleWorkoutData(
+                id = id,
+                finished = true,
+                activeTimeSec = if (id == 1L) 5000L else 3600L
+            )
+        }
+        val activeWorkoutId = 99_999L
+        val activeUnfinishedHuge = createSampleWorkoutData(
+            id = activeWorkoutId,
+            finished = false,
+            activeTimeSec = 999_999L,
+            totalDistance = 500.0
+        )
+
+        val workoutsFlow = MutableStateFlow(finishedWorkouts + activeUnfinishedHuge)
+        every { mockWorkoutRepo.allWorkouts } returns workoutsFlow
+        every { mockDbManager.isSyncFinished() } returns true
+        every { mockSummariesManager.getFinishedWorkoutCount() } returns 2200
+        every { mockDbManager.getTotalDayWorkoutsCount() } returns 2200
+        every { mockDbManager.getPeriodsByType(PeriodType.DAY) } returns emptyList()
+        every { mockDbManager.getPeriodsByType(PeriodType.WEEK) } returns emptyList()
+        every { mockDbManager.getPeriodsByType(PeriodType.MONTH) } returns listOf(baseSummary)
+        every { mockDbManager.getPeriodsByType(PeriodType.YEAR) } returns emptyList()
+
+        PeriodSummariesDatabaseManager.setInstanceForTesting(mockDbManager)
+        WorkoutSummariesDatabaseManager.setInstanceForTesting(mockSummariesManager)
+        WorkoutRepository.resetForTesting(mockWorkoutRepo)
+        every { mockDbManager.isSyncFinished() } returns true
+
+        val repo = PeriodsRepository.getInstance(mockApp)
+
+        // Wait for BOTH init loadFromDatabase() (4 calls) AND initial 200ms-debounced reactive load (4 calls).
+        verify(timeout = 3000, atLeast = 8) { mockDbManager.getPeriodsByType(any()) }
+        Thread.sleep(100L)
+        val settledMonth = repo.groupedPeriods.value.getOrNull(2)?.firstOrNull()
+        assertTrue(settledMonth != null)
+        assertTrue(
+            "precalculateGroups must exclude unfinished workouts from period enrichment",
+            settledMonth!!.workoutIdToSportMap.containsKey(activeWorkoutId).not()
+        )
+        assertEquals(2200, settledMonth.workoutIdToSportMap.size)
+
+        clearMocks(mockDbManager, answers = false, recordedCalls = true)
+        every { mockDbManager.isSyncFinished() } returns true
+        every { mockDbManager.getTotalDayWorkoutsCount() } returns 2200
+        every { mockDbManager.getPeriodsByType(PeriodType.DAY) } returns emptyList()
+        every { mockDbManager.getPeriodsByType(PeriodType.WEEK) } returns emptyList()
+        every { mockDbManager.getPeriodsByType(PeriodType.MONTH) } returns listOf(baseSummary)
+        every { mockDbManager.getPeriodsByType(PeriodType.YEAR) } returns emptyList()
+
+        // Simulate 3,600 1-Hz active workout updates alongside 2,200 finished workouts.
+        for (sec in 1..3600) {
+            workoutsFlow.value = finishedWorkouts + activeUnfinishedHuge.copy(
+                activeTimeSec = sec.toLong(),
+                totalDistance = sec * 8.0,
+                ascentMeters = sec / 10L,
+                mapPolyline = "poly_$sec"
+            )
+        }
+        Thread.sleep(450L)
+
+        verify(exactly = 0) { mockDbManager.getPeriodsByType(any()) }
+
+        // Finishing the active workout (finished: false -> true) must trigger period sync cleanly.
+        workoutsFlow.value = finishedWorkouts + activeUnfinishedHuge.copy(
+            finished = true,
+            activeTimeSec = 999_999L
+        )
+        verify(timeout = 3000, atLeast = 4) { mockDbManager.getPeriodsByType(any()) }
+        Thread.sleep(100L)
+        val updatedMonth = repo.groupedPeriods.value.getOrNull(2)?.firstOrNull()
+        assertTrue(updatedMonth!!.workoutIdToSportMap.containsKey(activeWorkoutId))
+        assertEquals(2201, updatedMonth.workoutIdToSportMap.size)
+        PeriodsRepository.resetInstanceForTesting()
     }
 }
