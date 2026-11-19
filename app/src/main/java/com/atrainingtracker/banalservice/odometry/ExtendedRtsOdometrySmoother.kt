@@ -254,6 +254,11 @@ object ExtendedRtsOdometrySmoother {
             for (i in 0 until STATE_DIM) {
                 smoothedStates[k][i] = curr.statePosterior[i] + cDeltaX[i]
             }
+            if (currStationary && nextStationary) {
+                // REQ-FIL-032.3: Pin [E, N] identically across consecutive stationary epochs (0.00 m Haversine drift)
+                smoothedStates[k][0] = smoothedStates[k + 1][0]
+                smoothedStates[k][1] = smoothedStates[k + 1][1]
+            }
             smoothedStates[k][3] = UnicycleOdometryEkf.normalizeAngle(smoothedStates[k][3])
             smoothedStates[k][2] = if (currStationary) 0.0 else sanitizeNonNegativeFinite(smoothedStates[k][2]) // Pin stationary speed
 
@@ -369,7 +374,7 @@ object ExtendedRtsOdometrySmoother {
             val modeProfile = sample.carriageMode.profile
             val gyroNoiseScale = if (useAntiAliasedYaw && hasTrustedGnss) modeProfile.ertsGyroNoiseScale else 1.0
 
-            ekf.predict(dtSec, yawRate, sample.timestampMs, gyroNoiseScale)
+            ekf.predict(dtSec, yawRate, sample.timestampMs, gyroNoiseScale, isStationary = isStationary)
 
             // Capture prior state and transition Jacobian right after predict
             val priorState = DoubleArray(STATE_DIM) { j ->

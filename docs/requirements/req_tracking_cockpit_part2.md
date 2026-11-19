@@ -1,14 +1,14 @@
 # Living Requirements: Tracking & Live Sensor Cockpit (Part 2 of 2)
 
 **Document ID**: `DOC-REQ-TRK-P2`  
-**Version**: 1.0.54  
+**Version**: 1.0.57  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit_part2`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Requirements**: 74
+**Total Requirements**: 75
 
 ---
 
@@ -3449,6 +3449,37 @@
 
 **Invariants**: `WheelPosition.UNSPECIFIED` enum/DB/fallback untouched; `R.string.equipment_wheel_position_unspecified` retained across all 9 locales; `EditDeviceDialog.kt <= 2,004` (`0` edits); `WheelPositionSelectionDialog.kt` `@Preview`s strictly `private fun` (`REQ-ARC-003.5`); `0` `src/main` test reads (`REQ-PRO-049.1`); `Rule 8.5` Light/Dark PNG verified.
 
+### REQ-FIL-032: Post-Workout ERTS Beat-Immune 1-Hz Timestamping, Authoritative speedAverage_mps Parity & Stationary Indoor Coordinate Pinning [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-FIL-032`
+- **System Requirement(s)**: `SYSREQ-TRK-003`, `SYSREQ-TRK-004`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `app/src/main/java/com/atrainingtracker/trainingtracker/database/ErtsPostWorkoutRecomputer.kt`, `app/src/main/java/com/atrainingtracker/banalservice/odometry/ExtendedRtsOdometrySmoother.kt`, `app/src/main/java/com/atrainingtracker/banalservice/odometry/UnicycleOdometryEkf.kt`
+- **Rationale**: Pixel 10 telemetry (`Zum Bäcker #58`, `workoutID = 2411`, `584 s`) exposed three residual post-workout ERTS defects: (1) asynchronous 1-Hz `ClockDevice` vs. `TrackerService` `TIME_TOTAL` `{1: 427, 2: 78, 0: 78}` beat pairs ratchet `baseEpochMs` forward by `+1 s` per `2 ... 0` pair (`+78 s` -> `662 s`); (2) `ErtsPostWorkoutRecomputer.updateWorkoutSummaries()` and `updateExtrema()` write unweighted sample mean `speeds.average()` (`3.050 m/s`), disagreeing by `7%` with `distanceTotal_m / timeActive_s` (`3.271 m/s`) and `Laps.db` (`3.265 m/s`); and (3) forward stationary `UnicycleOdometryEkf.predict()` keeps `F[0..1, 2] * P[2][2]` (`~2.0 m^2/s`) + `Q_POS` active during `118 s` indoor stops (`acc = 48.5 m > 20 m`), causing backward RTS smoothing to drift `35.66 m` across the building while `speedMps == 0.00 m/s` (`ATT-9064`, refining `REQ-FIL-017.1`/`.3`, `REQ-FIL-025.4`, `REQ-FIL-027.1`/`.3`, `REQ-FIL-028.4`, `REQ-TRK-030.3`).
+- **Description**:
+  1. *Beat-Immune 1-Hz Timestamp Reconstruction (`REQ-FIL-032.1`)*:
+     - `ErtsPostWorkoutRecomputer.readWorkoutSamples()` SHALL progress active 1-Hz timestamps via `oneHzTs = prevTs + 1000L` without ratcheting `baseEpochMs` on `TIME_TOTAL` `{0, 2}` clock-beat pairs in any ordering (`0 -> 2`, `2 -> 0`, or separated beats).
+     - It SHALL detect and re-anchor (`baseEpochMs`, `firstTimeTotalSec`) strictly on genuine `> 5_000L ms` pauses—signaled by single-step `deltaTimeTotal > 5L` (or `timeTotalTs - oneHzTs > 5_000L`) OR wall-clock `(parsedTs - oneHzTs) > 5_000L` (including when a `> 5 s` wall pause lands on a `timeTotalSec == prevTimeTotalSec` row or leading/all-`null` `TIME_TOTAL` rows)—preserving `TST-FIL-027.1` `6 s` batch-flush stall immunity and `30 s`/`25 s` double pauses.
+  2. *Authoritative `speedAverage_mps` & `ExtremaType.AVG(SPEED_mps)` Parity (`REQ-FIL-032.2`)*:
+     - `ErtsPostWorkoutRecomputer.updateWorkoutSummaries()` and `updateExtrema()` SHALL persist one unified finite non-negative average speed to both `WorkoutSummaries.SPEED_AVERAGE_mps` and `ExtremumValues(SensorType.SPEED_mps, ExtremaType.AVG)`: (a) `totalDistance / TIME_ACTIVE_s` when persisted `WorkoutSummaries.TIME_ACTIVE_s > 0` (matching `TrackerService.getAverageSpeed()` & `LapsDatabaseManager.syncLapDistancesAndSpeeds()`); (b) else matched active ratio `activeDist / activeDt` over steps with `dt in (0.0, MAX_ACTIVE_SAMPLE_GAP_SEC (5.0)]` (preventing pause-gap inflation when `TIME_ACTIVE_s` is `NULL`/`<= 0`); (c) else finite non-negative unweighted mean (`0.0` if empty/non-finite).
+  3. *Stationary `[E, N]` Covariance Freeze & Backward RTS Coordinate Pinning (`REQ-FIL-032.3`)*:
+     - `UnicycleOdometryEkf.predict()` SHALL add `@JvmOverloads isStationary: Boolean = false` (leaving live `SpeedAndLocationDevice_ATTFused` untouched); when `isStationary == true`, `predict()` MUST freeze `x[0..1]`, set `F[0..1, :] = [I_2, 0]`, and zero position process noise (`Q_POS = 0.0`) while keeping heading/bias propagation and positive-definite `P_{k+1|k}` invertibility intact.
+     - `ExtendedRtsOdometrySmoother.smoothSamples()` SHALL pass `isStationary = isStationary` to `ekf.predict()`, and `smoothSnapshots()` SHALL pin `smoothedStates[k][0..1] = smoothedStates[k + 1][0..1]` for consecutive stationary steps (`currStationary && nextStationary`), guaranteeing `0.00 m` Haversine coordinate drift across stationary indoor stops while preserving `TST-FIL-027.3` post-outage GNSS re-acquisition and canopy Doppler-dropout (`wheelSpeedMps = 10.0`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new `REQ-FIL-032` refining `REQ-FIL-017.1`/`.3`, `REQ-FIL-025.4`, `REQ-FIL-027.1`/`.3`, `REQ-FIL-028.4`, and `REQ-TRK-030.3` across `ErtsPostWorkoutRecomputer.kt`, `ExtendedRtsOdometrySmoother.kt`, and `UnicycleOdometryEkf.kt`.
+2. *Historical Origin & Commit Trace*: `ed6acfee` (`ATT-7750`), `d96fd52f` (`ATT-8705`), `14935efb` (`ATT-8880`), `fee3e805` (`ATT-8890`).
+3. *Root Reason for Existing Formulation*: `ATT-8880` assumed `TIME_TOTAL` was strictly 1-Hz monotonic (no `0/2` beat pairs) and decoupled `[0..1, 2]` cross-covariance without freezing forward stationary `F * P * F^T` / `Q_POS` or pinning backward `[E, N]`.
+4. *Preservation of Core Invariants*: Preserves raw device-column immutability (`REQ-FIL-017.3`), `KEY_POST_WORKOUT_ERTS_SMOOTHING = false`, live `UnicycleOdometryEkf` defaults (`isStationary = false`, `MIN_DOPPLER_SPEED_MPS = 3.0`, `ZUPT_SPEED_VARIANCE = 2.0`), `TST-FIL-027.1` flush-stall/double-pause behavior, `0` protected monolith edits (`ErtsPostWorkoutRecomputer`, `ExtendedRtsOdometrySmoother`, `UnicycleOdometryEkf` `< 1,500` LoC), `0` DB schema changes, `0` new `src/main` test reads (`REQ-PRO-049.1`), and `N/A - no UI strings`.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a `584`-row 1-Hz `WorkoutSamples.db` table with `78` `TIME_TOTAL` `0/2` beat pairs (`2 -> 0` and `0 -> 2`), *When* `ErtsPostWorkoutRecomputer` reconstructs timestamps and updates summaries/extrema/laps, *Then* the span equals `583 s` (not `662 s`), and `WorkoutSummaries.speedAverage_mps`, `ExtremumValues(SPEED_mps, AVG)`, and `Laps.speedAverage_mps` agree with `totalDistance / TIME_ACTIVE_s` within `0.02 m/s` (while `NULL` `TIME_ACTIVE_s` uses matched `activeDist / activeDt` over `dt <= 5.0 s`).
+• *Given* a workout with a `118 s` indoor stationary stop (`speed == 0.00 m/s`, `acc = 48.5 m`) between arrival and `+35.66 m` departure GNSS re-acquisition, *When* `ExtendedRtsOdometrySmoother.smoothSamples()` runs, *Then* both `deltaDistanceMeters` and Haversine coordinate movement across the stationary stop equal `0.00 m` while pre-/post-stop moving speeds stay `> 4.0 m/s`.
+
+**Invariants**: Raw device columns immutable (`REQ-FIL-017.3`); live `UnicycleOdometryEkf` untouched (`isStationary = false`, `MIN_DOPPLER_SPEED_MPS = 3.0`, `ZUPT_SPEED_VARIANCE = 2.0`); `> 5 s` wall/total pauses & `6 s` batch-flush stall preserved (`TST-FIL-027.1`); `0` DB schema bumps; `0` monolith LoC edits; `0` new `src/main` reads (`REQ-PRO-049.1`); `Localization Parity: N/A - no UI strings`.
+
 ---
 
 ## Change History
@@ -3508,3 +3539,6 @@
 | `1.0.52` | 2026-11-19 | AI Agent (`ATT-8859`, `--as agent1`) | `ATT-8859` | Added `REQ-SEN-032` `[Planned]` (`REQ-SEN-032.1`–`.3`) and refined `REQ-SEN-029.3` / `REQ-SEN-031.2` dialog option text so `WheelPositionSelectionDialog` presents strictly `Front` and `Rear` while preserving `WheelPosition.UNSPECIFIED` enum/DB fallback and 9-locale legacy summary display (`N/A - no UI strings`). |
 | `1.0.53` | 2026-11-19 | AI Agent (`ATT-8859`, `--as agent1`) | `ATT-8859` | Promoted `REQ-SEN-032` to `[Implemented]` following Stage 4 implementation in `WheelPositionSelectionDialog.kt`, behavioral Compose UI test `WheelPositionSelectionDialogUiTest.kt` (`4/4` PASS), `Rule 8.5` Light/Dark PNG capture (`ATT-8859_wheel_position_dialog.png`), and `35/35` targeted test PASS across 6 suites post-rebase onto `6927b2f8`. |
 | `1.0.54` | 2026-11-19 | AI Agent (`ATT-8859`, `--as agent1`) | `ATT-8859` | Promoted `REQ-SEN-032` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9145`) `35/35` PASS evidence (`Rule 7.5`, zero `app/` diff since `9e265f02`), `Rule 8.5` Light/Dark PNG audit (`ATT-8859_wheel_position_dialog.png`), and `verify_requirement_governance.py` `exit 0`. |
+| `1.0.55` | 2026-11-19 | AI Agent (`ATT-9064`, `--as agent1`) | `ATT-9064` | Added `REQ-FIL-032` `[Planned]` (`REQ-FIL-032.1`–`.3`, linked to `SYSREQ-TRK-003`/`004`) for beat-immune 1-Hz ERTS timestamping, authoritative `speedAverage_mps` / `ExtremaType.AVG(SPEED_mps)` parity with matched `activeDist / activeDt` fallback, and stationary `[E, N]` covariance freeze & backward RTS pinning (`N/A - no UI strings`). |
+| `1.0.56` | 2026-11-19 | AI Agent (`ATT-9064`, `--as agent1`) | `ATT-9064` | Promoted `REQ-FIL-032` to `[Implemented]` following Stage 4 construction (`ErtsPostWorkoutRecomputer.kt` `1,051` LoC, `ExtendedRtsOdometrySmoother.kt` `742` LoC, `UnicycleOdometryEkf.kt` `810` LoC; `0` monolith edits; `84/84` PASS across 9 targeted/contract suites, `0` warnings, 4 safety linters PASS). |
+| `1.0.57` | 2026-11-19 | AI Agent (`ATT-9064`, `--as agent1`) | `ATT-9064` | Promoted `REQ-FIL-032` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9167`) `84/84` PASS evidence (`Rule 7.5`, zero `app/` diff since `75f3bff9`), 4 safety linters PASS, `verify_requirement_governance.py` `exit 0`, and `docs/engineering/walkthroughs/ATT-9064_walkthrough.md`. |

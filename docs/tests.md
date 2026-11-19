@@ -12,7 +12,7 @@ Living test specifications use multi-line Markdown headings (`### TST-XXX: Title
 
 | Domain Shard | Scope & Functional Areas | Prefixes | Total | Verified | Implemented | Planned / Open |
 | :--- | :--- | :--- | :---: | :---: | :---: | :---: |
-| [Tracking & Live Sensor Cockpit](tests/tst_tracking_cockpit.md) | Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle. | `CON`, `FIL`, `FUSION`, `SEN`, `TRK` | 159 | 159 | 0 | 0 |
+| [Tracking & Live Sensor Cockpit](tests/tst_tracking_cockpit.md) | Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle. | `CON`, `FIL`, `FUSION`, `SEN`, `TRK` | 160 | 160 | 0 | 0 |
 | [Post-Workout Analytics & Periods](tests/tst_aftermath_periods.md) | Post-workout analytics, period statistics, zone distributions, HRV/workout dynamics, radar analytics. | `HRV`, `PER`, `PERF`, `RAD`, `SPT`, `WKO` | 70 | 65 | 5 | 0 |
 | [Maps, Polylines & Navigation](tests/tst_maps_navigation.md) | Map rendering, polylines, climbs, navigation overlays, GPX track follow-me, radar map overlays. | `CLM`, `GEO`, `MAP`, `NAV`, `RAD` | 71 | 70 | 1 | 0 |
 | [Persistence, Migration & Cloud Export](tests/tst_data_migration_export.md) | Database schema, backup/restore, migration pipelines, Strava/cloud upload, FIT/GPX/radar export. | `DAT`, `EXP`, `EXT`, `MIG`, `RAD` | 122 | 122 | 0 | 0 |
@@ -25,7 +25,7 @@ Living test specifications use multi-line Markdown headings (`### TST-XXX: Title
 | [Jubilee Milestones & App Reviews](tests/tst_aftermath_reviews.md) | Milestone workout auto-naming, jubilee achievements, Google Play in-app reviews, athlete feedback, and supporter tier promotions. | `REV` | 15 | 15 | 0 | 0 |
 | [Store Presence](tests/tst_store_presence.md) | Store presence, Google Play listings, screenshots, store metadata contract testing, and release governance. | `STP` | 11 | 11 | 0 | 0 |
 
-**Total Living Tests**: 1275 across 12 domain shards.
+**Total Living Tests**: 1276 across 12 domain shards.
 
 ---
 

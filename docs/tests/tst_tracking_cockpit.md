@@ -1,14 +1,14 @@
 # Living Test Specification: Tracking & Live Sensor Cockpit
 
 **Document ID**: `DOC-TST-TRK`  
-**Version**: 1.0.75  
+**Version**: 1.0.78  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Tests**: 159
+**Total Tests**: 160
 
 ---
 
@@ -3648,6 +3648,24 @@
      • Capture Light & Dark PNG screenshot at `docs/engineering/walkthroughs/img/ATT-8859_wheel_position_dialog.png` and verify visually via `read_file` (`Rule 8.5`).
      • Verify `WheelPosition.values().size == 3`, `EditDeviceEquipmentWheelPositionTest` legacy `UNSPECIFIED` summary/sheet display (`R.string.equipment_wheel_position_unspecified` preserved across all 9 locales; `Localization Parity: N/A - no UI strings`), `DeadCodeEliminationContractTest` (`private fun` `@Preview`s), and `SourceTextReadingAuditContractTest` (`0` new `src/main` reads) pass `100%`.
 
+### TST-FIL-032: **Post-Workout ERTS Beat-Immune Timestamping, speedAverage_mps Parity & Stationary Indoor Pinning Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Tickets**: `ATT-9064`
+- **Requirement(s)**: `REQ-FIL-032` (`REQ-FIL-032.1`..`REQ-FIL-032.3`), `REQ-FIL-017`, `REQ-FIL-025`, `REQ-FIL-027`, `REQ-FIL-028`, `REQ-TRK-030`
+- **Component**: `app/src/test/java/com/atrainingtracker/trainingtracker/database/ErtsPostWorkoutRecomputerTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/odometry/ExtendedRtsOdometrySmootherTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/odometry/UnicycleOdometryEkfTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/tracker/TrackerServiceErtsFinalizationTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/database/LapsDatabaseManagerTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ArchitectureConformanceContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SystemLiveTrackingRequirementsContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SourceTextReadingAuditContractTest.kt`
+- **Test Type**: Unit
+- **Verification Method**: Unit
+- **Procedure**:
+  1. *Beat-Immune 1-Hz Timestamping & Pause/Stall Parity (`TST-FIL-032.1`, `ErtsPostWorkoutRecomputerTest.kt`)*:
+     • Replay `584`-row `78`-pair `0/2` (`2 -> 0` and `0 -> 2`) `TIME_TOTAL` beat sequence asserting reconstructed span equals `583_000L ms` (`0 s` stretch vs. `662 s`), plus `> 5 s` wall pause landing on `timeTotalSec == prevTimeTotalSec`, `deltaTimeTotal > 5L` pause, leading/all-`null` `TIME_TOTAL` pauses, and regression of `testLeadingNullTimeTotal_batchFlushStall6s_andDoubleWallClockPause_tstFil027_1`.
+  2. *Authoritative `speedAverage_mps` / `Extrema(AVG)` / `Laps.db` Parity & Matched Fallback (`TST-FIL-032.2`, `ErtsPostWorkoutRecomputerTest.kt`, `LapsDatabaseManagerTest.kt`)*:
+     • Verify `WorkoutSummaries.SPEED_AVERAGE_mps`, `ExtremumValues(SensorType.SPEED_mps, ExtremaType.AVG)`, and `Laps.speedAverage_mps` agree with `totalDistance / TIME_ACTIVE_s` within `0.02 m/s` on a `584 s` ride with an indoor stop.
+     • Verify `TIME_ACTIVE_s = NULL` / `<= 0` with a `30 s` pause uses matched `activeDist / activeDt` over `dt in (0.0, 5.0]` without pause-gap inflation, and verify zero/empty/non-finite safety guards.
+  3. *Stationary Covariance Freeze, `0.00 m` Indoor Haversine Pinning & Contracts (`TST-FIL-032.3`, `UnicycleOdometryEkfTest.kt`, `ExtendedRtsOdometrySmootherTest.kt`, `ErtsPostWorkoutRecomputerTest.kt`, `TrackerServiceErtsFinalizationTest.kt`, `ArchitectureConformanceContractTest.kt`, `SystemLiveTrackingRequirementsContractTest.kt`, `SourceTextReadingAuditContractTest.kt`)*:
+     • Verify `UnicycleOdometryEkf.predict(isStationary = true)` freezes `[E, N]`, zeroes `F[0..1, 2..4]` and `Q_POS` (zero `P_pos` growth over `118 s`, SPD invertible `P_{k+1|k}`), leaving default `isStationary = false` untouched.
+     • Verify `ExtendedRtsOdometrySmoother.smoothSamples()` and `smoothSnapshots()` yield `0.00 m` Haversine drift and `0.00 m` `deltaDistanceMeters` across a `118 s` (`acc = 48.5 m`) indoor stop with `+35.66 m` departure jump while preserving `TST-FIL-027.3` & canopy Doppler-dropout (`wheelSpeedMps = 10.0`).
+     • Verify `ArchitectureConformanceContractTest` (`0` protected monolith edits; all 3 touched files `< 1,500` LoC), `SystemLiveTrackingRequirementsContractTest`, `SourceTextReadingAuditContractTest` (`0` new `src/main` reads), and `Localization Parity: N/A - no UI strings`.
+
 ---
 
 ## Change History
@@ -3720,3 +3738,6 @@
 | `1.0.73` | 2026-11-19 | AI Agent (`ATT-8859`, `--as agent1`) | `ATT-8859` | Added `TST-SEN-032` `[Planned]` (`TST-SEN-032.1`, `TST-SEN-032.2`) for `WheelPositionSelectionDialog` Front/Rear-only behavioral Compose UI testing (`WheelPositionSelectionDialogUiTest`), legacy `UNSPECIFIED` fallback preservation, `DeadCodeEliminationContractTest`, `SourceTextReadingAuditContractTest`, and `Rule 8.5` Light/Dark PNG (`Localization Parity: N/A - no UI strings`). |
 | `1.0.74` | 2026-11-19 | AI Agent (`ATT-8859`, `--as agent1`) | `ATT-8859` | Promoted `TST-SEN-032` to `[Implemented]` following Stage 4 test execution (`35/35` PASS across 6 suites post-rebase onto `6927b2f8`: `WheelPositionSelectionDialogUiTest 4/4`, `WheelPositionDialogsTest 4/4`, `EditDeviceEquipmentWheelPositionTest 5/5`, `ArchitectureConformanceContractTest 11/11`, `DeadCodeEliminationContractTest 5/5`, `SourceTextReadingAuditContractTest 6/6`) and `Rule 8.5` Light/Dark PNG inspection. |
 | `1.0.75` | 2026-11-19 | AI Agent (`ATT-8859`, `--as agent1`) | `ATT-8859` | Promoted `TST-SEN-032` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9145`) `35/35` PASS evidence (`Rule 7.5`, zero `app/` diff since `9e265f02`), `Rule 8.5` Light/Dark PNG (`ATT-8859_wheel_position_dialog.png`), and `verify_requirement_governance.py` `exit 0`. |
+| `1.0.76` | 2026-11-19 | AI Agent (`ATT-9064`, `--as agent1`) | `ATT-9064` | Added `TST-FIL-032` `[Planned]` (`TST-FIL-032.1`–`.3`) covering `584`-row `78`-pair `0/2` `TIME_TOTAL` beat non-stretching & pause/stall parity, `speedAverage_mps` / `Extrema(AVG)` / `Laps.db` parity + matched `activeDist / activeDt` fallback, and `UnicycleOdometryEkf.predict(isStationary = true)` + `0.00 m` indoor Haversine pinning (`N/A - no UI strings`). |
+| `1.0.77` | 2026-11-19 | AI Agent (`ATT-9064`, `--as agent1`) | `ATT-9064` | Promoted `TST-FIL-032` to `[Implemented]` following Stage 4 incremental `--rerun` verification (`84/84` PASS across 9 suites: `ErtsPostWorkoutRecomputerTest 17/17`, `ExtendedRtsOdometrySmootherTest 12/12`, `UnicycleOdometryEkfTest 17/17`, `TrackerServiceErtsFinalizationTest 2/2`, `LapsDatabaseManagerTest 10/10`, `ArchitectureConformanceContractTest 11/11`, `SystemLiveTrackingRequirementsContractTest 4/4`, `DeadCodeEliminationContractTest 5/5`, `SourceTextReadingAuditContractTest 6/6`). |
+| `1.0.78` | 2026-11-19 | AI Agent (`ATT-9064`, `--as agent1`) | `ATT-9064` | Promoted `TST-FIL-032` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9167`) `84/84` PASS evidence (`Rule 7.5`, zero `app/` diff since `75f3bff9`), 4 safety linters PASS, `verify_requirement_governance.py` `exit 0`, and `docs/engineering/walkthroughs/ATT-9064_walkthrough.md`. |

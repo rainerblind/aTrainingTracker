@@ -640,4 +640,144 @@ class ExtendedRtsOdometrySmootherTest {
         }
         assertTrue("Handlebar post-stop riding speed must recover cleanly", smoothed[50].speedMps > 5.0)
     }
+
+    // TST-FIL-032.3: 118s indoor bakery stop with +35.66 m departure jump pins [E, N] to 0.00 m Haversine drift
+    @Test
+    fun testStationaryIndoorStop_pinsCoordinatesToZeroHaversineDriftAcross118sOutage_tstFil032_3() {
+        val samples = mutableListOf<RawOdometrySample>()
+        var tMs = 6_000_000L
+        var east = 0.0
+        val rideSpeed = 6.0
+
+        // 0..99: Arrival riding East at 6.0 m/s (acc = 3.0 m)
+        for (i in 0 until 100) {
+            val (lat, lon) = ExtendedRtsOdometrySmoother.enuToLatLng(east, 0.0, originLat, originLon)
+            samples.add(
+                RawOdometrySample(
+                    timestampMs = tMs,
+                    latitude = lat,
+                    longitude = lon,
+                    speedMps = rideSpeed,
+                    bearingDeg = 90.0,
+                    accuracyMeters = 3.0,
+                    worldYawRateRadPerSec = 0.0,
+                    wheelSpeedMps = null
+                )
+            )
+            tMs += 1000L
+            east += rideSpeed
+        }
+
+        // 100..217: 118-second indoor bakery counter stop (speed = 0.00 m/s, acc = 48.5 m > 20 m)
+        val stopEast = east
+        for (i in 100 until 218) {
+            val indoorJitterE = stopEast + (i - 100) * 0.25
+            val indoorJitterN = if (i % 2 == 0) 15.0 else -15.0
+            val (lat, lon) = ExtendedRtsOdometrySmoother.enuToLatLng(indoorJitterE, indoorJitterN, originLat, originLon)
+            samples.add(
+                RawOdometrySample(
+                    timestampMs = tMs,
+                    latitude = lat,
+                    longitude = lon,
+                    speedMps = 0.0,
+                    bearingDeg = null,
+                    accuracyMeters = 48.5,
+                    worldYawRateRadPerSec = 0.0,
+                    wheelSpeedMps = null,
+                    carriageMode = PhoneCarriageMode.STATIONARY
+                )
+            )
+            tMs += 1000L
+        }
+
+        // 218..317: Departure with +35.66 m building-exit GNSS jump, then 6.0 m/s riding East
+        east = stopEast + 35.66
+        for (i in 218 until 318) {
+            val (lat, lon) = ExtendedRtsOdometrySmoother.enuToLatLng(east, 0.0, originLat, originLon)
+            samples.add(
+                RawOdometrySample(
+                    timestampMs = tMs,
+                    latitude = lat,
+                    longitude = lon,
+                    speedMps = rideSpeed,
+                    bearingDeg = 90.0,
+                    accuracyMeters = 3.0,
+                    worldYawRateRadPerSec = 0.0,
+                    wheelSpeedMps = null
+                )
+            )
+            tMs += 1000L
+            east += rideSpeed
+        }
+
+        val smoothed = ExtendedRtsOdometrySmoother.smoothSamples(samples, initialHeadingRad = 0.0)
+        assertEquals(318, smoothed.size)
+
+        var indoorHaversineMeters = 0.0
+        for (i in 100 until 218) {
+            assertEquals("Indoor stop speed must stay 0.0 m/s at $i", 0.0, smoothed[i].speedMps, 1e-9)
+            assertEquals("Indoor stop deltaDistanceMeters must stay 0.0 m at $i", 0.0, smoothed[i].deltaDistanceMeters, 1e-9)
+            if (i > 100) {
+                indoorHaversineMeters += haversineMeters(
+                    smoothed[i - 1].latitude,
+                    smoothed[i - 1].longitude,
+                    smoothed[i].latitude,
+                    smoothed[i].longitude
+                )
+            }
+        }
+        assertEquals("Indoor stop Haversine coordinate drift must be 0.00 m", 0.0, indoorHaversineMeters, 1e-6)
+        assertEquals(smoothed[100].latitude, smoothed[217].latitude, 1e-12)
+        assertEquals(smoothed[100].longitude, smoothed[217].longitude, 1e-12)
+
+        // Pre-stop & post-stop moving speeds and GNSS re-acquisition remain healthy (TST-FIL-027.3 parity)
+        for (i in 5 until 95) {
+            assertTrue("Pre-stop moving speed must stay > 4.0 m/s at $i (was ${smoothed[i].speedMps})", smoothed[i].speedMps > 4.0)
+        }
+        for (i in 223 until 313) {
+            assertTrue("Post-stop moving speed must stay > 4.0 m/s at $i (was ${smoothed[i].speedMps})", smoothed[i].speedMps > 4.0)
+        }
+    }
+
+    // TST-FIL-032.3: Direct smoothSnapshots() also pins consecutive stationary [E, N] coordinates to 0.00 m drift
+    @Test
+    fun testSmoothSnapshots_pinsConsecutiveStationaryPositionsDirectly_tstFil032_3() {
+        val ekf = UnicycleOdometryEkf(initialEast = 0.0, initialNorth = 0.0, initialSpeed = 0.0, initialHeadingRad = 0.0, recordSnapshots = false)
+        val snapshots = mutableListOf<OdometrySnapshot>()
+        val stationaryMask = BooleanArray(12) { it in 2..8 }
+
+        for (i in 0 until 12) {
+            val ts = 7_000_000L + i * 1000L
+            // Intentionally call default non-stationary predict to verify smoothSnapshots() pinning alone enforces 0.00 m
+            ekf.predict(dtSec = 1.0, gyroYawRateRadPerSec = 0.0, timestampMs = ts)
+            val priorState = doubleArrayOf(ekf.eastMeters, ekf.northMeters, ekf.speedMps, ekf.headingRad, ekf.gyroBiasRadPerSec)
+            val priorCov = ekf.getCovarianceCopy()
+            val jac = ekf.getTransitionJacobianCopy()
+            if (stationaryMask[i]) {
+                ekf.applyZeroVelocityUpdate(ts)
+            } else {
+                val targetE = if (i < 2) i * 5.0 else 45.0 + (i - 9) * 5.0
+                ekf.updateGnssPosition(targetE, 0.0, 3.0, ts, isStationary = false)
+                ekf.updateSpeed(5.0, 0.5, ts)
+            }
+            val postState = doubleArrayOf(ekf.eastMeters, ekf.northMeters, ekf.speedMps, ekf.headingRad, ekf.gyroBiasRadPerSec)
+            val postCov = ekf.getCovarianceCopy()
+            snapshots.add(OdometrySnapshot(ts, 1.0, priorState, priorCov, jac, postState, postCov))
+        }
+
+        val smoothed = ExtendedRtsOdometrySmoother.smoothSnapshots(snapshots, originLat, originLon, stationaryMask)
+        for (i in 3..8) {
+            val dM = haversineMeters(smoothed[i - 1].latitude, smoothed[i - 1].longitude, smoothed[i].latitude, smoothed[i].longitude)
+            assertEquals("Direct smoothSnapshots() must pin consecutive stationary step $i to 0.00 m", 0.0, dM, 1e-6)
+        }
+    }
+
+    private fun haversineMeters(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
+        val dLat = Math.toRadians(lat2 - lat1)
+        val dLon = Math.toRadians(lon2 - lon1)
+        val a = kotlin.math.sin(dLat / 2.0) * kotlin.math.sin(dLat / 2.0) +
+            kotlin.math.cos(Math.toRadians(lat1)) * kotlin.math.cos(Math.toRadians(lat2)) *
+            kotlin.math.sin(dLon / 2.0) * kotlin.math.sin(dLon / 2.0)
+        return 2.0 * ExtendedRtsOdometrySmoother.EARTH_RADIUS_METERS * kotlin.math.atan2(kotlin.math.sqrt(a), kotlin.math.sqrt(1.0 - a))
+    }
 }
