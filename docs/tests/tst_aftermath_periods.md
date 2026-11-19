@@ -1,14 +1,14 @@
 # Living Test Specification: Post-Workout Analytics & Periods
 
 **Document ID**: `DOC-TST-PERIODS`  
-**Version**: 1.0.12  
+**Version**: 1.0.15  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `aftermath_periods`  
 **Prefixes**: `PER`, `PERF`, `RAD`, `SPT`  
 **Scope**: Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers.  
-**Total Tests**: 70
+**Total Tests**: 71
 
 ---
 
@@ -1170,7 +1170,7 @@
 - **Localization Parity**: `N/A - no UI strings`
 - **Test Description**:
   1. *Inverted 3-Zone Math & Threshold Dash Filtering (`TST-HRV-044.1`, `TelemetryZoneMathTest.kt`)*:
-     • Verify `calculateHrvDfaA1ZoneBands` clamps `[dataMin, dataMax]` (`[0.2, 1.4]`) into Aerob (`Zone2`, top `[T1, dataMax]`), Schwelle (`Zone3`, middle `[T2, T1]`), and Anaerob (`Zone4`, bottom `[dataMin, T2]`) across default (`0.75`/`0.50`) and custom (`T1 = 1.50f` `MAX_DFA_A1_THRESHOLD`, `T2 = 0.15f`) inputs.
+     • Verify `calculateHrvDfaA1ZoneBands` clamps `[dataMin, dataMax]` (`[0.2, 1.4]`) into Anaerob (`Zone4`, top `[dataMin, T2]` per inverted effort Y-axis refined in `TST-HRV-046` / `ATT-8953`), Schwelle (`Zone3`, middle `[T2, T1]`), and Aerob (`Zone2`, bottom `[T1, dataMax]`) across default (`0.75`/`0.50`) and custom (`T1 = 1.50f` `MAX_DFA_A1_THRESHOLD`, `T2 = 0.15f`) inputs.
      • Verify `determineHrvDfaA1Zone` preserves `α1 > T1 -> Zone2`, `T2 <= α1 <= T1 -> Zone3` (`α1 == T1 -> Zone3`), `α1 < T2 -> Zone4`; verify `calculateHrvDfaA1ThresholdDashes` excludes out-of-range thresholds (`>= dataMax` or `<= dataMin`).
   2. *Scatter Dot Dynamic Threshold Parity (`TST-HRV-044.2`, `HrvAlpha1ScatterChartTest.kt`)*:
      • Render/evaluate `HrvAlpha1ScatterChart` with custom `t1`/`t2` (e.g., `t1 = 0.85f`, `t2 = 0.60f`) and assert scatter point colors match `HrvZoneIndicator.calculateZoneColor(p.alpha1, t1, t2)` rather than hardcoded defaults.
@@ -1250,6 +1250,30 @@
 
 ---
 
+### TST-HRV-046: **Inverted DFA alpha 1 Y-Axis Mapping, Gradient Stops & Spatial Pixel Verification Suite** (`ATT-8953`) [Verified]
+- **Requirement(s)**: `REQ-HRV-046` (`REQ-HRV-046.1`..`REQ-HRV-046.4`)
+- **Component**: `TelemetryZoneMath.kt`, `TelemetryMetricGraph.kt`, `TelemetryZoneMathTest.kt`, `TelemetryMetricGraphHrvUiTest.kt`, `TelemetryMetricGraphHrvTest.kt`, `HrvAlpha1ScatterChartUiTest.kt`, `ArchitectureConformanceContractTest.kt`, `DeadCodeEliminationContractTest.kt`, `SourceTextReadingAuditContractTest.kt`
+- **Jira**: `ATT-8953`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Localization Parity**: `N/A - no UI strings`
+- **Test Description**:
+  1. *Shared Y-Inversion Helper & Inverted Gradient Boundary Unit Tests (`TST-HRV-046.1`, `TelemetryZoneMathTest.kt`)*:
+     • Verify `isInvertedTelemetryYAxis` returns `true` for `PACE` and `HRV_DFA_A1` and `false` for `HEART_RATE`, `POWER`, `SPEED`, `SLOPE`, `HRV_RMSSD`.
+     • Verify `mapTelemetryValueToY` maps `0.20 -> top`, `0.50 -> 25%`, `0.75 -> 45.83%`, `1.40 -> bottom` when inverted.
+     • Verify `buildHrvDfaA1VerticalGradientStops` produces monotonically non-decreasing stops in `[0f, 1f]` with `0f = Zone4` (Anaerob top) -> `1f = Zone2` (Aerob bottom) for default (`0.75/0.50`), degenerate (`T1 == T2 = 0.70`), exact boundary (`T2 = 0.20`, `T1 = 1.40`), and out-of-range (`T1 = 1.50f`/`T2 = 0.50f`, `T1 = 1.50f`/`T2 = 0.15f`) thresholds.
+  2. *Spatial Top-vs-Bottom Compose UI Pixel Verification — Portrait & Landscape (`TST-HRV-046.2`, `TelemetryMetricGraphHrvUiTest.kt`)*:
+     • Using `createComposeRule()` (`0` `src/main` reads), render `TelemetryMetricGraph(HRV_DFA_A1)` in portrait (`isLandscape = false`) and landscape (`isLandscape = true` with `AlignedMarginalLinearDistribution`): assert top band of plot & marginal histogram renders `Zone4` red (and NOT `Zone2` green) while bottom band renders `Zone2` green (and NOT `Zone4` red).
+  3. *Rule 8.5 Light/Dark PNG Capture & Historical Asset Integrity (`TST-HRV-046.3`, `TelemetryMetricGraphHrvUiTest.kt`)*:
+     • Preserve `docs/engineering/walkthroughs/img/ATT-8710_dfa_a1_zone_graph.png` untouched; capture deterministic side-by-side Light & Dark PNG to `docs/engineering/walkthroughs/img/ATT-8953_dfa_a1_inverted_yaxis.png` and inspect via `read_file` against the 4-point Rule 8.5 checklist.
+  4. *Out-of-Range Thresholds, Heart Rate & Scatter Orientation Invariance (`TST-HRV-046.4`, `TelemetryMetricGraphHrvUiTest.kt`, `HrvAlpha1ScatterChartUiTest.kt`)*:
+     • Assert `T1 = 1.50f` emits `Zone4` top / `Zone3` bottom without `Zone2`, `HEART_RATE` preserves solid `CRIMSON` stroke, and `HrvAlpha1ScatterChart` keeps standard Cartesian orientation (`REQ-PER-035.4`).
+  5. *Tier 1 Targeted Regression & Architecture Contracts (`TST-HRV-046.5`)*:
+     • Run `./gradlew :app:testDebugUnitTest --rerun --tests "*TelemetryZoneMathTest" --tests "*TelemetryMetricGraphHrvUiTest" --tests "*TelemetryMetricGraphHrvTest" --tests "*TelemetryMetricGraphZoneTest" --tests "*HrvAlpha1ScatterChartUiTest" --tests "*ArchitectureConformanceContractTest" --tests "*DeadCodeEliminationContractTest" --tests "*SourceTextReadingAuditContractTest"` verifying `TelemetryMetricGraph.kt <= 1,965` LoC, `private fun` `@Preview`s, and `0` `src/main` reads.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -1267,3 +1291,6 @@
 | `1.0.10` | 2026-11-19 | Lane B Author (`ATT-8846`, `--as agent1`) | `ATT-8846` | Added `TST-HRV-045` (`[Planned]`, `.1`–`.5`) covering parameterized `NavRoutes.morningHrv`, `MorningHrvCheckContent` `forceFullHrv` override/regression, Rule 8.5 Light/Dark PNG, `emulator-5554` verification, and architecture contracts. |
 | `1.0.11` | 2026-11-19 | Lane B Author (`ATT-8846`, `--as agent1`) | `ATT-8846` | Promoted `TST-HRV-045` to `[Implemented]` with `MorningHrvCheckScreenTest` `10/10`, `SingleActivityNavigationTest` `16/16`, `ArchitectureConformanceContractTest` `11/11`, `SourceTextReadingAuditContractTest` `6/6` PASS, and Rule 8.5 Light/Dark PNG (`ATT-8846_morning_hrv_force_full.png`) inspected. |
 | `1.0.12` | 2026-11-19 | Lane B Author (`ATT-8846`, `--as agent1`) | `ATT-8846` | Promoted `TST-HRV-045` to `[Verified]` in Stage 5 reusing Gate 4 `43/43 PASS` evidence (`Rule 7.5`, `0` `app/` code drift since `c7c6cc76`), Rule 8.5 PNG certification, and governance parity check atop `6927b2f8`. |
+| `1.0.13` | 2026-11-19 | Lane B Author (`ATT-8953`, `--as agent1`) | `ATT-8953` | Added `TST-HRV-046` (`[Planned]`, `.1`–`.5`) for inverted DFA alpha 1 Y-axis unit math, portrait+landscape spatial pixel verification, Rule 8.5 Light/Dark PNG, and architecture contracts; reconciled `TST-HRV-044.1` top/bottom band order. |
+| `1.0.14` | 2026-11-19 | Lane B Author (`ATT-8953`, `--as agent1`) | `ATT-8953` | Promoted `TST-HRV-046` to `[Implemented]` with 100% PASS across all 8 suites (`56/56`) and Rule 8.5 Light/Dark PNG (`ATT-8953_dfa_a1_inverted_yaxis.png`) inspected. |
+| `1.0.15` | 2026-11-19 | Lane B Author (`ATT-8953`, `--as agent1`) | `ATT-8953` | Promoted `TST-HRV-046` to `[Verified]` in Stage 5 reusing Gate 4 verified `56/56 PASS` evidence across all 8 suites (`Rule 7.5`, `0` `app/` code drift since `c152801d`), Rule 8.5 PNG certification, and governance sync atop `2d7f1489`. |

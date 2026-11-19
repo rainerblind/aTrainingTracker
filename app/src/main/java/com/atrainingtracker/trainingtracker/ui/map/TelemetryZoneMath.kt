@@ -377,9 +377,43 @@ object TelemetryZoneMath {
     }
 
     /**
+     * Returns true when smaller numeric values represent higher physiological effort and should be
+     * plotted toward the top of the chart (`PACE` and `HRV_DFA_A1`) (`REQ-HRV-046.1`).
+     */
+    fun isInvertedTelemetryYAxis(metricType: TelemetryMetricType?): Boolean {
+        return metricType == TelemetryMetricType.PACE || metricType == TelemetryMetricType.HRV_DFA_A1
+    }
+
+    /**
+     * Maps a metric [value] within `[dataMin, dataMax]` onto canvas Y coordinates in
+     * `[topPaddingPx, topPaddingPx + chartHeightPx]`, preserving `(dataMax - dataMin).coerceAtLeast(1.0)`
+     * range safety across all telemetry metrics (`REQ-HRV-046.1`).
+     *
+     * When [isInverted] is true (`PACE`, `HRV_DFA_A1`), `dataMin` maps to `topPaddingPx` (top) and
+     * `dataMax` maps to `topPaddingPx + chartHeightPx` (bottom).
+     */
+    fun mapTelemetryValueToY(
+        value: Double,
+        dataMin: Double,
+        dataMax: Double,
+        topPaddingPx: Float,
+        chartHeightPx: Float,
+        isInverted: Boolean
+    ): Float {
+        val valRange = (dataMax - dataMin).coerceAtLeast(1.0)
+        val ratio = ((value - dataMin) / valRange).coerceIn(0.0, 1.0)
+        return if (isInverted) {
+            (topPaddingPx + ratio * chartHeightPx).toFloat()
+        } else {
+            (topPaddingPx + (1.0 - ratio) * chartHeightPx).toFloat()
+        }
+    }
+
+    /**
      * Builds monotonically non-decreasing `[0f, 1f]` vertical gradient color stops spanning
-     * `[dataMin, dataMax]` where `0f` maps to `dataMax` (top) and `1f` maps to `dataMin` (bottom).
-     * (REQ-HRV-044.1 / ATT-8710)
+     * `[dataMin, dataMax]` on the inverted DFA alpha 1 Y-axis where `0f` maps to `dataMin`
+     * (top, Anaerob / harder effort) and `1f` maps to `dataMax` (bottom, Aerob / easier effort).
+     * (`REQ-HRV-044.1`, `REQ-HRV-046.2` / `ATT-8953`)
      */
     fun buildHrvDfaA1VerticalGradientStops(
         t1: Float,
@@ -396,42 +430,43 @@ object TelemetryZoneMath {
         val effT1 = maxOf(t1, t2).toDouble()
         val range = dataMax - dataMin
         val eps = 0.001f
+        val boundaryEps = 1e-5
 
         fun alphaAt(fraction: Float): Float {
             return (topAlpha + (bottomAlpha - topAlpha) * fraction).coerceIn(0f, 1f)
         }
 
         val topBaseColor = when {
-            dataMax > effT1 -> TTColor.Zone2
-            dataMax > effT2 -> TTColor.Zone3
-            else -> TTColor.Zone4
+            effT2 > dataMin + boundaryEps -> TTColor.Zone4
+            effT1 > dataMin + boundaryEps -> TTColor.Zone3
+            else -> TTColor.Zone2
         }
         val bottomBaseColor = when {
-            dataMin >= effT1 -> TTColor.Zone2
-            dataMin >= effT2 -> TTColor.Zone3
-            else -> TTColor.Zone4
+            effT2 >= dataMax - boundaryEps -> TTColor.Zone4
+            effT1 >= dataMax - boundaryEps -> TTColor.Zone3
+            else -> TTColor.Zone2
         }
 
         val stops = mutableListOf<Pair<Float, Color>>()
         stops.add(0f to topBaseColor.copy(alpha = alphaAt(0f)))
         var lastStop = 0f
 
-        if (effT1 > dataMin && effT1 < dataMax) {
-            val frac = ((dataMax - effT1) / range).toFloat().coerceIn(0f, 1f)
+        if (effT2 > dataMin + boundaryEps && effT2 < dataMax - boundaryEps) {
+            val frac = ((effT2 - dataMin) / range).toFloat().coerceIn(0f, 1f)
             val upperStop = (frac - eps).coerceIn(lastStop, 1f)
             val lowerStop = (frac + eps).coerceIn(upperStop, 1f)
-            val belowColor = if (effT1 > effT2) TTColor.Zone3 else TTColor.Zone4
-            stops.add(upperStop to TTColor.Zone2.copy(alpha = alphaAt(upperStop)))
+            val belowColor = if (effT2 < effT1 - boundaryEps) TTColor.Zone3 else TTColor.Zone2
+            stops.add(upperStop to TTColor.Zone4.copy(alpha = alphaAt(upperStop)))
             stops.add(lowerStop to belowColor.copy(alpha = alphaAt(lowerStop)))
             lastStop = lowerStop
         }
 
-        if (effT2 > dataMin && effT2 < dataMax && effT2 < effT1) {
-            val frac = ((dataMax - effT2) / range).toFloat().coerceIn(0f, 1f)
+        if (effT1 > dataMin + boundaryEps && effT1 < dataMax - boundaryEps && effT1 > effT2 + boundaryEps) {
+            val frac = ((effT1 - dataMin) / range).toFloat().coerceIn(0f, 1f)
             val upperStop = (frac - eps).coerceIn(lastStop, 1f)
             val lowerStop = (frac + eps).coerceIn(upperStop, 1f)
             stops.add(upperStop to TTColor.Zone3.copy(alpha = alphaAt(upperStop)))
-            stops.add(lowerStop to TTColor.Zone4.copy(alpha = alphaAt(lowerStop)))
+            stops.add(lowerStop to TTColor.Zone2.copy(alpha = alphaAt(lowerStop)))
         }
 
         stops.add(1f to bottomBaseColor.copy(alpha = alphaAt(1f)))

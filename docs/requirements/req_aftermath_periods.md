@@ -1,14 +1,14 @@
 # Living Requirements: Post-Workout Analytics & Periods
 
 **Document ID**: `DOC-REQ-PERIODS`  
-**Version**: 1.0.11  
+**Version**: 1.0.14  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `aftermath_periods`  
 **Prefixes**: `PER`, `PERF`, `RAD`, `SPT`  
 **Scope**: Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers.  
-**Total Requirements**: 64
+**Total Requirements**: 65
 
 ---
 
@@ -1785,7 +1785,7 @@
 - **Rationale**: In Workout Details, `TelemetryMetricGraph` (`HRV_DFA_A1`) renders dashed threshold lines at `dfaA1ThresholdT2`/`dfaA1ThresholdT1` without zone bands or zone-colored curve/fill/histogram/cursor styling, does not guard the `52.dp` right margin against label-vs-histogram overlap, does not filter dashes outside `[0.2, 1.4]` (up to `MAX_DFA_A1_THRESHOLD = 1.50f`), and `HrvAlpha1ScatterChart.kt` omits `t1`/`t2` when calling `HrvZoneIndicator.calculateZoneColor`.
 - **Description**:
   1. *Inverted 3-Zone DFA $\alpha_1$ Bands & Curve/Fill/Histogram/Cursor Coloring (`REQ-HRV-044.1`)*:
-     - `TelemetryZoneMath` SHALL partition `[dataMin, dataMax]` into up to 3 clamped inverted DFA $\alpha_1$ bands with exact `HrvZoneIndicator.calculateZoneColor` parity: Aerob (`α1 > T1`, `TTColor.Zone2`, top band `[T1, dataMax]`), Schwelle (`T2 <= α1 <= T1`, `TTColor.Zone3`, middle band `[T2, T1]`), and Anaerob (`α1 < T2`, `TTColor.Zone4`, bottom band `[dataMin, T2]`), preserving `α1 == T1 -> Zone3`.
+     - `TelemetryZoneMath` SHALL partition `[dataMin, dataMax]` into up to 3 clamped inverted DFA $\alpha_1$ bands with exact `HrvZoneIndicator.calculateZoneColor` parity: Anaerob (`α1 < T2`, `TTColor.Zone4`, top band `[dataMin, T2]` per inverted effort Y-axis refined in `REQ-HRV-046` / `ATT-8953`), Schwelle (`T2 <= α1 <= T1`, `TTColor.Zone3`, middle band `[T2, T1]`), and Aerob (`α1 > T1`, `TTColor.Zone2`, bottom band `[T1, dataMax]`), preserving `α1 == T1 -> Zone3`.
      - For `TelemetryMetricType.HRV_DFA_A1`, `TelemetryMetricGraph` SHALL render horizontal background bands (`ZONE_BAND_ALPHA`), zone-colored curve stroke and under-curve fill (`Brush.verticalGradient` mapped to `valueToY(T1)`/`valueToY(T2)` across `[dataMin, dataMax]` with `> 5.0%` artifact gap breaks preserved), single-point dot, interactive scrubbing cursor dot/halo, and `nonZonedHistogram` bins (if supplied) colored by zone.
   2. *Right-Margin `52.dp` Layout Coordination (`REQ-HRV-044.2`)*:
      - Inside the `52.dp` `endPadding` strip in portrait (`!isLandscape`), right-hand zone labels (`band.label`) and `nonZonedHistogram` bars MUST remain cleanly disjoint: right-hand zone labels SHALL render only when `zoneDistribution == null && nonZonedHistogram.isEmpty() && !isLandscape`, suppressing duplicate axis text whenever `nonZonedHistogram` occupies the strip.
@@ -1801,7 +1801,7 @@
   3. *Root Reason for Existing Formulation*: `ATT-3544` focused on centered recompute, `[0.2, 1.4]` clamping, and artifact hatching, leaving `zoneBands` unimplemented for `HRV_DFA_A1` and `HrvAlpha1ScatterChart` on default thresholds.
   4. *Preservation of Core Invariants*: `HR`/`Power` solid curves (`REQ-UI-230`), `[0.2, 1.4]` Y-clamping, `> 5.0%` artifact gap hatching (`REQ-PER-035.2`), `50.dp`/`52.dp` margins, and `α1 == T1 -> Zone3` (`TrackingHrvZoneIndicatorTest`) remain untouched.
 - **Acceptance Criteria (Given-When-Then)**:
-  • *Given* valid `HRV_DFA_A1` trackpoints and custom `T1`/`T2` within `(0.2, 1.4)`, *When* rendering `TelemetryMetricGraph`, *Then* 3 inverted zone bands (`Zone2` top, `Zone3` middle, `Zone4` bottom), matching gradient stroke/fill, filtered threshold dashes, and zone-colored cursor dot render across Light/Dark/AMOLED without margin collisions.
+  • *Given* valid `HRV_DFA_A1` trackpoints and custom `T1`/`T2` within `(0.2, 1.4)`, *When* rendering `TelemetryMetricGraph`, *Then* 3 inverted zone bands (`Zone4` Anaerob top, `Zone3` Schwelle middle, `Zone2` Aerob bottom per `REQ-HRV-046`), matching gradient stroke/fill, filtered threshold dashes, and zone-colored cursor dot render across Light/Dark/AMOLED without margin collisions.
   • *Given* `T1 = 1.50f` (`> 1.4`), *When* computing threshold dashes and bands for `[0.2, 1.4]`, *Then* `T1` dash is filtered out and the top band clamps cleanly to `1.4`.
   • *Given* scatter points in `HrvAlpha1ScatterChart` with custom `t1`/`t2`, *When* rendering dots, *Then* each dot color matches `HrvZoneIndicator.calculateZoneColor(p.alpha1, t1, t2)`.
 - **Invariants**: `HR`/`Power` solid strokes preserved, `α1 == T1 -> Zone3` preserved, zero `src/main` reads in tests (`REQ-PRO-049.1`), zero DB/DataStore schema changes.
@@ -1927,6 +1927,36 @@
 
 ---
 
+### REQ-HRV-046: Inverted Y-Axis Orientation for Workout Details DFA alpha 1 Graph (`ATT-8953`) [Verified]
+- **System Requirement(s)**: Derived (SW-only) — Inverted Y-axis mapping (`0.20` Anaerob top -> `1.40` Aerob bottom) for `TelemetryMetricGraph` (`HRV_DFA_A1`) and aligned marginal histograms (refining `REQ-HRV-044.1` and `REQ-PER-035.3`)
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-HRV-046`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Implementation**: `TelemetryZoneMath.kt`, `TelemetryMetricGraph.kt`
+- **Rationale**: In Workout Details, `TelemetryMetricGraph(HRV_DFA_A1)` stacks vertically alongside Heart Rate, Power, and inverted `PACE` graphs (`Rule 64`), yet currently maps larger $\alpha_1$ values (`1.40` Aerob) to the top and smaller $\alpha_1$ values (`0.20` Anaerob) to the bottom, causing harder exercise intensity to slope downward. Inverting the `HRV_DFA_A1` Y-axis aligns visual effort direction across all stacked telemetry charts (`ATT-8953`).
+- **Description**:
+  1. *Shared Inverted Y-Axis Mapping Across All 3 Canvases (`REQ-HRV-046.1`)*:
+     - `TelemetryZoneMath` SHALL provide shared pure helpers (`isInvertedTelemetryYAxis(metricType)` returning `true` for `PACE` and `HRV_DFA_A1`; `mapTelemetryValueToY(value, dataMin, dataMax, topPaddingPx, chartHeightPx, isInverted)`) reused by `TelemetryMetricGraph`, `AlignedMarginalLinearDistribution`, and `AlignedMarginalZoneDistribution`, mapping `dataMin` (`0.20`, Anaerob) to `topPaddingPx` (top) and `dataMax` (`1.40`, Aerob) to `topPaddingPx + chartHeightPx` (bottom).
+  2. *Inverted Vertical Gradient Stops & Exact Boundary Inequalities (`REQ-HRV-046.2`)*:
+     - `TelemetryZoneMath.buildHrvDfaA1VerticalGradientStops` SHALL map stop `0f` (top) to `dataMin` and `1f` (bottom) to `dataMax` with monotonically non-decreasing stops (`effT2` at `(effT2 - dataMin) / range`, then `effT1` at `(effT1 - dataMin) / range`), using `topBaseColor = when { dataMin < effT2 -> Zone4; dataMin < effT1 -> Zone3; else -> Zone2 }` and `bottomBaseColor = when { dataMax > effT1 -> Zone2; dataMax > effT2 -> Zone3; else -> Zone4 }`, cleanly handling exact bounds (`T2 = 0.20`, `T1 = 1.40`), degenerate `T1 == T2`, and out-of-range thresholds (`T1 = 1.50f`, `T2 = 0.15f`).
+  3. *Inverted Y-Axis Labels, Zone Bands, Fill, Dashes, Histograms & Scatter Invariance (`REQ-HRV-046.3`)*:
+     - For `HRV_DFA_A1`, `TelemetryMetricGraph` SHALL render `dataMin` (`0.20`) at the top Y-axis label (`maxLabel`) and `dataMax` (`1.40`) at the bottom Y-axis label (`minLabel`), align Anaerob (`Zone4` red) top / Schwelle (`Zone3` orange) middle / Aerob (`Zone2` green) bottom across zone bands, gradient curve/fill (filling down to bottom `baselineY`), threshold dashes/labels, cursor/single-point dots, and portrait/landscape marginal histograms. `HrvAlpha1ScatterChart.kt` SHALL remain untouched in standard Cartesian orientation (`REQ-PER-035.4`).
+  4. *Architecture Ceilings, Asset Integrity & Private Previews (`REQ-HRV-046.4`)*:
+     - `TelemetryMetricGraph.kt` MUST stay `<= 1,965` LoC (`ArchitectureConformanceContractTest`), any new `@Preview` MUST be `private fun` (`DeadCodeEliminationContractTest`), tests MUST perform `0` `src/main` reads (`SourceTextReadingAuditContractTest`), historical `docs/engineering/walkthroughs/img/ATT-8710_dfa_a1_zone_graph.png` MUST remain untouched while capturing new Light/Dark PNG to `docs/engineering/walkthroughs/img/ATT-8953_dfa_a1_inverted_yaxis.png`, and `Localization Parity: N/A - no UI strings`.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: `REQ-HRV-044` (`REQ-HRV-044.1`, `TST-HRV-044.1`, `ATT-8710`) and `REQ-PER-035.3`, targeting `TelemetryZoneMath.kt` and `TelemetryMetricGraph.kt`.
+  2. *Historical Origin & Commit Trace*: `ATT-3544` (`3db57718`) added `[0.2, 1.4]` DFA $\alpha_1$ plotting; `ATT-8710` (`886eae05`) added 3-zone bands and gradient on the non-inverted Y-axis (`Zone2` top, `Zone4` bottom).
+  3. *Root Reason for Existing Formulation*: `ATT-8710` matched `TelemetryMetricGraph`'s default `(1.0 - ratio)` orientation without inverting Y, resulting in green easy effort at the top and red hard effort at the bottom.
+  4. *Preservation of Core Invariants*: Preserves `[0.2, 1.4]` clamping, `> 5.0%` artifact hatching, `50.dp`/`52.dp` margins (`Rule 64`), `α1 == T1 -> Zone3` boundary polarity, `HEART_RATE`/`POWER` solid curves (`REQ-UI-230`), `PACE` inversion, and `HrvAlpha1ScatterChart` Cartesian orientation (`REQ-PER-035.4`).
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `HRV_DFA_A1` samples across `[0.2, 1.4]` with `T1 = 0.75`, `T2 = 0.50`, *When* rendering `TelemetryMetricGraph` in portrait or landscape, *Then* `0.20` renders at top, `1.40` at bottom, Anaerob `Zone4` red occupies top `[0%..25%]`, Schwelle `Zone3` orange occupies middle `[25%..45.8%]`, Aerob `Zone2` green occupies bottom `[45.8%..100%]`, and curve/fill/cursor/histogram align 1:1.
+  • *Given* edge thresholds (`T1 == T2`, exact `T2 = 0.20`/`T1 = 1.40`, out-of-range `T1 = 1.50f`/`T2 = 0.15f`), *When* evaluating `buildHrvDfaA1VerticalGradientStops`, *Then* stops remain monotonically non-decreasing in `[0f, 1f]` with exact inverted colors.
+- **Invariants**: `HEART_RATE`/`POWER`/`PACE`/`SLOPE`/`HRV_RMSSD` unchanged; `HrvAlpha1ScatterChart.kt` untouched; `TelemetryMetricGraph.kt <= 1,965` LoC; `ATT-8710_dfa_a1_zone_graph.png` untouched; `Localization Parity: N/A - no UI strings`.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -1943,3 +1973,6 @@
 | `1.0.9` | 2026-11-19 | Lane B Author (`ATT-8846`, `--as agent1`) | `ATT-8846` | Added `REQ-HRV-045` (`[Planned]`, `.1`–`.4`) for parameterized `forceFullHrv` route override preserving full HRV measurement UI when launched from `AthleteProfileScreen` HRV tab. |
 | `1.0.10` | 2026-11-19 | Lane B Author (`ATT-8846`, `--as agent1`) | `ATT-8846` | Promoted `REQ-HRV-045` to `[Implemented]` following Stage 4 construction (`NavRoutes.kt`, `ATrainingTrackerApp.kt`, `MorningHrvCheckScreen.kt`), Rule 8.5 Light/Dark PNG verification, and green targeted/contract test suites. |
 | `1.0.11` | 2026-11-19 | Lane B Author (`ATT-8846`, `--as agent1`) | `ATT-8846` | Promoted `REQ-HRV-045` to `[Verified]` in Stage 5 reusing Gate 4 verified `43/43 PASS` evidence (`Rule 7.5`, `0` `app/` code drift since `c7c6cc76`), Rule 8.5 PNG inspection, and living-doc governance sync atop `6927b2f8`. |
+| `1.0.12` | 2026-11-19 | Lane B Author (`ATT-8953`, `--as agent1`) | `ATT-8953` | Added `REQ-HRV-046` (`[Planned]`, `.1`–`.4`) for inverted DFA alpha 1 Y-axis (`0.20` Anaerob top -> `1.40` Aerob bottom) and reconciled `REQ-HRV-044.1` top/bottom band ordering. |
+| `1.0.13` | 2026-11-19 | Lane B Author (`ATT-8953`, `--as agent1`) | `ATT-8953` | Promoted `REQ-HRV-046` to `[Implemented]` following Stage 4 construction (`TelemetryZoneMath.kt`, `TelemetryMetricGraph.kt`), Rule 8.5 Light/Dark PNG verification, and 100% pass across all 8 test/contract suites. |
+| `1.0.14` | 2026-11-19 | Lane B Author (`ATT-8953`, `--as agent1`) | `ATT-8953` | Promoted `REQ-HRV-046` to `[Verified]` in Stage 5 reusing Gate 4 verified `56/56 PASS` evidence across all 8 suites (`Rule 7.5`, `0` `app/` code drift since `c152801d`), Rule 8.5 PNG certification, and governance sync atop `2d7f1489`. |

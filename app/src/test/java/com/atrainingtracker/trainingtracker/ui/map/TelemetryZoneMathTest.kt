@@ -392,32 +392,93 @@ class TelemetryZoneMathTest {
 
     @Test
     fun testBuildHrvDfaA1VerticalGradientStops_monotonicAndBoundarySafe() {
+        // Inverted Y-axis (REQ-HRV-046.2 / ATT-8953): 0f = dataMin (Anaerob red top), 1f = dataMax (Aerob green bottom)
         val stops = TelemetryZoneMath.buildHrvDfaA1VerticalGradientStops(
             t1 = 0.75f,
             t2 = 0.50f,
             dataMin = 0.2,
             dataMax = 1.4
         )
-        assertTrue(stops.size >= 4)
+        assertTrue(stops.size >= 6)
         assertEquals(0f, stops.first().first, 1e-5f)
-        assertEquals(TTColor.Zone2, stops.first().second)
+        assertEquals(TTColor.Zone4, stops.first().second)
         assertEquals(1f, stops.last().first, 1e-5f)
-        assertEquals(TTColor.Zone4, stops.last().second)
+        assertEquals(TTColor.Zone2, stops.last().second)
         for (i in 1 until stops.size) {
             assertTrue("Stops must be monotonically non-decreasing", stops[i].first >= stops[i - 1].first)
             assertTrue(stops[i].first in 0f..1f)
         }
+        // First transition near T2 = 0.50 -> (0.50 - 0.20) / 1.20 = 0.25f (Zone4 -> Zone3)
+        assertEquals(0.25f, (stops[1].first + stops[2].first) / 2f, 0.002f)
+        assertEquals(TTColor.Zone4, stops[1].second)
+        assertEquals(TTColor.Zone3, stops[2].second)
+        // Second transition near T1 = 0.75 -> (0.75 - 0.20) / 1.20 = 0.4583f (Zone3 -> Zone2)
+        assertEquals(0.4583f, (stops[3].first + stops[4].first) / 2f, 0.002f)
+        assertEquals(TTColor.Zone3, stops[3].second)
+        assertEquals(TTColor.Zone2, stops[4].second)
 
-        // Degenerate equal thresholds (t1 == t2) and out-of-range t1 = 1.50f
+        // Degenerate equal thresholds (t1 == t2 = 0.70): direct Zone4 -> Zone2 with zero phantom Zone3
         val equalStops = TelemetryZoneMath.buildHrvDfaA1VerticalGradientStops(0.70f, 0.70f, 0.2, 1.4)
-        assertEquals(TTColor.Zone2, equalStops.first().second)
-        assertEquals(TTColor.Zone4, equalStops.last().second)
+        assertEquals(TTColor.Zone4, equalStops.first().second)
+        assertEquals(TTColor.Zone2, equalStops.last().second)
+        assertFalse("Equal thresholds must not emit phantom Zone3", equalStops.any { it.second == TTColor.Zone3 })
         for (i in 1 until equalStops.size) {
             assertTrue(equalStops[i].first >= equalStops[i - 1].first)
         }
 
-        val outOfRangeStops = TelemetryZoneMath.buildHrvDfaA1VerticalGradientStops(1.50f, 0.50f, 0.2, 1.4)
-        assertEquals(TTColor.Zone3, outOfRangeStops.first().second)
-        assertEquals(TTColor.Zone4, outOfRangeStops.last().second)
+        // Exact lower boundary T2 = 0.20 == dataMin, T1 = 0.75: top is Zone3, bottom is Zone2, no Zone4
+        val exactMinT2Stops = TelemetryZoneMath.buildHrvDfaA1VerticalGradientStops(0.75f, 0.20f, 0.2, 1.4)
+        assertEquals(TTColor.Zone3, exactMinT2Stops.first().second)
+        assertEquals(TTColor.Zone2, exactMinT2Stops.last().second)
+        assertFalse(exactMinT2Stops.any { it.second == TTColor.Zone4 })
+
+        // Exact upper boundary T1 = 1.40 == dataMax, T2 = 0.50: top is Zone4, bottom is Zone3, no Zone2
+        val exactMaxT1Stops = TelemetryZoneMath.buildHrvDfaA1VerticalGradientStops(1.40f, 0.50f, 0.2, 1.4)
+        assertEquals(TTColor.Zone4, exactMaxT1Stops.first().second)
+        assertEquals(TTColor.Zone3, exactMaxT1Stops.last().second)
+        assertFalse(exactMaxT1Stops.any { it.second == TTColor.Zone2 })
+
+        // Out-of-range T1 = 1.50f > 1.4, T2 = 0.50f: top Zone4 -> bottom Zone3
+        val outOfRangeHighT1 = TelemetryZoneMath.buildHrvDfaA1VerticalGradientStops(1.50f, 0.50f, 0.2, 1.4)
+        assertEquals(TTColor.Zone4, outOfRangeHighT1.first().second)
+        assertEquals(TTColor.Zone3, outOfRangeHighT1.last().second)
+        assertFalse(outOfRangeHighT1.any { it.second == TTColor.Zone2 })
+
+        // Out-of-range both T1 = 1.50f > 1.4 and T2 = 0.15f < 0.2: pure Zone3
+        val outOfRangeBoth = TelemetryZoneMath.buildHrvDfaA1VerticalGradientStops(1.50f, 0.15f, 0.2, 1.4)
+        assertEquals(TTColor.Zone3, outOfRangeBoth.first().second)
+        assertEquals(TTColor.Zone3, outOfRangeBoth.last().second)
+    }
+
+    @Test
+    fun testIsInvertedTelemetryYAxisAndMapTelemetryValueToY_TST_HRV_046() {
+        // REQ-HRV-046.1 / TST-HRV-046.1
+        assertTrue(TelemetryZoneMath.isInvertedTelemetryYAxis(TelemetryMetricType.PACE))
+        assertTrue(TelemetryZoneMath.isInvertedTelemetryYAxis(TelemetryMetricType.HRV_DFA_A1))
+        assertFalse(TelemetryZoneMath.isInvertedTelemetryYAxis(TelemetryMetricType.HEART_RATE))
+        assertFalse(TelemetryZoneMath.isInvertedTelemetryYAxis(TelemetryMetricType.POWER))
+        assertFalse(TelemetryZoneMath.isInvertedTelemetryYAxis(TelemetryMetricType.SPEED))
+        assertFalse(TelemetryZoneMath.isInvertedTelemetryYAxis(TelemetryMetricType.SLOPE))
+        assertFalse(TelemetryZoneMath.isInvertedTelemetryYAxis(TelemetryMetricType.HRV_RMSSD))
+        assertFalse(TelemetryZoneMath.isInvertedTelemetryYAxis(null))
+
+        val top = 10f
+        val height = 120f
+        // Inverted DFA alpha 1 [0.2, 1.4]: 0.20 -> top (10f), 0.50 -> 25% (40f), 0.75 -> 45.83% (65f), 1.40 -> bottom (130f)
+        assertEquals(10f, TelemetryZoneMath.mapTelemetryValueToY(0.20, 0.2, 1.4, top, height, true), 1e-3f)
+        assertEquals(40f, TelemetryZoneMath.mapTelemetryValueToY(0.50, 0.2, 1.4, top, height, true), 1e-3f)
+        assertEquals(65f, TelemetryZoneMath.mapTelemetryValueToY(0.75, 0.2, 1.4, top, height, true), 1e-3f)
+        assertEquals(130f, TelemetryZoneMath.mapTelemetryValueToY(1.40, 0.2, 1.4, top, height, true), 1e-3f)
+        // Clamping beyond bounds
+        assertEquals(10f, TelemetryZoneMath.mapTelemetryValueToY(0.05, 0.2, 1.4, top, height, true), 1e-3f)
+        assertEquals(130f, TelemetryZoneMath.mapTelemetryValueToY(1.80, 0.2, 1.4, top, height, true), 1e-3f)
+
+        // Inverted PACE [4.0, 7.0]: faster 4.0 -> top, slower 7.0 -> bottom
+        assertEquals(10f, TelemetryZoneMath.mapTelemetryValueToY(4.0, 4.0, 7.0, top, height, true), 1e-3f)
+        assertEquals(130f, TelemetryZoneMath.mapTelemetryValueToY(7.0, 4.0, 7.0, top, height, true), 1e-3f)
+
+        // Standard HEART_RATE [100, 200]: higher 200 -> top, lower 100 -> bottom
+        assertEquals(130f, TelemetryZoneMath.mapTelemetryValueToY(100.0, 100.0, 200.0, top, height, false), 1e-3f)
+        assertEquals(10f, TelemetryZoneMath.mapTelemetryValueToY(200.0, 100.0, 200.0, top, height, false), 1e-3f)
     }
 }
