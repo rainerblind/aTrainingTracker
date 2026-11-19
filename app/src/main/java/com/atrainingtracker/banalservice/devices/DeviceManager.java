@@ -155,18 +155,17 @@ public class DeviceManager {
                     if (!success) {                                                     // it was not found
                         Integer tries = mMyRemoteDeviceTries.get(current);
                         if (tries == null || tries <= 1) {  // no longer try to search for this device
-                            if (DEBUG)
-                                Log.i(TAG, "max number of tries <= 1 -> give up searching for this device");
-                            detachIfRrBeatSource(current);
-                            current.shutDown();                // so we shut it down
-                            mMyRemoteDevices.remove(deviceID);                              // and remove it
+                            if (!current.shouldKeepAliveOnSearchTimeout()) {
+                                if (DEBUG) Log.i(TAG, "max number of tries <= 1 -> give up searching for this device");
+                                detachIfRrBeatSource(current);
+                                current.shutDown();                // so we shut it down
+                                mMyRemoteDevices.remove(deviceID);                              // and remove it
+                            }
                         } else {  // continue searching
-                            if (DEBUG)
-                                Log.i(TAG, "max number of tries > 1 -> give this device another chance");
+                            if (DEBUG) Log.i(TAG, "max number of tries > 1 -> give this device another chance");
                             mMyRemoteDeviceTries.put(current, tries - 1);
                             mSearchQueue.addLast(current);
                         }
-
                     }
                     searchForNextRemoteDevice();
                 } else {

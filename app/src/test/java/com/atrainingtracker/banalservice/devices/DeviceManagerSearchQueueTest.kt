@@ -102,6 +102,21 @@ class DeviceManagerSearchQueueTest {
         field.set(deviceManager, device)
     }
 
+    private fun setDeviceTries(deviceManager: DeviceManager, device: MyRemoteDevice, tries: Int) {
+        val field = DeviceManager::class.java.getDeclaredField("mMyRemoteDeviceTries")
+        field.isAccessible = true
+        @Suppress("UNCHECKED_CAST")
+        val map = field.get(deviceManager) as MutableMap<MyRemoteDevice, Int>
+        map[device] = tries
+    }
+
+    private fun getRemoteDevicesMap(deviceManager: DeviceManager): MutableMap<Long, MyRemoteDevice> {
+        val field = DeviceManager::class.java.getDeclaredField("mMyRemoteDevices")
+        field.isAccessible = true
+        @Suppress("UNCHECKED_CAST")
+        return field.get(deviceManager) as MutableMap<Long, MyRemoteDevice>
+    }
+
     @Test
     fun testAlienDeviceEventIgnoredAndQueueNotPreempted() {
         val deviceManager = DeviceManager(mockBanalService, mockSensorManager)
@@ -169,5 +184,117 @@ class DeviceManagerSearchQueueTest {
         assertSame(deviceB, deviceManager.currentlySearchingForRemoteDevice)
         assertTrue(deviceManager.searchQueue.isEmpty())
         verify(exactly = 1) { deviceB.startSearching() }
+    }
+
+    /**
+     * TST-CON-051.1, TST-CON-051.2: Multi-sensor queue [HR1 -> offline BLE Radar -> HR2] during
+     * active/paused workout advances immediately to HR2 on Radar timeout, clears isSearching() after
+     * queue drain, and preserves the Radar in mMyRemoteDevices when tries <= 1.
+     */
+    @Test
+    fun testMultiSensorQueue_radarTimeoutDuringWorkout_advancesToSecondHrAndPreservesRadarOnTriesExhausted() {
+        val deviceManager = DeviceManager(mockBanalService, mockSensorManager)
+
+        val hr1 = mockk<MyRemoteDevice>(relaxed = true)
+        every { hr1.deviceId } returns 101L
+        every { hr1.deviceType } returns DeviceType.HRM
+
+        val offlineRadar = mockk<MyRemoteDevice>(relaxed = true)
+        every { offlineRadar.deviceId } returns 102L
+        every { offlineRadar.deviceType } returns DeviceType.BIKE_RADAR
+        every { offlineRadar.isSearching } returns false
+        every { offlineRadar.isReceivingData } returns false
+        every { offlineRadar.shouldKeepAliveOnSearchTimeout() } returns true
+
+        val hr2 = mockk<MyRemoteDevice>(relaxed = true)
+        every { hr2.deviceId } returns 103L
+        every { hr2.deviceType } returns DeviceType.HRM
+        every { hr2.isSearching } returns false
+        every { hr2.isReceivingData } returns false
+
+        val devicesMap = getRemoteDevicesMap(deviceManager)
+        devicesMap[101L] = hr1
+        devicesMap[102L] = offlineRadar
+        devicesMap[103L] = hr2
+
+        setCurrentlySearching(deviceManager, hr1)
+        setDeviceTries(deviceManager, offlineRadar, 1)
+        setDeviceTries(deviceManager, hr2, 1)
+        deviceManager.searchQueue.clear()
+        deviceManager.searchQueue.addLast(offlineRadar)
+        deviceManager.searchQueue.addLast(hr2)
+
+        val receiver = deviceManager.searchingStoppedForOneReceiver
+
+        // 1. HR1 found -> queue advances to offline Radar
+        val hr1Found = mockk<Intent>()
+        every { hr1Found.getLongExtra(BANALService.DEVICE_ID, -1) } returns 101L
+        every { hr1Found.getBooleanExtra(BANALService.SEARCHING_FINISHED_SUCCESS, false) } returns true
+        receiver.onReceive(mockBanalService, hr1Found)
+
+        assertSame(offlineRadar, deviceManager.currentlySearchingForRemoteDevice)
+        assertTrue(DeviceManager.isSearchingForARemoteDevice())
+        verify(exactly = 1) { offlineRadar.startSearching() }
+
+        // 2. Radar times out (success=false, tries=1) -> must NOT shut down Radar, must advance to HR2
+        val radarTimeout = mockk<Intent>()
+        every { radarTimeout.getLongExtra(BANALService.DEVICE_ID, -1) } returns 102L
+        every { radarTimeout.getBooleanExtra(BANALService.SEARCHING_FINISHED_SUCCESS, false) } returns false
+        receiver.onReceive(mockBanalService, radarTimeout)
+
+        verify(exactly = 0) { offlineRadar.shutDown() }
+        assertTrue("Active-workout reconnecting device must stay registered", devicesMap.containsKey(102L))
+        assertSame(hr2, deviceManager.currentlySearchingForRemoteDevice)
+        verify(exactly = 1) { hr2.startSearching() }
+
+        // 3. HR2 finishes -> queue drains and BANALService.isSearching() / DeviceManager.isSearchingForARemoteDevice() becomes false
+        val hr2Found = mockk<Intent>()
+        every { hr2Found.getLongExtra(BANALService.DEVICE_ID, -1) } returns 103L
+        every { hr2Found.getBooleanExtra(BANALService.SEARCHING_FINISHED_SUCCESS, false) } returns true
+        receiver.onReceive(mockBanalService, hr2Found)
+
+        assertEquals(null, deviceManager.currentlySearchingForRemoteDevice)
+        assertEquals(false, DeviceManager.isSearchingForARemoteDevice())
+        assertTrue(deviceManager.searchQueue.isEmpty())
+    }
+
+    /**
+     * TST-CON-051.2: Preserves REQ-CON-036.1 offline startup battery bounding: when
+     * shouldKeepAliveOnSearchTimeout() is false (TrackingMode.READY), tries <= 1 shuts down and removes device.
+     */
+    @Test
+    fun testTriesExhausted_whenKeepAliveFalse_shutsDownAndRemovesOfflineDevice() {
+        val deviceManager = DeviceManager(mockBanalService, mockSensorManager)
+
+        val offlineSensor = mockk<MyRemoteDevice>(relaxed = true)
+        every { offlineSensor.deviceId } returns 201L
+        every { offlineSensor.deviceType } returns DeviceType.BIKE_RADAR
+        every { offlineSensor.shouldKeepAliveOnSearchTimeout() } returns false
+
+        val nextHr = mockk<MyRemoteDevice>(relaxed = true)
+        every { nextHr.deviceId } returns 202L
+        every { nextHr.deviceType } returns DeviceType.HRM
+        every { nextHr.isSearching } returns false
+        every { nextHr.isReceivingData } returns false
+
+        val devicesMap = getRemoteDevicesMap(deviceManager)
+        devicesMap[201L] = offlineSensor
+        devicesMap[202L] = nextHr
+
+        setCurrentlySearching(deviceManager, offlineSensor)
+        setDeviceTries(deviceManager, offlineSensor, 1)
+        deviceManager.searchQueue.clear()
+        deviceManager.searchQueue.addLast(nextHr)
+
+        val timeoutIntent = mockk<Intent>()
+        every { timeoutIntent.getLongExtra(BANALService.DEVICE_ID, -1) } returns 201L
+        every { timeoutIntent.getBooleanExtra(BANALService.SEARCHING_FINISHED_SUCCESS, false) } returns false
+
+        deviceManager.searchingStoppedForOneReceiver.onReceive(mockBanalService, timeoutIntent)
+
+        verify(exactly = 1) { offlineSensor.shutDown() }
+        assertEquals(false, devicesMap.containsKey(201L))
+        assertSame(nextHr, deviceManager.currentlySearchingForRemoteDevice)
+        verify(exactly = 1) { nextHr.startSearching() }
     }
 }

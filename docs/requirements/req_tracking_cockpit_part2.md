@@ -1,14 +1,14 @@
 # Living Requirements: Tracking & Live Sensor Cockpit (Part 2 of 2)
 
 **Document ID**: `DOC-REQ-TRK-P2`  
-**Version**: 1.0.26  
+**Version**: 1.0.31  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit_part2`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Requirements**: 68
+**Total Requirements**: 69
 
 ---
 
@@ -3003,6 +3003,42 @@
 
 **Invariants**: `< API 33` fallback preserved; `ProxySensor` & `RrBeatSource` continuity preserved; single-GATT ref-counting (`REQ-SET-118.3`) & `ACC` mutex (`REQ-SET-112.3`) preserved; `PolarRawTelemetryRecorder` `rowCount == 0` cleanup preserved; `Devices.db` v14 untouched; `N/A - no UI strings`; `Rule 7.6` offline verification boundary respected.
 
+### REQ-CON-051: Non-Blocking BLE Search-Queue Timeout Handoff & Decoupled Mid-Session Background Reconnect [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-CON-051`
+- **System Requirement(s)**: `SYSREQ-TRK-002`
+- **Priority**: Critical
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `app/src/main/java/com/atrainingtracker/banalservice/devices/bluetooth_le/MyBTLEDevice.java`, `app/src/main/java/com/atrainingtracker/banalservice/devices/MyRemoteDevice.java`, `app/src/main/java/com/atrainingtracker/banalservice/devices/DeviceManager.java`, `docs/architecture/detailed_design/my_btle_device.md`, `docs/architecture/detailed_design/banal_service.md`
+- **Rationale**: When resuming a workout (`TrackingMode.TRACKING` or `PAUSED`) or searching mid-workout, `MyBTLEDevice.isMidSessionOrWorkoutActive()` returns `true` for every paired BLE sensor—including never-connected offline peripherals. Upon `mSearchTimeoutRunnable` expiration, `MyBTLEDevice` schedules `mReconnectRunnable` and `autoConnect = true` without resetting `mState` from `State.SEARCHING` or invoking `notifyStopSearching(false)`. `DeviceManager.cMyRemoteDeviceCurrentlySearchingFor` deadlocks forever on the first offline BLE sensor (`BANALService.isSearching() == true`), starving all subsequent sensors in `mSearchQueue` (`ATT-8998`, Parent Epic `ATT-5910`, refining `REQ-CON-020.2`, `REQ-CON-020.3`, `REQ-CON-036.1`, and `REQ-CON-036.2`):
+- **Description**:
+  1. *Immediate Sequential Search-Queue Release on Timeout (`REQ-CON-051.1`)*:
+     - When `MyBTLEDevice.mSearchTimeoutRunnable` expires without receiving data (`!isReceivingData()`), `MyBTLEDevice` SHALL always transition `mState` out of `State.SEARCHING` (`State.DISCONNECTED`) and invoke `notifyStopSearching(false)` (clearing `MyRemoteDevice.mSearching = false` and broadcasting `BANALService.SEARCHING_STOPPED_FOR_ONE_INTENT`), regardless of `TrackingMode` or `mHasConnectedInSession`.
+     - `DeviceManager.mSearchingStoppedForOneReceiver` SHALL clear `cMyRemoteDeviceCurrentlySearchingFor = null` and invoke `searchForNextRemoteDevice()` so subsequent paired sensors in `mSearchQueue` (e.g., a second HRM after an unavailable BLE Radar) are searched immediately and `BANALService.isSearching()` returns `false` once the queue drains.
+  2. *Decoupled Background Reconnect Without Queue Blocking or `tries <= 1` Teardown (`REQ-CON-051.2`)*:
+     - Mid-session / active-workout background reconnection (`mReconnectRunnable` exponential backoff `1s -> 2s -> 4s -> 8s -> 16s` and persistent `autoConnect = true` per `REQ-CON-036`) SHALL be decoupled from `DeviceManager` search-queue ownership: background reconnect attempts MUST NOT re-enter `MyRemoteDevice.mSearching = true`, MUST NOT block `cMyRemoteDeviceCurrentlySearchingFor`, and MUST NOT stall a concurrent `startSearchForPairedDevices()` / `searchForNextRemoteDevice()` (`next.isSearching()`).
+     - `MyBTLEDevice` SHALL preserve `triggerGattConnect(dev, true)` / `onScanResult()` attachment during background reconnect without keeping `mState == State.SEARCHING` on the active queue slot, and `shutDown()` MUST cancel all pending timers and close GATT cleanly.
+     - In `DeviceManager.mSearchingStoppedForOneReceiver`, when `!success` and `tries == null || tries <= 1`, `DeviceManager` MUST NOT call `shutDown()` or remove from `mMyRemoteDevices` any device persisting active mid-session / active-workout background reconnect, while never-connected offline devices in `TrackingMode.READY` (`!hasConnectedInSession()`) MUST still invoke `shutDown()` and removal (`REQ-CON-036.1`).
+  3. *Monolith LoC Ceiling, Design Parity & Localization Invariant (`REQ-CON-051.3`)*:
+     - `DeviceManager.java` MUST remain strictly `<= 1,708` LoC (`ArchitectureConformanceContractTest`); `DOC-ARC-DD-BTLE` (`my_btle_device.md`) and `DOC-ARC-DD-BANAL` (`banal_service.md`) SHALL be synchronized (`DetailedDesignParityContractTest`); `SYSREQ-TRK-002` requires no new `SYS.2`/`SYS.3` interfaces (`REQ-PRO-131.4`); `Localization Parity: N/A - no UI strings`; unit tests SHALL execute offline with `0` new `src/main` file reads (`REQ-PRO-049.1`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new `REQ-CON-051`, refining `REQ-CON-020.2`, `REQ-CON-020.3`, `REQ-CON-036.1`, and `REQ-CON-036.2`. Targets `MyBTLEDevice.java`, `MyRemoteDevice.java`, `DeviceManager.java`, `my_btle_device.md`, and `banal_service.md`.
+2. *Historical Origin & Commit Trace*: `e84383ee` (`ATT-4007`, queue & backoff), `22d8c54d` (`ATT-5489`, scan assist & configurable timeout), `3dc19303` (`ATT-7755`, `isMidSessionOrWorkoutActive()` persistent reconnect).
+3. *Root Reason for Existing Formulation*: `ATT-7755` omitted `notifyStopSearching(false)` and state reset in `mSearchTimeoutRunnable` under `isMidSessionOrWorkoutActive()` assuming `cMyRemoteDeviceCurrentlySearchingFor == null` during mid-workout disconnects, unaware that workout resume and mid-workout searches traverse `mSearchQueue` while `TrackingMode` is `TRACKING`/`PAUSED` and `DeviceManager` tears down devices when `tries <= 1`.
+4. *Preservation of Core Invariants*: Preserves offline startup battery bounding (`TrackingMode.READY && !mHasConnectedInSession` shuts down after bounded tries), preserves mid-workout exponential backoff (`1s..16s`) and `autoConnect = true` (`REQ-CON-036`), preserves `DeviceManager` alien-broadcast isolation (`REQ-CON-020.3`) and `mGattLock` / `mSearchQueue` thread safety, preserves `MyANTDevice` and `PolarOnlineStreamingBridge`, and enforces `DeviceManager.java <= 1,708` LoC.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `TrackingMode.TRACKING` (or `PAUSED`) with `[Offline BLE Radar, Online BLE HRM]` queued in `DeviceManager`,
+• *When* `MyBTLEDevice.mSearchTimeoutRunnable` expires on the offline BLE Radar,
+• *Then* `MyBTLEDevice` transitions out of `State.SEARCHING` and calls `notifyStopSearching(false)`, `DeviceManager` advances immediately to search the BLE HRM, and `BANALService.isSearching()` becomes `false` once `mSearchQueue` drains.
+• *Given* `DeviceManager.mSearchingStoppedForOneReceiver` receiving `success = false` with `tries <= 1` for a device persisting active-workout / mid-session background reconnect vs. an offline device in `TrackingMode.READY`,
+• *When* the broadcast is processed,
+• *Then* the persisting device is NOT shut down or removed from `mMyRemoteDevices` and continues background `mReconnectRunnable` (`2s -> 4s -> 8s -> 16s`) + `autoConnect = true` without setting `mSearching = true` or stalling subsequent `startSearchForPairedDevices()`, whereas the `TrackingMode.READY` offline device IS shut down and removed.
+
+**Invariants**: Offline startup battery bounding (`REQ-CON-036.1`) preserved; mid-workout exponential backoff (`1s..16s`) & `autoConnect = true` preserved; `mGattLock` & `mSearchQueue` thread safety preserved; `DeviceManager.java <= 1,708` LoC enforced; `MyANTDevice` & `PolarOnlineStreamingBridge` untouched; `0` new `src/main` test reads (`REQ-PRO-049.1`); `Localization Parity: N/A - no UI strings`.
+
 ### REQ-TRK-088: Radar Approach Speed Display Units in MyHelper & Sensor Unit Dictionary Sync [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-TRK-088`
@@ -3231,3 +3267,8 @@
 | `1.0.24` | 2026-11-18 | AI Agent (`ATT-8890`, `--as agent1`) | `ATT-8890` | Promoted `REQ-FIL-028` to `[Verified]` in Stage 5 following Gate 4 Pass (`ATT-8987`: initial `195/195` across 24 suites + Rev-1 `89/89` `--rerun-tasks` across 9 suites, `0` failed/`0` skipped, `verify_requirement_governance.py` `exit 0`). |
 | `1.0.25` | 2026-11-18 | AI Agent (`ATT-8890`, `--as agent1`) | `ATT-8890` | Stage 4 Bounce 1/3 heal: prioritized confirmed `>= 3.0 s` standstill cluster in `computeRawGnssDisplacementSpeedMps`, throttled 50-Hz gyro classify/sensor emission with `dt`-exponential smoothing + zero-alloc classifier scoring, reset `estimatedGnssYawRateRadPerSec` across expired/invalid GNSS bearing gaps, and set `[Implemented]` pending Stage 5 re-verification. |
 | `1.0.26` | 2026-11-18 | AI Agent (`ATT-8890`, `--as agent1`) | `ATT-8890` | Promoted `REQ-FIL-028` to `[Verified]` in Stage 5 (Bounce 1/3) following Gate 4 Pass (`ATT-9006`: `92/92` `--rerun-tasks` across 9 post-heal suites + unchanged `195/195` baseline across 24 suites, `0` failed/`0` skipped, `verify_requirement_governance.py` `exit 0`). |
+| `1.0.27` | 2026-11-18 | AI Agent (`ATT-8998`, `--as agent1`) | `ATT-8998` | Added `REQ-CON-051` `[Planned]` (`REQ-CON-051.1`–`.3`) for non-blocking BLE search-queue timeout handoff (`notifyStopSearching(false)` + state reset) and decoupled mid-session background reconnect with `DeviceManager.java <= 1,708` LoC guardrail. |
+| `1.0.28` | 2026-11-19 | AI Agent (`ATT-8998`, `--as agent1`) | `ATT-8998` | Promoted `REQ-CON-051` to `[Implemented]` following Stage 4 implementation (`MyRemoteDevice.java`, `MyBTLEDevice.java`, `DeviceManager.java` at `1,707` LoC). |
+| `1.0.29` | 2026-11-19 | AI Agent (`ATT-8998`, `--as agent1`) | `ATT-8998` | Promoted `REQ-CON-051` to `[Verified]` in Stage 5 following targeted unit/contract verification, static analysis baselines, and emulator deployment. |
+| `1.0.30` | 2026-11-19 | AI Agent (`ATT-8998`, `--as agent1`) | `ATT-8998` | Stage 6 Bounce 1/3 heal: guarded `mSearchTimeoutRunnable` on `CONNECTED_TO_GATT`/`CONNECTED_WITH_SERVICE` under `mGattLock`, synchronized `banal_service.md` & `my_btle_device.md`, and set `[Implemented]` pending Stage 5 re-verification. |
+| `1.0.31` | 2026-11-19 | AI Agent (`ATT-8998`, `--as agent1`) | `ATT-8998` | Promoted `REQ-CON-051` to `[Verified]` in Stage 5 (Bounce 1/3) following `--rerun-tasks` verification (`125/125` PASS across 19 suites), static baselines, emulator check, and governance `exit 0`. |

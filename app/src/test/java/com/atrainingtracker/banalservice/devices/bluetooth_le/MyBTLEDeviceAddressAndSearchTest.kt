@@ -356,4 +356,46 @@ class MyBTLEDeviceAddressAndSearchTest {
         assertFalse(device.isScanning())
         verify { mockDevice.connectGatt(mockContext, false, any<BluetoothGattCallback>(), BluetoothDevice.TRANSPORT_LE) }
     }
+
+    /**
+     * TST-CON-051.3: Verify scan-assist onScanResult connects GATT while in decoupled background
+     * reconnect (mIsBackgroundReconnecting=true, mState=DISCONNECTED) without State.SEARCHING.
+     */
+    @Test
+    fun testScanAssistance_onScanResult_connectsDuringDecoupledBackgroundReconnect() {
+        TrainingApplication.setTrackingModeForTesting(com.atrainingtracker.trainingtracker.TrackingMode.TRACKING)
+        try {
+            val address = "D0:C6:37:33:67:AA"
+            val device = ConcreteBTLEDevice(mockContext, mockSensorManager, address)
+            device.startSearching()
+            assertTrue(device.isScanning())
+
+            // Simulate search timeout transitioning out of SEARCHING into decoupled background reconnect
+            device.getSearchTimeoutRunnableRef().run()
+            assertEquals(MyBTLEDevice.State.DISCONNECTED, device.getState())
+            assertFalse(device.isSearching)
+
+            // Re-run background reconnect via mReconnectRunnable
+            device.reconnectRunnable.run()
+            assertTrue(device.isScanning())
+            assertEquals(MyBTLEDevice.State.DISCONNECTED, device.getState())
+            assertFalse(device.isSearching)
+
+            val callback = device.getScanCallback()
+            assertNotNull(callback)
+
+            val mockScanResult = mockk<ScanResult>(relaxed = true)
+            val mockDiscoveredDevice = mockk<BluetoothDevice>(relaxed = true)
+            every { mockScanResult.device } returns mockDiscoveredDevice
+            every { mockDiscoveredDevice.address } returns address
+            every { mockDiscoveredDevice.connectGatt(any(), any(), any(), any()) } returns mockk(relaxed = true)
+
+            callback!!.onScanResult(0, mockScanResult)
+
+            assertFalse(device.isScanning())
+            verify { mockDiscoveredDevice.connectGatt(mockContext, false, any<BluetoothGattCallback>(), BluetoothDevice.TRANSPORT_LE) }
+        } finally {
+            TrainingApplication.setTrackingModeForTesting(com.atrainingtracker.trainingtracker.TrackingMode.READY)
+        }
+    }
 }

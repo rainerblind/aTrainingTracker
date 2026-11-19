@@ -1,14 +1,14 @@
 # Detailed Design: BANALService & DeviceManager (ASPICE SWE.3)
 
 **Document ID**: `DOC-ARC-DD-BANAL`  
-**Version**: 1.0.3  
+**Version**: 1.0.4  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
-**Units**: `BANALService` (`app/src/main/java/com/atrainingtracker/banalservice/BANALService.java`, 948 LOC), `DeviceManager` (`app/src/main/java/com/atrainingtracker/banalservice/devices/DeviceManager.java`, 1,451 LOC), `MyRemoteDevice` (`MyRemoteDevice.java`, 139 LOC)  
+**Units**: `BANALService` (`app/src/main/java/com/atrainingtracker/banalservice/BANALService.java`, 950 LOC), `DeviceManager` (`app/src/main/java/com/atrainingtracker/banalservice/devices/DeviceManager.java`, 1,707 LOC), `MyRemoteDevice` (`MyRemoteDevice.java`, 159 LOC)  
 **Collaborators**: `MySensorManager`, `ProxySensor`, `FilterManager`, `SportTypesRepository`, `BANALServiceComm`  
 **SWE.2 Alignment**: `docs/architecture.md` §3.2, §4.2, §4.7, §4.8, §4.9 (`IF-SWE-03`, `IF-SWE-04`)  
-**Requirement Trace**: `REQ-PRO-114.1`, `REQ-ARC-008.2`, `REQ-SEN-021`, `REQ-TRK-024`, `REQ-TRK-055`, `REQ-TRK-077`
+**Requirement Trace**: `REQ-PRO-114.1`, `REQ-ARC-008.2`, `REQ-SEN-021`, `REQ-TRK-024`, `REQ-TRK-055`, `REQ-TRK-077`, `REQ-CON-051`
 
 ---
 
@@ -37,8 +37,9 @@ stateDiagram-v2
     SEARCHING_DEVICE --> SEARCH_QUEUE_ACTIVE: SEARCHING_STOPPED_FOR_ONE_INTENT (success=true)
     SEARCHING_DEVICE --> RETRY_REQUEUED: SEARCHING_STOPPED_FOR_ONE_INTENT (success=false, tries > 1 -> mSearchQueue.addLast)
     RETRY_REQUEUED --> SEARCH_QUEUE_ACTIVE: searchForNextRemoteDevice()
-    SEARCHING_DEVICE --> DEVICE_DROPPED: SEARCHING_STOPPED_FOR_ONE_INTENT (success=false, tries <= 1 -> shutDown + remove)
+    SEARCHING_DEVICE --> DEVICE_DROPPED: SEARCHING_STOPPED_FOR_ONE_INTENT (success=false, tries <= 1, !shouldKeepAliveOnSearchTimeout -> shutDown + remove)
     DEVICE_DROPPED --> SEARCH_QUEUE_ACTIVE: searchForNextRemoteDevice()
+    SEARCHING_DEVICE --> SEARCH_QUEUE_ACTIVE: SEARCHING_STOPPED_FOR_ONE_INTENT (success=false, tries <= 1, shouldKeepAliveOnSearchTimeout -> keep in mMyRemoteDevices)
     SEARCH_QUEUE_ACTIVE --> BOUND_IDLE: mSearchQueue empty -> cMyRemoteDeviceCurrentlySearchingFor=null -> SEARCHING_FINISHED_FOR_ALL_INTENT
     BOUND_IDLE --> NEW_DEVICE_SCANNING: startSearchForNewRemoteDevices(protocol, deviceType)
     NEW_DEVICE_SCANNING --> BOUND_IDLE: stopSearchForNewRemoteDevices()
@@ -58,7 +59,7 @@ stateDiagram-v2
 | `startSearchForPairedDevices()` | `!isSearchingForARemoteDevice()` | Populate paired ANT+/BLE devices into `mSearchQueue` (clamped to `MAX_FREE_PAIRED_DEVICES` on Free tier); seed `mMyRemoteDeviceTries`; broadcast `SEARCHING_STARTED_FOR_ALL_INTENT`; call `searchForNextRemoteDevice()` | `SEARCH_QUEUE_ACTIVE` |
 | `searchForNextRemoteDevice()` | `next == null` | Set `cMyRemoteDeviceCurrentlySearchingFor = null`; broadcast `SEARCHING_FINISHED_FOR_ALL_INTENT` | `BOUND_IDLE` |
 | `searchForNextRemoteDevice()` | `next != null && !next.isSearching() && !next.isReceivingData()` and sport filter matches | Set `cMyRemoteDeviceCurrentlySearchingFor = next`; call `next.startSearching()` (which invokes `MyRemoteDevice.notifyStartSearching()` -> `SEARCHING_STARTED_FOR_ONE_INTENT` and ends via `notifyStopSearching(success)` -> `SEARCHING_STOPPED_FOR_ONE_INTENT`) | `SEARCHING_DEVICE` |
-| `mSearchingStoppedForOneReceiver.onReceive` | `current != null && current.getDeviceId() == deviceID` | Clear `cMyRemoteDeviceCurrentlySearchingFor = null`; if `!success && tries <= 1` call `current.shutDown()` & remove from `mMyRemoteDevices`; if `!success && tries > 1` decrement tries & `mSearchQueue.addLast(current)`; call `searchForNextRemoteDevice()` | `SEARCH_QUEUE_ACTIVE` |
+| `mSearchingStoppedForOneReceiver.onReceive` | `current != null && current.getDeviceId() == deviceID` | Clear `cMyRemoteDeviceCurrentlySearchingFor = null`; if `!success && tries <= 1 && !current.shouldKeepAliveOnSearchTimeout()` call `current.shutDown()` & remove from `mMyRemoteDevices`; if `!success && tries > 1` decrement tries & `mSearchQueue.addLast(current)`; call `searchForNextRemoteDevice()` | `SEARCH_QUEUE_ACTIVE` |
 | `mNewLapReceiver.onReceive` (`REQUEST_NEW_LAP`) | Active service | Read `LAP_NR`, `TIME_LAP`, `DISTANCE_m_LAP`, compute `lapSpeed`, forward `deviceManager.newLap()`, broadcast `LAP_SUMMARY` (optionally trigger `REQUEST_START_SEARCH_FOR_PAIRED_DEVICES`) | Unchanged |
 | `setUserSelectedSportTypeId(sportTypeId)` | `BANALServiceComm` call | Set `mHaveUserSelectedSportType = true`; `updateIndoorModeForSportType`; broadcast `SPORT_TYPE_CHANGED_BY_USER_INTENT` | Unchanged |
 | `mPolarLiveImuChangedReceiver.onReceive` (`POLAR_LIVE_IMU_CHANGED`) | Paired BLE HRM (`deviceId > 0`, `!mIsShutDown`) | Detach `RrBeatSource`, remove from `mMyRemoteDevices`/`mSearchQueue`, track `mPendingTeardownDeviceIds` (so rapid repeat toggles wait for active teardown), call `shutDown(onTeardownComplete)` on active Polar HRM, and only in `onLiveImuTeardownComplete` invoke `createRemoteDevice(deviceId)` + `searchForNextRemoteDevice()` (`mSdkInt >= TIRAMISU`) | `SEARCH_QUEUE_ACTIVE` |
@@ -97,6 +98,7 @@ stateDiagram-v2
 | `HardwareHalIngestionIntegrationTest` | HAL -> `BANALService` / `MySensorManager` integration verification (`INT-SWE-04`, `TST-INT-012`) |
 | `DeviceManagerRrSourceTest` | Single-primary `RrBeatSource` arbitration (`ECG` > `ANT+` > `PPG`), `5000 ms` stale/disconnect fallback & monotonic timestamp clamping (`TST-TRK-085.1`) |
 | `DeviceManagerTeardownTest` | Defensive `removeAndStopRemoteDevice`, `POLAR_LIVE_IMU_CHANGED` ordered GATT/bridge teardown-before-connect handoff, `< API 33` fallback & `RrBeatSource` continuity (`TST-CON-050.1`) |
+| `DeviceManagerSearchQueueTest` | Search-queue alien-event isolation, multi-sensor queue advancement on BLE timeout, `tries <= 1` background-reconnect preservation via `shouldKeepAliveOnSearchTimeout()` vs. `TrackingMode.READY` teardown (`TST-CON-012.3`, `TST-CON-051`) |
 
 ---
 
@@ -108,3 +110,4 @@ stateDiagram-v2
 | `1.0.1` | 2026-11-18 | AI Agent (`ATT-8706`) | `ATT-8706` | Documented single-primary `RrBeatSource` arbitration (`mRrArbitrationLock`, `RR_SOURCE_STALE_TIMEOUT_MS`), monotonic forwarding, and `DeviceManagerRrSourceTest` parity (`REQ-PRO-114`, `REQ-TRK-085.1`). |
 | `1.0.2` | 2026-11-18 | AI Agent (`ATT-8714`) | `ATT-8714` | Documented `POLAR_LIVE_IMU_CHANGED` receiver, `mLiveImuHandoffGenerations`, ordered `shutDown(onTeardownComplete)` handoff, and `DeviceManagerTeardownTest` (`REQ-CON-050.1`). |
 | `1.0.3` | 2026-11-18 | AI Agent (`ATT-8714`) | `ATT-8714` | Bounce 1/3 heal: added `mPendingTeardownDeviceIds` + `onLiveImuTeardownComplete` to serialize rapid repeat Live-IMU toggles against active GATT teardown. |
+| `1.0.4` | 2026-11-19 | AI Agent (`ATT-8998`) | `ATT-8998` | Stage 6 Bounce 1/3 heal: documented `shouldKeepAliveOnSearchTimeout()` `tries <= 1` exemption in `mSearchingStoppedForOneReceiver`, updated unit LOC (`DeviceManager` `1,707`, `MyRemoteDevice` `159`), and added `DeviceManagerSearchQueueTest` parity (`REQ-CON-051`). |

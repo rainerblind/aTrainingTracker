@@ -1,14 +1,14 @@
 # Detailed Design: MyBTLEDevice (ASPICE SWE.3)
 
 **Document ID**: `DOC-ARC-DD-BTLE`  
-**Version**: 1.0.2  
+**Version**: 1.0.4  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
-**Unit**: `MyBTLEDevice` (`app/src/main/java/com/atrainingtracker/banalservice/devices/bluetooth_le/MyBTLEDevice.java`, 1,177 LOC)  
+**Unit**: `MyBTLEDevice` (`app/src/main/java/com/atrainingtracker/banalservice/devices/bluetooth_le/MyBTLEDevice.java`, 1,273 LOC)  
 **Superclass / Subclasses**: Extends `MyRemoteDevice`; specialized by BLE profiles (`BTLEHeartRateDevice`, `BTLERadarDevice`, cycling speed/cadence/power devices)  
 **SWE.2 Alignment**: `docs/architecture.md` §3.4, §4.5, §4.9 (`IF-SWE-04`)  
-**Requirement Trace**: `REQ-PRO-114.1`, `REQ-CON-007`, `REQ-CON-012`, `REQ-CON-020`, `REQ-CON-023`, `REQ-CON-028`, `REQ-CON-030`, `REQ-CON-031`
+**Requirement Trace**: `REQ-PRO-114.1`, `REQ-CON-007`, `REQ-CON-012`, `REQ-CON-020`, `REQ-CON-023`, `REQ-CON-028`, `REQ-CON-030`, `REQ-CON-031`, `REQ-CON-051`
 
 ---
 
@@ -24,6 +24,7 @@
    - `mIsGattPaused` (`volatile boolean`): External yield flag set by `pauseGattOperations()` / cleared by `resumeGattOperations()` (used by `PolarOfflineGattCoordinator`).
    - `mIsScanning` (`volatile boolean`): Active `BluetoothLeScanner` scan-assist state (`mScanCallback`, quota `MAX_SCANS_IN_WINDOW = 4` per `SCAN_QUOTA_WINDOW_MS = 30000L` under `sScanLock`).
    - `mHasConnectedInSession` (`volatile boolean`): Sticky session indicator enabling `autoConnect = true` via `isMidSessionOrWorkoutActive()`.
+   - `mIsBackgroundReconnecting` (`volatile boolean`): Decoupled background reconnect flag allowing `triggerGattConnect(..., true)` and `onScanResult()` attachment in `DISCONNECTED` without re-entering `State.SEARCHING` or `MyRemoteDevice.mSearching`.
    - `mGattOperationPending` (`volatile boolean`) + `mGattQueue` (`ConcurrentLinkedQueue<GattOperation>`): Serializes `WriteDescriptorOp`, `ReadCharacteristicOp`, `WriteCharacteristicOp`, and `RequestMtuOp` with `GATT_OP_TIMEOUT_MS = 2500L`.
 
 ---
@@ -37,12 +38,14 @@ stateDiagram-v2
     SEARCHING --> SEARCHING: startScanAssistance() onScanResult supersedes GATT or onScanFailed falls back to triggerGattConnect
     SEARCHING --> CONNECTED_TO_GATT: onConnectionStateChange(GATT_SUCCESS, STATE_CONNECTED) -> discoverServices()
     SEARCHING --> DISCONNECTED: mSearchTimeoutRunnable [!isMidSessionOrWorkoutActive] -> disconnectFromGatt() + notifyStopSearching(false)
-    SEARCHING --> SEARCHING: mSearchTimeoutRunnable [isMidSessionOrWorkoutActive] -> schedule mReconnectRunnable
+    SEARCHING --> DISCONNECTED: mSearchTimeoutRunnable [isMidSessionOrWorkoutActive] -> set mIsBackgroundReconnecting, schedule mReconnectRunnable, notifyStopSearching(false)
+    DISCONNECTED --> DISCONNECTED: mReconnectRunnable [!mIsShutDown && !mIsGattPaused] -> set mIsBackgroundReconnecting=true, startScanAssistance + triggerGattConnect without State.SEARCHING
     CONNECTED_TO_GATT --> CONNECTED_WITH_SERVICE: onServicesDiscovered -> readNextCharacteristic() [!sensorsRegistered] -> configureServices()
     CONNECTED_TO_GATT --> DISCONNECTED: onConnectionStateChange(STATE_DISCONNECTED or status != GATT_SUCCESS)
     CONNECTED_WITH_SERVICE --> DISCONNECTED: onConnectionStateChange(STATE_DISCONNECTED or status != GATT_SUCCESS) -> unregisterSensors() + disconnectFromGatt()
-    DISCONNECTED --> SEARCHING: mReconnectRunnable [1s..16s backoff, !mIsShutDown && !mIsGattPaused]
-    DISCONNECTED --> SEARCHING: resumeGattOperations() [mState == DISCONNECTED && !mIsShutDown]
+    DISCONNECTED --> CONNECTED_TO_GATT: onConnectionStateChange(GATT_SUCCESS, STATE_CONNECTED) [background autoConnect]
+    DISCONNECTED --> SEARCHING: resumeGattOperations() [mState == DISCONNECTED && !mIsShutDown && !mIsBackgroundReconnecting] -> startSearching()
+    DISCONNECTED --> DISCONNECTED: resumeGattOperations() [mState == DISCONNECTED && !mIsShutDown && mIsBackgroundReconnecting] -> attemptBackgroundReconnect()
     SEARCHING --> SEARCHING: pauseGattOperations() sets mIsGattPaused=true, stops scan/timers (mState unchanged)
     SEARCHING --> DISCONNECTED: shutDown()
     CONNECTED_TO_GATT --> DISCONNECTED: shutDown()
@@ -57,17 +60,18 @@ stateDiagram-v2
 
 | Trigger / Event | Pre-State & Guard | Transition / Side Effect | Target State |
 | :--- | :--- | :--- | :--- |
-| `startSearching()` | `!mIsShutDown && !mIsGattPaused` | `notifyStartSearching()`; `mState = SEARCHING`; schedule `mSearchTimeoutRunnable` (`TrainingApplication.getBtleSearchPeriodMs()`); `getBluetoothDevice()` (`getRemoteLeDevice` with `ADDRESS_TYPE_RANDOM` if `isRandomStaticAddress` on API 33+); `startScanAssistance()`; `triggerGattConnect()` if `!mIsScanning` or `isMidSessionOrWorkoutActive()` | `SEARCHING` |
-| `mScanCallback.onScanResult` | `!mIsShutDown && mState == SEARCHING` and address matches | `stopScanAssistance()`; close any prior `mBluetoothGatt`; `dev.connectGatt(mContext, false, mGattCallback, BluetoothDevice.TRANSPORT_LE)` | `SEARCHING` |
+| `startSearching()` | `!mIsShutDown && !mIsGattPaused` | `notifyStartSearching()`; under `mGattLock`: clear `mIsBackgroundReconnecting = false`, `mState = SEARCHING`; schedule `mSearchTimeoutRunnable` (`TrainingApplication.getBtleSearchPeriodMs()`); `getBluetoothDevice()` (`getRemoteLeDevice` with `ADDRESS_TYPE_RANDOM` if `isRandomStaticAddress` on API 33+); `startScanAssistance()`; `triggerGattConnect()` if `!mIsScanning` or `isMidSessionOrWorkoutActive()` | `SEARCHING` |
+| `mReconnectRunnable` (`attemptBackgroundReconnect`) | `!mIsShutDown && !mIsGattPaused && mState != CONNECTED_TO_GATT && mState != CONNECTED_WITH_SERVICE` | Under `mGattLock`: set `mIsBackgroundReconnecting = true` (leaving `mState = DISCONNECTED` and `MyRemoteDevice.mSearching = false`); schedule `mSearchTimeoutRunnable`; `startScanAssistance()`; `triggerGattConnect(dev, isMidSessionOrWorkoutActive())` if `!mIsScanning` or `isMidSessionOrWorkoutActive()` | `DISCONNECTED` |
+| `mScanCallback.onScanResult` | `!mIsShutDown && (mState == SEARCHING \|\| (mIsBackgroundReconnecting && mState == DISCONNECTED))` and address matches | `stopScanAssistance()`; close any prior `mBluetoothGatt`; `dev.connectGatt(mContext, false, mGattCallback, BluetoothDevice.TRANSPORT_LE)` | `SEARCHING` / `DISCONNECTED` |
 | `mScanCallback.onScanFailed` | Scan throttled or failed | Clear `mIsScanning = false`; fallback immediately to `triggerGattConnect(dev, isMidSessionOrWorkoutActive())` | `SEARCHING` |
-| `mSearchTimeoutRunnable` | `!isReceivingData()` and `!isMidSessionOrWorkoutActive()` | `stopScanAssistance()`; `disconnectFromGatt()`; `notifyStopSearching(false)` | `DISCONNECTED` |
-| `mSearchTimeoutRunnable` | `!isReceivingData()` and `isMidSessionOrWorkoutActive()` | Exponential backoff `mCurrentReconnectDelayMs` (`1000..16000 ms`); post `mReconnectRunnable`; ensure `triggerGattConnect(dev, true)` if `mBluetoothGatt == null` | `SEARCHING` |
-| `mGattCallback.onConnectionStateChange` | `status == GATT_SUCCESS && newState == STATE_CONNECTED` and `gatt == mBluetoothGatt` | `stopScanAssistance()`; `mState = CONNECTED_TO_GATT`; reset `mCurrentReconnectDelayMs = INITIAL_RECONNECT_DELAY_MS`; cancel `mReconnectRunnable` & `mSearchTimeoutRunnable`; post `gatt.discoverServices()` + `notifyStopSearching(true)` | `CONNECTED_TO_GATT` |
+| `mSearchTimeoutRunnable` | `mState != CONNECTED_TO_GATT && mState != CONNECTED_WITH_SERVICE` and `!isMidSessionOrWorkoutActive()` | `stopScanAssistance()`; `disconnectFromGatt()`; if `isSearching()` call `notifyStopSearching(false)` | `DISCONNECTED` |
+| `mSearchTimeoutRunnable` | `mState != CONNECTED_TO_GATT && mState != CONNECTED_WITH_SERVICE` and `isMidSessionOrWorkoutActive()` | Exponential backoff `mCurrentReconnectDelayMs` (`1000..16000 ms`); clear `mState = DISCONNECTED` and set `mIsBackgroundReconnecting = true`; post `mReconnectRunnable`; ensure `triggerGattConnect(dev, true)` if `mBluetoothGatt == null`; if `isSearching()` call `notifyStopSearching(false)` to release `DeviceManager` queue (aborts immediately if `CONNECTED_TO_GATT`/`CONNECTED_WITH_SERVICE`) | `DISCONNECTED` |
+| `mGattCallback.onConnectionStateChange` | `status == GATT_SUCCESS && newState == STATE_CONNECTED` and `gatt == mBluetoothGatt` | `stopScanAssistance()`; under `mGattLock`: `mState = CONNECTED_TO_GATT`, `mIsBackgroundReconnecting = false`, `mHasConnectedInSession = true`, reset `mCurrentReconnectDelayMs = INITIAL_RECONNECT_DELAY_MS`, cancel `mReconnectRunnable` & `mSearchTimeoutRunnable`; post `gatt.discoverServices()` + `notifyStopSearching(true)` | `CONNECTED_TO_GATT` |
 | `mGattCallback.onServicesDiscovered` | `gatt != null` | Enqueue battery read if `UUID_SERVICE_BATTERY` present; call `readNextCharacteristic()` | `CONNECTED_TO_GATT` -> `CONNECTED_WITH_SERVICE` |
 | `readNextCharacteristic()` | `mReadCharacteristicQueue` empty and `!sensorsRegistered()` | Under `mGattLock`: `mState = CONNECTED_WITH_SERVICE`, `mHasConnectedInSession = true`; `setLastActive()`; `registerSensors()`; post `configureServices(gatt)` (notification + CCCD `enqueueWriteDescriptor` + battery CCCD) | `CONNECTED_WITH_SERVICE` |
 | `onCharacteristicChanged` / `onCharacteristicRead` | `!mIsShutDown` | Clone bytes via `obtainSnapshotCharacteristic` (`REQ-CON-020.1`); dispatch `measurementCharacteristicUpdate` on `mHandler` when `mState == CONNECTED_WITH_SERVICE && gatt == mBluetoothGatt` | `CONNECTED_WITH_SERVICE` |
-| `mGattCallback.onConnectionStateChange` | `newState == STATE_DISCONNECTED` or `(newState == STATE_CONNECTED && status != GATT_SUCCESS)` | `mState = DISCONNECTED`; `unregisterSensors()`; `disconnectFromGatt()`; if `!mIsShutDown` schedule `mReconnectRunnable` with exponential backoff (`1s..16s`) | `DISCONNECTED` |
-| `pauseGattOperations()` / `resumeGattOperations()` | External GATT arbitration (`PolarOfflineGattCoordinator`) | `pauseGattOperations()` sets `mIsGattPaused = true`, `stopScanAssistance()`, cancels `mSearchTimeoutRunnable` & `mReconnectRunnable` without changing `mState` or closing GATT; `resumeGattOperations()` clears `mIsGattPaused = false` and calls `startSearching()` if `mState == DISCONNECTED && !mIsShutDown` | `mState` preserved on pause; `DISCONNECTED` -> `SEARCHING` on resume |
+| `mGattCallback.onConnectionStateChange` | `newState == STATE_DISCONNECTED` or `(newState == STATE_CONNECTED && status != GATT_SUCCESS)` | `mState = DISCONNECTED`; `unregisterSensors()`; `disconnectFromGatt()` (clears `mIsBackgroundReconnecting = false`); if `!mIsShutDown` schedule `mReconnectRunnable` (`attemptBackgroundReconnect()` re-arms `mIsBackgroundReconnecting = true` upon execution) | `DISCONNECTED` |
+| `pauseGattOperations()` / `resumeGattOperations()` | External GATT arbitration (`PolarOfflineGattCoordinator`) | `pauseGattOperations()` sets `mIsGattPaused = true`, `stopScanAssistance()`, cancels `mSearchTimeoutRunnable` & `mReconnectRunnable` without changing `mState` or closing GATT; `resumeGattOperations()` clears `mIsGattPaused = false` and if `mState == DISCONNECTED && !mIsShutDown` routes to `attemptBackgroundReconnect()` when `mIsBackgroundReconnecting` is `true` (staying `DISCONNECTED`, `mSearching = false`) or `startSearching()` otherwise | `mState` preserved on pause; `DISCONNECTED` or `SEARCHING` on resume |
 | `shutDown()` / `shutDown(onTeardownComplete)` | Any state | Store `mPendingTeardownCallback` and dispatch polymorphically through `shutDown()` (preserving subclass overrides like `BTLEHeartRateDevice.shutDown()`), then `performShutDown`: set `mIsShutDown = true`, `mHasConnectedInSession = false`; `stopScanAssistance()`; clear `mHandler` callbacks; `disconnectFromGatt(onTeardownComplete)` (`gattToClose.disconnect(); gattToClose.close()` on `mHandler` before callback); `super.shutDown()` | `DISCONNECTED` |
 
 ---
@@ -83,7 +87,7 @@ stateDiagram-v2
 
 ### 4.2 Threading & Serialized GATT Queue
 * **Main Looper (`mHandler = new Handler(mContext.getMainLooper())`)**: Executes `connectGatt`, `discoverServices`, `disconnect`/`close`, `configureServices`, `measurementCharacteristicUpdate`, `mSearchTimeoutRunnable`, `mReconnectRunnable`, `mBatteryReadRunnable`, and `mGattTimeoutRunnable`.
-* **Lock Discipline (`mGattLock` & `sScanLock`)**: `mGattLock` guards `mState`, `mBluetoothGatt`, `mIsGattPaused`, `mHasConnectedInSession`, `mCurrentReconnectDelayMs`, `mGattQueue`, and `mGattOperationPending`. `sScanLock` guards static `sScanTimestamps` (Android 30s scan-quota window).
+* **Lock Discipline (`mGattLock` & `sScanLock`)**: `mGattLock` guards `mState`, `mBluetoothGatt`, `mIsGattPaused`, `mHasConnectedInSession`, `mIsBackgroundReconnecting`, `mCurrentReconnectDelayMs`, `mGattQueue`, and `mGattOperationPending`. `sScanLock` guards static `sScanTimestamps` (Android 30s scan-quota window).
 * **Serialized `mGattQueue`**: Only one `GattOperation` (`WriteDescriptorOp`, `ReadCharacteristicOp`, `WriteCharacteristicOp`, `RequestMtuOp`) executes at a time (`mGattOperationPending = true`). Completion callbacks (`onCharacteristicRead`, `onDescriptorWrite`, `onCharacteristicWrite`, `onMtuChanged`) or the `2500 ms` `mGattTimeoutRunnable` watchdog call `onGattOperationCompleted()` to advance the queue. `disconnectFromGatt()` clears both `mGattQueue` and `mReadCharacteristicQueue` and resets `mGattOperationPending = false`.
 
 ### 4.3 Error Handling & Fault Recovery
@@ -101,6 +105,7 @@ stateDiagram-v2
 | `MyBTLEDeviceLifecycleTest` | Null `mBluetoothGatt` guards in `readNextCharacteristic`, TOCTOU race immunity, `disconnectFromGatt` queue & lock cleanup, `mBatteryReadRunnable` cancellation on disconnect, `onConnectionStateChange` null guard, `shutDown()` cleanup, `BLUETOOTH_CONNECT` permission guard, `TRANSPORT_LE` connection (`REQ-CON-012`, `TST-CON-003`) |
 | `MyBTLEDeviceQueueTest` | Sequential `mGattQueue` execution without dropping, queue clear on `disconnectFromGatt`, read-behind-descriptor serialization, `mBatteryReadRunnable` & `mReadCharacteristicQueue` routing through `mGattQueue`, `WriteCharacteristicOp` write-type selection, `onCharacteristicWriteCompleted` failure status propagation (`TST-CON-028.1`) |
 | `MyBTLEDeviceAddressAndSearchTest` | `isRandomStaticAddress` MAC classification, scan-assist `ScanFilter` & stop on timeout/disconnect/shutdown, scan-resolved GATT replacement & stale callback rejection, `onScanFailed` direct-connect fallback (`REQ-CON-023`, `TST-CON-023`) |
+| `BLEReconnectRobustnessTest` | Search timeout release (`notifyStopSearching(false)` + `State.DISCONNECTED`), decoupled `mReconnectRunnable` (`1s..16s`) & `autoConnect = true` (`REQ-CON-036`, `REQ-CON-051`, `TST-CON-051`) |
 
 ---
 
@@ -111,3 +116,5 @@ stateDiagram-v2
 | `1.0.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Added standardized `DOC-ARC-DD-BTLE` work-product control header and Change History. |
 | `1.0.1` | 2026-11-18 | AI Agent (`ATT-8714`) | `ATT-8714` | Documented `shutDown(onTeardownComplete)` / `disconnectFromGatt(onGattClosed)` post-close completion callback for ordered live Polar IMU handoff (`REQ-CON-050.1`). |
 | `1.0.2` | 2026-11-18 | AI Agent (`ATT-8714`) | `ATT-8714` | Bounce 1/3 heal: routed `shutDown(onTeardownComplete)` via `mPendingTeardownCallback` + `shutDown()` -> `performShutDown` so subclass overrides (`BTLEHeartRateDevice`) never get bypassed. |
+| `1.0.3` | 2026-11-18 | AI Agent (`ATT-8998`) | `ATT-8998` | Decoupled `mSearchTimeoutRunnable` and `mReconnectRunnable` from `State.SEARCHING` / `MyRemoteDevice.mSearching` via `mIsBackgroundReconnecting` and guaranteed `notifyStopSearching(false)` queue handoff (`REQ-CON-051`). |
+| `1.0.4` | 2026-11-19 | AI Agent (`ATT-8998`) | `ATT-8998` | Stage 6 Bounce 1/3 heal: guarded `mSearchTimeoutRunnable` on `CONNECTED_TO_GATT`/`CONNECTED_WITH_SERVICE` under `mGattLock` and documented `resumeGattOperations()` routing to `attemptBackgroundReconnect()` when `mIsBackgroundReconnecting == true`. |

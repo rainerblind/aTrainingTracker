@@ -45,6 +45,7 @@ import io.mockk.unmockkAll
 import io.mockk.verify
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -428,5 +429,39 @@ class MyBTLEDeviceLifecycleTest {
         // Assert: connectGatt never called
         verify(exactly = 0) { mockDevice.connectGatt(any<Context>(), any<Boolean>(), any<BluetoothGattCallback>(), any<Int>()) }
         verify(exactly = 0) { mockDevice.connectGatt(any<Context>(), any<Boolean>(), any<BluetoothGattCallback>()) }
+    }
+
+    /**
+     * TST-CON-051.3: Verify pauseGattOperations -> resumeGattOperations while background reconnecting
+     * resumes via decoupled reconnect without setting MyRemoteDevice.mSearching=true or State.SEARCHING.
+     */
+    @Test
+    fun testResumeGattOperations_whileBackgroundReconnecting_preservesNonBlockingState() {
+        val mockBtManager = mockk<BluetoothManager>(relaxed = true)
+        val mockAdapter = mockk<BluetoothAdapter>(relaxed = true)
+        val mockBtDevice = mockk<BluetoothDevice>(relaxed = true)
+        every { mockContext.getSystemService(Context.BLUETOOTH_SERVICE) } returns mockBtManager
+        every { mockBtManager.adapter } returns mockAdapter
+        every { mockAdapter.getRemoteDevice("AA:BB:CC:DD:EE:03") } returns mockBtDevice
+
+        com.atrainingtracker.trainingtracker.TrainingApplication.setTrackingModeForTesting(
+            com.atrainingtracker.trainingtracker.TrackingMode.TRACKING
+        )
+        try {
+            val device = TestBTLEDevice(mockContext, mockSensorManager, 3L, "AA:BB:CC:DD:EE:03")
+            device.startSearching()
+            device.searchTimeoutRunnable.run()
+            assertFalse(device.isSearching)
+
+            device.pauseGattOperations()
+            assertTrue(device.isGattPaused)
+            device.resumeGattOperations()
+            assertFalse(device.isGattPaused)
+            assertFalse("Resuming background reconnect must not mark mSearching=true", device.isSearching)
+        } finally {
+            com.atrainingtracker.trainingtracker.TrainingApplication.setTrackingModeForTesting(
+                com.atrainingtracker.trainingtracker.TrackingMode.READY
+            )
+        }
     }
 }

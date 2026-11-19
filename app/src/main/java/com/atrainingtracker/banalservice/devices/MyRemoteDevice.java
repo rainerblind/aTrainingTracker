@@ -95,6 +95,14 @@ public abstract class MyRemoteDevice extends MyDevice {
         return mSearching;
     }
 
+    /**
+     * Returns {@code true} if this device should stay alive for decoupled background reconnection
+     * when its sequential queue search tries expire ({@code REQ-CON-051.2}).
+     */
+    public boolean shouldKeepAliveOnSearchTimeout() {
+        return false;
+    }
+
     private Intent addSearchDetails(Intent intent) {
         intent.putExtra(BANALService.PROTOCOL, getProtocol().name());
         intent.putExtra(BANALService.DEVICE_TYPE, getDeviceType().name());
