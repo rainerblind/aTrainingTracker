@@ -134,6 +134,8 @@ object ErtsPostWorkoutRecomputer {
     const val MIN_DISTANCE_DIVERGENCE_FACTOR = 0.85
     const val MIN_RAW_DISTANCE_FOR_DIVERGENCE_CHECK_M = 500.0
     private const val MAX_ACTIVE_SAMPLE_GAP_SEC = 5.0
+    private const val PAUSE_GAP_THRESHOLD_MS = 5_000L
+    private const val PAUSE_TIME_TOTAL_GAP_SEC = 5L
     const val MIN_PLAUSIBLE_ALTITUDE_M = -1000.0
     const val MAX_PLAUSIBLE_ALTITUDE_M = 9000.0
     const val MAX_PLAUSIBLE_ASCENT_M = 20_000.0
@@ -251,10 +253,7 @@ object ErtsPostWorkoutRecomputer {
             val wheelSpeedCol = colNames.firstOrNull { isWheelSpeedColumn(it) }
             val wheelSpeedIdx = if (wheelSpeedCol != null) cursor.getColumnIndex(wheelSpeedCol) else -1
 
-            var baseEpochMs: Long? = null
-            var firstTimeTotalSec: Long? = null
-            var prevTimeTotalSec: Long? = null
-            var prevTs = 0L
+            val rawTimingPairs = mutableListOf<Pair<Long?, Long?>>()
             while (cursor.moveToNext()) {
                 val rowId = cursor.getLong(idIdx)
                 val timeStr = cursor.getString(timeIdx)
@@ -264,45 +263,7 @@ object ErtsPostWorkoutRecomputer {
                 } else {
                     null
                 }
-
-                // Reconstruct monotonic timestampMs from TIME_TOTAL BEFORE barometer/ERTS filtering (REQ-FIL-027.1),
-                // re-anchoring on leading null TIME_TOTAL transitions and genuine wall-clock pause jumps while
-                // comparing parsedTs against reconstructed time so >= 6s SQLite batch-flush stalls do not falsely trip.
-                val ts = if (timeTotalSec != null) {
-                    if (firstTimeTotalSec == null) {
-                        val anchorCandidate = parsedTs ?: (if (prevTs > 0L) prevTs + 1000L else System.currentTimeMillis())
-                        val anchoredTs = if (prevTs > 0L) max(anchorCandidate, prevTs + 1000L) else anchorCandidate
-                        baseEpochMs = anchoredTs
-                        firstTimeTotalSec = timeTotalSec
-                        anchoredTs
-                    } else if (prevTimeTotalSec != null && timeTotalSec > prevTimeTotalSec && baseEpochMs != null) {
-                        val candidateReconstructed = baseEpochMs + (timeTotalSec - firstTimeTotalSec) * 1000L
-                        val effectiveReconstructed = if (prevTs > 0L) max(candidateReconstructed, prevTs + 1000L) else candidateReconstructed
-                        val wallJumpPastTimeTotal = parsedTs != null && (parsedTs - effectiveReconstructed) > 5_000L
-                        if (wallJumpPastTimeTotal) {
-                            val pausedTs = if (prevTs > 0L) max(parsedTs!!, prevTs + 1000L) else parsedTs!!
-                            baseEpochMs = pausedTs
-                            firstTimeTotalSec = timeTotalSec
-                            pausedTs
-                        } else {
-                            if (effectiveReconstructed > candidateReconstructed) {
-                                baseEpochMs = effectiveReconstructed
-                                firstTimeTotalSec = timeTotalSec
-                            }
-                            effectiveReconstructed
-                        }
-                    } else {
-                        val candidate = parsedTs ?: (if (prevTs > 0L) prevTs + 1000L else System.currentTimeMillis())
-                        if (prevTs > 0L) max(candidate, prevTs + 1000L) else candidate
-                    }
-                } else {
-                    val candidate = parsedTs ?: (if (prevTs > 0L) prevTs + 1000L else System.currentTimeMillis())
-                    if (prevTs > 0L) max(candidate, prevTs + 1000L) else candidate
-                }
-                prevTs = ts
-                if (timeTotalSec != null) {
-                    prevTimeTotalSec = timeTotalSec
-                }
+                rawTimingPairs.add(parsedTs to timeTotalSec)
 
                 val lat = if (latIdx >= 0 && !cursor.isNull(latIdx)) cursor.getDouble(latIdx).takeIf { it.isFinite() } else null
                 val lon = if (lonIdx >= 0 && !cursor.isNull(lonIdx)) cursor.getDouble(lonIdx).takeIf { it.isFinite() } else null
@@ -339,7 +300,7 @@ object ErtsPostWorkoutRecomputer {
                 result.add(
                     RawSampleRow(
                         rowId = rowId,
-                        timestampMs = ts,
+                        timestampMs = 0L,
                         latitude = lat,
                         longitude = lon,
                         speedMps = speed,
@@ -356,8 +317,69 @@ object ErtsPostWorkoutRecomputer {
                     )
                 )
             }
+            // Reconstruct beat-immune monotonic 1-Hz timestamps BEFORE barometer/ERTS filtering (REQ-FIL-027.1, REQ-FIL-032.1)
+            val reconstructedTs = reconstructTimestamps(rawTimingPairs)
+            for (i in result.indices) {
+                result[i] = result[i].copy(timestampMs = reconstructedTs[i])
+            }
         }
         return resolveCarriageModesAndFilterBaro(result)
+    }
+
+    /**
+     * Reconstructs monotonic 1-Hz sample timestamps in milliseconds from `(parsedWallTsMs, timeTotalSec)`
+     * pairs without ratcheting on asynchronous `ClockDevice`/`TrackerService` `TIME_TOTAL` `{0, 2}`
+     * clock-beat pairs in any ordering, while preserving genuine `> 5 s` wall-clock or `TIME_TOTAL`
+     * pauses and `<= 6 s` SQLite batch-flush stalls (`REQ-FIL-027.1`, `REQ-FIL-032.1`).
+     */
+    internal fun reconstructTimestamps(
+        samples: List<Pair<Long?, Long?>>,
+        fallbackStartMs: Long = System.currentTimeMillis()
+    ): LongArray {
+        val result = LongArray(samples.size)
+        var prevTs = 0L
+        var prevTimeTotalSec: Long? = null
+        var prevTimeTotalIdx = -1
+        for (i in samples.indices) {
+            val (parsedTs, timeTotalSec) = samples[i]
+            val ts = if (i == 0) {
+                parsedTs ?: fallbackStartMs
+            } else {
+                val oneHzTs = prevTs + 1000L
+                val wallPauseTs = if (parsedTs != null && (parsedTs - oneHzTs) > PAUSE_GAP_THRESHOLD_MS) {
+                    parsedTs
+                } else {
+                    null
+                }
+                val timeTotalPauseTs = if (timeTotalSec != null && prevTimeTotalSec != null) {
+                    val extraGapSec = (timeTotalSec - prevTimeTotalSec) - (i - prevTimeTotalIdx).toLong()
+                    if (extraGapSec >= PAUSE_TIME_TOTAL_GAP_SEC) {
+                        oneHzTs + extraGapSec * 1000L
+                    } else {
+                        null
+                    }
+                } else {
+                    null
+                }
+                when {
+                    wallPauseTs != null && timeTotalPauseTs != null -> max(wallPauseTs, timeTotalPauseTs)
+                    wallPauseTs != null -> wallPauseTs
+                    timeTotalPauseTs != null -> timeTotalPauseTs
+                    else -> oneHzTs
+                }
+            }
+            result[i] = ts
+            prevTs = ts
+            if (timeTotalSec != null) {
+                prevTimeTotalSec = timeTotalSec
+                prevTimeTotalIdx = i
+            } else if (i > 0 && ts > result[i - 1] + 1000L) {
+                // Re-anchor TIME_TOTAL reference after a wall-clock pause on a null TIME_TOTAL row
+                prevTimeTotalSec = null
+                prevTimeTotalIdx = -1
+            }
+        }
+        return result
     }
 
     /**
@@ -698,11 +720,18 @@ object ErtsPostWorkoutRecomputer {
         summariesDbManager.updateMapAndStreams(workoutId, polyline, altitudeStream, distanceStream)
 
         // Update session totals & extrema in WorkoutSummaries.TABLE
+        val authoritativeAvgSpeed = if (smoothedOdometry != null && smoothedOdometry.isNotEmpty()) {
+            val timeActiveSec = summariesDbManager.getInt(workoutId, WorkoutSummaries.TIME_ACTIVE_s)
+            computeAuthoritativeAverageSpeedMps(totalDistance, timeActiveSec, smoothedOdometry)
+        } else {
+            null
+        }
         val cv = ContentValues()
         if (smoothedOdometry != null) {
             cv.put(WorkoutSummaries.DISTANCE_TOTAL_m, totalDistance)
-            val avgSpeed = smoothedOdometry.map { it.speedMps }.average()
-            cv.put(WorkoutSummaries.SPEED_AVERAGE_mps, avgSpeed)
+            if (authoritativeAvgSpeed != null) {
+                cv.put(WorkoutSummaries.SPEED_AVERAGE_mps, authoritativeAvgSpeed)
+            }
         }
         if (smoothedAltitude != null) {
             cv.put(WorkoutSummaries.ASCENDING, totalAscent)
@@ -714,7 +743,15 @@ object ErtsPostWorkoutRecomputer {
         }
 
         // Update extrema values
-        updateExtrema(summariesDbManager, summariesDb, workoutId, rawRows, smoothedOdometry, smoothedAltitude)
+        updateExtrema(
+            summariesDbManager,
+            summariesDb,
+            workoutId,
+            rawRows,
+            smoothedOdometry,
+            smoothedAltitude,
+            authoritativeAvgSpeed
+        )
 
         // REQ-FIL-025.4: Keep Laps.db synchronized with smoothed WorkoutSummaries.db totals
         if (smoothedOdometry != null && smoothedOdometry.isNotEmpty()) {
@@ -734,20 +771,78 @@ object ErtsPostWorkoutRecomputer {
         }
     }
 
+    /**
+     * Resolves one authoritative finite non-negative workout average speed in m/s shared across
+     * `WorkoutSummaries.SPEED_AVERAGE_mps` and `ExtremumValues(SPEED_mps, AVG)` (`REQ-FIL-032.2`).
+     *
+     * Precedence:
+     * 1. `totalDistanceM / timeActiveSec` when persisted `WorkoutSummaries.TIME_ACTIVE_s > 0`
+     *    (matching `TrackerService.getAverageSpeed()` and `LapsDatabaseManager.syncLapDistancesAndSpeeds()`).
+     * 2. Matched active-step ratio `activeDist / activeDt` summed strictly over consecutive samples
+     *    with `dt in (0.0, MAX_ACTIVE_SAMPLE_GAP_SEC]` (preventing pause-gap `deltaDistanceMeters`
+     *    inflation when `TIME_ACTIVE_s` is `NULL` or `<= 0`).
+     * 3. Finite non-negative unweighted mean of finite `speedMps` values (`0.0` if empty/non-finite).
+     */
+    internal fun computeAuthoritativeAverageSpeedMps(
+        totalDistanceM: Double,
+        timeActiveSec: Int?,
+        smoothedOdometry: List<SmoothedOdometryPoint>
+    ): Double {
+        if (timeActiveSec != null && timeActiveSec > 0 && totalDistanceM.isFinite() && totalDistanceM >= 0.0) {
+            val speed = totalDistanceM / timeActiveSec.toDouble()
+            if (speed.isFinite() && speed >= 0.0) return speed
+        }
+
+        if (smoothedOdometry.size >= 2) {
+            var activeDistM = 0.0
+            var activeDtSec = 0.0
+            for (i in 1 until smoothedOdometry.size) {
+                val dtSec = (smoothedOdometry[i].timestampMs - smoothedOdometry[i - 1].timestampMs) / 1000.0
+                if (dtSec > 0.0 && dtSec <= MAX_ACTIVE_SAMPLE_GAP_SEC) {
+                    val stepDist = smoothedOdometry[i].deltaDistanceMeters
+                    if (stepDist.isFinite() && stepDist >= 0.0) {
+                        activeDistM += stepDist
+                        activeDtSec += dtSec
+                    }
+                }
+            }
+            if (activeDtSec > 0.0) {
+                val matchedSpeed = activeDistM / activeDtSec
+                if (matchedSpeed.isFinite() && matchedSpeed >= 0.0) return matchedSpeed
+            }
+        }
+
+        var finiteSum = 0.0
+        var finiteCount = 0
+        for (pt in smoothedOdometry) {
+            if (pt.speedMps.isFinite() && pt.speedMps >= 0.0) {
+                finiteSum += pt.speedMps
+                finiteCount++
+            }
+        }
+        return if (finiteCount > 0) finiteSum / finiteCount else 0.0
+    }
+
     private fun updateExtrema(
         summariesManager: WorkoutSummariesDatabaseManager,
         summariesDb: SQLiteDatabase,
         workoutId: Long,
         rawRows: List<RawSampleRow>,
         smoothedOdometry: List<SmoothedOdometryPoint>?,
-        smoothedAltitude: List<SmoothedAltitudeSlopePoint>?
+        smoothedAltitude: List<SmoothedAltitudeSlopePoint>?,
+        authoritativeAvgSpeed: Double? = null
     ) {
         summariesDb.beginTransaction()
         try {
             if (smoothedOdometry != null && smoothedOdometry.isNotEmpty()) {
                 val speeds = smoothedOdometry.map { it.speedMps }
                 val maxSpeed = speeds.maxOrNull() ?: 0.0
-                val avgSpeed = speeds.average()
+                val avgSpeed = authoritativeAvgSpeed
+                    ?: computeAuthoritativeAverageSpeedMps(
+                        totalDistanceM = smoothedOdometry.sumOf { it.deltaDistanceMeters },
+                        timeActiveSec = null,
+                        smoothedOdometry = smoothedOdometry
+                    )
 
                 summariesManager.updateExtremaValue(summariesDb, workoutId, SensorType.SPEED_mps, ExtremaType.MAX, maxSpeed, null)
                 summariesManager.updateExtremaValue(summariesDb, workoutId, SensorType.SPEED_mps, ExtremaType.AVG, avgSpeed, null)

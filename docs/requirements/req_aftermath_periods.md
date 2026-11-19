@@ -1,18 +1,18 @@
 # Living Requirements: Post-Workout Analytics & Periods
 
 **Document ID**: `DOC-REQ-PERIODS`  
-**Version**: 1.0.7  
+**Version**: 1.0.14  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `aftermath_periods`  
 **Prefixes**: `PER`, `PERF`, `RAD`, `SPT`  
 **Scope**: Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers.  
-**Total Requirements**: 63
+**Total Requirements**: 65
 
 ---
 
-### REQ-PER-007: Reactive Period-Workout Association [Implemented]
+### REQ-PER-007: Reactive Period-Workout Association [Verified]
 - **Tests**: `TST-PERF-008`
 - **Priority**: Medium
 - **Type**: Functional
@@ -28,7 +28,7 @@
 - **Implementation**: `PeriodsFragment.kt`, `WorkoutSummariesViewModel.kt`
 - **Rationale**: The system SHALL correctly filter the workout list when navigating from a period summary highlight (Base Sport or Sub-Sport). This filtering MUST respect both the temporal bounds of the period and the specific sport identity selected to ensure professional analytical depth.
 
-### REQ-PER-009: Detail Map Sport Filtering [Implemented]
+### REQ-PER-009: Detail Map Sport Filtering [Verified]
 - **Tests**: `TST-PER-012`
 - **Priority**: Medium
 - **Type**: Functional
@@ -113,7 +113,7 @@
 - **Rationale**: Guarantee data consistency and prevent visual artifacts during navigation.
 - **Description**: The system SHALL ensure that only the map state (Heatmap, Tracks, and Markers) of the most recently selected Workout Cluster is displayed, preventing race conditions during rapid navigation.
 
-### REQ-PER-003: The system SHALL display a detailed progress notification (Migration Status card [Implemented]
+### REQ-PER-003: The system SHALL display a detailed progress notification (Migration Status card [Verified]
 - **Tests**: `TST-PERF-003`
 - **Priority**: Medium
 - **Type**: Functional
@@ -122,7 +122,7 @@
 - **Rationale**: Provide immediate feedback and maintain visual consistency with other progressive loading screens (e.g. Periods).
 - **Description**: The system SHALL display a detailed progress notification (Migration Status card) during the initial loading and "self-healing" phase of Workout Clusters to inform the user about the background processing state.
 
-### REQ-PER-004: The hierarchical periods aggregation SHALL utilize a 'Dual-Phase' strategy: Phas [Implemented]
+### REQ-PER-004: The hierarchical periods aggregation SHALL utilize a 'Dual-Phase' strategy: Phas [Verified]
 - **Tests**: `TST-PERF-005`
 - **Priority**: High
 - **Type**: Functional
@@ -131,7 +131,7 @@
 - **Rationale**: Eliminate database lock contention and O(N^2) re-grouping overhead to ensure sub-second startup and true real-time visibility.
 - **Description**: The hierarchical periods aggregation SHALL utilize a 'Dual-Phase' strategy: Phase 1 (O(N)) for high-speed database reading and global grouping, and Phase 2 for bucketized commits and incremental UI pumping.
 
-### REQ-PER-005: The 'Migration Status' notification SHALL provide a descriptive high-level title [Implemented]
+### REQ-PER-005: The 'Migration Status' notification SHALL provide a descriptive high-level title [Verified]
 - **Tests**: `TST-PERF-006`
 - **Priority**: Low
 - **Type**: Functional
@@ -140,7 +140,7 @@
 - **Rationale**: Enhance user transparency and professional feedback during complex background operations.
 - **Description**: The 'Migration Status' notification SHALL provide a descriptive high-level title (Introducing relational database) and explicitly label Phase 1 (Reading) and Phase 2 (Syncing) to provide clear technical context.
 
-### REQ-PER-006: The system SHALL display a detailed, multi-phase progress notification during th [Implemented]
+### REQ-PER-006: The system SHALL display a detailed, multi-phase progress notification during th [Verified]
 - **Tests**: `TST-PERF-007`, `TST-PERF-009`, `TST-PERF-010`
 - **Priority**: Medium
 - **Type**: Functional
@@ -1785,7 +1785,7 @@
 - **Rationale**: In Workout Details, `TelemetryMetricGraph` (`HRV_DFA_A1`) renders dashed threshold lines at `dfaA1ThresholdT2`/`dfaA1ThresholdT1` without zone bands or zone-colored curve/fill/histogram/cursor styling, does not guard the `52.dp` right margin against label-vs-histogram overlap, does not filter dashes outside `[0.2, 1.4]` (up to `MAX_DFA_A1_THRESHOLD = 1.50f`), and `HrvAlpha1ScatterChart.kt` omits `t1`/`t2` when calling `HrvZoneIndicator.calculateZoneColor`.
 - **Description**:
   1. *Inverted 3-Zone DFA $\alpha_1$ Bands & Curve/Fill/Histogram/Cursor Coloring (`REQ-HRV-044.1`)*:
-     - `TelemetryZoneMath` SHALL partition `[dataMin, dataMax]` into up to 3 clamped inverted DFA $\alpha_1$ bands with exact `HrvZoneIndicator.calculateZoneColor` parity: Aerob (`α1 > T1`, `TTColor.Zone2`, top band `[T1, dataMax]`), Schwelle (`T2 <= α1 <= T1`, `TTColor.Zone3`, middle band `[T2, T1]`), and Anaerob (`α1 < T2`, `TTColor.Zone4`, bottom band `[dataMin, T2]`), preserving `α1 == T1 -> Zone3`.
+     - `TelemetryZoneMath` SHALL partition `[dataMin, dataMax]` into up to 3 clamped inverted DFA $\alpha_1$ bands with exact `HrvZoneIndicator.calculateZoneColor` parity: Anaerob (`α1 < T2`, `TTColor.Zone4`, top band `[dataMin, T2]` per inverted effort Y-axis refined in `REQ-HRV-046` / `ATT-8953`), Schwelle (`T2 <= α1 <= T1`, `TTColor.Zone3`, middle band `[T2, T1]`), and Aerob (`α1 > T1`, `TTColor.Zone2`, bottom band `[T1, dataMax]`), preserving `α1 == T1 -> Zone3`.
      - For `TelemetryMetricType.HRV_DFA_A1`, `TelemetryMetricGraph` SHALL render horizontal background bands (`ZONE_BAND_ALPHA`), zone-colored curve stroke and under-curve fill (`Brush.verticalGradient` mapped to `valueToY(T1)`/`valueToY(T2)` across `[dataMin, dataMax]` with `> 5.0%` artifact gap breaks preserved), single-point dot, interactive scrubbing cursor dot/halo, and `nonZonedHistogram` bins (if supplied) colored by zone.
   2. *Right-Margin `52.dp` Layout Coordination (`REQ-HRV-044.2`)*:
      - Inside the `52.dp` `endPadding` strip in portrait (`!isLandscape`), right-hand zone labels (`band.label`) and `nonZonedHistogram` bars MUST remain cleanly disjoint: right-hand zone labels SHALL render only when `zoneDistribution == null && nonZonedHistogram.isEmpty() && !isLandscape`, suppressing duplicate axis text whenever `nonZonedHistogram` occupies the strip.
@@ -1801,7 +1801,7 @@
   3. *Root Reason for Existing Formulation*: `ATT-3544` focused on centered recompute, `[0.2, 1.4]` clamping, and artifact hatching, leaving `zoneBands` unimplemented for `HRV_DFA_A1` and `HrvAlpha1ScatterChart` on default thresholds.
   4. *Preservation of Core Invariants*: `HR`/`Power` solid curves (`REQ-UI-230`), `[0.2, 1.4]` Y-clamping, `> 5.0%` artifact gap hatching (`REQ-PER-035.2`), `50.dp`/`52.dp` margins, and `α1 == T1 -> Zone3` (`TrackingHrvZoneIndicatorTest`) remain untouched.
 - **Acceptance Criteria (Given-When-Then)**:
-  • *Given* valid `HRV_DFA_A1` trackpoints and custom `T1`/`T2` within `(0.2, 1.4)`, *When* rendering `TelemetryMetricGraph`, *Then* 3 inverted zone bands (`Zone2` top, `Zone3` middle, `Zone4` bottom), matching gradient stroke/fill, filtered threshold dashes, and zone-colored cursor dot render across Light/Dark/AMOLED without margin collisions.
+  • *Given* valid `HRV_DFA_A1` trackpoints and custom `T1`/`T2` within `(0.2, 1.4)`, *When* rendering `TelemetryMetricGraph`, *Then* 3 inverted zone bands (`Zone4` Anaerob top, `Zone3` Schwelle middle, `Zone2` Aerob bottom per `REQ-HRV-046`), matching gradient stroke/fill, filtered threshold dashes, and zone-colored cursor dot render across Light/Dark/AMOLED without margin collisions.
   • *Given* `T1 = 1.50f` (`> 1.4`), *When* computing threshold dashes and bands for `[0.2, 1.4]`, *Then* `T1` dash is filtered out and the top band clamps cleanly to `1.4`.
   • *Given* scatter points in `HrvAlpha1ScatterChart` with custom `t1`/`t2`, *When* rendering dots, *Then* each dot color matches `HrvZoneIndicator.calculateZoneColor(p.alpha1, t1, t2)`.
 - **Invariants**: `HR`/`Power` solid strokes preserved, `α1 == T1 -> Zone3` preserved, zero `src/main` reads in tests (`REQ-PRO-049.1`), zero DB/DataStore schema changes.
@@ -1892,6 +1892,71 @@
 
 ---
 
+### REQ-HRV-045: Preserve Full HRV Measurement UI via Route Override from AthleteProfile HRV Tab (`ATT-8846`) [Verified]
+- **System Requirement(s)**: Derived (SW-only) — Parameterized `NavRoutes.MORNING_HRV` route override (`forceFullHrv`) preserving full HRV measurement UI when launched from `AthleteProfileScreen` HRV tab (refining `REQ-HRV-043`, `REQ-PER-032`, `REQ-HRV-040`, and `REQ-UI-525`)
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-HRV-045`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Implementation**: `NavRoutes.kt`, `ATrainingTrackerApp.kt`, `MorningHrvCheckScreen.kt`
+- **Rationale**: Following `ATT-8598` (`REQ-HRV-043`), `MorningHrvCheckScreen` enters pure wellness mode whenever `showMorningCheckOnStartScreen == false && enableMorningSleepAndWellness == true && phase == MorningHrvPhase.READY`. Because `TrackingTabsScreen` (`ATrainingTrackerApp.kt:351`) and `AthleteProfileScreen` HRV tab (`ATrainingTrackerApp.kt:633`) both navigate to the identical parameterless `NavRoutes.MORNING_HRV`, athletes who hide the Start Screen HRV prompt cannot initiate an on-demand morning HRV measurement from *Athlete Profile -> HRV* (`ATT-8846`).
+- **Description**:
+  1. *Parameterized Route & Drawer Symmetry (`REQ-HRV-045.1`)*:
+     - `NavRoutes` (`NavRoutes.kt`) SHALL define `ARG_FORCE_FULL_HRV = "forceFullHrv"`, `MORNING_HRV_PATTERN = "morning_hrv?forceFullHrv={forceFullHrv}"`, and `fun morningHrv(forceFullHrv: Boolean = false): String` returning `MORNING_HRV` (`"morning_hrv"`) when `false` and `"morning_hrv?forceFullHrv=true"` when `true`.
+     - `NavRoutes.MORNING_HRV == "morning_hrv"`, `NavRoutes.fromDrawerItemId(R.id.drawer_morning_hrv) == MORNING_HRV`, and `NavRoutes.toDrawerItemId(...)` (stripping `?` query parameters) SHALL remain strictly backward compatible.
+  2. *Entry-Source Navigation Wiring (`REQ-HRV-045.2`)*:
+     - `ATrainingTrackerApp.kt` SHALL register `composable(route = NavRoutes.MORNING_HRV_PATTERN, arguments = listOf(navArgument(NavRoutes.ARG_FORCE_FULL_HRV) { type = NavType.BoolType; defaultValue = false }))` extracting `forceFullHrv` and passing it to `MorningHrvCheckScreen`.
+     - `AthleteProfileScreen` HRV tab (`ATrainingTrackerApp.kt:633`) SHALL navigate via `NavRoutes.morningHrv(forceFullHrv = true)`; `TrackingTabsScreen` Start Screen (`ATrainingTrackerApp.kt:351`) SHALL navigate via `NavRoutes.morningHrv(forceFullHrv = false)`.
+  3. *Full HRV Override & Pure Wellness Regression Guard (`REQ-HRV-045.3`)*:
+     - `MorningHrvCheckScreen` and `MorningHrvCheckContent` (`MorningHrvCheckScreen.kt`) SHALL accept `forceFullHrv: Boolean = false` and derive `isPureWellnessMode = !forceFullHrv && !uiState.showMorningCheckOnStartScreen && uiState.enableMorningSleepAndWellness && uiState.phase == MorningHrvPhase.READY`.
+     - When `forceFullHrv == true` (regardless of `showMorningCheckOnStartScreen`), `MorningHrvCheckContent` SHALL render the complete HRV measurement UI (TopAppBar `morning_hrv_title`, `morning_hrv_subtitle`, `morning_hrv_info_button` opening `HrvInfoBottomSheet`, `WakingProtocolChecklistCard`, `PostureAndDurationCard`, `MeasurementPacingCard`, and primary `morning_hrv_start_button`). `MorningWellnessInputCard` and secondary `OutlinedButton` *Save Morning Wellness* (`morning_hrv_save_wellness_secondary_button`) SHALL render iff `enableMorningSleepAndWellness == true`.
+     - When `forceFullHrv == false` with `!showMorningCheckOnStartScreen && enableMorningSleepAndWellness && phase == MorningHrvPhase.READY` (Start Screen / Drawer entry), pure wellness mode (`REQ-HRV-043`) SHALL remain strictly preserved.
+  4. *Architecture Ceilings, Private Previews & Localization (`REQ-HRV-045.4`)*:
+     - `MorningHrvCheckScreen.kt` MUST remain `<= 1,500` LoC (`ArchitectureConformanceContractTest`), `AthleteProfileScreen.kt` MUST incur `0` edits (preserving `1,975/1,975` LoC ceiling), `MorningHrvCheckViewModel.kt` MUST remain untouched, any added `@Preview` composable MUST be `private fun` (`REQ-ARC-003.5` / `DeadCodeEliminationContractTest`), and `Localization Parity: N/A - no UI strings`.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: `REQ-HRV-043` (`REQ-HRV-043.1`, `REQ-HRV-043.3`, `ATT-8598`), `REQ-PER-032`, `REQ-HRV-040`, and `REQ-UI-525`, targeting `NavRoutes.kt`, `ATrainingTrackerApp.kt`, and `MorningHrvCheckScreen.kt`.
+  2. *Historical Origin & Commit Trace*: `REQ-HRV-043` introduced in `ATT-8598` (`596a54f3`), whose Stage 6 Cold Review explicitly noted shared parameterless `NavRoutes.MORNING_HRV` across Start Screen and `AthleteProfileScreen` as residual risk, leading to `ATT-8846`.
+  3. *Root Reason for Existing Formulation*: `ATT-8598` scoped strictly to hiding HRV cards in Start Screen pure wellness mode without introducing route arguments, relying on `!enableMorningSleepAndWellness` as the only profile fallback.
+  4. *Preservation of Core Invariants*: Adding optional `forceFullHrv: Boolean = false` preserves 100% of `REQ-HRV-043` Start Screen pure wellness mode, preserves `MorningWellnessInputCard` + secondary save button alongside HRV when `enableMorningSleepAndWellness == true`, preserves active measurement/result phase guards & `keepScreenOn`, and introduces zero DB, ViewModel, or localization changes.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `showMorningCheckOnStartScreen = false` and `enableMorningSleepAndWellness = true`, *When* opening `MorningHrvCheckScreen` from *Athlete Profile -> HRV* tab (`forceFullHrv = true`), *Then* TopAppBar HRV title/subtitle/info button (`HrvInfoBottomSheet`), HRV protocol/posture/duration/pacing cards, primary *Start Measurement* CTA, `MorningWellnessInputCard`, and secondary *Save Morning Wellness* button all render.
+  • *Given* `showMorningCheckOnStartScreen = false` and `enableMorningSleepAndWellness = false`, *When* `forceFullHrv = true`, *Then* full HRV measurement UI renders without `MorningWellnessInputCard` or wellness save CTA.
+  • *Given* `showMorningCheckOnStartScreen = false` and `enableMorningSleepAndWellness = true`, *When* opening from Start Screen or Drawer (`forceFullHrv = false`), *Then* pure wellness mode (`REQ-HRV-043`) renders unchanged.
+- **Invariants**: Start Screen pure wellness mode (`REQ-HRV-043`) preserved; `NavRoutes.MORNING_HRV` & drawer mapping backward compatible; `MorningHrvCheckScreen.kt <= 1,500` LoC; `AthleteProfileScreen.kt == 1,975` LoC (`0` edits); `MorningHrvCheckViewModel.kt` untouched; `Localization Parity: N/A - no UI strings`.
+
+---
+
+### REQ-HRV-046: Inverted Y-Axis Orientation for Workout Details DFA alpha 1 Graph (`ATT-8953`) [Verified]
+- **System Requirement(s)**: Derived (SW-only) — Inverted Y-axis mapping (`0.20` Anaerob top -> `1.40` Aerob bottom) for `TelemetryMetricGraph` (`HRV_DFA_A1`) and aligned marginal histograms (refining `REQ-HRV-044.1` and `REQ-PER-035.3`)
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-HRV-046`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Implementation**: `TelemetryZoneMath.kt`, `TelemetryMetricGraph.kt`
+- **Rationale**: In Workout Details, `TelemetryMetricGraph(HRV_DFA_A1)` stacks vertically alongside Heart Rate, Power, and inverted `PACE` graphs (`Rule 64`), yet currently maps larger $\alpha_1$ values (`1.40` Aerob) to the top and smaller $\alpha_1$ values (`0.20` Anaerob) to the bottom, causing harder exercise intensity to slope downward. Inverting the `HRV_DFA_A1` Y-axis aligns visual effort direction across all stacked telemetry charts (`ATT-8953`).
+- **Description**:
+  1. *Shared Inverted Y-Axis Mapping Across All 3 Canvases (`REQ-HRV-046.1`)*:
+     - `TelemetryZoneMath` SHALL provide shared pure helpers (`isInvertedTelemetryYAxis(metricType)` returning `true` for `PACE` and `HRV_DFA_A1`; `mapTelemetryValueToY(value, dataMin, dataMax, topPaddingPx, chartHeightPx, isInverted)`) reused by `TelemetryMetricGraph`, `AlignedMarginalLinearDistribution`, and `AlignedMarginalZoneDistribution`, mapping `dataMin` (`0.20`, Anaerob) to `topPaddingPx` (top) and `dataMax` (`1.40`, Aerob) to `topPaddingPx + chartHeightPx` (bottom).
+  2. *Inverted Vertical Gradient Stops & Exact Boundary Inequalities (`REQ-HRV-046.2`)*:
+     - `TelemetryZoneMath.buildHrvDfaA1VerticalGradientStops` SHALL map stop `0f` (top) to `dataMin` and `1f` (bottom) to `dataMax` with monotonically non-decreasing stops (`effT2` at `(effT2 - dataMin) / range`, then `effT1` at `(effT1 - dataMin) / range`), using `topBaseColor = when { dataMin < effT2 -> Zone4; dataMin < effT1 -> Zone3; else -> Zone2 }` and `bottomBaseColor = when { dataMax > effT1 -> Zone2; dataMax > effT2 -> Zone3; else -> Zone4 }`, cleanly handling exact bounds (`T2 = 0.20`, `T1 = 1.40`), degenerate `T1 == T2`, and out-of-range thresholds (`T1 = 1.50f`, `T2 = 0.15f`).
+  3. *Inverted Y-Axis Labels, Zone Bands, Fill, Dashes, Histograms & Scatter Invariance (`REQ-HRV-046.3`)*:
+     - For `HRV_DFA_A1`, `TelemetryMetricGraph` SHALL render `dataMin` (`0.20`) at the top Y-axis label (`maxLabel`) and `dataMax` (`1.40`) at the bottom Y-axis label (`minLabel`), align Anaerob (`Zone4` red) top / Schwelle (`Zone3` orange) middle / Aerob (`Zone2` green) bottom across zone bands, gradient curve/fill (filling down to bottom `baselineY`), threshold dashes/labels, cursor/single-point dots, and portrait/landscape marginal histograms. `HrvAlpha1ScatterChart.kt` SHALL remain untouched in standard Cartesian orientation (`REQ-PER-035.4`).
+  4. *Architecture Ceilings, Asset Integrity & Private Previews (`REQ-HRV-046.4`)*:
+     - `TelemetryMetricGraph.kt` MUST stay `<= 1,965` LoC (`ArchitectureConformanceContractTest`), any new `@Preview` MUST be `private fun` (`DeadCodeEliminationContractTest`), tests MUST perform `0` `src/main` reads (`SourceTextReadingAuditContractTest`), historical `docs/engineering/walkthroughs/img/ATT-8710_dfa_a1_zone_graph.png` MUST remain untouched while capturing new Light/Dark PNG to `docs/engineering/walkthroughs/img/ATT-8953_dfa_a1_inverted_yaxis.png`, and `Localization Parity: N/A - no UI strings`.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: `REQ-HRV-044` (`REQ-HRV-044.1`, `TST-HRV-044.1`, `ATT-8710`) and `REQ-PER-035.3`, targeting `TelemetryZoneMath.kt` and `TelemetryMetricGraph.kt`.
+  2. *Historical Origin & Commit Trace*: `ATT-3544` (`3db57718`) added `[0.2, 1.4]` DFA $\alpha_1$ plotting; `ATT-8710` (`886eae05`) added 3-zone bands and gradient on the non-inverted Y-axis (`Zone2` top, `Zone4` bottom).
+  3. *Root Reason for Existing Formulation*: `ATT-8710` matched `TelemetryMetricGraph`'s default `(1.0 - ratio)` orientation without inverting Y, resulting in green easy effort at the top and red hard effort at the bottom.
+  4. *Preservation of Core Invariants*: Preserves `[0.2, 1.4]` clamping, `> 5.0%` artifact hatching, `50.dp`/`52.dp` margins (`Rule 64`), `α1 == T1 -> Zone3` boundary polarity, `HEART_RATE`/`POWER` solid curves (`REQ-UI-230`), `PACE` inversion, and `HrvAlpha1ScatterChart` Cartesian orientation (`REQ-PER-035.4`).
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `HRV_DFA_A1` samples across `[0.2, 1.4]` with `T1 = 0.75`, `T2 = 0.50`, *When* rendering `TelemetryMetricGraph` in portrait or landscape, *Then* `0.20` renders at top, `1.40` at bottom, Anaerob `Zone4` red occupies top `[0%..25%]`, Schwelle `Zone3` orange occupies middle `[25%..45.8%]`, Aerob `Zone2` green occupies bottom `[45.8%..100%]`, and curve/fill/cursor/histogram align 1:1.
+  • *Given* edge thresholds (`T1 == T2`, exact `T2 = 0.20`/`T1 = 1.40`, out-of-range `T1 = 1.50f`/`T2 = 0.15f`), *When* evaluating `buildHrvDfaA1VerticalGradientStops`, *Then* stops remain monotonically non-decreasing in `[0f, 1f]` with exact inverted colors.
+- **Invariants**: `HEART_RATE`/`POWER`/`PACE`/`SLOPE`/`HRV_RMSSD` unchanged; `HrvAlpha1ScatterChart.kt` untouched; `TelemetryMetricGraph.kt <= 1,965` LoC; `ATT-8710_dfa_a1_zone_graph.png` untouched; `Localization Parity: N/A - no UI strings`.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -1904,3 +1969,10 @@
 | `1.0.5` | 2026-11-18 | AI Agent (`ATT-8916`, `--as agent1`) | `ATT-8916` | Added `REQ-PER-045` (`[Planned]`, `.1`–`.5`) for segmented activity & phone carriage mode timeline bar and expandable phase breakdown in Workout Details. |
 | `1.0.6` | 2026-11-18 | AI Agent (`ATT-8916`, `--as agent1`) | `ATT-8916` | Promoted `REQ-PER-045` to `[Implemented]` following Stage 4 construction, `Rule 8.5` PNG inspection, and green contract/UI verification (`102/102` tests). |
 | `1.0.7` | 2026-11-18 | AI Agent (`ATT-8916`, `--as agent1`) | `ATT-8916` | Promoted `REQ-PER-045` to `[Verified]` after Stage 5 targeted unit/contract/UI regression, `emulator-5554` smoke verification, `Rule 8.5` PNG audit, and living-doc governance sync. |
+| `1.0.8` | 2026-11-19 | Lane A Flash (`ATT-8324`, `--as agent1`) | `ATT-8324` | Promoted `REQ-PER-003`, `REQ-PER-004`, `REQ-PER-005`, `REQ-PER-006`, `REQ-PER-007`, and `REQ-PER-009` to `[Verified]` in Stage 5 (`REQ-PER-001` retained `[Implemented]` pending `TST-BUG-002`) reusing Gate 4 `93/93 PASS` evidence (`Rule 7.5`). |
+| `1.0.9` | 2026-11-19 | Lane B Author (`ATT-8846`, `--as agent1`) | `ATT-8846` | Added `REQ-HRV-045` (`[Planned]`, `.1`–`.4`) for parameterized `forceFullHrv` route override preserving full HRV measurement UI when launched from `AthleteProfileScreen` HRV tab. |
+| `1.0.10` | 2026-11-19 | Lane B Author (`ATT-8846`, `--as agent1`) | `ATT-8846` | Promoted `REQ-HRV-045` to `[Implemented]` following Stage 4 construction (`NavRoutes.kt`, `ATrainingTrackerApp.kt`, `MorningHrvCheckScreen.kt`), Rule 8.5 Light/Dark PNG verification, and green targeted/contract test suites. |
+| `1.0.11` | 2026-11-19 | Lane B Author (`ATT-8846`, `--as agent1`) | `ATT-8846` | Promoted `REQ-HRV-045` to `[Verified]` in Stage 5 reusing Gate 4 verified `43/43 PASS` evidence (`Rule 7.5`, `0` `app/` code drift since `c7c6cc76`), Rule 8.5 PNG inspection, and living-doc governance sync atop `6927b2f8`. |
+| `1.0.12` | 2026-11-19 | Lane B Author (`ATT-8953`, `--as agent1`) | `ATT-8953` | Added `REQ-HRV-046` (`[Planned]`, `.1`–`.4`) for inverted DFA alpha 1 Y-axis (`0.20` Anaerob top -> `1.40` Aerob bottom) and reconciled `REQ-HRV-044.1` top/bottom band ordering. |
+| `1.0.13` | 2026-11-19 | Lane B Author (`ATT-8953`, `--as agent1`) | `ATT-8953` | Promoted `REQ-HRV-046` to `[Implemented]` following Stage 4 construction (`TelemetryZoneMath.kt`, `TelemetryMetricGraph.kt`), Rule 8.5 Light/Dark PNG verification, and 100% pass across all 8 test/contract suites. |
+| `1.0.14` | 2026-11-19 | Lane B Author (`ATT-8953`, `--as agent1`) | `ATT-8953` | Promoted `REQ-HRV-046` to `[Verified]` in Stage 5 reusing Gate 4 verified `56/56 PASS` evidence across all 8 suites (`Rule 7.5`, `0` `app/` code drift since `c152801d`), Rule 8.5 PNG certification, and governance sync atop `2d7f1489`. |

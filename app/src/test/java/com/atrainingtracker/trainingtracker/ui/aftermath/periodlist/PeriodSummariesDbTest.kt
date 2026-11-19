@@ -16,15 +16,21 @@
 package com.atrainingtracker.trainingtracker.ui.aftermath.periodlist
 
 import android.app.Application
+import android.content.ContentValues
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import androidx.preference.PreferenceManager
 import androidx.test.core.app.ApplicationProvider
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
+import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
 import com.atrainingtracker.trainingtracker.migration.DatabaseSchemaRegistry
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
+import com.atrainingtracker.trainingtracker.ui.util.MigrationStatus
 import io.mockk.*
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -33,6 +39,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
 /**
  * TST-PER-026: Comprehensive test suite for ATT-4476 (REQ-PER-020).
@@ -43,6 +50,7 @@ import org.robolectric.RobolectricTestRunner
  * 5. TST-PER-026.5: Gated Legacy DB File Cleanup (bypassed when preference is true).
  */
 @RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34], application = Application::class)
 class PeriodSummariesDbTest {
 
     private lateinit var context: Context
@@ -51,16 +59,25 @@ class PeriodSummariesDbTest {
     @Before
     fun setUp() {
         context = ApplicationProvider.getApplicationContext()
-        context.deleteDatabase(PeriodSummariesDatabaseManager.DATABASE_NAME)
-        context.deleteDatabase(testDbName)
+        PeriodsRepository.resetInstanceForTesting()
         PeriodSummariesDatabaseManager.setInstanceForTesting(null)
+        WorkoutSummariesDatabaseManager.setInstanceForTesting(null)
+        WorkoutRepository.resetForTesting(null)
+        context.deleteDatabase(PeriodSummariesDatabaseManager.DATABASE_NAME)
+        context.deleteDatabase(WorkoutSummariesDatabaseManager.WorkoutSummariesDbHelper.DB_NAME)
+        context.deleteDatabase(testDbName)
     }
 
     @After
     fun tearDown() {
+        PeriodsRepository.resetInstanceForTesting()
         PeriodSummariesDatabaseManager.setInstanceForTesting(null)
+        WorkoutSummariesDatabaseManager.setInstanceForTesting(null)
+        WorkoutRepository.resetForTesting(null)
         context.deleteDatabase(PeriodSummariesDatabaseManager.DATABASE_NAME)
+        context.deleteDatabase(WorkoutSummariesDatabaseManager.WorkoutSummariesDbHelper.DB_NAME)
         context.deleteDatabase(testDbName)
+        unmockkAll()
     }
 
     /**
@@ -418,5 +435,108 @@ class PeriodSummariesDbTest {
             sportStats = sportStats,
             sortKey = sortKey
         )
+    }
+
+    /**
+     * TST-PERF-004 (REQ-PER-001, REQ-DAT-003) & TST-PERF-005 (REQ-PER-004):
+     * Seeds workouts spanning 3 distinct months in real SQLite and invokes
+     * [PeriodsRepository.resyncAllPeriods]. Verifies:
+     * 1. _groupedPeriods emits incrementally growing monthly summary lists as each month commits.
+     * 2. _migrationStatus progresses monotonically from Phase 1 (Reading) -> Phase 1 (1.0f) +
+     *    Phase 2 (Syncing [Month]) -> Finalizing -> null without regressing back to Phase 1.
+     */
+    @Test
+    fun testResyncAllPeriods_emitsIncrementalMonths_andMonotonicDualPhaseProgress_TST_PERF_004_005() = runTest {
+        mockkStatic(TrainingApplication::class)
+        every { TrainingApplication.getAppContext() } returns context
+        every { TrainingApplication.getMinWalkSpeed_mps() } returns 0.5
+        every { TrainingApplication.getMaxWalkSpeed_mps() } returns 2.0
+        every { TrainingApplication.getMaxRunSpeed_mps() } returns 5.0
+        every { TrainingApplication.getMaxMTBSpeed_mps() } returns 8.0
+        every { TrainingApplication.getMaxBikeSpeed_mps() } returns 12.0
+
+        val mockWorkoutRepo = mockk<WorkoutRepository>(relaxed = true)
+        every { mockWorkoutRepo.allWorkouts } returns MutableStateFlow(emptyList())
+        WorkoutRepository.resetForTesting(mockWorkoutRepo)
+
+        // Ensure init{} sees a synced empty DB so background init does not race explicit resyncAllPeriods()
+        // Cancel and join background init{} jobs on empty DB before seeding workouts so explicit
+        // resyncAllPeriods() runs strictly once with zero background migration overlap.
+        val periodsDbMgr = PeriodSummariesDatabaseManager.getInstance(context)
+        periodsDbMgr.runInTransaction { db -> periodsDbMgr.setSyncFinished(db, true) }
+        val repo = PeriodsRepository(context.applicationContext as Application)
+        repo.scope.coroutineContext[kotlinx.coroutines.Job]?.let { job ->
+            job.children.forEach { it.cancel() }
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                kotlinx.coroutines.runBlocking {
+                    job.children.forEach { it.join() }
+                }
+            }
+        }
+
+        val summariesDb = WorkoutSummariesDatabaseManager.getInstance(context).database
+        listOf(
+            "w_jan" to "2026-01-15 10:00:00",
+            "w_feb" to "2026-02-15 10:00:00",
+            "w_mar" to "2026-03-15 10:00:00"
+        ).forEachIndexed { idx, (baseName, startStr) ->
+            val cv = ContentValues().apply {
+                put(WorkoutSummaries.WORKOUT_NAME, "Workout $idx")
+                put(WorkoutSummaries.FILE_BASE_NAME, baseName)
+                put(WorkoutSummaries.SPORT_ID, 1L)
+                put(WorkoutSummaries.TIME_START, startStr)
+                put(WorkoutSummaries.TIME_ACTIVE_s, 1800)
+                put(WorkoutSummaries.TIME_TOTAL_s, 1800)
+                put(WorkoutSummaries.DISTANCE_TOTAL_m, 10_000.0)
+                put(WorkoutSummaries.SPEED_AVERAGE_mps, 5.5)
+                put(WorkoutSummaries.ASCENDING, 120)
+                put(WorkoutSummaries.DESCENDING, 120)
+                put(WorkoutSummaries.FINISHED, 1)
+            }
+            summariesDb.insertOrThrow(WorkoutSummaries.TABLE, null, cv)
+        }
+
+        val monthCounts = java.util.concurrent.CopyOnWriteArrayList<Int>()
+        val statusHistory = java.util.concurrent.CopyOnWriteArrayList<MigrationStatus?>()
+
+        val periodsJob = async(kotlinx.coroutines.Dispatchers.Unconfined) {
+            repo.groupedPeriods.collect { groups ->
+                if (groups.size > 2) {
+                    monthCounts.add(groups[2].size)
+                }
+            }
+        }
+        val statusJob = async(kotlinx.coroutines.Dispatchers.Unconfined) {
+            repo.migrationStatus.collect { statusHistory.add(it) }
+        }
+
+        repo.resyncAllPeriods()
+        periodsJob.cancel()
+        statusJob.cancel()
+
+        // TST-PERF-004: Incremental month growth across transactions before final size == 3
+        val distinctNonZeroMonths = monthCounts.filter { it > 0 }.distinct()
+        assertTrue(
+            "Expected incremental monthly emissions (>1 step reaching 3), observed=$distinctNonZeroMonths",
+            distinctNonZeroMonths.size >= 2 && distinctNonZeroMonths.last() == 3
+        )
+        assertEquals(3, repo.groupedPeriods.value[2].size) // MONTH tab
+        assertEquals(1, repo.groupedPeriods.value[3].size) // YEAR tab
+
+        // TST-PERF-005: Monotonic Phase 1 -> Phase 1 (1.0f) + Phase 2 -> Finalizing -> null
+        val nonNullStatuses = statusHistory.filterNotNull()
+        val firstPhase2Idx = nonNullStatuses.indexOfFirst { it.phases.size == 2 && it.phases[1].id == 2 }
+        assertTrue("Dual-phase migration must emit Phase 2 statuses", firstPhase2Idx >= 0)
+        assertTrue(
+            "Phase 1 must precede Phase 2",
+            nonNullStatuses.take(firstPhase2Idx).all { it.phases.size == 1 && it.phases[0].id == 1 }
+        )
+        assertTrue(
+            "Once in Phase 2, status must never revert to Phase 1-only and Phase 1 progress stays 1.0f",
+            nonNullStatuses.drop(firstPhase2Idx).all {
+                it.phases.size == 2 && it.phases[0].progress == 1.0f && it.phases[1].id == 2
+            }
+        )
+        assertNull("Final migrationStatus must clear to null", repo.migrationStatus.value)
     }
 }

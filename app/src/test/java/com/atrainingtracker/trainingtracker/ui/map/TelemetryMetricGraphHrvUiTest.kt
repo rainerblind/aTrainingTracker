@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.ui.map
 
+import android.content.res.Configuration
 import android.graphics.Bitmap
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
@@ -29,10 +30,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -152,13 +155,94 @@ class TelemetryMetricGraphHrvUiTest {
         assertTrue("Dark DFA α1 graph must render Zone3 orange", bitmapContainsColorNear(darkBmp, TTColor.Zone3))
         assertTrue("Dark DFA α1 graph must render Zone4 red", bitmapContainsColorNear(darkBmp, TTColor.Zone4))
 
+        // Preserve historical ATT-8710_dfa_a1_zone_graph.png untouched; write inverted Rule 8.5 PNG to ATT-8953 asset (TST-HRV-046.3)
         val repoRoot = if (File("..", "docs/engineering/walkthroughs/img").exists()) File("..") else File(".")
-        val outFile = File(repoRoot, "docs/engineering/walkthroughs/img/ATT-8710_dfa_a1_zone_graph.png")
+        val outFile = File(repoRoot, "docs/engineering/walkthroughs/img/ATT-8953_dfa_a1_inverted_yaxis.png")
         outFile.parentFile?.mkdirs()
         FileOutputStream(outFile).use { fos ->
             compositeBmp.compress(Bitmap.CompressFormat.PNG, 100, fos)
         }
         assertTrue("Rule 8.5 PNG must exist and be non-empty", outFile.exists() && outFile.length() > 0L)
+    }
+
+    @Test
+    fun testDfaA1Graph_invertedYAxisSpatialBandsPortraitAndLandscape_TST_HRV_046() {
+        composeTestRule.setContent {
+            val baseConfig = LocalConfiguration.current
+            val portraitConfig = Configuration(baseConfig).apply {
+                orientation = Configuration.ORIENTATION_PORTRAIT
+            }
+            val landscapeConfig = Configuration(baseConfig).apply {
+                orientation = Configuration.ORIENTATION_LANDSCAPE
+            }
+            ATrainingTrackerTheme(darkTheme = false, amoled = false, setWindowColors = false) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.surface)
+                        .padding(8.dp)
+                ) {
+                    CompositionLocalProvider(LocalConfiguration provides portraitConfig) {
+                        TelemetryMetricGraph(
+                            pathPoints = dfaSamplePoints,
+                            metricType = TelemetryMetricType.HRV_DFA_A1,
+                            currentDistance = 500.0,
+                            onDistanceSelected = {},
+                            dfaA1ThresholdT1 = 0.75f,
+                            dfaA1ThresholdT2 = 0.50f,
+                            enableGestures = false,
+                            modifier = Modifier.testTag("dfa_a1_inverted_portrait")
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    CompositionLocalProvider(LocalConfiguration provides landscapeConfig) {
+                        TelemetryMetricGraph(
+                            pathPoints = dfaSamplePoints,
+                            metricType = TelemetryMetricType.HRV_DFA_A1,
+                            currentDistance = 100.0,
+                            onDistanceSelected = {},
+                            dfaA1ThresholdT1 = 0.75f,
+                            dfaA1ThresholdT2 = 0.50f,
+                            enableGestures = false,
+                            modifier = Modifier.testTag("dfa_a1_inverted_landscape")
+                        )
+                    }
+                }
+            }
+        }
+
+        composeTestRule.waitForIdle()
+        val portraitBmp = composeTestRule.onNodeWithTag("dfa_a1_inverted_portrait").captureToImage().asAndroidBitmap()
+        val landscapeBmp = composeTestRule.onNodeWithTag("dfa_a1_inverted_landscape").captureToImage().asAndroidBitmap()
+
+        // Portrait: top Anaerob band [0%..26%] has Zone4 red and NOT Zone2 green; bottom Aerob band [46%..80%] has Zone2 green and NOT Zone4 red
+        val pTopEnd = (portraitBmp.height * 0.26f).toInt()
+        val pBotStart = (portraitBmp.height * 0.46f).toInt()
+        val pBotEnd = (portraitBmp.height * 0.80f).toInt()
+        val pPlotStart = (portraitBmp.width * 0.10f).toInt()
+        val pPlotEnd = (portraitBmp.width * 0.90f).toInt()
+        val pHistStart = (portraitBmp.width * 0.945f).toInt()
+
+        assertTrue("Portrait main plot top band must render Zone4 Anaerob red", bitmapRegionContainsColorNear(portraitBmp, TTColor.Zone4, pPlotStart, pPlotEnd, 0, pTopEnd))
+        assertFalse("Portrait main plot top band must NOT render Zone2 Aerob green", bitmapRegionContainsColorNear(portraitBmp, TTColor.Zone2, pPlotStart, pPlotEnd, 0, pTopEnd))
+        assertTrue("Portrait main plot bottom band must render Zone2 Aerob green", bitmapRegionContainsColorNear(portraitBmp, TTColor.Zone2, pPlotStart, pPlotEnd, pBotStart, pBotEnd))
+        assertFalse("Portrait main plot bottom band must NOT render Zone4 Anaerob red", bitmapRegionContainsColorNear(portraitBmp, TTColor.Zone4, pPlotStart, pPlotEnd, pBotStart, pBotEnd))
+
+        assertTrue("Portrait marginal histogram top band must render Zone4 red", bitmapRegionContainsColorNear(portraitBmp, TTColor.Zone4, pHistStart, portraitBmp.width, 0, pTopEnd))
+        assertFalse("Portrait marginal histogram top band must NOT render Zone2 green", bitmapRegionContainsColorNear(portraitBmp, TTColor.Zone2, pHistStart, portraitBmp.width, 0, pTopEnd))
+        assertTrue("Portrait marginal histogram bottom band must render Zone2 green", bitmapRegionContainsColorNear(portraitBmp, TTColor.Zone2, pHistStart, portraitBmp.width, pBotStart, pBotEnd))
+        assertFalse("Portrait marginal histogram bottom band must NOT render Zone4 red", bitmapRegionContainsColorNear(portraitBmp, TTColor.Zone4, pHistStart, portraitBmp.width, pBotStart, pBotEnd))
+
+        // Landscape: 72/28 split with AlignedMarginalLinearDistribution (bars drawn at 0.85f alpha -> tolerance 48)
+        val lTopEnd = (landscapeBmp.height * 0.26f).toInt()
+        val lBotStart = (landscapeBmp.height * 0.46f).toInt()
+        val lBotEnd = (landscapeBmp.height * 0.80f).toInt()
+        val lHistStart = (landscapeBmp.width * 0.74f).toInt()
+
+        assertTrue("Landscape AlignedMarginalLinearDistribution top band must render Zone4 red", bitmapRegionContainsColorNear(landscapeBmp, TTColor.Zone4, lHistStart, landscapeBmp.width, 0, lTopEnd, tolerance = 48))
+        assertFalse("Landscape AlignedMarginalLinearDistribution top band must NOT render Zone2 green", bitmapRegionContainsColorNear(landscapeBmp, TTColor.Zone2, lHistStart, landscapeBmp.width, 0, lTopEnd, tolerance = 48))
+        assertTrue("Landscape AlignedMarginalLinearDistribution bottom band must render Zone2 green", bitmapRegionContainsColorNear(landscapeBmp, TTColor.Zone2, lHistStart, landscapeBmp.width, lBotStart, lBotEnd, tolerance = 48))
+        assertFalse("Landscape AlignedMarginalLinearDistribution bottom band must NOT render Zone4 red", bitmapRegionContainsColorNear(landscapeBmp, TTColor.Zone4, lHistStart, landscapeBmp.width, lBotStart, lBotEnd, tolerance = 48))
     }
 
     @Test
@@ -206,13 +290,30 @@ class TelemetryMetricGraphHrvUiTest {
     }
 
     private fun bitmapContainsColorNear(bitmap: Bitmap, target: Color, tolerance: Int = 18): Boolean {
+        return bitmapRegionContainsColorNear(bitmap, target, 0, bitmap.width, 0, bitmap.height, tolerance)
+    }
+
+    private fun bitmapRegionContainsColorNear(
+        bitmap: Bitmap,
+        target: Color,
+        xStart: Int,
+        xEnd: Int,
+        yStart: Int,
+        yEnd: Int,
+        tolerance: Int = 18
+    ): Boolean {
         val targetArgb = target.toArgb()
         val tr = android.graphics.Color.red(targetArgb)
         val tg = android.graphics.Color.green(targetArgb)
         val tb = android.graphics.Color.blue(targetArgb)
 
-        for (y in 0 until bitmap.height) {
-            for (x in 0 until bitmap.width) {
+        val safeYStart = yStart.coerceIn(0, bitmap.height)
+        val safeYEnd = yEnd.coerceIn(safeYStart, bitmap.height)
+        val safeXStart = xStart.coerceIn(0, bitmap.width)
+        val safeXEnd = xEnd.coerceIn(safeXStart, bitmap.width)
+
+        for (y in safeYStart until safeYEnd) {
+            for (x in safeXStart until safeXEnd) {
                 val px = bitmap.getPixel(x, y)
                 if (android.graphics.Color.alpha(px) < 200) continue
                 val dr = abs(android.graphics.Color.red(px) - tr)

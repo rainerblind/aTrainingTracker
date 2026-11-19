@@ -172,4 +172,29 @@ public abstract class MyAccumulatorSensor<N extends Number> extends MySensor<N> 
             }
         }
     }
+
+    /**
+     * Retroactively re-anchors this accumulator's composite total ({@code mInitialValue + mValue})
+     * to {@code targetValue} without altering {@code mValue}, {@code mLastAbsoluteValue}, or
+     * {@code MySensorManager}'s global initial-value map ({@code REQ-FIL-031.2}, {@code ATT-8917}).
+     *
+     * <p>Listeners are notified outside {@code synchronized (this)} when activated.
+     *
+     * @param targetValue The exact composite value this accumulator shall immediately report.
+     */
+    public final void resetTo(N targetValue) {
+        if (targetValue == null) {
+            return;
+        }
+        boolean active;
+        synchronized (this) {
+            mInitialValue = sub(targetValue, mValue);
+            active = mActivated;
+        }
+        if (active) {
+            for (SensorListener sensorListener : mSensorListeners) {
+                sensorListener.newValue(targetValue);
+            }
+        }
+    }
 }

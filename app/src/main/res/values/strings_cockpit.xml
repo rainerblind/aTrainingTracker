@@ -74,4 +74,8 @@
     <string name="cockpit_graph_color_all_metric">All %1$s</string>
     <string name="cockpit_graph_color_theme_default">Theme Default</string>
     <string name="cockpit_graph_color_dynamic_zone">Dynamic Zone</string>
+    <!-- Multisport Automatic Named Laps (REQ-FIL-031.4, ATT-8917) -->
+    <string name="lap_name_bike">Bike</string>
+    <string name="lap_name_transition">Transition</string>
+    <string name="lap_name_run">Run</string>
 </resources>

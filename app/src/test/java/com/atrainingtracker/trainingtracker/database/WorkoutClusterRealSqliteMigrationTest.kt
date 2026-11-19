@@ -18,14 +18,17 @@
 
 package com.atrainingtracker.trainingtracker.database
 
+import android.app.Application
 import android.content.ContentValues
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.provider.BaseColumns
 import androidx.test.core.app.ApplicationProvider
 import com.atrainingtracker.testutil.RealSqliteTestHelper
+import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterDatabaseManager.WorkoutClusterContract
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterDatabaseManager.WorkoutClusterDbHelper
+import com.atrainingtracker.trainingtracker.migration.DatabaseConnectionManager
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -34,13 +37,15 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
 /**
- * Real SQLite migration verification for WorkoutClusterDbHelper (TST-MIG-043.3, REQ-MIG-046.1).
+ * Real SQLite migration verification for WorkoutClusterDbHelper (TST-MIG-043.3, REQ-MIG-046.1; TST-DAT-032, REQ-DAT-036).
  * Verifies deterministic DDL execution, idempotent column addition via PRAGMA table_info,
  * and preservation of existing cluster rows from legacy schema versions (v6 -> v11).
  */
 @RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34], application = Application::class)
 class WorkoutClusterRealSqliteMigrationTest {
 
     private lateinit var context: Context
@@ -68,6 +73,15 @@ class WorkoutClusterRealSqliteMigrationTest {
     @Before
     fun setUp() {
         context = ApplicationProvider.getApplicationContext()
+        setStaticField(TrainingApplication::class.java, "cAppContext", context)
+        setStaticField(
+            TrainingApplication::class.java,
+            "cSharedPreferences",
+            androidx.preference.PreferenceManager.getDefaultSharedPreferences(context)
+        )
+        DatabaseConnectionManager.quiesceAllDatabases(context, closeConnections = true)
+        WorkoutClusterRepository.resetForTesting(null)
+        WorkoutClusterDatabaseManager.resetForTesting(null)
         context.deleteDatabase(dbName)
         db = context.openOrCreateDatabase(dbName, Context.MODE_PRIVATE, null)
         helper = WorkoutClusterDbHelper(context)
@@ -75,7 +89,22 @@ class WorkoutClusterRealSqliteMigrationTest {
 
     @After
     fun tearDown() {
+        runCatching { helper.close() }
         RealSqliteTestHelper.cleanupDatabase(db, dbName)
+        DatabaseConnectionManager.quiesceAllDatabases(context, closeConnections = true)
+        WorkoutClusterRepository.resetForTesting(null)
+        WorkoutClusterDatabaseManager.resetForTesting(null)
+        setStaticField(TrainingApplication::class.java, "cAppContext", null)
+        setStaticField(TrainingApplication::class.java, "cSharedPreferences", null)
+    }
+
+    private fun setStaticField(clazz: Class<*>, fieldName: String, value: Any?) {
+        try {
+            val field = clazz.getDeclaredField(fieldName)
+            field.isAccessible = true
+            field.set(null, value)
+        } catch (_: Exception) {
+        }
     }
 
     @Test

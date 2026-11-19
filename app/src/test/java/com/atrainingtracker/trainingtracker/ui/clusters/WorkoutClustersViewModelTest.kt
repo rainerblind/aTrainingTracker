@@ -54,6 +54,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.test.*
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -664,6 +665,104 @@ class WorkoutClustersViewModelTest {
         activeViewModel = viewModel
 
         assertNull(viewModel.peekedWorkoutDataWithTrack.value)
+    }
+
+    /**
+     * TST-PERF-002 (REQ-PER-001): Selecting a cluster with >30 workouts transitions isLoading
+     * true -> false, populates tracks/heatmapPaths/memberMarkers, and cancels superseded selections.
+     */
+    @Test
+    fun selectCluster_withOver30Workouts_loadsDetailMapAndCancelsSupersededSelection_TST_PERF_002() = runTest(testDispatcher) {
+        val clusterA = createCluster(10L, "Long Loop")
+        val clusterB = createCluster(20L, "Target Loop")
+        val largeWorkoutSet = (1L..35L).map { createWorkout(it, 20L) }
+        val gateA = kotlinx.coroutines.CompletableDeferred<List<WorkoutData>>()
+        val gateB = kotlinx.coroutines.CompletableDeferred<List<WorkoutData>>()
+
+        coEvery { mockClusterRepo.getWorkoutsForCluster(10L) } coAnswers { gateA.await() }
+        coEvery { mockClusterRepo.getWorkoutsForCluster(20L) } coAnswers { gateB.await() }
+
+        val viewModel = WorkoutClustersViewModel(mockApplication, testDispatcher)
+        activeViewModel = viewModel
+        advanceUntilIdle()
+
+        // Start slow selection for A, then immediately supersede with B (>30 workouts)
+        viewModel.selectCluster(clusterA)
+        testScheduler.runCurrent()
+        assertTrue("isLoading must become true on initial selection", viewModel.mapState.value.isLoading)
+
+        viewModel.selectCluster(clusterB)
+        testScheduler.runCurrent()
+        assertTrue("isLoading must remain true while B is loading", viewModel.mapState.value.isLoading)
+
+        // Complete B (A's selectionJob was cancelled)
+        gateB.complete(largeWorkoutSet)
+        gateA.cancel()
+        advanceUntilIdle()
+        // Wait for withContext(Dispatchers.Default) polyline/marker computation to settle on Main
+        val deadlineMs = System.currentTimeMillis() + 5_000L
+        while (viewModel.mapState.value.isLoading && System.currentTimeMillis() < deadlineMs) {
+            Thread.sleep(10)
+            advanceUntilIdle()
+        }
+
+        assertEquals(clusterB, viewModel.selectedCluster.value)
+        assertFalse("isLoading must clear after background decoding completes", viewModel.mapState.value.isLoading)
+        assertEquals(35, viewModel.clusterWorkouts.value.size)
+        assertEquals(35, viewModel.mapState.value.tracks.size)
+        assertEquals(35, viewModel.mapState.value.heatmapPaths.size)
+        assertTrue("Precomputed memberMarkers must populate for cluster workouts", viewModel.mapState.value.memberMarkers.isNotEmpty())
+    }
+
+    /**
+     * TST-PERF-003 (REQ-PER-003) / TST-PERF-007 (REQ-PER-006):
+     * Propagates multi-phase repository migrationStatus to UI state, toggles isRecalculating,
+     * and emits recalculationFinished when complete.
+     */
+    @Test
+    fun recalculateClusters_propagatesMigrationStatusAndCompletionEvent_TST_PERF_003_007() = runTest(testDispatcher) {
+        val statusFlow = MutableStateFlow<com.atrainingtracker.trainingtracker.ui.util.MigrationStatus?>(null)
+        every { mockClusterRepo.migrationStatus } returns statusFlow
+        val completionEvents = mutableListOf<Unit>()
+
+        coEvery { mockClusterRepo.recalculateClustersWithProgress() } coAnswers {
+            statusFlow.value = com.atrainingtracker.trainingtracker.ui.util.MigrationStatus(
+                title = "Analyzing Locations",
+                phases = listOf(com.atrainingtracker.trainingtracker.ui.util.ProgressPhase(1, "Phase 1", 0.5f))
+            )
+            statusFlow.value = com.atrainingtracker.trainingtracker.ui.util.MigrationStatus(
+                title = "Analyzing Locations",
+                phases = listOf(
+                    com.atrainingtracker.trainingtracker.ui.util.ProgressPhase(1, "Phase 1", 1.0f),
+                    com.atrainingtracker.trainingtracker.ui.util.ProgressPhase(2, "Phase 2", 0.7f)
+                )
+            )
+            statusFlow.value = null
+        }
+
+        val viewModel = WorkoutClustersViewModel(mockApplication, testDispatcher)
+        activeViewModel = viewModel
+        advanceUntilIdle()
+
+        val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.recalculationFinished.collect { completionEvents.add(it) }
+        }
+
+        val observedStatuses = mutableListOf<com.atrainingtracker.trainingtracker.ui.util.MigrationStatus?>()
+        val statusJob = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.migrationStatus.collect { observedStatuses.add(it) }
+        }
+
+        viewModel.recalculateClusters()
+        advanceUntilIdle()
+
+        assertFalse("isRecalculating must reset to false upon finish", viewModel.isRecalculating.value)
+        assertEquals(1, completionEvents.size)
+        assertTrue(observedStatuses.filterNotNull().any { it.phases.size == 2 })
+        assertNull(viewModel.migrationStatus.value)
+
+        job.cancel()
+        statusJob.cancel()
     }
 }
 

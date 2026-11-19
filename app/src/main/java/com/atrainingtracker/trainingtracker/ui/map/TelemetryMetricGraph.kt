@@ -630,19 +630,18 @@ fun TelemetryMetricGraph(
             val chartWidthPx = (size.width - startPaddingPx - endPaddingPx).coerceAtLeast(1f)
             val chartHeightPx = (size.height - topPaddingPx - bottomPaddingPx).coerceAtLeast(1f)
 
-            val valRange = (dataMax - dataMin).coerceAtLeast(1.0)
+            val isInvertedYAxis = TelemetryZoneMath.isInvertedTelemetryYAxis(metricType)
 
-            // Function to map metric value to Y coordinate
+            // Function to map metric value to Y coordinate (REQ-HRV-046.1)
             fun valueToY(v: Double): Float {
-                return if (metricType == TelemetryMetricType.PACE) {
-                    // For pace: faster (smaller value) is plotted higher (near top)
-                    val ratio = ((v - dataMin) / valRange).coerceIn(0.0, 1.0)
-                    (topPaddingPx + ratio * chartHeightPx).toFloat()
-                } else {
-                    // Standard: higher value is plotted higher
-                    val ratio = ((v - dataMin) / valRange).coerceIn(0.0, 1.0)
-                    (topPaddingPx + (1.0 - ratio) * chartHeightPx).toFloat()
-                }
+                return TelemetryZoneMath.mapTelemetryValueToY(
+                    value = v,
+                    dataMin = dataMin,
+                    dataMax = dataMax,
+                    topPaddingPx = topPaddingPx,
+                    chartHeightPx = chartHeightPx,
+                    isInverted = isInvertedYAxis
+                )
             }
 
             val nativeCanvas = drawContext.canvas.nativeCanvas
@@ -808,16 +807,16 @@ fun TelemetryMetricGraph(
                 )
             }
 
-            // Draw Y-axis labels (min and max)
+            // Draw Y-axis labels (top and bottom; inverted for PACE and HRV_DFA_A1 per REQ-HRV-046.3)
             val maxLabel = when (metricType) {
                 TelemetryMetricType.PACE -> TelemetryMetricUtils.formatPaceMinutes(dataMin)
-                TelemetryMetricType.HRV_DFA_A1 -> String.format(currentLocale, "%.2f", dataMax)
+                TelemetryMetricType.HRV_DFA_A1 -> String.format(currentLocale, "%.2f", dataMin)
                 TelemetryMetricType.SLOPE -> "${kotlin.math.round(dataMax).toInt()}%"
                 else -> "${dataMax.toInt()}"
             }
             val minLabel = when (metricType) {
                 TelemetryMetricType.PACE -> TelemetryMetricUtils.formatPaceMinutes(dataMax)
-                TelemetryMetricType.HRV_DFA_A1 -> String.format(currentLocale, "%.2f", dataMin)
+                TelemetryMetricType.HRV_DFA_A1 -> String.format(currentLocale, "%.2f", dataMax)
                 TelemetryMetricType.SLOPE -> "${kotlin.math.round(dataMin).toInt()}%"
                 else -> "${dataMin.toInt()}"
             }
@@ -1465,16 +1464,17 @@ fun AlignedMarginalLinearDistribution(
         val bottomPaddingPx = bottomPadding.toPx()
         val chartHeightPx = (size.height - topPaddingPx - bottomPaddingPx).coerceAtLeast(1f)
         val availableWidthPx = size.width
-        val valRange = (dataMax - dataMin).coerceAtLeast(1.0)
+        val isInvertedYAxis = TelemetryZoneMath.isInvertedTelemetryYAxis(metricType)
 
         fun valueToY(v: Double): Float {
-            return if (metricType == TelemetryMetricType.PACE) {
-                val ratio = ((v - dataMin) / valRange).coerceIn(0.0, 1.0)
-                (topPaddingPx + ratio * chartHeightPx).toFloat()
-            } else {
-                val ratio = ((v - dataMin) / valRange).coerceIn(0.0, 1.0)
-                (topPaddingPx + (1.0 - ratio) * chartHeightPx).toFloat()
-            }
+            return TelemetryZoneMath.mapTelemetryValueToY(
+                value = v,
+                dataMin = dataMin,
+                dataMax = dataMax,
+                topPaddingPx = topPaddingPx,
+                chartHeightPx = chartHeightPx,
+                isInverted = isInvertedYAxis
+            )
         }
 
         val maxBinPct = bins.maxOfOrNull { it.percentage }?.takeIf { it > 0f } ?: 1f
@@ -1572,16 +1572,17 @@ fun AlignedMarginalZoneDistribution(
         val bottomPaddingPx = bottomPadding.toPx()
         val chartHeightPx = (size.height - topPaddingPx - bottomPaddingPx).coerceAtLeast(1f)
         val availableWidthPx = size.width
-        val valRange = (dataMax - dataMin).coerceAtLeast(1.0)
+        val isInvertedYAxis = TelemetryZoneMath.isInvertedTelemetryYAxis(metricType)
 
         fun valueToY(v: Double): Float {
-            return if (metricType == TelemetryMetricType.PACE) {
-                val ratio = ((v - dataMin) / valRange).coerceIn(0.0, 1.0)
-                (topPaddingPx + ratio * chartHeightPx).toFloat()
-            } else {
-                val ratio = ((v - dataMin) / valRange).coerceIn(0.0, 1.0)
-                (topPaddingPx + (1.0 - ratio) * chartHeightPx).toFloat()
-            }
+            return TelemetryZoneMath.mapTelemetryValueToY(
+                value = v,
+                dataMin = dataMin,
+                dataMax = dataMax,
+                topPaddingPx = topPaddingPx,
+                chartHeightPx = chartHeightPx,
+                isInverted = isInvertedYAxis
+            )
         }
 
         val nativeCanvas = drawContext.canvas.nativeCanvas
@@ -1774,6 +1775,25 @@ private fun AlignedMarginalZoneDistributionDarkPreview() {
             dataMin = 95.0,
             dataMax = 205.0,
             metricType = TelemetryMetricType.HEART_RATE
+        )
+    }
+}
+
+@Preview(name = "DFA alpha 1 Inverted Y-Axis - Light", widthDp = 360, heightDp = 120, showBackground = true)
+@Composable
+private fun TelemetryMetricGraphDfaA1InvertedPreview() {
+    MaterialTheme {
+        val origin = com.google.android.gms.maps.model.LatLng(0.0, 0.0)
+        TelemetryMetricGraph(
+            pathPoints = listOf(
+                PathPoint(distance = 0.0, latLng = origin, timeSec = 0L, hrvDfaA1 = 1.08),
+                PathPoint(distance = 200.0, latLng = origin, timeSec = 60L, hrvDfaA1 = 0.68),
+                PathPoint(distance = 400.0, latLng = origin, timeSec = 120L, hrvDfaA1 = 0.36)
+            ),
+            metricType = TelemetryMetricType.HRV_DFA_A1,
+            currentDistance = 400.0,
+            onDistanceSelected = {},
+            enableGestures = false
         )
     }
 }

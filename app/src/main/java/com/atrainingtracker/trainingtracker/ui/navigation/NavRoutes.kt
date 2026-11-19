@@ -46,6 +46,8 @@ object NavRoutes {
     const val ARG_PUSHED = "pushed"
     const val PERIODS = "periods"
     const val MORNING_HRV = "morning_hrv"
+    const val ARG_FORCE_FULL_HRV = "forceFullHrv"
+    const val MORNING_HRV_PATTERN = "morning_hrv?forceFullHrv={forceFullHrv}"
     const val HRV_TEST = "hrv_test"
     const val MAP = "map"
     const val MAP_PATTERN = "map?locationId={locationId}"
@@ -125,6 +127,13 @@ object NavRoutes {
             base
         }
     }
+
+    /**
+     * Builds a navigation route to the Morning HRV Check screen, optionally forcing the full HRV
+     * measurement UI regardless of the Start Screen toggle (e.g., when opened from Athlete Profile -> HRV tab; REQ-HRV-045.1).
+     */
+    fun morningHrv(forceFullHrv: Boolean = false): String =
+        if (forceFullHrv) "$MORNING_HRV?$ARG_FORCE_FULL_HRV=true" else MORNING_HRV
 
     /**
      * Builds a navigation route to the Workouts destination, optionally marking it as pushed contextual navigation.

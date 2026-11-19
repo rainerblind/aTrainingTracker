@@ -39,7 +39,7 @@ import java.io.File
 import java.lang.reflect.Field
 
 /**
- * Unit tests verifying BackupWorker Dropbox backup gating and dynamic network constraints (TST-DAT-031.3).
+ * Unit tests verifying BackupWorker Dropbox backup gating and dynamic network constraints (REQ-MIG-003, TST-MIG-003, TST-DAT-031.3).
  */
 class BackupWorkerDropboxGatingTest {
 

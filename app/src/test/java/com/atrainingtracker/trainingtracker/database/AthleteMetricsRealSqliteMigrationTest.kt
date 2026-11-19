@@ -18,11 +18,13 @@
 
 package com.atrainingtracker.trainingtracker.database
 
+import android.app.Application
 import android.content.ContentValues
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import androidx.test.core.app.ApplicationProvider
 import com.atrainingtracker.testutil.RealSqliteTestHelper
+import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.migration.DatabaseSchemaRegistry
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import org.junit.After
@@ -33,13 +35,15 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
 /**
- * Real SQLite migration verification suite for [AthleteMetricsDbHelper] (TST-SET-082, REQ-SET-082).
+ * Real SQLite migration verification suite for [AthleteMetricsDbHelper] (TST-SET-082, REQ-SET-082; TST-DAT-032, REQ-DAT-036).
  * Verifies v1 -> v2 migration, schema parity between onCreate and onUpgrade (Rule 64),
  * and DatabaseSchemaRegistry contract (Rule 62).
  */
 @RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34], application = Application::class)
 class AthleteMetricsRealSqliteMigrationTest {
 
     private lateinit var context: Context
@@ -69,6 +73,12 @@ class AthleteMetricsRealSqliteMigrationTest {
     @Before
     fun setUp() {
         context = ApplicationProvider.getApplicationContext()
+        setStaticField(TrainingApplication::class.java, "cAppContext", context)
+        setStaticField(
+            TrainingApplication::class.java,
+            "cSharedPreferences",
+            androidx.preference.PreferenceManager.getDefaultSharedPreferences(context)
+        )
         context.deleteDatabase(dbMigrateName)
         context.deleteDatabase(dbFreshName)
         dbMigrate = context.openOrCreateDatabase(dbMigrateName, Context.MODE_PRIVATE, null)
@@ -78,8 +88,20 @@ class AthleteMetricsRealSqliteMigrationTest {
 
     @After
     fun tearDown() {
+        runCatching { helper.close() }
         RealSqliteTestHelper.cleanupDatabase(dbMigrate, dbMigrateName)
         RealSqliteTestHelper.cleanupDatabase(dbFresh, dbFreshName)
+        setStaticField(TrainingApplication::class.java, "cAppContext", null)
+        setStaticField(TrainingApplication::class.java, "cSharedPreferences", null)
+    }
+
+    private fun setStaticField(clazz: Class<*>, fieldName: String, value: Any?) {
+        try {
+            val field = clazz.getDeclaredField(fieldName)
+            field.isAccessible = true
+            field.set(null, value)
+        } catch (_: Exception) {
+        }
     }
 
     private fun scaffoldV1Schema(database: SQLiteDatabase) {

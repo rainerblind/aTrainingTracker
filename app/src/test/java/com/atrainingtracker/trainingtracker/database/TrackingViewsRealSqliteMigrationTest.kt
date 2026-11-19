@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.database
 
+import android.app.Application
 import android.content.ContentValues
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
@@ -25,6 +26,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.atrainingtracker.testutil.RealSqliteTestHelper
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.banalservice.filters.FilterType
+import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.ui.tracking.ViewSize
 import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager.TrackingViewsDbHelper
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
@@ -40,12 +42,14 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
 /**
- * Real SQLite migration verification suite for TrackingViewsDbHelper (TST-MIG-042.5, REQ-MIG-045).
+ * Real SQLite migration verification suite for TrackingViewsDbHelper (TST-MIG-042.5, REQ-MIG-045; TST-DAT-032, REQ-DAT-036).
  * Tests authentic DDL/DML execution in SQLite backed by Robolectric, verifying SectionDividersTable creation and views preservation.
  */
 @RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34], application = Application::class)
 class TrackingViewsRealSqliteMigrationTest {
 
     private lateinit var context: Context
@@ -56,6 +60,12 @@ class TrackingViewsRealSqliteMigrationTest {
     @Before
     fun setUp() {
         context = ApplicationProvider.getApplicationContext()
+        setStaticField(TrainingApplication::class.java, "cAppContext", context)
+        setStaticField(
+            TrainingApplication::class.java,
+            "cSharedPreferences",
+            androidx.preference.PreferenceManager.getDefaultSharedPreferences(context)
+        )
         context.deleteDatabase(dbName)
         db = context.openOrCreateDatabase(dbName, Context.MODE_PRIVATE, null)
         helper = TrackingViewsDbHelper(context)
@@ -63,7 +73,19 @@ class TrackingViewsRealSqliteMigrationTest {
 
     @After
     fun tearDown() {
+        runCatching { helper.close() }
         RealSqliteTestHelper.cleanupDatabase(db, dbName)
+        setStaticField(TrainingApplication::class.java, "cAppContext", null)
+        setStaticField(TrainingApplication::class.java, "cSharedPreferences", null)
+    }
+
+    private fun setStaticField(clazz: Class<*>, fieldName: String, value: Any?) {
+        try {
+            val field = clazz.getDeclaredField(fieldName)
+            field.isAccessible = true
+            field.set(null, value)
+        } catch (_: Exception) {
+        }
     }
 
     private fun scaffoldV13Schema(database: SQLiteDatabase) {

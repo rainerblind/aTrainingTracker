@@ -38,6 +38,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ApplicationProvider
 import com.atrainingtracker.R
@@ -279,6 +280,179 @@ class MorningHrvCheckScreenTest {
 
         val repoRoot = if (File("..", "docs/engineering/walkthroughs/img").exists()) File("..") else File(".")
         val outFile = File(repoRoot, "docs/engineering/walkthroughs/img/ATT-8598_morning_wellness_mode.png")
+        outFile.parentFile?.mkdirs()
+        FileOutputStream(outFile).use { out ->
+            bmp.compress(Bitmap.CompressFormat.PNG, 100, out)
+        }
+        assertTrue(outFile.exists() && outFile.length() > 0)
+    }
+
+    @Test
+    fun testForceFullHrvWithWellnessEnabled_preservesFullHrvUiAndOpensInfoSheet_TST_HRV_045() {
+        var startClicked = 0
+        var saveWellnessClicked = 0
+        composeTestRule.setContent {
+            ATrainingTrackerTheme(darkTheme = false) {
+                MorningHrvCheckContent(
+                    uiState = MorningHrvUiState(
+                        phase = MorningHrvPhase.READY,
+                        showMorningCheckOnStartScreen = false,
+                        enableMorningSleepAndWellness = true,
+                        enableSleepDurationAndQuality = true,
+                        enableMorningEnergy = true,
+                        currentHeartRateBpm = 54
+                    ),
+                    onNavigateBack = {},
+                    forceFullHrv = true,
+                    onStart = { startClicked++ },
+                    onSaveStandaloneWellness = { saveWellnessClicked++ }
+                )
+            }
+        }
+
+        // Full HRV TopAppBar metadata & info action preserved despite showMorningCheckOnStartScreen = false
+        composeTestRule.onNodeWithText(context.getString(R.string.morning_hrv_title)).assertIsDisplayed()
+        composeTestRule.onNodeWithText(context.getString(R.string.morning_hrv_subtitle)).assertIsDisplayed()
+        composeTestRule.onNodeWithTag("morning_hrv_info_button").assertIsDisplayed()
+
+        // Full HRV cards + Wellness card + primary Start Measurement + secondary Save Morning Wellness
+        composeTestRule.onNodeWithTag("morning_hrv_protocol_card").performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithTag("morning_hrv_posture_duration_card").performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithTag("morning_hrv_wellness_card").performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithTag("morning_hrv_pacing_card").performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithTag("morning_hrv_start_button").performScrollTo().assertIsDisplayed().performClick()
+        composeTestRule.onNodeWithTag("morning_hrv_save_wellness_secondary_button").performScrollTo().assertIsDisplayed().performClick()
+        composeTestRule.onNodeWithTag("morning_hrv_save_wellness_primary_button").assertDoesNotExist()
+        assertEquals(1, startClicked)
+        assertEquals(1, saveWellnessClicked)
+
+        // Clicking info button opens HrvInfoBottomSheet with HRV info content
+        composeTestRule.onNodeWithTag("morning_hrv_info_button").performClick()
+        composeTestRule.onNodeWithText(context.getString(R.string.hrv_info_title)).assertIsDisplayed()
+        composeTestRule.onNodeWithText(context.getString(R.string.hrv_info_trailing_lag_title)).assertIsDisplayed()
+    }
+
+    @Test
+    fun testForceFullHrvWithWellnessDisabled_showsFullHrvWithoutWellnessCard_TST_HRV_045() {
+        composeTestRule.setContent {
+            ATrainingTrackerTheme(darkTheme = false) {
+                MorningHrvCheckContent(
+                    uiState = MorningHrvUiState(
+                        phase = MorningHrvPhase.READY,
+                        showMorningCheckOnStartScreen = false,
+                        enableMorningSleepAndWellness = false,
+                        currentHeartRateBpm = 56
+                    ),
+                    onNavigateBack = {},
+                    forceFullHrv = true
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithText(context.getString(R.string.morning_hrv_title)).assertIsDisplayed()
+        composeTestRule.onNodeWithTag("morning_hrv_info_button").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("morning_hrv_protocol_card").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("morning_hrv_posture_duration_card").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("morning_hrv_pacing_card").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("morning_hrv_start_button").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("morning_hrv_wellness_card").assertDoesNotExist()
+        composeTestRule.onNodeWithTag("morning_hrv_save_wellness_secondary_button").assertDoesNotExist()
+        composeTestRule.onNodeWithTag("morning_hrv_save_wellness_primary_button").assertDoesNotExist()
+    }
+
+    @Test
+    fun testStartScreenEntry_forceFullHrvFalseRetainsPureWellnessMode_TST_HRV_045() {
+        composeTestRule.setContent {
+            ATrainingTrackerTheme(darkTheme = false) {
+                MorningHrvCheckContent(
+                    uiState = MorningHrvUiState(
+                        phase = MorningHrvPhase.READY,
+                        showMorningCheckOnStartScreen = false,
+                        enableMorningSleepAndWellness = true,
+                        enableSleepDurationAndQuality = true,
+                        enableMorningEnergy = true
+                    ),
+                    onNavigateBack = {},
+                    forceFullHrv = false
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithText(context.getString(R.string.hrv_morning_check_start_button)).assertIsDisplayed()
+        composeTestRule.onNodeWithText(context.getString(R.string.morning_hrv_wellness_subtitle)).assertIsDisplayed()
+        composeTestRule.onNodeWithTag("morning_hrv_wellness_card").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("morning_hrv_save_wellness_primary_button").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("morning_hrv_protocol_card").assertDoesNotExist()
+        composeTestRule.onNodeWithTag("morning_hrv_posture_duration_card").assertDoesNotExist()
+        composeTestRule.onNodeWithTag("morning_hrv_pacing_card").assertDoesNotExist()
+        composeTestRule.onNodeWithTag("morning_hrv_info_button").assertDoesNotExist()
+        composeTestRule.onNodeWithTag("morning_hrv_start_button").assertDoesNotExist()
+    }
+
+    @Test
+    fun testCaptureForceFullHrvLightAndDarkScreenshot_TST_HRV_045() {
+        composeTestRule.setContent {
+            Row(
+                modifier = Modifier
+                    .width(840.dp)
+                    .background(Color(0xFF888888))
+                    .padding(8.dp)
+                    .testTag("force_full_hrv_light_dark"),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                ATrainingTrackerTheme(darkTheme = false) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(940.dp)
+                    ) {
+                        MorningHrvCheckContent(
+                            uiState = MorningHrvUiState(
+                                phase = MorningHrvPhase.READY,
+                                showMorningCheckOnStartScreen = false,
+                                enableMorningSleepAndWellness = true,
+                                enableSleepDurationAndQuality = true,
+                                enableMorningEnergy = true,
+                                enableMuscleSoreness = false,
+                                enableContextTags = false,
+                                currentHeartRateBpm = 54
+                            ),
+                            onNavigateBack = {},
+                            forceFullHrv = true
+                        )
+                    }
+                }
+                ATrainingTrackerTheme(darkTheme = true) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(940.dp)
+                    ) {
+                        MorningHrvCheckContent(
+                            uiState = MorningHrvUiState(
+                                phase = MorningHrvPhase.READY,
+                                showMorningCheckOnStartScreen = false,
+                                enableMorningSleepAndWellness = true,
+                                enableSleepDurationAndQuality = true,
+                                enableMorningEnergy = true,
+                                enableMuscleSoreness = false,
+                                enableContextTags = false,
+                                currentHeartRateBpm = 54
+                            ),
+                            onNavigateBack = {},
+                            forceFullHrv = true
+                        )
+                    }
+                }
+            }
+        }
+
+        val bmp = composeTestRule.onNodeWithTag("force_full_hrv_light_dark")
+            .captureToImage()
+            .asAndroidBitmap()
+
+        val repoRoot = if (File("..", "docs/engineering/walkthroughs/img").exists()) File("..") else File(".")
+        val outFile = File(repoRoot, "docs/engineering/walkthroughs/img/ATT-8846_morning_hrv_force_full.png")
         outFile.parentFile?.mkdirs()
         FileOutputStream(outFile).use { out ->
             bmp.compress(Bitmap.CompressFormat.PNG, 100, out)

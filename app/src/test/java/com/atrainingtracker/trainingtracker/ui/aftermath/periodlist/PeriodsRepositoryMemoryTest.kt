@@ -265,4 +265,31 @@ class PeriodsRepositoryMemoryTest {
             heatmapOptions.liteMode
         )
     }
+
+    /**
+     * TST-PERF-001 (REQ-MAP-017): Enriching 520 workouts keeps eager LatLng path maps empty,
+     * bounds summary thumbnails to MAX_SUMMARY_THUMBNAIL_TRACKS (8), and keeps LRU cache <= 64.
+     */
+    @Test
+    fun testEnrich_withOver500Workouts_maintainsBoundedMemoryStructures() {
+        val workouts = (1L..520L).map { createSampleWorkout(it) }
+        val baseSummary = createBasePeriodSummary(totalWorkouts = 520)
+
+        val enriched = repo.enrich(baseSummary, workouts)
+
+        assertTrue(
+            "workoutIdToPathMap must stay empty even with 520 workouts (TST-PERF-001)",
+            enriched.workoutIdToPathMap.isEmpty()
+        )
+        assertTrue(
+            "workoutIdToAllPolylinesMap must stay empty even with 520 workouts (TST-PERF-001)",
+            enriched.workoutIdToAllPolylinesMap.isEmpty()
+        )
+        assertEquals(MAX_SUMMARY_THUMBNAIL_TRACKS, enriched.polylines.size)
+        assertTrue(
+            "workoutIdToPolylineMap anchors must remain bounded (<= 5)",
+            enriched.workoutIdToPolylineMap.size <= 5
+        )
+        assertEquals(520, enriched.workoutIdToSportMap.size)
+    }
 }

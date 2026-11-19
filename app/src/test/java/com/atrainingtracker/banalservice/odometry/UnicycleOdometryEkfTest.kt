@@ -413,4 +413,59 @@ class UnicycleOdometryEkfTest {
         assertEquals(20.0, ekf.northMeters, 1e-9)
         assertTrue(ekf.speedVariance.isFinite())
     }
+
+    // TST-FIL-032.3: Stationary predict freezes [E, N], F[0..1, 2..4], and Q_POS while keeping P_{k+1|k} SPD/invertible
+    @Test
+    fun testPredict_stationaryFreezesPositionAndCovarianceWhileRemainingInvertible_tstFil032_3() {
+        ekf.reset(east = 120.0, north = -45.0, speed = 5.0, headingRad = 0.3)
+        ekf.applyZeroVelocityUpdate(timestampMs = 1000L)
+        assertEquals(0.0, ekf.speedMps, 1e-9)
+        val initialPosVar = ekf.positionVariance
+        assertTrue("Initial position variance must be positive", initialPosVar > 0.0)
+
+        var ts = 2000L
+        for (i in 0 until 118) {
+            ekf.predict(
+                dtSec = 1.0,
+                gyroYawRateRadPerSec = 0.02,
+                timestampMs = ts,
+                gyroNoiseScale = 1.0,
+                isStationary = true
+            )
+            ekf.applyZeroVelocityUpdate(timestampMs = ts)
+            ts += 1000L
+        }
+
+        // [E, N] and P[0][0] + P[1][1] must stay completely frozen over 118 stationary seconds
+        assertEquals(120.0, ekf.eastMeters, 1e-9)
+        assertEquals(-45.0, ekf.northMeters, 1e-9)
+        assertEquals(initialPosVar, ekf.positionVariance, 1e-9)
+
+        val jac = ekf.getTransitionJacobianCopy()
+        assertEquals(1.0, jac[0][0], 1e-12)
+        assertEquals(1.0, jac[1][1], 1e-12)
+        for (col in 2 until UnicycleOdometryEkf.STATE_DIM) {
+            assertEquals("F[0][$col] must be zero while stationary", 0.0, jac[0][col], 1e-12)
+            assertEquals("F[1][$col] must be zero while stationary", 0.0, jac[1][col], 1e-12)
+        }
+
+        // Covariance must remain strictly SPD and invertible for backward RTS
+        val cov = ekf.getCovarianceCopy()
+        val inv = ExtendedRtsOdometrySmoother.invert5x5(cov)
+        val prod = ExtendedRtsOdometrySmoother.matMul5x5(cov, inv)
+        for (r in 0 until UnicycleOdometryEkf.STATE_DIM) {
+            for (c in 0 until UnicycleOdometryEkf.STATE_DIM) {
+                assertTrue("Inverse entry [$r][$c] must be finite", inv[r][c].isFinite())
+                val expected = if (r == c) 1.0 else 0.0
+                assertEquals("P * P^-1 [$r][$c]", expected, prod[r][c], 1e-6)
+            }
+        }
+
+        // Default isStationary = false must continue propagating position & Q_POS normally (live EKF unchanged)
+        ekf.reset(east = 0.0, north = 0.0, speed = 6.0, headingRad = 0.0)
+        val preMovingPosVar = ekf.positionVariance
+        ekf.predict(dtSec = 1.0, gyroYawRateRadPerSec = 0.0, timestampMs = ts)
+        assertEquals(6.0, ekf.eastMeters, 1e-6)
+        assertTrue("Moving predict must propagate position variance", ekf.positionVariance > preMovingPosVar)
+    }
 }

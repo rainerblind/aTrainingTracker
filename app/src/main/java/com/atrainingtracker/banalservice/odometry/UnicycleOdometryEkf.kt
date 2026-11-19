@@ -169,13 +169,18 @@ class UnicycleOdometryEkf @JvmOverloads constructor(
      * @param gyroYawRateRadPerSec Quaternion-projected ENU yaw-rate \omega_{ENU,z} (rad/s).
      * @param timestampMs Epoch timestamp of this prediction step.
      * @param gyroNoiseScale Optional multiplier on gyro process noise [Q_GYRO] (e.g., > 1.0 for 1-Hz offline replay).
+     * @param isStationary When `true` (offline ERTS stationary epoch, `REQ-FIL-032.3`), freezes `[E, N]`
+     *   state propagation, zeroes position coupling in `F` (`F[0..1, 2..4] = 0`), and zeroes `Q_POS` so
+     *   stationary position covariance does not inflate via `ZUPT_SPEED_VARIANCE` while preserving
+     *   heading/bias propagation and positive-definite invertibility of `P_{k+1|k}`.
      */
     @JvmOverloads
     fun predict(
         dtSec: Double,
         gyroYawRateRadPerSec: Double,
         timestampMs: Long = currentTimestampMs,
-        gyroNoiseScale: Double = 1.0
+        gyroNoiseScale: Double = 1.0,
+        isStationary: Boolean = false
     ) {
         if (dtSec <= 0.0) return
         currentTimestampMs = timestampMs
@@ -199,8 +204,10 @@ class UnicycleOdometryEkf @JvmOverloads constructor(
         val sinMid = sin(psiMid)
 
         // 2. Propagate state vector
-        x[0] += speed * cosMid * dtSec
-        x[1] += speed * sinMid * dtSec
+        if (!isStationary) {
+            x[0] += speed * cosMid * dtSec
+            x[1] += speed * sinMid * dtSec
+        }
         x[3] = normalizeAngle(heading + omegaCorrected * dtSec)
         // speed x[2] and bias x[4] maintain constant values under random walk
 
@@ -210,13 +217,15 @@ class UnicycleOdometryEkf @JvmOverloads constructor(
                 transitionJacobian[i][j] = if (i == j) 1.0 else 0.0
             }
         }
-        transitionJacobian[0][2] = cosMid * dtSec
-        transitionJacobian[0][3] = -speed * sinMid * dtSec
-        transitionJacobian[0][4] = 0.5 * speed * sinMid * dtSec * dtSec
+        if (!isStationary) {
+            transitionJacobian[0][2] = cosMid * dtSec
+            transitionJacobian[0][3] = -speed * sinMid * dtSec
+            transitionJacobian[0][4] = 0.5 * speed * sinMid * dtSec * dtSec
 
-        transitionJacobian[1][2] = sinMid * dtSec
-        transitionJacobian[1][3] = speed * cosMid * dtSec
-        transitionJacobian[1][4] = -0.5 * speed * cosMid * dtSec * dtSec
+            transitionJacobian[1][2] = sinMid * dtSec
+            transitionJacobian[1][3] = speed * cosMid * dtSec
+            transitionJacobian[1][4] = -0.5 * speed * cosMid * dtSec * dtSec
+        }
 
         transitionJacobian[3][4] = -dtSec
 
@@ -246,8 +255,10 @@ class UnicycleOdometryEkf @JvmOverloads constructor(
 
         // Add process noise Q * dt
         val effectiveGyroNoiseScale = if (gyroNoiseScale.isFinite() && gyroNoiseScale > 0.0) gyroNoiseScale else 1.0
-        p[0][0] += Q_POS * dtSec
-        p[1][1] += Q_POS * dtSec
+        if (!isStationary) {
+            p[0][0] += Q_POS * dtSec
+            p[1][1] += Q_POS * dtSec
+        }
         p[2][2] += Q_ACC * dtSec
         p[3][3] += Q_GYRO * effectiveGyroNoiseScale * dtSec
         p[4][4] += Q_BIAS * dtSec

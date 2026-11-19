@@ -498,5 +498,27 @@ class TranslationParityTest {
             )
         }
     }
+
+    /**
+     * TST-PER-017 (REQ-UI-125): Verify no_periods_available and no_periods_available_hint
+     * exist, are non-blank, and avoid XML line-break corruption across all 9 supported locales.
+     */
+    @Test
+    fun testPeriodEmptyStateStrings_presentAcrossAllLocales_TST_PER_017() {
+        val allLocaleDirs = listOf(File(resDir, "values")) + locales.map { File(resDir, "values-$it") }
+        val requiredKeys = listOf("no_periods_available", "no_periods_available_hint")
+
+        for (dir in allLocaleDirs) {
+            val stringsMap = parseStrings(dir)
+            for (key in requiredKeys) {
+                val res = stringsMap[key]
+                assertNotNull("$key missing in ${dir.name}", res)
+                assertTrue(
+                    "$key in ${dir.name} must be non-blank",
+                    res!!.text.trim().isNotEmpty()
+                )
+            }
+        }
+    }
 }
 

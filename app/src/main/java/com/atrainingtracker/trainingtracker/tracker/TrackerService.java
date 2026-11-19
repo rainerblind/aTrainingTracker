@@ -742,28 +742,21 @@ public class TrackerService extends Service {
     public WorkoutRecordingErrorCollector getDiagnosticCollector() {
         return mDiagnosticCollector;
     }
+    final MultisportLapCoordinator mMultisportLapCoordinator = new MultisportLapCoordinator();
     final BroadcastReceiver mLapSummaryReceiver = new BroadcastReceiver() {
         public void onReceive(Context context, @NonNull Intent intent) {
-            if (DEBUG) Log.i(TAG, "received lap summary intent");
-
-            int lapTime = intent.getIntExtra(BANALService.PREV_LAP_TIME_S, 0);
-            double lapDistance = intent.getDoubleExtra(BANALService.PREV_LAP_DISTANCE_m, 0);
-
-            // ATT-896 / REQ-TRK-002: Discard empty split summaries
-            if (lapTime <= 0 && lapDistance <= 0.0) {
-                if (DEBUG) Log.i(TAG, "Ignoring zero-duration lap summary broadcast");
-                return;
-            }
-
-            double lapSpeed = intent.getDoubleExtra(BANALService.PREV_LAP_SPEED_mps, 0);
-            if (Double.isNaN(lapSpeed) || Double.isInfinite(lapSpeed)) {
-                lapSpeed = (lapTime > 0) ? (lapDistance / lapTime) : 0.0;
-            }
-
-            saveLap(intent.getIntExtra(BANALService.PREV_LAP_NR, 0),
-                    lapTime,
-                    lapDistance,
-                    lapSpeed);
+            mMultisportLapCoordinator.onLapSummaryIntent(intent, mWorkoutID, System.currentTimeMillis(),
+                    mTimeActive_s, mTimeTotal_s, mDistanceTotal_m, mIsStopping, getWorkoutRepository(),
+                    (nr, t, d, s) -> { saveLap(nr, t, d, s); return kotlin.Unit.INSTANCE; },
+                    id -> { mBroadcastTracker.onDiscreteEdge(id); return kotlin.Unit.INSTANCE; });
+        }
+    };
+    final BroadcastReceiver mMultisportTransitionReceiver = new BroadcastReceiver() {
+        public void onReceive(Context context, @NonNull Intent intent) {
+            mMultisportLapCoordinator.onMultisportTransitionIntent(TrackerService.this, intent, mBanalService,
+                    () -> mWorkoutID, () -> mBaseFileName, () -> mIsStopping, getWorkoutRepository(),
+                    mTableInitializationFuture, mDbExecutor,
+                    id -> { mBroadcastTracker.onDiscreteEdge(id); return kotlin.Unit.INSTANCE; });
         }
     };
     private volatile String mBaseFileName;
@@ -1047,6 +1040,7 @@ public class TrackerService extends Service {
                 ContextCompat.registerReceiver(this, mSearchingFinishedReceiver, mSearchingFinishedFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
                 ContextCompat.registerReceiver(this, mAltitudeCorrectionReceiver, mAltitudeCorrectionFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
                 ContextCompat.registerReceiver(this, mLapSummaryReceiver, mLapSummaryFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+                ContextCompat.registerReceiver(this, mMultisportTransitionReceiver, new IntentFilter(BANALService.MULTISPORT_TRANSITION_INTENT), ContextCompat.RECEIVER_NOT_EXPORTED);
                 ContextCompat.registerReceiver(this, mUserSelectedSportTypeChangedReceiver, new IntentFilter(BANALService.SPORT_TYPE_CHANGED_BY_USER_INTENT), ContextCompat.RECEIVER_NOT_EXPORTED);
                 mReceiversRegistered = true;
             } catch (Throwable t) {
@@ -1061,6 +1055,7 @@ public class TrackerService extends Service {
                 LifecycleUtils.safeUnregisterReceiver(this, mSearchingFinishedReceiver, TAG);
                 LifecycleUtils.safeUnregisterReceiver(this, mAltitudeCorrectionReceiver, TAG);
                 LifecycleUtils.safeUnregisterReceiver(this, mLapSummaryReceiver, TAG);
+                LifecycleUtils.safeUnregisterReceiver(this, mMultisportTransitionReceiver, TAG);
                 LifecycleUtils.safeUnregisterReceiver(this, mUserSelectedSportTypeChangedReceiver, TAG);
                 mReceiversRegistered = false;
             } catch (Throwable t) {
@@ -1262,6 +1257,7 @@ public class TrackerService extends Service {
                 mSamplesTableName = WorkoutRepository.getSamplesTableName(mBaseFileName);
                 mLiveSession = new LiveWorkoutSession(0, IMPORTANT_SENSOR_TYPES);
                 mLiveSession.setSessionEpochStartTimeMs(startTimeMs);
+                mMultisportLapCoordinator.resetForSession(startTimeMs, 0, 0, 0.0);
 
                 final CompletableFuture<Void> initFuture = new CompletableFuture<>();
                 mTableInitializationFuture = initFuture;
@@ -1907,6 +1903,8 @@ public class TrackerService extends Service {
             return;
         }
 
+        mMultisportLapCoordinator.resetForSession(Math.max(0L, System.currentTimeMillis() - state.timeLap_s * 1000L), Math.max(0, mTimeActive_s - state.timeLap_s), Math.max(0, mTimeTotal_s - state.timeLap_s), Math.max(0.0, mDistanceTotal_m - state.distanceLap_m));
+
         if (mSessionEpochStartTimeMs <= 0L) {
             mSessionEpochStartTimeMs = System.currentTimeMillis();
         }
@@ -2214,8 +2212,8 @@ public class TrackerService extends Service {
         }
 
         double lapSpeed = (lapTime_s > 0) ? (lapDistance / lapTime_s) : 0.0;
-
-        saveLap(workoutId, prevLapNr, lapTime_s, lapDistance, lapSpeed);
+        mMultisportLapCoordinator.saveFinalLap(getWorkoutRepository(), workoutId, prevLapNr, lapTime_s, lapDistance, lapSpeed,
+                (wId, nr, t, d, s) -> { saveLap(wId, nr, t, d, s); return kotlin.Unit.INSTANCE; });
     }
 
     protected void saveLap(long lapNr, int lapTime, double lapDistance, double averageSpeed) {

@@ -41,7 +41,7 @@ import java.io.File
 import java.lang.reflect.Field
 
 /**
- * TST-MIG-033: Unit tests verifying BackupWorker scheduling, fallback defaults,
+ * TST-MIG-003 / TST-MIG-033: Unit tests verifying BackupWorker scheduling, fallback defaults,
  * process-safe lock contention handling, and decoupled local backups.
  */
 class BackupWorkerTest {

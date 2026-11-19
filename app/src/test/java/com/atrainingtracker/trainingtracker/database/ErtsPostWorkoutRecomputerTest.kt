@@ -1493,4 +1493,286 @@ class ErtsPostWorkoutRecomputerTest {
 
         assertTrue(ErtsPostWorkoutRecomputer.recomputeWorkout(context, workoutId))
     }
+
+    // TST-FIL-032.1: Clock-beat 0/2 TIME_TOTAL pairs (both 2->0 and 0->2, 78 pairs) never stretch timeline; pauses re-anchor
+    @Test
+    fun testReconstructTimestamps_clockBeatZeroTwoPairsDoNotStretchAndPausesReanchor_tstFil032_1() {
+        val baseTs = 1_700_010_000_000L
+
+        // 1. 584 rows with 78 (dt=2, dt=0) clock-beat pairs (reproduces +78s -> 662s Zum Bäcker #58 bug!)
+        val twoThenZero = ArrayList<Pair<Long?, Long?>>(584)
+        var tt = 0L
+        for (i in 0 until 584) {
+            val wallTs = baseTs + i * 1000L
+            if (i > 0) {
+                val pairSlot = i / 7
+                val offsetInBlock = i % 7
+                tt += when {
+                    pairSlot < 78 && offsetInBlock == 2 -> 2L // +2s beat first
+                    pairSlot < 78 && offsetInBlock == 3 -> 0L // paired 0s duplicate second
+                    else -> 1L
+                }
+            }
+            twoThenZero.add(wallTs to tt)
+        }
+        val tsTwoThenZero = ErtsPostWorkoutRecomputer.reconstructTimestamps(twoThenZero, baseTs)
+        assertEquals(584, tsTwoThenZero.size)
+        assertEquals("584 rows with 78 (2->0) beat pairs must span exactly 583 s (not 662 s)", 583_000L, tsTwoThenZero.last() - tsTwoThenZero.first())
+        for (i in 1 until tsTwoThenZero.size) {
+            assertEquals("Step $i must stay 1000 ms", 1000L, tsTwoThenZero[i] - tsTwoThenZero[i - 1])
+        }
+
+        // 2. 584 rows with 78 (dt=0, dt=2) clock-beat pairs in opposite ordering
+        val zeroThenTwo = ArrayList<Pair<Long?, Long?>>(584)
+        tt = 0L
+        for (i in 0 until 584) {
+            val wallTs = baseTs + i * 1000L
+            if (i > 0) {
+                val pairSlot = i / 7
+                val offsetInBlock = i % 7
+                tt += when {
+                    pairSlot < 78 && offsetInBlock == 2 -> 0L
+                    pairSlot < 78 && offsetInBlock == 3 -> 2L
+                    else -> 1L
+                }
+            }
+            zeroThenTwo.add(wallTs to tt)
+        }
+        val tsZeroThenTwo = ErtsPostWorkoutRecomputer.reconstructTimestamps(zeroThenTwo, baseTs)
+        assertEquals("584 rows with 78 (0->2) beat pairs must span exactly 583 s", 583_000L, tsZeroThenTwo.last() - tsZeroThenTwo.first())
+
+        // 3. Genuine >5s wall pause landing on a timeTotalSec == prevTimeTotalSec row + deltaTimeTotal > 5L + simultaneous max
+        val pauseCases = listOf(
+            (baseTs + 0L) to 0L,
+            (baseTs + 1_000L) to 1L,
+            // >5s wall pause (+20s) landing on duplicate timeTotalSec == 1L
+            (baseTs + 21_000L) to 1L,
+            (baseTs + 22_000L) to 2L,
+            // Single-step TIME_TOTAL jump (+30s) with null/stale wall timestamp
+            null to 32L,
+            null to 33L,
+            // Both wall pause (+40s) and TIME_TOTAL pause (+25s) on same row -> takes max (+40s)
+            (baseTs + 93_000L) to 58L,
+            (baseTs + 94_000L) to 59L
+        )
+        val tsPauses = ErtsPostWorkoutRecomputer.reconstructTimestamps(pauseCases, baseTs)
+        assertEquals(20_000L, tsPauses[2] - tsPauses[1])
+        assertEquals(1_000L, tsPauses[3] - tsPauses[2])
+        assertEquals(30_000L, tsPauses[4] - tsPauses[3])
+        assertEquals(1_000L, tsPauses[5] - tsPauses[4])
+        assertEquals(40_000L, tsPauses[6] - tsPauses[5])
+        assertEquals(1_000L, tsPauses[7] - tsPauses[6])
+
+        // 4. All-null TIME_TOTAL preserves >5s wall pause while resisting 0/2 wall quantization, and mid-stream null TIME_TOTALs don't false-trip
+        val allNullWithPause = listOf<Pair<Long?, Long?>>(
+            (baseTs + 0L) to null,
+            (baseTs + 2_000L) to null,
+            (baseTs + 2_000L) to null,
+            (baseTs + 3_000L) to null,
+            (baseTs + 33_000L) to null,
+            (baseTs + 34_000L) to null
+        )
+        val tsAllNull = ErtsPostWorkoutRecomputer.reconstructTimestamps(allNullWithPause, baseTs)
+        assertEquals(1_000L, tsAllNull[1] - tsAllNull[0])
+        assertEquals(1_000L, tsAllNull[2] - tsAllNull[1])
+        assertEquals(1_000L, tsAllNull[3] - tsAllNull[2])
+        assertEquals(30_000L, tsAllNull[4] - tsAllNull[3])
+        assertEquals(1_000L, tsAllNull[5] - tsAllNull[4])
+
+        val midStreamNulls = (0 until 15).map { i ->
+            val tVal = if (i in 4..10) null else i.toLong()
+            (baseTs + i * 1000L) to tVal
+        }
+        val tsMidNulls = ErtsPostWorkoutRecomputer.reconstructTimestamps(midStreamNulls, baseTs)
+        assertEquals("7 mid-stream null TIME_TOTAL rows during 1-Hz riding must not false-trip a pause", 14_000L, tsMidNulls.last() - tsMidNulls.first())
+    }
+
+    // TST-FIL-032.2: computeAuthoritativeAverageSpeedMps precedence & pause-gap immunity
+    @Test
+    fun testComputeAuthoritativeAverageSpeedMps_precedenceAndPauseImmunity_tstFil032_2() {
+        val baseTs = 1_700_020_000_000L
+        val pts = listOf(
+            com.atrainingtracker.banalservice.odometry.SmoothedOdometryPoint(baseTs, 0.0, 0.0, 6.0, 0.0, 0.0, 48.65, 9.05, 90.0, 0.0),
+            com.atrainingtracker.banalservice.odometry.SmoothedOdometryPoint(baseTs + 1_000L, 6.0, 0.0, 6.0, 0.0, 0.0, 48.65, 9.05, 90.0, 6.0),
+            // 30s pause gap carrying 180 m deltaDistanceMeters (must be excluded from BOTH numerator & denominator in NULL fallback!)
+            com.atrainingtracker.banalservice.odometry.SmoothedOdometryPoint(baseTs + 31_000L, 186.0, 0.0, 6.0, 0.0, 0.0, 48.65, 9.05, 90.0, 180.0),
+            com.atrainingtracker.banalservice.odometry.SmoothedOdometryPoint(baseTs + 32_000L, 192.0, 0.0, 6.0, 0.0, 0.0, 48.65, 9.05, 90.0, 6.0)
+        )
+
+        // 1. Persisted TIME_ACTIVE_s > 0 takes primary precedence
+        assertEquals(
+            1910.08 / 584.0,
+            ErtsPostWorkoutRecomputer.computeAuthoritativeAverageSpeedMps(1910.08, 584, pts),
+            1e-9
+        )
+        // 2. TIME_ACTIVE_s = null or 0 uses matched activeDist / activeDt over dt <= 5.0 s (= (6+6)/(1+1) = 6.0, NOT (192/2 = 96.0)!)
+        assertEquals(6.0, ErtsPostWorkoutRecomputer.computeAuthoritativeAverageSpeedMps(192.0, null, pts), 1e-9)
+        assertEquals(6.0, ErtsPostWorkoutRecomputer.computeAuthoritativeAverageSpeedMps(192.0, 0, pts), 1e-9)
+        // 3. Single-point / empty / non-finite fallback guards
+        assertEquals(4.5, ErtsPostWorkoutRecomputer.computeAuthoritativeAverageSpeedMps(0.0, null, listOf(pts[0].copy(speedMps = 4.5))), 1e-9)
+        assertEquals(0.0, ErtsPostWorkoutRecomputer.computeAuthoritativeAverageSpeedMps(Double.NaN, null, emptyList()), 1e-9)
+    }
+
+    // TST-FIL-032.1 + TST-FIL-032.2 + TST-FIL-032.3: End-to-end Zum Bäcker #58 profile (78 beat pairs, TIME_ACTIVE_s=584, 118s indoor stop)
+    @Test
+    fun testZumBaeckerProfile_endToEndBeatImmunitySpeedParityAndZeroIndoorDrift_tstFil032_1_2_3() = runBlocking {
+        val baseFileName = "2026-11-19_055904"
+        val cvWorkout = ContentValues().apply {
+            put(WorkoutSummaries.FILE_BASE_NAME, baseFileName)
+            put(WorkoutSummaries.TIME_START, "2026-11-19 05:59:04")
+            put(WorkoutSummaries.TIME_ACTIVE_s, 584)
+            put(WorkoutSummaries.TIME_TOTAL_s, 584)
+            put(WorkoutSummaries.SPORT_ID, 1L)
+        }
+        val workoutId = summariesDbManager.database.insertOrThrow(WorkoutSummaries.TABLE, null, cvWorkout)
+
+        val samplesDb = samplesDbManager.database
+        val tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
+        samplesDbManager.createNewTable(
+            baseFileName,
+            listOf(
+                SensorType.TIME_TOTAL,
+                SensorType.LATITUDE,
+                SensorType.LONGITUDE,
+                SensorType.SPEED_mps,
+                SensorType.PACE_spm,
+                SensorType.DISTANCE_m,
+                SensorType.DISTANCE_m_LAP,
+                SensorType.BEARING,
+                SensorType.ACCURACY,
+                SensorType.ALTITUDE,
+                SensorType.SLOPE,
+                SensorType.VERTICAL_SPEED,
+                SensorType.ASCENT,
+                SensorType.DESCENT,
+                SensorType.LAP_NR
+            )
+        )
+
+        val lapsDbManager = LapsDatabaseManager.getInstance(context)
+        lapsDbManager.saveLap(workoutId, 1L, "2026-11-19 05:59:04", 584, 1900.0, 3.25, "Lap 1", "")
+
+        val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).apply {
+            timeZone = TimeZone.getTimeZone("UTC")
+        }
+        val startTs = 1_795_067_944_000L
+        val originLat = 48.6567
+        val originLon = 9.0545
+        val rideSpeed = 4.1
+        val lonStepDeg = Math.toDegrees(rideSpeed / (6371000.0 * kotlin.math.cos(Math.toRadians(originLat))))
+        val jumpLonDeg = Math.toDegrees(35.66 / (6371000.0 * kotlin.math.cos(Math.toRadians(originLat))))
+
+        var curLon = originLon
+        var cumDist = 0.0
+        var timeTotalVal = 0L
+
+        samplesDb.beginTransaction()
+        try {
+            for (sec in 0 until 584) {
+                val isStop = sec in 242..359 // 118s indoor bakery stop
+                if (sec > 0) {
+                    val pairSlot = sec / 7
+                    val offset = sec % 7
+                    timeTotalVal += when {
+                        pairSlot < 78 && offset == 2 -> 2L
+                        pairSlot < 78 && offset == 3 -> 0L
+                        else -> 1L
+                    }
+                    if (!isStop) {
+                        if (sec == 360) curLon += jumpLonDeg
+                        curLon += lonStepDeg
+                        cumDist += rideSpeed
+                    }
+                }
+                val cv = ContentValues().apply {
+                    put("time", sdf.format(Date(startTs + sec * 1000L)))
+                    put(SensorType.TIME_TOTAL.name, timeTotalVal)
+                    put(SensorType.LATITUDE.name, originLat)
+                    put(SensorType.LONGITUDE.name, curLon)
+                    put(SensorType.SPEED_mps.name, if (isStop) 0.0 else rideSpeed)
+                    put(SensorType.PACE_spm.name, if (isStop) 0.0 else 1.0 / rideSpeed)
+                    put(SensorType.DISTANCE_m.name, cumDist)
+                    put(SensorType.DISTANCE_m_LAP.name, cumDist)
+                    put(SensorType.BEARING.name, 90.0)
+                    put(SensorType.ACCURACY.name, if (isStop) 48.5 else 3.0)
+                    put(SensorType.ALTITUDE.name, 440.0)
+                    put(SensorType.SLOPE.name, 0.0)
+                    put(SensorType.VERTICAL_SPEED.name, 0)
+                    put(SensorType.ASCENT.name, 0.0)
+                    put(SensorType.DESCENT.name, 0.0)
+                    put(SensorType.LAP_NR.name, 1L)
+                }
+                samplesDb.insert(tableName, null, cv)
+            }
+            samplesDb.setTransactionSuccessful()
+        } finally {
+            samplesDb.endTransaction()
+        }
+
+        assertTrue(ErtsPostWorkoutRecomputer.recomputeWorkout(context, workoutId))
+
+        // 1. Assert WorkoutSummaries.SPEED_AVERAGE_mps, Extrema(SPEED_mps, AVG), and Laps.db parity <= 0.02 m/s
+        var totalDist = 0.0
+        var summaryAvgSpeed = 0.0
+        summariesDbManager.database.query(
+            WorkoutSummaries.TABLE,
+            arrayOf(WorkoutSummaries.DISTANCE_TOTAL_m, WorkoutSummaries.SPEED_AVERAGE_mps),
+            "${WorkoutSummaries.C_ID} = ?",
+            arrayOf(workoutId.toString()),
+            null,
+            null,
+            null
+        ).use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            totalDist = cursor.getDouble(0)
+            summaryAvgSpeed = cursor.getDouble(1)
+        }
+        val expectedAvgSpeed = totalDist / 584.0
+        val extremaAvgSpeed = summariesDbManager.getExtremaValue(workoutId, SensorType.SPEED_mps, ExtremaType.AVG)
+        val laps = lapsDbManager.getLaps(workoutId)
+        assertEquals(1, laps.size)
+
+        assertEquals("WorkoutSummaries.SPEED_AVERAGE_mps must equal totalDist / TIME_ACTIVE_s", expectedAvgSpeed, summaryAvgSpeed, 0.02)
+        assertNotNull("Extrema(SPEED_mps, AVG) must be populated", extremaAvgSpeed)
+        assertEquals("Extrema(SPEED_mps, AVG) must match WorkoutSummaries.SPEED_AVERAGE_mps", expectedAvgSpeed, extremaAvgSpeed!!, 0.02)
+        assertEquals("Laps.db speedAverage_mps must match WorkoutSummaries.SPEED_AVERAGE_mps", expectedAvgSpeed, laps[0].speedAverageMps, 0.02)
+        // Total smoothed distance must stay near ~465 * 4.1 = 1906.5 m (not inflated by +78s stretching!)
+        assertTrue("Smoothed distance must not be stretched (was $totalDist m)", totalDist in 1750.0..2050.0)
+
+        // 2. Assert 0.00 m Haversine drift and 0.00 m distance delta across the 118s indoor stop (rows 242..359)
+        samplesDb.query(
+            tableName,
+            arrayOf(SensorType.LATITUDE.name, SensorType.LONGITUDE.name, SensorType.SPEED_mps.name, SensorType.DISTANCE_m.name),
+            null,
+            null,
+            null,
+            null,
+            "_id ASC"
+        ).use { cursor ->
+            var rowIdx = 0
+            var stopLat = Double.NaN
+            var stopLon = Double.NaN
+            var stopStartDist = 0.0
+            while (cursor.moveToNext()) {
+                val lat = cursor.getDouble(0)
+                val lon = cursor.getDouble(1)
+                val spd = cursor.getDouble(2)
+                val dist = cursor.getDouble(3)
+                if (rowIdx in 242..359) {
+                    assertEquals("Indoor stop speed must be 0.0 at row $rowIdx", 0.0, spd, 1e-9)
+                    if (stopLat.isNaN()) {
+                        stopLat = lat
+                        stopLon = lon
+                        stopStartDist = dist
+                    } else {
+                        assertEquals("Indoor stop latitude must remain pinned at row $rowIdx", stopLat, lat, 1e-12)
+                        assertEquals("Indoor stop longitude must remain pinned at row $rowIdx", stopLon, lon, 1e-12)
+                        assertEquals("Indoor stop DISTANCE_m must remain pinned at row $rowIdx", stopStartDist, dist, 1e-9)
+                    }
+                }
+                rowIdx++
+            }
+            assertEquals(584, rowIdx)
+        }
+    }
 }

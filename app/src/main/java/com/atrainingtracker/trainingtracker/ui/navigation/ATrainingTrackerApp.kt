@@ -348,7 +348,7 @@ fun ATrainingTrackerApp(
                     )
                     TrackingTabsScreen(
                         trackingTabsViewModel = trackingTabsViewModel,
-                        onNavigateToMorningHrv = { navController.navigate(NavRoutes.MORNING_HRV) }
+                        onNavigateToMorningHrv = { navController.navigate(NavRoutes.morningHrv(forceFullHrv = false)) }
                     )
                 }
 
@@ -630,7 +630,7 @@ fun ATrainingTrackerApp(
                     com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteProfileScreen(
                         viewModel = athleteProfileViewModel,
                         onOpenDrawer = { activity.openDrawer() },
-                        onNavigateToMorningHrv = { navController.navigate(NavRoutes.MORNING_HRV) }
+                        onNavigateToMorningHrv = { navController.navigate(NavRoutes.morningHrv(forceFullHrv = true)) }
                     )
                 }
 
@@ -737,11 +737,21 @@ fun ATrainingTrackerApp(
                     }
                 }
 
-                composable(NavRoutes.MORNING_HRV) {
+                composable(
+                    route = NavRoutes.MORNING_HRV_PATTERN,
+                    arguments = listOf(
+                        navArgument(NavRoutes.ARG_FORCE_FULL_HRV) {
+                            type = NavType.BoolType
+                            defaultValue = false
+                        }
+                    )
+                ) { backStackEntry ->
+                    val forceFullHrv = backStackEntry.arguments?.getBoolean(NavRoutes.ARG_FORCE_FULL_HRV) == true
                     val morningHrvViewModel: com.atrainingtracker.trainingtracker.ui.hrv.MorningHrvCheckViewModel = viewModel()
                     com.atrainingtracker.trainingtracker.ui.hrv.MorningHrvCheckScreen(
                         viewModel = morningHrvViewModel,
-                        onNavigateBack = { navController.popBackStack() }
+                        onNavigateBack = { navController.popBackStack() },
+                        forceFullHrv = forceFullHrv
                     )
                 }
 

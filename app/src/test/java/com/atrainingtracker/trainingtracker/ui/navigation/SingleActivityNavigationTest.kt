@@ -112,6 +112,23 @@ class SingleActivityNavigationTest {
     }
 
     @Test
+    fun testNavRoutesMorningHrvForceFullOverride_TST_HRV_045() {
+        // REQ-HRV-045.1, TST-HRV-045.1 (ATT-8846)
+        assertEquals("morning_hrv", NavRoutes.MORNING_HRV)
+        assertEquals("forceFullHrv", NavRoutes.ARG_FORCE_FULL_HRV)
+        assertEquals("morning_hrv?forceFullHrv={forceFullHrv}", NavRoutes.MORNING_HRV_PATTERN)
+        assertEquals("morning_hrv", NavRoutes.morningHrv())
+        assertEquals("morning_hrv", NavRoutes.morningHrv(forceFullHrv = false))
+        assertEquals("morning_hrv?forceFullHrv=true", NavRoutes.morningHrv(forceFullHrv = true))
+
+        // Drawer ID mapping symmetry & query-parameter stripping resilience
+        assertEquals(NavRoutes.MORNING_HRV, NavRoutes.fromDrawerItemId(R.id.drawer_morning_hrv))
+        assertEquals(R.id.drawer_morning_hrv, NavRoutes.toDrawerItemId(NavRoutes.MORNING_HRV))
+        assertEquals(R.id.drawer_morning_hrv, NavRoutes.toDrawerItemId("morning_hrv?forceFullHrv=true"))
+        assertEquals(R.id.drawer_morning_hrv, NavRoutes.toDrawerItemId(NavRoutes.MORNING_HRV_PATTERN))
+    }
+
+    @Test
     fun testDrawerItemIdToRouteMapping() {
         assertEquals(NavRoutes.START_TRACKING, NavRoutes.fromDrawerItemId(R.id.drawer_start_tracking))
         assertEquals(NavRoutes.WORKOUTS, NavRoutes.fromDrawerItemId(R.id.drawer_workouts))

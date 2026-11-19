@@ -108,8 +108,10 @@ open class SpeedAndLocationDevice_ATTFused(
     val wheelCalibrator = WheelCircumferenceCalibrator()
     val carriageClassifier = PhoneCarriageClassifier()
     val sportDiscriminator = KinematicSportTypeDiscriminator()
+    val multisportDetector = com.atrainingtracker.banalservice.odometry.MultisportTransitionDetector()
     @Volatile
     private var mLastPublishedInferredSport: BSportType = BSportType.UNKNOWN
+    private var mLastMultisportTickMs: Long = Long.MIN_VALUE
 
     private val mCadenceLock = Any()
     private var mPendingCadenceChanged = false
@@ -815,7 +817,9 @@ open class SpeedAndLocationDevice_ATTFused(
             carriageClassifier.setSportContext(resolveCarriageSportContextHint())
 
             mode = carriageClassifier.classify(timestampMs)
-            publishInferredSportTelemetry(sportDiscriminator.onCarriageMode(mode, timestampMs), timestampMs)
+            val inferredSport = sportDiscriminator.onCarriageMode(mode, timestampMs)
+            publishInferredSportTelemetry(inferredSport, timestampMs)
+            evaluateMultisportTransitionIfDue(mode, inferredSport, timestampMs)
             val hint = resolveSportContextHint()
             profile = mode.profile
             targetYawWindowSec = if (mode == PhoneCarriageMode.RUN_BICEP_ARM) {
@@ -1016,6 +1020,7 @@ open class SpeedAndLocationDevice_ATTFused(
             mLastClassifyTimestampMs = Long.MIN_VALUE
             mLastModeEmissionTimestampMs = Long.MIN_VALUE
             mLastAdaptationTimestampMs = Long.MIN_VALUE
+            mLastMultisportTickMs = Long.MIN_VALUE
         }
     }
 
@@ -1289,6 +1294,24 @@ open class SpeedAndLocationDevice_ATTFused(
         }
     }
 
+    private fun evaluateMultisportTransitionIfDue(
+        mode: PhoneCarriageMode,
+        kinematicSport: BSportType,
+        timestampMs: Long
+    ) {
+        val shouldTick = synchronized(mYawRateLock) {
+            val due = mLastMultisportTickMs == Long.MIN_VALUE ||
+                (timestampMs > mLastMultisportTickMs && (timestampMs - mLastMultisportTickMs) >= MODE_SENSOR_EMISSION_INTERVAL_MS)
+            if (due) mLastMultisportTickMs = timestampMs
+            due
+        }
+        if (!shouldTick) return
+        val event = com.atrainingtracker.banalservice.odometry.MultisportTransitionBridge.evaluateAndDispatch(
+            mContext, multisportDetector, mode, kinematicSport, timestampMs
+        )
+        if (event != null) handleSportTypeChanged(timestampMs)
+    }
+
     private fun resolveSportContextHint(): SportContextHint =
         mExplicitSportHintForTest ?: try {
             SportContextHint.fromBSportType(resolveActiveBSportType())
@@ -1331,6 +1354,7 @@ open class SpeedAndLocationDevice_ATTFused(
         clearYawRateWindow()
         carriageClassifier.reset()
         sportDiscriminator.reset()
+        multisportDetector.reset()
         mLastPublishedInferredSport = BSportType.UNKNOWN
         try {
             val service = mContext as? BANALService

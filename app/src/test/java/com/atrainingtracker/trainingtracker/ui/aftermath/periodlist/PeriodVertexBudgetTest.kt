@@ -27,7 +27,7 @@ import org.junit.Test
 
 /**
  * Unit verification suite for Dual Vertex Budget Enforcement & Adaptive Decimation
- * (ATT-4930 / REQ-PER-019.2 / TST-PER-034).
+ * (ATT-4930 / REQ-PER-019.2 / REQ-MAP-017 / TST-PER-034 / TST-PERF-001).
  */
 class PeriodVertexBudgetTest {
 
@@ -174,5 +174,37 @@ class PeriodVertexBudgetTest {
         for (path in result) {
             assertTrue("Each path must have at least 2 points", path.size >= 2)
         }
+    }
+
+    /**
+     * TST-PERF-001 (REQ-MAP-017): Heatmap & Card Mini-Map Scalability with 520 Workouts.
+     * Verifies both card mini-map preview budget (<= MAX_CARD_MINI_MAP_VERTICES) and detailed map
+     * heatmap vertex budget (<= MAX_DETAILED_MAP_VERTICES) hold for 520 workouts.
+     */
+    @Test
+    fun testTstPerf001_520WorkoutsHeatmapAndCardScalabilityWithinBudgets() {
+        val syntheticYear = createSyntheticYearSummary(workoutCount = 520, pointsPerWorkout = 150)
+        val cardState = prepareCardMapPreviewSync(syntheticYear)
+        assertTrue("Card preview state must be ready for 520 workouts", cardState.isReady)
+        val cardVertices = cardState.primaryPaths.sumOf { it.size }
+        assertTrue(
+            "Card vertices ($cardVertices) MUST NOT exceed MAX_CARD_MINI_MAP_VERTICES ($MAX_CARD_MINI_MAP_VERTICES)",
+            cardVertices <= MAX_CARD_MINI_MAP_VERTICES
+        )
+
+        val rawPathMap = (1L..520L).associateWith { id ->
+            generateSyntheticWorkoutPath(id.toInt(), 150)
+        }
+        val detailBudgetMap = simplifyPathMapToBudget(
+            pathMap = rawPathMap,
+            maxVertices = MAX_DETAILED_MAP_VERTICES,
+            baseTolerance = 8.0
+        )
+        assertEquals("All 520 workout heatmap paths must be retained", 520, detailBudgetMap.size)
+        val detailVertices = detailBudgetMap.values.sumOf { it.size }
+        assertTrue(
+            "Detailed heatmap vertices ($detailVertices) MUST NOT exceed MAX_DETAILED_MAP_VERTICES ($MAX_DETAILED_MAP_VERTICES)",
+            detailVertices <= MAX_DETAILED_MAP_VERTICES
+        )
     }
 }
