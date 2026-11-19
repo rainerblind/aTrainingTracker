@@ -3,7 +3,7 @@
 **Document ID**: `DOC-MGT-SCHICHT`  
 **Document Identifier**: `SCHICHT-OPS-ATT`  
 **Standard**: ASPICE 4.0 `MAN.3` / `SUP.1` / `SUP.8` (Continuous Multi-Agent Shift Operations)  
-**Target Release**: `V5.0.0` | **Version**: 1.0.2  
+**Target Release**: `V5.0.0` | **Version**: 1.0.3  
 **Status**: Reviewed | **Approver**: Pending PO Sign-Off | **Date**: 2026-11-19  
 **Governing Rules**: [`.agents/rules/aspice_governance.md`](../.agents/rules/aspice_governance.md) (`Rule 2`, `Rule 7`, `Rule 9`) & [`.agents/skills/sprint-planner/SKILL.md`](../.agents/skills/sprint-planner/SKILL.md)  
 
@@ -61,7 +61,7 @@ Jede Schicht entspricht einem eigenen Jira-Sprint (`YYYY-MM-DD_0x_Schichtname`) 
    - `./gradlew :app:assembleDebug :app:compileDebugAndroidTestKotlin :app:testDebugUnitTest --rerun --tests <SprintTouchedSuites> --tests "com.atrainingtracker.trainingtracker.build.*" --tests "com.atrainingtracker.trainingtracker.integration.*" --tests "com.atrainingtracker.trainingtracker.localization.*" --max-workers=1`
    - `python3 tools/verify_requirement_governance.py`, Python-Tests (`tools/test_*.py`), Hoechstmass- & Safety-Linter.
    - *(Die vollständige `:app:testDebugUnitTest`-Suite sowie `:app:lintDebug`, `:app:detekt` und `:app:koverXmlReportDebug` laufen **1× wöchentlich** im Rahmen des Weekly Dual-Vendor Code Review / ASPICE Audit sowie bei Releases.)*
-3. **Best-Effort Phone Deploy (`Rule 7.6`)**: Falls ein physisches `Pixel 10` verbunden ist, `ANDROID_SERIAL=<serial> ./gradlew installDebug` ausführen (sonst ohne Blockade protokollieren und weiter).
+3. **Best-Effort Phone Deploy (`Rule 7.6`, `Rule 8.6`)**: Falls ein physisches `Pixel 10` verbunden ist, `ANDROID_SERIAL=<serial> ./gradlew installDebug -PstampGitHash=true` ausführen (stempelt den exakten Schicht-Commit `5.0.0-dev-<sha>` aufs Gerät, während Worktree-Tests/Emulator-Builds per Default ohne `-PstampGitHash` den Cross-Worktree-Build-Cache `FROM-CACHE` nutzen; ohne verbundenes Gerät ohne Blockade protokollieren und weiter).
 4. **Evidenz, Retro, Wochen-Rollup & Merge nach `develop`**: `sprint-metrics --record --post-to-retro` (postet automatisch auch das kompakte Scorecard-Rollup auf das rollierende `Wochen Review & Retro`-Ticket), `export-gates`, `export-test-evidence --no-kover`, `--as agent2 qa-audit`, `record-review`, `docs/management/risk_register.md` aktualisieren, `Sprint_Review_and_Retro_<KEY>.md` (als persistentes Schichtbuch) schreiben und via `python3 tools/jira_util.py --as coordinator post-weekly-rollup --retro-file docs/engineering/retros/Sprint_Review_and_Retro_<KEY>.md` alle Retro-Erkenntnisse, Vorschläge und QA-Befunde automatisch ins `Wochen Review & Retro` spiegeln, committen, `sprint/<CLOSING_SCHICHT>` mit `--no-ff` in `develop` mergen, unveränderlich taggen (`baseline_manager.py tag` + `manifest`), und `Final Review (Human)`-Tickets via `archive-po-acceptance` nach `Bereit für PO Abnahme` (`453`) verschieben.
 
 ### Phase 2: Direkter Start der nächsten Schicht (`Direct Next-Schicht Start`)
@@ -86,3 +86,4 @@ Startet ein neuer Schichtführer in einem frischen Kontextfenster, prüft er zue
 | `1.0.0` | 2026-11-18 | Sprint Coordinator (`ATT-8944`) | `Interactive-PO` | Aligned `schichtbetrieb.md` with live `05:00`/`15:00`/`22:00` `Schicht` sprints, 3 parallel lanes, `Pro` routing for complex/graphical tasks only, Lean Tier-2 at `Schichtwechsel` + weekly full suite, and direct next-`Schicht` start. |
 | `1.0.1` | 2026-11-19 | Review Coordinator (`Interactive-PO`) | `ATT-8223` | Mandated automatic per-Schicht weekly rollup into the rolling `Wochen Review & Retro` ticket (`sprint-metrics --post-to-retro` scorecard rollup + `post-weekly-rollup --retro-file ...` qualitative Retro/QA rollup) during Schichtwechsel Phase 1. |
 | `1.0.2` | 2026-11-19 | Sprint Coordinator (`Interactive-PO`) | `ATT-9055` | Aligned Option 1 Neon (`inherit`)/`flash` routing and incremental `--rerun` (never `--rerun-tasks`) Tier-1/Lean Tier-2 execution across `Rule 7.1/7.2/7.5`, Stage 4–6 skills, and `schichtbetrieb.md`. |
+| `1.0.3` | 2026-11-19 | Sprint Coordinator (`Interactive-PO`) | `ATT-9055` | Enabled cross-worktree Gradle `FROM-CACHE` stability by keeping debug `versionNameSuffix` constant by default in `app/build.gradle` and scoping `-PstampGitHash=true` (`5.0.0-dev-<sha>`) to `Schichtwechsel` `Pixel 10` deploys (`Rule 8.6`). |

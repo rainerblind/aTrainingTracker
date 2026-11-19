@@ -29,9 +29,15 @@ plugins {
     id 'org.jetbrains.kotlinx.kover'
 }
 
-def getGitHash = providers.exec {
+// Cache-friendly debug versionNameSuffix (Interactive-PO / Rule 8.6):
+// - Default (unit tests & agent worktrees): keep versionNameSuffix stable ("") so Stage 4, Gate 4,
+//   and fresh Stage 6 Cold Reviewer worktrees reuse :app:compileDebugKotlin / :app:compileDebugJavaWithJavac
+//   directly FROM-CACHE (~30-60s instead of ~12 min cold recompile).
+// - Pass `-PstampGitHash=true` (e.g., Schichtwechsel Pixel 10 deploy) to stamp `-<short-sha>` into `5.0.0-dev-<sha>`.
+def stampGitHash = project.findProperty('stampGitHash')?.toString()?.toBoolean() ?: false
+def getGitHash = stampGitHash ? providers.exec {
     commandLine('git', 'rev-parse', '--short', 'HEAD')
-}.standardOutput.asText.get().strip()
+}.standardOutput.asText.get().strip() : ""
 
 android {
     compileSdkVersion = 37
@@ -71,7 +77,7 @@ android {
         debug {
             // Separate the debug build
             applicationIdSuffix = ".debug"
-            versionNameSuffix = "-${getGitHash}"
+            versionNameSuffix = stampGitHash ? "-${getGitHash}" : ""
             debuggable = true
             minifyEnabled false
         }
