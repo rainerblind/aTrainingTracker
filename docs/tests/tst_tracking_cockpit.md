@@ -1,14 +1,14 @@
 # Living Test Specification: Tracking & Live Sensor Cockpit
 
 **Document ID**: `DOC-TST-TRK`  
-**Version**: 1.0.63  
+**Version**: 1.0.66  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Tests**: 155
+**Total Tests**: 156
 
 ---
 
@@ -3424,6 +3424,23 @@
   3. *BLE Lifecycle, LoC Ceiling & Detailed-Design Parity (`TST-CON-051.3`, `MyBTLEDeviceAddressAndSearchTest`, `MyBTLEDeviceLifecycleTest`, `ArchitectureConformanceContractTest`, `DetailedDesignParityContractTest`)*:
      • Execute `MyBTLEDeviceAddressAndSearchTest`, `MyBTLEDeviceLifecycleTest`, `ArchitectureConformanceContractTest` (verifying `DeviceManager.java <= 1,708` LoC), and `DetailedDesignParityContractTest` (`my_btle_device.md`, `banal_service.md`), asserting 100% pass with `0` new `src/main` test reads (`REQ-PRO-049.1`) and `Localization Parity: N/A - no UI strings`.
 
+### TST-CON-052: **Extended Sensor Reconnect / Re-Search Backoff & Dual Search Settings Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Tickets**: `ATT-8965`
+- **Requirement(s)**: `REQ-CON-052` (`REQ-CON-052.1`..`REQ-CON-052.3`)
+- **Component**: `SensorReconnectBackoffPolicyTest.kt`, `SensorSearchSettingsTest.kt`, `MyBTLEDeviceLifecycleTest.kt`, `PolarOnlineStreamingBridgeTest.kt`, `DeviceManagerSearchQueueTest.kt`, `SearchSettingsDialogTest.kt`, `SensorSearchTuningSectionTest.kt`, `SystemLiveTrackingRequirementsContractTest.kt`, `ArchitectureConformanceContractTest.kt`, `TranslationParityTest.kt`
+- **Test Type**: Unit
+- **Verification Method**: Unit
+- **Procedure**:
+  1. *Extended Backoff Schedule, Clamping & Toggle Policy (`TST-CON-052.1`, `SensorReconnectBackoffPolicyTest`, `SensorSearchSettingsTest`)*:
+     • Step through `SensorReconnectBackoffPolicy` with default `5 min` (`300 s`) final period; assert sequence `1_000 -> 2_000 -> 4_000 -> 8_000 -> 16_000 -> 32_000 -> 64_000 -> 128_000 -> 300_000 -> 300_000 ms`, verify smaller final periods (`60 s`, `120 s`) clamp cleanly without overshooting, verify `10 min` (`600 s`) reaches `600_000 ms`, verify disabled mode caps at `16_000 ms`, and verify reset restores `1_000 ms`.
+     • Verify `SensorSearchSettings` defaults (`periodicResearchEnabled = true`, `finalPeriodSec = 300`) and SharedPreferences round-trip read/write.
+  2. *BLE, Polar SDK & DeviceManager Periodic Re-Search + Contract Invariants (`TST-CON-052.2`, `MyBTLEDeviceLifecycleTest`, `PolarOnlineStreamingBridgeTest`, `DeviceManagerSearchQueueTest`, `SystemLiveTrackingRequirementsContractTest`, `ArchitectureConformanceContractTest`)*:
+     • Assert `MyBTLEDevice` mid-session reconnect progresses beyond `16 s` up to configured final period when enabled, caps at `16 s` when disabled, cancels on `shutDown()`, and keeps `MAX_RECONNECT_DELAY_MS == 16000L`.
+     • Assert `DeviceManager` + `PolarOnlineStreamingBridge` re-enqueue search-exhausted sensors with extended backoff when enabled, preserve `REQ-CON-051` non-blocking search-queue release, shut down & remove cleanly when disabled, cancel pending retries on `startSearchForPairedDevices()` / `removeAndStopRemoteDevice()` / `shutDown()`, and keep `DeviceManager.java <= 1,708` LoC & `TrainingApplication.java <= 2,135` LoC.
+  3. *Behavioral Compose Dual Search Settings UI & 9-Locale Parity (`TST-CON-052.3`, `SearchSettingsDialogTest`, `SensorSearchTuningSectionTest`, `TranslationParityTest`, `REQ-PRO-132`, `0` `src/main` reads)*:
+     • Render `SearchSettingsDialog` and `SensorSearchTuningSection` via `createComposeRule()`; verify periodic re-search toggle (`default = true`) and final period selector (`1m`, `2m`, `5m`, `10m`; `default = 5m`) persist changes to SharedPreferences, verify disabled toggle dims/disables final period selector, and assert `TranslationParityTest` passes across all 9 `res/values*/strings_devices.xml` locales.
+
 
 ### TST-TRK-087: **ZonesSettingsActivity HRV Tab Gauge Toggle Removal & Behavioral Compose Verification Suite** [Verified]
 - **Target Release**: `V5.0.0`
@@ -3620,3 +3637,6 @@
 | `1.0.61` | 2026-11-19 | AI Agent (`ATT-8895`, `--as agent1`) | `ATT-8895` | Promoted `TST-FIL-029` to `[Verified]` in Stage 5 (Bounce 2/3) on `sprint/2026-11-18_03_Nacht` (`e62a6ba4`) following `--rerun-tasks` verification across `29` unit/NFR/contract/audit/localization suites (`201/201 PASS`, `0` fail, `0` error, `0` skipped), static analysis baselines & 4 Python safety linters PASS, and `docs/engineering/walkthroughs/ATT-8895_walkthrough.md`. |
 | `1.0.62` | 2026-11-19 | AI Agent (`ATT-8895`, `--as agent1`) | `ATT-8895` | Stage 6 Bounce 3/3 heal: added end-to-end Robolectric smartphone-only `BANALService` sport-context integration test (`SpeedAndLocationDevice_ATTFusedBANALServiceIntegrationTest`, zero test hints) proving `WALKING_TRANSITION` + running `STRIDES` registration, `BIKE` broadcast teardown, and `onDestroy()` cleanup (`BANALServiceLifecycleTest`), plus `RUN -> BIKE (transient dwell strides) -> RUN` baseline sync regression test (`SpeedAndLocationDevice_ATTFusedTest`), and set `[Implemented]` pending Stage 5 re-verification. |
 | `1.0.63` | 2026-11-19 | AI Agent (`ATT-8895`, `--as agent1`) | `ATT-8895` | Promoted `TST-FIL-029` to `[Verified]` in Stage 5 (Bounce 3/3) rebased cleanly atop `sprint/2026-11-19_01_Früh` (`8e44039d`) reusing Stage 4 Bounce 3 (`32` suites / `215/215` + `5` incremental suites / `42/42`) and Gate 4 Pass (`ATT-9068`: `23` suites / `169/169` + `5` suites / `42/42`, `0` new warnings) evidence including zero-SQLite hot-path cache verification (`Rule 7.5`). |
+| `1.0.64` | 2026-11-19 | AI Agent (`ATT-8965`, `--as agent1`) | `ATT-8965` | Added & verified `TST-CON-052` (`[Verified]`, `TST-CON-052.1`–`.3`) following Gate 4 Pass (`ATT-9083`: `105/105` incremental `--rerun` PASS; Author Stage 4 `103/103` across 14 suites, `0` new compiler warnings) reusing Gate 4 evidence (`Rule 7.5`, zero `app/` edits post-Gate 4) and `docs/engineering/walkthroughs/ATT-8965_walkthrough.md`. |
+| `1.0.65` | 2026-11-19 | AI Agent (`ATT-8965`, `--as agent1`) | `ATT-8965` | Stage 6 Bounce 1/3 heal: added regression unit tests for `effectiveDelayMs` live clamping (`SensorReconnectBackoffPolicyTest`, `BLEReconnectRobustnessTest`), disable-while-pending zombie cleanup & runnable-identity cancellation race (`DeviceSearchPeriodicRetryCoordinatorTest`, `DeviceManagerSearchQueueTest`), and Polar echo double-advance / `blePowerStateChanged` / exception reschedule (`PolarOnlineStreamingBridgeTest`); set `[Implemented]` pending verification. |
+| `1.0.66` | 2026-11-19 | AI Agent (`ATT-8965`, `--as agent1`) | `ATT-8965` | Promoted `TST-CON-052` to `[Verified]` in Stage 5 (Bounce 2) reusing Gate 4 Bounce 2 Pass (`ATT-9088`: `128/128` incremental `--rerun` PASS across 16 suites, zero `app/` changes post-`587730da` per `Rule 7.5`) and `docs/engineering/walkthroughs/ATT-8965_walkthrough.md`. |

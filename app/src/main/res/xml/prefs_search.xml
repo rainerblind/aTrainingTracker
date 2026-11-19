@@ -75,6 +75,22 @@
             android:summary="@string/prefsChangeSportWhenDeviceGetsLostSummary"
             android:title="@string/prefsChangeSportWhenDeviceGetsLostTitle"
             android:layout="@layout/preference_slim"/>
+
+        <CheckBoxPreference
+            android:defaultValue="true"
+            android:key="periodicSensorResearchEnabled"
+            android:summary="@string/prefs_periodic_research_enabled_summary"
+            android:title="@string/prefs_periodic_research_enabled_title"
+            android:layout="@layout/preference_slim"/>
+
+        <SeekBarPreference
+            android:key="periodicSensorResearchFinalPeriodSec"
+            android:title="@string/prefs_periodic_research_final_period_title"
+            android:summary="@string/prefs_periodic_research_final_period_summary"
+            android:defaultValue="300"
+            android:max="600"
+            app:min="60"
+            app:showSeekBarValue="true"/>
     </PreferenceCategory>
 
 </PreferenceScreen>

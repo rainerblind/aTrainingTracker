@@ -48,6 +48,7 @@ import androidx.core.content.ContextCompat;
 import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.devices.DeviceType;
 import com.atrainingtracker.banalservice.devices.MyRemoteDevice;
+import com.atrainingtracker.banalservice.devices.SensorReconnectBackoffPolicy;
 import com.atrainingtracker.banalservice.Protocol;
 import com.atrainingtracker.banalservice.sensor.MySensorManager;
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager;
@@ -489,8 +490,8 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
                         mState = State.DISCONNECTED;
                     }
                     mIsBackgroundReconnecting = true;
-                    delay = mCurrentReconnectDelayMs;
-                    mCurrentReconnectDelayMs = Math.min(mCurrentReconnectDelayMs * 2, MAX_RECONNECT_DELAY_MS);
+                    delay = SensorReconnectBackoffPolicy.effectiveDelayMs(mCurrentReconnectDelayMs, mContext);
+                    mCurrentReconnectDelayMs = SensorReconnectBackoffPolicy.nextDelayMs(delay, mContext);
                 }
                 Log.i(TAG, "Scheduling next reconnect attempt in " + delay + " ms (next backoff: " + mCurrentReconnectDelayMs + " ms)");
                 mHandler.removeCallbacks(mReconnectRunnable);
@@ -600,8 +601,8 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
                 if (!mIsShutDown) {
                     long delay;
                     synchronized (mGattLock) {
-                        delay = mCurrentReconnectDelayMs;
-                        mCurrentReconnectDelayMs = Math.min(mCurrentReconnectDelayMs * 2, MAX_RECONNECT_DELAY_MS);
+                        delay = SensorReconnectBackoffPolicy.effectiveDelayMs(mCurrentReconnectDelayMs, mContext);
+                        mCurrentReconnectDelayMs = SensorReconnectBackoffPolicy.nextDelayMs(delay, mContext);
                     }
                     Log.i(TAG, "Scheduling reconnect in " + delay + " ms (next backoff: " + mCurrentReconnectDelayMs + " ms)");
                     mHandler.removeCallbacks(mReconnectRunnable);

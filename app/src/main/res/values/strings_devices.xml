@@ -252,4 +252,14 @@
     <string name="carriage_mode_run_bicep_arm">Run Armband</string>
     <string name="carriage_mode_run_handheld">Run Handheld</string>
 
+    <!-- Extended Periodic Sensor Re-Search & Backoff (ATT-8965, REQ-CON-052.3) -->
+    <string name="prefs_periodic_research_enabled_title">Periodic long-term re-search</string>
+    <string name="prefs_periodic_research_enabled_summary">Automatically retry disconnected sensors with extending intervals (1s to steady-state period)</string>
+    <string name="prefs_periodic_research_final_period_title">Steady-state re-search interval</string>
+    <string name="prefs_periodic_research_final_period_summary">Final interval reached after backoff steps (16s → 32s → 64s → 2 min)</string>
+    <string name="prefs_research_period_1m">1 min</string>
+    <string name="prefs_research_period_2m">2 min</string>
+    <string name="prefs_research_period_5m">5 min</string>
+    <string name="prefs_research_period_10m">10 min</string>
+
 </resources>

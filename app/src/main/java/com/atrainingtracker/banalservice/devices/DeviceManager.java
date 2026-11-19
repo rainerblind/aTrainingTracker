@@ -130,6 +130,7 @@ public class DeviceManager {
     private final Set<Long> mPendingTeardownDeviceIds = ConcurrentHashMap.newKeySet();
     private volatile boolean mIsShutDown = false;
     private int mSdkInt = Build.VERSION.SDK_INT;
+    private volatile DeviceSearchPeriodicRetryCoordinator mPeriodicRetryCoordinator;
     private final BroadcastReceiver mStopSearchingForNewDevicesReceiver = new BroadcastReceiver() {
         public void onReceive(Context context, Intent intent) {
             if (DEBUG) Log.d(TAG, "Received StopSearchingForNewDevices Broadcast");
@@ -152,21 +153,8 @@ public class DeviceManager {
                 if (current != null
                         && current.getDeviceId() == deviceID) {  // it is indeed the device that we are currently searching
                     cMyRemoteDeviceCurrentlySearchingFor = null;
-                    if (!success) {                                                     // it was not found
-                        Integer tries = mMyRemoteDeviceTries.get(current);
-                        if (tries == null || tries <= 1) {  // no longer try to search for this device
-                            if (!current.shouldKeepAliveOnSearchTimeout()) {
-                                if (DEBUG) Log.i(TAG, "max number of tries <= 1 -> give up searching for this device");
-                                detachIfRrBeatSource(current);
-                                current.shutDown();                // so we shut it down
-                                mMyRemoteDevices.remove(deviceID);                              // and remove it
-                            }
-                        } else {  // continue searching
-                            if (DEBUG) Log.i(TAG, "max number of tries > 1 -> give this device another chance");
-                            mMyRemoteDeviceTries.put(current, tries - 1);
-                            mSearchQueue.addLast(current);
-                        }
-                    }
+                    getPeriodicRetryCoordinator().handleSearchStoppedForCurrentDevice(current, deviceID, success, mMyRemoteDevices, mMyRemoteDeviceTries, mSearchQueue,
+                            () -> cMyRemoteDeviceCurrentlySearchingFor, () -> { detachIfRrBeatSource(current); current.shutDown(); mMyRemoteDevices.remove(deviceID); }, DeviceManager.this::searchForNextRemoteDevice);
                     searchForNextRemoteDevice();
                 } else {
                     if (DEBUG) Log.d(TAG, "Ignoring search stop broadcast from non-active peripheral device ID: " + deviceID + " (0x" + Long.toHexString(deviceID) + ")");
@@ -174,6 +162,15 @@ public class DeviceManager {
             }
         }
     };
+
+    DeviceSearchPeriodicRetryCoordinator getPeriodicRetryCoordinator() {
+        DeviceSearchPeriodicRetryCoordinator c = mPeriodicRetryCoordinator;
+        if (c == null) synchronized (mSearchQueue) {
+            c = mPeriodicRetryCoordinator;
+            if (c == null) mPeriodicRetryCoordinator = c = new DeviceSearchPeriodicRetryCoordinator(mContext);
+        }
+        return c;
+    }
 
     BroadcastReceiver getSearchingStoppedForOneReceiver() {
         return mSearchingStoppedForOneReceiver;
@@ -764,6 +761,7 @@ public class DeviceManager {
     public void shutDown() {
         if (DEBUG) Log.d(TAG, "shutDown()");
         mIsShutDown = true;
+        if (mPeriodicRetryCoordinator != null) mPeriodicRetryCoordinator.shutDown();
         mLiveImuHandoffGenerations.clear();
         mPendingTeardownDeviceIds.clear();
 
@@ -1001,6 +999,7 @@ public class DeviceManager {
                 Log.i(TAG, "in startSearchForPairedDevices(): already searching => stop this search");
             return;  //immediately return when we are already searching
         }
+        getPeriodicRetryCoordinator().cancelAllPending();
 
 
         // first, save all existing devices
@@ -1396,6 +1395,7 @@ public class DeviceManager {
 
     protected void removeAndStopRemoteDevice(long deviceId, @Nullable Runnable onTeardownComplete) {
         if (DEBUG) Log.d(TAG, "removeAndStopRemoteDevice(" + deviceId + ")");
+        if (mPeriodicRetryCoordinator != null) mPeriodicRetryCoordinator.cancelDevice(deviceId);
 
         MyRemoteDevice myRemoteDevice = mMyRemoteDevices.remove(deviceId);
         if (myRemoteDevice != null) {

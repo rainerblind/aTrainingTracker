@@ -1,14 +1,14 @@
 # Detailed Design: BANALService & DeviceManager (ASPICE SWE.3)
 
 **Document ID**: `DOC-ARC-DD-BANAL`  
-**Version**: 1.0.6  
+**Version**: 1.0.7  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
-**Units**: `BANALService` (`app/src/main/java/com/atrainingtracker/banalservice/BANALService.java`, 980 LOC), `DeviceManager` (`app/src/main/java/com/atrainingtracker/banalservice/devices/DeviceManager.java`, 1,707 LOC), `MyRemoteDevice` (`MyRemoteDevice.java`, 159 LOC)  
-**Collaborators**: `MySensorManager`, `ProxySensor`, `FilterManager`, `SportTypesRepository`, `BANALServiceComm`  
+**Units**: `BANALService` (`app/src/main/java/com/atrainingtracker/banalservice/BANALService.java`, 980 LOC), `DeviceManager` (`app/src/main/java/com/atrainingtracker/banalservice/devices/DeviceManager.java`, 1,707 LOC), `MyRemoteDevice` (`MyRemoteDevice.java`, 159 LOC), `DeviceSearchPeriodicRetryCoordinator` (`DeviceSearchPeriodicRetryCoordinator.kt`)  
+**Collaborators**: `MySensorManager`, `ProxySensor`, `FilterManager`, `SportTypesRepository`, `BANALServiceComm`, `SensorReconnectBackoffPolicy`  
 **SWE.2 Alignment**: `docs/architecture.md` §3.2, §4.2, §4.7, §4.8, §4.9 (`IF-SWE-03`, `IF-SWE-04`)  
-**Requirement Trace**: `REQ-PRO-114.1`, `REQ-ARC-008.2`, `REQ-SEN-021`, `REQ-TRK-024`, `REQ-TRK-055`, `REQ-TRK-077`, `REQ-CON-051`, `REQ-FIL-029`
+**Requirement Trace**: `REQ-PRO-114.1`, `REQ-ARC-008.2`, `REQ-SEN-021`, `REQ-TRK-024`, `REQ-TRK-055`, `REQ-TRK-077`, `REQ-CON-051`, `REQ-FIL-029`, `REQ-CON-052`
 
 ---
 
@@ -59,7 +59,7 @@ stateDiagram-v2
 | `startSearchForPairedDevices()` | `!isSearchingForARemoteDevice()` | Populate paired ANT+/BLE devices into `mSearchQueue` (clamped to `MAX_FREE_PAIRED_DEVICES` on Free tier); seed `mMyRemoteDeviceTries`; broadcast `SEARCHING_STARTED_FOR_ALL_INTENT`; call `searchForNextRemoteDevice()` | `SEARCH_QUEUE_ACTIVE` |
 | `searchForNextRemoteDevice()` | `next == null` | Set `cMyRemoteDeviceCurrentlySearchingFor = null`; broadcast `SEARCHING_FINISHED_FOR_ALL_INTENT` | `BOUND_IDLE` |
 | `searchForNextRemoteDevice()` | `next != null && !next.isSearching() && !next.isReceivingData()` and sport filter matches | Set `cMyRemoteDeviceCurrentlySearchingFor = next`; call `next.startSearching()` (which invokes `MyRemoteDevice.notifyStartSearching()` -> `SEARCHING_STARTED_FOR_ONE_INTENT` and ends via `notifyStopSearching(success)` -> `SEARCHING_STOPPED_FOR_ONE_INTENT`) | `SEARCHING_DEVICE` |
-| `mSearchingStoppedForOneReceiver.onReceive` | `current != null && current.getDeviceId() == deviceID` | Clear `cMyRemoteDeviceCurrentlySearchingFor = null`; if `!success && tries <= 1 && !current.shouldKeepAliveOnSearchTimeout()` call `current.shutDown()` & remove from `mMyRemoteDevices`; if `!success && tries > 1` decrement tries & `mSearchQueue.addLast(current)`; call `searchForNextRemoteDevice()` | `SEARCH_QUEUE_ACTIVE` |
+| `mSearchingStoppedForOneReceiver.onReceive` | `current != null && current.getDeviceId() == deviceID` | Clear `cMyRemoteDeviceCurrentlySearchingFor = null`; delegate to `getPeriodicRetryCoordinator().handleSearchStoppedForCurrentDevice(...)` (on `success=true` reset periodic backoff; on `!success && tries <= 1 && !current.shouldKeepAliveOnSearchTimeout()` either schedule extended `32s->64s->128s->finalPeriodMs` periodic re-search when enabled or call `shutDown()` + remove when disabled; on `!success && tries > 1` decrement tries & `mSearchQueue.addLast(current)`); call `searchForNextRemoteDevice()` | `SEARCH_QUEUE_ACTIVE` |
 | `mNewLapReceiver.onReceive` (`REQUEST_NEW_LAP`) | Active service | Read `LAP_NR`, `TIME_LAP`, `DISTANCE_m_LAP`, compute `lapSpeed`, forward `deviceManager.newLap()`, broadcast `LAP_SUMMARY` (optionally trigger `REQUEST_START_SEARCH_FOR_PAIRED_DEVICES`) | Unchanged |
 | `setUserSelectedSportTypeId(sportTypeId)` | `BANALServiceComm` call | Resolve `BSportType` once via `SportTypesRepository`, publish `mUserSelectedSportTypeId` & `mUserSelectedBSportType` before `mHaveUserSelectedSportType = true`; `updateIndoorModeForSportType`; broadcast `SPORT_TYPE_CHANGED_BY_USER_INTENT` | Unchanged |
 | `mPolarLiveImuChangedReceiver.onReceive` (`POLAR_LIVE_IMU_CHANGED`) | Paired BLE HRM (`deviceId > 0`, `!mIsShutDown`) | Detach `RrBeatSource`, remove from `mMyRemoteDevices`/`mSearchQueue`, track `mPendingTeardownDeviceIds` (so rapid repeat toggles wait for active teardown), call `shutDown(onTeardownComplete)` on active Polar HRM, and only in `onLiveImuTeardownComplete` invoke `createRemoteDevice(deviceId)` + `searchForNextRemoteDevice()` (`mSdkInt >= TIRAMISU`) | `SEARCH_QUEUE_ACTIVE` |
@@ -117,3 +117,4 @@ stateDiagram-v2
 | `1.0.4` | 2026-11-19 | AI Agent (`ATT-8998`) | `ATT-8998` | Stage 6 Bounce 1/3 heal: documented `shouldKeepAliveOnSearchTimeout()` `tries <= 1` exemption in `mSearchingStoppedForOneReceiver`, updated unit LOC (`DeviceManager` `1,707`, `MyRemoteDevice` `159`), and added `DeviceManagerSearchQueueTest` parity (`REQ-CON-051`). |
 | `1.0.5` | 2026-11-19 | AI Agent (`ATT-8895`, `--as agent1`) | `ATT-8895` | Updated §4.1 (`IF-SWE-04`) for `CADENCE_PRIORITY` tail (`SPEED_AND_LOCATION_ATT_FUSED`), explicit `STRIDES_PRIORITY` (`RUN_SPEED > HRM > SPEED_AND_LOCATION_ATT_FUSED`), and `MyAccumulatorSensor` total-listener restoration, and added `ATT-8895` verification traceability in §5 (`REQ-FIL-029.4`, `REQ-PRO-114`). |
 | `1.0.6` | 2026-11-19 | AI Agent (`ATT-8895`, `--as agent1`) | `ATT-8895` | Stage 6 Bounce 3/3 heal (+ Gate 4 revision): documented `cServiceInstance` lifecycle + `getActiveBSportType()` resolution and volatile `mUserSelectedBSportType` cache in `BANALService.java` (`980 LOC`, zero per-sample SQLite lookups on 100-Hz IMU hot path, preserving leak-free `cServiceContext = getApplicationContext()`), non-`RUN` dwell stride baseline sync in `SpeedAndLocationDevice_ATTFused`, and `SpeedAndLocationDevice_ATTFusedBANALServiceIntegrationTest` parity (`REQ-FIL-029.3`, `REQ-PRO-114`). |
+| `1.0.7` | 2026-11-19 | AI Agent (`ATT-8965`, `--as agent1`) | `ATT-8965` | Delegated `tries <= 1` exhaustion & extended periodic re-search (`32s->64s->128s->finalPeriodMs`) to `DeviceSearchPeriodicRetryCoordinator` (`DeviceManager.java` `1,707` LOC, thread-safe double-checked init + disabled-mid-flight give-up cleanup, `REQ-CON-052`). |

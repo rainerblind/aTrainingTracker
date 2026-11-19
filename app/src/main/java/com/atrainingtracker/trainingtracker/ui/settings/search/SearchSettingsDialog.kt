@@ -26,14 +26,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.preference.PreferenceManager
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.settings.SensorSearchSettings
 import com.atrainingtracker.trainingtracker.ui.components.core.AppBottomSheetContent
 import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
+import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import kotlin.math.roundToInt
 
 /**
@@ -81,6 +86,12 @@ fun SearchSettingsDialog(
     var changeSportWhenDeviceGetsLost by remember {
         mutableStateOf(TrainingApplication.changeSportWhenDeviceGetsLost())
     }
+    var periodicResearchEnabled by remember {
+        mutableStateOf(SensorSearchSettings.isPeriodicResearchEnabled(context))
+    }
+    var periodicResearchFinalPeriodSec by remember {
+        mutableIntStateOf(SensorSearchSettings.getPeriodicResearchFinalPeriodSec(context))
+    }
 
     AppBottomSheetContent(
         title = stringResource(R.string.Search_Settings),
@@ -98,6 +109,11 @@ fun SearchSettingsDialog(
                         .putBoolean("startSearchWhenTrackingStarts", startSearchWhenTrackingStarts)
                         .putBoolean("searchOnlyForSportSpecificDevices", searchOnlyForSportSpecificDevices)
                         .putBoolean("changeSportWhenDeviceGetsLost", changeSportWhenDeviceGetsLost)
+                        .putBoolean(SensorSearchSettings.SP_PERIODIC_RESEARCH_ENABLED, periodicResearchEnabled)
+                        .putInt(
+                            SensorSearchSettings.SP_PERIODIC_RESEARCH_FINAL_PERIOD_SEC,
+                            SensorSearchSettings.normalizeFinalPeriodSec(periodicResearchFinalPeriodSec)
+                        )
                         .apply()
                     onDismiss()
                 },
@@ -253,9 +269,83 @@ fun SearchSettingsDialog(
                     checked = changeSportWhenDeviceGetsLost,
                     onCheckedChange = { changeSportWhenDeviceGetsLost = it }
                 )
+
+                SearchSettingToggleRow(
+                    title = stringResource(R.string.prefs_periodic_research_enabled_title),
+                    summary = stringResource(R.string.prefs_periodic_research_enabled_summary),
+                    checked = periodicResearchEnabled,
+                    onCheckedChange = { periodicResearchEnabled = it },
+                    modifier = Modifier.testTag("periodic_research_toggle")
+                )
+
+                PeriodicResearchFinalPeriodSelector(
+                    selectedPeriodSec = periodicResearchFinalPeriodSec,
+                    enabled = periodicResearchEnabled,
+                    onPeriodSelected = { periodicResearchFinalPeriodSec = it }
+                )
             }
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun PeriodicResearchFinalPeriodSelector(
+    selectedPeriodSec: Int,
+    enabled: Boolean,
+    onPeriodSelected: (Int) -> Unit
+) {
+    val contentAlpha = if (enabled) 1f else TTAlpha.Disabled
+    val options = SensorSearchSettings.FINAL_PERIOD_OPTIONS_SEC
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Text(
+            text = stringResource(R.string.prefs_periodic_research_final_period_title),
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = contentAlpha)
+        )
+        Text(
+            text = stringResource(R.string.prefs_periodic_research_final_period_summary),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = contentAlpha)
+        )
+        SingleChoiceSegmentedButtonRow(
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            options.forEachIndexed { index, optionSec ->
+                val isSelected = optionSec == selectedPeriodSec
+                SegmentedButton(
+                    selected = isSelected,
+                    onClick = { onPeriodSelected(optionSec) },
+                    shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size),
+                    enabled = enabled,
+                    icon = {},
+                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
+                    modifier = Modifier.testTag("periodic_research_period_$optionSec")
+                ) {
+                    Text(
+                        text = periodOptionLabel(optionSec),
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                        maxLines = 1,
+                        softWrap = false,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun periodOptionLabel(periodSec: Int): String = when (periodSec) {
+    60 -> stringResource(R.string.prefs_research_period_1m)
+    120 -> stringResource(R.string.prefs_research_period_2m)
+    300 -> stringResource(R.string.prefs_research_period_5m)
+    600 -> stringResource(R.string.prefs_research_period_10m)
+    else -> stringResource(R.string.prefs_research_period_5m)
 }
 
 @Composable
@@ -263,10 +353,11 @@ private fun SearchSettingToggleRow(
     title: String,
     summary: String? = null,
     checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
+    onCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .clickable { onCheckedChange(!checked) }
             .padding(vertical = 4.dp),

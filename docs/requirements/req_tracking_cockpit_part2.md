@@ -1,14 +1,14 @@
 # Living Requirements: Tracking & Live Sensor Cockpit (Part 2 of 2)
 
 **Document ID**: `DOC-REQ-TRK-P2`  
-**Version**: 1.0.40  
+**Version**: 1.0.43  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit_part2`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Requirements**: 70
+**Total Requirements**: 71
 
 ---
 
@@ -3039,6 +3039,48 @@
 
 **Invariants**: Offline startup battery bounding (`REQ-CON-036.1`) preserved; mid-workout exponential backoff (`1s..16s`) & `autoConnect = true` preserved; `mGattLock` & `mSearchQueue` thread safety preserved; `DeviceManager.java <= 1,708` LoC enforced; `MyANTDevice` & `PolarOnlineStreamingBridge` untouched; `0` new `src/main` test reads (`REQ-PRO-049.1`); `Localization Parity: N/A - no UI strings`.
 
+### REQ-CON-052: Extended Exponential Sensor Reconnect / Re-Search Backoff & Search Settings Configuration [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-CON-052`
+- **System Requirement(s)**: `SYSREQ-TRK-002`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `SensorReconnectBackoffPolicy.kt`, `SensorSearchSettings.kt`, `MyBTLEDevice.java`, `DeviceManager.java`, `PolarOnlineStreamingBridge.kt`, `SearchSettingsDialog.kt`, `SensorSearchTuningSection.kt`, `app/src/main/res/xml/prefs_search.xml`, `app/src/main/res/values*/strings_devices.xml`
+- **Rationale**: During active workouts, `MyBTLEDevice` caps exponential reconnect backoff at `MAX_RECONNECT_DELAY_MS = 16000L` indefinitely, wasting radio/battery budget during longer out-of-range intervals, while `DeviceManager` (`tries <= 1`) and `PolarOnlineStreamingBridge` (Live-IMU mode) stop searching permanently after `mMyRemoteDeviceTries` (`default = 3`) is exhausted (`ATT-8965`, Parent Epic `ATT-5910`, refining `REQ-CON-020.2`, `REQ-CON-036.1`, and `REQ-CON-051.2`):
+- **Description**:
+  1. *Extended Exponential Backoff Progression (`REQ-CON-052.1`)*:
+     - `SensorReconnectBackoffPolicy` SHALL compute reconnect/re-search delays starting from `INITIAL_RECONNECT_DELAY_MS = 1_000 ms`, doubling sequentially across `1 s -> 2 s -> 4 s -> 8 s -> 16 s -> 32 s -> 64 s -> 128 s -> <finalPeriodMs>` (default `300_000 ms` = `5 min`), capped at `<finalPeriodMs>`, and resetting to `1_000 ms` upon successful connection / service discovery.
+     - `MyBTLEDevice.INITIAL_RECONNECT_DELAY_MS = 1000L` and `MyBTLEDevice.MAX_RECONNECT_DELAY_MS = 16000L` static constants MUST remain unchanged for `SYSREQ-TRK-002` contract parity (`SystemLiveTrackingRequirementsContractTest`), while runtime reconnect progression delegates to `SensorReconnectBackoffPolicy`.
+  2. *Consistent Periodic Re-Search Coordination Across BLE, Polar SDK & DeviceManager (`REQ-CON-052.2`)*:
+     - When periodic long-term re-search is enabled (default `true`), `MyBTLEDevice`, `PolarOnlineStreamingBridge`, and `DeviceManager` (on `tries <= 1` search exhaustion) SHALL schedule periodic re-search / reconnect retries using `SensorReconnectBackoffPolicy` without deadlocking `DeviceManager.cMyRemoteDeviceCurrentlySearchingFor` (`REQ-CON-051.1`).
+     - All pending periodic re-search timers/coroutines MUST cancel cleanly upon sensor connection, `startSearchForPairedDevices()`, `removeAndStopRemoteDevice()`, and `shutDown()`.
+     - When periodic long-term re-search is disabled (`false`), `DeviceManager` SHALL NOT schedule periodic long-term re-search after `tries <= 1` exhaustion (`shutDown()` + removal preserved for `READY` / exhausted `PolarOnlineStreamingBridge` per `REQ-CON-036.1`), and mid-workout `MyBTLEDevice` SHALL stay capped at `MAX_RECONNECT_DELAY_MS = 16000L` (`SYSREQ-TRK-002`).
+     - `DeviceManager.java` MUST remain `<= 1,708` LoC and `TrainingApplication.java` MUST remain `<= 2,135` LoC (`ArchitectureConformanceContractTest`).
+  3. *Dual Search Settings UI, Preference Defaults & 9-Language Localization Parity (`REQ-CON-052.3`)*:
+     - `SensorSearchSettings` (`PreferenceManager.getDefaultSharedPreferences`) and `app/src/main/res/xml/prefs_search.xml` SHALL persist the periodic long-term re-search toggle (default `true`) and configurable discrete final steady-state period (`60 s`, `120 s`, `300 s`, `600 s`; default `300 s` = `5 min`).
+     - BOTH `SearchSettingsDialog.kt` AND `SensorSearchTuningSection.kt` SHALL expose both controls identically (`SensorSearchTuningSection.kt` MUST use `TuningToggleItem` and `TuningSegmentedButtonRow` per `docs/design_guidelines.md` §1.4; zero raw `Switch(`).
+     - All new user-facing UI strings SHALL be added under `app/src/main/res/values*/strings_devices.xml` with complete 9-language parity (`EN, DE, ES, FR, IT, JA, NL, PL, PT`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new `REQ-CON-052`, refining `REQ-CON-020.2`, `REQ-CON-036.1`, and `REQ-CON-051.2`. Targets `MyBTLEDevice.java`, `DeviceManager.java`, `PolarOnlineStreamingBridge.kt`, `SearchSettingsDialog.kt`, `SensorSearchTuningSection.kt`.
+2. *Historical Origin & Commit Trace*: `0234bfc0` (`ATT-4007`, `16000L` cap), `3dc19303` (`ATT-7755`, `isMidSessionOrWorkoutActive()`), `ATT-8998` (`REQ-CON-051`, search-queue timeout release & `1,708` LoC cap).
+3. *Root Reason for Existing Formulation*: `16000L` bounded GATT retry storms mid-workout while `tries <= 1` shutdown conserved battery on offline startup sensors; `MAX_RECONNECT_DELAY_MS = 16000L` is verified via reflection by `SystemLiveTrackingRequirementsContractTest`.
+4. *Preservation of Core Invariants*: Preserves `MyBTLEDevice.MAX_RECONNECT_DELAY_MS == 16000L` static constant, preserves `REQ-CON-051` non-blocking timeout release, restores bounded pre-workout shutdown when periodic re-search is disabled, and enforces `DeviceManager.java <= 1,708` LoC + `TrainingApplication.java <= 2,135` LoC.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* periodic long-term re-search is enabled with final period `5 min` (`300 s`),
+• *When* consecutive connection/search retries fail in `MyBTLEDevice`, `PolarOnlineStreamingBridge`, or `DeviceManager`,
+• *Then* retry delays progress `1s -> 2s -> 4s -> 8s -> 16s -> 32s -> 64s -> 128s -> 300s` (capped at `300s`) and reset to `1s` on connect, while pending timers cancel on `shutDown()` / `startSearchForPairedDevices()` / `removeAndStopRemoteDevice()`.
+• *Given* periodic long-term re-search is disabled (`false`),
+• *When* `DeviceManager` exhausts `mMyRemoteDeviceTries` for an idle or `PolarOnlineStreamingBridge` device,
+• *Then* no periodic re-search is scheduled and the device is shut down and removed cleanly, while `MyBTLEDevice` mid-workout stays capped at `16 s`.
+• *Given* `SearchSettingsDialog` or `SensorSearchTuningSection` rendered via Compose,
+• *When* changing the periodic re-search toggle or final period (`1m`, `2m`, `5m`, `10m`),
+• *Then* shared preferences update immediately in sync across both UIs with 9-language localization parity.
+
+**Invariants**: `MyBTLEDevice.MAX_RECONNECT_DELAY_MS == 16000L` preserved; `DeviceManager.java <= 1,708` LoC & `TrainingApplication.java <= 2,135` LoC enforced; `REQ-CON-051` search-queue unblocking preserved; `MyANTDevice` untouched; `0` new `src/main` test reads (`REQ-PRO-049.1`); 9-locale parity in `strings_devices.xml`.
+
 ### REQ-TRK-088: Radar Approach Speed Display Units in MyHelper & Sensor Unit Dictionary Sync [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-TRK-088`
@@ -3326,3 +3368,6 @@
 | `1.0.38` | 2026-11-19 | AI Agent (`ATT-8895`, `--as agent1`) | `ATT-8895` | Promoted `REQ-FIL-029` to `[Verified]` in Stage 5 (Bounce 2/3) on `sprint/2026-11-18_03_Nacht` (`e62a6ba4`) following `--rerun-tasks` verification across `29` unit/NFR/contract/audit/localization suites (`201/201 PASS`, `0` fail, `0` error, `0` skipped), static analysis baselines & 4 Python safety linters PASS, `+0` monolith LoC growth, and `docs/engineering/walkthroughs/ATT-8895_walkthrough.md`. |
 | `1.0.39` | 2026-11-19 | AI Agent (`ATT-8895`, `--as agent1`) | `ATT-8895` | Stage 6 Bounce 3/3 heal (+ Gate 4 revision): added `BANALService.cServiceInstance` (cleared in `onDestroy()`, keeping leak-free `cServiceContext = getApplicationContext()`) and volatile `mUserSelectedBSportType` cache (resolved once in `setUserSelectedSportTypeId()` before publishing `mHaveUserSelectedSportType = true` for zero per-sample SQLite lookups on 100-Hz IMU callbacks) in `BANALService.getActiveBSportType()` + `SpeedAndLocationDevice_ATTFused.resolveActiveBSportType()`; synced `mLastEstimatorTotalStrides` during non-`RUN` dwell in `applyCadenceAndStrideSensors()`; updated `banal_service.md` (`980 LOC`), listed `BANALService.java` in `Implementation`, and set `[Implemented]` pending Stage 5 re-verification. |
 | `1.0.40` | 2026-11-19 | AI Agent (`ATT-8895`, `--as agent1`) | `ATT-8895` | Promoted `REQ-FIL-029` to `[Verified]` in Stage 5 (Bounce 3/3) rebased cleanly atop `sprint/2026-11-19_01_Früh` (`8e44039d`) reusing Gate 4 Pass (`ATT-9068`) & Stage 4 verified test evidence (`Rule 7.5`), static baselines/linters PASS, `+0` monolith LoC growth, and fresh `docs/engineering/walkthroughs/ATT-8895_walkthrough.md`. |
+| `1.0.41` | 2026-11-19 | AI Agent (`ATT-8965`, `--as agent1`) | `ATT-8965` | Added & verified `REQ-CON-052` (`[Verified]`, linked to `SYSREQ-TRK-002`) following Gate 4 Pass (`ATT-9083`: `105/105` incremental `--rerun` PASS; Author Stage 4 `103/103` across 14 suites, `0` new compiler warnings) reusing Gate 4 evidence (`Rule 7.5`) and `docs/engineering/walkthroughs/ATT-8965_walkthrough.md`. |
+| `1.0.42` | 2026-11-19 | AI Agent (`ATT-8965`, `--as agent1`) | `ATT-8965` | Stage 6 Bounce 1/3 heal: restored `ATT-8895` (`1.0.32`–`1.0.39`) revision rows & fixed cancellation symbol names; added `SensorReconnectBackoffPolicy.effectiveDelayMs` live clamping before scheduling; fixed `DeviceSearchPeriodicRetryCoordinator` disable-while-pending zombie cleanup + inside-lock runnable identity scheduling + synchronized `DeviceManager` lazy init (`1,707` LoC); fixed `PolarOnlineStreamingBridge` exception reschedule, timeout/disconnect echo double-advance guard, and `blePowerStateChanged` cancellation; set `[Implemented]` pending Stage 5 re-verification. |
+| `1.0.43` | 2026-11-19 | AI Agent (`ATT-8965`, `--as agent1`) | `ATT-8965` | Promoted `REQ-CON-052` to `[Verified]` in Stage 5 (Bounce 2) reusing Gate 4 Bounce 2 Pass (`ATT-9088`: `128/128` incremental `--rerun` PASS across 16 suites, `0` failed/`0` skipped, static baselines & 4 safety linters exit `0`, zero `app/` edits post-`587730da` per `Rule 7.5`) and updated `docs/engineering/walkthroughs/ATT-8965_walkthrough.md`. |

@@ -1,7 +1,7 @@
 # Software Architecture: aTrainingTracker (ASPICE 4.0 SWE.2)
 
 **Document ID**: `DOC-ARC-MAIN`  
-**Version**: 1.0.11  
+**Version**: 1.0.12  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -280,7 +280,7 @@ To prevent UI jank, thread contention, and Android SQLite database lock errors, 
 ### 4.5 Paired Bluetooth LE Address Resolution, Scan-Assisted Connection & Search Lifecycle (`REQ-CON-023`)
 - **Random Static MAC Classification & Address Type**: Unbonded BLE fitness peripherals commonly utilize Random Static MAC addresses (identifiable by bits 47..46 = `11b`, i.e. `(firstOctet & 0xC0) == 0xC0`). When Android's `BluetoothRemoteDevices` cache is empty (e.g. after phone reboot or Bluetooth toggle), calling `getRemoteDevice(mAddress)` defaults to `ADDRESS_TYPE_PUBLIC`, causing peripherals to ignore `CONNECT_IND`. On API 33+, `MyBTLEDevice` explicitly invokes `BluetoothAdapter.getRemoteLeDevice(mAddress, ADDRESS_TYPE_RANDOM)`.
 - **Active Scan-Assisted Cache Warming**: `MyBTLEDevice` executes a lightweight, address-filtered `BluetoothLeScanner` scan during `startSearching()` (permission-gated by `BLUETOOTH_SCAN` on API 31+ or `BLUETOOTH_ADMIN` / `ACCESS_FINE_LOCATION` on API < 31). The scan is unconditionally stopped on GATT connection (`STATE_CONNECTED`), timeout, manual disconnect, or device shutdown.
-- **Configurable Search Duration**: Sequential search in `DeviceManager` honors `TrainingApplication.getBtleSearchPeriodMs()` (range $3\text{--}15$s, default 5s) instead of legacy hardcoded 10s intervals, preventing head-of-line blocking when paired sensors are offline.
+- **Configurable Search Duration & Extended Periodic Re-Search**: Sequential search in `DeviceManager` honors `TrainingApplication.getBtleSearchPeriodMs()` (range $3\text{--}15$s, default 5s) instead of legacy hardcoded 10s intervals, preventing head-of-line blocking when paired sensors are offline. `SensorReconnectBackoffPolicy`, `DeviceSearchPeriodicRetryCoordinator`, and `PolarOnlineStreamingBridge` continue disconnected/exhausted sensor retries along `1s -> 2s -> 4s -> 8s -> 16s -> 32s -> 64s -> 128s -> finalPeriodMs` (configurable `1m..10m`, default `5 min`, toggleable via `SensorSearchSettings`) while preserving `MyBTLEDevice.MAX_RECONNECT_DELAY_MS = 16000L` (`SYSREQ-TRK-002`, `REQ-CON-052`).
 
 ### 4.6 Chronological MediaStore Querying & Workout Photo Picker Permissions (`REQ-UI-455`)
 - **Temporal Window Querying**: Runtime media read permissions (`READ_MEDIA_IMAGES` on API 33+, `READ_MEDIA_VISUAL_USER_SELECTED` on API 34+, and `READ_EXTERNAL_STORAGE` on API <= 32) enable `WorkoutPhotoManager` to pre-filter local photos matching the workout time window `[startTimeMs - 5m .. endTimeMs + 5m]` via `MediaStore.Images.Media.EXTERNAL_CONTENT_URI` using `DATE_TAKEN` with fallback to `DATE_ADDED * 1000L`.
@@ -426,3 +426,4 @@ In accordance with **ASPICE SUP.8 (Configuration and Release Management)**, **SW
 | `1.0.9` | 2026-11-19 | AI Agent (`ATT-8969`, `--as agent1`) | `ATT-8969` | Added `PolarRetrySyncCoordinator` in §2 & §3.4 and documented lifecycle-safe Aftermath retry sync, HR telemetry refresh, and disconnected stop-time fast-fail / 5s connection bound (`REQ-SET-119`). |
 | `1.0.10` | 2026-11-19 | AI Agent (`ATT-9018`, `--as agent1`) | `ATT-9018` | Added `WorkoutClimbIngestionCoordinator`, `BulkImportBatchContext`, `LastActiveDateFormatter`, `ClimbDeduplicator`, `LiveClimbsRepository`, and `ClimbsDatabaseManager` to §2 for bulk-import OOM prevention via zero-split lazy deduplication, deferred post-batch reconciliation, and thread-local cached `DateFormat` (`REQ-STB-021`). |
 | `1.0.11` | 2026-11-19 | AI Agent (`ATT-8895`, `--as agent1`) | `ATT-8895` | Added `ImuCadenceDsp` and `SmartphoneImuCadenceEstimator` to §2 and synchronized `CADENCE_PRIORITY`/`STRIDES_PRIORITY` tail arbitration in §3.4 (`REQ-FIL-029`). |
+| `1.0.12` | 2026-11-19 | AI Agent (`ATT-8965`, `--as agent1`) | `ATT-8965` | Documented `SensorReconnectBackoffPolicy`, `DeviceSearchPeriodicRetryCoordinator`, and `SensorSearchSettings` in §4.5 for extended sensor reconnect/re-search backoff and configurable steady-state intervals while preserving `MyBTLEDevice.MAX_RECONNECT_DELAY_MS = 16000L` (`REQ-CON-052`). |

@@ -28,11 +28,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.preference.PreferenceManager
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.settings.SensorSearchSettings
+import com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningSegmentedButtonRow
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningSliderItem
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningToggleItem
 import kotlin.math.roundToInt
@@ -48,11 +51,15 @@ data class SensorSearchPreferences(
     val startSearchWhenUserChangesSport: Boolean = true,
     val startSearchWhenTrackingStarts: Boolean = false,
     val searchOnlyForSportSpecificDevices: Boolean = true,
-    val changeSportWhenDeviceGetsLost: Boolean = true
+    val changeSportWhenDeviceGetsLost: Boolean = true,
+    val periodicResearchEnabled: Boolean = DEFAULT_PERIODIC_RESEARCH_ENABLED,
+    val periodicResearchFinalPeriodSec: Int = DEFAULT_PERIODIC_RESEARCH_FINAL_PERIOD_SEC
 ) {
     companion object {
         const val DEFAULT_NUMBER_OF_SEARCH_TRIES = 3
         const val DEFAULT_BTLE_SEARCH_PERIOD_SEC = TrainingApplication.DEFAULT_BTLE_SEARCH_PERIOD_SEC
+        const val DEFAULT_PERIODIC_RESEARCH_ENABLED = SensorSearchSettings.DEFAULT_PERIODIC_RESEARCH_ENABLED
+        const val DEFAULT_PERIODIC_RESEARCH_FINAL_PERIOD_SEC = SensorSearchSettings.DEFAULT_FINAL_PERIOD_SEC
 
         fun load(context: Context): SensorSearchPreferences {
             val prefs = PreferenceManager.getDefaultSharedPreferences(context)
@@ -65,7 +72,9 @@ data class SensorSearchPreferences(
                 startSearchWhenUserChangesSport = prefs.getBoolean("startSearchWhenUserChangesSport", true),
                 startSearchWhenTrackingStarts = prefs.getBoolean("startSearchWhenTrackingStarts", false),
                 searchOnlyForSportSpecificDevices = prefs.getBoolean("searchOnlyForSportSpecificDevices", true),
-                changeSportWhenDeviceGetsLost = prefs.getBoolean("changeSportWhenDeviceGetsLost", true)
+                changeSportWhenDeviceGetsLost = prefs.getBoolean("changeSportWhenDeviceGetsLost", true),
+                periodicResearchEnabled = SensorSearchSettings.isPeriodicResearchEnabled(context),
+                periodicResearchFinalPeriodSec = SensorSearchSettings.getPeriodicResearchFinalPeriodSec(context)
             )
         }
 
@@ -80,6 +89,11 @@ data class SensorSearchPreferences(
                 .putBoolean("startSearchWhenTrackingStarts", prefs.startSearchWhenTrackingStarts)
                 .putBoolean("searchOnlyForSportSpecificDevices", prefs.searchOnlyForSportSpecificDevices)
                 .putBoolean("changeSportWhenDeviceGetsLost", prefs.changeSportWhenDeviceGetsLost)
+                .putBoolean(SensorSearchSettings.SP_PERIODIC_RESEARCH_ENABLED, prefs.periodicResearchEnabled)
+                .putInt(
+                    SensorSearchSettings.SP_PERIODIC_RESEARCH_FINAL_PERIOD_SEC,
+                    SensorSearchSettings.normalizeFinalPeriodSec(prefs.periodicResearchFinalPeriodSec)
+                )
                 .apply()
         }
 
@@ -118,6 +132,10 @@ fun SensorSearchTuningSection(
         onSearchOnlyForSportSpecificDevicesChange = { onPrefsChange(prefs.copy(searchOnlyForSportSpecificDevices = it)) },
         changeSportWhenDeviceGetsLost = prefs.changeSportWhenDeviceGetsLost,
         onChangeSportWhenDeviceGetsLostChange = { onPrefsChange(prefs.copy(changeSportWhenDeviceGetsLost = it)) },
+        periodicResearchEnabled = prefs.periodicResearchEnabled,
+        onPeriodicResearchEnabledChange = { onPrefsChange(prefs.copy(periodicResearchEnabled = it)) },
+        periodicResearchFinalPeriodSec = prefs.periodicResearchFinalPeriodSec,
+        onPeriodicResearchFinalPeriodSecChange = { onPrefsChange(prefs.copy(periodicResearchFinalPeriodSec = it)) },
         showAntMissingAdapterWarnings = showAntMissingAdapterWarnings,
         onShowAntMissingAdapterWarningsChange = onShowAntMissingAdapterWarningsChange
     )
@@ -141,6 +159,10 @@ fun SensorSearchTuningSection(
     onSearchOnlyForSportSpecificDevicesChange: (Boolean) -> Unit,
     changeSportWhenDeviceGetsLost: Boolean,
     onChangeSportWhenDeviceGetsLostChange: (Boolean) -> Unit,
+    periodicResearchEnabled: Boolean = SensorSearchPreferences.DEFAULT_PERIODIC_RESEARCH_ENABLED,
+    onPeriodicResearchEnabledChange: (Boolean) -> Unit = {},
+    periodicResearchFinalPeriodSec: Int = SensorSearchPreferences.DEFAULT_PERIODIC_RESEARCH_FINAL_PERIOD_SEC,
+    onPeriodicResearchFinalPeriodSecChange: (Int) -> Unit = {},
     showAntMissingAdapterWarnings: Boolean = true,
     onShowAntMissingAdapterWarningsChange: (Boolean) -> Unit = {}
 ) {
@@ -238,6 +260,33 @@ fun SensorSearchTuningSection(
             isChecked = showAntMissingAdapterWarnings,
             onCheckedChange = onShowAntMissingAdapterWarningsChange,
             summary = stringResource(R.string.tuning_show_ant_missing_adapter_warnings_desc)
+        )
+
+        TuningToggleItem(
+            title = stringResource(R.string.prefs_periodic_research_enabled_title),
+            isChecked = periodicResearchEnabled,
+            onCheckedChange = onPeriodicResearchEnabledChange,
+            summary = stringResource(R.string.prefs_periodic_research_enabled_summary),
+            modifier = Modifier.testTag("tuning_periodic_research_toggle")
+        )
+
+        TuningSegmentedButtonRow(
+            title = stringResource(R.string.prefs_periodic_research_final_period_title),
+            options = SensorSearchSettings.FINAL_PERIOD_OPTIONS_SEC,
+            selectedOption = periodicResearchFinalPeriodSec,
+            onOptionSelected = onPeriodicResearchFinalPeriodSecChange,
+            labelProvider = { optionSec ->
+                when (optionSec) {
+                    60 -> stringResource(R.string.prefs_research_period_1m)
+                    120 -> stringResource(R.string.prefs_research_period_2m)
+                    300 -> stringResource(R.string.prefs_research_period_5m)
+                    600 -> stringResource(R.string.prefs_research_period_10m)
+                    else -> stringResource(R.string.prefs_research_period_5m)
+                }
+            },
+            helperText = stringResource(R.string.prefs_periodic_research_final_period_summary),
+            enabled = periodicResearchEnabled,
+            modifier = Modifier.testTag("tuning_periodic_research_period_row")
         )
     }
 }

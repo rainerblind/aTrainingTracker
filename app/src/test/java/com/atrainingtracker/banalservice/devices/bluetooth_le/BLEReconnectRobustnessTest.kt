@@ -262,17 +262,73 @@ class BLEReconnectRobustnessTest {
 
         // 4th Disconnect: schedules at 8,000ms, advances to 16,000ms
         callback.onConnectionStateChange(mockGatt, BluetoothGatt.GATT_SUCCESS, BluetoothProfile.STATE_DISCONNECTED)
-        assertEquals(16000L, device.currentReconnectDelayMs)
         assertEquals(8000L, postedDelayedRunnables.last().second)
-
-        // 5th Disconnect: schedules at 16,000ms, remains capped at 16,000ms
-        callback.onConnectionStateChange(mockGatt, BluetoothGatt.GATT_SUCCESS, BluetoothProfile.STATE_DISCONNECTED)
         assertEquals(16000L, device.currentReconnectDelayMs)
-        assertEquals(16000L, postedDelayedRunnables.last().second)
+
+        // 5th-9th Disconnects: extend 16s -> 32s -> 64s -> 128s -> 300s (5 min default final period, ATT-8965)
+        val expectedExtendedSchedule = listOf(16_000L, 32_000L, 64_000L, 128_000L, 300_000L, 300_000L)
+        for (idx in 0 until expectedExtendedSchedule.size - 1) {
+            callback.onConnectionStateChange(mockGatt, BluetoothGatt.GATT_SUCCESS, BluetoothProfile.STATE_DISCONNECTED)
+            assertEquals(expectedExtendedSchedule[idx], postedDelayedRunnables.last().second)
+            assertEquals(expectedExtendedSchedule[idx + 1], device.currentReconnectDelayMs)
+        }
 
         // Now simulate successful reconnection: delay must reset to 1,000ms
         device.triggerNotifyStopSearching(true)
         assertEquals(1000L, device.currentReconnectDelayMs)
+    }
+
+    @Test
+    fun testReconnectBackoff_whenPeriodicResearchDisabled_capsAt16sAndPreservesConstant() {
+        val mockPrefs = mockk<android.content.SharedPreferences>(relaxed = true)
+        mockkStatic(androidx.preference.PreferenceManager::class)
+        every { androidx.preference.PreferenceManager.getDefaultSharedPreferences(mockContext) } returns mockPrefs
+        every { mockPrefs.contains(com.atrainingtracker.trainingtracker.settings.SensorSearchSettings.SP_PERIODIC_RESEARCH_ENABLED) } returns true
+        every { mockPrefs.getBoolean(com.atrainingtracker.trainingtracker.settings.SensorSearchSettings.SP_PERIODIC_RESEARCH_ENABLED, true) } returns false
+
+        val device = TestReconnectBTLEDevice(mockContext, mockSensorManager, 211L, "AA:BB:CC:DD:EE:19")
+        injectTrackingHandler(device)
+        val callback = device.gattCallbackForTesting
+
+        repeat(6) {
+            callback.onConnectionStateChange(mockGatt, BluetoothGatt.GATT_SUCCESS, BluetoothProfile.STATE_DISCONNECTED)
+        }
+        assertEquals(16_000L, device.currentReconnectDelayMs)
+        assertEquals(16_000L, postedDelayedRunnables.last().second)
+    }
+
+    @Test
+    fun testLiveSettingsChange_clampsStaleBackoffImmediatelyOnNextRetry() {
+        val mockPrefs = mockk<android.content.SharedPreferences>(relaxed = true)
+        mockkStatic(androidx.preference.PreferenceManager::class)
+        every { androidx.preference.PreferenceManager.getDefaultSharedPreferences(mockContext) } returns mockPrefs
+        every { mockPrefs.contains(com.atrainingtracker.trainingtracker.settings.SensorSearchSettings.SP_PERIODIC_RESEARCH_ENABLED) } returns true
+        every { mockPrefs.contains(com.atrainingtracker.trainingtracker.settings.SensorSearchSettings.SP_PERIODIC_RESEARCH_FINAL_PERIOD_SEC) } returns true
+
+        var enabledSetting = true
+        var periodSecSetting = 600
+        every { mockPrefs.getBoolean(com.atrainingtracker.trainingtracker.settings.SensorSearchSettings.SP_PERIODIC_RESEARCH_ENABLED, true) } answers { enabledSetting }
+        every { mockPrefs.getInt(com.atrainingtracker.trainingtracker.settings.SensorSearchSettings.SP_PERIODIC_RESEARCH_FINAL_PERIOD_SEC, 300) } answers { periodSecSetting }
+
+        val device = TestReconnectBTLEDevice(mockContext, mockSensorManager, 212L, "AA:BB:CC:DD:EE:20")
+        injectTrackingHandler(device)
+        val callback = device.gattCallbackForTesting
+
+        // Back off all the way to 10 min (600,000 ms)
+        repeat(9) {
+            callback.onConnectionStateChange(mockGatt, BluetoothGatt.GATT_SUCCESS, BluetoothProfile.STATE_DISCONNECTED)
+        }
+        assertEquals(600_000L, device.currentReconnectDelayMs)
+
+        // User lowers final period to 60s -> next retry clamps immediately to 60,000 ms
+        periodSecSetting = 60
+        callback.onConnectionStateChange(mockGatt, BluetoothGatt.GATT_SUCCESS, BluetoothProfile.STATE_DISCONNECTED)
+        assertEquals(60_000L, postedDelayedRunnables.last().second)
+
+        // User disables periodic re-search -> next retry clamps immediately to 16,000 ms
+        enabledSetting = false
+        callback.onConnectionStateChange(mockGatt, BluetoothGatt.GATT_SUCCESS, BluetoothProfile.STATE_DISCONNECTED)
+        assertEquals(16_000L, postedDelayedRunnables.last().second)
     }
 
     @Test

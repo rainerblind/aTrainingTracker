@@ -222,4 +222,14 @@
     <string name="carriage_mode_run_bicep_arm">Lauf (Oberarm)</string>
     <string name="carriage_mode_run_handheld">Lauf (Hand)</string>
 
+    <!-- Extended Periodic Sensor Re-Search & Backoff (ATT-8965, REQ-CON-052.3) -->
+    <string name="prefs_periodic_research_enabled_title">Periodische Langzeit-Wiederverbindung</string>
+    <string name="prefs_periodic_research_enabled_summary">Getrennte Sensoren automatisch mit steigenden Intervallen erneut suchen</string>
+    <string name="prefs_periodic_research_final_period_title">Dauerintervall der Sensorsuche</string>
+    <string name="prefs_periodic_research_final_period_summary">Maximales Intervall nach Backoff-Stufen (16s → 32s → 64s → 2 Min.)</string>
+    <string name="prefs_research_period_1m">1 Min.</string>
+    <string name="prefs_research_period_2m">2 Min.</string>
+    <string name="prefs_research_period_5m">5 Min.</string>
+    <string name="prefs_research_period_10m">10 Min.</string>
+
 </resources>

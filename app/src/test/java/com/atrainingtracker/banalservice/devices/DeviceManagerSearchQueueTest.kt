@@ -93,7 +93,11 @@ class DeviceManagerSearchQueueTest {
 
     @After
     fun tearDown() {
-        unmockkAll()
+        try {
+            unmockkAll()
+        } catch (_: ConcurrentModificationException) {
+            unmockkAll()
+        }
     }
 
     private fun setCurrentlySearching(deviceManager: DeviceManager, device: MyRemoteDevice?) {
@@ -259,11 +263,17 @@ class DeviceManagerSearchQueueTest {
     }
 
     /**
-     * TST-CON-051.2: Preserves REQ-CON-036.1 offline startup battery bounding: when
-     * shouldKeepAliveOnSearchTimeout() is false (TrackingMode.READY), tries <= 1 shuts down and removes device.
+     * TST-CON-051.2 / TST-CON-052.2: When periodic re-search is disabled, shouldKeepAliveOnSearchTimeout() == false
+     * preserves REQ-CON-036.1 offline startup battery bounding: tries <= 1 shuts down and removes device.
      */
     @Test
-    fun testTriesExhausted_whenKeepAliveFalse_shutsDownAndRemovesOfflineDevice() {
+    fun testTriesExhausted_whenKeepAliveFalseAndPeriodicDisabled_shutsDownAndRemovesOfflineDevice() {
+        val mockPrefs = mockk<android.content.SharedPreferences>(relaxed = true)
+        mockkStatic(androidx.preference.PreferenceManager::class)
+        every { androidx.preference.PreferenceManager.getDefaultSharedPreferences(mockBanalService) } returns mockPrefs
+        every { mockPrefs.contains(com.atrainingtracker.trainingtracker.settings.SensorSearchSettings.SP_PERIODIC_RESEARCH_ENABLED) } returns true
+        every { mockPrefs.getBoolean(com.atrainingtracker.trainingtracker.settings.SensorSearchSettings.SP_PERIODIC_RESEARCH_ENABLED, true) } returns false
+
         val deviceManager = DeviceManager(mockBanalService, mockSensorManager)
 
         val offlineSensor = mockk<MyRemoteDevice>(relaxed = true)
@@ -296,5 +306,122 @@ class DeviceManagerSearchQueueTest {
         assertEquals(false, devicesMap.containsKey(201L))
         assertSame(nextHr, deviceManager.currentlySearchingForRemoteDevice)
         verify(exactly = 1) { nextHr.startSearching() }
+    }
+
+    /**
+     * TST-CON-052.2: When periodic re-search is enabled (default), tries <= 1 exhaustion retains
+     * offline sensor and schedules extended backoff re-enqueue (32s -> 64s -> ... -> 5m) while still
+     * advancing the active queue immediately (REQ-CON-051).
+     */
+    @Test
+    fun testTriesExhausted_whenPeriodicResearchEnabled_retainsDeviceAndSchedulesBackoffReenqueue() {
+        val deviceManager = DeviceManager(mockBanalService, mockSensorManager)
+        val scheduled = mutableListOf<Pair<Long, Runnable>>()
+        deviceManager.periodicRetryCoordinator.setSchedulerForTesting(
+            scheduleDelayed = { delayMs, runnable -> scheduled.add(delayMs to runnable) },
+            cancelScheduled = {}
+        )
+
+        val polarSensor = mockk<MyRemoteDevice>(relaxed = true)
+        every { polarSensor.deviceId } returns 301L
+        every { polarSensor.deviceType } returns DeviceType.HRM
+        every { polarSensor.shouldKeepAliveOnSearchTimeout() } returns false
+        every { polarSensor.isReceivingData } returns false
+        every { polarSensor.isSearching } returns false
+
+        val nextDevice = mockk<MyRemoteDevice>(relaxed = true)
+        every { nextDevice.deviceId } returns 302L
+        every { nextDevice.deviceType } returns DeviceType.BIKE_SPEED
+        every { nextDevice.isReceivingData } returns false
+        every { nextDevice.isSearching } returns false
+
+        val devicesMap = getRemoteDevicesMap(deviceManager)
+        devicesMap[301L] = polarSensor
+        devicesMap[302L] = nextDevice
+
+        setCurrentlySearching(deviceManager, polarSensor)
+        setDeviceTries(deviceManager, polarSensor, 1)
+        deviceManager.searchQueue.clear()
+        deviceManager.searchQueue.addLast(nextDevice)
+
+        val timeoutIntent = mockk<Intent>()
+        every { timeoutIntent.getLongExtra(BANALService.DEVICE_ID, -1) } returns 301L
+        every { timeoutIntent.getBooleanExtra(BANALService.SEARCHING_FINISHED_SUCCESS, false) } returns false
+
+        deviceManager.searchingStoppedForOneReceiver.onReceive(mockBanalService, timeoutIntent)
+
+        // Queue advances to nextDevice cleanly without shutting down polarSensor
+        verify(exactly = 0) { polarSensor.shutDown() }
+        assertTrue(devicesMap.containsKey(301L))
+        assertSame(nextDevice, deviceManager.currentlySearchingForRemoteDevice)
+        verify(exactly = 1) { nextDevice.startSearching() }
+
+        // First periodic re-search scheduled at 32s
+        assertEquals(1, scheduled.size)
+        assertEquals(32_000L, scheduled[0].first)
+
+        // Finish nextDevice search so queue becomes idle
+        val nextDone = mockk<Intent>()
+        every { nextDone.getLongExtra(BANALService.DEVICE_ID, -1) } returns 302L
+        every { nextDone.getBooleanExtra(BANALService.SEARCHING_FINISHED_SUCCESS, false) } returns true
+        deviceManager.searchingStoppedForOneReceiver.onReceive(mockBanalService, nextDone)
+        assertEquals(null, deviceManager.currentlySearchingForRemoteDevice)
+
+        // Fire periodic retry -> polarSensor is re-enqueued and started; next exhaustion steps to 64s
+        scheduled[0].second.run()
+        assertSame(polarSensor, deviceManager.currentlySearchingForRemoteDevice)
+        verify(exactly = 1) { polarSensor.startSearching() }
+
+        deviceManager.searchingStoppedForOneReceiver.onReceive(mockBanalService, timeoutIntent)
+        assertEquals(2, scheduled.size)
+        assertEquals(64_000L, scheduled[1].first)
+    }
+
+    /**
+     * ATT-8965 Bounce 2: If periodic re-search is disabled while a retry timer is pending, firing
+     * the runnable MUST clean up delay state, invoke shutDown(), and remove the zombie device from mMyRemoteDevices.
+     */
+    @Test
+    fun testTriesExhausted_whenDisabledWhileRetryPending_givesUpAndRemovesZombieDevice() {
+        val mockPrefs = mockk<android.content.SharedPreferences>(relaxed = true)
+        mockkStatic(androidx.preference.PreferenceManager::class)
+        every { androidx.preference.PreferenceManager.getDefaultSharedPreferences(mockBanalService) } returns mockPrefs
+        var enabled = true
+        every { mockPrefs.contains(com.atrainingtracker.trainingtracker.settings.SensorSearchSettings.SP_PERIODIC_RESEARCH_ENABLED) } returns true
+        every { mockPrefs.getBoolean(com.atrainingtracker.trainingtracker.settings.SensorSearchSettings.SP_PERIODIC_RESEARCH_ENABLED, true) } answers { enabled }
+
+        val deviceManager = DeviceManager(mockBanalService, mockSensorManager)
+        val scheduled = mutableListOf<Pair<Long, Runnable>>()
+        deviceManager.periodicRetryCoordinator.setSchedulerForTesting(
+            scheduleDelayed = { delayMs, runnable -> scheduled.add(delayMs to runnable) },
+            cancelScheduled = {}
+        )
+
+        val offlineSensor = mockk<MyRemoteDevice>(relaxed = true)
+        every { offlineSensor.deviceId } returns 401L
+        every { offlineSensor.deviceType } returns DeviceType.HRM
+        every { offlineSensor.shouldKeepAliveOnSearchTimeout() } returns false
+        every { offlineSensor.isReceivingData } returns false
+
+        val devicesMap = getRemoteDevicesMap(deviceManager)
+        devicesMap[401L] = offlineSensor
+        setCurrentlySearching(deviceManager, offlineSensor)
+        setDeviceTries(deviceManager, offlineSensor, 1)
+
+        val timeoutIntent = mockk<Intent>()
+        every { timeoutIntent.getLongExtra(BANALService.DEVICE_ID, -1) } returns 401L
+        every { timeoutIntent.getBooleanExtra(BANALService.SEARCHING_FINISHED_SUCCESS, false) } returns false
+        deviceManager.searchingStoppedForOneReceiver.onReceive(mockBanalService, timeoutIntent)
+
+        assertTrue(devicesMap.containsKey(401L))
+        assertEquals(1, scheduled.size)
+
+        // Toggle disabled before scheduled periodic retry executes -> MUST shut down and remove zombie device
+        enabled = false
+        scheduled[0].second.run()
+
+        verify(exactly = 1) { offlineSensor.shutDown() }
+        assertEquals(false, devicesMap.containsKey(401L))
+        verify(exactly = 0) { offlineSensor.startSearching() }
     }
 }
