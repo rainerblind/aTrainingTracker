@@ -1,14 +1,14 @@
 # Living Requirements: Tracking & Live Sensor Cockpit (Part 2 of 2)
 
 **Document ID**: `DOC-REQ-TRK-P2`  
-**Version**: 1.0.89  
+**Version**: 1.0.94  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit_part2`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Requirements**: 85
+**Total Requirements**: 86
 
 ---
 
@@ -3792,6 +3792,30 @@
   • *Given* rapid overlapping SDK feature/DIS/session-sync callbacks on Polar H10 or Verity Sense, *When* streams start, *Then* at most one subscription runs per stream (`HR`, `ACC`, `GYRO`, `PPI`), `ACC` CAS rolls back if offline-locked, and cancelled jobs never clobber newer slots or `ACC_OWNER_ONLINE`.
   • *Given* `ACC`, `GYRO`, or `PPI` fails with `ERROR_ALREADY_IN_STATE`, *When* caught, *Then* `stopStreaming` + `500/1000/2000 ms` bounded retry (max `3`) recovers stream flow on success, or logs structured diagnostics and surfaces ONE session-deduplicated 9-locale Snackbar warning on exhaustion.
 
+### REQ-CON-054: BLE HRM Silent-Connection Watchdog, Alias-Complete Unpair Teardown & Connected-GATT Rediscovery (`ATT-9155`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-CON-054`
+- **System Requirement(s)**: `SYSREQ-TRK-001`, `SYSREQ-TRK-002`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Implementation**: `BleHrmSilentConnectionWatchdog.kt`, `PolarOfflineGattCoordinator.kt`, `PolarOnlineStreamingBridge.kt`, `PolarPmdStreamCoordinator.kt`, `MyBTLEDevice.java`, `BTLEHeartRateDevice.java`, `BTSearchForNewDevicesEngine.java`, `DeviceDataRepository.kt`, `DeviceManager.java`
+- **Rationale**: Field captures on Pixel 10 with Polar Verity Sense showed (1) BLE HRMs staying permanently connected with `--` when `0x2A37` CCCD or SDK HR collection stalls, and (2) unpairing/deleting leaving raw `BluetoothGatt` or `PolarBleApi` alias handles open so the peripheral stops advertising and stays invisible to BLE scans until power-cycled (`ATT-9155`).
+- **Description**:
+  1. *Alias-Complete Unpair/Delete Teardown (`REQ-CON-054.1`)*: `PolarOfflineGattCoordinator` SHALL provide `forceDisconnectDevice(context, mac, polarId)` and `disconnectUnpairedSessions(context, pairedProvider)` disconnecting all MAC/8-hex aliases and clearing `connectedDeviceIds`/`activeAccOwners`/`activeSessions` without harming sibling paired Polar sensors (`REQ-SET-118.3`). `PolarOnlineStreamingBridge.shutDown()`, `BTLEHeartRateDevice.shutDown()`, `DeviceDataRepository.updateDevice()`/`deleteDevice()` (capturing MAC pre-delete), and `DeviceManager.pairingChanged()` (even when absent from `mMyRemoteDevices`) SHALL invoke it; `MyBTLEDevice.disconnectFromGatt()` SHALL close synchronously when on `mHandler`'s looper and `onConnectionStateChange()` SHALL close late `STATE_CONNECTED` callbacks strictly when `mIsShutDown == true`.
+  2. *Connected-GATT Discovery Fallback (`REQ-CON-054.2`)*: `BTSearchForNewDevicesEngine.startAsyncSearch()` SHALL release unpaired Polar SDK sessions for `HRM`, probe `BluetoothManager.getConnectedDevices(BluetoothProfile.GATT)` (permission-guarded, skipping already-paired DB sensors), and enforce target GATT service-UUID validation + immediate close of non-matching probes strictly on `mConnectedGattProbes`.
+  3. *Silent-HR Watchdog & CCCD Retry (`REQ-CON-054.3`)*: Shared pure-JVM `BleHrmSilentConnectionWatchdog` (`12 s` default, injectable) SHALL drive both `BTLEHeartRateDevice` (preserving `REQ-CON-049` DIS-before-HR-CCCD order, retrying failed `0x2A37` CCCD status once, deferring while `isGattPaused()`) and `PolarOnlineStreamingBridge` to re-enable `0x2A37` / re-subscribe `HR` once on `12 s` silence, then cleanly disconnect/close & reconnect if still silent, disarming immediately on any HR packet.
+  4. *Monolith & Governance Invariants (`REQ-CON-054.4`)*: Keep `DeviceManager.java <= 1,708` (`+0` net LoC = `1,707`), `0` edits to `TrackerService.java`/`DevicesDatabaseManager.java`, all edited Kotlin/Java files `<= 1,500` LoC, `0` new `src/main` reads, and `Localization Parity: N/A - no new or modified UI strings`.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Refines `REQ-CON-012`, `REQ-CON-018`, `REQ-CON-050`, `REQ-CON-053`, `REQ-SET-118.3` across `MyBTLEDevice`, `BTLEHeartRateDevice`, `BTSearchForNewDevicesEngine`, `PolarOfflineGattCoordinator`, `PolarOnlineStreamingBridge`.
+  2. *Historical Origin & Commit Trace*: `ATT-1348`, `ATT-2224`, `ATT-8690`, `ATT-8714` (`1e7a2f0b`), `ATT-8717` (`9f9e5967`), `ATT-9161` (`104a028f`).
+  3. *Root Reason for Existing Formulation*: Prior teardown assumed single-ID `mMyRemoteDevices` ownership, scans assumed unpaired peripherals always advertise, and HR CCCD writes were fire-and-forget.
+  4. *Preservation of Core Invariants*: Preserves `REQ-CON-049` DIS-before-CCCD order (`BTLEHeartRateDeviceTest:561`), `MyBTLEDeviceLifecycleTest:323` non-shutdown null-GATT callback, `REQ-CON-050.1` ordered teardown, `REQ-SET-118.3` sibling Polar session isolation, `REQ-CON-053` 4-stream coordination, and `DeviceManager.java <= 1,708` LoC.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* a connected BLE/Polar HRM (optionally alongside a sibling paired Polar sensor), *When* unpaired or deleted, *Then* both raw `BluetoothGatt` and all MAC/8-hex `PolarBleApi` aliases tear down immediately without affecting the sibling sensor.
+  • *Given* an unpaired/deleted compatible BLE HRM still GATT-connected to the phone, *When* BLE search starts, *Then* unpaired Polar sessions release and `getConnectedDevices(GATT)` probes surface the sensor while skipping already-paired and non-matching peripherals.
+  • *Given* a connected BLE HRM receiving `0` HR packets for `12 s` (and not GATT-paused), *When* the watchdog fires, *Then* `0x2A37` CCCD / `HR` stream re-enables once and, if still silent, cleanly disconnects/closes and reconnects.
+
 ---
 
 ## Change History
@@ -3886,3 +3910,8 @@
 | `1.0.87` | 2026-11-20 | Lane B2 Author (`ATT-9161`, `--as agent1`) | `ATT-9161` | Promoted `REQ-CON-053` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9309` @ `80bd02ca`) `172/172 PASS` across 22 suites + `:app:assembleDebug` + `0` new warnings (`Rule 7.5`, `0` `app/` drift since `80bd02ca`), `4/4` Python safety linters PASS, clean-checkout `--check-verified-evidence` EXIT `0`, and `docs/engineering/walkthroughs/ATT-9161_walkthrough.md`. |
 | `1.0.88` | 2026-11-20 | Lane B2 Author (`ATT-9161`, `--as agent1`) | `ATT-9161` | Stage 6 Bounce 1/3 heal: executed `onFinalCleanup` and `onStreamsCancelled` atomically under `slotLock` prior to slot release, added `preAcquire` exception CAS rollback in `PolarPmdStreamCoordinator.kt`, wired `cancelAllStreams { releaseOnlineAccChannels() }` in `PolarOnlineStreamingBridge.kt`, added deterministic ownership test in `PolarPmdStreamCoordinatorTest.kt`, and set `[Implemented]` pending Gate 4 / Stage 5 re-verification. |
 | `1.0.89` | 2026-11-20 | Lane B2 Author (`ATT-9161`, `--as agent1`) | `ATT-9161` | Promoted `REQ-CON-053` to `[Verified]` in Stage 5 Bounce 1 reusing Gate 4 Bounce 1 (`ATT-9313` @ `79e9e1b1`) `173/173 PASS` across 22 suites + `:app:assembleDebug` + `0` new warnings (`Rule 7.5`, `0` `app/` drift since `79e9e1b1`), `4/4` Python safety linters PASS, clean-checkout `--check-verified-evidence` EXIT `0`, and refreshed `ATT-9161_walkthrough.md`. |
+| `1.0.90` | 2026-11-20 | Lane B Author (`ATT-9155`, `--as agent1`) | `ATT-9155` | Added `REQ-CON-054` (`[Planned]`, `.1`–`.4`, linked to `SYSREQ-TRK-001`/`SYSREQ-TRK-002`) for alias-complete GATT/Polar unpair/delete teardown, connected-GATT discovery fallback, and shared `12 s` silent-HR watchdog & CCCD retry (`N/A - no UI strings`). |
+| `1.0.91` | 2026-11-20 | Lane B Author (`ATT-9155`, `--as agent1`) | `ATT-9155` | Promoted `REQ-CON-054` to `[Implemented]` following Stage 4 construction (`BleHrmSilentConnectionWatchdog.kt`, `PolarOfflineGattCoordinator.kt`, `PolarPmdStreamCoordinator.kt`, `PolarOnlineStreamingBridge.kt`, `MyBTLEDevice.java`, `BTLEHeartRateDevice.java`, `BTSearchForNewDevicesEngine.java`, `DeviceDataRepository.kt`, `DeviceManager.java` `1,707/1,708` `+0` LoC, `0` protected monolith edits). |
+| `1.0.92` | 2026-11-20 | Lane B Author (`ATT-9155`, `--as agent1`) | `ATT-9155` | Promoted `REQ-CON-054` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9336` @ `3b81ce09`) `180/180 PASS` across 19 suites + `:app:assembleDebug` + `0` new Kotlin warnings (`Rule 7.5`, `0` `app/` drift since `3b81ce09`), `4/4` Python safety linters PASS, `--check-verified-evidence` EXIT `0`, and `docs/engineering/walkthroughs/ATT-9155_walkthrough.md`. |
+| `1.0.93` | 2026-11-20 | Lane B Author (`ATT-9155`, `--as agent1`) | `ATT-9155` | Stage 6 Bounce 1/3 heal: added monotonic watchdog `generation` + `silentHrWatchdogLock` job-identity guard (`BleHrmSilentConnectionWatchdog`, `PolarOnlineStreamingBridge`, `BTLEHeartRateDevice`), stale `gatt != mBluetoothGatt` guard in `onDescriptorWriteCompleted()`, `!posted -> closeRunnable.run()` GATT close fallback in `MyBTLEDevice.disconnectFromGatt()`, and `my_btle_device.md` precision fix; set `[Implemented]` pending Gate 4 / Stage 5 re-verification. |
+| `1.0.94` | 2026-11-20 | Lane B Author (`ATT-9155`, `--as agent1`) | `ATT-9155` | Promoted `REQ-CON-054` to `[Verified]` in Stage 5 Bounce 1 reusing Gate 4 Bounce 1 (`ATT-9351` @ `98a377f6`) `184/184 PASS` across 19 suites + `:app:assembleDebug` + `0` new production Kotlin warnings (`Rule 7.5`, `0` `app/` drift since `98a377f6`), `4/4` Python safety linters PASS, `--check-verified-evidence` EXIT `0`, and refreshed `docs/engineering/walkthroughs/ATT-9155_walkthrough.md`. |

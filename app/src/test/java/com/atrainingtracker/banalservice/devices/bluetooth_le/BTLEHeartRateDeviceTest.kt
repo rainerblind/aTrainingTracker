@@ -729,4 +729,104 @@ class BTLEHeartRateDeviceTest {
         org.junit.Assert.assertFalse("mRrIntervalSensor must be deactivated on BLE shutDown()", rrSensor2.isActivated)
         assertNull("Listener must receive null immediately on BLE shutDown()", observed2.last())
     }
+
+    // REQ-CON-054.1 / REQ-CON-054.3 / TST-CON-054.1 / TST-CON-054.3
+    @Test
+    fun testSilentHrWatchdog_cccdRetryPauseDeferralDisconnectAndPolarShutDown_TST_CON_054_3() {
+        val mac = "24:AC:AC:24:82:56"
+        val polarId = "24825632"
+        val mockPolarApi = mockk<com.polar.sdk.api.PolarBleApi>(relaxed = true)
+        PolarOfflineGattCoordinator.resetForTesting()
+        PolarOfflineGattCoordinator.apiFactoryForTesting = { _, _ -> mockPolarApi }
+        try {
+            PolarOfflineGattCoordinator.acquirePersistentSession(mockContext, polarId, mac, mockk(relaxed = true))
+            val device = TestBTLEHeartRateDevice(mockContext, mockSensorManager, 301L, mac)
+            val mockGatt = mockk<BluetoothGatt>(relaxed = true)
+            val hrService = mockk<BluetoothGattService>(relaxed = true)
+            val hrChar = mockk<BluetoothGattCharacteristic>(relaxed = true)
+            val hrDescriptor = mockk<BluetoothGattDescriptor>(relaxed = true)
+
+            every { mockGatt.getService(BluetoothConstants.getServiceUUID(DeviceType.HRM)) } returns hrService
+            every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_POLAR_PMD) } returns null
+            every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_POLAR_PFTP) } returns null
+            every { hrService.getCharacteristic(BluetoothConstants.getCharacteristicUUID(DeviceType.HRM)) } returns hrChar
+            every { hrChar.uuid } returns BluetoothConstants.getCharacteristicUUID(DeviceType.HRM)
+            every { hrChar.getDescriptor(BluetoothConstants.UUID_CHARACTERISTIC_CLIENT_CONFIG) } returns hrDescriptor
+            every { hrDescriptor.uuid } returns BluetoothConstants.UUID_CHARACTERISTIC_CLIENT_CONFIG
+            every { hrDescriptor.characteristic } returns hrChar
+
+            device.setBluetoothGattForTesting(mockGatt)
+            device.setStateForTesting(MyBTLEDevice.State.CONNECTED_WITH_SERVICE)
+            device.callConfigureServices(mockGatt)
+            assertEquals(BleHrmSilentConnectionWatchdog.State.ARMED_INITIAL, device.silentHrWatchdogStateForTesting)
+
+            // Failed 0x2A37 CCCD write triggers single retry (second failure does not loop infinitely)
+            device.onDescriptorWriteCompleted(mockGatt, hrDescriptor, BluetoothGatt.GATT_FAILURE)
+            io.mockk.verify(exactly = 2) { mockGatt.setCharacteristicNotification(hrChar, true) }
+            device.onDescriptorWriteCompleted(mockGatt, hrDescriptor, BluetoothGatt.GATT_FAILURE)
+            io.mockk.verify(exactly = 2) { mockGatt.setCharacteristicNotification(hrChar, true) }
+
+            // While GATT-paused for PFTP yield, watchdog defers without escalating
+            device.pauseGattOperations()
+            device.silentHrWatchdogRunnableForTesting.run()
+            assertEquals(BleHrmSilentConnectionWatchdog.State.ARMED_INITIAL, device.silentHrWatchdogStateForTesting)
+            device.resumeGattOperations()
+
+            // 1st silent watchdog tick -> REENABLE_CCCD (3rd setCharacteristicNotification)
+            device.silentHrWatchdogRunnableForTesting.run()
+            assertEquals(BleHrmSilentConnectionWatchdog.State.ARMED_AFTER_RESUBSCRIBE, device.silentHrWatchdogStateForTesting)
+            io.mockk.verify(exactly = 3) { mockGatt.setCharacteristicNotification(hrChar, true) }
+
+            // Receiving an HR packet disarms the watchdog cleanly
+            device.parseHeartRateMeasurement(byteArrayOf(0x00, 72), 10_000L)
+            assertEquals(BleHrmSilentConnectionWatchdog.State.DISARMED, device.silentHrWatchdogStateForTesting)
+
+            // Re-arm and escalate twice with 0 HR packets -> triggers clean disconnect/reconnect cycle
+            device.callConfigureServices(mockGatt)
+            device.silentHrWatchdogRunnableForTesting.run()
+            assertEquals(BleHrmSilentConnectionWatchdog.State.ARMED_AFTER_RESUBSCRIBE, device.silentHrWatchdogStateForTesting)
+            device.silentHrWatchdogRunnableForTesting.run()
+            assertFalse("Persistent silence must disconnect GATT and leave CONNECTED_WITH_SERVICE", device.isReceivingData)
+            assertTrue("Persistent silence must schedule background reconnect", device.isBackgroundReconnectingForTesting)
+
+            // shutDown() also disconnects lingering Polar SDK session aliases for this MAC
+            device.shutDown()
+            io.mockk.verify(atLeast = 1) { mockPolarApi.disconnectFromDevice(mac) }
+            io.mockk.verify(atLeast = 1) { mockPolarApi.disconnectFromDevice(polarId) }
+        } finally {
+            PolarOfflineGattCoordinator.resetForTesting()
+        }
+    }
+
+    // REQ-CON-054.3 / TST-CON-054.3
+    @Test
+    fun testOnDescriptorWriteCompleted_ignoresStaleGattWithoutBurningRetryFlag_TST_CON_054_3() {
+        val device = TestBTLEHeartRateDevice(mockContext, mockSensorManager, 302L, "24:AC:AC:24:82:58")
+        val activeGatt = mockk<BluetoothGatt>(relaxed = true)
+        val staleGatt = mockk<BluetoothGatt>(relaxed = true)
+        val hrService = mockk<BluetoothGattService>(relaxed = true)
+        val hrChar = mockk<BluetoothGattCharacteristic>(relaxed = true)
+        val hrDescriptor = mockk<BluetoothGattDescriptor>(relaxed = true)
+
+        every { activeGatt.getService(BluetoothConstants.getServiceUUID(DeviceType.HRM)) } returns hrService
+        every { staleGatt.getService(BluetoothConstants.getServiceUUID(DeviceType.HRM)) } returns hrService
+        every { hrService.getCharacteristic(BluetoothConstants.getCharacteristicUUID(DeviceType.HRM)) } returns hrChar
+        every { hrChar.uuid } returns BluetoothConstants.getCharacteristicUUID(DeviceType.HRM)
+        every { hrChar.getDescriptor(BluetoothConstants.UUID_CHARACTERISTIC_CLIENT_CONFIG) } returns hrDescriptor
+        every { hrDescriptor.uuid } returns BluetoothConstants.UUID_CHARACTERISTIC_CLIENT_CONFIG
+        every { hrDescriptor.characteristic } returns hrChar
+
+        device.setBluetoothGattForTesting(activeGatt)
+        device.setStateForTesting(MyBTLEDevice.State.CONNECTED_WITH_SERVICE)
+
+        // Failure callback from stale/superseded GATT must be ignored without enqueueing or burning retry budget
+        device.onDescriptorWriteCompleted(staleGatt, hrDescriptor, BluetoothGatt.GATT_FAILURE)
+        io.mockk.verify(exactly = 0) { staleGatt.setCharacteristicNotification(any(), any()) }
+        io.mockk.verify(exactly = 0) { activeGatt.setCharacteristicNotification(any(), any()) }
+        assertTrue("Stale GATT callback must not enqueue onto active mGattQueue", device.gattQueueForTesting.isEmpty())
+
+        // Subsequent real failure on activeGatt still gets its single CCCD retry
+        device.onDescriptorWriteCompleted(activeGatt, hrDescriptor, BluetoothGatt.GATT_FAILURE)
+        io.mockk.verify(exactly = 1) { activeGatt.setCharacteristicNotification(hrChar, true) }
+    }
 }

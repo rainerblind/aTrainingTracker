@@ -20,6 +20,7 @@ package com.atrainingtracker.banalservice.devices.bluetooth_le;
 
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCharacteristic;
+import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothGattService;
 import android.content.Context;
 import android.util.Log;
@@ -65,6 +66,13 @@ public class BTLEHeartRateDevice extends MyBTLEDevice implements RrBeatSource, H
     private double mLastBeatTimestampMs = 0.0;
     private double mLastNormalRrMs = RrBeatNormalization.DEFAULT_REFERENCE_RR_MS;
     private int mPacketCounter = 0;
+
+    private final BleHrmSilentConnectionWatchdog mSilentHrWatchdog = new BleHrmSilentConnectionWatchdog();
+    private volatile long mSilentHrWatchdogGeneration = 0L;
+    private volatile long mSilentHrWatchdogTimeoutMs = BleHrmSilentConnectionWatchdog.DEFAULT_WATCHDOG_TIMEOUT_MS;
+    private volatile boolean mHrCccdFailureRetried = false;
+    @Nullable
+    private volatile Runnable mSilentHrWatchdogRunnable = null;
 
     /**
      * Constructor
@@ -193,6 +201,116 @@ public class BTLEHeartRateDevice extends MyBTLEDevice implements RrBeatSource, H
             }
         }
         super.configureServices(gatt);
+        mHrCccdFailureRetried = false;
+        armSilentHrWatchdog();
+    }
+
+    private void armSilentHrWatchdog() {
+        long generation = mSilentHrWatchdog.armOnConnected();
+        mSilentHrWatchdogGeneration = generation;
+        scheduleSilentHrWatchdogTimer(generation);
+    }
+
+    private void scheduleSilentHrWatchdogTimer(final long expectedGeneration) {
+        if (mHandler != null && !mIsShutDown) {
+            Runnable previous = mSilentHrWatchdogRunnable;
+            if (previous != null) {
+                mHandler.removeCallbacks(previous);
+            }
+            Runnable next = () -> onSilentHrWatchdogTimeout(expectedGeneration);
+            mSilentHrWatchdogRunnable = next;
+            mHandler.postDelayed(next, mSilentHrWatchdogTimeoutMs);
+        }
+    }
+
+    private void cancelSilentHrWatchdog() {
+        mSilentHrWatchdog.reset();
+        Runnable previous = mSilentHrWatchdogRunnable;
+        mSilentHrWatchdogRunnable = null;
+        if (mHandler != null && previous != null) {
+            mHandler.removeCallbacks(previous);
+        }
+    }
+
+    @android.annotation.SuppressLint("MissingPermission")
+    private void reenableHrCccdNotifications(@Nullable BluetoothGatt gatt) {
+        if (gatt == null || mIsShutDown) {
+            return;
+        }
+        BluetoothGattService hrService = gatt.getService(BluetoothConstants.getServiceUUID(DeviceType.HRM));
+        if (hrService == null) {
+            return;
+        }
+        BluetoothGattCharacteristic hrChar = hrService.getCharacteristic(BluetoothConstants.getCharacteristicUUID(DeviceType.HRM));
+        if (hrChar == null) {
+            return;
+        }
+        try {
+            gatt.setCharacteristicNotification(hrChar, true);
+        } catch (SecurityException e) {
+            Log.w(TAG, "Missing BLUETOOTH_CONNECT permission re-enabling HR notifications", e);
+            return;
+        }
+        BluetoothGattDescriptor descriptor = hrChar.getDescriptor(BluetoothConstants.UUID_CHARACTERISTIC_CLIENT_CONFIG);
+        if (descriptor != null) {
+            enqueueWriteDescriptor(descriptor, BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
+        }
+    }
+
+    private void onSilentHrWatchdogTimeout(long expectedGeneration) {
+        if (mIsShutDown || mState != State.CONNECTED_WITH_SERVICE || mSilentHrWatchdog.getGeneration() != expectedGeneration) {
+            return;
+        }
+        if (isGattPaused()) {
+            scheduleSilentHrWatchdogTimer(expectedGeneration);
+            return;
+        }
+        BleHrmSilentConnectionWatchdog.Action action = mSilentHrWatchdog.onWatchdogElapsed(expectedGeneration);
+        if (action == BleHrmSilentConnectionWatchdog.Action.REENABLE_CCCD) {
+            if (mIsShutDown || mState != State.CONNECTED_WITH_SERVICE || mSilentHrWatchdog.getGeneration() != expectedGeneration) {
+                return;
+            }
+            Log.w(TAG, "Silent BLE HRM connection on " + getAddress()
+                    + " (" + mSilentHrWatchdogTimeoutMs + "ms without HR packets); re-enabling 0x2A37 CCCD");
+            reenableHrCccdNotifications(mBluetoothGatt);
+            scheduleSilentHrWatchdogTimer(expectedGeneration);
+        } else if (action == BleHrmSilentConnectionWatchdog.Action.DISCONNECT_AND_RECONNECT) {
+            Log.w(TAG, "Persistent silent BLE HRM connection on " + getAddress()
+                    + " after CCCD re-enable; disconnecting and reconnecting");
+            cancelSilentHrWatchdog();
+            triggerSilentConnectionReconnect();
+        }
+    }
+
+    @Override
+    protected void onDescriptorWriteCompleted(BluetoothGatt gatt, BluetoothGattDescriptor descriptor, int status) {
+        if (mIsShutDown || gatt == null || gatt != mBluetoothGatt || descriptor == null || status == BluetoothGatt.GATT_SUCCESS) {
+            return;
+        }
+        BluetoothGattCharacteristic parentChar = descriptor.getCharacteristic();
+        if (parentChar != null
+                && BluetoothConstants.UUID_CHARACTERISTIC_CLIENT_CONFIG.equals(descriptor.getUuid())
+                && BluetoothConstants.getCharacteristicUUID(DeviceType.HRM).equals(parentChar.getUuid())
+                && !mHrCccdFailureRetried) {
+            mHrCccdFailureRetried = true;
+            Log.w(TAG, "HR CCCD write failed (status=" + status + ") for " + getAddress() + "; retrying once");
+            reenableHrCccdNotifications(gatt);
+        }
+    }
+
+    @VisibleForTesting
+    public void setSilentHrWatchdogTimeoutMsForTesting(long timeoutMs) {
+        mSilentHrWatchdogTimeoutMs = timeoutMs;
+    }
+
+    @VisibleForTesting
+    public Runnable getSilentHrWatchdogRunnableForTesting() {
+        return mSilentHrWatchdogRunnable;
+    }
+
+    @VisibleForTesting
+    public BleHrmSilentConnectionWatchdog.State getSilentHrWatchdogStateForTesting() {
+        return mSilentHrWatchdog.getState();
     }
 
     @Override
@@ -268,6 +386,13 @@ public class BTLEHeartRateDevice extends MyBTLEDevice implements RrBeatSource, H
             }
 
             if (DEBUG) Log.i(TAG, String.format("Received heart rate: %d", heartRate));
+            if (mSilentHrWatchdog.onHrPacketReceived() && mHandler != null) {
+                Runnable pending = mSilentHrWatchdogRunnable;
+                mSilentHrWatchdogRunnable = null;
+                if (pending != null) {
+                    mHandler.removeCallbacks(pending);
+                }
+            }
             mHeartRateSensor.newValue(heartRate);
 
             // Bit 4: RR-Interval values present
@@ -322,6 +447,8 @@ public class BTLEHeartRateDevice extends MyBTLEDevice implements RrBeatSource, H
 
     @Override
     protected void unregisterSensors() {
+        cancelSilentHrWatchdog();
+        mHrCccdFailureRetried = false;
         if (mPerDeviceHrvController != null) {
             mPerDeviceHrvController.onDisconnect();
         }
@@ -341,6 +468,9 @@ public class BTLEHeartRateDevice extends MyBTLEDevice implements RrBeatSource, H
 
     @Override
     public void shutDown() {
+        cancelSilentHrWatchdog();
+        mHrCccdFailureRetried = false;
+        PolarOfflineGattCoordinator.forceDisconnectDevice(mContext, getAddress(), null);
         if (mPerDeviceHrvController != null) {
             mPerDeviceHrvController.shutDown();
         }

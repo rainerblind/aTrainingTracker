@@ -464,4 +464,58 @@ class MyBTLEDeviceLifecycleTest {
             )
         }
     }
+
+    // REQ-CON-054.1 / TST-CON-054.1
+    @Test
+    fun testOnConnectionStateChange_afterShutDown_immediatelyClosesLateGattCallback_TST_CON_054_1() {
+        val device = TestBTLEDevice(mockContext, mockSensorManager, 10L, "AA:BB:CC:DD:EE:10")
+        device.shutDown()
+        postedRunnables.clear()
+
+        val lateGatt = mockk<BluetoothGatt>(relaxed = true)
+        device.getGattCallback().onConnectionStateChange(
+            lateGatt,
+            BluetoothGatt.GATT_SUCCESS,
+            BluetoothProfile.STATE_CONNECTED
+        )
+
+        verify(exactly = 1) { lateGatt.disconnect() }
+        verify(exactly = 1) { lateGatt.close() }
+        verify(exactly = 0) { lateGatt.discoverServices() }
+        assertTrue("No post-shutdown discovery runnable should be queued", postedRunnables.isEmpty())
+    }
+
+    // REQ-CON-054.1 / TST-CON-054.1
+    @Test
+    fun testDisconnectFromGatt_whenOnHandlerLooper_closesSynchronouslyWithoutPosting_TST_CON_054_1() {
+        val sameLooper = mockk<Looper>(relaxed = true)
+        every { anyConstructed<Handler>().looper } returns sameLooper
+        mockkStatic(Looper::class)
+        every { Looper.myLooper() } returns sameLooper
+
+        val device = TestBTLEDevice(mockContext, mockSensorManager, 11L, "AA:BB:CC:DD:EE:11")
+        device.setGatt(mockGatt)
+        postedRunnables.clear()
+
+        device.disconnectFromGatt()
+
+        verify(exactly = 1) { mockGatt.disconnect() }
+        verify(exactly = 1) { mockGatt.close() }
+        assertTrue("Same-looper disconnectFromGatt must run synchronously without posting", postedRunnables.isEmpty())
+    }
+
+    // REQ-CON-054.1 / TST-CON-054.1
+    @Test
+    fun testDisconnectFromGatt_whenPostReturnsFalse_stillDisconnectsClosesAndRunsCallback_TST_CON_054_1() {
+        every { anyConstructed<Handler>().post(any()) } returns false
+        val device = TestBTLEDevice(mockContext, mockSensorManager, 12L, "AA:BB:CC:DD:EE:12")
+        device.setGatt(mockGatt)
+
+        var callbackRan = false
+        device.shutDown { callbackRan = true }
+
+        verify(exactly = 1) { mockGatt.disconnect() }
+        verify(exactly = 1) { mockGatt.close() }
+        assertTrue("onTeardownComplete callback must still execute when Handler.post returns false", callbackRan)
+    }
 }

@@ -41,6 +41,7 @@ import com.atrainingtracker.banalservice.devices.RrBeatListener
 import com.atrainingtracker.banalservice.devices.RrBeatNormalization
 import com.atrainingtracker.banalservice.devices.RrBeatSource
 import com.atrainingtracker.banalservice.devices.SensorReconnectBackoffPolicy
+import com.atrainingtracker.banalservice.devices.bluetooth_le.BleHrmSilentConnectionWatchdog
 import com.atrainingtracker.banalservice.devices.bluetooth_le.BluetoothConstants
 import com.atrainingtracker.banalservice.devices.hrv.HrvSignalQualityResult
 import com.atrainingtracker.banalservice.devices.hrv.HrvTelemetryProvider
@@ -294,6 +295,112 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
 
     private var searchTimeoutJob: Job? = null
 
+    private val silentHrWatchdog = BleHrmSilentConnectionWatchdog()
+    private val silentHrWatchdogLock = Any()
+
+    @Volatile
+    private var silentHrWatchdogJob: Job? = null
+
+    @VisibleForTesting
+    internal var silentHrWatchdogTimeoutMs: Long = BleHrmSilentConnectionWatchdog.DEFAULT_WATCHDOG_TIMEOUT_MS
+
+    @VisibleForTesting
+    internal fun getSilentHrWatchdogGenerationForTesting(): Long = silentHrWatchdog.getGeneration()
+
+    @VisibleForTesting
+    internal fun getSilentHrWatchdogJobForTesting(): Job? = synchronized(silentHrWatchdogLock) { silentHrWatchdogJob }
+
+    @VisibleForTesting
+    internal fun triggerSilentHrWatchdogTimeoutForTesting(expectedGeneration: Long) {
+        onSilentHrWatchdogTimeout(expectedGeneration)
+    }
+
+    private fun armSilentHrWatchdog() {
+        val generation = silentHrWatchdog.armOnConnected()
+        scheduleSilentHrWatchdogTimer(generation)
+    }
+
+    private fun scheduleSilentHrWatchdogTimer(expectedGeneration: Long) {
+        val jobToCancel = synchronized(silentHrWatchdogLock) {
+            if (isShutDown.get() || !isConnectedFlag.get() || silentHrWatchdog.getGeneration() != expectedGeneration) {
+                return
+            }
+            val previous = silentHrWatchdogJob
+            val timeoutMs = silentHrWatchdogTimeoutMs
+            silentHrWatchdogJob = scope.launch {
+                try {
+                    delay(timeoutMs)
+                    synchronized(silentHrWatchdogLock) {
+                        if (coroutineContext[Job] === silentHrWatchdogJob) {
+                            silentHrWatchdogJob = null
+                        }
+                    }
+                    onSilentHrWatchdogTimeout(expectedGeneration)
+                } finally {
+                    synchronized(silentHrWatchdogLock) {
+                        if (coroutineContext[Job] === silentHrWatchdogJob) {
+                            silentHrWatchdogJob = null
+                        }
+                    }
+                }
+            }
+            previous
+        }
+        jobToCancel?.cancel()
+    }
+
+    private fun cancelSilentHrWatchdog(resetState: Boolean = true) {
+        val jobToCancel = synchronized(silentHrWatchdogLock) {
+            val previous = silentHrWatchdogJob
+            silentHrWatchdogJob = null
+            if (resetState) {
+                silentHrWatchdog.reset()
+            }
+            previous
+        }
+        jobToCancel?.cancel()
+    }
+
+    private fun onSilentHrWatchdogTimeout(expectedGeneration: Long) {
+        if (isShutDown.get() || !isConnectedFlag.get() || silentHrWatchdog.getGeneration() != expectedGeneration) return
+        when (silentHrWatchdog.onWatchdogElapsed(expectedGeneration)) {
+            BleHrmSilentConnectionWatchdog.Action.REENABLE_CCCD -> {
+                if (isShutDown.get() || !isConnectedFlag.get() || silentHrWatchdog.getGeneration() != expectedGeneration) return
+                Log.w(TAG, "Silent Polar HR connection on $sdkSessionId (${silentHrWatchdogTimeoutMs}ms without HR packets); re-subscribing HR stream")
+                streamCoordinator.cancelSlot(PolarPmdStreamCoordinator.StreamSlot.HR)
+                if (isShutDown.get() || !isConnectedFlag.get() || silentHrWatchdog.getGeneration() != expectedGeneration) return
+                startHrCollection()
+                scheduleSilentHrWatchdogTimer(expectedGeneration)
+            }
+            BleHrmSilentConnectionWatchdog.Action.DISCONNECT_AND_RECONNECT -> {
+                Log.w(TAG, "Persistent silent Polar HR connection on $sdkSessionId after HR re-subscribe; disconnecting aliases and reconnecting")
+                cancelSilentHrWatchdog(resetState = true)
+                sessionOpenPendingFeatures.set(false)
+                isConnectedFlag.set(false)
+                activeBridges.remove(this@PolarOnlineStreamingBridge)
+                cancelActiveStreamJobs()
+                streamCoordinator.resetSessionWarningState(polarId, activeSdkStreamId, macAddress)
+                unregisterSensors()
+                PolarRawTelemetryRecorder.getActiveRecorder()?.let { recorder ->
+                    removeImuFrameListener(recorder)
+                    removeRrBeatListener(recorder)
+                }
+                val sessionId = sdkSessionId
+                PolarOfflineGattCoordinator.registerDeviceAliases(coordinatorSessionKey, activeSdkStreamId, polarId, macAddress)
+                PolarOfflineGattCoordinator.forceDisconnectDevice(
+                    context = mContext,
+                    macAddress = macAddress,
+                    polarId = sessionId,
+                    clearRegistrations = false
+                )
+                if (!isShutDown.get()) {
+                    scheduleBackoffReconnect()
+                }
+            }
+            BleHrmSilentConnectionWatchdog.Action.NONE -> Unit
+        }
+    }
+
     private fun armSearchTimeoutWatchdog() {
         cancelSearchTimeoutWatchdog()
         val timeoutMs = searchTimeoutMsProvider()
@@ -403,6 +510,7 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
         if (!wasConnected) {
             streamCoordinator.resetSessionWarningState(polarId, activeSdkStreamId, macAddress)
             registerSensors()
+            armSilentHrWatchdog()
         }
         syncCadenceSensorRegistration()
         activeBridges.addIfAbsent(this@PolarOnlineStreamingBridge)
@@ -422,6 +530,7 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
                 sessionOpenPendingFeatures.set(false)
                 cancelReconnectJob()
                 cancelSearchTimeoutWatchdog()
+                cancelSilentHrWatchdog(resetState = true)
                 isConnectedFlag.set(false)
                 activeBridges.remove(this@PolarOnlineStreamingBridge)
                 cancelActiveStreamJobs()
@@ -462,6 +571,7 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
                 return
             }
             sessionOpenPendingFeatures.set(false)
+            cancelSilentHrWatchdog(resetState = true)
             isConnectedFlag.set(false)
             activeBridges.remove(this@PolarOnlineStreamingBridge)
             cancelActiveStreamJobs()
@@ -909,6 +1019,9 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
      */
     fun processHrData(data: PolarHrData, packetArrivalMs: Long) {
         if (isShutDown.get()) return
+        if (data.samples.isNotEmpty() && silentHrWatchdog.onHrPacketReceived()) {
+            cancelSilentHrWatchdog(resetState = false)
+        }
         for (sample in data.samples) {
             if (sample.hr > 0) {
                 mHeartRateSensor.newValue(sample.hr)
@@ -1200,6 +1313,7 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
         hasConnectedInSession.set(false)
         cancelSearchTimeoutWatchdog()
         cancelReconnectJob()
+        cancelSilentHrWatchdog(resetState = true)
         isConnectedFlag.set(false)
 
         LifecycleUtils.safeUnregisterReceiver(mContext, sportChangedReceiver, TAG)
@@ -1231,10 +1345,13 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
             releaseOnlineAccChannels()
             PolarOfflineGattCoordinator.releaseAccChannel(streamId, PolarOfflineGattCoordinator.ACC_OWNER_ONLINE)
             PolarOfflineGattCoordinator.releaseAccChannel(coordKey, PolarOfflineGattCoordinator.ACC_OWNER_ONLINE)
-            try {
-                api.disconnectFromDevice(streamId)
-            } catch (_: Throwable) {
-            }
+            PolarOfflineGattCoordinator.registerDeviceAliases(coordKey, streamId, polarId, macAddress)
+            PolarOfflineGattCoordinator.forceDisconnectDevice(
+                context = mContext,
+                macAddress = macAddress,
+                polarId = streamId,
+                clearRegistrations = true
+            )
             PolarOfflineGattCoordinator.releasePersistentSession(
                 polarId = coordKey,
                 macAddress = macAddress,
@@ -1245,6 +1362,12 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
             releaseOnlineAccChannels()
             PolarOfflineGattCoordinator.releaseAccChannel(streamId, PolarOfflineGattCoordinator.ACC_OWNER_ONLINE)
             PolarOfflineGattCoordinator.releaseAccChannel(coordKey, PolarOfflineGattCoordinator.ACC_OWNER_ONLINE)
+            PolarOfflineGattCoordinator.forceDisconnectDevice(
+                context = mContext,
+                macAddress = macAddress,
+                polarId = streamId,
+                clearRegistrations = true
+            )
         }
 
         activeBridges.remove(this)
