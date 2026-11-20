@@ -2228,6 +2228,110 @@ class SpeedAndLocationDevice_ATTFusedTest {
         }
     }
 
+    // REQ-FIL-034.3 / TST-FIL-034.3: Indoor multipath GPS speed (acc=43.9 m, v=2.89 m/s) gated from classifier & isMovingByGnss
+    @Test
+    fun testDegradedMultipathIndoorSpeed_gatedFromClassifierAndStationaryPinning_tstFil034_3() {
+        val device = SpeedAndLocationDevice_ATTFused(mockContext, mockSensorManager)
+        try {
+            // 1. Establish WALKING_TRANSITION at ~1.0 m/s with valid outdoor GNSS fixes
+            var lat = 48.6567
+            val lon = 9.0545
+            val degPerMeter = 1.0 / (Math.toRadians(1.0) * 6371000.0)
+            var stepTick = 0
+            for (sec in 1L..6L) {
+                val tMs = sec * 1000L
+                for (sub in 1..50) {
+                    stepTick++
+                    val subMs = (sec - 1L) * 1000L + sub * 20L
+                    val phase = 2.0 * PI * 1.7 * (sub * 0.02)
+                    val half = Math.toRadians(65.0 + 8.0 * kotlin.math.sin(phase)) * 0.5
+                    if (stepTick % 29 == 0) device.ingestStepEventForTesting(subMs)
+                    device.ingestImuMeasurement(
+                        floatArrayOf(kotlin.math.sin(half).toFloat(), 0f, 0f, kotlin.math.cos(half).toFloat()),
+                        floatArrayOf(0f, 0f, (0.22 * kotlin.math.sin(phase)).toFloat()),
+                        dtSec = 0.02,
+                        timestampMs = subMs
+                    )
+                }
+                lat += 1.0 * degPerMeter
+                device.onLocationChanged(
+                    createMutableLocation(lat, lon, acc = 4.0f, timeMs = tMs, hasSpeedFlag = true, speedMps = 1.0f, hasBearingFlag = true, bearingDeg = 0.0f)
+                )
+            }
+            assertEquals(PhoneCarriageMode.WALKING_TRANSITION.code, device.mActivityAndCarriageModeSensor?.value)
+
+            // 2. Encounter indoor multipath fixes with acc=43.9 m and spurious location.speed=2.89 m/s + quiet IMU
+            val flatRotVec = floatArrayOf(0f, 0f, 0f, 1f)
+            for (sec in 7L..15L) {
+                val tMs = sec * 1000L
+                for (sub in 1..10) {
+                    device.ingestImuMeasurement(flatRotVec, floatArrayOf(0f, 0f, 0.01f), dtSec = 0.1, timestampMs = (sec - 1L) * 1000L + sub * 100L)
+                }
+                device.onLocationChanged(
+                    createMutableLocation(lat + 0.0002, lon, acc = 43.9f, timeMs = tMs, hasSpeedFlag = true, speedMps = 2.89f, hasBearingFlag = false)
+                )
+                val observedMode = PhoneCarriageMode.fromCode(device.mActivityAndCarriageModeSensor?.value)
+                assertTrue(
+                    "Degraded multipath 2.89 m/s @ acc=43.9 m must stay WALKING_TRANSITION or STATIONARY (was $observedMode at t=${sec}s)",
+                    observedMode == PhoneCarriageMode.WALKING_TRANSITION || observedMode == PhoneCarriageMode.STATIONARY
+                )
+            }
+            // Once quiet IMU settles into STATIONARY, degraded multipath 2.89 m/s must NOT defeat forceStationaryPinning
+            assertEquals(PhoneCarriageMode.STATIONARY.code, device.mActivityAndCarriageModeSensor?.value)
+        } finally {
+            device.shutDown()
+        }
+    }
+
+    // REQ-FIL-034.1 / TST-FIL-034.1: GNSS timeout speed decay propagates 0.0 m/s to carriageClassifier using injectable clock
+    @Test
+    fun testTriggerDecayTick_propagatesZeroSpeedToCarriageClassifierWithInjectableClock_tstFil034_1() {
+        var fakeClockMs = 1_000L
+        val device = object : SpeedAndLocationDevice_ATTFused(mockContext, mockSensorManager) {
+            override fun currentTimeMillis(): Long = fakeClockMs
+        }
+        try {
+            // 1. Move at 1.4 m/s to establish WALKING_TRANSITION and non-zero mSpeed
+            val lat = 48.6567
+            val lon = 9.0545
+            var stepTick = 0
+            for (sec in 1L..5L) {
+                fakeClockMs = sec * 1000L
+                for (sub in 1..50) {
+                    stepTick++
+                    val subMs = (sec - 1L) * 1000L + sub * 20L
+                    val phase = 2.0 * PI * 1.7 * (sub * 0.02)
+                    val half = Math.toRadians(65.0 + 8.0 * kotlin.math.sin(phase)) * 0.5
+                    if (stepTick % 29 == 0) device.ingestStepEventForTesting(subMs)
+                    device.ingestImuMeasurement(
+                        floatArrayOf(kotlin.math.sin(half).toFloat(), 0f, 0f, kotlin.math.cos(half).toFloat()),
+                        floatArrayOf(0f, 0f, (0.22 * kotlin.math.sin(phase)).toFloat()),
+                        dtSec = 0.02,
+                        timestampMs = subMs
+                    )
+                }
+                device.onLocationChanged(
+                    createMutableLocation(lat + sec * 0.000012, lon, acc = 4.0f, timeMs = fakeClockMs, hasSpeedFlag = true, speedMps = 1.4f, hasBearingFlag = false)
+                )
+            }
+            assertEquals(PhoneCarriageMode.WALKING_TRANSITION.code, device.mActivityAndCarriageModeSensor?.value)
+
+            // 2. Stop indoors: feed quiet IMU and trigger speed decay ticks to 0.0 m/s across dismount dwell
+            val flatRotVec = floatArrayOf(0f, 0f, 0f, 1f)
+            for (sec in 6L..12L) {
+                fakeClockMs = sec * 1000L
+                for (sub in 1..10) {
+                    device.ingestImuMeasurement(flatRotVec, floatArrayOf(0f, 0f, 0.01f), dtSec = 0.1, timestampMs = (sec - 1L) * 1000L + sub * 100L)
+                }
+                repeat(10) { device.triggerDecayTickForTesting() }
+            }
+            assertEquals(0.0, device.speed, 1e-9)
+            assertEquals(PhoneCarriageMode.STATIONARY.code, device.mActivityAndCarriageModeSensor?.value)
+        } finally {
+            device.shutDown()
+        }
+    }
+
     private fun createSyntheticSensorEvent(sensorType: Int, timestampNs: Long, data: FloatArray): SensorEvent {
         val mockSensor = mockk<Sensor>(relaxed = true) {
             every { type } returns sensorType

@@ -304,4 +304,61 @@ class HrvReadinessTrendMathTest {
         assertEquals("Health Connect", parseProvenanceBadge("HealthConnect"))
         assertEquals("Health Connect", parseProvenanceBadge(null))
     }
+
+    @Test
+    fun calculateTrendSeries_isolatesEcgAndOpticalCohortsAndDefaultsOpticalOnlyAthletes_TST_HRV_049() {
+        // REQ-HRV-049.4 / TST-HRV-049.4: Isolated ECG vs Optical PPI cohorts and optical-only default selection
+        val baseDate = java.time.LocalDate.of(2026, 11, 1)
+        val ecgEntries = (0 until 15).map { i ->
+            createEntry(
+                id = (i + 1).toLong(),
+                dateIso = baseDate.plusDays(i.toLong()).toString(),
+                posture = HrvPosture.SUPINE,
+                lnRmssd = 4.20 + (i % 2) * 0.04,
+                rmssdMs = 66.0
+            ).copy(sensorModality = com.atrainingtracker.trainingtracker.database.hrv.HrvSensorModality.ECG)
+        }
+        val opticalEntries = (10 until 15).map { i ->
+            createEntry(
+                id = (100 + i).toLong(),
+                dateIso = baseDate.plusDays(i.toLong()).toString(),
+                posture = HrvPosture.SUPINE,
+                lnRmssd = 3.10,
+                rmssdMs = 22.0
+            ).copy(sensorModality = com.atrainingtracker.trainingtracker.database.hrv.HrvSensorModality.OPTICAL_PPI)
+        }
+
+        val pureEcg = HrvReadinessTrendMath.calculateTrendSeries(ecgEntries, HrvPosture.SUPINE)
+        val mixed = HrvReadinessTrendMath.calculateTrendSeries(ecgEntries + opticalEntries, HrvPosture.SUPINE)
+
+        assertEquals(com.atrainingtracker.trainingtracker.database.hrv.HrvSensorModality.ECG, mixed.sensorModality)
+        assertEquals(
+            listOf(
+                com.atrainingtracker.trainingtracker.database.hrv.HrvSensorModality.ECG,
+                com.atrainingtracker.trainingtracker.database.hrv.HrvSensorModality.OPTICAL_PPI
+            ),
+            mixed.availableModalities
+        )
+        assertEquals("ECG SWC lower bound must be untouched by optical readings", pureEcg.points.last().swcLower!!, mixed.points.last().swcLower!!, 1e-9)
+        val opticalSub = mixed.seriesByModality[com.atrainingtracker.trainingtracker.database.hrv.HrvSensorModality.OPTICAL_PPI]
+        assertNotNull(opticalSub)
+        assertEquals(5, opticalSub!!.points.size)
+        assertNull("Optical cohort with 5 days must not inherit ECG 60d SWC", opticalSub.points.last().swcLower)
+
+        val opticalOnly = HrvReadinessTrendMath.calculateTrendSeries(opticalEntries, HrvPosture.SUPINE)
+        assertEquals(com.atrainingtracker.trainingtracker.database.hrv.HrvSensorModality.OPTICAL_PPI, opticalOnly.sensorModality)
+        assertEquals(5, opticalOnly.points.size)
+        assertEquals(listOf(com.atrainingtracker.trainingtracker.database.hrv.HrvSensorModality.OPTICAL_PPI), opticalOnly.availableModalities)
+
+        // REQ-HRV-049.4 / TST-HRV-049.4: Equal ECG vs Optical PPI counts must deterministically tie-break to ECG
+        val tiedSeries = HrvReadinessTrendMath.calculateTrendSeries(
+            ecgEntries.take(5) + opticalEntries,
+            HrvPosture.SUPINE
+        )
+        assertEquals(
+            "Tie between equal ECG and Optical PPI counts must default deterministically to ECG",
+            com.atrainingtracker.trainingtracker.database.hrv.HrvSensorModality.ECG,
+            tiedSeries.sensorModality
+        )
+    }
 }

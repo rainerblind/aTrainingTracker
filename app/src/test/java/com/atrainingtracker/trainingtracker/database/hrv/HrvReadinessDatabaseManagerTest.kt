@@ -621,4 +621,189 @@ class HrvReadinessDatabaseManagerTest {
         assertTrue("Should return true once entry is inserted for date", manager.hasCompletedMorningCheck(testDate))
         assertFalse("Different date should still return false", manager.hasCompletedMorningCheck("2026-11-13"))
     }
+
+    @Test
+    fun schemaUpgrade_v1ToV3_and_v2ToV3_matchOnCreateV3ExactParity_TST_HRV_049() {
+        // REQ-HRV-049.3 / TST-HRV-049.3: Rule 64 exact PRAGMA table_info & index parity across onCreate(v3), v1->v3, v2->v3
+        fun readTableInfo(db: android.database.sqlite.SQLiteDatabase): List<String> {
+            val cols = mutableListOf<String>()
+            db.rawQuery("PRAGMA table_info(${HrvReadinessDbHelper.TABLE_HRV_READINESS})", null).use { c ->
+                while (c.moveToNext()) {
+                    cols.add("${c.getInt(0)}:${c.getString(1)}:${c.getString(2)}:${c.getInt(3)}:${c.getString(4)}")
+                }
+            }
+            return cols
+        }
+
+        fun readIndexes(db: android.database.sqlite.SQLiteDatabase): Set<String> {
+            val idxs = mutableSetOf<String>()
+            db.rawQuery("PRAGMA index_list(${HrvReadinessDbHelper.TABLE_HRV_READINESS})", null).use { c ->
+                while (c.moveToNext()) {
+                    idxs.add(c.getString(1))
+                }
+            }
+            return idxs
+        }
+
+        val freshHelper = HrvReadinessDbHelper(context)
+        val freshDb = freshHelper.writableDatabase
+        val expectedCols = readTableInfo(freshDb)
+        val expectedIndexes = readIndexes(freshDb)
+        assertEquals(20, expectedCols.size)
+        assertEquals("19:sensor_modality:TEXT:1:'ECG'", expectedCols[19])
+
+        // Simulate v1 -> v3
+        val v1Db = android.database.sqlite.SQLiteDatabase.create(null)
+        v1Db.execSQL(
+            """
+            CREATE TABLE ${HrvReadinessDbHelper.TABLE_HRV_READINESS} (
+                _id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp_ms INTEGER NOT NULL,
+                date_iso TEXT NOT NULL,
+                timezone_id TEXT NOT NULL,
+                resting_hr_bpm INTEGER NOT NULL,
+                rmssd_ms REAL NOT NULL,
+                ln_rmssd REAL NOT NULL,
+                hrv_score_100 REAL NOT NULL,
+                sdnn_ms REAL,
+                artifact_rate_pct REAL,
+                duration_sec INTEGER NOT NULL,
+                posture TEXT NOT NULL,
+                is_primary_for_day INTEGER NOT NULL DEFAULT 0,
+                notes TEXT
+            );
+            """.trimIndent()
+        )
+        v1Db.execSQL(
+            """
+            INSERT INTO ${HrvReadinessDbHelper.TABLE_HRV_READINESS}
+            (timestamp_ms, date_iso, timezone_id, resting_hr_bpm, rmssd_ms, ln_rmssd, hrv_score_100, duration_sec, posture, is_primary_for_day)
+            VALUES (1731398400000, '2026-11-12', 'UTC', 52, 65.0, 4.17, 83.4, 60, 'SUPINE', 1);
+            """.trimIndent()
+        )
+        freshHelper.onUpgrade(v1Db, 1, 3)
+        assertEquals("v1->v3 table_info must match onCreate(v3)", expectedCols, readTableInfo(v1Db))
+        assertEquals("v1->v3 indexes must match onCreate(v3)", expectedIndexes, readIndexes(v1Db))
+        v1Db.rawQuery("SELECT sensor_modality FROM ${HrvReadinessDbHelper.TABLE_HRV_READINESS}", null).use { c ->
+            assertTrue(c.moveToFirst())
+            assertEquals("ECG", c.getString(0))
+        }
+        v1Db.close()
+
+        // Simulate v2 -> v3
+        val v2Db = android.database.sqlite.SQLiteDatabase.create(null)
+        v2Db.execSQL(
+            """
+            CREATE TABLE ${HrvReadinessDbHelper.TABLE_HRV_READINESS} (
+                _id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp_ms INTEGER NOT NULL,
+                date_iso TEXT NOT NULL,
+                timezone_id TEXT NOT NULL,
+                resting_hr_bpm INTEGER,
+                rmssd_ms REAL,
+                ln_rmssd REAL,
+                hrv_score_100 REAL,
+                sdnn_ms REAL,
+                artifact_rate_pct REAL,
+                duration_sec INTEGER,
+                posture TEXT NOT NULL,
+                is_primary_for_day INTEGER NOT NULL DEFAULT 0,
+                notes TEXT,
+                sleep_duration_min INTEGER,
+                sleep_quality_1_5 INTEGER,
+                morning_energy_1_5 INTEGER,
+                muscle_soreness_1_5 INTEGER,
+                context_tags TEXT
+            );
+            """.trimIndent()
+        )
+        v2Db.execSQL(HrvReadinessDbHelper.CREATE_INDEX_DATE_POSTURE)
+        v2Db.execSQL(HrvReadinessDbHelper.CREATE_INDEX_TIMESTAMP)
+        v2Db.execSQL(
+            """
+            INSERT INTO ${HrvReadinessDbHelper.TABLE_HRV_READINESS}
+            (timestamp_ms, date_iso, timezone_id, resting_hr_bpm, rmssd_ms, ln_rmssd, hrv_score_100, duration_sec, posture, is_primary_for_day)
+            VALUES (1731398400000, '2026-11-12', 'UTC', 52, 65.0, 4.17, 83.4, 60, 'SUPINE', 1);
+            """.trimIndent()
+        )
+        freshHelper.onUpgrade(v2Db, 2, 3)
+        assertEquals("v2->v3 table_info must match onCreate(v3)", expectedCols, readTableInfo(v2Db))
+        assertEquals("v2->v3 indexes must match onCreate(v3)", expectedIndexes, readIndexes(v2Db))
+        v2Db.rawQuery("SELECT sensor_modality FROM ${HrvReadinessDbHelper.TABLE_HRV_READINESS}", null).use { c ->
+            assertTrue(c.moveToFirst())
+            assertEquals("ECG", c.getString(0))
+        }
+        v2Db.close()
+    }
+
+    @Test
+    fun sameDayEcgAndOpticalEntries_maintainIndependentPrimariesAndFilteredWindowQueries_TST_HRV_049() {
+        // REQ-HRV-049.3 / TST-HRV-049.3: Same-day ECG + Optical primary isolation, SQL filtering, and updateEntry old-cohort recompute
+        val date = "2026-11-15"
+        val ecgId1 = manager.insertEntry(
+            HrvReadinessEntry(
+                timestampMs = 1731650000000L,
+                dateIso = date,
+                timezoneId = "UTC",
+                restingHrBpm = 50,
+                rmssdMs = 70.0,
+                lnRmssd = 4.248,
+                hrvScore100 = 84.9,
+                durationSec = 60,
+                posture = HrvPosture.SUPINE,
+                isPrimaryForDay = true,
+                sensorModality = HrvSensorModality.ECG
+            )
+        )
+        val ecgId2 = manager.insertEntry(
+            HrvReadinessEntry(
+                timestampMs = 1731650500000L,
+                dateIso = date,
+                timezoneId = "UTC",
+                restingHrBpm = 51,
+                rmssdMs = 68.0,
+                lnRmssd = 4.220,
+                hrvScore100 = 84.4,
+                durationSec = 60,
+                posture = HrvPosture.SUPINE,
+                isPrimaryForDay = false,
+                sensorModality = HrvSensorModality.ECG
+            )
+        )
+        val opticalId = manager.insertEntry(
+            HrvReadinessEntry(
+                timestampMs = 1731651000000L,
+                dateIso = date,
+                timezoneId = "UTC",
+                restingHrBpm = 53,
+                rmssdMs = 58.0,
+                lnRmssd = 4.060,
+                hrvScore100 = 81.2,
+                durationSec = 60,
+                posture = HrvPosture.SUPINE,
+                isPrimaryForDay = true,
+                sensorModality = HrvSensorModality.OPTICAL_PPI
+            )
+        )
+
+        assertTrue("ECG primary must remain primary after optical insert", manager.getEntryById(ecgId1)!!.isPrimaryForDay)
+        assertTrue("Optical entry must be primary for its own modality cohort", manager.getEntryById(opticalId)!!.isPrimaryForDay)
+        assertFalse("Second ECG entry must remain non-primary", manager.getEntryById(ecgId2)!!.isPrimaryForDay)
+
+        val ecgWindow = manager.getPrimaryEntriesInWindow(HrvPosture.SUPINE, "2026-11-01", "2026-11-20", HrvSensorModality.ECG)
+        val optWindow = manager.getPrimaryEntriesInWindow(HrvPosture.SUPINE, "2026-11-01", "2026-11-20", HrvSensorModality.OPTICAL_PPI)
+        val allWindow = manager.getPrimaryEntriesInWindow(HrvPosture.SUPINE, "2026-11-01", "2026-11-20")
+        assertEquals(1, ecgWindow.size)
+        assertEquals(ecgId1, ecgWindow[0].id)
+        assertEquals(1, optWindow.size)
+        assertEquals(opticalId, optWindow[0].id)
+        assertEquals("Unfiltered window must keep both modalities on same date", 2, allWindow.size)
+
+        // Move ecgId1 to OPTICAL_PPI via updateEntry -> old ECG cohort must promote ecgId2 to primary
+        val moved = manager.getEntryById(ecgId1)!!.copy(sensorModality = HrvSensorModality.OPTICAL_PPI, isPrimaryForDay = true)
+        assertTrue(manager.updateEntry(moved))
+        assertTrue("Old ECG cohort must recompute and promote ecgId2", manager.getEntryById(ecgId2)!!.isPrimaryForDay)
+        assertTrue("Moved entry must be primary in OPTICAL_PPI cohort", manager.getEntryById(ecgId1)!!.isPrimaryForDay)
+        assertFalse("Previous OPTICAL_PPI primary must be demoted", manager.getEntryById(opticalId)!!.isPrimaryForDay)
+    }
 }

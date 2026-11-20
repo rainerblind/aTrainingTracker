@@ -428,4 +428,29 @@ class EditWorkoutViewModelTest {
         viewModel.updateSyncToHealthConnect(true)
         assertEquals(true, viewModel.workoutData.value?.syncToHealthConnect)
     }
+
+    /**
+     * TST-INT-002 (REQ-EXP-006): Selecting a sport type configured with "- No upload -"
+     * (stravaName == null) disables Strava upload on the edited workout (uploadToStrava == 0).
+     */
+    @Test
+    fun testOnSportTypeSelected_noUploadStravaMapping_setsUploadToStravaZero_TST_INT_002() {
+        every { mockSportTypesRepository.sportTypesList } returns listOf(
+            SimpleSportTypeInfo(1L, "Road Cycling", BSportType.BIKE),
+            SimpleSportTypeInfo(99L, "Private Walk", BSportType.UNKNOWN)
+        )
+        every { mockSportTypesRepository.getBSportType(99L) } returns BSportType.UNKNOWN
+        every { mockSportTypesRepository.getStravaName(99L) } returns null
+
+        val initial = createTestWorkout().copy(uploadToStrava = 1, stravaSportName = "Ride")
+        val viewModel = createViewModel(initial)
+
+        viewModel.updateSportName("Private Walk")
+
+        val updated = viewModel.workoutData.value
+        assertNotNull(updated)
+        assertEquals(99L, updated!!.sportId)
+        assertNull("Strava name must be null for '- No upload -'", updated.stravaSportName)
+        assertEquals("uploadToStrava must be 0 when Strava mapping is null", 0, updated.uploadToStrava)
+    }
 }

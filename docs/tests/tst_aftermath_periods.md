@@ -1,14 +1,14 @@
 # Living Test Specification: Post-Workout Analytics & Periods
 
 **Document ID**: `DOC-TST-PERIODS`  
-**Version**: 1.0.15  
+**Version**: 1.0.24  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `aftermath_periods`  
 **Prefixes**: `PER`, `PERF`, `RAD`, `SPT`  
 **Scope**: Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers.  
-**Total Tests**: 71
+**Total Tests**: 74
 
 ---
 
@@ -1274,6 +1274,72 @@
 
 ---
 
+### TST-HRV-047: **Dynamic Outlier-Resilient rMSSD Y-Axis Bounds, Labels & Spatial Spread Verification Suite** (`ATT-9171`) [Verified]
+- **Requirement(s)**: `REQ-HRV-047` (`REQ-HRV-047.1`..`REQ-HRV-047.4`)
+- **Component**: `TelemetryZoneMath.kt`, `TelemetryMetricGraph.kt`, `TelemetryZoneMathTest.kt`, `TelemetryMetricGraphHrvUiTest.kt`, `TelemetryMetricGraphHrvTest.kt`, `TelemetryMetricGraphZoneTest.kt`, `ArchitectureConformanceContractTest.kt`, `DeadCodeEliminationContractTest.kt`, `SourceTextReadingAuditContractTest.kt`
+- **Jira**: `ATT-9171`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Localization Parity**: `N/A - no UI strings`
+- **Test Description**:
+  1. *Dynamic Bounds, Outlier Guard & Axis Label Unit Tests (`TST-HRV-047.1`, `TelemetryZoneMathTest.testCalculateHrvRmssdYAxisBounds_dynamicOutlierResilientAndEdgeCases_TST_HRV_047`, `TelemetryZoneMathTest.testFormatHrvRmssdAxisLabel_cleanIntegerFractionalAndDefensive_TST_HRV_047`)*:
+     • Verify `calculateHrvRmssdYAxisBounds` across exercise `1.89-5.64 ms -> (0.0, 7.0)`, moderate `8-45 ms -> (0.0, 60.0)`, transient spike `45 ms` over `2-6 ms` steady-state (`N >= 5`) -> `(0.0, 7.0)`, genuine resting `40-120 ms -> (0.0, 140.0)` (`>= max * 1.15`) and `120-180 ms -> (0.0, 220.0)`, empty/zero/single-value `[3.2] -> (0.0, 5.0)` & `[120.0] -> (0.0, 140.0)`, `NaN`/`Infinity`/negative filtering, and `Double.MAX_VALUE` overflow safety.
+     • Verify `formatHrvRmssdAxisLabel` (`0.0 -> "0"`, `-0.0 -> "0"`, `7.0 -> "7"`, `6.5 -> "6.5"`/`"6,5"`, `NaN`/`Infinity -> "0"`).
+  2. *Portrait & Landscape Spatial Spread + Artifact/Spike Resilience Compose UI Verification (`TST-HRV-047.2`, `TelemetryMetricGraphHrvUiTest.testRmssdGraph_dynamicYAxisLightDarkPngAndSpatialSpread_TST_HRV_047`, `TelemetryMetricGraphHrvUiTest.testRmssdGraph_landscapeHistogramAndRestingScaling_TST_HRV_047`)*:
+     • Using `createComposeRule()` (`0` `src/main` reads), render `TelemetryMetricGraph(HRV_RMSSD)` for exercise `1.89-5.64 ms` and spike-contaminated (`2-6 ms` + `45 ms` warmup/artifact spike) streams in portrait (`isLandscape = false`) and landscape (`isLandscape = true` with `AlignedMarginalLinearDistribution`): assert TEAL curve and marginal histogram pixels span upper-middle/upper vertical chart regions (not flattened along bottom 10%) and populate multiple histogram bins, while resting `40-120 ms` renders cleanly with zero clipping.
+  3. *Rule 8.5 Light/Dark PNG Capture & Legacy Asset Integrity (`TST-HRV-047.3`, `TelemetryMetricGraphHrvUiTest.testRmssdGraph_dynamicYAxisLightDarkPngAndSpatialSpread_TST_HRV_047`)*:
+     • Preserve `docs/engineering/walkthroughs/img/ATT-8710_dfa_a1_zone_graph.png` and `ATT-8953_dfa_a1_inverted_yaxis.png` untouched; capture deterministic side-by-side Light & Dark PNG (`1.89-5.64 ms` exercise rMSSD) strictly to `docs/engineering/walkthroughs/img/ATT-9171_rmssd_dynamic_yaxis.png` and inspect via `read_file` against the 4-point Rule 8.5 checklist.
+  4. *Tier 1 Targeted Regression & Architecture Contracts (`TST-HRV-047.4`)*:
+     • Run `./gradlew :app:testDebugUnitTest --rerun --tests "*TelemetryZoneMathTest" --tests "*TelemetryMetricGraphHrvUiTest" --tests "*TelemetryMetricGraphHrvTest" --tests "*TelemetryMetricGraphZoneTest" --tests "*ArchitectureConformanceContractTest" --tests "*DeadCodeEliminationContractTest" --tests "*SourceTextReadingAuditContractTest"` verifying `TelemetryMetricGraph.kt <= 1,965` LoC, `private fun` `@Preview`s, `0` `src/main` reads, and zero regressions on `HRV_DFA_A1` and `HEART_RATE`.
+
+---
+
+### TST-HRV-048: **WorkoutRr.db Beat-Level Artifact Flag Persistence & Live vs Post-Workout HRV Reconciliation Suite** (`ATT-9160`) [Verified]
+- **Requirement(s)**: `REQ-HRV-048` (`REQ-HRV-048.1`..`REQ-HRV-048.4`)
+- **Component**: `RrArtifactFilter.kt`, `WorkoutRrDatabaseManager.kt`, `WorkoutRrRepository.kt`, `HrvPostWorkoutRecomputer.kt`, `HRVMetricsDevice.kt`, `RrArtifactFilterTest.kt`, `HrvGoldenOracleTest.kt`, `WorkoutRrDatabaseManagerTest.kt`, `WorkoutRrRepositoryTest.kt`, `HrvPostWorkoutRecomputerTest.kt`, `HRVMetricsDeviceTest.kt`, `DfaCalculatorTest.kt`, `ArchitectureConformanceContractTest.kt`, `DeadCodeEliminationContractTest.kt`, `SourceTextReadingAuditContractTest.kt`
+- **Jira**: `ATT-9160`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Localization Parity**: `N/A - no UI strings`
+- **Test Description**:
+  1. *1:1 Input Artifact/Gap Metadata & NeuroKit2 Golden Parity (`TST-HRV-048.1`, `RrArtifactFilterTest.testInputArtifactFlagsAndGapBeats_aligned1To1AcrossArtifactsAndHardwareGaps_TST_HRV_048`, `HrvGoldenOracleTest.kt`, `DfaCalculatorTest.kt`)*:
+     • Verify `inputArtifactFlags`/`inputGapBeats` size equals input `beats.size` across clean, ectopic (`1`, `gap=0`), merged short pair (both indices `2`, `gap=0`), missed `779.3 ms` amidst `385 ms` (`4`, `gap=1`), unflagged `5196 ms` gap (`5`, `gap>=5`), hardware `ARTIFACT_GAP` (`max(event.gapBeats, gapCount - 1)` preserved), and stale-flag reset (`-> 0`); verify `HrvGoldenOracleTest` stays within NeuroKit2 `0.2.10` tolerances (`|ΔrMSSD| <= 0.5 ms`, `|Δα1| <= 0.02`/`0.03`).
+  2. *Delta-Batched DB Flag Persistence, Idempotency & Configurable Gate Threshold (`TST-HRV-048.2`, `WorkoutRrDatabaseManagerTest.updateBeatQualityFlags_updatesTargetBeatsTransactionallyAndCountsModifiedRows_TST_HRV_048`, `WorkoutRrRepositoryTest.repository_updateBeatQualityFlags_persistsAndClearsFlags_TST_HRV_048`, `HrvPostWorkoutRecomputerTest.recomputeWorkout_persistsArtifactFlagsIdempotentlyAndResetsAfterCleanBackfill_TST_HRV_048`, `HrvPostWorkoutRecomputerTest.recomputeWorkout_andComputeSessionSdnn_honorClampedArtifactGateThreshold_TST_HRV_048`)*:
+     • Verify `updateBeatQualityFlags` updates `(artifact_flag, gap_beats)` transactionally by `(workout_id, beat_index)` without mutating `rr_ms`/`beat_timestamp_ms`.
+     • Verify `HrvPostWorkoutRecomputer.recomputeWorkout` persists flags on `275.39 ms`/`779.30 ms`/`5196 ms` outliers, performs `0` DB writes on idempotent re-run, resets stale flags to `(0, 0)` after clean backfill, and honors configurable `artifactGateThresholdPercent` clamped to `[3.0, 5.0]` for DFA $\alpha_1$ and `computeSessionSdnn`.
+  3. *180s Causal Filter Context, Drain-to-Null, Signal Quality Scope & Phase-Aligned Reconciliation (`TST-HRV-048.3`, `HRVMetricsDeviceTest.test180sFilterContext_preservesTrailingQuartileAccuracyAnd120sSignalQualityScope_TST_HRV_048`, `HRVMetricsDeviceTest.testEmptyActiveDfaWindowAfterLookaheadTrim_emitsZeroArtifactRateAndNullDfa_TST_HRV_048`, `HrvPostWorkoutRecomputerTest.recomputeWorkout_phaseAlignedReconciliationWithLive180sContext_TST_HRV_048`)*:
+     • Verify 180s context supplies full 91-beat trailing quartile windows across rolling 120s ticks without inflating leading-edge artifacts; verify `+150 s` drain clears all 3 sensors to `null`; verify empty `dfaWindowBeats` (all active beats in 5-beat lookahead tail) emits `artifactRate = 0.0`, `dfaAlpha1 = null`; verify `signalQualityResult.beatCount` reflects the 120s `dfaWindowBeats` slice; verify phase-aligned live `[T - 120s, T]` vs recomputed `T - 60s` reconcile tightly on steady-state streams.
+  4. *Tier 1 Targeted Regression & Architecture Contracts (`TST-HRV-048.4`)*:
+     • Run locked incremental `./gradlew :app:testDebugUnitTest --rerun --tests "*RrArtifactFilterTest" --tests "*HrvGoldenOracleTest" --tests "*HRVMetricsDeviceTest" --tests "*WorkoutRrDatabaseManagerTest" --tests "*WorkoutRrRepositoryTest" --tests "*HrvPostWorkoutRecomputerTest" --tests "*DfaCalculatorTest" --tests "*ArchitectureConformanceContractTest" --tests "*DeadCodeEliminationContractTest" --tests "*SourceTextReadingAuditContractTest"` with hyphenated `TST-HRV-048` code tags for clean-checkout `REQ-PRO-099.3` parity.
+
+---
+
+### TST-HRV-049: **Polar Verity Sense Optical PPI Morning HRV Check, DB v3 Provenance & Baseline Isolation Suite** (`ATT-9177`) [Verified]
+- **Requirement(s)**: `REQ-HRV-049` (`REQ-HRV-049.1`..`REQ-HRV-049.4`)
+- **Component**: `RrBeatEvent.kt`, `HrvSignalQualityAnalyzer.kt`, `HrvSensorModality.kt`, `HrvReadinessEntry.kt`, `HrvReadinessDatabaseManager.kt`, `HrvReadinessCalculator.kt`, `HrvReadinessRepository.kt`, `MorningHrvCheckViewModel.kt`, `MorningHrvCheckScreen.kt`, `MorningHrvOpticalCards.kt`, `HrvReadinessTrendMath.kt`, `HrvReadinessTrendCard.kt`, `res/values*/strings_hrv.xml`, `HrvSignalQualityAnalyzerTest.kt`, `HrvReadinessEntryTest.kt`, `HrvReadinessDatabaseManagerTest.kt`, `DatabaseSchemaRegistryHrvTest.kt`, `HrvReadinessCalculatorTest.kt`, `HrvReadinessRepositoryTest.kt`, `MorningHrvCheckViewModelTest.kt`, `MorningHrvOpticalPpiUiTest.kt`, `MorningHrvCheckScreenTest.kt`, `HrvReadinessTrendMathTest.kt`, `HrvReadinessTrendCardTest.kt`, `ControlTrackingViewModelTest.kt`, `TranslationParityTest.kt`, `ArchitectureConformanceContractTest.kt`, `DeadCodeEliminationContractTest.kt`, `SourceTextReadingAuditContractTest.kt`
+- **Jira**: `ATT-9177`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Localization Parity**: `9-locale verified (en, de, es, fr, it, ja, nl, pl, pt)` in `res/values*/strings_hrv.xml` via `TranslationParityTest`
+- **Test Description**:
+  1. *Optical PPI Contract & Signal Quality Mode (`TST-HRV-049.1`, `HrvSignalQualityAnalyzerTest.testOpticalPpiMode_bypassesSmoothedAndQuantizedFlagsWhileEnforcingArtifactAndBeatGates_TST_HRV_049`)*:
+     • Verify `@JvmOverloads` `RrBeatEvent` defaults `isOpticalPpi = false`, 6-arg Java `copy(...)` preserves `isOpticalPpi`, and Java callers (`ANTHeartRateDevice.java`, `DeviceManager.java`) compile unchanged.
+     • Verify `HrvSignalQualityAnalyzer.analyze`/`analyzeBeats(..., isOpticalPpi = true)` returns `VALID` on low-variance/integer-ms optical PPI streams (no `QUANTIZED_SYNTHETIC` or `SMOOTHED_STREAM` false positives) while still enforcing `INSUFFICIENT_DATA` (`< 30` beats) and `HIGH_ARTIFACTS` (`> 5.0%`), and preserving existing ECG checks when `isOpticalPpi = false`.
+  2. *Non-Sticky Morning HRV Optical UX, Start-Screen Eligibility, Rule 8.5 PNG & 9-Locale Parity (`TST-HRV-049.2`, `MorningHrvCheckViewModelTest.testOpticalPpiNonStickyMode_andIsolatedPersistenceWithoutSmoothedEcgFalsePositive_TST_HRV_049`, `MorningHrvCheckViewModelTest.testOpticalPpiHighArtifactSession_triggersHighArtifactWarning_TST_HRV_049`, `MorningHrvOpticalPpiUiTest.testOpticalPpiMorningHrv_showsGuidanceProvenanceAndOpticalArtifactAdvice_TST_HRV_049`, `MorningHrvOpticalPpiUiTest.testCaptureOpticalPpiMorningHrvLightDarkPng_TST_HRV_049`, `ControlTrackingViewModelTest.isMorningHrvCheckVisible_whenPolarVeritySensePaired_remainsEligibleAndHidesAfterOpticalSave_TST_HRV_049`, `HrvReadinessTrendCardTest.testNineLocaleLocalizationParity_allHrvReadinessTrendStringsPresent`, `TranslationParityTest`)*:
+     • Verify `MorningHrvCheckViewModel` toggles `isOpticalPpiSession` non-stickily in `READY`/`STABILIZING` (clearing on ECG beats), completes and persists `HrvSensorModality.OPTICAL_PPI` entries without smoothed-ECG alerts, and flags `highArtifactWarning` when optical artifacts exceed `5.0%`.
+     • Verify `MorningHrvCheckScreen` behavioral Compose UI renders optical stillness/snug-contact guidance, optical armband artifact advice, `Optical PPI` provenance badge on `ReadinessResultCard`, and captures Rule 8.5 Light/Dark PNG (`docs/engineering/walkthroughs/img/ATT-9177_morning_hrv_optical_ppi.png`) with `private fun` `@Preview`s and `0` `src/main` reads.
+     • Verify `ControlTrackingViewModel` keeps the Morning HRV Start-screen CTA eligible for a paired Polar Verity Sense (`DeviceType.HRM`) and hides it after an optical morning check is saved; verify `TranslationParityTest` passes across all 9 locales.
+  3. *SQLite v2->v3 Migration, `.attbackup` Parity & Per-Modality Primary Isolation (`TST-HRV-049.3`, `HrvReadinessEntryTest.sensorModality_roundTripsSymmetricallyAndDefaultsLegacyCursorToEcg_TST_HRV_049`, `HrvReadinessDatabaseManagerTest.schemaUpgrade_v1ToV3_and_v2ToV3_matchOnCreateV3ExactParity_TST_HRV_049`, `HrvReadinessDatabaseManagerTest.sameDayEcgAndOpticalEntries_maintainIndependentPrimariesAndFilteredWindowQueries_TST_HRV_049`, `DatabaseSchemaRegistryHrvTest.databaseSchemaRegistry_referencesHrvReadinessDbVersionDirectly_Rule62`, `HrvReadinessRepositoryTest.repositoryCalculateReadiness_isolatesOpticalFromEcgCohort_TST_HRV_049`)*:
+     • Verify `v1 -> v3`, `v2 -> v3`, and `onCreate (v3)` exact schema parity (`Rule 64`), legacy rows defaulting to `ECG`, symmetric `toContentValues`/`fromCursor`/`fromCursorBatch` (`Rule 20`), and `DatabaseSchemaRegistryHrvTest` (`v3` supported, `v4` rejected for `.attbackup`).
+     • Verify same-day `ECG` and `OPTICAL_PPI` entries retain independent `is_primary_for_day = 1` flags, `updateEntry` recomputes the old `(dateIso, posture, sensorModality)` cohort when keys change, and `getPrimaryEntriesInWindow(..., sensorModality)` filters strictly by `AND sensor_modality = ?`.
+  4. *ECG vs Optical SWC Baseline Isolation, Trend Card Segmented Selector & Architecture Contracts (`TST-HRV-049.4`, `HrvReadinessCalculatorTest.calculateReadiness_strictlyIsolatesEcgAndOpticalPpiSwcBaselines_TST_HRV_049`, `HrvReadinessTrendMathTest.calculateTrendSeries_isolatesEcgAndOpticalCohortsAndDefaultsOpticalOnlyAthletes_TST_HRV_049`, `MorningHrvOpticalPpiUiTest.testTrendCard_segmentedModalitySelectorSwitchesBetweenEcgAndOpticalCohorts_TST_HRV_049`, `ArchitectureConformanceContractTest`, `DeadCodeEliminationContractTest`, `SourceTextReadingAuditContractTest`)*:
+     • Verify `HrvReadinessCalculator` and `HrvReadinessTrendMath` isolate 7d rolling average and 60d SWC corridors by `(posture, sensorModality)`, default optical-only athletes to `OPTICAL_PPI`, and render a `SingleChoiceSegmentedButtonRow` (`icon = {}`) cohort selector + provenance badge in `HrvReadinessTrendCard` without modifying `AthleteProfileScreen.kt` (`1,975/1,975` LoC) while keeping `MorningHrvCheckScreen.kt <= 1,450` LoC and tagging all new tests with hyphenated `TST-HRV-049` comments (`REQ-PRO-099.3`).
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -1294,3 +1360,12 @@
 | `1.0.13` | 2026-11-19 | Lane B Author (`ATT-8953`, `--as agent1`) | `ATT-8953` | Added `TST-HRV-046` (`[Planned]`, `.1`–`.5`) for inverted DFA alpha 1 Y-axis unit math, portrait+landscape spatial pixel verification, Rule 8.5 Light/Dark PNG, and architecture contracts; reconciled `TST-HRV-044.1` top/bottom band order. |
 | `1.0.14` | 2026-11-19 | Lane B Author (`ATT-8953`, `--as agent1`) | `ATT-8953` | Promoted `TST-HRV-046` to `[Implemented]` with 100% PASS across all 8 suites (`56/56`) and Rule 8.5 Light/Dark PNG (`ATT-8953_dfa_a1_inverted_yaxis.png`) inspected. |
 | `1.0.15` | 2026-11-19 | Lane B Author (`ATT-8953`, `--as agent1`) | `ATT-8953` | Promoted `TST-HRV-046` to `[Verified]` in Stage 5 reusing Gate 4 verified `56/56 PASS` evidence across all 8 suites (`Rule 7.5`, `0` `app/` code drift since `c152801d`), Rule 8.5 PNG certification, and governance sync atop `2d7f1489`. |
+| `1.0.16` | 2026-11-19 | Lane B Author (`ATT-9171`, `--as agent1`) | `ATT-9171` | Added `TST-HRV-047` (`[Planned]`, `.1`–`.4`) covering dynamic rMSSD bounds/outlier guard/label unit tests, portrait & landscape spatial spread, Rule 8.5 Light/Dark PNG, and architecture contracts. |
+| `1.0.17` | 2026-11-19 | Lane B Author (`ATT-9171`, `--as agent1`) | `ATT-9171` | Promoted `TST-HRV-047` to `[Implemented]` with 100% PASS across all 7 targeted/contract suites (`59/59`) and Rule 8.5 Light/Dark PNG (`ATT-9171_rmssd_dynamic_yaxis.png`) inspected. |
+| `1.0.18` | 2026-11-19 | Lane B Author (`ATT-9171`, `--as agent1`) | `ATT-9171` | Promoted `TST-HRV-047` to `[Verified]` in Stage 5 reusing Gate 4 verified `59/59 PASS` evidence across all 7 suites (`Rule 7.5`, `0` `app/` code drift since `c2979843`), Rule 8.5 PNG certification, and governance sync. |
+| `1.0.19` | 2026-11-20 | Lane B Author (`ATT-9160`, `--as agent1`) | `ATT-9160` | Added `TST-HRV-048` (`[Planned]`, `.1`–`.4`) covering 1:1 input artifact/gap metadata, idempotent delta DB persistence, 180s causal filter context & phase-aligned reconciliation, and unified artifact gate thresholds. |
+| `1.0.20` | 2026-11-20 | Lane B Author (`ATT-9160`, `--as agent1`) | `ATT-9160` | Promoted `TST-HRV-048` to `[Implemented]` with 100% PASS across all 10 unit/DB/golden/contract test suites and static `TST-HRV-048` code tag verification. |
+| `1.0.21` | 2026-11-20 | Lane B Author (`ATT-9160`, `--as agent1`) | `ATT-9160` | Promoted `TST-HRV-048` to `[Verified]` in Stage 5 reusing Gate 4 verified `76/76 PASS` evidence across all 10 suites (`Rule 7.5`, `0` `app/` code drift since `f6f7bb41`), clean-checkout `TST-HRV-048` traceability parity, and governance sync. |
+| `1.0.22` | 2026-11-20 | Lane B Author (`ATT-9177`, `--as agent1`) | `ATT-9177` | Added `TST-HRV-049` (`[Planned]`, `.1`–`.4`) covering `@JvmOverloads` optical PPI contract & signal quality mode, non-sticky Morning HRV optical UX/Rule 8.5 PNG/9-locale parity, SQLite v2->v3 `.attbackup` & primary isolation, and SWC baseline isolation with `SingleChoiceSegmentedButtonRow` trend selector. |
+| `1.0.23` | 2026-11-20 | Lane B Author (`ATT-9177`, `--as agent1`) | `ATT-9177` | Promoted `TST-HRV-049` to `[Implemented]` with `133/133 PASS` across all 16 targeted/contract/localization/UI suites, static `TST-HRV-049` code tag verification, and Rule 8.5 Light/Dark PNG (`ATT-9177_morning_hrv_optical_ppi.png`) inspected. |
+| `1.0.24` | 2026-11-20 | Lane B Author (`ATT-9177`, `--as agent1`) | `ATT-9177` | Promoted `TST-HRV-049` to `[Verified]` in Stage 5 reusing Gate 4 verified `133/133 PASS` evidence across all 16 suites (`Rule 7.5`, `0` `app/` code drift since `88c46b60`), Rule 8.5 PNG certification, verbatim test method citations, clean-checkout `TST-HRV-049` traceability parity, and governance sync. |

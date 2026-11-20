@@ -27,6 +27,11 @@ import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneThresholds
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.PowerZoneThresholds
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
+import java.util.Locale
+import kotlin.math.abs
+import kotlin.math.ceil
+import kotlin.math.floor
+import kotlin.math.round
 
 /**
  * Geometric and analytical representation of a single horizontal training zone band
@@ -471,5 +476,64 @@ object TelemetryZoneMath {
 
         stops.add(1f to bottomBaseColor.copy(alpha = alphaAt(1f)))
         return stops
+    }
+
+    /**
+     * Minimum Y-axis upper bound (ms) for `HRV_RMSSD` graphs so empty, all-zero, or ultra-low
+     * streams remain well-formed (`REQ-HRV-047.1`).
+     */
+    const val MIN_HRV_RMSSD_Y_CEILING = 5.0
+
+    /**
+     * Computes dynamic, outlier-resilient `(dataMin, dataMax)` Y-axis bounds for `HRV_RMSSD`
+     * telemetry graphs (`REQ-HRV-047.1` / `ATT-9171`).
+     *
+     * Filters finite values `>= 0.0` (returning `0.0 to 5.0` when empty), applies a nearest-rank
+     * `P95` spike-ratio guard when `N >= 5 && p95 > 0.0 && max > p95 * 2.0` so transient warmup or
+     * artifact spikes do not flatten steady-state exercise traces, preserves `>= max * 1.15` (zero
+     * clipping) on genuine non-spike recordings (`40..180+ ms`), guards against extreme `Double`
+     * overflow, and rounds upward to clean nice steps (`1/2/5/10/20`).
+     */
+    fun calculateHrvRmssdYAxisBounds(values: List<Double>): Pair<Double, Double> {
+        val finiteValues = values.filter { it.isFinite() && it >= 0.0 }
+        if (finiteValues.isEmpty()) return 0.0 to MIN_HRV_RMSSD_Y_CEILING
+
+        val sorted = finiteValues.sorted()
+        val max = sorted.last()
+        val base = if (sorted.size >= 5) {
+            val p95Index = floor(0.95 * (sorted.size - 1)).toInt().coerceIn(0, sorted.lastIndex)
+            val p95 = sorted[p95Index]
+            if (p95 > 0.0 && max > p95 * 2.0) p95 else max
+        } else {
+            max
+        }
+
+        val scaled = base * 1.15
+        val rawUpper = (if (scaled.isFinite()) scaled else base).coerceAtLeast(MIN_HRV_RMSSD_Y_CEILING)
+        val step = when {
+            rawUpper <= 10.0 -> 1.0
+            rawUpper <= 20.0 -> 2.0
+            rawUpper <= 50.0 -> 5.0
+            rawUpper <= 100.0 -> 10.0
+            else -> 20.0
+        }
+        val rounded = ceil(rawUpper / step) * step
+        val niceCeiling = if (rounded.isFinite()) rounded else rawUpper
+        return 0.0 to niceCeiling
+    }
+
+    /**
+     * Formats an `HRV_RMSSD` Y-axis boundary label cleanly without silent integer truncation or
+     * `-0.0` / non-finite artifacts (`REQ-HRV-047.2` / `ATT-9171`).
+     */
+    fun formatHrvRmssdAxisLabel(value: Double, locale: Locale = Locale.getDefault()): String {
+        if (!value.isFinite()) return "0"
+        val clean = if (abs(value) < 1e-9) 0.0 else value
+        val nearestInt = round(clean)
+        return when {
+            abs(clean - nearestInt) < 1e-6 && abs(nearestInt) < 9e18 -> "${nearestInt.toLong()}"
+            abs(clean - nearestInt) < 1e-6 -> String.format(locale, "%.0f", clean)
+            else -> String.format(locale, "%.1f", clean)
+        }
     }
 }

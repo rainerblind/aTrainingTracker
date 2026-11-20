@@ -164,4 +164,48 @@ class BarometricAltitudeFilterTest {
         val spikeOut = filter.filterSlewOnly(afterHandlebar + 12.0, 11_000L)
         assertTrue("Pocket mode slew/median must clamp +12m spike (out=$spikeOut, baseline=$afterHandlebar)", spikeOut - afterHandlebar <= 0.71)
     }
+
+    // TST-FIL-033.2: Speed-coupled slew helper scaling, cap, and explicit NaN/non-finite/negative guards
+    @Test
+    fun testComputeSpeedCoupledSlewRateMps_scalesWithSpeedAndGuardsNonFinite_tstFil033_2() {
+        assertEquals(0.7, BarometricAltitudeFilter.computeSpeedCoupledSlewRateMps(0.7, 0.0), 1e-9)
+        assertEquals(0.7, BarometricAltitudeFilter.computeSpeedCoupledSlewRateMps(0.7, 2.0), 1e-9)
+        assertEquals(4.5, BarometricAltitudeFilter.computeSpeedCoupledSlewRateMps(0.7, 18.0), 1e-9)
+        assertEquals(8.75, BarometricAltitudeFilter.computeSpeedCoupledSlewRateMps(0.7, 50.0), 1e-9)
+        assertEquals(0.7, BarometricAltitudeFilter.computeSpeedCoupledSlewRateMps(0.7, -5.0), 1e-9)
+        assertEquals(0.7, BarometricAltitudeFilter.computeSpeedCoupledSlewRateMps(0.7, Double.NaN), 1e-9)
+        assertEquals(0.7, BarometricAltitudeFilter.computeSpeedCoupledSlewRateMps(0.7, Double.POSITIVE_INFINITY), 1e-9)
+        assertEquals(1.2, BarometricAltitudeFilter.computeSpeedCoupledSlewRateMps(Double.NaN, 0.0), 1e-9)
+        assertEquals(1.2, BarometricAltitudeFilter.computeSpeedCoupledSlewRateMps(-1.0, 0.0), 1e-9)
+    }
+
+    // TST-FIL-033.2: Speed-coupled filterSlewOnly passes 18 m/s -10% alpine descent unclipped while preserving pocket spike rejection
+    @Test
+    fun testSpeedCoupledFilterSlewOnly_passesAlpineDescentUnclippedWhileRejectingSlowPocketSpikes_tstFil033_2() {
+        filter.setFilterParameters(newMaxSlewRateMps = 0.7, newMedianWindowSize = 9)
+        assertEquals(0.7, filter.maxSlewRateMps, 1e-9)
+
+        // 18 m/s alpine descent at -10% grade (-1.8 m/s vertical) over 60 s: 1500 m -> 1392 m (-108 m)
+        var out = 1500.0
+        for (sec in 0..60) {
+            out = filter.filterSlewOnly(1500.0 - sec * 1.8, 10_000L + sec * 1000L, speedMps = 18.0)
+        }
+        val totalDrop = 1500.0 - out
+        assertTrue(
+            "18 m/s -10% alpine descent must drop >= 98 m unclipped (dropped $totalDrop m; fixed 0.7 m/s would cap at 42 m)",
+            totalDrop >= 98.0
+        )
+        assertEquals("Base profile maxSlewRateMps must remain unmutated at 0.7", 0.7, filter.maxSlewRateMps, 1e-9)
+
+        // Reset and verify slow/flat pocket spike (+8 m) and NaN speed remain safely clamped
+        filter.reset()
+        filter.setFilterParameters(newMaxSlewRateMps = 0.7, newMedianWindowSize = 9)
+        for (sec in 0..9) {
+            filter.filterSlewOnly(438.0, 100_000L + sec * 1000L, speedMps = 2.0)
+        }
+        val spikeSlow = filter.filterSlewOnly(446.0, 110_000L, speedMps = 2.0)
+        assertTrue("Slow pocket +8 m spike must stay rejected (out=$spikeSlow)", spikeSlow - 438.0 <= 0.71)
+        val spikeNaN = filter.filterSlewOnly(446.0, 111_000L, speedMps = Double.NaN)
+        assertTrue("NaN speed must fall back to base 0.7 m/s without NaN (out=$spikeNaN)", spikeNaN.isFinite() && spikeNaN - 438.0 <= 0.71)
+    }
 }

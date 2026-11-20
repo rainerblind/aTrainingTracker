@@ -288,4 +288,66 @@ class HrvReadinessCalculatorTest {
         assertEquals(ReadinessStatus.OPTIMAL, result.status)
         assertEquals("Calibration complete", result.calibrationProgressMessage)
     }
+
+    @Test
+    fun calculateReadiness_strictlyIsolatesEcgAndOpticalPpiSwcBaselines_TST_HRV_049() {
+        // REQ-HRV-049.4 / TST-HRV-049.4: Optical PPI readings must not contaminate an ECG 60-day SWC baseline
+        val targetDate = LocalDate.parse("2026-11-20")
+        val ecgEntries = (0 until 15).map { idx ->
+            val d = targetDate.minusDays(idx.toLong()).toString()
+            HrvReadinessEntry(
+                id = (idx + 1).toLong(),
+                timestampMs = 1731000000000L + idx * 86_400_000L,
+                dateIso = d,
+                timezoneId = "UTC",
+                restingHrBpm = 50,
+                rmssdMs = 60.0 + (idx % 3) * 2.0,
+                lnRmssd = kotlin.math.ln(60.0 + (idx % 3) * 2.0),
+                hrvScore100 = 82.0,
+                durationSec = 60,
+                posture = HrvPosture.SUPINE,
+                isPrimaryForDay = true,
+                sensorModality = HrvSensorModality.ECG
+            )
+        }
+        val opticalOutliers = (0 until 7).map { idx ->
+            val d = targetDate.minusDays(idx.toLong()).toString()
+            HrvReadinessEntry(
+                id = (100 + idx).toLong(),
+                timestampMs = 1731000001000L + idx * 86_400_000L,
+                dateIso = d,
+                timezoneId = "UTC",
+                restingHrBpm = 54,
+                rmssdMs = 20.0,
+                lnRmssd = kotlin.math.ln(20.0),
+                hrvScore100 = 60.0,
+                durationSec = 60,
+                posture = HrvPosture.SUPINE,
+                isPrimaryForDay = true,
+                sensorModality = HrvSensorModality.OPTICAL_PPI
+            )
+        }
+
+        val pureEcg = HrvReadinessCalculator.calculateReadiness("2026-11-20", HrvPosture.SUPINE, ecgEntries)
+        val mixedEcg = HrvReadinessCalculator.calculateReadiness(
+            "2026-11-20",
+            HrvPosture.SUPINE,
+            ecgEntries + opticalOutliers,
+            HrvSensorModality.ECG
+        )
+        assertEquals(pureEcg.mu60d!!, mixedEcg.mu60d!!, 1e-9)
+        assertEquals(pureEcg.mu7d!!, mixedEcg.mu7d!!, 1e-9)
+        assertEquals(pureEcg.swcLower!!, mixedEcg.swcLower!!, 1e-9)
+        assertEquals(pureEcg.status, mixedEcg.status)
+
+        val opticalResult = HrvReadinessCalculator.calculateReadiness(
+            "2026-11-20",
+            HrvPosture.SUPINE,
+            ecgEntries + opticalOutliers,
+            HrvSensorModality.OPTICAL_PPI
+        )
+        assertEquals(7, opticalResult.n60d)
+        assertEquals(ReadinessStatus.CALIBRATING, opticalResult.status)
+        assertEquals(CalibrationProgressState.BASELINE_60D, opticalResult.calibrationState)
+    }
 }

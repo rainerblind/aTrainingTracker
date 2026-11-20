@@ -4323,16 +4323,136 @@ def ensure_weekly_aspice_audit_ticket(role="coordinator", force=False):
     return new_key
 
 
+def _has_new_develop_commits_since(since_dt, repo_root):
+    """Checks whether `develop` has commits newer than since_dt (fails open to True when unavailable)."""
+    try:
+        res = subprocess.run(
+            ["git", "rev-list", "--count", f"--since={since_dt.strftime('%Y-%m-%d')}", "develop"],
+            cwd=repo_root,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        if res.returncode == 0 and res.stdout.strip().isdigit():
+            return int(res.stdout.strip()) > 0
+    except Exception:
+        pass
+    return True
+
+
+def is_weekly_emulator_sweep_overdue(
+    sweeps_dir=None,
+    days_threshold=7,
+    repo_root=None,
+    has_new_commits_fn=None,
+):
+    """
+    REQ-PRO-135.4:
+    Returns True if no sweep report exists in docs/engineering/emulator_sweeps/ or more than
+    days_threshold days have elapsed since the latest sweep report and new develop commits landed.
+    """
+    if repo_root is None:
+        repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    if sweeps_dir is None:
+        sweeps_dir = os.path.join(repo_root, "docs", "engineering", "emulator_sweeps")
+
+    if not os.path.isdir(sweeps_dir):
+        return True
+
+    sweep_files = [
+        f for f in os.listdir(sweeps_dir)
+        if f.endswith("_sweep.md") and not f.startswith("template_")
+    ]
+    if not sweep_files:
+        return True
+
+    latest_date = None
+    for f in sweep_files:
+        m = re.match(r"^(\d{4}-\d{2}-\d{2})_", f)
+        if m:
+            try:
+                dt = datetime.strptime(m.group(1), "%Y-%m-%d")
+                if latest_date is None or dt > latest_date:
+                    latest_date = dt
+            except Exception:
+                pass
+
+    if latest_date is None:
+        return True
+
+    elapsed = (datetime.now() - latest_date).days
+    if elapsed < days_threshold:
+        return False
+
+    commits_checker = has_new_commits_fn or _has_new_develop_commits_since
+    return bool(commits_checker(latest_date, repo_root))
+
+
+def ensure_weekly_emulator_sweep_ticket(role="coordinator", force=False):
+    """
+    REQ-PRO-135.4 (ATT-8222):
+    Ensures one open Weekly Multi-OS & 9-Language Emulator UI Verification Sweep ticket exists
+    under Epic ATT-232 when overdue (> 7 days with develop commits), ranked at rank-top.
+    """
+    config = get_config()
+    jql = 'project = ATT AND parent = ATT-232 AND status != "Erledigt" AND (summary ~ "Multi-OS & 9-Language" OR summary ~ "Emulator UI Verification Sweep") ORDER BY created DESC'
+    existing = paged_jql_search(jql, ["summary", "status", "labels"], role=role, config=config)
+    for issue in existing:
+        summary = issue.get("fields", {}).get("summary", "")
+        lowered = summary.lower()
+        if "emulator" in lowered and "sweep" in lowered:
+            status = issue.get("fields", {}).get("status", {}).get("name", "Unknown")
+            print(f"Weekly Multi-OS & 9-Language Emulator Sweep ticket already open: {issue['key']} — {summary} [{status}]")
+            return issue["key"]
+
+    if not force and not is_weekly_emulator_sweep_overdue():
+        print("Weekly Multi-OS & 9-Language Emulator Sweep is not overdue (< 7 days or no new develop commits).")
+        return None
+
+    iso_year, iso_week, _ = datetime.now().isocalendar()
+    week_label = f"{iso_year}-KW{iso_week:02d}"
+    summary = f"Weekly Multi-OS & 9-Language Emulator UI Verification Sweep ({week_label})"
+    desc = (
+        f"h2. Mandatory Weekly Multi-OS & 9-Language Emulator UI Verification Sweep ({week_label})\n"
+        f"*Cadence*: Weekly serial Multi-OS & 9-locale emulator verification (REQ-PRO-135 / ATT-8222).\n\n"
+        "h3. Execution Protocol (REQ-TST-004 Emulator-Only)\n"
+        "1. Run `python3 tools/run_multi_os_emulator_sweep.py` serially across configured Android API levels "
+        "and all 9 supported locales (`en`, `de`, `es`, `fr`, `it`, `ja`, `nl`, `pl`, `pt`) on the reference AVD.\n"
+        "2. Verify zero `FATAL EXCEPTION` / `ANR` / `IllegalFormat*` crashes in `logcat` and zero clipped/overlapping `uiautomator dump` bounds.\n"
+        f"3. Archive sweep report & screenshots under `docs/engineering/emulator_sweeps/{datetime.now().strftime('%Y-%m-%d')}_sweep.md`.\n"
+        "4. File any discovered UI, OS-level, or localization defects as Backlog Bugs under Epic ATT-232 / ATT-8138.\n"
+    )
+    new_key = create_issue(
+        summary=summary,
+        description=desc,
+        issuetype_id="Verbesserung",
+        parent_key="ATT-232",
+        role=role,
+        add_to_sprint=False,
+        labels=["process", "emulator-sweep", "localization", "weekly-review"],
+        rank_top=True,
+        points=2.0,
+    )
+    print(f"Created Weekly Multi-OS & 9-Language Emulator Sweep ticket {new_key} ({week_label}) ranked at top of backlog.")
+    return new_key
+
+
 def ensure_weekly_reviews(role="coordinator", force=False):
     """
-    REQ-PRO-095.3 / REQ-PRO-096.3:
-    Coordinates both weekly dual-vendor pillars:
+    REQ-PRO-095.3 / REQ-PRO-096.3 / REQ-PRO-135.4:
+    Coordinates all weekly governance & verification pillars:
     1. Weekly Dual-Vendor Code Review ticket (ATT-8213)
     2. Weekly Dual-Vendor ASPICE 4.0 Audit ticket (ATT-8212)
+    3. Weekly Multi-OS & 9-Language Emulator UI Verification Sweep ticket (ATT-8222)
     """
     code_review_key = ensure_weekly_review_ticket(role=role, force=force)
     aspice_audit_key = ensure_weekly_aspice_audit_ticket(role=role, force=force)
-    return {"code_review": code_review_key, "aspice_audit": aspice_audit_key}
+    emulator_sweep_key = ensure_weekly_emulator_sweep_ticket(role=role, force=force)
+    return {
+        "code_review": code_review_key,
+        "aspice_audit": aspice_audit_key,
+        "emulator_sweep": emulator_sweep_key,
+    }
 
 
 def collect_sprint_metrics_for_id(sprint_id, sprint_name, board_id, role="coordinator", history=None):
@@ -4988,6 +5108,15 @@ def extract_text_from_description(desc):
     return str(desc)
 
 
+def _is_sup9_non_code_resolution(item):
+    """Return (is_sup9_non_code, matched_labels) if ticket carries an explicit SUP.9 non-code resolution label."""
+    fields = (item or {}).get("fields") or {}
+    raw_labels = fields.get("labels") or []
+    norm_labels = [str(l).strip().lower() for l in raw_labels if str(l).strip()]
+    matched = [lbl for lbl in norm_labels if lbl in NON_FIX_RESOLUTION_LABELS]
+    return bool(matched), matched
+
+
 def format_qa_audit_markdown(sprint_info, audit_results, overall_compliant, auditor_role="qa", total_tickets=None, random_seed=None):
     import datetime
     date_str = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d")
@@ -5000,12 +5129,23 @@ def format_qa_audit_markdown(sprint_info, audit_results, overall_compliant, audi
         total_tickets = total_sampled
 
     sampled_keys = [r["key"] for r in audit_results]
+    sampled_keys_str = ", ".join(sampled_keys) if sampled_keys else "N/A (0 merged tickets in sprint)"
+    if total_tickets == 0 and total_sampled == 0:
+        sample_size_str = "0 / 0 merged tickets (N/A (0 merged tickets in sprint))"
+        compliant_summary_str = "0 / 0 (N/A)"
+    elif total_tickets < 2:
+        sample_size_str = f"{total_sampled} / {total_tickets} merged ticket (all merged tickets audited)"
+        compliant_summary_str = f"{compliant_count} / {total_sampled}"
+    else:
+        sample_size_str = f"{total_sampled} / {total_tickets} tickets (>= 10% dynamic threshold enforced)"
+        compliant_summary_str = f"{compliant_count} / {total_sampled}"
+
     lines = [
         f"# Sprint QA Process-Compliance Audit: Sprint {s_name} (ID: {s_id})",
         "",
         f"**Date**: {date_str}  ",
         f"**Auditor Role**: `{auditor_role}` (Quality Assurance Auditor, independent of Coordinator/Implementer)  ",
-        f"**Sampled Tickets**: {', '.join(sampled_keys)}  ",
+        f"**Sampled Tickets**: {sampled_keys_str}  ",
     ]
     if random_seed is not None:
         lines.append(f"**Random Seed**: `{random_seed}`  ")
@@ -5016,18 +5156,18 @@ def format_qa_audit_markdown(sprint_info, audit_results, overall_compliant, audi
         "",
         "## 1. Executive Summary",
         "",
-        f"Under ASPICE SUP.1 (Quality Assurance) and GP 2.2 (Process Evidence), this audit verifies process adherence independently of product reviews. A sample of {total_sampled} / {total_tickets} tickets (>= 10% dynamic threshold enforced) was audited across 6 core ASPICE process criteria (Lifecycle Deliverables, Stage Subtask Progression, 4-Augen Role Separation, Living Documentation Parity, Commit Hygiene, and PO Approval Changelog Provenance).",
+        f"Under ASPICE SUP.1 (Quality Assurance) and GP 2.2 (Process Evidence), this audit verifies process adherence independently of product reviews. A sample of {sample_size_str} was audited across 6 core ASPICE process criteria (Lifecycle Deliverables, Stage Subtask Progression, 4-Augen Role Separation, Living Documentation Parity, Commit Hygiene, and PO Approval Changelog Provenance).",
         "",
         "| Metric | Value |",
         "| :--- | :--- |",
         f"| **Sprint** | {s_name} (ID: {s_id}) |",
-        f"| **Sample Size** | {total_sampled} / {total_tickets} tickets (>= 10% dynamic threshold enforced) |",
+        f"| **Sample Size** | {sample_size_str} |",
     ])
     if random_seed is not None:
         lines.append(f"| **Random Seed** | `{random_seed}` |")
-    lines.append(f"| **Sampled Keys** | {', '.join(sampled_keys)} |")
+    lines.append(f"| **Sampled Keys** | {sampled_keys_str} |")
     lines.extend([
-        f"| **Compliant Tickets** | {compliant_count} / {total_sampled} |",
+        f"| **Compliant Tickets** | {compliant_summary_str} |",
         f"| **Overall Process Verdict** | **{verdict_str}** |",
         "",
         "---",
@@ -5038,17 +5178,21 @@ def format_qa_audit_markdown(sprint_info, audit_results, overall_compliant, audi
         "| :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |",
     ])
 
-    for r in audit_results:
-        k = r["key"]
-        sm = r["summary"][:40] + ("..." if len(r["summary"]) > 40 else "")
-        d = "PASS" if r["deliv_pass"] else "FAIL"
-        g = "PASS" if r["gate_pass"] else "FAIL"
-        rs = "PASS" if r["role_sep_pass"] else "FAIL"
-        ld = "PASS" if r["living_doc_pass"] else "FAIL"
-        ch = "PASS" if r["commit_pass"] else "FAIL"
-        po = "PASS" if r.get("po_approval_pass", True) else "FAIL"
-        v = "COMPLIANT" if r["compliant"] else "NON-COMPLIANT"
-        lines.append(f"| {k} | {sm} | {d} | {g} | {rs} | {ld} | {ch} | {po} | {v} |")
+    if not audit_results:
+        lines.append("| N/A | N/A (0 merged tickets in sprint) | N/A | N/A | N/A | N/A | N/A | N/A | COMPLIANT |")
+    else:
+        for r in audit_results:
+            k = r["key"]
+            sm = r["summary"][:40] + ("..." if len(r["summary"]) > 40 else "")
+            sup9 = r.get("sup9_non_code", False)
+            d = "N/A" if sup9 else ("PASS" if r["deliv_pass"] else "FAIL")
+            g = "N/A" if sup9 else ("PASS" if r["gate_pass"] else "FAIL")
+            rs = "N/A" if sup9 else ("PASS" if r["role_sep_pass"] else "FAIL")
+            ld = "N/A" if sup9 else ("PASS" if r["living_doc_pass"] else "FAIL")
+            ch = "N/A" if sup9 else ("PASS" if r["commit_pass"] else "FAIL")
+            po = "PASS" if r.get("po_approval_pass", True) else "FAIL"
+            v = "COMPLIANT" if r["compliant"] else "NON-COMPLIANT"
+            lines.append(f"| {k} | {sm} | {d} | {g} | {rs} | {ld} | {ch} | {po} | {v} |")
 
     lines.extend([
         "",
@@ -5058,21 +5202,42 @@ def format_qa_audit_markdown(sprint_info, audit_results, overall_compliant, audi
         "",
     ])
 
-    for r in audit_results:
-        k = r["key"]
-        sm = r["summary"]
-        v = "COMPLIANT" if r["compliant"] else "NON-COMPLIANT"
+    if not audit_results:
         lines.extend([
-            f"### Ticket: {k} - {sm}",
-            f"* **Process Verdict**: **{v}**",
-            f"* **1. Lifecycle Deliverables**: {'PASS (analysis, specs, plan, walkthrough in docs/engineering/)' if r['deliv_pass'] else 'FAIL (missing stage deliverables)'}",
-            f"* **2. Stage Subtask Lifecycle**: {'PASS (sequential subtask progression verified)' if r['gate_pass'] else 'FAIL (incomplete gate progression)'}",
-            f"* **3. 4-Augen-Prinzip & Role Separation**: {'PASS (distinct submitter vs auditor verified)' if r['role_sep_pass'] else 'FAIL (role separation violation)'}",
-            f"* **4. Living Documentation Parity**: {'PASS (requirements mapped & synchronized)' if r['living_doc_pass'] else 'FAIL (living doc disparity)'}",
-            f"* **5. Commit Hygiene**: {'PASS (squashed commit on sprint branch)' if r['commit_pass'] else 'FAIL (commit hygiene issue)'}",
-            f"* **6. PO Approval & Provenance**: {'PASS (' + r.get('po_reason', 'verified') + ')' if r.get('po_approval_pass', True) else 'FAIL (' + r.get('po_reason', 'missing PO approval') + ')'}",
+            "* **N/A (0 merged tickets in sprint)**: Zero post-Stage-6 merged tickets present in sprint; unmerged WIP and Final Review (Agent) tickets excluded (REQ-PRO-134).",
             "",
         ])
+    else:
+        for r in audit_results:
+            k = r["key"]
+            sm = r["summary"]
+            v = "COMPLIANT" if r["compliant"] else "NON-COMPLIANT"
+            if r.get("sup9_non_code"):
+                sup9_lbls = ", ".join(r.get("sup9_labels") or []) or "SUP.9 non-code"
+                na_txt = f"N/A (SUP.9 non-code resolution: {sup9_lbls})"
+                lines.extend([
+                    f"### Ticket: {k} - {sm}",
+                    f"* **Process Verdict**: **{v}**",
+                    f"* **1. Lifecycle Deliverables**: {na_txt}",
+                    f"* **2. Stage Subtask Lifecycle**: {na_txt}",
+                    f"* **3. 4-Augen-Prinzip & Role Separation**: {na_txt}",
+                    f"* **4. Living Documentation Parity**: {na_txt}",
+                    f"* **5. Commit Hygiene**: {na_txt}",
+                    f"* **6. PO Approval & Provenance**: {'PASS (' + r.get('po_reason', 'verified') + ')' if r.get('po_approval_pass', True) else 'FAIL (' + r.get('po_reason', 'missing PO approval') + ')'}",
+                    "",
+                ])
+            else:
+                lines.extend([
+                    f"### Ticket: {k} - {sm}",
+                    f"* **Process Verdict**: **{v}**",
+                    f"* **1. Lifecycle Deliverables**: {'PASS (analysis, specs, plan, walkthrough in docs/engineering/)' if r['deliv_pass'] else 'FAIL (missing stage deliverables)'}",
+                    f"* **2. Stage Subtask Lifecycle**: {'PASS (sequential subtask progression verified)' if r['gate_pass'] else 'FAIL (incomplete gate progression)'}",
+                    f"* **3. 4-Augen-Prinzip & Role Separation**: {'PASS (distinct submitter vs auditor verified)' if r['role_sep_pass'] else 'FAIL (role separation violation)'}",
+                    f"* **4. Living Documentation Parity**: {'PASS (requirements mapped & synchronized)' if r['living_doc_pass'] else 'FAIL (living doc disparity)'}",
+                    f"* **5. Commit Hygiene**: {'PASS (squashed commit on sprint branch)' if r['commit_pass'] else 'FAIL (commit hygiene issue)'}",
+                    f"* **6. PO Approval & Provenance**: {'PASS (' + r.get('po_reason', 'verified') + ')' if r.get('po_approval_pass', True) else 'FAIL (' + r.get('po_reason', 'missing PO approval') + ')'}",
+                    "",
+                ])
 
     lines.extend([
         "---",
@@ -5136,7 +5301,7 @@ def qa_audit(sprint_arg=None, sample_size=None, out_path=None, role="qa", as_rol
     issues = fetch_all_sprint_issues(
         base,
         s_id,
-        f"summary,description,status,issuetype,priority,subtasks,comment,{STORY_POINTS_FIELD}",
+        f"summary,description,status,issuetype,priority,labels,subtasks,comment,{STORY_POINTS_FIELD}",
         role=role
     )
 
@@ -5167,7 +5332,7 @@ def qa_audit(sprint_arg=None, sample_size=None, out_path=None, role="qa", as_rol
             f"AND labels in ({labels_jql}) ORDER BY key ASC"
         )
         fallback_fields = [
-            "summary", "description", "status", "issuetype", "priority", "subtasks", "comment", STORY_POINTS_FIELD
+            "summary", "description", "status", "issuetype", "priority", "labels", "subtasks", "comment", STORY_POINTS_FIELD
         ]
         archived_issues = paged_jql_search(fallback_jql, fallback_fields, role=role, config=config)
         parent_issues = [
@@ -5191,23 +5356,30 @@ def qa_audit(sprint_arg=None, sample_size=None, out_path=None, role="qa", as_rol
                     except Exception:
                         st["comments"] = []
 
-    # Sampling >= max(2, ceil(len(parent_issues) * 0.10)) tickets
+    # Sampling >= max(2, ceil(len(completed_parents) * 0.10)) merged tickets (REQ-PRO-134.1/.2)
     import math
     import random
-    min_sample = max(2, math.ceil(len(parent_issues) * 0.10))
-    sample_size = min_sample if sample_size is None else max(int(sample_size), min_sample)
     completed_parents = [
         p for p in parent_issues
         if p.get("fields", {}).get("status", {}).get("name", "").lower()
-        in ("final review (human)", "final review (agent)", "final review", "erledigt", "closed", "done")
+        in ("final review (human)", "final review", "erledigt", "closed", "done")
     ]
-    pool = completed_parents if len(completed_parents) >= sample_size else parent_issues
+    total_merged = len(completed_parents)
+    if total_merged == 0:
+        effective_sample_size = 0
+    elif total_merged < 2:
+        effective_sample_size = total_merged
+    else:
+        min_sample = max(2, math.ceil(total_merged * 0.10))
+        requested_sample = min_sample if sample_size is None else max(int(sample_size), min_sample)
+        effective_sample_size = min(requested_sample, total_merged)
+    pool = completed_parents
     if seed is None:
         seed = random.randint(10000, 99999)
     else:
         seed = int(seed)
     rng = random.Random(seed)
-    sampled = rng.sample(pool, sample_size) if len(pool) >= sample_size else list(pool)
+    sampled = rng.sample(pool, effective_sample_size) if effective_sample_size > 0 and len(pool) >= effective_sample_size else list(pool)
 
     audit_results = []
     overall_compliant = True
@@ -5249,6 +5421,36 @@ def qa_audit(sprint_arg=None, sample_size=None, out_path=None, role="qa", as_rol
         summary = item.get("fields", {}).get("summary", "")
         subtasks = item.get("fields", {}).get("subtasks", [])
 
+        # 6. PO Approval & Provenance (REQ-PRO-105.3 / Dimension 6)
+        po_approval_pass, po_reason = verify_po_approval_changelog(
+            item, base_url=base, role=role, config=config
+        )
+
+        # REQ-PRO-134.3: Exempt SUP.9 non-code resolutions (duplicate/rejected/cannot-reproduce)
+        is_sup9_non_code, sup9_labels = _is_sup9_non_code_resolution(item)
+        if is_sup9_non_code:
+            ticket_compliant = po_approval_pass
+            if not ticket_compliant:
+                overall_compliant = False
+            failed_cats = [] if po_approval_pass else ["PO Approval Provenance"]
+            audit_results.append({
+                "key": key,
+                "summary": summary,
+                "deliv_pass": True,
+                "gate_pass": True,
+                "role_sep_pass": True,
+                "living_doc_pass": True,
+                "commit_pass": True,
+                "po_approval_pass": po_approval_pass,
+                "po_reason": po_reason,
+                "sup9_non_code": True,
+                "sup9_labels": sup9_labels,
+                "compliant": ticket_compliant,
+                "deliv_details": {},
+                "failed_categories": failed_cats,
+            })
+            continue
+
         # 1. Lifecycle Deliverables
         deliv_checks = {
             "analysis": os.path.isfile(os.path.join(repo_root, "docs", "engineering", "analysis", f"{key}_analysis.md")),
@@ -5256,7 +5458,10 @@ def qa_audit(sprint_arg=None, sample_size=None, out_path=None, role="qa", as_rol
                 os.path.isfile(os.path.join(repo_root, "docs", "engineering", "test_specs", f"{key}_test_spec.md"))
                 or os.path.isfile(os.path.join(repo_root, "docs", "engineering", "specifications", f"{key}_spec.md"))
             ),
-            "plan": os.path.isfile(os.path.join(repo_root, "docs", "engineering", "plans", f"{key}_plan.md")),
+            "plan": (
+                os.path.isfile(os.path.join(repo_root, "docs", "engineering", "plans", f"{key}_plan.md"))
+                or os.path.isfile(os.path.join(repo_root, "docs", "engineering", "plans", f"{key}_impl_plan.md"))
+            ),
             "walkthrough": os.path.isfile(os.path.join(repo_root, "docs", "engineering", "walkthroughs", f"{key}_walkthrough.md")),
         }
         deliv_pass = all(deliv_checks.values())
@@ -5403,11 +5608,6 @@ def qa_audit(sprint_arg=None, sample_size=None, out_path=None, role="qa", as_rol
         except Exception:
             commit_pass = False
 
-        # 6. PO Approval & Provenance (REQ-PRO-105.3 / Dimension 6)
-        po_approval_pass, po_reason = verify_po_approval_changelog(
-            item, base_url=base, role=role, config=config
-        )
-
         ticket_compliant = deliv_pass and gate_pass and role_sep_pass and living_doc_pass and commit_pass and po_approval_pass
         if not ticket_compliant:
             overall_compliant = False
@@ -5436,6 +5636,8 @@ def qa_audit(sprint_arg=None, sample_size=None, out_path=None, role="qa", as_rol
             "commit_pass": commit_pass,
             "po_approval_pass": po_approval_pass,
             "po_reason": po_reason,
+            "sup9_non_code": False,
+            "sup9_labels": [],
             "compliant": ticket_compliant,
             "deliv_details": deliv_checks,
             "failed_categories": failed_cats,
@@ -5507,7 +5709,7 @@ def qa_audit(sprint_arg=None, sample_size=None, out_path=None, role="qa", as_rol
         audit_results=audit_results,
         overall_compliant=overall_compliant,
         auditor_role=role,
-        total_tickets=len(parent_issues),
+        total_tickets=total_merged,
         random_seed=seed,
     )
 

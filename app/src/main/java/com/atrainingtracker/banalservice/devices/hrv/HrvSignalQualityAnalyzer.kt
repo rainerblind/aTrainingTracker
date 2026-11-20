@@ -55,14 +55,18 @@ object HrvSignalQualityAnalyzer {
      * @param rmssdMs Optional precomputed rMSSD in milliseconds.
      * @param dfaAlpha1 Optional precomputed DFA alpha 1 exponent.
      * @param artifactRatePercent Optional precomputed artifact percentage (0.0 to 100.0).
+     * @param isOpticalPpi True for optical PPG PPI streams (e.g. Polar Verity Sense, `REQ-HRV-049.1`),
+     *                     bypassing ECG-specific smoothing/quantization flags while preserving beat-count and artifact gates.
      */
     @JvmStatic
+    @JvmOverloads
     fun analyze(
         rawRrIntervalsMs: List<Double>,
         correctedRrIntervalsMs: List<Double>? = null,
         rmssdMs: Double? = null,
         dfaAlpha1: Double? = null,
-        artifactRatePercent: Double? = null
+        artifactRatePercent: Double? = null,
+        isOpticalPpi: Boolean = false
     ): HrvSignalQualityResult {
         val n = rawRrIntervalsMs.size
         val effectiveArtifactRate = artifactRatePercent ?: 0.0
@@ -98,6 +102,22 @@ object HrvSignalQualityAnalyzer {
         val tpr = computeTurningPointRatio(rawRrIntervalsMs)
 
         val computedRmssd = rmssdMs ?: computeRmssd(rawRrIntervalsMs)
+
+        // REQ-HRV-049.1: Optical PPG PPI streams bypass ECG-specific smoothing/quantization flags
+        // while still enforcing the >= 30 beats and <= 5.0% artifact rate gates above.
+        if (isOpticalPpi) {
+            return HrvSignalQualityResult(
+                status = HrvSignalQualityStatus.VALID,
+                details = "Valid optical PPI stream",
+                rmssdMs = computedRmssd,
+                dfaAlpha1 = dfaAlpha1,
+                turningPointRatio = tpr,
+                zeroDiffRate = zeroDiffRate,
+                artifactRatePercent = effectiveArtifactRate,
+                beatCount = n
+            )
+        }
+
         val computedDfa = dfaAlpha1 ?: run {
             val series = correctedRrIntervalsMs ?: rawRrIntervalsMs
             val alpha = DfaCalculator.computeDfaAlpha1(series.toDoubleArray())
@@ -186,11 +206,13 @@ object HrvSignalQualityAnalyzer {
      * Evaluates signal quality from a list of [FilteredRrBeat]s.
      */
     @JvmStatic
+    @JvmOverloads
     fun analyzeBeats(
         beats: List<FilteredRrBeat>,
         artifactRatePercent: Double? = null,
         rmssdMs: Double? = null,
-        dfaAlpha1: Double? = null
+        dfaAlpha1: Double? = null,
+        isOpticalPpi: Boolean = false
     ): HrvSignalQualityResult {
         val raw = beats.map { it.rawRrMs }
         val corrected = beats.map { it.correctedRrMs }
@@ -202,7 +224,8 @@ object HrvSignalQualityAnalyzer {
             correctedRrIntervalsMs = corrected,
             rmssdMs = rmssdMs,
             dfaAlpha1 = dfaAlpha1,
-            artifactRatePercent = effectiveArtifactRate
+            artifactRatePercent = effectiveArtifactRate,
+            isOpticalPpi = isOpticalPpi
         )
     }
 

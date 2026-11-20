@@ -3,8 +3,8 @@
 **Document ID**: `DOC-MGT-CM`  
 **Document Identifier**: `CM-PLAN-ATT`  
 **Standard**: ASPICE 4.0 `SUP.8` (Configuration Management)  
-**Target Release**: `V5.0.0` | **Version**: 1.2.1  
-**Status**: Reviewed | **Approver**: Pending PO Sign-Off | **Date**: 2026-11-18  
+**Target Release**: `V5.0.0` | **Version**: 1.2.2  
+**Status**: Reviewed | **Approver**: Pending PO Sign-Off | **Date**: 2026-11-20  
 **Governing Ticket**: [ATT-6152](https://rainerblind.atlassian.net/browse/ATT-6152), [ATT-6733](https://rainerblind.atlassian.net/browse/ATT-6733), [ATT-8163](https://rainerblind.atlassian.net/browse/ATT-8163), [ATT-8164](https://rainerblind.atlassian.net/browse/ATT-8164) | **Requirement**: `REQ-STP-009`, `REQ-PRO-057`, `REQ-PRO-119`, `REQ-PRO-120`  
 
 ---
@@ -33,7 +33,7 @@ All work products subject to formal configuration control are classified as Conf
 | **Management & CM Plans** | `docs/management/*.md` (`cm_plan.md`, `qa_plan.md`, `risk_register.md`) | Git (ASPICE SUP.8 CM Plan & Policies) |
 | **Project Release Plan** | `docs/management/release_plan.md` | Git (V5.0.0 milestone scope, 12h cadence, Pixel 10 verification per REQ-PRO-097) |
 | **Living Requirements & Tests** | `docs/requirements/`, `docs/tests/`, `docs/requirements.md`, `docs/tests.md` | Git (9 domain shards, synchronized master indexes) |
-| **Engineering Deliverables** | `docs/engineering/analysis/`, `plans/`, `test_specs/`, `walkthroughs/`, `retros/`, `gates/`, `qa_audits/`, `reviews/`, `code_reviews/`, `aspice_audits/`, `test_evidence/` | Git (Canonical directories per Rule 8.4, `REQ-PRO-059`, `REQ-PRO-061`, `REQ-PRO-062`, `REQ-PRO-100`) |
+| **Engineering Deliverables** | `docs/engineering/analysis/`, `plans/`, `test_specs/`, `walkthroughs/`, `retros/`, `gates/`, `qa_audits/`, `reviews/`, `code_reviews/`, `aspice_audits/`, `emulator_sweeps/`, `test_evidence/` | Git (Canonical directories per Rule 8.4, `REQ-PRO-059`, `REQ-PRO-061`, `REQ-PRO-062`, `REQ-PRO-100`, `REQ-PRO-135`) |
 | **Release & Baseline Dossiers** | `docs/releases/` (`manifest.md`, `sys_verification_record.md`, `verification_summary.md`, `release_dossier.md`) | Git (SUP.8 baseline manifests & SYS.5/SWE.6 evidence per `REQ-PRO-072`, `REQ-PRO-119`) |
 | **Code Review Coverage Matrix** | `docs/engineering/code_reviews/coverage_matrix.md`, review reports | Git (Weekly Dual-Vendor review evidence per REQ-PRO-095) |
 | **ASPICE Audit Records** | `docs/engineering/aspice_audits/` (`YYYY-MM-DD_dual_vendor_aspice_audit.md`) | Git (Weekly Dual-Vendor ASPICE audits per REQ-PRO-096) |
@@ -138,3 +138,4 @@ Changes must traverse 5 sequential verification gates plus independent Stage 6 C
 | `1.1.0` | 2026-11-17 | AI Agent (`ATT-8163`) | `ATT-8163` | Aligned `--no-ff` sprint/release merge policy, added `gates/`/`qa_audits/`/`reviews/`/`docs/releases/` CIs, enforced immutable annotated tags (`baseline_manager.py`, zero `git tag -f`), added `SUP.8.BP7` Configuration Status Accounting (`manifest.md`), and defined dry-run/PO-gated branch & tag hygiene policy. |
 | `1.2.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Standardized `DOC-MGT-CM` work-product header, reset self-declared `Approved` to `Reviewed` (`Pending PO Sign-Off`), and codified human-only approval governance (`REQ-PRO-120`). |
 | `1.2.1` | 2026-11-18 | AI Agent (`ATT-8207`) | `ATT-8207` | Deferred atomic `--merge-ticket` squash onto `sprint/<SPRINT_NAME>` until post-Stage-6 `PASS` (`REQ-PRO-125`), keeping `feature/<KEY>` intact across Stage 6 bounces. |
+| `1.2.2` | 2026-11-20 | Lane A Flash (`ATT-8222`, `--as agent1`) | `ATT-8222` | Registered `docs/engineering/emulator_sweeps/` as a governed CM configuration item for weekly and pre-release Multi-OS & 9-Language emulator UI verification sweeps (`REQ-PRO-135`). |

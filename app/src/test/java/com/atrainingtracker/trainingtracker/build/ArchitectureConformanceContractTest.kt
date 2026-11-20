@@ -36,7 +36,7 @@ import java.io.File
  * 3. Tripwires detect unallow-listed UI database references or domain UI imports (REQ-PRO-050.3).
  * 4. docs/architecture.md defines explicit resource and timing budgets (SWE.2.BP4, REQ-PRO-052, REQ-PRO-130).
  */
-// Linked test specs: TST-PRO-050, TST-PRO-052, TST-PRO-129, TST-PRO-130
+// Linked test specs: TST-PRO-050, TST-PRO-052, TST-PRO-129, TST-PRO-130, TST-STR-001
 class ArchitectureConformanceContractTest {
 
     companion object {

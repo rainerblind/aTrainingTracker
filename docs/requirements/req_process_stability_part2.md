@@ -1,14 +1,14 @@
 # Living Requirements: Engineering Process, Stability & Architecture (Part 2 of 2)
 
 **Document ID**: `DOC-REQ-PRO-P2`  
-**Version**: 1.0.38  
+**Version**: 1.0.44  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `process_stability_part2`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Requirements**: 75
+**Total Requirements**: 77
 
 ---
 
@@ -1079,11 +1079,11 @@
      • The QA process audit tool (`qa-audit`) and audit records in `docs/engineering/qa_audits/<sprint>.md` SHALL enforce an independent auditor role (`qa` / `agent2` / `quality-assurance`) that is strictly distinct from the sprint coordinator (`coordinator`) and ticket implementers (`agent1`).
      • Invoking `qa-audit` with `role="coordinator"` or `role="agent1"` SHALL be forbidden and rejected with exit code 1.
   2. *Representative Statistical Sampling Ratio & Seeded Randomization (`REQ-PRO-091.2`)*:
-     • The QA audit tool SHALL dynamically compute the minimum required sample size as at least 10% of completed parent sprint tickets:
-       $$\text{sample\_size} \ge \max(2, \lceil 0.10 \times N \rceil)$$
-       where $N$ is the count of completed parent sprint tickets.
+     • The QA audit tool SHALL dynamically compute the minimum required sample size as at least 10% of post-Stage-6 merged completed parent sprint tickets (`final review (human)`, `final review`, `erledigt`, `closed`, `done` — excluding unmerged `final review (agent)` and WIP fallback per `REQ-PRO-134.1`/`REQ-PRO-134.2`):
+       $$\text{sample\_size} \ge \max(2, \lceil 0.10 \times N \rceil) \quad (\text{when } N \ge 2)$$
+       where $N$ is the count of post-Stage-6 merged completed parent sprint tickets (`min(sample_size, N)` when $N = 1$, and `N/A (0 merged tickets in sprint)` when $N = 0$).
      • Sample selection SHALL use seeded pseudo-random sampling (`random.Random(seed).sample`), accepting an optional seed parameter (`--seed`) or generating a random integer seed.
-     • The audit report in `docs/engineering/qa_audits/<sprint>.md` SHALL explicitly document the total sprint population, sample size, random seed, and sampled ticket keys in Section 1.
+     • The audit report in `docs/engineering/qa_audits/<sprint>.md` SHALL explicitly document the total merged population, sample size, random seed, and sampled ticket keys in Section 1.
   3. *Closed-Loop Jira Corrective-Action Tracking (`REQ-PRO-091.3`)*:
      • For any audit evaluating a `NON-COMPLIANT` overall verdict or finding, Section 4 of `docs/engineering/qa_audits/<sprint>.md` SHALL link every non-compliant finding to a distinct, dedicated Jira corrective-action ticket (`ca_key != audited_key`). Self-referential links naming the audited ticket itself are strictly prohibited.
      • The QA audit tool SHALL idempotently create or link dedicated corrective action tickets (`issuetype_id="10008"` / `Verbesserung`, parent Epic `ATT-8138` or `ATT-232`) in raw Backlog (`add_to_sprint=False`, `rank_top=True`), deduplicated per non-conformance category per sprint (`[QA Corrective Action] <Category> - Sprint <Sprint>`), querying duplicates via `get_search_endpoint` / `paged_jql_search` (`/rest/api/3/search/jql` on Cloud) and failing loudly without synthetic `ATT-CA-*` fallback if live Jira creation fails (`REQ-PRO-118`).
@@ -1095,11 +1095,11 @@
   5. *Automated Governance Verifier Enforcement (`REQ-PRO-091.5`)*:
      • `tools/verify_requirement_governance.py --check-qa-audits` (and Höchstmaß mirror) SHALL validate that:
        (a) Auditor role is independent (not `coordinator` or `agent1`),
-       (b) Sample size is $\ge \max(2, \lceil 0.10 \times N \rceil)$ or documented rationale, and
+       (b) Sample size is $\ge \max(2, \lceil 0.10 \times N \rceil)$ when $N \ge 2$ or records a valid low/zero-merged-ticket audit (`N/A (0 merged tickets in sprint)` / `< 2` merged per `REQ-PRO-134.5`), and
        (c) Every `NON-COMPLIANT` audit record contains valid Jira ticket links for each non-compliant finding.
   6. *Objective Process-Compliance Verification Criteria (`REQ-PRO-091.6`)*:
      • Living Documentation Parity: `qa-audit` SHALL load and evaluate referenced requirement IDs against all living requirement domain shards in `docs/requirements/req_*.md` (~1,194 active requirements) and `docs/tests/tst_*.md`, rather than summary-only master tables.
-     • Issue Description Ingestion: `fetch_all_sprint_issues` SHALL include the `description` field in Jira Cloud queries to evaluate requirement references in ticket bodies.
+     • Issue Description & Labels Ingestion: `fetch_all_sprint_issues` (root and Höchstmaß) SHALL include `description` and `labels` in Jira queries to evaluate requirement references and SUP.9 `NON_FIX_RESOLUTION_LABELS` exemptions (`REQ-PRO-134.3`), and accept both `<KEY>_plan.md` and `<KEY>_impl_plan.md` (`REQ-PRO-134.4`).
      • AccountId-Based 4-Augen Role Separation: `qa-audit` SHALL verify author and reviewer separation by evaluating Atlassian `accountId`s against `ROLE_ACCOUNT_IDS` rather than matching display-name strings.
 - **Requirement Archaeology & Chesterton's Fence Audit**:
   1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-091` (`REQ-PRO-091.1`–`REQ-PRO-091.6`), refining and extending `REQ-PRO-061` (*Sprint-Level QA Process-Compliance Audit*). Targets `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `tools/hoechstmass/`, `.agents/skills/sprint-planner/SKILL.md`, and `docs/engineering/qa_audits/`.
@@ -2503,6 +2503,53 @@
 
 ---
 
+### REQ-PRO-134: qa-audit Merged-Only Sampling, SUP.9 Non-Code Resolution Exemption & Plan Variant Support (ATT-9071) [Verified]
+- **Tests**: `TST-PRO-134`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `tools/jira_util.py`, `tools/hoechstmass/tools/jira_util.py`, `tools/verify_requirement_governance.py`, `tools/hoechstmass/tools/verify_requirement_governance.py`, `tools/test_jira_accounts.py`, `tools/test_verify_requirement_governance.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`
+- **Rationale**: `qa_audit()` generated false-positive non-compliance tickets across `2026-11-18_03_Nacht` (`ATT-9052`–`ATT-9054`) and `2026-11-19_01_Früh` (`ATT-9116`–`ATT-9120`) by sampling unmerged `Final Review (Agent)` tickets post-`ATT-8207`, falling back to WIP `parent_issues`, omitting `labels` and penalizing SUP.9 non-code resolutions (`ATT-8729` `resolution-duplicate`), and rejecting `_impl_plan.md` (`ATT-8848`) (`ATT-9071`, refining `REQ-PRO-091.2`, `REQ-PRO-091.5`, `REQ-PRO-091.6`):
+- **Description**:
+  1. *Post-Stage-6 Merged-Only Statuses (`REQ-PRO-134.1`)*: `qa_audit()` in `tools/jira_util.py` and `tools/hoechstmass/tools/jira_util.py` SHALL restrict `completed_parents` strictly to `("final review (human)", "final review", "erledigt", "closed", "done")`, explicitly excluding `"final review (agent)"` and all WIP states (`zu erledigen`, `analysis`, `test spec`, `implementation plan`, `implementation`, `test`).
+  2. *Zero WIP Fallback & Low/Zero-Merged Handling (`REQ-PRO-134.2`)*: `qa_audit()` MUST NOT fall back to unmerged WIP `parent_issues` when `len(completed_parents) < sample_size`. It SHALL compute `min_sample` and `total_tickets` from `len(completed_parents)` (`max(2, ceil(N * 0.10))` when `N >= 2`), sample `min(sample_size, len(completed_parents))` from `completed_parents`, and when `len(completed_parents) == 0` record an explicit `COMPLIANT` report stating `N/A (0 merged tickets in sprint)` without creating corrective-action tickets.
+  3. *SUP.9 Non-Code Resolution Ingestion & Exemption (`REQ-PRO-134.3`)*: `qa_audit()` SHALL include `"labels"` in `fetch_all_sprint_issues()` / `fallback_fields` (and both `"labels"` and `"description"` in Höchstmaß `qa_audit()`). Tickets carrying `NON_FIX_RESOLUTION_LABELS` (`resolution-duplicate`, `resolution-rejected`, `resolution-cannot-reproduce`) SHALL have code-lifecycle checks (`Lifecycle Deliverables`, `Stage Subtask Progression`, `4-Augen Role Separation`, `Living Documentation Parity`, `Commit Hygiene`) marked `N/A (SUP.9 non-code resolution)` while verifying SUP.9 resolution metadata and `PO Approval Provenance`, raising zero code-lifecycle failures or CA tickets.
+  4. *Plan Filename Variant Support (`REQ-PRO-134.4`)*: `qa_audit()` `deliv_checks["plan"]` (root + Höchstmaß) SHALL accept both `docs/engineering/plans/<KEY>_plan.md` and `docs/engineering/plans/<KEY>_impl_plan.md` while keeping Stage 3 guidance canonical on `<KEY>_plan.md`.
+  5. *Governance Verifier Compatibility & Offline Mocking (`REQ-PRO-134.5`)*: `_validate_single_qa_audit()` in `tools/verify_requirement_governance.py` and `tools/hoechstmass/tools/verify_requirement_governance.py` SHALL accept valid `N/A (0 merged tickets in sprint)` and `< 2` merged-ticket audit reports when `total_merged < 2`, while strictly enforcing `>= max(2, ceil(0.10 * N))` whenever `N >= 2`. All new unit tests MUST mock Jira HTTP calls offline (`Rule 5`).
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Refines `REQ-PRO-091.2/.5/.6` (`tools/jira_util.py`, `tools/hoechstmass/tools/jira_util.py`, `tools/verify_requirement_governance.py`, `tools/hoechstmass/tools/verify_requirement_governance.py`), aligning with `REQ-PRO-121.2` (`NON_FIX_RESOLUTION_LABELS`) and `REQ-PRO-125` (`ATT-8207`).
+  2. *Historical Origin & Commit Trace*: `ATT-6154` (`824b1322`), `ATT-7101` (`f6ef21f2`), `ATT-8152` (`f3e42aa0`), `ATT-8559` (`b1329131`), `ATT-8207` (`3b390f63`).
+  3. *Root Reason for Existing Formulation*: Prior to `ATT-8207`, `Final Review (Agent)` tickets had already been merged to `sprint/<SPRINT>`, `parent_issues` fallback avoided empty reports before SUP.9 non-code resolutions (`ATT-8165`), and only `_plan.md` was checked.
+  4. *Preservation of Core Invariants*: Preserves `>= max(2, ceil(0.10 * N))` sampling for `N >= 2`, `agent2`/`qa` independence (`REQ-PRO-091.1`), fail-loud CA creation (`REQ-PRO-118.2`), `REQ-PRO-016` human gate, and zero live Jira HTTP calls in tests (`Rule 5`).
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* 3 `Final Review (Human)` tickets and 1 `Final Review (Agent)` ticket, *When* `qa-audit` runs, *Then* only `Final Review (Human)` tickets are eligible for sampling.
+  • *Given* 1 `Final Review (Human)` ticket and 2 `Implementation` WIP tickets (or 0 merged tickets), *When* `qa-audit` runs, *Then* only the 1 merged ticket is sampled (or `N/A (0 merged tickets in sprint)` COMPLIANT report is emitted) with zero WIP remediation tickets, and `--check-qa-audits` passes.
+  • *Given* a merged ticket labeled `resolution-duplicate`, `resolution-rejected`, or `resolution-cannot-reproduce` with 0 commits/subtasks, *When* `qa-audit` runs, *Then* `labels` is fetched, code checks record `N/A (SUP.9 non-code resolution)`, and zero CA tickets are created.
+  • *Given* merged tickets with `<KEY>_plan.md` or `<KEY>_impl_plan.md`, *When* `qa-audit` runs Lifecycle Deliverables, *Then* both pass.
+- **Invariants**: Zero `app/src/main/` edits; `Localization Parity: N/A - Python tooling only`; offline Jira HTTP mocking (`Rule 5`); 4 dirty `tools/` files untouched.
+
+---
+
+### REQ-PRO-135: Weekly & Pre-Release Serial Multi-OS and 9-Language Emulator UI Verification Sweep (ATT-8222) [Verified]
+- **Tests**: `TST-PRO-135`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Integration / Review
+- **Implementation**: `tools/run_multi_os_emulator_sweep.py`, `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `app/src/androidTest/`, `docs/management/qa_plan.md`, `docs/management/cm_plan.md`, `.agents/skills/release-manager/SKILL.md`
+- **Rationale**: Manual verification relies primarily on a single physical Pixel 10 while `compileSdk`/`targetSdk` is `37` (`minSdk 26`) across 9 supported locales (`en`, `de`, `es`, `fr`, `it`, `ja`, `nl`, `pl`, `pt`), risking late OS-version regressions and locale layout/format defects prior to major releases (`ATT-8222`, complementing `REQ-TST-004` and `REQ-PRO-095`):
+- **Description**:
+  1. *Serial Multi-OS + 9-Language Emulator Sweep Runner (`REQ-PRO-135.1`, tools/run_multi_os_emulator_sweep.py)*: The stdlib-only CLI runner SHALL dynamically discover installed AVDs (`>= 3` API levels, overridable via `--avds`), boot strictly `1` AVD at a time via `tools/agent_emulator.py` helpers, install `com.atrainingtracker.debug`, inject mock GPS (`adb emu geo fix`), sweep all `9` supported locales (`en`, `de`, `es`, `fr`, `it`, `ja`, `nl`, `pl`, `pt`) on a reference AVD, scan `logcat` (`FATAL EXCEPTION`, `ANR`, `StrictMode`, `IllegalFormat*`) and `uiautomator dump` bounds for clipped/overlapping labels, and guarantee clean `adb emu kill` shutdown in `finally`.
+  2. *Strict Physical-Device Isolation Guard (`REQ-PRO-135.2`, tools/run_multi_os_emulator_sweep.py)*: The sweep runner MUST enforce `REQ-TST-004` device-policy separation by accepting `emulator-*` serials exclusively and aborting before executing any ADB mutation if a non-emulator physical serial is encountered.
+  3. *Sweep Evidence Archive & Registry Governance (`REQ-PRO-135.3`, docs/engineering/emulator_sweeps/, tools/verify_requirement_governance.py, docs/management/cm_plan.md)*: Completed sweeps SHALL archive structured markdown reports (`YYYY-MM-DD_sweep.md`) and screenshots under `docs/engineering/emulator_sweeps/`, registered in `cm_plan.md` and permitted in `ALLOWED_ENGINEERING_ENTRIES`.
+  4. *Weekly Backlog Cadence & Pre-Release Gate (`REQ-PRO-135.4`, tools/jira_util.py, docs/management/qa_plan.md, .agents/skills/release-manager/SKILL.md)*: `tools/jira_util.py` SHALL implement `is_weekly_emulator_sweep_overdue()` (`> 7 days` since latest sweep with new `develop` commits) and `ensure_weekly_emulator_sweep_ticket()` (deduplicated under `ATT-232`, `rank_top=True`), integrated into `ensure_weekly_reviews()`, documented in `qa_plan.md` §7, and enforced (`<= 7 days`) prior to release branch cutting in `release-manager/SKILL.md`.
+  5. *Instrumented Click-Through & Offline Verification (`REQ-PRO-135.5`, app/src/androidTest/, tools/test_*.py)*: An `app/src/androidTest/` UI navigation click-through test SHALL compile cleanly via `:app:compileDebugAndroidTestKotlin` without `app/src/main/` modifications, and all Python tests MUST mock ADB/emulator/Jira subprocesses and HTTP calls offline (`Rule 5`).
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `>= 3` AVDs and `9` locales (`en..pt`), *When* `run_multi_os_emulator_sweep.py` executes with mocked/real ADB/emulator calls, *Then* AVDs boot serially (max `1` concurrent), `9` locales are verified on the reference AVD, `logcat` fatal/format errors & clipped bounds fail cleanly, `finally` kills any booted emulator, and physical serials raise `RuntimeError`.
+  • *Given* `docs/engineering/emulator_sweeps/` missing or `> 7 days` old with new `develop` commits, *When* `ensure_weekly_reviews()` executes offline (`Rule 5`), *Then* a deduplicated `rank_top=True` weekly sweep ticket is created under `ATT-232` alongside Code Review and ASPICE Audit pillars, and `verify_engineering_directory_structure()` accepts `"emulator_sweeps"`.
+- **Invariants**: Zero `app/src/main/` edits; `REQ-TST-004` physical device `66020DLCR002FL` strictly unreachable; Python 3 stdlib only (`TST-PRO-005.6`); `100%` offline mocked unit tests (`Rule 5`); `Localization Parity: N/A - no UI strings`.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -2546,3 +2593,9 @@
 | `1.0.36` | 2026-11-19 | Lane A Flash (`ATT-8199`, `--as agent1`) | `ATT-8199` | Added `[Planned]` `REQ-PRO-133` (`REQ-PRO-133.1`–`REQ-PRO-133.5`: evasion-resistant `SourceTextReadingAuditContractTest`, `RepositoryServiceCleanlinessContractTest` bytecode migration, `SystemContextContractTest` manifest migration, `22` `Recycle` baseline pruning & ratchet). |
 | `1.0.37` | 2026-11-19 | Lane A Flash (`ATT-8199`, `--as agent1`) | `ATT-8199` | Promoted `REQ-PRO-133` to `[Implemented]` in Stage 4 (`SourceTextReadingAuditContractTest.kt`, `RepositoryServiceCleanlinessContractTest.kt`, `SystemContextContractTest.kt`, `app/lint-baseline.xml` `238 -> 216` with `0` `Recycle`, `app/build.gradle` `'Range'` `36`-issue rationale, `tools/check_static_analysis_baselines.py` `DEFAULT_LINT_CEILING=216`, `ReleaseCiAndLintConfigContractTest.kt`). |
 | `1.0.38` | 2026-11-19 | Lane A Flash (`ATT-8199`, `--as agent1`) | `ATT-8199` | Promoted `REQ-PRO-133` (`REQ-PRO-133.1`–`REQ-PRO-133.5`) to `[Verified]` in Stage 5 reusing Gate 4 verified evidence (`Rule 7.5`: `63/63` targeted Gradle contract tests, `6/6` `test_check_static_analysis_baselines.py`, `:app:lintDebug` `0` errors / `0` `Recycle` / `216` baseline, `lint_cursor_safety.py` PASS; `ATT-8199_walkthrough.md`). |
+| `1.0.39` | 2026-11-19 | Lane A Flash (`ATT-9071`, `--as agent1`) | `ATT-9071` | Added `[Planned]` `REQ-PRO-134` (`REQ-PRO-134.1`–`REQ-PRO-134.5`: merged-only `qa-audit` sampling, zero WIP fallback & 0/1-merged handling, SUP.9 `NON_FIX_RESOLUTION_LABELS` exemption + `labels` fetch, `_impl_plan.md` variant, verifier parity) and reconciled `REQ-PRO-091.2/.5/.6`. |
+| `1.0.40` | 2026-11-19 | Lane A Flash (`ATT-9071`, `--as agent1`) | `ATT-9071` | Promoted `REQ-PRO-134` to `[Implemented]` in Stage 4 (`tools/jira_util.py`, `tools/hoechstmass/tools/jira_util.py`, `tools/verify_requirement_governance.py`, `tools/hoechstmass/tools/verify_requirement_governance.py`, offline unit test suites). |
+| `1.0.41` | 2026-11-19 | Lane A Flash (`ATT-9071`, `--as agent1`) | `ATT-9071` | Promoted `REQ-PRO-134` (`REQ-PRO-134.1`–`REQ-PRO-134.5`) to `[Verified]` in Stage 5 reusing Gate 4 verified evidence (`Rule 7.5`: `test_jira_accounts.py` `107/107`, `test_hoechstmass_tools.py` `40/40`, `TST-PRO-134.5` PASS, `18/18` QA audits PASS, `ATT-9071_walkthrough.md`). |
+| `1.0.42` | 2026-11-20 | Lane A Flash (`ATT-8222`, `--as agent1`) | `ATT-8222` | Added `[Planned]` `REQ-PRO-135` (`REQ-PRO-135.1`–`REQ-PRO-135.5`: serial Multi-OS & 9-language emulator sweep runner, `REQ-TST-004` physical-phone refusal, `docs/engineering/emulator_sweeps/` archive + `ALLOWED_ENGINEERING_ENTRIES` / `cm_plan.md`, `ensure-weekly-reviews` cadence + `qa_plan.md` / `release-manager` gate, `androidTest` click-through & offline tests). |
+| `1.0.43` | 2026-11-20 | Lane A Flash (`ATT-8222`, `--as agent1`) | `ATT-8222` | Promoted `REQ-PRO-135` to `[Implemented]` in Stage 4 (`tools/run_multi_os_emulator_sweep.py`, `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `docs/management/{cm_plan,qa_plan}.md`, `.agents/skills/release-manager/SKILL.md`, `MultiLocaleUiSweepAndroidTest.kt`, offline unit tests). |
+| `1.0.44` | 2026-11-20 | Lane A Flash (`ATT-8222`, `--as agent1`) | `ATT-8222` | Promoted `REQ-PRO-135` (`REQ-PRO-135.1`–`REQ-PRO-135.5`) to `[Verified]` in Stage 5 reusing Gate 4 verified evidence (`Rule 7.5` SHA `de14d362`: `114/114` Python tests, `11/11` `verify_skills.py`, `:app:compileDebugAndroidTestKotlin` BUILD SUCCESSFUL, `ATT-8222_walkthrough.md`). |

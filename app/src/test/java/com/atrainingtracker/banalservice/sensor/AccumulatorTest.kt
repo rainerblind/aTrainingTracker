@@ -28,7 +28,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
 
-// Linked test specs: TST-UNT-008
+// Linked test specs: TST-UNT-008, TST-REG-004
 class AccumulatorTest {
 
     @Before

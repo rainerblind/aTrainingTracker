@@ -36,6 +36,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.util.Locale
 
 /**
  * Unit tests verifying TelemetryZoneMath pure geometry, boundary clamping, threshold dashes,
@@ -480,5 +481,69 @@ class TelemetryZoneMathTest {
         // Standard HEART_RATE [100, 200]: higher 200 -> top, lower 100 -> bottom
         assertEquals(130f, TelemetryZoneMath.mapTelemetryValueToY(100.0, 100.0, 200.0, top, height, false), 1e-3f)
         assertEquals(10f, TelemetryZoneMath.mapTelemetryValueToY(200.0, 100.0, 200.0, top, height, false), 1e-3f)
+    }
+
+    @Test
+    fun testCalculateHrvRmssdYAxisBounds_dynamicOutlierResilientAndEdgeCases_TST_HRV_047() {
+        // REQ-HRV-047 (REQ-HRV-047.1) / TST-HRV-047 (TST-HRV-047.1)
+        // 1. Typical aerobic exercise run (Kurze Runde var 2 #53: 1.89 - 5.64 ms) -> 0 .. 7 ms
+        val exerciseRun = listOf(5.64, 4.10, 3.20, 2.85, 2.40, 1.89, 2.15, 3.05, 3.90, 4.80)
+        val (exMin, exMax) = TelemetryZoneMath.calculateHrvRmssdYAxisBounds(exerciseRun)
+        assertEquals(0.0, exMin, 1e-6)
+        assertEquals(7.0, exMax, 1e-6)
+
+        // 2. Moderate exercise range (8 - 45 ms) -> 0 .. 60 ms (>= 45 * 1.15 = 51.75)
+        val moderate = listOf(8.0, 15.0, 22.0, 30.0, 38.0, 45.0)
+        val (modMin, modMax) = TelemetryZoneMath.calculateHrvRmssdYAxisBounds(moderate)
+        assertEquals(0.0, modMin, 1e-6)
+        assertEquals(60.0, modMax, 1e-6)
+        assertTrue(modMax >= 45.0 * 1.15)
+
+        // 3. Transient warmup/artifact spike (45 ms at t=5s over 2 - 6 ms steady-state, N >= 5) -> 0 .. 7 ms
+        val spikeRun = listOf(45.5) + List(19) { idx -> 2.0 + (idx % 5) * 1.0 } // steady-state 2..6 ms
+        val (spikeMin, spikeMax) = TelemetryZoneMath.calculateHrvRmssdYAxisBounds(spikeRun)
+        assertEquals(0.0, spikeMin, 1e-6)
+        assertEquals(7.0, spikeMax, 1e-6)
+
+        // 4. Genuine resting / low-intensity recording (40 - 120 ms) -> 0 .. 140 ms (>= 120 * 1.15 = 138, zero clipping)
+        val resting = listOf(40.0, 55.0, 70.0, 85.0, 95.0, 105.0, 112.0, 118.0, 120.0)
+        val (restMin, restMax) = TelemetryZoneMath.calculateHrvRmssdYAxisBounds(resting)
+        assertEquals(0.0, restMin, 1e-6)
+        assertEquals(140.0, restMax, 1e-6)
+        assertTrue(restMax >= 120.0 * 1.15)
+
+        // 5. High resting recording (120 - 180 ms) -> 0 .. 220 ms (>= 180 * 1.15 = 207, zero clipping)
+        val highResting = listOf(120.0, 135.0, 150.0, 165.0, 175.0, 180.0)
+        val (highMin, highMax) = TelemetryZoneMath.calculateHrvRmssdYAxisBounds(highResting)
+        assertEquals(0.0, highMin, 1e-6)
+        assertEquals(220.0, highMax, 1e-6)
+        assertTrue(highMax >= 180.0 * 1.15)
+
+        // 6. Empty, all-zero, tiny, and single-value streams
+        assertEquals(0.0 to 5.0, TelemetryZoneMath.calculateHrvRmssdYAxisBounds(emptyList()))
+        assertEquals(0.0 to 5.0, TelemetryZoneMath.calculateHrvRmssdYAxisBounds(listOf(0.0, 0.0, 0.0)))
+        assertEquals(0.0 to 5.0, TelemetryZoneMath.calculateHrvRmssdYAxisBounds(listOf(3.2)))
+        assertEquals(0.0 to 140.0, TelemetryZoneMath.calculateHrvRmssdYAxisBounds(listOf(120.0)))
+
+        // 7. Non-finite / negative filtering and extreme Double.MAX_VALUE overflow guard
+        val dirty = listOf(Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY, -10.0, 4.0)
+        assertEquals(0.0 to 5.0, TelemetryZoneMath.calculateHrvRmssdYAxisBounds(dirty))
+        val (extremeMin, extremeMax) = TelemetryZoneMath.calculateHrvRmssdYAxisBounds(listOf(Double.MAX_VALUE))
+        assertEquals(0.0, extremeMin, 1e-6)
+        assertTrue("Extreme Double.MAX_VALUE must remain finite", extremeMax.isFinite() && extremeMax >= 5.0)
+    }
+
+    @Test
+    fun testFormatHrvRmssdAxisLabel_cleanIntegerFractionalAndDefensive_TST_HRV_047() {
+        // REQ-HRV-047 (REQ-HRV-047.2) / TST-HRV-047 (TST-HRV-047.1)
+        assertEquals("0", TelemetryZoneMath.formatHrvRmssdAxisLabel(0.0, Locale.US))
+        assertEquals("0", TelemetryZoneMath.formatHrvRmssdAxisLabel(-0.0, Locale.US))
+        assertEquals("7", TelemetryZoneMath.formatHrvRmssdAxisLabel(7.0, Locale.US))
+        assertEquals("140", TelemetryZoneMath.formatHrvRmssdAxisLabel(140.0, Locale.US))
+        assertEquals("6.5", TelemetryZoneMath.formatHrvRmssdAxisLabel(6.5, Locale.US))
+        assertEquals("6,5", TelemetryZoneMath.formatHrvRmssdAxisLabel(6.5, Locale.GERMANY))
+        assertEquals("0", TelemetryZoneMath.formatHrvRmssdAxisLabel(Double.NaN, Locale.US))
+        assertEquals("0", TelemetryZoneMath.formatHrvRmssdAxisLabel(Double.POSITIVE_INFINITY, Locale.US))
+        assertEquals("0", TelemetryZoneMath.formatHrvRmssdAxisLabel(Double.NEGATIVE_INFINITY, Locale.US))
     }
 }

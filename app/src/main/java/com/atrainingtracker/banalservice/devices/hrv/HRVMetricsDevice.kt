@@ -63,6 +63,7 @@ open class HRVMetricsDevice @JvmOverloads constructor(
     companion object {
         const val WINDOW_RMSSD_MS = 60_000L
         const val WINDOW_DFA_MS = 120_000L
+        const val WINDOW_FILTER_CONTEXT_MS = WINDOW_DFA_MS + 60_000L
         const val MIN_RMSSD_VALID_PAIRS = 10
         const val ARTIFACT_GATE_THRESHOLD_PERCENT = 5.0
         const val EVALUATION_PERIOD_SECONDS = 5L
@@ -134,7 +135,7 @@ open class HRVMetricsDevice @JvmOverloads constructor(
 
     @Synchronized
     private fun pruneOldBeats(currentTimestampMs: Long) {
-        val cutoff = currentTimestampMs - WINDOW_DFA_MS
+        val cutoff = currentTimestampMs - WINDOW_FILTER_CONTEXT_MS
         val iterator = mBeatQueue.iterator()
         while (iterator.hasNext()) {
             if (iterator.next().beatTimestampMs < cutoff) {
@@ -158,7 +159,8 @@ open class HRVMetricsDevice @JvmOverloads constructor(
         val now = mTimeProvider.currentTimeMillis()
         pruneOldBeats(now)
 
-        if (mBeatQueue.isEmpty()) {
+        val dfaCutoff = now - WINDOW_DFA_MS
+        if (mBeatQueue.isEmpty() || mBeatQueue.none { it.beatTimestampMs >= dfaCutoff }) {
             mHrvRmssdSensor.newValue(null)
             mHrvDfaA1Sensor.newValue(null)
             mHrvArtifactRateSensor.newValue(null)
@@ -169,26 +171,31 @@ open class HRVMetricsDevice @JvmOverloads constructor(
         val allBeats = RrBeatNormalization.sortAndNormalizeChronologically(mBeatQueue.toList())
         val filterResult = artifactFilter.filterLiveCausal(allBeats)
         val filteredBeats = filterResult.beats
+        val dfaWindowBeats = filteredBeats.filter { it.beatTimestampMs >= dfaCutoff }
 
-        // 1. Artifact rate over 120s window
-        val artifactRate = filterResult.artifactRatePercent
+        // 1. Artifact rate over active 120s window (REQ-HRV-048.3)
+        val artifactRate = if (dfaWindowBeats.isNotEmpty()) {
+            (dfaWindowBeats.count { it.isArtifact }.toDouble() / dfaWindowBeats.size) * 100.0
+        } else {
+            0.0
+        }
         mHrvArtifactRateSensor.newValue(artifactRate)
 
-        // 2. Bias-free rMSSD over 60s sliding window (REQ-TRK-060.3)
+        // 2. Bias-free rMSSD over 60s sliding window sliced from active 120s beats (REQ-TRK-060.3, REQ-HRV-048.3)
         val rmssdCutoff = now - WINDOW_RMSSD_MS
-        val rmssdBeats = filteredBeats.filter { it.beatTimestampMs >= rmssdCutoff }
+        val rmssdBeats = dfaWindowBeats.filter { it.beatTimestampMs >= rmssdCutoff }
         val rmssdValue = computeBiasFreeRmssd(rmssdBeats)
         mHrvRmssdSensor.newValue(rmssdValue)
 
-        // 3. DFA alpha 1 over 120s window with artifact gate suppression (REQ-TRK-060.4)
+        // 3. DFA alpha 1 over active 120s window with artifact gate suppression (REQ-TRK-060.4, REQ-HRV-048.3)
         val alpha1Value: Double?
         val effectiveGateThreshold = getEffectiveArtifactGateThreshold()
-        if (artifactRate > effectiveGateThreshold) {
-            // High artifact rate suppresses DFA alpha 1
+        if (dfaWindowBeats.isEmpty() || artifactRate > effectiveGateThreshold) {
+            // High artifact rate or empty lookahead-trimmed active window suppresses DFA alpha 1
             mHrvDfaA1Sensor.newValue(null)
             alpha1Value = null
         } else {
-            val nnIntervals = filteredBeats.map { it.correctedRrMs }.toDoubleArray()
+            val nnIntervals = dfaWindowBeats.map { it.correctedRrMs }.toDoubleArray()
             val alpha1 = DfaCalculator.computeDfaAlpha1(nnIntervals)
             if (alpha1.isFinite() && alpha1 > 0.0) {
                 mHrvDfaA1Sensor.newValue(alpha1)
@@ -199,9 +206,9 @@ open class HRVMetricsDevice @JvmOverloads constructor(
             }
         }
 
-        // 4. Signal quality analysis (REQ-TRK-067)
+        // 4. Signal quality analysis strictly over active 120s window (REQ-TRK-067, REQ-HRV-048.3)
         signalQualityResult = HrvSignalQualityAnalyzer.analyzeBeats(
-            beats = filteredBeats,
+            beats = dfaWindowBeats,
             artifactRatePercent = artifactRate,
             rmssdMs = rmssdValue,
             dfaAlpha1 = alpha1Value

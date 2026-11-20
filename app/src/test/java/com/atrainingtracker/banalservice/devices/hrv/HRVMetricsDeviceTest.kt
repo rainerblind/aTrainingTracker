@@ -469,4 +469,60 @@ class HRVMetricsDeviceTest {
         assertTrue("Clean active window must emit valid DFA alpha 1 after pruning stale out-of-order beats (was $dfa)", dfa != null && dfa > 0.0)
         device.shutDown()
     }
+
+    @Test
+    fun test180sFilterContext_preservesTrailingQuartileAccuracyAnd120sSignalQualityScope_TST_HRV_048() {
+        // REQ-HRV-048 (REQ-HRV-048.3) / TST-HRV-048 (TST-HRV-048.3)
+        val baseTs = 1_000_000L
+        var currentTime = baseTs + 180_000L
+        val device = TestableHRVMetricsDevice(context, sensorManager, { currentTime }, artifactGateThresholdPercent = 5.0)
+
+        // Feed 180 seconds of beats at 500 ms (360 beats total: 120 prior context beats in [0..60s] + 240 active beats in [60..180s])
+        for (i in 0 until 360) {
+            val ts = baseTs + i * 500L
+            val rr = 500.0 + 25.0 * Math.sin(2.0 * Math.PI * i / 16.0) + 10.0 * Math.sin(2.0 * Math.PI * i / 64.0)
+            device.onRrBeat(RrBeatEvent(ts, rr, i, ProtocolType.BLE))
+        }
+
+        device.calculateMetrics()
+
+        val artifactRate = device.getHrvArtifactRateSensor().sensorData.value
+        val dfa = device.getHrvDfaA1Sensor().sensorData.value
+        val rmssd = device.getHrvRmssdSensor().sensorData.value
+
+        assertEquals("Clean 180s-context stream must yield 0% artifact rate", 0.0, artifactRate!!, 0.001)
+        assertTrue("DFA alpha 1 must be positive finite", dfa != null && dfa > 0.0 && dfa.isFinite())
+        assertTrue("rMSSD must be positive finite", rmssd != null && rmssd > 0.0 && rmssd.isFinite())
+        // Signal quality beatCount MUST reflect active 120s slice (~235 beats after 5-beat lookahead), NOT 355 beats from 180s buffer
+        assertTrue(
+            "Signal quality must analyze 120s dfaWindowBeats (expected <= 245, was ${device.signalQualityResult.beatCount})",
+            device.signalQualityResult.beatCount in 200..245
+        )
+        device.shutDown()
+    }
+
+    @Test
+    fun testEmptyActiveDfaWindowAfterLookaheadTrim_emitsZeroArtifactRateAndNullDfa_TST_HRV_048() {
+        // REQ-HRV-048 (REQ-HRV-048.3) / TST-HRV-048 (TST-HRV-048.3)
+        val baseTs = 1_000_000L
+        var currentTime = baseTs + 180_000L
+        val device = TestableHRVMetricsDevice(context, sensorManager, { currentTime }, artifactGateThresholdPercent = 5.0)
+
+        // Feed 50 context beats strictly before active 120s cutoff (< baseTs + 60_000L)
+        for (i in 0 until 50) {
+            device.onRrBeat(RrBeatEvent(baseTs + 10_000L + i * 800L, 800.0, i, ProtocolType.BLE))
+        }
+        // Feed only 4 active beats inside [now - 120s, now] (< LOOKAHEAD_BEATS = 5), so all 4 sit in the lookahead tail
+        for (k in 0 until 4) {
+            device.onRrBeat(RrBeatEvent(currentTime - (4 - k) * 800L, 800.0, 50 + k, ProtocolType.BLE))
+        }
+
+        device.calculateMetrics()
+
+        assertEquals(0.0, device.getHrvArtifactRateSensor().sensorData.value!!, 0.001)
+        assertNull("Empty lookahead-trimmed active window must suppress DFA alpha 1", device.getHrvDfaA1Sensor().sensorData.value)
+        assertNull("Empty lookahead-trimmed active window must emit null rMSSD", device.getHrvRmssdSensor().sensorData.value)
+        assertEquals(0, device.signalQualityResult.beatCount)
+        device.shutDown()
+    }
 }

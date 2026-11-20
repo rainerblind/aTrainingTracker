@@ -38,7 +38,7 @@ class HrvReadinessDbHelper(context: Context) :
 
     companion object {
         const val DB_NAME = "HrvReadiness.db"
-        const val DB_VERSION = 2
+        const val DB_VERSION = 3
 
         const val TABLE_HRV_READINESS = "hrv_readiness_entries"
 
@@ -61,6 +61,7 @@ class HrvReadinessDbHelper(context: Context) :
         const val COLUMN_MORNING_ENERGY_1_5 = "morning_energy_1_5"
         const val COLUMN_MUSCLE_SORENESS_1_5 = "muscle_soreness_1_5"
         const val COLUMN_CONTEXT_TAGS = "context_tags"
+        const val COLUMN_SENSOR_MODALITY = "sensor_modality"
 
         const val CREATE_TABLE_HRV_READINESS = """
             CREATE TABLE IF NOT EXISTS $TABLE_HRV_READINESS (
@@ -82,7 +83,8 @@ class HrvReadinessDbHelper(context: Context) :
                 $COLUMN_SLEEP_QUALITY_1_5 INTEGER,
                 $COLUMN_MORNING_ENERGY_1_5 INTEGER,
                 $COLUMN_MUSCLE_SORENESS_1_5 INTEGER,
-                $COLUMN_CONTEXT_TAGS TEXT
+                $COLUMN_CONTEXT_TAGS TEXT,
+                $COLUMN_SENSOR_MODALITY TEXT NOT NULL DEFAULT 'ECG'
             );
         """
 
@@ -154,6 +156,11 @@ class HrvReadinessDbHelper(context: Context) :
             db.execSQL(CREATE_INDEX_DATE_POSTURE)
             db.execSQL(CREATE_INDEX_TIMESTAMP)
         }
+        if (oldVersion < 3) {
+            db.execSQL(
+                "ALTER TABLE $TABLE_HRV_READINESS ADD COLUMN $COLUMN_SENSOR_MODALITY TEXT NOT NULL DEFAULT 'ECG';"
+            )
+        }
     }
 }
 
@@ -209,6 +216,7 @@ class HrvReadinessDatabaseManager private constructor(context: Context) {
                     db = db,
                     dateIso = entry.dateIso,
                     posture = entry.posture,
+                    sensorModality = entry.sensorModality,
                     pinnedId = if (isPinned) rowId else null
                 )
             }
@@ -220,12 +228,14 @@ class HrvReadinessDatabaseManager private constructor(context: Context) {
     }
 
     /**
-     * Updates an existing [entry] in `HrvReadiness.db` identified by [entry.id] (`REQ-PER-031.4`).
-     * Transactionally recomputes `is_primary_for_day` for its `(date_iso, posture)`.
+     * Updates an existing [entry] in `HrvReadiness.db` identified by [entry.id] (`REQ-PER-031.4`, `REQ-HRV-049.3`).
+     * Transactionally recomputes `is_primary_for_day` for both the previous cohort (if date, posture, or modality changed)
+     * and the target `(date_iso, posture, sensor_modality)` cohort.
      */
     @Synchronized
     fun updateEntry(entry: HrvReadinessEntry): Boolean {
         if (entry.id <= 0) return false
+        val previous = getEntryById(entry.id)
         val db = database
         db.beginTransaction()
         try {
@@ -237,12 +247,27 @@ class HrvReadinessDatabaseManager private constructor(context: Context) {
                 arrayOf(entry.id.toString())
             )
             if (rows > 0) {
+                if (previous != null && (
+                        previous.dateIso != entry.dateIso ||
+                            previous.posture != entry.posture ||
+                            previous.sensorModality != entry.sensorModality
+                        )
+                ) {
+                    recomputePrimaryForDayInternal(
+                        db = db,
+                        dateIso = previous.dateIso,
+                        posture = previous.posture,
+                        sensorModality = previous.sensorModality,
+                        pinnedId = null
+                    )
+                }
                 val isPinned = entry.isPrimaryForDay &&
                     (entry.artifactRatePct == null || entry.artifactRatePct <= MAX_VALID_ARTIFACT_RATE_PCT)
                 recomputePrimaryForDayInternal(
                     db = db,
                     dateIso = entry.dateIso,
                     posture = entry.posture,
+                    sensorModality = entry.sensorModality,
                     pinnedId = if (isPinned) entry.id else null
                 )
             }
@@ -254,7 +279,7 @@ class HrvReadinessDatabaseManager private constructor(context: Context) {
     }
 
     /**
-     * Deletes the entry with [id] and recomputes the primary flag for its `(date_iso, posture)`.
+     * Deletes the entry with [id] and recomputes the primary flag for its `(date_iso, posture, sensor_modality)`.
      */
     @Synchronized
     fun deleteEntry(id: Long): Boolean {
@@ -272,6 +297,7 @@ class HrvReadinessDatabaseManager private constructor(context: Context) {
                     db = db,
                     dateIso = existing.dateIso,
                     posture = existing.posture,
+                    sensorModality = existing.sensorModality,
                     pinnedId = null
                 )
             }
@@ -283,7 +309,7 @@ class HrvReadinessDatabaseManager private constructor(context: Context) {
     }
 
     /**
-     * Explicitly pins or unpins an entry as the primary reading for its `(date_iso, posture)` (`REQ-PER-030.3`).
+     * Explicitly pins or unpins an entry as the primary reading for its `(date_iso, posture, sensor_modality)` (`REQ-PER-030.3`, `REQ-HRV-049.3`).
      */
     @Synchronized
     fun setPrimaryReading(id: Long, isPrimary: Boolean = true): Boolean {
@@ -299,6 +325,7 @@ class HrvReadinessDatabaseManager private constructor(context: Context) {
                     db = db,
                     dateIso = existing.dateIso,
                     posture = existing.posture,
+                    sensorModality = existing.sensorModality,
                     pinnedId = id
                 )
             } else {
@@ -311,6 +338,7 @@ class HrvReadinessDatabaseManager private constructor(context: Context) {
                     db = db,
                     dateIso = existing.dateIso,
                     posture = existing.posture,
+                    sensorModality = existing.sensorModality,
                     pinnedId = null
                 )
             }
@@ -322,14 +350,18 @@ class HrvReadinessDatabaseManager private constructor(context: Context) {
     }
 
     /**
-     * Recomputes `is_primary_for_day` for [dateIso] and [posture] (`REQ-PER-030.3`).
+     * Recomputes `is_primary_for_day` for [dateIso], [posture], and [sensorModality] (`REQ-PER-030.3`, `REQ-HRV-049.3`).
      */
     @Synchronized
-    fun recomputePrimaryForDay(dateIso: String, posture: HrvPosture) {
+    fun recomputePrimaryForDay(
+        dateIso: String,
+        posture: HrvPosture,
+        sensorModality: HrvSensorModality = HrvSensorModality.ECG
+    ) {
         val db = database
         db.beginTransaction()
         try {
-            recomputePrimaryForDayInternal(db, dateIso, posture, null)
+            recomputePrimaryForDayInternal(db, dateIso, posture, sensorModality, null)
             db.setTransactionSuccessful()
         } finally {
             db.endTransaction()
@@ -340,6 +372,7 @@ class HrvReadinessDatabaseManager private constructor(context: Context) {
         db: SQLiteDatabase,
         dateIso: String,
         posture: HrvPosture,
+        sensorModality: HrvSensorModality,
         pinnedId: Long?
     ) {
         if (pinnedId != null) {
@@ -357,26 +390,32 @@ class HrvReadinessDatabaseManager private constructor(context: Context) {
                     """
                     UPDATE ${HrvReadinessDbHelper.TABLE_HRV_READINESS}
                     SET ${HrvReadinessDbHelper.COLUMN_IS_PRIMARY_FOR_DAY} = CASE WHEN ${HrvReadinessDbHelper.COLUMN_ID} = ? THEN 1 ELSE 0 END
-                    WHERE ${HrvReadinessDbHelper.COLUMN_DATE_ISO} = ? AND ${HrvReadinessDbHelper.COLUMN_POSTURE} = ?
+                    WHERE ${HrvReadinessDbHelper.COLUMN_DATE_ISO} = ?
+                      AND ${HrvReadinessDbHelper.COLUMN_POSTURE} = ?
+                      AND ${HrvReadinessDbHelper.COLUMN_SENSOR_MODALITY} = ?
                     """,
-                    arrayOf(pinnedId.toString(), dateIso, posture.name)
+                    arrayOf(pinnedId.toString(), dateIso, posture.name, sensorModality.name)
                 )
                 return
             }
         }
 
-        // Query all valid readings for (dateIso, posture) ordered by is_primary_for_day DESC, timestamp_ms ASC
+        // Query all valid readings for (dateIso, posture, sensorModality) ordered by is_primary_for_day DESC, timestamp_ms ASC
         val query = """
             SELECT ${HrvReadinessDbHelper.COLUMN_ID}, ${HrvReadinessDbHelper.COLUMN_IS_PRIMARY_FOR_DAY}
             FROM ${HrvReadinessDbHelper.TABLE_HRV_READINESS}
             WHERE ${HrvReadinessDbHelper.COLUMN_DATE_ISO} = ?
               AND ${HrvReadinessDbHelper.COLUMN_POSTURE} = ?
+              AND ${HrvReadinessDbHelper.COLUMN_SENSOR_MODALITY} = ?
               AND (${HrvReadinessDbHelper.COLUMN_ARTIFACT_RATE_PCT} IS NULL OR ${HrvReadinessDbHelper.COLUMN_ARTIFACT_RATE_PCT} <= ?)
             ORDER BY ${HrvReadinessDbHelper.COLUMN_IS_PRIMARY_FOR_DAY} DESC, ${HrvReadinessDbHelper.COLUMN_TIMESTAMP_MS} ASC
         """
 
         var chosenPrimaryId: Long? = null
-        db.rawQuery(query, arrayOf(dateIso, posture.name, MAX_VALID_ARTIFACT_RATE_PCT.toString())).use { cursor ->
+        db.rawQuery(
+            query,
+            arrayOf(dateIso, posture.name, sensorModality.name, MAX_VALID_ARTIFACT_RATE_PCT.toString())
+        ).use { cursor ->
             if (cursor.moveToFirst()) {
                 chosenPrimaryId = cursor.getLong(0)
             }
@@ -387,19 +426,23 @@ class HrvReadinessDatabaseManager private constructor(context: Context) {
                 """
                 UPDATE ${HrvReadinessDbHelper.TABLE_HRV_READINESS}
                 SET ${HrvReadinessDbHelper.COLUMN_IS_PRIMARY_FOR_DAY} = CASE WHEN ${HrvReadinessDbHelper.COLUMN_ID} = ? THEN 1 ELSE 0 END
-                WHERE ${HrvReadinessDbHelper.COLUMN_DATE_ISO} = ? AND ${HrvReadinessDbHelper.COLUMN_POSTURE} = ?
+                WHERE ${HrvReadinessDbHelper.COLUMN_DATE_ISO} = ?
+                  AND ${HrvReadinessDbHelper.COLUMN_POSTURE} = ?
+                  AND ${HrvReadinessDbHelper.COLUMN_SENSOR_MODALITY} = ?
                 """,
-                arrayOf(chosenPrimaryId.toString(), dateIso, posture.name)
+                arrayOf(chosenPrimaryId.toString(), dateIso, posture.name, sensorModality.name)
             )
         } else {
-            // No valid readings: clear all primary flags for this date/posture
+            // No valid readings: clear all primary flags for this date/posture/modality cohort
             db.execSQL(
                 """
                 UPDATE ${HrvReadinessDbHelper.TABLE_HRV_READINESS}
                 SET ${HrvReadinessDbHelper.COLUMN_IS_PRIMARY_FOR_DAY} = 0
-                WHERE ${HrvReadinessDbHelper.COLUMN_DATE_ISO} = ? AND ${HrvReadinessDbHelper.COLUMN_POSTURE} = ?
+                WHERE ${HrvReadinessDbHelper.COLUMN_DATE_ISO} = ?
+                  AND ${HrvReadinessDbHelper.COLUMN_POSTURE} = ?
+                  AND ${HrvReadinessDbHelper.COLUMN_SENSOR_MODALITY} = ?
                 """,
-                arrayOf(dateIso, posture.name)
+                arrayOf(dateIso, posture.name, sensorModality.name)
             )
         }
     }
@@ -457,20 +500,31 @@ class HrvReadinessDatabaseManager private constructor(context: Context) {
     }
 
     /**
-     * Retrieves the primary valid reading for a specific [dateIso] and [posture] (`REQ-PER-030.3`).
+     * Retrieves the primary valid reading for a specific [dateIso], [posture], and optional [sensorModality] (`REQ-PER-030.3`, `REQ-HRV-049.3`).
      */
     @Synchronized
-    fun getPrimaryEntryForDate(dateIso: String, posture: HrvPosture): HrvReadinessEntry? {
+    fun getPrimaryEntryForDate(
+        dateIso: String,
+        posture: HrvPosture,
+        sensorModality: HrvSensorModality? = null
+    ): HrvReadinessEntry? {
         val db = database
+        val modalityClause = if (sensorModality != null) "AND ${HrvReadinessDbHelper.COLUMN_SENSOR_MODALITY} = ?" else ""
         val query = """
             SELECT * FROM ${HrvReadinessDbHelper.TABLE_HRV_READINESS}
             WHERE ${HrvReadinessDbHelper.COLUMN_DATE_ISO} = ?
               AND ${HrvReadinessDbHelper.COLUMN_POSTURE} = ?
+              $modalityClause
               AND (${HrvReadinessDbHelper.COLUMN_ARTIFACT_RATE_PCT} IS NULL OR ${HrvReadinessDbHelper.COLUMN_ARTIFACT_RATE_PCT} <= ?)
             ORDER BY ${HrvReadinessDbHelper.COLUMN_IS_PRIMARY_FOR_DAY} DESC, ${HrvReadinessDbHelper.COLUMN_TIMESTAMP_MS} ASC
             LIMIT 1
         """
-        db.rawQuery(query, arrayOf(dateIso, posture.name, MAX_VALID_ARTIFACT_RATE_PCT.toString())).use { cursor ->
+        val args = if (sensorModality != null) {
+            arrayOf(dateIso, posture.name, sensorModality.name, MAX_VALID_ARTIFACT_RATE_PCT.toString())
+        } else {
+            arrayOf(dateIso, posture.name, MAX_VALID_ARTIFACT_RATE_PCT.toString())
+        }
+        db.rawQuery(query, args).use { cursor ->
             return if (cursor.moveToFirst()) {
                 HrvReadinessEntry.fromCursor(cursor)
             } else {
@@ -480,52 +534,71 @@ class HrvReadinessDatabaseManager private constructor(context: Context) {
     }
 
     /**
-     * Retrieves the list of primary valid entries across all distinct dates within `[startDateIso, endDateIso]`.
+     * Retrieves the list of primary valid entries across all distinct dates within `[startDateIso, endDateIso]`,
+     * optionally restricted to [sensorModality] (`REQ-HRV-049.3`).
      */
     @Synchronized
     fun getPrimaryEntriesInWindow(
         posture: HrvPosture,
         startDateIso: String,
-        endDateIso: String
+        endDateIso: String,
+        sensorModality: HrvSensorModality? = null
     ): List<HrvReadinessEntry> {
         val db = database
-        // First fetch all valid entries in date range for posture
+        val modalityClause = if (sensorModality != null) "AND ${HrvReadinessDbHelper.COLUMN_SENSOR_MODALITY} = ?" else ""
         val query = """
             SELECT * FROM ${HrvReadinessDbHelper.TABLE_HRV_READINESS}
             WHERE ${HrvReadinessDbHelper.COLUMN_POSTURE} = ?
               AND ${HrvReadinessDbHelper.COLUMN_DATE_ISO} >= ?
               AND ${HrvReadinessDbHelper.COLUMN_DATE_ISO} <= ?
+              $modalityClause
               AND (${HrvReadinessDbHelper.COLUMN_ARTIFACT_RATE_PCT} IS NULL OR ${HrvReadinessDbHelper.COLUMN_ARTIFACT_RATE_PCT} <= ?)
               AND ${HrvReadinessDbHelper.COLUMN_RMSSD_MS} IS NOT NULL
             ORDER BY ${HrvReadinessDbHelper.COLUMN_DATE_ISO} ASC, ${HrvReadinessDbHelper.COLUMN_IS_PRIMARY_FOR_DAY} DESC, ${HrvReadinessDbHelper.COLUMN_TIMESTAMP_MS} ASC
         """
+        val args = if (sensorModality != null) {
+            arrayOf(posture.name, startDateIso, endDateIso, sensorModality.name, MAX_VALID_ARTIFACT_RATE_PCT.toString())
+        } else {
+            arrayOf(posture.name, startDateIso, endDateIso, MAX_VALID_ARTIFACT_RATE_PCT.toString())
+        }
         val allValid = ArrayList<HrvReadinessEntry>()
-        db.rawQuery(query, arrayOf(posture.name, startDateIso, endDateIso, MAX_VALID_ARTIFACT_RATE_PCT.toString())).use { cursor ->
+        db.rawQuery(query, args).use { cursor ->
             allValid.addAll(HrvReadinessEntry.fromCursorBatch(cursor))
         }
 
-        // Deduplicate by date_iso taking the first (which has is_primary_for_day DESC, timestamp ASC)
-        val result = LinkedHashMap<String, HrvReadinessEntry>()
+        // Deduplicate by (dateIso, sensorModality) taking the first (is_primary_for_day DESC, timestamp ASC)
+        val result = LinkedHashMap<Pair<String, HrvSensorModality>, HrvReadinessEntry>()
         for (entry in allValid) {
-            if (!result.containsKey(entry.dateIso)) {
-                result[entry.dateIso] = entry
+            val key = entry.dateIso to entry.sensorModality
+            if (!result.containsKey(key)) {
+                result[key] = entry
             }
         }
         return result.values.toList()
     }
 
     /**
-     * Retrieves all entries in the database, optionally filtered by [posture].
+     * Retrieves all entries in the database, optionally filtered by [posture] and [sensorModality].
      */
     @Synchronized
-    fun getAllEntries(posture: HrvPosture? = null): List<HrvReadinessEntry> {
+    fun getAllEntries(
+        posture: HrvPosture? = null,
+        sensorModality: HrvSensorModality? = null
+    ): List<HrvReadinessEntry> {
         val db = database
-        val query = if (posture != null) {
-            "SELECT * FROM ${HrvReadinessDbHelper.TABLE_HRV_READINESS} WHERE ${HrvReadinessDbHelper.COLUMN_POSTURE} = ? ORDER BY ${HrvReadinessDbHelper.COLUMN_TIMESTAMP_MS} ASC"
-        } else {
-            "SELECT * FROM ${HrvReadinessDbHelper.TABLE_HRV_READINESS} ORDER BY ${HrvReadinessDbHelper.COLUMN_TIMESTAMP_MS} ASC"
+        val clauses = mutableListOf<String>()
+        val argsList = mutableListOf<String>()
+        if (posture != null) {
+            clauses.add("${HrvReadinessDbHelper.COLUMN_POSTURE} = ?")
+            argsList.add(posture.name)
         }
-        val args = if (posture != null) arrayOf(posture.name) else null
+        if (sensorModality != null) {
+            clauses.add("${HrvReadinessDbHelper.COLUMN_SENSOR_MODALITY} = ?")
+            argsList.add(sensorModality.name)
+        }
+        val where = if (clauses.isNotEmpty()) "WHERE ${clauses.joinToString(" AND ")}" else ""
+        val query = "SELECT * FROM ${HrvReadinessDbHelper.TABLE_HRV_READINESS} $where ORDER BY ${HrvReadinessDbHelper.COLUMN_TIMESTAMP_MS} ASC"
+        val args = if (argsList.isNotEmpty()) argsList.toTypedArray() else null
         db.rawQuery(query, args).use { cursor ->
             return HrvReadinessEntry.fromCursorBatch(cursor)
         }

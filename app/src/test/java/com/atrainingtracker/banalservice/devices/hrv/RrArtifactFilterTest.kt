@@ -219,4 +219,76 @@ class RrArtifactFilterTest {
         val gapBeatsCausal = causal.beats.filter { it.artifactFlag == RrBeatEvent.ARTIFACT_GAP }
         assertTrue("Live causal filter must also flag unflagged extreme RRs", gapBeatsCausal.size >= 7)
     }
+
+    @Test
+    fun testInputArtifactFlagsAndGapBeats_aligned1To1AcrossArtifactsAndHardwareGaps_TST_HRV_048() {
+        // REQ-HRV-048 (REQ-HRV-048.1) / TST-HRV-048 (TST-HRV-048.1)
+        val baseTs = 1_700_000_000_000L
+        val beats = MutableList(120) { i ->
+            val rr = when (i) {
+                20 -> 275.39   // short/extra outlier amidst ~385 ms running beats
+                35 -> 190.0    // merged short pair first half (out-of-range -> GAP; use 260 + 260 below for merged SHORT)
+                45 -> 260.0    // merged short pair beat 1
+                46 -> 260.0    // merged short pair beat 2
+                60 -> 779.30   // missed beat (~2x 385 ms -> k = 2, gapBeats = 1)
+                80 -> 5196.29  // unflagged multi-second gap (> 2500 ms)
+                95 -> 780.0    // hardware RF ARTIFACT_GAP with gapBeats = 3
+                else -> 385.0 + (i % 3 - 1) * 2.0
+            }
+            val initialFlag = when (i) {
+                95 -> RrBeatEvent.ARTIFACT_GAP
+                10 -> RrBeatEvent.ARTIFACT_ECTOPIC // stale flag on clean beat must clear to 0
+                else -> RrBeatEvent.ARTIFACT_NORMAL
+            }
+            val initialGap = when (i) {
+                95 -> 3
+                10 -> 2 // stale gap on clean beat must clear to 0
+                else -> 0
+            }
+            RrBeatEvent(
+                beatTimestampMs = baseTs + i * 385L,
+                rrMs = rr,
+                rawCounter = i,
+                protocol = ProtocolType.BLE,
+                gapBeats = initialGap,
+                artifactFlag = initialFlag
+            )
+        }
+        // Keep index 35 clean so only intended test anomalies exist
+        beats[35] = beats[35].copy(rrMs = 385.0)
+
+        val result = filter.filterBidirectionalBeats(beats)
+
+        assertEquals(beats.size, result.inputArtifactFlags.size)
+        assertEquals(beats.size, result.inputGapBeats.size)
+
+        // Stale non-GAP flag/gap on clean beat 10 clears to (0, 0)
+        assertEquals(RrBeatEvent.ARTIFACT_NORMAL, result.inputArtifactFlags[10])
+        assertEquals(0, result.inputGapBeats[10])
+
+        // 275.39 ms short outlier flagged non-zero with gap = 0
+        assertTrue(result.inputArtifactFlags[20] != RrBeatEvent.ARTIFACT_NORMAL)
+        assertEquals(0, result.inputGapBeats[20])
+
+        // Merged short pair (45, 46): BOTH input indices flagged SHORT with gap = 0
+        assertEquals(RrBeatEvent.ARTIFACT_SHORT, result.inputArtifactFlags[45])
+        assertEquals(RrBeatEvent.ARTIFACT_SHORT, result.inputArtifactFlags[46])
+        assertEquals(0, result.inputGapBeats[45])
+        assertEquals(0, result.inputGapBeats[46])
+
+        // 779.30 ms missed beat amidst 385 ms -> MISSED/LONG with k - 1 = 1 missed beat
+        assertTrue(
+            result.inputArtifactFlags[60] == RrBeatEvent.ARTIFACT_MISSED ||
+                result.inputArtifactFlags[60] == RrBeatEvent.ARTIFACT_LONG
+        )
+        assertEquals(1, result.inputGapBeats[60])
+
+        // 5196.29 ms unflagged physiological gap -> ARTIFACT_GAP with gap >= 5
+        assertEquals(RrBeatEvent.ARTIFACT_GAP, result.inputArtifactFlags[80])
+        assertTrue("Expected gapBeats >= 5 for 5196 ms gap, was ${result.inputGapBeats[80]}", result.inputGapBeats[80] >= 5)
+
+        // Hardware ARTIFACT_GAP preserves gapBeats = 3
+        assertEquals(RrBeatEvent.ARTIFACT_GAP, result.inputArtifactFlags[95])
+        assertEquals(3, result.inputGapBeats[95])
+    }
 }

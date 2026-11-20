@@ -1645,14 +1645,19 @@ class TestJiraCliTooling(unittest.TestCase):
         self.assertEqual(key2, "ATT-9201")
         mock_create.assert_not_called()
 
+    @patch("jira_util.ensure_weekly_emulator_sweep_ticket", return_value="ATT-9202")
     @patch("jira_util.ensure_weekly_aspice_audit_ticket", return_value="ATT-9201")
     @patch("jira_util.ensure_weekly_review_ticket", return_value="ATT-9200")
-    def test_ensure_weekly_reviews_coordinates_both_pillars(self, mock_review, mock_audit):
-        """TST-PRO-096.3: ensure_weekly_reviews dispatches both code review and ASPICE audit tickets."""
+    def test_ensure_weekly_reviews_coordinates_both_pillars(self, mock_review, mock_audit, mock_sweep):
+        """TST-PRO-096.3 / TST-PRO-135.4: ensure_weekly_reviews dispatches code review, ASPICE audit, and emulator sweep pillars."""
         res = jira_util.ensure_weekly_reviews(role="coordinator", force=True)
-        self.assertEqual(res, {"code_review": "ATT-9200", "aspice_audit": "ATT-9201"})
+        self.assertEqual(
+            res,
+            {"code_review": "ATT-9200", "aspice_audit": "ATT-9201", "emulator_sweep": "ATT-9202"},
+        )
         mock_review.assert_called_once_with(role="coordinator", force=True)
         mock_audit.assert_called_once_with(role="coordinator", force=True)
+        mock_sweep.assert_called_once_with(role="coordinator", force=True)
 
     def test_select_greedy_bin_pack_tickets_with_capacity_ceiling(self):
         """TST-PRO-097.1: Multi-lane greedy bin-packing accumulates tickets up to max_sp_per_lane."""
@@ -3825,6 +3830,395 @@ class TestSup9ProblemResolution(unittest.TestCase):
                 jira_util.transition_issue("ATT-995", "freigabe", role="agent1")
         self.assertEqual(cm.exception.code, 1)
         self.assertIn("REQ-PRO-128.5", stderr_buf.getvalue())
+
+    @patch("jira_util.get_config", return_value={"JIRA_URL": "https://atrainingtracker.atlassian.net"})
+    @patch("jira_util.jira_request")
+    def test_tst_pro_134_1_and_2_qa_audit_merged_only_and_zero_wip_fallback(self, mock_request, _mock_cfg):
+        """TST-PRO-134.1 & TST-PRO-134.2: qa_audit excludes Final Review (Agent) & WIP fallback and handles 1/0 merged tickets."""
+        import subprocess
+        agent2_id = jira_util.ROLE_ACCOUNT_IDS["agent2"]
+
+        def make_subtasks(prefix):
+            return [
+                {
+                    "key": f"{prefix}-{i}",
+                    "fields": {"summary": f"[{lbl}] Task", "status": {"name": "Erledigt"}},
+                    "comments": [{"author": {"accountId": agent2_id, "displayName": "Agent 2"}, "body": "GATE_VERDICT: PASS"}],
+                }
+                for i, lbl in enumerate(["Analysis", "Req & Test Spec", "Impl-Plan", "Implementation", "Test"], start=1)
+            ]
+
+        def setup_repo_for(tmpdir, keys):
+            subprocess.run(["git", "init"], cwd=tmpdir, check=True, stdout=subprocess.DEVNULL)
+            subprocess.run(["git", "config", "user.name", "Tester"], cwd=tmpdir, check=True)
+            subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=tmpdir, check=True)
+            req_dir = os.path.join(tmpdir, "docs", "requirements")
+            os.makedirs(req_dir, exist_ok=True)
+            with open(os.path.join(req_dir, "req_test.md"), "w", encoding="utf-8") as f:
+                f.write("### REQ-PRO-134: QA [Planned]\n")
+            for k in keys:
+                subprocess.run(["git", "commit", "--allow-empty", "-m", f"{k}: Done"], cwd=tmpdir, check=True, stdout=subprocess.DEVNULL)
+                for sub, suf in [("analysis", "_analysis.md"), ("test_specs", "_test_spec.md"), ("plans", "_plan.md"), ("walkthroughs", "_walkthrough.md")]:
+                    d = os.path.join(tmpdir, "docs", "engineering", sub)
+                    os.makedirs(d, exist_ok=True)
+                    with open(os.path.join(d, f"{k}{suf}"), "w", encoding="utf-8") as f:
+                        f.write(f"# {k} REQ-PRO-134\n")
+
+        ca_posts = []
+        current_issues = []
+
+        def mock_jira(url, method="GET", payload=None, role="agent2"):
+            if "/rest/agile/1.0/board" in url and "/sprint" not in url and "/backlog" not in url:
+                return {"values": [{"id": 1, "name": "B"}]}
+            elif "/sprint?state=active" in url:
+                return {"values": [{"id": 464, "name": "2026-11-19_03_Nacht", "state": "active"}]}
+            elif "/rest/agile/1.0/sprint/464/issue" in url:
+                return {"issues": current_issues}
+            elif "/changelog" in url:
+                return {"values": [{"author": {"accountId": jira_util.ROLE_ACCOUNT_IDS["human"]}, "items": [{"field": "status", "toString": "Approved"}]}]}
+            elif method == "POST" and "/rest/api/2/issue" in url:
+                ca_posts.append(payload)
+                return {"key": "ATT-9999"}
+            return {}
+
+        mock_request.side_effect = mock_jira
+
+        # Case A: 2 Final Review (Human) + 1 Final Review (Agent) + 2 WIP -> only the 2 Human tickets sampled
+        current_issues = [
+            {"key": "ATT-9711", "fields": {"summary": "Merged 1", "description": "REQ-PRO-134", "status": {"name": "Final Review (Human)"}, "issuetype": {"subtask": False}, "labels": [], "subtasks": make_subtasks("ATT-981")}},
+            {"key": "ATT-9712", "fields": {"summary": "Merged 2", "description": "REQ-PRO-134", "status": {"name": "Final Review (Human)"}, "issuetype": {"subtask": False}, "labels": [], "subtasks": make_subtasks("ATT-982")}},
+            {"key": "ATT-9713", "fields": {"summary": "Unmerged Stage 6", "description": "", "status": {"name": "Final Review (Agent)"}, "issuetype": {"subtask": False}, "labels": [], "subtasks": []}},
+            {"key": "ATT-9714", "fields": {"summary": "WIP Impl", "description": "", "status": {"name": "Implementation"}, "issuetype": {"subtask": False}, "labels": [], "subtasks": []}},
+            {"key": "ATT-9715", "fields": {"summary": "WIP Analysis", "description": "", "status": {"name": "Analysis"}, "issuetype": {"subtask": False}, "labels": [], "subtasks": []}},
+        ]
+        with tempfile.TemporaryDirectory() as tmpdir:
+            setup_repo_for(tmpdir, ["ATT-9711", "ATT-9712"])
+            out_file = os.path.join(tmpdir, "audit_a.md")
+            _, res_a = jira_util.qa_audit(sample_size=3, out_path=out_file, role="agent2", repo_root=tmpdir)
+            self.assertEqual({r["key"] for r in res_a}, {"ATT-9711", "ATT-9712"})
+            self.assertTrue(all(r["compliant"] for r in res_a))
+            self.assertEqual(ca_posts, [])
+
+        # Case B: 1 Final Review (Human) + 2 WIP -> sample 1 without WIP fallback
+        current_issues = [
+            {"key": "ATT-9721", "fields": {"summary": "Only Merged", "description": "REQ-PRO-134", "status": {"name": "Final Review (Human)"}, "issuetype": {"subtask": False}, "labels": [], "subtasks": make_subtasks("ATT-983")}},
+            {"key": "ATT-9722", "fields": {"summary": "WIP Impl", "description": "", "status": {"name": "Implementation"}, "issuetype": {"subtask": False}, "labels": [], "subtasks": []}},
+            {"key": "ATT-9723", "fields": {"summary": "Stage 6 Rollover", "description": "", "status": {"name": "Final Review (Agent)"}, "issuetype": {"subtask": False}, "labels": [], "subtasks": []}},
+        ]
+        with tempfile.TemporaryDirectory() as tmpdir:
+            setup_repo_for(tmpdir, ["ATT-9721"])
+            out_file = os.path.join(tmpdir, "audit_b.md")
+            _, res_b = jira_util.qa_audit(out_path=out_file, role="agent2", repo_root=tmpdir)
+            self.assertEqual([r["key"] for r in res_b], ["ATT-9721"])
+            self.assertTrue(res_b[0]["compliant"])
+            self.assertEqual(ca_posts, [])
+
+        # Case C: 0 merged tickets -> explicit N/A (0 merged tickets in sprint) COMPLIANT report, 0 CA POSTs
+        current_issues = [
+            {"key": "ATT-9731", "fields": {"summary": "Stage 6 Only", "description": "", "status": {"name": "Final Review (Agent)"}, "issuetype": {"subtask": False}, "labels": [], "subtasks": []}},
+            {"key": "ATT-9732", "fields": {"summary": "WIP Only", "description": "", "status": {"name": "Implementation"}, "issuetype": {"subtask": False}, "labels": [], "subtasks": []}},
+        ]
+        with tempfile.TemporaryDirectory() as tmpdir:
+            out_file = os.path.join(tmpdir, "audit_c.md")
+            _, res_c = jira_util.qa_audit(out_path=out_file, role="agent2", repo_root=tmpdir)
+            self.assertEqual(res_c, [])
+            self.assertEqual(ca_posts, [])
+            with open(out_file, "r", encoding="utf-8") as f:
+                md_c = f.read()
+            self.assertIn("N/A (0 merged tickets in sprint)", md_c)
+            self.assertIn("COMPLIANT", md_c)
+
+    @patch("jira_util.get_config", return_value={"JIRA_URL": "https://atrainingtracker.atlassian.net"})
+    @patch("jira_util.jira_request")
+    def test_tst_pro_134_3_and_4_sup9_non_code_exemption_and_impl_plan_variant(self, mock_request, _mock_cfg):
+        """TST-PRO-134.3 & TST-PRO-134.4: qa_audit fetches labels, exempts SUP.9 non-code resolutions, and accepts _impl_plan.md."""
+        import subprocess
+        agent2_id = jira_util.ROLE_ACCOUNT_IDS["agent2"]
+        sprint_issue_urls = []
+        ca_posts = []
+
+        subtasks_9744 = [
+            {
+                "key": f"ATT-985-{i}",
+                "fields": {"summary": f"[{lbl}] Task", "status": {"name": "Erledigt"}},
+                "comments": [{"author": {"accountId": agent2_id, "displayName": "Agent 2"}, "body": "GATE_VERDICT: PASS"}],
+            }
+            for i, lbl in enumerate(["Analysis", "Req & Test Spec", "Impl-Plan", "Implementation", "Test"], start=1)
+        ]
+
+        def mock_jira(url, method="GET", payload=None, role="agent2"):
+            if "/rest/agile/1.0/board" in url and "/sprint" not in url and "/backlog" not in url:
+                return {"values": [{"id": 1, "name": "B"}]}
+            elif "/sprint?state=active" in url:
+                return {"values": [{"id": 462, "name": "2026-11-19_01_Früh", "state": "active"}]}
+            elif "/rest/agile/1.0/sprint/462/issue" in url:
+                sprint_issue_urls.append(url)
+                return {
+                    "issues": [
+                        {"key": "ATT-9741", "fields": {"summary": "Dup bug", "description": "", "status": {"name": "Final Review (Human)"}, "issuetype": {"subtask": False}, "labels": ["resolution-duplicate", "duplicate-of-ATT-9744"], "subtasks": []}},
+                        {"key": "ATT-9742", "fields": {"summary": "Rejected bug", "description": "", "status": {"name": "Final Review (Human)"}, "issuetype": {"subtask": False}, "labels": ["resolution-rejected"], "subtasks": []}},
+                        {"key": "ATT-9743", "fields": {"summary": "Cannot repro", "description": "", "status": {"name": "Erledigt"}, "issuetype": {"subtask": False}, "labels": ["resolution-cannot-reproduce"], "subtasks": []}},
+                        {"key": "ATT-9744", "fields": {"summary": "Impl plan variant", "description": "Implements REQ-PRO-134", "status": {"name": "Final Review (Human)"}, "issuetype": {"subtask": False}, "labels": [], "subtasks": subtasks_9744}},
+                    ]
+                }
+            elif "/changelog" in url:
+                return {"values": [{"author": {"accountId": jira_util.ROLE_ACCOUNT_IDS["human"]}, "items": [{"field": "status", "toString": "Approved"}]}]}
+            elif method == "POST" and "/rest/api/2/issue" in url:
+                ca_posts.append(payload)
+                return {"key": "ATT-9998"}
+            return {}
+
+        mock_request.side_effect = mock_jira
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            subprocess.run(["git", "init"], cwd=tmpdir, check=True, stdout=subprocess.DEVNULL)
+            subprocess.run(["git", "config", "user.name", "Tester"], cwd=tmpdir, check=True)
+            subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=tmpdir, check=True)
+            subprocess.run(["git", "commit", "--allow-empty", "-m", "ATT-9744: Fix with impl_plan"], cwd=tmpdir, check=True, stdout=subprocess.DEVNULL)
+
+            for sub, suf in [("analysis", "_analysis.md"), ("test_specs", "_test_spec.md"), ("plans", "_impl_plan.md"), ("walkthroughs", "_walkthrough.md")]:
+                d = os.path.join(tmpdir, "docs", "engineering", sub)
+                os.makedirs(d, exist_ok=True)
+                with open(os.path.join(d, f"ATT-9744{suf}"), "w", encoding="utf-8") as f:
+                    f.write("# ATT-9744 REQ-PRO-134\n")
+
+            req_dir = os.path.join(tmpdir, "docs", "requirements")
+            os.makedirs(req_dir, exist_ok=True)
+            with open(os.path.join(req_dir, "req_test.md"), "w", encoding="utf-8") as f:
+                f.write("### REQ-PRO-134: QA [Planned]\n")
+
+            out_file = os.path.join(tmpdir, "audit.md")
+            _, results = jira_util.qa_audit(sample_size=4, out_path=out_file, role="agent2", repo_root=tmpdir)
+            self.assertEqual(len(results), 4)
+            self.assertTrue(any("labels" in u for u in sprint_issue_urls), sprint_issue_urls)
+            self.assertEqual(ca_posts, [])
+            by_key = {r["key"]: r for r in results}
+            for sup9_k in ("ATT-9741", "ATT-9742", "ATT-9743"):
+                self.assertTrue(by_key[sup9_k]["compliant"], by_key[sup9_k])
+                self.assertTrue(by_key[sup9_k]["sup9_non_code"])
+            self.assertTrue(by_key["ATT-9744"]["compliant"], by_key["ATT-9744"])
+            self.assertTrue(by_key["ATT-9744"]["deliv_pass"])
+            with open(out_file, "r", encoding="utf-8") as f:
+                md = f.read()
+            self.assertIn("N/A (SUP.9 non-code resolution:", md)
+
+
+class TestProcessStabilityLegacyTsts(unittest.TestCase):
+    """Offline unit & protocol verification for TST-PRO-003, 006, 007, 008, 009, 010, 011, 017, 019, 020."""
+
+    @patch("jira_util.get_config", return_value={"JIRA_URL": "https://atrainingtracker.atlassian.net"})
+    @patch("jira_util.jira_request")
+    def test_tst_pro_003_and_010_impl_plan_subtask_and_discovery_first(self, mock_request, _mock_cfg):
+        """TST-PRO-003 & TST-PRO-010: [Impl-Plan] subtask creation, description-before-transition sequencing, and discovery-first reuse."""
+        actions = []
+        created = []
+        subtasks_state = []
+
+        def mock_jira(url, method="GET", payload=None, role="agent1"):
+            if "/rest/agile/1.0/board" in url and "/sprint" not in url:
+                return {"values": [{"id": 1, "name": "ATT Board"}]}
+            elif "/sprint?state=active" in url:
+                return {"values": [{"id": 464, "name": "2026-11-19_03_Nacht", "state": "active"}]}
+            elif "/rest/api/2/issue/ATT-501?" in url:
+                return {
+                    "key": "ATT-501",
+                    "fields": {
+                        "summary": "Plan test parent",
+                        "status": {"name": "Implementation Plan"},
+                        "issuetype": {"name": "Verbesserung", "subtask": False},
+                        "parent": {"key": "ATT-8138"},
+                        "subtasks": list(subtasks_state),
+                    },
+                }
+            elif "/rest/api/2/issue/ATT-501" in url and method == "GET" and "fields=" not in url:
+                return {"key": "ATT-501", "fields": {"status": {"name": "Implementation Plan"}, "subtasks": list(subtasks_state)}}
+            elif method == "POST" and url.endswith("/rest/api/2/issue"):
+                st_key = "ATT-502"
+                created.append(payload)
+                actions.append(("create", payload))
+                subtasks_state.append({"key": st_key, "fields": {"summary": payload["fields"]["summary"], "status": {"name": "Zu erledigen"}}})
+                return {"key": st_key}
+            elif "/rest/api/2/issue/ATT-502?" in url:
+                return {"key": "ATT-502", "fields": {"summary": "[Impl-Plan] ATT-501", "status": {"name": "Zu erledigen"}, "issuetype": {"subtask": True}, "parent": {"key": "ATT-501"}, "comment": {"comments": []}}}
+            elif method == "PUT" and url.endswith("/rest/api/2/issue/ATT-502"):
+                actions.append(("update-desc", payload))
+                return {}
+            elif "/transitions" in url and method == "GET":
+                return {"transitions": [
+                    {"id": "11", "name": "Start", "to": {"name": "In Bearbeitung"}},
+                    {"id": "21", "name": "Review", "to": {"name": "In Überprüfung"}},
+                ]}
+            elif "/transitions" in url and method == "POST":
+                actions.append(("transition", payload))
+                return {}
+            return {}
+
+        mock_request.side_effect = mock_jira
+        res_key = jira_util.submit_stage("ATT-501", "3", "Plan body line 1", role="agent1")
+        self.assertEqual(res_key, "ATT-502")
+        self.assertEqual(len(created), 1)
+        self.assertTrue(created[0]["fields"]["summary"].startswith("[Impl-Plan]"))
+        self.assertEqual(created[0]["fields"]["description"], "Plan body line 1")
+        self.assertTrue(any(a[0] == "transition" for a in actions))
+
+        # Second call reuses ATT-502 (discovery-first) and updates description before transitioning
+        actions.clear()
+        res_key_2 = jira_util.submit_stage("ATT-501", "3", "Updated plan body", role="agent1")
+        self.assertEqual(res_key_2, "ATT-502")
+        self.assertEqual(len(created), 1)
+        op_names = [a[0] for a in actions]
+        self.assertIn("update-desc", op_names)
+        self.assertIn("transition", op_names)
+        self.assertLess(op_names.index("update-desc"), op_names.index("transition"))
+
+    @patch("jira_util.get_config", return_value={"JIRA_URL": "https://atrainingtracker.atlassian.net"})
+    @patch("jira_util.jira_request")
+    def test_tst_pro_006_008_009_and_017_workflow_skills_and_human_gate(self, mock_request, _mock_cfg):
+        """TST-PRO-006, TST-PRO-008, TST-PRO-009, TST-PRO-017: Stage workflow, check-gate, FixVersion, verify_skills, and human gate."""
+        import verify_skills
+        self.assertTrue(verify_skills.verify_skills(REPO_ROOT))
+        self.assertEqual(set(jira_util.STAGE_SPECS.keys()), {"1", "2", "3", "4", "5"})
+        self.assertEqual(jira_util.STAGE_SPECS["5"]["parent_stage"], "test")
+        self.assertIn("final review (agent)", jira_util.PARENT_STAGE_ORDER)
+        self.assertIn("final review (human)", jira_util.PARENT_STAGE_ORDER)
+
+        # TST-PRO-009: check-gate returns 0 on Erledigt and exits 1 otherwise; parent Erledigt blocked for agents
+        mock_request.return_value = {"key": "ATT-602", "fields": {"summary": "[Impl-Plan] Task", "status": {"name": "Erledigt"}, "issuetype": {"subtask": True}}}
+        jira_util.check_gate("ATT-602", role="agent1")
+
+        mock_request.return_value = {"key": "ATT-602", "fields": {"summary": "[Impl-Plan] Task", "status": {"name": "In Überprüfung"}, "issuetype": {"subtask": True}}}
+        with self.assertRaises(SystemExit) as cm_gate:
+            jira_util.check_gate("ATT-602", role="agent1")
+        self.assertEqual(cm_gate.exception.code, 1)
+
+        mock_request.return_value = {"key": "ATT-600", "fields": {"summary": "Parent Bug", "status": {"name": "Test"}, "issuetype": {"subtask": False, "name": "Bug"}}}
+        with self.assertRaises(SystemExit) as cm_human:
+            jira_util.transition_issue("ATT-600", "erledigt", role="agent2")
+        self.assertEqual(cm_human.exception.code, 1)
+
+        # TST-PRO-008: FixVersion prohibited on subtasks
+        mock_request.side_effect = lambda url, **kwargs: (
+            [{"name": "V5.0.0"}] if url.endswith("/versions")
+            else {"key": "ATT-602", "fields": {"issuetype": {"subtask": True}}}
+        )
+        with self.assertRaises(SystemExit) as cm_fv:
+            jira_util.set_fix_version("ATT-602", "V5.0.0", role="agent1")
+        self.assertEqual(cm_fv.exception.code, 1)
+
+    def test_tst_pro_007_011_019_020_governance_triad_and_review_agent_shim(self):
+        """TST-PRO-007, TST-PRO-011, TST-PRO-019, TST-PRO-020: Document Triad, AAA, Rule 7.5/8.2, and review_agent shim."""
+        import subprocess
+        import review_agent
+
+        # TST-PRO-011: review_agent.py legacy shim invariants
+        self.assertEqual(review_agent.AUDITOR_ROLE, "agent2")
+        for g in ("Gate 1", "Gate 2", "Gate 3", "Gate 4", "Gate 5"):
+            self.assertIn(g, review_agent.GATE_DEFINITIONS)
+        proc = subprocess.run([sys.executable, os.path.join(REPO_ROOT, "tools", "review_agent.py")], capture_output=True, text=True)
+        self.assertEqual(proc.returncode, 1)
+        self.assertIn("gate-verdict", proc.stderr)
+
+        # TST-PRO-007, 019, 020: Document Triad + AAA + Rule 7.5/8.2
+        with open(os.path.join(REPO_ROOT, ".agents", "rules", "aspice_governance.md"), encoding="utf-8") as f:
+            rules = f.read()
+        with open(os.path.join(REPO_ROOT, "docs", "project_protocol.md"), encoding="utf-8") as f:
+            proto = f.read()
+        with open(os.path.join(REPO_ROOT, "docs", "design_guidelines.md"), encoding="utf-8") as f:
+            design = f.read()
+        with open(os.path.join(REPO_ROOT, "docs", "coding_standards.md"), encoding="utf-8") as f:
+            coding = f.read()
+        with open(os.path.join(REPO_ROOT, ".agents", "skills", "stage1-analysis", "SKILL.md"), encoding="utf-8") as f:
+            s1 = f.read()
+        with open(os.path.join(REPO_ROOT, ".agents", "skills", "stage5-verification", "SKILL.md"), encoding="utf-8") as f:
+            s5 = f.read()
+        with open(os.path.join(REPO_ROOT, ".agents", "skills", "sprint-planner", "SKILL.md"), encoding="utf-8") as f:
+            sp = f.read()
+
+        self.assertIn("9 Core Rules", rules)
+        self.assertIn("Rule 8.2", rules)
+        self.assertIn("--merge-ticket", rules)
+        self.assertIn("Rule 7.5", rules)
+        self.assertTrue(os.path.isfile(os.path.join(REPO_ROOT, "docs", "engineering", "rule_history_archive.md")))
+        self.assertIn("Agile Agentic ASPICE (AAA)", proto)
+        self.assertIn("Document Triad", proto)
+        self.assertIn("Component Selection Heuristics", design)
+        self.assertIn("Reuse Before Create", coding)
+        self.assertIn("Independent Hypothesis Verification", s1)
+        self.assertIn("Tier 1", s5)
+        self.assertIn("Ceremony 2", sp)
+
+    def test_tst_pro_135_4_weekly_emulator_sweep_cadence_and_gate_docs(self):
+        """TST-PRO-135.4: is_weekly_emulator_sweep_overdue, ensure_weekly_emulator_sweep_ticket, and QA/Release gate docs."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            sweeps_dir = os.path.join(tmpdir, "docs", "engineering", "emulator_sweeps")
+            # 1. Missing directory -> overdue
+            self.assertTrue(jira_util.is_weekly_emulator_sweep_overdue(sweeps_dir=sweeps_dir, repo_root=tmpdir))
+
+            os.makedirs(sweeps_dir, exist_ok=True)
+            # 2. Fresh sweep (today) -> not overdue even if commits exist
+            today_file = os.path.join(sweeps_dir, f"{datetime.now().strftime('%Y-%m-%d')}_sweep.md")
+            with open(today_file, "w", encoding="utf-8") as f:
+                f.write("# Fresh Sweep\n")
+            self.assertFalse(
+                jira_util.is_weekly_emulator_sweep_overdue(
+                    sweeps_dir=sweeps_dir,
+                    repo_root=tmpdir,
+                    has_new_commits_fn=lambda *_args: True,
+                )
+            )
+            os.remove(today_file)
+
+            # 3. Stale sweep (10 days old) -> overdue iff new develop commits landed
+            old_date = (datetime.now() - timedelta(days=10)).strftime("%Y-%m-%d")
+            old_file = os.path.join(sweeps_dir, f"{old_date}_sweep.md")
+            with open(old_file, "w", encoding="utf-8") as f:
+                f.write("# Stale Sweep\n")
+            self.assertTrue(
+                jira_util.is_weekly_emulator_sweep_overdue(
+                    sweeps_dir=sweeps_dir,
+                    repo_root=tmpdir,
+                    has_new_commits_fn=lambda *_args: True,
+                )
+            )
+            self.assertFalse(
+                jira_util.is_weekly_emulator_sweep_overdue(
+                    sweeps_dir=sweeps_dir,
+                    repo_root=tmpdir,
+                    has_new_commits_fn=lambda *_args: False,
+                )
+            )
+
+        with patch("jira_util.get_config", return_value={"JIRA_URL": "https://mock.atlassian.net"}), \
+             patch("jira_util.paged_jql_search", return_value=[]) as mock_search, \
+             patch("jira_util.is_weekly_emulator_sweep_overdue", return_value=True), \
+             patch("jira_util.create_issue", return_value="ATT-9250") as mock_create:
+            k1 = jira_util.ensure_weekly_emulator_sweep_ticket(role="coordinator")
+            self.assertEqual(k1, "ATT-9250")
+            mock_create.assert_called_once()
+            self.assertTrue(mock_create.call_args[1].get("rank_top"))
+            self.assertEqual(mock_create.call_args[1].get("parent_key"), "ATT-232")
+
+            mock_create.reset_mock()
+            mock_search.return_value = [
+                {
+                    "key": "ATT-9250",
+                    "fields": {
+                        "summary": "Weekly Multi-OS & 9-Language Emulator UI Verification Sweep (2026-KW47)",
+                        "status": {"name": "Zu erledigen"},
+                    },
+                }
+            ]
+            k2 = jira_util.ensure_weekly_emulator_sweep_ticket(role="coordinator")
+            self.assertEqual(k2, "ATT-9250")
+            mock_create.assert_not_called()
+
+        with open(os.path.join(REPO_ROOT, "docs", "management", "qa_plan.md"), encoding="utf-8") as f:
+            qa_plan = f.read()
+        with open(os.path.join(REPO_ROOT, ".agents", "skills", "release-manager", "SKILL.md"), encoding="utf-8") as f:
+            rel_skill = f.read()
+        self.assertIn("run_multi_os_emulator_sweep.py", qa_plan)
+        self.assertIn("emulator_sweeps/", qa_plan)
+        self.assertIn("is_weekly_emulator_sweep_overdue()", rel_skill)
 
 
 if __name__ == "__main__":

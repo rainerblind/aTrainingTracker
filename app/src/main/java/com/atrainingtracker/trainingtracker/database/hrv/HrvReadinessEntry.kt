@@ -46,7 +46,8 @@ data class HrvReadinessEntry(
     val sleepQuality1To5: Int? = null,
     val morningEnergy1To5: Int? = null,
     val muscleSoreness1To5: Int? = null,
-    val contextTags: String? = null
+    val contextTags: String? = null,
+    val sensorModality: HrvSensorModality = HrvSensorModality.ECG
 ) {
     fun toContentValues(): ContentValues {
         val cv = ContentValues()
@@ -123,6 +124,7 @@ data class HrvReadinessEntry(
         } else {
             cv.putNull(HrvReadinessDbHelper.COLUMN_CONTEXT_TAGS)
         }
+        cv.put(HrvReadinessDbHelper.COLUMN_SENSOR_MODALITY, sensorModality.name)
         return cv
     }
 
@@ -152,6 +154,7 @@ data class HrvReadinessEntry(
             val energyIdx = cursor.getColumnIndex(HrvReadinessDbHelper.COLUMN_MORNING_ENERGY_1_5)
             val sorenessIdx = cursor.getColumnIndex(HrvReadinessDbHelper.COLUMN_MUSCLE_SORENESS_1_5)
             val tagsIdx = cursor.getColumnIndex(HrvReadinessDbHelper.COLUMN_CONTEXT_TAGS)
+            val modalityIdx = cursor.getColumnIndex(HrvReadinessDbHelper.COLUMN_SENSOR_MODALITY)
 
             val postureName = cursor.getString(postIdx)
             val posture = HrvPosture.fromNameOrNull(postureName)
@@ -171,6 +174,11 @@ data class HrvReadinessEntry(
             val energy = if (energyIdx != -1 && !cursor.isNull(energyIdx)) cursor.getInt(energyIdx) else null
             val soreness = if (sorenessIdx != -1 && !cursor.isNull(sorenessIdx)) cursor.getInt(sorenessIdx) else null
             val tags = if (tagsIdx != -1 && !cursor.isNull(tagsIdx)) cursor.getString(tagsIdx) else null
+            val modality = if (modalityIdx != -1 && !cursor.isNull(modalityIdx)) {
+                HrvSensorModality.fromNameOrDefault(cursor.getString(modalityIdx))
+            } else {
+                HrvSensorModality.ECG
+            }
 
             return HrvReadinessEntry(
                 id = cursor.getLong(idIdx),
@@ -191,7 +199,8 @@ data class HrvReadinessEntry(
                 sleepQuality1To5 = sleepQual,
                 morningEnergy1To5 = energy,
                 muscleSoreness1To5 = soreness,
-                contextTags = tags
+                contextTags = tags,
+                sensorModality = modality
             )
         }
 
@@ -223,6 +232,7 @@ data class HrvReadinessEntry(
             val energyIdx = cursor.getColumnIndex(HrvReadinessDbHelper.COLUMN_MORNING_ENERGY_1_5)
             val sorenessIdx = cursor.getColumnIndex(HrvReadinessDbHelper.COLUMN_MUSCLE_SORENESS_1_5)
             val tagsIdx = cursor.getColumnIndex(HrvReadinessDbHelper.COLUMN_CONTEXT_TAGS)
+            val modalityIdx = cursor.getColumnIndex(HrvReadinessDbHelper.COLUMN_SENSOR_MODALITY)
 
             do {
                 val postureName = cursor.getString(postIdx)
@@ -241,6 +251,11 @@ data class HrvReadinessEntry(
                 val energy = if (energyIdx != -1 && !cursor.isNull(energyIdx)) cursor.getInt(energyIdx) else null
                 val soreness = if (sorenessIdx != -1 && !cursor.isNull(sorenessIdx)) cursor.getInt(sorenessIdx) else null
                 val tags = if (tagsIdx != -1 && !cursor.isNull(tagsIdx)) cursor.getString(tagsIdx) else null
+                val modality = if (modalityIdx != -1 && !cursor.isNull(modalityIdx)) {
+                    HrvSensorModality.fromNameOrDefault(cursor.getString(modalityIdx))
+                } else {
+                    HrvSensorModality.ECG
+                }
 
                 list.add(
                     HrvReadinessEntry(
@@ -262,7 +277,8 @@ data class HrvReadinessEntry(
                         sleepQuality1To5 = sleepQual,
                         morningEnergy1To5 = energy,
                         muscleSoreness1To5 = soreness,
-                        contextTags = tags
+                        contextTags = tags,
+                        sensorModality = modality
                     )
                 )
             } while (cursor.moveToNext())

@@ -1,0 +1,79 @@
+# Sprint Quality Gate Records: 2026-11-19_03_Nacht
+
+**Sprint ID**: `464` | **Sprint Name**: `2026-11-19_03_Nacht` | **Export Date**: `2026-11-20T04:19:34.925914+00:00` | **Total Gate Records**: `56`
+
+---
+
+## 1. Quality Gate Summary (First-Time-Pass-Rates)
+
+| Gate | Stage | Evaluated Records | Passed First Time | Revisions / Bounces | FTPR (%) |
+| :---: | :--- | :---: | :---: | :---: | :---: |
+| Gate 1 | Analysis (Gate 1) | 9 | 8 | 1 | 88.9% |
+| Gate 2 | Req & Test Spec (Gate 2) | 9 | 8 | 1 | 88.9% |
+| Gate 3 | Impl-Plan (Gate 3) | 0 | 0 | 0 | 100.0% |
+| Gate 4 | Implementation (Gate 4) | 12 | 12 | 0 | 100.0% |
+| Gate 5 | Test (Gate 5) | 12 | 12 | 0 | 100.0% |
+| Gate 6 | Final Review (Agent) (Gate 6) | 9 | 6 | 3 | 66.7% |
+
+---
+
+## 2. Gate Verdict Records Log
+
+| Parent Ticket | Subtask Key | Gate | Stage | Verdict | Role | Actor | Timestamp | Summary / Excerpt |
+| :--- | :--- | :---: | :--- | :---: | :---: | :--- | :--- | :--- |
+| ATT-8222 | ATT-9209 | Gate 1 | Analysis (Gate 1) | PASS | agent2 | Agent 2 (Reviewer) | 2026-11-20T01:45:46.559+0100 | Gate 1 Audit PASS (ATT-8222 / ATT-9209): Verified `docs/engineering/analysis/ATT-8222_analysis.md` (`d816bce8`) against `ATT-8222` and th... |
+| ATT-8222 | ATT-9210 | Gate 2 | Req & Test Spec (Gate 2) | PASS | agent2 | Agent 2 (Reviewer) | 2026-11-20T01:48:39.146+0100 | Gate 2 Audit PASS (ATT-8222 / ATT-9210): Verified `docs/engineering/test_specs/ATT-8222_test_spec.md` and living doc diffs (`8e930836`): ... |
+| ATT-8222 | ATT-9215 | Gate 4 | Implementation (Gate 4) | PASS | agent2 | Agent 2 (Reviewer) | 2026-11-20T01:58:52.551+0100 | Gate 4 Audit PASS (ATT-8222 / ATT-9215): Independently audited `feature/ATT-8222` (`de14d362`) against merge-base `56eb3702` and executed... |
+| ATT-8222 | ATT-9217 | Gate 5 | Test (Gate 5) | PASS | agent2 | Agent 2 (Reviewer) | 2026-11-20T02:01:33.755+0100 | Gate 5 Audit PASS (ATT-8222 / ATT-9217): Verified doc-only Stage 5 submission on `feature/ATT-8222` (`93451712`, `Rule 7.5` Gate 4 `de14d... |
+| ATT-8222 | - | Gate 6 | Final Review (Agent) (Gate 6) | PASS | agent2 | Agent 2 (Reviewer) | 2026-11-20T02:20:23.787+0100 | [FINAL REVIEW (AGENT) — PASS] Stage 6 Cold Final Review (1st pass, Flash, 0eb9529f) on feature/ATT-8222 (93451712) — atomically squashed ... |
+| ATT-8327 | ATT-9192 | Gate 1 | Analysis (Gate 1) | PASS | agent2 | Agent 2 (Reviewer) | 2026-11-19T23:43:42.380+0100 | Gate 1 Audit PASS (ATT-8327 / ATT-9192): Verified `docs/engineering/analysis/ATT-8327_analysis.md` (`d0fb573a`) against `ATT-8327` and th... |
+| ATT-8327 | ATT-9193 | Gate 2 | Req & Test Spec (Gate 2) | PASS | agent2 | Agent 2 (Reviewer) | 2026-11-19T23:47:21.772+0100 | Gate 2 Audit PASS (ATT-8327 / ATT-9193): Verified `docs/engineering/test_specs/ATT-8327_test_spec.md` and `docs/tests/tst_process_stabili... |
+| ATT-8327 | ATT-9199 | Gate 4 | Implementation (Gate 4) | PASS | agent2 | Agent 2 (Reviewer) | 2026-11-20T01:01:40.750+0100 | Gate 4 Audit PASS (ATT-8327 / ATT-9199): Independently audited `feature/ATT-8327` (`d266d87b`) against `4dca75c4` (`sprint/2026-11-19_03_... |
+| ATT-8327 | ATT-9200 | Gate 5 | Test (Gate 5) | PASS | agent2 | Agent 2 (Reviewer) | 2026-11-20T01:04:36.457+0100 | Gate 5 Audit PASS (ATT-8327 / ATT-9200): Verified doc-only Stage 5 submission on `feature/ATT-8327` (`50bbb9e3`, `Rule 7.5` Gate 4 eviden... |
+| ATT-8327 | ATT-9206 | Gate 4 | Implementation (Gate 4) | PASS | agent2 | Agent 2 (Reviewer) | 2026-11-20T01:24:16.366+0100 | Gate 4 Bounce 1 Audit PASS (ATT-8327 / ATT-9206): Verified doc-only Stage 6 Bounce 1/3 remediation on `feature/ATT-8327` (`d7cf10e2`, `Ru... |
+| ATT-8327 | ATT-9207 | Gate 5 | Test (Gate 5) | PASS | agent2 | Agent 2 (Reviewer) | 2026-11-20T01:25:44.222+0100 | Gate 5 Bounce 1 Audit PASS (ATT-8327 / ATT-9207): Verified doc-only Stage 5 Bounce 1 submission on `feature/ATT-8327` (`2f533cc7`, `Rule ... |
+| ATT-8327 | - | Gate 6 | Final Review (Agent) (Gate 6) | BOUNCE | agent2 | Agent 2 (Reviewer) | 2026-11-20T01:21:37.967+0100 | [FINAL REVIEW (AGENT) — BOUNCE 1/3] Stage 6 Cold Final Review (Bounce 1, Flash, 66fa84c1) on feature/ATT-8327 (50bbb9e3). * *Pros (Was is... |
+| ATT-8327 | - | Gate 6 | Final Review (Agent) (Gate 6) | PASS | agent2 | Agent 2 (Reviewer) | 2026-11-20T01:41:35.806+0100 | [FINAL REVIEW (AGENT) — PASS] Stage 6 Cold Final Review (Bounce 1, Flash, 4890d206 + prior 66fa84c1) on feature/ATT-8327 (2f533cc7) — ato... |
+| ATT-9071 | ATT-9181 | Gate 1 | Analysis (Gate 1) | PASS | agent2 | Agent 2 (Reviewer) | 2026-11-19T23:14:01.865+0100 | Gate 1 Audit PASS (ATT-9071 / ATT-9181): Verified `docs/engineering/analysis/ATT-9071_analysis.md` (`2e8b87f7`) against the codebase: - [... |
+| ATT-9071 | ATT-9184 | Gate 2 | Req & Test Spec (Gate 2) | PASS | agent2 | Agent 2 (Reviewer) | 2026-11-19T23:18:19.896+0100 | Gate 2 Audit PASS (ATT-9071 / ATT-9184): Verified `docs/engineering/test_specs/ATT-9071_test_spec.md` and living doc diffs on `feature/AT... |
+| ATT-9071 | ATT-9190 | Gate 4 | Implementation (Gate 4) | PASS | agent2 | Agent 2 (Reviewer) | 2026-11-19T23:30:08.180+0100 | Gate 4 Audit PASS (ATT-9071 / ATT-9190): Independently audited `feature/ATT-9071` (`bcd9e0ad`, `git diff sprint/2026-11-19_03_Nacht..bcd9... |
+| ATT-9071 | ATT-9191 | Gate 5 | Test (Gate 5) | PASS | agent2 | Agent 2 (Reviewer) | 2026-11-19T23:32:56.048+0100 | Gate 5 Audit PASS (ATT-9071 / ATT-9191): Verified doc-only Stage 5 submission on `feature/ATT-9071` (`70266d14`, `Rule 7.5` Gate 4 eviden... |
+| ATT-9071 | - | Gate 6 | Final Review (Agent) (Gate 6) | PASS | agent2 | Agent 2 (Reviewer) | 2026-11-19T23:38:39.399+0100 | [FINAL REVIEW (AGENT) — PASS] Stage 6 Cold Final Review (1st pass, Flash, abc4e048) on feature/ATT-9071 (70266d14) — atomically squashed ... |
+| ATT-9063 | ATT-9183 | Gate 1 | Analysis (Gate 1) | PASS | agent2 | Agent 2 (Reviewer) | 2026-11-19T23:20:34.019+0100 | Gate 1 PASS — Stage 1 Forensic Analysis for ATT-9063 (commit e1c3ca01, docs/engineering/analysis/ATT-9063_analysis.md) independently veri... |
+| ATT-9063 | ATT-9188 | Gate 2 | Req & Test Spec (Gate 2) | PASS | agent2 | Agent 2 (Reviewer) | 2026-11-19T23:26:23.969+0100 | Gate 2 PASS — Stage 2 Requirement & Test Specification for ATT-9063 (commit 383bd91a) independently verified across docs/engineering/test... |
+| ATT-9063 | ATT-9196 | Gate 4 | Implementation (Gate 4) | PASS | agent2 | Agent 2 (Reviewer) | 2026-11-20T00:18:56.750+0100 | Gate 4 PASS — Adversarial code review & independent incremental verification of ATT-9063 Stage 4 (commit 0f4dd34b on feature/ATT-9063). #... |
+| ATT-9063 | ATT-9198 | Gate 5 | Test (Gate 5) | PASS | agent2 | Agent 2 (Reviewer) | 2026-11-20T00:22:11.305+0100 | Gate 5 PASS — Doc-only Stage 5 Verification & Walkthrough audit for ATT-9063 (commit 30988d0a on feature/ATT-9063, Rule 7.5 reuse of Gate... |
+| ATT-9063 | - | Gate 6 | Final Review (Agent) (Gate 6) | PASS | agent2 | Agent 2 (Reviewer) | 2026-11-20T01:01:22.110+0100 | [FINAL REVIEW (AGENT) — PASS] Stage 6 Cold Final Review (1st pass, Neon, 1a8db417) on feature/ATT-9063 (30988d0a) — atomically squashed o... |
+| ATT-9062 | ATT-9202 | Gate 1 | Analysis (Gate 1) | PASS | agent2 | Agent 2 (Reviewer) | 2026-11-20T01:08:52.186+0100 | Gate 1 PASS — Stage 1 Forensic Analysis for ATT-9062 (commit 8879cd96, docs/engineering/analysis/ATT-9062_analysis.md) independently veri... |
+| ATT-9062 | ATT-9204 | Gate 2 | Req & Test Spec (Gate 2) | PASS | agent2 | Agent 2 (Reviewer) | 2026-11-20T01:14:21.166+0100 | Gate 2 PASS — Stage 2 Requirement & Test Specification for ATT-9062 (commit 206f16ef) independently verified across docs/engineering/test... |
+| ATT-9062 | ATT-9208 | Gate 4 | Implementation (Gate 4) | PASS | agent2 | Agent 2 (Reviewer) | 2026-11-20T01:51:17.425+0100 | Gate 4 PASS — Adversarial code review & independent locked incremental verification of ATT-9062 Stage 4 (commit 4b47831a on feature/ATT-9... |
+| ATT-9062 | ATT-9213 | Gate 5 | Test (Gate 5) | PASS | agent2 | Agent 2 (Reviewer) | 2026-11-20T01:54:53.148+0100 | Gate 5 PASS — Doc-only Stage 5 Verification & Walkthrough audit for ATT-9062 (commit 7b51d086 on feature/ATT-9062, Rule 7.5 reuse of Gate... |
+| ATT-9062 | - | Gate 6 | Final Review (Agent) (Gate 6) | PASS | agent2 | Agent 2 (Reviewer) | 2026-11-20T02:19:51.410+0100 | [FINAL REVIEW (AGENT) — PASS] Stage 6 Cold Final Review (1st pass, Neon, 576f3094) on feature/ATT-9062 (7b51d086) — atomically squashed o... |
+| ATT-9157 | ATT-9219 | Gate 1 | Analysis (Gate 1) | PASS | agent2 | Agent 2 (Reviewer) | 2026-11-20T02:30:21.473+0100 | Gate 1 PASS — Stage 1 Forensic Analysis for ATT-9157 (commit d7499545, docs/engineering/analysis/ATT-9157_analysis.md) independently veri... |
+| ATT-9157 | ATT-9221 | Gate 2 | Req & Test Spec (Gate 2) | PASS | agent2 | Agent 2 (Reviewer) | 2026-11-20T02:36:26.259+0100 | Gate 2 PASS — Stage 2 Requirement & Test Specification for ATT-9157 (commit 9efe71e7) independently verified across docs/engineering/test... |
+| ATT-9157 | ATT-9224 | Gate 4 | Implementation (Gate 4) | PASS | agent2 | Agent 2 (Reviewer) | 2026-11-20T03:09:45.817+0100 | Gate 4 Review (Neon Agent2) on feature/ATT-9157 @ 9b89af95 — PASS. - [x] **Diff Scope & Architecture Hygiene**: PASS — Audited git diff s... |
+| ATT-9157 | ATT-9227 | Gate 5 | Test (Gate 5) | PASS | agent2 | Agent 2 (Reviewer) | 2026-11-20T03:14:25.577+0100 | Doc-Only Gate 5 Review (Neon Agent2, Rule 7.5) on feature/ATT-9157 @ 288912ac — PASS. - [x] **Zero Code Drift Since Gate 4 (Rule 7.5)**: ... |
+| ATT-9157 | - | Gate 6 | Final Review (Agent) (Gate 6) | PASS | agent2 | Agent 2 (Reviewer) | 2026-11-20T03:36:05.818+0100 | [FINAL REVIEW (AGENT) — PASS] Stage 6 Cold Final Review (1st pass, Neon, e6f0e3d6) on feature/ATT-9157 (288912ac) — atomically squashed o... |
+| ATT-9160 | ATT-9211 | Gate 1 | Analysis (Gate 1) | PASS | agent2 | Agent 2 (Reviewer) | 2026-11-20T01:51:14.415+0100 | Gate 1 Independent Audit — PASS (Risk: LOW-MEDIUM) Independently audited docs/engineering/analysis/ATT-9160_analysis.md (commit 8dca2427,... |
+| ATT-9160 | ATT-9214 | Gate 2 | Req & Test Spec (Gate 2) | PASS | agent2 | Agent 2 (Reviewer) | 2026-11-20T01:56:15.800+0100 | Gate 2 Independent Audit — PASS (Risk: LOW-MEDIUM) Independently audited feature/ATT-9160 @ a792caff (docs/engineering/test_specs/ATT-916... |
+| ATT-9160 | ATT-9218 | Gate 4 | Implementation (Gate 4) | PASS | agent2 | Agent 2 (Reviewer) | 2026-11-20T02:27:33.081+0100 | Gate 4 Independent Adversarial Audit — PASS (Risk: LOW-MEDIUM) Independently audited feature/ATT-9160 @ f6f7bb41 (git diff sprint/2026-11... |
+| ATT-9160 | ATT-9220 | Gate 5 | Test (Gate 5) | PASS | agent2 | Agent 2 (Reviewer) | 2026-11-20T02:32:00.187+0100 | Gate 5 Independent Doc-Only Verification Audit — PASS (Risk: LOW-MEDIUM) Independently audited feature/ATT-9160 @ b069c881 (doc-only Stag... |
+| ATT-9160 | - | Gate 6 | Final Review (Agent) (Gate 6) | PASS | agent2 | Agent 2 (Reviewer) | 2026-11-20T02:52:59.523+0100 | [FINAL REVIEW (AGENT) — PASS] Stage 6 Cold Final Review (1st pass, Neon, 592fe76a) on feature/ATT-9160 (b069c881) — atomically squashed o... |
+| ATT-9177 | ATT-9223 | Gate 1 | Analysis (Gate 1) | REVISION | agent2 | Agent 2 (Reviewer) | 2026-11-20T03:01:33.703+0100 | Gate 1 Independent Audit — REVISION (SUP.10 Header Compliance + Key Precision Fixes) Audited docs/engineering/analysis/ATT-9177_analysis.... |
+| ATT-9177 | ATT-9223 | Gate 1 | Analysis (Gate 1) | PASS | agent2 | Agent 2 (Reviewer) | 2026-11-20T03:03:50.091+0100 | Gate 1 Independent Re-Review — PASS (Risk: LOW-MEDIUM) Independently audited revised docs/engineering/analysis/ATT-9177_analysis.md (comm... |
+| ATT-9177 | ATT-9225 | Gate 2 | Req & Test Spec (Gate 2) | REVISION | agent2 | Agent 2 (Reviewer) | 2026-11-20T03:08:38.029+0100 | Gate 2 Independent Audit — REVISION (1-Line REQ-PRO-077 Verification Method Fix) Independently audited feature/ATT-9177 @ 8eb9746c (docs/... |
+| ATT-9177 | ATT-9225 | Gate 2 | Req & Test Spec (Gate 2) | PASS | agent2 | Agent 2 (Reviewer) | 2026-11-20T03:10:31.250+0100 | Gate 2 Independent Re-Review — PASS (Risk: LOW-MEDIUM) Independently audited revised feature/ATT-9177 @ 42abf4af (git diff 8eb9746c..42ab... |
+| ATT-9177 | ATT-9228 | Gate 4 | Implementation (Gate 4) | PASS | agent2 | Agent 2 (Reviewer) | 2026-11-20T04:02:06.898+0100 | Gate 4 Review PASS for ATT-9177 (feature/ATT-9177 @ 88c46b60). Verification Checklist: - [x] **Java Compatibility & Modality Provenance (... |
+| ATT-9177 | ATT-9229 | Gate 5 | Test (Gate 5) | PASS | agent2 | Agent 2 (Reviewer) | 2026-11-20T04:06:11.085+0100 | Doc-Only Gate 5 Review PASS for ATT-9177 (feature/ATT-9177 @ 738304d6, Rule 7.5). Verification Checklist: - [x] **Zero Code Drift Since G... |
+| ATT-9177 | ATT-9230 | Gate 4 | Implementation (Gate 4) | PASS | agent2 | Agent 2 (Reviewer) | 2026-11-20T04:34:02.910+0100 | Gate 4 Bounce 1 Review PASS for ATT-9177 (feature/ATT-9177 @ 0d5c89aa). Verification Checklist: - [x] **Fix 1 — Deterministic ECG Tie-Bre... |
+| ATT-9177 | ATT-9231 | Gate 5 | Test (Gate 5) | PASS | agent2 | Agent 2 (Reviewer) | 2026-11-20T04:36:27.896+0100 | Doc-Only Gate 5 Bounce 1 Review PASS for ATT-9177 (feature/ATT-9177 @ 91d547d3, Rule 7.5). Verification Checklist: - [x] **Zero Code Drif... |
+| ATT-9177 | - | Gate 6 | Final Review (Agent) (Gate 6) | BOUNCE | agent2 | Agent 2 (Reviewer) | 2026-11-20T04:25:11.229+0100 | [FINAL REVIEW (AGENT) — BOUNCE 1/3] Stage 6 Cold Final Review (Bounce 1, Neon, 316bafc7) on feature/ATT-9177 (738304d6). * *Pros (Was ist... |
+| ATT-9177 | - | Gate 6 | Final Review (Agent) (Gate 6) | PASS | agent2 | Agent 2 (Reviewer) | 2026-11-20T04:52:20.376+0100 | [FINAL REVIEW (AGENT) — PASS] Stage 6 Cold Final Review (Bounce 1, Neon, 28788c36 + prior 316bafc7) on feature/ATT-9177 (91d547d3) — atom... |
+| ATT-9171 | ATT-9182 | Gate 1 | Analysis (Gate 1) | PASS | agent2 | Agent 2 (Reviewer) | 2026-11-19T23:16:22.807+0100 | Gate 1 Independent Audit — PASS (Risk: LOW) Independently audited docs/engineering/analysis/ATT-9171_analysis.md (commit 5a01529f, 67 lin... |
+| ATT-9171 | ATT-9186 | Gate 2 | Req & Test Spec (Gate 2) | PASS | agent2 | Agent 2 (Reviewer) | 2026-11-19T23:21:01.927+0100 | Gate 2 Independent Audit — PASS (Risk: LOW) Independently audited docs/engineering/test_specs/ATT-9171_test_spec.md (51 lines) and git di... |
+| ATT-9171 | ATT-9194 | Gate 4 | Implementation (Gate 4) | PASS | agent2 | Agent 2 (Reviewer) | 2026-11-20T00:01:54.918+0100 | Gate 4 Independent Adversarial Audit — PASS (Risk: LOW) Independently audited feature/ATT-9171 @ c2979843 (git diff sprint/2026-11-19_03_... |
+| ATT-9171 | ATT-9197 | Gate 5 | Test (Gate 5) | PASS | agent2 | Agent 2 (Reviewer) | 2026-11-20T00:05:40.896+0100 | Gate 5 Independent Doc-Only Verification Audit — PASS (Risk: LOW) Independently audited feature/ATT-9171 @ 260fff32 (doc-only Stage 5 ato... |
+| ATT-9171 | ATT-9201 | Gate 4 | Implementation (Gate 4) | PASS | agent2 | Agent 2 (Reviewer) | 2026-11-20T01:08:24.433+0100 | Gate 4 Bounce 1 Independent Audit — PASS (Risk: LOW) Independently audited feature/ATT-9171 @ 13984550 (git diff 260fff32..13984550): Che... |
+| ATT-9171 | ATT-9203 | Gate 5 | Test (Gate 5) | PASS | agent2 | Agent 2 (Reviewer) | 2026-11-20T01:10:26.831+0100 | Gate 5 Bounce 1 Independent Doc-Only Audit — PASS (Risk: LOW) Independently audited feature/ATT-9171 @ 4dc6cd39 (doc-only Stage 5 Bounce ... |
+| ATT-9171 | - | Gate 6 | Final Review (Agent) (Gate 6) | BOUNCE | agent2 | Agent 2 (Reviewer) | 2026-11-20T00:36:13.796+0100 | [FINAL REVIEW (AGENT) — BOUNCE 1/3] Stage 6 Cold Final Review (Bounce 1, Neon, c05840b9) on feature/ATT-9171 (260fff32). * *Pros (Was ist... |
+| ATT-9171 | - | Gate 6 | Final Review (Agent) (Gate 6) | PASS | agent2 | Agent 2 (Reviewer) | 2026-11-20T01:42:21.660+0100 | [FINAL REVIEW (AGENT) — PASS] Stage 6 Cold Final Review (Bounce 1, Neon, 9ca873b3) on feature/ATT-9171 (4dc6cd39) — atomically squashed o... |

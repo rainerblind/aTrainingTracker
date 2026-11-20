@@ -80,4 +80,38 @@ class WorkoutRrRepositoryTest {
         repository.deleteWorkout(workoutId)
         assertFalse(repository.hasIntervalsForWorkout(workoutId))
     }
+
+    @Test
+    fun repository_updateBeatQualityFlags_persistsAndClearsFlags_TST_HRV_048() = runBlocking {
+        // REQ-HRV-048 (REQ-HRV-048.2) / TST-HRV-048 (TST-HRV-048.2)
+        val workoutId = 77L
+        repository.insertIntervals(
+            listOf(
+                WorkoutRrInterval(workoutId = workoutId, beatIndex = 0, beatTimestampMs = 1000L, rrMs = 385f),
+                WorkoutRrInterval(workoutId = workoutId, beatIndex = 1, beatTimestampMs = 1779L, rrMs = 779.3f)
+            )
+        )
+
+        val modified = repository.updateBeatQualityFlags(
+            workoutId,
+            listOf(BeatQualityFlagUpdate(beatIndex = 1, artifactFlag = 4, gapBeats = 1))
+        )
+        assertEquals(1, modified)
+
+        val persisted = repository.getIntervalsForWorkout(workoutId)
+        assertEquals(4, persisted[1].artifactFlag)
+        assertEquals(1, persisted[1].gapBeats)
+
+        // Reset flag back to clean (0, 0)
+        assertEquals(
+            1,
+            repository.updateBeatQualityFlags(
+                workoutId,
+                listOf(BeatQualityFlagUpdate(beatIndex = 1, artifactFlag = 0, gapBeats = 0))
+            )
+        )
+        val cleared = repository.getIntervalsForWorkout(workoutId)
+        assertEquals(0, cleared[1].artifactFlag)
+        assertEquals(0, cleared[1].gapBeats)
+    }
 }

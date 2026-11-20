@@ -321,4 +321,12 @@
     <string name="tuning_cat_morning_check">朝のチェックとウェルネス</string>
     <string name="tuning_morning_check_start_short">スタート画面 (%02d:00まで)</string>
     <string name="tuning_morning_check_none_enabled">無効</string>
+
+    <!-- Polar Verity Sense Optical PPI Morning HRV & Baseline Isolation (ATT-9177 / REQ-HRV-049) -->
+    <string name="morning_hrv_optical_guidance_title">光学PPI (Verity Sense)</string>
+    <string name="morning_hrv_optical_guidance_desc">アームバンドを肌に密着させ、完全に静止してください。心電図チェストストラップの基準線を乱さないよう独立した光学ベースラインに保存されます。</string>
+    <string name="morning_hrv_optical_artifact_warning_desc">光学センサーの接触不良または体動によるアーティファクト率が5%%を超えています (%1$.1f%%)。腕を動かさずアームバンドの密着を確認してください。</string>
+    <string name="hrv_modality_ecg_short">ECG</string>
+    <string name="hrv_modality_optical_ppi_short">光学 (PPI)</string>
+    <string name="hrv_modality_optical_ppi_badge">光学PPI</string>
 </resources>

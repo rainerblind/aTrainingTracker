@@ -668,8 +668,9 @@ class WorkoutClustersViewModelTest {
     }
 
     /**
-     * TST-PERF-002 (REQ-PER-001): Selecting a cluster with >30 workouts transitions isLoading
-     * true -> false, populates tracks/heatmapPaths/memberMarkers, and cancels superseded selections.
+     * TST-PERF-002 / TST-BUG-001 (REQ-PER-001, REQ-PER-002): Selecting a cluster with >30 workouts
+     * transitions isLoading true -> false, populates tracks/heatmapPaths/memberMarkers, and
+     * cancels superseded selections (Cluster A -> Cluster B race condition).
      */
     @Test
     fun selectCluster_withOver30Workouts_loadsDetailMapAndCancelsSupersededSelection_TST_PERF_002() = runTest(testDispatcher) {

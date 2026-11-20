@@ -229,7 +229,7 @@ class TestCloseEpicGuardrails(unittest.TestCase):
 
 
 class TestTransitionIssueEpicProtection(unittest.TestCase):
-    """TST-PRO-040.3: Preservation of Human Gate on parent tickets in transition_issue."""
+    """TST-PRO-040.3 & TST-PRO-009: Preservation of Human Gate on parent tickets in transition_issue."""
 
     @patch("jira_util.jira_request")
     def test_transition_issue_blocks_standard_ticket_to_erledigt(self, mock_request):

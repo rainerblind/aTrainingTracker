@@ -1,14 +1,14 @@
 # Living Requirements: Tracking & Live Sensor Cockpit (Part 2 of 2)
 
 **Document ID**: `DOC-REQ-TRK-P2`  
-**Version**: 1.0.57  
+**Version**: 1.0.66  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit_part2`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Requirements**: 75
+**Total Requirements**: 78
 
 ---
 
@@ -3480,6 +3480,109 @@
 
 **Invariants**: Raw device columns immutable (`REQ-FIL-017.3`); live `UnicycleOdometryEkf` untouched (`isStationary = false`, `MIN_DOPPLER_SPEED_MPS = 3.0`, `ZUPT_SPEED_VARIANCE = 2.0`); `> 5 s` wall/total pauses & `6 s` batch-flush stall preserved (`TST-FIL-027.1`); `0` DB schema bumps; `0` monolith LoC edits; `0` new `src/main` reads (`REQ-PRO-049.1`); `Localization Parity: N/A - no UI strings`.
 
+### REQ-FIL-033: Post-Workout ERTS Altitude/Slope DEM Grid-Step Decoupling, Contractive OU Standstill Decay, Barometer-Free Fallback & Speed-Coupled Slew Limit [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-FIL-033`
+- **System Requirement(s)**: `SYSREQ-TRK-003`, `SYSREQ-TRK-004`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `app/src/main/java/com/atrainingtracker/banalservice/odometry/ExtendedRtsAltitudeSlopeSmoother.kt`, `app/src/main/java/com/atrainingtracker/banalservice/devices/BarometricAltitudeFilter.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/database/ErtsPostWorkoutRecomputer.kt`
+- **Rationale**: Field ride `Zum Bäcker #58` (`workoutID = 2411`, `584 s`) showed post-workout `ExtendedRtsAltitudeSlopeSmoother` producing a `+20.5 m` initial altitude overshoot (`458.48 m` vs. `DEM = 438.00 m`, `BARO = 437.19 m`), `-91%` slope at `t = 4..31 s`, and `21.97 m` of phantom initial descent after an integer DEM grid step (`438 -> 435 m`) during slow startup (`~5 m`), `20 s` frozen-slope standstill, and backward RTS amplification; additionally, fixed `BIKE_FRONT_POCKET` `0.7 m/s` barometric slew clips genuine `-1.8..-2.0 m/s` fast alpine descents (`17–20 m/s` at `-10%`) (`ATT-9063`, refining `REQ-FIL-017.2`/`.3`, `REQ-FIL-023.2`/`.3`, `REQ-FIL-027.5`, `REQ-FIL-028.4`, `REQ-TRK-057.1`).
+- **Description**:
+  1. *DEM Grid-Step Slope Decoupling, Physical Bounds, Low-Speed Damping & Contractive OU Standstill Decay (`REQ-FIL-033.1`)*:
+     - `ExtendedRtsAltitudeSlopeSmoother.smooth()` SHALL clamp slope `x[1]` and backward-smoothed `smoothedStates[k][1]` to `[-MAX_PHYSICAL_SLOPE, +MAX_PHYSICAL_SLOPE]` (`±0.35`, `±35%`), initialize flat-start slope variance `p[1][1] = 0.0025` (`5%` SD), cap moving `p[1][1]` at `MAX_SLOPE_VARIANCE = 0.015` (computing `p00New`/`p01New` from pre-update `p[1][1]` before capping `p11New`), and damp moving slope process noise (`qgVal`) and barometer slope gain (`k1`) via `lowSpeedSlopeGainFactor(speed)` (`0.0` below `0.3 m/s`, quadratic ramp to `1.0` at `1.2 m/s`).
+     - During sustained standstill (`standstillDurationSec >= 2.0 s`), it SHALL apply exact continuous linear Ornstein-Uhlenbeck decay (`alpha = exp(-dtSec / 2.5)`, `x[1] *= alpha`, `fMat[1][1] = alpha`, `p[0][1] *= alpha`, `p[1][2] *= alpha`, `p[1][1] = alpha^2 * p[1][1] + (1 - alpha^2) * max(0.0025, p[1][1])`) with no hard zero-snap discontinuity so `priors[k]` matches `jacobians[k]` identically and backward RTS gain stays strictly contractive ($0 < C_k[1][1] \le \alpha < 1$).
+     - When `hasBaroData` (`samples.any { it.rawAltitudeM.isFinite() }`), Step 3 reference updates MUST set `k1 = 0.0` (decoupling DEM grid steps from slope); all Step 2 (moving and standstill $H=[0,0,1]$) and Step 3 covariance updates MUST use exact 3×3 Joseph form $P^+ = (I - K H) P^- (I - K H)^T + K R K^T$.
+  2. *Speed-Coupled Barometric Slew Limiting (`REQ-FIL-033.2`)*:
+     - `BarometricAltitudeFilter.computeSpeedCoupledSlewRateMps(baseMaxSlewRateMps, speedMps)` SHALL return `max(safeBase, 0.25 * clampedSpeed)`, explicitly returning `safeBase` when `!speedMps.isFinite() || speedMps <= 0.0` (preventing Kotlin `Double.NaN.coerceIn` propagation), sanitizing non-finite/`<= 0` base rates to `DEFAULT_MAX_SLEW_RATE_MPS (1.2)`, and capping finite positive speed at `35.0 m/s`.
+     - `@JvmOverloads BarometricAltitudeFilter.filterSlewOnly(rawAltitude, timestampMs, speedMps = 0.0)` SHALL use the speed-coupled slew limit without mutating `maxSlewRateMps`, and `ErtsPostWorkoutRecomputer.resolveCarriageModesAndFilterBaro()` SHALL pass finite non-negative `epochSpeedMps` (`wheelSpeedMps` else `speedMps` else `0.0`, sanitized with `.takeIf { it.isFinite() && it >= 0.0 }`).
+  3. *Barometer-Free Fallback & NaN/Leading-Null Immunity (`REQ-FIL-033.3`)*:
+     - When `!hasBaroData` (barometer-free DEM/GPS-only stream), Step 3 SHALL allow damped, `±0.35`-clamped slope learning (`k1 = if (isStandstill) 0.0 else (p[1][0] / sRef) * gainScale`) via Joseph covariance update.
+     - `ExtendedRtsAltitudeSlopeSmoother.smooth()` SHALL initialize `initialAlt` by sequentially scanning `for (s in samples)` taking `s.referenceAltitudeM?.takeIf { it.isFinite() } ?: s.rawAltitudeM.takeIf { it.isFinite() }` (fallback `0.0`), set `hasInitialRef = (samples[0].referenceAltitudeM?.isFinite() == true)` strictly at `k = 0`, and apply the same finite guard for `n == 1`.
+     - `ErtsPostWorkoutRecomputer` SHALL pass `rawAltitudeM = row.rawAltitude ?: Double.NaN` in `runAltitudeSmoothing()` and gate altitude smoothing on `rawRows.any { it.rawAltitude != null || it.referenceAltitude != null }`.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new `REQ-FIL-033` refining `REQ-FIL-017.2`/`.3`, `REQ-FIL-023.2`/`.3`, `REQ-FIL-027.5`, `REQ-FIL-028.4`, and `REQ-TRK-057.1` across `ExtendedRtsAltitudeSlopeSmoother.kt`, `BarometricAltitudeFilter.kt`, and `ErtsPostWorkoutRecomputer.kt`.
+2. *Historical Origin & Commit Trace*: `e079f7a9` (`ATT-6265`), `75c1497e` (`ATT-6279`), `ed6acfee` (`ATT-7750`), `14935efb` (`ATT-8880`), `fee3e805` (`ATT-8890`).
+3. *Root Reason for Existing Formulation*: `ATT-7750` predated `ATT-8576` live slope hardening (`REQ-FIL-023.2`/`.3`), and `ATT-8890` set fixed `0.7 m/s` `BIKE_FRONT_POCKET` slew without horizontal speed coupling.
+4. *Preservation of Core Invariants*: Raw device columns immutable (`REQ-FIL-017.3`), `ASCENT_DESCENT_HYSTERESIS_METERS = 2.0`, `VERTICAL_SPEED` `[-3000, 3000] m/h`, `BarometricAltitudeFilter.maxSlewRateMps` & 2-arg `filterSlewOnly` unchanged, live `AltitudeAndSlopeDevice_ATTFused`/`KinematicAltitudeSlopeEkf` untouched, `0` DB schema bumps, `0` monolith LoC edits (`< 1,500` LoC), `0` new `src/main` test reads (`REQ-PRO-049.1`), and `Localization Parity: N/A - no UI strings`.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a closed-loop workout starting at `438 m` (`BARO ~ 437.5 m`, `DEM = 438 m`) with a `-3 m` or `-10 m` DEM step at `t = 4 s` during slow startup (`~5 m`), followed by `20 s` standstill and flat/hilly return, *When* `ExtendedRtsAltitudeSlopeSmoother.smooth()` runs, *Then* `smoothed[0].altitudeM` stays within `±2.0 m` of `438.0 m`, `|slopePercent| <= 35%` (`< 10%` on flat start), and `|ascentM - descentM| <= 3.0 m`.
+• *Given* an `8–15%` climb and an `18 m/s` `-10%` (`-1.8 m/s`) alpine descent in `BIKE_FRONT_POCKET`, plus slow pocket spikes and non-finite speeds, *When* `BarometricAltitudeFilter.filterSlewOnly(..., speedMps)` and `ErtsPostWorkoutRecomputer` + `ExtendedRtsAltitudeSlopeSmoother.smooth()` run, *Then* `-1.8 m/s` passes unclipped while slow spikes stay clamped, `maxSlewRateMps == 0.7`, and non-finite speeds safely return `safeBase`.
+• *Given* a barometer-free DEM/GPS-only workout (including leading-null rows and `n == 1` non-finite sample), *When* `ErtsPostWorkoutRecomputer` and `ExtendedRtsAltitudeSlopeSmoother.smooth()` run, *Then* elevation, slope (`±35%`), and ascent/descent remain finite and smooth without NaN/overshoot.
+
+**Invariants**: Raw device columns immutable (`REQ-FIL-017.3`); `ASCENT_DESCENT_HYSTERESIS_METERS = 2.0`; `BarometricAltitudeFilter.maxSlewRateMps` & 2-arg `filterSlewOnly` unchanged; live `AltitudeAndSlopeDevice_ATTFused` / `KinematicAltitudeSlopeEkf` untouched; `0` DB schema bumps; `0` monolith LoC edits; `0` new `src/main` reads (`REQ-PRO-049.1`); `Localization Parity: N/A - no UI strings`.
+
+### REQ-FIL-034: PhoneCarriageClassifier Indoor GNSS-Outage Stationary Transition, Cyclic-Immune Glance Gating, Multipath Speed Gating & Cross-Device Portability [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-FIL-034`
+- **System Requirement(s)**: `SYSREQ-TRK-003`, `SYSREQ-TRK-004`, `SYSREQ-TRK-010`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `app/src/main/java/com/atrainingtracker/banalservice/odometry/PhoneCarriageClassifier.kt`, `app/src/main/java/com/atrainingtracker/banalservice/devices/SpeedAndLocationDevice_ATTFused.kt`
+- **Rationale**: Field ride `Zum Bäcker #58` (`workoutID = 2411`, `584 s`) exposed three live carriage classification defects: (1) during a `118 s` indoor bakery stop (`v = 0.00 m/s`), GNSS staleness (`> 6 s`) caused `evaluateRawCandidate()` to return `UNKNOWN` and freeze `committedMode = RUN_WAIST_HIP (5)` while `SpeedAndLocationDevice` zero-decay never reached `carriageClassifier`; (2) `SpeedAndLocationDevice_ATTFused.onLocationChanged()` fed raw multipath `location.speed` (`2.89 m/s @ acc = 43.9 m`) directly to `carriageClassifier` and `isMovingByGnss`; and (3) cyclic `0.8–1.8 Hz ±25°` jeans-pocket thigh flexion falsely triggered `detectGlanceShift()` (`+2.2`) alongside speed-only `runningPrior`, misclassifying front-pocket cycling acceleration (`2.5–5.4 m/s`) as `RUN_HANDHELD (7)` (`ATT-9062`, refining `REQ-FIL-028.1`/`.3`, `REQ-FIL-029`, `REQ-FIL-030`).
+- **Description**:
+  1. *Indoor GNSS-Outage, Stagnant-Fix & Low-Speed Quiet-IMU `STATIONARY` Transition (`REQ-FIL-034.1`)*:
+     - `PhoneCarriageClassifier.evaluateRawCandidate()` SHALL classify `PhoneCarriageMode.STATIONARY (0)` (subject to dwell hysteresis) when `(hasOrientation || hasGyro)`, `quietImu` holds (`swingSdDeg < 2.5`, `rawGyroRms < 0.14`, `stepFreqHz == null`, no active accelerometer footstrikes), and `!wheelActiveMoving`, under: (a) stale GNSS (`effectiveSpeed == null`) after prior speed ingestion or non-`UNKNOWN` committed mode (preserving initial `UNKNOWN` for pure IMU-only checks with zero prior speed); (b) `effectiveSpeed <= 1.8 m/s`; or (c) stagnant cached GNSS positions (`>= 4.0 s` span, `>= 3` fixes, `< 2.0 m` spread).
+     - `SpeedAndLocationDevice_ATTFused` SHALL override `triggerDecayTick()` to propagate `0.0 m/s` to `carriageClassifier.ingestGnssSpeed(0.0, null, null, nowMs)` and invoke `updateCarriageClassification(nowMs, forceClassify = true)` using injectable `currentTimeMillis()` when `mSpeed <= SPEED_ZERO_THRESHOLD`.
+  2. *Cyclic-Immune `detectGlanceShift()` & Front-Pocket Cycling (`REQ-FIL-034.2`)*:
+     - `PhoneCarriageClassifier.detectGlanceShift()` SHALL require `prevSpanMs >= 1_200L` (`prevN >= 4`) and MUST reject periodic thigh oscillation whenever `(recSdDeg > 8.0 && deltaDeg < 2.6 * recSdDeg)` OR `(prevSdDeg >= 7.0 && deltaDeg <= 1.25 * prevPeakDeg)`, preventing false glance bonuses during `0.8–1.8 Hz ±25°` front-pocket pedaling while preserving genuine sustained wrist-glance holds (`70° -> 18–20°` and `70° -> 35°`).
+  3. *Degraded Multipath GNSS Speed & `isMovingByGnss` Gating (`REQ-FIL-034.3`)*:
+     - `SpeedAndLocationDevice_ATTFused.onLocationChanged()` SHALL define `hasTrustedGpsSpeed = hasGpsSpeed && acc > 0.0 && acc <= UnicycleOdometryEkf.MAX_GNSS_ACCURACY_METERS` and gate BOTH `speedForClassifier` and `isMovingByGnss` on `hasTrustedGpsSpeed` (passing `lat`/`lon` for stagnation tracking strictly when `acc > 0.0 && acc <= MAX_GNSS_ACCURACY_METERS`), preventing degraded multipath fixes (`acc = 43.9 m`, `2.89 m/s`) from triggering `RUN_*` or defeating `forceStationaryPinning`.
+  4. *Cross-Device & Cross-Athlete Portability (`REQ-FIL-034.4`)*:
+     - `PhoneCarriageClassifier` SHALL distinguish `stepDetectorUnavailable` from `stepDetectorActiveAndZero` via `setStepDetectorRegistered(Boolean)` (default `false`) and reuse `ImuCadenceDsp` (`50 Hz` time-based `UniformGridResampler`, `BiquadBandPass(50.0, 2.1, 4.2)`, `DoubleRingBuffer(250)`, `findFundamentalLagResult`) via `ingestAccelerometer(ax, ay, az, timestampMs)`, requiring BOTH `2.1–4.2 Hz` bandpass RMS `>= 1.2 m/s²` AND normalized ACF `peakCorrelation >= 0.42` over `2.3..3.8 Hz` (lags `13..22`), plus `>= 2.0 s` active accel span before `hasConfirmedNoFootstrikes = true`.
+     - `effectiveRunStepFreqHz = stepFreqHz ?: accelFootstrikeFreqHz` SHALL award `runningPrior += 5.0` ahead of speed cutoffs (`>= 5.5 m/s`) so `5.6 m/s` interval runners and permission-denied/barometer-free runners classify as `RUN_*`; `confirmedNoFootstrikes = stepDetectorActiveAndZero || hasConfirmedNoFootstrikes` SHALL gate the `WALKING_TRANSITION` short-circuit with `!(confirmedNoFootstrikes && effectiveSpeed >= 1.6)` and award `cyclingPrior` (not `runningPrior += 0.6`) when `confirmedNoFootstrikes && effectiveSpeed >= 1.8` so `2.0 m/s` `60 RPM` uphill MTB climbers classify as `BIKE_*` while step-detector-less walking (`PhoneCarriageClassifierTest:295`) stays `WALKING_TRANSITION`.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new `REQ-FIL-034` refining `REQ-FIL-028.1`/`.3`, `REQ-FIL-029`, and `REQ-FIL-030` across `PhoneCarriageClassifier.kt` and `SpeedAndLocationDevice_ATTFused.kt`.
+2. *Historical Origin & Commit Trace*: `fee3e805` (`ATT-8890`), `a3a5942a` (`ATT-8895`), `410240a8` (`ATT-8891`), `a93f3230` (`ATT-8917`).
+3. *Root Reason for Existing Formulation*: `ATT-8890` returned `UNKNOWN` on stale speed to keep IMU-only unit checks neutral and predated `ATT-8895`'s `ImuCadenceDsp` bandpass/ACF primitives and step-detector registration awareness.
+4. *Preservation of Core Invariants*: `PhoneCarriageMode` codes (`-1..7`) & `CarriageFilterProfile` untouched; `UnicycleOdometryEkf.MIN_DOPPLER_SPEED_MPS = 3.0` untouched; IMU-only initial `UNKNOWN` state preserved; `SpeedAndLocationDevice_ATTFused.kt <= 1,500` LoC (`0` protected monolith edits); time-based windows only; `0` DB schema bumps; `0` new `src/main` test reads (`REQ-PRO-049.1`); `Localization Parity: N/A - no UI strings`.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an active workout entering a bakery (`1.44 m/s`, `acc = 48.5 m`) followed by `120 s` indoor standstill (GNSS outage or stagnant cached fixes) with quiet IMU and zero steps, *When* `PhoneCarriageClassifier.classify()` or `triggerDecayTick()` runs, *Then* mode transitions to and stays in `STATIONARY (0)` instead of freezing on `RUN_WAIST_HIP (5)`.
+• *Given* front-pocket cycling acceleration `2.5 -> 5.4 m/s` (`sportHint == UNKNOWN`, `wheelSpeed == null`, `stepDetectorActiveAndZero`, cyclic `0.8–1.8 Hz ±25°` thigh flexion), *When* `PhoneCarriageClassifier.classify()` evaluates, *Then* `detectGlanceShift()` fires `0` false glances and output is `BIKE_FRONT_POCKET (4)` (while genuine wrist glances still trigger `isGlanceActive == true`).
+• *Given* walking (`ekf.speedMps ~ 1.0 m/s`) encountering an indoor multipath fix (`acc = 43.9 m`, `speed = 2.89 m/s`), *When* `SpeedAndLocationDevice_ATTFused.onLocationChanged()` runs, *Then* `2.89 m/s` is rejected from `speedForClassifier` and `isMovingByGnss` and mode stays `WALKING_TRANSITION (1)` / `STATIONARY (0)`.
+• *Given* (a) a barometer-free `ACTIVITY_RECOGNITION`-denied runner, (b) a `5.6 m/s` interval runner (`3.0 Hz` footstrikes), and (c) a `2.0 m/s` `60 RPM` uphill MTB climber (no footstrikes), *When* `PhoneCarriageClassifier` evaluates each stream, *Then* (a) and (b) classify as `RUN_*` and (c) classifies as `BIKE_*` (never `RUN_*`).
+
+**Invariants**: `PhoneCarriageMode` codes (`-1..7`) & `CarriageFilterProfile` untouched; `MIN_DOPPLER_SPEED_MPS = 3.0` untouched; `SpeedAndLocationDevice_ATTFused.kt <= 1,500` LoC (`0` protected monolith edits); time-based windows only; `0` DB schema bumps; `0` new `src/main` reads (`REQ-PRO-049.1`); `Localization Parity: N/A - no UI strings`.
+
+### REQ-FIL-035: PhoneCarriageClassifier Front-Hip Running Belt, Easy-Pace Running & Sport-Context Guardrail Calibration [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-FIL-035`
+- **System Requirement(s)**: `SYSREQ-TRK-003`, `SYSREQ-TRK-004`, `SYSREQ-TRK-010`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `app/src/main/java/com/atrainingtracker/banalservice/odometry/PhoneCarriageClassifier.kt`
+- **Rationale**: A 44-minute Pixel 10 field run (`2026-11-19_184953`, `Sport = RUN`, phone carried continuously in an elastic front-hip Salomon running belt with one slow obstacle climb at `19:12:54–19:18:04`) logged `RUN_WAIST_HIP (5)` only `0.3%` (`8 s`), `WALKING_TRANSITION (1)` `52.2%` (`1,386 s`), `RUN_HANDHELD (7)` `34.3%` (`911 s`), cycling modes `13.0%` (`BIKE_FRONT_POCKET 343 s`, `BIKE_JERSEY_BACK 3 s`), and `389` mode switches (`6.8 s` mean segment duration) due to (1) soft `runningPrior` allowing `BIKE_*` bleed without wheel/`>= 5.5 m/s` cycling evidence, (2) easy-pace runs (`1.65–2.5 m/s`) getting trapped in `walkingStepBand`/`walkingSpeedBand`, (3) rigid rear-clip penalty cliffs in `scoreRunWaistHip()`, and (4) `SCORE_MARGIN = 0.25` + `2.0 s` `RUN -> WALK` dwell (`ATT-9157`, refining `REQ-FIL-028.1`, `REQ-FIL-029`, `REQ-FIL-030`, `REQ-FIL-031`, `REQ-FIL-034`).
+- **Description**:
+  1. *Sport-Context Cycling Guardrail with Brick Override & Non-Sticky Eviction (`REQ-FIL-035.1`)*:
+     - When `suppressCyclingForRun` holds (`sportHint == SportContextHint.RUNNING && !wheelActiveMoving && (wheelSpeed == null || wheelSpeed <= 0.5) && (effectiveSpeed == null || effectiveSpeed < 5.5)`), `PhoneCarriageClassifier.evaluateRawCandidate()` SHALL exclude `BIKE_HANDLEBAR`, `BIKE_JERSEY_BACK`, and `BIKE_FRONT_POCKET` from candidate scoring and zero-IMU fallback, and map any stale `BIKE_*` `committedMode` to `committedScore = Double.NEGATIVE_INFINITY` so `SCORE_MARGIN` never retains a masked cycling mode.
+     - Once moving wheel speed (`wheelActiveMoving || wheelSpeed > 0.5`) or cycling velocity (`effectiveSpeed >= 5.5 m/s`) occurs, `suppressCyclingForRun` SHALL lift automatically to preserve triathlon/brick transition detection (`REQ-FIL-031`).
+  2. *Easy-Pace Running Walking-Gate Calibration & Front-Hip Running Belt Scoring (`REQ-FIL-035.2`)*:
+     - `AccelFootstrikeEval` SHALL expose `impactRmsMps2: Double?` (`2.1–4.2 Hz` bandpass RMS). Scoped strictly to `sportHint == SportContextHint.RUNNING && effectiveSpeed != null && effectiveSpeed >= 1.65`, `easyRunSuppressWalk` SHALL hold when `impactRmsMps2 >= 1.8`, OR step cadence `>= 2.15 Hz`, OR (`effectiveSpeed >= 1.75` and `impactRmsMps2 == null || impactRmsMps2 >= 1.2`), bypassing BOTH `walkingStepBand` and `walkingSpeedBand` while preserving `< 1.65 m/s` / low-impact obstacle climbs and all non-running dismount flows.
+     - `scoreRunWaistHip` (`swingSd < 10.0 -> +2.6`, `< 15.5 -> +1.8`, `< 22.0 -> -0.5`, else `-2.0`; `yaw <= 0.48 -> +2.2`, `<= 0.68 -> +1.4`, `<= 0.95 -> -0.4`, else `-1.5`; `baro < 0.45 -> +1.2`; `step >= 2.15 -> +0.8`; `glance == 0 -> +1.2`, `>= 1 -> -1.5`), `scoreRunBicepArm` (`swingSd >= 15.5 -> +2.6`, `>= 11.5 -> +0.8`, else `-0.8`), and `scoreRunHandheld` (`swingSd >= 15.0 -> +1.8`, `>= 11.0 -> +0.4`; `yaw >= 0.55 -> +2.6`, `>= 0.42 -> +0.8`; `baro >= 0.45 -> +1.8`; `glance >= 1 -> +2.8`, `== 0 -> -1.4`) SHALL smoothly classify front-hip running belts as `RUN_WAIST_HIP` while preserving rear-clip, bicep armband (`17°`), and handheld/wrist-glance separation.
+  3. *Chatter-Resistant Margin & Asymmetric Running Dwell Hysteresis (`REQ-FIL-035.3`)*:
+     - `PhoneCarriageClassifier.SCORE_MARGIN` SHALL be `0.85`.
+     - Dwell hysteresis SHALL be `0 ms` for verified wrist-glance `RUN_* -> RUN_HANDHELD`, `mountHysteresisMs (4_000L)` for `RUN_* -> WALKING_TRANSITION`, `maxOf(mountHysteresisMs, 6_000L)` for non-glance intra-run `RUN_* -> RUN_*`, and fast `dismountHysteresisMs (2_000L)` for `WALKING_TRANSITION -> RUN_*`, `RUN_* -> STATIONARY`, `STATIONARY <-> *`, and `BIKE_* <-> WALKING_TRANSITION`.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new `REQ-FIL-035` refining `REQ-FIL-028.1`, `REQ-FIL-029`, `REQ-FIL-030`, `REQ-FIL-031`, and `REQ-FIL-034` strictly inside `PhoneCarriageClassifier.kt`.
+2. *Historical Origin & Commit Trace*: `fee3e805` (`ATT-8890`), `a3a5942a` (`ATT-8895`), `410240a8` (`ATT-8891`), `a93f3230` (`ATT-8917`), `0210b827` (`ATT-9062`).
+3. *Root Reason for Existing Formulation*: `ATT-8890` calibrated rigid rear-clip thresholds and a soft `+2.5` running prior before elastic front-hip belt field validation and `ATT-8917` brick override triggers.
+4. *Preservation of Core Invariants*: `PhoneCarriageMode` codes (`-1..7`) & `CarriageFilterProfile` untouched; `SpeedAndLocationDevice_ATTFused.kt = 1,459 / 1,500` LoC (`0` edits); `PhoneCarriageClassifier.kt <= 1,500` LoC (`0` protected monolith edits); all `ATT-9062` (`REQ-FIL-034`) & `ATT-8890` (`REQ-FIL-028`) tests preserved; time-based windows only; `0` DB schema bumps; `0` new `src/main` test reads (`REQ-PRO-049.1`); `Localization Parity: N/A - no UI strings`.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `sportHint == RUNNING` with `wheelSpeed <= 0.5` (or `null`) and `effectiveSpeed < 5.5 m/s`, *When* `PhoneCarriageClassifier.classify()` evaluates (including from a stale `BIKE_*` committed mode), *Then* `BIKE_*` modes are masked (`0%` output, `committedScore = -Inf`), whereas wheel speed `> 0.5 m/s` or `effectiveSpeed >= 5.5 m/s` lifts the mask for brick transitions.
+• *Given* an easy-pace front-hip running belt workout (`1.8–2.5 m/s`, `2.15–2.30 Hz` or dropped steps, `impactRms >= 1.8 m/s²`, `swingSd 10–15°`, `yaw 0.38–0.65`, `baro < 0.45`, `glance == 0`), *When* `classify()` runs, *Then* `easyRunSuppressWalk` bypasses both `walkingStepBand` and `walkingSpeedBand` and output is `RUN_WAIST_HIP (5)`, while `< 1.55 m/s` / low-impact obstacle stretches still enter `WALKING_TRANSITION (1)` and rear-clip, bicep armband (`17°`), and handheld/wrist-glance profiles retain positive winning margins.
+• *Given* transient 2–3 s canopy speed dips or 4–5 s non-glance IMU bursts during steady running, *When* `classify()` runs, *Then* `SCORE_MARGIN = 0.85` and asymmetric `4 s`/`6 s` dwell hold `RUN_WAIST_HIP (5)` with zero spurious flips, while wrist glance switches in `0 ms` and `WALK -> RUN` / `RUN -> STATIONARY` switch in `2 s`.
+
+**Invariants**: `PhoneCarriageMode` codes (`-1..7`) & `CarriageFilterProfile` untouched; `SpeedAndLocationDevice_ATTFused.kt` `0` edits (`1,459 / 1,500` LoC); `PhoneCarriageClassifier.kt <= 1,500` LoC (`0` protected monolith edits); time-based windows only; `0` DB schema bumps; `0` new `src/main` reads (`REQ-PRO-049.1`); `Localization Parity: N/A - no UI strings`.
+
 ---
 
 ## Change History
@@ -3542,3 +3645,12 @@
 | `1.0.55` | 2026-11-19 | AI Agent (`ATT-9064`, `--as agent1`) | `ATT-9064` | Added `REQ-FIL-032` `[Planned]` (`REQ-FIL-032.1`–`.3`, linked to `SYSREQ-TRK-003`/`004`) for beat-immune 1-Hz ERTS timestamping, authoritative `speedAverage_mps` / `ExtremaType.AVG(SPEED_mps)` parity with matched `activeDist / activeDt` fallback, and stationary `[E, N]` covariance freeze & backward RTS pinning (`N/A - no UI strings`). |
 | `1.0.56` | 2026-11-19 | AI Agent (`ATT-9064`, `--as agent1`) | `ATT-9064` | Promoted `REQ-FIL-032` to `[Implemented]` following Stage 4 construction (`ErtsPostWorkoutRecomputer.kt` `1,051` LoC, `ExtendedRtsOdometrySmoother.kt` `742` LoC, `UnicycleOdometryEkf.kt` `810` LoC; `0` monolith edits; `84/84` PASS across 9 targeted/contract suites, `0` warnings, 4 safety linters PASS). |
 | `1.0.57` | 2026-11-19 | AI Agent (`ATT-9064`, `--as agent1`) | `ATT-9064` | Promoted `REQ-FIL-032` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9167`) `84/84` PASS evidence (`Rule 7.5`, zero `app/` diff since `75f3bff9`), 4 safety linters PASS, `verify_requirement_governance.py` `exit 0`, and `docs/engineering/walkthroughs/ATT-9064_walkthrough.md`. |
+| `1.0.58` | 2026-11-19 | AI Agent (`ATT-9063`, `--as agent1`) | `ATT-9063` | Added `REQ-FIL-033` `[Planned]` (`REQ-FIL-033.1`–`.3`, linked to `SYSREQ-TRK-003`/`004`) for DEM grid-step slope decoupling, `±35%` forward+backward clamping, low-speed slope damping, contractive OU standstill decay, 3×3 Joseph SPD updates, speed-coupled NaN-safe barometer slew, and barometer-free/leading-null fallback (`N/A - no UI strings`). |
+| `1.0.59` | 2026-11-19 | AI Agent (`ATT-9063`, `--as agent1`) | `ATT-9063` | Promoted `REQ-FIL-033` to `[Implemented]` following Stage 4 construction (`ExtendedRtsAltitudeSlopeSmoother.kt` `547` LoC, `BarometricAltitudeFilter.kt` `234` LoC, `ErtsPostWorkoutRecomputer.kt` `1,054` LoC; `0` monolith edits; `109/109` PASS across 11 targeted/contract suites, `0` warnings). |
+| `1.0.60` | 2026-11-19 | AI Agent (`ATT-9063`, `--as agent1`) | `ATT-9063` | Promoted `REQ-FIL-033` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9196`) `109/109` PASS evidence (`Rule 7.5`, zero `app/` diff since `0f4dd34b`), `verify_requirement_governance.py --check-verified-evidence` `exit 0`, and `docs/engineering/walkthroughs/ATT-9063_walkthrough.md`. |
+| `1.0.61` | 2026-11-20 | AI Agent (`ATT-9062`, `--as agent1`) | `ATT-9062` | Added `REQ-FIL-034` `[Planned]` (`REQ-FIL-034.1`–`.4`, linked to `SYSREQ-TRK-003`/`004`/`010`) for indoor GNSS-outage/stagnant-fix/decay-to-zero `STATIONARY` transition, cyclic-immune `detectGlanceShift()`, accuracy-gated multipath speed & `isMovingByGnss`, and cross-device/athlete `ImuCadenceDsp` footstrike portability (`N/A - no UI strings`). |
+| `1.0.62` | 2026-11-20 | AI Agent (`ATT-9062`, `--as agent1`) | `ATT-9062` | Promoted `REQ-FIL-034` to `[Implemented]` following Stage 4 construction (`PhoneCarriageClassifier.kt` `1,062` LoC, `SpeedAndLocationDevice_ATTFused.kt` `1,459 / 1,500` LoC; `0` monolith edits; `135/135` PASS across 12 executed suites, `0` new warnings). |
+| `1.0.63` | 2026-11-20 | AI Agent (`ATT-9062`, `--as agent1`) | `ATT-9062` | Promoted `REQ-FIL-034` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9208`) `135/135` PASS evidence (`Rule 7.5`, zero `app/` diff since `4b47831a`), clean-checkout `verify_requirement_governance.py --check-verified-evidence` `exit 0`, and `docs/engineering/walkthroughs/ATT-9062_walkthrough.md`. |
+| `1.0.64` | 2026-11-20 | AI Agent (`ATT-9157`, `--as agent1`) | `ATT-9157` | Added `REQ-FIL-035` `[Planned]` (`REQ-FIL-035.1`–`.3`, linked to `SYSREQ-TRK-003`/`004`/`010`) for `PhoneCarriageClassifier` sport-context cycling guardrail + non-sticky eviction, easy-pace `walkingStepBand`/`walkingSpeedBand` bypass, front-hip running belt scoring tiers, and chatter-resistant `SCORE_MARGIN = 0.85` + asymmetric dwell (`0` edits to `SpeedAndLocationDevice_ATTFused.kt`, `N/A - no UI strings`). |
+| `1.0.65` | 2026-11-20 | AI Agent (`ATT-9157`, `--as agent1`) | `ATT-9157` | Promoted `REQ-FIL-035` to `[Implemented]` following Stage 4 construction (`PhoneCarriageClassifier.kt` `1,124 / 1,500` LoC, `SpeedAndLocationDevice_ATTFused.kt` `1,459` LoC [`0` edits], `0` monolith edits; `138/138` PASS across 12 suites, `0` new compiler warnings). |
+| `1.0.66` | 2026-11-20 | AI Agent (`ATT-9157`, `--as agent1`) | `ATT-9157` | Promoted `REQ-FIL-035` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9224`) `138/138` PASS evidence (`Rule 7.5`, zero `app/` diff since `9b89af95`), clean-checkout `verify_requirement_governance.py --check-verified-evidence` `exit 0`, and `docs/engineering/walkthroughs/ATT-9157_walkthrough.md`. |

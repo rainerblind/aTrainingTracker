@@ -156,4 +156,31 @@ class SportTypeSwimTemplateTest {
         assertFalse("0.0 m/s workout must never match Swimming [0.0, 0.0)", zeroSpeedResolvedIds.contains(swimId))
         assertTrue("0.0 m/s workout must resolve to OTHER (ID 1)", zeroSpeedResolvedIds.contains(1L))
     }
+
+    /**
+     * TST-INT-002 (REQ-EXP-006) & TST-INT-003 (REQ-EXP-007): Real SQLite round-trip
+     * verifying saving "- No upload -" (null stravaName) and new Strava sport type "GravelRide".
+     */
+    @Test
+    fun testStravaSportTypeMapping_noUploadAndGravelRideRoundTrip_TST_INT_002_TST_INT_003() {
+        val dbManager = SportTypeDatabaseManager.getInstance(context)
+
+        // TST-INT-002: "- No upload -" persists null Strava name
+        val privateId = dbManager.updateSportType(
+            -1L, "Private Mobility", BSportType.UNKNOWN, 0.0, 2.0, null, "Other", "workout"
+        )
+        assertTrue("Inserted custom sport ID must be positive", privateId > 0L)
+        org.junit.Assert.assertNull(dbManager.getStravaName(privateId))
+
+        // TST-INT-003: "GravelRide" persists and round-trips via getStravaName and lookup
+        val gravelId = dbManager.updateSportType(
+            -1L, "Gravel Bike", BSportType.BIKE, 2.0, 12.0, "GravelRide", "Biking", "bike"
+        )
+        assertTrue("Inserted Gravel Bike sport ID must be positive", gravelId > 0L)
+        assertEquals("GravelRide", dbManager.getStravaName(gravelId))
+        assertEquals(gravelId, dbManager.getSportTypeIdFromStravaName("GravelRide"))
+
+        val stravaValues = context.resources.getStringArray(R.array.Strava_Sport_Types_Strava_Names)
+        assertTrue("arrays.xml must include GravelRide", stravaValues.contains("GravelRide"))
+    }
 }

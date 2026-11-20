@@ -25,6 +25,7 @@ import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.acos
 import kotlin.math.atan2
+import kotlin.math.cos
 import kotlin.math.hypot
 import kotlin.math.max
 import kotlin.math.sqrt
@@ -76,20 +77,63 @@ class PhoneCarriageClassifier(
         private const val GLANCE_MEMORY_MS = 15_000L
         private const val GLANCE_ACTIVE_HOLD_MS = 1_200L
         private const val STATIONARY_SPEED_MPS = 0.15
+        private const val QUIET_IMU_STATIONARY_SPEED_MPS = 1.8
+        private const val STAGNANT_POSITION_MIN_SPAN_MS = 4_000L
+        private const val STAGNANT_POSITION_MAX_SPREAD_M = 2.0
+        private const val EARTH_RADIUS_METERS = 6_371_000.0
+        private const val GLANCE_PREV_MIN_AGE_MS = 1_000L
+        private const val GLANCE_PREV_MAX_AGE_MS = 4_500L
+        private const val GLANCE_PREV_MIN_SPAN_MS = 1_200L
+        private const val GLANCE_REC_OSCILLATING_SD_DEG = 8.0
+        private const val GLANCE_REC_OSCILLATING_DELTA_RATIO = 2.6
+        private const val GLANCE_PREV_CYCLIC_SD_DEG = 7.0
+        private const val GLANCE_PREV_ENVELOPE_RATIO = 1.25
+        private const val ACCEL_IMPACT_HPF_HZ = 2.1
+        private const val ACCEL_IMPACT_LPF_HZ = 4.2
+        private const val ACCEL_IMPACT_MIN_RMS_MPS2 = 1.2
+        private const val ACCEL_IMPACT_MIN_SPAN_MS = 2_000L
+        private const val ACCEL_IMPACT_MIN_SAMPLES = 100
+        private const val ACCEL_ACF_MIN_LAG = 13
+        private const val ACCEL_ACF_MAX_LAG = 22
+        private const val ACCEL_ACF_MIN_OVERLAP = 50
+        private const val ACCEL_ACF_MIN_CORRELATION = 0.42
+        private const val CONFIRMED_NO_FOOTSTRIKE_WALK_SUPPRESS_SPEED_MPS = 1.6
+        private const val CONFIRMED_NO_FOOTSTRIKE_BIKE_PRIOR_SPEED_MPS = 1.8
+        private const val RUN_CYCLING_MASK_WHEEL_MAX_MPS = 0.5
+        private const val RUN_CYCLING_MASK_SPEED_MPS = 5.5
+        private const val EASY_RUN_MIN_SPEED_MPS = 1.65
+        private const val EASY_RUN_FALLBACK_SPEED_MPS = 1.75
+        private const val EASY_RUN_IMPACT_RMS_MPS2 = 1.8
+        private const val EASY_RUN_MIN_STEP_HZ = 2.15
+        private const val INTRA_RUN_HYSTERESIS_MIN_MS = 6_000L
         private const val WALK_MIN_SPEED_MPS = 0.35
         private const val WALK_MAX_SPEED_MPS = 2.50
-        private const val SCORE_MARGIN = 0.25
+        private const val SCORE_MARGIN = 0.85
     }
 
     private data class GravitySample(val timestampMs: Long, val gx: Double, val gy: Double, val gz: Double)
     private data class GyroSample(val timestampMs: Long, val yawResidualRadPerSec: Double, val rawMagRadPerSec: Double)
     private data class BaroSample(val timestampMs: Long, val altitudeM: Double)
+    private data class PositionSample(val timestampMs: Long, val lat: Double, val lon: Double)
+    private data class AccelFootstrikeEval(
+        val footstrikeFreqHz: Double?,
+        val confirmedNoFootstrikes: Boolean,
+        val impactRmsMps2: Double? = null
+    )
 
     private val gravitySamples = ArrayDeque<GravitySample>()
     private val gyroSamples = ArrayDeque<GyroSample>()
     private val baroSamples = ArrayDeque<BaroSample>()
+    private val positionSamples = ArrayDeque<PositionSample>()
     private val stepTimestampsMs = ArrayDeque<Long>()
     private val glanceTimestampsMs = ArrayDeque<Long>()
+
+    private val accResampler = UniformGridResampler(ImuCadenceDspConstants.GRID_STEP_MS)
+    private val impactBandPass = BiquadBandPass(ImuCadenceDspConstants.FS_HZ, ACCEL_IMPACT_HPF_HZ, ACCEL_IMPACT_LPF_HZ)
+    private val impactRing = DoubleRingBuffer(ImuCadenceDspConstants.WINDOW_SAMPLES)
+    private var firstAccelTimestampMs: Long = Long.MIN_VALUE
+    private var lastAccelTimestampMs: Long = Long.MIN_VALUE
+    private var stepDetectorRegistered: Boolean = false
 
     private var lastGnssSpeedMps: Double? = null
     private var lastGnssTimestampMs: Long = Long.MIN_VALUE
@@ -117,13 +161,28 @@ class PhoneCarriageClassifier(
         sportHint = hint
     }
 
+    /**
+     * Records whether hardware `TYPE_STEP_DETECTOR` is actively registered (distinguishing
+     * `stepDetectorActiveAndZero` from permission-denied/absent `stepDetectorUnavailable`; REQ-FIL-034.4).
+     */
+    @Synchronized
+    fun setStepDetectorRegistered(registered: Boolean) {
+        stepDetectorRegistered = registered
+    }
+
     @Synchronized
     fun reset() {
         gravitySamples.clear()
         gyroSamples.clear()
         baroSamples.clear()
+        positionSamples.clear()
         stepTimestampsMs.clear()
         glanceTimestampsMs.clear()
+        accResampler.reset()
+        impactBandPass.reset()
+        impactRing.clear()
+        firstAccelTimestampMs = Long.MIN_VALUE
+        lastAccelTimestampMs = Long.MIN_VALUE
         lastGnssSpeedMps = null
         lastGnssTimestampMs = Long.MIN_VALUE
         lastGnssBearingDeg = null
@@ -193,6 +252,33 @@ class PhoneCarriageClassifier(
         pruneWindows(timestampMs)
     }
 
+    /**
+     * Ingests a signed 3-axis accelerometer sample (m/s²) onto a uniform 50-Hz time-based grid
+     * for permission-free `2.4–3.6 Hz` running footstrike periodicity detection (REQ-FIL-034.4).
+     */
+    @Synchronized
+    fun ingestAccelerometer(axMps2: Double, ayMps2: Double, azMps2: Double, timestampMs: Long) {
+        if (!axMps2.isFinite() || !ayMps2.isFinite() || !azMps2.isFinite() || timestampMs < 0L) return
+        val mag = sqrt(axMps2 * axMps2 + ayMps2 * ayMps2 + azMps2 * azMps2)
+        if (!mag.isFinite()) return
+
+        if (lastAccelTimestampMs > Long.MIN_VALUE && (timestampMs - lastAccelTimestampMs) > STALENESS_MS) {
+            accResampler.reset()
+            impactBandPass.reset()
+            impactRing.clear()
+            firstAccelTimestampMs = timestampMs
+        }
+        if (firstAccelTimestampMs == Long.MIN_VALUE || timestampMs < firstAccelTimestampMs) {
+            firstAccelTimestampMs = timestampMs
+        }
+        lastAccelTimestampMs = max(lastAccelTimestampMs, timestampMs)
+        noteTimestamp(timestampMs)
+        accResampler.push(timestampMs, axMps2, ayMps2, azMps2, mag) { _, _, _, _, iMag ->
+            impactRing.add(impactBandPass.step(iMag))
+        }
+        pruneWindows(timestampMs)
+    }
+
     @Synchronized
     fun ingestStepEvent(timestampMs: Long) {
         noteTimestamp(timestampMs)
@@ -201,16 +287,26 @@ class PhoneCarriageClassifier(
     }
 
     @Synchronized
+    @JvmOverloads
     fun ingestGnssSpeed(
         speedMps: Double,
         bearingDeg: Double? = null,
         accuracyMeters: Double? = null,
-        timestampMs: Long
+        timestampMs: Long,
+        latitude: Double? = null,
+        longitude: Double? = null
     ) {
         noteTimestamp(timestampMs)
         if (speedMps.isFinite() && speedMps >= 0.0) {
             lastGnssSpeedMps = speedMps
             lastGnssTimestampMs = timestampMs
+        }
+        if (latitude != null && longitude != null &&
+            latitude.isFinite() && longitude.isFinite() &&
+            latitude in -90.0..90.0 && longitude in -180.0..180.0 &&
+            !(abs(latitude) < 1e-6 && abs(longitude) < 1e-6)
+        ) {
+            positionSamples.addLast(PositionSample(timestampMs, latitude, longitude))
         }
         val validBearing = bearingDeg != null && bearingDeg.isFinite() &&
             (accuracyMeters == null || (accuracyMeters.isFinite() && accuracyMeters <= 25.0))
@@ -302,17 +398,20 @@ class PhoneCarriageClassifier(
             return committedMode
         }
 
+        if (committedMode.isRunningMode() && rawCandidate == PhoneCarriageMode.RUN_HANDHELD && isGlanceActive(nowMs)) {
+            committedMode = rawCandidate
+            candidateMode = rawCandidate
+            candidateSinceMs = Long.MIN_VALUE
+            return committedMode
+        }
+
         if (candidateMode != rawCandidate || candidateSinceMs == Long.MIN_VALUE) {
             candidateMode = rawCandidate
             candidateSinceMs = nowMs
             return committedMode
         }
 
-        val requiredDwellMs = if (isDismountOrRemountTransition(committedMode, rawCandidate)) {
-            dismountHysteresisMs
-        } else {
-            mountHysteresisMs
-        }
+        val requiredDwellMs = requiredDwellMs(committedMode, rawCandidate)
         if (nowMs - candidateSinceMs >= requiredDwellMs) {
             committedMode = rawCandidate
             candidateSinceMs = Long.MIN_VALUE
@@ -320,8 +419,20 @@ class PhoneCarriageClassifier(
         return committedMode
     }
 
-    private fun isDismountOrRemountTransition(from: PhoneCarriageMode, to: PhoneCarriageMode): Boolean {
-        return from.isWalkingOrStationary() || to.isWalkingOrStationary()
+    /**
+     * Asymmetric dwell hysteresis (REQ-FIL-035.3):
+     * - `RUN_* -> WALKING_TRANSITION`: `mountHysteresisMs` (4.0 s default) to reject brief canopy GPS dips.
+     * - Non-glance intra-run `RUN_* -> RUN_*`: `maxOf(mountHysteresisMs, 6_000L)` to eliminate mid-run chatter.
+     * - `WALKING_TRANSITION -> RUN_*`, `RUN_* -> STATIONARY`, `STATIONARY <-> *`, `BIKE_* <-> WALKING_TRANSITION`:
+     *   fast `dismountHysteresisMs` (2.0 s default).
+     */
+    private fun requiredDwellMs(from: PhoneCarriageMode, to: PhoneCarriageMode): Long {
+        return when {
+            from.isRunningMode() && to == PhoneCarriageMode.WALKING_TRANSITION -> mountHysteresisMs
+            from.isRunningMode() && to.isRunningMode() -> maxOf(mountHysteresisMs, INTRA_RUN_HYSTERESIS_MIN_MS)
+            from.isWalkingOrStationary() || to.isWalkingOrStationary() -> dismountHysteresisMs
+            else -> mountHysteresisMs
+        }
     }
 
     private fun hasStrongDirectEvidence(nowMs: Long, candidate: PhoneCarriageMode): Boolean {
@@ -339,10 +450,8 @@ class PhoneCarriageClassifier(
         val effectiveSpeed = effectiveSpeedMps(nowMs)
 
         val stepFreqHz = currentStepFrequencyHz(nowMs)
-        // Without any speed/step reference, retain UNKNOWN so IMU-only gyro unit checks stay at neutral 1.0 s window
-        if (effectiveSpeed == null && stepFreqHz == null) {
-            return PhoneCarriageMode.UNKNOWN
-        }
+        val accelEval = evaluateAccelFootstrike(nowMs)
+        val effectiveRunStepFreqHz = stepFreqHz ?: accelEval.footstrikeFreqHz
 
         val hasOrientation = gravitySamples.size >= 3
         val orientationStats = if (hasOrientation) computeOrientationStats() else null
@@ -353,90 +462,152 @@ class PhoneCarriageClassifier(
         val glanceCount = glanceTimestampsMs.size
         val dominantFreqHz = estimateDominantOscillationHz(orientationStats, rawGyroRms)
 
-        if (effectiveSpeed == null && !hasOrientation && !hasGyro && baroStepRms == null && stepFreqHz == null) {
+        val quietImu = (!hasOrientation || (orientationStats!!.swingSdDeg < 2.5)) &&
+            (!hasGyro || (rawGyroRms!! < 0.14)) &&
+            effectiveRunStepFreqHz == null
+        val hadPriorSpeedOrMode = committedMode != PhoneCarriageMode.UNKNOWN ||
+            lastGnssTimestampMs > Long.MIN_VALUE ||
+            lastWheelTimestampMs > Long.MIN_VALUE
+
+        // Without any active speed/step reference: transition indoor GNSS outage + quiet IMU to STATIONARY
+        // once a speed source/mode existed, while keeping pure IMU-only unit checks at neutral UNKNOWN (REQ-FIL-034.1).
+        if (effectiveSpeed == null && effectiveRunStepFreqHz == null) {
+            return if (hadPriorSpeedOrMode && (hasOrientation || hasGyro) && quietImu) {
+                PhoneCarriageMode.STATIONARY
+            } else {
+                PhoneCarriageMode.UNKNOWN
+            }
+        }
+
+        if (effectiveSpeed == null && !hasOrientation && !hasGyro && baroStepRms == null && effectiveRunStepFreqHz == null) {
             return PhoneCarriageMode.UNKNOWN
         }
 
-        // 1. Stationary detection (bakery counter, traffic light stop)
-        val lowSpeed = effectiveSpeed != null && effectiveSpeed <= STATIONARY_SPEED_MPS
-        val quietImu = (!hasOrientation || (orientationStats!!.swingSdDeg < 2.5)) &&
-            (!hasGyro || (rawGyroRms!! < 0.14)) &&
-            stepFreqHz == null
-        if (lowSpeed && (quietImu || (effectiveSpeed <= 0.10 && (wheelSpeed == null || wheelSpeed <= 0.10)))) {
-            return PhoneCarriageMode.STATIONARY
-        }
-
-        // 2. Walking / Transition dismount detection (independent of cycling sportHint!)
         val newerWalkEvidenceThanWheel = lastWheelTimestampMs == Long.MIN_VALUE ||
             (lastGnssTimestampMs > lastWheelTimestampMs + 1_500L && gnssSpeed != null && gnssSpeed <= WALK_MAX_SPEED_MPS)
         val wheelActiveMoving = wheelSpeed != null && wheelSpeed > 0.5 && !newerWalkEvidenceThanWheel
+
+        // 1. Stationary detection (bakery counter, indoor outage, stagnant cached fix, traffic light stop; REQ-FIL-034.1)
+        val lowSpeed = effectiveSpeed != null && effectiveSpeed <= STATIONARY_SPEED_MPS
+        if (lowSpeed && (quietImu || (effectiveSpeed <= 0.10 && (wheelSpeed == null || wheelSpeed <= 0.10)))) {
+            return PhoneCarriageMode.STATIONARY
+        }
+        if (!wheelActiveMoving && (hasOrientation || hasGyro) && quietImu &&
+            ((effectiveSpeed != null && effectiveSpeed <= QUIET_IMU_STATIONARY_SPEED_MPS) || isPositionStagnant(nowMs))
+        ) {
+            return PhoneCarriageMode.STATIONARY
+        }
+
+        // Distinguish stepDetectorActiveAndZero / confirmed zero-footstrike accel from stepDetectorUnavailable (REQ-FIL-034.4)
+        val stepDetectorActiveAndZero = stepDetectorRegistered && stepFreqHz == null
+        val confirmedNoFootstrikes = stepDetectorActiveAndZero || accelEval.confirmedNoFootstrikes
+
+        // Sport = RUN cycling guardrail: mask BIKE_* (and MTB no-footstrike climb suppression) unless wheel > 0.5 or speed >= 5.5 (REQ-FIL-035.1)
+        val suppressCyclingForRun = sportHint == SportContextHint.RUNNING &&
+            !wheelActiveMoving &&
+            (wheelSpeed == null || wheelSpeed <= RUN_CYCLING_MASK_WHEEL_MAX_MPS) &&
+            (effectiveSpeed == null || effectiveSpeed < RUN_CYCLING_MASK_SPEED_MPS)
+
+        // 2. Walking / Transition dismount detection (independent of cycling sportHint, with easy-pace run guard; REQ-FIL-035.2)
         val walkingSpeedBand = effectiveSpeed != null && effectiveSpeed in WALK_MIN_SPEED_MPS..WALK_MAX_SPEED_MPS
         val walkingStepBand = stepFreqHz != null && stepFreqHz in 1.15..2.30
+        val easyRunSuppressWalk = sportHint == SportContextHint.RUNNING &&
+            effectiveSpeed != null &&
+            effectiveSpeed >= EASY_RUN_MIN_SPEED_MPS &&
+            (
+                (accelEval.impactRmsMps2 != null && accelEval.impactRmsMps2 >= EASY_RUN_IMPACT_RMS_MPS2) ||
+                (effectiveRunStepFreqHz != null && effectiveRunStepFreqHz >= EASY_RUN_MIN_STEP_HZ) ||
+                (effectiveSpeed >= EASY_RUN_FALLBACK_SPEED_MPS &&
+                    (accelEval.impactRmsMps2 == null || accelEval.impactRmsMps2 >= ACCEL_IMPACT_MIN_RMS_MPS2))
+            )
         if (!wheelActiveMoving) {
-            if (walkingStepBand && (effectiveSpeed == null || effectiveSpeed <= WALK_MAX_SPEED_MPS)) {
+            if (!easyRunSuppressWalk && walkingStepBand && (effectiveSpeed == null || effectiveSpeed <= WALK_MAX_SPEED_MPS)) {
                 return PhoneCarriageMode.WALKING_TRANSITION
             }
-            if (walkingSpeedBand) {
+            if (!easyRunSuppressWalk && walkingSpeedBand) {
+                val suppressWalkForNoFootstrikeClimb = !suppressCyclingForRun &&
+                    confirmedNoFootstrikes &&
+                    effectiveSpeed >= CONFIRMED_NO_FOOTSTRIKE_WALK_SUPPRESS_SPEED_MPS
                 val gyroOrSwingPresent = yawResidualRms == null || yawResidualRms >= 0.08 ||
                     (orientationStats != null && orientationStats.swingSdDeg >= 4.0)
                 val isPendulumWalking = dominantFreqHz == null || dominantFreqHz in 0.60..1.12
                 val isStepHarmonicWalking = dominantFreqHz != null && dominantFreqHz in 1.12..2.35 &&
                     (effectiveSpeed <= 2.15 || sportHint != SportContextHint.RUNNING)
-                if (stepFreqHz == null && gyroOrSwingPresent && (isPendulumWalking || isStepHarmonicWalking)) {
+                if (effectiveRunStepFreqHz == null &&
+                    !suppressWalkForNoFootstrikeClimb &&
+                    gyroOrSwingPresent &&
+                    (isPendulumWalking || isStepHarmonicWalking)
+                ) {
                     return PhoneCarriageMode.WALKING_TRANSITION
                 }
             }
         }
 
-        // 3. Score cycling vs running carriage regimes
+        // 3. Score cycling vs running carriage regimes (kinematic footstrikes prioritized over speed cutoffs; REQ-FIL-034.4, REQ-FIL-035.1)
+
         var cyclingPrior = 0.0
         var runningPrior = 0.0
         when {
             wheelActiveMoving -> cyclingPrior += 6.0
-            stepFreqHz != null && stepFreqHz >= 2.25 -> runningPrior += 5.0
+            effectiveRunStepFreqHz != null && effectiveRunStepFreqHz >= 2.25 -> runningPrior += 5.0
             else -> {
                 if (sportHint == SportContextHint.CYCLING) cyclingPrior += 2.5
                 if (sportHint == SportContextHint.RUNNING) runningPrior += 2.5
                 if (effectiveSpeed != null) {
-                    if (effectiveSpeed >= 5.5) cyclingPrior += 3.0
-                    else if (effectiveSpeed in 2.2..4.6 && wheelSpeed == null) runningPrior += 0.6
+                    when {
+                        effectiveSpeed >= 5.5 -> cyclingPrior += 3.0
+                        confirmedNoFootstrikes && effectiveSpeed >= CONFIRMED_NO_FOOTSTRIKE_BIKE_PRIOR_SPEED_MPS -> {
+                            cyclingPrior += 1.5
+                        }
+                        !confirmedNoFootstrikes && effectiveSpeed in 2.2..4.6 && wheelSpeed == null -> {
+                            runningPrior += 0.6
+                        }
+                    }
                 }
             }
         }
 
         // Handlebar vs other fallback if zero IMU is available
         if (!hasOrientation && !hasGyro && baroStepRms == null) {
-            return if (runningPrior > cyclingPrior) {
+            return if (suppressCyclingForRun || runningPrior > cyclingPrior) {
                 PhoneCarriageMode.RUN_WAIST_HIP
             } else {
                 PhoneCarriageMode.BIKE_HANDLEBAR
             }
         }
 
-        val sBikeHandlebar = cyclingPrior + scoreBikeHandlebar(
-            orientationStats, yawResidualRms, baroStepRms, effectiveSpeed
-        )
-        val sBikeJersey = cyclingPrior + scoreBikeJerseyBack(
-            orientationStats, yawResidualRms, baroStepRms
-        )
-        val sBikeFrontPocket = cyclingPrior + scoreBikeFrontPocket(
-            orientationStats, yawResidualRms, baroStepRms, dominantFreqHz
-        )
+        val sBikeHandlebar = if (suppressCyclingForRun) {
+            Double.NEGATIVE_INFINITY
+        } else {
+            cyclingPrior + scoreBikeHandlebar(orientationStats, yawResidualRms, baroStepRms, effectiveSpeed)
+        }
+        val sBikeJersey = if (suppressCyclingForRun) {
+            Double.NEGATIVE_INFINITY
+        } else {
+            cyclingPrior + scoreBikeJerseyBack(orientationStats, yawResidualRms, baroStepRms)
+        }
+        val sBikeFrontPocket = if (suppressCyclingForRun) {
+            Double.NEGATIVE_INFINITY
+        } else {
+            cyclingPrior + scoreBikeFrontPocket(orientationStats, yawResidualRms, baroStepRms, dominantFreqHz)
+        }
         val sRunWaist = runningPrior + scoreRunWaistHip(
-            orientationStats, yawResidualRms, baroStepRms, stepFreqHz, glanceCount
+            orientationStats, yawResidualRms, baroStepRms, effectiveRunStepFreqHz, glanceCount
         )
         val sRunBicep = runningPrior + scoreRunBicepArm(
-            orientationStats, yawResidualRms, baroStepRms, dominantFreqHz, stepFreqHz, glanceCount
+            orientationStats, yawResidualRms, baroStepRms, dominantFreqHz, effectiveRunStepFreqHz, glanceCount
         )
         val sRunHandheld = runningPrior + scoreRunHandheld(
             orientationStats, yawResidualRms, baroStepRms, glanceCount
         )
 
-        var bestMode = PhoneCarriageMode.BIKE_HANDLEBAR
-        var bestScore = sBikeHandlebar
-        if (sBikeJersey > bestScore) { bestScore = sBikeJersey; bestMode = PhoneCarriageMode.BIKE_JERSEY_BACK }
-        if (sBikeFrontPocket > bestScore) { bestScore = sBikeFrontPocket; bestMode = PhoneCarriageMode.BIKE_FRONT_POCKET }
-        if (sRunWaist > bestScore) { bestScore = sRunWaist; bestMode = PhoneCarriageMode.RUN_WAIST_HIP }
+        var bestMode = if (suppressCyclingForRun) PhoneCarriageMode.RUN_WAIST_HIP else PhoneCarriageMode.BIKE_HANDLEBAR
+        var bestScore = if (suppressCyclingForRun) sRunWaist else sBikeHandlebar
+        if (!suppressCyclingForRun) {
+            if (sBikeJersey > bestScore) { bestScore = sBikeJersey; bestMode = PhoneCarriageMode.BIKE_JERSEY_BACK }
+            if (sBikeFrontPocket > bestScore) { bestScore = sBikeFrontPocket; bestMode = PhoneCarriageMode.BIKE_FRONT_POCKET }
+            if (sRunWaist > bestScore) { bestScore = sRunWaist; bestMode = PhoneCarriageMode.RUN_WAIST_HIP }
+        }
         if (sRunBicep > bestScore) { bestScore = sRunBicep; bestMode = PhoneCarriageMode.RUN_BICEP_ARM }
         if (sRunHandheld > bestScore) { bestScore = sRunHandheld; bestMode = PhoneCarriageMode.RUN_HANDHELD }
 
@@ -538,18 +709,29 @@ class PhoneCarriageClassifier(
     ): Double {
         var score = 0.0
         if (o != null) {
-            score += if (o.swingSdDeg < 10.0) 2.6 else -2.0
+            score += when {
+                o.swingSdDeg < 10.0 -> 2.6
+                o.swingSdDeg < 15.5 -> 1.8
+                o.swingSdDeg < 22.0 -> -0.5
+                else -> -2.0
+            }
         }
         if (yawResidualRms != null) {
-            score += if (yawResidualRms in 0.06..0.38) 2.2 else if (yawResidualRms < 0.06) 0.8 else -1.5
+            score += when {
+                yawResidualRms < 0.06 -> 0.8
+                yawResidualRms <= 0.48 -> 2.2
+                yawResidualRms <= 0.68 -> 1.4
+                yawResidualRms <= 0.95 -> -0.4
+                else -> -1.5
+            }
         }
         if (baroStepRms != null) {
-            score += if (baroStepRms < 0.40) 1.2 else -0.5
+            score += if (baroStepRms < 0.45) 1.2 else -0.5
         }
-        if (stepFreqHz != null && stepFreqHz >= 2.25) {
+        if (stepFreqHz != null && stepFreqHz >= EASY_RUN_MIN_STEP_HZ) {
             score += 0.8
         }
-        if (glanceCount == 0) score += 0.6 else score -= 1.0
+        score += if (glanceCount == 0) 1.2 else -1.5
         return score
     }
 
@@ -564,9 +746,9 @@ class PhoneCarriageClassifier(
         var score = 0.0
         if (o != null) {
             score += when {
-                o.swingSdDeg >= 9.0 -> 2.6
-                o.swingSdDeg >= 6.5 -> 1.0
-                else -> -2.2
+                o.swingSdDeg >= 15.5 -> 2.6
+                o.swingSdDeg >= 11.5 -> 0.8
+                else -> -0.8
             }
         }
         if (yawResidualRms != null) {
@@ -596,17 +778,23 @@ class PhoneCarriageClassifier(
     ): Double {
         var score = 0.0
         if (o != null) {
-            score += if (o.swingSdDeg >= 9.0) 1.8 else -1.5
+            score += when {
+                o.swingSdDeg >= 15.0 -> 1.8
+                o.swingSdDeg >= 11.0 -> 0.4
+                else -> -1.5
+            }
         }
         if (yawResidualRms != null) {
-            score += if (yawResidualRms >= 0.48) 2.8 else if (yawResidualRms >= 0.36) 1.0 else -1.5
+            score += when {
+                yawResidualRms >= 0.55 -> 2.6
+                yawResidualRms >= 0.42 -> 0.8
+                else -> -1.5
+            }
         }
         if (baroStepRms != null) {
-            score += if (baroStepRms >= 0.35) 1.8 else 0.0
+            score += if (baroStepRms >= 0.45) 1.8 else 0.0
         }
-        if (glanceCount >= 1) {
-            score += 2.2
-        }
+        score += if (glanceCount >= 1) 2.8 else -1.4
         return score
     }
 
@@ -781,6 +969,52 @@ class PhoneCarriageClassifier(
         return null
     }
 
+    private fun evaluateAccelFootstrike(nowMs: Long): AccelFootstrikeEval {
+        if (lastAccelTimestampMs == Long.MIN_VALUE || firstAccelTimestampMs == Long.MIN_VALUE) {
+            return AccelFootstrikeEval(null, false)
+        }
+        if ((nowMs - lastAccelTimestampMs) > STALENESS_MS) {
+            return AccelFootstrikeEval(null, false)
+        }
+        if ((lastAccelTimestampMs - firstAccelTimestampMs) < ACCEL_IMPACT_MIN_SPAN_MS ||
+            impactRing.size < ACCEL_IMPACT_MIN_SAMPLES
+        ) {
+            return AccelFootstrikeEval(null, false)
+        }
+        val impactRms = impactRing.recentRms(impactRing.size)
+        val finiteImpactRms = impactRms.takeIf { it.isFinite() }
+        if (finiteImpactRms == null || finiteImpactRms < ACCEL_IMPACT_MIN_RMS_MPS2) {
+            return AccelFootstrikeEval(null, true, finiteImpactRms)
+        }
+        val lagResult = findFundamentalLagResult(
+            minLag = ACCEL_ACF_MIN_LAG,
+            maxLag = ACCEL_ACF_MAX_LAG,
+            minOverlap = ACCEL_ACF_MIN_OVERLAP,
+            availableSamples = impactRing.size,
+            minPeakCorrelation = ACCEL_ACF_MIN_CORRELATION
+        ) { lag -> impactRing.normalizedCorrelation(lag) }
+        if (lagResult != null && lagResult.peakCorrelation >= ACCEL_ACF_MIN_CORRELATION && lagResult.lagSamples > 0.0) {
+            val freqHz = (ImuCadenceDspConstants.FS_HZ / lagResult.lagSamples).coerceIn(2.25, 4.0)
+            return AccelFootstrikeEval(freqHz, false, finiteImpactRms)
+        }
+        return AccelFootstrikeEval(null, true, finiteImpactRms)
+    }
+
+    private fun isPositionStagnant(nowMs: Long): Boolean {
+        if (positionSamples.size < 3) return false
+        val first = positionSamples.peekFirst() ?: return false
+        val last = positionSamples.peekLast() ?: return false
+        if ((nowMs - last.timestampMs) > STALENESS_MS) return false
+        if ((last.timestampMs - first.timestampMs) < STAGNANT_POSITION_MIN_SPAN_MS) return false
+        val cosLat = cos(Math.toRadians(first.lat))
+        for (s in positionSamples) {
+            val dN = Math.toRadians(s.lat - first.lat) * EARTH_RADIUS_METERS
+            val dE = Math.toRadians(s.lon - first.lon) * EARTH_RADIUS_METERS * cosLat
+            if (hypot(dE, dN) >= STAGNANT_POSITION_MAX_SPREAD_M) return false
+        }
+        return true
+    }
+
     private fun detectGlanceShift(nowMs: Long) {
         if (gravitySamples.size < 6) return
         if (lastGlanceEventMs > Long.MIN_VALUE && (nowMs - lastGlanceEventMs) < GLANCE_DEBOUNCE_MS) return
@@ -793,6 +1027,8 @@ class PhoneCarriageClassifier(
         var prevY = 0.0
         var prevZ = 0.0
         var prevN = 0
+        var prevMinTs = Long.MAX_VALUE
+        var prevMaxTs = Long.MIN_VALUE
 
         for (s in gravitySamples) {
             val ageMs = nowMs - s.timestampMs
@@ -801,25 +1037,57 @@ class PhoneCarriageClassifier(
                 recY += s.gy
                 recZ += s.gz
                 recN++
-            } else if (ageMs in 1_000L..2_400L) {
+            } else if (ageMs in GLANCE_PREV_MIN_AGE_MS..GLANCE_PREV_MAX_AGE_MS) {
                 prevX += s.gx
                 prevY += s.gy
                 prevZ += s.gz
                 prevN++
+                if (s.timestampMs < prevMinTs) prevMinTs = s.timestampMs
+                if (s.timestampMs > prevMaxTs) prevMaxTs = s.timestampMs
             }
         }
-        if (recN < 2 || prevN < 2) return
+        if (recN < 2 || prevN < 4 || (prevMaxTs - prevMinTs) < GLANCE_PREV_MIN_SPAN_MS) return
 
         val rNorm = sqrt(recX * recX + recY * recY + recZ * recZ).coerceAtLeast(1e-6)
         val pNorm = sqrt(prevX * prevX + prevY * prevY + prevZ * prevZ).coerceAtLeast(1e-6)
-        val dot = ((recX / rNorm) * (prevX / pNorm) +
-            (recY / rNorm) * (prevY / pNorm) +
-            (recZ / rNorm) * (prevZ / pNorm)).coerceIn(-1.0, 1.0)
+        val rmx = recX / rNorm
+        val rmy = recY / rNorm
+        val rmz = recZ / rNorm
+        val pmx = prevX / pNorm
+        val pmy = prevY / pNorm
+        val pmz = prevZ / pNorm
+        val dot = (rmx * pmx + rmy * pmy + rmz * pmz).coerceIn(-1.0, 1.0)
         val deltaDeg = Math.toDegrees(acos(dot))
-        if (deltaDeg >= GLANCE_SHIFT_THRESHOLD_DEG) {
-            lastGlanceEventMs = nowMs
-            glanceTimestampsMs.addLast(nowMs)
+        if (deltaDeg < GLANCE_SHIFT_THRESHOLD_DEG) return
+
+        // Reject periodic/cyclic thigh oscillation (0.8-1.8 Hz) while preserving genuine wrist glance holds (REQ-FIL-034.2)
+        var recSumSq = 0.0
+        var prevSumSq = 0.0
+        var prevPeakDeg = 0.0
+        for (s in gravitySamples) {
+            val ageMs = nowMs - s.timestampMs
+            if (ageMs in 0L..700L) {
+                val rDot = (s.gx * rmx + s.gy * rmy + s.gz * rmz).coerceIn(-1.0, 1.0)
+                val ang = Math.toDegrees(acos(rDot))
+                recSumSq += ang * ang
+            } else if (ageMs in GLANCE_PREV_MIN_AGE_MS..GLANCE_PREV_MAX_AGE_MS) {
+                val pDot = (s.gx * pmx + s.gy * pmy + s.gz * pmz).coerceIn(-1.0, 1.0)
+                val ang = Math.toDegrees(acos(pDot))
+                prevSumSq += ang * ang
+                if (ang > prevPeakDeg) prevPeakDeg = ang
+            }
         }
+        val recSdDeg = sqrt(recSumSq / recN)
+        val prevSdDeg = sqrt(prevSumSq / prevN)
+        if (recSdDeg > GLANCE_REC_OSCILLATING_SD_DEG && deltaDeg < GLANCE_REC_OSCILLATING_DELTA_RATIO * recSdDeg) {
+            return
+        }
+        if (prevSdDeg >= GLANCE_PREV_CYCLIC_SD_DEG && deltaDeg <= GLANCE_PREV_ENVELOPE_RATIO * prevPeakDeg) {
+            return
+        }
+
+        lastGlanceEventMs = nowMs
+        glanceTimestampsMs.addLast(nowMs)
     }
 
     private fun noteTimestamp(timestampMs: Long) {
@@ -841,6 +1109,9 @@ class PhoneCarriageClassifier(
         }
         while (baroSamples.isNotEmpty() && baroSamples.peekFirst()!!.timestampMs < cutoff) {
             baroSamples.removeFirst()
+        }
+        while (positionSamples.isNotEmpty() && positionSamples.peekFirst()!!.timestampMs < cutoff) {
+            positionSamples.removeFirst()
         }
         while (stepTimestampsMs.isNotEmpty() && stepTimestampsMs.peekFirst()!! < cutoff) {
             stepTimestampsMs.removeFirst()

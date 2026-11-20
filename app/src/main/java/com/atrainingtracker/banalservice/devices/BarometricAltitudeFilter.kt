@@ -19,6 +19,8 @@
 package com.atrainingtracker.banalservice.devices
 
 import java.util.ArrayDeque
+import kotlin.math.max
+import kotlin.math.min
 
 /**
  * Causal non-linear outlier-rejecting filter for barometric altitude streams (REQ-TRK-057.1, ATT-6265).
@@ -46,7 +48,28 @@ class BarometricAltitudeFilter @JvmOverloads constructor(
         const val DEFAULT_MAX_SLEW_RATE_MPS = 1.2
         const val DEFAULT_MEDIAN_WINDOW_SIZE = 7
         const val DEFAULT_EMA_ALPHA = 0.18
+        const val SPEED_COUPLED_SLOPE_FACTOR = 0.25
+        const val MAX_SPEED_COUPLED_REF_MPS = 35.0
         private const val MAX_TIME_GAP_SEC = 10.0
+
+        /**
+         * Computes the speed-coupled vertical slew limit `max(safeBase, 0.25 * clampedSpeed)`
+         * so slow/flat carriage profiles reject pocket spikes while fast alpine descents
+         * (e.g. `18 m/s` at `-10%` = `-1.8 m/s`) pass unclipped (REQ-FIL-033.2).
+         *
+         * Explicitly guards non-finite and non-positive speeds against Kotlin `NaN.coerceIn` propagation.
+         */
+        @JvmStatic
+        fun computeSpeedCoupledSlewRateMps(baseMaxSlewRateMps: Double, speedMps: Double): Double {
+            val safeBase = if (baseMaxSlewRateMps.isFinite() && baseMaxSlewRateMps > 0.0) {
+                baseMaxSlewRateMps
+            } else {
+                DEFAULT_MAX_SLEW_RATE_MPS
+            }
+            if (!speedMps.isFinite() || speedMps <= 0.0) return safeBase
+            val clampedSpeed = min(speedMps, MAX_SPEED_COUPLED_REF_MPS)
+            return max(safeBase, SPEED_COUPLED_SLOPE_FACTOR * clampedSpeed)
+        }
     }
 
     private val window: ArrayDeque<Double> = ArrayDeque(this.medianWindowSize)
@@ -127,12 +150,17 @@ class BarometricAltitudeFilter @JvmOverloads constructor(
     }
 
     /**
-     * Executes Stage 1 (median window) and Stage 2 (physical slew-rate limiter) only,
+     * Executes Stage 1 (median window) and Stage 2 (speed-coupled physical slew-rate limiter) only,
      * omitting the EMA stage to prevent cascaded double-EMA phase lag when ingested by
-     * downstream Kalman filters (REQ-FIL-016.2, ATT-6279).
+     * downstream Kalman filters (REQ-FIL-016.2, REQ-FIL-033.2, ATT-6279, ATT-9063).
+     *
+     * @param rawAltitude Altitude derived from barometric formula in meters.
+     * @param timestampMs Fix epoch timestamp in milliseconds.
+     * @param speedMps Optional horizontal speed in m/s (`0.0` default preserves fixed [maxSlewRateMps]).
      */
     @Synchronized
-    fun filterSlewOnly(rawAltitude: Double, timestampMs: Long): Double {
+    @JvmOverloads
+    fun filterSlewOnly(rawAltitude: Double, timestampMs: Long, speedMps: Double = 0.0): Double {
         if (rawAltitude.isNaN() || rawAltitude.isInfinite()) {
             return if (!lastSlewAltitude.isNaN()) lastSlewAltitude else Double.NaN
         }
@@ -165,8 +193,9 @@ class BarometricAltitudeFilter @JvmOverloads constructor(
         window.addLast(rawAltitude)
         val medianValue = computeMedian(window)
 
-        // Stage 2: Physical Vertical Slew-Rate Limiter
-        val maxDelta = maxSlewRateMps * dtSec
+        // Stage 2: Speed-Coupled Physical Vertical Slew-Rate Limiter (REQ-FIL-033.2)
+        val effectiveMaxSlew = computeSpeedCoupledSlewRateMps(maxSlewRateMps, speedMps)
+        val maxDelta = effectiveMaxSlew * dtSec
         val delta = medianValue - lastSlewAltitude
         val clampedDelta = delta.coerceIn(-maxDelta, maxDelta)
         lastSlewAltitude += clampedDelta

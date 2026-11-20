@@ -45,13 +45,16 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalViewConfiguration
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.database.hrv.HrvPosture
+import com.atrainingtracker.trainingtracker.database.hrv.HrvSensorModality
 import com.atrainingtracker.trainingtracker.database.hrv.ReadinessStatus
 import com.atrainingtracker.trainingtracker.ui.map.ChartGestureDisambiguator
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
@@ -83,6 +86,11 @@ fun HrvReadinessTrendCard(
     if (series == null || (series.points.isEmpty() && series.availablePostures.isEmpty())) {
         return
     }
+
+    var activeModality by remember(series.posture, series.availableModalities) {
+        mutableStateOf(series.sensorModality)
+    }
+    val displayedSeries = series.seriesByModality[activeModality] ?: series
 
     Surface(
         modifier = modifier
@@ -142,9 +150,47 @@ fun HrvReadinessTrendCard(
                 }
             }
 
-            // Provenance Badge for Overnight Wearable (REQ-PER-033.1)
+            // Sensor Modality Cohort Selector (REQ-HRV-049.4 / design_guidelines.md §1)
+            if (series.availableModalities.size > 1 && selectedPosture != HrvPosture.OVERNIGHT_WEARABLE) {
+                SingleChoiceSegmentedButtonRow(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 4.dp, bottom = 2.dp)
+                        .height(28.dp)
+                        .testTag("hrv_trend_modality_selector")
+                ) {
+                    series.availableModalities.forEachIndexed { index, modality ->
+                        val isSelected = activeModality == modality
+                        val label = when (modality) {
+                            HrvSensorModality.ECG -> stringResource(R.string.hrv_modality_ecg_short)
+                            HrvSensorModality.OPTICAL_PPI -> stringResource(R.string.hrv_modality_optical_ppi_short)
+                        }
+                        SegmentedButton(
+                            selected = isSelected,
+                            onClick = { activeModality = modality },
+                            shape = SegmentedButtonDefaults.itemShape(
+                                index = index,
+                                count = series.availableModalities.size
+                            ),
+                            icon = {},
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                        ) {
+                            Text(
+                                text = label,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                maxLines = 1,
+                                softWrap = false,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Provenance Badge for Overnight Wearable (REQ-PER-033.1) or Optical PPI (REQ-HRV-049.4)
             if (selectedPosture == HrvPosture.OVERNIGHT_WEARABLE) {
-                val latestNote = series.points.lastOrNull { it.notes != null }?.notes
+                val latestNote = displayedSeries.points.lastOrNull { it.notes != null }?.notes
                 val badgeText = parseProvenanceBadge(latestNote)
                 Surface(
                     color = MaterialTheme.colorScheme.secondaryContainer,
@@ -153,6 +199,21 @@ fun HrvReadinessTrendCard(
                 ) {
                     Text(
                         text = badgeText,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                    )
+                }
+            } else if (displayedSeries.sensorModality == HrvSensorModality.OPTICAL_PPI) {
+                Surface(
+                    color = MaterialTheme.colorScheme.secondaryContainer,
+                    shape = RoundedCornerShape(4.dp),
+                    modifier = Modifier
+                        .padding(top = 4.dp, bottom = 2.dp)
+                        .testTag("hrv_trend_optical_badge")
+                ) {
+                    Text(
+                        text = stringResource(R.string.hrv_modality_optical_ppi_badge),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSecondaryContainer,
                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
@@ -211,7 +272,7 @@ fun HrvReadinessTrendCard(
             }
 
             // Chart Canvas
-            if (series.points.isEmpty()) {
+            if (displayedSeries.points.isEmpty()) {
                 val postureLabel = when (selectedPosture) {
                     HrvPosture.SUPINE -> stringResource(R.string.morning_hrv_posture_supine)
                     HrvPosture.SEATED -> stringResource(R.string.morning_hrv_posture_seated)
@@ -233,7 +294,7 @@ fun HrvReadinessTrendCard(
                 }
             } else {
                 HrvReadinessTrendCanvas(
-                    series = series,
+                    series = displayedSeries,
                     showTrainingLoad = showTrainingLoad,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -277,10 +338,11 @@ fun HrvReadinessTrendCard(
                     )
                 }
 
-                if (showTrainingLoad && series.maxTrainingLoad > 0.0) {
+                if (showTrainingLoad && displayedSeries.maxTrainingLoad > 0.0) {
                     Surface(
                         color = TTColor.PmcAtlMagenta.copy(alpha = 0.25f),
-                        shape = RoundedCornerShape(4.dp)
+                        shape = RoundedCornerShape(4.dp),
+                        modifier = Modifier.testTag("hrv_trend_training_load_legend")
                     ) {
                         Text(
                             text = stringResource(R.string.hrv_readiness_toggle_training_load),
@@ -310,8 +372,12 @@ fun HrvReadinessTrendCanvas(
 ) {
     val points = series.points
     val touchSlop = LocalViewConfiguration.current.touchSlop
-    var scrubbedPoint by remember { mutableStateOf<HrvTrendPoint?>(null) }
-    var scrubX by remember { mutableFloatStateOf(0f) }
+    var scrubbedPoint by remember(series.posture, series.sensorModality, series.metricMode) {
+        mutableStateOf<HrvTrendPoint?>(null)
+    }
+    var scrubX by remember(series.posture, series.sensorModality, series.metricMode) {
+        mutableFloatStateOf(0f)
+    }
 
     val currentPointsState by rememberUpdatedState(points)
     val gridColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)
@@ -324,7 +390,7 @@ fun HrvReadinessTrendCanvas(
     val tooltipTextColor = MaterialTheme.colorScheme.inverseOnSurface
 
     Canvas(
-        modifier = modifier.pointerInput(series.posture, series.metricMode) {
+        modifier = modifier.pointerInput(series.posture, series.sensorModality, series.metricMode) {
             awaitEachGesture {
                 val down = awaitFirstDown(requireUnconsumed = false)
                 var isDragging = false

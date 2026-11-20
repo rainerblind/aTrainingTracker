@@ -79,7 +79,9 @@ import java.util.concurrent.TimeUnit
  * - TST-ARC-008.1: TrackerService State Machine & 1-Hz Tick Dispatching
  * - ATT-7902: Core Service Characterisation Test Scaffolding
  * - ATT-7918: Export Gating Parity
+ * - REQ-TRK-009, REQ-UI-038, TST-REG-007: Live Pause Total Time Sync
  */
+// Linked test specs: TST-REG-007
 @RunWith(RobolectricTestRunner::class)
 @org.robolectric.annotation.Config(sdk = [34])
 class TrackerServiceStateMachineCharacterisationTest {

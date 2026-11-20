@@ -173,4 +173,249 @@ class ExtendedRtsAltitudeSlopeSmootherTest {
             pocketPeakDeviation < handlebarPeakDeviation
         )
     }
+
+    // TST-FIL-033.1: Zum Bäcker #58 closed-loop DEM grid step at slow start + 20s standstill
+    @Test
+    fun testZumBaeckerStartupDemGridStepAndStandstill_noSlopeBlowupOrInitialOvershoot_tstFil033_1() {
+        val samples = mutableListOf<RawAltitudeSample>()
+        var tMs = 4_000_000L
+
+        for (sec in 0 until 180) {
+            val speed: Double
+            val isStandstill: Boolean
+            val baroAlt: Double
+            val demAlt: Double
+            when {
+                // Slow startup (~5 m travel over t=0..7 s) with integer DEM stepping 438 -> 435 at t=4 s
+                sec < 4 -> {
+                    speed = 0.8
+                    isStandstill = false
+                    baroAlt = 437.93 - sec * 0.05
+                    demAlt = 438.0
+                }
+                sec < 8 -> {
+                    speed = 0.7
+                    isStandstill = false
+                    baroAlt = 437.70 - (sec - 4) * 0.05
+                    demAlt = 435.0
+                }
+                // 20 s standstill (t=8..28 s)
+                sec < 29 -> {
+                    speed = 0.0
+                    isStandstill = true
+                    baroAlt = 437.50
+                    demAlt = if (sec < 18) 435.0 else 438.0
+                }
+                // Flat roll-away (t=29..49 s) at 438 m
+                sec < 50 -> {
+                    speed = 4.5
+                    isStandstill = false
+                    baroAlt = 437.50
+                    demAlt = 438.0
+                }
+                // Genuine +20 m climb (t=50..114 s, 65 s at 5 m/s -> ~6.15% grade)
+                sec < 115 -> {
+                    val alt = 438.0 + ((sec - 49).toDouble() / 65.0) * 20.0
+                    speed = 5.0
+                    isStandstill = false
+                    baroAlt = alt - 0.5
+                    demAlt = kotlin.math.floor(alt)
+                }
+                // Genuine -20 m descent back to 438 m closed loop (t=115..179 s)
+                else -> {
+                    val alt = 458.0 - ((sec - 114).toDouble() / 65.0) * 20.0
+                    speed = 5.0
+                    isStandstill = false
+                    baroAlt = alt - 0.5
+                    demAlt = kotlin.math.floor(alt)
+                }
+            }
+            samples.add(
+                RawAltitudeSample(
+                    timestampMs = tMs,
+                    rawAltitudeM = baroAlt,
+                    referenceAltitudeM = demAlt,
+                    smoothedSpeedMps = speed,
+                    isStandstill = isStandstill,
+                    carriageMode = PhoneCarriageMode.BIKE_FRONT_POCKET
+                )
+            )
+            tMs += 1000L
+        }
+
+        val smoothed = ExtendedRtsAltitudeSlopeSmoother.smooth(samples)
+        assertEquals(180, smoothed.size)
+
+        val startAlt = smoothed[0].altitudeM
+        assertTrue(
+            "Initial smoothed altitude must stay within +-2.0 m of 438.0 m (was $startAlt m)",
+            abs(startAlt - 438.0) <= 2.0
+        )
+        assertTrue(
+            "All smoothed slopes must remain within +-35% (max=${smoothed.maxOf { abs(it.slopePercent) }}%)",
+            smoothed.all { it.slopePercent.isFinite() && abs(it.slopePercent) <= 35.0 + 1e-6 }
+        )
+        val maxFlatStartSlope = smoothed.take(29).maxOf { abs(it.slopePercent) }
+        assertTrue(
+            "Flat-start slope must stay < 10% (was $maxFlatStartSlope%)",
+            maxFlatStartSlope < 10.0
+        )
+        val finalAscent = smoothed.last().ascentM
+        val finalDescent = smoothed.last().descentM
+        assertTrue(
+            "Genuine +20 m climb must be preserved (ascent=$finalAscent m)",
+            finalAscent >= 16.0
+        )
+        assertTrue(
+            "Closed-loop ascent/descent must match within 3.0 m (ascent=$finalAscent, descent=$finalDescent)",
+            abs(finalAscent - finalDescent) <= 3.0
+        )
+    }
+
+    // TST-FIL-033.1: Steep mountain transient -10 m DEM grid-boundary step stays bounded without +20 m overshoot
+    @Test
+    fun testSteepMountainTransientDemStepAndStandstill_staysBoundedWithoutOvershoot_tstFil033_1() {
+        val samples = (0 until 120).map { sec ->
+            val speed = when {
+                sec < 8 -> 0.8
+                sec < 29 -> 0.0
+                else -> 5.0
+            }
+            val demAlt = if (sec in 4..7) 428.0 else 438.0
+            RawAltitudeSample(
+                timestampMs = 5_000_000L + sec * 1000L,
+                rawAltitudeM = 437.5,
+                referenceAltitudeM = demAlt,
+                smoothedSpeedMps = speed,
+                isStandstill = speed < 0.3,
+                carriageMode = PhoneCarriageMode.BIKE_FRONT_POCKET
+            )
+        }
+
+        val smoothed = ExtendedRtsAltitudeSlopeSmoother.smooth(samples)
+        assertEquals(120, smoothed.size)
+        assertTrue(
+            "Start altitude must stay bounded near 438 m without +20 m overshoot (was ${smoothed[0].altitudeM} m)",
+            abs(smoothed[0].altitudeM - 438.0) <= 2.5
+        )
+        assertTrue(
+            "All slopes must stay within +-35% (max=${smoothed.maxOf { abs(it.slopePercent) }}%)",
+            smoothed.all { it.slopePercent.isFinite() && abs(it.slopePercent) <= 35.0 + 1e-6 }
+        )
+        assertTrue(
+            "Flat-start slope must stay < 10% (max=${smoothed.take(29).maxOf { abs(it.slopePercent) }}%)",
+            smoothed.take(29).all { abs(it.slopePercent) < 10.0 }
+        )
+    }
+
+    // TST-FIL-033.1: Helper NaN/bounds guards and exact 3x3 Joseph SPD covariance update
+    @Test
+    fun testHelperGuards_lowSpeedGainClampAndJosephSpd_tstFil033_1() {
+        assertEquals(0.0, ExtendedRtsAltitudeSlopeSmoother.lowSpeedSlopeGainFactor(Double.NaN), 1e-12)
+        assertEquals(0.0, ExtendedRtsAltitudeSlopeSmoother.lowSpeedSlopeGainFactor(Double.POSITIVE_INFINITY), 1e-12)
+        assertEquals(0.0, ExtendedRtsAltitudeSlopeSmoother.lowSpeedSlopeGainFactor(0.2), 1e-12)
+        assertEquals(0.25, ExtendedRtsAltitudeSlopeSmoother.lowSpeedSlopeGainFactor(0.75), 1e-9)
+        assertEquals(1.0, ExtendedRtsAltitudeSlopeSmoother.lowSpeedSlopeGainFactor(1.2), 1e-12)
+
+        assertEquals(0.0, ExtendedRtsAltitudeSlopeSmoother.clampPhysicalSlope(Double.NaN), 1e-12)
+        assertEquals(-0.35, ExtendedRtsAltitudeSlopeSmoother.clampPhysicalSlope(-0.91), 1e-12)
+        assertEquals(0.35, ExtendedRtsAltitudeSlopeSmoother.clampPhysicalSlope(0.55), 1e-12)
+
+        // Suboptimal gain k1=0.0 on correlated P must remain strictly symmetric and SPD
+        val p = arrayOf(
+            doubleArrayOf(4.0, 0.05, -0.5),
+            doubleArrayOf(0.05, 0.0025, 0.01),
+            doubleArrayOf(-0.5, 0.01, 40.0)
+        )
+        ExtendedRtsAltitudeSlopeSmoother.josephCovarianceUpdate3x3(
+            p = p,
+            kVec = doubleArrayOf(0.5, 0.0, -0.0625),
+            hVec = doubleArrayOf(1.0, 0.0, 0.0),
+            rVar = 4.0
+        )
+        for (i in 0 until 3) {
+            assertTrue("Diagonal p[$i][$i] must stay positive", p[i][i] > 0.0)
+            for (j in 0 until 3) {
+                assertEquals("Joseph update must be symmetric at ($i,$j)", p[i][j], p[j][i], 1e-12)
+            }
+        }
+        val det = p[0][0] * (p[1][1] * p[2][2] - p[1][2] * p[2][1]) -
+            p[0][1] * (p[1][0] * p[2][2] - p[1][2] * p[2][0]) +
+            p[0][2] * (p[1][0] * p[2][1] - p[1][1] * p[2][0])
+        assertTrue("Joseph updated covariance must be strictly positive-definite (det=$det)", det > 0.0)
+    }
+
+    // TST-FIL-033.3: Barometer-free DEM/GPS-only stream, leading-null rows, and n==1 non-finite guard
+    @Test
+    fun testBarometerFreeDemOnlyLeadingNullAndSingleSample_finiteAndPhysicallyBounded_tstFil033_3() {
+        // 1. Barometer-free phone (rawAltitudeM = Double.NaN, DEM/GPS climb +10% then descent -10%)
+        val baroFreeSamples = (0 until 120).map { sec ->
+            val speed = if (sec < 60) 4.0 else 6.0
+            val alt = if (sec < 60) {
+                500.0 + sec * 0.4 // +10% at 4 m/s
+            } else {
+                500.0 + 59 * 0.4 - (sec - 59) * 0.6 // -10% at 6 m/s
+            }
+            RawAltitudeSample(
+                timestampMs = 6_000_000L + sec * 1000L,
+                rawAltitudeM = Double.NaN,
+                referenceAltitudeM = alt,
+                smoothedSpeedMps = speed
+            )
+        }
+        val baroFreeSmoothed = ExtendedRtsAltitudeSlopeSmoother.smooth(baroFreeSamples)
+        assertEquals(120, baroFreeSmoothed.size)
+        assertTrue(
+            "Barometer-free outputs must all be finite and physically bounded",
+            baroFreeSmoothed.all {
+                it.altitudeM.isFinite() &&
+                    it.slopePercent.isFinite() &&
+                    abs(it.slopePercent) <= 35.0 + 1e-6 &&
+                    it.ascentM.isFinite() &&
+                    it.descentM.isFinite()
+            }
+        )
+        assertTrue(
+            "Barometer-free climb must learn positive slope (mid-climb=${baroFreeSmoothed[35].slopePercent}%)",
+            baroFreeSmoothed[35].slopePercent in 5.0..15.0
+        )
+        assertTrue(
+            "Barometer-free descent must learn negative slope (mid-descent=${baroFreeSmoothed[95].slopePercent}%)",
+            baroFreeSmoothed[95].slopePercent in -15.0..-5.0
+        )
+        assertTrue("Barometer-free climb must accumulate ascent (was ${baroFreeSmoothed.last().ascentM})", baroFreeSmoothed.last().ascentM >= 15.0)
+        assertTrue("Barometer-free descent must accumulate descent (was ${baroFreeSmoothed.last().descentM})", baroFreeSmoothed.last().descentM >= 25.0)
+
+        // 2. Leading-null rows must NOT poison state with NaN or 0.0 m sea-level spike
+        val leadingNullSamples = (0 until 20).map { sec ->
+            val hasData = sec >= 4
+            RawAltitudeSample(
+                timestampMs = 7_000_000L + sec * 1000L,
+                rawAltitudeM = if (hasData) 438.0 else Double.NaN,
+                referenceAltitudeM = if (hasData) 438.0 else null,
+                smoothedSpeedMps = if (hasData) 5.0 else 0.0,
+                isStandstill = !hasData
+            )
+        }
+        val leadingNullSmoothed = ExtendedRtsAltitudeSlopeSmoother.smooth(leadingNullSamples)
+        assertTrue(
+            "Leading-null workout must produce finite altitudes near 438 m (min=${leadingNullSmoothed.minOf { it.altitudeM }})",
+            leadingNullSmoothed.all { it.altitudeM.isFinite() && abs(it.altitudeM - 438.0) <= 2.0 }
+        )
+
+        // 3. Single-sample n==1 with non-finite altitude must emit finite 0.0 (never NaN)
+        val singleNaN = ExtendedRtsAltitudeSlopeSmoother.smooth(
+            listOf(
+                RawAltitudeSample(
+                    timestampMs = 8_000_000L,
+                    rawAltitudeM = Double.NaN,
+                    referenceAltitudeM = null,
+                    smoothedSpeedMps = Double.NaN
+                )
+            )
+        )
+        assertEquals(1, singleNaN.size)
+        assertEquals(0.0, singleNaN[0].altitudeM, 1e-12)
+        assertEquals(0.0, singleNaN[0].slopePercent, 1e-12)
+    }
 }

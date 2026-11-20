@@ -61,8 +61,9 @@ import java.util.concurrent.TimeUnit
 /**
  * End-to-end integration tests verifying the integrated tracking pipeline across
  * TrackerService, simulated sensor layer (BANALServiceComm), LiveWorkoutSession,
- * WorkoutRepository, and authentic SQLite databases (REQ-TRK-075, TST-TRK-075, ATT-6185).
+ * WorkoutRepository, and authentic SQLite databases (REQ-TRK-075, TST-TRK-075, REQ-TRK-008, TST-STR-004, ATT-6185).
  */
+// Linked test specs: TST-STR-004
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class TrackerServiceIntegrationTest {

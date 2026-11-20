@@ -78,7 +78,14 @@ class HrvReadinessTrendCardTest {
             "morning_hrv_posture_overnight_wearable",
             "morning_hrv_posture_seated",
             "morning_hrv_posture_standing",
-            "morning_hrv_posture_supine"
+            "morning_hrv_posture_supine",
+            // REQ-HRV-049.2 / TST-HRV-049.2: Polar Verity Sense Optical PPI strings across all 9 locales
+            "morning_hrv_optical_guidance_title",
+            "morning_hrv_optical_guidance_desc",
+            "morning_hrv_optical_artifact_warning_desc",
+            "hrv_modality_ecg_short",
+            "hrv_modality_optical_ppi_short",
+            "hrv_modality_optical_ppi_badge"
         )
 
         locales.forEach { localeDir ->

@@ -53,7 +53,7 @@ import org.junit.Test
  * are symmetrically extracted into [WorkoutDataMapper.RawCursorSnapshot] and forwarded
  * into [WorkoutData] via [WorkoutDataMapper.fromSnapshot] and [WorkoutDataMapper.fromCursor] batch.
  */
-// Linked test specs: TST-DAT-016, TST-UI-365
+// Linked test specs: TST-DAT-016, TST-UI-365, TST-LOG-001, TST-LOG-002
 class WorkoutDataMappingSymmetryTest {
 
     private val context = mockk<Context>(relaxed = true)
@@ -564,5 +564,79 @@ class WorkoutDataMappingSymmetryTest {
         io.mockk.verify(exactly = 0) {
             mockSummariesDb.updateExtremaValue(any(), any(), any(), any(), any())
         }
+    }
+
+    /**
+     * TST-LOG-001 & TST-LOG-002 (REQ-UI-011): Running workouts derive both Speed and Pace
+     * extrema rows from the single SPEED_mps source, and Pace maintains strict mathematical
+     * ordering (Min column = fastest / numerically smallest time per km; Max column = slowest).
+     */
+    @Test
+    fun testRunningPaceExtrema_derivesBothSpeedAndPaceWithNumericalOrdering_TST_LOG_001_TST_LOG_002() {
+        val speedUnitsId = com.atrainingtracker.trainingtracker.MyHelper.getUnitsId(SensorType.SPEED_mps)
+        val paceUnitsId = com.atrainingtracker.trainingtracker.MyHelper.getUnitsId(SensorType.PACE_spm)
+        every { context.getString(SensorType.SPEED_mps.shortNameId) } returns "Speed"
+        every { context.getString(SensorType.PACE_spm.shortNameId) } returns "Pace"
+        every { context.getString(speedUnitsId) } returns "km/h"
+        every { context.getString(paceUnitsId) } returns "min/km"
+
+        val cursor = createMockCursor(sourceString = "TRACKER", raceInt = 0)
+        val snapshot = mapper.readCursorSnapshot(cursor)
+
+        val slowestSpeedPos = LatLng(48.10, 11.50)
+        val fastestSpeedPos = LatLng(48.20, 11.60)
+        val speedExtrema = listOf(
+            WorkoutSummariesDatabaseManager.ExtremaRecord(
+                snapshot.workoutId, SensorType.SPEED_mps, ExtremaType.MIN, 2.5, slowestSpeedPos
+            ),
+            WorkoutSummariesDatabaseManager.ExtremaRecord(
+                snapshot.workoutId, SensorType.SPEED_mps, ExtremaType.AVG, 10.0 / 3.0, null
+            ),
+            WorkoutSummariesDatabaseManager.ExtremaRecord(
+                snapshot.workoutId, SensorType.SPEED_mps, ExtremaType.MAX, 5.0, fastestSpeedPos
+            )
+        )
+
+        val batchMetadata = WorkoutDataMapper.BatchMetadata(
+            extrema = mapOf(snapshot.workoutId to speedExtrema),
+            stravaData = emptyMap(),
+            clusterNames = emptyMap(),
+            laps = emptyMap(),
+            sportTypes = mapOf(
+                snapshot.sportId to WorkoutDataMapper.SportTypeInfo(
+                    bSportType = BSportType.RUN,
+                    sportName = "Running",
+                    stravaSportName = "Run"
+                )
+            )
+        )
+
+        val mapped = mapper.fromSnapshot(snapshot, batchMetadata, reconcile = false)
+        val speedRow = mapped.extremaRows.firstOrNull { it.sensorLabel == "Speed" }
+        val paceRow = mapped.extremaRows.firstOrNull { it.sensorLabel == "Pace" }
+
+        assertNotNull("Running activity must emit Speed extrema row (TST-LOG-002)", speedRow)
+        assertNotNull("Running activity must emit derived Pace extrema row from SPEED_mps (TST-LOG-002)", paceRow)
+
+        // Pace values at 5.0 m/s (3:20/km), 3.333 m/s (5:00/km), 2.5 m/s (6:40/km)
+        val expectedFastestPace = SensorType.PACE_spm.myFormatter.format(1.0 / 5.0)
+        val expectedAvgPace = SensorType.PACE_spm.myFormatter.format(1.0 / (10.0 / 3.0))
+        val expectedSlowestPace = SensorType.PACE_spm.myFormatter.format(1.0 / 2.5)
+
+        assertEquals("Numerical minimum Pace (fastest) must populate minValue (TST-LOG-001)", expectedFastestPace, paceRow!!.minValue)
+        assertEquals(expectedAvgPace, paceRow.avgValue)
+        assertEquals("Numerical maximum Pace (slowest) must populate maxValue (TST-LOG-001)", expectedSlowestPace, paceRow.maxValue)
+        assertEquals(fastestSpeedPos, paceRow.minLatLng)
+        assertEquals(slowestSpeedPos, paceRow.maxLatLng)
+
+        fun paceSeconds(formatted: String): Int {
+            val parts = formatted.split(":")
+            return parts[0].toInt() * 60 + parts[1].toInt()
+        }
+        assertTrue(
+            "Pace min <= avg <= max numerically",
+            paceSeconds(paceRow.minValue!!) <= paceSeconds(paceRow.avgValue!!) &&
+                paceSeconds(paceRow.avgValue!!) <= paceSeconds(paceRow.maxValue!!)
+        )
     }
 }

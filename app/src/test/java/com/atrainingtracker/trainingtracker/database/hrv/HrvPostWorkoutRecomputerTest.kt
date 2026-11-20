@@ -505,4 +505,263 @@ class HrvPostWorkoutRecomputerTest {
         assertTrue("Centered window sec 60..125 must contain valid positive HRV_DFA_A1 rows (was $midWindowValidCount)", midWindowValidCount > 0)
         assertTrue("Heavy unflagged gap tail must suppress HRV_DFA_A1 to NULL (was $nullDfaCount)", nullDfaCount > 0)
     }
+
+    @Test
+    fun recomputeWorkout_persistsArtifactFlagsIdempotentlyAndResetsAfterCleanBackfill_TST_HRV_048() = runBlocking {
+        // REQ-HRV-048 (REQ-HRV-048.2) / TST-HRV-048 (TST-HRV-048.2)
+        val baseFileName = "2026-11-20_hrv_flag_persist"
+        val workoutId = createWorkout(baseFileName)
+        samplesDbManager.createNewTable(baseFileName, java.util.Arrays.asList(*SensorType.values()))
+
+        val startTs = 1_700_000_000_000L
+        val samplesDb = samplesDbManager.database
+        val tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
+        val sdf = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US).apply {
+            timeZone = java.util.TimeZone.getTimeZone("UTC")
+        }
+        samplesDb.beginTransaction()
+        try {
+            for (sec in 0 until 80) {
+                val cv = ContentValues().apply {
+                    put("time", sdf.format(java.util.Date(startTs + sec * 1000L)))
+                    put(SensorType.HR.name, 155.0)
+                }
+                samplesDb.insert(tableName, null, cv)
+            }
+            samplesDb.setTransactionSuccessful()
+        } finally {
+            samplesDb.endTransaction()
+        }
+
+        val rrList = mutableListOf<WorkoutRrInterval>()
+        var beatTs = startTs
+        for (idx in 0 until 180) {
+            val rr = when (idx) {
+                40 -> 275.39f  // extra/short outlier
+                90 -> 779.30f  // missed beat (~2x 385 ms)
+                140 -> 5196.29f // unflagged multi-second gap
+                else -> (385.0 + (idx % 3 - 1) * 3.0).toFloat()
+            }
+            rrList.add(
+                WorkoutRrInterval(
+                    workoutId = workoutId,
+                    beatIndex = idx,
+                    beatTimestampMs = beatTs,
+                    rrMs = rr,
+                    artifactFlag = 0,
+                    gapBeats = 0
+                )
+            )
+            beatTs += rr.toLong()
+        }
+        WorkoutRrRepository.getInstance(context).insertIntervals(rrList)
+
+        assertTrue(HrvPostWorkoutRecomputer.recomputeWorkout(context, workoutId))
+
+        val firstPass = rrDbManager.getIntervalsForWorkout(workoutId)
+        assertTrue("275.39 ms outlier must persist non-zero artifactFlag", firstPass[40].artifactFlag != 0)
+        assertEquals(0, firstPass[40].gapBeats)
+        assertTrue("779.30 ms missed beat must persist non-zero artifactFlag", firstPass[90].artifactFlag != 0)
+        assertEquals(1, firstPass[90].gapBeats)
+        assertEquals(com.atrainingtracker.banalservice.devices.RrBeatEvent.ARTIFACT_GAP, firstPass[140].artifactFlag)
+        assertTrue("5196.29 ms gap must persist gapBeats >= 5", firstPass[140].gapBeats >= 5)
+        assertEquals(0, firstPass[10].artifactFlag)
+        assertEquals(0, firstPass[10].gapBeats)
+
+        // Second idempotent pass must produce identical flags without mutating normal beats
+        assertTrue(HrvPostWorkoutRecomputer.recomputeWorkout(context, workoutId))
+        val secondPass = rrDbManager.getIntervalsForWorkout(workoutId)
+        assertEquals(firstPass.map { it.artifactFlag to it.gapBeats }, secondPass.map { it.artifactFlag to it.gapBeats })
+
+        // Clean backfill replacing outliers with clean 385 ms RR while retaining stale flags must reset them to (0, 0)
+        rrDbManager.insertIntervals(
+            listOf(
+                firstPass[40].copy(rrMs = 385f),
+                firstPass[90].copy(rrMs = 385f)
+            )
+        )
+        assertTrue(HrvPostWorkoutRecomputer.recomputeWorkout(context, workoutId))
+        val afterBackfill = rrDbManager.getIntervalsForWorkout(workoutId)
+        assertEquals(0, afterBackfill[40].artifactFlag)
+        assertEquals(0, afterBackfill[40].gapBeats)
+        assertEquals(0, afterBackfill[90].artifactFlag)
+        assertEquals(0, afterBackfill[90].gapBeats)
+    }
+
+    @Test
+    fun recomputeWorkout_andComputeSessionSdnn_honorClampedArtifactGateThreshold_TST_HRV_048() = runBlocking {
+        // REQ-HRV-048 (REQ-HRV-048.4) / TST-HRV-048 (TST-HRV-048.2)
+        // 100 beats with 4 artifacts (4.0%): passes at 5.0% (and clamped 9.0%->5.0%), gated null at 3.5% & clamped 1.0%->3.0%
+        val beatsWith4Pct = List(100) { idx ->
+            FilteredRrBeat(
+                beatTimestampMs = 1000L + idx * 800L,
+                rawRrMs = 800.0 + (idx % 4) * 10.0,
+                correctedRrMs = 800.0 + (idx % 4) * 10.0,
+                artifactFlag = if (idx < 4) 1 else 0,
+                isArtifact = idx < 4
+            )
+        }
+        assertNotNull(HrvPostWorkoutRecomputer.computeSessionSdnn(beatsWith4Pct, 5.0))
+        assertNotNull(HrvPostWorkoutRecomputer.computeSessionSdnn(beatsWith4Pct, 9.0)) // clamps to 5.0
+        assertNotNull(HrvPostWorkoutRecomputer.computeSessionSdnn(beatsWith4Pct, Double.NaN)) // fallback 5.0
+        assertNull(HrvPostWorkoutRecomputer.computeSessionSdnn(beatsWith4Pct, 3.5))
+        assertNull(HrvPostWorkoutRecomputer.computeSessionSdnn(beatsWith4Pct, 1.0)) // clamps to 3.0
+
+        // Full recomputeWorkout gate check: 100 beats with 4 spaced ARTIFACT_GAP beats (~4.0%)
+        val baseFileName = "2026-11-20_hrv_gate_clamp"
+        val workoutId = createWorkout(baseFileName)
+        samplesDbManager.createNewTable(baseFileName, java.util.Arrays.asList(*SensorType.values()))
+        val startTs = 1_700_000_000_000L
+        val samplesDb = samplesDbManager.database
+        val tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
+        val sdf = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US).apply {
+            timeZone = java.util.TimeZone.getTimeZone("UTC")
+        }
+        samplesDb.beginTransaction()
+        try {
+            for (sec in 0 until 80) {
+                val cv = ContentValues().apply {
+                    put("time", sdf.format(java.util.Date(startTs + sec * 1000L)))
+                    put(SensorType.HR.name, 75.0)
+                }
+                samplesDb.insert(tableName, null, cv)
+            }
+            samplesDb.setTransactionSuccessful()
+        } finally {
+            samplesDb.endTransaction()
+        }
+
+        val rrList = List(100) { idx ->
+            val isGap = idx == 15 || idx == 35 || idx == 55 || idx == 75
+            WorkoutRrInterval(
+                workoutId = workoutId,
+                beatIndex = idx,
+                beatTimestampMs = startTs + idx * 800L,
+                rrMs = (800.0 + 30.0 * kotlin.math.sin(2.0 * Math.PI * idx / 10.0)).toFloat(),
+                artifactFlag = if (isGap) com.atrainingtracker.banalservice.devices.RrBeatEvent.ARTIFACT_GAP else 0,
+                gapBeats = 0
+            )
+        }
+        rrDbManager.insertIntervals(rrList)
+
+        // At 3.0% gate, 4.0% artifacts must suppress HRV_DFA_A1 to NULL
+        assertTrue(HrvPostWorkoutRecomputer.recomputeWorkout(context, workoutId, artifactGateThresholdPercent = 3.0))
+        var dfaCountAt3 = 0
+        samplesDb.query(tableName, arrayOf(SensorType.HRV_DFA_A1.name), null, null, null, null, null).use { c ->
+            while (c.moveToNext()) if (!c.isNull(0)) dfaCountAt3++
+        }
+        assertEquals("4% artifacts must be suppressed when gate threshold is 3.0%", 0, dfaCountAt3)
+
+        // At 5.0% gate, 4.0% artifacts must compute positive HRV_DFA_A1
+        assertTrue(HrvPostWorkoutRecomputer.recomputeWorkout(context, workoutId, artifactGateThresholdPercent = 5.0))
+        var dfaCountAt5 = 0
+        samplesDb.query(tableName, arrayOf(SensorType.HRV_DFA_A1.name), null, null, null, null, null).use { c ->
+            while (c.moveToNext()) if (!c.isNull(0)) dfaCountAt5++
+        }
+        assertTrue("4% artifacts must compute HRV_DFA_A1 when gate threshold is 5.0%", dfaCountAt5 > 0)
+    }
+
+    @Test
+    fun recomputeWorkout_phaseAlignedReconciliationWithLive180sContext_TST_HRV_048() = runBlocking {
+        // REQ-HRV-048 (REQ-HRV-048.3, REQ-HRV-048.4) / TST-HRV-048 (TST-HRV-048.3)
+        val baseFileName = "2026-11-20_hrv_phase_align"
+        val workoutId = createWorkout(baseFileName)
+        samplesDbManager.createNewTable(baseFileName, java.util.Arrays.asList(*SensorType.values()))
+
+        val startTs = 1_700_000_000_000L
+        val samplesDb = samplesDbManager.database
+        val tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
+        val sdf = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US).apply {
+            timeZone = java.util.TimeZone.getTimeZone("UTC")
+        }
+        samplesDb.beginTransaction()
+        try {
+            for (sec in 0 until 210) {
+                val cv = ContentValues().apply {
+                    put("time", sdf.format(java.util.Date(startTs + sec * 1000L)))
+                    put(SensorType.HR.name, 150.0)
+                }
+                samplesDb.insert(tableName, null, cv)
+            }
+            samplesDb.setTransactionSuccessful()
+        } finally {
+            samplesDb.endTransaction()
+        }
+
+        // 500 steady-state beats (~400 ms = 200 s) with physiological harmonic variation
+        val rrEvents = mutableListOf<com.atrainingtracker.banalservice.devices.RrBeatEvent>()
+        val rrEntities = mutableListOf<WorkoutRrInterval>()
+        var ts = startTs
+        for (i in 0 until 500) {
+            val rr = 400.0 + 18.0 * kotlin.math.sin(2.0 * Math.PI * i / 16.0) + 8.0 * kotlin.math.sin(2.0 * Math.PI * i / 64.0)
+            rrEvents.add(
+                com.atrainingtracker.banalservice.devices.RrBeatEvent(
+                    beatTimestampMs = ts,
+                    rrMs = rr,
+                    rawCounter = i,
+                    protocol = com.atrainingtracker.banalservice.devices.ProtocolType.BLE
+                )
+            )
+            rrEntities.add(
+                WorkoutRrInterval(
+                    workoutId = workoutId,
+                    beatIndex = i,
+                    beatTimestampMs = ts,
+                    rrMs = rr.toFloat(),
+                    artifactFlag = 0,
+                    gapBeats = 0
+                )
+            )
+            ts += rr.toLong()
+        }
+        rrDbManager.insertIntervals(rrEntities)
+        assertTrue(HrvPostWorkoutRecomputer.recomputeWorkout(context, workoutId, artifactGateThresholdPercent = 5.0))
+
+        // Query centered recompute at t = 120s (centered window [60s..180s])
+        var centeredDfaAt120: Double? = null
+        var centeredArtAt120: Double? = null
+        samplesDb.query(
+            tableName,
+            arrayOf(SensorType.HRV_DFA_A1.name, SensorType.HRV_ARTIFACT_RATE.name),
+            "${WorkoutSamplesDatabaseManager.WorkoutSamplesDbHelper.C_ID} = ?",
+            arrayOf("121"), // 0-indexed sec=120 is row 121
+            null, null, null
+        ).use { c ->
+            if (c.moveToFirst()) {
+                if (!c.isNull(0)) centeredDfaAt120 = c.getDouble(0)
+                if (!c.isNull(1)) centeredArtAt120 = c.getDouble(1)
+            }
+        }
+        assertNotNull("Centered DFA a1 at t=120s must be computed", centeredDfaAt120)
+        assertEquals("Clean steady-state centered artifact rate must be 0%", 0.0, centeredArtAt120!!, 0.01)
+
+        // Compare against live HRVMetricsDevice at phase-aligned T = 180s (causal window [60s..180s] with 0..60s prior context)
+        val liveNow = startTs + 180_000L
+        val sensorManager = io.mockk.mockk<com.atrainingtracker.banalservice.sensor.MySensorManager>(relaxed = true)
+        val liveDevice = object : com.atrainingtracker.banalservice.devices.hrv.HRVMetricsDevice(
+            context = context,
+            mySensorManager = sensorManager,
+            timeProvider = { liveNow },
+            startScheduler = false,
+            artifactGateThresholdPercent = 5.0
+        ) {
+            override fun notifySensorsChanged() {}
+        }
+        for (ev in rrEvents) {
+            if (ev.beatTimestampMs <= liveNow) {
+                liveDevice.onRrBeat(ev)
+            }
+        }
+        liveDevice.calculateMetrics()
+        val liveDfaAt180 = liveDevice.getHrvDfaA1Sensor().sensorData.value
+        val liveArtAt180 = liveDevice.getHrvArtifactRateSensor().sensorData.value
+        liveDevice.shutDown()
+
+        assertNotNull("Live DFA a1 at T=180s must be computed", liveDfaAt180)
+        assertEquals("Phase-aligned live artifact rate must match centered 0%", 0.0, liveArtAt180!!, 0.01)
+        assertTrue(
+            "Phase-aligned live(180s) vs centered(120s) DFA a1 must reconcile closely (live=$liveDfaAt180, centered=$centeredDfaAt120)",
+            kotlin.math.abs(liveDfaAt180!! - centeredDfaAt120!!) <= 0.05
+        )
+    }
 }

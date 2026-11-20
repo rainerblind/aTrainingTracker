@@ -1,14 +1,14 @@
 # Living Test Specification: Engineering Process, Stability & Architecture (Part 2 of 2)
 
 **Document ID**: `DOC-TST-PRO-P2`  
-**Version**: 1.0.31  
+**Version**: 1.0.37  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `process_stability_part2`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Tests**: 91
+**Total Tests**: 93
 
 ---
 
@@ -1571,6 +1571,43 @@
   4. *Monotonic Baseline Ratchet & Zero-`Recycle` CI Enforcement (`TST-PRO-133.4`, `tools/test_check_static_analysis_baselines.py`, `ReleaseCiAndLintConfigContractTest.kt`)*:
      • *Given* tightened `DEFAULT_LINT_CEILING <= 216` and an explicit `<issue id="Recycle">` prohibition in `tools/check_static_analysis_baselines.py` + `ReleaseCiAndLintConfigContractTest.kt`, *When* `python3 -m unittest tools/test_check_static_analysis_baselines.py` and `:app:testDebugUnitTest --tests "*.ReleaseCiAndLintConfigContractTest"` execute against live and synthetic inflated/Recycle-containing baseline fixtures, *Then* live baselines pass `exit 0` and any baseline count increase or `Recycle` entry fails deterministically (`Localization Parity: N/A - no UI strings`). Tag tests with `TST-PRO-133.4`.
 
+### TST-PRO-134: **qa-audit Merged-Only Sampling, SUP.9 Non-Code Exemption, Plan Variant & Verifier Parity Suite (ATT-9071)** [Verified]
+- **Requirement(s)**: `REQ-PRO-134`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Component**: `tools/jira_util.py`, `tools/hoechstmass/tools/jira_util.py`, `tools/verify_requirement_governance.py`, `tools/hoechstmass/tools/verify_requirement_governance.py`, `tools/test_jira_accounts.py` (`TestSup9ProblemResolution.test_tst_pro_134_1_and_2_qa_audit_merged_only_and_zero_wip_fallback`, `TestSup9ProblemResolution.test_tst_pro_134_3_and_4_sup9_non_code_exemption_and_impl_plan_variant`), `tools/test_verify_requirement_governance.py` (`TestGrandfatheredSysreqsRemoved.test_scenario_88_tst_pro_134_5_qa_audit_verifier_zero_and_single_merged`), `tools/hoechstmass/tools/test_hoechstmass_tools.py` (`TestHoechstmassPostStage6MergeAndBounceParity.test_hoechstmass_qa_audit_tst_pro_134_parity_and_verifier`)
+- **Jira**: `ATT-9071`
+- **Test Description**:
+  1. *Merged-Only Sampling & Zero WIP Fallback (`TST-PRO-134.1`, `TST-PRO-134.2`, `tools/test_jira_accounts.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`)*:
+     • *Given* mocked Jira sprints mixing `Final Review (Human)` with `Final Review (Agent)` and `Implementation`/`Analysis` WIP tickets (plus `1` merged + `2` WIP and `0` merged + `2` WIP fixtures), *When* `qa_audit()` executes offline (`Rule 5`), *Then* `"final review (agent)"` and WIP tickets are excluded, `min_sample`/`total_tickets` reflect `len(completed_parents)`, and `0`-merged sprints emit a `COMPLIANT` `N/A (0 merged tickets in sprint)` report with `0` CA creations. Tag tests with `TST-PRO-134.1` and `TST-PRO-134.2`.
+  2. *SUP.9 Non-Code Resolution Exemption & `labels` Query Parity (`TST-PRO-134.3`, `tools/test_jira_accounts.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`)*:
+     • *Given* Jira issue query inspection and mocked merged tickets carrying `resolution-duplicate`, `resolution-rejected`, or `resolution-cannot-reproduce` with `0` commits/subtasks/deliverables, *When* `qa_audit()` executes, *Then* Jira queries include `labels` (and `description` in Höchstmaß), code checks record `N/A (SUP.9 non-code resolution)` with PO provenance verified, and `0` non-compliances or CA tickets are created. Tag tests with `TST-PRO-134.3`.
+  3. *Plan Filename Variant Support (`TST-PRO-134.4`, `tools/test_jira_accounts.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`)*:
+     • *Given* merged tickets with `docs/engineering/plans/<KEY>_plan.md` and `docs/engineering/plans/<KEY>_impl_plan.md`, *When* `qa_audit()` runs Lifecycle Deliverables checks, *Then* both variants pass. Tag tests with `TST-PRO-134.4`.
+  4. *Governance Verifier Compatibility (`TST-PRO-134.5`, `tools/test_verify_requirement_governance.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`)*:
+     • *Given* `N/A (0 merged tickets in sprint)` and `1 / 1` low-completion QA audit markdown fixtures alongside under-sampled `N >= 2` fixtures, *When* `_validate_single_qa_audit()` runs, *Then* valid low/zero-merged audits pass while under-sampled `N >= 2` audits still fail (`Localization Parity: N/A - Python tooling only`). Tag tests with `TST-PRO-134.5`.
+
+### TST-PRO-135: **Weekly & Pre-Release Multi-OS and 9-Language Emulator Sweep Suite** [Verified]
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Integration / Review
+- **Requirement(s)**: `REQ-PRO-135` (`REQ-PRO-135.1`–`REQ-PRO-135.5`)
+- **Component**: `tools/run_multi_os_emulator_sweep.py`, `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `app/src/androidTest/`, `docs/management/qa_plan.md`, `docs/management/cm_plan.md`, `.agents/skills/release-manager/SKILL.md`
+- **Verification Evidence**: `tools/test_run_multi_os_emulator_sweep.py::TestMultiOsEmulatorSweep::test_tst_pro_135_1_serial_multi_os_and_9_locale_sweep_and_cleanup_on_failure` (`TST-PRO-135.1`); `tools/test_run_multi_os_emulator_sweep.py::TestMultiOsEmulatorSweep::test_tst_pro_135_2_physical_device_refusal_and_logcat_and_bounds_defects` (`TST-PRO-135.2`); `tools/test_verify_requirement_governance.py::TestGrandfatheredSysreqsRemoved::test_scenario_89_tst_pro_135_3_emulator_sweeps_allowed_in_engineering_layout` (`TST-PRO-135.3`); `tools/test_jira_accounts.py::TestJiraCliTooling::test_ensure_weekly_reviews_coordinates_both_pillars` & `tools/test_jira_accounts.py::TestProcessStabilityLegacyTsts::test_tst_pro_135_4_weekly_emulator_sweep_cadence_and_gate_docs` (`TST-PRO-135.4`); `app/src/androidTest/java/com/atrainingtracker/trainingtracker/MultiLocaleUiSweepAndroidTest.kt::MultiLocaleUiSweepAndroidTest::sweepCoreScreensAndTrackingLifecycle_withoutCrashing_TST_PRO_135_5` (`TST-PRO-135.5`) (`ATT-8222`)
+- **Jira**: `ATT-8222`
+- **Test Description**:
+  1. *Serial Multi-OS & 9-Locale Execution + `finally` Cleanup (`TST-PRO-135.1`, `tools/test_run_multi_os_emulator_sweep.py`)*:
+     • *Given* mocked `avdmanager`/`emulator`/`adb` subprocesses across `3+` AVDs (`Pixel_5_Android_12`, `Pixel_8_Android_15`, `Pixel_7_Android_36`) and all `9` locales (`en`, `de`, `es`, `fr`, `it`, `ja`, `nl`, `pl`, `pt`), *When* `run_sweep()` executes, *Then* AVDs boot strictly serially (never concurrent), `adb emu geo fix` executes, `9` locales sweep on the reference AVD, `adb emu kill` cleanup runs in `finally` even when a mid-run step raises, and `YYYY-MM-DD_sweep.md` report output is written cleanly. Tag with `TST-PRO-135.1`.
+  2. *Physical-Device Refusal & Logcat/Bounds Defect Detection (`TST-PRO-135.2`, `tools/test_run_multi_os_emulator_sweep.py`)*:
+     • *Given* physical USB serial `66020DLCR002FL`, synthetic `logcat` outputs (`FATAL EXCEPTION`, `ANR in`, `IllegalFormatConversionException`), and synthetic `uiautomator dump` XML hierarchies with clipped/zero-size/overlapping text bounds, *When* device guardrail, logcat parser, and bounds analyzer run offline, *Then* physical serial raises `RuntimeError` immediately and defect parsers flag every injected crash and layout defect cleanly. Tag with `TST-PRO-135.2`.
+  3. *Governance Directory Allow-List & CM Registration (`TST-PRO-135.3`, `tools/test_verify_requirement_governance.py`)*:
+     • *Given* `"emulator_sweeps"` under `docs/engineering/` and `docs/management/cm_plan.md`, *When* `verify_engineering_directory_structure()` runs, *Then* `emulator_sweeps` passes without error. Tag with `TST-PRO-135.3`.
+  4. *Weekly Cadence, 3-Pillar `ensure_weekly_reviews()`, QA Plan & Release Gate (`TST-PRO-135.4`, `tools/test_jira_accounts.py`)*:
+     • *Given* offline mocked Jira API responses, `docs/engineering/emulator_sweeps/` fixtures (`empty`, `> 7 days` with `develop` commits vs fresh `<= 7 days`), and updated `test_ensure_weekly_reviews_coordinates_both_pillars` (mocking all 3 pillars), *When* `is_weekly_emulator_sweep_overdue()`, `ensure_weekly_emulator_sweep_ticket()`, and `ensure_weekly_reviews()` execute, *Then* overdue sweeps create deduplicated `rank_top=True` tickets under `ATT-232`, and `qa_plan.md` + `release-manager/SKILL.md` currency gate checks pass (`Localization Parity: N/A - no UI strings`). Tag with `TST-PRO-135.4`.
+  5. *Instrumented Click-Through Compilation (`TST-PRO-135.5`, `app/src/androidTest/`)*:
+     • *Given* the deterministic multi-screen navigation & tracking click-through `androidTest` class, *When* `./gradlew :app:compileDebugAndroidTestKotlin` runs via `parallel_sprint_lock.py`, *Then* compilation exits `0` with `0` edits under `app/src/main/`. Tag with `TST-PRO-135.5`.
+
 ---
 
 ## Change History
@@ -1609,3 +1646,9 @@
 | `1.0.29` | 2026-11-19 | Lane A Flash (`ATT-8199`, `--as agent1`) | `ATT-8199` | Added `[Planned]` `TST-PRO-133` (`TST-PRO-133.1`–`TST-PRO-133.4`: evasion-resistant scanner tripwire matrix, `RepositoryServiceCleanlinessContractTest` & `SystemContextContractTest` migration, `22` `Recycle` verification/pruning, conditional `'Range'` check, & monotonic baseline ratchet). |
 | `1.0.30` | 2026-11-19 | Lane A Flash (`ATT-8199`, `--as agent1`) | `ATT-8199` | Promoted `TST-PRO-133` to `[Implemented]` in Stage 4 (`63/63` targeted contract tests PASS, `6/6` `test_check_static_analysis_baselines.py` OK, `lint-baseline.xml` `216` / `0` `Recycle`). |
 | `1.0.31` | 2026-11-19 | Lane A Flash (`ATT-8199`, `--as agent1`) | `ATT-8199` | Promoted `TST-PRO-133` (`TST-PRO-133.1`–`TST-PRO-133.4`) to `[Verified]` in Stage 5 (`ATT-8199_walkthrough.md`, `Rule 7.5` reused Gate 4 evidence). |
+| `1.0.32` | 2026-11-19 | Lane A Flash (`ATT-9071`, `--as agent1`) | `ATT-9071` | Added `[Planned]` `TST-PRO-134` (`TST-PRO-134.1`–`TST-PRO-134.5`: merged-only sampling, zero WIP fallback & 0/1-merged handling, SUP.9 non-code exemption + `labels` fetch, `_impl_plan.md` variant, verifier parity). |
+| `1.0.33` | 2026-11-19 | Lane A Flash (`ATT-9071`, `--as agent1`) | `ATT-9071` | Promoted `TST-PRO-134` (`TST-PRO-134.1`–`TST-PRO-134.5`) to `[Implemented]` in Stage 4 (`tools/test_jira_accounts.py`, `tools/test_verify_requirement_governance.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`). |
+| `1.0.34` | 2026-11-19 | Lane A Flash (`ATT-9071`, `--as agent1`) | `ATT-9071` | Promoted `TST-PRO-134` (`TST-PRO-134.1`–`TST-PRO-134.5`) to `[Verified]` in Stage 5 with exact test class/method citations (`ATT-9071_walkthrough.md`, `Rule 7.5` reused Gate 4 evidence). |
+| `1.0.35` | 2026-11-20 | Lane A Flash (`ATT-8222`, `--as agent1`) | `ATT-8222` | Added `[Planned]` `TST-PRO-135` (`TST-PRO-135.1`–`TST-PRO-135.5`: serial Multi-OS & 9-language mocked sweep + `finally` cleanup, `66020DLCR002FL` physical-phone refusal + logcat/bounds checks, `ALLOWED_ENGINEERING_ENTRIES` + `cm_plan.md`, weekly 3-pillar `ensure_weekly_reviews` + `qa_plan`/`release-manager` gate, `:app:compileDebugAndroidTestKotlin`). |
+| `1.0.36` | 2026-11-20 | Lane A Flash (`ATT-8222`, `--as agent1`) | `ATT-8222` | Promoted `TST-PRO-135` (`TST-PRO-135.1`–`TST-PRO-135.5`) to `[Implemented]` in Stage 4 (`tools/test_run_multi_os_emulator_sweep.py` `2/2`, `tools/test_jira_accounts.py` `111/111`, `tools/test_verify_requirement_governance.py -k tst_pro_135` `1/1`, `verify_skills.py` `11/11`, `:app:compileDebugAndroidTestKotlin` BUILD SUCCESSFUL). |
+| `1.0.37` | 2026-11-20 | Lane A Flash (`ATT-8222`, `--as agent1`) | `ATT-8222` | Promoted `TST-PRO-135` (`TST-PRO-135.1`–`TST-PRO-135.5`) to `[Verified]` in Stage 5 with verbatim test citations (`ATT-8222_walkthrough.md`, `Rule 7.5` reused Gate 4 evidence at SHA `de14d362`). |

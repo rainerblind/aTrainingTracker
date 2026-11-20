@@ -45,9 +45,11 @@ class DatabaseSchemaRegistryHrvTest {
             supportedVersion
         )
 
+        // REQ-HRV-049.3 / TST-HRV-049.3: HrvReadiness.db v3 (.attbackup parity via Rule 62)
         assertTrue(DatabaseSchemaRegistry.isVersionSupported(HrvReadinessDbHelper.DB_NAME, 1))
         assertTrue(DatabaseSchemaRegistry.isVersionSupported(HrvReadinessDbHelper.DB_NAME, 2))
-        assertFalse(DatabaseSchemaRegistry.isVersionSupported(HrvReadinessDbHelper.DB_NAME, 3))
+        assertTrue(DatabaseSchemaRegistry.isVersionSupported(HrvReadinessDbHelper.DB_NAME, 3))
+        assertFalse(DatabaseSchemaRegistry.isVersionSupported(HrvReadinessDbHelper.DB_NAME, 4))
     }
 
     @Test

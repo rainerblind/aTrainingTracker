@@ -534,6 +534,7 @@ ALLOWED_ENGINEERING_ENTRIES = {
     "analysis",
     "aspice_audits",
     "code_reviews",
+    "emulator_sweeps",
     "gates",
     "metrics",
     "plans",
@@ -744,28 +745,47 @@ def _validate_single_qa_audit(found_file, sprint_name=None):
             content,
             re.IGNORECASE,
         )
-        sampled_tickets = set(t[0] or t[1] for t in ticket_sections if (t[0] or t[1]) and not (t[0] or t[1]).startswith("ATT-232"))
+        sampled_tickets = set(
+            (t[0] or t[1]) for t in ticket_sections
+            if (t[0] or t[1])
+            and (t[0] or t[1]).upper() not in ("PASS", "FAIL", "COMPLIANT", "NON-COMPLIANT")
+            and not (t[0] or t[1]).startswith("ATT-232")
+        )
         if len(sampled_tickets) == 0:
             all_keys = set(re.findall(r"\b(?:ATT|PROJ)-\d+\b", content))
             sampled_tickets = {k for k in all_keys if not k.startswith("ATT-232")}
 
         total_sampled = len(sampled_tickets)
-        if total_sampled < 2:
-            return False, [
-                f"ERROR: Sprint QA audit report in {found_file} sampled only {total_sampled} ticket(s) (minimum >= 2 required by REQ-PRO-061.1)."
-            ]
-
-        # Dynamic sample size check (REQ-PRO-091.2, TST-PRO-091.2)
+        # Dynamic sample size check (REQ-PRO-091.2, TST-PRO-091.2, REQ-PRO-134.5)
         sample_ratio_m = re.search(r"(?:Sample Size|sample_size).*?(\d+)\s*/\s*(\d+)", content, re.IGNORECASE)
-        if sample_ratio_m:
-            sampled_cnt = int(sample_ratio_m.group(1))
-            total_cnt = int(sample_ratio_m.group(2))
-            import math
-            min_required = max(2, math.ceil(total_cnt * 0.10))
-            if sampled_cnt < min_required:
+        is_zero_merged_na = bool(
+            sample_ratio_m
+            and int(sample_ratio_m.group(1)) == 0
+            and int(sample_ratio_m.group(2)) == 0
+            and re.search(r"N/A\s*\(0\s+merged\s+tickets\s+in\s+sprint\)", content, re.IGNORECASE)
+        )
+        is_single_merged = bool(
+            sample_ratio_m
+            and int(sample_ratio_m.group(1)) == 1
+            and int(sample_ratio_m.group(2)) == 1
+            and total_sampled == 1
+        )
+
+        if not is_zero_merged_na and not is_single_merged:
+            if total_sampled < 2:
                 return False, [
-                    f"ERROR: Sample size {sampled_cnt} / {total_cnt} in {found_file} is below required >= 10% dynamic threshold (minimum {min_required} required by REQ-PRO-091.2)."
+                    f"ERROR: Sprint QA audit report in {found_file} sampled only {total_sampled} ticket(s) (minimum >= 2 required by REQ-PRO-061.1)."
                 ]
+
+            if sample_ratio_m:
+                sampled_cnt = int(sample_ratio_m.group(1))
+                total_cnt = int(sample_ratio_m.group(2))
+                import math
+                min_required = max(2, math.ceil(total_cnt * 0.10))
+                if sampled_cnt < min_required:
+                    return False, [
+                        f"ERROR: Sample size {sampled_cnt} / {total_cnt} in {found_file} is below required >= 10% dynamic threshold (minimum {min_required} required by REQ-PRO-091.2)."
+                    ]
 
         # Corrective Action Tracking check (REQ-PRO-091.3, TST-PRO-091.3)
         is_non_compliant = bool(re.search(r"Overall Process Verdict.*?\bNON-COMPLIANT\b", content, re.IGNORECASE))

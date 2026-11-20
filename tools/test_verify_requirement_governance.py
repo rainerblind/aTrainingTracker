@@ -3848,6 +3848,65 @@ class TestGrandfatheredSysreqsRemoved(unittest.TestCase):
             self.assertFalse(ok_arch)
             self.assertTrue(any("SYSREQ-PER-001" in d for d in diag_arch), diag_arch)
 
+    def test_scenario_88_tst_pro_134_5_qa_audit_verifier_zero_and_single_merged(self):
+        """TST-PRO-134.5: verify_qa_audits accepts valid 0-merged N/A and 1/1 merged reports while rejecting under-sampled N>=2."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            audits_dir = os.path.join(tmpdir, "docs", "engineering", "qa_audits")
+            os.makedirs(audits_dir, exist_ok=True)
+            target_file = os.path.join(audits_dir, "sprint_2026-11-19_03_nacht.md")
+
+            zero_merged_report = (
+                "# Sprint QA Process-Compliance Audit: Sprint 2026-11-19_03_Nacht (ID: 464)\n\n"
+                "**Auditor Role**: `agent2`\n"
+                "**Sampled Tickets**: N/A (0 merged tickets in sprint)\n"
+                "**Overall Process Verdict**: **COMPLIANT**\n\n"
+                "| **Sample Size** | 0 / 0 merged tickets (N/A (0 merged tickets in sprint)) |\n"
+            )
+            with open(target_file, "w", encoding="utf-8") as f:
+                f.write(zero_merged_report)
+            ok_zero, msgs_zero = verify_qa_audits(sprint_name="sprint/2026-11-19_03_Nacht", repo_root=tmpdir)
+            self.assertTrue(ok_zero, msgs_zero)
+
+            single_merged_report = (
+                "# Sprint QA Process-Compliance Audit: Sprint 2026-11-19_03_Nacht (ID: 464)\n\n"
+                "**Auditor Role**: `agent2`\n"
+                "**Sampled Tickets**: ATT-9721\n"
+                "**Overall Process Verdict**: **COMPLIANT**\n\n"
+                "| **Sample Size** | 1 / 1 merged ticket (all merged tickets audited) |\n\n"
+                "| ATT-9721 | Only merged | PASS | PASS | PASS | PASS | PASS | PASS | COMPLIANT |\n\n"
+                "### Ticket: ATT-9721 - Only merged\n"
+            )
+            with open(target_file, "w", encoding="utf-8") as f:
+                f.write(single_merged_report)
+            ok_one, msgs_one = verify_qa_audits(sprint_name="sprint/2026-11-19_03_Nacht", repo_root=tmpdir)
+            self.assertTrue(ok_one, msgs_one)
+
+            undersampled_report = (
+                "# Sprint QA Process-Compliance Audit: Sprint 2026-11-19_03_Nacht (ID: 464)\n\n"
+                "**Auditor Role**: `agent2`\n"
+                "**Overall Process Verdict**: **COMPLIANT**\n\n"
+                "| **Sample Size** | 2 / 25 tickets |\n\n"
+                "### Ticket: ATT-9721\n### Ticket: ATT-9722\n"
+            )
+            with open(target_file, "w", encoding="utf-8") as f:
+                f.write(undersampled_report)
+            ok_bad, _ = verify_qa_audits(sprint_name="sprint/2026-11-19_03_Nacht", repo_root=tmpdir)
+            self.assertFalse(ok_bad)
+
+    def test_scenario_89_tst_pro_135_3_emulator_sweeps_allowed_in_engineering_layout(self):
+        """TST-PRO-135.3: ALLOWED_ENGINEERING_ENTRIES permits emulator_sweeps and cm_plan registers it."""
+        self.assertIn("emulator_sweeps", ALLOWED_ENGINEERING_ENTRIES)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            eng_dir = os.path.join(tmpdir, "docs", "engineering")
+            os.makedirs(os.path.join(eng_dir, "emulator_sweeps"), exist_ok=True)
+            ok, errs = verify_engineering_directory_structure(eng_dir=eng_dir)
+            self.assertTrue(ok, f"Expected emulator_sweeps to pass engineering dir check: {errs}")
+
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+        with open(os.path.join(repo_root, "docs", "management", "cm_plan.md"), encoding="utf-8") as f:
+            cm_plan = f.read()
+        self.assertIn("emulator_sweeps/", cm_plan)
+
 
 if __name__ == "__main__":
     unittest.main()

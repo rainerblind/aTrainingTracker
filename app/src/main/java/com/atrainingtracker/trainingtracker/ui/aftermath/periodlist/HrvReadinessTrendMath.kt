@@ -21,6 +21,7 @@ package com.atrainingtracker.trainingtracker.ui.aftermath.periodlist
 import com.atrainingtracker.trainingtracker.database.hrv.HrvPosture
 import com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessCalculator
 import com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessEntry
+import com.atrainingtracker.trainingtracker.database.hrv.HrvSensorModality
 import com.atrainingtracker.trainingtracker.database.hrv.ReadinessStatus
 import java.time.LocalDate
 import kotlin.math.max
@@ -62,7 +63,8 @@ data class HrvTrendPoint(
 )
 
 /**
- * Encapsulates the complete processed time series for a posture (`REQ-PER-033.1`, `REQ-PER-033.2`).
+ * Encapsulates the complete processed time series for a posture and isolated sensor modality
+ * (`REQ-PER-033.1`, `REQ-PER-033.2`, `REQ-HRV-049.4`).
  */
 data class HrvTrendSeries(
     val posture: HrvPosture,
@@ -71,7 +73,10 @@ data class HrvTrendSeries(
     val availablePostures: List<HrvPosture>,
     val yMin: Double,
     val yMax: Double,
-    val maxTrainingLoad: Double
+    val maxTrainingLoad: Double,
+    val sensorModality: HrvSensorModality = HrvSensorModality.ECG,
+    val availableModalities: List<HrvSensorModality> = listOf(sensorModality),
+    val seriesByModality: Map<HrvSensorModality, HrvTrendSeries> = emptyMap()
 )
 
 /**
@@ -102,13 +107,20 @@ object HrvReadinessTrendMath {
     }
 
     /**
-     * Computes the processed [HrvTrendSeries] for the given [selectedPosture] and [metricMode].
+     * Computes the processed [HrvTrendSeries] for the given [selectedPosture], [metricMode],
+     * and isolated [selectedModality] (`REQ-PER-033`, `REQ-HRV-049.4`).
+     *
+     * Strictly isolates ECG chest-strap and optical PPI readings into separate cohorts so systematic
+     * PPG-vs-ECG offsets never contaminate 7-day rolling averages or 60-day SWC baselines. When an
+     * athlete has only optical PPI entries for the active posture, defaults automatically to
+     * [HrvSensorModality.OPTICAL_PPI] so the chart is never empty.
      */
     fun calculateTrendSeries(
         entries: List<HrvReadinessEntry>,
         selectedPosture: HrvPosture,
         metricMode: HrvTrendMetricMode = HrvTrendMetricMode.LN_RMSSD,
-        dailyTrainingLoads: Map<String, Double> = emptyMap()
+        dailyTrainingLoads: Map<String, Double> = emptyMap(),
+        selectedModality: HrvSensorModality? = null
     ): HrvTrendSeries {
         val (defaultPosture, availablePostures) = resolveAvailablePostures(entries)
         val activePosture = if (availablePostures.contains(selectedPosture)) {
@@ -124,9 +136,61 @@ object HrvReadinessTrendMath {
                 it.rmssdMs != null && it.lnRmssd != null
         }
 
+        val countsByModality = postureEntries.groupBy { it.sensorModality }.mapValues { it.value.size }
+        val availableModalities = listOf(HrvSensorModality.ECG, HrvSensorModality.OPTICAL_PPI)
+            .filter { (countsByModality[it] ?: 0) > 0 }
+        val defaultModality = when {
+            availableModalities.isEmpty() -> HrvSensorModality.ECG
+            availableModalities.size == 1 -> availableModalities.first()
+            else -> countsByModality.maxWithOrNull(
+                compareBy<Map.Entry<HrvSensorModality, Int>> { it.value }
+                    .thenBy { if (it.key == HrvSensorModality.ECG) 1 else 0 }
+            )?.key ?: HrvSensorModality.ECG
+        }
+        val activeModality = if (selectedModality != null && availableModalities.contains(selectedModality)) {
+            selectedModality
+        } else {
+            defaultModality
+        }
+
+        val seriesByModality = LinkedHashMap<HrvSensorModality, HrvTrendSeries>()
+        for (modality in availableModalities) {
+            seriesByModality[modality] = computeSingleModalitySeries(
+                cohortEntries = postureEntries.filter { it.sensorModality == modality },
+                activePosture = activePosture,
+                availablePostures = availablePostures,
+                metricMode = metricMode,
+                dailyTrainingLoads = dailyTrainingLoads,
+                modality = modality,
+                availableModalities = availableModalities
+            )
+        }
+
+        val primary = seriesByModality[activeModality] ?: computeSingleModalitySeries(
+            cohortEntries = emptyList(),
+            activePosture = activePosture,
+            availablePostures = availablePostures,
+            metricMode = metricMode,
+            dailyTrainingLoads = dailyTrainingLoads,
+            modality = activeModality,
+            availableModalities = availableModalities
+        )
+
+        return primary.copy(seriesByModality = seriesByModality)
+    }
+
+    private fun computeSingleModalitySeries(
+        cohortEntries: List<HrvReadinessEntry>,
+        activePosture: HrvPosture,
+        availablePostures: List<HrvPosture>,
+        metricMode: HrvTrendMetricMode,
+        dailyTrainingLoads: Map<String, Double>,
+        modality: HrvSensorModality,
+        availableModalities: List<HrvSensorModality>
+    ): HrvTrendSeries {
         // 2. Daily deduplication: group by dateIso and pick primary
         val dailyMap = mutableMapOf<String, HrvReadinessEntry>()
-        for ((date, dayEntries) in postureEntries.groupBy { it.dateIso }) {
+        for ((date, dayEntries) in cohortEntries.groupBy { it.dateIso }) {
             val primary = dayEntries.sortedWith(
                 compareByDescending<HrvReadinessEntry> { it.isPrimaryForDay }
                     .thenBy { it.timestampMs }
@@ -143,7 +207,9 @@ object HrvReadinessTrendMath {
                 availablePostures = availablePostures,
                 yMin = 0.0,
                 yMax = 1.0,
-                maxTrainingLoad = 0.0
+                maxTrainingLoad = 0.0,
+                sensorModality = modality,
+                availableModalities = availableModalities
             )
         }
 
@@ -259,7 +325,9 @@ object HrvReadinessTrendMath {
             availablePostures = availablePostures,
             yMin = yMin,
             yMax = yMax,
-            maxTrainingLoad = maxLoad
+            maxTrainingLoad = maxLoad,
+            sensorModality = modality,
+            availableModalities = availableModalities
         )
     }
 

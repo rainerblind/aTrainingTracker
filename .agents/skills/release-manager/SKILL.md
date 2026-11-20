@@ -84,12 +84,12 @@ python3 tools/jira_util.py comment <RELEASE_TICKET_KEY> "h4. Release Progress: S
    git status
    ```
 
-   * **Mandatory Weekly Dual-Vendor Governance Currency Gate (`REQ-PRO-095`, `REQ-PRO-096` / `ATT-8212`, `ATT-8213`, `ATT-8426`)**:
-     Prior to cutting the release branch, verify that both the weekly Dual-Vendor (Google Gemini + Anthropic Claude) Code Review and ASPICE 4.0 Cross-Audit are current ($\le 7$ days old since the latest completed review/audit record) and recorded in `docs/engineering/code_reviews/` and `docs/engineering/aspice_audits/`:
+   * **Mandatory Weekly Dual-Vendor & Multi-OS/9-Language Emulator Sweep Currency Gate (`REQ-PRO-095`, `REQ-PRO-096`, `REQ-PRO-135` / `ATT-8212`, `ATT-8213`, `ATT-8222`, `ATT-8426`)**:
+     Prior to cutting the release branch, verify that the weekly Dual-Vendor (Google Gemini + Anthropic Claude) Code Review, ASPICE 4.0 Cross-Audit, and Multi-OS & 9-Language Emulator UI Verification Sweep are all current ($\le 7$ days old since the latest completed record) in `docs/engineering/code_reviews/`, `docs/engineering/aspice_audits/`, and `docs/engineering/emulator_sweeps/`:
      ```bash
-     python3 -c "import tools.jira_util as ju; exit(1 if (ju.is_weekly_review_overdue() or ju.is_weekly_aspice_audit_overdue()) else 0)"
+     python3 -c "import tools.jira_util as ju; exit(1 if (ju.is_weekly_review_overdue() or ju.is_weekly_aspice_audit_overdue() or ju.is_weekly_emulator_sweep_overdue()) else 0)"
      ```
-     If either review is overdue (> 7 days), release preparation is **STRICTLY BLOCKED** until the pending review ticket is resolved or human exception is recorded (decoupled from requiring all subsystem slices in coverage_matrix.md to be audited before release).
+     If any of these weekly gates is overdue (> 7 days), release preparation is **STRICTLY BLOCKED** until the pending review/sweep ticket is resolved (e.g. `python3 tools/run_multi_os_emulator_sweep.py`) or a human exception is recorded (decoupled from requiring all subsystem slices in coverage_matrix.md to be audited before release).
 
 2. **Inspect Current Version in `app/build.gradle`**:
    Read `versionName` and `versionCode` from the `defaultConfig` block in `app/build.gradle`:

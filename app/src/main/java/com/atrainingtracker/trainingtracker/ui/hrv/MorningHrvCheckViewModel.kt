@@ -38,6 +38,7 @@ import com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessCalculator
 import com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessEntry
 import com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessRepository
 import com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessResult
+import com.atrainingtracker.trainingtracker.database.hrv.HrvSensorModality
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
@@ -98,7 +99,8 @@ data class MorningHrvUiState(
     val sleepQuality1To5: Int = 3,
     val morningEnergy1To5: Int = 3,
     val muscleSoreness1To5: Int = 1,
-    val selectedContextTags: Set<String> = emptySet()
+    val selectedContextTags: Set<String> = emptySet(),
+    val isOpticalPpiSession: Boolean = false
 )
 
 /**
@@ -362,7 +364,7 @@ class MorningHrvCheckViewModel @JvmOverloads constructor(
     }
 
     /**
-     * Handles real-time RR beat events from [banalServiceRepository] (`REQ-PER-032.3`).
+     * Handles real-time RR beat events from [banalServiceRepository] (`REQ-PER-032.3`, `REQ-HRV-049.2`).
      */
     fun handleRrBeat(event: RrBeatEvent) {
         val hr = if (event.rrMs > 0.0) (60000.0 / event.rrMs).roundToInt() else null
@@ -370,6 +372,7 @@ class MorningHrvCheckViewModel @JvmOverloads constructor(
         if (_uiState.value.phase == MorningHrvPhase.MEASURING) {
             bufferedBeats.add(event)
             val currentBeats = bufferedBeats.toList()
+            val isOptical = currentBeats.any { it.isOpticalPpi }
             val causalResult = artifactFilter.filterLiveCausal(currentBeats)
             val (rate, isHigh) = if (causalResult.totalCount > 0) {
                 val pct = causalResult.artifactRatePercent
@@ -383,16 +386,22 @@ class MorningHrvCheckViewModel @JvmOverloads constructor(
                     currentHeartRateBpm = hr,
                     beatCount = currentBeats.size,
                     artifactRatePct = rate,
-                    highArtifactWarning = isHigh
+                    highArtifactWarning = isHigh,
+                    isOpticalPpiSession = isOptical
                 )
             }
         } else {
-            _uiState.update { it.copy(currentHeartRateBpm = hr) }
+            _uiState.update {
+                it.copy(
+                    currentHeartRateBpm = hr,
+                    isOpticalPpiSession = event.isOpticalPpi
+                )
+            }
         }
     }
 
     /**
-     * Post-hoc full-window centered filtering and readiness calculation (`REQ-PER-032.4`, `REQ-PER-032.5`).
+     * Post-hoc full-window centered filtering and readiness calculation (`REQ-PER-032.4`, `REQ-PER-032.5`, `REQ-HRV-049.2`).
      */
     suspend fun completeMeasurement() {
         val beats = bufferedBeats.toList()
@@ -406,6 +415,9 @@ class MorningHrvCheckViewModel @JvmOverloads constructor(
             }
             return
         }
+
+        val isOptical = beats.any { it.isOpticalPpi }
+        val modality = if (isOptical) HrvSensorModality.OPTICAL_PPI else HrvSensorModality.ECG
 
         val filterResult = artifactFilter.filterBidirectionalBeats(beats)
         val filteredBeats = filterResult.beats
@@ -429,7 +441,8 @@ class MorningHrvCheckViewModel @JvmOverloads constructor(
         val qualityResult = HrvSignalQualityAnalyzer.analyzeBeats(
             beats = filteredBeats,
             artifactRatePercent = artifactRate,
-            rmssdMs = rmssdMs
+            rmssdMs = rmssdMs,
+            isOpticalPpi = isOptical
         )
 
         val entry = HrvReadinessEntry(
@@ -444,12 +457,13 @@ class MorningHrvCheckViewModel @JvmOverloads constructor(
             artifactRatePct = artifactRate,
             durationSec = _uiState.value.durationSec,
             posture = _uiState.value.posture,
-            isPrimaryForDay = true
+            isPrimaryForDay = true,
+            sensorModality = modality
         )
 
-        val existingEntries = hrvReadinessRepository.getAllEntries(entry.posture)
+        val existingEntries = hrvReadinessRepository.getAllEntries(entry.posture, modality)
         val candidateList = existingEntries.filter { it.dateIso != dateIso } + entry
-        val initialResult = HrvReadinessCalculator.calculateReadiness(dateIso, entry.posture, candidateList)
+        val initialResult = HrvReadinessCalculator.calculateReadiness(dateIso, entry.posture, candidateList, modality)
 
         _uiState.update {
             it.copy(
@@ -461,7 +475,8 @@ class MorningHrvCheckViewModel @JvmOverloads constructor(
                 signalQualityResult = qualityResult,
                 computedEntry = entry,
                 readinessResult = initialResult,
-                isSaved = false
+                isSaved = false,
+                isOpticalPpiSession = isOptical
             )
         }
     }
@@ -531,7 +546,7 @@ class MorningHrvCheckViewModel @JvmOverloads constructor(
 
         val rowId = hrvReadinessRepository.insertEntry(entry)
         if (rowId > 0) {
-            val updatedResult = hrvReadinessRepository.calculateReadiness(entry.dateIso, entry.posture)
+            val updatedResult = hrvReadinessRepository.calculateReadiness(entry.dateIso, entry.posture, entry.sensorModality)
             _uiState.update {
                 it.copy(
                     isSaved = true,

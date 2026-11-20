@@ -193,4 +193,67 @@ class HrvSignalQualityAnalyzerTest {
 
         assertEquals(HrvSignalQualityStatus.VALID, result.status)
     }
+
+    @Test
+    fun testOpticalPpiMode_bypassesSmoothedAndQuantizedFlagsWhileEnforcingArtifactAndBeatGates_TST_HRV_049() {
+        // REQ-HRV-049.1 / TST-HRV-049.1: Optical PPI bypasses ECG smoothing/quantization false positives
+        // while preserving < 30 beats and > 5.0% artifact rate gates.
+        val flatOpticalSeries = List(60) { 950.0 }
+
+        val ecgResult = HrvSignalQualityAnalyzer.analyze(
+            rawRrIntervalsMs = flatOpticalSeries,
+            rmssdMs = 1.0,
+            dfaAlpha1 = 1.55,
+            artifactRatePercent = 0.0,
+            isOpticalPpi = false
+        )
+        assertEquals(HrvSignalQualityStatus.QUANTIZED_SYNTHETIC, ecgResult.status)
+
+        val validOptical = HrvSignalQualityAnalyzer.analyze(
+            rawRrIntervalsMs = flatOpticalSeries,
+            rmssdMs = 1.0,
+            dfaAlpha1 = 1.55,
+            artifactRatePercent = 2.0,
+            isOpticalPpi = true
+        )
+        assertEquals(HrvSignalQualityStatus.VALID, validOptical.status)
+
+        val highArtifactOptical = HrvSignalQualityAnalyzer.analyze(
+            rawRrIntervalsMs = flatOpticalSeries,
+            rmssdMs = 35.0,
+            artifactRatePercent = 6.5,
+            isOpticalPpi = true
+        )
+        assertEquals(HrvSignalQualityStatus.HIGH_ARTIFACTS, highArtifactOptical.status)
+
+        val shortOptical = HrvSignalQualityAnalyzer.analyze(
+            rawRrIntervalsMs = List(20) { 900.0 },
+            artifactRatePercent = 0.0,
+            isOpticalPpi = true
+        )
+        assertEquals(HrvSignalQualityStatus.INSUFFICIENT_DATA, shortOptical.status)
+
+        val filteredBeats = flatOpticalSeries.mapIndexed { idx, rr ->
+            FilteredRrBeat(
+                beatTimestampMs = 1000L * idx,
+                rawRrMs = rr,
+                correctedRrMs = rr,
+                artifactFlag = 0
+            )
+        }
+        val opticalBeatsResult = HrvSignalQualityAnalyzer.analyzeBeats(
+            beats = filteredBeats,
+            artifactRatePercent = 1.5,
+            rmssdMs = 4.0,
+            isOpticalPpi = true
+        )
+        assertEquals(HrvSignalQualityStatus.VALID, opticalBeatsResult.status)
+
+        // Verify 6-arg Java-compatible RrBeatEvent.copy preserves isOpticalPpi provenance
+        val opticalBeat = com.atrainingtracker.banalservice.devices.RrBeatEvent(
+            1000L, 950.0, 1, com.atrainingtracker.banalservice.devices.ProtocolType.BLE, 0, 0, true
+        )
+        val clampedCopy = opticalBeat.copy(1200L, 950.0, 1, com.atrainingtracker.banalservice.devices.ProtocolType.BLE, 0, 0)
+        assertTrue("6-arg Java copy overload must preserve isOpticalPpi", clampedCopy.isOpticalPpi)
+    }
 }

@@ -56,8 +56,9 @@ import java.util.concurrent.atomic.AtomicInteger
 /**
  * Unit tests verifying [BackupRestoreViewModel] interaction queue backpressure (`Semaphore(3)`)
  * and non-blocking concurrent background progress while user resolution dialogs remain open
- * (REQ-MIG-017, TST-MIG-013; REQ-MIG-014, REQ-MIG-017, TST-MIG-017).
+ * (REQ-MIG-017, TST-MIG-013; REQ-MIG-014, REQ-MIG-017, TST-MIG-017, TST-PRO-004).
  */
+// Linked test specs: TST-PRO-004
 @OptIn(ExperimentalCoroutinesApi::class)
 class BackupRestoreInteractionQueueTest {
 

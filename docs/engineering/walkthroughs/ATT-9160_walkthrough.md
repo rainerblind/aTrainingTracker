@@ -1,0 +1,35 @@
+# Stage 5: Walkthrough & Verification - ATT-9160: Persist Beat-Level Artifact Flags in WorkoutRr.db & Reconcile Live vs Post-Workout HRV Streams
+
+**Ticket**: [ATT-9160](https://rainerblind.atlassian.net/browse/ATT-9160) | **Parent Epic**: [ATT-3539](https://rainerblind.atlassian.net/browse/ATT-3539)  
+**Target Release**: `V5.0.0` | **Active Sprint**: `2026-11-19_03_Nacht` | **Branch**: `feature/ATT-9160`  
+**Gate 4 Verified Code SHA**: `f6f7bb41` (`0` `app/` code drift — `git diff f6f7bb41 -- app/` empty)  
+**Requirement Mapping**: `REQ-HRV-048` (`REQ-HRV-048.1`..`REQ-HRV-048.4`, refines `REQ-PER-034.3`, `REQ-TRK-060.2`/`.4`/`.5`) | **Test Mapping**: `TST-HRV-048` (`TST-HRV-048.1`..`TST-HRV-048.4`) | **Date**: 2026-11-20
+
+---
+
+## 1. Executive Summary & Surgical 5-File Fix
+- **`RrArtifactFilter.kt` (`408` LoC `<= 1,500`)**: Exposed optional 1:1 per-input-beat `inputArtifactFlags` & `inputGapBeats` on `FilterResult` (preserving `max(event.gapBeats, gapCount - 1)` strictly for `ARTIFACT_GAP (5)`, computing `k - 1` freshly for `ARTIFACT_MISSED (4)` / split `ARTIFACT_LONG (3)`, flagging both halves of merged `ARTIFACT_SHORT (2)` pairs with `gap = 0`, and explicitly outputting `gap = 0` for `NORMAL`/`ECTOPIC`/`SHORT`/non-split `LONG`), plus $O(N)$ `allMRrs` precomputation in `filterLiveCausal`.
+- **`WorkoutRrDatabaseManager.kt` (`214` LoC) & `WorkoutRrRepository.kt` (`108` LoC)**: Added `BeatQualityFlagUpdate` and single-transaction pre-compiled `updateBeatQualityFlags` (`stmt.use { ... }` summing `executeUpdateDelete()`, zero schema bump — `DB_VERSION = 2` unchanged; suspend-only repository method keeping `0` dead blocking wrappers).
+- **`HrvPostWorkoutRecomputer.kt` (`486` LoC)**: Persists delta-only `(artifact_flag, gap_beats)` updates (`newFlag != beat.artifactFlag || newGap != beat.gapBeats`) into `WorkoutRr.db` in a separate transaction (`0` writes on idempotent re-run; clears stale flags/gaps after clean backfill), and aligns DFA $\alpha_1$ / `computeSessionSdnn` gating to clamped `[3.0, 5.0]` `TuningPreferencesDataStore.hrvArtifactGateThresholdPercent` (`!isFinite() -> 5.0`, `hasInitializedInstance()` fallback, `@JvmOverloads` compatible).
+- **`HRVMetricsDevice.kt` (`266` LoC)**: Retains `WINDOW_FILTER_CONTEXT_MS = 180_000L` (`120s + 60s` trailing quartile context) in `mBeatQueue`, checks `mBeatQueue.none { it.beatTimestampMs >= now - WINDOW_DFA_MS }` before filtering (preserving `+150 s` drain-to-null clearing & Rule 51/52), handles empty lookahead-trimmed `dfaWindowBeats` (`artifactRate = 0.0`, `dfaAlpha1 = null`), slices `rmssdBeats` from `dfaWindowBeats`, and passes the 120s `dfaWindowBeats` slice to `HrvSignalQualityAnalyzer`.
+- **Intentional Causal vs Centered Phase Offset**: Live `HRV_DFA_A1 (HRV metrics)` evaluates trailing `[t - 120s, t]` (center `t - 60s`) whereas canonical `HRV_DFA_A1` (`REQ-PER-034.3`) evaluates centered `[t - 60s, t + 60s]` to eliminate the ~60s causal lag (explaining unshifted `t = 120 s` warmup vs steady-state divergence); phase-aligned centers (`live(T)` vs `centered(T - 60s)`) reconcile cleanly once trailing quartile starvation and gate-threshold drift are eliminated.
+- **Preserved Invariants**: `0` edits to `TrackerService.java` (`3,538 / 3,559` LoC), `DfaCalculator.kt` (NeuroKit2 `0.2.10` golden oracle intact), `WorkoutRrDbHelper.kt` (`DB_VERSION = 2`), `MIN_RMSSD_PAIRS = 3`, `values*/strings_*.xml` (`Localization Parity: N/A - no UI strings`), and `ANT-Android-SDKs`.
+
+## 2. Requirement & Test Verification Matrix
+
+| Requirement | Test Spec | Verification Method (Exact Verbatim Suites & Methods) | Result | Living Docs |
+| :--- | :--- | :--- | :--- | :--- |
+| `REQ-HRV-048.1` | `TST-HRV-048.1` | `RrArtifactFilterTest` (`10/10`: `testInputArtifactFlagsAndGapBeats_aligned1To1AcrossArtifactsAndHardwareGaps_TST_HRV_048`), `HrvGoldenOracleTest` (`3/3`), `DfaCalculatorTest` (`5/5`) | **PASSED** | `Verified` |
+| `REQ-HRV-048.2`, `.4` | `TST-HRV-048.2` | `WorkoutRrDatabaseManagerTest` (`7/7`: `updateBeatQualityFlags_updatesTargetBeatsTransactionallyAndCountsModifiedRows_TST_HRV_048`), `WorkoutRrRepositoryTest` (`2/2`: `repository_updateBeatQualityFlags_persistsAndClearsFlags_TST_HRV_048`), `HrvPostWorkoutRecomputerTest` (`13/13`: `recomputeWorkout_persistsArtifactFlagsIdempotentlyAndResetsAfterCleanBackfill_TST_HRV_048`, `recomputeWorkout_andComputeSessionSdnn_honorClampedArtifactGateThreshold_TST_HRV_048`) | **PASSED** | `Verified` |
+| `REQ-HRV-048.3`, `.4` | `TST-HRV-048.3` | `HRVMetricsDeviceTest` (`14/14`: `test180sFilterContext_preservesTrailingQuartileAccuracyAnd120sSignalQualityScope_TST_HRV_048`, `testEmptyActiveDfaWindowAfterLookaheadTrim_emitsZeroArtifactRateAndNullDfa_TST_HRV_048`), `HrvPostWorkoutRecomputerTest` (`recomputeWorkout_phaseAlignedReconciliationWithLive180sContext_TST_HRV_048`) | **PASSED** | `Verified` |
+| `REQ-HRV-048.1`..`.4` | `TST-HRV-048.4` | `ArchitectureConformanceContractTest` (`11/11`), `DeadCodeEliminationContractTest` (`5/5`), `SourceTextReadingAuditContractTest` (`6/6`) | **PASSED** | `Verified` |
+
+## 3. Automated Test Evidence (Rule 7.5 Gate 4 Evidence Reuse)
+- **Zero Redundant Gradle Re-Run (`Rule 7.5`)**: Stage 5 performs strictly doc-only `[Implemented]` -> `[Verified]` promotion and walkthrough authoring atop Gate 4 (`ATT-9218`) verified SHA `f6f7bb41`; `git diff f6f7bb41 -- app/` is completely empty (`0` `app/` code drift).
+- **Tier 1 Targeted & Contract Suite Scope (`76/76 PASS` across 10 suites; `0` failed, `0` skipped; full suite deferred to Tier 2 `Schichtwechsel` Gate; non-UI DSP/DB fix so emulator deployment skipped per `stage5-verification` §2; `strings*.xml` & `androidTest/` untouched)**:
+  - `RrArtifactFilterTest`: **10/10 PASS** | `HrvGoldenOracleTest`: **3/3 PASS** | `DfaCalculatorTest`: **5/5 PASS** | `HRVMetricsDeviceTest`: **14/14 PASS** | `WorkoutRrDatabaseManagerTest`: **7/7 PASS** | `WorkoutRrRepositoryTest`: **2/2 PASS** | `HrvPostWorkoutRecomputerTest`: **13/13 PASS** | `ArchitectureConformanceContractTest`: **11/11 PASS** | `DeadCodeEliminationContractTest`: **5/5 PASS** | `SourceTextReadingAuditContractTest`: **6/6 PASS**.
+- **Clean-Checkout Governance & Traceability Check**: `extract_test_code_tags(repo_root=".")` finds 16 hyphenated `TST-HRV-048` occurrences across all 5 test files (`REQ-PRO-099.3`); `verify_requirement_governance.py --repo-root . --sync-indexes`, clean-checkout `--base-ref refs/heads/sprint/2026-11-19_03_Nacht --check-verified-evidence --test-results-dir /tmp/empty_check_9160_s5`, and full `--base-ref` governance all **EXIT 0**.
+
+## 4. Invariant & Governance Summary
+1. **Feature Branch Preserved Intact (`REQ-PRO-125`)**: `feature/ATT-9160` remains unmerged for Stage 6 Cold Final Review before post-PASS atomic `--merge-ticket` onto `sprint/2026-11-19_03_Nacht`.
+2. **Living Documentation & Human Gate**: `REQ-HRV-048` & `TST-HRV-048` promoted to `[Verified]` with synced master indexes; `Localization Parity: N/A - no UI strings`; parent ticket advances to `Final Review (Agent)` and terminates at `Final Review (Human)` (`Rule 3.1`).

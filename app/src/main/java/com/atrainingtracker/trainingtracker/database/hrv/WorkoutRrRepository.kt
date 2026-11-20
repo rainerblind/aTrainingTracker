@@ -57,6 +57,14 @@ class WorkoutRrRepository private constructor(
         databaseManager.insertIntervals(intervals)
     }
 
+    /**
+     * Persists post-workout beat-level artifact and gap flags into `WorkoutRr.db` (`REQ-HRV-048.2`).
+     */
+    suspend fun updateBeatQualityFlags(workoutId: Long, updates: List<BeatQualityFlagUpdate>): Int =
+        withContext(Dispatchers.IO) {
+            databaseManager.updateBeatQualityFlags(workoutId, updates)
+        }
+
     suspend fun getIntervalsForWorkout(workoutId: Long): List<WorkoutRrInterval> = withContext(Dispatchers.IO) {
         databaseManager.getIntervalsForWorkout(workoutId)
     }

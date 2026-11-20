@@ -3,8 +3,8 @@
 **Document ID**: `DOC-MGT-QA`  
 **Document Identifier**: `QA-PLAN-ATT`  
 **Standard**: ASPICE 4.0 `SUP.1` (Quality Assurance) & `GP 2.1.6` (Ensure independence of quality assurance)  
-**Target Release**: `V5.0.0` | **Version**: 1.2.1  
-**Status**: Reviewed | **Approver**: Pending PO Sign-Off | **Date**: 2026-11-17  
+**Target Release**: `V5.0.0` | **Version**: 1.2.2  
+**Status**: Reviewed | **Approver**: Pending PO Sign-Off | **Date**: 2026-11-20  
 **Governing Tickets**: [ATT-8212](https://rainerblind.atlassian.net/browse/ATT-8212), [ATT-8213](https://rainerblind.atlassian.net/browse/ATT-8213), [ATT-8164](https://rainerblind.atlassian.net/browse/ATT-8164), [ATT-8169](https://rainerblind.atlassian.net/browse/ATT-8169) | **Requirements**: `REQ-PRO-095`, `REQ-PRO-096`, `REQ-PRO-061`, `REQ-PRO-120`, `REQ-PRO-123`  
 
 ---
@@ -76,6 +76,7 @@ Whenever non-conformances, gate escapes, or evidence integrity defects are detec
 To maintain verifiable audit trails, all quality records are formally version-controlled as Configuration Items (`cm_plan.md`):
 * `docs/engineering/aspice_audits/`: Versioned weekly dual-vendor ASPICE cross-audit reports (`YYYY-MM-DD_dual_vendor_aspice_audit.md`).
 * `docs/engineering/code_reviews/`: Versioned weekly dual-vendor code review reports and `coverage_matrix.md`.
+* `docs/engineering/emulator_sweeps/`: Versioned weekly & pre-release serial Multi-OS & 9-language emulator sweep reports (`YYYY-MM-DD_sweep.md`) and per-locale screenshots (`REQ-PRO-135`, `ATT-8222`).
 * `docs/engineering/qa_audits/`: Per-sprint QA process compliance audit reports (`sprint_<sprint_id>.md`).
 * `docs/engineering/gates/`: Sprint quality gate export records.
 * `docs/engineering/metrics/process_metrics.jsonl`: PA 4.1 quantitative process metrics and PA 4.2 SPC control limits.
@@ -93,11 +94,14 @@ Under `SWE.2`, `SWE.3.BP4`, `SWE.4.BP2`, `SUP.1.BP1/BP3`, and `GP 2.1.6`, the pr
    - Broad codebase scope: reviews are **NOT** restricted to delta diffs (`<last_sha>..develop`).
    - Every weekly review inspects **full production & test subsystem slices** of the existing codebase alongside recent changes, systematically tracking progress via `docs/engineering/code_reviews/coverage_matrix.md` across all 9 package domains (`tracker/`, `banalservice/`, `database/`, `exporter/`, `ui/tracking/`, `ui/aftermath/`, `ui/settings/`, `tools/`, `test/`).
    - Reconciles findings into `docs/engineering/code_reviews/YYYY-MM-DD_dual_vendor_code_review.md` and files actionable Bug/Improvement tickets under Epic `ATT-232` / `ATT-8138`.
+3. **Serial Multi-OS & 9-Language Emulator UI Verification Sweeps (`ATT-8222` / `REQ-PRO-135`)**:
+   - Executed serially across representative Android OS levels and all 9 app locales (`en`, `de`, `es`, `fr`, `it`, `ja`, `nl`, `pl`, `pt`) via `python3 tools/run_multi_os_emulator_sweep.py` strictly on `emulator-*` instances (`REQ-TST-004`).
+   - Audits `logcat` (`FATAL EXCEPTION`, `ANR`, `StrictMode`, `IllegalFormat*`) and `uiautomator dump` bounds, archiving results under `docs/engineering/emulator_sweeps/YYYY-MM-DD_sweep.md`.
 
 ### 7.2 Automated Backlog Scheduling & Enforcement (`ensure-weekly-reviews`)
-* To guarantee that weekly reviews cannot be overlooked or deprioritized during active sprints, `tools/jira_util.py ensure-weekly-reviews` runs during Ceremony 1 (Sprint Planning) and Ceremony 2 (Sprint Review).
-* If `> 7 days` have elapsed since the latest completed review (or unreviewed subsystems remain in `coverage_matrix.md` / `aspice_audits/`) and no open review ticket exists in Jira, the tooling **automatically creates the review ticket under Epic `ATT-232` and ranks it at the very top of the Product Backlog (`rank-top`)**.
-* `release-manager/SKILL.md` verifies that weekly dual-vendor reviews are current prior to production release branch cutting.
+* To guarantee that weekly reviews and multi-OS/9-locale sweeps cannot be overlooked or deprioritized during active sprints, `tools/jira_util.py ensure-weekly-reviews` runs during Ceremony 1 (Sprint Planning) and Ceremony 2 (Sprint Review).
+* If `> 7 days` have elapsed since the latest completed review/sweep (with new `develop` commits for emulator sweeps, or unreviewed subsystems remaining in `coverage_matrix.md` / `aspice_audits/`) and no open ticket exists in Jira, the tooling **automatically creates the due ticket under Epic `ATT-232` and ranks it at the very top of the Product Backlog (`rank-top`)**.
+* `release-manager/SKILL.md` verifies that weekly dual-vendor reviews and multi-OS/9-language emulator sweeps are current ($\le 7$ days) prior to production release branch cutting.
 
 ---
 
@@ -129,3 +133,4 @@ Per `docs/architecture/adr_001_java_core_services_migration.md` (`ADR-001` / `RE
 | `1.1.0` | 2026-11-15 | AI Agent (`ATT-8212`, `ATT-8213`) | `ATT-8212`, `ATT-8213` | Established dual-vendor weekly QA review strategy (`SUP.1`, `GP 2.1.6`). |
 | `1.2.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Standardized `DOC-MGT-QA` header, reset self-declared `Approved` to `Reviewed` (`Pending PO Sign-Off`), and added Change History. |
 | `1.2.1` | 2026-11-17 | AI Agent (`ATT-8169`) | `ATT-8169` | Added Section 8 documenting CI safety guards, Detekt/Lint baseline ratchet & burn-down plan, and PMD vs SpotBugs vs Error Prone Java evaluation referencing `ADR-001`. |
+| `1.2.2` | 2026-11-20 | Lane A Flash (`ATT-8222`, `--as agent1`) | `ATT-8222` | Added Pillar 3 (`Serial Multi-OS & 9-Language Emulator UI Verification Sweeps`) to §6 & §7 and `ensure-weekly-reviews` scheduling + pre-release gate integration (`REQ-PRO-135`). |

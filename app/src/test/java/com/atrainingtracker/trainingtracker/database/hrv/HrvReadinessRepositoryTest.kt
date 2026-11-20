@@ -121,4 +121,47 @@ class HrvReadinessRepositoryTest {
         assertEquals("Only readings within [D-59, D] must be counted in 60d window", 2, result.n60d)
         assertEquals(2, result.calibrationDaysCount)
     }
+
+    @Test
+    fun repositoryCalculateReadiness_isolatesOpticalFromEcgCohort_TST_HRV_049() = runTest(testDispatcher) {
+        // REQ-HRV-049.4 / TST-HRV-049.4: Repository bounded window query filters by sensorModality
+        val targetDate = LocalDate.parse("2026-11-20")
+        repository.insertEntry(
+            HrvReadinessEntry(
+                timestampMs = 1732080000000L,
+                dateIso = targetDate.toString(),
+                timezoneId = "UTC",
+                restingHrBpm = 49,
+                rmssdMs = 68.0,
+                lnRmssd = 4.22,
+                hrvScore100 = 84.4,
+                durationSec = 60,
+                posture = HrvPosture.SUPINE,
+                isPrimaryForDay = true,
+                sensorModality = HrvSensorModality.ECG
+            )
+        )
+        repository.insertEntry(
+            HrvReadinessEntry(
+                timestampMs = 1732080100000L,
+                dateIso = targetDate.toString(),
+                timezoneId = "UTC",
+                restingHrBpm = 53,
+                rmssdMs = 45.0,
+                lnRmssd = 3.81,
+                hrvScore100 = 76.2,
+                durationSec = 60,
+                posture = HrvPosture.SUPINE,
+                isPrimaryForDay = true,
+                sensorModality = HrvSensorModality.OPTICAL_PPI
+            )
+        )
+
+        val ecgRes = repository.calculateReadiness(targetDate.toString(), HrvPosture.SUPINE, HrvSensorModality.ECG)
+        val optRes = repository.calculateReadiness(targetDate.toString(), HrvPosture.SUPINE, HrvSensorModality.OPTICAL_PPI)
+        assertEquals(1, ecgRes.n60d)
+        assertEquals(HrvSensorModality.ECG, ecgRes.todayEntry?.sensorModality)
+        assertEquals(1, optRes.n60d)
+        assertEquals(HrvSensorModality.OPTICAL_PPI, optRes.todayEntry?.sensorModality)
+    }
 }
