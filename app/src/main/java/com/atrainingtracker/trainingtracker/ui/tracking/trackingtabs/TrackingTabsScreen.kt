@@ -27,6 +27,7 @@ import android.view.KeyEvent
 import androidx.activity.compose.BackHandler
 import androidx.annotation.VisibleForTesting
 import androidx.core.content.ContextCompat
+import com.atrainingtracker.banalservice.ui.devices.polar.PolarPmdStreamWarningEffect
 import com.atrainingtracker.util.safeUnregisterReceiver
 import com.atrainingtracker.trainingtracker.ui.tracking.tracking.CockpitStatus
 import com.atrainingtracker.trainingtracker.ui.tracking.tracking.NonRecordingStatusBanner
@@ -219,6 +220,7 @@ fun TrackingTabsScreen(
     }
 
     val snackbarHostState = remember { SnackbarHostState() }
+    PolarPmdStreamWarningEffect(snackbarHostState)
     val viewSensorsLabel = stringResource(R.string.sensor_battery_action_view_sensors)
     LaunchedEffect(Unit) {
         WorkoutNavigationEvents.lowBatteryAlert.collect { alert ->

@@ -1,14 +1,14 @@
 # Living Test Specification: Tracking & Live Sensor Cockpit
 
 **Document ID**: `DOC-TST-TRK`  
-**Version**: 1.0.108  
+**Version**: 1.0.113  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Tests**: 169
+**Total Tests**: 170
 
 ---
 
@@ -3826,6 +3826,18 @@
   3. *9-Locale Baseline Parity & Architecture/Governance Contracts (`TST-SEN-034.3`, `BANALServiceRepositoryItpmsWiringTest`: `testBaselineCircumferenceChangedFlow_isBufferedAndDeliversWithoutDropping_tstSen034_3`; `EditDeviceWheelCircumferenceTest`, `TranslationParityTest`, `BANALServiceRepositoryMultiWheelTpmsTest`, `IndirectTpmsEstimatorTest`, `DualWheelTpmsEstimatorTest`, Contracts)*:
      • Verify buffered `baselineCircumferenceChanged` burst delivery, `TranslationParityTest` (`11/11` across all 9 locales), `EditDeviceWheelCircumferenceTest` (`8/8`), `ArchitectureConformanceContractTest` (`11/11`, `BANALServiceRepository.kt = 1,354 / 1,500`, `DeviceDataRepository.kt = 769 / 1,500`, `0` monolith growth), `DeadCodeEliminationContractTest` (`6/6`), `SourceTextReadingAuditContractTest` (`6/6`), and `SystemLiveTrackingRequirementsContractTest` (`4/4`).
 
+### TST-CON-053: **PolarOnlineStreamingBridge Atomic Stream Guards, PMD ERROR_ALREADY_IN_STATE Recovery & Warning Suite** (`ATT-9161`) [Verified]
+- **Requirement(s)**: `REQ-CON-053` (`REQ-CON-053.1`..`REQ-CON-053.4`)
+- **Component**: `PolarPmdStreamCoordinator.kt`, `PolarOnlineStreamingBridge.kt`, `PolarPmdStreamWarningEffect.kt`, `TrackingTabsScreen.kt`, `DevicesTabbedScreen.kt`, `PolarPmdStreamCoordinatorTest.kt`, `PolarOnlineStreamingBridgeTest.kt`, `PolarPmdStreamWarningEffectTest.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-9161`
+- **Priority**: High | **Type**: Functional | **Verification Method**: Unit, Integration
+- **Test Description**:
+  1. *Atomic 4-Stream Re-Entrancy, ACC Mutex Rollback & Job-Identity Cleanup (`TST-CON-053.1`, `PolarPmdStreamCoordinatorTest#testLaunchStream_enforcesAtomicSingleFlightAndPreAcquireRollback_TST_CON_053_1`, `PolarPmdStreamCoordinatorTest#testCancelledJobFinally_neverClobbersNewerSlotOrCleanup_TST_CON_053_1`, `PolarPmdStreamCoordinatorTest#testAtomicSlotCleanupAndPreAcquireException_preservesAccChannelOwnership_TST_CON_053_1`, `PolarOnlineStreamingBridgeTest#testReentrantHandshakeBurst_preventsHrToggleStormAndDuplicatePmdStarts_TST_CON_053_1`)*: Verify single subscription per stream (`HR`/`ACC`/`GYRO`/`PPI`) under rapid callback bursts with suspended settings probes, `ACC_OWNER_OFFLINE` & `preAcquire` exception CAS rollback, atomic `slotLock` cleanup before slot reopen, and `job === myJob` non-clobbering.
+  2. *Bounded `ERROR_ALREADY_IN_STATE` Recovery (`TST-CON-053.2`, `PolarPmdStreamCoordinatorTest#testCollectPmdRecovery_handlesTypedCauseMessageAndResetsCounterOnSample_TST_CON_053_2`, `PolarOnlineStreamingBridgeTest#testPmdAlreadyInStateRecovery_recoversAccGyroAndPpiAfterStopStreamingAndBackoff_TST_CON_053_2`)*: Verify typed/cause/message detection, `stopStreaming` + `500/1000/2000 ms` backoff recovery on `ACC`/`GYRO`/`PPI`, first-sample retry reset, and immediate non-matching exit.
+  3. *Deduplicated Warning, Snackbar UI & 9-Locale Parity (`TST-CON-053.3`, `PolarPmdStreamCoordinatorTest#testExhaustionDeduplicatesWarningAndRespectsMultiDeviceOwnership_TST_CON_053_3`, `PolarOnlineStreamingBridgeTest#testPmdAlreadyInStateExhaustion_emitsSingleDeduplicatedWarningAndClearsOnDisconnect_TST_CON_053_3`, `PolarPmdStreamWarningEffectTest#testPolarPmdStreamWarningEffect_displaysLocalizedSnackbarAndDismissesOnDisconnect_TST_CON_053_3`, `TranslationParityTest`)*: Verify single session-deduplicated warning on 3-retry exhaustion, multi-device ownership, disconnect dismissal, and 9-locale `polar_live_imu_stream_blocked_warning` parity.
+  4. *Regression & Contract Guards (`TST-CON-053.4`)*: Verify `ATT-9176` PPI & `ATT-8994` `deactivateSensor()` tests, `ArchitectureConformanceContractTest` (`PolarOnlineStreamingBridge.kt` `1,259/1,500`, `0` protected monolith edits), `InterfaceSignatureDriftContractTest`, `DeadCodeEliminationContractTest`, `SystemLiveTrackingRequirementsContractTest`, `UiReflectionOnlyTestAuditContractTest`, and `SourceTextReadingAuditContractTest`.
+- **Verification Evidence**: Gate 4 Bounce 1 (`ATT-9313` @ `79e9e1b1`, `Rule 7.5`, `0` `app/` drift) — `173/173 PASS` (`0` fail, `0` err, `0` skip) across 22 suites + `:app:assembleDebug` PASS + `0` new Kotlin warnings (`9/9` verbatim `TST-CON-053` methods verified); `4/4` Python safety linters PASS; clean-checkout `verify_requirement_governance.py --check-verified-evidence` EXIT `0`.
+
 ---
 
 ## Change History
@@ -3931,3 +3943,8 @@
 | `1.0.106` | 2026-11-20 | AI Agent (`ATT-8421`, `--as agent1`) | `ATT-8421` | Promoted `TST-SEN-034` to `[Implemented]` following Stage 4 incremental `--rerun` verification (`75/75` PASS across `12` suites + `:app:assembleDebug`, `0` fail, `0` err, `0` skip, `0` new Kotlin compiler warnings; explicit hyphenated `REQ-SEN-034.x / TST-SEN-034.x` tags indexed in `BANALServiceRepositoryItpmsWiringTest.kt`). |
 | `1.0.107` | 2026-11-20 | AI Agent (`ATT-8421`, `--as agent1`) | `ATT-8421` | Gate 4 Revision 1 (`ATT-9292`): added per-device monotonic `baselineLoadGenerations` token + `repositoryScope`/`withContext(itpmsIoDispatcher)` thread confinement in `BANALServiceRepository.kt` (`1,354 / 1,500` LoC), added out-of-order `CompletableDeferred` discard test and `DeviceDataRepository.updateDevice()` baseline change test (`77/77` PASS across `12` suites + `:app:assembleDebug`, `0` new Kotlin compiler warnings). |
 | `1.0.108` | 2026-11-20 | AI Agent (`ATT-8421`, `--as agent1`) | `ATT-8421` | Promoted `TST-SEN-034` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9292`) independent `77/77` PASS evidence on `ba662145` (`Rule 7.5`, zero `app/` diff since `ba662145`, verbatim `BANALServiceRepositoryItpmsWiringTest` `8/8` incl. `testOutOfOrderAsyncIoLoad_staleCompletionIsDiscardedAndDoesNotOverwriteNewerBaseline_tstSen034_1` & `testDeviceDataRepositoryUpdateDevice_emitsBaselineChangedAndUpdatesLiveEstimator_tstSen034_1`, `4/4` Python safety linters PASS, clean-checkout `verify_requirement_governance.py --check-verified-evidence` `exit 0`, and `docs/engineering/walkthroughs/ATT-8421_walkthrough.md`). |
+| `1.0.109` | 2026-11-20 | Lane B2 Author (`ATT-9161`, `--as agent1`) | `ATT-9161` | Added `TST-CON-053` (`[Planned]`, `.1`–`.4`, strictly symmetric `REQ-CON-053`) covering 4-stream atomic CAS/`CoroutineStart.LAZY`/job-identity guards, bounded PMD `ERROR_ALREADY_IN_STATE` recovery (`ACC`/`GYRO`/`PPI`), session-deduplicated Snackbar warning + 9-locale parity, and regression/contract guards. |
+| `1.0.110` | 2026-11-20 | Lane B2 Author (`ATT-9161`, `--as agent1`) | `ATT-9161` | Promoted `TST-CON-053` to `[Implemented]` following Stage 4 test construction (`PolarPmdStreamCoordinatorTest` `4/4`, `PolarOnlineStreamingBridgeTest` `35/35`, `PolarPmdStreamWarningEffectTest` `1/1`, `TranslationParityTest` `11/11`, 6 contract suites + 12 polar suites = `172/172 PASS`, `:app:assembleDebug` PASS, `0` new Kotlin compiler warnings). |
+| `1.0.111` | 2026-11-20 | Lane B2 Author (`ATT-9161`, `--as agent1`) | `ATT-9161` | Promoted `TST-CON-053` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9309` @ `80bd02ca`) `172/172 PASS` across 22 suites + `:app:assembleDebug` + `0` new warnings (`Rule 7.5`, `0` `app/` drift since `80bd02ca`), `8/8` verbatim `TestClass#testMethod` citations verified, `4/4` Python safety linters PASS, clean-checkout `--check-verified-evidence` EXIT `0`, and `docs/engineering/walkthroughs/ATT-9161_walkthrough.md`. |
+| `1.0.112` | 2026-11-20 | Lane B2 Author (`ATT-9161`, `--as agent1`) | `ATT-9161` | Stage 6 Bounce 1/3 heal: added `PolarPmdStreamCoordinatorTest#testAtomicSlotCleanupAndPreAcquireException_preservesAccChannelOwnership_TST_CON_053_1` (`9/9` verbatim `TST-CON-053` methods) and set `[Implemented]` pending Gate 4 / Stage 5 re-verification. |
+| `1.0.113` | 2026-11-20 | Lane B2 Author (`ATT-9161`, `--as agent1`) | `ATT-9161` | Promoted `TST-CON-053` to `[Verified]` in Stage 5 Bounce 1 reusing Gate 4 Bounce 1 (`ATT-9313` @ `79e9e1b1`) `173/173 PASS` across 22 suites + `:app:assembleDebug` + `0` new warnings (`Rule 7.5`, `0` `app/` drift since `79e9e1b1`), `9/9` verbatim `TestClass#testMethod` citations verified, `4/4` Python safety linters PASS, clean-checkout `--check-verified-evidence` EXIT `0`, and refreshed `ATT-9161_walkthrough.md`. |

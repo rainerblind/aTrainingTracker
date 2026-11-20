@@ -219,6 +219,7 @@
     <string name="device_polar_h10_live_imu_desc">Streams live HR/RR and accelerometer data over a single Polar connection for running cadence when no footpod is active.</string>
     <string name="device_polar_verity_live_imu_desc">Streams live HR and ACC/GYRO data in Blue Sensor Mode over a single Polar connection for running cadence when no footpod is active.</string>
     <string name="device_polar_live_imu_requires_android_13">Requires Android 13 or newer.</string>
+    <string name="polar_live_imu_stream_blocked_warning">%1$s: Live IMU (%2$s) blocked by another app (e.g. Polar Flow) or stale sensor state. Close Polar Flow or restart the sensor.</string>
 
     <!-- Polar H10 Running Dynamics (ATT-8018, REQ-SET-116) -->
     <string name="units_cm" translatable="false">cm</string>

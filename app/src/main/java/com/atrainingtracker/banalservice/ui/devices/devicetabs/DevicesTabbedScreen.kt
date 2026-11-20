@@ -58,6 +58,7 @@ import com.atrainingtracker.banalservice.ui.devices.DeviceTypeSelectionDialog
 import com.atrainingtracker.banalservice.ui.devices.PairingProtocolBottomSheet
 import com.atrainingtracker.banalservice.ui.devices.devicelist.*
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
+import com.atrainingtracker.banalservice.ui.devices.polar.PolarPmdStreamWarningEffect
 import com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialog
 import androidx.compose.foundation.rememberScrollState
 import com.atrainingtracker.trainingtracker.ui.common.filters.FilterActionButton
@@ -183,6 +184,7 @@ fun DevicesTabbedScreen(
     val shoesHorizontalScrollState = rememberScrollState()
 
     val snackbarHostState = remember { SnackbarHostState() }
+    PolarPmdStreamWarningEffect(snackbarHostState)
     val haptic = LocalHapticFeedback.current
 
     LaunchedEffect(tabViewModel) {

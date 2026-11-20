@@ -1,14 +1,14 @@
 # Living Requirements: Tracking & Live Sensor Cockpit (Part 2 of 2)
 
 **Document ID**: `DOC-REQ-TRK-P2`  
-**Version**: 1.0.84  
+**Version**: 1.0.89  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit_part2`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Requirements**: 84
+**Total Requirements**: 85
 
 ---
 
@@ -3769,6 +3769,29 @@
 
 **Invariants**: `IndirectTpmsEstimator` thresholds unchanged; GPS-free `DualWheelTpmsEstimator` active when GNSS is absent; `BANALServiceRepository.kt <= 1,500` LoC & `DeviceDataRepository.kt <= 1,500` LoC; `0` protected monolith edits; `0` SQLite schema bumps; `Localization Parity: N/A - already localized by ATT-8422`; `0` new `src/main` reads.
 
+### REQ-CON-053: PolarOnlineStreamingBridge Atomic Stream Start Guards, PMD ERROR_ALREADY_IN_STATE Recovery & Blocked-Stream Warning (`ATT-9161`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-CON-053`
+- **System Requirement(s)**: `SYSREQ-TRK-001`, `SYSREQ-TRK-002`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Implementation**: `PolarPmdStreamCoordinator.kt`, `PolarOnlineStreamingBridge.kt`, `PolarPmdStreamWarningEffect.kt`, `TrackingTabsScreen.kt`, `DevicesTabbedScreen.kt`, `strings_devices.xml`
+- **Rationale**: Overlapping Polar SDK handshake callbacks (`bleSdkFeatureReady`, `syncAlreadyOpenSessionIfReady`, `disInformationReceived`) re-entrantly cancel and restart unguarded `HR`, `ACC`, and `GYRO` coroutines (causing 7x `00002a37` CCCD toggle storms and overlapping PMD `REQUEST_MEASUREMENT_START` commands), while PMD `ERROR_ALREADY_IN_STATE` (from re-entrancy or background `fi.polar.polarflow`) silently kills `ACC`, `GYRO`, and `PPI` for the entire session with zero recovery or user feedback (`ATT-9161`).
+- **Description**:
+  1. *Unified 4-Stream Atomic Re-Entrancy Guard & Job-Identity Cleanup (`REQ-CON-053.1`)*: `PolarPmdStreamCoordinator` SHALL manage `HR`, `ACC`, `GYRO`, and `PPI` slots under a single lock with pre-launch atomic `compareAndSet(false, true)`, `CoroutineStart.LAZY` job publication, and `slot.job === myJob` identity-guarded `finally` cleanup. Duplicate start triggers while active/in-flight (including suspended `resolve*Setting` / `getAvailableOnlineStreamDataTypes`) SHALL be atomic no-ops; `ACC` SHALL claim its CAS slot BEFORE `tryAcquireAccChannel(..., ACC_OWNER_ONLINE)` and roll back cleanly if offline recording holds the channel.
+  2. *Bounded PMD `ERROR_ALREADY_IN_STATE` Recovery (`REQ-CON-053.2`)*: Across `ACC`, `GYRO`, and `PPI`, classify `ERROR_ALREADY_IN_STATE` via typed `BleControlPointCommandError` (direct or `cause`) and message fallback; execute up to `3` bounded recovery attempts (`api.stopStreaming(sessionId, pmdType)` + injectable backoff `500 ms -> 1,000 ms -> 2,000 ms`) while connected and not shut down, resetting attempt count on first received frame and immediately rethrowing `CancellationException`.
+  3. *Diagnostics, Session-Deduplicated Warning & 9-Locale Snackbar (`REQ-CON-053.3`)*: On retry exhaustion while connected, log structured diagnostics and emit ONE session-deduplicated `PolarPmdStreamWarning` onto `PolarPmdStreamCoordinator.streamWarning` (`StateFlow` with `consumeStreamWarning()` and reset on connect/disconnect/power-off/`shutDown()`), observed via shared `PolarPmdStreamWarningEffect(snackbarHostState)` in `TrackingTabsScreen.kt` & `DevicesTabbedScreen.kt` using 9-locale `polar_live_imu_stream_blocked_warning` in `strings_devices.xml`.
+  4. *Monolith Ceilings & Regression Invariants (`REQ-CON-053.4`)*: Keep `PolarOnlineStreamingBridge.kt <= 1,306 / 1,500` LoC, `TrackingTabsScreen.kt <= 1,450 / 1,500` LoC, `0` edits to protected monoliths (`DeviceManager.java`, `TrackerService.java`, `DevicesDatabaseManager.java`), `0` upward `banalservice -> trainingtracker.ui` imports, and zero regression in `ATT-9176` (`REQ-HRV-051`) & `ATT-8994` (`REQ-FIL-038.2`).
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Refines `REQ-SET-112.2`/`.3`, `REQ-CON-045.4`, `REQ-CON-050.2`/`.3`, `REQ-HRV-051.2`, preserving `REQ-FIL-038.2` in `PolarOnlineStreamingBridge.kt`.
+  2. *Historical Origin & Commit Trace*: `ATT-8016` (`f4bef44c`), `ATT-8714` (`1e7a2f0b`), `ATT-8717` (`9f9e5967`), `ATT-9176` (`32ca4857`), `ATT-8994` (`001dd39f`).
+  3. *Root Reason for Existing Formulation*: Prior iterations cancelled `hrJob`/`accJob`/`gyroJob` unconditionally assuming single-shot feature callbacks; `ATT-9176` added atomic CAS only for `PPI`, leaving `HR`/`ACC`/`GYRO` unguarded and all PMD streams without `ERROR_ALREADY_IN_STATE` recovery.
+  4. *Preservation of Core Invariants*: Preserves single-GATT ref-counting (`REQ-SET-118`), `ACC` mutex (`REQ-SET-112.3`), `activeSdkStreamId` pinning (`REQ-CON-050.3`), `BSportType.RUN` gating, optical PPI H10 exclusion & `PolarPpiStreamProcessor`, dynamic sensor `deactivateSensor()`, and `0` protected monolith edits.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* rapid overlapping SDK feature/DIS/session-sync callbacks on Polar H10 or Verity Sense, *When* streams start, *Then* at most one subscription runs per stream (`HR`, `ACC`, `GYRO`, `PPI`), `ACC` CAS rolls back if offline-locked, and cancelled jobs never clobber newer slots or `ACC_OWNER_ONLINE`.
+  • *Given* `ACC`, `GYRO`, or `PPI` fails with `ERROR_ALREADY_IN_STATE`, *When* caught, *Then* `stopStreaming` + `500/1000/2000 ms` bounded retry (max `3`) recovers stream flow on success, or logs structured diagnostics and surfaces ONE session-deduplicated 9-locale Snackbar warning on exhaustion.
+
 ---
 
 ## Change History
@@ -3858,3 +3881,8 @@
 | `1.0.82` | 2026-11-20 | AI Agent (`ATT-8421`, `--as agent1`) | `ATT-8421` | Added `REQ-SEN-034` `[Planned]` (`REQ-SEN-034.1`–`.3`, linked to `SYSREQ-TRK-004`/`010`) for `BANALServiceRepository` persisted `baselineCircumference` IO cache + live reset propagation (`DeviceDataRepository.baselineCircumferenceChanged` buffered `SharedFlow`, `CALIBRATION_FACTOR_CHANGED` via `registerInternalReceiver()`, `clearBreadcrumbs()` / `READY -> TRACKING` reload, explicit `0.0` overwrite), strict null/non-finite GNSS accuracy/bearing skip guard with GPS-free `DualWheelTpmsEstimator` isolation, and `ATT-8422` 9-locale Baseline label parity verification. |
 | `1.0.83` | 2026-11-20 | AI Agent (`ATT-8421`, `--as agent1`) | `ATT-8421` | Promoted `REQ-SEN-034` to `[Implemented]` following Stage 4 construction (`BANALServiceRepository.kt` `1,336 / 1,500` LoC, `DeviceDataRepository.kt` `764 / 1,500` LoC, `0` protected monolith edits, `0` new Kotlin compiler warnings, `75/75` PASS across `12` suites + `:app:assembleDebug`). |
 | `1.0.84` | 2026-11-20 | AI Agent (`ATT-8421`, `--as agent1`) | `ATT-8421` | Promoted `REQ-SEN-034` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9292`) independent `77/77` PASS evidence on `ba662145` (`Rule 7.5`, zero `app/` diff since `ba662145`, `BANALServiceRepository.kt = 1,354 / 1,500`, `DeviceDataRepository.kt = 769 / 1,500`, `0` protected monolith edits, `0` new Kotlin warnings, `4/4` Python safety linters PASS, clean-checkout `verify_requirement_governance.py --check-verified-evidence` `exit 0`, and `docs/engineering/walkthroughs/ATT-8421_walkthrough.md`). |
+| `1.0.85` | 2026-11-20 | Lane B2 Author (`ATT-9161`, `--as agent1`) | `ATT-9161` | Added `REQ-CON-053` (`[Planned]`, `.1`–`.4`, linked to `SYSREQ-TRK-001`/`SYSREQ-TRK-002`) for unified 4-stream atomic CAS/`CoroutineStart.LAZY`/job-identity guards, bounded PMD `ERROR_ALREADY_IN_STATE` recovery across `ACC`/`GYRO`/`PPI`, deduplicated Snackbar warning (`PolarPmdStreamWarningEffect`), and 9-locale `strings_devices.xml` parity. |
+| `1.0.86` | 2026-11-20 | Lane B2 Author (`ATT-9161`, `--as agent1`) | `ATT-9161` | Promoted `REQ-CON-053` to `[Implemented]` following Stage 4 construction (`PolarPmdStreamCoordinator.kt` `294` LoC, `PolarOnlineStreamingBridge.kt` shrunk `1,306 -> 1,261/1,500` LoC, `PolarPmdStreamWarningEffect.kt` `56` LoC, `TrackingTabsScreen.kt` `1,419/1,500` LoC, `DevicesTabbedScreen.kt` `813/1,500` LoC, 9-locale `strings_devices.xml`), `0` protected monolith edits, `:app:assembleDebug` + `172/172` PASS across 22 suites, and `0` new Kotlin warnings. |
+| `1.0.87` | 2026-11-20 | Lane B2 Author (`ATT-9161`, `--as agent1`) | `ATT-9161` | Promoted `REQ-CON-053` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9309` @ `80bd02ca`) `172/172 PASS` across 22 suites + `:app:assembleDebug` + `0` new warnings (`Rule 7.5`, `0` `app/` drift since `80bd02ca`), `4/4` Python safety linters PASS, clean-checkout `--check-verified-evidence` EXIT `0`, and `docs/engineering/walkthroughs/ATT-9161_walkthrough.md`. |
+| `1.0.88` | 2026-11-20 | Lane B2 Author (`ATT-9161`, `--as agent1`) | `ATT-9161` | Stage 6 Bounce 1/3 heal: executed `onFinalCleanup` and `onStreamsCancelled` atomically under `slotLock` prior to slot release, added `preAcquire` exception CAS rollback in `PolarPmdStreamCoordinator.kt`, wired `cancelAllStreams { releaseOnlineAccChannels() }` in `PolarOnlineStreamingBridge.kt`, added deterministic ownership test in `PolarPmdStreamCoordinatorTest.kt`, and set `[Implemented]` pending Gate 4 / Stage 5 re-verification. |
+| `1.0.89` | 2026-11-20 | Lane B2 Author (`ATT-9161`, `--as agent1`) | `ATT-9161` | Promoted `REQ-CON-053` to `[Verified]` in Stage 5 Bounce 1 reusing Gate 4 Bounce 1 (`ATT-9313` @ `79e9e1b1`) `173/173 PASS` across 22 suites + `:app:assembleDebug` + `0` new warnings (`Rule 7.5`, `0` `app/` drift since `79e9e1b1`), `4/4` Python safety linters PASS, clean-checkout `--check-verified-evidence` EXIT `0`, and refreshed `ATT-9161_walkthrough.md`. |

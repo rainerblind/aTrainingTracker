@@ -178,6 +178,7 @@
     <string name="device_polar_h10_live_imu_desc">Przesyła na żywo tętno/RR i dane akcelerometru jednym połączeniem Polar dla kadencji biegu bez aktywnego footpoda.</string>
     <string name="device_polar_verity_live_imu_desc">Przesyła na żywo tętno i dane ACC/GYRO w trybie niebieskiego czujnika jednym połączeniem Polar dla kadencji biegu bez aktywnego footpoda.</string>
     <string name="device_polar_live_imu_requires_android_13">Wymaga systemu Android 13 lub nowszego.</string>
+    <string name="polar_live_imu_stream_blocked_warning">%1$s: Live IMU (%2$s) zablokowane przez inną aplikację (np. Polar Flow) lub nieaktualny stan czujnika. Zamknij Polar Flow lub uruchom ponownie czujnik.</string>
 
     <!-- Polar H10 Running Dynamics (ATT-8018, REQ-SET-116) -->
     <string name="vertical_oscillation">Odchylenie pionowe</string>

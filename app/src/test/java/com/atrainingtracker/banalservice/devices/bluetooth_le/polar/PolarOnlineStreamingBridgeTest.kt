@@ -39,7 +39,9 @@ import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
 import com.atrainingtracker.trainingtracker.TrackingMode
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.polar.androidcommunications.api.ble.exceptions.BleControlPointCommandError
 import com.polar.androidcommunications.api.ble.model.DisInfo
+import com.polar.androidcommunications.api.ble.model.gatt.client.pmd.PmdControlPointResponse
 import com.polar.androidcommunications.api.ble.model.gatt.client.pmd.PmdMeasurementType
 import com.polar.sdk.api.PolarBleApi
 import com.polar.sdk.api.model.PolarAccelerometerData
@@ -54,6 +56,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.spyk
 import io.mockk.verify
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.flow
@@ -97,6 +100,7 @@ class PolarOnlineStreamingBridgeTest {
         DeviceDataRepository.resetForTesting()
         PolarOfflineCapabilityStore.resetForTesting()
         PolarOfflineGattCoordinator.resetForTesting()
+        PolarPmdStreamCoordinator.resetWarningsForTesting()
         sensorManager = MySensorManager(context)
     }
 
@@ -105,6 +109,7 @@ class PolarOnlineStreamingBridgeTest {
         TrainingApplication.setTrackingModeForTesting(TrackingMode.READY)
         PolarOfflineCapabilityStore.resetForTesting()
         PolarOfflineGattCoordinator.resetForTesting()
+        PolarPmdStreamCoordinator.resetWarningsForTesting()
         sensorManager.shutDown()
         DeviceDataRepository.resetForTesting()
         DevicesDatabaseManager.resetForTesting()
@@ -1902,6 +1907,255 @@ class PolarOnlineStreamingBridgeTest {
             assertNull("VERTICAL_OSCILLATION must notify null on Polar disconnect", voSeen.last())
             assertNull("GROUND_CONTACT_TIME must notify null on Polar disconnect", gctSeen.last())
             assertEquals("STRIDES accumulator must NOT push null on disconnect", 15, stridesSeen.last())
+        } finally {
+            bridge.shutDown()
+        }
+    }
+
+    @Test
+    fun testReentrantHandshakeBurst_preventsHrToggleStormAndDuplicatePmdStarts_TST_CON_053_1() = runTest {
+        // REQ-CON-053.1 / TST-CON-053.1
+        val mac = "24:AC:AC:24:82:56"
+        val polarId = "24825632"
+        val db = DevicesDatabaseManager.getInstance(context)
+        val devId = db.insertNewBluetoothDeviceIntoDB(DeviceType.HRM, mac, "Polar Verity Sense $polarId", "Polar Electro", 90, true)
+
+        val accSettingsGate = CompletableDeferred<PolarSensorSetting>()
+        val gyroSettingsGate = CompletableDeferred<PolarSensorSetting>()
+        val ppiProbeGate = CompletableDeferred<Set<PolarBleApi.PolarDeviceDataType>>()
+        val veritySetting = PolarSensorSetting(mapOf(PolarSensorSetting.SettingType.SAMPLE_RATE to 52))
+
+        val mockApi = mockk<PolarBleApi>(relaxed = true)
+        every { mockApi.isFeatureReady(any(), PolarBleApi.PolarBleSdkFeature.FEATURE_HR) } returns true
+        every { mockApi.isFeatureReady(any(), PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_ONLINE_STREAMING) } returns true
+        coEvery { mockApi.requestStreamSettings(polarId, PolarBleApi.PolarDeviceDataType.ACC) } coAnswers { accSettingsGate.await() }
+        coEvery { mockApi.requestStreamSettings(polarId, PolarBleApi.PolarDeviceDataType.GYRO) } coAnswers { gyroSettingsGate.await() }
+        coEvery { mockApi.getAvailableOnlineStreamDataTypes(polarId) } coAnswers { ppiProbeGate.await() }
+        every { mockApi.startHrStreaming(polarId) } returns flow { awaitCancellation() }
+        every { mockApi.startAccStreaming(polarId, any()) } returns flow { awaitCancellation() }
+        every { mockApi.startGyroStreaming(polarId, any()) } returns flow { awaitCancellation() }
+        every { mockApi.startPpiStreaming(polarId) } returns flow { awaitCancellation() }
+
+        val testDispatcher = StandardTestDispatcher(testScheduler)
+        val bridge = PolarOnlineStreamingBridge(
+            context = context,
+            mySensorManager = sensorManager,
+            deviceId = devId,
+            macAddress = mac,
+            dispatcher = testDispatcher,
+            sdkIntProvider = { 34 },
+            sportTypeProvider = { BSportType.RUN },
+            apiFactory = { _, _ -> mockApi }
+        )
+
+        try {
+            // Lock ACC by offline recording first -> ACC CAS must roll back cleanly
+            assertTrue(PolarOfflineGattCoordinator.tryAcquireAccChannel(polarId, PolarOfflineGattCoordinator.ACC_OWNER_OFFLINE))
+            bridge.startSearching()
+            val callback = bridge.getSdkCallbackForTesting()
+            callback.deviceConnected(PolarDeviceInfo(polarId, mac, -52, "Polar Verity Sense $polarId", true))
+            testScheduler.runCurrent()
+
+            assertFalse("ACC CAS must roll back cleanly when offline recording holds channel", bridge.isAccStreamingForTesting())
+            PolarOfflineGattCoordinator.releaseAccChannel(polarId, PolarOfflineGattCoordinator.ACC_OWNER_OFFLINE)
+
+            // Fire rapid burst of overlapping callbacks while settings/capability probes are suspended
+            repeat(4) { callback.bleSdkFeatureReady(polarId, PolarBleApi.PolarBleSdkFeature.FEATURE_HR) }
+            repeat(3) { callback.bleSdkFeatureReady(polarId, PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_ONLINE_STREAMING) }
+            repeat(2) { callback.bleSdkFeatureReady(polarId, PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_OFFLINE_RECORDING) }
+            repeat(2) {
+                callback.disInformationReceived(
+                    polarId,
+                    DisInfo(BluetoothConstants.UUID_CHARACTERISTIC_MODEL_NUMBER.toString(), "Polar Verity Sense")
+                )
+            }
+            testScheduler.runCurrent()
+
+            // Complete suspended probes now
+            accSettingsGate.complete(veritySetting)
+            gyroSettingsGate.complete(veritySetting)
+            ppiProbeGate.complete(setOf(PolarBleApi.PolarDeviceDataType.PPI))
+            testScheduler.runCurrent()
+
+            verify(exactly = 1) { mockApi.startHrStreaming(polarId) }
+            verify(exactly = 1) { mockApi.startAccStreaming(polarId, any()) }
+            verify(exactly = 1) { mockApi.startGyroStreaming(polarId, any()) }
+            verify(exactly = 1) { mockApi.startPpiStreaming(polarId) }
+            assertTrue(bridge.isHrJobActiveForTesting())
+            assertTrue(bridge.isAccStreamingForTesting())
+            assertTrue(bridge.isGyroStreamingForTesting())
+            assertTrue(bridge.isPpiStreamingForTesting())
+        } finally {
+            PolarOfflineGattCoordinator.releaseAccChannel(polarId, PolarOfflineGattCoordinator.ACC_OWNER_OFFLINE)
+            bridge.shutDown()
+        }
+    }
+
+    @Test
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    fun testPmdAlreadyInStateRecovery_recoversAccGyroAndPpiAfterStopStreamingAndBackoff_TST_CON_053_2() = runTest {
+        // REQ-CON-053.2 / TST-CON-053.2
+        val mac = "24:AC:AC:24:82:57"
+        val polarId = "24825633"
+        val db = DevicesDatabaseManager.getInstance(context)
+        val devId = db.insertNewBluetoothDeviceIntoDB(DeviceType.HRM, mac, "Polar Verity Sense $polarId", "Polar Electro", 90, true)
+
+        val veritySetting = PolarSensorSetting(mapOf(PolarSensorSetting.SettingType.SAMPLE_RATE to 52))
+        val alreadyInState = BleControlPointCommandError(
+            "pmd cp command REQUEST_MEASUREMENT_START error: ERROR_ALREADY_IN_STATE",
+            PmdControlPointResponse.PmdControlPointResponseCode.ERROR_ALREADY_IN_STATE
+        )
+
+        val mockApi = mockk<PolarBleApi>(relaxed = true)
+        coEvery { mockApi.requestStreamSettings(polarId, any()) } returns veritySetting
+        coEvery { mockApi.getAvailableOnlineStreamDataTypes(polarId) } returns setOf(PolarBleApi.PolarDeviceDataType.PPI)
+
+        var accAttempts = 0
+        every { mockApi.startAccStreaming(polarId, any()) } answers {
+            val attempt = ++accAttempts
+            flow {
+                if (attempt == 1) throw alreadyInState
+                emit(PolarAccelerometerData(listOf(PolarAccelerometerData.PolarAccelerometerDataSample(1_000_000L, 10, 20, 1000))))
+                awaitCancellation()
+            }
+        }
+        var gyroAttempts = 0
+        every { mockApi.startGyroStreaming(polarId, any()) } answers {
+            val attempt = ++gyroAttempts
+            flow {
+                if (attempt == 1) throw alreadyInState
+                emit(PolarGyroData(listOf(PolarGyroData.PolarGyroDataSample(1_000_000L, 1.0f, 2.0f, 3.0f))))
+                awaitCancellation()
+            }
+        }
+        var ppiAttempts = 0
+        every { mockApi.startPpiStreaming(polarId) } answers {
+            val attempt = ++ppiAttempts
+            flow {
+                if (attempt == 1) throw alreadyInState
+                emit(
+                    PolarPpiData(
+                        listOf(
+                            PolarPpiData.PolarPpiSample(800, 10, 75, false, true, true, 0uL)
+                        )
+                    )
+                )
+                awaitCancellation()
+            }
+        }
+
+        val testDispatcher = StandardTestDispatcher(testScheduler)
+        val bridge = PolarOnlineStreamingBridge(
+            context = context,
+            mySensorManager = sensorManager,
+            deviceId = devId,
+            macAddress = mac,
+            dispatcher = testDispatcher,
+            sdkIntProvider = { 34 },
+            sportTypeProvider = { BSportType.RUN },
+            apiFactory = { _, _ -> mockApi }
+        )
+        var accFrames = 0
+        var gyroFrames = 0
+        val ppiBeats = mutableListOf<RrBeatEvent>()
+        bridge.addImuFrameListener(object : PolarOnlineStreamingBridge.ImuFrameListener {
+            override fun onAccFrame(polarId: String, data: PolarAccelerometerData) { accFrames++ }
+            override fun onGyroFrame(polarId: String, data: PolarGyroData) { gyroFrames++ }
+        })
+        bridge.addRrBeatListener(RrBeatListener { ppiBeats.add(it) })
+
+        try {
+            bridge.startSearching()
+            val callback = bridge.getSdkCallbackForTesting()
+            callback.deviceConnected(PolarDeviceInfo(polarId, mac, -52, "Polar Verity Sense $polarId", true))
+            callback.bleSdkFeatureReady(polarId, PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_ONLINE_STREAMING)
+            testScheduler.runCurrent()
+
+            // First attempt hit ERROR_ALREADY_IN_STATE -> stopStreaming issued for ACC, GYRO, PPI; waiting 500ms backoff
+            verify(exactly = 1) { mockApi.stopStreaming(polarId, PmdMeasurementType.ACC) }
+            verify(exactly = 1) { mockApi.stopStreaming(polarId, PmdMeasurementType.GYRO) }
+            verify(exactly = 1) { mockApi.stopStreaming(polarId, PmdMeasurementType.PPI) }
+            assertEquals(0, accFrames)
+
+            testScheduler.advanceTimeBy(501L)
+            testScheduler.runCurrent()
+
+            assertEquals("ACC must recover and deliver frames after 500ms backoff", 1, accFrames)
+            assertEquals("GYRO must recover and deliver frames after 500ms backoff", 1, gyroFrames)
+            assertEquals("PPI must recover and deliver optical beats after 500ms backoff", 1, ppiBeats.size)
+            assertNull("Recovered PMD streams must not emit blocked-stream warning", PolarPmdStreamCoordinator.streamWarning.value)
+        } finally {
+            bridge.shutDown()
+        }
+    }
+
+    @Test
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    @Suppress("DEPRECATION")
+    fun testPmdAlreadyInStateExhaustion_emitsSingleDeduplicatedWarningAndClearsOnDisconnect_TST_CON_053_3() = runTest {
+        // REQ-CON-053.3 / TST-CON-053.3
+        val mac = "24:AC:AC:24:82:58"
+        val polarId = "24825634"
+        val db = DevicesDatabaseManager.getInstance(context)
+        val devId = db.insertNewBluetoothDeviceIntoDB(DeviceType.HRM, mac, "Polar Verity Sense $polarId", "Polar Electro", 90, true)
+
+        val veritySetting = PolarSensorSetting(mapOf(PolarSensorSetting.SettingType.SAMPLE_RATE to 52))
+        val alwaysAlreadyInState = BleControlPointCommandError(
+            "pmd cp command REQUEST_MEASUREMENT_START error: ERROR_ALREADY_IN_STATE",
+            PmdControlPointResponse.PmdControlPointResponseCode.ERROR_ALREADY_IN_STATE
+        )
+
+        val mockApi = mockk<PolarBleApi>(relaxed = true)
+        coEvery { mockApi.requestStreamSettings(polarId, any()) } returns veritySetting
+        coEvery { mockApi.getAvailableOnlineStreamDataTypes(polarId) } returns setOf(PolarBleApi.PolarDeviceDataType.PPI)
+        every { mockApi.startAccStreaming(polarId, any()) } returns flow { throw alwaysAlreadyInState }
+        every { mockApi.startGyroStreaming(polarId, any()) } returns flow { throw alwaysAlreadyInState }
+        every { mockApi.startPpiStreaming(polarId) } returns flow { throw alwaysAlreadyInState }
+
+        val testDispatcher = StandardTestDispatcher(testScheduler)
+        val bridge = PolarOnlineStreamingBridge(
+            context = context,
+            mySensorManager = sensorManager,
+            deviceId = devId,
+            macAddress = mac,
+            dispatcher = testDispatcher,
+            sdkIntProvider = { 34 },
+            sportTypeProvider = { BSportType.RUN },
+            apiFactory = { _, _ -> mockApi }
+        )
+
+        try {
+            bridge.startSearching()
+            val callback = bridge.getSdkCallbackForTesting()
+            callback.deviceConnected(PolarDeviceInfo(polarId, mac, -52, "Polar Verity Sense $polarId", true))
+            callback.bleSdkFeatureReady(polarId, PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_ONLINE_STREAMING)
+
+            // Advance past 500 + 1000 + 2000 ms backoff retries
+            testScheduler.advanceTimeBy(4_000L)
+            testScheduler.runCurrent()
+
+            verify(exactly = 3) { mockApi.stopStreaming(polarId, PmdMeasurementType.ACC) }
+            verify(exactly = 3) { mockApi.stopStreaming(polarId, PmdMeasurementType.GYRO) }
+            verify(exactly = 3) { mockApi.stopStreaming(polarId, PmdMeasurementType.PPI) }
+
+            val warning = PolarPmdStreamCoordinator.streamWarning.value
+            assertNotNull("Exhausted PMD recovery must surface a status warning", warning)
+            assertEquals(polarId, warning!!.polarId)
+            assertEquals(PolarPmdStreamCoordinator.MAX_ALREADY_IN_STATE_RETRIES, warning.retryCount)
+
+            // Consume warning + redundant deviceConnected echo must NOT reset warningEmittedForSession mid-session
+            PolarPmdStreamCoordinator.consumeStreamWarning(polarId)
+            assertNull(PolarPmdStreamCoordinator.streamWarning.value)
+            callback.deviceConnected(PolarDeviceInfo(polarId, mac, -52, "Polar Verity Sense $polarId", true))
+            callback.bleSdkFeatureReady(polarId, PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_ONLINE_STREAMING)
+            testScheduler.advanceTimeBy(4_000L)
+            testScheduler.runCurrent()
+            assertNull("Redundant already-connected callback must not re-spam warning mid-session", PolarPmdStreamCoordinator.streamWarning.value)
+
+            // Disconnect resets session state and clears any active warning cleanly
+            callback.deviceDisconnected(PolarDeviceInfo(polarId, mac, -52, "Polar Verity Sense $polarId", true))
+            testScheduler.runCurrent()
+            assertNull(PolarPmdStreamCoordinator.streamWarning.value)
         } finally {
             bridge.shutDown()
         }

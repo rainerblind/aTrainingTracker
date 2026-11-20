@@ -178,6 +178,7 @@
     <string name="device_polar_h10_live_imu_desc">単一の Polar 接続でライブ心拍/RR と加速度データを配信し、フットポッド未使用時にランニングケイデンスを提供します。</string>
     <string name="device_polar_verity_live_imu_desc">青色センサーモードで単一の Polar 接続によりライブ心拍と ACC/GYRO を配信し、フットポッド未使用時にランニングケイデンスを提供します。</string>
     <string name="device_polar_live_imu_requires_android_13">Android 13 以降が必要です。</string>
+    <string name="polar_live_imu_stream_blocked_warning">%1$s：ライブIMU（%2$s）が他のアプリ（Polar Flowなど）またはセンサーの古い状態によりブロックされています。Polar Flowを閉じるか、センサーを再起動してください。</string>
 
     <!-- Polar H10 Running Dynamics (ATT-8018, REQ-SET-116) -->
     <string name="vertical_oscillation">上下動</string>

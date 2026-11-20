@@ -178,6 +178,7 @@
     <string name="device_polar_h10_live_imu_desc">Streamt live hartslag/RR en versnellingsgegevens via één Polar-verbinding voor hardloopcadans zonder actieve footpod.</string>
     <string name="device_polar_verity_live_imu_desc">Streamt live hartslag en ACC/GYRO-gegevens in de blauwe sensormodus via één Polar-verbinding voor hardloopcadans zonder actieve footpod.</string>
     <string name="device_polar_live_imu_requires_android_13">Vereist Android 13 of nieuwer.</string>
+    <string name="polar_live_imu_stream_blocked_warning">%1$s: Live-IMU (%2$s) geblokkeerd door een andere app (bijv. Polar Flow) of een vastgelopen sensorstatus. Sluit Polar Flow of start de sensor opnieuw op.</string>
 
     <!-- Polar H10 Running Dynamics (ATT-8018, REQ-SET-116) -->
     <string name="vertical_oscillation">Verticale oscillatie</string>

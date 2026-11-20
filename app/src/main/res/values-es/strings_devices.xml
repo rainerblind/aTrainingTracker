@@ -178,6 +178,7 @@
     <string name="device_polar_h10_live_imu_desc">Transmite FC/RR y datos del acelerómetro en vivo mediante una única conexión Polar para cadencia de carrera sin podómetro activo.</string>
     <string name="device_polar_verity_live_imu_desc">Transmite FC y datos ACC/GYRO en modo sensor azul mediante una única conexión Polar para cadencia de carrera sin podómetro activo.</string>
     <string name="device_polar_live_imu_requires_android_13">Requiere Android 13 o superior.</string>
+    <string name="polar_live_imu_stream_blocked_warning">%1$s: IMU en directo (%2$s) bloqueado por otra app (p. ej. Polar Flow) o un estado obsoleto del sensor. Cierra Polar Flow o reinicia el sensor.</string>
 
     <!-- Polar H10 Running Dynamics (ATT-8018, REQ-SET-116) -->
     <string name="vertical_oscillation">Oscilación vertical</string>
