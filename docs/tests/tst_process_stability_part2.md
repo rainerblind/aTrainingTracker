@@ -1,7 +1,7 @@
 # Living Test Specification: Engineering Process, Stability & Architecture (Part 2 of 2)
 
 **Document ID**: `DOC-TST-PRO-P2`  
-**Version**: 1.0.37  
+**Version**: 1.0.39  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -1498,16 +1498,17 @@
 
 ---
 
-### TST-PRO-132: **Behavioral Compose UI Testing Mandate, Reflection-Only UI Test Ratchet & `RadarSettingsSectionTest` Remediation Suite (ATT-8198)** [Verified]
+### TST-PRO-132: **Behavioral Compose UI Testing Mandate, Reflection-Only UI Test Ratchet & `RadarSettingsSectionTest` / `ElevationProfileGradeColorTest` Remediation Suite (ATT-8198, ATT-9179)** [Verified]
 - **Requirement(s)**: `REQ-PRO-132`
 - **Priority**: Medium
 - **Type**: Non-Functional
 - **Verification Method**: Unit / Review
-- **Component**: `app/src/test/java/com/atrainingtracker/trainingtracker/build/UiReflectionOnlyTestAuditContractTest.kt`, `app/ui-reflection-baseline.txt`, `app/src/test/java/com/atrainingtracker/trainingtracker/ui/settings/radar/RadarSettingsSectionTest.kt`, `docs/coding_standards.md`, `.agents/skills/stage4-implementation/SKILL.md`, `.agents/skills/stage5-verification/SKILL.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SourceTextReadingAuditContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/AspiceSweAuditContractTest.kt`
-- **Jira**: `ATT-8198`
+- **Component**: `app/src/test/java/com/atrainingtracker/trainingtracker/build/UiReflectionOnlyTestAuditContractTest.kt`, `app/ui-reflection-baseline.txt`, `app/src/test/java/com/atrainingtracker/trainingtracker/ui/settings/radar/RadarSettingsSectionTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/ui/map/ElevationProfileGradeColorTest.kt`, `docs/coding_standards.md`, `.agents/skills/stage4-implementation/SKILL.md`, `.agents/skills/stage5-verification/SKILL.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SourceTextReadingAuditContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/AspiceSweAuditContractTest.kt`
+- **Verification Evidence**: `UiReflectionOnlyTestAuditContractTest#testUiReflectionAudit_noUnallowlistedReflectionOnlyUiTests`, `UiReflectionOnlyTestAuditContractTest#testBaseline_containsOnlyExpectedLegacyCount`, `UiReflectionOnlyTestAuditContractTest#testRatchetingTripwire_andLegitimateReflectionProtections`, `UiReflectionOnlyTestAuditContractTest#testBehavioralComposeMandate_codingStandardsAndSkillsAligned` (`4/4` PASS), `ElevationProfileGradeColorTest#testElevationProfile_contractAndLegendSevenZones` (`5/5` PASS), `SourceTextReadingAuditContractTest#testSourceReadingAudit_noUnallowlistedSourceReaders` (`6/6` PASS) (`ATT-9179`, SHA `10bde5ec`, Gate 4 `ATT-9342`)
+- **Jira**: `ATT-8198`, `ATT-9179`
 - **Test Description**:
   1. *Reflection-Only UI Test Ratchet & Baseline Enforcement (`TST-PRO-132.1`, `UiReflectionOnlyTestAuditContractTest.kt`)*:
-     • *Given* `app/src/test/java/` scanned across `(?:^|/)ui/` (`com/atrainingtracker/trainingtracker/ui/` [`178`] and `com/atrainingtracker/banalservice/ui/` [`11`]) and `app/ui-reflection-baseline.txt` (`189` entries ceiling), *When* `UiReflectionOnlyTestAuditContractTest` executes against the live repository and synthetic tripwire fixtures (unallowlisted `Class.forName("...Kt")` without `createComposeRule()`, stale baseline entry), *Then* `0` unallowlisted reflection-only UI tests exist, `0` stale baseline entries exist, `baseline.size <= 189`, and the synthetic tripwire fails deterministically. Tag tests with `TST-PRO-132.1`.
+     • *Given* `app/src/test/java/` scanned across `(?:^|/)ui/` (`com/atrainingtracker/trainingtracker/ui/` [`177`, ratcheted from `178` in `ATT-9179`] and `com/atrainingtracker/banalservice/ui/` [`11`]) and `app/ui-reflection-baseline.txt` (`188` entries ceiling, ratcheted `189 -> 188` in `ATT-9179`), *When* `UiReflectionOnlyTestAuditContractTest` executes against the live repository and synthetic tripwire fixtures (unallowlisted `Class.forName("...Kt")` without `createComposeRule()`, stale baseline entry), *Then* `0` unallowlisted reflection-only UI tests exist, `0` stale baseline entries exist, `baseline.size == 188`, and the synthetic tripwire fails deterministically. Tag tests with `TST-PRO-132.1`.
   2. *Legitimate Reflection Guard Preservation (`TST-PRO-132.2`, `UiReflectionOnlyTestAuditContractTest.kt`, `AndroidViewModelReflectionContractTest.kt`, `InterfaceSignatureDriftContractTest.kt`, `AdrCompletenessContractTest.kt`)*:
      • *Given* `build/` reflection contract tests, non-`*Kt` classpath/decoupling checks (`CoreDependencyAlignmentTest`, `WorkoutRepositoryDeleteTest`), and `createComposeRule()` + signature tests (`RadarLightQuickSwitchSheetTest`, `SensorSourceDialogContractTest`), *When* `UiReflectionOnlyTestAuditContractTest` and the `build/` suites run, *Then* all pass with `0` false positives and `SourceTextReadingAuditContractTest` (`22` guards, `105` baseline) passes `4/4`. Tag tests with `TST-PRO-132.2`.
   3. *Coding Standard & Stage 4/5 Behavioral Compose Mandate Parity (`TST-PRO-132.3`, `AspiceSweAuditContractTest.kt` & `UiReflectionOnlyTestAuditContractTest.kt`)*:
@@ -1652,3 +1653,5 @@
 | `1.0.35` | 2026-11-20 | Lane A Flash (`ATT-8222`, `--as agent1`) | `ATT-8222` | Added `[Planned]` `TST-PRO-135` (`TST-PRO-135.1`–`TST-PRO-135.5`: serial Multi-OS & 9-language mocked sweep + `finally` cleanup, `66020DLCR002FL` physical-phone refusal + logcat/bounds checks, `ALLOWED_ENGINEERING_ENTRIES` + `cm_plan.md`, weekly 3-pillar `ensure_weekly_reviews` + `qa_plan`/`release-manager` gate, `:app:compileDebugAndroidTestKotlin`). |
 | `1.0.36` | 2026-11-20 | Lane A Flash (`ATT-8222`, `--as agent1`) | `ATT-8222` | Promoted `TST-PRO-135` (`TST-PRO-135.1`–`TST-PRO-135.5`) to `[Implemented]` in Stage 4 (`tools/test_run_multi_os_emulator_sweep.py` `2/2`, `tools/test_jira_accounts.py` `111/111`, `tools/test_verify_requirement_governance.py -k tst_pro_135` `1/1`, `verify_skills.py` `11/11`, `:app:compileDebugAndroidTestKotlin` BUILD SUCCESSFUL). |
 | `1.0.37` | 2026-11-20 | Lane A Flash (`ATT-8222`, `--as agent1`) | `ATT-8222` | Promoted `TST-PRO-135` (`TST-PRO-135.1`–`TST-PRO-135.5`) to `[Verified]` in Stage 5 with verbatim test citations (`ATT-8222_walkthrough.md`, `Rule 7.5` reused Gate 4 evidence at SHA `de14d362`). |
+| `1.0.38` | 2026-11-20 | Lane C Flash (`ATT-9179`, `--as agent1`) | `ATT-9179` | Set `TST-PRO-132` (`TST-PRO-132.1`) to `[Planned]` for `ATT-9179`: ratchet `app/ui-reflection-baseline.txt` and `LEGACY_BASELINE_CEILING` `189 -> 188` (`trainingtracker/ui/` `178 -> 177`) upon migrating `ElevationProfileGradeColorTest.kt` to `createComposeRule()`. |
+| `1.0.39` | 2026-11-20 | Lane C Flash (`ATT-9179`, `--as agent1`) | `ATT-9179` | Promoted `TST-PRO-132` to `[Verified]` in Stage 5 with verbatim test evidence (`ATT-9179_walkthrough.md`, `Rule 7.5` Gate 4 `ATT-9342` @ `10bde5ec`, `24/24 PASS` across 5 suites). |
