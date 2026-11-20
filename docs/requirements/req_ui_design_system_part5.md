@@ -1,14 +1,14 @@
 # Living Requirements: UI Components & Design System (Part 5 of 5)
 
 **Document ID**: `DOC-REQ-UI-P5`  
-**Version**: 1.0.12  
+**Version**: 1.0.13  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `ui_design_system_part5`  
 **Prefixes**: `UI`, `UNT`  
 **Scope**: Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts.  
-**Total Requirements**: 45
+**Total Requirements**: 46
 
 ---
 
@@ -1835,6 +1835,29 @@
 
 **Invariants**: Legacy `"v1|"` / `"v2|"` migration tests pass; `WorkoutSummary` list card summary toggles remain functional; `WorkoutHeader` Frame-0 bounds (`ATT-8097`) preserved; `WorkoutMasksAndCardsSection.kt < 400` LoC; `formatWorkoutMatrixSubtitle` 3-arg contract preserved; `WorkoutRepository.kt` untouched; 9-locale parity; `0` new `src/main` reads in tests; Compose UI tests use `createComposeRule()`.
 
+### REQ-UI-2788: Adequate Cockpit Sparkline Canvas Height, Compact X-Axis Leading & Flexible Value+Graph Layout (`ATT-8995`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-UI-2788`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Implementation**: `SensorSparklineView.kt`, `SensorFieldView.kt`, `EditSensorFieldDialog.kt`
+- **Localization Parity**: `N/A - no new or modified UI strings` (`0` edits to `res/values*/strings*.xml`)
+- **Rationale**: After `ATT-6695` (`ef243477`) added the X-axis time label row (`-T`, `-T/2`, `Now`) below `Canvas(Modifier.weight(1f))`, `resolveSparklineHeight(..., isGraphOnly = false)` (`26/34/44/52.dp`) combined with inherited `16.sp` M3 `labelSmall` leading and `2 * 3.dp = 6.dp` Canvas vertical padding squeezed `NORMAL` Value+Graph curves into `~12.dp` net drawing height, while rigid `.height(...)` in `SensorFieldView.kt:505-507` wasted surplus tile height (`ATT-8995`).
+- **Description**:
+  1. *Sparkline Minimum Heights & Compact X-Axis Leading (`REQ-UI-2788.1`)*: `resolveSparklineHeight(viewSize, isGraphOnly)` in `SensorSparklineView.kt` SHALL return `46.dp` (`<= SMALL`), `52.dp` (`NORMAL`), `60.dp` (`LARGE`), and `68.dp` (`>= XLARGE`) when `isGraphOnly == false` (guaranteeing `>= 28.dp` net Canvas curve amplitude at `NORMAL` and `>= 34.dp` measured Canvas height), while keeping `isGraphOnly == true` strictly monotonically taller (`48.dp`, `56.dp`, `68.dp`, `84.dp`) so toggling off Value never shrinks the sparkline. The X-axis label `Text`s (`SensorSparklineView.kt:362-379`) SHALL apply `lineHeight = 12.sp` paired with `PlatformTextStyle(includeFontPadding = false)` to reclaim dead font leading without clipping `10.sp` labels, and the sparkline `Canvas` SHALL expose a stable `testTag("sensor_sparkline_canvas")` for exact measured-height verification.
+  2. *Flexible Value+Graph Vertical Expansion & Fixed-Card Safety (`REQ-UI-2788.2`)*: In `SensorFieldView.kt:504-508`, Value+Graph mode (`showValue == true && showGraph == true`) SHALL apply `Modifier.heightIn(min = resolveSparklineHeight(fieldState.viewSize, isGraphOnly = false)).weight(1f).padding(horizontal = 4.dp)` instead of rigid `.height(...)`, expanding cleanly in `IntrinsicSize.Min` rows (`SensorGridScreen.kt:749,1122`), claiming surplus vertical space alongside taller neighbors in multi-column rows, and shrinking gracefully inside externally height-constrained cards (`116.dp`/`132.dp`) without clipping primary Value text or X-axis labels.
+  3. *WYSIWYG Preview Parity & Invariants (`REQ-UI-2788.3`)*: `EditSensorFieldDialog.kt:526` SHALL size its sparkline preview container to `52.dp` (matching `ViewSize.NORMAL` Value+Graph). `0` edits to `strings*.xml`, `docs/tests/tst_tracking_cockpit.md`, or protected monoliths; `0` Compose snapshot-state mutations (`Rule 66`).
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Refines `REQ-TRK-059.5`, `REQ-TRK-059.9`, `REQ-TRK-059.10`, and `REQ-UI-438` via net-new `REQ-UI-2788`.
+  2. *Historical Origin & Commit Trace*: `ATT-1294` created `SensorSparklineView`; `ATT-6695` (`ef243477`) added `-T / -T/2 / Now` X-axis labels; `ATT-6689` (`82e21ca5`) added `heightIn(min = ...).weight(1f)` for Graph-only `IntrinsicSize.Min` collapse immunity.
+  3. *Root Reason for Existing Formulation*: `ATT-6695` underestimated inherited `16.sp` M3 `labelSmall` leading + `6.dp` Canvas padding and kept rigid `.height(...)` for Value+Graph.
+  4. *Preservation of Core Invariants*: Preserves `0px` collapse immunity in `IntrinsicSize.Min` rows (`REQ-TRK-059.10`), X-axis `-T / -T/2 / Now` legibility & 9-locale parity, Dynamic Zone gradient & DFA alpha 1 inverted polarity (`REQ-TRK-082`, `ATT-8436`), placeholder mode (`REQ-TRK-059.11`), and `SensorGridScreen` 50% map-split scroll cap (`REQ-UI-358`).
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* a `ViewSize.NORMAL` `SensorFieldView` tile with `showValue = true` and `showGraph = true` inside a `Row(Modifier.height(IntrinsicSize.Min))`, *When* composed and measured via `createComposeRule()`, *Then* the `sensor_sparkline_canvas` node measures `>= 34.dp` (`>= 28.dp` net curve amplitude after `6.dp` padding) and all `-T`, `-T/2`, and `Now` X-axis labels remain fully visible without clipping.
+  • *Given* a multi-column `Row(Modifier.height(IntrinsicSize.Min))` containing a `NORMAL` Value+Graph tile beside a taller `XLARGE` neighbor, *When* composed, *Then* the Value+Graph sparkline expands vertically beyond its `52.dp` minimum to claim surplus tile height.
+  • *Given* externally height-constrained `132.dp` (`NORMAL`) and `116.dp` (`SMALL`) tiles (Light & Dark/AMOLED), *When* composed, *Then* primary Value text and X-axis labels remain unclipped and readable (`Rule 8.5` PNG verified).
+
 ---
 
 ## Change History
@@ -1852,3 +1875,6 @@
 | `1.0.10` | 2026-11-18 | AI Agent (`ATT-8079`) | `ATT-8079` | Added `REQ-UI-2787` (`[Planned]`) for `v3|` tab persistence, Workout Details summary-toggle decoupling, dynamic header action reservation, and tab-driven settings/subtitle. |
 | `1.0.11` | 2026-11-18 | AI Agent (`ATT-8079`) | `ATT-8079` | Promoted `REQ-UI-2787` to `[Implemented]` in Stage 4 (`WorkoutDetailTabConfig`, `WorkoutDetailTabbedContent`, `WorkoutHeader`, `WorkoutMasksAndCardsSection`, `AdvancedTuning*`, 9-locale `strings_workout_details.xml`). |
 | `1.0.12` | 2026-11-18 | AI Agent (`ATT-8079`) | `ATT-8079` | Promoted `REQ-UI-2787` to `[Verified]` in Stage 5 (`94/94` Tier 1 JUnit XMLs PASS, `Rule 8.5` PNG inspected). |
+| `1.0.13` | 2026-11-20 | Lane A Author (`ATT-8995`, `--as agent1`) | `ATT-8995` | Added `REQ-UI-2788` (`[Planned]`, `.1`–`.3`) for adequate Value+Graph sparkline Canvas height (`46/52/60/68.dp`), monotonic Graph-only heights (`48/56/68/84.dp`), compact `12.sp` X-axis leading (`includeFontPadding = false`), flexible `heightIn(min).weight(1f)` in `SensorFieldView`, and `52.dp` preview parity (`N/A - no new or modified UI strings`). |
+| `1.0.14` | 2026-11-20 | Lane A Author (`ATT-8995`, `--as agent1`) | `ATT-8995` | Promoted `REQ-UI-2788` to `[Implemented]` (`SensorSparklineView.kt`, `SensorFieldView.kt`, `EditSensorFieldDialog.kt`, `SensorFieldViewSparklineLayoutComposeTest.kt`, Light/Dark `Rule 8.5` PNG `ATT-8995_sparkline_value_graph_layout.png`; `0` `strings*.xml` or monolith edits). |
+| `1.0.15` | 2026-11-20 | Lane A Author (`ATT-8995`, `--as agent1`) | `ATT-8995` | Promoted `REQ-UI-2788` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9382` @ `a5cbbd1b`) `57/57 PASS` across 11 suites + `:app:assembleDebug` + `0` new Kotlin/deprecation warnings (`Rule 7.5`, `0` `app/` diff since `a5cbbd1b`), `Rule 8.5` Light/Dark PNG certified, `4/4` safety linters PASS, `--check-verified-evidence` `exit 0`, and `docs/engineering/walkthroughs/ATT-8995_walkthrough.md`. |

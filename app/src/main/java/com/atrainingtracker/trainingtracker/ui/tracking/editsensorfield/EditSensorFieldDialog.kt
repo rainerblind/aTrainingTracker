@@ -524,7 +524,7 @@ fun EditSensorFieldDialog(
                             invertYAxis = uiState.selectedSensorType == SensorType.HRV_DFA_A1 || (previewZoneThresholds?.invertedPolarity == true),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(44.dp)
+                                .height(52.dp)
                         )
                     }
                 }

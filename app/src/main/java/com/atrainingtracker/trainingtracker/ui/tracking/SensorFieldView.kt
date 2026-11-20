@@ -503,7 +503,8 @@ fun SensorFieldView(
                                             .padding(horizontal = 4.dp, vertical = 2.dp)
                                     } else {
                                         Modifier
-                                            .height(resolveSparklineHeight(fieldState.viewSize, isGraphOnly = false))
+                                            .heightIn(min = resolveSparklineHeight(fieldState.viewSize, isGraphOnly = false))
+                                            .weight(1f)
                                             .padding(horizontal = 4.dp)
                                     }
                                 )
