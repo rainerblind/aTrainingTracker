@@ -72,6 +72,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.zIndex
@@ -191,10 +192,24 @@ fun MapDetailLayout(
     val analyticsLayer = rememberGraphicsLayer()
 
     var isSharing by remember { mutableStateOf(false) }
+    var isHeaderLayerRecorded by remember { mutableStateOf(false) }
+    var readyToTakeMapSnapshot by remember { mutableStateOf(false) }
 
     LaunchedEffect(externalSnapshotTrigger) {
         if (externalSnapshotTrigger && !isSharing) {
             isSharing = true
+        }
+    }
+
+    LaunchedEffect(isSharing, externalSnapshotTrigger, showHeader, isHeaderLayerRecorded) {
+        if (!isSharing) {
+            readyToTakeMapSnapshot = false
+            if (!externalSnapshotTrigger) {
+                isHeaderLayerRecorded = false
+            }
+        } else if (showHeader || isHeaderLayerRecorded) {
+            withFrameNanos { }
+            readyToTakeMapSnapshot = true
         }
     }
     var showShareModeSheet by remember { mutableStateOf(false) }
@@ -367,7 +382,7 @@ fun MapDetailLayout(
                 activeScrubPath = activeScrubPath,
                 activeScrubPoint = activeScrubPoint,
                 modifier = Modifier.fillMaxSize(),
-                shouldTakeSnapshot = isSharing,
+                shouldTakeSnapshot = readyToTakeMapSnapshot,
                 onMapClick = onMapClick,
                 onSnapshotReady = { mapBitmap ->
                     scope.launch {
@@ -649,6 +664,44 @@ fun MapDetailLayout(
         )
         val floatingControlsTopOffsetDp = with(density) { floatingControlsTopOffsetPx.toDp() }
 
+        // REQ-REV-015: On-demand, non-interactive offscreen header recording outside .zIndex(1f)
+        if (!showHeader && (isSharing || externalSnapshotTrigger)) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .zIndex(-1f)
+                    .clearAndSetSemantics {}
+                    .layout { measurable, layoutConstraints ->
+                        val placeable = measurable.measure(layoutConstraints.copy(minHeight = 0))
+                        layout(0, 0) {
+                            placeable.place(0, -placeable.height - 10_000)
+                        }
+                    }
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .pointerInput(Unit) {
+                            awaitPointerEventScope {
+                                while (true) {
+                                    awaitPointerEvent(PointerEventPass.Initial).changes.forEach { it.consume() }
+                                }
+                            }
+                        }
+                        .drawWithContent {
+                            headerLayer.record {
+                                this@drawWithContent.drawContent()
+                            }
+                            if (!isHeaderLayerRecorded) {
+                                isHeaderLayerRecorded = true
+                            }
+                        }
+                ) {
+                    header()
+                }
+            }
+        }
+
         // 1. UPPER METADATA & HEADER (Slotted - REQ-UI-245, REQ-UI-250 / ATT-2112, ATT-2150)
         Column(
             modifier = Modifier
@@ -685,25 +738,6 @@ fun MapDetailLayout(
                             this@drawWithContent.drawContent()
                         }
                         drawLayer(headerLayer)
-                    }) {
-                        header()
-                    }
-                }
-            } else {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .layout { measurable, constraints ->
-                            val placeable = measurable.measure(constraints)
-                            layout(0, 0) {
-                                placeable.place(0, 0)
-                            }
-                        }
-                ) {
-                    Box(modifier = Modifier.drawWithContent {
-                        headerLayer.record {
-                            this@drawWithContent.drawContent()
-                        }
                     }) {
                         header()
                     }

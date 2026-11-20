@@ -1,14 +1,14 @@
 # Living Test Specification: Jubilee Milestones & App Reviews
 
 **Document ID**: `DOC-TST-REVIEWS`  
-**Version**: 1.0.0  
+**Version**: 1.0.5  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `aftermath_reviews`  
 **Prefixes**: `REV`  
 **Scope**: Milestone workout auto-naming, jubilee achievements, Google Play in-app reviews, athlete feedback, and supporter tier promotions.  
-**Total Tests**: 15
+**Total Tests**: 16
 
 ---
 
@@ -180,6 +180,25 @@
   2. `EditWorkoutScreen.kt` delegates save without redundant duplicate triggers.
   3. `ExportManager` honors per-workout sync selection and preserves fallback when null.
 
+### TST-REV-016: **Offscreen Snapshot Header Click-Through, Semantics Isolation & Frame-Synchronized Capture Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Tickets**: `ATT-9168`
+- **Requirement(s)**: `REQ-REV-015` (`REQ-REV-015.1`..`REQ-REV-015.2`)
+- **Component**: `app/src/test/java/com/atrainingtracker/trainingtracker/ui/map/MapDetailLayoutOffscreenHeaderUiTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/ui/map/MapDetailLayoutSnapshotContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/ui/map/MapDetailLayoutElevationVisibilityUiTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/ui/map/MapDetailLayoutCollapsingHeaderContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/ui/map/MapDetailLayoutTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/ui/map/WorkoutShareBottomSheetContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/ui/aftermath/WorkoutDetailHeaderClickContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/ui/aftermath/WorkoutDetailTabbedContentTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ArchitectureConformanceContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/DeadCodeEliminationContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SourceTextReadingAuditContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/UiReflectionOnlyTestAuditContractTest.kt`
+- **Test Type**: Unit
+- **Verification Method**: Unit
+- **Verification Result**: PASS (`77/77` PASS across 12 UI/contract suites on `408d9fb0`, `0` failures, `0` errors, `0` skipped, `0` compiler warnings on `MapDetailLayout.kt` & `MapDetailLayoutOffscreenHeaderUiTest.kt`, `4/4` Python safety linters PASS; verified at Gate 4 Bounce 1 `ATT-9314` with zero `app/` diff post-`408d9fb0` per `Rule 7.5`; `Localization Parity: N/A - no new or modified UI strings`)
+- **Verification Evidence**:
+  - `app/src/test/java/com/atrainingtracker/trainingtracker/ui/map/MapDetailLayoutOffscreenHeaderUiTest.kt`: `MapDetailLayoutOffscreenHeaderUiTest#idleShowHeaderFalse_allowsTempoLayersClickAndSuppressesDuplicateHeaderSemantics_tstRev016_1`, `MapDetailLayoutOffscreenHeaderUiTest#idleShowHeaderFalse_allowsSichtbareDiagrammeClick_tstRev016_1` (`TST-REV-016.1`); `MapDetailLayoutOffscreenHeaderUiTest#onDemandSnapshotTrigger_recordsFullWidthHeaderInsideClippedContainerWithoutSemanticsLeak_tstRev016_2`, `MapDetailLayoutOffscreenHeaderUiTest#activeSnapshotWithTransparentForeground_blocksPointerClicksOnOffscreenHeader_tstRev016_2` (`TST-REV-016.2`, `4/4` PASS on `408d9fb0`)
+  - Regression & contracts: `MapDetailLayoutSnapshotContractTest` (`5/5`), `MapDetailLayoutElevationVisibilityUiTest` (`1/1`), `MapDetailLayoutCollapsingHeaderContractTest` (`8/8`), `MapDetailLayoutTest` (`12/12`), `WorkoutShareBottomSheetContractTest` (`12/12`), `WorkoutDetailHeaderClickContractTest` (`1/1`), `WorkoutDetailTabbedContentTest` (`7/7`), `ArchitectureConformanceContractTest` (`11/11`, `MapDetailLayout.kt = 1,096 / 1,500` LoC), `DeadCodeEliminationContractTest` (`6/6`), `SourceTextReadingAuditContractTest` (`6/6`, `0` `src/main` reads), `UiReflectionOnlyTestAuditContractTest` (`4/4`)
+- **Procedure**:
+  1. *Idle Click-Through & Zero Duplicate Accessibility Semantics (`TST-REV-016.1`, `MapDetailLayoutOffscreenHeaderUiTest.kt`, `androidx.compose.ui.test.junit4.v2.createComposeRule`)*:
+     • Render `MapDetailLayout(showHeader = false, showMap = false, showTelemetryCharts = true, ...)` with a clickable `snapshotHeader` (simulating `WorkoutHeader`'s clickable route-cluster chip) and top-viewport `Sichtbare Diagramme` + `Tempo` multi-source layers controls.
+     • Assert the `snapshotHeader` node does NOT exist in composition/semantics (`assertDoesNotExist()`) while idle, and tapping both `Sichtbare Diagramme` and `Tempo` layers controls opens their menus reliably (`0` deprecation warnings, `0` `src/main` file reads).
+  2. *On-Demand Non-Interactive Capture & Frame-Synchronized `headerLayer` Recording (`TST-REV-016.2`, `MapDetailLayoutOffscreenHeaderUiTest.kt`, `MapDetailLayoutSnapshotContractTest.kt`, Contracts)*:
+     • Trigger `externalSnapshotTrigger = true` (or `isSharing = true`) on `MapDetailLayout(showHeader = false, ...)` inside both a `.clipToBounds()` container and a transparent-foreground root (`showMap = false, showElevationProfile = false, showTelemetryCharts = false`), invoke `onRoot().captureToImage()` to execute the native Compose/Robolectric draw pass (`headerDrawCount > 0`), and assert `measuredHeaderSize > 0` even at off-viewport placement `placeable.place(0, -placeable.height - 10_000)` while tapping top-viewport coordinates over transparent foreground leaves `headerClicks == 0` and zero duplicate `WorkoutHeader` accessibility semantics leak (`.clearAndSetSemantics {}`).
+     • Execute `MapDetailLayoutSnapshotContractTest`, `ArchitectureConformanceContractTest` (`MapDetailLayout.kt <= 1,500` LoC), and `SourceTextReadingAuditContractTest` (`0` new `src/main` reads; `Localization Parity: N/A - no new or modified UI strings`).
+
 ---
 
 ## Change History
@@ -187,3 +206,8 @@
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
 | `1.0.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Added standardized `DOC-TST-REVIEWS` work-product control header and Change History. |
+| `1.0.1` | 2026-11-20 | AI Agent (`ATT-9168`, `--as agent1`) | `ATT-9168` | Added `TST-REV-016` `[Planned]` (`TST-REV-016.1`–`.2`, strictly symmetric `REQ-REV-015`) using `v2.createComposeRule` for idle click-through, zero duplicate semantics, on-demand frame-synced `headerLayer` capture, and contract hygiene (`N/A - no new or modified UI strings`). |
+| `1.0.2` | 2026-11-20 | AI Agent (`ATT-9168`, `--as agent1`) | `ATT-9168` | Promoted `TST-REV-016` to `[Implemented]` following Stage 4 test construction (`MapDetailLayoutOffscreenHeaderUiTest.kt`) and incremental Gradle verification. |
+| `1.0.3` | 2026-11-20 | AI Agent (`ATT-9168`, `--as agent1`) | `ATT-9168` | Promoted `TST-REV-016` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9302`) `76/76 PASS` across 12 suites on `2251a7de` (`Rule 7.5`, zero `app/` diff post-`2251a7de`, `0` compiler warnings, `4/4` linters PASS), clean-checkout `--check-verified-evidence` `exit 0`, and `docs/engineering/walkthroughs/ATT-9168_walkthrough.md`. |
+| `1.0.4` | 2026-11-20 | AI Agent (`ATT-9168`, `--as agent1`) | `ATT-9168` | Stage 6 Bounce 1 (`Implemented`): added `activeSnapshotWithTransparentForeground_blocksPointerClicksOnOffscreenHeader_tstRev016_2` and `onRoot().captureToImage()` draw-pass verification (`headerDrawCount > 0`), re-verified `77/77 PASS` across 12 suites (`0` compiler warnings, `4/4` linters PASS). |
+| `1.0.5` | 2026-11-20 | AI Agent (`ATT-9168`, `--as agent1`) | `ATT-9168` | Promoted `TST-REV-016` to `[Verified]` in Stage 5 Bounce 1 reusing Gate 4 Bounce 1 (`ATT-9314`) `77/77 PASS` across 12 suites on `408d9fb0` (`Rule 7.5`, zero `app/` diff post-`408d9fb0`, `0` compiler warnings, `4/4` linters PASS), clean-checkout `--check-verified-evidence` `exit 0`, and updated `docs/engineering/walkthroughs/ATT-9168_walkthrough.md`. |

@@ -1,14 +1,14 @@
 # Living Requirements: Jubilee Milestones & App Reviews
 
 **Document ID**: `DOC-REQ-REVIEWS`  
-**Version**: 1.0.0  
+**Version**: 1.0.5  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `aftermath_reviews`  
 **Prefixes**: `REV`  
 **Scope**: Milestone workout auto-naming, jubilee achievements, Google Play in-app reviews, athlete feedback, and supporter tier promotions.  
-**Total Requirements**: 14
+**Total Requirements**: 15
 
 ---
 
@@ -434,6 +434,38 @@
   • *When* `ExportManager.exportWorkout` executes,
   • *Then* it synchronizes to Health Connect if and only if `TrainingApplication.syncToHealthConnect()` is true.
 
+### REQ-REV-015: On-Demand Non-Interactive Offscreen Snapshot Header & Frame-Synchronized `GraphicsLayer` Capture in `MapDetailLayout` [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-REV-016`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `app/src/main/java/com/atrainingtracker/trainingtracker/ui/map/MapDetailLayout.kt` (`<= 1,500` LoC)
+- **Rationale**: In `MapDetailLayout`, the `showHeader == false` branch currently always composes `header()` (`snapshotHeader` `WorkoutHeader`) inside the `.zIndex(1f)` upper `Column` using `layout(0, 0) { placeable.place(0, 0) }` and `drawWithContent { headerLayer.record { ... } }` without `drawContent()`, leaving invisible clickable nodes and TalkBack semantics overlapping `Sichtbare Diagramme` and the `Tempo` multi-source layers icon in tabbed `Übersicht` (`ATT-9168`, Parent Epic `ATT-68`, refining `REQ-REV-006.3`–`.4` and `REQ-PER-029`).
+- **Description**:
+  1. *On-Demand Composition & Hit-Test / Semantics Isolation (`REQ-REV-015.1`)*:
+     - When `showHeader == false` and `!isSharing && !externalSnapshotTrigger`, `MapDetailLayout` **SHALL NOT** compose or place `header()` (`snapshotHeader`), guaranteeing zero invisible pointer-event interception on `Sichtbare Diagramme`, `Tempo` multi-source layers icon, or any top-viewport control, and zero duplicate `WorkoutHeader` accessibility/TalkBack nodes during normal browsing.
+     - When `showHeader == false` and `(isSharing || externalSnapshotTrigger)` is `true`, `MapDetailLayout` **SHALL** compose `header()` strictly outside the `.zIndex(1f)` upper `Column` inside a `.zIndex(-1f)` off-viewport container (`layout(0, 0) { placeable.place(0, -placeable.height - 10_000) }`) wrapped with `.clearAndSetSemantics {}` and an inner full-width wrapper after `.layout(...)` carrying `.pointerInput(Unit)` (`PointerEventPass.Initial` consume loop) so it remains non-interactive (even over transparent foreground regions) and invisible to accessibility while still recording `headerLayer`.
+  2. *Frame-Synchronized `GraphicsLayer` Recording (`REQ-REV-015.2`)*:
+     - When sharing is triggered (`isSharing` or `externalSnapshotTrigger`) with `showHeader == false`, `MapDetailLayout` **SHALL** synchronize snapshot capture with the Compose draw pass (`isHeaderLayerRecorded` / `withFrameNanos {}` before setting `shouldTakeSnapshot = true` on `ATrainingTrackerMap` and/or before `headerLayer.toImageBitmap()`) so `headerLayer.size.width > 0 && headerLayer.size.height > 0` and the exported Share Snapshot bitmap always renders the full `WorkoutHeader`.
+     - Standalone `MapDetailLayout(showHeader = true)` layout, `REQ-REV-006.5` UI-thread rasterization + `NonCancellable` share dispatching, and `MapDetailLayout.kt <= 1,500` LoC (`1,062` baseline) **MUST** remain preserved (`Localization Parity: N/A - no new or modified UI strings`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new `REQ-REV-015`, refining `REQ-REV-006` (`REQ-REV-006.3`–`.4`, `docs/requirements/req_aftermath_reviews.md:85-115`) and `REQ-PER-029` (`docs/requirements/req_aftermath_periods.md:867-896`); targets `MapDetailLayout.kt`.
+2. *Historical Origin & Commit Trace*: `4fb53a57` (`ATT-6322`: introduced `showHeader = false` offscreen `headerLayer` recording), `d4e6cd52` (`ATT-6685`: UI-thread `GraphicsLayer` rasterization), `3652c31c` (`ATT-8080`: `Sichtbare Diagramme` & multi-source chart overlays).
+3. *Root Reason for Existing Formulation*: `ATT-6322` eliminated duplicate visible headers below the tab bar while keeping `headerLayer` permanently recorded for Share Snapshot, inadvertently placing invisible `header()` bounds at `(0, 0)` inside `.zIndex(1f)` over top-viewport controls.
+4. *Preservation of Core Invariants*: `showHeader = false` still suppresses duplicate visible headers; Share Snapshot (`headerLayer.toImageBitmap().asAndroidBitmap()` on UI thread + `combineWorkoutAndShare`) still produces the full `WorkoutHeader` bitmap; standalone `showHeader = true` visual parity and `MapDetailLayout.kt <= 1,500` LoC remain intact.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `MapDetailLayout(showHeader = false)` idle (`!isSharing && !externalSnapshotTrigger`) with `Sichtbare Diagramme` and `Tempo` layers controls at the top of the viewport,
+• *When* rendered and tapped,
+• *Then* `snapshotHeader` is NOT composed, zero duplicate `WorkoutHeader` semantics nodes exist, and both `Sichtbare Diagramme` and `Tempo` layers clicks trigger reliably.
+• *Given* Share Snapshot triggered (`isSharing` or `externalSnapshotTrigger`) with `showHeader = false`,
+• *When* `headerLayer` records and `executeSnapshotCaptureAndShare()` captures bitmaps,
+• *Then* `snapshotHeader` renders inside a `.zIndex(-1f)` / off-viewport `.clearAndSetSemantics {}` wrapper after Compose draws (`headerLayer.size > 0`), producing a non-null `header` bitmap without blocking foreground touches or polluting TalkBack.
+
+**Invariants**: Zero duplicate visible headers when `showHeader = false`; non-null full-fidelity `headerLayer` bitmap on Share Snapshot; `showHeader = true` standalone parity; `MapDetailLayout.kt <= 1,500` LoC; `0` `src/main` reads in tests; `Localization Parity: N/A - no new or modified UI strings`.
+
 ---
 
 ## Change History
@@ -441,3 +473,8 @@
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
 | `1.0.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Added standardized `DOC-REQ-REVIEWS` work-product control header and Change History. |
+| `1.0.1` | 2026-11-20 | AI Agent (`ATT-9168`, `--as agent1`) | `ATT-9168` | Added `REQ-REV-015` `[Planned]` for on-demand non-interactive `.zIndex(-1f)` / `.clearAndSetSemantics {}` offscreen `snapshotHeader` composition and frame-synchronized `headerLayer` recording in `MapDetailLayout.kt` (`N/A - no new or modified UI strings`). |
+| `1.0.2` | 2026-11-20 | AI Agent (`ATT-9168`, `--as agent1`) | `ATT-9168` | Promoted `REQ-REV-015` to `[Implemented]` following Stage 4 implementation in `MapDetailLayout.kt` and `MapDetailLayoutOffscreenHeaderUiTest.kt`. |
+| `1.0.3` | 2026-11-20 | AI Agent (`ATT-9168`, `--as agent1`) | `ATT-9168` | Promoted `REQ-REV-015` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9302`) `76/76 PASS` across 12 suites on `2251a7de` (`Rule 7.5`, zero `app/` diff post-`2251a7de`, `0` compiler warnings, `4/4` linters PASS), clean-checkout `--check-verified-evidence` `exit 0`, and `docs/engineering/walkthroughs/ATT-9168_walkthrough.md`. |
+| `1.0.4` | 2026-11-20 | AI Agent (`ATT-9168`, `--as agent1`) | `ATT-9168` | Stage 6 Bounce 1 (`Implemented`): moved `.pointerInput(Unit)` (`PointerEventPass.Initial` consume loop) after `.layout(0, 0)` onto the inner full-width `Box` and shifted off-viewport placement to `placeable.place(0, -placeable.height - 10_000)` (`MapDetailLayout.kt` `1,096 / 1,500` LoC; added `activeSnapshotWithTransparentForeground_blocksPointerClicksOnOffscreenHeader_tstRev016_2` and draw-pass assertions). |
+| `1.0.5` | 2026-11-20 | AI Agent (`ATT-9168`, `--as agent1`) | `ATT-9168` | Promoted `REQ-REV-015` to `[Verified]` in Stage 5 Bounce 1 reusing Gate 4 Bounce 1 (`ATT-9314`) `77/77 PASS` across 12 suites on `408d9fb0` (`Rule 7.5`, zero `app/` diff post-`408d9fb0`, `0` compiler warnings, `4/4` linters PASS), clean-checkout `--check-verified-evidence` `exit 0`, and updated `docs/engineering/walkthroughs/ATT-9168_walkthrough.md`. |
